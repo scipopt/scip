@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#define SCIP_DEBUG
+
 /**@file   compute_symmetry_nauty.c
  * @brief  interface for symmetry computations to nauty/traces
  * @author Marc Pfetsch
@@ -110,6 +110,7 @@ SCIP_DECL_HASHKEYVAL(SYMhashKeyValOptype)
 {  /*lint --e{715}*/
    SYM_OPTYPE* k;
    SCIP_Real exponent;
+   uint64_t result;
 
    k = (SYM_OPTYPE*) key;
 
@@ -118,8 +119,9 @@ SCIP_DECL_HASHKEYVAL(SYMhashKeyValOptype)
    else
       exponent = 1.0;
 
-   return SCIPhashTwo(SCIPrealHashCode(exponent), k->level),
-      (uint64_t) SCIPexprhdlrGetName(SCIPexprGetHdlr(k->expr));
+   result = SCIPhashTwo(SCIPrealHashCode(exponent), k->level), (uint64_t) SCIPexprhdlrGetName(SCIPexprGetHdlr(k->expr));
+
+   return result;
 }
 
 /* ------------------- map for constant types ------------------- */
@@ -337,14 +339,19 @@ static
 SCIP_RETCODE determineGraphSize(
    SCIP*                 scip,               /**< SCIP instance */
    SYM_MATRIXDATA*       matrixdata,         /**< data for MIP matrix */
-   int*                  nnodes,             /**< pointer to store number of nodes in graph */
-   int*                  nedges,             /**< pointer to store number of edges in graph */
-   int*                  ninternodes,        /**< pointer to store number of internal nodes in graph */
+   SYM_EXPRDATA*         exprdata,           /**< data for nonlinear constraints */
+   int*                  nnodes,             /**< pointer to store the total number of nodes in graph */
+   int*                  nedges,             /**< pointer to store the total number of edges in graph */
+   int*                  nlinearnodes,       /**< pointer to store the number of internal nodes for linear constraints */
+   int*                  nnonlinearnodes,    /**< pointer to store the number of internal nodes for nonlinear constraints */
+   int*                  nlinearedges,       /**< pointer to store the number of edges for linear constraints */
+   int*                  nnonlinearedges,    /**< pointer to store the number of edges for nonlinear constraints */
    int**                 degrees,            /**< pointer to store the degrees of the nodes */
    int*                  maxdegrees,         /**< pointer to store the maximal size of the degree array */
    SCIP_Bool*            success             /**< pointer to store whether the construction was successful */
    )
 {
+   SCIP_CONSHDLR* conshdlr;
    SCIP_Bool groupByConstraints;
    int* internodes = NULL;
    int nmaxinternodes;
@@ -353,45 +360,50 @@ SCIP_RETCODE determineGraphSize(
    SCIP_Real oldcoef = SCIP_INVALID;
 #endif
    int firstcolornodenumber = -1;
+   int nconss;
    int j;
 
    assert( scip != NULL );
    assert( matrixdata != NULL );
    assert( nnodes != NULL );
    assert( nedges != NULL );
-   assert( ninternodes != NULL );
+   assert( nlinearnodes != NULL );
+   assert( nnonlinearnodes != NULL );
+   assert( nlinearedges != NULL );
+   assert( nnonlinearedges != NULL );
    assert( degrees != NULL );
    assert( maxdegrees != NULL );
    assert( success != NULL );
 
-   *nedges = 0;
-   *ninternodes = 0;
    *success = TRUE;
 
    /* count nodes for variables */
    *nnodes = matrixdata->npermvars;
 
-   /* add nodes for rhs of constraints */
+   /* count nodes for rhs of constraints */
    *nnodes += matrixdata->nrhscoef;
 
-   /* allocate memory for degrees */
+   /* allocate memory for degrees (will grow dynamically) */
    *degrees = NULL;
    *maxdegrees = 0;
    SCIP_CALL( SCIPensureBlockMemoryArray(scip, degrees, maxdegrees, *nnodes + 100) );
    for (j = 0; j < *nnodes; ++j)
       (*degrees)[j] = 0;
 
-   /* Grouping of nodes depends on the number of nodes in the bipartite graph class.
-    * If there are more variables than constraints, we group by constraints.
-    * That is, given several variable nodes which are incident to one constraint node by the same color,
-    * we join these variable nodes to the constraint node by only one intermediate node.
-    */
+   /* initialize counters */
+   *nedges = 0;
+   *nlinearnodes = 0;
+   *nnonlinearnodes = 0;
+   *nlinearedges = 0;
+   *nnonlinearedges = 0;
+
+   /* Determine grouping depending on the number of rhs vs. variables; see fillGraphByLinearConss(). */
    if ( matrixdata->nrhscoef < matrixdata->npermvars )
       groupByConstraints = TRUE;
    else
       groupByConstraints = FALSE;
 
-   /* "colored" edges based on all matrix coefficients - loop through ordered matrix coefficients */
+   /* determine size of intermediate nodes */
    if ( groupByConstraints )
       nmaxinternodes = matrixdata->nrhscoef;
    else
@@ -401,6 +413,7 @@ SCIP_RETCODE determineGraphSize(
    for (j = 0; j < nmaxinternodes; ++j)
       internodes[j] = -1;
 
+   /* loop through all matrix coefficients */
    for (j = 0; j < matrixdata->nmatcoef; ++j)
    {
       int varrhsidx;
@@ -427,10 +440,10 @@ SCIP_RETCODE determineGraphSize(
 
       if ( matrixdata->nuniquemat == 1 )
       {
+         /* We do not need intermediate nodes if we have only one coefficient class; just add edges. */
          ++(*degrees)[varnode];
          ++(*degrees)[rhsnode];
-         ++(*nedges);
-         /* we do not need intermediate nodes if we have only one coefficient class */
+         ++(*nlinearedges);
       }
       else
       {
@@ -458,7 +471,7 @@ SCIP_RETCODE determineGraphSize(
          if ( internodes[varrhsidx] < firstcolornodenumber )
          {
             internodes[varrhsidx] = (*nnodes)++;
-            ++(*ninternodes);
+            ++(*nlinearnodes);
 
             /* ensure memory for degrees */
             SCIP_CALL( SCIPensureBlockMemoryArray(scip, degrees, maxdegrees, *nnodes) );
@@ -477,66 +490,408 @@ SCIP_RETCODE determineGraphSize(
 
          ++(*degrees)[varnode];
          ++(*degrees)[internode];
+         ++(*nlinearedges);
+
          ++(*degrees)[rhsnode];
          ++(*degrees)[internode];
-         ++(*nedges);
-         ++(*nedges);
+         ++(*nlinearedges);
       }
    }
    SCIPfreeBufferArray(scip, &internodes);
 
+   /* now treat nonlinear constraints */
+   conshdlr = SCIPfindConshdlr(scip, "nonlinear");
+   nconss = conshdlr != NULL ? SCIPconshdlrGetNConss(conshdlr) : 0;
+   if ( nconss > 0 )
+   {
+      SCIP_CONS** conss;
+      SCIP_EXPRITER* it;
+      SCIP_VAR** vars = NULL;
+      SCIP_Real* vals = NULL;
+      int* visitednodes;
+      int* ischildofsum;
+      int maxvisitednodes;
+      int maxischildofsum;
+      int numvisitednodes = 0;
+      int numischildofsum = 0;
+      int nvars;
+      int i;
+
+      conss = SCIPconshdlrGetConss(conshdlr);
+
+      /* prepare iterator */
+      SCIP_CALL( SCIPcreateExpriter(scip, &it) );
+
+      /* prepare stacks */
+      maxvisitednodes = exprdata->nuniqueoperators + exprdata->nuniqueconstants + exprdata->nuniquecoefs;
+      maxischildofsum = maxvisitednodes;
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &visitednodes, maxvisitednodes) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &ischildofsum, maxischildofsum) );
+
+      /* get number of variables */
+      nvars = SCIPgetNVars(scip);
+
+      /* iterate over all expressions and add the corresponding nodes to the graph */
+      for (i = 0; i < nconss; ++i)
+      {
+         SCIP_EXPR* rootexpr;
+         SCIP_EXPR* expr;
+         int currentlevel = 0;
+
+         rootexpr = SCIPgetExprNonlinear(conss[i]);
+
+         SCIP_CALL( SCIPexpriterInit(it, rootexpr, SCIP_EXPRITER_DFS, TRUE) );
+         SCIPexpriterSetStagesDFS(it, SCIP_EXPRITER_ENTEREXPR | SCIP_EXPRITER_LEAVEEXPR);
+
+         for (expr = SCIPexpriterGetCurrent(it); ! SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it)) /*lint !e441*/ /*lint !e440*/
+         {
+            /* upon entering an expression, check its type and add nodes and edges if neccessary */
+            switch ( SCIPexpriterGetStageDFS(it) )
+            {
+            case SCIP_EXPRITER_ENTEREXPR:
+            {
+               int node = -1;
+               int parentnode = -1;
+               SCIP_Bool isVarExpr = FALSE;
+
+               /* for variable expressions, get the corresponding node that is already in the graph */
+               if ( SCIPisExprVar(scip, expr) )
+               {
+                  SCIP_VAR* var;
+
+                  var = SCIPgetVarExprVar(expr);
+                  isVarExpr = TRUE;
+
+                  /* Check whether the variable is active; if not, then replace the inactive variable by its aggregation
+                   * or its fixed value; note that this step is equivalent as representing an inactive variable as sum
+                   * expression.
+                   */
+                  if ( SCIPvarIsActive(var) )
+                  {
+                     node = SCIPvarGetProbindex(var);
+                     assert( node < *nnodes );
+                  }
+                  else
+                  {
+                     SCIP_Real constant = 0.0;
+                     int varsize;
+                     int requiredsize;
+                     int k;
+
+                     if ( vars == NULL )
+                     {
+                        SCIP_CALL( SCIPallocBlockMemoryArray(scip, &vars, nvars) );
+                        SCIP_CALL( SCIPallocBlockMemoryArray(scip, &vals, nvars) );
+                     }
+                     assert( vars != NULL && vals != NULL );
+
+                     vars[0] = var;
+                     vals[0] = 1.0;
+
+                     SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, vals, &varsize, varsize, &constant, &requiredsize, TRUE) );
+                     assert( requiredsize <= nvars );
+
+                     assert( numvisitednodes > 0 );
+                     parentnode = visitednodes[numvisitednodes-1];
+                     assert( parentnode < *nnodes );
+
+                     /* create nodes for all aggregation variables and coefficients and connect them to the parent node */
+                     for (k = 0; k < requiredsize; ++k)
+                     {
+                        int internode;
+
+                        assert( vars[k] != NULL );
+                        assert( vals[k] != 0.0 );
+
+                        /* add node */
+                        internode = (*nnodes)++;
+                        ++(nnonlinearnodes);
+
+                        /* ensure size of degrees */
+                        SCIP_CALL( SCIPensureBlockMemoryArray(scip, degrees, maxdegrees, *nnodes) );
+                        (*degrees)[internode] = 0;
+
+                        ++(*degrees)[internode];
+                        ++(*degrees)[parentnode];
+                        ++(*nnonlinearedges);
+
+                        /* connect the intermediate node to its corresponding variable node */
+                        node = SCIPvarGetProbindex(vars[k]);
+                        assert( node < *nnodes );
+
+                        ++(*degrees)[internode];
+                        ++(*degrees)[node];
+                        ++(*nnonlinearedges);
+                     }
+
+                     /* add the node for the constant */
+                     if ( constant != 0.0 )
+                     {
+                        /* add node */
+                        node = (*nnodes)++;
+                        ++(*nnonlinearnodes);
+
+                        /* ensure size of degrees */
+                        SCIP_CALL( SCIPensureBlockMemoryArray(scip, degrees, maxdegrees, *nnodes) );
+                        (*degrees)[node] = 0;
+
+                        ++(*degrees)[node];
+                        ++(*degrees)[parentnode];
+                        ++(*nnonlinearedges);
+                     }
+
+                     /* add a filler node since it will be removed in the next iteration anyway */
+                     SCIP_CALL( SCIPensureBlockMemoryArray(scip, &visitednodes, &maxvisitednodes, numvisitednodes+1) );
+                     SCIP_CALL( SCIPensureBlockMemoryArray(scip, &ischildofsum, &maxischildofsum, numischildofsum+1) );
+
+                     visitednodes[numvisitednodes++] = *nnodes;
+                     ischildofsum[numischildofsum++] = FALSE;
+                     ++currentlevel;
+
+                     break;
+                  }
+               }
+               /* for all other expressions, no nodes nor edges have to be created */
+               else
+               {
+                  /* do nothing here */
+               }
+
+               /* if this is the root expression, add the constraint side node (will be parent of expression node) */
+               if ( SCIPexpriterGetParentDFS(it) == NULL )
+               {
+                  /* add the constraint side node */
+                  parentnode = (*nnodes)++;
+                  ++(*nnonlinearnodes);
+
+                  /* ensure size of degrees */
+                  SCIP_CALL( SCIPensureBlockMemoryArray(scip, degrees, maxdegrees, *nnodes) );
+                  (*degrees)[parentnode] = 0;
+               }
+               /* otherwise, get the parentnode stored in visitednodes */
+               else
+               {
+                  parentnode = visitednodes[numvisitednodes - 1];
+                  assert( parentnode < *nnodes );
+               }
+
+               /* in all cases apart from variable expressions, the new node is added with the corresponding color */
+               if ( ! isVarExpr )
+               {
+                  node = (*nnodes)++;
+                  ++(*nnonlinearnodes);
+
+                  /* ensure size of degrees */
+                  SCIP_CALL( SCIPensureBlockMemoryArray(scip, degrees, maxdegrees, *nnodes) );
+                  (*degrees)[node] = 0;
+               }
+
+               /* store the new node so that it can be used as parentnode later */
+               SCIP_CALL( SCIPensureBlockMemoryArray(scip, &visitednodes, &maxvisitednodes, numvisitednodes+1) );
+               SCIP_CALL( SCIPensureBlockMemoryArray(scip, &ischildofsum, &maxischildofsum, numischildofsum+1) );
+
+               assert( node != -1 );
+               visitednodes[numvisitednodes++] = node;
+               ischildofsum[numischildofsum++] = FALSE;
+
+               /* connect the current node with its parent */
+               assert( parentnode != -1 );
+               ++(*degrees)[node];
+               ++(*degrees)[parentnode];
+               ++(*nnonlinearedges);
+
+               /* for sum expression, also add intermediate nodes for the coefficients */
+               if ( SCIPisExprSum(scip, expr) )
+               {
+                  SCIP_Real constval;
+                  int internode;
+
+                  /* iterate over children from last to first, such that visitednodes array is in correct order */
+                  for (j = SCIPexprGetNChildren(expr) - 1; j >= 0; --j)
+                  {
+                     /* add the intermediate node with the corresponding color */
+                     internode = (*nnodes)++;
+                     ++(*nnonlinearnodes);
+
+                     SCIP_CALL( SCIPensureBlockMemoryArray(scip, &visitednodes, &maxvisitednodes, numvisitednodes+1) );
+                     SCIP_CALL( SCIPensureBlockMemoryArray(scip, &ischildofsum, &maxischildofsum, numischildofsum+1) );
+
+                     visitednodes[numvisitednodes++] = internode;
+                     ischildofsum[numischildofsum++] = TRUE;
+
+                     /* ensure size of degrees */
+                     SCIP_CALL( SCIPensureBlockMemoryArray(scip, degrees, maxdegrees, *nnodes) );
+                     (*degrees)[internode] = 0;
+
+                     ++(*degrees)[internode];
+                     ++(*degrees)[node];
+                     ++(*nnonlinearedges);
+                  }
+
+                  /* add node for the constant term of the sum expression */
+                  constval = SCIPgetConstantExprSum(expr);
+                  if ( constval != 0.0 )
+                  {
+                     /* add the node with a new color */
+                     internode = (*nnodes)++;
+                     ++(*nnonlinearnodes);
+
+                     /* ensure size of degrees */
+                     SCIP_CALL( SCIPensureBlockMemoryArray(scip, degrees, maxdegrees, *nnodes) );
+                     (*degrees)[internode] = 0;
+
+                     ++(*degrees)[internode];
+                     ++(*degrees)[node];
+                     ++(*nnonlinearedges);
+                  }
+               }
+
+               ++currentlevel;
+               break;
+            }
+            /* when leaving an expression, the nodes that are not needed anymore are erased from the respective arrays */
+            case SCIP_EXPRITER_LEAVEEXPR:
+            {
+               --numvisitednodes;
+               --numischildofsum;
+               currentlevel--;
+
+               /* When leaving the child of a sum expression, we have to pop again to get rid of the intermediate nodes
+                * used for the coefficients of summands
+                */
+               if ( numischildofsum > 0 && ischildofsum[numischildofsum - 1] )
+               {
+                  --numvisitednodes;
+                  --numischildofsum;
+               }
+
+               break;
+            }
+
+            default:
+               SCIPABORT(); /* we should never be called in this stage */
+               break;
+            }
+         }
+
+         assert( currentlevel == 0 );
+         assert( numvisitednodes == 0 );
+         assert( numischildofsum == 0 );
+      }
+      SCIPfreeBlockMemoryArrayNull(scip, &vals, nvars);
+      SCIPfreeBlockMemoryArrayNull(scip, &vars, nvars);
+
+      SCIPfreeBlockMemoryArray(scip, &visitednodes, maxvisitednodes);
+      SCIPfreeBlockMemoryArray(scip, &ischildofsum, maxischildofsum);
+      SCIPfreeExpriter(&it);
+   }
+
+   *nedges = *nlinearedges + *nnonlinearedges;
+   assert( *nnodes == matrixdata->npermvars + matrixdata->nrhscoef + *nlinearnodes + *nnonlinearnodes );
+
    SCIPdebugMsg(scip, "#nodes for variables: %d\n", matrixdata->npermvars);
    SCIPdebugMsg(scip, "#nodes for rhs: %d\n", matrixdata->nrhscoef);
-   SCIPdebugMsg(scip, "#intermediate nodes: %d\n", *ninternodes);
+   SCIPdebugMsg(scip, "#intermediate nodes for linear constraints: %d\n", *nlinearnodes);
+   SCIPdebugMsg(scip, "#intermediate nodes for nonlinear constraints: %d\n", *nnonlinearnodes);
+   SCIPdebugMsg(scip, "#edges for linear constraints: %d\n", *nlinearedges);
+   SCIPdebugMsg(scip, "#edges for nonlinear constraints: %d\n", *nnonlinearedges);
 
    return SCIP_OKAY;
 }
 
 
-/** Construct linear part of colored graph for symmetry computations
+/** Construct linear and nonlinear part of colored graph for symmetry computations
  *
- *  Construct graph:
+ *  Construct linear graph:
  *  - Each variable gets a different node.
  *  - Each constraint gets a different node.
  *  - Each matrix coefficient gets a different node that is connected to the two nodes
  *    corresponding to the respective constraint and variable.
+ *  - Each different variable, rhs, matrix coefficient gets a different color that is attached to the corresponding entries.
  *
- *  Each different variable, rhs, matrix coefficient gets a different color that is attached to the corresponding entries.
+  *  Construct nonlinear graph:
+ *  - Each node of the expression trees gets a different node.
+ *  - Each coefficient of a sum expression gets its own node connected to the node of the corresponding child.
+ *  - Each constraint (with lhs and (!) rhs) gets its own node connected to the corresponding node of the root expression.
  *
- *  @pre This method assumes that the nodes corresponding to permutation variables are already in the graph and that
- *  their node number is equal to their index.
+ *  @note: In contrast to the linear part, lhs and rhs are treated together here, so that each unique combination of lhs
+ *  and rhs gets its own node. This makes the implementation a lot simpler with the small downside, that different
+ *  formulations of the same constraints would not be detected as equivalent, e.g. for
+ *      0 <= x1 + x2 <= 1
+ *      0 <= x3 + x4
+ *           x3 + x4 <= 1
+ *  there would be no symmetry between (x1,x2) and (x3,x4) detected.
+ *
+ *  Each different constraint (sides), sum-expression coefficient, constant and operator type gets a
+ *  different color that is attached to the corresponding entries.
  */
 static
-SCIP_RETCODE fillGraphByLinearConss(
+SCIP_RETCODE fillGraphByConss(
    SCIP*                 scip,               /**< SCIP instance */
    sparsegraph*          SG,                 /**< Graph to be constructed */
    SYM_MATRIXDATA*       matrixdata,         /**< data for MIP matrix */
-   int                   nnodes,             /**< number of nodes in graph */
-   int                   nedges,             /**< number of edges in graph */
+   SYM_EXPRDATA*         exprdata,           /**< data for nonlinear constraints */
+   int                   nnodes,             /**< total number of nodes in graph */
+   int                   nedges,             /**< total number of edges in graph */
+   int                   nlinearnodes,       /**< number of intermediate nodes for linear constraints */
+   int                   nnonlinearnodes,    /**< number of intermediate nodes for nonlinear constraints */
+   int                   nlinearedges,       /**< number of intermediate edges for linear constraints */
+   int                   nnonlinearedges,    /**< number of intermediate edges for nonlinear constraints */
    int*                  degrees,            /**< array with the degrees of the nodes */
-   int*                  colors              /**< array with colors of nodes on output */
+   int*                  colors,             /**< array with colors of nodes on output */
+   int*                  nusedcolors         /**< pointer to store number of used colors in the graph so far */
    )
 {
+   SCIP_HASHTABLE* optypemap;
+   SCIP_HASHTABLE* consttypemap;
+   SCIP_HASHTABLE* sumcoefmap;
+   SCIP_HASHTABLE* rhstypemap;
+   SYM_OPTYPE* uniqueoparray = NULL;
+   SYM_CONSTTYPE* uniqueconstarray = NULL;
+   SYM_CONSTTYPE* sumcoefarray = NULL;
+   SYM_RHSTYPE* uniquerhsarray = NULL;
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONS** conss;
+   SCIP_EXPRITER* it;
+   SCIP_Bool* ischildofsum;
+   SCIP_VAR** vars = NULL;
+   SCIP_Real* vals = NULL;
    SCIP_Bool groupByConstraints;
    int* internodes = NULL;
    int* pos = NULL;
+   int* visitednodes;
+   int maxischildofsum;
+   int maxvisitednodes;
+   int numvisitednodes = 0;
+   int numischildofsum = 0;
+   int nconss;
+   int nuniqueops = 0;
+   int nuniqueconsts = 0;
+   int nuniquecoefs = 0;
+   int nuniquerhs = 0;
+   int oparraysize = exprdata->nuniqueoperators;
+   int constarraysize = exprdata->nuniqueconstants;
+   int coefarraysize = exprdata->nuniquecoefs;
+   int rhsarraysize;
    int nmaxinternodes;
    int oldcolor = -1;
    int cnt;
+   int nvars;
 #ifndef NDEBUG
    SCIP_Real oldcoef = SCIP_INVALID;
 #endif
    int firstcolornodenumber = -1;
-   int nusedcolors;
    int n = 0;
    int m = 0;
-   int j;
    int i;
+   int j;
 
    assert( scip != NULL );
    assert( matrixdata != NULL );
+   assert( exprdata != NULL );
    assert( degrees != NULL );
    assert( colors != NULL );
+   assert( nusedcolors != NULL );
 
    SCIPdebugMsg(scip, "Filling graph with colored coefficient nodes for linear part.\n");
 
@@ -546,17 +901,17 @@ SCIP_RETCODE fillGraphByLinearConss(
       assert( 0 <= matrixdata->permvarcolors[j] && matrixdata->permvarcolors[j] < matrixdata->nuniquevars );
       colors[n++] = matrixdata->permvarcolors[j];
    }
-   nusedcolors = matrixdata->nuniquevars;
+   *nusedcolors = matrixdata->nuniquevars;
 
    /* fill in array with colors for rhs */
    for (i = 0; i < matrixdata->nrhscoef; ++i)
    {
       assert( 0 <= matrixdata->rhscoefcolors[i] && matrixdata->rhscoefcolors[i] < matrixdata->nuniquerhs );
-      colors[n++] = nusedcolors + matrixdata->rhscoefcolors[i];
+      colors[n++] = *nusedcolors + matrixdata->rhscoefcolors[i];
    }
-   nusedcolors += matrixdata->nuniquerhs;
+   *nusedcolors += matrixdata->nuniquerhs;
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &pos, nnodes) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &pos, nnodes) );
 
    /* fill in positions in graph */
    cnt = 0;
@@ -649,7 +1004,7 @@ SCIP_RETCODE fillGraphByLinearConss(
 
          if ( internodes[varrhsidx] < firstcolornodenumber )
          {
-            colors[n] = nusedcolors + color;
+            colors[n] = *nusedcolors + color;
             internodes[varrhsidx] = n++;
          }
          internode = internodes[varrhsidx];
@@ -659,105 +1014,32 @@ SCIP_RETCODE fillGraphByLinearConss(
 
          SG->e[pos[varnode]++] = internode;
          SG->e[pos[internode]++] = varnode;
+         ++m;
 
          SG->e[pos[rhsnode]++] = internode;
          SG->e[pos[internode]++] = rhsnode;
+         ++m;
+
          assert( varnode == nnodes - 1 || pos[varnode] <= (int) SG->v[varnode+1] );
          assert( internode == nnodes - 1 || pos[internode] <= (int) SG->v[internode+1] );
-         ++m;
-         ++m;
       }
    }
-   assert( n == nnodes );
-   assert( m == nedges );
-
-#ifndef NDEBUG
-   for (i = 0; i < nnodes - 1; ++i)
-      assert( pos[i] == (int) SG->v[i+1] );
-#endif
+   assert( n == matrixdata->npermvars + matrixdata->nrhscoef + nlinearnodes );
+   assert( m == nlinearedges );
 
    SCIPfreeBufferArray(scip, &internodes);
-   SCIPfreeBufferArray(scip, &pos);
 
-   return SCIP_OKAY;
-}
+   *nusedcolors += matrixdata->nuniquemat;
 
-/** Construct non-linear part of colored graph for symmetry computations
- *
- *  Construct graph:
- *  - Each node of the expression trees gets a different node.
- *  - Each coefficient of a sum expression gets its own node connected to the node of the corresponding child.
- *  - Each constraint (with lhs and (!) rhs) gets its own node connected to the corresponding node of the root expression.
- *
- *  @note: In contrast to the linear part, lhs and rhs are treated together here, so that each unique combination of lhs
- *  and rhs gets its own node. This makes the implementation a lot simpler with the small downside, that different
- *  formulations of the same constraints would not be detected as equivalent, e.g. for
- *      0 <= x1 + x2 <= 1
- *      0 <= x3 + x4
- *           x3 + x4 <= 1
- *  there would be no symmetry between (x1,x2) and (x3,x4) detected.
- *
- *  Each different constraint (sides), sum-expression coefficient, constant and operator type gets a
- *  different color that is attached to the corresponding entries.
- *
- *  @pre This method assumes that the nodes corresponding to permutation variables are already in the graph and that
- *  their node number is equal to their index.
- */
-static
-SCIP_RETCODE fillGraphByNonlinearConss(
-   SCIP*                 scip,               /**< SCIP instance */
-   sparsegraph*          SG,                 /**< Graph to be constructed */
-   SYM_MATRIXDATA*       matrixdata,         /**< data for MIP matrix */
-   SYM_EXPRDATA*         exprdata,           /**< data for nonlinear constraints */
-   int                   nnodes,             /**< number of nodes in graph */
-   int                   nedges,             /**< number of edges in graph */
-   int*                  degrees,            /**< array with the degrees of the nodes */
-   int*                  nusedcolors,        /**< point to store number of used colors in the graph so far */
-   int*                  colors              /**< array with colors of nodes on output */
-   )
-{
-   SCIP_HASHTABLE* optypemap;
-   SCIP_HASHTABLE* consttypemap;
-   SCIP_HASHTABLE* sumcoefmap;
-   SCIP_HASHTABLE* rhstypemap;
-   SYM_OPTYPE* uniqueoparray = NULL;
-   SYM_CONSTTYPE* uniqueconstarray = NULL;
-   SYM_CONSTTYPE* sumcoefarray = NULL;
-   SYM_RHSTYPE* uniquerhsarray = NULL;
-   SCIP_CONSHDLR* conshdlr;
-   SCIP_CONS** conss;
-   SCIP_EXPRITER* it;
-   SCIP_Bool* ischildofsum;
-   SCIP_VAR** vars = NULL;
-   SCIP_Real* vals = NULL;
-   int* pos;
-   int* visitednodes;
-   int maxischildofsum;
-   int maxvisitednodes;
-   int numvisitednodes = 0;
-   int numischildofsum = 0;
-   int nconss;
-   int nuniqueops = 0;
-   int nuniqueconsts = 0;
-   int nuniquecoefs = 0;
-   int nuniquerhs = 0;
-   int oparraysize = exprdata->nuniqueoperators;
-   int constarraysize = exprdata->nuniqueconstants;
-   int coefarraysize = exprdata->nuniquecoefs;
-   int rhsarraysize;
-   int nvars;
-   int n = 0;
-   int m = 0;
-   int i;
-
-   assert( scip != NULL );
-   assert( SG != NULL );
-   assert( exprdata != NULL );
-
+   /* ------------------------------------------------------------------------ */
+   /* treat nonlinear constraints */
    conshdlr = SCIPfindConshdlr(scip, "nonlinear");
    nconss = conshdlr != NULL ? SCIPconshdlrGetNConss(conshdlr) : 0;
    if ( nconss == 0 )
+   {
+      SCIPfreeBlockMemoryArray(scip, &pos, nnodes);
       return SCIP_OKAY;
+   }
 
    conss = SCIPconshdlrGetConss(conshdlr);
    rhsarraysize = nconss;
@@ -788,11 +1070,9 @@ SCIP_RETCODE fillGraphByNonlinearConss(
    SCIP_CALL( SCIPcreateExpriter(scip, &it) );
 
    maxvisitednodes = oparraysize + constarraysize + coefarraysize;
-   maxischildofsum = oparraysize + constarraysize + coefarraysize;
+   maxischildofsum = maxvisitednodes;
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &visitednodes, maxvisitednodes) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &ischildofsum, maxischildofsum) );
-
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &pos, nnodes) );
 
    /* get number of variables */
    nvars = SCIPgetNVars(scip);
@@ -811,9 +1091,9 @@ SCIP_RETCODE fillGraphByNonlinearConss(
 
       for (expr = SCIPexpriterGetCurrent(it); ! SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it)) /*lint !e441*/ /*lint !e440*/
       {
+         /* upon entering an expression, check its type and add nodes and edges if neccessary */
          switch ( SCIPexpriterGetStageDFS(it) )
          {
-            /* upon entering an expression, check its type and add nodes and edges if neccessary */
             case SCIP_EXPRITER_ENTEREXPR:
             {
                int node = -1;
@@ -838,7 +1118,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                   }
                   else
                   {
-                     SCIP_Real constant = 0;
+                     SCIP_Real constant = 0.0;
                      int varsize;
                      int requiredsize;
                      int k;
@@ -1026,7 +1306,6 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                   /* add the constraint side node with the corresponding color */
                   parentnode = n++;
                   colors[parentnode] = parentcolor;
-                  assert( node < nnodes );
                   assert( parentnode < nnodes );
                }
                /* otherwise, get the parentnode stored in visitednodes */
@@ -1039,7 +1318,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                /* in all cases apart from variable expressions, the new node is added with the corresponding color */
                if ( color != -1 )
                {
-                  node = ++n;
+                  node = n++;
                   colors[node] = color;
                   assert( node < nnodes );
                   assert( n <= nnodes );
@@ -1069,7 +1348,6 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                   SCIP_Real* coefs;
                   SCIP_Real constval;
                   int internode;
-                  int j;
 
                   coefs = SCIPgetCoefsExprSum(expr);
 
@@ -1181,8 +1459,17 @@ SCIP_RETCODE fillGraphByNonlinearConss(
 
       assert( currentlevel == 0 );
       assert( numvisitednodes == 0 );
-      assert( ischildofsum == 0 );
+      assert( numischildofsum == 0 );
    }
+   assert( n == nnodes );
+   assert( m == nedges );
+   assert( n == matrixdata->npermvars + matrixdata->nrhscoef + nlinearnodes + nnonlinearnodes );
+   assert( m == nlinearedges + nnonlinearedges );
+
+#ifndef NDEBUG
+   for (i = 0; i < nnodes - 1; ++i)
+      assert( pos[i] == (int) SG->v[i+1] );
+#endif
 
    /* free everything */
    SCIPfreeBlockMemoryArrayNull(scip, &vals, nvars);
@@ -1253,7 +1540,11 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    int maxdegrees;
    int nnodes;
    int nedges;
-   int ninternodes;
+   int nlinearnodes;
+   int nnonlinearnodes;
+   int nlinearedges;
+   int nnonlinearedges;
+   int nusedcolors;
    int v;
 
    /* nauty data structures */
@@ -1299,7 +1590,9 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
 #endif
 
    /** Determine number of nodes and edges */
-   SCIP_CALL( determineGraphSize(scip, matrixdata, &nnodes, &nedges, &ninternodes, &degrees, &maxdegrees, &success) );
+   SCIP_CALL( determineGraphSize(scip, matrixdata, exprdata,
+         &nnodes, &nedges, &nlinearnodes, &nnonlinearnodes, &nlinearedges, &nnonlinearedges,
+         &degrees, &maxdegrees, &success) );
 
    if ( ! success )
    {
@@ -1315,14 +1608,13 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
 
    SG_ALLOC(SG, nnodes, 2 * nedges, "malloc");
 
-   SG.nv = nnodes;        /* number of nodes */
+   SG.nv = nnodes;                   /* number of nodes */
    SG.nde = (size_t) (2 * nedges);   /* number of directed edges */
 
-   /* fill graph with nodes for variables and linear constraints */
-   SCIP_CALL( fillGraphByLinearConss(scip, &SG, matrixdata, nnodes, nedges, degrees, colors) );
-
-   /* add the nodes for nonlinear constraints to the graph */
-   /* SCIP_CALL( fillGraphByNonlinearConss(scip, &SG, exprdata, nnodes, nedges, degrees, colors, nusedcolors, &success) ); */
+   /* add the nodes for linear and nonlinear constraints to the graph */
+   SCIP_CALL( fillGraphByConss(scip, &SG, matrixdata, exprdata,
+         nnodes, nedges, nlinearnodes, nnonlinearnodes, nlinearedges, nnonlinearedges,
+         degrees, colors, &nusedcolors) );
 
    SCIPfreeBlockMemoryArray(scip, &degrees, maxdegrees);
 
