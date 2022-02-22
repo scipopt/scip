@@ -1516,9 +1516,9 @@ const char* SYMsymmetryGetName(void)
 const char* SYMsymmetryGetDesc(void)
 {
 #ifdef NAUTY
-   return "Nauty by Brendan D. McKay (https://users.cecs.anu.edu.au/~bdm/nauty/)";
+   return "Computing Graph Automorphism Groups by Brendan D. McKay (https://users.cecs.anu.edu.au/~bdm/nauty/)";
 #else
-   return "Traces by Adolfo Piperno (https://pallini.di.uniroma1.it/)";
+   return "Computing Graph Automorphism Groups by Adolfo Piperno (https://pallini.di.uniroma1.it/)";
 #endif
 }
 
