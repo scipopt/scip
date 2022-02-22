@@ -564,9 +564,9 @@ SCIP_RETCODE fillGraphByNonlinearConss(
 
       for (SCIP_EXPR* expr = SCIPexpriterGetCurrent(it); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it)) /*lint !e441*/ /*lint !e440*/
       {
+         /* upon entering an expression, check its type and add nodes and edges if neccessary */
          switch( SCIPexpriterGetStageDFS(it) )
          {
-            /* upon entering an expression, check its type and add nodes and edges if neccessary */
             case SCIP_EXPRITER_ENTEREXPR:
             {
                int node = -1;
@@ -589,7 +589,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                   }
                   else
                   {
-                     SCIP_Real constant = 0;
+                     SCIP_Real constant = 0.0;
                      int varssize;
                      int requiredsize;
                      int k;
