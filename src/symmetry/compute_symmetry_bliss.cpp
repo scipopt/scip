@@ -969,7 +969,7 @@ const char* SYMsymmetryGetName(void)
 /** return description of external program used to compute generators */
 const char* SYMsymmetryGetDesc(void)
 {
-   return "Computing Graph Automorphism Groups by T. Junttila and P. Kaski (www.tcs.hut.fi/Software/bliss/)";
+   return "Computing Graph Automorphism Groups by T. Junttila and P. Kaski (https://users.aalto.fi/~tjunttil/bliss/)";
 }
 
 /** compute generators of symmetry group */
