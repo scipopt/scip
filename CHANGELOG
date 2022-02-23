@@ -27,6 +27,8 @@ Interface changes
 
 ### Interfaces to external software
 
+- added interface to nauty/traces for symmetry computation
+
 ### Changed parameters
 
 ### New parameters
@@ -48,6 +50,8 @@ Build system
 ### Cmake
 
 ### Makefile
+
+- added flag option "nauty" for SYM variable to specify which graph automorphism package should be used
 
 Fixed bugs
 ----------
