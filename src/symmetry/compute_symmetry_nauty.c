@@ -887,6 +887,7 @@ SCIP_RETCODE fillGraphByConss(
    int j;
 
    assert( scip != NULL );
+   assert( SG != NULL );
    assert( matrixdata != NULL );
    assert( exprdata != NULL );
    assert( degrees != NULL );
