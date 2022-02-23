@@ -59,7 +59,7 @@ struct NAUTY_Data
    int                   nperms;             /**< number of permutations */
    int**                 perms;              /**< permutation generators as (nperms x npermvars) matrix */
    int                   nmaxperms;          /**< maximal number of permutations */
-   int                   maxgenerators;      /**< maximal number of generators constructed (= 0 if unlimited) */
+   int                   maxgenerators;      /**< maximal number of generators to be constructed (= 0 if unlimited) */
 };
 
 /* static data for nauty callback */
