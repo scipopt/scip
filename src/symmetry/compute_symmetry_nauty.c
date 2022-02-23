@@ -114,7 +114,7 @@ SCIP_DECL_HASHKEYVAL(SYMhashKeyValOptype)
 
    k = (SYM_OPTYPE*) key;
 
-   if ( SCIPisExprPower((SCIP*)userptr, k->expr) )
+   if ( SCIPisExprPower((SCIP*) userptr, k->expr) )
       exponent = SCIPgetExponentExprPow(k->expr);
    else
       exponent = 1.0;
