@@ -30,6 +30,9 @@ Testing
 Build system
 ------------
 ### Cmake
+
+- In case BLISS is on but not found, compile a vendored version from https://github.com/ds4dm/Bliss
+
 ### Makefile
 Fixed bugs
 ----------
