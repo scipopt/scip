@@ -481,7 +481,7 @@ SCIP_RETCODE determineGraphSize(
          assert( internode >= matrixdata->npermvars + matrixdata->nrhscoef );
          assert( internode >= firstcolornodenumber );
 
-         /* determine whether graph would be too large for bliss (can only handle int) */
+         /* determine whether graph would be too large for nauty/traces (can only handle int) */
          if ( *nnodes >= INT_MAX/2 )
          {
             *success = FALSE;
