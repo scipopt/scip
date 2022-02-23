@@ -828,7 +828,7 @@ SCIP_RETCODE determineGraphSize(
 static
 SCIP_RETCODE fillGraphByConss(
    SCIP*                 scip,               /**< SCIP instance */
-   sparsegraph*          SG,                 /**< Graph to be constructed */
+   sparsegraph*          SG,                 /**< graph to be constructed */
    SYM_MATRIXDATA*       matrixdata,         /**< data for MIP matrix */
    SYM_EXPRDATA*         exprdata,           /**< data for nonlinear constraints */
    int                   nnodes,             /**< total number of nodes in graph */
