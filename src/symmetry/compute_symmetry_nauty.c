@@ -869,9 +869,9 @@ SCIP_RETCODE fillGraphByConss(
    int nuniqueconsts = 0;
    int nuniquecoefs = 0;
    int nuniquerhs = 0;
-   int oparraysize = exprdata->nuniqueoperators;
-   int constarraysize = exprdata->nuniqueconstants;
-   int coefarraysize = exprdata->nuniquecoefs;
+   int oparraysize;
+   int constarraysize;
+   int coefarraysize;
    int rhsarraysize;
    int nmaxinternodes;
    int oldcolor = -1;
@@ -1048,6 +1048,10 @@ SCIP_RETCODE fillGraphByConss(
    SCIPdebugMsg(scip, "Filling graph with colored coefficient nodes for non-linear part.\n");
 
    /* create maps for optypes, constants, sum coefficients and rhs to indices */
+   oparraysize = exprdata->nuniqueoperators;
+   constarraysize = exprdata->nuniqueconstants;
+   coefarraysize = exprdata->nuniquecoefs;
+
    SCIP_CALL( SCIPhashtableCreate(&optypemap, SCIPblkmem(scip), oparraysize, SYMhashGetKeyOptype,
          SYMhashKeyEQOptype, SYMhashKeyValOptype, (void*) scip) );
    SCIP_CALL( SCIPhashtableCreate(&consttypemap, SCIPblkmem(scip), constarraysize, SYMhashGetKeyConsttype,
