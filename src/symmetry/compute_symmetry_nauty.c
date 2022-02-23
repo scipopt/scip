@@ -651,7 +651,7 @@ SCIP_RETCODE determineGraphSize(
                      break;
                   }
                }
-               /* for all other expressions, no nodes nor edges have to be created */
+               /* for all other expressions, no nodes or edges have to be created */
                else
                {
                   /* do nothing here */
