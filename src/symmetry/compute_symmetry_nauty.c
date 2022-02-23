@@ -221,9 +221,13 @@ void nautyhook(
 
    assert( p != NULL );
 
-   /* make sure we do not generate more that maxgenerators many permutations, if the limit in nauty/traces is not available */
+   /* make sure we do not generate more that maxgenerators many permutations */
    if ( data_.maxgenerators != 0 && data_.nperms >= data_.maxgenerators )
+   {
+      /* request a kill from nauty */
+      nauty_kill_request = 1;
       return;
+   }
 
    /* check for identity */
    for (j = 0; j < data_.npermvars && isidentity; ++j)
@@ -283,9 +287,13 @@ void traceshook(
 
    assert( p != NULL );
 
-   /* make sure we do not generate more that maxgenerators many permutations, if the limit in nauty/traces is not available */
+   /* make sure we do not generate more that maxgenerators many permutations */
    if ( data_.maxgenerators != 0 && data_.nperms >= data_.maxgenerators )
+   {
+      /* request a kill from traces */
+      nauty_kill_request = 1;
       return;
+   }
 
    /* check for identity */
    for (j = 0; j < data_.npermvars && isidentity; ++j)
