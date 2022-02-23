@@ -93,7 +93,7 @@ SCIP_DECL_HASHKEYEQ(SYMhashKeyEQOptype)
       return FALSE;
 
    /* for pow expressions, also check exponent (TODO should that happen for signpow as well?) */
-   if ( SCIPisExprPower((SCIP*)userptr, k1->expr )
+   if ( SCIPisExprPower((SCIP*) userptr, k1->expr )
       && SCIPgetExponentExprPow(k1->expr) != SCIPgetExponentExprPow(k2->expr) )  /*lint !e777*/
       return FALSE;
 
