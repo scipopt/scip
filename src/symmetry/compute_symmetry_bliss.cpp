@@ -1035,6 +1035,17 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    G.write_dot("debug.dot");
 #endif
 
+#if SCIP_DISABLED_CODE
+   char filename[SCIP_MAXSTRLEN];
+   (void) SCIPsnprintf(filename, SCIP_MAXSTRLEN, "%s.dimacs", SCIPgetProbName(scip));
+   FILE* fp = fopen(filename, "w");
+   if ( fp )
+   {
+      G.write_dimacs(fp);
+      fclose(fp);
+   }
+#endif
+
    SCIPdebugMsg(scip, "Symmetry detection graph has %u nodes.\n", G.get_nof_vertices());
 
    /* compute automorphisms */
