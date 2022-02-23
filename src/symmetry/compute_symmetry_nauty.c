@@ -1589,7 +1589,7 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    options.defaultptn = FALSE; /* use color classes */
 #endif
 
-   /** Determine number of nodes and edges */
+   /* determine number of nodes and edges */
    SCIP_CALL( determineGraphSize(scip, matrixdata, exprdata,
          &nnodes, &nedges, &nlinearnodes, &nnonlinearnodes, &nlinearedges, &nnonlinearedges,
          &degrees, &maxdegrees, &success) );
