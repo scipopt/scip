@@ -6022,7 +6022,7 @@ SCIP_RETCODE selectOrbitLeaderSSTConss(
          assert( leader < nvars );
 
          if ( tiebreakrule == (int) SCIP_LEADERTIEBREAKRULE_MAXCONFLICTSINORBIT
-            && varconflicts[leader].nsetppccons <= 0)
+            && varconflicts[leader].nsetppccons > 0 )
          {
             /* count how many active variables in the orbit conflict with "leader".
              * This is only needed if there are possible conflicts. */
@@ -6102,7 +6102,7 @@ SCIP_RETCODE selectOrbitLeaderSSTConss(
       assert( leader < nvars );
       assert( norbitvarinconflict != NULL );
 
-      if ( *success /* && nconflictvars > 0 */ )
+      if ( *success && varconflicts[leader].nsetppccons > 0 )
       {
          /* count how many active variables in the orbit conflict with leader */
          SCIP_VAR* var;
@@ -6139,7 +6139,7 @@ SCIP_RETCODE selectOrbitLeaderSSTConss(
             {
                /* there is overlap! */
                orbitvarinconflict[i] = TRUE;
-               *norbitvarinconflict += 1;
+               ++(*norbitvarinconflict);
             }
          }
       }
