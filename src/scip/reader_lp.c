@@ -303,7 +303,7 @@ SCIP_Bool getNextLine(
       int newsize;
 
       newsize = SCIPcalcMemGrowSize(scip, lpinput->linebufsize + 1);
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &lpinput->linebuf, lpinput->linebufsize, newsize) );
+      SCIP_CALL_ABORT( SCIPreallocBlockMemoryArray(scip, &lpinput->linebuf, lpinput->linebufsize, newsize) );
 
       lpinput->linebuf[newsize-2] = '\0';
       if ( SCIPfgets(lpinput->linebuf + lpinput->linebufsize - 1, newsize - lpinput->linebufsize + 1, lpinput->file) == NULL )
