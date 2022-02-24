@@ -4688,12 +4688,18 @@ SCIP_RETCODE detectAndHandleSubgroups(
 
             if ( orbitopeadded )
             {
-               /* adapt the first variable per color to be compatible with the created orbiope (upper left variable) */
-               assert( compcolorbegins[j] <= chosencomp && chosencomp < compcolorbegins[j+1] );
-               assert( 0 <= firstvaridx && firstvaridx < propdata->npermvars );
+               if ( propdata->addstrongsbcs || propdata->addweaksbcs )
+               {
+                  assert( chosencomppercolor != NULL );
+                  assert( firstvaridxpercolor != NULL );
 
-               chosencomppercolor[j] = chosencomp;
-               firstvaridxpercolor[j] = firstvaridx;
+                  /* adapt the first variable per color to be compatible with the created orbiope (upper left variable) */
+                  assert( compcolorbegins[j] <= chosencomp && chosencomp < compcolorbegins[j+1] );
+                  assert( 0 <= firstvaridx && firstvaridx < propdata->npermvars );
+
+                  chosencomppercolor[j] = chosencomp;
+                  firstvaridxpercolor[j] = firstvaridx;
+               }
 
                if ( ! propdata->componentblocked[i] )
                {
