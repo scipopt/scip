@@ -156,17 +156,17 @@ typedef enum OpbSense OPBSENSE;
 struct OpbInput
 {
    SCIP_FILE*            file;
-   char                  linebuf[OPB_MAX_LINELEN+1];
+   char*                 linebuf;
    char*                 token;
    char*                 tokenbuf;
    char*                 pushedtokens[OPB_MAX_PUSHEDTOKENS];
    int                   npushedtokens;
    int                   linenumber;
    int                   linepos;
+   int                   linebufsize;
    int                   bufpos;
    SCIP_OBJSENSE         objsense;
    SCIP_Bool             comment;
-   SCIP_Bool             endline;
    SCIP_Bool             eof;
    SCIP_Bool             haserror;
    int                   nproblemcoeffs;
@@ -197,7 +197,7 @@ void syntaxError(
    assert(opbinput != NULL);
 
    SCIPerrorMessage("Syntax error in line %d: %s found <%s>\n", opbinput->linenumber, msg, opbinput->token);
-   if( opbinput->linebuf[strlen(opbinput->linebuf)-1] == '\n' )
+   if( opbinput->linebuf[opbinput->linebufsize - 1] == '\n' )
    {
       SCIPerrorMessage("  input: %s", opbinput->linebuf);
    }
@@ -319,69 +319,31 @@ SCIP_Bool getNextLine(
 
    assert(opbinput != NULL);
 
-   /* if we previously detected a comment we have to parse the remaining line away if there is something left */
-   if( !opbinput->endline && opbinput->comment )
-   {
-      SCIPdebugMsg(scip, "Throwing rest of comment away.\n");
+   /* read next line */
+   opbinput->linepos = 0;
+   opbinput->bufpos = 0;
+   opbinput->linebuf[opbinput->linebufsize - 2] = '\0';
 
-      do
-      {
-         opbinput->linebuf[OPB_MAX_LINELEN-2] = '\0';
-         (void)SCIPfgets(opbinput->linebuf, (int) sizeof(opbinput->linebuf), opbinput->file);
-      }
-      while( opbinput->linebuf[OPB_MAX_LINELEN-2] != '\0' );
-
-      opbinput->comment = FALSE;
-      opbinput->endline = TRUE;
-   }
-
-   /* clear the line */
-   opbinput->linebuf[OPB_MAX_LINELEN-2] = '\0';
-
-   /* set line position */
-   if( opbinput->endline )
-   {
-      opbinput->linepos = 0;
-      opbinput->linenumber++;
-   }
-   else
-      opbinput->linepos += OPB_MAX_LINELEN - 2;
-
-   if( SCIPfgets(opbinput->linebuf, (int) sizeof(opbinput->linebuf), opbinput->file) == NULL )
+   if( SCIPfgets(opbinput->linebuf, opbinput->linebufsize, opbinput->file) == NULL )
       return FALSE;
 
-   opbinput->bufpos = 0;
+   opbinput->linenumber++;
 
-   if( opbinput->linebuf[OPB_MAX_LINELEN-2] != '\0' )
+   /* if line is too long for our buffer reallocate buffer */
+   while( opbinput->linebuf[opbinput->linebufsize - 2] != '\0' )
    {
-      char* last;
+      int newsize;
 
-      /* buffer is full; erase last token since it might be incomplete */
-      opbinput->endline = FALSE;
-      last = strrchr(opbinput->linebuf, ' ');
+      newsize = SCIPcalcMemGrowSize(scip, opbinput->linebufsize + 1);
+      SCIP_CALL_ABORT( SCIPreallocBlockMemoryArray(scip, &opbinput->linebuf, opbinput->linebufsize, newsize) );
 
-      if( last == NULL )
-      {
-         SCIPwarningMessage(scip, "we read %d character from the file; these might indicates a corrupted input file!",
-            OPB_MAX_LINELEN - 2);
-         opbinput->linebuf[OPB_MAX_LINELEN-2] = '\0';
-         SCIPdebugMsg(scip, "the buffer might be corrupted\n");
-      }
-      else
-      {
-         SCIPfseek(opbinput->file, -(long) strlen(last), SEEK_CUR);
-         SCIPdebugMsg(scip, "correct buffer, reread the last %ld characters\n", (long) strlen(last));
-         *last = '\0';
-      }
-   }
-   else
-   {
-      /* found end of line */
-      opbinput->endline = TRUE;
+      opbinput->linebuf[newsize-2] = '\0';
+      if ( SCIPfgets(opbinput->linebuf + opbinput->linebufsize - 1, newsize - opbinput->linebufsize + 1, opbinput->file) == NULL )
+         return FALSE;
+      opbinput->linebufsize = newsize;
    }
 
-   opbinput->linebuf[OPB_MAX_LINELEN-1] = '\0'; /* we want to use lookahead of one char -> we need two \0 at the end */
-
+   opbinput->linebuf[opbinput->linebufsize - 1] = '\0'; /* we want to use lookahead of one char -> we need two \0 at the end */
    opbinput->comment = FALSE;
 
    /* skip characters after comment symbol */
@@ -431,7 +393,7 @@ SCIP_Bool getNextToken(
    int tokenlen;
 
    assert(opbinput != NULL);
-   assert(opbinput->bufpos < OPB_MAX_LINELEN);
+   assert(opbinput->bufpos < opbinput->linebufsize);
 
    /* check the token stack */
    if( opbinput->npushedtokens > 0 )
@@ -454,6 +416,8 @@ SCIP_Bool getNextToken(
             return FALSE;
          }
          assert(opbinput->bufpos == 0);
+         /* update buf, because the linebuffer may have been reallocated */
+         buf = opbinput->linebuf;
       }
       else
       {
@@ -461,7 +425,7 @@ SCIP_Bool getNextToken(
          opbinput->linepos++;
       }
    }
-   assert(opbinput->bufpos < OPB_MAX_LINELEN);
+   assert(opbinput->bufpos < opbinput->linebufsize);
    assert(!isDelimChar(buf[opbinput->bufpos]));
 
    /* check if the token is a value */
@@ -1628,9 +1592,9 @@ SCIP_RETCODE getMaxAndConsDim(
 
    do
    {
-      if( SCIPfgets(opbinput->linebuf, (int) sizeof(opbinput->linebuf), opbinput->file) == NULL )
+      if( SCIPfgets(opbinput->linebuf, opbinput->linebufsize, opbinput->file) == NULL )
       {
-         assert(SCIPfeof( opbinput->file ) );
+         assert( SCIPfeof(opbinput->file) );
          break;
       }
 
@@ -1731,7 +1695,7 @@ SCIP_RETCODE readOPBFile(
    /* tries to read the first comment line which usually contains information about the max size of "and" products */
    SCIP_CALL( getMaxAndConsDim(scip, opbinput, filename, &objoffset) );
 
-   BMSclearMemoryArray(opbinput->linebuf, OPB_MAX_LINELEN);
+   BMSclearMemoryArray(opbinput->linebuf, opbinput->linebufsize);
 
    /* create problem */
    SCIP_CALL( SCIPcreateProb(scip, filename, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
@@ -4302,7 +4266,9 @@ SCIP_RETCODE SCIPreadOpb(
 
    /* initialize OPB input data */
    opbinput.file = NULL;
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &opbinput.linebuf, OPB_MAX_LINELEN) );
    opbinput.linebuf[0] = '\0';
+   opbinput.linebufsize = OPB_MAX_LINELEN;
    SCIP_CALL( SCIPallocBufferArray(scip, &opbinput.token, OPB_MAX_LINELEN) );
    opbinput.token[0] = '\0';
    SCIP_CALL( SCIPallocBufferArray(scip, &opbinput.tokenbuf, OPB_MAX_LINELEN) );
@@ -4318,7 +4284,6 @@ SCIP_RETCODE SCIPreadOpb(
    opbinput.linepos = 0;
    opbinput.objsense = SCIP_OBJSENSE_MINIMIZE;
    opbinput.comment = FALSE;
-   opbinput.endline = FALSE;
    opbinput.eof = FALSE;
    opbinput.haserror = FALSE;
    opbinput.nproblemcoeffs = 0;
@@ -4339,6 +4304,7 @@ SCIP_RETCODE SCIPreadOpb(
    }
    SCIPfreeBufferArrayNull(scip, &opbinput.tokenbuf);
    SCIPfreeBufferArrayNull(scip, &opbinput.token);
+   SCIPfreeBlockMemoryArray(scip, &opbinput.linebuf, opbinput.linebufsize);
 
    if( retcode == SCIP_PLUGINNOTFOUND )
       retcode = SCIP_READERROR;
