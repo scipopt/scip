@@ -482,7 +482,7 @@ If you have pclint installed, enter `make pclint`.
 
 ### 7. Run a short test
 
-To run a short test, enter `make [options] test` with the same options with which you compiled SCIP in Step 1.
+To run a short test, enter `make [options] test` with the same options with which you compiled SCIP in step 1.
 If you use `EXPRINT=none`, a few MINLP instances might be aborted.
 If you use `LPS=none`, many instances will fail or take ages to be solved.
 
@@ -706,7 +706,7 @@ After the soft-links have been created, the compilation of the source files shou
 Compilation problems
 --------------------
 
-If the soft-link query script does not work on your machine, read Step 2 for instructions on manually creating the soft-links.
+If the soft-link query script does not work on your machine, read step 2 for instructions on manually creating the soft-links.
 
 ### No rule to make target lib/???
 If you get an error message of the type

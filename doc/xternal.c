@@ -178,7 +178,7 @@
  * <b>This is highly recommended for new users.</b>
  * If you are just curious about SCIP and want to try it out you can use the <a href="http://www.pokutta.com/blog/pages/scip/scip-teaching.html"> dockerized SCIP container</a>.
  *
- * However, if you want to develop your own plugin for SCIP, you have to compile SCIP or the SCIPOptSuite from the source code, which are available as a tarball from the <a href="http://scipopt.org/#download">download page</a>.
+ * However, if you want to develop your own plugin for SCIP, you have to compile SCIP or the SCIPOptSuite from source code, which are available as a tarball from the <a href="http://scipopt.org/#download">download page</a>.
  * Note that you might need some level of experience to be able to do this, this is described in the following.
  *
  * Be aware that generated libraries and binaries of both systems might be different and incompatible.
