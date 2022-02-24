@@ -34,7 +34,7 @@ Build system
 Fixed bugs
 ----------
 
-- Fixed problem with reading long lines in LP-files. The buffer is now reallocated,
+- Fixed problem with reading long lines in LP/FZN/OPB/Diff-files. The buffer is now reallocated,
   which also should be much faster.
 
 Miscellaneous
