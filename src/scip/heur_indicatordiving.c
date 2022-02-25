@@ -680,7 +680,6 @@ SCIP_DECL_HEUREXEC(heurExecIndicatordiving)
    SCIP_DIVESET* diveset;
    SCIP_CONS** indicatorconss;
    SCIP_Bool isatleastoneindcons; /* exists at least one unfixed indicator constraint? */
-   SCIP_CONS** conss;
    int nconss;
    int i;
 
@@ -692,9 +691,10 @@ SCIP_DECL_HEUREXEC(heurExecIndicatordiving)
    diveset = SCIPheurGetDivesets(heur)[0];
    assert(diveset != NULL);
 
-   //TODO maybe improve this if a Indicator exists it doesn't mean we branch on
-   // skip if problem doesn't contain indicator constraints
-
+   /* TODO maybe improve this if a Indicator exists it doesn't mean we branch on
+    * skip if problem doesn't contain indicator constraints
+    * If varbound constraints should be considered, skip only if there are also no varbound constraints.
+    */
    isatleastoneindcons = FALSE;
    indicatorconss = SCIPconshdlrGetConss(heurdata->conshdlr[0]);
    nconss = SCIPconshdlrGetNConss(heurdata->conshdlr[0]);
@@ -710,7 +710,7 @@ SCIP_DECL_HEUREXEC(heurExecIndicatordiving)
          break;
       }
    }
-   if( isatleastoneindcons == FALSE )
+   if( isatleastoneindcons == FALSE && (!heurdata->varbounds || SCIPconshdlrGetNConss(heurdata->conshdlr[1]) == 0) )
       return SCIP_OKAY;
 
    SCIPdebugMessage("call heurExecIndicatordiving at depth %d \n", SCIPgetDepth(scip));
@@ -727,14 +727,18 @@ SCIP_DECL_HEUREXEC(heurExecIndicatordiving)
          SCIP_CALL( SCIPhashmapInsert(heurdata->indicatormap, SCIPgetBinaryVarIndicator(indicatorconss[i]), indicatorconss[i]) );
       }
    }
-   nconss = SCIPconshdlrGetNConss(heurdata->conshdlr[1]);
-   conss = SCIPconshdlrGetConss(heurdata->conshdlr[1]);
-   SCIP_CALL( SCIPhashmapCreate(&heurdata->varboundmap, SCIPblkmem(scip), nconss) );
-   for( i = 0; i < nconss; i++ )
+   if( heurdata->varbounds )
    {
-      if( !SCIPhashmapExists(heurdata->varboundmap, SCIPgetVbdvarVarbound(scip, conss[i])) )
+      SCIP_CONS** conss;
+      nconss = SCIPconshdlrGetNConss(heurdata->conshdlr[1]);
+      conss = SCIPconshdlrGetConss(heurdata->conshdlr[1]);
+      SCIP_CALL( SCIPhashmapCreate(&heurdata->varboundmap, SCIPblkmem(scip), nconss) );
+      for( i = 0; i < nconss; i++ )
       {
-         SCIP_CALL( SCIPhashmapInsert(heurdata->varboundmap, SCIPgetVbdvarVarbound(scip, conss[i]), conss[i]) );
+         if( !SCIPhashmapExists(heurdata->varboundmap, SCIPgetVbdvarVarbound(scip, conss[i])) )
+         {
+            SCIP_CALL( SCIPhashmapInsert(heurdata->varboundmap, SCIPgetVbdvarVarbound(scip, conss[i]), conss[i]) );
+         }
       }
    }
 
@@ -765,7 +769,8 @@ SCIP_DECL_HEUREXEC(heurExecIndicatordiving)
    /* free hashmaps since constraints can get removed/modified till the next call
     * todo: Is it possible to update the hashmaps instead of freeing and creating the hashmaps in the next call again?
     */
-   SCIPhashmapFree(&heurdata->varboundmap);
+   if( heurdata->varbounds )
+      SCIPhashmapFree(&heurdata->varboundmap);
    SCIPhashmapFree(&heurdata->indicatormap);
 
    SCIPdebugMessage("leave heurExecIndicatordiving\n");
@@ -1063,9 +1068,28 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
 static
 SCIP_DECL_DIVESETAVAILABLE(divesetAvailableIndicatordiving)
 {
-   //TODO maybe improve this
-   // skip if problem doesn't contain indicator constraints
+   /* TODO maybe improve this
+    * skip if problem doesn't contain indicator constraints
+    * If varbound constraints should be considered, skip only if there are also no varbound constraints.
+    */
    *available =  SCIPconshdlrGetNActiveConss(SCIPfindConshdlr(scip, "indicator")) == 0;
+
+   if( !*available )
+   {
+      SCIP_HEUR* heur;
+      SCIP_HEURDATA* heurdata;
+
+      heur = SCIPdivesetGetHeur(diveset);
+      assert(heur != NULL);
+      heurdata = SCIPheurGetData(heur);
+      assert(heurdata != NULL);
+
+      if( heurdata->varbounds )
+      {
+         *available = SCIPconshdlrGetNActiveConss(SCIPfindConshdlr(scip, "varbound")) == 0;
+      }
+   }
+
    return SCIP_OKAY;
 }
 
