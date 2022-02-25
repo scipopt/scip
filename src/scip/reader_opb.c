@@ -165,7 +165,6 @@ struct OpbInput
    int                   linepos;
    int                   linebufsize;
    SCIP_OBJSENSE         objsense;
-   SCIP_Bool             comment;
    SCIP_Bool             eof;
    SCIP_Bool             haserror;
    int                   nproblemcoeffs;
@@ -342,7 +341,6 @@ SCIP_Bool getNextLine(
    }
 
    opbinput->linebuf[opbinput->linebufsize - 1] = '\0'; /* we want to use lookahead of one char -> we need two \0 at the end */
-   opbinput->comment = FALSE;
 
    /* skip characters after comment symbol */
    for( i = 0; commentchars[i] != '\0'; ++i )
@@ -354,7 +352,6 @@ SCIP_Bool getNextLine(
       {
          *commentstart = '\0';
          *(commentstart+1) = '\0'; /* we want to use lookahead of one char -> we need two \0 at the end */
-         opbinput->comment = TRUE;
          break;
       }
    }
@@ -4264,7 +4261,6 @@ SCIP_RETCODE SCIPreadOpb(
    opbinput.linenumber = 1;
    opbinput.linepos = 0;
    opbinput.objsense = SCIP_OBJSENSE_MINIMIZE;
-   opbinput.comment = FALSE;
    opbinput.eof = FALSE;
    opbinput.haserror = FALSE;
    opbinput.nproblemcoeffs = 0;

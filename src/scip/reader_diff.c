@@ -100,7 +100,6 @@ struct LpInput
    LPSECTION             section;
    SCIP_OBJSENSE         objsense;
    SCIP_Bool             haserror;
-   SCIP_Bool             comment;
 };
 typedef struct LpInput LPINPUT;
 
@@ -277,7 +276,6 @@ SCIP_Bool getNextLine(
       lpinput->linebufsize = newsize;
    }
    lpinput->linebuf[lpinput->linebufsize - 1] = '\0'; /* we want to use lookahead of one char -> we need two \0 at the end */
-   lpinput->comment = FALSE;
 
    /* skip characters after comment symbol */
    for( i = 0; commentchars[i] != '\0'; ++i )
@@ -290,7 +288,6 @@ SCIP_Bool getNextLine(
          *commentstart = '\0';
          *(commentstart+1) = '\0'; /* we want to use lookahead of one char -> we need two \0 at the end */
 
-         lpinput->comment = TRUE;
          break;
       }
    }
@@ -1042,7 +1039,6 @@ SCIP_RETCODE SCIPreadDiff(
    lpinput.section = LP_START;
    lpinput.objsense = SCIP_OBJSENSE_MINIMIZE;
    lpinput.haserror = FALSE;
-   lpinput.comment = FALSE;
 
    /* read the file */
    SCIP_CALL( readDiffFile(scip, &lpinput, filename) );

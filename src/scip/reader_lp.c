@@ -134,7 +134,6 @@ struct LpInput
    SCIP_Bool             dynamiccols;        /**< should columns be added and removed dynamically to the LP? */
    SCIP_Bool             dynamicrows;        /**< should rows be added and removed dynamically to the LP? */
    SCIP_Bool             haserror;
-   SCIP_Bool             comment;
 };
 typedef struct LpInput LPINPUT;
 
@@ -311,7 +310,6 @@ SCIP_Bool getNextLine(
       lpinput->linebufsize = newsize;
    }
    lpinput->linebuf[lpinput->linebufsize - 1] = '\0'; /* we want to use lookahead of one char -> we need two \0 at the end */
-   lpinput->comment = FALSE;
 
    /* skip characters after comment symbol */
    for( i = 0; commentchars[i] != '\0'; ++i )
@@ -324,7 +322,6 @@ SCIP_Bool getNextLine(
          *commentstart = '\0';
          *(commentstart+1) = '\0'; /* we want to use lookahead of one char -> we need two \0 at the end */
 
-         lpinput->comment = TRUE;
          break;
       }
    }
@@ -3452,7 +3449,6 @@ SCIP_RETCODE SCIPreadLp(
    lpinput.inlazyconstraints = FALSE;
    lpinput.inusercuts = FALSE;
    lpinput.haserror = FALSE;
-   lpinput.comment = FALSE;
 
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/initialconss", &(lpinput.initialconss)) );
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicconss", &(lpinput.dynamicconss)) );
