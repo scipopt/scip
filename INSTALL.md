@@ -502,7 +502,7 @@ The SCIP makefile supports several targets (used via `make ... "target"`):
 | `lint`   | Statically checks the code via flexelint. The call produces the file `lint.out` which contains all the detected warnings. |
 | `tags`   | Generates tags which can be used in the editor **emacs** and **xemacs**. |
 
-The \SCIP makefiles are structured as follows.
+The SCIP makefiles are structured as follows.
 
 - `Makefile` This is the basic makefile in the SCIP root directory. It loads
   additional makefile information depending on the parameters set.
