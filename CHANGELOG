@@ -33,6 +33,9 @@ Build system
 ### Makefile
 Fixed bugs
 ----------
+
+- fixed uninitialized array in detection of suborbitopes
+
 Miscellaneous
 -------------
 Known bugs
