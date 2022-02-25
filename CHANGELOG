@@ -33,6 +33,10 @@ Build system
 ### Makefile
 Fixed bugs
 ----------
+
+- Fixed problem with reading long lines in LP/FZN/OPB/Diff-files. The buffer is now reallocated,
+  which also should be much faster.
+
 Miscellaneous
 -------------
 Known bugs
