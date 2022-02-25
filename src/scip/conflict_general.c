@@ -1132,7 +1132,7 @@ SCIP_RETCODE addLocalRows(
    }
 
    /* remove all nearly zero coefficients */
-   //SCIPaggrRowRemoveZeros(set->scip, proofrow, TRUE, valid);
+   SCIPaggrRowRemoveZeros(set->scip, proofrow, TRUE, valid); // @TODO, we should maybe only do this when not in exact mode?
 
   TERMINATE:
    if( !(*valid) )
@@ -1641,7 +1641,7 @@ SCIP_RETCODE SCIPgetDualProof(
    }
 
    /* remove all nearly zero coefficients */
-   //SCIPaggrRowRemoveZeros(set->scip, farkasrow, TRUE, valid);
+   SCIPaggrRowRemoveZeros(set->scip, farkasrow, TRUE, valid); // @TODO, we should maybe only do this when not in exact mode?
 
    if( !(*valid) )
       goto TERMINATE;
