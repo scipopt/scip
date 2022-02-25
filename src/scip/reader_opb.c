@@ -1558,7 +1558,6 @@ static
 SCIP_RETCODE getMaxAndConsDim(
    SCIP*                 scip,               /**< SCIP data structure */
    OPBINPUT*             opbinput,           /**< OPB reading data */
-   const char*           filename,           /**< name of the input file */
    SCIP_Real*            objoffset           /**< pointer to store objective offset */
    )
 {
@@ -1674,7 +1673,7 @@ SCIP_RETCODE readOPBFile(
     */
 
    /* tries to read the first comment line which usually contains information about the max size of "and" products */
-   SCIP_CALL( getMaxAndConsDim(scip, opbinput, filename, &objoffset) );
+   SCIP_CALL( getMaxAndConsDim(scip, opbinput, &objoffset) );
 
    /* create problem */
    SCIP_CALL( SCIPcreateProb(scip, filename, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
