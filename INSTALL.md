@@ -195,8 +195,8 @@ We recommend using GCC version 4.8 or later.
 Brief installation description
 ------------------------------
 
-The easiest way to install \SCIP is to use the \SCIP Optimization Suite which contains \SCIP, SoPlex, and ZIMPL.
-For that we refer to the INSTALL file of the \SCIP Optimization Suite (main advantage: there is no need
+The easiest way to install SCIP is to use the SCIP Optimization Suite which contains SCIP, SoPlex, and ZIMPL.
+For that we refer to the INSTALL file of the SCIP Optimization Suite (main advantage: there is no need
 to specify any directories, the compiling process is fully automated).
 
 Compiling SCIP directly can be done as follows:
@@ -494,11 +494,11 @@ If you use `LPS=none`, many instances will fail or take ages to be solved.
 
 Further targets
 ---------------
-The \SCIP makefile supports several targets (used via `make ... "target"`):
+The SCIP makefile supports several targets (used via `make ... "target"`):
 
 | target | description|
 |--|--|
-| `all`    | (or no target) Build \SCIP library and binary.                           |
+| `all`    | (or no target) Build SCIP library and binary.                           |
 | `links`  | Reconfigures the links in the "lib" directory.                           |
 | `doc`    | Creates documentation in the "doc" directory.                            |
 | `clean`  | Removes all object files.                                                |
@@ -507,17 +507,17 @@ The \SCIP makefile supports several targets (used via `make ... "target"`):
 | `lint`   | Statically checks the code via flexelint. The call produces the file `lint.out` which contains all the detected warnings. |
 | `tags`   | Generates tags which can be used in the editor **emacs** and **xemacs**. |
 
-The \SCIP makefiles are structured as follows.
+The SCIP makefiles are structured as follows.
 
-- `Makefile` This is the basic makefile in the \SCIP root directory. It loads
+- `Makefile` This is the basic makefile in the SCIP root directory. It loads
   additional makefile information depending on the parameters set.
 - `make/make.project` This file contains definitions that are useful for all codes
-  that use \SCIP, for instance, the example.
+  that use SCIP, for instance, the example.
 - `make.\<sys\>.\<machine\>.\<compiler\>.\<dbg|opt|prf|opt-gccold\>` These file contain system/compiler specific
   definitions. If you have an unsupported compiler, you can copy one of these and modify it
   accordingly.
 
-If your platform or compiler is not supported by \SCIP you might try and copy one of the existing
+If your platform or compiler is not supported by SCIP you might try and copy one of the existing
 makefiles in the `make` directory and modify it. If you succeed, we are always
 interested in including more Makefiles into the system.
 
