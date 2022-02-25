@@ -33,6 +33,10 @@ Build system
 ### Makefile
 Fixed bugs
 ----------
+
+- Fixed problem with reading long lines in LP/FZN/OPB/Diff-files. The buffer is now reallocated,
+  which also should be much faster.
+
 Miscellaneous
 -------------
 Known bugs
@@ -2394,7 +2398,7 @@ Interface changes
   - methods SCIPrandomCreate() and SCIPrandomFree() are no longer public and should be replaced by SCIPcreateRandom() and
     SCIPfreeRandom(), respectively (the new methods respect the global parameter `randomization/randomseedshift` automatically)
   - methods SCIPdigraphCreate() and SCIPdigraphCopy() are no longer public and should be replaced by SCIPcreateDigraph() and
-    SCIPcopyDigraph(), respectively, which receive a \SCIP argument and are more robust towards future interface changes
+    SCIPcopyDigraph(), respectively, which receive a SCIP argument and are more robust towards future interface changes
 
 - Bilinear:
   - SCIPgetAllBilinearTermsQuadratic() to access data of all existing bilinear terms in quadratic constraints
