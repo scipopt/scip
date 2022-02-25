@@ -164,7 +164,6 @@ struct OpbInput
    int                   linenumber;
    int                   linepos;
    int                   linebufsize;
-   int                   bufpos;
    SCIP_OBJSENSE         objsense;
    SCIP_Bool             comment;
    SCIP_Bool             eof;
@@ -321,7 +320,6 @@ SCIP_Bool getNextLine(
 
    /* read next line */
    opbinput->linepos = 0;
-   opbinput->bufpos = 0;
    opbinput->linebuf[opbinput->linebufsize - 2] = '\0';
 
    if( SCIPfgets(opbinput->linebuf, opbinput->linebufsize, opbinput->file) == NULL )
@@ -393,7 +391,7 @@ SCIP_Bool getNextToken(
    int tokenlen;
 
    assert(opbinput != NULL);
-   assert(opbinput->bufpos < opbinput->linebufsize);
+   assert(opbinput->linepos < opbinput->linebufsize);
 
    /* check the token stack */
    if( opbinput->npushedtokens > 0 )
@@ -406,45 +404,41 @@ SCIP_Bool getNextToken(
 
    /* skip delimiters */
    buf = opbinput->linebuf;
-   while( isDelimChar(buf[opbinput->bufpos]) )
+   while( isDelimChar(buf[opbinput->linepos]) )
    {
-      if( buf[opbinput->bufpos] == '\0' )
+      if( buf[opbinput->linepos] == '\0' )
       {
          if( !getNextLine(scip, opbinput) )
          {
             SCIPdebugMsg(scip, "(line %d) end of file\n", opbinput->linenumber);
             return FALSE;
          }
-         assert(opbinput->bufpos == 0);
+         assert(opbinput->linepos == 0);
          /* update buf, because the linebuffer may have been reallocated */
          buf = opbinput->linebuf;
       }
       else
-      {
-         opbinput->bufpos++;
          opbinput->linepos++;
-      }
    }
-   assert(opbinput->bufpos < opbinput->linebufsize);
-   assert(!isDelimChar(buf[opbinput->bufpos]));
+   assert(opbinput->linepos < opbinput->linebufsize);
+   assert(!isDelimChar(buf[opbinput->linepos]));
 
    /* check if the token is a value */
    hasdot = FALSE;
    exptype = OPB_EXP_NONE;
-   if( isValueChar(buf[opbinput->bufpos], buf[opbinput->bufpos+1], TRUE, &hasdot, &exptype) )
+   if( isValueChar(buf[opbinput->linepos], buf[opbinput->linepos+1], TRUE, &hasdot, &exptype) )
    {
       /* read value token */
       tokenlen = 0;
       do
       {
          assert(tokenlen < OPB_MAX_LINELEN);
-         assert(!isDelimChar(buf[opbinput->bufpos]));
-         opbinput->token[tokenlen] = buf[opbinput->bufpos];
+         assert(!isDelimChar(buf[opbinput->linepos]));
+         opbinput->token[tokenlen] = buf[opbinput->linepos];
          tokenlen++;
-         opbinput->bufpos++;
          opbinput->linepos++;
       }
-      while( isValueChar(buf[opbinput->bufpos], buf[opbinput->bufpos+1], FALSE, &hasdot, &exptype) );
+      while( isValueChar(buf[opbinput->linepos], buf[opbinput->linepos+1], FALSE, &hasdot, &exptype) );
    }
    else
    {
@@ -453,14 +447,13 @@ SCIP_Bool getNextToken(
       do
       {
          assert(tokenlen < OPB_MAX_LINELEN);
-         opbinput->token[tokenlen] = buf[opbinput->bufpos];
+         opbinput->token[tokenlen] = buf[opbinput->linepos];
          tokenlen++;
-         opbinput->bufpos++;
          opbinput->linepos++;
          if( tokenlen == 1 && isTokenChar(opbinput->token[0]) )
             break;
       }
-      while( !isDelimChar(buf[opbinput->bufpos]) && !isTokenChar(buf[opbinput->bufpos]) );
+      while( !isDelimChar(buf[opbinput->linepos]) && !isTokenChar(buf[opbinput->linepos]) );
 
       /* if the token is an equation sense '<', '>', or '=', skip a following '='
        * if the token is an equality token '=' and the next character is a '<' or '>',
@@ -468,15 +461,13 @@ SCIP_Bool getNextToken(
        */
       if( tokenlen >= 1
          && (opbinput->token[tokenlen-1] == '<' || opbinput->token[tokenlen-1] == '>' || opbinput->token[tokenlen-1] == '=')
-         && buf[opbinput->bufpos] == '=' )
+         && buf[opbinput->linepos] == '=' )
       {
-         opbinput->bufpos++;
          opbinput->linepos++;
       }
-      else if( opbinput->token[tokenlen-1] == '=' && (buf[opbinput->bufpos] == '<' || buf[opbinput->bufpos] == '>') )
+      else if( opbinput->token[tokenlen-1] == '=' && (buf[opbinput->linepos] == '<' || buf[opbinput->linepos] == '>') )
       {
-         opbinput->token[tokenlen-1] = buf[opbinput->bufpos];
-         opbinput->bufpos++;
+         opbinput->token[tokenlen-1] = buf[opbinput->linepos];
          opbinput->linepos++;
       }
    }
@@ -4280,7 +4271,6 @@ SCIP_RETCODE SCIPreadOpb(
 
    opbinput.npushedtokens = 0;
    opbinput.linenumber = 1;
-   opbinput.bufpos = 0;
    opbinput.linepos = 0;
    opbinput.objsense = SCIP_OBJSENSE_MINIMIZE;
    opbinput.comment = FALSE;
