@@ -1636,21 +1636,14 @@ SCIP_RETCODE getMaxAndConsDim(
                break;
             }
 
+            /* make sure that comment vanishes */
+            *commentstart = '\0';
+
             break;
          }
       }
    }
    while(commentstart != NULL && !stop);
-
-   opbinput->linebuf[0] = '\0';
-
-#if 0 /* following lines should be correct, but it seems that gzseek does not reset the position if standing at the end of a file */
-   /* reset filereader pointer to the beginning */
-   (void) SCIPfseek(opbinput->file, 0, SEEK_SET);
-#else
-   SCIPfclose(opbinput->file);
-   opbinput->file = SCIPfopen(filename, "r");
-#endif
 
    return SCIP_OKAY;
 }
@@ -1685,8 +1678,6 @@ SCIP_RETCODE readOPBFile(
 
    /* tries to read the first comment line which usually contains information about the max size of "and" products */
    SCIP_CALL( getMaxAndConsDim(scip, opbinput, filename, &objoffset) );
-
-   BMSclearMemoryArray(opbinput->linebuf, opbinput->linebufsize);
 
    /* create problem */
    SCIP_CALL( SCIPcreateProb(scip, filename, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
