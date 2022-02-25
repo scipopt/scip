@@ -1,8 +1,8 @@
 If you want to compile SCIP yourself, it is recommended to download the SCIP Optimization Suite tarball from [scipopt.org](https://scipopt.org/index.php#download) as it contains also the LP solver [SoPlex](https://soplex.zib.de) and the presolver [PaPILO](https://github.com/scipopt/papilo).
 
 We provide two different systems to compile the code:
-- the [CMake](@ref CMAKE) build system (recommended for new users)
-- the traditional [Makefile](@ref MAKE) system.
+- the [CMake](https://scipopt.org/doc/html/md_INSTALL.php#CMAKE) build system (recommended for new users) [(local link)](@ref CMAKE).
+- the traditional [Makefile](https://scipopt.org/doc/html/md_INSTALL.php#MAKE) system [(local link)](@ref MAKE).
 
 Be aware that generated libraries and binaries of both systems might be different and incompatible.
 For further information please refer to the [online documentation of SCIP](https://scipopt.org/doc/html/INSTALL.php).
@@ -62,7 +62,7 @@ Additionally the following dependencies need to be downloaded, compiled and inst
  - [Metis](http://glaros.dtc.umn.edu/gkhome/metis/metis/download)
  - [Ipopt](https://github.com/coin-or/Ipopt/releases) with [Mumps](https://github.com/coin-or-tools/ThirdParty-Mumps/releases)
  - [Gmp](https://gmplib.org/#DOWNLOAD)
-During the CMake configuration of the SCIP Optimization Suite the can be specified, see [CMake](@ref CMAKE).
+During the CMake configuration of the SCIP Optimization Suite the can be specified, see [CMake](https://scipopt.org/doc/html/md_INSTALL.php#CMAKE) [(local link)](@ref CMAKE) .
 
 Modifying a CMake configuration
 -------------------------------
@@ -167,6 +167,7 @@ Additional targets
 
 There are several further targets available, which can be listed using `make help`.
 For instance, there are some examples that can be built with `make examples` or by specifying a certain one: `make <example-name>`.
+For detailed instructions see the [installation instructions for applications and examples](https://scipopt.org/doc/html/INSTALL_APPLICATIONS_EXAMPLES.php) [(local link)](@ref INSTALL_APPLICATIONS_EXAMPLES).
 
 | CMake target    | Description                                           | Requirements                          |
 |-----------------|-------------------------------------------------------|---------------------------------------|
