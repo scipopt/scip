@@ -30,7 +30,12 @@ Testing
 Build system
 ------------
 ### Cmake
+
+- avoid warnings about unrecognized compiler warning silencing options when compilation with GCC fails
 ### Makefile
+
+- avoid warnings about unrecognized compiler warning silencing options when compilation with GCC fails
+
 Fixed bugs
 ----------
 
