@@ -220,7 +220,7 @@ set(settings_Or
 #
 # consecutive solve instances
 #
-set(instances_MIP_consecSolve
+set(instances_consecSolve
   "instances/MIP/blend2.mps\;7.598985"
   "instances/MIP/bell5.mps\;8966406.49"
   "instances/MIP/dcmulti.mps\;188182"
@@ -955,7 +955,7 @@ file(MAKE_DIRECTORY ${shell_tmp_dir})
 
 # copy cmake file for comparision
 configure_file(interactiveshell/comparestatusfiles.cmake interactiveshell/comparestatusfiles.cmake)
-foreach(instance ${instances_MIP_consecSolve})
+foreach(instance ${instances_consecSolve})
     split_instance(instance)
     #
     # configure the batch file for this test by substituting placeholders in the in.file
