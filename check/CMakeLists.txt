@@ -951,7 +951,7 @@ set(shell_tmp_dir ${PROJECT_BINARY_DIR}/check/temp)
 file(MAKE_DIRECTORY ${shell_tmp_dir})
 
 # copy cmake file for comparision
-configure_file(interactiveshell/comparestatusfiles.cmake interactiveshell/comparestatusfiles.cmake)
+configure_file(interactiveshell/comparestatusfiles.cmake interactiveshell/comparestatusfiles.cmake COPYONLY)
 foreach(instance ${instances_consecSolve})
     split_instance(instance)
     #
