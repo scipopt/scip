@@ -19,6 +19,11 @@ Interface changes
 
 ### Deleted and changed API methods
 
+- SCIPtpiInitLock(), SCIPtpiDestroyLock(), SCIPtpiInitCondition(), SCIPtpiDestroyCondition() now take a double
+  pointer to SCIP_LOCK/SCIP_CONDITION, respectively.
+
+- Renamed SCIPtpiSumbitJob() to SCIPtpiSubmitJob().
+
 ### New API functions
 
 ### Command line interface
@@ -33,6 +38,8 @@ Interface changes
 
 Deleted files
 -------------
+
+- deleted the now unused files: tpi_none.h, tpi_openmp.h, tpi_tnycthrd.h, type_tpi_none.h, type_tpi_openmp.h, type_tpi_tnycthrd.h
 
 Unit tests
 ----------
@@ -52,6 +59,9 @@ Fixed bugs
 
 Miscellaneous
 -------------
+
+- The TPI has been changed to become mostly independent from the actual parallel interface during compile time.
+  For this, the locks and conditions are now pointers to abstract structs.
 
 Known bugs
 ----------

@@ -972,13 +972,7 @@ set(tinycthreadheader
 set(tpiheaders
     tpi/def_openmp.h
     tpi/tpi.h
-    tpi/tpi_none.h
-    tpi/tpi_openmp.h
-    tpi/tpi_tnycthrd.h
     tpi/type_tpi.h
-    tpi/type_tpi_none.h
-    tpi/type_tpi_openmp.h
-    tpi/type_tpi_tnycthrd.h
 )
 
 set(xmlheaders

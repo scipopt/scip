@@ -49,7 +49,7 @@ struct SCIP_SyncStore
 
    SCIP*                 mainscip;           /**< the SCIP instance that was used for initializing the syncstore */
    SCIP_Bool             stopped;            /**< flag to indicate if the solving is stopped */
-   SCIP_LOCK             lock;               /**< lock to protect the syncstore data structure from data races */
+   SCIP_LOCK*            lock;               /**< lock to protect the syncstore data structure from data races */
 
    /* SPI settings */
    int                   nsyncdata;          /**< the size of the synchronization data array */
@@ -78,9 +78,9 @@ struct SCIP_SyncData
    SCIP_Longint          syncnum;            /**< the synchronization number of this synchronization data */
    int                   winner;             /**< the solverid of the solver with the best status */
    SCIP_STATUS           status;             /**< the best status that was stored in this synchronization data */
-   SCIP_LOCK             lock;               /**< a lock to protect this synchronization data */
+   SCIP_LOCK*            lock;               /**< a lock to protect this synchronization data */
    int                   syncedcount;        /**< a counter of how many solvers have finished writing to this synchronization data */
-   SCIP_CONDITION        allsynced;          /**< a condition variable to signal when the last solver has finished writing to this
+   SCIP_CONDITION*       allsynced;          /**< a condition variable to signal when the last solver has finished writing to this
                                               *   synchronization data */
    SCIP_BOUNDSTORE*      boundstore;         /**< a boundstore for storing all the bound changes that were added to this
                                               *   synchronization data */
