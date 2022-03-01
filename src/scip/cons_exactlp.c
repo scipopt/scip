@@ -22,6 +22,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+#include "scip/clock.h"
+#include "scip/struct_stat.h"
 #include "scip/type_retcode.h"
 #include "blockmemshell/memory.h"
 #include "scip/certificate.h"
@@ -16551,6 +16553,7 @@ SCIP_DECL_CONSPROP(consPropExactLinear)
    int nchgbds;
    int i;
 
+   SCIPclockStart(scip->stat->exactproptime, scip->set);
    assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
@@ -16604,6 +16607,7 @@ SCIP_DECL_CONSPROP(consPropExactLinear)
    else
       *result = SCIP_DIDNOTFIND;
 
+   SCIPclockStop(scip->stat->exactproptime, scip->set);
    return SCIP_OKAY;
 
 }
@@ -17577,6 +17581,7 @@ SCIP_DECL_EVENTEXEC(eventExecExactLinear)
 
    if( (eventtype & SCIP_EVENTTYPE_BOUNDCHANGED) != 0 )
    {
+      SCIPclockStart(scip->stat->exactproptime, scip->set);
       SCIP_Rational* oldbound;
       SCIP_Rational* newbound;
       SCIP_Rational* val;
@@ -17640,6 +17645,7 @@ SCIP_DECL_EVENTEXEC(eventExecExactLinear)
                      consdata->boundstightened = 0;
                   break;
                default:
+                  SCIPclockStop(scip->stat->exactproptime, scip->set);
                   SCIPerrorMessage("invalid event type %lx\n", eventtype);
                   return SCIP_INVALIDDATA;
                }
@@ -17670,6 +17676,7 @@ SCIP_DECL_EVENTEXEC(eventExecExactLinear)
             RatFreeBuffer(SCIPbuffer(scip), &delta);
          }
       }
+      SCIPclockStop(scip->stat->exactproptime, scip->set);
    }
    else if( (eventtype & SCIP_EVENTTYPE_VARFIXED) != 0 )
    {
@@ -17695,6 +17702,7 @@ SCIP_DECL_EVENTEXEC(eventExecExactLinear)
    }
    else if( (eventtype & SCIP_EVENTTYPE_GBDCHANGED) != 0 )
    {
+      SCIPclockStart(scip->stat->exactproptime, scip->set);
       SCIP_Rational* oldbound;
       SCIP_Rational* newbound;
       SCIP_Rational* val;
@@ -17720,6 +17728,7 @@ SCIP_DECL_EVENTEXEC(eventExecExactLinear)
             consdataUpdateActivitiesGlbUb(scip, consdata, oldbound, newbound, val, TRUE);
          }
       }
+      SCIPclockStop(scip->stat->exactproptime, scip->set);
    }
    else
    {

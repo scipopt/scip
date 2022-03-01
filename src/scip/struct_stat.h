@@ -221,6 +221,7 @@ struct SCIP_Stat
    SCIP_Longint          nfailexlpinf;       /**< number of LPs failed to prove infeasible */
    SCIP_Longint          nexlp;              /**< number of LPs proved feasible */
    SCIP_Longint          nfailexlp;          /**< number of LPs failed to prove feasible */
+   SCIP_CLOCK*           exactproptime;      /**< time spent in exact propagation */
    SCIP_Longint          nboundshift;        /**< number of boundshift calls for feasible lp*/
    SCIP_Longint          nfailboundshift;    /**< number of failed boundshift calls for feasible lp */
    SCIP_Longint          nboundshiftinf;     /**< number of boundshift calls for infeasible lp */
