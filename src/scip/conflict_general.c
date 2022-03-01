@@ -1641,7 +1641,7 @@ SCIP_RETCODE SCIPgetDualProof(
    }
 
    /* remove all nearly zero coefficients */
-   SCIPaggrRowRemoveZeros(set->scip, farkasrow, TRUE, valid); // @TODO, we should maybe only do this when not in exact mode?
+   SCIPaggrRowRemoveZeros(set->scip, farkasrow, TRUE, valid);
 
    if( !(*valid) )
       goto TERMINATE;
