@@ -1365,6 +1365,277 @@ SCIP_RETCODE chooseRefpointsPow(
    return SCIP_OKAY;
 }
 
+#ifdef SCIP_DISABLED_CODE
+/** constructs expanded product of two sum expressions */
+static
+SCIP_RETCODE multiplySums(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR**           product,            /**< buffer where to store multiplied sums (expanded as sum) */
+   SCIP_EXPR*            factor1,            /**< first sum */
+   SCIP_EXPR*            factor2,            /**< second sum */
+   SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)),/**< expression owner create callback */
+   void*                 ownercreatedata     /**< data of ownercreate callback */
+   )
+{
+   SCIP_Real constant1;
+   SCIP_Real constant2;
+   int nchildren1;
+   int nchildren2;
+   int i1;
+   int i2;
+
+   assert(scip != NULL);
+   assert(product != NULL);
+   assert(factor1 != NULL);
+   assert(SCIPisExprSum(scip, factor1));
+   assert(factor2 != NULL);
+   assert(SCIPisExprSum(scip, factor2));
+
+   constant1 = SCIPgetConstantExprSum(factor1);
+   constant2 = SCIPgetConstantExprSum(factor2);
+   nchildren1 = SCIPexprGetNChildren(factor1);
+   nchildren2 = SCIPexprGetNChildren(factor2);
+
+   SCIP_CALL( SCIPcreateExprSum(scip, product, 0, NULL, NULL, constant1 * constant2, ownercreate, ownercreatedata) );
+
+   /* first add constant1 * factor2
+    * constant * constant2 already added above
+    */
+   if( constant1 != 0.0 )
+   {
+      for( i2 = 0; i2 < nchildren2; ++i2 )
+      {
+         SCIP_CALL( SCIPappendExprSumExpr(scip, *product, SCIPexprGetChildren(factor2)[i2], constant1 * SCIPgetCoefsExprSum(factor2)[i2]) );
+      }
+   }
+
+   for( i1 = 0; i1 < nchildren1; ++i1 )
+   {
+      SCIP_EXPR* child1;
+      SCIP_EXPR* child2;
+      SCIP_Real coef1;
+      SCIP_Real coef2;
+
+      coef1 = SCIPgetCoefsExprSum(factor1)[i1];
+      child1 = SCIPexprGetChildren(factor1)[i1];
+
+      if( constant2 != 0.0 )
+      {
+         /* add coef1 * child1 * constant2 */
+         SCIP_CALL( SCIPappendExprSumExpr(scip, *product, child1, coef1 * constant2) );
+      }
+
+      for( i2 = 0; i2 < nchildren2; ++i2 )
+      {
+         /* add coef1 * child1 * coef2 * child2 */
+         SCIP_EXPR* termprod;
+         SCIP_EXPR* termprodsimplified;
+         SCIP_EXPR* termfactors[2];
+         SCIP_Bool changed;
+         SCIP_Bool infeasible;
+
+         coef2 = SCIPgetCoefsExprSum(factor2)[i2];
+         child2 = SCIPexprGetChildren(factor2)[i2];
+
+         /* create child1 * child2 expr */
+         termfactors[0] = child1;
+         termfactors[1] = child2;
+         SCIP_CALL( SCIPcreateExprProduct(scip, &termprod, 2, termfactors, 1.0, NULL, NULL) );
+
+         /* simplify child1*child2 */
+         SCIP_CALL( SCIPsimplifyExpr(scip, termprod, &termprodsimplified, &changed, &infeasible, ownercreate, ownercreatedata) );
+         assert(!infeasible);  /* simplify of products should never be infeasible */
+         SCIP_CALL( SCIPreleaseExpr(scip, &termprod) );
+
+         /* append to product */
+         SCIP_CALL( SCIPappendExprSumExpr(scip, *product, termprodsimplified, coef1 * coef2) );
+         SCIP_CALL( SCIPreleaseExpr(scip, &termprodsimplified) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+#endif
+
+/** computes the expanded power of a sum expression
+ *
+ * for sum_i alpha_i expr_i  and exponent p, this constructs
+ *   sum_{beta} (p over beta) prod_i (alpha_i expr_i)^beta_i   over all multiindex beta such that sum_i beta_i = p
+ * See also https://en.wikipedia.org/wiki/Multinomial_theorem
+ * Calculation of multinomials adapted from https://github.com/m-j-w/MultinomialSeries.jl
+ *
+ * @attention The expansion can grow large. Be aware of what you wish for.
+ */
+static
+SCIP_RETCODE powerSum(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR**           result,             /**< buffer where to expanded power of sum */
+   SCIP_EXPR*            base,               /**< sum */
+   SCIP_Real             exponent,           /**< exponent */
+   SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)),/**< expression owner create callback */
+   void*                 ownercreatedata     /**< data of ownercreate callback */
+   )
+{
+   SCIP_EXPR** children;
+   SCIP_Real* coefs;
+   SCIP_Real constant;
+   SCIP_Bool haveconst;
+   int nchildren;
+   int nterms;
+   int expon;
+   int* factorials;
+   int* beta;
+   int betapos;
+   int restsum;
+   int multinomialcoef;
+   int i;
+
+   SCIP_EXPR* newterm;
+   SCIP_Real newtermcoef;
+
+   assert(scip != NULL);
+   assert(result != NULL);
+   assert(base != NULL);
+   assert(SCIPisExprSum(scip, base));
+   assert(EPSISINT(exponent, 0.0));
+   assert(exponent > 1.0);
+
+   expon = (int)exponent;
+
+   children = SCIPexprGetChildren(base);
+   nchildren = SCIPexprGetNChildren(base);
+   coefs = SCIPgetCoefsExprSum(base);
+   constant = SCIPgetConstantExprSum(base);
+   haveconst = constant != 0.0;
+   nterms = nchildren + (haveconst ? 1 : 0);
+
+#ifdef SCIP_DEBUG
+   SCIPinfoMessage(scip, NULL, "expanding (");
+   SCIPprintExpr(scip, base, NULL);
+   SCIPinfoMessage(scip, NULL, ")^%d\n", expon);
+#endif
+
+   SCIP_CALL( SCIPcreateExprSum(scip, result, 0, NULL, NULL, 0.0, ownercreate, ownercreatedata) );
+
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &beta, nterms) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &factorials, expon+1) );
+
+   /* precompute factorials k!, k = 0...expon */
+   factorials[0] = 1;
+   for( i = 1; i <= expon; ++i )
+     factorials[i] = factorials[i-1] * i;
+
+   /* first multinomial is (expon,0,0,...) */
+   beta[0] = expon;
+   betapos = 0;
+   do
+   {
+      /* compute multinomial coef expon! /  (beta[0]! * ... * beta[nterms-1]!) */
+      multinomialcoef = factorials[expon];
+      for( i = 0; i < nterms; ++i )
+      {
+         assert(beta[i] >= 0);
+         assert(beta[i] <= expon);
+         multinomialcoef /= factorials[beta[i]];
+      }
+
+      SCIPdebugMsg(scip, "multinomial (");
+      for( i = 0; i < nterms; ++i )
+         SCIPdebugPrintf("%d ", beta[i]);
+      SCIPdebugPrintf(")  with coef %d\n", multinomialcoef);
+
+      /* construct new term for expanded sum */
+      SCIP_CALL( SCIPcreateExprProduct(scip, &newterm, 0, NULL, 1.0, ownercreate, ownercreatedata) );
+      newtermcoef = multinomialcoef;
+      for( i = 0; i < nterms; ++i )
+      {
+         if( beta[i] == 0 )
+            continue;
+
+         if( i == nterms-1 && haveconst )
+         {
+            /* if constant term, then update newtermcoef */
+            newtermcoef *= pow(constant, beta[i]);
+            continue;
+         }
+
+         /* alpha_i^beta_i */
+         newtermcoef *= pow(coefs[i], beta[i]);
+
+         /* expr_i^beta_i*/
+         if( beta[i] == 1 )
+         {
+            SCIP_CALL( SCIPappendExprChild(scip, newterm, children[i]) );
+         }
+         else
+         {
+            /* TODO we could save a bit by reusing power expression
+             * TODO simplify pow expression
+             */
+            SCIP_EXPR* powexpr;
+            SCIP_CALL( SCIPcreateExprPow(scip, &powexpr, children[i], (SCIP_Real)beta[i], ownercreate, ownercreatedata) );
+            SCIP_CALL( SCIPappendExprChild(scip, newterm, powexpr) );
+            SCIP_CALL( SCIPreleaseExpr(scip, &powexpr) );
+         }
+      }
+      if( SCIPexprGetNChildren(newterm) == 0 )
+      {
+         SCIPsetConstantExprSum(*result, SCIPgetConstantExprSum(*result) + SCIPgetCoefExprProduct(newterm));
+      }
+      else
+      {
+         /* TODO simplify newterm */
+         /* append new term to sum */
+         SCIP_CALL( SCIPappendExprSumExpr(scip, *result, newterm, newtermcoef) );
+      }
+      SCIP_CALL( SCIPreleaseExpr(scip, &newterm) );
+
+      /* determine next beta */
+      while( beta[betapos] == 0 )
+         --betapos;
+
+      if( betapos == nterms-1 )
+      {
+         do
+         {
+            if( betapos == 0 )
+               goto TERMINATE;
+            --betapos;
+         }
+         while( beta[betapos] == 0 );
+
+         restsum = 0;
+         for( i = betapos+1; i < nterms; ++i )
+         {
+            restsum += beta[i];
+            beta[i] = 0;
+         }
+         beta[betapos+1] = restsum;
+      }
+
+      if( beta[betapos] > 0 )
+      {
+         --beta[betapos];
+         ++beta[++betapos];
+      }
+   }
+   while( TRUE );
+
+ TERMINATE:
+   SCIPfreeBufferArray(scip, &factorials);
+   SCIPfreeBufferArray(scip, &beta);
+
+#ifdef SCIP_DEBUG
+   SCIPinfoMessage(scip, NULL, "-> ");
+   SCIPprintExpr(scip, *result, NULL);
+   SCIPinfoMessage(scip, NULL, "\n");
+#endif
+
+   return SCIP_OKAY;
+}
+
+
+
 /*
  * Callback methods of expression handler
  */
@@ -1659,6 +1930,24 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyPow)
 
          return SCIP_OKAY;
       }
+
+      /* enforces POW7a
+       * expand (const + sum alpha_i expr_i)^p for p > 2
+       */
+      if( SCIPisExprSum(scip, base) && exponent > 2.0 )
+      {
+         SCIP_EXPR* expansion = NULL;
+
+         SCIPdebugPrintf("[simplifyPow] expanding sum^%g\n", exponent);
+
+         SCIP_CALL( powerSum(scip, &expansion, base, exponent, ownercreate, ownercreatedata) );
+
+         SCIP_CALL( SCIPcallExprSimplify(scip, expansion, simplifiedexpr, ownercreate, ownercreatedata) );
+         SCIP_CALL( SCIPreleaseExpr(scip, &expansion) );
+
+         return SCIP_OKAY;
+      }
+
    }
    else
    {
