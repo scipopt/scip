@@ -350,8 +350,8 @@ struct SCIP_ConflictData
    int                   orbitsize;          /**< size of the variable's orbit */
    int                   posinorbit;         /**< position of variable in its orbit */
    SCIP_Bool             active;             /**< whether variable has not been fixed by Schreier Sims code */
-   SCIP_CONS**           setppccons;         /**< List of setppc constraints. */
-   int                   nsetppccons;        /**< Number of setppc constraints. */
+   SCIP_CLIQUE**         cliques;         /**< List of setppc constraints. */
+   int                   ncliques;        /**< Number of setppc constraints. */
 };
 typedef struct SCIP_ConflictData SCIP_CONFLICTDATA;
 
@@ -5297,10 +5297,10 @@ SCIP_RETCODE updateSymInfoConflictGraphSST(
 
       /* determine nconflictsinorbit
        *
-       * For each pair of active variables in this orbit, check if it is part of a setppc constraint ( == 1 or <= 1 ).
-       * Use that we store the setppcs of this type in varconflicts[pos].setppccons.
+       * For each pair of active variables in this orbit, check if it is part of a conflict clique.
+       * Use that we store the cliques of this type in varconflicts[pos].cliques.
        * These lists are sorted (by the address of the constraint), so we only need to check for each i, j in the orbit
-       * whether they are contained in the same setppc-constraint.
+       * whether they are contained in the same clique.
        */
       for (i = orbitbegins[r]; i < orbitbegins[r + 1]; ++i)
       {
@@ -5320,14 +5320,14 @@ SCIP_RETCODE updateSymInfoConflictGraphSST(
             if ( ! varconflicts[jj].active )
                continue;
 
-            /* Check if i and j are overlapping in some setpacking constraint.
-             * Use that setppccons are sorted by the constraint address.
+            /* Check if i and j are overlapping in some clique, where only one of the two could have value 1.
+             * Use that cliques are sorted by the constraint address.
              *
              * @todo A better sorted order would be: First constraints with large variables (higher hitting probability)
              *  and then by a unique constraint identifier (address, or conspos).
              */
-            if ( checkSortedArraysHaveOverlappingEntry((void**)varconflicts[ii].setppccons,
-               varconflicts[ii].nsetppccons, (void**)varconflicts[jj].setppccons, varconflicts[jj].nsetppccons,
+            if ( checkSortedArraysHaveOverlappingEntry((void**)varconflicts[ii].cliques,
+               varconflicts[ii].ncliques, (void**)varconflicts[jj].cliques, varconflicts[jj].ncliques,
                sortByPointerValue) )
             {
                /* there is overlap! */
@@ -5359,19 +5359,18 @@ SCIP_RETCODE createConflictGraphSST(
    SCIP_HASHMAP*         permvarmap          /**< map of variables to indices in permvars array (or NULL) */
    )
 {
-   SCIP_CONSHDLR* setppcconshdlr;
-   SCIP_CONS** setppcconss;
-   SCIP_VAR** setppcvars;
-   SCIP_CONS* cons;
-   int* tmpnsetppccons;
-   int nsetppcconss;
-   int nsetppcvars;
+   SCIP_CLIQUE** cliques;
+   SCIP_VAR** cliquevars;
+   SCIP_CLIQUE* clique;
+   int* tmpncliques;
+   int ncliques;
+   int ncliquevars;
    int node;
    int c;
    int i;
 
 #ifdef SCIP_DEBUG
-   int nvarsetppcpairs = 0;
+   int varncliques = 0;
 #endif
 
    assert( scip != NULL );
@@ -5382,20 +5381,13 @@ SCIP_RETCODE createConflictGraphSST(
    /* we set the pointer of varconflicts to NULL to illustrate that we didn't generate it */
    *varconflicts = NULL;
 
-   /* get setppcconss for creating conflict structure */
-   setppcconshdlr = SCIPfindConshdlr(scip, "setppc");
-   if ( setppcconshdlr == NULL )
-   {
-      SCIPdebugMsg(scip, "Could not find setppc conshdlr --> construction of conflict structure aborted.\n");
-      return SCIP_OKAY;
-   }
-   assert( setppcconshdlr != NULL );
+   /* get cliques for creating conflict structure */
 
-   setppcconss = SCIPconshdlrGetConss(setppcconshdlr);
-   nsetppcconss = SCIPconshdlrGetNConss(setppcconshdlr);
-   if ( nsetppcconss == 0 )
+   cliques = SCIPgetCliques(scip);
+   ncliques = SCIPgetNCliques(scip);
+   if ( ncliques == 0 )
    {
-      SCIPdebugMsg(scip, "No setppc constraints present --> construction of conflict structure aborted.\n");
+      SCIPdebugMsg(scip, "No cliques present --> construction of conflict structure aborted.\n");
       return SCIP_OKAY;
    }
 
@@ -5404,42 +5396,37 @@ SCIP_RETCODE createConflictGraphSST(
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, varconflicts, nvars) );
    for (i = 0; i < nvars; ++i)
    {
-      (*varconflicts)[i].nsetppccons = 0;
+      (*varconflicts)[i].ncliques = 0;
       (*varconflicts)[i].active = FALSE;
       (*varconflicts)[i].var = NULL;
    }
 
-   /* Store, for each variable, the setppc constraints it is contained in.
+   /* Store, for each variable, the conflict cliques it is contained in.
     * In three steps:
-    * (1.) Count the number of setppc constraint it's contained in, per var, then
+    * (1.) Count the number of cliques it's contained in, per var, then
     * (2.) Create the array of this size, and
-    * (3.) Fill the array with the setppc constraints.
+    * (3.) Fill the array with the cliques.
     * Starting with (1.):
     */
-   for (c = 0; c < nsetppcconss; ++c)
+   for (c = 0; c < ncliques; ++c)
    {
-      cons = setppcconss[c];
-      assert( cons != NULL );
+      clique = cliques[c];
+      assert( clique != NULL );
 
-      /* skip covering constraints */
-      if ( SCIPgetTypeSetppc(scip, cons) == SCIP_SETPPCTYPE_COVERING )
-         continue;
+      cliquevars = SCIPcliqueGetVars(clique);
+      ncliquevars = SCIPcliqueGetNVars(clique);
+      assert( cliquevars != NULL );
+      assert( ncliquevars > 0 );
 
-      setppcvars = SCIPgetVarsSetppc(scip, cons);
-      nsetppcvars = SCIPgetNVarsSetppc(scip, cons);
-      assert( setppcvars != NULL );
-      assert( nsetppcvars > 0 );
+      SCIPdebugMsg(scip, "\tIdentify edges for clique ID: %d; Index: %d).\n", SCIPcliqueGetId(clique),
+         SCIPcliqueGetIndex(clique));
 
-      SCIPdebugMsg(scip, "\tIdentify edges for constraint %s.\n", SCIPconsGetName(cons));
-
-      /* iterate over pairs of variables in constraint and add bidirected arc
-       * if both are affected by a symmetry or active
-       */
-      for (i = 0; i < nsetppcvars; ++i)
+      /* for all variables, list which cliques it is part of */
+      for (i = 0; i < ncliquevars; ++i)
       {
          if ( onlypermvars )
          {
-            node = SCIPhashmapGetImageInt(permvarmap, setppcvars[i]);
+            node = SCIPhashmapGetImageInt(permvarmap, cliquevars[i]);
 
             /* skip variables that are not affected by symmetry */
             if ( node == INT_MAX )
@@ -5447,7 +5434,7 @@ SCIP_RETCODE createConflictGraphSST(
          }
          else
          {
-            node = SCIPvarGetProbindex(setppcvars[i]);
+            node = SCIPvarGetProbindex(cliquevars[i]);
 
             /* skip inactive variables */
             if ( node < 0 )
@@ -5455,49 +5442,44 @@ SCIP_RETCODE createConflictGraphSST(
          }
 
          (*varconflicts)[node].active = TRUE;
-         (*varconflicts)[node].var = setppcvars[i];
-         (*varconflicts)[node].nsetppccons++;
+         (*varconflicts)[node].var = cliquevars[i];
+         (*varconflicts)[node].ncliques++;
       }
    }
 
    /* (2.) allocate the arrays */
    for (i = 0; i < nvars; ++i)
    {
-      assert( (*varconflicts)[i].nsetppccons >= 0 );
-      if ( (*varconflicts)[i].nsetppccons == 0 )
-         (*varconflicts)[i].setppccons = NULL;
+      assert( (*varconflicts)[i].ncliques >= 0 );
+      if ( (*varconflicts)[i].ncliques == 0 )
+         (*varconflicts)[i].cliques = NULL;
       else
       {
-         SCIPallocBlockMemoryArray(scip, &(*varconflicts)[i].setppccons, (*varconflicts)[i].nsetppccons);
+         SCIPallocBlockMemoryArray(scip, &(*varconflicts)[i].cliques, (*varconflicts)[i].ncliques);
       }
    }
 
-   /* (3.) fill the setppc constraints */
-   SCIPallocClearBufferArray(scip, &tmpnsetppccons, nvars);
-   for (c = 0; c < nsetppcconss; ++c)
+   /* (3.) fill the clique constraints */
+   SCIPallocClearBufferArray(scip, &tmpncliques, nvars);
+   for (c = 0; c < ncliques; ++c)
    {
-      cons = setppcconss[c];
-      assert( cons != NULL );
+      clique = cliques[c];
+      assert( clique != NULL );
 
-      /* skip covering constraints */
-      if ( SCIPgetTypeSetppc(scip, cons) == SCIP_SETPPCTYPE_COVERING )
-         continue;
+      cliquevars = SCIPcliqueGetVars(clique);
+      ncliquevars = SCIPcliqueGetNVars(clique);
+      assert( cliquevars != NULL );
+      assert( ncliquevars > 0 );
 
-      setppcvars = SCIPgetVarsSetppc(scip, cons);
-      nsetppcvars = SCIPgetNVarsSetppc(scip, cons);
-      assert( setppcvars != NULL );
-      assert( nsetppcvars > 0 );
+      SCIPdebugMsg(scip, "\tAdd edges for clique ID: %d; Index: %d).\n", SCIPcliqueGetId(clique),
+         SCIPcliqueGetIndex(clique));
 
-      SCIPdebugMsg(scip, "\tAdd edges for constraint %s.\n", SCIPconsGetName(cons));
-
-      /* iterate over pairs of variables in constraint and add bidirected arc
-       * if both are affected by a symmetry or active
-       */
-      for (i = 0; i < nsetppcvars; ++i)
+      /* for all variables, list which cliques it is part of */
+      for (i = 0; i < ncliquevars; ++i)
       {
          if ( onlypermvars )
          {
-            node = SCIPhashmapGetImageInt(permvarmap, setppcvars[i]);
+            node = SCIPhashmapGetImageInt(permvarmap, cliquevars[i]);
 
             /* skip variables that are not affected by symmetry */
             if ( node == INT_MAX )
@@ -5505,41 +5487,41 @@ SCIP_RETCODE createConflictGraphSST(
          }
          else
          {
-            node = SCIPvarGetProbindex(setppcvars[i]);
+            node = SCIPvarGetProbindex(cliquevars[i]);
 
             /* skip inactive variables */
             if ( node < 0 )
                continue;
          }
 
-         /* Add cons to the setppccons. */
-         assert( tmpnsetppccons[node] < (*varconflicts)[node].nsetppccons );
-         (*varconflicts)[node].setppccons[tmpnsetppccons[node]++] = cons;
+         /* Add clique to the cliques. */
+         assert( tmpncliques[node] < (*varconflicts)[node].ncliques );
+         (*varconflicts)[node].cliques[tmpncliques[node]++] = clique;
 
 #ifdef SCIP_DEBUG
-         nvarsetppcpairs++;
+         varncliques++;
 #endif
       }
    }
 
-   /* sort the setppccons by the constraint address */
+   /* sort the variable cliques by the address, so checkSortedArraysHaveOverlappingEntry can detect intersections. */
    for (i = 0; i < nvars; ++i)
    {
-      SCIPsortPtr((void**)(*varconflicts)[i].setppccons, sortByPointerValue, (*varconflicts)[i].nsetppccons);
+      SCIPsortPtr((void**)(*varconflicts)[i].cliques, sortByPointerValue, (*varconflicts)[i].ncliques);
    }
 
 #ifndef NDEBUG
    for (i = 0; i < nvars; ++i)
    {
-      assert( tmpnsetppccons[i] == (*varconflicts)[i].nsetppccons );
+      assert( tmpncliques[i] == (*varconflicts)[i].ncliques );
    }
 #endif
 
-   SCIPfreeBufferArray(scip, &tmpnsetppccons);
+   SCIPfreeBufferArray(scip, &tmpncliques);
 
 #ifdef SCIP_DEBUG
-   SCIPdebugMsg(scip, "Construction of conflict graph terminated; %d variable-setppc combinations detected.\n",
-      nvarsetppcpairs);
+   SCIPdebugMsg(scip, "Construction of conflict graph terminated; %d variable-clique combinations detected.\n",
+      varncliques);
 #endif
 
    return SCIP_OKAY;
@@ -5563,8 +5545,8 @@ SCIP_RETCODE freeConflictGraphSST(
 
    for (i = nvars - 1; i >= 0; --i)
    {
-      n = (*varconflicts)[i].nsetppccons;
-      SCIPfreeBlockMemoryArray(scip, &(*varconflicts)[i].setppccons, n);
+      n = (*varconflicts)[i].ncliques;
+      SCIPfreeBlockMemoryArray(scip, &(*varconflicts)[i].cliques, n);
    }
    SCIPfreeBlockMemoryArray(scip, varconflicts, nvars);
 
@@ -6022,7 +6004,7 @@ SCIP_RETCODE selectOrbitLeaderSSTConss(
          assert( leader < nvars );
 
          if ( tiebreakrule == (int) SCIP_LEADERTIEBREAKRULE_MAXCONFLICTSINORBIT
-            && varconflicts[leader].nsetppccons > 0 )
+            && varconflicts[leader].ncliques > 0 )
          {
             /* count how many active variables in the orbit conflict with "leader".
              * This is only needed if there are possible conflicts. */
@@ -6054,9 +6036,9 @@ SCIP_RETCODE selectOrbitLeaderSSTConss(
                   continue;
 
                /* check if leader and var have overlap */
-               if ( checkSortedArraysHaveOverlappingEntry((void**)varconflicts[leader].setppccons,
-                  varconflicts[leader].nsetppccons, (void**)varconflicts[varmapid].setppccons,
-                  varconflicts[varmapid].nsetppccons, sortByPointerValue) )
+               if ( checkSortedArraysHaveOverlappingEntry((void**)varconflicts[leader].cliques,
+                  varconflicts[leader].ncliques, (void**)varconflicts[varmapid].cliques,
+                  varconflicts[varmapid].ncliques, sortByPointerValue) )
                {
                   /* there is overlap! */
                   orbitvarinconflict[i] = TRUE;
@@ -6102,7 +6084,7 @@ SCIP_RETCODE selectOrbitLeaderSSTConss(
       assert( leader < nvars );
       assert( norbitvarinconflict != NULL );
 
-      if ( *success && varconflicts[leader].nsetppccons > 0 )
+      if ( *success && varconflicts[leader].ncliques > 0 )
       {
          /* count how many active variables in the orbit conflict with leader */
          SCIP_VAR* var;
@@ -6133,9 +6115,9 @@ SCIP_RETCODE selectOrbitLeaderSSTConss(
                continue;
 
             /* check if leader and var have overlap */
-            if ( checkSortedArraysHaveOverlappingEntry((void**)varconflicts[leader].setppccons,
-               varconflicts[leader].nsetppccons, (void**)varconflicts[varmapid].setppccons,
-               varconflicts[varmapid].nsetppccons, sortByPointerValue) )
+            if ( checkSortedArraysHaveOverlappingEntry((void**)varconflicts[leader].cliques,
+               varconflicts[leader].ncliques, (void**)varconflicts[varmapid].cliques,
+               varconflicts[varmapid].ncliques, sortByPointerValue) )
             {
                /* there is overlap! */
                orbitvarinconflict[i] = TRUE;
@@ -6308,7 +6290,7 @@ SCIP_RETCODE addSSTConss(
    if ( nvarsselectedtype == 0 )
       return SCIP_OKAY;
 
-   /* possibly create conflict graph; graph is not created if no setppc conss are present */
+   /* possibly create conflict graph; graph is not created if no cliques are present */
    if ( selectedtype == SCIP_VARTYPE_BINARY && (leaderrule == SCIP_LEADERRULE_MAXCONFLICTSINORBIT
          || tiebreakrule == SCIP_LEADERTIEBREAKRULE_MAXCONFLICTSINORBIT) )
    {
