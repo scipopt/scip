@@ -1088,6 +1088,115 @@ SCIP_RETCODE enforceSP12(
    return SCIP_OKAY;
 }
 
+/* expands product of one sum and other expressions
+ * -) (prod factor ... factor (sum c s1 ... sn) factor ... factor )
+ *    - c != 0 --> c * factor is simplified (i.e. factor is not sum!)
+ *    - factor ... factor * si may be not be simplified, so put them in a product list and simplify them from there
+ */
+static
+SCIP_RETCODE enforceSP12b(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             simplifiedcoef,     /**< simplified product should be simplifiedcoef * PI simplifiedfactors */
+   EXPRNODE*             finalchildren,      /**< factors of simplified product */
+   SCIP_EXPR**           simplifiedexpr,     /**< buffer to store the simplified expression */
+   SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
+   void*                 ownercreatedata     /**< data to pass to ownercreate */
+   )
+{
+   EXPRNODE* sum_node = NULL;
+   EXPRNODE* n;
+   int nfactors = 0;
+   SCIP_EXPR** factors;
+   int nchildren;
+   SCIP_EXPR* expanded;
+   int j;
+
+   /* check whether there is exactly one sum, calc number of factors */
+   for( n = finalchildren; n != NULL; n = n->next )
+   {
+      if( SCIPisExprSum(scip, n->expr) )
+      {
+         if( sum_node == NULL )
+            sum_node = n;
+         else
+            return SCIP_OKAY;  /* more than one sum */
+      }
+      else
+      {
+         ++nfactors;
+      }
+   }
+   if( sum_node == NULL || nfactors == 0 )  /* no sum or no other factors */
+      return SCIP_OKAY;
+
+   /* collect exprs of all factors other than the sum */
+   SCIP_CALL( SCIPallocBufferArray(scip, &factors, nfactors + 1) );
+   for( n = finalchildren, j = 0; n != NULL; n = n->next )
+      if( n != sum_node )
+         factors[j++] = n->expr;
+
+   /* build new sum expression */
+   nchildren = SCIPexprGetNChildren(sum_node->expr);
+   SCIP_CALL( SCIPcreateExprSum(scip, &expanded, 0, NULL, NULL, 0.0, ownercreate, ownercreatedata) );
+
+   /* handle constant-from-sum * factors */
+   if( SCIPgetConstantExprSum(sum_node->expr) != 0.0 )
+   {
+      if( nfactors == 1 )
+      {
+         SCIP_CALL( SCIPappendExprSumExpr(scip, expanded, factors[0], simplifiedcoef * SCIPgetConstantExprSum(sum_node->expr)) );
+      }
+      else
+      {
+         SCIP_Real termcoef = 1.0;
+         SCIP_Bool dummy;
+         EXPRNODE* finalfactors;
+         SCIP_EXPR* term = NULL;
+
+         SCIP_CALL( simplifyMultiplyChildren(scip, factors, nfactors, &termcoef, &finalfactors, &dummy, ownercreate, ownercreatedata) );
+         assert(termcoef != 0.0);
+
+         SCIP_CALL( buildSimplifiedProduct(scip, 1.0, &finalfactors, TRUE, &term, ownercreate, ownercreatedata) );
+         assert(finalfactors == NULL);
+         assert(term != NULL);
+
+         SCIP_CALL( SCIPappendExprSumExpr(scip, expanded, term, termcoef * simplifiedcoef * SCIPgetConstantExprSum(sum_node->expr)) );
+         SCIP_CALL( SCIPreleaseExpr(scip, &term) );
+      }
+   }
+
+   for( j = 0; j < nchildren; ++j )
+   {
+      SCIP_Real coef;
+      SCIP_Real termcoef;
+      SCIP_Bool dummy;
+      EXPRNODE* finalfactors;
+      SCIP_EXPR* term = NULL;
+
+      coef = SCIPgetCoefsExprSum(sum_node->expr)[j];
+      factors[nfactors] = SCIPexprGetChildren(sum_node->expr)[j];
+
+      termcoef = coef;
+      SCIP_CALL( simplifyMultiplyChildren(scip, factors, nfactors + 1, &termcoef, &finalfactors, &dummy, ownercreate, ownercreatedata) );
+      assert(termcoef != 0.0);
+
+      SCIP_CALL( buildSimplifiedProduct(scip, 1.0, &finalfactors, TRUE, &term, ownercreate, ownercreatedata) );
+      assert(finalfactors == NULL);
+      assert(term != NULL);
+
+      SCIP_CALL( SCIPappendExprSumExpr(scip, expanded, term, termcoef * simplifiedcoef) );
+      SCIP_CALL( SCIPreleaseExpr(scip, &term) );
+   }
+
+   /* simplify the sum */
+   SCIP_CALL( SCIPcallExprSimplify(scip, expanded, simplifiedexpr, ownercreate, ownercreatedata) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &expanded) );
+
+   SCIPfreeBufferArray(scip, &factors);
+
+   return SCIP_OKAY;
+}
+
 /** builds a simplified product from simplifiedfactors
  *
  * @note this function also releases simplifiedfactors
@@ -1115,6 +1224,10 @@ SCIP_RETCODE buildSimplifiedProduct(
       goto CLEANUP;
 
    SCIP_CALL( enforceSP12(scip, simplifiedcoef, *simplifiedfactors, simplifiedexpr, ownercreate, ownercreatedata) );
+   if( *simplifiedexpr != NULL )
+      goto CLEANUP;
+
+   SCIP_CALL( enforceSP12b(scip, simplifiedcoef, *simplifiedfactors, simplifiedexpr, ownercreate, ownercreatedata) );
    if( *simplifiedexpr != NULL )
       goto CLEANUP;
 
