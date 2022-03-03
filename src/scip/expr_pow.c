@@ -1986,6 +1986,40 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyPow)
 
          return SCIP_OKAY;
       }
+
+      /* enforces POW5 for fractional exponent
+       * given (pow n (prod 1.0 expr_1 ... expr_k)) we distribute the exponent:
+       * -> (prod 1.0 (pow n expr_1) ... (pow n expr_k))
+       * notes: - since base is simplified and its coefficient is 1.0 (SP8)
+       */
+      if( SCIPisExprProduct(scip, base) )
+      {
+         SCIP_EXPR* aux;
+         SCIP_EXPR* simplifiedaux;
+         SCIP_EXPR* auxproduct;
+         int i;
+
+         /* create empty product */
+         SCIP_CALL( SCIPcreateExprProduct(scip, &auxproduct, 0, NULL, 1.0, ownercreate, ownercreatedata) );
+
+         for( i = 0; i < SCIPexprGetNChildren(base); ++i )
+         {
+            /* create (pow n expr_i) and simplify */
+            SCIP_CALL( SCIPcreateExprPow(scip, &aux, SCIPexprGetChildren(base)[i], exponent, ownercreate, ownercreatedata) );
+            SCIP_CALL( simplifyPow(scip, aux, &simplifiedaux, ownercreate, ownercreatedata) );
+            SCIP_CALL( SCIPreleaseExpr(scip, &aux) );
+
+            /* append (pow n expr_i) to product */
+            SCIP_CALL( SCIPappendExprChild(scip, auxproduct, simplifiedaux) );
+            SCIP_CALL( SCIPreleaseExpr(scip, &simplifiedaux) );
+         }
+
+         /* simplify (prod 1.0 (pow n expr_1) ... (pow n expr_k))
+          * this calls simplifyProduct directly, since we know its children are simplified */
+         SCIP_CALL( SCIPcallExprSimplify(scip, auxproduct, simplifiedexpr, ownercreate, ownercreatedata) );
+         SCIP_CALL( SCIPreleaseExpr(scip, &auxproduct) );
+         return SCIP_OKAY;
+      }
    }
 
    /* enforces POW8
