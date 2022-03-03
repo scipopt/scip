@@ -7735,7 +7735,7 @@ SCIP_RETCODE SCIPincludePropSymmetry(
    SCIP_CALL( SCIPaddIntParam(scip,
          "propagating/" PROP_NAME "/sstleaderrule",
          "rule to select the leader in an orbit (0: first var; 1: last var; 2: var having most conflicting vars in orbit; 3: var having most conflicting vars in problem)",
-         &propdata->sstleaderrule, TRUE, DEFAULT_SSTLEADERRULE, 0, 3, NULL, NULL) );
+         &propdata->sstleaderrule, TRUE, DEFAULT_SSTLEADERRULE, 0, 2, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
          "propagating/" PROP_NAME "/sstleadervartype",
