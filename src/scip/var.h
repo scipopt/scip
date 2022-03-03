@@ -1905,6 +1905,17 @@ int SCIPvarGetOrigIndex(
    SCIP_VAR*             var                 /**< scip variable */
    );
 
+/** Get the tightest local lower bound (from the exact and the real bound) */
+void SCIPvarGetLbLocalExactMaximal(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Rational*        output              /**< output rational */
+   );
+/** Get the tightest local uppper bound (from the exact and the real bound) */
+void SCIPvarGetUbLocalExactMinimal(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Rational*        output              /**< output rational */
+   );
+
 #ifdef NDEBUG
 
 /* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and

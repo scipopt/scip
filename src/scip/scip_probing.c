@@ -580,9 +580,7 @@ SCIP_RETCODE SCIPpropagateProbing(
    SCIP_Bool changedobj;
    int nobjchg;
 
-   if (scip->set->exact_enabled)
-      return SCIP_OKAY;
-
+   return SCIP_OKAY;
    SCIP_CALL( SCIPcheckStage(scip, "SCIPpropagateProbing", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    if( !SCIPtreeProbing(scip->tree) )

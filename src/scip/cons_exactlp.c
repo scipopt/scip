@@ -1400,7 +1400,7 @@ void consdataRecomputeMinactivity(
 {
    int i;
    SCIP_Rational* bound;
-
+   RatCreateBuffer(SCIPbuffer(scip), &bound);
    RatSetReal(consdata->minactivity, 0);
    #ifdef SCIP_DEBUG
    int minactivityneginf = 0;
@@ -1408,7 +1408,11 @@ void consdataRecomputeMinactivity(
    #endif
    for( i = consdata->nvars - 1; i >= 0; --i )
    {
-      bound = RatIsPositive(consdata->vals[i]) ? SCIPvarGetLbLocalExact(consdata->vars[i]) : SCIPvarGetUbLocalExact(consdata->vars[i]);
+      if (RatIsPositive(consdata->vals[i])) {
+         SCIPvarGetLbLocalExactMaximal(consdata->vars[i], bound);
+      } else {
+         SCIPvarGetUbLocalExactMinimal(consdata->vars[i], bound);
+      }
       if( !RatIsAbsInfinity(bound) )
       {
          RatAddProd(consdata->minactivity, consdata->vals[i], bound);
@@ -1425,7 +1429,7 @@ void consdataRecomputeMinactivity(
       }
       #endif
    }
-
+   RatFreeBuffer(SCIPbuffer(scip), &bound);
    /* the activity was just computed from scratch and is valid now */
    consdata->validminact = TRUE;
 
@@ -1442,7 +1446,7 @@ void consdataRecomputeMaxactivity(
 {
    int i;
    SCIP_Rational* bound;
-
+   RatCreateBuffer(SCIPbuffer(scip), &bound);
    RatSetReal(consdata->maxactivity, 0);
    #ifdef SCIP_DEBUG
    int maxactivityneginf = 0;
@@ -1450,11 +1454,14 @@ void consdataRecomputeMaxactivity(
    #endif
    for( i = consdata->nvars - 1; i >= 0; --i )
    {
-      bound = RatIsPositive(consdata->vals[i]) ? SCIPvarGetUbLocalExact(consdata->vars[i]) : SCIPvarGetLbLocalExact(consdata->vars[i]);
+      if (RatIsPositive(consdata->vals[i])) {
+         SCIPvarGetUbLocalExactMinimal(consdata->vars[i], bound);
+      } else {
+         SCIPvarGetLbLocalExactMaximal(consdata->vars[i], bound);
+      }
       if( !RatIsAbsInfinity(bound) )
       {
          RatAddProd(consdata->maxactivity, consdata->vals[i], bound);
-
       }
       #ifdef SCIP_DEBUG
       else if ( RatIsPositive(bound) )
@@ -1472,6 +1479,7 @@ void consdataRecomputeMaxactivity(
    assert(maxactivityposinf == consdata->maxactivityposinf);
    #endif
    /* the activity was just computed from scratch and is valid now */
+   RatFreeBuffer(SCIPbuffer(scip), &bound);
    consdata->validmaxact = TRUE;
 
    /* the activity was just computed from scratch, mark it to be reliable */
@@ -2116,10 +2124,19 @@ void consdataUpdateAddCoef(
    /* update minimal and maximal activity */
    if( consdata->validactivities )
    {
-      consdataUpdateActivitiesLb(scip, consdata, var, NULL, SCIPvarGetLbLocalExact(var), val, checkreliability);
-      consdataUpdateActivitiesUb(scip, consdata, var, NULL, SCIPvarGetUbLocalExact(var), val, checkreliability);
+      SCIP_Rational* tmpBound;
+      RatCreateBuffer(SCIPbuffer(scip), &tmpBound);
+
+      SCIPvarGetLbLocalExactMaximal(var, tmpBound);
+      consdataUpdateActivitiesLb(scip, consdata, var, NULL, tmpBound, val, checkreliability);
+
+      SCIPvarGetUbLocalExactMinimal(var, tmpBound);
+      consdataUpdateActivitiesUb(scip, consdata, var, NULL, tmpBound, val, checkreliability);
+
       consdataUpdateActivitiesGlbLb(scip, consdata, NULL, SCIPvarGetLbGlobalExact(var), val, checkreliability);
       consdataUpdateActivitiesGlbUb(scip, consdata, NULL, SCIPvarGetUbGlobalExact(var), val, checkreliability);
+
+      RatFreeBuffer(SCIPbuffer(scip), &tmpBound);
    }
 }
 
@@ -2891,14 +2908,16 @@ void consdataGetActivityResiduals(
 
    if( RatIsPositive(val) )
    {
-      RatSet(minactbound, SCIPvarGetLbLocalExact(var));
-      RatSet(maxactbound, SCIPvarGetUbLocalExact(var));
+      SCIPvarGetLbLocalExactMaximal(var, minactbound);
+      SCIPvarGetUbLocalExactMinimal(var, maxactbound);
       RatSet(absval, val);
    }
    else
    {
-      RatNegate(minactbound, SCIPvarGetUbLocalExact(var));
-      RatNegate(maxactbound, SCIPvarGetLbLocalExact(var));
+      SCIPvarGetLbLocalExactMaximal(var, maxactbound);
+      SCIPvarGetUbLocalExactMinimal(var, minactbound);
+      RatNegate(minactbound, minactbound);
+      RatNegate(maxactbound, maxactbound);
       RatNegate(absval, val);
    }
 
@@ -7314,8 +7333,8 @@ SCIP_RETCODE tightenVarBounds(
    assert(!RatIsInfinity(lhs));
    assert(!RatIsNegInfinity(rhs));
 
-   RatSet(lb, SCIPvarGetLbLocalExact(var));
-   RatSet(ub, SCIPvarGetUbLocalExact(var));
+   SCIPvarGetLbLocalExactMaximal(var, lb);
+   SCIPvarGetUbLocalExactMinimal(var, ub);
    assert(RatIsLE(lb, ub));
 
    if( RatIsPositive(val) )
@@ -17587,95 +17606,124 @@ SCIP_DECL_EVENTEXEC(eventExecExactLinear)
       SCIP_Rational* val;
       int varpos;
 
+      SCIP_CALL(RatCreateBuffer(SCIPbuffer(scip), &oldbound));
+      SCIP_CALL(RatCreateBuffer(SCIPbuffer(scip), &newbound));
       varpos = eventdata->varpos;
       assert(0 <= varpos && varpos < consdata->nvars);
-      oldbound = SCIPeventGetOldboundExact(event);
-      newbound = SCIPeventGetNewboundExact(event);
-      assert((oldbound != NULL) == (newbound != NULL));
       assert(var != NULL);
 
-      if (oldbound != NULL)
-      {
-         assert(consdata->vars[varpos] == var);
-         val = consdata->vals[varpos];
-
-         /* we only need to update the activities if the constraint is active,
-         * otherwise we mark them to be invalid
-         */
-         if( SCIPconsIsActive(cons) )
-         {
-            /* update the activity values */
-            if( (eventtype & SCIP_EVENTTYPE_LBCHANGED) != 0 )
-               consdataUpdateActivitiesLb(scip, consdata, var, oldbound, newbound, val, TRUE);
-            else
-            {
-               assert((eventtype & SCIP_EVENTTYPE_UBCHANGED) != 0);
-               consdataUpdateActivitiesUb(scip, consdata, var, oldbound, newbound, val, TRUE);
-            }
+      if (SCIPeventGetOldboundExact(event) == NULL) {
+         assert(newbound == NULL);
+         // The exact bounds are not updated, so oldbound_exact=newbound_exact
+         if (eventtype & SCIP_EVENTTYPE_LBCHANGED) {
+            RatSetInt(oldbound, (long) floor(SCIPeventGetOldbound(event)), 1);
+            RatSetInt(newbound, (long) floor(SCIPeventGetNewbound(event)), 1);
+            RatMAX(oldbound, oldbound, SCIPvarGetLbLocalExact(var));
+            RatMAX(newbound, newbound, SCIPvarGetLbLocalExact(var));
+         } else {
+            RatSetInt(oldbound, (long) ceil(SCIPeventGetOldbound(event)), 1);
+            RatSetInt(newbound, (long) ceil(SCIPeventGetNewbound(event)), 1);
+            RatMIN(oldbound, oldbound, SCIPvarGetUbLocalExact(var));
+            RatMIN(newbound, newbound, SCIPvarGetUbLocalExact(var));
          }
+
+      }
+      else {
+         /* The old fp bound might be tighter than the new exact bound, so we have to take the tightest bound.*/
+         RatSetInt(oldbound, (int) (eventtype & SCIP_EVENTTYPE_LBCHANGED ? floor(SCIPvarGetLbLocal(var)) : ceil(SCIPvarGetUbLocal(var))), 1);
+         if (eventtype & SCIP_EVENTTYPE_LBCHANGED)
+            RatMAX(oldbound, oldbound, SCIPeventGetOldboundExact(event));
          else
-            consdataInvalidateActivities(consdata);
+            RatMIN(oldbound, oldbound, SCIPeventGetOldboundExact(event));
 
-         consdata->presolved = FALSE;
-         consdata->rangedrowpropagated = 0;
+         /* The new fp bound will always be relaxation of the old bound, so the exact bound will be the tightest.*/
+         RatSet(newbound, SCIPeventGetOldboundExact(event));
 
-         /* bound change can turn the constraint infeasible or redundant only if it was a tightening */
-         if( (eventtype & SCIP_EVENTTYPE_BOUNDTIGHTENED) != 0 )
+      }
+
+
+
+      assert(consdata->vars[varpos] == var);
+      val = consdata->vals[varpos];
+
+      /* we only need to update the activities if the constraint is active,
+      * otherwise we mark them to be invalid
+      */
+      if( SCIPconsIsActive(cons) )
+      {
+         /* update the activity values */
+         if( (eventtype & SCIP_EVENTTYPE_LBCHANGED) != 0 )
+            consdataUpdateActivitiesLb(scip, consdata, var, oldbound, newbound, val, TRUE);
+         else
          {
-            SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
-
-            /* reset maximal activity delta, so that it will be recalculated on the next real propagation */
-            if( consdata->maxactdeltavar == var )
-            {
-               RatSetString(consdata->maxactdelta, "inf");
-               consdata->maxactdeltavar = NULL;
-            }
-
-            /* check whether bound tightening might now be successful */
-            if( consdata->boundstightened > 0)
-            {
-               switch( eventtype )
-               {
-               case SCIP_EVENTTYPE_LBTIGHTENED:
-                  if( (RatIsPositive(val) ? !RatIsInfinity(consdata->rhs) : !RatIsNegInfinity(consdata->lhs)) )
-                     consdata->boundstightened = 0;
-                  break;
-               case SCIP_EVENTTYPE_UBTIGHTENED:
-                  if( (RatIsPositive(val) ? !RatIsNegInfinity(consdata->lhs) : !RatIsInfinity(consdata->rhs)) )
-                     consdata->boundstightened = 0;
-                  break;
-               default:
-                  SCIPclockStop(scip->stat->exactproptime, scip->set);
-                  SCIPerrorMessage("invalid event type %lx\n", eventtype);
-                  return SCIP_INVALIDDATA;
-               }
-            }
-         }
-         /* update maximal activity delta if a bound was relaxed */
-         else if( !RatIsInfinity(consdata->maxactdelta) )
-         {
-            SCIP_Rational* lb;
-            SCIP_Rational* ub;
-            SCIP_Rational* delta;
-            RatCreateBuffer(SCIPbuffer(scip), &delta);
-            assert((eventtype & SCIP_EVENTTYPE_BOUNDRELAXED) != 0);
-
-            lb = SCIPvarGetLbLocalExact(var);
-            ub = SCIPvarGetUbLocalExact(var);
-
-            RatDiff(delta, ub, lb);
-            RatMult(delta, delta, val);
-            RatAbs(delta, delta);
-
-
-            if( RatIsGT(delta, consdata->maxactdelta) )
-            {
-               RatSet(consdata->maxactdelta, delta);
-               consdata->maxactdeltavar = var;
-            }
-            RatFreeBuffer(SCIPbuffer(scip), &delta);
+            assert((eventtype & SCIP_EVENTTYPE_UBCHANGED) != 0);
+            consdataUpdateActivitiesUb(scip, consdata, var, oldbound, newbound, val, TRUE);
          }
       }
+      else
+         consdataInvalidateActivities(consdata);
+
+      consdata->presolved = FALSE;
+      consdata->rangedrowpropagated = 0;
+
+      /* bound change can turn the constraint infeasible or redundant only if it was a tightening */
+      if( (eventtype & SCIP_EVENTTYPE_BOUNDTIGHTENED) != 0 && !RatIsEqual(newbound, oldbound))
+      {
+         SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
+
+         /* reset maximal activity delta, so that it will be recalculated on the next real propagation */
+         if( consdata->maxactdeltavar == var )
+         {
+            RatSetString(consdata->maxactdelta, "inf");
+            consdata->maxactdeltavar = NULL;
+         }
+
+         /* check whether bound tightening might now be successful */
+         if( consdata->boundstightened > 0)
+         {
+            switch( eventtype )
+            {
+            case SCIP_EVENTTYPE_LBTIGHTENED:
+               if( (RatIsPositive(val) ? !RatIsInfinity(consdata->rhs) : !RatIsNegInfinity(consdata->lhs)) )
+                  consdata->boundstightened = 0;
+               break;
+            case SCIP_EVENTTYPE_UBTIGHTENED:
+               if( (RatIsPositive(val) ? !RatIsNegInfinity(consdata->lhs) : !RatIsInfinity(consdata->rhs)) )
+                  consdata->boundstightened = 0;
+               break;
+            default:
+               SCIPerrorMessage("invalid event type %lx\n", eventtype);
+               SCIPclockStop(scip->stat->exactproptime, scip->set);
+               return SCIP_INVALIDDATA;
+            }
+         }
+      }
+      /* update maximal activity delta if a bound was relaxed */
+      else if( !RatIsInfinity(consdata->maxactdelta) )
+      {
+         SCIP_Rational* lb;
+         SCIP_Rational* ub;
+         SCIP_Rational* delta;
+         RatCreateBuffer(SCIPbuffer(scip), &delta);
+         assert((eventtype & SCIP_EVENTTYPE_BOUNDRELAXED) != 0);
+
+         lb = SCIPvarGetLbLocalExact(var);
+         ub = SCIPvarGetUbLocalExact(var);
+
+         RatDiff(delta, ub, lb);
+         RatMult(delta, delta, val);
+         RatAbs(delta, delta);
+
+
+         if( RatIsGT(delta, consdata->maxactdelta) )
+         {
+            RatSet(consdata->maxactdelta, delta);
+            consdata->maxactdeltavar = var;
+         }
+         RatFreeBuffer(SCIPbuffer(scip), &delta);
+      }
+      RatFreeBuffer(SCIPbuffer(scip), &newbound);
+      RatFreeBuffer(SCIPbuffer(scip), &oldbound);
       SCIPclockStop(scip->stat->exactproptime, scip->set);
    }
    else if( (eventtype & SCIP_EVENTTYPE_VARFIXED) != 0 )

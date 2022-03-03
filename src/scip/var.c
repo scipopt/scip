@@ -23238,6 +23238,18 @@ SCIP_Rational* SCIPvarGetLbLocalExact(
    return var->exactdata->locdom.lb;
 }
 
+void SCIPvarGetLbLocalExactMaximal(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Rational*        output              /**< output rational */
+   )
+{
+   assert(var != NULL);
+   assert(var->exactdata != NULL);
+   assert(var->exactdata->locdom.lb != NULL);
+   RatSetInt(output, (long) (floor(var->locdom.lb)), 1);
+   RatMAX(output, output, var->exactdata->locdom.lb);
+}
+
 /** gets current upper bound of variable */
 SCIP_Real SCIPvarGetUbLocal(
    SCIP_VAR*             var                 /**< problem variable */
@@ -23258,6 +23270,18 @@ SCIP_Rational* SCIPvarGetUbLocalExact(
    assert(var->exactdata->locdom.ub != NULL);
 
    return var->exactdata->locdom.ub;
+}
+
+void SCIPvarGetUbLocalExactMinimal(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Rational*        output              /**< output rational */
+   )
+{
+   assert(var != NULL);
+   assert(var->exactdata != NULL);
+   assert(var->exactdata->locdom.ub != NULL);
+   RatSetInt(output, (long) (ceil(var->locdom.ub)), 1);
+   RatMIN(output, output, var->exactdata->locdom.ub);
 }
 
 /** gets the current hole list of an active variable */
