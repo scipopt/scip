@@ -2659,6 +2659,10 @@ void SCIPintervalMax(
    resultant->sup = MAX(operand1.sup, operand2.sup);
 }
 
+SCIP_Real SCIPintervalAbsMax(SCIP_INTERVAL interval) {
+   return MAX(ABS(interval.sup), ABS(interval.inf));
+}
+
 /** stores absolute value of operand in resultant */
 void SCIPintervalAbs(
    SCIP_Real             infinity,           /**< value for infinity */

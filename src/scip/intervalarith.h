@@ -602,6 +602,8 @@ void SCIPintervalMax(
    SCIP_INTERVAL         operand2            /**< second operand of operation */
    );
 
+SCIP_Real SCIPintervalAbsMax(SCIP_INTERVAL interval);
+
 /** stores absolute value of operand in resultant */
 SCIP_EXPORT
 void SCIPintervalAbs(
