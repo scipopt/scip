@@ -6,8 +6,14 @@
 Features
 --------
 
+- Variable conflict-based addition of Schreier-Sims cuts for symmetry handling in prop_symmetry.c is now based
+  on the clique table instead of present packing and partitioning constraints.
+
 Performance improvements
 ------------------------
+
+- Variable conflict-based addition of Schreier-Sims cuts for symmetry handling in prop_symmetry.c does no longer use
+  an expensive explicit conflict graph construction.
 
 Examples and applications
 -------------------------
@@ -26,6 +32,8 @@ Interface changes
 ### Interfaces to external software
 
 ### Changed parameters
+
+- Shrunk range of parameter "propagating/symmetry/sstleaderrule" from [0,3] to [0,2], removed "MAXCONFLICTS"-option.
 
 ### New parameters
 
