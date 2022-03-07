@@ -5218,15 +5218,10 @@ SCIP_RETCODE detectOrbitopes(
 static
 SCIP_RETCODE updateSymInfoConflictGraphSST(
    SCIP*                 scip,               /**< SCIP instance */
-   SCIP_CONFLICTDATA*    varconflicts,       /**< conflict structure (must not be NULL) */
-   SCIP_VAR**            vars,               /**< variables encoded in conflict structure
-                                              *   (either all vars or permvars) */
-   int                   nvars,              /**< number of nodes/vars in conflict structure */
-   SCIP_VAR**            permvars,           /**< variables considered in permutations */
-   int                   npermvars,          /**< number of permvars */
-   SCIP_Bool             onlypermvars,       /**< whether conflict graph contains only permvars */
-   SCIP_HASHMAP*         varmap,             /**< map from graphvar to node label in conflict graph
-                                              *   (or NULL if onlypermvars == TRUE) */
+   SCIP_CONFLICTDATA*    varconflicts,       /**< conflict structure */
+   SCIP_VAR**            conflictvars,       /**< variables encoded in conflict structure */
+   int                   nconflictvars,      /**< number of nodes/vars in conflict structure */
+   SCIP_HASHMAP*         conflictvarmap,     /**< map from graphvar to node label in conflict graph */
    int*                  orbits,             /**< array of non-trivial orbits */
    int*                  orbitbegins,        /**< array containing begin positions of new orbits in orbits array */
    int                   norbits             /**< number of non-trivial orbits */
@@ -5240,17 +5235,14 @@ SCIP_RETCODE updateSymInfoConflictGraphSST(
 
    assert( scip != NULL );
    assert( varconflicts != NULL );
-   assert( vars != NULL );
-   assert( nvars > 0 );
-   assert( permvars != NULL );
-   assert( npermvars > 0 );
-   assert( onlypermvars || varmap != NULL );
+   assert( conflictvars != NULL );
+   assert( nconflictvars > 0 );
    assert( orbits != NULL );
    assert( orbitbegins != NULL );
    assert( norbits >= 0 );
 
    /* initialize/reset variable information of nodes in conflict graph */
-   for (i = 0; i < nvars; ++i)
+   for (i = 0; i < nconflictvars; ++i)
    {
       /* (re-)set node data */
       varconflicts[i].orbitidx = -1;
@@ -5274,22 +5266,10 @@ SCIP_RETCODE updateSymInfoConflictGraphSST(
          int pos;
 
          /* get variable and position in conflict graph */
-         if ( onlypermvars )
-         {
-            pos = orbits[i];
-            assert( pos < npermvars );
-            var = permvars[pos];
-         }
-         else
-         {
-            assert( orbits[i] < npermvars );
-            var = permvars[orbits[i]];
-            assert( var != NULL );
+         pos = orbits[i];
+         assert( pos < nconflictvars );
 
-            assert( SCIPhashmapExists(varmap, var) );
-            pos = SCIPhashmapGetImageInt(varmap, var);
-            assert( pos != INT_MAX );
-         }
+         var = conflictvars[pos];
          assert( varconflicts[pos].var == var );
 
          varconflicts[pos].orbitidx = r;
@@ -5356,10 +5336,9 @@ static
 SCIP_RETCODE createConflictGraphSST(
    SCIP*                 scip,               /**< SCIP instance */
    SCIP_CONFLICTDATA**   varconflicts,       /**< pointer to store the variable conflict data */
-   SCIP_VAR**            vars,               /**< variables encoded in conflict graph */
-   int                   nvars,              /**< number of vars encoded in conflict graph */
-   SCIP_Bool             onlypermvars,       /**< whether conflict graph contains only permvars */
-   SCIP_HASHMAP*         permvarmap          /**< map of variables to indices in permvars array (or NULL) */
+   SCIP_VAR**            conflictvars,       /**< array of variables to encode in conflict graph */
+   int                   nconflictvars,      /**< number of vars to encode in conflict graph */
+   SCIP_HASHMAP*         conflictvarmap      /**< map of variables to indices in conflictvars array */
    )
 {
    SCIP_CLIQUE** cliques;
@@ -5378,8 +5357,8 @@ SCIP_RETCODE createConflictGraphSST(
 
    assert( scip != NULL );
    assert( varconflicts != NULL );
-   assert( vars != NULL );
-   assert( nvars > 0 );
+   assert( conflictvars != NULL );
+   assert( nconflictvars > 0 );
 
    /* we set the pointer of varconflicts to NULL to illustrate that we didn't generate it */
    *varconflicts = NULL;
@@ -5396,12 +5375,12 @@ SCIP_RETCODE createConflictGraphSST(
 
    /* construct variable conflicts */
    SCIPdebugMsg(scip, "Construction of conflict structure:\n");
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, varconflicts, nvars) );
-   for (i = 0; i < nvars; ++i)
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, varconflicts, nconflictvars) );
+   for (i = 0; i < nconflictvars; ++i)
    {
       (*varconflicts)[i].ncliques = 0;
-      (*varconflicts)[i].active = FALSE;
-      (*varconflicts)[i].var = NULL;
+      (*varconflicts)[i].active = FALSE;  /* @todo Should you be active or inactive when having no overlap? */
+      (*varconflicts)[i].var = conflictvars[i];
    }
 
    /* Store, for each variable, the conflict cliques it is contained in.
@@ -5427,32 +5406,22 @@ SCIP_RETCODE createConflictGraphSST(
       /* for all variables, list which cliques it is part of */
       for (i = 0; i < ncliquevars; ++i)
       {
-         if ( onlypermvars )
-         {
-            node = SCIPhashmapGetImageInt(permvarmap, cliquevars[i]);
+         node = SCIPhashmapGetImageInt(conflictvarmap, cliquevars[i]);
 
-            /* skip variables that are not affected by symmetry */
-            if ( node == INT_MAX )
-               continue;
-         }
-         else
-         {
-            node = SCIPvarGetProbindex(cliquevars[i]);
+         /* skip variables not in the conflictvars array (so not in hashmap, too) */
+         if ( node == INT_MAX )
+            continue;
+         assert( node >= 0 );
+         assert( node < nconflictvars );
 
-            /* skip inactive variables */
-            if ( node < 0 )
-               continue;
-         }
-
-         assert( (*varconflicts)[node].var == NULL || (*varconflicts)[node].var == cliquevars[i] );
+         assert( (*varconflicts)[node].var == cliquevars[i] );
          (*varconflicts)[node].active = TRUE;
-         (*varconflicts)[node].var = cliquevars[i];
          (*varconflicts)[node].ncliques++;
       }
    }
 
    /* (2.) allocate the arrays */
-   for (i = 0; i < nvars; ++i)
+   for (i = 0; i < nconflictvars; ++i)
    {
       assert( (*varconflicts)[i].ncliques >= 0 );
       if ( (*varconflicts)[i].ncliques == 0 )
@@ -5464,7 +5433,7 @@ SCIP_RETCODE createConflictGraphSST(
    }
 
    /* (3.) fill the clique constraints */
-   SCIPallocClearBufferArray(scip, &tmpncliques, nvars);
+   SCIPallocClearBufferArray(scip, &tmpncliques, nconflictvars);
    for (c = 0; c < ncliques; ++c)
    {
       clique = cliques[c];
@@ -5481,22 +5450,15 @@ SCIP_RETCODE createConflictGraphSST(
       /* for all variables, list which cliques it is part of */
       for (i = 0; i < ncliquevars; ++i)
       {
-         if ( onlypermvars )
-         {
-            node = SCIPhashmapGetImageInt(permvarmap, cliquevars[i]);
+         node = SCIPhashmapGetImageInt(conflictvarmap, cliquevars[i]);
 
-            /* skip variables that are not affected by symmetry */
-            if ( node == INT_MAX )
-               continue;
-         }
-         else
-         {
-            node = SCIPvarGetProbindex(cliquevars[i]);
+         /* skip variables not in the conflictvars array (so not in hashmap, too) */
+         if ( node == INT_MAX )
+            continue;
 
-            /* skip inactive variables */
-            if ( node < 0 )
-               continue;
-         }
+         assert( node >= 0 );
+         assert( node < nconflictvars );
+         assert( (*varconflicts)[node].var == cliquevars[i] );
 
          /* add clique to the cliques */
          assert( tmpncliques[node] < (*varconflicts)[node].ncliques );
@@ -5509,13 +5471,13 @@ SCIP_RETCODE createConflictGraphSST(
    }
 
    /* sort the variable cliques by the address, so checkSortedArraysHaveOverlappingEntry can detect intersections */
-   for (i = 0; i < nvars; ++i)
+   for (i = 0; i < nconflictvars; ++i)
    {
       SCIPsortPtr((void**)(*varconflicts)[i].cliques, sortByPointerValue, (*varconflicts)[i].ncliques);
    }
 
 #ifndef NDEBUG
-   for (i = 0; i < nvars; ++i)
+   for (i = 0; i < nconflictvars; ++i)
    {
       assert( tmpncliques[i] == (*varconflicts)[i].ncliques );
    }
@@ -5879,13 +5841,9 @@ static
 SCIP_RETCODE selectOrbitLeaderSSTConss(
    SCIP*                 scip,               /**< SCIP instance */
    SCIP_CONFLICTDATA*    varconflicts,       /**< variable conflicts structure, or NULL if we do not use it */
-   SCIP_VAR**            vars,               /**< variables encoded in conflict graph */
-   int                   nvars,              /**< number of variables encoded in conflict graph */
-   SCIP_HASHMAP*         varmap,             /**< map from variable to node label in conflict graph
-                                              *   or NULL if varconflicts == NULL  */
-   SCIP_VAR**            permvars,           /**< vars encoded in a permutation */
-   int                   npermvars,          /**< number of vars in a permutation */
-   int*                  orbits,             /**< orbits of stabilizer subgroup */
+   SCIP_VAR**            conflictvars,       /**< variables encoded in conflict graph */
+   int                   nconflictvars,      /**< number of variables encoded in conflict graph */
+   int*                  orbits,             /**< orbits of stabilizer subgroup, expressed in terms of conflictvars */
    int*                  orbitbegins,        /**< array storing the begin position of each orbit in orbits */
    int                   norbits,            /**< number of orbits */
    int                   leaderrule,         /**< rule to select leader */
@@ -5906,11 +5864,8 @@ SCIP_RETCODE selectOrbitLeaderSSTConss(
    int leader = -1;
 
    assert( scip != NULL );
-   assert( vars != NULL );
-   assert( nvars > 0 );
-   assert( varmap != NULL || varconflicts == NULL );
-   assert( permvars != NULL );
-   assert( npermvars > 0 );
+   assert( conflictvars != NULL );
+   assert( nconflictvars > 0 );
    assert( orbits != NULL );
    assert( orbitbegins != NULL );
    assert( norbits > 0 );
@@ -5939,7 +5894,8 @@ SCIP_RETCODE selectOrbitLeaderSSTConss(
       for (i = 0; i < norbits; ++i)
       {
          /* skip orbits containing vars different to the leader's vartype */
-         if ( SCIPvarGetType(permvars[orbits[orbitbegins[i]]]) != leadervartype )
+         /* Conflictvars is permvars! */
+         if ( SCIPvarGetType(conflictvars[orbits[orbitbegins[i]]]) != leadervartype )
             continue;
 
          if ( tiebreakrule == (int) SCIP_LEADERTIEBREAKRULE_MINORBIT )
@@ -5959,9 +5915,9 @@ SCIP_RETCODE selectOrbitLeaderSSTConss(
 
                do
                {
-                  varidx = SCIPvarGetProbindex(permvars[orbits[cnt++]]);
+                  varidx = orbits[cnt++];
                }
-               while ( varidx == -1 && cnt < orbitbegins[i + 1]);
+               while ( SCIPvarGetProbindex(conflictvars[varidx]) == -1 && cnt < orbitbegins[i + 1]);
             }
             else
             {
@@ -5971,13 +5927,13 @@ SCIP_RETCODE selectOrbitLeaderSSTConss(
 
                do
                {
-                  varidx = SCIPvarGetProbindex(permvars[orbits[cnt--]]);
+                  varidx = orbits[cnt--];
                }
-               while ( varidx == -1 && cnt >= orbitbegins[i]);
+               while ( SCIPvarGetProbindex(conflictvars[varidx]) == -1 && cnt >= orbitbegins[i]);
             }
 
             /* skip inactive variables */
-            if ( varidx == -1 )
+            if ( SCIPvarGetProbindex(conflictvars[varidx]) == -1 )
                continue;
 
             assert( varconflicts[varidx].orbitidx == i );
@@ -6001,10 +5957,8 @@ SCIP_RETCODE selectOrbitLeaderSSTConss(
       /* store variables in conflict with leader */
       if ( *success && varconflicts != NULL )
       {
-         SCIP_VAR* leadervar;
-         leadervar = permvars[orbits[orbitbegins[*orbitidx] + *leaderidx]];
-         leader = SCIPhashmapGetImageInt(varmap, leadervar);
-         assert( leader < nvars );
+         leader = orbits[orbitbegins[*orbitidx] + *leaderidx];
+         assert( leader < nconflictvars );
 
          if ( tiebreakrule == (int) SCIP_LEADERTIEBREAKRULE_MAXCONFLICTSINORBIT
             && varconflicts[leader].ncliques > 0 )
@@ -6012,12 +5966,11 @@ SCIP_RETCODE selectOrbitLeaderSSTConss(
             /* count how many active variables in the orbit conflict with "leader"
              * This is only needed if there are possible conflicts.
              */
-            SCIP_VAR* var;
             int varmapid;
 
             orbitsize = orbitbegins[*orbitidx + 1] - orbitbegins[*orbitidx];
             assert( varconflicts != NULL );
-            assert( leader >= 0 && leader < npermvars );
+            assert( leader >= 0 && leader < nconflictvars );
 
             assert( orbitvarinconflict != NULL );
 
@@ -6028,12 +5981,7 @@ SCIP_RETCODE selectOrbitLeaderSSTConss(
                   continue;
 
                /* get variable index in conflict graph */
-               var = permvars[orbits[orbitbegins[*orbitidx] + i]];
-               varmapid = SCIPhashmapGetImageInt(varmap, var);
-
-               /* only include variables in the conflict structure */
-               if ( varmapid == INT_MAX )
-                  continue;
+               varmapid = orbits[orbitbegins[*orbitidx] + i];
 
                /* only active variables */
                if ( ! varconflicts[varmapid].active )
@@ -6063,10 +6011,10 @@ SCIP_RETCODE selectOrbitLeaderSSTConss(
       orbitcriterion = 0;
 
       /* iterate over variables and select the first one that meets the tiebreak rule */
-      for (i = 0; i < nvars; ++i)
+      for (i = 0; i < nconflictvars; ++i)
       {
          /* skip vars different to the leader's vartype */
-         if ( SCIPvarGetType(vars[i]) != leadervartype )
+         if ( SCIPvarGetType(conflictvars[i]) != leadervartype )
             continue;
 
          /* skip variables not affected by symmetry */
@@ -6085,19 +6033,18 @@ SCIP_RETCODE selectOrbitLeaderSSTConss(
       }
 
       /* store variables in conflict with leader */
-      leader = SCIPhashmapGetImageInt(varmap, permvars[orbits[orbitbegins[*orbitidx] + *leaderidx]]);
-      assert( leader < nvars );
+      leader = orbits[orbitbegins[*orbitidx] + *leaderidx];
+      assert( leader < nconflictvars );
       assert( norbitvarinconflict != NULL );
 
       if ( *success && varconflicts[leader].ncliques > 0 )
       {
          /* count how many active variables in the orbit conflict with leader */
-         SCIP_VAR* var;
          int varmapid;
 
          orbitsize = orbitbegins[*orbitidx + 1] - orbitbegins[*orbitidx];
          assert( varconflicts != NULL );
-         assert( leader >= 0 && leader < npermvars );
+         assert( leader >= 0 && leader < nconflictvars );
 
          assert( orbitvarinconflict != NULL );
 
@@ -6108,13 +6055,7 @@ SCIP_RETCODE selectOrbitLeaderSSTConss(
                continue;
 
             /* get variable index in conflict graph */
-            var = permvars[orbits[orbitbegins[*orbitidx] + i]];
-            varmapid = SCIPhashmapGetImageInt(varmap, var);
-
-            /* only include variables in the conflict structure */
-            if ( varmapid == INT_MAX )
-               continue;
-
+            varmapid = orbits[orbitbegins[*orbitidx] + i];
             /* only active variables */
             if ( ! varconflicts[varmapid].active )
                continue;
@@ -6145,10 +6086,6 @@ SCIP_RETCODE addSSTConss(
    )
 { /*lint --e{641}*/
    SCIP_CONFLICTDATA* varconflicts = NULL;
-   SCIP_HASHMAP* varmap = NULL;
-   SCIP_VAR** vars;
-   int nvars;
-
    SCIP_HASHMAP* permvarmap;
    SCIP_VAR** permvars;
    int** permstrans;
@@ -6262,9 +6199,6 @@ SCIP_RETCODE addSSTConss(
    propdata->nmovedimplintpermvars = nmovedimplintpermvars;
    propdata->nmovedcontpermvars = nmovedcontpermvars;
 
-   vars = SCIPgetVars(scip);
-   nvars = SCIPgetNVars(scip);
-
    /* determine the leader's vartype */
    nvarsselectedtype = 0;
    if ( ISSSTBINACTIVE(leadervartype) && nmovedbinpermvars > nvarsselectedtype )
@@ -6299,7 +6233,7 @@ SCIP_RETCODE addSSTConss(
    if ( selectedtype == SCIP_VARTYPE_BINARY && (leaderrule == SCIP_LEADERRULE_MAXCONFLICTSINORBIT
          || tiebreakrule == SCIP_LEADERTIEBREAKRULE_MAXCONFLICTSINORBIT) )
    {
-      SCIP_CALL( createConflictGraphSST(scip, &varconflicts, vars, nvars, FALSE, permvarmap) );
+      SCIP_CALL( createConflictGraphSST(scip, &varconflicts, permvars, npermvars, permvarmap) );
       conflictgraphcreated = varconflicts != NULL;
    }
 
@@ -6311,12 +6245,6 @@ SCIP_RETCODE addSSTConss(
    if ( conflictgraphcreated )
    {
       SCIP_CALL( SCIPallocClearBufferArray(scip, &orbitvarinconflict, npermvars) );
-      SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(scip), nvars) );
-      for (v = 0; v < nvars; ++v)
-      {
-         assert( ! SCIPhashmapExists(varmap, vars[v]) );
-         SCIP_CALL( SCIPhashmapInsertInt(varmap, vars[v], v) );
-      }
    }
 
    SCIPdebugMsg(scip, "Start selection of orbits and leaders for Schreier Sims constraints.\n");
@@ -6375,8 +6303,8 @@ SCIP_RETCODE addSSTConss(
          /* update symmetry information of conflict graph */
          if ( conflictgraphcreated )
          {
-            SCIP_CALL( updateSymInfoConflictGraphSST(scip, varconflicts, vars, nvars, permvars, npermvars, FALSE,
-                  varmap, orbits, orbitbegins, norbits) );
+            SCIP_CALL( updateSymInfoConflictGraphSST(scip, varconflicts, permvars, npermvars, permvarmap,
+               orbits, orbitbegins, norbits) );
          }
 
          /* possibly adapt the leader and tie-break rule */
@@ -6390,9 +6318,9 @@ SCIP_RETCODE addSSTConss(
             tiebreakrule = SCIP_LEADERTIEBREAKRULE_MAXORBIT;
 
          /* select orbit and leader */
-         SCIP_CALL( selectOrbitLeaderSSTConss(scip, varconflicts, vars, nvars, varmap,
-               permvars, npermvars, orbits, orbitbegins, norbits, propdata->sstleaderrule, propdata->ssttiebreakrule,
-               selectedtype, &orbitidx, &orbitleaderidx, orbitvarinconflict, &norbitvarinconflict, &success) );
+         SCIP_CALL( selectOrbitLeaderSSTConss(scip, varconflicts, permvars, npermvars, orbits, orbitbegins,
+            norbits, propdata->sstleaderrule, propdata->ssttiebreakrule, selectedtype, &orbitidx, &orbitleaderidx,
+            orbitvarinconflict, &norbitvarinconflict, &success) );
 
          if ( ! success )
             break;
@@ -6439,14 +6367,14 @@ SCIP_RETCODE addSSTConss(
 
    if ( conflictgraphcreated )
    {
-      SCIPhashmapFree(&varmap);
       SCIPfreeBufferArray(scip, &orbitvarinconflict);
    }
    SCIPfreeBufferArray(scip, &orbitbegins);
    SCIPfreeBufferArray(scip, &orbits);
    if ( varconflicts != NULL )
    {
-      SCIP_CALL( freeConflictGraphSST(scip, &varconflicts, nvars) );
+      /* nconflictvars at construction is npermvars */
+      SCIP_CALL( freeConflictGraphSST(scip, &varconflicts, npermvars) );
    }
    SCIPfreeBufferArray(scip, &inactiveperms);
 
