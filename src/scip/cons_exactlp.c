@@ -9566,6 +9566,7 @@ static SCIP_Bool assertActivities(SCIP* scip, SCIP_CONSDATA* consdata) {
    assert(consdata->computeactivities||!consdata->validactivities ||RatIsLEReal(consdata->maxactivityEx, consdata->maxactivity));
    consdataRecomputeMinactivityEx(scip, consdata);
    assert(consdata->computeactivities||!consdata->validactivities ||RatIsGEReal(consdata->minactivityEx, consdata->minactivity));
+   return true;
 }
 
 /** tightens bounds of variables in constraint due to activity bounds */
