@@ -9563,9 +9563,9 @@ SCIP_RETCODE tightenVarBounds(
 
 static SCIP_Bool assertActivities(SCIP* scip, SCIP_CONSDATA* consdata) {
    consdataRecomputeMaxactivityEx(scip, consdata);
-   assert(consdata->computeactivities||!consdata->validactivities ||RatIsLEReal(consdata->maxactivityEx, consdata->maxactivity));
+   assert(consdata->computeactivities || consdata->minactivityneginf > 0 || consdata->minactivityneghuge > 0||!consdata->validactivities ||RatIsLEReal(consdata->maxactivityEx, consdata->maxactivity));
    consdataRecomputeMinactivityEx(scip, consdata);
-   assert(consdata->computeactivities||!consdata->validactivities ||RatIsGEReal(consdata->minactivityEx, consdata->minactivity));
+   assert(consdata->computeactivities|| consdata->minactivityneginf > 0 || consdata->minactivityneghuge > 0|| !consdata->validactivities ||RatIsGEReal(consdata->minactivityEx, consdata->minactivity));
    return true;
 }
 
