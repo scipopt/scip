@@ -5379,8 +5379,14 @@ SCIP_RETCODE createConflictGraphSST(
    for (i = 0; i < nconflictvars; ++i)
    {
       (*varconflicts)[i].ncliques = 0;
-      (*varconflicts)[i].active = FALSE;  /* @todo Should you be active or inactive when having no overlap? */
+      (*varconflicts)[i].active = TRUE;
       (*varconflicts)[i].var = conflictvars[i];
+      /* set remaining variable conflictdata at neutral entries */
+      (*varconflicts)[i].cliques = NULL;
+      (*varconflicts)[i].orbitidx = -1;
+      (*varconflicts)[i].nconflictinorbit = 0;
+      (*varconflicts)[i].orbitsize = -1;
+      (*varconflicts)[i].posinorbit = -1;
    }
 
    /* Store, for each variable, the conflict cliques it is contained in.
@@ -5424,9 +5430,8 @@ SCIP_RETCODE createConflictGraphSST(
    for (i = 0; i < nconflictvars; ++i)
    {
       assert( (*varconflicts)[i].ncliques >= 0 );
-      if ( (*varconflicts)[i].ncliques == 0 )
-         (*varconflicts)[i].cliques = NULL;
-      else
+      assert( (*varconflicts)[i].cliques == NULL );
+      if ( (*varconflicts)[i].ncliques > 0 )
       {
          SCIPallocBlockMemoryArray(scip, &(*varconflicts)[i].cliques, (*varconflicts)[i].ncliques);
       }
