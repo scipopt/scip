@@ -384,9 +384,9 @@ SCIP_Bool checkSortedArraysHaveOverlappingEntry(
    int it2;
    int cmp;
 
-   assert( arr1 != NULL );
+   assert( arr1 != NULL || narr1 == 0 );
    assert( narr1 >= 0 );
-   assert( arr2 != NULL );
+   assert( arr2 != NULL || narr2 == 0 );
    assert( narr2 >= 0 );
    assert( compfunc != NULL );
 
