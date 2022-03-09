@@ -642,6 +642,7 @@ SCIP_RETCODE SCIPhashExpr(
  *     (TODO: we could handle more complicated stuff like \f$xy\log(x) \to - y * \mathrm{entropy}(x)\f$, but I am not sure this should happen at the simplification level;
  *            similar for \f$(xy) \log(xy)\f$, which currently simplifies to \f$xy \log(xy)\f$)
  *   - SP12: if it has two children, then neither of them is a sum (expand sums)
+ *   - SP12b: if it has at least two children and expandalways is set, then no child is a sum (expand sums always)
  *   - SP13: no child is a sum with a single term
  *   - SP14: at most one child is an `exp`
  * - is a power expression such that

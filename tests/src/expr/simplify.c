@@ -99,6 +99,7 @@ ParameterizedTestParameters(simplify /* test suite */, simplify_test /* test nam
       {"((2*<x>)^0.5+1)*((1*<x>)^0.5 + 1)", "sum"},
       {"<x>*(<x>+1)", "sum"},
       {"2*<x>*(<x>+1)", "sum"},
+      {"<x>*(<x>+1)*<y>", "prod"},  /* products with more than 2 factors are by default not expanded */
       {"(<x>^0.5)^0.5*((<x>^0.5)^0.5+2) - 2*(<x>^0.5)^0.5 - <x>^0.5", "val"},
       {"(25.0 * <x>^2)^0.5", "sum"},
       {"exp(<x>)*exp(<y>)", "exp"},
@@ -429,4 +430,7 @@ Test(simplify, more_simplification_tests)
 
    SCIP_CALL( SCIPsetBoolParam(scip, "expr/pow/distribfracexponent", TRUE) );
    parseSimplifyCheck(scip, "(<x>*<y>)^0.5", "prod", NULL);
+
+   SCIP_CALL( SCIPsetBoolParam(scip, "expr/prod/expandalways", TRUE) );
+   parseSimplifyCheck(scip, "<x>*(<x>+1)*<y>", "sum", NULL);
 }

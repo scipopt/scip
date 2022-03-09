@@ -69,6 +69,8 @@ struct SCIP_ExprData
 struct SCIP_ExprhdlrData
 {
    SCIP_CONSHDLR*        conshdlr;           /**< nonlinear constraint handler (to compute estimates for > 2-dim products) */
+
+   SCIP_Bool             expandalways;       /**< whether to expand products of a sum and several factors in simplify (SP12b) */
 };
 
 /** node for linked list of expressions */
@@ -103,6 +105,7 @@ SCIP_RETCODE buildSimplifiedProduct(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             simplifiedcoef,     /**< simplified product should be simplifiedcoef * PI simplifiedfactors */
    EXPRNODE**            simplifiedfactors,  /**< factors of simplified product */
+   SCIP_Bool             expandalways,       /**< whether to expand products of a sum and several factors in simplify (SP12b) */
    SCIP_Bool             changed,            /**< indicates whether some of the simplified factors was changed */
    SCIP_EXPR**           simplifiedexpr,     /**< buffer to store the simplified expression */
    SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
@@ -882,6 +885,7 @@ SCIP_RETCODE enforceSP12(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             simplifiedcoef,     /**< simplified product should be simplifiedcoef * PI simplifiedfactors */
    EXPRNODE*             finalchildren,      /**< factors of simplified product */
+   SCIP_Bool             expandalways,       /**< whether to expand products of a sum and several factors in simplify (SP12b) */
    SCIP_EXPR**           simplifiedexpr,     /**< buffer to store the simplified expression */
    SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
    void*                 ownercreatedata     /**< data to pass to ownercreate */
@@ -1005,7 +1009,7 @@ SCIP_RETCODE enforceSP12(
             }
 #endif
 
-            SCIP_CALL( buildSimplifiedProduct(scip, 1.0, &finalfactors, TRUE, &term, ownercreate, ownercreatedata) );
+            SCIP_CALL( buildSimplifiedProduct(scip, 1.0, &finalfactors, expandalways, TRUE, &term, ownercreate, ownercreatedata) );
             assert(finalfactors == NULL);
             assert(term != NULL);
 
@@ -1072,7 +1076,7 @@ SCIP_RETCODE enforceSP12(
          SCIP_CALL( simplifyMultiplyChildren(scip, factors, 2, &termcoef, &finalfactors, &dummy, ownercreate, ownercreatedata) );
          assert(termcoef != 0.0);
 
-         SCIP_CALL( buildSimplifiedProduct(scip, 1.0, &finalfactors, TRUE, &term, ownercreate, ownercreatedata) );
+         SCIP_CALL( buildSimplifiedProduct(scip, 1.0, &finalfactors, expandalways, TRUE, &term, ownercreate, ownercreatedata) );
          assert(finalfactors == NULL);
          assert(term != NULL);
 
@@ -1156,7 +1160,7 @@ SCIP_RETCODE enforceSP12b(
          SCIP_CALL( simplifyMultiplyChildren(scip, factors, nfactors, &termcoef, &finalfactors, &dummy, ownercreate, ownercreatedata) );
          assert(termcoef != 0.0);
 
-         SCIP_CALL( buildSimplifiedProduct(scip, 1.0, &finalfactors, TRUE, &term, ownercreate, ownercreatedata) );
+         SCIP_CALL( buildSimplifiedProduct(scip, 1.0, &finalfactors, TRUE, TRUE, &term, ownercreate, ownercreatedata) );
          assert(finalfactors == NULL);
          assert(term != NULL);
 
@@ -1180,7 +1184,7 @@ SCIP_RETCODE enforceSP12b(
       SCIP_CALL( simplifyMultiplyChildren(scip, factors, nfactors + 1, &termcoef, &finalfactors, &dummy, ownercreate, ownercreatedata) );
       assert(termcoef != 0.0);
 
-      SCIP_CALL( buildSimplifiedProduct(scip, 1.0, &finalfactors, TRUE, &term, ownercreate, ownercreatedata) );
+      SCIP_CALL( buildSimplifiedProduct(scip, 1.0, &finalfactors, TRUE, TRUE, &term, ownercreate, ownercreatedata) );
       assert(finalfactors == NULL);
       assert(term != NULL);
 
@@ -1206,6 +1210,7 @@ SCIP_RETCODE buildSimplifiedProduct(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             simplifiedcoef,     /**< simplified product should be simplifiedcoef * PI simplifiedfactors */
    EXPRNODE**            simplifiedfactors,  /**< factors of simplified product */
+   SCIP_Bool             expandalways,       /**< whether to expand products of a sum and several factors in simplify (SP12b) */
    SCIP_Bool             changed,            /**< indicates whether some of the simplified factors was changed */
    SCIP_EXPR**           simplifiedexpr,     /**< buffer to store the simplified expression */
    SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
@@ -1223,13 +1228,16 @@ SCIP_RETCODE buildSimplifiedProduct(
    if( *simplifiedexpr != NULL )
       goto CLEANUP;
 
-   SCIP_CALL( enforceSP12(scip, simplifiedcoef, *simplifiedfactors, simplifiedexpr, ownercreate, ownercreatedata) );
+   SCIP_CALL( enforceSP12(scip, simplifiedcoef, *simplifiedfactors, expandalways, simplifiedexpr, ownercreate, ownercreatedata) );
    if( *simplifiedexpr != NULL )
       goto CLEANUP;
 
-   SCIP_CALL( enforceSP12b(scip, simplifiedcoef, *simplifiedfactors, simplifiedexpr, ownercreate, ownercreatedata) );
-   if( *simplifiedexpr != NULL )
-      goto CLEANUP;
+   if( expandalways )
+   {
+      SCIP_CALL( enforceSP12b(scip, simplifiedcoef, *simplifiedfactors, simplifiedexpr, ownercreate, ownercreatedata) );
+      if( *simplifiedexpr != NULL )
+         goto CLEANUP;
+   }
 
    SCIP_CALL( enforceSP10(scip, simplifiedcoef, *simplifiedfactors, simplifiedexpr, ownercreate, ownercreatedata) );
    if( *simplifiedexpr != NULL )
@@ -1397,7 +1405,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyProduct)
 #endif
 
    /* get simplified product from simplified factors in finalchildren */
-   SCIP_CALL( buildSimplifiedProduct(scip, simplifiedcoef, &finalchildren, changed, simplifiedexpr, ownercreate,
+   SCIP_CALL( buildSimplifiedProduct(scip, simplifiedcoef, &finalchildren, SCIPexprhdlrGetData(SCIPexprGetHdlr(expr))->expandalways, changed, simplifiedexpr, ownercreate,
          ownercreatedata) );
    assert(finalchildren == NULL);
 
@@ -2226,6 +2234,10 @@ SCIP_RETCODE SCIPincludeExprhdlrProduct(
    SCIPexprhdlrSetCurvature(exprhdlr, curvatureProduct);
    SCIPexprhdlrSetMonotonicity(exprhdlr, monotonicityProduct);
    SCIPexprhdlrSetIntegrality(exprhdlr, integralityProduct);
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "expr/" EXPRHDLR_NAME "/expandalways",
+      "whether to expand products of a sum and several factors in simplify",
+      &exprhdlrdata->expandalways, FALSE, FALSE, NULL, NULL) );
 
    return SCIP_OKAY;
 }
