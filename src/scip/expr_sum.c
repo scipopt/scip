@@ -1286,6 +1286,7 @@ SCIP_RETCODE SCIPpowerExprSum(
    */
 
    SCIP_EXPR** children;
+   SCIP_EXPR*** childrenpower;
    SCIP_Real* coefs;
    SCIP_Real constant;
    SCIP_Bool haveconst;
@@ -1331,6 +1332,30 @@ SCIP_RETCODE SCIPpowerExprSum(
    for( i = 1; i <= exponent; ++i )
      factorials[i] = factorials[i-1] * i;
 
+   /* precompute children^k, k=1..exponent */
+   SCIP_CALL( SCIPallocBufferArray(scip, &childrenpower, nchildren) );
+   for( i = 0; i < nchildren; ++i )
+   {
+      int k;
+      SCIP_CALL( SCIPallocBufferArray(scip, &childrenpower[i], exponent+1) );
+      childrenpower[i][1] = children[i];
+      for( k = 2; k <= exponent; ++k )
+      {
+         SCIP_CALL( SCIPcreateExprPow(scip, &childrenpower[i][k], children[i], (SCIP_Real)k, NULL, NULL) );
+         if( simplify )
+         {
+            SCIP_Bool changed;
+            SCIP_Bool infeasible;
+            SCIP_EXPR* simplified;
+
+            SCIP_CALL( SCIPsimplifyExpr(scip, childrenpower[i][k], &simplified, &changed, &infeasible, ownercreate, ownercreatedata) );
+            assert(!infeasible);
+            SCIP_CALL( SCIPreleaseExpr(scip, &childrenpower[i][k]) );
+            childrenpower[i][k] = simplified;
+         }
+      }
+   }
+
    /* first multinomial is (exponent,0,0,...) */
    beta[0] = exponent;
    betapos = 0;
@@ -1369,52 +1394,45 @@ SCIP_RETCODE SCIPpowerExprSum(
          newtermcoef *= pow(coefs[i], (double)beta[i]);
 
          /* expr_i^beta_i*/
-         if( beta[i] == 1 )
-         {
-            SCIP_CALL( SCIPappendExprChild(scip, newterm, children[i]) );
-         }
-         else
-         {
-            /* TODO we could save a bit by reusing power expression */
-            SCIP_EXPR* powexpr;
-            SCIP_CALL( SCIPcreateExprPow(scip, &powexpr, children[i], (SCIP_Real)beta[i], ownercreate, ownercreatedata) );
+         SCIP_CALL( SCIPappendExprChild(scip, newterm, childrenpower[i][beta[i]]) );
+      }
 
+      /* append newterm to sum */
+      switch( SCIPexprGetNChildren(newterm) )
+      {
+         case 0:
+         {
+            /* no factor in product, so it is a constant -> update constant in sum */
+            SCIPsetConstantExprSum(*result, SCIPgetConstantExprSum(*result) + newtermcoef);
+            break;
+         }
+
+         case 1:
+         {
+            /* only one factor in product -> add this factor itself to sum */
+            SCIP_CALL( SCIPappendExprSumExpr(scip, *result, SCIPexprGetChildren(newterm)[0], newtermcoef) );
+            break;
+         }
+
+         default:
+         {
             if( simplify )
             {
+               /* simplify product */
                SCIP_Bool changed;
                SCIP_Bool infeasible;
                SCIP_EXPR* simplified;
 
-               SCIP_CALL( SCIPsimplifyExpr(scip, powexpr, &simplified, &changed, &infeasible, ownercreate, ownercreatedata) );
+               SCIP_CALL( SCIPsimplifyExpr(scip, newterm, &simplified, &changed, &infeasible, ownercreate, ownercreatedata) );
                assert(!infeasible);
-               SCIP_CALL( SCIPreleaseExpr(scip, &powexpr) );
-               powexpr = simplified;
+               SCIP_CALL( SCIPreleaseExpr(scip, &newterm) );
+               newterm = simplified;
             }
 
-            SCIP_CALL( SCIPappendExprChild(scip, newterm, powexpr) );
-            SCIP_CALL( SCIPreleaseExpr(scip, &powexpr) );
+            /* append new term to sum */
+            SCIP_CALL( SCIPappendExprSumExpr(scip, *result, newterm, newtermcoef) );
+            break;
          }
-      }
-      if( SCIPexprGetNChildren(newterm) == 0 )
-      {
-         SCIPsetConstantExprSum(*result, SCIPgetConstantExprSum(*result) + SCIPgetCoefExprProduct(newterm));
-      }
-      else
-      {
-         if( simplify )
-         {
-            SCIP_Bool changed;
-            SCIP_Bool infeasible;
-            SCIP_EXPR* simplified;
-
-            SCIP_CALL( SCIPsimplifyExpr(scip, newterm, &simplified, &changed, &infeasible, ownercreate, ownercreatedata) );
-            assert(!infeasible);
-            SCIP_CALL( SCIPreleaseExpr(scip, &newterm) );
-            newterm = simplified;
-         }
-
-         /* append new term to sum */
-         SCIP_CALL( SCIPappendExprSumExpr(scip, *result, newterm, newtermcoef) );
       }
       SCIP_CALL( SCIPreleaseExpr(scip, &newterm) );
 
@@ -1463,6 +1481,16 @@ SCIP_RETCODE SCIPpowerExprSum(
       *result = simplified;
    }
 
+   for( i = nchildren-1; i >= 0; --i )
+   {
+      int k;
+      for( k = exponent; k >= 2; --k )
+      {
+         SCIP_CALL( SCIPreleaseExpr(scip, &childrenpower[i][k]) );
+      }
+      SCIPfreeBufferArray(scip, &childrenpower[i]);
+   }
+   SCIPfreeBufferArray(scip, &childrenpower);
    SCIPfreeBufferArray(scip, &factorials);
    SCIPfreeBufferArray(scip, &beta);
 
