@@ -71,6 +71,8 @@ ParameterizedTestParameters(simplify /* test suite */, simplify_test /* test nam
       {"(2*<x>)^2", "sum"},
       {"(<x> + <y>)^2", "sum"},
       {"(<x> + <y> + 2)^2", "sum"},
+      {"(<x> + 2*<y> - 1)^3", "sum"},
+      {"(<x> + 2*<y> - 1)^10", "pow"},  // expandmaxexponent is < 10
       {"(<x> + <y>)*(<x> + 1)^2 - <x>^3 - <x>^2*<y> - 2*<x>^2 - 2*<y>*<x> -<y> -<x>", "val"},
       {"(<x> + <y>)^2 - <x>^2 - 2*<x>*<y>", "pow"},
       {"-<x>^2 + (<x> + <y>)^2 - 2*<x>*<y> - <y>^2", "val"}, // order is important to test the internal algorithms
@@ -318,6 +320,8 @@ void setup(void)
 
    /* include our presol which is needed for some tests */
    SCIP_CALL( SCIPincludePresolBasic(scip, NULL, "presol", "presol", 1, 1, SCIP_PRESOLTIMING_FAST, presolExec, NULL) );
+
+   SCIP_CALL( SCIPsetIntParam(scip, "expr/pow/expandmaxexponent", 3) );
 
    /* create problem */
    SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
