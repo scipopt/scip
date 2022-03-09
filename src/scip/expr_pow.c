@@ -84,6 +84,8 @@ SCIP_Real signpow_roots[SIGNPOW_ROOTS_KNOWN+1] = {
 struct SCIP_ExprhdlrData
 {
    SCIP_Real             minzerodistance;    /**< minimal distance from zero to enforce for child in bound tightening */
+   int                   expandmaxexponent;  /**< maximal exponent when to expand power of sum in simplify */
+
    SCIP_Bool             warnedonpole;       /**< whether we warned on enforcing a minimal distance from zero for child */
 };
 
@@ -1401,6 +1403,8 @@ SCIP_DECL_EXPRCOMPARE(comparePow)
 static
 SCIP_DECL_EXPRSIMPLIFY(simplifyPow)
 {  /*lint --e{715}*/
+   SCIP_EXPRHDLR* exprhdlr;
+   SCIP_EXPRHDLRDATA* exprhdlrdata;
    SCIP_EXPR* base;
    SCIP_Real exponent;
 
@@ -1408,6 +1412,12 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyPow)
    assert(expr != NULL);
    assert(simplifiedexpr != NULL);
    assert(SCIPexprGetNChildren(expr) == 1);
+
+   exprhdlr = SCIPexprGetHdlr(expr);
+   assert(exprhdlr != NULL);
+
+   exprhdlrdata = SCIPexprhdlrGetData(exprhdlr);
+   assert(exprhdlrdata != NULL);
 
    base = SCIPexprGetChildren(expr)[0];
    assert(base != NULL);
@@ -1595,13 +1605,13 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyPow)
          return SCIP_OKAY;
       }
 
-      /* enforces POW7
+      /* enforces POW7 for exponent 2
        * (const + sum alpha_i expr_i)^2 = sum alpha_i^2 expr_i^2
        * + sum_{j < i} 2*alpha_i alpha_j expr_i expr_j
        * + sum const alpha_i expr_i
        * TODO: put some limits on the number of children of the sum being expanded
        */
-      if( SCIPisExprSum(scip, base) && exponent == 2.0 )
+      if( SCIPisExprSum(scip, base) && exponent == 2.0 && exprhdlrdata->expandmaxexponent >= 2 )
       {
          int i;
          int nchildren;
@@ -1675,10 +1685,8 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyPow)
          return SCIP_OKAY;
       }
 
-      /* enforces POW7a
-       * expand (const + sum alpha_i expr_i)^p for p > 2
-       */
-      if( SCIPisExprSum(scip, base) && exponent > 2.0 )
+      /* enforces POW7 for exponent > 2 */
+      if( SCIPisExprSum(scip, base) && exponent > 2.0 && exponent <= exprhdlrdata->expandmaxexponent )
       {
          SCIPdebugPrintf("[simplifyPow] expanding sum^%g\n", exponent);
 
@@ -3190,6 +3198,10 @@ SCIP_RETCODE SCIPincludeExprhdlrPow(
    SCIP_CALL( SCIPaddRealParam(scip, "expr/" POWEXPRHDLR_NAME "/minzerodistance",
       "minimal distance from zero to enforce for child in bound tightening",
       &exprhdlrdata->minzerodistance, FALSE, SCIPepsilon(scip), 0.0, 1.0, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip, "expr/" POWEXPRHDLR_NAME "/expandmaxexponent",
+      "maximal exponent when to expand power of sum in simplify ",
+      &exprhdlrdata->expandmaxexponent, FALSE, 2, 1, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
