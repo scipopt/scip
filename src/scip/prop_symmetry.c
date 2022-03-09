@@ -5262,15 +5262,12 @@ SCIP_RETCODE updateSymInfoConflictGraphSST(
 
       for (i = orbitbegins[r]; i < orbitbegins[r + 1]; ++i)
       {
-         SCIP_VAR* var;
          int pos;
 
          /* get variable and position in conflict graph */
          pos = orbits[i];
          assert( pos < nconflictvars );
-
-         var = conflictvars[pos];
-         assert( varconflicts[pos].var == var );
+         assert( varconflicts[pos].var == conflictvars[pos] );
 
          varconflicts[pos].orbitidx = r;
          varconflicts[pos].nconflictinorbit = 0;
