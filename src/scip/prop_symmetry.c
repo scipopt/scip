@@ -399,7 +399,7 @@ SCIP_Bool checkSortedArraysHaveOverlappingEntry(
    it1 = 0;
    it2 = 0;
 
-   while (TRUE)
+   while ( TRUE )  /*lint !e716*/
    {
       cmp = compfunc(arr1[it1], arr2[it2]);
       if ( cmp < 0 )
@@ -5883,12 +5883,12 @@ SCIP_RETCODE selectOrbitLeaderSSTConss(
    *success = FALSE;
 
    /* terminate if leader or tiebreak rule cannot be checked */
-   if ( varconflicts == NULL && (leaderrule == (int) SCIP_LEADERRULE_MAXCONFLICTSINORBIT
-         || tiebreakrule == (int) SCIP_LEADERTIEBREAKRULE_MAXCONFLICTSINORBIT) )
+   if ( varconflicts == NULL && (leaderrule == SCIP_LEADERRULE_MAXCONFLICTSINORBIT
+         || tiebreakrule == SCIP_LEADERTIEBREAKRULE_MAXCONFLICTSINORBIT) )
       return SCIP_OKAY;
 
    /* select the leader and its orbit */
-   if ( leaderrule == (int) SCIP_LEADERRULE_FIRSTINORBIT || leaderrule == (int) SCIP_LEADERRULE_LASTINORBIT )
+   if ( leaderrule == SCIP_LEADERRULE_FIRSTINORBIT || leaderrule == SCIP_LEADERRULE_LASTINORBIT )
    {
       orbitcriterion = INT_MIN;
 
@@ -5900,16 +5900,16 @@ SCIP_RETCODE selectOrbitLeaderSSTConss(
          if ( SCIPvarGetType(conflictvars[orbits[orbitbegins[i]]]) != leadervartype )
             continue;
 
-         if ( tiebreakrule == (int) SCIP_LEADERTIEBREAKRULE_MINORBIT )
+         if ( tiebreakrule == SCIP_LEADERTIEBREAKRULE_MINORBIT )
             curcriterion = orbitbegins[i] - orbitbegins[i + 1];
-         else if ( tiebreakrule == (int) SCIP_LEADERTIEBREAKRULE_MAXORBIT )
+         else if ( tiebreakrule == SCIP_LEADERTIEBREAKRULE_MAXORBIT )
             curcriterion = orbitbegins[i + 1] - orbitbegins[i];
          else
          {
             assert( tiebreakrule == SCIP_LEADERTIEBREAKRULE_MAXCONFLICTSINORBIT );
 
             /* get first or last active variable in orbit */
-            if ( leaderrule == (int) SCIP_LEADERRULE_FIRSTINORBIT )
+            if ( leaderrule == SCIP_LEADERRULE_FIRSTINORBIT )
             {
                int cnt;
 
@@ -5949,7 +5949,7 @@ SCIP_RETCODE selectOrbitLeaderSSTConss(
             *orbitidx = i;
             *success = TRUE;
 
-            if ( leaderrule == (int) SCIP_LEADERRULE_FIRSTINORBIT )
+            if ( leaderrule == SCIP_LEADERRULE_FIRSTINORBIT )
                *leaderidx = 0;
             else
                *leaderidx = orbitbegins[i + 1] - orbitbegins[i] - 1;
@@ -5962,7 +5962,7 @@ SCIP_RETCODE selectOrbitLeaderSSTConss(
          leader = orbits[orbitbegins[*orbitidx] + *leaderidx];
          assert( leader < nconflictvars );
 
-         if ( tiebreakrule == (int) SCIP_LEADERTIEBREAKRULE_MAXCONFLICTSINORBIT
+         if ( tiebreakrule == SCIP_LEADERTIEBREAKRULE_MAXCONFLICTSINORBIT
             && varconflicts[leader].ncliques > 0 )
          {
             /* count how many active variables in the orbit conflict with "leader"
