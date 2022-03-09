@@ -1666,14 +1666,9 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyPow)
        */
       if( SCIPisExprSum(scip, base) && exponent > 2.0 )
       {
-         SCIP_EXPR* expansion = NULL;
-
          SCIPdebugPrintf("[simplifyPow] expanding sum^%g\n", exponent);
 
-         SCIP_CALL( SCIPpowerExprSum(scip, &expansion, base, exponent, TRUE, ownercreate, ownercreatedata) );
-
-         SCIP_CALL( SCIPcallExprSimplify(scip, expansion, simplifiedexpr, ownercreate, ownercreatedata) );
-         SCIP_CALL( SCIPreleaseExpr(scip, &expansion) );
+         SCIP_CALL( SCIPpowerExprSum(scip, simplifiedexpr, base, (int)exponent, TRUE, ownercreate, ownercreatedata) );
 
          return SCIP_OKAY;
       }

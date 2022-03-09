@@ -1182,6 +1182,8 @@ SCIP_RETCODE SCIPmultiplyBySumExprSum(
    nchildren1 = SCIPexprGetNChildren(factor1);
    nchildren2 = SCIPexprGetNChildren(factor2);
 
+   /* TODO might be nice to integrate more with simplify and construct a simplified sum right away */
+
    SCIP_CALL( SCIPcreateExprSum(scip, product, 0, NULL, NULL, constant1 * constant2, ownercreate, ownercreatedata) );
 
    /* first add constant1 * factor2
@@ -1245,7 +1247,17 @@ SCIP_RETCODE SCIPmultiplyBySumExprSum(
       }
    }
 
-   /* TODO simplify sum */
+   if( simplify )
+   {
+      SCIP_EXPR* prodsimplified;
+      SCIP_Bool changed;
+      SCIP_Bool infeasible;
+
+      SCIP_CALL( SCIPsimplifyExpr(scip, *product, &prodsimplified, &changed, &infeasible, ownercreate, ownercreatedata) );
+      assert(!infeasible);
+      SCIP_CALL( SCIPreleaseExpr(scip, product) );
+      *product = prodsimplified;
+   }
 
    return SCIP_OKAY;
 }
@@ -1269,6 +1281,8 @@ SCIP_RETCODE SCIPpowerExprSum(
    *   sum_{beta} (p over beta) prod_i (alpha_i expr_i)^beta_i   over all multiindex beta such that sum_i beta_i = p
    * See also https://en.wikipedia.org/wiki/Multinomial_theorem
    * Calculation of multinomials adapted from https://github.com/m-j-w/MultinomialSeries.jl
+   *
+   * TODO might be nice to integrate more with simplify and construct a simplified sum right away
    */
 
    SCIP_EXPR** children;
@@ -1361,11 +1375,22 @@ SCIP_RETCODE SCIPpowerExprSum(
          }
          else
          {
-            /* TODO we could save a bit by reusing power expression
-             * TODO simplify pow expression
-             */
+            /* TODO we could save a bit by reusing power expression */
             SCIP_EXPR* powexpr;
             SCIP_CALL( SCIPcreateExprPow(scip, &powexpr, children[i], (SCIP_Real)beta[i], ownercreate, ownercreatedata) );
+
+            if( simplify )
+            {
+               SCIP_Bool changed;
+               SCIP_Bool infeasible;
+               SCIP_EXPR* simplified;
+
+               SCIP_CALL( SCIPsimplifyExpr(scip, powexpr, &simplified, &changed, &infeasible, ownercreate, ownercreatedata) );
+               assert(!infeasible);
+               SCIP_CALL( SCIPreleaseExpr(scip, &powexpr) );
+               powexpr = simplified;
+            }
+
             SCIP_CALL( SCIPappendExprChild(scip, newterm, powexpr) );
             SCIP_CALL( SCIPreleaseExpr(scip, &powexpr) );
          }
@@ -1376,7 +1401,18 @@ SCIP_RETCODE SCIPpowerExprSum(
       }
       else
       {
-         /* TODO simplify newterm */
+         if( simplify )
+         {
+            SCIP_Bool changed;
+            SCIP_Bool infeasible;
+            SCIP_EXPR* simplified;
+
+            SCIP_CALL( SCIPsimplifyExpr(scip, newterm, &simplified, &changed, &infeasible, ownercreate, ownercreatedata) );
+            assert(!infeasible);
+            SCIP_CALL( SCIPreleaseExpr(scip, &newterm) );
+            newterm = simplified;
+         }
+
          /* append new term to sum */
          SCIP_CALL( SCIPappendExprSumExpr(scip, *result, newterm, newtermcoef) );
       }
@@ -1414,6 +1450,19 @@ SCIP_RETCODE SCIPpowerExprSum(
    while( TRUE );  /*lint !e506*/
 
  TERMINATE:
+
+   if( simplify )
+   {
+      SCIP_Bool changed;
+      SCIP_Bool infeasible;
+      SCIP_EXPR* simplified;
+
+      SCIP_CALL( SCIPsimplifyExpr(scip, *result, &simplified, &changed, &infeasible, ownercreate, ownercreatedata) );
+      assert(!infeasible);
+      SCIP_CALL( SCIPreleaseExpr(scip, result) );
+      *result = simplified;
+   }
+
    SCIPfreeBufferArray(scip, &factorials);
    SCIPfreeBufferArray(scip, &beta);
 
