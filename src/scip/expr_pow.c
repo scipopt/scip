@@ -1517,6 +1517,20 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyPow)
       SCIP_EXPR* aux;
       SCIP_EXPR* simplifiedaux;
 
+      /* enforces POW12 (abs(x)^n = x^n if n is even) */
+      if( SCIPisExprAbs(scip, base) && (int)exponent % 2 == 0 )
+      {
+         SCIP_EXPR* newpow;
+
+         SCIPdebugPrintf("[simplifyPow] POWXX\n");
+
+         SCIP_CALL( SCIPcreateExprPow(scip, &newpow, SCIPexprGetChildren(base)[0], exponent, ownercreate, ownercreatedata) );
+         SCIP_CALL( simplifyPow(scip, newpow, simplifiedexpr, ownercreate, ownercreatedata) );
+         SCIP_CALL( SCIPreleaseExpr(scip, &newpow) );
+
+         return SCIP_OKAY;
+      }
+
       /* enforces POW5
        * given (pow n (prod 1.0 expr_1 ... expr_k)) we distribute the exponent:
        * -> (prod 1.0 (pow n expr_1) ... (pow n expr_k))

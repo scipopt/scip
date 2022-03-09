@@ -656,6 +656,7 @@ SCIP_RETCODE SCIPhashExpr(
  *   - POW9: its child is not a sum with a single term with a positive coefficient: \f$(25x)^{0.5} \to 5 x^{0.5}\f$
  *   - POW10: its child is not a binary variable: \f$b^e, e > 0 \to b\f$; \f$b^e, e < 0 \to b := 1\f$
  *   - POW11: its child is not an exponential: \f$\exp(\text{expr})^e \to \exp(e\cdot\text{expr})\f$
+ *   - POW12: its child is not an absolute value if the exponent is an even integer: \f$\abs(\text{expr})^e, e \text{ even} \to \text{expr}^e\f$
  * - is a signedpower expression such that
  *   - SPOW1: exponent is not 0
  *   - SPOW2: exponent is not 1
