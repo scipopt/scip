@@ -5430,12 +5430,12 @@ SCIP_RETCODE createConflictGraphSST(
       assert( (*varconflicts)[i].cliques == NULL );
       if ( (*varconflicts)[i].ncliques > 0 )
       {
-         SCIPallocBlockMemoryArray(scip, &(*varconflicts)[i].cliques, (*varconflicts)[i].ncliques);
+         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*varconflicts)[i].cliques, (*varconflicts)[i].ncliques) );
       }
    }
 
    /* (3.) fill the clique constraints */
-   SCIPallocClearBufferArray(scip, &tmpncliques, nconflictvars);
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &tmpncliques, nconflictvars) );
    for (c = 0; c < ncliques; ++c)
    {
       clique = cliques[c];
