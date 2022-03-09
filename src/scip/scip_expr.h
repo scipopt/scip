@@ -650,6 +650,7 @@ SCIP_RETCODE SCIPhashExpr(
  *   - POW3: its child is not a value
  *   - POW4: its child is simplified
  *   - POW5: if exponent is integer, its child is not a product
+ *   - POW5a: if exponent is fractional and distribfracexponent param is enabled, its child is not a product
  *   - POW6: if exponent is integer, its child is not a sum with a single term (\f$(2x)^2 \to 4x^2\f$)
  *   - POW7: if exponent is integer and at most expandmaxeponent param, its child is not a sum (expand sums)
  *   - POW8: its child is not a power unless \f$(x^n)^m\f$ with \f$nm\f$ being integer and \f$n\f$ or \f$m\f$ fractional and \f$n\f$ not being even integer

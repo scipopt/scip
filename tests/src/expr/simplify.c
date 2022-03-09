@@ -57,6 +57,8 @@ ParameterizedTestParameters(simplify /* test suite */, simplify_test /* test nam
       {"(<x>^4)^0.5", "pow"},
       {"(<x>^2)^1.5", "pow"},  /* should be |x|^3 */
       {"(<y>^2)^2", "pow"},
+      {"(<x>*<y>)^3", "prod"},  /* should be x^3 y^3 by POW5 */
+      {"(<x>*<y>)^0.5", "pow"}, /* should remain (x*y)^0.5 because POW5a is off by default */
       {"1*2*(<x>+<y>)*<x>*4*0*5", "val"},
       {"(<x>^0.25)^2*(<x>^0.25)^2", "var"},
       {"(<x>)^0.25*(<x>)^0.25*(<x>)^0.25*(<x>)^0.25", "var"},
@@ -424,4 +426,7 @@ Test(simplify, more_simplification_tests)
    cr_assert_not_null(simplified);
    cr_expect(SCIPisExprVar(scip, SCIPexprGetChildren(simplified)[0]));
    SCIP_CALL( SCIPreleaseExpr(scip, &simplified) );
+
+   SCIP_CALL( SCIPsetBoolParam(scip, "expr/pow/distribfracexponent", TRUE) );
+   parseSimplifyCheck(scip, "(<x>*<y>)^0.5", "prod", NULL);
 }

@@ -85,6 +85,7 @@ struct SCIP_ExprhdlrData
 {
    SCIP_Real             minzerodistance;    /**< minimal distance from zero to enforce for child in bound tightening */
    int                   expandmaxexponent;  /**< maximal exponent when to expand power of sum in simplify */
+   SCIP_Bool             distribfracexponent;/**< whether a fractional exponent is distributed onto factors on power of product */
 
    SCIP_Bool             warnedonpole;       /**< whether we warned on enforcing a minimal distance from zero for child */
 };
@@ -1734,12 +1735,13 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyPow)
          return SCIP_OKAY;
       }
 
-      /* enforces POW5 for fractional exponent
+      /* enforces POW5a
        * given (pow n (prod 1.0 expr_1 ... expr_k)) we distribute the exponent:
        * -> (prod 1.0 (pow n expr_1) ... (pow n expr_k))
        * notes: - since base is simplified and its coefficient is 1.0 (SP8)
+       * TODO we can enable this more often by default when simplify makes use of bounds on factors
        */
-      if( SCIPisExprProduct(scip, base) )
+      if( exprhdlrdata->distribfracexponent && SCIPisExprProduct(scip, base) )
       {
          SCIP_EXPR* aux;
          SCIP_EXPR* simplifiedaux;
@@ -3200,8 +3202,12 @@ SCIP_RETCODE SCIPincludeExprhdlrPow(
       &exprhdlrdata->minzerodistance, FALSE, SCIPepsilon(scip), 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "expr/" POWEXPRHDLR_NAME "/expandmaxexponent",
-      "maximal exponent when to expand power of sum in simplify ",
+      "maximal exponent when to expand power of sum in simplify",
       &exprhdlrdata->expandmaxexponent, FALSE, 2, 1, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "expr/" POWEXPRHDLR_NAME "/distribfracexponent",
+      "whether a fractional exponent is distributed onto factors on power of product",
+      &exprhdlrdata->distribfracexponent, FALSE, FALSE, NULL, NULL) );
 
    return SCIP_OKAY;
 }
