@@ -5463,6 +5463,7 @@ SCIP_RETCODE createConflictGraphSST(
 
          /* add clique to the cliques */
          assert( tmpncliques[node] < (*varconflicts)[node].ncliques );
+         assert( (*varconflicts)[node].cliques != NULL );
          (*varconflicts)[node].cliques[tmpncliques[node]++] = clique;
 
 #ifdef SCIP_DEBUG
