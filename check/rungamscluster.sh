@@ -135,7 +135,7 @@ echo "-----------------------------"    >> "${OUTFILE}"
 date +"@03 %s"                          >> "${OUTFILE}"
 
 # run GAMS and check return code
-"${GAMSBIN}" "${GMSFILE}" ${GAMSOPTS} output="${LSTFILE}" inputdir="${INPUTDIR}" "${MODTYPE}"="${ACTSOLVER}" "${GDXFILE}" traceopt=3 trace="${TRCFILE}" >> "${OUTFILE}" 2>> "${ERRFILE}"
+"${GAMSBIN}" "${GMSFILE}" ${GAMSOPTS} output="${LSTFILE}" inputdir="${INPUTDIR}" SOLVER="${ACTSOLVER}" "${GDXFILE}" traceopt=3 trace="${TRCFILE}" >> "${OUTFILE}" 2>> "${ERRFILE}"
 gamsrc=$?
 if test "${gamsrc}" != 0
 then
