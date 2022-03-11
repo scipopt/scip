@@ -6,6 +6,7 @@ Features
 --------
 
 - clique lifting in cons_setppc (parameter enablecliquelifting) is only disabled if it has been applied
+- improved curvature check for quadratic expressions when extended formulations are disabled
 
 Performance improvements
 ------------------------
@@ -42,6 +43,8 @@ Fixed bugs
 - fixed uninitialized array in detection of suborbitopes
 - Fixed problem with reading long lines in LP/FZN/OPB/Diff-files. The buffer is now reallocated,
   which also should be much faster.
+- fixed that recursive products in expressions were sometimes not flattened
+- fixed that expressions in original variables could not be simplified
 
 Miscellaneous
 -------------
