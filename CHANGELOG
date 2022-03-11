@@ -6,6 +6,11 @@
 Features
 --------
 
+- added simplification of abs(x)^n to x^n when n is even (simplify rule POW12)
+- in expression simplification, added possibility to expand power of sum with exponents larger than 2 (simplify rule POW7)
+- in expression simplification, added possibility to expand products with sums as factor when there are more than two factors (simplify rule SP12b)
+- in expression simplification, added possibility to allow expanding power of products with fractional exponent (simplify rule POW5a)
+
 Performance improvements
 ------------------------
 
@@ -26,6 +31,8 @@ Interface changes
 
 ### New API functions
 
+- SCIPmultiplyBySumExprSum(), SCIPpowerExprSum()
+
 ### Command line interface
 
 ### Interfaces to external software
@@ -33,6 +40,10 @@ Interface changes
 ### Changed parameters
 
 ### New parameters
+
+- expr/pow/expandmaxexponent to specify limit on exponent when to expand power of sum
+- expr/pow/distribfracexponent to enable expanding power of products with fractional exponents
+- expr/product/expandalways to enable expanding any product with sums as factor (that is, also when more than two factors)
 
 ### Data structures
 
