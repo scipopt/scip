@@ -31,7 +31,7 @@
 
 #include <assert.h>
 
-#define MSKCONST const    /* this define is needed for older MOSEK versions */
+#define MSKCONST const    /* this define is needed for older MOSEK versions */  /*lint !e830*/
 #include "mosek.h"
 
 #include "lpi/lpi.h"
