@@ -29,9 +29,11 @@
  * @todo Check why it can happen that the termination code is MSK_RES_OK, but the solution status is MSK_SOL_STA_UNKNOWN.
  */
 
+/*lint -e830*/
+
 #include <assert.h>
 
-#define MSKCONST const    /* this define is needed for older MOSEK versions */  /*lint !e830*/
+#define MSKCONST const    /* this define is needed for older MOSEK versions */
 #include "mosek.h"
 
 #include "lpi/lpi.h"
