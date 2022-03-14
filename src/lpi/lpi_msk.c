@@ -29,6 +29,7 @@
  * @todo Check why it can happen that the termination code is MSK_RES_OK, but the solution status is MSK_SOL_STA_UNKNOWN.
  */
 
+/*lint -e750*/
 /*lint -e830*/
 
 #include <assert.h>
