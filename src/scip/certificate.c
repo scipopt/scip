@@ -663,10 +663,14 @@ SCIP_RETCODE SCIPcertificateInitTransFile(
       if( !RatIsAbsInfinity(SCIPvarGetLbGlobalExact(vars[j])) )
       {
          SCIP_CALL( SCIPcertificatePrintBoundCons(certificate, FALSE, NULL, vars[j], SCIPvarGetLbGlobalExact(vars[j]), FALSE) );
+         SCIPvarSetLbCertificateIndexGlobal(vars[j], certificate->indexcounter - 1);
+         SCIPvarSetLbCertificateIndexLocal(vars[j], certificate->indexcounter - 1);
       }
       if( !RatIsAbsInfinity(SCIPvarGetUbGlobalExact(vars[j])) )
       {
          SCIP_CALL( SCIPcertificatePrintBoundCons(certificate, FALSE, NULL, vars[j], SCIPvarGetUbGlobalExact(vars[j]), TRUE) );
+         SCIPvarSetUbCertificateIndexGlobal(vars[j], certificate->indexcounter - 1);
+         SCIPvarSetUbCertificateIndexLocal(vars[j], certificate->indexcounter - 1);
       }
    }
 
@@ -3211,9 +3215,88 @@ void SCIPcertificatePrintRtpInfeas(
    SCIPcertificatePrintProblemMessage(certificate, isorigfile, "RTP infeas\n");
  }
 
+SCIP_RETCODE SCIPcertificateSetLastBoundIndex(
+   SCIP*                 scip,
+   SCIP_CERTIFICATE*     certificate,        /**< certificate data structure */
+   SCIP_Longint          index
+   )
+{
+      assert(certificate != NULL);
+      assert(index >= 0);
+      certificate->lastboundindex = index;
+}
+
+SCIP_Longint SCIPcertificateGetLastBoundIndex(
+   SCIP*                 scip,
+   SCIP_CERTIFICATE*     certificate         /**< certificate data structure */
+   )
+{
+      assert(certificate != NULL);
+      return certificate->lastboundindex;
+}
+
 SCIP_RETCODE SCIPcertificatePrintCutoffConflictingBounds(SCIP* scip, SCIP_CERTIFICATE* certificate, SCIP_VAR* var, SCIP_Rational* lb, SCIP_Rational* ub, SCIP_Longint lbindex, SCIP_Longint ubindex)
 {
    SCIP_Rational* lowerbound;
+
+      assert(SCIPisExactSolve(scip));
+
+   if( !SCIPisCertificateActive(scip) )
+      return SCIP_OKAY;
+   assert(certificate != NULL);
+
+   switch (var->varstatus)
+   {
+      case SCIP_VARSTATUS_FIXED:
+      case SCIP_VARSTATUS_LOOSE:
+      case SCIP_VARSTATUS_ORIGINAL:
+         assert(false);
+         SCIPABORT();
+         return 0;
+      case SCIP_VARSTATUS_NEGATED:
+         if (lb != NULL) {
+            RatMultReal(lb, lb, -1);
+            RatAddReal(lb, lb, 1.0);
+         }
+         if (ub != NULL) {
+            RatMultReal(ub, ub, -1);
+            RatAddReal(ub, ub, 1.0);
+         }
+         assert( SCIPvarGetNegationConstant(var) == 1 );
+         SCIP_CALL( SCIPcertificatePrintCutoffConflictingBounds(scip, certificate, var->negatedvar, ub, lb, ubindex, lbindex) );
+         if (lb != NULL) {
+            RatAddReal(lb, lb, -1.0);
+            RatMultReal(lb, lb, -1);
+         }
+         if (ub != NULL) {
+            RatAddReal(ub, ub, -1.0);
+            RatMultReal(ub, ub, -1);
+         }
+         return SCIP_OKAY;
+         break;
+      case SCIP_VARSTATUS_AGGREGATED:
+         if (lb != NULL)
+            RatDiv(lb, lb, var->exactdata->aggregate.scalar);
+         if (ub != NULL)
+            RatDiv(ub, ub, var->exactdata->aggregate.scalar);
+
+         assert(RatIsZero(var->exactdata->aggregate.constant));
+         SCIP_Bool swapBounds = !RatIsPositive(var->exactdata->aggregate.scalar);
+         SCIP_CALL( SCIPcertificatePrintCutoffConflictingBounds(scip, certificate, var->data.aggregate.var, swapBounds ? ub : lb, swapBounds ? lb : ub,  swapBounds ? ubindex : lbindex, swapBounds ? lbindex : ubindex) );
+         if (lb != NULL)
+            RatMult(lb, lb, var->exactdata->aggregate.scalar);
+         if (ub != NULL)
+            RatMult(ub, ub, var->exactdata->aggregate.scalar);
+         return SCIP_OKAY;
+         break;
+      case SCIP_VARSTATUS_COLUMN:
+         break;
+      default:
+         assert(false);
+         SCIPABORT();
+         return 0;
+   }
+
    if ( lb == NULL )
    {
       lb = SCIPvarGetLbLocalExact(var);
@@ -3306,4 +3389,10 @@ SCIP_RETCODE SCIPcertificatePrintGlobalBound(
 
    certificate->indexcounter++;
    return SCIP_OKAY;
+}
+
+SCIP_Bool SCIPcertificateShouldTrackBounds(
+   SCIP*              scip
+   ) {
+   return SCIPisCertificateActive(scip) && scip->set->stage >= SCIP_STAGE_TRANSFORMED && !SCIPinProbing(scip);
 }

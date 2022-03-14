@@ -411,17 +411,15 @@ SCIP_RETCODE SCIPcertificateSetInheritanceData(
    SCIP_Longint          fileindex,          /**< index of new bound */
    SCIP_Rational*        newbound            /**< the inherited bound */
    );
-
-SCIP_Longint SCIPcertificatePrintActivityVarBound(
+SCIP_RETCODE SCIPcertificateSetLastBoundIndex(
    SCIP*                 scip,
    SCIP_CERTIFICATE*     certificate,        /**< certificate data structure */
-   const char*           linename,           /**< name of the unsplitting line */
-   SCIP_BOUNDTYPE        boundtype,
-   SCIP_Rational*        newbound,         /**< pointer to lower bound on the objective, NULL indicating infeasibility */
-   SCIP_Rational*        newboundproduct,
-   SCIP_Bool             ismaxactivity,
-   SCIP_CONS*            constraint,
-   SCIP_VAR*             variable
+   SCIP_Longint          index
+   );
+
+SCIP_Longint SCIPcertificateGetLastBoundIndex(
+   SCIP*                 scip,
+   SCIP_CERTIFICATE*     certificate         /**< certificate data structure */
    );
 
 void SCIPcertificateAssertStateCorrect(SCIP* scip, SCIP_VAR* var);
@@ -437,6 +435,10 @@ SCIP_RETCODE SCIPcertificatePrintGlobalBound(
    SCIP_BOUNDTYPE        boundtype,          /**< Whether we have an upper bound or a lower bound */
    SCIP_Rational*        value,              /**< value of the bound */
    SCIP_Longint          certificateindex    /**< index in the certificate */
+   );
+
+SCIP_Bool SCIPcertificateShouldTrackBounds(
+   SCIP*              scip
    );
 
 #ifdef __cplusplus

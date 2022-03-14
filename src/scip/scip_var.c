@@ -6540,7 +6540,7 @@ SCIP_RETCODE SCIPinferVarUbConsExact(
    if( RatIsLT(adjustedBound, lb) )
    {
       *infeasible = TRUE;
-      if (SCIPisCertificateActive(scip))
+      if (SCIPcertificateShouldTrackBounds(scip))
          SCIPcertificatePrintCutoffConflictingBounds(scip, SCIPgetCertificate(scip), var, NULL, adjustedBound, -1, SCIPcertificateGetCurrentIndex(SCIPgetCertificate(scip)) - 1);
       goto RETURN_SCIP_OKAY;
    }
@@ -6660,7 +6660,7 @@ SCIP_RETCODE SCIPinferVarLbConsExact(
    if( RatIsGT(adjustedBound, ub) )
    {
       *infeasible = TRUE;
-      if (SCIPisCertificateActive(scip))
+      if (SCIPcertificateShouldTrackBounds(scip))
          SCIPcertificatePrintCutoffConflictingBounds(scip, SCIPgetCertificate(scip), var, adjustedBound, NULL, SCIPcertificateGetCurrentIndex(SCIPgetCertificate(scip)) - 1, -1);
       goto RETURN_SCIP_OKAY;
    }

@@ -1916,6 +1916,18 @@ void SCIPvarGetUbLocalExactMinimal(
    SCIP_Rational*        output              /**< output rational */
    );
 
+/** sets index of variable in vipr-certificate */
+void SCIPvarSetUbCertificateIndexLocal(
+   SCIP_VAR*             var,                /**< variable to set index for */
+   SCIP_Longint          index               /**< the index */
+   );
+
+/** sets index of variable in vipr-certificate */
+void SCIPvarSetLbCertificateIndexLocal(
+   SCIP_VAR*             var,                /**< variable to set index for */
+   SCIP_Longint          index               /**< the index */
+   );
+
 #ifdef NDEBUG
 
 /* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and

@@ -107,6 +107,7 @@ struct SCIP_Certificate
    SCIP_Longint          indexcounter;       /**< counter for line indices in file */
    SCIP_Longint          indexcounter_ori;   /**< counter for line indices in origial problem vipr file */
    SCIP_Longint          conscounter;        /**< counter for line indices in constraint section */
+   SCIP_Longint          lastboundindex;     /**< place to store the last bound index to avoid having to add it to the signature of SCIPvarChgUbLocal, varProcessChgUbLocal */
    SCIP_FILE*            origfile;           /**< file to store original problem definition */
    SCIP_FILE*            transfile;          /**< file to store transformed problem (after presolving) */
    SCIP_FILE*            derivationfile;     /**< file to store derivations temporarily */

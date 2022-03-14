@@ -4586,8 +4586,10 @@ void consdataGetActivityResiduals(
    }
    else
    {  SCIPintervalSetRoundingModeUpwards();
+      SCIP_Real delta = absval * minactbound;
+      SCIPintervalSetRoundingModeDownwards();
       getMinActivity(scip, consdata, consdata->minactivityposinf, consdata->minactivityneginf,
-         consdata->minactivityposhuge, consdata->minactivityneghuge, absval * minactbound, FALSE, goodrelax,
+         consdata->minactivityposhuge, consdata->minactivityneghuge, delta, FALSE, goodrelax,
          minresactivity, minisrelax, isminsettoinfinity);
    }
 
@@ -4628,8 +4630,10 @@ void consdataGetActivityResiduals(
    }
    else
    {  SCIPintervalSetRoundingModeDownwards();
+      SCIP_Real delta = absval * maxactbound;
+      SCIPintervalSetRoundingModeUpwards();
       getMaxActivity(scip, consdata, consdata->maxactivityposinf, consdata->maxactivityneginf,
-         consdata->maxactivityposhuge, consdata->maxactivityneghuge, absval * maxactbound, FALSE, goodrelax,
+         consdata->maxactivityposhuge, consdata->maxactivityneghuge, delta, FALSE, goodrelax,
          maxresactivity, maxisrelax, ismaxsettoinfinity);
    }
 }
@@ -5160,13 +5164,12 @@ static char getInequalitySense(SCIP_Bool isgreaterthan) {
 }
 
 /** prints activity bound to proof section */
-SCIP_Longint SCIPcertificatePrintActivityVarBound(
+SCIP_Longint SCIPcertificatePrintActivityVarBoundEx(
    SCIP*                 scip,
    SCIP_CERTIFICATE*     certificate,        /**< certificate data structure */
    const char*           linename,           /**< name of the unsplitting line */
    SCIP_BOUNDTYPE        boundtype,
    SCIP_Rational*        newbound,         /**< pointer to lower bound on the objective, NULL indicating infeasibility */
-   SCIP_Rational*        newboundproduct,
    SCIP_Bool             ismaxactivity,
    SCIP_CONS*            constraint,
    SCIP_VAR*             variable
@@ -5192,20 +5195,18 @@ SCIP_Longint SCIPcertificatePrintActivityVarBound(
          RatMultReal(newbound, newbound, -1);
          assert( SCIPvarGetNegationConstant(variable) == 1 );
          RatAddReal(newbound, newbound, 1.0);
-         res = SCIPcertificatePrintActivityVarBound(scip, certificate, linename, boundtype == SCIP_BOUNDTYPE_UPPER ? SCIP_BOUNDTYPE_LOWER : SCIP_BOUNDTYPE_UPPER, newbound, newboundproduct, ismaxactivity, constraint, variable->negatedvar);
+         res = SCIPcertificatePrintActivityVarBoundEx(scip, certificate, linename, boundtype == SCIP_BOUNDTYPE_UPPER ? SCIP_BOUNDTYPE_LOWER : SCIP_BOUNDTYPE_UPPER, newbound, ismaxactivity, constraint, variable->negatedvar);
          RatAddReal(newbound, newbound, -1.0);
          RatMultReal(newbound, newbound, -1);
          return res;
          break;
       case SCIP_VARSTATUS_AGGREGATED:
+         RatAddProdReal(newbound, variable->exactdata->aggregate.constant, -1.0);
          RatDiv(newbound, newbound, variable->exactdata->aggregate.scalar);
-         RatDiv(newboundproduct, newboundproduct, variable->exactdata->aggregate.scalar);
-         assert(RatIsZero(variable->exactdata->aggregate.constant));
-         res = SCIPcertificatePrintActivityVarBound(scip, certificate, linename,
+         res = SCIPcertificatePrintActivityVarBoundEx(scip, certificate, linename,
          (boundtype == SCIP_BOUNDTYPE_UPPER) == RatIsPositive(variable->exactdata->aggregate.scalar) ? SCIP_BOUNDTYPE_UPPER: SCIP_BOUNDTYPE_LOWER,
-         newbound, newboundproduct, ismaxactivity, constraint, variable->data.aggregate.var);
+         newbound,  ismaxactivity, constraint, variable->data.aggregate.var);
          RatMult(newbound, newbound, variable->exactdata->aggregate.scalar);
-         RatMult(newboundproduct, newboundproduct, variable->exactdata->aggregate.scalar);
          return res;
          break;
       case SCIP_VARSTATUS_COLUMN:
@@ -5326,6 +5327,33 @@ SCIP_Longint SCIPcertificatePrintActivityVarBound(
    #endif
 
    return (certificate->indexcounter - 1);
+}
+
+/** prints activity bound to proof section */
+SCIP_Longint SCIPcertificatePrintActivityVarBound(
+   SCIP*                 scip,
+   SCIP_CERTIFICATE*     certificate,        /**< certificate data structure */
+   const char*           linename,           /**< name of the unsplitting line */
+   SCIP_BOUNDTYPE        boundtype,
+   SCIP_Real             newbound,           /**< pointer to lower bound on the objective, NULL indicating infeasibility */
+   SCIP_Real             newboundproduct,
+   SCIP_Bool             ismaxactivity,
+   SCIP_CONS*            constraint,
+   SCIP_VAR*             variable
+   )
+{
+   if (ismaxactivity)
+      consdataRecomputeMaxactivityEx(scip, SCIPconsGetData(constraint));
+   else
+      consdataRecomputeMinactivityEx(scip, SCIPconsGetData(constraint));
+
+   //It would be more efficient if we could do this all in fp artihmetic. However, this is not trivial because the translations between aggregate variables need to be done exactly..
+   SCIP_Rational* newboundex;
+   SCIP_CALL(RatCreateBuffer(SCIPbuffer(scip), &newboundex));
+   RatSetReal(newboundex, newbound);
+   SCIPcertificatePrintActivityVarBoundEx(scip, certificate, linename, boundtype, newboundex, ismaxactivity, constraint, variable);
+   RatFreeBuffer(SCIPbuffer(scip), &newboundex);
+
 }
 
 unsigned long certificateGetConsIndex(SCIP* scip, SCIP_CERTIFICATE* certificate, SCIP_CONS* cons, SCIP_Bool rhs) {
@@ -9085,7 +9113,7 @@ SCIP_RETCODE tightenVarBoundsEx(
                   SCIPconsGetName(cons), SCIPvarGetName(var), lb, ub, val, minresactivity, maxresactivity, lhs, rhs, newub);
                if( SCIPisCertificateActive(scip) && (SCIPgetStage(scip) == SCIP_STAGE_SOLVING) )
                {
-                  SCIPcertificatePrintActivityVarBound(scip, SCIPgetCertificate(scip), NULL, SCIP_BOUNDTYPE_UPPER, newub, newubproduct, false, cons, var);
+                  SCIPcertificatePrintActivityVarBoundEx(scip, SCIPgetCertificate(scip), NULL, SCIP_BOUNDTYPE_UPPER, newub, false, cons, var);
                }
                SCIP_CALL( SCIPinferVarUbConsExact(scip, var, newub, cons, getInferInt(PROPRULE_1_RHS, pos), force,
                      &infeasible, &tightened) );
@@ -9136,7 +9164,7 @@ SCIP_RETCODE tightenVarBoundsEx(
             RatDebugMessage("linear constraint <%s>: tighten <%s>, old bds=[%q,%q], val=%q, resactivity=[%q,%q], sides=[%q,%q] -> newlb=%q\n",
                SCIPconsGetName(cons), SCIPvarGetName(var), lb, ub, val, minresactivity, maxresactivity, lhs, rhs, newlb);
             if( SCIPisCertificateActive(scip) && (SCIPgetStage(scip) == SCIP_STAGE_SOLVING) )
-               SCIPcertificatePrintActivityVarBound(scip, SCIPgetCertificate(scip), NULL, SCIP_BOUNDTYPE_LOWER, newlb, newlbproduct, true, cons, var);
+               SCIPcertificatePrintActivityVarBoundEx(scip, SCIPgetCertificate(scip), NULL, SCIP_BOUNDTYPE_LOWER, newlb, true, cons, var);
 
             SCIP_CALL( SCIPinferVarLbConsExact(scip, var, newlb, cons, getInferInt(PROPRULE_1_LHS, pos), force,
                   &infeasible, &tightened) );
@@ -9189,7 +9217,7 @@ SCIP_RETCODE tightenVarBoundsEx(
                RatDebugMessage("linear constraint <%s>: tighten <%s>, old bds=[%q,%q], val=%.15g, resactivity=[%q,%q], sides=[%q,%q] -> newlb=%q\n",
                   SCIPconsGetName(cons), SCIPvarGetName(var), lb, ub, val, minresactivity, maxresactivity, lhs, rhs, newlb);
                if( SCIPisCertificateActive(scip) && (SCIPgetStage(scip) == SCIP_STAGE_SOLVING) )
-                  SCIPcertificatePrintActivityVarBound(scip, SCIPgetCertificate(scip), NULL, SCIP_BOUNDTYPE_LOWER, newlb, newlbproduct, false, cons, var);
+                  SCIPcertificatePrintActivityVarBoundEx(scip, SCIPgetCertificate(scip), NULL, SCIP_BOUNDTYPE_LOWER, newlb, false, cons, var);
                SCIP_CALL( SCIPinferVarLbConsExact(scip, var, newlb, cons, getInferInt(PROPRULE_1_RHS, pos), force,
                     &infeasible, &tightened) );
                if( infeasible )
@@ -9238,7 +9266,7 @@ SCIP_RETCODE tightenVarBoundsEx(
             RatDebugMessage("linear constraint <%s>: tighten <%s>, old bds=[%q,%q], val=%q, resactivity=[%q,%q], sides=[%q,%q], newub=%q\n",
                SCIPconsGetName(cons), SCIPvarGetName(var), lb, ub, val, minresactivity, maxresactivity, lhs, rhs, newub);
             if( SCIPisCertificateActive(scip) && (SCIPgetStage(scip) == SCIP_STAGE_SOLVING) )
-               SCIPcertificatePrintActivityVarBound(scip, SCIPgetCertificate(scip), NULL, SCIP_BOUNDTYPE_UPPER, newub, newubproduct, true, cons, var);
+               SCIPcertificatePrintActivityVarBoundEx(scip, SCIPgetCertificate(scip), NULL, SCIP_BOUNDTYPE_UPPER, newub, true, cons, var);
             SCIP_CALL( SCIPinferVarUbConsExact(scip, var, newub, cons, getInferInt(PROPRULE_1_LHS, pos), force,
                   &infeasible, &tightened) );
             if( infeasible )
@@ -9326,7 +9354,7 @@ SCIP_RETCODE tightenVarBounds(
    var = consdata->vars[pos];
 
    /* we cannot tighten bounds of multi-aggregated variables */
-   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
+   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR || SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED )
       return SCIP_OKAY;
 
    valrange = consdata->valsreal[pos];
@@ -9348,8 +9376,9 @@ SCIP_RETCODE tightenVarBounds(
       if( !isminsettoinfinity && !SCIPisInfinity(scip, rhs) && !minisrelax )
       {
          SCIP_Real newub;
+         assert(assertActivities(scip, consdata));
          SCIPintervalSetRoundingModeUpwards();
-         newub = (rhs - minresactivity)/valrange.inf;
+         newub = (rhs + SCIPintervalNegateReal(minresactivity))/valrange.inf;
          //assert(newub >= lb);
          if( !SCIPisInfinity(scip, newub) &&
             ((force && SCIPisLT(scip, newub, ub)) || (SCIPvarIsIntegral(var) && SCIPisFeasLT(scip, newub, ub)) || SCIPisUbBetter(scip, newub, lb, ub)) )
@@ -9372,6 +9401,8 @@ SCIP_RETCODE tightenVarBounds(
                /* tighten upper bound */
                SCIPdebugMsg(scip, "linear constraint <%s>: tighten <%s>, old bds=[%.15g,%.15g], val=%.15g, resactivity=[%.15g,%.15g], sides=[%.15g,%.15g] -> newub=%.15g\n",
                   SCIPconsGetName(cons), SCIPvarGetName(var), lb, ub, valrange.inf, minresactivity, maxresactivity, lhs, rhs, newub);
+               if( SCIPisCertificateActive(scip) && (SCIPgetStage(scip) == SCIP_STAGE_SOLVING) )
+                  SCIPcertificatePrintActivityVarBound(scip, SCIPgetCertificate(scip), NULL, SCIP_BOUNDTYPE_UPPER, newub, rhs - minresactivity, false, cons, var);
                SCIP_CALL( SCIPinferVarUbCons(scip, var, newub, cons, getInferInt(PROPRULE_1_RHS, pos), force,
                      &infeasible, &tightened) );
                if( infeasible )
@@ -9401,8 +9432,9 @@ SCIP_RETCODE tightenVarBounds(
       if( !ismaxsettoinfinity && !SCIPisInfinity(scip, -lhs) && !maxisrelax )
       {
          SCIP_Real newlb;
+         assert(assertActivities(scip, consdata));
          SCIPintervalSetRoundingModeDownwards();
-         newlb = (lhs - maxresactivity)/valrange.inf;
+         newlb = (lhs + SCIPintervalNegateReal(maxresactivity))/valrange.sup;
          //assert(newlb <= ub);
          if( !SCIPisInfinity(scip, -newlb) &&
             ((force && SCIPisGT(scip, newlb, lb)) || (SCIPvarIsIntegral(var) && SCIPisFeasGT(scip, newlb, lb)) || SCIPisLbBetter(scip, newlb, lb, ub)) )
@@ -9424,6 +9456,8 @@ SCIP_RETCODE tightenVarBounds(
             /* tighten lower bound */
             SCIPdebugMsg(scip, "linear constraint <%s>: tighten <%s>, old bds=[%.15g,%.15g], val=%.15g, resactivity=[%.15g,%.15g], sides=[%.15g,%.15g] -> newlb=%.15g\n",
                SCIPconsGetName(cons), SCIPvarGetName(var), lb, ub, valrange.inf, minresactivity, maxresactivity, lhs, rhs, newlb);
+            if( SCIPisCertificateActive(scip) && (SCIPgetStage(scip) == SCIP_STAGE_SOLVING) )
+               SCIPcertificatePrintActivityVarBound(scip, SCIPgetCertificate(scip), NULL, SCIP_BOUNDTYPE_LOWER, newlb, lhs - maxresactivity, true, cons, var);
             SCIP_CALL( SCIPinferVarLbCons(scip, var, newlb, cons, getInferInt(PROPRULE_1_LHS, pos), force,
                   &infeasible, &tightened) );
             if( infeasible )
@@ -9454,8 +9488,9 @@ SCIP_RETCODE tightenVarBounds(
       if( !isminsettoinfinity && !SCIPisInfinity(scip, rhs) && !minisrelax )
       {
          SCIP_Real newlb;
-
-         newlb = (rhs - minresactivity)/valrange.sup;
+         assert(assertActivities(scip, consdata));
+         SCIPintervalSetRoundingModeDownwards();
+         newlb = (minresactivity + SCIPintervalNegateReal(rhs))/SCIPintervalNegateReal(valrange.sup);
          //assert(newlb <= ub);
          if( !SCIPisInfinity(scip, -newlb) &&
             ((force && SCIPisGT(scip, newlb, lb)) || (SCIPvarIsIntegral(var) && SCIPisFeasGT(scip, newlb, lb)) || SCIPisLbBetter(scip, newlb, lb, ub)) )
@@ -9480,6 +9515,8 @@ SCIP_RETCODE tightenVarBounds(
                /* tighten lower bound */
                SCIPdebugMsg(scip, "linear constraint <%s>: tighten <%s>, old bds=[%.15g,%.15g], val=%.15g, resactivity=[%.15g,%.15g], sides=[%.15g,%.15g] -> newlb=%.15g\n",
                   SCIPconsGetName(cons), SCIPvarGetName(var), lb, ub, valrange.sup, minresactivity, maxresactivity, lhs, rhs, newlb);
+               if( SCIPisCertificateActive(scip) && (SCIPgetStage(scip) == SCIP_STAGE_SOLVING) )
+                  SCIPcertificatePrintActivityVarBound(scip, SCIPgetCertificate(scip), NULL, SCIP_BOUNDTYPE_LOWER, newlb, rhs - minresactivity, false, cons, var);
                SCIP_CALL( SCIPinferVarLbCons(scip, var, newlb, cons, getInferInt(PROPRULE_1_RHS, pos), force,
                      &infeasible, &tightened) );
                if( infeasible )
@@ -9508,8 +9545,9 @@ SCIP_RETCODE tightenVarBounds(
       if( !ismaxsettoinfinity && !SCIPisInfinity(scip, -lhs) && !maxisrelax )
       {
          SCIP_Real newub;
-
-         newub = (lhs - maxresactivity)/valrange.sup;
+         assert(assertActivities(scip, consdata));
+         SCIPintervalSetRoundingModeUpwards();
+         newub = (maxresactivity + SCIPintervalNegateReal(lhs))/SCIPintervalNegateReal(valrange.inf);
          //assert(newub >= lb);
          if(  !SCIPisInfinity(scip, newub) &&
             ((force && SCIPisLT(scip, newub, ub)) || (SCIPvarIsIntegral(var) && SCIPisFeasLT(scip, newub, ub)) || SCIPisUbBetter(scip, newub, lb, ub)) )
@@ -9531,6 +9569,8 @@ SCIP_RETCODE tightenVarBounds(
             /* tighten upper bound */
             SCIPdebugMsg(scip, "linear constraint <%s>: tighten <%s>, old bds=[%.15g,%.15g], val=%.15g, resactivity=[%.15g,%.15g], sides=[%.15g,%.15g], newub=%.15g\n",
                SCIPconsGetName(cons), SCIPvarGetName(var), lb, ub, valrange.sup, minresactivity, maxresactivity, lhs, rhs, newub);
+            if( SCIPisCertificateActive(scip) && (SCIPgetStage(scip) == SCIP_STAGE_SOLVING) )
+               SCIPcertificatePrintActivityVarBound(scip, SCIPgetCertificate(scip), NULL, SCIP_BOUNDTYPE_UPPER, newub, lhs - maxresactivity, true, cons, var);
             SCIP_CALL( SCIPinferVarUbCons(scip, var, newub, cons, getInferInt(PROPRULE_1_LHS, pos), force,
                   &infeasible, &tightened) );
             if( infeasible )
@@ -10411,8 +10451,7 @@ SCIP_RETCODE propagateConsEx(
       if( !(*cutoff) )
       {
          consdataGetActivityBoundsEx(scip, consdata, TRUE, minactivity, maxactivity, &minactisrelax, &maxactisrelax);
-         //RatSetString(minactivity, "0");
-         if( RatIsGT(minactivity, consdata->rhs) )
+         if( minactivity >consdata->rhs )
          {  RatDebugMessage("linear constraint <%s> is infeasible (rhs): activitybounds=[%q,%q], sides=[%q,%q]\n",
                SCIPconsGetName(cons), minactivity, maxactivity, consdata->lhs, consdata->rhs);
 
@@ -10422,7 +10461,7 @@ SCIP_RETCODE propagateConsEx(
             SCIP_CALL( SCIPresetConsAge(scip, cons) );
             *cutoff = TRUE;
          }
-         else if( RatIsLT(maxactivity, consdata->lhs) )
+         else if( maxactivity < consdata->lhs )
          {
             RatDebugMessage("linear constraint <%s> is infeasible (lhs): activitybounds=[%q,%q], sides=[%q,%q]\n",
                SCIPconsGetName(cons), minactivity, maxactivity, consdata->lhs, consdata->rhs);
