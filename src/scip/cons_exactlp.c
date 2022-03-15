@@ -3187,7 +3187,7 @@ void consdataUpdateChgCoef(
 
       absval = SCIPintervalAbsMax(newval);
 
-      if( SCIPisGE(scip, absval, consdata->maxabsval) )
+      if( absval >= consdata->maxabsval )
       {
          consdata->maxabsval = absval;
       }
@@ -3211,7 +3211,7 @@ void consdataUpdateChgCoef(
 
       absval = SCIPintervalAbsMax(newval);
 
-      if( SCIPisLE(scip, absval, consdata->minabsval) )
+      if( absval <= consdata->minabsval )
       {
          consdata->minabsval = absval;
       }
@@ -9714,7 +9714,7 @@ SCIP_RETCODE tightenBounds(
       surplus = (SCIPisInfinity(scip, -consdata->lhsreal) || ismaxsettoinfinity) ? SCIPinfinity(scip) : (maxactivity - consdata->lhsreal);
 
       /* check if the constraint will propagate */
-      if( SCIPisLE(scip, consdata->maxactdelta, MIN(slack, surplus)) )
+      if( consdata->maxactdelta <= MIN(slack, surplus) )
          return SCIP_OKAY;
    }
 
@@ -10633,7 +10633,7 @@ SCIP_RETCODE propagateCons(
             SCIP_CALL( SCIPresetConsAge(scip, cons) );
             *cutoff = TRUE;
          }
-         else if( SCIPisGE(scip, minactivity, consdata->lhsreal) && SCIPisLE(scip, maxactivity, consdata->rhsreal) )
+         else if( minactivity >= consdata->lhsreal && maxactivity <= consdata->rhsreal )
          {
             SCIPdebugMsg(scip, "linear constraint <%s> is redundant: activitybounds=[%.15g,%.15g], sides=[%.15g,%.15g]\n",
                SCIPconsGetName(cons), minactivity, maxactivity, consdata->lhsreal, consdata->rhsreal);
