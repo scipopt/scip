@@ -3665,6 +3665,8 @@ void SCIPprintLPStatistics(
          SCIPclockGetTime(scip->stat->provedinfeaspstime),
          scip->stat->nprojshiftinf,
          scip->stat->nfailprojshiftinf);
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "ExactLP reasons    :   Interleavedepth %10" SCIP_LONGINT_FORMAT " FP-LP Integer Feasible %10" SCIP_LONGINT_FORMAT "  Close to cutoff %10" SCIP_LONGINT_FORMAT "  \n",
+         scip->stat->nexlpinter, scip->stat->nexlpintfeas, scip->stat->nexlpboundexc);
 
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "Meta heuristic     :   Time Success (%.2f) TimeFail (%.2f) Calls (%lld) Found (%lld) \n",
          scip->stat->timesuccessexactsol, scip->stat->timefailexactsol, scip->stat->ncallsexactsol, scip->stat->nfoundexactsol);

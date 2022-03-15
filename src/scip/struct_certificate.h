@@ -49,26 +49,30 @@ struct SCIP_CertificateBound
 struct SCIP_AggregationInfo
 {
    SCIP_AGGRROW*         aggrrow;            /**< aggregation row to be saved */
-   SCIP_ROW**            aggrrows;           /**< array of rows used fo the aggregation */
+   SCIP_AGGRROW*         negslackrow;        /**< aggregation row that implicitly has the negative slack variables in it */
+   SCIP_ROW**            aggrrows;           /**< array of rows used for the aggregation */
+   SCIP_ROW**            negslackrows;       /**< array of rows that are implicitly added (using negative slack) */
    SCIP_Real*            weights;            /**< array of weights */
-   int                   naggrrows;          /**< length of the arrays */
+   SCIP_Real*            negslackweights;    /**< array of weights for the negslackrows */
+   SCIP_Real*            substfactor;        /**< factor used in the substition of slack variables (negslackweight)/(1-f0) */
+   int                   naggrrows;          /**< length of the aggrrows array */
+   int                   nnegslackrows;      /**< length of the negslackrows array */
    SCIP_Longint          fileindex;          /**< index of the aggregated row in the certificate file */
    SCIP_Longint          arpos;              /**< position in the aggrinfo array, so we can access it from the hashmap */
 };
 
 struct SCIP_MirInfo
 {
-   SCIP_Real*            splitcoefs;         /**< coefficients in the split, saved in the complemented variable space */
-   SCIP_Real*            contcoefs;          /**< coefficients of continous part, saved in the complemented variable space */
-   int*                  splitvarinds;       /**< indices of variables in split */
-   int*                  contvarinds;        /**< indices of variables in split */
-   SCIP_Bool*            splitupperused;     /**< TRUE if ub was used to complemented variable, FALSE if lb was used */
-   SCIP_Bool*            contupperused;      /**< TRUE if ub was used to complemented variable, FALSE if lb was used */
+   SCIP_Real*            splitcoefficients;  /**< coefficients in the split, saved in the complemented variable space */
+   int*                  varinds;            /**< indices of variables in split */
+   SCIP_Bool*            upperused;          /**< TRUE if ub was used to complement variable, FALSE if lb was used */
+   SCIP_Bool*            localbdused;        /**< TRUE if local bound was used to complement variable, FALSE if global was used */
    int                   nsplitvars;         /**< number of variables in the split */
-   int                   ncontvars;          /**< number of variables in the split */
-   SCIP_Real             rhs;                /**< rhs of the split disjunction */
+   int                   nlocalvars;         /**< number of local bounds used in transformation */
+   SCIP_Rational*        rhs;                /**< rhs of the split disjunction */
+   SCIP_Rational*        frac;               /**< fractionality of the rhs in the mir cut */
    SCIP_Longint          arpos;              /**< position in the mirinfo array, so we can access it from the hashmap */
-   SCIP_Bool             global;             /**< is the cut valid globally? (relevant for which bounds to use in rounding)*/
+   SCIP_INTERVAL         onedivoneminusf0;   /**< rounded value of 1/(1-f0) that was used in MIR procedure */
 };
 
 struct SCIP_Certnodedata

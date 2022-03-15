@@ -159,6 +159,21 @@ SCIP_Bool SCIPisExactSolve(
    return (scip->set->exact_enabled);
 }
 
+/** returns whether aggreagtion is allowed to use negative slack
+ *
+ *  @note This feature is not supported yet!
+ *
+ *  @return Returns TRUE if \SCIP is exact solving mode, otherwise FALSE
+ */
+SCIP_Bool SCIPallowNegSlack(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   return (!SCIPisExactSolve(scip)) || (scip->set->exact_allownegslack);
+}
 
 /** returns which method is used for computing truely valid dual bounds at the nodes ('n'eumaier and shcherbina,
  *  'v'erify LP basis, 'r'epair LP basis, 'p'roject and scale, 'e'xact LP,'i'nterval neumaier and shcherbina,
@@ -203,15 +218,19 @@ SCIP_CERTIFICATE* SCIPgetCertificate(
 SCIP_RETCODE SCIPaddCertificateAggregation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_AGGRROW*         aggrrow,            /**< agrrrow that results from the aggregation */
+   SCIP_AGGRROW*         negslackrow,        /**< agrrrow that results from the aggregation with implicitly defined negative slack added */
    SCIP_ROW**            aggrrows,           /**< array of rows used fo the aggregation */
    SCIP_Real*            weights,            /**< array of weights */
-   int                   naggrrows           /**< length of the arrays */
+   int                   naggrrows,          /**< length of the arrays */
+   SCIP_ROW**            negslackrows,       /**< array of rows that are added implicitly with negative slack */
+   SCIP_Real*            negslackweights,    /**< array of negative slack weights */
+   int                   nnegslackrows       /**< length of the negative slack array */
    )
 {
    assert(scip != NULL);
    assert(scip->stat != NULL);
 
-   SCIP_CALL( SCIPcertificateNewAggrInfo(scip, aggrrow, aggrrows, weights, naggrrows) );
+   SCIP_CALL( SCIPcertificateNewAggrInfo(scip, aggrrow, negslackrow, aggrrows, weights, naggrrows, negslackrows, negslackweights, nnegslackrows) );
 
    return SCIP_OKAY;
 }

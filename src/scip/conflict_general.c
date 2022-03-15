@@ -798,6 +798,7 @@ SCIP_RETCODE addRowToAggrRow(
    )
 {
    SCIP_Bool negated;
+   SCIP_Bool success;
    assert(set != NULL);
    assert(row != NULL);
    assert(weight != 0.0);
@@ -809,7 +810,8 @@ SCIP_RETCODE addRowToAggrRow(
 
    if( set->exact_enabled )
    {
-      SCIP_CALL( SCIPaggrRowAddRowSafely(set->scip, aggrrow, row, weight, negated ? -1 : 1) );
+      SCIP_CALL( SCIPaggrRowAddRowSafely(set->scip, aggrrow, row, weight, negated ? -1 : 1, &success) );
+      assert(success);
    }
    else
    {
@@ -1356,7 +1358,7 @@ SCIP_RETCODE SCIPgetFarkasProof(
       {
          usedrows[i] = SCIPgetLPRows(set->scip)[farkasrow->rowsinds[i]];
       }
-      SCIPcertificatePrintAggrrow(set, lp, prob, SCIPgetCertificate(set->scip), farkasrow, usedrows, farkasrow->rowweights, farkasrow->nrows, &farkasrow->certificateline);
+      SCIPcertificatePrintAggrrow(set, lp, prob, SCIPgetCertificate(set->scip), farkasrow, usedrows, farkasrow->rowweights, farkasrow->nrows, false, &farkasrow->certificateline);
       SCIPfreeBufferArray(set->scip, &usedrows);
    }
 
@@ -1700,7 +1702,7 @@ SCIP_RETCODE SCIPgetDualProof(
       {
          usedrows[i] = SCIPgetLPRows(set->scip)[farkasrow->rowsinds[i]];
       }
-      SCIPcertificatePrintAggrrow(set, lp, transprob, SCIPgetCertificate(set->scip), farkasrow, usedrows, farkasrow->rowweights, farkasrow->nrows, &farkasrow->certificateline);
+      SCIPcertificatePrintAggrrow(set, lp, transprob, SCIPgetCertificate(set->scip), farkasrow, usedrows, farkasrow->rowweights, farkasrow->nrows, false, &farkasrow->certificateline);
       SCIPhashmapRemove(SCIPgetCertificate(set->scip)->rowdatahash, objectiverow->rowexact);
       SCIPfreeBufferArray(set->scip, &usedrows);
    }

@@ -608,6 +608,7 @@ struct SCIP_Set
    int                   exact_psdualcolselection; /**< strategy to select which dual columns to use for lp to compute interior point
                                               *   (0: no sel, 1: active rows of inexact primal LP, 2: Active rows of exact primal LP) */
    SCIP_Bool             exact_lpinfo;       /**< should exact the LP solver display status messages? */
+   SCIP_Bool             exact_allownegslack;/**< should aggregation be allowed to use negative slack */
    SCIP_Longint          exact_cutmaxdenomsize; /**< maximal denominator in cut coefficient, leading to slightly
                                               *   weaker but numerically better cuts (0: disabled) */
    SCIP_Longint          exact_cutapproxmaxboundval; /**< maximal absolute bound value for wich cut coefficient should

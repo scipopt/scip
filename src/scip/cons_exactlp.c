@@ -16,7 +16,7 @@
 /**@file   cons_linear.c
  * @brief Constraint handler for exact linear constraints in their most general form, \f$lhs <= a^T x <= rhs\f$.
  * @author Leon Eifler
- * @authro Sander Borst
+ * @author Sander Borst
  *
  */
 
@@ -3258,6 +3258,7 @@ void consdataUpdateChgCoef(
    consdataUpdateAddCoef(scip, consdata, var, newval, checkreliability);
 }
 
+#ifdef SCIP_DISABLED_CODE
 /** returns the maximum absolute value of all coefficients in the constraint */
 static
 SCIP_Real consdataGetMaxAbsval(
@@ -3273,6 +3274,7 @@ SCIP_Real consdataGetMaxAbsval(
 
    return consdata->maxabsval;
 }
+#endif
 
 /** returns the minimum absolute value of all coefficients in the constraint */
 static
@@ -18621,7 +18623,8 @@ SCIP_DECL_CONSTRANS(consTransExactLinear)
    /* create linear constraint data for target constraint */
    SCIP_CALL( consdataCreate(scip, &targetdata, sourcedata->nvars, sourcedata->vars, sourcedata->vals, sourcedata->lhs, sourcedata->rhs) );
 
-   consdataScaleMinValue(scip, targetdata, 2 * SCIPepsilon(scip));
+   if( sourcedata->nvars > 0 )
+      consdataScaleMinValue(scip, targetdata, 2 * SCIPepsilon(scip));
 
    /* create target constraint */
    SCIP_CALL( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,

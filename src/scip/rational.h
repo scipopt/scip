@@ -669,7 +669,8 @@ SCIP_EXPORT
 void RatComputeApproximation(
    SCIP_Rational*        res,
    SCIP_Rational*        src,
-   SCIP_Longint          maxdenom
+   SCIP_Longint          maxdenom,
+   int                   forcegreater        /**< 1 if res >= src should be enforced, -1 if res <= src should be enforced, 0 else */
    );
 
 SCIP_EXPORT

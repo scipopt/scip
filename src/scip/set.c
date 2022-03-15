@@ -502,7 +502,7 @@
 #define SCIP_DEFAULT_EXACT_PSDUALCOLSELECTION 1 /**< strategy to select which dual columns to use for lp to compute interior point
                                                  *   (0: no sel, 1: active rows of inexact primal LP, 2: Active rows of exact primal LP) */
 #define SCIP_DEFAULT_EXACT_LPINFO         FALSE /**< should the exact LP solver display status messages? */
-#define SCIP_DEFAULT_CUTMAXDENOMSIZE    1048576 /**< maximal denominator in cut coefficient, leading to slightly weaker (default is 2^200)
+#define SCIP_DEFAULT_CUTMAXDENOMSIZE    0       /**< maximal denominator in cut coefficient, leading to slightly weaker (default is 2^20)
                                                  *   but numerically better cuts (0: disabled) */
 #define SCIP_DEFAULT_CUTAPPROXMAXBOUNDVAL 10000 /**< maximal absolute bound value for wich cut coefficient should
                                                  *   be approximated with bounded denominator (0: no restriction) */
@@ -2705,11 +2705,16 @@ SCIP_RETCODE SCIPsetCreate(
    SCIP_CALL( SCIPaddIntParam(scip,
          "exact/interleavedbfreq",
          "strategy to interleave safe dual bounding with exact LP solve (0: never, 1: only close to cutoff bound, 2: only at depth lvl 4,8,16,..., 3: close to cutoff bound OR at depth lvl 4,8,16,...) ",
-         &(*set)->exact_interleavestrategy, FALSE, SCIP_DEFAULT_EXACT_INTERLEAVESTRATEGY, 2, INT_MAX, NULL, NULL) );
+         &(*set)->exact_interleavestrategy, FALSE, SCIP_DEFAULT_EXACT_INTERLEAVESTRATEGY, 0, 3, NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "exact/lpinfo",
          "should the exact LP solver display status messages?",
          &(*set)->exact_lpinfo, FALSE, SCIP_DEFAULT_EXACT_LPINFO,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "exact/allownegslack",
+         "should the exact LP solver display status messages?",
+         &(*set)->exact_allownegslack, FALSE, TRUE,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddLongintParam(*set, messagehdlr, blkmem,
          "exact/cutmaxdenomsize",

@@ -249,7 +249,8 @@ SCIP_RETCODE SCIPcertificatePrintAggrrow(
    SCIP_AGGRROW*         aggrrow,            /**< agrrrow that results from the aggregation */
    SCIP_ROW**            aggrrows,           /**< array of rows used fo the aggregation */
    SCIP_Real*            weights,            /**< array of weights */
-   int                   naggrrows,           /**< length of the arrays */
+   int                   naggrrows,          /**< length of the arrays */
+   SCIP_Bool             local,              /**< true if local bound information can be used */
    unsigned long*        certificateline     /**< pointer to store the certificate line index or NULL */
    );
 
@@ -355,9 +356,13 @@ SCIP_RETCODE SCIPcertificateFreeAggrInfo(
 SCIP_RETCODE SCIPcertificateNewAggrInfo(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_AGGRROW*         aggrrow,            /**< agrrrow that results from the aggregation */
+   SCIP_AGGRROW*         negslackrow,        /**< agrrrow that results from the aggregation with implicitly defined negative slack added */
    SCIP_ROW**            aggrrows,           /**< array of rows used fo the aggregation */
    SCIP_Real*            weights,            /**< array of weights */
-   int                   naggrrows           /**< length of the arrays */
+   int                   naggrrows,          /**< length of the arrays */
+   SCIP_ROW**            negslackrows,       /**< array of rows that are added implicitly with negative slack */
+   SCIP_Real*            negslackweights,    /**< array of negative slack weights */
+   int                   nnegslackrows       /**< length of the negative slack array */
    );
 
 /** prints unsplitting information to proof section */

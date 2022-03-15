@@ -78,6 +78,14 @@ SCIP_Rational** SCIProwExactGetVals(
    SCIP_ROWEXACT*        row                 /**< LP row */
    );
 
+/** sorts row entries such that LP columns precede non-LP columns and inside both parts lower column indices precede
+ *  higher ones
+ */
+SCIP_EXPORT
+void SCIProwExactSort(
+   SCIP_ROWEXACT*        row                 /**< row to be sorted */
+   );
+
 /** gets array of exact columns */
 SCIP_EXPORT
 SCIP_COLEXACT** SCIProwExactGetCols(
