@@ -1297,7 +1297,7 @@ SCIP_Bool RatIsGEReal(
 
    if( rat->isinf )
    {
-      return RatApproxReal(rat) == real;
+      return RatApproxReal(rat) >= real;
    }
    else
    {
@@ -1333,7 +1333,7 @@ SCIP_Bool RatIsLEReal(
 
    if( rat->isinf )
    {
-      return RatApproxReal(rat) == real;
+      return RatApproxReal(rat) <= real;
    }
    else
    {
