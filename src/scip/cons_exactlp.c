@@ -10298,11 +10298,14 @@ SCIP_RETCODE separateCons(
 
 static SCIP_RETCODE CertificatePrintActivityConflict(SCIP* scip, SCIP_CONS* cons, SCIP_CONSDATA* consdata, SCIP_Bool rhs)
 {
-   SCIP_Rational* side;
-   SCIP_Rational* activity;
+   SCIP_Real side;
+   SCIP_Real activity;
    SCIP_Rational* diff;
    SCIP_CERTIFICATE* certificate;
    SCIP_Longint conscertificateindex;
+   SCIP_ROWEXACT* row;
+   int nvals;
+   SCIP_Rational** vals;
 
    if (!SCIPisCertificateActive(scip))
       return SCIP_OKAY;
@@ -10311,17 +10314,30 @@ static SCIP_RETCODE CertificatePrintActivityConflict(SCIP* scip, SCIP_CONS* cons
 
    if ( rhs )
    {
-      side = consdata->rhs;
-      activity = consdata->minactivityEx;
-      assert( RatIsGT(activity, side) );
+      side = consdata->rhsreal;
+      activity = consdata->minactivity;
+      assert( activity > side );
    }
    else
    {
-      side = consdata->lhs;
-      activity = consdata->maxactivityEx;
-      assert( RatIsLT(activity, side) );
+      side = consdata->lhsreal;
+      activity = consdata->maxactivity;
+      assert( activity < side );
    }
-   RatDiff(diff, activity, side);
+
+   row = consdata->rowexact;
+   if ( row != NULL )
+   {
+      nvals = row->len;
+      vals = row->vals;
+   }
+   else
+   {
+      nvals = consdata->nvars;
+      vals = consdata->vals;
+   }
+   RatSetReal(diff, activity);
+   RatDiffReal(diff, diff, side);
    conscertificateindex = SCIPhashmapGetImageLong(certificate->rowdatahash, cons); // @todo sander
    assert(conscertificateindex != LONG_MAX);
 
@@ -10329,17 +10345,17 @@ static SCIP_RETCODE CertificatePrintActivityConflict(SCIP* scip, SCIP_CONS* cons
    SCIPcertificatePrintProofMessage(certificate, rhs ? "G " : "L ");
 
    SCIPcertificatePrintProofRational(certificate, diff, 10);
-   SCIPcertificatePrintProofMessage(certificate, " 0 { lin %d %d -1", consdata->nvars + 1, conscertificateindex);
-   for( int i = 0; i < consdata->nvars; i++ )
+   SCIPcertificatePrintProofMessage(certificate, " 0 { lin %d %d -1", nvals + 1, conscertificateindex);
+   for( int i = 0; i < nvals; i++ )
    {
       SCIP_VAR* var;
       bool is_upper_bound;
       SCIP_Longint certificateindex;
-      var = consdata->vars[i];
-      is_upper_bound = rhs != RatIsPositive(consdata->vals[i]);
+      var = row == NULL ? consdata->vars[i] : row->cols[i]->var;
+      is_upper_bound = rhs != RatIsPositive(vals[i]);
       certificateindex = is_upper_bound ? SCIPvarGetUbCertificateIndexLocal(var) :  SCIPvarGetLbCertificateIndexLocal(var);
       SCIPcertificatePrintProofMessage(certificate, " %d ", certificateindex);
-      SCIPcertificatePrintProofRational(certificate, consdata->vals[i], 10);
+      SCIPcertificatePrintProofRational(certificate, vals[i], 10);
    }
    SCIPcertificatePrintProofMessage(certificate, " } -1\n");
 
@@ -10595,22 +10611,22 @@ SCIP_RETCODE propagateCons(
          consdataGetActivityBounds(scip, consdata, TRUE, &minactivity, &maxactivity, &minactisrelax, &maxactisrelax,
             &isminsettoinfinity, &ismaxsettoinfinity);
 
-         if( SCIPisFeasGT(scip, minactivity, consdata->rhsreal) )
+         if( minactivity > consdata->rhsreal )
          {
             SCIPdebugMsg(scip, "linear constraint <%s> is infeasible (rhs): activitybounds=[%.15g,%.15g], sides=[%.15g,%.15g]\n",
                SCIPconsGetName(cons), minactivity, maxactivity, consdata->lhs, consdata->rhs);
-
+            SCIP_CALL( CertificatePrintActivityConflict(scip, cons, consdata, TRUE) );
             /* analyze conflict */
             //SCIP_CALL( analyzeConflict(scip, cons, TRUE) );
 
             SCIP_CALL( SCIPresetConsAge(scip, cons) );
             *cutoff = TRUE;
          }
-         else if( SCIPisFeasLT(scip, maxactivity, consdata->lhsreal) )
+         else if( maxactivity < consdata->lhsreal )
          {
             SCIPdebugMsg(scip, "linear constraint <%s> is infeasible (lhs): activitybounds=[%.15g,%.15g], sides=[%.15g,%.15g]\n",
                SCIPconsGetName(cons), minactivity, maxactivity, consdata->lhsreal, consdata->rhsreal);
-
+            SCIP_CALL( CertificatePrintActivityConflict(scip, cons, consdata, FALSE) );
             /* analyze conflict */
             //SCIP_CALL( analyzeConflict(scip, cons, FALSE) );
 

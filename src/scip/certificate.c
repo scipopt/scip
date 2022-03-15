@@ -2890,6 +2890,9 @@ int SCIPcertificatePrintUnsplitting(
       assert(nodedata->derindex_right < certificate->indexcounter - 1);
       assert(nodedata->derindex_left < certificate->indexcounter - 1);
       assert( RatIsGE(lowerbound, SCIPnodeGetLowerboundExact(node)) );
+      assert( RatIsGEReal(lowerbound, SCIPnodeGetLowerbound(node)) );
+      assert(RatIsGE(lowerbound, SCIPgetCutoffboundExact(set->scip)) || infeas);
+
       SCIPcertificatePrintProofMessage(certificate, " { uns %d %d  %d %d  } -1\n", nodedata->derindex_left, nodedata->assumptionindex_left,
          nodedata->derindex_right, nodedata->assumptionindex_right);
       SCIP_CALL( SCIPcertificateUpdateParentData(certificate, node, certificate->indexcounter - 1, lowerbound) );
