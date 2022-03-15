@@ -1,3 +1,4 @@
+set misc usesymmetry 0
 set display verblevel 0
 set timing enabled FALSE
 read "${PROJECT_SOURCE_DIR}"/check/"${path}"
