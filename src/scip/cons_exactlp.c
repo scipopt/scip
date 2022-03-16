@@ -9408,7 +9408,7 @@ SCIP_RETCODE tightenVarBounds(
                /* tighten upper bound */
                SCIPdebugMsg(scip, "linear constraint <%s>: tighten <%s>, old bds=[%.15g,%.15g], val=%.15g, resactivity=[%.15g,%.15g], sides=[%.15g,%.15g] -> newub=%.15g\n",
                   SCIPconsGetName(cons), SCIPvarGetName(var), lb, ub, valrange.inf, minresactivity, maxresactivity, lhs, rhs, newub);
-               if( SCIPisCertificateActive(scip) && (SCIPgetStage(scip) == SCIP_STAGE_SOLVING) )
+               if( SCIPcertificateShouldTrackBounds(scip) )
                   SCIPcertificatePrintActivityVarBound(scip, SCIPgetCertificate(scip), NULL, SCIP_BOUNDTYPE_UPPER, newub, rhs - minresactivity, false, cons, var);
                SCIP_CALL( SCIPinferVarUbCons(scip, var, newub, cons, getInferInt(PROPRULE_1_RHS, pos), force,
                      &infeasible, &tightened) );
