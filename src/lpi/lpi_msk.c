@@ -2436,6 +2436,9 @@ SCIP_RETCODE SolveWSimplex(
       }
       else
       {
+#ifdef DISABLED_CODE
+         /* We are outside of the objective range, i.e., the objective limit has been reached (actually exceeded). This
+          * is then returned in SCIPlpiIsObjlimExc(). The following code seems to be old. */
          scipmskobjsen objsen;
          double bound;
 
@@ -2463,6 +2466,7 @@ SCIP_RETCODE SolveWSimplex(
                SCIP_CALL( SCIPlpiSolveBarrier(lpi, TRUE) );
             }
          }
+#endif
       }
    }
 
