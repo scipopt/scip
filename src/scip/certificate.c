@@ -3153,5 +3153,5 @@ SCIP_RETCODE SCIPcertificatePrintGlobalBound(
 SCIP_Bool SCIPcertificateShouldTrackBounds(
    SCIP*              scip
    ) {
-   return SCIPisCertificateActive(scip) && scip->set->stage >= SCIP_STAGE_TRANSFORMED && !SCIPinProbing(scip);
+   return SCIPisCertificateActive(scip) && scip->set->stage >= SCIP_STAGE_INITSOLVE && !SCIPinProbing(scip);
 }
