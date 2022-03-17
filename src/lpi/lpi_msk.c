@@ -2437,36 +2437,6 @@ SCIP_RETCODE SolveWSimplex(
          /* solve again with barrier */
          SCIP_CALL( SCIPlpiSolveBarrier(lpi, TRUE) );
       }
-      else
-      {
-         scipmskobjsen objsen;
-         double bound;
-
-         MOSEK_CALL( MSK_getobjsense(lpi->task, &objsen) );
-
-         if (objsen == MSK_OBJECTIVE_SENSE_MINIMIZE)
-         {
-            MOSEK_CALL( MSK_getdouparam(lpi->task, MSK_DPAR_UPPER_OBJ_CUT, &bound) );
-
-            if (1.0e-6*(fabs(bound) + fabs(dobj)) < bound-dobj)
-            {
-               SCIPerrorMessage("[%d] Terminated on obj range, dobj = %g, bound = %g\n", lpi->optimizecount, dobj, bound);
-
-               SCIP_CALL( SCIPlpiSolveBarrier(lpi, TRUE) );
-            }
-         }
-         else /* objsen == MSK_OBJECTIVE_SENSE_MAX */
-         {
-            MOSEK_CALL( MSK_getdouparam(lpi->task, MSK_DPAR_LOWER_OBJ_CUT, &bound) );
-
-            if (1.0e-6*(fabs(bound) + fabs(dobj)) < dobj-bound)
-            {
-               SCIPerrorMessage("[%d] Terminated on obj range, dobj = %g, bound = %g\n", lpi->optimizecount, dobj, bound);
-
-               SCIP_CALL( SCIPlpiSolveBarrier(lpi, TRUE) );
-            }
-         }
-      }
    }
 
    /* if the simplex took too many iterations, solve again with barrier */
@@ -3621,9 +3591,18 @@ SCIP_RETCODE SCIPlpiGetObjval(
 
    SCIPdebugMessage("Calling SCIPlpiGetObjval (%d)\n", lpi->lpid);
 
-   MOSEK_CALL( MSK_getprimalobj(lpi->task, lpi->lastsolvetype, objval) );
-
    /* TODO: tjek lighed med dual objektiv i de fleste tilfaelde. */
+
+   if ( lpi->termcode == MSK_RES_TRM_OBJECTIVE_RANGE )
+   {
+      /* if we reached the objective limit, return this value */
+      MOSEK_CALL( MSK_getdouparam(lpi->task, MSK_DPAR_UPPER_OBJ_CUT, objval) );
+   }
+   else
+   {
+      /* otherwise get the value from Mosek */
+      MOSEK_CALL( MSK_getprimalobj(lpi->task, lpi->lastsolvetype, objval) );
+   }
 
    return SCIP_OKAY;
 }
@@ -3655,7 +3634,16 @@ SCIP_RETCODE SCIPlpiGetSol(
 
    if ( objval != NULL )
    {
-      MOSEK_CALL( MSK_getprimalobj(lpi->task, lpi->lastsolvetype, objval) );
+      if ( lpi->termcode == MSK_RES_TRM_OBJECTIVE_RANGE )
+      {
+         /* if we reached the objective limit, return this value */
+         MOSEK_CALL( MSK_getdouparam(lpi->task, MSK_DPAR_UPPER_OBJ_CUT, objval) );
+      }
+      else
+      {
+         /* otherwise get the value from Mosek */
+         MOSEK_CALL( MSK_getprimalobj(lpi->task, lpi->lastsolvetype, objval) );
+      }
    }
 
    if( redcost )
