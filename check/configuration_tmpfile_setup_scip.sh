@@ -112,7 +112,7 @@ echo "set limits time ${TIMELIMIT}"                              >> "${TMPFILE}"
 echo "set limits nodes ${NODELIMIT}"                             >> "${TMPFILE}"
 echo "set limits memory ${MEMLIMIT}"                             >> "${TMPFILE}"
 echo "set lp advanced threads ${THREADS}"                        >> "${TMPFILE}"
-echo "set timing clocktype 1"                                    >> "${TMPFILE}"
+#echo "set timing clocktype 1"                                    >> "${TMPFILE}"
 echo "set display freq ${DISPFREQ}"                              >> "${TMPFILE}"
 if test "${WITHCERTIFICATE}" = true
 then
