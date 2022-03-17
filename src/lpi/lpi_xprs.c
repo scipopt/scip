@@ -642,13 +642,18 @@ void invalidateSolution(
  * @{
  */
 
+//TODO: version is not added to name in threadsafe mode
+#ifndef SCIP_THREADSAFE
 static char xprsname[100];
-
+#else
+static char xprsname[] = {'X', 'p', 'r', 'e', 's', 's'};
+#endif
 /** gets name and version of LP solver */
 const char* SCIPlpiGetSolverName(
    void
    )
 {
+#ifndef SCIP_THREADSAFE
    char version[16];
 
    /* get version of Xpress */
@@ -656,7 +661,7 @@ const char* SCIPlpiGetSolverName(
       (void) sprintf(xprsname, "Xpress %s", version);
    else
       (void) sprintf(xprsname, "Xpress %d", XPVERSION);
-
+#endif
    return xprsname;
 }
 
