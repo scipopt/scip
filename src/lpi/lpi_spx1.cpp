@@ -1622,8 +1622,26 @@ void invalidateSolution(SCIP_LPI* lpi)
  * Miscellaneous Methods
  */
 
-static char spxname[100];
-static char spxdesc[200];
+char* initSpxDesc( );
+
+#if (SOPLEX_SUBVERSION > 0)
+   const static char spxname[20]= {'S', 'o', 'p', 'l', 'e', 'x', '1', ' ', SOPLEX_VERSION/100 + '0', '.', (SOPLEX_VERSION % 100)/10 + '0', '.', SOPLEX_VERSION % 10 + '0', '.', SOPLEX_SUBVERSION + '0'};
+#else
+   const static char spxname[20] = {'S', 'o', 'p', 'l', 'e', 'x', '1', ' ', SOPLEX_VERSION/100 + '0', '.', (SOPLEX_VERSION % 100)/10 + '0', '.', SOPLEX_VERSION % 10 + '0'};
+#endif
+
+static char* spxdesc = initSpxDesc();
+
+char* initSpxDesc( )
+{
+   spxdesc = new char[200];
+   (void)snprintf(spxdesc, 200, "%s [GitHash: %s]", "Linear Programming Solver developed at Zuse Institute Berlin (soplex.zib.de)"
+#ifdef SCIP_WITH_LPSCHECK
+         " - including CPLEX double check"
+#endif
+         , getGitHash());
+   return spxdesc;
+}
 
 /**@name Miscellaneous Methods */
 /**@{ */
@@ -1634,12 +1652,6 @@ const char* SCIPlpiGetSolverName(
    )
 {
    SCIPdebugMessage("calling SCIPlpiGetSolverName()\n");
-
-#if (SOPLEX_SUBVERSION > 0)
-   snprintf(spxname, 100, "SoPlex1 %d.%d.%d.%d", SOPLEX_VERSION/100, (SOPLEX_VERSION % 100)/10, SOPLEX_VERSION % 10, SOPLEX_SUBVERSION); /*lint !e778*/
-#else
-   snprintf(spxname, 100, "SoPlex1 %d.%d.%d", SOPLEX_VERSION/100, (SOPLEX_VERSION % 100)/10, SOPLEX_VERSION % 10); /*lint !e778*/
-#endif
    return spxname;
 }
 
@@ -1648,19 +1660,6 @@ const char* SCIPlpiGetSolverDesc(
    void
    )
 {
-#if (SOPLEX_VERSION >= 160)
-   snprintf(spxdesc, 200, "Linear Programming Solver developed at Zuse Institute Berlin (soplex.zib.de) [GitHash: %s]"
-#ifdef SCIP_WITH_LPSCHECK
-     " - including CPLEX double check"
-#endif
-   , getGitHash());
-#else
-   snprintf(spxdesc, 200, "Linear Programming Solver developed at Zuse Institute Berlin (soplex.zib.de)"
-#ifdef SCIP_WITH_LPSCHECK
-     " - including CPLEX double check"
-#endif
-   );
-#endif
    return spxdesc;
 }
 
