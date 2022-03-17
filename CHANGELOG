@@ -120,6 +120,7 @@ Fixed bugs
   which also should be much faster.
 - fixed that recursive products in expressions were sometimes not flattened
 - fixed that expressions in original variables could not be simplified
+- fixed handling of objective limit with Mosek
 
 Miscellaneous
 -------------
