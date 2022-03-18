@@ -691,10 +691,7 @@ SCIP_DECL_HEUREXEC(heurExecIndicatordiving)
    diveset = SCIPheurGetDivesets(heur)[0];
    assert(diveset != NULL);
 
-   /* TODO maybe improve this if a Indicator exists it doesn't mean we branch on
-    * skip if problem doesn't contain indicator constraints
-    * If varbound constraints should be considered, skip only if there are also no varbound constraints.
-    */
+   /* Skip if problem doesn't contain indicator constraints or varbound constraints (optional). */
    isatleastoneindcons = FALSE;
    indicatorconss = SCIPconshdlrGetConss(heurdata->conshdlr[0]);
    nconss = SCIPconshdlrGetNConss(heurdata->conshdlr[0]);
@@ -718,6 +715,8 @@ SCIP_DECL_HEUREXEC(heurExecIndicatordiving)
    /* create and initialize hashmaps
     * indicatormap: binary var -> indicator constraint
     * varboundmap: binary var -> varbound constraint
+    *
+    * todo: For one binary variable there can be more than one corresponding indicator/varbound constraint
     */
    SCIP_CALL( SCIPhashmapCreate(&heurdata->indicatormap, SCIPblkmem(scip), nconss) );
    for( i = 0; i < nconss; i++ )
@@ -766,9 +765,7 @@ SCIP_DECL_HEUREXEC(heurExecIndicatordiving)
    else if( *result == SCIP_FOUNDSOL )
       heurdata->notfound = 0;
 
-   /* free hashmaps since constraints can get removed/modified till the next call
-    * todo: Is it possible to update the hashmaps instead of freeing and creating the hashmaps in the next call again?
-    */
+   /* free hashmaps since constraints can get removed/modified till the next call */
    if( heurdata->varbounds )
       SCIPhashmapFree(&heurdata->varboundmap);
    SCIPhashmapFree(&heurdata->indicatormap);
@@ -844,9 +841,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
    }
    heurdata->probingdepth = SCIPgetProbingDepth(scip);
 
-   /* skip candidate
-    * since we have violated indicator constraints but current candidate can not be determined by the indicator constraint handler
-    */
+   /* skip if current candidate can not be determined by the indicator constraint handler and violated indicator constraints still exists */
    if( !(SCIPisFeasIntegral(scip, candsol) && SCIPvarGetLbLocal(cand) < SCIPvarGetUbLocal(cand) - 0.5) && heurdata->gotoindconss )
    {
       *score = SCIP_REAL_MIN;
