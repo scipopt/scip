@@ -9894,9 +9894,21 @@ SCIP_RETCODE varProcessChgLbGlobal(
 
       case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  ->  y = (x-c)/a */
          assert(parentvar->data.aggregate.var == var);
-         if( SCIPsetIsPositive(set, parentvar->data.aggregate.scalar) )
+         SCIP_Real parentnewbound;
+         if (!set->exact_enabled)
          {
-            SCIP_Real parentnewbound;
+            parentnewbound = parentvar->data.aggregate.scalar * newbound + parentvar->data.aggregate.constant;
+         }
+         else
+         {
+            SCIP_INTERVAL parentboundinterval;
+            SCIPintervalSet(&parentboundinterval, newbound);
+            SCIPintervalMulScalar(SCIP_INTERVAL_INFINITY, &parentboundinterval, parentboundinterval, parentvar->data.aggregate.scalar);
+            SCIPintervalAddScalar(SCIP_INTERVAL_INFINITY, &parentboundinterval, parentboundinterval, parentvar->data.aggregate.constant);
+            parentnewbound = parentvar->data.aggregate.scalar > 0 ? parentboundinterval.inf : parentboundinterval.sup;
+         }
+         if( parentvar->data.aggregate.scalar > 0 )
+         {
 
             /* a > 0 -> change lower bound of y */
             assert(SCIPsetIsInfinity(set, -parentvar->glbdom.lb) || SCIPsetIsInfinity(set, -oldbound)
@@ -9911,7 +9923,6 @@ SCIP_RETCODE varProcessChgLbGlobal(
          }
          else
          {
-            SCIP_Real parentnewbound;
 
             /* a < 0 -> change upper bound of y */
             assert(SCIPsetIsNegative(set, parentvar->data.aggregate.scalar));
@@ -10069,9 +10080,22 @@ SCIP_RETCODE varProcessChgUbGlobal(
 
       case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  ->  y = (x-c)/a */
          assert(parentvar->data.aggregate.var == var);
-         if( SCIPsetIsPositive(set, parentvar->data.aggregate.scalar) )
+
+         SCIP_Real parentnewbound;
+         if (!set->exact_enabled)
          {
-            SCIP_Real parentnewbound;
+            parentnewbound = parentvar->data.aggregate.scalar * newbound + parentvar->data.aggregate.constant;
+         }
+         else
+         {
+            SCIP_INTERVAL parentboundinterval;
+            SCIPintervalSet(&parentboundinterval, newbound);
+            SCIPintervalMulScalar(SCIP_INTERVAL_INFINITY, &parentboundinterval, parentboundinterval, parentvar->data.aggregate.scalar);
+            SCIPintervalAddScalar(SCIP_INTERVAL_INFINITY, &parentboundinterval, parentboundinterval, parentvar->data.aggregate.constant);
+            parentnewbound = parentvar->data.aggregate.scalar > 0 ? parentboundinterval.inf : parentboundinterval.sup;
+         }
+         if( parentvar->data.aggregate.scalar > 0 )
+         {
 
             /* a > 0 -> change upper bound of y */
             assert(SCIPsetIsInfinity(set, parentvar->glbdom.ub) || SCIPsetIsInfinity(set, oldbound)
@@ -10085,7 +10109,6 @@ SCIP_RETCODE varProcessChgUbGlobal(
          }
          else
          {
-            SCIP_Real parentnewbound;
 
             /* a < 0 -> change lower bound of y */
             assert(SCIPsetIsNegative(set, parentvar->data.aggregate.scalar));
@@ -11395,9 +11418,21 @@ SCIP_RETCODE varProcessChgLbLocal(
 
       case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  ->  y = (x-c)/a */
          assert(parentvar->data.aggregate.var == var);
-         if( SCIPsetIsPositive(set, parentvar->data.aggregate.scalar) )
+         SCIP_Real parentnewbound;
+         if (!set->exact_enabled)
          {
-            SCIP_Real parentnewbound;
+            parentnewbound = parentvar->data.aggregate.scalar * newbound + parentvar->data.aggregate.constant;
+         }
+         else
+         {
+            SCIP_INTERVAL parentboundinterval;
+            SCIPintervalSet(&parentboundinterval, newbound);
+            SCIPintervalMulScalar(SCIP_INTERVAL_INFINITY, &parentboundinterval, parentboundinterval, parentvar->data.aggregate.scalar);
+            SCIPintervalAddScalar(SCIP_INTERVAL_INFINITY, &parentboundinterval, parentboundinterval, parentvar->data.aggregate.constant);
+            parentnewbound = parentvar->data.aggregate.scalar > 0 ? parentboundinterval.inf : parentboundinterval.sup;
+         }
+         if( parentvar->data.aggregate.scalar > 0 )
+         {
 
             /* a > 0 -> change lower bound of y */
             assert(SCIPsetIsInfinity(set, -parentvar->locdom.lb) || SCIPsetIsInfinity(set, -oldbound)
@@ -11406,7 +11441,6 @@ SCIP_RETCODE varProcessChgLbLocal(
 
             if( !SCIPsetIsInfinity(set, -newbound) && !SCIPsetIsInfinity(set, newbound) )
             {
-               parentnewbound = parentvar->data.aggregate.scalar * newbound + parentvar->data.aggregate.constant;
                /* if parent's new lower bound exceeds its upper bound, then this could be due to numerical difficulties, e.g., if numbers are large
                 * thus, at least a relative comparision of the new lower bound and the current upper bound should proof consistency
                 * as a result, the parent's lower bound is set to it's upper bound, and not above
@@ -11424,7 +11458,6 @@ SCIP_RETCODE varProcessChgLbLocal(
          }
          else
          {
-            SCIP_Real parentnewbound;
 
             /* a < 0 -> change upper bound of y */
             assert(SCIPsetIsNegative(set, parentvar->data.aggregate.scalar));
@@ -11434,7 +11467,6 @@ SCIP_RETCODE varProcessChgLbLocal(
 
             if( !SCIPsetIsInfinity(set, -newbound) && !SCIPsetIsInfinity(set, newbound) )
             {
-               parentnewbound = parentvar->data.aggregate.scalar * newbound + parentvar->data.aggregate.constant;
                /* if parent's new upper bound is below its lower bound, then this could be due to numerical difficulties, e.g., if numbers are large
                 * thus, at least a relative comparision of the new upper bound and the current lower bound should proof consistency
                 * as a result, the parent's upper bound is set to it's lower bound, and not below
@@ -11485,7 +11517,6 @@ SCIP_RETCODE varProcessChgUbLocal(
    SCIP_VAR* parentvar;
    SCIP_Real oldbound;
    int i;
-
    assert(var != NULL);
    assert(set != NULL);
    assert(var->scip == set->scip);
@@ -11567,9 +11598,21 @@ SCIP_RETCODE varProcessChgUbLocal(
 
       case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  ->  y = (x-c)/a */
          assert(parentvar->data.aggregate.var == var);
-         if( SCIPsetIsPositive(set, parentvar->data.aggregate.scalar) )
+         SCIP_Real parentnewbound;
+         if (!set->exact_enabled)
          {
-            SCIP_Real parentnewbound;
+            parentnewbound = parentvar->data.aggregate.scalar * newbound + parentvar->data.aggregate.constant;
+         }
+         else
+         {
+            SCIP_INTERVAL parentboundinterval;
+            SCIPintervalSet(&parentboundinterval, newbound);
+            SCIPintervalMulScalar(SCIP_INTERVAL_INFINITY, &parentboundinterval, parentboundinterval, parentvar->data.aggregate.scalar);
+            SCIPintervalAddScalar(SCIP_INTERVAL_INFINITY, &parentboundinterval, parentboundinterval, parentvar->data.aggregate.constant);
+            parentnewbound = parentvar->data.aggregate.scalar > 0 ? parentboundinterval.sup : parentboundinterval.inf;
+         }
+         if(  parentvar->data.aggregate.scalar > 0 )
+         {
 
             /* a > 0 -> change upper bound of x */
             assert(SCIPsetIsInfinity(set, parentvar->locdom.ub) || SCIPsetIsInfinity(set, oldbound)
@@ -11577,7 +11620,7 @@ SCIP_RETCODE varProcessChgUbLocal(
                   oldbound * parentvar->data.aggregate.scalar + parentvar->data.aggregate.constant));
             if( !SCIPsetIsInfinity(set, -newbound) && !SCIPsetIsInfinity(set, newbound) )
             {
-               parentnewbound = parentvar->data.aggregate.scalar * newbound + parentvar->data.aggregate.constant;
+
                /* if parent's new upper bound is below its lower bound, then this could be due to numerical difficulties, e.g., if numbers are large
                 * thus, at least a relative comparision of the new upper bound and the current lower bound should proof consistency
                 * as a result, the parent's upper bound is set to it's lower bound, and not below
@@ -11595,7 +11638,6 @@ SCIP_RETCODE varProcessChgUbLocal(
          }
          else
          {
-            SCIP_Real parentnewbound;
 
             /* a < 0 -> change lower bound of x */
             assert(SCIPsetIsNegative(set, parentvar->data.aggregate.scalar));
@@ -11604,7 +11646,6 @@ SCIP_RETCODE varProcessChgUbLocal(
                   oldbound * parentvar->data.aggregate.scalar + parentvar->data.aggregate.constant));
             if( !SCIPsetIsInfinity(set, -newbound) && !SCIPsetIsInfinity(set, newbound) )
             {
-               parentnewbound = parentvar->data.aggregate.scalar * newbound + parentvar->data.aggregate.constant;
                /* if parent's new lower bound exceeds its upper bound, then this could be due to numerical difficulties, e.g., if numbers are large
                 * thus, at least a relative comparision of the new lower bound and the current upper bound should proof consistency
                 * as a result, the parent's lower bound is set to it's upper bound, and not above
