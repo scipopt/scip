@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -38,6 +38,7 @@ CLIENTTMPDIR="${16}"   # - directory for temporary files
 SOLBASENAME="${17}"    # - base name for solution file
 VISUALIZE="${18}"      # - true, if the branch-and-bound search should be visualized
 SOLUFILE="${19}"       # - solu file, only necessary if ${SETCUTOFF} is 1
+EMPHBENCHMARK="${20}"  # - use set emphasis benchmark
 
 #args=("$@")
 #for ((i=0; i < $#; i++)) {
@@ -101,12 +102,15 @@ do
     INSTANCENAME=${INSTANCENAME%%.${i}}
 done
 INSTANCESETTINGSFILE="${INSTANCENAME}.set"
+
 if test -f "${INSTANCESETTINGSFILE}"
 then
     echo set load "${INSTANCESETTINGSFILE}"                      >> "${TMPFILE}"
 fi
 
-echo "set emphasis benchmark"                                    >> "${TMPFILE}" # avoid switching to dfs etc. - better abort with memory error; this has to be first
+if  [ "${EMPHBENCHMARK}" = true ] ; then
+    echo "set emphasis benchmark"                                >> "${TMPFILE}" # avoid switching to dfs etc. - better abort with memory error; this has to be first
+fi
 echo "set limits time ${TIMELIMIT}"                              >> "${TMPFILE}"
 echo "set limits nodes ${NODELIMIT}"                             >> "${TMPFILE}"
 echo "set limits memory ${MEMLIMIT}"                             >> "${TMPFILE}"

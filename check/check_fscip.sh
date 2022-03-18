@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -44,6 +44,7 @@ PERMUTE="${23}"
 SEEDS="${24}"
 GLBSEEDSHIFT="${25}"
 STARTPERM="${26}"
+EMPHBENCHMARK="${27}"
 
 # check if all variables defined (by checking the last one)
 if test -z "${STARTPERM}"
@@ -67,7 +68,6 @@ then
     echo "DEBUGTOOL     = ${DEBUGTOOL}"
     echo "CLIENTTMPDIR  = ${CLIENTTMPDIR}"
     echo "REOPT         = ${REOPT}"
-    echo "PERMUTE       = ${PERMUTE}"
     echo "OPTCOMMAND    = ${OPTCOMMAND}"
     echo "SETCUTOFF     = ${SETCUTOFF}"
     echo "MAXJOBS       = ${MAXJOBS}"
@@ -76,6 +76,7 @@ then
     echo "SEEDS         = ${SEEDS}"
     echo "GLBSEEDSHIFT  = ${GLBSEEDSHIFT}"
     echo "STARTPERM     = ${STARTPERM}"
+    echo "EMPHBENCHMARK  = ${EMPHBENCHMARK}"
     exit 1;
 fi
 
@@ -147,13 +148,13 @@ do
             # defines the following environment variables: OUTFILE, ERRFILE, EVALFILE, OBJECTIVEVAL, SHORTPROBNAME,
             #                                              FILENAME, SKIPINSTANCE, BASENAME, TMPFILE, SETFILE
             . ./configuration_logfiles.sh "${INIT}" "${COUNT}" "${INSTANCE}" "${BINID}" "${PERMUTE}" "${SEEDS}" "${SETNAME}" \
-                "${TSTNAME}" "${CONTINUE}" "${QUEUE}" "${p}" "${s}" "${THREADS}" "${GLBSEEDSHIFT}" "${STARTPERM}"
+                "${TSTNAME}" "${CONTINUE}" "${QUEUE}" "${p}" "${s}" "${THREADS}" "${GLBSEEDSHIFT}" "${STARTPERM}" ${EMPHBENCHMARK}
 
             if test "${INSTANCE}" = "DONE"
             then
                 wait
                 #echo "${EVALFILE}"
-                ./evalcheck_cluster.sh "${EVALFILE}"
+                ./evalcheck_cluster.sh "${EVALFILE}" useshortnames=0
                 continue
             fi
 

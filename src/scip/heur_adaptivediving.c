@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -235,9 +235,16 @@ SCIP_DECL_HEURINIT(heurInitAdaptivediving) /*lint --e{715}*/
    assert(heur != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
 
-   /* get heuristic data */
+   /* get and reset heuristic data */
    heurdata = SCIPheurGetData(heur);
    heurdata->lastselection = -1;
+   if( heurdata->divesets != NULL )
+   {
+      /* we clear the list of collected divesets to ensure reproducability and consistent state across multiple runs
+       * within the same SCIP data structure */
+      SCIPfreeBlockMemoryArray(scip, &heurdata->divesets, heurdata->divesetssize);
+      assert(heurdata->divesets == NULL);
+   }
 
    assert(heurdata != NULL);
 

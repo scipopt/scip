@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -15228,6 +15228,8 @@ SCIP_DECL_CONSINIT(consInitLinear)
    assert(conshdlrdata != NULL);
    assert(conshdlrdata->eventhdlr != NULL);
    assert(nconss == 0 || conss != NULL);
+
+   conshdlrdata->naddconss = 0;
 
    /* catch events for the constraints */
    for( c = 0; c < nconss; ++c )

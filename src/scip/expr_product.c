@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -64,7 +64,6 @@
 struct SCIP_ExprData
 {
    SCIP_Real             coefficient;        /**< coefficient */
-   SCIP_ROW*             row;                /**< row created during initLP() */
 };
 
 struct SCIP_ExprhdlrData
@@ -97,24 +96,6 @@ SCIP_DECL_VERTEXPOLYFUN(prodfunction)
       ret *= args[i];
 
    return ret;
-}
-
-/** create expression data */
-static
-SCIP_RETCODE createData(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_EXPRDATA**       exprdata,           /**< pointer where to store expression data */
-   SCIP_Real             coefficient         /**< coefficient of product */
-   )
-{
-   assert(exprdata != NULL);
-
-   SCIP_CALL( SCIPallocBlockMemory(scip, exprdata) );
-
-   (*exprdata)->coefficient  = coefficient;
-   (*exprdata)->row          = NULL;
-
-   return SCIP_OKAY;
 }
 
 static
@@ -1409,7 +1390,7 @@ SCIP_DECL_EXPRCOPYDATA(copydataProduct)
    sourceexprdata = SCIPexprGetData(sourceexpr);
    assert(sourceexprdata != NULL);
 
-   SCIP_CALL( createData(targetscip, targetexprdata, sourceexprdata->coefficient) );
+   SCIP_CALL( SCIPduplicateBlockMemory(targetscip, targetexprdata, sourceexprdata) );
 
    return SCIP_OKAY;
 }
@@ -1564,6 +1545,9 @@ SCIP_DECL_EXPRFWDIFF(fwdiffProduct)
 
    assert(SCIPexprGetData(expr) != NULL);
 
+   /* TODO add special handling for nchildren == 2 */
+
+   /**! [SnippetExprFwdiffProduct] */
    *dot = 0.0;
    for( c = 0; c < SCIPexprGetNChildren(expr); ++c )
    {
@@ -1595,6 +1579,7 @@ SCIP_DECL_EXPRFWDIFF(fwdiffProduct)
          *dot += partial * SCIPexprGetDot(child);
       }
    }
+   /**! [SnippetExprFwdiffProduct] */
 
    return SCIP_OKAY;
 }
@@ -1623,6 +1608,9 @@ SCIP_DECL_EXPRBWFWDIFF(bwfwdiffProduct)
    assert(!SCIPisExprValue(scip, partialchild));
    assert(SCIPexprGetEvalValue(partialchild) != SCIP_INVALID);
 
+   /* TODO add special handling for nchildren == 2 */
+
+   /**! [SnippetExprBwfwdiffProduct] */
    *bardot = 0.0;
    for( c = 0; c < SCIPexprGetNChildren(expr); ++c )
    {
@@ -1657,6 +1645,7 @@ SCIP_DECL_EXPRBWFWDIFF(bwfwdiffProduct)
          *bardot += partial * SCIPexprGetDot(child);
       }
    }
+   /**! [SnippetExprBwfwdiffProduct] */
 
    return SCIP_OKAY;
 }
@@ -1676,6 +1665,9 @@ SCIP_DECL_EXPRBWDIFF(bwdiffProduct)
    assert(!SCIPisExprValue(scip, child));
    assert(SCIPexprGetEvalValue(child) != SCIP_INVALID);
 
+   /* TODO add special handling for nchildren == 2 */
+
+   /**! [SnippetExprBwdiffProduct] */
    if( !SCIPisZero(scip, SCIPexprGetEvalValue(child)) )
    {
       *val = SCIPexprGetEvalValue(expr) / SCIPexprGetEvalValue(child);
@@ -1693,6 +1685,7 @@ SCIP_DECL_EXPRBWDIFF(bwdiffProduct)
          *val *= SCIPexprGetEvalValue(SCIPexprGetChildren(expr)[i]);
       }
    }
+   /**! [SnippetExprBwdiffProduct] */
 
    return SCIP_OKAY;
 }
@@ -1709,6 +1702,7 @@ SCIP_DECL_EXPRINTEVAL(intevalProduct)
    exprdata = SCIPexprGetData(expr);
    assert(exprdata != NULL);
 
+   /**! [SnippetExprIntevalProduct] */
    SCIPintervalSet(interval, exprdata->coefficient);
 
    SCIPdebugMsg(scip, "inteval %p with %d children: %.20g", (void*)expr, SCIPexprGetNChildren(expr), exprdata->coefficient);
@@ -1730,6 +1724,7 @@ SCIP_DECL_EXPRINTEVAL(intevalProduct)
       SCIPdebugMsgPrint(scip, " *[%.20g,%.20g]", childinterval.inf, childinterval.sup);
    }
    SCIPdebugMsgPrint(scip, " = [%.20g,%.20g]\n", interval->inf, interval->sup);
+   /**! [SnippetExprIntevalProduct] */
 
    return SCIP_OKAY;
 }
@@ -1928,6 +1923,7 @@ SCIP_DECL_EXPRREVERSEPROP(reversepropProduct)
    exprdata = SCIPexprGetData(expr);
    assert(exprdata != NULL);
 
+   /**! [SnippetExprReversepropProduct] */
    SCIPintervalSet(&zero, 0.0);
 
    /* f = const * prod_k c_k => c_i solves c_i * (const * prod_{j:j!=i} c_j) = f */
@@ -1975,6 +1971,7 @@ SCIP_DECL_EXPRREVERSEPROP(reversepropProduct)
          return SCIP_OKAY;
       }
    }
+   /**! [SnippetExprReversepropProduct] */
 
    return SCIP_OKAY;
 }
@@ -2124,10 +2121,12 @@ SCIP_RETCODE SCIPcreateExprProduct(
 {
    SCIP_EXPRDATA* exprdata;
 
-   SCIP_CALL( createData(scip, &exprdata, coefficient) );
+   /**! [SnippetCreateExprProduct] */
+   SCIP_CALL( SCIPallocBlockMemory(scip, &exprdata) );
+   exprdata->coefficient  = coefficient;
 
-   SCIP_CALL( SCIPcreateExpr(scip, expr, SCIPgetExprhdlrProduct(scip), exprdata, nchildren, children, ownercreate,
-         ownercreatedata) );
+   SCIP_CALL( SCIPcreateExpr(scip, expr, SCIPgetExprhdlrProduct(scip), exprdata, nchildren, children, ownercreate, ownercreatedata) );
+   /**! [SnippetCreateExprProduct] */
 
    return SCIP_OKAY;
 }

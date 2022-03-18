@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -526,7 +526,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifySum)
    return SCIP_OKAY;
 }
 
-/** compares two sum expressions.
+/** compares two sum expressions
  *
  *  The order of two sum expressions is a lexicographical order on the terms.
  *
@@ -663,6 +663,7 @@ SCIP_DECL_EXPRPRINT(printSum)
    exprdata = SCIPexprGetData(expr);
    assert(exprdata != NULL);
 
+   /**! [SnippetExprPrintSum] */
    switch( stage )
    {
       case SCIP_EXPRITER_ENTEREXPR :
@@ -723,6 +724,7 @@ SCIP_DECL_EXPRPRINT(printSum)
       case SCIP_EXPRITER_VISITEDCHILD :
       default: ;
    }
+   /**! [SnippetExprPrintSum] */
 
    return SCIP_OKAY;
 }
@@ -739,6 +741,7 @@ SCIP_DECL_EXPREVAL(evalSum)
    exprdata = SCIPexprGetData(expr);
    assert(exprdata != NULL);
 
+   /**! [SnippetExprEvalSum] */
    *val = exprdata->constant;
    for( c = 0; c < SCIPexprGetNChildren(expr); ++c )
    {
@@ -746,6 +749,7 @@ SCIP_DECL_EXPREVAL(evalSum)
 
       *val += exprdata->coefficients[c] * SCIPexprGetEvalValue(SCIPexprGetChildren(expr)[c]);
    }
+   /**! [SnippetExprEvalSum] */
 
    return SCIP_OKAY;
 }
@@ -953,11 +957,13 @@ SCIP_DECL_EXPRHASH(hashSum)
    exprdata = SCIPexprGetData(expr);
    assert(exprdata != NULL);
 
+   /**! [SnippetExprHashSum] */
    *hashkey = EXPRHDLR_HASHKEY;
    *hashkey ^= SCIPcalcFibHash(exprdata->constant);
 
    for( c = 0; c < SCIPexprGetNChildren(expr); ++c )
       *hashkey ^= SCIPcalcFibHash(exprdata->coefficients[c]) ^ childrenhashes[c];
+   /**! [SnippetExprHashSum] */
 
    return SCIP_OKAY;
 }
@@ -1018,6 +1024,7 @@ SCIP_DECL_EXPRINTEGRALITY(integralitySum)
    exprdata = SCIPexprGetData(expr);
    assert(exprdata != NULL);
 
+   /**! [SnippetExprIntegralitySum] */
    *isintegral = EPSISINT(exprdata->constant, 0.0); /*lint !e835*/
 
    for( i = 0; i < SCIPexprGetNChildren(expr) && *isintegral; ++i )
@@ -1027,6 +1034,7 @@ SCIP_DECL_EXPRINTEGRALITY(integralitySum)
 
       *isintegral = EPSISINT(exprdata->coefficients[i], 0.0) && SCIPexprIsIntegral(child); /*lint !e835*/
    }
+   /**! [SnippetExprIntegralitySum] */
 
    return SCIP_OKAY;
 }

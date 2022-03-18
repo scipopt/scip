@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -799,8 +799,18 @@ SCIP_RETCODE hashExpr(
  * @{
  */
 
+#ifdef NDEBUG
+#undef SCIPgetExprhdlrs
+#undef SCIPgetNExprhdlrs
+#undef SCIPfindExprhdlr
+#undef SCIPgetExprhdlrVar
+#undef SCIPgetExprhdlrValue
+#undef SCIPgetExprhdlrSum
+#undef SCIPgetExprhdlrProduct
+#undef SCIPgetExprhdlrPower
+#endif
+
 /** creates the handler for an expression handler and includes it into SCIP */
-SCIP_EXPORT
 SCIP_RETCODE SCIPincludeExprhdlr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRHDLR**       exprhdlr,           /**< buffer where to store created expression handler */
@@ -917,6 +927,38 @@ SCIP_EXPRHDLR* SCIPgetExprhdlrPower(
 
 /**@name Expression Methods */
 /**@{ */
+
+#ifdef NDEBUG
+#undef SCIPappendExprChild
+#undef SCIPreplaceExprChild
+#undef SCIPremoveExprChildren
+#undef SCIPduplicateExpr
+#undef SCIPduplicateExprShallow
+#undef SCIPcaptureExpr
+#undef SCIPreleaseExpr
+#undef SCIPisExprVar
+#undef SCIPisExprValue
+#undef SCIPisExprSum
+#undef SCIPisExprProduct
+#undef SCIPisExprPower
+#undef SCIPprintExpr
+#undef SCIPevalExpr
+#undef SCIPgetExprNewSoltag
+#undef SCIPevalExprGradient
+#undef SCIPevalExprHessianDir
+#undef SCIPevalExprActivity
+#undef SCIPcompareExpr
+#undef SCIPsimplifyExpr
+#undef SCIPcallExprCurvature
+#undef SCIPcallExprMonotonicity
+#undef SCIPcallExprEval
+#undef SCIPcallExprEvalFwdiff
+#undef SCIPcallExprInteval
+#undef SCIPcallExprEstimate
+#undef SCIPcallExprInitestimates
+#undef SCIPcallExprSimplify
+#undef SCIPcallExprReverseprop
+#endif
 
 /** creates and captures an expression with given expression data and children */
 SCIP_RETCODE SCIPcreateExpr(
@@ -2063,6 +2105,20 @@ SCIP_RETCODE SCIPgetExprVarExprs(
    return SCIP_OKAY;
 }
 
+/** calls the print callback for an expression
+ *
+ * @see SCIP_DECL_EXPRPRINT
+ */
+SCIP_EXPORT
+SCIP_DECL_EXPRPRINT(SCIPcallExprPrint)
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( SCIPexprhdlrPrintExpr(SCIPexprGetHdlr(expr), scip->set, scip->messagehdlr, expr, stage, currentchild, parentprecedence, file) );
+
+   return SCIP_OKAY;
+}
+
 /** calls the curvature callback for an expression
  *
  * @see SCIP_DECL_EXPRCURVATURE
@@ -2235,6 +2291,11 @@ SCIP_DECL_EXPRREVERSEPROP(SCIPcallExprReverseprop)
 /**@name Expression Iterator Methods */
 /**@{ */
 
+#ifdef NDEBUG
+#undef SCIPcreateExpriter
+#undef SCIPfreeExpriter
+#endif
+
 /** creates an expression iterator */
 SCIP_RETCODE SCIPcreateExpriter(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2262,6 +2323,12 @@ void SCIPfreeExpriter(
 
 /**@name Quadratic expression functions */
 /**@{ */
+
+#ifdef NDEBUG
+#undef SCIPcheckExprQuadratic
+#undef SCIPfreeExprQuadratic
+#undef SCIPcomputeExprQuadraticCurvature
+#endif
 
 /** checks whether an expression is quadratic
  *

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -37,6 +37,10 @@
 #include "scip/type_sol.h"
 #include "scip/type_expr.h"
 #include "scip/type_nlpi.h"
+
+#ifdef NDEBUG
+#include "scip/struct_nlp.h"
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -128,6 +132,25 @@ SCIP_EXPORT
 SCIP_Real SCIPnlrowGetDualsol(
    SCIP_NLROW*           nlrow               /**< NLP row */
    );
+
+#ifdef NDEBUG
+/* If NDEBUG is defined, the function calls are overwritten by defines to reduce the number of function calls and
+ * speed up the algorithms.
+ */
+#define SCIPnlrowGetConstant(nlrow)    (nlrow)->constant
+#define SCIPnlrowGetNLinearVars(nlrow) (nlrow)->nlinvars
+#define SCIPnlrowGetLinearVars(nlrow)  (nlrow)->linvars
+#define SCIPnlrowGetLinearCoefs(nlrow) (nlrow)->lincoefs
+#define SCIPnlrowGetExpr(nlrow)        (nlrow)->expr
+#define SCIPnlrowGetLhs(nlrow)         (nlrow)->lhs
+#define SCIPnlrowGetRhs(nlrow)         (nlrow)->rhs
+#define SCIPnlrowGetCurvature(nlrow)   (nlrow)->curvature
+#define SCIPnlrowSetCurvature(nlrow, curvature_) (nlrow)->curvature = curvature_
+#define SCIPnlrowGetName(nlrow)        (nlrow)->name
+#define SCIPnlrowGetNLPPos(nlrow)      (nlrow)->nlpindex
+#define SCIPnlrowIsInNLP(nlrow)        ((nlrow)->nlpindex != -1)
+#define SCIPnlrowGetDualsol(nlrow)     ((nlrow)->nlpiindex >= 0 ? (nlrow)->dualsol : 0.0)
+#endif
 
 /**@} */
 

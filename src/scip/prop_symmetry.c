@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -3953,6 +3953,7 @@ SCIP_RETCODE addWeakSBCsSubgroup(
    int*                  maxnvarsorder       /**< maximum number of variables in lexicographic order */
    )
 {  /*lint --e{571}*/
+   SCIP_HASHMAP* varsinlexorder;
    SCIP_Shortbool* usedvars;
    SCIP_VAR* vars[2];
    SCIP_Real vals[2] = {1, -1};
@@ -3962,6 +3963,7 @@ SCIP_RETCODE addWeakSBCsSubgroup(
    int activeorb = 0;
    int chosencolor = -1;
    int j;
+   int k;
 
    assert( scip != NULL );
    assert( propdata != NULL );
@@ -3984,13 +3986,35 @@ SCIP_RETCODE addWeakSBCsSubgroup(
    SCIP_CALL( SCIPallocBufferArray(scip, &orbit[0], propdata->npermvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &orbit[1], propdata->npermvars) );
 
+   /* Store the entries in lexorder in a hashmap, for fast lookups. */
+   if ( lexorder == NULL || *lexorder == NULL )
+   {
+      /* Lexorder does not exist, so do not create hashmap. */
+      varsinlexorder = NULL;
+   }
+   else
+   {
+      assert( *maxnvarsorder >= 0 );
+      assert( *nvarsorder >= 0 );
+
+      SCIP_CALL( SCIPhashmapCreate(&varsinlexorder, SCIPblkmem(scip), *maxnvarsorder) );
+
+      for (k = 0; k < *nvarsorder; ++k)
+      {
+         /* add element from lexorder to hashmap.
+          * Use insert, as duplicate entries in lexorder is not permitted. */
+         assert( ! SCIPhashmapExists(varsinlexorder, (void*) (long) (*lexorder)[k]) ); /* Use int as pointer */
+         SCIP_CALL( SCIPhashmapInsertInt(varsinlexorder, (void*) (long) (*lexorder)[k], k) );
+      }
+   }
+
    /* We will store the newest and the largest orbit and activeorb will be used to mark at which entry of the array
     * orbit the newly computed one will be stored. */
    for (j = 0; j < ncompcolors; ++j)
    {
       int graphcomp;
       int graphcompsize;
-      int k;
+      int varidx;
 
       /* skip color for which we did not add anything */
       if ( chosencomppercolor[j] < 0 )
@@ -3998,10 +4022,18 @@ SCIP_RETCODE addWeakSBCsSubgroup(
 
       graphcomp = chosencomppercolor[j];
       graphcompsize = graphcompbegins[graphcomp+1] - graphcompbegins[graphcomp];
+      varidx = firstvaridxpercolor[j];
 
       /* if the first variable was already contained in another orbit or if there are no variables left anyway, skip the
        * component */
-      if ( varfound[ firstvaridxpercolor[j]] || graphcompsize == propdata->npermvars )
+      if ( varfound[varidx] || graphcompsize == propdata->npermvars )
+         continue;
+
+      /* If varidx is in lexorder, then it must be the first entry of lexorder. */
+      if ( varsinlexorder != NULL
+         && SCIPhashmapExists(varsinlexorder, (void*) (long) varidx)
+         && lexorder != NULL && *lexorder != NULL && *maxnvarsorder > 0 && *nvarsorder > 0
+         && (*lexorder)[0] != varidx )
          continue;
 
       /* mark all variables that have been used in strong SBCs */
@@ -4014,10 +4046,10 @@ SCIP_RETCODE addWeakSBCsSubgroup(
 
       SCIP_CALL( SCIPcomputeOrbitVar(scip, propdata->npermvars, propdata->perms,
             propdata->permstrans, propdata->components, propdata->componentbegins,
-            usedvars, varfound, firstvaridxpercolor[j],symgrpcompidx,
+            usedvars, varfound, varidx, symgrpcompidx,
             orbit[activeorb], &orbitsize[activeorb]) );
 
-      assert( orbit[activeorb][0] ==  firstvaridxpercolor[j] );
+      assert( orbit[activeorb][0] ==  varidx );
 
       if ( orbitsize[activeorb] > orbitsize[1 - activeorb] ) /*lint !e514*/
       {
@@ -4086,25 +4118,48 @@ SCIP_RETCODE addWeakSBCsSubgroup(
       /* possibly store lexicographic order defined by weak SBCs */
       if ( storelexorder )
       {
+         int varidx;
+
+         varidx = orbit[activeorb][0];
+
          if ( *maxnvarsorder == 0 )
          {
             *maxnvarsorder = 1;
             *nvarsorder = 0;
 
             SCIP_CALL( SCIPallocBlockMemoryArray(scip, lexorder, *maxnvarsorder) );
-            (*lexorder)[(*nvarsorder)++] = orbit[activeorb][0];
+            (*lexorder)[(*nvarsorder)++] = varidx;
          }
          else
          {
             assert( *nvarsorder == *maxnvarsorder );
-
-            ++(*maxnvarsorder);
-
-            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, lexorder, *nvarsorder, *maxnvarsorder) );
+            assert( varsinlexorder != NULL );
+            assert( lexorder != NULL );
+            assert( *lexorder != NULL );
 
             /* the leader of the weak inequalities has to be the first element in the lexicographic order */
-            (*lexorder)[(*nvarsorder)++] = (*lexorder)[0];
-            (*lexorder)[0] = orbit[activeorb][0];
+            if ( varidx == (*lexorder)[0] )
+            {
+               /* lexorder is already ok!! */
+               assert( SCIPhashmapExists(varsinlexorder, (void*) (long) varidx) );
+            }
+            else
+            {
+               /* Then varidx must not be in the lexorder,
+                * We must add it at the front of the array, and maintain the current order. */
+               assert( ! SCIPhashmapExists(varsinlexorder, (void*) (long) varidx) );
+
+               ++(*maxnvarsorder);
+               ++(*nvarsorder);
+
+               SCIP_CALL( SCIPreallocBlockMemoryArray(scip, lexorder, *nvarsorder, *maxnvarsorder) );
+
+               /* Shift array by one position to the right */
+               for (k = *maxnvarsorder - 1; k >= 1; --k)
+                  (*lexorder)[k] = (*lexorder)[k - 1];
+
+               (*lexorder)[0] = varidx;
+            }
          }
       }
    }
@@ -4113,6 +4168,8 @@ SCIP_RETCODE addWeakSBCsSubgroup(
 
    SCIPfreeBufferArray(scip, &orbit[1]);
    SCIPfreeBufferArray(scip, &orbit[0]);
+   if ( varsinlexorder != NULL )
+      SCIPhashmapFree(&varsinlexorder);
    SCIPfreeBufferArray(scip, &varfound);
    SCIPfreeCleanBufferArray(scip, &usedvars);
 

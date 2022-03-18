@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -28,6 +28,7 @@
 #include "scip/pub_bandit_epsgreedy.h"
 #include "scip/pub_bandit_exp3.h"
 #include "scip/pub_bandit_ucb.h"
+#include "scip/type_misc.h"
 
 #ifdef __cplusplus
 extern "C" {

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1205,7 +1205,8 @@ void getKeyPathUpper(
    const SOLTREE*        soltreeData,        /**< solution tree data */
    const PCMW*           pcmwData,           /**< data */
    CONN*                 connectData,        /**< data */
-   KPATHS*               keypathsData        /**< key paths */
+   KPATHS*               keypathsData,       /**< key paths */
+   SCIP_Bool*            allGood             /**< all good? */
 )
 {
    int* const kpnodes = keypathsData->kpnodes;
@@ -1221,6 +1222,9 @@ void getKeyPathUpper(
    int firstedge2root = -1;
    int kptailnode = -1;
    SCIP_Real kpcost = -FARAWAY;
+
+   assert(*allGood);
+
 
    if( Is_term(graph->term[crucnode]) || pinned[crucnode] )
    {
@@ -1252,8 +1256,13 @@ void getKeyPathUpper(
                   assert(UNKNOWN == solEdges[e]);
                }
 
-               /* assert that each leaf of the Steiner tree is a terminal */
-               assert(e != EAT_LAST);
+               /* leaf of the Steiner tree is not a terminal? NOTE: should happen very rarely */
+               if( e == EAT_LAST )
+               {
+                  *allGood = FALSE;
+                  return;
+               }
+
                adjnode = graph->head[e];
 
                if( !solNodes[adjnode] || !graphmark[adjnode] )
@@ -3394,6 +3403,7 @@ SCIP_RETCODE localKeyVertexHeuristics(
             int e = UNKNOWN;
             int oldedge = UNKNOWN;
             int newedge = UNKNOWN;
+            SCIP_Bool allgood = TRUE;
 
             assert(graph->mark[crucnode]);
 
@@ -3402,7 +3412,15 @@ SCIP_RETCODE localKeyVertexHeuristics(
                continue;
 
             /* gets key path from crucnode towards tree root */
-            getKeyPathUpper(scip, crucnode, graph, &soltreeData, &pcmwData, &connectivityData, &keypathsData);
+            getKeyPathUpper(scip, crucnode, graph, &soltreeData, &pcmwData, &connectivityData, &keypathsData, &allgood);
+
+            if( !allgood )
+            {
+               *success = FALSE;
+               localmoves = 0;
+               SCIPdebugMessage("terminate key vertex heuristic \n");
+               goto TERMINATE;
+            }
 
 #ifndef NDEBUG
             for( int k = 0; k < nnodes; k++ )
@@ -3706,10 +3724,6 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
    if( !probtypeIsValidForLocal(graph) )
       return SCIP_OKAY;
 
-   /* don't run local in a Subscip */
-   if( SCIPgetSubscipDepth(scip) > 0 )
-      return SCIP_OKAY;
-
    /* no solution available? */
    if( SCIPgetBestSol(scip) == NULL )
       return SCIP_OKAY;
@@ -3787,7 +3801,6 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
       SCIP_CALL( SCIPStpHeurLocalExtendPcMwImp(scip, graph, results) );
 #endif
 
-
    /* finally, try to add the solution to the SCIP pool */
    SCIP_CALL( solAddTry(scip, sols, heur, graph, initialsol_obj, initialsol, results, result) );
 
@@ -3822,6 +3835,9 @@ SCIP_RETCODE localRun(
    assert(graph_valid(scip, graph));
 
    if( graph->grad[root] == 0 || graph->terms == 1 )
+      return SCIP_OKAY;
+
+   if( SCIPisStopped(scip) )
       return SCIP_OKAY;
 
    if( mwpc )

@@ -41,6 +41,7 @@ foreach(instance ${instances})
                         PROPERTIES
                             PASS_REGULAR_EXPRESSION "Validation         : Success"
                             DEPENDS examples-binpacking-build
+                            RESOURCE_LOCK libscip
                         )
     if(WIN32)
         # on windows we need to execute the application and examples executables from the directory containing the libscip.dll,

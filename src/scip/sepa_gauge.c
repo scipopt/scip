@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -39,6 +39,7 @@
 #include "scip/pub_misc.h"
 #include "scip/pub_nlp.h"
 #include "scip/pub_sepa.h"
+#include "scip/pub_var.h"
 #include "scip/scip_cut.h"
 #include "scip/scip_lp.h"
 #include "scip/scip_mem.h"
@@ -539,6 +540,10 @@ SCIP_RETCODE generateCut(
 
    SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 
+#ifdef CUT_DEBUG
+   SCIPdebug( SCIP_CALL( SCIPprintNlRow(scip, nlrow, NULL) ) );
+#endif
+
    /* linear part */
    for( i = 0; i < SCIPnlrowGetNLinearVars(nlrow); i++ )
    {
@@ -569,6 +574,7 @@ SCIP_RETCODE generateCut(
          *success = FALSE;
          break;
       }
+      /* SCIPdebugMsg(scip, "grad w.r.t. <%s> (%g) = %g, gradx0 += %g\n", SCIPvarGetName(var), SCIPgetSolVal(scip, sol, var), grad, grad * SCIPgetSolVal(scip, sol, var)); */
 
       gradx0 += grad * SCIPgetSolVal(scip, sol, var);
       SCIP_CALL( SCIPaddVarToRow(scip, row, var, grad) );
@@ -592,13 +598,13 @@ SCIP_RETCODE generateCut(
    if( convexside == RHS )
    {
       assert(!SCIPisInfinity(scip, SCIPnlrowGetRhs(nlrow)));
-      SCIP_CALL( SCIPchgRowRhs(scip, row, SCIPnlrowGetRhs(nlrow) - exprval + gradx0) );
+      SCIP_CALL( SCIPchgRowRhs(scip, row, SCIPnlrowGetRhs(nlrow) - SCIPnlrowGetConstant(nlrow) - exprval + gradx0) );
    }
    else
    {
       assert(convexside == LHS);
       assert(!SCIPisInfinity(scip, -SCIPnlrowGetLhs(nlrow)));
-      SCIP_CALL( SCIPchgRowLhs(scip, row, SCIPnlrowGetLhs(nlrow) - exprval + gradx0) );
+      SCIP_CALL( SCIPchgRowLhs(scip, row, SCIPnlrowGetLhs(nlrow) - SCIPnlrowGetConstant(nlrow) - exprval + gradx0) );
    }
 
 #ifdef CUT_DEBUG

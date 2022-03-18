@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -4557,7 +4557,7 @@ SCIP_HEUR* SCIPsetFindHeur(
    return NULL;
 }
 
-/** sorts heuristics by priorities */
+/** sorts heuristics by their delay positions and priorities */
 void SCIPsetSortHeurs(
    SCIP_SET*             set                 /**< global SCIP settings */
    )

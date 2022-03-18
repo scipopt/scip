@@ -1,3 +1,5 @@
+If you want to compile SCIP yourself, it is recommended to download the SCIP Optimization Suite tarball from [scipopt.org](https://scipopt.org/index.php#download) as it contains also the LP solver [SoPlex](https://soplex.zib.de) and the presolver [PaPILO](https://github.com/scipopt/papilo).
+
 We provide two different systems to compile the code:
 - the newer [CMake](@ref CMAKE) build system (recommended for new users)
 - the traditional [Makefile](@ref MAKE) system.
@@ -106,6 +108,7 @@ e.g., `cmake </path/to/SCIP> -DSOPLEX_DIR=<path/to/SoPlex/build/or/install>`.
 | `AMPL`                 | `on`, `off`                        | `AMPL=[true, false]`       |                                                                    |
 | `READLINE`             | `on`, `off`                        | `READLINE=[true, false]`   |                                                                    |
 | `..._DIR`              | `<custom/path/to/.../package>`     | --                         | e.g. `IPOPT_DIR`, `CPLEX_DIR`, `WORHP_DIR`, `Readline_DIR` ...     |
+| `BOOST_ROOT`           | `<custom/path/to/.../boost>`       | --                         | hint for location of boost                                         |
 | `CMAKE_INSTALL_PREFIX` | `\<path\>`                         | `INSTALLDIR=\<path\>`      |                                                                    |
 | `SHARED`               | `on`, `off`                        | `SHARED=[true, false]`     |                                                                    |
 | `CXXONLY`              | `on`, `off`                        | --                         | use a C++ compiler for all source files                            |

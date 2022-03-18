@@ -384,6 +384,7 @@ set(objscipsources
     objscip/objbenderscut.cpp
     objscip/objbranchrule.cpp
     objscip/objconshdlr.cpp
+    objscip/objcutsel.cpp
     objscip/objdialog.cpp
     objscip/objdisp.cpp
     objscip/objeventhdlr.cpp
@@ -428,6 +429,7 @@ set(objscipheaders
     objscip/objbranchrule.h
     objscip/objcloneable.h
     objscip/objconshdlr.h
+    objscip/objcutsel.h
     objscip/objdialog.h
     objscip/objdisp.h
     objscip/objeventhdlr.h
@@ -539,6 +541,7 @@ set(scipheaders
     scip/event_estim.h
     scip/event_softtimelimit.h
     scip/event_solvingphase.h
+    scip/expr.h
     scip/expr_abs.h
     scip/expr_entropy.h
     scip/expr_erf.h
@@ -630,6 +633,7 @@ set(scipheaders
     scip/nlhdlr_quadratic.h
     scip/nlhdlr_quotient.h
     scip/nlhdlr_soc.h
+    scip/nlhdlr.h
     scip/nlp.h
     scip/nlpi.h
     scip/nlpioracle.h

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -928,6 +928,7 @@ SCIP_RETCODE constructExpr(
    SCIP_EXPR*            rootexpr,           /**< expression */
    SCIP_EXPRCURV         curv,               /**< curvature to achieve */
    SCIP_HASHMAP*         assumevarfixed,     /**< hashmap containing variables that should be assumed to be fixed, or NULL */
+   SCIP_Bool             assumecurvature,    /**< whether to assume that desired curvature is given (skips curvature checks) */
    SCIP_Bool*            curvsuccess         /**< pointer to store whether the curvature could be achieved
                                                   w.r.t. the original variables (might be NULL) */
    )
@@ -981,7 +982,7 @@ SCIP_RETCODE constructExpr(
          SCIPinfoMessage(scip, NULL, "... is a multivariate linear sum that we'll treat as auxvar\n");
 #endif
       }
-      else if( SCIPexprGetCurvature(nlexpr) != SCIP_EXPRCURV_UNKNOWN )
+      else if( SCIPexprGetCurvature(nlexpr) != SCIP_EXPRCURV_UNKNOWN && !assumecurvature )
       {
          /* if we are here, either convexity or concavity is required; try to check for this curvature */
          SCIP_Bool success;
@@ -998,6 +999,7 @@ SCIP_RETCODE constructExpr(
       else
       {
          /* if we don't care about curvature in this subtree anymore (very unlikely),
+          * or we are told to assume that the desired curvature is present (assumecurvature==TRUE),
           * then only continue iterating this subtree to assemble leaf expressions
           */
          SCIP_CALL( nlhdlrExprGrowChildren(scip, nlexpr2origexpr, nlexpr, NULL) );
@@ -1763,7 +1765,7 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectConvex)
    if( (*enforcing & SCIP_NLHDLR_METHOD_SEPABELOW) == 0 )  /* if no separation below yet */
    {
       SCIP_CALL( constructExpr(scip, nlhdlrdata, &nlexpr, nlexpr2origexpr, &nleafs, expr,
-         SCIP_EXPRCURV_CONVEX, NULL, NULL) );
+         SCIP_EXPRCURV_CONVEX, NULL, SCIPassumeConvexNonlinear(conshdlr), NULL) );
       if( nlexpr != NULL )
       {
          assert(SCIPexprGetNChildren(nlexpr) > 0);  /* should not be trivial */
@@ -1781,7 +1783,7 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectConvex)
    if( (*enforcing & SCIP_NLHDLR_METHOD_SEPAABOVE) == 0 && nlexpr == NULL )  /* if no separation above and not convex */
    {
       SCIP_CALL( constructExpr(scip, nlhdlrdata, &nlexpr, nlexpr2origexpr, &nleafs, expr,
-         SCIP_EXPRCURV_CONCAVE, NULL, NULL) );
+         SCIP_EXPRCURV_CONCAVE, NULL, SCIPassumeConvexNonlinear(conshdlr), NULL) );
       if( nlexpr != NULL )
       {
          assert(SCIPexprGetNChildren(nlexpr) > 0);  /* should not be trivial */
@@ -2136,7 +2138,7 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectConcave)
    if( (*enforcing & SCIP_NLHDLR_METHOD_SEPABELOW) == 0 )  /* if no separation below yet */
    {
       SCIP_CALL( constructExpr(scip, nlhdlrdata, &nlexpr, nlexpr2origexpr, &nleafs, expr,
-         SCIP_EXPRCURV_CONCAVE, NULL, NULL) );
+         SCIP_EXPRCURV_CONCAVE, NULL, FALSE, NULL) );
 
       if( nlexpr != NULL && nleafs > SCIP_MAXVERTEXPOLYDIM )
       {
@@ -2161,7 +2163,7 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectConcave)
    if( (*enforcing & SCIP_NLHDLR_METHOD_SEPAABOVE) == 0 && nlexpr == NULL )  /* if no separation above and not concave */
    {
       SCIP_CALL( constructExpr(scip, nlhdlrdata, &nlexpr, nlexpr2origexpr, &nleafs, expr,
-         SCIP_EXPRCURV_CONVEX, NULL, NULL) );
+         SCIP_EXPRCURV_CONVEX, NULL, FALSE, NULL) );
 
       if( nlexpr != NULL && nleafs > SCIP_MAXVERTEXPOLYDIM )
       {
@@ -2466,7 +2468,7 @@ SCIP_RETCODE SCIPhasExprCurvature(
    nlhdlrdata.cvxprodcomp = TRUE;
    nlhdlrdata.handletrivial = TRUE;
 
-   SCIP_CALL( constructExpr(scip, &nlhdlrdata, &rootnlexpr, nlexpr2origexpr, &nleafs, expr, curv, assumevarfixed, success) );
+   SCIP_CALL( constructExpr(scip, &nlhdlrdata, &rootnlexpr, nlexpr2origexpr, &nleafs, expr, curv, assumevarfixed, FALSE, success) );
 
    /* free created expression */
    if( rootnlexpr != NULL )

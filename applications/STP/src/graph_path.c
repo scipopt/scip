@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -517,12 +517,13 @@ void graph_path_exit(
    GRAPH*                g                   /**< graph data structure */
    )
 {
-   assert(g != NULL);
-   assert(g->path_heap  != NULL);
-   assert(g->path_state != NULL);
+   assert(g);
+#ifndef WITH_UG
+   assert(g->path_heap && g->path_state);
+#endif
 
-   SCIPfreeMemoryArray(scip, &(g->path_state));
-   SCIPfreeMemoryArray(scip, &(g->path_heap));
+   SCIPfreeMemoryArrayNull(scip, &(g->path_state));
+   SCIPfreeMemoryArrayNull(scip, &(g->path_heap));
 }
 
 /*---------------------------------------------------------------------------*/

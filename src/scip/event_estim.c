@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1443,8 +1443,8 @@ SCIP_RETCODE subtreeSumGapUpdate(
    SCIP_Bool updatescaling = FALSE;
    SCIP_Bool insertchildren = (ssg->nsubtrees > 1 && nchildren > 0);
 
-   /* if the instance is solved or a node is cutoff at the initsolve stage, the ssg is 0 */
-   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVED || SCIPgetStage(scip) == SCIP_STAGE_INITSOLVE)
+   /* if the instance is solved or a node is cutoff at the initsolve stage or we are unbounded, the ssg is 0 */
+   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVED || SCIPgetStage(scip) == SCIP_STAGE_INITSOLVE || SCIPisInfinity(scip, -SCIPgetUpperbound(scip)) )
    {
       ssg->value = 0.0;
 
@@ -2651,6 +2651,7 @@ SCIP_DECL_EVENTINIT(eventInitEstim)
    }
 
    eventhdlrdata->lastrestartrun = 0;
+   eventhdlrdata->nrestartsperformed = 0;
 
    return SCIP_OKAY;
 }

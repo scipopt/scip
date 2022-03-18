@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -44,9 +44,13 @@ extern "C" {
 
 
 
-/** compares two heuristics w. r. to their priority */
+/** compares two heuristics w.r.t. to their delay positions and priorities */
 SCIP_EXPORT
 SCIP_DECL_SORTPTRCOMP(SCIPheurComp);
+
+/** compares two heuristics w.r.t. to their priority values */
+SCIP_EXPORT
+SCIP_DECL_SORTPTRCOMP(SCIPheurCompPriority);
 
 /** comparison method for sorting heuristics w.r.t. to their name */
 SCIP_EXPORT

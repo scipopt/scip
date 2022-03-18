@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -638,8 +638,8 @@ public:
             else if( (minimize && GTrel(objValueReal(), cpxobj, 2*opttol()))
                || (!minimize && LTrel(objValueReal(), cpxobj, 2*opttol())) )
             {
-               SCIPerrorMessage("In %s: LP optimal; SoPlex value=%.10f %s CPLEX value=%.10f suboptimal (checknum=%d)\n", objValueReal(),
-                  _probname, minimize ? ">" : "<", cpxobj, _checknum);
+               SCIPerrorMessage("In %s: LP optimal; SoPlex value=%.10f %s CPLEX value=%.10f suboptimal (checknum=%d)\n", _probname, objValueReal(),
+                  minimize ? ">" : "<", cpxobj, _checknum);
                if( EXIT_AT_WRONG_RESULT )
                   exit(1);
             }

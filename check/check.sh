@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -45,6 +45,7 @@ SEEDS="${24}"
 GLBSEEDSHIFT="${25}"
 STARTPERM="${26}"
 PYTHON="${27}"
+EMPHBENCHMARK="${28}"
 
 # check if all variables defined (by checking the last one)
 if test -z "${PYTHON}"
@@ -68,7 +69,6 @@ then
     echo "DEBUGTOOL     = ${DEBUGTOOL}"
     echo "CLIENTTMPDIR  = ${CLIENTTMPDIR}"
     echo "REOPT         = ${REOPT}"
-    echo "PERMUTE       = ${PERMUTE}"
     echo "OPTCOMMAND    = ${OPTCOMMAND}"
     echo "SETCUTOFF     = ${SETCUTOFF}"
     echo "MAXJOBS       = ${MAXJOBS}"
@@ -78,6 +78,7 @@ then
     echo "GLBSEEDSHIFT  = ${GLBSEEDSHIFT}"
     echo "STARTPERM     = ${STARTPERM}"
     echo "PYTHON        = ${PYTHON}"
+    echo "EMPHBENCHMARK = ${EMPHBENCHMARK}"
     exit 1;
 fi
 
@@ -186,7 +187,7 @@ do
                 # this may modify the EXECNAME environment variable
                 . "./${CONFFILE}" "${INSTANCE}" "${SCIPPATH}" "${TMPFILE}" "${SETNAME}" "${SETFILE}" "${THREADS}" "${SETCUTOFF}" \
                     "${FEASTOL}" "${TIMELIMIT}" "${MEMLIMIT}" "${NODELIMIT}" "${LPS}" "${DISPFREQ}"  "${REOPT}" "${OPTCOMMAND}" \
-                    "${CLIENTTMPDIR}" "${FILENAME}" "${VISUALIZE}" "${SOLUFILE}"
+                    "${CLIENTTMPDIR}" "${FILENAME}" "${VISUALIZE}" "${SOLUFILE}" "${EMPHBENCHMARK}"
 
                 # additional environment variables needed by run.sh
                 export SOLVERPATH="${SCIPPATH}"

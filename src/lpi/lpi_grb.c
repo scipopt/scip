@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -193,8 +193,8 @@ struct SCIP_LPiNorms
 #ifdef SCIP_THREADSAFE
    #if defined(_Thread_local)
       /* Use thread local environment in order to not create a new environment for each new LP. */
-      _Thread_local GRBenv*    reusegrbenv = NULL; /**< thread local Gurobi environment */
-      _Thread_local int        numlp = 0;          /**< number of open LP objects */
+      static _Thread_local GRBenv*    reusegrbenv = NULL; /**< thread local Gurobi environment */
+      static _Thread_local int        numlp = 0;          /**< number of open LP objects */
       #define SCIP_REUSEENV
    #endif
 #else

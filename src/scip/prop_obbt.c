@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -2516,7 +2516,7 @@ SCIP_RETCODE applyObbtBilinear(
             SCIP_Bool success;
 
             /* add inequality to the associated product expression */
-            SCIP_CALL( SCIPaddNlhdlrBilinearIneq(scip, bilinearnlhdlr, bilinbound->expr, xcoef, ycoef,
+            SCIP_CALL( SCIPaddIneqBilinear(scip, bilinearnlhdlr, bilinbound->expr, xcoef, ycoef,
                constant, &success) );
 
             /* check whether the inequality has been accepted */
@@ -2789,8 +2789,8 @@ SCIP_RETCODE initBounds(
       assert(bilinnlhdlr != NULL);
 
       /* collect all bilinear product in all nonlinear constraints */
-      exprs = SCIPgetNlhdlrBilinearExprs(bilinnlhdlr);
-      nexprs = SCIPgetNlhdlrBilinearNExprs(bilinnlhdlr);
+      exprs = SCIPgetExprsBilinear(bilinnlhdlr);
+      nexprs = SCIPgetNExprsBilinear(bilinnlhdlr);
 
       if( nexprs > 0 )
       {

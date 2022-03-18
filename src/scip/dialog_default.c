@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1003,6 +1003,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayCutselectors)
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayHeuristics)
 {  /*lint --e{715}*/
    SCIP_HEUR** heurs;
+   SCIP_HEUR** sorted;
    int nheurs;
    int i;
 
@@ -1011,23 +1012,32 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayHeuristics)
    heurs = SCIPgetHeurs(scip);
    nheurs = SCIPgetNHeurs(scip);
 
-   /* display list of primal heuristics */
+   /* copy heurs array into temporary memory for sorting */
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &sorted, heurs, nheurs) );
+
+   /* sort the heuristics */
+   SCIPsortPtr((void**)sorted, SCIPheurCompPriority, nheurs);
+
+   /* display sorted list of primal heuristics */
    SCIPdialogMessage(scip, NULL, "\n");
    SCIPdialogMessage(scip, NULL, " primal heuristic     c priority freq ofs  description\n");
    SCIPdialogMessage(scip, NULL, " ----------------     - -------- ---- ---  -----------\n");
    for( i = 0; i < nheurs; ++i )
    {
-      SCIPdialogMessage(scip, NULL, " %-20s ", SCIPheurGetName(heurs[i]));
-      if( strlen(SCIPheurGetName(heurs[i])) > 20 )
+      SCIPdialogMessage(scip, NULL, " %-20s ", SCIPheurGetName(sorted[i]));
+      if( strlen(SCIPheurGetName(sorted[i])) > 20 )
          SCIPdialogMessage(scip, NULL, "\n %20s ", "-->");
-      SCIPdialogMessage(scip, NULL, "%c ", SCIPheurGetDispchar(heurs[i]));
-      SCIPdialogMessage(scip, NULL, "%8d ", SCIPheurGetPriority(heurs[i]));
-      SCIPdialogMessage(scip, NULL, "%4d ", SCIPheurGetFreq(heurs[i]));
-      SCIPdialogMessage(scip, NULL, "%3d  ", SCIPheurGetFreqofs(heurs[i]));
-      SCIPdialogMessage(scip, NULL, "%s", SCIPheurGetDesc(heurs[i]));
+      SCIPdialogMessage(scip, NULL, "%c ", SCIPheurGetDispchar(sorted[i]));
+      SCIPdialogMessage(scip, NULL, "%8d ", SCIPheurGetPriority(sorted[i]));
+      SCIPdialogMessage(scip, NULL, "%4d ", SCIPheurGetFreq(sorted[i]));
+      SCIPdialogMessage(scip, NULL, "%3d  ", SCIPheurGetFreqofs(sorted[i]));
+      SCIPdialogMessage(scip, NULL, "%s", SCIPheurGetDesc(sorted[i]));
       SCIPdialogMessage(scip, NULL, "\n");
    }
    SCIPdialogMessage(scip, NULL, "\n");
+
+   /* free temporary memory */
+   SCIPfreeBufferArray(scip, &sorted);
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 

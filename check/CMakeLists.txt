@@ -217,6 +217,12 @@ set(settings_Or
     "presolving_separating_heuristics_off_randombranching"
 )
 
+#
+# consecutive solve instances
+#
+set(instances_MIP_consecSolve
+    "instances/MIP/blend2.mps\;7.598985"
+    )
 
 #
 # read/write instances
@@ -396,9 +402,9 @@ set(instances_Symmetry_B
 # Symmetry MINLP instances
 #
 set(instances_Symmetry_MINLP
-    "instances/MINLP/gastrans.osil.gz\;89.0858400000"
-    "instances/MINLP/tln2.osil.gz\;5.3000000000"
-    "instances/MINLP/cvxnonsep_psig40r.osil.gz\;86.5450782341784"
+    "instances/MINLP/gastrans.osil\;89.0858400000"
+    "instances/MINLP/tln2.osil\;5.3000000000"
+    "instances/MINLP/cvxnonsep_psig40r.osil\;86.5450782341784"
     )
 
 #
@@ -421,13 +427,13 @@ set(instances_BendersLB
    )
 
 set(instances_BendersQP
-    "instances/Benders/classical_20_0.mps.gz\;instances/Benders/classical_20.dec.gz\;-8.22960761981176e-02"
-    #"instances/Benders/classical_30_0.mps.gz\;instances/Benders/classical_30.dec.gz\;-7.98150796362468e-02"
-    "instances/Benders/classical_30_15.mps.gz\;instances/Benders/classical_30.dec.gz\;-7.34740783553289e-02"
+    "instances/Benders/classical_20_0.mps\;instances/Benders/classical_20.dec\;-8.22960761981176e-02"
+    #"instances/Benders/classical_30_0.mps\;instances/Benders/classical_30.dec\;-7.98150796362468e-02"
+    "instances/Benders/classical_30_15.mps\;instances/Benders/classical_30.dec\;-7.34740783553289e-02"
    )
 
 set(instances_Decomp
-   "instances/Decomp/exp-1-500-5-5.mps.gz\;instances/Decomp/exp-1-500-5-5.dec.gz\;65887"
+   "instances/Decomp/exp-1-500-5-5.mps\;instances/Decomp/exp-1-500-5-5.dec\;65887"
   )
 
 set(instances_Or
@@ -606,7 +612,11 @@ foreach(instance ${instances_Indicator})
     add_test(NAME Indicator-solvecip-${basename}
             COMMAND $<TARGET_FILE:scip> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/solvecip-${basename}.bat
             )
-    set_tests_properties(Indicator-solvecip-${basename} PROPERTIES PASS_REGULAR_EXPRESSION "Validation         : Success")
+    set_tests_properties(Indicator-solvecip-${basename}
+        PROPERTIES
+            PASS_REGULAR_EXPRESSION "Validation         : Success"
+            DEPENDS scip-build
+        )
 endforeach(instance)
 
 
@@ -650,9 +660,9 @@ foreach(instance ${instances_MIP_write})
       )
     set_tests_properties(MIP-writeronlytest-${extension}-${basename}
       PROPERTIES
-      PASS_REGULAR_EXPRESSION ${regex}
-      DEPENDS scip-build
-      )
+        PASS_REGULAR_EXPRESSION ${regex}
+        DEPENDS scip-build
+    )
   endforeach(extension)
 endforeach(instance)
 
@@ -910,16 +920,59 @@ foreach(instance ${instances_MIP})
                             PROPERTIES
                                 DEPENDS scip-build
                             )
-        foreach( pass_regex ${linclass_${shortbasename}} )
+        set(pass_regex )
+        foreach( regexp ${linclass_${shortbasename}} )
+            string(CONCAT pass_regex "${pass_regex}" "${regexp}" ".*")
+        endforeach()
         set_tests_properties(MIP-linclass-${basename}
                             PROPERTIES
                                 PASS_REGULAR_EXPRESSION "${pass_regex}"
                             )
-        endforeach()
-
     endif()
 
 endforeach()
+
+#
+# add tests for checking consistency across consecutive solves
+#
+set(shell_tmp_dir ${PROJECT_BINARY_DIR}/check/temp)
+file(MAKE_DIRECTORY ${shell_tmp_dir})
+
+foreach(instance ${instances_MIP_consecSolve})
+    split_instance(instance)
+    #
+    # configure the batch file for this test by substituting placeholders in the in.file
+    #
+    configure_file(interactiveshell/consecutivesolve.bat.in
+      interactiveshell/consecutivesolve-${basename}.bat)
+
+    #
+    # add a test for creating two log files from consecutive solves;
+    # this test acts as a setup for the next test
+    #
+    add_test(NAME MIP-consecutivesolve-${basename}-setup
+            COMMAND $<TARGET_FILE:scip> -b
+            ${PROJECT_BINARY_DIR}/check/interactiveshell/consecutivesolve-${basename}.bat
+            )
+    set_tests_properties(MIP-consecutivesolve-${basename}-setup
+                        PROPERTIES
+                            DEPENDS scip-build
+                            FIXTURES_SETUP consecutivesolve-${basename}
+                        )
+
+    #
+    # add a test for comparing two log files from consecutive solves
+    #
+    add_test(NAME MIP-consecutivesolve-${basename}-comparison
+      COMMAND ${CMAKE_COMMAND} -E compare_files
+      ${shell_tmp_dir}/${basename}_r1.stats ${shell_tmp_dir}/${basename}_r2.stats
+            )
+    set_tests_properties(MIP-consecutivesolve-${basename}-comparison
+                        PROPERTIES
+                            DEPENDS MIP-consecutivesolve-${basename}-setup
+                            FIXTURES_REQUIRED consecutivesolve-${basename}
+                        )
+endforeach(instance)
 
 #
 # add a test for handling of the SIGTERM signal. The test uses the timeout command that
