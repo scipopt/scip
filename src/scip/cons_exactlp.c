@@ -5257,7 +5257,26 @@ SCIP_Longint SCIPcertificatePrintActivityVarBoundEx(
       }
    }
 
-   assert(val != NULL);
+   if (val == NULL) {
+      // Apparently the variable was not contained in the row.
+      // In this case we do not have to (and can not) print the line to the certificate.
+      // Unfortunately we still do have to finish the statement by just referring to the earlier bound.
+      #ifndef NDEBUG
+         certificate->lastinfo->isbound = TRUE;
+         certificate->lastinfo->boundtype = boundtype;
+         certificate->lastinfo->varindex = SCIPvarGetCertificateIndex(variable);
+         certificate->lastinfo->isglobal = FALSE;
+         certificate->lastinfo->certificateindex = certificate->indexcounter - 1;
+         RatSet(certificate->lastinfo->boundval, newbound);
+      #endif
+      SCIPcertificatePrintProofMessage(certificate, "%c ", getInequalitySense(boundtype == SCIP_BOUNDTYPE_UPPER));
+      SCIPcertificatePrintProofRational(certificate, newbound, 10); // update
+      SCIPcertificatePrintProofMessage(certificate, " 1 %d 1 ", SCIPvarGetCertificateIndex(variable));
+
+      SCIPcertificatePrintProofMessage(certificate, " { lin 1 %d 1 } -1 \n", boundtype == SCIP_BOUNDTYPE_UPPER ? SCIPvarGetUbCertificateIndexLocal(variable) : SCIPvarGetLbCertificateIndexLocal(variable) );
+      return -1;
+   }
+
    // Do we need an upper bound on the contribution val[i]*x_i (otherwise a lowerbound)
    upperboundcontribution = (boundtype == SCIP_BOUNDTYPE_UPPER) == RatIsPositive(val);
    SCIPcertificatePrintProofMessage(certificate, "%c ", getInequalitySense(upperboundcontribution));
