@@ -5357,7 +5357,6 @@ SCIP_Longint SCIPcertificatePrintActivityVarBound(
    const char*           linename,           /**< name of the unsplitting line */
    SCIP_BOUNDTYPE        boundtype,
    SCIP_Real             newbound,           /**< pointer to lower bound on the objective, NULL indicating infeasibility */
-   SCIP_Real             newboundproduct,
    SCIP_Bool             ismaxactivity,
    SCIP_CONS*            constraint,
    SCIP_VAR*             variable
@@ -9428,7 +9427,7 @@ SCIP_RETCODE tightenVarBounds(
                SCIPdebugMsg(scip, "linear constraint <%s>: tighten <%s>, old bds=[%.15g,%.15g], val=%.15g, resactivity=[%.15g,%.15g], sides=[%.15g,%.15g] -> newub=%.15g\n",
                   SCIPconsGetName(cons), SCIPvarGetName(var), lb, ub, valrange.inf, minresactivity, maxresactivity, lhs, rhs, newub);
                if( SCIPcertificateShouldTrackBounds(scip) )
-                  SCIPcertificatePrintActivityVarBound(scip, SCIPgetCertificate(scip), NULL, SCIP_BOUNDTYPE_UPPER, newub, rhs - minresactivity, false, cons, var);
+                  SCIPcertificatePrintActivityVarBound(scip, SCIPgetCertificate(scip), NULL, SCIP_BOUNDTYPE_UPPER, newub, false, cons, var);
                SCIP_CALL( SCIPinferVarUbCons(scip, var, newub, cons, getInferInt(PROPRULE_1_RHS, pos), force,
                      &infeasible, &tightened) );
                if( infeasible )
@@ -9488,7 +9487,7 @@ SCIP_RETCODE tightenVarBounds(
             SCIPdebugMsg(scip, "linear constraint <%s>: tighten <%s>, old bds=[%.15g,%.15g], val=%.15g, resactivity=[%.15g,%.15g], sides=[%.15g,%.15g] -> newlb=%.15g\n",
                SCIPconsGetName(cons), SCIPvarGetName(var), lb, ub, valrange.inf, minresactivity, maxresactivity, lhs, rhs, newlb);
             if( SCIPcertificateShouldTrackBounds(scip) )
-               SCIPcertificatePrintActivityVarBound(scip, SCIPgetCertificate(scip), NULL, SCIP_BOUNDTYPE_LOWER, newlb, lhs - maxresactivity, true, cons, var);
+               SCIPcertificatePrintActivityVarBound(scip, SCIPgetCertificate(scip), NULL, SCIP_BOUNDTYPE_LOWER, newlb, true, cons, var);
             SCIP_CALL( SCIPinferVarLbCons(scip, var, newlb, cons, getInferInt(PROPRULE_1_LHS, pos), force,
                   &infeasible, &tightened) );
             if( infeasible )
@@ -9554,7 +9553,7 @@ SCIP_RETCODE tightenVarBounds(
                SCIPdebugMsg(scip, "linear constraint <%s>: tighten <%s>, old bds=[%.15g,%.15g], val=%.15g, resactivity=[%.15g,%.15g], sides=[%.15g,%.15g] -> newlb=%.15g\n",
                   SCIPconsGetName(cons), SCIPvarGetName(var), lb, ub, valrange.sup, minresactivity, maxresactivity, lhs, rhs, newlb);
                if( SCIPcertificateShouldTrackBounds(scip) )
-                  SCIPcertificatePrintActivityVarBound(scip, SCIPgetCertificate(scip), NULL, SCIP_BOUNDTYPE_LOWER, newlb, rhs - minresactivity, false, cons, var);
+                  SCIPcertificatePrintActivityVarBound(scip, SCIPgetCertificate(scip), NULL, SCIP_BOUNDTYPE_LOWER, newlb, false, cons, var);
                SCIP_CALL( SCIPinferVarLbCons(scip, var, newlb, cons, getInferInt(PROPRULE_1_RHS, pos), force,
                      &infeasible, &tightened) );
                if( infeasible )
@@ -9613,7 +9612,7 @@ SCIP_RETCODE tightenVarBounds(
             SCIPdebugMsg(scip, "linear constraint <%s>: tighten <%s>, old bds=[%.15g,%.15g], val=%.15g, resactivity=[%.15g,%.15g], sides=[%.15g,%.15g], newub=%.15g\n",
                SCIPconsGetName(cons), SCIPvarGetName(var), lb, ub, valrange.sup, minresactivity, maxresactivity, lhs, rhs, newub);
             if( SCIPcertificateShouldTrackBounds(scip) )
-               SCIPcertificatePrintActivityVarBound(scip, SCIPgetCertificate(scip), NULL, SCIP_BOUNDTYPE_UPPER, newub, lhs - maxresactivity, true, cons, var);
+               SCIPcertificatePrintActivityVarBound(scip, SCIPgetCertificate(scip), NULL, SCIP_BOUNDTYPE_UPPER, newub, true, cons, var);
             SCIP_CALL( SCIPinferVarUbCons(scip, var, newub, cons, getInferInt(PROPRULE_1_LHS, pos), force,
                   &infeasible, &tightened) );
             if( infeasible )
@@ -10379,7 +10378,7 @@ static SCIP_RETCODE CertificatePrintActivityConflict(SCIP* scip, SCIP_CONS* cons
    }
    RatSetReal(diff, activity);
    RatDiffReal(diff, diff, side);
-   conscertificateindex = SCIPhashmapGetImageLong(certificate->rowdatahash, cons); // @todo sander
+   conscertificateindex = certificateGetConsIndex(scip, certificate, cons, rhs);
    assert(conscertificateindex != LONG_MAX);
 
    SCIPcertificatePrintProofMessage(certificate, "ActivityConflict%d ", certificate->indexcounter);
