@@ -266,7 +266,7 @@ void nautyhook(
       data_.nmaxperms = newsize;
    }
 
-   if ( SCIPduplicateBlockMemoryArray(data_.scip, &pp, p, n) != SCIP_OKAY )
+   if ( SCIPduplicateBlockMemoryArray(data_.scip, &pp, p, data_.npermvars) != SCIP_OKAY )
       return;
    data_.perms[data_.nperms++] = pp;
 }
