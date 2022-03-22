@@ -6,10 +6,11 @@
 Features
 --------
 
-- clique lifting in cons_setppc (parameter enablecliquelifting) is only disabled if it has been applied
-
 Performance improvements
 ------------------------
+
+- Variable conflict-based addition of Schreier-Sims cuts for symmetry handling in prop_symmetry.c does no longer use
+  an expensive explicit conflict graph construction.
 
 Examples and applications
 -------------------------
@@ -21,6 +22,11 @@ Interface changes
 
 ### Deleted and changed API methods
 
+- SCIPtpiInitLock(), SCIPtpiDestroyLock(), SCIPtpiInitCondition(), SCIPtpiDestroyCondition() now take a double
+  pointer to SCIP_LOCK/SCIP_CONDITION, respectively.
+
+- Renamed SCIPtpiSumbitJob() to SCIPtpiSubmitJob().
+
 ### New API functions
 
 ### Command line interface
@@ -31,12 +37,16 @@ Interface changes
 
 ### Changed parameters
 
+- Shrunk range of parameter "propagating/symmetry/sstleaderrule" from [0,3] to [0,2], removed "MAXCONFLICTS"-option.
+
 ### New parameters
 
 ### Data structures
 
 Deleted files
 -------------
+
+- deleted the now unused files: tpi_none.h, tpi_openmp.h, tpi_tnycthrd.h, type_tpi_none.h, type_tpi_openmp.h, type_tpi_tnycthrd.h
 
 Unit tests
 ----------
@@ -59,6 +69,9 @@ Fixed bugs
 Miscellaneous
 -------------
 
+- The TPI has been changed to become mostly independent from the actual parallel interface during compile time.
+  For this, the locks and conditions are now pointers to abstract structs.
+
 Known bugs
 ----------
 
@@ -68,6 +81,10 @@ Known bugs
 *************************
 Features
 --------
+
+- clique lifting in cons_setppc (parameter enablecliquelifting) is only disabled if it has been applied
+- improved curvature check for quadratic expressions when extended formulations are disabled
+
 Performance improvements
 ------------------------
 Examples and applications
@@ -91,9 +108,24 @@ Testing
 Build system
 ------------
 ### Cmake
+
+- avoid warnings about unrecognized compiler warning silencing options when compilation with GCC fails
+- adjust mosek find module to version 9.3
+
 ### Makefile
+
+- avoid warnings about unrecognized compiler warning silencing options when compilation with GCC fails
+
 Fixed bugs
 ----------
+
+- fixed uninitialized array in detection of suborbitopes
+- Fixed problem with reading long lines in LP/FZN/OPB/Diff-files. The buffer is now reallocated,
+  which also should be much faster.
+- fixed that recursive products in expressions were sometimes not flattened
+- fixed that expressions in original variables could not be simplified
+- fixed handling of objective limit with Mosek
+
 Miscellaneous
 -------------
 Known bugs
@@ -2455,7 +2487,7 @@ Interface changes
   - methods SCIPrandomCreate() and SCIPrandomFree() are no longer public and should be replaced by SCIPcreateRandom() and
     SCIPfreeRandom(), respectively (the new methods respect the global parameter `randomization/randomseedshift` automatically)
   - methods SCIPdigraphCreate() and SCIPdigraphCopy() are no longer public and should be replaced by SCIPcreateDigraph() and
-    SCIPcopyDigraph(), respectively, which receive a \SCIP argument and are more robust towards future interface changes
+    SCIPcopyDigraph(), respectively, which receive a SCIP argument and are more robust towards future interface changes
 
 - Bilinear:
   - SCIPgetAllBilinearTermsQuadratic() to access data of all existing bilinear terms in quadratic constraints

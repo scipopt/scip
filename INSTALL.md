@@ -1,8 +1,8 @@
 If you want to compile SCIP yourself, it is recommended to download the SCIP Optimization Suite tarball from [scipopt.org](https://scipopt.org/index.php#download) as it contains also the LP solver [SoPlex](https://soplex.zib.de) and the presolver [PaPILO](https://github.com/scipopt/papilo).
 
 We provide two different systems to compile the code:
-- the newer [CMake](@ref CMAKE) build system (recommended for new users)
-- the traditional [Makefile](@ref MAKE) system.
+- the [CMake](https://scipopt.org/doc/html/md_INSTALL.php#CMAKE) build system (recommended for new users) [(local link)](@ref CMAKE).
+- the traditional [Makefile](https://scipopt.org/doc/html/md_INSTALL.php#MAKE) system [(local link)](@ref MAKE).
 
 Be aware that generated libraries and binaries of both systems might be different and incompatible.
 For further information please refer to the [online documentation of SCIP](https://scipopt.org/doc/html/INSTALL.php).
@@ -22,7 +22,7 @@ Windows and platform independent build instructions
 ---------------------------------------------------
 
 To build SCIP you may use the CMake GUI to specify the path to SCIP and the desired location for the build.
-Available options are listed and can be modified to suit your needs.
+Available options are listed and can be modified to fit your needs.
 After the configuration step is done, open the generated Visual Studio solution file and compile it.
 
 Alternatively, you may use the command line to configure and build SCIP by creating a `build` directory and then building the configuration:
@@ -62,7 +62,7 @@ Additionally the following dependencies need to be downloaded, compiled and inst
  - [Metis](http://glaros.dtc.umn.edu/gkhome/metis/metis/download)
  - [Ipopt](https://github.com/coin-or/Ipopt/releases) with [Mumps](https://github.com/coin-or-tools/ThirdParty-Mumps/releases)
  - [Gmp](https://gmplib.org/#DOWNLOAD)
-During the cmake configuration of the SCIP Optimization Suite the can be specified, see [CMake](@ref CMAKE).
+During the CMake configuration of the SCIP Optimization Suite the can be specified, see [CMake](https://scipopt.org/doc/html/md_INSTALL.php#CMAKE) [(local link)](@ref CMAKE) .
 
 Modifying a CMake configuration
 -------------------------------
@@ -70,19 +70,19 @@ Modifying a CMake configuration
 CMake uses an out-of-source build, i.e., compiled binaries and object files are separated from the source tree and located in another directory.
 Usually this directory is called `build` or `debug` or whatever you prefer.
 From within this directory, run `cmake <path/to/SCIP>` to configure your build, followed by `make` to compile the code according to the current configuration (this assumes that you chose Linux Makefiles as CMake Generator).
-By default, SCIP searches for Soplex as LP solver.
-If SoPlex is not installed systemwide, the path to a CMake build directory of SoPlex must be specified (ie one that contains "soplex-config.cmake").
+By default, SCIP searches for SoPlex as LP solver.
+If SoPlex is not installed systemwide, the path to a CMake build directory of SoPlex must be specified (i.e. one that contains "soplex-config.cmake").
 Alternatively, a different LP solver can be specified with the `LPS` variable.
 
 Afterwards, successive calls to `make` are going to recompile modified source code, without requiring another call to `cmake`.
 The initial configuration step checks your environment for available third-party libraries and packages and sets up the configuration accordingly, e.g., disabling support for GMP if not installed.
 
 The generated executable and libraries are put in directories `bin` and `lib` respectively and will simply be named `scip` or `libscip.so`.
-This is different from the naming convention of the previous Makefile setup that appended the configuration details like OS and third party dependencies directly to the name of the binary or library.
+This is different from the naming convention of the Makefile setup that appended the configuration details like OS and third party dependencies directly to the name of the binary or library.
 The CMake setup tries to follow the established Linux/UNIX compilation conventions to facilitate the use of the libraries in other applications.
 The previously generated sub-libraries like `liblpi.so` or `libobjscip.so` are not created by default anymore.
 They can be built using the respective targets `liblpi`, `libobjscip`, etc.
-The main library `libscip.so` will contain all SCIP sources and won't have dependencies to the other sub-libs.
+The main library `libscip.so` will contain all SCIP sources and won't have dependencies to the other sub-libraries.
 
 There are several options that can be passed to the `cmake <path/to/SCIP>` call to modify how the code is built.
 For all of these options and parameters you have to use `-D<Parameter_name>=<value>`.
@@ -102,7 +102,7 @@ e.g., `cmake </path/to/SCIP> -DSOPLEX_DIR=<path/to/SoPlex/build/or/install>`.
 | `GMP`                  | `on`, `off`                        | `GMP=[true, false]`        | specify `GMP_DIR` if not found automatically                       |
 | `IPOPT`                | `on`, `off`                        | `IPOPT=[true,false]`       | requires IPOPT version >= 3.12.0; specify `IPOPT_DIR` if not found automatically |
 | `LPS`                  | `spx`, `cpx`, `grb`, `xprs`, ...   | `LPS=...`                  | specify `SOPLEX_DIR`, `CPLEX_DIR`, `MOSEK_DIR`, ... if LP solver is not found automatically |
-| `SYM`                  | `bliss`, `none`                    | --                         | for bliss, specify `BLISS_DIR`                                     |
+| `SYM`                  | `bliss`, `none`                    | `SYM=[bliss, none]`        | for bliss, specify `BLISS_DIR`                                     |
 | `WORHP`                | `on`, `off`                        | `WORHP=[true,false]`       | should worhp be linked; specify `WORHP_DIR` if not found automatically |
 | `ZIMPL`                | `on`, `off`                        | `ZIMPL=[true, false]`      | specify `ZIMPL_DIR` if not found automatically                     |
 | `AMPL`                 | `on`, `off`                        | `AMPL=[true, false]`       |                                                                    |
@@ -120,7 +120,7 @@ e.g., `cmake </path/to/SCIP> -DSOPLEX_DIR=<path/to/SoPlex/build/or/install>`.
 | `NOBUFMEM`             | `on`, `off`                        | `NOBUFMEM=[true,false]`    |                                                                    |
 | `NOBLKBUFMEM`          | `on`, `off`                        | `NOBLKBUFMEM=[true,false]` |                                                                    |
 | `MT`                   | `on`, `off`                        |                            | use static runtime libraries for Visual Studio compiler on Windows |
-| `PARASCIP`             | `on`, `off`                        | `PARASCIP=[true,false]`    | thread safe compilation                                            |
+| `THREADSAFE`           | `on`, `off`                        | `THREADSAFE=[true,false]`  | thread safe compilation                                            |
 | `SANITIZE_...`         | `on`, `off`                        | --                         | enable sanitizer in debug mode if available                        |
 | `TPI`                  | `tny`, `omp`, `none`               | `TPI=[tny,omp,none]`       | enable task processing interface required for concurrent solver    |
 
@@ -167,6 +167,7 @@ Additional targets
 
 There are several further targets available, which can be listed using `make help`.
 For instance, there are some examples that can be built with `make examples` or by specifying a certain one: `make <example-name>`.
+For detailed instructions see the [installation instructions for applications and examples](https://scipopt.org/doc/html/INSTALL_APPLICATIONS_EXAMPLES.php) [(local link)](@ref INSTALL_APPLICATIONS_EXAMPLES).
 
 | CMake target    | Description                                           | Requirements                          |
 |-----------------|-------------------------------------------------------|---------------------------------------|
@@ -181,13 +182,11 @@ For instance, there are some examples that can be built with `make examples` or 
 | liblpi          | build the LPI library                                 |                                       |
 | libobjscip      | build the ObjSCIP library for the C++ wrapper classes |                                       |
 
+
 Building SCIP using the Makefile system {#MAKE}
 ===============================================
 
-**Please note, that the Makefile system is not actively maintained anymore.
-If possible, please use \ref CMAKE "the cmake system".**
-
-For Linux and Mac, reading the section "Brief installation description" should usually be enough.
+For Linux and Mac, reading the section "Brief installation description" below should usually be enough.
 If this is not the case, you can find the "Detailed installation description" below as well as some examples.
 
 We recommend using GCC version 4.8 or later.
@@ -195,8 +194,8 @@ We recommend using GCC version 4.8 or later.
 Brief installation description
 ------------------------------
 
-The easiest way to install \SCIP is to use the \SCIP Optimization Suite which contains \SCIP, SoPlex, and ZIMPL.
-For that we refer to the INSTALL file of the \SCIP Optimization Suite (main advantage: there is no need
+The easiest way to install SCIP is to use the SCIP Optimization Suite which contains SCIP, SoPlex, and ZIMPL.
+For that we refer to the `README.md` file of the SCIP Optimization Suite (main advantage: there is no need
 to specify any directories, the compiling process is fully automated).
 
 Compiling SCIP directly can be done as follows:
@@ -214,7 +213,7 @@ Usually, SCIP needs the following information
    a. the directory where the include files of the LP solver are located
    b. the library file(s) `lib*.a` or/and `lib*.so`
 
-Beside that, SCIP needs similar soft-link targets for ZIMPL
+Besides that, SCIP needs similar soft-link targets for ZIMPL
    a. the directory where the include files of ZIMPL are located
    b. the library file(s) `lib*.a` or/and `lib*.so`
 
@@ -244,50 +243,46 @@ Here is what you have to do to get SCIP running:
 
 In your SCIP main directory, enter `make [options]` with the following options:
 
-The following settings are supported:
-
 | parameter and default | options              | description                                                                                      |
 |-----------------------|----------------------|--------------------------------------------------------------------------------------------------|
-| `ARCH`                | `sparc`, `x86`, `x86_64`, `mips`, `hppa`, `ppc`, `pwr4`, ... | the architecture: try to autodetect                      |
-| `AMPL=true`           | `false`              | to enable or disable AMPL .nl file reader and support for using SCIP executable as solver in AMPL|
-| `COMP=gnu`            | `clang`, `intel`     | Use Gnu, Clang or Intel compiler.                                                                |
-| `EXPRINT=cppad`       | `none`               | to use CppAD as expressions interpreter                                                          |
-| `FILTERSQP=false`     | `true`               | to enable or disable FilterSQP interface                                                         |
-| `GMP=true`            | `false`              | to enable or disable GMP library for exact counting and Zimpl support                            |
-| `IPOPT=false`         | `true`               | to disable or enable IPOPT interface (needs IPOPT >= 3.12.0)                                     |
-| `LPS=spx`             | `spx1`, `cpx`, `grb`, `xprs`, `msk`, `clp`, `glop`, `qso`, `none` | determines the LP-Solver, should be installed seperately. Options to use SoPlex (> version 2.0), SoPlex (>= version 1.4), CPLEX, Gurobi, XPRESS, MOSEK, CLP, Glop, QSopt as LP solver, no LP solver  |
-| `LPSOPT=opt`          | `dbg`, `opt-gccold`  | Choose the debug or optimized version (or old GCC optimized) version of the LP-solver (currently only available for SoPlex and CLP). |
-| `NOBLKBUFMEM=true`    | `false`              | Turns the internal SCIP block and buffer memory off or on. This way the code can be checked by valgrind or similar tools. |
-| `NOBLKMEM=true`       | `false`              | Turns the internal SCIP block memory off or on.                                                  |
-| `NOBUFMEM=true`       | `false`              | Turns the internal SCIP buffer memory off or on.                                                 |
-| `OPT=opt`             | `dbg`, `perf`        | to use optimized, debug, performance (only with Gnu compiler) analysis compilation mode. `dbg` turns on debug mode. This enables asserts and avoids macros for several function in order to ease debugging. |
-| `OSTYPE`              | `linux`, `darwin`, `cygwin`, `irix`, `windows`, `mingw`, ... | the operating system: try to autedetect                  |
-| `PAPILO=false`        | `true`               | to disable or disable the MILP presolver based on the presolving library PaPILO                  |
-| `READLINE=true`       | `false`              | to enable or disable readline library for interactive shell                                      |
-| `SHARED=false`        | `true`               | to suppress or create shared libraries. (only Gnu compiler)                                      |
-| `SYM=none`            | `bliss`              | to disable symmetry handling in mixed integer programs or compute symmetries with bliss          |
-| `TPI=none`            | `omp`, `tny`         | to disable the task processing interface or use it with the openmp or tinycthreads interface for concurrent solves |
-| `VERBOSE=false`       | `true`               | to suppress or display of compiler and linker invocations                                        |
-| `WORHP=false`         | `true`               | to disable or enable WORHP interface (needs WORHP >= 2.00)                                       |
-| `ZIMPL=true`          | `false`, `auto`      | to enable or disable ZIMPL file reader (needs ZIMPL and GMP to be installed)                     |
-| `ZLIB=true`           | `false`              | to enable or disable zlib for reading of compressed files                                        |
+| `ARCH=x86_64`         | `[x86_64, x86, sparc, mips, hppa, ppc, pwr4]` | the architecture: try to autodetect                      |
+| `AMPL=true`           | `[true, false]`      | to enable or disable AMPL .nl file reader and support for using SCIP executable as solver in AMPL|
+| `COMP=gnu`            | `[gnu, clang, intel]`| Use Gnu, Clang or Intel compiler.                                                                |
+| `EXPRINT=cppad`       | `[cppad, none]`      | to use CppAD as expressions interpreter                                                          |
+| `FILTERSQP=false`     | `[false, true]`      | to enable or disable FilterSQP interface                                                         |
+| `GMP=true`            | `[true, false]`      | to enable or disable GMP library for exact counting and Zimpl support                            |
+| `IPOPT=false`         | `[false, true]`      | to disable or enable IPOPT interface (needs IPOPT >= 3.12.0)                                     |
+| `LPS=spx`             | `[spx1, cpx, grb, xprs, msk, clp, glop, qso, none]` | determines the LP-Solver, should be installed seperately. Options to use SoPlex (> version 2.0), SoPlex (>= version 1.4), CPLEX, Gurobi, XPRESS, MOSEK, CLP, Glop, QSopt as LP solver, no LP solver  |
+| `LPSOPT=opt`          | `[opt, dbg, opt-gccold]` | Choose the debug or optimized version (or old GCC optimized) version of the LP-solver (currently only available for SoPlex and CLP). |
+| `NOBLKMEM=false`      | `[false, true]`      | Turns the internal SCIP block memory off or on.                                                  |
+| `NOBUFMEM=false`      | `[false, true]`      | Turns the internal SCIP buffer memory off or on.                                                 |
+| `NOBLKBUFMEM=false`   | `[false, true]`      | Turns the internal SCIP block and buffer memory off or on. This way the code can be checked by valgrind or similar tools. |
+| `OPT=opt`             | `[opt, dbg, perf]`   | to use optimized, debug, performance (only with Gnu compiler) analysis compilation mode. `dbg` turns on debug mode. This enables asserts and avoids macros for several function in order to ease debugging. |
+| `OSTYPE`              | `[linux, darwin, cygwin, irix, windows, mingw]` | the operating system: try to autedetect                               |
+| `PAPILO=false`        | `[false, true]`      | to disable or disable the MILP presolver based on the presolving library PaPILO                  |
+| `READLINE=true`       | `[true, false]`      | to enable or disable readline library for interactive shell                                      |
+| `SHARED=false`        | `[false, true]`      | to suppress or create shared libraries (only Gnu compiler)                                       |
+| `SYM=none`            | `[none, bliss]`      | to disable symmetry handling in mixed integer programs or compute symmetries with bliss          |
+| `TPI=none`            | `[none, omp, tny]`   | to disable the task processing interface or use it with the openmp or tinycthreads interface for concurrent solves |
+| `VERBOSE=false`       | `[false, true]`      | to suppress or display of compiler and linker invocations                                        |
+| `WORHP=false`         | `[false, true]`      | to disable or enable WORHP interface (needs WORHP >= 2.00)                                       |
+| `ZIMPL=false`         | `[false, true, auto]`| to enable or disable ZIMPL file reader (needs ZIMPL and GMP to be installed)                     |
+| `ZLIB=true`           | `[true, false]`      | to enable or disable zlib for reading of compressed files                                        |
 
 For example, if you want to install SCIP on a Linux system with a x86 processor
 using the gnu compiler in debug mode, using Soplex version as LP solver,
 and neither an expressions interpreter nor symmetry handling techniques or multi-threading,
-you would have the following names:
+you would use following:
 
-- `OSTYPE  = linux`
-- `ARCH    = x86`
-- `COMP    = gnu`
-- `OPT     = dbg`
-- `EXPRINT = none`
+```
+make OSTYPE = linux  ARCH = x86  COMP = gnu  OPT = dbg  EXPRINT = none
+```
 
 On some machines, you should use `gmake` instead of `make`.
 
-On your first compilation you will be asked for some soft-link targets, depending on the LP solver you want to use.
-Usually, SCIP needs the following information
-- the directory where the include files of the LP solver
+On your first compilation you will be asked for some soft-link targets, depending on the external software you want to use.
+Usually, SCIP needs the following information:
+- the directory where the include files of the external software
 - the library file(s) `lib*.a` or/and `lib*.so`
 You will need either the `.a` or the `.so` files and can skip the others by just pressing return.
 
@@ -301,7 +296,7 @@ USRFLAGS=-I/sw/include USRCPPFLAGS=-I/sw/include USRCFLAGS=-I/sw/include USRLDFL
 
 ### 2. Installing SCIP
 
-After compiling you can install the headers, the libraries, and the binay.
+After compiling you can install the headers, the libraries, and the binary.
 You do that by running the command:
 
 ```
@@ -320,101 +315,100 @@ Create necessary soft-links in the `lib/static` and `lib/include/` subdirectorie
 
 #### a) to use SOPLEX (Version >= 1.4.0)
 
+For each used operating system and architecture:
 ```
 ln -s <path to SOPLEX' *.h files> <path to SCIP>/lib/include/spxinc
 ln -s <file libsoplex.[...].a> <path to SCIP>/lib/static/libsoplex.$(OSTYPE).$(ARCH).$(COMP).a
 ```
-For each operating system and architecture to use
+For example:
 ```
 cd scip
-ln -s ../soplex/lib/libsoplex.linux.x86_64.gnu.opt.a lib/static/libsoplex.linux.x86_64.gnu.a
+ln -s /soplex/lib/libsoplex.linux.x86_64.gnu.opt.a lib/static/libsoplex.linux.x86_64.gnu.a
 ```
 Warning! The `.opt` in the name of the SOPLEX library does not appear in the name of the soft-link.
 
 #### b) to use CPLEX (Version >= 10.0)
 
+For each used operation system and architecture:
 ```
 ln -s <path to directory of cplex.h> <path to SCIP>/lib/include/cpxinc
 ln -s <file libcplex.a> <path to SCIP>/lib/static/libcplex.$(OSTYPE).$(ARCH).$(COMP).a
 ```
-for each operation system and architecture to use
+For example:
 ```
 cd scip
 ln -s /cplex121/include/ilcplex lib/include/cpxinc
 ln -s /cplex121/lib/x86-64_debian4.0_4.1/static_pic/libcplex.a lib/static/libcplex.linux.x86.gnu.a
 ```
-and replace the paths with your installation location.
 
 #### c) to use Gurobi
 
+For each used operation system and architecture:
 ```
 ln -s <path to the include directory of Gurobi> <path to SCIP>/lib/include/grbinc
 ln -s <file libgurobi81.so> <path to SCIP>/lib/shared/libgurobi.$(OSTYPE).$(ARCH).$(COMP).so
 ```
-i.e.
+For example:
 ```
 cd scip
 ln -s /gurobi81/linux64/include lib/include/grbinc
 ln -s /gurobi81/linux64/lib/libgurobi81.so lib/shared/libgurobi.linux.x86_64.gnu.so
 ```
-and replace the paths with your installation location.
 
 #### d) to use XPRESS
 
+For each used operation system and architecture:
 ```
 ln -s <path to directory of xprs.h> <path to SCIP>/lib/include/xprsinc
 ln -s <file libxprs.a> <path to SCIP>/lib/static/libxprs.$(OSTYPE).$(ARCH).$(COMP).a
 ```
-for each operation system and architecture to use
+For example:
 ```
 cd scip
 ln -s /xpressmp/include lib/include/xprsinc
 ln -s /xpressmp/lib/libxprs.a lib/static/libxprs.linux.x86.gnu.a
 ```
-and replace the paths with your installation location.
 
 #### e) to use MOSEK
 
+For each used operation system and architecture:
 ```
 ln -s <path to directory of mosek.h> <path to SCIP>/lib/include/mskincn
 ln -s <file libmosek.so> <path to SCIP>/lib/shared/libmosek.$(OSTYPE).$(ARCH).$(COMP).so
 ```
-for each operation system and architecture to use
+For example:
 ```
 cd scip
 ln -s /mosek/8/tools/platform/linux64x86/h lib/include/mskinc
 ln -s /mosek/8/tools/platform/linux64x86/bin/libmosek64.so lib/shared/libmosek.linux.x86_64.gnu.so
 ```
-since MOSEK is a shared library, make sure your LD_LIBRARY_PATH contains `<path to SCIP>/lib/shared`
 
 #### f) to use CLP
 
+For each used operating system and architecture:
 ```
 ln -s <path to Clp main directory> <path to SCIP>/lib/include/libclp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)
 ```
-for each operating system and architecture to use
+For example:
 ```
 cd scip
 ln -s /Coin-Clp lib/include/libclp.linux.x86.gnu.opt
 ```
-and replace the paths with your installation location.
 
 #### g) to use Glop
 
 ```
 ln -s <path to OR-Tools main directory> <path to SCIP>/shared/ortools
 ```
-e.g.
+For example:
 ```
 cd scip
 ln -s /ortools lib/shared/ortools
 ```
-and replace the paths with your installation location.
 
 #### h) to use ZIMPL
 
-Use ZIMPL as additional file reader for reading *.zpl files
-
+Use ZIMPL as additional file reader for reading *.zpl files:
 ```
 mkdir <path to SCIP>/lib/include/zimplinc
 ln -s <path to ZIMPL's *.h files> <path to SCIP>/lib/include/zimplinc/zimpl
@@ -429,20 +423,20 @@ ln -s <path to IPOPT installation> <path to SCIP>/lib/ipopt.$(OSTYPE).$(ARCH).$(
 (e.g. `cd scip; ln -s /Ipopt lib/shared/ipopt.linux.x86.gnu.opt
 ```
 The path to the IPOPT installation is the path under where the Ipopt build has been installed.
-It should contain the directories `include/coin` with the Ipopt header files, the directory lib with the Ipopt libraries, and the directory `share/coin/doc/Ipopt` with the `ipopt_addlibs_cpp.txt` file.
+It should contain the directories `include/coin-or` with the Ipopt header files, the directory `lib` with the Ipopt libraries, and the file `lib/pkgconfig/ipopt.pc`.
 
 #### j) to use WORHP as NLP solver
 
 ```
 ln -s <path to WORHP installation> <path to SCIP>/lib/shared/worhp.$(OSTYPE).$(ARCH).$(COMP).$(WORHPOPT)
 ```
-e.g.
+For example:
 ```
 cd scip
 ln -s /Worhp lib/shared/worhp.linux.x86.gnu.opt
 ```
 The path to the WORHP installation is the path under where the Worhp build has been installed.
-It should contain the directories include/worhp with the WORHP header files and the directory lib with the WORHP libraries.
+It should contain the directories `include/worhp` with the WORHP header files and the directory `lib` with the WORHP libraries.
 
 #### k) to use FilterSQP as NLP solver
 
@@ -461,17 +455,17 @@ Make sure to replace the paths with your installation location.
 
 #### m) to use bliss
 
+For each used operation system and architecture:
 ```
 ln -s <path to bliss *.hh files> <path to SCIP>/lib/include/bliss
 ln -s <file libbliss.[...].a> <path to SCIP>/lib/static/libbliss.$(OSTYPE).$(ARCH).$(COMP).a
 ```
-for each operation system and architecture to use
+For example:
 ```
 cd scip
-ln -s ../bliss lib/include/bliss
-ln -s ../bliss/libbliss.a lib.static/libbliss.linux.x86_64.gnu.a
+ln -s /bliss lib/include/bliss
+ln -s /bliss/libbliss.a lib.static/libbliss.linux.x86_64.gnu.a
 ```
-Make sure to replace the paths with your installation location.
 
 ### 4. Run SCIP
 
@@ -482,9 +476,10 @@ To run SCIP enter `bin/scip.$(OSTYPE).$(ARCH).$(COMP).$(OPT).$(LPS)`
 
 To generate the documentation, you need to have doxygen installed, and enter `make doc`.
 
-### 6. Check Code with lint
+### 6. Check Code with (pc)lint
 
 To check the code with lint, you need to have flexelint installed, and enter `make lint`.
+If you have pclint installed, enter `make pclint`.
 
 ### 7. Run a short test
 
@@ -494,30 +489,30 @@ If you use `LPS=none`, many instances will fail or take ages to be solved.
 
 Further targets
 ---------------
-The \SCIP makefile supports several targets (used via `make ... "target"`):
+The SCIP makefile supports several targets (used via `make ... "target"`):
 
 | target | description|
 |--|--|
-| `all`    | (or no target) Build \SCIP library and binary.                           |
-| `links`  | Reconfigures the links in the "lib" directory.                           |
-| `doc`    | Creates documentation in the "doc" directory.                            |
+| `all`    | (or no target) Build SCIP library and binary.                            |
+| `links`  | Reconfigures the links in the `lib` directory.                           |
+| `doc`    | Creates documentation in the `doc` directory.                            |
 | `clean`  | Removes all object files.                                                |
-| `depend` | Updates dependencies files. This is only needed if you add checks for preprocessor-defines `WITH_*` or NPARASCIP in source files. |
-| `check`  | or `test` Runs the check script.                                         |
+| `depend` | Updates dependencies files. This is only needed if you add checks for preprocessor-defines `WITH_*` in source files. |
+| `check`  | or `test`. Runs the check script.                                         |
 | `lint`   | Statically checks the code via flexelint. The call produces the file `lint.out` which contains all the detected warnings. |
 | `tags`   | Generates tags which can be used in the editor **emacs** and **xemacs**. |
 
-The \SCIP makefiles are structured as follows.
+The SCIP makefiles are structured as follows.
 
-- `Makefile` This is the basic makefile in the \SCIP root directory. It loads
+- `Makefile` This is the basic makefile in the SCIP root directory. It loads
   additional makefile information depending on the parameters set.
 - `make/make.project` This file contains definitions that are useful for all codes
-  that use \SCIP, for instance, the example.
+  that use SCIP, for instance, the examples.
 - `make.\<sys\>.\<machine\>.\<compiler\>.\<dbg|opt|prf|opt-gccold\>` These file contain system/compiler specific
   definitions. If you have an unsupported compiler, you can copy one of these and modify it
   accordingly.
 
-If your platform or compiler is not supported by \SCIP you might try and copy one of the existing
+If your platform or compiler is not supported by SCIP you might try and copy one of the existing
 makefiles in the `make` directory and modify it. If you succeed, we are always
 interested in including more Makefiles into the system.
 
@@ -774,7 +769,7 @@ You have to compile with `READ=read`.
 ### Problems with Clp
 
 In some situations, it may be necessary to adjust the flags for linking against Clp.
-SCIP's Makefile tries to find the file `clp_addlibs.txt`, which specifies the needed libraries.
+SCIP's makefile tries to find the file `clp_addlibs.txt`, which specifies the needed libraries.
 The first thing you should check is whether `clp_addlibs.txt` is present at in path `libclp.*/share/coin/doc/Clp/` (you may have to correct this path for some Clp versions).
 If this file is not present in your Clp version, SCIP tries to guess the paths and libraries: it assumes that Blas and Lapack are installed as system libraries (`libblas.a`, `liblapack.a`) and are not build into the CoinUtils library.
 If that is different in your build of Clp, you may have to remove `$(LINKCXX_l)lapack$(LINKLIBSUFFIX)` from the `LPSLDFLAGS` in `Makefile` or `make.project`.
