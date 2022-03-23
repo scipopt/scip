@@ -221,7 +221,7 @@ void nautyhook(
 
    assert( p != NULL );
 
-   /* make sure we do not generate more that maxgenerators many permutations */
+   /* make sure we do not generate more than maxgenerators many permutations */
    if ( data_.maxgenerators != 0 && data_.nperms >= data_.maxgenerators )
    {
       /* request a kill from nauty */
