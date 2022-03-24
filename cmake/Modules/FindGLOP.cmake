@@ -22,7 +22,11 @@ find_library(GLOG_LIBRARY
     HINTS ${GLOP_DIR} $ENV{GLOP_DIR}
     PATH_SUFFIXES lib)
 
-set(GLOP_LIBRARIES ${GLOP_LIBRARY} ${GLOG_LIBRARY})
+if(GLOG_LIBRARY)
+    set(GLOP_LIBRARIES ${GLOP_LIBRARY} ${GLOG_LIBRARY})
+else()
+    set(GLOP_LIBRARIES ${GLOP_LIBRARY})
+endif()
 
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(GLOP DEFAULT_MSG GLOP_INCLUDE_DIRS GLOP_LIBRARIES)
