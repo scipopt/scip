@@ -131,14 +131,22 @@ struct SCIP_LPi
  * LP Interface Methods
  */
 
-static char glopname[128];
+char* initGlopName( );
+
+static char* glopname = initGlopName( );
+
+char* initGlopName( )
+{
+   glopname = new char[100];
+   (void) snprintf(glopname, 100, "Glop %d.%d", operations_research::OrToolsMajorVersion(), operations_research::OrToolsMinorVersion());
+   return glopname;
+}
 
 /** gets name and version of LP solver */
 const char* SCIPlpiGetSolverName(
    void
    )
 {
-   (void) snprintf(glopname, 100, "Glop %d.%d", operations_research::OrToolsMajorVersion(), operations_research::OrToolsMinorVersion());
    return glopname;
 }
 
