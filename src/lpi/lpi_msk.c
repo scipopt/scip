@@ -732,7 +732,14 @@ SCIP_RETCODE setbase(
  * Miscellaneous Methods
  */
 
-static char mskname[100];
+#define STR_HELPER(x) #x
+#define STR(x) STR_HELPER(x)
+
+#if MSK_VERSION_MAJOR < 9
+   #define mskname "MOSEK " STR(MSK_VERSION_MAJOR) "." STR(MSK_VERSION_MINOR) "." STR(MSK_VERSION_BUILD) "." STR(MSK_VERSION_REVISION)
+#else
+   #define mskname "MOSEK " STR(MSK_VERSION_MAJOR) "." STR(MSK_VERSION_MINOR) "." STR(MSK_VERSION_REVISION)
+#endif
 
 /**@name Miscellaneous Methods */
 /**@{ */
@@ -742,11 +749,6 @@ const char* SCIPlpiGetSolverName(
    void
    )
 {
-#if MSK_VERSION_MAJOR < 9
-   (void) snprintf(mskname, 100, "MOSEK %d.%d.%d.%d", MSK_VERSION_MAJOR, MSK_VERSION_MINOR, MSK_VERSION_BUILD, MSK_VERSION_REVISION);
-#else
-   (void) snprintf(mskname, 100, "MOSEK %d.%d.%d", MSK_VERSION_MAJOR, MSK_VERSION_MINOR, MSK_VERSION_REVISION);
-#endif
    return mskname;
 }
 
