@@ -59,6 +59,7 @@
 #include "scip/scip_cons.h"
 #include "scip/scip_general.h"
 #include "scip/scip_mem.h"
+#include "scip/scip_message.h"
 #include "scip/scip_numerics.h"
 #include "scip/scip_param.h"
 #include "scip/scip_prob.h"
