@@ -92,6 +92,9 @@ Interface changes
 ### New API functions
 ### Command line interface
 ### Interfaces to external software
+
+- Added compatibility with Mosek 10.0.0.12.
+
 ### Changed parameters
 ### New parameters
 ### Data structures
