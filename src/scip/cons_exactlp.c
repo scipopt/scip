@@ -2597,7 +2597,7 @@ void consdataUpdateActivities(
       }
    }
 
-   oldcontribution = -val * oldbound;
+   oldcontribution = -SCIPintervalNegateReal(val) * oldbound;
    newcontribution = val * newbound;
    hugevalnewcont = SCIPisHugeValue(scip, REALABS(newcontribution));
    finitenewbound = !SCIPisInfinity(scip, REALABS(newbound));
