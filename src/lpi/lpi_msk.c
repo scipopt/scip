@@ -2270,7 +2270,8 @@ SCIP_RETCODE SolveWSimplex(
    /* perform actual optimization */
    MOSEK_CALL( filterTRMrescode(lpi->messagehdlr, &lpi->termcode, MSK_optimize(lpi->task)) );
 
-   /* resolve with aggresive scaling if the maximal number of setbacks has been reached */
+#if MSK_VERSION_MAJOR < 10
+   /* resolve with aggressive scaling if the maximal number of setbacks has been reached */
    if( lpi->termcode == MSK_RES_TRM_MAX_NUM_SETBACKS )
    {
       int scaling;
@@ -2280,6 +2281,7 @@ SCIP_RETCODE SolveWSimplex(
       MOSEK_CALL( filterTRMrescode(lpi->messagehdlr, &lpi->termcode, MSK_optimize(lpi->task)) );
       MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_SCALING, scaling) );
    }
+#endif
 
 #if FORCE_MOSEK_SUMMARY
    if( lpi->optimizecount > WRITE_ABOVE )
@@ -2297,7 +2299,7 @@ SCIP_RETCODE SolveWSimplex(
    SCIP_CALL( scip_checkdata(lpi, "End optimize with simplex") );
 #endif
 
-   /* set paramaters to their original values */
+   /* set parameters to their original values */
    MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_PRESOLVE_USE, presolve) );
    MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_MAX_ITERATIONS, maxiter) );
 
@@ -3888,8 +3890,10 @@ SCIP_RETCODE convertstat_mosek2scip(
       case MSK_SK_UPR:
          stat[i] = (int)SCIP_BASESTAT_UPPER;
          break;
+#if MSK_VERSION_MAJOR < 10
       case MSK_SK_END:
          break;
+#endif
       default:
          SCIPABORT();
          return SCIP_INVALIDDATA; /*lint !e527*/
@@ -3957,7 +3961,9 @@ SCIP_RETCODE convertstat_mosek2scip_slack(
       case MSK_SK_LOW:
          stat[i] = (int)SCIP_BASESTAT_LOWER;
          break;
+#if MSK_VERSION_MAJOR < 10
       case MSK_SK_END:
+#endif
       default:
          SCIPABORT();
          return SCIP_INVALIDDATA; /*lint !e527*/
@@ -5071,8 +5077,10 @@ SCIP_RETCODE SCIPlpiGetIntpar(
          *ival = 0;
       else if( *ival == MSK_SCALING_FREE )
          *ival = 1;
+#if MSK_VERSION_MAJOR < 10
       else if( *ival == MSK_SCALING_AGGRESSIVE )
          *ival = 2;
+#endif
       else /* MSK_SCALING_MODERATE should not be used by the interface */
          return SCIP_PARAMETERWRONGVAL;
       break;
@@ -5143,12 +5151,17 @@ SCIP_RETCODE SCIPlpiSetIntpar(
    case SCIP_LPPAR_FASTMIP:                   /* fast mip setting of LP solver */
       return SCIP_PARAMETERUNKNOWN;
    case SCIP_LPPAR_SCALING:                   /* should LP solver use scaling? */
+#if MSK_VERSION_MAJOR < 10
       assert( ival >= 0 && ival <= 2 );
+#else
+      assert( ival >= 0 && ival <= 1 );
+#endif
       if( ival == 0 )
       {
          MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_SCALING, MSK_SCALING_NONE) );
          MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_INTPNT_SCALING, MSK_SCALING_NONE) );
       }
+#if MSK_VERSION_MAJOR < 10
       else if( ival == 1 )
       {
          MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_SCALING, MSK_SCALING_FREE) );
@@ -5159,6 +5172,13 @@ SCIP_RETCODE SCIPlpiSetIntpar(
          MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_SCALING, MSK_SCALING_AGGRESSIVE) );
          MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_INTPNT_SCALING, MSK_SCALING_AGGRESSIVE) );
       }
+#else
+      else
+      {
+         MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_SCALING, MSK_SCALING_FREE) );
+         MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_INTPNT_SCALING, MSK_SCALING_FREE) );
+      }
+#endif
 
       break;
    case SCIP_LPPAR_PRESOLVING:                /* should LP solver use presolving? */
