@@ -5494,6 +5494,7 @@ SCIP_Longint SCIPcertificatePrintActivityVarBoundEx(
       certificate->lastinfo->certificateindex = certificate->indexcounter - 1;
       RatSet(certificate->lastinfo->boundval, newbound);
    #endif
+   SCIPcertificateSetLastBoundIndex(scip, certificate, certificate->indexcounter - 1);
 
    return (certificate->indexcounter - 1);
 }
