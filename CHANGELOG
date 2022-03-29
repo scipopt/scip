@@ -31,6 +31,9 @@ Interface changes
 
 ### Command line interface
 
+- Added optional parameter -i when calling SCIP in AMPL-mode (-AMPL parameter).
+  If -i is specified, a SCIP shell is started where normally SCIPsolve() would be called.
+
 ### Interfaces to external software
 
 ### Changed parameters
