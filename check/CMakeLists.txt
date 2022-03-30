@@ -232,7 +232,7 @@ set(instances_consecSolve
   "instances/MINLP/meanvarxsc.lp\;14.3692321148754"
   "instances/SOS/sparse2.lp\;26.0"
   "instances/Cardinality/atm_5_25_1.cip\;+1.40606905557936e+05"
-  "instances/Stochastic/4node1.smps\;480.9"
+#  "instances/Stochastic/4node1.smps\;480.9"
   "instances/SAT/bart10.shuffled.cnf\;0"
   )
 
