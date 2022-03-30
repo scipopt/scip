@@ -51,6 +51,8 @@ Fixed bugs
 - fixed that recursive products in expressions were sometimes not flattened
 - fixed that expressions in original variables could not be simplified
 - fixed handling of objective limit with Mosek
+- made SCIPlpiGetSolverName()/SCIPlpiGetSolverDesc() thread-safe for LP Solvers (Cplex,Gurobi,Glop,Mosek,SoPlex,Xpress)
+- made SYMsymmetryGetName() thread-safe for Bliss
 
 Miscellaneous
 -------------
