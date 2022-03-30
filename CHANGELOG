@@ -82,6 +82,7 @@ Features
 --------
 
 - clique lifting in cons_setppc (parameter enablecliquelifting) is only disabled if it has been applied
+- avoid warning if Mosek has reached/exceeded the objective limit
 - improved curvature check for quadratic expressions when extended formulations are disabled
 
 Performance improvements
