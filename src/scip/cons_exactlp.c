@@ -407,7 +407,6 @@ static CERTIFICATE_CONS GetCertificateCons(SCIP* scip, SCIP_CONSDATA* consdata)
       ret.rhsreal = ret.rhs == NULL ? SCIPinfinity(scip) : RatRoundReal(ret.rhs, SCIP_R_ROUND_UPWARDS);
       ret.valsreal = consdata->rowexact->valsinterval;
       ret.constantEx = consdata->rowexact->constant;
-      ret.rhsreal = ret.rhs == NULL ? SCIPinfinity(scip) : RatRoundReal(ret.rhs, SCIP_R_ROUND_UPWARDS);
       SCIPintervalSetRational(&ret.constant, ret.constantEx);
    }
    else
@@ -9794,7 +9793,7 @@ SCIP_RETCODE tightenVarBounds(
 
 static SCIP_Bool assertActivities(SCIP* scip, SCIP_CONSDATA* consdata) {
    consdataRecomputeMaxactivityEx(scip, consdata);
-   assert(consdata->computeactivities || consdata->minactivityneginf > 0 || consdata->minactivityneghuge > 0||!consdata->validactivities ||RatIsLEReal(consdata->maxactivityEx, consdata->maxactivity));
+   assert(consdata->computeactivities || consdata->maxactivityposinf > 0 || consdata->maxactivityposhuge > 0||!consdata->validactivities ||RatIsLEReal(consdata->maxactivityEx, consdata->maxactivity));
    consdataRecomputeMinactivityEx(scip, consdata);
    assert(consdata->computeactivities|| consdata->minactivityneginf > 0 || consdata->minactivityneghuge > 0|| !consdata->validactivities ||RatIsGEReal(consdata->minactivityEx, consdata->minactivity));
    return true;
