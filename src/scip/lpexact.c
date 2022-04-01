@@ -3235,7 +3235,9 @@ SCIP_RETCODE SCIProwExactCreate(
    (*row)->delaysort = FALSE;
    (*row)->nlocks = 0;
    (*row)->fprelaxable = isfprelaxable;
-
+   (*row)->rhsreal = RatRoundReal((*row)->rhs, SCIP_R_ROUND_UPWARDS);
+   (*row)->lhsreal = RatRoundReal((*row)->lhs, SCIP_R_ROUND_DOWNWARDS);
+   SCIPintervalSet(&(*row)->constantreal, 0);
    /* capture the row */
    SCIProwExactCapture(*row);
 
@@ -5333,6 +5335,7 @@ SCIP_RETCODE SCIProwExactChgConstant(
       }
 
       RatSet(row->constant, constant);
+      SCIPintervalSetRational(&row->constantreal, constant);
    }
 
    return SCIP_OKAY;
@@ -8366,6 +8369,7 @@ SCIP_RETCODE SCIProwExactChgLhs(
    if( !RatIsEqual(rowexact->lhs, lhs) )
    {
       RatSet(rowexact->lhs, lhs);
+      rowexact->lhsreal = RatRoundReal(rowexact->lhs, SCIP_R_ROUND_DOWNWARDS);
       SCIP_CALL( rowExactSideChanged(rowexact, set, lpexact, SCIP_SIDETYPE_LEFT) );
    }
 
@@ -8388,6 +8392,7 @@ SCIP_RETCODE SCIProwExactChgRhs(
    if( !RatIsEqual(rowexact->rhs, rhs) )
    {
       RatSet(rowexact->rhs, rhs);
+      rowexact->rhsreal = RatRoundReal(rowexact->rhs, SCIP_R_ROUND_UPWARDS);
       SCIP_CALL( rowExactSideChanged(rowexact, set, lpexact, SCIP_SIDETYPE_RIGHT) );
    }
 

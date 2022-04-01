@@ -178,6 +178,9 @@ struct SCIP_RowExact
    SCIP_Rational*        constant;           /**< constant shift c in row lhs <= ax + c <= rhs */
    SCIP_Rational*        lhs;                /**< left hand side of row */
    SCIP_Rational*        rhs;                /**< right hand side of row */
+   SCIP_Real             lhsreal;            /**< fp relaxation of lhsreal */
+   SCIP_Real             rhsreal;            /**< fp relaxation of rhsreal */
+   SCIP_INTERVAL         constantreal;       /**< fp approximation of constant */
    SCIP_Rational*        flushedlhs;         /**< left hand side minus constant of row already flushed to the LP solver */
    SCIP_Rational*        flushedrhs;         /**< right hand side minus constant of row already flushed to the LP solver */
    SCIP_Rational*        objprod;            /**< scalar product of row vector with objective function */

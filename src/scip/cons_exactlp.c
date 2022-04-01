@@ -394,7 +394,8 @@ struct CertificateCons {
 
 typedef struct CertificateCons CERTIFICATE_CONS;
 
-static CERTIFICATE_CONS GetCertificateCons(SCIP* scip, SCIP_CONSDATA* consdata)
+static
+CERTIFICATE_CONS GetCertificateCons(SCIP* scip, SCIP_CONSDATA* consdata)
 {
    struct CertificateCons ret;
    if (consdata->rowexact != NULL)
@@ -403,11 +404,11 @@ static CERTIFICATE_CONS GetCertificateCons(SCIP* scip, SCIP_CONSDATA* consdata)
       ret.rhs = consdata->rowexact->rhs;
       ret.vals = consdata->rowexact->vals;
       ret.nvars = consdata->rowexact->len;
-      ret.lhsreal = ret.lhs == NULL ? -SCIPinfinity(scip) : RatRoundReal(ret.lhs, SCIP_R_ROUND_DOWNWARDS);
-      ret.rhsreal = ret.rhs == NULL ? SCIPinfinity(scip) : RatRoundReal(ret.rhs, SCIP_R_ROUND_UPWARDS);
+      ret.lhsreal = ret.lhs == NULL ? -SCIPinfinity(scip) : consdata->rowexact->lhsreal;
+      ret.rhsreal = ret.rhs == NULL ? SCIPinfinity(scip) : consdata->rowexact->rhsreal;
       ret.valsreal = consdata->rowexact->valsinterval;
       ret.constantEx = consdata->rowexact->constant;
-      SCIPintervalSetRational(&ret.constant, ret.constantEx);
+      ret.constant = consdata->rowexact->constantreal;
    }
    else
    {
@@ -424,7 +425,8 @@ static CERTIFICATE_CONS GetCertificateCons(SCIP* scip, SCIP_CONSDATA* consdata)
    return ret;
 }
 
-static SCIP_VAR* GetCertificateVar(SCIP_CONSDATA* consdata, int index)
+static inline
+SCIP_VAR* GetCertificateVar(SCIP_CONSDATA* consdata, int index)
 {
    SCIP_VAR* ret;
    assert(index >= 0);
