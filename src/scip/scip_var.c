@@ -6268,14 +6268,6 @@ SCIP_RETCODE SCIPinferVarLbCons(
    SCIP_Real ub;
 
    assert(infeasible != NULL);
-   if (scip->set->exact_enabled) {
-      SCIP_Rational* newboundrat;
-      SCIP_CALL(RatCreateBuffer(SCIPbuffer(scip), &newboundrat));
-      RatSetReal(newboundrat, newbound);
-      SCIP_CALL(SCIPinferVarLbConsExact(scip, var, newboundrat, infercons, inferinfo, force, infeasible, tightened));
-      RatFreeBuffer(SCIPbuffer(scip), &newboundrat);
-      return SCIP_OKAY;
-   }
    SCIP_CALL( SCIPcheckStage(scip, "SCIPinferVarLbCons", FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    *infeasible = FALSE;
@@ -6299,7 +6291,7 @@ SCIP_RETCODE SCIPinferVarLbCons(
    ub = SCIPvarGetUbLocal(var);
    assert(SCIPsetIsLE(scip->set, lb, ub));
 
-   if( SCIPsetIsFeasGT(scip->set, newbound, ub) )
+   if( SCIPsetIsFeasGT(scip->set, newbound, ub) || (scip->set->exact_enabled && ub < newbound))
    {
       *infeasible = TRUE;
       return SCIP_OKAY;
@@ -6390,14 +6382,6 @@ SCIP_RETCODE SCIPinferVarUbCons(
 
    assert(infeasible != NULL);
 
-   if (scip->set->exact_enabled) {
-      SCIP_Rational* newboundrat;
-      SCIP_CALL(RatCreateBuffer(SCIPbuffer(scip), &newboundrat));
-      RatSetReal(newboundrat, newbound);
-      SCIP_CALL(SCIPinferVarUbConsExact(scip, var, newboundrat, infercons, inferinfo, force, infeasible, tightened));
-      RatFreeBuffer(SCIPbuffer(scip), &newboundrat);
-      return SCIP_OKAY;
-   }
    SCIP_CALL( SCIPcheckStage(scip, "SCIPinferVarUbCons", FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    *infeasible = FALSE;
@@ -6421,7 +6405,7 @@ SCIP_RETCODE SCIPinferVarUbCons(
    ub = SCIPvarGetUbLocal(var);
    assert(SCIPsetIsLE(scip->set, lb, ub));
 
-   if( SCIPsetIsFeasLT(scip->set, newbound, lb) )
+   if( SCIPsetIsFeasLT(scip->set, newbound, lb) || (scip->set->exact_enabled && lb > newbound) )
    {
       *infeasible = TRUE;
       return SCIP_OKAY;

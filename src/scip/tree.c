@@ -1860,6 +1860,13 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
       oldlb = SCIPvarGetLbLocal(var);
       oldub = SCIPvarGetUbLocal(var);
    }
+   if (set->exact_enabled && useglobal && SCIPsetCertificateEnabled(set))
+   {  SCIP_Rational* newboundex;
+      SCIP_CALL(RatCreateBuffer(SCIPbuffer(set->scip), &newboundex));
+      RatSetReal(newboundex, newbound);
+      SCIPcertificatePrintGlobalBound(set->scip, SCIPgetCertificate(set->scip), var, boundtype, newboundex, SCIPcertificateGetCurrentIndex(SCIPgetCertificate(set->scip)) - 1);
+      RatFreeBuffer(SCIPbuffer(set->scip), &newboundex);
+   }
 
    assert(node != NULL);
    assert((SCIP_NODETYPE)node->nodetype == SCIP_NODETYPE_FOCUSNODE
