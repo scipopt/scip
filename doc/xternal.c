@@ -114,8 +114,8 @@
 
 /** @page NLPISOLVERS Available implementations of the NLP solver interface
  *
- * SCIP implements the NLP solver interface for the solvers <a href="https://projects.coin-or.org/Ipopt">IPOPT</a>, <a
- * href="https://worhp.de/">WORHP</a>, and <a href=" http://www.mcs.anl.gov/~leyffer/solvers.html">FilterSQP</a>. In
+ * SCIP implements the NLP solver interface for the solvers <a href="https://github.com/coin-or/Ipopt">IPOPT</a>, <a
+ * href="https://worhp.de/">WORHP</a>, and <a href="http://www.mcs.anl.gov/~leyffer/solvers.html">FilterSQP</a>. In
  * contrast to the implementations of the LP solver interface, SCIP can be compiled with multiple NLP solvers and selects
  * the solver with the highest priority at the beginning of the solving process.
  * Currently, the priorities are, in descending order: Ipopt, WORHP/IP, FilterSQP, WORHP/SQP.
@@ -140,7 +140,7 @@
  * @section NLPISOLVERS_WORHP WORHP
  *
  * <b>WORHP</b> implements a sequential quadratic programming method and a penalty-interior point algorithm.  It is
- * developed at the <a href="http://www.uni-bremen.de/en.html">University of Bremen</a> and is free for academic
+ * developed at the <a href="https://www.uni-bremen.de/en/">University of Bremen</a> and is free for academic
  * purposes.
  *
  * @section NLPISOLVERS_FILTERSQP FilterSQP
@@ -479,7 +479,7 @@
  *          \f}
  *          where \f$\mathbb{K}\f$ is either \f$\mathbb{Z}\f$ or \f$\mathbb{R}\f$.
  *    </td>
- *    <td colspan="3"> see the <a href="http://polyscipopt.org/">PolySCIP web page</a></td>
+ *    <td colspan="3"> see the <a href="http://polyscip.zib.de/">PolySCIP web page</a></td>
  * </tr>
  * <tr>
  *    <td>Mixed-integer semidefinite program (MISDP)</td>
@@ -8175,8 +8175,8 @@
   *
   * Contributions to these projects are very welcome.
   *
-  * There are also several third-party python interfaces to the \SCIP Optimization Suite
-  * - <a href="http://numberjack.ucc.ie/">NUMBERJACK</a> is a constraint programming platform implemented in python.
+  * There are also several third-party python interfaces to the \SCIP Optimization Suite:
+  * - <a href="https://github.com/eomahony/Numberjack">NUMBERJACK</a> is a constraint programming platform implemented in python.
   *   It supports a variety of different solvers, one of them being the \SCIP Optimization Suite .
   * - <a href="http://code.google.com/p/python-zibopt/">python-zibopt</a> was developed
   *   by Ryan J. O'Neil and is a python extension of the \SCIP Optimization Suite (not maintained anymore).

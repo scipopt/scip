@@ -341,8 +341,6 @@ SCIP_Bool bottleneckIsEqualityDominated(
 }
 
 
-
-
 /**@} */
 
 /**@name Interface methods
@@ -867,3 +865,5 @@ void extreduce_bottleneckCheckNonLeaves(
       }
    }
 }
+
+/**@} */
