@@ -136,3 +136,5 @@ SCIP_Bool extreduce_extCompFullIsPromising(
 
    return FALSE;
 }
+
+/**@} */

@@ -339,3 +339,5 @@ SCIP_RETCODE extreduce_spgCheck3NodeSimple(
 
    return SCIP_OKAY;
 }
+
+/**@} */
