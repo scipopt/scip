@@ -302,9 +302,7 @@
  * or the CMake cross platform build system generator. For new users, we strongly
  * recommend to use CMake, if available on their targeted platform.
  *
- * Please note that there are differences between both systems, most notably, the generated
- * library libscip will not be compatible between the versions. For more information, we
- * refer to the INSTALL.md file of the SCIP source code distribution.
+ * Be aware that generated libraries and binaries of both systems might be different and incompatible.
  *
  * - @subpage md_INSTALL  "Installation instructions"
  * - @subpage LPI         "Available implementations of the LP solver interface"
