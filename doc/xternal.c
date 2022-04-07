@@ -290,7 +290,7 @@
  * There are two options to get a running SCIP on your system.
  * You can either use one of the installers or you can compile it yourself.
  *
- * Which one you choose depends on you use case and your level of expertise.
+ * Which one you choose depends on your use case and your level of expertise.
  * If you just want to use SCIP as a black box solver you should use an installer with a precompiled binary from the <a href="http://scipopt.org/#download">download section</a>.
  * This is highly recommended for new users.
  * If you are just curious and want to try it out you can use the <a href="http://www.pokutta.com/blog/pages/scip/scip-teaching.html"> dockerized SCIP container</a>.
