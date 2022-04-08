@@ -162,20 +162,20 @@
 
 /**@page GETTINGSTARTED Getting started
  *
- * @subsection GETTINGSTARTED_BLACKBOX Use SCIP to solve a problem
+ * @section GETTINGSTARTED_BLACKBOX Use SCIP to solve a problem
  *
- * @subsubsection GETTINGSTARTED_BLACKBOX_WHY Why SCIP?
+ * @subsection GETTINGSTARTED_BLACKBOX_WHY Why SCIP?
  *
  * Alex lectures at a university and wants their students to get in touch with solving constraint integer programs (CIPs).
  * They would like to use SCIP for this purpose because its \ref LICENSE "license" allows free use for academic, non-commercial purposes.
  * Also, their mentor told them that there are various \ref INTERFACES "interfaces" to SCIP.
  *
- * @subsubsection GETTINGSTARTED_BLACKBOX_PROBLEMS What Kinds Of Problems?
+ * @subsection GETTINGSTARTED_BLACKBOX_PROBLEMS What Kinds Of Problems?
  *
  * As a first step they check \ref WHATPROBLEMS "what types of problems" \SCIP can solve and
  * \ref FILEREADERS "what are readable formats", and are happy that they find CIPs to be among them.
  *
- * @subsubsection GETTINGSTARTED_BLACKBOX_INSTALL Setup
+ * @subsection GETTINGSTARTED_BLACKBOX_INSTALL Setup
  *
  * Alex now needs to \ref INSTALL "install SCIP".
  * They work on a recent computer with a windows system and already have the <a href="https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads">Visual C++ Redistributable Packages</a> and <a href="https://github.com/oneapi-src/oneTBB">TBB</a> installed.
@@ -183,7 +183,7 @@
  * Having these prerequisites in place, Alex downloads the 64-bit windows exectuable from the <a href="https://scipopt.org/index.php#download">download page</a> and installs it without a problem.
  * They also read about the <a href="http://www.pokutta.com/blog/pages/scip/scip-teaching.html"> dockerized SCIP container</a> which they want to recommend to their students, in case they are unable to install SCIP on their own machines.
  *
- * @subsubsection GETTINGSTARTED_BLACKBOX_SOLVE Solve A First Problem
+ * @subsection GETTINGSTARTED_BLACKBOX_SOLVE Solve A First Problem
  *
  * To test their installation and get a first feeling for SCIP, Alex follows the steps descriped in the \ref QUICKSTART "quickstart" section to solve a first simple lp problem.
  *
@@ -194,7 +194,7 @@
  * and follows the \ref SHELL_AFTERINSTALL "interactive shell tutorial".
  * There, they already learn quite a lot of things about the solving process and how to work with the interactive shell.
  *
- * @subsubsection GETTINGSTARTED_BLACKBOX_HELP Getting Help
+ * @subsection GETTINGSTARTED_BLACKBOX_HELP Getting Help
  *
  * Feeling happy about having already solved some instances and having worked in interactive mode, Alex is curious on what more options SCIP has.
  * They type `scip -h` to find out.
@@ -203,7 +203,7 @@
  * There are some commands that do not yet make a lot of sense to them, but they don't worry about it for now.
  * They will familiarize themselves with it over time and with experience.
  *
- * @subsection GETTINGSTARTED_DEVELOP Develop A Custom Plugin
+ * @section GETTINGSTARTED_DEVELOP Develop A Custom Plugin
  *
  * Andrea is a researcher in Alex's group and is working on problems that have a very special structure that they hope to be able to exploit in the solving process.
  *
@@ -211,7 +211,7 @@
  * They explained that SCIP is plugin-based, that is, different components (plugins) are implemented using a generic interface and it is very easy to write your own plugins, like constraint handlers, heuristics etc.
  * So Andrea decides to give it a go and dive into SCIP.
  *
- * @subsubsection GETTINGSTARTED_DEVELOP_PREREQUISITES Prerequisites And Setup
+ * @subsection GETTINGSTARTED_DEVELOP_PREREQUISITES Prerequisites And Setup
  *
  * After some time of using SCIP, they feel confident enough to dig into the source code and decide to write their own plugin.
  * Andrea likes to use their linux machine for developing code, because in their experience compilation is easiest there.
@@ -219,7 +219,7 @@
  * They start by downloading the latest <a href="http://scipopt.org/#download">source code tarball</a>,
  * unpacking it and compiling via \ref CMAKE "cmake", typing `mkdir build; cd build; cmake ..; make`.
  *
- * @subsubsection GETTINGSTARTED_DEVELOP_HELP Getting help
+ * @subsection GETTINGSTARTED_DEVELOP_HELP Getting help
  *
  * Before writing any code, they quickly scan over the contents of the \ref PROGRAMMING "Programming with SCIP" page,
  * so that they know what some of the pitfalls, best practices and mechanisms are.
@@ -227,7 +227,7 @@
  *
  * Whenever they get stuck in the code, they make use of the extensive documentation to \ref DOC "search for interface methods".
  *
- * @subsubsection GETTINGSTARTED_DEVELOP_EXAMPLE Writing An Example
+ * @subsection GETTINGSTARTED_DEVELOP_EXAMPLE Writing An Example
  *
  * Andrea is now ready to write their very first example, they create a new folder `MinEx` under `examples` and puts two files in there:
  * `CMakeLists.txt`:
@@ -272,13 +272,13 @@
  *
  * After having successfully written this minimal example, Andrea follows the instructions to \ref START "start a new project" to start their actual project and extends this most basic code.
  *
- * @subsubsection GETTINGSTARTED_DEVELOP_CONSTRAINTHANDLER Writing A Plugin
+ * @subsection GETTINGSTARTED_DEVELOP_CONSTRAINTHANDLER Writing A Plugin
  *
  * Andrea now needs a custom constraint handler in their project, for that they will write a custom plugin.
  * They look up the instructions in the \ref HOWTOADD "How to add..." page and are
  * are very happy to find \ref CONS "a page with a detailed description" what they have to do.
  *
- * @subsubsection GETTINGSTARTED_DEVELOP_REOPTMIZATION Using Functionality In A Plugin
+ * @subsection GETTINGSTARTED_DEVELOP_REOPTMIZATION Using Functionality In A Plugin
  *
  * After implementing their own constraint handler Andrea realizes that they need to use repotimization in their project.
  * They look up the \ref HOWTOUSESECTION "How to use..." section and find some more information about \ref REOPT "how to use reoptimization".
