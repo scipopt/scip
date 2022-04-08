@@ -172,7 +172,7 @@
  *
  * @subsubsection GETTINGSTARTED_BLACKBOX_PROBLEMS What Kinds Of Problems?
  *
- * As a first step they check \ref WHATPROBLEMS "what types of problems" scip can solve and
+ * As a first step they check \ref WHATPROBLEMS "what types of problems" \SCIP can solve and
  * \ref FILEREADERS "what are readable formats", and are happy that they find CIPs to be among them.
  *
  * @subsubsection GETTINGSTARTED_BLACKBOX_INSTALL Setup
