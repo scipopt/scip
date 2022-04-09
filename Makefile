@@ -386,6 +386,8 @@ AMPLSRC	:=	$(shell cat $(AMPLDEP))
 THREADSAFEDEP	:=	$(SRCDIR)/depend.threadsafe
 THREADSAFESRC	:=	$(shell cat $(THREADSAFEDEP))
 
+LAPACKSRC	:=	$(SRCDIR)/scip/lapack_calls.c
+
 ifeq ($(ZIMPL),true)
 ifeq ($(GMP),false)
 $(error ZIMPL requires the GMP to be linked. Use either ZIMPL=false or GMP=true.)
@@ -749,6 +751,7 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/implics.o \
 			scip/interrupt.o \
 			scip/intervalarith.o \
+			scip/lapack_calls.o \
 			scip/lp.o \
 			scip/matrix.o \
 			scip/mem.o \
@@ -1373,6 +1376,9 @@ endif
 ifneq ($(AMPL),$(LAST_AMPL))
 		@-touch $(AMPLSRC)
 endif
+ifneq ($(IPOPT),$(LAST_IPOPT))
+		@-touch -c $(LAPACKSRC)
+endif
 ifneq ($(SYM),$(LAST_SYM))
 		@-touch $(SYMSRC)
 endif
@@ -1421,6 +1427,9 @@ endif
 ifneq ($(PAPILO),$(LAST_PAPILO))
 		@-touch -c $(ALLSRC)
 endif
+ifneq ($(LAPACK),$(LAST_LAPACK))
+		@-touch -c $(LAPACKSRC)
+endif
 		@-rm -f $(LASTSETTINGS)
 		@echo "LAST_BUILDFLAGS=\"$(BUILDFLAGS)\"" >> $(LASTSETTINGS)
 		@echo "LAST_SCIPGITHASH=$(SCIPGITHASH)" >> $(LASTSETTINGS)
@@ -1447,6 +1456,7 @@ endif
 		@echo "LAST_TPI=$(TPI)" >> $(LASTSETTINGS)
 		@echo "LAST_DEBUGSOL=$(DEBUGSOL)" >> $(LASTSETTINGS)
 		@echo "LAST_PAPILO=$(PAPILO)" >> $(LASTSETTINGS)
+		@echo "LAST_LAPACK=$(LAPACK)" >> $(LASTSETTINGS)
 
 $(LINKSMARKERFILE):
 		@$(MAKE) links
