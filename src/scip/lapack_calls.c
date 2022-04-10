@@ -44,17 +44,6 @@
 /* we use 64 bit integers as the base type */
 typedef long long int LAPACKINTTYPE;
 
-/** Checks if a BMSallocMemory-call was successfull, otherwise returns SCIP_NOMEMORY */
-#define BMS_CALL(x)   do                                                                                      \
-                      {                                                                                       \
-                          if( NULL == (x) )                                                                   \
-                          {                                                                                   \
-                             SCIPerrorMessage("No memory in function call\n");                                \
-                             return SCIP_NOMEMORY;                                                            \
-                          }                                                                                   \
-                      }                                                                                       \
-                      while( FALSE )
-
 /** transforms a SCIP_Real (that should be integer, but might be off by some numerical error) to an integer by adding 0.5 and rounding down */
 #define SCIP_RealTOINT(x) ((LAPACKINTTYPE) (x + 0.5))
 
@@ -80,6 +69,15 @@ void F77_FUNC(dsyevr, DSYEVR)(char* JOBZ, char* RANGE, char* UPLO,
    SCIP_Real* ABSTOL, LAPACKINTTYPE* M, SCIP_Real* W, SCIP_Real* Z,
    LAPACKINTTYPE* LDZ, LAPACKINTTYPE* ISUPPZ, SCIP_Real* WORK,
    LAPACKINTTYPE* LWORK, LAPACKINTTYPE* IWORK, LAPACKINTTYPE* LIWORK,
+   LAPACKINTTYPE* INFO);
+
+/** LAPACK Fortran subroutine DGETRF */
+void F77_FUNC(dgetrf, DGETRF)(LAPACKINTTYPE* M, LAPACKINTTYPE* N, SCIP_Real* A,
+   LAPACKINTTYPE* LDA, LAPACKINTTYPE* IPIV, LAPACKINTTYPE* INFO);
+
+/** LAPACK Fortran subroutine DGETRS */
+void F77_FUNC(dgetrs, DGETRS)(char* TRANS, LAPACKINTTYPE* N, LAPACKINTTYPE* NRHS,
+   SCIP_Real* A, LAPACKINTTYPE* LDA, LAPACKINTTYPE* IPIV, SCIP_Real* B, LAPACKINTTYPE* LDB,
    LAPACKINTTYPE* INFO);
 
 /**@} */
@@ -220,13 +218,13 @@ SCIP_RETCODE lapackComputeEigenvalues(
    LWORK = SCIP_RealTOINT(WSIZE);
    LIWORK = WISIZE;
 
-   BMS_CALL( BMSallocBufferMemoryArray(bufmem, &WORK, (int) LWORK) );
-   BMS_CALL( BMSallocBufferMemoryArray(bufmem, &IWORK, (int) LIWORK) );
-   BMS_CALL( BMSallocBufferMemoryArray(bufmem, &WTMP, (int) N) );
-   BMS_CALL( BMSallocBufferMemoryArray(bufmem, &ISUPPZ, 2) ); /*lint !e506*/
+   SCIP_ALLOC( BMSallocBufferMemoryArray(bufmem, &WORK, (int) LWORK) );
+   SCIP_ALLOC( BMSallocBufferMemoryArray(bufmem, &IWORK, (int) LIWORK) );
+   SCIP_ALLOC( BMSallocBufferMemoryArray(bufmem, &WTMP, (int) N) );
+   SCIP_ALLOC( BMSallocBufferMemoryArray(bufmem, &ISUPPZ, 2) ); /*lint !e506*/
    if ( geteigenvectors )
    {
-      BMS_CALL( BMSallocBufferMemoryArray(bufmem, &Z, n * n) );
+      SCIP_ALLOC( BMSallocBufferMemoryArray(bufmem, &Z, n * n) );
    }
 
    /* call the function */
@@ -305,6 +303,89 @@ SCIP_RETCODE SCIPlapackComputeEigenvalues(
 #else
       SCIPerrorMessage("Lapack not available.\n");
       return SCIP_PLUGINNOTFOUND;
+#endif
+   }
+
+   return SCIP_OKAY;
+}
+
+/** solves a linear problem of the form Ax = b for a regular matrix A
+ *
+ *  Calls Lapacks DGETRF routine to calculate a LU factorization and uses this factorization to solve
+ *  the linear problem Ax = b.
+ *
+ *  Code taken from nlpi_ipopt.cpp
+ */
+SCIP_RETCODE SCIPlapackSolveLinearEquations(
+   BMS_BUFMEM*           bufmem,             /**< buffer memory */
+   int                   n,                  /**< dimension */
+   SCIP_Real*            A,                  /**< matrix data on input (size N*N); filled column-wise */
+   SCIP_Real*            b,                  /**< right hand side vector (size N) */
+   SCIP_Real*            x,                  /**< buffer to store solution (size N) */
+   SCIP_Bool*            success             /**< pointer to store if the solving routine was successful */
+   )
+{
+   assert( n > 0 );
+   assert( A != NULL );
+   assert( b != NULL );
+   assert( x != NULL );
+   assert( success != NULL );
+
+   /* if possible, use IPOPT */
+   if ( SCIPisIpoptAvailableIpopt() )
+   {
+      SCIP_CALL( SCIPsolveLinearEquationsIpopt(n, A, b, x, success) );
+   }
+   else
+   {
+#ifdef SCIP_HAVE_LAPACK
+      LAPACKINTTYPE INFO;
+      LAPACKINTTYPE N;
+      LAPACKINTTYPE* pivots;
+      SCIP_Real* Acopy = NULL;
+      SCIP_Real* bcopy = NULL;
+
+      assert( bufmem != NULL );
+
+      SCIP_ALLOC( BMSduplicateBufferMemoryArray(bufmem, &Acopy, A, n * n) );
+      SCIP_ALLOC( BMSduplicateBufferMemoryArray(bufmem, &bcopy, b, n) );
+      SCIP_ALLOC( BMSallocBufferMemoryArray(bufmem, &pivots, n) );
+
+      /* compute LU factorization */
+      N = n;
+      F77_FUNC(dgetrf, DGETRF)(&N, &N, Acopy, &N, pivots, &INFO);
+
+      if ( convertToInt(INFO) != 0 )
+      {
+         SCIPdebugMessage("There was an error when calling DGETRF. INFO = %d\n", convertToInt(INFO));
+         *success = FALSE;
+      }
+      else
+      {
+         LAPACKINTTYPE NRHS = 1LL;
+         char TRANS = 'N';
+
+         /* solve system */
+         F77_FUNC(dgetrs, DGETRS)(&TRANS, &N, &NRHS, Acopy, &N, pivots, bcopy, &N, &INFO);
+
+         if ( convertToInt(INFO) != 0 )
+         {
+            SCIPdebugMessage("There was an error when calling DGETRF. INFO = %d\n", convertToInt(INFO));
+            *success = FALSE;
+         }
+         else
+            *success = TRUE;
+
+         /* copy the solution */
+         BMScopyMemoryArray(x, bcopy, n);
+      }
+
+      BMSfreeBufferMemoryArray(bufmem, &pivots);
+      BMSfreeBufferMemoryArray(bufmem, &bcopy);
+      BMSfreeBufferMemoryArray(bufmem, &Acopy);
+#else
+      /* call fallback solution in nlpi_ipopt_dummy */
+      SCIP_CALL( SCIPsolveLinearEquationsIpopt(n, A, b, x, success) );
 #endif
    }
 
