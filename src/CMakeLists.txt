@@ -285,6 +285,7 @@ set(scipsources
     scip/implics.c
     scip/interrupt.c
     scip/intervalarith.c
+    scip/lapack_calls.c
     scip/lp.c
     scip/matrix.c
     scip/mem.c
@@ -619,6 +620,7 @@ set(scipheaders
     scip/implics.h
     scip/interrupt.h
     scip/intervalarith.h
+    scip/lapack_calls.h
     scip/lp.h
     scip/mem.h
     scip/message_default.h
