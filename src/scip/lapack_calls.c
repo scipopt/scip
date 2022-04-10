@@ -84,6 +84,25 @@ void F77_FUNC(dsyevr, DSYEVR)(char* JOBZ, char* RANGE, char* UPLO,
 
 /**@} */
 
+/*
+ * Functions
+ */
+
+/**@name Functions */
+/**@{ */
+
+/** returns whether Lapack s available, i.e., whether it has been linked in */
+SCIP_Bool SCIPlapackIsAvailable(void)
+{
+   if ( SCIPisIpoptAvailableIpopt() )
+      return TRUE;
+
+#ifdef SCIP_HAVE_LAPACK
+   return TRUE;
+#endif
+   return FALSE;
+}
+
 #ifdef SCIP_HAVE_LAPACK
 /** converts a number stored in a long long int to an int, depending on big- or little endian machines
  *
@@ -123,29 +142,7 @@ int convertToInt(
    }
    return *((int*)&num + 4);
 }
-#endif
 
-/*
- * Functions
- */
-
-/**@name Functions */
-/**@{ */
-
-
-/** returns whether Lapack s available, i.e., whether it has been linked in */
-SCIP_Bool SCIPlapackIsAvailable(void)
-{
-   if ( SCIPisIpoptAvailableIpopt() )
-      return TRUE;
-
-#ifdef SCIP_HAVE_LAPACK
-   return TRUE;
-#endif
-   return FALSE;
-}
-
-#ifdef SCIP_HAVE_LAPACK
 /** computes eigenvalues of a symmetric matrix using LAPACK */
 static
 SCIP_RETCODE lapackComputeEigenvalues(
