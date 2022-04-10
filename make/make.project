@@ -581,6 +581,11 @@ FLAGS		+=	-DSCIP_WITH_READLINE $(READLINE_FLAGS)
 LDFLAGS		+=	$(READLINE_LDFLAGS)
 endif
 
+# if IPOPT is there, we do not need lapack
+ifeq ($(IPOPT),true)
+LAPACK		=	false
+endif
+
 ifeq ($(LAPACK),true)
 FLAGS		+=	-DSCIP_HAVE_LAPACK
 LDFLAGS		+= 	$(LINKCXX_l)lapack$(LINKLIBSUFFIX)
