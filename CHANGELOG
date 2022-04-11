@@ -54,6 +54,7 @@ Fixed bugs
 - fixed handling of objective limit with Mosek
 - made SCIPlpiGetSolverName()/SCIPlpiGetSolverDesc() thread-safe for LP Solvers (Cplex,Gurobi,Glop,Mosek,SoPlex,Xpress)
 - made SYMsymmetryGetName() thread-safe for Bliss
+- fixed memory allocation issue in detection of SOC nlhdlr
 
 Miscellaneous
 -------------

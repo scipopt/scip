@@ -2095,7 +2095,7 @@ SCIP_RETCODE detectSocQuadraticComplex(
    SCIP_CALL( SCIPallocBufferArray(scip, &offsets, npos + nneg + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &transcoefs, ntranscoefs) );
    SCIP_CALL( SCIPallocBufferArray(scip, &transcoefsidx, ntranscoefs) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &termbegins, npos + nneg + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &termbegins, npos + nneg + 2) );
 
    /* try to fill the nlhdlrexprdata (at this point, it can still fail) */
    SCIP_CALL( tryFillNlhdlrExprDataQuad(scip, occurringexprs, eigvecmatrix, eigvals, bp, nvars, termbegins, transcoefs,
