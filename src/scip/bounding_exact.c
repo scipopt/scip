@@ -2051,7 +2051,7 @@ SCIP_RETCODE boundShift(
    /** @todo exip: actually we only need to link the rows and cols in the exact lp. So possible performance improvement if we don't
     * flush it to the lpiexact */
    SCIP_CALL( SCIPsepastoreExactSyncLPs(set->scip->sepastoreexact, blkmem, set, stat, lpexact, prob, eventqueue) );
-   SCIP_CALL( SCIPlpExactFlush(lpexact, blkmem, set, eventqueue) );
+   SCIP_CALL( SCIPlpExactLink(lpexact, blkmem, set, eventqueue) );
 
    /* reset proved bound status */
    lp->hasprovedbound = FALSE;
@@ -2311,8 +2311,6 @@ SCIP_RETCODE boundShift(
    if( SCIPisCertificateActive(set->scip) && lp->hasprovedbound )
    {
       /* set up the exact lpi for the current node */
-      SCIP_CALL( SCIPsepastoreExactSyncLPs(set->scip->sepastoreexact, blkmem, set, stat, lpexact, prob, eventqueue) );
-      SCIP_CALL( SCIPlpExactFlush(lp->lpexact, blkmem, set, eventqueue) );
       for( j = 0; j < lpexact->nrows; j++ )
       {
          if( usefarkas )
