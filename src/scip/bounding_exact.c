@@ -2414,12 +2414,14 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
       {
          case 'n':
             /* Neumaier-Shcherbina */
+            *lperror = FALSE;
             SCIP_CALL( boundShift(lp, lpexact, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
                   prob, usefarkas, safebound) );
             break;
       #ifdef SCIP_WITH_GMP
          case 'p':
             /* project-and-shift */
+            *lperror = FALSE;
             SCIP_CALL( projectShift(lp, lpexact, set, stat, messagehdlr, eventqueue, eventfilter,
                   prob, blkmem, usefarkas, safebound) );
             break;
@@ -2449,9 +2451,15 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
       {
          SCIPdebugMessage("failed save bounding call after %d attempts to compute safe bound\n", nattempts);
          abort = TRUE;
+         *lperror = TRUE;
       }
    }
 #endif
+   if( *lperror )
+   {
+      lp->solved = FALSE;
+      lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+   }
 
    /* reset the forceexactsolve flag */
    lpexact->forceexactsolve = FALSE;
