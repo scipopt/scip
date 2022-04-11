@@ -4456,9 +4456,8 @@ SCIP_RETCODE lpExactFlushAndSolve(
       {
          SCIPdebugMessage("(node %" SCIP_LONGINT_FORMAT ") error or unknown return status of %s in LP %" SCIP_LONGINT_FORMAT " (internal status: %d)\n",
             stat->nnodes, &algo, stat->nlps, SCIPlpiExactGetInternalStatus(lpexact->lpiexact));
-         lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
          lpexact->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
-         lp->solved = FALSE;
+         lpexact->solved = FALSE;
          *lperror = TRUE;
          return SCIP_OKAY;
       }
@@ -4529,7 +4528,7 @@ SCIP_RETCODE SCIPlpExactSolveAndEval(
    /* solve the LP */
    SCIP_CALL( lpExactFlushAndSolve(lpexact, blkmem, set, messagehdlr, stat,
          prob, eventqueue, harditlim, fromscratch, lperror) );
-   assert(!(*lperror) || !lp->solved);
+   assert(!(*lperror) || !lpexact->solved);
 
    SCIPlpExactGetIterations(lpexact, &iterations);
 
@@ -4558,7 +4557,6 @@ SCIP_RETCODE SCIPlpExactSolveAndEval(
    {
       retcode = SCIP_OKAY;
       lp->hasprovedbound = FALSE;
-      lp->lpsolstat = lpexact->lpsolstat;
       goto TERMINATE;
    }
 
