@@ -1022,6 +1022,7 @@ target_link_libraries(libscip PRIVATE
     ${GMP_LIBRARIES}
     ${THREAD_LIBRARIES}
     ${NLPI_LIBRARIES}
+    ${LAPACK_LIBRARIES}
     ${SYM_LIBRARIES}
     ${PAPILO_IMPORTED_TARGETS})
 
@@ -1062,6 +1063,7 @@ target_link_libraries(scip
    ${SYM_LIBRARIES}
    ${THREAD_LIBRARIES}
    ${NLPI_LIBRARIES}
+   ${LAPACK_LIBRARIES}
    ${PAPILO_IMPORTED_TARGETS})
 
 add_dependencies(libscip scip_update_githash)
