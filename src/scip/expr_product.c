@@ -340,7 +340,16 @@ SCIP_RETCODE simplifyFactor(
       assert(SCIPgetCoefsExprSum(factor)[0] != 0.0 && SCIPgetCoefsExprSum(factor)[0] != 1.0);
       debugSimplify("[simplifyFactor] seeing a sum of the form coef * child : take coef and child apart\n");
 
-      SCIP_CALL( createExprlistFromExprs(scip, SCIPexprGetChildren(factor), 1, simplifiedfactor) );
+      if( SCIPisExprProduct(scip, SCIPexprGetChildren(factor)[0]) )
+      {
+         /* if child is a product, then add its children to exprlist */
+         SCIP_CALL( createExprlistFromExprs(scip, SCIPexprGetChildren(SCIPexprGetChildren(factor)[0]), SCIPexprGetNChildren(SCIPexprGetChildren(factor)[0]), simplifiedfactor) );
+         *simplifiedcoef *= SCIPgetCoefExprProduct(SCIPexprGetChildren(factor)[0]);
+      }
+      else
+      {
+         SCIP_CALL( createExprlistFromExprs(scip, SCIPexprGetChildren(factor), 1, simplifiedfactor) );
+      }
       *simplifiedcoef *= SCIPgetCoefsExprSum(factor)[0];
 
       return SCIP_OKAY;
@@ -702,7 +711,7 @@ SCIP_RETCODE simplifyMultiplyChildren(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPR**           exprs,              /**< factors to be simplified */
    int                   nexprs,             /**< number of factors */
-   SCIP_Real*            simplifiedcoef,     /**< buffer to store coefficient of PI exprs; do not initialize */
+   SCIP_Real*            simplifiedcoef,     /**< buffer to store coefficient of PI exprs; needs to be initialized */
    EXPRNODE**            finalchildren,      /**< expr node list to store the simplified factors */
    SCIP_Bool*            changed,            /**< buffer to store whether some factor changed */
    SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
@@ -939,7 +948,7 @@ SCIP_RETCODE enforceSP12(
 #ifdef SIMPLIFY_DEBUG
             debugSimplify("Multiplying summand1_i * %f\n", c2);
             debugSimplify("summand1_i: \n");
-            SCIP_CALL( SCIPprintExpr(scip, conshdlr, term, NULL) );
+            SCIP_CALL( SCIPprintExpr(scip, term, NULL) );
             SCIPinfoMessage(scip, NULL, "\n");
 #endif
          }

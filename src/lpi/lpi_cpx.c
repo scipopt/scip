@@ -997,8 +997,22 @@ SCIP_RETCODE restoreLPData(
 /*
  * Miscellaneous Methods
  */
+/*lint --e{778}*/
+/*lint --e{835}*/
+static const char cpxname[]= {'C', 'P', 'L', 'E', 'X', ' ',
+#if (defined CPX_VERSION_VERSION) && (CPX_VERSION_VERSION >= 10) && (CPX_VERSION_RELEASE >= 10)
+   (CPX_VERSION_VERSION/10) + '0', (CPX_VERSION_VERSION%10) + '0', '.', (CPX_VERSION_RELEASE/10) + '0', (CPX_VERSION_RELEASE%10) + '0', '.', CPX_VERSION_MODIFICATION + '0', '.', CPX_VERSION_FIX + '0'
+#elif (defined CPX_VERSION_VERSION) && (CPX_VERSION_VERSION <= 9) && (CPX_VERSION_RELEASE <= 9)
+   CPX_VERSION_VERSION + '0', '.',CPX_VERSION_RELEASE + '0', '.', CPX_VERSION_MODIFICATION + '0', '.', CPX_VERSION_FIX + '0'
+#elif (defined CPX_VERSION_VERSION) && (CPX_VERSION_VERSION >= 10) && (CPX_VERSION_RELEASE <= 9)
+   (CPX_VERSION_VERSION/10) + '0', (CPX_VERSION_VERSION%10) + '0', '.', CPX_VERSION_RELEASE + '0', '.', CPX_VERSION_MODIFICATION + '0', '.', CPX_VERSION_FIX + '0'
+#elif (defined CPX_VERSION_VERSION) && (CPX_VERSION_VERSION <= 9) && (CPX_VERSION_RELEASE >= 10)
+   CPX_VERSION_VERSION + '0', '.', (CPX_VERSION_RELEASE/10) + '0', (CPX_VERSION_RELEASE%10) + '0', '.',  CPX_VERSION_MODIFICATION + '0', '.', CPX_VERSION_FIX + '0'
+#else
+   (CPX_VERSION / 100) + '0', '.', ((CPX_VERSION % 100) / 10) + '0', '.', (CPX_VERSION % 10) + '0', '.', CPX_SUBVERSION + '0'
+#endif
+};
 
-static char cpxname[100];
 
 /**@name Miscellaneous Methods */
 /**@{ */
@@ -1008,11 +1022,6 @@ const char* SCIPlpiGetSolverName(
    void
    )
 {
-#ifdef CPX_VERSION_VERSION
-   (void) snprintf(cpxname, 100, "CPLEX %d.%d.%d.%d", CPX_VERSION_VERSION, CPX_VERSION_RELEASE, CPX_VERSION_MODIFICATION, CPX_VERSION_FIX);
-#else
-   (void) sprintf(cpxname, 100, "CPLEX %d.%d.%d.%d", CPX_VERSION/100, (CPX_VERSION%100)/10, CPX_VERSION%10, CPX_SUBVERSION);
-#endif
    return cpxname;
 }
 

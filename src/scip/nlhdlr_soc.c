@@ -1946,6 +1946,10 @@ SCIP_RETCODE detectSocQuadraticComplex(
       return SCIP_OKAY;
    }
 
+   /* we need Lapack to compute eigenvalues/vectors below */
+   if( !SCIPisIpoptAvailableIpopt() )
+      return SCIP_OKAY;
+
    /* get children of the sum */
    nchildren = SCIPexprGetNChildren(expr);
    constant = SCIPgetConstantExprSum(expr);

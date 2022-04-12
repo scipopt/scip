@@ -929,3 +929,5 @@ void redcosts_forLPget(
    }
 #endif
 }
+
+/**@} */
