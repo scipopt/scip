@@ -63,6 +63,7 @@
 #include "scip/struct_set.h"
 #include "scip/struct_stat.h"
 #include "scip/syncstore.h"
+#include "scip/lapack_calls.h"
 
 #include <string.h>
 #if defined(_WIN32) || defined(_WIN64)
@@ -262,6 +263,20 @@ SCIP_RETCODE doScipCreate(
 
 #ifdef SCIP_WITH_ZLIB
    SCIP_CALL( SCIPsetIncludeExternalCode((*scip)->set, "ZLIB " ZLIB_VERSION, "General purpose compression library by J. Gailly and M. Adler (zlib.net)") );
+#endif
+
+#ifdef SCIP_WITH_LAPACK
+   {
+      char name[SCIP_MAXSTRLEN];
+      int major;
+      int minor;
+      int patch;
+
+      SCIPlapackVersion(&major, &minor, &patch);
+      SCIPsnprintf(name, SCIP_MAXSTRLEN, "LAPACK %d.%d.%d", major, minor, patch);
+
+      SCIP_CALL( SCIPsetIncludeExternalCode((*scip)->set, name, "General  Linear Algebra PACKage (http://www.netlib.org/lapack/)") );
+   }
 #endif
 
    return SCIP_OKAY;
