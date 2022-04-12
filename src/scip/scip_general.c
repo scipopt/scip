@@ -275,7 +275,7 @@ SCIP_RETCODE doScipCreate(
       SCIPlapackVersion(&major, &minor, &patch);
       SCIPsnprintf(name, SCIP_MAXSTRLEN, "LAPACK %d.%d.%d", major, minor, patch);
 
-      SCIP_CALL( SCIPsetIncludeExternalCode((*scip)->set, name, "General  Linear Algebra PACKage (http://www.netlib.org/lapack/)") );
+      SCIP_CALL( SCIPsetIncludeExternalCode((*scip)->set, name, "General Linear Algebra PACKage (http://www.netlib.org/lapack/)") );
    }
 #endif
 
