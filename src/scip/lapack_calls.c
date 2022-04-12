@@ -161,9 +161,9 @@ void SCIPlapackVersion(
    int*                  patch               /**< patch version number */
    )
 {
-   LAPACKINTTYPE MAJOR;
-   LAPACKINTTYPE MINOR;
-   LAPACKINTTYPE PATCH;
+   LAPACKINTTYPE MAJOR = 0LL;
+   LAPACKINTTYPE MINOR = 0LL;
+   LAPACKINTTYPE PATCH = 0LL;
 
    assert( major != NULL );
    assert( minor != NULL );
