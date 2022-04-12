@@ -29,7 +29,7 @@
 
 #include <assert.h>
 
-#include "lapack_calls.h"
+#include "scip/lapack_calls.h"
 
 #include "scip/def.h"
 #include "scip/pub_message.h"                /* for debug and error message */
