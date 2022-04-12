@@ -12,6 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
 /**@file   conflict_graphanalysis.c
  * @ingroup OTHER_CFILES
  * @brief  methods and datastructures for conflict analysis
