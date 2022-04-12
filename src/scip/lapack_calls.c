@@ -101,7 +101,7 @@ void F77_FUNC(ilaver, ILAVER)(LAPACKINTTYPE* MAJOR, LAPACKINTTYPE* MINOR, LAPACK
 /**@name Functions */
 /**@{ */
 
-/** returns whether Lapack s available, i.e., whether it has been linked in */
+/** returns whether Lapack is available, i.e., whether it has been linked in */
 SCIP_Bool SCIPlapackIsAvailable(void)
 {
    if ( SCIPisIpoptAvailableIpopt() )
