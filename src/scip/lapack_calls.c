@@ -47,6 +47,7 @@ typedef int64_t LAPACKINTTYPE;
 /** transforms a SCIP_Real (that should be integer, but might be off by some numerical error) to an integer by adding 0.5 and rounding down */
 #define SCIP_RealTOINT(x) ((LAPACKINTTYPE) (x + 0.5))
 
+#ifdef SCIP_WITH_LAPACK
 /*
  * BLAS/LAPACK Calls
  */
@@ -98,6 +99,7 @@ void F77_FUNC(dgetrs, DGETRS)(char* TRANS, LAPACKINTTYPE* N, LAPACKINTTYPE* NRHS
 void F77_FUNC(ilaver, ILAVER)(LAPACKINTTYPE* MAJOR, LAPACKINTTYPE* MINOR, LAPACKINTTYPE* PATCH);
 
 /**@} */
+#endif
 
 /*
  * Functions
