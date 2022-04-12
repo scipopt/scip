@@ -120,17 +120,17 @@ SCIP_Bool SCIPlapackIsAvailable(void)
 }
 
 #ifdef SCIP_WITH_LAPACK
-/** converts a number stored in a long long int to an int, depending on big- or little endian machines
+/** converts a number stored in a int64_t to an int, depending on big- or little endian machines
  *
  *  We assume that the number actually fits into an int. Thus, if more bits are used, we assume that the number is
  *  negative.
  */
 static
 int convertToInt(
-   long long int         num                 /**< number to be converted */
+   int64_t               num                 /**< number to be converted */
    )
 {
-   long long int work;
+   int64_t work;
    int checkval = 1;
 
    assert(sizeof(work) > sizeof(checkval)); /*lint !e506*/
