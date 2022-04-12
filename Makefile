@@ -1643,6 +1643,7 @@ help:
 		@echo "  - LPSOPT=<dbg|opt>: Use debug or optimized (default) mode for LP-solver (SoPlex and Clp only)."
 		@echo "  - READLINE=<true|false>: Turns support via the readline library on (default) or off."
 		@echo "  - IPOPT=<true|false>: Turns support of IPOPT on or off (default)."
+		@echo "  - LAPACK=<true|false>: Link with Lapack (must be installed on the system)."
 		@echo "  - EXPRINT=<cppad|none>: Use CppAD as expressions interpreter (default) or no expressions interpreter."
 		@echo "  - SYM=<none|bliss>: To choose type of symmetry handling."
 		@echo "  - PARASCIP=<true|false>: Build for ParaSCIP (deprecated, use THREADSAFE)."
