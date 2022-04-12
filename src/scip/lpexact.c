@@ -2411,7 +2411,6 @@ SCIP_Rational* getFiniteLooseObjvalExact(
    assert(set != NULL);
    assert(prob != NULL);
    assert((lp->nloosevars > 0) || (lp->looseobjvalinf == 0 && RatIsZero(lp->looseobjval)));
-   assert(lp->flushed);
    assert(lp->looseobjvalinf == 0);
 
    return lp->looseobjval;
@@ -2665,22 +2664,42 @@ SCIP_RETCODE SCIPlpExactDelRowset(
 {
    SCIP_ROWEXACT* row;
    int nrows;
+   int nlpirows;
    int r;
+   int c;
 
    assert(lp != NULL);
-   assert(lp->nrows == lp->nlpirows);
    assert(rowdstat != NULL);
 
    nrows = lp->nrows;
+   nlpirows = lp->nlpirows;
 
    /* delete rows in LP solver */
    SCIP_CALL( SCIPlpiExactDelRowset(lp->lpiexact, rowdstat) );
+
+
+   /* set the correct status for rows that never made it to the lpi (this is special for the exact lp) */
+   c = lp->nlpirows - 1;
+   while( rowdstat[c] == -1 )
+   {
+      c--;
+   }
+   c = rowdstat[c] + 1;
+   for( r = lp->nlpirows; r < nrows; r++ )
+   {
+      if( rowdstat[r] != 1 )
+      {
+         rowdstat[r] = c;
+         ++c;
+      }
+      else
+         rowdstat[r] = -1;
+   }
 
    /* update LP data respectively */
    for( r = 0; r < nrows; ++r )
    {
       row = lp->rows[r];
-      assert(row == lp->lpirows[r]);
       assert(rowdstat[r] <= r);
       assert(row != NULL);
       row->lppos = rowdstat[r];
@@ -2694,31 +2713,40 @@ SCIP_RETCODE SCIPlpExactDelRowset(
          rowExactUpdateDelLP(row, set);
          row->lpdepth = -1;
 
-         SCIP_CALL( SCIProwExactRelease(&lp->lpirows[r], blkmem, set, lp) );
+         /* only release lpirows if they actually exist */
+         if( r < nlpirows )
+         {
+            assert(row == lp->lpirows[r]);
+
+            SCIP_CALL( SCIProwExactRelease(&lp->lpirows[r], blkmem, set, lp) );
+            lp->nlpirows--;
+         }
          //SCIProwExactUnlock(lp->rows[r]);
          SCIP_CALL( SCIProwExactRelease(&lp->rows[r], blkmem, set, lp) );
-         assert(lp->lpirows[r] == NULL);
          assert(lp->rows[r] == NULL);
          lp->nrows--;
-         lp->nlpirows--;
       }
       else if( rowdstat[r] < r )
       {
          assert(lp->rows[rowdstat[r]] == NULL);
          assert(lp->lpirows[rowdstat[r]] == NULL);
          lp->rows[rowdstat[r]] = row;
-         lp->lpirows[rowdstat[r]] = row;
+
+         /* only re-order lpirows if they actually exist */
+         if( r < nlpirows )
+         {
+            lp->lpirows[rowdstat[r]] = row;
+            lp->lpirows[r] = NULL;
+         }
          lp->rows[rowdstat[r]]->lppos = rowdstat[r];
          lp->rows[rowdstat[r]]->lpipos = rowdstat[r];
          lp->rows[r] = NULL;
-         lp->lpirows[r] = NULL;
       }
    }
 
    /* mark LP to be unsolved */
    if( lp->nrows < nrows )
    {
-      assert(lp->nrows == lp->nlpirows);
       assert(lp->nchgrows == 0);
 
       lp->lpifirstchgrow = lp->nlpirows;
@@ -3680,6 +3708,66 @@ SCIP_RETCODE SCIPlpExactFlush(
    return SCIP_OKAY;
 }
 
+/** ensures all rows/columns are correctly updated, but changes are not yet communicated to the exact LP solver */
+SCIP_RETCODE SCIPlpExactLink(
+   SCIP_LPEXACT*         lp,                 /**< current exact LP data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
+   )
+{
+   int pos;
+   int c, r;
+   SCIP_COLEXACT* col;
+   SCIP_ROWEXACT* row;
+
+   assert(lp != NULL);
+   assert(blkmem != NULL);
+
+   SCIPsetDebugMsg(set, "flushing exact LP changes: old (%d cols, %d rows), nchgcols=%d, nchgrows=%d, firstchgcol=%d, firstchgrow=%d, new (%d cols, %d rows), flushed=%u\n",
+      lp->nlpicols, lp->nlpirows, lp->nchgcols, lp->nchgrows, lp->lpifirstchgcol, lp->lpifirstchgrow, lp->ncols, lp->nrows, lp->flushed);
+
+   if( !lp->flushed )
+   {
+      lp->flushdeletedcols = FALSE;
+      lp->flushaddedcols = FALSE;
+      lp->flushdeletedrows = FALSE;
+      lp->flushaddedrows = FALSE;
+
+      /* we still flush added/deleted columns since this should only happen at the very start of the solve */
+      SCIP_CALL( lpExactFlushDelCols(lp) );
+      SCIP_CALL( lpExactFlushAddCols(lp, blkmem, set, eventqueue) );
+
+      /* link new columns/rows */
+      for( pos = 0, c = lp->nlpicols; c < lp->ncols; ++pos, ++c )
+      {
+         col = lp->cols[c];
+         assert(col != NULL);
+         assert(col->var != NULL);
+         assert(SCIPvarGetStatusExact(col->var) == SCIP_VARSTATUS_COLUMN);
+         assert(SCIPvarGetColExact(col->var) == col);
+         assert(col->lppos == c);
+
+         SCIPsetDebugMsg(set, "linking added column <%s>: ", SCIPvarGetName(col->var));
+         SCIP_CALL( colExactLink(col, blkmem, set, eventqueue, lp) );
+      }
+      for( pos = 0, r = lp->nlpirows; r < lp->nrows; ++pos, ++r )
+      {
+         row = lp->rows[r];
+         assert(row != NULL);
+         assert(row->lppos == r);
+
+         SCIPsetDebugMsg(set, "linking added exact row <%s>: ", row->fprow->name);
+
+         SCIP_CALL( rowExactLink(row, blkmem, set, eventqueue, lp) );
+      }
+
+      checkLinks(lp);
+   }
+
+   return SCIP_OKAY;
+}
+
 /*
  * lp methods
  */
@@ -4375,9 +4463,8 @@ SCIP_RETCODE lpExactFlushAndSolve(
       {
          SCIPdebugMessage("(node %" SCIP_LONGINT_FORMAT ") error or unknown return status of %s in LP %" SCIP_LONGINT_FORMAT " (internal status: %d)\n",
             stat->nnodes, &algo, stat->nlps, SCIPlpiExactGetInternalStatus(lpexact->lpiexact));
-         lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
          lpexact->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
-         lp->solved = FALSE;
+         lpexact->solved = FALSE;
          *lperror = TRUE;
          return SCIP_OKAY;
       }
@@ -4448,7 +4535,7 @@ SCIP_RETCODE SCIPlpExactSolveAndEval(
    /* solve the LP */
    SCIP_CALL( lpExactFlushAndSolve(lpexact, blkmem, set, messagehdlr, stat,
          prob, eventqueue, harditlim, fromscratch, lperror) );
-   assert(!(*lperror) || !lp->solved);
+   assert(!(*lperror) || !lpexact->solved);
 
    SCIPlpExactGetIterations(lpexact, &iterations);
 
@@ -4477,7 +4564,6 @@ SCIP_RETCODE SCIPlpExactSolveAndEval(
    {
       retcode = SCIP_OKAY;
       lp->hasprovedbound = FALSE;
-      lp->lpsolstat = lpexact->lpsolstat;
       goto TERMINATE;
    }
 
@@ -7610,7 +7696,7 @@ void SCIPlpExactGetObjval(
    assert((lp->nloosevars > 0) || (lp->looseobjvalinf == 0 && RatIsZero(lp->looseobjval)));
    assert(set != NULL);
 
-   if( !lp->flushed || lp->looseobjvalinf > 0 )
+   if( lp->looseobjvalinf > 0 )
       RatSetString(res, "-inf");
    else if( RatIsAbsInfinity(lp->lpobjval) )
       RatSet(res, lp->lpobjval);
