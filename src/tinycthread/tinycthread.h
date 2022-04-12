@@ -151,7 +151,7 @@ int _tthread_timespec_get(struct timespec *ts, int base);
 */
 
 #if !(defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201102L)) && !defined(_Thread_local)
- #if defined(__GNUC__) || defined(__INTEL_COMPILER) || defined(__SUNPRO_CC) || defined(__IBMCPP__)
+ #if defined(__GNUC__) || (defined(__INTEL_COMPILER) && !defined(_MSC_VER)) || defined(__SUNPRO_CC) || defined(__IBMCPP__)
   #define _Thread_local __thread
  #else
   #define _Thread_local __declspec(thread)

@@ -3,7 +3,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -76,13 +76,15 @@ EXECUTABLE      =       $(MAINFILE)
 BINID           =       $(notdir $(EXECUTABLE))
 OUTPUTDIR       =       results
 CLUSTERNODES    =       all
+EXCLUDENODES    =       none
 SLURMACCOUNT    =       default
 GAMS		=	gams
 PYTHON  =   none
+EMPHBENCHMARK  =   true
 
 # set SCIP version here for external projects
 # use underscore to make it compatible with def.h
-SCIP_VERSION	=	7.0.3.5
+SCIP_VERSION	=	8.0.0.2
 
 # compiling and linking parameters
 VERBOSE		=	false
@@ -213,29 +215,21 @@ endif
 ARFLAGS		=	cr
 DFLAGS		=	-MMD
 
-GCCWARN		=	-pedantic -Wno-long-long -Wall -W -Wpointer-arith -Wcast-align -Wwrite-strings -Wshadow \
-			-Wno-unknown-pragmas -Wno-unused-parameter -Wno-override-init \
-			-Wredundant-decls -Wdisabled-optimization \
-			-Wsign-compare -Wstrict-prototypes \
-			-Wmissing-declarations -Wmissing-prototypes -Wdeclaration-after-statement #-Wno-variadic-macros
-# GCCWARN is not only used for GCC!
-ifeq ($(COMP),clang)
-GCCWARN += -Wno-unknown-warning-option -Wno-initializer-overrides
-endif
-ifeq ($(COMP),gnu)
-ifeq ($(OSTYPE),darwin)
-GCCWARN += -Wno-uninitialized
-else
-GCCWARN += -Wno-maybe-uninitialized
-endif
-endif
+# if changing GCC/GXXWARN here, also update ADD_*_FLAGS in ../CMakeLists.txt
 
-GXXWARN		=	-pedantic -Wno-long-long -Wall -W -Wpointer-arith -Wcast-align -Wwrite-strings -Wshadow \
-			-Wno-unknown-pragmas -Wno-unused-parameter \
-			-Wredundant-decls -Wdisabled-optimization \
-			-Wctor-dtor-privacy -Wnon-virtual-dtor -Wreorder \
-			-Woverloaded-virtual -Wsign-promo -Wsynth \
-			-Wcast-qual -Wno-unused-parameter -Wno-strict-overflow #-Wno-variadic-macros -Wold-style-cast -Wshadow -Wundef
+# enable many more warnings for GCC and CLANG on C/C++
+GCCWARN = -pedantic -Wall -W
+GXXWARN = -pedantic -Wall -W
+
+# enable more warnings that are not in -Wall -W (probably in -Wextra, but we don't seem to use that)
+GCCWARN += -Wpointer-arith -Wcast-align -Wwrite-strings -Wshadow -Wredundant-decls -Wdisabled-optimization \
+           -Wsign-compare -Wstrict-prototypes -Wmissing-declarations -Wmissing-prototypes -Wdeclaration-after-statement
+GXXWARN += -Wpointer-arith -Wcast-align -Wwrite-strings -Wshadow -Wredundant-decls -Wdisabled-optimization \
+           -Wctor-dtor-privacy -Wnon-virtual-dtor -Wreorder -Woverloaded-virtual -Wsign-promo -Wsynth -Wcast-qual
+
+# disable some warning that would be too much effort to fix, disfigure the code, or produce too many false positive
+GCCWARN += -Wno-long-long -Wno-unknown-pragmas -Wno-unused-parameter -Wno-override-init -Wno-uninitialized -Wno-maybe-uninitialized
+GXXWARN += -Wno-long-long -Wno-unknown-pragmas -Wno-unused-parameter -Wno-strict-overflow
 
 ifeq ($(SHARED),true)
 LIBTYPE		=	shared
@@ -262,7 +256,7 @@ LIBOBJSUBDIRS	=	$(LIBOBJDIR)/scip \
 			$(LIBOBJDIR)/tclique \
 			$(LIBOBJDIR)/lpi \
 			$(LIBOBJDIR)/amplmp/src \
-			$(LIBOBJDIR)/amplmp/ \
+			$(LIBOBJDIR)/amplmp \
 			$(LIBOBJDIR)/tpi \
 			$(LIBOBJDIR)/xml \
 			$(LIBOBJDIR)/dijkstra \
@@ -393,11 +387,13 @@ endif
 #-------------------------------------------------------
 # define flags for Mosek
 ifeq ($(LPS),msk)
-LPSLDFLAGS	=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/shared $(LINKCC_l)mosek.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) \
-                        $(LINKCC_l)cilkrts.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
+LPSLDFLAGS	=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/shared $(LINKCC_l)mosek.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
+LPSLIBFILES	=	$(SCIPREALPATH)/$(LIBDIR)/shared/libmosek.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
 
-LPSLIBFILES	=	$(SCIPREALPATH)/$(LIBDIR)/shared/libmosek.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT) \
-                        $(SCIPREALPATH)/$(LIBDIR)/shared/libcilkrts.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
+ifneq ("$(wildcard $(SCIPREALPATH)/$(LIBDIR)/shared/libcilkrts.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT))", "")
+LPSLDFLAGS	+=	$(LINKCC_l)cilkrts.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
+LPSLIBFILES	+=	$(SCIPREALPATH)/$(LIBDIR)/shared/libcilkrts.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
+endif
 
 ifneq ("$(wildcard $(SCIPREALPATH)/$(LIBDIR)/shared/libiomp5.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT))", "")
 LPSLDFLAGS	+=	$(LINKCC_l)iomp5.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX)
@@ -531,11 +527,7 @@ endif
 #-----------------------------------------------------------------------------
 
 ifeq ($(PAPILO),true)
-ifeq ($(OSTYPE),darwin)
-  LDFLAGS   +=  -L/usr/local/lib -l tbb
-else
-  LDFLAGS		+=	-l:libtbb.so.12
-endif
+LDFLAGS		+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/shared $(LINKCC_l)tbb.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
 CXXFLAGS	+=	-std=c++14
 endif
 
@@ -680,10 +672,10 @@ endif
 # SCIP Library
 #-----------------------------------------------------------------------------
 
-SCIPLIBNAME	=	scip
-SCIPLIB		=	$(SCIPLIBNAME).$(BASE)
-SCIPLIBFILE	=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(SCIPLIB).$(LIBEXT)
-SCIPLIBSHARTLINK=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(SCIPLIBNAME).$(LIBEXT)
+SCIPLIBBASENAME	=	scipbase
+SCIPLIBBASE	=	$(SCIPLIBBASENAME).$(BASE)
+SCIPLIBBASEFILE	=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(SCIPLIBBASE).$(LIBEXT)
+SCIPLIBBASESHORTLINK =	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(SCIPLIBBASENAME).$(LIBEXT)
 
 
 #-----------------------------------------------------------------------------
@@ -701,11 +693,11 @@ OBJSCIPLIBSHORTLINK=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(OBJSCIPLIBNAME).$(LIBEX
 #-----------------------------------------------------------------------------
 
 # link SCIP for C projects
-LINKCXXSCIPALL	=	$(LINKCXX_L)$(SCIPREALPATH)/lib/$(LIBTYPE) $(LINKCXX_l)$(SCIPLIB)$(LINKLIBSUFFIX) \
+LINKCXXSCIPALL	=	$(LINKCXX_L)$(SCIPREALPATH)/lib/$(LIBTYPE) $(LINKCXX_l)$(SCIPLIBBASE)$(LINKLIBSUFFIX) \
 			$(LINKCXX_l)$(OBJSCIPLIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(LPILIB)$(LINKLIBSUFFIX) \
 			$(LINKCC_l)$(TPILIB)$(LINKLIBSUFFIX) $(OFLAGS) $(LPSLDFLAGS) $(TPILDFLAGS) $(LDFLAGS)
 
 # link SCIP for C++ projects (including libobjscip)
-LINKCCSCIPALL	=	$(LINKCC_L)$(SCIPREALPATH)/lib/$(LIBTYPE) $(LINKCC_l)$(SCIPLIB)$(LINKLIBSUFFIX) \
+LINKCCSCIPALL	=	$(LINKCC_L)$(SCIPREALPATH)/lib/$(LIBTYPE) $(LINKCC_l)$(SCIPLIBBASE)$(LINKLIBSUFFIX) \
 			$(LINKCC_l)$(OBJSCIPLIB)$(LINKLIBSUFFIX) $(LINKCC_l)$(LPILIB)$(LINKLIBSUFFIX) \
 			$(LINKCC_l)$(TPILIB)$(LINKLIBSUFFIX) $(OFLAGS) $(LPSLDFLAGS) $(TPILDFLAGS) $(LDFLAGS)

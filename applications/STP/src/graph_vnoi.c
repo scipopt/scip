@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -437,7 +437,7 @@ void graph_voronoi(
  * NOTE: uses bias for PC! */
 void graph_voronoiTerms(
    const GRAPH*          g,                  /**< graph data structure */
-   const SCIP_Bool*      nodes_isTerm,
+   const SCIP_Bool*      nodes_isTerm,       /**< for each node: is terminal? */
    int* RESTRICT         vbase,              /**< array containing Voronoi base to each node */
    PATH* RESTRICT        path                /**< array containing Voronoi paths data */
    )
@@ -597,7 +597,7 @@ void graph_voronoiMw(
 SCIP_RETCODE graph_voronoiWithDist(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
-   const SCIP_Bool*      nodes_isTerm,
+   const SCIP_Bool*      nodes_isTerm,       /**< for each node: is terminal? */
    const SCIP_Real*      cost,               /**< edge costs */
    SCIP_Real*            distance,           /**< array storing path from a terminal over shortest
                                                 incident edge to nearest terminal */

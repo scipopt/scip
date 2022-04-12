@@ -25,7 +25,7 @@ if(BLISS_DIR)
       find_path(BLISS_HEADER_DIR
          NAMES graph.hh
          PATHS ${BLISS_DIR}
-         PATH_SUFFIXES include
+         PATH_SUFFIXES include src
          NO_DEFAULT_PATH
          )
 
@@ -39,16 +39,17 @@ if(BLISS_DIR)
 
    if(BLISS_LIBRARY_DIR)
      find_library(BLISS_LIBRARY
-        NAMES libbliss
+        NAMES bliss
         PATHS ${BLISS_LIBRARY_DIR}
-        PATH_SUFFIXES lib
+        PATH_SUFFIXES lib build
         NO_DEFAULT_PATH
         )
+
    else()
      find_library(BLISS_LIBRARY
         NAMES bliss
         PATHS ${BLISS_DIR}
-        PATH_SUFFIXES lib
+        PATH_SUFFIXES lib build
         NO_DEFAULT_PATH
         )
    endif()
@@ -65,11 +66,11 @@ endif()
 if(NOT BLISS_INCLUDE_DIR OR NOT BLISS_LIBRARY)
    find_path(BLISS_INCLUDE_DIR
        NAMES bliss/graph.hh
-       PATH_SUFFIXES include)
+       PATH_SUFFIXES include src)
 
    find_library(BLISS_LIBRARY
        NAMES bliss
-       PATH_SUFFIXES lib)
+       PATH_SUFFIXES lib build)
 endif()
 
 if(BLISS_INCLUDE_DIR AND BLISS_LIBRARY)

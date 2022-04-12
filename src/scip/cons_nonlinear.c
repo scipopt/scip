@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -298,9 +298,10 @@ struct SCIP_ConshdlrData
    SCIP_Real             branchdomainweight; /**< weight by how much to consider the domain width in branching score */
    SCIP_Real             branchvartypeweight;/**< weight by how much to consider variable type in branching score */
    char                  branchscoreagg;     /**< how to aggregate several branching scores given for the same expression ('a'verage, 'm'aximum, or 's'um) */
-   char                  branchviolsplit;    /**< method used to split violation in expression onto variables ('e'venly, 'm'idness of solution, 'd'omain width, 'l'ogarithmic domain width) */
+   char                  branchviolsplit;    /**< method used to split violation in expression onto variables ('u'niform, 'm'idness of solution, 'd'omain width, 'l'ogarithmic domain width) */
    SCIP_Real             branchpscostreliable; /**< minimum pseudo-cost update count required to consider pseudo-costs reliable */
    char                  linearizeheursol;   /**< whether tight linearizations of nonlinear constraints should be added to cutpool when some heuristics finds a new solution ('o'ff, on new 'i'ncumbents, on 'e'very solution) */
+   SCIP_Bool             assumeconvex;       /**< whether to assume that any constraint is convex */
 
    /* statistics */
    SCIP_Longint          nweaksepa;          /**< number of times we used "weak" cuts for enforcement */
@@ -720,6 +721,7 @@ SCIP_RETCODE storeVarExprs(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
+   int varexprssize;
    int i;
 
    assert(consdata != NULL);
@@ -731,16 +733,29 @@ SCIP_RETCODE storeVarExprs(
    assert(consdata->varexprs == NULL);
    assert(consdata->nvarexprs == 0);
 
-   /* create array to store all variable expressions; the number of variable expressions is bounded by SCIPgetNTotalVars() */
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->varexprs, SCIPgetNTotalVars(scip)) );
+   /* get an upper bound on number of variable expressions */
+   if( consdata->issimplified )
+   {
+      /* if simplified, then we should have removed inactive variables and replaced common subexpressions,
+       * so we cannot have more variable expression than the number of active variables
+       */
+      varexprssize = SCIPgetNVars(scip);
+   }
+   else
+   {
+      SCIP_CALL( SCIPgetExprNVars(scip, consdata->expr, &varexprssize) );
+   }
+
+   /* create array to store all variable expressions */
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->varexprs, varexprssize) );
 
    SCIP_CALL( SCIPgetExprVarExprs(scip, consdata->expr, consdata->varexprs, &(consdata->nvarexprs)) );
-   assert(SCIPgetNTotalVars(scip) >= consdata->nvarexprs);
+   assert(varexprssize >= consdata->nvarexprs);
 
    /* shrink array if there are less variables in the expression than in the problem */
-   if( SCIPgetNTotalVars(scip) > consdata->nvarexprs )
+   if( varexprssize > consdata->nvarexprs )
    {
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &consdata->varexprs, SCIPgetNTotalVars(scip), consdata->nvarexprs) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &consdata->varexprs, varexprssize, consdata->nvarexprs) );
    }
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -748,7 +763,7 @@ SCIP_RETCODE storeVarExprs(
    assert(conshdlrdata->var2expr != NULL);
 
    /* ensure that for every variable an entry exists in the var2expr hashmap
-    * when removing duplicate subexpressions it can happen than a var->varexpr map was removed from the hashmap
+    * when removing duplicate subexpressions it can happen that a var->varexpr map was removed from the hashmap
     */
    for( i = 0; i < consdata->nvarexprs; ++i )
    {
@@ -3717,22 +3732,37 @@ SCIP_RETCODE initSolve(
          assert(consdata != NULL);
          assert(consdata->expr != NULL);
 
-         /* call the curvature detection algorithm of the convex nonlinear handler
-          * Check only for those curvature that may result in a convex inequality, i.e.,
-          * whether f(x) is concave when f(x) >= lhs and/or f(x) is convex when f(x) <= rhs.
-          * Also we can assume that we are nonlinear, so do not check for convex if already concave.
-          */
-         if( !SCIPisInfinity(scip, -consdata->lhs) )
+         if( !SCIPconshdlrGetData(conshdlr)->assumeconvex )
          {
-            SCIP_CALL( SCIPhasExprCurvature(scip, consdata->expr, SCIP_EXPRCURV_CONCAVE, &success, NULL) );
-            if( success )
-               consdata->curv = SCIP_EXPRCURV_CONCAVE;
+            /* call the curvature detection algorithm of the convex nonlinear handler
+             * Check only for those curvature that may result in a convex inequality, i.e.,
+             * whether f(x) is concave when f(x) >= lhs and/or f(x) is convex when f(x) <= rhs.
+             * Also we can assume that we are nonlinear, so do not check for convex if already concave.
+             */
+            if( !SCIPisInfinity(scip, -consdata->lhs) )
+            {
+               SCIP_CALL( SCIPhasExprCurvature(scip, consdata->expr, SCIP_EXPRCURV_CONCAVE, &success, NULL) );
+               if( success )
+                  consdata->curv = SCIP_EXPRCURV_CONCAVE;
+            }
+            if( !success && !SCIPisInfinity(scip, consdata->rhs) )
+            {
+               SCIP_CALL( SCIPhasExprCurvature(scip, consdata->expr, SCIP_EXPRCURV_CONVEX, &success, NULL) );
+               if( success )
+                  consdata->curv = SCIP_EXPRCURV_CONVEX;
+            }
          }
-         if( !success && !SCIPisInfinity(scip, consdata->rhs) )
+         else
          {
-            SCIP_CALL( SCIPhasExprCurvature(scip, consdata->expr, SCIP_EXPRCURV_CONVEX, &success, NULL) );
-            if( success )
-               consdata->curv = SCIP_EXPRCURV_CONVEX;
+            if( !SCIPisInfinity(scip, -consdata->lhs) && !SCIPisInfinity(scip, consdata->rhs) )
+            {
+               SCIPwarningMessage(scip, "Nonlinear constraint <%s> has finite left- and right-hand side, but constraints/nonlinear/assumeconvex is enabled.\n", SCIPconsGetName(conss[c]));
+               consdata->curv = SCIP_EXPRCURV_LINEAR;
+            }
+            else
+            {
+               consdata->curv = !SCIPisInfinity(scip, consdata->rhs) ? SCIP_EXPRCURV_CONVEX : SCIP_EXPRCURV_CONCAVE;
+            }
          }
          SCIPdebugMsg(scip, "root curvature of constraint %s = %d\n", SCIPconsGetName(conss[c]), consdata->curv);
 
@@ -6273,7 +6303,7 @@ SCIP_Real getViolSplitWeight(
 
    switch( conshdlrdata->branchviolsplit )
    {
-      case 'e' :  /* evenly: everyone gets the same score */
+      case 'u' :  /* uniform: everyone gets the same score */
          return 1.0;
 
       case 'm' :  /* midness of solution: 0.5 if in middle of domain, 0.05 if close to lower or upper bound */
@@ -6335,9 +6365,8 @@ void addExprsViolScore(
    if( nexprs == 1 )
    {
       SCIPaddExprViolScoreNonlinear(scip, exprs[0], violscore);
-      SCIPdebug( var = SCIPgetExprAuxVarNonlinear(exprs[0]); )
       SCIPdebugMsg(scip, "add score %g to <%s>[%g,%g]\n", violscore,
-         SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
+         SCIPvarGetName(SCIPgetExprAuxVarNonlinear(exprs[0])), SCIPvarGetLbLocal(SCIPgetExprAuxVarNonlinear(exprs[0])), SCIPvarGetUbLocal(SCIPgetExprAuxVarNonlinear(exprs[0])));
       *success = TRUE;
       return;
    }
@@ -7072,6 +7101,9 @@ void scoreBranchingCandidates(
             else
                pscostup = SCIP_INVALID;
 
+            /* TODO if both are valid, we get pscostdown*pscostup, but does this compare well with vars were only pscostdown or pscostup is used?
+             * maybe we should use (pscostdown+pscostup)/2 or sqrt(pscostdown*pscostup) ?
+             */
             if( pscostdown == SCIP_INVALID && pscostup == SCIP_INVALID )
                cands[c].pscost = SCIP_INVALID;
             else if( pscostdown == SCIP_INVALID )
@@ -7152,9 +7184,9 @@ void scoreBranchingCandidates(
          ENFOLOG( SCIPinfoMessage(scip, enfologfile, " %+g*%7.2g(dual)", conshdlrdata->branchdualweight, cands[c].dual / maxscore.dual); )
       }
 
-      /* use pseudo-costs, if we have some for at least half the candidates */
       if( maxscore.pscost > 0.0 )
       {
+         /* use pseudo-costs only if available */
          if( cands[c].pscost != SCIP_INVALID )
          {
             cands[c].weighted += conshdlrdata->branchpscostweight * cands[c].pscost / maxscore.pscost;
@@ -9528,6 +9560,8 @@ SCIP_DECL_CONSINIT(consInitNonlinear)
    conshdlrdata->lastboundrelax = ++conshdlrdata->curboundstag;
    /* set to 1 so it is larger than initial value of lastenforound in exprs */
    conshdlrdata->enforound = 1;
+   /* reset numbering for auxiliary variables */
+   conshdlrdata->auxvarid = 0;
 
    for( i = 0; i < nconss; ++i )
    {
@@ -9543,7 +9577,7 @@ SCIP_DECL_CONSINIT(consInitNonlinear)
    conshdlrdata->subnlpheur = SCIPfindHeur(scip, "subnlp");
    conshdlrdata->trysolheur = SCIPfindHeur(scip, "trysol");
 
-   /* reset statistics in nonlinear handlers (TODO only if misc/resetstat == TRUE) */
+   /* reset statistics in nonlinear handlers (TODO only if misc/resetstat == TRUE) and call nlhdlrInit */
    for( i = 0; i < conshdlrdata->nnlhdlrs; ++i )
    {
       SCIP_CALL( SCIPnlhdlrInit(scip, conshdlrdata->nlhdlrs[i]) );
@@ -10262,6 +10296,8 @@ SCIP_DECL_CONSACTIVE(consActiveNonlinear)
    /* simplify root expression if the constraint has been added after presolving */
    if( SCIPgetStage(scip) > SCIP_STAGE_EXITPRESOLVE )
    {
+      SCIP_Bool replacedroot;
+
       if( !consdata->issimplified )
       {
          SCIP_EXPR* simplified;
@@ -10274,6 +10310,10 @@ SCIP_DECL_CONSACTIVE(consActiveNonlinear)
          consdata->expr = simplified;
          consdata->issimplified = TRUE;
       }
+
+      /* ensure each variable is represented by one variable expression only (need this for storeVarExprs() with simplified=TRUE below) */
+      SCIP_CALL( SCIPreplaceCommonSubexpressions(scip, &consdata->expr, 1, &replacedroot) );
+      assert(!replacedroot);  /* root expression cannot have been equal to one of its subexpressions */
 
       /* ensure that varexprs in consdata->expr are the one from var2expr hashmap */
       {
@@ -10961,11 +11001,11 @@ SCIP_RETCODE SCIPincludeConshdlrNonlinear(
 
    SCIP_CALL( SCIPaddCharParam(scip, "constraints/" CONSHDLR_NAME "/branching/scoreagg",
          "how to aggregate several branching scores given for the same expression: 'a'verage, 'm'aximum, 's'um",
-         &conshdlrdata->branchscoreagg, TRUE, 's', "ams", NULL, NULL) );
+         &conshdlrdata->branchscoreagg, FALSE, 's', "ams", NULL, NULL) );
 
    SCIP_CALL( SCIPaddCharParam(scip, "constraints/" CONSHDLR_NAME "/branching/violsplit",
-         "method used to split violation in expression onto variables: 'e'venly, 'm'idness of solution, 'd'omain width, 'l'ogarithmic domain width",
-         &conshdlrdata->branchviolsplit, TRUE, 'm', "emdl", NULL, NULL) );
+         "method used to split violation in expression onto variables: 'u'niform, 'm'idness of solution, 'd'omain width, 'l'ogarithmic domain width",
+         &conshdlrdata->branchviolsplit, FALSE, 'm', "umdl", NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/branching/pscostreliable",
          "minimum pseudo-cost update count required to consider pseudo-costs reliable",
@@ -10974,6 +11014,10 @@ SCIP_RETCODE SCIPincludeConshdlrNonlinear(
    SCIP_CALL( SCIPaddCharParam(scip, "constraints/" CONSHDLR_NAME "/linearizeheursol",
          "whether tight linearizations of nonlinear constraints should be added to cutpool when some heuristics finds a new solution ('o'ff, on new 'i'ncumbents, on 'e'very solution)",
          &conshdlrdata->linearizeheursol, FALSE, 'o', "oie", NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/assumeconvex",
+         "whether to assume that any constraint is convex",
+         &conshdlrdata->assumeconvex, FALSE, FALSE, NULL, NULL) );
 
    /* include handler for bound change events */
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &conshdlrdata->eventhdlr, CONSHDLR_NAME "_boundchange",
@@ -11246,6 +11290,77 @@ SCIP_RETCODE SCIPcreateConsBasicQuadraticNonlinear(
 {
    SCIP_CALL( SCIPcreateConsQuadraticNonlinear(scip, cons, name, nlinvars, linvars, lincoefs, nquadterms, quadvars1, quadvars2, quadcoefs, lhs, rhs,
       TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   return SCIP_OKAY;
+}
+
+/** creates and captures a nonlinear constraint that is a second-order cone constraint with all its constraint flags set to their default values
+ *
+ * \f$\sqrt{\gamma + \sum_{i=1}^{n} (\alpha_i\, (x_i + \beta_i))^2} \leq \alpha_{n+1}\, (x_{n+1}+\beta_{n+1})\f$
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+SCIP_RETCODE SCIPcreateConsBasicSOCNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   int                   nvars,              /**< number of variables on left hand side of constraint (n) */
+   SCIP_VAR**            vars,               /**< array with variables on left hand side (x_i) */
+   SCIP_Real*            coefs,              /**< array with coefficients of left hand side variables (alpha_i), or NULL if all 1.0 */
+   SCIP_Real*            offsets,            /**< array with offsets of variables (beta_i), or NULL if all 0.0 */
+   SCIP_Real             constant,           /**< constant on left hand side (gamma) */
+   SCIP_VAR*             rhsvar,             /**< variable on right hand side of constraint (x_{n+1}) */
+   SCIP_Real             rhscoeff,           /**< coefficient of variable on right hand side (alpha_{n+1}) */
+   SCIP_Real             rhsoffset           /**< offset of variable on right hand side (beta_{n+1}) */
+   )
+{
+   SCIP_EXPR* expr;
+   SCIP_EXPR* lhssum;
+   SCIP_EXPR* terms[2];
+   SCIP_Real termcoefs[2];
+   int i;
+
+   assert(vars != NULL || nvars == 0);
+
+   SCIP_CALL( SCIPcreateExprSum(scip, &lhssum, 0, NULL, NULL, constant, NULL, NULL) );  /* gamma */
+   for( i = 0; i < nvars; ++i )
+   {
+      SCIP_EXPR* varexpr;
+      SCIP_EXPR* powexpr;
+
+      SCIP_CALL( SCIPcreateExprVar(scip, &varexpr, vars[i], NULL, NULL) );   /* x_i */
+      if( offsets != NULL && offsets[i] != 0.0 )
+      {
+         SCIP_EXPR* sum;
+         SCIP_CALL( SCIPcreateExprSum(scip, &sum, 1, &varexpr, NULL, offsets[i], NULL, NULL) );  /* x_i + beta_i */
+         SCIP_CALL( SCIPcreateExprPow(scip, &powexpr, sum, 2.0, NULL, NULL) );   /* (x_i + beta_i)^2 */
+         SCIP_CALL( SCIPreleaseExpr(scip, &sum) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPcreateExprPow(scip, &powexpr, varexpr, 2.0, NULL, NULL) );  /* x_i^2 */
+      }
+
+      SCIP_CALL( SCIPappendExprSumExpr(scip, lhssum, powexpr, coefs != NULL ? coefs[i]*coefs[i] : 1.0) );  /* + alpha_i^2 (x_i + beta_i)^2 */
+      SCIP_CALL( SCIPreleaseExpr(scip, &varexpr) );
+      SCIP_CALL( SCIPreleaseExpr(scip, &powexpr) );
+   }
+
+   SCIP_CALL( SCIPcreateExprPow(scip, &terms[0], lhssum, 0.5, NULL, NULL) );  /* sqrt(...) */
+   SCIP_CALL( SCIPreleaseExpr(scip, &lhssum) );
+   termcoefs[0] = 1.0;
+
+   SCIP_CALL( SCIPcreateExprVar(scip, &terms[1], rhsvar, NULL, NULL) );  /* x_{n+1} */
+   termcoefs[1] = -rhscoeff;
+
+   SCIP_CALL( SCIPcreateExprSum(scip, &expr, 2, terms, termcoefs, 0.0, NULL, NULL) );  /* sqrt(...) - alpha_{n+1}x_{n_1} */
+
+   SCIP_CALL( SCIPreleaseExpr(scip, &terms[1]) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &terms[0]) );
+
+   SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, cons, name, expr, -SCIPinfinity(scip), rhscoeff * rhsoffset) );
+
+   SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 
    return SCIP_OKAY;
 }
@@ -11581,6 +11696,10 @@ SCIP_RETCODE SCIPprocessRowprepNonlinear(
          ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    cut efficacy %g is too low (minefficacy=%g)\n",
                                   SCIPgetCutEfficacy(scip, sol, row), SCIPgetSepaMinEfficacy(scip)); )
       }
+      else if( !SCIPisCutApplicable(scip, row) )
+      {
+         ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    cut not applicable (e.g., cut is boundchange below eps)\n"); )
+      }
       else
       {
          SCIP_Bool infeasible;
@@ -11629,6 +11748,21 @@ SCIP_RETCODE SCIPprocessRowprepNonlinear(
    }
 
    return SCIP_OKAY;
+}
+
+/** returns whether all nonlinear constraints are assumed to be convex */
+SCIP_Bool SCIPassumeConvexNonlinear(
+   SCIP_CONSHDLR*        conshdlr
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert(conshdlr != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   return conshdlrdata->assumeconvex;
 }
 
 /** collects all bilinear terms for a given set of constraints
@@ -12031,12 +12165,12 @@ SCIP_RETCODE SCIPcomputeFacetVertexPolyhedralNonlinear(
    {
       int idx1 = nonfixedpos[0];
       int idx2 = nonfixedpos[1];
-      double p1[2] = { box[2*idx1],   box[2*idx2]   }; /* corner 0: 0>>0 & 0x1 = 0, 0>>1 & 0x1 = 0 */
-      double p2[2] = { box[2*idx1+1], box[2*idx2]   }; /* corner 1: 1>>0 & 0x1 = 1, 1>>1 & 0x1 = 0 */
-      double p3[2] = { box[2*idx1],   box[2*idx2+1] }; /* corner 2: 2>>0 & 0x1 = 0, 2>>1 & 0x1 = 1 */
-      double p4[2] = { box[2*idx1+1], box[2*idx2+1] }; /* corner 3: 3>>0 & 0x1 = 1, 3>>1 & 0x1 = 1 */
-      double xstar2[2] = { xstar[idx1], xstar[idx2] };
-      double coefs[2] = { 0.0, 0.0 };
+      SCIP_Real p1[2] = { box[2*idx1],   box[2*idx2]   }; /* corner 0: 0>>0 & 0x1 = 0, 0>>1 & 0x1 = 0 */
+      SCIP_Real p2[2] = { box[2*idx1+1], box[2*idx2]   }; /* corner 1: 1>>0 & 0x1 = 1, 1>>1 & 0x1 = 0 */
+      SCIP_Real p3[2] = { box[2*idx1],   box[2*idx2+1] }; /* corner 2: 2>>0 & 0x1 = 0, 2>>1 & 0x1 = 1 */
+      SCIP_Real p4[2] = { box[2*idx1+1], box[2*idx2+1] }; /* corner 3: 3>>0 & 0x1 = 1, 3>>1 & 0x1 = 1 */
+      SCIP_Real xstar2[2] = { xstar[idx1], xstar[idx2] };
+      SCIP_Real coefs[2] = { 0.0, 0.0 };
 
       SCIP_CALL( computeVertexPolyhedralFacetBivariate(scip, overestimate, p1, p2, p3, p4, funvals[0], funvals[1], funvals[2], funvals[3], xstar2, targetvalue, success, coefs, facetconstant) );
 
@@ -12958,6 +13092,7 @@ SCIP_RETCODE SCIPgetExprRelAuxViolationNonlinear(
    if( !SCIPisInfinity(scip, *viol) )
    {
       assert(auxvalue != SCIP_INVALID);
+      /* TODO maybe we should rather use max(eps,|auxvalue|)? */
       *viol /= MAX(1.0, REALABS(auxvalue));
    }
 
@@ -13593,6 +13728,36 @@ SCIP_RETCODE SCIPincludeNlhdlrNonlinear(
       SCIPsortDownPtr((void**)conshdlrdata->nlhdlrs, SCIPnlhdlrComp, conshdlrdata->nnlhdlrs);
 
    return SCIP_OKAY;
+}
+
+/** get number of nonlinear handler */
+int SCIPgetNNlhdlrsNonlinear(
+   SCIP_CONSHDLR*        conshdlr            /**< nonlinear constraint handler */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert(conshdlr != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   return conshdlrdata->nnlhdlrs;
+}
+
+/** get nonlinear handlers */
+SCIP_NLHDLR** SCIPgetNlhdlrsNonlinear(
+   SCIP_CONSHDLR*        conshdlr            /**< nonlinear constraint handler */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert(conshdlr != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   return conshdlrdata->nlhdlrs;
 }
 
 /** returns a nonlinear handler of a given name (or NULL if not found) */

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -57,7 +57,7 @@
 #define HEUR_NAME             "lpface"
 #define HEUR_DESC             "LNS heuristic that searches the optimal LP face inside a sub-MIP"
 #define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_LNS
-#define HEUR_PRIORITY         -1104000
+#define HEUR_PRIORITY         -1104010
 #define HEUR_FREQ             15
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
@@ -425,12 +425,14 @@ SCIP_RETCODE setSubscipLimits(
    SCIP_Real timelimit;
    SCIP_Real memorylimit;
    SCIP_Longint nodelimit;
+   SCIP_Bool avoidmemout;
 
    *success = TRUE;
 
    /* check whether there is enough time and memory left */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
    SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "misc/avoidmemout", &avoidmemout) );
 
    if( ! SCIPisInfinity(scip, timelimit) )
       timelimit -= SCIPgetSolvingTime(scip);
@@ -442,8 +444,9 @@ SCIP_RETCODE setSubscipLimits(
       memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
    }
 
-   /* abort if no time is left or not enough memory to create a copy of SCIP, including external memory usage */
-   if( timelimit <= 0.0 || memorylimit <= 2.0 * SCIPgetMemExternEstim(scip) / 1048576.0 )
+   /* abort if no time is left or not enough memory (we don't abort in this case if misc_avoidmemout == FALSE)
+    * to create a copy of SCIP, including external memory usage */
+   if( timelimit <= 0.0 || (avoidmemout && memorylimit <= 2.0 * SCIPgetMemExternEstim(scip) / 1048576.0) )
    {
       *success = FALSE;
       return SCIP_OKAY;

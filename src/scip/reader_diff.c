@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -87,7 +87,7 @@ typedef enum LpSense LPSENSE;
 struct LpInput
 {
    SCIP_FILE*            file;
-   char                  linebuf[LP_MAX_LINELEN+1];
+   char*                 linebuf;
    char                  probname[LP_MAX_LINELEN];
    char                  objname[LP_MAX_LINELEN];
    char*                 token;
@@ -96,11 +96,10 @@ struct LpInput
    int                   npushedtokens;
    int                   linenumber;
    int                   linepos;
+   int                   linebufsize;
    LPSECTION             section;
    SCIP_OBJSENSE         objsense;
    SCIP_Bool             haserror;
-   SCIP_Bool             comment;
-   SCIP_Bool             endline;
 };
 typedef struct LpInput LPINPUT;
 
@@ -124,7 +123,7 @@ void syntaxError(
    assert(lpinput != NULL);
 
    SCIPerrorMessage("Syntax error in line %d ('%s'): %s \n", lpinput->linenumber, lpinput->token, msg);
-   if( lpinput->linebuf[strlen(lpinput->linebuf)-1] == '\n' )
+   if( lpinput->linebuf[lpinput->linebufsize - 1] == '\n' )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "  input: %s", lpinput->linebuf);
    }
@@ -249,66 +248,34 @@ SCIP_Bool getNextLine(
 
    assert(lpinput != NULL);
 
-   /* if we previously detected a comment we have to parse the remaining line away if there is something left */
-   if( !lpinput->endline && lpinput->comment )
-   {
-      SCIPdebugMsg(scip, "Throwing rest of comment away.\n");
-
-      do
-      {
-         lpinput->linebuf[LP_MAX_LINELEN-2] = '\0';
-         (void)SCIPfgets(lpinput->linebuf, (int) sizeof(lpinput->linebuf), lpinput->file);
-      }
-      while( lpinput->linebuf[LP_MAX_LINELEN-2] != '\0' );
-
-      lpinput->comment = FALSE;
-      lpinput->endline = TRUE;
-   }
-
    /* read next line */
    lpinput->linepos = 0;
-   lpinput->linebuf[LP_MAX_LINELEN-2] = '\0';
+   lpinput->linebuf[lpinput->linebufsize - 2] = '\0';
 
-   if( SCIPfgets(lpinput->linebuf, (int) sizeof(lpinput->linebuf), lpinput->file) == NULL )
+   if( SCIPfgets(lpinput->linebuf, lpinput->linebufsize, lpinput->file) == NULL )
    {
       /* clear the line, this is really necessary here! */
-      BMSclearMemoryArray(lpinput->linebuf, LP_MAX_LINELEN);
+      BMSclearMemoryArray(lpinput->linebuf, lpinput->linebufsize);
 
       return FALSE;
    }
 
    lpinput->linenumber++;
 
-   /* if line is too long for our buffer correct the buffer and correct position in file */
-   if( lpinput->linebuf[LP_MAX_LINELEN-2] != '\0' )
+   /* if line is too long for our buffer reallocate buffer */
+   while( lpinput->linebuf[lpinput->linebufsize - 2] != '\0' )
    {
-      char* last;
+      int newsize;
 
-      /* buffer is full; erase last token since it might be incomplete */
-      lpinput->endline = FALSE;
-      last = strrchr(lpinput->linebuf, ' ');
+      newsize = SCIPcalcMemGrowSize(scip, lpinput->linebufsize + 1);
+      SCIP_CALL_ABORT( SCIPreallocBlockMemoryArray(scip, &lpinput->linebuf, lpinput->linebufsize, newsize) );
 
-      if( last == NULL )
-      {
-         SCIPwarningMessage(scip, "we read %d characters from the file; this might indicate a corrupted input file!",
-            LP_MAX_LINELEN - 2);
-         lpinput->linebuf[LP_MAX_LINELEN-2] = '\0';
-         SCIPdebugMsg(scip, "the buffer might be corrupted\n");
-      }
-      else
-      {
-         SCIPfseek(lpinput->file, -(long) strlen(last) - 1, SEEK_CUR);
-         SCIPdebugMsg(scip, "correct buffer, reread the last %ld characters\n", (long) strlen(last) + 1);
-         *last = '\0';
-      }
+      lpinput->linebuf[newsize-2] = '\0';
+      if ( SCIPfgets(lpinput->linebuf + lpinput->linebufsize - 1, newsize - lpinput->linebufsize + 1, lpinput->file) == NULL )
+         return FALSE;
+      lpinput->linebufsize = newsize;
    }
-   else
-   {
-      /* found end of line */
-      lpinput->endline = TRUE;
-   }
-   lpinput->linebuf[LP_MAX_LINELEN-1] = '\0'; /* we want to use lookahead of one char -> we need two \0 at the end */
-   lpinput->comment = FALSE;
+   lpinput->linebuf[lpinput->linebufsize - 1] = '\0'; /* we want to use lookahead of one char -> we need two \0 at the end */
 
    /* skip characters after comment symbol */
    for( i = 0; commentchars[i] != '\0'; ++i )
@@ -321,7 +288,6 @@ SCIP_Bool getNextLine(
          *commentstart = '\0';
          *(commentstart+1) = '\0'; /* we want to use lookahead of one char -> we need two \0 at the end */
 
-         lpinput->comment = TRUE;
          break;
       }
    }
@@ -356,7 +322,7 @@ SCIP_Bool getNextToken(
    int tokenlen;
 
    assert(lpinput != NULL);
-   assert(lpinput->linepos < LP_MAX_LINELEN);
+   assert(lpinput->linepos < lpinput->linebufsize);
 
    /* check the token stack */
    if( lpinput->npushedtokens > 0 )
@@ -381,11 +347,13 @@ SCIP_Bool getNextToken(
             return FALSE;
          }
          assert(lpinput->linepos == 0);
+         /* update buf, because the linebuffer may have been reallocated */
+         buf = lpinput->linebuf;
       }
       else
          lpinput->linepos++;
    }
-   assert(lpinput->linepos < LP_MAX_LINELEN);
+   assert(lpinput->linepos < lpinput->linebufsize);
    assert(!isDelimChar(buf[lpinput->linepos]));
    assert(buf[lpinput->linepos] != '\0'); /* '\0' is a delim-char, so this assert is redundant, but it helps to suppress a scan-build warning */
 
@@ -1051,7 +1019,9 @@ SCIP_RETCODE SCIPreadDiff(
 
    /* initialize LP input data */
    lpinput.file = NULL;
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &lpinput.linebuf, LP_MAX_LINELEN) );
    lpinput.linebuf[0] = '\0';
+   lpinput.linebufsize = LP_MAX_LINELEN;
    lpinput.probname[0] = '\0';
    lpinput.objname[0] = '\0';
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &lpinput.token, LP_MAX_LINELEN) ); /*lint !e506*/
@@ -1069,8 +1039,6 @@ SCIP_RETCODE SCIPreadDiff(
    lpinput.section = LP_START;
    lpinput.objsense = SCIP_OBJSENSE_MINIMIZE;
    lpinput.haserror = FALSE;
-   lpinput.comment = FALSE;
-   lpinput.endline = FALSE;
 
    /* read the file */
    SCIP_CALL( readDiffFile(scip, &lpinput, filename) );
@@ -1082,6 +1050,7 @@ SCIP_RETCODE SCIPreadDiff(
    }
    SCIPfreeBlockMemoryArray(scip, &lpinput.tokenbuf, LP_MAX_LINELEN);
    SCIPfreeBlockMemoryArray(scip, &lpinput.token, LP_MAX_LINELEN);
+   SCIPfreeBlockMemoryArray(scip, &lpinput.linebuf, lpinput.linebufsize);
 
    /* evaluate the result */
    if( lpinput.haserror )

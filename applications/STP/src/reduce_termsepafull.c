@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -123,7 +123,7 @@ int getPartitionNgroups(
 static
 void getPartitionGroupsSizes(
    int                   nelems,             /**< number of elements */
-   int                   ngroups,
+   int                   ngroups,            /**< number of groups */
    const int*            partition,          /**< group id for each element; 0,1,... */
    int*                  groups_sizes        /**< to be filled: size of each group */
    )

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -17424,8 +17424,8 @@ SCIP_VARTYPE SCIPvarGetType(
 /** returns TRUE if the variable is of binary type; this is the case if:
  *  (1) variable type is binary
  *  (2) variable type is integer or implicit integer and 
- *      (i)  the lazy lower bound or the global lower bound is greater than or equal to zero
- *      (ii) the lazy upper bound or the global upper bound is less than or equal to one
+ *      (i)  the global lower bound is greater than or equal to zero
+ *      (ii) the global upper bound is less than or equal to one
  */
 SCIP_Bool SCIPvarIsBinary(
    SCIP_VAR*             var                 /**< problem variable */
@@ -17434,7 +17434,7 @@ SCIP_Bool SCIPvarIsBinary(
    assert(var != NULL);
 
    return (SCIPvarGetType(var) == SCIP_VARTYPE_BINARY || 
-      (SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS && MAX(var->glbdom.lb, var->lazylb) >= 0.0 && MIN(var->glbdom.ub, var->lazyub) <= 1.0));
+      (SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS && var->glbdom.lb >= 0.0 && var->glbdom.ub <= 1.0));
 }
 
 /** returns whether variable is of integral type (binary, integer, or implicit integer) */

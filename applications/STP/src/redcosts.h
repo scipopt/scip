@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -343,6 +343,15 @@ SCIP_RETCODE redcosts_initializeDistancesTop(
 SCIP_EXPORT
 SCIP_Bool redcosts_forLPareAvailable(
    SCIP*                 scip                /**< SCIP structure */
+   );
+
+
+/** are reduced costs reliable? */
+SCIP_EXPORT
+SCIP_Bool redcosts_forLPareReliable(
+   SCIP*                 scip,               /**< SCIP structure */
+   SCIP_VAR**            vars,               /**< variables (in) */
+   const GRAPH*          graph               /**< graph data */
    );
 
 /** initialize reduced costs */

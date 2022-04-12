@@ -317,13 +317,20 @@ class NLHandler {
   /**
     \rst
     Returns true if the objective with index *obj_index* should be handled.
-    This method is deprecated.
     \endrst
    */
   bool NeedObj(int obj_index) const {
     internal::Unused(obj_index);
     return true;
   }
+
+  /**
+    \rst
+    Returns final objective index
+    (e.g., returns 0 if objno>0 and multiobj=0)
+    \endrst
+   */
+  int resulting_obj_index(int obj_index) const { return obj_index; }
 
   /**
     Receives notification of an objective type and the nonlinear part of
@@ -1243,11 +1250,9 @@ class BinaryReader : private InputConverter, public BinaryReaderBase {
   template <typename Int>
   Int ReadInt() {
     token_ = ptr_;
-    //SV was return this->Convert(*reinterpret_cast<const Int*>(Read(sizeof(Int))));
-    //but this can trigger a load of misaligned address error from sanitizers, so copy into aligned memory first
     Int val;
     memcpy(&val, Read(sizeof(Int)), sizeof(Int));
-    return val;
+    return this->Convert(val);
   }
 
   int ReadUInt() {
@@ -1259,12 +1264,9 @@ class BinaryReader : private InputConverter, public BinaryReaderBase {
 
   double ReadDouble() {
     token_ = ptr_;
-    // SV was return this->Convert(
-    //      *reinterpret_cast<const double*>(Read(sizeof(double))));
-    //but this can trigger a load of misaligned address error from sanitizers, so copy into aligned memory first
     double val;
     memcpy(&val, Read(sizeof(double)), sizeof(double));
-    return val;
+    return this->Convert(val);
   }
 
   fmt::StringRef ReadString() {
@@ -1470,7 +1472,8 @@ class NLReader {
     }
 
     typename Handler::LinearObjHandler OnLinearExpr(int index, int num_terms) {
-      return this->reader_.handler_.OnLinearObjExpr(index, num_terms);
+      auto& h = this->reader_.handler_;
+      return h.OnLinearObjExpr( h.resulting_obj_index(index), num_terms);
     }
   };
 
@@ -1854,7 +1857,8 @@ void NLReader<Reader, Handler>::ReadBounds() {
         reader_.ReadTillEndOfLine();
         continue;
       }
-      // Fall through as COMPL bound type is invalid for variables.
+      reader_.ReportError("COMPL bound type is invalid for variables");
+      break;
     default:
       reader_.ReportError("expected bound");
     }
@@ -1951,8 +1955,11 @@ void NLReader<Reader, Handler>::Read(Reader *bound_reader) {
       int index = ReadUInt(header_.num_objs);
       int obj_type = reader_.ReadUInt();
       reader_.ReadTillEndOfLine();
-      handler_.OnObj(index, obj_type != 0 ? obj::MAX : obj::MIN,
-                     ReadNumericExpr(true));
+      NumericExpr expr = ReadNumericExpr(true);
+      if (handler_.NeedObj(index))
+        handler_.OnObj(handler_.resulting_obj_index(index),
+                       obj_type != 0 ? obj::MAX : obj::MIN,
+                       expr);
       break;
     }
     case 'V': {
@@ -2215,8 +2222,9 @@ class NLProblemBuilder {
       builder_.AddVars(n, var::INTEGER);
     if (int n = h.num_common_exprs())
       builder_.AddCommonExprs(n);
-    if (h.num_objs != 0)
-      builder_.AddObjs(h.num_objs);
+    int n_objs = resulting_nobj( h.num_objs );
+    if (n_objs != 0)
+      builder_.AddObjs( n_objs );
     if (h.num_algebraic_cons != 0)
       builder_.AddAlgebraicCons(h.num_algebraic_cons);
     if (h.num_logical_cons != 0)
@@ -2225,9 +2233,21 @@ class NLProblemBuilder {
       builder_.AddFunctions(h.num_funcs);
   }
 
+  virtual int objno() const { return 1; }
+  virtual bool multiobj() const { return true; }
+
+  int resulting_nobj(int nobj_header) const {
+    return multiobj() ? nobj_header :
+                        std::min( (objno()>0), (nobj_header>0) );
+  }
   bool NeedObj(int obj_index) const {
-    internal::Unused(obj_index);
-    return true;
+    return multiobj() || objno()-1==obj_index;
+  }
+  int resulting_obj_index(int index) const {
+    if (multiobj())
+      return index;
+    assert(objno()-1==index);
+    return 0;
   }
 
   void OnObj(int index, obj::Type type, NumericExpr expr) {

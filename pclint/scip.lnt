@@ -3,7 +3,7 @@
 //*                  This file is part of the program and library             */
 //*         SCIP --- Solving Constraint Integer Programs                      */
 //*                                                                           */
-//*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+//*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 //*                            fuer Informationstechnik Berlin                */
 //*                                                                           */
 //*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -27,6 +27,13 @@
 
 // declare SCIP_ABORT to not return
 -sem(SCIP_ABORT, r_no)
+
+// declare __assert_fail as pure
+-sem(__assert_fail,pure)
+
+// declare some functions pure that are not recognized by pclint
+-sem(SCIPsetFeastol,pure)
+-sem(SCIPsetDualFeastol,pure)
 
 // turn off the following warning, because this often arises from old lint versions
 -e72
@@ -66,6 +73,14 @@
 -emacro(438,SCIP_CALL)
 -emacro(438,SCIP_CALL_ABORT)
 
+// function previously designated pure, assigns to pointer-to-non-const the address of  possibly non-local memory
+-esym(453,SCIPfeastol)
+-esym(453,SCIPdualfeastol)
+
+// duplicate initialization of object
+-emacro(485,SCIPsolveNlpi)
+-emacro(485,SCIPsolveNLP)
+
 // redundant left argument to comma
 -emacro(505,SCIPtpiInitLock)
 -emacro(505,SCIPtpiDestroyLock)
@@ -88,6 +103,8 @@
 -emacro(506,debugPrintf)
 -emacro(506,SCIPABORT)
 
+// expression statement involving a 'conditional operator' lacks side effects
+-emacro(523,assert)
 
 // is likely uninitialized
 -emacro(530,va_*)

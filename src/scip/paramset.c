@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -2388,6 +2388,11 @@ SCIP_RETCODE emphasisParse(
       SCIP_CALL( SCIPparamsetSetEmphasis(paramset, set, messagehdlr, SCIP_PARAMEMPHASIS_NUMERICS, FALSE) );
       globalemphasis = TRUE;
    }
+   else if ( strcmp(paramname, "benchmark") == 0 )
+   {
+      SCIP_CALL( SCIPparamsetSetEmphasis(paramset, set, messagehdlr, SCIP_PARAMEMPHASIS_BENCHMARK, FALSE) );
+      globalemphasis = TRUE;
+   }
 
    /* check whether rest of line is clean */
    if ( globalemphasis )
@@ -3798,6 +3803,7 @@ SCIP_RETCODE paramsetSetSeparatingOff(
  *  - \ref SCIP_PARAMEMPHASIS_PHASEIMPROVE to find improved solutions during a 3 phase solution process
  *  - \ref SCIP_PARAMEMPHASIS_PHASEPROOF to proof optimality during a 3 phase solution process
  *  - \ref SCIP_PARAMEMPHASIS_NUMERICS to solve problems which cause numerical issues
+ *  - \ref SCIP_PARAMEMPHASIS_BENCHMARK to not try to avoid running into memory limit
  */
 SCIP_RETCODE SCIPparamsetSetEmphasis(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
@@ -3807,13 +3813,11 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    )
 {
-   /* reset all parameter to default */
-   SCIP_CALL( SCIPparamsetSetToDefaults(paramset, set, messagehdlr) );
-
    switch( paramemphasis )
    {
    case SCIP_PARAMEMPHASIS_DEFAULT:
-      /* the default values are already set */
+      /* reset all parameter to default */
+      SCIP_CALL( SCIPparamsetSetToDefaults(paramset, set, messagehdlr) );
       break;
 
    case SCIP_PARAMEMPHASIS_COUNTER:
@@ -4050,6 +4054,13 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
       SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "constraints/nonlinear/conssiderelaxamount", 1e-7, quiet) );
       SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "constraints/nonlinear/varboundrelaxamount", 1e-7, quiet) );
 
+      break;
+
+   case SCIP_PARAMEMPHASIS_BENCHMARK:
+
+      /* turn off memory saving mode and do not try to avoid memory limit */
+      SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "memory/savefac", 1.0, quiet) );
+      SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "misc/avoidmemout", FALSE, quiet) );
       break;
 
    default:

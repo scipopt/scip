@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -286,6 +286,7 @@
 #define SCIP_DEFAULT_MISC_IMPROVINGSOLS   FALSE /**< should only solutions be checked which improve the primal bound */
 #define SCIP_DEFAULT_MISC_PRINTREASON      TRUE /**< should the reason be printed if a given start solution is infeasible? */
 #define SCIP_DEFAULT_MISC_ESTIMEXTERNMEM   TRUE /**< should the usage of external memory be estimated? */
+#define SCIP_DEFAULT_MISC_AVOIDMEMOUT      TRUE /**< try to avoid running into memory limit by restricting plugins like heuristics? */
 #define SCIP_DEFAULT_MISC_TRANSORIGSOLS    TRUE /**< should SCIP try to transfer original solutions to the transformed space (after presolving)? */
 #define SCIP_DEFAULT_MISC_TRANSSOLSORIG    TRUE /**< should SCIP try to transfer transformed solutions to the original space (after solving)? */
 #define SCIP_DEFAULT_MISC_CALCINTEGRAL     TRUE /**< should SCIP calculate the primal dual integral? */
@@ -351,7 +352,8 @@
 /* Decomposition */
 #define SCIP_DEFAULT_DECOMP_BENDERSLABELS FALSE /**< should the variables be labelled for the application of Benders' decomposition */
 #define SCIP_DEFAULT_DECOMP_APPLYBENDERS  FALSE /**< if a decomposition exists, should Benders' decomposition be applied? */
-#define SCIP_DEFAULT_DECOMP_MAXGRAPHEDGE  10000 /**< maximum number of edges in block graph computation, or -1 for no limit */
+#define SCIP_DEFAULT_DECOMP_MAXGRAPHEDGE  10000 /**< maximum number of edges in block graph computation (-1: no limit, 0: disable block graph computation) */
+#define SCIP_DEFAULT_DECOMP_DISABLEMEASURES FALSE /**< disable expensive measures */
 
 /* Benders' decomposition */
 #define SCIP_DEFAULT_BENDERS_SOLTOL        1e-6 /**< the tolerance used to determine optimality in Benders' decomposition */
@@ -1966,6 +1968,11 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->misc_estimexternmem, FALSE, SCIP_DEFAULT_MISC_ESTIMEXTERNMEM,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "misc/avoidmemout",
+         "try to avoid running into memory limit by restricting plugins like heuristics?",
+         &(*set)->misc_avoidmemout, FALSE, SCIP_DEFAULT_MISC_AVOIDMEMOUT,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "misc/transorigsols",
          "should SCIP try to transfer original solutions to the transformed space (after presolving)?",
          &(*set)->misc_transorigsols, FALSE, SCIP_DEFAULT_MISC_TRANSORIGSOLS,
@@ -2226,9 +2233,14 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "decomposition/maxgraphedge",
-         "maximum number of edges in block graph computation, or -1 for no limit",
+         "maximum number of edges in block graph computation (-1: no limit, 0: disable block graph computation)",
          &(*set)->decomp_maxgraphedge, FALSE, SCIP_DEFAULT_DECOMP_MAXGRAPHEDGE, -1, INT_MAX,
          NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+      "decomposition/disablemeasures",
+      "disable expensive measures",
+      &(*set)->decomp_disablemeasures, FALSE, SCIP_DEFAULT_DECOMP_DISABLEMEASURES,
+      NULL, NULL) );
 
    /* Benders' decomposition parameters */
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
@@ -4545,7 +4557,7 @@ SCIP_HEUR* SCIPsetFindHeur(
    return NULL;
 }
 
-/** sorts heuristics by priorities */
+/** sorts heuristics by their delay positions and priorities */
 void SCIPsetSortHeurs(
    SCIP_SET*             set                 /**< global SCIP settings */
    )

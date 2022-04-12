@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -127,9 +127,9 @@ Test(nlhdlrbilinear, collect_product_expressions)
    SCIP_CALL( SCIPconstructLP(scip, &infeasible) );
 
    /* check whether all product expressions could be found */
-   exprs = SCIPgetNlhdlrBilinearExprs(nlhdlr);
+   exprs = SCIPgetExprsBilinear(nlhdlr);
    cr_expect(exprs != NULL);
-   nexprs = SCIPgetNlhdlrBilinearNExprs(nlhdlr);
+   nexprs = SCIPgetNExprsBilinear(nlhdlr);
    cr_expect(nexprs == 3);
 
    for( c = 0; c < nexprs; ++c )
@@ -193,31 +193,31 @@ Test(nlhdlrbilinear, add_inequality)
     */
 
    /* separating inequality */
-   SCIP_CALL( SCIPaddNlhdlrBilinearIneq(scip, nlhdlr, expr, 1.0, -2.0, 4.5, &success) );
+   SCIP_CALL( SCIPaddIneqBilinear(scip, nlhdlr, expr, 1.0, -2.0, 4.5, &success) );
    cr_expect(success);
 
    /* non-separating inequality */
-   SCIP_CALL( SCIPaddNlhdlrBilinearIneq(scip, nlhdlr, expr, 1.0, -1.0, 5.0, &success) );
+   SCIP_CALL( SCIPaddIneqBilinear(scip, nlhdlr, expr, 1.0, -1.0, 5.0, &success) );
    cr_expect(!success);
 
    /* duplicates should not be accepted */
-   SCIP_CALL( SCIPaddNlhdlrBilinearIneq(scip, nlhdlr, expr, 1.0, -2.0, 4.5, &success) );
+   SCIP_CALL( SCIPaddIneqBilinear(scip, nlhdlr, expr, 1.0, -2.0, 4.5, &success) );
    cr_expect(!success);
 
    /* first inequality is still dominating this inequality -> do not accept it */
-   SCIP_CALL( SCIPaddNlhdlrBilinearIneq(scip, nlhdlr, expr, 0.9, -3.0, 5.5, &success) );
+   SCIP_CALL( SCIPaddIneqBilinear(scip, nlhdlr, expr, 0.9, -3.0, 5.5, &success) );
    cr_expect(!success);
 
    /* separates bottom-left corner */
-   SCIP_CALL( SCIPaddNlhdlrBilinearIneq(scip, nlhdlr, expr, -1.0, -1.1, -2.0, &success) );
+   SCIP_CALL( SCIPaddIneqBilinear(scip, nlhdlr, expr, -1.0, -1.1, -2.0, &success) );
    cr_expect(success);
 
    /* dominates first inequality */
-   SCIP_CALL( SCIPaddNlhdlrBilinearIneq(scip, nlhdlr, expr, 1.1, 0.5, -3.0, &success) );
+   SCIP_CALL( SCIPaddIneqBilinear(scip, nlhdlr, expr, 1.1, 0.5, -3.0, &success) );
    cr_expect(success);
 
    /* worse than inequality for bottom-left corner */
-   SCIP_CALL( SCIPaddNlhdlrBilinearIneq(scip, nlhdlr, expr, -1.0, -1.1, -2.2, &success) );
+   SCIP_CALL( SCIPaddIneqBilinear(scip, nlhdlr, expr, -1.0, -1.1, -2.2, &success) );
    cr_expect(!success);
 
    /* free memory */
@@ -317,7 +317,7 @@ Test(nlhdlrbilinear, separation_single)
    SCIP_CALL( SCIPsetSolVal(scip, sol, SCIPgetExprAuxVarNonlinear(expr), -1.25) );
 
     /* add inequality for underestimation to product expression */
-   SCIP_CALL( SCIPaddNlhdlrBilinearIneq(scip, nlhdlr, expr, 1.0, 1.0, 1.3, &success) );
+   SCIP_CALL( SCIPaddIneqBilinear(scip, nlhdlr, expr, 1.0, 1.0, 1.3, &success) );
    cr_expect(success);
 
    /* auxvar = -1.25 => McCormick relaxation is violated so the resulting cut should be one of the McCormick inequalities */
@@ -389,9 +389,9 @@ Test(nlhdlrbilinear, separation_two)
    SCIP_CALL( SCIPsetSolVal(scip, sol, SCIPgetExprAuxVarNonlinear(expr), 4.4) );
 
    /* add two inequalities to the product expression */
-   SCIP_CALL( SCIPaddNlhdlrBilinearIneq(scip, nlhdlr, expr, -1.2, -0.6, 0.9, &success) );
+   SCIP_CALL( SCIPaddIneqBilinear(scip, nlhdlr, expr, -1.2, -0.6, 0.9, &success) );
    cr_expect(success);
-   SCIP_CALL( SCIPaddNlhdlrBilinearIneq(scip, nlhdlr, expr, 0.5, 0.3, 0.6, &success) );
+   SCIP_CALL( SCIPaddIneqBilinear(scip, nlhdlr, expr, 0.5, 0.3, 0.6, &success) );
    cr_expect(success);
 
    /* auxvar = -0.1 => McCormick should do the job */
@@ -449,7 +449,7 @@ Test(nlhdlrbilinear, inteval_corner)
    cr_assert( SCIPgetExprNAuxvarUsesNonlinear(expr) > 0);
 
    /* add linear inequality x <= -y + 7 => maximum of xy is attained at (3,4) */
-   SCIP_CALL( SCIPaddNlhdlrBilinearIneq(scip, nlhdlr, expr, 1.0, -1.0, 7.0, &success) );
+   SCIP_CALL( SCIPaddIneqBilinear(scip, nlhdlr, expr, 1.0, -1.0, 7.0, &success) );
    cr_expect(success);
 
    interval = computeAndGetActivity(expr);
@@ -486,7 +486,7 @@ Test(nlhdlrbilinear, inteval_single_line)
    expr = SCIPgetExprNonlinear(cons);
 
    /* add linear inequality -x <= -y + 3.5 => maximum of xy is attained at (-1.75,1.75) */
-   SCIP_CALL( SCIPaddNlhdlrBilinearIneq(scip, nlhdlr, expr, -1.0, -1.0, 3.5, &success) );
+   SCIP_CALL( SCIPaddIneqBilinear(scip, nlhdlr, expr, -1.0, -1.0, 3.5, &success) );
    cr_expect(success);
 
    interval = computeAndGetActivity(expr);
@@ -531,13 +531,13 @@ Test(nlhdlrbilinear, inteval_three_lines)
    SCIPinfoMessage(scip, NULL, "\n");
 
    /* add -x <= -y + 3.5 and x <= -0.6 y -2.25 and -x <= 0.1 y + 3.5 */
-   SCIP_CALL( SCIPaddNlhdlrBilinearIneq(scip, nlhdlr, expr, -1.0, -1.0, 3.5, &success) );
+   SCIP_CALL( SCIPaddIneqBilinear(scip, nlhdlr, expr, -1.0, -1.0, 3.5, &success) );
    cr_expect(success);
 
-   SCIP_CALL( SCIPaddNlhdlrBilinearIneq(scip, nlhdlr, expr, 1.0, -0.6, -2.25, &success) );
+   SCIP_CALL( SCIPaddIneqBilinear(scip, nlhdlr, expr, 1.0, -0.6, -2.25, &success) );
    cr_expect(success);
 
-   SCIP_CALL( SCIPaddNlhdlrBilinearIneq(scip, nlhdlr, expr, -1.0, 0.1, 3.5, &success) );
+   SCIP_CALL( SCIPaddIneqBilinear(scip, nlhdlr, expr, -1.0, 0.1, 3.5, &success) );
    cr_expect(success);
 
    interval = computeAndGetActivity(SCIPgetExprNonlinear(cons));
@@ -576,9 +576,9 @@ Test(nlhdlrbilinear, inteval_parallel)
    expr = SCIPgetExprNonlinear(cons);
 
    /* add inequalities with the same slope: x <= y + 1 and x >= y - 1 */
-   SCIP_CALL( SCIPaddNlhdlrBilinearIneq(scip, nlhdlr, expr, 1.0, 1.0, 1.0, &success) );
+   SCIP_CALL( SCIPaddIneqBilinear(scip, nlhdlr, expr, 1.0, 1.0, 1.0, &success) );
    cr_expect(success);
-   SCIP_CALL( SCIPaddNlhdlrBilinearIneq(scip, nlhdlr, expr, -1.0, -1.0, 1.0, &success) );
+   SCIP_CALL( SCIPaddIneqBilinear(scip, nlhdlr, expr, -1.0, -1.0, 1.0, &success) );
    cr_expect(success);
 
    interval = computeAndGetActivity(expr);
@@ -618,7 +618,7 @@ Test(nlhdlrbilinear, reverseprop_single)
    expr = SCIPgetExprNonlinear(cons);
 
    /* add inequality x <= y - 1 */
-   SCIP_CALL( SCIPaddNlhdlrBilinearIneq(scip, nlhdlr, expr, 1.0, 1.0, -1.0, &success) );
+   SCIP_CALL( SCIPaddIneqBilinear(scip, nlhdlr, expr, 1.0, 1.0, -1.0, &success) );
    cr_expect(success);
 
    activity = computeAndGetActivity(expr);
@@ -670,7 +670,7 @@ Test(nlhdlrbilinear, reverseprop_levelset)
    expr = SCIPgetExprNonlinear(cons);
 
    /* add inequality x <= 0.7 y + 0.1 */
-   SCIP_CALL( SCIPaddNlhdlrBilinearIneq(scip, nlhdlr, expr, 1.0, 0.7, 0.1, &success) );
+   SCIP_CALL( SCIPaddIneqBilinear(scip, nlhdlr, expr, 1.0, 0.7, 0.1, &success) );
    cr_expect(success);
 
    interval = computeAndGetActivity(expr);
@@ -727,7 +727,7 @@ Test(nlhdlrbilinear, reverseprop_levelset_nointersection)
    expr = SCIPgetExprNonlinear(cons);
 
    /* add inequality -x <= y */
-   SCIP_CALL( SCIPaddNlhdlrBilinearIneq(scip, nlhdlr, expr, -1.0, 1.0, 0.0, &success) );
+   SCIP_CALL( SCIPaddIneqBilinear(scip, nlhdlr, expr, -1.0, 1.0, 0.0, &success) );
    cr_expect(success);
 
    interval = computeAndGetActivity(expr);

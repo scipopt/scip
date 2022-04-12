@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -3239,12 +3239,19 @@ SCIP_RETCODE SCIPcheckCopyLimits(
    )
 {
    SCIP_Real timelimit;
-   SCIP_Real memorylimit;
 
    SCIP_CALL( getCopyTimelimit(sourcescip, &timelimit) );
-   SCIP_CALL( getCopyMemlimit(sourcescip, &memorylimit) );
 
-   *success = timelimit > 0.0 && memorylimit > 2.0 * SCIPgetMemExternEstim(sourcescip) / 1048576.0;
+   if( sourcescip->set->misc_avoidmemout )
+   {
+      SCIP_Real memorylimit;
+
+      /* try to avoid running into memory limit */
+      SCIP_CALL( getCopyMemlimit(sourcescip, &memorylimit) );
+      *success = timelimit > 0.0 && memorylimit > 2.0 * SCIPgetMemExternEstim(sourcescip) / 1048576.0;
+   }
+   else
+      *success = timelimit > 0.0;
 
    return SCIP_OKAY;
 }

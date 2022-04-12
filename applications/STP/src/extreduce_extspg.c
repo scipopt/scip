@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -53,9 +53,9 @@ static inline
 SCIP_Bool spg4VerticesRuleOut(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          graph,              /**< graph data structure */
-   int                   node_pathstart,     /**< */
-   int                   node_pathend,       /**< */
-   int                   node_other,         /**< */
+   int                   node_pathstart,     /**< start of path */
+   int                   node_pathend,       /**< end of path */
+   int                   node_other,         /**< other node */
    SCIP_Real             tree_cost,          /**< tree cost */
    int*                  pathnodes,          /**< buffer */
    EXTDATA*              extdata             /**< extension data */
@@ -339,3 +339,5 @@ SCIP_RETCODE extreduce_spgCheck3NodeSimple(
 
    return SCIP_OKAY;
 }
+
+/**@} */

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -260,7 +260,7 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsIntegral)
    SCIP_Real solval;
    SCIP_Real score;
    SCIP_Real bestscore;
-   SCIP_Bool roundup;
+   SCIP_Bool bestroundup;
    int ninteger;
    int nbin;
    int nint;
@@ -284,7 +284,7 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsIntegral)
    bestscore = SCIP_REAL_MIN;
    bestcandidx = -1;
    *success = FALSE;
-   roundup = FALSE; /* only for lint */
+   bestroundup = FALSE; /* only for lint */
 
    /* loop over solution values and get score of fractional variables */
    for( v = 0; v < ninteger; ++v )
@@ -294,6 +294,8 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsIntegral)
       /* skip variable if solution value disagrees with the local bounds */
       if( ! SCIPisFeasIntegral(scip, solval) && SCIPisGE(scip, solval, SCIPvarGetLbLocal(vars[v])) && SCIPisLE(scip, solval, SCIPvarGetUbLocal(vars[v])) )
       {
+         SCIP_Bool roundup;
+
          SCIP_CALL( SCIPgetDivesetScore(scip, diveset, SCIP_DIVETYPE_INTEGRALITY, vars[v], solval,
                solval - SCIPfloor(scip, solval), &score, &roundup) );
 
@@ -302,6 +304,7 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsIntegral)
          {
             bestcandidx = v;
             bestscore = score;
+            bestroundup = roundup;
             *success = TRUE;
          }
       }
@@ -315,9 +318,9 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsIntegral)
 
       /* if we want to round up the best candidate, it is added as the preferred bound change */
       SCIP_CALL( SCIPaddDiveBoundChange(scip, vars[bestcandidx], SCIP_BRANCHDIR_UPWARDS,
-            SCIPceil(scip, solval), roundup) );
+            SCIPceil(scip, solval), bestroundup) );
       SCIP_CALL( SCIPaddDiveBoundChange(scip, vars[bestcandidx], SCIP_BRANCHDIR_DOWNWARDS,
-            SCIPfloor(scip, solval), ! roundup) );
+            SCIPfloor(scip, solval), ! bestroundup) );
    }
 
    return SCIP_OKAY;

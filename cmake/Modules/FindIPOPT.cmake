@@ -37,9 +37,10 @@ if(NOT WIN32)
   # On non Windows systems we use PkgConfig to find IPOPT
   find_package(PkgConfig QUIET)
 
-  if(NOT IPOPT_DIR)
-    set(IPOPT_DIR_TEST $ENV{IPOPT_DIR})
-    if(IPOPT_DIR_TEST)
+  if(DEFINED IPOPT_DIR)
+      message("Searching for IPOPT in ${IPOPT_DIR}")
+  else()
+    if(DEFINED ENV{IPOPT_DIR})
       set(IPOPT_DIR $ENV{IPOPT_DIR} CACHE PATH "Path to IPOPT build directory")
     else()
       set(IPOPT_DIR /usr            CACHE PATH "Path to IPOPT build directory")
@@ -76,12 +77,11 @@ if(NOT WIN32)
   else()
   # If pkg-config fails or hasn't been tried, try to find the package using IPOPT_DIR
 
-    set(IPOPT_INCLUDE_DIRS ${IPOPT_DIR}/include/coin-or)
-
-    if(NOT EXISTS "${IPOPT_INCLUDE_DIRS}")
-      # # version ipopt <= 3.12
-        set(IPOPT_INCLUDE_DIRS ${IPOPT_DIR}/include/coin)
-    endif()
+    find_path(IPOPT_INCLUDE_DIRS
+        NAMES IpoptConfig.h
+        HINTS ${IPOPT_DIR}/include
+        PATH_SUFFIXES coin coin-or
+        PATHS ${IPOPT_DIR})
 
     find_library(IPOPT_LIBRARIES ipopt ${IPOPT_DIR}/lib
                                      ${IPOPT_DIR}/lib/coin

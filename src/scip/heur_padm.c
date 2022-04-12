@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1017,6 +1017,8 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    SCIP_Bool doscaling;
    SCIP_Bool istimeleft;
    SCIP_Bool success;
+   SCIP_Bool avoidmemout;
+   SCIP_Bool disablemeasures;
    int maxgraphedge;
    int ndecomps;
    int nconss;
@@ -1133,17 +1135,23 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
 
    /* estimate required memory for all blocks and terminate if not enough memory is available */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memory) );
-   if( ((SCIPgetMemUsed(scip) + SCIPgetMemExternEstim(scip))/1048576.0) * nblocks >= memory )
+   SCIP_CALL( SCIPgetBoolParam(scip, "misc/avoidmemout", &avoidmemout) );
+   if( avoidmemout && (((SCIPgetMemUsed(scip) + SCIPgetMemExternEstim(scip))/1048576.0) * nblocks >= memory) )
    {
       SCIPdebugMsg(scip, "The estimated memory usage for %d blocks is too large.\n", nblocks);
       goto TERMINATE;
    }
 
-   /* we do not need the block decomposition graph of the statistics */
+   /* we do not need the block decomposition graph and expensive measures of the decomposition statistics */
    SCIP_CALL( SCIPgetIntParam(scip, "decomposition/maxgraphedge", &maxgraphedge) );
    if( !SCIPisParamFixed(scip, "decomposition/maxgraphedge") )
    {
       SCIP_CALL( SCIPsetIntParam(scip, "decomposition/maxgraphedge", 0) );
+   }
+   SCIP_CALL( SCIPgetBoolParam(scip, "decomposition/disablemeasures", &disablemeasures) );
+   if( !SCIPisParamFixed(scip, "decomposition/disablemeasures") )
+   {
+      SCIP_CALL( SCIPsetBoolParam(scip, "decomposition/disablemeasures", TRUE) );
    }
 
    /* don't change problem by sorting constraints */
@@ -1182,8 +1190,9 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
       nblocks = SCIPdecompGetNBlocks(decomp);
    }
 
-   /* reset parameter */
+   /* reset parameters */
    SCIP_CALL( SCIPsetIntParam(scip, "decomposition/maxgraphedge", maxgraphedge) );
+   SCIP_CALL( SCIPsetBoolParam(scip, "decomposition/disablemeasures", disablemeasures) );
 
    /* @note the terms 'linking' and 'border' (constraints/variables) are used interchangeably */
 

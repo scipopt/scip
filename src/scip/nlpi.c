@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -123,6 +123,17 @@ SCIP_RETCODE SCIPnlpiCreate(
    SCIP_CALL( SCIPclockCreate(&(*nlpi)->problemtime, SCIP_CLOCKTYPE_DEFAULT) );
 
    return SCIP_OKAY;
+}
+
+/** sets NLP solver priority */
+void SCIPnlpiSetPriority(
+   SCIP_NLPI*            nlpi,               /**< NLP interface structure */
+   int                   priority            /**< new priority of NLPI */
+   )
+{
+   assert(nlpi != NULL);
+
+   nlpi->priority = priority;
 }
 
 /** copies an NLPI and includes it into another SCIP instance */
@@ -649,6 +660,25 @@ SCIP_RETCODE SCIPnlpiGetStatistics(
    return SCIP_OKAY;
 }
 
+/* from pub_nlpi.h */
+
+#ifdef NDEBUG
+/* Undo the defines from pub_nlpi.h, which exist if NDEBUG is defined. */
+#undef SCIPnlpiGetData
+#undef SCIPnlpiGetName
+#undef SCIPnlpiGetDesc
+#undef SCIPnlpiGetPriority
+#undef SCIPnlpiSetPriority
+#undef SCIPnlpiGetNProblems
+#undef SCIPnlpiGetProblemTime
+#undef SCIPnlpiGetNSolves
+#undef SCIPnlpiGetSolveTime
+#undef SCIPnlpiGetEvalTime
+#undef SCIPnlpiGetNIterations
+#undef SCIPnlpiGetNTermStat
+#undef SCIPnlpiGetNSolStat
+#endif
+
 /** gets data of an NLPI */
 SCIP_NLPIDATA* SCIPnlpiGetData(
    SCIP_NLPI*            nlpi                /**< NLP interface structure */
@@ -687,17 +717,6 @@ int SCIPnlpiGetPriority(
    assert(nlpi != NULL);
 
    return nlpi->priority;
-}
-
-/** sets NLP solver priority */
-void SCIPnlpiSetPriority(
-   SCIP_NLPI*            nlpi,               /**< NLP interface structure */
-   int                   priority            /**< new priority of NLPI */
-   )
-{
-   assert(nlpi != NULL);
-
-   nlpi->priority = priority;
 }
 
 

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -68,7 +68,7 @@
 #define STP_AGG_SYM
 
 #define FLOWB       FALSE
-#define USEOFFSETVAR TRUE
+#define USEOFFSETVAR FALSE
 
 #define SYM_CONS_LIMIT 20000         /**< maximum number of symmetry inequalities for MWCSP and PCSPG */
 #define CYC_CONS_LIMIT 10000         /**< maximum number of symmetry inequalities for PCSPG */
@@ -1978,8 +1978,11 @@ SCIP_DECL_PROBCOPY(probcopyStp)
       GRAPH* orggraphcopy;
       SCIP_CALL( graph_copy(scip, sourcedata->orggraph, &orggraphcopy) );
       SCIP_CALL( graph_path_init(scip, orggraphcopy) );
-      SCIP_CALL( graph_initPseudoAncestors(scip, orggraphcopy) );
-      SCIP_CALL( graph_copyPseudoAncestors(scip, sourcedata->orggraph, orggraphcopy) );
+      if( orggraphcopy->knots > 1 )
+      {
+         SCIP_CALL( graph_initPseudoAncestors(scip, orggraphcopy) );
+         SCIP_CALL( graph_copyPseudoAncestors(scip, sourcedata->orggraph, orggraphcopy) );
+      }
       (*targetdata)->orggraph = orggraphcopy;
    }
 #endif
@@ -2026,7 +2029,7 @@ SCIP_DECL_PROBCOPY(probcopyStp)
       SCIP_CALL( SCIPallocMemoryArray(scip, &(*targetdata)->xval, sourcedata->nvars) );
       SCIP_CALL( SCIPallocMemoryArray(scip, &(*targetdata)->edgevars, sourcedata->nvars) );
 
-      for( v = sourcedata->nvars - 1; v >= 0; --v )
+      for( v = 0; v < sourcedata->nvars; v++ )
       {
          SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcedata->edgevars[v], &((*targetdata)->edgevars[v]), varmap, consmap, global, &success) );
          assert(success);
@@ -2867,8 +2870,11 @@ SCIP_RETCODE SCIPprobdataCreateFromGraph(
       probdata->orggraph = graph;
       graph = newgraph;
       probdata->graph = newgraph;
-      SCIP_CALL( graph_initPseudoAncestors(scip, probdata->graph) );
-      SCIP_CALL( graph_copyPseudoAncestors(scip, probdata->orggraph, probdata->graph) );
+      if( newgraph->knots > 1 )
+      {
+         SCIP_CALL( graph_initPseudoAncestors(scip, probdata->graph) );
+         SCIP_CALL( graph_copyPseudoAncestors(scip, probdata->orggraph, probdata->graph) );
+      }
    }
 #endif
 
@@ -2902,7 +2908,7 @@ SCIP_RETCODE SCIPprobdataCreateFromGraph(
       {
          assert(usedp == STP_USEDP_ALWAYS || usedp == STP_USEDP_AUTOMATIC);
 
-         if( usedp == STP_USEDP_ALWAYS || SCIPStpDpRelaxIsPromising(scip, graph) )
+         if( (usedp == STP_USEDP_ALWAYS || SCIPStpDpRelaxIsPromising(scip, graph)) && graph->terms > 1 )
          {
             SCIP_CALL( SCIPStpDpRelaxActivate(scip) );
             usedacuts = STP_CONS_NEVER;

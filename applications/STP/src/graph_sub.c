@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -78,7 +78,7 @@ struct subgraph_extraction_insertion
 static
 void extractSubgraphGetSizeAndMap(
    const GRAPH*          orggraph,           /**< original graph */
-   SUBINOUT*             subinout
+   SUBINOUT*             subinout            /**< data structure for handling inclusion/exclusion of sub-problems */
    )
 {
    int* RESTRICT nodemap_orgToSub = subinout->nodemap_orgToSub;
@@ -134,7 +134,7 @@ void extractSubgraphGetSizeAndMap(
 static
 void extractSubgraphAddNodes(
    const GRAPH*          orggraph,           /**< original graph */
-   SUBINOUT*             subinout,
+   SUBINOUT*             subinout,           /**< data structure for handling inclusion/exclusion of sub-problems */
    GRAPH*                subgraph            /**< graph to fill */
    )
 {
@@ -200,9 +200,9 @@ SCIP_RETCODE extractSubgraphInitHistory(
 static
 SCIP_RETCODE extractSubgraphAddEdge(
    SCIP*                 scip,                /**< SCIP data structure */
-   SCIP_Bool             useNewHistory,
-   SCIP_Bool             moveEdges,
-   const EDGETRANS*      edgetrans,
+   SCIP_Bool             useNewHistory,       /**< use new history? */
+   SCIP_Bool             moveEdges,           /**< move edges and in particular their history? */
+   const EDGETRANS*      edgetrans,           /**< helper for edge transfer */
    GRAPH*                source_graph,        /**< source graph */
    GRAPH*                target_graph         /**< graph to fill */
    )
@@ -327,7 +327,7 @@ static
 SCIP_RETCODE extractSubgraphAddEdgesWithHistory(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                orggraph,           /**< original graph */
-   SUBINOUT*             subinout,
+   SUBINOUT*             subinout,           /**< data structure for inserting/extracting sub-problem */
    GRAPH*                subgraph            /**< graph to fill */
    )
 {
@@ -384,7 +384,7 @@ void borderNodesCollect(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          orggraph,           /**< original graph */
    const GRAPH*          subgraph,           /**< sub graph */
-   SUBINOUT*             subinout
+   SUBINOUT*             subinout            /**< data structure for handling inclusion/exclusion of sub-problems */
    )
 {
    const int* const isMarked = orggraph->mark;
@@ -481,7 +481,7 @@ static
 SCIP_RETCODE extractSubgraphBuild(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                orggraph,           /**< original graph */
-   SUBINOUT*             subinout,
+   SUBINOUT*             subinout,           /**< data structure for handling inclusion/exclusion of sub-problems */
    GRAPH**               subgraph            /**< graph to be created */
    )
 {
@@ -548,7 +548,7 @@ static
 SCIP_RETCODE reinsertSubgraphTransferEdges(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                subgraph,           /**< graph to be inserted */
-   SUBINOUT*             subinsertion,
+   SUBINOUT*             subinsertion,       /**< data structure for handling inclusion/exclusion of sub-problems */
    GRAPH*                orggraph            /**< original graph */
    )
 {
@@ -590,7 +590,7 @@ SCIP_RETCODE reinsertSubgraphTransferEdges(
 static
 SCIP_RETCODE reinsertSubgraphTransferTerminals(
    const GRAPH*          subgraph,           /**< graph to be inserted */
-   SUBINOUT*             subinout,
+   SUBINOUT*             subinout,           /**< data structure for handling inclusion/exclusion of sub-problems */
    GRAPH*                orggraph            /**< original graph */
    )
 {
@@ -634,7 +634,7 @@ static
 SCIP_RETCODE reinsertSubgraphDeleteOldEdges(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          subgraph,           /**< graph to be inserted */
-   SUBINOUT*             subinout,
+   SUBINOUT*             subinout,           /**< data structure for handling inclusion/exclusion of sub-problems */
    GRAPH*                orggraph            /**< original graph */
    )
 {
@@ -675,7 +675,7 @@ static
 SCIP_RETCODE reinsertSubgraph(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                subgraph,           /**< graph to be inserted */
-   SUBINOUT*             subinout,
+   SUBINOUT*             subinout,           /**< data structure for inserting/extracting sub-problem */
    GRAPH*                orggraph            /**< original graph */
    )
 {
@@ -712,7 +712,7 @@ SCIP_RETCODE reinsertSubgraph(
 SCIP_RETCODE graph_subgraphExtract(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                orggraph,           /**< original graph */
-   SUBINOUT*             subinout,
+   SUBINOUT*             subinout,           /**< data structure for inserting/extracting sub-problem */
    GRAPH**               subgraph            /**< graph to be created */
    )
 {
@@ -733,7 +733,7 @@ SCIP_RETCODE graph_subgraphExtract(
 SCIP_RETCODE graph_subinoutInit(
   SCIP*                 scip,               /**< SCIP data structure */
   const GRAPH*          orggraph,           /**< original graph */
-  SUBINOUT**            subinout
+  SUBINOUT**            subinout            /**< data structure for handling inclusion/exclusion of sub-problems */
   )
 {
    SUBINOUT* sub;
@@ -768,7 +768,7 @@ SCIP_RETCODE graph_subinoutInit(
 /** activates */
 SCIP_RETCODE graph_subinoutActivateEdgeMap(
   const GRAPH*          orggraph,           /**< original graph */
-  SUBINOUT*             subinout
+  SUBINOUT*             subinout            /**< data structure for handling inclusion/exclusion of sub-problems */
   )
 {
    const int nedges = graph_get_nEdges(orggraph);
@@ -786,7 +786,7 @@ SCIP_RETCODE graph_subinoutActivateEdgeMap(
 
 /** activates */
 void graph_subinoutActivateNewHistory(
-  SUBINOUT*             subinout
+  SUBINOUT*             subinout            /**< data structure for handling inclusion/exclusion of sub-problems */
   )
 {
    assert(subinout);
@@ -797,7 +797,7 @@ void graph_subinoutActivateNewHistory(
 
 /** gets nodes map */
 const int* graph_subinoutGetSubToOrgNodeMap(
-  const SUBINOUT*       subinout
+  const SUBINOUT*       subinout            /**< data structure for handling inclusion/exclusion of sub-problems */
   )
 {
    assert(subinout);
@@ -810,7 +810,7 @@ const int* graph_subinoutGetSubToOrgNodeMap(
 
 /** gets edge map */
 const int* graph_subinoutGetSubToOrgEdgeMap(
-  const SUBINOUT*       subinout
+  const SUBINOUT*       subinout            /**< data structure for handling inclusion/exclusion of sub-problems */
   )
 {
    assert(subinout);
@@ -823,7 +823,7 @@ const int* graph_subinoutGetSubToOrgEdgeMap(
 
 /** gets nodes map */
 const int* graph_subinoutGetOrgToSubNodeMap(
-  const SUBINOUT*       subinout
+  const SUBINOUT*       subinout            /**< data structure for handling inclusion/exclusion of sub-problems */
   )
 {
    assert(subinout);
@@ -835,7 +835,7 @@ const int* graph_subinoutGetOrgToSubNodeMap(
 
 /** get contraction record for cut nodes (-1 if no contraction) */
 const int* graph_subinoutGetContractionRecord(
-  const SUBINOUT*       subinout
+  const SUBINOUT*       subinout            /**< data structure for handling inclusion/exclusion of sub-problems */
   )
 {
    assert(subinout);
@@ -846,7 +846,7 @@ const int* graph_subinoutGetContractionRecord(
 
 /** new history per subproblem is being used? */
 SCIP_Bool graph_subinoutUsesNewHistory(
-  const SUBINOUT*       subinout
+  const SUBINOUT*       subinout            /**< data structure for handling inclusion/exclusion of sub-problems */
   )
 {
    assert(subinout);
@@ -858,7 +858,7 @@ SCIP_Bool graph_subinoutUsesNewHistory(
 /** frees */
 void graph_subinoutFree(
   SCIP*                 scip,               /**< SCIP data structure */
-  SUBINOUT**            subinout
+  SUBINOUT**            subinout            /**< data structure for handling inclusion/exclusion of sub-problems */
   )
 {
    SUBINOUT* sub;
@@ -881,7 +881,7 @@ void graph_subinoutFree(
 /** cleans */
 void graph_subinoutClean(
   SCIP*                 scip,               /**< SCIP data structure */
-  SUBINOUT*             subinout
+  SUBINOUT*             subinout            /**< data structure for handling inclusion/exclusion of sub-problems */
   )
 {
    assert(scip && subinout);
@@ -893,8 +893,8 @@ void graph_subinoutClean(
 
 /** gets ancestor */
 int graph_knot_getContractionRecordAncestor(
-  int                   node,
-  const SUBINOUT*       subinout
+  int                   node,               /**< node to get ancestors for */
+  const SUBINOUT*       subinout            /**< data structure for handling inclusion/exclusion of sub-problems */
   )
 {
    int ancestor;
@@ -982,7 +982,7 @@ SCIP_RETCODE graph_subgraphCompleteNewHistory(
  *  Dual to "graph_subgraphExtract"  */
 SCIP_RETCODE graph_subgraphReinsert(
    SCIP*                 scip,               /**< SCIP data structure */
-   SUBINOUT*             subinout,
+   SUBINOUT*             subinout,           /**< data structure for handling inclusion/exclusion of sub-problems */
    GRAPH*                orggraph,           /**< original graph */
    GRAPH**               subgraph            /**< graph to be reinserted (and freed) */
    )

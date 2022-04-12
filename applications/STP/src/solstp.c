@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1668,7 +1668,7 @@ SCIP_Bool solstp_isValid(
 
 #ifndef NDEBUG
    for( int e = 0; e < graph->edges; ++e )
-      assert(result[e] == CONNECT || result[e] == UNKNOWN);
+      assert(graph->stp_type == STP_DCSTP || result[e] == CONNECT || result[e] == UNKNOWN);
 #endif
 
    SCIP_CALL_ABORT( SCIPallocBufferArray(scip, &reached, nnodes) );
@@ -1948,7 +1948,7 @@ SCIP_Real solstp_getObjCsr(
 /** gets STP solution from SCIP solution */
 void solstp_getStpFromSCIPsol(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOL*             scipsol,
+   SCIP_SOL*             scipsol,            /**< SCIP solution data structure */
    const GRAPH*          g,                  /**< the graph */
    int*                  soledges            /**< solution (CONNECT/UNKNOWN)  */
    )

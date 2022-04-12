@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1750,8 +1750,8 @@ int graph_pc_getNorgEdges(
 /** gets ratio of remaining nodes/edges */
 void graph_pc_getReductionRatios(
   const GRAPH*          graph,              /**< graph */
-  SCIP_Real*	         ratio_nodes,
-  SCIP_Real*	         ratio_edges
+  SCIP_Real*	         ratio_nodes,        /**< nodes ratio */
+  SCIP_Real*	         ratio_edges         /**< edges ratio */
 )
 {
    int nnodes_real = 0;

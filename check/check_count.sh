@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -142,6 +142,7 @@ do
             echo @01 ${i} ===========
             echo @01 ${i} ===========                >> ${ERRFILE}
             echo > ${TMPFILE}
+            echo set emphasis benchmark            >> ${TMPFILE} # avoid switching to dfs etc. - better abort with memory error; this has to be first
             if test ${SETTINGS} != "default"
             then
                 echo set load ${SETTINGS}            >> ${TMPFILE}
@@ -157,7 +158,6 @@ do
             echo set limits memory ${MEMLIMIT}       >> ${TMPFILE}
             echo set timing clocktype 1            >> ${TMPFILE}
             echo set display freq ${DISPFREQ}        >> ${TMPFILE}
-            echo set memory savefac 1.0            >> ${TMPFILE} # avoid switching to dfs - better abort with memory error
             if test "${LPS}" == "none"
             then
                 echo set lp solvefreq -1           >> ${TMPFILE} # avoid solving LPs in case of LPS=none

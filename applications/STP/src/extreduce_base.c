@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -381,7 +381,7 @@ void generalStarCheckExit(
    int* const nodes_mark = genstar->nodes_mark;
    const int degree = StpVecGetSize(genstar->edges_all);
 
-   assert(EQ(degree, StpVecGetSize(genstar->edges_head) + StpVecGetSize(genstar->edges_tail)));
+   assert(degree == (StpVecGetSize(genstar->edges_head) + StpVecGetSize(genstar->edges_tail)));
 
    for( int i = 0; i < degree; i++ )
    {
@@ -400,7 +400,7 @@ void generalStarCheckGetNextStar(
    const GRAPH*          g,                  /**< graph data structure  */
    GENSTAR*              genstar,            /**< general star */
    EXTCOMP*              extcomp,            /**< to be filled */
-   SCIP_Bool*            allVisited
+   SCIP_Bool*            allVisited          /**< all stars visited? */
 )
 {
    const int center_edge = genstar->edge;
@@ -928,7 +928,7 @@ static inline
 void pseudodeleteExit(
    SCIP*                 scip,               /**< SCIP data structure */
    EXTPSEUDO*            extpseudo,          /**< to initialize */
-   int*                  nelimsp
+   int*                  nelimsp             /**< pointer: number of eliminations (OUT) */
    )
 {
    assert(nelimsp);
@@ -1141,7 +1141,7 @@ SCIP_RETCODE pseudodeleteDeleteComputeCutoffs(
    SCIP_Bool             checkpromising,     /**< check whether promising? */
    SCIP_Bool             abortDeg3,          /**< abort for degree 3? */
    DISTDATA*             distdata,           /**< distance data */
-   int                   node,               /**> to be deleted */
+   int                   node,               /**< to be deleted */
    GRAPH*                graph,              /**< graph data structure */
    EXTPSEUDO*            extpseudo           /**< data */
 )
@@ -1231,12 +1231,12 @@ SCIP_RETCODE pseudodeleteDeleteComputeCutoffs(
 static inline
 SCIP_RETCODE pseudodeleteDeleteNode(
    SCIP*                 scip,               /**< SCIP data structure */
-   int                   node,               /**> to be deleted */
+   int                   node,               /**< to be deleted */
    REDCOST*              redcostdata,        /**< reduced cost data */
    DISTDATA*             distdata,           /**< distance data */
    GRAPH*                graph,              /**< graph data structure */
    EXTPSEUDO*            extpseudo,          /**< data */
-   SCIP_Bool*            success
+   SCIP_Bool*            success             /**< success? */
 )
 {
    const SCIP_Real* cutoffs = extpseudo->cutoffs;
@@ -1427,7 +1427,7 @@ SCIP_RETCODE extreduce_init(
    SCIP_Bool             useSd,              /**< use special distance? */
    enum EXTRED_MODE      mode,               /**< mode */
    GRAPH*                graph,              /**< graph data structure */
-   REDCOST*              redcostdata,        /**> reduced costs data */
+   REDCOST*              redcostdata,        /**< reduced costs data */
    EXTPERMA**            extpermanent        /**< permanent extension data (out) */
 )
 {

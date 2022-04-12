@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -379,6 +379,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpPartition)
                   if( states[3] == -1 )
                      continue;
                   nfirst++;
+
+                  successors[3] = SCIPdigraphGetSuccessors(edgegraph, states[3]);
+                  nsuccessors[3] = SCIPdigraphGetNSuccessors(edgegraph, states[3]);
 
                   violation += bestvalue;
 

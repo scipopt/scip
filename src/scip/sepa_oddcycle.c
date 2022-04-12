@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1251,6 +1251,7 @@ SCIP_RETCODE checkArraySizesHeur(
 {
    SCIP_Real memorylimit;
    unsigned int additional;
+   SCIP_Bool avoidmemout;
 
    assert(scip != NULL);
    assert(graph != NULL);
@@ -1279,8 +1280,9 @@ SCIP_RETCODE checkArraySizesHeur(
       memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
    }
 
+   SCIP_CALL( SCIPgetBoolParam(scip, "misc/avoidmemout", &avoidmemout) );
    /* if memorylimit would be exceeded or any other limit is reached free all data and exit */
-   if( memorylimit <= additional/1048576.0 || SCIPisStopped(scip) )
+   if( (avoidmemout && memorylimit <= additional/1048576.0) || SCIPisStopped(scip) )
    {
       *success = FALSE;
       SCIPdebugMsg(scip, "...memory limit exceeded\n");
@@ -1310,7 +1312,7 @@ SCIP_RETCODE checkArraySizesHeur(
       memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
    }
 
-   if( memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
+   if( avoidmemout && memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
    {
       *success = FALSE;
       SCIPdebugMsg(scip, "...memory limit exceeded\n");

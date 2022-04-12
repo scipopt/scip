@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -89,26 +89,6 @@ SCIP_RETCODE pairheapCombineSiblings(
 
    return SCIP_OKAY;
 }
-
-
-/** internal method used by 'pairheap_buffarr' */
-static
-void pairheapRec(
-   const PHNODE* p,
-   int* RESTRICT arr,
-   int* RESTRICT n
-   )
-{
-   if( p == NULL )
-   {
-      return;
-   }
-
-   arr[(*n)++] = p->element;
-   pairheapRec(p->sibling, arr, n);
-   pairheapRec(p->child, arr, n);
-}
-
 
 
 /** add heap to heap */
@@ -776,6 +756,7 @@ void SCIPpairheapFree(
 }
 
 
+
 /** stores all elements of the pairing heap in an array */
 SCIP_RETCODE SCIPpairheapBuffarr(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -784,10 +765,45 @@ SCIP_RETCODE SCIPpairheapBuffarr(
    int**                 elements            /**< pointer to array (will be allocated) */
    )
 {
+   int* RESTRICT arr;
+   const PHNODE** stack;
    int n = 0;
+   int stacksize = 0;
+
+   if( size == 0 )
+   {
+      *elements = NULL;
+      return SCIP_OKAY;
+   }
+
+   assert(root);
+   assert(size > 0);
 
    SCIP_CALL( SCIPallocBufferArray(scip, elements, size) );
-   pairheapRec(root, *elements, &n);
+   SCIP_CALL( SCIPallocBufferArray(scip, &stack, size) );
+
+   arr = *elements;
+   stack[stacksize++] = root;
+
+   while( stacksize > 0 )
+   {
+      const PHNODE* const p = stack[--stacksize];
+      arr[n++] = p->element;
+
+      if( p->sibling )
+      {
+         assert(stacksize < size);
+         stack[stacksize++] = p->sibling;
+      }
+
+      if( p->child )
+      {
+         assert(stacksize < size);
+         stack[stacksize++] = p->child;
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &stack);
 
    return SCIP_OKAY;
 }

@@ -83,7 +83,7 @@ else:
                        %(oldsubversion, newsubversion))
     commands.getoutput('sed -i "s/\@version.*/\@version  %-s/" doc/xternal.c' %(newversionstring))
     commands.getoutput('sed -i "s/^SCIP_VERSION.*/SCIP_VERSION	=	%-s/" make/make.project' %(newversionstring))
-    commands.getoutput('''sed -i 's/^VERSION=.*/VERSION=\"%s\"/' makedist.sh''' %(newversionstring))
+    commands.getoutput('''sed -i 's/^VERSION=.*/VERSION=\"%s\"/' scripts/makedist.sh''' %(newversionstring))
     commands.getoutput('sed -i "s/set(SCIP_VERSION_MAJOR %s)/set(SCIP_VERSION_MAJOR %s)/" CMakeLists.txt' %(oldmajor, newmajor))
     commands.getoutput('sed -i "s/set(SCIP_VERSION_MINOR %s)/set(SCIP_VERSION_MINOR %s)/" CMakeLists.txt' %(oldminor, newminor))
     commands.getoutput('sed -i "s/set(SCIP_VERSION_PATCH %s)/set(SCIP_VERSION_PATCH %s)/" CMakeLists.txt' %(oldpatch, newpatch))

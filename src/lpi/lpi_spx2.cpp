@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -81,21 +81,8 @@
 #undef SCIP_DEBUG
 #endif
 
-/* disable -Wclass-memaccess warnings due to dubious memcpy/realloc calls in SoPlex headers, see soplex#136, e.g.,
- * dataarray.h:314:16: warning: ‘void* memcpy(void*, const void*, size_t)’ writing to an object of type ‘struct soplex::SPxParMultPR::SPxParMultPr_Tmp’ with no trivial copy-assignment; use copy-assignment or copy-initialization instead [-Wclass-memaccess]
- */
-#ifdef __GNUC__
-#if __GNUC__ >= 8
-#pragma GCC diagnostic ignored "-Wclass-memaccess"
-#endif
-#endif
-
-/* disable -Wdeprecated-copy warnings in SoPlex headers, see soplex#206 */
-#ifdef __GNUC__
-#if __GNUC__ >= 9
-#pragma GCC diagnostic ignored "-Wdeprecated-copy"
-#endif
-#endif
+/* compile the SoPlex header with visibility=default because the SoPlex lib has been compiled that way */
+#pragma GCC visibility push(default)
 
 /* include SoPlex solver */
 #include "soplex.h"
@@ -651,8 +638,8 @@ public:
             else if( (minimize && GTrel(objValueReal(), cpxobj, 2*opttol()))
                || (!minimize && LTrel(objValueReal(), cpxobj, 2*opttol())) )
             {
-               SCIPerrorMessage("In %s: LP optimal; SoPlex value=%.10f %s CPLEX value=%.10f suboptimal (checknum=%d)\n", objValueReal(),
-                  _probname, minimize ? ">" : "<", cpxobj, _checknum);
+               SCIPerrorMessage("In %s: LP optimal; SoPlex value=%.10f %s CPLEX value=%.10f suboptimal (checknum=%d)\n", _probname, objValueReal(),
+                  minimize ? ">" : "<", cpxobj, _checknum);
                if( EXIT_AT_WRONG_RESULT )
                   exit(1);
             }
@@ -976,8 +963,25 @@ void invalidateSolution(SCIP_LPI* lpi)
  * Miscellaneous Methods
  */
 
-static char spxname[100];
-static char spxdesc[200];
+char* initSpxDesc( );
+
+#if (SOPLEX_SUBVERSION > 0)
+   const static char spxname[20] = {'S', 'o', 'p', 'l', 'e', 'x', ' ', SOPLEX_VERSION/100 + '0', '.', (SOPLEX_VERSION % 100)/10 + '0', '.', SOPLEX_VERSION % 10 + '0', '.', SOPLEX_SUBVERSION + '0'};
+#else
+   const static char spxname[20] = {'S', 'o', 'p', 'l', 'e', 'x', ' ', SOPLEX_VERSION/100 + '0', '.', (SOPLEX_VERSION % 100)/10 + '0', '.', SOPLEX_VERSION % 10 + '0'};
+#endif
+static char* spxdesc = initSpxDesc();
+
+char* initSpxDesc( )
+{
+   spxdesc = new char[200];
+   (void)snprintf(spxdesc, 200, "%s [GitHash: %s]", "Linear Programming Solver developed at Zuse Institute Berlin (soplex.zib.de)"
+#ifdef SCIP_WITH_LPSCHECK
+         " - including CPLEX double check"
+#endif
+         , getGitHash());
+   return spxdesc;
+}
 
 /**@name Miscellaneous Methods */
 /**@{ */
@@ -988,12 +992,6 @@ const char* SCIPlpiGetSolverName(
    )
 {
    SCIPdebugMessage("calling SCIPlpiGetSolverName()\n");
-
-#if (SOPLEX_SUBVERSION > 0)
-   (void)snprintf(spxname, 100, "SoPlex %d.%d.%d.%d", SOPLEX_VERSION/100, (SOPLEX_VERSION % 100)/10, SOPLEX_VERSION % 10, SOPLEX_SUBVERSION); /*lint !e778 !e845*/
-#else
-   (void)snprintf(spxname, 100, "SoPlex %d.%d.%d", SOPLEX_VERSION/100, (SOPLEX_VERSION % 100)/10, SOPLEX_VERSION % 10); /*lint !e778 !e845*/
-#endif
    return spxname;
 }
 
@@ -1002,12 +1000,6 @@ const char* SCIPlpiGetSolverDesc(
    void
    )
 {
-   (void)snprintf(spxdesc, 200, "%s [GitHash: %s]", "Linear Programming Solver developed at Zuse Institute Berlin (soplex.zib.de)"
-#ifdef SCIP_WITH_LPSCHECK
-     " - including CPLEX double check"
-#endif
-   , getGitHash());
-
    return spxdesc;
 }
 

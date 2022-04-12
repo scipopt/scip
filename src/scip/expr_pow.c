@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1381,6 +1381,7 @@ SCIP_DECL_EXPRCOMPARE(comparePow)
    SCIP_Real expo2;
    int compareresult;
 
+   /**! [SnippetExprComparePow] */
    compareresult = SCIPcompareExpr(scip, SCIPexprGetChildren(expr1)[0], SCIPexprGetChildren(expr2)[0]);
    if( compareresult != 0 )
       return compareresult;
@@ -1389,6 +1390,7 @@ SCIP_DECL_EXPRCOMPARE(comparePow)
    expo2 = SCIPgetExponentExprPow(expr2);
 
    return expo1 == expo2 ? 0 : expo1 < expo2 ? -1 : 1;
+   /**! [SnippetExprComparePow] */
 }
 
 /** simplifies a pow expression
@@ -1645,7 +1647,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyPow)
          SCIP_CALL( SCIPcallExprSimplify(scip, expansion, simplifiedexpr, ownercreate,
                     ownercreatedata) ); /* this calls simplifySum */
 
-         /* release eveything */
+         /* release everything */
          SCIP_CALL( SCIPreleaseExpr(scip, &expansion) );
          /* release the *created* expanded children */
          for( i = 0; i < nexpandedchildren - nchildren; ++i )
@@ -1826,6 +1828,7 @@ SCIP_DECL_EXPRPRINT(printPow)
 {  /*lint --e{715}*/
    assert(expr != NULL);
 
+   /**! [SnippetExprPrintPow] */
    switch( stage )
    {
       case SCIP_EXPRITER_ENTEREXPR :
@@ -1858,6 +1861,7 @@ SCIP_DECL_EXPRPRINT(printPow)
       default:
          break;
    }
+   /**! [SnippetExprPrintPow] */
 
    return SCIP_OKAY;
 }
@@ -2683,6 +2687,7 @@ SCIP_DECL_EXPRPARSE(parseSignpower)
 
    assert(expr != NULL);
 
+   /**! [SnippetExprParseSignpower] */
    /* parse child expression string */
    SCIP_CALL( SCIPparseExpr(scip, &childexpr, string, endstring, ownercreate, ownercreatedata) );
    assert(childexpr != NULL);
@@ -2718,6 +2723,7 @@ SCIP_DECL_EXPRPARSE(parseSignpower)
    SCIP_CALL( SCIPreleaseExpr(scip, &childexpr) );
 
    *success = TRUE;
+   /**! [SnippetExprParseSignpower] */
 
    return SCIP_OKAY;
 }

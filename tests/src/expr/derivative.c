@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -351,7 +351,7 @@ Test(derivative, complex2)
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
-static const int K = 40;
+#define K 40
 Test(performance, rosenbrock)
 {
    SCIP_VAR* vars[K];

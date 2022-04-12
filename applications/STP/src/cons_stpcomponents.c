@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -101,7 +101,7 @@ typedef struct sub_solution
 /** gets optimal sub-problem solution */
 static
 SCIP_RETCODE subsolGet(
-   SUBSTP*               substp,
+   SUBSTP*               substp,             /**< sub-problem data structure */
    SUBSOL*               subcomp             /**< component */
    )
 {
@@ -206,8 +206,8 @@ void subsolFree(
 static
 SCIP_RETCODE subcompFixOrgEdges(
    SCIP*                 scip,               /**< SCIP data structure */
-   const SUBINOUT*       subinout,
-   SUBSTP*               substp
+   const SUBINOUT*       subinout,           /**< sub-problem insertion/extraction data structure */
+   SUBSTP*               substp              /**< sub-problem data structure */
    )
 {
    SUBSOL* subcomp;
@@ -227,7 +227,7 @@ SCIP_RETCODE subcompFixOrgEdges(
 static
 SCIP_Bool decomposeIsPromising(
    const GRAPH*          g,                  /**< graph data structure */
-   const BIDECOMP*       bidecomp
+   const BIDECOMP*       bidecomp            /**< bidecomposition data structure */
    )
 {
    if( g->knots < DECOMP_MINNNODES )
@@ -253,7 +253,7 @@ SCIP_RETCODE decomposeGetSubgraph(
    const BIDECOMP*       bidecomp,           /**< all-components storage */
    int                   compindex,          /**< component index */
    GRAPH*                orggraph,           /**< graph data structure */
-   GRAPH**               subgraph
+   GRAPH**               subgraph            /**< subgraph */
    )
 {
 /*
@@ -350,8 +350,8 @@ SCIP_RETCODE decomposeSolveSub(
 static
 SCIP_RETCODE decomposeExec(
    SCIP*                 scip,               /**< SCIP data structure */
-   BIDECOMP*             bidecomp,
-   CUTNODES*             cutnodes,
+   BIDECOMP*             bidecomp,           /**< bidecomposition data structure */
+   CUTNODES*             cutnodes,           /**< cut nodes data structure */
    GRAPH*                orggraph,           /**< graph to decompose */
    SCIP_Bool*            success             /**< decomposed? */
    )
@@ -388,7 +388,7 @@ SCIP_RETCODE decomposeExec(
 static
 SCIP_RETCODE initDecompose(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLRDATA*    conshdlrdata,
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< cosntraint handler data */
    GRAPH*                orggraph,           /**< graph to decompose */
    SCIP_Bool*            isPromsing          /**< promising decomposition? */
    )
@@ -438,7 +438,7 @@ SCIP_RETCODE initDecompose(
 static
 void freeDecompose(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLRDATA*    conshdlrdata
+   SCIP_CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */
    )
 {
    assert(scip && conshdlrdata);
@@ -458,7 +458,7 @@ void freeDecompose(
 static
 SCIP_RETCODE divideAndConquer(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLRDATA*    conshdlrdata,
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraints handler data */
    SCIP_Bool*            success             /**< decomposed? */
    )
 {

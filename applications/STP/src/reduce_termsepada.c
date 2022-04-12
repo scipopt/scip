@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -178,7 +178,7 @@ void termcompMarkPseudoDelNodes(
 static
 SCIP_RETCODE termcompReduceWithParams(
    SCIP*                 scip,               /**< SCIP data structure */
-   DAPARAMS*             daparams,
+   DAPARAMS*             daparams,           /**< dual-ascent parameters */
    GRAPH*                g,                  /**< graph data structure */
    EXTPERMA*             extperma,           /**< extension data */
    TERMCOMP*             termcomp,           /**< component */

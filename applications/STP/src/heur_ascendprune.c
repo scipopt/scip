@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -210,7 +210,7 @@ static
 SCIP_RETCODE redcostGraphMark(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< the graph */
-   RCGRAPH*              redcostgraph
+   RCGRAPH*              redcostgraph        /**< reduced cost graph data structure */
    )
 {
    int* RESTRICT mark = g->mark;
@@ -342,7 +342,7 @@ static
 SCIP_RETCODE redcostGraphBuild(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< the graph */
-   RCGRAPH*              redcostgraph
+   RCGRAPH*              redcostgraph        /**< reduced cost graph data structure */
    )
 {
    GRAPH* newgraph;
@@ -495,7 +495,7 @@ SCIP_RETCODE redcostGraphBuild(
 static
 void redcostGraphFree(
    SCIP*                 scip,               /**< SCIP data structure */
-   RCGRAPH*              redcostgraph
+   RCGRAPH*              redcostgraph        /**< reduced cost graph data structure */
    )
 {
    if( redcostgraph->newgraph )
@@ -513,7 +513,7 @@ static
 SCIP_RETCODE redcostGraphSolRetransform(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< the graph */
-   const RCGRAPH*        redcostgraph,
+   const RCGRAPH*        redcostgraph,       /**< reduced cost graph data structure */
    const int*            subresult,          /**< solution for new graph, can also be NULL */
    int*                  result              /**< solution for original graph; for STP like also keeps sub-solution */
    )
@@ -595,8 +595,8 @@ static
 SCIP_RETCODE redcostGraphComputeSteinerTree(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< the graph */
-   RCGRAPH*              redcostgraph,
-   int*                  result
+   RCGRAPH*              redcostgraph,       /**< reduced cost graph data structure */
+   int*                  result              /**< solution array */
    )
 {
    GRAPH* newgraph = redcostgraph->newgraph;
@@ -643,9 +643,9 @@ static
 SCIP_RETCODE redcostGraphComputeSteinerTreeDirected(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< the graph */
-   RCGRAPH*              redcostgraph,
-   int*                  result,
-   SCIP_Bool*            solfound           /**< has a solution been found?  */
+   RCGRAPH*              redcostgraph,       /**< reduced cost graph data structure */
+   int*                  result,             /**< solution array */
+   SCIP_Bool*            solfound            /**< has a solution been found?  */
    )
 {
    GRAPH* const subgraph = redcostgraph->newgraph;
@@ -719,8 +719,8 @@ static
 SCIP_RETCODE redcostGraphComputeSteinerTreeDegCons(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< the graph */
-   RCGRAPH*              redcostgraph,
-   int*                  result,
+   RCGRAPH*              redcostgraph,       /**< reduced cost graph data structure */
+   int*                  result,             /**< solution array */
    SCIP_Bool*            solfound            /**< has a solution been found?  */
    )
 {

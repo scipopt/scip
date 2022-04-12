@@ -3,7 +3,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -65,6 +65,12 @@ if( CRITERION_FOUND )
         get_filename_component(testName ${testSrc} NAME_WE)
         get_filename_component(dir ${testSrc} DIRECTORY)
 
+        # intel compiler segfaults on cons_nonlinear, so skip these tests when compiler is intel
+        if((CMAKE_CXX_COMPILER_ID MATCHES "Intel") AND (${dir} STREQUAL "cons/nonlinear"))
+            continue()
+        endif()
+
+
         #
         # replace forward slashes by hyphens
         #
@@ -124,6 +130,7 @@ if( CRITERION_FOUND )
         set_tests_properties(${testName}
                             PROPERTIES
                                 DEPENDS ${testName}-build
+                                RESOURCE_LOCK libscip
                             )
     endforeach(testSrc)
 endif()

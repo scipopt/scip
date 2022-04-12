@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -226,10 +226,13 @@ SCIP_RETCODE addColToCut(
 }
 
 /** adds cutcoef * (slack - slack*) to rowprep
-  * row is lhs <= <coefs, vars> + constant <= rhs, thus slack is defined by
+ *
+  * row is lhs &le; <coefs, vars> + constant &le; rhs, thus slack is defined by
   * slack + <coefs.vars> + constant = side
+  *
   * If row (slack) is at upper, it means that <coefs,vars*> + constant = rhs, and so
   * slack* = side - rhs --> slack - slack* = rhs - <coefs, vars> - constant.
+  *
   * If row (slack) is at lower, then <coefs,vars*> + constant = lhs, and so
   * slack* = side - lhs --> slack - slack* = lhs - <coefs, vars> - constant.
   */
@@ -386,15 +389,18 @@ int countBasicVars(
    return nbasicvars;
 }
 
-/** stores the row of the tableau where `col` is basic. In general, we will have
- *  basicvar1 = tableaurow var1
- *  basicvar2 = tableaurow var2
- *  ...
- *  basicvarn = tableaurow varn
+/** stores the row of the tableau where `col` is basic
+ *
+ *  In general, we will have
+ *
+ *      basicvar1 = tableaurow var1
+ *      basicvar2 = tableaurow var2
+ *      ...
+ *      basicvarn = tableaurow varn
  *
  *  However, we want to store the the tableau row by columns. Thus, we need to know which of the basic vars `col` is.
  *
- * Note we only store the entries of the nonbasic variables
+ *  Note we only store the entries of the nonbasic variables
  */
 static
 SCIP_RETCODE storeDenseTableauRow(
@@ -451,16 +457,17 @@ SCIP_RETCODE storeDenseTableauRow(
    return SCIP_OKAY;
 }
 
-/** stores the rows of the tableau corresponding to the basic variables in the quadratic expression;
- * it also returns a map storing to which var the entry of a ray corresponds, i.e., if the tableau is
+/** stores the rows of the tableau corresponding to the basic variables in the quadratic expression
  *
- *  basicvar_1 = ray1_1 nonbasicvar_1 + ...
- *  basicvar_2 = ray1_2 nonbasicvar_1 + ...
- *  ...
- *  basicvar_n = ray1_n nonbasicvar_1 + ...
+ * Also return a map storing to which var the entry of a ray corresponds, i.e., if the tableau is
  *
- * the map maps k to the position of basicvar_k in the variables of the constraint assuming the variables are sorted as
- * [quadratic vars, linear vars, auxvar]
+ *     basicvar_1 = ray1_1 nonbasicvar_1 + ...
+ *     basicvar_2 = ray1_2 nonbasicvar_1 + ...
+ *     ...
+ *     basicvar_n = ray1_n nonbasicvar_1 + ...
+ *
+ * The map maps k to the position of basicvar_k in the variables of the constraint assuming the variables are sorted as
+ * [quadratic vars, linear vars, auxvar].
  */
 static
 SCIP_RETCODE storeDenseTableauRowsByColumns(
@@ -589,7 +596,7 @@ static
 SCIP_RETCODE createBoundRays(
    SCIP*                 scip,               /**< SCIP data structure */
    RAYS**                rays,               /**< rays data structure */
-   int                   size
+   int                   size                /**< number of rays to allocate */
    )
 {
    SCIP_CALL( SCIPallocBuffer(scip, rays) );
@@ -655,8 +662,9 @@ SCIP_RETCODE insertRayEntry(
 }
 
 /** constructs map between the lppos of a variables and its position in the constraint assuming the constraint variables
- * are sorted as [quad vars, lin vars, aux var (if it exists)]. If a variable doesn't appear in the constraint, then its
- * position is -1.
+ * are sorted as [quad vars, lin vars, aux var (if it exists)]
+ *
+ * If a variable doesn't appear in the constraint, then its position is -1.
  */
 static
 void constructLPPos2ConsPosMap(
@@ -789,33 +797,40 @@ SCIP_RETCODE insertRayEntries(
    return SCIP_OKAY;
 }
 
-/** stores rays in sparse form. The first rays correspond to the nonbasic variables
+/** stores rays in sparse form
+ *
+ * The first rays correspond to the nonbasic variables
  * and the last rays to the nonbasic slack variables.
  *
  * More details: The LP tableau is of the form
  *
- *  basicvar_1 = ray1_1 nonbasicvar_1 + ... + raym_1 nonbasicvar_m
- *  basicvar_2 = ray1_2 nonbasicvar_1 + ... + raym_2 nonbasicvar_m
- *  ...
- *  basicvar_n = ray1_n nonbasicvar_1 + ... + raym_n nonbasicvar_m
- *  nonbasicvar_1 = 1.0 nonbasicvar_1 + ... +    0.0 nonbasicvar_m
- *  ...
- *  nonbasicvar_m = 0.0 nonbasicvar_1 + ... +    1.0 nonbasicvar_m
+ *     basicvar_1 = ray1_1 nonbasicvar_1 + ... + raym_1 nonbasicvar_m
+ *     basicvar_2 = ray1_2 nonbasicvar_1 + ... + raym_2 nonbasicvar_m
+ *     ...
+ *     basicvar_n = ray1_n nonbasicvar_1 + ... + raym_n nonbasicvar_m
+ *     nonbasicvar_1 = 1.0 nonbasicvar_1 + ... +    0.0 nonbasicvar_m
+ *     ...
+ *     nonbasicvar_m = 0.0 nonbasicvar_1 + ... +    1.0 nonbasicvar_m
  *
  *  so rayk = (rayk_1, ... rayk_n, e_k)
  *  We store the entries of the rays associated to the variables present in the quadratic expr.
- *  We do not store zero rays
+ *  We do not store zero rays.
  *
  *  Also, we store the rays as if every nonbasic variable was at lower (so that all rays moves to infinity)
  *  Since the tableau is:
- *  basicvar + Binv L (nonbasic_lower - lb) + Binv U (nonbasic_upper - ub) = basicvar_sol
+ *
+ *      basicvar + Binv L (nonbasic_lower - lb) + Binv U (nonbasic_upper - ub) = basicvar_sol
+ *
  *  then:
- *  basicvar = basicvar_sol - Binv L (nonbasic_lower - lb) + Binv U (ub - nonbasic_upper)
+ *
+ *      basicvar = basicvar_sol - Binv L (nonbasic_lower - lb) + Binv U (ub - nonbasic_upper)
+ *
  *  and so the entries of the rays associated with the basic variables are:
  *  rays_basicvars = [-BinvL, BinvU].
+ *
  *  So we flip the sign of the rays associated to nonbasic vars at lower.
  *  In constrast, the nonbasic part of the ray has a 1.0 for nonbasic at lower and a -1.0 for nonbasic at upper, i.e.
- *  nonbasic_lower = lb + 1.0(nonbasic_lower - lb)
+ *  nonbasic_lower = lb + 1.0(nonbasic_lower - lb) and
  *  nonbasic_upper = ub - 1.0(ub - nonbasic_upper)
  */
 static
@@ -823,7 +838,7 @@ SCIP_RETCODE createAndStoreSparseRays(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLHDLREXPRDATA*  nlhdlrexprdata,     /**< nlhdlr expression data */
    SCIP_VAR*             auxvar,             /**< aux var of expr or NULL if not needed (e.g. separating real cons) */
-   RAYS**                raysptr,
+   RAYS**                raysptr,            /**< buffer to store rays datastructure */
    SCIP_Bool*            success             /**< we can't separate if there is a var with basis status ZERO */
    )
 {
@@ -968,59 +983,64 @@ CLEANUP:
    return SCIP_OKAY;
 }
 
-/** this function determines how the maximal S-free set is going to look like.
- * There are 4 possibilities: after writting the quadratic constraint
- * q(z) <= 0
- * as
- * \|x(z)\|^2 - \|y\|^2 + w(z) + kappa <= 0,
- * the cases are determined according to the following.
- * Case 1: w = 0 and kappa = 0
- * Case 2: w = 0 and kappa > 0
- * Case 3: w = 0 and kappa < 0
- * Case 4: w != 0
+/* TODO: which function this comment belongs to? */
+/* this function determines how the maximal S-free set is going to look like
  *
+ * There are 4 possibilities: after writing the quadratic constraint
+ * \f$q(z) \leq 0\f$
+ * as
+ * \f$\Vert x(z)\Vert^2 - \Vert y\Vert^2 + w(z) + kappa \leq 0\f$,
+ * the cases are determined according to the following:
+ * - Case 1: w = 0 and kappa = 0
+ * - Case 2: w = 0 and kappa > 0
+ * - Case 3: w = 0 and kappa < 0
+ * - Case 4: w != 0
  */
 
-/** Assume the quadratic is stored as
- * q(z) = z_q^T Q z_q + b_q^T z_q + b_l z_l + c - z_a
+/** compute quantities for intersection cuts
+ *
+ * Assume the quadratic is stored as
+ * \f[ q(z) = z_q^T Q z_q + b_q^T z_q + b_l z_l + c - z_a \f]
  * where:
- *  -  z_q are the quadratic vars
- *  -  z_l are the linear vars
- *  -  z_a is the aux var if it exists
+ *  - \f$z_q\f$ are the quadratic vars
+ *  - \f$z_l\f$ are the linear vars
+ *  - \f$z_a\f$ is the aux var if it exists
+ *
  * We can rewrite it as
- * \|x(z)\|^2 - \|y\|^2 + w(z) + kappa <= 0,
+ * \f[ \Vert x(z)\Vert^2 - \Vert y\Vert^2 + w(z) + \kappa \leq 0. \f]
  * To do this transformation and later to compute the actual cut we need to compute and store some quantities.
  * Let
- *    - I_0, I_+, and I_- be the index set of zero, positive, and negative eigenvalues, respectively
- *    - v_i be the i-th eigenvector of Q
- *    - zlp be the lp value of the variables z
+ *    - \f$I_0\f$, \f$I_+\f$, and \f$I_-\f$ be the index set of zero, positive, and negative eigenvalues, respectively
+ *    - \f$v_i\f$ be the i-th eigenvector of \f$Q\f$
+ *    - \f$zlp\f$ be the lp value of the variables \f$z\f$
+ *
  * The quantities we need are:
- *    - vb_i = v_i^T b for i in I_+ \cup I_-
- *    - vzlp_i = v_i^T zlp_q for i in I_+ \cup I_-
- *    - kappa = c - 1/4 * sum_{i in I_+ \cup I_-} (v_i^T b_q)^2 / eigval_i
- *    - w(z) = (sum_{i in I_0} v_i^T b_q  v_i^T) z_q + b_l^T z_l - z_a
- *    - w(zlp)
+ *    - \f$vb_i = v_i^T b\f$ for \f$i \in I_+ \cup I_-\f$
+ *    - \f$vzlp_i = v_i^T zlp_q\f$ for \f$i \in I_+ \cup I_-\f$
+ *    - \f$\kappa = c - 1/4 \sum_{i \in I_+ \cup I_-} (v_i^T b_q)^2 / eigval_i\f$
+ *    - \f$w(z) = (\sum_{i \in I_0} v_i^T b_q v_i^T) z_q + b_l^T z_l - z_a\f$
+ *    - \f$w(zlp)\f$
  *
- * The function returns kappa and the vector sum_{i in I_0} v_i^T b_q  v_i^T
+ * @return \f$\kappa\f$ and the vector \f$\sum_{i \in I_0} v_i^T b_q v_i^T\f$
  *
- * @note if the constraint is q(z) <= rhs, then the constant when writting the constraint as quad <= 0 is c - rhs.
- * @note if the quadratic constraint we are separating is q(z) >= lhs, then we multiply by -1.
- * in practice, what changes is
+ * @note if the constraint is q(z) &le; rhs, then the constant when writing the constraint as quad &le; 0 is c - rhs.
+ * @note if the quadratic constraint we are separating is q(z) &ge; lhs, then we multiply by -1.
+ * In practice, what changes is
  *    - the sign of the eigenvalues
- *    - the sign of b_q and b_l
+ *    - the sign of \f$b_q\f$ and \f$b_l\f$
  *    - the sign of the coefficient of the auxvar (if it exists)
- *    - the constant of the quadratic written as quad <= 0 is lhs - c
- * the eigenvectors _do not_ change sign!
+ *    - the constant of the quadratic written as quad &le; 0 is lhs - c
+ * @note The eigenvectors _do not_ change sign!
  */
 static
 SCIP_RETCODE intercutsComputeCommonQuantities(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLHDLREXPRDATA*  nlhdlrexprdata,     /**< nlhdlr expression data */
    SCIP_VAR*             auxvar,             /**< aux var of expr or NULL if not needed (e.g. separating real cons) */
-   SCIP_Real             sidefactor,         /**< 1.0 if the violated constraint is q <= rhs, -1.0 otherwise */
+   SCIP_Real             sidefactor,         /**< 1.0 if the violated constraint is q &le; rhs, -1.0 otherwise */
    SCIP_SOL*             sol,                /**< solution to separate */
-   SCIP_Real*            vb,                 /**< buffer to store v_i^T b for i in I_+ \cup I_- */
-   SCIP_Real*            vzlp,               /**< buffer to store v_i^T zlp_q for i in I_+ \cup I_- */
+   SCIP_Real*            vb,                 /**< buffer to store \f$v_i^T b\f$ for \f$i \in I_+ \cup I_-\f$ */
+   SCIP_Real*            vzlp,               /**< buffer to store \f$v_i^T zlp_q\f$ for \f$i \in I_+ \cup I_-\f$ */
    SCIP_Real*            wcoefs,             /**< buffer to store the coefs of quad vars of w */
    SCIP_Real*            wzlp,               /**< pointer to store the value of w at zlp */
    SCIP_Real*            kappa               /**< pointer to store the value of kappa */
@@ -1043,6 +1063,8 @@ SCIP_RETCODE intercutsComputeCommonQuantities(
    qexpr = nlhdlrexprdata->qexpr;
    SCIPexprGetQuadraticData(qexpr, &constant, &nlinexprs, &linexprs, &lincoefs, &nquadexprs, NULL, &eigenvalues,
          &eigenvectors);
+
+   assert( eigenvalues != NULL );
 
    /* first get constant of quadratic when written as quad <= 0 */
    if( nlhdlrexprdata->cons != NULL )
@@ -1124,7 +1146,7 @@ SCIP_RETCODE intercutsComputeCommonQuantities(
    return SCIP_OKAY;
 }
 
-/* computes eigenvec^T ray */
+/** computes eigenvec^T ray */
 static
 SCIP_Real computeEigenvecDotRay(
    SCIP_Real*            eigenvec,           /**< eigenvector */
@@ -1150,13 +1172,14 @@ SCIP_Real computeEigenvecDotRay(
    return retval;
 }
 
-/** computes linear part of evaluation of w(ray): b_l^T ray_l - ray_a
- * @note: we can know whether the auxiliary variable appears by the entries of the ray
+/** computes linear part of evaluation of w(ray): \f$b_l^T ray_l - ray_a\f$
+ *
+ * @note we can know whether the auxiliary variable appears by the entries of the ray
  */
 static
 SCIP_Real computeWRayLinear(
    SCIP_NLHDLREXPRDATA*  nlhdlrexprdata,     /**< nlhdlr expression data */
-   SCIP_Real             sidefactor,         /**< 1.0 if the violated constraint is q <= rhs, -1.0 otherwise */
+   SCIP_Real             sidefactor,         /**< 1.0 if the violated constraint is q &le; rhs, -1.0 otherwise */
    SCIP_Real*            raycoefs,           /**< coefficients of ray */
    int*                  rayidx,             /**< ray coef[i] affects var at pos rayidx[i] in consvar */
    int                   raynnonz            /**< length of raycoefs and rayidx */
@@ -1207,7 +1230,9 @@ SCIP_Real computeWRayLinear(
    return retval;
 }
 
-/** The restriction of the function representing the maximal S-free set to zlp + t * ray has the form
+/** calculate coefficients of restriction of the function to given ray.
+ *
+ * The restriction of the function representing the maximal S-free set to zlp + t * ray has the form
  * SQRT(A t^2 + B t + C) - (D t + E) for cases 1, 2, and 3.
  * For case 4 it is a piecewise defined function and each piece is of the aforementioned form.
  *
@@ -1216,19 +1241,18 @@ SCIP_Real computeWRayLinear(
  * in the piecewise definition of the function.
  *
  * The parameter iscase4 tells the function if it is case 4 or not.
- *
  */
 static
 SCIP_RETCODE computeRestrictionToRay(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLHDLREXPRDATA*  nlhdlrexprdata,     /**< nlhdlr expression data */
-   SCIP_Real             sidefactor,         /**< 1.0 if the violated constraint is q <= rhs, -1.0 otherwise */
+   SCIP_Real             sidefactor,         /**< 1.0 if the violated constraint is q &le; rhs, -1.0 otherwise */
    SCIP_Bool             iscase4,            /**< whether we are in case 4 */
    SCIP_Real*            raycoefs,           /**< coefficients of ray */
    int*                  rayidx,             /**< index of consvar the ray coef is associated to */
    int                   raynnonz,           /**< length of raycoefs and rayidx */
-   SCIP_Real*            vb,                 /**< array containing v_i^T b for i in I_+ \cup I_- */
-   SCIP_Real*            vzlp,               /**< array containing v_i^T zlp_q for i in I_+ \cup I_- */
+   SCIP_Real*            vb,                 /**< array containing \f$v_i^T b\f$ for \f$i \in I_+ \cup I_-\f$ */
+   SCIP_Real*            vzlp,               /**< array containing \f$v_i^T zlp_q\f$ for \f$i \in I_+ \cup I_-\f$ */
    SCIP_Real*            wcoefs,             /**< coefficients of w for the qud vars or NULL if w is 0 */
    SCIP_Real             wzlp,               /**< value of w at zlp */
    SCIP_Real             kappa,              /**< value of kappa */
@@ -1505,25 +1529,28 @@ SCIP_Real evalPhiAtRay(
 #endif
 }
 
-/** the condition for being in case 4a is
- * -lambda_{r+1} \|yhat(zlp + tsol ray)\| + yhat_{s+1}(zlp + tsol ray) <= 0
- *  This reduces to
- * -num(xhat_{r+1}(zlp)) SQRT(A t^2 + B t + C) / E  + w(ray) * t + num(yhat_{s+1}(zlp)) <= 0
- *  where num is the numerator
+/** checks whether case 4a applies
+ *
+ * The condition for being in case 4a is
+ * \f[ -\lambda_{r+1} \Vert \hat y(zlp + tsol\, ray)\Vert + \hat y_{s+1}(zlp + tsol\, ray) \leq 0\f]
+ *
+ * This reduces to
+ * \f[ -num(\hat x_{r+1}(zlp)) \sqrt{A t^2 + B t + C} / E  + w(ray) \cdot t + num(\hat y_{s+1}(zlp)) \leq 0\f]
+ * where num is the numerator.
  */
 static
 SCIP_Real isCase4a(
    SCIP_Real             tsol,               /**< t in the above formula */
    SCIP_Real*            coefs4a,            /**< coefficients A, B, C, D, and E of case 4a */
    SCIP_Real*            coefscondition      /**< extra coefficients needed for the evaluation of the condition:
-                                              *   num(xhat_{r+1}(zlp)) / E; w(ray); num(yhat_{s+1}(zlp)) */
+                                              *   \f$num(\hat x_{r+1}(zlp)) / E\f$; \f$w(ray)\f$; \f$num(\hat y_{s+1}(zlp))\f$ */
    )
 {
    return (coefscondition[0] * SQRT( coefs4a[0] * SQR( tsol ) + coefs4a[1] * tsol + coefs4a[2] ) + coefscondition[1] *
          tsol + coefscondition[2]) <= 0.0;
 }
 
-/** helper function of computeRoot: we want phi to be <= 0 */
+/** helper function of computeRoot: we want phi to be &le; 0 */
 static
 void doBinarySearch(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1565,8 +1592,9 @@ void doBinarySearch(
 
 /** finds smallest positive root phi by finding the smallest positive root of
  * (A - D^2) t^2 + (B - 2 D*E) t + (C - E^2) = 0
- * However, we are conservative and want a solution such that phi is negative, but close to 0;
- * thus we correct the result with a binary search
+ *
+ * However, we are conservative and want a solution such that phi is negative, but close to 0.
+ * Thus, we correct the result with a binary search.
  */
 static
 SCIP_Real computeRoot(
@@ -1638,26 +1666,32 @@ SCIP_Real computeRoot(
    return sol;
 }
 
-/** The maximal S-free set is gamma(z) <= 0; we find the intersection point of the ray `ray` starting from zlp with the
+/** The maximal S-free set is \f$\gamma(z) \leq 0\f$; we find the intersection point of the ray `ray` starting from zlp with the
  * boundary of the S-free set.
- * That is, we find t >= 0 such that gamma(zlp + t * ray) = 0.
+ * That is, we find \f$t \geq 0\f$ such that \f$\gamma(zlp + t \cdot \text{ray}) = 0\f$.
  *
  * In cases 1,2, and 3, gamma is of the form
- *    gamma(zlp + t * ray) = SQRT(A t^2 + B t + C) - (D t + E)
+ *    \f[ \gamma(zlp + t \cdot \text{ray}) = \sqrt{A t^2 + B t + C} - (D t + E) \f]
  *
  * In the case 4 gamma is of the form
- *    gamma(zlp + t * ray) = SQRT(A t^2 + B t + C) - (D t + E)          if some condition holds
- *                           SQRT(A' t^2 + B' t + C') - (D' t + E')     otherwise
+ *    \f[ \gamma(zlp + t \cdot \text{ray}) =
+ *      \begin{cases}
+ *        \sqrt{A t^2 + B t + C} - (D t + E), & \text{if some condition holds}, \\
+ *        \sqrt{A' t^2 + B' t + C'} - (D' t + E'), & \text{otherwise.}
+ *      \end{cases}
+ *    \f]
  *
- * It can be shown (given the special properties of gamma) that the smallest positive root of each function of the form
- * SQRT(a t^2 + b t + c) - (d t + e)
+ * It can be shown (given the special properties of \f$\gamma\f$) that the smallest positive root of each function of the form
+ * \f$\sqrt{a t^2 + b t + c} - (d t + e)\f$
  * is the same as the smallest positive root of the quadratic equation:
- *       (SQRT(a t^2 + b t + c) - (d t + e)) * (SQRT(a t^2 + b t + c) + (d t + e)) = 0
- *  <==> (a - d^2) t^2 + (b - 2 d*e) t + (c - e^2) = 0
+ * \f{align}{
+ *     & \sqrt{a t^2 + b t + c} - (d t + e)) (\sqrt{a t^2 + b t + c} + (d t + e)) = 0 \\  \Leftrightarrow
+ *     & (a - d^2) t^2 + (b - 2 d\,e) t + (c - e^2) = 0
+ * \f}
  *
  * So, in cases 1, 2, and 3, this function just returns the solution of the above equation.
  * In case 4, it first solves the equation assuming we are in the first piece.
- * If there is no solution, then the second piece can't have a solution (first piece >= second piece for all t)
+ * If there is no solution, then the second piece can't have a solution (first piece &ge; second piece for all t)
  * Then we check if the solution satisfies the condition.
  * If it doesn't then we solve the equation for the second piece.
  * If it has a solution, then it _has_ to be the solution.
@@ -1811,10 +1845,10 @@ SCIP_RETCODE computeIntercut(
    SCIP_NLHDLRDATA*      nlhdlrdata,         /**< nlhdlr data */
    SCIP_NLHDLREXPRDATA*  nlhdlrexprdata,     /**< nlhdlr expression data */
    RAYS*                 rays,               /**< rays */
-   SCIP_Real             sidefactor,         /**< 1.0 if the violated constraint is q <= rhs, -1.0 otherwise */
+   SCIP_Real             sidefactor,         /**< 1.0 if the violated constraint is q &le; rhs, -1.0 otherwise */
    SCIP_Bool             iscase4,            /**< whether we are in case 4 */
-   SCIP_Real*            vb,                 /**< array containing v_i^T b for i in I_+ \cup I_- */
-   SCIP_Real*            vzlp,               /**< array containing v_i^T zlp_q for i in I_+ \cup I_- */
+   SCIP_Real*            vb,                 /**< array containing \f$v_i^T b\f$ for \f$i \in I_+ \cup I_-\f$ */
+   SCIP_Real*            vzlp,               /**< array containing \f$v_i^T zlp_q\f$ for \f$i \in I_+ \cup I_-\f$ */
    SCIP_Real*            wcoefs,             /**< coefficients of w for the qud vars or NULL if w is 0 */
    SCIP_Real             wzlp,               /**< value of w at zlp */
    SCIP_Real             kappa,              /**< value of kappa */
@@ -1965,7 +1999,7 @@ void combineRays(
    }
 }
 
-/* checks if two rays are linearly dependent */
+/** checks if two rays are linearly dependent */
 static
 SCIP_Bool raysAreDependent(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2023,11 +2057,11 @@ SCIP_RETCODE rayInRecessionCone(
    RAYS*                 rays,               /**< rays */
    int                   j,                  /**< index of current ray in recession cone */
    int                   i,                  /**< index of current ray not in recession cone */
-   SCIP_Real             sidefactor,         /**< 1.0 if the violated constraint is q <= rhs, -1.0 otherwise */
+   SCIP_Real             sidefactor,         /**< 1.0 if the violated constraint is q &le; rhs, -1.0 otherwise */
    SCIP_Bool             iscase4,            /**< whether we are in case 4 */
-   SCIP_Real*            vb,                 /**< array containing v_i^T b for i in I_+ \cup I_- */
-   SCIP_Real*            vzlp,               /**< array containing v_i^T zlp_q for i in I_+ \cup I_- */
-   SCIP_Real*            wcoefs,             /**< coefficients of w for the qud vars or NULL if w is 0 */
+   SCIP_Real*            vb,                 /**< array containing \f$v_i^T b\f$ for \f$i \in I_+ \cup I_-\f$ */
+   SCIP_Real*            vzlp,               /**< array containing \f$v_i^T zlp_q\f$ for \f$i \in I_+ \cup I_-\f$ */
+   SCIP_Real*            wcoefs,             /**< coefficients of w for the quad vars or NULL if w is 0 */
    SCIP_Real             wzlp,               /**< value of w at zlp */
    SCIP_Real             kappa,              /**< value of kappa */
    SCIP_Real             alpha,              /**< coef for combining the two rays */
@@ -2091,11 +2125,11 @@ SCIP_RETCODE findRho(
    SCIP_NLHDLREXPRDATA*  nlhdlrexprdata,     /**< nlhdlr expression data */
    RAYS*                 rays,               /**< rays */
    int                   idx,                /**< index of current ray we want to find rho for */
-   SCIP_Real             sidefactor,         /**< 1.0 if the violated constraint is q <= rhs, -1.0 otherwise */
+   SCIP_Real             sidefactor,         /**< 1.0 if the violated constraint is q &le; rhs, -1.0 otherwise */
    SCIP_Bool             iscase4,            /**< whether we are in case 4 */
-   SCIP_Real*            vb,                 /**< array containing v_i^T b for i in I_+ \cup I_- */
-   SCIP_Real*            vzlp,               /**< array containing v_i^T zlp_q for i in I_+ \cup I_- */
-   SCIP_Real*            wcoefs,             /**< coefficients of w for the qud vars or NULL if w is 0 */
+   SCIP_Real*            vb,                 /**< array containing \f$v_i^T b\f$ for \f$i \in I_+ \cup I_-\f$ */
+   SCIP_Real*            vzlp,               /**< array containing \f$v_i^T zlp_q\f$ for \f$i \in I_+ \cup I_-\f$ */
+   SCIP_Real*            wcoefs,             /**< coefficients of w for the quad vars or NULL if w is 0 */
    SCIP_Real             wzlp,               /**< value of w at zlp */
    SCIP_Real             kappa,              /**< value of kappa */
    SCIP_Real*            interpoints,        /**< array to store intersection points for all rays or NULL if nothing
@@ -2209,10 +2243,10 @@ SCIP_RETCODE computeStrengthenedIntercut(
    SCIP_NLHDLRDATA*      nlhdlrdata,         /**< nlhdlr data */
    SCIP_NLHDLREXPRDATA*  nlhdlrexprdata,     /**< nlhdlr expression data */
    RAYS*                 rays,               /**< rays */
-   SCIP_Real             sidefactor,         /**< 1.0 if the violated constraint is q <= rhs, -1.0 otherwise */
+   SCIP_Real             sidefactor,         /**< 1.0 if the violated constraint is q &le; rhs, -1.0 otherwise */
    SCIP_Bool             iscase4,            /**< whether we are in case 4 */
-   SCIP_Real*            vb,                 /**< array containing v_i^T b for i in I_+ \cup I_- */
-   SCIP_Real*            vzlp,               /**< array containing v_i^T zlp_q for i in I_+ \cup I_- */
+   SCIP_Real*            vb,                 /**< array containing \f$v_i^T b\f$ for \f$i \in I_+ \cup I_-\f$ */
+   SCIP_Real*            vzlp,               /**< array containing \f$v_i^T zlp_q\f$ for \f$i \in I_+ \cup I_-\f$ */
    SCIP_Real*            wcoefs,             /**< coefficients of w for the qud vars or NULL if w is 0 */
    SCIP_Real             wzlp,               /**< value of w at zlp */
    SCIP_Real             kappa,              /**< value of kappa */
@@ -2361,8 +2395,8 @@ SCIP_RETCODE setVarToNearestBound(
  * solution we want to separate.
  *
  * Furthermore, we store the rays corresponding to the unit vectors, i.e.,
- *    - if x_i is at its lower bound in vertex --> r_i =  e_i
- *    - if x_i is at its upper bound in vertex --> r_i = -e_i
+ *    - if \f$x_i\f$ is at its lower bound in vertex --> \f$r_i =  e_i\f$
+ *    - if \f$x_i\f$ is at its upper bound in vertex --> \f$r_i = -e_i\f$
  */
 static
 SCIP_RETCODE findVertexAndGetRays(
@@ -2453,7 +2487,7 @@ SCIP_Bool isQuadConsViolated(
    SCIP_NLHDLREXPRDATA*  nlhdlrexprdata,     /**< nlhdlr expression data */
    SCIP_VAR*             auxvar,             /**< aux var of expr or NULL if not needed (e.g. separating real cons) */
    SCIP_SOL*             sol,                /**< solution to check feasibility for */
-   SCIP_Real             sidefactor          /**< 1.0 if the violated constraint is q <= rhs, -1.0 otherwise */
+   SCIP_Real             sidefactor          /**< 1.0 if the violated constraint is q &le; rhs, -1.0 otherwise */
    )
 {
    SCIP_EXPR* qexpr;
@@ -2540,7 +2574,7 @@ SCIP_RETCODE generateIntercut(
    SCIP_CONS*            cons,               /**< violated constraint that contains expr */
    SCIP_SOL*             sol,                /**< solution to separate */
    SCIP_ROWPREP*         rowprep,            /**< rowprep for the generated cut */
-   SCIP_Bool             overestimate,       /**< TRUE if viol cons is q(z) >= lhs; FALSE if q(z) <= rhs */
+   SCIP_Bool             overestimate,       /**< TRUE if viol cons is q(z) &ge; lhs; FALSE if q(z) &le; rhs */
    SCIP_Bool*            success             /**< whether separation was successfull or not */
    )
 {
@@ -4015,7 +4049,7 @@ SCIP_DECL_NLHDLRREVERSEPROP(nlhdlrReversepropQuadratic)
     * linear sum on the left hand side.
     *
     * Note: this last step generalizes a technique that appeared in the classic cons_quadratic.
-    * The idea of that technique was to to borrow a bilinear term expr_k expr_l when propagating expr_l and the quadratic
+    * The idea of that technique was to borrow a bilinear term expr_k expr_l when propagating expr_l and the quadratic
     * function for expr_k was simple enough.
     * Since in P_l we only consider the indices of expressions that appear multiplying expr_l as _second_ factor, we
     * would lose the bilinear terms expr_k * expr_l, which contributes to the dependency problem.

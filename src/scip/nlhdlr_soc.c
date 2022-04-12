@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1946,6 +1946,10 @@ SCIP_RETCODE detectSocQuadraticComplex(
       return SCIP_OKAY;
    }
 
+   /* we need Lapack to compute eigenvalues/vectors below */
+   if( !SCIPisIpoptAvailableIpopt() )
+      return SCIP_OKAY;
+
    /* get children of the sum */
    nchildren = SCIPexprGetNChildren(expr);
    constant = SCIPgetConstantExprSum(expr);
@@ -2146,6 +2150,8 @@ CLEANUP:
  *  which can be transformed to the form \f$\sqrt{\sum_i (\text{coef}_i \text{expr}_i + \text{const}_i)^2 + c^*}\f$ with \f$c^* \geq 0\f$.\n
  *    -> this results in the SOC     expr &le; auxvar(expr)
  *
+ *    TODO we should generalize and check for sqrt(positive-semidefinite-quadratic)
+ *
  *  2. check if expression represents a quadratic function of one of the following forms (all coefs > 0)
  *     1. \f$(\sum_i   \text{coef}_i \text{expr}_i^2) - \text{coef}_k \text{expr}_k^2 \leq \text{RHS}\f$ or
  *     2. \f$(\sum_i - \text{coef}_i \text{expr}_i^2) + \text{coef}_k \text{expr}_k^2 \geq \text{LHS}\f$ or
@@ -2312,7 +2318,13 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectSoc)
 
    /* inform what we can do */
    *participating = enforcebelow ? SCIP_NLHDLR_METHOD_SEPABELOW : SCIP_NLHDLR_METHOD_SEPAABOVE;
-   *enforcing |= *participating;
+
+   /* if we have been successful on sqrt(...) <= auxvar, then we enforce
+    * otherwise, expr is quadratic and we separate for expr <= ub(auxvar) only
+    * in that case, we enforce only if expr is the root of a constraint, since then replacing auxvar by up(auxvar) does not relax anything (auxvar <= ub(auxvar) is the only constraint on auxvar)
+    */
+   if( (SCIPisExprPower(scip, expr) && SCIPgetExponentExprPow(expr) == 0.5) || (cons != NULL) )
+      *enforcing |= *participating;
 
    return SCIP_OKAY;
 }
@@ -2498,6 +2510,8 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaSoc)
       SCIP_CALL( createDisaggrRow(scip, conshdlr, expr, nlhdlrexprdata) );
    }
 
+   /* TODO add something to the LP as well, at least the disaggregation row */
+
    return SCIP_OKAY;
 }
 
@@ -2672,6 +2686,7 @@ SCIP_RETCODE SCIPincludeNlhdlrSoc(
    SCIPnlhdlrSetSepa(nlhdlr, nlhdlrInitSepaSoc, nlhdlrEnfoSoc, NULL, nlhdlrExitSepaSoc);
 
    /* add soc nlhdlr parameters */
+   /* TODO should we get rid of this and use separating/mineffiacy(root) instead, which is 1e-4? */
    SCIP_CALL( SCIPaddRealParam(scip, "nlhdlr/" NLHDLR_NAME "/mincutefficacy",
          "Minimum efficacy which a cut needs in order to be added.",
          &nlhdlrdata->mincutefficacy, FALSE, DEFAULT_MINCUTEFFICACY, 0.0, SCIPinfinity(scip), NULL, NULL) );

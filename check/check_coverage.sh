@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -121,6 +121,7 @@ do
             echo "@01 ${i} ==========="
             echo "@01 ${i} ==========="                   >> "${ERRFILE}"
             echo                                          > "${TMPFILE}"
+	    echo "set emphasis benchmark"                 >> "${TMPFILE}" # avoid switching to dfs etc. - better abort with memory error; this has to be first
             if test "${SETNAME}" != "default"
             then
                 echo "set load ${SETTINGS}"               >>  "${TMPFILE}"
@@ -132,7 +133,6 @@ do
             echo "set timing clocktype 1"                 >> "${TMPFILE}"
             echo "set display verblevel 4"                >> "${TMPFILE}"
             echo "set display freq ${DISPFREQ}"           >> "${TMPFILE}"
-            echo "set memory savefac 1.0"                 >> "${TMPFILE}" # avoid switching to dfs - better abort with memory error
             echo "set visual vbcfilename vbctest.vbc"     >> "${TMPFILE}"
             echo "set save ${SETFILE}"                    >> "${TMPFILE}"
             echo "read ${i}"                              >> "${TMPFILE}"
@@ -167,6 +167,7 @@ do
             echo "@01 ${i} ==========="
             echo "@01 ${i} ==========="                   >> "${ERRFILE}"
             echo > "${TMPFILE}"
+	    echo "set emphasis benchmark"                 >> "${TMPFILE}" # avoid switching to dfs etc. - better abort with memory error; this has to be first
             if test "${SETNAME}" != "default"
             then
                 echo "set load ${SETTINGS}"               >> "${TMPFILE}"
@@ -178,7 +179,6 @@ do
             echo "set timing clocktype 1"                 >> "${TMPFILE}"
             echo "set display verblevel 4"                >> "${TMPFILE}"
             echo "set display freq ${DISPFREQ}"           >> "${TMPFILE}"
-            echo "set memory savefac 1.0"                 >> "${TMPFILE}" # avoid switching to dfs - better abort with memory error
             echo "set save ${SETFILE}"                    >> "${TMPFILE}"
             echo "read cipreadparsetest.cip"              >> "${TMPFILE}"
             echo "read soltest.sol"                       >> "${TMPFILE}"
@@ -204,6 +204,7 @@ do
             echo "@01 ${i} ==========="
             echo "@01 ${i} ==========="                   >> "${ERRFILE}"
             echo                                           > "${TMPFILE}"
+	    echo "set emphasis benchmark"                 >> "${TMPFILE}" # avoid switching to dfs etc. - better abort with memory error; this has to be first
             if test "${SETNAME}" != "default"
             then
                 echo "set load ${SETTINGS}"               >>  "${TMPFILE}"
@@ -215,7 +216,6 @@ do
             echo "set timing clocktype 1"                 >> "${TMPFILE}"
             echo "set display verblevel 4"                >> "${TMPFILE}"
             echo "set display freq ${DISPFREQ}"           >> "${TMPFILE}"
-            echo "set memory savefac 1.0"                 >> "${TMPFILE}" # avoid switching to dfs - better abort with memory error
             echo "set save ${SETFILE}"                    >> "${TMPFILE}"
             echo "read ${i}"                              >> "${TMPFILE}"
             echo "presolve"                               >> "${TMPFILE}"

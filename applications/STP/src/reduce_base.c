@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -194,20 +194,20 @@ void reduceStatsPrint(
 /** iterate NV and SL test while at least minelims many contractions are being performed */
 static
 SCIP_RETCODE execNvSl(
-   SCIP*                 scip,
+   SCIP*                 scip,               /**< SCIP data structure */
    const int*            edgestate,          /**< for propagation or NULL */
-   GRAPH*                g,
-   PATH*                 vnoi,
-   SCIP_Real*            nodearrreal,
-   SCIP_Real*            fixed,
-   int*                  edgearrint,
-   int*                  vbase,
-   int*                  neighb,
-   int*                  distnode,
-   int*                  solnode,
-   STP_Bool*             visited,
-   int*                  nelims,
-   int                   minelims
+   GRAPH*                g,                  /**< graph */
+   PATH*                 vnoi,               /**< Voronoi */
+   SCIP_Real*            nodearrreal,        /**< array */
+   SCIP_Real*            fixed,              /**< offset */
+   int*                  edgearrint,         /**< array */
+   int*                  vbase,              /**< array */
+   int*                  neighb,             /**< array */
+   int*                  distnode,           /**< array */
+   int*                  solnode,            /**< array */
+   STP_Bool*             visited,            /**< array */
+   int*                  nelims,             /**< number of eliminations */
+   int                   minelims            /**< minimum number of eliminations */
    )
 {
    int elims;
@@ -336,19 +336,19 @@ SCIP_RETCODE execPc_BDk(
 
 static
 SCIP_RETCODE execPc_NVSL(
-   SCIP*                 scip,
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             usestrongreds,      /**< allow strong reductions? */
-   GRAPH*                g,
-   PATH*                 vnoi,
-   SCIP_Real*            nodearrreal,
-   SCIP_Real*            fixed,
-   int*                  edgearrint,
-   int*                  vbase,
-   int*                  neighb,
-   int*                  distnode,
-   int*                  solnode,
-   STP_Bool*             visited,
-   int*                  nelims,
+   GRAPH*                g,                  /**< graph */
+   PATH*                 vnoi,               /**< Voronoi data structure */
+   SCIP_Real*            nodearrreal,        /**< array */
+   SCIP_Real*            fixed,              /**< offset */
+   int*                  edgearrint,         /**< array */
+   int*                  vbase,              /**< array */
+   int*                  neighb,             /**< array */
+   int*                  distnode,           /**< array */
+   int*                  solnode,            /**< array */
+   STP_Bool*             visited,            /**< array */
+   int*                  nelims,             /**< number of eliminations */
    int                   redbound,           /**< reduction bound */
    SCIP_Bool             verbose,            /**< be verbose? */
    SCIP_Bool*            rerun               /**< use again? */
@@ -415,7 +415,7 @@ SCIP_Real* redbaseGetOffsetPointer(
  *  todo: remove once redsol is properly tested */
 static
 int* redbaseGetSolnode(
-   REDSOLLOCAL*          redsollocal,
+   REDSOLLOCAL*          redsollocal,        /**< data structure for retaining primal solution */
    REDBASE*              redbase             /**< base */
    )
 {
@@ -442,7 +442,7 @@ SCIP_RETCODE redLoopInnerStp(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_RANDNUMGEN*      randnumgen,         /**< generator */
    GRAPH*                g,                  /**< graph data structure */
-   REDSOLLOCAL*          redsollocal,
+   REDSOLLOCAL*          redsollocal,        /**< data structure for retaining primal solution */
    REDBASE*              redbase,            /**< parameters */
    SCIP_Bool*            wasDecomposed       /**< pointer to mark whether to exit early */
 )
@@ -691,7 +691,7 @@ static
 SCIP_RETCODE redLoopInnerMw(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
-   REDSOLLOCAL*          redsollocal,
+   REDSOLLOCAL*          redsollocal,        /**< data structure for retaining primal solution */
    PATH*                 vnoi,               /**< Voronoi data structure */
    SCIP_Real*            nodearrreal,        /**< nodes-sized array  */
    int*                  state,              /**< shortest path array  */
@@ -873,7 +873,7 @@ SCIP_RETCODE redLoopInnerPc(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
    REDSOLLOCAL*          redsollocal,        /**< solution store */
-   DHEAP*                dheap,
+   DHEAP*                dheap,              /**< heap data structure */
    PATH*                 vnoi,               /**< Voronoi data structure */
    PATH*                 path,               /**< path data structure */
    SCIP_Real*            nodearrreal,        /**< nodes-sized array  */
@@ -884,17 +884,17 @@ SCIP_RETCODE redLoopInnerPc(
    int*                  edgearrint,         /**< edge-sized array  */
    int*                  nodearrint2,        /**< nodes-sized array  */
    STP_Bool*             nodearrchar,        /**< nodes-sized array  */
-   SCIP_Real*            fixed,
-   SCIP_RANDNUMGEN*      randnumgen,
-   SCIP_Real             prizesum,
+   SCIP_Real*            fixed,              /**< offset */
+   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
+   SCIP_Real             prizesum,           /**< prize sum */
    SCIP_Bool             dualascent,         /**< do dual-ascent reduction? */
    SCIP_Bool             bred,               /**< do bound-based reduction? */
    int                   reductbound,        /**< minimal number of edges to be eliminated in order to reiterate reductions */
    SCIP_Bool             userec,             /**< use recombination heuristic? */
    SCIP_Bool             nodereplacing,      /**< should node replacement (by edges) be performed? */
    SCIP_Bool             usestrongreds,      /**< allow strong reductions? */
-   SCIP_Bool             beFast,
-   int*                  ninnerelims
+   SCIP_Bool             beFast,             /**< fast mode? */
+   int*                  ninnerelims         /**< number of eliminations */
    )
 {
    int* solnode = reduce_sollocalGetSolnode(redsollocal);
@@ -1798,9 +1798,7 @@ SCIP_RETCODE reduce_redLoopMw(
    SCIP_RANDNUMGEN* randnumgen;
    SCIP_Real prizesum;
 
-   assert(scip != NULL);
-   assert(g != NULL);
-   assert(fixed != NULL);
+   assert(scip && g);
    assert(advanced || !tryrmw);
 
    tryrmw = tryrmw && userec;

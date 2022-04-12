@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -2365,7 +2365,7 @@ SCIP_RETCODE prepareReoptimization(
     */
    if( scip->stat->nreoptruns == 1 )
    {
-      assert(scip->set->stage == SCIP_STAGE_PRESOLVED);
+      assert(scip->set->stage == SCIP_STAGE_PRESOLVED || scip->set->stage == SCIP_STAGE_SOLVED);
 
       SCIP_CALL( SCIPreoptSaveGlobalBounds(scip->reopt, scip->transprob, scip->mem->probmem) );
 
@@ -2710,7 +2710,13 @@ SCIP_RETCODE SCIPsolve(
             statsprinted = TRUE;
 
          if( scip->set->stage == SCIP_STAGE_SOLVED || scip->set->stage == SCIP_STAGE_PRESOLVING )
+         {
+            if ( scip->set->reopt_enable )
+            {
+               SCIP_CALL( prepareReoptimization(scip) );
+            }
             break;
+         }
          assert(scip->set->stage == SCIP_STAGE_PRESOLVED);
 
          if( SCIPsolveIsStopped(scip->set, scip->stat, FALSE) )
@@ -3013,8 +3019,16 @@ SCIP_RETCODE SCIPsolveConcurrent(
          memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
          memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
          /* estimate maximum number of copies that be created based on memory limit */
-         nthreads = MAX(1, memorylimit / (4.0*SCIPgetMemExternEstim(scip)/1048576.0));
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "estimated a maximum of %lli threads based on memory limit\n", nthreads);
+         if( !scip->set->misc_avoidmemout )
+         {
+            nthreads = MAX(1, memorylimit / (4.0*SCIPgetMemExternEstim(scip)/1048576.0));
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "estimated a maximum of %lli threads based on memory limit\n", nthreads);
+         }
+         else
+         {
+            nthreads = minnthreads;
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "ignoring memory limit; all threads can be created\n");
+         }
       }
       nconcsolvertypes = SCIPgetNConcsolverTypes(scip);
       concsolvertypes = SCIPgetConcsolverTypes(scip);

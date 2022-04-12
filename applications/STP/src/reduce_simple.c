@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -101,7 +101,7 @@ SCIP_RETCODE cutEdgeProbe(
    const GRAPH*          g,                  /**< graph data structure */
    int                   start,              /**< the node to start from */
    int                   end,                /**< note to ignore */
-   SCIP_Bool* RESTRICT   nodes_visited,
+   SCIP_Bool* RESTRICT   nodes_visited,      /**< marks for each node whether visited or not */
    SCIP_Bool*            terminalFound       /**< found? */
 )
 {
@@ -1163,7 +1163,7 @@ SCIP_RETCODE reduce_unconnectedForDirected(
 /** remove unconnected vertices and checks whether problem is infeasible  */
 SCIP_RETCODE reduce_unconnectedInfeas(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             beVerbose,
+   SCIP_Bool             beVerbose,          /**< be verbose? */
    GRAPH*                g,                  /**< graph data structure */
    SCIP_Bool*            infeas              /**< is problem infeasible? */
 )

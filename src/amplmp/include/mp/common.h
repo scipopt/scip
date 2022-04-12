@@ -104,6 +104,8 @@ enum Kind {
   PROBLEM =    3   /**< Applies to problems. */
 };
 
+// SV disabled following line as not compilable with ancient MSVC 10.0
+// constexpr int KIND_MASK = Kind::VAR | Kind::CON | Kind::OBJ | Kind ::PROBLEM;
 // Suffix flags.
 enum {
   FLOAT   =    4,  /**< Suffix values are floating-point numbers. */
@@ -124,6 +126,7 @@ enum {
 namespace sol {
 /** Solution status. */
 enum Status {
+  NOT_CHECKED = -200,
   /** Unknown status. */
   UNKNOWN     =  -1,
 
@@ -361,6 +364,7 @@ enum Kind {
     \endrst
    */
   ATANH,
+
 
   /** The last unary numeric expression kind. */
   LAST_UNARY = ATANH,
@@ -869,7 +873,9 @@ const char *str(expr::Kind kind);
 int nl_opcode(expr::Kind kind);
 }  // namespace expr
 
+#define MP_CONST_DISPATCH(call) static_cast<const Impl*>(this)->call
 #define MP_DISPATCH(call) static_cast<Impl*>(this)->call
+#define MP_DISPATCH_STATIC(call) Impl::call
 
 namespace internal {
 
@@ -1103,6 +1109,29 @@ struct ProblemInfo {
         num_common_exprs_in_single_objs;
   }
 };
+/* SV disabled enum classes as not compilable with ancient MSVC 10.0
+enum class IISStatus {
+  non = 0,
+  low = 1,
+  fix = 2,
+  upp = 3,
+  mem = 4,
+  pmem = 5,
+  plow = 6,
+  pupp = 7,
+  bug = 8
+};
+
+enum class BasicStatus {
+  none= 0,
+  bas = 1,
+  sup = 2,
+  low = 3,
+  upp = 4,
+  equ = 5,
+  btw = 6
+};
+*/
 }  // namespace mp
 
 #endif  // MP_COMMON_H_

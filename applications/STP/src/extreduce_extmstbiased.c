@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -54,8 +54,8 @@
 static
 SCIP_Bool mst3StarNeighborRuleOut(
    SCIP*                 scip,               /**< SCIP data structure */
-   const SCIP_Real       dists_def[3],
-   const SCIP_Real       dists_bias[3],
+   const SCIP_Real       dists_def[3],       /**< distances between adjacent nodes */
+   const SCIP_Real       dists_bias[3],      /**< biased distances between adjacent nodes */
    SCIP_Real             starcost,           /**< cost of the star */
    SCIP_Bool             allowEquality       /**< allow equality? */
 )
@@ -269,3 +269,5 @@ SCIP_RETCODE extreduce_mstbiasedCheck3NodeSimple(
 
    return SCIP_OKAY;
 }
+
+/**@} */

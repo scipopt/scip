@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -38,7 +38,7 @@
 
 #include "scip/struct_heur.h"
 
-/** compares two heuristics w. r. to their delay positions and their priority */
+/** compares two heuristics w.r.t. to their delay positions and priorities */
 SCIP_DECL_SORTPTRCOMP(SCIPheurComp)
 {  /*lint --e{715}*/
    SCIP_HEUR* heur1 = (SCIP_HEUR*)elem1;
@@ -48,7 +48,10 @@ SCIP_DECL_SORTPTRCOMP(SCIPheurComp)
    assert(heur2 != NULL);
 
    if( heur1->delaypos == heur2->delaypos )
-      return heur2->priority - heur1->priority; /* prefer higher priorities */
+      if( heur1->priority != heur2->priority )
+         return heur2->priority - heur1->priority; /* prefer higher priorities */
+      else
+         return (strcmp(heur1->name, heur2->name)); /* tiebreaker */
    else if( heur1->delaypos == -1 )
       return +1;                                /* prefer delayed heuristics */
    else if( heur2->delaypos == -1 )
@@ -61,6 +64,12 @@ SCIP_DECL_SORTPTRCOMP(SCIPheurComp)
       return heur1->delaypos - heur2->delaypos; /* prefer lower delay positions */
 }
 
+/** compares two heuristics w.r.t. to their priority values */
+SCIP_DECL_SORTPTRCOMP(SCIPheurCompPriority)
+{
+   return SCIPheurGetPriority((SCIP_HEUR*)elem2) -
+     SCIPheurGetPriority((SCIP_HEUR*)elem1);
+}
 
 /** comparison method for sorting heuristics w.r.t. to their name */
 SCIP_DECL_SORTPTRCOMP(SCIPheurCompName)
@@ -1064,6 +1073,9 @@ SCIP_RETCODE SCIPheurInit(
       heur->ncalls = 0;
       heur->nsolsfound = 0;
       heur->nbestsolsfound = 0;
+
+      set->heurssorted = FALSE;
+      set->heursnamesorted = FALSE;
    }
 
    if( heur->heurinit != NULL )

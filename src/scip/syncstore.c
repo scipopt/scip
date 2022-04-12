@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -18,6 +18,7 @@
  * @brief  the function definitions of the synchronization store
  * @author Leona Gottwald
  * @author Stephen J. Maher
+ * @author Marc Pfetsch
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -69,6 +70,7 @@ SCIP_RETCODE SCIPsyncstoreCreate(
    (*syncstore)->syncdata = NULL;
    (*syncstore)->stopped = FALSE;
    (*syncstore)->nuses = 1;
+
    SCIP_CALL( SCIPtpiInitLock(&(*syncstore)->lock) );
 
    return SCIP_OKAY;
@@ -85,10 +87,10 @@ SCIP_RETCODE SCIPsyncstoreRelease(
    if( *syncstore == NULL )
       return SCIP_OKAY;
 
-   SCIP_CALL( SCIPtpiAcquireLock(&(*syncstore)->lock) );
+   SCIP_CALL( SCIPtpiAcquireLock((*syncstore)->lock) );
    (*syncstore)->nuses -= 1;
    references = (*syncstore)->nuses;
-   SCIP_CALL( SCIPtpiReleaseLock(&(*syncstore)->lock) );
+   SCIP_CALL( SCIPtpiReleaseLock((*syncstore)->lock) );
 
    if( references == 0 )
    {
@@ -114,11 +116,11 @@ SCIP_RETCODE SCIPsyncstoreCapture(
    SCIP_SYNCSTORE*       syncstore           /**< the synchronization store */
    )
 {
-   SCIP_CALL( SCIPtpiAcquireLock(&syncstore->lock) );
+   SCIP_CALL( SCIPtpiAcquireLock(syncstore->lock) );
 
    ++(syncstore->nuses);
 
-   SCIP_CALL( SCIPtpiReleaseLock(&syncstore->lock) );
+   SCIP_CALL( SCIPtpiReleaseLock(syncstore->lock) );
 
    return SCIP_OKAY;
 }
@@ -231,11 +233,11 @@ SCIP_Bool SCIPsyncstoreSolveIsStopped(
 {
    SCIP_Bool stopped;
 
-   SCIP_CALL_ABORT( SCIPtpiAcquireLock(&syncstore->lock) );
+   SCIP_CALL_ABORT( SCIPtpiAcquireLock(syncstore->lock) );
 
    stopped = syncstore->stopped;
 
-   SCIP_CALL_ABORT( SCIPtpiReleaseLock(&syncstore->lock) );
+   SCIP_CALL_ABORT( SCIPtpiReleaseLock(syncstore->lock) );
 
    return stopped;
 }
@@ -248,11 +250,11 @@ void SCIPsyncstoreSetSolveIsStopped(
    SCIP_Bool             stopped             /**< flag if the solve is stopped */
    )
 {
-   SCIP_CALL_ABORT( SCIPtpiAcquireLock(&syncstore->lock) );
+   SCIP_CALL_ABORT( SCIPtpiAcquireLock(syncstore->lock) );
 
    syncstore->stopped = stopped;
 
-   SCIP_CALL_ABORT( SCIPtpiReleaseLock(&syncstore->lock) );
+   SCIP_CALL_ABORT( SCIPtpiReleaseLock(syncstore->lock) );
 }
 
 /** gets the upperbound from the last synchronization */
@@ -403,17 +405,17 @@ SCIP_RETCODE SCIPsyncstoreEnsureAllSynced(
    assert(syncstore->initialized);
 
    /* check if waiting is required, make sure to hold the lock */
-   SCIP_CALL( SCIPtpiAcquireLock(&syncdata->lock) );
+   SCIP_CALL( SCIPtpiAcquireLock(syncdata->lock) );
 
    while( syncdata->syncedcount < syncstore->nsolvers )
    {
       /* yes, so wait on the condition variable
        * (automatically releases the lock and reacquires it after the waiting)
        */
-      SCIP_CALL( SCIPtpiWaitCondition(&syncdata->allsynced, &syncdata->lock) );
+      SCIP_CALL( SCIPtpiWaitCondition(syncdata->allsynced, syncdata->lock) );
    }
 
-   SCIP_CALL( SCIPtpiReleaseLock(&syncdata->lock) );
+   SCIP_CALL( SCIPtpiReleaseLock(syncdata->lock) );
 
    return SCIP_OKAY;
 }
@@ -445,7 +447,7 @@ SCIP_RETCODE SCIPsyncstoreStartSync(
    *syncdata = &syncstore->syncdata[i];
    assert(*syncdata != NULL);
 
-   SCIP_CALL( SCIPtpiAcquireLock(&(*syncdata)->lock) );
+   SCIP_CALL( SCIPtpiAcquireLock((*syncdata)->lock) );
 
    if( (*syncdata)->syncnum != syncnum )
    {
@@ -487,10 +489,10 @@ SCIP_RETCODE SCIPsyncstoreFinishSync(
       syncstore->lastsync = *syncdata;
       printline = TRUE;
 
-      SCIP_CALL( SCIPtpiBroadcastCondition(&(*syncdata)->allsynced) );
+      SCIP_CALL( SCIPtpiBroadcastCondition((*syncdata)->allsynced) );
    }
 
-   SCIP_CALL( SCIPtpiReleaseLock(&(*syncdata)->lock) );
+   SCIP_CALL( SCIPtpiReleaseLock((*syncdata)->lock) );
 
    if( printline )
    {

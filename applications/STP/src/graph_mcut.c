@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -348,8 +348,8 @@ static int bfs(
 static
 SCIP_RETCODE mincutInit(
    SCIP*                 scip,               /**< SCIP data structure */
-   int                   nnodes,
-   int                   nedges,
+   int                   nnodes,             /**<  number of nodes */
+   int                   nedges,             /**< number of edges */
    GRAPH*                p                   /**< graph data structure */
 )
 {
@@ -1119,8 +1119,8 @@ SCIP_RETCODE graph_mincut_init(
 /** reinitializes minimum cut arrays */
 SCIP_RETCODE graph_mincut_reInit(
    SCIP*                 scip,               /**< SCIP data structure */
-   int                   nnodes,
-   int                   nedges,
+   int                   nnodes,             /**< number of nodes */
+   int                   nedges,             /**< number of edges */
    GRAPH*                p                   /**< graph data structure */
      )
 {

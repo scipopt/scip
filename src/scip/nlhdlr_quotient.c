@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1089,6 +1089,7 @@ SCIP_DECL_NLHDLREVALAUX(nlhdlrEvalauxQuotient)
    assert(expr != NULL);
    assert(auxvalue != NULL);
 
+   /**! [SnippetNlhdlrEvalauxQuotient] */
    /* get auxiliary variables */
    auxvarx = SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->numexpr);
    auxvary = SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->denomexpr);
@@ -1105,6 +1106,7 @@ SCIP_DECL_NLHDLREVALAUX(nlhdlrEvalauxQuotient)
 
    /* return SCIP_INVALID if the denominator evaluates to zero */
    *auxvalue = (denomval != 0.0) ? nlhdlrexprdata->constant + nomval / denomval : SCIP_INVALID;
+   /**! [SnippetNlhdlrEvalauxQuotient] */
 
    return SCIP_OKAY;
 }
@@ -1126,6 +1128,7 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateQuotient)
    assert(nlhdlrexprdata != NULL);
    assert(rowpreps != NULL);
 
+   /** ![SnippetNlhdlrEstimateQuotient] */
    *addedbranchscores = FALSE;
    *success = FALSE;
 
@@ -1178,6 +1181,7 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateQuotient)
 
       SCIP_CALL( SCIPaddExprsViolScoreNonlinear(scip, exprs, nexprs, violation, sol, addedbranchscores) );
    }
+   /** ![SnippetNlhdlrEstimateQuotient] */
 
    return SCIP_OKAY;
 }
@@ -1198,12 +1202,14 @@ SCIP_DECL_NLHDLRINTEVAL(nlhdlrIntevalQuotient)
     */
    assert(nlhdlrexprdata->numexpr == nlhdlrexprdata->denomexpr);
 
+   /**! [SnippetNlhdlrIntevalQuotient] */
    /* get activity of the numerator (= denominator) expression */
    bnds = SCIPexprGetActivity(nlhdlrexprdata->numexpr);
 
    /* call interval evaluation for the univariate quotient expression */
    *interval = intEvalQuotient(scip, bnds, nlhdlrexprdata->numcoef, nlhdlrexprdata->numconst,
       nlhdlrexprdata->denomcoef, nlhdlrexprdata->denomconst, nlhdlrexprdata->constant);
+   /**! [SnippetNlhdlrIntevalQuotient] */
 
    return SCIP_OKAY;
 }
@@ -1230,6 +1236,7 @@ SCIP_DECL_NLHDLRREVERSEPROP(nlhdlrReversepropQuotient)
       nlhdlrexprdata->constant, bounds.inf, bounds.sup);
 
    /* call reverse propagation */
+   /**! [SnippetNlhdlrReversepropQuotient] */
    result = reversepropQuotient(bounds, nlhdlrexprdata->numcoef, nlhdlrexprdata->numconst,
       nlhdlrexprdata->denomcoef, nlhdlrexprdata->denomconst, nlhdlrexprdata->constant);
 
@@ -1239,6 +1246,7 @@ SCIP_DECL_NLHDLRREVERSEPROP(nlhdlrReversepropQuotient)
 
    /* tighten bounds of the expression */
    SCIP_CALL( SCIPtightenExprIntervalNonlinear(scip, nlhdlrexprdata->numexpr, result, infeasible, nreductions) );
+   /**! [SnippetNlhdlrReversepropQuotient] */
 
    return SCIP_OKAY;
 }

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -28,7 +28,6 @@
 #define EXPRHDLR_NAME         "xyz"
 #define EXPRHDLR_DESC         "expression handler template"
 #define EXPRHDLR_PRECEDENCE   0
-#define EXPRHDLR_HASHKEY      SCIPcalcFibHash(1.0)
 
 /*
  * Data structures
@@ -36,13 +35,13 @@
 
 /* TODO: fill in the necessary data */
 
-/** expression data */
-struct SCIP_ExprData
+/** expression handler data */
+struct SCIP_ExprhdlrData
 {
 };
 
-/** expression handler data */
-struct SCIP_ExprhdlrData
+/** expression data */
+struct SCIP_ExprData
 {
 };
 
@@ -248,7 +247,6 @@ static
 SCIP_DECL_EXPRHASH(hashXyz)
 {  /*lint --e{715}*/
    assert(expr != NULL);
-   assert(EXPRHDLR_HASHKEY != 0);
 
    SCIPerrorMessage("method of xyz expression handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
@@ -367,4 +365,15 @@ SCIP_RETCODE SCIPcreateExprXyz(
          ownercreatedata) );
 
    return SCIP_OKAY;
+}
+
+/** indicates whether expression is of xyz-type */  /*lint -e{715}*/
+SCIP_Bool SCIPisExprXyz(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{  /*lint --e{715}*/
+   assert(expr != NULL);
+
+   return strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), EXPRHDLR_NAME) == 0;
 }

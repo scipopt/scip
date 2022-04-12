@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -77,10 +77,13 @@ SCIP_RETCODE SCIPincludePresolMILP(
 #define DEFAULT_MAXFILLINPERSUBST  3         /**< maximal possible fillin for substitutions to be considered */
 #define DEFAULT_MAXSHIFTPERROW     10        /**< maximal amount of nonzeros allowed to be shifted to make space for substitutions */
 #define DEFAULT_DETECTLINDEP       0         /**< should linear dependent equations and free columns be removed? (0: never, 1: for LPs, 2: always) */
+#define DEFAULT_MAXBADGESIZE_SEQ   15000     /**< the max badge size in Probing if PaPILO is executed in sequential mode*/
+#define DEFAULT_MAXBADGESIZE_PAR   -1        /**< the max badge size in Probing if PaPILO is executed in parallel mode*/
 #define DEFAULT_RANDOMSEED         0         /**< the random seed used for randomization of tie breaking */
 #define DEFAULT_MODIFYCONSFAC      0.8       /**< modify SCIP constraints when the number of nonzeros or rows is at most this
                                               *   factor times the number of nonzeros or rows before presolving */
 #define DEFAULT_MARKOWITZTOLERANCE 0.01      /**< the markowitz tolerance used for substitutions */
+#define DEFAULT_VERBOSITY          0
 #define DEFAULT_HUGEBOUND          1e8       /**< absolute bound value that is considered too huge for activitity based calculations */
 #define DEFAULT_ENABLEPARALLELROWS TRUE      /**< should the parallel rows presolver be enabled within the presolve library? */
 #define DEFAULT_ENABLEDOMCOL       TRUE      /**< should the dominated column presolver be enabled within the presolve library? */
@@ -88,6 +91,7 @@ SCIP_RETCODE SCIPincludePresolMILP(
 #define DEFAULT_ENABLEMULTIAGGR    TRUE      /**< should the multi-aggregation presolver be enabled within the presolve library? */
 #define DEFAULT_ENABLEPROBING      TRUE      /**< should the probing presolver be enabled within the presolve library? */
 #define DEFAULT_ENABLESPARSIFY     FALSE     /**< should the sparsify presolver be enabled within the presolve library? */
+#define DEFAULT_FILENAME_PROBLEM   "-"       /**< default filename to store the instance before presolving */
 
 /*
  * Data structures
@@ -100,9 +104,13 @@ struct SCIP_PresolData
    int lastnrows;                            /**< the number of rows from the last call */
    int threads;                              /**< maximum number of threads presolving may use (0: automatic) */
    int maxfillinpersubstitution;             /**< maximal possible fillin for substitutions to be considered */
+   int maxbadgesizeseq;                      /**< the max badge size in Probing if PaPILO is called in sequential mode*/
+   int maxbadgesizepar;                      /**< the max badge size in Probing if PaPILO is called in parallel mode */
    int maxshiftperrow;                       /**< maximal amount of nonzeros allowed to be shifted to make space for substitutions */
    int detectlineardependency;               /**< should linear dependent equations and free columns be removed? (0: never, 1: for LPs, 2: always) */
    int randomseed;                           /**< the random seed used for randomization of tie breaking */
+   int verbosity;
+
    SCIP_Bool enablesparsify;                 /**< should the sparsify presolver be enabled within the presolve library? */
    SCIP_Bool enabledomcol;                   /**< should the dominated column presolver be enabled within the presolve library? */
    SCIP_Bool enableprobing;                  /**< should the probing presolver be enabled within the presolve library? */
@@ -113,6 +121,9 @@ struct SCIP_PresolData
                                               *   factor times the number of nonzeros or rows before presolving */
    SCIP_Real markowitztolerance;             /**< the markowitz tolerance used for substitutions */
    SCIP_Real hugebound;                      /**< absolute bound value that is considered too huge for activitity based calculations */
+
+   char* filename = NULL;                    /**< filename to store the instance before presolving */
+
 };
 
 using namespace papilo;
@@ -284,7 +295,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
     * presolve library those look like normal substitution on the postsolve stack */
    presolve.getPresolveOptions().removeslackvars = false;
 
-   /* communicate the SCIP parameters to the presolve libary */
+   /* communicate the SCIP parameters to the presolve library */
    presolve.getPresolveOptions().maxfillinpersubstitution = data->maxfillinpersubstitution;
    presolve.getPresolveOptions().markowitz_tolerance = data->markowitztolerance;
    presolve.getPresolveOptions().maxshiftperrow = data->maxshiftperrow;
@@ -296,8 +307,16 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
    /* communicate the random seed */
    presolve.getPresolveOptions().randomseed = SCIPinitializeRandomSeed(scip, (unsigned int)data->randomseed);
 
+#ifdef PAPILO_TBB
    /* set number of threads to be used for presolve */
    presolve.getPresolveOptions().threads = data->threads;
+#else
+   if (data->threads != DEFAULT_THREADS)
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+                      "PaPILO can utilize only multiple threads if it is build with TBB.\n");
+   presolve.getPresolveOptions().threads = 1;
+#endif
+
 
    /* disable dual reductions that are not permitted */
    if( !complete )
@@ -334,7 +353,31 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
    if( data->enabledualinfer )
       presolve.addPresolveMethod( uptr( new DualInfer<SCIP_Real>() ) );
    if( data->enableprobing )
+   {
+#if PAPILO_VERSION_MAJOR > 2 || (PAPILO_VERSION_MAJOR == 2 && PAPILO_VERSION_MINOR >= 1)
+      Probing<SCIP_Real> *probing = new Probing<SCIP_Real>();
+      if( presolve.getPresolveOptions().runs_sequential() )
+      {
+         probing->set_max_badge_size( data->maxbadgesizeseq );
+      }
+      else
+      {
+         probing->set_max_badge_size( data->maxbadgesizepar );
+      }
+      presolve.addPresolveMethod( uptr( probing ) );
+
+#else
       presolve.addPresolveMethod( uptr( new Probing<SCIP_Real>() ) );
+      if( data->maxbadgesizeseq != DEFAULT_MAXBADGESIZE_SEQ )
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+               "   The parameter 'presolving/milp/maxbadgesizeseq' can only be used with PaPILO 2.1.0 or later versions.\n");
+
+      if( data->maxbadgesizepar != DEFAULT_MAXBADGESIZE_PAR )
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+               "   The parameter 'presolving/milp/maxbadgesizepar' can only be used with PaPILO 2.1.0 or later versions.\n");
+
+#endif
+   }
    if( data->enabledomcol )
       presolve.addPresolveMethod( uptr( new DominatedCols<SCIP_Real>() ) );
    if( data->enablemultiaggr )
@@ -347,17 +390,41 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
    presolve.getPresolveOptions().feastol = SCIPfeastol(scip);
    presolve.getPresolveOptions().epsilon = SCIPepsilon(scip);
 
-   /* adjust output settings of presolve libary */
+   /* adjust output settings of presolve library */
 #ifdef SCIP_PRESOLLIB_ENABLE_OUTPUT
    problem.setName(SCIPgetProbName(scip));
 #else
-   presolve.setVerbosityLevel(VerbosityLevel::kQuiet);
+   switch( data->verbosity )
+   {
+      case 0:
+         presolve.setVerbosityLevel(VerbosityLevel::kQuiet);
+         break;
+      case 1:
+         presolve.setVerbosityLevel(VerbosityLevel::kError);
+         break;
+      case 2:
+         presolve.setVerbosityLevel(VerbosityLevel::kWarning);
+         break;
+      case 3:
+         presolve.setVerbosityLevel(VerbosityLevel::kInfo);
+         break;
+      case 4:
+         presolve.setVerbosityLevel(VerbosityLevel::kDetailed);
+         break;
+      default:
+         assert(false);
+   }
 #endif
 
    /* communicate the time limit */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
    if( !SCIPisInfinity(scip, timelimit) )
       presolve.getPresolveOptions().tlim = timelimit - SCIPgetSolvingTime(scip);
+
+   if( 0 != strncmp(data->filename, DEFAULT_FILENAME_PROBLEM, strlen(DEFAULT_FILENAME_PROBLEM)) )
+   {
+      SCIP_CALL(SCIPwriteTransProblem(scip, data->filename, NULL, FALSE));
+   }
 
    /* call the presolving */
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
@@ -487,20 +554,26 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
          SCIP_Bool fixed;
          int col = res.postsolve.indices[first];
 
-         SCIP_VAR* colvar = SCIPmatrixGetVar(matrix, col);
+         SCIP_VAR* var = SCIPmatrixGetVar(matrix, col);
 
          SCIP_Real value = res.postsolve.values[first];
 
-         SCIP_CALL( SCIPfixVar(scip, colvar, value, &infeas, &fixed) );
+         SCIP_CALL( SCIPfixVar(scip, var, value, &infeas, &fixed) );
          *nfixedvars += 1;
 
          assert(!infeas);
-         assert(fixed);
+         /* SCIP has different rules for aggregating variables than PaPILO: therefore the variable PaPILO
+          * tries to fix now may have been aggregated by SCIP before. Additionally, after aggregation SCIP
+          * sometimes performs bound tightening resulting in possible fixings. These cases need to be excluded. */
+         assert(fixed || SCIPvarGetStatus(var) == SCIP_VARSTATUS_AGGREGATED ||
+                      SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED || SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED);
          break;
       }
 /*
- * with the dual postsolving PaPILO introduced a substitution with more and at different location stored information
- * Therefore get at the required (primal) information regarding the Substitution type
+ * Dual-postsolving in PaPILO required introducing a postsolve-type for substitution with additional information.
+ * Further, the different Substitution-postsolving types store the required postsolving data differently (in different order) in the postsolving stack.
+ * Therefore, we need to distinguish how to parse the required data (rowLength, col, side, startRowCoefficients, lastRowCoefficients) from the postsolving stack.
+ * If these values are accessed, the procedure is the same for both.
  */
 #if (PAPILO_VERSION_MAJOR >= 2)
       case ReductionType::kSubstitutedColWithDual:
@@ -548,6 +621,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
          SCIP_Real constant = 0.0;
          if( rowlen == 2 )
          {
+            SCIP_Real updatedSide;
             SCIP_VAR* varx = SCIPmatrixGetVar(matrix, res.postsolve.indices[startRowCoefficients]);
             SCIP_VAR* vary = SCIPmatrixGetVar(matrix, res.postsolve.indices[startRowCoefficients + 1]);
             SCIP_Real scalarx = res.postsolve.values[startRowCoefficients];
@@ -559,9 +633,9 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
             SCIP_CALL( SCIPgetProbvarSum(scip, &vary, &scalary, &constant) );
             assert(SCIPvarGetStatus(vary) != SCIP_VARSTATUS_MULTAGGR);
 
-            side -= constant;
+            updatedSide = side - constant;
 
-            SCIP_CALL( SCIPaggregateVars(scip, varx, vary, scalarx, scalary, side, &infeas, &redundant, &aggregated) );
+            SCIP_CALL( SCIPaggregateVars(scip, varx, vary, scalarx, scalary, updatedSide, &infeas, &redundant, &aggregated) );
          }
          else
          {
@@ -610,7 +684,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
             /* if the constraints where replaced, we need to add the failed substitution as an equality to SCIP */
             tmpvars.clear();
             tmpvals.clear();
-            for( int j = first + 1; j < last; ++j )
+            for( int j = startRowCoefficients; j < lastRowCoefficients; ++j )
             {
                tmpvars.push_back(SCIPmatrixGetVar(matrix, res.postsolve.indices[j]));
                tmpvals.push_back(res.postsolve.values[j]);
@@ -689,6 +763,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
       VariableDomains<SCIP_Real>& varDomains = problem.getVariableDomains();
       for( int i = 0; i != problem.getNCols(); ++i )
       {
+         assert( ! varDomains.flags[i].test(ColFlag::kInactive) );
          SCIP_VAR* var = SCIPmatrixGetVar(matrix, res.postsolve.origcol_mapping[i]);
          if( !varDomains.flags[i].test(ColFlag::kLbInf) )
          {
@@ -756,10 +831,14 @@ SCIP_RETCODE SCIPincludePresolMILP(
    String name = fmt::format("PaPILO {}.{}.{}", PAPILO_VERSION_MAJOR, PAPILO_VERSION_MINOR, PAPILO_VERSION_PATCH);
 #endif
 
-#ifdef PAPILO_GITHASH_AVAILABLE
-   String desc = fmt::format("parallel presolve for integer and linear optimization (github.com/scipopt/papilo) [GitHash: {}]", PAPILO_GITHASH);
-#else
+#if defined(PAPILO_GITHASH_AVAILABLE) && defined(PAPILO_TBB)
+   String desc = fmt::format("parallel presolve for integer and linear optimization (github.com/scipopt/papilo) (built with TBB) [GitHash: {}]", PAPILO_GITHASH);
+#elif !defined(PAPILO_GITHASH_AVAILABLE) && !defined(PAPILO_TBB)
    String desc("parallel presolve for integer and linear optimization (github.com/scipopt/papilo)");
+#elif defined(PAPILO_GITHASH_AVAILABLE) && !defined(PAPILO_TBB)
+   String desc = fmt::format("parallel presolve for integer and linear optimization (github.com/scipopt/papilo) [GitHash: {}]", PAPILO_GITHASH);
+#elif !defined(PAPILO_GITHASH_AVAILABLE) && defined(PAPILO_TBB)
+   String desc = fmt::format("parallel presolve for integer and linear optimization (github.com/scipopt/papilo) (built with TBB)");
 #endif
 
    /* add external code info for the presolve library */
@@ -768,6 +847,7 @@ SCIP_RETCODE SCIPincludePresolMILP(
    /* create MILP presolver data */
    presoldata = NULL;
    SCIP_CALL( SCIPallocBlockMemory(scip, &presoldata) );
+   BMSclearMemory(presoldata);
 
    presol = NULL;
 
@@ -830,6 +910,19 @@ SCIP_RETCODE SCIPincludePresolMILP(
          "absolute bound value that is considered too huge for activitity based calculations",
          &presoldata->hugebound, FALSE, DEFAULT_HUGEBOUND, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
+#if PAPILO_VERSION_MAJOR > 2 || (PAPILO_VERSION_MAJOR == 2 && PAPILO_VERSION_MINOR >= 1)
+   SCIP_CALL(SCIPaddIntParam(scip, "presolving/" PRESOL_NAME "/maxbadgesizeseq",
+         "maximal badge size in Probing in PaPILO if PaPILO is executed in sequential mode",
+         &presoldata->maxbadgesizeseq, FALSE, DEFAULT_MAXBADGESIZE_SEQ, -1, INT_MAX, NULL, NULL));
+
+   SCIP_CALL(SCIPaddIntParam(scip, "presolving/" PRESOL_NAME "/maxbadgesizepar",
+         "maximal badge size in Probing in PaPILO if PaPILO is executed in parallel mode",
+         &presoldata->maxbadgesizepar, FALSE, DEFAULT_MAXBADGESIZE_PAR, -1, INT_MAX, NULL, NULL));
+#else
+   presoldata->maxbadgesizeseq = DEFAULT_MAXBADGESIZE_SEQ;
+   presoldata->maxbadgesizepar = DEFAULT_MAXBADGESIZE_PAR;
+#endif
+
    SCIP_CALL( SCIPaddBoolParam(scip,
          "presolving/" PRESOL_NAME "/enableparallelrows",
          "should the parallel rows presolver be enabled within the presolve library?",
@@ -859,6 +952,14 @@ SCIP_RETCODE SCIPincludePresolMILP(
          "presolving/" PRESOL_NAME "/enablesparsify",
          "should the sparsify presolver be enabled within the presolve library?",
          &presoldata->enablesparsify, TRUE, DEFAULT_ENABLESPARSIFY, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddStringParam(scip, "presolving/" PRESOL_NAME "/probfilename",
+         "filename to store the problem before MILP presolving starts",
+         &presoldata->filename, TRUE, DEFAULT_FILENAME_PROBLEM, NULL, NULL) );
+
+   SCIP_CALL(SCIPaddIntParam(scip, "presolving/" PRESOL_NAME "/verbosity",
+         "verbosity level of PaPILO (0: quiet, 1: errors, 2: warnings, 3: normal, 4: detailed)",
+         &presoldata->verbosity, FALSE, DEFAULT_VERBOSITY, 0, 4, NULL, NULL));
 
    return SCIP_OKAY;
 }

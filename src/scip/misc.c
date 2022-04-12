@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -136,7 +136,7 @@ SCIP_Real SCIPcomputeTwoSampleTTestValue(
    /* tresult can be understood as realization of a Student-T distributed variable with
     * countx + county - 2 degrees of freedom
     */
-   tresult = (meanx - meany) / pooledvariance;
+   tresult = (meanx - meany) / SQRT(pooledvariance);
    tresult *= SQRT(countx * county / (countx + county));
 
    return tresult;

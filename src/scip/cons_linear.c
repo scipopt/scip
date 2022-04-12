@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -162,6 +162,9 @@
 #define MAXSCALEDCOEF                   0 /**< maximal coefficient value after scaling */
 #define MAXSCALEDCOEFINTEGER            0 /**< maximal coefficient value after scaling if all variables are of integral
                                            *   type
+                                           */
+#define MAXACTVAL                   1e+09 /**< maximal absolute value of full and partial activities such that
+                                           *   redundancy-based simplifications are allowed to be applied
                                            */
 
 #define MAXVALRECOMP                1e+06 /**< maximal abolsute value we trust without recomputing the activity */
@@ -11517,6 +11520,8 @@ SCIP_RETCODE simplifyInequalities(
    SCIP_Real feastol;
    SCIP_Real newcoef;
    SCIP_Real absval;
+   SCIP_Real minact;
+   SCIP_Real maxact;
    SCIP_Real side;
    SCIP_Real lhs;
    SCIP_Real rhs;
@@ -11664,7 +11669,7 @@ SCIP_RETCODE simplifyInequalities(
    SCIPdebugPrintCons(scip, cons, NULL);
 
    /* get global activities */
-   consdataGetGlbActivityBounds(scip, consdata, FALSE, &minactsub, &maxactsub,
+   consdataGetGlbActivityBounds(scip, consdata, FALSE, &minact, &maxact,
       &isminrelax, &ismaxrelax, &isminsettoinfinity, &ismaxsettoinfinity);
 
    /* cannot work with infinite activities */
@@ -11673,13 +11678,15 @@ SCIP_RETCODE simplifyInequalities(
 
    assert(!isminrelax);
    assert(!ismaxrelax);
-   assert(maxactsub > minactsub);
-   assert(!SCIPisInfinity(scip, -minactsub));
-   assert(!SCIPisInfinity(scip, maxactsub));
+   assert(maxact > minact);
+   assert(!SCIPisInfinity(scip, -minact));
+   assert(!SCIPisInfinity(scip, maxact));
 
    v = 0;
    offsetv = -1;
    side = haslhs ? lhs : rhs;
+   minactsub = minact;
+   maxactsub = maxact;
 
    /* we now determine coefficients as large as the side of the constraint to retrieve a better reduction where we
     * do not need to look at the large coefficients
@@ -11774,6 +11781,10 @@ SCIP_RETCODE simplifyInequalities(
    if( nvars > 2 && SCIPisIntegral(scip, vals[v]) )
    {
       SCIP_Bool redundant = FALSE;
+      SCIP_Bool numericsok;
+      SCIP_Bool rredundant;
+      SCIP_Bool lredundant;
+
 
       gcd = (SCIP_Longint)(REALABS(vals[v]) + feastol);
       assert(gcd >= 1);
@@ -11851,9 +11862,11 @@ SCIP_RETCODE simplifyInequalities(
                siderest = gcd;
          }
 
+         rredundant = hasrhs && maxactsub <= siderest && SCIPisFeasGT(scip, minactsub, siderest - gcd);
+         lredundant = haslhs && SCIPisFeasLT(scip, maxactsub, siderest) && minactsub >= siderest - gcd;
+
          /* early termination if the activities deceed the gcd */
-         if( (offsetv == -1 && hasrhs && maxactsub <= siderest && SCIPisFeasGT(scip, minactsub, siderest - gcd)) ||
-               (haslhs && SCIPisFeasLT(scip, maxactsub, siderest) && minactsub >= siderest - gcd) )
+         if( offsetv == -1 && (rredundant || lredundant) )
          {
             redundant = TRUE;
             break;
@@ -11882,10 +11895,16 @@ SCIP_RETCODE simplifyInequalities(
       SCIPdebugMsg(scip, "stopped at pos %d (of %d), subactivities [%g, %g], redundant = %u, hasrhs = %u, siderest = %g, gcd = %" SCIP_LONGINT_FORMAT ", offset position for 'side' coefficients = %d\n",
             v, nvars, minactsub, maxactsub, redundant, hasrhs, siderest, gcd, offsetv);
 
+      /* to avoid inconsistencies due to numerics, check that the full and partial activities have
+       * reasonable absolute values */
+      numericsok = REALABS(maxact) < MAXACTVAL && REALABS(maxactsub) < MAXACTVAL && REALABS(minact) < MAXACTVAL &&
+            REALABS(minactsub) < MAXACTVAL;
+
+      rredundant = hasrhs && maxactsub <= siderest && SCIPisFeasGT(scip, minactsub, siderest - gcd);
+      lredundant = haslhs && SCIPisFeasLT(scip, maxactsub, siderest) && minactsub >= siderest - gcd;
+
       /* check if we can remove redundant variables */
-      if( v < nvars && (redundant ||
-                        (offsetv == -1 && hasrhs && maxactsub <= siderest && SCIPisFeasGT(scip, minactsub, siderest - gcd)) ||
-                        (haslhs && SCIPisFeasLT(scip, maxactsub, siderest) && minactsub >= siderest - gcd)) )
+      if( v < nvars && numericsok && (redundant || (offsetv == -1 && (rredundant || lredundant))) )
       {
          SCIP_Real oldcoef;
 
@@ -15209,6 +15228,8 @@ SCIP_DECL_CONSINIT(consInitLinear)
    assert(conshdlrdata != NULL);
    assert(conshdlrdata->eventhdlr != NULL);
    assert(nconss == 0 || conss != NULL);
+
+   conshdlrdata->naddconss = 0;
 
    /* catch events for the constraints */
    for( c = 0; c < nconss; ++c )

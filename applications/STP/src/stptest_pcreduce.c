@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -39,9 +39,9 @@
 static
 SCIP_RETCODE checkSdWalk(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             extended,
-   GRAPH**               g,
-   int*                  nelims
+   SCIP_Bool             extended,           /**< graph in extended state? */
+   GRAPH**               g,                  /**< graph data structure */
+   int*                  nelims              /**< pointer to number of eliminations */
 )
 {
    DHEAP* dheap;

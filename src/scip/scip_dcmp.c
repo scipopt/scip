@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -837,7 +837,7 @@ static
 SCIP_RETCODE buildBlockGraph(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DECOMP*          decomp,             /**< decomposition data structure */
-   int                   maxgraphedge        /**< maximum number of edges in block graph computation, or -1 for no limit */
+   int                   maxgraphedge        /**< maximum number of edges in block graph computation (-1: no limit, 0: disable block graph computation) */
    )
 {
    SCIP_VAR** vars;
@@ -1143,6 +1143,7 @@ SCIP_RETCODE SCIPcomputeDecompStats(
    int considx;
    int i;
    int maxgraphedge;
+   SCIP_Bool disablemeasures;
 
    assert(scip != NULL);
    assert(decomp != NULL);
@@ -1310,9 +1311,12 @@ SCIP_RETCODE SCIPcomputeDecompStats(
    }
 
    /* compute more involved statistics such as the area score, the modularity, and the block graph statistics */
-   SCIP_CALL( computeModularity(scip, decomp, &decomp->modularity) );
-
-   computeAreaScore(scip, decomp);
+   SCIP_CALL( SCIPgetBoolParam(scip, "decomposition/disablemeasures", &disablemeasures) );
+   if( !disablemeasures )
+   {
+      SCIP_CALL( computeModularity(scip, decomp, &decomp->modularity) );
+      computeAreaScore(scip, decomp);
+   }
 
    if( uselimits )
    {
@@ -1321,7 +1325,11 @@ SCIP_RETCODE SCIPcomputeDecompStats(
    else
       maxgraphedge = -1;
 
-   SCIP_CALL( buildBlockGraph(scip, decomp, maxgraphedge) );
+   /* do not start computation of the block graph if maxgraphedge is set to 0 */
+   if( maxgraphedge != 0 )
+   {
+      SCIP_CALL( buildBlockGraph(scip, decomp, maxgraphedge) );
+   }
 
    SCIPfreeBufferArray(scip, &varslabels);
    SCIPfreeBufferArray(scip, &varsarray);

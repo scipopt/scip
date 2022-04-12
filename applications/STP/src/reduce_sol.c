@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -112,9 +112,9 @@ void nodesolSetTrivial(
 static
 SCIP_RETCODE nodesolUpdate(
    SCIP*                scip,               /**< SCIP data structure */
-   GRAPH*               g,
+   GRAPH*               g,                  /**< graph data structure */
    SCIP_Real*           solval,             /**< FARAWAY if no valid solution build */
-   PATH*                solpath,
+   PATH*                solpath,            /**< path entry per node */
    int*                 nodesol             /**< solution array to be filled */
    )
 {
@@ -303,7 +303,7 @@ SCIP_Bool redlevelIsClean(
 /** cleans */
 static
 void redlevelClean(
-   SCIP*                 scip,
+   SCIP*                 scip,               /**< SCIP data structure */
    REDSOLLEVEL*          redlevel            /**< to be cleaned */
    )
 {
@@ -639,10 +639,10 @@ SCIP_Real reduce_sollocalGetUpperBound(
    if( EQ(sollocal->primalbound, FARAWAY) )
       return FARAWAY;
 
-   assert(GE(sollocal->primalbound - sollocal->offset, 0.0));
+   assert(GE_FEAS(sollocal->primalbound, sollocal->offset));
 
    SCIPdebugMessage("returning best bound: %f (%f-%f) \n", sollocal->primalbound - sollocal->offset, sollocal->primalbound, sollocal->offset);
-   return (sollocal->primalbound - sollocal->offset);
+   return MAX(sollocal->primalbound - sollocal->offset, 0.0);
 }
 
 
@@ -845,8 +845,8 @@ void reduce_solFree(
 /** packs solution */
 void reduce_solPack(
    const GRAPH*          g,                /**< graph data structure */
-   const int*            nodes_old2packed, /**< map */
-   int                   nnodes_packed,
+   const int*            nodes_old2packed, /**< map to packed node IDs */
+   int                   nnodes_packed,    /**< number of packed nodes */
    REDSOL*               redsol            /**< sollocal */
    )
 {
@@ -955,7 +955,7 @@ void reduce_solLevelTopRemove(
 /** finalizes top level; also removes the level! */
 void reduce_solLevelTopFinalize(
    SCIP*                 scip,             /**< SCIP data structure */
-   GRAPH*                g,
+   GRAPH*                g,                /**< graph data structure */
    REDSOL*               redsol            /**< sollocal */
    )
 {

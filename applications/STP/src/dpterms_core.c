@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -77,7 +77,7 @@ typedef struct dynamic_programming_iterator
 /** prints separator nodes in SCIP_DEBUG mode */
 static
 void debugPrintSeparator(
-   SCIP_Real             maxvaliddist,
+   SCIP_Real             maxvaliddist,       /**< maximum value distance */
    const DPITER*         dpiterator          /**< iterator */
 )
 {
@@ -658,9 +658,9 @@ SCIP_RETCODE subtreesExtend(
 static
 SCIP_RETCODE dpiterAddNewPrepare(
    SCIP*                 scip,               /**< SCIP data structure */
-   DPMISC*               dpmisc,
+   DPMISC*               dpmisc,             /**< DP misc data structure */
    DPITER*               dpiterator,         /**< iterator */
-   SCIP_Bool*            hasExtension
+   SCIP_Bool*            hasExtension        /**< extensions existing? */
 )
 {
    STP_Vectype(SOLTRACE) valid_traces = dpiterator->valid_traces;

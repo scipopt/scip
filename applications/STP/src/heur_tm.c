@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -59,7 +59,7 @@
 #define DEFAULT_EVALRUNS 20                  /**< number of runs */
 #define DEFAULT_INITRUNS 100                 /**< number of initial runs */
 #define DEFAULT_LEAFRUNS 25                  /**< number of runs at leafs */
-#define DEFAULT_HARD_RUNSMULT 3.5            /**< multiplier */
+#define DEFAULT_HARD_RUNSMULT 1.75           /**< multiplier */
 #define DEFAULT_ROOTRUNS 50                  /**< number of runs at the root */
 #define DEFAULT_DURINGLPFREQ 5               /**< frequency during LP solving */
 #define DEFAULT_TYPE  0                      /**< heuristic to execute */
@@ -640,7 +640,7 @@ static
 void pcmwAdaptStarts(
    SCIP_HEURDATA*        heurdata,           /**< heurdata */
    const GRAPH*          graph,              /**< graph data structure */
-   int                   maxtmruns,          /**> number of TM runs */
+   int                   maxtmruns,          /**< number of TM runs */
    int                   bestincstart,       /**< best incumbent start vertex */
    int*                  terminalperm        /**< terminal permutation */
    )
@@ -671,7 +671,7 @@ static
 SCIP_RETCODE pcmwGetStartNodes(
    SCIP*                 scip,               /**< SCIP data structure */
    const SCIP_Real*      nodepriority,       /**< vertex priorities for vertices to be starting points (NULL for no priorities) */
-   int                   maxtmruns,          /**> number of TM runs */
+   int                   maxtmruns,          /**< number of TM runs */
    int                   bestincstart,       /**< best incumbent start vertex */
    GRAPH*                graph,              /**< graph data structure */
    int*                  terminalperm        /**< terminal permutation */
@@ -1147,7 +1147,7 @@ SCIP_RETCODE computeSteinerTreeDijkBMw(
    const SCIP_Real*      prize,              /**< (possibly biased) vertex prizes */
    int                   start,              /**< start vertex */
    TMBASE*               tmbase,             /**< data */
-   SCIP_Bool*            solfound
+   SCIP_Bool*            solfound            /**< solution found? (OUT) */
    )
 {
    assert(g->stp_type == STP_BRMWCSP);
@@ -2026,8 +2026,8 @@ void tmLpGetEdgeRandomizations(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEURDATA*        heurdata,           /**< heurdata */
    const GRAPH*          graph,              /**< graph data structure */
-   SCIP_Bool*            partrand,
-   SCIP_Bool*            totalrand
+   SCIP_Bool*            partrand,           /**< use partial randomization? (OUT) */
+   SCIP_Bool*            totalrand           /**< use total randomization? (OUT) */
 )
 {
    *partrand = FALSE;
@@ -3453,9 +3453,6 @@ SCIP_RETCODE SCIPStpHeurTMRun(
    beststart = bestincstart;
    (*success) = FALSE;
 
-   if( SCIPisStopped(scip) )
-      return SCIP_OKAY;
-
 #ifdef SCIP_DEBUG
    SCIPdebugMessage("executing TM for graph (reduced info) \n");
    graph_printInfoReduced(graph);
@@ -3735,10 +3732,15 @@ SCIP_RETCODE SCIPStpIncludeHeurTM(
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeTM) );
    SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitTM) );
 
+
    heurdata->ncalls = 0;
    heurdata->nlpiterations = -1;
    heurdata->nexecs = 0;
    heurdata->randseed = DEFAULT_RANDSEED;
+
+#ifdef WITH_UG
+   heurdata->randseed += getUgRank();
+#endif
 
    /* add TM primal heuristic parameters */
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/evalruns",

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -36,6 +36,28 @@
 /**@addtogroup PublicNlhdlrInterfaceMethods
  * @{
  */
+
+#ifdef NDEBUG
+/* Undo the defines from pub_nlhdlr.h, which exist if NDEBUG is defined. */
+#undef SCIPnlhdlrSetCopyHdlr
+#undef SCIPnlhdlrSetFreeHdlrData
+#undef SCIPnlhdlrSetFreeExprData
+#undef SCIPnlhdlrSetInitExit
+#undef SCIPnlhdlrSetProp
+#undef SCIPnlhdlrSetSepa
+#undef SCIPnlhdlrGetName
+#undef SCIPnlhdlrGetDesc
+#undef SCIPnlhdlrGetDetectPriority
+#undef SCIPnlhdlrGetEnfoPriority
+#undef SCIPnlhdlrIsEnabled
+#undef SCIPnlhdlrGetData
+#undef SCIPnlhdlrHasIntEval
+#undef SCIPnlhdlrHasReverseProp
+#undef SCIPnlhdlrHasInitSepa
+#undef SCIPnlhdlrHasExitSepa
+#undef SCIPnlhdlrHasEnfo
+#undef SCIPnlhdlrHasEstimate
+#endif
 
 /** sets the copy handler callback of a nonlinear handler */
 void SCIPnlhdlrSetCopyHdlr(
@@ -273,6 +295,12 @@ SCIP_DECL_SORTPTRCOMP(SCIPnlhdlrCompEnfo)
 /** @} */
 
 /* nlhdlr private API functions from nlhdlr.h */
+
+#ifndef NDEBUG
+#undef SCIPnlhdlrResetNDetectionslast
+#undef SCIPnlhdlrIncrementNCutoffs
+#undef SCIPnlhdlrIncrementNSeparated
+#endif
 
 /** creates a nonlinear handler */
 SCIP_RETCODE SCIPnlhdlrCreate(

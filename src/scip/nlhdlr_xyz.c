@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -16,7 +16,7 @@
 /**@file   nlhdlr_xyz.h
  * @ingroup DEFPLUGINS_NLHDLR
  * @brief  xyz nonlinear handler
- * @author Benjamin Mueller
+ * @author Jane Doe
  */
 
 #include <string.h>
@@ -37,13 +37,13 @@
 
 /* TODO: fill in the necessary nonlinear handler data */
 
-/** nonlinear handler expression data */
-struct SCIP_NlhdlrExprData
+/** nonlinear handler data */
+struct SCIP_NlhdlrData
 {
 };
 
-/** nonlinear handler data */
-struct SCIP_NlhdlrData
+/** nonlinear handler expression data */
+struct SCIP_NlhdlrExprData
 {
 };
 

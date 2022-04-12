@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -40,6 +40,7 @@
 #define DEFAULT_PROBINGFREQ       1     /**< probing frequency (-1 - no probing, 0 - root node only) */
 #define DEFAULT_CONVEXONLY        FALSE /**< whether perspective cuts are added only for convex expressions */
 #define DEFAULT_TIGHTENBOUNDS     TRUE  /**< whether variable semicontinuity is used to tighten variable bounds */
+#define DEFAULT_ADJREFPOINT       TRUE  /**< whether to adjust the reference point if indicator is not 1 */
 
 /*
  * Data structures
@@ -94,6 +95,7 @@ struct SCIP_NlhdlrData
    int                   probingfreq;        /**< if and when to do probing */
    SCIP_Bool             convexonly;         /**< whether perspective cuts are added only for convex expressions */
    SCIP_Bool             tightenbounds;      /**< whether variable semicontinuity is used to tighten variable bounds */
+   SCIP_Bool             adjrefpoint;        /**< whether to adjust the reference point if indicator is not 1 */
 };
 
 /*
@@ -742,15 +744,24 @@ SCIP_RETCODE computeOffValues(
                         nlhdlrexprdata->indicators[i], &pos);
                   issc = scvdata != NULL;
                }
-               else
+               else if( SCIPisExprSum(scip, curexpr) && curexpr == expr )
                {
-                  /* curexpr is a non-variable expression, so it belongs to the non-linear part of expr
-                   * since the non-linear part of expr must be semicontinuous with respect to
-                   * nlhdlrexprdata->indicators[i], curexpr must be semicontinuous
+                  /* if expr itself is a sum, this is an exception since a sum with nonlinear terms is
+                   * allowed to have both semicontinuous and non-semicontinuous variables; we skip it here
+                   * and then analyse it term by term
                    */
-                  issc = TRUE;
+                  issc = FALSE;
+               }
 
 #ifndef NDEBUG
+               if( !SCIPisExprVar(scip, curexpr) && (!SCIPisExprSum(scip, curexpr) || curexpr != expr) )
+               {
+                  /* curexpr is a non-variable expression and does not fit the sum special case,
+                   * so it belongs to the non-linear part of expr.
+                   * Since the non-linear part of expr must be semicontinuous with respect to
+                   * nlhdlrexprdata->indicators[i], curexpr must be semicontinuous
+                   */
+
                   SCIP_CALL( SCIPallocBufferArray(scip, &childvarexprs, norigvars) );
                   SCIP_CALL( SCIPgetExprVarExprs(scip, curexpr, childvarexprs, &nchildvarexprs) );
 
@@ -765,8 +776,8 @@ SCIP_RETCODE computeOffValues(
                   }
 
                   SCIPfreeBufferArray(scip, &childvarexprs);
-#endif
                }
+#endif
             }
 
             if( issc )
@@ -948,6 +959,10 @@ SCIP_RETCODE analyseVarOnoffBounds(
    scub = indvalue ? scvdata->ubs1[pos] : scvdata->vals0[pos];
    loclb = SCIPvarGetLbLocal(var);
    locub = SCIPvarGetUbLocal(var);
+
+   /* nothing to do for fixed variables */
+   if( SCIPisEQ(scip, loclb, locub) )
+      return SCIP_OKAY;
 
    /* use a non-redundant lower bound */
    if( SCIPisGT(scip, sclb, SCIPvarGetLbLocal(var)) || (sclb >= 0.0 && loclb < 0.0) )
@@ -1509,6 +1524,9 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoPerspective)
    SCIP_Bool stop;
    int nenfos;
    int* enfoposs;
+   SCIP_SOL* soladj;
+   int pos;
+   SCVARDATA* scvdata;
 
    nlhdlrdata = SCIPnlhdlrGetData(nlhdlr);
 
@@ -1548,6 +1566,7 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoPerspective)
 
    doprobing = FALSE;
    nenfos = 0;
+   soladj = NULL;
 
    /* find suitable nlhdlrs and check if there is enough violation to do probing */
    for( j = 0; j < SCIPgetExprNEnfosNonlinear(expr); ++j )
@@ -1641,12 +1660,17 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoPerspective)
       SCIP_INTERVAL* probingdoms;
       int nprobingvars;
       SCIP_Bool doprobingind;
+      SCIP_Real indval;
+      SCIP_Real solval;
+      SCIP_Bool adjrefpoint;
 
       indicator = nlhdlrexprdata->indicators[i];
       probingvars = NULL;
       probingdoms = NULL;
       nprobingvars = 0;
       doprobingind = doprobing;
+      solval = SCIPgetSolVal(scip, solcopy, indicator);
+      adjrefpoint = nlhdlrdata->adjrefpoint && !SCIPisFeasEQ(scip, solval, 1.0);
 
       SCIP_CALL( analyseOnoffBounds(scip, nlhdlrdata, nlhdlrexprdata, indicator, &probingvars, &probingdoms,
             &nprobingvars, &doprobingind, result) );
@@ -1721,6 +1745,42 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoPerspective)
          }
       }
 
+      if( adjrefpoint )
+      {
+         /* make sure that when we adjust the point, we don't divide by something too close to 0.0 */
+         indval = MAX(solval, 0.1);
+
+         /* create an adjusted point x^adj = (x* - x0) / z* + x0 */
+         SCIP_CALL( SCIPcreateSol(scip, &soladj, NULL) );
+         for( v = 0; v < nlhdlrexprdata->nvars; ++v )
+         {
+            if( SCIPvarGetStatus(nlhdlrexprdata->vars[v]) == SCIP_VARSTATUS_FIXED )
+               continue;
+
+            scvdata = getSCVarDataInd(nlhdlrdata->scvars, nlhdlrexprdata->vars[v], indicator, &pos);
+
+            /* a non-semicontinuous variable must be linear in expr; skip it */
+            if( scvdata == NULL )
+               continue;
+
+            SCIP_CALL( SCIPsetSolVal(scip, soladj, nlhdlrexprdata->vars[v],
+                  (SCIPgetSolVal(scip, solcopy, nlhdlrexprdata->vars[v]) - scvdata->vals0[pos]) / indval
+                  + scvdata->vals0[pos]) );
+         }
+         for( v = 0; v < nlhdlrexprdata->nindicators; ++v )
+         {
+            if( SCIPvarGetStatus(nlhdlrexprdata->indicators[v]) == SCIP_VARSTATUS_FIXED )
+               continue;
+
+            SCIP_CALL( SCIPsetSolVal(scip, soladj, nlhdlrexprdata->indicators[v],
+                  SCIPgetSolVal(scip, solcopy, nlhdlrexprdata->indicators[v])) );
+         }
+         if( SCIPvarGetStatus(auxvar) != SCIP_VARSTATUS_FIXED )
+         {
+            SCIP_CALL( SCIPsetSolVal(scip, soladj, auxvar, SCIPgetSolVal(scip, solcopy, auxvar)) );
+         }
+      }
+
       /* use cuts from every suitable nlhdlr */
       for( j = 0; j < nenfos; ++j )
       {
@@ -1736,8 +1796,22 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoPerspective)
          SCIPdebugMsg(scip, "asking nonlinear handler %s to %sestimate\n", SCIPnlhdlrGetName(nlhdlr2), overestimate ? "over" : "under");
 
          /* ask the nonlinear handler for an estimator */
-         SCIP_CALL( SCIPnlhdlrEstimate(scip, conshdlr, nlhdlr2, expr, nlhdlr2exprdata, solcopy, nlhdlr2auxvalue,
-               overestimate, SCIPgetSolVal(scip, solcopy, auxvar), FALSE, rowpreps2, &success2, &addedbranchscores2j) );
+         if( adjrefpoint )
+         {
+            SCIP_CALL( SCIPnlhdlrEvalaux(scip, nlhdlr2, expr, nlhdlr2exprdata, &nlhdlr2auxvalue, soladj) );
+
+            SCIP_CALL( SCIPnlhdlrEstimate(scip, conshdlr, nlhdlr2, expr,
+                  nlhdlr2exprdata, soladj,
+                  nlhdlr2auxvalue, overestimate, SCIPgetSolVal(scip, solcopy, auxvar),
+                  addbranchscores, rowpreps2, &success2, &addedbranchscores2j) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPnlhdlrEstimate(scip, conshdlr, nlhdlr2, expr,
+                  nlhdlr2exprdata, solcopy,
+                  nlhdlr2auxvalue, overestimate, SCIPgetSolVal(scip, solcopy, auxvar),
+                  addbranchscores, rowpreps2, &success2, &addedbranchscores2j) );
+         }
 
          minidx = SCIPgetPtrarrayMinIdx(scip, rowpreps2);
          maxidx = SCIPgetPtrarrayMaxIdx(scip, rowpreps2);
@@ -1748,8 +1822,6 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoPerspective)
          for( r = minidx; r <= maxidx; ++r )
          {
             SCIP_Real maxcoef;
-            int pos;
-            SCVARDATA* scvdata;
             SCIP_Real* rowprepcoefs;
             SCIP_VAR** rowprepvars;
 
@@ -1820,6 +1892,11 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoPerspective)
          }
 
          SCIP_CALL( SCIPclearPtrarray(scip, rowpreps2) );
+      }
+
+      if( adjrefpoint )
+      {
+         SCIP_CALL( SCIPfreeSol(scip, &soladj) );
       }
 
       if( doprobingind )
@@ -1938,6 +2015,10 @@ SCIP_RETCODE SCIPincludeNlhdlrPerspective(
    SCIP_CALL( SCIPaddBoolParam(scip, "nlhdlr/" NLHDLR_NAME "/tightenbounds",
            "whether variable semicontinuity is used to tighten variable bounds",
            &nlhdlrdata->tightenbounds, FALSE, DEFAULT_TIGHTENBOUNDS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "nlhdlr/" NLHDLR_NAME "/adjrefpoint",
+           "whether to adjust the reference point",
+           &nlhdlrdata->adjrefpoint, FALSE, DEFAULT_ADJREFPOINT, NULL, NULL) );
 
    SCIPnlhdlrSetCopyHdlr(nlhdlr, nlhdlrCopyhdlrPerspective);
    SCIPnlhdlrSetFreeHdlrData(nlhdlr, nlhdlrFreehdlrdataPerspective);

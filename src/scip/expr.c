@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -242,6 +242,53 @@ SCIP_RETCODE evalAndDiff(
 /*
  * Public methods
  */
+
+/* Undo the defines from pub_expr.h, which exist if NDEBUG is defined. */
+#ifdef NDEBUG
+#undef SCIPexprhdlrSetCopyFreeHdlr
+#undef SCIPexprhdlrSetCopyFreeData
+#undef SCIPexprhdlrSetPrint
+#undef SCIPexprhdlrSetParse
+#undef SCIPexprhdlrSetCurvature
+#undef SCIPexprhdlrSetMonotonicity
+#undef SCIPexprhdlrSetIntegrality
+#undef SCIPexprhdlrSetHash
+#undef SCIPexprhdlrSetCompare
+#undef SCIPexprhdlrSetDiff
+#undef SCIPexprhdlrSetIntEval
+#undef SCIPexprhdlrSetSimplify
+#undef SCIPexprhdlrSetReverseProp
+#undef SCIPexprhdlrSetEstimate
+#undef SCIPexprhdlrGetName
+#undef SCIPexprhdlrGetDescription
+#undef SCIPexprhdlrGetPrecedence
+#undef SCIPexprhdlrGetData
+#undef SCIPexprhdlrHasPrint
+#undef SCIPexprhdlrHasBwdiff
+#undef SCIPexprhdlrHasFwdiff
+#undef SCIPexprhdlrHasIntEval
+#undef SCIPexprhdlrHasEstimate
+#undef SCIPexprhdlrHasInitEstimates
+#undef SCIPexprhdlrHasSimplify
+#undef SCIPexprhdlrHasCurvature
+#undef SCIPexprhdlrHasMonotonicity
+#undef SCIPexprhdlrHasReverseProp
+#undef SCIPexprhdlrGetNCreated
+#undef SCIPexprhdlrGetNIntevalCalls
+#undef SCIPexprhdlrGetIntevalTime
+#undef SCIPexprhdlrGetNReversepropCalls
+#undef SCIPexprhdlrGetReversepropTime
+#undef SCIPexprhdlrGetNCutoffs
+#undef SCIPexprhdlrGetNDomainReductions
+#undef SCIPexprhdlrIncrementNDomainReductions
+#undef SCIPexprhdlrGetNEstimateCalls
+#undef SCIPexprhdlrGetEstimateTime
+#undef SCIPexprhdlrGetNBranchings
+#undef SCIPexprhdlrIncrementNBranchings
+#undef SCIPexprhdlrGetNSimplifyCalls
+#undef SCIPexprhdlrGetSimplifyTime
+#undef SCIPexprhdlrGetNSimplifications
+#endif
 
 /** create expression handler */
 SCIP_RETCODE SCIPexprhdlrCreate(
@@ -1642,6 +1689,15 @@ SCIP_RETCODE SCIPexprhdlrReversePropExpr(
 /**@{ */
 
 /* from expr.h */
+
+#ifdef NDEBUG
+#undef SCIPexprCapture
+#undef SCIPexprIsVar
+#undef SCIPexprIsValue
+#undef SCIPexprIsSum
+#undef SCIPexprIsProduct
+#undef SCIPexprIsPower
+#endif
 
 /** creates and captures an expression with given expression data and children */
 SCIP_RETCODE SCIPexprCreate(
@@ -3703,6 +3759,30 @@ CLEANUP:
 
 
 /* from pub_expr.h */
+
+#ifdef NDEBUG
+#undef SCIPexprGetNUses
+#undef SCIPexprGetNChildren
+#undef SCIPexprGetChildren
+#undef SCIPexprGetHdlr
+#undef SCIPexprGetData
+#undef SCIPexprSetData
+#undef SCIPexprGetOwnerData
+#undef SCIPexprGetEvalValue
+#undef SCIPexprGetEvalTag
+#undef SCIPexprGetDerivative
+#undef SCIPexprGetDot
+#undef SCIPexprGetBardot
+#undef SCIPexprGetDiffTag
+#undef SCIPexprGetActivity
+#undef SCIPexprGetActivityTag
+#undef SCIPexprSetActivity
+#undef SCIPexprGetCurvature
+#undef SCIPexprSetCurvature
+#undef SCIPexprIsIntegral
+#undef SCIPexprSetIntegrality
+#undef SCIPexprAreQuadraticExprsVariables
+#endif
 
 /** gets the number of times the expression is currently captured */
 int SCIPexprGetNUses(

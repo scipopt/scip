@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1068,7 +1068,7 @@ SCIP_RETCODE SCIPnlrowPrint(
    }
 
    /* print right hand side */
-   SCIPmessageFPrintInfo(messagehdlr, file, "<= %.15g\n", nlrow->rhs);
+   SCIPmessageFPrintInfo(messagehdlr, file, " <= %.15g\n", nlrow->rhs);
 
    return SCIP_OKAY;
 }
@@ -1732,6 +1732,23 @@ SCIP_RETCODE SCIPnlrowIsRedundant(
 
    return SCIP_OKAY;
 }
+
+#ifdef NDEBUG
+/* Undo the defines from pub_nlhdlr.h, which exist if NDEBUG is defined. */
+#undef SCIPnlrowGetConstant
+#undef SCIPnlrowGetNLinearVars
+#undef SCIPnlrowGetLinearVars
+#undef SCIPnlrowGetLinearCoefs
+#undef SCIPnlrowGetExpr
+#undef SCIPnlrowGetLhs
+#undef SCIPnlrowGetRhs
+#undef SCIPnlrowGetCurvature
+#undef SCIPnlrowSetCurvature
+#undef SCIPnlrowGetName
+#undef SCIPnlrowGetNLPPos
+#undef SCIPnlrowIsInNLP
+#undef SCIPnlrowGetDualsol
+#endif
 
 /** gets constant */
 SCIP_Real SCIPnlrowGetConstant(

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -193,8 +193,8 @@ struct SCIP_LPiNorms
 #ifdef SCIP_THREADSAFE
    #if defined(_Thread_local)
       /* Use thread local environment in order to not create a new environment for each new LP. */
-      _Thread_local GRBenv*    reusegrbenv = NULL; /**< thread local Gurobi environment */
-      _Thread_local int        numlp = 0;          /**< number of open LP objects */
+      static _Thread_local GRBenv*    reusegrbenv = NULL; /**< thread local Gurobi environment */
+      static _Thread_local int        numlp = 0;          /**< number of open LP objects */
       #define SCIP_REUSEENV
    #endif
 #else
@@ -1233,7 +1233,13 @@ SCIP_RETCODE addRangeInfo(
  * Miscellaneous Methods
  */
 
-static char grbname[100];
+static const char grbname[] = {'G', 'u', 'r', 'o', 'b', 'i', ' ',
+#if GRB_VERSION_MAJOR < 10
+   GRB_VERSION_MAJOR + '0',
+#else
+   (GRB_VERSION_MAJOR/10) + '0', (GRB_VERSION_MAJOR%10) + '0',
+#endif
+   '.', GRB_VERSION_MINOR + '0', '.', GRB_VERSION_TECHNICAL + '0'};
 
 /**@name Miscellaneous Methods */
 /**@{ */
@@ -1243,12 +1249,6 @@ const char* SCIPlpiGetSolverName(
    void
    )
 {
-   int majorversion;
-   int minorversion;
-   int technical;
-
-   GRBversion(&majorversion, &minorversion, &technical);
-   (void) snprintf(grbname, 100, "Gurobi %d.%d.%d", majorversion, minorversion, technical);
    return grbname;
 }
 
@@ -4090,10 +4090,7 @@ SCIP_RETCODE SCIPlpiIgnoreInstability(
    return SCIP_OKAY;
 }
 
-/** gets objective value of solution
- *
- *  @note if the solution status is iteration limit reached (GRB_ITERATION_LIMIT), the objective value was not computed
- */
+/** gets objective value of solution */
 SCIP_RETCODE SCIPlpiGetObjval(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    SCIP_Real*            objval              /**< stores the objective value */
@@ -4119,36 +4116,42 @@ SCIP_RETCODE SCIPlpiGetObjval(
    assert(lpi->solstat != GRB_OPTIMAL || oval == obnd); /*lint !e777*/
 #endif
 
-   ret = GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_OBJBOUND, objval);
+   /* obtain objective value */
+   ret = GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_OBJVAL, objval);
+   assert( ret == 0 || ret == GRB_ERROR_DATA_NOT_AVAILABLE );
+   SCIP_UNUSED(ret);
 
-   if( ret == GRB_ERROR_DATA_NOT_AVAILABLE )
+   /* return minus infinity if value not available and we reached the iteration limit (see lpi_cpx) */
+   if( lpi->solstat == GRB_ITERATION_LIMIT )
    {
-      /* return minus infinity if value not available and we reached an iteration limit (see lpi_cpx) */
-      if( lpi->solstat == GRB_ITERATION_LIMIT )
-         *objval = -SCIPlpiInfinity(lpi);
+      (void)GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_OBJBOUND, objval);
+   }
+   else if( lpi->solstat == GRB_CUTOFF )
+   {
+      SCIP_Real cutoff;
+
+      /* if we reached the cutoff, then OBJBOUND seems to be -infinity; we set the value to the cutoff in this case */
+      SCIP_CALL( getDblParam(lpi, GRB_DBL_PAR_CUTOFF, &cutoff) );
+      *objval = cutoff;
+
+#ifdef SCIP_DISABLED_CODE
       /**@todo The following is some kind of hack which works with the current SCIP implementation and should be fixed.  In
-       * the case that the LP status is GRB_CUTOFF it might be that certain attributes cannot be queries (e.g., objval,
+       * the case that the LP status is GRB_CUTOFF it might be that certain attributes cannot be queried (e.g., objval,
        * primal and dual solution), in this case we just return the installed cutoff value minus some epsilon. This is some
        * kind of hack for the code in conflict.c:7595 were some extra code handles CPLEX' FASTMIP case that is similar to
        * this case.
        */
-      else if( lpi->solstat == GRB_CUTOFF )
-      {
-         SCIP_Real dval;
-         SCIP_OBJSEN objsense;
+      SCIP_Real dval;
+      SCIP_OBJSEN objsense;
 
-         SCIP_CALL( SCIPlpiGetObjsen(lpi, &objsense) );
-         SCIP_CALL( getDblParam(lpi, GRB_DBL_PAR_CUTOFF, &dval) );
+      SCIP_CALL( SCIPlpiGetObjsen(lpi, &objsense) );
+      SCIP_CALL( getDblParam(lpi, GRB_DBL_PAR_CUTOFF, &dval) );
 
-         if( objsense == SCIP_OBJSEN_MINIMIZE )
-            *objval = dval - 1e-06;
-         else
-            *objval = dval + 1e-06;
-      }
-   }
-   else
-   {
-      CHECK_ZERO( lpi->messagehdlr, ret );
+      if( objsense == SCIP_OBJSEN_MINIMIZE )
+         *objval = dval - 1e-06;
+      else
+         *objval = dval + 1e-06;
+#endif
    }
 
    return SCIP_OKAY;

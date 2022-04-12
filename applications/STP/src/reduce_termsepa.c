@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -838,7 +838,7 @@ SCIP_RETCODE reduce_termcompChangeSubgraphToBottleneck(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
    TERMCOMP*             termcomp,           /**< component */
-   SCIP_Bool*            success
+   SCIP_Bool*            success             /**< pointer to store whether computation was successful (OUT)  */
    )
 {
    GRAPH* subgraph = termcomp->subgraph;

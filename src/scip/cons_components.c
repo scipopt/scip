@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -661,6 +661,7 @@ SCIP_RETCODE solveSubscip(
 {
    SCIP_Real timelimit;
    SCIP_Real memorylimit;
+   SCIP_Bool avoidmemout;
 
    assert(scip != NULL);
    assert(subscip != NULL);
@@ -682,10 +683,19 @@ SCIP_RETCODE solveSubscip(
       memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
    }
 
-   /* abort if no time is left or not enough memory to create a copy of SCIP, including external memory usage */
-   if( timelimit <= 0.0 || memorylimit <= 0.0)
+   /* check if mem limit needs to be avoided */
+   SCIP_CALL( SCIPgetBoolParam(scip, "misc/avoidmemout", &avoidmemout) );
+
+   /* abort if no time is left or not enough memory (we don't abort in this case if misc_avoidmemout == TRUE)
+    * to create a copy of SCIP, including external memory usage */
+   if( avoidmemout && memorylimit <= 0.0 )
    {
-      SCIPdebugMessage("--> not solved (not enough memory or time left)\n");
+      SCIPdebugMessage("--> not solved (not enough memory left)\n");
+      return SCIP_OKAY;
+   }
+   else if( timelimit <= 0.0 )
+   {
+      SCIPdebugMessage("--> not solved (not enough time left)\n");
       return SCIP_OKAY;
    }
 

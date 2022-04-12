@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -37,6 +37,7 @@
 #include "scip/scip_presol.h"
 #include "scip/scip_prob.h"
 #include "scip/scip_var.h"
+#include "scip/debug.h"
 #include <string.h>
 
 #define PRESOL_NAME            "boundshift"
@@ -207,6 +208,32 @@ SCIP_DECL_PRESOLEXEC(presolExecBoundshift)
          SCIP_CALL( SCIPcreateVar(scip, &newvar, newvarname, 0.0, (ub - lb), 0.0, SCIPvarGetType(var),
                SCIPvarIsInitial(var), SCIPvarIsRemovable(var), NULL, NULL, NULL, NULL, NULL) );
          SCIP_CALL( SCIPaddVar(scip, newvar) );
+
+#ifdef WITH_DEBUG_SOLUTION
+         if( SCIPdebugIsMainscip(scip) )
+         {
+            /* calculate and store debug solution value of shift variable */
+            SCIP_Real val;
+
+            SCIP_CALL( SCIPdebugGetSolVal(scip, var, &val) );
+            SCIPdebugMsg(scip, "debug solution value: <%s> = %g", SCIPvarGetName(var), val);
+
+            if( presoldata->flipping )
+            {
+               if( REALABS(ub) < REALABS(lb) )
+                  val = ub - val;
+               else
+                  val = val - lb;
+            }
+            else
+            {
+               val = val - lb;
+            }
+            SCIPdebugMsgPrint(scip, " -> <%s> = %g\n", SCIPvarGetName(newvar), val);
+
+            SCIP_CALL( SCIPdebugAddSolVal(scip, newvar, val) );
+         }
+#endif
 
          /* aggregate old variable with new variable */
          if( presoldata->flipping )

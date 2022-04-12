@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -43,6 +43,7 @@
 #include "scip/syncstore.h"
 #include "scip/set.h"
 #include "tpi/tpi.h"
+#include "tpi/def_openmp.h"
 
 /** create concurrent data */
 SCIP_RETCODE SCIPcreateConcurrent(
@@ -506,7 +507,7 @@ SCIP_RETCODE SCIPconcurrentSolve(
             SCIP_SUBMITSTATUS status;
 
             SCIP_CALL_ABORT( SCIPtpiCreateJob(&job, jobid, execConcsolver, scip) );
-            SCIP_CALL_ABORT( SCIPtpiSumbitJob(job, &status) );
+            SCIP_CALL_ABORT( SCIPtpiSubmitJob(job, &status) );
 
             assert(status == SCIP_SUBMIT_SUCCESS);
          }

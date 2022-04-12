@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -156,6 +156,8 @@ SCIP_RETCODE detect(
 /* tests detection of convex/concave subexpressions */
 Test(nlhdlrconvex, detect, .init = setup, .fini = teardown)
 {
+   SCIP_CALL( SCIPsetBoolParam(scip, "nlhdlr/convex/extendedform", FALSE) );
+
    detect("exp(exp(<x1>))", SCIP_EXPRCURV_CONVEX, FALSE);
    detect("exp(exp(log(<x1>)))", SCIP_EXPRCURV_CONVEX, FALSE);
 
@@ -181,6 +183,12 @@ Test(nlhdlrconvex, detect, .init = setup, .fini = teardown)
    detect("exp(<x1>^2+<x2>^2)", SCIP_EXPRCURV_CONVEX, FALSE);
    if( SCIPisIpoptAvailableIpopt() )
       detect("<x1>^2+2*<x1>*<x2>+<x2>^2", SCIP_EXPRCURV_CONVEX, TRUE);
+
+   /* assumeconvex */
+   SCIP_CALL( SCIPsetBoolParam(scip, "constraints/nonlinear/assumeconvex", TRUE) );
+   detect("<x1>*<x2>-<x3>^2", SCIP_EXPRCURV_CONVEX, FALSE);
+   SCIP_CALL( SCIPsetBoolParam(scip, "nlhdlr/convex/handletrivial", TRUE) );
+   detect("<x1>*<x2>", SCIP_EXPRCURV_CONVEX, FALSE);
 }
 
 /** test detection for block-decomposable quadratic */
@@ -410,6 +418,8 @@ Test(nlhdlrconvex, estimate, .init = setup, .fini = teardown)
    SCIP_Real x3coef = 0.0;
    SCIP_Real constant = 0.0;
    SCIP_SOL* sol;
+
+   SCIP_CALL( SCIPsetBoolParam(scip, "nlhdlr/convex/extendedform", FALSE) );
 
    SCIPcreateSol(scip, &sol, NULL);
 

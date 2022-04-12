@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -3237,7 +3237,9 @@ SCIP_RETCODE shortenConss(
       consdata = SCIPconsGetData(cons);
       assert(consdata != NULL);
 
-      /* prepare constraint by removing fixings and merge it */
+      /* prepare constraint by removing fixings and merge it; we invalidate the presolved flag, because the calls to
+       * SCIPcleanupCliques() in this loop may have lead to fixed variables that are not yet removed */
+      consdata->presolved = FALSE;
       SCIP_CALL( prepareCons(scip, cons, eventhdlr, entries, nentries, &redundant, nfixedvars, nchgcoefs, ndelconss, cutoff) );
 
       if( redundant )
@@ -3299,20 +3301,7 @@ SCIP_RETCODE shortenConss(
          ++(*ndelconss);
 
          /* reset redundants array to FALSE */
-#if 1
          BMSclearMemoryArray(redundants, consdata->nvars);
-#else
-         if( nredvars > 0 )
-         {
-            for( v = consdata->nvars - 1; v >= 0; --v )
-            {
-               if( redundants[v] )
-               {
-                  redundants[v] = FALSE;
-               }
-            }
-         }
-#endif
          continue;
       }
 
@@ -3349,6 +3338,21 @@ SCIP_RETCODE shortenConss(
          }
          /* @todo might also upgrade a two variable constraint to a set-packing constraint */
       }
+   }
+
+   /* invalidate the presolved flags, because the calls to SCIPcleanupCliques() may have lead to fixed variables that
+    * are not yet removed */
+   for( c = nconss - 1; c >= 0; --c )
+   {
+      SCIP_CONS* cons = conss[c];
+      SCIP_CONSDATA* consdata;
+
+      assert(cons != NULL);
+
+      consdata = SCIPconsGetData(cons);
+      assert(consdata != NULL);
+
+      consdata->presolved = FALSE;
    }
 
  TERMINATE:

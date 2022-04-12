@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -48,7 +48,7 @@ extern "C" {
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  *
- *  @deprecated Use SCIPcreateConsNonlinear() instead
+ *  @deprecated Use SCIPcreateConsBasicSOCNonlinear() instead
  */
 SCIP_EXPORT
 SCIP_DEPRECATED
@@ -94,7 +94,7 @@ SCIP_RETCODE SCIPcreateConsSOC(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  *
- *  @deprecated Use SCIPcreateConsBasicNonlinear() instead
+ *  @deprecated Use SCIPcreateConsBasicSOCNonlinear() instead
  */
 SCIP_EXPORT
 SCIP_DEPRECATED

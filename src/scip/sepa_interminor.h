@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -19,9 +19,8 @@
  * @author Felipe Serrano
  * @author Antonia Chmiela
  *
- * This separator detects quadratic constraints of the form
- * x_i * x_j - x_l * x_k = 0
- * that appear implicitly (i.e., minors) and enforces them via intersection cuts.
+ * Let X be the matrix of auxiliary variables added for bilinear terms, X_{ij} = x_ix_j.
+ * The separator enforces quadratic constraints det(2x2 minor of X) = 0 via intersection cuts.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

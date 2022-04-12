@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -62,9 +62,9 @@ static
 SCIP_RETCODE solveWithDpBorder(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< the graph */
-   DPBORDER*             dpborder,
-   SCIP_Real*            obj,
-   SCIP_Bool*            wasSolved
+   DPBORDER*             dpborder,           /**< DP border algorithm data structure */
+   SCIP_Real*            obj,                /**< pointer to the objective value (OUT) */
+   SCIP_Bool*            wasSolved           /**< pointer to mark whether problem was solved (OUT) */
    )
 {
    int* soledges;
@@ -103,8 +103,8 @@ static
 SCIP_RETCODE solveWithDpTerms(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< the graph */
-   SCIP_Real*            obj,
-   SCIP_Bool*            wasSolved
+   SCIP_Real*            obj,                /**< pointer to the objective value (OUT) */
+   SCIP_Bool*            wasSolved           /**< pointer to mark whether problem was solved (OUT) */
    )
 {
    int* soledges;
@@ -278,8 +278,10 @@ SCIP_RETCODE SCIPStpDpRelaxActivate(
 
    assert(relaxdata);
 
-   // todo maybe also turn SCIP presolving off
    SCIP_CALL( SCIPsetIntParam(scip, "heuristics/TM/initruns", 0) );
+   SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );
+   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/trivial/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(scip, "propagating/maxroundsroot", 0) );
 
    relaxdata->isActive = TRUE;
 

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -8335,9 +8335,9 @@ SCIP_RETCODE SCIPreoptResetActiveConss(
    int i;
 
    assert(reopt != NULL);
-   assert(reopt->activeconss != NULL);
-   assert(reopt->activeconssset != NULL);
-   assert(reopt->nmaxactiveconss > 0);
+   assert(reopt->activeconss != NULL || reopt->nmaxactiveconss == 0);
+   assert(reopt->activeconssset != NULL || reopt->nmaxactiveconss == 0);
+   assert(reopt->nmaxactiveconss >= 0);
 
    SCIPsetDebugMsg(set, "Reset %d active conss.\n", reopt->nactiveconss);
 
@@ -8346,6 +8346,7 @@ SCIP_RETCODE SCIPreoptResetActiveConss(
    {
       SCIP_CONS* cons;
 
+      assert(reopt->activeconss != NULL);
       cons = reopt->activeconss[i];
       assert(cons != NULL);
       assert(SCIPhashsetExists(reopt->activeconssset, cons));

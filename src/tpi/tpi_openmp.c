@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -18,12 +18,44 @@
  * @brief  the interface functions for openmp
  * @author Stephen J. Maher
  * @author Leona Gottwald
+ * @author Marc Pfetsch
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "tpi/tpi.h"
 #include "blockmemshell/memory.h"
+#include <omp.h>
+
+/* macros for direct access */
+
+/* lock */
+#define SCIPompInitLock(lock)     (omp_init_lock(lock), SCIP_OKAY)
+#define SCIPompDestroyLock(lock)  (omp_destroy_lock(lock))
+#define SCIPompAcquireLock(lock)  (omp_set_lock(lock), SCIP_OKAY)
+#define SCIPompReleaseLock(lock)  (omp_unset_lock(lock), SCIP_OKAY)
+
+/* condition */
+#define SCIPompInitCondition(condition)    ( omp_init_lock(&(condition)->_lock), \
+                                             (condition)->_waiters = 0, (condition)->_waitnum = 0, (condition)->_signals = 0, SCIP_OKAY )
+#define SCIPompDestroyCondition(condition) do { assert((condition)->_waiters == 0); assert((condition)->_waitnum == 0); assert((condition)->_signals == 0); omp_destroy_lock(&(condition)->_lock); } while(0)
+
+
+/** struct containing lock */
+struct SCIP_Lock
+{
+   omp_lock_t            lock;
+};
+
+/** struct for condition */
+struct SCIP_Condition
+{
+   omp_lock_t            _lock;
+   int                   _waiters;
+   int                   _waitnum;
+   int                   _signals;
+};
+
 
 /** A job added to the queue */
 struct SCIP_Job
@@ -51,7 +83,7 @@ struct SCIP_JobQueues
    int                   ncurrentjobs;       /**< number of currently running jobs */
    int                   nthreads;           /**< number of threads */
    SCIP_JOBQUEUE         finishedjobs;       /**< jobqueue containing the finished jobs */
-   SCIP_LOCK             lock;               /**< lock to protect this stucture from concurrent access */
+   omp_lock_t            lock;               /**< lock to protect this stucture from concurrent access */
    SCIP_CONDITION        jobfinished;        /**< condition to signal if a job was finished */
 };
 typedef struct SCIP_JobQueues SCIP_JOBQUEUES;
@@ -89,8 +121,8 @@ SCIP_RETCODE createJobQueue(
    for( i = 0; i < nthreads; ++i )
       _jobqueues->currentjobs[i] = NULL;
 
-   SCIP_CALL( SCIPtpiInitLock(&_jobqueues->lock) );
-   SCIP_CALL( SCIPtpiInitCondition(&_jobqueues->jobfinished) );
+   SCIP_CALL( SCIPompInitLock(&_jobqueues->lock) );
+   SCIP_CALL( SCIPompInitCondition(&_jobqueues->jobfinished) );
 
    return SCIP_OKAY;
 }
@@ -104,8 +136,8 @@ SCIP_RETCODE freeJobQueue(
 {
    assert(_jobqueues != NULL);
 
-   SCIPtpiDestroyLock(&_jobqueues->lock);
-   SCIPtpiDestroyCondition(&_jobqueues->jobfinished);
+   SCIPompDestroyLock(&_jobqueues->lock);
+   SCIPompDestroyCondition(&_jobqueues->jobfinished);
    BMSfreeMemoryArray(&_jobqueues->currentjobs);
 
    BMSfreeMemory(&_jobqueues);
@@ -124,13 +156,13 @@ void executeJob(
 
    threadnum = SCIPtpiGetThreadNum();
 
-   SCIP_CALL_ABORT( SCIPtpiAcquireLock(&_jobqueues->lock) );
+   SCIP_CALL_ABORT( SCIPompAcquireLock(&_jobqueues->lock) );
    _jobqueues->currentjobs[threadnum] = job;
-   SCIP_CALL_ABORT( SCIPtpiReleaseLock(&_jobqueues->lock) );
+   SCIP_CALL_ABORT( SCIPompReleaseLock(&_jobqueues->lock) );
 
    job->retcode = (*(job->jobfunc))(job->args);
 
-   SCIP_CALL_ABORT( SCIPtpiAcquireLock(&_jobqueues->lock) );
+   SCIP_CALL_ABORT( SCIPompAcquireLock(&_jobqueues->lock) );
    _jobqueues->ncurrentjobs--;
    _jobqueues->currentjobs[threadnum] = NULL;
 
@@ -150,7 +182,84 @@ void executeJob(
 
    SCIP_CALL_ABORT( SCIPtpiBroadcastCondition(&_jobqueues->jobfinished) );
 
-   SCIP_CALL_ABORT( SCIPtpiReleaseLock(&_jobqueues->lock) );
+   SCIP_CALL_ABORT( SCIPompReleaseLock(&_jobqueues->lock) );
+}
+
+/** wait for a condition */
+SCIP_RETCODE SCIPtpiWaitCondition(
+   SCIP_CONDITION*       condition,          /**< condition to wait for */
+   SCIP_LOCK*            lock                /**< corresponding lock */
+   )
+{
+   int waitnum;
+
+   SCIP_CALL( SCIPtpiReleaseLock(lock) );
+
+   SCIP_CALL( SCIPompAcquireLock(&condition->_lock) );
+   waitnum = ++condition->_waitnum;
+
+   ++condition->_waiters;
+
+   do
+   {
+      SCIP_CALL( SCIPompReleaseLock(&condition->_lock) );
+      #pragma omp taskyield
+      SCIP_CALL( SCIPompAcquireLock(&condition->_lock) );
+   }
+   while( condition->_signals < waitnum );
+
+   --condition->_waiters;
+
+   if( condition->_waiters == 0 )
+   {
+      condition->_signals = 0;
+      condition->_waitnum = 0;
+   }
+
+   SCIP_CALL( SCIPompReleaseLock(&condition->_lock) );
+
+   SCIP_CALL( SCIPtpiAcquireLock(lock) );
+
+   return SCIP_OKAY;
+}
+
+/** wait for a condition (direct access to lock) */
+static
+SCIP_RETCODE SCIPompWaitCondition(
+   SCIP_CONDITION*       condition,          /**< condition to wait for */
+   omp_lock_t*           lock                /**< corresponding lock */
+   )
+{
+   int waitnum;
+
+   SCIP_CALL( SCIPompReleaseLock(lock) );
+
+   SCIP_CALL( SCIPompAcquireLock(&condition->_lock) );
+   waitnum = ++condition->_waitnum;
+
+   ++condition->_waiters;
+
+   do
+   {
+      SCIP_CALL( SCIPompReleaseLock(&condition->_lock) );
+      #pragma omp taskyield
+      SCIP_CALL( SCIPompAcquireLock(&condition->_lock) );
+   }
+   while( condition->_signals < waitnum );
+
+   --condition->_waiters;
+
+   if( condition->_waiters == 0 )
+   {
+      condition->_signals = 0;
+      condition->_waitnum = 0;
+   }
+
+   SCIP_CALL( SCIPompReleaseLock(&condition->_lock) );
+
+   SCIP_CALL( SCIPompAcquireLock(lock) );
+
+   return SCIP_OKAY;
 }
 
 
@@ -166,11 +275,11 @@ void jobQueueProcessJob(
 {
    SCIP_JOB* job;
 
-   SCIP_CALL_ABORT( SCIPtpiAcquireLock(&_jobqueues->lock) );
+   SCIP_CALL_ABORT( SCIPompAcquireLock(&_jobqueues->lock) );
 
    while( _jobqueues->ncurrentjobs == SCIPtpiGetNumThreads() )
    {
-      SCIP_CALL_ABORT( SCIPtpiWaitCondition(&_jobqueues->jobfinished, &_jobqueues->lock) );
+      SCIP_CALL_ABORT( SCIPompWaitCondition(&_jobqueues->jobfinished, &_jobqueues->lock) );
    }
 
    if( _jobqueues->jobqueue.njobs == 1 )
@@ -192,7 +301,7 @@ void jobQueueProcessJob(
    }
 
    ++(_jobqueues->ncurrentjobs);
-   SCIP_CALL_ABORT( SCIPtpiReleaseLock(&_jobqueues->lock) );
+   SCIP_CALL_ABORT( SCIPompReleaseLock(&_jobqueues->lock) );
 
    if( job )
    {
@@ -219,7 +328,7 @@ SCIP_RETCODE jobQueueAddJob(
 
    /* This function queries the current job list. This could change by other threads writing to the list. So a lock is
     * required to ensure that the current joblist remains static. */
-   SCIP_CALL( SCIPtpiAcquireLock(&_jobqueues->lock) );
+   SCIP_CALL( SCIPompAcquireLock(&_jobqueues->lock) );
 
    /* checking the status of the job queue */
    if( _jobqueues->ncurrentjobs == SCIPtpiGetNumThreads() )
@@ -237,7 +346,7 @@ SCIP_RETCODE jobQueueAddJob(
 
       _jobqueues->jobqueue.njobs++;
 
-      SCIP_CALL( SCIPtpiReleaseLock(&_jobqueues->lock) );
+      SCIP_CALL( SCIPompReleaseLock(&_jobqueues->lock) );
 
       #pragma omp task
       jobQueueProcessJob();
@@ -248,7 +357,7 @@ SCIP_RETCODE jobQueueAddJob(
 
       _jobqueues->ncurrentjobs++;
 
-      SCIP_CALL( SCIPtpiReleaseLock(&_jobqueues->lock) );
+      SCIP_CALL( SCIPompReleaseLock(&_jobqueues->lock) );
       /* running the new job */
       #pragma omp task firstprivate(newjob)
       executeJob(newjob);
@@ -265,12 +374,12 @@ SCIP_RETCODE SCIPtpiSignalCondition(
 {
    assert( condition != NULL );
 
-   SCIP_CALL( SCIPtpiAcquireLock(&condition->_lock) );
+   SCIP_CALL( SCIPompAcquireLock(&condition->_lock) );
 
    if( condition->_waitnum > condition->_signals )
       ++condition->_signals;
 
-   SCIP_CALL( SCIPtpiReleaseLock(&condition->_lock) );
+   SCIP_CALL( SCIPompReleaseLock(&condition->_lock) );
 
    return SCIP_OKAY;
 }
@@ -283,51 +392,14 @@ SCIP_RETCODE SCIPtpiBroadcastCondition(
 {
    assert( condition != NULL );
 
-   SCIP_CALL( SCIPtpiAcquireLock(&condition->_lock) );
+   SCIP_CALL( SCIPompAcquireLock(&condition->_lock) );
    condition->_signals = condition->_waitnum;
-   SCIP_CALL( SCIPtpiReleaseLock(&condition->_lock) );
+   SCIP_CALL( SCIPompReleaseLock(&condition->_lock) );
 
    return SCIP_OKAY;
 }
 
 
-/** wait for a condition */
-SCIP_RETCODE SCIPtpiWaitCondition(
-   SCIP_CONDITION*       condition,          /**< condition to wait for */
-   SCIP_LOCK*            lock                /**< corresponding lock */
-   )
-{
-   int waitnum;
-
-   SCIP_CALL( SCIPtpiReleaseLock(lock) );
-
-   SCIP_CALL( SCIPtpiAcquireLock(&condition->_lock) );
-   waitnum = ++condition->_waitnum;
-
-   ++condition->_waiters;
-
-   do
-   {
-      SCIP_CALL( SCIPtpiReleaseLock(&condition->_lock) );
-      #pragma omp taskyield
-      SCIP_CALL( SCIPtpiAcquireLock(&condition->_lock) );
-   }
-   while( condition->_signals < waitnum );
-
-   --condition->_waiters;
-
-   if( condition->_waiters == 0 )
-   {
-      condition->_signals = 0;
-      condition->_waitnum = 0;
-   }
-
-   SCIP_CALL( SCIPtpiReleaseLock(&condition->_lock) );
-
-   SCIP_CALL( SCIPtpiAcquireLock(lock) );
-
-   return SCIP_OKAY;
-}
 
 /** returns the number of threads */
 int SCIPtpiGetNumThreads(
@@ -376,7 +448,7 @@ int SCIPtpiGetNewJobID(
 }
 
 /** submit a job for parallel processing; the return value is a globally defined status */
-SCIP_RETCODE SCIPtpiSumbitJob(
+SCIP_RETCODE SCIPtpiSubmitJob(
    SCIP_JOB*             job,                /**< pointer to the job to be submitted */
    SCIP_SUBMITSTATUS*    status              /**< pointer to store the submit status */
    )
@@ -448,11 +520,11 @@ SCIP_RETCODE SCIPtpiCollectJobs(
    SCIP_RETCODE retcode;
 
    retcode = SCIP_OKAY;
-   SCIP_CALL( SCIPtpiAcquireLock(&_jobqueues->lock) );
+   SCIP_CALL( SCIPompAcquireLock(&_jobqueues->lock) );
 
    while( isJobRunning(jobid) || isJobWaiting(jobid) )
    {
-      SCIP_CALL( SCIPtpiWaitCondition(&_jobqueues->jobfinished, &_jobqueues->lock) );
+      SCIP_CALL( SCIPompWaitCondition(&_jobqueues->jobfinished, &_jobqueues->lock) );
    }
 
    if( _jobqueues->finishedjobs.njobs > 0 )
@@ -504,7 +576,7 @@ SCIP_RETCODE SCIPtpiCollectJobs(
       retcode = SCIP_ERROR;
    }
 
-   SCIP_CALL_ABORT( SCIPtpiReleaseLock(&_jobqueues->lock) );
+   SCIP_CALL_ABORT( SCIPompReleaseLock(&_jobqueues->lock) );
 
    return retcode;
 }
@@ -537,4 +609,86 @@ SCIP_RETCODE SCIPtpiExit(
    SCIP_CALL( freeJobQueue() );
 
    return SCIP_OKAY;
+}
+
+
+/*
+ * locks
+ */
+
+/** initializes the given lock */
+SCIP_RETCODE SCIPtpiInitLock(
+   SCIP_LOCK**           lock                /**< the lock */
+   )
+{
+   assert(lock != NULL);
+
+   SCIP_ALLOC( BMSallocMemory(lock) );
+   omp_init_lock(&(*lock)->lock);
+   return SCIP_OKAY;
+}
+
+/** destroys the given lock */
+void SCIPtpiDestroyLock(
+   SCIP_LOCK**           lock                /**< the lock */
+   )
+{
+   assert(lock != NULL);
+
+   omp_destroy_lock(&(*lock)->lock);
+   BMSfreeMemory(lock);
+}
+
+/** acquires the given lock */
+SCIP_RETCODE SCIPtpiAcquireLock(
+   SCIP_LOCK*            lock                /**< the lock */
+   )
+{
+   omp_set_lock(&lock->lock);
+   return SCIP_OKAY;
+}
+
+/** releases the given lock */
+SCIP_RETCODE SCIPtpiReleaseLock(
+   SCIP_LOCK*            lock                /**< the lock */
+   )
+{
+   omp_unset_lock(&lock->lock);
+   return SCIP_OKAY;
+}
+
+
+/*
+ * conditions
+ */
+
+/** initializes the given condition variable */
+SCIP_RETCODE SCIPtpiInitCondition(
+   SCIP_CONDITION**      condition           /**< condition to be created and initialized */
+   )
+{
+   assert(condition != NULL);
+
+   SCIP_ALLOC( BMSallocMemory(condition) );
+
+   omp_init_lock(&(*condition)->_lock);
+   (*condition)->_waiters = 0;
+   (*condition)->_waitnum = 0;
+   (*condition)->_signals = 0;
+
+   return SCIP_OKAY;
+}
+
+/** destroys the given condition variable */
+void SCIPtpiDestroyCondition(
+   SCIP_CONDITION**      condition           /**< condition to be destroyed and freed */
+   )
+{
+   assert((*condition)->_waiters == 0);
+   assert((*condition)->_waitnum == 0);
+   assert((*condition)->_signals == 0);
+
+   omp_destroy_lock(&(*condition)->_lock);
+
+   BMSfreeMemory(condition);
 }

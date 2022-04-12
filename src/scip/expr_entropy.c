@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -19,6 +19,8 @@
  * @author Benjamin Mueller
  * @author Fabian Wegscheider
  * @author Ksenia Bestuzheva
+ *
+ * @todo replace exp(-1.0) by 1.0/M_E
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -265,6 +267,8 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyEntropy)
       /* we have to capture it, since it must simulate a "normal" simplified call in which a new expression is created */
       SCIPcaptureExpr(*simplifiedexpr);
    }
+
+   /* TODO handle -x*log(x) = 0 if x in {0,1} */
 
    return SCIP_OKAY;
 }
@@ -691,4 +695,15 @@ SCIP_RETCODE SCIPcreateExprEntropy(
    SCIP_CALL( SCIPcreateExpr(scip, expr, exprhdlr, exprdata, 1, &child, ownercreate, ownercreatedata) );
 
    return SCIP_OKAY;
+}
+
+/** indicates whether expression is of entropy-type */  /*lint -e{715}*/
+SCIP_Bool SCIPisExprEntropy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{  /*lint --e{715}*/
+   assert(expr != NULL);
+
+   return strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), EXPRHDLR_NAME) == 0;
 }

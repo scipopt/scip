@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -41,6 +41,7 @@
 #include "scip/pub_var.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_tree.h"
+#include "scip/scip_numerics.h"
 #include "scip/struct_mem.h"
 #include "scip/struct_scip.h"
 #include "scip/struct_stat.h"
@@ -430,6 +431,28 @@ SCIP_RETCODE SCIPcutoffNode(
 
    SCIP_CALL( SCIPnodeCutoff(node, scip->set, scip->stat, scip->tree, scip->transprob, scip->origprob, scip->reopt,
          scip->lp, scip->mem->probmem) );
+
+   return SCIP_OKAY;
+}
+
+/** removes all nodes from branch and bound tree that were marked to be cut off via SCIPcutoffNode()
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @note In diving mode, the removal of nodes is delayed until diving ends.
+ */
+SCIP_RETCODE SCIPpruneTree(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPpruneTree", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPtreeCutoff(scip->tree, scip->reopt, scip->mem->probmem, scip->set, scip->stat, scip->eventfilter,
+         scip->eventqueue, scip->lp, SCIPinfinity(scip)) );
 
    return SCIP_OKAY;
 }

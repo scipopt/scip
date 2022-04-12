@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -464,10 +464,6 @@ SCIP_RETCODE SCIPselectCutsHybrid(
    assert(nselectedcuts != NULL);
 
    *nselectedcuts = 0;
-
-   /* if all cuts are forced cuts, no cuts from cuts array can be selected */
-   if( nforcedcuts >= MIN(ncuts, maxselectedcuts) )
-      return SCIP_OKAY;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &scores, ncuts) );
 

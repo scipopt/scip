@@ -1,5 +1,5 @@
-How to train custom custom tree size estimation for SCIP                         {#TRAINESTIMATION}
-========================================================
+How to train custom tree size estimation for SCIP                         {#TRAINESTIMATION}
+=================================================
 
 While watching SCIP's periodic output, users may sometimes wonder to what extent the
 search process is already finished.

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -358,6 +358,7 @@ void getFeasiblePointsBilinear(
    /* collect inequalities */
    for( i = 0; i < noverineqs; ++i )
    {
+      SCIPdebugMsg(scip, "over-inequality  %d: %g*x <= %g*y + %g\n", i, overineqs[3*i], overineqs[3*i+1], overineqs[3*i+2]);
       ineqs[3*nineqs] = overineqs[3*i];
       ineqs[3*nineqs+1] = overineqs[3*i+1];
       ineqs[3*nineqs+2] = overineqs[3*i+2];
@@ -365,6 +366,7 @@ void getFeasiblePointsBilinear(
    }
    for( i = 0; i < nunderineqs; ++i )
    {
+      SCIPdebugMsg(scip, "under-inequality %d: %g*x <= %g*y + %g 0\n", i, underineqs[3*i], underineqs[3*i+1], underineqs[3*i+2]);
       ineqs[3*nineqs] = underineqs[3*i];
       ineqs[3*nineqs+1] = underineqs[3*i+1];
       ineqs[3*nineqs+2] = underineqs[3*i+2];
@@ -400,12 +402,15 @@ void getFeasiblePointsBilinear(
    ubx = boundsx.sup;
    lby = boundsy.inf;
    uby = boundsy.sup;
+   SCIPdebugMsg(scip, "x = [%g,%g], y=[%g,%g]\n", lbx, ubx, lby, uby);
 
    /* corner points that satisfy all inequalities */
    for( i = 0; i < 4; ++i )
    {
       SCIP_Real cx = i < 2 ? lbx : ubx;
       SCIP_Real cy = (i % 2) == 0 ? lby : uby;
+
+      SCIPdebugMsg(scip, "corner point (%g,%g) feasible? %u\n", cx, cy, isPointFeasible(scip, cx, cy, lbx, ubx, lby, uby, ineqs, nineqs));
 
       if( isPointFeasible(scip, cx, cy, lbx, ubx, lby, uby, ineqs, nineqs) )
       {
@@ -431,6 +436,7 @@ void getFeasiblePointsBilinear(
 
       for( j = 0; j < 5; ++j )
       {
+         SCIPdebugMsg(scip, "intersection point (%g,%g) feasible? %u\n", px[j], py[j], isPointFeasible(scip, px[j], py[j], lbx, ubx, lby, uby, ineqs, nineqs));
          if( isPointFeasible(scip, px[j], py[j], lbx, ubx, lby, uby, ineqs, nineqs) )
          {
             xs[*npoints] = px[j];
@@ -645,10 +651,12 @@ SCIP_INTERVAL intevalBilinear(
    /* compute the minimum and maximum over all computed points */
    inf = xs[0] * ys[0];
    sup = inf;
+   SCIPdebugMsg(scip, "point 0: (%g,%g) -> inf = sup = %g\n", xs[0], ys[0], inf);
    for( i = 1; i < npoints; ++i )
    {
       inf = MIN(inf, xs[i] * ys[i]);
       sup = MAX(sup, xs[i] * ys[i]);
+      SCIPdebugMsg(scip, "point %d: (%g,%g) -> inf = %g, sup = %g\n", i, xs[i], ys[i], inf, sup);
    }
    assert(inf <= sup);
 
@@ -969,7 +977,7 @@ SCIP_DECL_TABLEOUTPUT(tableOutputBilinear)
 
       SCIP_CALL( SCIPexpriterInit(it, SCIPgetExprNonlinear(cons), SCIP_EXPRITER_DFS, FALSE) );
 
-      for( expr = SCIPexpriterGetCurrent(it); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) ) /*lint !e441*/
+      for( expr = SCIPexpriterGetCurrent(it); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) ) /*lint !e441*//*lint !e440*/
       {
          if( SCIPhashmapExists(hashmap, expr) )
          {
@@ -1459,6 +1467,7 @@ SCIP_RETCODE SCIPincludeNlhdlrBilinear(
 
    assert(scip != NULL);
 
+   /**! [SnippetIncludeNlhdlrBilinear] */
    /* create nonlinear handler specific data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &nlhdlrdata) );
    BMSclearMemory(nlhdlrdata);
@@ -1500,12 +1509,13 @@ SCIP_RETCODE SCIPincludeNlhdlrBilinear(
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_BILINEAR, TABLE_DESC_BILINEAR, FALSE,
          NULL, NULL, NULL, NULL, NULL, NULL, tableOutputBilinear,
          NULL, TABLE_POSITION_BILINEAR, TABLE_EARLIEST_STAGE_BILINEAR) );
+   /**! [SnippetIncludeNlhdlrBilinear] */
 
    return SCIP_OKAY;
 }
 
 /** returns an array of expressions that have been detected by the bilinear nonlinear handler */
-SCIP_EXPR** SCIPgetNlhdlrBilinearExprs(
+SCIP_EXPR** SCIPgetExprsBilinear(
    SCIP_NLHDLR*          nlhdlr              /**< nonlinear handler */
    )
 {
@@ -1521,7 +1531,7 @@ SCIP_EXPR** SCIPgetNlhdlrBilinearExprs(
 }
 
 /** returns the total number of expressions that have been detected by the bilinear nonlinear handler */
-int SCIPgetNlhdlrBilinearNExprs(
+int SCIPgetNExprsBilinear(
    SCIP_NLHDLR*          nlhdlr              /**< nonlinear handler */
    )
 {
@@ -1537,7 +1547,7 @@ int SCIPgetNlhdlrBilinearNExprs(
 }
 
 /** adds a globally valid inequality of the form \f$\text{xcoef}\cdot x \leq \text{ycoef} \cdot y + \text{constant}\f$ to a product expression of the form \f$x\cdot y\f$ */
-SCIP_RETCODE SCIPaddNlhdlrBilinearIneq(
+SCIP_RETCODE SCIPaddIneqBilinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLHDLR*          nlhdlr,             /**< nonlinear handler */
    SCIP_EXPR*            expr,               /**< product expression */

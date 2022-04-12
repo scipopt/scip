@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -44,7 +44,7 @@
 #define CONCAVE_NLHDLR_ENFOPRIORITY    40
 
 #define DEFAULT_DETECTSUM             FALSE
-#define DEFAULT_PREFEREXTENDED        TRUE
+#define DEFAULT_EXTENDEDFORM          TRUE
 #define DEFAULT_CVXQUADRATIC_CONVEX   TRUE
 #define DEFAULT_CVXQUADRATIC_CONCAVE  FALSE
 #define DEFAULT_CVXSIGNOMIAL          TRUE
@@ -81,7 +81,7 @@ struct SCIP_NlhdlrData
 
    /* parameters */
    SCIP_Bool             detectsum;          /**< whether to run detection when the root of an expression is a non-quadratic sum */
-   SCIP_Bool             preferextended;     /**< whether to prefer extended formulations */
+   SCIP_Bool             extendedform;       /**< whether to create extended formulations instead of looking for maximal possible subexpression */
 
    /* advanced parameters (maybe remove some day) */
    SCIP_Bool             cvxquadratic;       /**< whether to use convexity check on quadratics */
@@ -443,8 +443,15 @@ DECL_CURVCHECK(curvCheckQuadratic)
       }
       else
       {
-         /* linear term (or term to be considered as linear) */
-         SCIPexprSetCurvature(child, SCIP_EXPRCURV_LINEAR);
+         /* linear term (or term to be considered as linear) or lonely square term
+          * if we want extended formulations, then require linearity, so an auxvar will be introduced if it is nonlinear
+          * if we do not want extended formulations, then the term needs to have curvature "wantedcurv"
+          *   thus, if the coef is negative, then the child needs to have the curvature opposite to "wantedcurv"
+          */
+         if( nlhdlrdata->extendedform )
+            SCIPexprSetCurvature(child, SCIP_EXPRCURV_LINEAR);
+         else
+            SCIPexprSetCurvature(child, SCIPexprcurvMultiply(SCIPgetCoefsExprSum(nlexpr)[i], wantedcurv));
          SCIP_CALL( exprstackPush(scip, stack, 1, &child) );
       }
    }
@@ -528,7 +535,7 @@ DECL_CURVCHECK(curvCheckSignomial)
 
    /* put children that are not power on stack
     * grow child for children that are power and put this child on stack
-    * if preferextended, then require children with more than one child to be linear
+    * if extendedform, then require children to be linear
     * unless they are linear, an auxvar will be introduced for them and thus they will be handled as var here
     */
    for( i = 0; i < nfactors; ++i )
@@ -544,7 +551,7 @@ DECL_CURVCHECK(curvCheckSignomial)
       }
       assert(SCIPexprGetNChildren(child) == 0);
 
-      if( nlhdlrdata->preferextended && SCIPexprGetNChildren(child) > 1 )
+      if( nlhdlrdata->extendedform )
       {
          SCIPexprSetCurvature(child, SCIP_EXPRCURV_LINEAR);
 #ifdef SCIP_DEBUG
@@ -761,6 +768,10 @@ DECL_CURVCHECK(curvCheckProductComposite)
    /* push this h onto stack for further checking */
    SCIP_CALL( exprstackPush(scip, stack, 1, &(SCIPexprGetChildren(nlexpr)[1-fidx])) );
 
+   /* if we prefer extended formulations, then we always want h() to be linear */
+   if( nlhdlrdata->extendedform )
+      hcurv = SCIP_EXPRCURV_LINEAR;
+
    /* h-child of product should have curvature hcurv */
    SCIPexprSetCurvature(SCIPexprGetChildren(nlexpr)[1-fidx], hcurv);
 
@@ -839,11 +850,11 @@ DECL_CURVCHECK(curvCheckExprhdlr)
    assert(SCIPexprGetChildren(nlexpr) != NULL);
    assert(SCIPexprGetNChildren(nlexpr) == nchildren);
 
-   /* If more than one child and we prefer extended formulations, then require all children to be linear.
+   /* If we prefer extended formulations, then require all children to be linear.
     * Unless they are, auxvars will be introduced and they will be handles as variables, which can be an
     * advantage in the context of extended formulations.
     */
-   if( nchildren > 1 && nlhdlrdata->preferextended )
+   if( nlhdlrdata->extendedform )
    {
       int i;
       for( i = 0; i < nchildren; ++i )
@@ -924,6 +935,7 @@ SCIP_RETCODE constructExpr(
    SCIP_EXPR*            rootexpr,           /**< expression */
    SCIP_EXPRCURV         curv,               /**< curvature to achieve */
    SCIP_HASHMAP*         assumevarfixed,     /**< hashmap containing variables that should be assumed to be fixed, or NULL */
+   SCIP_Bool             assumecurvature,    /**< whether to assume that desired curvature is given (skips curvature checks) */
    SCIP_Bool*            curvsuccess         /**< pointer to store whether the curvature could be achieved
                                                   w.r.t. the original variables (might be NULL) */
    )
@@ -977,7 +989,7 @@ SCIP_RETCODE constructExpr(
          SCIPinfoMessage(scip, NULL, "... is a multivariate linear sum that we'll treat as auxvar\n");
 #endif
       }
-      else if( SCIPexprGetCurvature(nlexpr) != SCIP_EXPRCURV_UNKNOWN )
+      else if( SCIPexprGetCurvature(nlexpr) != SCIP_EXPRCURV_UNKNOWN && !assumecurvature )
       {
          /* if we are here, either convexity or concavity is required; try to check for this curvature */
          SCIP_Bool success;
@@ -994,6 +1006,7 @@ SCIP_RETCODE constructExpr(
       else
       {
          /* if we don't care about curvature in this subtree anymore (very unlikely),
+          * or we are told to assume that the desired curvature is present (assumecurvature==TRUE),
           * then only continue iterating this subtree to assemble leaf expressions
           */
          SCIP_CALL( nlhdlrExprGrowChildren(scip, nlexpr2origexpr, nlexpr, NULL) );
@@ -1759,7 +1772,7 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectConvex)
    if( (*enforcing & SCIP_NLHDLR_METHOD_SEPABELOW) == 0 )  /* if no separation below yet */
    {
       SCIP_CALL( constructExpr(scip, nlhdlrdata, &nlexpr, nlexpr2origexpr, &nleafs, expr,
-         SCIP_EXPRCURV_CONVEX, NULL, NULL) );
+         SCIP_EXPRCURV_CONVEX, NULL, SCIPassumeConvexNonlinear(conshdlr), NULL) );
       if( nlexpr != NULL )
       {
          assert(SCIPexprGetNChildren(nlexpr) > 0);  /* should not be trivial */
@@ -1777,7 +1790,7 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectConvex)
    if( (*enforcing & SCIP_NLHDLR_METHOD_SEPAABOVE) == 0 && nlexpr == NULL )  /* if no separation above and not convex */
    {
       SCIP_CALL( constructExpr(scip, nlhdlrdata, &nlexpr, nlexpr2origexpr, &nleafs, expr,
-         SCIP_EXPRCURV_CONCAVE, NULL, NULL) );
+         SCIP_EXPRCURV_CONCAVE, NULL, SCIPassumeConvexNonlinear(conshdlr), NULL) );
       if( nlexpr != NULL )
       {
          assert(SCIPexprGetNChildren(nlexpr) > 0);  /* should not be trivial */
@@ -2043,9 +2056,9 @@ SCIP_RETCODE SCIPincludeNlhdlrConvex(
       "whether to run convexity detection when the root of an expression is a non-quadratic sum",
       &nlhdlrdata->detectsum, FALSE, DEFAULT_DETECTSUM, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "nlhdlr/" CONVEX_NLHDLR_NAME "/preferextended",
-      "whether to prefer extended formulations",
-      &nlhdlrdata->preferextended, FALSE, DEFAULT_PREFEREXTENDED, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "nlhdlr/" CONVEX_NLHDLR_NAME "/extendedform",
+      "whether to create extended formulations instead of looking for maximal convex expressions",
+      &nlhdlrdata->extendedform, FALSE, DEFAULT_EXTENDEDFORM, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "nlhdlr/" CONVEX_NLHDLR_NAME "/cvxquadratic",
       "whether to use convexity check on quadratics",
@@ -2132,7 +2145,7 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectConcave)
    if( (*enforcing & SCIP_NLHDLR_METHOD_SEPABELOW) == 0 )  /* if no separation below yet */
    {
       SCIP_CALL( constructExpr(scip, nlhdlrdata, &nlexpr, nlexpr2origexpr, &nleafs, expr,
-         SCIP_EXPRCURV_CONCAVE, NULL, NULL) );
+         SCIP_EXPRCURV_CONCAVE, NULL, FALSE, NULL) );
 
       if( nlexpr != NULL && nleafs > SCIP_MAXVERTEXPOLYDIM )
       {
@@ -2157,7 +2170,7 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectConcave)
    if( (*enforcing & SCIP_NLHDLR_METHOD_SEPAABOVE) == 0 && nlexpr == NULL )  /* if no separation above and not concave */
    {
       SCIP_CALL( constructExpr(scip, nlhdlrdata, &nlexpr, nlexpr2origexpr, &nleafs, expr,
-         SCIP_EXPRCURV_CONVEX, NULL, NULL) );
+         SCIP_EXPRCURV_CONVEX, NULL, FALSE, NULL) );
 
       if( nlexpr != NULL && nleafs > SCIP_MAXVERTEXPOLYDIM )
       {
@@ -2401,7 +2414,7 @@ SCIP_RETCODE SCIPincludeNlhdlrConcave(
       &nlhdlrdata->detectsum, FALSE, DEFAULT_DETECTSUM, NULL, NULL) );
 
    /* "extended" formulations of a concave expressions can give worse estimators */
-   nlhdlrdata->preferextended = FALSE;
+   nlhdlrdata->extendedform = FALSE;
 
    SCIP_CALL( SCIPaddBoolParam(scip, "nlhdlr/" CONCAVE_NLHDLR_NAME "/cvxquadratic",
       "whether to use convexity check on quadratics",
@@ -2456,13 +2469,13 @@ SCIP_RETCODE SCIPhasExprCurvature(
    nlhdlrdata.isnlhdlrconvex = TRUE;
    nlhdlrdata.evalsol = NULL;
    nlhdlrdata.detectsum = TRUE;
-   nlhdlrdata.preferextended = FALSE;
+   nlhdlrdata.extendedform = FALSE;
    nlhdlrdata.cvxquadratic = TRUE;
    nlhdlrdata.cvxsignomial = TRUE;
    nlhdlrdata.cvxprodcomp = TRUE;
    nlhdlrdata.handletrivial = TRUE;
 
-   SCIP_CALL( constructExpr(scip, &nlhdlrdata, &rootnlexpr, nlexpr2origexpr, &nleafs, expr, curv, assumevarfixed, success) );
+   SCIP_CALL( constructExpr(scip, &nlhdlrdata, &rootnlexpr, nlexpr2origexpr, &nleafs, expr, curv, assumevarfixed, FALSE, success) );
 
    /* free created expression */
    if( rootnlexpr != NULL )

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -26,6 +26,14 @@
 #define SCIP_NLHDLR_H_
 
 #include "scip/pub_nlhdlr.h"
+
+#ifndef NDEBUG
+#include "scip/struct_nlhdlr.h"
+#endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** creates a nonlinear handler */
 SCIP_RETCODE SCIPnlhdlrCreate(
@@ -104,5 +112,15 @@ void SCIPnlhdlrPrintStatistics(
    int                   nnlhdlrs,           /**< number of nonlinear handlers */
    FILE*                 file                /**< file handle, or NULL for standard out */
    );
+
+#ifndef NDEBUG
+#define SCIPnlhdlrResetNDetectionslast(nlhdlr)  (nlhdlr)->ndetectionslast = 0
+#define SCIPnlhdlrIncrementNCutoffs(nlhdlr)     ++(nlhdlr)->ncutoffs
+#define SCIPnlhdlrIncrementNSeparated(nlhdlr)   ++(nlhdlr)->nseparated
+#endif
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* SCIP_NLHDLR_H_ */

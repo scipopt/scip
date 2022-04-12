@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -386,7 +386,7 @@ void selectBestCands(
       /* evaluate the candidate against the currently best candidate w.r.t. aggregated score */
       evaluateAggrCand(scip, cand, aggrscore, val, &bestaggrcand, &bestaggrscore, &bestval, bestcands, nbestcands);
    }
-}
+}  /*lint --e{438}*/
 
 
 /** selects a variable out of the given candidate array and performs the branching */
@@ -408,7 +408,6 @@ SCIP_RETCODE performBranchingSol(
 {
    SCIP_VAR* bestaggrcand;
    SCIP_Real bestval;
-   SCIP_Real bestaggrscore;
    SCIP_NODE* downchild;
    SCIP_NODE* eqchild;
    SCIP_NODE* upchild;
@@ -505,9 +504,9 @@ SCIP_RETCODE performBranchingSol(
 
    assert(bestaggrcand != NULL);
 
-   SCIPdebugMsg(scip, " -> %d candidates, selected variable <%s>[%g,%g] (prio=%d, solval=%.12f, score=%g, conflict=%g cutoff=%g, inference=%g)\n",
+   SCIPdebugMsg(scip, " -> %d candidates, selected variable <%s>[%g,%g] (prio=%d, solval=%.12f, conflict=%g cutoff=%g, inference=%g)\n",
       ncands, SCIPvarGetName(bestaggrcand), SCIPvarGetLbLocal (bestaggrcand), SCIPvarGetUbLocal(bestaggrcand), SCIPvarGetBranchPriority(bestaggrcand),
-      bestval == SCIP_UNKNOWN ? SCIPgetVarSol(scip, bestaggrcand) : bestval, bestaggrscore, /*lint !e777*/
+      bestval == SCIP_UNKNOWN ? SCIPgetVarSol(scip, bestaggrcand) : bestval, /*lint !e777*/
       SCIPgetVarConflictScore(scip, bestaggrcand),  SCIPgetVarAvgInferenceCutoffScore(scip, bestaggrcand, cutoffweight),
       SCIPgetVarAvgInferenceScore(scip, bestaggrcand));
 

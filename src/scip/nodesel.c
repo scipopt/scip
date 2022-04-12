@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -654,7 +654,7 @@ SCIP_RETCODE SCIPnodepqBound(
       node = nodepq->slots[pos];
       assert(node != NULL);
       assert(SCIPnodeGetType(node) == SCIP_NODETYPE_LEAF);
-      if( SCIPsetIsGE(set, SCIPnodeGetLowerbound(node), cutoffbound) )
+      if( SCIPsetIsInfinity(set, SCIPnodeGetLowerbound(node)) || SCIPsetIsGE(set, SCIPnodeGetLowerbound(node), cutoffbound) )
       {
          SCIPsetDebugMsg(set, "free node in slot %d (len=%d) at depth %d with lowerbound=%g\n",
             pos, nodepq->len, SCIPnodeGetDepth(node), SCIPnodeGetLowerbound(node));

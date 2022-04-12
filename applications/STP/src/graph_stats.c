@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -185,7 +185,7 @@ void graph_knot_printInfo(
 SCIP_Bool graph_hasMultiEdges(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
-   SCIP_Bool             verbose
+   SCIP_Bool             verbose             /**< be verbose? */
 )
 {
    const int nnodes = graph_get_nNodes(g);
@@ -597,7 +597,7 @@ void graph_get_nVET(
    }
 
    if( nnodes )
-      *nnodes = v;
+      *nnodes = MAX(v, 1);
 
    if( nedges )
       *nedges = e;
@@ -634,3 +634,5 @@ SCIP_Real graph_get_avgDeg(
 
    return ((double) e / v );
 }
+
+/**@} */

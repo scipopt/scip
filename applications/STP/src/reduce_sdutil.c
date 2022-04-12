@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -81,7 +81,7 @@ static
 SCIP_RETCODE sdprofitAlloc(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          g,                  /**< graph to initialize from */
-   SCIP_Bool             useSecond,          /**> use second profit? */
+   SCIP_Bool             useSecond,          /**< use second profit? */
    SDPROFIT**            sdprofit            /**< SD profit */
 )
 {
@@ -924,8 +924,8 @@ const SCIP_Bool* reduce_sdneighborGetBlocked(const SDN* sdneighbors)
 /** gets (up to) four close terminals to given node i;
  *  with strict upper bound on allowed distances */
 void reduce_sdneighborGetCloseTerms(
-   const GRAPH*          g,                  /**< graph */
-   const SDN*            sdneighbor,         /**<  */
+   const GRAPH*          g,                  /**< graph data structure */
+   const SDN*            sdneighbor,         /**< SD neighbor data structure */
    int                   node,               /**< node */
    SCIP_Real             maxdist_strict,     /**< maximum valid distance (strict) */
    int* RESTRICT         closeterms,         /**< four close terminals */

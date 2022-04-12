@@ -14,7 +14,7 @@
 
 * [ ] The CHANGELOG is up to date (including API changes if present in this MR).
 * [ ] The user documentation is up to date (doc/xternal.c, doc/inc/faq/, installation instructions, ...).
-* [ ] makedist.sh and both build systems are up to date (file additions/removals, ...).
+* [ ] Both build systems and makedist.sh are up to date. Especially, newly added, renamed or removed source files have been added to, renamed in or removed from src/CMakeLists.txt.
 
 ### Testing
 

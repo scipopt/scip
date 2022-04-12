@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -234,9 +234,9 @@ void gmlWriteEdge(
 /**  gets ratios of remaining nodes/edges */
 static
 void getReductionRatiosPcMw(
-  const GRAPH*          graph,              /**< graph */
-  SCIP_Real*	        ratio_nodes,
-  SCIP_Real*	        ratio_edges
+  const GRAPH*        graph,              /**< graph */
+  SCIP_Real*          ratio_nodes,        /**< nodes ratio */
+  SCIP_Real*          ratio_edges         /**< edges ratio */
 )
 {
    assert(graph_pc_isPcMw(graph));
@@ -249,9 +249,9 @@ void getReductionRatiosPcMw(
 /**  Call before graph packing! */
 static
 void getReductionRatios(
-   const GRAPH*         graph,              /**< graph */
-   SCIP_Real*	        ratio_nodes,
-   SCIP_Real*	        ratio_edges
+   const GRAPH*        graph,              /**< graph */
+   SCIP_Real*	        ratio_nodes,        /**< nodes ratio */
+   SCIP_Real*	        ratio_edges         /**< edges ratio */
 )
 {
    const int nnodes = graph->knots;

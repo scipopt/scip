@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -3719,6 +3719,14 @@ SCIP_RETCODE SCIPconshdlrEnforcePseudoSol(
          if( lastinfeasible && *result == SCIP_FEASIBLE )
             *result = SCIP_INFEASIBLE;
       }
+      else if( objinfeasible )
+      {
+         /*
+          * Even if nothing is enforced, the solution might still be infeasible due to violating lower bound.
+          * Make sure the result is updated in this case as well.
+          */
+         *result = SCIP_INFEASIBLE;
+      }
    }
 
    return SCIP_OKAY;
@@ -3870,7 +3878,7 @@ SCIP_RETCODE SCIPconshdlrPropagate(
             lastnusefulpropconss = conshdlr->nusefulpropconss;
 
             /* get the array of the constraints to be processed */
-            conss = &(conshdlr->propconss[firstcons]);
+            conss = nconss > 0 ? (conshdlr->propconss + firstcons) : NULL;
 
             oldndomchgs = stat->nboundchgs + stat->nholechgs;
             oldnprobdomchgs = stat->nprobboundchgs + stat->nprobholechgs;

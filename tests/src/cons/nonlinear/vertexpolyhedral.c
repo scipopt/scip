@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -13,11 +13,18 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   separation_vertexpolyhedral.c
+/**@file   vertexpolyhedral.c
  * @brief  tests estimation of vertexpolyhedral functions
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+/* ICC 2020.4.304 segfaults when compiling this file
+ * __INTEL_COMPILER_BUILD_DATE=20200925
+ * __INTEL_COMPILER=1910
+ * __INTEL_COMPILER_UPDATE=3
+ */
+#if !defined(__INTEL_COMPILER) || (__INTEL_COMPILER != 1910)
 
 #include "scip/nlhdlr.c"
 #include "scip/cons_nonlinear.c"
@@ -48,12 +55,12 @@ SCIP_RETCODE printMatrix(int size)
 
    SCIP_CALL( SCIPcreate(&scip) );
 
-   cr_redirect_stdout();
    SCIP_CALL( buildVertexPolyhedralSeparationLP(scip, size, &lp) );
 
    SCIP_CALL( SCIPlpiGetNRows(lp, &nrows) );
    SCIP_CALL( SCIPlpiGetNCols(lp, &ncols) );
 
+   cr_redirect_stdout();
    for( i = 0; i < nrows; ++i )
    {
       for( j = 0; j < ncols; ++j )
@@ -439,3 +446,5 @@ Test(separation, vertexpolyhedral,
 
    cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
 }
+
+#endif  /* if !intel */

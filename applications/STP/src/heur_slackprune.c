@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -170,7 +170,7 @@ static inline
 SCIP_Bool abortSlackPruneEarly(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          graph,              /**< graph data structure */
-   SCIP_HEURDATA*        heurdata
+   SCIP_HEURDATA*        heurdata            /**< heuristic's data */
 )
 {
 	const int nedges = graph->edges;
@@ -223,11 +223,11 @@ static
 SCIP_RETCODE reduceExact(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                prunegraph,         /**< graph data structure */
-   int                   reductbound,
+   int                   reductbound,        /**< reduction bound */
    SCIP_Bool             fullreduce,         /**< use full reduction techniques? */
    int*                  soledge,            /**< solution edges (in/out) */
    int*                  solnode,            /**< array of nodes of current solution that is not to be destroyed (in/out) */
-   SCIP_Real*            offset
+   SCIP_Real*            offset              /**< objective offset */
    )
 {
    REDSOL* redsol;

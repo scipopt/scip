@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -74,6 +74,11 @@
 
 #define COST_MAX_POLY_x0 500
 #define COST_MIN_POLY_x0 100
+
+#ifdef WITH_UG
+int getUgRank(void);
+#endif
+
 
 
 /*
@@ -357,7 +362,7 @@ SCIP_RETCODE computeReducedProbSolutionBiased(
    SCIP_VAR**            vars,               /**< variables or NULL */
    SCIP_Bool             usestppool,         /**< using STP pool? */
    int*                  soledges,           /**< solution edges */
-   SCIP_Bool*            success
+   SCIP_Bool*            success             /**< success? */
 )
 {
    SCIP_Real* cost;
@@ -492,7 +497,7 @@ SCIP_RETCODE computeReducedProbSolution(
    SCIP_VAR**            vars,               /**< variables or NULL */
    SCIP_Bool             usestppool,         /**< using STP pool? */
    int*                  soledges,           /**< solution edges */
-   SCIP_Bool*            success
+   SCIP_Bool*            success             /**< success? */
 )
 {
    assert(soledges != NULL);
@@ -505,8 +510,6 @@ SCIP_RETCODE computeReducedProbSolution(
 
    SCIP_CALL( computeReducedProbSolutionBiased(scip, heurdata, graph, solgraph, edgeweight,
          edgeancestor, vars, usestppool, soledges, success) );
-
- //  printf("solval_bias=%f \n", solstp_getObj(solgraph, soledges, 0.0));
 
    if( reduce_solUsesNodesol(redsol) )
    {
@@ -530,12 +533,6 @@ SCIP_RETCODE computeReducedProbSolution(
             BMScopyMemoryArray(soledges, soledges_red, solgraph->edges);
             SCIPdebugMessage("updating best solution value: %f->%f \n", solval_bias, solval_red);
          }
-      }
-      else
-      {
-       //  graph_printInfo(solgraph);
-       //  assert(0);
-
       }
 
       SCIPfreeBufferArray(scip, &soledges_red);
@@ -1968,6 +1965,9 @@ SCIP_DECL_HEURINITSOL(heurInitsolRec)
    heurdata->bestsolindex = -1;
    heurdata->nfailures = 0;
 
+#ifdef WITH_UG
+   heurdata->randseed += getUgRank();
+#endif
 
    return SCIP_OKAY;
 }
@@ -1996,7 +1996,7 @@ SCIP_DECL_HEUREXEC(heurExecRec)
 
    int runs;
    int nsols;
-   int solindex;
+   int solposition;
    int probtype;
    int newsolindex;
    int nreadysols;
@@ -2124,7 +2124,7 @@ SCIP_DECL_HEUREXEC(heurExecRec)
       if( newsolindex == -1 )
       {
          SCIPdebugMessage("REC: random start solution\n");
-         newsolindex = SCIPsolGetIndex(sols[SCIPrandomGetInt(heurdata->randnumgen, 0, nreadysols)]);
+         newsolindex = SCIPsolGetIndex(sols[SCIPrandomGetInt(heurdata->randnumgen, 0, nreadysols - 1)]);
       }
    }
 
@@ -2132,14 +2132,14 @@ SCIP_DECL_HEUREXEC(heurExecRec)
    SCIP_CALL( SCIPStpHeurRecRun(scip, NULL, heur, heurdata, graph, vars, &newsolindex, runs, nreadysols, restrictheur, &solfound) );
 
    /* save latest solution index */
-   solindex = 0;
+   solposition = 0;
    nsols = SCIPgetNSols(scip);
    assert(nsols > 0);
    sols = SCIPgetSols(scip);
 
    for( int i = 1; i < nsols; i++ )
-      if( SCIPsolGetIndex(sols[i]) > SCIPsolGetIndex(sols[solindex]) )
-         solindex = i;
+      if( SCIPsolGetIndex(sols[i]) > SCIPsolGetIndex(sols[solposition]) )
+         solposition = i;
 
    if( solfound )
       *result = SCIP_FOUNDSOL;
@@ -2149,7 +2149,7 @@ SCIP_DECL_HEUREXEC(heurExecRec)
    else
       heurdata->nfailures = 0;
 
-   heurdata->lastsolindex = SCIPsolGetIndex(sols[solindex]);
+   heurdata->lastsolindex = SCIPsolGetIndex(sols[solposition]);
    heurdata->bestsolindex = SCIPsolGetIndex(SCIPgetBestSol(scip));
    heurdata->nlastsols = SCIPgetNSolsFound(scip);
 
@@ -2206,6 +2206,10 @@ SCIP_RETCODE SCIPStpIncludeHeurRec(
 
    heurdata->nusedsols = DEFAULT_NUSEDSOLS;
    heurdata->randseed = DEFAULT_RANDSEED;
+
+#ifdef WITH_UG
+   heurdata->randseed += getUgRank();
+#endif
 
    /* create random number generator */
    SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen, heurdata->randseed, TRUE) );

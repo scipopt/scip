@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -69,7 +69,8 @@ enum SCIP_ParamEmphasis
    SCIP_PARAMEMPHASIS_PHASEFEAS   = 7,        /**< feasibility phase settings during 3-phase solving approach */
    SCIP_PARAMEMPHASIS_PHASEIMPROVE= 8,        /**< improvement phase settings during 3-phase solving approach */
    SCIP_PARAMEMPHASIS_PHASEPROOF  = 9,        /**< proof phase settings during 3-phase solving approach */
-   SCIP_PARAMEMPHASIS_NUMERICS    = 10        /**< emphasis parameters for increased numerical safety */
+   SCIP_PARAMEMPHASIS_NUMERICS    = 10,       /**< emphasis parameters for increased numerical safety */
+   SCIP_PARAMEMPHASIS_BENCHMARK   = 11        /**< do not try to avoid running into memory limit */
 };
 typedef enum SCIP_ParamEmphasis SCIP_PARAMEMPHASIS;
 

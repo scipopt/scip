@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -373,7 +373,7 @@ SCIP_RETCODE SCIPgetOpenNodesData(
    int*                  nsiblings           /**< pointer to store the number of siblings, or NULL */
    );
 
-/** cuts off node and whole sub tree from branch and bound tree
+/** marks node and whole sub tree to be cut off from branch and bound tree
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -385,6 +385,21 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPcutoffNode(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NODE*            node                /**< node that should be cut off */
+   );
+
+/** removes all nodes from branch and bound tree that were marked to be cut off via SCIPcutoffNode()
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @note In diving mode, the removal of nodes is delayed until diving ends.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPpruneTree(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** marks the given node to be propagated again the next time a node of its subtree is processed

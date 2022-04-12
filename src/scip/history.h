@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -169,12 +169,6 @@ SCIP_Longint SCIPhistoryGetNActiveConflicts(
    SCIP_BRANCHDIR        dir                 /**< branching direction */
    );
 
-/** gets the average conflict length of the history entry */
-SCIP_Real SCIPhistoryGetAvgConflictlength(
-   SCIP_HISTORY*         history,            /**< branching and inference history */
-   SCIP_BRANCHDIR        dir                 /**< branching direction */
-   );
-
 /** increases the number of branchings counter */
 void SCIPhistoryIncNBranchings(
    SCIP_HISTORY*         history,            /**< branching and inference history */
@@ -199,12 +193,6 @@ void SCIPhistoryIncCutoffSum(
 
 /** get number of branchings counter */
 SCIP_Longint SCIPhistoryGetNBranchings(
-   SCIP_HISTORY*         history,            /**< branching and inference history */
-   SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
-   );
-
-/** get number of inferences counter */
-SCIP_Real SCIPhistoryGetInferenceSum(
    SCIP_HISTORY*         history,            /**< branching and inference history */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
@@ -276,14 +264,11 @@ void SCIPhistorySetRatioHistory(
 #define SCIPhistoryIncNActiveConflicts(history,dir,length) { (history)->nactiveconflicts[dir]++; \
       (history)->conflengthsum[dir] += length; }
 #define SCIPhistoryGetNActiveConflicts(history,dir) ((history)->nactiveconflicts[dir])
-#define SCIPhistoryGetAvgConflictlength(history,dir) ((history)->conflengthsum[dir] > 0.0 \
-      ? (SCIP_Real)(history)->nactiveconflicts[dir]/(SCIP_Real)(history)->conflengthsum[dir] : 0.0)
 #define SCIPhistoryIncNBranchings(history,dir,depth) { (history)->nbranchings[dir]++; \
       (history)->branchdepthsum[dir] += depth; }
 #define SCIPhistoryIncInferenceSum(history,dir,weight)     (history)->inferencesum[dir] += (weight)
 #define SCIPhistoryIncCutoffSum(history,dir,weight)        (history)->cutoffsum[dir] += (weight)
 #define SCIPhistoryGetNBranchings(history,dir)     ((history)->nbranchings[dir])
-#define SCIPhistoryGetInferenceSum(history,dir)     ((history)->inferencesum[dir])
 #define SCIPhistoryGetAvgInferences(history,dir)   ((history)->nbranchings[dir] > 0 \
       ? (SCIP_Real)(history)->inferencesum[dir]/(SCIP_Real)(history)->nbranchings[dir] : 0.0)
 #define SCIPhistoryGetAvgCutoffs(history,dir)      ((history)->nbranchings[dir] > 0 \

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -194,7 +194,7 @@ SCIP_RETCODE computeSteinerTreeTM(
    GRAPH*                graph,              /**< graph data structure */
    int*                  result,             /**< solution array */
    SCIP_Real*            bestobjval,         /**< pointer to the objective value */
-   SCIP_Bool*            success
+   SCIP_Bool*            success             /**< success? */
 )
 {
    SCIP_Real* cost = NULL;
@@ -242,7 +242,7 @@ SCIP_RETCODE computeSteinerTreeTM(
    }
    else
    {
-      assert(graph->stp_type == STP_DHCSTP);
+      assert(graph->stp_type == STP_DHCSTP || graph->stp_type == STP_DCSTP);
       SCIPdebugMessage("TM failed \n");
    }
 
@@ -624,7 +624,7 @@ SCIP_RETCODE updateNodeReplaceBounds(
    int outedges[STP_DABD_MAXDEGREE];
    const int nnodes = graph->knots;
    const SCIP_Real lpobjval = redcosts_getDualBoundTop(redcostdata);
-   const SCIP_Real cutoff = upperbound - lpobjval;
+   const SCIP_Real cutoff = MAX(upperbound - lpobjval, 0.0);
    const int halfnedges = graph->edges / 2;
    const SCIP_Real *redcost = redcosts_getEdgeCostsTop(redcostdata);
    const SCIP_Real *pathdist = redcosts_getRootToNodeDistTop(redcostdata);
@@ -633,7 +633,8 @@ SCIP_RETCODE updateNodeReplaceBounds(
    const int root = redcosts_getRootTop(redcostdata);
 
    assert(!graph_pc_isMw(graph));
-   assert(!SCIPisNegative(scip, cutoff));
+   assert(SCIPisFeasGE(scip, upperbound, lpobjval));
+
    assert(graph->stp_type == STP_SPG || graph->stp_type == STP_RSMT || !graph->extended);
    assert(!extendedsearch && "deprecated!");
 
@@ -1088,6 +1089,8 @@ void findRootsMark(
 {
    int realterm = -1;
    SCIP_Bool mark = FALSE;
+   const SCIP_Real objgap = MAX(upperbound - lpobjval, 0.0);
+   const SCIP_Real objgap_best = MAX(upperbound - bestlpobjval, 0.0);
 
    assert(!graph->extended && transgraph->extended);
    assert(graph->grad[pseudoterm] == 2);
@@ -1116,7 +1119,7 @@ void findRootsMark(
    if( rerun && isfixedterm[realterm] )
       return;
 
-   if( SCIPisGT(scip, cost[pseudoedge], upperbound - lpobjval) || SCIPisGT(scip, bestcost[pseudoedge], upperbound - bestlpobjval) )
+   if( SCIPisGT(scip, cost[pseudoedge], objgap) || SCIPisGT(scip, bestcost[pseudoedge], objgap_best) )
    {
       mark = TRUE;
    }
@@ -1161,7 +1164,7 @@ void findRootsMark(
             }
          }
 
-         if( SCIPisGT(scip, costsum, upperbound - lpobjval) || SCIPisGT(scip, bestcostsum, upperbound - bestlpobjval) )
+         if( SCIPisGT(scip, costsum, objgap) || SCIPisGT(scip, bestcostsum, objgap_best) )
             mark = TRUE;
       }
    }
@@ -1736,11 +1739,11 @@ int daGetNruns(
 static
 SCIP_RETCODE daRoundInit(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real             upperbound,
+   SCIP_Real             upperbound,         /**< upper bound */
    GRAPH*                graph,              /**< graph structure */
-   REDCOST*              redcostdata,         /**< reduced cost data */
-   STP_Bool*             arcsdeleted,
-   SCIP_Real*            cutoffbound
+   REDCOST*              redcostdata,        /**< reduced cost data */
+   STP_Bool*             arcsdeleted,        /**< array */
+   SCIP_Real*            cutoffbound         /**< cut-off bound */
 )
 {
    const SCIP_Bool isRpcmw = graph_pc_isRootedPcMw(graph);
@@ -1772,9 +1775,9 @@ SCIP_RETCODE daRoundInit(
 static
 void daRoundExit(
    SCIP*                 scip,               /**< SCIP data structure */
-   int                   ndeletions_run,
+   int                   ndeletions_run,     /**< number of deletions */
    GRAPH*                graph,              /**< graph structure */
-   int*                  nelims
+   int*                  nelims              /**< number of eliminations */
 )
 {
    const SCIP_Bool isRpcmw = graph_pc_isRootedPcMw(graph);

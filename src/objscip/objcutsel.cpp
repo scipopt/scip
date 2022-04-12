@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -180,7 +180,8 @@ SCIP_DECL_CUTSELSELECT(cutselSelectObj)
    assert(cutseldata->objcutsel != NULL);
 
    /* call virtual method of cutsel object */
-   SCIP_CALL( cutseldata->objcutsel->scip_select(scip, cutsel, selcut) );
+   SCIP_CALL( cutseldata->objcutsel->scip_select(scip, cutsel, cuts, ncuts, forcedcuts, nforcedcuts,
+      root, maxnselectedcuts, nselectedcuts, result) );
 
    return SCIP_OKAY;
 }

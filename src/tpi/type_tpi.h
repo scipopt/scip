@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -18,17 +18,13 @@
  * @brief  the type definitions for the task processing interface
  * @author Leona Gottwald
  * @author Stephen J. Maher
+ * @author Marc Pfetsch
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #ifndef __TYPE_TPI_H__
 #define __TYPE_TPI_H__
-
-#include "scip/type_retcode.h"
-#include "tpi/type_tpi_openmp.h"
-#include "tpi/type_tpi_tnycthrd.h"
-#include "tpi/type_tpi_none.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -60,6 +56,10 @@ enum SCIP_Jobstatus
 typedef enum SCIP_Jobstatus SCIP_JOBSTATUS;
 
 typedef struct SCIP_Job SCIP_JOB;            /**< a job to be submitted to a separate thread */
+
+
+typedef struct SCIP_Lock SCIP_LOCK;          /**< TPI type dependent lock */
+typedef struct SCIP_Condition SCIP_CONDITION;/**< TPI type dependent condition */
 
 #ifdef __cplusplus
 }

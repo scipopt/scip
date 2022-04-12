@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -512,6 +512,24 @@ void rowprepCleanupSide(
    if( viol != NULL )
       *viol = SCIP_INVALID;
 }
+
+#ifdef NDEBUG
+/* Undo the defines from pub_misc_rowprep.h, which exist if NDEBUG is defined. */
+#undef SCIProwprepGetNVars
+#undef SCIProwprepGetVars
+#undef SCIProwprepGetCoefs
+#undef SCIProwprepGetSide
+#undef SCIProwprepGetSidetype
+#undef SCIProwprepIsLocal
+#undef SCIProwprepGetName
+#undef SCIProwprepGetNModifiedVars
+#undef SCIProwprepGetModifiedVars
+#undef SCIProwprepAddSide
+#undef SCIProwprepAddConstant
+#undef SCIProwprepSetSidetype
+#undef SCIProwprepSetLocal
+#undef SCIProwprepRecordModifications
+#endif
 
 /** creates a SCIP_ROWPREP datastructure
  *
@@ -1236,7 +1254,7 @@ SCIP_RETCODE SCIPcleanupRowprep(
    SCIPprintRowprep(scip, rowprep, NULL);
 #endif
 
-#if 0
+#if !1
    /* compute final coefrange, if requested by caller */
    if( coefrange != NULL )
    {

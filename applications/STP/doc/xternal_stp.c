@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -35,7 +35,7 @@
  *
  * This application contains the branch-and-cut based solver SCIP-Jack for Steiner tree and related problems, realized within the framework
  * \SCIP. See the doctoral thesis: "Faster algorithms for Steiner tree and related problems: From theory to practice"
- * by Daniel Rehfeldt for more details. This application includes (among others):
+ * by Daniel Rehfeldt for more details. See also https://scipjack.zib.de. This application includes (among others):
  *
  * - problem readers, which parse the problem out of .stp or .gr files
  *   (reader_stp.c, reader_gr.c)
@@ -66,11 +66,13 @@
  * -# \subpage STP_PROBLEMDATA "Main problem data, creating the problem"
  * -# \subpage STP_CONS "Separating violated constraints"
  * -# \subpage STP_READWRITE "Reading and writing"
+ * -# \subpage STP_MISC "Miscellaneous methods used for Steiner tree problems"
+ * -# \subpage STP_MINCUT "Graph minimum cut routine"
  *
  * Installation
  * ------------
  *
- * See the @ref INSTALL_APPLICATIONS_EXAMPLES "Install file"
+ * See the @ref INSTALL_APPLICATIONS_EXAMPLES "Install file", application "stp" (for Make) or "scipstp" (for CMake)
  */
 
 /**@page STP_PROBLEM Problem description and solving approach
@@ -171,14 +173,14 @@
 /**@page STP_READWRITE Reading and writing
  *
  * Problem instances can be read in both in the .stp format described here: http://steinlib.zib.de/format.php,
- * and the .gr format described here: https://pacechallenge.org/2018/steiner-tree/. To run SCIP-Jack from the command line use
+ * and the (somewhat simpler) .gr format described here: https://pacechallenge.org/2018/steiner-tree/. To run SCIP-Jack from the command line use
  *
  * bin/stp -f filename.stp
  *
  * Note that the solution shown by SCIP does not correspond to the actual solution computed by SCIP-Jack,
  * because SCIP-Jack performs preprocessing prior to building the SCIP problem (for performance and memory reasons).
  * The solution value shown by SCIP is correct, however.
- * To get the solution computed by SCIP-Jack, create a file called (for example) "write.set" in folder /settings with content
+ * To get the solution computed by SCIP-Jack, create a file called (for example) "write.set" in folder ./settings with content
  *
  * stp/logfile = "use_probname"
  *

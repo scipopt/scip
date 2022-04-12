@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -26,6 +26,10 @@
 #include <string.h>
 #include "scip/expr_var.h"
 #include "scip/expr_sum.h"
+
+#ifdef NDEBUG
+#undef SCIPgetVarExprVar
+#endif
 
 #define EXPRHDLR_NAME         "var"
 #define EXPRHDLR_DESC         "SCIP variable expression"
@@ -60,7 +64,6 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyVar)
    SCIP_Real constant;
    int nvars;
    int varssize;
-   int requsize;
    int i;
    SCIP_EXPR* sumexpr;
 
@@ -88,15 +91,20 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyVar)
    coefs[0] = 1.0;
    constant = 0.0;
    nvars = 1;
-   SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, coefs, &nvars, varssize, &constant, &requsize, TRUE) );
-
-   if( requsize > varssize )
+   if( !SCIPvarIsOriginal(var) )
    {
-      SCIP_CALL( SCIPreallocBufferArray(scip, &vars,  requsize) );
-      SCIP_CALL( SCIPreallocBufferArray(scip, &coefs, requsize) );
-      varssize = requsize;
+      int requsize;
+
       SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, coefs, &nvars, varssize, &constant, &requsize, TRUE) );
-      assert(requsize <= nvars);
+
+      if( requsize > varssize )
+      {
+         SCIP_CALL( SCIPreallocBufferArray(scip, &vars,  requsize) );
+         SCIP_CALL( SCIPreallocBufferArray(scip, &coefs, requsize) );
+         varssize = requsize;
+         SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, coefs, &nvars, varssize, &constant, &requsize, TRUE) );
+         assert(requsize <= nvars);
+      }
    }
 
    /* create expression for constant + sum coefs_i vars_i */

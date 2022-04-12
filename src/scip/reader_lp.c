@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -115,7 +115,7 @@ typedef enum LpSense LPSENSE;
 struct LpInput
 {
    SCIP_FILE*            file;
-   char                  linebuf[LP_MAX_LINELEN+1];
+   char*                 linebuf;
    char                  probname[LP_MAX_LINELEN];
    char                  objname[LP_MAX_LINELEN];
    char*                 token;
@@ -124,6 +124,7 @@ struct LpInput
    int                   npushedtokens;
    int                   linenumber;
    int                   linepos;
+   int                   linebufsize;
    LPSECTION             section;
    SCIP_OBJSENSE         objsense;
    SCIP_Bool             inlazyconstraints;  /**< whether we are currently reading the section for lazy constraints */
@@ -133,8 +134,6 @@ struct LpInput
    SCIP_Bool             dynamiccols;        /**< should columns be added and removed dynamically to the LP? */
    SCIP_Bool             dynamicrows;        /**< should rows be added and removed dynamically to the LP? */
    SCIP_Bool             haserror;
-   SCIP_Bool             comment;
-   SCIP_Bool             endline;
 };
 typedef struct LpInput LPINPUT;
 
@@ -158,7 +157,7 @@ void syntaxError(
    assert(lpinput != NULL);
 
    SCIPerrorMessage("Syntax error in line %d ('%s'): %s \n", lpinput->linenumber, lpinput->token, msg);
-   if( lpinput->linebuf[strlen(lpinput->linebuf)-1] == '\n' )
+   if( lpinput->linebuf[lpinput->linebufsize - 1] == '\n' )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "  input: %s", lpinput->linebuf);
    }
@@ -283,66 +282,34 @@ SCIP_Bool getNextLine(
 
    assert(lpinput != NULL);
 
-   /* if we previously detected a comment we have to parse the remaining line away if there is something left */
-   if( !lpinput->endline && lpinput->comment )
-   {
-      SCIPdebugMsg(scip, "Throwing rest of comment away.\n");
-
-      do
-      {
-         lpinput->linebuf[LP_MAX_LINELEN-2] = '\0';
-         (void)SCIPfgets(lpinput->linebuf, (int) sizeof(lpinput->linebuf), lpinput->file);
-      }
-      while( lpinput->linebuf[LP_MAX_LINELEN-2] != '\0' );
-
-      lpinput->comment = FALSE;
-      lpinput->endline = TRUE;
-   }
-
    /* read next line */
    lpinput->linepos = 0;
-   lpinput->linebuf[LP_MAX_LINELEN-2] = '\0';
+   lpinput->linebuf[lpinput->linebufsize - 2] = '\0';
 
-   if( SCIPfgets(lpinput->linebuf, (int) sizeof(lpinput->linebuf), lpinput->file) == NULL )
+   if( SCIPfgets(lpinput->linebuf, lpinput->linebufsize, lpinput->file) == NULL )
    {
       /* clear the line, this is really necessary here! */
-      BMSclearMemoryArray(lpinput->linebuf, LP_MAX_LINELEN);
+      BMSclearMemoryArray(lpinput->linebuf, lpinput->linebufsize);
 
       return FALSE;
    }
 
    lpinput->linenumber++;
 
-   /* if line is too long for our buffer correct the buffer and correct position in file */
-   if( lpinput->linebuf[LP_MAX_LINELEN-2] != '\0' )
+   /* if line is too long for our buffer reallocate buffer */
+   while( lpinput->linebuf[lpinput->linebufsize - 2] != '\0' )
    {
-      char* last;
+      int newsize;
 
-      /* buffer is full; erase last token since it might be incomplete */
-      lpinput->endline = FALSE;
-      last = strrchr(lpinput->linebuf, ' ');
+      newsize = SCIPcalcMemGrowSize(scip, lpinput->linebufsize + 1);
+      SCIP_CALL_ABORT( SCIPreallocBlockMemoryArray(scip, &lpinput->linebuf, lpinput->linebufsize, newsize) );
 
-      if( last == NULL )
-      {
-         SCIPwarningMessage(scip, "we read %d characters from the file; this might indicate a corrupted input file!",
-            LP_MAX_LINELEN - 2);
-         lpinput->linebuf[LP_MAX_LINELEN-2] = '\0';
-         SCIPdebugMsg(scip, "the buffer might be corrupted\n");
-      }
-      else
-      {
-         SCIPfseek(lpinput->file, -(long) strlen(last), SEEK_CUR);
-         SCIPdebugMsg(scip, "correct buffer, reread the last %ld characters\n", (long) strlen(last));
-         *last = '\0';
-      }
+      lpinput->linebuf[newsize-2] = '\0';
+      if ( SCIPfgets(lpinput->linebuf + lpinput->linebufsize - 1, newsize - lpinput->linebufsize + 1, lpinput->file) == NULL )
+         return FALSE;
+      lpinput->linebufsize = newsize;
    }
-   else
-   {
-      /* found end of line */
-      lpinput->endline = TRUE;
-   }
-   lpinput->linebuf[LP_MAX_LINELEN-1] = '\0'; /* we want to use lookahead of one char -> we need two \0 at the end */
-   lpinput->comment = FALSE;
+   lpinput->linebuf[lpinput->linebufsize - 1] = '\0'; /* we want to use lookahead of one char -> we need two \0 at the end */
 
    /* skip characters after comment symbol */
    for( i = 0; commentchars[i] != '\0'; ++i )
@@ -355,7 +322,6 @@ SCIP_Bool getNextLine(
          *commentstart = '\0';
          *(commentstart+1) = '\0'; /* we want to use lookahead of one char -> we need two \0 at the end */
 
-         lpinput->comment = TRUE;
          break;
       }
    }
@@ -390,7 +356,7 @@ SCIP_Bool getNextToken(
    int tokenlen;
 
    assert(lpinput != NULL);
-   assert(lpinput->linepos < LP_MAX_LINELEN);
+   assert(lpinput->linepos < lpinput->linebufsize);
 
    /* check the token stack */
    if( lpinput->npushedtokens > 0 )
@@ -415,11 +381,13 @@ SCIP_Bool getNextToken(
             return FALSE;
          }
          assert(lpinput->linepos == 0);
+         /* update buf, because the linebuffer may have been reallocated */
+         buf = lpinput->linebuf;
       }
       else
          lpinput->linepos++;
    }
-   assert(lpinput->linepos < LP_MAX_LINELEN);
+   assert(lpinput->linepos < lpinput->linebufsize);
    assert(!isDelimChar(buf[lpinput->linepos]));
 
    /* check if the token is a value */
@@ -1026,6 +994,12 @@ SCIP_RETCODE readCoefficients(
       /* check if we read a sign */
       if( isSign(lpinput, &coefsign) )
       {
+         if( havevalue )
+         {
+            syntaxError(scip, lpinput, "sign after value without variable.");
+            return SCIP_OKAY;
+         }
+
          SCIPdebugMsg(scip, "(line %d) read coefficient sign: %+d\n", lpinput->linenumber, coefsign);
          havesign = TRUE;
          continue;
@@ -1050,6 +1024,18 @@ SCIP_RETCODE readCoefficients(
          if( isobjective )
          {
             syntaxError(scip, lpinput, "no sense allowed in objective");
+            return SCIP_OKAY;
+         }
+
+         if( havevalue )
+         {
+            syntaxError(scip, lpinput, "no constant values allowed for constraints in lp file format");
+            return SCIP_OKAY;
+         }
+
+         if( havesign )
+         {
+            syntaxError(scip, lpinput, "constaint has sign without a variable");
             return SCIP_OKAY;
          }
 
@@ -3441,7 +3427,9 @@ SCIP_RETCODE SCIPreadLp(
 
    /* initialize LP input data */
    lpinput.file = NULL;
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &lpinput.linebuf, LP_MAX_LINELEN) );
    lpinput.linebuf[0] = '\0';
+   lpinput.linebufsize = LP_MAX_LINELEN;
    lpinput.probname[0] = '\0';
    lpinput.objname[0] = '\0';
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &lpinput.token, LP_MAX_LINELEN) ); /*lint !e506*/
@@ -3461,8 +3449,6 @@ SCIP_RETCODE SCIPreadLp(
    lpinput.inlazyconstraints = FALSE;
    lpinput.inusercuts = FALSE;
    lpinput.haserror = FALSE;
-   lpinput.comment = FALSE;
-   lpinput.endline = FALSE;
 
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/initialconss", &(lpinput.initialconss)) );
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicconss", &(lpinput.dynamicconss)) );
@@ -3479,6 +3465,7 @@ SCIP_RETCODE SCIPreadLp(
    }
    SCIPfreeBlockMemoryArray(scip, &lpinput.tokenbuf, LP_MAX_LINELEN);
    SCIPfreeBlockMemoryArray(scip, &lpinput.token, LP_MAX_LINELEN);
+   SCIPfreeBlockMemoryArray(scip, &lpinput.linebuf, lpinput.linebufsize);
 
    if( retcode == SCIP_PLUGINNOTFOUND )
       retcode = SCIP_READERROR;
@@ -3550,6 +3537,7 @@ SCIP_RETCODE SCIPwriteLp(
 
    SCIP_VAR** aggvars;
    SCIP_VAR** tmpvars;
+   int tmpvarssize;
    int naggvars = 0;
    int saggvars;
    SCIP_HASHTABLE* varAggregated;
@@ -3712,7 +3700,8 @@ SCIP_RETCODE SCIPwriteLp(
    SCIP_CALL( SCIPallocBufferArray(scip, &consExpr, nconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &consIndicator, nconss) );
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &tmpvars, SCIPgetNTotalVars(scip)) );
+   tmpvarssize = SCIPgetNTotalVars(scip);
+   SCIP_CALL( SCIPallocBufferArray(scip, &tmpvars, tmpvarssize) );
 
    for( c = 0; c < nconss; ++c )
    {
@@ -3966,7 +3955,12 @@ SCIP_RETCODE SCIPwriteLp(
       /* get variables of the nonlinear constraint */
       SCIP_CALL( SCIPgetConsNVars(scip, consExpr[c], &ntmpvars, &success) );
       assert(success);
-      SCIP_CALL( SCIPgetConsVars(scip, consExpr[c], tmpvars, SCIPgetNTotalVars(scip), &success) );
+      if( ntmpvars > tmpvarssize )
+      {
+         tmpvarssize = SCIPcalcMemGrowSize(scip, ntmpvars);
+         SCIP_CALL( SCIPreallocBufferArray(scip, &tmpvars, tmpvarssize) );
+      }
+      SCIP_CALL( SCIPgetConsVars(scip, consExpr[c], tmpvars, tmpvarssize, &success) );
       assert(success);
 
       SCIP_CALL( collectAggregatedVars(scip, tmpvars, ntmpvars, &aggvars, &naggvars, &saggvars, varAggregated) );

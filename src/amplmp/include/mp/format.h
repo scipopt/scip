@@ -456,6 +456,14 @@ class BasicStringRef {
     return std::basic_string<Char>(data_, size_);
   }
 
+  /**
+    \rst
+    Automatically converts a string reference to an ``std::string`` object.
+    \endrst
+   */
+  operator std::basic_string<Char>() const {
+    return std::basic_string<Char>(data_, size_);
+  }
   /** Returns a pointer to the string data. */
   const Char *data() const { return data_; }
 

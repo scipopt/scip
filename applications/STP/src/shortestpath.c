@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -185,7 +185,7 @@ void computeSteinerTree_connectNode(
    const int*            nodes_pred,         /**< predecessor array (on vertices) */
    SCIP_Real* RESTRICT   nodes_dist,         /**< distance array (on vertices) */
    DHEAP*                dheap,              /**< Dijkstra heap */
-   int*                  termscount,
+   int*                  termscount,         /**< pointer for terminal count */
    STP_Bool* RESTRICT    connected           /**< array to mark whether a vertex is part of computed Steiner tree */
 )
 {
@@ -407,7 +407,7 @@ void computeSteinerTree_execDirected(
 static inline
 void computeSteinerTree_execBiased(
    const GRAPH*          g,                  /**< graph data structure */
-   const SDPROFIT*       sdprofit,
+   const SDPROFIT*       sdprofit,           /**< implied profit data structure */
    int                   startnode,          /**< start vertex */
    SPATHS*               spaths              /**< shortest paths data */
 )
@@ -1080,7 +1080,7 @@ void shortestpath_computeSteinerTreeDirected(
 /** shortest path based heuristic for computing a Steiner tree  */
 void shortestpath_computeSteinerTreeBiased(
    const GRAPH*          g,                  /**< graph data structure */
-   const SDPROFIT*       sdprofit,
+   const SDPROFIT*       sdprofit,           /**< implied profit data structure */
    int                   startnode,          /**< start vertex */
    SPATHS*               spaths              /**< shortest paths data */
 )

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -71,6 +71,7 @@
 
 
 #define FZN_BUFFERLEN         65536      /**< size of the line buffer for reading or writing */
+#define FZN_INIT_LINELEN      65536      /**< initial size of the line buffer for reading */
 #define FZN_MAX_PUSHEDTOKENS  1
 
 /*
@@ -165,18 +166,18 @@ struct FznInput
    SCIP_HASHTABLE*       varHashtable;
    SCIP_HASHTABLE*       constantHashtable;
    FZNCONSTANT**         constants;
-   char                  linebuf[FZN_BUFFERLEN+1];
+   char*                 linebuf;
    char*                 token;
    char*                 pushedtokens[FZN_MAX_PUSHEDTOKENS];
    int                   npushedtokens;
    int                   linenumber;
    int                   linepos;
+   int                   linebufsize;
    int                   bufpos;
    int                   nconstants;
    int                   sconstants;
    SCIP_OBJSENSE         objsense;
    SCIP_Bool             hasdot;             /**< if the current token is a number, this bool tells if it contains a dot */
-   SCIP_Bool             endline;            /**< current buffer contains everything until the line ends */
    SCIP_Bool             comment;            /**< current buffer contains everything until a comment starts */
    SCIP_Bool             haserror;           /**< a error was detected during parsing */
    SCIP_Bool             valid;
@@ -426,69 +427,32 @@ SCIP_Bool getNextLine(
 
    assert(fzninput != NULL);
 
-   /* if we previously detected a comment we have to parse the remaining line away if there is something left */
-   if( !fzninput->endline && fzninput->comment )
-   {
-      SCIPdebugMsg(scip, "Throwing rest of comment away.\n");
-
-      do
-      {
-         fzninput->linebuf[FZN_BUFFERLEN-2] = '\0';
-         (void)SCIPfgets(fzninput->linebuf, (int) sizeof(fzninput->linebuf), fzninput->file);
-      }
-      while( fzninput->linebuf[FZN_BUFFERLEN-2] != '\0' );
-
-      fzninput->comment = FALSE;
-      fzninput->endline = TRUE;
-   }
-
    /* clear the line */
-   BMSclearMemoryArray(fzninput->linebuf, FZN_BUFFERLEN);
-   fzninput->linebuf[FZN_BUFFERLEN-2] = '\0';
+   BMSclearMemoryArray(fzninput->linebuf, fzninput->linebufsize);
+   fzninput->linebuf[fzninput->linebufsize - 2] = '\0';
 
-   /* set line position */
-   if( fzninput->endline )
-   {
-      fzninput->linepos = 0;
-      fzninput->linenumber++;
-   }
-   else
-      fzninput->linepos += FZN_BUFFERLEN - 2;
-
-   if( SCIPfgets(fzninput->linebuf, (int) sizeof(fzninput->linebuf), fzninput->file) == NULL )
-      return FALSE;
-
+   fzninput->linepos = 0;
    fzninput->bufpos = 0;
 
-   if( fzninput->linebuf[FZN_BUFFERLEN-2] != '\0' )
-   {
-      char* last;
+   if( SCIPfgets(fzninput->linebuf, fzninput->linebufsize, fzninput->file) == NULL )
+      return FALSE;
 
-      /* buffer is full; erase last token since it might be incomplete */
-      fzninput->endline = FALSE;
-      last = strrchr(fzninput->linebuf, ' ');
+   fzninput->linenumber++;
 
-      if( last == NULL )
-      {
-         SCIPwarningMessage(scip, "we read %d characters from the file; this might indicate a corrupted input file!\n",
-            FZN_BUFFERLEN - 2);
-         fzninput->linebuf[FZN_BUFFERLEN-2] = '\0';
-         SCIPdebugMsg(scip, "the buffer might be corrupted\n");
-      }
-      else
-      {
-         SCIPfseek(fzninput->file, -(long) strlen(last), SEEK_CUR);
-         SCIPdebugMsg(scip, "correct buffer, reread the last %ld characters\n", (long) strlen(last));
-         *last = '\0';
-      }
-   }
-   else
+   if( fzninput->linebuf[fzninput->linebufsize - 2] != '\0' )
    {
-      /* found end of line */
-      fzninput->endline = TRUE;
+      int newsize;
+
+      newsize = SCIPcalcMemGrowSize(scip, fzninput->linebufsize + 1);
+      SCIP_CALL_ABORT( SCIPreallocBlockMemoryArray(scip, &fzninput->linebuf, fzninput->linebufsize, newsize) );
+
+      fzninput->linebuf[newsize-2] = '\0';
+      if ( SCIPfgets(fzninput->linebuf + fzninput->linebufsize - 1, newsize - fzninput->linebufsize + 1, fzninput->file) == NULL )
+         return FALSE;
+      fzninput->linebufsize = newsize;
    }
 
-   fzninput->linebuf[FZN_BUFFERLEN-1] = '\0'; /* we want to use lookahead of one char -> we need two \0 at the end */
+   fzninput->linebuf[fzninput->linebufsize - 1] = '\0'; /* we want to use lookahead of one char -> we need two \0 at the end */
    fzninput->comment = FALSE;
 
    /* skip characters after comment symbol */
@@ -523,7 +487,7 @@ SCIP_Bool getNextToken(
    int tokenlen;
 
    assert(fzninput != NULL);
-   assert(fzninput->bufpos < FZN_BUFFERLEN);
+   assert(fzninput->bufpos < fzninput->linebufsize);
 
    /* if the current line got marked as comment get the next line */
    if( fzninput->comment && !getNextLine(scip, fzninput) )
@@ -553,6 +517,8 @@ SCIP_Bool getNextToken(
             return FALSE;
          }
          assert(fzninput->bufpos == 0);
+         /* update buf, because the linebuffer may have been reallocated */
+         buf = fzninput->linebuf;
       }
       else
       {
@@ -560,7 +526,7 @@ SCIP_Bool getNextToken(
          fzninput->linepos++;
       }
    }
-   assert(fzninput->bufpos < FZN_BUFFERLEN);
+   assert(fzninput->bufpos < fzninput->linebufsize);
    assert(!isDelimChar(buf[fzninput->bufpos]));
 
    hasdot = FALSE;
@@ -581,13 +547,13 @@ SCIP_Bool getNextToken(
       tokenlen = 0;
       do
       {
-         assert(tokenlen < FZN_BUFFERLEN);
+         assert(tokenlen < fzninput->linebufsize);
          assert(!isDelimChar(buf[fzninput->bufpos]));
          fzninput->token[tokenlen] = buf[fzninput->bufpos];
          tokenlen++;
          fzninput->bufpos++;
          fzninput->linepos++;
-         assert(fzninput->bufpos < FZN_BUFFERLEN);
+         assert(fzninput->bufpos < fzninput->linebufsize);
       }
       while( isValueChar(buf[fzninput->bufpos], buf[fzninput->bufpos+1], FALSE, &hasdot, &exptype) );
 
@@ -599,7 +565,7 @@ SCIP_Bool getNextToken(
       tokenlen = 0;
       do
       {
-         assert(tokenlen < FZN_BUFFERLEN);
+         assert(tokenlen < fzninput->linebufsize);
          fzninput->token[tokenlen] = buf[fzninput->bufpos];
          tokenlen++;
          fzninput->bufpos++;
@@ -621,7 +587,7 @@ SCIP_Bool getNextToken(
       while( !isDelimChar(buf[fzninput->bufpos]) && !isTokenChar(buf[fzninput->bufpos]) );
    }
 
-   assert(tokenlen < FZN_BUFFERLEN);
+   assert(tokenlen < fzninput->linebufsize);
    fzninput->token[tokenlen] = '\0';
 
    SCIPdebugMsg(scip, "(line %d) read token: '%s'\n", fzninput->linenumber, fzninput->token);
@@ -4796,7 +4762,9 @@ SCIP_DECL_READERREAD(readerReadFzn)
 
    /* initialize FZN input data */
    fzninput.file = NULL;
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &fzninput.linebuf, FZN_INIT_LINELEN) );
    fzninput.linebuf[0] = '\0';
+   fzninput.linebufsize = FZN_INIT_LINELEN;
    SCIP_CALL( SCIPallocBufferArray(scip, &fzninput.token, FZN_BUFFERLEN) );
    fzninput.token[0] = '\0';
 
@@ -4810,7 +4778,6 @@ SCIP_DECL_READERREAD(readerReadFzn)
    fzninput.bufpos = 0;
    fzninput.linepos = 0;
    fzninput.objsense = SCIP_OBJSENSE_MINIMIZE;
-   fzninput.endline = FALSE;
    fzninput.comment = FALSE;
    fzninput.haserror = FALSE;
    fzninput.valid = TRUE;
@@ -4870,6 +4837,8 @@ SCIP_DECL_READERREAD(readerReadFzn)
       freeConstarray(scip, &(fzninput.constarrays[i]));
    }
    SCIPfreeBlockMemoryArrayNull(scip, &fzninput.constarrays, fzninput.constarrayssize);
+
+   SCIPfreeBlockMemoryArray(scip, &fzninput.linebuf, fzninput.linebufsize);
 
    /* evaluate the result */
    if( fzninput.haserror || ! fzninput.valid )

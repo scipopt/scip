@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -180,7 +180,7 @@ SCIP_Bool computeLeftTangentSin(
 
 /* TODO: fix this, more cases can be considered, see at unit test
  * the underestimating of the tangents depends not only on the ub but also on the lower bound.
- * right now, this function is only checking whether the tangent underestimates independenly of the lower bound!
+ * right now, this function is only checking whether the tangent underestimates independently of the lower bound!
  */
 /** helper function to compute the tangent at upper bound if it is an underestimator
  *
@@ -328,7 +328,12 @@ SCIP_Bool computeLeftSecantSin(
    else
    {
       /* in ascending area, take the midpoint of the possible area in descending part */
-      if( SCIPisLT(scip, sin(lb), 0.0) )
+      /* for lb < 0 but close to zero, we may have sin(lb) = 0 but lbmodpi = pi, which gives a starting point too close to lb
+       * but for sin(lb) around 0 we know that the tangent point needs to be in [lb+pi,lb+pi+pi/2]
+       */
+      if( SCIPisZero(scip, sin(lb)) )
+         startingpoint = lb + 1.25*M_PI;
+      else if( sin(lb) < 0.0 )
          startingpoint = lb + 2.25*M_PI - lbmodpi;
       else
          startingpoint = lb + 1.25*M_PI - lbmodpi;
@@ -410,7 +415,12 @@ SCIP_Bool computeRightSecantSin(
    else
    {
       /* in descending area, take the midpoint of the possible area in ascending part */
-      if( SCIPisLE(scip, sin(ub), 0.0) )
+      /* for ub < 0 but close to zero, we may have sin(ub) = 0 but ubmodpi = pi, which gives a starting point too close to ub
+       * but for sin(ub) around 0 we know that the tangent point needs to be in [ub-(pi+pi/2),ub-pi]
+       */
+      if( SCIPisZero(scip, sin(ub)) )
+         startingpoint = ub - 1.25*M_PI;
+      else if( sin(ub) < 0.0 )
          startingpoint = ub - 1.25*M_PI - ubmodpi;
       else
          startingpoint = ub - M_PI_4 - ubmodpi;
@@ -1444,4 +1454,26 @@ SCIP_RETCODE SCIPcreateExprCos(
             ownercreatedata) );
 
    return SCIP_OKAY;
+}
+
+/** indicates whether expression is of sine-type */  /*lint -e{715}*/
+SCIP_Bool SCIPisExprSin(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{  /*lint --e{715}*/
+   assert(expr != NULL);
+
+   return strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), SINEXPRHDLR_NAME) == 0;
+}
+
+/** indicates whether expression is of cosine-type */  /*lint -e{715}*/
+SCIP_Bool SCIPisExprCos(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{  /*lint --e{715}*/
+   assert(expr != NULL);
+
+   return strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), COSEXPRHDLR_NAME) == 0;
 }

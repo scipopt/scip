@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -332,7 +332,7 @@ char* strlower(
 static
 SCIP_RETCODE check_inputgraph(
    SCIP*                 scip,               /**< SCIP data structure */
-   int                   nterms,
+   int                   nterms,             /**< number of terminals */
    GRAPH*                graph               /**< graph */
 )
 {

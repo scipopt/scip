@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -29,13 +29,26 @@
 extern "C" {
 #endif
 
-/** creates the handler for erf expressions and includes it into SCIP */
-SCIP_EXPORT
-SCIP_RETCODE SCIPincludeExprhdlrErf(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
+/** @{
+ *
+ * @name Gaussian error function expression
+ *
+ * This expression handler provides the Gaussian error function, that is
+ *
+ * \f[
+ *   x \mapsto \frac{2}{\sqrt{\pi}}\int_0^x \exp(-t^2) dt.
+ * \f]
+ *
+ * @attention The implementation of this expression handler is incomplete.
+ * It is not usable for most use cases so far.
+ * @{
+ */
 
-/** creates an erf expression */
+/** creates an erf expression
+ *
+ * @attention The implementation of `erf` expressions is incomplete.
+ * They are not usable for most use cases so far.
+ */
 SCIP_EXPORT
 SCIP_RETCODE SCIPcreateExprErf(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -43,6 +56,27 @@ SCIP_RETCODE SCIPcreateExprErf(
    SCIP_EXPR*            child,              /**< child expression */
    SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
    void*                 ownercreatedata     /**< data to pass to ownercreate */
+   );
+
+/** indicates whether expression is of erf-type */
+SCIP_EXPORT
+SCIP_Bool SCIPisExprErf(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr                /**< expression */
+   );
+
+/** @}
+  * @}
+  */
+
+/** creates the handler for erf expressions and includes it into SCIP
+ *
+ * @attention The implementation of this expression handler is incomplete.
+ * It is not usable for most use cases so far.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPincludeExprhdlrErf(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 #ifdef __cplusplus

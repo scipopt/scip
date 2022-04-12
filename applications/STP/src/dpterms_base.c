@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -37,6 +37,7 @@
 
 // todo more or less random values, tune them!
 #define PROMISING_FULL_MAXNTERMS              20
+#define PROMISING_FULL_MAXNTERMS_LARGE        15
 #define PROMISING_PARTLY_MAXDENSITY          2.2
 #define PROMISING_PARTLY_SMALL_MAXNTERMS      45
 #define PROMISING_PARTLY_SMALL_MINNEDGES    1100
@@ -44,6 +45,8 @@
 #define PROMISING_PARTLY_MEDIUM_MINNEDGES   1500
 #define PROMISING_PARTLY_LARGE_MAXNTERMS      65
 #define PROMISING_PARTLY_LARGE_MINNEDGES    3000
+#define PROMISING_FULL_LARGE_MINNEDGES    100000
+#define PROMISING_FULL_MAXAVGDEG             5.0
 
 
 /*
@@ -546,6 +549,16 @@ SCIP_Bool dpterms_isPromisingPartly(
    return FALSE;
 }
 
+
+/** is DP embarrassingly promising? */
+SCIP_Bool dpterms_isPromisingEmbarrassingly(
+   const GRAPH*          graph               /**< graph */
+)
+{
+   return ( graph->terms <= 3 );
+}
+
+
 /** is DP fully promising? */
 SCIP_Bool dpterms_isPromisingFully(
    const GRAPH*          graph               /**< graph */
@@ -553,8 +566,18 @@ SCIP_Bool dpterms_isPromisingFully(
 {
    assert(graph);
 
-   if( graph->terms <= PROMISING_FULL_MAXNTERMS )
+   if( graph->terms <= PROMISING_FULL_MAXNTERMS_LARGE )
       return TRUE;
+
+   if( graph->terms <= PROMISING_FULL_MAXNTERMS )
+   {
+      int nedges;
+      int nnodes;
+      graph_get_nVET(graph, &nnodes, &nedges, NULL);
+
+      if( nedges < PROMISING_FULL_LARGE_MINNEDGES && LT((SCIP_Real) nedges / (SCIP_Real) nnodes, PROMISING_FULL_MAXAVGDEG) )
+         return TRUE;
+   }
 
    return FALSE;
 }

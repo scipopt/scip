@@ -355,6 +355,26 @@ SECTION: General Questions about SCIP
         or by compiling bliss differently, i.e. without GMP support.
     </p>
 
+    QUESTION: How can I run SCIP in parallel?
+    LABEL:howtorunscipinparallel
+    ANSWER:
+    <p>
+       SCIP itself is mostly a sequential solver and does not feature internal parallelism, e.g., to process branch-and-bound nodes in parallel.
+       However, there are two ways to make use of parallel hardware:
+        <ul>
+            <li>First, using the command <code>concurrentopt</code> in the
+            interactive shell or the method <code>SCIPsolveConcurrent()</code>
+            one can spawn multiple solves in parallel, which exchange bound
+            changes and primal solutions and will terminate as soon as the
+            fastest solver terminates. For this to work, SCIP must be built with
+            the TPI option.</li>
+            <li>Second, one can use the external UG framework for shared-memory
+            and distributed-memory parallelization of the tree search.  See the
+            <a href="http://ug.zib.de"></a> UG web page</a> for further
+            details.</li>
+        </ul>
+    </p>
+
 SECTION: Using SCIP as a standalone solver
 
     QUESTION: The output is too wide for my terminal window. What can I do?
