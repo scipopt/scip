@@ -109,8 +109,9 @@ SCIP_Bool SCIPlapackIsAvailable(void)
 
 #ifdef SCIP_WITH_LAPACK
    return TRUE;
-#endif
+#else
    return FALSE;
+#endif
 }
 
 #ifdef SCIP_WITH_LAPACK
