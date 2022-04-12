@@ -41,13 +41,13 @@
 /*lint --e{788,818}*/
 
 
+#ifdef SCIP_WITH_LAPACK
 /* we use 64 bit integers as the base type */
 typedef int64_t LAPACKINTTYPE;
 
 /** transforms a SCIP_Real (that should be integer, but might be off by some numerical error) to an integer by adding 0.5 and rounding down */
 #define SCIP_RealTOINT(x) ((LAPACKINTTYPE) (x + 0.5))
 
-#ifdef SCIP_WITH_LAPACK
 /*
  * BLAS/LAPACK Calls
  */
@@ -164,9 +164,9 @@ int convertToInt(
 
 /** returns whether Lapack s available, i.e., whether it has been linked in */
 void SCIPlapackVersion(
-   int*                  major,              /**< major version number */
-   int*                  minor,              /**< minor version number */
-   int*                  patch               /**< patch version number */
+   int*                  majorver,           /**< major version number */
+   int*                  minorver,           /**< minor version number */
+   int*                  patchver            /**< patch version number */
    )
 {
 #ifdef SCIP_WITH_LAPACK
@@ -175,20 +175,20 @@ void SCIPlapackVersion(
    LAPACKINTTYPE PATCH = 0LL;
 #endif
 
-   assert( major != NULL );
-   assert( minor != NULL );
-   assert( patch != NULL );
+   assert( majorver != NULL );
+   assert( minorver != NULL );
+   assert( patchver != NULL );
 
 #ifdef SCIP_WITH_LAPACK
    F77_FUNC(ilaver, ILAVER)(&MAJOR, &MINOR, &PATCH);
 
-   *major = convertToInt(MAJOR);
-   *minor = convertToInt(MINOR);
-   *patch = convertToInt(PATCH);
+   *majorver = convertToInt(MAJOR);
+   *minorver = convertToInt(MINOR);
+   *patchver = convertToInt(PATCH);
 #else
-   *major = -1;
-   *minor = -1;
-   *patch = -1;
+   *majorver = -1;
+   *minorver = -1;
+   *patchver = -1;
 #endif
 }
 
