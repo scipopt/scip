@@ -6,6 +6,9 @@
 Features
 --------
 
+- Can now build with Lapack (used for solving nonlinear problems). If IPOPT is used, then Lapack is accessed through it.
+  There	is an interface to Lapack in lapack_calls.
+
 Performance improvements
 ------------------------
 
@@ -60,7 +63,11 @@ Build system
 
 ### Cmake
 
+- New flag -DLAPACK=on for linking with Lapack (must be available in the system)
+
 ### Makefile
+
+- New flag LAPACK for linking with Lapack (must be available in the system)
 
 Fixed bugs
 ----------
