@@ -56,10 +56,19 @@ typedef long long int LAPACKINTTYPE;
 
 /** Define to a macro mangling the given C identifier (in lower and upper
  *  case), which must not contain underscores, for linking with Fortran. */
-#define F77_FUNC(name,NAME) name ## _
+#ifdef FNAME_LCASE_DECOR
+# define F77_FUNC(name,NAME) name ## _
+#endif
+#ifdef FNAME_UCASE_DECOR
+# define F77_FUNC(name,NAME) NAME ## _
+#endif
+#ifdef FNAME_LCASE_NODECOR
+# define F77_FUNC(name,NAME) name
+#endif
+#ifdef FNAME_UCASE_NODECOR
+# define F77_FUNC(name,NAME) NAME
+#endif
 
-/** As F77_FUNC, but for C identifiers containing underscores. */
-#define F77_FUNC_(name,NAME) name ## _
 
 /** LAPACK Fortran subroutine DSYEVR */
 void F77_FUNC(dsyevr, DSYEVR)(char* JOBZ, char* RANGE, char* UPLO,
