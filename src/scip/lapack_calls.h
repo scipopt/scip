@@ -35,6 +35,14 @@ extern "C" {
 SCIP_EXPORT
 SCIP_Bool SCIPlapackIsAvailable(void);
 
+/** returns whether Lapack s available, i.e., whether it has been linked in */
+SCIP_EXPORT
+void SCIPlapackVersion(
+   int*                  major,              /**< major version number */
+   int*                  minor,              /**< minor version number */
+   int*                  patch               /**< patch version number */
+   );
+
 /** computes eigenvalues and eigenvectors of a dense symmetric matrix
  *
  *  Calls Lapack's DSYEV function.

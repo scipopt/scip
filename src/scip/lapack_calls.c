@@ -80,6 +80,9 @@ void F77_FUNC(dgetrs, DGETRS)(char* TRANS, LAPACKINTTYPE* N, LAPACKINTTYPE* NRHS
    SCIP_Real* A, LAPACKINTTYPE* LDA, LAPACKINTTYPE* IPIV, SCIP_Real* B, LAPACKINTTYPE* LDB,
    LAPACKINTTYPE* INFO);
 
+/** LAPACK Fortran subroutine ivlayer */
+void F77_FUNC(ilaver, ILAVER)(LAPACKINTTYPE* MAJOR, LAPACKINTTYPE* MINOR, LAPACKINTTYPE* PATCH);
+
 /**@} */
 
 /*
@@ -140,7 +143,37 @@ int convertToInt(
    }
    return *((int*)&num + 4);
 }
+#endif
 
+/** returns whether Lapack s available, i.e., whether it has been linked in */
+void SCIPlapackVersion(
+   int*                  major,              /**< major version number */
+   int*                  minor,              /**< minor version number */
+   int*                  patch               /**< patch version number */
+   )
+{
+   LAPACKINTTYPE MAJOR;
+   LAPACKINTTYPE MINOR;
+   LAPACKINTTYPE PATCH;
+
+   assert( major != NULL );
+   assert( minor != NULL );
+   assert( patch != NULL );
+
+#ifdef SCIP_WITH_LAPACK
+   F77_FUNC(ilaver, ILAVER)(&MAJOR, &MINOR, &PATCH);
+
+   *major = convertToInt(MAJOR);
+   *minor = convertToInt(MINOR);
+   *patch = convertToInt(PATCH);
+#else
+   *major = -1;
+   *minor = -1;
+   *patch = -1;
+#endif
+}
+
+#ifdef SCIP_WITH_LAPACK
 /** computes eigenvalues of a symmetric matrix using LAPACK */
 static
 SCIP_RETCODE lapackComputeEigenvalues(
