@@ -587,7 +587,7 @@ LAPACK		=	false
 endif
 
 ifeq ($(LAPACK),true)
-FLAGS		+=	-DSCIP_HAVE_LAPACK
+FLAGS		+=	-DSCIP_WITH_LAPACK
 LDFLAGS		+= 	$(LINKCXX_l)lapack$(LINKLIBSUFFIX)
 endif
 

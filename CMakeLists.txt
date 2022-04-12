@@ -542,11 +542,11 @@ if(LAPACK)
     message(STATUS "Finding LAPACK")
     find_package(LAPACK REQUIRED)
     message(STATUS "Finding LAPACK - found")
-    set(SCIP_HAVE_LAPACK on)
+    set(SCIP_WITH_LAPACK on)
 else()
     message(STATUS "Support LAPACK: OFF")
     set(LAPACK_LIBRARIES "")
-    set(SCIP_HAVE_LAPACK off)
+    set(SCIP_WITH_LAPACK off)
 endif()
 
 # WORHP

@@ -95,13 +95,13 @@ SCIP_Bool SCIPlapackIsAvailable(void)
    if ( SCIPisIpoptAvailableIpopt() )
       return TRUE;
 
-#ifdef SCIP_HAVE_LAPACK
+#ifdef SCIP_WITH_LAPACK
    return TRUE;
 #endif
    return FALSE;
 }
 
-#ifdef SCIP_HAVE_LAPACK
+#ifdef SCIP_WITH_LAPACK
 /** converts a number stored in a long long int to an int, depending on big- or little endian machines
  *
  *  We assume that the number actually fits into an int. Thus, if more bits are used, we assume that the number is
@@ -298,7 +298,7 @@ SCIP_RETCODE SCIPlapackComputeEigenvalues(
    else
    {
       assert( bufmem != NULL );
-#ifdef SCIP_HAVE_LAPACK
+#ifdef SCIP_WITH_LAPACK
       SCIP_CALL( lapackComputeEigenvalues(bufmem, geteigenvectors, N, a, w) );
 #else
       SCIPerrorMessage("Lapack not available.\n");
@@ -338,7 +338,7 @@ SCIP_RETCODE SCIPlapackSolveLinearEquations(
    }
    else
    {
-#ifdef SCIP_HAVE_LAPACK
+#ifdef SCIP_WITH_LAPACK
       LAPACKINTTYPE INFO;
       LAPACKINTTYPE N;
       LAPACKINTTYPE* pivots;
