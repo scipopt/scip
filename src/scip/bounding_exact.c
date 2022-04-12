@@ -2048,8 +2048,6 @@ SCIP_RETCODE boundShift(
 
    SCIPdebugMessage("calling proved bound for %s LP\n", usefarkas ? "infeasible" : "feasible");
 
-   /** @todo exip: actually we only need to link the rows and cols in the exact lp. So possible performance improvement if we don't
-    * flush it to the lpiexact */
    SCIP_CALL( SCIPsepastoreExactSyncLPs(set->scip->sepastoreexact, blkmem, set, stat, lpexact, prob, eventqueue) );
    SCIP_CALL( SCIPlpExactLink(lpexact, blkmem, set, eventqueue) );
 

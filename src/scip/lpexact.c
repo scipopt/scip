@@ -2677,6 +2677,8 @@ SCIP_RETCODE SCIPlpExactDelRowset(
    /* delete rows in LP solver */
    SCIP_CALL( SCIPlpiExactDelRowset(lp->lpiexact, rowdstat) );
 
+
+   /* set the correct status for rows that never made it to the lpi (this is special for the exact lp) */
    c = lp->nlpirows - 1;
    while( rowdstat[c] == -1 )
    {
@@ -2711,6 +2713,7 @@ SCIP_RETCODE SCIPlpExactDelRowset(
          rowExactUpdateDelLP(row, set);
          row->lpdepth = -1;
 
+         /* only release lpirows if they actually exist */
          if( r < nlpirows )
          {
             assert(row == lp->lpirows[r]);
@@ -2728,6 +2731,8 @@ SCIP_RETCODE SCIPlpExactDelRowset(
          assert(lp->rows[rowdstat[r]] == NULL);
          assert(lp->lpirows[rowdstat[r]] == NULL);
          lp->rows[rowdstat[r]] = row;
+
+         /* only re-order lpirows if they actually exist */
          if( r < nlpirows )
          {
             lp->lpirows[rowdstat[r]] = row;
@@ -3729,9 +3734,11 @@ SCIP_RETCODE SCIPlpExactLink(
       lp->flushdeletedrows = FALSE;
       lp->flushaddedrows = FALSE;
 
+      /* we still flush added/deleted columns since this should only happen at the very start of the solve */
       SCIP_CALL( lpExactFlushDelCols(lp) );
       SCIP_CALL( lpExactFlushAddCols(lp, blkmem, set, eventqueue) );
 
+      /* link new columns/rows */
       for( pos = 0, c = lp->nlpicols; c < lp->ncols; ++pos, ++c )
       {
          col = lp->cols[c];
