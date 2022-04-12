@@ -35,7 +35,7 @@ extern "C" {
 SCIP_EXPORT
 SCIP_Bool SCIPlapackIsAvailable(void);
 
-/** returns whether Lapack s available, i.e., whether it has been linked in */
+/** returns Lapack version if Lapack is available */
 SCIP_EXPORT
 void SCIPlapackVersion(
    int*                  major,              /**< major version number */
