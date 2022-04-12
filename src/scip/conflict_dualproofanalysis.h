@@ -13,10 +13,15 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   conflict.h
- * @ingroup INTERNALAPI
+/**@file   conflict_dualproofanalysis.h
+ * @ingroup OTHER_CFILES
  * @brief  internal methods for dual proof conflict analysis
  * @author Tobias Achterberg
+ * @author Timo Berthold
+ * @author Stefan Heinz
+ * @author Marc Pfetsch
+ * @author Michael Winkler
+ * @author Jakob Witzig
  *
  * In dual proof analysis, an infeasible LP relaxation is analysed.
  * Using the dual solution, a valid constraint is derived that is violated

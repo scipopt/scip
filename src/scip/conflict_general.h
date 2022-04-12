@@ -13,10 +13,25 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   conflict.h
- * @ingroup INTERNALAPI
- * @brief  internal methods for conflict analysis
+/**@file   conflict_general.h
+ * @ingroup OTHER_CFILES
+ * @brief  methods and datastructures for conflict analysis
  * @author Tobias Achterberg
+ * @author Timo Berthold
+ * @author Stefan Heinz
+ * @author Marc Pfetsch
+ * @author Michael Winkler
+ * @author Jakob Witzig
+ *
+ * SCIP contains two kinds of conflict analysis:
+ *    - In graph based conflict analysis, the graph consisting of derived
+ *      is analysed. Code and documentation is available in conflict_graphanalysis.h
+ *    - In dual proof analysis, an infeasible LP relaxation is analysed.
+ *      Using the dual solution, a valid constraint is derived that is violated
+ *      by all values in the domain. This constraint is added to the problem
+ *      and can then be used for domain propagation.
+ *      Code is available in conflict_dualproofanalysis.h
+ * This file contains the methods that are shared by both kinds of conflict analysis.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

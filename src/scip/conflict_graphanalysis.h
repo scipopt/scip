@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   conflict_graphanalysis.c
+/**@file   conflict_graphanalysis.h
  * @ingroup OTHER_CFILES
  * @brief  methods and datastructures for conflict analysis
  * @author Tobias Achterberg
