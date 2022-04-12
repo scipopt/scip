@@ -43,31 +43,40 @@
  *
  * See the web site of <a href="http://scipopt.org">\SCIP</a> for more information about licensing and to download \SCIP.
  *
- *  <b>If you are new to SCIP and don't know where to start you should have a look at the
- *  @subpage GETTINGSTARTED "Getting started"
- *  page.</b>
+ *  <b style="color: red">If you are new to SCIP and don't know where to start you should have a look at the
+ *  @ref GETTINGSTARTED "first steps walkthrough"
+ *  .</b>
  *
  * @section TABLEOFCONTENTS Structure of this manual
  *
  * This manual gives an accessible introduction to the functionality of the SCIP code in the following chapters
  *
- *  - @subpage EXAMPLES            Coding examples in C and C++ in the source code distribution
- *  - @subpage APPLICATIONS        Extensions of SCIP for specific applications
- *  - @subpage PARAMETERS          List of all SCIP parameters
- *  - @subpage PROGRAMMING         Important programming concepts for working with(in) SCIP.
- *  - @subpage HOWTOADD            Detailed guides for adding user plugins
- *  - @subpage HOWTOUSESECTION     Detailed guides for advanced SCIP topics
+ * Setup and news
+ *  - @subpage INSTALL             Installation
  *  - @subpage FAQ                 Frequently asked questions (FAQ)
  *  - @subpage CHG                 Release notes and changelog
- *  - @subpage AUTHORS             SCIP Authors
- *  - @subpage EXTERNALDOC         Links to external documentation
- *  - @subpage LICENSE             License
- *  - @subpage INSTALL             Installation
- *  - @subpage SHELL               Tutorial: the interactive shell
- *  - @subpage FILEREADERS         Readable file formats
- *  - @subpage INTERFACES          Interfaces
+ *
+ * Tutorials and guides
+ *  - @subpage GETTINGSTARTED      First steps walkthrough
+ *  - @subpage SHELL               The interactive shell
+ *  - @subpage PROGRAMMING         Important programming concepts for working with(in) SCIP.
  *  - @subpage START               How to start a new project
  *  - @subpage DOC                 How to search the documentation for interface methods
+ *  - @subpage HOWTOADD            Detailed guides for adding user plugins
+ *  - @subpage HOWTOUSESECTION     Detailed guides for advanced SCIP topics
+ *
+ * Examples and applications
+ *  - @subpage EXAMPLES            Coding examples in C and C++ in the source code distribution
+ *  - @subpage APPLICATIONS        Extensions of SCIP for specific applications
+ *
+ * References
+ *  - @subpage WHATPROBLEMS        Supported types of optimization problems
+ *  - @subpage FILEREADERS         Readable file formats
+ *  - @subpage INTERFACES          Interfaces
+ *  - @subpage PARAMETERS          List of all SCIP parameters
+ *  - @subpage AUTHORS             SCIP Authors
+ *  - @subpage LICENSE             License
+ *  - @subpage EXTERNALDOC         Links to external documentation
  *
  *
  * @section QUICKSTART Quickstart
@@ -160,7 +169,7 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-/**@page GETTINGSTARTED Getting started
+/**@page GETTINGSTARTED First Steps Walkthrough
  *
  * @section GETTINGSTARTED_BLACKBOX Use SCIP to solve a problem
  *
