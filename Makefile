@@ -727,7 +727,9 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/clock.o \
 			scip/concsolver.o \
 			scip/concurrent.o \
-			scip/conflict.o \
+			scip/conflict_general.o \
+			scip/conflict_graphanalysis.o \
+			scip/conflict_dualproofanalysis.o \
 			scip/conflictstore.o \
 			scip/cons.o \
 			scip/cutpool.o \
