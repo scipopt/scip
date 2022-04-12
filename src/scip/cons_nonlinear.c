@@ -12161,7 +12161,7 @@ SCIP_RETCODE SCIPcomputeFacetVertexPolyhedralNonlinear(
          *success = FALSE;
       }
    }
-   else if( nvars == 2 )
+   else if( nvars == 2 && SCIPlapackIsAvailable() )
    {
       int idx1 = nonfixedpos[0];
       int idx2 = nonfixedpos[1];
