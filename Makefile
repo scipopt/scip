@@ -1376,9 +1376,6 @@ endif
 ifneq ($(AMPL),$(LAST_AMPL))
 		@-touch $(AMPLSRC)
 endif
-ifneq ($(IPOPT),$(LAST_IPOPT))
-		@-touch -c $(LAPACKSRC)
-endif
 ifneq ($(SYM),$(LAST_SYM))
 		@-touch $(SYMSRC)
 endif
