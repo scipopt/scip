@@ -16,11 +16,7 @@
 /**@file   conflict_dualproofanalysis.c
  * @ingroup OTHER_CFILES
  * @brief  internal methods for dual proof conflict analysis
- * @author Tobias Achterberg
  * @author Timo Berthold
- * @author Stefan Heinz
- * @author Marc Pfetsch
- * @author Michael Winkler
  * @author Jakob Witzig
  *
  * In dual proof analysis, an infeasible LP relaxation is analysed.
