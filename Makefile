@@ -386,7 +386,7 @@ AMPLSRC	:=	$(shell cat $(AMPLDEP))
 THREADSAFEDEP	:=	$(SRCDIR)/depend.threadsafe
 THREADSAFESRC	:=	$(shell cat $(THREADSAFEDEP))
 
-LAPACKSRC	:=	$(SRCDIR)/scip/lapack_calls.c
+LAPACKSRC	:=	$(SRCDIR)/scip/lapack_calls.c $(SRCDIR)/scip/scip_general.c
 
 ifeq ($(ZIMPL),true)
 ifeq ($(GMP),false)
