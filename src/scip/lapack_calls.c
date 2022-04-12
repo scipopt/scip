@@ -57,16 +57,21 @@ typedef int64_t LAPACKINTTYPE;
 /** Define to a macro mangling the given C identifier (in lower and upper
  *  case), which must not contain underscores, for linking with Fortran. */
 #ifdef FNAME_LCASE_DECOR
-# define F77_FUNC(name,NAME) name ## _
+#define F77_FUNC(name,NAME) name ## _
 #endif
 #ifdef FNAME_UCASE_DECOR
-# define F77_FUNC(name,NAME) NAME ## _
+#define F77_FUNC(name,NAME) NAME ## _
 #endif
 #ifdef FNAME_LCASE_NODECOR
-# define F77_FUNC(name,NAME) name
+#define F77_FUNC(name,NAME) name
 #endif
 #ifdef FNAME_UCASE_NODECOR
-# define F77_FUNC(name,NAME) NAME
+#define F77_FUNC(name,NAME) NAME
+#endif
+
+/* use backup ... */
+#ifndef F77_FUNC
+#define F77_FUNC(name,NAME) name ## _
 #endif
 
 
