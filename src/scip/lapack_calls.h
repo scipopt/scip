@@ -31,7 +31,7 @@
 extern "C" {
 #endif
 
-/** returns whether Lapack s available, i.e., whether it has been linked in */
+/** returns whether Lapack is available, i.e., whether it has been linked in */
 SCIP_EXPORT
 SCIP_Bool SCIPlapackIsAvailable(void);
 
