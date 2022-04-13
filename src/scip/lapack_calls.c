@@ -276,7 +276,7 @@ SCIP_RETCODE lapackComputeEigenvalues(
    SCIP_ALLOC( BMSallocBufferMemoryArray(bufmem, &ISUPPZ, 2) ); /*lint !e506*/
    if ( geteigenvectors )
    {
-      SCIP_ALLOC( BMSallocBufferMemoryArray(bufmem, &Z, n * n) );
+      SCIP_ALLOC( BMSallocBufferMemoryArray(bufmem, &Z, n * n) ); /*lint !e647*/
    }
 
    /* call the function */
@@ -394,18 +394,18 @@ SCIP_RETCODE SCIPlapackSolveLinearEquations(
       LAPACKINTTYPE INFO;
       LAPACKINTTYPE N;
       LAPACKINTTYPE* pivots;
-      SCIP_Real* Acopy = NULL;
-      SCIP_Real* bcopy = NULL;
+      SCIP_Real* Atmp = NULL;
+      SCIP_Real* btmp = NULL;
 
       assert( bufmem != NULL );
 
-      SCIP_ALLOC( BMSduplicateBufferMemoryArray(bufmem, &Acopy, A, n * n) );
-      SCIP_ALLOC( BMSduplicateBufferMemoryArray(bufmem, &bcopy, b, n) );
+      SCIP_ALLOC( BMSduplicateBufferMemoryArray(bufmem, &Atmp, A, n * n) ); /*lint !e647*/
+      SCIP_ALLOC( BMSduplicateBufferMemoryArray(bufmem, &btmp, b, n) );
       SCIP_ALLOC( BMSallocBufferMemoryArray(bufmem, &pivots, n) );
 
       /* compute LU factorization */
       N = n;
-      F77_FUNC(dgetrf, DGETRF)(&N, &N, Acopy, &N, pivots, &INFO);
+      F77_FUNC(dgetrf, DGETRF)(&N, &N, Atmp, &N, pivots, &INFO);
 
       if ( convertToInt(INFO) != 0 )
       {
@@ -418,7 +418,7 @@ SCIP_RETCODE SCIPlapackSolveLinearEquations(
          char TRANS = 'N';
 
          /* solve system */
-         F77_FUNC(dgetrs, DGETRS)(&TRANS, &N, &NRHS, Acopy, &N, pivots, bcopy, &N, &INFO);
+         F77_FUNC(dgetrs, DGETRS)(&TRANS, &N, &NRHS, Atmp, &N, pivots, btmp, &N, &INFO);
 
          if ( convertToInt(INFO) != 0 )
          {
@@ -429,14 +429,15 @@ SCIP_RETCODE SCIPlapackSolveLinearEquations(
             *success = TRUE;
 
          /* copy the solution */
-         BMScopyMemoryArray(x, bcopy, n);
+         BMScopyMemoryArray(x, btmp, n);
       }
 
       BMSfreeBufferMemoryArray(bufmem, &pivots);
-      BMSfreeBufferMemoryArray(bufmem, &bcopy);
-      BMSfreeBufferMemoryArray(bufmem, &Acopy);
+      BMSfreeBufferMemoryArray(bufmem, &btmp);
+      BMSfreeBufferMemoryArray(bufmem, &Atmp);
 #else
       SCIP_UNUSED(bufmem);
+
       /* call fallback solution in nlpi_ipopt_dummy */
       SCIP_CALL( SCIPsolveLinearEquationsIpopt(n, A, b, x, success) );
 #endif
