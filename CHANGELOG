@@ -32,6 +32,14 @@ Interface changes
 
 ### New API functions
 
+- new functions for interfacing with Lapack:
+  SCIPlapackIsAvailable(), SCIPlapackIsAvailable(),
+  SCIPlapackComputeEigenvalues(), and SCIPlapackSolveLinearEquations
+
+  These functions should be used instead of SCIPisIpoptAvailableIpopt(), SCIPcallLapackDsyevIpopt(), and
+  SCIPsolveLinearEquationsIpopt() in the context of computing eigenvalues or solving linear equations. If IPOPT is available,
+  the calls will be passed on.
+
 ### Command line interface
 
 - Added optional parameter -i when calling SCIP in AMPL-mode (-AMPL parameter).
