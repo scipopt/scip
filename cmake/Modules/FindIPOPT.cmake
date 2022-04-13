@@ -43,8 +43,6 @@ if(NOT WIN32)
     set(IPOPT_DIR_TEST $ENV{IPOPT_DIR})
     if(DEFINED ENV{IPOPT_DIR})
       set(IPOPT_DIR $ENV{IPOPT_DIR} CACHE PATH "Path to IPOPT build directory")
-    else()
-      set(IPOPT_DIR /usr            CACHE PATH "Path to IPOPT build directory")
     endif()
   endif()
 
@@ -72,22 +70,23 @@ if(NOT WIN32)
   # if no package config or it found a version too old (<= 3.12)
   # then try to find the package manually using IPOPT_DIR
 
-    find_file(IPOPT_DEP_FILE ipopt_addlibs_cpp.txt ${IPOPT_DIR}/share/doc/coin-or/Ipopt
-                                                   ${IPOPT_DIR}/share/coin-or/doc/Ipopt
-                                                   ${IPOPT_DIR}/share/doc/coin/Ipopt
-                                                   ${IPOPT_DIR}/share/coin/doc/Ipopt
-                                                   NO_DEFAULT_PATH)
+    find_file(IPOPT_DEP_FILE
+        NAMES ipopt_addlibs_cpp.txt
+        HINTS ${IPOPT_DIR} /usr /opt/homebrew
+        PATH_SUFFIXES share/doc/coin-or/Ipopt share/coin-or/doc/Ipopt share/doc/coin/Ipopt share/coin/doc/Ipopt
+        )
 
     find_path(IPOPT_INCLUDE_DIRS
         NAMES IpoptConfig.h
-        HINTS ${IPOPT_DIR}/include
-        PATH_SUFFIXES coin coin-or
-        PATHS ${IPOPT_DIR})
+        HINTS ${IPOPT_DIR} /usr /opt/homebrew
+        PATH_SUFFIXES include/coin include/coin-or
+        )
 
-    find_library(IPOPT_LIBRARIES ipopt ${IPOPT_DIR}/lib
-                                     ${IPOPT_DIR}/lib/coin
-                                     ${IPOPT_DIR}/lib/coin-or
-                                     NO_DEFAULT_PATH)
+    find_library(IPOPT_LIBRARIES
+        NAMES ipopt
+        HINTS ${IPOPT_DIR} /usr /opt/homebrew
+        PATH_SUFFIXES lib lib/coin lib/coin-or
+        )
 
     if(IPOPT_LIBRARIES)
       if(IPOPT_DEP_FILE)
