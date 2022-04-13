@@ -132,33 +132,39 @@ int convertToInt(
    int64_t               num                 /**< number to be converted */
    )
 {
-   int64_t work;
+   union
+   {
+      int64_t big;
+      int     small[2];
+   } work;
    int checkval = 1;
 
    assert(sizeof(work) > sizeof(checkval)); /*lint !e506*/
+
+   work.big = num;
 
    /* if we have a little-endian machine (e.g, x86), the sought value is in the bottom part */
    if ( *(int8_t*)&checkval != 0 ) /*lint !e774*/
    {
       /* if the top part is nonzero, we assume that the number is negative */
-      if ( *((int8_t*)&num + 4) != 0 ) /*lint !e2662*/
+      if ( work.small[1] != 0 ) /*lint !e2662*/
       {
-         work = -num;
-         return -(*((int*)&work));
+         work.big = -num;
+         return -work.small[0];
       }
-      return *((int*)&num);
+      return work.small[0];
    }
 
    /* otherwise we have a big-endian machine (e.g., PowerPC); the sought value is in the top part */
    assert( *(int8_t*)&checkval == 0 );
 
    /* if the bottom part is nonzero, we assume that the number is negative */
-   if ( *(int8_t*)&num != 0 ) /*lint !e774*/
+   if ( work.small[0] != 0 ) /*lint !e774*/
    {
-      work = -num;
-      return -(*((int*)&work + 4)); /*lint !e2662*/
+      work.big = -num;
+      return -work.small[1]; /*lint !e2662*/
    }
-   return *((int*)&num + 4);
+   return work.small[1];
 }
 #endif
 
