@@ -38,6 +38,7 @@ Build system
 
 - avoid warnings about unrecognized compiler warning silencing options when compilation with GCC fails
 - adjust mosek find module to version 9.3
+- added cmake compatibility for ipopt versions 3.14.x
 
 ### Makefile
 
