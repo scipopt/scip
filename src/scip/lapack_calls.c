@@ -436,6 +436,7 @@ SCIP_RETCODE SCIPlapackSolveLinearEquations(
       BMSfreeBufferMemoryArray(bufmem, &bcopy);
       BMSfreeBufferMemoryArray(bufmem, &Acopy);
 #else
+      SCIP_UNUSED(bufmem);
       /* call fallback solution in nlpi_ipopt_dummy */
       SCIP_CALL( SCIPsolveLinearEquationsIpopt(n, A, b, x, success) );
 #endif
