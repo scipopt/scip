@@ -39,6 +39,8 @@ Interface changes
 
 ### Interfaces to external software
 
+- Added interface to Lapack (used for solving nonlinear problems).
+
 ### Changed parameters
 
 - Shrunk range of parameter "propagating/symmetry/sstleaderrule" from [0,3] to [0,2], removed "MAXCONFLICTS"-option.
