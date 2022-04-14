@@ -4051,6 +4051,8 @@ void SCIPexprSetIntegrality(
  *
  * This function returns pointers to internal data in linexprs and lincoefs.
  * The user must not change this data.
+ *
+ * @attention SCIPcheckExprQuadratic() needs to be called first to check whether expression is quadratic and initialize the data of the quadratic representation.
  */
 void SCIPexprGetQuadraticData(
    SCIP_EXPR*            expr,               /**< quadratic expression */
