@@ -1100,7 +1100,7 @@ SCIP_RETCODE enforceSP12(
 static
 SCIP_RETCODE enforceSP12b(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real             simplifiedcoef,     /**< simplified product should be simplifiedcoef * PI simplifiedfactors */
+   SCIP_Real             simplifiedcoef,     /**< simplified product should be simplifiedcoef * prod simplifiedfactors */
    EXPRNODE*             finalchildren,      /**< factors of simplified product */
    SCIP_EXPR**           simplifiedexpr,     /**< buffer to store the simplified expression */
    SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
