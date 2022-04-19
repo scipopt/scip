@@ -56,6 +56,7 @@ Fixed bugs
 - made SCIPlpiGetSolverName()/SCIPlpiGetSolverDesc() thread-safe for LP Solvers (Cplex,Gurobi,Glop,Mosek,SoPlex,Xpress)
 - made SYMsymmetryGetName() thread-safe for Bliss
 - fixed memory allocation issue in detection of SOC nlhdlr
+- fixed that reaching the walltime limit in Ipopt was not handled properly
 
 Miscellaneous
 -------------
