@@ -43,7 +43,7 @@
  *
  * See the web site of <a href="http://scipopt.org">\SCIP</a> for more information about licensing and to download \SCIP.
  *
- *  <b style="color: red">If you are new to SCIP and don't know where to start you should have a look at the
+ *  <b style="color: blue">If you are new to SCIP and don't know where to start you should have a look at the
  *  @ref GETTINGSTARTED "first steps walkthrough"
  *  .</b>
  *
@@ -57,11 +57,11 @@
  *  - @subpage CHG                 Release notes and changelog
  *
  * Tutorials and guides
- *  - @subpage GETTINGSTARTED      First steps walkthrough
- *  - @subpage SHELL               The interactive shell
+ *  - @subpage GETTINGSTARTED
+ *  - @subpage SHELL
  *  - @subpage PROGRAMMING         Important programming concepts for working with(in) SCIP.
- *  - @subpage START               How to start a new project
- *  - @subpage DOC                 How to search the documentation for interface methods
+ *  - @subpage START
+ *  - @subpage DOC
  *  - @subpage HOWTOADD            Detailed guides for adding user plugins
  *  - @subpage HOWTOUSESECTION     Detailed guides for advanced SCIP topics
  *
@@ -72,10 +72,10 @@
  * References
  *  - @subpage WHATPROBLEMS        Supported types of optimization problems
  *  - @subpage FILEREADERS         Readable file formats
- *  - @subpage INTERFACES          Interfaces
- *  - @subpage PARAMETERS          List of all SCIP parameters
+ *  - @subpage INTERFACES
+ *  - @subpage PARAMETERS
  *  - @subpage AUTHORS             SCIP Authors
- *  - @subpage LICENSE             License
+ *  - @subpage LICENSE
  *  - @subpage EXTERNALDOC         Links to external documentation
  *
  *
