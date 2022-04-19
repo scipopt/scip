@@ -86,10 +86,10 @@
  *
  *  \verbinclude simple.lp
  *
- *  Saving this file as "simple.lp" allows to read it into SCIP and solve it by calling the scip binary with the `-c` flag to execute a scip command and exit.
+ *  Saving this file as "simple.lp" allows to read it into SCIP and solve it by calling the scip binary with the `-f` flag to solve the problem from the provided file and exit.
  *
  * ```
- * scip -c "read simple.lp optimize quit"
+ * scip -f simple.lp
  * ```
  * reads and optimizes this model in no time:
  *
@@ -177,12 +177,12 @@
  *
  * Alex lectures at a university and wants their students to get in touch with solving constraint integer programs (CIPs).
  * They would like to use SCIP for this purpose because its \ref LICENSE "license" allows free use for academic, non-commercial purposes.
- * Also, their mentor told them that there are various \ref INTERFACES "interfaces" to SCIP.
+ * Also, their advisor told them that there are various \ref INTERFACES "interfaces" to SCIP.
  *
  * @subsection GETTINGSTARTED_BLACKBOX_PROBLEMS What Kinds Of Problems?
  *
  * As a first step they check \ref WHATPROBLEMS "what types of problems" \SCIP can solve and
- * \ref FILEREADERS "what are readable formats", and are happy that they find CIPs to be among them.
+ * \ref FILEREADERS "what are readable formats", and are happy to find MIPs to be among them.
  *
  * @subsection GETTINGSTARTED_BLACKBOX_INSTALL Setup
  *
@@ -216,7 +216,7 @@
  *
  * Andrea is a researcher in Alex's group and is working on problems that have a very special structure that they hope to be able to exploit in the solving process.
  *
- * Andrea has heard Alex talk very highly of SCIP.
+ * Andrea has heard Alex talk about SCIP.
  * They explained that SCIP is plugin-based, that is, different components (plugins) are implemented using a generic interface and it is very easy to write your own plugins, like constraint handlers, heuristics etc.
  * So Andrea decides to give it a go and dive into SCIP.
  *
