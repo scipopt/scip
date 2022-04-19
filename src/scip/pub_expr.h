@@ -448,7 +448,7 @@ SCIP_EXPR_OWNERDATA* SCIPexprGetOwnerData(
 
 /** gives the value from the last evaluation of an expression (or SCIP_INVALID if there was an eval error)
  *
- * @see SCIPevalExpr
+ * @see SCIPevalExpr to evaluate the expression at a given solution.
  */
 SCIP_EXPORT
 SCIP_Real SCIPexprGetEvalValue(
