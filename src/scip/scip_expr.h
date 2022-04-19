@@ -642,6 +642,7 @@ SCIP_RETCODE SCIPhashExpr(
  *     (TODO: we could handle more complicated stuff like \f$xy\log(x) \to - y * \mathrm{entropy}(x)\f$, but I am not sure this should happen at the simplification level;
  *            similar for \f$(xy) \log(xy)\f$, which currently simplifies to \f$xy \log(xy)\f$)
  *   - SP12: if it has two children, then neither of them is a sum (expand sums)
+ *   - SP12b: if it has at least two children and expandalways is set, then no child is a sum (expand sums always)
  *   - SP13: no child is a sum with a single term
  *   - SP14: at most one child is an `exp`
  * - is a power expression such that
@@ -650,12 +651,14 @@ SCIP_RETCODE SCIPhashExpr(
  *   - POW3: its child is not a value
  *   - POW4: its child is simplified
  *   - POW5: if exponent is integer, its child is not a product
+ *   - POW5a: if exponent is fractional and distribfracexponent param is enabled, its child is not a product
  *   - POW6: if exponent is integer, its child is not a sum with a single term (\f$(2x)^2 \to 4x^2\f$)
- *   - POW7: if exponent is 2, its child is not a sum (expand sums)
+ *   - POW7: if exponent is integer and at most expandmaxeponent param, its child is not a sum (expand sums)
  *   - POW8: its child is not a power unless \f$(x^n)^m\f$ with \f$nm\f$ being integer and \f$n\f$ or \f$m\f$ fractional and \f$n\f$ not being even integer
  *   - POW9: its child is not a sum with a single term with a positive coefficient: \f$(25x)^{0.5} \to 5 x^{0.5}\f$
  *   - POW10: its child is not a binary variable: \f$b^e, e > 0 \to b\f$; \f$b^e, e < 0 \to b := 1\f$
  *   - POW11: its child is not an exponential: \f$\exp(\text{expr})^e \to \exp(e\cdot\text{expr})\f$
+ *   - POW12: its child is not an absolute value if the exponent is an even integer: \f$\abs(\text{expr})^e, e \text{ even} \to \text{expr}^e\f$
  * - is a signedpower expression such that
  *   - SPOW1: exponent is not 0
  *   - SPOW2: exponent is not 1

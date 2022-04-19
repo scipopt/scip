@@ -84,6 +84,9 @@ SCIP_Real signpow_roots[SIGNPOW_ROOTS_KNOWN+1] = {
 struct SCIP_ExprhdlrData
 {
    SCIP_Real             minzerodistance;    /**< minimal distance from zero to enforce for child in bound tightening */
+   int                   expandmaxexponent;  /**< maximal exponent when to expand power of sum in simplify */
+   SCIP_Bool             distribfracexponent;/**< whether a fractional exponent is distributed onto factors on power of product */
+
    SCIP_Bool             warnedonpole;       /**< whether we warned on enforcing a minimal distance from zero for child */
 };
 
@@ -1365,6 +1368,7 @@ SCIP_RETCODE chooseRefpointsPow(
    return SCIP_OKAY;
 }
 
+
 /*
  * Callback methods of expression handler
  */
@@ -1400,6 +1404,8 @@ SCIP_DECL_EXPRCOMPARE(comparePow)
 static
 SCIP_DECL_EXPRSIMPLIFY(simplifyPow)
 {  /*lint --e{715}*/
+   SCIP_EXPRHDLR* exprhdlr;
+   SCIP_EXPRHDLRDATA* exprhdlrdata;
    SCIP_EXPR* base;
    SCIP_Real exponent;
 
@@ -1407,6 +1413,12 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyPow)
    assert(expr != NULL);
    assert(simplifiedexpr != NULL);
    assert(SCIPexprGetNChildren(expr) == 1);
+
+   exprhdlr = SCIPexprGetHdlr(expr);
+   assert(exprhdlr != NULL);
+
+   exprhdlrdata = SCIPexprhdlrGetData(exprhdlr);
+   assert(exprhdlrdata != NULL);
 
    base = SCIPexprGetChildren(expr)[0];
    assert(base != NULL);
@@ -1516,6 +1528,20 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyPow)
       SCIP_EXPR* aux;
       SCIP_EXPR* simplifiedaux;
 
+      /* enforces POW12 (abs(x)^n = x^n if n is even) */
+      if( SCIPisExprAbs(scip, base) && (int)exponent % 2 == 0 )
+      {
+         SCIP_EXPR* newpow;
+
+         SCIPdebugPrintf("[simplifyPow] POWXX\n");
+
+         SCIP_CALL( SCIPcreateExprPow(scip, &newpow, SCIPexprGetChildren(base)[0], exponent, ownercreate, ownercreatedata) );
+         SCIP_CALL( simplifyPow(scip, newpow, simplifiedexpr, ownercreate, ownercreatedata) );
+         SCIP_CALL( SCIPreleaseExpr(scip, &newpow) );
+
+         return SCIP_OKAY;
+      }
+
       /* enforces POW5
        * given (pow n (prod 1.0 expr_1 ... expr_k)) we distribute the exponent:
        * -> (prod 1.0 (pow n expr_1) ... (pow n expr_k))
@@ -1580,13 +1606,13 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyPow)
          return SCIP_OKAY;
       }
 
-      /* enforces POW7
+      /* enforces POW7 for exponent 2
        * (const + sum alpha_i expr_i)^2 = sum alpha_i^2 expr_i^2
        * + sum_{j < i} 2*alpha_i alpha_j expr_i expr_j
        * + sum const alpha_i expr_i
        * TODO: put some limits on the number of children of the sum being expanded
        */
-      if( SCIPisExprSum(scip, base) && exponent == 2.0 )
+      if( SCIPisExprSum(scip, base) && exponent == 2.0 && exprhdlrdata->expandmaxexponent >= 2 )
       {
          int i;
          int nchildren;
@@ -1659,6 +1685,17 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyPow)
 
          return SCIP_OKAY;
       }
+
+      /* enforces POW7 for exponent > 2 */
+      if( SCIPisExprSum(scip, base) && exponent > 2.0 && exponent <= exprhdlrdata->expandmaxexponent )
+      {
+         SCIPdebugPrintf("[simplifyPow] expanding sum^%g\n", exponent);
+
+         SCIP_CALL( SCIPpowerExprSum(scip, simplifiedexpr, base, (int)exponent, TRUE, ownercreate, ownercreatedata) );
+
+         return SCIP_OKAY;
+      }
+
    }
    else
    {
@@ -1695,6 +1732,41 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyPow)
          SCIP_CALL( SCIPreleaseExpr(scip, &aux) );
          SCIP_CALL( SCIPreleaseExpr(scip, &simplifiedaux) );
 
+         return SCIP_OKAY;
+      }
+
+      /* enforces POW5a
+       * given (pow n (prod 1.0 expr_1 ... expr_k)) we distribute the exponent:
+       * -> (prod 1.0 (pow n expr_1) ... (pow n expr_k))
+       * notes: - since base is simplified and its coefficient is 1.0 (SP8)
+       * TODO we can enable this more often by default when simplify makes use of bounds on factors
+       */
+      if( exprhdlrdata->distribfracexponent && SCIPisExprProduct(scip, base) )
+      {
+         SCIP_EXPR* aux;
+         SCIP_EXPR* simplifiedaux;
+         SCIP_EXPR* auxproduct;
+         int i;
+
+         /* create empty product */
+         SCIP_CALL( SCIPcreateExprProduct(scip, &auxproduct, 0, NULL, 1.0, ownercreate, ownercreatedata) );
+
+         for( i = 0; i < SCIPexprGetNChildren(base); ++i )
+         {
+            /* create (pow n expr_i) and simplify */
+            SCIP_CALL( SCIPcreateExprPow(scip, &aux, SCIPexprGetChildren(base)[i], exponent, ownercreate, ownercreatedata) );
+            SCIP_CALL( simplifyPow(scip, aux, &simplifiedaux, ownercreate, ownercreatedata) );
+            SCIP_CALL( SCIPreleaseExpr(scip, &aux) );
+
+            /* append (pow n expr_i) to product */
+            SCIP_CALL( SCIPappendExprChild(scip, auxproduct, simplifiedaux) );
+            SCIP_CALL( SCIPreleaseExpr(scip, &simplifiedaux) );
+         }
+
+         /* simplify (prod 1.0 (pow n expr_1) ... (pow n expr_k))
+          * this calls simplifyProduct directly, since we know its children are simplified */
+         SCIP_CALL( SCIPcallExprSimplify(scip, auxproduct, simplifiedexpr, ownercreate, ownercreatedata) );
+         SCIP_CALL( SCIPreleaseExpr(scip, &auxproduct) );
          return SCIP_OKAY;
       }
    }
@@ -3128,6 +3200,14 @@ SCIP_RETCODE SCIPincludeExprhdlrPow(
    SCIP_CALL( SCIPaddRealParam(scip, "expr/" POWEXPRHDLR_NAME "/minzerodistance",
       "minimal distance from zero to enforce for child in bound tightening",
       &exprhdlrdata->minzerodistance, FALSE, SCIPepsilon(scip), 0.0, 1.0, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip, "expr/" POWEXPRHDLR_NAME "/expandmaxexponent",
+      "maximal exponent when to expand power of sum in simplify",
+      &exprhdlrdata->expandmaxexponent, FALSE, 2, 1, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "expr/" POWEXPRHDLR_NAME "/distribfracexponent",
+      "whether a fractional exponent is distributed onto factors on power of product",
+      &exprhdlrdata->distribfracexponent, FALSE, FALSE, NULL, NULL) );
 
    return SCIP_OKAY;
 }
