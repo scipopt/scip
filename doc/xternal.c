@@ -175,7 +175,7 @@
  *
  * @subsection GETTINGSTARTED_BLACKBOX_WHY Why SCIP?
  *
- * Alex lectures at a university and wants their students to get in touch with solving constraint integer programs (CIPs).
+ * Alex lectures at a university and they their students to get in touch with solving constraint integer programs (CIPs).
  * They would like to use SCIP for this purpose because its \ref LICENSE "license" allows free use for academic, non-commercial purposes.
  * Also, their advisor told them that there are various \ref INTERFACES "interfaces" to SCIP.
  *
