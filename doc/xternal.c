@@ -52,31 +52,31 @@
  * This manual gives an accessible introduction to the functionality of the SCIP code in the following chapters
  *
  * Setup and news
- *  - @subpage INSTALL             Installation
- *  - @subpage FAQ                 Frequently asked questions (FAQ)
- *  - @subpage CHG                 Release notes and changelog
+ *  - @subpage INSTALL
+ *  - @subpage FAQ
+ *  - @subpage CHG
  *
  * Tutorials and guides
  *  - @subpage GETTINGSTARTED
  *  - @subpage SHELL
- *  - @subpage PROGRAMMING         Important programming concepts for working with(in) SCIP.
+ *  - @subpage PROGRAMMING "Important programming concepts for working with(in) SCIP"
  *  - @subpage START
  *  - @subpage DOC
- *  - @subpage HOWTOADD            Detailed guides for adding user plugins
- *  - @subpage HOWTOUSESECTION     Detailed guides for advanced SCIP topics
+ *  - @subpage HOWTOADD "Detailed guides for adding user plugins"
+ *  - @subpage HOWTOUSESECTION "Detailed guides for advanced SCIP topics"
  *
  * Examples and applications
- *  - @subpage EXAMPLES            Coding examples in C and C++ in the source code distribution
- *  - @subpage APPLICATIONS        Extensions of SCIP for specific applications
+ *  - @subpage EXAMPLES "Coding examples in C and C++ in the source code distribution"
+ *  - @subpage APPLICATIONS "Extensions of SCIP for specific applications"
  *
  * References
- *  - @subpage WHATPROBLEMS        Supported types of optimization problems
- *  - @subpage FILEREADERS         Readable file formats
+ *  - @subpage WHATPROBLEMS "Supported types of optimization problems"
+ *  - @subpage FILEREADERS "Readable file formats"
  *  - @subpage INTERFACES
  *  - @subpage PARAMETERS
- *  - @subpage AUTHORS             SCIP Authors
+ *  - @subpage AUTHORS "SCIP Authors"
  *  - @subpage LICENSE
- *  - @subpage EXTERNALDOC         Links to external documentation
+ *  - @subpage EXTERNALDOC "Links to external documentation"
  *
  *
  * @section QUICKSTART Quickstart
