@@ -94,6 +94,7 @@ LPS		=	spx2
 TPI		=	none
 SYM		=	none
 PAPILO		=	false
+LAPACK		=	false
 STATICLIBEXT	=	a
 SHAREDLIBEXT	=	so
 LIBEXT		=	$(STATICLIBEXT)
@@ -578,6 +579,16 @@ endif
 ifeq ($(READLINE),true)
 FLAGS		+=	-DSCIP_WITH_READLINE $(READLINE_FLAGS)
 LDFLAGS		+=	$(READLINE_LDFLAGS)
+endif
+
+# if IPOPT is there, we do not need lapack
+ifeq ($(IPOPT),true)
+LAPACK		=	false
+endif
+
+ifeq ($(LAPACK),true)
+FLAGS		+=	-DSCIP_WITH_LAPACK
+LDFLAGS		+= 	$(LINKCXX_l)lapack$(LINKLIBSUFFIX)
 endif
 
 #-------------------------------------------------------

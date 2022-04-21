@@ -59,7 +59,7 @@
 #include "scip/cons_bounddisjunction.h"
 #include "scip/heur_subnlp.h"
 #include "scip/heur_trysol.h"
-#include "scip/nlpi_ipopt.h"  /* for SCIPsolveLinearEquationsIpopt */
+#include "scip/lapack_calls.h"
 #include "scip/debug.h"
 #include "scip/dialog_default.h"
 
@@ -9279,7 +9279,7 @@ SCIP_RETCODE computeHyperplaneThreePoints(
       SCIPdebugMsg(scip, "numerical troubles - try to solve the linear system via an LU factorization\n");
 
       /* solve the linear problem */
-      SCIP_CALL( SCIPsolveLinearEquationsIpopt(3, m, rhs, x, &success) );
+      SCIP_CALL( SCIPlapackSolveLinearEquations(SCIPbuffer(scip), 3, m, rhs, x, &success) );
 
       *delta  = rhs[0];
       *alpha  = x[0];
@@ -12161,7 +12161,7 @@ SCIP_RETCODE SCIPcomputeFacetVertexPolyhedralNonlinear(
          *success = FALSE;
       }
    }
-   else if( nvars == 2 )
+   else if( nvars == 2 && SCIPlapackIsAvailable() )
    {
       int idx1 = nonfixedpos[0];
       int idx2 = nonfixedpos[1];

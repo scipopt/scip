@@ -10,6 +10,8 @@ Features
 - in expression simplification, added possibility to expand power of sum with exponents larger than 2 (simplify rule POW7)
 - in expression simplification, added possibility to expand products with sums as factor when there are more than two factors (simplify rule SP12b)
 - in expression simplification, added possibility to allow expanding power of products with fractional exponent (simplify rule POW5a)
+- Can now build with Lapack (used for solving nonlinear problems). If IPOPT is used, then Lapack is accessed through it.
+  There	is an interface to Lapack in lapack_calls.
 
 Performance improvements
 ------------------------
@@ -34,6 +36,13 @@ Interface changes
 
 ### New API functions
 
+- new functions for interfacing with Lapack:
+  SCIPlapackIsAvailable(), SCIPlapackIsAvailable(),
+  SCIPlapackComputeEigenvalues(), and SCIPlapackSolveLinearEquations
+
+  These functions should be used instead of SCIPisIpoptAvailableIpopt(), SCIPcallLapackDsyevIpopt(), and
+  SCIPsolveLinearEquationsIpopt() in the context of computing eigenvalues or solving linear equations. If IPOPT is available,
+  the calls will be passed on.
 - SCIPmultiplyBySumExprSum(), SCIPpowerExprSum()
 
 ### Command line interface
@@ -42,6 +51,8 @@ Interface changes
   If -i is specified, a SCIP shell is started where normally SCIPsolve() would be called.
 
 ### Interfaces to external software
+
+- Added interface to Lapack (used for solving nonlinear problems).
 
 ### Changed parameters
 
@@ -71,7 +82,11 @@ Build system
 
 ### Cmake
 
+- New flag -DLAPACK=on for linking with Lapack (must be available in the system)
+
 ### Makefile
+
+- New flag LAPACK for linking with Lapack (must be available in the system)
 
 Fixed bugs
 ----------

@@ -40,7 +40,7 @@
 #include "scip/expr_var.h"
 #include "scip/debug.h"
 #include "scip/pub_nlhdlr.h"
-#include "scip/nlpi_ipopt.h"
+#include "scip/lapack_calls.h"
 
 
 /* fundamental nonlinear handler properties */
@@ -1947,7 +1947,7 @@ SCIP_RETCODE detectSocQuadraticComplex(
    }
 
    /* we need Lapack to compute eigenvalues/vectors below */
-   if( !SCIPisIpoptAvailableIpopt() )
+   if( ! SCIPlapackIsAvailable() )
       return SCIP_OKAY;
 
    /* get children of the sum */
@@ -1997,7 +1997,7 @@ SCIP_RETCODE detectSocQuadraticComplex(
    /* compute eigenvalues and vectors, A = PDP^t
     * note: eigvecmatrix stores P^t, i.e., P^t_{i,j} = eigvecmatrix[i*nvars+j]
     */
-   if( SCIPcallLapackDsyevIpopt(TRUE, nvars, eigvecmatrix, eigvals) != SCIP_OKAY )
+   if( SCIPlapackComputeEigenvalues(SCIPbuffer(scip), TRUE, nvars, eigvecmatrix, eigvals) != SCIP_OKAY )
    {
       SCIPdebugMsg(scip, "Failed to compute eigenvalues and eigenvectors for expression:\n");
 
