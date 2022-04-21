@@ -177,7 +177,7 @@
  *
  * Charlotte lectures at a university and she wants her students to get in touch with solving constraint integer programs (CIPs).
  * She would like to use SCIP for this purpose because its \ref LICENSE "license" allows free use for academic, non-commercial purposes.
- * Also, her advisor told them that there are various \ref INTERFACES "interfaces" to SCIP.
+ * Also, her advisor told her that there are various \ref INTERFACES "interfaces" to SCIP.
  *
  * @subsection GETTINGSTARTED_BLACKBOX_PROBLEMS What Kinds Of Problems?
  *
@@ -190,7 +190,8 @@
  * She works on a recent computer with a windows system and already has the <a href="https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads">Visual C++ Redistributable Packages</a> and <a href="https://github.com/oneapi-src/oneTBB">TBB</a> installed.
  *
  * Having these prerequisites in place, Charlotte downloads the 64-bit windows exectuable from the <a href="https://scipopt.org/index.php#download">download page</a> and installs it without a problem.
- * They also read about the <a href="http://www.pokutta.com/blog/pages/scip/scip-teaching.html"> dockerized SCIP container</a> which she want to recommend to her students, in case they are unable to install SCIP on their own machines.
+ * They also read about the <a href="http://www.pokutta.com/blog/pages/scip/scip-teaching.html"> dockerized SCIP container</a> which she wants
+ * to recommend to her students, in case they are unable to install SCIP on their own machines.
  *
  * @subsection GETTINGSTARTED_BLACKBOX_SOLVE Solve A First Problem
  *
@@ -201,28 +202,28 @@
  *
  * After the first solution process worked like a charm, Charlotte downloads a more complicated problem file from the <a href="https://miplib.zib.de/instance_details_enlight_hard.html">MIPLIB 2017</a> page
  * and follows the \ref SHELL_AFTERINSTALL "interactive shell tutorial".
- * There, she already learns quite a lot of things about the solving process and how to work with the interactive shell.
+ * There, she already learns quite a lot about the solving process and how to work with the interactive shell.
  *
  * @subsection GETTINGSTARTED_BLACKBOX_HELP Getting Help
  *
  * Feeling happy about having already solved some instances and having worked in interactive mode, Charlotte is curious on what more options SCIP has.
  * She types `scip -h` to find out.
  *
- * She feel confident to being able to understand and use some of the other options, like `-l` to write the output to a logfile, or `-b` to pass a file containing the commands to be executed by scip.
- * There are some commands that do not yet make a lot of sense to her yet, but she doesn't worry about it for now.
- * She will familiarize herselve with it over time and with experience.
+ * She feels confident to being able to understand and use some of the other options, like `-l` to write the output to a logfile, or `-b` to pass a file containing the commands to be executed by scip.
+ * There are some commands that do not yet make a lot of sense to her, but she doesn't worry about it for now.
+ * She will familiarize herself with it over time and with experience.
  *
  * @section GETTINGSTARTED_DEVELOP Develop A Custom Plugin
  *
  * Alex is a researcher in Charlotte's group and is working on problems that have a very special structure that he hopes to be able to exploit in the solving process.
  *
- * Alex has heard Charlotte talk about SCIP.
- * She explained that SCIP is plugin-based, that is, different components (plugins) are implemented using a generic interface and it is very easy to write your own plugins, like constraint handlers, heuristics etc.
+ * Alex heard Charlotte talk about SCIP.
+ * She explained that SCIP is plugin-based, that is, different components (plugins) are implemented using a generic interface and that it is very easy to write your own plugins, like constraint handlers, heuristics etc.
  * So Alex decides to give it a go and dive into SCIP.
  *
  * @subsection GETTINGSTARTED_DEVELOP_PREREQUISITES Prerequisites And Setup
  *
- * After some time of using SCIP, he feels confident enough to dig into the source code and decides to write their own plugin.
+ * After some time of using SCIP, he feels confident enough to dig into the source code and decides to write his own plugin.
  * Alex likes to use his linux machine for developing code, because in his experience compilation is easiest there.
  *
  * He starts by downloading the latest <a href="http://scipopt.org/#download">source code tarball</a>,
@@ -234,7 +235,7 @@
  * so that he knows about some of the pitfalls, best practices and mechanisms.
  * If a problem comes up later or he gets stuck, he knows what to look out for and where to find help.
  *
- * Whenever Alex gets stuck in the code, he makes use of the extensive documentation to \ref DOC "search for interface methods".
+ * Whenever Alex gets stuck inside the code, he makes use of the extensive documentation to \ref DOC "search for interface methods".
  *
  * @subsection GETTINGSTARTED_DEVELOP_EXAMPLE Writing An Example
  *
@@ -274,23 +275,23 @@
  * ```
  *
  * This is a minimal example that just prints "Hello world." and exits.
- * Alex compiles and runs it via cmake with the following command
+ * Alex compiles and runs it via cmake with the following command:
  * ```
  * mkdir build; cd build; cmake .. -DSCIP_DIR=../../build/; make; ./minex
  * ```
  *
- * After having successfully written this minimal example, Alex follows the instructions to \ref START "start a new project" to start his actual project and extends this most basic code.
+ * After having successfully written this minimal example, Alex follows the instructions to \ref START "start a new project" to start his actual project and extend this most basic code.
  *
  * @subsection GETTINGSTARTED_DEVELOP_CONSTRAINTHANDLER Writing A Plugin
  *
  * Alex now needs a custom constraint handler in his project, for that he will write a custom plugin.
  * He looks up the instructions in the \ref HOWTOADD "How to add..." page and is
- * very happy to find \ref CONS "a page with a detailed description" what they have to do.
+ * very happy to find \ref CONS "a page with a detailed description" what he has to do.
  *
  * Furthermore he found exercises for implementing plugins for the example of the
  * linear ordering problem. The corresponding code framework
  * (<a href="https://scipopt.org/workshop2018/pyscipopt-exercises.tgz">Python</a> or
- * C/C++ <a href="https://scipopt.org/workshop2018/exercise.pdf">C/C++</a>)
+ * <a href="https://scipopt.org/workshop2018/exercise.pdf">C/C++</a>)
  * could form a good starting point for a new project as well.
  *
  * @subsection GETTINGSTARTED_DEVELOP_REOPTMIZATION Using Functionality In A Plugin
