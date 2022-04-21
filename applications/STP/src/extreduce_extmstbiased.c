@@ -269,3 +269,5 @@ SCIP_RETCODE extreduce_mstbiasedCheck3NodeSimple(
 
    return SCIP_OKAY;
 }
+
+/**@} */

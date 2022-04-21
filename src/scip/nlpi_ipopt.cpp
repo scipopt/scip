@@ -2466,6 +2466,9 @@ void ScipNLP::finalize_solution(
       break;
 
    case CPUTIME_EXCEEDED:
+#if IPOPT_VERSION_MAJOR > 3 || IPOPT_VERSION_MINOR >= 14
+   case WALLTIME_EXCEEDED:
+#endif
       check_feasibility = true;
       nlpiproblem->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
       nlpiproblem->termstat = SCIP_NLPTERMSTAT_TIMELIMIT;

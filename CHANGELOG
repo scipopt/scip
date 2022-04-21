@@ -6,6 +6,10 @@
 Features
 --------
 
+- added simplification of abs(x)^n to x^n when n is even (simplify rule POW12)
+- in expression simplification, added possibility to expand power of sum with exponents larger than 2 (simplify rule POW7)
+- in expression simplification, added possibility to expand products with sums as factor when there are more than two factors (simplify rule SP12b)
+- in expression simplification, added possibility to allow expanding power of products with fractional exponent (simplify rule POW5a)
 - Can now build with Lapack (used for solving nonlinear problems). If IPOPT is used, then Lapack is accessed through it.
   There	is an interface to Lapack in lapack_calls.
 
@@ -39,6 +43,7 @@ Interface changes
   These functions should be used instead of SCIPisIpoptAvailableIpopt(), SCIPcallLapackDsyevIpopt(), and
   SCIPsolveLinearEquationsIpopt() in the context of computing eigenvalues or solving linear equations. If IPOPT is available,
   the calls will be passed on.
+- SCIPmultiplyBySumExprSum(), SCIPpowerExprSum()
 
 ### Command line interface
 
@@ -54,6 +59,10 @@ Interface changes
 - Shrunk range of parameter "propagating/symmetry/sstleaderrule" from [0,3] to [0,2], removed "MAXCONFLICTS"-option.
 
 ### New parameters
+
+- expr/pow/expandmaxexponent to specify limit on exponent when to expand power of sum
+- expr/pow/distribfracexponent to enable expanding power of products with fractional exponents
+- expr/product/expandalways to enable expanding any product with sums as factor (that is, also when more than two factors)
 
 ### Data structures
 
@@ -131,6 +140,7 @@ Build system
 
 - avoid warnings about unrecognized compiler warning silencing options when compilation with GCC fails
 - adjust mosek find module to version 9.3
+- added cmake compatibility for ipopt versions 3.14.x
 
 ### Makefile
 
@@ -147,6 +157,8 @@ Fixed bugs
 - fixed handling of objective limit with Mosek
 - made SCIPlpiGetSolverName()/SCIPlpiGetSolverDesc() thread-safe for LP Solvers (Cplex,Gurobi,Glop,Mosek,SoPlex,Xpress)
 - made SYMsymmetryGetName() thread-safe for Bliss
+- fixed memory allocation issue in detection of SOC nlhdlr
+- fixed that reaching the walltime limit in Ipopt was not handled properly
 
 Miscellaneous
 -------------
