@@ -21,7 +21,7 @@
  * @author Marc Pfetsch
  * @author Michael Winkler
  * @author Jakob Witzig
- * @autor  Sander Borst
+ * @author Sander Borst
  *
  * SCIP contains two kinds of conflict analysis:
  *    - In graph based conflict analysis, the graph consisting of derived
