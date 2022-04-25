@@ -2371,7 +2371,7 @@ SCIP_RETCODE solCheckExact(
    SCIP_CALL( RatCreateBuffer(set->buffer, &solval) );
 
    /* check whether the solution respects the global bounds of the variables */
-   if( checkbounds || sol->hasinfval )
+   if( checkbounds || sol->hasinfval || TRUE )
    {
       int v;
 
@@ -2394,7 +2394,7 @@ SCIP_RETCODE solCheckExact(
             ub = SCIPvarGetUbGlobalExact(var);
 
             /* if we have to check bound and one of the current bounds is violated */
-            if( checkbounds && ((!RatIsNegInfinity(lb) && RatIsLT(solval, lb))
+            if( ((!RatIsNegInfinity(lb) && RatIsLT(solval, lb))
                      || (!RatIsInfinity(ub) && RatIsGT(solval, ub))) )
             {
                *feasible = FALSE;

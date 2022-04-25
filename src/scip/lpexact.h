@@ -283,6 +283,14 @@ SCIP_RETCODE SCIPlpExactFlush(
    SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
    );
 
+/** ensures all rows/columns are correctly updated, but changes are not yet communicated to the exact LP solver */
+SCIP_RETCODE SCIPlpExactLink(
+   SCIP_LPEXACT*         lp,                 /**< current exact LP data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
+   );
+
 /*
  * lp methods
  */

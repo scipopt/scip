@@ -2048,10 +2048,8 @@ SCIP_RETCODE boundShift(
 
    SCIPdebugMessage("calling proved bound for %s LP\n", usefarkas ? "infeasible" : "feasible");
 
-   /** @todo exip: actually we only need to link the rows and cols in the exact lp. So possible performance improvement if we don't
-    * flush it to the lpiexact */
    SCIP_CALL( SCIPsepastoreExactSyncLPs(set->scip->sepastoreexact, blkmem, set, stat, lpexact, prob, eventqueue) );
-   SCIP_CALL( SCIPlpExactFlush(lpexact, blkmem, set, eventqueue) );
+   SCIP_CALL( SCIPlpExactLink(lpexact, blkmem, set, eventqueue) );
 
    /* reset proved bound status */
    lp->hasprovedbound = FALSE;
@@ -2311,8 +2309,6 @@ SCIP_RETCODE boundShift(
    if( SCIPisCertificateActive(set->scip) && lp->hasprovedbound )
    {
       /* set up the exact lpi for the current node */
-      SCIP_CALL( SCIPsepastoreExactSyncLPs(set->scip->sepastoreexact, blkmem, set, stat, lpexact, prob, eventqueue) );
-      SCIP_CALL( SCIPlpExactFlush(lp->lpexact, blkmem, set, eventqueue) );
       for( j = 0; j < lpexact->nrows; j++ )
       {
          if( usefarkas )
@@ -2414,12 +2410,14 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
       {
          case 'n':
             /* Neumaier-Shcherbina */
+            *lperror = FALSE;
             SCIP_CALL( boundShift(lp, lpexact, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
                   prob, usefarkas, safebound) );
             break;
       #ifdef SCIP_WITH_GMP
          case 'p':
             /* project-and-shift */
+            *lperror = FALSE;
             SCIP_CALL( projectShift(lp, lpexact, set, stat, messagehdlr, eventqueue, eventfilter,
                   prob, blkmem, usefarkas, safebound) );
             break;
@@ -2449,9 +2447,15 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
       {
          SCIPdebugMessage("failed save bounding call after %d attempts to compute safe bound\n", nattempts);
          abort = TRUE;
+         *lperror = TRUE;
       }
    }
 #endif
+   if( *lperror )
+   {
+      lp->solved = FALSE;
+      lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+   }
 
    /* reset the forceexactsolve flag */
    lpexact->forceexactsolve = FALSE;
