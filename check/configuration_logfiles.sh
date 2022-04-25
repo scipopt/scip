@@ -76,27 +76,27 @@ OUTFILE="${CHECKBASENAME}.out"
 ERRFILE="${CHECKBASENAME}.err"
 CHECKSETFILE="${CHECKBASENAME}.set"
 EVALFILE="${CHECKBASENAME}.eval"
+METAFILE="${CHECKBASENAME}.meta"
 
 # create meta file
 if test -e "${EVALFILE}"
 then
-    fname="${SCIPPATH}/${OUTPUTDIR}/$(basename ${EVALFILE} .eval).meta"
-    if ! test -e ${fname}
+    if ! test -e ${METAFILE}
     then
-        echo "@Permutation ${PERM}"             >  "${fname}"
-        echo "@Seed ${SEED}"                    >> "${fname}"
-        echo "@Settings ${SETNAME}"             >> "${fname}"
-        echo "@TstName ${TSTNAME}"              >> "${fname}"
-        echo "@BinName ${BINNAME}"              >> "${fname}"
-        echo "@NodeLimit ${NODELIMIT}"          >> "${fname}"
-        echo "@MemLimit ${MEMLIMIT}"            >> "${fname}"
-        echo "@Threads ${THREADS}"              >> "${fname}"
-        echo "@FeasTol ${FEASTOL}"              >> "${fname}"
-        echo "@Queue ${QUEUE}"                  >> "${fname}"
-        echo "@Exclusive ${EXCLUSIVE}"          >> "${fname}"
+        echo "@Permutation ${PERM}"             >  "${METAFILE}"
+        echo "@Seed ${SEED}"                    >> "${METAFILE}"
+        echo "@Settings ${SETNAME}"             >> "${METAFILE}"
+        echo "@TstName ${TSTNAME}"              >> "${METAFILE}"
+        echo "@BinName ${BINNAME}"              >> "${METAFILE}"
+        echo "@NodeLimit ${NODELIMIT}"          >> "${METAFILE}"
+        echo "@MemLimit ${MEMLIMIT}"            >> "${METAFILE}"
+        echo "@Threads ${THREADS}"              >> "${METAFILE}"
+        echo "@FeasTol ${FEASTOL}"              >> "${METAFILE}"
+        echo "@Queue ${QUEUE}"                  >> "${METAFILE}"
+        echo "@Exclusive ${EXCLUSIVE}"          >> "${METAFILE}"
         if [ "${CLUSTERBENCHMARK}" == "yes" ]; then
-            echo "@QueueNode ${CB_QUEUENODE}"   >> "${fname}"
-            echo "@ClusterBenchmarkID ${CB_ID}" >> "${fname}"
+            echo "@QueueNode ${CB_QUEUENODE}"   >> "${METAFILE}"
+            echo "@ClusterBenchmarkID ${CB_ID}" >> "${METAFILE}"
         fi
     fi
 fi
