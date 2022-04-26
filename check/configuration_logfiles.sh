@@ -79,25 +79,22 @@ EVALFILE="${CHECKBASENAME}.eval"
 METAFILE="${CHECKBASENAME}.meta"
 
 # create meta file
-if test -e "${EVALFILE}"
+if ! test -e "${METAFILE}"
 then
-    if ! test -e ${METAFILE}
-    then
-        echo "@Permutation ${PERM}"             >  "${METAFILE}"
-        echo "@Seed ${SEED}"                    >> "${METAFILE}"
-        echo "@Settings ${SETNAME}"             >> "${METAFILE}"
-        echo "@TstName ${TSTNAME}"              >> "${METAFILE}"
-        echo "@BinName ${BINNAME}"              >> "${METAFILE}"
-        echo "@NodeLimit ${NODELIMIT}"          >> "${METAFILE}"
-        echo "@MemLimit ${MEMLIMIT}"            >> "${METAFILE}"
-        echo "@Threads ${THREADS}"              >> "${METAFILE}"
-        echo "@FeasTol ${FEASTOL}"              >> "${METAFILE}"
-        echo "@Queue ${QUEUE}"                  >> "${METAFILE}"
-        echo "@Exclusive ${EXCLUSIVE}"          >> "${METAFILE}"
-        if [ "${CLUSTERBENCHMARK}" == "yes" ]; then
-            echo "@QueueNode ${CB_QUEUENODE}"   >> "${METAFILE}"
-            echo "@ClusterBenchmarkID ${CB_ID}" >> "${METAFILE}"
-        fi
+    echo "@Permutation ${PERM}"             >  "${METAFILE}"
+    echo "@Seed ${SEED}"                    >> "${METAFILE}"
+    echo "@Settings ${SETNAME}"             >> "${METAFILE}"
+    echo "@TstName ${TSTNAME}"              >> "${METAFILE}"
+    echo "@BinName ${BINNAME}"              >> "${METAFILE}"
+    echo "@NodeLimit ${NODELIMIT}"          >> "${METAFILE}"
+    echo "@MemLimit ${MEMLIMIT}"            >> "${METAFILE}"
+    echo "@Threads ${THREADS}"              >> "${METAFILE}"
+    echo "@FeasTol ${FEASTOL}"              >> "${METAFILE}"
+    echo "@Queue ${QUEUE}"                  >> "${METAFILE}"
+    echo "@Exclusive ${EXCLUSIVE}"          >> "${METAFILE}"
+    if [ "${CLUSTERBENCHMARK}" == "yes" ]; then
+        echo "@QueueNode ${CB_QUEUENODE}"   >> "${METAFILE}"
+        echo "@ClusterBenchmarkID ${CB_ID}" >> "${METAFILE}"
     fi
 fi
 
