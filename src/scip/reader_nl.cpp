@@ -214,6 +214,7 @@ private:
             SCIP_CALL_THROW( SCIPtightenVarUbGlobal(scip, var, 1.0, TRUE, &infeas, &tightened) );
             assert(!infeas);
          }
+         val = FALSE;  // for scan-build
 
          return;
       }
