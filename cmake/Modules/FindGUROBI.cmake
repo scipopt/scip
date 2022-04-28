@@ -5,7 +5,7 @@ find_path(GUROBI_INCLUDE_DIRS
 
 # todo: enable recursive search
 find_library(GUROBI_LIBRARY
-    NAMES gurobi gurobi70 gurobi75 gurobi80 gurobi90 gurobi91
+    NAMES gurobi gurobi70 gurobi75 gurobi80 gurobi81 gurobi90 gurobi91 gurobi95
     HINTS ${GUROBI_DIR} $ENV{GUROBI_DIR}
     PATH_SUFFIXES linux64/lib lib)
 
