@@ -44,6 +44,7 @@ Interface changes
   SCIPsolveLinearEquationsIpopt() in the context of computing eigenvalues or solving linear equations. If IPOPT is available,
   the calls will be passed on.
 - SCIPmultiplyBySumExprSum(), SCIPpowerExprSum()
+- SCIPsetParam()
 
 ### Command line interface
 
