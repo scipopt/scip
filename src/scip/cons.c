@@ -3422,7 +3422,7 @@ SCIP_RETCODE SCIPconshdlrEnforceLPSol(
          conshdlr->lastnusefulenfoconss = conshdlr->nusefulenfoconss;
 
          /* get the array of the constraints to be processed */
-         conss = &(conshdlr->enfoconss[firstcons]);
+         conss = nconss > 0 ? conshdlr->enfoconss + firstcons : NULL;
 
          oldncuts = SCIPsepastoreGetNCuts(sepastore);
          oldnactiveconss = stat->nactiveconss;
