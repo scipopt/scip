@@ -1336,7 +1336,7 @@ public:
             {
                /* lhs and nonzero == lhs */
                assert(rhsval != 0.0);
-               expr = rhs;
+               expr = lhs;
                break;
             }
 
