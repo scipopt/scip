@@ -6,6 +6,8 @@ Features
 --------
 
 - clique lifting in cons_setppc (parameter enablecliquelifting) is only disabled if it has been applied
+- avoid warning if Mosek has reached/exceeded the objective limit
+- improved curvature check for quadratic expressions when extended formulations are disabled
 
 Performance improvements
 ------------------------
@@ -18,6 +20,9 @@ Interface changes
 ### New API functions
 ### Command line interface
 ### Interfaces to external software
+
+- Added compatibility with Mosek 10.0.0.12.
+
 ### Changed parameters
 ### New parameters
 ### Data structures
@@ -32,10 +37,28 @@ Build system
 ### Cmake
 
 - In case BLISS is on but not found, compile a vendored version from https://github.com/ds4dm/Bliss
+- avoid warnings about unrecognized compiler warning silencing options when compilation with GCC fails
+- adjust mosek find module to version 9.3
+- added cmake compatibility for ipopt versions 3.14.x
 
 ### Makefile
+
+- avoid warnings about unrecognized compiler warning silencing options when compilation with GCC fails
+
 Fixed bugs
 ----------
+
+- fixed uninitialized array in detection of suborbitopes
+- Fixed problem with reading long lines in LP/FZN/OPB/Diff-files. The buffer is now reallocated,
+  which also should be much faster.
+- fixed that recursive products in expressions were sometimes not flattened
+- fixed that expressions in original variables could not be simplified
+- fixed handling of objective limit with Mosek
+- made SCIPlpiGetSolverName()/SCIPlpiGetSolverDesc() thread-safe for LP Solvers (Cplex,Gurobi,Glop,Mosek,SoPlex,Xpress)
+- made SYMsymmetryGetName() thread-safe for Bliss
+- fixed memory allocation issue in detection of SOC nlhdlr
+- fixed that reaching the walltime limit in Ipopt was not handled properly
+
 Miscellaneous
 -------------
 Known bugs
@@ -2397,7 +2420,7 @@ Interface changes
   - methods SCIPrandomCreate() and SCIPrandomFree() are no longer public and should be replaced by SCIPcreateRandom() and
     SCIPfreeRandom(), respectively (the new methods respect the global parameter `randomization/randomseedshift` automatically)
   - methods SCIPdigraphCreate() and SCIPdigraphCopy() are no longer public and should be replaced by SCIPcreateDigraph() and
-    SCIPcopyDigraph(), respectively, which receive a \SCIP argument and are more robust towards future interface changes
+    SCIPcopyDigraph(), respectively, which receive a SCIP argument and are more robust towards future interface changes
 
 - Bilinear:
   - SCIPgetAllBilinearTermsQuadratic() to access data of all existing bilinear terms in quadratic constraints

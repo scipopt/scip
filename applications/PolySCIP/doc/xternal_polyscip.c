@@ -24,7 +24,7 @@
  * General information
  * ===================
  *
- * [PolySCIP] (http://polyscipopt.org) is a solver for multi-criteria integer programming and multi-criteria linear
+ * [PolySCIP] (http://polyscip.zib.de) is a solver for multi-criteria integer programming and multi-criteria linear
  * programming problems.
  * In other words, it solves optimization problems of the form:
  * \f{align*}{
@@ -67,7 +67,7 @@
  * | parameter | long | description |
  * |-----------|------|-------------|
  * | `-h` | `--help` | Display usage information and exit |
- * | `-p` | `--params &lt;param_file.set&gt;` | Specify a file consisting of SCIP parameter settings. PolySCIP comes with the parameter settings file *scipmip.set*. A [list](http://scipopt.org/doc/html_devel/PARAMETERS.php) of all available SCIP parameters is available at \ref PARAMETERS. To switch, e.g., the verbosity level of the internal SCIP solution process to 1, write `display/verblevel=1` in the *scipmip.set* file and run *polyscip* with `-p scipmip.set` |
+ * | `-p` | `--params &lt;param_file.set&gt;` | Specify a file consisting of SCIP parameter settings. PolySCIP comes with the parameter settings file *scipmip.set*. A [list](http://scipopt.org/doc-3.2.1/html_devel/PARAMETERS.php) of all available SCIP parameters is available at \ref PARAMETERS. To switch, e.g., the verbosity level of the internal SCIP solution process to 1, write `display/verblevel=1` in the *scipmip.set* file and run *polyscip* with `-p scipmip.set` |
  * | `-W` | `--writeSolsPath &lt;path&gt;` | Path where the solution file should be written to if `-w` was set |
  * | `-e` | `--Epsilon &lt;double&gt;` | Specify epsilon used in computation of unsupported points; the default value is 1e-3 |
  * | `-d` | `--Delta &lt;double&gt;` | Specify delta used in computation of feasible boxes; the default value is 0.01 |
@@ -277,5 +277,5 @@
  * guide](http://zimpl.zib.de/download/zimpl.pdf) for more modelling
  * details.
  *
- * ZIMPL webpage, <http://zimpl.scip.de>
+ * ZIMPL webpage, <http://zimpl.zib.de>
 */

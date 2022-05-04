@@ -17,9 +17,15 @@ project(SCIP)
 
 
 # if changing these flags, also update GCCWARN/GXXWARN in make/make.project
-set(ADD_C_AND_CXX_FLAGS -pedantic -Wall -W -Wno-unknown-warning-option -Wno-unknown-warning -Wpointer-arith -Wcast-align -Wwrite-strings -Wshadow  -Wredundant-decls -Wdisabled-optimization -Wno-long-long -Wno-unknown-pragmas -Wno-unused-parameter)
-set(ADD_C_FLAGS -Wsign-compare -Wstrict-prototypes -Wmissing-declarations -Wmissing-prototypes -Wdeclaration-after-statement -Wno-override-init -Wno-uninitialized -Wno-maybe-uninitialized -Wno-initializer-overrides)
+set(ADD_C_AND_CXX_FLAGS -pedantic -Wall -W -Wpointer-arith -Wcast-align -Wwrite-strings -Wshadow  -Wredundant-decls -Wdisabled-optimization -Wno-long-long -Wno-unknown-pragmas -Wno-unused-parameter)
+set(ADD_C_FLAGS -Wsign-compare -Wstrict-prototypes -Wmissing-declarations -Wmissing-prototypes -Wdeclaration-after-statement -Wno-override-init -Wno-uninitialized -Wno-maybe-uninitialized)
 set(ADD_CXX_FLAGS -Wctor-dtor-privacy -Wnon-virtual-dtor -Wreorder -Woverloaded-virtual -Wsign-promo -Wsynth -Wcast-qual -Wno-strict-overflow -Wno-psabi)
+
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+# clang specific suppressions
+set(ADD_C_AND_CXX_FLAGS ${ADD_C_AND_CXX_FLAGS} -Wno-unknown-warning-option)
+set(ADD_C_FLAGS ${ADD_C_FLAGS} -Wno-initializer-overrides)
+endif()
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "Intel")
    # for intel compilers we need to set the fp-model precise flag to disable incorrect floating point optimizations
@@ -316,6 +322,9 @@ if(LPS STREQUAL "spx")
 elseif(LPS STREQUAL "cpx")
     find_package(CPLEX REQUIRED)
 elseif(LPS STREQUAL "glop")
+    if(NOT TPI STREQUAL "tny")
+        message(FATAL_ERROR "When using GLOP as an lp solver, TPI needs to be set to 'tny'.")
+    endif()
     find_package(GLOP REQUIRED)
 elseif(LPS STREQUAL "grb")
     find_package(GUROBI REQUIRED)

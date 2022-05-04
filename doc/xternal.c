@@ -114,8 +114,8 @@
 
 /** @page NLPISOLVERS Available implementations of the NLP solver interface
  *
- * SCIP implements the NLP solver interface for the solvers <a href="https://projects.coin-or.org/Ipopt">IPOPT</a>, <a
- * href="https://worhp.de/">WORHP</a>, and <a href=" http://www.mcs.anl.gov/~leyffer/solvers.html">FilterSQP</a>. In
+ * SCIP implements the NLP solver interface for the solvers <a href="https://github.com/coin-or/Ipopt">IPOPT</a>, <a
+ * href="https://worhp.de/">WORHP</a>, and <a href="http://www.mcs.anl.gov/~leyffer/solvers.html">FilterSQP</a>. In
  * contrast to the implementations of the LP solver interface, SCIP can be compiled with multiple NLP solvers and selects
  * the solver with the highest priority at the beginning of the solving process.
  * Currently, the priorities are, in descending order: Ipopt, WORHP/IP, FilterSQP, WORHP/SQP.
@@ -140,7 +140,7 @@
  * @section NLPISOLVERS_WORHP WORHP
  *
  * <b>WORHP</b> implements a sequential quadratic programming method and a penalty-interior point algorithm.  It is
- * developed at the <a href="http://www.uni-bremen.de/en.html">University of Bremen</a> and is free for academic
+ * developed at the <a href="https://www.uni-bremen.de/en/">University of Bremen</a> and is free for academic
  * purposes.
  *
  * @section NLPISOLVERS_FILTERSQP FilterSQP
@@ -171,19 +171,17 @@
  * SCIP lets you freely choose between its own, manually maintained Makefile system
  * or the CMake cross platform build system generator.
  *
- * <b>For new users and on for installation of the scipoptsuite on windows, we strongly recommend to use CMake, if available on their targeted platform.</b>
+ * <b>For new users and for installation of the scipoptsuite on windows, we strongly recommend to use CMake, if available on their targeted platform.</b>
  *
- * Which one you choose depends on you use case and your level of expertise.
+ * Which one you choose depends on your use case and your level of expertise.
  * If you just want to use SCIP as a black box solver you should use an installer with a precompiled binary from the <a href="http://scipopt.org/#download">download section</a>.
  * <b>This is highly recommended for new users.</b>
  * If you are just curious about SCIP and want to try it out you can use the <a href="http://www.pokutta.com/blog/pages/scip/scip-teaching.html"> dockerized SCIP container</a>.
  *
- * However if you want to develop your own plugin for scip you have to compile the SCIPOptSuite from the source code, which is available as a tarball from the <a href="http://scipopt.org/#download">website</a>.
+ * However, if you want to develop your own plugin for SCIP, you have to compile SCIP or the SCIPOptSuite from source code, which are available as a tarball from the <a href="http://scipopt.org/#download">download page</a>.
  * Note that you might need some level of experience to be able to do this, this is described in the following.
  *
- * Please note that there are differences between both systems, most notably, the generated
- * library libscip will not be compatible between the versions. For more information, we
- * refer to the INSTALL.md file of the SCIP source code distribution.
+ * Be aware that generated libraries and binaries of both systems might be different and incompatible.
  *
  * - @subpage md_INSTALL  "Installation instructions"
  * - @subpage LPI         "Available implementations of the LP solver interface"
@@ -481,7 +479,7 @@
  *          \f}
  *          where \f$\mathbb{K}\f$ is either \f$\mathbb{Z}\f$ or \f$\mathbb{R}\f$.
  *    </td>
- *    <td colspan="3"> see the <a href="http://polyscipopt.org/">PolySCIP web page</a></td>
+ *    <td colspan="3"> see the <a href="http://polyscip.zib.de/">PolySCIP web page</a></td>
  * </tr>
  * <tr>
  *    <td>Mixed-integer semidefinite program (MISDP)</td>
@@ -8136,12 +8134,12 @@
   * The easiest way to load a problem into SCIP is via an input file, given in a format that SCIP can parse directly,
   * see \ref SHELL "the tutorial on how to use the interactive shell".
   * \SCIP is capable of reading more than ten different file formats, including formats for nonlinear
-  * problems and constraint programs. This gives researchers from different communities an easy, first access to the
+  * problems and constraint programs. This gives researchers from different communities an easy access to the
   * \SCIP Optimization Suite. See also the \ref AVAILABLEFORMATS "list of readable file formats".
   *
-  * @section C_API C and C++ API
+  * @section C_API C API
   *
-  * For \SCIP there exists an API to C and C++. Please refer to the \ref PUBLICAPI documentation
+  * The main access point for \SCIP is its API to C. Please refer to the \ref PUBLICAPI documentation
   * for further details.
   *
   * @section CPLUSPLUS C++ wrapper classes
@@ -8149,7 +8147,7 @@
   * Since \SCIP is written in C, its callable library can be directly accessed from C++. If a user wants to program own
   * plugins in C++, there are wrapper classes for all different types of plugins available in the <code>src/objscip</code>
   * directory of the \SCIP standard distribution. SCIP provides several examples that were written in C++, see
-  * \ref EXAMPLES "Examples" and select an example written in C++.
+  * \ref EXAMPLES "Examples".
   *
   * @section SCIPINTERFACES Interfaces for other programming languages
   *
@@ -8157,54 +8155,50 @@
   * on <a href="https://github.com/scipopt">GitHub</a> in order to provide extensions and patches faster
   * and to collaborate on them more easily.
   *
-  * - <a href="https://github.com/scipopt/PySCIPOpt">PySCIPOpt</a> for Python
+  * - <a href="https://github.com/scipopt/PySCIPOpt">PySCIPOpt</a> provides an extensive open-source interface for Python.
   *   PySCIPOpt can be installed via <a href="https://anaconda.org/conda-forge/pyscipopt">conda-forge</a>,
   *   which automatically includes \SCIP.
-  *   PySCIPOpt is our open-source python API for \SCIP, using wrappers to allow users to build
+  *   PySCIPOpt uses wrappers to allow users to build
   *   their own plugins without accessing the C code of \SCIP itself.
   *   Since Python is one of the most commonly used programming languages, especially in the field of
   *   machine learning, the API gives easy access to the solvers functionality to incorporate \SCIP
-  *   into any python project pipeline, extract data for further analysis and computation and allow
-  *   customizing the solving process from the outside.
-  * - <a href="https://github.com/scipopt/SCIP.jl">SCIP.jl</a> for Julia
-  *   The Julia interface exposes an API identical to the SCIP-C_API and implements the
+  *   into any python project pipeline, extract data for further analysis and computation as well as allow
+  *   customizing the solving process.
+  * - <a href="https://github.com/scipopt/SCIP.jl">SCIP.jl</a> is a
+  *   Julia interface that exposes an API identical to the SCIP-C_API and implements the
   *   MathOptInterface used by most constrained solvers in Julia.
   *   It can be accessed through the Julia package manager and will install a pre-built version of
   *   \SCIP if none is provided by the user.
-  * - There is a <a href="https://github.com/scipopt/MatlabSCIPInterface">separate interface</a>
-  *   available from Matlab to SCIP and SCIP-SDP.
-  * - <a href="https://github.com/scipopt/JSCIPOpt">JSCIPOpt</a> for Java
+  * - There is a <a href="https://github.com/scipopt/MatlabSCIPInterface">Matlab interface</a>
+  *   to use SCIP and SCIP-SDP from Matlab and Octave.
+  * - <a href="https://github.com/scipopt/JSCIPOpt">JSCIPOpt</a> is an interface for Java.
   *
   * Contributions to these projects are very welcome.
   *
-  * There are also several third-party python interfaces to the \SCIP Optimization Suite, e.g.,
-  * NUMBERJACK and python-zibopt.
-  * <a href="http://numberjack.ucc.ie/">NUMBERJACK</a> is a constraint programming platform implemented in python.
-  * It supports a variety of different solvers, one of them being the \SCIP Optimization Suite.
-  * <a href="http://code.google.com/p/python-zibopt/">python-zibopt</a> was developed
-  * by Ryan J. O'Neil and is a python extension of the \SCIP Optimization Suite.
-  * <a href="http://picos.zib.de/">PICOS</a> is a python interface for conic optimization,
-  * provided by Guillaume Sagnol.
+  * There are also several third-party python interfaces to the \SCIP Optimization Suite:
+  * - <a href="https://github.com/eomahony/Numberjack">NUMBERJACK</a> is a constraint programming platform implemented in python.
+  *   It supports a variety of different solvers, one of them being the \SCIP Optimization Suite .
+  * - <a href="http://code.google.com/p/python-zibopt/">python-zibopt</a> was developed
+  *   by Ryan J. O'Neil and is a python extension of the \SCIP Optimization Suite (not maintained anymore).
+  * - <a href="http://picos.zib.de/">PICOS</a> is a python interface for conic optimization,
+  *   provided by Guillaume Sagnol.
   *
   * @section MODELLING Modeling languages
   *
   * A natural way of formulating an optimization problem is to use a modeling language.
-  * Besides ZIMPL, that is a part of the \SCIP Optimization Suite,
-  * there are several other modeling tools with a direct interface to \SCIP.
+  * Besides ZIMPL, which is part of the \SCIP Optimization Suite,
+  * there are several other modeling tools with a direct interface to \SCIP:
   *
   * - <a href="https://zimpl.zib.de">ZIMPL</a>, a modeling language for constraint programming,
   * - both <a href="http://www.ampl.com/">AMPL</a> and <a href="http://www.gams.com">GAMS</a>,
   *   are well-suited for modeling mixed-integer linear and nonlinear optimization problems,
   * - and <a href="https://projects.coin-or.org/Cmpl">CMPL</a> for mixed-integer linear problems.
   * - <a href="https://jump.dev/JuMP.jl/stable/">JuMP</a> accesses SCIP through the Julia interface.
+  * - <a href="http://users.isy.liu.se/johanl/yalmip/pmwiki.php?n=Main.HomePage">YALMIP</a> by Johan L&ouml;fberg provides a
+  *   free modeling language.
   *
   * The AMPL and ZIMPL interfaces are included in the \SCIP distribution,
   * the GAMS interface is available <a href="https://github.com/coin-or/GAMSlinks">here</a>.
-  *
-  * The <a href="http://www.i2c2.aut.ac.nz/Wiki/OPTI/index.php">OPTI project</a> by Jonathan Currie provides an external
-  * MATLAB interface for the \SCIP Optimization Suite. Furthermore,
-  * <a href="http://users.isy.liu.se/johanl/yalmip/pmwiki.php?n=Main.HomePage">YALMIP</a> by Johan L&ouml;fberg provides a
-  * free modeling language.
   *
   */
 

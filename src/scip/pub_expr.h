@@ -448,7 +448,7 @@ SCIP_EXPR_OWNERDATA* SCIPexprGetOwnerData(
 
 /** gives the value from the last evaluation of an expression (or SCIP_INVALID if there was an eval error)
  *
- * @see SCIPevalExpr
+ * @see SCIPevalExpr to evaluate the expression at a given solution.
  */
 SCIP_EXPORT
 SCIP_Real SCIPexprGetEvalValue(
@@ -584,6 +584,8 @@ void SCIPexprSetIntegrality(
  *
  * This function returns pointers to internal data in linexprs and lincoefs.
  * The user must not change this data.
+ *
+ * @attention SCIPcheckExprQuadratic() needs to be called first to check whether expression is quadratic and initialize the data of the quadratic representation.
  */
 SCIP_EXPORT
 void SCIPexprGetQuadraticData(
