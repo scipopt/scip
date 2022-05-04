@@ -45,6 +45,7 @@ Interface changes
   SCIPsolveLinearEquationsIpopt() in the context of computing eigenvalues or solving linear equations. If IPOPT is available,
   the calls will be passed on.
 - SCIPmultiplyBySumExprSum(), SCIPpowerExprSum()
+- SCIPsetParam()
 
 ### Command line interface
 
@@ -54,6 +55,10 @@ Interface changes
 ### Interfaces to external software
 
 - Added interface to Lapack (used for solving nonlinear problems).
+- The AMPL interface now supports parameters specified in AMPL command scripts via option scip_options.
+  The value of scip_options is expected to be a sequence of parameter names and values, separated by a space, e.g.,
+    `option scip_options 'limits/time 10 display/verblevel 1';`.
+  String values should not be quoted and spaces in string values are not supported.
 
 ### Changed parameters
 

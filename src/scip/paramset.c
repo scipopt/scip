@@ -2131,6 +2131,65 @@ SCIP_RETCODE SCIPparamsetSetString(
    return SCIP_OKAY;
 }
 
+/** changes the value of an existing parameter */
+SCIP_RETCODE SCIPparamsetSet(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   const char*           name,               /**< name of the parameter */
+   const char*           value,              /**< new value of the parameter as string */
+   SCIP_Bool             fix                 /**< whether to fix parameter */
+   )
+{
+   SCIP_PARAM* param;
+
+   assert(paramset != NULL);
+   assert(paramset->hashtable != NULL);
+   assert(name != NULL);
+   assert(value != NULL);
+
+   /* retrieve parameter from hash table */
+   param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
+   if( param == NULL )
+   {
+      SCIPmessagePrintWarning(messagehdlr, "unknown parameter <%s>\n", name);
+      return SCIP_OKAY;
+   }
+
+   SCIPparamSetFixed(param, FALSE);
+
+   /* set parameter's value */
+   switch( param->paramtype )
+   {
+   case SCIP_PARAMTYPE_BOOL:
+      SCIP_CALL( paramParseBool(param, set, messagehdlr, (char*)value) );
+      break;
+   case SCIP_PARAMTYPE_INT:
+      SCIP_CALL( paramParseInt(param, set, messagehdlr, (char*)value) );
+      break;
+   case SCIP_PARAMTYPE_LONGINT:
+      SCIP_CALL( paramParseLongint(param, set, messagehdlr, (char*)value) );
+      break;
+   case SCIP_PARAMTYPE_REAL:
+      SCIP_CALL( paramParseReal(param, set, messagehdlr, (char*)value) );
+      break;
+   case SCIP_PARAMTYPE_CHAR:
+      SCIP_CALL( paramParseChar(param, set, messagehdlr, (char*)value) );
+      break;
+   case SCIP_PARAMTYPE_STRING:
+      SCIP_CALL( paramParseString(param, set, messagehdlr, (char*)value) );
+      break;
+   default:
+      SCIPerrorMessage("unknown parameter type\n");
+      return SCIP_INVALIDDATA;
+   }
+
+   if( fix )
+      SCIPparamSetFixed(param, TRUE);
+
+   return SCIP_OKAY;
+}
+
 /** changes the default value of an existing SCIP_Bool parameter */
 SCIP_RETCODE SCIPparamsetSetDefaultBool(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
@@ -2480,7 +2539,6 @@ SCIP_RETCODE paramsetParse(
    SCIP_Bool*            foundnormalparam    /**< pointer to store whether a normal parameter (not emphasis setting) has been found */
    )
 {
-   SCIP_PARAM* param;
    char* paramname;
    char* paramvaluestr;
    char* paramend;
@@ -2582,44 +2640,7 @@ SCIP_RETCODE paramsetParse(
       }
    }
 
-   /* retrieve parameter from hash table */
-   param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
-   if( param == NULL )
-   {
-      SCIPmessagePrintWarning(messagehdlr, "unknown parameter <%s>\n", paramname);
-      return SCIP_OKAY;
-   }
-
-   SCIPparamSetFixed(param, FALSE);
-
-   /* set parameter's value */
-   switch( param->paramtype )
-   {
-   case SCIP_PARAMTYPE_BOOL:
-      SCIP_CALL( paramParseBool(param, set, messagehdlr, paramvaluestr) );
-      break;
-   case SCIP_PARAMTYPE_INT:
-      SCIP_CALL( paramParseInt(param, set, messagehdlr, paramvaluestr) );
-      break;
-   case SCIP_PARAMTYPE_LONGINT:
-      SCIP_CALL( paramParseLongint(param, set, messagehdlr, paramvaluestr) );
-      break;
-   case SCIP_PARAMTYPE_REAL:
-      SCIP_CALL( paramParseReal(param, set, messagehdlr, paramvaluestr) );
-      break;
-   case SCIP_PARAMTYPE_CHAR:
-      SCIP_CALL( paramParseChar(param, set, messagehdlr, paramvaluestr) );
-      break;
-   case SCIP_PARAMTYPE_STRING:
-      SCIP_CALL( paramParseString(param, set, messagehdlr, paramvaluestr) );
-      break;
-   default:
-      SCIPerrorMessage("unknown parameter type\n");
-      return SCIP_INVALIDDATA;
-   }
-
-   if( fix )
-      SCIPparamSetFixed(param, TRUE);
+   SCIP_CALL( SCIPparamsetSet(paramset, set, messagehdlr, paramname, paramvaluestr, fix) );
 
    *foundnormalparam = TRUE;
 
