@@ -129,7 +129,7 @@ Interface changes
 ### Command line interface
 ### Interfaces to external software
 
-- Added compatibility with Mosek 10.0.0.12.
+- Added compatibility with Mosek 10.0.13.
 
 ### Changed parameters
 ### New parameters
