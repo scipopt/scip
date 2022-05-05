@@ -2,7 +2,7 @@
 #define BLISS_C_H
 
 /*
-  Copyright (c) 2003-2015 Tommi Junttila
+  Copyright (c) 2003-2021 Tommi Junttila
   Released under the GNU Lesser General Public License version 3.
 
   This file is part of bliss.
@@ -24,8 +24,7 @@
  * \file
  * \brief The bliss C API.
  *
- * This is the C language API to
- * <A href="http://www.tcs.hut.fi/Software/bliss/">bliss</A>.
+ * This is the C language API to <a href="https://users.aalto.fi/tjunttil/bliss">bliss</a>.
  * Note that this C API is only a subset of the C++ API;
  * please consider using the C++ API whenever possible.
  */
@@ -47,21 +46,21 @@ typedef struct bliss_graph_struct BlissGraph;
 typedef struct bliss_stats_struct
 {
   /**
-   * An approximation (due to possible rounding errors) of
+   * \brief An approximation (due to possible rounding errors) of
    * the size of the automorphism group.
    */
   long double group_size_approx;
-  /** The number of nodes in the search tree. */
+  /** \brief The number of nodes in the search tree. */
   long unsigned int nof_nodes;
-  /** The number of leaf nodes in the search tree. */
+  /** \brief The number of leaf nodes in the search tree. */
   long unsigned int nof_leaf_nodes;
-  /** The number of bad nodes in the search tree. */
+  /** \brief The number of bad nodes in the search tree. */
   long unsigned int nof_bad_nodes;
-  /** The number of canonical representative updates. */
+  /** \brief The number of canonical representative updates. */
   long unsigned int nof_canupdates;
-  /** The number of generator permutations. */
+  /** \brief The number of generator permutations. */
   long unsigned int nof_generators;
-  /** The maximal depth of the search tree. */
+  /** \brief The maximal depth of the search tree. */
   unsigned long int max_level;
 } BlissStats;
 
@@ -177,11 +176,11 @@ BlissGraph *bliss_permute(BlissGraph *graph, const unsigned int *perm);
  */
 void
 bliss_find_automorphisms(BlissGraph *graph,
-			 void (*hook)(void *user_param,
-				      unsigned int N,
-				      const unsigned int *aut),
-			 void *hook_user_param,
-			 BlissStats *stats);
+                         void (*hook)(void *user_param,
+                                      unsigned int N,
+                                      const unsigned int *aut),
+                         void *hook_user_param,
+                         BlissStats *stats);
 
 
 /**
@@ -197,10 +196,10 @@ bliss_find_automorphisms(BlissGraph *graph,
  */
 const unsigned int *
 bliss_find_canonical_labeling(BlissGraph *graph,
-			      void (*hook)(void *user_param,
-					   unsigned int N,
-					   const unsigned int *aut),
-			      void *hook_user_param,
-			      BlissStats *stats);
+                              void (*hook)(void *user_param,
+                                           unsigned int N,
+                                           const unsigned int *aut),
+                              void *hook_user_param,
+                              BlissStats *stats);
 
 #endif

@@ -1,20 +1,5 @@
-#include <cstdlib>
-#include <cstdio>
-#include <cstring>
-#include <cassert>
-#ifdef _WIN32
-  #include <ciso646>
-#endif
-
-#include "bliss/defs.hh"
-#include "bliss/graph.hh"
-#ifndef _WIN32
-  #include "bliss/timer.hh"
-#endif
-#include "bliss/utils.hh"
-
 /*
-  Copyright (c) 2003-2015 Tommi Junttila
+  Copyright (c) 2003-2021 Tommi Junttila
   Released under the GNU Lesser General Public License version 3.
 
   This file is part of bliss.
@@ -32,8 +17,19 @@
   along with bliss.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <functional>
+#include <cstdlib>
+#include <cstdio>
+#include <cstring>
+#include <cassert>
+#include "bliss/defs.hh"
+#include "bliss/timer.hh"
+#include "bliss/utils.hh"
+#include "bliss/graph.hh"
+#include "bliss/digraph.hh"
+
 /**
- * \page executable bliss executable
+ * \page executable The bliss executable
  * \include bliss.cc
  */
 
@@ -57,16 +53,14 @@ static FILE* verbstr = stdout;
 static void
 usage(FILE* const fp, const char* argv0)
 {
-  const char* program_name;
-
-  program_name = strrchr(argv0, '/');
+  const char* program_name = strrchr(argv0, '/');
 
   if(program_name) program_name++;
   else program_name = argv0;
   if(!program_name or *program_name == 0) program_name = "bliss";
 
   fprintf(fp, "bliss version %s (compiled %s)\n", bliss::version, __DATE__);
-  fprintf(fp, "Copyright 2003-2015 Tommi Junttila\n");
+  fprintf(fp, "Copyright 2003-2021 Tommi Junttila\n");
   fprintf(fp,
 "\n"
 "Usage: %s [options] [<graph file>]\n"
@@ -90,7 +84,7 @@ usage(FILE* const fp, const char* argv0)
 "  -version    print the version number and exit\n"
 "  -help       print this help and exit\n"
           ,program_name
-	  );
+          );
 }
 
 
@@ -102,78 +96,63 @@ parse_options(const int argc, const char** argv)
   for(int i = 1; i < argc; i++)
     {
       if(strcmp(argv[i], "-can") == 0)
-	opt_canonize = true;
+        opt_canonize = true;
       else if((strncmp(argv[i], "-ocan=", 6) == 0) and (strlen(argv[i]) > 6))
-	{
-	  opt_canonize = true;
-	  opt_output_can_file = argv[i]+6;
-	}
+        {
+          opt_canonize = true;
+          opt_output_can_file = argv[i]+6;
+        }
       else if(sscanf(argv[i], "-v=%u", &tmp) == 1)
-	verbose_level = tmp;
+        verbose_level = tmp;
       else if(strcmp(argv[i], "-directed") == 0)
-	opt_directed = true;
+        opt_directed = true;
       else if(strcmp(argv[i], "-fr=n") == 0)
-	opt_use_failure_recording = false;
+        opt_use_failure_recording = false;
       else if(strcmp(argv[i], "-fr=y") == 0)
-	opt_use_failure_recording = true;
+        opt_use_failure_recording = true;
       else if(strcmp(argv[i], "-cr=n") == 0)
-	opt_use_component_recursion = false;
+        opt_use_component_recursion = false;
       else if(strcmp(argv[i], "-cr=y") == 0)
-	opt_use_component_recursion = true;
+        opt_use_component_recursion = true;
       else if((strncmp(argv[i], "-sh=", 4) == 0) and (strlen(argv[i]) > 4))
-	{
-	  opt_splitting_heuristics = argv[i]+4;
-	}
+        {
+          opt_splitting_heuristics = argv[i]+4;
+        }
       else if(strcmp(argv[i], "-version") == 0)
-	{
-	  fprintf(stdout, "bliss version %s\n", bliss::version);
-	  exit(0);
-	}
+        {
+          fprintf(stdout, "bliss version %s\n", bliss::version);
+          exit(0);
+        }
       else if(strcmp(argv[i], "-help") == 0)
-	{
-	  usage(stdout, argv[0]);
-	  exit(0);
-	}
+        {
+          usage(stdout, argv[0]);
+          exit(0);
+        }
       else if(argv[i][0] == '-')
-	{
-	  fprintf(stderr, "Unknown command line argument `%s'\n", argv[i]);
-	  usage(stderr, argv[0]);
-	  exit(1);
-	}
+        {
+          fprintf(stderr, "Unknown command line argument `%s'\n", argv[i]);
+          usage(stderr, argv[0]);
+          exit(1);
+        }
       else
-	{
-	  if(infilename)
-	    {
-	      fprintf(stderr, "Too many file arguments\n");
-	      usage(stderr, argv[0]);
-	      exit(1);
-	    }
-	  else
-	    {
-	      infilename = argv[i];
-	    }
-	}
+        {
+          if(infilename)
+            {
+              fprintf(stderr, "Too many file arguments\n");
+              usage(stderr, argv[0]);
+              exit(1);
+            }
+          else
+            {
+              infilename = argv[i];
+            }
+        }
     }
 }
 
 
 
-/**
- * The hook function that prints the found automorphisms.
- * \a param must be a file descriptor (FILE *).
- */
-static void
-report_aut(void* param, const unsigned int n, const unsigned int* aut)
-{
-  assert(param);
-  fprintf((FILE*)param, "Generator: ");
-  bliss::print_permutation((FILE*)param, n, aut, 1);
-  fprintf((FILE*)param, "\n");
-}
-
-
-
-/* Output an error message and exit the whole program */
+/* Output an error message and exit the whole program with the exit value 1. */
 static void
 _fatal(const char* fmt, ...)
 {
@@ -202,36 +181,36 @@ main(const int argc, const char** argv)
   if(opt_directed)
     {
       if(strcmp(opt_splitting_heuristics, "f") == 0)
-	shs_directed = bliss::Digraph::shs_f;
+        shs_directed = bliss::Digraph::shs_f;
       else if(strcmp(opt_splitting_heuristics, "fs") == 0)
-	shs_directed = bliss::Digraph::shs_fs;
+        shs_directed = bliss::Digraph::shs_fs;
       else if(strcmp(opt_splitting_heuristics, "fl") == 0)
-	shs_directed = bliss::Digraph::shs_fl;
+        shs_directed = bliss::Digraph::shs_fl;
       else if(strcmp(opt_splitting_heuristics, "fm") == 0)
-	shs_directed = bliss::Digraph::shs_fm;
+        shs_directed = bliss::Digraph::shs_fm;
       else if(strcmp(opt_splitting_heuristics, "fsm") == 0)
-	shs_directed = bliss::Digraph::shs_fsm;
+        shs_directed = bliss::Digraph::shs_fsm;
       else if(strcmp(opt_splitting_heuristics, "flm") == 0)
-	shs_directed = bliss::Digraph::shs_flm;
+        shs_directed = bliss::Digraph::shs_flm;
       else
-	_fatal("Illegal option -sh=%s, aborting", opt_splitting_heuristics);
+        _fatal("Illegal option -sh=%s, aborting", opt_splitting_heuristics);
     }
   else
     {
       if(strcmp(opt_splitting_heuristics, "f") == 0)
-	shs_undirected = bliss::Graph::shs_f;
+        shs_undirected = bliss::Graph::shs_f;
       else if(strcmp(opt_splitting_heuristics, "fs") == 0)
-	shs_undirected = bliss::Graph::shs_fs;
+        shs_undirected = bliss::Graph::shs_fs;
       else if(strcmp(opt_splitting_heuristics, "fl") == 0)
-	shs_undirected = bliss::Graph::shs_fl;
+        shs_undirected = bliss::Graph::shs_fl;
       else if(strcmp(opt_splitting_heuristics, "fm") == 0)
-	shs_undirected = bliss::Graph::shs_fm;
+        shs_undirected = bliss::Graph::shs_fm;
       else if(strcmp(opt_splitting_heuristics, "fsm") == 0)
-	shs_undirected = bliss::Graph::shs_fsm;
+        shs_undirected = bliss::Graph::shs_fsm;
       else if(strcmp(opt_splitting_heuristics, "flm") == 0)
-	shs_undirected = bliss::Graph::shs_flm;
+        shs_undirected = bliss::Graph::shs_flm;
       else
-	_fatal("Illegal option -sh=%s, aborting", opt_splitting_heuristics);
+        _fatal("Illegal option -sh=%s, aborting", opt_splitting_heuristics);
     }
 
   /* Open the input file */
@@ -240,7 +219,7 @@ main(const int argc, const char** argv)
     {
       infile = fopen(infilename, "r");
       if(!infile)
-	_fatal("Cannot not open `%s' for input, aborting", infilename);
+        _fatal("Cannot not open `%s' for input, aborting", infilename);
     }
 
   /* Read the graph from the file */
@@ -283,30 +262,36 @@ main(const int argc, const char** argv)
   g->set_component_recursion(opt_use_component_recursion);
 
 
+  auto report_aut = [&](const unsigned int n, const unsigned int* aut) -> void {
+    fprintf(stdout, "Generator: ");
+    bliss::print_permutation(stdout, n, aut, 1);
+    fprintf(stdout, "\n");
+  };
+
   if(opt_canonize == false)
     {
       /* No canonical labeling, only automorphism group */
-      g->find_automorphisms(stats, &report_aut, stdout);
+      g->find_automorphisms(stats, report_aut);
     }
   else
     {
       /* Canonical labeling and automorphism group */
-      const unsigned int* cl = g->canonical_form(stats, &report_aut, stdout);
+      const unsigned int* cl = g->canonical_form(stats, report_aut);
 
       fprintf(stdout, "Canonical labeling: ");
       bliss::print_permutation(stdout, g->get_nof_vertices(), cl, 1);
       fprintf(stdout, "\n");
 
       if(opt_output_can_file)
-	{
-	  bliss::AbstractGraph* cf = g->permute(cl);
-	  FILE* const fp = fopen(opt_output_can_file, "w");
-	  if(!fp)
-	    _fatal("Cannot open '%s' for outputting the canonical form, aborting", opt_output_can_file);
-	  cf->write_dimacs(fp);
-	  fclose(fp);
-	  delete cf;
-	}
+        {
+          bliss::AbstractGraph* cf = g->permute(cl);
+          FILE* const fp = fopen(opt_output_can_file, "w");
+          if(!fp)
+            _fatal("Cannot open '%s' for outputting the canonical form, aborting", opt_output_can_file);
+          cf->write_dimacs(fp);
+          fclose(fp);
+          delete cf;
+        }
     }
 
   /* Output search statistics */
@@ -320,6 +305,7 @@ main(const int argc, const char** argv)
       fflush(verbstr);
     }
 #endif
+
 
   delete g; g = 0;
 

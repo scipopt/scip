@@ -1,13 +1,5 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <assert.h>
-#include "bliss/graph.hh"
-extern "C" {
-#include "bliss/bliss_C.h"
-}
-
 /*
-  Copyright (c) 2003-2015 Tommi Junttila
+  Copyright (c) 2003-2021 Tommi Junttila
   Released under the GNU Lesser General Public License version 3.
 
   This file is part of bliss.
@@ -25,6 +17,17 @@ extern "C" {
   along with bliss.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <stdlib.h>
+#include <stdio.h>
+#include <assert.h>
+#include "bliss/graph.hh"
+extern "C" {
+#include "bliss/bliss_C.h"
+}
+
+/**
+ * \brief The true bliss graph is hiding in this struct.
+ */
 struct bliss_graph_struct {
   bliss::Graph* g;
 };
@@ -133,16 +136,22 @@ BlissGraph *bliss_permute(BlissGraph *graph, const unsigned int *perm)
 extern "C"
 void
 bliss_find_automorphisms(BlissGraph *graph,
-			 void (*hook)(void *user_param,
-				      unsigned int n,
-				      const unsigned int *aut),
-			 void *hook_user_param,
-			 BlissStats *stats)
+                         void (*hook)(void *user_param,
+                                      unsigned int n,
+                                      const unsigned int *aut),
+                         void *hook_user_param,
+                         BlissStats *stats)
 {
   bliss::Stats s;
   assert(graph);
   assert(graph->g);
-  graph->g->find_automorphisms(s, hook, hook_user_param);
+
+  auto report_aut = [&](unsigned int n, const unsigned int *aut) -> void {
+    if(hook)
+      (*hook)(hook_user_param, n, aut);
+  };
+
+  graph->g->find_automorphisms(s, report_aut);
 
   if(stats)
     {
@@ -160,18 +169,23 @@ bliss_find_automorphisms(BlissGraph *graph,
 extern "C"
 const unsigned int *
 bliss_find_canonical_labeling(BlissGraph *graph,
-			      void (*hook)(void *user_param,
-					   unsigned int n,
-					   const unsigned int *aut),
-			      void *hook_user_param,
-			      BlissStats *stats)
+                              void (*hook)(void *user_param,
+                                           unsigned int n,
+                                           const unsigned int *aut),
+                              void *hook_user_param,
+                              BlissStats *stats)
 {
   bliss::Stats s;
   const unsigned int *canonical_labeling = 0;
   assert(graph);
   assert(graph->g);
 
-  canonical_labeling = graph->g->canonical_form(s, hook, hook_user_param);
+  auto report_aut = [&](unsigned int n, const unsigned int *aut) -> void {
+    if(hook)
+      (*hook)(hook_user_param, n, aut);
+  };
+
+  canonical_labeling = graph->g->canonical_form(s, report_aut);
 
   if(stats)
     {

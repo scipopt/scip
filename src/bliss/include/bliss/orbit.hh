@@ -1,8 +1,7 @@
-#ifndef BLISS_ORBIT_HH
-#define BLISS_ORBIT_HH
+#pragma once
 
 /*
-  Copyright (c) 2003-2015 Tommi Junttila
+  Copyright (c) 2003-2021 Tommi Junttila
   Released under the GNU Lesser General Public License version 3.
 
   This file is part of bliss.
@@ -22,7 +21,7 @@
 
 namespace bliss {
 
-/** \internal
+/**
  * \brief A class for representing orbit information.
  *
  * Given a set {0,...,N-1} of N elements, represent equivalence
@@ -30,8 +29,9 @@ namespace bliss {
  * Supports only equivalence class merging, not splitting.
  * Merging two classes requires time O(k), where k is the number of
  * the elements in the smaller of the merged classes.
- * Getting the smallest representative in a class (and thus testing
- * whether two elements belong to the same class) is a constant time operation.
+ * Getting the smallest representative in a class
+ * (and thus testing whether two elements belong to the same class)
+ * is a constant time operation.
  */
 class Orbit
 {
@@ -107,5 +107,3 @@ public:
 };
 
 } // namespace bliss
-
-#endif

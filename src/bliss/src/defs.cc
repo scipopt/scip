@@ -1,9 +1,5 @@
-#include <cstdlib>
-#include <cstdio>
-#include "bliss/defs.hh"
-
 /*
-  Copyright (c) 2003-2015 Tommi Junttila
+  Copyright (c) 2003-2021 Tommi Junttila
   Released under the GNU Lesser General Public License version 3.
 
   This file is part of bliss.
@@ -21,18 +17,10 @@
   along with bliss.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-namespace bliss {
+#include <cstdlib>
+#include <cstdio>
+#include "bliss/defs.hh"
 
-void
-fatal_error(const char* fmt, ...)
-{
-  va_list ap;
-  va_start(ap, fmt);
-  fprintf(stderr,"Bliss fatal error: ");
-  vfprintf(stderr, fmt, ap);
-  fprintf(stderr, "\nAborting!\n");
-  va_end(ap);
-  exit(1);
-}
+namespace bliss {
 
 }

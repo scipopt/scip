@@ -1,8 +1,7 @@
-#ifndef BLISS_HEAP_HH
-#define BLISS_HEAP_HH
+#pragma once
 
 /*
-  Copyright (c) 2003-2015 Tommi Junttila
+  Copyright (c) 2003-2021 Tommi Junttila
   Released under the GNU Lesser General Public License version 3.
 
   This file is part of bliss.
@@ -20,64 +19,71 @@
   along with bliss.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <vector>
+#include <algorithm>
+
 namespace bliss {
 
-/** \internal
- * \brief A capacity bounded heap data structure.
+/**
+ * \brief A min-heap of unsigned integers.
  */
 
 class Heap
 {
-  unsigned int N;
-  unsigned int n;
-  unsigned int *array;
-  void upheap(unsigned int k);
-  void downheap(unsigned int k);
+  std::vector<unsigned int> contents;
+  /** \nternal
+   * Less-than operator for building min-heaps.
+   */
+  struct {
+    /** \internal Use greater-than as less-than -> min-heaps. */
+    bool operator()(const unsigned int e1, const unsigned int e2) {return e1 > e2; }
+  } gt;
 public:
-  /**
-   * Create a new heap.
-   * init() must be called after this.
-   */
-  Heap() {array = 0; n = 0; N = 0; }
-  ~Heap();
-
-  /**
-   * Initialize the heap to have the capacity to hold \e size elements.
-   */
-  void init(const unsigned int size);
 
   /**
    * Is the heap empty?
    * Time complexity is O(1).
    */
-  bool is_empty() const {return(n==0); }
+  bool is_empty() const {return contents.empty(); }
 
   /**
    * Remove all the elements in the heap.
    * Time complexity is O(1).
    */
-  void clear() {n = 0;}
+  void clear() {contents.clear(); }
 
   /**
    * Insert the element \a e in the heap.
    * Time complexity is O(log(N)), where N is the number of elements
    * currently in the heap.
    */
-  void insert(const unsigned int e);
+  void insert(const unsigned int e) {
+    contents.push_back(e);
+    std::push_heap(contents.begin(), contents.end(), gt);
+  }
+
+  /**
+   * Return the smallest element in the heap.
+   * Time complexity is O(1).
+   */
+  unsigned int smallest() const {return contents.front(); }
 
   /**
    * Remove and return the smallest element in the heap.
    * Time complexity is O(log(N)), where N is the number of elements
    * currently in the heap.
    */
-  unsigned int remove();
+  unsigned int remove() {
+    const unsigned int result = smallest();
+    std::pop_heap(contents.begin(),contents.end(), gt);
+    contents.pop_back();
+    return result;
+  }
 
   /**
    * Get the number of elements in the heap.
    */
-  unsigned int size() const {return n; }
+  size_t size() const {return contents.size(); }
 };
 
 } // namespace bliss
-
-#endif

@@ -1,8 +1,7 @@
-#ifndef BLISS_UTILS_HH
-#define BLISS_UTILS_HH
+#pragma once
 
 /*
-  Copyright (c) 2003-2015 Tommi Junttila
+  Copyright (c) 2003-2021 Tommi Junttila
   Released under the GNU Lesser General Public License version 3.
 
   This file is part of bliss.
@@ -23,9 +22,9 @@
 /**
  * \file
  * \brief Some small utilities.
- *
  */
 
+#include <vector>
 #include <cstdio>
 
 namespace bliss {
@@ -36,10 +35,10 @@ namespace bliss {
  * The amount \a offset is added to each element before printing,
  * e.g. the permutation (2 4) is printed as (3 5) when \a offset is 1.
  */
-void print_permutation(FILE* fp,
-		       const unsigned int N,
-		       const unsigned int* perm,
-		       const unsigned int offset = 0);
+size_t print_permutation(FILE* fp,
+                         const unsigned int N,
+                         const unsigned int* perm,
+                         const unsigned int offset = 0);
 
 /**
  * Print the permutation \a perm of {0,...,N-1} in the cycle format
@@ -47,9 +46,9 @@ void print_permutation(FILE* fp,
  * The amount \a offset is added to each element before printing,
  * e.g. the permutation (2 4) is printed as (3 5) when \a offset is 1.
  */
-void print_permutation(FILE* fp,
-		       const std::vector<unsigned int>& perm,
-		       const unsigned int offset = 0);
+size_t print_permutation(FILE* fp,
+                         const std::vector<unsigned int>& perm,
+                         const unsigned int offset = 0);
 
 /**
  * Check whether \a perm is a valid permutation on {0,...,N-1}.
@@ -64,5 +63,3 @@ bool is_permutation(const unsigned int N, const unsigned int* perm);
 bool is_permutation(const std::vector<unsigned int>& perm);
 
 } // namespace bliss
-
-#endif

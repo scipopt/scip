@@ -1,11 +1,7 @@
-#ifndef BLISS_DEFS_HH
-#define BLISS_DEFS_HH
-
-#include <cassert>
-#include <cstdarg>
+#pragma once
 
 /*
-  Copyright (c) 2003-2015 Tommi Junttila
+  Copyright (c) 2003-2021 Tommi Junttila
   Released under the GNU Lesser General Public License version 3.
 
   This file is part of bliss.
@@ -23,20 +19,22 @@
   along with bliss.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <cassert>
+#include <cstdarg>
+
+/** \file
+ * \brief Some common definitions.
+ */
+
+#define BLISS_VERSION "0.77"
+#define BLISS_VERSION_MAJOR 0
+#define BLISS_VERSION_MINOR 77
+
 namespace bliss {
 
-/**
- * The version number of bliss.
- */
-static const char * const version = "0.73.3";
+/** \brief The version number of bliss. */
+static const char * const version = "0.77";
 
-/*
- * If a fatal error (out of memory, internal error) is encountered,
- * this function is called.
- * There should not be a return from this function but exit or
- * a jump to code that deallocates the AbstractGraph instance that called this.
- */
-void fatal_error(const char* fmt, ...);
 
 
 #if defined(BLISS_DEBUG)
@@ -59,57 +57,28 @@ void fatal_error(const char* fmt, ...);
 } // namespace bliss
 
 
-
-/*! \mainpage Bliss
+/*! \mainpage Outline
  *
- * \section intro_sec Introduction
- *
- * This is the source code documentation of bliss,
- * produced by running <A href="http://www.doxygen.org">doxygen</A> in
+ * This is the C++ API documentation of bliss,
+ * produced by running <a href="http://www.doxygen.org">doxygen</a> in
  * the source directory.
- * The algorithms and data structures used in bliss are documented in
- * the papers found at the
- * <A href="http://www.tcs.hut.fi/Software/bliss">bliss web site</A>.
  *
+ * The algorithms and data structures used in bliss,
+ * the graph file format, as well as the compilation process
+ * can be found at the
+ * <a href="https://users.aalto.fi/tjunttil/bliss">bliss web site</a>.
  *
- * \section compile_sec Compiling
+ * The C++ language API is the main API to bliss.
+ * It basically consists of the public methods in the classes
+ * * bliss::Graph and
+ * * bliss::Digraph.
  *
- * Compiling bliss in Linux should be easy, just execute
- * \code
- * make
- * \endcode
- * in the bliss source directory.
- * This will produce the executable program \c bliss as well as
- * the library file \c libbliss.a that can be linked in other programs.
- * If you have the <A href="http://gmplib.org/">GNU Multiple Precision
- * Arithmetic Library</A> (GMP) installed in your machine, you can also use
- * \code
- * make gmp
- * \endcode
- * to enable exact computation of automorphism group sizes.
- *
- * When linking the bliss library \c libbliss.a in other programs,
- * remember to include the standard c++ library
- * (and the GMP library if you compiled bliss to include it).
- * For instance,
- * \code gcc -o test test.c -lstdc++ -lgmp -lbliss\endcode
- *
- * \section cppapi_sec The C++ language API
- *
- * The C++ language API is the main API to bliss;
- * all other APIs are just more or less complete variants of it.
- * The C++ API consists basically of the public methods in
- * the classes bliss::AbstractGraph, bliss::Graph, and bliss::Digraph.
  * For an example of its use,
  * see the \ref executable "source of the bliss executable".
- *
  *
  * \section capi_sec The C language API
  *
  * The C language API is given in the file bliss_C.h.
- * It is currently more restricted than the C++ API so
- * consider using the C++ API whenever possible.
+ * It is currently only a subset of the C++ API,
+ * so consider using the C++ API whenever possible.
  */
-
-
-#endif

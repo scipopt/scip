@@ -1,10 +1,5 @@
-#include <stdlib.h>
-#include <assert.h>
-#include "bliss/defs.hh"
-#include "bliss/orbit.hh"
-
 /*
-  Copyright (c) 2003-2015 Tommi Junttila
+  Copyright (c) 2003-2021 Tommi Junttila
   Released under the GNU Lesser General Public License version 3.
 
   This file is part of bliss.
@@ -22,39 +17,52 @@
   along with bliss.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <cassert>
+#include "bliss/defs.hh"
+#include "bliss/orbit.hh"
+
 namespace bliss {
 
 Orbit::Orbit()
 {
-  orbits = 0;
-  in_orbit = 0;
+  orbits = nullptr;
+  in_orbit = nullptr;
   nof_elements = 0;
 }
 
 
 Orbit::~Orbit()
 {
+  delete[] orbits;
+  orbits = nullptr;
+  /*
   if(orbits)
     {
       free(orbits);
       orbits = 0;
     }
+  */
+  delete[] in_orbit;
+  in_orbit = nullptr;
+  /*
   if(in_orbit)
     {
       free(in_orbit);
       in_orbit = 0;
     }
+  */
   nof_elements = 0;
+  _nof_orbits = 0;
 }
 
 
 void Orbit::init(const unsigned int n)
 {
   assert(n > 0);
-  if(orbits) free(orbits);
-  orbits = (OrbitEntry*)malloc(n * sizeof(OrbitEntry));
-  if(in_orbit) free(in_orbit);
-  in_orbit = (OrbitEntry**)malloc(n * sizeof(OrbitEntry*));
+  if(orbits) delete[] orbits;
+  orbits = new OrbitEntry[n];
+  delete[] in_orbit;
+  in_orbit = new OrbitEntry*[n];
   nof_elements = n;
 
   reset();
@@ -85,28 +93,28 @@ void Orbit::merge_orbits(OrbitEntry *orbit1, OrbitEntry *orbit2)
       _nof_orbits--;
       /* Only update the elements in the smaller orbit */
       if(orbit1->size > orbit2->size)
-	{
-	  OrbitEntry * const temp = orbit2;
-	  orbit2 = orbit1;
-	  orbit1 = temp;
-	}
+        {
+          OrbitEntry * const temp = orbit2;
+          orbit2 = orbit1;
+          orbit1 = temp;
+        }
       /* Link the elements of orbit1 to the almost beginning of orbit2 */
       OrbitEntry *e = orbit1;
       while(e->next)
-	{
-	  in_orbit[e->element] = orbit2;
-	  e = e->next;
-	}
+        {
+          in_orbit[e->element] = orbit2;
+          e = e->next;
+        }
       in_orbit[e->element] = orbit2;
       e->next = orbit2->next;
       orbit2->next = orbit1;
       /* Keep the minimal orbit representative in the beginning */
       if(orbit1->element < orbit2->element)
-	{
-	  const unsigned int temp = orbit1->element;
-	  orbit1->element = orbit2->element;
-	  orbit2->element = temp;
-	}
+        {
+          const unsigned int temp = orbit1->element;
+          orbit1->element = orbit2->element;
+          orbit2->element = temp;
+        }
       orbit2->size += orbit1->size;
     }
 }

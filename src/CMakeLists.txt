@@ -1083,7 +1083,10 @@ add_dependencies(scip scip_update_githash)
 set_target_properties(libscip PROPERTIES
     VERSION ${SCIP_VERSION_MAJOR}.${SCIP_VERSION_MINOR}.${SCIP_VERSION_PATCH}.${SCIP_VERSION_SUB}
     SOVERSION ${SCIP_VERSION_MAJOR}.${SCIP_VERSION_MINOR}
-    INSTALL_RPATH_USE_LINK_PATH TRUE)
+    INSTALL_RPATH_USE_LINK_PATH TRUE
+    CMAKE_CXX_VISIBILITY_PRESET hidden
+    CMAKE_C_VISIBILITY_PRESET hidden
+    CMAKE_VISIBILITY_INLINES_HIDDEN 1)
 
 target_include_directories(scip PUBLIC
     $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}>
@@ -1107,18 +1110,18 @@ install(FILES ${xmlheaders} DESTINATION include/xml)
 install(FILES ${symheaders} DESTINATION include/symmetry)
 install(FILES ${blockmemshellheader} DESTINATION include/blockmemshell)
 
-# install the binary and the library to appropriate lcoations and add them to an export group
-install(TARGETS scip libscip ${BLISS_TARGET} EXPORT scip-targets
+# install the binary and the library to appropriate locations and add them to an export group
+install(TARGETS scip libscip EXPORT scip-targets
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib
         RUNTIME DESTINATION bin
         INCLUDES DESTINATION include)
 
 # Add all targets to the build-tree export set
-export(TARGETS scip libscip
+export(TARGETS scip libscip libbliss
   FILE "${PROJECT_BINARY_DIR}/scip-targets.cmake")
 
-#make soplex and zimpl dir absolute for the config file
+# make soplex and zimpl dir absolute for the config file
 if(SOPLEX_NEEDED)
     get_filename_component(CONF_SOPLEX_DIR ${SOPLEX_DIR} REALPATH BASE_DIR ${CMAKE_SOURCE_DIR})
 endif()
@@ -1127,7 +1130,7 @@ if(ZIMPL_NEEDED)
     get_filename_component(CONF_ZIMPL_DIR ${ZIMPL_DIR} REALPATH BASE_DIR ${CMAKE_SOURCE_DIR})
 endif()
 
-#configure the config file for the build tree
+# configure the config file for the build tree
 set(CONF_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/src" "${PROJECT_BINARY_DIR}")
 configure_file(${PROJECT_SOURCE_DIR}/scip-config.cmake.in
   "${PROJECT_BINARY_DIR}/scip-config.cmake" @ONLY)

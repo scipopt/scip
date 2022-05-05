@@ -1,8 +1,7 @@
-#ifndef BLISS_TIMER_HH
-#define BLISS_TIMER_HH
+#pragma once
 
 /*
-  Copyright (c) 2003-2015 Tommi Junttila
+  Copyright (c) 2003-2021 Tommi Junttila
   Released under the GNU Lesser General Public License version 3.
 
   This file is part of bliss.
@@ -20,34 +19,39 @@
   along with bliss.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+
+#include <chrono>
+
 namespace bliss {
 
-/** \internal
- * \brief A very simple wrapper class for measuring elapsed user+system time.
- * Not essential if you are using bliss as a library.
+/**
+ * \brief A simple helper class for measuring elapsed time.
  */
-
 class Timer
 {
-  double start_time;
+  std::chrono::high_resolution_clock::time_point start_time_;
 public:
   /**
-   * Create and start a new timer.
+   * \brief Create and start a new timer.
    */
-  Timer();
+  Timer() {
+    reset();
+  }
 
   /**
-   * Reset the timer.
+   * \brief Reset the timer.
    */
-  void reset();
+  void reset() {
+    start_time_ = std::chrono::high_resolution_clock::now();
+  }
 
   /**
-   * Get the user+system time (in seconds) elapsed since the creation or
-   * the last reset() call of the timer.
+   * \brief Get the time (in seconds) elapsed since
+   *        the creation or the last reset() call of the timer.
    */
-  double get_duration();
+  double get_duration() const {
+    return std::chrono::duration_cast<std::chrono::duration<double> >(std::chrono::high_resolution_clock::now() - start_time_).count();
+  }
 };
 
 } // namespace bliss
-
-#endif

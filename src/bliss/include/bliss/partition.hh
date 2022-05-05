@@ -1,8 +1,7 @@
-#ifndef BLISS_PARTITION_HH
-#define BLISS_PARTITION_HH
+#pragma once
 
 /*
-  Copyright (c) 2003-2015 Tommi Junttila
+  Copyright (c) 2003-2021 Tommi Junttila
   Released under the GNU Lesser General Public License version 3.
 
   This file is part of bliss.
@@ -24,19 +23,15 @@ namespace bliss {
   class Partition;
 }
 
-#include <cstdlib>
-#include <cstdio>
+#include <vector>
 #include <climits>
-#include "bliss/kstack.hh"
 #include "bliss/kqueue.hh"
-#include "bliss/heap.hh"
-#include "bliss/orbit.hh"
-#include "bliss/graph.hh"
+#include "bliss/abstractgraph.hh"
 
 
 namespace bliss {
 
-/** \internal
+/**
  * \brief A class for refinable, backtrackable ordered partitions.
  *
  * This is rather a data structure with some helper functions than
@@ -94,7 +89,7 @@ private:
   /** \internal
    * A stack for remembering the splits, used for backtracking.
    */
-  KStack<RefInfo> refinement_stack;
+  std::vector<RefInfo> refinement_stack;
 
   class BacktrackInfo {
   public:
@@ -140,10 +135,10 @@ public:
    * @return         the new unit Cell \a newcell
    */
   Cell* individualize(Cell* const cell,
-		      const unsigned int element);
+                      const unsigned int element);
 
   Cell* aux_split_in_two(Cell* const cell,
-			 const unsigned int first_half_size);
+                         const unsigned int first_half_size);
 
 
 private:
@@ -161,6 +156,7 @@ public:
   Cell **element_to_cell_map;
   /** Get the cell of the element \a e */
   Cell* get_cell(const unsigned int e) const {
+    assert(e < N);
     return element_to_cell_map[e];
   }
   /* in_pos[e] points to the elements array s.t. *in_pos[e] = e  */
@@ -202,7 +198,7 @@ public:
    * The flag \a max_ival_info_ok indicates whether the max_ival and
    * max_ival_count fields of the Cell \a cell have consistent values
    * when the method is called.
-   * Clears the invariant values of elements in the Cell \a cell as well as
+   * Clears the invariant values of the elements in the Cell \a cell as well as
    * the max_ival and max_ival_count fields of the Cell \a cell.
    */
   Cell *zplit_cell(Cell * const cell, const bool max_ival_info_ok);
@@ -214,7 +210,7 @@ public:
   void cr_free();
   unsigned int cr_get_level(const unsigned int cell_index) const;
   unsigned int cr_split_level(const unsigned int level,
-			      const std::vector<unsigned int>& cells);
+                              const std::vector<unsigned int>& cells);
 
   /** Clear the invariant_values of the elements in the Cell \a cell. */
   void clear_ivs(Cell* const cell);
@@ -234,11 +230,11 @@ private:
     CRCell** prev_next_ptr;
     void detach() {
       if(next)
-	next->prev_next_ptr = prev_next_ptr;
+        next->prev_next_ptr = prev_next_ptr;
       *(prev_next_ptr) = next;
       level = UINT_MAX;
-      next = 0;
-      prev_next_ptr = 0;
+      next = nullptr;
+      prev_next_ptr = nullptr;
     }
   };
   CRCell* cr_cells;
@@ -283,7 +279,9 @@ private:
 inline Partition::Cell*
 Partition::splitting_queue_pop()
 {
+  assert(!splitting_queue.is_empty());
   Cell* const cell = splitting_queue.pop_front();
+  assert(cell->in_splitting_queue);
   cell->in_splitting_queue = false;
   return cell;
 }
@@ -298,11 +296,10 @@ Partition::splitting_queue_is_empty() const
 inline unsigned int
 Partition::cr_get_level(const unsigned int cell_index) const
 {
+  assert(cr_enabled);
+  assert(cell_index < N);
+  assert(cr_cells[cell_index].level != UINT_MAX);
   return(cr_cells[cell_index].level);
 }
 
-
-
 } // namespace bliss
-
-#endif

@@ -1,0 +1,29 @@
+Version 0.77 (2021-02-18):
+- set_color and copy methods in the C++ API
+- examples/enumerate.cc
+- precise group size computation also without GNU GMP
+- no more exit-causing "fatal_errors", instead a std::logic_error, std::out_of_range or std::bad_alloc is thrown
+
+Version 0.76 (2021-02-01):
+- The sources are now in a separate directory.
+- The monolithic "graph" file is split in "abstractgraph", "graph" and "digraph".
+- defs.hh now contains the version number as a #define.
+- is_automorphism is now a public member of Graph and Digraph.
+
+Version 0.75 (2021-01-22):
+- Automorphism reporting and termination check functions
+  are now of C++ type std::function.
+- Bignum allows one to get a copy of internal GNU GMP integer.
+
+Version 0.74 (2021-01-18)
+- Fixed a memory leak (thanks to Alexander Haupt and others for reporting this).
+- Possibility to terminate the search early (at the risk of incompleteness).
+- Minor changes for better C++11 compatibility.
+- Memory allocation failures now throw std::bad_alloc (except GNU GMP Bignum).
+- CMake (https://cmake.org/) support.
+
+Version 0.73 (2015-09-01)
+- Release under LGPL3.
+- Fix an uninitialized variable found by J. Azarija.
+- Fix a bug reported by T. Rehn.
+- Removed a too eager assertion.
