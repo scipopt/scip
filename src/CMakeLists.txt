@@ -12,9 +12,7 @@ set(CMAKE_C_STANDARD_REQUIRED on)
 set(CMAKE_C_EXTENSIONS OFF)
 
 if(NOT WIN32)
-    add_compile_options(
-        "$<$<COMPILE_LANGUAGE:C>:-D_XOPEN_SOURCE=600>"
-    )
+    set(SCIP_COMP_OPTIONS ${SCIP_COMP_OPTIONS} "$<$<COMPILE_LANGUAGE:C>:-D_XOPEN_SOURCE=600>")
 endif()
 
 #configure the scipbuildflags.c source file for the build tree
@@ -992,7 +990,7 @@ if(CXXONLY)
 
     # for the clang compiler this suppresses the warnings about treating 'c' input as 'c++' when CXXONLY is enabled
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-       add_compile_options(-x c++)
+       set(SCIP_COMP_OPTIONS ${SCIP_COMP_OPTIONS} -x c++)
     endif()
 endif()
 
@@ -1053,6 +1051,9 @@ endif()
 
 add_executable(SCIP::SCIP ALIAS scip)
 add_library(SCIP::libscip ALIAS libscip)
+
+target_compile_options(scip PUBLIC ${SCIP_COMP_OPTIONS})
+target_compile_options(libscip PUBLIC ${SCIP_COMP_OPTIONS})
 
 include(GenerateExportHeader)
 generate_export_header(libscip BASE_NAME scip EXPORT_FILE_NAME ${PROJECT_BINARY_DIR}/scip/scip_export.h)
