@@ -582,7 +582,7 @@ SCIP_DECL_CONSPRINT(ConshdlrSubtour::scip_print)
 SCIP_DECL_CONSHDLRCLONE(ObjProbCloneable* ConshdlrSubtour::clone) /*lint !e665*/
 {
    assert(valid != NULL);
-   *valid = true;
+   *valid = TRUE;
    return new ConshdlrSubtour(scip);
 }
 
@@ -621,7 +621,7 @@ SCIP_DECL_CONSCOPY(ConshdlrSubtour::scip_copy)
          conshdlr, consdata, initial, separate, enforce, check,
          propagate, local, modifiable, dynamic, removable, FALSE) );
 
-   *valid = true;
+   *valid = TRUE;
 
    return SCIP_OKAY;
 }
