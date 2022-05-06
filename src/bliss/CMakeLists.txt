@@ -19,42 +19,6 @@ endif()
 
 option(USE_GMP "Use GNU Multiple Precision Arithmetic library" OFF)
 
-# specify the C++ standard
-set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_CXX_STANDARD_REQUIRED True)
-
-if (MSVC)
-    # /permissive- for standard C++ with "and" and "or" logical operators
-    add_compile_options(/permissive-)
-else()
-    # Warnings, optimization, no assertions
-    add_compile_options(-Wall -pedantic -O3 -DNDEBUG) #-Wextra -Werror
-endif()
-
-if(USE_GMP)
-  find_path(GMP_INCLUDE_DIR NAMES gmp.h)
-  find_library(GMP_LIBRARIES NAMES gmp libgmp mpir REQUIRED)
-  if (MSVC)
-    add_compile_options(/DBLISS_USE_GMP /I${GMP_INCLUDE_DIR})
-  else()
-    add_compile_options(-DBLISS_USE_GMP -I${GMP_INCLUDE_DIR})
-  endif()
-endif(USE_GMP)
-
-# Set the default build type to the given value if no build type was specified
-if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
-  message(STATUS "Setting build type to Release as none was specified")
-  set(
-    CMAKE_BUILD_TYPE Release
-    CACHE STRING "Choose the type of build" FORCE
-  )
-  # Set the possible values of build type for cmake-gui, ccmake
-  set_property(
-    CACHE CMAKE_BUILD_TYPE
-    PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo"
-  )
-endif()
-
 
 set(
   BLISS_SOURCE_FILES
@@ -79,7 +43,7 @@ endif(MSVC)
 # Add the shared library
 add_library(libbliss ${BLISS_SOURCE_FILES})
 
-set_target_properties(libbliss PROPERTIES OUTPUT_NAME bliss)
+set_target_properties(libbliss PROPERTIES OUTPUT_NAME bliss )
 add_library(Bliss::libbliss ALIAS libbliss)
 
 target_include_directories(
@@ -105,6 +69,48 @@ target_link_libraries(bliss PRIVATE libbliss)
 if(USE_GMP)
   target_link_libraries(bliss ${GMP_LIBRARIES})
 endif(USE_GMP)
+
+set_target_properties(libbliss bliss PROPERTIES COMPILE_OPTIONS "")
+
+# specify the C++ standard
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED True)
+
+if (MSVC)
+    # /permissive- for standard C++ with "and" and "or" logical operators
+    target_compile_options(libbliss PUBLIC /permissive-)
+    target_compile_options(bliss PUBLIC /permissive-)
+else()
+    # Warnings, optimization, no assertions
+    target_compile_options(libbliss PUBLIC -O3 -DNDEBUG) #-Wextra -Werror ### disable as part of scip build
+    target_compile_options(bliss PUBLIC -O3 -DNDEBUG) #-Wextra -Werror ### disable as part of scip build
+endif()
+
+if(USE_GMP)
+  find_path(GMP_INCLUDE_DIR NAMES gmp.h)
+  find_library(GMP_LIBRARIES NAMES gmp libgmp mpir REQUIRED)
+  if (MSVC)
+      target_compile_options(libbliss PUBLIC /DBLISS_USE_GMP /I${GMP_INCLUDE_DIR})
+      target_compile_options(bliss PUBLIC /DBLISS_USE_GMP /I${GMP_INCLUDE_DIR})
+  else()
+      target_compile_options(libbliss PUBLIC -DBLISS_USE_GMP -I${GMP_INCLUDE_DIR})
+      target_compile_options(bliss PUBLIC -DBLISS_USE_GMP -I${GMP_INCLUDE_DIR})
+  endif()
+endif(USE_GMP)
+
+# Set the default build type to the given value if no build type was specified
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+  message(STATUS "Setting build type to Release as none was specified")
+  set(
+    CMAKE_BUILD_TYPE Release
+    CACHE STRING "Choose the type of build" FORCE
+  )
+  # Set the possible values of build type for cmake-gui, ccmake
+  set_property(
+    CACHE CMAKE_BUILD_TYPE
+    PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo"
+  )
+endif()
 
 
 install(

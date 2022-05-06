@@ -1052,8 +1052,8 @@ endif()
 add_executable(SCIP::SCIP ALIAS scip)
 add_library(SCIP::libscip ALIAS libscip)
 
-target_compile_options(scip PUBLIC ${SCIP_COMP_OPTIONS})
-target_compile_options(libscip PUBLIC ${SCIP_COMP_OPTIONS})
+target_compile_options(scip PRIVATE ${SCIP_COMP_OPTIONS})
+target_compile_options(libscip PRIVATE ${SCIP_COMP_OPTIONS})
 
 include(GenerateExportHeader)
 generate_export_header(libscip BASE_NAME scip EXPORT_FILE_NAME ${PROJECT_BINARY_DIR}/scip/scip_export.h)
