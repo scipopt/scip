@@ -196,7 +196,7 @@ SCIP_RETCODE sepaSubtour(
 
             // Add violated cut. The cuts produced by ghc_tree are violated by at least the feasibility tolerance. If we
             // are enforcing, then this is enough to add the cut. Otherwise (we are separating), we check whether the
-            // cut is efficious.
+            // cut is efficacious.
             if( enforce || SCIPisCutEfficacious(scip, sol, row) )
             {
                SCIP_Bool infeasible;
