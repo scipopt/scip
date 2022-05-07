@@ -102,9 +102,10 @@ private:
    /** method asserting, that the file has had the correct format and everything was set correctly */
    bool checkValid(
       GRAPH*             graph,              /**< the constructed graph, schould not be NULL */
-      std::string        name,               /**< the name of the file */
-      std::string        type,               /**< the type of the problem, should be "TSP" */
-      std::string        edgeweighttype,     /**< type of the edgeweights, should be "EUC_2D", "MAX_2D", or "MAN_2D" */
+      const std::string& name,               /**< the name of the file */
+      const std::string& type,               /**< the type of the problem, should be "TSP" */
+      const std::string& edgeweighttype,     /**< type of the edgeweights, should be "EUC_2D", "MAX_2D", "MAN_2D",
+                                              *   "ATT", or "GEO" */
       int                nnodes              /**< dimension of the problem, should at least be one */
       );
 
