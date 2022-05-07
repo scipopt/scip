@@ -121,6 +121,9 @@ Performance improvements
 ------------------------
 Examples and applications
 -------------------------
+
+- Fixed handling of enforcing in the TSP example.
+
 Interface changes
 -----------------
 ### New and changed callbacks

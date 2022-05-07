@@ -151,7 +151,7 @@ void fini_maxflow(void)
    free(number);
 }
 
-/** global relabel operation */\
+/** global relabel operation */
 static
 void global_relabel(
    GRAPH*                gr,                 /**< graph */
@@ -286,7 +286,7 @@ double maxflow(
          return FALSE;
       }
 
-      nptr->excess = 0.0L;
+      nptr->excess = 0.0;
       nptr->stack_link = NULL;
       nptr->alive = TRUE;
       nptr->unmarked = TRUE;
@@ -344,13 +344,13 @@ double maxflow(
       for ( nptr = &(gr->nodes[n-1]); nptr >= gr->nodes; --nptr )
       {
          if ( nptr->unmarked )
-            return (-1.0L);
+            return (-1.0);
       }
    }
 
    s_ptr->dist = (int) n; /* number[0] and number[n] not required */
    t_ptr->dist = 0L;
-   t_ptr->excess = 1.0L;  /* to be subtracted again */
+   t_ptr->excess = 1.0;  /* to be subtracted again */
 
    /* initial preflow push from source node */
    max_dist = 0L;  /* = max_dist of active nodes */
@@ -365,7 +365,7 @@ double maxflow(
          nptr->excess += cap;
          s_ptr->excess -= cap;
          eptr->back->rcap += cap;
-         eptr->rcap = 0.0L;
+         eptr->rcap = 0.0;
 
          if ( nptr != t_ptr && nptr->excess <= cap + EPS )
          {
@@ -411,7 +411,7 @@ double maxflow(
                /* perform a non saturating push */
                eptr->rcap -= incre;
                eptr->back->rcap += incre;
-               aptr->excess = 0.0L;
+               aptr->excess = 0.0;
                nptr->excess += incre;
 
                if ( nptr->excess <= incre + EPS )
@@ -433,7 +433,7 @@ double maxflow(
                eptr->back->rcap += incre;
                aptr->excess -= incre;
                nptr->excess += incre;
-               eptr->rcap = 0.0L;
+               eptr->rcap = 0.0;
 
                if ( nptr->excess <= incre + EPS )
                {

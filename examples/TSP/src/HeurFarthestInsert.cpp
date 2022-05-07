@@ -141,7 +141,7 @@ SCIP_DECL_HEUREXEC(HeurFarthestInsert::scip_exec)
       GRAPHEDGE* edge = &(graph_->edges[e]); /*lint !e613*/
       if( SCIPvarGetLbGlobal(edge->var) == 1.0 )
       {
-         hasFixedEdges = true;
+         hasFixedEdges = TRUE;
          break;
       }
    }
@@ -200,7 +200,7 @@ SCIP_DECL_HEUREXEC(HeurFarthestInsert::scip_exec)
                   continue;
                else
                {
-                  foundThreeCircle = true;
+                  foundThreeCircle = TRUE;
 
                   subtour[u] = true;
                   dist[u] = 0.0;

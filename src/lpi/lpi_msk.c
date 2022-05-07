@@ -4161,9 +4161,6 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
 {
    int nrows;
    int i;
-#if MSK_VERSION_MAJOR >= 10
-   int nnzout;
-#endif
 
    assert(lpi != NULL);
    assert(lpi->mosekenv != NULL);
@@ -4195,7 +4192,7 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
 #if MSK_VERSION_MAJOR < 10
       MOSEK_CALL( MSK_solvewithbasis(lpi->task, 1, ninds, inds, coef) );
 #else
-      MOSEK_CALL( MSK_solvewithbasis(lpi->task, 1, ninds, inds, coef, &nnzout) );
+      MOSEK_CALL( MSK_solvewithbasis(lpi->task, 1, *ninds, inds, coef, ninds) );
 #endif
       assert( *ninds <= nrows );
    }
@@ -4213,7 +4210,7 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
 #if MSK_VERSION_MAJOR < 10
       MOSEK_CALL( MSK_solvewithbasis(lpi->task, 1, &numnz, sub, coef) );
 #else
-      MOSEK_CALL( MSK_solvewithbasis(lpi->task, 1, &numnz, sub, coef, &nnzout) );
+      MOSEK_CALL( MSK_solvewithbasis(lpi->task, 1, numnz, sub, coef, &numnz) );
 #endif
       assert( numnz <= nrows );
 
@@ -4251,9 +4248,6 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
 {
    int nrows;
    int i;
-#if MSK_VERSION_MAJOR >= 10
-   int nnzout;
-#endif
 
    assert(lpi != NULL);
    assert(lpi->mosekenv != NULL);
@@ -4284,7 +4278,7 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
 #if MSK_VERSION_MAJOR < 10
       MOSEK_CALL( MSK_solvewithbasis(lpi->task, 0, ninds, inds, coef) );
 #else
-      MOSEK_CALL( MSK_solvewithbasis(lpi->task, 0, ninds, inds, coef, &nnzout) );
+      MOSEK_CALL( MSK_solvewithbasis(lpi->task, 0, *ninds, inds, coef, ninds) );
 #endif
       assert( *ninds <= nrows );
    }
@@ -4301,7 +4295,7 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
 #if MSK_VERSION_MAJOR < 10
       MOSEK_CALL( MSK_solvewithbasis(lpi->task, 0, &numnz, sub, coef) );
 #else
-      MOSEK_CALL( MSK_solvewithbasis(lpi->task, 0, &numnz, sub, coef, &nnzout) );
+      MOSEK_CALL( MSK_solvewithbasis(lpi->task, 0, numnz, sub, coef, &numnz) );
 #endif
       assert( numnz <= nrows );
 
@@ -4414,9 +4408,6 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    int nrows;
    int numnz;
    int i;
-#if MSK_VERSION_MAJOR >= 10
-   int nnzout;
-#endif
 
    assert(lpi != NULL);
    assert(lpi->mosekenv != NULL);
@@ -4455,7 +4446,7 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
 #if MSK_VERSION_MAJOR < 10
       MOSEK_CALL( MSK_solvewithbasis(lpi->task, 0, ninds, inds, coef) );
 #else
-      MOSEK_CALL( MSK_solvewithbasis(lpi->task, 0, ninds, inds, coef, &nnzout) );
+      MOSEK_CALL( MSK_solvewithbasis(lpi->task, 0, *ninds, inds, coef, ninds) );
 #endif
       assert( *ninds <= nrows );
    }
@@ -4475,7 +4466,7 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
 #if MSK_VERSION_MAJOR < 10
       MOSEK_CALL( MSK_solvewithbasis(lpi->task, 0, &numnz, sub, coef) );
 #else
-      MOSEK_CALL( MSK_solvewithbasis(lpi->task, 0, &numnz, sub, coef, &nnzout) );
+      MOSEK_CALL( MSK_solvewithbasis(lpi->task, 0, numnz, sub, coef, &numnz) );
 #endif
 
       if ( ninds != NULL )
