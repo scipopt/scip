@@ -43,22 +43,40 @@
  *
  * See the web site of <a href="http://scipopt.org">\SCIP</a> for more information about licensing and to download \SCIP.
  *
+ *  <b style="color: blue">If you are new to SCIP and don't know where to start you should have a look at the
+ *  @ref GETTINGSTARTED "first steps walkthrough"
+ *  .</b>
  *
  * @section TABLEOFCONTENTS Structure of this manual
  *
  * This manual gives an accessible introduction to the functionality of the SCIP code in the following chapters
  *
- *  - @subpage GETTINGSTARTED      Installation and license information and an interactive shell tutorial
- *  - @subpage EXAMPLES            Coding examples in C and C++ in the source code distribution
- *  - @subpage APPLICATIONS        Extensions of SCIP for specific applications
- *  - @subpage PARAMETERS          List of all SCIP parameters
- *  - @subpage PROGRAMMING         Important programming concepts for working with(in) SCIP.
- *  - @subpage HOWTOADD            Detailed guides for adding user plugins
- *  - @subpage HOWTOUSESECTION     Detailed guides for advanced SCIP topics
- *  - @subpage FAQ                 Frequently asked questions (FAQ)
- *  - @subpage CHG                 Release notes and changelog
- *  - @subpage AUTHORS             SCIP Authors
- *  - @subpage EXTERNALDOC         Links to external documentation
+ * Setup and news
+ *  - @subpage INSTALL
+ *  - @subpage FAQ
+ *  - @subpage CHG
+ *
+ * Tutorials and guides
+ *  - @subpage GETTINGSTARTED
+ *  - @subpage SHELL
+ *  - @subpage PROGRAMMING "Important programming concepts for working with(in) SCIP"
+ *  - @subpage START
+ *  - @subpage DOC
+ *  - @subpage HOWTOADD "Detailed guides for adding user plugins"
+ *  - @subpage HOWTOUSESECTION "Detailed guides for advanced SCIP topics"
+ *
+ * Examples and applications
+ *  - @subpage EXAMPLES "Coding examples in C and C++ in the source code distribution"
+ *  - @subpage APPLICATIONS "Extensions of SCIP for specific applications"
+ *
+ * References
+ *  - @subpage WHATPROBLEMS "Supported types of optimization problems"
+ *  - @subpage FILEREADERS "Readable file formats"
+ *  - @subpage INTERFACES
+ *  - @subpage PARAMETERS
+ *  - @subpage AUTHORS "SCIP Authors"
+ *  - @subpage LICENSE
+ *  - @subpage EXTERNALDOC "Links to external documentation"
  *
  *
  * @section QUICKSTART Quickstart
@@ -68,10 +86,10 @@
  *
  *  \verbinclude simple.lp
  *
- *  Saving this file as "simple.lp" allows to read it into SCIP and solve it.
+ *  Saving this file as "simple.lp" allows to read it into SCIP and solve it by calling the scip binary with the `-f` flag to solve the problem from the provided file and exit.
  *
  * ```
- * scip -c "read simple.lp optimize quit"
+ * scip -f simple.lp
  * ```
  * reads and optimizes this model in no time:
  *
@@ -151,35 +169,154 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-/**@page GETTINGSTARTED Getting started
+/**@page GETTINGSTARTED First Steps Walkthrough
  *
- * - @subpage WHATPROBLEMS "What types of optimization problems does SCIP solve?"
+ * @section GETTINGSTARTED_BLACKBOX Use SCIP to solve a problem
  *
- * - @subpage LICENSE     "License"
- * - @subpage INSTALL     "Installation"
- * - @subpage SHELL       "Tutorial: the interactive shell"
- * - @subpage FILEREADERS "Readable file formats"
- * - @subpage INTERFACES  "Interfaces"
- * - @subpage START       "How to start a new project"
- * - @subpage DOC         "How to search the documentation for interface methods"
+ * @subsection GETTINGSTARTED_BLACKBOX_WHY Why SCIP?
+ *
+ * Charlotte lectures at a university and she wants her students to get in touch with solving constraint integer programs (CIPs).
+ * She would like to use SCIP for this purpose because its \ref LICENSE "license" allows free use for academic, non-commercial purposes.
+ * Also, her advisor told her that there are various \ref INTERFACES "interfaces" to SCIP.
+ *
+ * @subsection GETTINGSTARTED_BLACKBOX_PROBLEMS What Kinds Of Problems?
+ *
+ * As a first step she checks \ref WHATPROBLEMS "what types of problems" \SCIP can solve and
+ * \ref FILEREADERS "what are readable formats", and is happy to find MIPs to be among them.
+ *
+ * @subsection GETTINGSTARTED_BLACKBOX_INSTALL Setup
+ *
+ * Charlotte now needs to \ref INSTALL "install SCIP".
+ * She works on a recent computer with a windows system and already has the <a href="https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads">Visual C++ Redistributable Packages</a> and <a href="https://github.com/oneapi-src/oneTBB">TBB</a> installed.
+ *
+ * Having these prerequisites in place, Charlotte downloads the 64-bit windows exectuable from the <a href="https://scipopt.org/index.php#download">download page</a> and installs it without a problem.
+ * They also read about the <a href="http://www.pokutta.com/blog/pages/scip/scip-teaching.html"> dockerized SCIP container</a> which she wants
+ * to recommend to her students, in case they are unable to install SCIP on their own machines.
+ *
+ * @subsection GETTINGSTARTED_BLACKBOX_SOLVE Solve A First Problem
+ *
+ * To test her installation and get a first feeling for SCIP, Charlotte follows the steps described in the \ref QUICKSTART "quickstart" section to solve a first simple lp problem.
+ *
+ * She has just solved a problem, using SCIP in the command-based mode, by passing a command to the scip call via the `-c` flag.
+ * These commands can also be typed into the interactive shell, that one uses by just calling the binary `scip`.
+ *
+ * After the first solution process worked like a charm, Charlotte downloads a more complicated problem file from the <a href="https://miplib.zib.de/instance_details_enlight_hard.html">MIPLIB 2017</a> page
+ * and follows the \ref SHELL_AFTERINSTALL "interactive shell tutorial".
+ * There, she already learns quite a lot about the solving process and how to work with the interactive shell.
+ *
+ * @subsection GETTINGSTARTED_BLACKBOX_HELP Getting Help
+ *
+ * Feeling happy about having already solved some instances and having worked in interactive mode, Charlotte is curious on what more options SCIP has.
+ * She types `scip -h` to find out.
+ *
+ * She feels confident to being able to understand and use some of the other options, like `-l` to write the output to a logfile, or `-b` to pass a file containing the commands to be executed by scip.
+ * There are some commands that do not yet make a lot of sense to her, but she doesn't worry about it for now.
+ * She will familiarize herself with it over time and with experience.
+ *
+ * @section GETTINGSTARTED_DEVELOP Develop A Custom Plugin
+ *
+ * Alex is a researcher in Charlotte's group and is working on problems that have a very special structure that he hopes to be able to exploit in the solving process.
+ *
+ * Alex heard Charlotte talk about SCIP.
+ * She explained that SCIP is plugin-based, that is, different components (plugins) are implemented using a generic interface and that it is very easy to write your own plugins, like constraint handlers, heuristics etc.
+ * So Alex decides to give it a go and dive into SCIP.
+ *
+ * @subsection GETTINGSTARTED_DEVELOP_PREREQUISITES Prerequisites And Setup
+ *
+ * After some time of using SCIP, he feels confident enough to dig into the source code and decides to write his own plugin.
+ * Alex likes to use his linux machine for developing code, because in his experience compilation is easiest there.
+ *
+ * He starts by downloading the latest <a href="http://scipopt.org/#download">source code tarball</a>,
+ * unpacking it and compiling via \ref CMAKE "cmake", typing `mkdir build; cd build; cmake ..; make`.
+ *
+ * @subsection GETTINGSTARTED_DEVELOP_HELP Getting help
+ *
+ * Before writing any code, he quickly scans over the contents of the \ref PROGRAMMING "Programming with SCIP" page,
+ * so that he knows about some of the pitfalls, best practices and mechanisms.
+ * If a problem comes up later or he gets stuck, he knows what to look out for and where to find help.
+ *
+ * Whenever Alex gets stuck inside the code, he makes use of the extensive documentation to \ref DOC "search for interface methods".
+ *
+ * @subsection GETTINGSTARTED_DEVELOP_EXAMPLE Writing An Example
+ *
+ * Alex is now ready to write his very first example, he creates a new folder `MinEx` under `examples` and puts two files in there:
+ * `CMakeLists.txt`:
+ * ```
+ * cmake_minimum_required(VERSION 3.3)
+ *
+ * project(minex)
+ * find_package(SCIP REQUIRED)
+ * include_directories(${SCIP_INCLUDE_DIRS})
+ *
+ * add_executable(minex
+ *   src/cmain.c)
+ *
+ * target_link_libraries(minex ${SCIP_LIBRARIES})
+ *
+ * if( TARGET examples )
+ *     add_dependencies( examples minex )
+ * endif()
+ * ```
+ *
+ * and `cmain.c` in a subfolder `src`:
+ * ```
+ * #include <string.h>
+ * #include <scip/scip.h>
+ *
+ * int main( int argc, char** argv )
+ * {
+ *    SCIP* scip = NULL;
+ *    SCIP_CALL( SCIPcreate(&scip) ); // initialize SCIP
+ *    SCIPinfoMessage(scip, NULL, "Hello world.\n"); // output greeting
+ *    SCIP_CALL( SCIPfree(&scip) ); // free SCIP
+ *    BMScheckEmptyMemory();
+ *    return 0;
+ * }
+ * ```
+ *
+ * This is a minimal example that just prints "Hello world." and exits.
+ * Alex compiles and runs it via cmake with the following command:
+ * ```
+ * mkdir build; cd build; cmake .. -DSCIP_DIR=../../build/; make; ./minex
+ * ```
+ *
+ * After having successfully written this minimal example, Alex follows the instructions to \ref START "start a new project" to start his actual project and extend this most basic code.
+ *
+ * @subsection GETTINGSTARTED_DEVELOP_CONSTRAINTHANDLER Writing A Plugin
+ *
+ * Alex now needs a custom constraint handler in his project, for that he will write a custom plugin.
+ * He looks up the instructions in the \ref HOWTOADD "How to add..." page and is
+ * very happy to find \ref CONS "a page with a detailed description" what he has to do.
+ *
+ * Furthermore he found exercises for implementing plugins for the example of the
+ * linear ordering problem. The corresponding code framework
+ * (<a href="https://scipopt.org/workshop2018/pyscipopt-exercises.tgz">Python</a> or
+ * <a href="https://scipopt.org/workshop2018/exercise.pdf">C/C++</a>)
+ * could form a good starting point for a new project as well.
+ *
+ * @subsection GETTINGSTARTED_DEVELOP_REOPTMIZATION Using Functionality In A Plugin
+ *
+ * After implementing his own constraint handler Alex realizes that he needs to use repotimization in his project.
+ * He looks up the \ref HOWTOUSESECTION "How to use..." section and finds some more information about \ref REOPT "how to use reoptimization".
+ *
  */
 
 /**@page INSTALL Installing SCIP
  *
- * This chapter is a detailed guide to the installation procedure of SCIP.
- *
- * SCIP lets you freely choose between its own, manually maintained Makefile system
- * or the CMake cross platform build system generator.
- *
- * <b>For new users and for installation of the scipoptsuite on windows, we strongly recommend to use CMake, if available on their targeted platform.</b>
+ * There are two options to get a running SCIP on your system.
+ * You can either use one of the installers or you can compile it yourself.
  *
  * Which one you choose depends on your use case and your level of expertise.
  * If you just want to use SCIP as a black box solver you should use an installer with a precompiled binary from the <a href="http://scipopt.org/#download">download section</a>.
- * <b>This is highly recommended for new users.</b>
- * If you are just curious about SCIP and want to try it out you can use the <a href="http://www.pokutta.com/blog/pages/scip/scip-teaching.html"> dockerized SCIP container</a>.
+ * This is highly recommended for new users.
+ * If you are just curious and want to try it out you can use the <a href="http://www.pokutta.com/blog/pages/scip/scip-teaching.html"> dockerized SCIP container</a>.
  *
  * However, if you want to develop your own plugin for SCIP, you have to compile SCIP or the SCIPOptSuite from source code, which are available as a tarball from the <a href="http://scipopt.org/#download">download page</a>.
  * Note that you might need some level of experience to be able to do this, this is described in the following.
+ *
+ * SCIP lets you choose freely between its own, manually maintained Makefile system
+ * or the CMake cross platform build system generator. For new users, we strongly
+ * recommend to use CMake, if available on their targeted platform.
  *
  * Be aware that generated libraries and binaries of both systems might be different and incompatible.
  *
@@ -873,22 +1010,29 @@
  *
  * @section TUTORIAL_OPTIMIZE Read and optimize a problem instance
  *
- * First of all, we need a \SCIP binary and an example problem file to work with. Therefore, you can either download the
- * \SCIP standard distribution (which includes problem files) and compile it on your own or you can download a
+ * @subsection SHELL_PREREQUISITES "Prerequisites"
+ *
+ * First of all, we need a \SCIP binary and an example problem file to work with.
+ * For installation we refer you to the \ref INSTALL section.
+ *
+ * Therefore, you can either download the \SCIP standard distribution (which includes problem files) and compile it on your own or you can download a
  * precompiled binary and an example problem separately. \SCIP can read files in LP, MPS, ZPL, WBO, FZN, PIP, OSiL, and
  * other formats (see \ref FILEREADERS).
  *
  * If you want to download the source code of the \SCIP standard distribution, we recommend to go to the <a
- * href="http://scipopt.org/#download">SCIP download section</a>, download the latest release (version 4.0.0 as
- * of this writing), inflate the tarball (e.g., with "tar xzf scipoptsuite-[version].tgz"), and follow the instructions
- * in the INSTALL.md file. The instance stein27, which will serve as an example in this tutorial, can be found under
+ * href="https://scipopt.org/#download">SCIP download section</a>, download the latest release,
+ * inflate the tarball (e.g., with "tar xzf scipoptsuite-[version].tgz"), and follow the instructions
+ * in the INSTALL file. The instance stein27, which will serve as an example in this tutorial, can be found under
  * scipoptsuite-[version]/scip-[version]/check/instances/MIP/stein27.fzn.
+ * Alternatively you can download an instance file from the <a href="https://miplib.zib.de/tag_benchmark.html">MIPLIB 2017 page</a>.
  *
  * If you want to download a precompiled binary, go to the <a href="http://scipopt.org/#download">SCIP download
  * section</a> and download an appropriate binary for your operating system. The \SCIP source code distribution already comes with
  * the example instance used throughout this tutorial. To follow this tutorial with a precompiled binary, we recommend downloading the instance
  * <a href="http://miplib2010.zib.de/miplib3/miplib3/stein27.mps.gz">stein27</a> from
  * the <a href="http://miplib2010.zib.de/miplib3/miplib.html">MIPLIB 3.0</a> homepage.
+ *
+ * @subsection SHELL_AFTERINSTALL "After installation"
  *
  * Now start your binary, without any arguments. This opens the interactive shell, which should look somehow like this:
  *
@@ -898,7 +1042,7 @@
  *
  * @snippet shelltutorial/shelltutorialannotated.tmp SnippetHelp
  *
- * Okay, let's solve the example instance... use "read check/instances/MIP/stein27.fzn" to parse the instance file, "optimize" to solve it and "display
+ * Okay, let's solve the example instance... use "read check/instances/MIP/stein27.fzn" (or the problem file of your choice) to parse the instance file, "optimize" to solve it and "display
  * solution" to show the nonzero variables of the best found solution.
  *
  * @snippet shelltutorial/shelltutorialannotated.tmp SnippetOpt1
