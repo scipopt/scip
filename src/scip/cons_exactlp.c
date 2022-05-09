@@ -9594,7 +9594,19 @@ SCIP_RETCODE tightenVarBounds(
 
    /* we cannot tighten bounds of multi-aggregated variables */
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR || SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED )
+   {
       return SCIP_OKAY;
+   }
+   else {
+      SCIP_VAR* tmpVar;
+      SCIP_Real tmpBound;
+      SCIP_BOUNDTYPE tmpBoundtype;
+      tmpVar = var;
+      SCIPvarGetProbvarBound(&var, &tmpBound, &tmpBoundtype);
+      if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR || SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED ) {
+         return SCIP_OKAY;
+      }
+   }
 
    valrange = ccons.valsreal[pos];
    lhs = ccons.lhsreal;
