@@ -2230,15 +2230,20 @@ SCIP_RETCODE SCIPaggrRowAddRowSafely(
 
    previousroundmode = SCIPintervalGetRoundingMode();
 
-   if( !SCIProwExactHasFpRelax(rowexact) )
+   if( SCIProwExactGetRowRhs(rowexact) != NULL && !uselhs )
    {
+      userow = SCIProwExactGetRowRhs(rowexact);
+   }
+   else if (rowexact->fprow != NULL)
+   {
+      assert(uselhs || !SCIPisInfinity(scip, rowexact->fprow->rhs));
+      userow = rowexact->fprow;
+   }
+   else {
+      assert(!SCIProwExactHasFpRelax(rowexact));
       SCIPerrorMessage("cannot aggregate row that admits no fp relaxation");
       SCIPABORT();
    }
-   else if( SCIProwExactGetRowRhs(rowexact) != NULL && !uselhs )
-      userow = SCIProwExactGetRowRhs(rowexact);
-   else
-      userow = rowexact->fprow;
 
    if( uselhs )
    {
