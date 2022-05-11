@@ -4438,3 +4438,12 @@ void SCIPstoreSolutionGap(
       SCIPstatUpdatePrimalDualIntegrals(scip->stat, scip->set, scip->transprob, scip->origprob, SCIPgetUpperbound(scip), SCIPgetLowerbound(scip) );
    }
 }
+
+/** recomputes and returns the primal dual gap stored in the stats */
+SCIP_EXPORT
+SCIP_Real SCIPgetPrimalDualIntegral(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   return SCIPstatGetPrimalDualIntegral(scip->stat, scip->set, scip->transprob, scip->origprob, TRUE);
+}
