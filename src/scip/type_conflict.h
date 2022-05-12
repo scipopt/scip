@@ -41,8 +41,18 @@ typedef struct SCIP_Conflicthdlr SCIP_CONFLICTHDLR; /**< conflict handler to pro
 typedef struct SCIP_ConflicthdlrData SCIP_CONFLICTHDLRDATA; /**< conflict handler data */
 typedef struct SCIP_ConflictSet SCIP_CONFLICTSET; /**< set of conflicting bound changes */
 typedef struct SCIP_ProofSet SCIP_PROOFSET;       /**< set of variables and coefficients describing a proof-constraint of type a^Tx <= rhs */
+typedef struct SCIP_ResolutionSet SCIP_RESOLUTIONSET; /**< set of variables and coefficients describing a resolution-constraint */
 typedef struct SCIP_LPBdChgs SCIP_LPBDCHGS;       /**< set of LP bound changes */
 typedef struct SCIP_Conflict SCIP_CONFLICT;       /**< conflict analysis data structure */
+
+/** types for side that is propagated */
+enum SCIP_PropSide
+{
+   SCIP_PROPSIDE_UNKNOWN  = 0,                /**< unknown type */
+   SCIP_PROPSIDE_LHS      = 1,                /**< lhs was propagated */
+   SCIP_PROPSIDE_RHS      = 2,                /**< rhs was propagated */
+};
+typedef enum SCIP_PropSide SCIP_PROPSIDE;
 
 /** types of conflicts */
 enum SCIP_ConflictType

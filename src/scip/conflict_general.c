@@ -214,6 +214,7 @@ void SCIPconflictEnableOrDisableClocks(
    SCIPclockEnableOrDisable(conflict->dIBclock, enable);
    SCIPclockEnableOrDisable(conflict->inflpanalyzetime, enable);
    SCIPclockEnableOrDisable(conflict->propanalyzetime, enable);
+   SCIPclockEnableOrDisable(conflict->resanalyzetime, enable);
    SCIPclockEnableOrDisable(conflict->pseudoanalyzetime, enable);
    SCIPclockEnableOrDisable(conflict->sbanalyzetime, enable);
 }
@@ -231,6 +232,7 @@ SCIP_RETCODE SCIPconflictCreate(
 
    SCIP_CALL( SCIPclockCreate(&(*conflict)->dIBclock, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*conflict)->propanalyzetime, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*conflict)->resanalyzetime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*conflict)->inflpanalyzetime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*conflict)->boundlpanalyzetime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*conflict)->sbanalyzetime, SCIP_CLOCKTYPE_DEFAULT) );
@@ -325,6 +327,7 @@ SCIP_RETCODE SCIPconflictFree(
 
    SCIPclockFree(&(*conflict)->dIBclock);
    SCIPclockFree(&(*conflict)->propanalyzetime);
+   SCIPclockFree(&(*conflict)->resanalyzetime);
    SCIPclockFree(&(*conflict)->inflpanalyzetime);
    SCIPclockFree(&(*conflict)->boundlpanalyzetime);
    SCIPclockFree(&(*conflict)->sbanalyzetime);
@@ -395,6 +398,16 @@ SCIP_Real SCIPconflictGetPropTime(
    assert(conflict != NULL);
 
    return SCIPclockGetTime(conflict->propanalyzetime);
+}
+
+/** gets time in seconds used for analyzing propagation conflicts with generalized resolution*/
+SCIP_Real SCIPconflictGetResTime(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   )
+{
+   assert(conflict != NULL);
+
+   return SCIPclockGetTime(conflict->resanalyzetime);
 }
 
 /** gets number of calls to propagation conflict analysis */

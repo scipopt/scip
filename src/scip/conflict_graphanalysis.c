@@ -2903,7 +2903,6 @@ SCIP_BDCHGINFO* conflictRemoveCand(
 }
 
 /** returns next conflict analysis candidate from the candidate queue without removing it */
-static
 SCIP_BDCHGINFO* conflictFirstCand(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    )

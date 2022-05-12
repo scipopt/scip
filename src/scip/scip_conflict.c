@@ -701,11 +701,19 @@ SCIP_RETCODE SCIPanalyzeConflictCons(
 
    if( SCIPconsIsGlobal(cons) )
    {
+      /* @todo add parameters for generalized resolution conflict analysis */
+      // SCIP_CALL( SCIPconflictAnalyzeResolution(scip, scip->conflict, cons, scip->mem->probmem, scip->set, scip->stat,
+      //       scip->transprob, scip->tree, 0, success) );
+
       SCIP_CALL( SCIPconflictAnalyze(scip->conflict, scip->mem->probmem, scip->set, scip->stat,
             scip->transprob, scip->tree, 0, success) );
    }
    else if( SCIPconsIsActive(cons) )
    {
+      /* @todo add parameters for generalized resolution conflict analysis */
+      // SCIP_CALL( SCIPconflictAnalyzeResolution(scip, scip->conflict, cons, scip->mem->probmem, scip->set, scip->stat,
+      //       scip->transprob, scip->tree, SCIPconsGetValidDepth(cons), success) );
+
       SCIP_CALL( SCIPconflictAnalyze(scip->conflict, scip->mem->probmem, scip->set, scip->stat,
             scip->transprob, scip->tree, SCIPconsGetValidDepth(cons), success) );
    }

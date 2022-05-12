@@ -57,6 +57,7 @@
 #include "scip/type_stat.h"
 #include "scip/type_tree.h"
 #include "scip/type_var.h"
+#include "scip/type_cons.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -85,6 +86,24 @@ SCIP_RETCODE SCIPconflictFree(
  */
 SCIP_RETCODE SCIPconflictAnalyze(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
+   BMS_BLKMEM*           blkmem,             /**< block memory of transformed problem */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   int                   validdepth,         /**< minimal depth level at which the initial conflict set is valid */
+   SCIP_Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
+   );
+
+/** based on generalized resolution analyzes conflicting bound changes that were added with calls to SCIPconflictAddBound(),
+ *  and on success, calls the conflict handlers to create a linear conflict constraint;
+ *  updates statistics for propagation conflict analysis
+ */
+
+SCIP_RETCODE SCIPconflictAnalyzeResolution(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
+   SCIP_CONS*            cons,               /**< constraint that detected the conflict */
    BMS_BLKMEM*           blkmem,             /**< block memory of transformed problem */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
@@ -165,6 +184,11 @@ SCIP_Real SCIPconflictGetGlobalApplTime(
 
 /** gets time in seconds used for analyzing propagation conflicts */
 SCIP_Real SCIPconflictGetPropTime(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
+/** gets time in seconds used for analyzing propagation conflicts with generalized resolution*/
+SCIP_Real SCIPconflictGetResTime(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
@@ -503,6 +527,32 @@ SCIP_RETCODE conflictAnalyze(
    int*                  nliterals,          /**< pointer to store the number of literals in generated conflict constraints */
    int*                  nreconvconss,       /**< pointer to store the number of generated reconvergence constraints */
    int*                  nreconvliterals     /**< pointer to store the number of literals generated reconvergence constraints */
+   );
+
+/** analyzes conflicting bound changes that were added with calls to SCIPconflictAddBound() and
+ *  SCIPconflictAddRelaxedBound(), and on success, calls the conflict handlers to create a conflict constraint;
+ *  afterwards the conflict queue and the conflict set is cleared
+ */
+
+SCIP_RETCODE conflictAnalyzeResolution(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
+   SCIP_CONS*            cons,               /**< constraint that detected the conflict */
+   BMS_BLKMEM*           blkmem,             /**< block memory of transformed problem */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_Bool             diving,             /**< are we in strong branching or diving mode? */
+   int                   validdepth,         /**< minimal depth level at which the initial conflict set is valid */
+   SCIP_Bool             mustresolve,        /**< should the conflict set only be used, if a resolution was applied? */
+   int*                  nconss,             /**< pointer to store the number of generated conflict constraints */
+   int*                  nconfvars           /**< pointer to store the number of variables in generated conflict constraints */
+   );
+
+/** returns next conflict analysis candidate from the candidate queue without removing it */
+SCIP_BDCHGINFO* conflictFirstCand(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
 /** calculates a Farkas proof from the current dual LP solution */

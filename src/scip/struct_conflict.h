@@ -89,6 +89,22 @@ struct SCIP_ProofSet
    SCIP_CONFTYPE         conflicttype;       /**< conflict type: unknown, infeasible LP, bound exceeding LP */
 };
 
+/** set of conflicting bound changes */
+struct SCIP_ResolutionSet
+{
+   SCIP_Real*            vals;
+   int*                  inds;
+   SCIP_Real             lhs;
+   SCIP_Real             origlhs;
+   SCIP_Real             origrhs;
+   int                   nnz;
+   int                   size;
+   int                   validdepth;
+   SCIP_ROW*             row;
+   SCIP_PROPSIDE         propside;           /**< propagation side: unknown, lhs, rhs */
+   SCIP_CONFTYPE         conflicttype;       /**< conflict type: unknown, infeasible LP, bound exceeding LP */
+};
+
 /** set of LP bound change */
 struct SCIP_LPBdChgs
 {
@@ -115,6 +131,10 @@ struct SCIP_Conflict
    SCIP_Longint          npropconfliterals;  /**< total number of literals in valid propagation conflict constraints */
    SCIP_Longint          npropreconvconss;   /**< number of reconvergence constraints detected in propagation conflict analysis */
    SCIP_Longint          npropreconvliterals;/**< total number of literals in valid propagation reconvergence constraints */
+   SCIP_Longint          nrescalls;          /**< number of calls to resolution conflict analysis */
+   SCIP_Longint          nressuccess;        /**< number of calls yielding at least one conflict constraint */
+   SCIP_Longint          nresconfconss;      /**< number of valid conflict constraints detected in resolution conflict analysis */
+   SCIP_Longint          nresconfvariables;  /**< total number of variables in valid resolution conflict constraints */
    SCIP_Longint          ninflpcalls;        /**< number of calls to infeasible LP conflict analysis */
    SCIP_Longint          ninflpsuccess;      /**< number of calls yielding at least one conflict constraint */
    SCIP_Longint          ninflpconfconss;    /**< number of valid conflict constraints detected in infeasible LP conflict
@@ -162,6 +182,7 @@ struct SCIP_Conflict
    SCIP_CLOCK*           dIBclock;           /**< time used for detect implied bounds */
 
    SCIP_CLOCK*           propanalyzetime;    /**< time used for propagation conflict analysis */
+   SCIP_CLOCK*           resanalyzetime;     /**< time used for resolution conflict analysis */
    SCIP_CLOCK*           inflpanalyzetime;   /**< time used for infeasible LP conflict analysis */
    SCIP_CLOCK*           boundlpanalyzetime; /**< time used for bound exceeding LP conflict analysis */
    SCIP_CLOCK*           sbanalyzetime;      /**< time used for strong branching LP conflict analysis */
@@ -170,6 +191,8 @@ struct SCIP_Conflict
    SCIP_PQUEUE*          forcedbdchgqueue;   /**< unprocessed conflict bound changes that must be resolved */
    SCIP_PROOFSET*        proofset;           /**< proof sets found at the current node */
    SCIP_PROOFSET**       proofsets;          /**< proof sets found at the current node */
+   SCIP_RESOLUTIONSET*   resolutionset;      /**< resolution sets for the current conflict */
+   SCIP_RESOLUTIONSET**  resolutionsets;     /**< resolution sets found at the current node */
    SCIP_CONFLICTSET*     conflictset;        /**< bound changes resembling the current conflict set */
    SCIP_CONFLICTSET**    conflictsets;       /**< conflict sets found at the current node */
    SCIP_Real*            conflictsetscores;  /**< score values of the conflict sets found at the current node */
