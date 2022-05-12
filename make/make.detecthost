@@ -28,7 +28,6 @@ ARCH		:=	$(shell uname -m | \
 			-e 's/amd64/x86_64/' \
 			-e 's/IP../mips/' \
 			-e 's/9000..../hppa/' \
-			-e 's/Power\ Macintosh/ppc/' \
 			-e 's/00........../pwr4/'\
 			-e 's/arm.*/arm/' \
 			-e 's/aarch64/arm/')
