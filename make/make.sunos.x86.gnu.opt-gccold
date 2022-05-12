@@ -1,7 +1,7 @@
 FLAGS		+=	-DNDEBUG -DNO_STRERROR_R -DSCIP_ROUNDING_FE
-OFLAGS		+=	-O3 -fomit-frame-pointer # -malign-double -mcpu=pentium4 -g
+OFLAGS		+=	-O3 -fomit-frame-pointer
 CFLAGS		+=	$(GCCWARN) -Wno-strict-aliasing -Wno-missing-declarations -Wno-missing-prototypes
-CXXFLAGS	+=	$(GXXWARN) -std=c++0x -Wno-strict-aliasing # -fno-exceptions (CLP uses exceptions)
+CXXFLAGS	+=	$(GXXWARN) -Wno-strict-aliasing
 ARFLAGS		=	crs
 LDFLAGS		+=      -Bstatic -lsocket -lnsl
 ZLIB_FLAGS	=
