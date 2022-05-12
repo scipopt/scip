@@ -492,6 +492,7 @@ Test(nlhdlrperspective, sepa, .init = setup, .fini = teardown)
    SCIP_CALL( nlhdlrDetectPerspective(scip, conshdlr, nlhdlr, expr, cons, &enforcing, &participating, &nlhdlrexprdata) );
    cr_expect_eq(participating, SCIP_NLHDLR_METHOD_SEPABELOW, "expecting sepabelow, got %d\n", participating);
    cr_assert_not_null(nlhdlrexprdata);
+   ownerdata->enfos[1]->nlhdlrexprdata = nlhdlrexprdata;
 
    cr_expect_eq(nlhdlrexprdata->nindicators, 2, "Expecting 2 indicator variables, got %d\n", nlhdlrexprdata->nindicators);
 
@@ -543,15 +544,6 @@ Test(nlhdlrperspective, sepa, .init = setup, .fini = teardown)
    SCIP_CALL( SCIPclearCuts(scip) );
    SCIP_CALL( SCIPfreePtrarray(scip, &rowpreps) );
    SCIP_CALL( SCIPfreeSol(scip, &sol) );
-
-   SCIP_CALL( freeAuxVar(scip, expr) );
-   SCIP_CALL( freeNlhdlrExprData(scip, nlhdlrexprdata) ); /* convex nlhdlr is freed when expr is released */
-   SCIPfreeBlockMemory(scip, &nlhdlrexprdata);
-
-   SCIPfreeBlockMemory(scip, &ownerdata->enfos[1]);
-   SCIPfreeBlockMemory(scip, &ownerdata->enfos[0]);
-   SCIPfreeBlockMemoryArray(scip, &ownerdata->enfos, 2);
-   ownerdata->nenfos = 0;
 
    SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
