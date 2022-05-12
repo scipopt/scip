@@ -46,6 +46,7 @@ Build system
 ### Makefile
 
 - avoid warnings about unrecognized compiler warning silencing options when compilation with GCC fails
+- fixed that compilation with MS/Intel compilers on Windows and Cray compilers was broken when enabling PAPILO
 
 Fixed bugs
 ----------
