@@ -1119,7 +1119,7 @@ install(TARGETS scip libscip EXPORT scip-targets
         INCLUDES DESTINATION include)
 
 # Add all targets to the build-tree export set
-export(TARGETS scip libscip libbliss
+export(TARGETS scip libscip ${BLISS_TARGET}
   FILE "${PROJECT_BINARY_DIR}/scip-targets.cmake")
 
 # make soplex and zimpl dir absolute for the config file
