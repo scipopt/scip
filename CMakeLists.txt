@@ -15,6 +15,7 @@ set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_DEBUG} ${CMAKE_CXX_FLAGS_R
 
 project(SCIP)
 
+set(SCIP_COMP_OPTIONS "") # this is what is supposed to be added to the compile flags for the scip targets after they have been defined in src/CMakeLists.txt
 
 # if changing these flags, also update GCCWARN/GXXWARN in make/make.project
 set(ADD_C_AND_CXX_FLAGS -pedantic -Wall -W -Wpointer-arith -Wcast-align -Wwrite-strings -Wshadow  -Wredundant-decls -Wdisabled-optimization -Wno-long-long -Wno-unknown-pragmas -Wno-unused-parameter)
@@ -29,20 +30,20 @@ endif()
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "Intel")
    # for intel compilers we need to set the fp-model precise flag to disable incorrect floating point optimizations
-   set(SCIP_COMP_FLAGS -fp-model precise)
+   set(SCIP_COMP_OPTIONS ${SCIP_COMP_OPTIONS} -fp-model precise)
    # to prevent symbols from svml exported twice we use the -shared-intel flag, see https://git.zib.de/integer/scip/issues/2872
    # this happens with the cplex static lib
    if(LPS MATCHES "cpx")
-       set(SCIP_COMP_FLAGS -shared-intel) # for c and cxx
+       set(SCIP_COMP_OPTIONS ${SCIP_COMP_OPTIONS} -shared-intel) # for c and cxx
    endif()
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
     # require at least gcc 4.8
     if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.8)
         message(WARNING "GCC version not supported, should be at least 4.8!")
     endif()
-    set(SCIP_COMP_FLAGS ${ADD_C_AND_CXX_FLAGS} "$<$<COMPILE_LANGUAGE:C>:${ADD_C_FLAGS}>$<$<COMPILE_LANGUAGE:CXX>:${ADD_CXX_FLAGS}>")
+    set(SCIP_COMP_OPTIONS ${SCIP_COMP_OPTIONS} ${ADD_C_AND_CXX_FLAGS} "$<$<COMPILE_LANGUAGE:C>:${ADD_C_FLAGS}>$<$<COMPILE_LANGUAGE:CXX>:${ADD_CXX_FLAGS}>")
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    set(SCIP_COMP_FLAGS ${ADD_C_AND_CXX_FLAGS} "$<$<COMPILE_LANGUAGE:C>:${ADD_C_FLAGS}>$<$<COMPILE_LANGUAGE:CXX>:${ADD_CXX_FLAGS}>")
+    set(SCIP_COMP_OPTIONS ${SCIP_COMP_OPTIONS} ${ADD_C_AND_CXX_FLAGS} "$<$<COMPILE_LANGUAGE:C>:${ADD_C_FLAGS}>$<$<COMPILE_LANGUAGE:CXX>:${ADD_CXX_FLAGS}>")
 endif()
 
 set(SCIP_VERSION_MAJOR 8)
@@ -166,7 +167,7 @@ endif()
 
 # Visual Studio compiler with static runtime libraries
 if(MSVC AND MT)
-    set(SCIP_COMP_FLAGS ${SCIP_COMP_FLAGS} "$<$<AND:$<COMPILE_LANGUAGE:CXX>,$<CONFIG:DEBUG>>:/MTd>$<$<AND:$<COMPILE_LANGUAGE:CXX>,$<CONFIG:RELEASE>>:/MT>$<$<AND:$<COMPILE_LANGUAGE:C>,$<CONFIG:DEBUG>>:/MTd>$<$<AND:$<COMPILE_LANGUAGE:C>,$<CONFIG:RELEASE>>:/MT>")
+    set(SCIP_COMP_OPTIONS ${SCIP_COMP_OPTIONS} "$<$<AND:$<COMPILE_LANGUAGE:CXX>,$<CONFIG:DEBUG>>:/MTd>$<$<AND:$<COMPILE_LANGUAGE:CXX>,$<CONFIG:RELEASE>>:/MT>$<$<AND:$<COMPILE_LANGUAGE:C>,$<CONFIG:DEBUG>>:/MTd>$<$<AND:$<COMPILE_LANGUAGE:C>,$<CONFIG:RELEASE>>:/MT>")
 endif()
 
 #set expression interpreter file that should be used
@@ -198,7 +199,7 @@ elseif(TPI STREQUAL "omp")
     set(tpisources tpi/tpi_openmp.c)
     find_package(OpenMP REQUIRED)
     set(THREAD_LIBRARIES "")
-    set(SCIP_COMP_FLAGS ${SCIP_COMP_FLAGS} "$<$<COMPILE_LANGUAGE:C>:${OpenMP_C_FLAGS}>$<$<COMPILE_LANGUAGE:CXX>:${OpenMP_CXX_FLAGS}>")
+    set(SCIP_COMP_OPTIONS ${SCIP_COMP_OPTIONS} "$<$<COMPILE_LANGUAGE:C>:${OpenMP_C_FLAGS}>$<$<COMPILE_LANGUAGE:CXX>:${OpenMP_CXX_FLAGS}>")
     add_link_options("${OpenMP_CXX_FLAGS}")
 else()
     message(FATAL_ERROR "TPI option has wrong value")
