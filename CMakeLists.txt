@@ -440,16 +440,16 @@ if(SYM STREQUAL "bliss")
 
     # modify configuration for bliss
     set(BUILD_SHARED_LIBS OFF)
-    set(TMPFLAGS $CMAKE_C_FLAGS)
-    set(TMXFLAGS $CMAKE_CXX_FLAGS)
+    set(TMPFLAGS ${CMAKE_C_FLAGS})
+    set(TMXFLAGS ${CMAKE_CXX_FLAGS})
     set(CMAKE_C_FLAGS -w)
     set(CMAKE_CXX_FLAGS -w)
 
     add_subdirectory(src/bliss)
 
     # undo modification
-    set(CMAKE_C_FLAGS $TMPFLAGS)
-    set(CMAKE_CXX_FLAGS $TMXFLAGS)
+    set(CMAKE_C_FLAGS ${TMPFLAGS})
+    set(CMAKE_CXX_FLAGS ${TMXFLAGS})
     set(BUILD_SHARED_LIBS ${SHARED})
 
     set(BLISS_TARGET libbliss)
