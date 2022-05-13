@@ -107,9 +107,21 @@ message(STATUS "Finding symmetry computation program \"${SYM}\"")
 set(BLISS_TARGET "")
 if(SYM STREQUAL "bliss")
     set(sym symmetry/compute_symmetry_bliss.cpp)
+
+    # modify configuration for bliss
     set(BUILD_SHARED_LIBS OFF)
+    set(TMPFLAGS ${CMAKE_C_FLAGS})
+    set(TMXFLAGS ${CMAKE_CXX_FLAGS})
+    set(CMAKE_C_FLAGS -w)
+    set(CMAKE_CXX_FLAGS -w)
+
     add_subdirectory(src/bliss)
+
+    # undo modification
+    set(CMAKE_C_FLAGS ${TMPFLAGS})
+    set(CMAKE_CXX_FLAGS ${TMXFLAGS})
     set(BUILD_SHARED_LIBS ${SHARED})
+
     set(BLISS_TARGET libbliss)
     set(SYM_LIBRARIES libbliss)
     set(SYM_PIC_LIBRARIES libbliss)
@@ -119,8 +131,6 @@ elseif(SYM STREQUAL "none")
 else()
     message(FATAL_ERROR "option SYM has wrong value")
 endif()
-
-target_compile_options(${BLISS_TARGET} PRIVATE -w)
 
 # if changing these flags, also update GCCWARN/GXXWARN in make/make.project
 set(ADD_C_AND_CXX_FLAGS -pedantic -Wall -W -Wpointer-arith -Wcast-align -Wwrite-strings -Wshadow  -Wredundant-decls -Wdisabled-optimization -Wno-long-long -Wno-unknown-pragmas -Wno-unused-parameter)
