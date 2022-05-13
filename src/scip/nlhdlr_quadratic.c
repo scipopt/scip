@@ -69,6 +69,7 @@
 #define INTERCUTS_MINVIOL              1e-4
 #define DEFAULT_USEINTERCUTS           FALSE
 #define DEFAULT_USESTRENGTH            FALSE
+#define DEFAULT_USEMONOIDAL            FALSE
 #define DEFAULT_USEBOUNDS              FALSE
 #define BINSEARCH_MAXITERS             120
 #define DEFAULT_NCUTSROOT              20
@@ -116,6 +117,7 @@ struct SCIP_NlhdlrData
    /* parameter */
    SCIP_Bool             useintersectioncuts; /**< whether to use intersection cuts for quadratic constraints or not */
    SCIP_Bool             usestrengthening;   /**< whether the strengthening should be used */
+   SCIP_Bool             usemonoidal;        /**< whether monoidal strengthening should be used */
    SCIP_Bool             useboundsasrays;    /**< use bounds of variables in quadratic as rays for intersection cuts */
    int                   ncutslimit;         /**< limit for number of cuts generated consecutively */
    int                   ncutslimitroot;     /**< limit for number of cuts generated at root node */
@@ -1875,34 +1877,63 @@ SCIP_RETCODE computeIntercut(
       SCIP_Real coefs1234a[5];
       SCIP_Real coefs4b[5];
       SCIP_Real coefscondition[3];
+      SCIP_Bool monodialsuccess;
 
-      /* restrict phi to ray */
-      SCIP_CALL( computeRestrictionToRay(scip, nlhdlrexprdata, sidefactor, iscase4,
-               &rays->rays[rays->raysbegin[i]], &rays->raysidx[rays->raysbegin[i]], rays->raysbegin[i + 1] -
-               rays->raysbegin[i], vb, vzlp, wcoefs, wzlp, kappa, coefs1234a, coefs4b, coefscondition, success) );
+      /* check if we use monoidal strengthening */
+      if( nlhdlrdata->usemonoidal )
+      {
+         monodialsuccess = False;
 
-      if( ! *success )
-         return SCIP_OKAY;
+         /* check if we are in correct case (case 2) */
+         if( wcoefs == NULL && kappa > 0 )
+         {
 
-      /* if restriction to ray is numerically nasty -> abort cut separation */
-      *success = areCoefsNumericsGood(scip, nlhdlrdata, coefs1234a, coefs4b, iscase4);
+            /* check if var corresponding to current ray is integer */
+            if( rays->lppos[i] > 0 && SCIPvarGetType(SCIProwGetVar(rows[rays->lppos[i]])) == SCIP_VARTYPE_INTEGER )
+            {
 
-      if( ! *success )
-         return SCIP_OKAY;
+               /* if ray is in strip, monoidal is not possible -> continue with computing intersection point to get cut coef
+                * if ray is not in the strip -> do monoidal strengthening */
+               if( ! rayInStrip() )
+               {
+                  monodialsuccess = True;
+                  cutcoef = computeMonoidalStrengthCoef();
+               }
+            }
+         }
+      }
 
-      /* compute intersection point */
-      interpoint = computeIntersectionPoint(scip, nlhdlrdata, iscase4, coefs1234a, coefs4b, coefscondition);
+      /* if we don't use monoidal or if monoidal couldn't be applied, use gauge to compute coef  */
+      if( ! nlhdlrdata->usemonoidal || ! monodialsuccess )
+      {
+         /* restrict phi to ray */
+         SCIP_CALL( computeRestrictionToRay(scip, nlhdlrexprdata, sidefactor, iscase4,
+                  &rays->rays[rays->raysbegin[i]], &rays->raysidx[rays->raysbegin[i]], rays->raysbegin[i + 1] -
+                  rays->raysbegin[i], vb, vzlp, wcoefs, wzlp, kappa, coefs1234a, coefs4b, coefscondition, success) );
+
+         if( ! *success )
+            return SCIP_OKAY;
+
+         /* if restriction to ray is numerically nasty -> abort cut separation */
+         *success = areCoefsNumericsGood(scip, nlhdlrdata, coefs1234a, coefs4b, iscase4);
+
+         if( ! *success )
+            return SCIP_OKAY;
+
+         /* compute intersection point */
+         interpoint = computeIntersectionPoint(scip, nlhdlrdata, iscase4, coefs1234a, coefs4b, coefscondition);
 
 #ifdef  DEBUG_INTERSECTIONCUT
-      SCIPinfoMessage(scip, NULL, "interpoint for ray %d is %g\n", i, interpoint);
+         SCIPinfoMessage(scip, NULL, "interpoint for ray %d is %g\n", i, interpoint);
 #endif
 
-      /* store intersection point */
-      if( interpoints != NULL )
-         interpoints[i] = interpoint;
+         /* store intersection point */
+         if( interpoints != NULL )
+            interpoints[i] = interpoint;
 
-      /* compute cut coef */
-      cutcoef = SCIPisInfinity(scip, interpoint) ? 0.0 : 1.0 / interpoint;
+         /* compute cut coef */
+         cutcoef = SCIPisInfinity(scip, interpoint) ? 0.0 : 1.0 / interpoint;
+      }
 
       /* add var to cut: if variable is nonbasic at upper we have to flip sign of cutcoef */
       lppos = rays->lpposray[i];
@@ -4329,6 +4360,10 @@ SCIP_RETCODE SCIPincludeNlhdlrQuadratic(
    SCIP_CALL( SCIPaddBoolParam(scip, "nlhdlr/" NLHDLR_NAME "/usestrengthening",
          "whether the strengthening should be used",
          &nlhdlrdata->usestrengthening, FALSE, DEFAULT_USESTRENGTH, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "nlhdlr/" NLHDLR_NAME "/usemonoidal",
+         "whether monoidal strengthening should be used",
+         &nlhdlrdata->usemonoidal, FALSE, DEFAULT_USEMONOIDAL, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "nlhdlr/" NLHDLR_NAME "/useboundsasrays",
          "use bounds of variables in quadratic as rays for intersection cuts",
