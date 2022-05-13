@@ -206,6 +206,8 @@ FLAGS		=	-I$(SRCDIR) -DWITH_SCIPDEF -DFNAME_$(FORTRAN_NAMING_CONVENTION) -I$(SCI
 OFLAGS		=
 CFLAGS		=
 CXXFLAGS	=
+CXX14FLAG	=	-std=c++14
+CXX11FLAG	=	-std=c++0x
 
 ifeq ($(COMP),msvc)
 LDFLAGS		=
@@ -280,6 +282,15 @@ ALLSRC		=
 -include $(SCIPREALPATH)/make/local/make.$(HOSTNAME).$(COMP).$(OPT)
 -include $(SCIPREALPATH)/make/local/make.local
 
+#-----------------------------------------------------------------------------
+# define C++ standard
+#-----------------------------------------------------------------------------
+
+ifeq ($(PAPILO),true)
+CXXFLAGS += $(CXX14FLAG)
+else
+CXXFLAGS += $(CXX11FLAG)
+endif
 
 #-----------------------------------------------------------------------------
 # define path to find SCIP upon execution
@@ -529,7 +540,6 @@ endif
 
 ifeq ($(PAPILO),true)
 LDFLAGS		+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/shared $(LINKCC_l)tbb.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
-CXXFLAGS	+=	-std=c++14
 endif
 
 #-----------------------------------------------------------------------------

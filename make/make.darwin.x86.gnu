@@ -1,6 +1,6 @@
 ifneq ($(OPT),opt-gccold)
 ifneq ($(OPT),dbg)
-OFLAGS          +=      -mtune=native  # -malign-double -mcpu=pentium4
+OFLAGS          +=      -mtune=native
 endif
 endif
 CFLAGS		+=	-m32
