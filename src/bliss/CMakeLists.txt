@@ -73,17 +73,19 @@ endif(USE_GMP)
 set_target_properties(libbliss bliss PROPERTIES COMPILE_OPTIONS "")
 
 # specify the C++ standard
-set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_CXX_STANDARD_REQUIRED True)
+set_property(TARGET libbliss PROPERTY CXX_STANDARD 11
+                                      CXX_STANDARD_REQUIRED True)
+set_property(TARGET bliss PROPERTY CXX_STANDARD 11
+                                   CXX_STANDARD_REQUIRED True)
 
 if (MSVC)
     # /permissive- for standard C++ with "and" and "or" logical operators
-    target_compile_options(libbliss PUBLIC /permissive-)
-    target_compile_options(bliss PUBLIC /permissive-)
+    target_compile_options(libbliss PRIVATE /permissive-)
+    target_compile_options(bliss PRIVATE /permissive-)
 else()
     # Warnings, optimization, no assertions
-    target_compile_options(libbliss PUBLIC -O3 -DNDEBUG) #-Wextra -Werror ### disable as part of scip build
-    target_compile_options(bliss PUBLIC -O3 -DNDEBUG) #-Wextra -Werror ### disable as part of scip build
+    target_compile_options(libbliss PRIVATE -O3 -DNDEBUG) #-Wextra -Werror ### disable as part of scip build
+    target_compile_options(bliss PRIVATE -O3 -DNDEBUG) #-Wextra -Werror ### disable as part of scip build
 endif()
 
 if(USE_GMP)
