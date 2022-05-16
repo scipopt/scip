@@ -1557,7 +1557,9 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
    certificatePrintWeakDerStart(certificate, prob, SCIProwIsLocal(row));
 
    /* 1 * (\xi \le \lfloor \beta \rfloor) we also have to add the correct multipliers for the negative slacks that were used here */
-   SCIPcertificatePrintProofMessage(certificate, "%d %d 1 ", 1 + aggrinfo->nnegslackrows, leftdisjunctionindex);
+   SCIPcertificatePrintProofMessage(certificate, "%d %d ", 1 + aggrinfo->nnegslackrows, leftdisjunctionindex);
+   RatSetReal(tmpval, mirinfo->scale);
+   SCIPcertificatePrintProofRational(certificate, tmpval, 10);
 
    for( i = 0; i < aggrinfo->nnegslackrows; i++ )
    {
@@ -1581,6 +1583,7 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
           key += 1;
 
        SCIPcertificatePrintProofMessage(certificate, " %d ", key);
+       RatMultReal(tmpval, tmpval, mirinfo->scale);
        SCIPcertificatePrintProofRational(certificate, tmpval, 10);
    }
    SCIPcertificatePrintProofMessage(certificate, " } -1 \n");
@@ -1596,6 +1599,7 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
    RatSet(tmpval, mirinfo->frac);
    RatNegate(tmpval, tmpval); /* -f */
    RatDiv(tmpval, tmpval, oneminusf0); /* -f/(1-f) */
+   RatMultReal(tmpval, tmpval, mirinfo->scale);
    SCIPcertificatePrintProofRational(certificate, tmpval, 10);
 
    /* (1/1-f)(\xi - \nu \le \beta) */
@@ -1626,6 +1630,7 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
          key += 1;
 
       SCIPcertificatePrintProofMessage(certificate, " %d ", key);
+      RatMultReal(value, value, mirinfo->scale);
       SCIPcertificatePrintProofRational(certificate, value, 10);
    }
 
@@ -1650,6 +1655,7 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
          key += 1;
 
       SCIPcertificatePrintProofMessage(certificate, " %d ", key);
+      RatMultReal(value, value, mirinfo->scale);
       SCIPcertificatePrintProofRational(certificate, value, 10);
    }
 
@@ -2585,6 +2591,7 @@ SCIP_RETCODE SCIPcertificateNewMirInfo(
    mirinfo->nlocalvars = 0;
    mirinfo->nsplitvars = SCIPgetNVars(scip);
    mirinfo->arpos = certificate->nmirinfos;
+   mirinfo->scale = 1.0;
 
    SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &(mirinfo->splitcoefficients), SCIPgetNVars(scip)) );
    SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &(mirinfo->upperused), SCIPgetNVars(scip)) );
