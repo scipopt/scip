@@ -106,8 +106,8 @@ SCIP_DECL_HASHKEYVAL(SYMhashKeyValOptype)
    else
       exponent = 1.0;
 
-   return SCIPhashTwo(SCIPrealHashCode(exponent), k->level),
-      (uint64_t) SCIPexprhdlrGetName(SCIPexprGetHdlr(k->expr));
+   return SCIPhashThree(SCIPrealHashCode(exponent), k->level,
+      (uint64_t)SCIPexprhdlrGetName(SCIPexprGetHdlr(k->expr)));
 }
 
 /* ------------------- map for constant types ------------------- */
