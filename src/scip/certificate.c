@@ -1292,8 +1292,10 @@ void SCIPcertificatePrintCons(
 
 static
 SCIP_RETCODE SCIPcertificatePrintRow(
+      SCIP_SET*          set,
       SCIP_CERTIFICATE*  certificate,
-      SCIP_ROWEXACT*     rowexact
+      SCIP_ROWEXACT*     rowexact,
+      SCIP_Real          alternativerhs
    )
 {
    SCIP_ROW* row;
@@ -1307,9 +1309,19 @@ SCIP_RETCODE SCIPcertificatePrintRow(
 
    SCIPcertificatePrintProofMessage(certificate, "L%d_%s %c ", certificate->indexcounter, row->name, 'L');
 
-   rhs = SCIProwExactGetRhs(rowexact);
-
-   SCIPcertificatePrintProofRational(certificate, rhs, 10);
+   /* if we rounded the rhs in cut tightening we need to first verify the cut without it */
+   if( SCIPsetIsInfinity(set, alternativerhs) )
+   {
+      rhs = SCIProwExactGetRhs(rowexact);
+      SCIPcertificatePrintProofRational(certificate, rhs, 10);
+   }
+   else
+   {
+      SCIP_CALL( RatCreateBuffer(set->buffer, &rhs) );
+      RatSetReal(rhs, alternativerhs);
+      SCIPcertificatePrintProofRational(certificate, rhs, 10);
+      RatFreeBuffer(set->buffer, &rhs);
+   }
 
    SCIPcertificatePrintProofMessage(certificate, " %d", SCIProwGetNNonz(row));
 
@@ -1548,7 +1560,7 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
    /* we dont need the \nu \ge 0 part since it will be taken care of by the vipr completion part */
    assert(rowexact != NULL);
 
-   SCIPcertificatePrintRow(certificate, rowexact);
+   SCIPcertificatePrintRow(set, certificate, rowexact, mirinfo->unroundedrhs);
 
    /* calculate 1-f0 */
    RatSetReal(oneminusf0, 1.0);
@@ -1589,7 +1601,7 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
    SCIPcertificatePrintProofMessage(certificate, " } -1 \n");
 
    /* print the mir cut with proof (-f/1-f) * (\xi \ge \lfloor \beta + 1 \rfloor) + (1/1-f)(\xi - \nu \le \beta) */
-   SCIPcertificatePrintRow(certificate, rowexact);
+   SCIPcertificatePrintRow(set, certificate, rowexact, mirinfo->unroundedrhs);
 
    certificatePrintWeakDerStart(certificate, prob, SCIProwIsLocal(row));
    SCIPcertificatePrintProofMessage(certificate, " %d ", 1 + aggrinfo->naggrrows + aggrinfo->nnegslackrows);
@@ -1662,15 +1674,21 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
    SCIPcertificatePrintProofMessage(certificate, " } -1\n");
 
    /* print the unsplitting of the split disjunction */
-   SCIPcertificatePrintRow(certificate, rowexact);
+   SCIPcertificatePrintRow(set, certificate, rowexact, mirinfo->unroundedrhs);
    SCIPcertificatePrintProofMessage(certificate, " { uns %d %d  %d %d  } -1\n", certificate->indexcounter - 3, leftdisjunctionindex,
          certificate->indexcounter - 2, rightdisjunctionindex);
+
+   /* if we rounded the rhs we need to still certify that part */
+   if( !SCIPsetIsInfinity(set, mirinfo->unroundedrhs) )
+   {
+      /* print the row with the rounded rhs */
+      SCIPcertificatePrintRow(set, certificate, rowexact, SCIPsetInfinity(set));
+      SCIPcertificatePrintProofMessage(certificate, " { rnd 1 %d 1 } -1\n", certificate->indexcounter - 2);
+   }
 
    SCIP_CALL( SCIPhashmapInsert(certificate->rowdatahash, SCIProwGetRowExact(row), (void*)((size_t)certificate->indexcounter - 1)) );
 
    SCIP_CALL( SCIPcertificateFreeAggrInfo(set, certificate, lp, aggrinfo, row) );
-
-   SCIPcertificatePrintProofMessage(certificate, "\n");
 
    RatFreeBuffer(set->buffer, &value);
    RatFreeBuffer(set->buffer, &oneminusf0);
@@ -2592,6 +2610,7 @@ SCIP_RETCODE SCIPcertificateNewMirInfo(
    mirinfo->nsplitvars = SCIPgetNVars(scip);
    mirinfo->arpos = certificate->nmirinfos;
    mirinfo->scale = 1.0;
+   mirinfo->unroundedrhs = SCIPinfinity(scip);
 
    SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &(mirinfo->splitcoefficients), SCIPgetNVars(scip)) );
    SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &(mirinfo->upperused), SCIPgetNVars(scip)) );

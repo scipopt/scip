@@ -1692,6 +1692,10 @@ SCIP_RETCODE cutTightenCoefsQuadSafely(
             }
          }
 
+         if( SCIPisCertificateActive(scip) )
+         {
+            mirinfo->unroundedrhs = *cutrhs;
+         }
          SCIPquadprecEpsFloorQ(*cutrhs, *cutrhs, 0); /*lint !e666*/
 
          /* recompute the maximal activity after scaling to integral values */
@@ -1816,6 +1820,8 @@ SCIP_RETCODE cutTightenCoefsQuadSafely(
 
    SCIPsortDownInd(cutinds, compareAbsCoefsQuad, (void*) cutcoefs, *cutnnz);
 
+/** @todo exip: implement and certify coef tightening */
+#ifdef SCIP_DISABLED_CODE
    /* loop over the integral variables and try to tighten the coefficients; see cons_linear for more details */
    for( i = 0; i < *cutnnz && FALSE; )
    {
@@ -1930,7 +1936,7 @@ SCIP_RETCODE cutTightenCoefsQuadSafely(
 
       ++i;
    }
-
+#endif
 
    return SCIP_OKAY;
 }
