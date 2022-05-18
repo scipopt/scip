@@ -3628,6 +3628,9 @@ void SCIPprintLPStatistics(
       else
          SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10" SCIP_LONGINT_FORMAT "          - %10.2f\n", scip->stat->nfailexlp, scip->stat->boundingerrorexlp/scip->stat->nexlp);
 
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  feas failed      : %10.2f %10" SCIP_LONGINT_FORMAT " \n",
+         scip->stat->timefailexlp, scip->stat->nfailexlp);
+
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  exact lp infeas  : %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10.2f",
          SCIPclockGetTime(scip->stat->provedinfeaslptime),
          scip->stat->nexlpinf,
@@ -3637,6 +3640,9 @@ void SCIPprintLPStatistics(
          SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f %10" SCIP_LONGINT_FORMAT "          -\n", (SCIP_Real)scip->stat->niterationsexlpinf/SCIPclockGetTime(scip->stat->provedinfeaslptime), scip->stat->nfailexlpinf);
       else
          SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10" SCIP_LONGINT_FORMAT "          -          -\n", scip->stat->nfailexlpinf);
+
+            SCIPmessageFPrintInfo(scip->messagehdlr, file, "  inf failed       : %10.2f %10" SCIP_LONGINT_FORMAT " \n",
+         scip->stat->timefailexlpinf, scip->stat->nfailexlpinf);
 
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  boundshift feas  : %10.2f %10" SCIP_LONGINT_FORMAT "          -          -          - %10" SCIP_LONGINT_FORMAT " %.4e %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
          SCIPclockGetTime(scip->stat->provedfeasbstime),

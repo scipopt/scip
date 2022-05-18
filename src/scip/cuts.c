@@ -2853,7 +2853,7 @@ SCIP_RETCODE SCIPaggrRowSumRows(
                   }
                   if( rowused && !rowusedcert )
                   {
-                     assert( (lhsused && weights[k] >= 0) || ((!lhsused) && weights[k] <= 0) );
+
                      negslackrows[nnegslackrows] = rows[k];
                      negslackweights[nnegslackrows] = -weights[k];
                      nnegslackrows++;
@@ -4977,7 +4977,6 @@ SCIP_RETCODE cutsRoundMIR(
    assert(boundtype != NULL);
    assert(varsign != NULL);
    assert(0.0 < QUAD_TO_DBL(f0) && QUAD_TO_DBL(f0) < 1.0);
-   assert(!SCIPisExactSolve(scip));
 
    SCIPquadprecSumQD(onedivoneminusf0, -f0, 1.0);
    SCIPquadprecDivDQ(onedivoneminusf0, 1.0, onedivoneminusf0);

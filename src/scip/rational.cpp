@@ -1159,7 +1159,7 @@ SCIP_Bool RatIsEqualReal(
    if( REALABS(real) >= infinity && rat->isinf )
       return (real > 0 && RatIsPositive(rat)) || (real < 0 && RatIsNegative(rat));
 
-   return !rat->isinf && rat->val == real;
+   return !rat->isinf && rat->val == Rational(real);
 }
 
 /** check if real approx of rational and a real are equal */

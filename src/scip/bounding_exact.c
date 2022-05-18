@@ -2426,6 +2426,13 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
             /* exact LP */
             SCIP_CALL( SCIPlpExactSolveAndEval(lpexact, lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
                   prob, set->lp_iterlim, lperror, usefarkas) );
+            if( *lperror )
+            {
+               if( !usefarkas )
+                  stat->nfailexlp++;
+               else
+                  stat->nfailexlpinf++;
+            }
             *primalfeasible = lpexact->primalfeasible;
             *dualfeasible = lpexact->dualfeasible;
             break;
