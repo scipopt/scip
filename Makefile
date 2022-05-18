@@ -116,9 +116,6 @@ LPILIBOBJ	=
 LPSOPTIONS	=
 LPIINSTMSG	=
 
-LPSCHECKDEP	:=	$(SRCDIR)/depend.lpscheck
-LPSCHECKSRC	:=	$(shell cat $(LPSCHECKDEP))
-
 LPSOPTIONS	+=	cpx
 ifeq ($(LPS),cpx)
 FLAGS		+=	-I$(LIBDIR)/include/cpxinc
@@ -303,7 +300,6 @@ TPILIBOBJ	=	tpi/tpi_tnycthrd.o \
 endif
 
 TPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(TPILIBOBJ:.o=.c))
-TPISRC		=	$(TPILIBSRC) $(SRCDIR)/scip/concurrent.c $(SRCDIR)/scip/benders.c    # files to be rebuilt when changing TPI
 TPILIB		=	$(TPILIBNAME).$(BASE)
 TPILIBFILE	=	$(LIBDIR)/$(LIBTYPE)/lib$(TPILIB).$(LIBEXT)
 TPILIBOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(TPILIBOBJ))
@@ -378,26 +374,6 @@ endif
 #-----------------------------------------------------------------------------
 # External Libraries
 #-----------------------------------------------------------------------------
-
-ZLIBDEP		:=	$(SRCDIR)/depend.zlib
-ZLIBSRC		:=	$(shell cat $(ZLIBDEP))
-
-GMPDEP		:=	$(SRCDIR)/depend.gmp
-GMPSRC		:=	$(shell cat $(GMPDEP))
-
-READLINEDEP	:=	$(SRCDIR)/depend.readline
-READLINESRC	:=	$(shell cat $(READLINEDEP))
-
-ZIMPLDEP	:=	$(SRCDIR)/depend.zimpl
-ZIMPLSRC	:=	$(shell cat $(ZIMPLDEP))
-
-AMPLDEP	:=	$(SRCDIR)/depend.ampl
-AMPLSRC	:=	$(shell cat $(AMPLDEP))
-
-THREADSAFEDEP	:=	$(SRCDIR)/depend.threadsafe
-THREADSAFESRC	:=	$(shell cat $(THREADSAFEDEP))
-
-LAPACKSRC	:=	$(SRCDIR)/scip/lapack_calls.c $(SRCDIR)/scip/scip_general.c
 
 ifeq ($(ZIMPL),true)
 ifeq ($(GMP),false)
@@ -981,7 +957,8 @@ preprocess:     checkdefines
 				echo "-> generating necessary links" ; \
 				$(MAKE) -j1 $(LINKSMARKERFILE) ; \
 			fi'
-		@$(MAKE) touchexternal $(SCIPCONFIGHFILE)
+		@$(MAKE) touchexternal
+		@$(MAKE) $(SCIPCONFIGHFILE)
 
 .PHONY: lint
 lint:		$(SCIPLIBBASESRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(TPILIBSRC) $(MAINSRC) $(SYMSRC) githash
@@ -1216,16 +1193,6 @@ cleanbin:       | $(BINDIR)
 		@echo "-> remove binary $(MAINFILE)"
 		@-rm -f $(MAINFILE) $(MAINLINK) $(MAINSHORTLINK)
 
-depend:
-# We explicitely add all lpi's here, since the content of depend.lpscheck should be independent of the currently selected LPI,
-# but contain all LPI's that use the SCIP_WITH_LPSCHECK define.
-		@echo `grep -l "SCIP_WITH_LPSCHECK" $(SCIPLIBBASESRC) $(OBJSCIPLIBSRC) $(MAINSRC) src/lpi/lpi*.{c,cpp}` >$(LPSCHECKDEP)
-		@echo `grep -l "SCIP_WITH_ZLIB" $(ALLSRC)` >$(ZLIBDEP)
-		@echo `grep -l "SCIP_WITH_GMP" $(ALLSRC)` >$(GMPDEP)
-		@echo `grep -l "SCIP_WITH_READLINE" $(ALLSRC)` >$(READLINEDEP)
-		@echo `grep -l "SCIP_WITH_ZIMPL" $(ALLSRC)` >$(ZIMPLDEP)
-		@echo `grep -l "SCIP_WITH_AMPL" $(ALLSRC)` >$(AMPLDEP)
-		@echo `grep -l "SCIP_THREADSAFE" $(ALLSRC) src/lpi/lpi*.{c,cpp} src/scip/nlpi*.{c,cpp}` >$(THREADSAFEDEP)
 
 # do not attempt to include .d files if there will definitely be any (empty DFLAGS), because it slows down the build on Windows considerably
 ifneq ($(DFLAGS),)
@@ -1360,14 +1327,8 @@ else
 endif
 
 .PHONY: touchexternal
-touchexternal:	$(ZLIBDEP) $(GMPDEP) $(READLINEDEP) $(ZIMPLDEP) $(AMPLDEP) $(LPSCHECKDEP) $(THREADSAFEDEP) | $(LIBOBJDIR)
+touchexternal:	| $(LIBOBJDIR)
 ifeq ($(TOUCHLINKS),true)
-		@-touch $(ZLIBSRC)
-		@-touch $(GMPSRC)
-		@-touch $(READLINESRC)
-		@-touch $(ZIMPLSRC)
-		@-touch $(AMPLSRC)
-		@-touch $(LPSCHECKSRC)
 		@-touch $(LPILIBSRC)
 endif
 ifneq ($(SCIPGITHASH),$(LAST_SCIPGITHASH))
@@ -1381,29 +1342,8 @@ endif
 ifneq ($(subst \\n,\n,$(BUILDFLAGS)),$(LAST_BUILDFLAGS))
 		@echo "#define SCIP_BUILDFLAGS \"$(BUILDFLAGS)\"" > $(SCIPBUILDFLAGSFILE)
 endif
-ifneq ($(ZLIB),$(LAST_ZLIB))
-		@-touch $(ZLIBSRC)
-endif
-ifneq ($(GMP),$(LAST_GMP))
-		@-touch $(GMPSRC)
-endif
-ifneq ($(READLINE),$(LAST_READLINE))
-		@-touch $(READLINESRC)
-endif
-ifneq ($(ZIMPL),$(LAST_ZIMPL))
-		@-touch $(ZIMPLSRC)
-endif
-ifneq ($(AMPL),$(LAST_AMPL))
-		@-touch $(AMPLSRC)
-endif
 ifneq ($(SYM),$(LAST_SYM))
 		@-touch $(SYMSRC)
-endif
-ifneq ($(LPSCHECK),$(LAST_LPSCHECK))
-		@-touch $(LPSCHECKSRC)
-endif
-ifneq ($(THREADSAFE),$(LAST_THREADSAFE))
-		@-touch $(THREADSAFESRC)
 endif
 ifneq ($(USRFLAGS),$(LAST_USRFLAGS))
 		@-touch $(ALLSRC)
@@ -1423,29 +1363,8 @@ endif
 ifneq ($(USRARFLAGS),$(LAST_USRARFLAGS))
 		@-touch -c $(SCIPLIBBASEOBJFILES) $(OBJSCIPLIBOBJFILES) $(LPILIBOBJFILES) $(TPILIBOBJFILES)
 endif
-ifneq ($(NOBLKMEM),$(LAST_NOBLKMEM))
-		@-touch -c $(ALLSRC)
-endif
-ifneq ($(NOBUFMEM),$(LAST_NOBUFMEM))
-		@-touch -c $(ALLSRC)
-endif
-ifneq ($(NOBLKBUFMEM),$(LAST_NOBLKBUFMEM))
-		@-touch -c $(ALLSRC)
-endif
 ifneq ($(SANITIZE),$(LAST_SANITIZE))
 		@-touch -c $(ALLSRC)
-endif
-ifneq ($(TPI),$(LAST_TPI))
-		@-touch -c $(TPISRC)
-endif
-ifneq ($(DEBUGSOL),$(LAST_DEBUGSOL))
-		@-touch -c $(ALLSRC)
-endif
-ifneq ($(PAPILO),$(LAST_PAPILO))
-		@-touch -c $(ALLSRC)
-endif
-ifneq ($(LAPACK),$(LAST_LAPACK))
-		@-touch -c $(LAPACKSRC)
 endif
 		@-rm -f $(LASTSETTINGS)
 		@echo "LAST_BUILDFLAGS=\"$(BUILDFLAGS)\"" >> $(LASTSETTINGS)
@@ -1753,7 +1672,6 @@ help:
 		@echo "  - splint: Run splint on all C SCIP files. (Needs splint.)"
 		@echo "  - clean: Removes all object files."
 		@echo "  - cleanlibs: Remove all SCIP libraries."
-		@echo "  - depend: Updates dependencies files. This is only needed if you modify SCIP source."
 		@echo "  - tags: Creates TAGS file that can be used in (x)emacs."
 		@echo "  - check or test: Runs the check/test script, see the online documentation."
 
