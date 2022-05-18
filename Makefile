@@ -863,6 +863,7 @@ ALLSRC		+=	$(SCIPLIBBASESRC)
 SCIPGITHASHFILE	= 	$(SRCDIR)/scip/githash.c
 SCIPBUILDFLAGSFILE = 	$(SRCDIR)/scip/buildflags.c
 SCIPCONFIGHFILE	= 	$(OBJDIR)/include/scip/config.h
+SCIPEXPORTHFILE	= 	$(OBJDIR)/include/scip/scip_export.h
 
 #-----------------------------------------------------------------------------
 # Objective SCIP Library
@@ -957,7 +958,7 @@ preprocess:     checkdefines
 				$(MAKE) -j1 $(LINKSMARKERFILE) ; \
 			fi'
 		@$(MAKE) touchexternal
-		@$(MAKE) $(SCIPCONFIGHFILE)
+		@$(MAKE) $(SCIPCONFIGHFILE) $(SCIPEXPORTHFILE)
 
 .PHONY: lint
 lint:		$(SCIPLIBBASESRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(TPILIBSRC) $(MAINSRC) $(SYMSRC) githash
@@ -1430,6 +1431,12 @@ ifeq ($(AMPL),true)
 endif
 		@echo >> $@
 		@echo "#endif /* SCIP_CONFIG_H */" >> $@
+
+# we only need this file to be present, so it can be included
+# the cmake system writes into it, but the (fallback) logic in def.h is actually sufficient
+$(SCIPEXPORTHFILE) :
+		@mkdir -p $(@D)
+		@touch $@
 
 $(LINKSMARKERFILE):
 		@$(MAKE) links

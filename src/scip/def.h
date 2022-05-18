@@ -40,9 +40,7 @@
  * include build configuration flags
  */
 #include "scip/config.h"
-#ifndef NO_CONFIG_HEADER
 #include "scip/scip_export.h"
-#endif
 
 /*
  * GNU COMPILER VERSION define
@@ -103,10 +101,10 @@
 #endif
 
 /*
- * Define the marco SCIP_EXPORT if it is not included from the generated header
+ * Define the macro SCIP_EXPORT if it is not included from the generated header
  */
 #ifndef SCIP_EXPORT
-#if defined(_WIN32) || defined(_WIN64)
+#if defined(_WIN32)
 #define SCIP_EXPORT __declspec(dllexport)
 #elif defined(__GNUC__) && __GNUC__ >= 4
 #define SCIP_EXPORT __attribute__((__visibility__("default")))

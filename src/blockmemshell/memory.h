@@ -33,9 +33,7 @@
  * include build configuration flags
  */
 #include "scip/config.h"
-#ifndef NO_CONFIG_HEADER
 #include "scip/scip_export.h"
-#endif
 
 #ifdef __cplusplus
 
