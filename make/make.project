@@ -326,9 +326,6 @@ CXXFLAGS	+=	$(USRCXXFLAGS)
 LDFLAGS		+=	$(USRLDFLAGS)
 ARFLAGS		+=	$(USRARFLAGS)
 
-# skip scip_export header
-FLAGS		+=  -DNO_CONFIG_HEADER
-
 #-----------------------------------------------------------------------------
 # THREADSAFE
 #-----------------------------------------------------------------------------
