@@ -66,7 +66,6 @@ VERSION		=	$(SCIP_VERSION)
 SCIPGITHASH	=
 SOFTLINKS	=
 MAKESOFTLINKS	=	true
-TOUCHLINKS	=	false
 
 #-----------------------------------------------------------------------------
 # define build flags
@@ -1328,9 +1327,6 @@ endif
 
 .PHONY: touchexternal
 touchexternal:	| $(LIBOBJDIR)
-ifeq ($(TOUCHLINKS),true)
-		@-touch $(LPILIBSRC)
-endif
 ifneq ($(SCIPGITHASH),$(LAST_SCIPGITHASH))
 		@$(MAKE) githash
 endif
@@ -1341,30 +1337,6 @@ endif
 			fi'
 ifneq ($(subst \\n,\n,$(BUILDFLAGS)),$(LAST_BUILDFLAGS))
 		@echo "#define SCIP_BUILDFLAGS \"$(BUILDFLAGS)\"" > $(SCIPBUILDFLAGSFILE)
-endif
-ifneq ($(SYM),$(LAST_SYM))
-		@-touch $(SYMSRC)
-endif
-ifneq ($(USRFLAGS),$(LAST_USRFLAGS))
-		@-touch $(ALLSRC)
-endif
-ifneq ($(USROFLAGS),$(LAST_USROFLAGS))
-		@-touch $(ALLSRC)
-endif
-ifneq ($(USRCFLAGS),$(LAST_USRCFLAGS))
-		@-touch $(ALLSRC)
-endif
-ifneq ($(USRCXXFLAGS),$(LAST_USRCXXFLAGS))
-		@-touch $(ALLSRC)
-endif
-ifneq ($(USRLDFLAGS),$(LAST_USRLDFLAGS))
-		@-touch -c $(SCIPLIBBASEOBJFILES) $(LPILIBOBJFILES) $(TPILIBOBJFILES) $(TPILIBOBJFILES) $(MAINOBJFILES)
-endif
-ifneq ($(USRARFLAGS),$(LAST_USRARFLAGS))
-		@-touch -c $(SCIPLIBBASEOBJFILES) $(OBJSCIPLIBOBJFILES) $(LPILIBOBJFILES) $(TPILIBOBJFILES)
-endif
-ifneq ($(SANITIZE),$(LAST_SANITIZE))
-		@-touch -c $(ALLSRC)
 endif
 		@-rm -f $(LASTSETTINGS)
 		@echo "LAST_BUILDFLAGS=\"$(BUILDFLAGS)\"" >> $(LASTSETTINGS)
