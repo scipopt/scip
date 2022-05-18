@@ -1290,12 +1290,15 @@ void SCIPcertificatePrintCons(
    }
 }
 
+/** print a line for an exact row to the certificate (without derivation), @param alternativerhs is used instead
+ * of the real rhs of the row (infinity if real rhs should be used). This is necessary for integer cuts
+ * where the rhs was rounded down from the original rhs */
 static
 SCIP_RETCODE SCIPcertificatePrintRow(
-      SCIP_SET*          set,
-      SCIP_CERTIFICATE*  certificate,
-      SCIP_ROWEXACT*     rowexact,
-      SCIP_Real          alternativerhs
+      SCIP_SET*          set,                /**< global SCIP settings */
+      SCIP_CERTIFICATE*  certificate,        /**< certificate structure */
+      SCIP_ROWEXACT*     rowexact,           /**< exact SCIP row */
+      SCIP_Real          alternativerhs      /**< rhs to be used instead or rowexact->rhs (infinity to disable this) */
    )
 {
    SCIP_ROW* row;
@@ -1570,6 +1573,7 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
 
    /* 1 * (\xi \le \lfloor \beta \rfloor) we also have to add the correct multipliers for the negative slacks that were used here */
    SCIPcertificatePrintProofMessage(certificate, "%d %d ", 1 + aggrinfo->nnegslackrows, leftdisjunctionindex);
+   /* multiply with scaling parameter that was used during cut computation */
    RatSetReal(tmpval, mirinfo->scale);
    SCIPcertificatePrintProofRational(certificate, tmpval, 10);
 
@@ -1611,15 +1615,11 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
    RatSet(tmpval, mirinfo->frac);
    RatNegate(tmpval, tmpval); /* -f */
    RatDiv(tmpval, tmpval, oneminusf0); /* -f/(1-f) */
+   /* multiply with scaling factor that was used in cut derivation */
    RatMultReal(tmpval, tmpval, mirinfo->scale);
    SCIPcertificatePrintProofRational(certificate, tmpval, 10);
 
-   /* (1/1-f)(\xi - \nu \le \beta) */
-   // SCIPcertificatePrintProofMessage(certificate, " %d ", aggrrowindex);
-   // RatSetReal(tmpval, 1.0);
-   // RatDiv(tmpval, tmpval, oneminusf0);
-   // SCIPcertificatePrintProofRational(certificate, tmpval, 10);
-
+   /* we also have to add the correct multipliers for the negative slacks that were used here */
    for( i = 0; i < aggrinfo->nnegslackrows; i++ )
    {
       size_t key;
@@ -1646,6 +1646,7 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
       SCIPcertificatePrintProofRational(certificate, value, 10);
    }
 
+   /* we also have to add the correct multipliers for the aggregation rows that were used here */
    for( i = 0; i < aggrinfo->naggrrows; i++ )
    {
       size_t key;

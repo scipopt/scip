@@ -1448,15 +1448,18 @@ SCIP_RETCODE cutTightenCoefsQuad(
    return SCIP_OKAY;
 }
 
+/** multiplies a parameter for a variable in a row safely (using variable bounds and increasing the rhs)
+ * @return the scaled value
+ */
 static
 SCIP_Real scaleValSafely(
-   SCIP*                 scip,
-   SCIP_Real             val,
-   SCIP_Real             scale,
-   SCIP_Bool             cutislocal,
-   SCIP_VAR*             var,
-   SCIP_Real*            rhschange,
-   SCIP_Bool*            success
+   SCIP*                 scip,               /**< SCIP structure */
+   SCIP_Real             val,                /**< the value that should be scaled */
+   SCIP_Real             scale,              /**< scaling factor */
+   SCIP_Bool             cutislocal,         /**< should local or global bounds be used */
+   SCIP_VAR*             var,                /**< the variable that is relevant */
+   SCIP_Real*            rhschange,          /**< resulting change in rhs of row */
+   SCIP_Bool*            success             /**< was the operation succesful? (false if no bounds) */
    )
 {
    SCIP_ROUNDMODE previousroundmode;
