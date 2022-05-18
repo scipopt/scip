@@ -70,6 +70,8 @@ struct SCIP_MirInfo
    SCIP_Rational*        frac;               /**< fractionality of the rhs in the mir cut */
    SCIP_Longint          arpos;              /**< position in the mirinfo array, so we can access it from the hashmap */
    SCIP_INTERVAL         onedivoneminusf0;   /**< rounded value of 1/(1-f0) that was used in MIR procedure */
+   SCIP_Real             scale;              /**< scaling factor that was used in cut-postprocessing */
+   SCIP_Real             unroundedrhs;       /**< we need to save the rhs if we round down integral cuts for certification */
 };
 
 struct SCIP_Certnodedata
