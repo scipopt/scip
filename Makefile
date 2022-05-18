@@ -1481,6 +1481,11 @@ $(SCIPCONFIGHFILE) : $(SCIPBUILDFLAGSFILE)
 		@echo "#ifndef SCIP_CONFIG_H" > $@
 		@echo "#define SCIP_CONFIG_H" >> $@
 		@echo >> $@
+		@echo "#define SCIP_VERSION_MAJOR $(SCIP_VERSION_MAJOR)" >> $@
+		@echo "#define SCIP_VERSION_MINOR $(SCIP_VERSION_MINOR)" >> $@
+		@echo "#define SCIP_VERSION_PATCH $(SCIP_VERSION_PATCH)" >> $@
+		@echo "#define SCIP_VERSION_SUB $(SCIP_VERSION_SUB)" >> $@
+		@echo "#define SCIP_VERSION_API $(SCIP_VERSION_API)" >> $@
 ifeq ($(NOBLKBUFMEM),true)
 		@echo "#define BMS_NOBLOCKMEM" >> $@
 		@echo "#define SCIP_NOBUFFERMEM" >> $@
