@@ -1846,12 +1846,80 @@ SCIP_Bool areCoefsNumericsGood(
  */
 static
 void computeMonoidalQuadCoefs(
+   SCIP_NLHDLREXPRDATA*  nlhdlrexprdata,     /**< nlhdlr expression data */
+   SCIP_Real*            raycoefs,           /**< coefficients of ray */
+   int*                  rayidx,             /**< index of consvar the ray coef is associated to */
+   int                   raynnonz,           /**< length of raycoefs and rayidx */
+   SCIP_Real*            vb,                 /**< array containing \f$v_i^T b\f$ for \f$i \in I_+ \cup I_-\f$ */
+   SCIP_Real*            vzlp,               /**< array containing \f$v_i^T zlp_q\f$ for \f$i \in I_+ \cup I_-\f$ */
+   SCIP_Real             kappa,              /**< value of kappa */
+   SCIP_Real             sidefactor,         /**< 1.0 if the violated constraint is q &le; rhs, -1.0 otherwise */
    SCIP_Real*            a,                  /**< pointer to store quadratic coefficient */
    SCIP_Real*            b,                  /**< pointer to store linear coefficient */
    SCIP_Real*            c                   /**< pointer to store constant */
    )
 {
+   SCIP_EXPR* qexpr;
+   int nquadexprs;
+   SCIP_Real* eigenvectors;
+   SCIP_Real* eigenvalues;
+   SCIP_Real apos;
+   SCIP_Real bpos;
+   SCIP_Real norm;
+   int i;
+   int j;
 
+   qexpr = nlhdlrexprdata->qexpr;
+   SCIPexprGetQuadraticData(qexpr, NULL, NULL, NULL, NULL, &nquadexprs, NULL, &eigenvalues, &eigenvectors);
+
+   apos = 0.0;
+   bpos = 0.0;
+   norm = 0.0;
+   *a = 0.0;
+   *b = 0.0;
+   *c = 0.0;
+   j = 0;
+   for( i = 0; i < nquadexprs; ++i )
+   {
+      SCIP_Real dot;
+      SCIP_Real rayentry;
+
+      /* no eigenvalue should be zero, since we are in case 2 -> TODO: check this */
+      assert(! SCIPisZero(scip, eigenvalues[i]));
+
+      /* get entry of ray -> check if current var index corresponds to a non-zero entry in ray */
+      if( j < raynnonz && i == rayidx[j] )
+      {
+         rayentry = raycoefs[j];
+         ++j;
+      }
+      else
+         rayentry = 0.0;
+
+      dot = vzlp[i] + vb[i] / (2.0 * (sidefactor * eigenvalues[i]));
+
+      if( sidefactor * eigenvalues[i] > 0 )
+      {
+         apos += sidefactor * eigenvalues[i] * SQR(dot);
+         bpos += SQRT(sidefactor * eigenvalues[i]) * dot * (SQRT(sidefactor * eigenvalues[i]) / SQRT(kappa) * dot + rayentry);
+         *c += SQR(SQRT(sidefactor * eigenvalues[i]) / SQRT(kappa) * dot + rayentry);
+         norm += sidefactor * eigenvalues[i] * SQR(dot);
+      }
+      else
+      {
+         *a += sidefactor * eigenvalues[i] * SQR(dot);
+         *b += SQRT(sidefactor * eigenvalues[i]) * dot * (SQRT(sidefactor * eigenvalues[i]) / SQRT(kappa) * dot + rayentry);
+         *c -= SQR(SQRT(-sidefactor * eigenvalues[i]) / SQRT(kappa) * dot + rayentry);
+      }
+   }
+
+   norm += 1.0 / kappa;
+
+   *a = (norm * apos + *a) / kappa + 1.0;
+   *b = (*b - norm * bpos) / SQRT(kappa) + 1.0;
+   *c += 1.0;
+
+   assert(*a > 0);
 }
 
 /** computes the smallest root of the quadratic function a*x^2 + b*x + c with a > 0
@@ -1898,9 +1966,16 @@ SCIP_Real findMonoidalQuadRoot(
 
 static
 void computeMonoidalStrengthCoef(
+   SCIP_NLHDLREXPRDATA*  nlhdlrexprdata,     /**< nlhdlr expression data */
    int                   lppos,              /**< lp pos of current ray */
+   SCIP_Real*            raycoefs,           /**< coefficients of ray */
+   int*                  rayidx,             /**< index of consvar the ray coef is associated to */
+   int                   raynnonz,           /**< length of raycoefs and rayidx */
+   SCIP_Real*            vb,                 /**< array containing \f$v_i^T b\f$ for \f$i \in I_+ \cup I_-\f$ */
+   SCIP_Real*            vzlp,               /**< array containing \f$v_i^T zlp_q\f$ for \f$i \in I_+ \cup I_-\f$ */
    SCIP_Real*            wcoefs,             /**< coefficients of w for the qud vars or NULL if w is 0 */
    SCIP_Real             kappa,              /**< value of kappa */
+   SCIP_Real             sidefactor,         /**< 1.0 if the violated constraint is q &le; rhs, -1.0 otherwise */
    SCIP_Real*            cutcoef,            /**< pointer to store cut coef */
    SCIP_Bool*            success             /**< TRUE if monoidal strengthening could be applied */
    )
@@ -1918,7 +1993,7 @@ void computeMonoidalStrengthCoef(
          SCIP_Real b;
          SCIP_Real c;
 
-         computeMonoidalQuadCoefs(, &a, &b, &c);
+         computeMonoidalQuadCoefs(nlhdlrexprdata, raycoefs, rayidx, raynnonz, vb, vzlp, kappa, sidefactor, &a, &b, &c);
 
          /* if ray is in strip, monoidal is not possible -> continue with computing intersection point to get cut coef
           * if ray is not in the strip -> do monoidal strengthening */
@@ -1976,7 +2051,9 @@ SCIP_RETCODE computeIntercut(
 
       /* if we use monoidal strengthening, compute the cut coefficient with that */
       if( nlhdlrdata->usemonoidal )
-         computeMonoidalStrengthCoef(rays->lppos[i], wcoefs, kappa, &cutcoef, &monoidalsuccess);
+         computeMonoidalStrengthCoef(nlhdlrexprdata, rays->lppos[i], &rays->rays[rays->raysbegin[i]],
+                  &rays->raysidx[rays->raysbegin[i]], rays->raysbegin[i + 1] - rays->raysbegin[i],
+                  vb, vzlp, wcoefs, kappa, sidefactor, &cutcoef, &monoidalsuccess);
 
       /* if we don't use monoidal or if monoidal couldn't be applied, use gauge to compute coef  */
       if( ! nlhdlrdata->usemonoidal || ! monodialsuccess )
