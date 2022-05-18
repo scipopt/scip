@@ -1838,6 +1838,101 @@ SCIP_Bool areCoefsNumericsGood(
    return TRUE;
 }
 
+/** computes the coefficients a, b, c defining the quadratic function defining set S restricted to the line
+ *  theta * apex.
+ *
+ *  The solution to the monoidal strengthening problem is then given by the smallest root of the function
+ *  a * theta^2 + b * theta + c
+ */
+static
+void computeMonoidalQuadCoefs(
+   SCIP_Real*            a,                  /**< pointer to store quadratic coefficient */
+   SCIP_Real*            b,                  /**< pointer to store linear coefficient */
+   SCIP_Real*            c                   /**< pointer to store constant */
+   )
+{
+
+}
+
+/** computes the smallest root of the quadratic function a*x^2 + b*x + c with a > 0
+ *  and b^2 - 4ac >= 0. We use binary search between -inf and minimum at -b/2a.
+ */
+static
+SCIP_Real findMonoidalQuadRoot(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             a,                  /**< quadratic coefficient */
+   SCIP_Real             b,                  /**< linear coefficient */
+   SCIP_Real             c                   /**< constant */
+   )
+{
+   SCIP_Real sol;
+   SCIP_Real val;
+   SCIP_Real lb;
+   SCIP_Real ub;
+   int niter;
+
+   assert(a > 0);
+   assert(SQR(b) - 4 * a * c >= 0);
+
+   ub = - b / (2 * a);
+   lb = - SCIPinfinity(scip);
+   val = SCIPinfinity(scip);
+   niter = 0;
+   while( niter < BINSEARCH_MAXITERS && ABS(val) > 10e-6 )
+   {
+      sol = (ub + lb) / 2;
+      val = a * SQR(sol) + b * sol + c;
+
+      if( val < 0 )
+         lb = val;
+      else
+         ub = val;
+
+      /* if we are close enough, return with (feasible) solution */
+      if( val > 0 && val < 10e-6 )
+         break;
+   }
+
+   return sol;
+}
+
+static
+void computeMonoidalStrengthCoef(
+   int                   lppos,              /**< lp pos of current ray */
+   SCIP_Real*            wcoefs,             /**< coefficients of w for the qud vars or NULL if w is 0 */
+   SCIP_Real             kappa,              /**< value of kappa */
+   SCIP_Real*            cutcoef,            /**< pointer to store cut coef */
+   SCIP_Bool*            success             /**< TRUE if monoidal strengthening could be applied */
+   )
+{
+   *success = False;
+
+   /* check if we are in correct case (case 2) */
+   if( wcoefs == NULL && kappa > 0 )
+   {
+
+      /* check if var corresponding to current ray is integer */
+      if( rays->lppos[i] > 0 && SCIPvarGetType(SCIProwGetVar(rows[rays->lppos[i]])) == SCIP_VARTYPE_INTEGER )
+      {
+         SCIP_Real a;
+         SCIP_Real b;
+         SCIP_Real c;
+
+         computeMonoidalQuadCoefs(, &a, &b, &c);
+
+         /* if ray is in strip, monoidal is not possible -> continue with computing intersection point to get cut coef
+          * if ray is not in the strip -> do monoidal strengthening */
+         if( SQR(b) >= 4 * a * c )
+         {
+            *success = TRUE;
+
+            /* find smallest root of quadratic function a * x^2 + b * x + c -> this is the cut coef */
+            *cutcoef = findMonoidalQuadRoot(scip, a, b, c);
+         }
+      }
+   }
+}
+
 /** computes intersection cut cuts off sol (because solution sol violates the quadratic constraint cons)
  * and stores it in rowprep. Here, we don't use any strengthening.
  */
@@ -1879,29 +1974,9 @@ SCIP_RETCODE computeIntercut(
       SCIP_Real coefscondition[3];
       SCIP_Bool monodialsuccess;
 
-      /* check if we use monoidal strengthening */
+      /* if we use monoidal strengthening, compute the cut coefficient with that */
       if( nlhdlrdata->usemonoidal )
-      {
-         monodialsuccess = False;
-
-         /* check if we are in correct case (case 2) */
-         if( wcoefs == NULL && kappa > 0 )
-         {
-
-            /* check if var corresponding to current ray is integer */
-            if( rays->lppos[i] > 0 && SCIPvarGetType(SCIProwGetVar(rows[rays->lppos[i]])) == SCIP_VARTYPE_INTEGER )
-            {
-
-               /* if ray is in strip, monoidal is not possible -> continue with computing intersection point to get cut coef
-                * if ray is not in the strip -> do monoidal strengthening */
-               if( ! rayInStrip() )
-               {
-                  monodialsuccess = True;
-                  cutcoef = computeMonoidalStrengthCoef();
-               }
-            }
-         }
-      }
+         computeMonoidalStrengthCoef(rays->lppos[i], wcoefs, kappa, &cutcoef, &monoidalsuccess);
 
       /* if we don't use monoidal or if monoidal couldn't be applied, use gauge to compute coef  */
       if( ! nlhdlrdata->usemonoidal || ! monodialsuccess )
