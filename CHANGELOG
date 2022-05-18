@@ -107,6 +107,8 @@ Build system
 ### Makefile
 
 - New flag LAPACK for linking with Lapack (must be available in the system)
+- A file scip/config.h is created in the build directory ($(OBJDIR)/include) now.
+  Defining NO_CONFIG_HEADER is no longer necessary and has no effect anymore.
 
 Fixed bugs
 ----------
