@@ -178,7 +178,7 @@ endif
 LPIINSTMSG	=	"  -> \"spxinc\" is the path to the SoPlex \"src\" directory, e.g., \"<SoPlex-path>/src\".\n"
 LPIINSTMSG	+=	" -> \"libsoplex.*\" is the path to the SoPlex library, e.g., \"<SoPlex-path>/lib/libsoplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT).$(STATICLIBEXT)\""
 ifeq ($(LPSCHECK),true)
-FLAGS		+=	-DSCIP_WITH_LPSCHECK -I$(LIBDIR)/include/cpxinc
+FLAGS		+=	-I$(LIBDIR)/include/cpxinc
 SOFTLINKS	+=	$(LIBDIR)/include/cpxinc
 ifeq ($(SHARED),true)
 SOFTLINKS	+=	$(LIBDIR)/shared/libcplex.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
@@ -206,7 +206,7 @@ endif
 LPIINSTMSG	=	"  -> \"spxinc\" is the path to the SoPlex \"src\" directory, e.g., \"<SoPlex-path>/src\".\n"
 LPIINSTMSG	+=	" -> \"libsoplex.*\" is the path to the SoPlex library, e.g., \"<SoPlex-path>/lib/libsoplex.linux.x86.gnu.opt.a\""
 ifeq ($(LPSCHECK),true)
-FLAGS		+=	-DSCIP_WITH_LPSCHECK -I$(LIBDIR)/include/cpxinc
+FLAGS		+=	-I$(LIBDIR)/include/cpxinc
 SOFTLINKS	+=	$(LIBDIR)/include/cpxinc
 ifeq ($(SHARED),true)
 SOFTLINKS	+=	$(LIBDIR)/shared/libcplex.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
@@ -217,10 +217,6 @@ LPIINSTMSG	+=	"  -> \"cpxinc\" is the path to the CPLEX \"include\" directory, e
 LPIINSTMSG	+=	" -> \"libcplex.*.a\" is the path to the CPLEX library, e.g., \"<CPLEX-path>/lib/x86_rhel4.0_3.4/static_pic/libcplex.a\"\n"
 LPIINSTMSG	+=	" -> \"libcplex.*.so\" is the path to the CPLEX library, e.g., \"<CPLEX-path>/bin/x86-64_linux/libcplex1263.so\""
 endif
-endif
-
-ifeq ($(DEBUGSOL),true)
-FLAGS		+=	-DWITH_DEBUG_SOLUTION
 endif
 
 LPSOPTIONS	+=	clp
@@ -293,20 +289,17 @@ TPILIBOBJ	=
 TPIOPTIONS	+=	none
 ifeq ($(TPI),none)
 TPILIBOBJ	=	tpi/tpi_none.o
-FLAGS		+=	-DTPI_NONE
 endif
 
 TPIOPTIONS	+=	omp
 ifeq ($(TPI),omp)
 TPILIBOBJ	=	tpi/tpi_openmp.o
-FLAGS		+=	-DTPI_OMP
 endif
 
 TPIOPTIONS	+=	tny
 ifeq ($(TPI),tny)
 TPILIBOBJ	=	tpi/tpi_tnycthrd.o \
 			tinycthread/tinycthread.o
-FLAGS		+=	-DTPI_TNYC
 endif
 
 TPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(TPILIBOBJ:.o=.c))
@@ -371,7 +364,7 @@ endif
 #-----------------------------------------------------------------------------
 
 ifeq ($(PAPILO),true)
-FLAGS        +=    -DSCIP_WITH_PAPILO -DPAPILO_NO_CMAKE_CONFIG -I$(LIBDIR)/include/tbb/include -I$(LIBDIR)/include/papilo/external -I$(LIBDIR)/include/papilo/src
+FLAGS        +=    -DPAPILO_NO_CMAKE_CONFIG -I$(LIBDIR)/include/tbb/include -I$(LIBDIR)/include/papilo/external -I$(LIBDIR)/include/papilo/src
 SOFTLINKS    +=    $(LIBDIR)/include/papilo
 LPIINSTMSG    +=    "\n  -> \"papilo\" is the path to the PaPILO directory\n"
 SOFTLINKS    +=    $(LIBDIR)/include/boost
@@ -410,7 +403,7 @@ ifeq ($(ZIMPL),true)
 ifeq ($(GMP),false)
 $(error ZIMPL requires the GMP to be linked. Use either ZIMPL=false or GMP=true.)
 endif
-FLAGS		+=	-DSCIP_WITH_ZIMPL -I$(LIBDIR)/include/zimplinc $(ZIMPL_FLAGS)
+FLAGS		+=	-I$(LIBDIR)/include/zimplinc $(ZIMPL_FLAGS)
 DIRECTORIES	+=	$(LIBDIR)/include/zimplinc
 SOFTLINKS	+=	$(LIBDIR)/include/zimplinc/zimpl
 SOFTLINKS	+=	$(LIBDIR)/$(LIBTYPE)/libzimpl.$(OSTYPE).$(ARCH).$(COMP).$(ZIMPLOPT).$(STATICLIBEXT)
@@ -450,7 +443,7 @@ LPIINSTMSG	+=	"\n  -> \"worhp.$(OSTYPE).$(ARCH).$(COMP).$(WORHPOPT)\" is a direc
 endif
 
 ifeq ($(AMPL),true)
-FLAGS		+=	-DSCIP_WITH_AMPL -I$(SRCDIR)/amplmp/include
+FLAGS		+=	-I$(SRCDIR)/amplmp/include
 LINKER		=	CPP
 endif
 
@@ -894,6 +887,7 @@ ALLSRC		+=	$(SCIPLIBBASESRC)
 
 SCIPGITHASHFILE	= 	$(SRCDIR)/scip/githash.c
 SCIPBUILDFLAGSFILE = 	$(SRCDIR)/scip/buildflags.c
+SCIPCONFIGHFILE	= 	$(OBJDIR)/include/scip/config.h
 
 #-----------------------------------------------------------------------------
 # Objective SCIP Library
@@ -987,7 +981,7 @@ preprocess:     checkdefines
 				echo "-> generating necessary links" ; \
 				$(MAKE) -j1 $(LINKSMARKERFILE) ; \
 			fi'
-		@$(MAKE) touchexternal
+		@$(MAKE) touchexternal $(SCIPCONFIGHFILE)
 
 .PHONY: lint
 lint:		$(SCIPLIBBASESRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(TPILIBSRC) $(MAINSRC) $(SYMSRC) githash
@@ -1200,8 +1194,8 @@ ifneq ($(BINOBJDIR),)
 		@-rm -f $(BINOBJDIR)/*.o $(BINOBJDIR)/*.d && rmdir $(BINOBJDIR)
 endif
 ifneq ($(OBJDIR),)
-		@-rm -f $(LASTSETTINGS)
-		@-rmdir $(OBJDIR)
+		@-rm -f $(LASTSETTINGS) $(SCIPCONFIGHFILE)
+		@-rmdir $(OBJDIR)/include/scip $(OBJDIR)/include $(OBJDIR)
 endif
 
 .PHONY: cleanlibs
@@ -1480,6 +1474,66 @@ endif
 		@echo "LAST_DEBUGSOL=$(DEBUGSOL)" >> $(LASTSETTINGS)
 		@echo "LAST_PAPILO=$(PAPILO)" >> $(LASTSETTINGS)
 		@echo "LAST_LAPACK=$(LAPACK)" >> $(LASTSETTINGS)
+
+$(SCIPCONFIGHFILE) : $(SCIPBUILDFLAGSFILE)
+		@echo "-> writing $(SCIPCONFIGHFILE)"
+		@mkdir -p $(@D)
+		@echo "#ifndef SCIP_CONFIG_H" > $@
+		@echo "#define SCIP_CONFIG_H" >> $@
+		@echo >> $@
+ifeq ($(NOBLKBUFMEM),true)
+		@echo "#define BMS_NOBLOCKMEM" >> $@
+		@echo "#define SCIP_NOBUFFERMEM" >> $@
+else
+ifeq ($(NOBLKMEM),true)
+		@echo "#define BMS_NOBLOCKMEM" >> $@
+endif
+ifeq ($(NOBUFMEM),true)
+		@echo "#define SCIP_NOBUFFERMEM" >> $@
+endif
+endif
+ifeq ($(DEBUGSOL),true)
+		@echo "#define WITH_DEBUG_SOLUTION" >> $@
+endif
+ifeq ($(TPI),none)
+		@echo "#define TPI_NONE" >> $@
+endif
+ifeq ($(TPI),tny)
+		@echo "#define TPI_TNYC" >> $@
+endif
+ifeq ($(TPI),omp)
+		@echo "#define TPI_OMP" >> $@
+endif
+ifeq ($(THREADSAFE),true)
+		@echo "#define SCIP_THREADSAFE" >> $@
+endif
+		@echo "#define WITH_SCIPDEF" >> $@
+ifeq ($(LAPACK),true)
+		@echo "#define SCIP_WITH_LAPACK" >> $@
+endif
+ifeq ($(PAPILO),true)
+		@echo "#define SCIP_WITH_PAPILO" >> $@
+endif
+ifeq ($(ZLIB),true)
+		@echo "#define SCIP_WITH_ZLIB" >> $@
+endif
+ifeq ($(READLINE),true)
+		@echo "#define SCIP_WITH_READLINE" >> $@
+endif
+ifeq ($(GMP),true)
+		@echo "#define SCIP_WITH_GMP" >> $@
+endif
+ifeq ($(LPSCHECK),true)
+		@echo "#define SCIP_WITH_LPSCHECK" >> $@
+endif
+ifeq ($(ZIMPL),true)
+		@echo "#define SCIP_WITH_ZIMPL" >> $@
+endif
+ifeq ($(AMPL),true)
+		@echo "#define SCIP_WITH_AMPL" >> $@
+endif
+		@echo >> $@
+		@echo "#endif /* SCIP_CONFIG_H */" >> $@
 
 $(LINKSMARKERFILE):
 		@$(MAKE) links
