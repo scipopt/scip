@@ -861,7 +861,7 @@ SCIPLIBSOLVERSHORTLINK = $(LIBDIR)/$(LIBTYPE)/libscipsolver.$(LIBEXT)
 ALLSRC		+=	$(SCIPLIBBASESRC)
 
 SCIPGITHASHFILE	= 	$(SRCDIR)/scip/githash.c
-SCIPBUILDFLAGSFILE = 	$(SRCDIR)/scip/buildflags.c
+SCIPBUILDFLAGSFILE = 	$(OBJDIR)/include/scip/buildflags.h
 SCIPCONFIGHFILE	= 	$(OBJDIR)/include/scip/config.h
 SCIPEXPORTHFILE	= 	$(OBJDIR)/include/scip/scip_export.h
 
@@ -1171,7 +1171,7 @@ ifneq ($(BINOBJDIR),)
 		@-rm -f $(BINOBJDIR)/*.o $(BINOBJDIR)/*.d && rmdir $(BINOBJDIR)
 endif
 ifneq ($(OBJDIR),)
-		@-rm -f $(LASTSETTINGS) $(SCIPCONFIGHFILE)
+		@-rm -f $(LASTSETTINGS) $(SCIPCONFIGHFILE) $(SCIPEXPORTHFILE) $(SCIPBUILDFLAGSFILE)
 		@-rmdir $(OBJDIR)/include/scip $(OBJDIR)/include $(OBJDIR)
 endif
 
@@ -1337,11 +1337,16 @@ endif
 				$(MAKE) githash ; \
 			fi'
 ifneq ($(subst \\n,\n,$(BUILDFLAGS)),$(LAST_BUILDFLAGS))
+		@mkdir -p $(OBJDIR)/include/scip
 		@echo "#define SCIP_BUILDFLAGS \"$(BUILDFLAGS)\"" > $(SCIPBUILDFLAGSFILE)
 endif
 		@-rm -f $(LASTSETTINGS)
 		@echo "LAST_BUILDFLAGS=\"$(BUILDFLAGS)\"" >> $(LASTSETTINGS)
 		@echo "LAST_SCIPGITHASH=$(SCIPGITHASH)" >> $(LASTSETTINGS)
+
+$(SCIPBUILDFLAGSFILE) :
+		@mkdir -p $(@D)
+		@echo "#define SCIP_BUILDFLAGS \"$(BUILDFLAGS)\"" > $@
 
 $(SCIPCONFIGHFILE) : $(SCIPBUILDFLAGSFILE)
 		@echo "-> writing $(SCIPCONFIGHFILE)"
