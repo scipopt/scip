@@ -3550,16 +3550,16 @@ void consdataCalcActivitiesEx(
    RatCreateBuffer(SCIPbuffer(scip), &oldglbmaxactivity);
    RatCreateBuffer(SCIPbuffer(scip), &oldlastglbminactivity);
    RatCreateBuffer(SCIPbuffer(scip), &oldlastglbmaxactivity);
-   RatSet(oldmaxabsval, consdata->maxabsval);
-   RatSet(oldminabsval, consdata->minabsval);
-   RatSet(oldminactivity, consdata->minactivity);
-   RatSet(oldmaxactivity, consdata->maxactivity);
-   RatSet(oldlastminactivity, consdata->lastminactivity);
-   RatSet(oldlastmaxactivity, consdata->lastmaxactivity);
-   RatSet(oldglbminactivity, consdata->glbminactivity);
-   RatSet(oldglbmaxactivity, consdata->glbmaxactivity);
-   RatSet(oldlastglbminactivity, consdata->lastglbminactivity);
-   RatSet(oldlastglbmaxactivity, consdata->lastglbmaxactivity);
+   RatSet(oldmaxabsval, consdata->maxabsvalEx);
+   RatSet(oldminabsval, consdata->minabsvalEx);
+   RatSet(oldminactivity, consdata->minactivityEx);
+   RatSet(oldmaxactivity, consdata->maxactivityEx);
+   //RatSet(oldlastminactivity, consdata->lastminactivityEx);
+   //RatSet(oldlastmaxactivity, consdata->lastmaxactivityEx);
+   RatSet(oldglbminactivity, consdata->glbminactivityEx);
+   RatSet(oldglbmaxactivity, consdata->glbmaxactivityEx);
+   RatSet(oldlastglbminactivity, consdata->lastglbminactivityEx);
+   RatSet(oldlastglbmaxactivity, consdata->lastglbmaxactivityEx);
    #endif
    CERTIFICATE_CONS ccons = GetCertificateCons(scip, consdata);
    assert(scip != NULL);
@@ -3623,21 +3623,21 @@ void consdataCalcActivitiesEx(
    RatSet(consdata->lastglbmaxactivityEx, consdata->glbmaxactivityEx);
 
    #ifdef SCIP_DEBUG
-   assert( !activityWasValid || RatIsEqual(consdata->lastglbmaxactivity, consdata->glbmaxactivity) );
-   assert( !activityWasValid || RatIsEqual(consdata->lastglbminactivity, consdata->glbminactivity) );
-   assert( !activityWasValid || RatIsEqual(consdata->lastmaxactivity, consdata->maxactivity) );
-   assert( !activityWasValid || RatIsEqual(consdata->lastminactivity, consdata->minactivity) );
+   assert( !activityWasValid || RatIsEqual(consdata->lastglbmaxactivityEx, consdata->glbmaxactivityEx) );
+   assert( !activityWasValid || RatIsEqual(consdata->lastglbminactivityEx, consdata->glbminactivityEx) );
+   //assert( !activityWasValid || RatIsEqual(consdata->lastmaxactivityEx, consdata->maxactivity) );
+   //assert( !activityWasValid || RatIsEqual(consdata->lastminactivityEx, consdata->minactivity) );
 
-   assert( !activityWasValid || RatIsEqual(consdata->maxabsval, consdata->maxabsval));
-   assert( !activityWasValid || RatIsEqual(consdata->minabsval, consdata->minabsval));
-   assert( !activityWasValid || RatIsEqual(consdata->minactivity, consdata->minactivity));
-   assert( !activityWasValid || RatIsEqual(consdata->maxactivity, consdata->maxactivity));
-   assert( !activityWasValid || RatIsEqual(consdata->lastminactivity, consdata->lastminactivity));
-   assert( !activityWasValid || RatIsEqual(consdata->lastmaxactivity, consdata->lastmaxactivity));
-   assert( !activityWasValid || RatIsEqual(consdata->glbminactivity, consdata->glbminactivity));
-   assert( !activityWasValid || RatIsEqual(consdata->glbmaxactivity, consdata->glbmaxactivity));
-   assert( !activityWasValid || RatIsEqual(consdata->lastglbminactivity, consdata->lastglbminactivity));
-   assert( !activityWasValid || RatIsEqual(consdata->lastglbmaxactivity, consdata->lastglbmaxactivity));
+   assert( !activityWasValid || RatIsEqual(consdata->maxabsvalEx, consdata->maxabsvalEx));
+   assert( !activityWasValid || RatIsEqual(consdata->minabsvalEx, consdata->minabsvalEx));
+   assert( !activityWasValid || RatIsEqual(consdata->minactivityEx, consdata->minactivityEx));
+   assert( !activityWasValid || RatIsEqual(consdata->maxactivityEx, consdata->maxactivityEx));
+   //assert( !activityWasValid || RatIsEqual(consdata->lastminactivityEx, consdata->lastminactivityEx));
+   //assert( !activityWasValid || RatIsEqual(consdata->lastmaxactivityEx, consdata->lastmaxactivityEx));
+   assert( !activityWasValid || RatIsEqual(consdata->glbminactivityEx, consdata->glbminactivityEx));
+   assert( !activityWasValid || RatIsEqual(consdata->glbmaxactivityEx, consdata->glbmaxactivityEx));
+   assert( !activityWasValid || RatIsEqual(consdata->lastglbminactivityEx, consdata->lastglbminactivityEx));
+   assert( !activityWasValid || RatIsEqual(consdata->lastglbmaxactivityEx, consdata->lastglbmaxactivityEx));
 
    assert( !activityWasValid || oldminactivityneginf == consdata->minactivityneginf );
    assert( !activityWasValid || oldminactivityposinf == consdata->minactivityposinf );
@@ -9602,8 +9602,8 @@ SCIP_RETCODE tightenVarBounds(
       SCIP_Real tmpBound;
       SCIP_BOUNDTYPE tmpBoundtype;
       tmpVar = var;
-      SCIPvarGetProbvarBound(&var, &tmpBound, &tmpBoundtype);
-      if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR || SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED ) {
+      SCIPvarGetProbvarBound(&tmpVar, &tmpBound, &tmpBoundtype);
+      if( SCIPvarGetStatus(tmpVar) == SCIP_VARSTATUS_MULTAGGR || SCIPvarGetStatus(tmpVar) == SCIP_VARSTATUS_FIXED ) {
          return SCIP_OKAY;
       }
    }
@@ -10271,7 +10271,7 @@ SCIP_RETCODE addRelaxation(
    if( !SCIProwIsInLP(consdata->rowlhs) )
    {
       SCIPdebugMsg(scip, "adding relaxation of linear constraint <%s>: ", SCIPconsGetName(cons));
-      SCIPdebug( SCIP_CALL( SCIPprintRow(scip, consdata->row, NULL)) );
+      SCIPdebug( SCIP_CALL( SCIPprintRow(scip, consdata->rowlhs, NULL)) );
       SCIPdebug( SCIP_CALL( SCIPprintRowExact(scip, consdata->rowexact, NULL)) ); // Maybe we should still add the row even if rowlhs is already in the LP?
 
       /* if presolving is turned off, the row might be trivial */
