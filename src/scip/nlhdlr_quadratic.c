@@ -1846,6 +1846,7 @@ SCIP_Bool areCoefsNumericsGood(
  */
 static
 void computeMonoidalQuadCoefs(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLHDLREXPRDATA*  nlhdlrexprdata,     /**< nlhdlr expression data */
    SCIP_Real*            raycoefs,           /**< coefficients of ray */
    int*                  rayidx,             /**< index of consvar the ray coef is associated to */
@@ -1966,6 +1967,7 @@ SCIP_Real findMonoidalQuadRoot(
 
 static
 void computeMonoidalStrengthCoef(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLHDLREXPRDATA*  nlhdlrexprdata,     /**< nlhdlr expression data */
    int                   lppos,              /**< lp pos of current ray */
    SCIP_Real*            raycoefs,           /**< coefficients of ray */
@@ -1980,20 +1982,23 @@ void computeMonoidalStrengthCoef(
    SCIP_Bool*            success             /**< TRUE if monoidal strengthening could be applied */
    )
 {
-   *success = False;
+   *success = FALSE;
 
    /* check if we are in correct case (case 2) */
    if( wcoefs == NULL && kappa > 0 )
    {
+      SCIP_COL** cols;
+
+      cols = SCIPgetLPCols(scip);
 
       /* check if var corresponding to current ray is integer */
-      if( rays->lppos[i] > 0 && SCIPvarGetType(SCIProwGetVar(rows[rays->lppos[i]])) == SCIP_VARTYPE_INTEGER )
+      if( lppos > 0 && SCIPvarGetType(SCIPcolGetVar(cols[lppos])) == SCIP_VARTYPE_INTEGER )
       {
          SCIP_Real a;
          SCIP_Real b;
          SCIP_Real c;
 
-         computeMonoidalQuadCoefs(nlhdlrexprdata, raycoefs, rayidx, raynnonz, vb, vzlp, kappa, sidefactor, &a, &b, &c);
+         computeMonoidalQuadCoefs(scip, nlhdlrexprdata, raycoefs, rayidx, raynnonz, vb, vzlp, kappa, sidefactor, &a, &b, &c);
 
          /* if ray is in strip, monoidal is not possible -> continue with computing intersection point to get cut coef
           * if ray is not in the strip -> do monoidal strengthening */
@@ -2047,16 +2052,16 @@ SCIP_RETCODE computeIntercut(
       SCIP_Real coefs1234a[5];
       SCIP_Real coefs4b[5];
       SCIP_Real coefscondition[3];
-      SCIP_Bool monodialsuccess;
+      SCIP_Bool monoidalsuccess;
 
       /* if we use monoidal strengthening, compute the cut coefficient with that */
       if( nlhdlrdata->usemonoidal )
-         computeMonoidalStrengthCoef(nlhdlrexprdata, rays->lppos[i], &rays->rays[rays->raysbegin[i]],
+         computeMonoidalStrengthCoef(scip, nlhdlrexprdata, rays->lpposray[i], &rays->rays[rays->raysbegin[i]],
                   &rays->raysidx[rays->raysbegin[i]], rays->raysbegin[i + 1] - rays->raysbegin[i],
                   vb, vzlp, wcoefs, kappa, sidefactor, &cutcoef, &monoidalsuccess);
 
       /* if we don't use monoidal or if monoidal couldn't be applied, use gauge to compute coef  */
-      if( ! nlhdlrdata->usemonoidal || ! monodialsuccess )
+      if( ! nlhdlrdata->usemonoidal || ! monoidalsuccess )
       {
          /* restrict phi to ray */
          SCIP_CALL( computeRestrictionToRay(scip, nlhdlrexprdata, sidefactor, iscase4,
