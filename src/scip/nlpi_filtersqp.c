@@ -30,15 +30,6 @@
 #include <sys/time.h>
 #endif
 
-/* fallback to non-thread version for windows, because pthread does not exist */
-#if defined(_MSC_VER) && defined(SCIP_THREADSAFE)
-#undef SCIP_THREADSAFE
-#endif
-
-#ifdef SCIP_THREADSAFE
-#include <pthread.h>
-#endif
-
 #include "scip/nlpi_filtersqp.h"
 #include "scip/nlpioracle.h"
 #include "scip/scip_general.h"
@@ -49,6 +40,15 @@
 #include "scip/scip_randnumgen.h"
 #include "scip/scip_solve.h"
 #include "scip/pub_misc.h"
+
+/* fallback to non-thread version for windows, because pthread does not exist */
+#if defined(_MSC_VER) && defined(SCIP_THREADSAFE)
+#undef SCIP_THREADSAFE
+#endif
+
+#ifdef SCIP_THREADSAFE
+#include <pthread.h>
+#endif
 
 #define NLPI_NAME              "filtersqp"                 /**< short concise name of solver */
 #define NLPI_DESC              "Sequential Quadratic Programming trust region solver by R. Fletcher and S. Leyffer" /**< description of solver */
