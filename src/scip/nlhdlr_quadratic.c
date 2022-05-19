@@ -29,6 +29,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 /* #define DEBUG_INTERSECTIONCUT */
+#define DEBUG_MONOIDAL
 /* #define INTERCUT_MOREDEBUG */
 /* #define INTERCUTS_VERBOSE */
 
@@ -1991,6 +1992,9 @@ void computeMonoidalStrengthCoef(
 
       cols = SCIPgetLPCols(scip);
 
+#ifdef DEBUG_MONOIDAL
+      printf("We are in case 2 \n");
+#endif
       /* check if var corresponding to current ray is integer */
       if( lppos > 0 && SCIPvarGetType(SCIPcolGetVar(cols[lppos])) == SCIP_VARTYPE_INTEGER )
       {
@@ -2000,6 +2004,10 @@ void computeMonoidalStrengthCoef(
 
          computeMonoidalQuadCoefs(scip, nlhdlrexprdata, raycoefs, rayidx, raynnonz, vb, vzlp, kappa, sidefactor, &a, &b, &c);
 
+#ifdef DEBUG_MONOIDAL
+         printf("Var %s is integer \n", SCIPvarGetName(SCIPcolGetVar(cols[lppos])));
+#endif
+
          /* if ray is in strip, monoidal is not possible -> continue with computing intersection point to get cut coef
           * if ray is not in the strip -> do monoidal strengthening */
          if( SQR(b) >= 4 * a * c )
@@ -2008,6 +2016,10 @@ void computeMonoidalStrengthCoef(
 
             /* find smallest root of quadratic function a * x^2 + b * x + c -> this is the cut coef */
             *cutcoef = findMonoidalQuadRoot(scip, a, b, c);
+
+#ifdef DEBUG_MONOIDAL
+            printf("Ray is not in strip -> monoidal is possible -> computed cut coef %g \n", *cutcoef);
+#endif
          }
       }
    }
