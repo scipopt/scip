@@ -1643,7 +1643,7 @@ AbstractGraph::search(const bool canonical,
         /*
          * Compute backjumping level
          */
-        unsigned int backjumping_level = current_level+1-1;
+        unsigned int backjumping_level;
         if(!first_path_orbits.is_minimal_representative(search_stack[gca_level_with_first].split_element))
           {
             backjumping_level = gca_level_with_first;
