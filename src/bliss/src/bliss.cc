@@ -238,7 +238,10 @@ main(const int argc, const char** argv)
     fclose(infile);
 
   if(!g)
+  {
     _fatal("Failed to read the graph, aborting");
+    exit(1); /* this is here because scan-build does not recognize _fatal exits. */
+  }
 
 #ifndef _WIN32
   if(verbose_level >= 2)
@@ -252,7 +255,6 @@ main(const int argc, const char** argv)
   bliss::Stats stats;
 
   /* Set splitting heuristics and verbose level */
-  assert(g != NULL);
   if(opt_directed)
     ((bliss::Digraph*)g)->set_splitting_heuristic(shs_directed);
   else
