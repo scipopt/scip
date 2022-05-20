@@ -252,8 +252,7 @@ main(const int argc, const char** argv)
   bliss::Stats stats;
 
   /* Set splitting heuristics and verbose level */
-  if(!g)
-    _fatal("Failed to read the graph, aborting");
+  assert(g != NULL);
   if(opt_directed)
     ((bliss::Digraph*)g)->set_splitting_heuristic(shs_directed);
   else

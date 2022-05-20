@@ -402,7 +402,10 @@ Digraph::read_dimacs(FILE* const fp, FILE* const errstr)
   unsigned int line_num = 1;
 
   const bool verbose = false;
-  FILE* const verbstr = stdout;
+  FILE* verbstr;
+  if(verbose)
+      verbstr = stdout;
+
 
   /* Read comments and the problem definition line */
   while(1)
@@ -447,7 +450,7 @@ Digraph::read_dimacs(FILE* const fp, FILE* const errstr)
         fprintf(errstr, "error: no vertices\n");
       goto error_exit;
     }
-  if(verbose and verbstr)
+  if(verbose)
     {
       fprintf(verbstr, "Instance has %d vertices and %d edges\n",
               nof_vertices, nof_edges);
@@ -459,7 +462,7 @@ Digraph::read_dimacs(FILE* const fp, FILE* const errstr)
   //
   // Read vertex colors
   //
-  if(verbose and verbstr)
+  if(verbose)
     {
       fprintf(verbstr, "Reading vertex colors...\n");
       fflush(verbstr);
@@ -493,7 +496,7 @@ Digraph::read_dimacs(FILE* const fp, FILE* const errstr)
       line_num++;
       g->change_color(vertex - 1, color);
     }
-  if(verbose and verbstr)
+  if(verbose)
     {
       fprintf(verbstr, "Done\n");
       fflush(verbstr);
@@ -536,7 +539,7 @@ Digraph::read_dimacs(FILE* const fp, FILE* const errstr)
       line_num++;
       g->add_edge(from-1, to-1);
     }
-  if(verbose and verbstr)
+  if(verbose)
     {
       fprintf(verbstr, "Done\n");
       fflush(verbstr);

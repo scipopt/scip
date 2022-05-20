@@ -171,7 +171,9 @@ Graph::read_dimacs(FILE* const fp, FILE* const errstr)
   int c;
 
   const bool verbose = false;
-  FILE* const verbstr = stdout;
+  FILE* verbstr;
+  if(verbose)
+      verbstr = stdout;
 
   /* Read comments and the problem definition line */
   while(1)
@@ -218,7 +220,7 @@ Graph::read_dimacs(FILE* const fp, FILE* const errstr)
         fprintf(errstr, "error: no vertices\n");
       goto error_exit;
     }
-  if(verbose and verbstr)
+  if(verbose)
     {
       fprintf(verbstr, "Instance has %d vertices and %d edges\n",
           nof_vertices, nof_edges);
@@ -230,7 +232,7 @@ Graph::read_dimacs(FILE* const fp, FILE* const errstr)
   //
   // Read vertex colors
   //
-  if(verbose and verbstr)
+  if(verbose)
     {
       fprintf(verbstr, "Reading vertex colors...\n");
       fflush(verbstr);
@@ -264,7 +266,7 @@ Graph::read_dimacs(FILE* const fp, FILE* const errstr)
       line_num++;
       g->change_color(vertex - 1, color);
     }
-  if(verbose and verbstr)
+  if(verbose)
     {
       fprintf(verbstr, "Done\n");
       fflush(verbstr);
@@ -273,7 +275,7 @@ Graph::read_dimacs(FILE* const fp, FILE* const errstr)
   //
   // Read edges
   //
-  if(verbose and verbstr)
+  if(verbose)
     {
       fprintf(verbstr, "Reading edges...\n");
       fflush(verbstr);
@@ -307,7 +309,7 @@ Graph::read_dimacs(FILE* const fp, FILE* const errstr)
       line_num++;
       g->add_edge(from-1, to-1);
     }
-  if(verbose and verbstr)
+  if(verbose)
     {
       fprintf(verbstr, "Done\n");
       fflush(verbstr);
