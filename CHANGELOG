@@ -13,6 +13,9 @@ Performance improvements
 ------------------------
 Examples and applications
 -------------------------
+
+- Fixed handling of enforcing in the TSP example.
+
 Interface changes
 -----------------
 ### New and changed callbacks
@@ -21,7 +24,7 @@ Interface changes
 ### Command line interface
 ### Interfaces to external software
 
-- Added compatibility with Mosek 10.0.0.12.
+- Added compatibility with Mosek 10.0.13.
 
 ### Changed parameters
 ### New parameters
@@ -44,6 +47,7 @@ Build system
 ### Makefile
 
 - avoid warnings about unrecognized compiler warning silencing options when compilation with GCC fails
+- fixed that compilation with MS/Intel compilers on Windows and Cray compilers was broken when enabling PAPILO
 
 Fixed bugs
 ----------

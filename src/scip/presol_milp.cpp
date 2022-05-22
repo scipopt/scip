@@ -44,6 +44,21 @@ SCIP_RETCODE SCIPincludePresolMILP(
 
 #else
 
+/* disable some warnings that come up in header files of PAPILO or its dependencies */
+#ifdef __GNUC__
+#pragma GCC diagnostic ignored "-Wshadow"
+#pragma GCC diagnostic ignored "-Wsign-compare"
+#pragma GCC diagnostic ignored "-Wctor-dtor-privacy"
+#pragma GCC diagnostic ignored "-Wredundant-decls"
+#if __GNUC__ >= 7
+#pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
+#endif
+#endif
+#ifdef __clang__
+#pragma GCC diagnostic ignored "-Wdeprecated-copy"
+#pragma GCC diagnostic ignored "-Wimplicit-const-int-float-conversion"
+#endif
+
 #include <assert.h>
 #include "scip/cons_linear.h"
 #include "scip/pub_matrix.h"

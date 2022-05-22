@@ -4189,7 +4189,11 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
       inds[0]= r;
 
       /* solve transposed system */
+#if MSK_VERSION_MAJOR < 10
       MOSEK_CALL( MSK_solvewithbasis(lpi->task, 1, ninds, inds, coef) );
+#else
+      MOSEK_CALL( MSK_solvewithbasis(lpi->task, 1, *ninds, inds, coef, ninds) );
+#endif
       assert( *ninds <= nrows );
    }
    else
@@ -4203,7 +4207,11 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
       sub[0] = r;
 
       /* solve transposed system */
+#if MSK_VERSION_MAJOR < 10
       MOSEK_CALL( MSK_solvewithbasis(lpi->task, 1, &numnz, sub, coef) );
+#else
+      MOSEK_CALL( MSK_solvewithbasis(lpi->task, 1, numnz, sub, coef, &numnz) );
+#endif
       assert( numnz <= nrows );
 
       BMSfreeMemoryArray(&sub);
@@ -4267,7 +4275,11 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
       *ninds = 1;
       inds[0]= c;
 
+#if MSK_VERSION_MAJOR < 10
       MOSEK_CALL( MSK_solvewithbasis(lpi->task, 0, ninds, inds, coef) );
+#else
+      MOSEK_CALL( MSK_solvewithbasis(lpi->task, 0, *ninds, inds, coef, ninds) );
+#endif
       assert( *ninds <= nrows );
    }
    else
@@ -4280,7 +4292,11 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
       numnz = 1;
       sub[0]= c;
 
+#if MSK_VERSION_MAJOR < 10
       MOSEK_CALL( MSK_solvewithbasis(lpi->task, 0, &numnz, sub, coef) );
+#else
+      MOSEK_CALL( MSK_solvewithbasis(lpi->task, 0, numnz, sub, coef, &numnz) );
+#endif
       assert( numnz <= nrows );
 
       BMSfreeMemoryArray(&sub);
@@ -4427,7 +4443,11 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
 
       *ninds = numnz;
 
+#if MSK_VERSION_MAJOR < 10
       MOSEK_CALL( MSK_solvewithbasis(lpi->task, 0, ninds, inds, coef) );
+#else
+      MOSEK_CALL( MSK_solvewithbasis(lpi->task, 0, *ninds, inds, coef, ninds) );
+#endif
       assert( *ninds <= nrows );
    }
    else
@@ -4443,7 +4463,11 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
          coef[sub[i]] = val[i];
       }
 
+#if MSK_VERSION_MAJOR < 10
       MOSEK_CALL( MSK_solvewithbasis(lpi->task, 0, &numnz, sub, coef) );
+#else
+      MOSEK_CALL( MSK_solvewithbasis(lpi->task, 0, numnz, sub, coef, &numnz) );
+#endif
 
       if ( ninds != NULL )
          *ninds = numnz;
