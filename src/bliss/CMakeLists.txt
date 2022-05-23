@@ -73,10 +73,9 @@ endif(USE_GMP)
 set_target_properties(libbliss bliss PROPERTIES COMPILE_OPTIONS "")
 
 # specify the C++ standard
-set_property(TARGET libbliss PROPERTIES CXX_STANDARD 11
-                                        CXX_STANDARD_REQUIRED True)
-set_property(TARGET bliss PROPERTIES CXX_STANDARD 11
-                                     CXX_STANDARD_REQUIRED True)
+set_target_property(libbliss bliss
+    PROPERTIES CXX_STANDARD 11
+               CXX_STANDARD_REQUIRED True)
 
 if (MSVC)
     # /permissive- for standard C++ with "and" and "or" logical operators
