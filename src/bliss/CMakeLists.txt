@@ -73,7 +73,7 @@ endif(USE_GMP)
 set_target_properties(libbliss bliss PROPERTIES COMPILE_OPTIONS "")
 
 # specify the C++ standard
-set_target_property(libbliss bliss
+set_target_properties(libbliss bliss
     PROPERTIES CXX_STANDARD 11
                CXX_STANDARD_REQUIRED True)
 
