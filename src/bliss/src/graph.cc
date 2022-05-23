@@ -750,7 +750,6 @@ Graph::split_neighbourhood_of_cell(Partition::Cell* const cell)
 
 
       Partition::Cell* const last_new_cell = p.zplit_cell(neighbour_cell, true);
-      assert(neighbour_cell->nof_nonzeros == 0);
 
       /* Update certificate and hash if needed */
       const Partition::Cell* c = neighbour_cell;
