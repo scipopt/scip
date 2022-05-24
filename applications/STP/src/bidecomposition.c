@@ -883,11 +883,12 @@ SCIP_Bool bidecomposition_componentIsTrivial(
 }
 
 
-/** todo remove once bigger graphs can be handled */
+/** checks whether bidecomposition check is possible */
 SCIP_Bool bidecomposition_isPossible(
    const GRAPH*          g                   /**< graph data structure */
    )
 {
+#ifdef USE_RECURSIVE_DFS
    int nnodes_real = 0;
    const int nnodes = graph_get_nNodes(g);
    const int* const isMarked = g->mark;
@@ -901,6 +902,9 @@ SCIP_Bool bidecomposition_isPossible(
    }
 
    return (nnodes_real < 75000);
+#else
+   return TRUE;
+#endif
 }
 
 
