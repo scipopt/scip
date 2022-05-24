@@ -139,6 +139,10 @@ extern "C" {
 #define StpVecGetSize(vec)      \
    vecinternalGetSize(vec)
 
+/** gets top element of the vector */
+#define StpVecTop(vec)      \
+    vec[StpVecGetSize(vec) - 1]
+
 
 /** is the vector empty? */
 #define StpVecIsEmpty(vec)    \
