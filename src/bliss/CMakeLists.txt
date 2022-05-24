@@ -79,8 +79,8 @@ set_target_properties(libbliss bliss
 
 if (MSVC)
     # /permissive- for standard C++ with "and" and "or" logical operators
-    target_compile_options(libbliss PRIVATE /permissive-)
-    target_compile_options(bliss PRIVATE /permissive-)
+    target_compile_options(libbliss PUBLIC /permissive-)
+    target_compile_options(bliss PUBLIC /permissive-)
 else()
     # Warnings, optimization, no assertions
     target_compile_options(libbliss PRIVATE -O3 -DNDEBUG) #-Wextra -Werror ### disable as part of scip build
