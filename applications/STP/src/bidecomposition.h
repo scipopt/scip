@@ -48,6 +48,11 @@ typedef struct biconnected_component_decomposition
 } BIDECOMP;
 
 
+
+/** for internal computation */
+typedef struct biconnected_stack_node STACK_NODE;
+
+
 /** cut nodes/ articulation points todo: hide */
 typedef struct cut_nodes
 {
@@ -56,13 +61,16 @@ typedef struct cut_nodes
    int*                  childcount_nodes;   /**< number of nodes below each node */
    int*                  childcount_terms;   /**< number of terminals below each node */
 #endif
+   STACK_NODE*           stack_nodes;        /**< data for iterative computation */
    STP_Vectype(int)      biconn_stack;       /**< stack for marking bi-connected component */
    int*                  biconn_nodesmark;   /**< marks in which component each node is 0, 1,.., biconn_ncomps - 1 */
    int*                  biconn_comproots;   /**< root of each component with index 0,1,...,biconn_ncomps - 1 */
    STP_Vectype(int)      artpoints;          /**< cut nodes */
    int*                  nodes_hittime;      /**< hit time 0,1,... */
+   int                   stack_size;         /**< size of stack */
    int                   biconn_ncomps;      /**< number of components */
    int                   dfsroot;            /**< root */
+   int                   nrootcomps;         /**< number of root components */
    int                   curr_lowpoint;      /**< current low-point */
    int                   curr_hittime;       /**< current hit time */
 } CUTNODES;
