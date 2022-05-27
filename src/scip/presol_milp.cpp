@@ -409,26 +409,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
 #ifdef SCIP_PRESOLLIB_ENABLE_OUTPUT
    problem.setName(SCIPgetProbName(scip));
 #else
-   switch( data->verbosity )
-   {
-      case 0:
-         presolve.setVerbosityLevel(VerbosityLevel::kQuiet);
-         break;
-      case 1:
-         presolve.setVerbosityLevel(VerbosityLevel::kError);
-         break;
-      case 2:
-         presolve.setVerbosityLevel(VerbosityLevel::kWarning);
-         break;
-      case 3:
-         presolve.setVerbosityLevel(VerbosityLevel::kInfo);
-         break;
-      case 4:
-         presolve.setVerbosityLevel(VerbosityLevel::kDetailed);
-         break;
-      default:
-         assert(false);
-   }
+   presolve.setVerbosityLevel((VerbosityLevel) data->verbosity);
 #endif
 
    /* communicate the time limit */
