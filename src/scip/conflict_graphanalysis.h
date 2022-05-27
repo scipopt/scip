@@ -517,6 +517,10 @@ SCIP_RETCODE SCIPrunBoundHeuristic(
    SCIP_Bool*            valid               /**< pointer to store whether the result is still a valid proof */
    );
 
+void conflictsetPrint(
+   SCIP_CONFLICTSET*     conflictset         /**< conflict set */
+   );
+
 #ifdef __cplusplus
 }
 #endif

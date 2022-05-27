@@ -100,9 +100,7 @@ struct SCIP_ResolutionSet
    int                   nnz;
    int                   size;
    int                   validdepth;
-   SCIP_ROW*             row;
-   SCIP_PROPSIDE         propside;           /**< propagation side: unknown, lhs, rhs */
-   SCIP_CONFTYPE         conflicttype;       /**< conflict type: unknown, infeasible LP, bound exceeding LP */
+   SCIP_CONFTYPE         conflicttype;       /**< conflict type... */
 };
 
 /** set of LP bound change */

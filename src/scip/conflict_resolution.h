@@ -40,6 +40,8 @@
 #include "scip/type_var.h"
 #include "scip/type_prob.h"
 #include "scip/type_event.h"
+#include "scip/type_conflictstore.h"
+
 #include <string.h>
 #if defined(_WIN32) || defined(_WIN64)
 #else
@@ -49,6 +51,30 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/* create resolution constraints out of resolution sets */
+SCIP_RETCODE SCIPconflictFlushResolutionSets(
+   SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
+   SCIP_RESOLUTIONSET*   resolutionset,      /**< resolution set */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_PROB*            origprob,           /**< original problem */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_CLIQUETABLE*     cliquetable         /**< clique table data structure */
+   );
+
+/** frees a resolutionset */
+void SCIPresolutionsetFree(
+   SCIP_RESOLUTIONSET**  resolutionset,      /**< resolution set */
+   BMS_BLKMEM*           blkmem              /**< block memory */
+   );
 
 #ifdef __cplusplus
 }
