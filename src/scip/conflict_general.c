@@ -251,6 +251,7 @@ SCIP_RETCODE SCIPconflictCreate(
    (*conflict)->tmpbdchginfos = NULL;
    (*conflict)->conflictsetssize = 0;
    (*conflict)->nconflictsets = 0;
+   (*conflict)->resolutionsets = NULL;
    (*conflict)->proofsets = NULL;
    (*conflict)->proofsetssize = 0;
    (*conflict)->nproofsets = 0;
@@ -304,6 +305,12 @@ SCIP_RETCODE SCIPconflictCreate(
    (*conflict)->ndualproofsbndlocal = 0;
    (*conflict)->ndualproofsbndsuccess = 0;
    (*conflict)->dualproofsbndnnonzeros = 0;
+   (*conflict)->nrescalls = 0;
+   (*conflict)->nressuccess = 0;
+   (*conflict)->nresconfconss = 0;
+   (*conflict)->nresconfvariables = 0;
+
+   SCIP_CALL( SCIPconflictInitResolutionset((*conflict), blkmem) );
 
    SCIP_CALL( SCIPconflictInitProofset((*conflict), blkmem) );
 

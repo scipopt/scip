@@ -94,6 +94,20 @@ SCIP_RETCODE resolutionsetCreate(
    return SCIP_OKAY;
 }
 
+/** creates and clears the resolution set */
+SCIP_RETCODE SCIPconflictInitResolutionset(
+   SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
+   BMS_BLKMEM*           blkmem              /**< block memory of transformed problem */
+   )
+{
+   assert(conflict != NULL);
+   assert(blkmem != NULL);
+
+   SCIP_CALL( resolutionsetCreate(&conflict->resolutionset, blkmem) );
+
+   return SCIP_OKAY;
+}
+
 /** frees a resolution set */
 void SCIPresolutionsetFree(
    SCIP_RESOLUTIONSET**  resolutionset,      /**< resolution set */

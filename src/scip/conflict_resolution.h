@@ -70,6 +70,12 @@ SCIP_RETCODE SCIPconflictFlushResolutionSets(
    SCIP_CLIQUETABLE*     cliquetable         /**< clique table data structure */
    );
 
+/** creates and clears the resolutionset */
+SCIP_RETCODE SCIPconflictInitResolutionset(
+   SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
+   BMS_BLKMEM*           blkmem              /**< block memory of transformed problem */
+   );
+
 /** frees a resolutionset */
 void SCIPresolutionsetFree(
    SCIP_RESOLUTIONSET**  resolutionset,      /**< resolution set */
