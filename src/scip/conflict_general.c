@@ -342,6 +342,7 @@ SCIP_RETCODE SCIPconflictFree(
    SCIPpqueueFree(&(*conflict)->bdchgqueue);
    SCIPpqueueFree(&(*conflict)->forcedbdchgqueue);
    SCIPconflictsetFree(&(*conflict)->conflictset, blkmem);
+   SCIPresolutionsetFree(&(*conflict)->resolutionset, blkmem);
    SCIPproofsetFree(&(*conflict)->proofset, blkmem);
 
    BMSfreeMemoryArrayNull(&(*conflict)->conflictsets);

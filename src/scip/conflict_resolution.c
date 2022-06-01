@@ -1063,6 +1063,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
       (*nconfvars) = resolutionsetGetNNzs(conflictresolutionset);
       SCIPresolutionsetFree(&conflictresolutionset, blkmem);
       SCIPresolutionsetFree(&reasonresolutionset, blkmem);
+      SCIPresolutionsetFree(&conflict->resolutionset, blkmem);
       return SCIP_OKAY;
    }
    SCIPsetDebugMsg(set, "Slack of resolved row: %f \n", conflictslack);
