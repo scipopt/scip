@@ -49,3 +49,6 @@ instances/SOS/tpesc.lp
 instances/Symmetry/packorb_1-FullIns_3.cip
 instances/Symmetry/partorb_1-FullIns_3.cip
 instances/CP/disj_conj_rail.cip
+instances/Logic/logic1.nl
+instances/Logic/logic2.nl
+instances/Logic/logic3.nl

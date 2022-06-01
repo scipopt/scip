@@ -353,7 +353,7 @@ endif
 #-----------------------------------------------------------------------------
 
 ifeq ($(PAPILO),true)
-FLAGS        +=    -DSCIP_WITH_PAPILO -DPAPILO_NO_CMAKE_CONFIG -isystem $(LIBDIR)/include/tbb/include -isystem $(LIBDIR)/include/papilo/external -isystem $(LIBDIR)/include/papilo/src
+FLAGS        +=    -DSCIP_WITH_PAPILO -DPAPILO_NO_CMAKE_CONFIG -I$(LIBDIR)/include/tbb/include -I$(LIBDIR)/include/papilo/external -I$(LIBDIR)/include/papilo/src
 SOFTLINKS    +=    $(LIBDIR)/include/papilo
 LPIINSTMSG    +=    "\n  -> \"papilo\" is the path to the PaPILO directory\n"
 SOFTLINKS    +=    $(LIBDIR)/include/boost
@@ -385,6 +385,8 @@ AMPLSRC	:=	$(shell cat $(AMPLDEP))
 
 THREADSAFEDEP	:=	$(SRCDIR)/depend.threadsafe
 THREADSAFESRC	:=	$(shell cat $(THREADSAFEDEP))
+
+LAPACKSRC	:=	$(SRCDIR)/scip/lapack_calls.c $(SRCDIR)/scip/scip_general.c
 
 ifeq ($(ZIMPL),true)
 ifeq ($(GMP),false)
@@ -752,6 +754,7 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/implics.o \
 			scip/interrupt.o \
 			scip/intervalarith.o \
+			scip/lapack_calls.o \
 			scip/lp.o \
 			scip/matrix.o \
 			scip/mem.o \
@@ -1424,6 +1427,9 @@ endif
 ifneq ($(PAPILO),$(LAST_PAPILO))
 		@-touch -c $(ALLSRC)
 endif
+ifneq ($(LAPACK),$(LAST_LAPACK))
+		@-touch -c $(LAPACKSRC)
+endif
 		@-rm -f $(LASTSETTINGS)
 		@echo "LAST_BUILDFLAGS=\"$(BUILDFLAGS)\"" >> $(LASTSETTINGS)
 		@echo "LAST_SCIPGITHASH=$(SCIPGITHASH)" >> $(LASTSETTINGS)
@@ -1450,6 +1456,7 @@ endif
 		@echo "LAST_TPI=$(TPI)" >> $(LASTSETTINGS)
 		@echo "LAST_DEBUGSOL=$(DEBUGSOL)" >> $(LASTSETTINGS)
 		@echo "LAST_PAPILO=$(PAPILO)" >> $(LASTSETTINGS)
+		@echo "LAST_LAPACK=$(LAPACK)" >> $(LASTSETTINGS)
 
 $(LINKSMARKERFILE):
 		@$(MAKE) links
@@ -1639,6 +1646,7 @@ help:
 		@echo "  - LPSOPT=<dbg|opt>: Use debug or optimized (default) mode for LP-solver (SoPlex and Clp only)."
 		@echo "  - READLINE=<true|false>: Turns support via the readline library on (default) or off."
 		@echo "  - IPOPT=<true|false>: Turns support of IPOPT on or off (default)."
+		@echo "  - LAPACK=<true|false>: Link with Lapack (must be installed on the system)."
 		@echo "  - EXPRINT=<cppad|none>: Use CppAD as expressions interpreter (default) or no expressions interpreter."
 		@echo "  - SYM=<none|bliss>: To choose type of symmetry handling."
 		@echo "  - PARASCIP=<true|false>: Build for ParaSCIP (deprecated, use THREADSAFE)."

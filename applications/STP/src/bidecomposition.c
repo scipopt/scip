@@ -35,6 +35,20 @@
 #include "portab.h"
 
 /*
+ * Data structures
+ */
+
+struct biconnected_stack_node {
+   int                   id;                 /**< node ID in the underlying graph */
+   int                   parent;             /**< parent in the underlying graph */
+   int                   nextEdge;           /**< next edge in the underlying graph */
+   int                   biconnStart;        /**< start of current component in separate stack */
+   int                   lowpoint;           /**< low-point of this node */
+   SCIP_Bool             isArtPoint;         /**< is articulation point? */
+};
+
+
+/*
  * Local methods
  */
 
@@ -110,9 +124,11 @@ void cutNodesProcessComponent(
 }
 
 
+//#define USE_RECURSIVE_DFS
+#ifdef USE_RECURSIVE_DFS
 /** recursive DFS */
 static
-void cutNodesComputeDfs(
+void cutNodesComputeRecursive(
    const GRAPH*          g,                  /**< graph data structure */
    int                   node,               /**< vertex */
    int                   parent,             /**< parent of node */
@@ -138,7 +154,6 @@ void cutNodesComputeDfs(
    for( int e = g->outbeg[node]; e != EAT_LAST; e = g->oeat[e] )
    {
       const int head = g->head[e];
-
       if( !g->mark[head] )
          continue;
 
@@ -148,7 +163,7 @@ void cutNodesComputeDfs(
          const int stack_start = StpVecGetSize(cutnodes->biconn_stack);
          assert(head != parent);
 
-         cutNodesComputeDfs(g, head, node, cutnodes);
+         cutNodesComputeRecursive(g, head, node, cutnodes);
 
 #ifdef CUTTREE_PRINT_STATISTICS
          childcount_nodes[node] += childcount_nodes[head] + 1;
@@ -161,7 +176,6 @@ void cutNodesComputeDfs(
             if( nchildren > 1 )
             {
                SCIPdebugMessage("mark new bi-connected component from root \n");
-
                cutNodesProcessComponent(node, stack_start, cutnodes);
             }
          }
@@ -170,7 +184,6 @@ void cutNodesComputeDfs(
             isCutNode = TRUE;
 
             SCIPdebugMessage("mark new bi-connected component from %d \n", node);
-
             cutNodesProcessComponent(node, stack_start, cutnodes);
          }
 
@@ -199,7 +212,139 @@ void cutNodesComputeDfs(
 
    cutnodes->curr_lowpoint = mylowpoint;
 }
+#else
+/** non-recursive DFS-based biconnected components helper */
+static
+void cutNodesProcessNext(
+   const GRAPH*          g,                  /**< graph data structure */
+   CUTNODES*             cutnodes            /**< cut nodes */
+   )
+{
+   const int stack_top = cutnodes->stack_size - 1;
+   STACK_NODE* stack_top_data = &(cutnodes->stack_nodes[stack_top]);
+   const int node = stack_top_data->id;
+   int* const nodes_hittime = cutnodes->nodes_hittime;
+   int e;
+   SCIP_Bool childWasAdded = FALSE;
+   const SCIP_Bool isFirstNodeVisit = (stack_top_data->nextEdge == g->outbeg[node]);
+   SCIPdebugMessage("processing node %d, global hit-time=%d \n", node, cutnodes->curr_hittime);
 
+   if( isFirstNodeVisit )
+   {
+      assert(StpVecGetSize(cutnodes->biconn_stack) < StpVecGetcapacity(cutnodes->biconn_stack));
+      assert(stack_top_data->lowpoint == -1);
+
+      nodes_hittime[node] = (cutnodes->curr_hittime)++;
+      stack_top_data->lowpoint = nodes_hittime[node];
+      StpVecPushBack(cutnodes->scip, cutnodes->biconn_stack, node);
+      assert(!stack_top_data->isArtPoint);
+   }
+
+   for( e = stack_top_data->nextEdge; e != EAT_LAST; e = g->oeat[e] )
+   {
+      const int head = g->head[e];
+      if( !g->mark[head] )
+         continue;
+
+      /* not visited? */
+      if( nodes_hittime[head] < 0 )
+      {
+         assert(head != stack_top_data->parent);
+         assert(cutnodes->stack_size < g->knots);
+
+         /* add child node to stack */
+         cutnodes->stack_nodes[cutnodes->stack_size++] =
+               (STACK_NODE) { .id = head, .parent = node, .nextEdge = g->outbeg[head],
+                              .biconnStart = -1, .lowpoint = -1, .isArtPoint = FALSE };
+         childWasAdded = TRUE;
+         break;
+      }
+      else if( head != stack_top_data->parent )
+      {
+         assert(nodes_hittime[head] >= 0);
+         if( stack_top_data->lowpoint > nodes_hittime[head] ) {
+            SCIPdebugMessage("update my lowpoint to %d (from %d) \n", nodes_hittime[head], head);
+            stack_top_data->lowpoint = nodes_hittime[head];
+         }
+      }
+   }
+   stack_top_data->nextEdge = (e != EAT_LAST) ? g->oeat[e] : EAT_LAST;
+
+   /* are we finished with this node? */
+   if( !childWasAdded )
+   {
+      cutnodes->stack_size--;
+
+      if( cutnodes->stack_size > 0 ) {
+         /* update hit-time of parent */
+         const int parent_pos = cutnodes->stack_size - 1;
+         if( cutnodes->stack_nodes[parent_pos].lowpoint > stack_top_data->lowpoint ) {
+            SCIPdebugMessage("update parent(%d) current lowpoint to %d \n", cutnodes->stack_nodes[parent_pos].id, stack_top_data->lowpoint);
+            cutnodes->stack_nodes[parent_pos].lowpoint = stack_top_data->lowpoint;
+         }
+      }
+      SCIPdebugMessage("finished node %d \n", node);
+   }
+
+   if( !isFirstNodeVisit ) {
+      const SCIP_Bool nodeIsRoot = (node == cutnodes->dfsroot);
+      assert(nodeIsRoot == (stack_top_data->parent == -1));
+      SCIPdebugMessage("return to node %d, cutnodes->curr_lowpoint=%d \n", node, cutnodes->curr_lowpoint);
+
+      if( nodeIsRoot )
+      {
+         assert(cutnodes->nrootcomps >= 0);
+         cutnodes->nrootcomps++;
+
+         /* is root an articulation point? */
+         if( cutnodes->nrootcomps > 1 )
+         {
+            SCIPdebugMessage("mark new bi-connected component from root \n");
+            cutNodesProcessComponent(node, stack_top_data->biconnStart, cutnodes);
+
+            /* have we detected for the first time that root is an articulation point? */
+            if( cutnodes->nrootcomps == 2 ) {
+               assert(!stack_top_data->isArtPoint);
+               stack_top_data->isArtPoint = TRUE;
+            }
+         }
+      }
+      else if( cutnodes->curr_lowpoint >= nodes_hittime[node]  )
+      {
+         SCIPdebugMessage("mark new bi-connected component from %d \n", node);
+         cutNodesProcessComponent(node, stack_top_data->biconnStart, cutnodes);
+         stack_top_data->isArtPoint = TRUE;
+      }
+   }
+
+   if( !childWasAdded && stack_top_data->isArtPoint ) {
+      StpVecPushBack(cutnodes->scip, cutnodes->artpoints, node);
+   }
+
+   stack_top_data->biconnStart = StpVecGetSize(cutnodes->biconn_stack);
+   cutnodes->curr_lowpoint = stack_top_data->lowpoint;
+}
+
+
+/** non-recursive DFS */
+static
+void cutNodesCompute(
+   const GRAPH*          g,                  /**< graph data structure */
+   CUTNODES*             cutnodes            /**< cut nodes */
+   )
+{
+   const int root = cutnodes->dfsroot;
+   assert(graph_knot_isInRange(g, root));
+   cutnodes->stack_nodes[0] = (STACK_NODE) { .id = root, .parent = -1, .nextEdge = g->outbeg[root], .biconnStart = -1, .lowpoint = -1, .isArtPoint = FALSE };
+   cutnodes->stack_size = 1;
+   SCIPdebugMessage("start bidecomposition check with node %d \n", root);
+
+   while( cutnodes->stack_size > 0 )
+   {
+      cutNodesProcessNext(g, cutnodes);
+   }
+}
+#endif
 
 /** post-process */
 static
@@ -213,19 +358,6 @@ void cutNodesComputePostProcess(
 
    cutnodes->biconn_comproots[0] = lastroot;
    cutnodes->biconn_ncomps++;
-
-#ifdef XXX_XXX
-    for( int i = 0; i < g->knots; i++ )
-    {
-       printf("%d in comp %d \n", i, cutnodes->biconn_nodesmark[i]);
-    }
-
-    for( int i = 0; i < cutnodes->biconn_ncomps; i++ )
-    {
-       printf("comp-root[%d]=%d \n", i, cutnodes->biconn_comproots[i]);
-    }
-#endif
-
 }
 
 #ifndef NDEBUG
@@ -477,6 +609,7 @@ SCIP_RETCODE bidecomposition_cutnodesInit(
    SCIP_CALL( SCIPallocMemoryArray(scip, &biconn_comproots, nnodes) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &biconn_nodesmark, nnodes) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &nodes_hittime, nnodes) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &cn->stack_nodes, nnodes) );
 
    for( int k = 0; k < nnodes; k++ )
       nodes_hittime[k] = -1;
@@ -495,10 +628,12 @@ SCIP_RETCODE bidecomposition_cutnodesInit(
    cn->biconn_comproots = biconn_comproots;
    cn->biconn_nodesmark = biconn_nodesmark;
    cn->nodes_hittime = nodes_hittime;
+   cn->stack_size = 0;
    cn->biconn_ncomps = 0;
    cn->dfsroot = -1;
    cn->curr_lowpoint = -1;
    cn->curr_hittime = -1;
+   cn->nrootcomps = -1;
 
    cutNodesSetDfsRoot(g, cn);
 
@@ -523,9 +658,10 @@ void bidecomposition_cutnodesFree(
    StpVecFree(scip, cn->artpoints);
    StpVecFree(scip, cn->biconn_stack);
 
-   SCIPfreeMemoryArray(scip, &(cn->nodes_hittime));
+   SCIPfreeMemoryArray(scip, &(cn->stack_nodes));
    SCIPfreeMemoryArray(scip, &(cn->biconn_nodesmark));
    SCIPfreeMemoryArray(scip, &(cn->biconn_comproots));
+   SCIPfreeMemoryArray(scip, &(cn->nodes_hittime));
 
 #ifdef CUTTREE_PRINT_STATISTICS
    SCIPfreeMemoryArray(scip, &(cn->childcount_terms));
@@ -542,14 +678,21 @@ void bidecomposition_cutnodesCompute(
    CUTNODES*             cutnodes            /**< cut nodes */
    )
 {
+   assert(cutnodes);
    assert(StpVecGetSize(cutnodes->biconn_stack) == 0);
    assert(StpVecGetSize(cutnodes->artpoints) == 0);
+   assert(cutnodes->curr_lowpoint == -1);
 
    cutnodes->curr_hittime = 0;
+   cutnodes->nrootcomps = 0;
    /* NOTE: we assume the graph to be connected, so we only do the DFS once */
    /* todo make it non-recursive, otherwise it might crash for big graphs! */
    SCIPdebugMessage("starting DFS from %d \n", cutnodes->dfsroot);
-   cutNodesComputeDfs(g, cutnodes->dfsroot, -1, cutnodes);
+#ifdef USE_RECURSIVE_DFS
+   cutNodesComputeRecursive(g, cutnodes->dfsroot, -1, cutnodes);
+#else
+   cutNodesCompute(g, cutnodes);
+#endif
 
    SCIPdebugMessage("number of cut nodes: %d \n", StpVecGetSize(cutnodes->artpoints));
    assert(cutnodes->biconn_ncomps >= StpVecGetSize(cutnodes->artpoints));
@@ -740,11 +883,12 @@ SCIP_Bool bidecomposition_componentIsTrivial(
 }
 
 
-/** todo remove once bigger graphs can be handled */
+/** checks whether bidecomposition check is possible */
 SCIP_Bool bidecomposition_isPossible(
    const GRAPH*          g                   /**< graph data structure */
    )
 {
+#ifdef USE_RECURSIVE_DFS
    int nnodes_real = 0;
    const int nnodes = graph_get_nNodes(g);
    const int* const isMarked = g->mark;
@@ -758,6 +902,9 @@ SCIP_Bool bidecomposition_isPossible(
    }
 
    return (nnodes_real < 75000);
+#else
+   return TRUE;
+#endif
 }
 
 

@@ -288,6 +288,7 @@ set(scipsources
     scip/implics.c
     scip/interrupt.c
     scip/intervalarith.c
+    scip/lapack_calls.c
     scip/lp.c
     scip/matrix.c
     scip/mem.c
@@ -626,6 +627,7 @@ set(scipheaders
     scip/implics.h
     scip/interrupt.h
     scip/intervalarith.h
+    scip/lapack_calls.h
     scip/lp.h
     scip/mem.h
     scip/message_default.h
@@ -1027,6 +1029,7 @@ target_link_libraries(libscip PRIVATE
     ${GMP_LIBRARIES}
     ${THREAD_LIBRARIES}
     ${NLPI_LIBRARIES}
+    ${LAPACK_LIBRARIES}
     ${SYM_LIBRARIES}
     ${PAPILO_IMPORTED_TARGETS})
 
@@ -1067,6 +1070,7 @@ target_link_libraries(scip
    ${SYM_LIBRARIES}
    ${THREAD_LIBRARIES}
    ${NLPI_LIBRARIES}
+   ${LAPACK_LIBRARIES}
    ${PAPILO_IMPORTED_TARGETS})
 
 add_dependencies(libscip scip_update_githash)

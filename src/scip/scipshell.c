@@ -158,6 +158,7 @@ SCIP_RETCODE fromAmpl(
    char fullnlfilename[SCIP_MAXSTRLEN];
    char* logfile;
    SCIP_Bool printstat;
+   char* options;
 
    SCIP_CALL( SCIPaddBoolParam(scip, "display/statistics",
       "whether to print statistics on a solve",
@@ -172,6 +173,27 @@ SCIP_RETCODE fromAmpl(
 
    SCIPprintExternalCodes(scip, NULL);
    SCIPinfoMessage(scip, NULL, "\n");
+
+   options = getenv("scip_options");
+   if( options != NULL )
+   {
+      /* parse and apply options from scip_options env variable */
+      char* optname;
+      char* optval;
+
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "applying scip_options:\n");
+
+      optname = strtok(options, " ");
+      optval = strtok(NULL, " ");
+      while( optname != NULL && optval != NULL )
+      {
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "  %s = %s\n", optname, optval);
+         SCIP_CALL( SCIPsetParam(scip, optname, optval) );
+
+         optname = strtok(NULL, " ");
+         optval = strtok(NULL, " ");
+      }
+   }
 
    if( defaultsetname != NULL )
    {

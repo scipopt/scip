@@ -44,6 +44,13 @@ SCIP_RETCODE SCIPincludePresolMILP(
 
 #else
 
+/* disable some warnings that come up in header files of PAPILOs dependencies */
+#ifdef __GNUC__
+#pragma GCC diagnostic ignored "-Wshadow"
+#pragma GCC diagnostic ignored "-Wctor-dtor-privacy"
+#pragma GCC diagnostic ignored "-Wredundant-decls"
+#endif
+
 #include <assert.h>
 #include "scip/cons_linear.h"
 #include "scip/pub_matrix.h"
@@ -394,26 +401,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
 #ifdef SCIP_PRESOLLIB_ENABLE_OUTPUT
    problem.setName(SCIPgetProbName(scip));
 #else
-   switch( data->verbosity )
-   {
-      case 0:
-         presolve.setVerbosityLevel(VerbosityLevel::kQuiet);
-         break;
-      case 1:
-         presolve.setVerbosityLevel(VerbosityLevel::kError);
-         break;
-      case 2:
-         presolve.setVerbosityLevel(VerbosityLevel::kWarning);
-         break;
-      case 3:
-         presolve.setVerbosityLevel(VerbosityLevel::kInfo);
-         break;
-      case 4:
-         presolve.setVerbosityLevel(VerbosityLevel::kDetailed);
-         break;
-      default:
-         assert(false);
-   }
+   presolve.setVerbosityLevel((VerbosityLevel) data->verbosity);
 #endif
 
    /* communicate the time limit */
