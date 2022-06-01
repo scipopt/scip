@@ -947,6 +947,8 @@ SCIP_RETCODE conflictAnalyzeResolution(
    assert(currentdepth == tree->pathlen-1);
    assert(focusdepth <= currentdepth);
 
+   *nconss = 0;
+   *nconfvars = 0;
    /* check, whether local conflicts are allowed; however, don't generate conflict constraints that are only valid in the
     * probing path and not in the problem tree (i.e. that exceed the focusdepth)
     */
@@ -1058,6 +1060,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
       /* @todo call flush from the main solving loop! */
       SCIPconflictFlushResolutionSets(conflict, blkmem, scip, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue, cliquetable);
       (*nconss)++;
+      (*nconfvars) = resolutionsetGetNNzs(conflictresolutionset);
       SCIPresolutionsetFree(&conflictresolutionset, blkmem);
       SCIPresolutionsetFree(&reasonresolutionset, blkmem);
       return SCIP_OKAY;
