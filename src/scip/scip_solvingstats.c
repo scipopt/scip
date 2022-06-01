@@ -2845,6 +2845,11 @@ void SCIPprintConflictStatistics(
       SCIPconflictGetNPropReconvergenceConss(scip->conflict) > 0
       ? (SCIP_Real)SCIPconflictGetNPropReconvergenceLiterals(scip->conflict)
       / (SCIP_Real)SCIPconflictGetNPropReconvergenceConss(scip->conflict) : 0);
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  resolution       : %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "          - %10" SCIP_LONGINT_FORMAT "\n",
+      SCIPconflictGetResTime(scip->conflict),
+      SCIPconflictGetNResCalls(scip->conflict),
+      SCIPconflictGetNResSuccess(scip->conflict),
+      SCIPconflictGetNResConflictConss(scip->conflict));
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  infeasible LP    : %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "          - %10" SCIP_LONGINT_FORMAT " %10.1f %10" SCIP_LONGINT_FORMAT " %10.1f %10" SCIP_LONGINT_FORMAT " %10.1f %10" SCIP_LONGINT_FORMAT "\n",
       SCIPconflictGetInfeasibleLPTime(scip->conflict),
       SCIPconflictGetNInfeasibleLPCalls(scip->conflict),

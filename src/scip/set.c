@@ -101,6 +101,8 @@
 #define SCIP_DEFAULT_CONF_LPITERATIONS       10 /**< maximal number of LP iterations in each LP resolving loop
                                                  *   (-1: no limit) */
 #define SCIP_DEFAULT_CONF_USEPROP          TRUE /**< should propagation conflict analysis be used? */
+#define SCIP_DEFAULT_CONF_USEGENRES       FALSE /**< should generalized resolution conflict analysis be used? */
+
 #define SCIP_DEFAULT_CONF_USEINFLP          'b' /**< should infeasible LP conflict analysis be used?
                                                  *   ('o'ff, 'c'onflict graph, 'd'ual ray, 'b'oth conflict graph and dual ray)
                                                  */
@@ -1332,6 +1334,11 @@ SCIP_RETCODE SCIPsetCreate(
          "conflict/useprop",
          "should propagation conflict analysis be used?",
          &(*set)->conf_useprop, FALSE, SCIP_DEFAULT_CONF_USEPROP,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "conflict/usegeneralres",
+         "should generalized resolution conflict analysis be used?",
+         &(*set)->conf_usegeneralres, FALSE, SCIP_DEFAULT_CONF_USEGENRES,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddCharParam(*set, messagehdlr, blkmem,
          "conflict/useinflp",

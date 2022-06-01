@@ -218,6 +218,7 @@ struct SCIP_Set
    SCIP_Bool             conf_enable;        /**< should conflict analysis be enabled? */
    SCIP_Bool             conf_cleanbnddepend;/**< should conflicts related to an old cutoff bound be removed? */
    SCIP_Bool             conf_useprop;       /**< should propagation conflict analysis be used? (uses conflict graph only) */
+   SCIP_Bool             conf_usegeneralres; /**< should generalized resolution conflict analysis be used? */
    char                  conf_useinflp;      /**< should infeasible LP conflict analysis be used?
                                               *   ('o'ff, 'c'onflict graph, 'd'ual ray, 'b'oth conflict graph and dual ray)
                                               */
@@ -332,7 +333,7 @@ struct SCIP_Set
                                               *   freed at end of diving? */
    int                   lp_colagelimit;     /**< maximum age a column can reach before it is deleted from the SCIP_LP
                                               *   (-1: don't delete columns due to aging) */
-   int                   lp_rowagelimit;     /**< maximum age a row can reach before it is deleted from the LP 
+   int                   lp_rowagelimit;     /**< maximum age a row can reach before it is deleted from the LP
                                               *   (-1: don't delete rows due to aging) */
    SCIP_Bool             lp_cleanupcols;     /**< should new non-basic columns be removed after LP solving? */
    SCIP_Bool             lp_cleanupcolsroot; /**< should new non-basic columns be removed after root LP solving? */

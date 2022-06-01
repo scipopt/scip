@@ -62,7 +62,8 @@ enum SCIP_ConflictType
    SCIP_CONFTYPE_INFEASLP     = 2,                /**< conflict results from an infeasible LP relaxation */
    SCIP_CONFTYPE_BNDEXCEEDING = 3,                /**< conflict results from a boundexceeding LP relaxation */
    SCIP_CONFTYPE_ALTINFPROOF  = 4,                /**< alternative proof of an infeasible LP relaxation */
-   SCIP_CONFTYPE_ALTBNDPROOF  = 5                 /**< alternative proof of a boundexceeding LP relaxation */
+   SCIP_CONFTYPE_ALTBNDPROOF  = 5,                /**< alternative proof of a boundexceeding LP relaxation */
+   SCIP_CONFTYPE_RESOLUTION   = 6                 /**< conflict constraint from resolution */
 };
 typedef enum SCIP_ConflictType SCIP_CONFTYPE;
 

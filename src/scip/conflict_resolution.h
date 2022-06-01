@@ -52,10 +52,29 @@
 extern "C" {
 #endif
 
+/** return TRUE if generalized resolution conflict analysis is applicable */
+SCIP_Bool SCIPconflictResolutionApplicable(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** gets number of conflict constraints detected in resolution conflict analysis */
+SCIP_Longint SCIPconflictGetNResConflictConss(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
+/** gets number of calls to resolution conflict analysis that yield at least one conflict constraint */
+SCIP_Longint SCIPconflictGetNResSuccess(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
+/** gets number of calls to resolution conflict analysis */
+SCIP_Longint SCIPconflictGetNResCalls(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
 /* create resolution constraints out of resolution sets */
 SCIP_RETCODE SCIPconflictFlushResolutionSets(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
-   SCIP_RESOLUTIONSET*   resolutionset,      /**< resolution set */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SET*             set,                /**< global SCIP settings */

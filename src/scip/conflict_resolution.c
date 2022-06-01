@@ -22,7 +22,6 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-#define SCIP_DEBUG
 
 #include "lpi/lpi.h"
 #include "scip/conflict_resolution.h"
@@ -70,6 +69,49 @@
 #else
 #include <strings.h> /*lint --e{766}*/
 #endif
+
+/** return TRUE if generalized resolution conflict analysis is applicable */
+SCIP_Bool SCIPconflictResolutionApplicable(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   /* check, if generalized resolution conflict analysis is enabled */
+   if( !set->conf_enable || !set->conf_usegeneralres )
+      return FALSE;
+
+   return TRUE;
+}
+
+
+/** gets number of conflict constraints detected in resolution conflict analysis */
+SCIP_Longint SCIPconflictGetNResConflictConss(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   )
+{
+   assert(conflict != NULL);
+
+   return conflict->nresconfconss;
+}
+
+/** gets number of calls to resolution conflict analysis that yield at least one conflict constraint */
+SCIP_Longint SCIPconflictGetNResSuccess(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   )
+{
+   assert(conflict != NULL);
+
+   return conflict->nressuccess;
+}
+
+/** gets number of calls to resolution conflict analysis */
+SCIP_Longint SCIPconflictGetNResCalls(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   )
+{
+   assert(conflict != NULL);
+
+   return conflict->nrescalls;
+}
 
 /** creates a resolution set */
 static
@@ -334,28 +376,77 @@ SCIP_Real getSlack(
 static
 SCIP_RETCODE createAndAddResolutionCons(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
-   SCIP_RESOLUTIONSET*   resolutionset,      /**< resolution set */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
-   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_PROB*            transprob,          /**< transformed problem after presolve */
    SCIP_PROB*            origprob,           /**< original problem */
-   SCIP_TREE*            tree,               /**< tree data */
-   SCIP_REOPT*           reopt,              /**< reoptimization data */
-   SCIP_LP*              lp,                 /**< LP data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
-   BMS_BLKMEM*           blkmem              /**< block memory */
+   SCIP_RESOLUTIONSET*   resolutionset,      /**< resolution set to add to the tree */
+   int                   insertdepth,        /**< depth level at which the conflict set should be added */
+   SCIP_Bool*            success             /**< pointer to store whether the addition was successful */
    )
 {
+
+   SCIP_VAR** vars;
+   vars = SCIPprobGetVars(transprob);
+   assert(vars != NULL);
+
    /* @todo */
+   SCIP_VAR** consvars;
+   SCIP_Real* vals;
+   SCIP_Real lhs;
+   int i;
+
+   vals = resolutionset->vals;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &consvars, resolutionsetGetNNzs(resolutionset)) );
+
+   lhs = resolutionsetGetLhs(resolutionset);
+
+   for( i = 0; i < resolutionsetGetNNzs(resolutionset); ++i )
+   {
+      consvars[i] = vars[resolutionset->inds[i]];
+   }
+
+   SCIP_CONS* cons;
+   SCIP_CONS* upgdcons;
+
+   char consname[SCIP_MAXSTRLEN];
+
+
+   /* create a constraint out of the conflict set */
+   (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "confres%" SCIP_LONGINT_FORMAT, conflict->nresconfconss);
+   SCIP_CALL( SCIPcreateConsLinear(scip, &cons, consname, resolutionsetGetNNzs(resolutionset), consvars, vals, lhs, SCIPinfinity(scip),
+         FALSE, set->conf_separate, FALSE, FALSE, TRUE, (SCIPnodeGetDepth(tree->path[resolutionset->validdepth]) > 0 ), FALSE, set->conf_dynamic, set->conf_removable, FALSE) );
+
+   /* try to automatically convert a linear constraint into a more specific and more specialized constraint */
+   SCIP_CALL( SCIPupgradeConsLinear(scip, cons, &upgdcons) );
+   if( upgdcons != NULL )
+   {
+      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+      cons = upgdcons;
+   }
+
+   /* add conflict to SCIP */
+   SCIP_CALL( SCIPaddConflict(scip, tree->path[insertdepth], cons, tree->path[resolutionset->validdepth], SCIP_CONFTYPE_RESOLUTION, FALSE) );
+
+   /* free temporary memory */
+   SCIPfreeBufferArray(scip, &consvars);
+
+
    return SCIP_OKAY;
 }
 
 /** create resolution constraints out of resolution sets */
 SCIP_RETCODE SCIPconflictFlushResolutionSets(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
-   SCIP_RESOLUTIONSET*   resolutionset,      /**< resolution set */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -371,10 +462,81 @@ SCIP_RETCODE SCIPconflictFlushResolutionSets(
    )
 {
    assert(conflict != NULL);
+   assert(set != NULL);
+   assert(stat != NULL);
+   assert(transprob != NULL);
+   assert(tree != NULL);
+
+      int focusdepth;
+#ifndef NDEBUG
+      int currentdepth;
+#endif
+      int cutoffdepth;
+      int repropdepth;
+      int maxconflictsets;
+      int maxsize;
+      int i;
+
+      /* calculate the maximal number of conflict sets to accept, and the maximal size of each accepted conflict set */
+      maxconflictsets = (set->conf_maxconss == -1 ? INT_MAX : set->conf_maxconss);
+      maxsize = conflictCalcMaxsize(set, transprob);
+
+      focusdepth = SCIPtreeGetFocusDepth(tree);
+#ifndef NDEBUG
+      currentdepth = SCIPtreeGetCurrentDepth(tree);
+      assert(focusdepth <= currentdepth);
+      assert(currentdepth == tree->pathlen-1);
+#endif
+
+      SCIPsetDebugMsg(set, "flushing %d resolution sets at focus depth %d (maxsize: %d)\n",
+         1, focusdepth, maxsize);
+
+   /* insert the conflict sets at the corresponding nodes */
+   cutoffdepth = INT_MAX;
+   repropdepth = INT_MAX;
+
+   /* @todo add a check for the number of resolution sets */
+   /* @todo loop over all resolution sets */
+   SCIP_RESOLUTIONSET* resolutionset;
+   resolutionset = conflict->resolutionset;
+
+   assert(resolutionset != NULL);
+   assert(0 <= resolutionset->validdepth);
    assert( getSlack(scip, set, transprob, resolutionset) < 0 );
 
-   SCIP_CALL( createAndAddResolutionCons(conflict, resolutionset, set, stat, transprob, origprob, \
-                  tree, reopt, lp, branchcand, eventqueue, cliquetable, blkmem) );
+
+   /* if the resolution set is empty, the node and its sub tree in the conflict set's valid depth can be
+      * cut off completely
+      */
+   if( resolutionsetGetNNzs(resolutionset) == 0 )
+   {
+      SCIPsetDebugMsg(set, " -> empty resolution set in depth %d cuts off sub tree at depth %d\n",
+         focusdepth, resolutionset->validdepth);
+
+      SCIP_CALL( SCIPnodeCutoff(tree->path[resolutionset->validdepth], set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
+      cutoffdepth = resolutionset->validdepth;
+      return SCIP_OKAY;
+   }
+   /* if the conflict set is too long, use the conflict set only if it decreases the repropagation depth */
+   if( resolutionsetGetNNzs(resolutionset) > maxsize )
+   {
+      SCIPsetDebugMsg(set, " -> conflict set is too long: %d > %d nonzeros\n", resolutionsetGetNNzs(resolutionset), maxsize);
+      /* @todo keep constraint for repropagation */
+   }
+   else
+   {
+      SCIP_Bool success;
+
+      /* @todo use the right insert depth and not valid depth */
+      SCIP_CALL( createAndAddResolutionCons(conflict, blkmem, scip, set, stat, transprob, origprob, \
+                     tree, reopt, lp, branchcand, eventqueue, cliquetable, resolutionset, resolutionset->validdepth, &success) );
+      SCIPsetDebugMsg(set, " -> resolution set added (cdpt:%d, fdpt:%d, insert:%d, valid:%d, conf: -, reprop: - , len:%d):\n",
+         SCIPtreeGetCurrentDepth(tree), SCIPtreeGetFocusDepth(tree),
+         resolutionset->validdepth, resolutionset->validdepth, resolutionsetGetNNzs(resolutionset));
+
+   }
+
+   /* @todo free the conflict */
 
    return SCIP_OKAY;
 }
@@ -737,13 +899,20 @@ SCIP_RETCODE conflictAnalyzeResolution(
    BMS_BLKMEM*           blkmem,             /**< block memory of transformed problem */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_LP*              lp,                 /**< LP data */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_Bool             diving,             /**< are we in strong branching or diving mode? */
    int                   validdepth,         /**< minimal depth level at which the initial conflict set is valid */
    SCIP_Bool             mustresolve,        /**< should the conflict set only be used, if a resolution was applied? */
    int*                  nconss,             /**< pointer to store the number of generated conflict constraints */
    int*                  nconfvars           /**< pointer to store the number of variables in generated conflict constraints */
+
    )
 {
    SCIP_RESOLUTIONSET *conflictresolutionset;
@@ -800,6 +969,12 @@ SCIP_RETCODE conflictAnalyzeResolution(
    /* last bound change that led to infeasibility */
    bdchginfo = conflictFirstCand(conflict);
 
+   if (bdchginfo == NULL)
+   {
+      SCIPsetDebugMsg(set, "Conflict analysis not applicable since bdchginfo is empty \n");
+      return SCIP_OKAY;
+   }
+
    /* if the bound change was not infered by a constraint (reason) then conflict analysis is not applicable */
    if ( SCIPbdchginfoGetChgtype(bdchginfo) != SCIP_BOUNDCHGTYPE_CONSINFER )
    {
@@ -816,7 +991,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
    /* sort for linear time resolution*/
    SCIPsortIntReal(conflictresolutionset->inds, conflictresolutionset->vals, conflictresolutionset->nnz);
 
-   conflictslack = getSlack(scip, set, prob, conflictresolutionset);
+   conflictslack = getSlack(scip, set, transprob, conflictresolutionset);
 
    /* slack should be negative */
    /* @todo assert(conflictslack < 0); */
@@ -848,7 +1023,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
       SCIP_CALL( reasonResolutionsetFromRow(scip, reasonresolutionset, bdchginfo, set, blkmem, reasonrow) );
       /* sort for linear time resolution*/
       SCIPsortIntReal(reasonresolutionset->inds, reasonresolutionset->vals, reasonresolutionset->nnz);
-      reasonslack = getSlack(scip, set, prob, reasonresolutionset);
+      reasonslack = getSlack(scip, set, transprob, reasonresolutionset);
 
       /* @todo assert(reasonslack >= 0); */
       /* @todo apply coefficient tightening for reason set */
@@ -873,12 +1048,16 @@ SCIP_RETCODE conflictAnalyzeResolution(
    residx = SCIPvarGetProbindex(vartoresolve);
    resolveWithReason(scip, set, conflictresolutionset, reasonresolutionset, blkmem, residx);
 
-   conflictslack = getSlack(scip, set, prob, conflictresolutionset);
+   conflictslack = getSlack(scip, set, transprob, conflictresolutionset);
 
    if ( SCIPsetIsLT(set, conflictslack, 0.0) )
    {
       /* @todo add constraint */
+      conflict->resolutionset = conflictresolutionset;
+
       /* @todo call flush from the main solving loop! */
+      SCIPconflictFlushResolutionSets(conflict, blkmem, scip, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue, cliquetable);
+      (*nconss)++;
       SCIPresolutionsetFree(&conflictresolutionset, blkmem);
       SCIPresolutionsetFree(&reasonresolutionset, blkmem);
       return SCIP_OKAY;
@@ -908,24 +1087,32 @@ SCIP_RETCODE SCIPconflictAnalyzeResolution(
    BMS_BLKMEM*           blkmem,             /**< block memory of transformed problem */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_LP*              lp,                 /**< LP data */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    int                   validdepth,         /**< minimal depth level at which the initial conflict set is valid */
    SCIP_Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
    )
 {
+
    int nconss;
    int nconfvars;
 
    assert(conflict != NULL);
    assert(set != NULL);
-   assert(prob != NULL);
+   assert(origprob != NULL);
+   assert(transprob != NULL);
 
    if( success != NULL )
       *success = FALSE;
 
-   /* @todo add option in SCIPconflictApplicable for resolution conflict analysis*/
-   if( !SCIPconflictApplicable(set) )
+   /* check if generalized resolution conflict analysis is applicable */
+   if( !SCIPconflictResolutionApplicable(set) )
       return SCIP_OKAY;
 
    /* @todo check, if the conflict constraint will get too large with high probability */
@@ -938,7 +1125,7 @@ SCIP_RETCODE SCIPconflictAnalyzeResolution(
    conflict->nrescalls++;
 
    /* analyze the conflict set, and create a conflict constraint on success */
-   SCIP_CALL( conflictAnalyzeResolution(scip, conflict, cons, blkmem, set, stat, prob, tree, FALSE, validdepth, TRUE, &nconss, &nconfvars) );
+   SCIP_CALL( conflictAnalyzeResolution(scip, conflict, cons, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue, cliquetable, FALSE, validdepth, TRUE, &nconss, &nconfvars) );
 
    conflict->nressuccess += (nconss > 0 ? 1 : 0);
    conflict->nresconfconss += nconss;
