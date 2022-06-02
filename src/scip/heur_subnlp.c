@@ -758,7 +758,7 @@ SCIP_RETCODE createSolFromSubScipSol(
    return SCIP_OKAY;
 }
 
-/** finds an iteration limit */
+/** finds an iteration limit */  /*lint --e{715}*/
 static
 int calcIterLimit(
    SCIP*                 scip,               /**< original SCIP data structure */

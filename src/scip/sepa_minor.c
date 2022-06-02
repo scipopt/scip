@@ -28,7 +28,7 @@
 
 #include "scip/sepa_minor.h"
 #include "scip/cons_nonlinear.h"
-#include "scip/nlpi_ipopt.h"
+#include "scip/lapack_calls.h"
 
 #define SEPA_NAME              "minor"
 #define SEPA_DESC              "separator to ensure that 2x2 principal minors of X - xx' are positive semi-definite"
@@ -528,7 +528,7 @@ SCIP_RETCODE getEigenValues(
    eigenvecs[8] = yy;
 
    /* use LAPACK to compute the eigenvalues and eigenvectors */
-   if( SCIPcallLapackDsyevIpopt(TRUE, 3, eigenvecs, eigenvals) != SCIP_OKAY )
+   if( SCIPlapackComputeEigenvalues(SCIPbuffer(scip), TRUE, 3, eigenvecs, eigenvals) != SCIP_OKAY )
    {
       SCIPdebugMsg(scip, "Failed to compute eigenvalues and eigenvectors of augmented quadratic form matrix.\n");
       *success = FALSE;
@@ -806,7 +806,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpMinor)
    int ncalls;
 
    /* need routine to compute eigenvalues/eigenvectors */
-   if( !SCIPisIpoptAvailableIpopt() )
+   if( ! SCIPlapackIsAvailable() )
       return SCIP_OKAY;
 
    sepadata = SCIPsepaGetData(sepa);
@@ -839,7 +839,7 @@ SCIP_DECL_SEPAEXECSOL(sepaExecsolMinor)
    int ncalls;
 
    /* need routine to compute eigenvalues/eigenvectors */
-   if( !SCIPisIpoptAvailableIpopt() )
+   if( ! SCIPlapackIsAvailable() )
       return SCIP_OKAY;
 
    sepadata = SCIPsepaGetData(sepa);

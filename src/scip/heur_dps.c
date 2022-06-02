@@ -1502,7 +1502,7 @@ SCIP_DECL_EVENTEXEC(eventExecDps)
    assert(event != NULL);
    assert(SCIPeventGetType(event) & SCIP_EVENTTYPE_LPSOLVED);
 
-   SCIPdebugMsg(scip, "dual bound: %0.2f\n", SCIPgetDualbound(scip));
+   SCIPdebugMsg(scip, "dual bound: %.2f\n", SCIPgetDualbound(scip));
 
    if( SCIPisFeasGT(scip, SCIPgetDualbound(scip), 0.0) && SCIPgetNSols(scip) >= 1 )
    {
@@ -1908,7 +1908,7 @@ SCIP_DECL_HEUREXEC(heurExecDps)
          /* if reoptimization is turned off or reoptimization found no solution, try initial solution */
          if( *result != SCIP_FOUNDSOL )
          {
-            SCIPdebugMsg(scip, "Solution has value: %0.2f\n", SCIPgetSolOrigObj(scip, newsol));
+            SCIPdebugMsg(scip, "Solution has value: %.2f\n", SCIPgetSolOrigObj(scip, newsol));
             SCIP_CALL( SCIPtrySolFree(scip, &newsol, TRUE, FALSE, TRUE, TRUE, TRUE, &success) );
             if( success )
             {

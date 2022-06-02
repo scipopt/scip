@@ -36,6 +36,7 @@
 #include "scip/scip_message.h"
 #include <string.h>
 #include "tpi/tpi.h"
+
 /* fundamental propagator properties */
 #define PROP_NAME              "sync"
 #define PROP_DESC              "propagator for synchronization of bound changes"

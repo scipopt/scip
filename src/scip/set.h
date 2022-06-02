@@ -377,6 +377,14 @@ SCIP_RETCODE SCIPsetSetStringParam(
    const char*           value               /**< new value of the parameter */
    );
 
+/** changes the value of an existing parameter */
+SCIP_RETCODE SCIPsetSetParam(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   const char*           name,               /**< name of the parameter */
+   const char*           value               /**< new value of the parameter as string */
+   );
+
 /** reads parameters from a file */
 SCIP_RETCODE SCIPsetReadParams(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -1094,6 +1102,9 @@ SCIP_Real SCIPsetSumepsilon(
    );
 
 /** returns feasibility tolerance for constraints */
+#ifdef __GNUC__
+__attribute__ ((pure))
+#endif
 SCIP_Real SCIPsetFeastol(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
@@ -1104,6 +1115,9 @@ SCIP_Real SCIPsetLPFeastolFactor(
    );
 
 /** returns feasibility tolerance for reduced costs */
+#ifdef __GNUC__
+__attribute__ ((pure))
+#endif
 SCIP_Real SCIPsetDualfeastol(
    SCIP_SET*             set                 /**< global SCIP settings */
    );

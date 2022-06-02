@@ -1,7 +1,7 @@
-FLAGS		+=	-DNDEBUG # -DSCIP_ROUNDING_FE
-OFLAGS		+=	-I/usr/local/include -O3 -mtune=native -fomit-frame-pointer # -malign-double -g
+FLAGS		+=	-DNDEBUG -DSCIP_ROUNDING_FE
+OFLAGS		+=	-I/usr/local/include -O3 -mtune=native -fomit-frame-pointer
 CFLAGS		+=	$(GCCWARN) -Wno-strict-aliasing -Wno-missing-declarations -Wno-missing-prototypes
-CXXFLAGS	+=	$(GXXWARN) -std=c++0x -Wno-strict-aliasing # -fno-exceptions (CLP uses exceptions)
+CXXFLAGS	+=	$(GXXWARN) -Wno-strict-aliasing
 ARFLAGS		=	crs
 LDFLAGS		+= -L/usr/local/lib
 ZLIB_FLAGS	=

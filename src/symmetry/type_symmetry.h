@@ -76,8 +76,7 @@ enum SCIP_LeaderRule
 {
    SCIP_LEADERRULE_FIRSTINORBIT        = 0,       /**< first var in orbit */
    SCIP_LEADERRULE_LASTINORBIT         = 1,       /**< last var in orbit */
-   SCIP_LEADERRULE_MAXCONFLICTSINORBIT = 2,       /**< var with most conflicting vars in its orbit */
-   SCIP_LEADERRULE_MAXCONFLICTS        = 3        /**< var with most conflicting vars in problem */
+   SCIP_LEADERRULE_MAXCONFLICTSINORBIT = 2        /**< var with most conflicting vars in its orbit */
 };
 typedef enum SCIP_LeaderRule SCIP_LEADERRULE;
 

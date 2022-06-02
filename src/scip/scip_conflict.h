@@ -36,11 +36,6 @@
 #include "scip/type_conflict.h"
 #include "scip/type_cons.h"
 #include "scip/type_lp.h"
-#include "scip/type_result.h"
-#include "scip/type_retcode.h"
-#include "scip/type_scip.h"
-#include "scip/type_tree.h"
-#include "scip/type_var.h"
 
 #ifdef __cplusplus
 extern "C" {

@@ -3424,6 +3424,21 @@ SCIP_RETCODE SCIPsetSetStringParam(
    return SCIP_OKAY;
 }
 
+/** changes the value of an existing parameter */
+SCIP_RETCODE SCIPsetSetParam(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   const char*           name,               /**< name of the parameter */
+   const char*           value               /**< new value of the parameter as string */
+   )
+{
+   assert(set != NULL);
+
+   SCIP_CALL( SCIPparamsetSet(set->paramset, set, messagehdlr, name, value, FALSE) );
+
+   return SCIP_OKAY;
+}
+
 /** reads parameters from a file */
 SCIP_RETCODE SCIPsetReadParams(
    SCIP_SET*             set,                /**< global SCIP settings */

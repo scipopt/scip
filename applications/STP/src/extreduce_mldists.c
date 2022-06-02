@@ -920,3 +920,5 @@ SCIP_Real extreduce_mldistsTargetDist(
 
    return (mldists->target_dists[targetpos]);
 }
+
+/**@} */

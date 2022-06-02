@@ -271,7 +271,7 @@ public:
    /** returns whether the objective plugin is copyable */
    virtual SCIP_DECL_CONSHDLRISCLONEABLE(iscloneable)
    {
-      return true;
+      return TRUE;
    }
 
    /** clone method which will be used to copy a objective plugin */

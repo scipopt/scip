@@ -1233,7 +1233,13 @@ SCIP_RETCODE addRangeInfo(
  * Miscellaneous Methods
  */
 
-static char grbname[100];
+static const char grbname[] = {'G', 'u', 'r', 'o', 'b', 'i', ' ',
+#if GRB_VERSION_MAJOR < 10
+   GRB_VERSION_MAJOR + '0',
+#else
+   (GRB_VERSION_MAJOR/10) + '0', (GRB_VERSION_MAJOR%10) + '0',
+#endif
+   '.', GRB_VERSION_MINOR + '0', '.', GRB_VERSION_TECHNICAL + '0'};
 
 /**@name Miscellaneous Methods */
 /**@{ */
@@ -1243,12 +1249,6 @@ const char* SCIPlpiGetSolverName(
    void
    )
 {
-   int majorversion;
-   int minorversion;
-   int technical;
-
-   GRBversion(&majorversion, &minorversion, &technical);
-   (void) snprintf(grbname, 100, "Gurobi %d.%d.%d", majorversion, minorversion, technical);
    return grbname;
 }
 

@@ -18,12 +18,42 @@
  * @brief  a TPI implementation using tinycthreads
  * @author Stephen J. Maher
  * @author Leona Gottwald
+ * @author Marc Pfetsch
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "tpi/tpi.h"
 #include "blockmemshell/memory.h"
+#include "tinycthread/tinycthread.h"
+
+/* macros for direct access */
+
+/* lock */
+#define SCIPtnyInitLock(lock)                 ( mtx_init((lock), mtx_plain) == thrd_success ? SCIP_OKAY : SCIP_ERROR )
+#define SCIPtnyDestroyLock(lock)              ( mtx_destroy(lock) )
+#define SCIPtnyAcquireLock(lock)              ( mtx_lock(lock) == thrd_success ? SCIP_OKAY : SCIP_ERROR )
+#define SCIPtnyReleaseLock(lock)              ( mtx_unlock(lock) == thrd_success ? SCIP_OKAY : SCIP_ERROR )
+
+/* condition */
+#define SCIPtnyInitCondition(condition)       ( cnd_init(condition) == thrd_success ? SCIP_OKAY : SCIP_ERROR )
+#define SCIPtnyDestroyCondition(condition)    ( cnd_destroy(condition) )
+#define SCIPtnySignalCondition(condition)     ( cnd_signal(condition) == thrd_success ? SCIP_OKAY : SCIP_ERROR )
+#define SCIPtnyBroadcastCondition(condition)  ( cnd_broadcast(condition) == thrd_success ? SCIP_OKAY : SCIP_ERROR )
+#define SCIPtnyWaitCondition(condition, lock) ( cnd_wait((condition), (lock)) == thrd_success ? SCIP_OKAY: SCIP_ERROR )
+
+/** struct containing lock */
+struct SCIP_Lock
+{
+   mtx_t                 lock;
+};
+
+/** struct containing condition */
+struct SCIP_Condition
+{
+   cnd_t                 condition;
+};
+
 
 typedef struct SCIP_ThreadPool SCIP_THREADPOOL;
 static SCIP_THREADPOOL* _threadpool = NULL;
@@ -70,11 +100,11 @@ struct SCIP_ThreadPool
    SCIP_Bool             queueopen;          /**< indicates whether the queue is open */
 
    /* mutex and locks for the thread pool */
-   SCIP_LOCK             poollock;           /**< mutex to allow read and write of the pool features */
-   SCIP_CONDITION        queuenotempty;      /**< condition to broadcast the queue has jobs */
-   SCIP_CONDITION        queuenotfull;       /**< condition to broadcast the queue is not full */
-   SCIP_CONDITION        queueempty;         /**< condition to broadcast that the queue is empty */
-   SCIP_CONDITION        jobfinished;        /**< condition to broadcast that a job has been finished */
+   mtx_t                 poollock;           /**< mutex to allow read and write of the pool features */
+   cnd_t                 queuenotempty;      /**< condition to broadcast the queue has jobs */
+   cnd_t                 queuenotfull;       /**< condition to broadcast the queue is not full */
+   cnd_t                 queueempty;         /**< condition to broadcast that the queue is empty */
+   cnd_t                 jobfinished;        /**< condition to broadcast that a job has been finished */
 };
 
 /** this function controls the execution of each of the threads */
@@ -90,19 +120,19 @@ SCIP_RETCODE threadPoolThreadRetcode(
    _threadnumber = (int)(uintptr_t) threadnum;
 
    /* Increase the number of active threads */
-   SCIP_CALL( SCIPtpiAcquireLock(&(_threadpool->poollock)) );
+   SCIP_CALL( SCIPtnyAcquireLock(&(_threadpool->poollock)) );
    _threadpool->currworkingthreads += 1;
-   SCIP_CALL( SCIPtpiReleaseLock(&(_threadpool->poollock)) );
+   SCIP_CALL( SCIPtnyReleaseLock(&(_threadpool->poollock)) );
 
    /* this is an endless loop that runs until the thrd_exit function is called */
    while( TRUE ) /*lint !e716*/
    {
-      SCIP_CALL( SCIPtpiAcquireLock(&(_threadpool->poollock)) );
+      SCIP_CALL( SCIPtnyAcquireLock(&(_threadpool->poollock)) );
 
       /* the queue is empty but the shutdown command has not been given */
       while( _threadpool->jobqueue->njobs == 0 && !_threadpool->shutdown )
       {
-         SCIP_CALL( SCIPtpiWaitCondition(&(_threadpool->queuenotempty), &(_threadpool->poollock)) );
+         SCIP_CALL( SCIPtnyWaitCondition(&(_threadpool->queuenotempty), &(_threadpool->poollock)) );
       }
 
       /* if the shutdown command has been given, then exit the thread */
@@ -110,7 +140,7 @@ SCIP_RETCODE threadPoolThreadRetcode(
       {
          /* Decrease the thread count when execution of job queue has completed */
          _threadpool->currworkingthreads -= 1;
-         SCIP_CALL( SCIPtpiReleaseLock(&(_threadpool->poollock)) );
+         SCIP_CALL( SCIPtnyReleaseLock(&(_threadpool->poollock)) );
 
          thrd_exit((int)SCIP_OKAY);
       }
@@ -131,13 +161,13 @@ SCIP_RETCODE threadPoolThreadRetcode(
       if( _threadpool->blockwhenfull &&
           _threadpool->jobqueue->njobs == _threadpool->queuesize - 1 )
       {
-         SCIP_CALL( SCIPtpiBroadcastCondition(&(_threadpool->queuenotfull)) );
+         SCIP_CALL( SCIPtnyBroadcastCondition(&(_threadpool->queuenotfull)) );
       }
 
       /* indicating that the queue is empty */
       if( _threadpool->jobqueue->njobs == 0 )
       {
-         SCIP_CALL( SCIPtpiBroadcastCondition(&(_threadpool->queueempty)) );
+         SCIP_CALL( SCIPtnyBroadcastCondition(&(_threadpool->queueempty)) );
       }
 
       /* updating the current job list */
@@ -154,13 +184,13 @@ SCIP_RETCODE threadPoolThreadRetcode(
 
       _threadpool->currentjobs->njobs++;
 
-      SCIP_CALL( SCIPtpiReleaseLock(&(_threadpool->poollock)) );
+      SCIP_CALL( SCIPtnyReleaseLock(&(_threadpool->poollock)) );
 
       /* setting the job to run on this thread */
       newjob->retcode = (*(newjob->jobfunc))(newjob->args);
 
       /* setting the current job on this thread to NULL */
-      SCIP_CALL( SCIPtpiAcquireLock(&(_threadpool->poollock)) );
+      SCIP_CALL( SCIPtnyAcquireLock(&(_threadpool->poollock)) );
 
       /* finding the location of the processed job in the currentjobs queue */
       currjob = _threadpool->currentjobs->firstjob;
@@ -198,9 +228,9 @@ SCIP_RETCODE threadPoolThreadRetcode(
       _threadpool->finishedjobs->njobs++;
 
       /* signalling that a job has been finished */
-      SCIP_CALL( SCIPtpiBroadcastCondition(&(_threadpool)->jobfinished) );
+      SCIP_CALL( SCIPtnyBroadcastCondition(&(_threadpool)->jobfinished) );
 
-      SCIP_CALL( SCIPtpiReleaseLock(&(_threadpool->poollock)) );
+      SCIP_CALL( SCIPtnyReleaseLock(&(_threadpool->poollock)) );
    }
 }
 
@@ -255,13 +285,13 @@ SCIP_RETCODE createThreadPool(
    (*thrdpool)->finishedjobs->njobs = 0;
 
    /* initialising the mutex */
-   SCIP_CALL( SCIPtpiInitLock(&(*thrdpool)->poollock) ); /*lint !e2482*/
+   SCIP_CALL( SCIPtnyInitLock(&(*thrdpool)->poollock) ); /*lint !e2482*/
 
    /* initialising the conditions */
-   SCIP_CALL( SCIPtpiInitCondition(&(*thrdpool)->queuenotempty) );
-   SCIP_CALL( SCIPtpiInitCondition(&(*thrdpool)->queuenotfull) );
-   SCIP_CALL( SCIPtpiInitCondition(&(*thrdpool)->queueempty) );
-   SCIP_CALL( SCIPtpiInitCondition(&(*thrdpool)->jobfinished) );
+   SCIP_CALL( SCIPtnyInitCondition(&(*thrdpool)->queuenotempty) );
+   SCIP_CALL( SCIPtnyInitCondition(&(*thrdpool)->queuenotfull) );
+   SCIP_CALL( SCIPtnyInitCondition(&(*thrdpool)->queueempty) );
+   SCIP_CALL( SCIPtnyInitCondition(&(*thrdpool)->jobfinished) );
 
    /* creating the threads */
    (*thrdpool)->currworkingthreads = 0;
@@ -316,7 +346,7 @@ void jobQueueAddJob(
 
    /* signalling to all threads that the queue has jobs using the signal instead of broadcast because only one thread
     * should be awakened */
-   SCIP_CALL_ABORT( SCIPtpiSignalCondition(&(threadpool->queuenotempty)) );
+   SCIP_CALL_ABORT( SCIPtnySignalCondition(&(threadpool->queuenotempty)) );
 
    threadpool->jobqueue->njobs++;
 }
@@ -331,12 +361,12 @@ SCIP_RETCODE threadPoolAddWork(
    assert(newjob != NULL);
    assert(_threadpool != NULL);
 
-   SCIP_CALL( SCIPtpiAcquireLock(&(_threadpool->poollock)) );
+   SCIP_CALL( SCIPtnyAcquireLock(&(_threadpool->poollock)) );
 
    /* if the queue is full and we are blocking, then return an error. */
    if( _threadpool->jobqueue->njobs == _threadpool->queuesize && _threadpool->blockwhenfull )
    {
-      SCIP_CALL( SCIPtpiReleaseLock(&(_threadpool->poollock)) );
+      SCIP_CALL( SCIPtnyReleaseLock(&(_threadpool->poollock)) );
       *status = SCIP_SUBMIT_QUEUEFULL;
       return SCIP_OKAY;
    }
@@ -346,19 +376,19 @@ SCIP_RETCODE threadPoolAddWork(
     * thread pool is shut down. Need to work out the best way to handle this. */
    while( _threadpool->jobqueue->njobs == _threadpool->queuesize && !(_threadpool->shutdown || !_threadpool->queueopen) )
    {
-      SCIP_CALL( SCIPtpiWaitCondition(&(_threadpool->queuenotfull), &(_threadpool->poollock)) );
+      SCIP_CALL( SCIPtnyWaitCondition(&(_threadpool->queuenotfull), &(_threadpool->poollock)) );
    }
 
    /* if the thread pool is shut down or the queue is closed, then we need to leave the job submission */
    if( !_threadpool->queueopen )
    {
-      SCIP_CALL( SCIPtpiReleaseLock(&(_threadpool->poollock)) );
+      SCIP_CALL( SCIPtnyReleaseLock(&(_threadpool->poollock)) );
       *status = SCIP_SUBMIT_QUEUECLOSED;
       return SCIP_OKAY;
    }
    else if( _threadpool->shutdown )
    {
-      SCIP_CALL( SCIPtpiReleaseLock(&(_threadpool->poollock)) );
+      SCIP_CALL( SCIPtnyReleaseLock(&(_threadpool->poollock)) );
       *status =  SCIP_SUBMIT_SHUTDOWN;
       return SCIP_OKAY;
    }
@@ -371,7 +401,7 @@ SCIP_RETCODE threadPoolAddWork(
    assert(_threadpool->jobqueue->njobs != _threadpool->queuesize);
    jobQueueAddJob(_threadpool, newjob);
 
-   SCIP_CALL( SCIPtpiReleaseLock(&(_threadpool->poollock)) );
+   SCIP_CALL( SCIPtnyReleaseLock(&(_threadpool->poollock)) );
 
    *status = SCIP_SUBMIT_SUCCESS;
 
@@ -417,12 +447,12 @@ SCIP_RETCODE freeThreadPool(
    /*TODO remove argument? */
    SCIP_UNUSED( finishjobs );
 
-   SCIP_CALL( SCIPtpiAcquireLock(&((*thrdpool)->poollock)) );
+   SCIP_CALL( SCIPtnyAcquireLock(&((*thrdpool)->poollock)) );
 
    /* if the shutdown is already in progress, then we don't need to complete this function */
    if( !(*thrdpool)->queueopen || (*thrdpool)->shutdown )
    {
-      SCIP_CALL( SCIPtpiReleaseLock(&((*thrdpool)->poollock)) );
+      SCIP_CALL( SCIPtnyReleaseLock(&((*thrdpool)->poollock)) );
 
       return SCIP_OKAY;
    }
@@ -435,20 +465,20 @@ SCIP_RETCODE freeThreadPool(
    {
       while( (*thrdpool)->jobqueue->njobs > 0 )
       {
-         SCIP_CALL( SCIPtpiWaitCondition(&((*thrdpool)->queueempty), &((*thrdpool)->poollock)) );
+         SCIP_CALL( SCIPtnyWaitCondition(&((*thrdpool)->queueempty), &((*thrdpool)->poollock)) );
       }
    }
 
    /* indicating that the tpi has commenced the shutdown process */
    (*thrdpool)->shutdown = TRUE;
 
-   SCIP_CALL( SCIPtpiReleaseLock(&((*thrdpool)->poollock)) );
+   SCIP_CALL( SCIPtnyReleaseLock(&((*thrdpool)->poollock)) );
 
    /* waking up all threads so that they can check the shutdown condition;
     * this requires that the conditions queuenotempty and queuenotfull is broadcast
     */
-   SCIP_CALL( SCIPtpiBroadcastCondition(&((*thrdpool)->queuenotempty)) );
-   SCIP_CALL( SCIPtpiBroadcastCondition(&((*thrdpool)->queuenotfull)) );
+   SCIP_CALL( SCIPtnyBroadcastCondition(&((*thrdpool)->queuenotempty)) );
+   SCIP_CALL( SCIPtnyBroadcastCondition(&((*thrdpool)->queuenotfull)) );
 
    retcode = SCIP_OKAY;
 
@@ -475,13 +505,13 @@ SCIP_RETCODE freeThreadPool(
    freeJobQueue(*thrdpool);
 
    /* destroying the conditions */
-   SCIPtpiDestroyCondition(&(*thrdpool)->jobfinished);
-   SCIPtpiDestroyCondition(&(*thrdpool)->queueempty);
-   SCIPtpiDestroyCondition(&(*thrdpool)->queuenotfull);
-   SCIPtpiDestroyCondition(&(*thrdpool)->queuenotempty);
+   SCIPtnyDestroyCondition(&(*thrdpool)->jobfinished);
+   SCIPtnyDestroyCondition(&(*thrdpool)->queueempty);
+   SCIPtnyDestroyCondition(&(*thrdpool)->queuenotfull);
+   SCIPtnyDestroyCondition(&(*thrdpool)->queuenotempty);
 
    /* destroying the mutex */
-   SCIPtpiDestroyLock(&(*thrdpool)->poollock);
+   SCIPtnyDestroyLock(&(*thrdpool)->poollock);
 
    BMSfreeMemory(thrdpool);
 
@@ -587,15 +617,15 @@ int SCIPtpiGetNewJobID(
    int id;
    assert(_threadpool != NULL);
 
-   SCIP_CALL_ABORT( SCIPtpiAcquireLock(&_threadpool->poollock) );
+   SCIP_CALL_ABORT( SCIPtnyAcquireLock(&_threadpool->poollock) );
    id = ++_threadpool->currentid;
-   SCIP_CALL_ABORT( SCIPtpiReleaseLock(&_threadpool->poollock) );
+   SCIP_CALL_ABORT( SCIPtnyReleaseLock(&_threadpool->poollock) );
 
    return id;
 }
 
 /** submit a job for parallel processing; the return value is a globally defined status */
-SCIP_RETCODE SCIPtpiSumbitJob(
+SCIP_RETCODE SCIPtpiSubmitJob(
    SCIP_JOB*             job,                /**< pointer to the job to be submitted */
    SCIP_SUBMITSTATUS*    status              /**< pointer to store the job's submit status */
    )
@@ -620,11 +650,11 @@ SCIP_RETCODE SCIPtpiCollectJobs(
    SCIP_JOB* currjob;
    SCIP_JOB* prevjob;
 
-   SCIP_CALL( SCIPtpiAcquireLock(&(_threadpool->poollock)) );
+   SCIP_CALL( SCIPtnyAcquireLock(&(_threadpool->poollock)) );
 
    while( isJobRunning(_threadpool->currentjobs, jobid) || isJobRunning(_threadpool->jobqueue, jobid) )
    {
-      SCIP_CALL( SCIPtpiWaitCondition(&_threadpool->jobfinished, &_threadpool->poollock) );
+      SCIP_CALL( SCIPtnyWaitCondition(&_threadpool->jobfinished, &_threadpool->poollock) );
    }
 
    /* finding the location of the processed job in the currentjobs queue */
@@ -672,7 +702,131 @@ SCIP_RETCODE SCIPtpiCollectJobs(
       }
    }
 
-   SCIP_CALL( SCIPtpiReleaseLock(&_threadpool->poollock) );
+   SCIP_CALL( SCIPtnyReleaseLock(&_threadpool->poollock) );
 
    return retcode;
+}
+
+
+/*
+ * locks
+ */
+
+/** initializes the given lock */
+SCIP_RETCODE SCIPtpiInitLock(
+   SCIP_LOCK**           lock                /**< the lock */
+   )
+{
+   assert(lock != NULL);
+
+   SCIP_ALLOC( BMSallocMemory(lock) );
+
+   if( mtx_init(&(*lock)->lock, mtx_plain) == thrd_success )
+      return SCIP_OKAY;
+   else
+   {
+      BMSfreeMemory(lock);
+      return SCIP_ERROR;
+   }
+}
+
+/** destroys the given lock */
+void SCIPtpiDestroyLock(
+   SCIP_LOCK**           lock                /**< the lock */
+   )
+{
+   assert(lock != NULL);
+
+   mtx_destroy(&(*lock)->lock);
+   BMSfreeMemory(lock);
+}
+
+/** acquires the given lock */
+SCIP_RETCODE SCIPtpiAcquireLock(
+   SCIP_LOCK*            lock                /**< the lock */
+   )
+{
+   if( mtx_lock(&lock->lock) == thrd_success )
+      return SCIP_OKAY;
+   return SCIP_ERROR;
+}
+
+/** releases the given lock */
+SCIP_RETCODE SCIPtpiReleaseLock(
+   SCIP_LOCK*            lock                /**< the lock */
+   )
+{
+   if( mtx_unlock(&lock->lock) == thrd_success )
+      return SCIP_OKAY;
+   return SCIP_ERROR;
+}
+
+
+/*
+ * conditions
+ */
+
+/** initializes the given condition variable */
+SCIP_RETCODE SCIPtpiInitCondition(
+   SCIP_CONDITION**      condition           /**< condition to be created and initialized */
+   )
+{
+   assert(condition != NULL);
+
+   SCIP_ALLOC( BMSallocMemory(condition) );
+
+   if( cnd_init(&(*condition)->condition) == thrd_success )
+      return SCIP_OKAY;
+   return SCIP_ERROR;
+}
+
+/** destroys the given condition variable */
+void SCIPtpiDestroyCondition(
+   SCIP_CONDITION**      condition           /**< condition to be destroyed and freed */
+   )
+{
+   cnd_destroy(&(*condition)->condition);
+   BMSfreeMemory(condition);
+}
+
+/** signals one waiting thread */
+SCIP_RETCODE SCIPtpiSignalCondition(
+   SCIP_CONDITION*       condition           /**< the condition variable to signal */
+   )
+{
+   if( cnd_signal(&condition->condition) == thrd_success )
+      return SCIP_OKAY;
+   return SCIP_ERROR;
+}
+
+/** signals all waiting threads */
+SCIP_EXPORT
+SCIP_RETCODE SCIPtpiBroadcastCondition(
+   SCIP_CONDITION*       condition           /**< the condition variable to broadcast */
+   )
+{
+   if( cnd_broadcast(&condition->condition) == thrd_success )
+      return SCIP_OKAY;
+   return SCIP_ERROR;
+}
+
+/** waits on a condition variable. The given lock must be held by the caller and will
+ *  be held when this function returns.
+ */
+SCIP_RETCODE SCIPtpiWaitCondition(
+   SCIP_CONDITION*       condition,          /**< the condition variable to wait on */
+   SCIP_LOCK*            lock                /**< the lock that is held by the caller */
+   )
+{
+   if( cnd_wait(&condition->condition, &lock->lock) == thrd_success )
+      return SCIP_OKAY;
+   return SCIP_ERROR;
+}
+
+/** returns the thread number */
+int SCIPtpiGetThreadNum(
+   void
+   )
+{
+   return _threadnumber;
 }

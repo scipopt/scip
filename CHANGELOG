@@ -1,4 +1,180 @@
+@page RN Release notes for SCIP NEXT
+
+@section RNNEXT SCIP NEXT
+*************************
+
+Features
+--------
+
+- added simplification of abs(x)^n to x^n when n is even (simplify rule POW12)
+- in expression simplification, added possibility to expand power of sum with exponents larger than 2 (simplify rule POW7)
+- in expression simplification, added possibility to expand products with sums as factor when there are more than two factors (simplify rule SP12b)
+- in expression simplification, added possibility to allow expanding power of products with fractional exponent (simplify rule POW5a)
+- Can now build with Lapack (used for solving nonlinear problems). If IPOPT is used, then Lapack is accessed through it.
+  There	is an interface to Lapack in lapack_calls.
+- added support for logical constraints in binary variables and basic logical operators (and, or, not, equal) to AMPL .nl reader
+
+Performance improvements
+------------------------
+
+- Variable conflict-based addition of Schreier-Sims cuts for symmetry handling in prop_symmetry.c does no longer use
+  an expensive explicit conflict graph construction.
+
+Examples and applications
+-------------------------
+
+Interface changes
+-----------------
+
+### New and changed callbacks
+
+### Deleted and changed API methods
+
+- SCIPtpiInitLock(), SCIPtpiDestroyLock(), SCIPtpiInitCondition(), SCIPtpiDestroyCondition() now take a double
+  pointer to SCIP_LOCK/SCIP_CONDITION, respectively.
+
+- Renamed SCIPtpiSumbitJob() to SCIPtpiSubmitJob().
+
+### New API functions
+
+- new functions for interfacing with Lapack:
+  SCIPlapackIsAvailable(), SCIPlapackIsAvailable(),
+  SCIPlapackComputeEigenvalues(), and SCIPlapackSolveLinearEquations
+
+  These functions should be used instead of SCIPisIpoptAvailableIpopt(), SCIPcallLapackDsyevIpopt(), and
+  SCIPsolveLinearEquationsIpopt() in the context of computing eigenvalues or solving linear equations. If IPOPT is available,
+  the calls will be passed on.
+- SCIPmultiplyBySumExprSum(), SCIPpowerExprSum()
+- SCIPsetParam()
+- SCIPgetPrimalDualIntegral() returns the primal dual integral stored in the statistics
+
+### Command line interface
+
+- Added optional parameter -i when calling SCIP in AMPL-mode (-AMPL parameter).
+  If -i is specified, a SCIP shell is started where normally SCIPsolve() would be called.
+
+### Interfaces to external software
+
+- Added interface to Lapack (used for solving nonlinear problems).
+- The AMPL interface now supports parameters specified in AMPL command scripts via option scip_options.
+  The value of scip_options is expected to be a sequence of parameter names and values, separated by a space, e.g.,
+    `option scip_options 'limits/time 10 display/verblevel 1';`.
+  String values should not be quoted and spaces in string values are not supported.
+
+### Changed parameters
+
+- Shrunk range of parameter "propagating/symmetry/sstleaderrule" from [0,3] to [0,2], removed "MAXCONFLICTS"-option.
+
+### New parameters
+
+- expr/pow/expandmaxexponent to specify limit on exponent when to expand power of sum
+- expr/pow/distribfracexponent to enable expanding power of products with fractional exponents
+- expr/product/expandalways to enable expanding any product with sums as factor (that is, also when more than two factors)
+
+### Data structures
+
+Deleted files
+-------------
+
+- deleted the now unused files: tpi_none.h, tpi_openmp.h, tpi_tnycthrd.h, type_tpi_none.h, type_tpi_openmp.h, type_tpi_tnycthrd.h
+
+Unit tests
+----------
+
+Testing
+-------
+
+Build system
+------------
+
+### Cmake
+
+- New flag -DLAPACK=on for linking with Lapack (must be available in the system)
+
+### Makefile
+
+- New flag LAPACK for linking with Lapack (must be available in the system)
+
+Fixed bugs
+----------
+
+Miscellaneous
+-------------
+
+- The TPI has been changed to become mostly independent from the actual parallel interface during compile time.
+  For this, the locks and conditions are now pointers to abstract structs.
+
+Known bugs
+----------
+
 @page RN80 Release notes for SCIP 8.0
+
+@section RN000 SCIP 8.0.1
+*************************
+Features
+--------
+
+- clique lifting in cons_setppc (parameter enablecliquelifting) is only disabled if it has been applied
+- avoid warning if Mosek has reached/exceeded the objective limit
+- improved curvature check for quadratic expressions when extended formulations are disabled
+
+Performance improvements
+------------------------
+Examples and applications
+-------------------------
+
+- Fixed handling of enforcing in the TSP example.
+
+Interface changes
+-----------------
+### New and changed callbacks
+### Deleted and changed API methods
+### New API functions
+### Command line interface
+### Interfaces to external software
+
+- Added compatibility with Mosek 10.0.13.
+
+### Changed parameters
+### New parameters
+### Data structures
+Deleted files
+-------------
+Unit tests
+----------
+Testing
+-------
+Build system
+------------
+### Cmake
+
+- avoid warnings about unrecognized compiler warning silencing options when compilation with GCC fails
+- adjust mosek find module to version 9.3
+- added cmake compatibility for ipopt versions 3.14.x
+
+### Makefile
+
+- avoid warnings about unrecognized compiler warning silencing options when compilation with GCC fails
+- fixed that compilation with MS/Intel compilers on Windows and Cray compilers was broken when enabling PAPILO
+
+Fixed bugs
+----------
+
+- fixed uninitialized array in detection of suborbitopes
+- Fixed problem with reading long lines in LP/FZN/OPB/Diff-files. The buffer is now reallocated,
+  which also should be much faster.
+- fixed that recursive products in expressions were sometimes not flattened
+- fixed that expressions in original variables could not be simplified
+- fixed handling of objective limit with Mosek
+- made SCIPlpiGetSolverName()/SCIPlpiGetSolverDesc() thread-safe for LP Solvers (Cplex,Gurobi,Glop,Mosek,SoPlex,Xpress)
+- made SYMsymmetryGetName() thread-safe for Bliss
+- fixed memory allocation issue in detection of SOC nlhdlr
+- fixed that reaching the walltime limit in Ipopt was not handled properly
+
+Miscellaneous
+-------------
+Known bugs
+----------
 
 @section RN800 SCIP 8.0.0
 *************************
@@ -2356,7 +2532,7 @@ Interface changes
   - methods SCIPrandomCreate() and SCIPrandomFree() are no longer public and should be replaced by SCIPcreateRandom() and
     SCIPfreeRandom(), respectively (the new methods respect the global parameter `randomization/randomseedshift` automatically)
   - methods SCIPdigraphCreate() and SCIPdigraphCopy() are no longer public and should be replaced by SCIPcreateDigraph() and
-    SCIPcopyDigraph(), respectively, which receive a \SCIP argument and are more robust towards future interface changes
+    SCIPcopyDigraph(), respectively, which receive a SCIP argument and are more robust towards future interface changes
 
 - Bilinear:
   - SCIPgetAllBilinearTermsQuadratic() to access data of all existing bilinear terms in quadratic constraints

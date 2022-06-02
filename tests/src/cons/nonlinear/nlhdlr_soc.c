@@ -746,7 +746,7 @@ Test(nlhdlrsoc, detectandfree11, .description = "detects complex quadratic const
    SCIP_Bool infeasible;
    SCIP_Bool success;
 
-   if( !SCIPisIpoptAvailableIpopt() )
+   if( !SCIPlapackIsAvailable() )
       return;
 
    /* create nonlinear constraint */
@@ -802,7 +802,7 @@ Test(nlhdlrsoc, detectandfree12, .description = "detects complex quadratic const
    SCIP_Bool infeasible;
    SCIP_Bool success;
 
-   if( !SCIPisIpoptAvailableIpopt() )
+   if( !SCIPlapackIsAvailable() )
       return;
 
    /* create nonlinear constraint */

@@ -93,6 +93,33 @@ void SCIPmultiplyByConstantExprSum(
    SCIP_Real             constant            /**< constant that multiplies sum expression */
    );
 
+/** constructs the expanded product of two sum expressions */
+SCIP_EXPORT
+SCIP_RETCODE SCIPmultiplyBySumExprSum(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR**           product,            /**< buffer where to store multiplied sums (expanded as sum) */
+   SCIP_EXPR*            factor1,            /**< first sum */
+   SCIP_EXPR*            factor2,            /**< second sum */
+   SCIP_Bool             simplify,           /**< whether to simplify created terms and sum */
+   SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
+   void*                 ownercreatedata     /**< data to pass to ownercreate */
+   );
+
+/** constructs the expanded power of a sum expression
+ *
+ * @attention The number of terms in the expansion grows exponential with the exponent. Be aware of what you wish for.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPpowerExprSum(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR**           result,             /**< buffer where to store expanded power of sum */
+   SCIP_EXPR*            base,               /**< sum */
+   int                   exponent,           /**< exponent > 1 */
+   SCIP_Bool             simplify,           /**< whether to simplify created terms and sum */
+   SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
+   void*                 ownercreatedata     /**< data to pass to ownercreate */
+   );
+
 /** @}
   * @}
   */

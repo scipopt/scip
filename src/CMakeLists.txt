@@ -265,7 +265,9 @@ set(scipsources
     scip/clock.c
     scip/concsolver.c
     scip/concurrent.c
-    scip/conflict.c
+    scip/conflict_general.c
+    scip/conflict_graphanalysis.c
+    scip/conflict_dualproofanalysis.c
     scip/conflictstore.c
     scip/cons.c
     scip/cutpool.c
@@ -286,6 +288,7 @@ set(scipsources
     scip/implics.c
     scip/interrupt.c
     scip/intervalarith.c
+    scip/lapack_calls.c
     scip/lp.c
     scip/matrix.c
     scip/mem.c
@@ -491,6 +494,9 @@ set(scipheaders
     scip/concsolver_scip.h
     scip/concurrent.h
     scip/conflict.h
+    scip/conflict_graphanalysis.h
+    scip/conflict_dualproofanalysis.h
+    scip/conflict_general.h
     scip/conflictstore.h
     scip/cons_abspower.h
     scip/cons_and.h
@@ -621,6 +627,7 @@ set(scipheaders
     scip/implics.h
     scip/interrupt.h
     scip/intervalarith.h
+    scip/lapack_calls.h
     scip/lp.h
     scip/mem.h
     scip/message_default.h
@@ -974,13 +981,7 @@ set(tinycthreadheader
 set(tpiheaders
     tpi/def_openmp.h
     tpi/tpi.h
-    tpi/tpi_none.h
-    tpi/tpi_openmp.h
-    tpi/tpi_tnycthrd.h
     tpi/type_tpi.h
-    tpi/type_tpi_none.h
-    tpi/type_tpi_openmp.h
-    tpi/type_tpi_tnycthrd.h
 )
 
 set(xmlheaders
@@ -1028,6 +1029,7 @@ target_link_libraries(libscip PRIVATE
     ${GMP_LIBRARIES}
     ${THREAD_LIBRARIES}
     ${NLPI_LIBRARIES}
+    ${LAPACK_LIBRARIES}
     ${SYM_LIBRARIES}
     ${PAPILO_IMPORTED_TARGETS})
 
@@ -1068,6 +1070,7 @@ target_link_libraries(scip
    ${SYM_LIBRARIES}
    ${THREAD_LIBRARIES}
    ${NLPI_LIBRARIES}
+   ${LAPACK_LIBRARIES}
    ${PAPILO_IMPORTED_TARGETS})
 
 add_dependencies(libscip scip_update_githash)

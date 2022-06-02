@@ -35,7 +35,7 @@
 #include "scip/tree.h"
 #include "scip/struct_set.h"
 #include "scip/struct_stat.h"
-#include "scip/nlpi_ipopt.h" /* for LAPACK */
+#include "scip/lapack_calls.h"
 
 /*lint -e440*/
 /*lint -e441*/
@@ -3631,7 +3631,7 @@ SCIP_RETCODE SCIPexprComputeQuadraticCurvature(
 
    /* TODO do some simple tests first; like diagonal entries don't change sign, etc */
 
-   if( !SCIPisIpoptAvailableIpopt() )
+   if( ! SCIPlapackIsAvailable() )
       return SCIP_OKAY;
 
    nn = n * n;
@@ -3719,7 +3719,7 @@ SCIP_RETCODE SCIPexprComputeQuadraticCurvature(
    }
 
    /* compute eigenvalues */
-   if( SCIPcallLapackDsyevIpopt(storeeigeninfo, n, matrix, alleigval) != SCIP_OKAY )
+   if( SCIPlapackComputeEigenvalues(bufmem, storeeigeninfo, n, matrix, alleigval) != SCIP_OKAY )
    {
       SCIPmessagePrintWarning(messagehdlr, "Failed to compute eigenvalues of quadratic coefficient "
             "matrix --> don't know curvature\n");
@@ -3867,7 +3867,7 @@ SCIP_EXPR_OWNERDATA* SCIPexprGetOwnerData(
 
 /** gives the value from the last evaluation of an expression (or SCIP_INVALID if there was an eval error)
  *
- * @see SCIPevalExpr
+ * @see SCIPevalExpr to evaluate the expression at a given solution.
  */
 SCIP_Real SCIPexprGetEvalValue(
    SCIP_EXPR*            expr                /**< expression */
@@ -4051,6 +4051,8 @@ void SCIPexprSetIntegrality(
  *
  * This function returns pointers to internal data in linexprs and lincoefs.
  * The user must not change this data.
+ *
+ * @attention SCIPcheckExprQuadratic() needs to be called first to check whether expression is quadratic and initialize the data of the quadratic representation.
  */
 void SCIPexprGetQuadraticData(
    SCIP_EXPR*            expr,               /**< quadratic expression */

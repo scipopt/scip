@@ -40,7 +40,7 @@
 #include "scip/expr_var.h"
 #include "scip/debug.h"
 #include "scip/pub_nlhdlr.h"
-#include "scip/nlpi_ipopt.h"
+#include "scip/lapack_calls.h"
 
 
 /* fundamental nonlinear handler properties */
@@ -1946,6 +1946,10 @@ SCIP_RETCODE detectSocQuadraticComplex(
       return SCIP_OKAY;
    }
 
+   /* we need Lapack to compute eigenvalues/vectors below */
+   if( ! SCIPlapackIsAvailable() )
+      return SCIP_OKAY;
+
    /* get children of the sum */
    nchildren = SCIPexprGetNChildren(expr);
    constant = SCIPgetConstantExprSum(expr);
@@ -1993,7 +1997,7 @@ SCIP_RETCODE detectSocQuadraticComplex(
    /* compute eigenvalues and vectors, A = PDP^t
     * note: eigvecmatrix stores P^t, i.e., P^t_{i,j} = eigvecmatrix[i*nvars+j]
     */
-   if( SCIPcallLapackDsyevIpopt(TRUE, nvars, eigvecmatrix, eigvals) != SCIP_OKAY )
+   if( SCIPlapackComputeEigenvalues(SCIPbuffer(scip), TRUE, nvars, eigvecmatrix, eigvals) != SCIP_OKAY )
    {
       SCIPdebugMsg(scip, "Failed to compute eigenvalues and eigenvectors for expression:\n");
 
@@ -2091,7 +2095,7 @@ SCIP_RETCODE detectSocQuadraticComplex(
    SCIP_CALL( SCIPallocBufferArray(scip, &offsets, npos + nneg + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &transcoefs, ntranscoefs) );
    SCIP_CALL( SCIPallocBufferArray(scip, &transcoefsidx, ntranscoefs) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &termbegins, npos + nneg + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &termbegins, npos + nneg + 2) );
 
    /* try to fill the nlhdlrexprdata (at this point, it can still fail) */
    SCIP_CALL( tryFillNlhdlrExprDataQuad(scip, occurringexprs, eigvecmatrix, eigvals, bp, nvars, termbegins, transcoefs,

@@ -156,11 +156,11 @@ LPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(LPILIBOBJ:.o=.c))
 SOFTLINKS	+=	$(LIBDIR)/include/mskinc
 SOFTLINKS	+=	$(LIBDIR)/shared/libmosek.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
 SOFTLINKS	+=	$(LIBDIR)/shared/libiomp5.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)    # for Mosek < 9
-SOFTLINKS	+=	$(LIBDIR)/shared/libcilkrts.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
+SOFTLINKS	+=	$(LIBDIR)/shared/libcilkrts.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)  # for Mosek < 10
 LPIINSTMSG	=	"  -> \"mskinc\" is the path to the Mosek \"include\" directory, e.g., \"<Mosek-path>/tools/platform/linux64x86/h\".\n"
 LPIINSTMSG	+=	" -> \"libmosek.*\" is the path to the Mosek library, e.g., \"<Mosek-path>/tools/platform/linux64x86/bin/libmosek64.so\".\n"
 LPIINSTMSG	+=	" -> \"libiomp5.*\" is the path to the Intel OpenMP library, e.g., \"<Mosek-path>/tools/platform/linux64x86/bin/libiomp5.so\" (required for Mosek < 9.0 only).\n"
-LPIINSTMSG	+=	" -> \"libcilkrts.*\" is the path to the cilk library, e.g., \"<Mosek-path>/tools/platform/linux64x86/bin/libcilkrts.so.5\".\n"
+LPIINSTMSG	+=	" -> \"libcilkrts.*\" is the path to the cilk library, e.g., \"<Mosek-path>/tools/platform/linux64x86/bin/libcilkrts.so.5\" (required for Mosek < 10.0 only).\n"
 endif
 
 LPSOPTIONS	+=	spx1
@@ -310,6 +310,7 @@ FLAGS		+=	-DTPI_TNYC
 endif
 
 TPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(TPILIBOBJ:.o=.c))
+TPISRC		=	$(TPILIBSRC) $(SRCDIR)/scip/concurrent.c $(SRCDIR)/scip/benders.c    # files to be rebuilt when changing TPI
 TPILIB		=	$(TPILIBNAME).$(BASE)
 TPILIBFILE	=	$(LIBDIR)/$(LIBTYPE)/lib$(TPILIB).$(LIBEXT)
 TPILIBOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(TPILIBOBJ))
@@ -352,7 +353,7 @@ endif
 #-----------------------------------------------------------------------------
 
 ifeq ($(PAPILO),true)
-FLAGS        +=    -DSCIP_WITH_PAPILO -DPAPILO_NO_CMAKE_CONFIG -isystem $(LIBDIR)/include/tbb/include -isystem $(LIBDIR)/include/papilo/external -isystem $(LIBDIR)/include/papilo/src
+FLAGS        +=    -DSCIP_WITH_PAPILO -DPAPILO_NO_CMAKE_CONFIG -I$(LIBDIR)/include/tbb/include -I$(LIBDIR)/include/papilo/external -I$(LIBDIR)/include/papilo/src
 SOFTLINKS    +=    $(LIBDIR)/include/papilo
 LPIINSTMSG    +=    "\n  -> \"papilo\" is the path to the PaPILO directory\n"
 SOFTLINKS    +=    $(LIBDIR)/include/boost
@@ -384,6 +385,8 @@ AMPLSRC	:=	$(shell cat $(AMPLDEP))
 
 THREADSAFEDEP	:=	$(SRCDIR)/depend.threadsafe
 THREADSAFESRC	:=	$(shell cat $(THREADSAFEDEP))
+
+LAPACKSRC	:=	$(SRCDIR)/scip/lapack_calls.c $(SRCDIR)/scip/scip_general.c
 
 ifeq ($(ZIMPL),true)
 ifeq ($(GMP),false)
@@ -727,7 +730,9 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/clock.o \
 			scip/concsolver.o \
 			scip/concurrent.o \
-			scip/conflict.o \
+			scip/conflict_general.o \
+			scip/conflict_graphanalysis.o \
+			scip/conflict_dualproofanalysis.o \
 			scip/conflictstore.o \
 			scip/cons.o \
 			scip/cutpool.o \
@@ -749,6 +754,7 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/implics.o \
 			scip/interrupt.o \
 			scip/intervalarith.o \
+			scip/lapack_calls.o \
 			scip/lp.o \
 			scip/matrix.o \
 			scip/mem.o \
@@ -1413,13 +1419,16 @@ ifneq ($(SANITIZE),$(LAST_SANITIZE))
 		@-touch -c $(ALLSRC)
 endif
 ifneq ($(TPI),$(LAST_TPI))
-		@-touch -c $(ALLSRC)
+		@-touch -c $(TPISRC)
 endif
 ifneq ($(DEBUGSOL),$(LAST_DEBUGSOL))
 		@-touch -c $(ALLSRC)
 endif
 ifneq ($(PAPILO),$(LAST_PAPILO))
 		@-touch -c $(ALLSRC)
+endif
+ifneq ($(LAPACK),$(LAST_LAPACK))
+		@-touch -c $(LAPACKSRC)
 endif
 		@-rm -f $(LASTSETTINGS)
 		@echo "LAST_BUILDFLAGS=\"$(BUILDFLAGS)\"" >> $(LASTSETTINGS)
@@ -1447,6 +1456,7 @@ endif
 		@echo "LAST_TPI=$(TPI)" >> $(LASTSETTINGS)
 		@echo "LAST_DEBUGSOL=$(DEBUGSOL)" >> $(LASTSETTINGS)
 		@echo "LAST_PAPILO=$(PAPILO)" >> $(LASTSETTINGS)
+		@echo "LAST_LAPACK=$(LAPACK)" >> $(LASTSETTINGS)
 
 $(LINKSMARKERFILE):
 		@$(MAKE) links
@@ -1636,6 +1646,7 @@ help:
 		@echo "  - LPSOPT=<dbg|opt>: Use debug or optimized (default) mode for LP-solver (SoPlex and Clp only)."
 		@echo "  - READLINE=<true|false>: Turns support via the readline library on (default) or off."
 		@echo "  - IPOPT=<true|false>: Turns support of IPOPT on or off (default)."
+		@echo "  - LAPACK=<true|false>: Link with Lapack (must be installed on the system)."
 		@echo "  - EXPRINT=<cppad|none>: Use CppAD as expressions interpreter (default) or no expressions interpreter."
 		@echo "  - SYM=<none|bliss>: To choose type of symmetry handling."
 		@echo "  - PARASCIP=<true|false>: Build for ParaSCIP (deprecated, use THREADSAFE)."

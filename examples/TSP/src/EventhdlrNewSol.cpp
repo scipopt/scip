@@ -75,7 +75,7 @@ SCIP_DECL_EVENTINIT(EventhdlrNewSol::scip_init)
    filedata.close();
 
    /* delete lock file */
-   unlink("temp.tour.lock");
+   (void) unlink("temp.tour.lock");
    (void) sleep(1); /* wait for the Java TSPViewer */
 
    return SCIP_OKAY;
@@ -193,7 +193,7 @@ SCIP_DECL_EVENTEXEC(EventhdlrNewSol::scip_exec)
    filedata.close();
 
    /* delete lock file */
-   unlink("temp.tour.lock");
+   (void) unlink("temp.tour.lock");
    (void) sleep(1); /* wait for the Java TSPViewer */
 
    return SCIP_OKAY;

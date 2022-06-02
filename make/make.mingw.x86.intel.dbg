@@ -13,7 +13,9 @@ LINKCXX_o	=	-out:
 FLAGS		+=	-DSCIP_NO_SIGACTION -DNO_RAND_R -DSCIP_NO_STRTOK_R -DNO_STRERROR_R -DSCIP_ROUNDING_MS -D_CRT_SECURE_NO_WARNINGS
 OFLAGS		+=
 CFLAGS		+=	-Zi
-CXXFLAGS	+=	-Qstd=c++0x -Zi -EHsc -GR
+CXX11FLAG	=	-Qstd=c++0x
+CXX14FLAG	=	-Qstd=c++14
+CXXFLAGS	+=	-Zi -EHsc -GR
 DFLAGS =
 LDFLAGS		+=	-debug -subsystem:console -incremental:no -fixed:no
 LINKRPATH =

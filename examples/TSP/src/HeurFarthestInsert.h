@@ -95,7 +95,7 @@ public:
    /** returns whether the objective plugin is copyable */
    virtual SCIP_DECL_HEURISCLONEABLE(iscloneable)
    {
-      return true;
+      return TRUE;
    }
 }; /*lint !e1712*/
 

@@ -183,15 +183,10 @@ SCIP_RETCODE sdStarBiasedProcessNode(
 {
    const int nnodes = graph_get_nNodes(g);
    SCIP_Bool runloop = TRUE;
-   DCSR *dcsr;
-   RANGE *RESTRICT range_csr;
-   int *RESTRICT head_csr;
-   int *RESTRICT edgeid_csr;
-
-   dcsr = g->dcsr_storage;
-   range_csr = dcsr->range;
-   head_csr = dcsr->head;
-   edgeid_csr = dcsr->edgeid;
+   DCSR* const dcsr = g->dcsr_storage;
+   RANGE* const range_csr = dcsr->range;
+   int* const head_csr = dcsr->head;
+   int* const edgeid_csr = dcsr->edgeid;
 
    assert(g->mark[node]);
 

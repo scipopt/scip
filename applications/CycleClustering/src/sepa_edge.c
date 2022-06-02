@@ -315,32 +315,35 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpEdge)
       }
    }
 
-   /* apply the cuts with the highest violation or use cut-selection */
-   if( usecutselection )
+   if( ncutscreated > 0 )
    {
-      SCIP_CALL( SCIPgetRealParam(scip, "cycleclustering/goodscorefac", &goodscorefac) );
-      SCIP_CALL( SCIPgetRealParam(scip, "cycleclustering/badscorefac", &badscorefac) );
-      SCIP_CALL( SCIPgetRealParam(scip, "cycleclustering/goodmaxparall", &goodmaxparall) );
-      SCIP_CALL( SCIPgetRealParam(scip, "cycleclustering/maxparall", &maxparall) );
-      SCIP_CALL( SCIPgetRealParam(scip, "cycleclustering/dircutoffdist", &dircutoffdist) );
-      SCIP_CALL( SCIPgetRealParam(scip, "cycleclustering/efficacyweight", &efficacyweight) );
-      SCIP_CALL( SCIPgetRealParam(scip, "cycleclustering/objparalweight", &objparalweight) );
-      SCIP_CALL( SCIPgetRealParam(scip, "cycleclustering/intsuppweight", &intsuppweight) );
+      /* apply the cuts with the highest violation or use cut-selection */
+      if( usecutselection )
+      {
+         SCIP_CALL( SCIPgetRealParam(scip, "cycleclustering/goodscorefac", &goodscorefac) );
+         SCIP_CALL( SCIPgetRealParam(scip, "cycleclustering/badscorefac", &badscorefac) );
+         SCIP_CALL( SCIPgetRealParam(scip, "cycleclustering/goodmaxparall", &goodmaxparall) );
+         SCIP_CALL( SCIPgetRealParam(scip, "cycleclustering/maxparall", &maxparall) );
+         SCIP_CALL( SCIPgetRealParam(scip, "cycleclustering/dircutoffdist", &dircutoffdist) );
+         SCIP_CALL( SCIPgetRealParam(scip, "cycleclustering/efficacyweight", &efficacyweight) );
+         SCIP_CALL( SCIPgetRealParam(scip, "cycleclustering/objparalweight", &objparalweight) );
+         SCIP_CALL( SCIPgetRealParam(scip, "cycleclustering/intsuppweight", &intsuppweight) );
 
-      SCIP_CALL( SCIPselectCutsHybrid(scip, cuts, NULL, NULL, goodscorefac, badscorefac,
-            goodmaxparall, maxparall, dircutoffdist, efficacyweight, objparalweight, intsuppweight,
-            ncutscreated, 0, MAXCUTS, &ncutsapplied) );
-   }
-   else
-   {
-      SCIPsortDownRealPtr(violation, ((void **) cuts), ncutscreated);
-      ncutsapplied = MIN(ncutscreated, MAXCUTS);
-   }
+         SCIP_CALL( SCIPselectCutsHybrid(scip, cuts, NULL, NULL, goodscorefac, badscorefac,
+               goodmaxparall, maxparall, dircutoffdist, efficacyweight, objparalweight, intsuppweight,
+               ncutscreated, 0, MAXCUTS, &ncutsapplied) );
+      }
+      else
+      {
+         SCIPsortDownRealPtr(violation, ((void **) cuts), ncutscreated);
+         ncutsapplied = MIN(ncutscreated, MAXCUTS);
+      }
 
-   for( j = 0; j < ncutsapplied; ++j )
-   {
-      SCIP_CALL( SCIPaddPoolCut(scip, cuts[j]) );
-      *result = SCIP_SEPARATED;
+      for( j = 0; j < ncutsapplied; ++j )
+      {
+         SCIP_CALL( SCIPaddPoolCut(scip, cuts[j]) );
+         *result = SCIP_SEPARATED;
+      }
    }
 
    /* free memory */

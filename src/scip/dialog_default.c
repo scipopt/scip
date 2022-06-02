@@ -956,7 +956,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayExprhdlrs)
    for( i = 0; i < nexprhdlrs; ++i )
    {
       SCIPdialogMessage(scip, NULL, " %-18s ", SCIPexprhdlrGetName(exprhdlrs[i]));
-      SCIPdialogMessage(scip, NULL, " %10d ", SCIPexprhdlrGetPrecedence(exprhdlrs[i]));
+      SCIPdialogMessage(scip, NULL, " %10u ", SCIPexprhdlrGetPrecedence(exprhdlrs[i]));
       SCIPdialogMessage(scip, NULL, " %s", SCIPexprhdlrGetDescription(exprhdlrs[i]));
       SCIPdialogMessage(scip, NULL, "\n");
    }
