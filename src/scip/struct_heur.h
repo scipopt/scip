@@ -81,7 +81,6 @@ struct SCIP_Diveset
    SCIP_Bool             ispublic;           /**< is this dive set publicly available (ie., can be used by other primal heuristics?) */
    SCIP_DIVETYPE         divetypemask;       /**< bit mask that represents the supported dive types by this dive set */
    SCIP_DECL_DIVESETGETSCORE((*divesetgetscore));  /**< method for candidate score and rounding direction */
-   SCIP_DECL_DIVESETSOLVEMIP((*divesetsolvemip));
    SCIP_DECL_DIVESETAVAILABLE((*divesetavailable)); /**< callback to check availability of dive set at the current stage, or NULL if always available */
 };
 

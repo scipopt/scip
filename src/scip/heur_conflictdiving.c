@@ -481,7 +481,6 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreConflictdiving)
  */
 
 #define divesetAvailableConflictdiving NULL
-#define divesetSolveMipConflictdiving NULL
 
 /** creates the conflictdiving heuristic and includes it in SCIP */
 SCIP_RETCODE SCIPincludeHeurConflictdiving(
@@ -510,7 +509,7 @@ SCIP_RETCODE SCIPincludeHeurConflictdiving(
    SCIP_CALL( SCIPcreateDiveset(scip, NULL, heur, HEUR_NAME, DEFAULT_MINRELDEPTH, DEFAULT_MAXRELDEPTH, DEFAULT_MAXLPITERQUOT,
          DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL, DEFAULT_MAXDIVEAVGQUOTNOSOL, DEFAULT_LPRESOLVEDOMCHGQUOT,
          DEFAULT_LPSOLVEFREQ, DEFAULT_MAXLPITEROFS, DEFAULT_RANDSEED, DEFAULT_BACKTRACK, DEFAULT_ONLYLPBRANCHCANDS,
-         DIVESET_ISPUBLIC, DIVESET_DIVETYPES, divesetGetScoreConflictdiving, divesetSolveMipConflictdiving, divesetAvailableConflictdiving) );
+         DIVESET_ISPUBLIC, DIVESET_DIVETYPES, divesetGetScoreConflictdiving, divesetAvailableConflictdiving) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/maxviol", "try to maximize the violation",
          &heurdata->maxviol, TRUE, DEFAULT_MAXVIOL, NULL, NULL) );

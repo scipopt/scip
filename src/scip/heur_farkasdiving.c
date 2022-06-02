@@ -510,7 +510,6 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreFarkasdiving)
  * heuristic specific interface methods
  */
 #define divesetAvailableFarkasdiving NULL
-#define divesetSolveMipFarkasdiving NULL
 
 /** creates the farkasdiving heuristic and includes it in SCIP */
 SCIP_RETCODE SCIPincludeHeurFarkasdiving(
@@ -542,7 +541,7 @@ SCIP_RETCODE SCIPincludeHeurFarkasdiving(
    SCIP_CALL( SCIPcreateDiveset(scip, NULL, heur, HEUR_NAME, DEFAULT_MINRELDEPTH, DEFAULT_MAXRELDEPTH, DEFAULT_MAXLPITERQUOT,
          DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL, DEFAULT_MAXDIVEAVGQUOTNOSOL, DEFAULT_LPRESOLVEDOMCHGQUOT,
          DEFAULT_LPSOLVEFREQ, DEFAULT_MAXLPITEROFS, DEFAULT_RANDSEED, DEFAULT_BACKTRACK, DEFAULT_ONLYLPBRANCHCANDS, DIVESET_ISPUBLIC, DIVESET_DIVETYPES,
-         divesetGetScoreFarkasdiving, divesetSolveMipFarkasdiving, divesetAvailableFarkasdiving) );
+         divesetGetScoreFarkasdiving, divesetAvailableFarkasdiving) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/checkcands",
          "should diving candidates be checked before running?",

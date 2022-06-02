@@ -353,7 +353,6 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreActconsdiving)
 }
 
 #define divesetAvailableActconsdiving NULL
-#define divesetSolveMipActconsdiving NULL
 
 /*
  * heuristic specific interface methods
@@ -388,8 +387,7 @@ SCIP_RETCODE SCIPincludeHeurActconsdiving(
          DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL, DEFAULT_MAXDIVEAVGQUOTNOSOL, DEFAULT_LPRESOLVEDOMCHGQUOT,
          DEFAULT_LPSOLVEFREQ, DEFAULT_MAXLPITEROFS, DEFAULT_RANDSEED,
          DEFAULT_BACKTRACK, DEFAULT_ONLYLPBRANCHCANDS,
-         DIVESET_ISPUBLIC, DIVESET_DIVETYPES, divesetGetScoreActconsdiving, divesetSolveMipActconsdiving,
-         divesetAvailableActconsdiving) );
+         DIVESET_ISPUBLIC, DIVESET_DIVETYPES, divesetGetScoreActconsdiving, divesetAvailableActconsdiving) );
 
    return SCIP_OKAY;
 }

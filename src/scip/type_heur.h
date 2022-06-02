@@ -174,8 +174,6 @@ typedef struct SCIP_VGraph SCIP_VGRAPH;           /**< variable graph data struc
 #define SCIP_DECL_DIVESETGETSCORE(x) SCIP_RETCODE x (SCIP* scip, SCIP_DIVESET* diveset, \
    SCIP_DIVETYPE divetype, SCIP_VAR* cand, SCIP_Real candsol, SCIP_Real candsfrac, SCIP_Real* score, SCIP_Bool* roundup)
 
-#define SCIP_DECL_DIVESETSOLVEMIP(x) SCIP_RETCODE x (SCIP* scip,  SCIP_DIVESET* diveset, SCIP_Bool* solvemip)
-
 /**
  * optional callback to check preconditions for diving, e.g., if an incumbent solution is available
  *
