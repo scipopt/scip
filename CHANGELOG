@@ -61,6 +61,7 @@ Fixed bugs
 - made SYMsymmetryGetName() thread-safe for Bliss
 - fixed memory allocation issue in detection of SOC nlhdlr
 - fixed that reaching the walltime limit in Ipopt was not handled properly
+- During presolving a bug was fixed that set substituted variables to infinity by mistake resulting in an unbounded problem.
 
 Miscellaneous
 -------------
