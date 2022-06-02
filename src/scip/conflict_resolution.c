@@ -423,7 +423,7 @@ SCIP_RETCODE createAndAddResolutionCons(
 
    /* create a constraint out of the conflict set */
    (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "confres%" SCIP_LONGINT_FORMAT, conflict->nresconfconss);
-   SCIP_CALL( SCIPcreateConsLinear(scip, &cons, consname, resolutionsetGetNNzs(resolutionset), consvars, vals, lhs, SCIPinfinity(scip),
+   SCIP_CALL( SCIPcreateConsLinear(scip, &cons, consname, resolutionsetGetNNzs(resolutionset), consvars, vals, lhs, SCIPsetInfinity(set),
          FALSE, set->conf_separate, FALSE, FALSE, TRUE, (SCIPnodeGetDepth(tree->path[resolutionset->validdepth]) > 0 ), FALSE, set->conf_dynamic, set->conf_removable, FALSE) );
 
    /* try to automatically convert a linear constraint into a more specific and more specialized constraint */
@@ -458,7 +458,8 @@ SCIP_RETCODE SCIPconflictFlushResolutionSets(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_CLIQUETABLE*     cliquetable         /**< clique table data structure */
+   SCIP_CLIQUETABLE*     cliquetable,         /**< clique table data structure */
+   SCIP_RESOLUTIONSET*   resolutionset      /**< resolution set to add to the tree */
    )
 {
    assert(conflict != NULL);
@@ -497,8 +498,6 @@ SCIP_RETCODE SCIPconflictFlushResolutionSets(
 
    /* @todo add a check for the number of resolution sets */
    /* @todo loop over all resolution sets */
-   SCIP_RESOLUTIONSET* resolutionset;
-   resolutionset = conflict->resolutionset;
 
    assert(resolutionset != NULL);
    assert(0 <= resolutionset->validdepth);
@@ -1054,16 +1053,13 @@ SCIP_RETCODE conflictAnalyzeResolution(
 
    if ( SCIPsetIsLT(set, conflictslack, 0.0) )
    {
-      /* @todo add constraint */
-      conflict->resolutionset = conflictresolutionset;
-
       /* @todo call flush from the main solving loop! */
-      SCIPconflictFlushResolutionSets(conflict, blkmem, scip, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue, cliquetable);
+      SCIPconflictFlushResolutionSets(conflict, blkmem, scip, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue, cliquetable, conflictresolutionset);
       (*nconss)++;
       (*nconfvars) = resolutionsetGetNNzs(conflictresolutionset);
+
       SCIPresolutionsetFree(&conflictresolutionset, blkmem);
       SCIPresolutionsetFree(&reasonresolutionset, blkmem);
-      SCIPresolutionsetFree(&conflict->resolutionset, blkmem);
       return SCIP_OKAY;
    }
    SCIPsetDebugMsg(set, "Slack of resolved row: %f \n", conflictslack);
