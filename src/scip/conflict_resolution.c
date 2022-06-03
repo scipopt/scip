@@ -456,7 +456,6 @@ SCIP_RETCODE SCIPconflictFlushResolutionSets(
 {
 
    int focusdepth;
-   int currentdepth;
    int maxsize;
 
    assert(conflict != NULL);
@@ -467,9 +466,8 @@ SCIP_RETCODE SCIPconflictFlushResolutionSets(
 
 
    focusdepth = SCIPtreeGetFocusDepth(tree);
-   currentdepth = SCIPtreeGetCurrentDepth(tree);
-   assert(focusdepth <= currentdepth);
-   assert(currentdepth == tree->pathlen-1);
+   assert(focusdepth <= SCIPtreeGetCurrentDepth(tree));
+   assert(SCIPtreeGetCurrentDepth(tree) == tree->pathlen-1);
 
    /* calculate the maximal size of each accepted conflict set */
    maxsize = conflictCalcMaxsize(set, transprob);
@@ -629,6 +627,9 @@ SCIP_RETCODE resolveWithReason(
    assert(coefconf * coefreas < 0);
    assert(idxinconflict && idxinreason);
 
+   SCIP_UNUSED(idxinconflict);
+   SCIP_UNUSED(idxinreason);
+
    newsize = conflictresolutionset->nnz + reasonresolutionset->nnz;
    SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &conflictresolutionset->inds, conflictresolutionset->size, newsize ) );
    SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &conflictresolutionset->vals, conflictresolutionset->size, newsize ) );
@@ -761,6 +762,7 @@ SCIP_RETCODE reasonResolutionsetFromRow(
       }
    }
    assert(isincon);
+   SCIP_UNUSED(isincon);
 
    if ( changesign )
    {
@@ -848,6 +850,7 @@ SCIP_RETCODE conflictResolutionsetFromRow(
       }
    }
    assert(isincon);
+   SCIP_UNUSED(isincon);
 
    if ( changesign )
    {
