@@ -147,83 +147,133 @@ else()
   select_library_configurations(IPOPT_IPOPT)
   set(IPOPT_LIBRARIES ${IPOPT_IPOPT_LIBRARY})
 
-  # Some very old version of binary releases of IPOPT have Intel fortran
-  # libraries embedded in the library, some less older releases require them to
-  # be explicitly linked. Current releases include the Intel fortran libraries
-  # as dependencies of the DLL.
-  if(IPOPT_IPOPT_LIBRARY)
-    get_filename_component(_MSVC_DIR "${CMAKE_LINKER}" DIRECTORY)
+  find_file(IPOPT_DEP_FILE ipopt_addlibs_cpp.txt ${IPOPT_DIR}/share/doc/coin-or/Ipopt
+                                                 ${IPOPT_DIR}/share/coin-or/doc/Ipopt
+                                                 ${IPOPT_DIR}/share/doc/coin/Ipopt
+                                                 ${IPOPT_DIR}/share/coin/doc/Ipopt
+                                                 NO_DEFAULT_PATH)
+  mark_as_advanced(IPOPT_DEP_FILE)
 
-    # Find the lib.exe executable
-    find_program(LIB_EXECUTABLE
-                 NAMES lib.exe
-                 HINTS "${_MSVC_BINDIR}"
-                       "C:/Program Files/Microsoft Visual Studio 10.0/VC/bin"
-                       "C:/Program Files (x86)/Microsoft Visual Studio 10.0/VC/bin"
-                       "C:/Program Files/Microsoft Visual Studio 11.0/VC/bin"
-                       "C:/Program Files (x86)/Microsoft Visual Studio 11.0/VC/bin"
-                       "C:/Program Files/Microsoft Visual Studio 12.0/VC/bin"
-                       "C:/Program Files (x86)/Microsoft Visual Studio 12.0/VC/bin"
-                       "C:/Program Files/Microsoft Visual Studio 14.0/VC/bin"
-                       "C:/Program Files (x86)/Microsoft Visual Studio 14.0/VC/bin"
-                 DOC "Path to the lib.exe executable")
-    mark_as_advanced(LIB_EXECUTABLE)
+  if(IPOPT_DEP_FILE)
+    # parse the file and acquire the dependencies
+    file(READ ${IPOPT_DEP_FILE} IPOPT_DEP)
 
-    # backup PATH environment variable
-    set(_path $ENV{PATH})
+    string(REGEX REPLACE "-[^l][^ ]* " "" IPOPT_DEP ${IPOPT_DEP})
+    string(REPLACE "\n"                "" IPOPT_DEP ${IPOPT_DEP})
+    string(REPLACE "\n"                "" IPOPT_DEP ${IPOPT_DEP})
+    string(REPLACE "ipopt"             "" IPOPT_DEP ${IPOPT_DEP})       # remove any possible auto-dependency
+    separate_arguments(IPOPT_DEP)
 
-    # Add th MSVC "Common7/IDE" dir containing the dlls in the PATH when needed.
-    get_filename_component(_MSVC_LIBDIR "${_MSVC_BINDIR}/../../Common7/IDE" ABSOLUTE)
-    if(NOT EXISTS "${_MSVC_LIBDIR}")
-      get_filename_component(_MSVC_LIBDIR "${_MSVC_BINDIR}/../../../Common7/IDE" ABSOLUTE)
-    endif()
+    # use the find_library command in order to prepare rpath correctly
+    foreach(LIB ${IPOPT_DEP})
 
-    if(EXISTS "${_MSVC_LIBDIR}")
-      set(_MSVC_LIBDIR_FOUND 0)
-      file(TO_CMAKE_PATH "$ENV{PATH}" _env_path)
-      foreach(_dir ${_env_path})
-        if("${_dir}" STREQUAL ${_MSVC_LIBDIR})
-          set(_MSVC_LIBDIR_FOUND 1)
+      # skip LD library flags (this can be either -libflags or -l)
+      if(${LIB} MATCHES "-l*")
+        continue()
+      endif()
+
+      # check whether we compile for x86 or x64
+      if(${CMAKE_SIZEOF_VOID_P} EQUAL 8)
+        set(MKL_ARCH_DIR "intel64")
+      else()
+        set(MKL_ARCH_DIR "ia32")
+      endif()
+
+      find_library(IPOPT_SEARCH_FOR_${LIB} ${LIB} $ENV{MKLROOT}/lib/${MKL_ARCH_DIR}
+                                                  ${IPOPT_DIR}/lib
+                                                  ${IPOPT_DIR}/lib/coin-or
+                                                  ${IPOPT_DIR}/lib/coin-or/ThirdParty
+                                                  ${IPOPT_DIR}/lib/coin
+                                                  ${IPOPT_DIR}/lib/coin/ThirdParty
+                                                  NO_DEFAULT_PATH)
+
+      if(IPOPT_SEARCH_FOR_${LIB})
+        set(IPOPT_LIBRARIES ${IPOPT_LIBRARIES} ${IPOPT_SEARCH_FOR_${LIB}})
+      endif()
+      mark_as_advanced(IPOPT_SEARCH_FOR_${LIB})
+    endforeach()
+
+  else()
+    # if no dep file was found, i.e. newer versions >= 3.13 of ipopt
+
+    # Some very old version of binary releases of IPOPT have Intel fortran
+    # libraries embedded in the library, some less older releases require them to
+    # be explicitly linked. Current releases include the Intel fortran libraries
+    # as dependencies of the DLL.
+    if(IPOPT_IPOPT_LIBRARY)
+      get_filename_component(_MSVC_DIR "${CMAKE_LINKER}" DIRECTORY)
+
+      # Find the lib.exe executable
+      find_program(LIB_EXECUTABLE
+                   NAMES lib.exe
+                   HINTS "${_MSVC_BINDIR}"
+                         "C:/Program Files/Microsoft Visual Studio 10.0/VC/bin"
+                         "C:/Program Files (x86)/Microsoft Visual Studio 10.0/VC/bin"
+                         "C:/Program Files/Microsoft Visual Studio 11.0/VC/bin"
+                         "C:/Program Files (x86)/Microsoft Visual Studio 11.0/VC/bin"
+                         "C:/Program Files/Microsoft Visual Studio 12.0/VC/bin"
+                         "C:/Program Files (x86)/Microsoft Visual Studio 12.0/VC/bin"
+                         "C:/Program Files/Microsoft Visual Studio 14.0/VC/bin"
+                         "C:/Program Files (x86)/Microsoft Visual Studio 14.0/VC/bin"
+                   DOC "Path to the lib.exe executable")
+      mark_as_advanced(LIB_EXECUTABLE)
+
+      # backup PATH environment variable
+      set(_path $ENV{PATH})
+
+      # Add th MSVC "Common7/IDE" dir containing the dlls in the PATH when needed.
+      get_filename_component(_MSVC_LIBDIR "${_MSVC_BINDIR}/../../Common7/IDE" ABSOLUTE)
+      if(NOT EXISTS "${_MSVC_LIBDIR}")
+        get_filename_component(_MSVC_LIBDIR "${_MSVC_BINDIR}/../../../Common7/IDE" ABSOLUTE)
+      endif()
+
+      if(EXISTS "${_MSVC_LIBDIR}")
+        set(_MSVC_LIBDIR_FOUND 0)
+        file(TO_CMAKE_PATH "$ENV{PATH}" _env_path)
+        foreach(_dir ${_env_path})
+          if("${_dir}" STREQUAL ${_MSVC_LIBDIR})
+            set(_MSVC_LIBDIR_FOUND 1)
+          endif()
+        endforeach()
+        if(NOT _MSVC_LIBDIR_FOUND)
+          file(TO_NATIVE_PATH "${_MSVC_LIBDIR}" _MSVC_LIBDIR)
+          set(ENV{PATH} "$ENV{PATH};${_MSVC_LIBDIR}")
         endif()
-      endforeach()
-      if(NOT _MSVC_LIBDIR_FOUND)
-        file(TO_NATIVE_PATH "${_MSVC_LIBDIR}" _MSVC_LIBDIR)
-        set(ENV{PATH} "$ENV{PATH};${_MSVC_LIBDIR}")
+      endif()
+
+      set(_IPOPT_LIB ${IPOPT_IPOPT_LIBRARY_RELEASE})
+
+      execute_process(COMMAND ${LIB_EXECUTABLE} /list "${_IPOPT_LIB}"
+                      OUTPUT_VARIABLE _lib_output)
+
+      set(ENV{PATH} "${_path}")
+      unset(_path)
+
+      if(NOT "${_lib_output}" MATCHES "libifcoremd.dll")
+        get_filename_component(_IPOPT_IPOPT_LIBRARY_DIR "${_IPOPT_LIB}" DIRECTORY)
+
+        foreach(_lib ifconsol
+                     libifcoremd
+                     libifportmd
+                     libmmd
+                     libirc
+                     svml_dispmd)
+          string(TOUPPER "${_lib}" _LIB)
+          find_library(IPOPT_${_LIB}_LIBRARY_RELEASE ${_lib} ${_IPOPT_IPOPT_LIBRARY_DIR})
+          select_library_configurations(IPOPT_${_LIB})
+          if(NOT "${IPOPT_${_LIB}_LIBRARY}" MATCHES "NOTFOUND$")
+            list(APPEND IPOPT_LIBRARIES ${IPOPT_${_LIB}_LIBRARY})
+          endif()
+        endforeach()
       endif()
     endif()
 
-    set(_IPOPT_LIB ${IPOPT_IPOPT_LIBRARY_RELEASE})
-
-    execute_process(COMMAND ${LIB_EXECUTABLE} /list "${_IPOPT_LIB}"
-                    OUTPUT_VARIABLE _lib_output)
-
-    set(ENV{PATH} "${_path}")
-    unset(_path)
-
-    if(NOT "${_lib_output}" MATCHES "libifcoremd.dll")
-      get_filename_component(_IPOPT_IPOPT_LIBRARY_DIR "${_IPOPT_LIB}" DIRECTORY)
-
-      foreach(_lib ifconsol
-                   libifcoremd
-                   libifportmd
-                   libmmd
-                   libirc
-                   svml_dispmd)
-        string(TOUPPER "${_lib}" _LIB)
-        find_library(IPOPT_${_LIB}_LIBRARY_RELEASE ${_lib} ${_IPOPT_IPOPT_LIBRARY_DIR})
-        select_library_configurations(IPOPT_${_LIB})
-        if(NOT "${IPOPT_${_LIB}_LIBRARY}" MATCHES "NOTFOUND$")
-          list(APPEND IPOPT_LIBRARIES ${IPOPT_${_LIB}_LIBRARY})
-        endif()
-      endforeach()
+    set(IPOPT_DEFINITIONS "")
+    if(MSVC)
+      set(IPOPT_LINK_FLAGS "/NODEFAULTLIB:libcmt.lib;libcmtd.lib")
+    else()
+      set(IPOPT_LINK_FLAGS "")
     endif()
-  endif()
-
-  set(IPOPT_DEFINITIONS "")
-  if(MSVC)
-    set(IPOPT_LINK_FLAGS "/NODEFAULTLIB:libcmt.lib;libcmtd.lib")
-  else()
-    set(IPOPT_LINK_FLAGS "")
   endif()
 
 endif()
