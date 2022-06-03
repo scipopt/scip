@@ -83,6 +83,21 @@
 
 #define NUMSTOP 9007199254740992.0
 
+/** return TRUE if conflict analysis is applicable; In case the function return FALSE there is no need to initialize the
+ *  conflict analysis since it will not be applied
+ */
+SCIP_Bool SCIPconflictApplicable(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+
+   /* check, if resolution or propagation conflict analysis is enabled */
+   if( !set->conf_enable || !( set->conf_useprop || set->conf_usegeneralres ) )
+      return FALSE;
+
+   return TRUE;
+}
+
 /** returns the current number of conflict sets in the conflict set storage */
 int SCIPconflictGetNConflicts(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */

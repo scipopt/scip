@@ -347,10 +347,8 @@ void SCIPconflicthdlrEnableOrDisableClocks(
    SCIP_Bool             enable              /**< should the clocks of the conflict handler be enabled? */
    );
 
-/** return TRUE if conflict analysis is applicable; In case the function return FALSE there is no need to initialize the
- *  conflict analysis since it will not be applied
- */
-SCIP_Bool SCIPconflictApplicable(
+/** return TRUE if conflict graph analysis is applicable */
+SCIP_Bool SCIPconflictGraphApplicable(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 

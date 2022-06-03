@@ -1545,10 +1545,8 @@ SCIP_Real SCIPconflicthdlrGetTime(
    return SCIPclockGetTime(conflicthdlr->conflicttime);
 }
 
-/** return TRUE if conflict analysis is applicable; In case the function return FALSE there is no need to initialize the
- *  conflict analysis since it will not be applied
- */
-SCIP_Bool SCIPconflictApplicable(
+/** return TRUE if conflict graph analysis is applicable */
+SCIP_Bool SCIPconflictGraphApplicable(
    SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
@@ -5461,7 +5459,7 @@ SCIP_RETCODE SCIPconflictAnalyze(
       *success = FALSE;
 
    /* check if the conflict analysis is applicable */
-   if( !SCIPconflictApplicable(set) )
+   if( !SCIPconflictGraphApplicable(set) )
       return SCIP_OKAY;
 
    /* check, if the conflict set will get too large with high probability */

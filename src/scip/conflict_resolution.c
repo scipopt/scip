@@ -49,6 +49,7 @@
 #include "scip/pub_var.h"
 #include "scip/scip_conflict.h"
 #include "scip/scip_cons.h"
+#include "scip/scip_prob.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_sol.h"
 #include "scip/scip_var.h"
@@ -183,38 +184,38 @@ void resolutionSetClear(
 }
 
 /** weaken variables in the reason */
-static
-SCIP_RETCODE weakenVarReason(
-   SCIP_RESOLUTIONSET*   resolutionset,      /**< resolution set */
-   SCIP_SET*             set,
-   SCIP_VAR*             var,
-   int                   pos
-   )
-{
-   assert(resolutionset != NULL);
-   assert(var != NULL);
-   assert(pos >= 0 && pos < resolutionset->nnz);
+// static
+// SCIP_RETCODE weakenVarReason(
+//    SCIP_RESOLUTIONSET*   resolutionset,      /**< resolution set */
+//    SCIP_SET*             set,
+//    SCIP_VAR*             var,
+//    int                   pos
+//    )
+// {
+//    assert(resolutionset != NULL);
+//    assert(var != NULL);
+//    assert(pos >= 0 && pos < resolutionset->nnz);
 
-   /* weaken with upper bound */
-   if( SCIPsetIsGT(set, resolutionset->vals[pos], 0.0) )
-   {
-      resolutionset->lhs -= resolutionset->vals[pos] * SCIPvarGetUbGlobal(var);
-   }
-   /* weaken with lower bound */
-   /* @todo check this */
-   else
-   {
-      assert( SCIPsetIsLT(set, resolutionset->vals[pos], 0.0) );
-      resolutionset->lhs -= resolutionset->vals[pos] * SCIPvarGetLbGlobal(var);
-   }
+//    /* weaken with upper bound */
+//    if( SCIPsetIsGT(set, resolutionset->vals[pos], 0.0) )
+//    {
+//       resolutionset->lhs -= resolutionset->vals[pos] * SCIPvarGetUbGlobal(var);
+//    }
+//    /* weaken with lower bound */
+//    /* @todo check this */
+//    else
+//    {
+//       assert( SCIPsetIsLT(set, resolutionset->vals[pos], 0.0) );
+//       resolutionset->lhs -= resolutionset->vals[pos] * SCIPvarGetLbGlobal(var);
+//    }
 
-   --resolutionset->nnz;
+//    --resolutionset->nnz;
 
-   resolutionset->vals[pos] = resolutionset->vals[resolutionset->nnz];
-   resolutionset->inds[pos] = resolutionset->inds[resolutionset->nnz];
+//    resolutionset->vals[pos] = resolutionset->vals[resolutionset->nnz];
+//    resolutionset->inds[pos] = resolutionset->inds[resolutionset->nnz];
 
-   return SCIP_OKAY;
-}
+//    return SCIP_OKAY;
+// }
 
 /* Removes a variable with zero coefficient in the resolutionset */
 static
@@ -232,17 +233,6 @@ void resolutionsetRemoveZeroVar(
    --resolutionset->nnz;
    resolutionset->vals[pos] = resolutionset->vals[resolutionset->nnz];
    resolutionset->inds[pos] = resolutionset->inds[resolutionset->nnz];
-}
-
-/** return the indices of variables in the resolutionset */
-static
-int* resolutionsetGetInds(
-   SCIP_RESOLUTIONSET*   resolutionset       /**< resolution set */
-   )
-{
-   assert(resolutionset != NULL);
-
-   return resolutionset->inds;
 }
 
 /** return the values of variable coefficients in the resolutionset */
@@ -319,7 +309,7 @@ SCIP_Real getSlack(
    QUAD_ASSIGN(slack, 0.0);
 
    SCIPsetDebugMsg(set, "resolution set with LHS: %f \n", resolutionset->lhs);
-   SCIPsetDebugMsg(set, "resolution set with orig LHS: %f, and orig RHS: %f \n", resolutionset->origlhs,resolutionset->origrhs);
+   SCIPsetDebugMsg(set, "resolution set with orig LHS: %f, and orig RHS: %f \n", resolutionsetGetOrigLhs(resolutionset),resolutionsetGetOrigRhs(resolutionset));
 
    for( i = 0; i < resolutionsetGetNNzs(resolutionset); i++ )
    {
@@ -395,16 +385,22 @@ SCIP_RETCODE createAndAddResolutionCons(
 {
 
    SCIP_VAR** vars;
-   vars = SCIPprobGetVars(transprob);
-   assert(vars != NULL);
-
-   /* @todo */
    SCIP_VAR** consvars;
+   SCIP_CONS* cons;
+   SCIP_CONS* upgdcons;
+
+   char consname[SCIP_MAXSTRLEN];
+
    SCIP_Real* vals;
    SCIP_Real lhs;
    int i;
 
-   vals = resolutionset->vals;
+   vars = SCIPprobGetVars(transprob);
+   assert(vars != NULL);
+
+
+
+   vals = resolutionsetGetVals(resolutionset);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &consvars, resolutionsetGetNNzs(resolutionset)) );
 
@@ -415,10 +411,6 @@ SCIP_RETCODE createAndAddResolutionCons(
       consvars[i] = vars[resolutionset->inds[i]];
    }
 
-   SCIP_CONS* cons;
-   SCIP_CONS* upgdcons;
-
-   char consname[SCIP_MAXSTRLEN];
 
 
    /* create a constraint out of the conflict set */
@@ -462,39 +454,30 @@ SCIP_RETCODE SCIPconflictFlushResolutionSets(
    SCIP_RESOLUTIONSET*   resolutionset      /**< resolution set to add to the tree */
    )
 {
+
+   int focusdepth;
+   int currentdepth;
+   int maxsize;
+
    assert(conflict != NULL);
    assert(set != NULL);
    assert(stat != NULL);
    assert(transprob != NULL);
    assert(tree != NULL);
 
-      int focusdepth;
-#ifndef NDEBUG
-      int currentdepth;
-#endif
-      int cutoffdepth;
-      int repropdepth;
-      int maxconflictsets;
-      int maxsize;
-      int i;
 
-      /* calculate the maximal number of conflict sets to accept, and the maximal size of each accepted conflict set */
-      maxconflictsets = (set->conf_maxconss == -1 ? INT_MAX : set->conf_maxconss);
-      maxsize = conflictCalcMaxsize(set, transprob);
+   focusdepth = SCIPtreeGetFocusDepth(tree);
+   currentdepth = SCIPtreeGetCurrentDepth(tree);
+   assert(focusdepth <= currentdepth);
+   assert(currentdepth == tree->pathlen-1);
 
-      focusdepth = SCIPtreeGetFocusDepth(tree);
-#ifndef NDEBUG
-      currentdepth = SCIPtreeGetCurrentDepth(tree);
-      assert(focusdepth <= currentdepth);
-      assert(currentdepth == tree->pathlen-1);
-#endif
+   /* calculate the maximal size of each accepted conflict set */
+   maxsize = conflictCalcMaxsize(set, transprob);
 
-      SCIPsetDebugMsg(set, "flushing %d resolution sets at focus depth %d (maxsize: %d)\n",
-         1, focusdepth, maxsize);
+   SCIPsetDebugMsg(set, "flushing %d resolution sets at focus depth %d (maxsize: %d)\n",
+      1, focusdepth, maxsize);
 
-   /* insert the conflict sets at the corresponding nodes */
-   cutoffdepth = INT_MAX;
-   repropdepth = INT_MAX;
+   /* @todo insert the conflict sets at the corresponding nodes */
 
    /* @todo add a check for the number of resolution sets */
    /* @todo loop over all resolution sets */
@@ -513,7 +496,6 @@ SCIP_RETCODE SCIPconflictFlushResolutionSets(
          focusdepth, resolutionset->validdepth);
 
       SCIP_CALL( SCIPnodeCutoff(tree->path[resolutionset->validdepth], set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
-      cutoffdepth = resolutionset->validdepth;
       return SCIP_OKAY;
    }
    /* if the conflict set is too long, use the conflict set only if it decreases the repropagation depth */
@@ -699,11 +681,11 @@ SCIP_RETCODE resolveWithReason(
    }
    conflictresolutionset->lhs = fabs(coefreas) * conflictresolutionset->lhs + fabs(coefconf) * reasonresolutionset->lhs;
 
-   // for( i = 0; i < conflictresolutionset->nnz; i++ )
-   // {
-   //    if (SCIPsetIsZero(set, conflictresolutionset->vals[i] ))
-   //       resolutionsetRemoveZeroVar(conflictresolutionset, set, i);
-   // }
+   for( i = 0; i < conflictresolutionset->nnz; i++ )
+   {
+      if (SCIPsetIsZero(set, conflictresolutionset->vals[i] ))
+         resolutionsetRemoveZeroVar(conflictresolutionset, set, i);
+   }
 
    SCIPsetDebugMsg(set, "Nonzeros in resolved constraint: %d \n", conflictresolutionset->nnz);
 
@@ -1058,6 +1040,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
       (*nconss)++;
       (*nconfvars) = resolutionsetGetNNzs(conflictresolutionset);
 
+      resolutionSetClear(conflictresolutionset);
       SCIPresolutionsetFree(&conflictresolutionset, blkmem);
       SCIPresolutionsetFree(&reasonresolutionset, blkmem);
       return SCIP_OKAY;
