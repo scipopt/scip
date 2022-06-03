@@ -331,7 +331,6 @@ SCIP_RETCODE SCIPcreateDiveset(
    SCIP_Bool             specificsos1score,  /**< should SOS1 variables be scored by the diving heuristics specific score function;
                                               *   otherwise use the score function of the SOS1 constraint handler */
    SCIP_DECL_DIVESETGETSCORE((*divesetgetscore)), /**< method for candidate score and rounding direction */
-   SCIP_DECL_DIVESETSOLVEMIP((*divesetsolvemip)),
    SCIP_DECL_DIVESETAVAILABLE((*divesetavailable)) /**< callback to check availability of dive set at the current stage, or NULL if always available */
    )
 {
@@ -342,7 +341,7 @@ SCIP_RETCODE SCIPcreateDiveset(
    SCIP_CALL( SCIPdivesetCreate(&divesetptr, heur, name, scip->set, scip->messagehdlr, scip->mem->setmem,
          minreldepth, maxreldepth, maxlpiterquot, maxdiveubquot, maxdiveavgquot, maxdiveubquotnosol,
          maxdiveavgquotnosol, lpresolvedomchgquot, lpsolvefreq, maxlpiterofs, initialseed, backtrack,
-         onlylpbranchcands, ispublic, specificsos1score, divesetgetscore, divesetsolvemip, divesetavailable) );
+         onlylpbranchcands, ispublic, specificsos1score, divesetgetscore, divesetavailable) );
 
    assert(divesetptr != NULL);
    if( diveset != NULL )

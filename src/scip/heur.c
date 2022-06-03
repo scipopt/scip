@@ -278,7 +278,6 @@ SCIP_RETCODE SCIPdivesetCreate(
    SCIP_Bool             ispublic,           /**< is this dive set publicly available (ie., can be used by other primal heuristics?) */
    SCIP_DIVETYPE         divetypemask,       /**< bit mask that represents the supported dive types by this dive set */
    SCIP_DECL_DIVESETGETSCORE((*divesetgetscore)), /**< method for candidate score and rounding direction */
-   SCIP_DECL_DIVESETSOLVEMIP((*divesetsolvemip)),
    SCIP_DECL_DIVESETAVAILABLE((*divesetavailable)) /**< callback to check availability of dive set at the current stage, or NULL if always available */
    )
 {
@@ -312,7 +311,6 @@ SCIP_RETCODE SCIPdivesetCreate(
    /* scoring callbacks */
    diveset->divesetgetscore = divesetgetscore;
    diveset->divesetavailable = divesetavailable;
-   diveset->divesetsolvemip = divesetsolvemip;
 
    SCIP_CALL( heurAddDiveset(heur, diveset) );
    diveset->sol = NULL;
@@ -866,25 +864,7 @@ SCIP_RETCODE SCIPdivesetIsAvailable(
    return SCIP_OKAY;
 }
 
-/** calls the callback whether a MIP should be solved */
-SCIP_RETCODE SCIPdivesetSolveMIP(
-   SCIP_DIVESET*         diveset,            /**< diving heuristic settings */
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool*            solvemip            /**< pointer to store if a MIP should be solved */
-   )
-{
-   assert(scip != NULL);
-   assert(diveset != NULL);
-   assert(solvemip != NULL);
 
-   *solvemip = FALSE;
-   if( diveset->divesetsolvemip != NULL )
-   {
-      SCIP_CALL( diveset->divesetsolvemip(scip, diveset, solvemip) );
-   }
-
-   return SCIP_OKAY;
-}
 
 /** copies the given primal heuristic to a new scip */
 SCIP_RETCODE SCIPheurCopyInclude(

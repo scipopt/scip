@@ -66,7 +66,6 @@ SCIP_RETCODE SCIPdivesetCreate(
    SCIP_Bool             ispublic,           /**< is this dive set publicly available (ie., can be used by other primal heuristics?) */
    SCIP_DIVETYPE         divetypemask,       /**< bit mask that represents the supported dive types by this dive set */
    SCIP_DECL_DIVESETGETSCORE((*divesetgetscore)), /**< method for candidate score and rounding direction */
-   SCIP_DECL_DIVESETSOLVEMIP((*divesetsolvemip)),
    SCIP_DECL_DIVESETAVAILABLE((*divesetavailable)) /**< callback to check availability of dive set at the current stage, or NULL if always available */
    );
 
@@ -108,13 +107,6 @@ SCIP_RETCODE SCIPdivesetIsAvailable(
    SCIP_SET*             set,                /**< SCIP settings */
    SCIP_Bool*            available           /**< pointer to store if the diving can run at the current solving stage */
    );
-
-/** calls the callback whether a MIP should be solved */
-SCIP_RETCODE SCIPdivesetSolveMIP(
-   SCIP_DIVESET*         diveset,            /**< diving heuristic settings */
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool*            solvemip            /**< pointer to store if a MIP should be solved */
-);
 
 /** update diveset LP statistics, should be called after every LP solved by this diving heuristic */
 void SCIPdivesetUpdateLPStats(

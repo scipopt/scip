@@ -1032,7 +1032,6 @@ SCIP_DECL_EVENTEXEC(eventExecDistribution)
  */
 
 #define divesetAvailableDistributiondiving NULL
-#define divesetSolveMipDistributiondiving NULL
 
 /** creates the distributiondiving heuristic and includes it in SCIP */
 SCIP_RETCODE SCIPincludeHeurDistributiondiving(
@@ -1087,7 +1086,7 @@ SCIP_RETCODE SCIPincludeHeurDistributiondiving(
          DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL,
          DEFAULT_MAXDIVEAVGQUOTNOSOL, DEFAULT_LPRESOLVEDOMCHGQUOT, DEFAULT_LPSOLVEFREQ,
          DEFAULT_MAXLPITEROFS, DEFAULT_RANDSEED, DEFAULT_BACKTRACK, DEFAULT_ONLYLPBRANCHCANDS, DIVESET_ISPUBLIC, DIVESET_DIVETYPES,
-         divesetGetScoreDistributiondiving, divesetSolveMipDistributiondiving, divesetAvailableDistributiondiving) );
+         divesetGetScoreDistributiondiving, divesetAvailableDistributiondiving) );
 
    SCIP_CALL( SCIPaddCharParam(scip, "heuristics/" HEUR_NAME "/scoreparam",
          "the score;largest 'd'ifference, 'l'owest cumulative probability,'h'ighest c.p., 'v'otes lowest c.p., votes highest c.p.('w'), 'r'evolving",

@@ -98,7 +98,7 @@
 #define DEFAULT_ROUNDINGFRAC        0.5 /**< default parameter setting for parameter roundingfrac */
 #define DEFAULT_MODE                  3 /**< default parameter setting for parameter mode */
 #define DEFAULT_SEMICONTSCOREMODE     0 /**< default parameter setting for parameter semicontscoremode */
-#define DEFAULT_SOLVEMIP          FALSE /**< default parameter setting for parameter solvemip */
+//#define DEFAULT_SOLVEMIP          FALSE /**< default parameter setting for parameter solvemip */
 #define DEFAULT_VARBOUNDS          TRUE /**< default parameter setting for parameter varbounds */
 
 enum IndicatorDivingMode
@@ -142,7 +142,7 @@ struct SCIP_HeurData
    int                   semicontscoremode;  /**< which values of semi-continuous variables should get a high score? (0: low (default), 1: middle, 2: high) */
    int                   notfound;           /**< calls without found solution in succession */
    SCIP_Bool             dynamicfreq;        /**< should the frequency be adjusted dynamically? */
-   SCIP_Bool             solvemip;           /**< should a MIP be solved after all indicator variables are fixed? */
+//   SCIP_Bool             solvemip;           /**< should a MIP be solved after all indicator variables are fixed? */
    SCIP_Bool             varbounds;          /**< should varbound constraints be considered? */
    SCIP_Bool             gotoindconss;       /**< can we skip the candidate var until indicator conss handler determines the candidate var? */
    SCIP_Bool             containsviolindconss;/**< contains current solution violated indicator constraints? (only unbounded) */
@@ -1089,46 +1089,46 @@ SCIP_DECL_DIVESETAVAILABLE(divesetAvailableIndicatordiving)
 }
 
 
-static
-SCIP_DECL_DIVESETSOLVEMIP(divesetSolveMipIndicatordiving)
-{
-   /* input:
-    * - scip : SCIP main data structure
-    * - SCIP_DIVESET* diveset
-    * - solvemip : bool
-    */
-   SCIP_CONS** indicatorconss;
-   int nindconss;
-   SCIP_Bool existsoneindcons; /* exists exactly one violated but not fixed indicator constraint? */
-   int i;
-
-   assert(scip != NULL);
-
-   if( !diveset->heur->heurdata->solvemip || SCIPgetNIntVars(scip) == 0 )
-   {
-      *solvemip = FALSE;
-      return SCIP_OKAY;
-   }
-   existsoneindcons = FALSE;
-   *solvemip = FALSE;
-   indicatorconss = SCIPconshdlrGetConss(diveset->heur->heurdata->conshdlr[0]);
-   nindconss = SCIPconshdlrGetNConss(diveset->heur->heurdata->conshdlr[0]);
-   for( i = 0; i < nindconss; i++ )
-   {
-      if( isViolatedAndNotFixed(scip, diveset->heur->heurdata->sol, indicatorconss[i]) )
-      {
-         if( existsoneindcons )
-         {
-            assert(!*solvemip);
-            return SCIP_OKAY;
-         }
-         existsoneindcons = TRUE;
-      }
-   }
-   if( existsoneindcons )
-      *solvemip = TRUE;
-   return SCIP_OKAY;
-}
+//static
+//SCIP_DECL_DIVESETSOLVEMIP(divesetSolveMipIndicatordiving)
+//{
+//   /* input:
+//    * - scip : SCIP main data structure
+//    * - SCIP_DIVESET* diveset
+//    * - solvemip : bool
+//    */
+//   SCIP_CONS** indicatorconss;
+//   int nindconss;
+//   SCIP_Bool existsoneindcons; /* exists exactly one violated but not fixed indicator constraint? */
+//   int i;
+//
+//   assert(scip != NULL);
+//
+//   if( !diveset->heur->heurdata->solvemip || SCIPgetNIntVars(scip) == 0 )
+//   {
+//      *solvemip = FALSE;
+//      return SCIP_OKAY;
+//   }
+//   existsoneindcons = FALSE;
+//   *solvemip = FALSE;
+//   indicatorconss = SCIPconshdlrGetConss(diveset->heur->heurdata->conshdlr[0]);
+//   nindconss = SCIPconshdlrGetNConss(diveset->heur->heurdata->conshdlr[0]);
+//   for( i = 0; i < nindconss; i++ )
+//   {
+//      if( isViolatedAndNotFixed(scip, diveset->heur->heurdata->sol, indicatorconss[i]) )
+//      {
+//         if( existsoneindcons )
+//         {
+//            assert(!*solvemip);
+//            return SCIP_OKAY;
+//         }
+//         existsoneindcons = TRUE;
+//      }
+//   }
+//   if( existsoneindcons )
+//      *solvemip = TRUE;
+//   return SCIP_OKAY;
+//}
 
 /*
  * heuristic specific interface methods
@@ -1165,7 +1165,7 @@ SCIP_RETCODE SCIPincludeHeurIndicatordiving(
    SCIP_CALL( SCIPcreateDiveset(scip, NULL, heur, HEUR_NAME, DEFAULT_MINRELDEPTH, DEFAULT_MAXRELDEPTH, DEFAULT_MAXLPITERQUOT,
          DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL, DEFAULT_MAXDIVEAVGQUOTNOSOL, DEFAULT_LPRESOLVEDOMCHGQUOT,
          DEFAULT_LPSOLVEFREQ, DEFAULT_MAXLPITEROFS, DEFAULT_RANDSEED, DEFAULT_BACKTRACK, DEFAULT_ONLYLPBRANCHCANDS,
-         DIVESET_ISPUBLIC, DIVESET_DIVETYPES, divesetGetScoreIndicatordiving, divesetSolveMipIndicatordiving, divesetAvailableIndicatordiving) );
+         DIVESET_ISPUBLIC, DIVESET_DIVETYPES, divesetGetScoreIndicatordiving, divesetAvailableIndicatordiving) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/roundingfrac",
          "in fractional case all fractional below this value are rounded up",
@@ -1183,9 +1183,9 @@ SCIP_RETCODE SCIPincludeHeurIndicatordiving(
          "should the frequency be adjusted dynamically?",
          &heurdata->dynamicfreq, FALSE, FALSE, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/solvemip",
-         "should a MIP be solved after all indicator variables are fixed?",
-         &heurdata->solvemip, FALSE, DEFAULT_SOLVEMIP, NULL, NULL) );
+//   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/solvemip",
+//         "should a MIP be solved after all indicator variables are fixed?",
+//         &heurdata->solvemip, FALSE, DEFAULT_SOLVEMIP, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/varbounds",
          "should varbound constraints be considered?",

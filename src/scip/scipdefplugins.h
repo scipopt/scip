@@ -107,7 +107,6 @@
 #include "scip/heur_gins.h"
 #include "scip/heur_guideddiving.h"
 #include "scip/heur_indicator.h"
-#include "scip/heur_indicatordiving.h"
 #include "scip/heur_intdiving.h"
 #include "scip/heur_intshifting.h"
 #include "scip/heur_linesearchdiving.h"

@@ -264,7 +264,6 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreFracdiving)
 }
 
 #define divesetAvailableFracdiving NULL
-#define divesetSolveMipFracdiving NULL
 
 /*
  * heuristic specific interface methods
@@ -299,7 +298,7 @@ SCIP_RETCODE SCIPincludeHeurFracdiving(
          DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL, DEFAULT_MAXDIVEAVGQUOTNOSOL,
          DEFAULT_LPRESOLVEDOMCHGQUOT, DEFAULT_LPSOLVEFREQ, DEFAULT_MAXLPITEROFS, DEFAULT_RANDSEED,
          DEFAULT_BACKTRACK, DEFAULT_ONLYLPBRANCHCANDS,
-         DIVESET_ISPUBLIC, DIVESET_DIVETYPES, divesetGetScoreFracdiving, divesetSolveMipFracdiving, divesetAvailableFracdiving) );
+         DIVESET_ISPUBLIC, DIVESET_DIVETYPES, divesetGetScoreFracdiving, divesetAvailableFracdiving) );
 
    return SCIP_OKAY;
 }
