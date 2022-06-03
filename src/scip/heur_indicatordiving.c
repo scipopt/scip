@@ -98,7 +98,6 @@
 #define DEFAULT_ROUNDINGFRAC        0.5 /**< default parameter setting for parameter roundingfrac */
 #define DEFAULT_MODE                  3 /**< default parameter setting for parameter mode */
 #define DEFAULT_SEMICONTSCOREMODE     0 /**< default parameter setting for parameter semicontscoremode */
-//#define DEFAULT_SOLVEMIP          FALSE /**< default parameter setting for parameter solvemip */
 #define DEFAULT_VARBOUNDS          TRUE /**< default parameter setting for parameter varbounds */
 
 enum IndicatorDivingMode
@@ -142,7 +141,6 @@ struct SCIP_HeurData
    int                   semicontscoremode;  /**< which values of semi-continuous variables should get a high score? (0: low (default), 1: middle, 2: high) */
    int                   notfound;           /**< calls without found solution in succession */
    SCIP_Bool             dynamicfreq;        /**< should the frequency be adjusted dynamically? */
-//   SCIP_Bool             solvemip;           /**< should a MIP be solved after all indicator variables are fixed? */
    SCIP_Bool             varbounds;          /**< should varbound constraints be considered? */
    SCIP_Bool             gotoindconss;       /**< can we skip the candidate var until indicator conss handler determines the candidate var? */
    SCIP_Bool             containsviolindconss;/**< contains current solution violated indicator constraints? (only unbounded) */
@@ -451,7 +449,7 @@ SCIP_RETCODE varIsSemicontinuous(
       }
 
       /* the 'off' domain of a semicontinuous var should reduce to a single point and be different from the 'on' domain */
-      //TODO: this doesn't work because the ub0 is not detected. -> therefore ignore this and check it outside
+      /* TODO: this doesn't work because the ub0 is not detected. -> therefore ignore this and check it outside */
       if( (!SCIPisEQ(scip, lb0, lb1) || !SCIPisEQ(scip, ub0, ub1)) )
       {
          if( scvdata == NULL )
@@ -481,7 +479,7 @@ SCIP_RETCODE varIsSemicontinuous(
       ub1 = MIN(vubconstants[c] + vubcoefs[c], gub);
 
       /* the 'off' domain of a semicontinuous var should reduce to a single point and be different from the 'on' domain */
-      //TODO: indicator not considered
+      /* TODO: indicator not considered */
       if( (!SCIPisEQ(scip, lb0, lb1) || !SCIPisEQ(scip, ub0, ub1)) )
       {
          if( scvdata == NULL )
@@ -552,26 +550,6 @@ void getScoreOfFarkasDiving(
 
    /* larger score is better */
    *score = REALABS(obj) + SCIPrandomGetReal(randnumgen, MIN_RAND, MAX_RAND);
-
-   //TODO: implement scalescoring of farkasdiving if desired
-   //   if( heurdata->scalescore )
-   //   {
-   //      if( heurdata->scaletype == 'f' )
-   //      {
-   //         if( *roundup )
-   //            *score *= (1.0 - candsfrac);
-   //         else
-   //            *score *= candsfrac;
-   //      }
-   //      else
-   //      {
-   //         assert(heurdata->scaletype == 'i');
-   //         if( *roundup )
-   //            *score *= (SCIPceil(scip, candsol) - SCIPvarGetLbLocal(cand));
-   //         else
-   //            *score *= (SCIPvarGetUbLocal(cand) - SCIPfloor(scip, candsol));
-   //      }
-   //   }
 
    /* prefer decisions on binary variables */
    if( SCIPvarGetType(cand) != SCIP_VARTYPE_BINARY )
@@ -1088,48 +1066,6 @@ SCIP_DECL_DIVESETAVAILABLE(divesetAvailableIndicatordiving)
    return SCIP_OKAY;
 }
 
-
-//static
-//SCIP_DECL_DIVESETSOLVEMIP(divesetSolveMipIndicatordiving)
-//{
-//   /* input:
-//    * - scip : SCIP main data structure
-//    * - SCIP_DIVESET* diveset
-//    * - solvemip : bool
-//    */
-//   SCIP_CONS** indicatorconss;
-//   int nindconss;
-//   SCIP_Bool existsoneindcons; /* exists exactly one violated but not fixed indicator constraint? */
-//   int i;
-//
-//   assert(scip != NULL);
-//
-//   if( !diveset->heur->heurdata->solvemip || SCIPgetNIntVars(scip) == 0 )
-//   {
-//      *solvemip = FALSE;
-//      return SCIP_OKAY;
-//   }
-//   existsoneindcons = FALSE;
-//   *solvemip = FALSE;
-//   indicatorconss = SCIPconshdlrGetConss(diveset->heur->heurdata->conshdlr[0]);
-//   nindconss = SCIPconshdlrGetNConss(diveset->heur->heurdata->conshdlr[0]);
-//   for( i = 0; i < nindconss; i++ )
-//   {
-//      if( isViolatedAndNotFixed(scip, diveset->heur->heurdata->sol, indicatorconss[i]) )
-//      {
-//         if( existsoneindcons )
-//         {
-//            assert(!*solvemip);
-//            return SCIP_OKAY;
-//         }
-//         existsoneindcons = TRUE;
-//      }
-//   }
-//   if( existsoneindcons )
-//      *solvemip = TRUE;
-//   return SCIP_OKAY;
-//}
-
 /*
  * heuristic specific interface methods
  */
@@ -1182,10 +1118,6 @@ SCIP_RETCODE SCIPincludeHeurIndicatordiving(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/dynamicfreq",
          "should the frequency be adjusted dynamically?",
          &heurdata->dynamicfreq, FALSE, FALSE, NULL, NULL) );
-
-//   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/solvemip",
-//         "should a MIP be solved after all indicator variables are fixed?",
-//         &heurdata->solvemip, FALSE, DEFAULT_SOLVEMIP, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/varbounds",
          "should varbound constraints be considered?",
