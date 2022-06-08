@@ -22,6 +22,7 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+// #define SCIP_DEBUG
 
 #include "lpi/lpi.h"
 #include "scip/conflict_resolution.h"
@@ -70,6 +71,100 @@
 #else
 #include <strings.h> /*lint --e{766}*/
 #endif
+
+/** returns next conflict analysis candidate from the candidate queue without removing it */
+static
+SCIP_BDCHGINFO* conflictFirstCand(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   )
+{
+   SCIP_BDCHGINFO* bdchginfo;
+
+   assert(conflict != NULL);
+
+   if( SCIPpqueueNElems(conflict->resforcedbdchgqueue) > 0 )
+   {
+      /* get next potential candidate */
+      bdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueFirst(conflict->resforcedbdchgqueue));
+
+      /* check if this candidate is valid */
+      if( bdchginfoIsInvalid(conflict, bdchginfo) )
+      {
+         SCIPdebugMessage("bound change info [%d:<%s> %s %g] is invaild -> pop it from the force queue\n", SCIPbdchginfoGetDepth(bdchginfo),
+            SCIPvarGetName(SCIPbdchginfoGetVar(bdchginfo)),
+            SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
+            SCIPbdchginfoGetNewbound(bdchginfo));
+
+         /* pop the invalid bound change info from the queue */
+         (void)(SCIPpqueueRemove(conflict->resforcedbdchgqueue));
+
+         /* call method recursively to get next conflict analysis candidate */
+         bdchginfo = conflictFirstCand(conflict);
+      }
+   }
+   else
+   {
+      bdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueFirst(conflict->resbdchgqueue));
+
+      /* check if this candidate is valid */
+      if( bdchginfo != NULL && bdchginfoIsInvalid(conflict, bdchginfo) )
+      {
+         SCIPdebugMessage("bound change info [%d:<%s> %s %g] is invaild -> pop it from the queue\n", SCIPbdchginfoGetDepth(bdchginfo),
+            SCIPvarGetName(SCIPbdchginfoGetVar(bdchginfo)),
+            SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
+            SCIPbdchginfoGetNewbound(bdchginfo));
+
+         /* pop the invalid bound change info from the queue */
+         (void)(SCIPpqueueRemove(conflict->resbdchgqueue));
+         /* call method recursively to get next conflict analysis candidate */
+         bdchginfo = conflictFirstCand(conflict);
+      }
+   }
+   assert(bdchginfo == NULL || !SCIPbdchginfoIsRedundant(bdchginfo));
+
+   return bdchginfo;
+}
+
+/** removes and returns next conflict analysis candidate from the candidate queue */
+static
+SCIP_BDCHGINFO* conflictRemoveCand(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   )
+{
+   SCIP_BDCHGINFO* bdchginfo;
+   SCIP_VAR* var;
+
+   assert(conflict != NULL);
+
+   if( SCIPpqueueNElems(conflict->resforcedbdchgqueue) > 0 )
+      bdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueRemove(conflict->resforcedbdchgqueue));
+   else
+      bdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueRemove(conflict->resbdchgqueue));
+
+   assert(!SCIPbdchginfoIsRedundant(bdchginfo));
+
+   /* if we have a candidate this one should be valid for the current conflict analysis */
+   assert(!bdchginfoIsInvalid(conflict, bdchginfo));
+
+   /* mark the bound change to be no longer in the conflict (it will be either added again to the conflict set or
+    * replaced by resolving, which might add a weaker change on the same bound to the queue)
+    */
+   var = SCIPbdchginfoGetVar(bdchginfo);
+   if( SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER )
+   {
+      var->conflictlbcount = 0;
+      var->conflictrelaxedlb = SCIP_REAL_MIN;
+   }
+   else
+   {
+      assert(SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_UPPER);
+      var->conflictubcount = 0;
+      var->conflictrelaxedub = SCIP_REAL_MAX;
+   }
+
+   return bdchginfo;
+}
+
 
 /** return TRUE if generalized resolution conflict analysis is applicable */
 SCIP_Bool SCIPconflictResolutionApplicable(
@@ -147,6 +242,7 @@ SCIP_RETCODE SCIPconflictInitResolutionset(
    assert(blkmem != NULL);
 
    SCIP_CALL( resolutionsetCreate(&conflict->resolutionset, blkmem) );
+   SCIP_CALL( resolutionsetCreate(&conflict->reasonset, blkmem) );
 
    return SCIP_OKAY;
 }
@@ -184,38 +280,38 @@ void resolutionSetClear(
 }
 
 /** weaken variables in the reason */
-// static
-// SCIP_RETCODE weakenVarReason(
-//    SCIP_RESOLUTIONSET*   resolutionset,      /**< resolution set */
-//    SCIP_SET*             set,
-//    SCIP_VAR*             var,
-//    int                   pos
-//    )
-// {
-//    assert(resolutionset != NULL);
-//    assert(var != NULL);
-//    assert(pos >= 0 && pos < resolutionset->nnz);
+static
+SCIP_RETCODE weakenVarReason(
+   SCIP_RESOLUTIONSET*   resolutionset,      /**< resolution set */
+   SCIP_SET*             set,
+   SCIP_VAR*             var,
+   int                   pos
+   )
+{
+   assert(resolutionset != NULL);
+   assert(var != NULL);
+   assert(pos >= 0 && pos < resolutionset->nnz);
 
-//    /* weaken with upper bound */
-//    if( SCIPsetIsGT(set, resolutionset->vals[pos], 0.0) )
-//    {
-//       resolutionset->lhs -= resolutionset->vals[pos] * SCIPvarGetUbGlobal(var);
-//    }
-//    /* weaken with lower bound */
-//    /* @todo check this */
-//    else
-//    {
-//       assert( SCIPsetIsLT(set, resolutionset->vals[pos], 0.0) );
-//       resolutionset->lhs -= resolutionset->vals[pos] * SCIPvarGetLbGlobal(var);
-//    }
+   /* weaken with upper bound */
+   if( SCIPsetIsGT(set, resolutionset->vals[pos], 0.0) )
+   {
+      resolutionset->lhs -= resolutionset->vals[pos] * SCIPvarGetUbGlobal(var);
+   }
+   /* weaken with lower bound */
+   /* @todo check this */
+   else
+   {
+      assert( SCIPsetIsLT(set, resolutionset->vals[pos], 0.0) );
+      resolutionset->lhs -= resolutionset->vals[pos] * SCIPvarGetLbGlobal(var);
+   }
 
-//    --resolutionset->nnz;
+   --resolutionset->nnz;
 
-//    resolutionset->vals[pos] = resolutionset->vals[resolutionset->nnz];
-//    resolutionset->inds[pos] = resolutionset->inds[resolutionset->nnz];
+   resolutionset->vals[pos] = resolutionset->vals[resolutionset->nnz];
+   resolutionset->inds[pos] = resolutionset->inds[resolutionset->nnz];
 
-//    return SCIP_OKAY;
-// }
+   return SCIP_OKAY;
+}
 
 /* Removes a variable with zero coefficient in the resolutionset */
 static
@@ -398,7 +494,7 @@ SCIP_RETCODE createAndAddResolutionCons(
    vars = SCIPprobGetVars(transprob);
    assert(vars != NULL);
 
-
+   /* TODO: replace resolutionset by conflict->resolutionset */
 
    vals = resolutionsetGetVals(resolutionset);
 
@@ -464,6 +560,7 @@ SCIP_RETCODE SCIPconflictFlushResolutionSets(
    assert(transprob != NULL);
    assert(tree != NULL);
 
+   /* TODO: replace resolutionset by conflict->resolutionset */
 
    focusdepth = SCIPtreeGetFocusDepth(tree);
    assert(focusdepth <= SCIPtreeGetCurrentDepth(tree));
@@ -497,11 +594,11 @@ SCIP_RETCODE SCIPconflictFlushResolutionSets(
       return SCIP_OKAY;
    }
    /* if the conflict set is too long, use the conflict set only if it decreases the repropagation depth */
-   if( resolutionsetGetNNzs(resolutionset) > maxsize )
-   {
-      SCIPsetDebugMsg(set, " -> conflict set is too long: %d > %d nonzeros\n", resolutionsetGetNNzs(resolutionset), maxsize);
-      /* @todo keep constraint for repropagation */
-   }
+   // if( resolutionsetGetNNzs(resolutionset) > maxsize )
+   // {
+   //    SCIPsetDebugMsg(set, " -> conflict set is too long: %d > %d nonzeros\n", resolutionsetGetNNzs(resolutionset), maxsize);
+   //    /* @todo keep constraint for repropagation */
+   // }
    else
    {
       SCIP_Bool success;
@@ -1118,6 +1215,9 @@ SCIP_RETCODE SCIPconflictAnalyzeResolution(
    conflict->nresconfvariables += nconfvars;
    if( success != NULL )
       *success = (nconss > 0);
+
+   SCIPpqueueClear(conflict->resbdchgqueue);
+   SCIPpqueueClear(conflict->resforcedbdchgqueue);
 
    /* stop timing */
    SCIPclockStop(conflict->resanalyzetime, set);

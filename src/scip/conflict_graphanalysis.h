@@ -519,6 +519,11 @@ void conflictsetPrint(
    SCIP_CONFLICTSET*     conflictset         /**< conflict set */
    );
 
+SCIP_Bool bdchginfoIsInvalid(
+   SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
+   SCIP_BDCHGINFO*       bdchginfo           /**< bound change information */
+   );
+
 #ifdef __cplusplus
 }
 #endif

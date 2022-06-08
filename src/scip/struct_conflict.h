@@ -187,9 +187,12 @@ struct SCIP_Conflict
    SCIP_CLOCK*           pseudoanalyzetime;  /**< time used for pseudo solution conflict analysis */
    SCIP_PQUEUE*          bdchgqueue;         /**< unprocessed conflict bound changes */
    SCIP_PQUEUE*          forcedbdchgqueue;   /**< unprocessed conflict bound changes that must be resolved */
+   SCIP_PQUEUE*          resbdchgqueue;      /**< unprocessed conflict bound changes */
+   SCIP_PQUEUE*          resforcedbdchgqueue;/**< unprocessed conflict bound changes that must be resolved */
    SCIP_PROOFSET*        proofset;           /**< proof sets found at the current node */
    SCIP_PROOFSET**       proofsets;          /**< proof sets found at the current node */
    SCIP_RESOLUTIONSET*   resolutionset;      /**< resolution sets for the current conflict */
+   SCIP_RESOLUTIONSET*   reasonset;          /**< resolution sets for the current reason */
    SCIP_RESOLUTIONSET**  resolutionsets;     /**< resolution sets found at the current node */
    SCIP_CONFLICTSET*     conflictset;        /**< bound changes resembling the current conflict set */
    SCIP_CONFLICTSET**    conflictsets;       /**< conflict sets found at the current node */

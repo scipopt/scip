@@ -569,11 +569,6 @@ SCIP_RETCODE conflictAnalyzeResolution(
    int*                  nconfvars           /**< pointer to store the number of variables in generated conflict constraints */
    );
 
-/** returns next conflict analysis candidate from the candidate queue without removing it */
-SCIP_BDCHGINFO* conflictFirstCand(
-   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
-   );
-
 /** calculates a Farkas proof from the current dual LP solution */
 SCIP_RETCODE SCIPgetFarkasProof(
    SCIP_SET*             set,                /**< global SCIP settings */

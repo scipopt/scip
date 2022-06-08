@@ -2394,10 +2394,12 @@ SCIP_RETCODE conflictQueueBound(
          && !isBoundchgUseless(set, bdchginfo) )
       {
          SCIP_CALL( SCIPpqueueInsert(conflict->bdchgqueue, (void*)bdchginfo) );
+         SCIP_CALL( SCIPpqueueInsert(conflict->resbdchgqueue, (void*)bdchginfo) );
       }
       else
       {
          SCIP_CALL( SCIPpqueueInsert(conflict->forcedbdchgqueue, (void*)bdchginfo) );
+         SCIP_CALL( SCIPpqueueInsert(conflict->resforcedbdchgqueue, (void*)bdchginfo) );
       }
 
 #ifdef SCIP_CONFGRAPH
@@ -2644,7 +2646,7 @@ SCIP_RETCODE SCIPconflictAnalyzeRemainingBdchgs(
  *       conflict->count); however the (x >= 3) only has be explained if conflictlb matches that one; that is
  *       (var->conflictlb == bdchginfo->newbound); otherwise it redundant/invalid.
  */
- static
+
 SCIP_Bool bdchginfoIsInvalid(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    SCIP_BDCHGINFO*       bdchginfo           /**< bound change information */
@@ -2901,6 +2903,7 @@ SCIP_BDCHGINFO* conflictRemoveCand(
 }
 
 /** returns next conflict analysis candidate from the candidate queue without removing it */
+static
 SCIP_BDCHGINFO* conflictFirstCand(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    )
@@ -2911,7 +2914,7 @@ SCIP_BDCHGINFO* conflictFirstCand(
 
    if( SCIPpqueueNElems(conflict->forcedbdchgqueue) > 0 )
    {
-      /* get next potetioal candidate */
+      /* get next potential candidate */
       bdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueFirst(conflict->forcedbdchgqueue));
 
       /* check if this candidate is valid */
@@ -3296,6 +3299,12 @@ SCIP_RETCODE SCIPconflictInit(
 
    /* clear the conflict candidate queue and the conflict set */
    conflictClear(conflict);
+
+   if ( set->conf_usegeneralres )
+   {
+      SCIPpqueueClear(conflict->resbdchgqueue);
+      SCIPpqueueClear(conflict->resforcedbdchgqueue);
+   }
 
    /* set conflict type */
    assert(conftype == SCIP_CONFTYPE_BNDEXCEEDING || conftype == SCIP_CONFTYPE_INFEASLP
