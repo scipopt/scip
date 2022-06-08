@@ -593,12 +593,7 @@ SCIP_RETCODE SCIPconflictFlushResolutionSets(
       SCIP_CALL( SCIPnodeCutoff(tree->path[resolutionset->validdepth], set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
       return SCIP_OKAY;
    }
-   /* if the conflict set is too long, use the conflict set only if it decreases the repropagation depth */
-   // if( resolutionsetGetNNzs(resolutionset) > maxsize )
-   // {
-   //    SCIPsetDebugMsg(set, " -> conflict set is too long: %d > %d nonzeros\n", resolutionsetGetNNzs(resolutionset), maxsize);
-   //    /* @todo keep constraint for repropagation */
-   // }
+   /* @todo long conflicts can be used for repropagation */
    else
    {
       SCIP_Bool success;
@@ -629,9 +624,12 @@ SCIP_RETCODE resolutionsetAddSparseData(
    SCIP_Real             lhs,                /**< left-hand side of resolution set */
    SCIP_Real             origrhs,            /**< right-hand side of the row */
    SCIP_Real             origlhs,            /**< left-hand side of the row */
-   SCIP_ROW*             row                 /**< pointer to row */
+   SCIP_ROW*             row,                /**< pointer to row */
+   SCIP_Bool             reverse             /**< reverse coefficients */
+
    )
 {
+   int i;
 
    assert(resolutionset != NULL);
    assert(blkmem != NULL);
@@ -641,15 +639,12 @@ SCIP_RETCODE resolutionsetAddSparseData(
       assert(resolutionset->vals == NULL);
       assert(resolutionset->inds == NULL);
 
-      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &resolutionset->vals, vals, nnz) );
-      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &resolutionset->inds, inds, nnz) );
-
+      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &resolutionset->vals, nnz) );
+      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &resolutionset->inds, nnz) );
       resolutionset->size = nnz;
    }
    else
    {
-      int i;
-
       assert(resolutionset->vals != NULL);
       assert(resolutionset->inds != NULL);
 
@@ -659,13 +654,25 @@ SCIP_RETCODE resolutionsetAddSparseData(
          SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &resolutionset->inds, resolutionset->size, nnz) );
          resolutionset->size = nnz;
       }
+   }
 
+   if ( reverse )
+   {
+      for( i = 0; i < nnz; i++ )
+      {
+         resolutionset->vals[i] = -vals[i];
+         resolutionset->inds[i] = inds[i];
+      }
+   }
+   else
+   {
       for( i = 0; i < nnz; i++ )
       {
          resolutionset->vals[i] = vals[i];
          resolutionset->inds[i] = inds[i];
       }
    }
+
    resolutionset->lhs = lhs;
    resolutionset->origrhs = origrhs;
    resolutionset->origlhs = origlhs;
@@ -698,8 +705,8 @@ SCIP_RETCODE resolveWithReason(
 
    idxinconflict = FALSE;
    idxinreason = FALSE;
-   /* @todo add asserts to make sure that residx exist in bot sets! */
-   for( i = 0; i < conflictresolutionset->nnz; i++ )
+
+   for( i = 0; i < resolutionsetGetNNzs(conflictresolutionset); i++ )
    {
       if (conflictresolutionset->inds[i] == residx)
       {
@@ -709,7 +716,7 @@ SCIP_RETCODE resolveWithReason(
       }
    }
 
-   for( i = 0; i < reasonresolutionset->nnz; i++ )
+   for( i = 0; i < resolutionsetGetNNzs(reasonresolutionset); i++ )
    {
       if (reasonresolutionset->inds[i] == residx)
       {
@@ -718,8 +725,8 @@ SCIP_RETCODE resolveWithReason(
          break;
       }
    }
-   SCIPsetDebugMsg(set, "Nonzeros in conflict constraint: %d \n", conflictresolutionset->nnz);
-   SCIPsetDebugMsg(set, "Nonzeros in reason constraint: %d \n", reasonresolutionset->nnz);
+   SCIPsetDebugMsg(set, "Nonzeros in conflict constraint: %d \n", resolutionsetGetNNzs(conflictresolutionset));
+   SCIPsetDebugMsg(set, "Nonzeros in reason constraint: %d \n", resolutionsetGetNNzs(reasonresolutionset));
 
    assert(coefconf * coefreas < 0);
    assert(idxinconflict && idxinreason);
@@ -727,21 +734,24 @@ SCIP_RETCODE resolveWithReason(
    SCIP_UNUSED(idxinconflict);
    SCIP_UNUSED(idxinreason);
 
-   newsize = conflictresolutionset->nnz + reasonresolutionset->nnz;
-   SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &conflictresolutionset->inds, conflictresolutionset->size, newsize ) );
-   SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &conflictresolutionset->vals, conflictresolutionset->size, newsize ) );
-   conflictresolutionset->size = newsize;
+   newsize = resolutionsetGetNNzs(conflictresolutionset) + resolutionsetGetNNzs(reasonresolutionset);
+   if ( conflictresolutionset->size < newsize )
+   {
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &conflictresolutionset->inds, conflictresolutionset->size, newsize ) );
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &conflictresolutionset->vals, conflictresolutionset->size, newsize ) );
+      conflictresolutionset->size = newsize;
+   }
 
    cidx = 0;
-   previousnnz = conflictresolutionset->nnz;
+   previousnnz = resolutionsetGetNNzs(conflictresolutionset);
 
    /* multiply conflict by coefreas */
-   for( i = 0; i < conflictresolutionset->nnz; i++ )
+   for( i = 0; i < resolutionsetGetNNzs(conflictresolutionset); i++ )
    {
       conflictresolutionset->vals[i] = fabs(coefreas) * conflictresolutionset->vals[i];
    }
    /* multiply reason by coefconf */
-   for( i = 0; i < reasonresolutionset->nnz; i++ )
+   for( i = 0; i < resolutionsetGetNNzs(reasonresolutionset); i++ )
    {
       reasonresolutionset->vals[i] = fabs(coefconf) * reasonresolutionset->vals[i];
    }
@@ -749,7 +759,7 @@ SCIP_RETCODE resolveWithReason(
 
    i = 0;
    /* add conflict and reason resolution sets */
-   while ( i < reasonresolutionset->nnz )
+   while ( i < resolutionsetGetNNzs(reasonresolutionset) )
    {
       if (cidx >= previousnnz)
       {
@@ -779,16 +789,16 @@ SCIP_RETCODE resolveWithReason(
    }
    conflictresolutionset->lhs = fabs(coefreas) * conflictresolutionset->lhs + fabs(coefconf) * reasonresolutionset->lhs;
 
-   for( i = 0; i < conflictresolutionset->nnz; i++ )
+   for( i = 0; i < resolutionsetGetNNzs(conflictresolutionset); i++ )
    {
       if (SCIPsetIsZero(set, conflictresolutionset->vals[i] ))
          resolutionsetRemoveZeroVar(conflictresolutionset, set, i);
    }
 
-   SCIPsetDebugMsg(set, "Nonzeros in resolved constraint: %d \n", conflictresolutionset->nnz);
+   SCIPsetDebugMsg(set, "Nonzeros in resolved constraint: %d \n", resolutionsetGetNNzs(conflictresolutionset));
 
    /* sort for linear time resolution */
-   SCIPsortIntReal(conflictresolutionset->inds, conflictresolutionset->vals, conflictresolutionset->nnz);
+   SCIPsortIntReal(conflictresolutionset->inds, conflictresolutionset->vals, resolutionsetGetNNzs(conflictresolutionset));
 
    return SCIP_OKAY;
 }
@@ -807,7 +817,6 @@ SCIP_RETCODE reasonResolutionsetFromRow(
    SCIP_COL** cols;
    SCIP_VAR* var;
    SCIP_Real* vals;
-   SCIP_Real* changedvals;
    int* inds;
    SCIP_Real lhs;
    SCIP_Real origlhs;
@@ -833,7 +842,6 @@ SCIP_RETCODE reasonResolutionsetFromRow(
    vals = SCIProwGetVals(row);
    cols = SCIProwGetCols(row);
 
-   SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &changedvals, vals, nnz) );
    SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &inds, nnz) );
 
    isincon = FALSE;
@@ -862,21 +870,15 @@ SCIP_RETCODE reasonResolutionsetFromRow(
    SCIP_UNUSED(isincon);
 
    if ( changesign )
-   {
       lhs = -origrhs;
-      for( i = 0; i < nnz; i++ )
-      {
-         changedvals[i] = -vals[i];
-      }
-   }
-   else lhs = origlhs;
+   else
+      lhs = origlhs;
 
    assert(inds != NULL);
    assert(vals != NULL);
 
-   SCIP_CALL( resolutionsetAddSparseData(scip, resolutionset, blkmem, changedvals, inds, nnz, lhs, origrhs, origlhs, row) );
+   SCIP_CALL( resolutionsetAddSparseData(scip, resolutionset, blkmem, vals, inds, nnz, lhs, origrhs, origlhs, row, changesign) );
 
-   BMSfreeBlockMemoryArray(blkmem, &changedvals, nnz);
    BMSfreeBlockMemoryArray(blkmem, &inds, nnz);
 
    return SCIP_OKAY;
@@ -896,7 +898,6 @@ SCIP_RETCODE conflictResolutionsetFromRow(
    SCIP_COL** cols;
    SCIP_VAR* var;
    SCIP_Real* vals;
-   SCIP_Real* changedvals;
    int* inds;
    SCIP_Real lhs;
    SCIP_Real origlhs;
@@ -921,7 +922,6 @@ SCIP_RETCODE conflictResolutionsetFromRow(
    vals = SCIProwGetVals(row);
    cols = SCIProwGetCols(row);
 
-   SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &changedvals, vals, nnz) );
    SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &inds, nnz) );
 
    isincon = FALSE;
@@ -950,21 +950,15 @@ SCIP_RETCODE conflictResolutionsetFromRow(
    SCIP_UNUSED(isincon);
 
    if ( changesign )
-   {
       lhs = -origrhs;
-      for( i = 0; i < nnz; i++ )
-      {
-         changedvals[i] = -vals[i];
-      }
-   }
-   else lhs = origlhs;
+   else
+      lhs = origlhs;
 
    assert(inds != NULL);
    assert(vals != NULL);
 
-   SCIP_CALL( resolutionsetAddSparseData(scip, resolutionset, blkmem, changedvals, inds, nnz, lhs, origrhs, origlhs, row) );
+   SCIP_CALL( resolutionsetAddSparseData(scip, resolutionset, blkmem, vals, inds, nnz, lhs, origrhs, origlhs, row, changesign) );
 
-   BMSfreeBlockMemoryArray(blkmem, &changedvals, nnz);
    BMSfreeBlockMemoryArray(blkmem, &inds, nnz);
    return SCIP_OKAY;
 }
@@ -1023,6 +1017,11 @@ SCIP_RETCODE conflictAnalyzeResolution(
    assert(nconss != NULL);
    assert(nconfvars != NULL);
 
+   resolutionSetClear(conflict->resolutionset);
+   resolutionSetClear(conflict->reasonset);
+   conflictresolutionset = conflict->resolutionset;
+   reasonresolutionset = conflict->reasonset;
+
    focusdepth = SCIPtreeGetFocusDepth(tree);
    currentdepth = SCIPtreeGetCurrentDepth(tree);
    assert(currentdepth == tree->pathlen-1);
@@ -1065,24 +1064,20 @@ SCIP_RETCODE conflictAnalyzeResolution(
       return SCIP_OKAY;
    }
 
-   SCIP_CALL( resolutionsetCreate(&conflictresolutionset, blkmem) );
    conflictresolutionset->validdepth = validdepth;
 
    /* get the resolution set of the conflict row */
    SCIP_CALL( conflictResolutionsetFromRow(scip, conflictresolutionset, bdchginfo, set, blkmem, conflictrow) );
 
    /* sort for linear time resolution*/
-   SCIPsortIntReal(conflictresolutionset->inds, conflictresolutionset->vals, conflictresolutionset->nnz);
+   SCIPsortIntReal(conflictresolutionset->inds, conflictresolutionset->vals, resolutionsetGetNNzs(conflictresolutionset));
 
    conflictslack = getSlack(scip, set, transprob, conflictresolutionset);
 
    /* slack should be negative */
    /* @todo assert(conflictslack < 0); */
    if ( conflictslack >= 0 )
-   {
-      SCIPresolutionsetFree(&conflictresolutionset, blkmem);
       return SCIP_OKAY;
-   }
 
    /* @todo apply coefficient tightening for conflict set */
 
@@ -1095,17 +1090,12 @@ SCIP_RETCODE conflictAnalyzeResolution(
 
       /* if no row exists conflict analysis is not applicable */
       if (reasonrow == NULL)
-      {
-         SCIPresolutionsetFree(&conflictresolutionset, blkmem);
          return SCIP_OKAY;
-      }
-
-      SCIP_CALL( resolutionsetCreate(&reasonresolutionset, blkmem) );
 
       /* get the resolution set of the conflict row */
       SCIP_CALL( reasonResolutionsetFromRow(scip, reasonresolutionset, bdchginfo, set, blkmem, reasonrow) );
       /* sort for linear time resolution*/
-      SCIPsortIntReal(reasonresolutionset->inds, reasonresolutionset->vals, reasonresolutionset->nnz);
+      SCIPsortIntReal(reasonresolutionset->inds, reasonresolutionset->vals, resolutionsetGetNNzs(reasonresolutionset));
       reasonslack = getSlack(scip, set, transprob, reasonresolutionset);
 
       /* @todo assert(reasonslack >= 0); */
@@ -1113,18 +1103,11 @@ SCIP_RETCODE conflictAnalyzeResolution(
 
    }
    else
-   {
-      SCIPresolutionsetFree(&conflictresolutionset, blkmem);
       return SCIP_OKAY;
-   }
    /* @todo apply weakining and coef. tightening is  conflictslack + reasonslack >= 0 */
    /* for now apply resolution only if conflictslack + reasonslack < 0 */
    if ( conflictslack + reasonslack >= 0 )
-   {
-      SCIPresolutionsetFree(&conflictresolutionset, blkmem);
-      SCIPresolutionsetFree(&reasonresolutionset, blkmem);
       return SCIP_OKAY;
-   }
 
    SCIPsetDebugMsg(set, "Slack of conflict: %f, Slack of reason %f \n", conflictslack, reasonslack);
    vartoresolve = bdchginfo->var;
@@ -1135,14 +1118,9 @@ SCIP_RETCODE conflictAnalyzeResolution(
 
    if ( SCIPsetIsLT(set, conflictslack, 0.0) )
    {
-      /* @todo call flush from the main solving loop! */
       SCIPconflictFlushResolutionSets(conflict, blkmem, scip, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue, cliquetable, conflictresolutionset);
       (*nconss)++;
       (*nconfvars) = resolutionsetGetNNzs(conflictresolutionset);
-
-      resolutionSetClear(conflictresolutionset);
-      SCIPresolutionsetFree(&conflictresolutionset, blkmem);
-      SCIPresolutionsetFree(&reasonresolutionset, blkmem);
       return SCIP_OKAY;
    }
    SCIPsetDebugMsg(set, "Slack of resolved row: %f \n", conflictslack);
@@ -1155,8 +1133,6 @@ SCIP_RETCODE conflictAnalyzeResolution(
       /* @todo go through variables and weaken + coef. tightening till the resolved constraint has negative slack */
    }
 
-   SCIPresolutionsetFree(&conflictresolutionset, blkmem);
-   SCIPresolutionsetFree(&reasonresolutionset, blkmem);
    return SCIP_OKAY;
 }
 
