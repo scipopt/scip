@@ -72,6 +72,201 @@
 #include <strings.h> /*lint --e{766}*/
 #endif
 
+
+/** perform activity based coefficient tigthening on a row defined with a left hand side; returns TRUE if the row
+ *  is redundant due to acitvity bounds
+ */
+
+static
+SCIP_Bool tightenCoefLhs(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROB*            prob,
+   SCIP_Bool             localbounds,        /**< do we use local bounds? */
+   SCIP_Real*            rowcoefs,           /**< array of the non-zero coefficients in the row */
+   SCIP_Real*            rowlhs,             /**< the left hand side of the row */
+   int*                  rowinds,            /**< array of indices of variables with a non-zero coefficient in the row */
+   int*                  rownnz,             /**< the number of non-zeros in the row */
+   int*                  nchgcoefs           /**< number of changed coefficients */
+   )
+{
+
+   int i;
+   int nintegralvars;
+   SCIP_VAR** vars;
+   SCIP_Real* absvals;
+   SCIP_Real QUAD(minacttmp);
+   SCIP_Real minact;
+   SCIP_Real maxabsval = 0.0;
+   SCIP_Bool redundant = FALSE;
+
+   assert(nchgcoefs != NULL);
+
+   QUAD_ASSIGN(minacttmp, 0.0);
+
+   vars = SCIPprobGetVars(prob);
+   nintegralvars = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
+   SCIP_CALL_ABORT( SCIPallocBufferArray(scip, &absvals, *rownnz) );
+
+   assert(nchgcoefs != NULL);
+   *nchgcoefs = 0;
+
+   for( i = 0; i < *rownnz; ++i )
+   {
+      assert(rowinds[i] >= 0);
+      assert(vars[rowinds[i]] != NULL);
+
+      if( rowcoefs[i] > 0.0 )
+      {
+         SCIP_Real lb = localbounds ? SCIPvarGetLbLocal(vars[rowinds[i]]) : SCIPvarGetLbGlobal(vars[rowinds[i]]);
+
+         if( SCIPisInfinity(scip, -lb) )
+            goto TERMINATE;
+
+         if( rowinds[i] < nintegralvars )
+         {
+            maxabsval = MAX(maxabsval, rowcoefs[i]);
+            absvals[i] = rowcoefs[i];
+         }
+         else
+            absvals[i] = 0.0;
+
+         SCIPquadprecSumQD(minacttmp, minacttmp, lb * rowcoefs[i]);
+      }
+      else
+      {
+         SCIP_Real ub = localbounds ? SCIPvarGetUbLocal(vars[rowinds[i]]) : SCIPvarGetUbGlobal(vars[rowinds[i]]);
+
+         if( SCIPisInfinity(scip, ub) )
+            goto TERMINATE;
+
+         if( rowinds[i] < nintegralvars )
+         {
+            maxabsval = MAX(maxabsval, -rowcoefs[i]);
+            absvals[i] = -rowcoefs[i];
+         }
+         else
+            absvals[i] = 0.0;
+
+         SCIPquadprecSumQD(minacttmp, minacttmp, ub * rowcoefs[i]);
+      }
+   }
+
+   minact = QUAD_TO_DBL(minacttmp);
+
+   /* row is redundant in activity bounds */
+   if( SCIPisFeasGE(scip, minact, *rowlhs) )
+   {
+      redundant = TRUE;
+      goto TERMINATE;
+   }
+
+   /* terminate, because coefficient tightening cannot be performed; also excludes the case in which no integral variable is present */
+   // for lhs terminate if amin + maxabsval < rowlhs
+   if( SCIPisLT(scip, minact + maxabsval, *rowlhs) )
+      goto TERMINATE;
+
+   SCIPsortDownRealRealInt(absvals, rowcoefs, rowinds, *rownnz);
+   SCIPfreeBufferArray(scip, &absvals);
+
+   /* loop over the integral variables and try to tighten the coefficients; see cons_linear for more details */
+   for( i = 0; i < *rownnz; ++i )
+   {
+      /* due to sorting, we can exit if we reached a continuous variable: all further integral variables have 0 coefficents anyway */
+      if( rowinds[i] >= nintegralvars )
+         break;
+
+      assert(SCIPvarIsIntegral(vars[rowinds[i]]));
+
+      if( rowcoefs[i] < 0.0 && SCIPisGE(scip, minact - rowcoefs[i], *rowlhs) )
+      {
+         SCIP_Real coef = minact - (*rowlhs);
+         SCIP_Real ub = localbounds ? SCIPvarGetUbLocal(vars[rowinds[i]]) : SCIPvarGetUbGlobal(vars[rowinds[i]]);
+
+         // coef = floor(coef);
+
+         if( coef > rowcoefs[i] )
+         {
+            SCIP_Real QUAD(delta);
+            SCIP_Real QUAD(tmp);
+
+            SCIPquadprecSumDD(delta, coef, -rowcoefs[i]);
+            SCIPquadprecProdQD(delta, delta, ub);
+
+            SCIPquadprecSumQD(tmp, delta, *rowlhs);
+            SCIPdebugPrintf("tightened coefficient from %g to %g; lhs changed from %g to %g; the bounds are [%g,%g]\n",
+               rowcoefs[i], coef, (*rowlhs), QUAD_TO_DBL(tmp),
+               localbounds ? SCIPvarGetUbLocal(vars[rowinds[i]]) : SCIPvarGetUbGlobal(vars[rowinds[i]]), ub);
+
+            *rowlhs = QUAD_TO_DBL(tmp);
+
+            assert(!SCIPisPositive(scip, coef));
+
+            ++(*nchgcoefs);
+
+            if( SCIPisNegative(scip, coef) )
+            {
+               SCIPquadprecSumQQ(minacttmp, minacttmp, delta);
+               minact = QUAD_TO_DBL(minacttmp);
+               rowcoefs[i] = coef;
+            }
+            else
+            {
+               --(*rownnz);
+               rowinds[i] = rowinds[*rownnz];
+               rowcoefs[i] = rowcoefs[*rownnz];
+               continue;
+            }
+         }
+      }
+      else if( rowcoefs[i] > 0.0 && SCIPisGE(scip, minact + rowcoefs[i], *rowlhs) )
+      {
+         SCIP_Real coef = (*rowlhs) - minact;
+         SCIP_Real lb = localbounds ? SCIPvarGetLbLocal(vars[rowinds[i]]) : SCIPvarGetLbGlobal(vars[rowinds[i]]);
+
+         if( coef < rowcoefs[i] )
+         {
+            SCIP_Real QUAD(delta);
+            SCIP_Real QUAD(tmp);
+
+            SCIPquadprecSumDD(delta, coef, -rowcoefs[i]);
+            SCIPquadprecProdQD(delta, delta, lb);
+
+            SCIPquadprecSumQD(tmp, delta, *rowlhs);
+            SCIPdebugPrintf("tightened coefficient from %g to %g; lhs changed from %g to %g; the bounds are [%g,%g]\n",
+               rowcoefs[i], coef, (*rowlhs), QUAD_TO_DBL(tmp), lb,
+               localbounds ? SCIPvarGetUbLocal(vars[rowinds[i]]) : SCIPvarGetUbGlobal(vars[rowinds[i]]));
+
+            *rowlhs = QUAD_TO_DBL(tmp);
+
+            assert(!SCIPisNegative(scip, coef));
+
+            ++(*nchgcoefs);
+
+            if( SCIPisPositive(scip, coef) )
+            {
+               SCIPquadprecSumQQ(minacttmp, minacttmp, delta);
+               minact = QUAD_TO_DBL(minacttmp);
+               rowcoefs[i] = coef;
+            }
+            else
+            {
+               --(*rownnz);
+               rowinds[i] = rowinds[*rownnz];
+               rowcoefs[i] = rowcoefs[*rownnz];
+               continue;
+            }
+         }
+      }
+      else /* due to sorting we can stop completely if the precondition was not fulfilled for this variable */
+         break;
+   }
+
+  TERMINATE:
+   SCIPfreeBufferArrayNull(scip, &absvals);
+
+   return redundant;
+}
+
 /** returns next conflict analysis candidate from the candidate queue without removing it */
 static
 SCIP_BDCHGINFO* conflictFirstCand(
@@ -581,7 +776,6 @@ SCIP_RETCODE SCIPconflictFlushResolutionSets(
    assert(0 <= resolutionset->validdepth);
    assert( getSlack(scip, set, transprob, resolutionset) < 0 );
 
-
    /* if the resolution set is empty, the node and its sub tree in the conflict set's valid depth can be
       * cut off completely
       */
@@ -1000,6 +1194,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
    int focusdepth;
    int currentdepth;
    int maxvaliddepth;
+   int i;
 
    SCIP_VAR* vartoresolve;
    int residx;
@@ -1094,27 +1289,91 @@ SCIP_RETCODE conflictAnalyzeResolution(
 
       /* get the resolution set of the conflict row */
       SCIP_CALL( reasonResolutionsetFromRow(scip, reasonresolutionset, bdchginfo, set, blkmem, reasonrow) );
-      /* sort for linear time resolution*/
-      SCIPsortIntReal(reasonresolutionset->inds, reasonresolutionset->vals, resolutionsetGetNNzs(reasonresolutionset));
       reasonslack = getSlack(scip, set, transprob, reasonresolutionset);
+
+      vartoresolve = bdchginfo->var;
+      residx = SCIPvarGetProbindex(vartoresolve);
+
+   // int changes = 0;
+   // double values[5] = {-2.0, -2.0, -2.0, -2.0, -2.0};
+   // int indices[5] = {0,1,2,3,4};
+   // double lhs = -9.0;
+   // int nzzs = 5;
+
+   // tightenCoefLhs(scip, transprob, FALSE, &values[0], &lhs, &indices[0], &nzzs, &changes);
 
       /* @todo assert(reasonslack >= 0); */
       /* @todo apply coefficient tightening for reason set */
+      i = 0;
+      while ( i < resolutionsetGetNNzs(reasonresolutionset) )
+      {
+         double currentslack;
+         currentslack = reasonslack;
+
+         SCIP_VAR* vartoweaken;
+         SCIP_VAR** vars;
+         SCIP_Bool* success;
+         success = FALSE;
+         vars = SCIPprobGetVars(transprob);
+         vartoweaken = vars[reasonresolutionset->inds[i]];
+
+         if ( reasonresolutionset->inds[i] != residx )
+         {
+            if( reasonresolutionset->vals[i] > 0.0 )
+            {
+               int nubchgs;
+               nubchgs = SCIPvarGetNBdchgInfosUb(vars[reasonresolutionset->inds[i]]);
+               if ( nubchgs == 0 )
+               {
+                  weakenVarReason(reasonresolutionset, set, vartoweaken, i);
+                  success = FALSE;
+               }
+            }
+            else
+            {
+               assert( reasonresolutionset->vals[i] < 0.0);
+               int nlbchgs;
+               nlbchgs = SCIPvarGetNBdchgInfosLb(vars[reasonresolutionset->inds[i]]);
+               if ( nlbchgs == 0 )
+               {
+                  weakenVarReason(reasonresolutionset, set, vartoweaken, i);
+                  success = FALSE;
+               }
+            }
+         }
+         if (success)
+         {
+            int nchgcoefs;
+            tightenCoefLhs(scip, transprob, FALSE, reasonresolutionset->vals, &reasonresolutionset->lhs, reasonresolutionset->inds, &reasonresolutionset->nnz, &nchgcoefs);
+            reasonslack = getSlack(scip, set, transprob, reasonresolutionset);
+            assert(SCIPsetIsEQ(set, currentslack, reasonslack) );
+         }
+         else
+          i++;
+      }
+      /* sort for linear time resolution*/
+      SCIPsortIntReal(reasonresolutionset->inds, reasonresolutionset->vals, resolutionsetGetNNzs(reasonresolutionset));
+
 
    }
    else
       return SCIP_OKAY;
+
    /* @todo apply weakining and coef. tightening is  conflictslack + reasonslack >= 0 */
    /* for now apply resolution only if conflictslack + reasonslack < 0 */
    if ( conflictslack + reasonslack >= 0 )
       return SCIP_OKAY;
 
    SCIPsetDebugMsg(set, "Slack of conflict: %f, Slack of reason %f \n", conflictslack, reasonslack);
-   vartoresolve = bdchginfo->var;
-   residx = SCIPvarGetProbindex(vartoresolve);
    resolveWithReason(scip, set, conflictresolutionset, reasonresolutionset, blkmem, residx);
 
    conflictslack = getSlack(scip, set, transprob, conflictresolutionset);
+   int nchgcoefs;
+   tightenCoefLhs(scip, transprob, FALSE, conflictresolutionset->vals, &conflictresolutionset->lhs, conflictresolutionset->inds, &conflictresolutionset->nnz, &nchgcoefs);
+   if (nchgcoefs > 0)
+   {
+      SCIPsetDebugMsg(set, "Some bounds (%d) are tightened!!! \n", nchgcoefs);
+   }
 
    if ( SCIPsetIsLT(set, conflictslack, 0.0) )
    {
