@@ -16,37 +16,6 @@ set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_DEBUG} ${CMAKE_CXX_FLAGS_R
 project(SCIP)
 
 
-# if changing these flags, also update GCCWARN/GXXWARN in make/make.project
-set(ADD_C_AND_CXX_FLAGS -pedantic -Wall -W -Wpointer-arith -Wcast-align -Wwrite-strings -Wshadow  -Wredundant-decls -Wdisabled-optimization -Wno-long-long -Wno-unknown-pragmas -Wno-unused-parameter)
-set(ADD_C_FLAGS -Wsign-compare -Wstrict-prototypes -Wmissing-declarations -Wmissing-prototypes -Wdeclaration-after-statement -Wno-override-init -Wno-uninitialized -Wno-maybe-uninitialized)
-set(ADD_CXX_FLAGS -Wctor-dtor-privacy -Wnon-virtual-dtor -Wreorder -Woverloaded-virtual -Wsign-promo -Wsynth -Wcast-qual -Wno-strict-overflow -Wno-psabi)
-
-if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-# clang specific suppressions
-set(ADD_C_AND_CXX_FLAGS ${ADD_C_AND_CXX_FLAGS} -Wno-unknown-warning-option)
-set(ADD_C_FLAGS ${ADD_C_FLAGS} -Wno-initializer-overrides)
-endif()
-
-if(CMAKE_CXX_COMPILER_ID MATCHES "Intel")
-   # for intel compilers we need to set the fp-model precise flag to disable incorrect floating point optimizations
-   add_compile_options(-fp-model precise)
-   # to prevent symbols from svml exported twice we use the -shared-intel flag, see https://git.zib.de/integer/scip/issues/2872
-   # this happens with the cplex static lib
-   if(LPS MATCHES "cpx")
-       add_compile_options(-shared-intel) # for c and cxx
-   endif()
-elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-    # require at least gcc 4.8
-    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.8)
-        message(WARNING "GCC version not supported, should be at least 4.8!")
-    endif()
-    add_compile_options(${ADD_C_AND_CXX_FLAGS})
-    add_compile_options("$<$<COMPILE_LANGUAGE:C>:${ADD_C_FLAGS}>$<$<COMPILE_LANGUAGE:CXX>:${ADD_CXX_FLAGS}>")
-elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    add_compile_options(${ADD_C_AND_CXX_FLAGS})
-    add_compile_options("$<$<COMPILE_LANGUAGE:C>:${ADD_C_FLAGS}>$<$<COMPILE_LANGUAGE:CXX>:${ADD_CXX_FLAGS}>")
-endif()
-
 set(SCIP_VERSION_MAJOR 8)
 set(SCIP_VERSION_MINOR 0)
 set(SCIP_VERSION_PATCH 1)
@@ -132,6 +101,67 @@ set_property(CACHE LPS PROPERTY STRINGS spx cpx grb xprs clp glop msk qso none )
 
 set(SYM bliss CACHE STRING "options for symmetry computation")  #create the variable
 set_property(CACHE SYM PROPERTY STRINGS bliss none )  #define list of values GUI will offer for the variable
+
+#search the selected symmetry computation program
+message(STATUS "Finding symmetry computation program \"${SYM}\"")
+set(BLISS_TARGET "")
+if(SYM STREQUAL "bliss")
+    set(sym symmetry/compute_symmetry_bliss.cpp)
+
+    # modify configuration for bliss
+    set(BUILD_SHARED_LIBS OFF)
+    set(TMPFLAGS ${CMAKE_C_FLAGS})
+    set(TMXFLAGS ${CMAKE_CXX_FLAGS})
+    set(CMAKE_C_FLAGS -w)
+    set(CMAKE_CXX_FLAGS -w)
+
+    add_subdirectory(src/bliss)
+
+    # undo modification
+    set(CMAKE_C_FLAGS ${TMPFLAGS})
+    set(CMAKE_CXX_FLAGS ${TMXFLAGS})
+    set(BUILD_SHARED_LIBS ${SHARED})
+
+    set(BLISS_TARGET libbliss)
+    set(SYM_LIBRARIES libbliss)
+    set(SYM_PIC_LIBRARIES libbliss)
+elseif(SYM STREQUAL "none")
+    message(STATUS "Support SYM: OFF")
+    set(sym symmetry/compute_symmetry_none.cpp)
+else()
+    message(FATAL_ERROR "option SYM has wrong value")
+endif()
+
+# if changing these flags, also update GCCWARN/GXXWARN in make/make.project
+set(ADD_C_AND_CXX_FLAGS -pedantic -Wall -W -Wpointer-arith -Wcast-align -Wwrite-strings -Wshadow  -Wredundant-decls -Wdisabled-optimization -Wno-long-long -Wno-unknown-pragmas -Wno-unused-parameter)
+set(ADD_C_FLAGS -Wsign-compare -Wstrict-prototypes -Wmissing-declarations -Wmissing-prototypes -Wdeclaration-after-statement -Wno-override-init -Wno-uninitialized -Wno-maybe-uninitialized)
+set(ADD_CXX_FLAGS -Wctor-dtor-privacy -Wnon-virtual-dtor -Wreorder -Woverloaded-virtual -Wsign-promo -Wsynth -Wcast-qual -Wno-strict-overflow -Wno-psabi)
+
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+# clang specific suppressions
+set(ADD_C_AND_CXX_FLAGS ${ADD_C_AND_CXX_FLAGS} -Wno-unknown-warning-option)
+set(ADD_C_FLAGS ${ADD_C_FLAGS} -Wno-initializer-overrides)
+endif()
+
+if(CMAKE_CXX_COMPILER_ID MATCHES "Intel")
+   # for intel compilers we need to set the fp-model precise flag to disable incorrect floating point optimizations
+   add_compile_options(-fp-model precise)
+   # to prevent symbols from svml exported twice we use the -shared-intel flag, see https://git.zib.de/integer/scip/issues/2872
+   # this happens with the cplex static lib
+   if(LPS MATCHES "cpx")
+       add_compile_options(-shared-intel) # for c and cxx
+   endif()
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+    # require at least gcc 4.8
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.8)
+        message(WARNING "GCC version not supported, should be at least 4.8!")
+    endif()
+    add_compile_options(${ADD_C_AND_CXX_FLAGS})
+    add_compile_options("$<$<COMPILE_LANGUAGE:C>:${ADD_C_FLAGS}>$<$<COMPILE_LANGUAGE:CXX>:${ADD_CXX_FLAGS}>")
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    add_compile_options(${ADD_C_AND_CXX_FLAGS})
+    add_compile_options("$<$<COMPILE_LANGUAGE:C>:${ADD_C_FLAGS}>$<$<COMPILE_LANGUAGE:CXX>:${ADD_CXX_FLAGS}>")
+endif()
 
 #set options for memory management
 if( NOBLKBUFMEM )
@@ -253,11 +283,6 @@ set(WITH_SCIPDEF on)
 
 # use C++14 standard
 set(CMAKE_CXX_STANDARD 14)
-
-# set function visibility default to hidden
-set(CMAKE_CXX_VISIBILITY_PRESET hidden)
-set(CMAKE_C_VISIBILITY_PRESET hidden)
-set(CMAKE_VISIBILITY_INLINES_HIDDEN 1)
 
 # ZLIB
 if(ZLIB)
@@ -437,33 +462,6 @@ if(QSO_FOUND)
 else()
     message(STATUS "Support QSO: OFF")
 endif()
-
-#search the selected symmetry computation program
-message(STATUS "Finding symmetry computation program \"${SYM}\"")
-if(SYM STREQUAL "bliss")
-    message(STATUS "Finding BLISS")
-    find_package(BLISS)
-    if(BLISS_FOUND)
-        message(STATUS "Finding BLISS - found")
-        include_directories(${BLISS_INCLUDE_DIRS})
-        set(sym symmetry/compute_symmetry_bliss.cpp)
-        set(SYM_LIBRARIES ${BLISS_LIBRARIES})
-        set(SYM_PIC_LIBRARIES ${BLISS_LIBRARIES})
-        if(BLISS_DEFINITIONS STREQUAL "")
-            add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:${BLISS_DEFINITIONS}>")
-        endif()
-    else()
-        message(STATUS "Finding BLISS - not found")
-        set(sym symmetry/compute_symmetry_none.cpp)
-    endif()
-elseif(SYM STREQUAL "none")
-    message(STATUS "Support SYM: OFF")
-    set(sym symmetry/compute_symmetry_none.cpp)
-else()
-    message(FATAL_ERROR "option SYM has wrong value")
-endif()
-
-
 
 #
 # enable coverage support
