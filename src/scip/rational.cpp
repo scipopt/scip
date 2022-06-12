@@ -2080,6 +2080,25 @@ void binarySearchSemiconv(
    }
 }
 
+static
+void chooseSemiconv(
+   long& resnum,
+   long& resden,
+   Integer* p,
+   Integer* q,
+   long maxdenom
+   )
+{
+   Integer j, resnumerator, resdenominator;
+
+   j = (Integer(maxdenom) - q[0]) / q[1];
+   resnumerator = j * p[1] + p[0];
+   resdenominator = j * q[1] + q[0];
+
+   resnum = resnumerator.convert_to<long>();
+   resden = resdenominator.convert_to<long>();
+}
+
 /** compute an approximate number with denominator <= maxdenom, closest to src and save it in res using continued fractions */
 void RatComputeApproximation(
    SCIP_Rational*        res,
@@ -2107,6 +2126,7 @@ void RatComputeApproximation(
    long resden;
 
    int sign;
+   int forcegreatersign;
 
    RatCanonicalize(src);
 
@@ -2116,14 +2136,23 @@ void RatComputeApproximation(
       return;
    }
    /* close to 0, we can just set to 1/maxdenom or 0, depending on sign */
-   else if( src->val.sign() == 1 && forcegreater && RatApproxReal(src) < (1.0 / maxdenom) )
+   else if( src->val.sign() == 1 && RatApproxReal(src) < (1.0 / maxdenom) )
    {
-      RatSetInt(res, 1, maxdenom);
+      if( forcegreater == 1 )
+         RatSetInt(res, 1, maxdenom);
+      else
+         RatSetReal(res, 0.0);
+
       return;
    }
-   else if( src->val.sign() == -1 && forcegreater && RatApproxReal(src) > (-1.0 / maxdenom) )
+   else if( src->val.sign() == -1 && RatApproxReal(src) > (-1.0 / maxdenom) )
    {
-      RatSetReal(res, 0.0);
+
+      if( forcegreater == -1 )
+         RatSetInt(res, 1, maxdenom);
+      else
+         RatSetReal(res, 0.0);
+
       return;
    }
 
@@ -2133,6 +2162,7 @@ void RatComputeApproximation(
 
    /* scale to positive to avoid unnecessary complications */
    sign = tn.sign();
+   forcegreatersign = forcegreater * sign;
    tn *= sign;
 
    assert(td >= 0);
@@ -2147,12 +2177,14 @@ void RatComputeApproximation(
       temp = 1;
       divide_qr(tn, td, a0, temp);
 
-      /* if value is almost integer, we use the next best integer */
+      /* if value is almost integer, we use the next best integer (while still adhering to <=/>= requirements) */
       if( temp * maxdenom < td )
       {
          res->val = a0 * sign;
-         if( forcegreater && res->val < src->val )
+         if( forcegreater == 1 && res->val < src->val )
             res->val += Rational(1,maxdenom);
+         if( forcegreater == -1 && res->val > src->val )
+            res->val -= Rational(1,maxdenom);
          res->isinf = FALSE;
          res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
 
@@ -2206,29 +2238,17 @@ void RatComputeApproximation(
          cfcnt++;
       }
 
-      binarySearchSemiconv(resnum, resden, src, p, q, maxdenom,
-         ai.convert_to<long>());
-      res->val = Rational(resnum,resden) * sign;
+      if( (forcegreater == 1 && Rational(p[2],q[2]) * sign < src->val) ||
+          (forcegreater == -1 && Rational(p[2],q[2]) * sign > src->val) )
+         res->val = Rational(p[1],q[1]) * sign;
+      else
+      {
+         chooseSemiconv(resnum, resden, p, q, maxdenom);
+         res->val = Rational(resnum,resden) * sign;
+      }
 
-      assert(res->val >= src->val);
-
-      // if( td == 0 && forcegreater == 1 )
-      // {
-      //    assert(Rational(p[1],q[1]) * sign <= src->val);
-
-      //    if( RatIsIntegral(res) )
-      //       res->val += Rational(1,maxdenom);
-      //    else
-      //       res->val = Rational(p[0],q[0]) * sign;
-      // }
-      // /* we know that we alternate between larger and smaller values, if we force on direction, we can just do one more iteration */
-      // else if( (forcegreater == 1 && res->val < src->val) || (forcegreater == -1 && res->val > src->val) )
-      // {
-      //    if( RatIsIntegral(res) )
-      //       res->val += Rational(1,maxdenom);
-      //    else
-      //       res->val = Rational(p[0],q[0]) * sign;
-      // }
+      assert(res->val >= src->val || forcegreater != 1);
+      assert(res->val <= src->val || forcegreater != -1);
    }
 
    assert(forcegreater != 1 || res->val >= src->val);
