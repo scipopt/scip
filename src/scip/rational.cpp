@@ -2181,9 +2181,9 @@ void RatComputeApproximation(
       if( temp * maxdenom < td )
       {
          res->val = a0 * sign;
-         if( forcegreater == 1 && res->val < src->val )
+         if( forcegreatersign == 1 && res->val < src->val )
             res->val += Rational(1,maxdenom);
-         if( forcegreater == -1 && res->val > src->val )
+         if( forcegreatersign == -1 && res->val > src->val )
             res->val -= Rational(1,maxdenom);
          res->isinf = FALSE;
          res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
@@ -2246,9 +2246,6 @@ void RatComputeApproximation(
          chooseSemiconv(resnum, resden, p, q, maxdenom);
          res->val = Rational(resnum,resden) * sign;
       }
-
-      assert(res->val >= src->val || forcegreater != 1);
-      assert(res->val <= src->val || forcegreater != -1);
    }
 
    assert(forcegreater != 1 || res->val >= src->val);
