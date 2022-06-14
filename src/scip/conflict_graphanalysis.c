@@ -2394,12 +2394,14 @@ SCIP_RETCODE conflictQueueBound(
          && !isBoundchgUseless(set, bdchginfo) )
       {
          SCIP_CALL( SCIPpqueueInsert(conflict->bdchgqueue, (void*)bdchginfo) );
-         SCIP_CALL( SCIPpqueueInsert(conflict->resbdchgqueue, (void*)bdchginfo) );
+         if (set->conf_usegeneralres)
+            SCIP_CALL( SCIPpqueueInsert(conflict->resbdchgqueue, (void*)bdchginfo) );
       }
       else
       {
          SCIP_CALL( SCIPpqueueInsert(conflict->forcedbdchgqueue, (void*)bdchginfo) );
-         SCIP_CALL( SCIPpqueueInsert(conflict->resforcedbdchgqueue, (void*)bdchginfo) );
+         if (set->conf_usegeneralres)
+            SCIP_CALL( SCIPpqueueInsert(conflict->resforcedbdchgqueue, (void*)bdchginfo) );
       }
 
 #ifdef SCIP_CONFGRAPH
