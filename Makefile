@@ -331,16 +331,34 @@ endif
 
 SYMOPTIONS	+=	bliss
 ifeq ($(SYM),bliss)
-FLAGS		+=	-I$(LIBDIR)/include/
 SYMOBJ		=	symmetry/compute_symmetry_bliss.o
 SYMOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(SYMOBJ))
-SYMSRC  	=	$(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.cpp))
+SYMSRC		=       $(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.cpp))
+ifeq ($(BLISSEXTERNAL),false)
+FLAGS		+=	-I$(SRCDIR)/bliss/src -I$(SRCDIR)/bliss/include
+BLISSOBJ	=	bliss/src/abstractgraph.o
+BLISSOBJ	+=	bliss/src/bliss.o
+BLISSOBJ	+=	bliss/src/bliss_C.o
+BLISSOBJ	+=	bliss/src/defs.o
+BLISSOBJ	+=	bliss/src/digraph.o
+BLISSOBJ	+=	bliss/src/graph.o
+BLISSOBJ	+=	bliss/src/orbit.o
+BLISSOBJ	+=	bliss/src/partition.o
+BLISSOBJ	+=	bliss/src/uintseqhash.o
+BLISSOBJ	+=	bliss/src/utils.o
+SYMOBJFILES	+=	$(addprefix $(LIBOBJDIR)/,$(BLISSOBJ))
+SYMSRC  	+=	$(addprefix $(SRCDIR)/,$(BLISSOBJ:.o=.cc))
+else
+FLAGS		+=	-I$(LIBDIR)/include/
+endif
 ALLSRC		+=	$(SYMSRC)
+ifeq ($(BLISSEXTERNAL),true)
 SOFTLINKS	+=	$(LIBDIR)/include/bliss
 ifeq ($(SHARED),true)
 SOFTLINKS	+=	$(LIBDIR)/shared/libbliss.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
 else
 SOFTLINKS	+=	$(LIBDIR)/static/libbliss.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT)
+endif
 endif
 LPIINSTMSG	+=	"\n  -> \"blissinc\" is the path to the BLISS directory, e.g., \"<BLISS-path>\".\n"
 LPIINSTMSG	+=	" -> \"libbliss.*.a\" is the path to the BLISS library, e.g., \"<BLISS-path>/libbliss.a\"\n"
@@ -1317,6 +1335,10 @@ $(LIBOBJDIR)/scip/presol_milp.o: $(SRCDIR)/scip/presol_milp.cpp | $(LIBOBJDIR) $
 endif
 
 $(LIBOBJDIR)/%.o:	$(SRCDIR)/%.cpp | $(LIBOBJDIR) $(LIBOBJSUBDIRS)
+		@echo "-> compiling $@"
+		$(CXX) $(FLAGS) $(OFLAGS) $(LIBOFLAGS) $(CXXFLAGS) $(DFLAGS) $(TPICFLAGS) $(CXX_c)$< $(CXX_o)$@
+
+$(LIBOBJDIR)/%.o:	$(SRCDIR)/%.cc | $(LIBOBJDIR) $(LIBOBJSUBDIRS)
 		@echo "-> compiling $@"
 		$(CXX) $(FLAGS) $(OFLAGS) $(LIBOFLAGS) $(CXXFLAGS) $(DFLAGS) $(TPICFLAGS) $(CXX_c)$< $(CXX_o)$@
 
