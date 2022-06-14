@@ -2,7 +2,7 @@
 # The "manual" GNU Makefile for bliss.
 #
 
-CFLAGS = -I.
+CFLAGS = -Iinclude
 CFLAGS += -g
 #CFLAGS += -pg
 CFLAGS += -Wall
