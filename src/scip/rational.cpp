@@ -2092,6 +2092,7 @@ void chooseSemiconv(
    Integer j, resnumerator, resdenominator;
 
    j = (Integer(maxdenom) - q[0]) / q[1];
+   //  std::cout << " semiconv multiplier is " << j << std::endl;
    resnumerator = j * p[1] + p[0];
    resdenominator = j * q[1] + q[0];
 
@@ -2181,12 +2182,14 @@ void RatComputeApproximation(
       if( temp * maxdenom < td )
       {
          res->val = a0 * sign;
-         if( forcegreatersign == 1 && res->val < src->val )
+         if( forcegreater == 1 && res->val < src->val )
             res->val += Rational(1,maxdenom);
-         if( forcegreatersign == -1 && res->val > src->val )
+         if( forcegreater == -1 && res->val > src->val )
             res->val -= Rational(1,maxdenom);
          res->isinf = FALSE;
          res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
+
+//         std::cout << "approximating " << src->val << " by " << res->val << std::endl;
 
          return;
       }
@@ -2206,6 +2209,9 @@ void RatComputeApproximation(
       q[2] = ai;
 
       done = 0;
+
+      //std::cout << "approximating " << src->val << " by continued fractions with maxdenom " << maxdenom << std::endl;
+      //std::cout << "confrac initial values: p0 " << p[1] << " q0 " << q[1] << " p1 " << p[2] << " q1 " << q[2] << std::endl;
 
       /* if q is already big, skip loop */
       if( q[2] > Dbound )
@@ -2232,6 +2238,8 @@ void RatComputeApproximation(
          p[2] = p[0] + p[1] * ai;
          q[2] = q[0] + q[1] * ai;
 
+         //std::cout << "ai " << ai << " pi " << p[2] << " qi " << q[2] << std::endl;
+
          if( q[2] > Dbound )
             done = 1;
 
@@ -2243,8 +2251,31 @@ void RatComputeApproximation(
          res->val = Rational(p[1],q[1]) * sign;
       else
       {
-         chooseSemiconv(resnum, resden, p, q, maxdenom);
-         res->val = Rational(resnum,resden) * sign;
+         /* the corner case where p[2]/q[2] == res has to be considered separately, depending on the side that p[1]/q[1] lies on */
+         if( forcegreater != 0 && Rational(p[2],q[2]) * sign == src->val )
+         {
+            /* if p[1]/q[1] is on the correct side we take it, otherwise we take the correct semiconvergent */
+            if( (forcegreater == 1 && Rational(p[1],q[1]) * sign > src->val)
+                || (forcegreater == -1 && Rational(p[1],q[1]) * sign < src->val) )
+            {
+               res->val = Rational(p[1],q[1]) * sign;
+            }
+            else
+            {
+               //std::cout << " picking semiconvergent " << std::endl;
+               chooseSemiconv(resnum, resden, p, q, maxdenom);
+               //std::cout << " use " << resnum << "/" << resden << std::endl;
+               res->val = Rational(resnum,resden) * sign;
+            }
+         }
+         /* normal case -> pick semiconvergent for best approximation */
+         else
+         {
+            //std::cout << " picking semiconvergent " << std::endl;
+            chooseSemiconv(resnum, resden, p, q, maxdenom);
+            //std::cout << " use " << resnum << "/" << resden << std::endl;
+            res->val = Rational(resnum,resden) * sign;
+         }
       }
    }
 
