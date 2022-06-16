@@ -944,7 +944,7 @@ AbstractGraph::search(const bool canonical,
           else if(current_node.needs_long_prune)
             {
               current_node.needs_long_prune = false;
-              unsigned int begin = (current_node.long_prune_begin>long_prune_begin)?current_node.long_prune_begin:long_prune_begin;
+              begin = (current_node.long_prune_begin>long_prune_begin)?current_node.long_prune_begin:long_prune_begin;
               for(unsigned int i = begin; i < long_prune_end; i++)
                 {
                   const std::vector<bool>& fixed = long_prune_get_fixed(i);
