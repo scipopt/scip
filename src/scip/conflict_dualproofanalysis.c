@@ -150,7 +150,7 @@ void SCIPproofsetFree(
 }
 
 #ifdef SCIP_DEBUG
-
+/** print a proof set */
 void proofsetPrint(
    SCIP_PROOFSET*        proofset,
    SCIP_SET*             set,
@@ -371,6 +371,7 @@ SCIP_RETCODE SCIPconflictInitProofset(
 
    return SCIP_OKAY;
 }
+
 /** resizes proofsets array to be able to store at least num entries */
 static
 SCIP_RETCODE conflictEnsureProofsetsMem(
@@ -395,7 +396,6 @@ SCIP_RETCODE conflictEnsureProofsetsMem(
    return SCIP_OKAY;
 }
 
-
 /** add a proofset to the list of all proofsets */
 static
 SCIP_RETCODE conflictInsertProofset(
@@ -415,7 +415,6 @@ SCIP_RETCODE conflictInsertProofset(
 
    return SCIP_OKAY;
 }
-
 
 /** tighten the bound of a singleton variable in a constraint
  *
@@ -704,6 +703,7 @@ SCIP_Real getMaxActivity(
    return QUAD_TO_DBL(maxact);
 }
 
+/** propagate a long proof */
 static
 SCIP_RETCODE propagateLongProof(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
@@ -805,7 +805,6 @@ SCIP_RETCODE propagateLongProof(
 
    return SCIP_OKAY;
 }
-
 
 /** creates a proof constraint and tries to add it to the storage */
 static
@@ -1086,7 +1085,7 @@ SCIP_RETCODE createAndAddProofcons(
    return SCIP_OKAY;
 }
 
-/* create proof constraints out of proof sets */
+/** create proof constraints out of proof sets */
 SCIP_RETCODE SCIPconflictFlushProofset(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
@@ -1207,6 +1206,7 @@ SCIP_RETCODE SCIPconflictFlushProofset(
 
 
 #ifdef SCIP_DEBUG
+/** print violation for debugging */
 static
 void debugPrintViolationInfo(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -1385,7 +1385,6 @@ SCIP_RETCODE separateAlternativeProofs(
 
    return SCIP_OKAY;
 }
-
 
 /** tighten a given infeasibility proof a^Tx <= b with minact > b w.r.t. local bounds
  *

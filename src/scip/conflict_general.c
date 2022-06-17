@@ -173,10 +173,6 @@ SCIP_Longint SCIPconflictGetNAppliedLocalLiterals(
    return conflict->nappliedlocliterals;
 }
 
-
-
-
-
 /** compares two conflict set entries, such that bound changes infered later are
  *  ordered prior to ones that were infered earlier
  */
@@ -777,7 +773,6 @@ SCIP_Longint SCIPconflictGetNStrongbranchIterations(
    return conflict->nsbiterations;
 }
 
-
 /** adds a weighted LP row to an aggregation row */
 static
 SCIP_RETCODE addRowToAggrRow(
@@ -1134,7 +1129,6 @@ SCIP_RETCODE addLocalRows(
 
    return SCIP_OKAY;
 }
-
 
 /** calculates a Farkas proof from the current dual LP solution */
 SCIP_RETCODE SCIPgetFarkasProof(
@@ -1532,6 +1526,7 @@ SCIP_RETCODE SCIPgetDualProof(
 
    return SCIP_OKAY;
 }
+
 
 /*
  * pseudo solution conflict analysis
@@ -2077,6 +2072,7 @@ SCIP_RETCODE conflictAnalyzeLP(
    return SCIP_OKAY;
 }
 
+
 /*
  * infeasible strong branching conflict analysis
  */
@@ -2317,6 +2313,7 @@ SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
 
    return SCIP_OKAY;
 }
+
 /** analyzes an infeasible LP to find out the bound changes on variables that were responsible for the infeasibility;
  *  on success, calls standard conflict analysis with the responsible variables as starting conflict set, thus creating
  *  a conflict constraint out of the resulting conflict set;

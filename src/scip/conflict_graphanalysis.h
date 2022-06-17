@@ -142,14 +142,12 @@ extern "C" {
 #endif
 
 /** creates an empty conflict set */
-
 SCIP_RETCODE SCIPconflictsetCreate(
    SCIP_CONFLICTSET**    conflictset,        /**< pointer to store the conflict set */
    BMS_BLKMEM*           blkmem              /**< block memory of transformed problem */
    );
 
 /** frees a conflict set */
-
 void SCIPconflictsetFree(
    SCIP_CONFLICTSET**    conflictset,        /**< pointer to the conflict set */
    BMS_BLKMEM*           blkmem              /**< block memory of transformed problem */
@@ -323,9 +321,6 @@ SCIP_RETCODE SCIPundoBdchgsProof(
    SCIP_LPI*             lpi                 /**< pointer to LPi to access infinity of LP solver; necessary to set correct values */
    );
 
-
-
-
 /** applies conflict analysis starting with given bound changes, that could not be undone during previous
  *  infeasibility analysis
  */
@@ -345,7 +340,7 @@ SCIP_RETCODE SCIPconflictAnalyzeRemainingBdchgs(
    int*                  nreconvliterals     /**< pointer to store the number of literals generated reconvergence constraints */
    );
 
-   /** initializes the propagation conflict analysis by clearing the conflict candidate queue */
+/** initializes the propagation conflict analysis by clearing the conflict candidate queue */
 SCIP_RETCODE SCIPconflictInit(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -406,7 +401,7 @@ SCIP_Real SCIPconflictGetVarUb(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
-   /** try to find a subset of changed bounds leading to an infeasible LP
+/** try to find a subset of changed bounds leading to an infeasible LP
  *
  *  1. call undoBdchgsDualfarkas() or undoBdchgsDualsol()
  *     -> update lb/ubchginfoposs arrays
@@ -419,7 +414,6 @@ SCIP_Real SCIPconflictGetVarUb(
  *  4. analyze conflict
  *     -> put remaining changed bounds (see lb/ubchginfoposs arrays) into starting conflict set
  */
-
 SCIP_RETCODE SCIPrunBoundHeuristic(
    SCIP_CONFLICT*        conflict,           /**< conflict data */
    SCIP_SET*             set,                /**< global SCIP settings */
