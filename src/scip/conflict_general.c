@@ -1304,8 +1304,7 @@ SCIP_RETCODE SCIPgetFarkasProof(
    return SCIP_OKAY;
 }
 
-/** calculates a Farkas proof from the current dual LP solution */
-
+/** calculates a dual proof from the current dual LP solution */
 SCIP_RETCODE SCIPgetDualProof(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            transprob,          /**< transformed problem */

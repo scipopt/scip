@@ -519,7 +519,7 @@ SCIP_RETCODE SCIPgetFarkasProof(
    SCIP_Bool*            valid               /**< pointer store whether the proof constraint is valid */
    );
 
-/** calculates a Farkas proof from the current dual LP solution */
+/** calculates a dual proof from the current dual LP solution */
 SCIP_RETCODE SCIPgetDualProof(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            transprob,          /**< transformed problem */
