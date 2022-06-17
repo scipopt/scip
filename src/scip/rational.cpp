@@ -590,7 +590,7 @@ void RatSetString(
             exponent = std::stoi(s.substr(exponentidx + 1, s.length()));
             s = s.substr(0, exponentidx);
          }
-         // std::cout << s << std::endl;
+         SCIPdebug(std::cout << s << std::endl);
          if( s[0] == '.' )
             s.insert(0, "0");
 
@@ -615,7 +615,6 @@ void RatSetString(
          res->val *= pow(10, exponent);
 
          res->isinf = FALSE;
-         // RatPrint(res);
       }
    }
 
@@ -1962,142 +1961,22 @@ SCIP_Real RatApproxReal(
    return retval;
 }
 
-static
-void binarySearchSemiconv(
-   long& resnum,
-   long& resden,
-   SCIP_Rational* src,
-   Integer* p,
-   Integer* q,
-   long maxdenom,
-   long ai
-   )
-{
-   long maxmul;
-   long leftden, rightden, leftnum, rightnum, lastnum, lastden;
-   long currentmul, nextmul;
-   long uppermul, lowermul;
-   int maxiterations, niterations;
-   bool increasing, wrongdir, lessthan;
-
-   leftnum = p[0].convert_to<long>();
-   rightnum = p[1].convert_to<long>();
-   leftden = q[0].convert_to<long>();
-   rightden = q[1].convert_to<long>();
-
-   increasing = ((double) leftnum) / leftden <= ((double) rightnum) / rightden;
-
-   maxmul = (maxdenom - leftden) / rightden;
-   maxmul = std::min(maxmul, ai);
-
-   nextmul = maxmul / 2;
-   currentmul = -1;
-
-   maxiterations = 5;
-   niterations = 0;
-   uppermul = maxmul;
-   lowermul = 0;
-   wrongdir = true;
-   lastnum = leftnum;
-   lastden = leftden;
-   lessthan = src->val.sign() < 0;
-
-   while(nextmul != currentmul && (niterations < maxiterations || wrongdir))
-   {
-      Rational nextval;
-
-      currentmul = nextmul;
-
-      lastnum = resnum;
-      lastden = resden;
-
-      resnum = leftnum + currentmul * rightnum;
-      resden = leftden + currentmul * rightden;
-
-      nextval = Rational(resnum, resden);
-
-      if( nextval > (src->val * src->val.sign()) )
-      {
-         if( !increasing )
-         {
-            lowermul = currentmul;
-            nextmul = currentmul + (uppermul - currentmul + 1) / 2;
-         }
-         else
-         {
-            uppermul = currentmul;
-            nextmul = currentmul / 2 + lowermul / 2;
-         }
-         if( !lessthan )
-            wrongdir = false;
-      }
-      else
-      {
-         if( increasing )
-         {
-            lowermul = currentmul;
-            nextmul = currentmul + (uppermul - currentmul + 1) / 2;
-         }
-         else
-         {
-            uppermul = currentmul;
-            nextmul = currentmul / 2 + lowermul / 2;
-         }
-         if( lessthan )
-            wrongdir = false;
-      }
-
-      niterations++;
-   }
-
-   /* we stopped because of the maximal allowed multiplier -> just use the right-most value */
-   if( wrongdir )
-   {
-      if( lessthan )
-      {
-         resnum = increasing ? leftnum : rightnum;
-         resden = increasing ? leftden : rightden;
-      }
-      else
-      {
-         resnum = !increasing ? leftnum : rightnum;
-         resden = !increasing ? leftden : rightden;
-      }
-   }
-
-   if( !wrongdir )
-   {
-      if(lessthan && Rational(resnum, resden) > (src->val * src->val.sign()) )
-      {
-         resnum = lastnum;
-         resden = lastden;
-      }
-      else if(!lessthan && Rational(resnum, resden) < (src->val * src->val.sign()) )
-      {
-         resnum = lastnum;
-         resden = lastden;
-      }
-   }
-}
-
+/* choose the best semiconvergent with demnominator <= maxdenom between p1/q1 and p2/q2 */
 static
 void chooseSemiconv(
-   long& resnum,
-   long& resden,
-   Integer* p,
-   Integer* q,
-   long maxdenom
+   Integer&              resnum,             /**< the resulting numerator */
+   Integer&              resden,             /**< the resulting denominator */
+   Integer*              p,                  /**< the last 3 numerators of convergents */
+   Integer*              q,                  /**< the last 3 denominators of convergents */
+   long                  maxdenom            /**< the maximal denominator */
    )
 {
    Integer j, resnumerator, resdenominator;
 
    j = (Integer(maxdenom) - q[0]) / q[1];
-   //  std::cout << " semiconv multiplier is " << j << std::endl;
-   resnumerator = j * p[1] + p[0];
-   resdenominator = j * q[1] + q[0];
 
-   resnum = resnumerator.convert_to<long>();
-   resden = resdenominator.convert_to<long>();
+   resnum = j * p[1] + p[0];
+   resden = j * q[1] + q[0];
 }
 
 /** compute an approximate number with denominator <= maxdenom, closest to src and save it in res using continued fractions */
@@ -2123,11 +2002,10 @@ void RatComputeApproximation(
    Integer p[3];
    Integer q[3];
 
-   long resnum;
-   long resden;
+   Integer resnum;
+   Integer resden;
 
    int sign;
-   int forcegreatersign;
 
    RatCanonicalize(src);
 
@@ -2163,7 +2041,6 @@ void RatComputeApproximation(
 
    /* scale to positive to avoid unnecessary complications */
    sign = tn.sign();
-   forcegreatersign = forcegreater * sign;
    tn *= sign;
 
    assert(td >= 0);
@@ -2189,7 +2066,7 @@ void RatComputeApproximation(
          res->isinf = FALSE;
          res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
 
-//         std::cout << "approximating " << src->val << " by " << res->val << std::endl;
+         SCIPdebug(std::cout << "approximating " << src->val << " by " << res->val << std::endl);
 
          return;
       }
@@ -2210,8 +2087,8 @@ void RatComputeApproximation(
 
       done = 0;
 
-      //std::cout << "approximating " << src->val << " by continued fractions with maxdenom " << maxdenom << std::endl;
-      //std::cout << "confrac initial values: p0 " << p[1] << " q0 " << q[1] << " p1 " << p[2] << " q1 " << q[2] << std::endl;
+      SCIPdebug(std::cout << "approximating " << src->val << " by continued fractions with maxdenom " << maxdenom << std::endl);
+      SCIPdebug(std::cout << "confrac initial values: p0 " << p[1] << " q0 " << q[1] << " p1 " << p[2] << " q1 " << q[2] << std::endl);
 
       /* if q is already big, skip loop */
       if( q[2] > Dbound )
@@ -2238,7 +2115,7 @@ void RatComputeApproximation(
          p[2] = p[0] + p[1] * ai;
          q[2] = q[0] + q[1] * ai;
 
-         //std::cout << "ai " << ai << " pi " << p[2] << " qi " << q[2] << std::endl;
+         SCIPdebug(std::cout << "ai " << ai << " pi " << p[2] << " qi " << q[2] << std::endl);
 
          if( q[2] > Dbound )
             done = 1;
@@ -2262,18 +2139,18 @@ void RatComputeApproximation(
             }
             else
             {
-               //std::cout << " picking semiconvergent " << std::endl;
+               SCIPdebug(std::cout << " picking semiconvergent " << std::endl);
                chooseSemiconv(resnum, resden, p, q, maxdenom);
-               //std::cout << " use " << resnum << "/" << resden << std::endl;
+               SCIPdebug(std::cout << " use " << resnum << "/" << resden << std::endl);
                res->val = Rational(resnum,resden) * sign;
             }
          }
          /* normal case -> pick semiconvergent for best approximation */
          else
          {
-            //std::cout << " picking semiconvergent " << std::endl;
+            SCIPdebug(std::cout << " picking semiconvergent " << std::endl);
             chooseSemiconv(resnum, resden, p, q, maxdenom);
-            //std::cout << " use " << resnum << "/" << resden << std::endl;
+            SCIPdebug(std::cout << " use " << resnum << "/" << resden << std::endl);
             res->val = Rational(resnum,resden) * sign;
          }
       }
