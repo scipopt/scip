@@ -37,9 +37,11 @@ Testing
 -------
 Build system
 ------------
+
+- BLISS is now built from the vendored version from https://github.com/ds4dm/Bliss
+
 ### Cmake
 
-- In case BLISS is on but not found, compile a vendored version from https://github.com/ds4dm/Bliss
 - avoid warnings about unrecognized compiler warning silencing options when compilation with GCC fails
 - adjust mosek find module to version 9.3
 - added cmake compatibility for ipopt versions 3.14.x
