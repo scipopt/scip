@@ -70,9 +70,7 @@
 #include "scip/tree.h"
 #include "scip/var.h"
 #include "scip/visual.h"
-/* because calculations might cancel out some values, we stop the infeasibility analysis if a value is bigger than
- * 2^53 = 9007199254740992
- */
+
 #define BOUNDSWITCH                0.51 /**< threshold for bound switching - see cuts.c */
 #define POSTPROCESS               FALSE /**< apply postprocessing to the cut - see cuts.c */
 #define USEVBDS                   FALSE /**< use variable bounds - see cuts.c */

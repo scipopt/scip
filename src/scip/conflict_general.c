@@ -81,6 +81,9 @@
 #include <strings.h> /*lint --e{766}*/
 #endif
 
+/* because calculations might cancel out some values, we stop the infeasibility analysis if a value is bigger than
+ * 2^53 = 9007199254740992
+ */
 #define NUMSTOP 9007199254740992.0
 
 /** returns the current number of conflict sets in the conflict set storage */
