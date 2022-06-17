@@ -805,10 +805,10 @@ Graph::split_neighbourhood_of_cell(Partition::Cell* const cell)
     {
       for(unsigned int i = p.splitting_queue.size(); i > 0; i--)
         {
-          Partition::Cell* const cell = p.splitting_queue.pop_front();
-          rest.update(cell->first);
-          rest.update(cell->length);
-          p.splitting_queue.push_back(cell);
+          Partition::Cell* const cell2 = p.splitting_queue.pop_front();
+          rest.update(cell2->first);
+          rest.update(cell2->length);
+          p.splitting_queue.push_back(cell2);
         }
       rest.update(failure_recording_fp_deviation);
       failure_recording_fp_deviation = rest.get_value();
