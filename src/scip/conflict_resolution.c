@@ -155,6 +155,18 @@ SCIP_Bool tightenCoefLhs(
 
    minact = QUAD_TO_DBL(minacttmp);
 
+   /* row is redundant if minact is infinity */
+   if (SCIPisInfinity(scip, minact) )
+   {
+      redundant = TRUE;
+      goto TERMINATE;
+   }
+   /* no coefficients can be tightened */
+   if (SCIPisInfinity(scip, -minact) )
+   {
+      goto TERMINATE;
+   }
+
    /* row is redundant in activity bounds */
    if( SCIPisFeasGE(scip, minact, *rowlhs) )
    {
@@ -183,8 +195,6 @@ SCIP_Bool tightenCoefLhs(
       {
          SCIP_Real coef = minact - (*rowlhs);
          SCIP_Real ub = localbounds ? SCIPvarGetUbLocal(vars[rowinds[i]]) : SCIPvarGetUbGlobal(vars[rowinds[i]]);
-
-         // coef = floor(coef);
 
          if( coef > rowcoefs[i] )
          {
@@ -335,6 +345,8 @@ void conflictCleanUpbdchgqueue(
    SCIP_BDCHGINFO* bdchginfo;
    SCIP_VAR* var;
 
+   int nelems;
+   int deleted;
    int i;
 
    assert(conflict != NULL);
@@ -348,8 +360,6 @@ void conflictCleanUpbdchgqueue(
          SCIPpqueueDelPos(conflict->resforcedbdchgqueue, i);
       }
    }
-   int nelems;
-   int deleted;
    nelems = SCIPpqueueNElems(conflict->resbdchgqueue);
    deleted = 0;
    /* @todo this is inefficient. Think of something better */
@@ -419,6 +429,22 @@ SCIP_BDCHGINFO* conflictRemoveCand(
 
    /* if we have a candidate this one should be valid for the current conflict analysis */
    assert(!bdchginfoIsInvalid(conflict, bdchginfo));
+
+   /* mark the bound change to be no longer in the conflict (it will be either added again to the conflict set or
+    * replaced by resolving, which might add a weaker change on the same bound to the queue)
+    */
+   var = SCIPbdchginfoGetVar(bdchginfo);
+   if( SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER )
+   {
+      var->conflictlbcount = 0;
+      var->conflictrelaxedlb = SCIP_REAL_MIN;
+   }
+   else
+   {
+      assert(SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_UPPER);
+      var->conflictubcount = 0;
+      var->conflictrelaxedub = SCIP_REAL_MAX;
+   }
 
    return bdchginfo;
 }
@@ -865,7 +891,7 @@ SCIP_RETCODE SCIPconflictFlushResolutionSets(
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_CLIQUETABLE*     cliquetable,         /**< clique table data structure */
-   SCIP_RESOLUTIONSET*   resolutionset      /**< resolution set to add to the tree */
+   SCIP_RESOLUTIONSET*   resolutionset       /**< resolution set to add to the tree */
    )
 {
 
@@ -1203,7 +1229,7 @@ SCIP_RETCODE reasonResolutionsetFromRow(
    {
       var = SCIPcolGetVar(cols[i]);
       inds[i] = SCIPvarGetProbindex(var);
-      if ( (inds[i] == varidx) )
+      if ( inds[i] == varidx )
       {
          if ( (SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER && vals[i] < 0) || (SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_UPPER && vals[i] > 0) )
          {
@@ -1283,7 +1309,7 @@ SCIP_RETCODE conflictResolutionsetFromRow(
    {
       var = SCIPcolGetVar(cols[i]);
       inds[i] = SCIPvarGetProbindex(var);
-      if ( (inds[i] == varidx) )
+      if ( inds[i] == varidx )
       {
          if ( (SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER && vals[i] > 0) || (SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_UPPER && vals[i] < 0) )
          {
@@ -1361,6 +1387,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
    int i;
    SCIP_Bool addconstraint;
    int nchgcoefs;
+   int nressteps;
 
    SCIP_VAR* vartoresolve;
    int residx;
@@ -1471,6 +1498,7 @@ SCIPsetDebugMsg(set, " -> First bound change to resolve <%s> %s %.15g [status:%d
    if ( conflictslack >= 0 )
       return SCIP_OKAY;
 
+   nressteps = 0;
    /* main loop */
    while( bdchginfo != NULL && validdepth <= maxvaliddepth )
    {
@@ -1499,10 +1527,10 @@ SCIPsetDebugMsg(set, " -> First bound change to resolve <%s> %s %.15g [status:%d
       while ( i < resolutionsetGetNNzs(reasonresolutionset) )
       {
          double currentslack;
-         currentslack = reasonslack;
-
          SCIP_VAR* vartoweaken;
-         SCIP_Bool* success;
+         SCIP_Bool success;
+
+         currentslack = reasonslack;
          success = FALSE;
          vartoweaken = vars[reasonresolutionset->inds[i]];
 
@@ -1520,9 +1548,10 @@ SCIPsetDebugMsg(set, " -> First bound change to resolve <%s> %s %.15g [status:%d
             }
             else
             {
-               assert( reasonresolutionset->vals[i] < 0.0);
                int nlbchgs;
                nlbchgs = SCIPvarGetNBdchgInfosLb(vars[reasonresolutionset->inds[i]]);
+
+               assert( reasonresolutionset->vals[i] < 0.0);
                if ( nlbchgs == 0 )
                {
                   weakenVarReason(reasonresolutionset, set, vartoweaken, i);
@@ -1587,6 +1616,7 @@ SCIPsetDebugMsg(set, " -> First bound change to resolve <%s> %s %.15g [status:%d
 #endif
       /* resolution step */
       resolveWithReason(scip, set, conflictresolutionset, reasonresolutionset, blkmem, residx, addconstraint, &successresolution);
+      nressteps++;
 
       if (!successresolution)
          goto TERMINATE;
@@ -1606,20 +1636,6 @@ SCIPsetDebugMsg(set, " -> First bound change to resolve <%s> %s %.15g [status:%d
       SCIPsetDebugMsgPrint(set, ">= %f \n", conflictresolutionset->lhs);
    }
 #endif
-      // conflictslack = getSlack(scip, set, transprob, conflictresolutionset);
-      // tightenCoefLhs(scip, transprob, FALSE, conflictresolutionset->vals, &conflictresolutionset->lhs, conflictresolutionset->inds, &conflictresolutionset->nnz, &nchgcoefs);
-      // if (nchgcoefs > 0)
-      // {
-      //    SCIPsetDebugMsg(set, "Some bounds (%d) are tightened!!! \n", nchgcoefs);
-      // }
-      // /* sort for linear time resolution */
-      // SCIPsortIntReal(conflictresolutionset->inds, conflictresolutionset->vals, resolutionsetGetNNzs(conflictresolutionset));
-
-      // SCIPsetDebugMsg(set, "Slack of resolved row: %f \n", conflictslack);
-      // goto TERMINATE;
-
-      /* add parameter if we want to terminate after one resolution step */
-      /* goto TERMINATE; */
    }
    else
    {
@@ -1650,6 +1666,11 @@ SCIPsetDebugMsg(set, " -> First bound change to resolve <%s> %s %.15g [status:%d
    SCIPsortIntReal(conflictresolutionset->inds, conflictresolutionset->vals, resolutionsetGetNNzs(conflictresolutionset));
 
    SCIPsetDebugMsg(set, "Slack of resolved row: %f \n", conflictslack);
+
+   /* terminate after at most nressteps resolution iterations */
+   if (set->conf_maxnumressteps > 0 && nressteps >= set->conf_maxnumressteps)
+      goto TERMINATE;
+
    conflictCleanUpbdchgqueue(conflict, set, conflictresolutionset);
    addConflictBounds(scip, transprob, set, conflictresolutionset, vartoresolve, bdchgidx);
 
@@ -1752,7 +1773,7 @@ SCIP_RETCODE SCIPconflictAnalyzeResolution(
    SCIPclockStart(conflict->resanalyzetime, set);
 
    conflict->nrescalls++;
-
+   conflict->bdchgonlyresqueue = TRUE;
    /* analyze the conflict set, and create a conflict constraint on success */
    SCIP_CALL( conflictAnalyzeResolution(scip, conflict, cons, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue, cliquetable, FALSE, validdepth, TRUE, &nconss, &nconfvars) );
 
@@ -1764,6 +1785,7 @@ SCIP_RETCODE SCIPconflictAnalyzeResolution(
 
    SCIPpqueueClear(conflict->resbdchgqueue);
    SCIPpqueueClear(conflict->resforcedbdchgqueue);
+   conflict->bdchgonlyresqueue = FALSE;
 
    /* stop timing */
    SCIPclockStop(conflict->resanalyzetime, set);

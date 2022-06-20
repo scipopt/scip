@@ -122,6 +122,8 @@
 #define SCIP_DEFAULT_CONF_MAXSTORESIZE    10000 /**< maximal size of the conflict pool */
 #define SCIP_DEFAULT_CONF_RECONVLEVELS       -1 /**< number of depth levels up to which UIP reconvergence constraints are
                                                  *   generated (-1: generate reconvergence constraints in all depth levels) */
+#define SCIP_DEFAULT_CONF_MAXNUMRESSTEPS     1  /**< maximal number of resolution steps in generalized resolution
+                                                 *   (-1: resolve till FirstUIP) */
 #define SCIP_DEFAULT_CONF_CLEANBNDDEPEND   TRUE /**< should conflicts based on an old cutoff bound removed? */
 #define SCIP_DEFAULT_CONF_FUIPLEVELS         -1 /**< number of depth levels up to which first UIP's are used in conflict
                                                  *   analysis (-1: use All-FirstUIP rule) */
@@ -1394,6 +1396,11 @@ SCIP_RETCODE SCIPsetCreate(
          "conflict/reconvlevels",
          "number of depth levels up to which UIP reconvergence constraints are generated (-1: generate reconvergence constraints in all depth levels)",
          &(*set)->conf_reconvlevels, TRUE, SCIP_DEFAULT_CONF_RECONVLEVELS, -1, INT_MAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "conflict/maxnumressteps",
+         "maximal number of resolution steps in generalized resolution (-1: resolve till FirstUIP)",
+         &(*set)->conf_maxnumressteps, TRUE, SCIP_DEFAULT_CONF_MAXNUMRESSTEPS, -1, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "conflict/maxconss",

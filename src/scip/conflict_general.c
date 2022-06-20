@@ -328,6 +328,7 @@ SCIP_RETCODE SCIPconflictCreate(
    (*conflict)->nressuccess = 0;
    (*conflict)->nresconfconss = 0;
    (*conflict)->nresconfvariables = 0;
+   (*conflict)->bdchgonlyresqueue = FALSE;
 
    SCIP_CALL( SCIPconflictInitResolutionset((*conflict), blkmem) );
 
