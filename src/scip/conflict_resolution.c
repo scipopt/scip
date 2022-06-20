@@ -637,28 +637,6 @@ SCIP_Real resolutionsetGetLhs(
    return resolutionset->lhs;
 }
 
-/** return the left-hand side of row from which we derive the resolutionset */
-static
-SCIP_Real resolutionsetGetOrigLhs(
-   SCIP_RESOLUTIONSET*   resolutionset  /**< resolution set */
-   )
-{
-   assert(resolutionset != NULL);
-
-   return resolutionset->origlhs;
-}
-
-/** return the right-hand side of row from which we derive the resolutionset */
-static
-SCIP_Real resolutionsetGetOrigRhs(
-   SCIP_RESOLUTIONSET*   resolutionset       /**< resolution set */
-   )
-{
-   assert(resolutionset != NULL);
-
-   return resolutionset->origrhs;
-}
-
 /** returns the number of non zeros in the resolutionset */
 static
 int resolutionsetGetNNzs(
