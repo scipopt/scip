@@ -1476,10 +1476,10 @@ SCIPsetDebugMsg(set, " -> First bound change to resolve <%s> %s %.15g [status:%d
       return SCIP_OKAY;
 
    nressteps = 0;
+   addconstraint = FALSE;
    /* main loop */
    while( bdchginfo != NULL && validdepth <= maxvaliddepth )
    {
-      addconstraint = FALSE;
 
       if ( SCIPbdchginfoGetChgtype(bdchginfo) == SCIP_BOUNDCHGTYPE_CONSINFER )
       {
