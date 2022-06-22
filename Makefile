@@ -75,7 +75,6 @@ BUILDFLAGS =	" ARCH=$(ARCH)\\n\
 		DEBUGSOL=$(DEBUGSOL)\\n\
 		EXPRINT=$(EXPRINT)\\n\
 		GMP=$(GMP)\\n\
-		IPOPT=$(IPOPT)\\n\
 		IPOPTOPT=$(IPOPTOPT)\\n\
 		LPSCHECK=$(LPSCHECK)\\n\
 		LPSOPT=$(LPSOPT)\\n\
@@ -1335,10 +1334,11 @@ endif
 				echo "-> generating $(SCIPGITHASHFILE)" ; \
 				$(MAKE) githash ; \
 			fi'
-ifneq ($(subst \\n,\n,$(BUILDFLAGS)$(LPS)),$(LAST_BUILDFLAGS)$(LAST_LPS))
+ifneq ($(subst \\n,\n,$(BUILDFLAGS)$(LPS)$(IPOPT)),$(LAST_BUILDFLAGS)$(LAST_LPS)$(LAST_IPOPT))
 		@mkdir -p $(OBJDIR)/include/scip
 		@echo "#define SCIP_BUILDFLAGS \"$(BUILDFLAGS)\"" > $(SCIPBUILDFLAGSFILE)
 		@echo "#define SCIP_LPS \"$(LPS)\"" >> $(SCIPBUILDFLAGSFILE)
+		@echo "#define SCIP_IPOPT \"$(IPOPT)\"" >> $(SCIPBUILDFLAGSFILE)
 endif
 ifneq ($(subst \\n,\n,$(BUILDFLAGS)),$(LAST_BUILDFLAGS))
 		@rm -f $(SCIPCONFIGHFILE)
@@ -1347,12 +1347,14 @@ endif
 		@-rm -f $(LASTSETTINGS)
 		@echo "LAST_BUILDFLAGS=\"$(BUILDFLAGS)\"" >> $(LASTSETTINGS)
 		@echo "LAST_LPS=\"$(LPS)\"" >> $(LASTSETTINGS)
+		@echo "LAST_IPOPT=\"$(IPOPT)\"" >> $(LASTSETTINGS)
 		@echo "LAST_SCIPGITHASH=$(SCIPGITHASH)" >> $(LASTSETTINGS)
 
 $(SCIPBUILDFLAGSFILE) :
 		@mkdir -p $(@D)
 		@echo "#define SCIP_BUILDFLAGS \"$(BUILDFLAGS)\"" > $@
 		@echo "#define SCIP_LPS \"$(LPS)\"" >> $(SCIPBUILDFLAGSFILE)
+		@echo "#define SCIP_IPOPT \"$(IPOPT)\"" >> $(SCIPBUILDFLAGSFILE)
 
 $(SCIPCONFIGHFILE) :
 		@echo "-> writing $(SCIPCONFIGHFILE)"
