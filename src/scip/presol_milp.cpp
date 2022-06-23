@@ -166,7 +166,10 @@ Problem<SCIP_Real> buildProblem(
       builder.setColLbInf(i, SCIPisInfinity(scip, -lb));
       builder.setColUbInf(i, SCIPisInfinity(scip, ub));
 
-      builder.setColIntegral(i, SCIPvarIsIntegral(var));
+      if ( SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT )
+         builder.setColImplInt(i, TRUE);
+      else
+         builder.setColIntegral(i, SCIPvarIsIntegral(var));
       builder.setObj(i, SCIPvarGetObj(var));
    }
 
