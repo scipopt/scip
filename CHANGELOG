@@ -51,6 +51,7 @@ Fixed bugs
 - fixed memory allocation issue in detection of SOC nlhdlr
 - fixed that reaching the walltime limit in Ipopt was not handled properly
 - Deactivated dual fixing of unlocked variables with zero objective in presol_milp that SCIP is unable to postsolve.
+- set the column flag kImplInt for implicit integers in the papilo problem
 
 @section RN800 SCIP 8.0.0
 *************************
