@@ -27,7 +27,7 @@ ARCH		:=	$(shell uname -m | \
 			-e 's/[0-9]86/x86/' \
 			-e 's/amd64/x86_64/' \
 			-e 's/9000..../hppa/' \
-			-e 's/00........../pwr4/'\
+			-e 's/00........../pwr4/' \
 			-e 's/arm.*/arm/' \
 			-e 's/aarch64/arm/')
 OSTYPE		:=	$(shell uname -s | tr '[:upper:]' '[:lower:]' | \
