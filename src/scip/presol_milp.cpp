@@ -350,7 +350,6 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
    presolve.addPresolveMethod( uptr( new SimplifyInequalities<SCIP_Real>() ) );
    presolve.addPresolveMethod( uptr( new SimpleSubstitution<SCIP_Real>() ) );
 
-
    /* exhaustive presolvers*/
    presolve.addPresolveMethod( uptr( new ImplIntDetection<SCIP_Real>() ) );
    if( data->enabledualinfer )
@@ -696,7 +695,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
 #if (PAPILO_VERSION_MAJOR <= 1 && PAPILO_VERSION_MINOR==0)
 #else
       case ReductionType::kFixedInfCol: {
-         //TODO: currently SCIP can not handle this kind of reduction (see issue #3391)
+         /* todo: currently SCIP can not handle this kind of reduction (see issue #3391) */
          assert(false);
          if(!constraintsReplaced)
             continue;
