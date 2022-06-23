@@ -350,7 +350,13 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
    /* todo: parallel cols cannot be handled by SCIP currently
    * addPresolveMethod( uptr( new ParallelColDetection<SCIP_Real>() ) ); */
    presolve.addPresolveMethod( uptr( new SingletonStuffing<SCIP_Real>() ) );
+#if PAPILO_VERSION_MAJOR > 2 || (PAPILO_VERSION_MAJOR == 2 && PAPILO_VERSION_MINOR >= 1)
+   DualFix<SCIP_Real> *dualfix = new DualFix<SCIP_Real>();
+   dualfix->set_fix_to_infinity_allowed(false);
+   presolve.addPresolveMethod( uptr( dualfix ) );
+#else
    presolve.addPresolveMethod( uptr( new DualFix<SCIP_Real>() ) );
+#endif
    presolve.addPresolveMethod( uptr( new FixContinuous<SCIP_Real>() ) );
    presolve.addPresolveMethod( uptr( new SimplifyInequalities<SCIP_Real>() ) );
    presolve.addPresolveMethod( uptr( new SimpleSubstitution<SCIP_Real>() ) );
@@ -700,6 +706,8 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
 #if (PAPILO_VERSION_MAJOR <= 1 && PAPILO_VERSION_MINOR==0)
 #else
       case ReductionType::kFixedInfCol: {
+         /* todo: currently SCIP can not handle this kind of reduction (see issue #3391) */
+         assert(false);
          if(!constraintsReplaced)
             continue;
          SCIP_Bool infeas;

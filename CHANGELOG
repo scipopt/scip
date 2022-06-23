@@ -109,7 +109,7 @@ Known bugs
 
 @page RN80 Release notes for SCIP 8.0
 
-@section RN000 SCIP 8.0.1
+@section RN801 SCIP 8.0.1
 *************************
 Features
 --------
@@ -118,8 +118,6 @@ Features
 - avoid warning if Mosek has reached/exceeded the objective limit
 - improved curvature check for quadratic expressions when extended formulations are disabled
 
-Performance improvements
-------------------------
 Examples and applications
 -------------------------
 
@@ -127,23 +125,11 @@ Examples and applications
 
 Interface changes
 -----------------
-### New and changed callbacks
-### Deleted and changed API methods
-### New API functions
-### Command line interface
+
 ### Interfaces to external software
 
 - Added compatibility with Mosek 10.0.13.
 
-### Changed parameters
-### New parameters
-### Data structures
-Deleted files
--------------
-Unit tests
-----------
-Testing
--------
 Build system
 ------------
 
@@ -173,11 +159,7 @@ Fixed bugs
 - made SYMsymmetryGetName() thread-safe for Bliss
 - fixed memory allocation issue in detection of SOC nlhdlr
 - fixed that reaching the walltime limit in Ipopt was not handled properly
-
-Miscellaneous
--------------
-Known bugs
-----------
+- Deactivated dual fixing of unlocked variables with zero objective in presol_milp that SCIP is unable to postsolve.
 
 @section RN800 SCIP 8.0.0
 *************************
