@@ -206,6 +206,8 @@ struct SCIP_Conflict
    int                   ntmpbdchginfos;     /**< number of temporary created bound change information data */
    int                   count;              /**< conflict set counter to label binary conflict variables with */
    SCIP_Bool             bdchgonlyresqueue;  /**< if true we add bound changes only for generalized resolution */
+   int                   nresolutionsets;    /**< number of available resolution sets */
+
 };
 
 #ifdef __cplusplus
