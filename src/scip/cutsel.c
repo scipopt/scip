@@ -221,6 +221,7 @@ SCIP_RETCODE SCIPcutselsSelect(
          }
          else
          {
+            cutsel->nlocalcutsselected += *nselectedcuts - nforcedcuts;
             cutsel->nlocalcutsforced += nforcedcuts;
             cutsel->nlocalcutsfiltered += ncuts - *nselectedcuts;
          }
