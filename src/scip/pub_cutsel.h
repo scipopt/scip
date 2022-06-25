@@ -88,10 +88,49 @@ SCIP_Real SCIPcutselGetTime(
    SCIP_CUTSEL*          cutsel              /**< cut selector */
    );
 
+/** get number of times the cutselector was called */
+SCIP_Longint SCIPcutselGetNCalls(
+    SCIP_CUTSEL*          cutsel              /**< cut selector */
+);
+
+/** get number of times the cutselector was called at the root */
+SCIP_Longint SCIPcutselGetNRootCalls(
+    SCIP_CUTSEL*          cutsel              /**< cut selector */
+);
+
+/** get total number of cuts that were selected at the root */
+SCIP_Longint SCIPcutselGetNRootCuts(
+   SCIP_CUTSEL*          cutsel              /**< cut selector */
+   );
+
+/** get total number of forced cuts that were selected at the root */
+SCIP_Longint SCIPcutselGetNRootForcedCuts(
+   SCIP_CUTSEL*          cutsel              /**< cut selector */
+   );
+
+/** get total number of root cuts that were filtered */
+SCIP_Longint SCIPcutselGetNRootCutsFiltered(
+   SCIP_CUTSEL*          cutsel              /**< cut selector */
+   );
+
+/** get total number of local cuts that were selected */
+SCIP_Longint SCIPcutselGetNLocalCuts(
+   SCIP_CUTSEL*          cutsel              /**< cut selector */
+   );
+
+/** get total number of forced local cuts that were selected */
+SCIP_Longint SCIPcutselGetNLocalForcedCuts(
+   SCIP_CUTSEL*          cutsel              /**< cut selector */
+   );
+
+/** get total number of local cuts that were filtered */
+SCIP_Longint SCIPcutselGetNLocalCutsFiltered(
+   SCIP_CUTSEL*          cutsel              /**< cut selector */
+   );
+
 /** compares two cut selectors w. r. to their priority */
 SCIP_EXPORT
 SCIP_DECL_SORTPTRCOMP(SCIPcutselComp);
-
 
 /** @} */
 

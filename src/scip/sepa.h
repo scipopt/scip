@@ -186,17 +186,30 @@ void SCIPsepaEnableOrDisableClocks(
    SCIP_Bool             enable              /**< should the clocks of the separator be enabled? */
    );
 
-/** increase count of applied cuts */
-void SCIPsepaIncNAppliedCuts(
-   SCIP_SEPA*            sepa                /**< separator */
+/** increase count of applied cuts by one */
+void SCIPsepaIncNCutsApplied(
+   SCIP_SEPA*            sepa,                /**< separator */
+   unsigned int          fromcutpool          /**< added from cutpool to sepastore */
    );
 
-/** increase count of found cuts */
+/** increase count of found cuts by one */
+void SCIPsepaIncNCutsAdded(
+   SCIP_SEPA*            sepa,                /**< separator */
+   unsigned int          fromcutpool          /**< added from cutpool to sepastore */
+   );
+
+/** decrease the count of added cuts by one */
+void SCIPsepaDecNCutsAdded(
+   SCIP_SEPA*            sepa,                /**< separator */
+   unsigned int          fromcutpool          /**< added from cutpool to sepastore */
+   );
+
+/** increase count of found cuts by one */
 void SCIPsepaIncNCutsFound(
    SCIP_SEPA*            sepa                /**< separator */
    );
 
-/** increase count of found cuts at current node */
+/** increase count of found cuts at current node by one */
 void SCIPsepaIncNCutsFoundAtNode(
    SCIP_SEPA*            sepa                /**< separator */
    );

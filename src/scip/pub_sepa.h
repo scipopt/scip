@@ -122,6 +122,12 @@ SCIP_Longint SCIPsepaGetNCalls(
    SCIP_SEPA*            sepa                /**< separator */
    );
 
+/** gets the total number of times, the separator was called at the root */
+SCIP_EXPORT
+SCIP_Longint SCIPsepaGetNRootCalls(
+   SCIP_SEPA*            sepa                /**< separator */
+   );
+
 /** gets the number of times, the separator was called at the current node */
 SCIP_EXPORT
 int SCIPsepaGetNCallsAtNode(
@@ -134,15 +140,47 @@ SCIP_Longint SCIPsepaGetNCutoffs(
    SCIP_SEPA*            sepa                /**< separator */
    );
 
-/** gets the total number of cutting planes found by this separator */
+/** gets the total number of cutting planes added from the separator to the cut pool
+ *  and to the sepastore directly */
 SCIP_EXPORT
 SCIP_Longint SCIPsepaGetNCutsFound(
    SCIP_SEPA*            sepa                /**< separator */
    );
 
-/** gets the total number of cutting planes applied to lp */
+/** gets the total number of cutting planes added from the separator to the sepastore;
+ *  equal to the sum of added cuts directly and via the pool. */
+SCIP_EXPORT
+SCIP_Longint SCIPsepaGetNCutsAdded(
+   SCIP_SEPA*            sepa                /**< separator */
+   );
+
+/** gets the number of cutting planes from the separator added from the cut pool */
+SCIP_EXPORT
+SCIP_Longint SCIPsepaGetNCutsAddedViaPool(
+   SCIP_SEPA*            sepa                /**< separator */
+   );
+
+/** gets the number of cutting planes from the separator added directly to the sepastore */
+SCIP_EXPORT
+SCIP_Longint SCIPsepaGetNCutsAddedDirect(
+   SCIP_SEPA*            sepa                /**< separator */
+   );
+
+/** gets the total number of cutting planes from the separator applied to the LP */
 SCIP_EXPORT
 SCIP_Longint SCIPsepaGetNCutsApplied(
+   SCIP_SEPA*            sepa                /**< separator */
+   );
+
+/** gets the total number of cutting planes from the separator applied to the LP from the cutpool */
+SCIP_EXPORT
+SCIP_Longint SCIPsepaGetNCutsAppliedViaPool(
+   SCIP_SEPA*            sepa                /**< separator */
+   );
+
+/** gets the total number of cutting planes from the separator applied directly to the LP */
+SCIP_EXPORT
+SCIP_Longint SCIPsepaGetNCutsAppliedDirect(
    SCIP_SEPA*            sepa                /**< separator */
    );
 
