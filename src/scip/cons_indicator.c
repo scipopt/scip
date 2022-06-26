@@ -3285,7 +3285,7 @@ SCIP_RETCODE createVarUbs(
    int*                  ngen                /**< number of successful operations */
    )
 {
-   char name[50];
+   char name[50] = "\0";
    int c;
 
    assert( scip != NULL );
@@ -3313,8 +3313,6 @@ SCIP_RETCODE createVarUbs(
 
 #ifndef NDEBUG
          (void) SCIPsnprintf(name, 50, "couple%d", c);
-#else
-         name[0] = '\0';
 #endif
 
          SCIPdebugMsg(scip, "Insert coupling varbound constraint for indicator constraint <%s> (coeff: %f).\n", SCIPconsGetName(conss[c]), ub);
@@ -3365,8 +3363,8 @@ SCIP_RETCODE presolRoundIndicator(
    SCIP_Bool             dualreductions,     /**< should dual reductions be performed? */
    SCIP_Bool*            cutoff,             /**< whether a cutoff happened */
    SCIP_Bool*            success,            /**< whether we performed a successful reduction */
-   int*                  ndelconss,          /**< number of deleted constraints */
-   int*                  nfixedvars          /**< number of fixed variables */
+   int*                  ndelconss,          /**< pointer to store the number of deleted constraints */
+   int*                  nfixedvars          /**< pointer to store the number of fixed variables */
    )
 {
    SCIP_Bool infeasible;
@@ -3492,9 +3490,9 @@ SCIP_RETCODE presolRoundIndicator(
          if ( obj <= 0.0 )
          {
             /* In this case we would like to fix the binary variable to 1, if it is not locked up
-               except by this indicator constraint. If more than one indicator constraint is
-               effected, we have to hope that they are all fulfilled - in this case the last
-               constraint will fix the binary variable to 1. */
+             * except by this indicator constraint. If more than one indicator constraint is
+             * affected, we have to hope that they are all fulfilled - in this case the last
+             * constraint will fix the binary variable to 1. */
             if ( SCIPvarGetNLocksUpType(binvar, SCIP_LOCKTYPE_MODEL) <= 1 )
             {
                if ( SCIPvarGetUbGlobal(binvar) > 0.5 )
@@ -3509,10 +3507,11 @@ SCIP_RETCODE presolRoundIndicator(
                }
             }
          }
+
          if ( obj >= 0.0 )
          {
             /* In this case we would like to fix the binary variable to 0, if it is not locked down
-               (should also have been performed by other dual reductions). */
+             * (should also have been performed by other dual reductions). */
             if ( SCIPvarGetNLocksDownType(binvar, SCIP_LOCKTYPE_MODEL) == 0 )
             {
                if ( SCIPvarGetLbGlobal(binvar) < 0.5 )
@@ -3918,9 +3917,9 @@ SCIP_RETCODE propIndicator(
             if ( obj <= 0.0 )
             {
                /* In this case we would like to fix the binary variable to 1, if it is not locked up
-                  except by this indicator constraint. If more than one indicator constraint is
-                  affected, we have to hope that they are all fulfilled - in this case the last
-                  constraint will fix the binary variable to 1. */
+                * except by this indicator constraint. If more than one indicator constraint is
+                * affected, we have to hope that they are all fulfilled - in this case the last
+                * constraint will fix the binary variable to 1. */
                if ( SCIPvarGetNLocksUpType(binvar, SCIP_LOCKTYPE_MODEL) <= 1 )
                {
                   if ( SCIPvarGetUbLocal(binvar) > 0.5 )
@@ -3935,10 +3934,11 @@ SCIP_RETCODE propIndicator(
                   }
                }
             }
+
             if ( obj >= 0.0 )
             {
                /* In this case we would like to fix the binary variable to 0, if it is not locked down
-                  (should also have been performed by other dual reductions). */
+                * (should also have been performed by other dual reductions). */
                if ( SCIPvarGetNLocksDownType(binvar, SCIP_LOCKTYPE_MODEL) == 0 )
                {
                   if ( SCIPvarGetLbLocal(binvar) < 0.5 )
@@ -4112,8 +4112,8 @@ SCIP_RETCODE enforceIndicators(
    SCIP_RESULT*          result              /**< result */
    )
 {
-   SCIP_CONSDATA* consdata;
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSDATA* consdata;
    SCIP_NODE* node1;
    SCIP_NODE* node2;
    SCIP_VAR* slackvar;
@@ -6500,6 +6500,7 @@ SCIP_DECL_CONSPROP(consPropIndicator)
       int cnt;
 
       *result = SCIP_DIDNOTFIND;
+
       assert( conss[c] != NULL );
       cons = conss[c];
       consdata = SCIPconsGetData(cons);
@@ -7728,7 +7729,7 @@ SCIP_RETCODE SCIPcreateConsIndicatorGeneric(
                binvarinternal = binvar;
             else
             {
-               SCIP_CALL ( SCIPgetNegatedVar(scip, binvar, &binvarinternal) );
+               SCIP_CALL( SCIPgetNegatedVar(scip, binvar, &binvarinternal) );
             }
 
             /* check whether binary variable is present: note that a binary variable might appear several times, but this seldomly happens. */
