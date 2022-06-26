@@ -3901,9 +3901,8 @@ SCIP_RETCODE propIndicator(
             SCIP_CALL( SCIPdelConsLocal(scip, cons) );
          }
       }
-
       /* if the slack variable is fixed to zero */
-      if ( SCIPisFeasZero(scip, SCIPvarGetUbLocal(consdata->slackvar)) )
+      else if ( SCIPisFeasZero(scip, SCIPvarGetUbLocal(consdata->slackvar)) )
       {
          /* perform dual reduction - if required */
          if ( dualreductions )
@@ -4128,6 +4127,7 @@ SCIP_RETCODE enforceIndicators(
    SCIP_CONS* branchCons = NULL;
    SCIP_Real maxSlack = -1.0;
    SCIP_Bool someLinconsNotActive = FALSE;
+   SCIP_Bool dualreductions;
    int c;
 
    assert( scip != NULL );
@@ -4143,9 +4143,7 @@ SCIP_RETCODE enforceIndicators(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
 
-#ifdef SCIP_OUTPUT
-   SCIP_CALL( SCIPwriteTransProblem(scip, "ind.cip", "cip", FALSE) );
-#endif
+   dualreductions = conshdlrdata->dualreductions && SCIPallowStrongDualReds(scip);
 
    /* check each constraint */
    for (c = 0; c < nconss; ++c)
@@ -4167,9 +4165,7 @@ SCIP_RETCODE enforceIndicators(
       }
 
       /* first perform propagation (it might happen that standard propagation is turned off) */
-      SCIP_CALL( propIndicator(scip, conss[c], consdata,
-            conshdlrdata->dualreductions && SCIPallowStrongDualReds(scip), conshdlrdata->addopposite,
-            &cutoff, &cnt) );
+      SCIP_CALL( propIndicator(scip, conss[c], consdata, dualreductions, conshdlrdata->addopposite, &cutoff, &cnt) );
       if ( cutoff )
       {
          SCIPdebugMsg(scip, "Propagation in enforcing <%s> detected cutoff.\n", SCIPconsGetName(conss[c]));
@@ -6469,6 +6465,7 @@ static
 SCIP_DECL_CONSPROP(consPropIndicator)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_Bool dualreductions;
    int ngen = 0;
    int c;
 
@@ -6498,6 +6495,8 @@ SCIP_DECL_CONSPROP(consPropIndicator)
    /* already mark that no bound has changed */
    conshdlrdata->boundhaschanged = FALSE;
 
+   dualreductions = conshdlrdata->dualreductions && SCIPallowStrongDualReds(scip);
+
    /* check each constraint */
    for (c = 0; c < nconss; ++c)
    {
@@ -6517,10 +6516,7 @@ SCIP_DECL_CONSPROP(consPropIndicator)
       SCIPdebugMsg(scip, "Propagating indicator constraint <%s>.\n", SCIPconsGetName(cons) );
 #endif
 
-      *result = SCIP_DIDNOTFIND;
-
-      SCIP_CALL( propIndicator(scip, cons, consdata, conshdlrdata->dualreductions && SCIPallowStrongDualReds(scip),
-            conshdlrdata->addopposite, &cutoff, &cnt) );
+      SCIP_CALL( propIndicator(scip, cons, consdata, dualreductions, conshdlrdata->addopposite, &cutoff, &cnt) );
 
       if ( cutoff )
       {
