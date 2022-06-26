@@ -3895,7 +3895,11 @@ SCIP_RETCODE propIndicator(
             }
          }
 
-         SCIP_CALL( SCIPdelConsLocal(scip, cons) );
+         /* remove constraint if we are not in probing */
+         if ( ! SCIPinProbing(scip) )
+         {
+            SCIP_CALL( SCIPdelConsLocal(scip, cons) );
+         }
       }
 
       /* if the slack variable is fixed to zero */
