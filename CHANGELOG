@@ -13,6 +13,8 @@ Features
 - Can now build with Lapack (used for solving nonlinear problems). If IPOPT is used, then Lapack is accessed through it.
   There	is an interface to Lapack in lapack_calls.
 - added support for logical constraints in binary variables and basic logical operators (and, or, not, equal) to AMPL .nl reader
+- indicator constraints now use the same slack variable for the linear constraints if binary variables are used multiple times
+  for indicator constraints
 
 Performance improvements
 ------------------------
