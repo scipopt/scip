@@ -3719,6 +3719,12 @@ SCIP_RETCODE propIndicator(
    assert( consdata->binvar != NULL );
    assert( SCIPisFeasGE(scip, SCIPvarGetLbLocal(consdata->slackvar), 0.0) );
 
+   /* increase age of constraint; age will be reset to zero, if a conflict or a propagation was found */
+   if ( ! SCIPinRepropagation(scip) )
+   {
+      SCIP_CALL( SCIPincConsAge(scip, cons) );
+   }
+
    /* if both slackvar and binvar are fixed to be nonzero */
    if ( consdata->nfixednonzero > 1 )
    {
@@ -3749,10 +3755,6 @@ SCIP_RETCODE propIndicator(
    /* if exactly one of the variables is fixed to be nonzero */
    if ( consdata->nfixednonzero == 1 )
    {
-      /* increase age of constraint; age is reset to zero, if a conflict or a propagation was found */
-      if ( ! SCIPinRepropagation(scip) )
-         SCIP_CALL( SCIPincConsAge(scip, cons) );
-
       /* if binvar is fixed to be nonzero */
       if ( SCIPvarGetLbLocal(consdata->binvar) > 0.5 )
       {
@@ -3788,10 +3790,6 @@ SCIP_RETCODE propIndicator(
                ++(*nGen);
          }
       }
-
-      /* reset constraint age counter */
-      if ( *nGen > 0 )
-         SCIP_CALL( SCIPresetConsAge(scip, cons) );
 
       /* remove constraint if we are not in probing */
       if ( ! SCIPinProbing(scip) )
@@ -3970,7 +3968,6 @@ SCIP_RETCODE propIndicator(
 
             SCIP_CALL( SCIPdelConsLocal(scip, cons) );
          }
-         SCIP_CALL( SCIPresetConsAge(scip, cons) );
          ++(*nGen);
       }
 
@@ -3978,6 +3975,12 @@ SCIP_RETCODE propIndicator(
        * constraint if the linear constraint is not active or disabled - see the note in @ref
        * PREPROC and consPresolIndicator(). Moreover, it would drastically increase memory
        * consumption, because the linear constraints have to be stored in each node. */
+   }
+
+   /* reset constraint age counter */
+   if ( *nGen > 0 )
+   {
+      SCIP_CALL( SCIPresetConsAge(scip, cons) );
    }
 
    return SCIP_OKAY;
