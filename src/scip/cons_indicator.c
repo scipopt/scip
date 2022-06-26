@@ -332,6 +332,7 @@ struct SCIP_ConshdlrData
 {
    SCIP_EVENTHDLR*       eventhdlrbound;     /**< event handler for bound change events */
    SCIP_EVENTHDLR*       eventhdlrrestart;   /**< event handler for performing restarts */
+   SCIP_Bool             boundhaschanged;    /**< whether a bound of a binvar/slackvar of some indicator constraint has changed */
    SCIP_Bool             removable;          /**< whether the separated cuts should be removable */
    SCIP_Bool             scaled;             /**< if first row of alt. LP has been scaled */
    SCIP_Bool             objindicatoronly;   /**< whether the objective is nonzero only for indicator variables */
@@ -447,8 +448,10 @@ while ( FALSE )
 static
 SCIP_DECL_EVENTEXEC(eventExecIndicatorBound)
 {
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_EVENTTYPE eventtype;
    SCIP_CONSDATA* consdata;
+   SCIP_CONSHDLR* conshdlr;
    SCIP_CONS* cons;
    SCIP_Real oldbound;
    SCIP_Real newbound;
@@ -465,6 +468,11 @@ SCIP_DECL_EVENTEXEC(eventExecIndicatorBound)
    assert( 0 <= consdata->nfixednonzero && consdata->nfixednonzero <= 2 );
    assert( consdata->linconsactive );
 
+   conshdlr = SCIPconsGetHdlr(cons);
+   assert( conshdlr != NULL );
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert( conshdlrdata != NULL );
+
    oldbound = SCIPeventGetOldbound(event);
    newbound = SCIPeventGetNewbound(event);
 
@@ -474,41 +482,53 @@ SCIP_DECL_EVENTEXEC(eventExecIndicatorBound)
    case SCIP_EVENTTYPE_LBTIGHTENED:
       /* if variable is now fixed to be positive */
       if ( ! SCIPisFeasPositive(scip, oldbound) && SCIPisFeasPositive(scip, newbound) )
+      {
          ++(consdata->nfixednonzero);
+         conshdlrdata->boundhaschanged = TRUE;
 #ifdef SCIP_MORE_DEBUG
-      SCIPdebugMsg(scip, "Changed lower bound of variable <%s> from %g to %g (nfixednonzero: %d).\n",
-         SCIPvarGetName(SCIPeventGetVar(event)), oldbound, newbound, consdata->nfixednonzero);
+         SCIPdebugMsg(scip, "Changed lower bound of variable <%s> from %g to %g (nfixednonzero: %d).\n",
+            SCIPvarGetName(SCIPeventGetVar(event)), oldbound, newbound, consdata->nfixednonzero);
 #endif
+      }
       break;
 
    case SCIP_EVENTTYPE_UBTIGHTENED:
       /* if variable is now fixed to be negative */
       if ( ! SCIPisFeasNegative(scip, oldbound) && SCIPisFeasNegative(scip, newbound) )
+      {
          ++(consdata->nfixednonzero);
+         conshdlrdata->boundhaschanged = TRUE;
 #ifdef SCIP_MORE_DEBUG
-      SCIPdebugMsg(scip, "Changed upper bound of variable <%s> from %g to %g (nfixednonzero: %d).\n",
-         SCIPvarGetName(SCIPeventGetVar(event)), oldbound, newbound, consdata->nfixednonzero);
+         SCIPdebugMsg(scip, "Changed upper bound of variable <%s> from %g to %g (nfixednonzero: %d).\n",
+            SCIPvarGetName(SCIPeventGetVar(event)), oldbound, newbound, consdata->nfixednonzero);
 #endif
+      }
       break;
 
    case SCIP_EVENTTYPE_LBRELAXED:
       /* if variable is not fixed to be positive anymore */
       if ( SCIPisFeasPositive(scip, oldbound) && ! SCIPisFeasPositive(scip, newbound) )
+      {
          --(consdata->nfixednonzero);
+         conshdlrdata->boundhaschanged = TRUE;
 #ifdef SCIP_MORE_DEBUG
-      SCIPdebugMsg(scip, "Changed lower bound of variable <%s> from %g to %g (nfixednonzero: %d).\n",
-         SCIPvarGetName(SCIPeventGetVar(event)), oldbound, newbound, consdata->nfixednonzero);
+         SCIPdebugMsg(scip, "Changed lower bound of variable <%s> from %g to %g (nfixednonzero: %d).\n",
+            SCIPvarGetName(SCIPeventGetVar(event)), oldbound, newbound, consdata->nfixednonzero);
 #endif
+      }
       break;
 
    case SCIP_EVENTTYPE_UBRELAXED:
       /* if variable is not fixed to be negative anymore */
       if ( SCIPisFeasNegative(scip, oldbound) && ! SCIPisFeasNegative(scip, newbound) )
+      {
          --(consdata->nfixednonzero);
+         conshdlrdata->boundhaschanged = TRUE;
 #ifdef SCIP_MORE_DEBUG
-      SCIPdebugMsg(scip, "Changed upper bound of variable <%s> from %g to %g (nfixednonzero: %d).\n",
-         SCIPvarGetName(SCIPeventGetVar(event)), oldbound, newbound, consdata->nfixednonzero);
+         SCIPdebugMsg(scip, "Changed upper bound of variable <%s> from %g to %g (nfixednonzero: %d).\n",
+            SCIPvarGetName(SCIPeventGetVar(event)), oldbound, newbound, consdata->nfixednonzero);
 #endif
+      }
       break;
 
    default:
@@ -4861,6 +4881,7 @@ void initConshdlrData(
 {
    assert( conshdlrdata != NULL );
 
+   conshdlrdata->boundhaschanged = FALSE;
    conshdlrdata->removable = TRUE;
    conshdlrdata->scaled = FALSE;
    conshdlrdata->altlp = NULL;
@@ -6441,7 +6462,7 @@ static
 SCIP_DECL_CONSPROP(consPropIndicator)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
-   int ngen;
+   int ngen = 0;
    int c;
 
    assert( scip != NULL );
@@ -6449,16 +6470,26 @@ SCIP_DECL_CONSPROP(consPropIndicator)
    assert( conss != NULL );
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( result != NULL );
+
    *result = SCIP_DIDNOTRUN;
 
    assert( SCIPisTransformed(scip) );
 
    SCIPdebugMsg(scip, "Start propagation of constraint handler <%s>.\n", SCIPconshdlrGetName(conshdlr));
-   ngen = 0;
 
    /* get constraint handler data */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
+
+   /* avoid propagation if no bound has changed */
+   if ( ! conshdlrdata->boundhaschanged )
+   {
+      *result = SCIP_DIDNOTFIND;
+      return SCIP_OKAY;
+   }
+
+   /* already mark that no bound has changed */
+   conshdlrdata->boundhaschanged = FALSE;
 
    /* check each constraint */
    for (c = 0; c < nconss; ++c)
@@ -6490,6 +6521,7 @@ SCIP_DECL_CONSPROP(consPropIndicator)
       }
       ngen += cnt;
    }
+
    SCIPdebugMsg(scip, "Propagated %d domains in constraint handler <%s>.\n", ngen, SCIPconshdlrGetName(conshdlr));
    if ( ngen > 0 )
       *result = SCIP_REDUCEDDOM;
