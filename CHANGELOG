@@ -50,6 +50,8 @@ Interface changes
 - SCIPmultiplyBySumExprSum(), SCIPpowerExprSum()
 - SCIPsetParam()
 - SCIPgetPrimalDualIntegral() returns the primal dual integral stored in the statistics
+- new functions SCIPcreateConsIndicatorLinConsPure() and SCIPcreateConsIndicatorGenericLinConsPure() that
+  create indicator constraints from a linear constraint without a slack variable
 
 ### Command line interface
 
