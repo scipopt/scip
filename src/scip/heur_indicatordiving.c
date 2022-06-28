@@ -1008,15 +1008,13 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
    else
    {
       assert(FALSE);
-      *score = SCIP_REAL_MIN;
-      fixconstant = FALSE;
    }
 
    /* Set roundup depending on whether we have an indicator constraint or a varbound constraint:
     * - indicator constraint: roundup == fix to constant
     * - varbound constraint: roundup == push to range
     */
-   *roundup = isindicatorvar ? fixconstant : !fixconstant;
+   *roundup = isindicatorvar ? fixconstant : !fixconstant; /*lint !e644*/
 
    /* free memory */
    SCIPfreeBufferArray(scip, &consvals);
