@@ -3958,7 +3958,6 @@ SCIP_RETCODE propIndicator(
             SCIP_CALL( SCIPdelConsLocal(scip, cons) );
          }
          SCIP_CALL( SCIPresetConsAge(scip, cons) );
-         ++(*nGen);
       }
 
       /* Note that because of possible multi-aggregation we cannot simply remove the indicator
