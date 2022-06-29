@@ -106,7 +106,6 @@ SCIP_RETCODE SCIPconflictAnalyze(
  *  and on success, calls the conflict handlers to create a linear conflict constraint;
  *  updates statistics for propagation conflict analysis
  */
-
 SCIP_RETCODE SCIPconflictAnalyzeResolution(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */

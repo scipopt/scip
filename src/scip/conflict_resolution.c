@@ -684,9 +684,9 @@ int resolutionsetGetNNzs(
    return resolutionset->nnz;
 }
 
-/** returns the difference of the largest and smallest value in an array */
+/** returns the quotient of the largest and smallest value in an array */
 static
-SCIP_Real getDiffLargestSmallestCoef(
+SCIP_Real getQuotLargestSmallestCoef(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real*            vals,               /**< array of values */
    int                   nnz                 /**< number of nonzeros */
@@ -706,7 +706,7 @@ SCIP_Real getDiffLargestSmallestCoef(
          minval = MIN(minval, vals[i]);
          maxval = MAX(maxval, vals[i]);
       }
-      return fabs(maxval - minval);
+      return maxval / minval;
    }
 
 /** calculates the slack of a given set of bounds and coefficients */
@@ -1085,7 +1085,6 @@ SCIP_RETCODE resolveWithReason(
 
    SCIP_Bool idxinconflict;
    SCIP_Bool idxinreason;
-   SCIP_Real tmp;
 
    idxinconflict = FALSE;
    idxinreason = FALSE;
@@ -1134,31 +1133,17 @@ SCIP_RETCODE resolveWithReason(
    assert(coefconf * coefreas < 0);
    assert((idxinconflict && idxinreason));
 
+   coefreas = coefconf / coefreas;
+   coefconf = 1.0;
 
+   /** stop if the linear combination of slacks is positive. @todo we are not supposed to stop since
+    *  because of sub-additive slacks the resolved constraint may still have negative slack
+    */
    if (SCIPsetIsGE(set, conflictslack * fabs(coefconf) + reasonslack * fabs(coefreas), 0.0))
    {
       *success = FALSE;
       return SCIP_OKAY;
    }
-
-   if (fabs(coefconf * coefreas) > 1e+9)
-   {
-      *success = FALSE;
-      return SCIP_OKAY;
-   }
-
-   /* @todo in case of integer coefficients we can use scm for smaller coefficients */
-   /* @todo divide coefficients by gcd if possible */
-   // if ( SCIPsetIsEQ(set, coefconf, floor(coefconf)) && SCIPsetIsEQ(set, coefreas, floor(coefreas)))
-   // {
-   //    SCIP_Longint scm;
-   //    scm = SCIPcalcSmaComMul(fabs(coefconf), fabs(coefreas));
-   //    coefconf = scm/fabs(coefconf);
-   //    coefreas = scm/fabs(coefreas);
-   // }
-   tmp = coefconf;
-   coefconf = coefreas;
-   coefreas = tmp;
 
    SCIP_UNUSED(idxinconflict);
    SCIP_UNUSED(idxinreason);
@@ -1174,22 +1159,11 @@ SCIP_RETCODE resolveWithReason(
    cidx = 0;
    previousnnz = resolutionsetGetNNzs(conflictresolutionset);
 
-   /* multiply conflict by coefreas */
-   for( i = 0; i < resolutionsetGetNNzs(conflictresolutionset); i++ )
-   {
-      conflictresolutionset->vals[i] = fabs(coefconf) * conflictresolutionset->vals[i];
-      if (fabs(conflictresolutionset->vals[i]) > 1e+9)
-      {
-         *success = FALSE;
-         return SCIP_OKAY;
-      }
-
-   }
-   /* multiply reason by coefconf */
+   /* multiply reason by coefreas */
    for( i = 0; i < resolutionsetGetNNzs(reasonresolutionset); i++ )
    {
       reasonresolutionset->vals[i] = fabs(coefreas) * reasonresolutionset->vals[i];
-      if (fabs(reasonresolutionset->vals[i]) > 1e+9)
+      if (fabs(reasonresolutionset->vals[i]) > set->conf_generalresminmaxquot)
       {
          *success = FALSE;
          return SCIP_OKAY;
@@ -1228,9 +1202,9 @@ SCIP_RETCODE resolveWithReason(
          i++;
       }
    }
-   conflictresolutionset->lhs = fabs(coefconf) * conflictresolutionset->lhs + fabs(coefreas) * reasonresolutionset->lhs;
+   conflictresolutionset->lhs = conflictresolutionset->lhs + fabs(coefreas) * reasonresolutionset->lhs;
 
-   /* @todo check if we can remove the coefficient that are almost zero */
+   /* @todo check if we can remove coefficients that are almost zero */
    for( i = 0; i < resolutionsetGetNNzs(conflictresolutionset); i++ )
    {
       if (SCIPsetIsZero(set, conflictresolutionset->vals[i] ))
@@ -1778,7 +1752,7 @@ SCIPsetDebugMsg(set, " -> First bound change to resolve <%s> %s %.15g [status:%d
   TERMINATE:
    if ( addconstraint && SCIPsetIsLT(set, conflictslack, 0.0) )
    {
-      if (getDiffLargestSmallestCoef(scip, conflictresolutionset->vals, conflictresolutionset->nnz) < set->conf_generalresminmaxdiff)
+      if (getQuotLargestSmallestCoef(scip, conflictresolutionset->vals, conflictresolutionset->nnz) < set->conf_generalresminmaxquot)
       {
          SCIPconflictFlushResolutionSets(conflict, blkmem, scip, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue, cliquetable, conflictresolutionset);
          (*nconss)++;
