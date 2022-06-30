@@ -2393,13 +2393,15 @@ SCIP_RETCODE conflictQueueBound(
       if( (!set->conf_preferbinary || SCIPvarIsBinary(SCIPbdchginfoGetVar(bdchginfo)))
          && !isBoundchgUseless(set, bdchginfo) )
       {
-         SCIP_CALL( SCIPpqueueInsert(conflict->bdchgqueue, (void*)bdchginfo) );
+         if (!conflict->bdchgonlyresqueue)
+            SCIP_CALL( SCIPpqueueInsert(conflict->bdchgqueue, (void*)bdchginfo) );
          if (set->conf_usegeneralres)
             SCIP_CALL( SCIPpqueueInsert(conflict->resbdchgqueue, (void*)bdchginfo) );
       }
       else
       {
-         SCIP_CALL( SCIPpqueueInsert(conflict->forcedbdchgqueue, (void*)bdchginfo) );
+         if (!conflict->bdchgonlyresqueue)
+            SCIP_CALL( SCIPpqueueInsert(conflict->forcedbdchgqueue, (void*)bdchginfo) );
          if (set->conf_usegeneralres)
             SCIP_CALL( SCIPpqueueInsert(conflict->resforcedbdchgqueue, (void*)bdchginfo) );
       }
