@@ -894,8 +894,9 @@ SCIP_RETCODE createAndAddResolutionCons(
 
    /* create a constraint out of the conflict set */
    (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "confres_%" SCIP_LONGINT_FORMAT, conflict->nresconfconss);
+   /* todo add parameter for separation */
    SCIP_CALL( SCIPcreateConsLinear(scip, &cons, consname, resolutionsetGetNNzs(resolutionset), consvars, vals, lhs, SCIPsetInfinity(set),
-         FALSE, set->conf_separate, FALSE, FALSE, TRUE, (SCIPnodeGetDepth(tree->path[resolutionset->validdepth]) > 0 ), FALSE, set->conf_dynamic, set->conf_removable, FALSE) );
+         FALSE, FALSE, FALSE, FALSE, TRUE, (SCIPnodeGetDepth(tree->path[resolutionset->validdepth]) > 0 ), FALSE, set->conf_dynamic, set->conf_removable, FALSE) );
 
    /* try to automatically convert a linear constraint into a more specific and more specialized constraint */
    SCIP_CALL( SCIPupgradeConsLinear(scip, cons, &upgdcons) );
@@ -966,10 +967,10 @@ SCIP_RETCODE SCIPconflictFlushResolutionSets(
     * cut off completely
     * @todo should check this! May be wrong
     */
-   if( resolutionsetGetNNzs(resolutionset) == 0 )
+   if( resolutionsetGetNNzs(resolutionset) == 0 && SCIPsetIsLT(set, resolutionset->lhs, 0.0))
    {
-      SCIPsetDebugMsg(set, " -> empty resolution set in depth %d cuts off sub tree at depth %d\n",
-         focusdepth, resolutionset->validdepth);
+      SCIPsetDebugMsg(set, " -> empty resolution set with lhs %f in depth %d cuts off sub tree at depth %d\n",
+         resolutionset->lhs, focusdepth, resolutionset->validdepth);
 
       SCIP_CALL( SCIPnodeCutoff(tree->path[resolutionset->validdepth], set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
       return SCIP_OKAY;
