@@ -1795,6 +1795,18 @@ SCIP_RETCODE SCIPconflictAnalyzeResolution(
    int nconss;
    int nconfvars;
 
+   /* @todo improve this by adding this info directly to the nodes */
+   int i;
+   SCIP_VAR** vars;
+
+   int tmp_count;
+   SCIP_Real tmp_conflictlb[transprob->nvars];
+   SCIP_Real tmp_conflictub[transprob->nvars];
+   SCIP_Real tmp_conflictrelaxedlb[transprob->nvars];
+   SCIP_Real tmp_conflictrelaxedub[transprob->nvars];
+   int tmp_conflictlbcount[transprob->nvars];
+   int tmp_conflictubcount[transprob->nvars];
+
    assert(conflict != NULL);
    assert(set != NULL);
    assert(origprob != NULL);
@@ -1809,8 +1821,18 @@ SCIP_RETCODE SCIPconflictAnalyzeResolution(
 
    SCIPsetDebugMsg(set, "resolution based conflict analysis after infeasible propagation in depth %d\n", SCIPtreeGetCurrentDepth(tree));
 
-   /* @todo store variable data that are relevant for graph conflict analysis */
+   tmp_count = conflict->count;
+   vars = SCIPprobGetVars(transprob);
 
+   for (i = 0; i < transprob->nvars; i++)
+   {
+      tmp_conflictlb[i] = vars[i]->conflictlb;
+      tmp_conflictub[i] = vars[i]->conflictub;
+      tmp_conflictrelaxedlb[i] = vars[i]->conflictrelaxedlb;
+      tmp_conflictrelaxedub[i] = vars[i]->conflictrelaxedub;
+      tmp_conflictlbcount[i] = vars[i]->conflictlbcount;
+      tmp_conflictubcount[i] = vars[i]->conflictubcount;
+   }
    /* start timing */
    SCIPclockStart(conflict->resanalyzetime, set);
 
@@ -1825,7 +1847,17 @@ SCIP_RETCODE SCIPconflictAnalyzeResolution(
    if( success != NULL )
       *success = (nconss > 0);
 
-   /* @todo set variable data to values before using generalized resolution */
+   /* @todo set variable data to the values before using generalized resolution */
+   for (i = 0; i < transprob->nvars; i++)
+   {
+      vars[i]->conflictlb = tmp_conflictlb[i];
+      vars[i]->conflictub = tmp_conflictub[i];
+      vars[i]->conflictrelaxedlb = tmp_conflictrelaxedlb[i];
+      vars[i]->conflictrelaxedub = tmp_conflictrelaxedub[i];
+      vars[i]->conflictlbcount = tmp_conflictlbcount[i];
+      vars[i]->conflictubcount = tmp_conflictubcount[i];
+   }
+   conflict->count = tmp_count;
 
    SCIPpqueueClear(conflict->resbdchgqueue);
    SCIPpqueueClear(conflict->resforcedbdchgqueue);
