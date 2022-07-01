@@ -716,7 +716,8 @@ static
 SCIP_Real getSlack(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROB*            prob,               /**< problem data */
-   SCIP_RESOLUTIONSET*   resolutionset       /**< resolution set */
+   SCIP_RESOLUTIONSET*   resolutionset,      /**< resolution set */
+   SCIP_BDCHGIDX *       currbdchgidx        /**< index of current bound change */
    )
 {
    SCIP_VAR** vars;
@@ -739,43 +740,10 @@ SCIP_Real getSlack(
 
       coef = resolutionset->vals[i];
 
-      if( coef > 0.0 )
-      {
-         SCIP_Real bnd;
-         int nubchgs;
-         SCIP_BDCHGIDX *bdchgidx;
+      /* get the latest bound change before currbdchgidx */
+      if( coef > 0.0 ) SCIPquadprecProdDD(delta, coef, SCIPgetVarUbAtIndex(scip, vars[v], currbdchgidx, TRUE));
+      else SCIPquadprecProdDD(delta, coef, SCIPgetVarLbAtIndex(scip, vars[v], currbdchgidx, TRUE));
 
-         nubchgs = SCIPvarGetNBdchgInfosUb(vars[v]);
-         bdchgidx = SCIPvarGetLastBdchgIndex(vars[v]);
-
-         /* @todo bdchgidx should be the one from the currently resolving variable! */
-         if ( nubchgs > 0 )
-         {
-            bnd = SCIPgetVarUbAtIndex(scip, vars[v], bdchgidx, TRUE);
-         }
-         /* @todo if no bound change for the given variable should we use the local or global upper bound? */
-         else bnd = SCIPvarGetUbLocal(vars[v]);
-
-         SCIPquadprecProdDD(delta, coef, bnd);
-      }
-      else
-      {
-         SCIP_Real bnd;
-         int nlbchgs;
-         SCIP_BDCHGIDX *bdchgidx;
-
-         nlbchgs = SCIPvarGetNBdchgInfosLb(vars[v]);
-         bdchgidx = SCIPvarGetLastBdchgIndex(vars[v]);
-         /* @todo bdchgidx should be the one from the currently resolving variable! */
-         if ( nlbchgs > 0 )
-         {
-            bnd = SCIPgetVarLbAtIndex(scip, vars[v], bdchgidx, TRUE);
-         }
-         /* @todo if no bound change for the given variable should we use the local or global upper bound? */
-         else bnd = SCIPvarGetLbLocal(vars[v]);
-
-         SCIPquadprecProdDD(delta, coef, bnd);
-      }
       SCIPquadprecSumQQ(slack, slack, delta);
    }
    SCIPquadprecSumQD(slack, slack, -resolutionset->lhs);
@@ -817,8 +785,7 @@ SCIP_RETCODE addConflictBounds(
          SCIP_Real bnd;
          if ( SCIPvarGetNBdchgInfosUb(vars[v]) > 0 )
          {
-            /* @todo should the bdchgindex be inferbdchgidx or SCIPvarGetLastBdchgIndex(vars[v]) */
-            bnd = SCIPgetVarUbAtIndex(scip, vars[v], inferbdchgidx, TRUE);
+            bnd = SCIPgetVarUbAtIndex(scip, vars[v], inferbdchgidx, FALSE);
             if ( SCIPsetIsLT(set, bnd, SCIPvarGetUbGlobal(vars[v])) )
             {
                SCIP_CALL( SCIPaddConflictUb(scip, vars[v], inferbdchgidx) );
@@ -830,8 +797,7 @@ SCIP_RETCODE addConflictBounds(
          SCIP_Real bnd;
          if ( SCIPvarGetNBdchgInfosLb(vars[v]) > 0 )
          {
-            /* @todo should the bdchgindex be inferbdchgidx or SCIPvarGetLastBdchgIndex(vars[v]) */
-            bnd = SCIPgetVarLbAtIndex(scip, vars[v], inferbdchgidx, TRUE);
+            bnd = SCIPgetVarLbAtIndex(scip, vars[v], inferbdchgidx, FALSE);
             if ( SCIPsetIsGT(set, bnd, SCIPvarGetLbGlobal(vars[v])) )
             {
                SCIP_CALL( SCIPaddConflictLb(scip, vars[v], inferbdchgidx) );
@@ -1510,7 +1476,7 @@ SCIPsetDebugMsg(set, " -> First bound change to resolve <%s> %s %.15g [status:%d
    /* get the resolution set of the conflict row */
    SCIP_CALL( conflictResolutionsetFromRow(set, blkmem, conflictrow, conflictresolutionset, bdchginfo) );
 
-   conflictslack = getSlack(set->scip, transprob, conflictresolutionset);
+   conflictslack = getSlack(set->scip, transprob, conflictresolutionset, bdchgidx);
 
    /* apply coefficient tightening for the conflict constraint */
    /* @todo add parameter for this */
@@ -1547,11 +1513,11 @@ SCIPsetDebugMsg(set, " -> First bound change to resolve <%s> %s %.15g [status:%d
          /* @todo Treat negated variables differently to avoid this. This should resolve the issue */
          if (SCIPsetIsInfinity(set, -reasonresolutionset->lhs) || SCIPsetIsInfinity(set, reasonresolutionset->lhs))
             goto TERMINATE;
-         reasonslack = getSlack(set->scip, transprob, reasonresolutionset);
+         reasonslack = getSlack(set->scip, transprob, reasonresolutionset, bdchgidx);
          SCIPsetDebugMsg(set, "conflict resolution set: nnzs: %d, slack: %f \n", resolutionsetGetNNzs(conflictresolutionset), conflictslack);
          SCIPsetDebugMsg(set, "reason resolution set: nnzs: %d, slack: %f \n", resolutionsetGetNNzs(reasonresolutionset), reasonslack);
 
-         assert(SCIPsetIsGE(set, reasonslack, 0.0));
+         /* should we assert SCIPsetIsGE(set, reasonslack, 0.0)? */
 
          i = 0;
          while ( i < resolutionsetGetNNzs(reasonresolutionset) )
@@ -1592,7 +1558,7 @@ SCIPsetDebugMsg(set, " -> First bound change to resolve <%s> %s %.15g [status:%d
             if (success)
             {
                tightenCoefLhs(set->scip, transprob, FALSE, reasonresolutionset->vals, &reasonresolutionset->lhs, reasonresolutionset->inds, &reasonresolutionset->nnz, &nchgcoefs);
-               reasonslack = getSlack(set->scip, transprob, reasonresolutionset);
+               reasonslack = getSlack(set->scip, transprob, reasonresolutionset, bdchgidx);
                if ( SCIPsetIsLT(set, reasonslack, currentslack))
                   SCIPsetDebugMsg(set, "Reduced slack of reason from %f to %f\n", currentslack, reasonslack);
             }
@@ -1664,7 +1630,7 @@ SCIPsetDebugMsg(set, " -> First bound change to resolve <%s> %s %.15g [status:%d
       }
 #endif
 
-         conflictslack = getSlack(set->scip, transprob, conflictresolutionset);
+         conflictslack = getSlack(set->scip, transprob, conflictresolutionset, bdchgidx);
 
 
          SCIPsetDebugMsg(set, "Slack of resolved row: %f \n", conflictslack);
@@ -1681,7 +1647,7 @@ SCIPsetDebugMsg(set, " -> First bound change to resolve <%s> %s %.15g [status:%d
          if (nchgcoefs > 0)
          {
             SCIPsetDebugMsg(set, "Tightened %d coefficients in the resolved constraint \n", nchgcoefs);
-            conflictslack = getSlack(set->scip, transprob, conflictresolutionset);
+            conflictslack = getSlack(set->scip, transprob, conflictresolutionset, bdchgidx);
          }
          /* sort for linear time resolution */
          SCIPsortIntReal(conflictresolutionset->inds, conflictresolutionset->vals, resolutionsetGetNNzs(conflictresolutionset));
