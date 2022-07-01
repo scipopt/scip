@@ -102,14 +102,11 @@ SCIP_RETCODE SCIPconflictAnalyze(
    SCIP_Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
    );
 
-/** based on generalized resolution analyzes conflicting bound changes that were added with calls to SCIPconflictAddBound(),
- *  and on success, calls the conflict handlers to create a linear conflict constraint;
- *  updates statistics for propagation conflict analysis
+/** analyzes conflicting bound changes that were added with calls to SCIPconflictAddBound(), and on success,
+ * creates a linear constraint that explains the infeasibility
  */
 SCIP_RETCODE SCIPconflictAnalyzeResolution(
-   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
-   SCIP_CONS*            cons,               /**< constraint that detected the conflict */
    BMS_BLKMEM*           blkmem,             /**< block memory of transformed problem */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
@@ -121,6 +118,7 @@ SCIP_RETCODE SCIPconflictAnalyzeResolution(
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
+   SCIP_CONS*            cons,               /**< constraint that detected the conflict */
    int                   validdepth,         /**< minimal depth level at which the initial conflict set is valid */
    SCIP_Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
    );
@@ -542,14 +540,11 @@ SCIP_RETCODE conflictAnalyze(
    );
 
 /** analyzes conflicting bound changes that were added with calls to SCIPconflictAddBound() and
- *  SCIPconflictAddRelaxedBound(), and on success, calls the conflict handlers to create a conflict constraint;
- *  afterwards the conflict queue and the conflict set is cleared
+ *  SCIPconflictAddRelaxedBound(), and on success, creates and possibly adds a linear constraint
+ *  that explains the infeasibility; afterwards the resolution set(s) are cleared
  */
-
 SCIP_RETCODE conflictAnalyzeResolution(
-   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
-   SCIP_CONS*            cons,               /**< constraint that detected the conflict */
    BMS_BLKMEM*           blkmem,             /**< block memory of transformed problem */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
@@ -561,6 +556,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
+   SCIP_CONS*            cons,               /**< constraint that detected the conflict */
    SCIP_Bool             diving,             /**< are we in strong branching or diving mode? */
    int                   validdepth,         /**< minimal depth level at which the initial conflict set is valid */
    SCIP_Bool             mustresolve,        /**< should the conflict set only be used, if a resolution was applied? */

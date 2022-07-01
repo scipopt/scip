@@ -701,8 +701,8 @@ SCIP_RETCODE SCIPanalyzeConflictCons(
 
    if( SCIPconsIsGlobal(cons) )
    {
-      SCIP_CALL( SCIPconflictAnalyzeResolution(scip, scip->conflict, cons, scip->mem->probmem, scip->set, scip->stat,
-            scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable, 0, success) );
+      SCIP_CALL( SCIPconflictAnalyzeResolution(scip->conflict, scip->mem->probmem, scip->set, scip->stat,
+            scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable, cons, 0, success) );
 
       SCIP_CALL( SCIPconflictAnalyze(scip->conflict, scip->mem->probmem, scip->set, scip->stat,
             scip->transprob, scip->tree, 0, success) );
@@ -710,8 +710,8 @@ SCIP_RETCODE SCIPanalyzeConflictCons(
    else if( SCIPconsIsActive(cons) )
    {
       /* @todo local case */
-      // SCIP_CALL( SCIPconflictAnalyzeResolution(scip, scip->conflict, cons, scip->mem->probmem, scip->set, scip->stat,
-      //       scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable, SCIPconsGetValidDepth(cons), success) );
+      // SCIP_CALL( SCIPconflictAnalyzeResolution(scip->conflict, scip->mem->probmem, scip->set, scip->stat,
+      //       scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable, cons, SCIPconsGetValidDepth(cons), success) );
 
       SCIP_CALL( SCIPconflictAnalyze(scip->conflict, scip->mem->probmem, scip->set, scip->stat,
             scip->transprob, scip->tree, SCIPconsGetValidDepth(cons), success) );

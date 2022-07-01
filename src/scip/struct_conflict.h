@@ -89,7 +89,9 @@ struct SCIP_ProofSet
    SCIP_CONFTYPE         conflicttype;       /**< conflict type: unknown, infeasible LP, bound exceeding LP */
 };
 
-/** set of conflicting bound changes */
+/** set of conflicting bound changes
+ * @todo change the conflictype to infeasible LP, bound exceeding LP, propagation
+ */
 struct SCIP_ResolutionSet
 {
    SCIP_Real*            vals;
@@ -100,7 +102,7 @@ struct SCIP_ResolutionSet
    int                   nnz;
    int                   size;
    int                   validdepth;
-   SCIP_CONFTYPE         conflicttype;       /**< conflict type... */
+   SCIP_CONFTYPE         conflicttype;       /**< conflict type: unknown, resolution */
 };
 
 /** set of LP bound change */
@@ -187,8 +189,8 @@ struct SCIP_Conflict
    SCIP_CLOCK*           pseudoanalyzetime;  /**< time used for pseudo solution conflict analysis */
    SCIP_PQUEUE*          bdchgqueue;         /**< unprocessed conflict bound changes */
    SCIP_PQUEUE*          forcedbdchgqueue;   /**< unprocessed conflict bound changes that must be resolved */
-   SCIP_PQUEUE*          resbdchgqueue;      /**< unprocessed conflict bound changes */
-   SCIP_PQUEUE*          resforcedbdchgqueue;/**< unprocessed conflict bound changes that must be resolved */
+   SCIP_PQUEUE*          resbdchgqueue;      /**< unprocessed conflict bound changes used in generalized resolution*/
+   SCIP_PQUEUE*          resforcedbdchgqueue;/**< unprocessed conflict bound changes used in generalized resolution that must be resolved */
    SCIP_PROOFSET*        proofset;           /**< proof sets found at the current node */
    SCIP_PROOFSET**       proofsets;          /**< proof sets found at the current node */
    SCIP_RESOLUTIONSET*   resolutionset;      /**< resolution sets for the current conflict */
@@ -205,8 +207,8 @@ struct SCIP_Conflict
    int                   tmpbdchginfossize;  /**< size of tmpbdchginfos array */
    int                   ntmpbdchginfos;     /**< number of temporary created bound change information data */
    int                   count;              /**< conflict set counter to label binary conflict variables with */
-   SCIP_Bool             bdchgonlyresqueue;  /**< if true we add bound changes only for generalized resolution */
    int                   nresolutionsets;    /**< number of available resolution sets */
+   SCIP_Bool             bdchgonlyresqueue;  /**< if true we add bound changes only in generalized resolution queues */
 
 };
 
