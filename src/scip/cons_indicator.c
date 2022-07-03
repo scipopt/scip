@@ -8120,6 +8120,7 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinConsPure(
    SCIP_Bool linconsactive = TRUE;
    SCIP_VAR* slackvar = NULL;
    SCIP_VARTYPE slackvartype;
+   SCIP_Bool slackvarisnew = TRUE;
    SCIP_VAR** vars;
    SCIP_Real* vals;
    SCIP_Real sign = -1.0;
@@ -8202,7 +8203,7 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinConsPure(
       {
          SCIP_Bool infeasible;
 
-         /* possibly overwrite slackvariable */
+         /* determine slack variable */
          slackvar = (SCIP_VAR*) SCIPhashmapGetImage(conshdlrdata->binslackvarhash, (void*) binvarinternal);
          assert( slackvar != NULL );
 
@@ -8213,6 +8214,7 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinConsPure(
             assert( ! infeasible );
          }
          SCIP_CALL( SCIPcaptureVar(scip, slackvar) );
+         slackvarisnew = FALSE;
       }
       else
       {
@@ -8274,7 +8276,6 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinConsPure(
       sign = 1.0;
 
    /* add slack variable */
-   SCIP_CALL( SCIPaddVar(scip, slackvar) );
    SCIP_CALL( SCIPaddCoefLinear(scip, lincons, slackvar, sign) );
 
    /* mark linear constraint not to be upgraded - otherwise we loose control over it */
@@ -8289,9 +8290,7 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinConsPure(
       /* if active on 0, the binary variable is reversed */
       SCIP_VAR* binvarinternal;
       if ( activeone )
-      {
          binvarinternal = binvar;
-      }
       else
       {
          SCIP_CALL ( SCIPgetNegatedVar(scip, binvar, &binvarinternal) );
@@ -8312,8 +8311,8 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinConsPure(
       SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
             local, modifiable, dynamic, removable, stickingatnode) );
 
-      /* catch local bound change events on binary variable */
-      if ( consdata->linconsactive && SCIPisTransformed(scip) )
+      /* catch local bound change events on binary variable; only needed if slack variable is new */
+      if ( consdata->linconsactive && SCIPisTransformed(scip) && slackvarisnew )
       {
          SCIP_CALL( SCIPcatchVarEvent(scip, consdata->binvar, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlrbound, (SCIP_EVENTDATA*) *cons, NULL) );
          SCIP_CALL( SCIPcatchVarEvent(scip, consdata->slackvar, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlrbound, (SCIP_EVENTDATA*) *cons, NULL) );
