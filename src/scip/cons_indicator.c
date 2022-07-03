@@ -7496,7 +7496,7 @@ SCIP_RETCODE SCIPcreateConsIndicator(
    )
 {
    return SCIPcreateConsIndicatorGeneric(scip, cons, name, binvar, nvars, vars, vals, rhs, TRUE, TRUE, initial,
-                                         separate, enforce, check, propagate, local, dynamic, removable, stickingatnode);
+      separate, enforce, check, propagate, local, dynamic, removable, stickingatnode);
 }
 
 /** creates and captures a indicator constraint in a more generic version.
@@ -7540,11 +7540,12 @@ SCIP_RETCODE SCIPcreateConsIndicatorGeneric(
 {
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_CONSDATA* consdata;
+   SCIP_CONSDATA* consdata = NULL;
    SCIP_CONS* lincons;
    SCIP_VAR* slackvar = NULL;
+   SCIP_Bool slackvarisnew = TRUE;
    SCIP_Bool modifiable = FALSE;
-   SCIP_Bool linconsactive;
+   SCIP_Bool linconsactive = TRUE;
    SCIP_VARTYPE slackvartype;
    SCIP_Real absvalsum = 0.0;
    char s[SCIP_MAXSTRLEN];
@@ -7614,9 +7615,7 @@ SCIP_RETCODE SCIPcreateConsIndicatorGeneric(
 
       /* if active on 0, the binary variable is reversed */
       if ( activeone )
-      {
          binvarinternal = binvar;
-      }
       else
       {
          SCIP_CALL ( SCIPgetNegatedVar(scip, binvar, &binvarinternal) );
@@ -7636,6 +7635,7 @@ SCIP_RETCODE SCIPcreateConsIndicatorGeneric(
          slackvar = (SCIP_VAR*) SCIPhashmapGetImage(conshdlrdata->binslackvarhash, (void*) binvarinternal);
          assert( slackvar != NULL );
 
+         /* make sure that the type of the slackvariable is as general as possible */
          if ( SCIPvarGetType(slackvar) == SCIP_VARTYPE_IMPLINT && slackvartype != SCIP_VARTYPE_IMPLINT )
          {
             SCIP_CALL( SCIPchgVarType(scip, slackvar, SCIP_VARTYPE_CONTINUOUS, &infeasible) );
@@ -7643,6 +7643,7 @@ SCIP_RETCODE SCIPcreateConsIndicatorGeneric(
          }
 
          SCIP_CALL( SCIPcaptureVar(scip, slackvar) );
+         slackvarisnew = FALSE;
       }
       else
       {
@@ -7673,7 +7674,6 @@ SCIP_RETCODE SCIPcreateConsIndicatorGeneric(
    }
 
    /* if the problem should be decomposed if only non-integer variables are present */
-   linconsactive = TRUE;
    if ( conshdlrdata->nolinconscont )
    {
       SCIP_Bool onlyCont = TRUE;
@@ -7758,7 +7758,6 @@ SCIP_RETCODE SCIPcreateConsIndicatorGeneric(
    else
    {
       /* create constraint data */
-      consdata = NULL;
       SCIP_CALL( consdataCreate(scip, conshdlr, conshdlrdata, name, &consdata, conshdlrdata->eventhdlrrestart,
             binvar, activeone, lessthanineq, slackvar, lincons, linconsactive) );
       assert( consdata != NULL );
@@ -7771,7 +7770,7 @@ SCIP_RETCODE SCIPcreateConsIndicatorGeneric(
       if ( SCIPisTransformed(scip) )
       {
          /* catch local bound change events on binary variable */
-         if ( linconsactive )
+         if ( linconsactive && slackvarisnew )
          {
             SCIP_CALL( SCIPcatchVarEvent(scip, consdata->binvar, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlrbound, (SCIP_EVENTDATA*) *cons, NULL) );
             SCIP_CALL( SCIPcatchVarEvent(scip, consdata->slackvar, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlrbound, (SCIP_EVENTDATA*) *cons, NULL) );
@@ -8233,17 +8232,16 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinConsPure(
    if ( conshdlrdata->nolinconscont )
    {
       SCIP_Bool onlyCont = TRUE;
-      int v;
 
       nvars = SCIPgetNVarsLinear(scip, lincons);
       vars = SCIPgetVarsLinear(scip, lincons);
 
       /* check whether call variables are non-integer */
-      for (v = 0; v < nvars; ++v)
+      for (j = 0; j < nvars; ++j)
       {
          SCIP_VARTYPE vartype;
 
-         vartype = SCIPvarGetType(vars[v]);
+         vartype = SCIPvarGetType(vars[j]);
          if ( vartype != SCIP_VARTYPE_CONTINUOUS && vartype != SCIP_VARTYPE_IMPLINT )
          {
             onlyCont = FALSE;
