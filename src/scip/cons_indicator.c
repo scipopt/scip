@@ -7853,7 +7853,7 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
-   SCIP_VAR*             binvar,             /**< binary indicator variable (or NULL) */
+   SCIP_VAR*             binvar,             /**< binary indicator variable */
    SCIP_CONS*            lincons,            /**< linear constraint */
    SCIP_VAR*             slackvar,           /**< slack variable */
    SCIP_Bool             activeone,          /**< is the constraint active when the binary is 1? */
@@ -7886,6 +7886,7 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinCons(
 
    assert( scip != NULL );
    assert( lincons != NULL );
+   assert( binvar != NULL );
    assert( slackvar != NULL );
 
    /* check whether lincons is really a linear constraint */
@@ -8008,7 +8009,7 @@ SCIP_RETCODE SCIPcreateConsIndicatorLinCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
-   SCIP_VAR*             binvar,             /**< binary indicator variable (or NULL) */
+   SCIP_VAR*             binvar,             /**< binary indicator variable */
    SCIP_CONS*            lincons,            /**< linear constraint */
    SCIP_VAR*             slackvar,           /**< slack variable */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? Usually set to TRUE. */
@@ -8033,7 +8034,7 @@ SCIP_RETCODE SCIPcreateConsIndicatorLinCons(
    )
 {
    return SCIPcreateConsIndicatorGenericLinCons(scip, cons, name, binvar, lincons, slackvar, TRUE, initial, separate,
-                                         enforce, check, propagate, local, dynamic, removable, stickingatnode);
+      enforce, check, propagate, local, dynamic, removable, stickingatnode);
 }
 
 
@@ -8057,7 +8058,7 @@ SCIP_RETCODE SCIPcreateConsBasicIndicatorLinCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
-   SCIP_VAR*             binvar,             /**< binary indicator variable (or NULL) */
+   SCIP_VAR*             binvar,             /**< binary indicator variable */
    SCIP_CONS*            lincons,            /**< linear constraint */
    SCIP_VAR*             slackvar            /**< slack variable */
    )
@@ -8088,7 +8089,7 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinConsPure(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
-   SCIP_VAR*             binvar,             /**< binary indicator variable (or NULL) */
+   SCIP_VAR*             binvar,             /**< binary indicator variable */
    SCIP_CONS*            lincons,            /**< linear constraint */
    SCIP_Bool             activeone,          /**< is the constraint active when the binary is 1? */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? Usually set to TRUE. */
@@ -8118,6 +8119,7 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinConsPure(
    SCIP_CONSDATA* consdata = NULL;
    SCIP_Bool modifiable = FALSE;
    SCIP_Bool linconsactive = TRUE;
+   SCIP_VAR* binvarinternal;
    SCIP_VAR* slackvar = NULL;
    SCIP_VARTYPE slackvartype;
    SCIP_Bool slackvarisnew = TRUE;
@@ -8131,6 +8133,7 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinConsPure(
 
    assert( scip != NULL );
    assert( lincons != NULL );
+   assert( binvar != NULL );
 
    /* check whether lincons is really a linear constraint */
    conshdlr = SCIPconsGetHdlr(lincons);
@@ -8179,57 +8182,37 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinConsPure(
       }
    }
 
-   /* Check awhether binary variable has been used for a different constraint; then use the same slack variable. */
-   if ( binvar != NULL )
+   /* if active on 0, the binary variable is reversed */
+   if ( activeone )
+      binvarinternal = binvar;
+   else
    {
-      SCIP_VAR* binvarinternal;
+      SCIP_CALL ( SCIPgetNegatedVar(scip, binvar, &binvarinternal) );
+   }
 
-      /* if active on 0, the binary variable is reversed */
-      if ( activeone )
-         binvarinternal = binvar;
-      else
+   /* Check awhether binary variable has been used for a different constraint; then use the same slack variable. */
+   if ( conshdlrdata->binslackvarhash == NULL )
+   {
+      SCIP_CALL( SCIPhashmapCreate(&conshdlrdata->binslackvarhash, SCIPblkmem(scip), SCIPgetNOrigVars(scip)) );
+   }
+
+   assert( conshdlrdata->binslackvarhash != NULL );
+   if ( SCIPhashmapExists(conshdlrdata->binslackvarhash, (void*) binvarinternal) )
+   {
+      SCIP_Bool infeasible;
+
+      /* determine slack variable */
+      slackvar = (SCIP_VAR*) SCIPhashmapGetImage(conshdlrdata->binslackvarhash, (void*) binvarinternal);
+      assert( slackvar != NULL );
+
+      /* make sure that the type of the slackvariable is as general as possible */
+      if ( SCIPvarGetType(slackvar) == SCIP_VARTYPE_IMPLINT && slackvartype != SCIP_VARTYPE_IMPLINT )
       {
-         SCIP_CALL ( SCIPgetNegatedVar(scip, binvar, &binvarinternal) );
+         SCIP_CALL( SCIPchgVarType(scip, slackvar, SCIP_VARTYPE_CONTINUOUS, &infeasible) );
+         assert( ! infeasible );
       }
-
-      /* make sure that the hashmap exists */
-      if ( conshdlrdata->binslackvarhash == NULL )
-      {
-         SCIP_CALL( SCIPhashmapCreate(&conshdlrdata->binslackvarhash, SCIPblkmem(scip), SCIPgetNOrigVars(scip)) );
-      }
-
-      assert( conshdlrdata->binslackvarhash != NULL );
-      if ( SCIPhashmapExists(conshdlrdata->binslackvarhash, (void*) binvarinternal) )
-      {
-         SCIP_Bool infeasible;
-
-         /* determine slack variable */
-         slackvar = (SCIP_VAR*) SCIPhashmapGetImage(conshdlrdata->binslackvarhash, (void*) binvarinternal);
-         assert( slackvar != NULL );
-
-         /* make sure that the type of the slackvariable is as general as possible */
-         if ( SCIPvarGetType(slackvar) == SCIP_VARTYPE_IMPLINT && slackvartype != SCIP_VARTYPE_IMPLINT )
-         {
-            SCIP_CALL( SCIPchgVarType(scip, slackvar, SCIP_VARTYPE_CONTINUOUS, &infeasible) );
-            assert( ! infeasible );
-         }
-         SCIP_CALL( SCIPcaptureVar(scip, slackvar) );
-         slackvarisnew = FALSE;
-      }
-      else
-      {
-         /* create slack variable */
-         (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "indslack_%s", name);
-         SCIP_CALL( SCIPcreateVar(scip, &slackvar, s, 0.0, SCIPinfinity(scip), 0.0, slackvartype, TRUE, FALSE,
-               NULL, NULL, NULL, NULL, NULL) );
-
-         SCIP_CALL( SCIPaddVar(scip, slackvar) );
-
-         /* mark slack variable not to be multi-aggregated */
-         SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, slackvar) );
-
-         SCIP_CALL( SCIPhashmapInsert(conshdlrdata->binslackvarhash, (void*) binvarinternal, (void*) slackvar) );
-      }
+      SCIP_CALL( SCIPcaptureVar(scip, slackvar) );
+      slackvarisnew = FALSE;
    }
    else
    {
@@ -8242,6 +8225,8 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinConsPure(
 
       /* mark slack variable not to be multi-aggregated */
       SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, slackvar) );
+
+      SCIP_CALL( SCIPhashmapInsert(conshdlrdata->binslackvarhash, (void*) binvarinternal, (void*) slackvar) );
    }
 
    /* if the problem should be decomposed (only if all variables are continuous) */
@@ -8287,15 +8272,6 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinConsPure(
    {
       SCIP_Real val = 1.0;
 
-      /* if active on 0, the binary variable is reversed */
-      SCIP_VAR* binvarinternal;
-      if ( activeone )
-         binvarinternal = binvar;
-      else
-      {
-         SCIP_CALL ( SCIPgetNegatedVar(scip, binvar, &binvarinternal) );
-      }
-
       /* create a quadratic constraint with a single bilinear term - note that cons is used */
       SCIP_CALL( SCIPcreateConsQuadraticNonlinear(scip, cons, name, 0, NULL, NULL, 1, &binvarinternal, &slackvar, &val, 0.0, 0.0,
             TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
@@ -8339,7 +8315,7 @@ SCIP_RETCODE SCIPcreateConsIndicatorLinConsPure(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
-   SCIP_VAR*             binvar,             /**< binary indicator variable (or NULL) */
+   SCIP_VAR*             binvar,             /**< binary indicator variable */
    SCIP_CONS*            lincons,            /**< linear constraint */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? Usually set to TRUE. */
    SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
@@ -8363,7 +8339,7 @@ SCIP_RETCODE SCIPcreateConsIndicatorLinConsPure(
    )
 {
    return SCIPcreateConsIndicatorGenericLinConsPure(scip, cons, name, binvar, lincons, TRUE, initial, separate,
-                                         enforce, check, propagate, local, dynamic, removable, stickingatnode);
+      enforce, check, propagate, local, dynamic, removable, stickingatnode);
 }
 
 

@@ -182,7 +182,7 @@ SCIP_RETCODE SCIPcreateConsIndicatorLinCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
-   SCIP_VAR*             binvar,             /**< binary indicator variable (or NULL) */
+   SCIP_VAR*             binvar,             /**< binary indicator variable */
    SCIP_CONS*            lincons,            /**< linear constraint */
    SCIP_VAR*             slackvar,           /**< slack variable */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? Usually set to TRUE. */
@@ -225,7 +225,7 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
-   SCIP_VAR*             binvar,             /**< binary indicator variable (or NULL) */
+   SCIP_VAR*             binvar,             /**< binary indicator variable */
    SCIP_CONS*            lincons,            /**< linear constraint */
    SCIP_VAR*             slackvar,           /**< slack variable */
    SCIP_Bool             activeone,          /**< is the constraint active when the binary is 1? */
@@ -271,7 +271,7 @@ SCIP_RETCODE SCIPcreateConsBasicIndicatorLinCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
-   SCIP_VAR*             binvar,             /**< binary indicator variable (or NULL) */
+   SCIP_VAR*             binvar,             /**< binary indicator variable */
    SCIP_CONS*            lincons,            /**< linear constraint */
    SCIP_VAR*             slackvar            /**< slack variable */
    );
@@ -294,7 +294,7 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinConsPure(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
-   SCIP_VAR*             binvar,             /**< binary indicator variable (or NULL) */
+   SCIP_VAR*             binvar,             /**< binary indicator variable */
    SCIP_CONS*            lincons,            /**< linear constraint */
    SCIP_Bool             activeone,          /**< is the constraint active when the binary is 1? */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? Usually set to TRUE. */
@@ -332,7 +332,7 @@ SCIP_RETCODE SCIPcreateConsIndicatorLinConsPure(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
-   SCIP_VAR*             binvar,             /**< binary indicator variable (or NULL) */
+   SCIP_VAR*             binvar,             /**< binary indicator variable */
    SCIP_CONS*            lincons,            /**< linear constraint */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? Usually set to TRUE. */
    SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?

@@ -37,6 +37,7 @@ Interface changes
   pointer to SCIP_LOCK/SCIP_CONDITION, respectively.
 
 - Renamed SCIPtpiSumbitJob() to SCIPtpiSubmitJob().
+- SCIPcreateConsIndicatorLinCons(), SCIPcreateConsIndicatorGenericLinCons() do not allow binvar to be NULL anymore
 
 ### New API functions
 
