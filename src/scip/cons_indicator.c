@@ -8174,8 +8174,7 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinConsPure(
       if ( ! SCIPvarIsIntegral(vars[j]) || ! SCIPisIntegral(scip, vals[j]) )
       {
          slackvartype = SCIP_VARTYPE_CONTINUOUS;
-         if ( ! conshdlrdata->scaleslackvar )
-            break;
+         break;
       }
    }
 
