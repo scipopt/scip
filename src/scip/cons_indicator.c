@@ -8072,8 +8072,8 @@ SCIP_RETCODE SCIPcreateConsBasicIndicatorLinCons(
 
 
 /** creates and captures an indicator constraint with given linear constraint in a generic version, i. e., with a flag
- *  activeone indicating whether the constraint is active on value 1 or 0 of the binary variable. No slack variable is
- *  given.
+ *  activeone indicating whether the constraint is active on value 1 or 0 of the binary variable; no slack variable is
+ *  given
 
  *  @note @a binvar is checked to be binary only later. This enables a change of the type in
  *  procedures reading an instance.
@@ -8164,7 +8164,7 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinConsPure(
       return SCIP_INVALIDDATA;
    }
 
-   /* determine type of slackvariable */
+   /* determine type of slack variable */
    slackvartype = SCIP_VARTYPE_IMPLINT;
    nvars = SCIPgetNVarsLinear(scip, lincons);
    vars = SCIPgetVarsLinear(scip, lincons);
@@ -8185,9 +8185,7 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinConsPure(
 
       /* if active on 0, the binary variable is reversed */
       if ( activeone )
-      {
          binvarinternal = binvar;
-      }
       else
       {
          SCIP_CALL ( SCIPgetNegatedVar(scip, binvar, &binvarinternal) );

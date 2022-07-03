@@ -277,7 +277,7 @@ SCIP_RETCODE SCIPcreateConsBasicIndicatorLinCons(
    );
 
 /** creates and captures an indicator constraint with given linear constraint in a generic version, i. e., with a flag
- *  activeone indicating whether the constraint is active on value 1 or 0 of the binary variable. No slack variable is
+ *  activeone indicating whether the constraint is active on value 1 or 0 of the binary variable; no slack variable is
  *  specified
 
  *  @note @a binvar is checked to be binary only later. This enables a change of the type in
