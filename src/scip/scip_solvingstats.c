@@ -3025,7 +3025,8 @@ void SCIPprintSeparatorStatistics(
 
 /** outputs cutselector statistics
  *
- *       The number of cuts Filtered + Forced + Selected should be equal to the number of cuts ViaPoolAdd + Directly in the separator statistics.
+ *       Filtered = ViaPoolAdd(Separators) + DirectAdd(Separators) - Selected - Cuts(Constraints)
+ *       Selected = Applied(Separators) + Applied(Constraints)
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING

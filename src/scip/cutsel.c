@@ -215,13 +215,13 @@ SCIP_RETCODE SCIPcutselsSelect(
          assert(ncuts >= *nselectedcuts);
          if( root )
          {
-            cutsel->nrootcutsselected += *nselectedcuts - nforcedcuts; /*lint !e776*/
+            cutsel->nrootcutsselected += *nselectedcuts;
             cutsel->nrootcutsforced += nforcedcuts;
             cutsel->nrootcutsfiltered += ncuts - *nselectedcuts; /*lint !e776*/
          }
          else
          {
-            cutsel->nlocalcutsselected += *nselectedcuts - nforcedcuts; /*lint !e776*/
+            cutsel->nlocalcutsselected += *nselectedcuts;
             cutsel->nlocalcutsforced += nforcedcuts;
             cutsel->nlocalcutsfiltered += ncuts - *nselectedcuts; /*lint !e776*/
          }
