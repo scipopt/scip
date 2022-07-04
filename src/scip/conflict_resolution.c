@@ -1751,12 +1751,19 @@ SCIP_RETCODE SCIPconflictAnalyzeResolution(
 
    /* arrays to store variable information related to conflict analysis */
    int tmp_count;
-   SCIP_Real tmp_conflictlb[transprob->nvars];
-   SCIP_Real tmp_conflictub[transprob->nvars];
-   SCIP_Real tmp_conflictrelaxedlb[transprob->nvars];
-   SCIP_Real tmp_conflictrelaxedub[transprob->nvars];
-   int tmp_conflictlbcount[transprob->nvars];
-   int tmp_conflictubcount[transprob->nvars];
+   SCIP_Real* tmp_conflictlb;
+   SCIP_Real* tmp_conflictub;
+   SCIP_Real* tmp_conflictrelaxedlb;
+   SCIP_Real* tmp_conflictrelaxedub;
+   int* tmp_conflictlbcount;
+   int* tmp_conflictubcount;
+
+   BMSallocBlockMemoryArray(blkmem, &tmp_conflictlb, transprob->nvars);
+   BMSallocBlockMemoryArray(blkmem, &tmp_conflictub, transprob->nvars);
+   BMSallocBlockMemoryArray(blkmem, &tmp_conflictrelaxedlb, transprob->nvars);
+   BMSallocBlockMemoryArray(blkmem, &tmp_conflictrelaxedub, transprob->nvars);
+   BMSallocBlockMemoryArray(blkmem, &tmp_conflictlbcount, transprob->nvars);
+   BMSallocBlockMemoryArray(blkmem, &tmp_conflictubcount, transprob->nvars);
 
    assert(conflict != NULL);
    assert(set != NULL);
@@ -1812,6 +1819,14 @@ SCIP_RETCODE SCIPconflictAnalyzeResolution(
       vars[i]->conflictubcount = tmp_conflictubcount[i];
    }
    conflict->count = tmp_count;
+
+   /* free data */
+   BMSfreeBlockMemoryArray(blkmem, &tmp_conflictlb, transprob->nvars);
+   BMSfreeBlockMemoryArray(blkmem, &tmp_conflictub, transprob->nvars);
+   BMSfreeBlockMemoryArray(blkmem, &tmp_conflictrelaxedlb, transprob->nvars);
+   BMSfreeBlockMemoryArray(blkmem, &tmp_conflictrelaxedub, transprob->nvars);
+   BMSfreeBlockMemoryArray(blkmem, &tmp_conflictlbcount, transprob->nvars);
+   BMSfreeBlockMemoryArray(blkmem, &tmp_conflictubcount, transprob->nvars);
 
    SCIPpqueueClear(conflict->resbdchgqueue);
    SCIPpqueueClear(conflict->resforcedbdchgqueue);
