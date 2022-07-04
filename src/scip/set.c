@@ -122,7 +122,7 @@
 #define SCIP_DEFAULT_CONF_MAXSTORESIZE    10000 /**< maximal size of the conflict pool */
 #define SCIP_DEFAULT_CONF_RECONVLEVELS       -1 /**< number of depth levels up to which UIP reconvergence constraints are
                                                  *   generated (-1: generate reconvergence constraints in all depth levels) */
-#define SCIP_DEFAULT_CONF_MAXNUMRESSTEPS     1  /**< maximal number of resolution steps in generalized resolution
+#define SCIP_DEFAULT_CONF_MAXNUMRESSTEPS   1000 /**< maximal number of resolution steps in generalized resolution
                                                  *   (-1: resolve till FirstUIP) */
 #define SCIP_DEFAULT_CONF_CLEANBNDDEPEND   TRUE /**< should conflicts based on an old cutoff bound removed? */
 #define SCIP_DEFAULT_CONF_FUIPLEVELS         -1 /**< number of depth levels up to which first UIP's are used in conflict
