@@ -615,7 +615,6 @@ SCIP_RETCODE weakenVarReason(
    assert(var != NULL);
    assert(pos >= 0 && pos < resolutionset->nnz);
 
-   /* @todo we weaken with global bounds (or maybe local?) */
    /* weaken with global upper bound */
    if( SCIPsetIsGT(set, resolutionset->vals[pos], 0.0) )
    {
@@ -937,6 +936,7 @@ SCIP_RETCODE SCIPconflictFlushResolutionSets(
       SCIP_CALL( SCIPnodeCutoff(tree->path[resolutionset->validdepth], set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
       return SCIP_OKAY;
    }
+   /* @todo do not create if relaxation only variable exist */
    /* @todo long conflicts can be used for repropagation */
    else
    {
@@ -1083,8 +1083,6 @@ SCIP_RETCODE resolveWithReason(
          return SCIP_OKAY;
       }
       assert((idxinconflict && idxinreason));
-      /** @todo this should be replace by an assert. We have to update the current bdchginfo and
-       * nextbdchginfo before adding the assert. At the moment we just stop */
       if (SCIPsetIsGE(set, coefconf * coefreas, 0.0))
       {
          *success = FALSE;
@@ -1098,7 +1096,7 @@ SCIP_RETCODE resolveWithReason(
    coefreas = coefconf / coefreas;
    coefconf = 1.0;
 
-   /** stop if the linear combination of slacks is positive. @todo we are not supposed to stop since
+   /** stop if the linear combination of slacks is positive. @todo we do not have to stop;
     *  because of sub-additive slacks the resolved constraint may still have negative slack
     */
    if (SCIPsetIsGE(set, conflictslack * fabs(coefconf) + reasonslack * fabs(coefreas), 0.0))
@@ -1795,7 +1793,6 @@ SCIP_RETCODE SCIPconflictAnalyzeResolution(
    conflict->bdchgonlyresqueue = TRUE;
 
    /* analyze the conflict set, and create a conflict constraint on success */
-   /* @todo remove all tree related information and flush conflict outside of the function */
    SCIP_CALL( conflictAnalyzeResolution(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue, cliquetable, cons, FALSE, validdepth, TRUE, &nconss, &nconfvars) );
 
    conflict->nressuccess += (nconss > 0 ? 1 : 0);
