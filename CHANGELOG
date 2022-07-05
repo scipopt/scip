@@ -4,6 +4,9 @@
 *************************
 Features
 --------
+
+- read objective offset from ZIMPL files
+
 Performance improvements
 ------------------------
 Examples and applications
