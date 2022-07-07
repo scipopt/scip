@@ -28,8 +28,12 @@ Build system
 ------------
 ### Cmake
 ### Makefile
+
 Fixed bugs
 ----------
+
+- read objective offset from ZIMPL files
+
 Miscellaneous
 -------------
 Known bugs
