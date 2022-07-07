@@ -4,9 +4,6 @@
 *************************
 Features
 --------
-
-- read objective offset from ZIMPL files
-
 Performance improvements
 ------------------------
 Examples and applications
@@ -31,8 +28,12 @@ Build system
 ------------
 ### Cmake
 ### Makefile
+
 Fixed bugs
 ----------
+
+- read objective offset from ZIMPL files
+
 Miscellaneous
 -------------
 Known bugs
