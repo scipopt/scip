@@ -708,6 +708,8 @@ SCIP_RETCODE addObjTerm(
    const Term*           term                /**< term to use */
    )
 {
+   SCIP_Real objoffset;
+
    if( term_is_linear(term) )
    {
       int i;
@@ -755,6 +757,9 @@ SCIP_RETCODE addObjTerm(
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
       SCIP_CALL( SCIPreleaseVar(scip, &objvar) );
    }
+
+   objoffset = numb_todbl(term_get_constant(term));
+   SCIP_CALL( SCIPaddOrigObjoffset(scip, objoffset) );
 
    return SCIP_OKAY;
 }
