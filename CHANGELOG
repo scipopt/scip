@@ -30,6 +30,10 @@ Build system
 ### Makefile
 Fixed bugs
 ----------
+
+- Make sure that objective limit is disabled if not all variables are in the LP. If we would run into
+  an objective limit in this case, the results of the LP solver are unclear.
+
 Miscellaneous
 -------------
 Known bugs
