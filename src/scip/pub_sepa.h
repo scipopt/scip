@@ -116,13 +116,13 @@ SCIP_Real SCIPsepaGetTime(
    SCIP_SEPA*            sepa                /**< separator */
    );
 
-/** gets the total number of times, the separator was called */
+/** gets the total number of times the separator was called */
 SCIP_EXPORT
 SCIP_Longint SCIPsepaGetNCalls(
    SCIP_SEPA*            sepa                /**< separator */
    );
 
-/** gets the total number of times, the separator was called at the root */
+/** gets the total number of times the separator was called at the root */
 SCIP_EXPORT
 SCIP_Longint SCIPsepaGetNRootCalls(
    SCIP_SEPA*            sepa                /**< separator */

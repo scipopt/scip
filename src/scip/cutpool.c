@@ -430,7 +430,7 @@ SCIP_RETCODE SCIPcutpoolCreate(
 
    SCIP_CALL( SCIPclockCreate(&(*cutpool)->poolclock, SCIP_CLOCKTYPE_DEFAULT) );
 
-   SCIP_CALL( SCIPhashtableCreate(&(*cutpool)->hashtable, blkmem, 
+   SCIP_CALL( SCIPhashtableCreate(&(*cutpool)->hashtable, blkmem,
          (set->misc_usesmalltables ? SCIP_HASHSIZE_CUTPOOLS_SMALL : SCIP_HASHSIZE_CUTPOOLS),
          hashGetKeyCut, hashKeyEqCut, hashKeyValCut, (void*) set) );
 
@@ -1136,19 +1136,19 @@ SCIP_Longint SCIPcutpoolGetNCutsAdded(
  *  this is primarily used to keep statistics when SCIP performs a restart */
 void SCIPcutpoolAddMaxNCuts(
    SCIP_CUTPOOL*         cutpool,             /**< cut pool */
-   SCIP_Longint          maxncuts             /**< maxncuts before restart */
+   SCIP_Longint          ncuts                /**< number of cuts to add */
    )
 {
    assert(cutpool != NULL);
 
-   cutpool->maxncuts += maxncuts;
+   cutpool->maxncuts += ncuts;
 }
 
 /** sets time in seconds used for separating cuts from the pool;
  *  this is primarily used to keep statistics when SCIP performs a restart */
 void SCIPcutpoolSetTime(
    SCIP_CUTPOOL*         cutpool,             /**< cut pool */
-   SCIP_Real             time                 /**< poolclock time before restart */
+   SCIP_Real             time                 /**< poolclock time */
    )
 {
    assert(cutpool != NULL);
@@ -1160,7 +1160,7 @@ void SCIPcutpoolSetTime(
  *  this is primarily used to keep statistics when SCIP performs a restart */
 void SCIPcutpoolAddNCalls(
    SCIP_CUTPOOL*         cutpool,             /**< cut pool */
-   SCIP_Longint          ncalls               /**< ncalls before restart */
+   SCIP_Longint          ncalls               /**< ncalls */
    )
 {
    assert(cutpool != NULL);
@@ -1172,7 +1172,7 @@ void SCIPcutpoolAddNCalls(
  *  this is primarily used to keep statistics when SCIP performs a restart */
 void SCIPcutpoolAddNRootCalls(
    SCIP_CUTPOOL*         cutpool,             /**< cut pool */
-   SCIP_Longint          nrootcalls           /**< nrootcalls before restart */
+   SCIP_Longint          nrootcalls           /**< nrootcalls */
    )
 {
    assert(cutpool != NULL);

@@ -495,7 +495,7 @@ SCIP_RETCODE SCIPsepastoreAddCut(
          }
       }
 
-      SCIP_CALL(SCIProwRelease(&sepastore->cuts[0], blkmem, set, lp));
+      SCIP_CALL( SCIProwRelease(&sepastore->cuts[0], blkmem, set, lp) );
       sepastore->ncuts = 0;
       sepastore->nforcedcuts = 0;
    }
@@ -963,7 +963,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
 
       /* note that cut selector statistics are updated here also when in probing mode; this may lead to an offset with
        * separator/constraint handler statistics */
-      /* TODO dont update cutselector statistics if SCIPtreeProbing(scip->tree)? */
+      /* @todo do not update cutselector statistics if SCIPtreeProbing(scip->tree) */
       nselectedcuts += sepastore->nforcedcuts;
    }
 

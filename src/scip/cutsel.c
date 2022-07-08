@@ -211,8 +211,8 @@ SCIP_RETCODE SCIPcutselsSelect(
       if( result != SCIP_DIDNOTFIND && !initiallp )
       {
          assert(0 <= ncuts);
-         assert(0 <= *nselectedcuts);
-         assert(ncuts >= *nselectedcuts);
+         assert(0 <= *nselectedcuts && *nselectedcuts <= ncuts);
+
          if( root )
          {
             cutsel->nrootcutsselected += *nselectedcuts;

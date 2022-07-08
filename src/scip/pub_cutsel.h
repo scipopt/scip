@@ -90,13 +90,13 @@ SCIP_Real SCIPcutselGetTime(
 
 /** get number of times the cutselector was called */
 SCIP_Longint SCIPcutselGetNCalls(
-    SCIP_CUTSEL*          cutsel              /**< cut selector */
-);
+   SCIP_CUTSEL*          cutsel              /**< cut selector */
+   );
 
 /** get number of times the cutselector was called at the root */
 SCIP_Longint SCIPcutselGetNRootCalls(
-    SCIP_CUTSEL*          cutsel              /**< cut selector */
-);
+   SCIP_CUTSEL*          cutsel              /**< cut selector */
+   );
 
 /** get total number of cuts that were selected at the root */
 SCIP_Longint SCIPcutselGetNRootCuts(

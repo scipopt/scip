@@ -124,28 +124,28 @@ SCIP_RETCODE SCIPcutpoolSeparate(
  *  this is primarily used to keep statistics when SCIP performs a restart */
 void SCIPcutpoolAddMaxNCuts(
    SCIP_CUTPOOL*         cutpool,             /**< cut pool */
-   SCIP_Longint          maxncuts             /**< maxncuts before restart */
+   SCIP_Longint          ncuts             /**< number of cuts to add */
    );
 
 /** sets time in seconds used for separating cuts from the pool;
  *  this is primarily used to keep statistics when SCIP performs a restart */
 void SCIPcutpoolSetTime(
    SCIP_CUTPOOL*         cutpool,             /**< cut pool */
-   SCIP_Real             time                 /**< poolclock time before restart */
+   SCIP_Real             time                 /**< poolclock time */
    );
 
 /** adds the number of times the cut pool was separated;
  *  this is primarily used to keep statistics when SCIP performs a restart */
 void SCIPcutpoolAddNCalls(
    SCIP_CUTPOOL*         cutpool,             /**< cut pool */
-   SCIP_Longint          ncalls               /**< ncalls before restart */
+   SCIP_Longint          ncalls               /**< ncalls */
    );
 
 /** adds the number of times the cut pool was separated at the root;
  *  this is primarily used to keep statistics when SCIP performs a restart */
 void SCIPcutpoolAddNRootCalls(
    SCIP_CUTPOOL*         cutpool,             /**< cut pool */
-   SCIP_Longint          nrootcalls           /**< nrootcalls before restart */
+   SCIP_Longint          nrootcalls           /**< nrootcalls */
 );
 
 /** adds the total number of cuts that were added to the pool;

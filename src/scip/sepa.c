@@ -847,7 +847,7 @@ SCIP_Real SCIPsepaGetTime(
    return SCIPclockGetTime(sepa->sepaclock);
 }
 
-/** gets the total number of times, the separator was called */
+/** gets the total number of times the separator was called */
 SCIP_Longint SCIPsepaGetNCalls(
    SCIP_SEPA*            sepa                /**< separator */
    )
@@ -857,7 +857,7 @@ SCIP_Longint SCIPsepaGetNCalls(
    return sepa->ncalls;
 }
 
-/** gets the total number of times, the separator was called at the root */
+/** gets the total number of times the separator was called at the root */
 SCIP_Longint SCIPsepaGetNRootCalls(
    SCIP_SEPA*            sepa                /**< separator */
    )
@@ -939,7 +939,6 @@ SCIP_Longint SCIPsepaGetNCutsApplied(
 }
 
 /** gets the total number of cutting planes of the separator applied to the LP via the cutpool */
-SCIP_EXPORT
 SCIP_Longint SCIPsepaGetNCutsAppliedViaPool(
    SCIP_SEPA*            sepa                /**< separator */
    )
@@ -950,7 +949,6 @@ SCIP_Longint SCIPsepaGetNCutsAppliedViaPool(
 }
 
 /** gets the total number of cutting planes of the separator applied to the LP via the sepastore directly */
-SCIP_EXPORT
 SCIP_Longint SCIPsepaGetNCutsAppliedDirect(
    SCIP_SEPA*            sepa                /**< separator */
    )
@@ -963,7 +961,7 @@ SCIP_Longint SCIPsepaGetNCutsAppliedDirect(
 /** increase count of applied cuts by one */
 void SCIPsepaIncNCutsApplied(
    SCIP_SEPA*            sepa,                /**< separator */
-   unsigned int          fromcutpool          /**< added from cutpool to sepastore */
+   SCIP_Bool             fromcutpool          /**< whether the cuts were added from the cutpool to sepastore */
    )
 {
    SCIP_SEPA* parentsepa;
@@ -985,7 +983,7 @@ void SCIPsepaIncNCutsApplied(
 /** increase count of added cuts by one */
 void SCIPsepaIncNCutsAdded(
    SCIP_SEPA*            sepa,                /**< separator */
-   unsigned int          fromcutpool          /**< added from cutpool to sepastore */
+   SCIP_Bool             fromcutpool          /**< whether the cuts were added from the cutpool to sepastore */
    )
 {
    SCIP_SEPA* parentsepa;
@@ -1008,7 +1006,7 @@ void SCIPsepaIncNCutsAdded(
 /** decrease the count of added cuts by one */
 void SCIPsepaDecNCutsAdded(
    SCIP_SEPA*            sepa,                /**< separator */
-   unsigned int          fromcutpool          /**< added from cutpool to sepastore */
+   SCIP_Bool             fromcutpool          /**< whether the cuts were added from the cutpool to sepastore */
    )
 {
    SCIP_SEPA* parentsepa;

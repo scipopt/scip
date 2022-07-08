@@ -2934,7 +2934,7 @@ void SCIPprintConflictStatistics(
  *    - DirectApp: The number of cuts that entered the sepastore directly and were applied to the LP.
  *
  *  The number of cuts ViaPoolAdd + Directly should be equal to the number of cuts Filtered + Forced + Selected in the
- *  cutselector Statistics.
+ *  cutselector statistics.
  *
  *  @note The following edge case may lead to over or undercounting of statistics: When SCIPapplyCutsProbing() is
  *        called, cuts are counted for the cut selection statistics, but not for the separator statistics.  This
