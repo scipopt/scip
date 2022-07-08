@@ -12808,13 +12808,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                solstat = SCIPlpGetSolstat(lp);
                assert(solstat != SCIP_LPSOLSTAT_OBJLIMIT);
 
-               if( !(*lperror) && solstat != SCIP_LPSOLSTAT_ERROR && solstat != SCIP_LPSOLSTAT_NOTSOLVED )
-               {
-                  SCIPsetDebugMsg(set, " ---> new objval = %f (solstat: %d, 1 add. step)\n", objval, solstat);
-               }
-
-               /* disable fastmip for subsequent LP calls (if objective limit is not yet exceeded or LP solution is infeasible) */
-               fastmip = 0;
+               SCIPsetDebugMsg(set, " ---> new objval = %f (solstat: %d, 1 add. step)\n", objval, solstat);
 
                /* the solution is still not exceeding the objective limit and the solving process
                 * was stopped due to time or iteration limit, solve again with fastmip turned off
@@ -12822,18 +12816,21 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                if( solstat == SCIP_LPSOLSTAT_ITERLIMIT &&
                   SCIPsetIsLT(set, objval, lp->cutoffbound - getFiniteLooseObjval(lp, set, prob)) )
                {
-                  assert(!(*lperror));
+                  SCIP_Bool simplex = (lp->lastlpalgo == SCIP_LPALGO_PRIMALSIMPLEX || lp->lastlpalgo == SCIP_LPALGO_DUALSIMPLEX);
+                  if( !(lperror) && (fastmip > 0) && simplex )
+                  {
+                     fastmip = 0;
+                     SCIP_CALL( lpSolve(lp, set, messagehdlr, stat, prob, SCIP_LPALGO_DUALSIMPLEX, -1, -1,
+                           FALSE, FALSE, TRUE, fastmip, tightprimfeastol, tightdualfeastol, fromscratch, keepsol, lperror) );
 
-                  SCIP_CALL( lpSolve(lp, set, messagehdlr, stat, prob, SCIP_LPALGO_DUALSIMPLEX, -1, -1,
-                        FALSE, FALSE, TRUE, fastmip, tightprimfeastol, tightdualfeastol, fromscratch, keepsol, lperror) );
+                     /* get objective value */
+                     SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
 
-                  /* get objective value */
-                  SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
+                     /* get solution status for the lp */
+                     solstat = SCIPlpGetSolstat(lp);
 
-                  /* get solution status for the lp */
-                  solstat = SCIPlpGetSolstat(lp);
-
-                  SCIPsetDebugMsg(set, " ---> new objval = %f (solstat: %d, without fastmip)\n", objval, solstat);
+                     SCIPsetDebugMsg(set, " ---> new objval = %f (solstat: %d, without fastmip)\n", objval, solstat);
+                  }
                }
 
                /* check for lp errors */
@@ -12849,7 +12846,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
 
                lp->solved = TRUE;
 
-               /* optimal solution / objlimit with fastmip turned off / itlimit or timelimit, but objlimit exceeded */
+               /* optimal solution / objlimit / itlimit or timelimit, but objlimit exceeded */
                if( solstat == SCIP_LPSOLSTAT_OPTIMAL || solstat == SCIP_LPSOLSTAT_OBJLIMIT
                   || ( (solstat == SCIP_LPSOLSTAT_ITERLIMIT || solstat == SCIP_LPSOLSTAT_TIMELIMIT)
                      && SCIPsetIsGE(set, objval, lp->cutoffbound - getFiniteLooseObjval(lp, set, prob)) ) )
