@@ -12,12 +12,31 @@ Interface changes
 -----------------
 ### New and changed callbacks
 ### Deleted and changed API methods
+
+- added input parameter SCIP_Bool initiallp to SCIPcutselsSelect
+- changed function type int to SCIP_Longint for SCIPcutpoolGetMaxNCuts
+- replaced SCIPsepastoreGetNCutsFound with SCIPsepastoreGetNCutsAdded following the naming convention for the new statistics
+- replaced SCIPsepaIncNAppliedCuts with SCIPsepaIncNCutsApplied
+
 ### New API functions
+
+- added SCIPsepastoreGetNCutsAdded, SCIPsepastoreGetNCutsAddedViaPool, SCIPsepastoreGetNCutsAddedDirect
+- added SCIPsepaIncNCutsAdded, SCIPsepaDecNCutsAdded, SCIPsepaIncNCutsApplied, SCIPsepaGetNRootCalls, SCIPsepaGetNCutsAdded, SCIPsepaGetNCutsAddedViaPool, SCIPsepaGetNCutsAddedDirect, SCIPsepaGetNCutsAppliedViaPool, SCIPsepaGetNCutsAppliedDirect
+- added SCIPcutpoolGetNRootCalls, SCIPcutpoolGetNCutsAdded, SCIPcutpoolAddMaxNCuts, SCIPcutpoolSetTime, SCIPcutpoolAddNCalls, SCIPcutpoolAddNRootCalls, SCIPcutpoolAddNCutsFound, SCIPcutpoolAddNCutsAdded,
+- added SCIPcutselGetNCalls, SCIPcutselGetNRootCalls, SCIPcutselGetNRootCuts, SCIPcutselGetNRootForcedCuts, SCIPcutselGetNRootCutsFiltered, SCIPcutselGetNLocalCuts, SCIPcutselGetNLocalForcedCuts, SCIPcutselGetNLocalCutsFiltered,
+
 ### Command line interface
 ### Interfaces to external software
 ### Changed parameters
 ### New parameters
 ### Data structures
+
+- added nrootcalls and ncutsadded to SCIP_Cutpool
+- added fromcutpool flag to SCIP_Row and fixed 33 bit allocation
+- added ncalls, nrootcalls, nrootcutsselected, nrootcutsforced, nrootcutsfiltered, nlocalcutsselected, nlocalcutsforced, nlocalcutsfiltered to SCIP_Cutsel
+- added ncutsadded, ncutsaddedviapool, ncutsaddeddirect, ncutsappliedviapool, ncutsapplieddirect, nrootcalls to SCIP_Sepa
+- added ncutsadded, ncutsaddedviapool, ncutsaddeddirect to SCIP_Sepastore
+
 Deleted files
 -------------
 Unit tests
@@ -36,6 +55,11 @@ Fixed bugs
 
 Miscellaneous
 -------------
+
+- Added extended cutselector statistics splitting between root node specific and general statistics
+- Added extended and refined cutpool statistics showing the number of cuts added from the cutpool to the sepastore
+- Added extended and refined separator statistics to get a better view of the individual generators performance
+
 Known bugs
 ----------
 

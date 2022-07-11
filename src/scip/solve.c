@@ -1310,7 +1310,9 @@ SCIP_RETCODE SCIPconstructCurrentLP(
             /* keep all active global cuts that where applied in the previous node in the lp */
             if( !lp->rows[i]->local && lp->rows[i]->age == 0 )
             {
-               SCIP_CALL( SCIPsepastoreAddCut(sepastore, blkmem, set, stat, eventqueue, eventfilter, lp, lp->rows[i], TRUE, (SCIPtreeGetCurrentDepth(tree) == 0), cutoff) );
+               lp->rows[i]->fromcutpool = TRUE; /* this has no effect inside initial LP, but is set for consistency */
+               SCIP_CALL( SCIPsepastoreAddCut(sepastore, blkmem, set, stat, eventqueue, eventfilter, lp, lp->rows[i],
+                     TRUE, (SCIPtreeGetCurrentDepth(tree) == 0), cutoff) );
             }
          }
       }

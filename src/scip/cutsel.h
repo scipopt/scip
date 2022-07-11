@@ -69,6 +69,7 @@ SCIP_RETCODE SCIPcutselsSelect(
    int                   ncuts,              /**< length of cuts */
    int                   nforcedcuts,        /**< number of forced cuts at start of given array */
    SCIP_Bool             root,               /**< are we at the root node? */
+   SCIP_Bool             initiallp,          /**< is the separation storage currently being filled with the initial LP rows? */
    int                   maxnselectedcuts,   /**< maximum number of cuts to be selected */
    int*                  nselectedcuts       /**< pointer to return number of selected cuts */
    );

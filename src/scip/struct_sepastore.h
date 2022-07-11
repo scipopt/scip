@@ -43,9 +43,11 @@ struct SCIP_SepaStore
    int                   cutssize;           /**< size of cuts and score arrays */
    int                   ncuts;              /**< number of separated cuts (max. is set->sepa_maxcuts) */
    int                   nforcedcuts;        /**< number of forced separated cuts (first positions in cuts array) */
-   int                   ncutsfound;         /**< total number of cuts found so far */
+   int                   ncutsadded;         /**< total number of cuts added so far */
+   int                   ncutsaddedviapool;  /**< total number of cuts added from cutpool */
+   int                   ncutsaddeddirect;   /**< total number of cuts added directly */
    int                   ncutsfoundround;    /**< number of cuts found so far in this separation round */
-   int                   ncutsapplied;       /**< total number of cuts applied to the LPs */
+   int                   ncutsapplied;       /**< total number of cuts applied to the LP */
    SCIP_Bool             initiallp;          /**< is the separation storage currently being filled with the initial LP rows? */
    SCIP_Bool             forcecuts;          /**< should the cuts be used despite the number of cuts parameter limit? */
 };

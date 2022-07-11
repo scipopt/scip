@@ -237,6 +237,7 @@ struct SCIP_Row
    int                   numminval;          /**< number of coefs with absolute value equal to minval, zero if minval invalid */
    int                   age;                /**< number of successive times this row was in LP and was not sharp in solution */
    int                   rank;               /**< rank of the row (upper bound, to be precise) */
+   unsigned int          fromcutpool:1;      /**< added from cutpool to sepastore */
    unsigned int          basisstatus:2;      /**< basis status of row in last LP solution, invalid for non-LP rows */
    unsigned int          lpcolssorted:1;     /**< are the linked LP columns in the cols array sorted by non-decreasing index? */
    unsigned int          nonlpcolssorted:1;  /**< are the non-LP/not linked columns sorted by non-decreasing index? */
@@ -251,7 +252,7 @@ struct SCIP_Row
    unsigned int          removable:1;        /**< is row removable from the LP (due to aging or cleanup)? */
    unsigned int          inglobalcutpool:1;  /**< is row contained in the global cut pool? */
    unsigned int          normunreliable:1;   /**< is the objective product of the row unreliable? */
-   unsigned int          nlocks:15;          /**< number of sealed locks of an unmodifiable row */
+   unsigned int          nlocks:13;          /**< number of sealed locks of an unmodifiable row */
    unsigned int          origintype:3;       /**< origin of row (0: unknown, 1: constraint handler, 2: constraint, 3: separator, 4: reoptimization) */
 };
 
