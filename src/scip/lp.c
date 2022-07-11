@@ -5212,6 +5212,7 @@ SCIP_RETCODE SCIProwCreate(
    (*row)->age = 0;
    (*row)->rank = 0;
    (*row)->obsoletenode = -1;
+   (*row)->fromcutpool = FALSE;
    (*row)->basisstatus = SCIP_BASESTAT_BASIC; /*lint !e641*/
    (*row)->lpcolssorted = TRUE;
    (*row)->nonlpcolssorted = (len <= 1);

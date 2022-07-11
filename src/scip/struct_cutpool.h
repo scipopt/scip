@@ -49,7 +49,9 @@ struct SCIP_Cut
 struct SCIP_Cutpool
 {
    SCIP_Longint          ncalls;             /**< number of times, the cutpool was separated */
-   SCIP_Longint          ncutsfound;         /**< total number of cuts that were separated from the pool */
+   SCIP_Longint          nrootcalls;         /**< number of times, the cutpool was separated at the root */
+   SCIP_Longint          ncutsfound;         /**< total number of cuts that were added to the pool */
+   SCIP_Longint          ncutsadded;         /**< total number of cuts that were added from the pool */
    SCIP_CLOCK*           poolclock;          /**< separation time */
    SCIP_HASHTABLE*       hashtable;          /**< hash table to identify already stored cuts */
    SCIP_CUT**            cuts;               /**< stored cuts of the pool */
@@ -63,7 +65,7 @@ struct SCIP_Cutpool
    int                   agelimit;           /**< maximum age a cut can reach before it is deleted from the pool */
    int                   firstunprocessed;   /**< first cut that has not been processed in the last LP */
    int                   firstunprocessedsol;/**< first cut that has not been processed in the last LP when separating other solutions */
-   int                   maxncuts;           /**< maximal number of cuts stored in the pool at the same time */
+   SCIP_Longint          maxncuts;           /**< maximal number of cuts stored in the pool at the same time */
    SCIP_Bool             globalcutpool;      /**< is this the global cut pool of SCIP? */
 };
 

@@ -74,7 +74,7 @@ int SCIPcutpoolGetNCuts(
 
 /** get maximum number of cuts that were stored in the cut pool at the same time */
 SCIP_EXPORT
-int SCIPcutpoolGetMaxNCuts(
+SCIP_Longint SCIPcutpoolGetMaxNCuts(
    SCIP_CUTPOOL*         cutpool             /**< cut pool */
    );
 
@@ -84,9 +84,15 @@ SCIP_Real SCIPcutpoolGetTime(
    SCIP_CUTPOOL*         cutpool             /**< cut pool */
    );
 
-/** get number of times, the cut pool was separated */
+/** get number of times the cut pool was separated */
 SCIP_EXPORT
 SCIP_Longint SCIPcutpoolGetNCalls(
+   SCIP_CUTPOOL*         cutpool             /**< cut pool */
+   );
+
+/** get number of times the cut pool was separated at the root */
+SCIP_EXPORT
+SCIP_Longint SCIPcutpoolGetNRootCalls(
    SCIP_CUTPOOL*         cutpool             /**< cut pool */
    );
 
@@ -96,6 +102,11 @@ SCIP_Longint SCIPcutpoolGetNCutsFound(
    SCIP_CUTPOOL*         cutpool             /**< cut pool */
    );
 
+/** get total number of cuts that were added from the cut pool to sepastore */
+SCIP_EXPORT
+SCIP_Longint SCIPcutpoolGetNCutsAdded(
+   SCIP_CUTPOOL*         cutpool             /**< cut pool */
+   );
 /** @} */
 
 #ifdef __cplusplus
