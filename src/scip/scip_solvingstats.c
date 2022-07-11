@@ -1013,9 +1013,9 @@ int SCIPgetNSepaRounds(
    return scip->stat->nseparounds;
 }
 
-/** get total number of cuts found so far; this includes global cuts from the cut pool as often as they are separated
+/** get total number of cuts added to the sepastore so far; this includes global cuts from the cut pool as often as they are separated
  *
- *  @return the total number of cuts found so far
+ *  @return the total number of cuts added to the sepastore so far
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_PRESOLVED
