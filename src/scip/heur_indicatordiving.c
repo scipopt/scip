@@ -130,7 +130,7 @@ struct SCIP_HeurData
    SCIP_HASHMAP*         scvars;             /**< hashmap to store semicontinuous variables */
    SCIP_HASHMAP*         indicatormap;       /**< hashmap to store indicator constraints of binary variables */
    SCIP_HASHMAP*         varboundmap;        /**< hashmap to store varbound constraints of binary variables */
-   SCIP_Real             roundingfrac;       /**< in violation case all fractional below this value are rounded up*/
+   SCIP_Real             roundingfrac;       /**< in violation case all fractional below this value are rounded up */
    int                   roundingmode;       /**< decides which roundingmode is selected (0: conservative (default), 1: aggressive) */
    int                   semicontscoremode;  /**< which values of semi-continuous variables should get a high score? (0: low (default), 1: middle, 2: high) */
    SCIP_Bool             usevarbounds;       /**< should varbound constraints be considered? */
@@ -1053,8 +1053,8 @@ SCIP_RETCODE SCIPincludeHeurIndicatordiving(
          DIVESET_ISPUBLIC, DIVESET_DIVETYPES, divesetGetScoreIndicatordiving, divesetAvailableIndicatordiving) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/roundingfrac",
-         "in fractional case all fractional below this value are rounded up",
-         &heurdata->roundingfrac, FALSE, DEFAULT_ROUNDINGFRAC, 0.0, SCIPinfinity(scip), NULL, NULL) );
+         "in violation case all fractional below this value are rounded up",
+         &heurdata->roundingfrac, FALSE, DEFAULT_ROUNDINGFRAC, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/roundingmode",
          "decides which roundingmode is selected (0: conservative (default), 1: aggressive)",
