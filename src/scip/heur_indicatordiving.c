@@ -92,18 +92,16 @@
  * Heuristic specific parameters
  */
 #define DEFAULT_ROUNDINGFRAC        0.5 /**< default setting for parameter roundingfrac */
-#define DEFAULT_MODE                  3 /**< default setting for parameter mode */
+#define DEFAULT_ROUNDINGMODE          0 /**< default setting for parameter roundingmode */
 #define DEFAULT_SEMICONTSCOREMODE     0 /**< default setting for parameter semicontscoremode */
 #define DEFAULT_USEVARBOUNDS       TRUE /**< default setting for parameter usevarbounds */
 
-enum IndicatorDivingMode
+enum IndicatorDivingRoundingMode
 {
-   ROUNDING_DOWN = 0,
-   ROUNDING_UP = 1,
-   ROUNDING_FRAC_AGGRESSIVE = 2,
-   ROUNDING_FRAC_CONSERVATIVE = 3
+   ROUNDING_CONSERVATIVE = 0,
+   ROUNDING_AGGRESSIVE = 1
 };
-typedef enum IndicatorDivingMode INDICATORDIVINGMODE;
+typedef enum IndicatorDivingRoundingMode INDICATORDIVINGROUNDINGMODE;
 
 /** data structure to store information of a semicontinuous variable
  *
@@ -132,8 +130,8 @@ struct SCIP_HeurData
    SCIP_HASHMAP*         scvars;             /**< hashmap to store semicontinuous variables */
    SCIP_HASHMAP*         indicatormap;       /**< hashmap to store indicator constraints of binary variables */
    SCIP_HASHMAP*         varboundmap;        /**< hashmap to store varbound constraints of binary variables */
-   SCIP_Real             roundingfrac;       /**< in fractional case all fractional below this value are rounded up*/
-   int                   mode;               /**< decides which mode is selected (0: down, 1: up, 2: aggressive, 3: conservative (default)) */
+   SCIP_Real             roundingfrac;       /**< in violation case all fractional below this value are rounded up*/
+   int                   roundingmode;       /**< decides which roundingmode is selected (0: conservative (default), 1: aggressive) */
    int                   semicontscoremode;  /**< which values of semi-continuous variables should get a high score? (0: low (default), 1: middle, 2: high) */
    SCIP_Bool             usevarbounds;       /**< should varbound constraints be considered? */
    SCIP_Bool             gotoindconss;       /**< can we skip the candidate var until indicator conss handler determines the candidate var? */
@@ -643,7 +641,7 @@ SCIP_DECL_HEUREXEC(heurExecIndicatordiving)
    SCIP_HEURDATA* heurdata;
    SCIP_DIVESET* diveset;
    SCIP_CONS** indicatorconss;
-   SCIP_Bool isatleastoneindcons; /* exists at least one unfixed indicator constraint? */
+   SCIP_Bool hasunfixedindconss;
    int nconss;
    int i;
 
@@ -659,7 +657,7 @@ SCIP_DECL_HEUREXEC(heurExecIndicatordiving)
    *result = SCIP_DIDNOTRUN;
 
    /* skip if problem doesn't contain indicator constraints or varbound constraints (optional) */
-   isatleastoneindcons = FALSE;
+   hasunfixedindconss = FALSE;
    indicatorconss = SCIPconshdlrGetConss(heurdata->conshdlr[0]);
    nconss = SCIPconshdlrGetNConss(heurdata->conshdlr[0]);
    for( i = 0; i < nconss; i++ )
@@ -669,11 +667,11 @@ SCIP_DECL_HEUREXEC(heurExecIndicatordiving)
       if( SCIPvarGetLbLocal(binvar) < SCIPvarGetUbLocal(binvar) - 0.5 )
       {
          SCIPdebugMsg(scip, "unfixed binary indicator variable: %s\n", SCIPvarGetName(binvar));
-         isatleastoneindcons = TRUE;
+         hasunfixedindconss = TRUE;
          break;
       }
    }
-   if( isatleastoneindcons == FALSE && (!heurdata->usevarbounds || SCIPconshdlrGetNConss(heurdata->conshdlr[1]) == 0) )
+   if( hasunfixedindconss == FALSE && (!heurdata->usevarbounds || SCIPconshdlrGetNConss(heurdata->conshdlr[1]) == 0) )
       return SCIP_OKAY;
 
    SCIPdebugMsg(scip, "call heurExecIndicatordiving at depth %d \n", SCIPgetDepth(scip));
@@ -943,19 +941,13 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
       *score = 100 * (scdata->lbs1[idxbvars] - lpsolsemicontinuous) / scdata->lbs1[idxbvars];
       assert(*score>0);
 
-      switch( (INDICATORDIVINGMODE)heurdata->mode )
+      switch( (INDICATORDIVINGROUNDINGMODE)heurdata->roundingmode )
       {
-      case ROUNDING_DOWN:
-         fixconstant = FALSE;
-         break;
-      case ROUNDING_UP:
-         fixconstant = TRUE;
-         break;
-      case ROUNDING_FRAC_AGGRESSIVE:
-         fixconstant = (*score <= heurdata->roundingfrac * 100);
-         break;
-      case ROUNDING_FRAC_CONSERVATIVE:
+      case ROUNDING_CONSERVATIVE:
          fixconstant = (*score > heurdata->roundingfrac * 100);
+         break;
+      case ROUNDING_AGGRESSIVE:
+         fixconstant = (*score <= heurdata->roundingfrac * 100);
          break;
       }
 
@@ -1064,9 +1056,9 @@ SCIP_RETCODE SCIPincludeHeurIndicatordiving(
          "in fractional case all fractional below this value are rounded up",
          &heurdata->roundingfrac, FALSE, DEFAULT_ROUNDINGFRAC, 0.0, SCIPinfinity(scip), NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/mode",
-         "decides which mode is selected (0: down, 1: up, 2: aggressive, 3: conservative (default))",
-         &heurdata->mode, FALSE, DEFAULT_MODE, 0, 3, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/roundingmode",
+         "decides which roundingmode is selected (0: conservative (default), 1: aggressive)",
+         &heurdata->roundingmode, FALSE, DEFAULT_ROUNDINGMODE, 0, 1, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/semicontscoremode",
          "which values of semi-continuous variables should get a high score? (0: low (default), 1: middle, 2: high)",
