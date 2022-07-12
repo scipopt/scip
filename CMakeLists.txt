@@ -63,7 +63,7 @@ endif()
 
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
-option(EASYBUILD "find and use dependencies on availability (ignores other flags)" OFF)
+option(EASYBUILD "find and use dependencies on availability (ignores IPOPT, ZLIB, GMP, PAPILO, ZIMPL, READLINE flags)" OFF)
 option(ZLIB "should zlib be linked" ON)
 option(READLINE "should readline be linked" ON)
 option(GMP "should gmp be linked" ON)
