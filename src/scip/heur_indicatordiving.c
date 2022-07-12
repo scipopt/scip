@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -15,23 +15,19 @@
 
 /**@file   heur_indicatordiving.c
  * @ingroup DEFPLUGINS_HEUR
- * @brief  indicator diving heuristic
+ * @brief  LP diving heuristic that rounds indicator variables controlling semicontinuous variables
  * @author Katrin Halbig
  * @author Alexander Hoen
  *
- * Diving heuristic: Iteratively fixes some fractional variable and resolves the LP-relaxation, thereby simulating a
- * depth-first-search in the tree.
+ * A diving heuristic iteratively fixes some fractional variables or variables determined by constraint handlers,
+ * and resolves the LP relaxation. Thereby simulating a depth-first-search in the tree.
  *
- * Indicatordiving:
- * Implements a diving heuristic for indicator variables. (Unfortunately the SC is not contained in the v-bound data structure)
- * - for indicator variables calculates a score depending of the bound see explaination of the modes
- * - for non-indicator variables:
- *          - returns invalid value if unfixed constraints exists
- *          - otherwise uses another heuristic
+ * Indicatordiving focuses on indicator variables, which control semicontinuous variables.
+ * If the semicontinuous variable is unbounded, the indicator constraint is not part of the LP and,
+ * therefore, the indicator variable is not set to an useful value in the LP solution.
  *
- * Modes:
- *
- *
+ * For these indicator variables the score depends on the LP value and the bounds of the corresponding semicontinuous variable.
+ * For all other variables the Farkas score (scaled) is returned.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -605,7 +601,7 @@ SCIP_DECL_HEURINIT(heurInitIndicatordiving) /*lint --e{715}*/
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
-   /* create working solution */
+   /* create working data */
    SCIP_CALL( SCIPcreateSol(scip, &heurdata->sol, heur) );
    SCIP_CALL( SCIPhashmapCreate( &heurdata->scvars, SCIPblkmem( scip ), SCIPgetNVars(scip) ));
 
@@ -729,7 +725,6 @@ SCIP_DECL_HEUREXEC(heurExecIndicatordiving)
 
    return SCIP_OKAY;
 }
-
 
 
 /** calculate score and preferred rounding direction for the candidate variable */
@@ -919,7 +914,6 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
    }
 
    /* only continue if semicontinuous variable */
-   /* TODO: set useful values */
    if( !issemicont )
    {
       getScoreOfFarkasDiving(scip, diveset, cand, candsfrac, roundup, score);
@@ -1006,8 +1000,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
 static
 SCIP_DECL_DIVESETAVAILABLE(divesetAvailableIndicatordiving)
 {
-   /* TODO maybe improve this
-    * skip if problem doesn't contain indicator constraints
+   /* Skip if problem doesn't contain indicator constraints.
     * If varbound constraints should be considered, skip only if there are also no varbound constraints.
     */
    *available =  SCIPconshdlrGetNActiveConss(SCIPfindConshdlr(scip, "indicator")) == 0;

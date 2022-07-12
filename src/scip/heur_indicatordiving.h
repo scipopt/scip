@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -19,7 +19,15 @@
  * @author Katrin Halbig
  * @author Alexander Hoen
  *
- * todo: add description
+ * A diving heuristic iteratively fixes some fractional variables or variables determined by constraint handlers,
+ * and resolves the LP relaxation. Thereby simulating a depth-first-search in the tree.
+ *
+ * Indicatordiving focuses on indicator variables, which control semicontinuous variables.
+ * If the semicontinuous variable is unbounded, the indicator constraint is not part of the LP and,
+ * therefore, the indicator variable is not set to an useful value in the LP solution.
+ *
+ * For these indicator variables the score depends on the LP value and the bounds of the corresponding semicontinuous variable.
+ * For all other variables the Farkas score (scaled) is returned.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
