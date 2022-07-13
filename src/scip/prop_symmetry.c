@@ -1034,8 +1034,8 @@ SCIP_RETCODE delSymConss(
    }
 
    /* free pointers to symmetry group and binary variables */
-   assert( propdata->nperms > 0 );
-   assert( propdata->nperms >= propdata->ngenorbconss );
+   assert( propdata->nperms > 0 || propdata->genorbconss == NULL );
+   assert( propdata->nperms >= propdata->ngenorbconss || propdata->genorbconss == NULL );
    SCIPfreeBlockMemoryArrayNull(scip, &propdata->genorbconss, propdata->nperms);
    propdata->ngenorbconss = 0;
    propdata->triedaddconss = FALSE;
