@@ -731,6 +731,35 @@ SCIP_Bool isLeadervartypeCompatible(
 }
 
 
+/** returns whether a recomputation of symmetries is required */
+static
+SCIP_Bool isSymmetryRecomputationRequired(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_PROPDATA*        propdata            /**< propagator data */
+   )
+{
+   assert( scip != NULL );
+   assert( propdata != NULL );
+
+   if ( propdata->recomputerestart == SCIP_RECOMPUTESYM_NEVER )
+      return FALSE;
+
+   /* we do not need to recompute symmetries if no restart has occured */
+   if ( SCIPgetNRuns(scip) == propdata->lastrestart || propdata->lastrestart < 0 )
+      return FALSE;
+
+   if ( propdata->recomputerestart == SCIP_RECOMPUTESYM_ALWAYS )
+      return TRUE;
+
+   /* recompute symmetries if OF found a reduction */
+   assert( propdata->recomputerestart == SCIP_RECOMPUTESYM_OFFOUNDRED );
+   if ( propdata->offoundreduction )
+      return TRUE;
+
+   return FALSE;
+}
+
+
 /** frees symmetry data */
 static
 SCIP_RETCODE freeSymmetryData(
@@ -2722,8 +2751,7 @@ SCIP_RETCODE determineSymmetry(
    }
 
    /* if a restart occured, possibly prepare symmetry data to be recomputed */
-   if ( SCIPgetNRuns(scip) > propdata->lastrestart && (propdata->recomputerestart == SCIP_RECOMPUTESYM_ALWAYS ||
-         (propdata->recomputerestart == SCIP_RECOMPUTESYM_OFFOUNDRED && propdata->offoundreduction)) )
+   if ( isSymmetryRecomputationRequired(scip, propdata) )
    {
       /* reset symmetry information */
       SCIP_CALL( delSymConss(scip, propdata) );
@@ -6373,7 +6401,17 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
    assert( propdata->symconsenabled || propdata->sstenabled );
 
    /* if constraints have already been added */
-   if ( propdata->triedaddconss )
+   if ( propdata->triedaddconss && isSymmetryRecomputationRequired(scip, propdata) )
+   {
+      /* remove symmetry handling constraints to be prepared for a recomputation */
+      SCIP_CALL( delSymConss(scip, propdata) );
+      SCIP_CALL( freeSymmetryData(scip, propdata) );
+
+      propdata->lastrestart = SCIPgetNRuns(scip);
+      propdata->offoundreduction = FALSE;
+
+   }
+   else if ( propdata->triedaddconss )
    {
       assert( propdata->nperms > 0 );
 
