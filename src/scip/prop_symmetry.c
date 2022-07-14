@@ -337,6 +337,12 @@ struct SCIP_PropData
    SCIP_Bool             addconflictcuts;    /**< Should Schreier Sims constraints be added if we use a conflict based rule? */
    SCIP_Bool             sstaddcuts;         /**< Should Schreier Sims constraints be added? */
    SCIP_Bool             sstmixedcomponents; /**< Should Schreier Sims constraints be added if a symmetry component contains variables of different types? */
+
+   /* original values (needed to reset values for a restarted problem) */
+   SCIP_Bool             origsymconsenabled; /**< original value of symconsenabled */
+   SCIP_Bool             origofenabled;      /**< original value of ofenabled */
+   SCIP_Bool             origsstenabled;     /**< original value of sstenabled */
+
 };
 
 /** node data of a given node in the conflict graph */
@@ -2759,6 +2765,9 @@ SCIP_RETCODE determineSymmetry(
 
       propdata->lastrestart = SCIPgetNRuns(scip);
       propdata->offoundreduction = FALSE;
+      propdata->symconsenabled = propdata->origsymconsenabled;
+      propdata->ofenabled = propdata->origofenabled;
+      propdata->sstenabled = propdata->origsstenabled;
    }
 
    /* skip computation if symmetry has already been computed */
@@ -6409,7 +6418,9 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
 
       propdata->lastrestart = SCIPgetNRuns(scip);
       propdata->offoundreduction = FALSE;
-
+      propdata->symconsenabled = propdata->origsymconsenabled;
+      propdata->ofenabled = propdata->origofenabled;
+      propdata->sstenabled = propdata->origsstenabled;
    }
    else if ( propdata->triedaddconss )
    {
@@ -7721,6 +7732,11 @@ SCIP_RETCODE SCIPincludePropSymmetry(
    {
       SCIP_CALL( SCIPincludeExternalCodeInformation(scip, SYMsymmetryGetName(), SYMsymmetryGetDesc()) );
    }
+
+   /* store initial values (needed to reset values for a restarted problem) */
+   propdata->origsymconsenabled = propdata->symconsenabled;
+   propdata->origofenabled = propdata->ofenabled;
+   propdata->origsstenabled = propdata->sstenabled;
 
    return SCIP_OKAY;
 }
