@@ -509,12 +509,13 @@ SCIP_RETCODE varIsSemicontinuous(
 static
 void getScoreOfFarkasDiving(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_DIVESET*         diveset,
-   SCIP_VAR*             cand,
-   SCIP_Real             candsfrac,
-   SCIP_Bool*            roundup,
-   SCIP_Real*            score
-){  /*lint --e{715}*/
+   SCIP_DIVESET*         diveset,            /**< diving settings */
+   SCIP_VAR*             cand,               /**< candidate variable */
+   SCIP_Real             candsfrac,          /**< fractional part of solution value of candidate variable */
+   SCIP_Bool*            roundup,            /**< pointer to store whether the preferred rounding direction is upwards */
+   SCIP_Real*            score               /**< pointer for diving score value */
+   )
+{  /*lint --e{715}*/
    SCIP_RANDNUMGEN* randnumgen;
    SCIP_Real obj;
 
