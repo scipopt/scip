@@ -3537,6 +3537,7 @@ SCIP_RETCODE SCIPtreeLoadLPState(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< problem data */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp                  /**< current LP data */
@@ -3588,7 +3589,7 @@ SCIP_RETCODE SCIPtreeLoadLPState(
       if( SCIPnodeGetType(lpstatefork) == SCIP_NODETYPE_FORK )
       {
          assert(lpstatefork->data.fork != NULL);
-         SCIP_CALL( SCIPlpSetState(lp, blkmem, set, eventqueue, lpstatefork->data.fork->lpistate,
+         SCIP_CALL( SCIPlpSetState(lp, blkmem, set, prob, eventqueue, lpstatefork->data.fork->lpistate,
                lpstatefork->data.fork->lpwasprimfeas, lpstatefork->data.fork->lpwasprimchecked,
                lpstatefork->data.fork->lpwasdualfeas, lpstatefork->data.fork->lpwasdualchecked) );
       }
@@ -3596,7 +3597,7 @@ SCIP_RETCODE SCIPtreeLoadLPState(
       {
          assert(SCIPnodeGetType(lpstatefork) == SCIP_NODETYPE_SUBROOT);
          assert(lpstatefork->data.subroot != NULL);
-         SCIP_CALL( SCIPlpSetState(lp, blkmem, set, eventqueue, lpstatefork->data.subroot->lpistate,
+         SCIP_CALL( SCIPlpSetState(lp, blkmem, set, prob, eventqueue, lpstatefork->data.subroot->lpistate,
                lpstatefork->data.subroot->lpwasprimfeas, lpstatefork->data.subroot->lpwasprimchecked,
                lpstatefork->data.subroot->lpwasdualfeas, lpstatefork->data.subroot->lpwasdualchecked) );
       }
@@ -3778,7 +3779,7 @@ SCIP_RETCODE focusnodeCleanupVars(
       /* remove all additions to the LP at this node */
       SCIP_CALL( SCIPlpShrinkCols(lp, set, SCIPlpGetNCols(lp) - SCIPlpGetNNewcols(lp)) );
 
-      SCIP_CALL( SCIPlpFlush(lp, blkmem, set, eventqueue) );
+      SCIP_CALL( SCIPlpFlush(lp, blkmem, set, transprob, eventqueue) );
    }
 
    /* mark variables as deleted */
@@ -6569,6 +6570,7 @@ SCIP_RETCODE SCIPtreeLoadProbingLPState(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< problem data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp                  /**< current LP data */
    )
@@ -6628,7 +6630,7 @@ SCIP_RETCODE SCIPtreeLoadProbingLPState(
       /* set the LP state */
       if( lpistate != NULL )
       {
-         SCIP_CALL( SCIPlpSetState(lp, blkmem, set, eventqueue, lpistate,
+         SCIP_CALL( SCIPlpSetState(lp, blkmem, set, prob, eventqueue, lpistate,
                lpwasprimfeas, lpwasprimchecked, lpwasdualfeas, lpwasdualchecked) );
       }
 
@@ -6898,7 +6900,7 @@ SCIP_RETCODE SCIPtreeEndProbing(
    /* if the LP was flushed before probing starts, flush it again */
    if( tree->probinglpwasflushed )
    {
-      SCIP_CALL( SCIPlpFlush(lp, blkmem, set, eventqueue) );
+      SCIP_CALL( SCIPlpFlush(lp, blkmem, set, transprob, eventqueue) );
 
       /* if the LP was solved before probing starts, solve it again to restore the LP solution */
       if( tree->probinglpwassolved )
@@ -6918,7 +6920,7 @@ SCIP_RETCODE SCIPtreeEndProbing(
          }
          else
          {
-            SCIP_CALL( SCIPlpSetState(lp, blkmem, set, eventqueue, tree->probinglpistate,
+            SCIP_CALL( SCIPlpSetState(lp, blkmem, set, transprob, eventqueue, tree->probinglpistate,
                   tree->probinglpwasprimfeas, tree->probinglpwasprimchecked, tree->probinglpwasdualfeas,
                   tree->probinglpwasdualchecked) );
             SCIP_CALL( SCIPlpFreeState(lp, blkmem, &tree->probinglpistate) );
