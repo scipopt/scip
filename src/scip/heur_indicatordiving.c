@@ -358,6 +358,7 @@ SCIP_RETCODE varIsSemicontinuous(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< the variable to check */
    SCIP_HASHMAP*         scvars,             /**< semicontinuous variable information */
+   SCIP_Real             constant,           /**< value which should be equal to the constant */
    SCIP_Bool*            result              /**< buffer to store whether var is semicontinuous */
    )
 {
@@ -442,9 +443,8 @@ SCIP_RETCODE varIsSemicontinuous(
          ub1 = gub;
       }
 
-      /* the 'off' domain of a semicontinuous var should reduce to a single point and be different from the 'on' domain */
-      /* TODO: this doesn't work because the ub0 is not detected. -> therefore ignore this and check it outside */
-      if( (!SCIPisEQ(scip, lb0, lb1) || !SCIPisEQ(scip, ub0, ub1)) )
+      /* the 'off' domain of a semicontinuous var should reduce to a single point (constant) and be different from the 'on' domain */
+      if( SCIPisEQ(scip, lb0, constant) && (!SCIPisEQ(scip, lb0, lb1) || !SCIPisEQ(scip, ub0, ub1)) )
       {
          if( scvdata == NULL )
          {
@@ -472,9 +472,8 @@ SCIP_RETCODE varIsSemicontinuous(
       ub0 = MIN(vubconstants[c], gub);
       ub1 = MIN(vubconstants[c] + vubcoefs[c], gub);
 
-      /* the 'off' domain of a semicontinuous var should reduce to a single point and be different from the 'on' domain */
-      /* TODO: indicator not considered */
-      if( (!SCIPisEQ(scip, lb0, lb1) || !SCIPisEQ(scip, ub0, ub1)) )
+      /* the 'off' domain of a semicontinuous var should reduce to a single point (constant) and be different from the 'on' domain */
+      if( SCIPisEQ(scip, lb0, constant) && (!SCIPisEQ(scip, lb0, lb1) || !SCIPisEQ(scip, ub0, ub1)) )
       {
          if( scvdata == NULL )
          {
@@ -890,9 +889,9 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
       lpsolsemicontinuous = SCIPvarGetLPSol( semicontinuousvar );
       SCIPdebugMsg(scip, "%s lp sol %f %f\n", SCIPvarGetName( semicontinuousvar ), lpsolsemicontinuous,
                         consvals[v] );
-      SCIP_CALL( varIsSemicontinuous(scip, semicontinuousvar, heurdata->scvars, &success) );
+      SCIP_CALL( varIsSemicontinuous(scip, semicontinuousvar, heurdata->scvars, side, &success) );
 
-      /* only allow sc variables and do the check if side is equal to constant value of the sc */
+      /* only allow semicontinuous variables */
       if( success )
       {
          assert(SCIPhashmapExists(heurdata->scvars, (void*) semicontinuousvar));
@@ -901,9 +900,10 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
 
          for( b = 0; b < scdata->nbnds; b++ )
          {
-            if( (scdata->bvars[b] == cand || (SCIPvarIsNegated(cand) && scdata->bvars[0] == SCIPvarGetNegationVar(cand)))
-                  && SCIPisEQ(scip, side, scdata->vals0[b]) )
+            if( (scdata->bvars[b] == cand || (SCIPvarIsNegated(cand) && scdata->bvars[0] == SCIPvarGetNegationVar(cand))) )
             {
+               assert(SCIPisEQ(scip, side, scdata->vals0[b]));
+
                /* TODO: handle also more general variables;
                 * currently we handle only variables with domain vals0 < lb1 <= ub1 */
                if( SCIPisGE(scip, lpsolsemicontinuous, scdata->vals0[b]) && SCIPisLE(scip, lpsolsemicontinuous, scdata->ubs1[b]) )
