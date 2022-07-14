@@ -95,6 +95,7 @@
 #define DEFAULT_ROUNDINGMODE          0 /**< default setting for parameter roundingmode */
 #define DEFAULT_SEMICONTSCOREMODE     0 /**< default setting for parameter semicontscoremode */
 #define DEFAULT_USEVARBOUNDS       TRUE /**< default setting for parameter usevarbounds */
+#define DEFAULT_RUNWITHOUTINDS    FALSE /**< default setting for parameter runwithoutinds */
 
 enum IndicatorDivingRoundingMode
 {
@@ -134,6 +135,7 @@ struct SCIP_HeurData
    int                   roundingmode;       /**< decides which roundingmode is selected (0: conservative (default), 1: aggressive) */
    int                   semicontscoremode;  /**< which values of semi-continuous variables should get a high score? (0: low (default), 1: middle, 2: high) */
    SCIP_Bool             usevarbounds;       /**< should varbound constraints be considered? */
+   SCIP_Bool             runwithoutinds;     /**< should heur run if there are no indicator constraints? */
    SCIP_Bool             gotoindconss;       /**< can we skip the candidate var until indicator conss handler determines the candidate var? */
    SCIP_Bool             containsviolindconss;/**< contains current solution violated indicator constraints? (only unbounded) */
    SCIP_Bool             newnode;            /**< are we at a new probing node? */
@@ -656,7 +658,7 @@ SCIP_DECL_HEUREXEC(heurExecIndicatordiving)
    assert(result != NULL);
    *result = SCIP_DIDNOTRUN;
 
-   /* skip if problem doesn't contain indicator constraints or varbound constraints (optional) */
+   /* check if there are unfixed indicator variables */
    hasunfixedindconss = FALSE;
    indicatorconss = SCIPconshdlrGetConss(heurdata->conshdlr[0]);
    nconss = SCIPconshdlrGetNConss(heurdata->conshdlr[0]);
@@ -671,7 +673,10 @@ SCIP_DECL_HEUREXEC(heurExecIndicatordiving)
          break;
       }
    }
-   if( hasunfixedindconss == FALSE && (!heurdata->usevarbounds || SCIPconshdlrGetNConss(heurdata->conshdlr[1]) == 0) )
+   /* skip heuristic if problem doesn't contain unfixed indicator variables,
+    * or if there are no varbound constraints which should be considered
+    */
+   if( !hasunfixedindconss && (!heurdata->runwithoutinds || !heurdata->usevarbounds || SCIPconshdlrGetNConss(heurdata->conshdlr[1]) == 0) )
       return SCIP_OKAY;
 
    SCIPdebugMsg(scip, "call heurExecIndicatordiving at depth %d \n", SCIPgetDepth(scip));
@@ -1007,7 +1012,7 @@ SCIP_DECL_DIVESETAVAILABLE(divesetAvailableIndicatordiving)
       heurdata = SCIPheurGetData(heur);
       assert(heurdata != NULL);
 
-      if( heurdata->usevarbounds )
+      if( heurdata->runwithoutinds && heurdata->usevarbounds )
       {
          *available = SCIPconshdlrGetNActiveConss(SCIPfindConshdlr(scip, "varbound")) == 0;
       }
@@ -1067,6 +1072,10 @@ SCIP_RETCODE SCIPincludeHeurIndicatordiving(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/usevarbounds",
          "should varbound constraints be considered?",
          &heurdata->usevarbounds, FALSE, DEFAULT_USEVARBOUNDS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/runwithoutinds",
+         "should heur run if there are no indicator constraints?",
+         &heurdata->runwithoutinds, FALSE, DEFAULT_RUNWITHOUTINDS, NULL, NULL) );
 
    return SCIP_OKAY;
 }
