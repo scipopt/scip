@@ -27,6 +27,7 @@
  * therefore, the indicator variable is not set to an useful value in the LP solution.
  *
  * For these indicator variables the score depends on the LP value and the bounds of the corresponding semicontinuous variable.
+ * If parameter usevarbounds=TRUE, also varbound constraints modeling semicontinuous variables are considered.
  * For all other variables the Farkas score (scaled) is returned.
  */
 
@@ -514,7 +515,7 @@ void getScoreOfFarkasDiving(
    SCIP_Bool*            roundup,            /**< pointer to store whether the preferred rounding direction is upwards */
    SCIP_Real*            score               /**< pointer for diving score value */
    )
-{  /*lint --e{715}*/
+{
    SCIP_RANDNUMGEN* randnumgen;
    SCIP_Real obj;
 
@@ -568,7 +569,7 @@ SCIP_DECL_HEURCOPY(heurCopyIndicatordiving)
 
 /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
 static
-SCIP_DECL_HEURFREE(heurFreeIndicatordiving) /*lint --e{715}*/
+SCIP_DECL_HEURFREE(heurFreeIndicatordiving)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
 
@@ -589,7 +590,7 @@ SCIP_DECL_HEURFREE(heurFreeIndicatordiving) /*lint --e{715}*/
 
 /** initialization method of primal heuristic (called after problem was transformed) */
 static
-SCIP_DECL_HEURINIT(heurInitIndicatordiving) /*lint --e{715}*/
+SCIP_DECL_HEURINIT(heurInitIndicatordiving)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
 
@@ -615,7 +616,7 @@ SCIP_DECL_HEURINIT(heurInitIndicatordiving) /*lint --e{715}*/
 
 /** deinitialization method of primal heuristic (called before transformed problem is freed) */
 static
-SCIP_DECL_HEUREXIT(heurExitIndicatordiving) /*lint --e{715}*/
+SCIP_DECL_HEUREXIT(heurExitIndicatordiving)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
 
@@ -1063,11 +1064,11 @@ SCIP_RETCODE SCIPincludeHeurIndicatordiving(
          &heurdata->roundingfrac, FALSE, DEFAULT_ROUNDINGFRAC, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/roundingmode",
-         "decides which roundingmode is selected (0: conservative (default), 1: aggressive)",
+         "decides which roundingmode is selected (0: conservative, 1: aggressive)",
          &heurdata->roundingmode, FALSE, DEFAULT_ROUNDINGMODE, 0, 1, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/semicontscoremode",
-         "which values of semi-continuous variables should get a high score? (0: low (default), 1: middle, 2: high)",
+         "which values of semi-continuous variables should get a high score? (0: low, 1: middle, 2: high)",
          &heurdata->semicontscoremode, FALSE, DEFAULT_SEMICONTSCOREMODE, 0, 2, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/usevarbounds",

@@ -15,7 +15,7 @@
 
 /**@file   heur_indicatordiving.h
  * @ingroup PRIMALHEURISTICS
- * @brief  indicator diving heuristic
+ * @brief  LP diving heuristic that rounds indicator variables controlling semicontinuous variables
  * @author Katrin Halbig
  * @author Alexander Hoen
  *
@@ -27,6 +27,7 @@
  * therefore, the indicator variable is not set to an useful value in the LP solution.
  *
  * For these indicator variables the score depends on the LP value and the bounds of the corresponding semicontinuous variable.
+ * If parameter usevarbounds=TRUE, also varbound constraints modeling semicontinuous variables are considered.
  * For all other variables the Farkas score (scaled) is returned.
  */
 
