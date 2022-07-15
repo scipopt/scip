@@ -734,7 +734,7 @@ SCIP_DECL_HEUREXEC(heurExecIndicatordiving)
 /** calculate score and preferred rounding direction for the candidate variable */
 static
 SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
-{
+{  /*lint --e{715}*/
    SCIP_HEUR* heur;
    SCIP_HEURDATA* heurdata;
    SCIP_RANDNUMGEN* randnumgen;
