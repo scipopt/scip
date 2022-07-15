@@ -99,6 +99,7 @@ struct SCIP_ResolutionSet
    SCIP_Real             lhs;
    SCIP_Real             origlhs;
    SCIP_Real             origrhs;
+   SCIP_Real             slack;
    int                   nnz;
    int                   size;
    int                   validdepth;
@@ -208,6 +209,8 @@ struct SCIP_Conflict
    int                   ntmpbdchginfos;     /**< number of temporary created bound change information data */
    int                   count;              /**< conflict set counter to label binary conflict variables with */
    int                   nresolutionsets;    /**< number of available resolution sets */
+   int                   resolutionsetssize; /**< size of resolutionset array */
+   SCIP_Real             resolutionminslack; /**< smallest slack among all resolution sets */
    SCIP_Bool             bdchgonlyresqueue;  /**< if true we add bound changes only in generalized resolution queues */
 
 };
