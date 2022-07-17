@@ -1803,21 +1803,30 @@ SCIPsetDebugMsg(set, " -> First bound change to resolve <%s> %s %.15g [status:%d
    }
 
   TERMINATE:
+   SCIPsetDebugMsg(set, "Total number of resolution sets found %d\n", conflict->nresolutionsets);
    if ( conflict->nresolutionsets > 0 )
    {
-      /* add latest found conflict constraint */
+      /* add first and latest found conflict constraint */
       /* todo this has to be reworked */
-      for( i = conflict->nresolutionsets - 1; i >= 0; i-- )
-      {
-         SCIP_RESOLUTIONSET* resolutionset;
-         resolutionset = conflict->resolutionsets[i];
-         assert(SCIPsetIsLT(set, resolutionset->slack, 0.0));
-         if ( SCIPsetIsLT(set, getQuotLargestSmallestCoef(set, resolutionset->vals, resolutionset->nnz),set->conf_generalresminmaxquot) )
+         SCIP_RESOLUTIONSET* resolutionset_first;
+         resolutionset_first = conflict->resolutionsets[0];
+         assert(SCIPsetIsLT(set, resolutionset_first->slack, 0.0));
+         if ( SCIPsetIsLT(set, getQuotLargestSmallestCoef(set, resolutionset_first->vals, resolutionset_first->nnz),set->conf_generalresminmaxquot) )
          {
-            SCIPconflictFlushResolutionSets(conflict, blkmem, set->scip, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue, cliquetable, resolutionset);
+            SCIPconflictFlushResolutionSets(conflict, blkmem, set->scip, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue, cliquetable, resolutionset_first);
             (*nconss)++;
-            (*nconfvars) = resolutionsetGetNNzs(resolutionset);
-            break;
+            (*nconfvars) = resolutionsetGetNNzs(resolutionset_first);
+         }
+      if ( conflict->nresolutionsets >= 2 )
+      {
+         SCIP_RESOLUTIONSET* resolutionset_last;
+         resolutionset_last = conflict->resolutionsets[conflict->nresolutionsets - 1];
+         assert(SCIPsetIsLT(set, resolutionset_last->slack, 0.0));
+         if ( SCIPsetIsLT(set, getQuotLargestSmallestCoef(set, resolutionset_last->vals, resolutionset_last->nnz),set->conf_generalresminmaxquot) )
+         {
+            SCIPconflictFlushResolutionSets(conflict, blkmem, set->scip, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue, cliquetable, resolutionset_last);
+            (*nconss)++;
+            (*nconfvars) = resolutionsetGetNNzs(resolutionset_last);
          }
       }
    }
