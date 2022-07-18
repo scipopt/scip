@@ -337,12 +337,6 @@ struct SCIP_PropData
    SCIP_Bool             addconflictcuts;    /**< Should Schreier Sims constraints be added if we use a conflict based rule? */
    SCIP_Bool             sstaddcuts;         /**< Should Schreier Sims constraints be added? */
    SCIP_Bool             sstmixedcomponents; /**< Should Schreier Sims constraints be added if a symmetry component contains variables of different types? */
-
-   /* original values (needed to reset values for a restarted problem) */
-   SCIP_Bool             origsymconsenabled; /**< original value of symconsenabled */
-   SCIP_Bool             origofenabled;      /**< original value of ofenabled */
-   SCIP_Bool             origsstenabled;     /**< original value of sstenabled */
-
 };
 
 /** node data of a given node in the conflict graph */
@@ -751,7 +745,7 @@ SCIP_Bool isSymmetryRecomputationRequired(
       return FALSE;
 
    /* we do not need to recompute symmetries if no restart has occured */
-   if ( SCIPgetNRuns(scip) == propdata->lastrestart || propdata->lastrestart < 0 )
+   if ( SCIPgetNRuns(scip) == propdata->lastrestart || propdata->lastrestart == 0 || SCIPgetNRuns(scip) == 1 )
       return FALSE;
 
    if ( propdata->recomputerestart == SCIP_RECOMPUTESYM_ALWAYS )
@@ -763,6 +757,33 @@ SCIP_Bool isSymmetryRecomputationRequired(
       return TRUE;
 
    return FALSE;
+}
+
+
+/** sets in propdata which symmetry handling methods are active */
+static
+SCIP_RETCODE setSymmetryMethodEnabledValues(
+   SCIP_PROPDATA*        propdata            /**< propagator data */
+   )
+{
+   assert( propdata != NULL );
+
+   if ( ISSYMRETOPESACTIVE(propdata->usesymmetry) )
+      propdata->symconsenabled = TRUE;
+   else
+      propdata->symconsenabled = FALSE;
+
+   if ( ISORBITALFIXINGACTIVE(propdata->usesymmetry) )
+      propdata->ofenabled = TRUE;
+   else
+      propdata->ofenabled = FALSE;
+
+   if ( ISSSTACTIVE(propdata->usesymmetry) )
+      propdata->sstenabled = TRUE;
+   else
+      propdata->sstenabled = FALSE;
+
+   return SCIP_OKAY;
 }
 
 
@@ -2765,9 +2786,6 @@ SCIP_RETCODE determineSymmetry(
 
       propdata->lastrestart = SCIPgetNRuns(scip);
       propdata->offoundreduction = FALSE;
-      propdata->symconsenabled = propdata->origsymconsenabled;
-      propdata->ofenabled = propdata->origofenabled;
-      propdata->sstenabled = propdata->origsstenabled;
    }
 
    /* skip computation if symmetry has already been computed */
@@ -6418,9 +6436,6 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
 
       propdata->lastrestart = SCIPgetNRuns(scip);
       propdata->offoundreduction = FALSE;
-      propdata->symconsenabled = propdata->origsymconsenabled;
-      propdata->ofenabled = propdata->origofenabled;
-      propdata->sstenabled = propdata->origsstenabled;
    }
    else if ( propdata->triedaddconss )
    {
@@ -7073,21 +7088,13 @@ SCIP_DECL_PROPINITPRE(propInitpreSymmetry)
    if ( propdata->usesymmetry < 0 )
    {
       SCIP_CALL( SCIPgetIntParam(scip, "misc/usesymmetry", &propdata->usesymmetry) );
+      SCIP_CALL( setSymmetryMethodEnabledValues(propdata) );
+   }
+   else if ( SCIPgetNRuns(scip) > propdata->lastrestart )
+   {
+      assert( SCIPgetNRuns(scip) > 1 );
 
-      if ( ISSYMRETOPESACTIVE(propdata->usesymmetry) )
-         propdata->symconsenabled = TRUE;
-      else
-         propdata->symconsenabled = FALSE;
-
-      if ( ISORBITALFIXINGACTIVE(propdata->usesymmetry) )
-         propdata->ofenabled = TRUE;
-      else
-         propdata->ofenabled = FALSE;
-
-      if ( ISSSTACTIVE(propdata->usesymmetry) )
-         propdata->sstenabled = TRUE;
-      else
-         propdata->sstenabled = FALSE;
+      SCIP_CALL( setSymmetryMethodEnabledValues(propdata) );
    }
 
    /* add symmetry handling constraints if required  */
@@ -7349,20 +7356,13 @@ SCIP_DECL_PROPEXEC(propExecSymmetry)
    if ( propdata->usesymmetry < 0 )
    {
       SCIP_CALL( SCIPgetIntParam(scip, "misc/usesymmetry", &propdata->usesymmetry) );
-      if ( ISSYMRETOPESACTIVE(propdata->usesymmetry) )
-         propdata->symconsenabled = TRUE;
-      else
-         propdata->symconsenabled = FALSE;
+      SCIP_CALL( setSymmetryMethodEnabledValues(propdata) );
+   }
+   else if ( SCIPgetNRuns(scip) > propdata->lastrestart )
+   {
+      assert( SCIPgetNRuns(scip) > 1 );
 
-      if ( ISORBITALFIXINGACTIVE(propdata->usesymmetry) )
-         propdata->ofenabled = TRUE;
-      else
-         propdata->ofenabled = FALSE;
-
-      if ( ISSSTACTIVE(propdata->usesymmetry) )
-         propdata->sstenabled = TRUE;
-      else
-         propdata->sstenabled = FALSE;
+      SCIP_CALL( setSymmetryMethodEnabledValues(propdata) );
    }
 
    /* do not propagate if orbital fixing is not enabled */
@@ -7732,11 +7732,6 @@ SCIP_RETCODE SCIPincludePropSymmetry(
    {
       SCIP_CALL( SCIPincludeExternalCodeInformation(scip, SYMsymmetryGetName(), SYMsymmetryGetDesc()) );
    }
-
-   /* store initial values (needed to reset values for a restarted problem) */
-   propdata->origsymconsenabled = propdata->symconsenabled;
-   propdata->origofenabled = propdata->ofenabled;
-   propdata->origsstenabled = propdata->sstenabled;
 
    return SCIP_OKAY;
 }
