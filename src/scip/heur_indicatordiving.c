@@ -15,11 +15,11 @@
 
 /**@file   heur_indicatordiving.c
  * @ingroup DEFPLUGINS_HEUR
- * @brief  LP diving heuristic that rounds indicator variables controlling semicontinuous variables
+ * @brief  LP diving heuristic that fixes indicator variables controlling semicontinuous variables
  * @author Katrin Halbig
  * @author Alexander Hoen
  *
- * A diving heuristic iteratively fixes some fractional variables or variables determined by constraint handlers,
+ * A diving heuristic iteratively rounds some fractional variables or variables determined by constraint handlers,
  * and resolves the LP relaxation. Thereby simulating a depth-first-search in the tree.
  *
  * Indicatordiving focuses on indicator variables, which control semicontinuous variables.
@@ -56,7 +56,7 @@
 #include "scip/scip_message.h"
 
 #define HEUR_NAME             "indicatordiving"
-#define HEUR_DESC             "indicator diving heuristic"
+#define HEUR_DESC             "LP diving heuristic that fixes indicator variables controlling semicontinuous variables"
 #define HEUR_DISPCHAR         'I'
 #define HEUR_PRIORITY         -150000
 #define HEUR_FREQ             0
@@ -87,7 +87,7 @@
 #define DEFAULT_LPSOLVEFREQ          30 /**< LP solve frequency for diving heuristics */
 #define DEFAULT_ONLYLPBRANCHCANDS FALSE /**< should only LP branching candidates be considered instead of the slower but
                                          *   more general constraint handler diving variable selection? */
-#define DEFAULT_RANDSEED             11  /**< initial seed for random number generation */
+#define DEFAULT_RANDSEED             11 /**< initial seed for random number generation */
 
 /*
  * Heuristic specific parameters
@@ -96,7 +96,7 @@
 #define DEFAULT_ROUNDINGMODE          0 /**< default setting for parameter roundingmode */
 #define DEFAULT_SEMICONTSCOREMODE     0 /**< default setting for parameter semicontscoremode */
 #define DEFAULT_USEVARBOUNDS       TRUE /**< default setting for parameter usevarbounds */
-#define DEFAULT_RUNWITHOUTINDS    FALSE /**< default setting for parameter runwithoutinds */
+#define DEFAULT_RUNWITHOUTSCINDS  FALSE /**< default setting for parameter runwithoutscinds */
 
 enum IndicatorDivingRoundingMode
 {
@@ -137,7 +137,7 @@ struct SCIP_HeurData
    int                   roundingmode;       /**< decides which roundingmode is selected (0: conservative (default), 1: aggressive) */
    int                   semicontscoremode;  /**< which values of semi-continuous variables should get a high score? (0: low (default), 1: middle, 2: high) */
    SCIP_Bool             usevarbounds;       /**< should varbound constraints be considered? */
-   SCIP_Bool             runwithoutinds;     /**< should heur run if there are no indicator constraints? */
+   SCIP_Bool             runwithoutscinds;   /**< should heur run if there are no indicator constraints modeling semicont. vars? */
    SCIP_Bool             gotoindconss;       /**< can we skip the candidate var until indicator conss handler determines the candidate var? */
    SCIP_Bool             containsviolindconss;/**< contains current solution violated indicator constraints? (only unbounded) */
    SCIP_Bool             newnode;            /**< are we at a new probing node? */
@@ -787,11 +787,10 @@ SCIP_DECL_HEUREXEC(heurExecIndicatordiving)
    /* skip heuristic if problem doesn't contain unfixed indicator variables,
     * or if there are no varbound constraints which should be considered
     */
-   if( !hasunfixedscindconss && (!heurdata->runwithoutinds || !heurdata->usevarbounds || SCIPconshdlrGetNConss(heurdata->varboundconshdlr) == 0) )
+   if( !hasunfixedscindconss && (!heurdata->runwithoutscinds || !heurdata->usevarbounds || SCIPconshdlrGetNConss(heurdata->varboundconshdlr) == 0) )
       return SCIP_OKAY;
 
    SCIPdebugMsg(scip, "call heurExecIndicatordiving at depth %d \n", SCIPgetDepth(scip));
-   *result = SCIP_DIDNOTFIND;
 
    /* create and initialize hashmaps */
    SCIP_CALL( createMaps(scip, heurdata->indicatorconshdlr, heurdata->varboundconshdlr, heurdata->usevarbounds, &heurdata->indicatormap, &heurdata->varboundmap) );
@@ -1098,7 +1097,7 @@ SCIP_DECL_DIVESETAVAILABLE(divesetAvailableIndicatordiving)
       heurdata = SCIPheurGetData(heur);
       assert(heurdata != NULL);
 
-      if( heurdata->runwithoutinds && heurdata->usevarbounds )
+      if( heurdata->runwithoutscinds && heurdata->usevarbounds )
       {
          *available = SCIPconshdlrGetNActiveConss(SCIPfindConshdlr(scip, "varbound")) == 0;
       }
@@ -1159,9 +1158,9 @@ SCIP_RETCODE SCIPincludeHeurIndicatordiving(
          "should varbound constraints be considered?",
          &heurdata->usevarbounds, FALSE, DEFAULT_USEVARBOUNDS, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/runwithoutinds",
-         "should heur run if there are no indicator constraints?",
-         &heurdata->runwithoutinds, FALSE, DEFAULT_RUNWITHOUTINDS, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/runwithoutscinds",
+         "should heur run if there are no indicator constraints modeling semicont. vars?",
+         &heurdata->runwithoutscinds, FALSE, DEFAULT_RUNWITHOUTSCINDS, NULL, NULL) );
 
    return SCIP_OKAY;
 }

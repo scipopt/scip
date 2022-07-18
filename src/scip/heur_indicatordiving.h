@@ -15,11 +15,11 @@
 
 /**@file   heur_indicatordiving.h
  * @ingroup PRIMALHEURISTICS
- * @brief  LP diving heuristic that rounds indicator variables controlling semicontinuous variables
+ * @brief  LP diving heuristic that fixes indicator variables controlling semicontinuous variables
  * @author Katrin Halbig
  * @author Alexander Hoen
  *
- * A diving heuristic iteratively fixes some fractional variables or variables determined by constraint handlers,
+ * A diving heuristic iteratively rounds some fractional variables or variables determined by constraint handlers,
  * and resolves the LP relaxation. Thereby simulating a depth-first-search in the tree.
  *
  * Indicatordiving focuses on indicator variables, which control semicontinuous variables.
