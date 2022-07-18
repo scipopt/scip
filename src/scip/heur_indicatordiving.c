@@ -133,7 +133,7 @@ struct SCIP_HeurData
    SCIP_HASHMAP*         scvars;             /**< hashmap to store semicontinuous variables */
    SCIP_HASHMAP*         indicatormap;       /**< hashmap to store indicator constraints of binary variables */
    SCIP_HASHMAP*         varboundmap;        /**< hashmap to store varbound constraints of binary variables */
-   SCIP_Real             roundingfrac;       /**< in violation case all fractional below this value are rounded up */
+   SCIP_Real             roundingfrac;       /**< in violation case all fractional below this value are fixed to constant */
    int                   roundingmode;       /**< decides which roundingmode is selected (0: conservative (default), 1: aggressive) */
    int                   semicontscoremode;  /**< which values of semi-continuous variables should get a high score? (0: low (default), 1: middle, 2: high) */
    SCIP_Bool             usevarbounds;       /**< should varbound constraints be considered? */
@@ -1028,16 +1028,26 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
    /* Case: Variable is between constant and lb1 */
    else if( SCIPisGT(scip, lpsolsemicontinuous, scdata->vals0[idxbvars]) && SCIPisLT(scip, lpsolsemicontinuous, scdata->lbs1[idxbvars]) )
    {
-      *score = 100 * (scdata->lbs1[idxbvars] - lpsolsemicontinuous) / scdata->lbs1[idxbvars];
+      SCIP_Real shiftedlpsolsemicontinuous = lpsolsemicontinuous;
+      SCIP_Real shiftedlbs1 = scdata->lbs1[idxbvars];
+
+      /* handle case if constant of semicont. var is not zero -> shift values */
+      if( !SCIPisZero(scip, scdata->vals0[idxbvars]) )
+      {
+         shiftedlpsolsemicontinuous -= scdata->vals0[idxbvars];
+         shiftedlbs1 -= scdata->vals0[idxbvars];
+      }
+
+      *score = 100 * (shiftedlbs1 - shiftedlpsolsemicontinuous) / shiftedlbs1;
       assert(*score>0);
 
       switch( (INDICATORDIVINGROUNDINGMODE)heurdata->roundingmode )
       {
       case ROUNDING_CONSERVATIVE:
-         fixconstant = (*score > heurdata->roundingfrac * 100);
+         fixconstant = (*score > (1 - heurdata->roundingfrac) * 100);
          break;
       case ROUNDING_AGGRESSIVE:
-         fixconstant = (*score <= heurdata->roundingfrac * 100);
+         fixconstant = (*score <= (1 - heurdata->roundingfrac) * 100);
          break;
       }
 
@@ -1046,10 +1056,10 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
       case 0:
          break;
       case 1:
-         if( lpsolsemicontinuous < scdata->lbs1[idxbvars] * heurdata->roundingfrac )
-            *score = 100 * (lpsolsemicontinuous / (heurdata->roundingfrac * scdata->lbs1[idxbvars]));
+         if( shiftedlpsolsemicontinuous < shiftedlbs1 * heurdata->roundingfrac )
+            *score = 100 * (shiftedlpsolsemicontinuous / (heurdata->roundingfrac * shiftedlbs1));
          else
-            *score = 100 * (-lpsolsemicontinuous / ((1 - heurdata->roundingfrac) * scdata->lbs1[idxbvars]) + (1 / (1 - heurdata->roundingfrac)) );
+            *score = 100 * (-shiftedlpsolsemicontinuous / ((1 - heurdata->roundingfrac) * shiftedlbs1) + (1 / (1 - heurdata->roundingfrac)) );
          break;
       case 2:
          *score = 100 - *score;
@@ -1143,7 +1153,7 @@ SCIP_RETCODE SCIPincludeHeurIndicatordiving(
          DIVESET_ISPUBLIC, DIVESET_DIVETYPES, divesetGetScoreIndicatordiving, divesetAvailableIndicatordiving) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/roundingfrac",
-         "in violation case all fractional below this value are rounded up",
+         "in violation case all fractional below this value are fixed to constant",
          &heurdata->roundingfrac, FALSE, DEFAULT_ROUNDINGFRAC, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/roundingmode",
