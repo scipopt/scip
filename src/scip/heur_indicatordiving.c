@@ -501,6 +501,77 @@ SCIP_RETCODE varIsSemicontinuous(
    return SCIP_OKAY;
 }
 
+/** checks if there are unfixed indicator variables modeling semicont. vars */
+static
+SCIP_RETCODE hasUnfixedSCIndicator(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< indicator constraint handler */
+   SCIP_HASHMAP*         scvars,             /**< semicontinuous variable information */
+   SCIP_Bool*            hasunfixedscindconss /**< pointer to store if there are unfixed indicator variables modeling semicont. vars */
+   )
+{
+   SCIP_CONS** indicatorconss;
+   SCIP_VAR** consvars;
+   SCIP_Real* consvals;
+   int nconss;
+   int i;
+
+   *hasunfixedscindconss = FALSE;
+   indicatorconss = SCIPconshdlrGetConss(conshdlr);
+   nconss = SCIPconshdlrGetNConss(conshdlr);
+   SCIP_CALL( SCIPallocBufferArray(scip, &consvars, 2) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &consvals, 2) );
+
+   for( i = 0; i < nconss; i++ )
+   {
+      SCIP_VAR *binvar;
+      SCIP_VAR* semicontinuousvar;
+      SCIP_CONS* lincons;
+      SCIP_Real rhs;
+      int nconsvars;
+      SCIP_Bool success;
+      int v;
+
+      binvar = SCIPgetBinaryVarIndicator(indicatorconss[i]);
+
+      /* check if indicator variable is unfixed */
+      if( SCIPvarGetLbLocal(binvar) < SCIPvarGetUbLocal(binvar) - 0.5 )
+      {
+         lincons = SCIPgetLinearConsIndicator(indicatorconss[i]);
+         rhs = SCIPconsGetRhs(scip, lincons, &success);
+         SCIP_CALL( SCIPgetConsNVars(scip, lincons, &nconsvars, &success) );
+
+         /* check if constraint contains only two variables with finite rhs */
+         /* TODO: allow also indicators for lower bounds */
+         if( nconsvars == 2 && !SCIPisInfinity(scip, rhs) )
+         {
+            SCIP_CALL( SCIPgetConsVars(scip, lincons, consvars, nconsvars, &success) );
+            SCIP_CALL( SCIPgetConsVals(scip, lincons, consvals, nconsvars, &success) );
+
+            for( v = 0; v < nconsvars ; v++ )
+            {
+               if( consvars[v] == SCIPgetSlackVarIndicator(indicatorconss[i]) ) /* note that we have exact two variables */
+                  continue;
+
+               semicontinuousvar = consvars[v];
+               SCIP_CALL( varIsSemicontinuous(scip, semicontinuousvar, scvars, rhs, &success) );
+
+               /* check if semicontinuous variable */
+               if( success )
+               {
+                  *hasunfixedscindconss = TRUE;
+                  break;
+               }
+            }
+            if( *hasunfixedscindconss )
+               break;
+         }
+      }
+   }
+   SCIPfreeBufferArray(scip, &consvals);
+   SCIPfreeBufferArray(scip, &consvars);
+   return SCIP_OKAY;
+}
 
 #define MIN_RAND 1e-06
 #define MAX_RAND 1e-05
@@ -643,8 +714,8 @@ SCIP_DECL_HEUREXEC(heurExecIndicatordiving)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
    SCIP_DIVESET* diveset;
-   SCIP_CONS** indicatorconss;
-   SCIP_Bool hasunfixedindconss;
+   SCIP_CONS** conss;
+   SCIP_Bool hasunfixedscindconss; /* are there unfixed indicator variables modeling a semicont. variable? */
    int nconss;
    int i;
 
@@ -659,25 +730,13 @@ SCIP_DECL_HEUREXEC(heurExecIndicatordiving)
    assert(result != NULL);
    *result = SCIP_DIDNOTRUN;
 
-   /* check if there are unfixed indicator variables */
-   hasunfixedindconss = FALSE;
-   indicatorconss = SCIPconshdlrGetConss(heurdata->conshdlr[0]);
-   nconss = SCIPconshdlrGetNConss(heurdata->conshdlr[0]);
-   for( i = 0; i < nconss; i++ )
-   {
-      SCIP_VAR *binvar;
-      binvar = SCIPgetBinaryVarIndicator(indicatorconss[i]);
-      if( SCIPvarGetLbLocal(binvar) < SCIPvarGetUbLocal(binvar) - 0.5 )
-      {
-         SCIPdebugMsg(scip, "unfixed binary indicator variable: %s\n", SCIPvarGetName(binvar));
-         hasunfixedindconss = TRUE;
-         break;
-      }
-   }
+   /* check if there are unfixed indicator variables modeling semicont. vars */
+   SCIP_CALL( hasUnfixedSCIndicator(scip, heurdata->conshdlr[0], heurdata->scvars, &hasunfixedscindconss) );
+
    /* skip heuristic if problem doesn't contain unfixed indicator variables,
     * or if there are no varbound constraints which should be considered
     */
-   if( !hasunfixedindconss && (!heurdata->runwithoutinds || !heurdata->usevarbounds || SCIPconshdlrGetNConss(heurdata->conshdlr[1]) == 0) )
+   if( !hasunfixedscindconss && (!heurdata->runwithoutinds || !heurdata->usevarbounds || SCIPconshdlrGetNConss(heurdata->conshdlr[1]) == 0) )
       return SCIP_OKAY;
 
    SCIPdebugMsg(scip, "call heurExecIndicatordiving at depth %d \n", SCIPgetDepth(scip));
@@ -689,17 +748,18 @@ SCIP_DECL_HEUREXEC(heurExecIndicatordiving)
     *
     * TODO: For one binary variable there can be more than one corresponding indicator/varbound constraint
     */
+   nconss = SCIPconshdlrGetNConss(heurdata->conshdlr[0]);
+   conss = SCIPconshdlrGetConss(heurdata->conshdlr[0]);
    SCIP_CALL( SCIPhashmapCreate(&heurdata->indicatormap, SCIPblkmem(scip), nconss) );
    for( i = 0; i < nconss; i++ )
    {
-      if( !SCIPhashmapExists(heurdata->indicatormap, SCIPgetBinaryVarIndicator(indicatorconss[i])) )
+      if( !SCIPhashmapExists(heurdata->indicatormap, SCIPgetBinaryVarIndicator(conss[i])) )
       {
-         SCIP_CALL( SCIPhashmapInsert(heurdata->indicatormap, SCIPgetBinaryVarIndicator(indicatorconss[i]), indicatorconss[i]) );
+         SCIP_CALL( SCIPhashmapInsert(heurdata->indicatormap, SCIPgetBinaryVarIndicator(conss[i]), conss[i]) );
       }
    }
    if( heurdata->usevarbounds )
    {
-      SCIP_CONS** conss;
       nconss = SCIPconshdlrGetNConss(heurdata->conshdlr[1]);
       conss = SCIPconshdlrGetConss(heurdata->conshdlr[1]);
       SCIP_CALL( SCIPhashmapCreate(&heurdata->varboundmap, SCIPblkmem(scip), nconss) );
