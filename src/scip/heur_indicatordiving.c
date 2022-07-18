@@ -128,7 +128,8 @@ typedef struct SCVarData SCVARDATA;
 struct SCIP_HeurData
 {
    SCIP_SOL*             sol;                /**< working solution */
-   SCIP_CONSHDLR**       conshdlr;           /**< constraint handlers */
+   SCIP_CONSHDLR*        indicatorconshdlr;  /**< indicator constraint handler */
+   SCIP_CONSHDLR*        varboundconshdlr;   /**< varbound constraint handler */
    SCIP_HASHMAP*         scvars;             /**< hashmap to store semicontinuous variables */
    SCIP_HASHMAP*         indicatormap;       /**< hashmap to store indicator constraints of binary variables */
    SCIP_HASHMAP*         varboundmap;        /**< hashmap to store varbound constraints of binary variables */
@@ -573,6 +574,61 @@ SCIP_RETCODE hasUnfixedSCIndicator(
    return SCIP_OKAY;
 }
 
+/** creates and initializes hashmaps
+ *
+ * indicatormap: binary var -> indicator constraint
+ * varboundmap: binary var -> varbound constraint
+ *
+ * Currently exactly one constraint is assigned to a binary variable (per hashmap),
+ * but a binary variable can also control more than one constraint.
+ * TODO: Allow more than one corresponding indicator/varbound constraint per binary variable.
+ */
+static
+SCIP_RETCODE createMaps(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        indicatorconshdlr,  /**< indicator constraint handler */
+   SCIP_CONSHDLR*        varboundconshdlr,   /**< varbound constraint handler */
+   SCIP_Bool             usevarbounds,       /**< should varbound constraints be considered? */
+   SCIP_HASHMAP**        indicatormap,       /**< hashmap to store indicator constraints of binary variables */
+   SCIP_HASHMAP**        varboundmap         /**< hashmap to store varbound constraints of binary variables */
+   )
+{
+   SCIP_CONS** conss;
+   int nconss;
+   int i;
+
+   assert(strcmp(SCIPconshdlrGetName(indicatorconshdlr), "indicator") == 0);
+   assert(strcmp(SCIPconshdlrGetName(varboundconshdlr), "varbound") == 0);
+
+   /* indicator constraints */
+   nconss = SCIPconshdlrGetNConss(indicatorconshdlr);
+   conss = SCIPconshdlrGetConss(indicatorconshdlr);
+   SCIP_CALL( SCIPhashmapCreate(indicatormap, SCIPblkmem(scip), nconss) );
+   for( i = 0; i < nconss; i++ )
+   {
+      if( !SCIPhashmapExists(*indicatormap, SCIPgetBinaryVarIndicator(conss[i])) )
+      {
+         SCIP_CALL( SCIPhashmapInsert(*indicatormap, SCIPgetBinaryVarIndicator(conss[i]), conss[i]) );
+      }
+   }
+
+   /* varbound constraints */
+   if( usevarbounds )
+   {
+      nconss = SCIPconshdlrGetNConss(varboundconshdlr);
+      conss = SCIPconshdlrGetConss(varboundconshdlr);
+      SCIP_CALL( SCIPhashmapCreate(varboundmap, SCIPblkmem(scip), nconss) );
+      for( i = 0; i < nconss; i++ )
+      {
+         if( !SCIPhashmapExists(*varboundmap, SCIPgetVbdvarVarbound(scip, conss[i])) )
+         {
+            SCIP_CALL( SCIPhashmapInsert(*varboundmap, SCIPgetVbdvarVarbound(scip, conss[i]), conss[i]) );
+         }
+      }
+   }
+   return SCIP_OKAY;
+}
+
 #define MIN_RAND 1e-06
 #define MAX_RAND 1e-05
 
@@ -677,9 +733,8 @@ SCIP_DECL_HEURINIT(heurInitIndicatordiving)
    SCIP_CALL( SCIPcreateSol(scip, &heurdata->sol, heur) );
    SCIP_CALL( SCIPhashmapCreate( &heurdata->scvars, SCIPblkmem( scip ), SCIPgetNVars(scip) ));
 
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &heurdata->conshdlr, 2) );
-   heurdata->conshdlr[0] = SCIPfindConshdlr(scip, "indicator");
-   heurdata->conshdlr[1] = SCIPfindConshdlr(scip, "varbound");
+   heurdata->indicatorconshdlr = SCIPfindConshdlr(scip, "indicator");
+   heurdata->varboundconshdlr = SCIPfindConshdlr(scip, "varbound");
 
    return SCIP_OKAY;
 }
@@ -702,7 +757,6 @@ SCIP_DECL_HEUREXIT(heurExitIndicatordiving)
    /* free working data */
    SCIP_CALL( SCIPfreeSol(scip, &heurdata->sol) );
    SCIP_CALL( releaseSCHashmap(scip, heurdata->scvars) );
-   SCIPfreeBlockMemoryArray(scip, &heurdata->conshdlr, 2);
 
    return SCIP_OKAY;
 }
@@ -714,10 +768,7 @@ SCIP_DECL_HEUREXEC(heurExecIndicatordiving)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
    SCIP_DIVESET* diveset;
-   SCIP_CONS** conss;
    SCIP_Bool hasunfixedscindconss; /* are there unfixed indicator variables modeling a semicont. variable? */
-   int nconss;
-   int i;
 
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
@@ -731,46 +782,19 @@ SCIP_DECL_HEUREXEC(heurExecIndicatordiving)
    *result = SCIP_DIDNOTRUN;
 
    /* check if there are unfixed indicator variables modeling semicont. vars */
-   SCIP_CALL( hasUnfixedSCIndicator(scip, heurdata->conshdlr[0], heurdata->scvars, &hasunfixedscindconss) );
+   SCIP_CALL( hasUnfixedSCIndicator(scip, heurdata->indicatorconshdlr, heurdata->scvars, &hasunfixedscindconss) );
 
    /* skip heuristic if problem doesn't contain unfixed indicator variables,
     * or if there are no varbound constraints which should be considered
     */
-   if( !hasunfixedscindconss && (!heurdata->runwithoutinds || !heurdata->usevarbounds || SCIPconshdlrGetNConss(heurdata->conshdlr[1]) == 0) )
+   if( !hasunfixedscindconss && (!heurdata->runwithoutinds || !heurdata->usevarbounds || SCIPconshdlrGetNConss(heurdata->varboundconshdlr) == 0) )
       return SCIP_OKAY;
 
    SCIPdebugMsg(scip, "call heurExecIndicatordiving at depth %d \n", SCIPgetDepth(scip));
    *result = SCIP_DIDNOTFIND;
 
-   /* create and initialize hashmaps
-    * indicatormap: binary var -> indicator constraint
-    * varboundmap: binary var -> varbound constraint
-    *
-    * TODO: For one binary variable there can be more than one corresponding indicator/varbound constraint
-    */
-   nconss = SCIPconshdlrGetNConss(heurdata->conshdlr[0]);
-   conss = SCIPconshdlrGetConss(heurdata->conshdlr[0]);
-   SCIP_CALL( SCIPhashmapCreate(&heurdata->indicatormap, SCIPblkmem(scip), nconss) );
-   for( i = 0; i < nconss; i++ )
-   {
-      if( !SCIPhashmapExists(heurdata->indicatormap, SCIPgetBinaryVarIndicator(conss[i])) )
-      {
-         SCIP_CALL( SCIPhashmapInsert(heurdata->indicatormap, SCIPgetBinaryVarIndicator(conss[i]), conss[i]) );
-      }
-   }
-   if( heurdata->usevarbounds )
-   {
-      nconss = SCIPconshdlrGetNConss(heurdata->conshdlr[1]);
-      conss = SCIPconshdlrGetConss(heurdata->conshdlr[1]);
-      SCIP_CALL( SCIPhashmapCreate(&heurdata->varboundmap, SCIPblkmem(scip), nconss) );
-      for( i = 0; i < nconss; i++ )
-      {
-         if( !SCIPhashmapExists(heurdata->varboundmap, SCIPgetVbdvarVarbound(scip, conss[i])) )
-         {
-            SCIP_CALL( SCIPhashmapInsert(heurdata->varboundmap, SCIPgetVbdvarVarbound(scip, conss[i]), conss[i]) );
-         }
-      }
-   }
+   /* create and initialize hashmaps */
+   SCIP_CALL( createMaps(scip, heurdata->indicatorconshdlr, heurdata->varboundconshdlr, heurdata->usevarbounds, &heurdata->indicatormap, &heurdata->varboundmap) );
 
    /* (re-)set flags */
    heurdata->gotoindconss = FALSE;
@@ -859,7 +883,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
 
    /* check if candidate variable is indicator variable */
    SCIP_CALL( checkAndGetIndicator(scip, cand, heurdata->indicatormap, &indicatorcons, &isindicatorvar,
-         &heurdata->containsviolindconss, heurdata->newnode, heurdata->sol, heurdata->conshdlr[0]) );
+         &heurdata->containsviolindconss, heurdata->newnode, heurdata->sol, heurdata->indicatorconshdlr) );
 
    /* skip candidate in next calls since we have violated indicator constraints but current candidate is not determined
     * by the indicator constraint handler */
