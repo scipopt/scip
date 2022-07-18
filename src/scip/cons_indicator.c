@@ -7135,9 +7135,6 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsIndicator)
 
             SCIP_CALL( SCIPgetDivesetScore(scip, diveset, SCIP_DIVETYPE_INTEGRALITY, binvar, solval, 0.0,
                   &score, &roundup) );
-#ifdef SCIP_MORE_DEBUG
-            SCIPdebugMsg(scip, "    calculated score for variable %s to %u\n", SCIPvarGetName(binvar), bestvarroundup);
-#endif
 
             /* best candidate maximizes the score */
             if( score > bestscore )
@@ -7155,7 +7152,6 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsIndicator)
 
    if( *success )
    {
-      SCIPdebugMsg(scip, "best dive var %s will be fixed to %u\n", SCIPvarGetName(bestvar), bestvarroundup);
       /* if the diving score voted for fixing the best variable to 1.0, we add this as the preferred bound change */
       SCIP_CALL( SCIPaddDiveBoundChange(scip, bestvar, SCIP_BRANCHDIR_UPWARDS, 1.0, bestvarroundup) );
       SCIP_CALL( SCIPaddDiveBoundChange(scip, bestvar, SCIP_BRANCHDIR_DOWNWARDS, 0.0, ! bestvarroundup) );
