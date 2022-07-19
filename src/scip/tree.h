@@ -507,6 +507,7 @@ SCIP_RETCODE SCIPtreeLoadLPState(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< problem data */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp                  /**< current LP data */
@@ -697,6 +698,7 @@ SCIP_RETCODE SCIPtreeLoadProbingLPState(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< problem data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp                  /**< current LP data */
    );

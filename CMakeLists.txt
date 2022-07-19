@@ -13,14 +13,17 @@ endif()
 set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_DEBUG} ${CMAKE_C_FLAGS_RELEASE}")
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_DEBUG} ${CMAKE_CXX_FLAGS_RELEASE}")
 
-project(SCIP)
-
-
 set(SCIP_VERSION_MAJOR 8)
 set(SCIP_VERSION_MINOR 0)
 set(SCIP_VERSION_PATCH 2)
 set(SCIP_VERSION_SUB 0)
 set(SCIP_VERSION_API 104)
+
+project(SCIP
+    VERSION ${SCIP_VERSION_MAJOR}.${SCIP_VERSION_MINOR}.${SCIP_VERSION_PATCH}.${SCIP_VERSION_SUB}
+    LANGUAGES CXX C
+    DESCRIPTION "SCIP is currently one of the fastest non-commercial solvers for mixed integer programming (MIP) and mixed integer nonlinear programming (MINLP)"
+    )
 
 get_directory_property(hasParent PARENT_DIRECTORY)
 if(hasParent)
@@ -104,6 +107,7 @@ set(SYM bliss CACHE STRING "options for symmetry computation")  #create the vari
 set_property(CACHE SYM PROPERTY STRINGS bliss none )  #define list of values GUI will offer for the variable
 
 #search the selected symmetry computation program
+message(STATUS "Finding symmetry computation program \"${SYM}\"")
 set(BLISS_TARGET "")
 if(SYM STREQUAL "bliss")
     message(STATUS "Setting up Bliss")

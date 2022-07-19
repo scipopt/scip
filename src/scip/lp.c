@@ -2638,7 +2638,7 @@ SCIP_RETCODE lpCheckRealpar(
 #endif
 
 /** should the objective limit of the LP solver be disabled */
-#define lpCutoffDisabled(set) (set->lp_disablecutoff == 1 || (set->nactivepricers > 0 && set->lp_disablecutoff == 2))
+#define lpCutoffDisabled(set,prob) (set->lp_disablecutoff == 1 || ((set->nactivepricers > 0 || !SCIPprobAllColsInLP(prob, set, lp)) && set->lp_disablecutoff == 2))
 
 /** sets the objective limit of the LP solver
  *
@@ -2648,6 +2648,7 @@ static
 SCIP_RETCODE lpSetObjlim(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< problem data */
    SCIP_Real             objlim,             /**< new objective limit */
    SCIP_Bool*            success             /**< pointer to store whether the parameter was actually changed */
    )
@@ -2659,9 +2660,9 @@ SCIP_RETCODE lpSetObjlim(
    *success = FALSE;
 
    /* We disabled the objective limit in the LP solver or we want so solve exactly and thus cannot rely on the LP
-    * solver's objective limit handling, so we return here and do not apply the objective limit. */
-   if( lpCutoffDisabled(set) || set->misc_exactsolve )
-      return SCIP_OKAY;
+    * solver's objective limit handling, so we make sure that the objective limit is inactive (infinity). */
+   if( lpCutoffDisabled(set, prob) || set->misc_exactsolve )
+      objlim = SCIPlpiInfinity(lp->lpi);
 
    /* convert SCIP infinity value to lp-solver infinity value if necessary */
    if( SCIPsetIsInfinity(set, objlim) )
@@ -8666,6 +8667,7 @@ SCIP_RETCODE SCIPlpFlush(
    SCIP_LP*              lp,                 /**< current LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< problem data */
    SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
    )
 {
@@ -8696,7 +8698,7 @@ SCIP_RETCODE SCIPlpFlush(
 
    /* if the cutoff bound was changed in between and it is not disabled (e.g. for column generation),
     * we want to re-optimize the LP even if nothing else has changed */
-   if( lp->cutoffbound != lp->lpiobjlim && lp->ncols > 0 && ! lpCutoffDisabled(set) ) /*lint !e777*/
+   if( lp->cutoffbound != lp->lpiobjlim && lp->ncols > 0 && ! lpCutoffDisabled(set, prob) ) /*lint !e777*/
    {
       lp->solved = FALSE;
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
@@ -9409,6 +9411,7 @@ SCIP_RETCODE SCIPlpReset(
    SCIP_LP*              lp,                 /**< LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< problem data */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter         /**< global event filter */
@@ -9417,7 +9420,7 @@ SCIP_RETCODE SCIPlpReset(
    assert(stat != NULL);
 
    SCIP_CALL( SCIPlpClear(lp, blkmem, set, eventqueue, eventfilter) );
-   SCIP_CALL( SCIPlpFlush(lp, blkmem, set, eventqueue) );
+   SCIP_CALL( SCIPlpFlush(lp, blkmem, set, prob, eventqueue) );
 
    /* mark the empty LP to be solved */
    lp->lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
@@ -10050,6 +10053,7 @@ SCIP_RETCODE SCIPlpSetState(
    SCIP_LP*              lp,                 /**< LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< problem data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LPISTATE*        lpistate,           /**< LP state information (like basis information) */
    SCIP_Bool             wasprimfeas,        /**< primal feasibility when LP state information was stored */
@@ -10062,7 +10066,7 @@ SCIP_RETCODE SCIPlpSetState(
    assert(blkmem != NULL);
 
    /* flush changes to the LP solver */
-   SCIP_CALL( SCIPlpFlush(lp, blkmem, set, eventqueue) );
+   SCIP_CALL( SCIPlpFlush(lp, blkmem, set, prob, eventqueue) );
    assert(lp->flushed);
 
    if( lp->solved && lp->solisbasic )
@@ -10220,7 +10224,7 @@ SCIP_RETCODE SCIPlpSetCutoffbound(
    /* if the cutoff bound is decreased below the current optimal value, the LP now exceeds the objective limit;
     * if the objective limit in the LP solver was disabled, the solution status of the LP is not changed
     */
-   else if( !lpCutoffDisabled(set) && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL
+   else if( !lpCutoffDisabled(set, prob) && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL
       && SCIPlpGetObjval(lp, set, prob) >= cutoffbound )
    {
       assert(lp->flushed);
@@ -11635,11 +11639,11 @@ SCIP_RETCODE lpSolveStable(
    /* solve with given settings (usually fast but imprecise) */
    if( SCIPsetIsInfinity(set, lp->cutoffbound) )
    {
-      SCIP_CALL( lpSetObjlim(lp, set, lp->cutoffbound, &success) );
+      SCIP_CALL( lpSetObjlim(lp, set, prob, lp->cutoffbound, &success) );
    }
    else
    {
-      SCIP_CALL( lpSetObjlim(lp, set, lp->cutoffbound - getFiniteLooseObjval(lp, set, prob), &success) );
+      SCIP_CALL( lpSetObjlim(lp, set, prob, lp->cutoffbound - getFiniteLooseObjval(lp, set, prob), &success) );
    }
    SCIP_CALL( lpSetIterationLimit(lp, itlim) );
    SCIP_CALL( lpSetFeastol(lp, tightprimfeastol ? FEASTOLTIGHTFAC * lp->feastol : lp->feastol, &success) );
@@ -12103,12 +12107,12 @@ SCIP_RETCODE lpSolve(
       /* if we did not disable the cutoff bound in the LP solver, the LP solution status should be objective limit
        * reached if the LP objective value is greater than the cutoff bound
        */
-      assert(lpCutoffDisabled(set) || lp->lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT || SCIPsetIsInfinity(set, lp->cutoffbound)
+      assert(lpCutoffDisabled(set, prob) || lp->lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT || SCIPsetIsInfinity(set, lp->cutoffbound)
          || SCIPsetIsLE(set, lp->lpobjval + getFiniteLooseObjval(lp, set, prob), lp->cutoffbound));
    }
    else if( SCIPlpiIsObjlimExc(lp->lpi) )
    {
-      assert(!lpCutoffDisabled(set));
+      assert(!lpCutoffDisabled(set, prob));
 
 #ifndef NDEBUG
       /* the LP solution objective should exceed the limit in this case */
@@ -12227,7 +12231,7 @@ SCIP_RETCODE lpFlushAndSolve(
    assert(lperror != NULL);
 
    /* flush changes to the LP solver */
-   SCIP_CALL( SCIPlpFlush(lp, blkmem, set, eventqueue) );
+   SCIP_CALL( SCIPlpFlush(lp, blkmem, set, prob, eventqueue) );
    fastmip = ((!lp->flushaddedcols && !lp->flushdeletedcols) ? fastmip : 0); /* turn off FASTMIP if columns were changed */
 
    /* select LP algorithm to apply */
@@ -12460,7 +12464,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
    }
 
    /* flush changes to the LP solver */
-   SCIP_CALL( SCIPlpFlush(lp, blkmem, set, eventqueue) );
+   SCIP_CALL( SCIPlpFlush(lp, blkmem, set, prob, eventqueue) );
    assert(lp->flushed);
 
    /* if the time limit was reached in the last call and the LP did not change, lp->solved is set to TRUE, but we want
@@ -12752,7 +12756,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
          break;
 
       case SCIP_LPSOLSTAT_OBJLIMIT:
-         assert(!lpCutoffDisabled(set));
+         assert(!lpCutoffDisabled(set, prob));
          /* Some LP solvers, e.g. CPLEX With FASTMIP setting, do not apply the final pivot to reach the dual solution
           * exceeding the objective limit. In some cases like branch-and-price, however, we must make sure that a dual
           * feasible solution exists that exceeds the objective limit. Therefore, we have to continue solving it without
@@ -12809,13 +12813,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                solstat = SCIPlpGetSolstat(lp);
                assert(solstat != SCIP_LPSOLSTAT_OBJLIMIT);
 
-               if( !(*lperror) && solstat != SCIP_LPSOLSTAT_ERROR && solstat != SCIP_LPSOLSTAT_NOTSOLVED )
-               {
-                  SCIPsetDebugMsg(set, " ---> new objval = %f (solstat: %d, 1 add. step)\n", objval, solstat);
-               }
-
-               /* disable fastmip for subsequent LP calls (if objective limit is not yet exceeded or LP solution is infeasible) */
-               fastmip = 0;
+               SCIPsetDebugMsg(set, " ---> new objval = %f (solstat: %d, 1 add. step)\n", objval, solstat);
 
                /* the solution is still not exceeding the objective limit and the solving process
                 * was stopped due to time or iteration limit, solve again with fastmip turned off
@@ -12823,18 +12821,21 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                if( solstat == SCIP_LPSOLSTAT_ITERLIMIT &&
                   SCIPsetIsLT(set, objval, lp->cutoffbound - getFiniteLooseObjval(lp, set, prob)) )
                {
-                  assert(!(*lperror));
+                  SCIP_Bool simplex = (lp->lastlpalgo == SCIP_LPALGO_PRIMALSIMPLEX || lp->lastlpalgo == SCIP_LPALGO_DUALSIMPLEX);
+                  if( !(lperror) && (fastmip > 0) && simplex )
+                  {
+                     fastmip = 0;
+                     SCIP_CALL( lpSolve(lp, set, messagehdlr, stat, prob, SCIP_LPALGO_DUALSIMPLEX, -1, -1,
+                           FALSE, FALSE, TRUE, fastmip, tightprimfeastol, tightdualfeastol, fromscratch, keepsol, lperror) );
 
-                  SCIP_CALL( lpSolve(lp, set, messagehdlr, stat, prob, SCIP_LPALGO_DUALSIMPLEX, -1, -1,
-                        FALSE, FALSE, TRUE, fastmip, tightprimfeastol, tightdualfeastol, fromscratch, keepsol, lperror) );
+                     /* get objective value */
+                     SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
 
-                  /* get objective value */
-                  SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
+                     /* get solution status for the lp */
+                     solstat = SCIPlpGetSolstat(lp);
 
-                  /* get solution status for the lp */
-                  solstat = SCIPlpGetSolstat(lp);
-
-                  SCIPsetDebugMsg(set, " ---> new objval = %f (solstat: %d, without fastmip)\n", objval, solstat);
+                     SCIPsetDebugMsg(set, " ---> new objval = %f (solstat: %d, without fastmip)\n", objval, solstat);
+                  }
                }
 
                /* check for lp errors */
@@ -12850,7 +12851,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
 
                lp->solved = TRUE;
 
-               /* optimal solution / objlimit with fastmip turned off / itlimit or timelimit, but objlimit exceeded */
+               /* optimal solution / objlimit / itlimit or timelimit, but objlimit exceeded */
                if( solstat == SCIP_LPSOLSTAT_OPTIMAL || solstat == SCIP_LPSOLSTAT_OBJLIMIT
                   || ( (solstat == SCIP_LPSOLSTAT_ITERLIMIT || solstat == SCIP_LPSOLSTAT_TIMELIMIT)
                      && SCIPsetIsGE(set, objval, lp->cutoffbound - getFiniteLooseObjval(lp, set, prob)) ) )
@@ -14356,6 +14357,8 @@ SCIP_RETCODE SCIPlpGetSol(
    assert(set != NULL);
    assert(stat != NULL);
    assert(lp->validsollp <= stat->lpcount);
+
+   assert(lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL);
 
    /* initialize return and feasibility flags; if primal oder dual feasibility shall not be checked, we set the
     * corresponding flag immediately to FALSE to skip all checks
@@ -16107,7 +16110,7 @@ SCIP_RETCODE SCIPlpEndDive(
    /* reload LPI state saved at start of diving and free it afterwards; it may be NULL, in which case simply nothing
     * happens
     */
-   SCIP_CALL( SCIPlpSetState(lp, blkmem, set, eventqueue, lp->divelpistate,
+   SCIP_CALL( SCIPlpSetState(lp, blkmem, set, prob, eventqueue, lp->divelpistate,
          lp->divelpwasprimfeas, lp->divelpwasprimchecked, lp->divelpwasdualfeas, lp->divelpwasdualchecked) );
    SCIP_CALL( SCIPlpFreeState(lp, blkmem, &lp->divelpistate) );
    lp->divelpwasprimfeas = TRUE;
@@ -16167,7 +16170,7 @@ SCIP_RETCODE SCIPlpEndDive(
          assert(lp->diving == lp->divinglazyapplied);
 
          /* flush changes to the LP solver */
-         SCIP_CALL( SCIPlpFlush(lp, blkmem, set, eventqueue) );
+         SCIP_CALL( SCIPlpFlush(lp, blkmem, set, prob, eventqueue) );
       }
 
       /* increment lp counter to ensure that we do not use solution values from the last solved diving lp */

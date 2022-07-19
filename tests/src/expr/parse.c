@@ -147,6 +147,10 @@ Test(parse, signpower)
    SCIP_CALL( SCIPreleaseExpr(scip, &crazyexpr) );
 }
 
+/* disable undefined-behavior sanitizer because of intentional division by zero */
+#if defined(__GNUC__) && __GNUC__ * 100 + __GNUC_MINOR__ * 10 >= 490 && !defined(__INTEL_COMPILER)
+__attribute__((no_sanitize_undefined))
+#endif
 Test(parse, eval)
 {
    SCIP_EXPR* crazyexpr;
