@@ -95,7 +95,7 @@ struct SCIP_HeurData
    SCIP_Bool             updatelocks;        /**< should the locks be updated based on LP rows? */
    SCIP_Bool             copycuts;           /**< should all active cuts from cutpool be copied to constraints in
                                               *   the subproblem? */
-   SCIP_Bool             usefinalsubmip;     /**< should a final sub-MIP be solved to costruct a feasible solution if
+   SCIP_Bool             usefinalsubmip;     /**< should a final sub-MIP be solved to construct a feasible solution if
                                               *   the LP was not roundable? */
 };
 

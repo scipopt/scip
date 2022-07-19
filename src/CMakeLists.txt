@@ -116,6 +116,7 @@ set(scipsources
     scip/heur_gins.c
     scip/heur_guideddiving.c
     scip/heur_indicator.c
+    scip/heur_indicatordiving.c
     scip/heur_intdiving.c
     scip/heur_intshifting.c
     scip/heur_linesearchdiving.c
@@ -578,6 +579,7 @@ set(scipheaders
     scip/heur_guideddiving.h
     scip/heur.h
     scip/heur_indicator.h
+    scip/heur_indicatordiving.h
     scip/heur_intdiving.h
     scip/heur_intshifting.h
     scip/heuristics.h
