@@ -288,7 +288,6 @@ SCIP_RETCODE varVecAddScaledRowCoefsQuadSafely(
    int i;
    SCIP_ROUNDMODE previousroundmode;
    SCIP_VAR* var;
-   SCIP_INTERVAL valinterval;
    SCIP_ROWEXACT* rowexact;
 
    assert(inds != NULL);
@@ -318,33 +317,58 @@ SCIP_RETCODE varVecAddScaledRowCoefsQuadSafely(
       if( QUAD_HI(val) == SCIP_INVALID )
          QUAD_ASSIGN(val, 0.0);
 
-      SCIPintervalSetBounds(&valinterval, rowexact->valsinterval[i].inf, rowexact->valsinterval[i].sup);
-      SCIPintervalMulScalar(SCIPinfinity(scip), &valinterval, valinterval, scale);
-      SCIPintervalAddScalar(SCIPinfinity(scip), &valinterval, valinterval, QUAD_TO_DBL(val));
-
       if( SCIPvarGetLbGlobal(var) > -SCIPinfinity(scip) && SCIPvarGetLbGlobal(var) >= 0 )
       {
+         SCIPintervalSetRoundingModeDownwards();
          SCIPdebugMessage("Lb positive, no change in rhs needed \n");
-         QUAD_ASSIGN(val, SCIPintervalGetInf(valinterval));
+         if( scale >= 0 )
+            val += (rowexact->valsinterval[i].inf * scale);
+         else
+            val += (rowexact->valsinterval[i].sup * scale);
       }
       else if(SCIPvarGetUbGlobal(var) < SCIPinfinity(scip) && SCIPvarGetUbGlobal(var) <= 0 )
       {
          SCIPdebugMessage("Ub negative, no change in rhs needed \n");
-         QUAD_ASSIGN(val, SCIPintervalGetSup(valinterval));
+         SCIPintervalSetRoundingModeUpwards();
+         if( scale >= 0 )
+            val += (rowexact->valsinterval[i].sup * scale);
+         else
+            val += (rowexact->valsinterval[i].inf * scale);
       }
       else if( SCIPvarGetLbGlobal(var) > -SCIPinfinity(scip) )
       {
-         QUAD_ASSIGN(val, SCIPintervalGetInf(valinterval));
+         SCIP_Real uproundedval, downroundedval;
+         SCIPintervalSetRoundingModeDownwards();
+         if( scale >= 0 )
+            downroundedval = (rowexact->valsinterval[i].inf * scale);
+         else
+            downroundedval = (rowexact->valsinterval[i].sup * scale);
+
+         val += downroundedval;
          SCIPintervalSetRoundingModeUpwards();
-         *rhschange += (SCIPintervalGetSup(valinterval) - SCIPintervalGetInf(valinterval)) * (-SCIPvarGetLbGlobal(var));
-         SCIPdebugMessage("Using lb %.17g corrected by %.17g. Change to rhs: %.17g \n", SCIPvarGetLbGlobal(var), -SCIPintervalGetSup(valinterval) + SCIPintervalGetInf(valinterval), *rhschange);
+         if( scale >= 0 )
+            uproundedval = (rowexact->valsinterval[i].sup * scale);
+         else
+            uproundedval = (rowexact->valsinterval[i].inf * scale);
+         *rhschange += (uproundedval - downroundedval) * (-SCIPvarGetLbGlobal(var));
       }
       else if( SCIPvarGetUbGlobal(var) < SCIPinfinity(scip) )
       {
-         QUAD_ASSIGN(val, SCIPintervalGetSup(valinterval));
+         SCIP_Real uproundedval, downroundedval;
+         SCIPintervalSetRoundingModeDownwards();
+         if( scale >= 0 )
+            downroundedval = (rowexact->valsinterval[i].inf * scale);
+         else
+            downroundedval = (rowexact->valsinterval[i].sup * scale);
+
          SCIPintervalSetRoundingModeUpwards();
-         *rhschange += (SCIPintervalGetSup(valinterval) - SCIPintervalGetInf(valinterval)) * (SCIPvarGetUbGlobal(var));
-         SCIPdebugMessage("Using ub %.17g corrected by %.17g. Change to rhs: %.17g \n", SCIPvarGetUbGlobal(var), SCIPintervalGetSup(valinterval) - SCIPintervalGetInf(valinterval), *rhschange);
+         if( scale >= 0 )
+            uproundedval = (rowexact->valsinterval[i].sup * scale);
+         else
+            uproundedval = (rowexact->valsinterval[i].inf * scale);
+
+         val += uproundedval;
+         *rhschange += (uproundedval - downroundedval) * (SCIPvarGetUbGlobal(var));
       }
       else
       {
