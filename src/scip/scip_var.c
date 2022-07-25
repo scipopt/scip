@@ -6159,7 +6159,6 @@ SCIP_RETCODE SCIPtightenVarUbExact(
    }  /*lint !e788*/
 
    /* check whether the lower bound improved */
-   SCIPcomputeVarUbLocalExact(scip, var, newbound);
    if( tightened != NULL && RatIsGT(ub, newbound) )
       *tightened = TRUE;
 

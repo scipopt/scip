@@ -4278,6 +4278,8 @@ SCIP_RETCODE SCIPvarFixExact(
    *infeasible = FALSE;
    *fixed = FALSE;
 
+   assert(SCIPvarGetStatusExact(var) ==  SCIPvarGetStatus(var));
+
    if( SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_FIXED )
    {
       *infeasible = !RatIsEqual(fixedval, var->exactdata->locdom.lb);
@@ -17383,6 +17385,7 @@ SCIP_RETCODE SCIPvarGetProbvarSumExact(
    assert(var != NULL);
    assert(scalar != NULL);
    assert(constant != NULL);
+   assert(SCIPvarGetStatusExact(*var) == SCIPvarGetStatus(*var));
 
    while( *var != NULL )
    {

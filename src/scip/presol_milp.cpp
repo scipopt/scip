@@ -233,6 +233,8 @@ Problem<papilo::Rational> buildProblemRational(
       builder.setRowRhsInf(i, RatIsInfinity(rhs));
    }
 
+   builder.setObjOffset(0);
+
    return builder.build();
 }
 
@@ -544,6 +546,10 @@ SCIP_RETCODE doMilpPresolveRational(
 
          setRational(scip, tmprhs, rhs);
          setRational(scip, tmplhs, lhs);
+         if( rflags[i].test(RowFlag::kLhsInf) )
+            RatSetString(tmplhs, "-inf");
+         if( rflags[i].test(RowFlag::kRhsInf) )
+            RatSetString(tmprhs, "inf");
 
          SCIP_CALL( SCIPcreateConsBasicExactLinear(scip, &cons, SCIPconsGetName(oldcons), rowlen, tmpvars.data(), tmpvals, tmplhs, tmprhs) );
          SCIP_CALL( SCIPaddCons(scip, cons) );
