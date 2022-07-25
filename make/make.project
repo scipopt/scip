@@ -266,12 +266,6 @@ LIBOBJSUBDIRS	=	$(LIBOBJDIR)/scip \
 			$(LIBOBJDIR)/dijkstra \
 			$(LIBOBJDIR)/symmetry \
 			$(LIBOBJDIR)/tinycthread
-ifeq ($(SYM),bliss)
-ifeq ($(BLISSEXTERNAL),false)
-LIBOBJSUBDIRS	+=      $(LIBOBJDIR)/bliss/src
-LIBOBJSUBDIRS	+=      $(LIBOBJDIR)/bliss
-endif
-endif
 SRCDIR		=	src
 BINDIR		=	bin
 LIBDIR		=	lib
@@ -540,6 +534,9 @@ TPILIBSHORTLINK	=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(TPILIBNAME).$(LIBEXT)
 ifeq ($(SYM),bliss)
 ifeq ($(BLISSEXTERNAL),true)
 LDFLAGS		+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCC_l)bliss.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
+else
+LIBOBJSUBDIRS	+=      $(LIBOBJDIR)/bliss/src
+LIBOBJSUBDIRS	+=      $(LIBOBJDIR)/bliss
 endif
 endif
 
