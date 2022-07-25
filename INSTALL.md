@@ -98,6 +98,7 @@ e.g., `cmake </path/to/SCIP> -DSOPLEX_DIR=<path/to/SoPlex/build/or/install>`.
 
 | CMake option           | Available values                   | Makefile equivalent        | Remarks                                                            |
 |------------------------|------------------------------------|----------------------------|--------------------------------------------------------------------|
+| `AUTOBUILD`            | `on`, `off`                        | --                         | automatically find dependencies on availability, ignores individual flags of these packages |
 | `CMAKE_BUILD_TYPE`     | `Release`, `Debug`, ...            | `OPT=[opt, dbg]`           |                                                                    |
 | `GMP`                  | `on`, `off`                        | `GMP=[true, false]`        | specify `GMP_DIR` if not found automatically                       |
 | `IPOPT`                | `on`, `off`                        | `IPOPT=[true,false]`       | requires IPOPT version >= 3.12.0; specify `IPOPT_DIR` if not found automatically |
