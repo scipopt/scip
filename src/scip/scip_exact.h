@@ -77,12 +77,7 @@ SCIP_Bool SCIPisExactSolve(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** returns whether aggreagtion is allowed to use negative slack
- *
- *  @note This feature is not supported yet!
- *
- *  @return Returns TRUE if \SCIP is exact solving mode, otherwise FALSE
- */
+/** returns whether aggreagtion is allowed to use negative slack */
 SCIP_EXPORT
 SCIP_Bool SCIPallowNegSlack(
    SCIP*                 scip                /**< SCIP data structure */
@@ -120,7 +115,7 @@ SCIP_CERTIFICATE* SCIPgetCertificate(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** add aggregation information to certificate for one row */
+/** adds aggregation information to certificate for one row */
 SCIP_EXPORT
 SCIP_RETCODE SCIPaddCertificateAggregation(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -134,36 +129,39 @@ SCIP_RETCODE SCIPaddCertificateAggregation(
    int                   nnegslackrows       /**< length of the negative slack array */
    );
 
-/** agg aggregation information to certificate for one row */
+/** adds mir information (split, etc) to certificate for one row */
 SCIP_EXPORT
 SCIP_RETCODE SCIPaddCertificateMirInfo(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** stores the active aggregation information in the certificate data structures for a row */
 SCIP_EXPORT
 SCIP_RETCODE SCIPstoreCertificateActiveAggregationInfo(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row                 /**< row that aggregation information is stored for */
    );
 
-
+/** stores the active mir information in the certificate data structures for a row */
 SCIP_EXPORT
 SCIP_RETCODE SCIPstoreCertificateActiveMirInfo(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row                 /**< row that mirinfo is stored for */
    );
 
+/** frees the active mir information */
 SCIP_EXPORT
 SCIP_RETCODE SCIPfreeCertificateActiveMirInfo(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** frees the active aggregation information */
 SCIP_EXPORT
 SCIP_RETCODE SCIPfreeCertificateActiveAggregationInfo(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** compute a safe bound that is valid in exact rational arithmetic */
+/** computes a safe bound that is valid in exact rational arithmetic */
 SCIP_EXPORT
 SCIP_RETCODE SCIPcomputeSafeBound(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -171,7 +169,7 @@ SCIP_RETCODE SCIPcomputeSafeBound(
    SCIP_Real*            safebound           /**< store the safe bound */
    );
 
-/** force the next lp to be solved by a rational lp solver */
+/** forces the next lp to be solved by a rational lp solver */
 SCIP_EXPORT
 SCIP_RETCODE SCIPforceExactSolve(
    SCIP*                 scip                /**< SCIP data structure */

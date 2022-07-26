@@ -1490,7 +1490,7 @@ SCIP_RETCODE certificatePrintWeakDerStart(
    return SCIP_OKAY;
 }
 
-/** prints constraint */
+/** prints verification of row as a MIR cut (viewed as a split cut) */
 SCIP_RETCODE SCIPcertificatePrintMirCut(
    SCIP_SET*             set,                /**< SCIP settings */
    SCIP_LP*              lp,                 /**< SCIP lp data structure */
@@ -2111,6 +2111,7 @@ SCIP_RETCODE  SCIPcertificatePrintDualboundPseudo(
    return SCIP_OKAY;
 }
 
+/** prints the bound that a node inherits from its parent to the certificate */
 SCIP_RETCODE SCIPcertificatePrintInheritedBound(
    SCIP_SET*             set,                /**< general SCIP settings */
    SCIP_CERTIFICATE*     certificate,        /**< certificate data structure */
@@ -2652,6 +2653,7 @@ SCIP_RETCODE SCIPstoreCertificateActiveAggregationInfo(
    return SCIP_OKAY;
 }
 
+/** stores the active mir information in the certificate data structures for a row */
 SCIP_RETCODE SCIPstoreCertificateActiveMirInfo(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row                 /**< row that mirinfo is stored for */
@@ -2707,6 +2709,7 @@ SCIP_RETCODE SCIPstoreCertificateActiveMirInfo(
    return SCIP_OKAY;
 }
 
+/** frees the active mir information */
 SCIP_RETCODE SCIPfreeCertificateActiveMirInfo(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -2746,6 +2749,7 @@ SCIP_RETCODE SCIPfreeCertificateActiveMirInfo(
    return SCIP_OKAY;
 }
 
+/** frees the active aggregation information */
 SCIP_RETCODE SCIPfreeCertificateActiveAggregationInfo(
    SCIP*                 scip                /**< SCIP data structure */
    )

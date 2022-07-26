@@ -43,6 +43,7 @@ struct SCIP_CertificateBound
    SCIP_Bool             isbound;            /**< is the last printed index a bound? if it is not, the other information is not useful */
 };
 
+/** data structure for storing necessary information to print verified aggregation of rows */
 struct SCIP_AggregationInfo
 {
    SCIP_AGGRROW*         aggrrow;            /**< aggregation row to be saved */
@@ -58,6 +59,7 @@ struct SCIP_AggregationInfo
    SCIP_Longint          arpos;              /**< position in the aggrinfo array, so we can access it from the hashmap */
 };
 
+/** data structure for certifying MIR cut (splitcoefs, rhs, fractionality f, 1/1-f, scaling factor, which bounds to use) */
 struct SCIP_MirInfo
 {
    SCIP_Real*            splitcoefficients;  /**< coefficients in the split, saved in the complemented variable space */
