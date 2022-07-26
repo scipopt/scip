@@ -3444,7 +3444,7 @@ void SCIPprintNLPStatistics(
       scip->stat->nnlps);
 
    SCIPgetNLPNlRowsStat(scip, &nnlrowlinear, &nnlrowconvexineq, &nnlrownonconvexineq, &nnlrownonlineareq);
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  convexity        : %10s (%d linear rows, %d convex inequ., %d nonconvex inequ., %d nonlinear equ.)\n",
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  convexity        : %10s (%d linear rows, %d convex ineq., %d nonconvex ineq., %d nonlinear eq.)\n",
       (nnlrownonconvexineq == 0 && nnlrownonlineareq == 0) ? "convex" : "nonconvex",
       nnlrowlinear, nnlrowconvexineq, nnlrownonconvexineq, nnlrownonlineareq);
 }
