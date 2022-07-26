@@ -223,7 +223,7 @@ int SCIPgetNNLPNlRows(
  *       - \ref SCIP_STAGE_SOLVED
  */
 SCIP_EXPORT
-void SCIPgetNLPNlRowsStat(
+SCIP_RETCODE SCIPgetNLPNlRowsStat(
    SCIP*                 scip,               /**< SCIP data structure */
    int*                  nlinear,            /**< buffer to store number of linear rows in NLP, or NULL */
    int*                  nconvexineq,        /**< buffer to store number of convex inequalities in NLP, or NULL */

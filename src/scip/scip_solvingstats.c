@@ -3443,7 +3443,7 @@ void SCIPprintNLPStatistics(
       SCIPclockGetTime(scip->stat->nlpsoltime),
       scip->stat->nnlps);
 
-   SCIPgetNLPNlRowsStat(scip, &nnlrowlinear, &nnlrowconvexineq, &nnlrownonconvexineq, &nnlrownonlineareq);
+   SCIP_CALL_ABORT( SCIPgetNLPNlRowsStat(scip, &nnlrowlinear, &nnlrowconvexineq, &nnlrownonconvexineq, &nnlrownonlineareq) );
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  convexity        : %10s (%d linear rows, %d convex ineq., %d nonconvex ineq., %d nonlinear eq.)\n",
       (nnlrownonconvexineq == 0 && nnlrownonlineareq == 0) ? "convex" : "nonconvex",
       nnlrowlinear, nnlrowconvexineq, nnlrownonconvexineq, nnlrownonlineareq);

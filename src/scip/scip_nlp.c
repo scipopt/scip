@@ -357,7 +357,7 @@ int SCIPgetNNLPNlRows(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-void SCIPgetNLPNlRowsStat(
+SCIP_RETCODE SCIPgetNLPNlRowsStat(
    SCIP*                 scip,               /**< SCIP data structure */
    int*                  nlinear,            /**< buffer to store number of linear rows in NLP, or NULL */
    int*                  nconvexineq,        /**< buffer to store number of convex inequalities in NLP, or NULL */
@@ -365,15 +365,17 @@ void SCIPgetNLPNlRowsStat(
    int*                  nnonlineareq        /**< buffer to store number of nonlinear equalities or ranged rows in NLP, or NULL */
    )
 {
-   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPnlpGetNlRowsStat", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPnlpGetNlRowsStat", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    if( scip->nlp == NULL )
    {
       SCIPerrorMessage("NLP has not been constructed.\n");
-      SCIPABORT();
+      return SCIP_ERROR;
    }
 
    SCIPnlpGetNlRowsStat(scip->nlp, nlinear, nconvexineq, nnonconvexineq, nnonlineareq);
+
+   return SCIP_OKAY;
 }
 
 /** adds a nonlinear row to the NLP. This row is captured by the NLP.
