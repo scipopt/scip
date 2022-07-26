@@ -14,6 +14,7 @@ Features
   There	is an interface to Lapack in lapack_calls.
 - added support for logical constraints in binary variables and basic logical operators (and, or, not, equal) to AMPL .nl reader
 - new diving heuristic indicatordiving that focuses on indicator variables which control semicontinuous variables
+- updated statistics on NLP relaxation; information on convexity of NLP has been added
 
 Performance improvements
 ------------------------

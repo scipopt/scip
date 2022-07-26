@@ -1121,7 +1121,10 @@ SCIP_RETCODE SCIPnlrowPrint(
    }
 
    /* print right hand side */
-   SCIPmessageFPrintInfo(messagehdlr, file, " <= %.15g\n", nlrow->rhs);
+   SCIPmessageFPrintInfo(messagehdlr, file, " <= %.15g", nlrow->rhs);
+
+   /* print convexity */
+   SCIPmessageFPrintInfo(messagehdlr, file, " [%s]\n", SCIPexprcurvGetName(nlrow->curvature));
 
    return SCIP_OKAY;
 }

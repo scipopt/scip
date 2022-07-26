@@ -3431,11 +3431,18 @@ void SCIPprintNLPStatistics(
    if( scip->nlp == NULL )
       return;
 
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "NLP                :       Time      Calls\n");
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "NLP relaxation     :\n");
 
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  all NLPs         : %10.2f %10" SCIP_LONGINT_FORMAT "\n",
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  solve time       : %10.2f (%" SCIP_LONGINT_FORMAT " calls)\n",
       SCIPclockGetTime(scip->stat->nlpsoltime),
       scip->stat->nnlps);
+
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  convexity        : %10s (%d linear rows, %d convex inequ., %d nonconvex inequ., %d nonlinear equ.)\n",
+      (scip->stat->nnlrownonconvexineq == 0 && scip->stat->nnlrownonlineareq == 0) ? "convex" : "nonconvex",
+      scip->stat->nnlrowlinear,
+      scip->stat->nnlrowconvexineq,
+      scip->stat->nnlrownonconvexineq,
+      scip->stat->nnlrownonlineareq);
 }
 
 /** outputs relaxator statistics
