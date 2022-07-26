@@ -192,11 +192,13 @@ struct SCIP_ConsData
    SCIP_VAR*             maxactdeltavar;     /**< variable with maximal activity contribution, or NULL if invalid */
    uint64_t              possignature;       /**< bit signature of coefficients that may take a positive value */
    uint64_t              negsignature;       /**< bit signature of coefficients that may take a negative value */
-   SCIP_ROW*             row;                /**< LP row, if constraint is already stored in LP row format */
+   SCIP_ROW*             rowlhs;             /**< LP row, if constraint is already stored in LP row format; represents fp-relaxation of lhs-part of rowexact;
+                                                  only this row will be added to the exact LP, rowrhs is used for safe aggregation of rows */
+   SCIP_ROW*             rowrhs;             /**< LP row, if constraint is already stored in LP row format; represents fp-relaxation of rhs-part of rowexact */
    SCIP_ROWEXACT*        rowexact;           /**< Exact rational lp row */
    SCIP_VAR**            vars;               /**< variables of constraint entries */
    SCIP_Rational**       vals;               /**< coefficients of constraint entries */
-   SCIP_Real*            valsreal;
+   SCIP_INTERVAL*        valsreal;           /**< values of val rounded up/down to closest fp-representable numbers */
    SCIP_EVENTDATA**      eventdata;          /**< event data for bound change events of the variables */
    int                   minactivityneginf;  /**< number of coefficients contributing with neg. infinite value to minactivity */
    int                   minactivityposinf;  /**< number of coefficients contributing with pos. infinite value to minactivity */
@@ -246,6 +248,8 @@ struct SCIP_ConsData
    unsigned int          hasnonbinvar:1;     /**< does the constraint contain at least one non-binary variable? */
    unsigned int          hasnonbinvalid:1;   /**< is the information stored in hasnonbinvar and hascontvar valid? */
    unsigned int          checkabsolute:1;    /**< should the constraint be checked w.r.t. an absolute feasibilty tolerance? */
+   unsigned int          onerowrelax:1;      /**< is one floating-point row enough for the fp-relaxation? if so only rowlhs is used */
+   unsigned int          hasfprelax:1;       /**< is the constraint possible to be represented as a fp relaxation (only false if var without bound is present) */
 };
 
 /** event data for bound change event */
@@ -351,6 +355,7 @@ struct InferInfo
 };
 typedef struct InferInfo INFERINFO;
 
+#ifdef SCIP_DISABLED_CODE
 /** converts an integer into an inference information */
 static
 INFERINFO intToInferInfo(
@@ -419,12 +424,13 @@ int getInferInt(
 {
    return inferInfoToInt(getInferInfo(proprule, pos));
 }
-
+#endif
 
 /*
  * memory growing methods for dynamically allocated arrays
  */
 
+#ifdef SCIP_DISABLED_CODE
 /** ensures, that linconsupgrades array can store at least num entries */
 static
 SCIP_RETCODE conshdlrdataEnsureLinconsupgradesSize(
@@ -449,6 +455,7 @@ SCIP_RETCODE conshdlrdataEnsureLinconsupgradesSize(
 
    return SCIP_OKAY;
 }
+#endif
 
 /** ensures, that vars and vals arrays can store at least num entries */
 static
@@ -490,6 +497,7 @@ SCIP_RETCODE consdataEnsureVarsSize(
  * local methods for managing linear constraint update methods
  */
 
+#ifdef SCIP_DISABLED_CODE
 /** creates a linear constraint upgrade data object */
 static
 SCIP_RETCODE linconsupgradeCreate(
@@ -510,6 +518,7 @@ SCIP_RETCODE linconsupgradeCreate(
 
    return SCIP_OKAY;
 }
+#endif
 
 /** frees a linear constraint upgrade data object */
 static
@@ -583,6 +592,7 @@ void conshdlrdataFree(
    SCIPfreeBlockMemory(scip, conshdlrdata);
 }
 
+#ifdef SCIP_DISABLED_CODE
 /** creates a linear constraint upgrade data object */
 static
 SCIP_Bool conshdlrdataHasUpgrade(
@@ -640,6 +650,7 @@ SCIP_RETCODE conshdlrdataIncludeUpgrade(
 
    return SCIP_OKAY;
 }
+#endif
 
 /*
  * local methods
@@ -871,7 +882,7 @@ SCIP_RETCODE consdataCreate(
    if( RatIsGT(lhs, rhs) )
    {
       SCIPwarningMessage(scip, "left hand side of linear constraint greater than right hand side\n");
-      SCIPwarningMessage(scip, " -> lhs=%g, rhs=%g\n", lhs, rhs);
+      SCIPwarningMessage(scip, " -> lhs=%g, rhs=%g\n", RatApproxReal(lhs), RatApproxReal(rhs));
    }
 
    SCIP_CALL( SCIPallocBlockMemory(scip, consdata) );
@@ -892,7 +903,7 @@ SCIP_RETCODE consdataCreate(
 
       SCIP_VAR** varsbuffer;
       SCIP_Rational** valsbuffer;
-      SCIP_Real* valsrealbuffer;
+      SCIP_INTERVAL* valsrealbuffer;
 
       /* copy variables into temporary buffer */
       SCIP_CALL( SCIPallocBufferArray(scip, &varsbuffer, nvars) );
@@ -919,8 +930,7 @@ SCIP_RETCODE consdataCreate(
             {
                varsbuffer[k] = var;
                RatSet(valsbuffer[k], vals[v]);
-               valsrealbuffer[k] = RatApproxReal(vals[v]);
-
+               SCIPintervalSetRational(&(valsrealbuffer[k]), vals[v]);
                k++;
 
                /* update hascontvar and hasnonbinvar flags */
@@ -957,8 +967,8 @@ SCIP_RETCODE consdataCreate(
 
    (*consdata)->eventdata = NULL;
 
-   lhsrel = RatRoundReal(lhs, SCIP_ROUND_DOWNWARDS);
-   rhsrel = RatRoundReal(rhs, SCIP_ROUND_UPWARDS);
+   lhsrel = RatRoundReal(lhs, SCIP_R_ROUND_DOWNWARDS);
+   rhsrel = RatRoundReal(rhs, SCIP_R_ROUND_UPWARDS);
 
    /* due to compressed copying, we may have fixed variables contributing to the left and right hand side */
    if( !RatIsZero(constant) )
@@ -970,7 +980,8 @@ SCIP_RETCODE consdataCreate(
          RatDiff(rhs, rhs, constant);
    }
 
-   (*consdata)->row = NULL;
+   (*consdata)->rowlhs = NULL;
+   (*consdata)->rowrhs = NULL;
    (*consdata)->rowexact = NULL;
    SCIP_CALL( RatCopy(SCIPblkmem(scip), &(*consdata)->lhs, lhs) );
    SCIP_CALL( RatCopy(SCIPblkmem(scip), &(*consdata)->rhs, rhs) );
@@ -1030,6 +1041,8 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->varsdeleted = FALSE;
    (*consdata)->rangedrowpropagated = 0;
    (*consdata)->checkabsolute = FALSE;
+   (*consdata)->onerowrelax = FALSE;
+   (*consdata)->hasfprelax = FALSE;
 
    SCIP_CALL( RatCreateBlock(SCIPblkmem(scip), &(*consdata)->activity) );
    SCIP_CALL( RatCreateBlock(SCIPblkmem(scip), &(*consdata)->violation) );
@@ -1068,9 +1081,13 @@ SCIP_RETCODE consdataFree(
    assert((*consdata)->varssize >= 0);
 
    /* release the row */
-   if( (*consdata)->row != NULL )
+   if( (*consdata)->rowlhs != NULL )
    {
-      SCIP_CALL( SCIPreleaseRow(scip, &(*consdata)->row) );
+      SCIP_CALL( SCIPreleaseRow(scip, &(*consdata)->rowlhs) );
+   }
+   if( (*consdata)->rowrhs != NULL && !(*consdata)->onerowrelax )
+   {
+      SCIP_CALL( SCIPreleaseRow(scip, &(*consdata)->rowrhs) );
    }
 
    /* release variables */
@@ -1115,9 +1132,10 @@ SCIP_RETCODE consdataPrint(
    FILE*                 file                /**< output file (or NULL for standard output) */
    )
 {
+   char rationalbuffer[SCIP_MAXSTRLEN];
+
    assert(scip != NULL);
    assert(consdata != NULL);
-   char rationalbuffer[SCIP_MAXSTRLEN];
 
    /* print left hand side for ranged rows */
    if( !RatIsNegInfinity(consdata->lhs)
@@ -1361,6 +1379,7 @@ void consdataComputePseudoActivity(
 
 }
 
+#ifdef SCIP_DISABLED_CODE
 /** recompute the minactivity of a constraint */
 static
 void consdataRecomputeMinactivity(
@@ -1476,6 +1495,7 @@ void consdataRecomputeGlbMaxactivity(
    /* the activity was just computed from scratch, mark it to be reliable */
    consdata->lastglbmaxactivity = consdata->glbmaxactivity;
 }
+#endif
 
 /** calculates maximum absolute value of coefficients */
 static
@@ -1513,17 +1533,23 @@ void consdataCalcMinAbsval(
    consdata->validminabsval = TRUE;
 
    if( consdata->nvars > 0 )
+   {
       RatAbs(consdata->minabsval, consdata->vals[0]);
+      assert(!RatIsZero(consdata->vals[0]));
+   }
    else
       RatSetReal(consdata->minabsval, 0.0);
 
    for( i = 1; i < consdata->nvars; ++i )
    {
+      assert(!RatIsZero(consdata->vals[i]));
+
       if( RatIsAbsGT(consdata->minabsval, consdata->vals[i]) )
          RatAbs(consdata->minabsval, consdata->vals[i]);
    }
 }
 
+#ifdef SCIP_DISABLED_CODE
 /** checks the type of all variables of the constraint and sets hasnonbinvar and hascontvar flags accordingly */
 static
 void consdataCheckNonbinvar(
@@ -1555,7 +1581,7 @@ void consdataCheckNonbinvar(
 
    consdata->hasnonbinvalid = TRUE;
 }
-
+#endif
 
 #ifdef CHECKMAXACTDELTA
 /* checks that the stored maximal activity delta (if not invalid) is correct */
@@ -1604,6 +1630,7 @@ void checkMaxActivityDelta(
 #define checkMaxActivityDelta(scip, consdata) /**/
 #endif
 
+#ifdef SCIP_DISABLED_CODE
 /** recompute maximal activity contribution for a single variable */
 static
 SCIP_RETCODE consdataRecomputeMaxActivityDelta(
@@ -1673,6 +1700,7 @@ SCIP_RETCODE consdataRecomputeMaxActivityDelta(
 
    return SCIP_OKAY;
 }
+#endif
 
 /** updates activities for a change in a bound */
 static
@@ -2240,6 +2268,7 @@ void consdataUpdateChgCoef(
    consdataUpdateAddCoef(scip, consdata, var, newval, checkreliability);
 }
 
+#ifdef SCIP_DISABLED_CODE
 /** returns the maximum absolute value of all coefficients in the constraint */
 static
 SCIP_Rational* consdataGetMaxAbsval(
@@ -2255,6 +2284,7 @@ SCIP_Rational* consdataGetMaxAbsval(
 
    return consdata->maxabsval;
 }
+#endif
 
 /** returns the minimum absolute value of all coefficients in the constraint */
 static
@@ -2272,6 +2302,51 @@ SCIP_Rational* consdataGetMinAbsval(
    return consdata->minabsval;
 }
 
+/** ensures that every nonzero is a least minval so that we don't get problem with SCIPs 0 in floating point representation */
+static
+void consdataScaleMinValue(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSDATA*        consdata,           /**< linear constraint data */
+   SCIP_Real             minval              /**< minmimal value for coefficients in constraint */
+   )
+{
+   int i;
+   SCIP_Rational* scalingfactor;
+   SCIP_Rational* minabsval;
+
+   assert(scip != NULL);
+   assert(consdata != NULL);
+
+   minabsval = consdataGetMinAbsval(scip, consdata);
+
+   assert(!RatIsZero(minabsval) || consdata->nvars == 0);
+
+   RatCreateBuffer(SCIPbuffer(scip), &scalingfactor);
+
+   if( RatIsLTReal(minabsval, minval) )
+   {
+      RatSetReal(scalingfactor, minval);
+      RatDiv(scalingfactor, scalingfactor, minabsval);
+
+      for( i = 0; i < consdata->nvars; i++ )
+      {
+         RatMult(consdata->vals[i], consdata->vals[i], scalingfactor);
+         SCIPintervalSetRational(&(consdata->valsreal[i]), consdata->vals[i]);
+      }
+
+      RatMult(consdata->rhs, consdata->rhs, scalingfactor);
+      consdata->rhsreal = RatRoundReal(consdata->rhs, SCIP_R_ROUND_UPWARDS);
+
+      RatMult(consdata->lhs, consdata->lhs, scalingfactor);
+      consdata->lhsreal = RatRoundReal(consdata->lhs, SCIP_R_ROUND_DOWNWARDS);
+   }
+
+   consdataInvalidateActivities(consdata);
+
+   RatFreeBuffer(SCIPbuffer(scip), &scalingfactor);
+}
+
+#ifdef SCIP_DISABLED_CODE
 /** calculates minimum and maximum local and global activity for constraint from scratch;
  *  additionally recalculates maximum absolute value of coefficients
  */
@@ -2299,7 +2374,7 @@ void consdataCalcActivities(
    consdata->validglbminact = TRUE;
    consdata->validglbmaxact = TRUE;
    RatSetReal(consdata->maxabsval, 0.0);
-   RatSetReal(consdata->minabsval, consdata->nvars == 0 ? 0.0 : REALABS(consdata->valsreal[0]));
+   RatSetReal(consdata->minabsval, consdata->nvars == 0 ? 0.0 : REALABS(consdata->valsreal[0].inf));
    RatSetReal(consdata->minactivity, 0.0);
    RatSetReal(consdata->maxactivity, 0.0);
    RatSetReal(consdata->lastminactivity, 0.0);
@@ -2333,6 +2408,7 @@ void consdataCalcActivities(
    RatSet(consdata->lastglbminactivity, consdata->glbminactivity);
    RatSet(consdata->lastglbmaxactivity, consdata->glbmaxactivity);
 }
+#endif
 
 /** computes the activity of a row for a given solution plus a bound on the floating-point error using running error analysis */
 static
@@ -2348,8 +2424,6 @@ SCIP_Bool consdataComputeSolActivityWithErrorbound(
    SCIP_Real sum;
    SCIP_Real mu;
    SCIP_Real inf;
-   SCIP_ROWEXACT* row;
-   SCIP_ROW* fprow;
    SCIP_Bool success;
    int v;
 
@@ -2363,7 +2437,7 @@ SCIP_Bool consdataComputeSolActivityWithErrorbound(
    sum = 0.0;
    mu = 0.0;
    /* normally we want to use the row since all fixed/aggregated variables do not appear there */
-   if( consdata->row == NULL )
+   if( consdata->rowlhs == NULL )
    {
       for( v = 0; v < consdata->nvars; ++v )
       {
@@ -2375,10 +2449,10 @@ SCIP_Bool consdataComputeSolActivityWithErrorbound(
          if( solval == SCIP_UNKNOWN ) /*lint !e777*/
             return FALSE;
 
-         sum += consdata->valsreal[v] * solval;
+         sum += consdata->valsreal[v].inf * solval;
          mu += REALABS(sum);
          /* the factor 3 + eps is needed to account for rounding errors in valsreal[v]/solval */
-         mu += (3.0 + SCIP_REAL_UNITROUNDOFF) * REALABS(consdata->valsreal[v] * solval);
+         mu += (3.0 + SCIP_REAL_UNITROUNDOFF) * REALABS(consdata->valsreal[v].inf * solval);
       }
    }
    else
@@ -2401,6 +2475,7 @@ SCIP_Bool consdataComputeSolActivityWithErrorbound(
    return TRUE;
 }
 
+#ifdef SCIP_DISABLED_CODE
 /** gets minimal activity for constraint and given values of counters for infinite and huge contributions
  *  and (if needed) delta to subtract from stored finite part of activity in case of a residual activity
  */
@@ -2587,7 +2662,9 @@ void consdataGetActivityBounds(
 
    RatFreeBuffer(SCIPbuffer(scip), &tmpdelta);
 }
+#endif
 
+#ifdef SCIP_DISABLED_CODE
 /** calculates activity bounds for constraint after setting variable to zero */
 static
 void consdataGetReliableResidualActivity(
@@ -3003,6 +3080,7 @@ void consdataGetGlbActivityResiduals(
    RatFreeBuffer(SCIPbuffer(scip), &maxactbound);
    RatFreeBuffer(SCIPbuffer(scip), &minactbound);
 }
+#endif
 
 /** calculates the activity of the linear constraint for given solution */
 static
@@ -3069,7 +3147,7 @@ void consdataGetActivity(
       else if( nneginf > 0 )
          RatSetString(activity, "-inf");
 
-      SCIPdebugMsg(scip, "corrected activity of linear constraint: %.15g\n", activity);
+      RatDebugMessage("corrected activity of linear constraint: %q\n", activity);
       RatFreeBuffer(SCIPbuffer(scip), &solval);
    }
 }
@@ -3130,6 +3208,7 @@ void consdataUpdateSignatures(
       consdata->negsignature |= varsignature;
 }
 
+#ifdef SCIP_DISABLED_CODE
 /** calculates the bit signatures of the given constraint data */
 static
 void consdataCalcSignatures(
@@ -3149,6 +3228,7 @@ void consdataCalcSignatures(
          consdataUpdateSignatures(consdata, i);
    }
 }
+#endif
 
 static
 SCIP_RETCODE printCertificateConsLinear(
@@ -3160,14 +3240,7 @@ SCIP_RETCODE printCertificateConsLinear(
    SCIP_CERTIFICATE* certificate;
    SCIP_CONSDATA* consdata;
    SCIP_ROWEXACT* row;
-   SCIP_COLEXACT** cols;
-   SCIP_VAR* var;
-   SCIP_Rational** vals;
-   SCIP_Rational* lhs;
-   SCIP_Rational* rhs;
-   SCIP_Rational* quotient;
    SCIP_Rational* correctedside;
-   SCIP_Bool isupper;
    int* varsindex;
    int i;
    void* image;
@@ -3287,6 +3360,7 @@ SCIP_RETCODE printCertificateConsLinearOrig(
    return SCIP_OKAY;
 }
 
+#ifdef SCIP_DISABLED_CODE
 /** index comparison method of linear constraints: compares two indices of the variable set in the linear constraint */
 static
 SCIP_DECL_SORTINDCOMP(consdataCompVar)
@@ -3517,7 +3591,7 @@ SCIP_RETCODE consdataSort(
 
    return SCIP_OKAY;
 }
-
+#endif
 
 /*
  * local linear constraint handler methods
@@ -3553,7 +3627,7 @@ SCIP_RETCODE chgLhs(
    {
       RatSet(consdata->rhs, lhs);
       consdata->lhsreal = RatApproxReal(lhs);
-      assert(consdata->row == NULL);
+      assert(consdata->rowlhs == NULL);
    }
 
    locked = FALSE;
@@ -3676,7 +3750,7 @@ SCIP_RETCODE chgRhs(
    {
       RatSet(consdata->rhs, rhs);
       consdata->rhsreal = RatApproxReal(rhs);
-      assert(consdata->row == NULL);
+      assert(consdata->rowlhs == NULL);
    }
 
    locked = FALSE;
@@ -3763,7 +3837,7 @@ SCIP_RETCODE chgRhs(
    consdata->rangedrowpropagated = 0;
 
    /* update the rhs of the LP row */
-   if( consdata->row != NULL )
+   if( consdata->rowexact != NULL )
    {
       SCIP_CALL( SCIPchgRowExactRhs(scip, consdata->rowexact, rhs) );
    }
@@ -3808,7 +3882,7 @@ SCIP_RETCODE addCoef(
    SCIP_CALL( consdataEnsureVarsSize(scip, consdata, consdata->nvars+1) );
    consdata->vars[consdata->nvars] = var;
    RatSet(consdata->vals[consdata->nvars], val);
-   consdata->valsreal[consdata->nvars] = RatApproxReal(val);
+   SCIPintervalSetRational(&(consdata->valsreal[consdata->nvars]), val);
    consdata->nvars++;
 
    /* capture variable */
@@ -3838,7 +3912,7 @@ SCIP_RETCODE addCoef(
       /* update minimum and maximum activities */
       consdataUpdateAddCoef(scip, consdata, var, val, FALSE);
 
-#if 0
+#ifdef SCIP_DISABLED_CODE
       /* update maximum activity delta */
       if( !RisInfinity(consdata->maxactdelta ) )
       {
@@ -3920,9 +3994,10 @@ SCIP_RETCODE addCoef(
    }
 
    /* add the new coefficient to the LP row */
-   if( consdata->row != NULL )
+   if( consdata->rowexact != NULL )
    {
-     // todo: exip  SCIP_CALL( SCIPaddVarToRow(scip, consdata->row, var, val) );
+      /**@ todo exip: inexact rows have to be changed as well here */
+     SCIP_CALL( SCIPaddVarsToRowExact(scip, consdata->rowexact, 1, &var, &val) );
    }
 
    return SCIP_OKAY;
@@ -3994,7 +4069,7 @@ SCIP_RETCODE delCoefPos(
    RatFreeBlock(SCIPblkmem(scip), &(consdata->vals[consdata->nvars - 1]));
    consdata->nvars--;
 
-# if 0
+#ifdef SCIP_DISABLED_CODE
    /* if at most one variable is left, the activities should be recalculated (to correspond exactly to the bounds
     * of the remaining variable, or give exactly 0.0)
     */
@@ -4042,9 +4117,9 @@ SCIP_RETCODE delCoefPos(
    }
 
    /* delete coefficient from the LP row */
-   if( consdata->row != NULL )
+   if( consdata->rowexact != NULL )
    {
-      // todo: exip SCIP_CALL( SCIPaddVarToRow(scip, consdata->row, var, -val) );
+      /** @todo: exip SCIP_CALL( SCIPaddVarToRow(scip, consdata->row, var, -val) ); */
    }
 
    /* release variable */
@@ -4099,7 +4174,7 @@ SCIP_RETCODE chgCoefPos(
 
    /* change the value */
    RatSet(consdata->vals[pos], newval);
-   consdata->valsreal[pos] = RatApproxReal(newval);
+   SCIPintervalSetRational(&(consdata->valsreal[pos]), newval);
    consdata->binvarssorted = consdata->binvarssorted && !SCIPvarIsBinary(var);
 
    /* update minimum and maximum activities */
@@ -4125,7 +4200,7 @@ SCIP_RETCODE chgCoefPos(
    return SCIP_OKAY;
 }
 
-#if 0
+#ifdef SCIP_DISABLED_CODE
 /** scales a linear constraint with a constant scalar */
 static
 SCIP_RETCODE scaleCons(
@@ -4254,7 +4329,7 @@ SCIP_RETCODE performVarDeletions(
    return SCIP_OKAY;
 }
 
-#if 0
+#ifdef SCIP_DISABLED_CODE
 /** normalizes a linear constraint with the following rules:
  *  - if all coefficients have them same absolute value, change them to (-)1.0
  *  - multiplication with +1 or -1:
@@ -4635,6 +4710,7 @@ SCIP_RETCODE normalizeCons(
 }
 #endif
 
+#ifdef SCIP_DISABLED_CODE
 /** replaces multiple occurrences of a variable by a single coefficient */
 static
 SCIP_RETCODE mergeMultiples(
@@ -4708,8 +4784,9 @@ SCIP_RETCODE mergeMultiples(
 
    return SCIP_OKAY;
 }
+#endif
 
-#if 0
+#ifdef SCIP_DISABLED_CODE
 /** replaces all fixed and aggregated variables by their non-fixed counterparts */
 static
 SCIP_RETCODE applyFixings(
@@ -4947,7 +5024,7 @@ SCIP_RETCODE applyFixings(
 }
 #endif
 
-#if 0
+#ifdef SCIP_DISABLED_CODE
 /** for each variable in the linear constraint, except the inferred variable, adds one bound to the conflict analysis'
  *  candidate store (bound depends on sign of coefficient and whether the left or right hand side was the reason for the
  *  inference variable's bound change); the conflict analysis can be initialized with the linear constraint being the
@@ -7280,9 +7357,7 @@ SCIP_RETCODE checkCons(
    )
 {
    SCIP_CONSDATA* consdata;
-   SCIP_Real absviolfp;
    SCIP_Rational* activity;
-   SCIP_Rational* violation;
    SCIP_Bool success;
 
    assert(scip != NULL);
@@ -7297,10 +7372,9 @@ SCIP_RETCODE checkCons(
 
    *violated = FALSE;
    activity = consdata->activity;
-   violation = consdata->violation;
 
    /* only check exact constraint if fp cons is feasible enough */
-   if( (consdata->row == NULL || checklprows) && !RatIsEqual(consdata->lhs, consdata->rhs) )
+   if( (consdata->rowexact == NULL || checklprows) && !RatIsEqual(consdata->lhs, consdata->rhs) )
    {
       SCIP_Real activityfp;
       SCIP_Real mu;
@@ -7338,9 +7412,9 @@ SCIP_RETCODE checkCons(
       }
    }
 
-   if( consdata->row != NULL )
+   if( consdata->rowexact != NULL )
    {
-      if( !checklprows && SCIProwIsInLP(consdata->row) )
+      if( !checklprows && SCIProwExactIsInLP(consdata->rowexact) && SCIPlpExactIsSolved(scip) )
          return SCIP_OKAY;
       else if( sol == NULL && !SCIPhasCurrentNodeLP(scip) )
          consdataComputePseudoActivity(scip, consdata, activity);
@@ -7351,9 +7425,9 @@ SCIP_RETCODE checkCons(
       consdataGetActivity(scip, consdata, sol, useexactsol, activity);
 
    RatDebugMessage("consdata activity=%q (lhs=%q, rhs=%q, row=%p, checklprows=%u, rowinlp=%u, sol=%p, hascurrentnodelp=%u)\n",
-      activity, consdata->lhs, consdata->rhs, (void*)consdata->row, checklprows,
-      consdata->row == NULL ? 0 : SCIProwIsInLP(consdata->row), (void*)sol,
-      consdata->row == NULL ? FALSE : SCIPhasCurrentNodeLP(scip));
+      activity, consdata->lhs, consdata->rhs, (void*)consdata->rowexact, checklprows,
+      consdata->rowexact == NULL ? 0 : SCIProwExactIsInLP(consdata->rowexact), (void*)sol,
+      consdata->rowexact == NULL ? FALSE : SCIPhasCurrentNodeLP(scip));
 
    /* the activity of pseudo solutions may be invalid if it comprises positive and negative infinity contributions; we
     * return infeasible for safety
@@ -7401,24 +7475,41 @@ SCIP_RETCODE createRows(
    )
 {
    SCIP_CONSDATA* consdata;
+   SCIP_Bool onerowrelax;
+   SCIP_Bool hasfprelax;
 
    assert(scip != NULL);
    assert(cons != NULL);
 
    consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-   assert(consdata->row == NULL);
 
-   /** create row for fp approximation */
-   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->row, cons, SCIPconsGetName(cons), consdata->lhsreal, consdata->rhsreal,
+   assert(consdata != NULL);
+   assert(consdata->rowexact == NULL);
+
+   /** create empty fp-rows */
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &(consdata->rowrhs), cons, SCIPconsGetName(cons), -SCIPinfinity(scip), SCIPinfinity(scip),
       SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
 
-   SCIP_CALL( SCIPaddVarsToRow(scip, consdata->row, consdata->nvars, consdata->vars, consdata->valsreal) );
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &(consdata->rowlhs), cons, SCIPconsGetName(cons), -SCIPinfinity(scip), SCIPinfinity(scip),
+      SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
 
    /** create exact row */
-   SCIP_CALL( SCIPcreateEmptyRowConsExact(scip, &consdata->rowexact, consdata->row, consdata->lhs, consdata->rhs) );
+   SCIP_CALL( SCIPcreateEmptyRowConsExact(scip, &consdata->rowexact, consdata->rowlhs, consdata->rowrhs,
+      consdata->lhs, consdata->rhs, consdata->hasfprelax) );
 
    SCIP_CALL( SCIPaddVarsToRowExact(scip, consdata->rowexact, consdata->nvars, consdata->vars, consdata->vals) );
+
+   onerowrelax = TRUE;
+   hasfprelax = TRUE;
+
+   SCIP_CALL( SCIPgenerateFpRowsFromRowExact(scip, consdata->rowexact, consdata->rowlhs,
+      consdata->rowrhs, &onerowrelax, &hasfprelax) );
+
+   consdata->onerowrelax = onerowrelax;
+   consdata->hasfprelax = hasfprelax;
+
+   if( !(consdata->hasfprelax) || consdata->onerowrelax )
+      consdata->rowrhs = NULL;
 
    return SCIP_OKAY;
 }
@@ -7432,7 +7523,6 @@ SCIP_RETCODE addRelaxation(
    )
 {
    SCIP_CONSDATA* consdata;
-   SCIP_Bool infeasible;
 
    assert(scip != NULL);
    assert(cons != NULL);
@@ -7440,12 +7530,12 @@ SCIP_RETCODE addRelaxation(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   if( consdata->row == NULL )
+   if( consdata->rowexact == NULL )
    {
       /* convert consdata object into LP row and exact lp row */
       SCIP_CALL( createRows(scip, cons) );
    }
-   assert(consdata->row != NULL);
+   assert(consdata->rowlhs != NULL);
    assert(consdata->rowexact != NULL);
 
    if( consdata->nvars == 0 )
@@ -7454,17 +7544,16 @@ SCIP_RETCODE addRelaxation(
    }
 
    /* insert LP row as cut */
-   if( !SCIProwIsInLP(consdata->row) )
+   if( !SCIProwIsInLP(consdata->rowlhs) )
    {
       SCIPdebugMsg(scip, "adding relaxation of linear constraint <%s>: ", SCIPconsGetName(cons));
       SCIPdebug( SCIP_CALL( SCIPprintRow(scip, consdata->row, NULL)) );
-      SCIPdebug( SCIP_CALL( SCIPprintRowex(scip, consdata->rowexact, NULL)) );
+      SCIPdebug( SCIP_CALL( SCIPprintRowExact(scip, consdata->rowexact, NULL)) );
       /* if presolving is turned off, the row might be trivial */
       if ( !RatIsNegInfinity(consdata->lhs) || !RatIsInfinity(consdata->rhs) )
       {
-         SCIP_CALL( SCIPaddRow(scip, consdata->row, FALSE, cutoff) );
-         SCIP_CALL( SCIPsepastoreexAddCut(scip->sepastoreexact, SCIPblkmem(scip), scip->set, scip->stat, scip->eventqueue,
-         scip->eventfilter, scip->lpexact, consdata->rowexact, &infeasible) );
+         SCIP_CALL( SCIPaddRow(scip, consdata->rowlhs, FALSE, cutoff) );
+         SCIP_CALL( SCIPaddRowExact(scip, consdata->rowexact) );
       }
 #ifndef NDEBUG
       else
@@ -7495,7 +7584,6 @@ SCIP_RETCODE separateCons(
    SCIP_Bool*            cutoff              /**< pointer to store whether a cutoff was found */
    )
 {
-   SCIP_CONSDATA* consdata;
    SCIP_Bool violated;
    int oldncuts;
 
@@ -7504,9 +7592,7 @@ SCIP_RETCODE separateCons(
    assert(cons != NULL);
    assert(cutoff != NULL);
 
-   consdata = SCIPconsGetData(cons);
    assert(ncuts != NULL);
-   assert(consdata != NULL);
 
    oldncuts = *ncuts;
    *cutoff = FALSE;
@@ -7519,7 +7605,7 @@ SCIP_RETCODE separateCons(
       SCIP_CALL( addRelaxation(scip, cons, cutoff) );
       (*ncuts)++;
    }
-   #if 0
+   #ifdef SCIP_DISABLED_CODE
    else if( !SCIPconsIsModifiable(cons) && separatecards )
    {
       /* relax linear constraint into knapsack constraint and separate lifted cardinality cuts */
@@ -7573,7 +7659,7 @@ SCIP_RETCODE separateCons(
    return SCIP_OKAY;
 }
 
-#if 0
+#ifdef SCIP_DISABLED_CODE
 /** propagation method for linear constraints */
 static
 SCIP_RETCODE propagateCons(
@@ -7721,7 +7807,7 @@ SCIP_RETCODE propagateCons(
  * Presolving methods
  */
 
-# if 0
+#ifdef SCIP_DISABLED_CODE
 /** converts all variables with fixed domain into FIXED variables */
 static
 SCIP_RETCODE fixVariables(
@@ -7859,7 +7945,7 @@ SCIP_RETCODE fixVariables(
  *     as clique, (this part is done at the end of the method)
  *
  */
-#if 0
+#ifdef SCIP_DISABLED_CODE
 static
 SCIP_RETCODE extractCliques(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -8227,7 +8313,7 @@ SCIP_RETCODE extractCliques(
 
             i = 0;
             j = i + 1;
-#if 0 /* assertion should only holds when constraints were fully propagated and boundstightened */
+#ifdef SCIP_DISABLED_CODE /* assertion should only holds when constraints were fully propagated and boundstightened */
             /* check that it is possible to choose binvar[i], otherwise it should have been fixed to zero */
             assert(SCIPisFeasLE(scip, binvarvals[i], threshold));
 #endif
@@ -8376,7 +8462,7 @@ SCIP_RETCODE extractCliques(
 
             i = nposbinvars + nnegbinvars - 1;
             j = i - 1;
-#if 0 /* assertion should only holds when constraints were fully propagated and boundstightened */
+#ifdef SCIP_DISABLED_CODE /* assertion should only holds when constraints were fully propagated and boundstightened */
             /* check that it is possible to choose binvar[i], otherwise it should have been fixed to zero */
             assert(SCIPisFeasGE(scip, binvarvals[i], threshold));
 #endif
@@ -8536,7 +8622,7 @@ SCIP_RETCODE extractCliques(
             i = nposbinvars + nnegbinvars - 1;
             j = i - 1;
 
-#if 0 /* assertion should only holds when constraints were fully propagated and boundstightened */
+#ifdef SCIP_DISABLED_CODE /* assertion should only holds when constraints were fully propagated and boundstightened */
             /* check if the variable should not have already been fixed to one */
             assert(!SCIPisFeasGT(scip, binvarvals[i], threshold));
 #endif
@@ -8696,7 +8782,7 @@ SCIP_RETCODE extractCliques(
             i = 0;
             j = i + 1;
 
-#if 0 /* assertion should only holds when constraints were fully propagated and boundstightened */
+#ifdef SCIP_DISABLED_CODE /* assertion should only holds when constraints were fully propagated and boundstightened */
             /* check if the variable should not have already been fixed to one */
             assert(!SCIPisFeasLT(scip, -binvarvals[i], threshold));
 #endif
@@ -10230,6 +10316,7 @@ SCIP_RETCODE checkPartialObjective(
 }
 #endif
 
+#ifdef SCIP_DISABLED_CODE
 /** updates the cutoff if the given primal bound (which is implied by the given constraint) is better */
 static
 SCIP_RETCODE updateCutoffbound(
@@ -10271,8 +10358,9 @@ SCIP_RETCODE updateCutoffbound(
 
    return SCIP_OKAY;
 }
+#endif
 
-#if 0
+#ifdef SCIP_DISABLED_CODE
 /** check if the linear constraint is parallel to objective function; if so update the cutoff bound and avoid that the
  *  constraint enters the LP by setting the initial and separated flag to FALSE
  */
@@ -10480,6 +10568,7 @@ SCIP_Bool consdataIsResidualIntegral(
 }
 #endif
 
+#ifdef SCIP_DISABLED_CODE
 /* check if lhs/a_i - \sum_{j \neq i} a_j/a_i * x_j is always inside the bounds of x_i
  * check if rhs/a_i - \sum_{j \neq i} a_j/a_i * x_j is always inside the bounds of x_i
  */
@@ -10534,8 +10623,9 @@ void calculateMinvalAndMaxval(
       }
    }
 }
+#endif
 
-#if 0
+#ifdef SCIP_DISABLED_CODE
 /* applies dual presolving for variables that are locked only once in a direction, and this locking is due to a
  * linear inequality
  */
@@ -11182,7 +11272,7 @@ SCIP_RETCODE aggregateVariables(
 }
 #endif
 
-
+#ifdef SCIP_DISABLED_CODE
 /** sorting method for constraint data, compares two variables on given indices, continuous variables will be sorted to
  *  the end and for all other variables the sortation will be in non-increasing order of their absolute value of the
  *  coefficients
@@ -11215,13 +11305,14 @@ SCIP_DECL_SORTINDCOMP(consdataCompSim)
    else if( vartype2 == SCIP_VARTYPE_CONTINUOUS )
       return -1;
 
-   value = REALABS(consdata->valsreal[ind2]) - REALABS(consdata->valsreal[ind1]);
+   value = REALABS(consdata->valsreal[ind2].inf) - REALABS(consdata->valsreal[ind1].inf);
 
    /* for all non-continuous variables, the variables are sorted after decreasing absolute coefficients */
    return (value > 0 ? +1 : (value < 0 ? -1 : 0));
 }
+#endif
 
-#if 0
+#ifdef SCIP_DISABLED_CODE
 /** tries to simplify coefficients and delete variables in ranged row of the form lhs <= a^Tx <= rhs, e.g. using the greatest
  *  common divisor
  *
@@ -12883,6 +12974,7 @@ SCIP_RETCODE aggregateConstraints(
 }
 #endif
 
+#ifdef SCIP_DISABLED_CODE
 /** gets the key of the given element */
 static
 SCIP_DECL_HASHGETKEY(hashGetKeyLinearcons)
@@ -12897,11 +12989,8 @@ SCIP_DECL_HASHGETKEY(hashGetKeyLinearcons)
 static
 SCIP_DECL_HASHKEYEQ(hashKeyEqExactLinearcons)
 {
-   SCIP* scip;
    SCIP_CONSDATA* consdata1;
    SCIP_CONSDATA* consdata2;
-   SCIP_Real cons1scale;
-   SCIP_Real cons2scale;
    int i;
 
    assert(key1 != NULL);
@@ -12910,9 +12999,6 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqExactLinearcons)
    consdata2 = SCIPconsGetData((SCIP_CONS*)key2);
    assert(consdata1->sorted);
    assert(consdata2->sorted);
-
-   scip = (SCIP*)userptr;
-   assert(scip != NULL);
 
    /* if it is the same constraint we dont need to check anything */
    if( key1 == key2 )
@@ -12984,7 +13070,8 @@ SCIP_DECL_HASHKEYVAL(hashKeyValLinearcons)
                        SCIPhashTwo(mididx, SCIPrealHashCode(RatApproxReal(consdata->vals[consdata->nvars / 2]) * scale)),
                        SCIPhashTwo(maxidx, SCIPrealHashCode(RatApproxReal(consdata->vals[consdata->nvars - 1]) * scale))); /*lint !e571*/
 }
-
+#endif
+#ifdef SCIP_DISABLED_CODE
 /** returns the key for deciding which of two parallel constraints should be kept (smaller key should be kept);
  *  prefers non-upgraded constraints and as second criterion the constraint with the smallest position
  */
@@ -13002,8 +13089,9 @@ unsigned int getParallelConsKey(
 
    return (((unsigned int)consdata->upgraded)<<31) + (unsigned int)SCIPconsGetPos(cons); /*lint !e571*/
 }
+#endif
 
-#if 0
+#ifdef SCIP_DISABLED_CODE
 /** updates the hashtable such that out of all constraints in the hashtable that are detected
  *  to be parallel to *querycons, only one is kept in the hashtable and stored into *querycons,
  *  and all others are removed from the hashtable and stored in the given array
@@ -15104,6 +15192,7 @@ SCIP_DECL_CONSEXIT(consExitExactLinear)
    return SCIP_OKAY;
 }
 
+#ifdef SCIP_DISABLED_CODE
 /** is constraint ranged row, i.e., -inf < lhs < rhs < inf? */
 static
 SCIP_Bool isRangedRow(
@@ -15116,8 +15205,8 @@ SCIP_Bool isRangedRow(
 
    return !(RatIsEqual(lhs, rhs) || RatIsNegInfinity(lhs) || RatIsInfinity(rhs) );
 }
-
-#if 0
+#endif
+#ifdef SCIP_DISABLED_CODE
 /** is constraint ranged row, i.e., -inf < lhs < rhs < inf? */
 static
 SCIP_Bool isFiniteNonnegativeIntegral(
@@ -15131,7 +15220,7 @@ SCIP_Bool isFiniteNonnegativeIntegral(
 }
 #endif
 
-#if 0
+#ifdef SCIP_DISABLED_CODE
 /** performs linear constraint type classification as used for MIPLIB
  *
  *  iterates through all linear constraints and stores relevant statistics in the linear constraint statistics \p linconsstats.
@@ -15482,7 +15571,6 @@ SCIP_RETCODE SCIPclassifyConstraintTypesLinear(
 static
 SCIP_DECL_CONSEXITPRE(consExitpreExactLinear)
 {  /*lint --e{715}*/
-   int c;
 #ifdef SCIP_STATISTIC
    SCIP_CONSHDLRDATA* conshdlrdata;
    int ngoodconss;
@@ -15500,7 +15588,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreExactLinear)
       SCIPwarningMessage(scip, "Exact presolving not implemented yet \n");
    }
 
-#if 0
+#ifdef SCIP_DISABLED_CODE
 #ifdef SCIP_STATISTIC
    /* count number of well behaved linear constraints */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -15580,10 +15668,15 @@ SCIP_DECL_CONSEXITSOL(consExitsolExactLinear)
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
 
-      if( consdata->row != NULL )
+      if( consdata->rowlhs != NULL )
       {
-         SCIP_CALL( SCIPreleaseRow(scip, &consdata->row) );
+         SCIP_CALL( SCIPreleaseRow(scip, &consdata->rowlhs) );
          SCIP_CALL( SCIPreleaseRowExact(scip, &consdata->rowexact) );
+         if( consdata->rowrhs != NULL )
+         {
+            assert(!consdata->onerowrelax);
+            SCIP_CALL( SCIPreleaseRow(scip, &consdata->rowrhs) );
+         }
       }
    }
 
@@ -15694,10 +15787,13 @@ SCIP_DECL_CONSTRANS(consTransExactLinear)
 
    sourcedata = SCIPconsGetData(sourcecons);
    assert(sourcedata != NULL);
-   assert(sourcedata->row == NULL);  /* in original problem, there cannot be LP rows */
+   assert(sourcedata->rowlhs == NULL && sourcedata->rowexact == NULL);  /* in original problem, there cannot be LP rows */
 
    /* create linear constraint data for target constraint */
    SCIP_CALL( consdataCreate(scip, &targetdata, sourcedata->nvars, sourcedata->vars, sourcedata->vals, sourcedata->lhs, sourcedata->rhs) );
+
+   if( sourcedata->nvars > 0 )
+      consdataScaleMinValue(scip, targetdata, 2 * SCIPepsilon(scip));
 
    /* create target constraint */
    SCIP_CALL( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
@@ -15714,7 +15810,6 @@ static
 SCIP_DECL_CONSINITLP(consInitlpExactLinear)
 {  /*lint --e{715}*/
    int c;
-   int freq;
 
    assert(scip != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
@@ -16011,6 +16106,10 @@ SCIP_DECL_CONSCHECK(consCheckExactLinear)
 static
 SCIP_DECL_CONSPROP(consPropExactLinear)
 {  /*lint --e{715}*/
+   *result = SCIP_DIDNOTFIND;
+   return SCIP_OKAY;
+
+#ifdef SCIP_DISABLED_CODE
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Bool rangedrowpropagation = FALSE;
    SCIP_Bool tightenbounds;
@@ -16027,11 +16126,6 @@ SCIP_DECL_CONSPROP(consPropExactLinear)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   // SCIPerrorMessage("Exact propagation not implemented yet \n");
-   *result = SCIP_DIDNOTFIND;
-   return SCIP_OKAY;
-
-#if 0
    /*debugMsg(scip, "Prop method of linear constraints\n");*/
 
    /* check, if we want to tighten variable's bounds (in probing, we always want to tighten the bounds) */
@@ -16087,6 +16181,10 @@ SCIP_DECL_CONSPROP(consPropExactLinear)
 static
 SCIP_DECL_CONSPRESOL(consPresolExactLinear)
 {  /*lint --e{715}*/
+   *result = SCIP_DIDNOTRUN;
+   return SCIP_OKAY;
+
+#ifdef SCIP_DISABLED_CODE
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONS* cons;
    SCIP_CONSDATA* consdata;
@@ -16111,10 +16209,6 @@ SCIP_DECL_CONSPRESOL(consPresolExactLinear)
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(result != NULL);
 
-   SCIPinfoMessage(scip, NULL, "Exact presolving not implemented yet \n");
-   return SCIP_OKAY;
-
-#if 0
    /*debugMsg(scip, "Presol method of linear constraints\n");*/
 
    /* remember old preprocessing counters */
@@ -16687,7 +16781,7 @@ static
 SCIP_DECL_CONSCOPY(consCopyExactLinear)
 {  /*lint --e{715}*/
    SCIP_VAR** sourcevars;
-   SCIP_Real* sourcecoefs;
+   SCIP_INTERVAL* sourcecoefs;
    const char* consname;
    int nvars;
 
@@ -16715,6 +16809,7 @@ SCIP_DECL_CONSCOPY(consCopyExactLinear)
    return SCIP_OKAY;
 }
 
+#ifdef SCIP_DISABLED_CODE
 /* find operators '<=', '==', '>=', [free] in input string and return those places. There should only be one operator,
  * except for ranged rows for which exactly two operators '<=' must be present
  */
@@ -16817,11 +16912,15 @@ SCIP_RETCODE findOperators(
 
    return SCIP_OKAY;
 }
+#endif
 
 /** constraint parsing method of constraint handler */
 static
 SCIP_DECL_CONSPARSE(consParseExactLinear)
 {  /*lint --e{715}*/
+   SCIPerrorMessage("not implemented in exact mode yet \n");
+   SCIPABORT();
+#ifdef SCIP_DISABLED_CODE
    SCIP_VAR** vars;
    SCIP_Rational** coefs;
    int        nvars;
@@ -16843,9 +16942,6 @@ SCIP_DECL_CONSPARSE(consParseExactLinear)
    assert(name != NULL);
    assert(cons != NULL);
 
-   SCIPerrorMessage("not implemented in exact mode yet \n");
-   SCIPABORT();
-#if 0
    /* set left and right hand side to their default values */
    lhs = -SCIPinfinity(scip);
    rhs =  SCIPinfinity(scip);
@@ -17027,6 +17123,8 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsExactLinear)
 static
 SCIP_DECL_EVENTEXEC(eventExecExactLinear)
 {  /*lint --e{715}*/
+   return SCIP_OKAY;
+#ifdef SCIP_DISABLED_CODE
    SCIP_CONS* cons;
    SCIP_CONSDATA* consdata;
    SCIP_VAR* var;
@@ -17043,8 +17141,6 @@ SCIP_DECL_EVENTEXEC(eventExecExactLinear)
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   return SCIP_OKAY;
-# if 0
    /* we can skip events droped for deleted constraints */
    if( SCIPconsIsDeleted(cons) )
       return SCIP_OKAY;
@@ -17204,7 +17300,7 @@ SCIP_DECL_EVENTEXEC(eventExecExactLinear)
  * Callback methods of conflict handler
  */
 
-#if 0
+#ifdef SCIP_DISABLED_CODE
 static
 SCIP_DECL_CONFLICTEXEC(conflictExecExactLinear)
 {  /*lint --e{715}*/
@@ -17298,7 +17394,6 @@ SCIP_RETCODE SCIPincludeConshdlrExactLinear(
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSHDLR* conshdlr;
    SCIP_EVENTHDLR* eventhdlr;
-   SCIP_CONFLICTHDLR* conflicthdlr;
    char version[20];
 
    assert(scip != NULL);
@@ -17465,7 +17560,7 @@ SCIP_RETCODE SCIPincludeConshdlrExactLinear(
 }
 
 
-#if 0
+#ifdef SCIP_DISABLED_CODE
 /** includes a linear constraint update method into the linear constraint handler */
 SCIP_RETCODE SCIPincludeExactLinconsUpgrade(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -17717,7 +17812,7 @@ SCIP_RETCODE SCIPcopyConsExactLinear(
    const char*           name,               /**< name of constraint */
    int                   nvars,              /**< number of variables in source variable array */
    SCIP_VAR**            sourcevars,         /**< source variables of the linear constraints */
-   SCIP_Real*            sourcecoefs,        /**< coefficient array of the linear constraint, or NULL if all coefficients are one */
+   SCIP_INTERVAL*        sourcecoefs,        /**< coefficient array of the linear constraint, or NULL if all coefficients are one */
    SCIP_Real             lhs,                /**< left hand side of the linear constraint */
    SCIP_Real             rhs,                /**< right hand side of the linear constraint */
    SCIP_HASHMAP*         varmap,             /**< a SCIP_HASHMAP mapping variables of the source SCIP to corresponding
@@ -17768,7 +17863,11 @@ SCIP_RETCODE SCIPcopyConsExactLinear(
    /* duplicate coefficient array */
    if( sourcecoefs != NULL )
    {
-      SCIP_CALL( SCIPduplicateBufferArray(scip, &coefs, sourcecoefs, nvars) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &coefs, nvars) );
+      for( int i = 0; i < nvars; i++ )
+      {
+         coefs[i] = SCIPintervalGetSup(sourcecoefs[i]);
+      }
    }
    else
    {
@@ -18071,11 +18170,12 @@ SCIP_RETCODE SCIPdelCoefExactLinear(
    SCIP_VAR*             var                 /**< variable of constraint entry */
    )
 {
+   SCIP_Rational* temp;
+
    assert(scip != NULL);
    assert(cons != NULL);
    assert(var != NULL);
 
-   SCIP_Rational* temp;
    SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &temp) );
 
    SCIP_CALL( SCIPchgCoefExactLinear(scip, cons, var, temp) );
@@ -18217,7 +18317,7 @@ SCIP_VAR** SCIPgetVarsExactLinear(
 }
 
 /** gets the array of coefficient values in the linear constraint; the user must not modify this array! */
-SCIP_Real* SCIPgetValsRealExactLinear(
+SCIP_INTERVAL* SCIPgetValsRealExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    )
@@ -18316,12 +18416,12 @@ void SCIPgetFeasibilityExactLinear(
    assert(consdata != NULL);
 
    if( consdata->rowexact != NULL )
-      return SCIPgetRowSolFeasibilityExact(scip, consdata->rowexact, sol, ret);
+      SCIPgetRowSolFeasibilityExact(scip, consdata->rowexact, sol, ret);
    else
-      return consdataGetFeasibility(scip, consdata, sol, ret);
+      consdataGetFeasibility(scip, consdata, sol, ret);
 }
 
-/** todo: exip -> these might be needed currently wip only return fp duals */
+/** @todo: exip -> these might be needed currently wip only return fp duals */
 /** gets the dual solution of the linear constraint in the current LP */
 void SCIPgetDualsolExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -18343,12 +18443,13 @@ void SCIPgetDualsolExactLinear(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   if( consdata->row != NULL )
-      RatSetReal(ret, SCIProwGetDualsol(consdata->row));
+   if( consdata->rowlhs != NULL )
+      RatSetReal(ret, SCIProwGetDualsol(consdata->rowlhs));
    else
       RatSetReal(ret, 0.0);
 }
 
+/** @todo exip: WIP returns fp dual */
 /** gets the dual Farkas value of the linear constraint in the current infeasible LP */
 void SCIPgetDualfarkasExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -18370,12 +18471,13 @@ void SCIPgetDualfarkasExactLinear(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   if( consdata->row != NULL )
-      RatSetReal(ret, SCIProwGetDualfarkas(consdata->row));
+   if( consdata->rowlhs != NULL )
+      RatSetReal(ret, SCIProwGetDualfarkas(consdata->rowlhs));
    else
       RatSetReal(ret, 0.0);
 }
 
+/** @todo exip: maybe this should set the missing side of rowlhs to at least get an approximation? */
 /** returns the linear relaxation of the given linear constraint; may return NULL if no LP row was yet created;
  *  the user must not modify the row!
  */
@@ -18398,7 +18500,7 @@ SCIP_ROW* SCIPgetRowExactLinear(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   return consdata->row;
+   return consdata->rowlhs;
 }
 
 /** returns the exact linear relaxation of the given linear constraint; may return NULL if no LP row was yet created;
@@ -18452,7 +18554,7 @@ void SCIPgetRunningErrorStatsExactLinear(
    *naborts = conshdlrdata->nabotserrorbound;
 }
 
-#if 0
+#ifdef SCIP_DISABLED_CODE
 /** tries to automatically convert a linear constraint into a more specific and more specialized constraint */
 SCIP_RETCODE SCIPupgradeConsLinear(
    SCIP*                 scip,               /**< SCIP data structure */

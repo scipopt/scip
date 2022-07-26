@@ -78,6 +78,14 @@ SCIP_Rational** SCIProwExactGetVals(
    SCIP_ROWEXACT*        row                 /**< LP row */
    );
 
+/** sorts row entries such that LP columns precede non-LP columns and inside both parts lower column indices precede
+ *  higher ones
+ */
+SCIP_EXPORT
+void SCIProwExactSort(
+   SCIP_ROWEXACT*        row                 /**< row to be sorted */
+   );
+
 /** gets array of exact columns */
 SCIP_EXPORT
 SCIP_COLEXACT** SCIProwExactGetCols(
@@ -87,16 +95,38 @@ SCIP_COLEXACT** SCIProwExactGetCols(
 /** locks an unmodifiable row, which forbids further changes; has no effect on modifiable rows */
 SCIP_EXPORT
 void SCIProwExactLock(
-   SCIP_ROW*             row                 /**< LP row */
+   SCIP_ROWEXACT*        row                 /**< LP row */
    );
 
 /** unlocks a lock of an unmodifiable row; a row with no sealed lock may be modified; has no effect on modifiable rows */
 SCIP_EXPORT
 void SCIProwExactUnlock(
-   SCIP_ROW*             row                 /**< LP row */
+   SCIP_ROWEXACT*        row                 /**< LP row */
    );
 
+/** returns exact row corresponding to fprow, if it exists. Otherwise returns NULL */
+SCIP_EXPORT
+SCIP_ROWEXACT* SCIProwGetRowExact(
+   SCIP_ROW*             row                 /**< SCIP row */
+   );
 
+/** returns fp row corresponding to exact row, if it exists. Otherwise returns NULL */
+SCIP_EXPORT
+SCIP_ROW* SCIProwExactGetRow(
+   SCIP_ROWEXACT*        row                 /**< SCIP row */
+   );
+
+/** returns rhs-relaxation part of exact row, if it exists. Otherwise returns NULL */
+SCIP_EXPORT
+SCIP_ROW* SCIProwExactGetRowRhs(
+   SCIP_ROWEXACT*        row                 /**< SCIP row */
+   );
+
+/** true if row can be relaxed (possibly as two fp rows) */
+SCIP_EXPORT
+SCIP_Bool SCIProwExactHasFpRelax(
+   SCIP_ROWEXACT*        row                 /**< SCIP row */
+   );
 
 #ifdef __cplusplus
 }

@@ -169,6 +169,7 @@ SCIP_RETCODE solIncArrayVal(
    return SCIP_OKAY;
 }
 
+#ifdef SCIP_DISABLED_CODE
 /** increases value of variable in the exact solution's array */
 static
 SCIP_RETCODE solIncArrayValExact(
@@ -209,6 +210,7 @@ SCIP_RETCODE solIncArrayValExact(
 
    return SCIP_OKAY;
 }
+#endif
 
 /** returns the value of the variable in the given solution */
 static
@@ -1110,8 +1112,6 @@ SCIP_RETCODE valsExactFree(
    BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
-   SCIP_SOL* fpsol;
-
    assert(valsexact != NULL);
    assert(*valsexact != NULL);
 
@@ -1222,7 +1222,7 @@ SCIP_RETCODE SCIPsolLinkLPSolExact(
 
    /* the objective value in the columns is correct, s.t. the LP's objective value is also correct */
    SCIPlpExactGetObjval(lp, set, prob, sol->valsexact->obj);
-   sol->obj = RatRoundReal(sol->valsexact->obj, SCIP_ROUND_UPWARDS);
+   sol->obj = RatRoundReal(sol->valsexact->obj, SCIP_R_ROUND_UPWARDS);
    sol->solorigin = SCIP_SOLORIGIN_LPSOL;
 
    return SCIP_OKAY;
@@ -1723,10 +1723,11 @@ SCIP_RETCODE SCIPsolSetValExact(
 
             RatAddProd(sol->valsexact->obj, obj, val);
          }
+
+         return SCIP_OKAY;
       }
       else
          return SCIPsolSetValExact(sol, set, stat, tree, SCIPvarGetTransVar(var), val);
-
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
       assert(sol->solorigin != SCIP_SOLORIGIN_ORIGINAL);
@@ -2370,7 +2371,7 @@ SCIP_RETCODE solCheckExact(
    SCIP_CALL( RatCreateBuffer(set->buffer, &solval) );
 
    /* check whether the solution respects the global bounds of the variables */
-   if( checkbounds || sol->hasinfval )
+   if( checkbounds || sol->hasinfval || TRUE )
    {
       int v;
 
@@ -2393,14 +2394,14 @@ SCIP_RETCODE solCheckExact(
             ub = SCIPvarGetUbGlobalExact(var);
 
             /* if we have to check bound and one of the current bounds is violated */
-            if( checkbounds && ((!RatIsNegInfinity(lb) && RatIsLT(solval, lb))
+            if( ((!RatIsNegInfinity(lb) && RatIsLT(solval, lb))
                      || (!RatIsInfinity(ub) && RatIsGT(solval, ub))) )
             {
                *feasible = FALSE;
 
                if( printreason )
                {
-                  SCIPmessagePrintInfo(messagehdlr, "solution value %g violates bounds of <%s>[%g,%g] by %g\n", solval, SCIPvarGetName(var),
+                  SCIPmessagePrintInfo(messagehdlr, "solution value %g violates bounds of <%s>[%g,%g] by %g\n", RatApproxReal(solval), SCIPvarGetName(var),
                         SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), MAX(RatApproxReal(lb) - RatApproxReal(solval), 0.0) + MAX(RatApproxReal(solval) - RatApproxReal(ub), 0.0));
                }
 #ifdef SCIP_DEBUG
@@ -2424,7 +2425,7 @@ SCIP_RETCODE solCheckExact(
                   if( printreason )
                   {
                      SCIPmessagePrintInfo(messagehdlr, "infinite solution value %g for variable  <%s> with obj %g implies objective value +infinity\n",
-                        solval, SCIPvarGetName(var), SCIPvarGetUnchangedObj(var));
+                        RatApproxReal(solval), SCIPvarGetName(var), SCIPvarGetUnchangedObj(var));
                   }
 #ifdef SCIP_DEBUG
                   else
@@ -3074,7 +3075,7 @@ SCIP_Bool solsAreEqualExact(
 
    assert(sol1 != NULL);
    assert(sol2 != NULL);
-   assert((sol1->solorigin == SCIP_SOLORIGIN_ORIGINAL) && (sol2->solorigin == SCIP_SOLORIGIN_ORIGINAL) || transprob != NULL);
+   assert(((sol1->solorigin == SCIP_SOLORIGIN_ORIGINAL) && (sol2->solorigin == SCIP_SOLORIGIN_ORIGINAL)) || transprob != NULL);
 
    SCIP_CALL( RatCreateBuffer(set->buffer, &tmp1) );
    SCIP_CALL( RatCreateBuffer(set->buffer, &tmp2) );
@@ -3730,7 +3731,6 @@ SCIP_RETCODE SCIPsolOverwriteFPSolWithExact(
 {
    SCIP_VAR** vars;
    SCIP_Rational* solval;
-   SCIP_Rational* obj;
    int nvars;
    int i;
 
@@ -3747,7 +3747,7 @@ SCIP_RETCODE SCIPsolOverwriteFPSolWithExact(
    {
       SCIP_ROUNDMODE roundmode;
       SCIPsolGetValExact(solval, sol, set, stat, vars[i]);
-      roundmode = vars[i]->obj > 0 ? SCIP_ROUND_UPWARDS : SCIP_ROUND_DOWNWARDS;
+      roundmode = vars[i]->obj > 0 ? SCIP_R_ROUND_UPWARDS : SCIP_R_ROUND_DOWNWARDS;
 
       RatDebugMessage("overwriting value %g of var %s with value %g (%q) \n", SCIPsolGetVal(sol, set, stat, vars[i]),
            vars[i]->name, RatRoundReal(solval, roundmode), solval);
@@ -3758,7 +3758,7 @@ SCIP_RETCODE SCIPsolOverwriteFPSolWithExact(
 
    SCIPsolGetObjExact(sol, set, transprob, origprob, solval);
    /* hard-set the obj value of the solution  */
-   sol->obj = RatRoundReal(solval, SCIP_ROUND_UPWARDS);
+   sol->obj = RatRoundReal(solval, SCIP_R_ROUND_UPWARDS);
 
    RatFreeBuffer(set->buffer, &solval);
 

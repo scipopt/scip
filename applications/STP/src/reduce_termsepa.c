@@ -838,7 +838,7 @@ SCIP_RETCODE reduce_termcompChangeSubgraphToBottleneck(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
    TERMCOMP*             termcomp,           /**< component */
-   SCIP_Bool*            success
+   SCIP_Bool*            success             /**< pointer to store whether computation was successful (OUT)  */
    )
 {
    GRAPH* subgraph = termcomp->subgraph;

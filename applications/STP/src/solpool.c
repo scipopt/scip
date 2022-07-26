@@ -150,7 +150,7 @@ void solpool_free(
 SCIP_RETCODE solpool_addSolToScip(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEUR*            heur,               /**< heuristic data structure or NULL */
-   const GRAPH*          g,
+   const GRAPH*          g,                  /**< graph data structure */
    const int*            result,             /**< edge array of solution to be added */
    SCIP_Bool*            success             /**< has solution been added? */
    )

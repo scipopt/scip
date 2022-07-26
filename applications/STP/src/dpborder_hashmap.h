@@ -1,10 +1,27 @@
-/*
- * dpborder_hashmap.h
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                           */
+/*                  This file is part of the program and library             */
+/*         SCIP --- Solving Constraint Integer Programs                      */
+/*                                                                           */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*                            fuer Informationstechnik Berlin                */
+/*                                                                           */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*                                                                           */
+/*  You should have received a copy of the ZIB Academic License              */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*                                                                           */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+/**@file   dpborder_hashmap.h
+ * @brief  Special hashmap for DP-border Steiner tree algorithm
+ * @author Daniel Rehfeldt
  *
+ * modified version of https://github.com/sheredom/hashmap.h
  *
- *      Author: bzfrehfe
- *      NOTE: modified version of https://github.com/sheredom/hashmap.h
  */
+
+/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 
 #ifndef APPLICATIONS_STP_SRC_DPBORDER_HASHMAP_H_
@@ -82,6 +99,7 @@ extern "C" {
 /// @brief Create a hashmap.
 /// @param initial_size The initial size of the hashmap. Must be a power of two.
 /// @param out_hashmap The storage for the created hashmap.
+/// @param keyarr Array with keys
 /// @return On success 0 is returned.
 ///
 /// Note that the initial size of the hashmap must be a power of two, and
@@ -96,7 +114,7 @@ static void hashmap_updateKeyarr(
 
 /// @brief Put an element into the hashmap.
 /// @param hashmap The hashmap to insert into.
-/// @param key The string key to use.
+/// @param key_position The string key position to use.
 /// @param len The length of the string key.
 /// @param value The value to insert.
 /// @return On success 0 is returned.
@@ -112,7 +130,7 @@ static void hashmap_put(struct hashmap_s *const hashmap, int position,
 
 /// @brief Get an element from the hashmap.
 /// @param hashmap The hashmap to get from.
-/// @param key The string key to use.
+/// @param position The string key position to use.
 /// @param len The length of the string key.
 /// @return The previously set element, or NULL if none exists.
 static int hashmap_get(const struct hashmap_s *const hashmap, int position,
@@ -120,7 +138,7 @@ static int hashmap_get(const struct hashmap_s *const hashmap, int position,
 
 /// @brief Remove an element from the hashmap.
 /// @param hashmap The hashmap to remove from.
-/// @param key The string key to use.
+/// @param position The string key position to use.
 /// @param len The length of the string key.
 /// @return On success 0 is returned.
 static int hashmap_remove(struct hashmap_s *const hashmap, int position,
@@ -128,12 +146,8 @@ static int hashmap_remove(struct hashmap_s *const hashmap, int position,
 
 /// @brief Iterate over all the elements in a hashmap.
 /// @param hashmap The hashmap to iterate over.
-/// @param f The function pointer to call on each element.
-/// @param context The context to pass as the first argument to f.
+/// @param hashmap_new The new hashmap.
 /// @return If the entire hashmap was iterated then 0 is returned.
-/// Otherwise if the callback function f returned positive then the positive
-/// value is returned.  If the callback function returns -1, the current item
-/// is removed and iteration continues.
 static int hashmap_iterate_pairs(struct hashmap_s *const hashmap,
                                  struct hashmap_s *const hashmap_new) HASHMAP_USED;
 

@@ -133,12 +133,12 @@ void sdStarFinalize(
 /** resets data needed for SD star tests */
 static inline
 void sdStarReset(
-   int                   nnodes,
-   int                   nvisits,
-   const int*            visitlist,
-   int* RESTRICT         star_base,
-   SCIP_Real* RESTRICT   dist,
-   STP_Bool* RESTRICT    visited,
+   int                   nnodes,             /**< number of nodes */
+   int                   nvisits,            /**< number of visits */
+   const int*            visitlist,          /**< array of visited nodes */
+   int* RESTRICT         star_base,          /**< star-bases */
+   SCIP_Real* RESTRICT   dist,               /**< node distances */
+   STP_Bool* RESTRICT    visited,            /**< visit mark */
    DHEAP* RESTRICT       dheap               /**< Dijkstra heap */
 )
 {
@@ -2657,239 +2657,19 @@ SCIP_Real sdGetSdPcMw(
 }
 
 
-
-/*  longest edge reduction test from T. Polzin's "Algorithms for the Steiner problem in networks" (Lemma 20)
- *
- *  *** DEPRECATED! *** */
-SCIP_RETCODE reduce_ledge(
-   SCIP*   scip,
-   GRAPH*  g,
-   PATH*   vnoi,
-   int* heap,
-   int* state,
-   int* vbase,
-   int* nelims,
-   int* edgestate
-)
-{
-   GRAPH* netgraph;
-   PATH* mst;
-   SCIP_Real cost;
-   SCIP_Real maxcost;
-   int v1;
-   int v2;
-   int k;
-   int e;
-   int ne;
-   int nedges;
-   int nnodes;
-   int nterms;
-   int maxnedges;
-   int netnnodes;
-   int* nodesid;
-   int* edgeorg;
-   SCIP_Bool checkstate = (edgestate != NULL);
-   STP_Bool* blocked;
-
-   assert(g != NULL);
-   assert(vnoi != NULL);
-   assert(heap != NULL);
-   assert(state != NULL);
-   assert(vbase != NULL);
-
-   *nelims = 0;
-   nedges = g->edges;
-   nnodes = g->knots;
-   assert(graph_valid(scip, g));
-
-   nterms = 0;
-   for( k = 0; k < nnodes; k++ )
-   {
-      g->mark[k] = (g->grad[k] > 0);
-      if( Is_term(g->term[k]) && g->mark[k] )
-         nterms++;
-   }
-
-   if( nterms <= 1 )
-      return SCIP_OKAY;
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &blocked, nedges / 2) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &edgeorg, nedges / 2) );
-
-   graph_add1stTermPaths(g, g->cost, vnoi, vbase, state);
-
-   if( nedges >= (nterms - 1) * nterms )
-      maxnedges = (nterms - 1) * nterms;
-   else
-      maxnedges = nedges;
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &nodesid, nnodes) );
-
-   /* initialize the new graph */
-   SCIP_CALL( graph_init(scip, &netgraph, nterms, maxnedges, 1) );
-
-   e = 0;
-   for( k = 0; k < nnodes; k++ )
-   {
-      if( Is_term(g->term[k]) && g->grad[k] > 0 )
-      {
-         if( e == 0 )
-            graph_knot_add(netgraph, 0);
-         else
-            graph_knot_add(netgraph, -1);
-         nodesid[k] = e++;
-      }
-      else
-      {
-         nodesid[k] = UNKNOWN;
-      }
-   }
-
-   netnnodes = netgraph->knots;
-   assert(netnnodes == e);
-   assert(netnnodes == nterms);
-
-   for( e = 0; e < nedges / 2; e++ )
-   {
-      blocked[e] = FALSE;
-      edgeorg[e] = UNKNOWN;
-   }
-
-   for( k = 0; k < nnodes; k++ )
-   {
-      for( e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
-      {
-         v1 = vbase[k];
-         assert(k == g->tail[e]);
-
-         if( v1 != vbase[g->head[e]] )
-         {
-            v2 = vbase[g->head[e]];
-            assert(Is_term(g->term[v1]));
-            assert(Is_term(g->term[v2]));
-            assert(nodesid[v1] >= 0);
-            assert(nodesid[v2] >= 0);
-
-            for( ne = netgraph->outbeg[nodesid[v1]]; ne != EAT_LAST; ne = netgraph->oeat[ne] )
-               if( netgraph->head[ne] == nodesid[v2] )
-                  break;
-
-            cost = g->cost[e] + vnoi[g->head[e]].dist + vnoi[g->tail[e]].dist;
-            /* edge exists? */
-            if( ne != EAT_LAST )
-            {
-               assert(ne >= 0);
-               assert(netgraph->head[ne] == nodesid[v2]);
-               assert(netgraph->tail[ne] == nodesid[v1]);
-               if( SCIPisGT(scip, netgraph->cost[ne], cost) )
-               {
-                  netgraph->cost[ne]            = cost;
-                  netgraph->cost[Edge_anti(ne)] = cost;
-                  edgeorg[ne / 2] = e;
-                  assert(ne <= maxnedges);
-               }
-            }
-            else
-            {
-               edgeorg[netgraph->edges / 2] = e;
-               graph_edge_add(scip, netgraph, nodesid[v1], nodesid[v2], cost, cost);
-               assert(netgraph->edges <= maxnedges);
-            }
-         }
-      }
-   }
-   netgraph->source = 0;
-
-   assert(graph_valid(scip, netgraph));
-
-   for( k = 0; k < netnnodes; k++ )
-      netgraph->mark[k] = TRUE;
-
-   /* compute a MST on netgraph */
-   SCIP_CALL( SCIPallocBufferArray(scip, &mst, netnnodes) );
-   SCIP_CALL( graph_path_init(scip, netgraph) );
-   graph_path_exec(scip, netgraph, MST_MODE, 0, netgraph->cost, mst);
-
-   maxcost = -1;
-   assert(mst[0].edge == -1);
-
-   for( k = 1; k < netnnodes; k++ )
-   {
-      assert(netgraph->path_state[k] == CONNECT);
-      e = mst[k].edge;
-      assert(e >= 0);
-      cost = netgraph->cost[e];
-      if( SCIPisGT(scip, cost, maxcost) )
-         maxcost = cost;
-
-      ne = edgeorg[e / 2];
-      blocked[ne / 2] = TRUE;
-      for( v1 = g->head[ne]; v1 != vbase[v1]; v1 = g->tail[vnoi[v1].edge] )
-         blocked[vnoi[v1].edge / 2] = TRUE;
-
-      for( v1 = g->tail[ne]; v1 != vbase[v1]; v1 = g->tail[vnoi[v1].edge] )
-         blocked[vnoi[v1].edge / 2] = TRUE;
-      assert(e != EAT_LAST);
-   }
-
-   for( k = 0; k < nnodes; k++ )
-   {
-      e = g->outbeg[k];
-      while( e != EAT_LAST )
-      {
-         assert(e >= 0);
-         if( checkstate && (edgestate[e] == EDGE_BLOCKED) )
-         {
-            e = g->oeat[e];
-            continue;
-         }
-
-         if( SCIPisGE(scip, g->cost[e], maxcost) && !blocked[e / 2] )
-         {
-            (*nelims)++;
-            v1 = g->oeat[e];
-            graph_edge_del(scip, g, e, TRUE);
-            e = v1;
-         }
-         else
-         {
-            e = g->oeat[e];
-         }
-      }
-   }
-
-   /* graph might have become disconnected */
-   if( *nelims > 0 )
-   {
-      SCIP_CALL( reduce_unconnected(scip, g) );
-   }
-
-   /* free netgraph and  MST data structure */
-   graph_path_exit(scip, netgraph);
-   graph_free(scip, &netgraph, TRUE);
-   SCIPfreeBufferArray(scip, &mst);
-   SCIPfreeBufferArray(scip, &nodesid);
-   SCIPfreeBufferArray(scip, &edgeorg);
-   SCIPfreeBufferArray(scip, &blocked);
-
-   assert(graph_valid(scip, g));
-   return SCIP_OKAY;
-}
-
-
 /** SDC test for the SAP using a limited version of Dijkstra's algorithm from both endpoints of an arc */
 SCIP_RETCODE reduce_sdspSap(
-   SCIP*                 scip,
-   GRAPH*                g,
-   PATH*                 pathtail,
-   PATH*                 pathhead,
-   int*                  heap,
-   int*                  statetail,
-   int*                  statehead,
-   int*                  memlbltail,
-   int*                  memlblhead,
-   int*                  nelims,
-   int                   limit
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph data structure */
+   PATH*                 pathtail,           /**< path tails */
+   PATH*                 pathhead,           /**< path heads */
+   int*                  heap,               /**< heap */
+   int*                  statetail,          /**< states of tails */
+   int*                  statehead,          /**< states of heads */
+   int*                  memlbltail,         /**< storage for tails */
+   int*                  memlblhead,         /**< storage for heads */
+   int*                  nelims,             /**< number of eliminations */
+   int                   limit               /**< limit for number of visits */
    )
 {
    SCIP_Real sdist;
@@ -3036,16 +2816,16 @@ SCIP_RETCODE reduce_sdspSap(
 
 /** SD test for PcMw using only limited Dijkstra-like walk from both endpoints of an edge */
 SCIP_RETCODE reduce_sdWalk_csr(
-   SCIP*                 scip,
-   int                   edgelimit,
-   const int*            edgestate,
-   GRAPH*                g,
-   int*                  termmark,
-   SCIP_Real*            dist,
-   int*                  visitlist,
-   STP_Bool*             visited,
-   DHEAP*                dheap,
-   int*                  nelims
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   edgelimit,          /**< edge limit */
+   const int*            edgestate,          /**< per edge: state */
+   GRAPH*                g,                  /**< graph data structure */
+   int*                  termmark,           /**< per node: terminal property */
+   SCIP_Real*            dist,               /**< per node: distance */
+   int*                  visitlist,          /**< array to store visited nodes */
+   STP_Bool*             visited,            /**< per node: was visited? */
+   DHEAP*                dheap,              /**< head data structure */
+   int*                  nelims              /**< pointer to store number of eliminations */
    )
 {
    DCSR* dcsr;
@@ -3157,10 +2937,10 @@ SCIP_RETCODE reduce_sdWalk_csr(
 
 /** SD test */
 SCIP_RETCODE reduce_sdEdgeCliqueStar(
-   SCIP*                 scip,
-   int                   edgelimit,
-   GRAPH*                g,
-   int*                  nelims
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   edgelimit,          /**< edge limit */
+   GRAPH*                g,                  /**< graph data structure */
+   int*                  nelims              /**< number of eliminations */
 )
 {
    const int nnodes = graph_get_nNodes(g);
@@ -3229,16 +3009,16 @@ SCIP_RETCODE reduce_sdEdgeCliqueStar(
 
 /** SD test for PcMw using limited Dijkstra-like walk from both endpoints of an edge */
 SCIP_RETCODE reduce_sdWalkTriangle(
-   SCIP*                 scip,
-   int                   edgelimit,
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   edgelimit,          /**< edge limit */
    SCIP_Bool             usestrongreds,      /**< allow strong reductions? */
-   GRAPH*                g,
-   int*                  termmark,
-   SCIP_Real*            dist,
-   int*                  visitlist,
-   STP_Bool*             visited,
-   DHEAP*                dheap,
-   int*                  nelims
+   GRAPH*                g,                  /**< graph data structure */
+   int*                  termmark,           /**< terminal mark */
+   SCIP_Real*            dist,               /**< distances */
+   int*                  visitlist,          /**< array to store visited nodes */
+   STP_Bool*             visited,            /**< per node: was visited? */
+   DHEAP*                dheap,              /**< heap data structure */
+   int*                  nelims              /**< number of eliminations */
    )
 {
    DCSR* dcsr;
@@ -4045,16 +3825,16 @@ SCIP_RETCODE reduce_sdWalk(
 
 /** SD test for PcMw using only limited Dijkstra-like walk from both endpoints of an edge */
 SCIP_RETCODE reduce_sdWalkExt(
-   SCIP*                 scip,
-   int                   edgelimit,
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   edgelimit,          /**< edge limit */
    SCIP_Bool             usestrongreds,      /**< allow strong reductions? */
-   GRAPH*                g,
-   SCIP_Real*            dist,
-   int*                  heap,
-   int*                  state,
-   int*                  visitlist,
-   STP_Bool*             visited,
-   int*                  nelims
+   GRAPH*                g,                  /**< graph data structure */
+   SCIP_Real*            dist,               /**< per node: distances */
+   int*                  heap,               /**< heap */
+   int*                  state,              /**< state */
+   int*                  visitlist,          /**< array to store visited nodes */
+   STP_Bool*             visited,            /**< number of visited nodes */
+   int*                  nelims              /**< number of eliminations */
    )
 {
    int* prevterms;
@@ -4128,17 +3908,17 @@ SCIP_RETCODE reduce_sdWalkExt(
 
 /** SD test for PcMw using only limited Dijkstra-like walk from both endpoints of an edge */
 SCIP_RETCODE reduce_sdWalkExt2(
-   SCIP*                 scip,
-   int                   edgelimit,
-   const int*            edgestate,
-   GRAPH*                g,
-   int*                  termmark,
-   SCIP_Real*            dist,
-   int*                  heap,
-   int*                  state,
-   int*                  visitlist,
-   STP_Bool*             visited,
-   int*                  nelims
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   edgelimit,          /**< edge limit */
+   const int*            edgestate,          /**< per edge: state */
+   GRAPH*                g,                  /**< graph data structure */
+   int*                  termmark,           /**< per node: terminal state */
+   SCIP_Real*            dist,               /**< per node: distance */
+   int*                  heap,               /**< heap */
+   int*                  state,              /**< state */
+   int*                  visitlist,          /**< visited nodes */
+   STP_Bool*             visited,            /**< number of visited nodes */
+   int*                  nelims              /**< number of eliminations */
    )
 {
    int* prevterms;
@@ -4238,16 +4018,16 @@ SCIP_RETCODE reduce_sdWalkExt2(
 
 /** SD test using only limited Dijkstra from both endpoints of an edge */
 SCIP_RETCODE reduce_sdsp(
-   SCIP*                 scip,
-   GRAPH*                g,
-   PATH*                 pathtail,
-   int*                  heap,
-   int*                  statetail,
-   int*                  statehead,
-   int*                  memlbltail,
-   int*                  memlblhead,
-   int*                  nelims,
-   int                   limit,
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph data structure */
+   PATH*                 pathtail,           /**< path tails */
+   int*                  heap,               /**< heap */
+   int*                  statetail,          /**< tails */
+   int*                  statehead,          /**< heads */
+   int*                  memlbltail,         /**< to save changed tails */
+   int*                  memlblhead,         /**< to save changed heads */
+   int*                  nelims,             /**< number of eliminations */
+   int                   limit,              /**< limit for number checks */
    SCIP_Bool             usestrongreds       /**< allow strong reductions? */
 )
 {

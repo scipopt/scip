@@ -26,6 +26,7 @@
 #include <string.h>
 
 #include "blockmemshell/memory.h"
+#include "scip/cuts.h"
 #include "scip/cons_exactlp.h"
 #include "scip/scip.h"
 #include "scip/set.h"
@@ -43,44 +44,6 @@
 
 #define SCIP_HASHSIZE_CERTIFICATE    500 /**< size of hash map for certificate -> nodesdata mapping used for certificate output */
 
-/** gets the key of the given element */
-static
-SCIP_DECL_HASHGETKEY(hashGetKeyVarbound)
-{  /*lint --e{715}*/
-   /* the key is the element itself */
-   return elem;
-}
-
-/** returns TRUE iff both keys are equal */
-static
-SCIP_DECL_HASHKEYEQ(hashKeyEqVarbound)
-{
-   assert(key1 != NULL);
-   assert(key2 != NULL);
-
-   if( ((SCIP_CERTIFICATEBOUND*)key1)->isupper != ((SCIP_CERTIFICATEBOUND*)key2)->isupper )
-      return FALSE;
-
-   if( ((SCIP_CERTIFICATEBOUND*)key1)->varindex != ((SCIP_CERTIFICATEBOUND*)key2)->varindex )
-      return FALSE;
-
-   if( !RatIsEqual(((SCIP_CERTIFICATEBOUND*)key1)->boundval, ((SCIP_CERTIFICATEBOUND*)key2)->boundval) )
-      return FALSE;
-
-   return TRUE;
-}
-
-/** returns the hash value of the key */
-static
-SCIP_DECL_HASHKEYVAL(hashKeyValVarbound)
-{
-   SCIP_CERTIFICATEBOUND* bound;
-
-   bound = (SCIP_CERTIFICATEBOUND*)key;
-
-   return ((((unsigned int)(10*RatApproxReal(bound->boundval))) << 22) + (bound->varindex << 2) + (unsigned int)bound->isupper);
-}
-
 /** updates file size */
 static
 void updateFilesize(
@@ -89,39 +52,6 @@ void updateFilesize(
    )
 {
    certificate->filesize += nchars/1048576.0;
-}
-
-static
-int getVarBoundFileIndex(
-   SCIP_CERTIFICATE*     certificate,        /**< certificate information */
-   SCIP_COLEXACT*        col,                /**< exact column */
-   SCIP_Rational*        multiplier          /**< dual multiplier (farkascoef or redcost) */
-   )
-{
-   void* image;
-
-   if( RatIsNegative(multiplier) )
-   {
-      certificate->workbound->isupper = TRUE;
-      RatSet(certificate->workbound->boundval, SCIPcolExactGetUb(col));
-   }
-   else
-   {
-      certificate->workbound->isupper = FALSE;
-      RatSet(certificate->workbound->boundval, SCIPcolExactGetLb(col));
-   }
-   certificate->workbound->varindex = SCIPvarGetCertificateIndex(SCIPcolGetVar(col->fpcol));
-
-   image = SCIPhashtableRetrieve(certificate->varboundtable, certificate->workbound);
-
-   if( image == NULL )
-   {
-      SCIPerrorMessage("col not in varbound-table \n");
-      SCIPABORT();
-      return -1;
-   }
-
-   return ((SCIP_CERTIFICATEBOUND*)image)->fileindex;
 }
 
 /** checks whether node is a left node or not */
@@ -153,83 +83,37 @@ SCIP_Bool certificateIsLeftNode(
       return FALSE;
 }
 
-/** print variable bound assumption into certificate if not already present and add it to varboundtable,
+/** print variable bound assumption into certificate,
  *  return index of this bound in the certificate file
  */
 static
 SCIP_Longint printBoundAssumption(
    SCIP_SET*             set,                /**< general SCIP settings */
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
-   int                   varindex,           /**< index of the variable */
+   SCIP_VAR*             var,                /**< variable to print assumption for */
    SCIP_Rational*        boundval,           /**< value of the bound */
    SCIP_BOUNDTYPE        boundtype           /**< is it the upper bound? */
    )
 {
-   SCIP_CERTIFICATEBOUND* image;
-   SCIP_CERTIFICATEBOUND* foundbound;
-
    /* check whether output should be created */
    if ( certificate->origfile == NULL )
       return SCIP_OKAY;
 
-   /* install bound information in working structure */
-   certificate->workbound->fileindex = certificate->indexcounter;
-   certificate->workbound->varindex = varindex;
-   RatSet(certificate->workbound->boundval, boundval);
-   certificate->workbound->isupper = boundtype == SCIP_BOUNDTYPE_UPPER ? TRUE : FALSE;
+#ifndef NDEBUG
+   certificate->lastinfo->isbound = TRUE;
+   certificate->lastinfo->boundtype = boundtype;
+   certificate->lastinfo->varindex = SCIPvarGetCertificateIndex(var);
+   RatSet(certificate->lastinfo->boundval, boundval);
+#endif
 
-   /* check if an assumption with this current working structure exists, NULL if not.
-    * If the assumption already exists, then we only check that it has the good values. If the assumption does not exists,
-    * then we insert the new assumption into the hashtable storing all variable bound assumptions and finally print it
-    */
-   image = SCIPhashtableRetrieve(certificate->varboundtable, certificate->workbound);
+   /** @todo: it could be better to seperate the printing from insertion of variable bound */
+   SCIPcertificatePrintProofMessage(certificate, "A%lld %c ", certificate->indexcounter, (boundtype == SCIP_BOUNDTYPE_LOWER) ? 'G' : 'L');
 
-   if( image != NULL )
-   {
-      foundbound = (SCIP_CERTIFICATEBOUND*)image;
+   SCIPcertificatePrintProofRational(certificate, boundval, 10);
+   SCIPcertificatePrintProofMessage(certificate, " 1 %d 1 { asm } -1\n", SCIPvarGetCertificateIndex(var));
+   certificate->indexcounter++;
 
-      SCIPdebugMessage("Found bound assumption at line %" SCIP_LONGINT_FORMAT ": <variable %d> %s approx. %g\n",
-         foundbound->fileindex, varindex, (certificate->workbound->isupper ? "<=" : ">="), RatApproxReal(boundval));
-
-      assert(foundbound->fileindex >= 0);
-      assert(foundbound->varindex == varindex);
-      assert(RatIsEqual(foundbound->boundval, boundval));
-      assert(foundbound->isupper == certificate->workbound->isupper);
-
-      return foundbound->fileindex;
-   }
-   else
-   {
-      SCIP_CERTIFICATEBOUND* insertbound;
-
-      SCIPdebugMessage("Print bound assumption at line %" SCIP_LONGINT_FORMAT ": <variable %d> %s approx. %g\n",
-         certificate->workbound->fileindex, varindex, (certificate->workbound->isupper  ? "<=" : ">="), RatApproxReal(boundval));
-
-      /* insertion */
-      SCIP_ALLOC( BMSduplicateBlockMemory(certificate->blkmem, &insertbound, certificate->workbound) );
-      SCIP_CALL( RatCreateBlock(certificate->blkmem, &insertbound->boundval) );
-      RatSet(insertbound->boundval, boundval);
-
-      /* ensure size and insert boundval in array to be able to free it at the end */
-      if( certificate->nboundvals >= certificate->boundvalsize )
-      {
-         BMSreallocBlockMemoryArray(certificate->blkmem, &certificate->boundvals, certificate->boundvalsize, certificate->boundvalsize + 100);
-         certificate->boundvalsize += 100;
-      }
-      certificate->boundvals[certificate->nboundvals] = insertbound;
-      certificate->nboundvals++;
-
-      SCIP_CALL( SCIPhashtableInsert(certificate->varboundtable, insertbound) );
-
-      /** @todo: it could be better to seperate the printing from insertion of variable bound */
-      SCIPcertificatePrintProofMessage(certificate, "A%lld %c ", insertbound->fileindex, (certificate->workbound->isupper ? 'L' : 'G'));
-
-      SCIPcertificatePrintProofRational(certificate, boundval, 10);
-      SCIPcertificatePrintProofMessage(certificate, " 1 %d 1 { asm } -1\n", varindex);
-      certificate->indexcounter++;
-
-      return insertbound->fileindex;
-   }
+   return certificate->indexcounter - 1;
 }
 
 /** free nodedata of corresponding node */
@@ -269,7 +153,6 @@ SCIP_RETCODE SCIPcertificatePrintSol(
    int nvars;
    int nnonz;
    int i;
-   int j;
 
    /* check if certificate output should be created */
    if( certificate->origfile == NULL )
@@ -359,8 +242,7 @@ SCIP_RETCODE SCIPcertificateCreate(
    SCIP_ALLOC( BMSallocMemory(certificate) );
 
    (*certificate)->messagehdlr = messagehdlr;
-   (*certificate)->varboundtable = NULL;
-   (*certificate)->workbound = NULL;
+   (*certificate)->lastinfo = NULL;
    (*certificate)->blkmem = NULL;
    (*certificate)->indexcounter = 0;
    (*certificate)->indexcounter_ori = 0;
@@ -372,17 +254,22 @@ SCIP_RETCODE SCIPcertificateCreate(
    (*certificate)->derivationfilename = NULL;
    (*certificate)->filesize = 0.0;
    (*certificate)->rowdatahash = NULL;
-   (*certificate)->boundvals = NULL;
-   (*certificate)->boundvalsize = 0;
-   (*certificate)->nboundvals = 0;
+   (*certificate)->naggrinfos = 0;
+   (*certificate)->nmirinfos = 0;
+   (*certificate)->aggrinfosize = 0;
+   (*certificate)->mirinfosize = 0;
    (*certificate)->nodedatahash = NULL;
    (*certificate)->rootbound = NULL;
    (*certificate)->finalbound = NULL;
    (*certificate)->derindex_root = -1;
    (*certificate)->rootinfeas = FALSE;
    (*certificate)->objintegral = FALSE;
+   (*certificate)->workingmirinfo = FALSE;
+   (*certificate)->workingaggrinfo = FALSE;
    (*certificate)->vals = NULL;
    (*certificate)->valssize = 0;
+   (*certificate)->aggrinfo = NULL;
+   (*certificate)->mirinfo = NULL;
 
    return SCIP_OKAY;
 }
@@ -500,6 +387,12 @@ SCIP_RETCODE SCIPcertificateInit(
    /* initialisation of hashmaps and hashtables */
    SCIP_CALL( SCIPhashmapCreate(&certificate->nodedatahash, blkmem, SCIP_HASHSIZE_CERTIFICATE) );
    SCIP_CALL( SCIPhashmapCreate(&certificate->rowdatahash, blkmem, SCIP_HASHSIZE_CERTIFICATE) );
+   SCIP_CALL( SCIPhashmapCreate(&certificate->aggrinfohash, blkmem, SCIP_HASHSIZE_CERTIFICATE) );
+   SCIP_CALL( SCIPhashmapCreate(&certificate->mirinfohash, blkmem, SCIP_HASHSIZE_CERTIFICATE) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(certificate->aggrinfo), SCIP_HASHSIZE_CERTIFICATE) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(certificate->mirinfo), SCIP_HASHSIZE_CERTIFICATE) );
+   certificate->aggrinfosize = SCIP_HASHSIZE_CERTIFICATE;
+   certificate->mirinfosize = SCIP_HASHSIZE_CERTIFICATE;
 
    certificate->blkmem = blkmem;
    SCIPsetFreeBufferArray(set, &name);
@@ -596,11 +489,11 @@ SCIP_RETCODE SCIPcertificateInit(
    {
       if( !RatIsAbsInfinity(SCIPvarGetLbGlobalExact(vars[j])) )
       {
-         SCIP_CALL( SCIPcertificatePrintBoundCons(certificate, TRUE, NULL, SCIPvarGetCertificateIndex(vars[j]), SCIPvarGetLbGlobalExact(vars[j]), FALSE) );
+         SCIP_CALL( SCIPcertificatePrintBoundCons(certificate, TRUE, NULL, vars[j], SCIPvarGetLbGlobalExact(vars[j]), FALSE) );
       }
       if( !RatIsAbsInfinity(SCIPvarGetUbGlobalExact(vars[j])) )
       {
-         SCIP_CALL( SCIPcertificatePrintBoundCons(certificate, TRUE, NULL, SCIPvarGetCertificateIndex(vars[j]), SCIPvarGetUbGlobalExact(vars[j]), TRUE) );
+         SCIP_CALL( SCIPcertificatePrintBoundCons(certificate, TRUE, NULL, vars[j], SCIPvarGetUbGlobalExact(vars[j]), TRUE) );
       }
    }
 
@@ -747,11 +640,11 @@ SCIP_RETCODE SCIPcertificateInitTransFile(
    {
       if( !RatIsAbsInfinity(SCIPvarGetLbGlobalExact(vars[j])) )
       {
-         SCIP_CALL( SCIPcertificatePrintBoundCons(certificate, FALSE, NULL, SCIPvarGetCertificateIndex(vars[j]), SCIPvarGetLbGlobalExact(vars[j]), FALSE) );
+         SCIP_CALL( SCIPcertificatePrintBoundCons(certificate, FALSE, NULL, vars[j], SCIPvarGetLbGlobalExact(vars[j]), FALSE) );
       }
       if( !RatIsAbsInfinity(SCIPvarGetUbGlobalExact(vars[j])) )
       {
-         SCIP_CALL( SCIPcertificatePrintBoundCons(certificate, FALSE, NULL, SCIPvarGetCertificateIndex(vars[j]), SCIPvarGetUbGlobalExact(vars[j]), TRUE) );
+         SCIP_CALL( SCIPcertificatePrintBoundCons(certificate, FALSE, NULL, vars[j], SCIPvarGetUbGlobalExact(vars[j]), TRUE) );
       }
    }
 
@@ -782,6 +675,7 @@ void concatCert(
 
 /** closes the certificate output files */
 void SCIPcertificateExit(
+   SCIP*                 scip,               /**< scip data structure */
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
@@ -803,6 +697,12 @@ void SCIPcertificateExit(
          SCIPfclose(certificate->derivationfile);
          certificate->derivationfile = NULL;
          concatCert(certificate, set->certificate_filename);
+         // if the file is empty (e.g. because we detected infeasibility in presolving) we delete it
+         if( certificate->indexcounter == 0 )
+         {
+            SCIPdebugMessage("derivation file is empty; deleting it");
+            remove(set->certificate_filename);
+         }
       }
       SCIPfclose(certificate->origfile);
       SCIPfclose(certificate->transfile);
@@ -811,36 +711,45 @@ void SCIPcertificateExit(
 
       BMSfreeMemoryArray(&certificate->derivationfilename);
       BMSfreeMemoryArray(&certificate->origfilename);
-      if( certificate->varboundtable != NULL )
+
+      if( certificate->lastinfo != NULL )
       {
-         for( i = 0; i < certificate->nboundvals; i++ )
-         {
-            RatFreeBlock(certificate->blkmem, &certificate->boundvals[i]->boundval);
-            BMSfreeBlockMemory(certificate->blkmem, &certificate->boundvals[i]);
-         }
-         /**@todo fix memory leak: mpq_clear and free all elements */
-         SCIPhashtableRemoveAll(certificate->varboundtable);
-         SCIPhashtableFree(&certificate->varboundtable);
-         BMSfreeBlockMemoryArray(certificate->blkmem, &certificate->boundvals, certificate->boundvalsize);
-      }
-      if( certificate->workbound != NULL )
-      {
-         RatFreeBlock(certificate->blkmem, &certificate->workbound->boundval);
-         BMSfreeBlockMemory(certificate->blkmem, &certificate->workbound);
+         RatFreeBlock(certificate->blkmem, &certificate->lastinfo->boundval);
+         BMSfreeBlockMemory(certificate->blkmem, &certificate->lastinfo);
       }
 
       if( certificate->rowdatahash)
          SCIPhashmapFree(&certificate->rowdatahash);
 
-   if( certificate->nodedatahash )
+      if( certificate->nodedatahash )
       {
          assert(SCIPhashmapIsEmpty(certificate->nodedatahash));
          SCIPhashmapFree(&certificate->nodedatahash);
       }
+      if( certificate->aggrinfohash )
+      {
+         SCIPcertificateClearAggrinfo(scip);
+      }
+      if( certificate->mirinfohash )
+      {
+         for( i = 0; i < certificate->nmirinfos; i++ )
+         {
+            RatFreeBlock(certificate->blkmem, &certificate->mirinfo[i]->frac);
+            RatFreeBlock(certificate->blkmem, &certificate->mirinfo[i]->rhs);
+            BMSfreeBlockMemoryArray(certificate->blkmem, &(certificate->mirinfo[i]->varinds), certificate->mirinfo[i]->nsplitvars);
+            BMSfreeBlockMemoryArray(certificate->blkmem, &(certificate->mirinfo[i]->splitcoefficients), certificate->mirinfo[i]->nsplitvars);
+            BMSfreeBlockMemoryArray(certificate->blkmem, &(certificate->mirinfo[i]->upperused), certificate->mirinfo[i]->nsplitvars);
+            BMSfreeBlockMemoryArray(certificate->blkmem, &(certificate->mirinfo[i]->localbdused), certificate->mirinfo[i]->nsplitvars);
+            BMSfreeBlockMemory(certificate->blkmem, &certificate->mirinfo[i]);
+         }
+         BMSfreeBlockMemoryArray(certificate->blkmem, &certificate->mirinfo, certificate->mirinfosize);
+         SCIPhashmapRemoveAll(certificate->mirinfohash);
+         SCIPhashmapFree(&certificate->mirinfohash);
+      }
 
-   RatFreeBlock(certificate->blkmem, &certificate->rootbound);
-   RatFreeBlock(certificate->blkmem, &certificate->finalbound);
-   RatFreeBlockArray(certificate->blkmem, &certificate->vals, certificate->valssize);
+      RatFreeBlock(certificate->blkmem, &certificate->rootbound);
+      RatFreeBlock(certificate->blkmem, &certificate->finalbound);
+      RatFreeBlockArray(certificate->blkmem, &certificate->vals, certificate->valssize);
    }
 }
 
@@ -853,6 +762,19 @@ SCIP_Bool SCIPcertificateIsActive(
    return (set->exact_enabled && certificate != NULL && (certificate->transfile != NULL || strcmp(set->certificate_filename, "-")) );
 }
 
+/** returns whether the certificate output is activated? */
+SCIP_Bool SCIPsetCertificateEnabled(
+   SCIP_SET*             set                 /**< SCIP settings */
+   )
+{
+   if( !set->exact_enabled )
+      return FALSE;
+   if( (set->certificate_filename[0] == '-' && set->certificate_filename[1] == '\0') )
+      return FALSE;
+
+   return TRUE;
+}
+
 /** returns current certificate file size in MB */
 SCIP_Real SCIPcertificateGetFilesize(
    SCIP_CERTIFICATE*     certificate         /**< certificate information */
@@ -863,6 +785,49 @@ SCIP_Real SCIPcertificateGetFilesize(
    else
       return certificate->filesize;
 }
+
+/** returns current certificate index (return -1 if certificate not active) */
+SCIP_Longint SCIPcertificateGetCurrentIndex(
+   SCIP_CERTIFICATE*     certificate         /**< certificate information */
+   )
+{
+   if( certificate == NULL || certificate->transfile == NULL)
+      return -1;
+   else
+      return certificate->indexcounter;
+}
+
+#ifndef NDEBUG
+/** checks if information is consistent with printed certificate line */
+SCIP_Bool SCIPcertificateEnsureLastBoundInfoConsistent(
+   SCIP_CERTIFICATE*     certificate,        /**< certificate information */
+   SCIP_VAR*             var,                /**< variable that gets changed */
+   SCIP_BOUNDTYPE        boundtype,          /**< lb or ub changed? */
+   SCIP_Real             newbound            /**< new bound */
+   )
+{
+   SCIP_Bool consistent;
+
+   assert(certificate != NULL);
+
+   consistent = TRUE;
+   consistent = consistent && certificate->lastinfo->isbound;
+   consistent = consistent && certificate->lastinfo->varindex == SCIPvarGetCertificateIndex(var);
+   if( boundtype == SCIP_BOUNDTYPE_LOWER )
+   {
+      consistent = consistent && certificate->lastinfo->boundtype == SCIP_BOUNDTYPE_LOWER;
+      consistent = consistent && RatRoundReal(certificate->lastinfo->boundval, SCIP_R_ROUND_DOWNWARDS) == newbound;
+   }
+   else
+   {
+      consistent = consistent && certificate->lastinfo->boundtype == SCIP_BOUNDTYPE_UPPER;
+      consistent = consistent && RatRoundReal(certificate->lastinfo->boundval, SCIP_R_ROUND_UPWARDS) == newbound;
+   }
+
+   return consistent;
+
+}
+#endif
 
 /** sets the objective function used when printing dual bounds */
 SCIP_RETCODE SCIPcertificateSetAndPrintObjective(
@@ -886,12 +851,9 @@ SCIP_RETCODE SCIPcertificateSetAndPrintObjective(
    /* create a hash table for the variable bounds (we work on the tranformed problem) */
    if( isorigfile )
    {
-      SCIP_CALL( SCIPhashtableCreate(&certificate->varboundtable, blkmem, nvars,
-            hashGetKeyVarbound, hashKeyEqVarbound, hashKeyValVarbound, NULL) );
-
       /* create working memory for bound struct */
-      SCIP_ALLOC( BMSallocBlockMemory(blkmem, &certificate->workbound) );
-      SCIP_CALL( RatCreateBlock(blkmem, &certificate->workbound->boundval) );
+      SCIP_ALLOC( BMSallocBlockMemory(blkmem, &certificate->lastinfo) );
+      SCIP_CALL( RatCreateBlock(blkmem, &certificate->lastinfo->boundval) );
    }
 
    nnonz = 0;
@@ -1107,9 +1069,9 @@ void SCIPcertificatePrintProblemRational(
    BMSallocMemoryArray(&formatstr, len);
    RatToString(val, formatstr, len);
    if( isorigfile )
-      SCIPfprintf(certificate->origfile, "%s", formatstr);
+      SCIPfputs(formatstr, certificate->origfile);
    else
-      SCIPfprintf(certificate->transfile, "%s", formatstr);
+      SCIPfputs(formatstr, certificate->transfile);
 
    BMSfreeMemoryArray(&formatstr);
 }
@@ -1133,7 +1095,7 @@ void SCIPcertificatePrintProofRational(
 
    BMSallocMemoryArray(&formatstr, len);
    RatToString(val, formatstr, len);
-   SCIPfprintf(certificate->derivationfile, "%s", formatstr);
+   SCIPfputs(formatstr, certificate->derivationfile);
    BMSfreeMemoryArray(&formatstr);
 }
 
@@ -1317,12 +1279,440 @@ void SCIPcertificatePrintCons(
    if( isorigfile )
       certificate->indexcounter_ori++;
    else
+   {
       certificate->indexcounter++;
+      certificate->lastinfo->isbound = FALSE;
+   }
 
    if( !isorigfile )
    {
       certificate->conscounter++;
    }
+}
+
+/** print a line for an exact row to the certificate (without derivation), @param alternativerhs is used instead
+ * of the real rhs of the row (infinity if real rhs should be used). This is necessary for integer cuts
+ * where the rhs was rounded down from the original rhs */
+static
+SCIP_RETCODE SCIPcertificatePrintRow(
+      SCIP_SET*          set,                /**< global SCIP settings */
+      SCIP_CERTIFICATE*  certificate,        /**< certificate structure */
+      SCIP_ROWEXACT*     rowexact,           /**< exact SCIP row */
+      SCIP_Real          alternativerhs      /**< rhs to be used instead or rowexact->rhs (infinity to disable this) */
+   )
+{
+   SCIP_ROW* row;
+   SCIP_Rational* rhs;
+   int i;
+
+   assert(rowexact != NULL);
+
+   row = SCIProwExactGetRow(rowexact);
+   assert(SCIProwGetNNonz(row) == SCIProwExactGetNNonz(rowexact));
+
+   SCIPcertificatePrintProofMessage(certificate, "L%d_%s %c ", certificate->indexcounter, row->name, 'L');
+
+   /* if we rounded the rhs in cut tightening we need to first verify the cut without it */
+   if( SCIPsetIsInfinity(set, alternativerhs) )
+   {
+      rhs = SCIProwExactGetRhs(rowexact);
+      SCIPcertificatePrintProofRational(certificate, rhs, 10);
+   }
+   else
+   {
+      SCIP_CALL( RatCreateBuffer(set->buffer, &rhs) );
+      RatSetReal(rhs, alternativerhs);
+      SCIPcertificatePrintProofRational(certificate, rhs, 10);
+      RatFreeBuffer(set->buffer, &rhs);
+   }
+
+   SCIPcertificatePrintProofMessage(certificate, " %d", SCIProwGetNNonz(row));
+
+   for( i = 0; i < SCIProwGetNNonz(row); i++ )
+   {
+      SCIP_Rational* val;
+      int varindex;
+      /** @todo exip: perform line breaking before exceeding maximum line length */
+      assert(rowexact->cols[i]->fpcol->var->index == rowexact->fprow->cols[i]->var->index);
+
+      varindex = SCIPvarGetCertificateIndex(SCIPcolExactGetVar(SCIProwExactGetCols(rowexact)[i]));
+      val = SCIProwExactGetVals(rowexact)[i];
+
+      SCIPcertificatePrintProofMessage(certificate, " %d ", varindex);
+      SCIPcertificatePrintProofRational(certificate, val, 10);
+   }
+   certificate->indexcounter++;
+   certificate->lastinfo->isbound = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/** prints mir split for the specified aggrrow */
+static
+SCIP_RETCODE certificatePrintMirSplit(
+   SCIP_SET*             set,                /**< SCIP settings */
+   SCIP_PROB*            prob,               /**< SCIP problem data */
+   SCIP_CERTIFICATE*     certificate,        /**< certificate information */
+   SCIP_ROW*             row                 /**< row that split should be printed for */
+   )
+{
+   SCIP_MIRINFO* mirinfo;
+   SCIP_Rational* val;
+   SCIP_VAR** vars;
+   int i;
+
+   assert(SCIPhashmapExists(certificate->mirinfohash, (void*) row));
+
+   mirinfo = (SCIP_MIRINFO*) SCIPhashmapGetImage(certificate->mirinfohash, (void*) row);
+
+   vars = SCIPprobGetVars(prob);
+
+   SCIP_CALL( RatCreateBuffer(set->buffer, &val) );
+
+   RatDebugMessage("printing mirinfo with rhs %q \n", mirinfo->rhs);
+   /* transform the split back into original variable space -> undo the bound transformations */
+
+   SCIPcertificatePrintProofMessage(certificate, "A%d_split %c ", certificate->indexcounter, 'L');
+
+   SCIPcertificatePrintProofRational(certificate, mirinfo->rhs, 10);
+
+   SCIPcertificatePrintProofMessage(certificate, " %d", mirinfo->nsplitvars);
+
+   for( i = 0; i < mirinfo->nsplitvars; i++ )
+   {
+      int varindex;
+      /** @todo exip: perform line breaking before exceeding maximum line length */
+      varindex = SCIPvarGetCertificateIndex(vars[mirinfo->varinds[i]]);
+      RatSetReal(val, mirinfo->splitcoefficients[i]);
+
+      assert(RatIsIntegral(val));
+
+      SCIPcertificatePrintProofMessage(certificate, " %d ", varindex);
+      SCIPcertificatePrintProofRational(certificate, val, 10);
+   }
+
+   SCIPcertificatePrintProofMessage(certificate, " { asm } -1 \n");
+
+   certificate->indexcounter++;
+   certificate->lastinfo->isbound = FALSE;
+
+   SCIPcertificatePrintProofMessage(certificate, "A%d_split %c ", certificate->indexcounter, 'G');
+
+   RatAddReal(mirinfo->rhs, mirinfo->rhs, 1.0);
+
+   SCIPcertificatePrintProofRational(certificate, mirinfo->rhs, 10);
+
+   RatAddReal(mirinfo->rhs, mirinfo->rhs, -1.0);
+
+   SCIPcertificatePrintProofMessage(certificate, " %d", mirinfo->nsplitvars);
+
+   for( i = 0; i < mirinfo->nsplitvars; i++ )
+   {
+      int varindex;
+      /** @todo exip: perform line breaking before exceeding maximum line length */
+      varindex = SCIPvarGetCertificateIndex(vars[mirinfo->varinds[i]]);
+      RatSetReal(val, mirinfo->splitcoefficients[i]);
+
+      assert(RatIsIntegral(val));
+
+      SCIPcertificatePrintProofMessage(certificate, " %d ", varindex);
+      SCIPcertificatePrintProofRational(certificate, val, 10);
+   }
+
+   SCIPcertificatePrintProofMessage(certificate, " { asm } -1 \n");
+
+   certificate->indexcounter++;
+   certificate->lastinfo->isbound = FALSE;
+
+   RatFreeBuffer(set->buffer, &val);
+
+   return SCIP_OKAY;
+}
+
+/** prints all local bounds that differ from their global bounds as the bounds to take into account */
+static
+SCIP_RETCODE certificatePrintWeakDerStart(
+   SCIP_CERTIFICATE*     certificate,        /**< SCIP certificate */
+   SCIP_PROB*            prob,               /**< SCIP problem data */
+   SCIP_Bool             local               /**< TRUE if the cut is only valid locally */
+   )
+{
+   SCIP_VAR** vars;
+   int nvars;
+   int i;
+   int nboundentries;
+
+   nboundentries = 0;
+
+   vars = SCIPprobGetVars(prob);
+   nvars = SCIPprobGetNVars(prob);
+
+   /* count the number of needed entries */
+   for( i = 0; i < nvars && local; i++ )
+   {
+      SCIP_VAR* var = vars[i];
+      if( !RatIsEqual(var->exactdata->glbdom.lb, var->exactdata->locdom.lb) )
+         nboundentries++;
+      if( !RatIsEqual(var->exactdata->glbdom.ub, var->exactdata->locdom.ub) )
+         nboundentries++;
+   }
+
+   SCIPcertificatePrintProofMessage(certificate, " { lin weak { %d", nboundentries);
+
+   for( i = 0; i < nvars && nboundentries > 0; i++ )
+   {
+      SCIP_VAR* var = vars[i];
+
+      if( !RatIsEqual(var->exactdata->glbdom.lb, var->exactdata->locdom.lb) )
+      {
+         SCIP_Longint index;
+         SCIP_Rational* boundval;
+
+         index = SCIPvarGetLbCertificateIndexLocal(var);
+         boundval = SCIPvarGetLbLocalExact(var);
+         SCIPcertificatePrintProofMessage(certificate, " L %d %d ", SCIPvarGetCertificateIndex(var), index);
+         SCIPcertificatePrintProofRational(certificate, boundval, 10);
+      }
+      if( !RatIsEqual(var->exactdata->glbdom.ub, var->exactdata->locdom.ub) )
+      {
+         SCIP_Longint index;
+         SCIP_Rational* boundval;
+
+         index = SCIPvarGetUbCertificateIndexLocal(var);
+         boundval = SCIPvarGetUbLocalExact(var);
+         SCIPcertificatePrintProofMessage(certificate, " U %d %d ", SCIPvarGetCertificateIndex(var), index);
+         SCIPcertificatePrintProofRational(certificate, boundval, 10);
+      }
+   }
+
+   SCIPcertificatePrintProofMessage(certificate, " } ");
+
+   return SCIP_OKAY;
+}
+
+/** prints verification of row as a MIR cut (viewed as a split cut) */
+SCIP_RETCODE SCIPcertificatePrintMirCut(
+   SCIP_SET*             set,                /**< SCIP settings */
+   SCIP_LP*              lp,                 /**< SCIP lp data structure */
+   SCIP_CERTIFICATE*     certificate,        /**< certificate information */
+   SCIP_PROB*            prob,               /**< SCIP problem data */
+   SCIP_ROW*             row,                /**< the row to be printed */
+   const char            sense               /**< sense of the constraint, i.e., G, L, or E */
+   )
+{
+   SCIP_ROWEXACT* rowexact;
+   SCIP_Rational* tmpval;
+   SCIP_Rational* value;
+   SCIP_Rational* oneminusf0;
+   SCIP_AGGREGATIONINFO* aggrinfo;
+   SCIP_Longint leftdisjunctionindex;
+   SCIP_Longint rightdisjunctionindex;
+   SCIP_MIRINFO* mirinfo;
+   int arraypos;
+   int i;
+
+   /* check if certificate output should be created */
+   if( certificate->transfile == NULL )
+      return SCIP_OKAY;
+
+   assert(row != NULL);
+   assert(sense == 'L'); // only take care of this case for now
+   assert(SCIPhashmapExists(certificate->aggrinfohash, (void*) row));
+
+   SCIP_CALL( RatCreateBuffer(set->buffer, &tmpval) );
+   SCIP_CALL( RatCreateBuffer(set->buffer, &oneminusf0) );
+   SCIP_CALL( RatCreateBuffer(set->buffer, &value) );
+
+   rowexact = SCIProwGetRowExact(row);
+
+   /* get aggregation info and print aggregation row to certificate */
+   aggrinfo = (SCIP_AGGREGATIONINFO*) SCIPhashmapGetImage(certificate->aggrinfohash, (void*) row);
+   mirinfo = (SCIP_MIRINFO*) SCIPhashmapGetImage(certificate->mirinfohash, (void*) row);
+
+   /* compute the correct split from the aggregation row, and print the two assumptions (\xi \le \lfloor \beta \rfloor), and  (\xi \ge \lfloor \beta + 1 \rfloor) */
+   SCIP_CALL( certificatePrintMirSplit(set, prob, certificate, row) );
+
+   leftdisjunctionindex = certificate->indexcounter - 2;
+   rightdisjunctionindex = certificate->indexcounter - 1;
+
+   /* if this aggregation depends on another no yet certified MIR cut, we need to print that first */
+   for( i = 0; i < aggrinfo->naggrrows; i++ )
+   {
+      SCIP_ROWEXACT* aggrrow;
+      aggrrow = SCIProwGetRowExact(aggrinfo->aggrrows[i]);
+        assert(aggrrow != NULL);
+      if( !SCIPhashmapExists(certificate->rowdatahash, (void*) aggrrow) )
+      {
+         SCIP_CALL( SCIPcertificatePrintMirCut(set, lp, certificate, prob, aggrinfo->aggrrows[i], 'L') );
+      }
+   }
+
+   /* print possibly missing derivations to the certifiacte */
+   for( i = 0; i < aggrinfo->nnegslackrows; i++ )
+   {
+      SCIP_ROWEXACT* slackrow;
+      slackrow = SCIProwGetRowExact(aggrinfo->negslackrows[i]);
+
+      if( !SCIPhashmapExists(certificate->rowdatahash, (void*) slackrow) )
+      {
+         SCIP_CALL( SCIPcertificatePrintMirCut(set, lp, certificate, prob, aggrinfo->negslackrows[i], 'L') );
+      }
+   }
+
+   /* print the mir cut with proof 1 * (\xi \le \lfloor \beta \rfloor) - (1/1-f)(\nu \ge 0) */
+   /* we dont need the \nu \ge 0 part since it will be taken care of by the vipr completion part */
+   assert(rowexact != NULL);
+
+   SCIPcertificatePrintRow(set, certificate, rowexact, mirinfo->unroundedrhs);
+
+   /* calculate 1-f0 */
+   RatSetReal(oneminusf0, 1.0);
+   RatDiff(oneminusf0, oneminusf0, mirinfo->frac);
+
+   certificatePrintWeakDerStart(certificate, prob, SCIProwIsLocal(row));
+
+   /* 1 * (\xi \le \lfloor \beta \rfloor) we also have to add the correct multipliers for the negative slacks that were used here */
+   SCIPcertificatePrintProofMessage(certificate, "%d %d ", 1 + aggrinfo->nnegslackrows, leftdisjunctionindex);
+   /* multiply with scaling parameter that was used during cut computation */
+   RatSetReal(tmpval, mirinfo->scale);
+   SCIPcertificatePrintProofRational(certificate, tmpval, 10);
+
+   for( i = 0; i < aggrinfo->nnegslackrows; i++ )
+   {
+       size_t key;
+       SCIP_ROWEXACT* slackrow;
+       slackrow = SCIProwGetRowExact(aggrinfo->negslackrows[i]);
+
+       SCIPdebugMessage("adding %g times row: ", aggrinfo->negslackweights[i]);
+       SCIPdebug(SCIProwExactPrint(slackrow, set->scip->messagehdlr, NULL));
+       assert(slackrow != NULL);
+       assert(SCIPhashmapExists(certificate->rowdatahash, (void*) slackrow));
+       RatSetReal(tmpval, aggrinfo->substfactor[i]);
+#ifndef NDEBUG
+       assert(fabs(RatApproxReal(tmpval) - aggrinfo->negslackweights[i] / RatApproxReal(oneminusf0)) < 1e-9);
+#endif
+
+       key = (size_t)SCIPhashmapGetImage(certificate->rowdatahash, (void*) slackrow);
+       /* for ranged rows, the key always corresponds to the >= part of the row;
+          therefore we need to increase it by one to get the correct key */
+       if( !RatIsAbsInfinity(slackrow->rhs) && !RatIsAbsInfinity(slackrow->lhs) && !RatIsEqual(slackrow->lhs, slackrow->rhs) && aggrinfo->negslackweights[i] >= 0 )
+          key += 1;
+
+       SCIPcertificatePrintProofMessage(certificate, " %d ", key);
+       RatMultReal(tmpval, tmpval, mirinfo->scale);
+       SCIPcertificatePrintProofRational(certificate, tmpval, 10);
+   }
+   SCIPcertificatePrintProofMessage(certificate, " } -1 \n");
+
+   /* print the mir cut with proof (-f/1-f) * (\xi \ge \lfloor \beta + 1 \rfloor) + (1/1-f)(\xi - \nu \le \beta) */
+   SCIPcertificatePrintRow(set, certificate, rowexact, mirinfo->unroundedrhs);
+
+   certificatePrintWeakDerStart(certificate, prob, SCIProwIsLocal(row));
+   SCIPcertificatePrintProofMessage(certificate, " %d ", 1 + aggrinfo->naggrrows + aggrinfo->nnegslackrows);
+
+   /* (-f/1-f) * (\xi \ge \lfloor \beta + 1 \rfloor) */
+   SCIPcertificatePrintProofMessage(certificate, "%d ", rightdisjunctionindex);
+   RatSet(tmpval, mirinfo->frac);
+   RatNegate(tmpval, tmpval); /* -f */
+   RatDiv(tmpval, tmpval, oneminusf0); /* -f/(1-f) */
+   /* multiply with scaling factor that was used in cut derivation */
+   RatMultReal(tmpval, tmpval, mirinfo->scale);
+   SCIPcertificatePrintProofRational(certificate, tmpval, 10);
+
+   /* we also have to add the correct multipliers for the negative slacks that were used here */
+   for( i = 0; i < aggrinfo->nnegslackrows; i++ )
+   {
+      size_t key;
+      SCIP_ROWEXACT* slackrow;
+      slackrow = SCIProwGetRowExact(aggrinfo->negslackrows[i]);
+
+      SCIPdebugMessage("adding %g times row: ", aggrinfo->negslackweights[i]);
+      SCIPdebug(SCIProwExactPrint(slackrow, set->scip->messagehdlr, NULL));
+      RatSetReal(value, -aggrinfo->negslackweights[i]);
+      RatDiv(value, value, oneminusf0);
+      RatAddReal(value, value, aggrinfo->substfactor[i]);
+
+      assert(slackrow != NULL);
+      assert(SCIPhashmapExists(certificate->rowdatahash, (void*) slackrow));
+
+      key = (size_t)SCIPhashmapGetImage(certificate->rowdatahash, (void*) slackrow);
+      /* for ranged rows, the key always corresponds to the >= part of the row;
+         therefore we need to increase it by one to get the correct key */
+      if( !RatIsAbsInfinity(slackrow->rhs) && !RatIsAbsInfinity(slackrow->lhs) && !RatIsEqual(slackrow->lhs, slackrow->rhs) && aggrinfo->negslackweights[i] >= 0 )
+         key += 1;
+
+      SCIPcertificatePrintProofMessage(certificate, " %d ", key);
+      RatMultReal(value, value, mirinfo->scale);
+      SCIPcertificatePrintProofRational(certificate, value, 10);
+   }
+
+   /* we also have to add the correct multipliers for the aggregation rows that were used here */
+   for( i = 0; i < aggrinfo->naggrrows; i++ )
+   {
+      size_t key;
+      SCIP_ROWEXACT* aggrrow;
+      aggrrow = SCIProwGetRowExact(aggrinfo->aggrrows[i]);
+
+      SCIPdebugMessage("adding %g times row: ", aggrinfo->weights[i]);
+      SCIPdebug(SCIProwExactPrint(aggrrow, set->scip->messagehdlr, NULL));
+      RatSetReal(value, aggrinfo->weights[i]);
+      RatDiv(value, value, oneminusf0);
+
+      assert(aggrrow != NULL);
+      assert(SCIPhashmapExists(certificate->rowdatahash, (void*) aggrrow));
+
+      key = (size_t)SCIPhashmapGetImage(certificate->rowdatahash, (void*) aggrrow);
+      /* for ranged rows, the key always corresponds to the >= part of the row;
+         therefore we need to increase it by one to get the correct key */
+      if( !RatIsAbsInfinity(aggrrow->rhs) && !RatIsAbsInfinity(aggrrow->lhs) && !RatIsEqual(aggrrow->lhs, aggrrow->rhs) && aggrinfo->weights[i] >= 0 )
+         key += 1;
+
+      SCIPcertificatePrintProofMessage(certificate, " %d ", key);
+      RatMultReal(value, value, mirinfo->scale);
+      SCIPcertificatePrintProofRational(certificate, value, 10);
+   }
+
+   SCIPcertificatePrintProofMessage(certificate, " } -1\n");
+
+   /* print the unsplitting of the split disjunction */
+   SCIPcertificatePrintRow(set, certificate, rowexact, mirinfo->unroundedrhs);
+   SCIPcertificatePrintProofMessage(certificate, " { uns %d %d  %d %d  } -1\n", certificate->indexcounter - 3, leftdisjunctionindex,
+         certificate->indexcounter - 2, rightdisjunctionindex);
+
+   /* if we rounded the rhs we need to still certify that part */
+   if( !SCIPsetIsInfinity(set, mirinfo->unroundedrhs) )
+   {
+      /* print the row with the rounded rhs */
+      SCIPcertificatePrintRow(set, certificate, rowexact, SCIPsetInfinity(set));
+      SCIPcertificatePrintProofMessage(certificate, " { rnd 1 %d 1 } -1\n", certificate->indexcounter - 2);
+   }
+
+   SCIP_CALL( SCIPhashmapInsert(certificate->rowdatahash, SCIProwGetRowExact(row), (void*)((size_t)certificate->indexcounter - 1)) );
+
+   SCIP_CALL( SCIPcertificateFreeAggrInfo(set, certificate, lp, aggrinfo, row) );
+
+   RatFreeBuffer(set->buffer, &value);
+   RatFreeBuffer(set->buffer, &oneminusf0);
+   RatFreeBuffer(set->buffer, &tmpval);
+
+   /* remove the mirinfo, move last element to the now freed up one */
+   arraypos = mirinfo->arpos;
+   SCIP_CALL( SCIPhashmapRemove(certificate->mirinfohash, (void*) row) );
+   RatFreeBlock(certificate->blkmem, &(mirinfo->rhs));
+   RatFreeBlock(certificate->blkmem, &(mirinfo->frac));
+   BMSfreeBlockMemoryArray(certificate->blkmem, &(mirinfo->splitcoefficients), mirinfo->nsplitvars);
+   BMSfreeBlockMemoryArray(certificate->blkmem, &(mirinfo->varinds), mirinfo->nsplitvars);
+   BMSfreeBlockMemoryArray(certificate->blkmem, &(mirinfo->upperused), mirinfo->nsplitvars);
+   BMSfreeBlockMemoryArray(certificate->blkmem, &(mirinfo->localbdused), mirinfo->nsplitvars);
+   BMSfreeBlockMemory(certificate->blkmem, &mirinfo);
+   if( arraypos != certificate->nmirinfos - 1 )
+   {
+      certificate->mirinfo[arraypos] = certificate->mirinfo[certificate->nmirinfos - 1];
+      certificate->mirinfo[arraypos]->arpos = arraypos;
+   }
+   certificate->nmirinfos--;
+
+   return SCIP_OKAY;
 }
 
 /** @todo exip: refactor this so duplicates and redundant bounds do not get printed */
@@ -1331,62 +1721,40 @@ SCIP_RETCODE SCIPcertificatePrintBoundCons(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
    SCIP_Bool             isorigfile,         /**< shoud the line be printed to the origfile or the transfile */
    const char*           boundname,          /**< name of the bound constraint */
-   int                   varindex,           /**< index of the variable */
+   SCIP_VAR*             var,                /**< variable to print the bound cons for */
    SCIP_Rational*        boundval,           /**< value of the bound */
    SCIP_Bool             isupper             /**< is it the upper bound? */
    )
 {
-   void* image;
+   SCIP_Longint varindex;
 
    /* check if certificate output should be created */
    if( certificate->transfile == NULL )
       return SCIP_OKAY;
 
+   varindex = SCIPvarGetCertificateIndex(var);
+
    if( !isorigfile )
    {
-      /* install bound information in working struct */
-      certificate->workbound->fileindex = certificate->indexcounter;
-      certificate->workbound->varindex = varindex;
-      RatSet(certificate->workbound->boundval, boundval);
-      certificate->workbound->isupper = isupper;
+      certificate->indexcounter++;
+      certificate->conscounter++;
 
-      SCIPdebugMessage("Printing bound at line %" SCIP_LONGINT_FORMAT ": <variable %d> %s approx. %g\n",
-         certificate->indexcounter, varindex, (isupper ? "<=" : ">="), RatApproxReal(boundval));
+#ifndef NDEBUG
+      certificate->lastinfo->isbound = TRUE;
+      certificate->lastinfo->boundtype = isupper ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER;
+      certificate->lastinfo->varindex = SCIPvarGetCertificateIndex(var);
+      RatSet(certificate->lastinfo->boundval, boundval);
+#endif
 
-      /* bounds in the problem should be created only once, but row singletons get handled as bounds, as well */
-      image = SCIPhashtableRetrieve(certificate->varboundtable, (void*)certificate->workbound);
+      if( isupper )
+         SCIPvarSetUbCertificateIndexGlobal(var, certificate->indexcounter - 1);
+      else
+         SCIPvarSetLbCertificateIndexGlobal(var, certificate->indexcounter - 1);
 
-      if( image != NULL )
-      {
-         SCIPdebugMessage("Duplicate bound in certificate hashtable. Ignoring \n");
-         assert(RatIsEqual(boundval, ((SCIP_CERTIFICATEBOUND*) image)->boundval));
-
-         //return SCIP_OKAY;
-      }
-      /* add the new bound */
-      {
-         SCIP_CERTIFICATEBOUND* insertbound;
-
-         SCIP_ALLOC( BMSduplicateBlockMemory(certificate->blkmem, &insertbound, certificate->workbound) );
-         SCIP_CALL( RatCopy(certificate->blkmem, &insertbound->boundval, boundval) );
-         /* ensure size and insert boundval in array to be able to free it at the end */
-         if( certificate->nboundvals >= certificate->boundvalsize )
-         {
-            BMSreallocBlockMemoryArray(certificate->blkmem, &certificate->boundvals, certificate->boundvalsize, certificate->boundvalsize + 100);
-            certificate->boundvalsize += 100;
-         }
-         certificate->boundvals[certificate->nboundvals] = insertbound;
-         certificate->nboundvals++;
-
-         SCIP_CALL( SCIPhashtableInsert(certificate->varboundtable, (void*)insertbound) );
-         certificate->indexcounter++;
-         certificate->conscounter++;
-
-         if( boundname == NULL )
-            SCIPcertificatePrintProblemMessage(certificate, isorigfile, "B%d %c ", certificate->indexcounter - 1, (isupper ? 'L' : 'G'));
-         else
-            SCIPcertificatePrintProblemMessage(certificate, isorigfile, "%s %c ", boundname, (isupper ? 'L' : 'G'));
-      }
+      if( boundname == NULL )
+         SCIPcertificatePrintProblemMessage(certificate, isorigfile, "B%d %c ", certificate->indexcounter - 1, (isupper ? 'L' : 'G'));
+      else
+         SCIPcertificatePrintProblemMessage(certificate, isorigfile, "%s %c ", boundname, (isupper ? 'L' : 'G'));
    }
    else
    {
@@ -1401,78 +1769,6 @@ SCIP_RETCODE SCIPcertificatePrintBoundCons(
    SCIPcertificatePrintProblemMessage(certificate, isorigfile, " 1 %d 1\n", varindex);
 
    return SCIP_OKAY;
-}
-
-/** checks whether variable bound assumption is present; prints it if not; returns index */
-SCIP_Longint SCIPcertificatePrintBoundAssumption(
-   SCIP_CERTIFICATE*     certificate,        /**< certificate information */
-   const char*           assumptionname,     /**< name of the bound constraint */
-   int                   varindex,           /**< index of the variable */
-   SCIP_Rational*        boundval,           /**< value of the bound */
-   SCIP_Bool             isupper             /**< is it the upper bound? */
-   )
-{
-   void* image;
-
-   /* check if certificate output should be created */
-   if( certificate->transfile == NULL )
-      return 0;
-
-   /* install bound information in working struct */
-   certificate->workbound->fileindex = certificate->indexcounter;
-   certificate->workbound->varindex = varindex;
-   RatSet(certificate->workbound->boundval, boundval);
-   certificate->workbound->isupper = isupper;
-
-   image = SCIPhashtableRetrieve(certificate->varboundtable, (void*)certificate->workbound);
-   if( image != NULL )
-   {
-      SCIP_CERTIFICATEBOUND* foundbound;
-
-      foundbound = (SCIP_CERTIFICATEBOUND*)image;
-
-      SCIPdebugMessage("Found bound assumption at line %" SCIP_LONGINT_FORMAT ": <variable %d> %s approx. %g\n",
-         foundbound->fileindex, varindex, (isupper ? "<=" : ">="), RatApproxReal(boundval));
-
-      assert(foundbound->fileindex >= 0);
-      assert(foundbound->varindex == varindex);
-      assert(RatIsEqual(foundbound->boundval, boundval));
-      assert(foundbound->isupper == isupper);
-      return foundbound->fileindex;
-   }
-   else
-   {
-      SCIP_CERTIFICATEBOUND* insertbound;
-
-      SCIPdebugMessage("Print bound assumption at line %" SCIP_LONGINT_FORMAT ": <variable %d> %s approx. %g\n",
-         certificate->workbound->fileindex, varindex, (isupper ? "<=" : ">="), RatApproxReal(boundval));
-
-      SCIP_ALLOC( BMSduplicateBlockMemory(certificate->blkmem, &insertbound, certificate->workbound) );
-      SCIP_CALL( RatCopy(certificate->blkmem, &insertbound->boundval, boundval) );
-
-      /* ensure size and insert boundval in array to be able to free it at the end */
-      if( certificate->nboundvals >= certificate->boundvalsize )
-      {
-         BMSreallocBlockMemoryArray(certificate->blkmem, &certificate->boundvals, certificate->boundvalsize, certificate->boundvalsize + 100);
-         certificate->boundvalsize += 100;
-      }
-      certificate->boundvals[certificate->nboundvals] = insertbound;
-      certificate->nboundvals++;
-
-      SCIP_CALL( SCIPhashtableInsert(certificate->varboundtable, (void*)insertbound) );
-
-      certificate->indexcounter++;
-
-      if( assumptionname == NULL )
-         SCIPcertificatePrintProofMessage(certificate, "A%d %c ", insertbound->fileindex, (isupper ? 'L' : 'G'));
-      else
-        SCIPcertificatePrintProofMessage(certificate,  "%s %c ", assumptionname, (isupper ? 'L' : 'G'));
-
-      SCIPcertificatePrintProofRational(certificate, boundval, 10);
-      SCIPcertificatePrintProofMessage(certificate,  " 1 %d 1 { asm } -1\n", varindex);
-
-      return insertbound->fileindex;
-   }
 }
 
 /** installs updated node data in parent node */
@@ -1570,7 +1866,6 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
    int len;
    int i;
    unsigned long key;
-   void* image;
 
    if( certificate->transfile == NULL )
       return SCIP_OKAY;
@@ -1592,18 +1887,14 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
    assert(lpexact!= NULL);
    assert(certificate->transfile != NULL);
 
-   vals = certificate->vals;
    /* if needed extend vals array */
    if( lpexact->ncols + lpexact->nrows > certificate->valssize )
    {
-      SCIP_ALLOC( BMSreallocBlockMemoryArray(certificate->blkmem, &certificate->vals,
-         certificate->valssize, lpexact->ncols + lpexact->nrows) );
-      for( i = certificate->valssize; i < lpexact->ncols + lpexact->nrows; i++ )
-      {
-         SCIP_CALL( RatCreateBlock(certificate->blkmem, &(certificate->vals[i])) );
-      }
-      certificate->valssize =  lpexact->ncols + lpexact->nrows;
+      SCIP_CALL( RatReallocBlockArray(certificate->blkmem, &(certificate->vals), certificate->valssize, lpexact->nrows + lpexact->ncols + 50) );
+      certificate->valssize =  lpexact->ncols + lpexact->nrows + 50;
    }
+
+   vals = certificate->vals;
 
    SCIP_CALL( RatCreateBuffer(set->buffer, &farkasrhs) );
 
@@ -1613,6 +1904,8 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
    for( i = 0; i < lpexact->ncols; ++i )
    {
       SCIP_COLEXACT* col = lpexact->cols[i];
+      SCIP_VAR* var = SCIPcolExactGetVar(col);
+
       if( usefarkas )
          val = col->farkascoef;
       else
@@ -1627,14 +1920,14 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
          else
             RatSet(vals[len], val);
 
-         ind[len] = getVarBoundFileIndex(certificate, col, vals[len]);
+         ind[len] = RatIsNegative(vals[len]) ? SCIPvarGetUbCertificateIndexLocal(var) : SCIPvarGetLbCertificateIndexLocal(var);
 
          RatDebugMessage("Column %d for var %s has index %l and farkas coef %q \n", col->index, col->var->name, ind[len], val);
 
          /* update farkasrhs */
          if( usefarkas )
          {
-            val = certificate->workbound->boundval;
+            val = RatIsNegative(vals[len]) ? SCIPvarGetUbLocalExact(var) : SCIPvarGetLbLocalExact(var);
             RatAddProd(farkasrhs, vals[len], val);
          }
          len++;
@@ -1652,16 +1945,16 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
       {
          RatSet(vals[len], val);
          key = (size_t)SCIPhashmapGetImage(certificate->rowdatahash, (void*) row);
-         if( key >= INT_MAX - 1 )
-         {
-            SCIPerrorMessage("row not in rowdata-hash \n");
-            SCIPABORT();
-            return SCIP_ERROR;
-         }
 
-         if( key == 0 && SCIProwExactGetNNonz(row) == 1 )
+         if( key == 0 && SCIProwGetOrigintype(SCIProwExactGetRow(row)) == SCIP_ROWORIGINTYPE_SEPA )
          {
-            key = getVarBoundFileIndex(certificate, SCIProwExactGetCols(row)[0], val);
+            SCIP_CALL( SCIPcertificatePrintMirCut(set, lpexact->fplp, certificate, prob, SCIProwExactGetRow(row), 'L') );
+            key = (size_t)SCIPhashmapGetImage(certificate->rowdatahash, (void*) row);
+         }
+         else if( key == 0 && SCIProwExactGetNNonz(row) == 1 )
+         {
+            SCIP_VAR* var = SCIPcolExactGetVar(SCIProwExactGetCols(row)[0]);
+            key = ind[len] = RatIsNegative(val) ? SCIPvarGetUbCertificateIndexLocal(var) : SCIPvarGetLbCertificateIndexLocal(var);
          }
 
          assert(key != 0);
@@ -1718,13 +2011,19 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
    return SCIP_OKAY;
 }
 
-/** Print a dual bound from the pseudo solution */
+/** Print a dual bound from the pseudo solution
+ *  in case of a bound change (branching), this happens before the bound change is processed;
+ *  therefore we add the option to give on varindex, boundchgindex pair to pass directly to the method
+ */
 SCIP_RETCODE  SCIPcertificatePrintDualboundPseudo(
    SCIP_CERTIFICATE*     certificate,        /**< scip certificate struct */
    SCIP_LPEXACT*         lpexact,            /**< the exact lp */
    SCIP_NODE*            node,               /**< current node */
    SCIP_SET*             set,                /**< scip settings */
    SCIP_PROB*            prob,               /**< problem data */
+   SCIP_Bool             lowerchanged,       /**< to the modified indices address a change in lb or ub? */
+   int                   modifiedvarindex,   /**< index of modified variable, or -1 */
+   SCIP_Longint          boundchangeindex,   /**< index of unprocessed bound change in the certificate, or -1 */
    SCIP_Real             psval               /**< the pseudo obj value (or inf to use exact lp value) */
    )
 {
@@ -1736,11 +2035,11 @@ SCIP_RETCODE  SCIPcertificatePrintDualboundPseudo(
    int duallen;
    int i;
    int nnonzeros;
-   void* image;
 
    assert(certificate != NULL);
    assert(prob != NULL);
    assert(set != NULL);
+   assert((modifiedvarindex >= 0 && boundchangeindex >= 0) || (modifiedvarindex == -1 && boundchangeindex == -1) );
 
    /* only print if not -infinity and certificate is active */
    if( !set->exact_enabled || !SCIPcertificateIsActive(set, certificate) || SCIPsetIsInfinity(set, -psval) )
@@ -1779,20 +2078,19 @@ SCIP_RETCODE  SCIPcertificatePrintDualboundPseudo(
          assert(!RatIsAbsInfinity(bounds[nnonzeros]));
 
          /* retrieve the line in the certificate of the bound */
-         RatSet(certificate->workbound->boundval, SCIPvarGetBestBoundLocalExact(vars[i]));
-         certificate->workbound->varindex = SCIPvarGetCertificateIndex(vars[i]);
-         certificate->workbound->isupper = RatIsNegative(obj);
-
-         image = SCIPhashtableRetrieve(certificate->varboundtable, (void*)certificate->workbound);
-
-         if( image != NULL )
-            dualind[nnonzeros] = ((SCIP_CERTIFICATEBOUND*)image)->fileindex;
+         if( RatIsPositive(obj) )
+         {
+            dualind[nnonzeros] = SCIPvarGetLbCertificateIndexLocal(vars[i]);
+            if( lowerchanged && modifiedvarindex == SCIPvarGetCertificateIndex(vars[i]) )
+               dualind[nnonzeros] = boundchangeindex;
+         }
          else
          {
-            SCIPerrorMessage("Bound should be present in certificate \n");
-            SCIPABORT();
-            return SCIP_ERROR;
+            dualind[nnonzeros] = SCIPvarGetUbCertificateIndexLocal(vars[i]);
+            if( !lowerchanged && modifiedvarindex == SCIPvarGetCertificateIndex(vars[i]) )
+               dualind[nnonzeros] = boundchangeindex;
          }
+
          nnonzeros++;
       }
    }
@@ -1813,6 +2111,7 @@ SCIP_RETCODE  SCIPcertificatePrintDualboundPseudo(
    return SCIP_OKAY;
 }
 
+/** prints the bound that a node inherits from its parent to the certificate */
 SCIP_RETCODE SCIPcertificatePrintInheritedBound(
    SCIP_SET*             set,                /**< general SCIP settings */
    SCIP_CERTIFICATE*     certificate,        /**< certificate data structure */
@@ -1821,9 +2120,7 @@ SCIP_RETCODE SCIPcertificatePrintInheritedBound(
 {
 
    SCIP_CERTNODEDATA* nodedata;
-   SCIP_Longint unsplit_index;
    SCIP_Rational* lowerbound;
-   SCIP_Bool infeas;
 
    assert(node != NULL);
 
@@ -1834,13 +2131,13 @@ SCIP_RETCODE SCIPcertificatePrintInheritedBound(
    /* get the current node data */
    assert(SCIPhashmapExists(certificate->nodedatahash, node));
    nodedata = (SCIP_CERTNODEDATA*) SCIPhashmapGetImage(certificate->nodedatahash, node);
-   infeas = FALSE;
+
    if( nodedata->inheritedbound && nodedata->assumptionindex_self != - 1 )
    {
       SCIP_Longint ind[1];
-      ind[0] = nodedata->derindex_inherit;
-      SCIP_Rational* lowerbound;
       SCIP_Rational* val;
+
+      ind[0] = nodedata->derindex_inherit;
 
       RatCreateBuffer(set->buffer, &lowerbound);
       RatCreateBuffer(set->buffer, &val);
@@ -1873,6 +2170,7 @@ SCIP_Longint SCIPcertificatePrintDualbound(
       return 0;
 
    certificate->indexcounter++;
+   certificate->lastinfo->isbound = FALSE;
 
    if( linename == NULL )
    {
@@ -1901,8 +2199,10 @@ SCIP_Longint SCIPcertificatePrintDualbound(
    }
    else
    {
-      SCIPcertificatePrintProofMessage(certificate, " { lin %d", len);
       int i;
+
+      SCIPcertificatePrintProofMessage(certificate, " { lin %d", len);
+
       for( i = 0; i < len; i++ )
       {
          /** @todo exip: perform line breaking before exceeding maximum line length */
@@ -1916,13 +2216,12 @@ SCIP_Longint SCIPcertificatePrintDualbound(
    /* print rounding derivation */
    if( !RatIsNegInfinity(lowerbound) && certificate->objintegral && !RatIsIntegral(lowerbound) )
    {
-      long int ceilint;
-
       certificate->indexcounter++;
+      certificate->lastinfo->isbound = FALSE;
 
       SCIPcertificatePrintProofMessage(certificate, "R%d G ", certificate->indexcounter - 1);
       updateFilesize(certificate, 4.0 + ceil(log10(certificate->indexcounter - 1 + 1)));
-      RatRound(lowerbound, lowerbound, SCIP_ROUND_UPWARDS);
+      RatRound(lowerbound, lowerbound, SCIP_R_ROUND_UPWARDS);
 
       SCIPcertificatePrintProofRational(certificate, lowerbound, 10);
 
@@ -1972,7 +2271,7 @@ SCIP_RETCODE SCIPcertificatePrintBranching(
 
    if( branchvar != NULL )
    {
-      nodedata->assumptionindex_self = printBoundAssumption(set, certificate, SCIPvarGetCertificateIndex(branchvar),
+      nodedata->assumptionindex_self = printBoundAssumption(set, certificate, branchvar,
          branchbound, boundtype);
    }
 
@@ -1982,9 +2281,9 @@ SCIP_RETCODE SCIPcertificatePrintBranching(
 
       if( branchvar != NULL )
       {
-         if( boundtype == SCIP_BOUNDTYPE_LOWER )
-            nodedataparent->assumptionindex_right = nodedata->assumptionindex_self;
          if( boundtype == SCIP_BOUNDTYPE_UPPER )
+            nodedataparent->assumptionindex_right = nodedata->assumptionindex_self;
+         if( boundtype == SCIP_BOUNDTYPE_LOWER )
             nodedataparent->assumptionindex_left = nodedata->assumptionindex_self;
       }
    }
@@ -2049,6 +2348,440 @@ SCIP_RETCODE SCIPcertificateNewNodeData(
    return SCIP_OKAY;
 }
 
+/** create a new node data structure for the current node */
+SCIP_RETCODE SCIPcertificatePrintAggrrow(
+   SCIP_SET*             set,                /**< general SCIP settings */
+   SCIP_LP*              lp,                 /**< SCIP lp data structure */
+   SCIP_PROB*            prob,               /**< SCIP problem data */
+   SCIP_CERTIFICATE*     certificate,        /**< SCIP certificate */
+   SCIP_AGGRROW*         aggrrow,            /**< agrrrow that results from the aggregation */
+   SCIP_ROW**            aggrrows,           /**< array of rows used fo the aggregation */
+   SCIP_Real*            weights,            /**< array of weights */
+   int                   naggrrows,          /**< length of the arrays */
+   SCIP_Bool             local               /**< true if local bound information can be used */
+   )
+{
+   int i;
+   SCIP_Rational* tmpval;
+   SCIP_ROWEXACT* rowexact;
+   SCIP_VAR** vars;
+
+
+
+   SCIP_CALL( RatCreateBuffer(set->buffer, &tmpval) );
+   vars = SCIPprobGetVars(prob);
+
+   SCIPdebugMessage("printing certificate for aggrrow: ");
+   SCIPdebug(SCIPaggrRowPrint(set->scip, aggrrow, NULL));
+
+   SCIPcertificatePrintProofMessage(certificate, "L%d %c ", certificate->indexcounter, 'L');
+
+   RatSetReal(tmpval, SCIPaggrRowGetRhs(aggrrow));
+
+   SCIPcertificatePrintProofRational(certificate, tmpval, 10);
+
+   SCIPcertificatePrintProofMessage(certificate, " %d", SCIPaggrRowGetNNz(aggrrow));
+
+   for( i = 0; i < SCIPaggrRowGetNNz(aggrrow); i++ )
+   {
+      int varindex;
+      /** @todo exip: perform line breaking before exceeding maximum line length */
+
+      varindex = SCIPvarGetCertificateIndex(vars[SCIPaggrRowGetInds(aggrrow)[i]]);
+      RatSetReal(tmpval, SCIPaggrRowGetValue(aggrrow, i));
+
+      SCIPcertificatePrintProofMessage(certificate, " %d ", varindex);
+      SCIPcertificatePrintProofRational(certificate, tmpval, 10);
+   }
+
+   certificatePrintWeakDerStart(certificate, prob, local);
+   SCIPcertificatePrintProofMessage(certificate, " %d", naggrrows);
+   for( i = 0; i < naggrrows; i++ )
+   {
+      size_t key;
+      rowexact = SCIProwGetRowExact(aggrrows[i]);
+
+      SCIPdebugMessage("adding %g times row: ", weights[i]);
+      SCIPdebug(SCIProwExactPrint(rowexact, set->scip->messagehdlr, NULL));
+      RatSetReal(tmpval, weights[i]);
+
+      assert(rowexact != NULL);
+      assert(SCIPhashmapExists(certificate->rowdatahash, (void*) rowexact));
+
+      key = (size_t)SCIPhashmapGetImage(certificate->rowdatahash, (void*) rowexact);
+      /* for ranged rows, the key always corresponds to the >= part of the row;
+         therefore we need to increase it by one to get the correct key */
+      if( !RatIsAbsInfinity(rowexact->rhs) && !RatIsAbsInfinity(rowexact->lhs) && !RatIsEqual(rowexact->lhs, rowexact->rhs) && weights[i] >= 0 )
+         key += 1;
+
+      SCIPcertificatePrintProofMessage(certificate, " %d ", key);
+      SCIPcertificatePrintProofRational(certificate, tmpval, 10);
+   }
+
+   SCIPcertificatePrintProofMessage(certificate, " } -1\n");
+
+   certificate->indexcounter++;
+   certificate->lastinfo->isbound = FALSE;
+
+   RatFreeBuffer(set->buffer, &tmpval);
+
+   return SCIP_OKAY;
+}
+
+/** free all aggregation information */
+SCIP_RETCODE SCIPcertificateClearAggrinfo(
+   SCIP*                 scip                /**< global SCIP data structure */
+   )
+{
+   int i;
+   SCIP_CERTIFICATE* certificate;
+
+   certificate = SCIPgetCertificate(scip);
+
+   if( certificate == NULL || certificate->aggrinfo == NULL )
+      return SCIP_OKAY;
+
+   assert(certificate != NULL);
+
+   for( i = certificate->naggrinfos - 1; i >= 0; i-- )
+   {
+      SCIP_CALL( SCIPcertificateFreeAggrInfo(scip->set, certificate, scip->lp, certificate->aggrinfo[i], NULL) );
+   }
+
+   BMSfreeBlockMemoryArray(certificate->blkmem, &certificate->aggrinfo, certificate->aggrinfosize);
+   SCIPhashmapRemoveAll(certificate->aggrinfohash);
+   SCIPhashmapFree(&certificate->aggrinfohash);
+   certificate->naggrinfos = 0;
+   certificate->aggrinfohash = NULL;
+
+   return SCIP_OKAY;
+}
+
+/** free aggregation information for row */
+SCIP_RETCODE SCIPcertificateFreeAggrInfo(
+   SCIP_SET*             set,                /**< general SCIP settings */
+   SCIP_CERTIFICATE*     certificate,        /**< SCIP certificate structure */
+   SCIP_LP*              lp,                 /**< SCIP lp data structure */
+   SCIP_AGGREGATIONINFO* aggrinfo,           /**< SCIP aggregation info */
+   SCIP_ROW*             row                 /**< row that should be freed, or NULL if not needed */
+   )
+{
+   int arraypos;
+   int i;
+
+   /* remove the (no longer needed aggrinfo), move last element to now freed spot */
+   arraypos = aggrinfo->arpos;
+
+   if( row != NULL )
+   {
+      SCIP_CALL( SCIPhashmapRemove(certificate->aggrinfohash, (void*) row) );
+   }
+
+   for( i = 0; i < aggrinfo->naggrrows; i++ )
+   {
+      SCIProwRelease(&(aggrinfo->aggrrows[i]), certificate->blkmem, set, lp);
+   }
+   for( i = 0; i < aggrinfo->nnegslackrows; i++ )
+   {
+      SCIProwRelease(&(aggrinfo->negslackrows[i]), certificate->blkmem, set, lp);
+   }
+
+   BMSfreeBlockMemoryArray(certificate->blkmem, &(aggrinfo->substfactor), aggrinfo->nnegslackrows);
+   BMSfreeBlockMemoryArray(certificate->blkmem, &(aggrinfo->negslackweights), aggrinfo->nnegslackrows);
+   BMSfreeBlockMemoryArray(certificate->blkmem, &(aggrinfo->negslackrows), aggrinfo->nnegslackrows);
+   BMSfreeBlockMemoryArray(certificate->blkmem, &(aggrinfo->weights), aggrinfo->naggrrows);
+   BMSfreeBlockMemoryArray(certificate->blkmem, &(aggrinfo->aggrrows), aggrinfo->naggrrows);
+   SCIPaggrRowFree(set->scip, &(aggrinfo->aggrrow));
+   SCIPaggrRowFree(set->scip, &(aggrinfo->negslackrow));
+   BMSfreeBlockMemory(certificate->blkmem, &aggrinfo);
+   if( arraypos != certificate->naggrinfos - 1 )
+   {
+      certificate->aggrinfo[arraypos] = certificate->aggrinfo[certificate->naggrinfos - 1];
+      certificate->aggrinfo[arraypos]->arpos = arraypos;
+   }
+   certificate->naggrinfos--;
+
+   return SCIP_OKAY;
+}
+
+/** create a new node data structure for the current node */
+SCIP_RETCODE SCIPcertificateNewAggrInfo(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_AGGRROW*         aggrrow,            /**< agrrrow that results from the aggregation */
+   SCIP_AGGRROW*         negslackrow,        /**< agrrrow that results from the aggregation with implicitly defined negative slack added */
+   SCIP_ROW**            aggrrows,           /**< array of rows used fo the aggregation */
+   SCIP_Real*            weights,            /**< array of weights */
+   int                   naggrrows,          /**< length of the arrays */
+   SCIP_ROW**            negslackrows,       /**< array of rows that are added implicitly with negative slack */
+   SCIP_Real*            negslackweights,    /**< array of negative slack weights */
+   int                   nnegslackrows       /**< length of the negative slack array */
+   )
+{
+   int i;
+   SCIP_AGGREGATIONINFO* info;
+   SCIP_CERTIFICATE* certificate;
+
+   assert(scip != NULL );
+
+   certificate = SCIPgetCertificate(scip);
+
+   assert(certificate != NULL);
+
+   /* check whether output should be created */
+   if( certificate->transfile == NULL )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPallocBlockMemory(scip, &info) );
+
+   SCIPdebugMessage("adding aggrinfo, with %d rows to certficate \n", naggrrows);
+
+   SCIP_CALL( SCIPaggrRowCopy(scip, &(info->aggrrow), aggrrow) );
+   SCIP_CALL( SCIPaggrRowCopy(scip, &(info->negslackrow), negslackrow) );
+
+   info->naggrrows = naggrrows;
+   info->nnegslackrows = nnegslackrows;
+   info->fileindex = certificate->indexcounter - 1;
+
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(info->aggrrows), naggrrows) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(info->weights), naggrrows) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(info->negslackrows), nnegslackrows) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(info->negslackweights), nnegslackrows) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(info->substfactor), nnegslackrows) );
+   for( i = 0; i < naggrrows; i++ )
+   {
+      SCIPdebugMessage("adding row %s with weight %g to aggrinfo \n", SCIProwGetName(aggrrows[i]), weights[i]);
+      info->aggrrows[i] = aggrrows[i];
+      info->weights[i] = weights[i];
+      SCIProwCapture(aggrrows[i]);
+   }
+   for( i = 0; i < nnegslackrows; i++ )
+   {
+      SCIPdebugMessage("adding (implicitly) row %s with negative slack multiplier %g to aggrinfo \n", SCIProwGetName(negslackrows[i]), negslackweights[i]);
+      info->negslackrows[i] = negslackrows[i];
+      info->negslackweights[i] = negslackweights[i];
+      SCIProwCapture(negslackrows[i]);
+   }
+
+   /* link the node to its nodedata in the corresponding hashmap */
+   if( certificate->aggrinfosize == certificate->naggrinfos )
+   {
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &certificate->aggrinfo, certificate->aggrinfosize, certificate->aggrinfosize + 100) );
+      certificate->aggrinfosize += 100;
+   }
+   certificate->aggrinfo[certificate->naggrinfos] = info;
+   info->arpos = certificate->naggrinfos;
+   certificate->naggrinfos++;
+   certificate->workingaggrinfo = TRUE;
+
+   return SCIP_OKAY;
+}
+
+/** create a new split info structure for the current cut */
+SCIP_RETCODE SCIPcertificateNewMirInfo(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_MIRINFO* mirinfo;
+   SCIP_CERTIFICATE* certificate;
+
+   assert(scip != NULL );
+
+   certificate = SCIPgetCertificate(scip);
+
+   assert(certificate != NULL);
+
+   /* check whether output should be created */
+   if( certificate->transfile == NULL )
+      return SCIP_OKAY;
+
+   if( certificate->mirinfosize == certificate->nmirinfos )
+   {
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &certificate->mirinfo, certificate->mirinfosize, certificate->mirinfosize + 100) );
+      certificate->mirinfosize += 100;
+   }
+
+   SCIP_CALL( SCIPallocBlockMemory(scip, &(certificate->mirinfo[certificate->nmirinfos])) );
+
+   mirinfo =  certificate->mirinfo[certificate->nmirinfos];
+
+   SCIPdebugMessage("adding mirinfo, with to certficate \n");
+
+   SCIP_CALL( RatCreateBlock(SCIPblkmem(scip), &(mirinfo->rhs)) );
+   SCIP_CALL( RatCreateBlock(SCIPblkmem(scip), &(mirinfo->frac)) );
+   mirinfo->nlocalvars = 0;
+   mirinfo->nsplitvars = SCIPgetNVars(scip);
+   mirinfo->arpos = certificate->nmirinfos;
+   mirinfo->scale = 1.0;
+   mirinfo->unroundedrhs = SCIPinfinity(scip);
+
+   SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &(mirinfo->splitcoefficients), SCIPgetNVars(scip)) );
+   SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &(mirinfo->upperused), SCIPgetNVars(scip)) );
+   SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &(mirinfo->localbdused), SCIPgetNVars(scip)) );
+   mirinfo->varinds = NULL;
+
+   certificate->nmirinfos++;
+   certificate->workingmirinfo = TRUE;
+
+   return SCIP_OKAY;
+}
+
+SCIP_RETCODE SCIPstoreCertificateActiveAggregationInfo(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW*             row                 /**< row that aggregation-info is stored for */
+   )
+{
+   SCIP_CERTIFICATE* certificate;
+   SCIP_AGGREGATIONINFO* aggrinfo;
+
+   assert(SCIPisExactSolve(scip));
+
+   if( !SCIPisExactSolve(scip) || !SCIPisCertificateActive(scip) )
+      return SCIP_OKAY;
+
+   certificate = SCIPgetCertificate(scip);
+
+   assert(certificate != NULL);
+   assert(certificate->workingaggrinfo);
+
+   aggrinfo = certificate->aggrinfo[certificate->naggrinfos - 1];
+   certificate->workingaggrinfo = FALSE;
+
+   assert(aggrinfo != NULL);
+
+   SCIP_CALL( SCIPhashmapSetImage(certificate->aggrinfohash, (void*) row, (void*) aggrinfo) );
+
+   return SCIP_OKAY;
+}
+
+/** stores the active mir information in the certificate data structures for a row */
+SCIP_RETCODE SCIPstoreCertificateActiveMirInfo(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW*             row                 /**< row that mirinfo is stored for */
+   )
+{
+   SCIP_CERTIFICATE* certificate;
+   SCIP_MIRINFO* mirinfo;
+   int i;
+   int csplit;
+
+   assert(SCIPisExactSolve(scip));
+
+   if( !SCIPisExactSolve(scip) || !SCIPisCertificateActive(scip) )
+      return SCIP_OKAY;
+
+   certificate = SCIPgetCertificate(scip);
+
+   assert(certificate != NULL);
+   assert(certificate->workingmirinfo);
+
+   certificate->workingmirinfo = FALSE;
+
+   mirinfo = certificate->mirinfo[certificate->nmirinfos - 1];
+
+   assert(mirinfo != NULL);
+
+   assert(mirinfo->nsplitvars == SCIPgetNVars(scip));
+
+   csplit = 0;
+
+   /* make the mirinfo sparse again */
+   SCIPallocBlockMemoryArray(scip, &(mirinfo->varinds), mirinfo->nsplitvars);
+   for( i = 0; i < mirinfo->nsplitvars; i++ )
+   {
+      if( mirinfo->splitcoefficients[i] != 0.0 || mirinfo->upperused[i] || mirinfo->localbdused[i] )
+      {
+         mirinfo->splitcoefficients[csplit] = mirinfo->splitcoefficients[i];
+         mirinfo->upperused[csplit] = mirinfo->upperused[i];
+         mirinfo->localbdused[csplit] = mirinfo->localbdused[i];
+         mirinfo->varinds[csplit] = i;
+         csplit++;
+      }
+   }
+
+   mirinfo->nsplitvars = csplit;
+   SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(mirinfo->splitcoefficients), SCIPgetNVars(scip), mirinfo->nsplitvars) );
+   SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(mirinfo->varinds), SCIPgetNVars(scip), mirinfo->nsplitvars) );
+   SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(mirinfo->upperused), SCIPgetNVars(scip), mirinfo->nsplitvars) );
+   SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(mirinfo->localbdused), SCIPgetNVars(scip), mirinfo->nsplitvars) );
+
+   SCIP_CALL( SCIPhashmapSetImage(certificate->mirinfohash, (void*) row, (void*) mirinfo) );
+
+   return SCIP_OKAY;
+}
+
+/** frees the active mir information */
+SCIP_RETCODE SCIPfreeCertificateActiveMirInfo(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CERTIFICATE* certificate;
+   SCIP_MIRINFO* mirinfo;
+
+   assert(SCIPisExactSolve(scip));
+
+   if( !SCIPisExactSolve(scip) || !SCIPisCertificateActive(scip) )
+      return SCIP_OKAY;
+
+   certificate = SCIPgetCertificate(scip);
+
+   assert(certificate != NULL);
+
+   mirinfo = certificate->mirinfo[certificate->nmirinfos - 1];
+
+   assert(mirinfo != NULL);
+
+   /* if the mirinfo is used it gets tranformed into sparse format, don't free it in that case */
+   if( !certificate->workingmirinfo )
+      return SCIP_OKAY;
+
+   assert(mirinfo->varinds == NULL);
+
+   RatFreeBlock(SCIPblkmem(scip), &(mirinfo->rhs));
+   RatFreeBlock(SCIPblkmem(scip), &(mirinfo->frac));
+
+   SCIPfreeBlockMemoryArray(scip, &(mirinfo->splitcoefficients), SCIPgetNVars(scip));
+   SCIPfreeBlockMemoryArray(scip, &(mirinfo->upperused), SCIPgetNVars(scip));
+   SCIPfreeBlockMemoryArray(scip, &(mirinfo->localbdused), SCIPgetNVars(scip));
+   SCIPfreeBlockMemory(scip, &mirinfo);
+   certificate->nmirinfos--;
+   certificate->workingmirinfo = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/** frees the active aggregation information */
+SCIP_RETCODE SCIPfreeCertificateActiveAggregationInfo(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CERTIFICATE* certificate;
+   SCIP_AGGREGATIONINFO* aggrinfo;
+
+   assert(SCIPisExactSolve(scip));
+
+   if( !SCIPisExactSolve(scip) || !SCIPisCertificateActive(scip) )
+      return SCIP_OKAY;
+
+   certificate = SCIPgetCertificate(scip);
+
+   assert(certificate != NULL);
+
+
+   /* if the mirinfo is used it gets tranformed into sparse format, don't free it in that case */
+   if( !certificate->workingaggrinfo )
+      return SCIP_OKAY;
+
+   aggrinfo = certificate->aggrinfo[certificate->naggrinfos - 1];
+
+   assert(aggrinfo != NULL);
+
+   SCIP_CALL( SCIPcertificateFreeAggrInfo(scip->set, certificate, scip->lp, aggrinfo, NULL) );
+
+   certificate->workingaggrinfo = FALSE;
+
+   return SCIP_OKAY;
+}
+
 /** prints unsplitting information to proof section */
 int SCIPcertificatePrintUnsplitting(
    SCIP_SET*             set,                /**< general SCIP settings */
@@ -2057,7 +2790,6 @@ int SCIPcertificatePrintUnsplitting(
    )
 {
    SCIP_CERTNODEDATA* nodedata;
-   SCIP_Longint unsplit_index;
    SCIP_Rational* lowerbound;
    SCIP_Bool infeas;
 
@@ -2093,6 +2825,7 @@ int SCIPcertificatePrintUnsplitting(
          infeas = TRUE;
 
       certificate->indexcounter++;
+      certificate->lastinfo->isbound = FALSE;
 
       SCIPcertificatePrintProofMessage(certificate, "U%d ", certificate->indexcounter - 1);
 
@@ -2123,11 +2856,10 @@ int SCIPcertificatePrintUnsplitting(
       if( nodedata->inheritedbound && nodedata->assumptionindex_self != - 1 )
       {
          SCIP_Longint ind[1];
-         ind[0] = nodedata->derindex_inherit;
-         SCIP_Rational* lowerbound;
          SCIP_Rational* val;
 
-         RatCreateBuffer(set->buffer, &lowerbound);
+         ind[0] = nodedata->derindex_inherit;
+
          RatCreateBuffer(set->buffer, &val);
 
          RatSet(lowerbound, nodedata->derbound_inherit);
@@ -2136,7 +2868,6 @@ int SCIPcertificatePrintUnsplitting(
          SCIPcertificatePrintDualbound(certificate, NULL, lowerbound, 1, ind, &val);
          SCIPcertificateUpdateParentData(certificate, node, certificate->indexcounter - 1, lowerbound);
 
-         RatFreeBuffer(set->buffer, &lowerbound);
          RatFreeBuffer(set->buffer, &val);
       }
    }

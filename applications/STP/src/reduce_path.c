@@ -195,7 +195,7 @@ void ruleOutFromHead(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          g,                  /**< graph data structure */
    PR*                   pr,                 /**< path replacement data structure */
-   SCIP_Bool*            needFullRuleOut
+   SCIP_Bool*            needFullRuleOut     /**< pointer to store whether full rule-out is needed */
    )
 {
    const SCIP_Real* const sp_dists = pr->sp_dists;
@@ -276,7 +276,7 @@ void ruleOutFromTailSingle(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          g,                  /**< graph data structure */
    PR*                   pr,                 /**< path replacement data structure */
-   SCIP_Bool*            isRuledOut
+   SCIP_Bool*            isRuledOut          /**< ruled-out? */
 )
 {
    const SCIP_Real* const sp_dists = pr->sp_dists;
@@ -335,7 +335,7 @@ void ruleOutFromTailCombs(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          g,                  /**< graph data structure */
    PR*                   pr,                 /**< path replacement data structure */
-   SCIP_Bool*            isRuledOut
+   SCIP_Bool*            isRuledOut          /**< ruled-out? */
 )
 {
    const SCIP_Real* const sp_dists = pr->sp_dists;
@@ -435,7 +435,7 @@ void addNonPathNode(
 static inline
 void addPathHeadEdge(
    SCIP*                 scip,               /**< SCIP */
-   const GRAPH*          g,
+   const GRAPH*          g,                  /**< graph */
    PR*                   pr                  /**< path replacement data structure */
    )
 {
@@ -478,9 +478,9 @@ void addPathHeadEdge(
 static inline
 void addInitialPathNodes(
    SCIP*                 scip,               /**< SCIP */
-   const GRAPH*          g,
-   int                   startedge_tail,
-   int                   startdege_head,
+   const GRAPH*          g,                  /**< graph */
+   int                   startedge_tail,     /**< tail of start edge */
+   int                   startdege_head,     /**< head of start edge */
    PR*                   pr                  /**< path replacement data structure */
    )
 {
@@ -792,8 +792,8 @@ void pathExend(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          g,                  /**< graph data structure */
    PR*                   pr,                 /**< path replacement data structure */
-   SCIP_Bool*            isExendible,
-   SCIP_Bool*            isRedundant
+   SCIP_Bool*            isExendible,        /**< extendible? */
+   SCIP_Bool*            isRedundant         /**< redundant? */
    )
 {
    const int npathedges = StpVecGetSize(pr->pathedges);

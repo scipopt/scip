@@ -62,9 +62,9 @@ static
 SCIP_RETCODE solveWithDpBorder(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< the graph */
-   DPBORDER*             dpborder,
-   SCIP_Real*            obj,
-   SCIP_Bool*            wasSolved
+   DPBORDER*             dpborder,           /**< DP border algorithm data structure */
+   SCIP_Real*            obj,                /**< pointer to the objective value (OUT) */
+   SCIP_Bool*            wasSolved           /**< pointer to mark whether problem was solved (OUT) */
    )
 {
    int* soledges;
@@ -103,8 +103,8 @@ static
 SCIP_RETCODE solveWithDpTerms(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< the graph */
-   SCIP_Real*            obj,
-   SCIP_Bool*            wasSolved
+   SCIP_Real*            obj,                /**< pointer to the objective value (OUT) */
+   SCIP_Bool*            wasSolved           /**< pointer to mark whether problem was solved (OUT) */
    )
 {
    int* soledges;

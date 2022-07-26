@@ -37,10 +37,43 @@ extern "C" {
 /** data structure for hashing bounds of variables in a certificate file */
 struct SCIP_CertificateBound
 {
-   SCIP_Longint          fileindex;          /**< index of this bound in the certificate file */
    int                   varindex;           /**< index of the variable */
    SCIP_Rational*        boundval;           /**< value of the bound */
-   SCIP_Bool             isupper;            /**< is it the upper bound? */
+   SCIP_BOUNDTYPE        boundtype;          /**< is it the upper bound? */
+   SCIP_Bool             isbound;            /**< is the last printed index a bound? if it is not, the other information is not useful */
+};
+
+/** data structure for storing necessary information to print verified aggregation of rows */
+struct SCIP_AggregationInfo
+{
+   SCIP_AGGRROW*         aggrrow;            /**< aggregation row to be saved */
+   SCIP_AGGRROW*         negslackrow;        /**< aggregation row that implicitly has the negative slack variables in it */
+   SCIP_ROW**            aggrrows;           /**< array of rows used for the aggregation */
+   SCIP_ROW**            negslackrows;       /**< array of rows that are implicitly added (using negative slack) */
+   SCIP_Real*            weights;            /**< array of weights */
+   SCIP_Real*            negslackweights;    /**< array of weights for the negslackrows */
+   SCIP_Real*            substfactor;        /**< factor used in the substition of slack variables (negslackweight)/(1-f0) */
+   int                   naggrrows;          /**< length of the aggrrows array */
+   int                   nnegslackrows;      /**< length of the negslackrows array */
+   SCIP_Longint          fileindex;          /**< index of the aggregated row in the certificate file */
+   SCIP_Longint          arpos;              /**< position in the aggrinfo array, so we can access it from the hashmap */
+};
+
+/** data structure for certifying MIR cut (splitcoefs, rhs, fractionality f, 1/1-f, scaling factor, which bounds to use) */
+struct SCIP_MirInfo
+{
+   SCIP_Real*            splitcoefficients;  /**< coefficients in the split, saved in the complemented variable space */
+   int*                  varinds;            /**< indices of variables in split */
+   SCIP_Bool*            upperused;          /**< TRUE if ub was used to complement variable, FALSE if lb was used */
+   SCIP_Bool*            localbdused;        /**< TRUE if local bound was used to complement variable, FALSE if global was used */
+   int                   nsplitvars;         /**< number of variables in the split */
+   int                   nlocalvars;         /**< number of local bounds used in transformation */
+   SCIP_Rational*        rhs;                /**< rhs of the split disjunction */
+   SCIP_Rational*        frac;               /**< fractionality of the rhs in the mir cut */
+   SCIP_Longint          arpos;              /**< position in the mirinfo array, so we can access it from the hashmap */
+   SCIP_INTERVAL         onedivoneminusf0;   /**< rounded value of 1/(1-f0) that was used in MIR procedure */
+   SCIP_Real             scale;              /**< scaling factor that was used in cut-postprocessing */
+   SCIP_Real             unroundedrhs;       /**< we need to save the rhs if we round down integral cuts for certification */
 };
 
 struct SCIP_Certnodedata
@@ -65,12 +98,16 @@ struct SCIP_Certnodedata
 struct SCIP_Certificate
 {
    SCIP_MESSAGEHDLR*     messagehdlr;        /**< message handler to use */
-   SCIP_HASHTABLE*       varboundtable;      /**< hash table for mapping variable bounds to line index in file */
-   SCIP_CERTIFICATEBOUND** boundvals;        /**< array to store rationals in varboundtable to avoid memory leak */
-   SCIP_Longint          boundvalsize;       /**< size of boundvals array */
-   SCIP_Longint          nboundvals;         /**< number of elements in boundvals array */
    SCIP_HASHMAP*         nodedatahash;       /**< Hashmap storing pointer to data of each node */
-   SCIP_CERTIFICATEBOUND* workbound;         /**< temporary memory for hashing bound information */
+   SCIP_HASHMAP*         aggrinfohash;       /**< Hashmap storing aggregation information of rows */
+   SCIP_HASHMAP*         mirinfohash;      /**< Hashmap storing split disjunctions */
+   SCIP_AGGREGATIONINFO** aggrinfo;          /**< array to store the aggregation info to avoid memory leaks */
+   SCIP_MIRINFO**        mirinfo;          /**< array to store the split info to avoid memory leaks */
+   SCIP_Longint          aggrinfosize;       /**< size of aggrinfo array */
+   SCIP_Longint          naggrinfos;         /**< number of elements in aggrinfo array */
+   SCIP_Longint          mirinfosize;      /**< size of mirinfo array */
+   SCIP_Longint          nmirinfos;        /**< number of elements in mirinfo array */
+   SCIP_CERTIFICATEBOUND* lastinfo;          /**< information on last printed certificate index */
    BMS_BLKMEM*           blkmem;             /**< SCIP block memory */
    SCIP_Longint          indexcounter;       /**< counter for line indices in file */
    SCIP_Longint          indexcounter_ori;   /**< counter for line indices in origial problem vipr file */
@@ -87,6 +124,8 @@ struct SCIP_Certificate
    SCIP_Longint          derindex_root;      /**< index of root bound in certificate */
    SCIP_Bool             rootinfeas;         /**< is the root node infeasible */
    SCIP_Bool             objintegral;        /**< is the objective always integral? copy this so we don't need the prob everywhere */
+   SCIP_Bool             workingmirinfo;     /**< true if mirinfo is under construction and not sparsely stored, false otherwise */
+   SCIP_Bool             workingaggrinfo;     /**< true if aggrinfo is under construction (last entry not in hashmap), false otherwise */
    SCIP_Rational**       vals;               /**< we maintain an array for solvals so we don't have to reallocate at every bounding call */
    int                   valssize;           /**< the size of the vals array */
 };

@@ -92,6 +92,12 @@ void SCIPsepaSetFreq(
    int                   freq                /**< new frequency of separator */
    );
 
+/** marks the separator as exact (i.e. safe to use in exact solving mode) */
+SCIP_EXPORT
+void SCIPsepaSetExact(
+   SCIP_SEPA*            sepa                /**< separator */
+   );
+
 /** get maximal bound distance at which the separator is called */
 SCIP_EXPORT
 SCIP_Real SCIPsepaGetMaxbounddist(

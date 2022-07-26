@@ -1525,7 +1525,7 @@ void SCIPgetLowerboundExact(
        * bound = -inf instead of lower bound = upper bound = +inf also in case we prove that the problem is unbounded,
        * it seems to make sense to return with lower bound = -inf, since -infinity is the only valid lower bound
        */
-      return RatSetString(result, "-inf");
+      RatSetString(result, "-inf");
    }
    else
    {
@@ -1733,7 +1733,7 @@ SCIP_Real SCIPgetUpperbound(
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-SCIP_Real SCIPgetUpperboundExact(
+void SCIPgetUpperboundExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Rational*        result              /**< the resulting upper bound value */
    )
@@ -3628,6 +3628,9 @@ void SCIPprintLPStatistics(
       else
          SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10" SCIP_LONGINT_FORMAT "          - %10.2f\n", scip->stat->nfailexlp, scip->stat->boundingerrorexlp/scip->stat->nexlp);
 
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  feas failed      : %10.2f %10" SCIP_LONGINT_FORMAT " \n",
+         scip->stat->timefailexlp, scip->stat->nfailexlp);
+
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  exact lp infeas  : %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10.2f",
          SCIPclockGetTime(scip->stat->provedinfeaslptime),
          scip->stat->nexlpinf,
@@ -3637,6 +3640,9 @@ void SCIPprintLPStatistics(
          SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f %10" SCIP_LONGINT_FORMAT "          -\n", (SCIP_Real)scip->stat->niterationsexlpinf/SCIPclockGetTime(scip->stat->provedinfeaslptime), scip->stat->nfailexlpinf);
       else
          SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10" SCIP_LONGINT_FORMAT "          -          -\n", scip->stat->nfailexlpinf);
+
+            SCIPmessageFPrintInfo(scip->messagehdlr, file, "  inf failed       : %10.2f %10" SCIP_LONGINT_FORMAT " \n",
+         scip->stat->timefailexlpinf, scip->stat->nfailexlpinf);
 
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  boundshift feas  : %10.2f %10" SCIP_LONGINT_FORMAT "          -          -          - %10" SCIP_LONGINT_FORMAT " %.4e %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
          SCIPclockGetTime(scip->stat->provedfeasbstime),
@@ -3663,6 +3669,8 @@ void SCIPprintLPStatistics(
          SCIPclockGetTime(scip->stat->provedinfeaspstime),
          scip->stat->nprojshiftinf,
          scip->stat->nfailprojshiftinf);
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "ExactLP reasons    :   Interleavedepth %10" SCIP_LONGINT_FORMAT " FP-LP Integer Feasible %10" SCIP_LONGINT_FORMAT "  Close to cutoff %10" SCIP_LONGINT_FORMAT "  \n",
+         scip->stat->nexlpinter, scip->stat->nexlpintfeas, scip->stat->nexlpboundexc);
 
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "Meta heuristic     :   Time Success (%.2f) TimeFail (%.2f) Calls (%lld) Found (%lld) \n",
          scip->stat->timesuccessexactsol, scip->stat->timefailexactsol, scip->stat->ncallsexactsol, scip->stat->nfoundexactsol);

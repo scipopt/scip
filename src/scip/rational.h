@@ -54,7 +54,7 @@ SCIP_EXPORT
 SCIP_RETCODE RatCreateString(
    BMS_BLKMEM*           mem,                /**< block memory */
    SCIP_Rational**       rational,           /**< pointer to the rational to create */
-   char*                 desc                /**< the string describing the rational */
+   const char*           desc                /**< the string describing the rational */
    );
 
 /** creates an array of rationals */
@@ -466,7 +466,7 @@ SCIP_Bool RatIsApproxEqualReal(
    SCIP_SET*             set,                /**< SCIP set pointer */
    SCIP_Rational*        r1,                 /**< the rational */
    SCIP_Real             r2,                 /**< the real */
-   SCIP_ROUNDMODE        roundmode           /**< the rounding mode to use */
+   SCIP_ROUNDMODE_RAT    roundmode           /**< the rounding mode to use */
    );
 
 /** checks if the first rational is greater than the second*/
@@ -585,13 +585,22 @@ SCIP_Bool RatIsFpRepresentable(
  */
 
 /** returns the numerator of a rational as a long */
+SCIP_EXPORT
 SCIP_Longint RatNumerator(
    SCIP_Rational*        rational            /**< the rational */
    );
 
 /** returns the denominator of a rational as a long */
+SCIP_EXPORT
 SCIP_Longint RatDenominator(
    SCIP_Rational*        rational            /**< the rational */
+   );
+
+/** returns the denominator of a rational as a long */
+SCIP_EXPORT
+SCIP_Bool RatDenominatorIsLE(
+   SCIP_Rational*        rational,           /**< the rational */
+   SCIP_Longint          val                 /**< long value to compare to */
    );
 
 /** returns the sign of the rational (1 if positive, -1 if negative, 0 if zero) */
@@ -646,7 +655,7 @@ void RatMessage(
 SCIP_EXPORT
 SCIP_Real RatRoundReal(
    SCIP_Rational*        r,                  /**< the rational to convert */
-   SCIP_ROUNDMODE        roundmode           /**< rounding direction (not really working yet) */
+   SCIP_ROUNDMODE_RAT    roundmode           /**< rounding direction (not really working yet) */
    );
 
 /** returns approximation of rational as SCIP_Real */
@@ -655,11 +664,20 @@ SCIP_Real RatApproxReal(
    SCIP_Rational*        r                   /**< the rational to convert */
    );
 
+/** compute an approximate number with denominator <= maxdenom, closest to src and save it in res using continued fractions */
+SCIP_EXPORT
+void RatComputeApproximation(
+   SCIP_Rational*        res,
+   SCIP_Rational*        src,
+   SCIP_Longint          maxdenom,
+   int                   forcegreater        /**< 1 if res >= src should be enforced, -1 if res <= src should be enforced, 0 else */
+   );
+
 SCIP_EXPORT
 void RatRound(
    SCIP_Rational*        retval,             /**< the resulting rounded integer */
    SCIP_Rational*        src,                /**< the rational to round */
-   SCIP_ROUNDMODE        roundmode           /**< the rounding direction */
+   SCIP_ROUNDMODE_RAT    roundmode           /**< the rounding direction */
    );
 
 /** rounds rational to next integer in direction of roundmode */
@@ -667,7 +685,7 @@ SCIP_EXPORT
 SCIP_Bool RatRoundInteger(
    SCIP_Longint*         retval,             /**< the resulting rounded lon int */
    SCIP_Rational*        src,                /**< the rational to round */
-   SCIP_ROUNDMODE        roundmode           /**< the rounding direction */
+   SCIP_ROUNDMODE_RAT    roundmode           /**< the rounding direction */
    );
 
 /*

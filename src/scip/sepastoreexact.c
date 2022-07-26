@@ -109,6 +109,7 @@ SCIP_RETCODE SCIPsepastoreExactFree(
    return SCIP_OKAY;
 }
 
+#ifdef SCIP_DISABLED_CODE
 /** informs separation storage that the setup of the initial LP starts now */
 void SCIPsepastoreExactStartInitialLP(
    SCIP_SEPASTOREEXACT*  sepastoreexact      /**< separation storage */
@@ -132,21 +133,19 @@ void SCIPsepastoreExactEndInitialLP(
 
    sepastoreexact->initiallp = FALSE;
 }
+#endif
 
 /** adds cut to separation storage and captures it */
-SCIP_RETCODE SCIPsepastoreexAddCut(
+SCIP_RETCODE SCIPsepastoreExactAddCut(
    SCIP_SEPASTOREEXACT*  sepastoreexact,     /**< separation storage */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global events */
    SCIP_LPEXACT*         lp,                 /**< LP data */
-   SCIP_ROWEXACT*        cut,                /**< separated cut */
-   SCIP_Bool*            infeasible          /**< pointer to store whether the cut is infeasible */
+   SCIP_ROWEXACT*        cut                 /**< separated cut */
    )
 {
-   SCIP_Bool redundant;
    int pos;
 
    assert(sepastoreexact != NULL);
@@ -154,7 +153,6 @@ SCIP_RETCODE SCIPsepastoreexAddCut(
    assert(cut != NULL);
    assert(!RatIsNegInfinity(SCIProwExactGetLhs(cut)) || !RatIsInfinity(SCIProwExactGetRhs(cut)));
    assert(eventqueue != NULL);
-   assert(eventfilter != NULL);
 
    /* debug: check cut for feasibility */
    /** @todo exip: actually check the exact row */
@@ -171,7 +169,7 @@ SCIP_RETCODE SCIPsepastoreexAddCut(
    SCIP_CALL( sepastoreExactEnsureCutsMem(sepastoreexact, set, sepastoreexact->ncuts+1) );
    assert(sepastoreexact->ncuts < sepastoreexact->cutssize);
 
-   SCIPsetDebugMsg(set, "adding cut <%s> to exact separation storage of size %d (forcecut=%u, len=%d)\n",
+   SCIPsetDebugMsg(set, "adding cut <%s> to exact separation storage of size %d (len=%d)\n",
       SCIProwGetName(cut->fprow), sepastoreexact->ncuts, SCIProwGetNNonz(cut->fprow));
    /*SCIP_CALL( SCIPprintRow(set->scip, cut, NULL) );*/
 
@@ -183,10 +181,6 @@ SCIP_RETCODE SCIPsepastoreexAddCut(
    sepastoreexact->cuts[pos] = cut;
    sepastoreexact->ncuts++;
 
-   /* If the duals need to be collected, then the infeasible flag is set to FALSE. This ensures that the LP is solved */
-   if( set->lp_alwaysgetduals && sepastoreexact->initiallp )
-      (*infeasible) = FALSE;
-
    return SCIP_OKAY;
 }
 
@@ -197,53 +191,53 @@ SCIP_RETCODE SCIPsepastoreExactSyncLPs(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_LPEXACT*         lpexact,            /**< LP data */
+   SCIP_PROB*            prob,               /**< scip prob structure */
    SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
    )
 {
    SCIP_LP* fplp;
-   SCIP_ROW** fprows;
    SCIP_ROWEXACT* rowexact;
-   SCIP_CONS* origcons;
+   int* rowdset;
    int nrowsfp;
    int nrowsex;
-   int nreleases;
-   int nadded;
    int i;
+   SCIP_Bool remove;
 
    if( !set->exact_enabled )
       return SCIP_OKAY;
 
    fplp = lpexact->fplp;
-   nreleases = 0;
-   nadded = 0;
 
    assert(fplp != NULL);
 
-   fprows = SCIPlpGetRows(fplp);
    nrowsfp = SCIPlpGetNRows(fplp);
-   nrowsex = SCIPlexGetNRows(lpexact);
+   nrowsex = SCIPlpExactGetNRows(lpexact);
 
-   assert(fprows != NULL);
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &rowdset, lpexact->nrows) );
+
+   remove = FALSE;
 
    /* this method should sync the fp-lp withe the exact lp */
 
    /* remove all rows from exact lp that are not in the floating point lp */
-   for( i = nrowsex - 1; i >= 0; --i )
+   for( i = 0; i < nrowsex; ++i )
    {
-      SCIP_ROW* fprow =lpexact->rows[i]->fprow;
-      assert(fprow != NULL);
+      SCIP_ROW* fprow = lpexact->rows[i]->fprow;
 
-      if( !SCIProwIsInLP(fprow) )
+      if( fprow == NULL || !SCIProwIsInLP(fprow) || fprow->lppos != i || remove )
       {
-         nreleases++;
-         assert(i == nrowsex - nreleases);
+         remove = TRUE;
+         rowdset[i] = 1;
       }
+      else
+         rowdset[i] = 0;
    }
-   SCIPlpExactshrinkRows(lpexact, blkmem, set, eventqueue, lpexact->nrows - nreleases);
+
+   SCIP_CALL( SCIPlpExactDelRowset(lpexact, blkmem, set, eventqueue, rowdset) );
 
    for( i = 0; i < nrowsfp; ++i )
    {
-      rowexact = SCIProwGetExRow(lpexact, fplp->rows[i]);
+      rowexact = SCIProwGetRowExact(fplp->rows[i]);
       if( rowexact != NULL )
       {
          /* if the row is already in lp, do nothing */
@@ -256,14 +250,17 @@ SCIP_RETCODE SCIPsepastoreExactSyncLPs(
       }
       else
       {
-         SCIPerrorMessage("exact cut has not been created \n");
-         return SCIP_OKAY;
+         assert(SCIProwGetOriginSepa(fplp->rows[i]) != NULL);
+
+         SCIP_CALL( SCIPsepastoreExactAddCut(sepastoreexact, blkmem, set, stat, eventqueue, lpexact, rowexact) );
+         SCIP_CALL( SCIPlpExactAddRow(lpexact, blkmem, set, eventqueue, rowexact, SCIProwGetLPDepth(fplp->rows[i])) );
+         SCIP_CALL( SCIProwExactRelease(&rowexact, blkmem, set, lpexact) );
       }
    }
 
-   //assert(SCIPlpExactIsSynced(lpexact, set, SCIPgetMessagehdlr(set->scip)));
+   /** @todo exip: make this more efficient by not enforcing same order of rows in exact/fp lp */
 
-   SCIP_CALL( SCIPsepastoreExactClearCuts(sepastoreexact, blkmem, set, eventqueue, lpexact) );
+   SCIPsetFreeBufferArray(set, &rowdset);
 
    return SCIP_OKAY;
 }

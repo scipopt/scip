@@ -154,6 +154,8 @@ struct SCIP_Stat
    SCIP_Real             boundingerrorexlp;  /**< aggregated error of all exact lp calls */
    SCIP_Real             timesuccessexactsol;/**< time spent in exactsol constraint handler that led to a found solution */
    SCIP_Real             timefailexactsol;   /**< time spent in exactsol constraint handler that did not lead to a solution */
+   SCIP_Real             timefailexlpinf;
+   SCIP_Real             timefailexlp;
    SCIP_Longint          ncallsexactsol;     /**< number of runs of exactsol constraint handler */
    SCIP_Longint          nfoundexactsol;     /**< number of sols found by exactsol constraint handler */
    SCIP_CLOCK*           solvingtime;        /**< total time used for solving (including presolving) the current problem */
@@ -220,6 +222,9 @@ struct SCIP_Stat
    SCIP_Longint          nexlpinf;           /**< number of LPs proved infeasible */
    SCIP_Longint          nfailexlpinf;       /**< number of LPs failed to prove infeasible */
    SCIP_Longint          nexlp;              /**< number of LPs proved feasible */
+   SCIP_Longint          nexlpinter;         /**< number of LPs proved feasible */
+   SCIP_Longint          nexlpintfeas;       /**< number of LPs proved feasible */
+   SCIP_Longint          nexlpboundexc;      /**< number of LPs proved feasible */
    SCIP_Longint          nfailexlp;          /**< number of LPs failed to prove feasible */
    SCIP_Longint          nboundshift;        /**< number of boundshift calls for feasible lp*/
    SCIP_Longint          nfailboundshift;    /**< number of failed boundshift calls for feasible lp */

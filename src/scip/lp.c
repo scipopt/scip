@@ -31,7 +31,6 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-
 #include "lpi/lpi.h"
 #include "lpiexact/lpiexact.h"
 #include "scip/clock.h"
@@ -2394,7 +2393,7 @@ SCIP_RETCODE rowChgCoefPos(
       /* delete existing coefficient */
       SCIP_CALL( rowDelCoefPos(row, blkmem, set, eventqueue, lp, pos) );
    }
-   else if( !SCIPsetIsEQ(set, row->vals[pos], val) )
+   else if( !SCIPsetIsEQ(set, row->vals[pos], val) || (set->exact_enabled && row->vals[pos] != val) )
    {
       SCIP_Real oldval;
 
@@ -5470,6 +5469,15 @@ SCIP_RETCODE SCIProwFree(
    BMSfreeBlockMemoryArrayNull(blkmem, &(*row)->cols_index, (*row)->size);
    BMSfreeBlockMemoryArrayNull(blkmem, &(*row)->vals, (*row)->size);
    BMSfreeBlockMemoryArrayNull(blkmem, &(*row)->linkpos, (*row)->size);
+
+   if( (*row)->rowexact != NULL )
+   {
+      if( *row == (*row)->rowexact->fprow )
+         (*row)->rowexact->fprow = NULL;
+      else
+         (*row)->rowexact->fprowrhs = NULL;
+   }
+
    BMSfreeBlockMemory(blkmem, row);
 
    return SCIP_OKAY;
@@ -5855,7 +5863,7 @@ SCIP_RETCODE SCIProwChgLhs(
    assert(row != NULL);
    assert(lp != NULL);
 
-   if( !SCIPsetIsEQ(set, row->lhs, lhs) )
+   if( !SCIPsetIsEQ(set, row->lhs, lhs) || (set->exact_enabled && row->lhs != lhs) )
    {
       SCIP_Real oldlhs;
 
@@ -5887,7 +5895,7 @@ SCIP_RETCODE SCIProwChgRhs(
    assert(row != NULL);
    assert(lp != NULL);
 
-   if( !SCIPsetIsEQ(set, row->rhs, rhs) )
+   if( !SCIPsetIsEQ(set, row->rhs, rhs) || (set->exact_enabled && row->rhs != rhs) )
    {
       SCIP_Real oldrhs;
 
@@ -6346,6 +6354,15 @@ void SCIProwForceSort(
 
    row->delaysort = FALSE;
    rowMerge(row, set);
+}
+
+/** recalculates norms of a row */
+void SCIProwRecalcNorms(
+   SCIP_ROW*             row,                /**< LP row */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   rowCalcNorms(row, set);
 }
 
 /** recalculates the current activity of a row */
@@ -10416,7 +10433,8 @@ SCIP_RETCODE SCIPlpSetCutoffbound(
       lp->lpsolstat = SCIP_LPSOLSTAT_OBJLIMIT;
    }
 
-   SCIPlpExactSetCutoffbound(lp->lpexact, set, prob, cutoffbound);
+   if( !lp->diving )
+      SCIPlpExactSetCutoffbound(lp->lpexact, set, prob, cutoffbound);
 
    lp->cutoffbound = cutoffbound;
 
@@ -12304,7 +12322,7 @@ SCIP_RETCODE lpSolve(
 #ifndef NDEBUG
       /* the LP solution objective should exceed the limit in this case */
       SCIP_CALL( SCIPlpiGetObjval(lp->lpi, &lp->lpobjval) );
-      assert(SCIPsetIsGE(set, lp->lpobjval, lp->lpiobjlim));
+      assert(!set->lp_checkdualfeas || SCIPsetIsRelGE(set, lp->lpobjval, lp->lpiobjlim));
 #endif
 
       lp->lpsolstat = SCIP_LPSOLSTAT_OBJLIMIT;
@@ -18970,12 +18988,12 @@ SCIP_RETCODE SCIPlpGetDualDegeneracy(
                   {
                      if( SCIPsetIsEQ(set, SCIProwGetLhs(row), SCIProwGetLPActivity(row, set, stat, lp)) )
                      {
-                        assert(!SCIPlpIsDualReliable(lp) || !SCIPsetIsDualfeasNegative(set, dualsol));
+                        assert(!SCIPlpIsDualReliable(lp) || !SCIPsetIsDualfeasNegative(set, dualsol) || set->exact_enabled);
                         ++nfixedrows;
                      }
                      else if( SCIPsetIsEQ(set, SCIProwGetRhs(row), SCIProwGetLPActivity(row, set, stat, lp)) )
                      {
-                        assert(!SCIPlpIsDualReliable(lp) || !SCIPsetIsDualfeasPositive(set, dualsol));
+                        assert(!SCIPlpIsDualReliable(lp) || !SCIPsetIsDualfeasPositive(set, dualsol)|| set->exact_enabled);
                         ++nfixedrows;
                      }
                   }

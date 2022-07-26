@@ -571,6 +571,44 @@ void SCIPvarSetCertificateIndex(
    int                   index               /**< the index */
    );
 
+/** sets index of variable in vipr-certificate */
+SCIP_EXPORT
+void SCIPvarSetUbCertificateIndexGlobal(
+   SCIP_VAR*             var,                /**< variable to set index for */
+   int                   index               /**< the index */
+   );
+
+/** sets index of variable in vipr-certificate */
+SCIP_EXPORT
+void SCIPvarSetLbCertificateIndexGlobal(
+   SCIP_VAR*             var,                /**< variable to set index for */
+   int                   index               /**< the index */
+   );
+
+/**< returns index of variable bound in vipr certificate */
+SCIP_EXPORT
+SCIP_Longint SCIPvarGetLbCertificateIndexLocal(
+   SCIP_VAR*             var                 /**< variable to get index for */
+   );
+
+/**< returns index of variable bound in vipr certificate */
+SCIP_EXPORT
+SCIP_Longint SCIPvarGetUbCertificateIndexLocal(
+   SCIP_VAR*             var                 /**< variable to get index for */
+   );
+
+/**< returns index of variable bound in vipr certificate */
+SCIP_EXPORT
+SCIP_Longint SCIPvarGetLbCertificateIndexGlobal(
+   SCIP_VAR*             var                 /**< variable to get index for */
+   );
+
+/**< returns index of variable bound in vipr certificate */
+SCIP_EXPORT
+SCIP_Longint SCIPvarGetUbCertificateIndexGlobal(
+   SCIP_VAR*             var                 /**< variable to get index for */
+   );
+
 /** gets transformed variable of ORIGINAL variable */
 SCIP_EXPORT
 SCIP_VAR* SCIPvarGetTransVar(

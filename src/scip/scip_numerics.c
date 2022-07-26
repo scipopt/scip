@@ -474,7 +474,10 @@ SCIP_Bool SCIPparseRational(
       /* parse a finite value */
       RatSetString(value, str);
       *endptr = (char*)(localstr + RatStrlen(value));
+      return TRUE;
    }
+
+   return TRUE;
 }
 
 /** checks, if values are in range of epsilon */

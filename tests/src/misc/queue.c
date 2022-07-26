@@ -30,7 +30,7 @@
 static SCIP* scip;
 static SCIP_QUEUE* queue;
 
-static const int arraylen = 3;
+#define arraylen 3
 static SCIP_Real myrealentries[] =
 {
    5.0,

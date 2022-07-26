@@ -335,7 +335,7 @@ SCIP_RETCODE nsvInitData(
 /** initializes NSV recordings */
 static
 void nsvInitRecording(
-   STP_Vectype(int)      edgesrecord,
+   STP_Vectype(int)      edgesrecord,        /**< edges record */
    NSV*                  nsv                 /**< NSV */
 )
 {

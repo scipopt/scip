@@ -51,6 +51,7 @@
 #include "scip/branchexact.h"
 #include "scip/bounding_exact.h"
 #include "scip/branch_nodereopt.h"
+#include "scip/certificate.h"
 #include "scip/clock.h"
 #include "scip/compr.h"
 #include "scip/concsolver.h"
@@ -93,6 +94,7 @@
 #include "scip/relax.h"
 #include "scip/reopt.h"
 #include "scip/retcode.h"
+#include "scip/sepastoreexact.h"
 #include "scip/scipbuildflags.h"
 #include "scip/scipcoreplugins.h"
 #include "scip/scipgithash.h"
@@ -157,6 +159,17 @@ SCIP_Bool SCIPisExactSolve(
    return (scip->set->exact_enabled);
 }
 
+/** returns whether aggreagtion is allowed to use negative slack */
+SCIP_Bool SCIPallowNegSlack(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   return (!SCIPisExactSolve(scip)) || (scip->set->exact_allownegslack);
+}
+
 /** returns which method is used for computing truely valid dual bounds at the nodes ('n'eumaier and shcherbina,
  *  'v'erify LP basis, 'r'epair LP basis, 'p'roject and scale, 'e'xact LP,'i'nterval neumaier and shcherbina,
  *  e'x'act neumaier and shcherbina, 'a'utomatic); only relevant for solving the problem provably correct
@@ -194,6 +207,40 @@ SCIP_CERTIFICATE* SCIPgetCertificate(
    assert(scip->stat != NULL);
 
    return scip->stat->certificate;
+}
+
+/** agg aggregation information to certificate for one row */
+SCIP_RETCODE SCIPaddCertificateAggregation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_AGGRROW*         aggrrow,            /**< agrrrow that results from the aggregation */
+   SCIP_AGGRROW*         negslackrow,        /**< agrrrow that results from the aggregation with implicitly defined negative slack added */
+   SCIP_ROW**            aggrrows,           /**< array of rows used fo the aggregation */
+   SCIP_Real*            weights,            /**< array of weights */
+   int                   naggrrows,          /**< length of the arrays */
+   SCIP_ROW**            negslackrows,       /**< array of rows that are added implicitly with negative slack */
+   SCIP_Real*            negslackweights,    /**< array of negative slack weights */
+   int                   nnegslackrows       /**< length of the negative slack array */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->stat != NULL);
+
+   SCIP_CALL( SCIPcertificateNewAggrInfo(scip, aggrrow, negslackrow, aggrrows, weights, naggrrows, negslackrows, negslackweights, nnegslackrows) );
+
+   return SCIP_OKAY;
+}
+
+/** agg aggregation information to certificate for one row */
+SCIP_RETCODE SCIPaddCertificateMirInfo(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->stat != NULL);
+
+   SCIP_CALL( SCIPcertificateNewMirInfo(scip) );
+
+   return SCIP_OKAY;
 }
 
 /** compute a safe bound for the current lp solution */
@@ -270,6 +317,27 @@ SCIP_RETCODE SCIPbranchLPexact(
    SCIP_CALL( SCIPbranchExecLPexact(scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
          scip->tree, scip->reopt, scip->lp, scip->sepastore, scip->branchcand, scip->eventqueue, scip->primal->cutoffbound,
          TRUE, result) );
+
+   return SCIP_OKAY;
+}
+
+/** adds row to exact separation storage
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_RETCODE SCIPaddRowExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROWEXACT*        rowexact            /**< exact row to add */
+   )
+{
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPaddRowExact", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPsepastoreExactAddCut(scip->sepastoreexact, SCIPblkmem(scip), scip->set, scip->stat, scip->eventqueue,
+            scip->lpexact, rowexact) );
 
    return SCIP_OKAY;
 }

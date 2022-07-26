@@ -6159,7 +6159,6 @@ SCIP_RETCODE SCIPtightenVarUbExact(
    }  /*lint !e788*/
 
    /* check whether the lower bound improved */
-   SCIPcomputeVarUbLocalExact(scip, var, newbound);
    if( tightened != NULL && RatIsGT(ub, newbound) )
       *tightened = TRUE;
 
@@ -9234,14 +9233,14 @@ SCIP_RETCODE SCIPfixVarExact(
        */
       if( RatIsLE(fixedval, SCIPvarGetLbLocalExact(var)) )
       {
-         SCIP_CALL( SCIPchgVarLb(scip, var, RatRoundReal(fixedval, SCIP_ROUND_DOWNWARDS)) );
-         SCIP_CALL( SCIPchgVarUb(scip, var, RatRoundReal(fixedval, SCIP_ROUND_UPWARDS)) );
+         SCIP_CALL( SCIPchgVarLb(scip, var, RatRoundReal(fixedval, SCIP_R_ROUND_DOWNWARDS)) );
+         SCIP_CALL( SCIPchgVarUb(scip, var, RatRoundReal(fixedval, SCIP_R_ROUND_UPWARDS)) );
          *fixed = TRUE;
       }
       else
       {
-         SCIP_CALL( SCIPchgVarUb(scip, var, RatRoundReal(fixedval, SCIP_ROUND_UPWARDS)) );
-         SCIP_CALL( SCIPchgVarLb(scip, var, RatRoundReal(fixedval, SCIP_ROUND_DOWNWARDS)) );
+         SCIP_CALL( SCIPchgVarUb(scip, var, RatRoundReal(fixedval, SCIP_R_ROUND_UPWARDS)) );
+         SCIP_CALL( SCIPchgVarLb(scip, var, RatRoundReal(fixedval, SCIP_R_ROUND_DOWNWARDS)) );
          *fixed = TRUE;
       }
       return SCIP_OKAY;
@@ -9265,7 +9264,7 @@ SCIP_RETCODE SCIPfixVarExact(
          }
          else
          {
-            SCIP_CALL( SCIPchgVarLb(scip, var, RatRoundReal(fixedval, SCIP_ROUND_DOWNWARDS)) );
+            SCIP_CALL( SCIPchgVarLb(scip, var, RatRoundReal(fixedval, SCIP_R_ROUND_DOWNWARDS)) );
             *fixed = TRUE;
          }
       }
@@ -9278,7 +9277,7 @@ SCIP_RETCODE SCIPfixVarExact(
          }
          else
          {
-            SCIP_CALL( SCIPchgVarUb(scip, var, RatRoundReal(fixedval, SCIP_ROUND_UPWARDS)) );
+            SCIP_CALL( SCIPchgVarUb(scip, var, RatRoundReal(fixedval, SCIP_R_ROUND_UPWARDS)) );
             *fixed = TRUE;
          }
       }

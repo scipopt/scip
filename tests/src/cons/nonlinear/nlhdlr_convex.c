@@ -156,6 +156,8 @@ SCIP_RETCODE detect(
 /* tests detection of convex/concave subexpressions */
 Test(nlhdlrconvex, detect, .init = setup, .fini = teardown)
 {
+   SCIP_CALL( SCIPsetBoolParam(scip, "nlhdlr/convex/extendedform", FALSE) );
+
    detect("exp(exp(<x1>))", SCIP_EXPRCURV_CONVEX, FALSE);
    detect("exp(exp(log(<x1>)))", SCIP_EXPRCURV_CONVEX, FALSE);
 
@@ -410,6 +412,8 @@ Test(nlhdlrconvex, estimate, .init = setup, .fini = teardown)
    SCIP_Real x3coef = 0.0;
    SCIP_Real constant = 0.0;
    SCIP_SOL* sol;
+
+   SCIP_CALL( SCIPsetBoolParam(scip, "nlhdlr/convex/extendedform", FALSE) );
 
    SCIPcreateSol(scip, &sol, NULL);
 

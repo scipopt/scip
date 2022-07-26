@@ -28,6 +28,7 @@
 #include "blockmemshell/memory.h"
 #include "scip/def.h"
 #include "scip/type_branch.h"
+#include "scip/type_certificate.h"
 #include "scip/type_cons.h"
 #include "scip/type_event.h"
 #include "scip/type_history.h"
@@ -143,6 +144,13 @@ SCIP_RETCODE SCIPdomchgUndo(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
+   );
+
+/** adds certificate line number to domain changes */
+void SCIPdomchgAddCurrentCertificateIndex(
+   SCIP_DOMCHG*          domchg,             /**< pointer to domain change data structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_CERTIFICATE*     certificate         /**< certificate information */
    );
 
 /** adds bound change to domain changes */

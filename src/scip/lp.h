@@ -486,6 +486,12 @@ SCIP_RETCODE SCIProwMakeIntegral(
    SCIP_Bool*            success             /**< stores whether row could be made rational */
    );
 
+/** recalculates norms of a row */
+void SCIProwRecalcNorms(
+   SCIP_ROW*             row,                /**< LP row */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
 /** recalculates the current activity of a row */
 void SCIProwRecalcLPActivity(
    SCIP_ROW*             row,                /**< LP row */

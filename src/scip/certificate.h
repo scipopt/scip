@@ -27,6 +27,7 @@
 
 #include "scip/def.h"
 #include "scip/type_set.h"
+#include "scip/type_cuts.h"
 #include "scip/type_stat.h"
 #include "scip/type_tree.h"
 #include "scip/type_certificate.h"
@@ -70,6 +71,7 @@ SCIP_RETCODE SCIPcertificateInitTransFile(
 
 /** closes the certificate output files */
 void SCIPcertificateExit(
+   SCIP*                 scip,               /**< scip data structure */
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
@@ -81,10 +83,30 @@ SCIP_Bool SCIPcertificateIsActive(
    SCIP_CERTIFICATE*     certificate         /**< certificate information */
    );
 
-/** returns current certificate file size in MB */
+/** returns whether the certificate output is activated? */
+SCIP_Bool SCIPsetCertificateEnabled(
+   SCIP_SET*             set                 /**< SCIP settings */
+   );
+
+/** returns current certificate index (return -1 if certificate not active) */
 SCIP_Real SCIPcertificateGetFilesize(
    SCIP_CERTIFICATE*     certificate         /**< certificate information */
    );
+
+/** returns current certificate index*/
+SCIP_Longint SCIPcertificateGetCurrentIndex(
+   SCIP_CERTIFICATE*     certificate         /**< certificate information */
+   );
+
+#ifndef NDEBUG
+/** checks if information is consistent with printed certificate line */
+SCIP_Bool SCIPcertificateEnsureLastBoundInfoConsistent(
+   SCIP_CERTIFICATE*     certificate,        /**< certificate information */
+   SCIP_VAR*             var,                /**< variable that gets changed */
+   SCIP_BOUNDTYPE        boundtype,          /**< lb or ub changed? */
+   SCIP_Real             newbound            /**< new bound */
+   );
+#endif
 
 /** sets the objective function used when printing dual bounds */
 SCIP_RETCODE SCIPcertificateSetAndPrintObjective(
@@ -186,21 +208,47 @@ void SCIPcertificatePrintCons(
    SCIP_Rational**       val                 /**< coefficient array */
    );
 
+/** prints verification of row as a MIR cut (viewed as a split cut) */
+SCIP_RETCODE SCIPcertificatePrintMirCut(
+   SCIP_SET*             set,                /**< SCIP settings */
+   SCIP_LP*              lp,                 /**< SCIP lp data structure */
+   SCIP_CERTIFICATE*     certificate,        /**< certificate information */
+   SCIP_PROB*            prob,               /**< SCIP problem data */
+   SCIP_ROW*             row,                /**< the row to be printed */
+   const char            sense               /**< sense of the constraint, i.e., G, L, or E */
+   );
+
+/** create a new node data structure for the current node */
+SCIP_RETCODE SCIPcertificateTransAggrrow(
+   SCIP_SET*             set,                /**< general SCIP settings */
+   SCIP_PROB*            prob,               /**< SCIP problem data */
+   SCIP_CERTIFICATE*     certificate,        /**< SCIP certificate */
+   SCIP_AGGRROW*         aggrrow,            /**< agrrrow that results from the aggregation */
+   SCIP_ROW*             row,                /**< the cut that we are attempting to prove */
+   SCIP_ROW**            aggrrows,           /**< array of rows used fo the aggregation */
+   SCIP_Real*            weights,            /**< array of weights */
+   int                   naggrrows           /**< length of the arrays */
+   );
+
+/** create a new node data structure for the current node */
+SCIP_RETCODE SCIPcertificatePrintAggrrow(
+   SCIP_SET*             set,                /**< general SCIP settings */
+   SCIP_LP*              lp,                 /**< SCIP lp data structure */
+   SCIP_PROB*            prob,               /**< SCIP problem data */
+   SCIP_CERTIFICATE*     certificate,        /**< SCIP certificate */
+   SCIP_AGGRROW*         aggrrow,            /**< agrrrow that results from the aggregation */
+   SCIP_ROW**            aggrrows,           /**< array of rows used fo the aggregation */
+   SCIP_Real*            weights,            /**< array of weights */
+   int                   naggrrows,          /**< length of the arrays */
+   SCIP_Bool             local               /**< true if local bound information can be used */
+   );
+
 /** prints a variable bound to the problem section of the certificate file and returns line index */
 SCIP_RETCODE SCIPcertificatePrintBoundCons(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
    SCIP_Bool             isorigfile,         /**< should the original solution be printed or in transformed space */
    const char*           boundname,          /**< name of the bound constraint */
-   int                   varindex,           /**< index of the variable */
-   SCIP_Rational*        boundval,           /**< value of the bound */
-   SCIP_Bool             isupper             /**< is it the upper bound? */
-   );
-
-/** checks whether variable bound assumption is present; prints it if not; returns index */
-SCIP_Longint SCIPcertificatePrintBoundAssumption(
-   SCIP_CERTIFICATE*     certificate,        /**< certificate information */
-   const char*           assumptionname,     /**< name of the bound constraint */
-   int                   varindex,           /**< index of the variable */
+   SCIP_VAR*             var,                /**< variable to print the bound cons for */
    SCIP_Rational*        boundval,           /**< value of the bound */
    SCIP_Bool             isupper             /**< is it the upper bound? */
    );
@@ -240,9 +288,13 @@ SCIP_RETCODE SCIPcertificatePrintDualboundPseudo(
    SCIP_NODE*            node,               /**< current node */
    SCIP_SET*             set,                /**< scip settings */
    SCIP_PROB*            prob,               /**< problem data */
+   SCIP_Bool             lowerchanged,       /**< to the modified indices address a change in lb or ub? */
+   int                   modifiedvarindex,   /**< index of modified variable, or -1 */
+   SCIP_Longint          boundchangeindex,   /**< index of unprocessed bound change in the certificate, or -1 */
    SCIP_Real             psval               /**< the pseudo obj value */
    );
 
+/** prints the bound that a node inherits from its parent to the certificate */
 SCIP_RETCODE SCIPcertificatePrintInheritedBound(
    SCIP_SET*             set,                /**< general SCIP settings */
    SCIP_CERTIFICATE*     certificate,        /**< certificate data structure */
@@ -269,6 +321,38 @@ SCIP_RETCODE SCIPcertificateNewNodeData(
    SCIP_CERTIFICATE*     certificate,        /**< SCIP certificate */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_NODE*            node                /**< new node, that was created */
+   );
+
+/** create a new split info structure for the current cut */
+SCIP_RETCODE SCIPcertificateNewMirInfo(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** free all aggregation information */
+SCIP_RETCODE SCIPcertificateClearAggrinfo(
+   SCIP*                 scip                /**< global SCIP data structure */
+   );
+
+/** free aggregation information */
+SCIP_RETCODE SCIPcertificateFreeAggrInfo(
+   SCIP_SET*             set,                /**< general SCIP settings */
+   SCIP_CERTIFICATE*     certificate,        /**< SCIP certificate structure */
+   SCIP_LP*              lp,                 /**< SCIP lp data structure */
+   SCIP_AGGREGATIONINFO* aggrinfo,           /**< SCIP aggregation info */
+   SCIP_ROW*             row                 /**< new row, that info should be stored for */
+   );
+
+/** create a new aggregation info for a row */
+SCIP_RETCODE SCIPcertificateNewAggrInfo(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_AGGRROW*         aggrrow,            /**< agrrrow that results from the aggregation */
+   SCIP_AGGRROW*         negslackrow,        /**< agrrrow that results from the aggregation with implicitly defined negative slack added */
+   SCIP_ROW**            aggrrows,           /**< array of rows used fo the aggregation */
+   SCIP_Real*            weights,            /**< array of weights */
+   int                   naggrrows,          /**< length of the arrays */
+   SCIP_ROW**            negslackrows,       /**< array of rows that are added implicitly with negative slack */
+   SCIP_Real*            negslackweights,    /**< array of negative slack weights */
+   int                   nnegslackrows       /**< length of the negative slack array */
    );
 
 /** prints unsplitting information to proof section */
@@ -312,6 +396,14 @@ void SCIPcertificatePrintSolExact(
    SCIP_CERTIFICATE*     certificate,        /**< certificate data structure */
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol                 /**< primal CIP solution */
+   );
+
+/** set the node to have its own bound proof */
+SCIP_RETCODE SCIPcertificateSetInheritanceData(
+   SCIP_CERTIFICATE*     certificate,        /**< certificate information */
+   SCIP_NODE*            node,               /**< node data structure */
+   SCIP_Longint          fileindex,          /**< index of new bound */
+   SCIP_Rational*        newbound            /**< the inherited bound */
    );
 
 #ifdef __cplusplus

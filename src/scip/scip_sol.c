@@ -4084,11 +4084,6 @@ SCIP_RETCODE SCIPoverwriteFPsol(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    )
 {
-   int v;
-   int nvars;
-   SCIP_Rational* res;
-   SCIP_VAR** vars;
-
    assert(scip != NULL);
    assert(sol != NULL);
 

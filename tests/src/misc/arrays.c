@@ -33,7 +33,7 @@ static SCIP_INTARRAY* intarray;
 static SCIP_BOOLARRAY* boolarray;
 static SCIP_PTRARRAY* ptrarray;
 
-static const int arraylen = 3;
+#define arraylen 3
 static SCIP_Real myrealarray[] =
 {
    5.0,

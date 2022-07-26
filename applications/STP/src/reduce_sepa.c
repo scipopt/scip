@@ -223,9 +223,9 @@ SCIP_RETCODE cutNodesTreeCheckLeaveComponents(
 /** helper */
 static inline
 void cutNodesTreeAddNode(
-   int                   node,
+   int                   node,               /**< node to add  */
    const CUTNODES*       cutnodes,           /**< cut nodes */
-   int                   lastcutnode,
+   int                   lastcutnode,        /**< last cut node */
    CUTTREE*              cuttree             /**< cut tree data */
    )
 {
@@ -800,8 +800,8 @@ SCIP_RETCODE decomposeExactSubTry(
 static
 SCIP_Bool decomposeIsPromising(
    const GRAPH*          g,                  /**< graph data structure */
-   const BIDECPARAMS*    bidecompparams,     /**< bidecomposition */
-   const BIDECOMP*       bidecomp
+   const BIDECPARAMS*    bidecompparams,     /**< bidecomposition parameters */
+   const BIDECOMP*       bidecomp            /**< bidecomposition data structure */
    )
 {
    const SCIP_Real mincompratio = bidecompparams->depth == 0 ? BIDECOMP_MINMAXCOMPRATIO_FIRST : BIDECOMP_MINMAXCOMPRATIO;
@@ -821,7 +821,7 @@ static
 SCIP_Bool decomposePartialIsPromising(
    const GRAPH*          g,                  /**< graph data structure */
    const REDBASE*        redbase,            /**< reduction stuff */
-   const BIDECOMP*       bidecomp
+   const BIDECOMP*       bidecomp            /**< bidecomposition data structure */
    )
 {
    SCIP_Real maxratio;
@@ -845,7 +845,7 @@ static
 SCIP_RETCODE decomposeReduce(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
-   BIDECOMP*             bidecomp,
+   BIDECOMP*             bidecomp,           /**< bidecomposition data structure */
    REDBASE*              redbase             /**< reduction stuff */
    )
 {

@@ -607,11 +607,11 @@ SCIP_Real sdGet1ProfitDist(
 static inline
 SCIP_Real sdCliqueStarGetNodeBias(
    const SDPROFIT*       sdprofit,           /**< profit or NULL */
-   int                   node,
-   int                   nextnode,
-   int                   prevnode,
-   SCIP_Real             edgecost,
-   SCIP_Real             dist
+   int                   node,               /**< node to get bias for */
+   int                   nextnode,           /**< next node */
+   int                   prevnode,           /**< previous node */
+   SCIP_Real             edgecost,           /**< edge cost */
+   SCIP_Real             dist                /**< distance */
    )
 {
    SCIP_Real bias;

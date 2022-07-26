@@ -18,7 +18,8 @@ Features
 - New separator to generate mixing cuts (works well for stochastic programming with probabilistic constraint).
 - New parsing routines for cons_orbisack and cons_symresack.
 - Variables can now be marked to forbid aggregation
-- Heuristic PADM can now reoptimize found solution with original objective function
+- Variables can now be marked to forbid aggregation.
+- Heuristic PADM can now reoptimize found solution with original objective function.
 - Added code to support debugging of catching or releasing of variables to var.c (prints backtrace
   when catching and releasing).
 - SCIPintervalSin() and SCIPintervalCos() are now rounding-safe.
@@ -29,11 +30,13 @@ Features
 - New separator sepa_minor to compute cuts from 2x2 minors of a violated semidefiniteness constraint that is
   implied by the extended formulation for bilinear products.
 - New separator sepa_interminor to compute intersection cuts from 2x2 (not only principle) minors of a violated
-  semidefiniteness constraint that is implied by the extended formulation for bilinear products.
+  rank-one constraint that is implied by the extended formulation for bilinear products.
 - Symmetry handling has been extended to detect also symmetries between variables that also appear in nonlinear constraints.
 - Improved OBBT by only considering variables that are contained in at least one nonconvex expression that has an auxiliary variable.
 - Default parameter settings for NLP solves are now defined independently of the NLP solver.
 - Added table to print statistics on NLP solvers.
+- Knapsack, linear, logicor, setppc, and varbound constraints now add themselves to the NLP relaxation, if enabled.
+  And, linking constraints and bounddisjunctions in one variable are added to the NLP relaxation now.
 - Ipopt interface now supports warmstarts from a full primal/dual solution pair.
 - Extended data structure SCIP_ROWPREP and routines to assemble a linear inequality before it is turned into a SCIP row and
   made it available via the API.
@@ -65,8 +68,6 @@ Expressions:
 - Removed interval-arithmetic evaluation from expression interpreter (interfaces to automatic differentiation codes).
 - Hessians for user-provided expression handlers are not available in the NLP solver interfaces for now.
 - Sparse Hessians are now returned by expression interpreter. Removed dense Hessians.
-- Knapsack, linear, logicor, setppc, and varbound constraints now add themselves to the NLP relaxation, if enabled.
-  And, linking constraints and bounddisjunctions in one variable are added to the NLP relaxation now.
 
 Constraint handlers for NLP:
 - cons_nonlinear has been completely rewritten and now handles constraints of the form lhs <= expr <= rhs, where
@@ -117,10 +118,10 @@ Constraint handlers for NLP:
 Performance improvements
 ------------------------
 
-- Use the objective cutoff row as base row for separation in sepa_aggregation.c
-- Separate lifted cover cuts based on newer lifting function of Letchford and Souli (2019) in sepa_aggregation.c
+- Use the objective cutoff row as base row for separation in sepa_aggregation.c.
+- Separate lifted cover cuts based on newer lifting function of Letchford and Souli (2019) in sepa_aggregation.c.
 - In-tree restarts due to tree size estimation have been made compatible with orbital fixing.
-- improved upgrade of orbisacks to packing/partitioning orbitopes
+- Improved upgrade of orbisacks to packing/partitioning orbitopes.
 - Improved running time of symresack cover separation.
 - Improved propagation algorithm for orbisack and symresack.
 - Improved handling for expressions of type signpower in CppAD interface by making use of CppADs conditional expressions.
@@ -140,6 +141,7 @@ Performance improvements
 - The RENS neighborhood in ALNS now fixes fractional variables if necessary for reaching its target fixing rate.
 - Use cpsolver emphasis in sepa_rapidlearning.
 - If decomposition/maxgraphedge = 0, the computation of the block graph is completely turned off.
+- Fixed a performance bug in cons_integral.c where rounding information was passed incorrectly to the generic diving algorithm.
 
 Examples and applications
 -------------------------
@@ -598,6 +600,8 @@ Cut Selector:
   https://github.com/coin-or/GAMSlinks
 - integrated AMPL interface into main SCIP executable, that is, added possibility to use SCIP executable as solver in AMPL
   (AMPL calls solver with name of .nl file and -AMPL as arguments; SCIP will then attempt to solve the problem and write an AMPL solution file)
+- the ZIMPL interface has been updated to support ZIMPL 3.4.1;
+  the minimal required ZIMPL version is now 3.4.1
 
 ### Changed parameters
 
@@ -690,7 +694,7 @@ Cut Selector:
 - constraints/nonlinear/branching/aux, constraints/nonlinear/branching/external, constraints/nonlinear/branching/highviolfactor, constraints/nonlinear/branching/highscorefactor, constraints/nonlinear/branching/violweight, constraints/nonlinear/branching/dualweight, constraints/nonlinear/branching/pscostweight, constraints/nonlinear/branching/domainweight, constraints/nonlinear/branching/vartypeweight, constraints/nonlinear/branching/scoreagg, constraints/nonlinear/branching/violsplit, constraints/nonlinear/branching/pscostreliable
 - constraints/nonlinear/linearizeheursol
 - nlhdlr/default/enabled
-- nlhdlr/convex/enabled, nlhdlr/convex/detectsum, nlhdlr/convex/preferextended, nlhdlr/convex/cvxquadratic, nlhdlr/convex/cvxsignomial, nlhdlr/convex/cvxprodcomp, nlhdlr/convex/handletrivial
+- nlhdlr/convex/enabled, nlhdlr/convex/detectsum, nlhdlr/convex/extendedform, nlhdlr/convex/cvxquadratic, nlhdlr/convex/cvxsignomial, nlhdlr/convex/cvxprodcomp, nlhdlr/convex/handletrivial
 - nlhdlr/concave/enabled, nlhdlr/concave/detectsum, nlhdlr/concave/cvxquadratic, nlhdlr/concave/cvxsignomial, nlhdlr/concave/cvxprodcomp, nlhdlr/concave/handletrivial
 - nlhdlr/bilinear/enabled, nlhdlr/bilinear/useinteval, nlhdlr/bilinear/usereverseprop, nlhdlr/bilinear/maxseparoundsroot, nlhdlr/bilinear/maxseparounds, nlhdlr/bilinear/maxsepadepth
 - nlhdlr/perspective/enabled, nlhdlr/perspective/maxproprounds, nlhdlr/perspective/mindomreduction, nlhdlr/perspective/minviolprobing, nlhdlr/perspective/probingonlyinsepa, nlhdlr/perspective/probingfreq, nlhdlr/perspective/convexonly, nlhdlr/perspective/tightenbounds, nlhdlr/perspective/adjrefpoint
@@ -720,6 +724,7 @@ Cut Selector:
 - new parameter "misc/avoidmemout" to try to avoid running into memory limit
 - cutselection/hybrid/dircutoffdistweight, cutselection/hybrid/efficacyweight, cutselection/hybrid/intsupportweight, cutselection/hybrid/objparalweight, cutselection/hybrid/priority
 - new parameter "decomposition/disablemeasures" to disable expensive measures in SCIPcomputeDecompStats()
+- new parameter "presolving/milp/probfilename" filename to write the problem to a file before MILP presolving starts
 
 ### Data structures
 
@@ -873,6 +878,12 @@ Fixed bugs
 - fixed variance computation in t-value computation in hypothesis testing of reliability branching
 - fixed potential overflow in cuts.c:evaluateLiftingFunctionKnapsack()
 - do not transfer dual reductions to main SCIP in sepa_rapidlearning if strong dual reductions are forbidden
+- fixed a bug in cons_setppc.c:removeDoubleAndSingletonsAndPerformDualpresolve() which led to wrong variable aggregations
+- added missing redundancy check to coefficient tightening routine in cons_varbound that led to wrong variable locks
+- added a check of numerics to avoid wrong reductions in cons_linear.c:simplifyInequalities()
+- fixed a bug in cons_logicor.c regarding fixed variables that were not removed
+- presol_milp.c handles variable fixings, suggested by PaPILO, more carefully to cover all cases that can appear
+
 
 Miscellaneous
 -------------
@@ -884,6 +895,8 @@ Miscellaneous
 - In SCIPdebugMsg(), SCIPsetDebugMsg(), SCIPstatDebugMsg() strip directory from filename.
 - Recompute activity of rows when checking LP solutions instead of trusting the value given by the LP solver
 - The define NPARASCIP has been replaced by SCIP_THREADSAFE
+- Parameters are not reset to their default values before activating an emphasis setting; this now allows to combine
+  different emphasis settings.
 
 Known bugs
 ----------

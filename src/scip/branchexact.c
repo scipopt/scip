@@ -38,6 +38,7 @@
 #include "scip/sepastore.h"
 #include "scip/scip.h"
 #include "scip/branch.h"
+#include "scip/branchexact.h"
 #include "scip/solve.h"
 #include "scip/visual.h"
 #include "scip/certificate.h"
@@ -278,7 +279,6 @@ SCIP_RETCODE branchcandCalcLPCandsExact(
  * if x' is almost integral but not at a bound, this will branch (x <= x'-1, x == x', x >= x'+1);
  * not meant for branching on a continuous variables
  */
-
 SCIP_RETCODE SCIPtreeBranchVarExact(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
@@ -303,7 +303,6 @@ SCIP_RETCODE SCIPtreeBranchVarExact(
    SCIP_Real downub;
    SCIP_Real fixval;
    SCIP_Real uplb;
-   SCIP_Real lpval;
    SCIP_Real val;
 
    assert(tree != NULL);
@@ -436,7 +435,7 @@ SCIP_RETCODE SCIPtreeBranchVarExact(
       priority = SCIPtreeCalcNodeselPriority(tree, set, stat, var, SCIP_BRANCHDIR_DOWNWARDS, downub);
       /* if LP solution is cutoff in child, compute a new estimate
        * otherwise we cannot expect a direct change in the best solution, so we keep the estimate of the parent node */
-      if( SCIPsetIsGT(set, lpval, downub) )
+      if( SCIPsetIsGT(set, val, downub) )
          estimate = SCIPtreeCalcChildEstimate(tree, set, stat, var, downub);
       else
          estimate = SCIPnodeGetEstimate(tree->focusnode);
@@ -466,7 +465,6 @@ SCIP_RETCODE SCIPtreeBranchVarExact(
       SCIP_CALL( SCIPnodeCreateChild(&node, blkmem, set, stat, tree, priority, estimate) );
 
       /* print branching information to certificate, if certificate is active */
-      SCIP_CALL( SCIPcertificatePrintBranching(set, stat->certificate, stat, transprob, lp, tree, node, var, SCIP_BOUNDTYPE_UPPER, fixval) );
       SCIP_CALL( SCIPcertificatePrintBranching(set, stat->certificate, stat, transprob, lp, tree, node, var, SCIP_BOUNDTYPE_LOWER, fixval) );
 
       if( !SCIPsetIsFeasEQ(set, SCIPvarGetLbLocal(var), fixval) )
@@ -474,6 +472,10 @@ SCIP_RETCODE SCIPtreeBranchVarExact(
          SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue,
                NULL, var, fixval, SCIP_BOUNDTYPE_LOWER, FALSE) );
       }
+
+      /* print branching information to certificate, if certificate is active */
+      SCIP_CALL( SCIPcertificatePrintBranching(set, stat->certificate, stat, transprob, lp, tree, node, var, SCIP_BOUNDTYPE_UPPER, fixval) );
+
       if( !SCIPsetIsFeasEQ(set, SCIPvarGetUbLocal(var), fixval) )
       {
          SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue,
@@ -490,7 +492,7 @@ SCIP_RETCODE SCIPtreeBranchVarExact(
    {
       /* create child node with x >= uplb */
       priority = SCIPtreeCalcNodeselPriority(tree, set, stat, var, SCIP_BRANCHDIR_UPWARDS, uplb);
-      if( SCIPsetIsLT(set, lpval, uplb) )
+      if( SCIPsetIsLT(set, val, uplb) )
          estimate = SCIPtreeCalcChildEstimate(tree, set, stat, var, uplb);
       else
          estimate = SCIPnodeGetEstimate(tree->focusnode);
@@ -571,17 +573,20 @@ SCIP_RETCODE SCIPbranchExecLPexact(
    for( i = 0; i < branchcand->nlpcands && *result != SCIP_BRANCHED; i++ )
    {
       SCIP_VAR* branchvar;
-      SCIP_Rational* tmp;
-      SCIP_Real branchval;
 
       branchvar = branchcand->lpcands[i];
 
 #ifndef NDEBUG
-      RatCreateBuffer(set->buffer, &tmp);
-      branchval = branchcand->lpcandssol[i];
-      RatSetReal(tmp, branchval);
-      assert(!RatIsIntegral(tmp));
-      RatFreeBuffer(set->buffer, &tmp);
+      {
+         SCIP_Rational* tmp;
+         SCIP_Real branchval;
+
+         RatCreateBuffer(set->buffer, &tmp);
+         branchval = branchcand->lpcandssol[i];
+         RatSetReal(tmp, branchval);
+         assert(!RatIsIntegral(tmp));
+         RatFreeBuffer(set->buffer, &tmp);
+      }
 #endif
 
       SCIP_CALL( SCIPtreeBranchVarExact(tree, reopt, blkmem, set, stat, transprob, origprob, lp,

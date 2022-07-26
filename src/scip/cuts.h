@@ -99,6 +99,19 @@ SCIP_RETCODE SCIPaggrRowAddRow(
    int                   sidetype            /**< specify row side type (-1 = lhs, 0 = automatic, 1 = rhs) */
    );
 
+/** add weighted row to aggregation row
+ * @note this method is the variant of SCIPaggrRowAddRow that is safe to use in exact solving mode
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPaggrRowAddRowSafely(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_AGGRROW*         aggrrow,            /**< aggregation row */
+   SCIP_ROW*             row,                /**< row to add to aggregation row */
+   SCIP_Real             weight,             /**< scale for adding given row to aggregation row */
+   int                   sidetype,           /**< specify row side type (-1 = lhs, 0 = automatic, 1 = rhs) */
+   SCIP_Bool*            success             /**< was the row added successfully */
+   );
+
 /** Removes a given variable @p var from position @p pos the aggregation row and updates the right-hand side according
  *  to sign of the coefficient, i.e., rhs -= coef * bound, where bound = lb if coef >= 0 and bound = ub, otherwise.
  *

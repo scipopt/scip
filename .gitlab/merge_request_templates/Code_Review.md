@@ -9,6 +9,7 @@
 * [ ] Emphasis settings are up to date.
 * [ ] The code is sufficiently documented.
 * [ ] The coding style is OK, see https://scipopt.org/doc/html/CODE.php.
+* [ ] Newly added source files are added to src/CMakeLists.txt
 
 ### Documentation and building
 

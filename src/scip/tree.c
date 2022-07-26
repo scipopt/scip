@@ -943,9 +943,11 @@ SCIP_RETCODE nodeReleaseParent(
 
       /* update the effective root depth
        * in reoptimization we must not increase the effective root depth
+       * the same goes for exact solving
        */
       assert(tree->effectiverootdepth >= 0);
-      if( singleChild && SCIPnodeGetDepth(parent) == tree->effectiverootdepth && !set->reopt_enable )
+      if( singleChild && SCIPnodeGetDepth(parent) == tree->effectiverootdepth
+            && !set->reopt_enable && !set->exact_enabled )
       {
          tree->effectiverootdepth++;
          SCIPsetDebugMsg(set, "unlinked node #%" SCIP_LONGINT_FORMAT " in depth %d -> new effective root depth: %d\n",
@@ -2044,6 +2046,9 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
       SCIP_CALL( SCIPdomchgAddBoundchg(&node->domchg, blkmem, set, var, newbound, boundtype, SCIP_BOUNDCHGTYPE_BRANCHING,
             lpsolval, NULL, NULL, NULL, 0, inferboundtype) );
 
+      if( SCIPnodeGetType(node) != SCIP_NODETYPE_PROBINGNODE )
+         SCIPdomchgAddCurrentCertificateIndex(node->domchg, set, stat->certificate);
+
       /* update the child's lower bound */
       newpseudoobjval = SCIPlpGetModifiedPseudoObjval(lp, set, transprob, var, oldbound, newbound, boundtype);
       if( !SCIPtreeProbing(tree) && newpseudoobjval > SCIPnodeGetLowerbound(node)
@@ -2055,7 +2060,9 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
          bound = inferboundtype == SCIP_BOUNDTYPE_LOWER ? SCIPvarGetLbLocalExact(var) : SCIPvarGetUbLocalExact(var);
          RatSetReal(bound, newbound);
          SCIP_CALL( SCIPcertificatePrintDualboundPseudo(stat->certificate, lp->lpexact,
-         node, set, transprob, newpseudoobjval) );
+               node, set, transprob, inferboundtype == SCIP_BOUNDTYPE_LOWER,
+               SCIPvarGetCertificateIndex(var), SCIPcertificateGetCurrentIndex(stat->certificate) - 1,
+               newpseudoobjval) );
          RatSetReal(bound, oldbound);
       }
 
@@ -2070,6 +2077,9 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
       SCIP_CALL( SCIPdomchgAddBoundchg(&node->domchg, blkmem, set, var, newbound, boundtype,
             infercons != NULL ? SCIP_BOUNDCHGTYPE_CONSINFER : SCIP_BOUNDCHGTYPE_PROPINFER,
             0.0, infervar, infercons, inferprop, inferinfo, inferboundtype) );
+
+      if( SCIPnodeGetType(node) != SCIP_NODETYPE_PROBINGNODE )
+         SCIPdomchgAddCurrentCertificateIndex(node->domchg, set, stat->certificate);
    }
 
    assert(node->domchg != NULL);
@@ -2206,7 +2216,7 @@ SCIP_RETCODE SCIPnodeAddBoundinferExact(
       assert(RatIsLE(newbound, oldub));
       RatSet(oldbound, oldlb);
       RatMIN(newbound, newbound, oldub);
-      oldboundreal = RatRoundReal(oldbound, SCIP_ROUND_UPWARDS);
+      oldboundreal = RatRoundReal(oldbound, SCIP_R_ROUND_UPWARDS);
 
       if ( set->stage == SCIP_STAGE_SOLVING && RatIsInfinity(newbound) )
       {
@@ -2224,7 +2234,7 @@ SCIP_RETCODE SCIPnodeAddBoundinferExact(
       assert(RatIsGE(newbound, oldlb));
       RatSet(oldbound, oldub);
       RatMAX(newbound, newbound, oldlb);
-      oldboundreal = RatRoundReal(oldbound, SCIP_ROUND_DOWNWARDS);
+      oldboundreal = RatRoundReal(oldbound, SCIP_R_ROUND_DOWNWARDS);
 
       if ( set->stage == SCIP_STAGE_SOLVING && RatIsNegInfinity(newbound) )
       {
@@ -2258,7 +2268,7 @@ SCIP_RETCODE SCIPnodeAddBoundinferExact(
    {
       int conflictingdepth;
 
-      newboundreal = boundtype == SCIP_BOUNDTYPE_UPPER ? RatRoundReal(newbound, SCIP_ROUND_UPWARDS) : RatRoundReal(newbound, SCIP_ROUND_DOWNWARDS);
+      newboundreal = boundtype == SCIP_BOUNDTYPE_UPPER ? RatRoundReal(newbound, SCIP_R_ROUND_UPWARDS) : RatRoundReal(newbound, SCIP_R_ROUND_DOWNWARDS);
 
       /** @todo exip: do we need this exact as well? */
       conflictingdepth = SCIPvarGetConflictingBdchgDepth(var, set, boundtype, newboundreal);
@@ -2344,6 +2354,9 @@ SCIP_RETCODE SCIPnodeAddBoundinferExact(
       SCIP_CALL( SCIPdomchgAddBoundchg(&node->domchg, blkmem, set, var, newboundreal, boundtype, SCIP_BOUNDCHGTYPE_BRANCHING,
             lpsolval, NULL, NULL, NULL, 0, inferboundtype) );
 
+      if( SCIPnodeGetType(node) != SCIP_NODETYPE_PROBINGNODE )
+         SCIPdomchgAddCurrentCertificateIndex(node->domchg, set, stat->certificate);
+
       /* update the child's lower bound (pseudoobjval is safe, so can use the fp version) */
       newpseudoobjval = SCIPlpGetModifiedPseudoObjval(lpexact->fplp, set, transprob, var, oldboundreal, newboundreal, boundtype);
       if( newpseudoobjval > SCIPnodeGetLowerbound(node) && SCIPcertificateIsActive(set, stat->certificate) )
@@ -2353,8 +2366,9 @@ SCIP_RETCODE SCIPnodeAddBoundinferExact(
          SCIP_Rational* bound;
          bound = inferboundtype == SCIP_BOUNDTYPE_LOWER ? SCIPvarGetLbLocalExact(var) : SCIPvarGetUbLocalExact(var);
          RatSet(bound, newbound);
-         SCIP_CALL( SCIPcertificatePrintDualboundPseudo(stat->certificate, lpexact,
-         node, set, transprob, newpseudoobjval) );
+         SCIP_CALL( SCIPcertificatePrintDualboundPseudo(stat->certificate, lpexact, node, set, transprob,
+               inferboundtype == SCIP_BOUNDTYPE_LOWER, SCIPvarGetCertificateIndex(var),
+               SCIPcertificateGetCurrentIndex(stat->certificate) -1, newpseudoobjval) );
          RatSet(bound, oldbound);
       }
 
@@ -2369,6 +2383,9 @@ SCIP_RETCODE SCIPnodeAddBoundinferExact(
       SCIP_CALL( SCIPdomchgAddBoundchg(&node->domchg, blkmem, set, var, newboundreal, boundtype,
             infercons != NULL ? SCIP_BOUNDCHGTYPE_CONSINFER : SCIP_BOUNDCHGTYPE_PROPINFER,
             0.0, infervar, infercons, inferprop, inferinfo, inferboundtype) );
+
+      if( SCIPnodeGetType(node) != SCIP_NODETYPE_PROBINGNODE )
+         SCIPdomchgAddCurrentCertificateIndex(node->domchg, set, stat->certificate);
    }
 
    assert(node->domchg != NULL);
@@ -2774,7 +2791,7 @@ void SCIPnodeUpdateExactLowerbound(
 
       oldbound = node->lowerbound;
       RatSet(node->lowerboundexact, newbound);
-      node->lowerbound = RatRoundReal(newbound, SCIP_ROUND_DOWNWARDS);
+      node->lowerbound = RatRoundReal(newbound, SCIP_R_ROUND_DOWNWARDS);
       node->estimate = MAX(node->estimate, node->lowerbound);
 
       if( node->depth == 0 )

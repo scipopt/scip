@@ -1,4 +1,3 @@
-
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
 /*                  This file is part of the program and library             */
@@ -76,8 +75,66 @@ SCIP_RETCODE SCIPcreateEmptyRowConsExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWEXACT**       rowexact,           /**< pointer to row */
    SCIP_ROW*             fprow,              /**< pointer to fp-row that corresponds to this row */
+   SCIP_ROW*             fprowrhs,           /**< rhs-part of fp-relaxation of this row if necessary, NULL otherwise */
    SCIP_Rational*        lhs,                /**< left hand side of row */
-   SCIP_Rational*        rhs                 /**< right hand side of row */
+   SCIP_Rational*        rhs,                /**< right hand side of row */
+   SCIP_Bool             isfprelaxable      /**< is it possible to make fp-relaxation of this row */
+   );
+
+/** creates and captures an exact LP row without any coefficients from a separator
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcreateEmptyRowExactSepa(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROWEXACT**       rowexact,           /**< pointer to exact row */
+   SCIP_ROW*             fprow,              /**< corresponding fp approximation/relaxation */
+   SCIP_SEPA*            sepa,               /**< separator that creates the row */
+   const char*           name,               /**< name of row */
+   SCIP_Rational*        lhs,                /**< left hand side of row */
+   SCIP_Rational*        rhs,                /**< right hand side of row */
+   SCIP_Bool             hasfprelaxation     /**< the the fprow a relaxation or only an approximation of the exact row? */
+   );
+
+/** creates and captures an exact LP row from an existing fp row
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcreateRowExactFromRow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW*             fprow
+                /**< corresponding fp approximation/relaxation */
+   );
+
+/** generates two fprows that are a relaxation of the exact row wrt the lhs/rhs, respectively
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_EXPORT
+SCIP_Bool SCIPgenerateFpRowsFromRowExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROWEXACT*        row,                /**< SCIP exact row */
+   SCIP_ROW*             rowlhs,             /**< fp row-relaxation wrt lhs */
+   SCIP_ROW*             rowrhs,             /**< fp row-relaxation wrt rhs */
+   SCIP_Bool*            onerowrelax,        /**< is one row enough to represent the exact row */
+   SCIP_Bool*            hasfprelax          /**< is it possible to generate relaxations at all for this row? */
    );
 
 /** decreases usage counter of LP row, and frees memory if necessary
@@ -219,7 +276,7 @@ void SCIPgetRowSolFeasibilityExact(
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPprintRowex(
+SCIP_RETCODE SCIPprintRowExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWEXACT*        row,                /**< LP row */
    FILE*                 file                /**< output file (or NULL for standard output) */
@@ -347,6 +404,22 @@ SCIP_RETCODE SCIPstartExactDive(
 SCIP_EXPORT
 SCIP_RETCODE SCIPendExactDive(
    SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** writes current exact LP to a file
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPwriteLPexact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           filename            /**< file name */
    );
 
 #ifdef __cplusplus

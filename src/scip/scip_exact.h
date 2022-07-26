@@ -33,6 +33,7 @@
 
 
 #include "scip/def.h"
+#include "scip/type_cuts.h"
 #include "scip/type_cons.h"
 #include "scip/type_heur.h"
 #include "scip/type_retcode.h"
@@ -40,6 +41,7 @@
 #include "scip/type_sol.h"
 #include "scip/type_var.h"
 #include "scip/type_certificate.h"
+#include "scip/type_lpexact.h"
 
 /* In debug mode, we include the SCIP's structure in scip.c, such that no one can access
  * this structure except the interface methods in scip.c.
@@ -75,6 +77,12 @@ SCIP_Bool SCIPisExactSolve(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** returns whether aggreagtion is allowed to use negative slack */
+SCIP_EXPORT
+SCIP_Bool SCIPallowNegSlack(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** returns which method is used for computing truely valid dual bounds at the nodes ('n'eumaier and shcherbina,
  *  'v'erify LP basis, 'r'epair LP basis, 'p'roject and scale, 'e'xact LP,'i'nterval neumaier and shcherbina,
  *  e'x'act neumaier and shcherbina, 'a'utomatic); only relevant for solving the problem provably correct
@@ -107,7 +115,53 @@ SCIP_CERTIFICATE* SCIPgetCertificate(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** compute a safe bound that is valid in exact rational arithmetic */
+/** adds aggregation information to certificate for one row */
+SCIP_EXPORT
+SCIP_RETCODE SCIPaddCertificateAggregation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_AGGRROW*         aggrrow,            /**< agrrrow that results from the aggregation */
+   SCIP_AGGRROW*         negslackrow,        /**< agrrrow that results from the aggregation with implicitly defined negative slack added */
+   SCIP_ROW**            aggrrows,           /**< array of rows used fo the aggregation */
+   SCIP_Real*            weights,            /**< array of weights */
+   int                   naggrrows,          /**< length of the arrays */
+   SCIP_ROW**            negslackrows,       /**< array of rows that are added implicitly with negative slack */
+   SCIP_Real*            negslackweights,    /**< array of negative slack weights */
+   int                   nnegslackrows       /**< length of the negative slack array */
+   );
+
+/** adds mir information (split, etc) to certificate for one row */
+SCIP_EXPORT
+SCIP_RETCODE SCIPaddCertificateMirInfo(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** stores the active aggregation information in the certificate data structures for a row */
+SCIP_EXPORT
+SCIP_RETCODE SCIPstoreCertificateActiveAggregationInfo(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW*             row                 /**< row that aggregation information is stored for */
+   );
+
+/** stores the active mir information in the certificate data structures for a row */
+SCIP_EXPORT
+SCIP_RETCODE SCIPstoreCertificateActiveMirInfo(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW*             row                 /**< row that mirinfo is stored for */
+   );
+
+/** frees the active mir information */
+SCIP_EXPORT
+SCIP_RETCODE SCIPfreeCertificateActiveMirInfo(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** frees the active aggregation information */
+SCIP_EXPORT
+SCIP_RETCODE SCIPfreeCertificateActiveAggregationInfo(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** computes a safe bound that is valid in exact rational arithmetic */
 SCIP_EXPORT
 SCIP_RETCODE SCIPcomputeSafeBound(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -115,7 +169,7 @@ SCIP_RETCODE SCIPcomputeSafeBound(
    SCIP_Real*            safebound           /**< store the safe bound */
    );
 
-/** force the next lp to be solved by a rational lp solver */
+/** forces the next lp to be solved by a rational lp solver */
 SCIP_EXPORT
 SCIP_RETCODE SCIPforceExactSolve(
    SCIP*                 scip                /**< SCIP data structure */
@@ -132,9 +186,24 @@ SCIP_RETCODE SCIPforceExactSolve(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
+SCIP_EXPORT
 SCIP_RETCODE SCIPbranchLPexact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_RESULT*          result              /**< pointer to store the result of the branching (s. branch.h) */
+   );
+
+/** adds row to exact separation storage
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPaddRowExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROWEXACT*        rowexact            /**< exact row to add */
    );
 
 #ifdef __cplusplus

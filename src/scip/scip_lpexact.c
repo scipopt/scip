@@ -88,6 +88,7 @@
 #include "scip/scipgithash.h"
 #include "scip/sepa.h"
 #include "scip/sepastore.h"
+#include "scip/sepastoreexact.h"
 #include "scip/set.h"
 #include "scip/sol.h"
 #include "scip/solve.h"
@@ -100,6 +101,7 @@
 #include "xml/xml.h"
 
 #include "scip/scip_lp.h"
+#include "scip/scip_lpexact.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_numerics.h"
 #include "scip/scip_sol.h"
@@ -255,15 +257,97 @@ SCIP_RETCODE SCIPcreateEmptyRowConsExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWEXACT**       rowexact,           /**< pointer to row */
    SCIP_ROW*             fprow,              /**< corresponding fp-row */
+   SCIP_ROW*             fprowrhs,           /**< rhs-part of fp-relaxation of this row if necessary, NULL otherwise */
    SCIP_Rational*        lhs,                /**< left hand side of row */
-   SCIP_Rational*        rhs                 /**< right hand side of row */
+   SCIP_Rational*        rhs,                /**< right hand side of row */
+   SCIP_Bool             isfprelaxable       /**< is it possible to make fp-relaxation of this row */
    )
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateEmptyRowConsExact", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIProwCreateExact(rowexact, fprow, scip->mem->probmem, scip->set,
+   SCIP_CALL( SCIProwExactCreate(rowexact, fprow, fprowrhs, scip->mem->probmem, scip->set,
                                  scip->stat, scip->lpexact, 0, NULL, NULL, lhs, rhs,
-                                 SCIP_ROWORIGINTYPE_CONS, SCIProwGetOriginCons(fprow)) );
+                                 SCIP_ROWORIGINTYPE_CONS, isfprelaxable, SCIProwGetOriginCons(fprow)) );
+
+   return SCIP_OKAY;
+}
+
+/** creates and captures an exact LP row without any coefficients from a separator
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_RETCODE SCIPcreateEmptyRowExactSepa(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROWEXACT**       rowexact,           /**< pointer to exact row */
+   SCIP_ROW*             fprow,              /**< corresponding fp approximation/relaxation */
+   SCIP_SEPA*            sepa,               /**< separator that creates the row */
+   const char*           name,               /**< name of row */
+   SCIP_Rational*        lhs,                /**< left hand side of row */
+   SCIP_Rational*        rhs,                /**< right hand side of row */
+   SCIP_Bool             hasfprelaxation     /**< the the fprow a relaxation or only an approximation of the exact row? */
+   )
+{
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateEmptyRowSepa", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIProwExactCreate(rowexact, fprow, NULL, scip->mem->probmem, scip->set, scip->stat,
+         scip->lpexact, 0, NULL, NULL, lhs, rhs, SCIP_ROWORIGINTYPE_SEPA, hasfprelaxation, (void*) sepa) );
+
+   return SCIP_OKAY;
+}
+
+/** creates and captures an exact LP row from an existing fp row
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcreateRowExactFromRow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW*             fprow               /**< corresponding fp approximation/relaxation */
+   )
+{
+   assert(fprow != NULL);
+   assert(fprow->rowexact == NULL);
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateRowExactFromRow", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIProwExactCreateFromRow(&(fprow->rowexact), fprow, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->transprob, scip->lpexact) );
+
+   return SCIP_OKAY;
+}
+
+/** generates two fprows that are a relaxation of the exact row wrt the lhs/rhs, respectively
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_Bool SCIPgenerateFpRowsFromRowExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROWEXACT*        row,                /**< SCIP exact row */
+   SCIP_ROW*             rowlhs,             /**< fp row-relaxation wrt lhs */
+   SCIP_ROW*             rowrhs,             /**< fp row-relaxation wrt rhs */
+   SCIP_Bool*            onerowrelax,        /**< is one row enough to represent the exact row */
+   SCIP_Bool*            hasfprelax          /**< is it possible to generate relaxations at all for this row? */
+   )
+{
+   assert(row != NULL);
+   assert(rowlhs != NULL);
+   assert(rowrhs != NULL);
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPgenerateFpRowsFromRowExact", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIProwExactGenerateFpRows(scip->mem->probmem, scip->set, scip->stat,  scip->eventqueue, scip->lpexact, scip->transprob, row, rowlhs, rowrhs, onerowrelax, hasfprelax) );
 
    return SCIP_OKAY;
 }
@@ -328,7 +412,7 @@ void SCIPgetRowSolActivityExact(
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-SCIP_RETCODE SCIPprintRowex(
+SCIP_RETCODE SCIPprintRowExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWEXACT*        row,                /**< LP row */
    FILE*                 file                /**< output file (or NULL for standard output) */
@@ -336,7 +420,7 @@ SCIP_RETCODE SCIPprintRowex(
 {
    assert(row != NULL);
 
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPprintRowex", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPprintRowExact", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
    SCIProwExactPrint(row, scip->messagehdlr, file);
 
@@ -612,6 +696,41 @@ SCIP_RETCODE SCIPchgVarUbExactDive(
    }
 
    SCIP_CALL( SCIPvarChgUbExactDive(var, scip->set, scip->lpexact, newbound) );
+
+   return SCIP_OKAY;
+}
+
+/** writes current exact LP to a file
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+SCIP_RETCODE SCIPwriteLPexact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           filename            /**< file name */
+   )
+{
+   SCIP_Bool cutoff;
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPwriteLPexact", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   if( !SCIPtreeIsFocusNodeLPConstructed(scip->tree) )
+   {
+      SCIP_CALL( SCIPconstructCurrentLP(scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
+            scip->tree, scip->reopt, scip->lp, scip->pricestore, scip->sepastore, scip->cutpool, scip->branchcand,
+            scip->eventqueue, scip->eventfilter, scip->cliquetable, FALSE, &cutoff) );
+   }
+
+   /* we need a flushed lp to write the current lp */
+   SCIP_CALL( SCIPsepastoreExactSyncLPs(scip->sepastoreexact, scip->mem->probmem, scip->set, scip->stat, scip->lpexact, scip->transprob, scip->eventqueue) );
+   SCIP_CALL( SCIPlpExactFlush(scip->lpexact, scip->mem->probmem, scip->set, scip->eventqueue) );
+
+   SCIP_CALL( SCIPlpExactWrite(scip->lpexact, filename) );
 
    return SCIP_OKAY;
 }

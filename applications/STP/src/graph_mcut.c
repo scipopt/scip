@@ -348,8 +348,8 @@ static int bfs(
 static
 SCIP_RETCODE mincutInit(
    SCIP*                 scip,               /**< SCIP data structure */
-   int                   nnodes,
-   int                   nedges,
+   int                   nnodes,             /**<  number of nodes */
+   int                   nedges,             /**< number of edges */
    GRAPH*                p                   /**< graph data structure */
 )
 {
@@ -1119,8 +1119,8 @@ SCIP_RETCODE graph_mincut_init(
 /** reinitializes minimum cut arrays */
 SCIP_RETCODE graph_mincut_reInit(
    SCIP*                 scip,               /**< SCIP data structure */
-   int                   nnodes,
-   int                   nedges,
+   int                   nnodes,             /**< number of nodes */
+   int                   nedges,             /**< number of edges */
    GRAPH*                p                   /**< graph data structure */
      )
 {

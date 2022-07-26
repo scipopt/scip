@@ -4119,6 +4119,7 @@ SCIP_RETCODE SCIPlpiGetObjval(
    /* obtain objective value */
    ret = GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_OBJVAL, objval);
    assert( ret == 0 || ret == GRB_ERROR_DATA_NOT_AVAILABLE );
+   SCIP_UNUSED(ret);
 
    /* return minus infinity if value not available and we reached the iteration limit (see lpi_cpx) */
    if( lpi->solstat == GRB_ITERATION_LIMIT )

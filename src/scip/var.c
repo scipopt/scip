@@ -35,6 +35,7 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 #include "scip/cons.h"
+#include "scip/certificate.h"
 #include "scip/event.h"
 #include "scip/history.h"
 #include "scip/implics.h"
@@ -707,6 +708,12 @@ SCIP_RETCODE SCIPboundchgApply(
             *cutoff = TRUE;
             boundchg->redundant = TRUE; /* bound change has not entered the lbchginfos array of the variable! */
          }
+
+         if( SCIPsetCertificateEnabled(set) )
+         {
+            var->lbchginfos[var->nlbchginfos - 1].oldcertindex = var->exactdata->locdom.lbcertificateidx;
+            var->exactdata->locdom.lbcertificateidx = boundchg->certificateindex;
+         }
       }
       else
       {
@@ -773,6 +780,12 @@ SCIP_RETCODE SCIPboundchgApply(
                SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, boundchg->newbound);
             *cutoff = TRUE;
             boundchg->redundant = TRUE; /* bound change has not entered the ubchginfos array of the variable! */
+         }
+
+         if( SCIPsetCertificateEnabled(set) )
+         {
+            var->ubchginfos[var->nubchginfos - 1].oldcertindex = var->exactdata->locdom.ubcertificateidx;
+            var->exactdata->locdom.ubcertificateidx = boundchg->certificateindex;
          }
       }
       else
@@ -858,6 +871,10 @@ SCIP_RETCODE SCIPboundchgUndo(
       /* in case all bound changes are removed the local bound should match the global bound */
       assert(var->nlbchginfos > 0 || SCIPsetIsFeasEQ(set, var->locdom.lb, var->glbdom.lb));
 
+      /* in case certificate is used, set back the certificate line index */
+      if( SCIPsetCertificateEnabled(set) )
+         var->exactdata->locdom.lbcertificateidx = var->lbchginfos[var->nlbchginfos].oldcertindex;
+
       break;
 
    case SCIP_BOUNDTYPE_UPPER:
@@ -878,6 +895,10 @@ SCIP_RETCODE SCIPboundchgUndo(
 
       /* in case all bound changes are removed the local bound should match the global bound */
       assert(var->nubchginfos > 0 || SCIPsetIsFeasEQ(set, var->locdom.ub, var->glbdom.ub));
+
+      /* in case certificate is used, set back the certificate line index */
+      if( SCIPsetCertificateEnabled(set) )
+         var->exactdata->locdom.ubcertificateidx = var->ubchginfos[var->nubchginfos].oldcertindex;
 
       break;
 
@@ -948,6 +969,20 @@ SCIP_RETCODE boundchgApplyGlobal(
    {
       *cutoff = TRUE;
       return SCIP_OKAY;
+   }
+
+   if( SCIPsetCertificateEnabled(set) )
+   {
+      if( boundtype == SCIP_BOUNDTYPE_LOWER )
+      {
+         var->exactdata->glbdom.lbcertificateidx = boundchg->certificateindex;
+         var->exactdata->locdom.lbcertificateidx = boundchg->certificateindex;
+      }
+      if( boundtype == SCIP_BOUNDTYPE_UPPER )
+      {
+         var->exactdata->glbdom.ubcertificateidx = boundchg->certificateindex;
+         var->exactdata->locdom.ubcertificateidx = boundchg->certificateindex;
+      }
    }
 
    /* apply bound change */
@@ -1409,6 +1444,27 @@ SCIP_RETCODE SCIPdomchgApplyGlobal(
    return SCIP_OKAY;
 }
 
+/** adds certificate line number to domain changes */
+void SCIPdomchgAddCurrentCertificateIndex(
+   SCIP_DOMCHG*          domchg,             /**< pointer to domain change data structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_CERTIFICATE*     certificate         /**< certificate information */
+   )
+{
+   SCIP_BOUNDCHG* change;
+
+   if( !SCIPcertificateIsActive(set, certificate) )
+      return;
+
+   change = &(domchg->domchgdyn.boundchgs[domchg->domchgdyn.nboundchgs - 1]);
+
+#ifndef NDEBUG
+   SCIPcertificateEnsureLastBoundInfoConsistent(certificate, change->var, change->boundtype, change->newbound);
+#endif
+
+   change->certificateindex = SCIPcertificateGetCurrentIndex(certificate) - 1;
+}
+
 /** adds bound change to domain changes */
 SCIP_RETCODE SCIPdomchgAddBoundchg(
    SCIP_DOMCHG**         domchg,             /**< pointer to domain change data structure */
@@ -1587,7 +1643,7 @@ void adjustedLbExact(
    else if( RatIsPositive(lb) && SCIPsetIsInfinity(set, RatApproxReal(lb)) )
       RatSetString(lb, "inf");
    else if( vartype != SCIP_VARTYPE_CONTINUOUS )
-      RatRound(lb, lb, SCIP_ROUND_UPWARDS);
+      RatRound(lb, lb, SCIP_R_ROUND_UPWARDS);
 }
 
 /** returns adjusted upper bound value, which is rounded for integral variable types */
@@ -1623,7 +1679,7 @@ void adjustedUbExact(
    else if( RatIsPositive(ub) && SCIPsetIsInfinity(set, RatApproxReal(ub)) )
       RatSetString(ub, "inf");
    else if( vartype != SCIP_VARTYPE_CONTINUOUS )
-      RatRound(ub, ub, SCIP_ROUND_DOWNWARDS);
+      RatRound(ub, ub, SCIP_R_ROUND_DOWNWARDS);
 }
 
 /** writes the approximate exact multi-aggregate data in the floating-point structs */
@@ -2210,8 +2266,8 @@ SCIP_RETCODE SCIPvarAddExactData(
    assert(var != NULL);
    assert(blkmem != NULL);
 
-   assert(ub == NULL || var->glbdom.ub == RatRoundReal(ub, SCIP_ROUND_UPWARDS));
-   assert(lb == NULL || var->glbdom.lb == RatRoundReal(lb, SCIP_ROUND_DOWNWARDS));
+   assert(ub == NULL || var->glbdom.ub == RatRoundReal(ub, SCIP_R_ROUND_UPWARDS));
+   assert(lb == NULL || var->glbdom.lb == RatRoundReal(lb, SCIP_R_ROUND_DOWNWARDS));
 
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, &(var->exactdata)) );
 
@@ -4222,11 +4278,13 @@ SCIP_RETCODE SCIPvarFixExact(
    *infeasible = FALSE;
    *fixed = FALSE;
 
+   assert(SCIPvarGetStatusExact(var) ==  SCIPvarGetStatus(var));
+
    if( SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_FIXED )
    {
       *infeasible = !RatIsEqual(fixedval, var->exactdata->locdom.lb);
       RatDebugMessage(" -> variable already fixed to %q (fixedval=%q): infeasible=%u\n", var->exactdata->locdom.lb, fixedval, *infeasible);
-      return SCIP_OKAY;
+      goto terminate;
    }
    else if( (SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS && !RatIsIntegral(fixedval))
       || RatIsLT(fixedval, var->exactdata->locdom.lb)
@@ -4234,7 +4292,7 @@ SCIP_RETCODE SCIPvarFixExact(
    {
       RatDebugMessage(" -> fixing infeasible: locdom=[%q,%q], fixedval=%q\n", var->exactdata->locdom.lb, var->exactdata->locdom.ub, fixedval);
       *infeasible = TRUE;
-      return SCIP_OKAY;
+      goto terminate;
    }
 
    switch( SCIPvarGetStatusExact(var) )
@@ -4345,6 +4403,7 @@ SCIP_RETCODE SCIPvarFixExact(
       return SCIP_INVALIDDATA;
    }
 
+terminate:
    RatFreeBuffer(set->buffer, &tmpval);
    RatFreeBuffer(set->buffer, &childfixedval);
    RatFreeBuffer(set->buffer, &obj);
@@ -5890,7 +5949,6 @@ SCIP_RETCODE varUpdateAggregationBoundsExact(
       }
       else
       {
-         SCIP_Real oldbd;
          if( RatIsGT(aggvarlb, aggvar->exactdata->glbdom.lb) )
          {
             RatSet(varlb, aggvar->exactdata->glbdom.lb);
@@ -5913,7 +5971,6 @@ SCIP_RETCODE varUpdateAggregationBoundsExact(
    RatDebugMessage("  new bounds: <%s> [%q,%q]   <%s> [%q,%q]\n",
       var->name, var->exactdata->glbdom.lb, var->exactdata->glbdom.ub, aggvar->name, aggvar->exactdata->glbdom.lb, aggvar->exactdata->glbdom.ub);
 
-FREE:
    RatFreeBuffer(set->buffer, &aggvarub);
    RatFreeBuffer(set->buffer, &aggvarlb);
    RatFreeBuffer(set->buffer, &varub);
@@ -6251,9 +6308,6 @@ SCIP_RETCODE SCIPvarAggregateExact(
    SCIP_Bool*            aggregated          /**< pointer to store whether the aggregation was successful */
    )
 {
-   SCIP_VAR** vars;
-   SCIP_Rational** coefs;
-   SCIP_Rational** constants;
    SCIP_Rational* obj;
    SCIP_Rational* tmpval;
    SCIP_Real branchfactor;
@@ -6261,9 +6315,7 @@ SCIP_RETCODE SCIPvarAggregateExact(
    int branchpriority;
    int nlocksdown[NLOCKTYPES];
    int nlocksup[NLOCKTYPES];
-   int nvbds;
    int i;
-   int j;
 
    assert(var != NULL);
    assert(aggvar != NULL);
@@ -6775,7 +6827,6 @@ SCIP_RETCODE tryAggregateIntVarsExact(
    SCIP_Longint classstep;
    SCIP_Longint xsol;
    SCIP_Longint ysol;
-   SCIP_Bool success;
    SCIP_VARTYPE vartype;
 
 #define MAXDNOM 1000000LL
@@ -6840,7 +6891,7 @@ SCIP_RETCODE tryAggregateIntVarsExact(
    }
 
    /* we know rhs is integral, so check if it is in integer range */
-   if( !RatRoundInteger(&c, rhs, SCIP_ROUND_DOWNWARDS) )
+   if( !RatRoundInteger(&c, rhs, SCIP_R_ROUND_DOWNWARDS) )
    {
       *infeasible = TRUE;
       goto FREE;
@@ -8205,6 +8256,7 @@ SCIP_Bool SCIPvarDoNotMultaggr(
 }
 
 /** adds correct bound-data to negated variable */
+static
 SCIP_RETCODE varNegateExactData(
    SCIP_VAR*             negvar,             /**< the negated variable */
    SCIP_VAR*             origvar,            /**< the original variable */
@@ -9313,7 +9365,7 @@ SCIP_RETCODE SCIPvarChgLbOriginalExact(
 
       /* change the bound */
       RatSet(var->exactdata->origdom.lb, newbound);
-      var->data.original.origdom.lb = RatRoundReal(newbound, SCIP_ROUND_DOWNWARDS);
+      var->data.original.origdom.lb = RatRoundReal(newbound, SCIP_R_ROUND_DOWNWARDS);
    }
    else if( SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_NEGATED )
    {
@@ -9445,7 +9497,7 @@ SCIP_RETCODE SCIPvarChgUbOriginalExact(
 
       /* change the bound */
       RatSet(var->exactdata->origdom.ub, newbound);
-      var->data.original.origdom.ub = RatRoundReal(newbound, SCIP_ROUND_UPWARDS);
+      var->data.original.origdom.ub = RatRoundReal(newbound, SCIP_R_ROUND_UPWARDS);
    }
    else if( SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_NEGATED )
    {
@@ -9548,7 +9600,7 @@ SCIP_RETCODE varEventGlbChangedExact(
 
       RatDebugMessage("issue exact GLBCHANGED event for variable <%s>: %q -> %q\n", var->name, oldbound, newbound);
 
-      SCIP_CALL( SCIPeventCreateGlbChanged(&event, blkmem, var, RatRoundReal(oldbound, SCIP_ROUND_DOWNWARDS), RatRoundReal(newbound, SCIP_ROUND_DOWNWARDS)) );
+      SCIP_CALL( SCIPeventCreateGlbChanged(&event, blkmem, var, RatRoundReal(oldbound, SCIP_R_ROUND_DOWNWARDS), RatRoundReal(newbound, SCIP_R_ROUND_DOWNWARDS)) );
       SCIP_CALL( SCIPeventAddExactBdChg(event, blkmem, oldbound, newbound) );
       SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, lp, branchcand, NULL, &event) );
    }
@@ -9623,9 +9675,9 @@ SCIP_RETCODE varEventGubChangedExact(
    {
       SCIP_EVENT* event;
 
-      SCIPsetDebugMsg(set, "issue GUBCHANGED event for variable <%s>: %g -> %g\n", var->name, oldbound, newbound);
+      SCIPsetDebugMsg(set, "issue GUBCHANGED event for variable <%s>: %g -> %g\n", var->name, RatApproxReal(oldbound), RatApproxReal(newbound));
 
-      SCIP_CALL( SCIPeventCreateGubChanged(&event, blkmem, var, RatRoundReal(oldbound, SCIP_ROUND_UPWARDS), RatRoundReal(newbound, SCIP_ROUND_UPWARDS)) );
+      SCIP_CALL( SCIPeventCreateGubChanged(&event, blkmem, var, RatRoundReal(oldbound, SCIP_R_ROUND_UPWARDS), RatRoundReal(newbound, SCIP_R_ROUND_UPWARDS)) );
       SCIP_CALL( SCIPeventAddExactBdChg(event, blkmem, oldbound, newbound) );
       SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, lp, branchcand, NULL, &event) );
    }
@@ -10129,7 +10181,7 @@ SCIP_RETCODE varProcessChgLbGlobalExact(
    RatSet(oldbound, var->exactdata->glbdom.lb);
    assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM || RatIsLE(newbound, var->exactdata->glbdom.ub));
    RatSet(var->exactdata->glbdom.lb, newbound);
-   var->glbdom.lb = RatRoundReal(newbound, SCIP_ROUND_DOWNWARDS);
+   var->glbdom.lb = RatRoundReal(newbound, SCIP_R_ROUND_DOWNWARDS);
    assert( RatIsLE(var->exactdata->glbdom.lb, var->exactdata->locdom.lb) );
    assert( RatIsLE(var->exactdata->locdom.ub, var->exactdata->glbdom.ub) );
 
@@ -10280,7 +10332,7 @@ SCIP_RETCODE varProcessChgUbGlobalExact(
    RatSet(oldbound, var->exactdata->glbdom.ub);
    assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM || RatIsGE(newbound, var->exactdata->glbdom.lb));
    RatSet(var->exactdata->glbdom.ub, newbound);
-   var->glbdom.ub = RatRoundReal(newbound, SCIP_ROUND_UPWARDS);
+   var->glbdom.ub = RatRoundReal(newbound, SCIP_R_ROUND_UPWARDS);
    assert( RatIsLE(var->exactdata->glbdom.lb, var->exactdata->locdom.lb) );
    assert( RatIsLE(var->exactdata->locdom.ub, var->exactdata->glbdom.ub) );
 
@@ -10875,7 +10927,8 @@ SCIP_RETCODE SCIPvarChgUbGlobalExact(
          if( RatIsLT(newbound, SCIPvarGetUbLocalExact(var)) )
          {
             SCIP_CALL( SCIPvarChgUbLocalExact(var, blkmem, set, stat, lpexact, branchcand, eventqueue, newbound) );
-         }SCIP_Rational* childnewbound;
+         }
+
          SCIP_CALL( varProcessChgUbGlobalExact(var, blkmem, set, stat, lpexact, branchcand, eventqueue, cliquetable, newbound) );
       }
       break;
@@ -11135,7 +11188,7 @@ SCIP_RETCODE varEventLbChangedExact(
 
       RatDebugMessage("issue exact LBCHANGED event for variable <%s>: %q -> %q\n", var->name, oldbound, newbound);
 
-      SCIP_CALL( SCIPeventCreateLbChanged(&event, blkmem, var, RatRoundReal(oldbound, SCIP_ROUND_DOWNWARDS), RatRoundReal(newbound, SCIP_ROUND_DOWNWARDS)) );
+      SCIP_CALL( SCIPeventCreateLbChanged(&event, blkmem, var, RatRoundReal(oldbound, SCIP_R_ROUND_DOWNWARDS), RatRoundReal(newbound, SCIP_R_ROUND_DOWNWARDS)) );
       SCIP_CALL( SCIPeventAddExactBdChg(event, blkmem, oldbound, newbound) );
       SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, lp->fplp, branchcand, NULL, &event) );
    }
@@ -11209,9 +11262,9 @@ SCIP_RETCODE varEventUbChangedExact(
    {
       SCIP_EVENT* event;
 
-      SCIPsetDebugMsg(set, "issue UBCHANGED event for variable <%s>: %g -> %g\n", var->name, oldbound, newbound);
+      SCIPsetDebugMsg(set, "issue UBCHANGED event for variable <%s>: %g -> %g\n", var->name, RatApproxReal(oldbound), RatApproxReal(newbound));
 
-      SCIP_CALL( SCIPeventCreateUbChanged(&event, blkmem, var, RatRoundReal(oldbound, SCIP_ROUND_UPWARDS), RatRoundReal(newbound, SCIP_ROUND_UPWARDS)) );
+      SCIP_CALL( SCIPeventCreateUbChanged(&event, blkmem, var, RatRoundReal(oldbound, SCIP_R_ROUND_UPWARDS), RatRoundReal(newbound, SCIP_R_ROUND_UPWARDS)) );
       SCIP_CALL( SCIPeventAddExactBdChg(event, blkmem, oldbound, newbound) );
       SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, lp->fplp, branchcand, NULL, &event) );
    }
@@ -11287,7 +11340,7 @@ SCIP_RETCODE varProcessChgLbLocal(
    assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM || SCIPsetIsFeasLE(set, newbound, var->locdom.ub));
    var->locdom.lb = newbound;
    /* adjust the exact bound as well */
-   if( set->exact_enabled && RatRoundReal(var->exactdata->locdom.lb, SCIP_ROUND_DOWNWARDS) != var->locdom.lb )
+   if( set->exact_enabled && RatRoundReal(var->exactdata->locdom.lb, SCIP_R_ROUND_DOWNWARDS) != var->locdom.lb )
       RatSetReal(var->exactdata->locdom.lb, var->locdom.lb);
 
    /* update statistic; during the update steps of the parent variable we pass a NULL pointer to ensure that we only
@@ -11457,7 +11510,7 @@ SCIP_RETCODE varProcessChgUbLocal(
    assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM || SCIPsetIsFeasGE(set, newbound, var->locdom.lb));
    var->locdom.ub = newbound;
    /* adjust the exact bound as well */
-   if( set->exact_enabled && RatRoundReal(var->exactdata->locdom.ub, SCIP_ROUND_UPWARDS) != var->locdom.ub )
+   if( set->exact_enabled && RatRoundReal(var->exactdata->locdom.ub, SCIP_R_ROUND_UPWARDS) != var->locdom.ub )
       RatSetReal(var->exactdata->locdom.ub, var->locdom.ub);
 
    /* update statistic; during the update steps of the parent variable we pass a NULL pointer to ensure that we only
@@ -11640,7 +11693,7 @@ SCIP_RETCODE varProcessChgLbLocalExact(
    RatSet(oldbound, var->exactdata->locdom.lb);
    assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM || RatIsLE(newbound, var->exactdata->locdom.ub));
    RatSet(var->exactdata->locdom.lb, newbound);
-   var->locdom.lb = RatRoundReal(newbound, SCIP_ROUND_DOWNWARDS);
+   var->locdom.lb = RatRoundReal(newbound, SCIP_R_ROUND_DOWNWARDS);
 
    /* update statistic; during the update steps of the parent variable we pass a NULL pointer to ensure that we only
     * once update the statistic
@@ -11783,7 +11836,7 @@ SCIP_RETCODE varProcessChgUbLocalExact(
    RatSet(oldbound, var->exactdata->locdom.ub);
    assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM || RatIsGE(newbound, var->exactdata->locdom.lb));
    RatSet(var->exactdata->locdom.ub, newbound);
-   var->locdom.ub = RatRoundReal(newbound, SCIP_ROUND_UPWARDS);
+   var->locdom.ub = RatRoundReal(newbound, SCIP_R_ROUND_UPWARDS);
 
    /* update statistic; during the update steps of the parent variable we pass a NULL pointer to ensure that we only
     * once update the statistic
@@ -17329,11 +17382,10 @@ SCIP_RETCODE SCIPvarGetProbvarSumExact(
    SCIP_Rational*        constant            /**< pointer to constant c in sum a*x + c */
    )
 {
-   SCIP_Rational* tmpval;
-
    assert(var != NULL);
    assert(scalar != NULL);
    assert(constant != NULL);
+   assert(SCIPvarGetStatusExact(*var) == SCIPvarGetStatus(*var));
 
    while( *var != NULL )
    {
@@ -18092,9 +18144,6 @@ SCIP_Rational* SCIPvarGetPseudoSolExact_rec(
    SCIP_VAR*             var                 /**< problem variable */
    )
 {
-   SCIP_Real pseudosol;
-   int i;
-
    assert(var != NULL);
 
    switch( SCIPvarGetStatusExact(var) )
@@ -22988,6 +23037,7 @@ SCIP_Rational* SCIPvarGetLbOriginalExact(
 
       SCIPerrorMessage("negated var not implemented yet for rational data \n");
       SCIPABORT();
+      return NULL;
    }
 }
 
@@ -23030,6 +23080,7 @@ SCIP_Rational* SCIPvarGetUbOriginalExact(
 
       SCIPerrorMessage("negated var not implemented yet for rational data \n");
       SCIPABORT();
+      return NULL;
    }
 }
 
@@ -24014,4 +24065,76 @@ void SCIPvarSetCertificateIndex(
    assert(index >= 0);
 
    var->exactdata->certificateindex = index;
+}
+
+/** sets index of variable in vipr-certificate */
+void SCIPvarSetUbCertificateIndexGlobal(
+   SCIP_VAR*             var,                /**< variable to set index for */
+   int                   index               /**< the index */
+   )
+{
+   assert(var != NULL);
+   assert(var->exactdata != NULL);
+   assert(index >= 0);
+
+   var->exactdata->glbdom.ubcertificateidx = index;
+   var->exactdata->locdom.ubcertificateidx = index;
+}
+
+/** sets index of variable in vipr-certificate */
+void SCIPvarSetLbCertificateIndexGlobal(
+   SCIP_VAR*             var,                /**< variable to set index for */
+   int                   index               /**< the index */
+   )
+{
+   assert(var != NULL);
+   assert(var->exactdata != NULL);
+   assert(index >= 0);
+
+   var->exactdata->glbdom.lbcertificateidx = index;
+   var->exactdata->locdom.lbcertificateidx = index;
+}
+
+/**< returns index of variable bound in vipr certificate */
+SCIP_Longint SCIPvarGetLbCertificateIndexLocal(
+   SCIP_VAR*             var                 /**< variable to get index for */
+   )
+{
+   assert(var->exactdata != NULL);
+   assert(var->exactdata->locdom.lbcertificateidx != -1);
+
+   return var->exactdata->locdom.lbcertificateidx;
+}
+
+/**< returns index of variable bound in vipr certificate */
+SCIP_Longint SCIPvarGetUbCertificateIndexLocal(
+   SCIP_VAR*             var                 /**< variable to get index for */
+   )
+{
+   assert(var->exactdata != NULL);
+   assert(var->exactdata->locdom.ubcertificateidx != -1);
+
+   return var->exactdata->locdom.ubcertificateidx;
+}
+
+/**< returns index of variable bound in vipr certificate */
+SCIP_Longint SCIPvarGetLbCertificateIndexGlobal(
+   SCIP_VAR*             var                 /**< variable to get index for */
+   )
+{
+   assert(var->exactdata != NULL);
+   assert(var->exactdata->glbdom.lbcertificateidx != -1);
+
+   return var->exactdata->glbdom.lbcertificateidx;
+}
+
+/**< returns index of variable bound in vipr certificate */
+SCIP_Longint SCIPvarGetUbCertificateIndexGlobal(
+   SCIP_VAR*             var                 /**< variable to get index for */
+   )
+{
+   assert(var->exactdata != NULL);
+   assert(var->exactdata->glbdom.ubcertificateidx != -1);
+
+   return var->exactdata->glbdom.ubcertificateidx;
 }

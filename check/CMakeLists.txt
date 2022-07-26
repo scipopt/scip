@@ -965,6 +965,7 @@ if (UNIX)
 endif (UNIX)
 endif()
 
+# @todo exip: this assumes you have vipr on your path, needs to be fixed eventually
 if(TEST_MIPEX)
     foreach(instance ${instances_MIPEX})
         split_instance(instance)
@@ -995,11 +996,20 @@ if(TEST_MIPEX)
                                     DEPENDS scip-build
                                 )
 
-            add_test(NAME MIPEX-${setting}-${basename}-vipr
-                    COMMAND viprchk ${basename}.${setting}.vipr)
-            set_tests_properties(MIPEX-${setting}-${basename}-vipr
+            add_test(NAME MIPEX-${setting}-${basename}-viprcomp
+                    COMMAND viprcomp ${basename}.${setting}.vipr)
+            set_tests_properties(MIPEX-${setting}-${basename}-viprcomp
                                 PROPERTIES
                                 DEPENDS MIPEX-${setting}-${basename}
+                                PASS_REGULAR_EXPRESSION "Completion of File successful!"
+                                FAIL_REGULAR_EXPRESSION "Error"
+                                FAIL_REGULAR_EXPRESSION "Failed")
+
+            add_test(NAME MIPEX-${setting}-${basename}-vipr
+                    COMMAND viprchk ${basename}.${setting}_complete.vipr)
+            set_tests_properties(MIPEX-${setting}-${basename}-vipr
+                                PROPERTIES
+                                DEPENDS MIPEX-${setting}-${basename}-viprcomp
                                 PASS_REGULAR_EXPRESSION "Successfully verified"
                                 FAIL_REGULAR_EXPRESSION "Error"
                                 FAIL_REGULAR_EXPRESSION "Failed")
@@ -1016,3 +1026,4 @@ if(TEST_MIPEX)
         endforeach(setting)
     endforeach(instance ${instances_MIPEX})
 endif()
+set_tests_properties(FastMIP-presolving_off-bell5.mps PROPERTIES TIMEOUT 3000)

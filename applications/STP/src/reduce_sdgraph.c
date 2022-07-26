@@ -335,7 +335,7 @@ void sdqueryAttachBinaryTreeNode(
    int                   parentposition,     /**< position of parent (edge) in binary tree array */
    int                   graphnode,          /**< graph node to attach */
    LCABUILDER*           lcabuilder,         /**< the builder */
-   UF*                   uf
+   UF*                   uf                  /**< union-find data structure */
 )
 {
    BINARYNODE* RESTRICT lcatree = lcabuilder->lcatree;
@@ -789,8 +789,8 @@ void sdqueryFullDfs(
    const BINARYNODE*     lcatree,            /**< tree */
    int                   nlcanodes,          /**< number of nodes */
    const SCIP_Real*      lcatree_costs,      /**< LCA tree costs */
-   SCIP_Bool* RESTRICT   nodes_isVisited,
-   UF*                   uf,
+   SCIP_Bool* RESTRICT   nodes_isVisited,    /**< per node: is visited? */
+   UF*                   uf,                 /**< union-find data structure */
    SCIP_Real* RESTRICT   fullq_dists         /**< distances to be computed */
 )
 {
@@ -1746,7 +1746,7 @@ SCIP_RETCODE sdgraphMstBuild(
 static
 void sdgraphFinalize(
    SCIP*                 scip,               /**< SCIP data structure */
-   VNOI**                vnoi,               /**> Voronoi */
+   VNOI**                vnoi,               /**< Voronoi data structure */
    int**                 edgeorg             /**< array of size nedges / 2 */
 )
 {

@@ -357,7 +357,7 @@ SCIP_RETCODE computeReducedProbSolutionBiased(
    SCIP_VAR**            vars,               /**< variables or NULL */
    SCIP_Bool             usestppool,         /**< using STP pool? */
    int*                  soledges,           /**< solution edges */
-   SCIP_Bool*            success
+   SCIP_Bool*            success             /**< success? */
 )
 {
    SCIP_Real* cost;
@@ -492,7 +492,7 @@ SCIP_RETCODE computeReducedProbSolution(
    SCIP_VAR**            vars,               /**< variables or NULL */
    SCIP_Bool             usestppool,         /**< using STP pool? */
    int*                  soledges,           /**< solution edges */
-   SCIP_Bool*            success
+   SCIP_Bool*            success             /**< success? */
 )
 {
    assert(soledges != NULL);

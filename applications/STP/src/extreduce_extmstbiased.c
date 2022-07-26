@@ -54,8 +54,8 @@
 static
 SCIP_Bool mst3StarNeighborRuleOut(
    SCIP*                 scip,               /**< SCIP data structure */
-   const SCIP_Real       dists_def[3],
-   const SCIP_Real       dists_bias[3],
+   const SCIP_Real       dists_def[3],       /**< distances between adjacent nodes */
+   const SCIP_Real       dists_bias[3],      /**< biased distances between adjacent nodes */
    SCIP_Real             starcost,           /**< cost of the star */
    SCIP_Bool             allowEquality       /**< allow equality? */
 )

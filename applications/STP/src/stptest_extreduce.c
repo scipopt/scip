@@ -43,12 +43,12 @@ SCIP_RETCODE extCheckArc(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< the graph */
    REDCOST*              redcostdata,        /**< reduced cost data */
-   STP_Bool*             edgedeleted,
-   int                   edge,
-   int                   edgedelete,
+   STP_Bool*             edgedeleted,        /**< marks for each edge whether deleted */
+   int                   edge,               /**< the edge/arc to check */
+   int                   edgedelete,         /**< delete the edge if possible? */
    int                   nclosenodes,        /**< max. number of close nodes to each node */
-   SCIP_Bool*            deletable,
-   SCIP_Bool             equality
+   SCIP_Bool*            deletable,          /**< is the edge deletable? */
+   SCIP_Bool             equality            /**< allow equality for checks */
 )
 {
    DISTDATA* distdata;
@@ -85,10 +85,10 @@ SCIP_RETCODE extCheckEdge(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< the graph */
    REDCOST*              redcostdata,        /**< reduced cost data */
-   STP_Bool*             edgedeleted,
-   int                   edge,
-   SCIP_Bool*            deletable,
-   SCIP_Bool             allowEquality
+   STP_Bool*             edgedeleted,        /**< array to mark */
+   int                   edge,               /**< edge to check */
+   SCIP_Bool*            deletable,          /**< can edge be deleted?  */
+   SCIP_Bool             allowEquality       /**< allow equality for rule-out */
 )
 {
    DISTDATA* distdata;
@@ -119,10 +119,10 @@ SCIP_RETCODE extCheckNode(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< the graph */
    REDCOST*              redcostdata,        /**< reduced cost data */
-   STP_Bool*             edgedeleted,
-   int                   node,
-   SCIP_Bool*            deletable,
-   SCIP_Bool             allowEquality
+   STP_Bool*             edgedeleted,        /**< array */
+   int                   node,               /**< node to check */
+   SCIP_Bool*            deletable,          /**< pointer to mark whether node can be deleted */
+   SCIP_Bool             allowEquality       /**< allow equality? */
 )
 {
    STAR* star;
@@ -157,7 +157,7 @@ SCIP_RETCODE extDeleteNodes(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< the graph */
    REDCOST*              redcostdata,        /**< reduced cost data */
-   SCIP_Bool             allowEquality
+   SCIP_Bool             allowEquality       /**< allow equality? */
 )
 {
    DISTDATA* distdata;
@@ -241,8 +241,9 @@ void extInitRedCostArraysPc(
    }
 }
 
+#ifdef SCIP_DISABLED
 /** initializes to default for PC */
-static inline
+static
 void extInitRedCostArraysPcWithBase(
    const GRAPH*          graph,              /**< the graph */
    int                   base,               /**< the base */
@@ -261,6 +262,7 @@ void extInitRedCostArraysPcWithBase(
       vbase3[i] = base;
    }
 }
+#endif
 
 
 static

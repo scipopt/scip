@@ -52,7 +52,6 @@ extern "C" {
 
 static const char posinf[4] = "inf";
 static const char neginf[5] = "-inf";
-static char stringbuf[SCIP_MAXSTRLEN];
 static SCIP_Rational buffer;
 static SCIP_Real infinity = SCIP_DEFAULT_INFINITY; /* values above this are considered to be infinite */
 
@@ -108,7 +107,7 @@ SCIP_RETCODE RatCreateBuffer(
 SCIP_RETCODE RatCreateString(
    BMS_BLKMEM*           mem,                /**< block memory */
    SCIP_Rational**       rational,           /**< pointer to the rational to create */
-   char*                 desc                /**< the String describing the rational */
+   const char*           desc                /**< the String describing the rational */
 )
 {
    SCIP_CALL( RatCreateBlock(mem, rational) );
@@ -262,9 +261,7 @@ SCIP_RETCODE RatReallocBlockArray(
    BMSreallocBlockMemoryArray(mem, result, oldlen, newlen);
 
    for( i = oldlen; i < newlen; ++i )
-   {
-      SCIP_CALL( RatCreateBlock(mem, &(*result)[i]) );
-   }
+      RatCreateBlock(mem, &((*result)[i]));
 
    return SCIP_OKAY;
 }
@@ -351,7 +348,6 @@ void RatSetGMPArray(
    int                   len                 /** array length */
    )
 {
-   int i;
    for( int i = 0; i < len; i++ )
    {
       mpq_init(mpqaaray[i]);
@@ -366,7 +362,6 @@ void RatSetArrayGMP(
    int                   len                 /** array length */
    )
 {
-   int i;
    for( int i = 0; i < len; i++ )
    {
       RatSetGMP(ratarray[i], mpqarray[i]);
@@ -379,7 +374,6 @@ void RatClearGMPArray(
    int                   len                 /** array length */
    )
 {
-   int i;
    for( int i = 0; i < len; i++ )
    {
       mpq_clear(mpqarray[i]);
@@ -530,8 +524,6 @@ void RatSetInt(
    SCIP_Longint          denom               /**< the denominator */
    )
 {
-   char buf[SCIP_MAXSTRLEN];
-
    assert(res != NULL);
    assert(denom != 0);
 
@@ -598,7 +590,7 @@ void RatSetString(
             exponent = std::stoi(s.substr(exponentidx + 1, s.length()));
             s = s.substr(0, exponentidx);
          }
-         // std::cout << s << std::endl;
+         SCIPdebug(std::cout << s << std::endl);
          if( s[0] == '.' )
             s.insert(0, "0");
 
@@ -609,7 +601,7 @@ void RatSetString(
 
          if( decimalpos != std::string::npos )
          {
-            for( int i = 0; i < exponentpos; ++i )
+            for( size_t i = 0; i < exponentpos; ++i )
                denominator.append("0");
 
             s.erase(decimalpos, 1);
@@ -623,7 +615,6 @@ void RatSetString(
          res->val *= pow(10, exponent);
 
          res->isinf = FALSE;
-         // RatPrint(res);
       }
    }
 
@@ -650,6 +641,7 @@ void RatSetReal(
       res->val = real;
       res->isfprepresentable = SCIP_ISFPREPRESENTABLE_TRUE;
    }
+   assert(RatIsEqualReal(res, real));
 }
 
 /** resets the flag isfprepresentable to SCIP_ISFPREPRESENTABLE_UNKNOWN */
@@ -867,10 +859,22 @@ void RatDivReal(
    )
 {
    assert(res != NULL && op1 != NULL);
-   assert(!op1->isinf);
    assert(op2 != 0.0);
 
-   RatMultReal(res, op1, 1.0 / op2 );
+   if( op1->isinf )
+   {
+      op2 > 0 ? RatSet(res, op1) : RatNegate(res, op1);
+   }
+   else if( REALABS(op2) >= infinity && !RatIsZero(op1) )
+   {
+      RatSetReal(res, op2 * op1->val.sign());
+   }
+   else
+   {
+      res->val = op1->val / Rational(op2);
+      res->isinf = FALSE;
+   }
+   res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
 }
 
 /* Computes res += op1 * op2 and saves the result in res */
@@ -1055,7 +1059,6 @@ void RatMIN(
    SCIP_Rational*        op2                 /**< the second rational */
    )
 {
-   SCIP_Bool positive;
    assert(op1 != NULL && op2 != NULL);
 
    if( op1->isinf )
@@ -1087,7 +1090,6 @@ void RatMAX(
    SCIP_Rational*        op2                 /**< the second rational */
    )
 {
-   SCIP_Bool positive;
    assert(op1 != NULL && op2 != NULL);
 
    if( op1->isinf )
@@ -1154,9 +1156,9 @@ SCIP_Bool RatIsEqualReal(
    assert(rat != NULL);
 
    if( REALABS(real) >= infinity && rat->isinf )
-      return (real > 0 && RatIsPositive(rat));
+      return (real > 0 && RatIsPositive(rat)) || (real < 0 && RatIsNegative(rat));
 
-   return !rat->isinf && rat->val == real;
+   return !rat->isinf && rat->val == Rational(real);
 }
 
 /** check if real approx of rational and a real are equal */
@@ -1164,7 +1166,7 @@ SCIP_Bool RatIsApproxEqualReal(
    SCIP_SET*             set,                /**< SCIP set pointer */
    SCIP_Rational*        rat,                /**< the rational */
    SCIP_Real             real,               /**< the real */
-   SCIP_ROUNDMODE        roundmode           /**< the rounding mode to use */
+   SCIP_ROUNDMODE_RAT    roundmode           /**< the rounding mode to use */
    )
 {
    assert(rat != NULL);
@@ -1175,7 +1177,7 @@ SCIP_Bool RatIsApproxEqualReal(
    }
    else
    {
-      if( roundmode == SCIP_ROUND_NEAREST )
+      if( roundmode == SCIP_R_ROUND_NEAREST )
          return SCIPsetIsEQ(set, real, RatApproxReal(rat));
       else
          return SCIPsetIsEQ(set, real, RatRoundReal(rat, roundmode));
@@ -1434,7 +1436,7 @@ SCIP_Bool RatIsFpRepresentable(
    assert(rational != NULL);
    if( rational->isfprepresentable == SCIP_ISFPREPRESENTABLE_TRUE )
    {
-      assert(RatRoundReal(rational, SCIP_ROUND_DOWNWARDS) == RatRoundReal(rational, SCIP_ROUND_UPWARDS));
+      assert(RatRoundReal(rational, SCIP_R_ROUND_DOWNWARDS) == RatRoundReal(rational, SCIP_R_ROUND_UPWARDS));
       return TRUE;
    }
    else if( rational->isfprepresentable == SCIP_ISFPREPRESENTABLE_FALSE )
@@ -1443,8 +1445,8 @@ SCIP_Bool RatIsFpRepresentable(
    }
    else
    {
-      rational->isfprepresentable = (RatRoundReal(rational, SCIP_ROUND_DOWNWARDS)
-         == RatRoundReal(rational, SCIP_ROUND_UPWARDS)) ? SCIP_ISFPREPRESENTABLE_TRUE : SCIP_ISFPREPRESENTABLE_FALSE;
+      rational->isfprepresentable = (RatRoundReal(rational, SCIP_R_ROUND_DOWNWARDS)
+         == RatRoundReal(rational, SCIP_R_ROUND_UPWARDS)) ? SCIP_ISFPREPRESENTABLE_TRUE : SCIP_ISFPREPRESENTABLE_FALSE;
    }
 
    return rational->isfprepresentable == SCIP_ISFPREPRESENTABLE_TRUE ? TRUE : FALSE;
@@ -1511,15 +1513,20 @@ void RatMessage(
    SCIP_Rational*        rational            /**< the rational to print */
    )
 {
-   char buf[SCIP_MAXSTRLEN];
    assert(rational != NULL);
 
-   if( SCIP_MAXSTRLEN == RatToString(rational, buf, SCIP_MAXSTRLEN) )
+   if( rational->isinf )
    {
-      SCIPerrorMessage("WARNING: Rational does not fit in line \n.");
+      if( rational->val.sign() > 0 )
+         SCIPmessageFPrintInfo(msg, file, "inf");
+      else
+         SCIPmessageFPrintInfo(msg, file, "-inf");
    }
-
-   SCIPmessageFPrintInfo(msg, file, "%s", buf);
+   else
+   {
+      std::string s = rational->val.str();
+      SCIPmessageFPrintInfo(msg, file, "%s", s.c_str());
+   }
 }
 
 /** print a rational to command line (for debugging) */
@@ -1544,6 +1551,7 @@ std::ostream& operator<<(std::ostream& os, SCIP_Rational const & r) {
    return os;
 }
 
+#ifdef SCIP_DISABLED_CODE
 /* convert va_arg format string into std:string */
 static
 std::string RatString(const char *format, va_list arguments)
@@ -1572,9 +1580,11 @@ std::string RatString(const char *format, va_list arguments)
          case 'f':
             dval = va_arg(arguments, SCIP_Real);
             stream << boost::format("%f") % dval;
+            break;
          case 'g':
             dval = va_arg(arguments, SCIP_Real);
             stream << boost::format("%g") % dval;
+            break;
          case 'e':
             dval = va_arg(arguments, SCIP_Real);
             stream << boost::format("%e") % dval;
@@ -1604,6 +1614,7 @@ std::string RatString(const char *format, va_list arguments)
    std::string ret = stream.str();
    return ret;
 }
+#endif
 
 /* printf extension for rationals (not supporting all format options) */
 void RatPrintf(const char *format, ...)
@@ -1711,6 +1722,25 @@ SCIP_Longint RatDenominator(
    return result;
 }
 
+/** returns the denominator of a rational as a long */
+SCIP_Bool RatDenominatorIsLE(
+   SCIP_Rational*        rational,           /**< the rational */
+   SCIP_Longint          val                 /**< long value to compare to */
+   )
+{
+   Integer denominator;
+
+   if( RatIsAbsInfinity(rational) )
+   {
+      SCIPerrorMessage("cannot compare denominator of infinite value");
+      return false;
+   }
+
+   denominator = boost::multiprecision::denominator(rational->val);
+
+   return denominator <= val;
+}
+
 #else
 /** returns the numerator of a rational as a long */
 SCIP_Longint Rnumerator(
@@ -1741,18 +1771,18 @@ int RatGetSign(
 /** @todo exip: we might have to worry about incorrect results when huge coefficients occur */
 SCIP_Real RatRoundReal(
    SCIP_Rational*        rational,           /**< the rational */
-   SCIP_ROUNDMODE        roundmode           /**< the rounding direction */
+   SCIP_ROUNDMODE_RAT    roundmode           /**< the rounding direction */
    )
 {
    SCIP_Real realapprox;
-   SCIP_Longint nom, denom;
-   SCIP_ROUNDMODE current;
 
    assert(rational != NULL);
 
+   realapprox = 0;
+
    if( rational->isinf )
       return (rational->val.sign() * infinity);
-   if( rational->isfprepresentable == SCIP_ISFPREPRESENTABLE_TRUE || roundmode == SCIP_ROUND_NEAREST )
+   if( rational->isfprepresentable == SCIP_ISFPREPRESENTABLE_TRUE || roundmode == SCIP_R_ROUND_NEAREST )
       return RatApproxReal(rational);
 
 #if 1
@@ -1765,15 +1795,15 @@ SCIP_Real RatRoundReal(
       val = RatGetGMP(rational);
       switch(roundmode)
       {
-         case SCIP_ROUND_DOWNWARDS:
+         case SCIP_R_ROUND_DOWNWARDS:
             mpfr_init_set_q(valmpfr, *val, MPFR_RNDD);
             realapprox = (SCIP_Real) mpfr_get_d(valmpfr, MPFR_RNDD);
             break;
-         case SCIP_ROUND_UPWARDS:
+         case SCIP_R_ROUND_UPWARDS:
             mpfr_init_set_q(valmpfr, *val, MPFR_RNDU);
             realapprox = (SCIP_Real) mpfr_get_d(valmpfr, MPFR_RNDU);
             break;
-         case SCIP_ROUND_NEAREST:
+         case SCIP_R_ROUND_NEAREST:
             mpfr_init_set_q(valmpfr, *val, MPFR_RNDN);
             realapprox = (SCIP_Real) mpfr_get_d(valmpfr, MPFR_RNDN);
             break;
@@ -1789,13 +1819,13 @@ SCIP_Real RatRoundReal(
    {
       switch(roundmode)
       {
-      case SCIP_ROUND_DOWNWARDS:
+      case SCIP_R_ROUND_DOWNWARDS:
          SCIPintervalSetRoundingModeDownwards();
          break;
-      case SCIP_ROUND_UPWARDS:
+      case SCIP_R_ROUND_UPWARDS:
          SCIPintervalSetRoundingModeUpwards();
          break;
-      case SCIP_ROUND_NEAREST:
+      case SCIP_R_ROUND_NEAREST:
          SCIPintervalSetRoundingModeToNearest();
          break;
       default:
@@ -1824,7 +1854,7 @@ SCIP_Real RatRoundReal(
 void RatRound(
    SCIP_Rational*        res,                /**< the resulting rounded integer */
    SCIP_Rational*        src,                /**< the rational to round */
-   SCIP_ROUNDMODE        roundmode           /**< the rounding direction */
+   SCIP_ROUNDMODE_RAT    roundmode           /**< the rounding direction */
    )
 {
 #ifdef SCIP_WITH_BOOST
@@ -1844,13 +1874,13 @@ void RatRound(
       {
          switch (roundmode)
          {
-         case SCIP_ROUND_DOWNWARDS:
+         case SCIP_R_ROUND_DOWNWARDS:
             roundint = src->val.sign() > 0 ? roundint : roundint - 1;
             break;
-         case SCIP_ROUND_UPWARDS:
+         case SCIP_R_ROUND_UPWARDS:
             roundint = src->val.sign() > 0 ? roundint + 1 : roundint;
             break;
-         case SCIP_ROUND_NEAREST:
+         case SCIP_R_ROUND_NEAREST:
             roundint = abs(rest) * 2 >= denominator(src->val) ? roundint + src->val.sign() : roundint;
             break;
          default:
@@ -1871,7 +1901,7 @@ void RatRound(
 SCIP_Bool RatRoundInteger(
    SCIP_Longint*         res,                /**< the resulting rounded long int */
    SCIP_Rational*        src,                /**< the rational to round */
-   SCIP_ROUNDMODE        roundmode           /**< the rounding direction */
+   SCIP_ROUNDMODE_RAT    roundmode           /**< the rounding direction */
    )
 {
    SCIP_Bool success = FALSE;
@@ -1888,13 +1918,13 @@ SCIP_Bool RatRoundInteger(
    {
       switch (roundmode)
       {
-      case SCIP_ROUND_DOWNWARDS:
+      case SCIP_R_ROUND_DOWNWARDS:
          roundint = src->val.sign() > 0 ? roundint : roundint - 1;
          break;
-      case SCIP_ROUND_UPWARDS:
+      case SCIP_R_ROUND_UPWARDS:
          roundint = src->val.sign() > 0 ? roundint + 1 : roundint;
          break;
-      case SCIP_ROUND_NEAREST:
+      case SCIP_R_ROUND_NEAREST:
          roundint = abs(rest) * 2 >= denominator(src->val) ? roundint + src->val.sign() : roundint;
          break;
       default:
@@ -1929,6 +1959,381 @@ SCIP_Real RatApproxReal(
 #endif
 #endif
    return retval;
+}
+
+/* choose the best semiconvergent with demnominator <= maxdenom between p1/q1 and p2/q2 */
+static
+void chooseSemiconv(
+   Integer&              resnum,             /**< the resulting numerator */
+   Integer&              resden,             /**< the resulting denominator */
+   Integer*              p,                  /**< the last 3 numerators of convergents */
+   Integer*              q,                  /**< the last 3 denominators of convergents */
+   long                  maxdenom            /**< the maximal denominator */
+   )
+{
+   Integer j, resnumerator, resdenominator;
+
+   j = (Integer(maxdenom) - q[0]) / q[1];
+
+   resnum = j * p[1] + p[0];
+   resden = j * q[1] + q[0];
+}
+
+/* choose the best semiconvergent with demnominator <= maxdenom between p1/q1 and p2/q2 */
+static
+void chooseSemiconvLong(
+   SCIP_Longint&         resnum,             /**< the resulting numerator */
+   SCIP_Longint&         resden,             /**< the resulting denominator */
+   SCIP_Longint*         p,                  /**< the last 3 numerators of convergents */
+   SCIP_Longint*         q,                  /**< the last 3 denominators of convergents */
+   long                  maxdenom            /**< the maximal denominator */
+   )
+{
+   SCIP_Longint j;
+
+   j = (maxdenom - q[0]) / q[1];
+
+   resnum = j * p[1] + p[0];
+   resden = j * q[1] + q[0];
+}
+
+void RatComputeApproximationLong(
+   SCIP_Rational*        res,
+   SCIP_Rational*        src,
+   SCIP_Longint          maxdenom,
+   int                   forcegreater        /**< 1 if res >= src should be enforced, -1 if res <= src should be enforced, 0 else */
+   )
+{
+   SCIP_Longint tn, td, temp, a0, ai, resnum, resden;
+   /* here we use p[2]=pk, p[1]=pk-1,p[0]=pk-2 and same for q */
+   SCIP_Longint p[3];
+   SCIP_Longint q[3];
+   int sign;
+   int done = 0;
+
+   assert(numerator(src->val) <= SCIP_LONGINT_MAX);
+   assert(denominator(src->val) <= SCIP_LONGINT_MAX);
+
+   /* setup n and d for computing a_i the cont. frac. rep */
+   tn = RatNumerator(src);
+   td = RatDenominator(src);
+
+   /* scale to positive to avoid unnecessary complications */
+   sign = tn >= 0 ? 1 : -1;
+   tn *= sign;
+
+   assert(td >= 0);
+   assert(tn >= 0);
+
+   if( td <= maxdenom )
+   {
+      res->val = Rational(tn, td) * sign;
+   }
+   else
+   {
+      temp = 1;
+      a0 = tn / td;
+      temp = tn % td;
+
+      /* if value is almost integer, we use the next best integer (while still adhering to <=/>= requirements) */
+      if( temp  < td / (maxdenom * 1.0) )
+      {
+         res->val = a0 * sign;
+         if( forcegreater == 1 && res->val < src->val )
+            res->val += Rational(1,maxdenom);
+         if( forcegreater == -1 && res->val > src->val )
+            res->val -= Rational(1,maxdenom);
+         res->isinf = FALSE;
+         res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
+
+         SCIPdebug(std::cout << "approximating " << src->val << " by " << res->val << std::endl);
+
+         return;
+      }
+
+      tn = td;
+      td = temp;
+
+      ai = tn / td;
+      temp = tn % td;
+
+      tn = td;
+      td = temp;
+
+      p[1] = a0;
+      p[2] = 1 + a0 * ai;
+
+      q[1] = 1;
+      q[2] = ai;
+
+      done = 0;
+
+      SCIPdebug(std::cout << "approximating " << src->val << " by continued fractions with maxdenom " << maxdenom << std::endl);
+      SCIPdebug(std::cout << "confrac initial values: p0 " << p[1] << " q0 " << q[1] << " p1 " << p[2] << " q1 " << q[2] << std::endl);
+
+      /* if q is already big, skip loop */
+      if( q[2] > maxdenom )
+         done = 1;
+
+      int cfcnt = 2;
+
+      while(!done && td != 0)
+      {
+         /* update everything: compute next ai, then update convergents */
+
+         /* update ai */
+         ai = tn / td;
+         temp = tn % td;
+
+         tn = td;
+         td = temp;
+
+         /* shift p,q */
+         q[0] = q[1];
+         q[1] = q[2];
+         p[0] = p[1];
+         p[1] = p[2];
+
+         /* compute next p,q */
+         p[2] = p[0] + p[1] * ai;
+         q[2] = q[0] + q[1] * ai;
+
+         SCIPdebug(std::cout << "ai " << ai << " pi " << p[2] << " qi " << q[2] << std::endl);
+
+         if( q[2] > maxdenom )
+            done = 1;
+
+         cfcnt++;
+      }
+
+      if( (forcegreater == 1 && Rational(p[2],q[2]) * sign < src->val) ||
+          (forcegreater == -1 && Rational(p[2],q[2]) * sign > src->val) )
+         res->val = Rational(p[1],q[1]) * sign;
+      else
+      {
+         /* the corner case where p[2]/q[2] == res has to be considered separately, depending on the side that p[1]/q[1] lies on */
+         if( forcegreater != 0 && Rational(p[2],q[2]) * sign == src->val )
+         {
+            /* if p[1]/q[1] is on the correct side we take it, otherwise we take the correct semiconvergent */
+            if( (forcegreater == 1 && Rational(p[1],q[1]) * sign > src->val)
+                || (forcegreater == -1 && Rational(p[1],q[1]) * sign < src->val) )
+            {
+               res->val = Rational(p[1],q[1]) * sign;
+            }
+            else
+            {
+               SCIPdebug(std::cout << " picking semiconvergent " << std::endl);
+               chooseSemiconvLong(resnum, resden, p, q, maxdenom);
+               SCIPdebug(std::cout << " use " << resnum << "/" << resden << std::endl);
+               res->val = Rational(resnum,resden) * sign;
+            }
+         }
+         /* normal case -> pick semiconvergent for best approximation */
+         else
+         {
+            SCIPdebug(std::cout << " picking semiconvergent " << std::endl);
+            chooseSemiconvLong(resnum, resden, p, q, maxdenom);
+            SCIPdebug(std::cout << " use " << resnum << "/" << resden << std::endl);
+            res->val = Rational(resnum,resden) * sign;
+         }
+      }
+   }
+
+   assert(forcegreater != 1 || res->val >= src->val);
+   assert(forcegreater != -1 || res->val <= src->val);
+
+   res->isinf = FALSE;
+   res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
+}
+
+/** compute an approximate number with denominator <= maxdenom, closest to src and save it in res using continued fractions */
+void RatComputeApproximation(
+   SCIP_Rational*        res,
+   SCIP_Rational*        src,
+   SCIP_Longint          maxdenom,
+   int                   forcegreater        /**< 1 if res >= src should be enforced, -1 if res <= src should be enforced, 0 else */
+   )
+{
+   int done = 0;
+
+   Integer temp;
+   Integer td;
+   Integer tn;
+
+   /* The following represent the continued fraction values a_i, the cont frac representation and p_i/q_i, the convergents */
+   Integer a0;
+   Integer ai;
+
+   /* here we use p[2]=pk, p[1]=pk-1,p[0]=pk-2 and same for q */
+   Integer p[3];
+   Integer q[3];
+
+   Integer resnum;
+   Integer resden;
+
+   int sign;
+
+   RatCanonicalize(src);
+
+   if(src->val == 0)
+   {
+      RatSetReal(res, 0.0);
+      return;
+   }
+   /* close to 0, we can just set to 1/maxdenom or 0, depending on sign */
+   else if( src->val.sign() == 1 && RatApproxReal(src) < (1.0 / maxdenom) )
+   {
+      if( forcegreater == 1 )
+         RatSetInt(res, 1, maxdenom);
+      else
+         RatSetReal(res, 0.0);
+
+      return;
+   }
+   else if( src->val.sign() == -1 && RatApproxReal(src) > (-1.0 / maxdenom) )
+   {
+
+      if( forcegreater == -1 )
+         RatSetInt(res, 1, maxdenom);
+      else
+         RatSetReal(res, 0.0);
+
+      return;
+   }
+
+   /* setup n and d for computing a_i the cont. frac. rep */
+   tn = numerator(src->val);
+   td = denominator(src->val);
+
+   /* as long as the rational is small enough, we can do everythin we need in long long */
+   if( (tn * tn.sign() <= SCIP_LONGINT_MAX) && (td * td.sign() <= SCIP_LONGINT_MAX) )
+   {
+      RatComputeApproximationLong(res, src, maxdenom, forcegreater);
+      return;
+   }
+
+   /* scale to positive to avoid unnecessary complications */
+   sign = tn.sign();
+   tn *= sign;
+
+   assert(td >= 0);
+   assert(tn >= 0);
+
+   if( td <= maxdenom )
+   {
+      res->val = Rational(tn, td) * sign;
+   }
+   else
+   {
+      temp = 1;
+      divide_qr(tn, td, a0, temp);
+
+      /* if value is almost integer, we use the next best integer (while still adhering to <=/>= requirements) */
+      if( temp * maxdenom < td )
+      {
+         res->val = a0 * sign;
+         if( forcegreater == 1 && res->val < src->val )
+            res->val += Rational(1,maxdenom);
+         if( forcegreater == -1 && res->val > src->val )
+            res->val -= Rational(1,maxdenom);
+         res->isinf = FALSE;
+         res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
+
+         SCIPdebug(std::cout << "approximating " << src->val << " by " << res->val << std::endl);
+
+         return;
+      }
+
+      tn = td;
+      td = temp;
+
+      divide_qr(tn, td, ai, temp);
+
+      tn = td;
+      td = temp;
+
+      p[1] = a0;
+      p[2] = 1 + a0 * ai;
+
+      q[1] = 1;
+      q[2] = ai;
+
+      done = 0;
+
+      SCIPdebug(std::cout << "approximating " << src->val << " by continued fractions with maxdenom " << maxdenom << std::endl);
+      SCIPdebug(std::cout << "confrac initial values: p0 " << p[1] << " q0 " << q[1] << " p1 " << p[2] << " q1 " << q[2] << std::endl);
+
+      /* if q is already big, skip loop */
+      if( q[2] > maxdenom )
+         done = 1;
+
+      int cfcnt = 2;
+
+      while(!done && td != 0)
+      {
+         /* update everything: compute next ai, then update convergents */
+
+         /* update ai */
+         divide_qr(tn, td, ai, temp);
+         tn = td;
+         td = temp;
+
+         /* shift p,q */
+         q[0] = q[1];
+         q[1] = q[2];
+         p[0] = p[1];
+         p[1] = p[2];
+
+         /* compute next p,q */
+         p[2] = p[0] + p[1] * ai;
+         q[2] = q[0] + q[1] * ai;
+
+         SCIPdebug(std::cout << "ai " << ai << " pi " << p[2] << " qi " << q[2] << std::endl);
+
+         if( q[2] > maxdenom )
+            done = 1;
+
+         cfcnt++;
+      }
+
+      if( (forcegreater == 1 && Rational(p[2],q[2]) * sign < src->val) ||
+          (forcegreater == -1 && Rational(p[2],q[2]) * sign > src->val) )
+         res->val = Rational(p[1],q[1]) * sign;
+      else
+      {
+         /* the corner case where p[2]/q[2] == res has to be considered separately, depending on the side that p[1]/q[1] lies on */
+         if( forcegreater != 0 && Rational(p[2],q[2]) * sign == src->val )
+         {
+            /* if p[1]/q[1] is on the correct side we take it, otherwise we take the correct semiconvergent */
+            if( (forcegreater == 1 && Rational(p[1],q[1]) * sign > src->val)
+                || (forcegreater == -1 && Rational(p[1],q[1]) * sign < src->val) )
+            {
+               res->val = Rational(p[1],q[1]) * sign;
+            }
+            else
+            {
+               SCIPdebug(std::cout << " picking semiconvergent " << std::endl);
+               chooseSemiconv(resnum, resden, p, q, maxdenom);
+               SCIPdebug(std::cout << " use " << resnum << "/" << resden << std::endl);
+               res->val = Rational(resnum,resden) * sign;
+            }
+         }
+         /* normal case -> pick semiconvergent for best approximation */
+         else
+         {
+            SCIPdebug(std::cout << " picking semiconvergent " << std::endl);
+            chooseSemiconv(resnum, resden, p, q, maxdenom);
+            SCIPdebug(std::cout << " use " << resnum << "/" << resden << std::endl);
+            res->val = Rational(resnum,resden) * sign;
+         }
+      }
+   }
+
+   assert(forcegreater != 1 || res->val >= src->val);
+   assert(forcegreater != -1 || res->val <= src->val);
+
+   res->isinf = FALSE;
+   res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
 }
 
 /*
@@ -2030,7 +2435,7 @@ void SCIPrationalarrayGetVal(
    assert(rationalarray != NULL);
    assert(idx >= 0);
    if( rationalarray->firstidx == -1 || idx < rationalarray->firstidx
-      || idx >= rationalarray->vals.size() + rationalarray->firstidx )
+      || (size_t) idx >= rationalarray->vals.size() + rationalarray->firstidx )
       RatSetInt(result, 0, 1);
    else
       RatSet(result, &rationalarray->vals[idx - rationalarray->firstidx]);
@@ -2059,7 +2464,7 @@ SCIP_RETCODE SCIPrationalarraySetVal(
       rationalarray->firstidx = idx;
       rationalarray->vals[0] = *val;
    }
-   else if( idx >= rationalarray->vals.size() + rationalarray->firstidx )
+   else if( (size_t) idx >= rationalarray->vals.size() + rationalarray->firstidx )
    {
       int ninserts = idx - rationalarray->vals.size() - rationalarray->firstidx + 1;
       SCIP_Rational r;
@@ -2086,7 +2491,7 @@ SCIP_RETCODE SCIPrationalarrayIncVal(
 
    if( RatIsZero(incval) )
       return SCIP_OKAY;
-   else if( idx < rationalarray->firstidx || idx >= rationalarray->vals.size() + rationalarray->firstidx )
+   else if( idx < rationalarray->firstidx || (size_t) idx >= rationalarray->vals.size() + rationalarray->firstidx )
       SCIP_CALL( SCIPrationalarraySetVal(rationalarray, idx, incval) );
    else
    {

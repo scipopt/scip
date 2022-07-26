@@ -123,7 +123,7 @@ int getPartitionNgroups(
 static
 void getPartitionGroupsSizes(
    int                   nelems,             /**< number of elements */
-   int                   ngroups,
+   int                   ngroups,            /**< number of groups */
    const int*            partition,          /**< group id for each element; 0,1,... */
    int*                  groups_sizes        /**< to be filled: size of each group */
    )

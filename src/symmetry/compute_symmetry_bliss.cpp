@@ -1058,8 +1058,25 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    G.set_search_limits(0, (unsigned) maxgenerators);
 #endif
 
+#if BLISS_VERSION_MAJOR >= 1 || BLISS_VERSION_MINOR >= 76
+   /* lambda function to have access to data and pass it to the blisshook above */
+   auto reportglue = [&](unsigned int n, const unsigned int* aut) {
+      blisshook((void*)&data, n, aut);
+   };
+
+   /* lambda function to have access to stats and terminate the search if maxgenerators are reached */
+   auto term = [&]() {
+      return (stats.get_nof_generators() >= (long unsigned int) maxgenerators);
+   };
+
+   /* start search */
+   G.find_automorphisms(stats, reportglue, term);
+#else
    /* start search */
    G.find_automorphisms(stats, blisshook, (void*) &data);
+#endif
+
+
 #ifdef SCIP_OUTPUT
    (void) stats.print(stdout);
 #endif

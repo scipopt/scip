@@ -39,9 +39,9 @@
 static
 SCIP_RETCODE checkSdWalk(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             extended,
-   GRAPH**               g,
-   int*                  nelims
+   SCIP_Bool             extended,           /**< graph in extended state? */
+   GRAPH**               g,                  /**< graph data structure */
+   int*                  nelims              /**< pointer to number of eliminations */
 )
 {
    DHEAP* dheap;

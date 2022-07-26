@@ -22,6 +22,7 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
 //#define SCIP_DEBUG
 #include "dpborder.h"
 #include "dpborderinterns.h"
@@ -83,7 +84,7 @@ void printBorder(
 static inline
 SCIP_RETCODE partitionTryRealloc(
    SCIP*                 scip,               /**< SCIP data structure */
-   int                   newadds,
+   int                   newadds,            /**< number of additions */
    DPBORDER*             dpborder            /**< border */
    )
 {
@@ -110,9 +111,9 @@ SCIP_RETCODE partitionTryRealloc(
 static inline
 void partitionGetRangeGlobal(
    const DPBORDER*       dpborder,            /**< border */
-   int                   globalposition,     /**< position of partition */
-   int*                  start,
-   int*                  end
+   int                   globalposition,      /**< position of partition */
+   int*                  start,               /**< pointer to range start (OUT) */
+   int*                  end                  /**< pointer to range end (OUT) */
    )
 {
    const int* const starts = dpborder->global_partstarts;

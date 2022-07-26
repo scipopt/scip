@@ -138,7 +138,7 @@ SCIP_RETCODE computeNewSols(
    int*                  globalsoledge,      /**< array storing best solution wrt g */
    SCIP_Real*            globalobj,          /**< pointer to objective value of best solution wrt g */
    SCIP_Bool             incumbentgiven,     /**< incumbent solution for pruned graph given? */
-   SCIP_Bool             beFast,
+   SCIP_Bool             beFast,             /**< use fast mode? */
    SCIP_Bool*            success             /**< pointer to store whether a solution could be found */
 )
 {

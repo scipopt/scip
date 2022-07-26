@@ -188,7 +188,7 @@ SCIP_RETCODE SCIPcopyConsExactLinear(
    const char*           name,               /**< name of constraint */
    int                   nvars,              /**< number of variables in source variable array */
    SCIP_VAR**            sourcevars,         /**< source variables of the linear constraints */
-   SCIP_Real*            sourcecoefs,        /**< coefficient array of the linear constraint, or NULL if all coefficients are one */
+   SCIP_INTERVAL*        sourcecoefs,        /**< coefficient array of the linear constraint, or NULL if all coefficients are one */
    SCIP_Real             lhs,                /**< left hand side of the linear constraint */
    SCIP_Real             rhs,                /**< right hand side of the linear constraint */
    SCIP_HASHMAP*         varmap,             /**< a SCIP_HASHMAP mapping variables of the source SCIP to corresponding
@@ -293,7 +293,7 @@ SCIP_VAR** SCIPgetVarsExactLinear(
 
 /** gets the array of coefficient values in the linear constraint; the user must not modify this array! */
 SCIP_EXPORT
-SCIP_Real* SCIPgetValsRealExactLinear(
+SCIP_INTERVAL* SCIPgetValsRealExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );

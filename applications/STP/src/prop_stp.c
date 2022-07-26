@@ -171,7 +171,7 @@ SCIP_RETCODE fixEdgeVar(
 static
 SCIP_Real getCutoffbound(
    SCIP*                 scip,              /**< SCIP data structure */
-   SCIP_Real             lpbound
+   SCIP_Real             lpbound            /**< LP bound */
    )
 {
    SCIP_Real cutoffbound;
@@ -504,7 +504,7 @@ SCIP_RETCODE getRedCost2ndNextDistances(
    SCIP*                 scip,               /**< SCIP structure */
    const SCIP_Real*      redcost,            /**< reduced costs */
    GRAPH*                g,                  /**< graph data structure */
-   PATH*                 vnoi,               /**> Voronoi paths  */
+   PATH*                 vnoi,               /**< Voronoi paths  */
    SCIP_Real*            pathdist,           /**< path distance */
    int*                  vbase,              /**< Voronoi base */
    int*                  state               /**< state  */
@@ -761,7 +761,7 @@ void updateEdgestateFromRed(
 /** update method for reduction based variable fixings */
 static
 void updateEdgestateFromRedPcmw(
-   SCIP*                 scip,
+   SCIP*                 scip,               /**< SCIP */
    const GRAPH*          graph,              /**< graph structure */
    const GRAPH*          propgraph,          /**< propagator graph */
    SCIP_VAR**            vars,               /**< variables */
@@ -862,7 +862,7 @@ static
 void updateEdgeLurkingBounds(
    const GRAPH*          graph,              /**< graph data structure */
    const SCIP_Real*      cost,               /**< reduced costs */
-   const SCIP_Real*      pathdist,           /**> shortest path distances  */
+   const SCIP_Real*      pathdist,           /**< shortest path distances  */
    const PATH*           vnoi,               /**< Voronoi paths  */
    SCIP_Real             lpobjal,            /**< LP objective  */
    SCIP_Real*            fixingbounds        /**< fixing bounds */
@@ -889,7 +889,7 @@ void updateEdgeLurkingBounds(
 static
 void updateDeg2LurkingBounds(
    const GRAPH*          graph,              /**< graph data structure */
-   const SCIP_Real*      pathdist,           /**> shortest path distances  */
+   const SCIP_Real*      pathdist,           /**< shortest path distances  */
    const PATH*           vnoi,               /**< Voronoi paths  */
    SCIP_Real             lpobjal,            /**< LP objective  */
    SCIP_Real*            deg2bounds          /**< bounds */
@@ -1403,7 +1403,7 @@ SCIP_Bool useRedcostdata(
 static
 void writeRedcostdata(
    SCIP*                 scip,               /**< SCIP data structure */
-   int                   level,
+   int                   level,              /**< the level */
    const GRAPH*          graph,              /**< graph structure to use for the update */
    SCIP_VAR**            vars,               /**< variables */
    SCIP_PROPDATA*        propdata            /**< propagator data */
@@ -1545,7 +1545,7 @@ static
 SCIP_RETCODE fixVarsDualcostLurking(
    SCIP*                 scip,               /**< SCIP structure */
    const GRAPH*          graph,              /**< graph structure */
-   SCIP_Real             cutoffbound,        /**> cutoff bound  */
+   SCIP_Real             cutoffbound,        /**< cutoff bound  */
    SCIP_PROPDATA*        propdata,           /**< propagator data */
    SCIP_VAR**            vars                /**< variables */
 )

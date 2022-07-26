@@ -351,7 +351,7 @@ Test(derivative, complex2)
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
-static const int K = 40;
+#define K 40
 Test(performance, rosenbrock)
 {
    SCIP_VAR* vars[K];

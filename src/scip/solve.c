@@ -2765,6 +2765,16 @@ SCIP_RETCODE priceAndCutLoop(
          /* increase separation round counter */
          stat->nseparounds++;
       }
+
+      /* in exact solving mode, solve the LP once more, now allowing an exact solve if desired */
+      if( set->exact_enabled && !mustsepa )
+      {
+         lp->solved = FALSE;
+         SCIPlpExactAllowExactSolve(lp->lpexact, set, TRUE);
+         /* resolve LP */
+         SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, transprob,
+            set->lp_iterlim, FALSE, FALSE, FALSE, lperror) );
+      }
    }
 
    if( root && nsepastallrounds >= maxnsepastallrounds )
@@ -2879,7 +2889,7 @@ SCIP_RETCODE applyBounding(
 
       if( pseudoobjval == SCIPnodeGetLowerbound(focusnode) && focusnode->number != 1 )
       {
-         SCIP_CALL( SCIPcertificatePrintDualboundPseudo(stat->certificate, lp->lpexact, focusnode, set, transprob, pseudoobjval) );
+         SCIP_CALL( SCIPcertificatePrintDualboundPseudo(stat->certificate, lp->lpexact, focusnode, set, transprob, FALSE, -1, -1, pseudoobjval) );
       }
       /* check for infeasible node by bounding */
       if( SCIPsetIsGE(set, SCIPnodeGetLowerbound(focusnode), primal->cutoffbound)
@@ -2893,7 +2903,7 @@ SCIP_RETCODE applyBounding(
                SCIP_Rational* pseudoobjvalrational;
                SCIP_CALL( RatCreateBuffer(set->buffer, &pseudoobjvalrational) );
 
-               SCIP_CALL( SCIPsepastoreExactSyncLPs(set->scip->sepastoreexact, blkmem, set, stat, lp->lpexact, eventqueue) );
+               SCIP_CALL( SCIPsepastoreExactSyncLPs(set->scip->sepastoreexact, blkmem, set, stat, lp->lpexact, transprob, eventqueue) );
                SCIPlpExactGetPseudoObjval(lp->lpexact, set, transprob, pseudoobjvalrational);
 
                SCIPnodeUpdateExactLowerbound(focusnode, stat, set, tree, transprob, origprob, pseudoobjvalrational);
@@ -3936,7 +3946,7 @@ SCIP_RETCODE propAndSolve(
       if( focusnode->parent == NULL )
       {
          SCIP_CALL( SCIPcertificatePrintDualboundPseudo(stat->certificate, lp->lpexact, focusnode, set,
-            transprob, SCIPlpGetPseudoObjval(lp, set, transprob)) );
+            transprob, FALSE, -1, -1, SCIPlpGetPseudoObjval(lp, set, transprob)) );
       }
 
       *lpsolved = TRUE;
@@ -4237,7 +4247,7 @@ SCIP_RETCODE solveNode(
          if( *cutoff && set->exact_enabled && !SCIPsetIsInfinity(set, -SCIPlpGetPseudoObjval(lp, set, transprob)) )
          {
             SCIP_CALL( SCIPcertificatePrintDualboundPseudo(stat->certificate, lp->lpexact, focusnode, set,
-                        transprob, SCIPsetInfinity(set)) );
+                        transprob, FALSE, -1, -1, SCIPsetInfinity(set)) );
          }
 
          /* propagate domains before lp solving and solve relaxation and lp */

@@ -1293,7 +1293,7 @@ SCIP_Real SCIPgetUpperbound(
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
 SCIP_EXPORT
-SCIP_Real SCIPgetUpperboundExact(
+void SCIPgetUpperboundExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Rational*        result              /**< the resulting upper bound value */
    );

@@ -120,12 +120,12 @@ Test(rationals, setting, .description = "tests all the different methods to set/
 
    /* test rounding */
    cr_log_info("printing test approx: %.17e \n", RatApproxReal(r1));
-   cr_log_info("rounding down:        %.17e \n", RatRoundReal(r1, SCIP_ROUND_DOWNWARDS));
-   cr_log_info("rounding up:          %.17e \n", RatRoundReal(r1, SCIP_ROUND_UPWARDS));
-   cr_log_info("rounding nearest:     %.17e \n", RatRoundReal(r1, SCIP_ROUND_NEAREST));
+   cr_log_info("rounding down:        %.17e \n", RatRoundReal(r1, SCIP_R_ROUND_DOWNWARDS));
+   cr_log_info("rounding up:          %.17e \n", RatRoundReal(r1, SCIP_R_ROUND_UPWARDS));
+   cr_log_info("rounding nearest:     %.17e \n", RatRoundReal(r1, SCIP_R_ROUND_NEAREST));
 
    /* test that rounding down is lt rounding up */
-   cr_assert_lt(RatRoundReal(r1, SCIP_ROUND_DOWNWARDS), RatRoundReal(r1, SCIP_ROUND_UPWARDS), "rounding down should be lt rounding up");
+   cr_assert_lt(RatRoundReal(r1, SCIP_R_ROUND_DOWNWARDS), RatRoundReal(r1, SCIP_R_ROUND_UPWARDS), "rounding down should be lt rounding up");
 
    /* test gmp conversion */
    RatSetGMP(r1, gmpr);
@@ -270,7 +270,7 @@ Test(rationals, arithmetic, .description = "tests rational arithmetic methods")
    /* test rounding/ fp approximation */
    RatAdd(rbuf, r1, r1);
    doub = RatApproxReal(r1);
-   cr_log_info("rounding nearest:     %.17e \n", RatRoundReal(rbuf, SCIP_ROUND_NEAREST));
+   cr_log_info("rounding nearest:     %.17e \n", RatRoundReal(rbuf, SCIP_R_ROUND_NEAREST));
    cr_log_info("rounding first:       %.17e \n", 2 * doub);
    cr_assert_leq(2 * doub, RatApproxReal(rbuf));
    cr_assert(!RatIsFpRepresentable(rbuf));
@@ -283,16 +283,16 @@ Test(rationals, arithmetic, .description = "tests rational arithmetic methods")
    RatToString(r1, buf, SCIP_MAXSTRLEN);
    cr_log_info("Test print 1/3: %s \n", buf);
    RatSetString(r1, "3/4");
-   RatRoundInteger(&intval, r1, SCIP_ROUND_DOWNWARDS);
+   RatRoundInteger(&intval, r1, SCIP_R_ROUND_DOWNWARDS);
    cr_assert_eq(intval, 0);
    RatSetString(r1, "3/4");
-   RatRoundInteger(&intval, r1, SCIP_ROUND_UPWARDS);
+   RatRoundInteger(&intval, r1, SCIP_R_ROUND_UPWARDS);
    cr_assert_eq(intval, 1);
    RatSetString(r1, "-5/4");
-   RatRoundInteger(&intval, r1, SCIP_ROUND_DOWNWARDS);
+   RatRoundInteger(&intval, r1, SCIP_R_ROUND_DOWNWARDS);
    cr_assert_eq(intval, -2);
    RatSetString(r1, "-9/4");
-   RatRoundInteger(&intval, r1, SCIP_ROUND_UPWARDS);
+   RatRoundInteger(&intval, r1, SCIP_R_ROUND_UPWARDS);
    cr_assert_eq(intval, -2);
 }
 
@@ -303,45 +303,45 @@ Test(rationals, overflows, .description = "test conversion methods with huge rat
 
    // round -1/2 up/down/nearest
    RatSetInt(r1, testlong, -(testlong * 2));
-   RatRound(r2, r1, SCIP_ROUND_UPWARDS);
+   RatRound(r2, r1, SCIP_R_ROUND_UPWARDS);
    cr_assert_eq(RatApproxReal(r2), 0);
-   RatRoundInteger(&reslong, r1, SCIP_ROUND_UPWARDS);
+   RatRoundInteger(&reslong, r1, SCIP_R_ROUND_UPWARDS);
    cr_assert_eq(reslong, 0);
 
-   RatRound(r2, r1, SCIP_ROUND_DOWNWARDS);
+   RatRound(r2, r1, SCIP_R_ROUND_DOWNWARDS);
    cr_assert_eq(RatApproxReal(r2), -1);
-   RatRoundInteger(&reslong, r1, SCIP_ROUND_DOWNWARDS);
+   RatRoundInteger(&reslong, r1, SCIP_R_ROUND_DOWNWARDS);
    cr_assert_eq(reslong, -1);
 
-   RatRound(r2, r1, SCIP_ROUND_NEAREST);
+   RatRound(r2, r1, SCIP_R_ROUND_NEAREST);
    cr_assert_eq(RatApproxReal(r2), -1);
-   RatRoundInteger(&reslong, r1, SCIP_ROUND_NEAREST);
+   RatRoundInteger(&reslong, r1, SCIP_R_ROUND_NEAREST);
    cr_assert_eq(reslong, -1);
 
    // round 1/2 up/down/nearest
    RatSetInt(r1, testlong, (testlong * 2));
-   RatRound(r2, r1, SCIP_ROUND_UPWARDS);
+   RatRound(r2, r1, SCIP_R_ROUND_UPWARDS);
    cr_assert_eq(RatApproxReal(r2), 1);
-   RatRoundInteger(&reslong, r1, SCIP_ROUND_UPWARDS);
+   RatRoundInteger(&reslong, r1, SCIP_R_ROUND_UPWARDS);
    cr_assert_eq(reslong, 1);
 
-   RatRound(r2, r1, SCIP_ROUND_DOWNWARDS);
+   RatRound(r2, r1, SCIP_R_ROUND_DOWNWARDS);
    cr_assert_eq(RatApproxReal(r2), 0);
-   RatRoundInteger(&reslong, r1, SCIP_ROUND_DOWNWARDS);
+   RatRoundInteger(&reslong, r1, SCIP_R_ROUND_DOWNWARDS);
    cr_assert_eq(reslong, 0);
 
-   RatRound(r2, r1, SCIP_ROUND_NEAREST);
+   RatRound(r2, r1, SCIP_R_ROUND_NEAREST);
    cr_assert_eq(RatApproxReal(r2), 1);
-   RatRoundInteger(&reslong, r1, SCIP_ROUND_NEAREST);
+   RatRoundInteger(&reslong, r1, SCIP_R_ROUND_NEAREST);
    cr_assert_eq(reslong, 1);
 
    // round -1/3 up/down/nearest
    RatSetInt(r1, testlong, -(testlong * 3));
-   RatRound(r2, r1, SCIP_ROUND_UPWARDS);
+   RatRound(r2, r1, SCIP_R_ROUND_UPWARDS);
    cr_assert_eq(RatApproxReal(r2), 0);
-   RatRound(r2, r1, SCIP_ROUND_DOWNWARDS);
+   RatRound(r2, r1, SCIP_R_ROUND_DOWNWARDS);
    cr_assert_eq(RatApproxReal(r2), -1);
-   RatRound(r2, r1, SCIP_ROUND_NEAREST);
+   RatRound(r2, r1, SCIP_R_ROUND_NEAREST);
    cr_assert_eq(RatApproxReal(r2), 0);
 }
 

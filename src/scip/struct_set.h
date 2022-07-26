@@ -600,7 +600,7 @@ struct SCIP_Set
 
    /* exact SCIP settings */
    SCIP_Bool             exact_enabled;      /**< should the problem be solved exactly (without numerical tolerances)? */
-   SCIP_Bool             exact_interleavestrategy; /**< strategy to interleave safe dual bounding with exact LP
+   int                   exact_interleavestrategy; /**< strategy to interleave safe dual bounding with exact LP
                                               *   solve (0: never, 1: only close to cutoff bound, 2: only at depth lvl 4,8,16,...,
                                               *   3: close to cutoff bound OR at depth lvl 4,8,16,...) */
    char                  exact_safedbmethod; /**< method for computing safe dual bounds
@@ -608,6 +608,12 @@ struct SCIP_Set
    int                   exact_psdualcolselection; /**< strategy to select which dual columns to use for lp to compute interior point
                                               *   (0: no sel, 1: active rows of inexact primal LP, 2: Active rows of exact primal LP) */
    SCIP_Bool             exact_lpinfo;       /**< should exact the LP solver display status messages? */
+   SCIP_Bool             exact_allownegslack;/**< should aggregation be allowed to use negative slack */
+   SCIP_Bool             exact_weakencuts;   /**< should cuts be weakened without changing the coefficients in exact solving mode? */
+   SCIP_Longint          exact_cutmaxdenomsize; /**< maximal denominator in cut coefficient, leading to slightly
+                                              *   weaker but numerically better cuts (0: disabled) */
+   SCIP_Longint          exact_cutapproxmaxboundval; /**< maximal absolute bound value for wich cut coefficient should
+                                              *   be approximated with bounded denominator (0: no restriction) */
 
    /* CERTIFICATE tool settings */
    char*                 certificate_filename; /**< name of the CERTIFICATE Tool output file, or - if no output should be created */

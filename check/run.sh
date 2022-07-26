@@ -115,6 +115,7 @@ echo "-----------------------------"        >> "${OUTFILE}"
 date +"@03 %s"                              >> "${OUTFILE}"
 echo "@05 ${TIMELIMIT}"                     >> "${OUTFILE}"
 
+ulimit -S -s unlimited
 #if we use a debugger command, we need to replace the errfile place holder by the actual err-file for logging
 #and if we run on the cluster we want to use srun with CPU binding which is defined by the check_cluster script
 EXECNAME="${EXECNAME/ERRFILE_PLACEHOLDER/${ERRFILE}}"
@@ -139,6 +140,7 @@ echo -----------------------------  >> $OUTFILE
 
 # build/check/compress vipr file if it exists
 VIPRFILE=$CLIENTTMPDIR/${USER}-tmpdir/$BASENAME.vipr
+VIPRCOMPFILE=$CLIENTTMPDIR/${USER}-tmpdir/$BASENAME\_complete.vipr
 VIPRORIFILE=$CLIENTTMPDIR/${USER}-tmpdir/$BASENAME.vipr_ori
 VIPRRAWFILE=$CLIENTTMPDIR/${USER}-tmpdir/$BASENAME.viprraw
 if test -e $VIPRFILE
@@ -153,10 +155,14 @@ echo -----------------------------  >> $OUTFILE
 
 # run vipr tightening
 echo "viprfile raw:       " `ls -lisa $VIPRRAWFILE` >> $OUTFILE
+echo Completing vipr file ... >> $OUTFILE
+echo "Completed filename $VIPRCOMPFILE " >> $OUTFILE
+bash -c "$VIPRCOMPNAME $VIPRFILE 2>>$ERRFILE"  | tee -a $OUTFILE
+echo "viprfile raw + completed:       " `ls -lisa $VIPRCOMPFILE` >> $OUTFILE
 echo Compressing vipr file ... >> $OUTFILE
-bash -c "$VIPRCOMPRESSNAME $VIPRFILE 2>>$ERRFILE"  | tee -a $OUTFILE
-mv $VIPRFILE.tightened $VIPRFILE
-echo "viprfile tightened: " `ls -lisa $VIPRFILE` >> $OUTFILE
+bash -c "$VIPRCOMPRESSNAME $VIPRCOMPFILE 2>>$ERRFILE"  | tee -a $OUTFILE
+echo "viprfile tightened (and completed):       " `ls -lisa $VIPRCOMPFILE.opt` >> $OUTFILE
+mv $VIPRCOMPFILE.opt $VIPRFILE
 
 echo -----------------------------  >> $OUTFILE
 date                                >> $OUTFILE
@@ -199,6 +205,8 @@ mv $VIPRFILE.gz $SOLVERPATH/$OUTPUTDIR/$BASENAME.vipr.gz
 mv $VIPRRAWFILE.gz $SOLVERPATH/$OUTPUTDIR/$BASENAME.viprraw.gz
 mv $VIPRORIFILE.gz $SOLVERPATH/$OUTPUTDIR/$BASENAME.vipr_ori.gz
 fi
+#ensure no garbage is left over
+rm $CLIENTTMPDIR/${USER}-tmpdir/$BASENAME*vipr*
 
 if test -e "${SOLFILE}"
 then

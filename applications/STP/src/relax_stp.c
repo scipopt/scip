@@ -110,7 +110,7 @@ SCIP_RETCODE runDualAscent(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< the graph */
    SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
-   SCIP_Real*            lowerbound
+   SCIP_Real*            lowerbound          /**< pointer to lower bound (OUT) */
    )
 {
    const SCIP_Bool mw = (graph->stp_type == STP_MWCSP);

@@ -226,6 +226,7 @@ do
                 export TIMELIMIT
                 export EXECNAME
                 export VIPRCHECKNAME=viprchk
+                export VIPRCOMPNAME=viprcomp
 		          export VIPRCOMPRESSNAME=viprttn
 
                 if test "${SLURMACCOUNT}" == "default"

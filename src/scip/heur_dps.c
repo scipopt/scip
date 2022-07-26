@@ -1573,6 +1573,7 @@ SCIP_DECL_HEUREXEC(heurExecDps)
    SCIP_Real allslacksval;
    SCIP_Real blocksolval;
    SCIP_STATUS status;
+   SCIP_Bool avoidmemout;
    SCIP_Bool disablemeasures;
    int maxgraphedge;
    int ndecomps;
@@ -1623,7 +1624,8 @@ SCIP_DECL_HEUREXEC(heurExecDps)
 
    /* estimate required memory for all blocks and terminate if not enough memory is available */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memory) );
-   if( ((SCIPgetMemUsed(scip) + SCIPgetMemExternEstim(scip))/1048576.0) * (nblocks/4.0 + 2) >= memory )
+   SCIP_CALL( SCIPgetBoolParam(scip, "misc/avoidmemout", &avoidmemout) );
+   if( avoidmemout && (((SCIPgetMemUsed(scip) + SCIPgetMemExternEstim(scip))/1048576.0) * (nblocks/4.0 + 2) >= memory) )
    {
       SCIPdebugMsg(scip, "The estimated memory usage for %d blocks is too large.\n", nblocks);
       return SCIP_OKAY;

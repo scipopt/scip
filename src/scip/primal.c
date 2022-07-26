@@ -339,7 +339,7 @@ SCIP_RETCODE primalSetCutoffboundExact(
    RatDebugMessage("changing exact cutoff bound from %q to %q\n", primal->cutoffboundexact, cutoffbound);
 
    RatMIN(primal->cutoffboundexact, cutoffbound, primal->upperboundexact); /* get rid of numerical issues */
-   primal->cutoffbound = RatRoundReal(primal->cutoffboundexact, SCIP_ROUND_UPWARDS);
+   primal->cutoffbound = RatRoundReal(primal->cutoffboundexact, SCIP_R_ROUND_UPWARDS);
 
    /* set cut off value in LP solver */
    SCIP_CALL( SCIPlpSetCutoffbound(lp, set, prob, primal->cutoffbound) );
@@ -487,7 +487,7 @@ SCIP_RETCODE primalSetUpperboundExact(
 
    SCIP_CALL( RatCreateBuffer(set->buffer, &cutoffbound) );
    RatSet(primal->upperboundexact, upperbound);
-   primal->upperbound = RatRoundReal(primal->upperboundexact, SCIP_ROUND_UPWARDS);
+   primal->upperbound = RatRoundReal(primal->upperboundexact, SCIP_R_ROUND_UPWARDS);
 
    /* if objective value is always integral, the cutoff bound can be reduced to nearly the previous integer number */
    if( SCIPprobIsObjIntegral(prob) && !RatIsInfinity(upperbound) )
@@ -496,7 +496,7 @@ SCIP_RETCODE primalSetUpperboundExact(
 
       delta = SCIPsetCutoffbounddelta(set);
 
-      RatRound(cutoffbound, primal->upperboundexact, SCIP_ROUND_DOWNWARDS);
+      RatRound(cutoffbound, primal->upperboundexact, SCIP_R_ROUND_DOWNWARDS);
       RatAddReal(cutoffbound, cutoffbound, delta);
    }
    else
@@ -2229,11 +2229,8 @@ SCIP_RETCODE primalAddSolExact(
 {
    SCIP_Bool stored;
    /* cppcheck-suppress unassignedVariable */
-   SCIP_EVENT event;
    SCIP_Rational* obj;
-   SCIP_Real fpobj;
    SCIP_SOL* sol;
-   int pos;
 
    assert(primal != NULL);
    assert(set != NULL);
@@ -2250,7 +2247,6 @@ SCIP_RETCODE primalAddSolExact(
    SCIP_CALL( RatCreateBuffer(set->buffer, &obj) );
 
    SCIPsolGetObjExact(sol, set, transprob, origprob, obj);
-   fpobj = RatRoundReal(obj, SCIP_ROUND_UPWARDS);
 
    SCIPsetDebugMsg(set, "insert exact primal solution %p with obj %g at position %d (replace=%u):\n",
       (void*)sol, RatApproxReal(obj), insertpos, replace);
