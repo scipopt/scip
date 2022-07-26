@@ -1036,6 +1036,7 @@ Test(nlhdlrsoc, separation1, .description = "test separation for simple norm exp
    SCIPsetSolVal(scip, sol, nlhdlrexprdata->disvars[1], 1.0);
    SCIPsetSolVal(scip, sol, nlhdlrexprdata->disvars[2], 1.0);
    SCIPsetSolVal(scip, sol, auxvar, 2.0);
+   updateVarVals(scip, nlhdlrexprdata, sol);
 
    /* check cut w.r.t. x */
    SCIP_CALL( generateCutSolDisagg(scip, expr, cons, sol, nlhdlrexprdata, 0, 0.0, 2.0, &cut) );
@@ -1134,6 +1135,7 @@ Test(nlhdlrsoc, separation2, .description = "test separation for simple norm exp
    SCIPsetSolVal(scip, sol, x, 1.0);
    SCIPsetSolVal(scip, sol, y, 2.0);
    SCIPsetSolVal(scip, sol, auxvar, 1.0);
+   updateVarVals(scip, nlhdlrexprdata, sol);
 
    /* check cut */
    SCIP_CALL( generateCutSolSOC(scip, expr, cons, sol, nlhdlrexprdata, 0.0, 1.0, &cut) );
@@ -1193,11 +1195,15 @@ Test(nlhdlrsoc, separation3, .description = "test separation for simple expressi
    getSocNlhdlrData(expr, &nlhdlrexprdata);
    cr_assert_not_null(nlhdlrexprdata);
 
+   /* since nlhdlrInitSepaSoc is not called (on purpose), alloc the varvals array manually */
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &nlhdlrexprdata->varvals, nlhdlrexprdata->nvars) );
+
    /* create solution */
    SCIPcreateSol(scip, &sol, NULL);
    SCIPsetSolVal(scip, sol, x, 1.0);
    SCIPsetSolVal(scip, sol, y, 1.0);
    SCIPsetSolVal(scip, sol, z, 0.0);
+   updateVarVals(scip, nlhdlrexprdata, sol);
 
    /* check cut */
    SCIP_CALL( generateCutSolSOC(scip, expr, cons, sol, nlhdlrexprdata, 0.0, 1.0, &cut) );

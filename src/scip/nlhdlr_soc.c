@@ -109,6 +109,10 @@ struct SCIP_NlhdlrExprData
    /* variables for cone disaggregation */
    SCIP_VAR**            disvars;            /**< disaggregation variables for each term in lhs */
    SCIP_ROW*             disrow;             /**< disaggregation row */
+
+   /* separation data */
+   SCIP_Real*            varvals;            /**< current values for vars */
+   SCIP_Real*            disvarvals;         /**< current values for disvars */
 };
 
 struct SCIP_NlhdlrData
@@ -218,6 +222,7 @@ SCIP_RETCODE createDisaggrVars(
 
    /* allocate memory */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &nlhdlrexprdata->disvars, ndisvars) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &nlhdlrexprdata->disvarvals, ndisvars) );
 
    /* create disaggregation variables representing the epigraph of (v_i^T x + beta_i)^2 / (v_{n+1}^T x + beta_{n+1}) */
    for( i = 0; i < ndisvars; ++i )
@@ -259,7 +264,8 @@ SCIP_RETCODE freeDisaggrVars(
    }
 
    /* free memory */
-   SCIPfreeBlockMemoryArrayNull(scip, &nlhdlrexprdata->disvars, ndisvars);
+   SCIPfreeBlockMemoryArray(scip, &nlhdlrexprdata->disvars, ndisvars);
+   SCIPfreeBlockMemoryArrayNull(scip, &nlhdlrexprdata->disvarvals, ndisvars);
 
    return SCIP_OKAY;
 }
@@ -354,6 +360,9 @@ SCIP_RETCODE createNlhdlrExprData(
    (*nlhdlrexprdata)->disrow = NULL;
    (*nlhdlrexprdata)->disvars = NULL;
 
+   (*nlhdlrexprdata)->varvals = NULL;
+   (*nlhdlrexprdata)->disvarvals = NULL;
+
 #ifdef SCIP_DEBUG
    SCIPdebugMsg(scip, "created nlhdlr data for the following soc expression:\n");
    printNlhdlrExprData(scip, *nlhdlrexprdata);
@@ -380,6 +389,7 @@ SCIP_RETCODE freeNlhdlrExprData(
 
    ntranscoefs = (*nlhdlrexprdata)->termbegins[(*nlhdlrexprdata)->nterms];
 
+   SCIPfreeBlockMemoryArrayNull(scip, &(*nlhdlrexprdata)->varvals, (*nlhdlrexprdata)->nvars);
    SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->termbegins, (*nlhdlrexprdata)->nterms + 1);
    SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->transcoefsidx, ntranscoefs);
    SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->transcoefs, ntranscoefs);
@@ -390,12 +400,34 @@ SCIP_RETCODE freeNlhdlrExprData(
    return SCIP_OKAY;
 }
 
+/** set varvalrs in nlhdlrexprdata to values from given SCIP solution */
+static
+void updateVarVals(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLHDLREXPRDATA*  nlhdlrexprdata,     /**< nonlinear handler expression data */
+   SCIP_SOL*             sol                 /**< SCIP solution */
+   )
+{
+   int i;
+
+   assert(nlhdlrexprdata != NULL);
+   assert(nlhdlrexprdata->varvals != NULL);
+
+   /* update varvals */
+   for( i = 0; i < nlhdlrexprdata->nvars; ++i )
+      nlhdlrexprdata->varvals[i] = SCIPgetSolVal(scip, sol, SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->vars[i]));
+
+   /* update disvarvals (in unittests, this may be NULL even though nterms > 1 */
+   if( nlhdlrexprdata->disvarvals != NULL )
+      for( i = 0; i < nlhdlrexprdata->nterms - 1; ++i )
+         nlhdlrexprdata->disvarvals[i] = SCIPgetSolVal(scip, sol, nlhdlrexprdata->disvars[i]);
+}
+
 /** evaluate a single term of the form \f$v_i^T x + \beta_i\f$ */
 static
 SCIP_Real evalSingleTerm(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLHDLREXPRDATA* nlhdlrexprdata,      /**< nonlinear handler expression data */
-   SCIP_SOL*             sol,                /**< solution */
+   SCIP_NLHDLREXPRDATA*  nlhdlrexprdata,     /**< nonlinear handler expression data */
    int                   k                   /**< term to be evaluated */
    )
 {
@@ -409,10 +441,7 @@ SCIP_Real evalSingleTerm(
    result = nlhdlrexprdata->offsets[k];
 
    for( i = nlhdlrexprdata->termbegins[k]; i < nlhdlrexprdata->termbegins[k + 1]; ++i )
-   {
-      SCIP_Real varval = SCIPgetSolVal(scip, sol, SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[i]]));
-      result += nlhdlrexprdata->transcoefs[i] * varval;
-   }
+      result += nlhdlrexprdata->transcoefs[i] * nlhdlrexprdata->varvals[nlhdlrexprdata->transcoefsidx[i]];
 
    return result;
 }
@@ -481,7 +510,7 @@ SCIP_RETCODE generateCutSolSOC(
    fvalue = 0.0;
    for( i = 0; i < nterms - 1; ++i )
    {
-      valterms[i] = evalSingleTerm(scip, nlhdlrexprdata, sol, i);
+      valterms[i] = evalSingleTerm(scip, nlhdlrexprdata, i);
       fvalue += SQR( valterms[i] );
    }
    fvalue = SQRT( fvalue );
@@ -520,7 +549,7 @@ SCIP_RETCODE generateCutSolSOC(
 
          SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, cutvar, cutcoef) );
 
-         cutrhs += cutcoef * SCIPgetSolVal(scip, sol, cutvar);
+         cutrhs += cutcoef * nlhdlrexprdata->varvals[transcoefsidx[i]];
       }
    }
 
@@ -606,7 +635,7 @@ SCIP_RETCODE generateCutSolDisagg(
    assert(expr != NULL);
    assert(cons != NULL);
    assert(nlhdlrexprdata != NULL);
-   assert(disaggidx < nlhdlrexprdata->nterms);
+   assert(disaggidx < nlhdlrexprdata->nterms-1);
    assert(mincutviolation >= 0.0);
    assert(cut != NULL);
 
@@ -621,9 +650,9 @@ SCIP_RETCODE generateCutSolDisagg(
 
    *cut = NULL;
 
-   disvarval = SCIPgetSolVal(scip, sol, disvars[disaggidx]);
+   disvarval = nlhdlrexprdata->disvarvals[disaggidx];
 
-   lhsval = evalSingleTerm(scip, nlhdlrexprdata, sol, disaggidx);
+   lhsval = evalSingleTerm(scip, nlhdlrexprdata, disaggidx);
 
    denominator = SQRT(4.0 * SQR(lhsval) + SQR(rhsval - disvarval));
 
@@ -666,7 +695,7 @@ SCIP_RETCODE generateCutSolDisagg(
 
       SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, cutvar, cutcoef) );
 
-      constant += cutcoef * SCIPgetSolVal(scip, sol, cutvar);
+      constant += cutcoef * nlhdlrexprdata->varvals[transcoefsidx[i]];
    }
 
    /* add terms for v_n */
@@ -680,7 +709,7 @@ SCIP_RETCODE generateCutSolDisagg(
 
       SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, cutvar, cutcoef) );
 
-      constant += cutcoef * SCIPgetSolVal(scip, sol, cutvar);
+      constant += cutcoef * nlhdlrexprdata->varvals[transcoefsidx[i]];
    }
 
    /* add term for disvar: cutcoef is the the partial derivative w.r.t. the disaggregation variable */
@@ -689,7 +718,7 @@ SCIP_RETCODE generateCutSolDisagg(
 
    SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, cutvar, cutcoef) );
 
-   constant += cutcoef * SCIPgetSolVal(scip, sol, cutvar);
+   constant += cutcoef * nlhdlrexprdata->disvarvals[disaggidx];
 
    /* add side */
    SCIProwprepAddSide(rowprep, constant - fvalue);
@@ -2349,13 +2378,15 @@ SCIP_DECL_NLHDLREVALAUX(nlhdlrEvalauxSoc)
    {
       assert(SCIPgetExponentExprPow(expr) == 0.5);
 
+      updateVarVals(scip, nlhdlrexprdata, sol);
+
       /* compute sum_i coef_i expr_i^2 */
       *auxvalue = 0.0;
       for( i = 0; i < nlhdlrexprdata->nterms - 1; ++i )
       {
          SCIP_Real termval;
 
-         termval = evalSingleTerm(scip, nlhdlrexprdata, sol, i);
+         termval = evalSingleTerm(scip, nlhdlrexprdata, i);
          *auxvalue += SQR(termval);
       }
 
@@ -2447,7 +2478,11 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaSoc)
          int ndisvars;
          int nterms;
          int i;
-         int k;
+
+         for( i = 0; i < nlhdlrexprdata->nvars; ++i )
+         {
+            SCIP_CALL( SCIPdebugGetSolVal(scip, SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->vars[i]), &nlhdlrexprdata->varvals[i]) );
+         }
 
          /*  the debug solution value of the disaggregation variables is set to
           *      (v_i^T x + beta_i)^2 / (v_{n+1}^T x + beta_{n+1})
@@ -2458,17 +2493,7 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaSoc)
          nterms = nlhdlrexprdata->nterms;
 
          /* find value of rhs */
-         rhsval = nlhdlrexprdata->offsets[nterms - 1];
-         for( i = nlhdlrexprdata->termbegins[nterms - 1]; i < nlhdlrexprdata->termbegins[nterms]; ++i )
-         {
-            SCIP_VAR* var;
-            SCIP_Real varval;
-
-            var = SCIPgetVarExprVar(nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[i]]);
-
-            SCIP_CALL( SCIPdebugGetSolVal(scip, var, &varval) );
-            rhsval += nlhdlrexprdata->transcoefs[i] * varval;
-         }
+         rhsval = evalSingleTerm(scip, nlhdlrexprdata, nterms - 1);
 
          /* set value of disaggregation vars */
          ndisvars = nlhdlrexprdata->nterms - 1;
@@ -2483,24 +2508,13 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaSoc)
          else
          {
             /* set value for each disaggregation variable corresponding to quadratic term */
-            for( k = 0; k < ndisvars; ++k )
+            for( i = 0; i < ndisvars; ++i )
             {
-               lhsval = nlhdlrexprdata->offsets[k];
-
-               for( i = nlhdlrexprdata->termbegins[k]; i < nlhdlrexprdata->termbegins[k + 1]; ++i )
-               {
-                  SCIP_VAR* var;
-                  SCIP_Real varval;
-
-                  var = SCIPgetVarExprVar(nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[i]]);
-
-                  SCIP_CALL( SCIPdebugGetSolVal(scip, var, &varval) );
-                  lhsval += nlhdlrexprdata->transcoefs[i] * varval;
-               }
+               lhsval = evalSingleTerm(scip, nlhdlrexprdata, i);
 
                disvarval = SQR(lhsval) / rhsval;
 
-               SCIP_CALL( SCIPdebugAddSolVal(scip, nlhdlrexprdata->disvars[k], disvarval) );
+               SCIP_CALL( SCIPdebugAddSolVal(scip, nlhdlrexprdata->disvars[i], disvarval) );
             }
          }
       }
@@ -2508,9 +2522,14 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaSoc)
 
       /* create the disaggregation row and store it in nlhdlrexprdata */
       SCIP_CALL( createDisaggrRow(scip, conshdlr, expr, nlhdlrexprdata) );
+
+      /* add it to the LP */
+      SCIP_CALL( SCIPaddRow(scip, nlhdlrexprdata->disrow, FALSE, infeasible) );
    }
 
-   /* TODO add something to the LP as well, at least the disaggregation row */
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &nlhdlrexprdata->varvals, nlhdlrexprdata->nvars) );
+
+   /* TODO add something to the LP as well */
 
    return SCIP_OKAY;
 }
@@ -2527,6 +2546,8 @@ SCIP_DECL_NLHDLREXITSEPA(nlhdlrExitSepaSoc)
    {
       SCIP_CALL( SCIPreleaseRow(scip, &nlhdlrexprdata->disrow) );
    }
+
+   SCIPfreeBlockMemoryArray(scip, &nlhdlrexprdata->varvals, nlhdlrexprdata->nvars);
 
    return SCIP_OKAY;
 }
@@ -2551,7 +2572,10 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoSoc)
    nlhdlrdata = SCIPnlhdlrGetData(nlhdlr);
    assert(nlhdlrdata != NULL);
 
-   rhsval = evalSingleTerm(scip, nlhdlrexprdata, sol, nlhdlrexprdata->nterms - 1);
+   /* update varvals */
+   updateVarVals(scip, nlhdlrexprdata, sol);
+
+   rhsval = evalSingleTerm(scip, nlhdlrexprdata, nlhdlrexprdata->nterms - 1);
 
    /* if there are three or two terms just compute gradient cut */
    if( nlhdlrexprdata->nterms < 4 )
