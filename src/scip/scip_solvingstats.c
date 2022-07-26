@@ -77,6 +77,7 @@
 #include "scip/scip_general.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
+#include "scip/scip_nlp.h"
 #include "scip/scip_numerics.h"
 #include "scip/scip_sol.h"
 #include "scip/scip_solvingstats.h"
@@ -3423,6 +3424,11 @@ void SCIPprintNLPStatistics(
    FILE*                 file                /**< output file */
    )
 {
+   int nnlrowlinear;
+   int nnlrowconvexineq;
+   int nnlrownonconvexineq;
+   int nnlrownonlineareq;
+
    assert(scip != NULL);
    assert(scip->stat != NULL);
 
@@ -3437,12 +3443,10 @@ void SCIPprintNLPStatistics(
       SCIPclockGetTime(scip->stat->nlpsoltime),
       scip->stat->nnlps);
 
+   SCIPgetNLPNlRowsStat(scip, &nnlrowlinear, &nnlrowconvexineq, &nnlrownonconvexineq, &nnlrownonlineareq);
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  convexity        : %10s (%d linear rows, %d convex inequ., %d nonconvex inequ., %d nonlinear equ.)\n",
-      (scip->stat->nnlrownonconvexineq == 0 && scip->stat->nnlrownonlineareq == 0) ? "convex" : "nonconvex",
-      scip->stat->nnlrowlinear,
-      scip->stat->nnlrowconvexineq,
-      scip->stat->nnlrownonconvexineq,
-      scip->stat->nnlrownonlineareq);
+      (nnlrownonconvexineq == 0 && nnlrownonlineareq == 0) ? "convex" : "nonconvex",
+      nnlrowlinear, nnlrowconvexineq, nnlrownonconvexineq, nnlrownonlineareq);
 }
 
 /** outputs relaxator statistics

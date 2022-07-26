@@ -210,6 +210,27 @@ int SCIPgetNNLPNlRows(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** gets statistics on convexity of rows in NLP
+ *
+ *  Reports counts on the current number of linear rows, convex inequalities, nonconvex inequalities, and nonlinear equalities or ranged rows.
+ *  - A nonlinear inequality with infinity left-hand-side is accounted as convex if its expression has been marked as convex.
+ *  - A nonlinear inequality with infinity right-hand-side is accounted as convex if its expression has been marked as concave.
+ *  - Other nonlinear rows are accounted as nonconvex. Note that convexity for a nonlinear row may just not have been detected.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_EXPORT
+void SCIPgetNLPNlRowsStat(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int*                  nlinear,            /**< buffer to store number of linear rows in NLP, or NULL */
+   int*                  nconvexineq,        /**< buffer to store number of convex inequalities in NLP, or NULL */
+   int*                  nnonconvexineq,     /**< buffer to store number of nonconvex inequalities in NLP, or NULL */
+   int*                  nnonlineareq        /**< buffer to store number of nonlinear equalities or ranged rows in NLP, or NULL */
+   );
+
 /** adds a nonlinear row to the NLP. This row is captured by the NLP.
  *
  *  @pre This method can be called if SCIP is in one of the following stages:

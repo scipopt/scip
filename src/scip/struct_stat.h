@@ -265,10 +265,6 @@ struct SCIP_Stat
    int                   nreoptruns;         /**< number of reoptimization runs */
    int                   nclockskipsleft;    /**< how many times the timing should be skipped in SCIPsolveIsStopped() */
    int                   nactiveexpriter;    /**< number of active expression iterators */
-   int                   nnlrowlinear;       /**< number of linear rows in NLP */
-   int                   nnlrowconvexineq;   /**< number of convex one-sided inequalities in NLP */
-   int                   nnlrownonconvexineq;/**< number of nonconvex one-sided inequalities in NLP */
-   int                   nnlrownonlineareq;  /**< number of nonlinear equalities and two-sided inequalities in NLP */
    SCIP_Bool             memsavemode;        /**< should algorithms be switched to memory saving mode? */
    SCIP_Bool             userinterrupt;      /**< has the user asked to interrupt the solving process? */
    SCIP_Bool             userrestart;        /**< has the user asked to restart the solving process? */

@@ -315,47 +315,47 @@ SCIP_RETCODE nlrowConstantChanged(
    return SCIP_OKAY;
 }
 
-/** increments or decrements count of NLROW in SCIP statistics
+/** increments or decrements count of NLROW in NLP statistics
  *
  * Updates count on linear/convex/nonconvex NLP rows w.r.t. given NLROW.
  */
 static
 void nlrowAddToStat(
-   SCIP_NLROW*           nlrow,              /**< nonlinear row */
+   SCIP_NLP*             nlp,                /**< NLP */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_NLROW*           nlrow,              /**< nonlinear row */
    int                   incr                /**< by how much to increment statistic: +1 or -1 */
    )
 {
+   assert(nlp != NULL);
    assert(nlrow != NULL);
    assert(set != NULL);
-   assert(stat != NULL);
    assert(incr == 1 || incr == -1);
 
    if( nlrow->expr == NULL )
    {
-      stat->nnlrowlinear += incr;
-      assert(stat->nnlrowlinear >= 0);
+      nlp->nnlrowlinear += incr;
+      assert(nlp->nnlrowlinear >= 0);
       return;
    }
 
    if( !SCIPsetIsInfinity(set, -nlrow->lhs) && !SCIPsetIsInfinity(set, nlrow->rhs) )
    {
-      stat->nnlrownonlineareq += incr;
-      assert(stat->nnlrownonlineareq >= 0);
+      nlp->nnlrownonlineareq += incr;
+      assert(nlp->nnlrownonlineareq >= 0);
       return;
    }
 
    if( (SCIPsetIsInfinity(set, -nlrow->lhs) && (nlrow->curvature & SCIP_EXPRCURV_CONVEX)) ||  /* g(x) <= rhs with g(x) convex */
        (SCIPsetIsInfinity(set, nlrow->rhs) && (nlrow->curvature & SCIP_EXPRCURV_CONCAVE)) )   /* g(x) >= lhs with g(x) concave */
    {
-      stat->nnlrowconvexineq += incr;
-      assert(stat->nnlrowconvexineq >= 0);
+      nlp->nnlrowconvexineq += incr;
+      assert(nlp->nnlrowconvexineq >= 0);
       return;
    }
 
-   stat->nnlrownonconvexineq += incr;
-   assert(stat->nnlrownonconvexineq >= 0);
+   nlp->nnlrownonconvexineq += incr;
+   assert(nlp->nnlrownonconvexineq >= 0);
 }
 
 /** sorts linear part of row entries such that lower variable indices precede higher ones */
@@ -822,13 +822,13 @@ SCIP_RETCODE nlrowSimplifyExpr(
        * first remove current nlrow from stat, then add again after releasing expression
        */
       if( nlrow->nlpindex >= 0 )
-         nlrowAddToStat(nlrow, set, stat, -1);
+         nlrowAddToStat(nlp, set, nlrow, -1);
 
       SCIP_CALL( SCIPexprRelease(set, stat, blkmem, &nlrow->expr) );
       nlrow->curvature = SCIP_EXPRCURV_LINEAR;
 
       if( nlrow->nlpindex >= 0 )
-         nlrowAddToStat(nlrow, set, stat, 1);
+         nlrowAddToStat(nlp, set, nlrow, 1);
    }
 
    SCIP_CALL( nlrowExprChanged(nlrow, blkmem, set, stat, nlp) );
@@ -1345,7 +1345,7 @@ SCIP_RETCODE SCIPnlrowChgExpr(
 
    /* if row in NLP, then remove it from statistics on NLP rows */
    if( nlrow->nlpindex >= 0 )
-      nlrowAddToStat(nlrow, set, stat, -1);
+      nlrowAddToStat(nlp, set, nlrow, -1);
 
    /* free previous expression tree */
    if( nlrow->expr != NULL )
@@ -1380,7 +1380,7 @@ SCIP_RETCODE SCIPnlrowChgExpr(
 
    /* if row in NLP, then add it again to statistics on NLP rows */
    if( nlrow->nlpindex >= 0 )
-      nlrowAddToStat(nlrow, set, stat, 1);
+      nlrowAddToStat(nlp, set, nlrow, 1);
 
    return SCIP_OKAY;
 }
@@ -1447,21 +1447,21 @@ SCIP_RETCODE SCIPnlrowChgRhs(
 
 /** sets the curvature of a nonlinear row */
 void SCIPnlrowSetCurvature(
-   SCIP_NLROW*           nlrow,              /**< NLP row */
+   SCIP_NLP*             nlp,                /**< NLP */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_NLROW*           nlrow,              /**< NLP row */
    SCIP_EXPRCURV         curvature           /**< curvature of NLP row */
    )
 {
    assert(nlrow != NULL);
 
    if( nlrow->nlpindex >= 0 )
-      nlrowAddToStat(nlrow, set, stat, -1);
+      nlrowAddToStat(nlp, set, nlrow, -1);
 
    nlrow->curvature = curvature;
 
    if( nlrow->nlpindex >= 0 )
-      nlrowAddToStat(nlrow, set, stat, 1);
+      nlrowAddToStat(nlp, set, nlrow, 1);
 }
 
 /** removes (or substitutes) all fixed, negated, aggregated, multi-aggregated variables from the linear and nonlinear part of a nonlinear row and simplifies its expression */
@@ -2057,7 +2057,7 @@ SCIP_RETCODE nlpAddNlRows(
       nlp->nlrows[nlp->nnlrows + j] = nlrow;
       nlrow->nlpindex = nlp->nnlrows + j;
 
-      nlrowAddToStat(nlrow, set, stat, 1);
+      nlrowAddToStat(nlp, set, nlrow, 1);
 
       SCIPnlrowCapture(nlrow);
 
@@ -2160,7 +2160,7 @@ SCIP_RETCODE nlpDelNlRowPos(
    nlrow->nlpindex = -1;
 
    /* do no longer count nlrow in NLP row statistics */
-   nlrowAddToStat(nlrow, set, stat, -1);
+   nlrowAddToStat(nlp, set, nlrow, -1);
 
    /* forget about restriction */
    SCIP_CALL( SCIPnlrowRelease(&nlrow, blkmem, set, stat) );
@@ -3589,6 +3589,10 @@ SCIP_RETCODE SCIPnlpCreate(
    (*nlp)->nnlrows = 0;
    (*nlp)->sizenlrows = 0;
    (*nlp)->nlrows = NULL;
+   (*nlp)->nnlrowlinear = 0;
+   (*nlp)->nnlrowconvexineq = 0;
+   (*nlp)->nnlrownonconvexineq = 0;
+   (*nlp)->nnlrownonlineareq = 0;
 
    (*nlp)->nnlrows_solver = 0;
    (*nlp)->sizenlrows_solver = 0;
@@ -4419,6 +4423,30 @@ int SCIPnlpGetNNlRows(
    assert(nlp != NULL);
 
    return nlp->nnlrows;
+}
+
+/** gets statistics on convexity of nonlinear rows in NLP */
+void SCIPnlpGetNlRowsStat(
+   SCIP_NLP*             nlp,                /**< current NLP data */
+   int*                  nlinear,            /**< buffer to store number of linear rows in NLP, or NULL */
+   int*                  nconvexineq,        /**< buffer to store number of convex inequalities in NLP, or NULL */
+   int*                  nnonconvexineq,     /**< buffer to store number of nonconvex inequalities in NLP, or NULL */
+   int*                  nnonlineareq        /**< buffer to store number of nonlinear equalities or ranged rows in NLP, or NULL */
+   )
+{
+   assert(nlp != NULL);
+
+   if( nlinear != NULL )
+      *nlinear = nlp->nnlrowlinear;
+
+   if( nconvexineq != NULL )
+      *nconvexineq = nlp->nnlrowconvexineq;
+
+   if( nnonconvexineq != NULL )
+      *nnonconvexineq = nlp->nnlrownonconvexineq;
+
+   if( nnonlineareq )
+      *nnonlineareq = nlp->nnlrownonlineareq;
 }
 
 /** gets the NLP solver interface */

@@ -345,6 +345,37 @@ int SCIPgetNNLPNlRows(
    return SCIPnlpGetNNlRows(scip->nlp);
 }
 
+/** gets statistics on convexity of rows in NLP
+ *
+ *  Reports counts on the current number of linear rows, convex inequalities, nonconvex inequalities, and nonlinear equalities or ranged rows.
+ *  - A nonlinear inequality with infinity left-hand-side is accounted as convex if its expression has been marked as convex.
+ *  - A nonlinear inequality with infinity right-hand-side is accounted as convex if its expression has been marked as concave.
+ *  - Other nonlinear rows are accounted as nonconvex. Note that convexity for a nonlinear row may just not have been detected.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+void SCIPgetNLPNlRowsStat(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int*                  nlinear,            /**< buffer to store number of linear rows in NLP, or NULL */
+   int*                  nconvexineq,        /**< buffer to store number of convex inequalities in NLP, or NULL */
+   int*                  nnonconvexineq,     /**< buffer to store number of nonconvex inequalities in NLP, or NULL */
+   int*                  nnonlineareq        /**< buffer to store number of nonlinear equalities or ranged rows in NLP, or NULL */
+   )
+{
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPnlpGetNlRowsStat", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   if( scip->nlp == NULL )
+   {
+      SCIPerrorMessage("NLP has not been constructed.\n");
+      SCIPABORT();
+   }
+
+   SCIPnlpGetNlRowsStat(scip->nlp, nlinear, nconvexineq, nnonconvexineq, nnonlineareq);
+}
+
 /** adds a nonlinear row to the NLP. This row is captured by the NLP.
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
@@ -1103,7 +1134,7 @@ void SCIPsetNlRowCurvature(
 {
    assert(scip != NULL);
 
-   SCIPnlrowSetCurvature(nlrow, scip->set, scip->stat, curvature);
+   SCIPnlrowSetCurvature(scip->nlp, scip->set, nlrow, curvature);
 }
 
 /** adds variable with a linear coefficient to a nonlinear row
@@ -1214,7 +1245,7 @@ SCIP_RETCODE SCIPsetNlRowExpr(
    SCIP_CALL( SCIPnlrowChgExpr(nlrow, scip->mem->probmem, scip->set, scip->stat, scip->nlp, expr) );
 
    /* invalidate curvature */
-   SCIPnlrowSetCurvature(nlrow, scip->set, scip->stat, SCIP_EXPRCURV_UNKNOWN);
+   SCIPnlrowSetCurvature(scip->nlp, scip->set, nlrow, SCIP_EXPRCURV_UNKNOWN);
 
    return SCIP_OKAY;
 }
