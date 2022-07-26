@@ -315,6 +315,10 @@ void SCIPstatReset(
    stat->ncopies = 0;
    stat->nclockskipsleft = 0;
    stat->nactiveexpriter = 0;
+   stat->nnlrowlinear = 0;
+   stat->nnlrowconvexineq = 0;
+   stat->nnlrownonconvexineq = 0;
+   stat->nnlrownonlineareq = 0;
    stat->marked_nvaridx = -1;
    stat->marked_ncolidx = -1;
    stat->marked_nrowidx = -1;

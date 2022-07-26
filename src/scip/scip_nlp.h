@@ -702,6 +702,14 @@ SCIP_RETCODE SCIPchgNlRowConstant(
    SCIP_Real             constant            /**< new value for constant */
    );
 
+/** set curvature of a nonlinear row */
+SCIP_EXPORT
+void SCIPsetNlRowCurvature(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLROW*           nlrow,              /**< NLP row */
+   SCIP_EXPRCURV         curvature           /**< curvature of NLP row */
+   );
+
 /** adds variable with a linear coefficient to a nonlinear row
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref

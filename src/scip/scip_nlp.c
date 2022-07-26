@@ -1094,6 +1094,18 @@ SCIP_RETCODE SCIPchgNlRowConstant(
    return SCIP_OKAY;
 }
 
+/** set curvature of a nonlinear row */
+void SCIPsetNlRowCurvature(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLROW*           nlrow,              /**< NLP row */
+   SCIP_EXPRCURV         curvature           /**< curvature of NLP row */
+   )
+{
+   assert(scip != NULL);
+
+   SCIPnlrowSetCurvature(nlrow, scip->set, scip->stat, curvature);
+}
+
 /** adds variable with a linear coefficient to a nonlinear row
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -1202,7 +1214,7 @@ SCIP_RETCODE SCIPsetNlRowExpr(
    SCIP_CALL( SCIPnlrowChgExpr(nlrow, scip->mem->probmem, scip->set, scip->stat, scip->nlp, expr) );
 
    /* invalidate curvature */
-   SCIPnlrowSetCurvature(nlrow, SCIP_EXPRCURV_UNKNOWN);
+   SCIPnlrowSetCurvature(nlrow, scip->set, scip->stat, SCIP_EXPRCURV_UNKNOWN);
 
    return SCIP_OKAY;
 }

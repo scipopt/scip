@@ -191,6 +191,14 @@ SCIP_RETCODE SCIPnlrowChgRhs(
    SCIP_Real             rhs                 /**< new right hand side */
    );
 
+/** sets the curvature of a nonlinear row */
+void SCIPnlrowSetCurvature(
+   SCIP_NLROW*           nlrow,              /**< NLP row */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_EXPRCURV         curvature           /**< curvature of NLP row */
+   );
+
 /** removes (or substitutes) all fixed, negated, aggregated, multi-aggregated variables from the linear and nonlinear part of a nonlinear row and simplifies its expression */
 SCIP_RETCODE SCIPnlrowSimplify(
    SCIP_NLROW*           nlrow,              /**< nonlinear row */
