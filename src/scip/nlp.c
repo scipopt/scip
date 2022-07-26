@@ -1418,8 +1418,14 @@ SCIP_RETCODE SCIPnlrowChgLhs(
 
    if( !SCIPsetIsEQ(set, nlrow->lhs, lhs) )
    {
+      if( nlrow->nlpindex >= 0 )
+         nlrowAddToStat(nlp, set, nlrow, -1);
+
       nlrow->lhs = lhs;
       SCIP_CALL( nlrowSideChanged(nlrow, set, stat, nlp) );
+
+      if( nlrow->nlpindex >= 0 )
+         nlrowAddToStat(nlp, set, nlrow, 1);
    }
 
    return SCIP_OKAY;
@@ -1438,8 +1444,14 @@ SCIP_RETCODE SCIPnlrowChgRhs(
 
    if( !SCIPsetIsEQ(set, nlrow->rhs, rhs) )
    {
+      if( nlrow->nlpindex >= 0 )
+         nlrowAddToStat(nlp, set, nlrow, -1);
+
       nlrow->rhs = rhs;
       SCIP_CALL( nlrowSideChanged(nlrow, set, stat, nlp) );
+
+      if( nlrow->nlpindex >= 0 )
+         nlrowAddToStat(nlp, set, nlrow, 1);
    }
 
    return SCIP_OKAY;
