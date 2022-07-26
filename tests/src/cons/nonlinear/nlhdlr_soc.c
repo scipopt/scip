@@ -228,7 +228,7 @@ void checkData(
 
 static
 void checkCut(
-   SCIP_ROW*             cut,
+   SCIP_ROWPREP*         cut,
    SCIP_VAR**            vars,
    SCIP_Real*            vals,
    SCIP_Real             rhs,
@@ -241,9 +241,12 @@ void checkCut(
    cr_assert_not_null(vars);
    cr_assert_not_null(vals);
 
-   cr_expect_eq(SCIProwGetNNonz(cut), nvars, "expected %d vars in cut, but got %d\n",
-      nvars, SCIProwGetNNonz(cut));
-   cr_expect(SCIPisEQ(scip, SCIProwGetRhs(cut), rhs), "expected rhs = %f, but got %f\n", rhs, SCIProwGetRhs(cut));
+   SCIPmergeRowprepTerms(scip, cut);
+
+   cr_expect_eq(SCIProwprepGetNVars(cut), nvars, "expected %d vars in cut, but got %d\n",
+      nvars, SCIProwprepGetNVars(cut));
+   cr_expect_eq(SCIProwprepGetSidetype(cut), SCIP_SIDETYPE_RIGHT);
+   cr_expect(SCIPisEQ(scip, SCIProwprepGetSide(cut), rhs), "expected rhs = %f, but got %f\n", rhs, SCIProwprepGetSide(cut));
 
    /* FIXME the remaining tests assume a certain order of terms and thus are not invariant to
     * valid permutations
@@ -252,10 +255,10 @@ void checkCut(
 
    for( i = 0; i < nvars; ++i )
    {
-      cr_expect_eq(SCIPcolGetVar(SCIProwGetCols(cut)[i]), vars[i], "expected var%d = %s, but got %s\n",
-         i + 1, SCIPvarGetName(vars[i]), SCIPvarGetName(SCIPcolGetVar(SCIProwGetCols(cut)[i])));
-      cr_expect_eq(SCIProwGetVals(cut)[i], vals[i], "expected val%d = %f, but got %f\n", i + 1, vals[i],
-         SCIProwGetVals(cut)[i]);
+      cr_expect_eq(SCIProwprepGetVars(cut)[i], vars[i], "expected var%d = %s, but got %s\n",
+         i + 1, SCIPvarGetName(vars[i]), SCIPvarGetName(SCIProwprepGetVars(cut)[i]));
+      cr_expect_eq(SCIProwprepGetCoefs(cut)[i], vals[i], "expected val%d = %f, but got %f\n", i + 1, vals[i],
+         SCIProwprepGetCoefs(cut)[i]);
    }
 }
 
@@ -1010,7 +1013,7 @@ Test(nlhdlrsoc, separation1, .description = "test separation for simple norm exp
    SCIP_EXPR* rootexpr;
    SCIP_EXPR* expr;
    SCIP_SOL* sol;
-   SCIP_ROW* cut;
+   SCIP_ROWPREP* cut;
    SCIP_VAR* cutvars[3];
    SCIP_VAR* auxvar;
    SCIP_Real cutvals[3];
@@ -1039,7 +1042,7 @@ Test(nlhdlrsoc, separation1, .description = "test separation for simple norm exp
    updateVarVals(scip, nlhdlrexprdata, sol);
 
    /* check cut w.r.t. x */
-   SCIP_CALL( generateCutSolDisagg(scip, expr, cons, sol, nlhdlrexprdata, 0, 0.0, 2.0, &cut) );
+   SCIP_CALL( generateCutSolDisagg(scip, &cut, expr, cons, nlhdlrexprdata, 0, 0.0, 2.0) );
 
    cutvars[0] = nlhdlrexprdata->disvars[0];
    cutvars[1] = x;
@@ -1050,10 +1053,10 @@ Test(nlhdlrsoc, separation1, .description = "test separation for simple norm exp
    rhs = cutvals[1] + cutvals[2] * 2.0 - SQRT(8.0) + 2.0;
 
    checkCut(cut, cutvars, cutvals, rhs, 3);
-   SCIPreleaseRow(scip, &cut);
+   SCIPfreeRowprep(scip, &cut);
 
    /* check cut w.r.t. y */
-   SCIP_CALL( generateCutSolDisagg(scip, expr, cons, sol, nlhdlrexprdata, 1, 0.0, 2.0, &cut) );
+   SCIP_CALL( generateCutSolDisagg(scip, &cut, expr, cons, nlhdlrexprdata, 1, 0.0, 2.0) );
 
    cutvars[0] = auxvar;
    cutvars[1] = y;
@@ -1064,10 +1067,10 @@ Test(nlhdlrsoc, separation1, .description = "test separation for simple norm exp
    rhs =  cutvals[0] * 2.0 + cutvals[1] * 2.0 + cutvals[2] * 1.0 - SQRT(17.0) + 3.0;
 
    checkCut(cut, cutvars, cutvals, rhs, 3);
-   SCIPreleaseRow(scip, &cut);
+   SCIPfreeRowprep(scip, &cut);
 
    /* check cut w.r.t. z */
-   SCIP_CALL( generateCutSolDisagg(scip, expr, cons, sol, nlhdlrexprdata, 2, 0.0, 2.0, &cut) );
+   SCIP_CALL( generateCutSolDisagg(scip, &cut, expr, cons, nlhdlrexprdata, 2, 0.0, 2.0) );
 
    cutvars[0] = auxvar;
    cutvars[1] = z;
@@ -1078,7 +1081,7 @@ Test(nlhdlrsoc, separation1, .description = "test separation for simple norm exp
    rhs =  cutvals[0] * 2.0 - cutvals[1] * 2.0 + cutvals[2] * 1.0 - SQRT(17.0) + 3.0;
 
    checkCut(cut, cutvars, cutvals, rhs, 3);
-   SCIPreleaseRow(scip, &cut);
+   SCIPfreeRowprep(scip, &cut);
 
    /* free expr and cons */
    SCIPfreeSol(scip, &sol);
@@ -1094,7 +1097,7 @@ Test(nlhdlrsoc, separation2, .description = "test separation for simple norm exp
    SCIP_EXPR* rootexpr;
    SCIP_EXPR* expr;
    SCIP_SOL* sol;
-   SCIP_ROW* cut;
+   SCIP_ROWPREP* cut;
    SCIP_VAR* cutvars[3];
    SCIP_VAR* auxvar;
    SCIP_Real cutvals[3];
@@ -1138,7 +1141,7 @@ Test(nlhdlrsoc, separation2, .description = "test separation for simple norm exp
    updateVarVals(scip, nlhdlrexprdata, sol);
 
    /* check cut */
-   SCIP_CALL( generateCutSolSOC(scip, expr, cons, sol, nlhdlrexprdata, 0.0, 1.0, &cut) );
+   SCIP_CALL( generateCutSolSOC(scip, &cut, expr, cons, nlhdlrexprdata, 0.0, 1.0) );
 
    cutvars[0] = auxvar;
    cutvars[1] = y;
@@ -1149,7 +1152,7 @@ Test(nlhdlrsoc, separation2, .description = "test separation for simple norm exp
    rhs = -3.0 / 10;
 
    checkCut(cut, cutvars, cutvals, rhs, 3);
-   SCIPreleaseRow(scip, &cut);
+   SCIPfreeRowprep(scip, &cut);
 
    /* free expr and cons */
    SCIPfreeSol(scip, &sol);
@@ -1170,7 +1173,7 @@ Test(nlhdlrsoc, separation3, .description = "test separation for simple expressi
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_EXPR* expr;
    SCIP_SOL* sol;
-   SCIP_ROW* cut;
+   SCIP_ROWPREP* cut;
    SCIP_VAR* cutvars[3];
    SCIP_Real cutvals[3];
    SCIP_Real rhs;
@@ -1206,7 +1209,7 @@ Test(nlhdlrsoc, separation3, .description = "test separation for simple expressi
    updateVarVals(scip, nlhdlrexprdata, sol);
 
    /* check cut */
-   SCIP_CALL( generateCutSolSOC(scip, expr, cons, sol, nlhdlrexprdata, 0.0, 1.0, &cut) );
+   SCIP_CALL( generateCutSolSOC(scip, &cut, expr, cons, nlhdlrexprdata, 0.0, 1.0) );
 
    cutvars[0] = x;
    cutvars[1] = y;
@@ -1217,7 +1220,7 @@ Test(nlhdlrsoc, separation3, .description = "test separation for simple expressi
    rhs = 0.0;
 
    checkCut(cut, cutvars, cutvals, rhs, 3);
-   SCIPreleaseRow(scip, &cut);
+   SCIPfreeRowprep(scip, &cut);
 
    /* free expr and cons */
    SCIPfreeSol(scip, &sol);

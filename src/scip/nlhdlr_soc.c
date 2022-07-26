@@ -469,16 +469,14 @@ SCIP_Real evalSingleTerm(
 static
 SCIP_RETCODE generateCutSolSOC(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROWPREP**        rowprep,            /**< buffer to store rowprep with cut data */
    SCIP_EXPR*            expr,               /**< expression */
    SCIP_CONS*            cons,               /**< the constraint that expr is part of */
-   SCIP_SOL*             sol,                /**< solution to separate or NULL for the LP solution */
    SCIP_NLHDLREXPRDATA*  nlhdlrexprdata,     /**< nonlinear handler expression data */
    SCIP_Real             mincutviolation,    /**< minimal required cut violation */
-   SCIP_Real             rhsval,             /**< value of last term at sol */
-   SCIP_ROW**            cut                 /**< pointer to store a cut */
+   SCIP_Real             rhsval              /**< value of last term at sol */
    )
 {
-   SCIP_ROWPREP* rowprep;
    SCIP_Real* transcoefs;
    SCIP_Real cutcoef;
    SCIP_Real fvalue;
@@ -492,11 +490,11 @@ SCIP_RETCODE generateCutSolSOC(
    int i;
    int j;
 
+   assert(rowprep != NULL);
    assert(expr != NULL);
    assert(cons != NULL);
    assert(nlhdlrexprdata != NULL);
    assert(mincutviolation >= 0.0);
-   assert(cut != NULL);
 
    vars = nlhdlrexprdata->vars;
    transcoefs = nlhdlrexprdata->transcoefs;
@@ -504,7 +502,7 @@ SCIP_RETCODE generateCutSolSOC(
    termbegins = nlhdlrexprdata->termbegins;
    nterms = nlhdlrexprdata->nterms;
 
-   *cut = NULL;
+   *rowprep = NULL;
 
    /* evaluate lhs terms and compute f(x*) */
    fvalue = 0.0;
@@ -528,8 +526,8 @@ SCIP_RETCODE generateCutSolSOC(
    assert(fvalue > 0.0);
 
    /* create cut */
-   SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, SCIP_SIDETYPE_RIGHT, FALSE) );
-   SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, termbegins[nterms]) );
+   SCIP_CALL( SCIPcreateRowprep(scip, rowprep, SCIP_SIDETYPE_RIGHT, FALSE) );
+   SCIP_CALL( SCIPensureRowprepSize(scip, *rowprep, termbegins[nterms]) );
 
    /* cut is f(x*) + \nabla f(x*)^T (x - x*) \leq v_n^T x + \beta_n, i.e.,
     * \nabla f(x*)^T x - v_n^T x \leq \beta_n + \nabla f(x*)^T x* - f(x*)
@@ -547,7 +545,7 @@ SCIP_RETCODE generateCutSolSOC(
          /* cutcoef is (the first part of) the partial derivative w.r.t cutvar */
          cutcoef = transcoefs[i] * valterms[j] / fvalue;
 
-         SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, cutvar, cutcoef) );
+         SCIP_CALL( SCIPaddRowprepTerm(scip, *rowprep, cutvar, cutcoef) );
 
          cutrhs += cutcoef * nlhdlrexprdata->varvals[transcoefsidx[i]];
       }
@@ -557,28 +555,14 @@ SCIP_RETCODE generateCutSolSOC(
    for( i = termbegins[nterms - 1]; i < termbegins[nterms]; ++i )
    {
       cutvar = SCIPgetExprAuxVarNonlinear(vars[transcoefsidx[i]]);
-      SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, cutvar, -transcoefs[i]) );
+      SCIP_CALL( SCIPaddRowprepTerm(scip, *rowprep, cutvar, -transcoefs[i]) );
    }
 
    /* add side */
-   SCIProwprepAddSide(rowprep, cutrhs);
+   SCIProwprepAddSide(*rowprep, cutrhs);
 
-   SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, sol, SCIPinfinity(scip), NULL) );
-
-   if( SCIPgetRowprepViolation(scip, rowprep, sol, NULL) >= mincutviolation )
-   {
-      (void) SCIPsnprintf(SCIProwprepGetName(rowprep), SCIP_MAXSTRLEN, "soc%d_%p_%" SCIP_LONGINT_FORMAT, nterms, (void*) expr, SCIPgetNLPs(scip));
-      SCIP_CALL( SCIPgetRowprepRowCons(scip, cut, rowprep, cons) );
-   }
-   else
-   {
-      SCIPdebugMsg(scip, "%d-SOC rowprep violation %g below mincutviolation %g\n", nterms, SCIPgetRowprepViolation(scip,
-               rowprep, sol, NULL), mincutviolation);
-      /* SCIPprintRowprep(scip, rowprep, NULL); */
-   }
-
-   /* free memory */
-   SCIPfreeRowprep(scip, &rowprep);
+   /* set name */
+   (void) SCIPsnprintf(SCIProwprepGetName(*rowprep), SCIP_MAXSTRLEN, "soc%d_%p_%d", nterms, (void*) expr, SCIPgetNLPs(scip));
 
    return SCIP_OKAY;
 }
@@ -605,14 +589,13 @@ SCIP_RETCODE generateCutSolSOC(
 static
 SCIP_RETCODE generateCutSolDisagg(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROWPREP**        rowprep,            /**< buffer to store rowprep with cut data */
    SCIP_EXPR*            expr,               /**< expression */
    SCIP_CONS*            cons,               /**< the constraint that expr is part of */
-   SCIP_SOL*             sol,                /**< solution to separate or NULL for the LP solution */
    SCIP_NLHDLREXPRDATA*  nlhdlrexprdata,     /**< nonlinear handler expression data */
    int                   disaggidx,          /**< index of disaggregation to separate */
    SCIP_Real             mincutviolation,    /**< minimal required cut violation */
-   SCIP_Real             rhsval,             /**< value of the rhs term */
-   SCIP_ROW**            cut                 /**< pointer to store a cut */
+   SCIP_Real             rhsval              /**< value of the rhs term */
    )
 {
    SCIP_EXPR** vars;
@@ -620,7 +603,6 @@ SCIP_RETCODE generateCutSolDisagg(
    SCIP_Real* transcoefs;
    int* transcoefsidx;
    int* termbegins;
-   SCIP_ROWPREP* rowprep;
    SCIP_VAR* cutvar;
    SCIP_Real cutcoef;
    SCIP_Real fvalue;
@@ -632,12 +614,12 @@ SCIP_RETCODE generateCutSolDisagg(
    int nterms;
    int i;
 
+   assert(rowprep != NULL);
    assert(expr != NULL);
    assert(cons != NULL);
    assert(nlhdlrexprdata != NULL);
    assert(disaggidx < nlhdlrexprdata->nterms-1);
    assert(mincutviolation >= 0.0);
-   assert(cut != NULL);
 
    vars = nlhdlrexprdata->vars;
    disvars = nlhdlrexprdata->disvars;
@@ -648,7 +630,7 @@ SCIP_RETCODE generateCutSolDisagg(
 
    /* nterms is equal to n in the description and disaggidx is in {0, ..., n - 1} */
 
-   *cut = NULL;
+   *rowprep = NULL;
 
    disvarval = nlhdlrexprdata->disvarvals[disaggidx];
 
@@ -676,8 +658,8 @@ SCIP_RETCODE generateCutSolDisagg(
    ncutvars = (termbegins[nterms] - termbegins[nterms-1]) + (termbegins[disaggidx + 1] - termbegins[disaggidx]) + 1;
 
    /* create cut */
-   SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, SCIP_SIDETYPE_RIGHT, FALSE) );
-   SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, ncutvars) );
+   SCIP_CALL( SCIPcreateRowprep(scip, rowprep, SCIP_SIDETYPE_RIGHT, FALSE) );
+   SCIP_CALL( SCIPensureRowprepSize(scip, *rowprep, ncutvars) );
 
    /* constant will be grad_f(x*,y*)^T  (x*, y*) */
    constant = 0.0;
@@ -693,7 +675,7 @@ SCIP_RETCODE generateCutSolDisagg(
       /* cutcoef is (the first part of) the partial derivative w.r.t cutvar */
       cutcoef = 4.0 * lhsval * transcoefs[i] / denominator;
 
-      SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, cutvar, cutcoef) );
+      SCIP_CALL( SCIPaddRowprepTerm(scip, *rowprep, cutvar, cutcoef) );
 
       constant += cutcoef * nlhdlrexprdata->varvals[transcoefsidx[i]];
    }
@@ -707,7 +689,7 @@ SCIP_RETCODE generateCutSolDisagg(
       /* cutcoef is the (second part of) the partial derivative w.r.t cutvar */
       cutcoef = (rhsval - disvarval) * transcoefs[i] / denominator - transcoefs[i];
 
-      SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, cutvar, cutcoef) );
+      SCIP_CALL( SCIPaddRowprepTerm(scip, *rowprep, cutvar, cutcoef) );
 
       constant += cutcoef * nlhdlrexprdata->varvals[transcoefsidx[i]];
    }
@@ -716,32 +698,84 @@ SCIP_RETCODE generateCutSolDisagg(
    cutcoef = (disvarval - rhsval) / denominator - 1.0;
    cutvar = disvars[disaggidx];
 
-   SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, cutvar, cutcoef) );
+   SCIP_CALL( SCIPaddRowprepTerm(scip, *rowprep, cutvar, cutcoef) );
 
    constant += cutcoef * nlhdlrexprdata->disvarvals[disaggidx];
 
    /* add side */
-   SCIProwprepAddSide(rowprep, constant - fvalue);
+   SCIProwprepAddSide(*rowprep, constant - fvalue);
+
+   /* set name */
+   (void) SCIPsnprintf(SCIProwprepGetName(*rowprep), SCIP_MAXSTRLEN, "soc_%p_%d_%d", (void*) expr, disaggidx, SCIPgetNLPs(scip));
+
+   return SCIP_OKAY;
+}
+
+/** given a rowprep, does a number of cleanup and checks and, if successful, generate a cut to be added to the sepastorage */
+static
+SCIP_RETCODE addCut(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLHDLRDATA*      nlhdlrdata,         /**< nonlinear handler data */
+   SCIP_ROWPREP*         rowprep,            /**< rowprep from which to generate row and add as cut */
+   SCIP_SOL*             sol,                /**< solution to be separated */
+   SCIP_CONS*            cons,               /**< constraint for which cut is generated, or NULL */
+   SCIP_Bool             allowweakcuts,      /**< whether weak cuts are allowed */
+   SCIP_RESULT*          result              /**< result pointer to update (set to SCIP_CUTOFF or SCIP_SEPARATED if cut is added) */
+   )
+{
+   SCIP_ROW* cut;
+   SCIP_Real cutefficacy;
+
+   assert(scip != NULL);
+   assert(nlhdlrdata != NULL);
+   assert(rowprep != NULL);
+   assert(result != NULL);
 
    SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, sol, SCIPinfinity(scip), NULL) );
 
-   if( SCIPgetRowprepViolation(scip, rowprep, sol, NULL) >= mincutviolation )
+   if( SCIPgetRowprepViolation(scip, rowprep, sol, NULL) >= SCIPgetLPFeastol(scip) )
    {
-      (void) SCIPsnprintf(SCIProwprepGetName(rowprep), SCIP_MAXSTRLEN, "soc_%p_%d_%" SCIP_LONGINT_FORMAT, (void*) expr, disaggidx, SCIPgetNLPs(scip));
-      SCIP_CALL( SCIPgetRowprepRowCons(scip, cut, rowprep, cons) );
+      SCIP_CALL( SCIPgetRowprepRowCons(scip, &cut, rowprep, cons) );
    }
    else
    {
       SCIPdebugMsg(scip, "rowprep violation %g below mincutviolation %g\n", SCIPgetRowprepViolation(scip, rowprep, sol,
-               NULL), mincutviolation);
+         NULL), SCIPgetLPFeastol(scip));
       /* SCIPprintRowprep(scip, rowprep, NULL); */
+
+      return SCIP_OKAY;
    }
 
-   /* free memory */
-   SCIPfreeRowprep(scip, &rowprep);
+   cutefficacy = SCIPgetCutEfficacy(scip, sol, cut);
+
+   SCIPdebugMsg(scip, "generated row for SOC, efficacy=%g, minefficacy=%g, allowweakcuts=%u\n",
+      cutefficacy, nlhdlrdata->mincutefficacy, allowweakcuts);
+
+   /* check whether cut is applicable */
+   if( SCIPisCutApplicable(scip, cut) && (allowweakcuts || cutefficacy >= nlhdlrdata->mincutefficacy) )
+   {
+      SCIP_Bool infeasible;
+
+      SCIP_CALL( SCIPaddRow(scip, cut, FALSE, &infeasible) );
+
+#ifdef SCIP_CONSNONLINEAR_ROWNOTREMOVABLE
+      /* mark row as not removable from LP for current node, if in enforcement (==addbranchscores) (this can prevent some cycling) */
+      if( addbranchscores )
+         SCIPmarkRowNotRemovableLocal(scip, row);
+#endif
+
+      if( infeasible )
+         *result = SCIP_CUTOFF;
+      else
+         *result = SCIP_SEPARATED;
+   }
+
+   /* release row */
+   SCIP_CALL( SCIPreleaseRow(scip, &cut) );
 
    return SCIP_OKAY;
 }
+
 
 /** checks if an expression is quadratic and collects all occurring expressions
  *
@@ -2580,47 +2614,21 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoSoc)
    /* if there are three or two terms just compute gradient cut */
    if( nlhdlrexprdata->nterms < 4 )
    {
-      SCIP_ROW* row;
+      SCIP_ROWPREP* rowprep;
 
       /* compute gradient cut */
-      SCIP_CALL( generateCutSolSOC(scip, expr, cons, sol, nlhdlrexprdata, SCIPgetLPFeastol(scip), rhsval, &row) );
+      SCIP_CALL( generateCutSolSOC(scip, &rowprep, expr, cons, nlhdlrexprdata, SCIPgetLPFeastol(scip), rhsval) );
 
-      /* TODO this code repeats below, factorize out */
-      if( row != NULL )
+      if( rowprep != NULL )
       {
-         SCIP_Real cutefficacy;
+         SCIP_CALL( addCut(scip, nlhdlrdata, rowprep, sol, cons, allowweakcuts, result) );
 
-         cutefficacy = SCIPgetCutEfficacy(scip, sol, row);
-
-         SCIPdebugMsg(scip, "generated row for %d-SOC, efficacy=%g, minefficacy=%g, allowweakcuts=%u\n",
-            nlhdlrexprdata->nterms, cutefficacy, nlhdlrdata->mincutefficacy, allowweakcuts);
-
-         /* check whether cut is applicable */
-         if( SCIPisCutApplicable(scip, row) && (allowweakcuts || cutefficacy >= nlhdlrdata->mincutefficacy) )
-         {
-            SCIP_CALL( SCIPaddRow(scip, row, FALSE, &infeasible) );
-
-#ifdef SCIP_CONSNONLINEAR_ROWNOTREMOVABLE
-            /* mark row as not removable from LP for current node, if in enforcement (==addbranchscores) (this can prevent some cycling) */
-            if( addbranchscores )
-               SCIPmarkRowNotRemovableLocal(scip, row);
-#endif
-
-            if( infeasible )
-               *result = SCIP_CUTOFF;
-            else
-               *result = SCIP_SEPARATED;
-         }
-
-         /* release row */
-         SCIP_CALL( SCIPreleaseRow(scip, &row) );
+         SCIPfreeRowprep(scip, &rowprep);
       }
-#ifdef SCIP_DEBUG
       else
       {
-         SCIPdebugMsg(scip, "failed to generate SOC\n");
+         SCIPdebugMsg(scip, "failed to generate cut for SOC\n");
       }
-#endif
 
       return SCIP_OKAY;
    }
@@ -2644,39 +2652,16 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoSoc)
 
    for( k = 0; k < ndisaggrs && *result != SCIP_CUTOFF; ++k )
    {
-      SCIP_ROW* row;
+      SCIP_ROWPREP* rowprep;
 
       /* compute gradient cut */
-      SCIP_CALL( generateCutSolDisagg(scip, expr, cons, sol, nlhdlrexprdata, k, SCIPgetLPFeastol(scip), rhsval, &row) );
+      SCIP_CALL( generateCutSolDisagg(scip, &rowprep, expr, cons, nlhdlrexprdata, k, SCIPgetLPFeastol(scip), rhsval) );
 
-      if( row != NULL )
+      if( rowprep != NULL )
       {
-         SCIP_Real cutefficacy;
+         SCIP_CALL( addCut(scip, nlhdlrdata, rowprep, sol, cons, allowweakcuts, result) );
 
-         cutefficacy = SCIPgetCutEfficacy(scip, sol, row);
-
-         SCIPdebugMsg(scip, "generated row for disaggregation %d, efficacy=%g, minefficacy=%g, allowweakcuts=%u\n",
-            k, cutefficacy, nlhdlrdata->mincutefficacy, allowweakcuts);
-
-         /* check whether cut is applicable */
-         if( SCIPisCutApplicable(scip, row) && (allowweakcuts || cutefficacy >= nlhdlrdata->mincutefficacy) )
-         {
-            SCIP_CALL( SCIPaddRow(scip, row, FALSE, &infeasible) );
-
-#ifdef SCIP_CONSNONLINEAR_ROWNOTREMOVABLE
-            /* mark row as not removable from LP for current node, if in enforcement (==addbranchscores) (this can prevent some cycling) */
-            if( addbranchscores )
-               SCIPmarkRowNotRemovableLocal(scip, row);
-#endif
-
-            if( infeasible )
-               *result = SCIP_CUTOFF;
-            else
-               *result = SCIP_SEPARATED;
-         }
-
-         /* release row */
-         SCIP_CALL( SCIPreleaseRow(scip, &row) );
+         SCIPfreeRowprep(scip, &rowprep);
       }
    }
 
