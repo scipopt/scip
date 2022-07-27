@@ -494,7 +494,6 @@ SCIP_RETCODE generateCutSolSOC(
    assert(expr != NULL);
    assert(cons != NULL);
    assert(nlhdlrexprdata != NULL);
-   assert(mincutviolation >= 0.0);
 
    vars = nlhdlrexprdata->vars;
    transcoefs = nlhdlrexprdata->transcoefs;
@@ -2493,6 +2492,8 @@ SCIP_DECL_NLHDLREVALAUX(nlhdlrEvalauxSoc)
 static
 SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaSoc)
 { /*lint --e{715}*/
+   SCIP_ROWPREP* rowprep;
+
    assert(conshdlr != NULL);
    assert(expr != NULL);
    assert(nlhdlrexprdata != NULL);
@@ -2563,7 +2564,177 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaSoc)
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &nlhdlrexprdata->varvals, nlhdlrexprdata->nvars) );
 
-   /* TODO add something to the LP as well */
+   if( *infeasible )
+      return SCIP_OKAY;
+
+
+   /* add some initial cuts on well-selected coordinates */
+   if( nlhdlrexprdata->nterms == 2 )
+   {
+      SCIP_Real plusminus1;
+      SCIP_Real norm;
+      int i;
+
+      /* we have |v_1^T x + \beta_1| \leq v_2^T x + \beta_2
+       *
+       * we should linearize at points where the first term is -1 or 1, so we can take
+       *
+       * x = v_1 / ||v_1||^2 (+/-1 - beta_1)
+       */
+
+      /* calculate ||v_1||^2 */
+      norm = 0.0;
+      for( i = nlhdlrexprdata->termbegins[0]; i < nlhdlrexprdata->termbegins[1]; ++i )
+         norm += SQR(nlhdlrexprdata->transcoefs[i]);
+      assert(norm > 0.0);
+
+      BMSclearMemoryArray(nlhdlrexprdata->varvals, nlhdlrexprdata->nvars);
+
+      for( plusminus1 = -1.0; plusminus1 <= 1.0; plusminus1 += 2.0 )
+      {
+         /* set x = v_1 / ||v_1||^2 (plusminus1 - beta_1) */
+         for( i = nlhdlrexprdata->termbegins[0]; i < nlhdlrexprdata->termbegins[1]; ++i )
+            nlhdlrexprdata->varvals[nlhdlrexprdata->transcoefsidx[i]] = nlhdlrexprdata->transcoefs[i] / norm * (plusminus1 - nlhdlrexprdata->offsets[0]);
+         assert(SCIPisEQ(scip, evalSingleTerm(scip, nlhdlrexprdata, 0), plusminus1));
+
+         /* compute gradient cut */
+         SCIP_CALL( generateCutSolSOC(scip, &rowprep, expr, cons, nlhdlrexprdata, -SCIPinfinity(scip), evalSingleTerm(scip, nlhdlrexprdata, 1)) );
+
+         if( rowprep != NULL )
+         {
+            SCIP_Bool success = FALSE;
+
+            SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, NULL, SCIPgetHugeValue(scip), &success) );
+            if( success )
+            {
+               SCIP_ROW* cut;
+               SCIP_CALL( SCIPgetRowprepRowCons(scip, &cut, rowprep, cons) );
+               SCIP_CALL( SCIPaddRow(scip, cut, FALSE, infeasible) );
+               SCIP_CALL( SCIPreleaseRow(scip, &cut) );
+            }
+
+            SCIPfreeRowprep(scip, &rowprep);
+         }
+
+         if( *infeasible )
+            return SCIP_OKAY;
+      }
+   }
+   else if( nlhdlrexprdata->nterms == 3 )
+   {
+      /* we have \sqrt{ (v_1^T x + \beta_1)^2 + (v_2^T x + \beta_2)^2 } \leq v_3^T x + \beta_3
+       *
+       * we should linearize at points where the first and second term are (-1,0), (1,1), (1,-1), i.e.,
+       *
+       * v_1^T x + \beta_1 = -1   1   1
+       * v_2^T x + \beta_2 =  0   1  -1
+       *
+       * Let i be the index of the first nonzero element in v_1.
+       * Let j != i be an index of v_2, to be determined.
+       * Assume all other entries of x will be set to 0.
+       * Then we have
+       *   (v_1)_i x_i + (v_1)_j x_j = c   with  c = -1 - beta_1
+       *   (v_2)_i x_i + (v_2)_j x_j = d   with  d =  0 - beta_2
+       *
+       * Since (v_1)_i != 0, this gives
+       *   x_i = 1/(v_1)_i (c - (v_1)_j x_j)
+       * Substituting in the 2nd equation, we get
+       *    (v_2)_i/(v_1)_i (c - (v_1)_j x_j) + (v_2)_j x_j = d
+       * -> ((v_2)_j - (v_2)_i (v_1)_j / (v_1)_i) x_j = d - (v_2)_i/(v_1)_i c
+       * Now find j such that (v_2)_j - (v_2)_i (v_1)_j / (v_1)_i != 0.
+       */
+      SCIP_Real v1i, v1j;
+      SCIP_Real v2i, v2j;
+      int i;
+      int j = -1;
+      int k;
+      int pos;
+
+      i = nlhdlrexprdata->transcoefsidx[nlhdlrexprdata->termbegins[0]];
+      v1i = nlhdlrexprdata->transcoefs[0];
+      assert(v1i != 0.0);
+
+      /* get (v_2)_i; as it is a sparse vector, we need to search for i in transcoefsidx */
+      v2i = 0.0;
+      if( SCIPsortedvecFindInt(nlhdlrexprdata->transcoefsidx + nlhdlrexprdata->termbegins[1], i, nlhdlrexprdata->termbegins[2] - nlhdlrexprdata->termbegins[1], &pos) )
+      {
+         assert(nlhdlrexprdata->transcoefsidx[nlhdlrexprdata->termbegins[1] + pos] == j);
+         v2i = nlhdlrexprdata->transcoefs[nlhdlrexprdata->termbegins[1] + pos];
+      }
+
+      /* find a j, for now look only into indices with (v_2)_j != 0 */
+      for( k = nlhdlrexprdata->termbegins[1]; k < nlhdlrexprdata->termbegins[2]; ++k )
+      {
+         /* check whether transcoefsidx[k] could be a good j */
+
+         if( nlhdlrexprdata->transcoefsidx[k] == i ) /* i == j is not good */
+            continue;
+
+         /* get (v_1)_j; as it is a sparse vector, we need to search for j in transcoefsidx */
+         v1j = 0.0;
+         if( SCIPsortedvecFindInt(nlhdlrexprdata->transcoefsidx + nlhdlrexprdata->termbegins[0], j, nlhdlrexprdata->termbegins[1] - nlhdlrexprdata->termbegins[0], &pos) )
+         {
+            assert(nlhdlrexprdata->transcoefsidx[nlhdlrexprdata->termbegins[0] + pos] == j);
+            v1j = nlhdlrexprdata->transcoefs[nlhdlrexprdata->termbegins[0] + pos];
+         }
+
+         v2j = nlhdlrexprdata->transcoefs[k];
+
+         if( SCIPisZero(scip, v2j - v2i * v1j / v1i) )  /* (v_2)_j - (v_2)_i (v_1)_j / (v_1)_i = 0 is also not good */
+            continue;
+
+         j = nlhdlrexprdata->transcoefsidx[k];
+         break;
+      }
+
+      if( j != -1 )
+      {
+         SCIP_Real c, d;
+         int point;
+
+         BMSclearMemoryArray(nlhdlrexprdata->varvals, nlhdlrexprdata->nvars);
+
+         for( point = 0; point < 3; ++point )
+         {
+            c = (SCIP_Real[]){-1.0, 1.0,  1.0}[point] - nlhdlrexprdata->offsets[0];
+            d = (SCIP_Real[]){ 0.0, 1.0, -1.0}[point] - nlhdlrexprdata->offsets[1];
+
+            /* set x_j and x_i */
+            nlhdlrexprdata->varvals[j] = (d - v2i/v1i*c) / (v2j - v2i * v1j / v1i);
+            nlhdlrexprdata->varvals[i] = (c - v1j * nlhdlrexprdata->varvals[j]) / v1i;
+
+            assert(SCIPisEQ(scip, evalSingleTerm(scip, nlhdlrexprdata, 0), (SCIP_Real[]){-1.0, 1.0,  1.0}[point]));
+            assert(SCIPisEQ(scip, evalSingleTerm(scip, nlhdlrexprdata, 1), (SCIP_Real[]){ 0.0, 1.0, -1.0}[point]));
+
+            /* compute gradient cut */
+            SCIP_CALL( generateCutSolSOC(scip, &rowprep, expr, cons, nlhdlrexprdata, -SCIPinfinity(scip), evalSingleTerm(scip, nlhdlrexprdata, 2)) );
+
+            if( rowprep != NULL )
+            {
+               SCIP_Bool success = FALSE;
+
+               SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, NULL, SCIPgetHugeValue(scip), &success) );
+               if( success )
+               {
+                  SCIP_ROW* cut;
+                  SCIP_CALL( SCIPgetRowprepRowCons(scip, &cut, rowprep, cons) );
+                  SCIP_CALL( SCIPaddRow(scip, cut, FALSE, infeasible) );
+                  SCIP_CALL( SCIPreleaseRow(scip, &cut) );
+               }
+
+               SCIPfreeRowprep(scip, &rowprep);
+            }
+
+            if( *infeasible )
+               return SCIP_OKAY;
+         }
+      }
+   }
+   else
+   {
+      /* TODO */
+   }
+
 
    return SCIP_OKAY;
 }
