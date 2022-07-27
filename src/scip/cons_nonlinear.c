@@ -3774,7 +3774,7 @@ SCIP_RETCODE initSolve(
                SCIP_CALL( createNlRow(scip, conss[c]) );
                assert(consdata->nlrow != NULL);
             }
-            SCIPnlrowSetCurvature(consdata->nlrow, consdata->curv);
+            SCIPsetNlRowCurvature(scip, consdata->nlrow, consdata->curv);
             SCIP_CALL( SCIPaddNlRow(scip, consdata->nlrow) );
          }
       }

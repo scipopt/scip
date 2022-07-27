@@ -14,6 +14,7 @@ Features
   There	is an interface to Lapack in lapack_calls.
 - added support for logical constraints in binary variables and basic logical operators (and, or, not, equal) to AMPL .nl reader
 - new diving heuristic indicatordiving that focuses on indicator variables which control semicontinuous variables
+- updated statistics on NLP relaxation; information on convexity of NLP has been added
 
 Performance improvements
 ------------------------
@@ -33,8 +34,8 @@ Interface changes
 
 - SCIPtpiInitLock(), SCIPtpiDestroyLock(), SCIPtpiInitCondition(), SCIPtpiDestroyCondition() now take a double
   pointer to SCIP_LOCK/SCIP_CONDITION, respectively.
-
 - Renamed SCIPtpiSumbitJob() to SCIPtpiSubmitJob().
+- Replaced SCIPnlrowSetCurvature() by SCIPsetNlRowCurvature().
 
 ### New API functions
 
@@ -48,6 +49,7 @@ Interface changes
 - SCIPmultiplyBySumExprSum(), SCIPpowerExprSum()
 - SCIPsetParam()
 - SCIPgetPrimalDualIntegral() returns the primal dual integral stored in the statistics
+- SCIPgetNLPNlRowsStat() to retrieve counts on linear, convex, and nonconvex rows in NLP
 
 ### Command line interface
 

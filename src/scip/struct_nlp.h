@@ -116,6 +116,10 @@ struct SCIP_Nlp
    int                   nnlrows;            /**< number of nonlinear rows */
    int                   sizenlrows;         /**< allocated space for nonlinear rows */
    SCIP_NLROW**          nlrows;             /**< nonlinear rows */
+   int                   nnlrowlinear;       /**< number of linear rows in NLP */
+   int                   nnlrowconvexineq;   /**< number of convex one-sided inequalities in NLP */
+   int                   nnlrownonconvexineq;/**< number of nonconvex one-sided inequalities in NLP */
+   int                   nnlrownonlineareq;  /**< number of nonlinear equalities and two-sided inequalities in NLP */
    /* nonlinear rows in NLPI problem */
    int                   nnlrows_solver;     /**< number of nonlinear rows in solver */
    int                   sizenlrows_solver;  /**< allocated space for nonlinear rows in solver */
