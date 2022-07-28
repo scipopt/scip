@@ -2566,16 +2566,15 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaSoc)
    /* add some initial cuts on well-selected coordinates */
    if( nlhdlrexprdata->nterms == 2 )
    {
-      SCIP_Real plusminus1;
-      SCIP_Real norm;
-      int i;
-
       /* we have |v_1^T x + \beta_1| \leq v_2^T x + \beta_2
        *
        * we should linearize at points where the first term is -1 or 1, so we can take
        *
        * x = v_1 / ||v_1||^2 (+/-1 - beta_1)
        */
+      SCIP_Real plusminus1;
+      SCIP_Real norm;
+      int i;
 
       /* calculate ||v_1||^2 */
       norm = 0.0;
@@ -2615,9 +2614,10 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaSoc)
             return SCIP_OKAY;
       }
    }
-   else if( nlhdlrexprdata->nterms == 3 )
+   else if( nlhdlrexprdata->nterms == 3 && nlhdlrexprdata->termbegins[0] != nlhdlrexprdata->termbegins[1] )
    {
       /* we have \sqrt{ (v_1^T x + \beta_1)^2 + (v_2^T x + \beta_2)^2 } \leq v_3^T x + \beta_3
+       * with v_1 != 0
        *
        * we should linearize at points where the first and second term are (-1,0), (1,1), (1,-1), i.e.,
        *
@@ -2637,10 +2637,14 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaSoc)
        *    (v_2)_i/(v_1)_i (c - (v_1)_j x_j) + (v_2)_j x_j = d
        * -> ((v_2)_j - (v_2)_i (v_1)_j / (v_1)_i) x_j = d - (v_2)_i/(v_1)_i c
        * Now find j such that (v_2)_j - (v_2)_i (v_1)_j / (v_1)_i != 0.
+       *
+       * If v_2 = 0, then linearize only for first term being -1 or 1 and don't care about value of second term.
+       * We then set j != i arbitrary, x_j = 0, and x_i = 1/(v_1)_i c.
        */
       static const SCIP_Real refpoints[3][2] = { {-1.0, 0.0}, {1.0, 1.0}, {1.0, -1.0} };
       SCIP_Real v1i, v1j;
       SCIP_Real v2i, v2j;
+      SCIP_Bool v2zero;
       int i;
       int j = -1;
       int k;
@@ -2650,9 +2654,11 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaSoc)
       v1i = nlhdlrexprdata->transcoefs[0];
       assert(v1i != 0.0);
 
+      v2zero = nlhdlrexprdata->termbegins[1] == nlhdlrexprdata->termbegins[2];
+
       /* get (v_2)_i; as it is a sparse vector, we need to search for i in transcoefsidx */
       v2i = 0.0;
-      if( SCIPsortedvecFindInt(nlhdlrexprdata->transcoefsidx + nlhdlrexprdata->termbegins[1], i, nlhdlrexprdata->termbegins[2] - nlhdlrexprdata->termbegins[1], &pos) )
+      if( !v2zero && SCIPsortedvecFindInt(nlhdlrexprdata->transcoefsidx + nlhdlrexprdata->termbegins[1], i, nlhdlrexprdata->termbegins[2] - nlhdlrexprdata->termbegins[1], &pos) )
       {
          assert(nlhdlrexprdata->transcoefsidx[nlhdlrexprdata->termbegins[1] + pos] == j);
          v2i = nlhdlrexprdata->transcoefs[nlhdlrexprdata->termbegins[1] + pos];
@@ -2683,6 +2689,13 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaSoc)
          break;
       }
 
+      if( v2zero )
+      {
+         j = (i+1) % (nlhdlrexprdata->nvars-1);
+         v1j = 0.0;
+         v2j = 0.0;
+      }
+
       if( j != -1 )
       {
          SCIP_Real c, d;
@@ -2690,21 +2703,26 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaSoc)
 
          BMSclearMemoryArray(nlhdlrexprdata->varvals, nlhdlrexprdata->nvars);
 
-         for( point = 0; point < 3; ++point )
+         for( point = 0; point < (v2zero ? 2 : 3); ++point )
          {
             c = refpoints[point][0] - nlhdlrexprdata->offsets[0];
-            d = refpoints[point][1] - nlhdlrexprdata->offsets[1];
 
             /* set x_j and x_i */
-            nlhdlrexprdata->varvals[j] = (d - v2i/v1i*c) / (v2j - v2i * v1j / v1i);
-            nlhdlrexprdata->varvals[i] = (c - v1j * nlhdlrexprdata->varvals[j]) / v1i;
+            if( !v2zero )
+            {
+               d = refpoints[point][1] - nlhdlrexprdata->offsets[1];
+               nlhdlrexprdata->varvals[j] = (d - v2i/v1i*c) / (v2j - v2i * v1j / v1i);
+               nlhdlrexprdata->varvals[i] = (c - v1j * nlhdlrexprdata->varvals[j]) / v1i;
+            }
+            else
+               nlhdlrexprdata->varvals[i] = c / v1i;
 
             SCIPdebugMsg(scip, "<%s>(%d) = %g, <%s>(%d) = %g\n",
                SCIPvarGetName(SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->vars[i])), i, nlhdlrexprdata->varvals[i],
                SCIPvarGetName(SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->vars[j])), j, nlhdlrexprdata->varvals[j]);
 
             assert(SCIPisEQ(scip, evalSingleTerm(scip, nlhdlrexprdata, 0), refpoints[point][0]));
-            assert(SCIPisEQ(scip, evalSingleTerm(scip, nlhdlrexprdata, 1), refpoints[point][1]));
+            assert(v2zero || SCIPisEQ(scip, evalSingleTerm(scip, nlhdlrexprdata, 1), refpoints[point][1]));
 
             /* compute gradient cut */
             SCIP_CALL( generateCutSolSOC(scip, &rowprep, expr, cons, nlhdlrexprdata, -SCIPinfinity(scip), evalSingleTerm(scip, nlhdlrexprdata, 2)) );
@@ -2731,6 +2749,57 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaSoc)
          }
       }
    }
+   else if( nlhdlrexprdata->nterms == 3 )
+   {
+      /* we have \sqrt{ \beta_1^2 + (v_2^T x + \beta_2)^2 } \leq v_3^T x + \beta_3
+       * with v_2 != 0
+       *
+       * we should linearize at points where the second term are -1 or 1
+       *
+       * set x = v_2 / ||v_2||^2 (+/-1 - beta_2)
+       */
+      SCIP_Real plusminus1;
+      SCIP_Real norm;
+      int i;
+
+      /* calculate ||v_2||^2 */
+      norm = 0.0;
+      for( i = nlhdlrexprdata->termbegins[1]; i < nlhdlrexprdata->termbegins[2]; ++i )
+         norm += SQR(nlhdlrexprdata->transcoefs[i]);
+      assert(norm > 0.0);
+
+      BMSclearMemoryArray(nlhdlrexprdata->varvals, nlhdlrexprdata->nvars);
+
+      for( plusminus1 = -1.0; plusminus1 <= 1.0; plusminus1 += 2.0 )
+      {
+         /* set x = v_2 / ||v_2||^2 (plusminus1 - beta_2) */
+         for( i = nlhdlrexprdata->termbegins[1]; i < nlhdlrexprdata->termbegins[2]; ++i )
+            nlhdlrexprdata->varvals[nlhdlrexprdata->transcoefsidx[i]] = nlhdlrexprdata->transcoefs[i] / norm * (plusminus1 - nlhdlrexprdata->offsets[1]);
+         assert(SCIPisEQ(scip, evalSingleTerm(scip, nlhdlrexprdata, 1), plusminus1));
+
+         /* compute gradient cut */
+         SCIP_CALL( generateCutSolSOC(scip, &rowprep, expr, cons, nlhdlrexprdata, -SCIPinfinity(scip), evalSingleTerm(scip, nlhdlrexprdata, 2)) );
+
+         if( rowprep != NULL )
+         {
+            SCIP_Bool success = FALSE;
+
+            SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, NULL, SCIPgetHugeValue(scip), &success) );
+            if( success )
+            {
+               SCIP_ROW* cut;
+               SCIP_CALL( SCIPgetRowprepRowCons(scip, &cut, rowprep, cons) );
+               SCIP_CALL( SCIPaddRow(scip, cut, FALSE, infeasible) );
+               SCIP_CALL( SCIPreleaseRow(scip, &cut) );
+            }
+
+            SCIPfreeRowprep(scip, &rowprep);
+         }
+
+         if( *infeasible )
+            return SCIP_OKAY;
+      }
+   }
    else
    {
       /* generate gradient cuts for the small rotated cones
@@ -2742,6 +2811,8 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaSoc)
        * Since we have y_k, we can achieve this more easily here via
        *   x = v_k/||v_k||^2 (+/-0.5 - beta_k)
        *   y_k = v_n^T x + beta_n + 0/1/-1
+       *
+       * If v_k = 0, then we use x = 0 and linearize for second term being 1 and -1 only
        */
       static const SCIP_Real refpoints[3][2] = { {-0.5, 0.0}, {0.5, 1.0}, {0.5, -1.0} };
       SCIP_Real rhsval;
@@ -2749,6 +2820,7 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaSoc)
       int point;
       int i;
       int k;
+      SCIP_Bool vkzero;
 
       /* add disaggregation row to LP */
       SCIP_CALL( SCIPaddRow(scip, nlhdlrexprdata->disrow, FALSE, infeasible) );
@@ -2758,20 +2830,26 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaSoc)
 
       for( k = 0; k < nlhdlrexprdata->nterms - 1; ++k )
       {
+         vkzero = nlhdlrexprdata->termbegins[k+1] == nlhdlrexprdata->termbegins[k];
+         assert(!vkzero || nlhdlrexprdata->offsets[k] != 0.0);
+
          /* calculate ||v_k||^2 */
-         norm = 0.0;
-         for( i = nlhdlrexprdata->termbegins[k]; i < nlhdlrexprdata->termbegins[k+1]; ++i )
-            norm += SQR(nlhdlrexprdata->transcoefs[i]);
-         assert(norm > 0.0);
+         if( !vkzero )
+         {
+            norm = 0.0;
+            for( i = nlhdlrexprdata->termbegins[k]; i < nlhdlrexprdata->termbegins[k+1]; ++i )
+               norm += SQR(nlhdlrexprdata->transcoefs[i]);
+            assert(norm > 0.0);
+         }
 
          BMSclearMemoryArray(nlhdlrexprdata->varvals, nlhdlrexprdata->nvars);
 
-         for( point = 0; point < 3; ++point )
+         for( point = vkzero ? 1 : 0; point < 3; ++point )
          {
             /* set x = v_k / ||v_k||^2 (refpoints[point][0] - beta_k) / 2 */
             for( i = nlhdlrexprdata->termbegins[k]; i < nlhdlrexprdata->termbegins[k+1]; ++i )
                nlhdlrexprdata->varvals[nlhdlrexprdata->transcoefsidx[i]] = nlhdlrexprdata->transcoefs[i] / norm * (refpoints[point][0] - nlhdlrexprdata->offsets[k]);
-            assert(SCIPisEQ(scip, evalSingleTerm(scip, nlhdlrexprdata, k), refpoints[point][0]));
+            assert(vkzero || SCIPisEQ(scip, evalSingleTerm(scip, nlhdlrexprdata, k), refpoints[point][0]));
 
             /* set y_k = v_n^T x + beta_n + 0/1/-1 */
             rhsval = evalSingleTerm(scip, nlhdlrexprdata, nlhdlrexprdata->nterms - 1);
