@@ -645,10 +645,8 @@ SCIP_RETCODE generateCutSolDisagg(
       return SCIP_OKAY;
    }
 
-   /* if the denominator is 0 -> the constraint can't be violated */
+   /* if the denominator is 0 -> the constraint can't be violated, and the gradient is infinite */
    assert(!SCIPisZero(scip, denominator));
-   /* if v_disaggidx^T x + beta_disaggidx is 0 -> the constraint can't be violated */
-   assert(!SCIPisZero(scip, lhsval));
 
    /* compute upper bound on the number of variables in cut: vars in rhs + vars in term + disagg var */
    ncutvars = (termbegins[nterms] - termbegins[nterms-1]) + (termbegins[disaggidx + 1] - termbegins[disaggidx]) + 1;
