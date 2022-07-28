@@ -1001,7 +1001,7 @@ Test(nlhdlrsoc, disaggregation, .description = "disaggregate soc and check the r
 
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
-   /* clear sepastorage to get rid of disaggregation row */
+   /* clear sepastorage to get rid of initial relaxation */
    SCIP_CALL( SCIPclearCuts(scip) );
 }
 
@@ -1234,7 +1234,7 @@ Test(nlhdlrsoc, separation3, .description = "test separation for simple expressi
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
 
-/* detects 2x^2 - 9y^2 + sin(z)^2 < = 0 as soc constraint using a public function */
+/* detects 2x^2 - 9y^2 + z^2 < = 0 as soc constraint using a public function */
 Test(nlhdlrsoc, access, .description = "public detect for simple quadratic constraint")
 {
    SCIP_CONS* cons;
