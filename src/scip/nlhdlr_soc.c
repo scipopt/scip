@@ -2640,8 +2640,8 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaSoc)
        * We then set j != i arbitrary, x_j = 0, and x_i = 1/(v_1)_i c.
        */
       static const SCIP_Real refpoints[3][2] = { {-1.0, 0.0}, {1.0, 1.0}, {1.0, -1.0} };
-      SCIP_Real v1i, v1j;
-      SCIP_Real v2i, v2j;
+      SCIP_Real v1i, v1j = 0.0;
+      SCIP_Real v2i, v2j = 0.0;
       SCIP_Bool v2zero;
       int i;
       int j = -1;
@@ -2832,13 +2832,10 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaSoc)
          assert(!vkzero || nlhdlrexprdata->offsets[k] != 0.0);
 
          /* calculate ||v_k||^2 */
-         if( !vkzero )
-         {
-            norm = 0.0;
-            for( i = nlhdlrexprdata->termbegins[k]; i < nlhdlrexprdata->termbegins[k+1]; ++i )
-               norm += SQR(nlhdlrexprdata->transcoefs[i]);
-            assert(norm > 0.0);
-         }
+         norm = 0.0;
+         for( i = nlhdlrexprdata->termbegins[k]; i < nlhdlrexprdata->termbegins[k+1]; ++i )
+            norm += SQR(nlhdlrexprdata->transcoefs[i]);
+         assert(vkzero || norm > 0.0);
 
          BMSclearMemoryArray(nlhdlrexprdata->varvals, nlhdlrexprdata->nvars);
 
@@ -2846,7 +2843,7 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaSoc)
          {
             /* set x = v_k / ||v_k||^2 (refpoints[point][0] - beta_k) / 2 */
             for( i = nlhdlrexprdata->termbegins[k]; i < nlhdlrexprdata->termbegins[k+1]; ++i )
-               nlhdlrexprdata->varvals[nlhdlrexprdata->transcoefsidx[i]] = nlhdlrexprdata->transcoefs[i] / norm * (refpoints[point][0] - nlhdlrexprdata->offsets[k]);
+               nlhdlrexprdata->varvals[nlhdlrexprdata->transcoefsidx[i]] = nlhdlrexprdata->transcoefs[i] / norm * (refpoints[point][0] - nlhdlrexprdata->offsets[k]);  /*lint !e795*/
             assert(vkzero || SCIPisEQ(scip, evalSingleTerm(scip, nlhdlrexprdata, k), refpoints[point][0]));
 
             /* set y_k = v_n^T x + beta_n + 0/1/-1 */
