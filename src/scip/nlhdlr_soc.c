@@ -152,7 +152,7 @@ void printNlhdlrExprData(
       {
          assert(nlhdlrexprdata->offsets[i] != 0.0);
 
-         SCIPinfoMessage(scip, NULL, "%f", SQR(nlhdlrexprdata->offsets[i]));
+         SCIPinfoMessage(scip, NULL, "%g", SQR(nlhdlrexprdata->offsets[i]));
          continue;
       }
 
@@ -162,7 +162,9 @@ void printNlhdlrExprData(
       for( j = startidx; j < nlhdlrexprdata->termbegins[i + 1]; ++j )
       {
          if( nlhdlrexprdata->transcoefs[j] != 1.0 )
-            SCIPinfoMessage(scip, NULL, "%f*", nlhdlrexprdata->transcoefs[j]);
+            SCIPinfoMessage(scip, NULL, " %+g*", nlhdlrexprdata->transcoefs[j]);
+         else
+            SCIPinfoMessage(scip, NULL, " +");
          if( SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[j]]) != NULL )
          {
             SCIPinfoMessage(scip, NULL, "%s", SCIPvarGetName(SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[j]])));
@@ -170,12 +172,9 @@ void printNlhdlrExprData(
          }
          else
             SCIPinfoMessage(scip, NULL, "%p", (void*)nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[j]]);
-
-         if( j < nlhdlrexprdata->termbegins[i + 1] - 1 )
-            SCIPinfoMessage(scip, NULL, " + ");
-         else if( nlhdlrexprdata->offsets[i] != 0.0 )
-            SCIPinfoMessage(scip, NULL, " + %f", nlhdlrexprdata->offsets[i]);
       }
+      if( nlhdlrexprdata->offsets[i] != 0.0 )
+         SCIPinfoMessage(scip, NULL, " %+g", nlhdlrexprdata->offsets[i]);
 
       SCIPinfoMessage(scip, NULL, ")^2");
 
@@ -183,22 +182,21 @@ void printNlhdlrExprData(
          SCIPinfoMessage(scip, NULL, " + ");
    }
 
-   SCIPinfoMessage(scip, NULL, " ) <= ");
+   SCIPinfoMessage(scip, NULL, " ) <=");
 
    for( j = nlhdlrexprdata->termbegins[nterms-1]; j < nlhdlrexprdata->termbegins[nterms]; ++j )
    {
       if( nlhdlrexprdata->transcoefs[j] != 1.0 )
-         SCIPinfoMessage(scip, NULL, "%f*", nlhdlrexprdata->transcoefs[j]);
+         SCIPinfoMessage(scip, NULL, " %+g*", nlhdlrexprdata->transcoefs[j]);
+      else
+         SCIPinfoMessage(scip, NULL, " +");
       if( SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[j]]) != NULL )
          SCIPinfoMessage(scip, NULL, "%s", SCIPvarGetName(SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[j]])));
       else
          SCIPinfoMessage(scip, NULL, "%p", (void*)nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[j]]);
-
-      if( j < nlhdlrexprdata->termbegins[nterms] - 1 )
-         SCIPinfoMessage(scip, NULL, " + ");
-      else if( nlhdlrexprdata->offsets[nterms-1] != 0.0 )
-         SCIPinfoMessage(scip, NULL, " + %f", nlhdlrexprdata->offsets[nterms-1]);
    }
+   if( nlhdlrexprdata->offsets[nterms-1] != 0.0 )
+      SCIPinfoMessage(scip, NULL, " %+g", nlhdlrexprdata->offsets[nterms-1]);
 
    SCIPinfoMessage(scip, NULL, "\n");
 }
@@ -366,7 +364,7 @@ SCIP_RETCODE createNlhdlrExprData(
 #ifdef SCIP_DEBUG
    SCIPdebugMsg(scip, "created nlhdlr data for the following soc expression:\n");
    printNlhdlrExprData(scip, *nlhdlrexprdata);
-   printf("x is %p\n", (void *)vars[0]);
+   /* SCIPdebugMsg(scip, "x is %p\n", (void *)vars[0]); */
 #endif
 
    return SCIP_OKAY;
@@ -1914,9 +1912,9 @@ SCIP_RETCODE detectSocQuadraticSimple(
    termbegins[nextentry] = nnzinterms;
 
 #ifdef SCIP_DEBUG
-   SCIPdebugMsg(scip, "found SOC structure for expression %p\n%f <= ", (void*)expr, lhs);
+   SCIPdebugMsg(scip, "found SOC structure for expression %p\n  %g <= ", (void*)expr, lhs);
    SCIPprintExpr(scip, expr, NULL);
-   SCIPinfoMessage(scip, NULL, "<= %f\n", rhs);
+   SCIPinfoMessage(scip, NULL, " <= %g\n", rhs);
 #endif
 
    /* create and store nonlinear handler expression data */
@@ -2567,6 +2565,10 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaSoc)
    if( *infeasible )
       return SCIP_OKAY;
 
+#ifdef SCIP_DEBUG
+   SCIPdebugMsg(scip, "initlp for \n");
+   printNlhdlrExprData(scip, nlhdlrexprdata);
+#endif
 
    /* add some initial cuts on well-selected coordinates */
    if( nlhdlrexprdata->nterms == 2 )
@@ -2703,6 +2705,10 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaSoc)
             nlhdlrexprdata->varvals[j] = (d - v2i/v1i*c) / (v2j - v2i * v1j / v1i);
             nlhdlrexprdata->varvals[i] = (c - v1j * nlhdlrexprdata->varvals[j]) / v1i;
 
+            SCIPdebugMsg(scip, "<%s>(%d) = %g, <%s>(%d) = %g\n",
+               SCIPvarGetName(SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->vars[i])), i, nlhdlrexprdata->varvals[i],
+               SCIPvarGetName(SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->vars[j])), j, nlhdlrexprdata->varvals[j]);
+
             assert(SCIPisEQ(scip, evalSingleTerm(scip, nlhdlrexprdata, 0), (SCIP_Real[]){-1.0, 1.0,  1.0}[point]));
             assert(SCIPisEQ(scip, evalSingleTerm(scip, nlhdlrexprdata, 1), (SCIP_Real[]){ 0.0, 1.0, -1.0}[point]));
 
@@ -2719,6 +2725,7 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaSoc)
                   SCIP_ROW* cut;
                   SCIP_CALL( SCIPgetRowprepRowCons(scip, &cut, rowprep, cons) );
                   SCIP_CALL( SCIPaddRow(scip, cut, FALSE, infeasible) );
+                  /* SCIPdebug( SCIPprintRow(scip, cut, NULL) ); */
                   SCIP_CALL( SCIPreleaseRow(scip, &cut) );
                }
 
