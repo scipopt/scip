@@ -19,6 +19,7 @@
  * @author Gioni Mexi
  *
  * @todo Description
+ * @todo apply repropagation even if no constraint is added
  * @todo we do not need forced bdchg queue
  * @todo remove scip pointer
  * @todo implement division rule to replace coefficient tightening. Idea: Weaken and then apply division once
@@ -96,7 +97,6 @@ SCIP_RETCODE resolutionsetCopy(
    SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*targetresolutionset)->vals, targetsize) );
 
    /* copy all data from source to target */
-   /* todo this might be expensive since we copy vectors */
    BMScopyMemoryArray((*targetresolutionset)->inds, sourceresolutionset->inds, targetsize);
    BMScopyMemoryArray((*targetresolutionset)->vals, sourceresolutionset->vals, targetsize);
 
@@ -137,17 +137,18 @@ SCIP_RETCODE conflictEnsureResolutionsetsMem(
    return SCIP_OKAY;
 }
 
-/** add a resolutionset to the list of all proofsets */
+/** add a resolutionset to the list of all resolutionsets */
 static
 SCIP_RETCODE conflictInsertResolutionset(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_RESOLUTIONSET**   resolutionset       /**< resolution set to add */
+   SCIP_RESOLUTIONSET**  resolutionset       /**< resolutionset to add */
    )
 {
    assert(conflict != NULL);
    assert(resolutionset != NULL);
 
+   /* todo check the validdepth */
    /* insert resolution into the resolutionsets array */
    SCIP_CALL( conflictEnsureResolutionsetsMem(conflict, set, conflict->nresolutionsets + 1) );
 
@@ -156,7 +157,7 @@ SCIP_RETCODE conflictInsertResolutionset(
    conflict->resolutionsets[conflict->nresolutionsets] = *resolutionset;
    ++conflict->nresolutionsets;
 
-   *resolutionset = NULL; /* ownership of pointer is now in the conflictsets array */
+   *resolutionset = NULL; /* ownership of pointer is now in the resolutionsets array */
 
    return SCIP_OKAY;
 }
@@ -261,7 +262,7 @@ SCIP_Bool tightenCoefLhs(
    }
 
    /* terminate, because coefficient tightening cannot be performed; also excludes the case in which no integral variable is present */
-   // for lhs terminate if amin + maxabsval < rowlhs
+   /* for lhs terminate if amin + maxabsval < rowlhs */
    if( SCIPisLT(scip, minact + maxabsval, *rowlhs) )
       goto TERMINATE;
 
@@ -423,7 +424,7 @@ SCIP_BDCHGINFO* conflictFirstCand(
  */
 static
 void conflictCleanUpbdchgqueue(
-   SCIP_CONFLICT*        conflict,            /**< conflict analysis data */
+   SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_RESOLUTIONSET*   resolutionset       /**< resolution set */
    )
@@ -573,7 +574,6 @@ SCIP_BDCHGINFO* conflictRemoveCand(
    return bdchginfo;
 }
 
-
 /** return TRUE if generalized resolution conflict analysis is applicable */
 SCIP_Bool SCIPconflictResolutionApplicable(
    SCIP_SET*             set                 /**< global SCIP settings */
@@ -585,7 +585,6 @@ SCIP_Bool SCIPconflictResolutionApplicable(
 
    return TRUE;
 }
-
 
 /** gets number of conflict constraints detected in resolution conflict analysis */
 SCIP_Longint SCIPconflictGetNResConflictConss(
@@ -715,7 +714,6 @@ SCIP_RETCODE weakenVarReason(
    }
 
    --resolutionset->nnz;
-
    resolutionset->vals[pos] = resolutionset->vals[resolutionset->nnz];
    resolutionset->inds[pos] = resolutionset->inds[resolutionset->nnz];
 
@@ -943,8 +941,6 @@ SCIP_RETCODE createAndAddResolutionCons(
       consvars[i] = vars[resolutionset->inds[i]];
    }
 
-
-
    /* create a constraint out of the conflict set */
    (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "confres_%" SCIP_LONGINT_FORMAT, conflict->nresconfconss);
    /* todo add parameter for separation */
@@ -964,7 +960,6 @@ SCIP_RETCODE createAndAddResolutionCons(
 
    /* free temporary memory */
    SCIPfreeBufferArray(scip, &consvars);
-
 
    return SCIP_OKAY;
 }
@@ -998,7 +993,6 @@ SCIP_RETCODE SCIPconflictFlushResolutionSets(
    assert(tree != NULL);
 
    /* @todo use conflict->resolutionsets for multiple conflicts per round */
-
    focusdepth = SCIPtreeGetFocusDepth(tree);
    assert(focusdepth <= SCIPtreeGetCurrentDepth(tree));
    assert(SCIPtreeGetCurrentDepth(tree) == tree->pathlen-1);
@@ -1704,7 +1698,6 @@ SCIPsetDebugMsg(set, " -> First bound change to resolve <%s> %s %.15g [status:%d
          if (!successresolution)
             goto TERMINATE;
 
-
 #ifdef SCIP_DEBUG
       {
          int v;
@@ -1798,7 +1791,6 @@ SCIPsetDebugMsg(set, " -> First bound change to resolve <%s> %s %.15g [status:%d
             ? SCIPconsGetName(SCIPbdchginfoGetInferCons(nextbdchginfo))
             : (SCIPbdchginfoGetInferProp(nextbdchginfo) != NULL ? SCIPpropGetName(SCIPbdchginfoGetInferProp(nextbdchginfo))
                : "none")));
-
 
    }
 
