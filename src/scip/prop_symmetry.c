@@ -7090,7 +7090,7 @@ SCIP_DECL_PROPINITPRE(propInitpreSymmetry)
       SCIP_CALL( SCIPgetIntParam(scip, "misc/usesymmetry", &propdata->usesymmetry) );
       SCIP_CALL( setSymmetryMethodEnabledValues(propdata) );
    }
-   else if ( SCIPgetNRuns(scip) > propdata->lastrestart )
+   else if ( SCIPgetNRuns(scip) > propdata->lastrestart && isSymmetryRecomputationRequired(scip, propdata) )
    {
       assert( SCIPgetNRuns(scip) > 1 );
 
@@ -7358,7 +7358,7 @@ SCIP_DECL_PROPEXEC(propExecSymmetry)
       SCIP_CALL( SCIPgetIntParam(scip, "misc/usesymmetry", &propdata->usesymmetry) );
       SCIP_CALL( setSymmetryMethodEnabledValues(propdata) );
    }
-   else if ( SCIPgetNRuns(scip) > propdata->lastrestart )
+   else if ( SCIPgetNRuns(scip) > propdata->lastrestart && isSymmetryRecomputationRequired(scip, propdata) )
    {
       assert( SCIPgetNRuns(scip) > 1 );
 
