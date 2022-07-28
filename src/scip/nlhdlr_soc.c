@@ -616,7 +616,6 @@ SCIP_RETCODE generateCutSolDisagg(
    assert(cons != NULL);
    assert(nlhdlrexprdata != NULL);
    assert(disaggidx < nlhdlrexprdata->nterms-1);
-   assert(mincutviolation >= 0.0);
 
    vars = nlhdlrexprdata->vars;
    disvars = nlhdlrexprdata->disvars;
@@ -2555,15 +2554,9 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaSoc)
 
       /* create the disaggregation row and store it in nlhdlrexprdata */
       SCIP_CALL( createDisaggrRow(scip, conshdlr, expr, nlhdlrexprdata) );
-
-      /* add it to the LP */
-      SCIP_CALL( SCIPaddRow(scip, nlhdlrexprdata->disrow, FALSE, infeasible) );
    }
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &nlhdlrexprdata->varvals, nlhdlrexprdata->nvars) );
-
-   if( *infeasible )
-      return SCIP_OKAY;
 
 #ifdef SCIP_DEBUG
    SCIPdebugMsg(scip, "initlp for \n");
@@ -2740,9 +2733,75 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaSoc)
    }
    else
    {
-      /* TODO */
-   }
+      /* generate gradient cuts for the small rotated cones
+       *  \f[
+       *    \sqrt{4(v_k^T x + \beta_k)^2 + (v_n^T x + \beta_n - y_k)^2} - v_n^T x - \beta_n - y_k \leq 0.
+       *  \f]
+       *
+       * we should linearize again at points where the first and second term (inside sqr) are (-1/2,0), (1/2,1), (1/2,-1).
+       * Since we have y_k, we can achieve this more easily here via
+       *   x = v_k/||v_k||^2 (+/-0.5 - beta_k)
+       *   y_k = v_n^T x + beta_n + 0/1/-1
+       */
+      static const SCIP_Real refpoints[3][2] = { {-0.5, 0.0}, {0.5, 1.0}, {0.5, -1.0} };
+      SCIP_Real rhsval;
+      SCIP_Real norm;
+      int point;
+      int i;
+      int k;
 
+      /* add disaggregation row to LP */
+      SCIP_CALL( SCIPaddRow(scip, nlhdlrexprdata->disrow, FALSE, infeasible) );
+
+      if( *infeasible )
+         return SCIP_OKAY;
+
+      for( k = 0; k < nlhdlrexprdata->nterms - 1; ++k )
+      {
+         /* calculate ||v_k||^2 */
+         norm = 0.0;
+         for( i = nlhdlrexprdata->termbegins[k]; i < nlhdlrexprdata->termbegins[k+1]; ++i )
+            norm += SQR(nlhdlrexprdata->transcoefs[i]);
+         assert(norm > 0.0);
+
+         BMSclearMemoryArray(nlhdlrexprdata->varvals, nlhdlrexprdata->nvars);
+
+         for( point = 0; point < 3; ++point )
+         {
+            /* set x = v_k / ||v_k||^2 (refpoints[point][0] - beta_k) / 2 */
+            for( i = nlhdlrexprdata->termbegins[k]; i < nlhdlrexprdata->termbegins[k+1]; ++i )
+               nlhdlrexprdata->varvals[nlhdlrexprdata->transcoefsidx[i]] = nlhdlrexprdata->transcoefs[i] / norm * (refpoints[point][0] - nlhdlrexprdata->offsets[k]);
+            assert(SCIPisEQ(scip, evalSingleTerm(scip, nlhdlrexprdata, k), refpoints[point][0]));
+
+            /* set y_k = v_n^T x + beta_n + 0/1/-1 */
+            rhsval = evalSingleTerm(scip, nlhdlrexprdata, nlhdlrexprdata->nterms - 1);
+            nlhdlrexprdata->disvarvals[k] = rhsval + refpoints[point][1];
+
+            /* compute gradient cut */
+            SCIP_CALL( generateCutSolDisagg(scip, &rowprep, expr, cons, nlhdlrexprdata, k, -SCIPinfinity(scip), rhsval) );
+
+            if( rowprep != NULL )
+            {
+               SCIP_Bool success = FALSE;
+
+               SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, NULL, SCIPgetHugeValue(scip), &success) );
+               if( success )
+               {
+                  SCIP_ROW* cut;
+                  SCIP_CALL( SCIPgetRowprepRowCons(scip, &cut, rowprep, cons) );
+                  SCIP_CALL( SCIPaddRow(scip, cut, FALSE, infeasible) );
+                  /* SCIPdebug( SCIPprintRow(scip, cut, NULL) ); */
+                  SCIP_CALL( SCIPreleaseRow(scip, &cut) );
+               }
+
+               SCIPfreeRowprep(scip, &rowprep);
+            }
+
+            if( *infeasible )
+               return SCIP_OKAY;
+         }
+      }
+   }
 
    return SCIP_OKAY;
 }
