@@ -2698,7 +2698,11 @@ Test(interCuts, testBoundRays1)
       /* cr_expect_arr_eq(myrays->raysidx, expectedraysidx, expectednnonz * sizeof(int));
       cr_expect_arr_eq(myrays->lpposray, expectedlppos, expectednrays * sizeof(int));
       cr_expect_arr_eq(myrays->raysbegin, expectedbegin, (expectednrays + 1) * sizeof(int)); */
+
+      SCIP_CALL( SCIPfreeSol(scip, &vertex) );
    }
+
+   SCIP_CALL( SCIPfreeSol(scip, &sol) );
 
    /* end probing mode */
    SCIP_CALL( SCIPendProbing(scip) );

@@ -84,7 +84,7 @@ EMPHBENCHMARK  =   true
 
 # set SCIP version here for external projects
 # use underscore to make it compatible with def.h
-SCIP_VERSION	=	8.0.0.2
+SCIP_VERSION	=	8.0.1.3
 
 # compiling and linking parameters
 VERBOSE		=	false
@@ -103,6 +103,7 @@ SHARED		=	false
 NOBLKMEM	=	false
 NOBUFMEM	=	false
 NOBLKBUFMEM	=	false
+BLISSEXTERNAL	=	false
 
 # if SHARED = true, nevertheless link to static version of external libraries (usefull for mingw)
 LIBEXTFORCESTATIC =	false
@@ -531,7 +532,12 @@ TPILIBSHORTLINK	=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(TPILIBNAME).$(LIBEXT)
 #-----------------------------------------------------------------------------
 
 ifeq ($(SYM),bliss)
+ifeq ($(BLISSEXTERNAL),true)
 LDFLAGS		+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCC_l)bliss.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
+else
+LIBOBJSUBDIRS	+=      $(LIBOBJDIR)/bliss/src
+LIBOBJSUBDIRS	+=      $(LIBOBJDIR)/bliss
+endif
 endif
 
 #-----------------------------------------------------------------------------
