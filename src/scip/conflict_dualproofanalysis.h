@@ -94,19 +94,6 @@ SCIP_RETCODE SCIPconflictFlushProofset(
    SCIP_CLIQUETABLE*     cliquetable         /**< clique table data structure */
    );
 
-#ifdef SCIP_DEBUG
-static
-void debugPrintViolationInfo(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Real             minact,             /**< min activity */
-   SCIP_Real             rhs,                /**< right hand side */
-   const char*           infostr             /**< additional info for this debug message, or NULL */
-   );
-#else
-#define debugPrintViolationInfo(...) /**/
-#endif
-
-
 /** perform conflict analysis based on a dual unbounded ray
  *
  *  given an aggregation of rows lhs <= a^Tx such that lhs > maxactivity. if the constraint has size one we add a

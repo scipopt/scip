@@ -574,7 +574,6 @@ SCIP_Bool conflictsetIsRedundant(
 
 #ifdef SCIP_DEBUG
 /** prints a conflict set to the screen */
-
 void conflictsetPrint(
    SCIP_CONFLICTSET*     conflictset         /**< conflict set */
    )
@@ -926,7 +925,6 @@ SCIP_RETCODE detectImpliedBounds(
    return SCIP_OKAY;
 }
 
-
 /** clears the given conflict set */
 static
 void conflictsetClear(
@@ -947,7 +945,6 @@ void conflictsetClear(
 }
 
 /** creates an empty conflict set */
-
 SCIP_RETCODE SCIPconflictsetCreate(
    SCIP_CONFLICTSET**    conflictset,        /**< pointer to store the conflict set */
    BMS_BLKMEM*           blkmem              /**< block memory of transformed problem */
@@ -1004,7 +1001,6 @@ SCIP_RETCODE conflictsetCopy(
 }
 
 /** frees a conflict set */
-
 void SCIPconflictsetFree(
    SCIP_CONFLICTSET**    conflictset,        /**< pointer to the conflict set */
    BMS_BLKMEM*           blkmem              /**< block memory of transformed problem */
@@ -1018,8 +1014,6 @@ void SCIPconflictsetFree(
    BMSfreeBlockMemoryArrayNull(blkmem, &(*conflictset)->sortvals, (*conflictset)->bdchginfossize);
    BMSfreeBlockMemory(blkmem, conflictset);
 }
-
-
 
 /** calculates the score of the conflict set
  *
@@ -1038,19 +1032,18 @@ SCIP_Real conflictsetCalcScore(
          + set->conf_weightvaliddepth * conflictset->validdepth);
 }
 
+
 /*
  * Conflict Handler
  */
 
 /** compares two conflict handlers w. r. to their priority */
-
 SCIP_DECL_SORTPTRCOMP(SCIPconflicthdlrComp)
 {  /*lint --e{715}*/
    return ((SCIP_CONFLICTHDLR*)elem2)->priority - ((SCIP_CONFLICTHDLR*)elem1)->priority;
 }
 
 /** comparison method for sorting conflict handler w.r.t. to their name */
-
 SCIP_DECL_SORTPTRCOMP(SCIPconflicthdlrCompName)
 {
    return strcmp(SCIPconflicthdlrGetName((SCIP_CONFLICTHDLR*)elem1), SCIPconflicthdlrGetName((SCIP_CONFLICTHDLR*)elem2));
@@ -1072,7 +1065,6 @@ SCIP_DECL_PARAMCHGD(paramChgdConflicthdlrPriority)
 }
 
 /** copies the given conflict handler to a new scip */
-
 SCIP_RETCODE SCIPconflicthdlrCopyInclude(
    SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
    SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
@@ -1435,7 +1427,6 @@ void SCIPconflicthdlrSetExit(
 }
 
 /** set solving process initialization method of conflict handler */
-
 void SCIPconflicthdlrSetInitsol(
    SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
    SCIP_DECL_CONFLICTINITSOL((*conflictinitsol))/**< solving process initialization method of conflict handler */
@@ -1502,7 +1493,6 @@ void SCIPconflicthdlrSetPriority(
 }
 
 /** is conflict handler initialized? */
-
 SCIP_Bool SCIPconflicthdlrIsInitialized(
    SCIP_CONFLICTHDLR*    conflicthdlr        /**< conflict handler */
    )
@@ -1513,7 +1503,6 @@ SCIP_Bool SCIPconflicthdlrIsInitialized(
 }
 
 /** enables or disables all clocks of \p conflicthdlr, depending on the value of the flag */
-
 void SCIPconflicthdlrEnableOrDisableClocks(
    SCIP_CONFLICTHDLR*    conflicthdlr,       /**< the conflict handler for which all clocks should be enabled or disabled */
    SCIP_Bool             enable              /**< should the clocks of the conflict handler be enabled? */
@@ -1626,8 +1615,6 @@ void conflictFreeTmpBdchginfos(
    conflict->ntmpbdchginfos = 0;
 }
 
-
-
 /** increases the conflict score of the variable in the given direction */
 static
 SCIP_RETCODE incVSIDS(
@@ -1658,6 +1645,7 @@ SCIP_RETCODE incVSIDS(
 
    return SCIP_OKAY;
 }
+
 /** update conflict statistics */
 static
 SCIP_RETCODE updateStatistics(
@@ -2117,7 +2105,6 @@ SCIP_RETCODE conflictEnsureConflictsetsMem(
    return SCIP_OKAY;
 }
 
-
 /** inserts conflict set into sorted conflictsets array and deletes the conflict set pointer */
 static
 SCIP_RETCODE conflictInsertConflictset(
@@ -2212,8 +2199,6 @@ SCIP_RETCODE conflictInsertConflictset(
    return SCIP_OKAY;
 }
 
-
-
 /** marks bound to be present in the current conflict and returns whether a bound which is at least as tight was already
  *  member of the current conflict (i.e., the given bound change does not need to be added)
  */
@@ -2305,7 +2290,6 @@ SCIP_Bool conflictMarkBoundCheckPresence(
    }
 }
 
-
 /** puts bound change into the current conflict set */
 static
 SCIP_RETCODE conflictAddConflictBound(
@@ -2348,6 +2332,7 @@ SCIP_RETCODE conflictAddConflictBound(
 
    return SCIP_OKAY;
 }
+
 /** returns whether the negation of the given bound change would lead to a globally valid literal */
 static
 SCIP_Bool isBoundchgUseless(
@@ -2413,6 +2398,7 @@ SCIP_RETCODE conflictQueueBound(
 
    return SCIP_OKAY;
 }
+
 /** adds variable's bound to conflict candidate queue */
 static
 SCIP_RETCODE conflictAddBound(
@@ -2610,9 +2596,6 @@ SCIP_RETCODE SCIPconflictAnalyzeRemainingBdchgs(
    return SCIP_OKAY;
 }
 
-
-
-
 /** check if the bound change info (which is the potential next candidate which is queued) is valid for the current
  *  conflict analysis; a bound change info can get invalid if after this one was added to the queue, a weaker bound
  *  change was added to the queue (due the bound widening idea) which immediately makes this bound change redundant; due
@@ -2646,7 +2629,7 @@ SCIP_RETCODE SCIPconflictAnalyzeRemainingBdchgs(
  *       conflict->count); however the (x >= 3) only has be explained if conflictlb matches that one; that is
  *       (var->conflictlb == bdchginfo->newbound); otherwise it redundant/invalid.
  */
- static
+static
 SCIP_Bool bdchginfoIsInvalid(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    SCIP_BDCHGINFO*       bdchginfo           /**< bound change information */
@@ -2687,7 +2670,6 @@ SCIP_Bool bdchginfoIsInvalid(
 
    return FALSE;
 }
-
 
 /** adds given bound changes to a conflict set */
 static
@@ -3265,8 +3247,6 @@ SCIP_RETCODE conflictResolveBound(
    return SCIP_OKAY;
 }
 
-
-
 /** clears the conflict queue and the current conflict set */
 static
 void conflictClear(
@@ -3345,12 +3325,6 @@ SCIP_RETCODE SCIPconflictInit(
 
    return SCIP_OKAY;
 }
-
-
-
-
-
-
 
 /** convert variable and bound change to active variable */
 static
@@ -3643,7 +3617,6 @@ SCIP_RETCODE conflictCreateReconvergenceConss(
  *  SCIPconflictAddRelaxedBound(), and on success, calls the conflict handlers to create a conflict constraint out of
  *  the resulting conflict set; afterwards the conflict queue and the conflict set is cleared
  */
-
 SCIP_RETCODE conflictAnalyze(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    BMS_BLKMEM*           blkmem,             /**< block memory of transformed problem */
@@ -3927,7 +3900,6 @@ SCIP_RETCODE conflictAnalyze(
    return SCIP_OKAY;
 }
 
-
 /** calculates the score of a bound change within a conflict */
 static
 SCIP_Real calcBdchgScore(
@@ -4003,8 +3975,6 @@ SCIP_RETCODE ensureCandsSize(
 
    return SCIP_OKAY;
 }
-
-
 
 /** after changing the global bound of a variable, the bdchginfos that are now redundant are replaced with
  *  oldbound = newbound = global bound; if the current bdchginfo is of such kind, the bound is equal to the
@@ -4405,7 +4375,6 @@ SCIP_RETCODE addBdchg(
    return SCIP_OKAY;
 }
 
-
 /** adds variable to candidate list, if the current best bound corresponding to the proof coefficient is local;
  *  returns the array position in the candidate list, where the new candidate was inserted, or -1 if the
  *  variable can relaxed to global bounds immediately without increasing the proof's activity;
@@ -4756,8 +4725,6 @@ SCIP_RETCODE SCIPundoBdchgsProof(
    return SCIP_OKAY;
 }
 
-
-
 /** analyzes an infeasible LP and undoes additional bound changes while staying infeasible */
 static
 SCIP_RETCODE undoBdchgsDualfarkas(
@@ -4814,10 +4781,10 @@ SCIP_RETCODE undoBdchgsDualfarkas(
    return SCIP_OKAY;
 }
 
+
 /*
  * Conflict LP Bound Changes
  */
-
 
 /** create conflict LP bound change data structure */
 static
@@ -4840,6 +4807,7 @@ SCIP_RETCODE lpbdchgsCreate(
 
    return SCIP_OKAY;
 }
+
 
 /*
  * Propagation Conflict Analysis
@@ -5057,7 +5025,6 @@ SCIP_RETCODE undoBdchgsDualsol(
  *  4. analyze conflict
  *     -> put remaining changed bounds (see lb/ubchginfoposs arrays) into starting conflict set
  */
-
 SCIP_RETCODE SCIPrunBoundHeuristic(
    SCIP_CONFLICT*        conflict,           /**< conflict data */
    SCIP_SET*             set,                /**< global SCIP settings */
