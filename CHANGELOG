@@ -52,6 +52,7 @@ Fixed bugs
 ----------
 
 - read objective offset from ZIMPL files
+- fixed problem with recomputing symmetries after a restart
 
 Miscellaneous
 -------------
