@@ -1474,7 +1474,7 @@ SCIP_RETCODE solveNodeInitialLP(
       return SCIP_OKAY;
 
    /* load the LP state */
-   SCIP_CALL( SCIPtreeLoadLPState(tree, blkmem, set, stat, eventqueue, lp) );
+   SCIP_CALL( SCIPtreeLoadLPState(tree, blkmem, set, transprob, stat, eventqueue, lp) );
 
    focusnode = SCIPtreeGetFocusNode(tree);
 
@@ -2443,7 +2443,7 @@ SCIP_RETCODE priceAndCutLoop(
                      /* in the root node, remove redundant rows permanently from the LP */
                      if( root )
                      {
-                        SCIP_CALL( SCIPlpFlush(lp, blkmem, set, eventqueue) );
+                        SCIP_CALL( SCIPlpFlush(lp, blkmem, set, transprob, eventqueue) );
                         SCIP_CALL( SCIPlpRemoveRedundantRows(lp, blkmem, set, stat, eventqueue, eventfilter) );
                      }
 
@@ -2652,7 +2652,7 @@ SCIP_RETCODE priceAndCutLoop(
                   /* in the root node, remove redundant rows permanently from the LP */
                   if( root )
                   {
-                     SCIP_CALL( SCIPlpFlush(lp, blkmem, set, eventqueue) );
+                     SCIP_CALL( SCIPlpFlush(lp, blkmem, set, transprob, eventqueue) );
                      SCIP_CALL( SCIPlpRemoveRedundantRows(lp, blkmem, set, stat, eventqueue, eventfilter) );
                   }
                }
