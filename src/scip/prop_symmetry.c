@@ -737,7 +737,7 @@ SCIP_Bool isSymmetryRecomputationRequired(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_PROPDATA*        propdata            /**< propagator data */
    )
-{
+{ /*lint --e{641}*/
    assert( scip != NULL );
    assert( propdata != NULL );
 
