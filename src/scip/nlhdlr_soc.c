@@ -2645,6 +2645,7 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaSoc)
        * -> ((v_2)_j - (v_2)_i (v_1)_j / (v_1)_i) x_j = d - (v_2)_i/(v_1)_i c
        * Now find j such that (v_2)_j - (v_2)_i (v_1)_j / (v_1)_i != 0.
        */
+      static const SCIP_Real refpoints[3][2] = { {-1.0, 0.0}, {1.0, 1.0}, {1.0, -1.0} };
       SCIP_Real v1i, v1j;
       SCIP_Real v2i, v2j;
       int i;
@@ -2698,8 +2699,8 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaSoc)
 
          for( point = 0; point < 3; ++point )
          {
-            c = (SCIP_Real[]){-1.0, 1.0,  1.0}[point] - nlhdlrexprdata->offsets[0];
-            d = (SCIP_Real[]){ 0.0, 1.0, -1.0}[point] - nlhdlrexprdata->offsets[1];
+            c = refpoints[point][0] - nlhdlrexprdata->offsets[0];
+            d = refpoints[point][1] - nlhdlrexprdata->offsets[1];
 
             /* set x_j and x_i */
             nlhdlrexprdata->varvals[j] = (d - v2i/v1i*c) / (v2j - v2i * v1j / v1i);
@@ -2709,8 +2710,8 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaSoc)
                SCIPvarGetName(SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->vars[i])), i, nlhdlrexprdata->varvals[i],
                SCIPvarGetName(SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->vars[j])), j, nlhdlrexprdata->varvals[j]);
 
-            assert(SCIPisEQ(scip, evalSingleTerm(scip, nlhdlrexprdata, 0), (SCIP_Real[]){-1.0, 1.0,  1.0}[point]));
-            assert(SCIPisEQ(scip, evalSingleTerm(scip, nlhdlrexprdata, 1), (SCIP_Real[]){ 0.0, 1.0, -1.0}[point]));
+            assert(SCIPisEQ(scip, evalSingleTerm(scip, nlhdlrexprdata, 0), refpoints[point][0]));
+            assert(SCIPisEQ(scip, evalSingleTerm(scip, nlhdlrexprdata, 1), refpoints[point][1]));
 
             /* compute gradient cut */
             SCIP_CALL( generateCutSolSOC(scip, &rowprep, expr, cons, nlhdlrexprdata, -SCIPinfinity(scip), evalSingleTerm(scip, nlhdlrexprdata, 2)) );
