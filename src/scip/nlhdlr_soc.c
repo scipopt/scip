@@ -403,7 +403,8 @@ static
 void updateVarVals(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLHDLREXPRDATA*  nlhdlrexprdata,     /**< nonlinear handler expression data */
-   SCIP_SOL*             sol                 /**< SCIP solution */
+   SCIP_SOL*             sol,                /**< SCIP solution */
+   SCIP_Bool             roundtinyfrac       /**< whether values close to integers should be rounded */
    )
 {
    int i;
@@ -413,12 +414,20 @@ void updateVarVals(
 
    /* update varvals */
    for( i = 0; i < nlhdlrexprdata->nvars; ++i )
+   {
       nlhdlrexprdata->varvals[i] = SCIPgetSolVal(scip, sol, SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->vars[i]));
+      if( roundtinyfrac && SCIPisIntegral(scip, nlhdlrexprdata->varvals[i]) )
+         nlhdlrexprdata->varvals[i] = SCIPround(scip, nlhdlrexprdata->varvals[i]);
+   }
 
    /* update disvarvals (in unittests, this may be NULL even though nterms > 1 */
    if( nlhdlrexprdata->disvarvals != NULL )
       for( i = 0; i < nlhdlrexprdata->nterms - 1; ++i )
+      {
          nlhdlrexprdata->disvarvals[i] = SCIPgetSolVal(scip, sol, nlhdlrexprdata->disvars[i]);
+         if( roundtinyfrac && SCIPisIntegral(scip, nlhdlrexprdata->disvarvals[i]) )
+            nlhdlrexprdata->disvarvals[i] = SCIPround(scip, nlhdlrexprdata->disvarvals[i]);
+      }
 }
 
 /** evaluate a single term of the form \f$v_i^T x + \beta_i\f$ */
@@ -2442,7 +2451,7 @@ SCIP_DECL_NLHDLREVALAUX(nlhdlrEvalauxSoc)
    {
       assert(SCIPgetExponentExprPow(expr) == 0.5);
 
-      updateVarVals(scip, nlhdlrexprdata, sol);
+      updateVarVals(scip, nlhdlrexprdata, sol, FALSE);
 
       /* compute sum_i coef_i expr_i^2 */
       *auxvalue = 0.0;
@@ -2959,8 +2968,13 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoSoc)
    nlhdlrdata = SCIPnlhdlrGetData(nlhdlr);
    assert(nlhdlrdata != NULL);
 
-   /* update varvals */
-   updateVarVals(scip, nlhdlrexprdata, sol);
+   /* update varvals
+    * set variables close to integer to integer, in particular when close to zero
+    * for simple soc's (no large v_i, no offsets), variables close to zero would give coefficients close to zero in the cut,
+    * which the cut cleanup may have problems to relax (and we end up with local or much relaxed cuts)
+    * also when close to other integers, rounding now may prevent some relaxation in cut cleanup
+    */
+   updateVarVals(scip, nlhdlrexprdata, sol, TRUE);
 
    rhsval = evalSingleTerm(scip, nlhdlrexprdata, nlhdlrexprdata->nterms - 1);
 

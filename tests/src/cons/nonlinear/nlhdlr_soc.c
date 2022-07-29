@@ -1039,7 +1039,7 @@ Test(nlhdlrsoc, separation1, .description = "test separation for simple norm exp
    SCIPsetSolVal(scip, sol, nlhdlrexprdata->disvars[1], 1.0);
    SCIPsetSolVal(scip, sol, nlhdlrexprdata->disvars[2], 1.0);
    SCIPsetSolVal(scip, sol, auxvar, 2.0);
-   updateVarVals(scip, nlhdlrexprdata, sol);
+   updateVarVals(scip, nlhdlrexprdata, sol, FALSE);
 
    /* check cut w.r.t. x */
    SCIP_CALL( generateCutSolDisagg(scip, &cut, expr, cons, nlhdlrexprdata, 0, 0.0, 2.0) );
@@ -1138,7 +1138,7 @@ Test(nlhdlrsoc, separation2, .description = "test separation for simple norm exp
    SCIPsetSolVal(scip, sol, x, 1.0);
    SCIPsetSolVal(scip, sol, y, 2.0);
    SCIPsetSolVal(scip, sol, auxvar, 1.0);
-   updateVarVals(scip, nlhdlrexprdata, sol);
+   updateVarVals(scip, nlhdlrexprdata, sol, FALSE);
 
    /* check cut */
    SCIP_CALL( generateCutSolSOC(scip, &cut, expr, cons, nlhdlrexprdata, 0.0, 1.0) );
@@ -1206,7 +1206,7 @@ Test(nlhdlrsoc, separation3, .description = "test separation for simple expressi
    SCIPsetSolVal(scip, sol, x, 1.0);
    SCIPsetSolVal(scip, sol, y, 1.0);
    SCIPsetSolVal(scip, sol, z, 0.0);
-   updateVarVals(scip, nlhdlrexprdata, sol);
+   updateVarVals(scip, nlhdlrexprdata, sol, FALSE);
 
    /* check cut */
    SCIP_CALL( generateCutSolSOC(scip, &cut, expr, cons, nlhdlrexprdata, 0.0, 1.0) );
