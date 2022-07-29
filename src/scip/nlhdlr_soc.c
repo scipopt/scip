@@ -458,6 +458,14 @@ SCIP_Real evalSingleTerm(
  *
  *  and the gradient cut is then \f$f(x^*) + \nabla f(x^*)(x - x^*) \leq v_3^T x + \beta_3\f$.
  *
+ *  If \f$\beta_1 = \beta_2 = 0\f$, then the constant on the left-hand-side of the cut becomes zero:
+ *  \f[
+ *    f(x^*) - (\frac{(v_1)_j v_1^T x^* + (v_2)_j v_2^T x^*}{f(x^*)})_j^T x^*
+ *    = f(x^*) - \frac{1}{f(x^*)} \sum_j ((v_1)_j x_j^* v_1^T x^* + (v_2)_j x_j^* v_2^T x^*)
+ *    = f(x^*) - \frac{1}{f(x^*)} ((v_1^T x^*)^2 + (v_2^T x^*)^2)
+ *    = f(x^*) - \frac{1}{f(x^*)} f(x^*)^2 = 0
+ *  \f]
+ *
  *  A 2D SOC is
  *  \f[
  *    |v_1^T x + \beta_1| \leq v_2^T x + \beta_2
@@ -482,6 +490,7 @@ SCIP_RETCODE generateCutSolSOC(
    SCIP_Real cutrhs;
    SCIP_EXPR** vars;
    SCIP_VAR* cutvar;
+   SCIP_Bool offsetzero;
    int* transcoefsidx;
    int* termbegins;
    int nterms;
@@ -501,12 +510,15 @@ SCIP_RETCODE generateCutSolSOC(
 
    *rowprep = NULL;
 
-   /* evaluate lhs terms and compute f(x*) */
+   /* evaluate lhs terms and compute f(x*), check whether both beta_1 and beta_2 are zero */
    fvalue = 0.0;
+   offsetzero = TRUE;
    for( i = 0; i < nterms - 1; ++i )
    {
       valterms[i] = evalSingleTerm(scip, nlhdlrexprdata, i);
       fvalue += SQR( valterms[i] );
+      if( nlhdlrexprdata->offsets[i] != 0.0 )
+         offsetzero = FALSE;
    }
    fvalue = SQRT( fvalue );
 
@@ -519,7 +531,7 @@ SCIP_RETCODE generateCutSolSOC(
       return SCIP_OKAY;
    }
 
-   /* if f(x*) = 0 then SOC can't be violated and we shouldn't be here */
+   /* if f(x*) = 0 then we are at top of cone, where we cannot generate cut */
    if( SCIPisZero(scip, fvalue) )
    {
       SCIPdebugMsg(scip, "do not generate cut for lhs=%g, cannot linearize at top of cone\n", fvalue);
@@ -533,8 +545,11 @@ SCIP_RETCODE generateCutSolSOC(
    /* cut is f(x*) + \nabla f(x*)^T (x - x*) \leq v_n^T x + \beta_n, i.e.,
     * \nabla f(x*)^T x - v_n^T x \leq \beta_n + \nabla f(x*)^T x* - f(x*)
     * thus cutrhs is \beta_n - f(x*) + \nabla f(x*)^T x*
+    * if offsetzero, then we make sure that cutrhs is exactly \beta_n
     */
-   cutrhs = nlhdlrexprdata->offsets[nterms - 1] - fvalue;
+   cutrhs = nlhdlrexprdata->offsets[nterms - 1];
+   if( !offsetzero )
+      cutrhs -= fvalue;
 
    /* add cut coefficients from lhs terms and compute cut's rhs */
    for( j = 0; j < nterms - 1; ++j )
@@ -548,7 +563,8 @@ SCIP_RETCODE generateCutSolSOC(
 
          SCIP_CALL( SCIPaddRowprepTerm(scip, *rowprep, cutvar, cutcoef) );
 
-         cutrhs += cutcoef * nlhdlrexprdata->varvals[transcoefsidx[i]];
+         if( !offsetzero )
+            cutrhs += cutcoef * nlhdlrexprdata->varvals[transcoefsidx[i]];
       }
    }
 
@@ -586,6 +602,8 @@ SCIP_RETCODE generateCutSolSOC(
  *    \frac{\delta f}{\delta y_i} &= \frac{y_i - v_n^T x -\beta_n}{\sqrt{4(v_i^T x + \beta_i)^2 + (v_n^T x + \beta_n - y_i)^2}} - 1
  *  \f}
  *  and the gradient cut is then \f$f(x^*, y^*) + \nabla f(x^*,y^*)((x,y) - (x^*, y^*)) \leq 0\f$.
+ *
+ *  As in \ref generateCutSolSOC(), the cut constant is zero if \f$\beta_i = \beta_n = 0\f$.
  */
 static
 SCIP_RETCODE generateCutSolDisagg(
@@ -611,6 +629,7 @@ SCIP_RETCODE generateCutSolDisagg(
    SCIP_Real lhsval;
    SCIP_Real constant;
    SCIP_Real denominator;
+   SCIP_Bool offsetzero;
    int ncutvars;
    int nterms;
    int i;
@@ -663,6 +682,9 @@ SCIP_RETCODE generateCutSolDisagg(
    SCIP_CALL( SCIPcreateRowprep(scip, rowprep, SCIP_SIDETYPE_RIGHT, FALSE) );
    SCIP_CALL( SCIPensureRowprepSize(scip, *rowprep, ncutvars) );
 
+   /* check whether offsets (beta) are zero, so we can know cut constant will be zero */
+   offsetzero = nlhdlrexprdata->offsets[disaggidx] == 0.0 && nlhdlrexprdata->offsets[nterms-1] == 0.0;
+
    /* constant will be grad_f(x*,y*)^T  (x*, y*) */
    constant = 0.0;
 
@@ -679,7 +701,8 @@ SCIP_RETCODE generateCutSolDisagg(
 
       SCIP_CALL( SCIPaddRowprepTerm(scip, *rowprep, cutvar, cutcoef) );
 
-      constant += cutcoef * nlhdlrexprdata->varvals[transcoefsidx[i]];
+      if( !offsetzero )
+         constant += cutcoef * nlhdlrexprdata->varvals[transcoefsidx[i]];
    }
 
    /* add terms for v_n */
@@ -693,7 +716,8 @@ SCIP_RETCODE generateCutSolDisagg(
 
       SCIP_CALL( SCIPaddRowprepTerm(scip, *rowprep, cutvar, cutcoef) );
 
-      constant += cutcoef * nlhdlrexprdata->varvals[transcoefsidx[i]];
+      if( !offsetzero )
+         constant += cutcoef * nlhdlrexprdata->varvals[transcoefsidx[i]];
    }
 
    /* add term for disvar: cutcoef is the the partial derivative w.r.t. the disaggregation variable */
@@ -702,10 +726,13 @@ SCIP_RETCODE generateCutSolDisagg(
 
    SCIP_CALL( SCIPaddRowprepTerm(scip, *rowprep, cutvar, cutcoef) );
 
-   constant += cutcoef * nlhdlrexprdata->disvarvals[disaggidx];
+   if( !offsetzero )
+   {
+      constant += cutcoef * nlhdlrexprdata->disvarvals[disaggidx];
 
-   /* add side */
-   SCIProwprepAddSide(*rowprep, constant - fvalue);
+      /* add side */
+      SCIProwprepAddSide(*rowprep, constant - fvalue);
+   }
 
    /* set name */
    (void) SCIPsnprintf(SCIProwprepGetName(*rowprep), SCIP_MAXSTRLEN, "soc_%p_%d_%d", (void*) expr, disaggidx, SCIPgetNLPs(scip));
