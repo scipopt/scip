@@ -2637,7 +2637,7 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaSoc)
        * Now find j such that (v_2)_j - (v_2)_i (v_1)_j / (v_1)_i != 0.
        *
        * If v_2 = 0, then linearize only for first term being -1 or 1 and don't care about value of second term.
-       * We then set j != i arbitrary, x_j = 0, and x_i = 1/(v_1)_i c.
+       * We then set j arbitrary, x_i = 1/(v_1)_i c, other coordinates of x = zero.
        */
       static const SCIP_Real refpoints[3][2] = { {-1.0, 0.0}, {1.0, 1.0}, {1.0, -1.0} };
       SCIP_Real v1i, v1j = 0.0;
@@ -2689,7 +2689,7 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaSoc)
 
       if( v2zero )
       {
-         j = (i+1) % (nlhdlrexprdata->nvars-1);
+         j = 0;
          v1j = 0.0;
          v2j = 0.0;
       }
@@ -2705,19 +2705,25 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaSoc)
          {
             c = refpoints[point][0] - nlhdlrexprdata->offsets[0];
 
-            /* set x_j and x_i */
             if( !v2zero )
             {
+               /* set x_j and x_i */
                d = refpoints[point][1] - nlhdlrexprdata->offsets[1];
                nlhdlrexprdata->varvals[j] = (d - v2i/v1i*c) / (v2j - v2i * v1j / v1i);
                nlhdlrexprdata->varvals[i] = (c - v1j * nlhdlrexprdata->varvals[j]) / v1i;
+
+               SCIPdebugMsg(scip, "<%s>(%d) = %g, <%s>(%d) = %g\n",
+                  SCIPvarGetName(SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->vars[i])), i, nlhdlrexprdata->varvals[i],
+                  SCIPvarGetName(SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->vars[j])), j, nlhdlrexprdata->varvals[j]);
             }
             else
+            {
+               /* set x_i */
                nlhdlrexprdata->varvals[i] = c / v1i;
 
-            SCIPdebugMsg(scip, "<%s>(%d) = %g, <%s>(%d) = %g\n",
-               SCIPvarGetName(SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->vars[i])), i, nlhdlrexprdata->varvals[i],
-               SCIPvarGetName(SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->vars[j])), j, nlhdlrexprdata->varvals[j]);
+               SCIPdebugMsg(scip, "<%s>(%d) = %g\n",
+                  SCIPvarGetName(SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->vars[i])), i, nlhdlrexprdata->varvals[i]);
+            }
 
             assert(SCIPisEQ(scip, evalSingleTerm(scip, nlhdlrexprdata, 0), refpoints[point][0]));
             assert(v2zero || SCIPisEQ(scip, evalSingleTerm(scip, nlhdlrexprdata, 1), refpoints[point][1]));
