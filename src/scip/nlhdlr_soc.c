@@ -763,27 +763,29 @@ SCIP_RETCODE addCut(
 {
    SCIP_ROW* cut;
    SCIP_Real cutefficacy;
+   SCIP_Bool success;
 
    assert(scip != NULL);
    assert(nlhdlrdata != NULL);
    assert(rowprep != NULL);
    assert(result != NULL);
 
-   /* TODO reject if not successful */
-   SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, sol, SCIPinfinity(scip), NULL) );
+   SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, sol, SCIPgetHugeValue(scip), &success) );
 
-   if( SCIPgetRowprepViolation(scip, rowprep, sol, NULL) >= SCIPgetLPFeastol(scip) )
+   if( !success )
    {
-      SCIP_CALL( SCIPgetRowprepRowCons(scip, &cut, rowprep, cons) );
-   }
-   else
-   {
-      SCIPdebugMsg(scip, "rowprep violation %g below mincutviolation %g\n", SCIPgetRowprepViolation(scip, rowprep, sol,
-         NULL), SCIPgetLPFeastol(scip));
-      /* SCIPprintRowprep(scip, rowprep, NULL); */
-
+      SCIPdebugMsg(scip, "rowprep cleanup failed, skip cut\n");
       return SCIP_OKAY;
    }
+
+   if( SCIPgetRowprepViolation(scip, rowprep, sol, NULL) <= SCIPgetLPFeastol(scip) )
+   {
+      SCIPdebugMsg(scip, "rowprep violation %g below LP feastol %g, skip cut\n",
+         SCIPgetRowprepViolation(scip, rowprep, sol, NULL), SCIPgetLPFeastol(scip));
+      return SCIP_OKAY;
+   }
+
+   SCIP_CALL( SCIPgetRowprepRowCons(scip, &cut, rowprep, cons) );
 
    cutefficacy = SCIPgetCutEfficacy(scip, sol, cut);
 
