@@ -520,7 +520,11 @@ SCIP_RETCODE generateCutSolSOC(
    }
 
    /* if f(x*) = 0 then SOC can't be violated and we shouldn't be here */
-   assert(fvalue > 0.0);
+   if( SCIPisZero(scip, fvalue) )
+   {
+      SCIPdebugMsg(scip, "do not generate cut for lhs=%g, cannot linearize at top of cone\n", fvalue);
+      return SCIP_OKAY;
+   }
 
    /* create cut */
    SCIP_CALL( SCIPcreateRowprep(scip, rowprep, SCIP_SIDETYPE_RIGHT, FALSE) );
@@ -646,7 +650,11 @@ SCIP_RETCODE generateCutSolDisagg(
    }
 
    /* if the denominator is 0 -> the constraint can't be violated, and the gradient is infinite */
-   assert(!SCIPisZero(scip, denominator));
+   if( SCIPisZero(scip, denominator) )
+   {
+      SCIPdebugMsg(scip, "skip cut on disaggregation index %d as we are on top of cone (denom=%g)\n", disaggidx, denominator);
+      return SCIP_OKAY;
+   }
 
    /* compute upper bound on the number of variables in cut: vars in rhs + vars in term + disagg var */
    ncutvars = (termbegins[nterms] - termbegins[nterms-1]) + (termbegins[disaggidx + 1] - termbegins[disaggidx]) + 1;
@@ -725,6 +733,7 @@ SCIP_RETCODE addCut(
    assert(rowprep != NULL);
    assert(result != NULL);
 
+   /* TODO reject if not successful */
    SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, sol, SCIPinfinity(scip), NULL) );
 
    if( SCIPgetRowprepViolation(scip, rowprep, sol, NULL) >= SCIPgetLPFeastol(scip) )
