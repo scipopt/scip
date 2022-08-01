@@ -599,7 +599,7 @@ SCIP_DECL_NLHDLRSOLNOTIFY(nlhdlrSolnotifyDefault)
        * since we pass the global bounds as local bounds, too, we can ignore whether resulting estimator is marked as local
        */
       SCIP_CALL( SCIPcallExprEstimate(scip, expr, bounds, bounds, refpoint, rnd == 0,
-         rnd == 0 ? -SCIPinfinity(scip) : SCIPinfinity(scip),
+         rnd == 0 ? SCIPinfinity(scip) : -SCIPinfinity(scip),
          SCIProwprepGetCoefs(rowprep), &constant, &local, &success, branchcand) );
 
       if( success )
