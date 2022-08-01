@@ -525,6 +525,125 @@ TERMINATE:
    return SCIP_OKAY;
 }
 
+/** solution notification callback */
+static
+SCIP_DECL_NLHDLRSOLNOTIFY(nlhdlrSolnotifyDefault)
+{ /*lint --e{715}*/
+   SCIP_Real constant;
+   SCIP_Bool local;
+   SCIP_Bool* branchcand = NULL;
+   int nchildren;
+   int c;
+   SCIP_INTERVAL* bounds;
+   SCIP_Real* refpoint;
+   SCIP_VAR* auxvar;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+
+   SCIPdebug( SCIPinfoMessage(scip, NULL, "solnotify exprhdlr %s for expr ", SCIPexprhdlrGetName(SCIPexprGetHdlr(expr))) );
+   SCIPdebug( SCIPprintExpr(scip, expr, NULL) );
+   SCIPdebug( SCIPinfoMessage(scip, NULL, "\n") );
+
+   nchildren = SCIPexprGetNChildren(expr);
+
+   if( !overestimate && !underestimate )
+      return SCIP_OKAY;
+
+   /* skip on sum, as the estimator doesn't depend on the reference point (expr is linear in auxvars) */
+   if( SCIPisExprSum(scip, expr) )
+      return SCIP_OKAY;
+
+   /* if expr estimate would use bounds, then the function is very likely not convex (w.r.t. global bounds), so skip */
+   if( (overestimate && ((size_t)nlhdlrexprdata & OVERESTIMATEUSESACTIVITY)) &&
+       (underestimate && ((size_t)nlhdlrexprdata & UNDERESTIMATEUSESACTIVITY)) )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &bounds, nchildren) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &refpoint, nchildren) );
+   /* we need to pass a branchcand array to exprhdlr's estimate also if not asked to add branching scores */
+   SCIP_CALL( SCIPallocBufferArray(scip, &branchcand, nchildren) );
+
+   for( c = 0; c < nchildren; ++c )
+   {
+      auxvar = SCIPgetExprAuxVarNonlinear(SCIPexprGetChildren(expr)[c]);
+      assert(auxvar != NULL);
+
+      SCIPintervalSetBounds(&bounds[c],
+         -infty2infty(SCIPinfinity(scip), SCIP_INTERVAL_INFINITY, -SCIPvarGetLbGlobal(auxvar)),
+          infty2infty(SCIPinfinity(scip), SCIP_INTERVAL_INFINITY,  SCIPvarGetUbGlobal(auxvar)));
+
+      refpoint[c] = SCIPgetSolVal(scip, sol, auxvar);
+
+      branchcand[c] = TRUE;
+   }
+
+   for( c = (overestimate ? 0 : 1); c < (underestimate ? 2 : 1); ++c )  /* c == 0: overestimate,  c == 1: underestimate */
+   {
+      SCIP_ROWPREP* rowprep;
+      SCIP_Bool success = FALSE;
+
+      if( c == 0 && ((size_t)nlhdlrexprdata & OVERESTIMATEUSESACTIVITY) )
+         continue;
+      if( c == 1 && ((size_t)nlhdlrexprdata & UNDERESTIMATEUSESACTIVITY) )
+         continue;
+
+      SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, c == 0 ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, FALSE) );
+
+      /* make sure enough space is available in rowprep arrays */
+      SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, nchildren + 1) );
+
+      /* call the estimation callback of the expression handler
+       * since we pass the global bounds as local bounds, too, we can ignore whether resulting estimator is marked as local
+       */
+      SCIP_CALL( SCIPcallExprEstimate(scip, expr, bounds, bounds, refpoint, c == 0,
+         c == 0 ? -SCIPinfinity(scip) : SCIPinfinity(scip),
+         SCIProwprepGetCoefs(rowprep), &constant, &local, &success, branchcand) );
+
+      if( success )
+      {
+         int i;
+
+         /* add variables to rowprep (coefs were already added by SCIPexprhdlrEstimateExpr) */
+         for( i = 0; i < nchildren; ++i )
+         {
+            SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, SCIPgetExprAuxVarNonlinear(SCIPexprGetChildren(expr)[i]),
+               SCIProwprepGetCoefs(rowprep)[i]) );
+         }
+
+         SCIProwprepAddConstant(rowprep, constant);
+
+         SCIPdebug( SCIPinfoMessage(scip, NULL, "  found rowprep ") );
+         SCIPdebug( SCIPprintRowprepSol(scip, rowprep, sol, NULL) );
+
+         (void) SCIPsnprintf(SCIProwprepGetName(rowprep), SCIP_MAXSTRLEN, "%sestimate_%s%p_sol%dnotify",
+            c == 0 ? "over" : "under", SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), (void*)expr, SCIPsolGetIndex(sol));
+
+         /* complete estimator to cut and clean it up */
+         SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, SCIPgetExprAuxVarNonlinear(expr), -1.0) );
+         SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, sol, SCIPgetHugeValue(scip), &success) );
+      }
+
+      /* if cleanup succeeded and rowprep is still global, add to cutpool */
+      if( success && !SCIProwprepIsLocal(rowprep) )
+      {
+         SCIP_ROW* row;
+
+         SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, cons) );
+         SCIP_CALL( SCIPaddPoolCut(scip, row) );
+         SCIP_CALL( SCIPreleaseRow(scip, &row) );
+      }
+
+      SCIPfreeRowprep(scip, &rowprep);
+   }
+
+   SCIPfreeBufferArray(scip, &branchcand);
+   SCIPfreeBufferArray(scip, &refpoint);
+   SCIPfreeBufferArray(scip, &bounds);
+
+   return SCIP_OKAY;
+}
+
 /** interval-evaluate expression w.r.t. activity of children */
 static
 SCIP_DECL_NLHDLRINTEVAL(nlhdlrIntevalDefault)
@@ -614,6 +733,7 @@ SCIP_RETCODE SCIPincludeNlhdlrDefault(
    SCIPnlhdlrSetCopyHdlr(nlhdlr, nlhdlrCopyhdlrDefault);
    SCIPnlhdlrSetFreeExprData(nlhdlr, nlhdlrFreeExprDataDefault);
    SCIPnlhdlrSetSepa(nlhdlr, nlhdlrInitSepaDefault, NULL, nlhdlrEstimateDefault, NULL);
+   SCIPnlhdlrSetSolnotify(nlhdlr, nlhdlrSolnotifyDefault);
    SCIPnlhdlrSetProp(nlhdlr, nlhdlrIntevalDefault, nlhdlrReversepropDefault);
 
    return SCIP_OKAY;
