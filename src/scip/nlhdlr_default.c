@@ -534,6 +534,7 @@ SCIP_DECL_NLHDLRSOLNOTIFY(nlhdlrSolnotifyDefault)
    SCIP_Bool* branchcand = NULL;
    int nchildren;
    int c;
+   int rnd;
    SCIP_INTERVAL* bounds;
    SCIP_Real* refpoint;
    SCIP_VAR* auxvar;
@@ -574,30 +575,31 @@ SCIP_DECL_NLHDLRSOLNOTIFY(nlhdlrSolnotifyDefault)
           infty2infty(SCIPinfinity(scip), SCIP_INTERVAL_INFINITY,  SCIPvarGetUbGlobal(auxvar)));
 
       refpoint[c] = SCIPgetSolVal(scip, sol, auxvar);
-
-      branchcand[c] = TRUE;
    }
 
-   for( c = (overestimate ? 0 : 1); c < (underestimate ? 2 : 1); ++c )  /* c == 0: overestimate,  c == 1: underestimate */
+   for( rnd = (overestimate ? 0 : 1); rnd < (underestimate ? 2 : 1); ++rnd )  /* rnd == 0: overestimate, rnd == 1: underestimate */
    {
       SCIP_ROWPREP* rowprep;
       SCIP_Bool success = FALSE;
 
-      if( c == 0 && ((size_t)nlhdlrexprdata & OVERESTIMATEUSESACTIVITY) )
+      if( rnd == 0 && ((size_t)nlhdlrexprdata & OVERESTIMATEUSESACTIVITY) )
          continue;
-      if( c == 1 && ((size_t)nlhdlrexprdata & UNDERESTIMATEUSESACTIVITY) )
+      if( rnd == 1 && ((size_t)nlhdlrexprdata & UNDERESTIMATEUSESACTIVITY) )
          continue;
 
-      SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, c == 0 ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, FALSE) );
+      SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, rnd == 0 ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, FALSE) );
 
       /* make sure enough space is available in rowprep arrays */
       SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, nchildren + 1) );
 
+      for( c = 0; c < nchildren; ++c )
+         branchcand[c] = TRUE;
+
       /* call the estimation callback of the expression handler
        * since we pass the global bounds as local bounds, too, we can ignore whether resulting estimator is marked as local
        */
-      SCIP_CALL( SCIPcallExprEstimate(scip, expr, bounds, bounds, refpoint, c == 0,
-         c == 0 ? -SCIPinfinity(scip) : SCIPinfinity(scip),
+      SCIP_CALL( SCIPcallExprEstimate(scip, expr, bounds, bounds, refpoint, rnd == 0,
+         rnd == 0 ? -SCIPinfinity(scip) : SCIPinfinity(scip),
          SCIProwprepGetCoefs(rowprep), &constant, &local, &success, branchcand) );
 
       if( success )
@@ -617,7 +619,7 @@ SCIP_DECL_NLHDLRSOLNOTIFY(nlhdlrSolnotifyDefault)
          SCIPdebug( SCIPprintRowprepSol(scip, rowprep, sol, NULL) );
 
          (void) SCIPsnprintf(SCIProwprepGetName(rowprep), SCIP_MAXSTRLEN, "%sestimate_%s%p_sol%dnotify",
-            c == 0 ? "over" : "under", SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), (void*)expr, SCIPsolGetIndex(sol));
+            rnd == 0 ? "over" : "under", SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), (void*)expr, SCIPsolGetIndex(sol));
 
          /* complete estimator to cut and clean it up */
          SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, SCIPgetExprAuxVarNonlinear(expr), -1.0) );
