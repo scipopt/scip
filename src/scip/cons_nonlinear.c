@@ -2021,7 +2021,8 @@ SCIP_RETCODE addTightEstimatorCuts(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONS**           conss,              /**< constraints */
    int                   nconss,             /**< number of constraints */
-   SCIP_SOL*             sol                 /**< reference point where to estimate */
+   SCIP_SOL*             sol,                /**< reference point where to estimate */
+   SCIP_Bool             solisbest           /**< whether solution is best */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -2104,6 +2105,16 @@ SCIP_RETCODE addTightEstimatorCuts(
             nlhdlr = ownerdata->enfos[e]->nlhdlr;
             assert(nlhdlr != NULL);
 
+            if( SCIPnlhdlrHasSolnotify(nlhdlr) )
+            {
+               /* call solnotify callback, if implemented by nlhdlr */
+               SCIP_CALL( SCIPnlhdlrSolnotify(scip, conshdlr, expr == consdata->expr ? conss[c] : NULL, nlhdlr, expr, ownerdata->enfos[e]->nlhdlrexprdata, sol, solisbest,
+                  ownerdata->enfos[e]->nlhdlrparticipation & SCIP_NLHDLR_METHOD_SEPAABOVE,
+                  ownerdata->enfos[e]->nlhdlrparticipation & SCIP_NLHDLR_METHOD_SEPABELOW) );
+
+               continue;
+            }
+
             /* skip nlhdlr that does not implement estimate (so it does enfo) */
             if( !SCIPnlhdlrHasEstimate(nlhdlr) )
                continue;
@@ -2185,7 +2196,7 @@ SCIP_DECL_EVENTEXEC(processNewSolutionEvent)
 
    SCIPdebugMsg(scip, "caught new sol event %" SCIP_EVENTTYPE_FORMAT " from heur <%s>\n", SCIPeventGetType(event), SCIPheurGetName(SCIPsolGetHeur(sol)));
 
-   SCIP_CALL( addTightEstimatorCuts(scip, conshdlr, SCIPconshdlrGetConss(conshdlr), SCIPconshdlrGetNConss(conshdlr), sol) );
+   SCIP_CALL( addTightEstimatorCuts(scip, conshdlr, SCIPconshdlrGetConss(conshdlr), SCIPconshdlrGetNConss(conshdlr), sol, SCIPeventGetType(event) & SCIP_EVENTTYPE_BESTSOLFOUND) );
 
    return SCIP_OKAY;
 }

@@ -702,17 +702,7 @@ SCIP_DECL_NLHDLRSOLNOTIFY(SCIPnlhdlrSolnotify)
    if( nlhdlr->solnotify == NULL )
       return SCIP_OKAY;
 
-#ifndef NDEBUG
-   /* check that auxvalue is correct by reevaluating */
-   {
-      SCIP_Real auxvaluetest;
-      SCIP_CALL( SCIPnlhdlrEvalaux(scip, nlhdlr, expr, nlhdlrexprdata, &auxvaluetest, sol) );
-      /* we should get EXACTLY the same value from calling evalaux with the same solution as before */
-      assert(auxvalue == auxvaluetest);  /*lint !e777*/
-   }
-#endif
-
-   SCIP_CALL( nlhdlr->solnotify(scip, conshdlr, cons, nlhdlr, expr, nlhdlrexprdata, sol, solisbest, auxvalue, overestimate, underestimate) );
+   SCIP_CALL( nlhdlr->solnotify(scip, conshdlr, cons, nlhdlr, expr, nlhdlrexprdata, sol, solisbest, overestimate, underestimate) );
 
    return SCIP_OKAY;
 }

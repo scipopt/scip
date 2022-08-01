@@ -412,7 +412,6 @@ typedef unsigned int SCIP_NLHDLR_METHOD; /**< nlhdlr methods bitflags */
  * \param[in] nlhdlrexprdata     expression data of nonlinear handler
  * \param[in] sol                solution that has been found
  * \param[in] solisbest          whether solution is new best solution (incumbent)
- * \param[in] auxvalue           current value of expression w.r.t. auxiliary variables as obtained from \ref SCIP_DECL_NLHDLREVALAUX "EVALAUX"
  * \param[in] overestimate       whether the expression needs is overestimated by the nlhdlr
  * \param[in] underestimate      whether the expression needs is underestimated by the nlhdlr
  */
@@ -425,7 +424,6 @@ typedef unsigned int SCIP_NLHDLR_METHOD; /**< nlhdlr methods bitflags */
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata,  \
    SCIP_SOL*            sol,             \
    SCIP_Bool            solisbest,       \
-   SCIP_Real            auxvalue,        \
    SCIP_Bool            overestimate,    \
    SCIP_Bool            underestimate)
 
