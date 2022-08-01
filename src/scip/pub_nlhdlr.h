@@ -88,6 +88,13 @@ void SCIPnlhdlrSetSepa(
    SCIP_DECL_NLHDLREXITSEPA((*exitsepa))     /**< separation deinitialization callback (can be NULL) */
 );
 
+/** sets the solution notification callback of a nonlinear handler */
+SCIP_EXPORT
+void SCIPnlhdlrSetSolnotify(
+   SCIP_NLHDLR*          nlhdlr,             /**< nonlinear handler */
+   SCIP_DECL_NLHDLRSOLNOTIFY((*solnotify))   /**< solution notify callback */
+);
+
 /** gives name of nonlinear handler */
 SCIP_EXPORT
 const char* SCIPnlhdlrGetName(
@@ -160,6 +167,12 @@ SCIP_Bool SCIPnlhdlrHasEstimate(
    SCIP_NLHDLR*          nlhdlr              /**< nonlinear handler */
 );
 
+/** returns whether nonlinear handler implements the solution notification callback */
+SCIP_EXPORT
+SCIP_Bool SCIPnlhdlrHasSolnotify(
+   SCIP_NLHDLR*          nlhdlr              /**< nonlinear handler */
+);
+
 /** compares two nonlinear handlers by detection priority
  *
  * if handlers have same detection priority, then compare by name
@@ -176,6 +189,7 @@ SCIP_DECL_SORTPTRCOMP(SCIPnlhdlrComp);
 #define SCIPnlhdlrSetInitExit(nlhdlr, init_, exit_)       do { (nlhdlr)->init = init_; nlhdlr->exit = exit_; } while (FALSE)
 #define SCIPnlhdlrSetProp(nlhdlr, inteval_, reverseprop_) do { (nlhdlr)->inteval = inteval_; nlhdlr->reverseprop = reverseprop_; } while (FALSE)
 #define SCIPnlhdlrSetSepa(nlhdlr, initsepa_, enfo_, estimate_, exitsepa_) do { (nlhdlr)->initsepa = initsepa_; (nlhdlr)->enfo = enfo_; (nlhdlr)->estimate = estimate_; (nlhdlr)->exitsepa = exitsepa_; } while (FALSE);
+#define SCIPnlhdlrSetSolnotify(nlhdlr, solnotify_)        (nlhdlr)->solnotify = solnotify_
 #define SCIPnlhdlrGetName(nlhdlr) (nlhdlr)->name
 #define SCIPnlhdlrGetDesc(nlhdlr) (nlhdlr)->desc
 #define SCIPnlhdlrGetDetectPriority(nlhdlr) (nlhdlr)->detectpriority
@@ -188,6 +202,7 @@ SCIP_DECL_SORTPTRCOMP(SCIPnlhdlrComp);
 #define SCIPnlhdlrHasExitSepa(nlhdlr) ((nlhdlr)->exitsepa != NULL)
 #define SCIPnlhdlrHasEnfo(nlhdlr) ((nlhdlr)->enfo != NULL)
 #define SCIPnlhdlrHasEstimate(nlhdlr) ((nlhdlr)->estimate != NULL)
+#define SCIPnlhdlrHasSolnotify(nlhdlr) ((nlhdlr)->solnotify != NULL)
 #endif
 
 /** @} */

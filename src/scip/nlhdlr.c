@@ -45,6 +45,7 @@
 #undef SCIPnlhdlrSetInitExit
 #undef SCIPnlhdlrSetProp
 #undef SCIPnlhdlrSetSepa
+#undef SCIPnlhdlrSetSolnotify
 #undef SCIPnlhdlrGetName
 #undef SCIPnlhdlrGetDesc
 #undef SCIPnlhdlrGetDetectPriority
@@ -57,6 +58,7 @@
 #undef SCIPnlhdlrHasExitSepa
 #undef SCIPnlhdlrHasEnfo
 #undef SCIPnlhdlrHasEstimate
+#undef SCIPnlhdlrHasSolnotify
 #endif
 
 /** sets the copy handler callback of a nonlinear handler */
@@ -137,6 +139,18 @@ void SCIPnlhdlrSetSepa(
    nlhdlr->exitsepa = exitsepa;
 }
 
+/** sets the solution notification callback of a nonlinear handler */
+void SCIPnlhdlrSetSolnotify(
+   SCIP_NLHDLR*          nlhdlr,             /**< nonlinear handler */
+   SCIP_DECL_NLHDLRSOLNOTIFY((*solnotify))   /**< solution notify callback */
+)
+{
+   assert(nlhdlr != NULL);
+   assert(solnotify != NULL);
+
+   nlhdlr->solnotify = solnotify;
+}
+
 /** gives name of nonlinear handler */
 const char* SCIPnlhdlrGetName(
    SCIP_NLHDLR*          nlhdlr              /**< nonlinear handler */
@@ -202,6 +216,8 @@ SCIP_Bool SCIPnlhdlrHasIntEval(
    SCIP_NLHDLR*          nlhdlr              /**< nonlinear handler */
    )
 {
+   assert(nlhdlr != NULL);
+
    return nlhdlr->inteval != NULL;
 }
 
@@ -210,6 +226,8 @@ SCIP_Bool SCIPnlhdlrHasReverseProp(
    SCIP_NLHDLR*          nlhdlr              /**< nonlinear handler */
    )
 {
+   assert(nlhdlr != NULL);
+
    return nlhdlr->reverseprop != NULL;
 }
 
@@ -218,6 +236,8 @@ SCIP_Bool SCIPnlhdlrHasInitSepa(
    SCIP_NLHDLR*          nlhdlr              /**< nonlinear handler */
    )
 {
+   assert(nlhdlr != NULL);
+
    return nlhdlr->initsepa != NULL;
 }
 
@@ -226,6 +246,8 @@ SCIP_Bool SCIPnlhdlrHasExitSepa(
    SCIP_NLHDLR*          nlhdlr              /**< nonlinear handler */
    )
 {
+   assert(nlhdlr != NULL);
+
    return nlhdlr->exitsepa != NULL;
 }
 
@@ -234,6 +256,8 @@ SCIP_Bool SCIPnlhdlrHasEnfo(
    SCIP_NLHDLR*          nlhdlr              /**< nonlinear handler */
    )
 {
+   assert(nlhdlr != NULL);
+
    return nlhdlr->enfo != NULL;
 }
 
@@ -242,7 +266,19 @@ SCIP_Bool SCIPnlhdlrHasEstimate(
    SCIP_NLHDLR*          nlhdlr              /**< nonlinear handler */
    )
 {
+   assert(nlhdlr != NULL);
+
    return nlhdlr->estimate != NULL;
+}
+
+/** returns whether nonlinear handler implements the solution notification callback */
+SCIP_Bool SCIPnlhdlrHasSolnotify(
+   SCIP_NLHDLR*          nlhdlr              /**< nonlinear handler */
+)
+{
+   assert(nlhdlr != NULL);
+
+   return nlhdlr->solnotify != NULL;
 }
 
 /** compares two nonlinear handlers by detection priority
@@ -653,6 +689,30 @@ SCIP_DECL_NLHDLRESTIMATE(SCIPnlhdlrEstimate)
 
    /* update statistics */
    ++nlhdlr->nenfocalls;
+
+   return SCIP_OKAY;
+}
+
+/** call the solution notification callback of a nonlinear handler */
+SCIP_DECL_NLHDLRSOLNOTIFY(SCIPnlhdlrSolnotify)
+{
+   assert(scip != NULL);
+   assert(nlhdlr != NULL);
+
+   if( nlhdlr->solnotify == NULL )
+      return SCIP_OKAY;
+
+#ifndef NDEBUG
+   /* check that auxvalue is correct by reevaluating */
+   {
+      SCIP_Real auxvaluetest;
+      SCIP_CALL( SCIPnlhdlrEvalaux(scip, nlhdlr, expr, nlhdlrexprdata, &auxvaluetest, sol) );
+      /* we should get EXACTLY the same value from calling evalaux with the same solution as before */
+      assert(auxvalue == auxvaluetest);  /*lint !e777*/
+   }
+#endif
+
+   SCIP_CALL( nlhdlr->solnotify(scip, conshdlr, cons, nlhdlr, expr, nlhdlrexprdata, sol, solisbest, auxvalue, overestimate, underestimate) );
 
    return SCIP_OKAY;
 }

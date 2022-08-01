@@ -399,6 +399,36 @@ typedef unsigned int SCIP_NLHDLR_METHOD; /**< nlhdlr methods bitflags */
    SCIP_Bool*           success,         \
    SCIP_Bool*           addedbranchscores)
 
+/** nonlinear handler solution notify callback
+ *
+ * The callback is called when a new feasible solution has been found.
+ * The nonlinear handler may add tight estimates on its nonlinear function to the cut pool of SCIP.
+ *
+ * \param[in] scip               SCIP main data structure
+ * \param[in] conshdlr           constraint handler
+ * \param[in] cons               nonlinear constraint which has expr as root, or NULL
+ * \param[in] nlhdlr             nonlinear handler
+ * \param[in] expr               expression
+ * \param[in] nlhdlrexprdata     expression data of nonlinear handler
+ * \param[in] sol                solution that has been found
+ * \param[in] solisbest          whether solution is new best solution (incumbent)
+ * \param[in] auxvalue           current value of expression w.r.t. auxiliary variables as obtained from \ref SCIP_DECL_NLHDLREVALAUX "EVALAUX"
+ * \param[in] overestimate       whether the expression needs is overestimated by the nlhdlr
+ * \param[in] underestimate      whether the expression needs is underestimated by the nlhdlr
+ */
+#define SCIP_DECL_NLHDLRSOLNOTIFY(x) SCIP_RETCODE x (\
+   SCIP*                scip,            \
+   SCIP_CONSHDLR*       conshdlr,        \
+   SCIP_CONS*           cons,            \
+   SCIP_NLHDLR*         nlhdlr,          \
+   SCIP_EXPR*           expr,            \
+   SCIP_NLHDLREXPRDATA* nlhdlrexprdata,  \
+   SCIP_SOL*            sol,             \
+   SCIP_Bool            solisbest,       \
+   SCIP_Real            auxvalue,        \
+   SCIP_Bool            overestimate,    \
+   SCIP_Bool            underestimate)
+
 typedef struct SCIP_Nlhdlr         SCIP_NLHDLR;          /**< nonlinear handler */
 typedef struct SCIP_NlhdlrData     SCIP_NLHDLRDATA;      /**< nonlinear handler data */
 typedef struct SCIP_NlhdlrExprData SCIP_NLHDLREXPRDATA;  /**< nonlinear handler data for a specific expression */

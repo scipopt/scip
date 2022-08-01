@@ -55,6 +55,7 @@ struct SCIP_Nlhdlr
    SCIP_DECL_NLHDLREXITSEPA((*exitsepa));          /**< separation deinitialization callback (can be NULL) */
    SCIP_DECL_NLHDLRINTEVAL((*inteval));            /**< interval evaluation callback (can be NULL) */
    SCIP_DECL_NLHDLRREVERSEPROP((*reverseprop));    /**< reverse propagation callback (can be NULL) */
+   SCIP_DECL_NLHDLRSOLNOTIFY((*solnotify));        /**< solution notification callback (can be NULL) */
 
    /* statistics */
    SCIP_Longint          nenfocalls;         /**< number of times, the enforcement or estimation callback was called */
