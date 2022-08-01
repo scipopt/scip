@@ -817,6 +817,43 @@ SCIP_RETCODE addCut(
    return SCIP_OKAY;
 }
 
+/** given a rowprep, does a number of cleanup and checks and, if successful, generate a cut to be added to the cutpool */
+static
+SCIP_RETCODE addCutPool(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLHDLRDATA*      nlhdlrdata,         /**< nonlinear handler data */
+   SCIP_ROWPREP*         rowprep,            /**< rowprep from which to generate row and add as cut */
+   SCIP_SOL*             sol,                /**< solution to be separated */
+   SCIP_CONS*            cons                /**< constraint for which cut is generated, or NULL */
+   )
+{
+   SCIP_ROW* cut;
+   SCIP_Bool success;
+
+   assert(scip != NULL);
+   assert(nlhdlrdata != NULL);
+   assert(rowprep != NULL);
+
+   assert(!SCIProwprepIsLocal(rowprep));
+
+   SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, sol, SCIPgetHugeValue(scip), &success) );
+   /* if failed or cut is only locally valid now, then skip */
+   if( !success || SCIProwprepIsLocal(rowprep) )
+      return SCIP_OKAY;
+
+   /* if row after cleanup is just a boundchange, then skip */
+   if( SCIProwprepGetNVars(rowprep) <= 1 )
+      return SCIP_OKAY;
+
+   /* generate row and add to cutpool */
+   SCIP_CALL( SCIPgetRowprepRowCons(scip, &cut, rowprep, cons) );
+
+   SCIP_CALL( SCIPaddPoolCut(scip, cut) );
+
+   SCIP_CALL( SCIPreleaseRow(scip, &cut) );
+
+   return SCIP_OKAY;
+}
 
 /** checks if an expression is quadratic and collects all occurring expressions
  *
@@ -3037,6 +3074,62 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoSoc)
    return SCIP_OKAY;
 }
 
+static
+SCIP_DECL_NLHDLRSOLNOTIFY(nlhdlrSolnotifySoc)
+{ /*lint --e{715}*/
+   SCIP_NLHDLRDATA* nlhdlrdata;
+   SCIP_Real rhsval;
+   int k;
+
+   assert(sol != NULL);
+   assert(nlhdlrexprdata != NULL);
+   assert(nlhdlrexprdata->nterms < 4 || nlhdlrexprdata->disrow != NULL);
+   assert(nlhdlrexprdata->nterms > 1);
+
+   nlhdlrdata = SCIPnlhdlrGetData(nlhdlr);
+   assert(nlhdlrdata != NULL);
+
+   /* update varvals */
+   updateVarVals(scip, nlhdlrexprdata, sol, TRUE);
+
+   rhsval = evalSingleTerm(scip, nlhdlrexprdata, nlhdlrexprdata->nterms - 1);
+
+   /* if there are three or two terms just compute gradient cut */
+   if( nlhdlrexprdata->nterms < 4 )
+   {
+      SCIP_ROWPREP* rowprep;
+
+      /* compute gradient cut */
+      SCIP_CALL( generateCutSolSOC(scip, &rowprep, expr, cons, nlhdlrexprdata, -SCIPinfinity(scip), rhsval) );
+
+      if( rowprep != NULL )
+      {
+         SCIP_CALL( addCutPool(scip, nlhdlrdata, rowprep, sol, cons) );
+
+         SCIPfreeRowprep(scip, &rowprep);
+      }
+
+      return SCIP_OKAY;
+   }
+
+   for( k = 0; k < nlhdlrexprdata->nterms - 1; ++k )
+   {
+      SCIP_ROWPREP* rowprep;
+
+      /* compute gradient cut */
+      SCIP_CALL( generateCutSolDisagg(scip, &rowprep, expr, cons, nlhdlrexprdata, k, -SCIPinfinity(scip), rhsval) );
+
+      if( rowprep != NULL )
+      {
+         SCIP_CALL( addCutPool(scip, nlhdlrdata, rowprep, sol, cons) );
+
+         SCIPfreeRowprep(scip, &rowprep);
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /*
  * nonlinear handler specific interface methods
  */
@@ -3062,6 +3155,7 @@ SCIP_RETCODE SCIPincludeNlhdlrSoc(
    SCIPnlhdlrSetFreeExprData(nlhdlr, nlhdlrFreeExprDataSoc);
    SCIPnlhdlrSetInitExit(nlhdlr, nlhdlrInitSoc, nlhdlrExitSoc);
    SCIPnlhdlrSetSepa(nlhdlr, nlhdlrInitSepaSoc, nlhdlrEnfoSoc, NULL, nlhdlrExitSepaSoc);
+   SCIPnlhdlrSetSolnotify(nlhdlr, nlhdlrSolnotifySoc);
 
    /* add soc nlhdlr parameters */
    /* TODO should we get rid of this and use separating/mineffiacy(root) instead, which is 1e-4? */
