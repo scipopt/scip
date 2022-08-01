@@ -9587,18 +9587,6 @@ SCIP_DECL_CONSINITSOL(consInitsolNonlinear)
 
    SCIP_CALL( initSolve(scip, conshdlr, conss, nconss) );
 
-   /* catch new solution event */
-   if( nconss != 0 && conshdlrdata->linearizeheursol != 'o' )
-   {
-      SCIP_EVENTHDLR* eventhdlr;
-
-      eventhdlr = SCIPfindEventhdlr(scip, CONSHDLR_NAME "_newsolution");
-      assert(eventhdlr != NULL);
-
-      SCIP_CALL( SCIPcatchEvent(scip, conshdlrdata->linearizeheursol == 'i' ? SCIP_EVENTTYPE_BESTSOLFOUND : SCIP_EVENTTYPE_SOLFOUND,
-         eventhdlr, (SCIP_EVENTDATA*)conshdlr, &conshdlrdata->newsoleventfilterpos) );
-   }
-
    /* check that branching/lpgainnormalize is set to a known value if pseudo-costs are used in branching */
    if( conshdlrdata->branchpscostweight > 0.0 )
    {
@@ -9710,12 +9698,29 @@ SCIP_DECL_CONSTRANS(consTransNonlinear)
 static
 SCIP_DECL_CONSINITLP(consInitlpNonlinear)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
    /* create auxiliary variables and call separation initialization callbacks of the expression handlers
     * TODO if we ever want to allow constraints that are separated but not initial, then we need to call initSepa also
     *   during SEPALP, ENFOLP, etc, whenever a constraint may be separated the first time
     *   for now, there is an assert in detectNlhdlrs to require initial if separated
     */
    SCIP_CALL( initSepa(scip, conshdlr, conss, nconss, infeasible) );
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* catch new solution event */
+   if( conshdlrdata->linearizeheursol != 'o' && conshdlrdata->newsoleventfilterpos == -1 )
+   {
+      SCIP_EVENTHDLR* eventhdlr;
+
+      eventhdlr = SCIPfindEventhdlr(scip, CONSHDLR_NAME "_newsolution");
+      assert(eventhdlr != NULL);
+
+      SCIP_CALL( SCIPcatchEvent(scip, conshdlrdata->linearizeheursol == 'i' ? SCIP_EVENTTYPE_BESTSOLFOUND : SCIP_EVENTTYPE_SOLFOUND,
+         eventhdlr, (SCIP_EVENTDATA*)conshdlr, &conshdlrdata->newsoleventfilterpos) );
+   }
 
    /* collect all bilinear terms for which an auxvar is present
     * TODO this will only do something for the first call of initlp after initsol, because it cannot handle
