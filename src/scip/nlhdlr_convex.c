@@ -2012,6 +2012,71 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateConvex)
    return SCIP_OKAY;
 }
 
+/** solution notification callback */
+static
+SCIP_DECL_NLHDLRSOLNOTIFY(nlhdlrSolnotifyConvex)
+{ /*lint --e{715}*/
+   SCIP_ROWPREP* rowprep;
+   SCIP_Bool success = FALSE;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(nlhdlrexprdata != NULL);
+   assert(nlhdlrexprdata->nlexpr != NULL);
+   assert(SCIPhashmapGetImage(nlhdlrexprdata->nlexpr2origexpr, (void*)nlhdlrexprdata->nlexpr) == expr);
+   assert(sol != NULL);
+
+   /* we must be called only for the side that we indicated to participate in during DETECT */
+   assert(SCIPexprGetCurvature(nlhdlrexprdata->nlexpr) == SCIP_EXPRCURV_CONVEX
+          || SCIPexprGetCurvature(nlhdlrexprdata->nlexpr) == SCIP_EXPRCURV_CONCAVE);
+   assert(!overestimate || SCIPexprGetCurvature(nlhdlrexprdata->nlexpr) == SCIP_EXPRCURV_CONCAVE);
+   assert(!underestimate || SCIPexprGetCurvature(nlhdlrexprdata->nlexpr) == SCIP_EXPRCURV_CONVEX);
+   assert(underestimate == !overestimate);  /* should be exactly one of under- and overestimate */
+
+   /* evaluate nlexpr in solution */
+   SCIP_CALL( SCIPevalExpr(scip, nlhdlrexprdata->nlexpr, sol, 0L) );
+
+   SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, TRUE) );
+
+   if( nlhdlrexprdata->nleafs == 1 && SCIPexprIsIntegral(nlhdlrexprdata->leafexprs[0]) )
+   {
+      SCIP_CALL( estimateConvexSecant(scip, nlhdlr, nlhdlrexprdata, sol, rowprep, &success) );
+
+      (void) SCIPsnprintf(SCIProwprepGetName(rowprep), SCIP_MAXSTRLEN, "%sestimate_convexsecant%p_sol%dnotify",
+         overestimate ? "over" : "under", (void*)expr, SCIPsolGetIndex(sol));
+   }
+
+   /* if secant method was not used or failed, then try with gradient */
+   if( !success )
+   {
+      SCIP_CALL( estimateGradient(scip, nlhdlrexprdata, sol, rowprep, &success) );
+
+      (void) SCIPsnprintf(SCIProwprepGetName(rowprep), SCIP_MAXSTRLEN, "%sestimate_convexgradient%p_sol%dnotify",
+         overestimate ? "over" : "under", (void*)expr, SCIPsolGetIndex(sol));
+   }
+
+   if( success )
+   {
+      /* complete estimator to cut and clean it up */
+      SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, SCIPgetExprAuxVarNonlinear(expr), -1.0) );
+      SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, sol, SCIPgetHugeValue(scip), &success) );
+   }
+
+   /* if cleanup succeeded and rowprep is still global, add to cutpool */
+   if( success && !SCIProwprepIsLocal(rowprep) )
+   {
+      SCIP_ROW* row;
+
+      SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, cons) );
+      SCIP_CALL( SCIPaddPoolCut(scip, row) );
+      SCIP_CALL( SCIPreleaseRow(scip, &row) );
+   }
+
+   SCIPfreeRowprep(scip, &rowprep);
+
+   return SCIP_OKAY;
+}
+
 /** include nlhdlr in another scip instance */
 static
 SCIP_DECL_NLHDLRCOPYHDLR(nlhdlrCopyhdlrConvex)
@@ -2071,6 +2136,7 @@ SCIP_RETCODE SCIPincludeNlhdlrConvex(
    SCIPnlhdlrSetCopyHdlr(nlhdlr, nlhdlrCopyhdlrConvex);
    SCIPnlhdlrSetFreeExprData(nlhdlr, nlhdlrfreeExprDataConvexConcave);
    SCIPnlhdlrSetSepa(nlhdlr, nlhdlrInitSepaConvex, NULL, nlhdlrEstimateConvex, NULL);
+   SCIPnlhdlrSetSolnotify(nlhdlr, nlhdlrSolnotifyConvex);
    SCIPnlhdlrSetInitExit(nlhdlr, NULL, nlhdlrExitConvex);
 
    return SCIP_OKAY;
