@@ -33,6 +33,8 @@ Interface changes
 ### New and changed callbacks
 
 - Added solution notification callback for nonlinear handlers.
+  The nonlinear handler may use this callback to add tight cuts that use the given solution as reference point to the cutpool.
+  The callback is called if option constraints/nonlinear/linearizeheursol is enabled.
 
 ### Deleted and changed API methods
 
