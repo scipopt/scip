@@ -1482,8 +1482,6 @@ SCIP_RETCODE estimateGradient(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLHDLREXPRDATA*  nlhdlrexprdata,     /**< nonlinear handler expression data */
    SCIP_SOL*             sol,                /**< solution to use */
-   SCIP_Real             auxvalue,           /**< value of nlexpr in sol - we may not be able to take this value
-                                                  from nlexpr if it was evaluated at a different sol recently */
    SCIP_ROWPREP*         rowprep,            /**< rowprep where to store estimator */
    SCIP_Bool*            success             /**< buffer to store whether successful */
    )
@@ -1507,14 +1505,7 @@ SCIP_RETCODE estimateGradient(
 
    *success = FALSE;
 
-   /* evaluation error -> skip */
-   if( auxvalue == SCIP_INVALID )
-   {
-      SCIPdebugMsg(scip, "evaluation error / too large value (%g) for %p\n", auxvalue, (void*)nlexpr);
-      return SCIP_OKAY;
-   }
-
-   /* compute gradient (TODO: this also re-evaluates (soltag=0), which shouldn't be necessary unless we tried ConvexSecant before) */
+   /* compute gradient (TODO: this also re-evaluates (soltag=0), which shouldn't be necessary unless we tried ConvexSecant before or are called from Solnotify callback) */
    SCIP_CALL( SCIPevalExprGradient(scip, nlexpr, sol, 0L) );
 
    /* gradient evaluation error -> skip */
@@ -1911,7 +1902,7 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaConvex)
       }
 
       SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, TRUE) );
-      SCIP_CALL( estimateGradient(scip, nlhdlrexprdata, sol, 0.0, rowprep, &success) );
+      SCIP_CALL( estimateGradient(scip, nlhdlrexprdata, sol, rowprep, &success) );
       if( !success )
       {
          SCIPdebugMsg(scip, "failed to linearize for k = %d\n", k);
@@ -1997,10 +1988,10 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateConvex)
          sol != NULL ? (SCIP_Longint) SCIPsolGetIndex(sol) : SCIPgetNLPs(scip));
    }
 
-   /* if secant method was not used or failed, then try with gradient */
-   if( !*success )
+   /* if secant method was not used or failed, then try with gradient (unless we had an evaluation error in sol before) */
+   if( !*success && auxvalue != SCIP_INVALID )
    {
-      SCIP_CALL( estimateGradient(scip, nlhdlrexprdata, sol, auxvalue, rowprep, success) );
+      SCIP_CALL( estimateGradient(scip, nlhdlrexprdata, sol, rowprep, success) );
 
       (void) SCIPsnprintf(SCIProwprepGetName(rowprep), SCIP_MAXSTRLEN, "%sestimate_convexgradient%p_%s%" SCIP_LONGINT_FORMAT,
          overestimate ? "over" : "under",
