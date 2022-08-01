@@ -1989,7 +1989,7 @@ SCIP_RETCODE notifyNlhdlrNewsol(
          for( e = 0; e < ownerdata->nenfos; ++e )
          {
             /* call solnotify callback, if implemented by nlhdlr */
-            SCIP_CALL( SCIPnlhdlrSolnotify(scip, conshdlr, expr == consdata->expr ? conss[c] : NULL,
+            SCIP_CALL( SCIPnlhdlrSolnotify(scip, conshdlr, conss[c],
                ownerdata->enfos[e]->nlhdlr, expr, ownerdata->enfos[e]->nlhdlrexprdata, sol, solisbest,
                ownerdata->enfos[e]->nlhdlrparticipation & SCIP_NLHDLR_METHOD_SEPAABOVE,
                ownerdata->enfos[e]->nlhdlrparticipation & SCIP_NLHDLR_METHOD_SEPABELOW) );

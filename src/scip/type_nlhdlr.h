@@ -406,7 +406,7 @@ typedef unsigned int SCIP_NLHDLR_METHOD; /**< nlhdlr methods bitflags */
  *
  * \param[in] scip               SCIP main data structure
  * \param[in] conshdlr           constraint handler
- * \param[in] cons               nonlinear constraint which has expr as root, or NULL
+ * \param[in] cons               a nonlinear constraint which includes expression
  * \param[in] nlhdlr             nonlinear handler
  * \param[in] expr               expression
  * \param[in] nlhdlrexprdata     expression data of nonlinear handler
