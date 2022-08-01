@@ -2036,7 +2036,7 @@ SCIP_DECL_EVENTEXEC(processNewSolutionEvent)
 
    SCIPdebugMsg(scip, "caught new sol event %" SCIP_EVENTTYPE_FORMAT " from heur <%s>\n", SCIPeventGetType(event), SCIPheurGetName(SCIPsolGetHeur(sol)));
 
-   SCIP_CALL( notifyNlhdlrNewsol(scip, conshdlr, SCIPconshdlrGetConss(conshdlr), SCIPconshdlrGetNConss(conshdlr), sol, SCIPeventGetType(event) & SCIP_EVENTTYPE_BESTSOLFOUND) );
+   SCIP_CALL( notifyNlhdlrNewsol(scip, conshdlr, SCIPconshdlrGetConss(conshdlr), SCIPconshdlrGetNConss(conshdlr), sol, (SCIPeventGetType(event) & SCIP_EVENTTYPE_BESTSOLFOUND) != 0) );
 
    return SCIP_OKAY;
 }
