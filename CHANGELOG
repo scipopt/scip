@@ -36,6 +36,7 @@ Interface changes
 - added ncalls, nrootcalls, nrootcutsselected, nrootcutsforced, nrootcutsfiltered, nlocalcutsselected, nlocalcutsforced, nlocalcutsfiltered to SCIP_Cutsel
 - added ncutsadded, ncutsaddedviapool, ncutsaddeddirect, ncutsappliedviapool, ncutsapplieddirect, nrootcalls to SCIP_Sepa
 - added ncutsadded, ncutsaddedviapool, ncutsaddeddirect to SCIP_Sepastore
+- fixed statistics of relaxators w.r.t. number of times conss/cuts were added
 
 Deleted files
 -------------

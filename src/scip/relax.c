@@ -32,6 +32,7 @@
 #include "scip/clock.h"
 #include "scip/paramset.h"
 #include "scip/scip.h"
+#include "scip/scip_cut.h"
 #include "scip/sol.h"
 #include "scip/var.h"
 #include "scip/relax.h"
@@ -369,8 +370,13 @@ SCIP_RETCODE SCIPrelaxExec(
    if( (depth == 0 && relax->freq == 0) || (relax->freq > 0 && depth % relax->freq == 0) )
    {
       SCIP_Real starttime;
+      int oldnactiveconss;
+      int oldncuts;
 
       SCIPsetDebugMsg(set, "executing relaxation handler <%s>\n", relax->name);
+
+      oldnactiveconss = stat->nactiveconss;
+      oldncuts = SCIPgetNCuts(set->scip);
 
       /* start timing */
       starttime = SCIPclockGetTime(relax->relaxclock);
@@ -423,12 +429,13 @@ SCIP_RETCODE SCIPrelaxExec(
                relax->imprtime += SCIPclockGetTime(relax->relaxclock) - starttime;
             }
 
-            if( *result == SCIP_CONSADDED )
+            if ( stat->nactiveconss > oldnactiveconss )
                ++relax->naddedconss;
-            else if( *result == SCIP_REDUCEDDOM )
-               ++relax->nreduceddom;
-            else if( *result == SCIP_SEPARATED )
+            if ( SCIPgetNCuts(set->scip) > oldncuts )
                ++relax->nseparated;
+
+            if( *result == SCIP_REDUCEDDOM )
+               ++relax->nreduceddom;
          }
       }
    }
