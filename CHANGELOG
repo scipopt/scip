@@ -23,6 +23,7 @@ Performance improvements
   an expensive explicit conflict graph construction.
 - Added initialization of LP relaxation for SOC constraints.
 - Avoided some numerical issues when separating SOC constraints.
+- If differentation of convex expression fails in convex nlhdlr, then a perturbed point is tried.
 
 Examples and applications
 -------------------------
@@ -80,6 +81,7 @@ Interface changes
 - expr/pow/expandmaxexponent to specify limit on exponent when to expand power of sum
 - expr/pow/distribfracexponent to enable expanding power of products with fractional exponents
 - expr/product/expandalways to enable expanding any product with sums as factor (that is, also when more than two factors)
+- nlhdlr/convex/maxperturb to specify maximal perturbation of non-differential reference points
 
 ### Data structures
 
