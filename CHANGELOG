@@ -4,6 +4,12 @@
 *************************
 Features
 --------
+
+- turned off output of statistics for the following information by default:
+  diving heuristics, ALNS neighborhood information and tree size estimation statistics;
+  they can be turned on using the following parameters:
+  misc/showdivingstat (diving heuristics), heuristics/alns/shownbstat (ALNS), estimation/showstats (tree size estimation)
+
 Performance improvements
 ------------------------
 Examples and applications
