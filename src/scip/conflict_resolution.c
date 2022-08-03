@@ -440,16 +440,16 @@ void conflictCleanUpbdchgqueue(
 
    nelems = SCIPpqueueNElems(conflict->resforcedbdchgqueue);
    deleted = 0;
-   /* @todo this is inefficient and incompatible with lint since the bound value in the for loop changes */
+   /* @todo this is inefficient */
    if( SCIPpqueueNElems(conflict->resforcedbdchgqueue) > 0 )
    {
-      for( i = 0; i < nelems - deleted; ++i )
+      for( i = 0; i < nelems; ++i )
       {
          int j;
          SCIP_Bool idxinrow;
          SCIP_Real val;
          int idxvar;
-         bdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueElems(conflict->resforcedbdchgqueue)[i]);
+         bdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueElems(conflict->resforcedbdchgqueue)[i - deleted]);
          var = bdchginfo->var;
          idxvar = SCIPvarGetProbindex(var);
          idxinrow = FALSE;
@@ -478,25 +478,25 @@ void conflictCleanUpbdchgqueue(
                      : "none")),
                SCIPbdchginfoGetChgtype(bdchginfo) != SCIP_BOUNDCHGTYPE_BRANCHING ? SCIPbdchginfoGetInferInfo(bdchginfo) : -1);
 
-               SCIPpqueueDelPos(conflict->resforcedbdchgqueue, i);
+               SCIPpqueueDelPos(conflict->resforcedbdchgqueue, i - deleted);
                deleted++;
-               i--;
+               if (i - deleted >= nelems) break;
          }
       }
 
    }
    nelems = SCIPpqueueNElems(conflict->resbdchgqueue);
    deleted = 0;
-   /* @todo this is inefficient and incompatible with lint since the bound value in the for loop changes */
+   /* @todo this is inefficient */
    if( nelems > 0 )
    {
-      for( i = 0; i < nelems - deleted; ++i )
+      for( i = 0; i < nelems; ++i )
       {
          int j;
          SCIP_Bool idxinrow;
          SCIP_Real val;
          int idxvar;
-         bdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueElems(conflict->resbdchgqueue)[i]);
+         bdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueElems(conflict->resbdchgqueue)[i - deleted]);
          var = bdchginfo->var;
          idxvar = SCIPvarGetProbindex(var);
          idxinrow = FALSE;
@@ -525,9 +525,9 @@ void conflictCleanUpbdchgqueue(
                      : "none")),
                SCIPbdchginfoGetChgtype(bdchginfo) != SCIP_BOUNDCHGTYPE_BRANCHING ? SCIPbdchginfoGetInferInfo(bdchginfo) : -1);
 
-               SCIPpqueueDelPos(conflict->resbdchgqueue, i);
+               SCIPpqueueDelPos(conflict->resbdchgqueue, i - deleted);
                deleted++;
-               i--;
+               if (i - deleted >= nelems) break;
          }
       }
    }
@@ -834,6 +834,88 @@ SCIP_Real getSlack(
    return QUAD_TO_DBL(slack);
 }
 
+/** weaken a row by removing all variables that do not affect the slack */
+static
+SCIP_RETCODE weakenResolutionSet(
+   SCIP_RESOLUTIONSET*   resolutionset,      /**< resolution set */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_BDCHGIDX*        currbdchgidx,       /**< index of current bound change */
+   int                   residx,             /**< index of variable to resolve */
+   SCIP_Bool             isreason            /**< distinguish between reason and conflict constraint */
+   )
+{
+   SCIP_VAR** vars;
+   int i;
+   SCIP_Bool applytightening;
+   int nchgcoefs;
+   int nweakenedvars;
+
+   assert(resolutionset != NULL);
+
+   vars = SCIPprobGetVars(prob);
+   i = 0;
+   applytightening = FALSE;
+
+   while ( i < resolutionsetGetNNzs(resolutionset) )
+   {
+      SCIP_Bool varwasweakened;
+      SCIP_VAR* vartoweaken;
+
+      varwasweakened = FALSE;
+      vartoweaken = vars[resolutionset->inds[i]];
+
+      if ( resolutionset->inds[i] != residx )
+      {
+         if( resolutionset->vals[i] > 0.0 )
+         {
+            int nubchgs;
+            nubchgs = SCIPvarGetNBdchgInfosUb(vars[resolutionset->inds[i]]);
+            if ( nubchgs == 0 )
+            {
+               weakenVarReason(resolutionset, set, vartoweaken, i);
+               varwasweakened = TRUE;
+               applytightening = TRUE;
+               nweakenedvars++;
+            }
+         }
+         else
+         {
+            int nlbchgs;
+            nlbchgs = SCIPvarGetNBdchgInfosLb(vars[resolutionset->inds[i]]);
+
+            assert( resolutionset->vals[i] < 0.0);
+            if ( nlbchgs == 0 )
+            {
+               weakenVarReason(resolutionset, set, vartoweaken, i);
+               varwasweakened = TRUE;
+               applytightening = TRUE;
+               nweakenedvars++;
+            }
+         }
+      }
+      if (varwasweakened)
+      {
+         if ( isreason && !set->conf_weakenreasonall && (set->conf_batchcoeftight > 0) && (nweakenedvars % set->conf_batchcoeftight == 0) )
+         {
+            tightenCoefLhs(set->scip, prob, FALSE, resolutionset->vals, &resolutionset->lhs, resolutionset->inds, &resolutionset->nnz, &nchgcoefs);
+            applytightening = FALSE;
+         }
+      }
+      else
+         i++;
+   }
+   if (applytightening)
+   {
+      tightenCoefLhs(set->scip, prob, FALSE, resolutionset->vals, &resolutionset->lhs, resolutionset->inds, &resolutionset->nnz, &nchgcoefs);
+   }
+   resolutionset->slack = getSlack(set->scip, prob, resolutionset, currbdchgidx);
+   /* sort for linear time resolution*/
+   SCIPsortIntReal(resolutionset->inds, resolutionset->vals, resolutionsetGetNNzs(resolutionset));
+
+   return SCIP_OKAY;
+}
+
 /** for every variable in the row, except the inferred variable, add bound changes */
 static
 SCIP_RETCODE addConflictBounds(
@@ -1113,9 +1195,7 @@ SCIP_RETCODE resolveWithReason(
    BMS_BLKMEM*           blkmem,                /**< block memory */
    int                   residx,                /**< index of variable to resolve */
    SCIP_Bool             wasresolved,           /**< resolution has been applied */
-   SCIP_Bool*            success,               /**< apply resolution */
-   SCIP_Real             conflictslack,         /**< slack of conflictresolutionset */
-   SCIP_Real             reasonslack            /**< slack of reasonresolutionset */
+   SCIP_Bool*            success               /**< apply resolution */
    )
 {
    int i;
@@ -1161,12 +1241,14 @@ SCIP_RETCODE resolveWithReason(
       if ( SCIPsetIsZero(set, coefconf) )
       {
          *success = FALSE;
+         SCIPsetDebugMsg(set, "Coefficient of resolvent in conflict is zero");
          return SCIP_OKAY;
       }
       assert((idxinconflict && idxinreason));
       if (SCIPsetIsGE(set, coefconf * coefreas, 0.0))
       {
          *success = FALSE;
+         SCIPsetDebugMsg(set, "Coefficient of resolvent has the same sign in both conflict and reason");
          return SCIP_OKAY;
       }
    }
@@ -1180,7 +1262,7 @@ SCIP_RETCODE resolveWithReason(
    /** stop if the linear combination of slacks is positive. @todo we do not have to stop;
     *  because of sub-additive slacks the resolved constraint may still have negative slack
     */
-   if (SCIPsetIsGE(set, conflictslack * fabs(coefconf) + reasonslack * fabs(coefreas), 0.0))
+   if (SCIPsetIsGE(set, conflictresolutionset->slack + reasonresolutionset->slack, 0.0))
    {
       *success = FALSE;
       return SCIP_OKAY;
@@ -1207,6 +1289,7 @@ SCIP_RETCODE resolveWithReason(
       if (fabs(reasonresolutionset->vals[i]) > set->conf_generalresminmaxquot)
       {
          *success = FALSE;
+         SCIPsetDebugMsg(set, "Coefficients in reason are getting large");
          return SCIP_OKAY;
       }
 
@@ -1244,7 +1327,7 @@ SCIP_RETCODE resolveWithReason(
    }
    conflictresolutionset->lhs = conflictresolutionset->lhs + fabs(coefreas) * reasonresolutionset->lhs;
 
-   /* @todo check if we can remove coefficients that are almost zero (10^-9 tolerance) */
+   /* remove coefficients that are almost zero (10^-9 tolerance) */
    for( i = 0; i < resolutionsetGetNNzs(conflictresolutionset); i++ )
    {
       if (SCIPsetIsZero(set, conflictresolutionset->vals[i] ))
@@ -1457,13 +1540,11 @@ SCIP_RETCODE conflictAnalyzeResolution(
    int focusdepth;
    int currentdepth;
    int maxvaliddepth;
-   SCIP_Bool addconstraint;
    int nchgcoefs;
    int nressteps;
    SCIP_Real conflictslack;
    SCIP_Real reasonslack;
    SCIP_Bool successresolution;
-   SCIP_Bool applytightening;
    int i;
 
    SCIP_VAR* vartoresolve;
@@ -1556,26 +1637,28 @@ SCIPsetDebugMsg(set, " -> First bound change to resolve <%s> %s %.15g [status:%d
    /* get the resolution set of the conflict row */
    SCIP_CALL( conflictResolutionsetFromRow(set, blkmem, conflictrow, conflictresolutionset, bdchginfo) );
 
-   /* apply coefficient tightening for the conflict constraint */
-   /* @todo add parameter for this */
-   tightenCoefLhs(set->scip, transprob, FALSE, conflictresolutionset->vals, &conflictresolutionset->lhs, conflictresolutionset->inds, &conflictresolutionset->nnz, &nchgcoefs);
-
-   /* sort for linear time resolution */
-   SCIPsortIntReal(conflictresolutionset->inds, conflictresolutionset->vals, resolutionsetGetNNzs(conflictresolutionset));
-
-   conflictslack = getSlack(set->scip, transprob, conflictresolutionset, bdchgidx);
-
-   conflictresolutionset->slack = conflictslack;
+   /* weaken or just apply coefficient tightening for the conflict constraint */
+   if ( set->conf_weakenconflict ) weakenResolutionSet(conflictresolutionset, set, transprob, bdchgidx, residx, FALSE);
+   else
+   {
+      tightenCoefLhs(set->scip, transprob, FALSE, conflictresolutionset->vals, &conflictresolutionset->lhs, conflictresolutionset->inds, &conflictresolutionset->nnz, &nchgcoefs);
+      /* sort for linear time resolution */
+      SCIPsortIntReal(conflictresolutionset->inds, conflictresolutionset->vals, resolutionsetGetNNzs(conflictresolutionset));
+      conflictslack = getSlack(set->scip, transprob, conflictresolutionset, bdchgidx);
+      conflictresolutionset->slack = conflictslack;
+   }
 
    /** slack should be negative. Are there cases where this is not the case?
-    * @todo: Carefully check if there are bound changes for negated variables.
+    * @todo: Check if there are bound changes for negated variables.
     * After that add assert(conflictslack < 0); currently just stop
     */
    if ( SCIPsetIsGE(set, conflictresolutionset->slack, 0.0) )
+   {
+      SCIPsetDebugMsg(set, "Slack of conflict constraint is not negative \n");
       return SCIP_OKAY;
+   }
 
    nressteps = 0;
-   addconstraint = FALSE;
    /* main loop */
    while( bdchginfo != NULL && validdepth <= maxvaliddepth )
    {
@@ -1588,70 +1671,34 @@ SCIPsetDebugMsg(set, " -> First bound change to resolve <%s> %s %.15g [status:%d
 
          /* if no row exists conflict analysis is not applicable */
          if (reasonrow == NULL)
+         {
+            SCIP_CONSHDLR* conshdlr;
+            conshdlr = SCIPconsGetHdlr(reasoncon);
+            SCIPsetDebugMsg(set, "No reason row for constraint %s of type %s \n", SCIPconsGetName(reasoncon), SCIPconshdlrGetName(conshdlr));
             goto TERMINATE;
+         }
+
          /* get the resolution set of the conflict row */
-         SCIP_CALL( reasonResolutionsetFromRow(set, blkmem, reasonrow,reasonresolutionset, bdchginfo) );
+         SCIP_CALL( reasonResolutionsetFromRow(set, blkmem, reasonrow, reasonresolutionset, bdchginfo) );
 
          /* @todo Treat negated variables differently to avoid this. This should resolve the issue */
          if (SCIPsetIsInfinity(set, -reasonresolutionset->lhs) || SCIPsetIsInfinity(set, reasonresolutionset->lhs))
+         {
+            SCIPsetDebugMsg(set, "Left hand side becomes infinity -> abort resolution \n");
             goto TERMINATE;
+         }
          reasonslack = getSlack(set->scip, transprob, reasonresolutionset, bdchgidx);
          reasonresolutionset->slack = reasonslack;
          SCIPsetDebugMsg(set, "conflict resolution set: nnzs: %d, slack: %f \n", resolutionsetGetNNzs(conflictresolutionset), conflictslack);
          SCIPsetDebugMsg(set, "reason resolution set: nnzs: %d, slack: %f \n", resolutionsetGetNNzs(reasonresolutionset), reasonslack);
 
-         /* should we assert SCIPsetIsGE(set, reasonslack, 0.0)? */
-
-         i = 0;
-         applytightening = FALSE;
-
-         while ( i < resolutionsetGetNNzs(reasonresolutionset) )
+         if ( set->conf_weakenreason )
          {
-            SCIP_Bool varwasweakened;
-            SCIP_VAR* vartoweaken;
-
-            varwasweakened = FALSE;
-            vartoweaken = vars[reasonresolutionset->inds[i]];
-
-            if ( reasonresolutionset->inds[i] != residx )
-            {
-               if( reasonresolutionset->vals[i] > 0.0 )
-               {
-                  int nubchgs;
-                  nubchgs = SCIPvarGetNBdchgInfosUb(vars[reasonresolutionset->inds[i]]);
-                  if ( nubchgs == 0 )
-                  {
-                     weakenVarReason(reasonresolutionset, set, vartoweaken, i);
-                     varwasweakened = TRUE;
-                  }
-               }
-               else
-               {
-                  int nlbchgs;
-                  nlbchgs = SCIPvarGetNBdchgInfosLb(vars[reasonresolutionset->inds[i]]);
-
-                  assert( reasonresolutionset->vals[i] < 0.0);
-                  if ( nlbchgs == 0 )
-                  {
-                     weakenVarReason(reasonresolutionset, set, vartoweaken, i);
-                     varwasweakened = TRUE;
-                  }
-               }
-            }
-            if (varwasweakened)
-               applytightening = TRUE;
-            else
-               i++;
+            weakenResolutionSet(reasonresolutionset, set, transprob, bdchgidx, residx, TRUE);
          }
-         if (applytightening)
-         {
-            tightenCoefLhs(set->scip, transprob, FALSE, reasonresolutionset->vals, &reasonresolutionset->lhs, reasonresolutionset->inds, &reasonresolutionset->nnz, &nchgcoefs);
-            reasonslack = getSlack(set->scip, transprob, reasonresolutionset, bdchgidx);
-         }
-         /* sort for linear time resolution*/
-         SCIPsortIntReal(reasonresolutionset->inds, reasonresolutionset->vals, resolutionsetGetNNzs(reasonresolutionset));
-         reasonresolutionset->slack = reasonslack;
-
+         /* @todo: in the binary case slack should become zero */
+         // if ((transprob->nvars == transprob->nbinvars))
+         //   assert(SCIPsetIsEQ(set, reasonresolutionset->slack, 0.0));
          if ( SCIPsetIsGE(set, conflictresolutionset->slack + reasonresolutionset->slack, 0.0) )
          goto TERMINATE;
 
@@ -1692,7 +1739,7 @@ SCIPsetDebugMsg(set, " -> First bound change to resolve <%s> %s %.15g [status:%d
       }
 #endif
          /* resolution step */
-         resolveWithReason(set->scip, set, conflictresolutionset, reasonresolutionset, blkmem, residx, addconstraint, &successresolution, conflictslack, reasonslack);
+         resolveWithReason(set->scip, set, conflictresolutionset, reasonresolutionset, blkmem, residx, (conflict->nresolutionsets > 0), &successresolution);
          nressteps++;
 
          if (!successresolution)
@@ -1721,10 +1768,8 @@ SCIPsetDebugMsg(set, " -> First bound change to resolve <%s> %s %.15g [status:%d
          if (SCIPsetIsGE(set, conflictslack, 0.0))
          {
             /* @todo if we add previous conflicts to the resolutionsets we can still add a constraint */
-            addconstraint = FALSE;
             goto TERMINATE;
          }
-         addconstraint = TRUE;
 
          tightenCoefLhs(set->scip, transprob, FALSE, conflictresolutionset->vals, &conflictresolutionset->lhs, conflictresolutionset->inds, &conflictresolutionset->nnz, &nchgcoefs);
          if (nchgcoefs > 0)
