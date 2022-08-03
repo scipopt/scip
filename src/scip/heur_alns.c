@@ -77,7 +77,7 @@
 
 #define NNEIGHBORHOODS 9
 
-#define DEFAULT_SHOWNBSTAT    FALSE /**< show statistics on neighborhoods? */
+#define DEFAULT_SHOWNBSTATS   FALSE /**< show statistics on neighborhoods? */
 
 /*
  * limit parameters for sub-SCIPs
@@ -463,7 +463,7 @@ struct SCIP_HeurData
    SCIP_Bool             copycuts;           /**< should cutting planes be copied to the sub-SCIP? */
    SCIP_Bool             uselocalredcost;    /**< should local reduced costs be used for generic (un)fixing? */
    SCIP_Bool             initduringroot;     /**< should the heuristic be executed multiple times during the root node? */
-   SCIP_Bool             shownbstat;         /**< show statistics on neighborhoods? */
+   SCIP_Bool             shownbstats;        /**< show statistics on neighborhoods? */
 };
 
 /** event handler data */
@@ -1092,7 +1092,7 @@ void printNeighborhoodStatistics(
    int j;
    HISTINDEX statusses[] = {HIDX_OPT, HIDX_INFEAS, HIDX_NODELIM, HIDX_STALLNODE, HIDX_SOLLIM, HIDX_USR, HIDX_OTHER};
 
-   if( ! heurdata->shownbstat )
+   if( ! heurdata->shownbstats )
       return;
 
    SCIPinfoMessage(scip, file, "Neighborhoods      : %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %4s %4s %4s %4s %4s %4s %4s %4s\n",
@@ -4006,9 +4006,9 @@ SCIP_RETCODE SCIPincludeHeurAlns(
    SCIP_CALL( SCIPsetHeurInitsol(scip, heur, heurInitsolAlns) );
    SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitAlns) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/shownbstat",
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/shownbstats",
          "show statistics on neighborhoods?",
-         &heurdata->shownbstat, TRUE, DEFAULT_SHOWNBSTAT, NULL, NULL) );
+         &heurdata->shownbstats, TRUE, DEFAULT_SHOWNBSTATS, NULL, NULL) );
 
    /* add alns primal heuristic parameters */
    SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/" HEUR_NAME "/maxnodes",
