@@ -252,6 +252,7 @@ typedef struct TreeProfile TREEPROFILE;
 #define DEFAULT_SSG_NMAXSUBTREES     -1      /**< the maximum number of individual SSG subtrees; the old split is kept if
                                                *  a new split exceeds this number of subtrees ; -1: no limit */
 #define DEFAULT_SSG_NMINNODESLASTSPLIT   0L  /**< minimum number of nodes to process between two consecutive SSG splits */
+#define DEFAULT_SHOWSTATS            FALSE   /**< should statistics be shown at the end? */
 
 /** event handler data */
 struct SCIP_EventhdlrData
@@ -286,6 +287,7 @@ struct SCIP_EventhdlrData
    SCIP_Bool             treeisbinary;       /**< internal flag if all branching decisions produced 2 children */
    SCIP_Bool             restartnonlinear;   /**< whether to apply a restart when nonlinear constraints are present */
    SCIP_Bool             restartactpricers;  /**< whether to apply a restart when active pricers are used */
+   SCIP_Bool             showstats;          /**< should statistics be shown at the end? */
 };
 
 typedef struct SubtreeSumGap SUBTREESUMGAP;
@@ -2834,7 +2836,8 @@ SCIP_DECL_TABLEOUTPUT(tableOutputEstim)
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
 
-   SCIPinfoMessage(scip, file, "%s", printReport(scip, eventhdlrdata, strbuf, 0));
+   if( eventhdlrdata->showstats )
+      SCIPinfoMessage(scip, file, "%s", printReport(scip, eventhdlrdata, strbuf, 0));
 
    return SCIP_OKAY;
 }
@@ -2961,6 +2964,10 @@ SCIP_RETCODE SCIPincludeEventHdlrEstim(
    SCIP_CALL( SCIPaddBoolParam(scip, "estimation/useleafts",
          "use leaf nodes as basic observations for time series, or all nodes?",
          &eventhdlrdata->useleafts, TRUE, DEFAULT_USELEAFTS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "estimation/showstats",
+         "should statistics be shown at the end?",
+         &eventhdlrdata->showstats, TRUE, DEFAULT_SHOWSTATS, NULL, NULL) );
 
    /* SSG parameters */
    SCIP_CALL( SCIPaddIntParam(scip, "estimation/ssg/nmaxsubtrees",

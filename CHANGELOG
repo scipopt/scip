@@ -141,6 +141,9 @@ Interface changes
 ### Interfaces to external software
 ### Changed parameters
 ### New parameters
+
+- new paramters to turn on more statistics: misc/showdivingstats (diving heuristics), heuristics/alns/shownbstats (ALNS), estimation/showstats (tree size estimation)
+
 ### Data structures
 
 - added nrootcalls and ncutsadded to SCIP_Cutpool
@@ -175,6 +178,10 @@ Miscellaneous
 - Added extended cutselector statistics splitting between root node specific and general statistics
 - Added extended and refined cutpool statistics showing the number of cuts added from the cutpool to the sepastore
 - Added extended and refined separator statistics to get a better view of the individual generators performance
+- turned off output of statistics for the following information by default:
+  diving heuristics, ALNS neighborhood information and tree size estimation statistics;
+  they can be turned on using the following new parameters:
+  misc/showdivingstats (diving heuristics), heuristics/alns/shownbstats (ALNS), estimation/showstats (tree size estimation)
 
 Known bugs
 ----------

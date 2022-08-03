@@ -1930,7 +1930,7 @@ SCIP_RETCODE addTightEstimatorCut(
       overestimate ? "over" : "under", SCIPnlhdlrGetName(exprenfo->nlhdlr), (void*)expr, SCIPexprhdlrGetName(SCIPexprGetHdlr(expr))); )
 
    SCIP_CALL( SCIPnlhdlrEstimate(scip, conshdlr, exprenfo->nlhdlr, expr, exprenfo->nlhdlrexprdata, sol,
-      exprenfo->auxvalue, overestimate, SCIPinfinity(scip), FALSE, rowpreps, &estimatesuccess, &branchscoresuccess) );
+      exprenfo->auxvalue, overestimate, overestimate ? SCIPinfinity(scip) : -SCIPinfinity(scip), FALSE, rowpreps, &estimatesuccess, &branchscoresuccess) );
 
    minidx = SCIPgetPtrarrayMinIdx(scip, rowpreps);
    maxidx = SCIPgetPtrarrayMaxIdx(scip, rowpreps);
