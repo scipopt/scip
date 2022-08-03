@@ -404,7 +404,7 @@ struct SCIP_Set
                                               *   symresacks) */
    char*                 misc_debugsol;      /**< path to a debug solution */
    SCIP_Bool             misc_scaleobj;      /**< should the objective function be scaled? */
-   SCIP_Bool             misc_showdivingstat;/**< should detailed statistics for diving heuristics be shown? */
+   SCIP_Bool             misc_showdivingstats;/**< should detailed statistics for diving heuristics be shown? */
 
    /* randomization parameters */
    int                   random_randomseedshift;/**< global shift of all random seeds in the plugins, this will have no impact on the permutation and LP seeds */
