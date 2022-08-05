@@ -6001,35 +6001,33 @@ SCIP_RETCODE cutsSubstituteMIRSafe(
       SCIPintervalMulScalar(SCIPinfinity(scip), &ar, ar, slacksign[i]);
 
       /* calculate slack variable's coefficient a^_r in the cut */
-      /** @todo exip: handle integer slacks in exact solving mode */
-#ifdef SCIP_DISABLED_CODE
-      if( row->integral && !SCIPisExactSolve(scip)
-         && ((slacksign[i] == +1 && SCIPisFeasIntegral(scip, row->rhs - row->constant))
-            || (slacksign[i] == -1 && SCIPisFeasIntegral(scip, row->lhs - row->constant))) ) /*lint !e613*/
+      /** @todo exip: add certification for integer slacks */
+      if( row->integral && !SCIPisCertificateActive(scip) &&
+            ((slacksign[i] == +1 && SCIPisExactlyIntegral(scip, row->rhs) &&  SCIPisExactlyIntegral(scip, row->constant))
+            || (slacksign[i] == -1 && SCIPisExactlyIntegral(scip, row->lhs) &&  SCIPisExactlyIntegral(scip, row->constant))) ) /*lint !e613*/
       {
          /* slack variable is always integral:
           *    a^_r = a~_r = down(a'_r)                      , if f_r <= f0
           *    a^_r = a~_r = down(a'_r) + (f_r - f0)/(1 - f0), if f_r >  f0
           */
-         if( !SCIPisExactSolve(scip) )
-            downar = EPSFLOOR(ar, QUAD_EPSILON);
-         else
-            downar = floor(ar);
+         SCIP_Real downar;
+         SCIP_Real fr;
+         downar = floor(ar.inf);
+         fr = ar.inf - downar;
 
-         SCIPquadprecSumDD(fr, ar, -downar);
-         if( SCIPisLE(scip, QUAD_TO_DBL(fr), QUAD_TO_DBL(f0)) && (!SCIPisExactSolve(scip) || QUAD_TO_DBL(fr) <= QUAD_TO_DBL(f0)) )
+         if( fr <= f0.inf )
          {
-            QUAD_ASSIGN(cutar, downar);
+            SCIPintervalSet(&cutar, downar);
          }
          else
          {
-            SCIPquadprecSumQQ(cutar, fr, -f0);
-            SCIPquadprecProdQQ(cutar, cutar, onedivoneminusf0);
-            SCIPquadprecSumQD(cutar, cutar, downar);
+            SCIPintervalSet(&cutar, fr);
+            SCIPintervalSub(SCIPinfinity(scip), &cutar, cutar, f0);
+            SCIPintervalDiv(SCIPinfinity(scip), &cutar, cutar, onedivoneminusf0);
+            SCIPintervalAddScalar(SCIPinfinity(scip), &cutar, cutar, downar);
          }
       }
       else
-#endif
       {
          /* slack variable is continuous:
           *    a^_r = a~_r = 0                               , if a'_r >= 0
@@ -6478,7 +6476,7 @@ SCIP_RETCODE cutsSubstituteMIR(
          downar = EPSFLOOR(ar, QUAD_EPSILON);
 
          SCIPquadprecSumDD(fr, ar, -downar);
-         if( SCIPisLE(scip, QUAD_TO_DBL(fr), QUAD_TO_DBL(f0)) && (!SCIPisExactSolve(scip) || QUAD_TO_DBL(fr) <= QUAD_TO_DBL(f0)) )
+         if( SCIPisLE(scip, QUAD_TO_DBL(fr), QUAD_TO_DBL(f0)) )
          {
             QUAD_ASSIGN(cutar, downar);
          }
