@@ -5978,6 +5978,7 @@ SCIP_RETCODE cutsSubstituteMIRSafe(
       SCIP_INTERVAL ar;
       SCIP_INTERVAL cutar;
       int r;
+      SCIP_Bool integralslack = FALSE;
 
       r = rowinds[i]; /*lint !e613*/
       assert(0 <= r && r < SCIPgetNLPRows(scip));
@@ -6014,6 +6015,8 @@ SCIP_RETCODE cutsSubstituteMIRSafe(
          SCIP_Real fr;
          downar = floor(ar.inf);
          fr = ar.inf - downar;
+
+         integralslack = TRUE;
 
          if( fr <= f0.inf )
          {
@@ -6067,7 +6070,7 @@ SCIP_RETCODE cutsSubstituteMIRSafe(
          else
             mult = cutar.sup;
 
-         if( SCIPisCertificateActive(scip) )
+         if( SCIPisCertificateActive(scip) && !integralslack )
          {
             assert(aggrinfo->negslackweights[currentnegslackrow] == -weights[i]);
             aggrinfo->substfactor[currentnegslackrow] = mult;

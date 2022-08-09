@@ -2504,6 +2504,7 @@ SCIP_RETCODE SCIPcertificateFreeAggrInfo(
    return SCIP_OKAY;
 }
 
+/**@ todo exip negslackrow might be unnecessary */
 /** create a new node data structure for the current node */
 SCIP_RETCODE SCIPcertificateNewAggrInfo(
    SCIP*                 scip,               /**< SCIP data structure */
