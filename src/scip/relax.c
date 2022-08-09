@@ -429,11 +429,10 @@ SCIP_RETCODE SCIPrelaxExec(
                relax->imprtime += SCIPclockGetTime(relax->relaxclock) - starttime;
             }
 
-            if ( stat->nactiveconss > oldnactiveconss )
+            if( stat->nactiveconss > oldnactiveconss )
                ++relax->naddedconss;
-            if ( SCIPgetNCuts(set->scip) > oldncuts )
+            if( SCIPgetNCuts(set->scip) > oldncuts )
                ++relax->nseparated;
-
             if( *result == SCIP_REDUCEDDOM )
                ++relax->nreduceddom;
          }
