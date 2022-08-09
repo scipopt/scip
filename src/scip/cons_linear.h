@@ -343,6 +343,13 @@ SCIP_ROW* SCIPgetRowLinear(
    SCIP_CONS*            cons                /**< constraint data */
    );
 
+/** returns the row of the given linear constraint if no LP row was yet created */
+SCIP_EXPORT
+SCIP_ROW* SCIPcreateRowLinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   );
+
 /** tries to automatically convert a linear constraint into a more specific and more specialized constraint */
 SCIP_EXPORT
 SCIP_RETCODE SCIPupgradeConsLinear(

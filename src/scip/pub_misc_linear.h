@@ -106,6 +106,13 @@ SCIP_ROW* SCIPconsGetRow(
    SCIP_CONS*            cons                /**< constraint to get left hand side for */
    );
 
+/** creates and returns the row of an arbitrary SCIP constraint that can be represented as a single linear constraint */
+SCIP_EXPORT
+SCIP_ROW* SCIPconsCreateRow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint for which row is queried */
+   );
+
 /** adds the given variable to the input constraint.
  *  If the constraint is setppc or logicor the value is ignored. If the constraint is knapsack, then the value is
  *  converted to an int. A warning is passed if the SCIP_Real is not an integer.

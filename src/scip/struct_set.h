@@ -220,6 +220,7 @@ struct SCIP_Set
    int                   conf_weakenmax;      /**< maximal number of weakening steps for the reason constraint */
    int                   conf_batchcoeftight;/**< number of weakening steps for the reason before applying coef tightening
                                               *   (-1: apply once after the weakening loop) */
+   int                   conf_resolutioncons;/**< number of resolution constraints to add (-1: add every conflict constraint) */
    SCIP_Bool             conf_enable;        /**< should conflict analysis be enabled? */
    SCIP_Bool             conf_cleanbnddepend;/**< should conflicts related to an old cutoff bound be removed? */
    SCIP_Bool             conf_useprop;       /**< should propagation conflict analysis be used? (uses conflict graph only) */

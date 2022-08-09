@@ -292,6 +292,13 @@ SCIP_ROW* SCIPgetRowSetppc(
    SCIP_CONS*            cons                /**< constraint data */
    );
 
+/** returns the row of the given set partitioning / packing / covering constraint if no LP row was yet created */
+SCIP_EXPORT
+SCIP_ROW* SCIPCreateRowSetppc(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   );
+
 /** returns current number of variables fixed to one in the constraint  */
 SCIP_EXPORT
 int SCIPgetNFixedonesSetppc(

@@ -3181,7 +3181,7 @@ SCIP_RETCODE conflictResolveBound(
 
             var = infervar;
 
-            /* transform given varibale to active varibale */
+            /* transform given variable to active variable */
             SCIP_CALL( SCIPvarGetProbvarSum(&var, set, &scalar, &constant) );
             assert(var == actvar);
 

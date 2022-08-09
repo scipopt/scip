@@ -162,6 +162,13 @@ SCIP_ROW* SCIPgetRowLogicor(
    SCIP_CONS*            cons                /**< constraint data */
    );
 
+/** returns the row of the given logicor constraint if no LP row was yet created */
+SCIP_EXPORT
+SCIP_ROW* SCIPcreateRowLogicor(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   );
+
 /** cleans up (multi-)aggregations and fixings from logicor constraints */
 SCIP_EXPORT
 SCIP_RETCODE SCIPcleanupConssLogicor(

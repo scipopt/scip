@@ -398,7 +398,7 @@ void SCIPconsGetDualsol(
 }
 
 /** returns the row of an arbitrary SCIP constraint that can be represented as a single linear constraint
- *  or NULL of no row is awailable
+ *  or NULL of no row is available
  */
 SCIP_ROW* SCIPconsGetRow(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -434,6 +434,67 @@ SCIP_ROW* SCIPconsGetRow(
    else if( strcmp(conshdlrname, "varbound") == 0 )
    {
       return SCIPgetRowVarbound(scip, cons);
+   }
+
+   return NULL;
+}
+
+/** creates and returns the row of an arbitrary SCIP constraint that can be represented as a single linear constraint */
+SCIP_ROW* SCIPconsCreateRow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint for which row is queried */
+   )
+{
+   SCIP_ROW* row;
+   SCIP_CONSHDLR* conshdlr;
+   const char* conshdlrname;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+
+   conshdlr = SCIPconsGetHdlr(cons);
+   assert(conshdlr != NULL);
+   conshdlrname = SCIPconshdlrGetName(conshdlr);
+
+   if( strcmp(conshdlrname, "linear") == 0 )
+   {
+      row = SCIPgetRowLinear(scip, cons);
+      if (row != NULL)
+         return row;
+      else
+         return SCIPcreateRowLinear(scip, cons);
+   }
+   else if( strcmp(conshdlrname, "setppc") == 0 )
+   {
+      row = SCIPgetRowSetppc(scip, cons);
+      if (row != NULL)
+         return row;
+      else
+         return SCIPCreateRowSetppc(scip, cons);
+   }
+   else if( strcmp(conshdlrname, "logicor") == 0 )
+   {
+      row = SCIPgetRowLogicor(scip, cons);
+      if (row != NULL)
+         return row;
+      else
+         return SCIPcreateRowLogicor(scip, cons);
+   }
+   else if( strcmp(conshdlrname, "knapsack") == 0 )
+   {
+      row = SCIPgetRowKnapsack(scip, cons);
+      if (row != NULL)
+         return row;
+      else
+         return SCIPcreateRowKnapsack(scip, cons);
+   }
+   else if( strcmp(conshdlrname, "varbound") == 0 )
+   {
+      row = SCIPgetRowVarbound(scip, cons);
+      if (row != NULL)
+         return row;
+      else
+         return SCIPcreateRowVarbound(scip, cons);
    }
 
    return NULL;

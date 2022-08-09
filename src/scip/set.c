@@ -162,6 +162,7 @@
 
 /* Conflict Analysis (generalized resolution) */
 
+#define SCIP_DEFAULT_CONF_RESOLUTIONCONS     1  /**< number of resolution constraints to add (-1: add every conflict constraint) */
 #define SCIP_DEFAULT_CONF_MAXNUMRESSTEPS   1000 /**< maximal number of resolution steps in generalized resolution (-1: resolve till FirstUIP) */
 #define SCIP_DEFAULT_CONF_WEAKENCONFLICT  FALSE /**< should the conflict constraint be weakened? */
 #define SCIP_DEFAULT_CONF_WEAKENREASON    TRUE  /**< should the reason constraint be weakened? */
@@ -1396,6 +1397,11 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->conf_fuiplevels, TRUE, SCIP_DEFAULT_CONF_FUIPLEVELS, -1, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "conflict/resolutioncons",
+         "number of resolution constraints to add (-1: add every conflict constraint)",
+         &(*set)->conf_resolutioncons, TRUE, SCIP_DEFAULT_CONF_RESOLUTIONCONS, -1, INT_MAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "conflict/interconss",
          "maximal number of intermediate conflict constraints generated in conflict graph (-1: use every intermediate constraint)",
          &(*set)->conf_interconss, TRUE, SCIP_DEFAULT_CONF_INTERCONSS, -1, INT_MAX,
@@ -1411,7 +1417,7 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->conf_maxnumressteps, TRUE, SCIP_DEFAULT_CONF_MAXNUMRESSTEPS, -1, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
-         "conflict/conf_weakenmax",
+         "conflict/confweakenmax",
          "maximal number of weakening steps for the reason constraint",
          &(*set)->conf_weakenmax, TRUE, SCIP_DEFAULT_CONF_MAXNUMWEAKEN, 0, INT_MAX,
          NULL, NULL) );

@@ -184,6 +184,13 @@ SCIP_ROW* SCIPgetRowVarbound(
    SCIP_CONS*            cons                /**< constraint data */
    );
 
+/** returns the row of the given varbound constraint if no LP row was yet created */
+SCIP_EXPORT
+SCIP_ROW* SCIPcreateRowVarbound(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   );
+
 /** cleans up (multi-)aggregations and fixings from varbound constraints */
 SCIP_EXPORT
 SCIP_RETCODE SCIPcleanupConssVarbound(
