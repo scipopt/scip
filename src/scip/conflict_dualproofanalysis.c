@@ -1281,8 +1281,8 @@ SCIP_RETCODE separateAlternativeProofs(
    SCIP_Real* cutcoefs;
    SCIP_Real cutefficacy;
    SCIP_Real cutrhs;
-   SCIP_Real proofefficiacy;
-   SCIP_Real efficiacynorm;
+   SCIP_Real proofefficacy;
+   SCIP_Real efficacynorm;
    SCIP_Bool islocal;
    SCIP_Bool cutsuccess;
    SCIP_Bool success;
@@ -1300,15 +1300,15 @@ SCIP_RETCODE separateAlternativeProofs(
    inds = SCIPaggrRowGetInds(proofrow);
    nnz = SCIPaggrRowGetNNz(proofrow);
 
-   proofefficiacy = SCIPaggrRowGetMinActivity(set, transprob, proofrow, curvarlbs, curvarubs, &infdelta);
+   proofefficacy = SCIPaggrRowGetMinActivity(set, transprob, proofrow, curvarlbs, curvarubs, &infdelta);
 
    if( infdelta )
       return SCIP_OKAY;
 
-   proofefficiacy -= SCIPaggrRowGetRhs(proofrow);
+   proofefficacy -= SCIPaggrRowGetRhs(proofrow);
 
-   efficiacynorm = SCIPaggrRowCalcEfficacyNorm(set->scip, proofrow);
-   proofefficiacy /= MAX(1e-6, efficiacynorm);
+   efficacynorm = SCIPaggrRowCalcEfficacyNorm(set->scip, proofrow);
+   proofefficacy /= MAX(1e-6, efficacynorm);
 
    /* create reference solution */
    SCIP_CALL( SCIPcreateSol(set->scip, &refsol, NULL) );
@@ -1352,7 +1352,7 @@ SCIP_RETCODE separateAlternativeProofs(
    success = (success || cutsuccess);
 
    /* replace the current proof */
-   if( success && !islocal && SCIPsetIsPositive(set, cutefficacy) && cutefficacy * nnz > proofefficiacy * cutnnz )
+   if( success && !islocal && SCIPsetIsPositive(set, cutefficacy) && cutefficacy * nnz > proofefficacy * cutnnz )
    {
       SCIP_PROOFSET* alternativeproofset;
       SCIP_Bool redundant;

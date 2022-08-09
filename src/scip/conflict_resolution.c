@@ -78,6 +78,13 @@
 #include <strings.h> /*lint --e{766}*/
 #endif
 
+#define BOUNDSWITCH                0.51 /**< threshold for bound switching - see cuts.c */
+#define POSTPROCESS               FALSE /**< apply postprocessing to the cut - see cuts.c */
+#define USEVBDS                   FALSE /**< use variable bounds - see cuts.c */
+#define ALLOWLOCAL                FALSE /**< allow to generate local cuts - see cuts. */
+#define MINFRAC                   0.05  /**< minimal fractionality of floor(rhs) - see cuts.c */
+#define MAXFRAC                   0.999 /**< maximal fractionality of floor(rhs) - see cuts.c */
+
 /** creates a copy of the given resolution set, allocating an additional amount of memory */
 static
 SCIP_RETCODE resolutionsetCopy(
@@ -916,6 +923,128 @@ SCIP_RETCODE weakenResolutionSet(
 
    return SCIP_OKAY;
 }
+
+/** calculates a MIR cut from the coefficients of the resolution set */
+static
+SCIP_RETCODE computecMIRfromResolutionSet(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_RESOLUTIONSET*   resolutionset,      /**< resolution set */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_Real*            cutcoefs,           /**< the coefficients of the MIR cut */
+   int*                  cutinds,            /**< the variable indices of the MIR cut */
+   SCIP_Real*            cutrhs,             /**< the RHS of the MIR cut */
+   int*                  cutnnz,             /**< the number of non-zeros in the cut */
+   SCIP_Bool*            success             /**< was the MIR cut successfully computed? */
+   )
+{
+   SCIP_VAR** vars;
+   SCIP_AGGRROW* aggrrow;
+   SCIP_SOL* refsol;
+
+   SCIP_Real* rowvals;
+   int* rowinds;
+
+   SCIP_Real cutefficacy;
+   int nvars;
+   int nnz;
+   int i;
+   int j;
+
+   SCIP_Bool islocal;
+   SCIP_Bool cutsuccess;
+
+   vars = SCIPprobGetVars(prob);
+   nvars = SCIPprobGetNVars(prob);
+   *success = FALSE;
+
+   /* creating the aggregation row. There will be only a single row in this aggregation, since it is only used to
+    * compute the MIR coefficients
+    */
+   SCIP_CALL( SCIPaggrRowCreate(set->scip, &aggrrow) );
+
+   /* All values must be negated since the aggregation row requires a RHS, and resolution sets are computed with a LHS */
+   SCIP_CALL( SCIPallocBufferArray(set->scip, &rowvals, resolutionset->nnz) );
+   SCIP_CALL( SCIPallocBufferArray(set->scip, &rowinds, resolutionset->nnz) );
+
+   assert(!SCIPisInfinity(set->scip, resolutionset->lhs) && !SCIPisInfinity(set->scip, -resolutionset->lhs));
+
+   j = 0;
+   for( i = 0; i < resolutionset->nnz; i++ )
+   {
+      if ( !SCIPsetIsZero(set, resolutionset->vals[i]) )
+      {
+         rowinds[j] = resolutionset->inds[i];
+         rowvals[j] = -resolutionset->vals[i];
+         j++;
+      }
+      nnz = j;
+   }
+
+   /* create the aggregation row */
+   SCIP_CALL( SCIPaggrRowAddCustomCons(set->scip, aggrrow, rowinds, rowvals, nnz, -resolutionset->lhs, 1.0, 1, FALSE) );
+
+   /* create reference solution */
+   SCIP_CALL( SCIPcreateSol(set->scip, &refsol, NULL) );
+
+   /* initialize with average solution */
+   for( i = 0; i < nvars; i++ )
+   {
+      SCIP_CALL( SCIPsolSetVal(refsol, set, stat, tree, vars[i], SCIPvarGetAvgSol(vars[i])) );
+   }
+
+   /* set all variables that are part of the resolution set to their active local bounds */
+   for( i = 0; i < resolutionset->nnz; i++ )
+   {
+      int v;
+      SCIP_Real val;
+
+      v = resolutionset->inds[i];
+      val = resolutionset->vals[i];
+      SCIPsetDebugMsg(set, "ind, val (%d,%f)\n",v, val);
+      if( val > 0.0 )
+      {
+         SCIP_CALL( SCIPsolSetVal(refsol, set, stat, tree, vars[v], SCIPvarGetUbLocal(vars[v])) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPsolSetVal(refsol, set, stat, tree, vars[v], SCIPvarGetLbLocal(vars[v])) );
+      }
+   }
+
+   /* apply flow cover */
+   SCIP_CALL( SCIPcalcFlowCover(set->scip, refsol, POSTPROCESS, BOUNDSWITCH, ALLOWLOCAL, aggrrow, \
+         cutcoefs, cutrhs, cutinds, cutnnz, &cutefficacy, NULL, &islocal, &cutsuccess) );
+   *success = cutsuccess;
+
+   /* apply MIR */
+   SCIP_CALL( SCIPcutGenerationHeuristicCMIR(set->scip, refsol, POSTPROCESS, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, INT_MAX, \
+         NULL, NULL, MINFRAC, MAXFRAC, aggrrow, cutcoefs, cutrhs, cutinds, cutnnz, &cutefficacy, NULL, \
+         &islocal, &cutsuccess) );
+   *success = (*success || cutsuccess);
+
+   /* try to tighten the coefficients of the cut */
+   if( (*success) && !islocal )
+   {
+      SCIP_Bool redundant;
+      int nchgcoefs;
+
+      redundant = SCIPcutsTightenCoefficients(set->scip, FALSE, cutcoefs, cutrhs, cutinds, cutnnz, &nchgcoefs);
+
+      (*success) = !redundant;
+   }
+
+   /* freeing the local memory */
+   SCIPfreeBufferArray(set->scip, &rowinds);
+   SCIPfreeBufferArray(set->scip, &rowvals);
+   SCIPaggrRowFree(set->scip, &aggrrow);
+   SCIP_CALL( SCIPfreeSol(set->scip, &refsol) );
+
+   return SCIP_OKAY;
+}
+
 
 /** for every variable in the row, except the inferred variable, add bound changes */
 static
@@ -1859,11 +1988,41 @@ SCIPsetDebugMsg(set, " -> First bound change to resolve <%s> %s %.15g [status:%d
          SCIP_RESOLUTIONSET* resolutionset;
          resolutionset = conflict->resolutionsets[i];
          assert(SCIPsetIsLT(set, resolutionset->slack, 0.0));
+
          if ( SCIPsetIsLT(set, getQuotLargestSmallestCoef(set, resolutionset->vals, resolutionset->nnz),set->conf_generalresminmaxquot) )
          {
             SCIPconflictFlushResolutionSets(conflict, blkmem, set->scip, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue, cliquetable, resolutionset);
             (*nconss)++;
             (*nconfvars) = resolutionsetGetNNzs(resolutionset);
+         }
+
+         /* @todo add parameter */
+         if ( set->conf_applycmir )
+         {
+            SCIP_Real* cutcoefs;
+            int* cutinds;
+            SCIP_Real cutrhs;
+            int cutnnz;
+
+            SCIP_Bool success;
+            SCIP_CALL( SCIPsetAllocBufferArray(set, &cutcoefs, SCIPprobGetNVars(transprob)) );
+            SCIP_CALL( SCIPsetAllocBufferArray(set, &cutinds, SCIPprobGetNVars(transprob)) );
+
+            cutnnz = 0;
+            computecMIRfromResolutionSet(set, resolutionset, transprob, NULL, stat, tree, cutcoefs, cutinds, &cutrhs, &cutnnz, &success);
+            if (success)
+            {
+               SCIP_RESOLUTIONSET* cutresolutionset;
+               resolutionsetCreate(&cutresolutionset, blkmem);
+               resolutionsetAddSparseData(cutresolutionset, blkmem, cutcoefs, cutinds, cutnnz, -cutrhs, cutrhs, -SCIPinfinity(set->scip), NULL, TRUE);
+               SCIPconflictFlushResolutionSets(conflict, blkmem, set->scip, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue, cliquetable, cutresolutionset);
+               (*nconss)++;
+               (*nconfvars) = resolutionsetGetNNzs(resolutionset);
+               SCIPresolutionsetFree(&cutresolutionset, blkmem);
+            }
+            SCIPsetFreeBufferArray(set, &cutinds);
+            SCIPsetFreeBufferArray(set, &cutcoefs);
+
          }
       }
    }
