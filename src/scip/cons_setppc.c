@@ -2435,49 +2435,6 @@ SCIP_RETCODE createRow(
    return SCIP_OKAY;
 }
 
-/** creates an LP row in a set partitioning / packing / covering constraint data object */
-static
-SCIP_RETCODE GetRow(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< set partitioning / packing / covering constraint */
-   )
-{
-   SCIP_CONSDATA* consdata;
-   SCIP_Real lhs;
-   SCIP_Real rhs;
-
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-   assert(consdata->row == NULL);
-
-   switch( consdata->setppctype )
-   {
-   case SCIP_SETPPCTYPE_PARTITIONING:
-      lhs = 1.0;
-      rhs = 1.0;
-      break;
-   case SCIP_SETPPCTYPE_PACKING:
-      lhs = -SCIPinfinity(scip);
-      rhs = 1.0;
-      break;
-   case SCIP_SETPPCTYPE_COVERING:
-      lhs = 1.0;
-      rhs = SCIPinfinity(scip);
-      break;
-   default:
-      SCIPerrorMessage("unknown setppc type\n");
-      return SCIP_INVALIDDATA;
-   }
-
-   SCIP_ROW* row;
-   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->row, cons, SCIPconsGetName(cons), lhs, rhs,
-         SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
-
-   SCIP_CALL( SCIPaddVarsToRowSameCoef(scip, consdata->row, consdata->nvars, consdata->vars, 1.0) );
-
-   return SCIP_OKAY;
-}
-
 /** adds setppc constraint as cut to the LP */
 static
 SCIP_RETCODE addCut(
@@ -9610,7 +9567,7 @@ SCIP_ROW* SCIPCreateRowSetppc(
       break;
    default:
       SCIPerrorMessage("unknown setppc type\n");
-      return SCIP_INVALIDDATA;
+      return NULL;
    }
 
    SCIPcreateEmptyRowCons(scip, &consdata->row, cons, SCIPconsGetName(cons), lhs, rhs,

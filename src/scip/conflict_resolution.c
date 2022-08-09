@@ -1659,7 +1659,6 @@ SCIP_RETCODE conflictAnalyzeResolution(
    SCIP_BDCHGINFO* bdchginfo;
    SCIP_BDCHGINFO* nextbdchginfo;
    SCIP_BDCHGIDX* bdchgidx;
-   SCIP_VAR** vars;
    SCIP_ROW* conflictrow;
    SCIP_ROW* reasonrow;
    SCIP_CONS* reasoncon;
@@ -1687,9 +1686,6 @@ SCIP_RETCODE conflictAnalyzeResolution(
    assert(0 <= validdepth && validdepth <= SCIPtreeGetCurrentDepth(tree));
    assert(nconss != NULL);
    assert(nconfvars != NULL);
-
-   vars = SCIPprobGetVars(transprob);
-   assert(vars != NULL);
 
    resolutionSetClear(conflict->resolutionset);
    resolutionSetClear(conflict->reasonset);
@@ -1837,7 +1833,11 @@ SCIPsetDebugMsg(set, " -> First bound change to resolve <%s> %s %.15g [status:%d
 
 #ifdef SCIP_DEBUG
       {
+         SCIP_VAR** vars;
          int v;
+
+         vars = SCIPprobGetVars(transprob);
+         assert(vars != NULL);
 
          SCIPsetDebugMsgPrint(set, "Conflict row: ");
          for( i = 0; i < resolutionsetGetNNzs(conflictresolutionset); i++ )
@@ -1880,7 +1880,11 @@ SCIPsetDebugMsg(set, " -> First bound change to resolve <%s> %s %.15g [status:%d
 
 #ifdef SCIP_DEBUG
       {
+         SCIP_VAR** vars;
          int v;
+
+         vars = SCIPprobGetVars(transprob);
+         assert(vars != NULL);
          SCIPsetDebugMsgPrint(set, "Resolved row: ");
          for( i = 0; i < resolutionsetGetNNzs(conflictresolutionset); i++ )
          {
