@@ -27,6 +27,7 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+#define SCIP_DEBUG
 
 #include "lpi/lpi.h"
 #include "scip/conflict_resolution.h"
@@ -971,6 +972,7 @@ SCIP_RETCODE computecMIRfromResolutionSet(
 
    assert(!SCIPisInfinity(set->scip, resolutionset->lhs) && !SCIPisInfinity(set->scip, -resolutionset->lhs));
 
+   nnz = 0;
    j = 0;
    for( i = 0; i < resolutionset->nnz; i++ )
    {
@@ -983,64 +985,67 @@ SCIP_RETCODE computecMIRfromResolutionSet(
       nnz = j;
    }
 
-   /* create the aggregation row */
-   SCIP_CALL( SCIPaggrRowAddCustomCons(set->scip, aggrrow, rowinds, rowvals, nnz, -resolutionset->lhs, 1.0, 1, FALSE) );
-
-   /* create reference solution */
-   SCIP_CALL( SCIPcreateSol(set->scip, &refsol, NULL) );
-
-   /* initialize with average solution */
-   for( i = 0; i < nvars; i++ )
+   if ( nnz > 0 )
    {
-      SCIP_CALL( SCIPsolSetVal(refsol, set, stat, tree, vars[i], SCIPvarGetAvgSol(vars[i])) );
-   }
+      /* create the aggregation row */
+      SCIP_CALL( SCIPaggrRowAddCustomCons(set->scip, aggrrow, rowinds, rowvals, nnz, -resolutionset->lhs, 1.0, 1, FALSE) );
 
-   /* set all variables that are part of the resolution set to their active local bounds */
-   for( i = 0; i < resolutionset->nnz; i++ )
-   {
-      int v;
-      SCIP_Real val;
+      /* create reference solution */
+      SCIP_CALL( SCIPcreateSol(set->scip, &refsol, NULL) );
 
-      v = resolutionset->inds[i];
-      val = resolutionset->vals[i];
-      SCIPsetDebugMsg(set, "ind, val (%d,%f)\n",v, val);
-      if( val > 0.0 )
+      /* initialize with average solution */
+      for( i = 0; i < nvars; i++ )
       {
-         SCIP_CALL( SCIPsolSetVal(refsol, set, stat, tree, vars[v], SCIPvarGetUbLocal(vars[v])) );
+         SCIP_CALL( SCIPsolSetVal(refsol, set, stat, tree, vars[i], SCIPvarGetAvgSol(vars[i])) );
       }
-      else
+
+      /* set all variables that are part of the resolution set to their active local bounds */
+      for( i = 0; i < resolutionset->nnz; i++ )
       {
-         SCIP_CALL( SCIPsolSetVal(refsol, set, stat, tree, vars[v], SCIPvarGetLbLocal(vars[v])) );
+         int v;
+         SCIP_Real val;
+
+         v = resolutionset->inds[i];
+         val = resolutionset->vals[i];
+         SCIPsetDebugMsg(set, "ind, val (%d,%f)\n",v, val);
+         if( val > 0.0 )
+         {
+            SCIP_CALL( SCIPsolSetVal(refsol, set, stat, tree, vars[v], SCIPvarGetUbLocal(vars[v])) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPsolSetVal(refsol, set, stat, tree, vars[v], SCIPvarGetLbLocal(vars[v])) );
+         }
       }
+
+      /* apply flow cover */
+      SCIP_CALL( SCIPcalcFlowCover(set->scip, refsol, POSTPROCESS, BOUNDSWITCH, ALLOWLOCAL, aggrrow, \
+            cutcoefs, cutrhs, cutinds, cutnnz, &cutefficacy, NULL, &islocal, &cutsuccess) );
+      *success = cutsuccess;
+
+      /* apply MIR */
+      SCIP_CALL( SCIPcutGenerationHeuristicCMIR(set->scip, refsol, POSTPROCESS, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, INT_MAX, \
+            NULL, NULL, MINFRAC, MAXFRAC, aggrrow, cutcoefs, cutrhs, cutinds, cutnnz, &cutefficacy, NULL, \
+            &islocal, &cutsuccess) );
+      *success = (*success || cutsuccess);
+
+      /* try to tighten the coefficients of the cut */
+      if( (*success) && !islocal )
+      {
+         SCIP_Bool redundant;
+         int nchgcoefs;
+
+         redundant = SCIPcutsTightenCoefficients(set->scip, FALSE, cutcoefs, cutrhs, cutinds, cutnnz, &nchgcoefs);
+
+         (*success) = !redundant;
+      }
+
+      SCIP_CALL( SCIPfreeSol(set->scip, &refsol) );
    }
-
-   /* apply flow cover */
-   SCIP_CALL( SCIPcalcFlowCover(set->scip, refsol, POSTPROCESS, BOUNDSWITCH, ALLOWLOCAL, aggrrow, \
-         cutcoefs, cutrhs, cutinds, cutnnz, &cutefficacy, NULL, &islocal, &cutsuccess) );
-   *success = cutsuccess;
-
-   /* apply MIR */
-   SCIP_CALL( SCIPcutGenerationHeuristicCMIR(set->scip, refsol, POSTPROCESS, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, INT_MAX, \
-         NULL, NULL, MINFRAC, MAXFRAC, aggrrow, cutcoefs, cutrhs, cutinds, cutnnz, &cutefficacy, NULL, \
-         &islocal, &cutsuccess) );
-   *success = (*success || cutsuccess);
-
-   /* try to tighten the coefficients of the cut */
-   if( (*success) && !islocal )
-   {
-      SCIP_Bool redundant;
-      int nchgcoefs;
-
-      redundant = SCIPcutsTightenCoefficients(set->scip, FALSE, cutcoefs, cutrhs, cutinds, cutnnz, &nchgcoefs);
-
-      (*success) = !redundant;
-   }
-
    /* freeing the local memory */
    SCIPfreeBufferArray(set->scip, &rowinds);
    SCIPfreeBufferArray(set->scip, &rowvals);
    SCIPaggrRowFree(set->scip, &aggrrow);
-   SCIP_CALL( SCIPfreeSol(set->scip, &refsol) );
 
    return SCIP_OKAY;
 }

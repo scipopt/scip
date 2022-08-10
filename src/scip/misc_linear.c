@@ -456,6 +456,11 @@ SCIP_ROW* SCIPconsCreateRow(
    assert(conshdlr != NULL);
    conshdlrname = SCIPconshdlrGetName(conshdlr);
 
+   if ( !(SCIPgetStage(scip) == SCIP_STAGE_INITSOLVE || SCIPgetStage(scip) == SCIP_STAGE_SOLVING) )
+   {
+      return SCIPconsGetRow(scip, cons);
+   }
+
    if( strcmp(conshdlrname, "linear") == 0 )
    {
       row = SCIPgetRowLinear(scip, cons);
