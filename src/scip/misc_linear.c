@@ -475,7 +475,7 @@ SCIP_ROW* SCIPconsCreateRow(
       if (row != NULL)
          return row;
       else
-         return SCIPCreateRowSetppc(scip, cons);
+         return SCIPcreateRowSetppc(scip, cons);
    }
    else if( strcmp(conshdlrname, "logicor") == 0 )
    {

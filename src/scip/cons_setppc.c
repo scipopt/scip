@@ -9528,7 +9528,7 @@ SCIP_ROW* SCIPgetRowSetppc(
 }
 
 /** returns the row of the given set partitioning / packing / covering constraint if no LP row was yet created */
-SCIP_ROW* SCIPCreateRowSetppc(
+SCIP_ROW* SCIPcreateRowSetppc(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    )
