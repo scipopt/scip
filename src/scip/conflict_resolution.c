@@ -929,7 +929,7 @@ SCIP_RETCODE weakenResolutionSet(
    previousslack = resolutionset->slack;
    /* recompute slack */
    resolutionset->slack = getSlack(set->scip, prob, resolutionset, currbdchgidx);
-   assert(SCIPsetIsLE(set, resolutionset->slack, previousslack));
+   assert(SCIPsetIsRelLE(set, resolutionset->slack, previousslack));
 
 #ifdef SCIP_DEBUG
    {
@@ -1962,7 +1962,7 @@ SCIPsetDebugMsg(set, " -> First bound change to resolve <%s> %s %.15g [status:%d
             previousslack = conflictresolutionset->slack;
             conflictresolutionset->slack = getSlack(set->scip, transprob, conflictresolutionset, bdchgidx);
             SCIPsetDebugMsg(set, "Tightened %d coefficients in the resolved constraint, old slack %f, new slack %f \n", nchgcoefs, previousslack,conflictresolutionset->slack);
-            assert(SCIPsetIsLE(set, conflictresolutionset->slack, previousslack));
+            assert(SCIPsetIsRelLE(set, conflictresolutionset->slack, previousslack));
          }
          /* sort for linear time resolution */
          SCIPsortIntReal(conflictresolutionset->inds, conflictresolutionset->vals, resolutionsetGetNNzs(conflictresolutionset));
