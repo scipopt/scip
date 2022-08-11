@@ -30,7 +30,7 @@ Interface changes
 ### Changed parameters
 ### New parameters
 
-- new paramters to turn on more statistics: misc/showdivingstats (diving heuristics), heuristics/alns/shownbstats (ALNS), estimation/showstats (tree size estimation)
+- new parameters to turn on more statistics: misc/showdivingstats (diving heuristics), heuristics/alns/shownbstats (ALNS), estimation/showstats (tree size estimation)
 
 ### Data structures
 
