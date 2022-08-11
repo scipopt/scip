@@ -1650,7 +1650,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
-   SCIP_CONS*            cons,               /**< constraint that detected the conflict */
+   SCIP_ROW*             initialconflictrow, /**< row of constraint that detected the conflict */
    SCIP_Bool             diving,             /**< are we in strong branching or diving mode? */
    int                   validdepth,         /**< minimal depth level at which the initial conflict set is valid */
    SCIP_Bool             mustresolve,        /**< should the conflict set only be used, if a resolution was applied? */
@@ -1663,7 +1663,6 @@ SCIP_RETCODE conflictAnalyzeResolution(
    SCIP_BDCHGINFO* bdchginfo;
    SCIP_BDCHGINFO* nextbdchginfo;
    SCIP_BDCHGIDX* bdchgidx;
-   SCIP_ROW* conflictrow;
    SCIP_ROW* reasonrow;
    SCIP_CONS* reasoncon;
 
@@ -1681,7 +1680,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
    SCIP_VAR* vartoresolve;
    int residx;
 
-   assert(cons != NULL);
+   assert(initialconflictrow != NULL);
    assert(conflict != NULL);
    assert(conflict->conflictset != NULL);
    assert(conflict->conflictset->nbdchginfos >= 0);
@@ -1710,16 +1709,14 @@ SCIP_RETCODE conflictAnalyzeResolution(
    if( validdepth > maxvaliddepth )
       return SCIP_OKAY;
 
-   /* get the corresponding conflict row */
-   conflictrow = SCIPconsCreateRow(set->scip, cons);
    /* if no row exists conflict analysis is not applicable */
-   if (conflictrow == NULL)
+   if (initialconflictrow == NULL)
    {
-      SCIPsetDebugMsg(set, "Conflict analysis not applicable since no row is available for the conflict constraint \n");
+      SCIPsetDebugMsg(set, "Conflict analysis not applicable since no row is available \n");
       return SCIP_OKAY;
    }
 
-   SCIPsetDebugMsg(set, "Conflict constraint: %s \n", SCIPconsGetName(cons));
+   SCIPsetDebugMsg(set, "Initial conflict Row: %s \n", SCIProwGetName(initialconflictrow));
 
    /* last bound change that led to infeasibility */
    bdchginfo = conflictFirstCand(conflict);
@@ -1737,6 +1734,9 @@ SCIP_RETCODE conflictAnalyzeResolution(
 
    vartoresolve = bdchginfo->var;
    residx = SCIPvarGetProbindex(vartoresolve);
+
+   /* check if the variable we are resolving is active */
+   assert(SCIPvarIsActive(vartoresolve));
 
 SCIPsetDebugMsg(set, " -> First bound change to resolve <%s> %s %.15g [status:%d, type:%d, depth:%d, pos:%d, reason:<%s>, info:%d] \n",
    SCIPvarGetName(vartoresolve),
@@ -1762,7 +1762,7 @@ SCIPsetDebugMsg(set, " -> First bound change to resolve <%s> %s %.15g [status:%d
    conflictresolutionset->validdepth = validdepth;
 
    /* get the resolution set of the conflict row */
-   SCIP_CALL( conflictResolutionsetFromRow(set, blkmem, conflictrow, conflictresolutionset, bdchginfo) );
+   SCIP_CALL( conflictResolutionsetFromRow(set, blkmem, initialconflictrow, conflictresolutionset, bdchginfo) );
 
    /* weaken or just apply coefficient tightening for the conflict constraint */
    if ( set->conf_weakenconflict )
@@ -1950,6 +1950,9 @@ SCIPsetDebugMsg(set, " -> First bound change to resolve <%s> %s %.15g [status:%d
 
       nextbdchginfo = conflictFirstCand(conflict);
 
+      /* check if the variable we are resolving is active */
+      assert(SCIPvarIsActive(vartoresolve));
+
       /* if this is a UIP we stop resolving with the reason */
       if( nextbdchginfo == NULL || SCIPbdchginfoGetDepth(nextbdchginfo) != bdchgdepth )
          goto TERMINATE;
@@ -2059,7 +2062,7 @@ SCIP_RETCODE SCIPconflictAnalyzeResolution(
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
-   SCIP_CONS*            cons,               /**< constraint that detected the conflict */
+   SCIP_ROW*             initialconflictrow, /**< row of constraint that detected the conflict */
    int                   validdepth,         /**< minimal depth level at which the initial conflict set is valid */
    SCIP_Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
    )
@@ -2121,7 +2124,8 @@ SCIP_RETCODE SCIPconflictAnalyzeResolution(
    conflict->bdchgonlyresqueue = TRUE;
 
    /* analyze the conflict set, and create a conflict constraint on success */
-   SCIP_CALL( conflictAnalyzeResolution(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue, cliquetable, cons, FALSE, validdepth, TRUE, &nconss, &nconfvars) );
+   SCIP_CALL( conflictAnalyzeResolution(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, \
+          eventqueue, cliquetable, initialconflictrow, FALSE, validdepth, TRUE, &nconss, &nconfvars) );
 
    conflict->nressuccess += (nconss > 0 ? 1 : 0);
    conflict->nresconfconss += nconss;

@@ -38,6 +38,7 @@
 #include "scip/pub_cons.h"
 #include "scip/pub_message.h"
 #include "scip/pub_var.h"
+#include "scip/pub_misc_linear.h"
 #include "scip/scip_conflict.h"
 #include "scip/scip_tree.h"
 #include "scip/set.h"
@@ -701,17 +702,18 @@ SCIP_RETCODE SCIPanalyzeConflictCons(
 
    if( SCIPconsIsGlobal(cons) )
    {
+      SCIP_ROW* conflictrow;
+      conflictrow = SCIPconsCreateRow(scip, cons);
+
       SCIP_CALL( SCIPconflictAnalyzeResolution(scip->conflict, scip->mem->probmem, scip->set, scip->stat,
-            scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable, cons, 0, success) );
+               scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable, conflictrow, 0, success) );
 
       SCIP_CALL( SCIPconflictAnalyze(scip->conflict, scip->mem->probmem, scip->set, scip->stat,
             scip->transprob, scip->tree, 0, success) );
    }
    else if( SCIPconsIsActive(cons) )
    {
-      /* @todo local case */
-      // SCIP_CALL( SCIPconflictAnalyzeResolution(scip->conflict, scip->mem->probmem, scip->set, scip->stat,
-      //       scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable, cons, SCIPconsGetValidDepth(cons), success) );
+      /* @todo generalized resolution for the local case */
 
       SCIP_CALL( SCIPconflictAnalyze(scip->conflict, scip->mem->probmem, scip->set, scip->stat,
             scip->transprob, scip->tree, SCIPconsGetValidDepth(cons), success) );
