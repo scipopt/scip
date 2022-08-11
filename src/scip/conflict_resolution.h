@@ -52,6 +52,14 @@
 extern "C" {
 #endif
 
+/** prints a resolution set in debug mode */
+void resolutionsetPrintRow(
+   SCIP_RESOLUTIONSET*   resolutionset,      /**< resolution set to print */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   int                   type                /**< type of resolution set (0: initial, 1:conflict, 2:reason, 3:resolved) */
+   );
+
 /** return TRUE if generalized resolution conflict analysis is applicable */
 SCIP_Bool SCIPconflictResolutionApplicable(
    SCIP_SET*             set                 /**< global SCIP settings */

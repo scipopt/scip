@@ -170,8 +170,7 @@ SCIP_RETCODE conflictInsertResolutionset(
 }
 
 
-
-/** perform activity based coefficient tigthening on a row defined with a left hand side; returns TRUE if the row
+/** perform activity based coefficient tightening on a row defined with a left hand side; returns TRUE if the row
  *  is redundant due to acitvity bounds
  */
 static
@@ -791,6 +790,9 @@ SCIP_Real getQuotLargestSmallestCoef(
 
       assert( vals != NULL);
 
+      if ( nnz == 0 )
+         return 0.0;
+
       minval = SCIPsetInfinity(set);
       maxval = -SCIPsetInfinity(set);
 
@@ -799,7 +801,7 @@ SCIP_Real getQuotLargestSmallestCoef(
          minval = MIN(minval, vals[i]);
          maxval = MAX(maxval, vals[i]);
       }
-      return maxval / minval;
+      return fabs(maxval / minval);
    }
 
 /** calculates the slack (maxact - rhs) for a resolutionset given a set of bounds and coefficients */
@@ -830,11 +832,15 @@ SCIP_Real getSlack(
       assert(SCIPvarGetProbindex(vars[v]) == v);
 
       coef = resolutionset->vals[i];
-
       /* get the latest bound change before currbdchgidx */
-      if( coef > 0.0 ) SCIPquadprecProdDD(delta, coef, SCIPgetVarUbAtIndex(scip, vars[v], currbdchgidx, TRUE));
-      else SCIPquadprecProdDD(delta, coef, SCIPgetVarLbAtIndex(scip, vars[v], currbdchgidx, TRUE));
-
+      if( coef > 0.0 )
+      {
+         SCIPquadprecProdDD(delta, coef, SCIPgetVarUbAtIndex(scip, vars[v], currbdchgidx, TRUE));
+      }
+      else
+      {
+         SCIPquadprecProdDD(delta, coef, SCIPgetVarLbAtIndex(scip, vars[v], currbdchgidx, TRUE));
+      }
       SCIPquadprecSumQQ(slack, slack, delta);
    }
    SCIPquadprecSumQD(slack, slack, -resolutionset->lhs);
@@ -854,6 +860,8 @@ SCIP_RETCODE weakenResolutionSet(
    )
 {
    SCIP_VAR** vars;
+   SCIP_Real previousslack;
+
    int i;
    SCIP_Bool applytightening;
    int nchgcoefs;
@@ -917,14 +925,29 @@ SCIP_RETCODE weakenResolutionSet(
    {
       tightenCoefLhs(set->scip, prob, FALSE, resolutionset->vals, &resolutionset->lhs, resolutionset->inds, &resolutionset->nnz, &nchgcoefs);
    }
+
+   previousslack = resolutionset->slack;
+   /* recompute slack */
    resolutionset->slack = getSlack(set->scip, prob, resolutionset, currbdchgidx);
+   assert(SCIPsetIsLE(set, resolutionset->slack, previousslack));
+
+#ifdef SCIP_DEBUG
+   {
+      if ( isreason )
+         SCIPsetDebugMsg(set, " Slack of reason after weakening %d variables is: %f \n", *nvarsweakened, resolutionset->slack);
+      else
+         SCIPsetDebugMsg(set, " Slack of resolved constraint after weakening %d variables is: %f \n", *nvarsweakened, resolutionset->slack);
+   }
+#endif
    /* sort for linear time resolution*/
    SCIPsortIntReal(resolutionset->inds, resolutionset->vals, resolutionsetGetNNzs(resolutionset));
 
    return SCIP_OKAY;
 }
 
-/** calculates a MIR cut from the coefficients of the resolution set */
+/** calculates a c-MIR cut from the coefficients of the resolution set
+ * @todo add debug messages, asserts
+*/
 static
 SCIP_RETCODE computecMIRfromResolutionSet(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -1006,7 +1029,6 @@ SCIP_RETCODE computecMIRfromResolutionSet(
 
          v = resolutionset->inds[i];
          val = resolutionset->vals[i];
-         SCIPsetDebugMsg(set, "ind, val (%d,%f)\n",v, val);
          if( val > 0.0 )
          {
             SCIP_CALL( SCIPsolSetVal(refsol, set, stat, tree, vars[v], SCIPvarGetUbLocal(vars[v])) );
@@ -1057,7 +1079,6 @@ SCIP_RETCODE addConflictBounds(
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_RESOLUTIONSET*   resolutionset,      /**< resolution set */
-   SCIP_VAR*             infervar,           /**< variable that was deduced, or NULL */
    SCIP_BDCHGIDX*        inferbdchgidx       /**< bound change index (time stamp of bound change), or NULL for current time */
    )
 {
@@ -1325,6 +1346,7 @@ SCIP_RETCODE resolveWithReason(
    SCIP_RESOLUTIONSET*   conflictresolutionset, /**< conflict resolution set */
    SCIP_RESOLUTIONSET*   reasonresolutionset,   /**< reason resolution set */
    BMS_BLKMEM*           blkmem,                /**< block memory */
+   SCIP_PROB*            transprob,          /**< transformed problem */
    int                   residx,                /**< index of variable to resolve */
    SCIP_Bool             wasresolved,           /**< resolution has been applied */
    SCIP_Bool*            success               /**< apply resolution */
@@ -1333,6 +1355,8 @@ SCIP_RETCODE resolveWithReason(
    int i;
    SCIP_Real coefconf;
    SCIP_Real coefreas;
+   SCIP_Real largestcoef;
+   SCIP_Real smallestcoef;
 
    int newsize;
    int cidx;
@@ -1345,6 +1369,7 @@ SCIP_RETCODE resolveWithReason(
    idxinreason = FALSE;
    *success = FALSE;
 
+   /* find in the conflict resolution set the coefficient of the variable we are resolving */
    for( i = 0; i < resolutionsetGetNNzs(conflictresolutionset); i++ )
    {
       if (conflictresolutionset->inds[i] == residx)
@@ -1355,6 +1380,7 @@ SCIP_RETCODE resolveWithReason(
       }
    }
 
+   /* find in the reason resolution set the coefficient of the variable we are resolving */
    for( i = 0; i < resolutionsetGetNNzs(reasonresolutionset); i++ )
    {
       if (reasonresolutionset->inds[i] == residx)
@@ -1416,16 +1442,7 @@ SCIP_RETCODE resolveWithReason(
 
    /* multiply reason by coefreas */
    for( i = 0; i < resolutionsetGetNNzs(reasonresolutionset); i++ )
-   {
       reasonresolutionset->vals[i] = fabs(coefreas) * reasonresolutionset->vals[i];
-      if (fabs(reasonresolutionset->vals[i]) > set->conf_generalresminmaxquot)
-      {
-         *success = FALSE;
-         SCIPsetDebugMsg(set, "Coefficients in reason are getting large");
-         return SCIP_OKAY;
-      }
-
-   }
 
    i = 0;
    /* add conflict and reason resolution sets */
@@ -1459,14 +1476,31 @@ SCIP_RETCODE resolveWithReason(
    }
    conflictresolutionset->lhs = conflictresolutionset->lhs + fabs(coefreas) * reasonresolutionset->lhs;
 
+   largestcoef = -SCIPsetInfinity(set);
+   smallestcoef = SCIPsetInfinity(set);
    /* remove coefficients that are almost zero (10^-9 tolerance) */
    for( i = 0; i < resolutionsetGetNNzs(conflictresolutionset); i++ )
    {
       if (SCIPsetIsZero(set, conflictresolutionset->vals[i] ))
+      {
          resolutionsetRemoveZeroVar(conflictresolutionset, set, i);
+         i--;
+      }
+      else
+      {
+         smallestcoef = MIN(smallestcoef, conflictresolutionset->vals[i]);
+         largestcoef = MAX(largestcoef, conflictresolutionset->vals[i]);
+      }
    }
-
-   SCIPsetDebugMsg(set, "Nonzeros in resolved constraint: %d \n", resolutionsetGetNNzs(conflictresolutionset));
+      SCIPsetDebugMsg(set, "Nonzeros in resolved constraint: %d \n", resolutionsetGetNNzs(conflictresolutionset));
+      SCIPdebug(resolutionsetPrintRow(conflictresolutionset, set, transprob, 3));
+      /* check if the quotient of coefficients in the resolvent exceeds the max allowed quotient */
+      if ( SCIPsetIsGT(set, (conflictresolutionset->nnz > 0) ? fabs(largestcoef / smallestcoef) : 0.0, set->conf_generalresminmaxquot) )
+      {
+         *success = FALSE;
+         SCIPsetDebugMsg(set, "Quotient %f exceeds max allowed quotient", (conflictresolutionset->nnz > 0) ? fabs(largestcoef / smallestcoef) : 0.0);
+         return SCIP_OKAY;
+      }
 
    /* sort for linear time resolution */
    SCIPsortIntReal(conflictresolutionset->inds, conflictresolutionset->vals, resolutionsetGetNNzs(conflictresolutionset));
@@ -1633,6 +1667,53 @@ SCIP_RETCODE conflictResolutionsetFromRow(
    return SCIP_OKAY;
 }
 
+#ifdef SCIP_DEBUG
+/** prints a resolution set in debug mode */
+void resolutionsetPrintRow(
+   SCIP_RESOLUTIONSET*   resolutionset,      /**< resolution set to print */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   int                   type                /**< row type (0: initial, 1:conflict, 2:reason, 3:resolved, 4:cmir) */
+   )
+{
+      SCIP_VAR** vars;
+      int v;
+      int i;
+
+      vars = SCIPprobGetVars(transprob);
+      assert(vars != NULL);
+
+      switch( type )
+      {
+      case 0:
+         SCIPsetDebugMsgPrint(set, "Initial row: ");
+         break;
+      case 1:
+         SCIPsetDebugMsgPrint(set, "Conflict row: ");
+         break;
+      case 2:
+         SCIPsetDebugMsgPrint(set, "Reason row: ");
+         break;
+      case 3:
+         SCIPsetDebugMsgPrint(set, "Resolved row: ");
+         break;
+      case 4:
+         SCIPsetDebugMsgPrint(set, "c-MIR row: ");
+         break;
+      default:
+         SCIPsetDebugMsgPrint(set, "Resolution set row: ");
+         break;
+      }
+      for( i = 0; i < resolutionsetGetNNzs(resolutionset); i++ )
+      {
+         v = resolutionset->inds[i];
+         assert(SCIPvarGetProbindex(vars[v]) == v);
+         SCIPsetDebugMsgPrint(set, "%f<%s> ", resolutionset->vals[i], SCIPvarGetName(vars[v]));
+      }
+      SCIPsetDebugMsgPrint(set, ">= %f \n", resolutionset->lhs);
+}
+#endif
+
 /** analyzes conflicting bound changes that were added with calls to SCIPconflictAddBound() and
  *  SCIPconflictAddRelaxedBound(), and on success, creates and possibly adds a linear constraint
  *  that explains the infeasibility; afterwards the resolution set(s) are cleared
@@ -1680,7 +1761,6 @@ SCIP_RETCODE conflictAnalyzeResolution(
    SCIP_VAR* vartoresolve;
    int residx;
 
-   assert(initialconflictrow != NULL);
    assert(conflict != NULL);
    assert(conflict->conflictset != NULL);
    assert(conflict->conflictset->nbdchginfos >= 0);
@@ -1764,12 +1844,14 @@ SCIPsetDebugMsg(set, " -> First bound change to resolve <%s> %s %.15g [status:%d
    /* get the resolution set of the conflict row */
    SCIP_CALL( conflictResolutionsetFromRow(set, blkmem, initialconflictrow, conflictresolutionset, bdchginfo) );
 
+   SCIPdebug(resolutionsetPrintRow(conflictresolutionset, set, transprob, 0));
    /* weaken or just apply coefficient tightening for the conflict constraint */
    if ( set->conf_weakenconflict )
    {
       int nvarsweakened;
       weakenResolutionSet(conflictresolutionset, set, transprob, bdchgidx, residx, &nvarsweakened, FALSE);
       SCIPsetDebugMsgPrint(set, "Weakened %d variables, new conflict slack %f \n", nvarsweakened, conflictresolutionset->slack);
+      SCIPdebug(resolutionsetPrintRow(conflictresolutionset, set, transprob, 0));
    }
    else
    {
@@ -1822,45 +1904,24 @@ SCIPsetDebugMsg(set, " -> First bound change to resolve <%s> %s %.15g [status:%d
          reasonresolutionset->slack = reasonslack;
          SCIPsetDebugMsg(set, "conflict resolution set: nnzs: %d, slack: %f \n", resolutionsetGetNNzs(conflictresolutionset), conflictslack);
          SCIPsetDebugMsg(set, "reason resolution set: nnzs: %d, slack: %f \n", resolutionsetGetNNzs(reasonresolutionset), reasonslack);
+         SCIPdebug(resolutionsetPrintRow(reasonresolutionset, set, transprob, 2));
 
          if ( set->conf_weakenreason )
          {
             int nvarsweakened;
             weakenResolutionSet(reasonresolutionset, set, transprob, bdchgidx, residx, &nvarsweakened, TRUE);
             SCIPsetDebugMsgPrint(set, "Weakened %d variables, new reason slack %f \n", nvarsweakened, reasonresolutionset->slack);
+            SCIPdebug(resolutionsetPrintRow(reasonresolutionset, set, transprob, 2));
          }
          /* @todo: in the binary case slack should become zero */
          // if ((transprob->nvars == transprob->nbinvars))
          //   assert(SCIPsetIsEQ(set, reasonresolutionset->slack, 0.0));
+
          if ( SCIPsetIsGE(set, conflictresolutionset->slack + reasonresolutionset->slack, 0.0) )
          goto TERMINATE;
 
 #ifdef SCIP_DEBUG
       {
-         SCIP_VAR** vars;
-         int v;
-
-         vars = SCIPprobGetVars(transprob);
-         assert(vars != NULL);
-
-         SCIPsetDebugMsgPrint(set, "Conflict row: ");
-         for( i = 0; i < resolutionsetGetNNzs(conflictresolutionset); i++ )
-         {
-            v = conflictresolutionset->inds[i];
-            assert(SCIPvarGetProbindex(vars[v]) == v);
-            SCIPsetDebugMsgPrint(set, "%f<%s> ", conflictresolutionset->vals[i], SCIPvarGetName(vars[v]));
-         }
-         SCIPsetDebugMsgPrint(set, ">= %f \n", conflictresolutionset->lhs);
-
-         SCIPsetDebugMsgPrint(set, "Reason row: ");
-         for( i = 0; i < resolutionsetGetNNzs(reasonresolutionset); i++ )
-         {
-            v = reasonresolutionset->inds[i];
-            assert(SCIPvarGetProbindex(vars[v]) == v);
-            SCIPsetDebugMsgPrint(set, "%f<%s> ", reasonresolutionset->vals[i], SCIPvarGetName(vars[v]));
-         }
-         SCIPsetDebugMsgPrint(set, ">= %f \n", reasonresolutionset->lhs);
-
          SCIPsetDebugMsg(set, " -> Resolve bound change <%s> %s %.15g [status:%d, type:%d, depth:%d, pos:%d, reason:<%s>, info:%d] \n",
             SCIPvarGetName(vartoresolve),
             SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
@@ -1876,29 +1937,11 @@ SCIPsetDebugMsg(set, " -> First bound change to resolve <%s> %s %.15g [status:%d
       }
 #endif
          /* resolution step */
-         resolveWithReason(set->scip, set, conflictresolutionset, reasonresolutionset, blkmem, residx, (conflict->nresolutionsets > 0), &successresolution);
+         resolveWithReason(set->scip, set, conflictresolutionset, reasonresolutionset, blkmem, transprob, residx, (conflict->nresolutionsets > 0), &successresolution);
          nressteps++;
 
          if (!successresolution)
             goto TERMINATE;
-
-#ifdef SCIP_DEBUG
-      {
-         SCIP_VAR** vars;
-         int v;
-
-         vars = SCIPprobGetVars(transprob);
-         assert(vars != NULL);
-         SCIPsetDebugMsgPrint(set, "Resolved row: ");
-         for( i = 0; i < resolutionsetGetNNzs(conflictresolutionset); i++ )
-         {
-            v = conflictresolutionset->inds[i];
-            assert(SCIPvarGetProbindex(vars[v]) == v);
-            SCIPsetDebugMsgPrint(set, "%f<%s> ", conflictresolutionset->vals[i], SCIPvarGetName(vars[v]));
-         }
-         SCIPsetDebugMsgPrint(set, ">= %f \n", conflictresolutionset->lhs);
-      }
-#endif
 
          conflictslack = getSlack(set->scip, transprob, conflictresolutionset, bdchgidx);
 
@@ -1915,9 +1958,11 @@ SCIPsetDebugMsg(set, " -> First bound change to resolve <%s> %s %.15g [status:%d
          tightenCoefLhs(set->scip, transprob, FALSE, conflictresolutionset->vals, &conflictresolutionset->lhs, conflictresolutionset->inds, &conflictresolutionset->nnz, &nchgcoefs);
          if (nchgcoefs > 0)
          {
-            SCIPsetDebugMsg(set, "Tightened %d coefficients in the resolved constraint \n", nchgcoefs);
-            conflictslack = getSlack(set->scip, transprob, conflictresolutionset, bdchgidx);
-            conflictresolutionset->slack = conflictslack;
+            SCIP_Real previousslack;
+            previousslack = conflictresolutionset->slack;
+            conflictresolutionset->slack = getSlack(set->scip, transprob, conflictresolutionset, bdchgidx);
+            SCIPsetDebugMsg(set, "Tightened %d coefficients in the resolved constraint, old slack %f, new slack %f \n", nchgcoefs, previousslack,conflictresolutionset->slack);
+            assert(SCIPsetIsLE(set, conflictresolutionset->slack, previousslack));
          }
          /* sort for linear time resolution */
          SCIPsortIntReal(conflictresolutionset->inds, conflictresolutionset->vals, resolutionsetGetNNzs(conflictresolutionset));
@@ -1938,7 +1983,7 @@ SCIPsetDebugMsg(set, " -> First bound change to resolve <%s> %s %.15g [status:%d
          goto TERMINATE;
 
       conflictCleanUpbdchgqueue(conflict, set, conflictresolutionset);
-      addConflictBounds(set->scip, transprob, set, conflictresolutionset, vartoresolve, bdchgidx);
+      addConflictBounds(set->scip, transprob, set, conflictresolutionset, bdchgidx);
 
       bdchginfo = conflictFirstCand(conflict);
       if (bdchginfo == NULL)
@@ -2000,7 +2045,7 @@ SCIPsetDebugMsg(set, " -> First bound change to resolve <%s> %s %.15g [status:%d
          resolutionset = conflict->resolutionsets[i];
          assert(SCIPsetIsLT(set, resolutionset->slack, 0.0));
 
-         if ( SCIPsetIsLT(set, getQuotLargestSmallestCoef(set, resolutionset->vals, resolutionset->nnz),set->conf_generalresminmaxquot) )
+         if ( SCIPsetIsLT(set, getQuotLargestSmallestCoef(set, resolutionset->vals, resolutionset->nnz), set->conf_generalresminmaxquot) )
          {
             SCIPconflictFlushResolutionSets(conflict, blkmem, set->scip, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue, cliquetable, resolutionset);
             (*nconss)++;
@@ -2026,6 +2071,15 @@ SCIPsetDebugMsg(set, " -> First bound change to resolve <%s> %s %.15g [status:%d
                SCIP_RESOLUTIONSET* cutresolutionset;
                resolutionsetCreate(&cutresolutionset, blkmem);
                resolutionsetAddSparseData(cutresolutionset, blkmem, cutcoefs, cutinds, cutnnz, -cutrhs, cutrhs, -SCIPinfinity(set->scip), NULL, TRUE);
+
+#ifdef SCIP_DEBUG
+            {
+               SCIP_Real cutslack;
+               cutslack = getSlack(set->scip, transprob, cutresolutionset, NULL);
+               assert(SCIPsetIsLE(set, cutslack, 0.0));
+            }
+#endif
+               SCIPdebug(resolutionsetPrintRow(reasonresolutionset, set, transprob, 4));
                SCIPconflictFlushResolutionSets(conflict, blkmem, set->scip, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue, cliquetable, cutresolutionset);
                (*nconss)++;
                (*nconfvars) = resolutionsetGetNNzs(resolutionset);
