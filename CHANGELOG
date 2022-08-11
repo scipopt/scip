@@ -61,6 +61,7 @@ Fixed bugs
 - fixed bug in reopt.c, which occured for bounds outside of current valid bounds
 - fixed problem with recomputing symmetries after a restart
 - fixed bug SCIPcalcMIR() with wrong order of arguments for removeZerosQuad()
+- fixed segmentation fault in update of cut statistic
 
 Miscellaneous
 -------------
