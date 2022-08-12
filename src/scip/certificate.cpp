@@ -1709,7 +1709,7 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
       RatSetReal(value, -aggrinfo->negslackweights[i]);
       RatDiv(value, value, oneminusf0);
       RatAddReal(value, value, aggrinfo->substfactor[i]);
-      RatDebugMessage("adding %q times row (negative continous slacks): ", value);
+      RatDebugMessage("adding %q times row (negative continous slacks) (%g aggweight %g substfactor): ", value, -aggrinfo->negslackweights[i] / RatApproxReal(oneminusf0), aggrinfo->substfactor[i]);
       SCIPdebug(SCIProwExactPrint(slackrow, set->scip->messagehdlr, NULL));
 
       assert(slackrow != NULL);
@@ -1734,7 +1734,7 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
       SCIP_ROWEXACT* slackrow;
       slackrow = SCIProwGetRowExact(mirinfo->slackrows[i]);
 
-      RatSetReal(value, -mirinfo->slackorigcoefs[i]);
+      RatSetReal(value, mirinfo->slackorigcoefs[i]);
       RatDiv(value, value, oneminusf0);
 
       SCIPdebugMessage("adding %g times row: ", RatApproxReal(value));

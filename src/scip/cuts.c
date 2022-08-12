@@ -3439,7 +3439,7 @@ SCIP_RETCODE SCIPaggrRowSumRows(
             {
                SCIPdebugMessage("Adding %g times row: ", weights[k]);
                SCIPdebug(SCIPprintRow(scip, rows[k], NULL));
-               SCIP_CALL( addOneRowSafely(scip, certificaterow, rows[k], weights[k], sidetypebasis, allowlocal, negslack, maxaggrlen, &rowtoolong, &rowused, valid, &lhsused) );
+               SCIP_CALL( addOneRowSafely(scip, aggrrow, rows[k], weights[k], sidetypebasis, allowlocal, negslack, maxaggrlen, &rowtoolong, &rowused, valid, &lhsused) );
                if( SCIPisCertificateActive(scip) )
                {
                   SCIP_ROW* row = rows[k];
@@ -3451,11 +3451,11 @@ SCIP_RETCODE SCIPaggrRowSumRows(
                   {
                      rowusedcert = FALSE;
                      SCIPdebugMessage("row has integral slack\n");
-                     integral = TRUE; //SCIP_CALL( addOneRowSafely(scip, aggrrow, rows[k], weights[k], sidetypebasis, allowlocal, negslack, maxaggrlen, &rowtoolong, &rowused, valid, &lhsused) );
+                     integral = TRUE; //SCIP_CALL( addOneRowSafely(scip, certificaterow, rows[k], weights[k], sidetypebasis, allowlocal, negslack, maxaggrlen, &rowtoolong, &rowused, valid, &lhsused) );
                   }
                   else
                   {
-                     SCIP_CALL( addOneRowSafely(scip, certificaterow, rows[rowinds[k]], weights[rowinds[k]], sidetypebasis, allowlocal, 0, maxaggrlen, &rowtoolongcert, &rowusedcert, valid, &lhsused) );
+                     SCIP_CALL( addOneRowSafely(scip, certificaterow, rows[k], weights[k], sidetypebasis, allowlocal, 0, maxaggrlen, &rowtoolongcert, &rowusedcert, valid, &lhsused) );
                   }
                   if( rowusedcert )
                   {
@@ -6097,16 +6097,8 @@ SCIP_RETCODE cutsSubstituteMIRSafe(
       else
          userow = row;
 
-      if( SCIPisCertificateActive(scip) )
+      if( SCIPisCertificateActive(scip) && integralslack)
       {
-         if( !integralslack )
-         {
-            assert(aggrinfo->negslackweights[currentnegslackrow] == -weights[i]);
-            aggrinfo->substfactor[currentnegslackrow] = MIN(cutar.inf * -slacksign[i], cutar.sup * -slacksign[i]);
-            currentnegslackrow++;
-         }
-         else
-         {
             SCIP_INTERVAL slackcont;
 
             // save the value for the split disjunction for the integer slack and the continous part (for rounded up we subtract 1-f)
@@ -6126,11 +6118,10 @@ SCIP_RETCODE cutsSubstituteMIRSafe(
             mirinfo->slackcontcoefs[mirinfo->nslacks] = slackcont.inf; //(slacksign[i] == -1) ? slackcont.inf : slackcont.sup;
 
             // save the value that goes into the certificate aggregation row (either downar or ar)
-            mirinfo->slackorigcoefs[mirinfo->nslacks] = slackorigcoef * slacksign[i];
+            mirinfo->slackorigcoefs[mirinfo->nslacks] = slackorigcoef * (-slacksign[i]); // * slacksign[i];
             if( slackorigcoef != 0 )
                mirinfo->nrounddownslacks++;
             mirinfo->nslacks++;
-         }
       }
 
       /* if the coefficient was reduced to zero, ignore the slack variable */
@@ -6146,11 +6137,17 @@ SCIP_RETCODE cutsSubstituteMIRSafe(
          SCIP_Real sidevalchg;
 
          SCIPintervalMulScalar(SCIPinfinity(scip), &cutar, cutar, -slacksign[i]);
-         // if( slacksign[i] == -1 )
-         //    mult = cutar.inf;
-         // else
-         //    mult = cutar.sup;
-         mult = cutar.inf;
+         if( slacksign[i] == -1 )
+            mult = cutar.inf;
+         else
+            mult = cutar.sup;
+
+         if( SCIPisCertificateActive(scip) && !integralslack )
+         {
+            assert(aggrinfo->negslackweights[currentnegslackrow] == -weights[i]);
+            aggrinfo->substfactor[currentnegslackrow] = mult;
+            currentnegslackrow++;
+         }
 
          /** @todo exip: inf/sup here? */
          SCIP_CALL( varVecAddScaledRowCoefsQuadSafely(scip, cutinds, cutcoefs, nnz, userow, mult, &sidevalchg, NULL, 0.0, &success) );
