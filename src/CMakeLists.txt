@@ -45,7 +45,7 @@ set(scipsources
     scip/branch_random.c
     scip/branch_relpscost.c
     scip/branch_vanillafullstrong.c
-    scip/certificate.c
+    scip/certificate.cpp
     scip/compr_largestrepr.c
     scip/compr_weakcompr.c
     scip/concsolver_scip.c

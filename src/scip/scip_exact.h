@@ -120,7 +120,6 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPaddCertificateAggregation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_AGGRROW*         aggrrow,            /**< agrrrow that results from the aggregation */
-   SCIP_AGGRROW*         negslackrow,        /**< agrrrow that results from the aggregation with implicitly defined negative slack added */
    SCIP_ROW**            aggrrows,           /**< array of rows used fo the aggregation */
    SCIP_Real*            weights,            /**< array of weights */
    int                   naggrrows,          /**< length of the arrays */

@@ -20,10 +20,11 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-
+#define SCIP_DEBUG
 #include <stdio.h>
 #include <assert.h>
 #include <string.h>
+#include <map>
 
 #include "blockmemshell/memory.h"
 #include "scip/cuts.h"
@@ -740,6 +741,11 @@ void SCIPcertificateExit(
             BMSfreeBlockMemoryArray(certificate->blkmem, &(certificate->mirinfo[i]->splitcoefficients), certificate->mirinfo[i]->nsplitvars);
             BMSfreeBlockMemoryArray(certificate->blkmem, &(certificate->mirinfo[i]->upperused), certificate->mirinfo[i]->nsplitvars);
             BMSfreeBlockMemoryArray(certificate->blkmem, &(certificate->mirinfo[i]->localbdused), certificate->mirinfo[i]->nsplitvars);
+            BMSfreeBlockMemoryArray(certificate->blkmem, &(certificate->mirinfo[i]->slackrows), certificate->mirinfo[i]->nslacks);
+            BMSfreeBlockMemoryArray(certificate->blkmem, &(certificate->mirinfo[i]->slacksign), certificate->mirinfo[i]->nslacks);
+            BMSfreeBlockMemoryArray(certificate->blkmem, &(certificate->mirinfo[i]->slackcoefficients), certificate->mirinfo[i]->nslacks);
+            BMSfreeBlockMemoryArray(certificate->blkmem, &(certificate->mirinfo[i]->slackcontcoefs), certificate->mirinfo[i]->nslacks);
+            BMSfreeBlockMemoryArray(certificate->blkmem, &(certificate->mirinfo[i]->slackorigcoefs), certificate->mirinfo[i]->nslacks);
             BMSfreeBlockMemory(certificate->blkmem, &certificate->mirinfo[i]);
          }
          BMSfreeBlockMemoryArray(certificate->blkmem, &certificate->mirinfo, certificate->mirinfosize);
@@ -1359,31 +1365,74 @@ SCIP_RETCODE certificatePrintMirSplit(
    SCIP_MIRINFO* mirinfo;
    SCIP_Rational* val;
    SCIP_VAR** vars;
-   int i;
+   int i, j;
+   SCIP_Real slackrhs;
+   std::map<int, SCIP_Real> coefs;
 
    assert(SCIPhashmapExists(certificate->mirinfohash, (void*) row));
 
    mirinfo = (SCIP_MIRINFO*) SCIPhashmapGetImage(certificate->mirinfohash, (void*) row);
 
    vars = SCIPprobGetVars(prob);
+   slackrhs = 0;
+
+   RatDebugMessage("printing split disjunction <= %q \\/ >= %q+1  \n", mirinfo->rhs, mirinfo->rhs);
+
+   for( i = 0; i < mirinfo->nsplitvars; ++i )
+   {
+      coefs[SCIPvarGetCertificateIndex(vars[mirinfo->varinds[i]])] += mirinfo->splitcoefficients[i];
+      SCIPdebugMessage("+%g%s", mirinfo->splitcoefficients[i], SCIPvarGetName(vars[mirinfo->varinds[i]]));
+   }
+   for( i = 0; i < mirinfo->nslacks; ++i )
+   {
+      SCIP_ROW* slackrow = mirinfo->slackrows[i];
+      SCIP_Real slackval = mirinfo->slackcoefficients[i];
+
+      for( j = 0; j < SCIProwGetNNonz(slackrow); ++j)
+      {
+         SCIP_VAR* var = SCIPcolGetVar(SCIProwGetCols(slackrow)[j]);
+         int varidx = SCIPvarGetCertificateIndex(var);
+         SCIP_Real rowcoef = SCIProwGetVals(slackrow)[j];
+
+         assert(SCIPisExactlyIntegral(set->scip, rowcoef * slackval));
+         assert(SCIPvarIsBinary(var) || SCIPvarIsIntegral(var));
+         coefs[varidx] += rowcoef  * slackval;
+         assert(SCIPisExactlyIntegral(set->scip, coefs[varidx]));
+      }
+      if( mirinfo->slacksign[i] == 1 )
+      {
+         assert(SCIPisExactlyIntegral(set->scip, SCIProwGetRhs(slackrow) - SCIProwGetConstant(slackrow)));
+         slackrhs += (SCIProwGetRhs(slackrow) - SCIProwGetConstant(slackrow)) * slackval;
+
+         assert(SCIPisExactlyIntegral(set->scip, slackrhs));
+         SCIPdebugMessage("+%gsrhs_%s", mirinfo->slackcoefficients[i], SCIProwGetName(mirinfo->slackrows[i]));
+      }
+      else
+      {
+         assert(SCIPisExactlyIntegral(set->scip, SCIProwGetLhs(slackrow) - SCIProwGetConstant(slackrow)));
+         slackrhs += (SCIProwGetLhs(slackrow) - SCIProwGetConstant(slackrow)) * slackval;
+
+         assert(SCIPisExactlyIntegral(set->scip, slackrhs));
+         SCIPdebugMessage("+%gslhs_%s", mirinfo->slackcoefficients[i], SCIProwGetName(mirinfo->slackrows[i]));
+      }
+   }
 
    SCIP_CALL( RatCreateBuffer(set->buffer, &val) );
 
-   RatDebugMessage("printing mirinfo with rhs %q \n", mirinfo->rhs);
    /* transform the split back into original variable space -> undo the bound transformations */
-
    SCIPcertificatePrintProofMessage(certificate, "A%d_split %c ", certificate->indexcounter, 'L');
 
-   SCIPcertificatePrintProofRational(certificate, mirinfo->rhs, 10);
+   /* add rhs change from integer slacks and print rhs */
+   RatAddReal(val, mirinfo->rhs, slackrhs);
+   SCIPcertificatePrintProofRational(certificate, val, 10);
 
-   SCIPcertificatePrintProofMessage(certificate, " %d", mirinfo->nsplitvars);
+   SCIPcertificatePrintProofMessage(certificate, " %d", coefs.size());
 
-   for( i = 0; i < mirinfo->nsplitvars; i++ )
+   for( auto it = coefs.begin(); it != coefs.end(); ++it )
    {
-      int varindex;
       /** @todo exip: perform line breaking before exceeding maximum line length */
-      varindex = SCIPvarGetCertificateIndex(vars[mirinfo->varinds[i]]);
-      RatSetReal(val, mirinfo->splitcoefficients[i]);
+      int varindex = it->first;
+      RatSetReal(val, it->second);
 
       assert(RatIsIntegral(val));
 
@@ -1398,20 +1447,16 @@ SCIP_RETCODE certificatePrintMirSplit(
 
    SCIPcertificatePrintProofMessage(certificate, "A%d_split %c ", certificate->indexcounter, 'G');
 
-   RatAddReal(mirinfo->rhs, mirinfo->rhs, 1.0);
+   RatAddReal(val, mirinfo->rhs, slackrhs + 1.0);
+   SCIPcertificatePrintProofRational(certificate, val, 10);
 
-   SCIPcertificatePrintProofRational(certificate, mirinfo->rhs, 10);
+   SCIPcertificatePrintProofMessage(certificate, " %d", coefs.size());
 
-   RatAddReal(mirinfo->rhs, mirinfo->rhs, -1.0);
-
-   SCIPcertificatePrintProofMessage(certificate, " %d", mirinfo->nsplitvars);
-
-   for( i = 0; i < mirinfo->nsplitvars; i++ )
+   for( auto it = coefs.begin(); it != coefs.end(); ++it )
    {
-      int varindex;
       /** @todo exip: perform line breaking before exceeding maximum line length */
-      varindex = SCIPvarGetCertificateIndex(vars[mirinfo->varinds[i]]);
-      RatSetReal(val, mirinfo->splitcoefficients[i]);
+      int varindex = it->first;
+      RatSetReal(val, it->second);
 
       assert(RatIsIntegral(val));
 
@@ -1525,6 +1570,9 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
 
    rowexact = SCIProwGetRowExact(row);
 
+   SCIPdebugMessage("Printing MIR-certifiaction for row ");
+   SCIPdebug(SCIProwExactPrint(rowexact,  set->scip->messagehdlr, NULL));
+
    /* get aggregation info and print aggregation row to certificate */
    aggrinfo = (SCIP_AGGREGATIONINFO*) SCIPhashmapGetImage(certificate->aggrinfohash, (void*) row);
    mirinfo = (SCIP_MIRINFO*) SCIPhashmapGetImage(certificate->mirinfohash, (void*) row);
@@ -1572,18 +1620,21 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
    certificatePrintWeakDerStart(certificate, prob, SCIProwIsLocal(row));
 
    /* 1 * (\xi \le \lfloor \beta \rfloor) we also have to add the correct multipliers for the negative slacks that were used here */
-   SCIPcertificatePrintProofMessage(certificate, "%d %d ", 1 + aggrinfo->nnegslackrows, leftdisjunctionindex);
+   SCIPcertificatePrintProofMessage(certificate, "%d %d ", 1 + aggrinfo->nnegslackrows + mirinfo->nslacks, leftdisjunctionindex);
    /* multiply with scaling parameter that was used during cut computation */
    RatSetReal(tmpval, mirinfo->scale);
    SCIPcertificatePrintProofRational(certificate, tmpval, 10);
 
+   SCIPdebugMessage("Verifying left part of split disjunction, multipliers 1 and 1/%g \n", RatApproxReal(oneminusf0));
+
+   SCIPdebugMessage("Correcting for negative continous slacks ( needed for v >= 0 part ) \n");
    for( i = 0; i < aggrinfo->nnegslackrows; i++ )
    {
        size_t key;
        SCIP_ROWEXACT* slackrow;
        slackrow = SCIProwGetRowExact(aggrinfo->negslackrows[i]);
 
-       SCIPdebugMessage("adding %g times row: ", aggrinfo->negslackweights[i]);
+       SCIPdebugMessage("adding (weight/(1-f0)) %g times row: ", aggrinfo->substfactor[i]);
        SCIPdebug(SCIProwExactPrint(slackrow, set->scip->messagehdlr, NULL));
        assert(slackrow != NULL);
        assert(SCIPhashmapExists(certificate->rowdatahash, (void*) slackrow));
@@ -1602,13 +1653,40 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
        RatMultReal(tmpval, tmpval, mirinfo->scale);
        SCIPcertificatePrintProofRational(certificate, tmpval, 10);
    }
+
+   SCIPdebugMessage("Correcting for integer slacks  ( needed for v >= 0 part ) \n");
+   for( i = 0; i < mirinfo->nslacks; i++ )
+   {
+       size_t key;
+       SCIP_ROWEXACT* slackrow;
+       slackrow = SCIProwGetRowExact(mirinfo->slackrows[i]);
+
+       SCIPdebugMessage("adding %g times row: ", mirinfo->slackcontcoefs[i]);
+       SCIPdebug(SCIProwExactPrint(slackrow, set->scip->messagehdlr, NULL));
+       assert(slackrow != NULL);
+       assert(SCIPhashmapExists(certificate->rowdatahash, (void*) slackrow));
+       RatSetReal(tmpval, mirinfo->slackcontcoefs[i]);
+
+       key = (size_t)SCIPhashmapGetImage(certificate->rowdatahash, (void*) slackrow);
+       /* for ranged rows, the key always corresponds to the >= part of the row;
+          therefore we need to increase it by one to get the correct key */
+       if( !RatIsAbsInfinity(slackrow->rhs) && !RatIsAbsInfinity(slackrow->lhs) && !RatIsEqual(slackrow->lhs, slackrow->rhs) && mirinfo->slackcontcoefs[i] >= 0 )
+          key += 1;
+
+       SCIPcertificatePrintProofMessage(certificate, " %d ", key);
+       RatMultReal(tmpval, tmpval, mirinfo->scale);
+       SCIPcertificatePrintProofRational(certificate, tmpval, 10);
+   }
+
    SCIPcertificatePrintProofMessage(certificate, " } -1 \n");
+
+   SCIPdebugMessage("Verifying right part of split disjunction, multipliers -f/(1-f) and 1/1-f \n");
 
    /* print the mir cut with proof (-f/1-f) * (\xi \ge \lfloor \beta + 1 \rfloor) + (1/1-f)(\xi - \nu \le \beta) */
    SCIPcertificatePrintRow(set, certificate, rowexact, mirinfo->unroundedrhs);
 
    certificatePrintWeakDerStart(certificate, prob, SCIProwIsLocal(row));
-   SCIPcertificatePrintProofMessage(certificate, " %d ", 1 + aggrinfo->naggrrows + aggrinfo->nnegslackrows);
+   SCIPcertificatePrintProofMessage(certificate, " %d ", 1 + aggrinfo->naggrrows + aggrinfo->nnegslackrows + mirinfo->nslacks);
 
    /* (-f/1-f) * (\xi \ge \lfloor \beta + 1 \rfloor) */
    SCIPcertificatePrintProofMessage(certificate, "%d ", rightdisjunctionindex);
@@ -1619,18 +1697,20 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
    RatMultReal(tmpval, tmpval, mirinfo->scale);
    SCIPcertificatePrintProofRational(certificate, tmpval, 10);
 
-   /* we also have to add the correct multipliers for the negative slacks that were used here */
+   SCIPdebugMessage("Correcting for negative continous slacks \n");
+   /** @todo exip: really necessary? if so this is only for rounding error correction */
+   /* we also have to add the correct multipliers for the negative continuous slacks that were used here */
    for( i = 0; i < aggrinfo->nnegslackrows; i++ )
    {
       size_t key;
       SCIP_ROWEXACT* slackrow;
       slackrow = SCIProwGetRowExact(aggrinfo->negslackrows[i]);
 
-      SCIPdebugMessage("adding %g times row: ", aggrinfo->negslackweights[i]);
-      SCIPdebug(SCIProwExactPrint(slackrow, set->scip->messagehdlr, NULL));
       RatSetReal(value, -aggrinfo->negslackweights[i]);
       RatDiv(value, value, oneminusf0);
       RatAddReal(value, value, aggrinfo->substfactor[i]);
+      RatDebugMessage("adding %q times row (negative continous slacks): ", value);
+      SCIPdebug(SCIProwExactPrint(slackrow, set->scip->messagehdlr, NULL));
 
       assert(slackrow != NULL);
       assert(SCIPhashmapExists(certificate->rowdatahash, (void*) slackrow));
@@ -1646,6 +1726,35 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
       SCIPcertificatePrintProofRational(certificate, value, 10);
    }
 
+   SCIPdebugMessage("Correcting for %d integer slacks \n", mirinfo->nrounddownslacks);
+   /* we also have to add the correct multipliers for the integer slacks that were used here */
+   for( i = 0; i < mirinfo->nslacks; i++ )
+   {
+      size_t key;
+      SCIP_ROWEXACT* slackrow;
+      slackrow = SCIProwGetRowExact(mirinfo->slackrows[i]);
+
+      RatSetReal(value, -mirinfo->slackorigcoefs[i]);
+      RatDiv(value, value, oneminusf0);
+
+      SCIPdebugMessage("adding %g times row: ", RatApproxReal(value));
+      SCIPdebug(SCIProwExactPrint(slackrow, set->scip->messagehdlr, NULL));
+
+      assert(slackrow != NULL);
+      assert(SCIPhashmapExists(certificate->rowdatahash, (void*) slackrow));
+
+      key = (size_t)SCIPhashmapGetImage(certificate->rowdatahash, (void*) slackrow);
+      /* for ranged rows, the key always corresponds to the >= part of the row;
+         therefore we need to increase it by one to get the correct key */
+      if( mirinfo->slacksign[i] == 1 )
+         key += 1;
+
+      SCIPcertificatePrintProofMessage(certificate, " %d ", key);
+      RatMultReal(value, value, mirinfo->scale);
+      SCIPcertificatePrintProofRational(certificate, value, 10);
+   }
+
+   SCIPdebugMessage("Adding %d aggregation rows \n", aggrinfo->naggrrows);
    /* we also have to add the correct multipliers for the aggregation rows that were used here */
    for( i = 0; i < aggrinfo->naggrrows; i++ )
    {
@@ -1653,10 +1762,11 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
       SCIP_ROWEXACT* aggrrow;
       aggrrow = SCIProwGetRowExact(aggrinfo->aggrrows[i]);
 
-      SCIPdebugMessage("adding %g times row: ", aggrinfo->weights[i]);
-      SCIPdebug(SCIProwExactPrint(aggrrow, set->scip->messagehdlr, NULL));
       RatSetReal(value, aggrinfo->weights[i]);
       RatDiv(value, value, oneminusf0);
+
+      SCIPdebugMessage("adding (%g/%g) = %g times row: ", aggrinfo->weights[i], RatApproxReal(oneminusf0), RatApproxReal(value));
+      SCIPdebug(SCIProwExactPrint(aggrrow, set->scip->messagehdlr, NULL));
 
       assert(aggrrow != NULL);
       assert(SCIPhashmapExists(certificate->rowdatahash, (void*) aggrrow));
@@ -1704,6 +1814,13 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
    BMSfreeBlockMemoryArray(certificate->blkmem, &(mirinfo->varinds), mirinfo->nsplitvars);
    BMSfreeBlockMemoryArray(certificate->blkmem, &(mirinfo->upperused), mirinfo->nsplitvars);
    BMSfreeBlockMemoryArray(certificate->blkmem, &(mirinfo->localbdused), mirinfo->nsplitvars);
+
+   BMSfreeBlockMemoryArray(certificate->blkmem, &(mirinfo->slackrows), mirinfo->nslacks);
+   BMSfreeBlockMemoryArray(certificate->blkmem, &(mirinfo->slacksign), mirinfo->nslacks);
+   BMSfreeBlockMemoryArray(certificate->blkmem, &(mirinfo->slackcoefficients), mirinfo->nslacks);
+   BMSfreeBlockMemoryArray(certificate->blkmem, &(mirinfo->slackcontcoefs), mirinfo->nslacks);
+   BMSfreeBlockMemoryArray(certificate->blkmem, &(mirinfo->slackorigcoefs), mirinfo->nslacks);
+
    BMSfreeBlockMemory(certificate->blkmem, &mirinfo);
    if( arraypos != certificate->nmirinfos - 1 )
    {
@@ -1898,7 +2015,7 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
 
    SCIP_CALL( RatCreateBuffer(set->buffer, &farkasrhs) );
 
-   SCIPsetAllocBufferArray(set, &ind, lpexact->nrows + lpexact->ncols);
+   SCIPsetAllocBufferArray(set, &ind, (lpexact->nrows + lpexact->ncols));
 
    len = 0;
    for( i = 0; i < lpexact->ncols; ++i )
@@ -2335,7 +2452,7 @@ SCIP_RETCODE SCIPcertificateNewNodeData(
       SCIP_NODE* parent = SCIPnodeGetParent(node);
       SCIP_CERTNODEDATA* parentdata;
       assert(SCIPhashmapExists(certificate->nodedatahash, parent));
-      parentdata = SCIPhashmapGetImage(certificate->nodedatahash, (void*) parent);
+      parentdata = (SCIP_CERTNODEDATA*) SCIPhashmapGetImage(certificate->nodedatahash, (void*) parent);
       assert(parentdata != NULL);
 
       nodedata->derindex_inherit = parentdata->derindex_inherit;
@@ -2492,7 +2609,6 @@ SCIP_RETCODE SCIPcertificateFreeAggrInfo(
    BMSfreeBlockMemoryArray(certificate->blkmem, &(aggrinfo->weights), aggrinfo->naggrrows);
    BMSfreeBlockMemoryArray(certificate->blkmem, &(aggrinfo->aggrrows), aggrinfo->naggrrows);
    SCIPaggrRowFree(set->scip, &(aggrinfo->aggrrow));
-   SCIPaggrRowFree(set->scip, &(aggrinfo->negslackrow));
    BMSfreeBlockMemory(certificate->blkmem, &aggrinfo);
    if( arraypos != certificate->naggrinfos - 1 )
    {
@@ -2504,12 +2620,10 @@ SCIP_RETCODE SCIPcertificateFreeAggrInfo(
    return SCIP_OKAY;
 }
 
-/**@ todo exip negslackrow might be unnecessary */
 /** create a new node data structure for the current node */
 SCIP_RETCODE SCIPcertificateNewAggrInfo(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_AGGRROW*         aggrrow,            /**< agrrrow that results from the aggregation */
-   SCIP_AGGRROW*         negslackrow,        /**< agrrrow that results from the aggregation with implicitly defined negative slack added */
    SCIP_ROW**            aggrrows,           /**< array of rows used fo the aggregation */
    SCIP_Real*            weights,            /**< array of weights */
    int                   naggrrows,          /**< length of the arrays */
@@ -2537,7 +2651,6 @@ SCIP_RETCODE SCIPcertificateNewAggrInfo(
    SCIPdebugMessage("adding aggrinfo, with %d rows to certficate \n", naggrrows);
 
    SCIP_CALL( SCIPaggrRowCopy(scip, &(info->aggrrow), aggrrow) );
-   SCIP_CALL( SCIPaggrRowCopy(scip, &(info->negslackrow), negslackrow) );
 
    info->naggrrows = naggrrows;
    info->nnegslackrows = nnegslackrows;
@@ -2610,6 +2723,8 @@ SCIP_RETCODE SCIPcertificateNewMirInfo(
    SCIP_CALL( RatCreateBlock(SCIPblkmem(scip), &(mirinfo->rhs)) );
    SCIP_CALL( RatCreateBlock(SCIPblkmem(scip), &(mirinfo->frac)) );
    mirinfo->nlocalvars = 0;
+   mirinfo->nslacks = 0;
+   mirinfo->nrounddownslacks = 0;
    mirinfo->nsplitvars = SCIPgetNVars(scip);
    mirinfo->arpos = certificate->nmirinfos;
    mirinfo->scale = 1.0;
@@ -2618,6 +2733,11 @@ SCIP_RETCODE SCIPcertificateNewMirInfo(
    SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &(mirinfo->splitcoefficients), SCIPgetNVars(scip)) );
    SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &(mirinfo->upperused), SCIPgetNVars(scip)) );
    SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &(mirinfo->localbdused), SCIPgetNVars(scip)) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(mirinfo->slackrows), SCIPgetNVars(scip)) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(mirinfo->slackcoefficients), SCIPgetNVars(scip)) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(mirinfo->slacksign), SCIPgetNVars(scip)) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(mirinfo->slackcontcoefs), SCIPgetNVars(scip)) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(mirinfo->slackorigcoefs), SCIPgetNVars(scip)) );
    mirinfo->varinds = NULL;
 
    certificate->nmirinfos++;
@@ -2705,6 +2825,12 @@ SCIP_RETCODE SCIPstoreCertificateActiveMirInfo(
    SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(mirinfo->upperused), SCIPgetNVars(scip), mirinfo->nsplitvars) );
    SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(mirinfo->localbdused), SCIPgetNVars(scip), mirinfo->nsplitvars) );
 
+   SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &mirinfo->slackrows, SCIPgetNVars(scip), mirinfo->nslacks) );
+   SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &mirinfo->slacksign, SCIPgetNVars(scip), mirinfo->nslacks) );
+   SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &mirinfo->slackcoefficients, SCIPgetNVars(scip), mirinfo->nslacks) );
+   SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &mirinfo->slackcontcoefs, SCIPgetNVars(scip), mirinfo->nslacks) );
+   SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &mirinfo->slackorigcoefs, SCIPgetNVars(scip), mirinfo->nslacks) );
+
    SCIP_CALL( SCIPhashmapSetImage(certificate->mirinfohash, (void*) row, (void*) mirinfo) );
 
    return SCIP_OKAY;
@@ -2743,6 +2869,11 @@ SCIP_RETCODE SCIPfreeCertificateActiveMirInfo(
    SCIPfreeBlockMemoryArray(scip, &(mirinfo->splitcoefficients), SCIPgetNVars(scip));
    SCIPfreeBlockMemoryArray(scip, &(mirinfo->upperused), SCIPgetNVars(scip));
    SCIPfreeBlockMemoryArray(scip, &(mirinfo->localbdused), SCIPgetNVars(scip));
+   SCIPfreeBlockMemoryArray(scip, &(mirinfo->slackrows), SCIPgetNVars(scip));
+   SCIPfreeBlockMemoryArray(scip, &(mirinfo->slackcoefficients), SCIPgetNVars(scip));
+   SCIPfreeBlockMemoryArray(scip, &(mirinfo->slacksign), SCIPgetNVars(scip));
+   SCIPfreeBlockMemoryArray(scip, &(mirinfo->slackcontcoefs), SCIPgetNVars(scip));
+   SCIPfreeBlockMemoryArray(scip, &(mirinfo->slackorigcoefs), SCIPgetNVars(scip));
    SCIPfreeBlockMemory(scip, &mirinfo);
    certificate->nmirinfos--;
    certificate->workingmirinfo = FALSE;

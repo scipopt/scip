@@ -213,7 +213,6 @@ SCIP_CERTIFICATE* SCIPgetCertificate(
 SCIP_RETCODE SCIPaddCertificateAggregation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_AGGRROW*         aggrrow,            /**< agrrrow that results from the aggregation */
-   SCIP_AGGRROW*         negslackrow,        /**< agrrrow that results from the aggregation with implicitly defined negative slack added */
    SCIP_ROW**            aggrrows,           /**< array of rows used fo the aggregation */
    SCIP_Real*            weights,            /**< array of weights */
    int                   naggrrows,          /**< length of the arrays */
@@ -225,7 +224,7 @@ SCIP_RETCODE SCIPaddCertificateAggregation(
    assert(scip != NULL);
    assert(scip->stat != NULL);
 
-   SCIP_CALL( SCIPcertificateNewAggrInfo(scip, aggrrow, negslackrow, aggrrows, weights, naggrrows, negslackrows, negslackweights, nnegslackrows) );
+   SCIP_CALL( SCIPcertificateNewAggrInfo(scip, aggrrow, aggrrows, weights, naggrrows, negslackrows, negslackweights, nnegslackrows) );
 
    return SCIP_OKAY;
 }

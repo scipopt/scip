@@ -47,12 +47,11 @@ struct SCIP_CertificateBound
 struct SCIP_AggregationInfo
 {
    SCIP_AGGRROW*         aggrrow;            /**< aggregation row to be saved */
-   SCIP_AGGRROW*         negslackrow;        /**< aggregation row that implicitly has the negative slack variables in it */
    SCIP_ROW**            aggrrows;           /**< array of rows used for the aggregation */
    SCIP_ROW**            negslackrows;       /**< array of rows that are implicitly added (using negative slack) */
    SCIP_Real*            weights;            /**< array of weights */
    SCIP_Real*            negslackweights;    /**< array of weights for the negslackrows */
-   SCIP_Real*            substfactor;        /**< factor used in the substition of slack variables (negslackweight)/(1-f0) */
+   SCIP_Real*            substfactor;        /**< factor used in the substition of slack variables (weight)/(1-f0) */
    int                   naggrrows;          /**< length of the aggrrows array */
    int                   nnegslackrows;      /**< length of the negslackrows array */
    SCIP_Longint          fileindex;          /**< index of the aggregated row in the certificate file */
@@ -63,11 +62,18 @@ struct SCIP_AggregationInfo
 struct SCIP_MirInfo
 {
    SCIP_Real*            splitcoefficients;  /**< coefficients in the split, saved in the complemented variable space */
+   SCIP_Real*            slackcoefficients;  /**< coefficients for integer slacks that enter the split */
+   SCIP_Real*            slackcontcoefs;     /**< continuous part of integer slack that needs to be accounted for */
+   SCIP_Real*            slackorigcoefs;     /**< original part of integer slack that needs to be accounted for */
+   SCIP_ROW**            slackrows;          /**< rows whos integer slack is in the split */
    int*                  varinds;            /**< indices of variables in split */
+   int*                  slacksign;          /**< was rhs or lhs used for integer slacks? +1 -> rhs, -1 -> lhs*/
    SCIP_Bool*            upperused;          /**< TRUE if ub was used to complement variable, FALSE if lb was used */
    SCIP_Bool*            localbdused;        /**< TRUE if local bound was used to complement variable, FALSE if global was used */
    int                   nsplitvars;         /**< number of variables in the split */
    int                   nlocalvars;         /**< number of local bounds used in transformation */
+   int                   nslacks;            /**< number of integer slacks in the split */
+   int                   nrounddownslacks;
    SCIP_Rational*        rhs;                /**< rhs of the split disjunction */
    SCIP_Rational*        frac;               /**< fractionality of the rhs in the mir cut */
    SCIP_Longint          arpos;              /**< position in the mirinfo array, so we can access it from the hashmap */

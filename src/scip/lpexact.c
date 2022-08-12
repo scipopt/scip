@@ -2673,10 +2673,11 @@ SCIP_RETCODE SCIPlpExactDelRowset(
 
    nrows = lp->nrows;
    nlpirows = lp->nlpirows;
+   if( nlpirows == 0 )
+      return SCIP_OKAY;
 
    /* delete rows in LP solver */
    SCIP_CALL( SCIPlpiExactDelRowset(lp->lpiexact, rowdstat) );
-
 
    /* set the correct status for rows that never made it to the lpi (this is special for the exact lp) */
    c = lp->nlpirows - 1;
