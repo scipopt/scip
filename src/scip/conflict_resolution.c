@@ -930,6 +930,7 @@ SCIP_RETCODE weakenResolutionSet(
    /* recompute slack */
    resolutionset->slack = getSlack(set->scip, prob, resolutionset, currbdchgidx);
    assert(SCIPsetIsRelLE(set, resolutionset->slack, previousslack));
+   SCIP_UNUSED(previousslack);
 
 #ifdef SCIP_DEBUG
    {
