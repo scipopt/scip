@@ -1769,8 +1769,9 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
       slackrow = SCIProwGetRowExact(mirinfo->slackrows[i]);
 
       RatSetReal(value, mirinfo->slackorigcoefs[i]);
-      RatDiv(value, value, oneminusf0);
+      //RatDiv(value, value, oneminusf0);
 
+#ifdef SCIP_DISABLED_CODE
       RatDebugMessage("value 1 %g \n", RatApproxReal(value));
 
       if( mirinfo->slackorigcoefs[i] == 0 )
@@ -1780,9 +1781,13 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
          RatSet(value, tmpval);
          RatMultReal(value, value, -mirinfo->slackcoefficients[i]);
          RatAddReal(value, value, mirinfo->slackusedcoef[i]);
+
+         RatDiffReal(value, value, mirinfo->slackcoefficients[i] / RatApproxReal(oneminusf0));
       }
 
-      RatDebugMessage("value 2 %g (usedcoef %g, slackcoef %g) (-f/1-f)=%g \n", RatApproxReal(value), mirinfo->slackusedcoef[i], mirinfo->slackcoefficients[i], RatApproxReal(tmpval));
+      RatDebugMessage("value 2 %g =  (usedcoef %g - slackcoef %g * (-f/1-f) %g - splitcoef %g / 1-f0 %g \n", RatApproxReal(value), mirinfo->slackusedcoef[i], mirinfo->slackcoefficients[i], RatApproxReal(tmpval)
+      , mirinfo->slackcoefficients[i], RatApproxReal(oneminusf0));
+#endif
 
       SCIPdebugMessage("adding %g times row: ", RatApproxReal(value));
       SCIPdebug(SCIProwExactPrint(slackrow, set->scip->messagehdlr, NULL));

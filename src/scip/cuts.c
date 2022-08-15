@@ -6045,20 +6045,21 @@ SCIP_RETCODE cutsSubstituteMIRSafe(
           *    a^_r = a~_r = down(a'_r) + (f_r - f0)/(1 - f0), if f_r >  f0
           */
          SCIP_Real downar;
-         SCIP_Real fr;
+         SCIP_INTERVAL fr;
 
          SCIPdebugMessage("resubstituting integer slack for row %s\n", row->name);
          downar = floor(ar.inf);
-         fr = ar.inf - downar;
+         SCIPintervalSubScalar(SCIPinfinity(scip), &fr, ar, downar);
 
          integralslack = TRUE;
 
-         if( fr <= f0.inf )
+         if( fr.inf <= f0.inf )
          {
             SCIPintervalSet(&cutar, downar);
             splitcoef = downar;
             slackweight = 0;
-            slackorigcoef = fr;
+            SCIPintervalMul(SCIPinfinity(scip), &fr, fr, onedivoneminusf0);
+            slackorigcoef = slacksign[i] == -1 ? fr.inf : fr.sup;
             SCIPdebugMessage("fractionality %g, f0 %g -> round down to %g\n", fr, f0.inf, splitcoef);
          }
          else
