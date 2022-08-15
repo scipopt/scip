@@ -4523,16 +4523,15 @@ SCIP_DECL_CONSPRESOL(consPresolAnd)
 
 	      if( SCIPconsIsActive(cons) )
 	      {
-            /* cliquepresolve may aggregate variables which need to be removed from other constraints, we also need
+            /* cliquePresolve() may aggregate variables which need to be removed from other constraints, we also need
              * to make sure that we remove fixed variables by calling propagateCons() to make sure that applyFixing()
-             * and mergeMultiples() work */
-
-            /* propagate constraint */
+             * and mergeMultiples() work
+             */
             SCIP_CALL( propagateCons(scip, cons, conshdlrdata->eventhdlr, &cutoff, nfixedvars, nupgdconss) );
 
             /* remove all variables that are fixed to one; merge multiple entries of the same variable;
-            * fix resultant to zero if a pair of negated variables is contained in the operand variables
-            */
+             * fix resultant to zero if a pair of negated variables is contained in the operand variables
+             */
             if( !cutoff && !SCIPconsIsDeleted(cons) )
             {
                SCIP_CALL( applyFixings(scip, cons, conshdlrdata->eventhdlr, nchgcoefs) );
