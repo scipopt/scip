@@ -62,6 +62,7 @@ Fixed bugs
 - fixed problem with recomputing symmetries after a restart
 - fixed bug SCIPcalcMIR() with wrong order of arguments for removeZerosQuad()
 - fixed segmentation fault in update of cut statistic
+- fixed bug in consPresolAnd. Remove variables with multiple occurrences due to aggregation before calling cliquePresolve()
 
 Miscellaneous
 -------------
