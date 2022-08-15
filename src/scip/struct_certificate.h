@@ -65,6 +65,8 @@ struct SCIP_MirInfo
    SCIP_Real*            slackcoefficients;  /**< coefficients for integer slacks that enter the split */
    SCIP_Real*            slackcontcoefs;     /**< continuous part of integer slack that needs to be accounted for */
    SCIP_Real*            slackorigcoefs;     /**< original part of integer slack that needs to be accounted for */
+   SCIP_Real*            slackscale;         /**< original part of integer slack that needs to be accounted for */
+   SCIP_Real*            slackusedcoef;      /**< coef that was actually used in the slack subsititution */
    SCIP_ROW**            slackrows;          /**< rows whos integer slack is in the split */
    int*                  varinds;            /**< indices of variables in split */
    int*                  slacksign;          /**< was rhs or lhs used for integer slacks? +1 -> rhs, -1 -> lhs*/

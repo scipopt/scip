@@ -5971,7 +5971,8 @@ SCIP_RETCODE cutsSubstituteMIRSafe(
    SCIP_MIRINFO* mirinfo;
    SCIP_Real mult;
    SCIP_Real splitcoef;
-   SCIP_Real slackfrac;
+   SCIP_Real slackweight;
+   SCIP_Real slackscale;
    SCIP_Real slackorigcoef;
    int i;
    int currentnegslackrow;
@@ -6023,12 +6024,10 @@ SCIP_RETCODE cutsSubstituteMIRSafe(
       assert(row->len == 0 || row->cols_index != NULL);
       assert(row->len == 0 || row->vals != NULL);
 
-      // if( slacksign[i] == 1 )
-      //    SCIPintervalSetRoundingModeDownwards();
-      // else
-      //    SCIPintervalSetRoundingModeUpwards();
-
-      SCIPintervalSetRoundingModeDownwards();
+      if( slacksign[i] == 1 )
+         SCIPintervalSetRoundingModeDownwards();
+      else
+         SCIPintervalSetRoundingModeUpwards();
 
       /* get the slack's coefficient a'_r = weights[i] * scale in the aggregated row */
       SCIPintervalSet(&ar, weights[i]);
@@ -6058,7 +6057,7 @@ SCIP_RETCODE cutsSubstituteMIRSafe(
          {
             SCIPintervalSet(&cutar, downar);
             splitcoef = downar;
-            slackfrac = 1; // set to one since we do 1-f later and then turns to 0
+            slackweight = 0;
             slackorigcoef = fr;
             SCIPdebugMessage("fractionality %g, f0 %g -> round down to %g\n", fr, f0.inf, splitcoef);
          }
@@ -6070,7 +6069,7 @@ SCIP_RETCODE cutsSubstituteMIRSafe(
             SCIPintervalMul(SCIPinfinity(scip), &cutar, cutar, onedivoneminusf0);
             SCIPintervalAddScalar(SCIPinfinity(scip), &cutar, cutar, downar);
             splitcoef = downar + 1;
-            slackfrac = fr;
+            slackweight = weights[i];
             slackorigcoef = 0;
             SCIPdebugMessage("fractionality %g, f0 %g -> round up! splitcoef %g sub-coefficient %g", fr, f0.inf, splitcoef, cutar.inf);
          }
@@ -6097,6 +6096,13 @@ SCIP_RETCODE cutsSubstituteMIRSafe(
       else
          userow = row;
 
+      SCIPintervalMulScalar(SCIPinfinity(scip), &cutar, cutar, -slacksign[i]);
+
+      if( slacksign[i] == -1 )
+         mult = cutar.inf;
+      else
+         mult = cutar.sup;
+
       if( SCIPisCertificateActive(scip) && integralslack)
       {
             SCIP_INTERVAL slackcont;
@@ -6111,14 +6117,14 @@ SCIP_RETCODE cutsSubstituteMIRSafe(
             // SCIPintervalSet(&slackcont, slackfrac * slacksign[i]);
             // SCIPintervalMul(SCIPinfinity(scip), &slackcont, slackcont, onedivoneminusf0);
             // save the value that goes into the v >= 0 part (residuals of rounded up parts in the split)
-            SCIPintervalSet(&slackcont, 1.0);
-            SCIPintervalSubScalar(SCIPinfinity(scip), &slackcont, slackcont, slackfrac);
-            SCIPintervalMulScalar(SCIPinfinity(scip), &slackcont, slackcont, slacksign[i]);
-            SCIPintervalMul(SCIPinfinity(scip), &slackcont, slackcont, onedivoneminusf0);
-            mirinfo->slackcontcoefs[mirinfo->nslacks] = slackcont.inf; //(slacksign[i] == -1) ? slackcont.inf : slackcont.sup;
+            // SCIPintervalMulScalar(SCIPinfinity(scip), &slackcont, slackfrac, slacksign[i]);
+            // SCIPintervalMul(SCIPinfinity(scip), &slackcont, slackcont, onedivoneminusf0);
+            mirinfo->slackcontcoefs[mirinfo->nslacks] = slackweight;
+            mirinfo->slackscale[mirinfo->nslacks] = scale;
+            mirinfo->slackusedcoef[mirinfo->nslacks] = mult;
 
             // save the value that goes into the certificate aggregation row (either downar or ar)
-            mirinfo->slackorigcoefs[mirinfo->nslacks] = slackorigcoef * (-slacksign[i]); // * slacksign[i];
+            mirinfo->slackorigcoefs[mirinfo->nslacks] = slackorigcoef * (slacksign[i]); // * slacksign[i];
             if( slackorigcoef != 0 )
                mirinfo->nrounddownslacks++;
             mirinfo->nslacks++;
@@ -6135,12 +6141,6 @@ SCIP_RETCODE cutsSubstituteMIRSafe(
       {
          SCIP_Bool success;
          SCIP_Real sidevalchg;
-
-         SCIPintervalMulScalar(SCIPinfinity(scip), &cutar, cutar, -slacksign[i]);
-         if( slacksign[i] == -1 )
-            mult = cutar.inf;
-         else
-            mult = cutar.sup;
 
          if( SCIPisCertificateActive(scip) && !integralslack )
          {
