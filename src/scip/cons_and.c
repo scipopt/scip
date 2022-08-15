@@ -4521,8 +4521,8 @@ SCIP_DECL_CONSPRESOL(consPresolAnd)
          cons = conss[c];
          assert(cons != NULL);
 
-	      if( SCIPconsIsActive(cons) )
-	      {
+         if( SCIPconsIsActive(cons) )
+         {
             /* cliquePresolve() may aggregate variables which need to be removed from other constraints, we also need
              * to make sure that we remove fixed variables by calling propagateCons() to make sure that applyFixing()
              * and mergeMultiples() work
