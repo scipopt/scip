@@ -29,7 +29,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 /* #define DEBUG_INTERSECTIONCUT */
-#define DEBUG_MONOIDAL
+/* #define DEBUG_MONOIDAL */
 /* #define INTERCUT_MOREDEBUG */
 /* #define INTERCUTS_VERBOSE */
 
@@ -68,9 +68,9 @@
 
 /* some default values */
 #define INTERCUTS_MINVIOL              1e-4
-#define DEFAULT_USEINTERCUTS           FALSE
+#define DEFAULT_USEINTERCUTS           TRUE
 #define DEFAULT_USESTRENGTH            FALSE
-#define DEFAULT_USEMONOIDAL            FALSE
+#define DEFAULT_USEMONOIDAL            TRUE
 #define DEFAULT_USEBOUNDS              FALSE
 #define BINSEARCH_MAXITERS             120
 #define DEFAULT_NCUTSROOT              20
@@ -1867,7 +1867,6 @@ void computeMonoidalQuadCoefs(
    SCIP_Real* eigenvalues;
    SCIP_Real apos;
    SCIP_Real bpos;
-   SCIP_Real norm;
    int i;
    int j;
 
@@ -1876,7 +1875,6 @@ void computeMonoidalQuadCoefs(
 
    apos = 0.0;
    bpos = 0.0;
-   norm = 0.0;
    *a = 0.0;
    *b = 0.0;
    *c = 0.0;
@@ -1885,9 +1883,6 @@ void computeMonoidalQuadCoefs(
    {
       SCIP_Real dot;
       SCIP_Real rayentry;
-
-      /* no eigenvalue should be zero, since we are in case 2 -> TODO: check this */
-      assert(! SCIPisZero(scip, eigenvalues[i]));
 
       /* get entry of ray -> check if current var index corresponds to a non-zero entry in ray */
       if( j < raynnonz && i == rayidx[j] )
@@ -1903,25 +1898,23 @@ void computeMonoidalQuadCoefs(
       if( sidefactor * eigenvalues[i] > 0 )
       {
          apos += sidefactor * eigenvalues[i] * SQR(dot);
-         bpos += SQRT(sidefactor * eigenvalues[i]) * dot * (SQRT(sidefactor * eigenvalues[i]) / SQRT(kappa) * dot + rayentry);
-         *c += SQR(SQRT(sidefactor * eigenvalues[i]) / SQRT(kappa) * dot + rayentry);
-         norm += sidefactor * eigenvalues[i] * SQR(dot);
+         bpos += SQRT(sidefactor * eigenvalues[i]) * dot * rayentry;
+         *c += SQR(rayentry);
       }
       else
       {
          *a += sidefactor * eigenvalues[i] * SQR(dot);
-         *b += SQRT(sidefactor * eigenvalues[i]) * dot * (SQRT(sidefactor * eigenvalues[i]) / SQRT(kappa) * dot + rayentry);
-         *c -= SQR(SQRT(-sidefactor * eigenvalues[i]) / SQRT(kappa) * dot + rayentry);
+         *b -= SQRT(sidefactor * eigenvalues[i]) * dot * rayentry;
+         *c -= SQR(rayentry);
       }
    }
 
-   norm += 1.0 / kappa;
-
-   *a = (norm * apos + *a) / kappa + 1.0;
-   *b = (*b - norm * bpos) / SQRT(kappa) + 1.0;
-   *c += 1.0;
-
-   assert(*a > 0);
+   *a /= kappa;
+   *a += (kappa / apos) * SQR(apos / kappa + 1.0);
+   *b /= SQRT(kappa);
+   *b += (1.0 + kappa / apos) * ( bpos / SQRT(kappa) - 1.0);
+   *b *= 2.0;
+   *c += (kappa / apos) * (1 - 2 * bpos / SQRT(kappa)) + 1.0;
 }
 
 /** computes the smallest root of the quadratic function a*x^2 + b*x + c with a > 0
@@ -1989,14 +1982,17 @@ void computeMonoidalStrengthCoef(
    if( wcoefs == NULL && kappa > 0 )
    {
       SCIP_COL** cols;
+      SCIP_ROW** rows;
 
       cols = SCIPgetLPCols(scip);
+      rows = SCIPgetLPRows(scip);
 
 #ifdef DEBUG_MONOIDAL
       printf("We are in case 2 \n");
 #endif
       /* check if var corresponding to current ray is integer */
-      if( lppos > 0 && SCIPvarGetType(SCIPcolGetVar(cols[lppos])) == SCIP_VARTYPE_INTEGER )
+      if( (lppos >= 0 && SCIPvarGetType(SCIPcolGetVar(cols[lppos])) != SCIP_VARTYPE_CONTINUOUS) ||
+          (lppos < 0 && SCIProwIsIntegral(rows[- lppos - 1])) )
       {
          SCIP_Real a;
          SCIP_Real b;
@@ -2012,6 +2008,7 @@ void computeMonoidalStrengthCoef(
           * if ray is not in the strip -> do monoidal strengthening */
          if( SQR(b) >= 4 * a * c )
          {
+            printf("WE CAN DO MONOIDAL! \n");
             *success = TRUE;
 
             /* find smallest root of quadratic function a * x^2 + b * x + c -> this is the cut coef */
