@@ -734,7 +734,7 @@ SCIP_RETCODE solveProbingLP(
       *cutoff = FALSE;
 
    /* load the LP state (if necessary) */
-   SCIP_CALL( SCIPtreeLoadProbingLPState(scip->tree, scip->mem->probmem, scip->set, scip->eventqueue, scip->lp) );
+   SCIP_CALL( SCIPtreeLoadProbingLPState(scip->tree, scip->mem->probmem, scip->set, scip->transprob, scip->eventqueue, scip->lp) );
 
    SCIPlpSetIsRelax(scip->lp, TRUE);
 

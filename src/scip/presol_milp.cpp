@@ -44,6 +44,13 @@ SCIP_RETCODE SCIPincludePresolMILP(
 
 #else
 
+/* disable some warnings that come up in header files of PAPILOs dependencies */
+#ifdef __GNUC__
+#pragma GCC diagnostic ignored "-Wshadow"
+#pragma GCC diagnostic ignored "-Wctor-dtor-privacy"
+#pragma GCC diagnostic ignored "-Wredundant-decls"
+#endif
+
 #include <assert.h>
 #include "scip/cons_linear.h"
 #include "scip/pub_matrix.h"
@@ -159,7 +166,10 @@ Problem<SCIP_Real> buildProblem(
       builder.setColLbInf(i, SCIPisInfinity(scip, -lb));
       builder.setColUbInf(i, SCIPisInfinity(scip, ub));
 
-      builder.setColIntegral(i, SCIPvarIsIntegral(var));
+      if ( SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT )
+         builder.setColImplInt(i, TRUE);
+      else
+         builder.setColIntegral(i, SCIPvarIsIntegral(var));
       builder.setObj(i, SCIPvarGetObj(var));
    }
 
@@ -343,7 +353,13 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
    /* todo: parallel cols cannot be handled by SCIP currently
    * addPresolveMethod( uptr( new ParallelColDetection<SCIP_Real>() ) ); */
    presolve.addPresolveMethod( uptr( new SingletonStuffing<SCIP_Real>() ) );
+#if PAPILO_VERSION_MAJOR > 2 || (PAPILO_VERSION_MAJOR == 2 && PAPILO_VERSION_MINOR >= 1)
+   DualFix<SCIP_Real> *dualfix = new DualFix<SCIP_Real>();
+   dualfix->set_fix_to_infinity_allowed(false);
+   presolve.addPresolveMethod( uptr( dualfix ) );
+#else
    presolve.addPresolveMethod( uptr( new DualFix<SCIP_Real>() ) );
+#endif
    presolve.addPresolveMethod( uptr( new FixContinuous<SCIP_Real>() ) );
    presolve.addPresolveMethod( uptr( new SimplifyInequalities<SCIP_Real>() ) );
    presolve.addPresolveMethod( uptr( new SimpleSubstitution<SCIP_Real>() ) );
@@ -394,26 +410,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
 #ifdef SCIP_PRESOLLIB_ENABLE_OUTPUT
    problem.setName(SCIPgetProbName(scip));
 #else
-   switch( data->verbosity )
-   {
-      case 0:
-         presolve.setVerbosityLevel(VerbosityLevel::kQuiet);
-         break;
-      case 1:
-         presolve.setVerbosityLevel(VerbosityLevel::kError);
-         break;
-      case 2:
-         presolve.setVerbosityLevel(VerbosityLevel::kWarning);
-         break;
-      case 3:
-         presolve.setVerbosityLevel(VerbosityLevel::kInfo);
-         break;
-      case 4:
-         presolve.setVerbosityLevel(VerbosityLevel::kDetailed);
-         break;
-      default:
-         assert(false);
-   }
+   presolve.setVerbosityLevel((VerbosityLevel) data->verbosity);
 #endif
 
    /* communicate the time limit */
@@ -712,6 +709,8 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
 #if (PAPILO_VERSION_MAJOR <= 1 && PAPILO_VERSION_MINOR==0)
 #else
       case ReductionType::kFixedInfCol: {
+         /* todo: currently SCIP can not handle this kind of reduction (see issue #3391) */
+         assert(false);
          if(!constraintsReplaced)
             continue;
          SCIP_Bool infeas;

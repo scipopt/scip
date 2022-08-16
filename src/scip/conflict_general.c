@@ -81,6 +81,9 @@
 #include <strings.h> /*lint --e{766}*/
 #endif
 
+/* because calculations might cancel out some values, we stop the infeasibility analysis if a value is bigger than
+ * 2^53 = 9007199254740992
+ */
 #define NUMSTOP 9007199254740992.0
 
 /** returns the current number of conflict sets in the conflict set storage */
@@ -172,10 +175,6 @@ SCIP_Longint SCIPconflictGetNAppliedLocalLiterals(
 
    return conflict->nappliedlocliterals;
 }
-
-
-
-
 
 /** compares two conflict set entries, such that bound changes infered later are
  *  ordered prior to ones that were infered earlier
@@ -777,7 +776,6 @@ SCIP_Longint SCIPconflictGetNStrongbranchIterations(
    return conflict->nsbiterations;
 }
 
-
 /** adds a weighted LP row to an aggregation row */
 static
 SCIP_RETCODE addRowToAggrRow(
@@ -1135,7 +1133,6 @@ SCIP_RETCODE addLocalRows(
    return SCIP_OKAY;
 }
 
-
 /** calculates a Farkas proof from the current dual LP solution */
 SCIP_RETCODE SCIPgetFarkasProof(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -1307,8 +1304,7 @@ SCIP_RETCODE SCIPgetFarkasProof(
    return SCIP_OKAY;
 }
 
-/** calculates a Farkas proof from the current dual LP solution */
-
+/** calculates a dual proof from the current dual LP solution */
 SCIP_RETCODE SCIPgetDualProof(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            transprob,          /**< transformed problem */
@@ -1532,6 +1528,7 @@ SCIP_RETCODE SCIPgetDualProof(
 
    return SCIP_OKAY;
 }
+
 
 /*
  * pseudo solution conflict analysis
@@ -2077,6 +2074,7 @@ SCIP_RETCODE conflictAnalyzeLP(
    return SCIP_OKAY;
 }
 
+
 /*
  * infeasible strong branching conflict analysis
  */
@@ -2317,6 +2315,7 @@ SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
 
    return SCIP_OKAY;
 }
+
 /** analyzes an infeasible LP to find out the bound changes on variables that were responsible for the infeasibility;
  *  on success, calls standard conflict analysis with the responsible variables as starting conflict set, thus creating
  *  a conflict constraint out of the resulting conflict set;

@@ -142,14 +142,3 @@ examples/*/doc/miniscippy.png
 examples/*/doc/userguide.*
 examples/*/!doc/userguide.tex
 examples/*/lint
-
-# sma for interfaces
-interfaces/ampl/solvers/
-interfaces/ampl/check/locks/
-interfaces/ampl/check/results/
-interfaces/ampl/check/evalcheck.sh
-interfaces/ampl/check/evaluate.sh
-interfaces/ampl/check/check.awk
-interfaces/ampl/check/getlastprob.awk
-interfaces/ampl/check/instances/*/*.sol
-interfaces/ampl/lint

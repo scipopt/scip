@@ -155,6 +155,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeHeurGuideddiving(scip) );
    SCIP_CALL( SCIPincludeHeurZeroobj(scip) );
    SCIP_CALL( SCIPincludeHeurIndicator(scip) );
+   SCIP_CALL( SCIPincludeHeurIndicatordiving(scip) );
    SCIP_CALL( SCIPincludeHeurIntdiving(scip) );
    SCIP_CALL( SCIPincludeHeurIntshifting(scip) );
    SCIP_CALL( SCIPincludeHeurLinesearchdiving(scip) );

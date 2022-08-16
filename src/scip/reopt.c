@@ -3832,11 +3832,17 @@ SCIP_RETCODE addSplitcons(
       if( boundtype == SCIP_BOUNDTYPE_LOWER )
       {
          newbound = reoptconsdata->vals[0] - 1.0;
+         /* if newbound > local upper bound, the variable cannot take the old value and we exit */
+         if( SCIPisGT(scip, newbound, oldub) )
+            return SCIP_OKAY;
          assert(SCIPisLE(scip, newbound, oldub));
       }
       else
       {
          newbound = reoptconsdata->vals[0] + 1.0;
+         /* if newbound < local lower bound, the variable cannot take the old value and we exit */
+         if( SCIPisLT(scip, newbound, oldlb) )
+            return SCIP_OKAY;
          assert(SCIPisGE(scip, newbound, oldlb));
       }
       boundtype = (SCIP_BOUNDTYPE) (1 - (int)boundtype);

@@ -1930,7 +1930,7 @@ SCIP_RETCODE addTightEstimatorCut(
       overestimate ? "over" : "under", SCIPnlhdlrGetName(exprenfo->nlhdlr), (void*)expr, SCIPexprhdlrGetName(SCIPexprGetHdlr(expr))); )
 
    SCIP_CALL( SCIPnlhdlrEstimate(scip, conshdlr, exprenfo->nlhdlr, expr, exprenfo->nlhdlrexprdata, sol,
-      exprenfo->auxvalue, overestimate, SCIPinfinity(scip), FALSE, rowpreps, &estimatesuccess, &branchscoresuccess) );
+      exprenfo->auxvalue, overestimate, overestimate ? SCIPinfinity(scip) : -SCIPinfinity(scip), FALSE, rowpreps, &estimatesuccess, &branchscoresuccess) );
 
    minidx = SCIPgetPtrarrayMinIdx(scip, rowpreps);
    maxidx = SCIPgetPtrarrayMaxIdx(scip, rowpreps);
@@ -3774,7 +3774,7 @@ SCIP_RETCODE initSolve(
                SCIP_CALL( createNlRow(scip, conss[c]) );
                assert(consdata->nlrow != NULL);
             }
-            SCIPnlrowSetCurvature(consdata->nlrow, consdata->curv);
+            SCIPsetNlRowCurvature(scip, consdata->nlrow, consdata->curv);
             SCIP_CALL( SCIPaddNlRow(scip, consdata->nlrow) );
          }
       }
@@ -7405,13 +7405,13 @@ SCIP_RETCODE enforceExprNlhdlr(
    /* if it was not running (e.g., because it was not available) or did not find anything, then try with estimator callback */
    if( *result != SCIP_DIDNOTRUN && *result != SCIP_DIDNOTFIND )
    {
-      ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    sepa of nlhdlr %s succeeded with result %d\n",
+      ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    enfo of nlhdlr %s succeeded with result %d\n",
                SCIPnlhdlrGetName(nlhdlr), *result); )
       return SCIP_OKAY;
    }
    else
    {
-      ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    sepa of nlhdlr <%s> did not succeed with result %d\n", SCIPnlhdlrGetName(nlhdlr), *result); )
+      ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    enfo of nlhdlr <%s> did not succeed with result %d\n", SCIPnlhdlrGetName(nlhdlr), *result); )
    }
 
    *result = SCIP_DIDNOTFIND;
@@ -7894,6 +7894,11 @@ SCIP_RETCODE enforceConstraints(
 
             if( *result == SCIP_CUTOFF )
                break;
+         }
+         else
+         {
+            ENFOLOG( SCIPinfoMessage(scip, enfologfile, " constraint <%s> could not be enforced, skip because viol %g below %g * maxrelconsviol %g\n",
+               SCIPconsGetName(conss[c]), viol, conshdlrdata->weakcutminviolfactor, maxrelconsviol); )
          }
       }
    }

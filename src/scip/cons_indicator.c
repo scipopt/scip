@@ -3958,7 +3958,6 @@ SCIP_RETCODE propIndicator(
             SCIP_CALL( SCIPdelConsLocal(scip, cons) );
          }
          SCIP_CALL( SCIPresetConsAge(scip, cons) );
-         ++(*nGen);
       }
 
       /* Note that because of possible multi-aggregation we cannot simply remove the indicator
@@ -7115,7 +7114,7 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsIndicator)
    indconss = SCIPconshdlrGetConss(conshdlr);
    nindconss = SCIPconshdlrGetNConss(conshdlr);
 
-   /* loop over indicator constraints and score indicator variables with already integral solution value  */
+   /* loop over indicator constraints and score indicator variables with already integral solution value */
    for (c = 0; c < nindconss; ++c)
    {
       /* check whether constraint is violated */

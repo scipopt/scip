@@ -1310,7 +1310,9 @@ SCIP_RETCODE SCIPconstructCurrentLP(
             /* keep all active global cuts that where applied in the previous node in the lp */
             if( !lp->rows[i]->local && lp->rows[i]->age == 0 )
             {
-               SCIP_CALL( SCIPsepastoreAddCut(sepastore, blkmem, set, stat, eventqueue, eventfilter, lp, lp->rows[i], TRUE, (SCIPtreeGetCurrentDepth(tree) == 0), cutoff) );
+               lp->rows[i]->fromcutpool = TRUE; /* this has no effect inside initial LP, but is set for consistency */
+               SCIP_CALL( SCIPsepastoreAddCut(sepastore, blkmem, set, stat, eventqueue, eventfilter, lp, lp->rows[i],
+                     TRUE, (SCIPtreeGetCurrentDepth(tree) == 0), cutoff) );
             }
          }
       }
@@ -1472,7 +1474,7 @@ SCIP_RETCODE solveNodeInitialLP(
       return SCIP_OKAY;
 
    /* load the LP state */
-   SCIP_CALL( SCIPtreeLoadLPState(tree, blkmem, set, stat, eventqueue, lp) );
+   SCIP_CALL( SCIPtreeLoadLPState(tree, blkmem, set, transprob, stat, eventqueue, lp) );
 
    focusnode = SCIPtreeGetFocusNode(tree);
 
@@ -2441,7 +2443,7 @@ SCIP_RETCODE priceAndCutLoop(
                      /* in the root node, remove redundant rows permanently from the LP */
                      if( root )
                      {
-                        SCIP_CALL( SCIPlpFlush(lp, blkmem, set, eventqueue) );
+                        SCIP_CALL( SCIPlpFlush(lp, blkmem, set, transprob, eventqueue) );
                         SCIP_CALL( SCIPlpRemoveRedundantRows(lp, blkmem, set, stat, eventqueue, eventfilter) );
                      }
 
@@ -2650,7 +2652,7 @@ SCIP_RETCODE priceAndCutLoop(
                   /* in the root node, remove redundant rows permanently from the LP */
                   if( root )
                   {
-                     SCIP_CALL( SCIPlpFlush(lp, blkmem, set, eventqueue) );
+                     SCIP_CALL( SCIPlpFlush(lp, blkmem, set, transprob, eventqueue) );
                      SCIP_CALL( SCIPlpRemoveRedundantRows(lp, blkmem, set, stat, eventqueue, eventfilter) );
                   }
                }
