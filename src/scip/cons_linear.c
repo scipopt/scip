@@ -11108,11 +11108,13 @@ SCIP_RETCODE dualPresolve(
             for( j = 0; j < naggrs; ++j)
             {
                /** @todo should we use the same pointer for the detection of infeasibility?
-                * If the multi-aggregation was not infeasible, then setting impicit integers to integers
+                * If the multi-aggregation was not infeasible, then setting implicit integers to integers
                 * should not lead to infeasibility
                 */
-               if ( SCIPvarGetType(aggrvars[j]) == SCIP_VARTYPE_IMPLINT )
-                     SCIP_CALL( SCIPchgVarType(scip, aggrvars[j], SCIP_VARTYPE_INTEGER, &infeasible) );
+               if( SCIPvarGetType(aggrvars[j]) == SCIP_VARTYPE_IMPLINT )
+               {
+                  SCIP_CALL( SCIPchgVarType(scip, aggrvars[j], SCIP_VARTYPE_INTEGER, &infeasible) );
+               }
             }
             /* the problem should not become infeasible */
             assert(!infeasible);
