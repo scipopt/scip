@@ -11102,22 +11102,25 @@ SCIP_RETCODE dualPresolve(
           * also convertLongEquality() early termination due to coefficients
           */
          SCIP_CALL( SCIPmultiaggregateVar(scip, bestvar, naggrs, aggrvars, aggrcoefs, aggrconst, &infeasible, &aggregated) );
-         /* if the aggregated variable is integer, then impicit integers in the multi-aggregation are set to integers */
+
+         /** if the multi-aggregate bestvar is integer, we need to convert implicit integers to integers because
+          *  the implicitness might rely on the constraint and the integrality of bestvar
+          */
          if( !infeasible && aggregated && SCIPvarGetType(bestvar) == SCIP_VARTYPE_INTEGER )
          {
+            SCIP_Bool infeasiblevartypechg;
+
             for( j = 0; j < naggrs; ++j)
             {
-               /** @todo should we use the same pointer for the detection of infeasibility?
-                * If the multi-aggregation was not infeasible, then setting implicit integers to integers
-                * should not lead to infeasibility
+               /** If the multi-aggregation was not infeasible, then setting implicit integers to integers should not
+                *  lead to infeasibility
                 */
                if( SCIPvarGetType(aggrvars[j]) == SCIP_VARTYPE_IMPLINT )
                {
-                  SCIP_CALL( SCIPchgVarType(scip, aggrvars[j], SCIP_VARTYPE_INTEGER, &infeasible) );
+                  SCIP_CALL( SCIPchgVarType(scip, aggrvars[j], SCIP_VARTYPE_INTEGER, &infeasiblevartypechg) );
+                  assert(!infeasiblevartypechg);
                }
             }
-            /* the problem should not become infeasible */
-            assert(!infeasible);
          }
       }
       else
