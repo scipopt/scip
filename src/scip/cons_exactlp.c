@@ -1578,8 +1578,10 @@ void consdataRecomputeMinactivity(
 {
    int i;
    SCIP_Real bound;
-   CERTIFICATE_CONS ccons = GetCertificateCons(scip, consdata);
-
+   CERTIFICATE_CONS ccons;
+   SCIP_ROUNDMODE prevmode;
+   prevmode = SCIPintervalGetRoundingMode();
+   ccons = GetCertificateCons(scip, consdata);
    consdata->minactivity = ccons.constant.inf;
    SCIPintervalSetRoundingModeDownwards();
    for( i = ccons.nvars - 1; i >= 0; --i )
@@ -1595,6 +1597,7 @@ void consdataRecomputeMinactivity(
 
    /* the activity was just computed from scratch, mark it to be reliable */
    consdata->lastminactivity = consdata->minactivity;
+   SCIPintervalSetRoundingMode(prevmode);
 }
 
 /** recompute the maxactivity of a constraint */
@@ -1607,6 +1610,8 @@ void consdataRecomputeMaxactivity(
    int i;
    SCIP_Real bound;
    CERTIFICATE_CONS ccons = GetCertificateCons(scip, consdata);
+   SCIP_ROUNDMODE prevmode;
+   prevmode = SCIPintervalGetRoundingMode();
 
    consdata->maxactivity = ccons.constant.sup;
    SCIPintervalSetRoundingModeUpwards();
@@ -1623,6 +1628,7 @@ void consdataRecomputeMaxactivity(
 
    /* the activity was just computed from scratch, mark it to be reliable */
    consdata->lastmaxactivity = consdata->maxactivity;
+   SCIPintervalSetRoundingMode(prevmode);
 }
 
 /** recompute the minactivity of a constraint */
@@ -1635,6 +1641,9 @@ void consdataRecomputeMinactivityEx(
    int i;
    SCIP_Rational* bound;
    CERTIFICATE_CONS ccons = GetCertificateCons(scip, consdata);
+   SCIP_ROUNDMODE prevmode;
+   prevmode = SCIPintervalGetRoundingMode();
+
    RatCreateBuffer(SCIPbuffer(scip), &bound);
    if (ccons.constantEx == NULL)
       RatSetReal(consdata->minactivityEx, 0);
@@ -1670,6 +1679,7 @@ void consdataRecomputeMinactivityEx(
    RatFreeBuffer(SCIPbuffer(scip), &bound);
    /* the activity was just computed from scratch and is valid now */
    consdata->validminact = TRUE;
+   SCIPintervalSetRoundingMode(prevmode);
 }
 
 /** recompute the maxactivity of a constraint */
@@ -1682,6 +1692,9 @@ void consdataRecomputeMaxactivityEx(
    int i;
    SCIP_Rational* bound;
    CERTIFICATE_CONS ccons = GetCertificateCons(scip, consdata);
+   SCIP_ROUNDMODE prevmode;
+   prevmode = SCIPintervalGetRoundingMode();
+
    RatCreateBuffer(SCIPbuffer(scip), &bound);
    if (ccons.constantEx == NULL)
       RatSetReal(consdata->maxactivityEx, 0);
@@ -1720,7 +1733,7 @@ void consdataRecomputeMaxactivityEx(
    /* the activity was just computed from scratch and is valid now */
    RatFreeBuffer(SCIPbuffer(scip), &bound);
    consdata->validmaxact = TRUE;
-
+   SCIPintervalSetRoundingMode(prevmode);
 
 }
 
@@ -1734,6 +1747,9 @@ void consdataRecomputeGlbMinactivity(
    int i;
    SCIP_Real bound;
    CERTIFICATE_CONS ccons = GetCertificateCons(scip, consdata);
+   SCIP_ROUNDMODE prevmode;
+   prevmode = SCIPintervalGetRoundingMode();
+
    SCIPintervalSetRoundingModeDownwards();
    consdata->glbminactivity = 0;
 
@@ -1750,6 +1766,7 @@ void consdataRecomputeGlbMinactivity(
 
    /* the activity was just computed from scratch, mark it to be reliable */
    consdata->lastglbminactivity = consdata->glbminactivity;
+   SCIPintervalSetRoundingMode(prevmode);
 }
 
 /** recompute the global maxactivity of a constraint */
@@ -1762,6 +1779,9 @@ void consdataRecomputeGlbMaxactivity(
    int i;
    SCIP_Real bound;
    CERTIFICATE_CONS ccons = GetCertificateCons(scip, consdata);
+   SCIP_ROUNDMODE prevmode;
+   prevmode = SCIPintervalGetRoundingMode();
+
    SCIPintervalSetRoundingModeUpwards();
    consdata->glbmaxactivity = ccons.constant.sup;
 
@@ -1778,6 +1798,7 @@ void consdataRecomputeGlbMaxactivity(
 
    /* the activity was just computed from scratch, mark it to be reliable */
    consdata->lastglbmaxactivity = consdata->glbmaxactivity;
+   SCIPintervalSetRoundingMode(prevmode);
 }
 
 /** recompute the global minactivity of a constraint */
@@ -1790,6 +1811,9 @@ void consdataRecomputeGlbMinactivityEx(
    int i;
    SCIP_Rational* bound;
    CERTIFICATE_CONS ccons = GetCertificateCons(scip, consdata);
+   SCIP_ROUNDMODE prevmode;
+   prevmode = SCIPintervalGetRoundingMode();
+
    if (ccons.constantEx == NULL)
       RatSetReal(consdata->glbminactivityEx, 0);
    else
@@ -1810,6 +1834,7 @@ void consdataRecomputeGlbMinactivityEx(
 
    /* the activity was just computed from scratch, mark it to be reliable */
    consdata->lastglbminactivityEx = consdata->glbminactivityEx;
+   SCIPintervalSetRoundingMode(prevmode);
 }
 
 /** recompute the global maxactivity of a constraint */
@@ -1822,6 +1847,9 @@ void consdataRecomputeGlbMaxactivityEx(
    int i;
    SCIP_Rational* bound;
    CERTIFICATE_CONS ccons = GetCertificateCons(scip, consdata);
+   SCIP_ROUNDMODE prevmode;
+   prevmode = SCIPintervalGetRoundingMode();
+
    if (ccons.constantEx == NULL)
       RatSetReal(consdata->glbmaxactivityEx, 0);
    else
@@ -1842,6 +1870,7 @@ void consdataRecomputeGlbMaxactivityEx(
 
    /* the activity was just computed from scratch, mark it to be reliable */
    consdata->lastglbmaxactivityEx = consdata->glbmaxactivityEx;
+   SCIPintervalSetRoundingMode(prevmode);
 }
 
 /** calculates maximum absolute value of coefficients */
@@ -2436,6 +2465,8 @@ void consdataUpdateActivities(
    SCIP_Bool finitenewbound;
    SCIP_Bool hugevalnewcont;
    SCIP_Real val;
+   SCIP_ROUNDMODE prevmode;
+   prevmode = SCIPintervalGetRoundingMode();
 
    assert(scip != NULL);
    assert(consdata != NULL);
@@ -2810,6 +2841,7 @@ void consdataUpdateActivities(
          }
       }
    }
+   SCIPintervalSetRoundingMode(prevmode);
    //assert(assertActivities(scip, consdata));
 }
 /** updates minimum and maximum activity for a change in lower bound */
@@ -4687,6 +4719,8 @@ void consdataGetActivityResiduals(
    SCIP_Real minactbound;
    SCIP_Real maxactbound;
    SCIP_Real absval;
+   SCIP_ROUNDMODE prevmode;
+   prevmode = SCIPintervalGetRoundingMode();
 
    assert(scip != NULL);
    assert(consdata != NULL);
@@ -4816,6 +4850,7 @@ void consdataGetActivityResiduals(
          consdata->maxactivityposhuge, consdata->maxactivityneghuge, delta, FALSE, goodrelax,
          maxresactivity, maxisrelax, ismaxsettoinfinity);
    }
+   SCIPintervalSetRoundingMode(prevmode);
 }
 
 /** gets global activity bounds for constraint */
@@ -9574,6 +9609,8 @@ SCIP_RETCODE tightenVarBounds(
    SCIP_Bool maxisrelax;
    SCIP_Bool isminsettoinfinity;
    SCIP_Bool ismaxsettoinfinity;
+   SCIP_ROUNDMODE prevmode;
+   prevmode = SCIPintervalGetRoundingMode();
 
    assert(scip != NULL);
    assert(cons != NULL);
@@ -9582,7 +9619,7 @@ SCIP_RETCODE tightenVarBounds(
 
    /* we cannot tighten variables' bounds, if the constraint may be not complete */
    if( SCIPconsIsModifiable(cons) )
-      return SCIP_OKAY;
+      goto RETURN_SCIP_OKAY;
 
    consdata = SCIPconsGetData(cons);
    CERTIFICATE_CONS ccons = GetCertificateCons(scip, consdata);
@@ -9604,7 +9641,7 @@ SCIP_RETCODE tightenVarBounds(
       tmpVar = var;
       SCIPvarGetProbvarBound(&tmpVar, &tmpBound, &tmpBoundtype);
       if( SCIPvarGetStatus(tmpVar) == SCIP_VARSTATUS_MULTAGGR || SCIPvarGetStatus(tmpVar) == SCIP_VARSTATUS_FIXED ) {
-         return SCIP_OKAY;
+         goto RETURN_SCIP_OKAY;
       }
    }
 
@@ -9671,7 +9708,7 @@ SCIP_RETCODE tightenVarBounds(
                   if( SCIPcertificateShouldTrackBounds(scip) )
                      SCIP_CALL( CertificatePrintActivityConflict(scip, cons, consdata, TRUE) );
                   *cutoff = TRUE;
-                  return SCIP_OKAY;
+                  goto RETURN_SCIP_OKAY;
                }
                if( tightened )
                {
@@ -9733,7 +9770,7 @@ SCIP_RETCODE tightenVarBounds(
                   SCIP_CALL( CertificatePrintActivityConflict(scip, cons, consdata, FALSE) );
 
                *cutoff = TRUE;
-               return SCIP_OKAY;
+               goto RETURN_SCIP_OKAY;
             }
             if( tightened )
             {
@@ -9801,7 +9838,7 @@ SCIP_RETCODE tightenVarBounds(
                   //SCIP_CALL( analyzeConflict(scip, cons, TRUE) );
 
                   *cutoff = TRUE;
-                  return SCIP_OKAY;
+                  goto RETURN_SCIP_OKAY;
                }
                if( tightened )
                {
@@ -9862,7 +9899,7 @@ SCIP_RETCODE tightenVarBounds(
                //SCIP_CALL( analyzeConflict(scip, cons, FALSE) );
 
                *cutoff = TRUE;
-               return SCIP_OKAY;
+               goto RETURN_SCIP_OKAY;
             }
             if( tightened )
             {
@@ -9875,7 +9912,8 @@ SCIP_RETCODE tightenVarBounds(
          }
       }
    }
-
+   RETURN_SCIP_OKAY:
+   SCIPintervalSetRoundingMode(prevmode);
    return SCIP_OKAY;
 }
 
