@@ -2850,6 +2850,7 @@ Features
   - the subnlp heuristic now gives ownership of a found solution to the heuristic that constructed the starting point, if any;
     as a consequence, MIP heuristics may now be shown more frequently for having found a solution when solving MINLPs, even
     though the solutions required an additional NLP solve
+  - new multistart heuristic for NLPs
 
 - Propagator:
   - add prop_nlobbt, a nonlinear optimization-based bound propagator solving two convex NLP relaxations for each variable
