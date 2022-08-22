@@ -142,7 +142,7 @@ Interface changes
 ### Changed parameters
 ### New parameters
 
-- new paramters to turn on more statistics: misc/showdivingstats (diving heuristics), heuristics/alns/shownbstats (ALNS), estimation/showstats (tree size estimation)
+- new parameters to turn on more statistics: misc/showdivingstats (diving heuristics), heuristics/alns/shownbstats (ALNS), estimation/showstats (tree size estimation)
 
 ### Data structures
 
@@ -172,8 +172,9 @@ Fixed bugs
   an objective limit in this case, the results of the LP solver are unclear.
 - fixed bug in reopt.c, which occured for bounds outside of current valid bounds
 - fixed problem with recomputing symmetries after a restart
-- fixed bug SCIPcalcMIR() with wrong order of arguments for removeZerosQuad()
+- fixed bug in SCIPcalcMIR() with wrong order of arguments for removeZerosQuad()
 - fixed segmentation fault in update of cut statistic
+- fixed bug in presolving of and constraints by merging variables with multiple occurrences before cliquePresolve()
 
 Miscellaneous
 -------------
@@ -2962,6 +2963,7 @@ Features
   - the subnlp heuristic now gives ownership of a found solution to the heuristic that constructed the starting point, if any;
     as a consequence, MIP heuristics may now be shown more frequently for having found a solution when solving MINLPs, even
     though the solutions required an additional NLP solve
+  - new multistart heuristic for NLPs
 
 - Propagator:
   - add prop_nlobbt, a nonlinear optimization-based bound propagator solving two convex NLP relaxations for each variable
