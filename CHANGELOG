@@ -63,6 +63,7 @@ Fixed bugs
 - fixed bug in SCIPcalcMIR() with wrong order of arguments for removeZerosQuad()
 - fixed segmentation fault in update of cut statistic
 - fixed bug in presolving of and constraints by merging variables with multiple occurrences before cliquePresolve()
+- fixed bug in dual presolving of linear constraints by setting implicit integers to integers in multi-aggregation
 
 Miscellaneous
 -------------
