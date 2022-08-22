@@ -4518,11 +4518,29 @@ SCIP_DECL_CONSPRESOL(consPresolAnd)
    {
       for( c = 0; c < nconss && !cutoff && !SCIPisStopped(scip); ++c )
       {
-	 if( SCIPconsIsActive(conss[c]) )
-	 {
-	    /* check if at least two operands are in one clique */
-	    SCIP_CALL( cliquePresolve(scip, conss[c], conshdlrdata->eventhdlr, &cutoff, nfixedvars, naggrvars, nchgcoefs, ndelconss, naddconss) );
-	 }
+         cons = conss[c];
+         assert(cons != NULL);
+
+         if( !SCIPconsIsActive(cons) )
+            continue;
+
+         /* cliquePresolve() may aggregate variables which need to be removed from other constraints, we also need
+          * to make sure that we remove fixed variables by calling propagateCons() to make sure that applyFixing()
+          * and mergeMultiples() work
+          */
+         SCIP_CALL( propagateCons(scip, cons, conshdlrdata->eventhdlr, &cutoff, nfixedvars, nupgdconss) );
+
+         if( !cutoff && !SCIPconsIsDeleted(cons) )
+         {
+            /* remove all variables that are fixed to one; merge multiple entries of the same variable;
+             * fix resultant to zero if a pair of negated variables is contained in the operand variables
+             */
+            SCIP_CALL( applyFixings(scip, cons, conshdlrdata->eventhdlr, nchgcoefs) );
+            SCIP_CALL( mergeMultiples(scip, cons, conshdlrdata->eventhdlr, &entries, &nentries, nfixedvars, nchgcoefs, ndelconss) );
+
+            /* check if at least two operands are in one clique */
+            SCIP_CALL( cliquePresolve(scip, cons, conshdlrdata->eventhdlr, &cutoff, nfixedvars, naggrvars, nchgcoefs, ndelconss, naddconss) );
+         }
       }
    }
 
