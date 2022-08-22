@@ -3258,7 +3258,7 @@ SCIP_RETCODE SCIPaddConflict(
       SCIP_CALL( SCIPaddConsNode(scip, node, cons, validnode) );
    }
 
-   if( node == NULL || SCIPnodeGetType(node) != SCIP_NODETYPE_PROBINGNODE )
+   if( ( node == NULL || SCIPnodeGetType(node) != SCIP_NODETYPE_PROBINGNODE ) && conftype != SCIP_CONFTYPE_RESOLUTION )
    {
       /* add the conflict to the conflict store */
       SCIP_CALL( SCIPconflictstoreAddConflict(scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->tree,

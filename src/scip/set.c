@@ -162,7 +162,7 @@
 
 /* Conflict Analysis (generalized resolution) */
 
-#define SCIP_DEFAULT_CONF_RESOLUTIONCONS     -1 /**< number of resolution constraints to add (-1: add every conflict constraint) */
+#define SCIP_DEFAULT_CONF_RESOLUTIONCONS     1  /**< number of resolution constraints to add (-1: add every conflict constraint) */
 #define SCIP_DEFAULT_CONF_MAXNUMRESSTEPS   1000 /**< maximal number of resolution steps in generalized resolution (-1: resolve till FirstUIP) */
 #define SCIP_DEFAULT_CONF_WEAKENCONFLICT  FALSE /**< should the conflict constraint be weakened? */
 #define SCIP_DEFAULT_CONF_WEAKENREASON     TRUE /**< should the reason constraint be weakened? */

@@ -211,6 +211,7 @@ struct SCIP_Conflict
    int                   nresolutionsets;    /**< number of available resolution sets */
    int                   resolutionsetssize; /**< size of resolutionset array */
    SCIP_Real             resolutionminslack; /**< smallest slack among all resolution sets */
+   SCIP_Bool             bdchgonlyconfqueue; /**< if true we add bound changes only in graph conflict queues */
    SCIP_Bool             bdchgonlyresqueue;  /**< if true we add bound changes only in generalized resolution queues */
 
 };

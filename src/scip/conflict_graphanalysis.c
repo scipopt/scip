@@ -2378,16 +2378,16 @@ SCIP_RETCODE conflictQueueBound(
       if( (!set->conf_preferbinary || SCIPvarIsBinary(SCIPbdchginfoGetVar(bdchginfo)))
          && !isBoundchgUseless(set, bdchginfo) )
       {
-         if (!conflict->bdchgonlyresqueue)
+         if (set->conf_useprop && !conflict->bdchgonlyresqueue)
             SCIP_CALL( SCIPpqueueInsert(conflict->bdchgqueue, (void*)bdchginfo) );
-         if (set->conf_usegeneralres)
+         if (set->conf_usegeneralres && !conflict->bdchgonlyconfqueue)
             SCIP_CALL( SCIPpqueueInsert(conflict->resbdchgqueue, (void*)bdchginfo) );
       }
       else
       {
-         if (!conflict->bdchgonlyresqueue)
+         if (set->conf_useprop && !conflict->bdchgonlyresqueue)
             SCIP_CALL( SCIPpqueueInsert(conflict->forcedbdchgqueue, (void*)bdchginfo) );
-         if (set->conf_usegeneralres)
+         if (set->conf_usegeneralres && !conflict->bdchgonlyconfqueue)
             SCIP_CALL( SCIPpqueueInsert(conflict->resforcedbdchgqueue, (void*)bdchginfo) );
       }
 
@@ -2592,9 +2592,14 @@ SCIP_RETCODE SCIPconflictAnalyzeRemainingBdchgs(
 
    if( v == nvars )
    {
+      /* setting this to true adds bound changes only to the conflict graph bdchg queue */
+      conflict->bdchgonlyconfqueue = TRUE;
+
       /* analyze the conflict set, and create conflict constraints on success */
       SCIP_CALL( conflictAnalyze(conflict, blkmem, set, stat, prob, tree, diving, 0, FALSE, nconss, nliterals, \
             nreconvconss, nreconvliterals) );
+
+      conflict->bdchgonlyconfqueue = FALSE;
    }
 
    return SCIP_OKAY;
@@ -5453,6 +5458,9 @@ SCIP_RETCODE SCIPconflictAnalyze(
 
    conflict->npropcalls++;
 
+   /* setting this to true adds bound changes only to the conflict graph bdchg queue */
+   conflict->bdchgonlyconfqueue = TRUE;
+
    /* analyze the conflict set, and create a conflict constraint on success */
    SCIP_CALL( conflictAnalyze(conflict, blkmem, set, stat, prob, tree, FALSE, validdepth, TRUE, &nconss, &nliterals, \
          &nreconvconss, &nreconvliterals) );
@@ -5461,6 +5469,8 @@ SCIP_RETCODE SCIPconflictAnalyze(
    conflict->npropconfliterals += nliterals;
    conflict->npropreconvconss += nreconvconss;
    conflict->npropreconvliterals += nreconvliterals;
+   conflict->bdchgonlyconfqueue = FALSE;
+
    if( success != NULL )
       *success = (nconss > 0);
 

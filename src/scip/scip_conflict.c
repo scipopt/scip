@@ -706,7 +706,7 @@ SCIP_RETCODE SCIPanalyzeConflictCons(
       conflictrow = SCIPconsCreateRow(scip, cons);
 
       SCIP_CALL( SCIPconflictAnalyzeResolution(scip->conflict, scip->mem->probmem, scip->set, scip->stat,
-               scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable, conflictrow, 0, success) );
+               scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable, conflictrow, 0, FALSE, success) );
 
       SCIP_CALL( SCIPconflictAnalyze(scip->conflict, scip->mem->probmem, scip->set, scip->stat,
             scip->transprob, scip->tree, 0, success) );
