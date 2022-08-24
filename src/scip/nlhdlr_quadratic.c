@@ -2198,8 +2198,10 @@ SCIP_RETCODE computeIntercut(
          assert(SCIProwGetBasisStatus(rows[lppos]) == SCIP_BASESTAT_LOWER || SCIProwGetBasisStatus(rows[lppos]) ==
                SCIP_BASESTAT_UPPER);
 
-         SCIP_CALL( addRowToCut(scip, rowprep, SCIProwGetBasisStatus(rows[lppos]) == SCIP_BASESTAT_UPPER ? cutcoef :
-                  -cutcoef, rows[lppos], success) ); /* rows have flipper base status! */
+         /* flip cutcoef when necessary. Note: rows have flipped base status! */
+         cutcoef = SCIProwGetBasisStatus(rows[lppos]) == SCIP_BASESTAT_UPPER ? cutcoef : -cutcoef;
+
+         SCIP_CALL( addRowToCut(scip, rowprep, cutcoef, rows[lppos], success) );
 
          if( ! *success )
          {
@@ -2214,12 +2216,18 @@ SCIP_RETCODE computeIntercut(
          {
             assert(SCIPcolGetBasisStatus(cols[lppos]) == SCIP_BASESTAT_UPPER || SCIPcolGetBasisStatus(cols[lppos]) ==
                   SCIP_BASESTAT_LOWER);
-            SCIP_CALL( addColToCut(scip, rowprep, sol, SCIPcolGetBasisStatus(cols[lppos]) == SCIP_BASESTAT_UPPER ? -cutcoef :
-                  cutcoef, cols[lppos]) );
+
+            /* flip cutcoef when necessary */
+            cutcoef = SCIPcolGetBasisStatus(cols[lppos]) == SCIP_BASESTAT_UPPER ? -cutcoef : cutcoef;
+
+            SCIP_CALL( addColToCut(scip, rowprep, sol, cutcoef, cols[lppos]) );
          }
          else
          {
-            SCIP_CALL( addColToCut(scip, rowprep, sol, rays->rays[i] == -1 ? -cutcoef : cutcoef, cols[lppos]) );
+            /* flip cutcoef when necessary */
+            cutcoef = rays->rays[i] == -1 ? -cutcoef : cutcoef;
+
+            SCIP_CALL( addColToCut(scip, rowprep, sol, cutcoef, cols[lppos]) );
          }
       }
    }
