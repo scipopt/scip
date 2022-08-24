@@ -101,10 +101,10 @@ void setup(void)
    SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );
    SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_SOLVING, TRUE) );
 
-   SCIP_CALL( SCIPcreateVarBasic(scip, &x, "x", -SCIPinfinity(scip), SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS) );
-   SCIP_CALL( SCIPcreateVarBasic(scip, &y, "y", -SCIPinfinity(scip), SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS) );
-   SCIP_CALL( SCIPcreateVarBasic(scip, &w, "w", -SCIPinfinity(scip), SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS) );
-   SCIP_CALL( SCIPcreateVarBasic(scip, &z, "z", -SCIPinfinity(scip), SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &x, "x", -SCIPinfinity(scip), SCIPinfinity(scip), 0.0, SCIP_VARTYPE_INTEGER) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &y, "y", -SCIPinfinity(scip), SCIPinfinity(scip), 0.0, SCIP_VARTYPE_INTEGER) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &w, "w", -SCIPinfinity(scip), SCIPinfinity(scip), 0.0, SCIP_VARTYPE_INTEGER) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &z, "z", -SCIPinfinity(scip), SCIPinfinity(scip), 0.0, SCIP_VARTYPE_INTEGER) );
    SCIP_CALL( SCIPcreateVarBasic(scip, &s, "s", -SCIPinfinity(scip), SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPcreateVarBasic(scip, &t, "t", -SCIPinfinity(scip), SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPaddVar(scip, x) );
@@ -1164,6 +1164,49 @@ void buildAndSolveSimpleProbingLP2(void)
 
 }
 
+/* builds lp so that x and y are basic and the rays are
+ * x      2     0
+ * y  =   2 s1  4 s2
+ *
+ */
+static
+void buildAndSolveSimpleProbingLP3(void)
+{
+   SCIP_ROW* row1;
+   SCIP_ROW* row2;
+   SCIP_Bool lperror;
+   SCIP_Bool cutoff;
+
+   /* -x/2 <= 1 */
+   SCIP_CALL( SCIPcreateEmptyRowUnspec(scip, &row1, "row1", -SCIPinfinity(scip), 1.0, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPaddVarToRow(scip, row1, x,  -0.5) );
+
+   SCIP_CALL( SCIPaddRowProbing(scip, row1) );
+   SCIP_CALL( SCIPreleaseRow(scip, &row1) );
+
+   /* x - y <= -3 */
+   SCIP_CALL( SCIPcreateEmptyRowUnspec(scip, &row2, "row2", -SCIPinfinity(scip), -0.75, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPaddVarToRow(scip, row2, x,  0.25) );
+   SCIP_CALL( SCIPaddVarToRow(scip, row2, y,  -0.25) );
+
+   SCIP_CALL( SCIPaddRowProbing(scip, row2) );
+   SCIP_CALL( SCIPreleaseRow(scip, &row2) );
+
+   /* set objective coefficient */
+   SCIP_CALL( SCIPchgVarObjProbing(scip, x, 1.0) );
+   SCIP_CALL( SCIPchgVarObjProbing(scip, y, 1.0) );
+
+   SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror, &cutoff) );
+   cr_assert_not(lperror);
+   /* interestingly this fails because the cutoffbound of scip is .0001 or something TODO: figure out why */
+   //cr_assert_not(cutoff);
+   SCIP_CALL( SCIPprintSol(scip, NULL, NULL, TRUE) );
+
+   /* all variables should be basic */
+   cr_expect_eq(SCIPcolGetBasisStatus(SCIPvarGetCol(x)), SCIP_BASESTAT_BASIC, "got %d\n", SCIPcolGetBasisStatus(SCIPvarGetCol(x)));
+   cr_expect_eq(SCIPcolGetBasisStatus(SCIPvarGetCol(y)), SCIP_BASESTAT_BASIC);
+}
+
 /* function to test cuts: coefficients should be normalize so to have norm 1 */
 static
 void testCut(
@@ -2095,6 +2138,7 @@ Test(interCuts, cut1, .description = "test cut for Case 2")
    /* register enforcer info in expr and free */
    registerAndFree(cons, nlhdlrexprdata);
 }
+
 Test(interCuts, cut2, .description = "test cut for Case 1")
 {
    SCIP_Bool cutoff;
@@ -2705,6 +2749,97 @@ Test(interCuts, testBoundRays1)
    SCIP_CALL( SCIPfreeSol(scip, &sol) );
 
    /* end probing mode */
+   SCIP_CALL( SCIPendProbing(scip) );
+
+   /* register enforcer info in expr and free */
+   registerAndFree(cons, nlhdlrexprdata);
+}
+
+Test(interCuts, monoidal, .description = "test cut for monoidal strengthening")
+{
+   SCIP_Bool cutoff;
+   SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
+   SCIP_CONS* cons;
+   SCIP_Real* eigenvalues;
+
+   simplifyAndDetect(&cons, &nlhdlrexprdata, "[nonlinear] <test>: <x>^2 - <y>^2 <= -1.0");
+
+   /* skip if eigenvalue decomposition does not exist */
+   SCIPexprGetQuadraticData(nlhdlrexprdata->qexpr, NULL, NULL, NULL, NULL, NULL, NULL, &eigenvalues, NULL);
+   if( eigenvalues == NULL )
+   {
+      registerAndFree(cons, nlhdlrexprdata);
+      return;
+   }
+
+   /*
+    * build LP so that every var is non-basic
+    */
+   SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
+   cr_assert_not(cutoff);
+
+   SCIP_CALL( SCIPstartProbing(scip) );
+
+   buildAndSolveSimpleProbingLP3();
+
+   /* what rays should be
+    * x      2     0
+    * y  =   2 s1  4 s2
+    */
+   {
+      int expectednnonz = 3;
+      SCIP_Real expectedrayscoefs[3] = {
+         2.0, 2.0,
+         4.0
+      };
+      int expectedraysidx[4] = {
+         0, 1,
+         1
+      };
+      int expectednrays = 2;
+      int expectedlppos[2] = {-1, -2};
+      int expectedbegin[4] = {0, 2, 3};
+
+      int expectedncols = 6;
+      SCIP_VAR* vars[6] = {x, y, w, z, s, t};
+      SCIP_VAR* consvars[3] = {x, y};
+
+      testRays(nlhdlrexprdata, NULL, vars, consvars, expectedrayscoefs, expectedraysidx, expectedlppos, expectedbegin,
+            expectednrays, expectednnonz, expectedncols);
+   }
+
+   {
+      SCIP_Real vb[2];      /* eigenvectors * b */
+      SCIP_Real vzlp[2];    /* eigenvectors * lpsol */
+      SCIP_Real wcoefs[2];  /* coefficients affecting quadterms in w */
+      SCIP_Real wzlp;     /* w(lpsol) */
+      SCIP_Real kappa;
+
+      SCIP_Real raycoefs[2] = {2.0, 2.0};
+      int rayidx[2] = {0, 1};
+      int raynnonz = 2;
+
+      SCIP_Real a;
+      SCIP_Real b;
+      SCIP_Real c;
+      SCIP_Real cutcoef;
+
+      SCIP_Real expectedquadcoefs[3] = {5.25, -16.5, 3.25};
+      SCIP_Real expectedcutcoef = 2.931700653055780;
+
+      SCIP_CALL( intercutsComputeCommonQuantities(scip, nlhdlrexprdata, NULL, 1.0, NULL, vb, vzlp, wcoefs, &wzlp, &kappa) );
+
+      /* compute quadratic function of monoidal problem and the resulting cut coef */
+      computeMonoidalQuadCoefs(scip, nlhdlrexprdata, raycoefs, rayidx, raynnonz, vb, vzlp, kappa, 1.0, &a, &b, &c);
+      cutcoef = findMonoidalQuadRoot(scip, a, b, c);
+
+      /* check if coefs are correct */
+      cr_expect_eq(a, expectedquadcoefs[0], "e %g g %g\n", expectedquadcoefs[0], a);
+      cr_expect_eq(b, expectedquadcoefs[1], "e %g g %g\n", expectedquadcoefs[1], b);
+      cr_expect_eq(c, expectedquadcoefs[2], "e %g g %g\n", expectedquadcoefs[2], c);
+      cr_expect_eq(cutcoef, expectedcutcoef, "e %.10f g %.15f\n", expectedcutcoef, cutcoef);
+   }
+
    SCIP_CALL( SCIPendProbing(scip) );
 
    /* register enforcer info in expr and free */
