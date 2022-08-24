@@ -1159,7 +1159,7 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-/**@page DOC How to search the documentation for interface methods
+/**@page DOC How to search the documentation and source files structure for public interface methods
  *
  * If you are looking for a method in order to perform a specific task, the public \ref PUBLICAPI "SCIP C-API" is the place to look.
  * - It contains interface methods for all SCIP structs, both in the solver core or in one of the plugins.
