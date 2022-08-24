@@ -1909,7 +1909,7 @@ void computeMonoidalQuadCoefs(
       else
       {
          *a += sidefactor * eigenvalues[i] * SQR(dot);
-         *b -= SQRT(sidefactor * eigenvalues[i]) * dot * rayentry;
+         *b -= SQRT(-sidefactor * eigenvalues[i]) * dot * rayentry;
          *c -= SQR(rayentry);
       }
    }
