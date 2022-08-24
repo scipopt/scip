@@ -1922,6 +1922,62 @@ void computeMonoidalQuadCoefs(
    *c += (kappa / apos) * (1 - 2 * bpos / SQRT(kappa)) + 1.0;
 }
 
+
+/* check if ray was in strip by checking if the point in the monoid corresponding to the cutcoef we just found
+ * is "on the wrong side" of the hyperplane -(a - lambda^Ta lambda)^T x */
+static
+SCIP_Bool isRayInStrip(
+   SCIP_NLHDLREXPRDATA*  nlhdlrexprdata,     /**< nlhdlr expression data */
+   SCIP_Real*            raycoefs,           /**< coefficients of ray */
+   int*                  rayidx,             /**< index of consvar the ray coef is associated to */
+   int                   raynnonz,           /**< length of raycoefs and rayidx */
+   SCIP_Real*            vb,                 /**< array containing \f$v_i^T b\f$ for \f$i \in I_+ \cup I_-\f$ */
+   SCIP_Real*            vzlp,               /**< array containing \f$v_i^T zlp_q\f$ for \f$i \in I_+ \cup I_-\f$ */
+   SCIP_Real             kappa,              /**< value of kappa */
+   SCIP_Real             sidefactor,         /**< 1.0 if the violated constraint is q &le; rhs, -1.0 otherwise */
+   SCIP_Real             cutcoef             /**< optimal solution of the monoidal quadratic */
+   )
+{
+   SCIP_EXPR* qexpr;
+   int nquadexprs;
+   SCIP_Real* eigenvectors;
+   SCIP_Real* eigenvalues;
+   SCIP_Real apos;
+   SCIP_Real bpos;
+   int i;
+   int j;
+
+   qexpr = nlhdlrexprdata->qexpr;
+   SCIPexprGetQuadraticData(qexpr, NULL, NULL, NULL, NULL, &nquadexprs, NULL, &eigenvalues, &eigenvectors);
+
+   apos = 0.0;
+   bpos = 0.0;
+   for( i = 0; i < nquadexprs; ++i )
+   {
+      SCIP_Real dot;
+      SCIP_Real rayentry;
+
+      if( sidefactor * eigenvalues[i] <= 0 )
+         continue;
+
+      /* get entry of ray -> check if current var index corresponds to a non-zero entry in ray */
+      if( j < raynnonz && i == rayidx[j] )
+      {
+         rayentry = raycoefs[j];
+         ++j;
+      }
+      else
+         rayentry = 0.0;
+
+      dot = vzlp[i] + vb[i] / (2.0 * (sidefactor * eigenvalues[i]));
+
+      apos += sidefactor * eigenvalues[i] * SQR(dot);
+      bpos += SQRT(sidefactor * eigenvalues[i]) * dot * rayentry;
+   }
+
+   return  SQRT(kappa) / (apos + 1.0) * bpos + cutcoef > 1 ? TRUE: FALSE;
+}
+
 /** computes the smallest root of the quadratic function a*x^2 + b*x + c with a > 0
  *  and b^2 - 4ac >= 0. We use binary search between -inf and minimum at -b/2a.
  */
@@ -2018,6 +2074,10 @@ void computeMonoidalStrengthCoef(
 
             /* find smallest root of quadratic function a * x^2 + b * x + c -> this is the cut coef */
             *cutcoef = findMonoidalQuadRoot(scip, a, b, c);
+
+            /* check if ray is in strip. If not, monoidal is possible and cutcoef is the strengthened cut coef */
+            if( ! isRayInStrip(nlhdlrexprdata, raycoefs, rayidx, raynnonz, vb, vzlp, kappa, sidefactor, *cutcoef) )
+               *success = TRUE;
 
 #ifdef DEBUG_MONOIDAL
             printf("Ray is not in strip -> monoidal is possible -> computed cut coef %g \n", *cutcoef);
