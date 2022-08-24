@@ -1990,31 +1990,45 @@ SCIP_Real findMonoidalQuadRoot(
    )
 {
    SCIP_Real sol;
-   SCIP_Real val;
-   SCIP_Real lb;
-   SCIP_Real ub;
-   int niter;
+   SCIP_INTERVAL bounds;
+   SCIP_INTERVAL result;
 
    assert(a > 0);
    assert(SQR(b) - 4 * a * c >= 0);
 
-   ub = - b / (2 * a);
-   lb = - SCIPinfinity(scip);
-   val = SCIPinfinity(scip);
-   niter = 0;
-   while( niter < BINSEARCH_MAXITERS && ABS(val) > 10e-6 )
+   SCIPintervalSetBounds(&bounds, - b / (2 * a), SCIPinfinity(scip));
+
+   /* SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar finds all x such that a x^2 + b x >= -c and x in bounds.*/
+   SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar(SCIP_INTERVAL_INFINITY, &result, a, b, -c, bounds);
+
+   sol = SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, result) ? SCIPinfinity(scip) : SCIPintervalGetInf(result);
+
+   /* check if that solution is close enough or if we need to improve it more with binary search */
+   if( a * SQR(sol) + sol * b + c > 1e-10 )
    {
-      sol = (ub + lb) / 2;
-      val = a * SQR(sol) + b * sol + c;
+      SCIP_Real val;
+      SCIP_Real lb;
+      SCIP_Real ub;
+      int niter;
 
-      if( val < 0 )
-         lb = val;
-      else
-         ub = val;
+      lb = - b / (2 * a);
+      ub = sol;
+      val = SCIPinfinity(scip);
+      niter = 0;
+      while( niter < BINSEARCH_MAXITERS && ABS(val) > 10e-10 )
+      {
+         sol = (ub + lb) / 2.0;
+         val = a * SQR(sol) + b * sol + c;
 
-      /* if we are close enough, return with (feasible) solution */
-      if( val > 0 && val < 10e-6 )
-         break;
+         if( val < 0 )
+            lb = val;
+         else
+            ub = val;
+
+         /* if we are close enough, return with (feasible) solution */
+         if( val > 0 && val < 10e-6 )
+            break;
+      }
    }
 
    return sol;
