@@ -66,8 +66,8 @@ endif()
 
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
-option(AUTOBUILD "find and use dependencies on availability (ignores IPOPT, ZLIB, GMP, PAPILO, ZIMPL, READLINE, WORHP flags)" OFF)
-set(AUTOBUILD_MSG "\nIf you have troubles configuring, you can consider setting AUTOBUILD=ON to try and find optional packages on availability.")
+option(AUTOBUILD "find and use dependencies as available" OFF)
+set(AUTOBUILD_MSG "\nIf you have troubles configuring, you can consider setting AUTOBUILD=ON to try and find optional packages as available.")
 option(ZLIB "should zlib be linked" ON)
 option(READLINE "should readline be linked" ON)
 option(GMP "should gmp be linked" ON)
@@ -331,7 +331,7 @@ else()
 endif()
 
 # GMP
-if(GMP OR EASIBUILD)
+if(GMP OR AUTOBUILD)
     message(STATUS "Finding GMP")
     find_package(GMP)
     if((NOT GMP_FOUND) AND (NOT AUTOBUILD))
