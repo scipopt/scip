@@ -176,6 +176,7 @@ Fixed bugs
 - fixed segmentation fault in update of cut statistic
 - fixed bug in presolving of and constraints by merging variables with multiple occurrences before cliquePresolve()
 - fixed bug in dual presolving of linear constraints by setting implicit integers to integers in multi-aggregation
+- fixed update of presolve statistics on added constraints and changed coefficients in constraint handler for nonlinear constraints
 
 Miscellaneous
 -------------
