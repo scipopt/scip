@@ -108,7 +108,9 @@ set(SYM bliss CACHE STRING "options for symmetry computation")  #create the vari
 set_property(CACHE SYM PROPERTY STRINGS bliss none )  #define list of values GUI will offer for the variable
 
 if(AUTOBUILD)
-    message(WARNING "You are using the automatic build option to find and use dependencies automatically. The following flags are ignored: IPOPT, ZLIB, GMP, PAPILO, ZIMPL, READLINE, WORHP.")
+    message(WARNING "You are using the automatic build option AUTOBUILD=ON to find and use dependencies automatically.")
+else()
+    message(WARNING "You are not using the automatic build option. ${AUTOBUILD_MSG}")
 endif() # AUTOBUILD
 
 #search the selected symmetry computation program
