@@ -1771,6 +1771,43 @@ int getNSymhandableConss(
    return nhandleconss;
 }
 
+/** returns the number of active constraints that can be handled by reflection symmetry computation */
+static
+int getNReflsymhandableConss(
+   SCIP*                 scip                /**< SCIP instance */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+   int nhandleconss = 0;
+
+   assert( scip != NULL );
+
+   conshdlr = SCIPfindConshdlr(scip, "linear");
+   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
+   conshdlr = SCIPfindConshdlr(scip, "linking");
+   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
+   conshdlr = SCIPfindConshdlr(scip, "setppc");
+   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
+   conshdlr = SCIPfindConshdlr(scip, "xor");
+   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
+   conshdlr = SCIPfindConshdlr(scip, "and");
+   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
+   conshdlr = SCIPfindConshdlr(scip, "or");
+   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
+   conshdlr = SCIPfindConshdlr(scip, "logicor");
+   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
+   conshdlr = SCIPfindConshdlr(scip, "knapsack");
+   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
+   conshdlr = SCIPfindConshdlr(scip, "varbound");
+   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
+   conshdlr = SCIPfindConshdlr(scip, "bounddisjunction");
+   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
+   conshdlr = SCIPfindConshdlr(scip, "nonlinear");
+   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
+
+   return nhandleconss;
+}
+
 /** returns whether there are any active nonlinear constraints */
 static
 SCIP_Bool hasNonlinearConstraints(
@@ -1912,6 +1949,410 @@ SCIP_RETCODE setSymmetryData(
    return SCIP_OKAY;
 }
 
+/** stores information about a constraint in reflection symmetry data structure */
+static
+SCIP_RETCODE storeLinearConstraint(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SYM_REFLSYMDATA*      reflsymdata,        /**< pointer to reflection symmetry data structure */
+   SCIP_VAR**            linvars,            /**< array of variables */
+   SCIP_Real*            linvals,            /**< array of coefficient values (or NULL if all coefficients are 1) */
+   int                   nlinvars,           /**< number of variables */
+   SCIP_Real             lhs,                /**< left-hand side of constraint */
+   SCIP_Real             rhs,                /**< right-hand side of constraint */
+   SCIP_Bool             istransformed       /**< whether the constraint is transformed */
+   )
+{
+   SCIP_EXPRHDLR* exprsum;
+   SCIP_EXPRHDLR* exprprod;
+   SCIP_VAR** vars;
+   SCIP_Real* vals;
+   SCIP_Real constant = 0.0;
+   int nvars;
+   int newsize;
+   int prodparent;
+   int parent;
+   int i;
+
+   int ntrees;
+   int ntreerhs;
+   int ntreeops;
+   int ntreecoefs;
+   int ntreevaridx;
+
+   assert( scip != NULL );
+   assert( reflsymdata != NULL );
+   assert( linvars != NULL );
+   assert( linvals != NULL );
+
+   /* do not store constraint if it is redundant*/
+   if ( nlinvars == 0 )
+      return SCIP_OKAY;
+
+   if ( SCIPisInfinity(scip, -lhs) && SCIPisInfinity(scip, rhs) )
+      return SCIP_OKAY;
+
+   /* duplicate variables and coefficients, and get active variables */
+   nvars = nlinvars;
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &vars, linvars, nlinvars) );
+   if ( linvals != NULL )
+   {
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &vals, linvals, nlinvars) );
+   }
+   else
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &vals, nlinvars) );
+      for (i = 0; i < nlinvars; ++i)
+         vals[i] = 1.0;
+   }
+   assert( vars != NULL );
+   assert( vals != NULL );
+
+   SCIP_CALL( getActiveVariables(scip, &vars, &vals, &nvars, &constant, istransformed) );
+
+   /* check whether constraint became redundant after restricting to active variables */
+   if ( nvars <= 0 )
+   {
+      SCIPfreeBufferArray(scip, &vals);
+      SCIPfreeBufferArray(scip, &vars);
+
+      return SCIP_OKAY;
+   }
+
+   /* handle constants */
+   if ( ! SCIPisInfinity(scip, -lhs) )
+      lhs -= constant;
+   if ( ! SCIPisInfinity(scip, rhs) )
+      rhs -= constant;
+
+   ntrees = reflsymdata->ntrees;
+   ntreerhs = reflsymdata->ntreerhs;
+   ntreeops = reflsymdata->ntreeops;
+   ntreecoefs = reflsymdata->ntreecoefs;
+   ntreevaridx = reflsymdata->ntreevaridx;
+
+   /* check whether we need to resize data */
+   if ( ntrees + 3 * nvars + 1 > reflsymdata->maxntrees )
+   {
+      /* already deal with the case that a constraint may have both a lhs and rhs */
+      newsize = SCIPcalcMemGrowSize(scip, ntrees + 6 * nvars + 2);
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &reflsymdata->trees, reflsymdata->maxntrees, newsize) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &reflsymdata->treemap, reflsymdata->maxntrees, newsize) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &reflsymdata->treeparentidx, reflsymdata->maxntrees, newsize) );
+      reflsymdata->maxntrees = newsize;
+   }
+   if ( ntreeops + 2 > reflsymdata->maxntreeops )
+   {
+      newsize = SCIPcalcMemGrowSize(scip, ntreeops + 2);
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &reflsymdata->treeops, reflsymdata->maxntreeops, newsize) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &reflsymdata->opsidx, reflsymdata->maxntreeops, newsize) );
+      reflsymdata->maxntreeops = newsize;
+   }
+   if ( ntreecoefs + 1 > reflsymdata->maxntreecoefs )
+   {
+      newsize = SCIPcalcMemGrowSize(scip, ntreecoefs + 1);
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &reflsymdata->treecoefs, reflsymdata->maxntreecoefs, newsize) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &reflsymdata->coefidx, reflsymdata->maxntreecoefs, newsize) );
+      reflsymdata->maxntreecoefs = newsize;
+   }
+   if ( ntreevaridx + 1 > reflsymdata->maxntreevaridx )
+   {
+      newsize = SCIPcalcMemGrowSize(scip, ntreevaridx + 1);
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &reflsymdata->treevaridx, reflsymdata->maxntreevaridx, newsize) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &reflsymdata->varidx, reflsymdata->maxntreevaridx, newsize) );
+      reflsymdata->maxntreevaridx = newsize;
+   }
+
+   /* store constraint */
+   exprsum = SCIPfindExprhdlr(scip, "sum");
+   exprprod = SCIPfindExprhdlr(scip, "prod");
+
+   assert( exprsum != NULL );
+   assert( exprprod != NULL );
+
+   if ( ! SCIPisInfinity(scip, -lhs) )
+   {
+      /* initialize new tree */
+      reflsymdata->treebegins[ntreerhs] = ntrees;
+      reflsymdata->treerhs[ntreerhs++] = -lhs;
+
+      /* root expression of a linear constraint is the SUM-operator */
+      reflsymdata->trees[ntrees] = SYM_NODETYPE_OPERATOR;
+      reflsymdata->treemap[ntrees] = ntreeops;
+      reflsymdata->treeparentidx[ntrees] = -1;
+      reflsymdata->treeops[ntreeops] = exprsum;
+      reflsymdata->opsidx[ntreeops++] = ntrees;
+      prodparent = ntrees++;
+
+      /* add each summand \f$\alpha \cdot x\f$ of the linear constraint to the tree */
+      for (i = 0; i < nvars; ++i)
+      {
+         /* the product part of the summand */
+         reflsymdata->trees[ntrees] = SYM_NODETYPE_OPERATOR;
+         reflsymdata->treemap[ntrees] = ntreeops;
+         reflsymdata->treeparentidx[ntrees] = prodparent;
+         reflsymdata->treeops[ntreeops] = exprprod;
+         reflsymdata->opsidx[ntreeops++] = ntrees;
+         parent = ntrees++;
+
+         /* the coefficient part of the summand */
+         reflsymdata->trees[ntrees] = SYM_NODETYPE_COEF;
+         reflsymdata->treemap[ntrees] = ntreecoefs;
+         reflsymdata->treeparentidx[ntrees] = parent;
+         reflsymdata->treecoefs[ntreecoefs] = -vals[i];
+         reflsymdata->coefidx[ntreecoefs++] = ntrees++;
+
+         /* the variable part of the summand */
+         reflsymdata->trees[ntrees] = SYM_NODETYPE_VAR;
+         reflsymdata->treemap[ntrees] = ntreevaridx;
+         reflsymdata->treeparentidx[ntrees] = parent;
+         reflsymdata->treevaridx[ntreevaridx] = SCIPvarGetProbindex(vars[i]);
+         assert( reflsymdata->treevaridx[ntreevaridx] >= 0 );
+         reflsymdata->varidx[ntreevaridx++] = ntrees++;
+      }
+
+      reflsymdata->treebegins[ntreerhs + 1] = ntrees;
+   }
+
+   if ( ! SCIPisInfinity(scip, rhs) )
+   {
+      /* initialize new tree */
+      reflsymdata->treebegins[ntreerhs] = ntrees;
+      reflsymdata->treerhs[ntreerhs++] = rhs;
+
+      /* root expression of a linear constraint is the SUM-operator */
+      reflsymdata->trees[ntrees] = SYM_NODETYPE_OPERATOR;
+      reflsymdata->treemap[ntrees] = ntreeops;
+      reflsymdata->treeparentidx[ntrees] = -1;
+      reflsymdata->treeops[ntreeops] = exprsum;
+      reflsymdata->opsidx[ntreeops++] = ntrees;
+      prodparent = ntrees++;
+
+      /* add each summand \f$\alpha \cdot x\f$ of the linear constraint to the tree */
+      for (i = 0; i < nvars; ++i)
+      {
+         /* the product part of the summand */
+         reflsymdata->trees[ntrees] = SYM_NODETYPE_OPERATOR;
+         reflsymdata->treemap[ntrees] = ntreeops;
+         reflsymdata->treeparentidx[ntrees] = prodparent;
+         reflsymdata->treeops[ntreeops] = exprprod;
+         reflsymdata->opsidx[ntreeops++] = ntrees;
+         parent = ntrees++;
+
+         /* the coefficient part of the summand */
+         reflsymdata->trees[ntrees] = SYM_NODETYPE_COEF;
+         reflsymdata->treemap[ntrees] = ntreecoefs;
+         reflsymdata->treeparentidx[ntrees] = parent;
+         reflsymdata->treecoefs[ntreecoefs] = vals[i];
+         reflsymdata->coefidx[ntreecoefs++] = ntrees++;
+
+         /* the variable part of the summand */
+         reflsymdata->trees[ntrees] = SYM_NODETYPE_VAR;
+         reflsymdata->treemap[ntrees] = ntreevaridx;
+         reflsymdata->treeparentidx[ntrees] = parent;
+         reflsymdata->treevaridx[ntreevaridx] = SCIPvarGetProbindex(vars[i]);
+         assert( reflsymdata->treevaridx[ntreevaridx] >= 0 );
+         reflsymdata->varidx[ntreevaridx++] = ntrees++;
+      }
+
+      reflsymdata->treebegins[ntreerhs + 1] = ntrees;
+   }
+
+   SCIPfreeBufferArray(scip, &vals);
+   SCIPfreeBufferArray(scip, &vars);
+
+   return SCIP_OKAY;
+}
+
+/** computes reflection symmetry group of a CIP */
+static
+SCIP_RETCODE computeReflectionSymmetryGroup(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SYM_SPEC              fixedtype,          /**< variable types that must be fixed by symmetries */
+   int*                  nperms,             /**< pointer to store number of permutations */
+   SCIP_Bool*            success             /**< pointer to store whether symmetries could be computed */
+   )
+{
+   SYM_REFLSYMDATA reflsymdata;
+   SCIP_CONS** conss;
+   SCIP_VAR** vars;
+   int nconss;
+   int nactiveconss;
+   int nhandleconss;
+   int nvars;
+   int c;
+
+   assert( scip != NULL );
+   assert( success != NULL );
+
+   /* initialize return values */
+   *nperms = 0;
+   *success = FALSE;
+
+   nconss = SCIPgetNConss(scip);
+   nvars = SCIPgetNVars(scip);
+
+   /* exit if no symmetries can exist */
+   if ( nconss == 0 || nvars <= 1 )
+   {
+      *success = TRUE;
+      return SCIP_OKAY;
+   }
+
+   conss = SCIPgetConss(scip);
+   assert( conss != NULL );
+
+   nactiveconss = SCIPgetNActiveConss(scip);
+
+   /* exit if no active constraints are available */
+   if ( nactiveconss == 0 )
+   {
+      *success = TRUE;
+      return SCIP_OKAY;
+   }
+
+   /* check whether we can handle all constraints during symmetry computation */
+   nhandleconss = getNReflsymhandableConss(scip);
+   assert( nhandleconss <= nactiveconss );
+   if ( nhandleconss < nactiveconss )
+   {
+      /* we cannot compute symmetries due to unknown constraints */
+      *success = FALSE;
+      *nperms = -1;
+      return SCIP_OKAY;
+   }
+
+   SCIPdebugMsg(scip, "Start computing reflection symmetry group of problem with %d variables and %d constraints.\n",
+      nvars, nactiveconss);
+
+   /* initialize reflection symmetry data */
+   reflsymdata.ntrees = 0;
+   reflsymdata.ntreevars = nvars;
+   reflsymdata.ntreerhs = 0;
+   reflsymdata.ntreevaridx = 0;
+   reflsymdata.ntreecoefs = 0;
+   reflsymdata.ntreevals = 0;
+   reflsymdata.ntreeops = 0;
+
+   reflsymdata.maxntrees = 20 * nactiveconss;
+   reflsymdata.maxntreerhs =  2 * nactiveconss; /* double memory, because constraints have lhs and rhs */
+   reflsymdata.maxntreevaridx = 10 * nactiveconss;
+   reflsymdata.maxntreecoefs = 10 * nactiveconss;
+   reflsymdata.maxntreevals = 10 * nactiveconss;
+   reflsymdata.maxntreeops = 10 * nactiveconss;
+   reflsymdata.maxntreebegins = nactiveconss + 1;
+
+   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &vars, SCIPgetVars(scip), nvars) ); /*lint !e666*/
+   assert( vars != NULL );
+   reflsymdata.treevars = vars;
+
+   /* prepare arrays (use block memory since this can become large) */
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &reflsymdata.trees, reflsymdata.maxntrees) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &reflsymdata.treebegins, reflsymdata.maxntreebegins) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &reflsymdata.treerhs, reflsymdata.maxntreerhs) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &reflsymdata.treeparentidx, reflsymdata.maxntrees) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &reflsymdata.treevaridx, reflsymdata.maxntreevaridx) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &reflsymdata.treecoefs, reflsymdata.maxntreecoefs) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &reflsymdata.treevals, reflsymdata.maxntreevals) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &reflsymdata.treeops, reflsymdata.maxntreeops) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &reflsymdata.treemap, reflsymdata.maxntrees) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &reflsymdata.rhsidx, reflsymdata.maxntreerhs) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &reflsymdata.varidx, reflsymdata.maxntreevaridx) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &reflsymdata.coefidx, reflsymdata.maxntreecoefs) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &reflsymdata.validx, reflsymdata.maxntreevals) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &reflsymdata.opsidx, reflsymdata.maxntreeops) );
+
+   /* store information about constraints */
+   for (c = 0; c < nconss; ++c)
+   {
+      const char* conshdlrname;
+      SCIP_CONSHDLR* conshdlr;
+      SCIP_CONS* cons;
+      SCIP_VAR** linvars;
+      SCIP_Real* linvals;
+      SCIP_Real lhs;
+      SCIP_Real rhs;
+      int nlinvars;
+      int i;
+      SCIP_Bool islinearcons = FALSE;
+
+      /* get constraint */
+      cons = conss[c];
+      assert( cons != NULL );
+
+      /* skip non-active constraints */
+      if ( ! SCIPconsIsActive(cons) )
+         continue;
+
+      /* skip conflict constraints if we are late in the solving process */
+      if ( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPconsIsConflict(cons) )
+         continue;
+
+      /* get constraint handler */
+      conshdlr = SCIPconsGetHdlr(cons);
+      assert( conshdlr != NULL );
+
+      conshdlrname = SCIPconshdlrGetName(conshdlr);
+      assert( conshdlrname != NULL );
+
+      /* in case constraint is linear, prepare data to be stored */
+      if ( strcmp(conshdlrname, "knapsack") == 0 )
+      {
+         SCIP_Longint* weights;
+         SCIP_Longint capacity;
+
+         islinearcons = TRUE;
+
+         weights = SCIPgetWeightsKnapsack(scip, cons);
+         capacity = SCIPgetCapacityKnapsack(scip, cons);
+         linvars = SCIPgetVarsKnapsack(scip, cons);
+         nlinvars = SCIPgetNVarsKnapsack(scip, cons);
+         lhs = -SCIPinfinity(scip);
+         rhs = (SCIP_Real) capacity;
+
+         assert( weights != NULL );
+         assert( linvars != NULL );
+
+         /* avoid empty constraints */
+         if ( nlinvars == 0 )
+            continue;
+
+         SCIP_CALL( SCIPallocBufferArray(scip, &linvals, nlinvars) );
+
+         for (i = 0; i < nlinvars; ++i)
+            linvals[i] = (SCIP_Real) weights[i];
+      }
+
+      if ( islinearcons )
+      {
+         SCIP_CALL( storeLinearConstraint(scip, &reflsymdata, linvars, linvals, nlinvars,
+               lhs, rhs, SCIPconsIsTransformed(cons)) );
+
+         SCIPfreeBufferArray(scip, &linvals);
+      }
+   }
+
+   SCIPdebugMsg(scip, "Finished computing reflection symmetry group.\n");
+
+   /* free memory */
+   SCIPfreeBlockMemoryArrayNull(scip, &reflsymdata.opsidx, reflsymdata.maxntreeops);
+   SCIPfreeBlockMemoryArrayNull(scip, &reflsymdata.validx, reflsymdata.maxntreevals);
+   SCIPfreeBlockMemoryArrayNull(scip, &reflsymdata.coefidx, reflsymdata.maxntreecoefs);
+   SCIPfreeBlockMemoryArrayNull(scip, &reflsymdata.varidx, reflsymdata.maxntreevaridx);
+   SCIPfreeBlockMemoryArrayNull(scip, &reflsymdata.rhsidx, reflsymdata.maxntreerhs);
+   SCIPfreeBlockMemoryArrayNull(scip, &reflsymdata.treemap, reflsymdata.maxntrees);
+   SCIPfreeBlockMemoryArrayNull(scip, &reflsymdata.treeops, reflsymdata.maxntreeops);
+   SCIPfreeBlockMemoryArrayNull(scip, &reflsymdata.treevals, reflsymdata.maxntreevals);
+   SCIPfreeBlockMemoryArrayNull(scip, &reflsymdata.treecoefs, reflsymdata.maxntreecoefs);
+   SCIPfreeBlockMemoryArrayNull(scip, &reflsymdata.treevaridx, reflsymdata.maxntreevaridx);
+   SCIPfreeBlockMemoryArrayNull(scip, &reflsymdata.treeparentidx, reflsymdata.maxntrees);
+   SCIPfreeBlockMemoryArrayNull(scip, &reflsymdata.treerhs, reflsymdata.maxntreerhs);
+   SCIPfreeBlockMemoryArrayNull(scip, &reflsymdata.treebegins, reflsymdata.maxntreebegins);
+   SCIPfreeBlockMemoryArrayNull(scip, &reflsymdata.trees, reflsymdata.maxntrees);
+   SCIPfreeBlockMemoryArrayNull(scip, &vars, nvars);
+
+   return SCIP_OKAY;
+}
+
 
 /** computes symmetry group of a MIP */
 static
@@ -1999,6 +2440,14 @@ SCIP_RETCODE computeSymmetryGroup(
    nvars = SCIPgetNVars(scip);
    nbinvars = SCIPgetNBinVars(scip);
    nvarsorig = nvars;
+
+   /* @todo remove this temporary function call, which is used for testing */
+   {
+      SCIP_Bool tmpsuccess;
+      int ntmpperms;
+
+      SCIP_CALL( computeReflectionSymmetryGroup(scip, fixedtype, &ntmpperms, &tmpsuccess) );
+   }
 
    /* exit if no constraints or no variables are available */
    if ( nconss == 0 || nvars == 0 )
