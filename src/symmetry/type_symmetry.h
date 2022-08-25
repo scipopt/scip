@@ -55,6 +55,16 @@ enum SYM_Rhssense
 };
 typedef enum SYM_Rhssense SYM_RHSSENSE;
 
+/** define type of nodes in symmetry detection expression trees */
+enum SYM_Nodetype
+{
+   SYM_NODETYPE_OPERATOR = 0,                /**< operator node */
+   SYM_NODETYPE_VAR      = 1,                /**< variable node */
+   SYM_NODETYPE_COEF     = 2,                /**< coefficient node */
+   SYM_NODETYPE_VAL      = 3                 /**< numerical value node */
+};
+typedef enum SYM_Nodetype SYM_NODETYPE;
+
 /* type of symmetry handling codes */
 #define SYM_HANDLETYPE_NONE             UINT32_C(0x00000000)  /**< no symmetry handling */
 #define SYM_HANDLETYPE_SYMBREAK         UINT32_C(0x00000001)  /**< symmetry breaking inequalities */
@@ -69,6 +79,7 @@ typedef struct SYM_Optype SYM_OPTYPE;        /**< data of operators that are con
 typedef struct SYM_Consttype SYM_CONSTTYPE;  /**< data of constants that are considered to be equivalent */
 typedef struct SYM_Rhstype SYM_RHSTYPE;      /**< data of constraint sides that are considered to be equivalent */
 typedef struct SYM_Matrixdata SYM_MATRIXDATA;/**< data for symmetry group computation on linear constraints */
+typedef struct SYM_Reflsymdata SYM_REFLSYMDATA ;/**< data for reflection symmetry group computation */
 typedef struct SYM_Exprdata SYM_EXPRDATA;    /**< data for symmetry group computation on nonlinear constraints */
 
 /** selection rules for leaders in SST cuts */

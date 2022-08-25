@@ -96,6 +96,44 @@ struct SYM_Exprdata
    int                   nuniquecoefs;       /**< number of unique coefficients */
 };
 
+/** data for reflection symmetry group computation */
+struct SYM_Reflsymdata
+{
+   SYM_NODETYPE*         trees;              /**< array to encode all constraints as consecutive expression trees
+                                              *   (trees are encoded by DFS-traversal, coefficients appear before
+                                              *    the corresponding variables) */
+   SCIP_VAR**            treevars;           /**< array of unique variables that appear in expression trees */
+   int*                  treebegins;         /**< array containing begin positions of new tree in trees */
+   SCIP_Real*            treerhs;            /**< right-hand side coefficients of trees */
+   int*                  treeparentidx;      /**< array assigning each position in trees the position of its parent
+                                              *   (or -1 in case the position corresponds to the root of a tree) */
+   int*                  treevaridx;         /**< indices of variables in expression trees (order according to trees) */
+   SCIP_Real*            treecoefs;          /**< var coefficients in expression trees (order according to trees) */
+   SCIP_Real*            treevals;           /**< numerical values in expression trees (order according to trees) */
+   SCIP_EXPRHDLR**       treeops;            /**< operators used in expression trees (order according to trees) */
+   int*                  treemap;            /**< maps position in trees array to the corresponding position in
+                                              *   treecoefs/treevals/treeops/treevaridx (depending on node type) */
+   int*                  rhsidx;             /**< maps index of treerhs to index of corresponding tree */
+   int*                  varidx;             /**< maps index of treevaridx to position in trees */
+   int*                  coefidx;            /**< maps index of treecoefs to position in trees */
+   int*                  validx;             /**< maps index of treevals to position in trees */
+   int*                  opsidx;             /**< maps index of treeops to position in trees */
+   int                   ntrees;             /**< number of elements in trees */
+   int                   ntreevars;          /**< number of elements in treevars */
+   int                   ntreevaridx;        /**< number of elements in treevaridx */
+   int                   ntreerhs;           /**< number of elements in treerhs */
+   int                   ntreecoefs;         /**< number of elements in treecoefs */
+   int                   ntreevals;          /**< number of elements in treevals */
+   int                   ntreeops;           /**< number of elements in treeops */
+   int                   maxntrees;          /**< maximum number of elements that fit into trees */
+   int                   maxntreerhs;        /**< maximum number of elements that fit into treerhs */
+   int                   maxntreevaridx;     /**< maximum number of elements that fit into treevaridx */
+   int                   maxntreecoefs;      /**< maximum number of elements that fit into treecoefs */
+   int                   maxntreevals;       /**< maximum number of elements that fit into treevals */
+   int                   maxntreeops;        /**< maximum number of elements that fit into treeops */
+   int                   maxntreebegins;     /**< maximum number of elements that fit into treebegins */
+};
+
 #ifdef __cplusplus
 }
 #endif
