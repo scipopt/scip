@@ -2188,10 +2188,13 @@ SCIP_RETCODE computeReflectionSymmetryGroup(
    SYM_REFLSYMDATA reflsymdata;
    SCIP_CONS** conss;
    SCIP_VAR** vars;
+   SCIP_VAR** consvars;
+   SCIP_Real* consvals;
    int nconss;
    int nactiveconss;
    int nhandleconss;
    int nvars;
+   int nconsvars;
    int c;
 
    assert( scip != NULL );
@@ -2274,19 +2277,21 @@ SCIP_RETCODE computeReflectionSymmetryGroup(
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &reflsymdata.validx, reflsymdata.maxntreevals) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &reflsymdata.opsidx, reflsymdata.maxntreeops) );
 
+   /* allocate memory for variables and coefficients of constraints to avoid separate allocation for each
+    * each individual constraint, also take fixed variables into account
+    */
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consvars, nvars + SCIPgetNFixedVars(scip)) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consvals, nvars + SCIPgetNFixedVars(scip)) );
+
    /* store information about constraints */
    for (c = 0; c < nconss; ++c)
    {
       const char* conshdlrname;
       SCIP_CONSHDLR* conshdlr;
       SCIP_CONS* cons;
-      SCIP_VAR** linvars;
-      SCIP_Real* linvals;
       SCIP_Real lhs;
       SCIP_Real rhs;
-      int nlinvars;
       int i;
-      SCIP_Bool islinearcons = FALSE;
 
       /* get constraint */
       cons = conss[c];
@@ -2307,46 +2312,80 @@ SCIP_RETCODE computeReflectionSymmetryGroup(
       conshdlrname = SCIPconshdlrGetName(conshdlr);
       assert( conshdlrname != NULL );
 
-      /* in case constraint is linear, prepare data to be stored */
-      if ( strcmp(conshdlrname, "knapsack") == 0 )
+      /* store constraints */
+      if ( strcmp(conshdlrname, "linear") == 0 )
+      {
+         SCIP_CALL( storeLinearConstraint(scip, &reflsymdata, SCIPgetVarsLinear(scip,cons),
+               SCIPgetValsLinear(scip,cons), SCIPgetNVarsLinear(scip, cons), SCIPgetLhsLinear(scip, cons),
+               SCIPgetRhsLinear(scip, cons), SCIPconsIsTransformed(cons)) );
+      }
+      else if ( strcmp(conshdlrname, "knapsack") == 0 )
       {
          SCIP_Longint* weights;
          SCIP_Longint capacity;
 
-         islinearcons = TRUE;
-
          weights = SCIPgetWeightsKnapsack(scip, cons);
          capacity = SCIPgetCapacityKnapsack(scip, cons);
-         linvars = SCIPgetVarsKnapsack(scip, cons);
-         nlinvars = SCIPgetNVarsKnapsack(scip, cons);
+         nconsvars = SCIPgetNVarsKnapsack(scip, cons);
          lhs = -SCIPinfinity(scip);
          rhs = (SCIP_Real) capacity;
 
          assert( weights != NULL );
-         assert( linvars != NULL );
 
          /* avoid empty constraints */
-         if ( nlinvars == 0 )
+         if ( nconsvars == 0 )
             continue;
 
-         SCIP_CALL( SCIPallocBufferArray(scip, &linvals, nlinvars) );
+         for (i = 0; i < nconsvars; ++i)
+            consvals[i] = (SCIP_Real) weights[i];
 
-         for (i = 0; i < nlinvars; ++i)
-            linvals[i] = (SCIP_Real) weights[i];
+         SCIP_CALL( storeLinearConstraint(scip, &reflsymdata, SCIPgetVarsKnapsack(scip, cons), consvals,
+               nconsvars, lhs, rhs, SCIPconsIsTransformed(cons)) );
       }
-
-      if ( islinearcons )
+      else if ( strcmp(conshdlrname, "setppc") == 0 )
       {
-         SCIP_CALL( storeLinearConstraint(scip, &reflsymdata, linvars, linvals, nlinvars,
-               lhs, rhs, SCIPconsIsTransformed(cons)) );
+         nconsvars = SCIPgetNVarsSetppc(scip, cons);
 
-         SCIPfreeBufferArray(scip, &linvals);
+         switch ( SCIPgetTypeSetppc(scip, cons) )
+         {
+         case SCIP_SETPPCTYPE_PARTITIONING :
+            SCIP_CALL( storeLinearConstraint(scip, &reflsymdata, SCIPgetVarsSetppc(scip, cons), NULL, nconsvars,
+                  1.0, 1.0, SCIPconsIsTransformed(cons)) );
+            break;
+         case SCIP_SETPPCTYPE_PACKING :
+            SCIP_CALL( storeLinearConstraint(scip, &reflsymdata, SCIPgetVarsSetppc(scip, cons), NULL, nconsvars,
+                  -SCIPinfinity(scip), 1.0, SCIPconsIsTransformed(cons)) );
+            break;
+         case SCIP_SETPPCTYPE_COVERING :
+            SCIP_CALL( storeLinearConstraint(scip, &reflsymdata, SCIPgetVarsSetppc(scip, cons), NULL, nconsvars,
+                  1.0, SCIPinfinity(scip), SCIPconsIsTransformed(cons)) );
+            break;
+         default:
+            SCIPerrorMessage("Unknown setppc type %d.\n", SCIPgetTypeSetppc(scip, cons));
+            return SCIP_ERROR;
+         }
+      }
+      else if ( strcmp(conshdlrname, "varbound") == 0 )
+      {
+         consvars[0] = SCIPgetVarVarbound(scip, cons);
+         consvals[0] = 1.0;
+
+         consvars[1] = SCIPgetVbdvarVarbound(scip, cons);
+         consvals[1] = SCIPgetVbdcoefVarbound(scip, cons);
+
+         SCIP_CALL( storeLinearConstraint(scip, &reflsymdata, consvars, consvals, 2,
+               SCIPgetLhsVarbound(scip, cons), SCIPgetRhsVarbound(scip, cons), SCIPconsIsTransformed(cons)) );
       }
    }
+
+   SCIP_CALL( printReflectionSymmetryData(scip, &reflsymdata) );
 
    SCIPdebugMsg(scip, "Finished computing reflection symmetry group.\n");
 
    /* free memory */
+   SCIPfreeBlockMemoryArrayNull(scip, &consvals, nvars + SCIPgetNFixedVars(scip));
+   SCIPfreeBlockMemoryArrayNull(scip, &consvars, nvars + SCIPgetNFixedVars(scip));
+
    SCIPfreeBlockMemoryArrayNull(scip, &reflsymdata.opsidx, reflsymdata.maxntreeops);
    SCIPfreeBlockMemoryArrayNull(scip, &reflsymdata.validx, reflsymdata.maxntreevals);
    SCIPfreeBlockMemoryArrayNull(scip, &reflsymdata.coefidx, reflsymdata.maxntreecoefs);
