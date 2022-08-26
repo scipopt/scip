@@ -27,6 +27,9 @@ Interface changes
 
 ### Command line interface
 ### Interfaces to external software
+
+- Added compatibility with Mosek 10.0.18.
+
 ### Changed parameters
 ### New parameters
 
