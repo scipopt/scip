@@ -2111,7 +2111,10 @@ SCIP_RETCODE storeLinearConstraint(
          reflsymdata->varidx[ntreevaridx++] = ntrees++;
       }
 
-      reflsymdata->treebegins[ntreerhs + 1] = ntrees;
+      /* make sure that also the end position of the last constraint is stored correctly
+       * (ntreerhs has been incremented already above)
+       */
+      reflsymdata->treebegins[ntreerhs] = ntrees;
    }
 
    if ( ! SCIPisInfinity(scip, rhs) )
@@ -2155,11 +2158,20 @@ SCIP_RETCODE storeLinearConstraint(
          reflsymdata->varidx[ntreevaridx++] = ntrees++;
       }
 
-      reflsymdata->treebegins[ntreerhs + 1] = ntrees;
+      /* make sure that also the end position of the last constraint is stored correctly
+       * (ntreerhs has been incremented already above)
+       */
+      reflsymdata->treebegins[ntreerhs] = ntrees;
    }
 
    SCIPfreeBufferArray(scip, &vals);
    SCIPfreeBufferArray(scip, &vars);
+
+   reflsymdata->ntrees = ntrees;
+   reflsymdata->ntreerhs = ntreerhs;
+   reflsymdata->ntreeops = ntreeops;
+   reflsymdata->ntreecoefs = ntreecoefs;
+   reflsymdata->ntreevaridx = ntreevaridx;
 
    return SCIP_OKAY;
 }
