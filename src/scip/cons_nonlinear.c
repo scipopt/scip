@@ -5632,6 +5632,7 @@ SCIP_RETCODE removeSingleLockedVars(
  *  @todo extend this to cases where a variable can appear in a monomial with an exponent, essentially relax
  *    g(x) to \f$\sum_i [a_i,b_i] x^{p_i}\f$ for a single variable \f$x\f$ and try to conclude montonicity or convexity/concavity
  *    on this (probably have one or two flags per variable and update this whenever another \f$x^{p_i}\f$ is found)
+ *  @todo reduction should also be applicable if variable appears in the objective with the right sign (sign such that opt is at boundary)
  */
 static
 SCIP_RETCODE presolveSingleLockedVars(
