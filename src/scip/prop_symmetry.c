@@ -2030,33 +2030,34 @@ SCIP_RETCODE storeLinearConstraint(
    ntreecoefs = reflsymdata->ntreecoefs;
    ntreevaridx = reflsymdata->ntreevaridx;
 
-   /* check whether we need to resize data */
+   /* check whether we need to resize data
+    * already deal with the case that a constraint may have both a lhs and rhs
+    */
    if ( ntrees + 3 * nvars + 1 > reflsymdata->maxntrees )
    {
-      /* already deal with the case that a constraint may have both a lhs and rhs */
       newsize = SCIPcalcMemGrowSize(scip, ntrees + 6 * nvars + 2);
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &reflsymdata->trees, reflsymdata->maxntrees, newsize) );
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &reflsymdata->treemap, reflsymdata->maxntrees, newsize) );
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &reflsymdata->treeparentidx, reflsymdata->maxntrees, newsize) );
       reflsymdata->maxntrees = newsize;
    }
-   if ( ntreeops + 2 > reflsymdata->maxntreeops )
+   if ( ntreeops + 2 * nvars + 2 > reflsymdata->maxntreeops )
    {
-      newsize = SCIPcalcMemGrowSize(scip, ntreeops + 2);
+      newsize = SCIPcalcMemGrowSize(scip, ntreeops + 2 * nvars + 2);
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &reflsymdata->treeops, reflsymdata->maxntreeops, newsize) );
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &reflsymdata->opsidx, reflsymdata->maxntreeops, newsize) );
       reflsymdata->maxntreeops = newsize;
    }
-   if ( ntreecoefs + 1 > reflsymdata->maxntreecoefs )
+   if ( ntreecoefs + 2 * nvars > reflsymdata->maxntreecoefs )
    {
-      newsize = SCIPcalcMemGrowSize(scip, ntreecoefs + 1);
+      newsize = SCIPcalcMemGrowSize(scip, ntreecoefs + 2 * nvars);
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &reflsymdata->treecoefs, reflsymdata->maxntreecoefs, newsize) );
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &reflsymdata->coefidx, reflsymdata->maxntreecoefs, newsize) );
       reflsymdata->maxntreecoefs = newsize;
    }
-   if ( ntreevaridx + 1 > reflsymdata->maxntreevaridx )
+   if ( ntreevaridx + 2 * nvars > reflsymdata->maxntreevaridx )
    {
-      newsize = SCIPcalcMemGrowSize(scip, ntreevaridx + 1);
+      newsize = SCIPcalcMemGrowSize(scip, ntreevaridx + 2 * nvars);
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &reflsymdata->treevaridx, reflsymdata->maxntreevaridx, newsize) );
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &reflsymdata->varidx, reflsymdata->maxntreevaridx, newsize) );
       reflsymdata->maxntreevaridx = newsize;
