@@ -1949,6 +1949,84 @@ SCIP_RETCODE setSymmetryData(
    return SCIP_OKAY;
 }
 
+/** prints the expression tree information used for computing reflection symmetries to screen */
+static
+SCIP_RETCODE printReflectionSymmetryData(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SYM_REFLSYMDATA*      reflsymdata         /** pointer to reflection symmetry data structure */
+   )
+{
+   int* openops;
+   int nopenops = 0;
+   int i;
+   int j;
+
+   assert( scip != NULL );
+   assert( reflsymdata != NULL );
+
+   /* array to store for which operators we have open brackets */
+   SCIP_CALL( SCIPallocBufferArray(scip, &openops, reflsymdata->ntreeops) );
+
+   SCIPinfoMessage(scip, NULL, "There are %d trees stored in the symmetry detection data structure.\n", reflsymdata->ntreerhs);
+
+   for (i = 0; i < reflsymdata->ntreerhs; ++i)
+   {
+      SCIPinfoMessage(scip, NULL, "tree %d\n", i);
+      SCIPinfoMessage(scip, NULL, "%f >=", reflsymdata->treerhs[i]);
+
+      for (j = reflsymdata->treebegins[i]; j < reflsymdata->treebegins[i + 1]; ++j)
+      {
+         SCIP_EXPRHDLR* op;
+
+         /* check whether we need to close brackets */
+         while ( nopenops > 0 && openops[nopenops - 1] > reflsymdata->treeparentidx[j] )
+         {
+            SCIPinfoMessage(scip, NULL, ")");
+            --nopenops;
+         }
+
+         switch ( reflsymdata->trees[j] )
+         {
+         case SYM_NODETYPE_OPERATOR :
+            op = reflsymdata->treeops[reflsymdata->treemap[j]];
+            openops[nopenops++] = j;
+
+            SCIPinfoMessage(scip, NULL, " (");
+            if (  op == SCIPfindExprhdlr(scip, "sum") )
+               SCIPinfoMessage(scip, NULL, "+ ");
+            else if ( op == SCIPfindExprhdlr(scip, "prod") )
+               SCIPinfoMessage(scip, NULL, "* ");
+            else
+               SCIPinfoMessage(scip, NULL, "? ");
+            break;
+         case SYM_NODETYPE_VAR :
+            SCIPinfoMessage(scip, NULL, "%s ", SCIPvarGetName(reflsymdata->treevars[reflsymdata->treevaridx[reflsymdata->treemap[j]]]));
+            break;
+         case SYM_NODETYPE_COEF :
+            SCIPinfoMessage(scip, NULL, "%f ", reflsymdata->treecoefs[reflsymdata->treemap[j]]);
+            break;
+         case SYM_NODETYPE_VAL :
+            SCIPinfoMessage(scip, NULL, "%f ", reflsymdata->treevals[reflsymdata->treemap[j]]);
+            break;
+         default :
+            return SCIP_ERROR;
+         }
+      }
+
+      /* check whether we need to close brackets */
+      while ( nopenops > 0 )
+      {
+         SCIPinfoMessage(scip, NULL, ")");
+         --nopenops;
+      }
+      SCIPinfoMessage(scip, NULL, "\n");
+   }
+
+   SCIPfreeBufferArray(scip, &openops);
+
+   return SCIP_OKAY;
+}
+
 /** stores information about a constraint in reflection symmetry data structure */
 static
 SCIP_RETCODE storeLinearConstraint(
