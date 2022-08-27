@@ -2110,7 +2110,7 @@ SCIP_RETCODE storeLinearConstraint(
    /* check whether we need to resize data
     * already deal with the case that a constraint may have both a lhs and rhs
     */
-   if ( ntrees + 3 * nvars + 1 > reflsymdata->maxntrees )
+   if ( ntrees + 6 * nvars + 2 > reflsymdata->maxntrees )
    {
       newsize = SCIPcalcMemGrowSize(scip, ntrees + 6 * nvars + 2);
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &reflsymdata->trees, reflsymdata->maxntrees, newsize) );
@@ -2332,7 +2332,7 @@ SCIP_RETCODE computeReflectionSymmetryGroup(
    reflsymdata.maxntreecoefs = 10 * nactiveconss;
    reflsymdata.maxntreevals = 10 * nactiveconss;
    reflsymdata.maxntreeops = 10 * nactiveconss;
-   reflsymdata.maxntreebegins = nactiveconss + 1;
+   reflsymdata.maxntreebegins = 2 * nactiveconss + 1;
 
    SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &vars, SCIPgetVars(scip), nvars) ); /*lint !e666*/
    assert( vars != NULL );
