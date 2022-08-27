@@ -2060,7 +2060,6 @@ SCIP_RETCODE storeLinearConstraint(
    assert( scip != NULL );
    assert( reflsymdata != NULL );
    assert( linvars != NULL );
-   assert( linvals != NULL );
 
    /* do not store constraint if it is redundant*/
    if ( nlinvars == 0 )
