@@ -2027,7 +2027,7 @@ SCIP_RETCODE printReflectionSymmetryData(
    return SCIP_OKAY;
 }
 
-/** stores information about a constraint in reflection symmetry data structure */
+/** stores information about a linear constraint in reflection symmetry data structure */
 static
 SCIP_RETCODE storeLinearConstraint(
    SCIP*                 scip,               /**< SCIP pointer */
@@ -2452,6 +2452,11 @@ SCIP_RETCODE computeReflectionSymmetryGroup(
 
          SCIP_CALL( storeLinearConstraint(scip, &reflsymdata, consvars, consvals, 2,
                SCIPgetLhsVarbound(scip, cons), SCIPgetRhsVarbound(scip, cons), SCIPconsIsTransformed(cons)) );
+      }
+      else if ( strcmp(conshdlrname, "logicor") == 0 )
+      {
+         SCIP_CALL( storeLinearConstraint(scip, &reflsymdata, SCIPgetVarsLogicor(scip, cons), NULL,
+               SCIPgetNVarsLogicor(scip, cons), 1.0, SCIPinfinity(scip), SCIPconsIsTransformed(cons)) );
       }
    }
 
