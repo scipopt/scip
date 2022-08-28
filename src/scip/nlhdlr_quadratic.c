@@ -1952,13 +1952,11 @@ SCIP_Bool isRayInStrip(
 
    apos = 0.0;
    bpos = 0.0;
+   j = 0;
    for( i = 0; i < nquadexprs; ++i )
    {
       SCIP_Real dot;
       SCIP_Real rayentry;
-
-      if( sidefactor * eigenvalues[i] <= 0 )
-         continue;
 
       /* get entry of ray -> check if current var index corresponds to a non-zero entry in ray */
       if( j < raynnonz && i == rayidx[j] )
@@ -1969,13 +1967,21 @@ SCIP_Bool isRayInStrip(
       else
          rayentry = 0.0;
 
+      if( sidefactor * eigenvalues[i] <= 0 )
+         continue;
+
       dot = vzlp[i] + vb[i] / (2.0 * (sidefactor * eigenvalues[i]));
 
       apos += sidefactor * eigenvalues[i] * SQR(dot);
       bpos += SQRT(sidefactor * eigenvalues[i]) * dot * rayentry;
    }
 
-   return  SQRT(kappa) / (apos + 1.0) * bpos + cutcoef > 1 ? TRUE: FALSE;
+   apos /= kappa;
+   bpos /= SQRT(kappa);
+
+   printf("strip value = %g \n", 1.0 / (apos + 1.0) * bpos + cutcoef);
+
+   return  1.0 / (apos + 1.0) * bpos + cutcoef < 1 ? TRUE: FALSE;
 }
 
 /** computes the smallest root of the quadratic function a*x^2 + b*x + c with a > 0
@@ -2088,23 +2094,22 @@ void computeMonoidalStrengthCoef(
          printf("Var %s is integer \n", SCIPvarGetName(SCIPcolGetVar(cols[lppos])));
 #endif
 
+         printf("monoidal coefs are: a = %g, b = %g, c = %g \n", a, b, c);
          /* if ray is in strip, monoidal is not possible -> continue with computing intersection point to get cut coef
           * if ray is not in the strip -> do monoidal strengthening */
          if( SQR(b) >= 4 * a * c )
          {
             printf("WE CAN DO MONOIDAL! \n");
-            *success = TRUE;
 
             /* find smallest root of quadratic function a * x^2 + b * x + c -> this is the cut coef */
             *cutcoef = findMonoidalQuadRoot(scip, a, b, c);
 
             /* check if ray is in strip. If not, monoidal is possible and cutcoef is the strengthened cut coef */
             if( ! isRayInStrip(nlhdlrexprdata, raycoefs, rayidx, raynnonz, vb, vzlp, kappa, sidefactor, *cutcoef) )
+            {
                *success = TRUE;
-
-#ifdef DEBUG_MONOIDAL
-            printf("Ray is not in strip -> monoidal is possible -> computed cut coef %g \n", *cutcoef);
-#endif
+               printf("ray is not in strip \n");
+            }
          }
       }
    }
