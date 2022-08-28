@@ -2000,10 +2000,10 @@ SCIP_RETCODE printReflectionSymmetryData(
                SCIPinfoMessage(scip, NULL, "? ");
             break;
          case SYM_NODETYPE_VAR :
-            SCIPinfoMessage(scip, NULL, "%s ", SCIPvarGetName(reflsymdata->treevars[reflsymdata->treevaridx[reflsymdata->treemap[j]]]));
+            SCIPinfoMessage(scip, NULL, "%s] ", SCIPvarGetName(reflsymdata->treevars[reflsymdata->treevaridx[reflsymdata->treemap[j]]]));
             break;
          case SYM_NODETYPE_COEF :
-            SCIPinfoMessage(scip, NULL, "%f ", reflsymdata->treecoefs[reflsymdata->treemap[j]]);
+            SCIPinfoMessage(scip, NULL, "[%f ", reflsymdata->treecoefs[reflsymdata->treemap[j]]);
             break;
          case SYM_NODETYPE_VAL :
             SCIPinfoMessage(scip, NULL, "%f ", reflsymdata->treevals[reflsymdata->treemap[j]]);
@@ -2027,6 +2027,125 @@ SCIP_RETCODE printReflectionSymmetryData(
    return SCIP_OKAY;
 }
 
+/** reallocate dynamically allocated memory for reflection symmetry detection */
+static
+SCIP_RETCODE ensureReflSymDataMemorySuffices(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SYM_REFLSYMDATA*      reflsymdata,        /**< pointer to reflection symmetry data structure */
+   int                   reqtreesize,        /**< required size for trees */
+   int                   reqtreeops,         /**< required size for operators */
+   int                   reqtreecoefs,       /**< required size for coefficients */
+   int                   reqvaridx           /**< required size for variable indices */
+   )
+{
+   int newsize;
+
+   assert( scip != NULL );
+   assert( reflsymdata != NULL );
+
+   if ( reqtreesize > reflsymdata->maxntrees )
+   {
+      newsize = SCIPcalcMemGrowSize(scip, reqtreesize);
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &reflsymdata->trees, reflsymdata->maxntrees, newsize) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &reflsymdata->treemap, reflsymdata->maxntrees, newsize) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &reflsymdata->treeparentidx, reflsymdata->maxntrees, newsize) );
+      reflsymdata->maxntrees = newsize;
+   }
+   if ( reqtreeops > reflsymdata->maxntreeops )
+   {
+      newsize = SCIPcalcMemGrowSize(scip, reqtreeops);
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &reflsymdata->treeops, reflsymdata->maxntreeops, newsize) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &reflsymdata->opsidx, reflsymdata->maxntreeops, newsize) );
+      reflsymdata->maxntreeops = newsize;
+   }
+   if ( reqtreecoefs > reflsymdata->maxntreecoefs )
+   {
+      newsize = SCIPcalcMemGrowSize(scip, reqtreecoefs);
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &reflsymdata->treecoefs, reflsymdata->maxntreecoefs, newsize) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &reflsymdata->coefidx, reflsymdata->maxntreecoefs, newsize) );
+      reflsymdata->maxntreecoefs = newsize;
+   }
+   if ( reqvaridx > reflsymdata->maxntreevaridx )
+   {
+      newsize = SCIPcalcMemGrowSize(scip, reqvaridx);
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &reflsymdata->treevaridx, reflsymdata->maxntreevaridx, newsize) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &reflsymdata->varidx, reflsymdata->maxntreevaridx, newsize) );
+      reflsymdata->maxntreevaridx = newsize;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** adds an operator to the reflection symmetry data structure */
+static
+SCIP_RETCODE addOperatorReflSym(
+   SYM_REFLSYMDATA*     reflsymdata,        /**< pointer to reflection symmetry data structure */
+   SCIP_EXPRHDLR*       operator,           /**< exprhdlr corresponding to operator */
+   int                  parent,             /**< index of parent node of operator */
+   int*                 posintrees          /**< pointer to store position in trees */
+   )
+{
+   assert( reflsymdata != NULL );
+
+   reflsymdata->trees[reflsymdata->ntrees] = SYM_NODETYPE_OPERATOR;
+   reflsymdata->treemap[reflsymdata->ntrees] = reflsymdata->ntreeops;
+   reflsymdata->treeparentidx[reflsymdata->ntrees] = parent;
+   reflsymdata->treeops[reflsymdata->ntreeops] = operator;
+   reflsymdata->opsidx[reflsymdata->ntreeops++] = reflsymdata->ntrees;
+   if ( posintrees != NULL )
+      *posintrees = reflsymdata->ntrees;
+   ++reflsymdata->ntrees;
+
+   return SCIP_OKAY;
+}
+
+/** adds a coefficient to the reflection symmetry data structure */
+static
+SCIP_RETCODE addCoefReflSym(
+   SYM_REFLSYMDATA*     reflsymdata,        /**< pointer to reflection symmetry data structure */
+   SCIP_Real            coef,               /**< coefficient to be added */
+   int                  parent,             /**< index of parent node of coefficient */
+   int*                 posintrees          /**< pointer to store position in trees */
+   )
+{
+   assert( reflsymdata != NULL );
+
+   reflsymdata->trees[reflsymdata->ntrees] = SYM_NODETYPE_COEF;
+   reflsymdata->treemap[reflsymdata->ntrees] = reflsymdata->ntreecoefs;
+   reflsymdata->treeparentidx[reflsymdata->ntrees] = parent;
+   reflsymdata->treecoefs[reflsymdata->ntreecoefs] = coef;
+   reflsymdata->coefidx[reflsymdata->ntreecoefs++] = reflsymdata->ntrees;
+   if ( posintrees != NULL )
+      *posintrees = reflsymdata->ntrees;
+   ++reflsymdata->ntrees;
+
+   return SCIP_OKAY;
+}
+
+/** adds a variable to the reflection symmetry data structure */
+static
+SCIP_RETCODE addVarReflSym(
+   SYM_REFLSYMDATA*     reflsymdata,        /**< pointer to reflection symmetry data structure */
+   int                  varidx,             /**< index of problem variable */
+   int                  parent,             /**< index of parent node of coefficient */
+   int*                 posintrees          /**< pointer to store position in trees */
+   )
+{
+   assert( reflsymdata != NULL );
+   assert( varidx >= 0 );
+
+   reflsymdata->trees[reflsymdata->ntrees] = SYM_NODETYPE_VAR;
+   reflsymdata->treemap[reflsymdata->ntrees] = reflsymdata->ntreevaridx;
+   reflsymdata->treeparentidx[reflsymdata->ntrees] = parent;
+   reflsymdata->treevaridx[reflsymdata->ntreecoefs] = varidx;;
+   reflsymdata->varidx[reflsymdata->ntreevaridx++] = reflsymdata->ntrees;
+   if ( posintrees != NULL )
+      *posintrees = reflsymdata->ntrees;
+   ++reflsymdata->ntrees;
+
+   return SCIP_OKAY;
+}
+
 /** stores information about a linear constraint in reflection symmetry data structure */
 static
 SCIP_RETCODE storeLinearConstraint(
@@ -2041,21 +2160,12 @@ SCIP_RETCODE storeLinearConstraint(
    )
 {
    SCIP_EXPRHDLR* exprsum;
-   SCIP_EXPRHDLR* exprprod;
    SCIP_VAR** vars;
    SCIP_Real* vals;
    SCIP_Real constant = 0.0;
    int nvars;
-   int newsize;
-   int prodparent;
-   int parent;
+   int mainopidx;
    int i;
-
-   int ntrees;
-   int ntreerhs;
-   int ntreeops;
-   int ntreecoefs;
-   int ntreevaridx;
 
    assert( scip != NULL );
    assert( reflsymdata != NULL );
@@ -2101,154 +2211,66 @@ SCIP_RETCODE storeLinearConstraint(
    if ( ! SCIPisInfinity(scip, rhs) )
       rhs -= constant;
 
-   ntrees = reflsymdata->ntrees;
-   ntreerhs = reflsymdata->ntreerhs;
-   ntreeops = reflsymdata->ntreeops;
-   ntreecoefs = reflsymdata->ntreecoefs;
-   ntreevaridx = reflsymdata->ntreevaridx;
-
    /* check whether we need to resize data
     * already deal with the case that a constraint may have both a lhs and rhs
     */
-   if ( ntrees + 6 * nvars + 2 > reflsymdata->maxntrees )
-   {
-      newsize = SCIPcalcMemGrowSize(scip, ntrees + 6 * nvars + 2);
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &reflsymdata->trees, reflsymdata->maxntrees, newsize) );
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &reflsymdata->treemap, reflsymdata->maxntrees, newsize) );
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &reflsymdata->treeparentidx, reflsymdata->maxntrees, newsize) );
-      reflsymdata->maxntrees = newsize;
-   }
-   if ( ntreeops + 2 * nvars + 2 > reflsymdata->maxntreeops )
-   {
-      newsize = SCIPcalcMemGrowSize(scip, ntreeops + 2 * nvars + 2);
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &reflsymdata->treeops, reflsymdata->maxntreeops, newsize) );
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &reflsymdata->opsidx, reflsymdata->maxntreeops, newsize) );
-      reflsymdata->maxntreeops = newsize;
-   }
-   if ( ntreecoefs + 2 * nvars > reflsymdata->maxntreecoefs )
-   {
-      newsize = SCIPcalcMemGrowSize(scip, ntreecoefs + 2 * nvars);
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &reflsymdata->treecoefs, reflsymdata->maxntreecoefs, newsize) );
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &reflsymdata->coefidx, reflsymdata->maxntreecoefs, newsize) );
-      reflsymdata->maxntreecoefs = newsize;
-   }
-   if ( ntreevaridx + 2 * nvars > reflsymdata->maxntreevaridx )
-   {
-      newsize = SCIPcalcMemGrowSize(scip, ntreevaridx + 2 * nvars);
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &reflsymdata->treevaridx, reflsymdata->maxntreevaridx, newsize) );
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &reflsymdata->varidx, reflsymdata->maxntreevaridx, newsize) );
-      reflsymdata->maxntreevaridx = newsize;
-   }
+   SCIP_CALL( ensureReflSymDataMemorySuffices(scip, reflsymdata, reflsymdata->ntrees + 4 * nvars + 2,
+         reflsymdata->ntreeops + 2, reflsymdata->ntreecoefs + 2 * nvars, reflsymdata->ntreevaridx + 2 * nvars) );
 
    /* store constraint */
    exprsum = SCIPfindExprhdlr(scip, "sum");
-   exprprod = SCIPfindExprhdlr(scip, "prod");
 
    assert( exprsum != NULL );
-   assert( exprprod != NULL );
 
    if ( ! SCIPisInfinity(scip, -lhs) )
    {
       /* initialize new tree */
-      reflsymdata->treebegins[ntreerhs] = ntrees;
-      reflsymdata->treerhs[ntreerhs++] = -lhs;
+      reflsymdata->treebegins[reflsymdata->ntreerhs] = reflsymdata->ntrees;
+      reflsymdata->treerhs[reflsymdata->ntreerhs++] = -lhs;
 
       /* root expression of a linear constraint is the SUM-operator */
-      reflsymdata->trees[ntrees] = SYM_NODETYPE_OPERATOR;
-      reflsymdata->treemap[ntrees] = ntreeops;
-      reflsymdata->treeparentidx[ntrees] = -1;
-      reflsymdata->treeops[ntreeops] = exprsum;
-      reflsymdata->opsidx[ntreeops++] = ntrees;
-      prodparent = ntrees++;
+      SCIP_CALL( addOperatorReflSym(reflsymdata, exprsum, -1, &mainopidx) );
 
       /* add each summand \f$\alpha \cdot x\f$ of the linear constraint to the tree */
       for (i = 0; i < nvars; ++i)
       {
-         /* the product part of the summand */
-         reflsymdata->trees[ntrees] = SYM_NODETYPE_OPERATOR;
-         reflsymdata->treemap[ntrees] = ntreeops;
-         reflsymdata->treeparentidx[ntrees] = prodparent;
-         reflsymdata->treeops[ntreeops] = exprprod;
-         reflsymdata->opsidx[ntreeops++] = ntrees;
-         parent = ntrees++;
-
-         /* the coefficient part of the summand */
-         reflsymdata->trees[ntrees] = SYM_NODETYPE_COEF;
-         reflsymdata->treemap[ntrees] = ntreecoefs;
-         reflsymdata->treeparentidx[ntrees] = parent;
-         reflsymdata->treecoefs[ntreecoefs] = -vals[i];
-         reflsymdata->coefidx[ntreecoefs++] = ntrees++;
-
-         /* the variable part of the summand */
-         reflsymdata->trees[ntrees] = SYM_NODETYPE_VAR;
-         reflsymdata->treemap[ntrees] = ntreevaridx;
-         reflsymdata->treeparentidx[ntrees] = parent;
-         reflsymdata->treevaridx[ntreevaridx] = SCIPvarGetProbindex(vars[i]);
-         assert( reflsymdata->treevaridx[ntreevaridx] >= 0 );
-         reflsymdata->varidx[ntreevaridx++] = ntrees++;
+         SCIP_CALL( addCoefReflSym(reflsymdata, -vals[i], mainopidx, NULL) );
+         SCIP_CALL( addVarReflSym(reflsymdata, SCIPvarGetProbindex(vars[i]), mainopidx, NULL) );
       }
 
       /* make sure that also the end position of the last constraint is stored correctly
        * (ntreerhs has been incremented already above)
        */
-      reflsymdata->treebegins[ntreerhs] = ntrees;
+      reflsymdata->treebegins[reflsymdata->ntreerhs] = reflsymdata->ntrees;
    }
 
    if ( ! SCIPisInfinity(scip, rhs) )
    {
       /* initialize new tree */
-      reflsymdata->treebegins[ntreerhs] = ntrees;
-      reflsymdata->treerhs[ntreerhs++] = rhs;
+      reflsymdata->treebegins[reflsymdata->ntreerhs] = reflsymdata->ntrees;
+      reflsymdata->treerhs[reflsymdata->ntreerhs++] = rhs;
 
       /* root expression of a linear constraint is the SUM-operator */
-      reflsymdata->trees[ntrees] = SYM_NODETYPE_OPERATOR;
-      reflsymdata->treemap[ntrees] = ntreeops;
-      reflsymdata->treeparentidx[ntrees] = -1;
-      reflsymdata->treeops[ntreeops] = exprsum;
-      reflsymdata->opsidx[ntreeops++] = ntrees;
-      prodparent = ntrees++;
+      SCIP_CALL( addOperatorReflSym(reflsymdata, exprsum, -1, &mainopidx) );
 
       /* add each summand \f$\alpha \cdot x\f$ of the linear constraint to the tree */
       for (i = 0; i < nvars; ++i)
       {
-         /* the product part of the summand */
-         reflsymdata->trees[ntrees] = SYM_NODETYPE_OPERATOR;
-         reflsymdata->treemap[ntrees] = ntreeops;
-         reflsymdata->treeparentidx[ntrees] = prodparent;
-         reflsymdata->treeops[ntreeops] = exprprod;
-         reflsymdata->opsidx[ntreeops++] = ntrees;
-         parent = ntrees++;
-
-         /* the coefficient part of the summand */
-         reflsymdata->trees[ntrees] = SYM_NODETYPE_COEF;
-         reflsymdata->treemap[ntrees] = ntreecoefs;
-         reflsymdata->treeparentidx[ntrees] = parent;
-         reflsymdata->treecoefs[ntreecoefs] = vals[i];
-         reflsymdata->coefidx[ntreecoefs++] = ntrees++;
-
-         /* the variable part of the summand */
-         reflsymdata->trees[ntrees] = SYM_NODETYPE_VAR;
-         reflsymdata->treemap[ntrees] = ntreevaridx;
-         reflsymdata->treeparentidx[ntrees] = parent;
-         reflsymdata->treevaridx[ntreevaridx] = SCIPvarGetProbindex(vars[i]);
-         assert( reflsymdata->treevaridx[ntreevaridx] >= 0 );
-         reflsymdata->varidx[ntreevaridx++] = ntrees++;
+         SCIP_CALL( addCoefReflSym(reflsymdata, vals[i], mainopidx, NULL) );
+         SCIP_CALL( addVarReflSym(reflsymdata, SCIPvarGetProbindex(vars[i]), mainopidx, NULL) );
       }
 
       /* make sure that also the end position of the last constraint is stored correctly
        * (ntreerhs has been incremented already above)
        */
-      reflsymdata->treebegins[ntreerhs] = ntrees;
+      reflsymdata->treebegins[reflsymdata->ntreerhs] = reflsymdata->ntrees;
    }
 
    SCIPfreeBufferArray(scip, &vals);
    SCIPfreeBufferArray(scip, &vars);
 
-   reflsymdata->ntrees = ntrees;
-   reflsymdata->ntreerhs = ntreerhs;
-   reflsymdata->ntreeops = ntreeops;
-   reflsymdata->ntreecoefs = ntreecoefs;
-   reflsymdata->ntreevaridx = ntreevaridx;
+   return SCIP_OKAY;
+}
 
    return SCIP_OKAY;
 }
