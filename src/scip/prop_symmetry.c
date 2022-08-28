@@ -139,7 +139,9 @@
 #include <scip/cons_xor.h>
 #include <scip/cons_linking.h>
 #include <scip/cons_bounddisjunction.h>
+#include <scip/cons_indicator.h>
 #include <scip/cons_nonlinear.h>
+#include <scip/cons_cardinality.h>
 #include <scip/pub_expr.h>
 #include <scip/misc.h>
 #include <scip/scip_datastructures.h>
@@ -1802,6 +1804,10 @@ int getNReflsymhandableConss(
    nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
    conshdlr = SCIPfindConshdlr(scip, "bounddisjunction");
    nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
+   conshdlr = SCIPfindConshdlr(scip, "cardinality");
+   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
+   conshdlr = SCIPfindConshdlr(scip, "indicator");
+   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
    conshdlr = SCIPfindConshdlr(scip, "nonlinear");
    nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
 
@@ -1996,6 +2002,22 @@ SCIP_RETCODE printReflectionSymmetryData(
                SCIPinfoMessage(scip, NULL, "+ ");
             else if ( op == SCIPfindExprhdlr(scip, "prod") )
                SCIPinfoMessage(scip, NULL, "* ");
+            else if ( op == (SCIP_EXPRHDLR*) SYM_CONSTYPE_AND )
+               SCIPinfoMessage(scip, NULL, "AND ");
+            else if ( op == (SCIP_EXPRHDLR*) SYM_CONSTYPE_OR )
+               SCIPinfoMessage(scip, NULL, "OR ");
+            else if ( op == (SCIP_EXPRHDLR*) SYM_CONSTYPE_XOR )
+               SCIPinfoMessage(scip, NULL, "XOR ");
+            else if ( op == (SCIP_EXPRHDLR*) SYM_CONSTYPE_CARD )
+               SCIPinfoMessage(scip, NULL, "CARD ");
+            else if ( op == (SCIP_EXPRHDLR*) SYM_CONSTYPE_BDDISJ )
+               SCIPinfoMessage(scip, NULL, "BDDISJ ");
+            else if ( op == (SCIP_EXPRHDLR*) SYM_CONSTYPE_INDICATOR )
+               SCIPinfoMessage(scip, NULL, "--> ");
+            else if ( op == (SCIP_EXPRHDLR*) SYM_CONSTYPE_EQ )
+               SCIPinfoMessage(scip, NULL, "== ");
+            else if ( op == (SCIP_EXPRHDLR*) SYM_CONSTYPE_GEQ )
+               SCIPinfoMessage(scip, NULL, ">= ");
             else
                SCIPinfoMessage(scip, NULL, "? ");
             break;
@@ -2035,7 +2057,8 @@ SCIP_RETCODE ensureReflSymDataMemorySuffices(
    int                   reqtreesize,        /**< required size for trees */
    int                   reqtreeops,         /**< required size for operators */
    int                   reqtreecoefs,       /**< required size for coefficients */
-   int                   reqvaridx           /**< required size for variable indices */
+   int                   reqvaridx,          /**< required size for variable indices */
+   int                   reqtreevals         /**< required size for value indices */
    )
 {
    int newsize;
@@ -2071,6 +2094,13 @@ SCIP_RETCODE ensureReflSymDataMemorySuffices(
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &reflsymdata->treevaridx, reflsymdata->maxntreevaridx, newsize) );
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &reflsymdata->varidx, reflsymdata->maxntreevaridx, newsize) );
       reflsymdata->maxntreevaridx = newsize;
+   }
+   if ( reqtreevals > reflsymdata->maxntreevals )
+   {
+      newsize = SCIPcalcMemGrowSize(scip, reqtreevals);
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &reflsymdata->treevals, reflsymdata->maxntreevals, newsize) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &reflsymdata->validx, reflsymdata->maxntreevals, newsize) );
+      reflsymdata->maxntreevals = newsize;
    }
 
    return SCIP_OKAY;
@@ -2139,6 +2169,29 @@ SCIP_RETCODE addVarReflSym(
    reflsymdata->treeparentidx[reflsymdata->ntrees] = parent;
    reflsymdata->treevaridx[reflsymdata->ntreevaridx] = varidx;
    reflsymdata->varidx[reflsymdata->ntreevaridx++] = reflsymdata->ntrees;
+   if ( posintrees != NULL )
+      *posintrees = reflsymdata->ntrees;
+   ++reflsymdata->ntrees;
+
+   return SCIP_OKAY;
+}
+
+/** adds a numerical value to the reflection symmetry data structure */
+static
+SCIP_RETCODE addValReflSym(
+   SYM_REFLSYMDATA*     reflsymdata,        /**< pointer to reflection symmetry data structure */
+   SCIP_Real            val,                /**< value to be added */
+   int                  parent,             /**< index of parent node of coefficient */
+   int*                 posintrees          /**< pointer to store position in trees */
+   )
+{
+   assert( reflsymdata != NULL );
+
+   reflsymdata->trees[reflsymdata->ntrees] = SYM_NODETYPE_VAL;
+   reflsymdata->treemap[reflsymdata->ntrees] = reflsymdata->ntreevals;
+   reflsymdata->treeparentidx[reflsymdata->ntrees] = parent;
+   reflsymdata->treevals[reflsymdata->ntreevals] = val;
+   reflsymdata->validx[reflsymdata->ntreevals++] = reflsymdata->ntrees;
    if ( posintrees != NULL )
       *posintrees = reflsymdata->ntrees;
    ++reflsymdata->ntrees;
@@ -2215,7 +2268,8 @@ SCIP_RETCODE storeLinearConstraint(
     * already deal with the case that a constraint may have both a lhs and rhs
     */
    SCIP_CALL( ensureReflSymDataMemorySuffices(scip, reflsymdata, reflsymdata->ntrees + 4 * nvars + 2,
-         reflsymdata->ntreeops + 2, reflsymdata->ntreecoefs + 2 * nvars, reflsymdata->ntreevaridx + 2 * nvars) );
+         reflsymdata->ntreeops + 2, reflsymdata->ntreecoefs + 2 * nvars, reflsymdata->ntreevaridx + 2 * nvars,
+         reflsymdata->ntreevals) );
 
    /* store constraint */
    exprsum = SCIPfindExprhdlr(scip, "sum");
@@ -2271,6 +2325,431 @@ SCIP_RETCODE storeLinearConstraint(
 
    return SCIP_OKAY;
 }
+
+/** stores information about a linear constraint in reflection symmetry data structure */
+static
+SCIP_RETCODE storeSimpleConstraint(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SYM_REFLSYMDATA*      reflsymdata,        /**< pointer to reflection symmetry data structure */
+   SCIP_CONS*            cons,               /**< pointer to constraint that needs to be stored */
+   SYM_CONSTYPE          constype,           /**< type of constraint that needs to be stored */
+   SCIP_VAR**            consvars,           /**< allocated array to store variables in constraints */
+   SCIP_Real*            consvals            /**< allocated array to store coefficients in constraints */
+   )
+{
+   SCIP_EXPRHDLR* expr;
+   SCIP_EXPRHDLR* exprsum;
+   SCIP_VAR** vars;
+   SCIP_Real constant = 0.0;
+   int nvars;
+   int mainopidx;
+   int i;
+
+   assert( scip != NULL );
+   assert( reflsymdata != NULL );
+   assert( cons != NULL );
+
+   /* to identify simple constraint, we cast the constype to an exprhdlr pointer */
+   expr = (SCIP_EXPRHDLR*) constype;
+
+   switch ( constype )
+   {
+   case SYM_CONSTYPE_AND :
+   case SYM_CONSTYPE_OR :
+      nvars = constype == SYM_CONSTYPE_AND ? SCIPgetNVarsAnd(scip, cons) : SCIPgetNVarsOr(scip, cons);
+
+      /* identify non-resultant variables by coefficient 1.0 */
+      vars = constype == SYM_CONSTYPE_AND ? SCIPgetVarsAnd(scip, cons) : SCIPgetVarsOr(scip, cons);
+      for (i = 0; i < nvars; ++i)
+      {
+         consvars[i] = vars[i];
+         consvals[i] = 1.0;
+      }
+
+      /* use cofficient 2.0 to identify the resultant */
+      consvars[nvars] = constype == SYM_CONSTYPE_AND ? SCIPgetResultantAnd(scip, cons) : SCIPgetResultantOr(scip, cons);
+      consvals[nvars++] = 2.0;
+
+      SCIP_CALL( getActiveVariables(scip, &consvars, &consvals, &nvars, &constant, SCIPconsIsTransformed(cons)) );
+
+      /* enconde AND/OR constraints as (AND/OR coef1 var1 ... coefk vark) */
+      SCIP_CALL( ensureReflSymDataMemorySuffices(scip, reflsymdata, reflsymdata->ntrees + 2 * nvars + 1,
+            reflsymdata->ntreeops + 1, reflsymdata->ntreecoefs + nvars, reflsymdata->ntreevaridx + nvars,
+            reflsymdata->ntreevals) );
+
+      /* initialize new tree */
+      reflsymdata->treebegins[reflsymdata->ntreerhs] = reflsymdata->ntrees;
+      reflsymdata->treerhs[reflsymdata->ntreerhs++] = 0.0;
+
+      /* indicate AND/OR constraint */
+      SCIP_CALL( addOperatorReflSym(reflsymdata, expr, -1, &mainopidx) );
+
+      /* add variables with corresponding coefficients */
+      for (i = 0; i < nvars; ++i)
+      {
+         SCIP_CALL( addCoefReflSym(reflsymdata, consvals[i], mainopidx, NULL) );
+         SCIP_CALL( addVarReflSym(reflsymdata, SCIPvarGetProbindex(consvars[i]), mainopidx, NULL) );
+      }
+
+      /* make sure that also the end position of the last constraint is stored correctly
+       * (ntreerhs has been incremented already above)
+       */
+      reflsymdata->treebegins[reflsymdata->ntreerhs] = reflsymdata->ntrees;
+      break;
+   case SYM_CONSTYPE_CARD :
+      /* enconde cardinality constraints as (CARD expr1 ... exprk)
+       *
+       * The expressions correspond to the variables in the cardinality constraint.
+       * If a variable is active, the corresponding expression is [coef var].
+       * Otherwise, the expression is the tree [+ val coef1 auxvar1 ... coefl auxvarl]
+       * representing the aggregation of the variable in the constraint.
+       *
+       * To avoid computing the number of needed expressions twice, we estimate the required memory
+       * by assuming each variable requires 1 numerical value and 3 auxiliary variables, and
+       * reallocate memory if needed. That is, an expression is assumed to be
+       * [+ val coef1 auxvar 1 coef2 auxvar2 coef3 auxvar3], which requires 8 positions.
+       */
+      nvars = SCIPgetNVarsCardinality(scip, cons);
+      exprsum = SCIPfindExprhdlr(scip, "sum");
+
+      SCIP_CALL( ensureReflSymDataMemorySuffices(scip, reflsymdata, reflsymdata->ntrees + 8 * nvars + 1,
+            reflsymdata->ntreeops + nvars + 1, reflsymdata->ntreecoefs + 3 * nvars,
+            reflsymdata->ntreevaridx + 3 * nvars, reflsymdata->ntreevals + nvars) );
+
+      /* initialize new tree */
+      reflsymdata->treebegins[reflsymdata->ntreerhs] = reflsymdata->ntrees;
+      reflsymdata->treerhs[reflsymdata->ntreerhs++] = SCIPgetCardvalCardinality(scip, cons);
+
+      /* indicate cardinality constraint */
+      SCIP_CALL( addOperatorReflSym(reflsymdata, expr, -1, &mainopidx) );
+
+      for (i = 0; i < nvars; ++i)
+      {
+         int nlocvars = 1.0;
+
+         consvars[0] = SCIPgetVarsCardinality(scip, cons)[i];
+         consvals[0] = 1.0;
+         constant = 0.0;
+
+         SCIP_CALL( getActiveVariables(scip, &consvars, &consvals, &nlocvars, &constant, SCIPconsIsTransformed(cons)) );
+
+         if ( nlocvars == 1 )
+         {
+            /* ensure that [coef var] fits into the data structure */
+            SCIP_CALL( ensureReflSymDataMemorySuffices(scip, reflsymdata, reflsymdata->ntrees + 2,
+            reflsymdata->ntreeops, reflsymdata->ntreecoefs + 1,
+            reflsymdata->ntreevaridx + 1, reflsymdata->ntreevals) );
+
+            SCIP_CALL( addCoefReflSym(reflsymdata, consvals[0], mainopidx, NULL) );
+            SCIP_CALL( addVarReflSym(reflsymdata, SCIPvarGetProbindex(consvars[0]), mainopidx, NULL) );
+         }
+         else
+         {
+            int sumidx;
+            int j;
+
+            /* ensure that [+ val coef1 auxvar1 ... coefl auxvarl] fits into the data structure */
+            SCIP_CALL( ensureReflSymDataMemorySuffices(scip, reflsymdata, reflsymdata->ntrees + nlocvars + 2,
+            reflsymdata->ntreeops + 1, reflsymdata->ntreecoefs + nlocvars,
+            reflsymdata->ntreevaridx + nlocvars, reflsymdata->ntreevals + 1) );
+
+            /* add sum operator */
+            SCIP_CALL( addOperatorReflSym(reflsymdata, exprsum, mainopidx, &sumidx) );
+
+            if ( ! SCIPisZero(scip, constant) )
+            {
+               SCIP_CALL( addValReflSym(reflsymdata, constant, sumidx, NULL) );
+            }
+            for (j = 0; j < nlocvars; ++j)
+            {
+               SCIP_CALL( addCoefReflSym(reflsymdata, consvals[j], sumidx, NULL) );
+               SCIP_CALL( addVarReflSym(reflsymdata, SCIPvarGetProbindex(consvars[j]), sumidx, NULL) );
+            }
+         }
+      }
+
+      /* make sure that also the end position of the last constraint is stored correctly
+       * (ntreerhs has been incremented already above)
+       */
+      reflsymdata->treebegins[reflsymdata->ntreerhs] = reflsymdata->ntrees;
+      break;
+   case SYM_CONSTYPE_XOR :
+      nvars = SCIPgetNVarsXor(scip, cons);
+
+      /* identify non-resultant variables by coefficient 1.0 */
+      for (i = 0; i < nvars; ++i)
+      {
+         consvars[i] = SCIPgetVarsXor(scip, cons)[i];
+         consvals[i] = 1.0;
+      }
+
+      /* integer variable might have been removed, identify it by coefficient 2.0 */
+      if ( SCIPgetIntVarXor(scip, cons) != NULL )
+      {
+         consvars[nvars] = SCIPgetIntVarXor(scip, cons);
+         consvals[nvars++] = 2.0;
+      }
+
+      SCIP_CALL( getActiveVariables(scip, &consvars, &consvals, &nvars, &constant, SCIPconsIsTransformed(cons)) );
+
+      /* enconde XOR constraints as (XOR coef1 var1 ... coefk vark) */
+      SCIP_CALL( ensureReflSymDataMemorySuffices(scip, reflsymdata, reflsymdata->ntrees + 2 * nvars + 1,
+            reflsymdata->ntreeops + 1, reflsymdata->ntreecoefs + nvars, reflsymdata->ntreevaridx + nvars,
+            reflsymdata->ntreevals) );
+
+      /* initialize new tree */
+      reflsymdata->treebegins[reflsymdata->ntreerhs] = reflsymdata->ntrees;
+      reflsymdata->treerhs[reflsymdata->ntreerhs++] = SCIPgetRhsXor(scip, cons) - constant;
+
+      /* indicate XOR constraint */
+      SCIP_CALL( addOperatorReflSym(reflsymdata, expr, -1, &mainopidx) );
+
+      /* add variables with corresponding coefficients */
+      for (i = 0; i < nvars; ++i)
+      {
+         SCIP_CALL( addCoefReflSym(reflsymdata, consvals[i], mainopidx, NULL) );
+         SCIP_CALL( addVarReflSym(reflsymdata, SCIPvarGetProbindex(consvars[i]), mainopidx, NULL) );
+      }
+
+      /* make sure that also the end position of the last constraint is stored correctly
+       * (ntreerhs has been incremented already above)
+       */
+      reflsymdata->treebegins[reflsymdata->ntreerhs] = reflsymdata->ntrees;
+      break;
+   case SYM_CONSTYPE_BDDISJ :
+      /* enconde bounddisjunction constraints as (BDDISJ expr1 ... exprk)
+       *
+       * The expressions correspond to the expressions in the bounddisjunction.
+       * If the disjunction is based on an active variable, then the expression
+       * is given by (>= val coef var) to encode \f$val \geq coef \cdot var\f$.
+       * Note that we normalize bounddisjunction to the ">="-case.
+       * Otherwise, it is given by ({<=,>=} val + coef1 auxvar1 ... coefl auxvarl),
+       * where val incorporates the constant of the linear expression replacing var.
+       *
+       * To avoid computing the number of needed expressions twice, we estimate the required memory
+       * by assuming each variable requires 3 auxiliary variables, and
+       * reallocate memory if needed. That is, an expression is assumed to be
+       * [+ coef1 auxvar 1 coef2 auxvar2 coef3 auxvar3], which requires 7 positions.
+       */
+      nvars = SCIPgetNVarsBounddisjunction(scip, cons);
+      exprsum = SCIPfindExprhdlr(scip, "sum");
+
+      SCIP_CALL( ensureReflSymDataMemorySuffices(scip, reflsymdata, reflsymdata->ntrees + 7 * nvars + 1,
+            reflsymdata->ntreeops + 2 * nvars + 1, reflsymdata->ntreecoefs + 3 * nvars,
+            reflsymdata->ntreevaridx + 3 * nvars, reflsymdata->ntreevals + nvars) );
+
+      /* initialize new tree */
+      reflsymdata->treebegins[reflsymdata->ntreerhs] = reflsymdata->ntrees;
+      reflsymdata->treerhs[reflsymdata->ntreerhs++] = 0.0;
+
+      /* indicate bounddisjunction constraint */
+      SCIP_CALL( addOperatorReflSym(reflsymdata, expr, -1, &mainopidx) );
+
+      for (i = 0; i < nvars; ++i)
+      {
+         int subopidx;
+         int nlocvars = 1.0;
+
+         consvars[0] = SCIPgetVarsBounddisjunction(scip, cons)[i];
+         consvals[0] = 1.0;
+         constant = 0.0;
+
+         SCIP_CALL( getActiveVariables(scip, &consvars, &consvals, &nlocvars, &constant, SCIPconsIsTransformed(cons)) );
+
+         if ( nlocvars == 1 )
+         {
+            /* ensure that [>= val coef var] fits into the data structure */
+            SCIP_CALL( ensureReflSymDataMemorySuffices(scip, reflsymdata, reflsymdata->ntrees + 4,
+            reflsymdata->ntreeops + 1, reflsymdata->ntreecoefs + 1,
+            reflsymdata->ntreevaridx + 1, reflsymdata->ntreevals + 1) );
+
+            SCIP_CALL( addOperatorReflSym(reflsymdata, (SCIP_EXPRHDLR*) SYM_CONSTYPE_GEQ, mainopidx, &subopidx) );
+            if ( SCIPgetBoundtypesBounddisjunction(scip, cons)[i] == SCIP_BOUNDTYPE_LOWER )
+            {
+               SCIP_CALL( addValReflSym(reflsymdata, SCIPgetBoundsBounddisjunction(scip, cons)[i], subopidx, NULL) );
+               SCIP_CALL( addCoefReflSym(reflsymdata, 1.0, subopidx, NULL) );
+            }
+            else
+            {
+               SCIP_CALL( addValReflSym(reflsymdata, -SCIPgetBoundsBounddisjunction(scip, cons)[i], subopidx, NULL) );
+               SCIP_CALL( addCoefReflSym(reflsymdata, -1.0, subopidx, NULL) );
+            }
+            SCIP_CALL( addVarReflSym(reflsymdata, SCIPvarGetProbindex(consvars[0]), subopidx, NULL) );
+         }
+         else
+         {
+            int sumidx;
+            int j;
+
+            /* ensure that [>= val + coef1 auxvar1 ... coefl auxvarl] fits into the data structure */
+            SCIP_CALL( ensureReflSymDataMemorySuffices(scip, reflsymdata, reflsymdata->ntrees + nlocvars + 3,
+            reflsymdata->ntreeops + 2, reflsymdata->ntreecoefs + nlocvars,
+            reflsymdata->ntreevaridx + nlocvars, reflsymdata->ntreevals + 1) );
+
+            /* add >= operator */
+            SCIP_CALL( addOperatorReflSym(reflsymdata, (SCIP_EXPRHDLR*) SYM_CONSTYPE_GEQ, mainopidx, &subopidx) );
+
+            /* add numerical value*/
+            if ( SCIPgetBoundtypesBounddisjunction(scip, cons)[i] == SCIP_BOUNDTYPE_LOWER )
+            {
+               SCIP_CALL( addValReflSym(reflsymdata, SCIPgetBoundsBounddisjunction(scip, cons)[i] - constant,
+                     subopidx, NULL) );
+            }
+            else
+            {
+               SCIP_CALL( addValReflSym(reflsymdata, -SCIPgetBoundsBounddisjunction(scip, cons)[i] + constant,
+                     subopidx, NULL) );
+            }
+
+            /* add plus operator */
+            SCIP_CALL( addOperatorReflSym(reflsymdata, exprsum, subopidx, &sumidx) );
+
+            for (j = 0; j < nlocvars; ++j)
+            {
+               if ( SCIPgetBoundtypesBounddisjunction(scip, cons)[i] == SCIP_BOUNDTYPE_LOWER )
+               {
+                  SCIP_CALL( addCoefReflSym(reflsymdata, consvals[j], sumidx, NULL) );
+               }
+               else
+               {
+                  SCIP_CALL( addCoefReflSym(reflsymdata, -consvals[j], sumidx, NULL) );
+               }
+               SCIP_CALL( addVarReflSym(reflsymdata, SCIPvarGetProbindex(consvars[j]), sumidx, NULL) );
+            }
+         }
+      }
+
+      /* make sure that also the end position of the last constraint is stored correctly
+       * (ntreerhs has been incremented already above)
+       */
+      reflsymdata->treebegins[reflsymdata->ntreerhs] = reflsymdata->ntrees;
+
+      break;
+   case SYM_CONSTYPE_INDICATOR :
+      /* encode indicator constraints \f$ y = b \Rightarrow a_1x_1 + \dots + a_kx_k \leq \beta \f$
+       * as (INDICATOR (COMPARE y b) (+ a1 x1 ... ak xk)) and assign the indicator the expression
+       * the right-hand side of the constraint.
+       *
+       * Here, \f$b\f$ is a boolean value that determines when the constraint is enabled.
+       * Moreover, if \f$y\f$ is aggregated, it can be replaced by the corresponding sum
+       * of binary variables.
+       */
+   {
+      SCIP_EXPRHDLR* exprcompare = (SCIP_EXPRHDLR*) SYM_CONSTYPE_EQ;
+      SCIP_CONS* lincons;
+      int nlocvars = 1.0;
+      int subopidx;
+      int sumopidx;
+      SCIP_Bool isleqcons = TRUE;
+
+      exprsum = SCIPfindExprhdlr(scip, "sum");
+
+      /* add \f$y = b\f$ to to tree */
+      consvars[0] = SCIPgetBinaryVarIndicator(cons);
+      consvals[0] = 1.0;
+
+      SCIP_CALL( getActiveVariables(scip, &consvars, &consvals, &nlocvars, &constant, SCIPconsIsTransformed(cons)) );
+
+      /* initialize new tree, update rhs below when it gets known */
+      reflsymdata->treebegins[reflsymdata->ntreerhs] = reflsymdata->ntrees;
+
+      if ( nlocvars == 1 )
+      {
+         /* ensure that [INDICATOR == val coef var] fits into the data structure */
+         SCIP_CALL( ensureReflSymDataMemorySuffices(scip, reflsymdata, reflsymdata->ntrees + 5,
+               reflsymdata->ntreeops + 2, reflsymdata->ntreecoefs + 1,
+               reflsymdata->ntreevaridx + 1, reflsymdata->ntreevals + 1) );
+
+         SCIP_CALL( addOperatorReflSym(reflsymdata, expr, -1, &mainopidx) );
+         SCIP_CALL( addOperatorReflSym(reflsymdata, exprcompare, mainopidx, &subopidx) );
+         SCIP_CALL( addValReflSym(reflsymdata, (SCIP_Real) SCIPgetActiveOnIndicator(cons), subopidx, NULL) );
+         SCIP_CALL( addCoefReflSym(reflsymdata, 1.0, subopidx, NULL) );
+         SCIP_CALL( addVarReflSym(reflsymdata, SCIPvarGetProbindex(consvars[0]), subopidx, NULL) );
+      }
+      else
+      {
+         /* ensure that [INDICATOR == val coef var] fits into the data structure if (coef var) is replaced
+          * by (+ value coef1 auxvar1 ... coefl auxvarl), where value corresponds to the constant part
+          */
+         SCIP_CALL( ensureReflSymDataMemorySuffices(scip, reflsymdata, reflsymdata->ntrees + 2 * nlocvars + 4,
+               reflsymdata->ntreeops + 3, reflsymdata->ntreecoefs + nlocvars,
+               reflsymdata->ntreevaridx + nlocvars, reflsymdata->ntreevals + 2) );
+
+         SCIP_CALL( addOperatorReflSym(reflsymdata, expr, -1, &mainopidx) );
+         SCIP_CALL( addOperatorReflSym(reflsymdata, exprcompare, mainopidx, &subopidx) );
+         SCIP_CALL( addValReflSym(reflsymdata, (SCIP_Real) SCIPgetActiveOnIndicator(cons), subopidx, NULL) );
+         SCIP_CALL( addOperatorReflSym(reflsymdata, exprsum, subopidx, &sumopidx) );
+         if ( ! SCIPisZero(scip, constant) )
+         {
+            SCIP_CALL( addValReflSym(reflsymdata, constant, sumopidx, NULL) );
+         }
+         for (i = 0; i < nlocvars; ++i)
+         {
+            SCIP_CALL( addCoefReflSym(reflsymdata, consvals[i], sumopidx, NULL) );
+            SCIP_CALL( addVarReflSym(reflsymdata, SCIPvarGetProbindex(consvars[i]), sumopidx, NULL) );
+         }
+      }
+
+      /* add linear constraint to data structure */
+      constant = 0.0;
+
+      lincons = SCIPgetLinearConsIndicator(cons);
+      assert( SCIPisInfinity(scip, -SCIPgetLhsLinear(scip, lincons)) ||
+         SCIPisInfinity(scip, SCIPgetRhsLinear(scip, lincons)) );
+
+      /* check whether we need to negate coefficients */
+      if ( SCIPisInfinity(scip, SCIPgetRhsLinear(scip, lincons)) )
+         isleqcons = FALSE;
+
+      nlocvars = SCIPgetNVarsLinear(scip, lincons);
+      for (i = 0; i < nlocvars; ++i)
+         consvars[i] = SCIPgetVarsLinear(scip, lincons)[i];
+
+      if ( isleqcons )
+      {
+         for (i = 0; i < nlocvars; ++i)
+            consvals[i] = SCIPgetValsLinear(scip, lincons)[i];
+      }
+      else
+      {
+         for (i = 0; i < nlocvars; ++i)
+            consvals[i] = -SCIPgetValsLinear(scip, lincons)[i];
+      }
+
+      SCIP_CALL( getActiveVariables(scip, &consvars, &consvals, &nlocvars, &constant, SCIPconsIsTransformed(lincons)) );
+
+      /* set rhs of indicator constraint */
+      if ( isleqcons )
+         reflsymdata->treerhs[reflsymdata->ntreerhs++] = SCIPgetRhsLinear(scip, lincons) - constant;
+      else
+         reflsymdata->treerhs[reflsymdata->ntreerhs++] = -SCIPgetLhsLinear(scip, lincons) + constant;
+
+      /* add linear constraint to expression tree */
+      SCIP_CALL( ensureReflSymDataMemorySuffices(scip, reflsymdata, reflsymdata->ntrees + 2 * nlocvars,
+               reflsymdata->ntreeops + 1, reflsymdata->ntreecoefs + nlocvars,
+               reflsymdata->ntreevaridx + nlocvars, reflsymdata->ntreevals) );
+
+      SCIP_CALL( addOperatorReflSym(reflsymdata, exprsum, mainopidx, &sumopidx) );
+      for (i = 0; i < nlocvars; ++i)
+      {
+         /* do not negate coefficient here since this has been done before */
+         SCIP_CALL( addCoefReflSym(reflsymdata, consvals[i], sumopidx, NULL) );
+         SCIP_CALL( addVarReflSym(reflsymdata, SCIPvarGetProbindex(consvars[i]), sumopidx, NULL) );
+      }
+
+      /* make sure that also the end position of the last constraint is stored correctly
+       * (ntreerhs has been incremented already above)
+       */
+      reflsymdata->treebegins[reflsymdata->ntreerhs] = reflsymdata->ntrees;
+
+      break;
+   }
+   default:
+      SCIPinfoMessage(scip, NULL,
+         "Terminate symmetry detection, because of unknown constraint type of constraint %s.\n",
+         SCIPconsGetName(cons));
+      return SCIP_ERROR;
+   }
 
    return SCIP_OKAY;
 }
@@ -2479,6 +2958,70 @@ SCIP_RETCODE computeReflectionSymmetryGroup(
       {
          SCIP_CALL( storeLinearConstraint(scip, &reflsymdata, SCIPgetVarsLogicor(scip, cons), NULL,
                SCIPgetNVarsLogicor(scip, cons), 1.0, SCIPinfinity(scip), SCIPconsIsTransformed(cons)) );
+      }
+      else if ( strcmp(conshdlrname, "linking") == 0 )
+      {
+         SCIP_VAR** curconsvars;
+         SCIP_Real* curconsvals;
+
+         /* get constraint variables and their coefficients */
+         curconsvals = SCIPgetValsLinking(scip, cons);
+         SCIP_CALL( SCIPgetBinvarsLinking(scip, cons, &curconsvars, &nconsvars) );
+
+         /* copy vars and vals for binary variables */
+         for (i = 0; i < nconsvars; i++)
+         {
+            consvars[i] = curconsvars[i];
+            consvals[i] = (SCIP_Real) curconsvals[i];
+         }
+
+         /* get linking variable of constraint */
+         consvars[nconsvars] = SCIPgetLinkvarLinking(scip, cons);
+         consvals[nconsvars++] = -1.0;
+
+         /* store the linking constraint itself */
+         SCIP_CALL( storeLinearConstraint(scip, &reflsymdata, consvars, consvals, nconsvars,
+               0.0, 0.0, SCIPconsIsTransformed(cons)) );
+
+         /* also store set partitioning constraint corresponding to linking constraint */
+         SCIP_CALL( storeLinearConstraint(scip, &reflsymdata, consvars, consvals, nconsvars - 1,
+               1.0, 1.0, SCIPconsIsTransformed(cons)) );
+      }
+      else if ( strcmp(conshdlrname, "and") == 0 )
+      {
+         SCIP_CALL( storeSimpleConstraint(scip, &reflsymdata, cons, SYM_CONSTYPE_AND, consvars, consvals) );
+      }
+      else if ( strcmp(conshdlrname, "bounddisjunction") == 0 )
+      {
+         SCIP_CALL( storeSimpleConstraint(scip, &reflsymdata, cons, SYM_CONSTYPE_BDDISJ, consvars, consvals) );
+      }
+      else if ( strcmp(conshdlrname, "cardinality") == 0 )
+      {
+         SCIP_CALL( storeSimpleConstraint(scip, &reflsymdata, cons, SYM_CONSTYPE_CARD, consvars, consvals) );
+      }
+      else if ( strcmp(conshdlrname, "indicator") == 0 )
+      {
+         SCIP_CALL( storeSimpleConstraint(scip, &reflsymdata, cons, SYM_CONSTYPE_INDICATOR, consvars, consvals) );
+      }
+      else if ( strcmp(conshdlrname, "or") == 0 )
+      {
+         SCIP_CALL( storeSimpleConstraint(scip, &reflsymdata, cons, SYM_CONSTYPE_OR, consvars, consvals) );
+      }
+      else if ( strcmp(conshdlrname, "pseudoboolean") == 0 )
+      {
+         SCIP_CALL( storeSimpleConstraint(scip, &reflsymdata, cons, SYM_CONSTYPE_PSEUDOBOOL, consvars, consvals) );
+      }
+      else if ( strcmp(conshdlrname, "sos1") == 0 )
+      {
+         SCIP_CALL( storeSimpleConstraint(scip, &reflsymdata, cons, SYM_CONSTYPE_SOS1, consvars, consvals) );
+      }
+      else if ( strcmp(conshdlrname, "sos2") == 0 )
+      {
+         SCIP_CALL( storeSimpleConstraint(scip, &reflsymdata, cons, SYM_CONSTYPE_SOS2, consvars, consvals) );
+      }
+      else if ( strcmp(conshdlrname, "xor") == 0 )
+      {
+         SCIP_CALL( storeSimpleConstraint(scip, &reflsymdata, cons, SYM_CONSTYPE_XOR, consvars, consvals) );
       }
    }
 

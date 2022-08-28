@@ -65,6 +65,24 @@ enum SYM_Nodetype
 };
 typedef enum SYM_Nodetype SYM_NODETYPE;
 
+/** define type of simple constraints in symmetry detection */
+enum SYM_Constype
+{
+   SYM_CONSTYPE_UNKNOWN  = 0,                /**< unkown constraint type */
+   SYM_CONSTYPE_AND      = 1,                /**< constraint of type and */
+   SYM_CONSTYPE_BDDISJ   = 2,                /**< constraint of type bounddisjunction */
+   SYM_CONSTYPE_CARD     = 3,                /**< constraint of type cardinality */
+   SYM_CONSTYPE_INDICATOR = 4,               /**< constraint of type indicator */
+   SYM_CONSTYPE_OR       = 5,                /**< constraint of type or */
+   SYM_CONSTYPE_PSEUDOBOOL = 6,              /**< constraint of type pseudoboolean */
+   SYM_CONSTYPE_SOS1     = 7,                /**< constraint of type SOS1 */
+   SYM_CONSTYPE_SOS2     = 8,                /**< constraint of type SOS2 */
+   SYM_CONSTYPE_XOR      = 9,                /**< constraint of type xor */
+   SYM_CONSTYPE_GEQ      = 10,               /**< needed to encode >= in bounddisjunctions */
+   SYM_CONSTYPE_EQ       = 11                /**< needed to encode == in indicator constraints */
+};
+typedef enum SYM_Constype SYM_CONSTYPE;
+
 /* type of symmetry handling codes */
 #define SYM_HANDLETYPE_NONE             UINT32_C(0x00000000)  /**< no symmetry handling */
 #define SYM_HANDLETYPE_SYMBREAK         UINT32_C(0x00000001)  /**< symmetry breaking inequalities */
