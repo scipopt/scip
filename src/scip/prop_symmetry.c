@@ -2137,7 +2137,7 @@ SCIP_RETCODE addVarReflSym(
    reflsymdata->trees[reflsymdata->ntrees] = SYM_NODETYPE_VAR;
    reflsymdata->treemap[reflsymdata->ntrees] = reflsymdata->ntreevaridx;
    reflsymdata->treeparentidx[reflsymdata->ntrees] = parent;
-   reflsymdata->treevaridx[reflsymdata->ntreecoefs] = varidx;;
+   reflsymdata->treevaridx[reflsymdata->ntreevaridx] = varidx;
    reflsymdata->varidx[reflsymdata->ntreevaridx++] = reflsymdata->ntrees;
    if ( posintrees != NULL )
       *posintrees = reflsymdata->ntrees;
