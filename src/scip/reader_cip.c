@@ -157,8 +157,8 @@ SCIP_RETCODE getInputString(
       }
 
       cipinput->linenumber++;
-      endline = strrchr(cipinput->strbuf, '\n');
-      endcharacter = strchr(cipinput->strbuf, ';');
+      endline = strrchr(&cipinput->strbuf[pos + 1], '\n');
+      endcharacter = strchr(&cipinput->strbuf[pos + 1], ';');
    }
    assert(endline != NULL);
 
