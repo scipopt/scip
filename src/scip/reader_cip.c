@@ -123,8 +123,8 @@ SCIP_RETCODE getInputString(
 
    cipinput->linenumber++;
    endline = strchr(cipinput->strbuf, '\n');
-
    endcharacter = strchr(cipinput->strbuf, ';');
+
    while( endline == NULL || (endcharacter == NULL && cipinput->section == CIP_CONSTRAINTS && strncmp(cipinput->strbuf, "END", 3) != 0 ) )
    {
       int pos;
