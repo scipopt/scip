@@ -68,6 +68,7 @@ Fixed bugs
 - fixed bug in presolving of and constraints by merging variables with multiple occurrences before cliquePresolve()
 - fixed bug in dual presolving of linear constraints by setting implicit integers to integers in multi-aggregation
 - fixed update of presolve statistics on added constraints and changed coefficients in constraint handler for nonlinear constraints
+- fixed bug with reading CIP files with large constraints split over several lines
 
 Miscellaneous
 -------------
