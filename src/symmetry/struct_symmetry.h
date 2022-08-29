@@ -132,6 +132,16 @@ struct SYM_Reflsymdata
    int                   maxntreevals;       /**< maximum number of elements that fit into treevals */
    int                   maxntreeops;        /**< maximum number of elements that fit into treeops */
    int                   maxntreebegins;     /**< maximum number of elements that fit into treebegins */
+   int*                  varcolors;          /**< array to store colors of individual variables */
+   int*                  coefcolors;         /**< array to store colors of individual coefficients */
+   int*                  opscolors;          /**< array to store colors of individual operators */
+   int*                  valcolors;          /**< array to store colors of individual values */
+   int*                  rhscolors;          /**< array to store colors of individual right-hand sides */
+   int                   nuniquevars;        /**< number of unique variable types */
+   int                   nuniquecoefs;       /**< number of unique coefficients */
+   int                   nuniqueops;         /**< number of unique operators */
+   int                   nuniquevals;        /**< number of unique values */
+   int                   nuniquerhs;         /**< number of unique right-hand sides */
 };
 
 #ifdef __cplusplus

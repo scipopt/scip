@@ -141,6 +141,8 @@
 #include <scip/cons_bounddisjunction.h>
 #include <scip/cons_indicator.h>
 #include <scip/cons_nonlinear.h>
+#include <scip/cons_sos1.h>
+#include <scip/cons_sos2.h>
 #include <scip/cons_cardinality.h>
 #include <scip/pub_expr.h>
 #include <scip/misc.h>
@@ -694,6 +696,29 @@ SCIP_DECL_SORTINDCOMP(SYMsortMatCoef)
    if ( diffvals < 0.0 )
       return -1;
    else if ( diffvals > 0.0 )
+      return 1;
+
+   return 0;
+}
+
+
+/** sorts operators corresponding to SCIP_EXPRHDLR*
+ *
+ *  result:
+ *    < 0: ind1 comes before (is better than) ind2
+ *    = 0: both indices have the same value
+ *    > 0: ind2 comes after (is worse than) ind2
+ */
+static
+SCIP_DECL_SORTINDCOMP(SYMsortOperators)
+{
+   SCIP_EXPRHDLR** vals;
+
+   vals = (SCIP_EXPRHDLR**) dataptr;
+
+   if ( vals[ind1] < vals[ind2] )
+      return -1;
+   else if ( vals[ind1] > vals[ind2] )
       return 1;
 
    return 0;
@@ -1808,6 +1833,10 @@ int getNReflsymhandableConss(
    nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
    conshdlr = SCIPfindConshdlr(scip, "indicator");
    nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
+   conshdlr = SCIPfindConshdlr(scip, "SOS1");
+   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
+   conshdlr = SCIPfindConshdlr(scip, "SOS2");
+   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
    conshdlr = SCIPfindConshdlr(scip, "nonlinear");
    nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
 
@@ -2018,6 +2047,12 @@ SCIP_RETCODE printReflectionSymmetryData(
                SCIPinfoMessage(scip, NULL, "== ");
             else if ( op == (SCIP_EXPRHDLR*) SYM_CONSTYPE_GEQ )
                SCIPinfoMessage(scip, NULL, ">= ");
+            else if ( op == (SCIP_EXPRHDLR*) SYM_CONSTYPE_SOS1 )
+               SCIPinfoMessage(scip, NULL, "SOS1 ");
+            else if ( op == (SCIP_EXPRHDLR*) SYM_CONSTYPE_SOS2 )
+               SCIPinfoMessage(scip, NULL, "SOS2 ");
+            else if ( op == (SCIP_EXPRHDLR*) SYM_CONSTYPE_TUPLE )
+               SCIPinfoMessage(scip, NULL, "tuple ");
             else
                SCIPinfoMessage(scip, NULL, "? ");
             break;
@@ -2726,8 +2761,8 @@ SCIP_RETCODE storeSimpleConstraint(
 
       /* add linear constraint to expression tree */
       SCIP_CALL( ensureReflSymDataMemorySuffices(scip, reflsymdata, reflsymdata->ntrees + 2 * nlocvars,
-               reflsymdata->ntreeops + 1, reflsymdata->ntreecoefs + nlocvars,
-               reflsymdata->ntreevaridx + nlocvars, reflsymdata->ntreevals) );
+            reflsymdata->ntreeops + 1, reflsymdata->ntreecoefs + nlocvars,
+            reflsymdata->ntreevaridx + nlocvars, reflsymdata->ntreevals) );
 
       SCIP_CALL( addOperatorReflSym(reflsymdata, exprsum, mainopidx, &sumopidx) );
       for (i = 0; i < nlocvars; ++i)
@@ -2744,12 +2779,444 @@ SCIP_RETCODE storeSimpleConstraint(
 
       break;
    }
+   case SYM_CONSTYPE_SOS1 :
+      /* encode SOS1 constraints as (SOS1 1 x1 ... 1 xk). If a variable is aggregated, replace
+       * the (1 xi) part by [+ ai1 yi1 ... ail yil].
+       *
+       * To avoid computing the number of needed expressions twice, we estimate the required memory
+       * by assuming each variable requires 3 auxiliary variables, and
+       * reallocate memory if needed.
+       */
+      nvars = SCIPgetNVarsSOS1(scip, cons);
+      exprsum = SCIPfindExprhdlr(scip, "sum");
+
+      SCIP_CALL( ensureReflSymDataMemorySuffices(scip, reflsymdata, reflsymdata->ntrees + 7 * nvars + 1,
+            reflsymdata->ntreeops + nvars + 1, reflsymdata->ntreecoefs + 3 * nvars,
+            reflsymdata->ntreevaridx + 3 * nvars, reflsymdata->ntreevals) );
+
+      /* initialize new tree */
+      reflsymdata->treebegins[reflsymdata->ntreerhs] = reflsymdata->ntrees;
+      reflsymdata->treerhs[reflsymdata->ntreerhs++] = 0.0;
+
+      /* indicate SOS1 constraint */
+      SCIP_CALL( addOperatorReflSym(reflsymdata, expr, -1, &mainopidx) );
+
+      for (i = 0; i < nvars; ++i)
+      {
+         int nlocvars = 1.0;
+
+         consvars[0] = SCIPgetVarsSOS1(scip, cons)[i];
+         consvals[0] = 1.0;
+         constant = 0.0;
+
+         SCIP_CALL( getActiveVariables(scip, &consvars, &consvals, &nlocvars, &constant, SCIPconsIsTransformed(cons)) );
+
+         if ( nlocvars == 1 )
+         {
+            /* ensure that [coef var] fits into the data structure */
+            SCIP_CALL( ensureReflSymDataMemorySuffices(scip, reflsymdata, reflsymdata->ntrees + 2,
+                  reflsymdata->ntreeops, reflsymdata->ntreecoefs + 1,
+                  reflsymdata->ntreevaridx + 1, reflsymdata->ntreevals) );
+
+            SCIP_CALL( addCoefReflSym(reflsymdata, 1.0, mainopidx, NULL) );
+            SCIP_CALL( addVarReflSym(reflsymdata, SCIPvarGetProbindex(consvars[0]), mainopidx, NULL) );
+         }
+         else
+         {
+            int sumidx;
+            int j;
+
+            /* ensure that [+ coef1 auxvar1 ... coefl auxvarl] fits into the data structure */
+            SCIP_CALL( ensureReflSymDataMemorySuffices(scip, reflsymdata, reflsymdata->ntrees + 2 * nlocvars + 1,
+                  reflsymdata->ntreeops + 1, reflsymdata->ntreecoefs + nlocvars,
+                  reflsymdata->ntreevaridx + nlocvars, reflsymdata->ntreevals) );
+
+            SCIP_CALL( addOperatorReflSym(reflsymdata, exprsum, mainopidx, &sumidx) );
+            for (j = 0; j < nlocvars; ++j)
+            {
+               SCIP_CALL( addCoefReflSym(reflsymdata, consvals[j], sumidx, NULL) );
+               SCIP_CALL( addVarReflSym(reflsymdata, SCIPvarGetProbindex(consvars[j]), sumidx, NULL) );
+            }
+         }
+      }
+
+      /* make sure that also the end position of the last constraint is stored correctly
+       * (ntreerhs has been incremented already above)
+       */
+      reflsymdata->treebegins[reflsymdata->ntreerhs] = reflsymdata->ntrees;
+
+      break;
+   case SYM_CONSTYPE_SOS2 :
+      /* encode SOS2 constraints as (SOS2 (tuple 1 x11 1 x12) ... (tuple 1 xk1 1 xk2)).
+       * If a variable is aggregated, replace [1 var] by  [+ ai1 yi1 ... ail yil].
+       *
+       * To avoid computing the number of needed expressions twice, we estimate the required memory
+       * by assuming each variable requires 3 auxiliary variables, and
+       * reallocate memory if needed.
+       */
+      nvars = SCIPgetNVarsSOS2(scip, cons);
+      exprsum = SCIPfindExprhdlr(scip, "sum");
+
+      SCIP_CALL( ensureReflSymDataMemorySuffices(scip, reflsymdata, reflsymdata->ntrees + 10 * nvars - 9,
+            reflsymdata->ntreeops + 4 * nvars - 3, reflsymdata->ntreecoefs + 3 * nvars - 3,
+            reflsymdata->ntreevaridx + 3 * nvars - 3, reflsymdata->ntreevals) );
+
+      /* initialize new tree */
+      reflsymdata->treebegins[reflsymdata->ntreerhs] = reflsymdata->ntrees;
+      reflsymdata->treerhs[reflsymdata->ntreerhs++] = 0.0;
+
+      /* indicate SOS2 constraint */
+      SCIP_CALL( addOperatorReflSym(reflsymdata, expr, -1, &mainopidx) );
+
+      /* add nodes for pairs */
+      for (i = 0; i < nvars - 1; ++i)
+      {
+         int subopidx;
+         int neededvars;
+         int nsumops = 0.0;
+         int nvals  =0.0;
+         int nlocvars = 1.0;
+         int j;
+
+         /* determine memory needed for storing variables (or their expressions) */
+         consvars[0] = SCIPgetVarsSOS2(scip, cons)[i + 1];
+         consvals[0] = 1.0;
+         constant = 0.0;
+
+         SCIP_CALL( getActiveVariables(scip, &consvars, &consvals, &nlocvars, &constant, SCIPconsIsTransformed(cons)) );
+         neededvars = nlocvars;
+         if ( nlocvars > 1 )
+            nsumops += 1;
+         if ( ! SCIPisZero(scip, constant) )
+            nvals += 1;
+
+         consvars[0] = SCIPgetVarsSOS2(scip, cons)[i];
+         consvals[0] = 1.0;
+         constant = 0.0;
+
+         SCIP_CALL( getActiveVariables(scip, &consvars, &consvals, &nlocvars, &constant, SCIPconsIsTransformed(cons)) );
+         neededvars += nlocvars;
+         if ( nlocvars > 1 )
+            nsumops += 1;
+         if ( ! SCIPisZero(scip, constant) )
+            nvals += 1;
+
+         SCIP_CALL( ensureReflSymDataMemorySuffices(scip, reflsymdata,
+               reflsymdata->ntrees + 2 * neededvars + nsumops + nvals + 1,
+               reflsymdata->ntreeops + nsumops + 1, reflsymdata->ntreecoefs + neededvars,
+               reflsymdata->ntreevaridx + neededvars, reflsymdata->ntreevals + nvals) );
+
+         SCIP_CALL( addOperatorReflSym(reflsymdata, (SCIP_EXPRHDLR*) SYM_CONSTYPE_TUPLE, mainopidx, &subopidx) );
+
+         /* add nodes for first variable in pair */
+         for (j = 0; j < nlocvars; ++j)
+         {
+            if ( nlocvars == 1 )
+            {
+               SCIP_CALL( addCoefReflSym(reflsymdata, 1.0, subopidx, NULL) );
+               SCIP_CALL( addVarReflSym(reflsymdata, SCIPvarGetProbindex(consvars[0]), subopidx, NULL) );
+            }
+            else
+            {
+               int sumidx;
+               int k;
+
+               SCIP_CALL( addOperatorReflSym(reflsymdata, exprsum, subopidx, &sumidx) );
+               if ( ! SCIPisZero(scip, constant) )
+               {
+                  SCIP_CALL( addValReflSym(reflsymdata, constant, sumidx, NULL) );
+               }
+               for (k = 0; k < nlocvars; ++k)
+               {
+                  SCIP_CALL( addCoefReflSym(reflsymdata, consvals[j], sumidx, NULL) );
+                  SCIP_CALL( addVarReflSym(reflsymdata, SCIPvarGetProbindex(consvars[j]), sumidx, NULL) );
+               }
+            }
+         }
+
+         /* add nodes for second variable in pair */
+         consvars[0] = SCIPgetVarsSOS2(scip, cons)[i + 1];
+         consvals[0] = 1.0;
+         constant = 0.0;
+
+         SCIP_CALL( getActiveVariables(scip, &consvars, &consvals, &nlocvars, &constant, SCIPconsIsTransformed(cons)) );
+
+         for (j = 0; j < nlocvars; ++j)
+         {
+            if ( nlocvars == 1 )
+            {
+               SCIP_CALL( addCoefReflSym(reflsymdata, 1.0, subopidx, NULL) );
+               SCIP_CALL( addVarReflSym(reflsymdata, SCIPvarGetProbindex(consvars[0]), subopidx, NULL) );
+            }
+            else
+            {
+               int sumidx;
+               int k;
+
+               SCIP_CALL( addOperatorReflSym(reflsymdata, exprsum, subopidx, &sumidx) );
+               if ( ! SCIPisZero(scip, constant) )
+               {
+                  SCIP_CALL( addValReflSym(reflsymdata, constant, sumidx, NULL) );
+               }
+               for (k = 0; k < nlocvars; ++k)
+               {
+                  SCIP_CALL( addCoefReflSym(reflsymdata, consvals[j], sumidx, NULL) );
+                  SCIP_CALL( addVarReflSym(reflsymdata, SCIPvarGetProbindex(consvars[j]), sumidx, NULL) );
+               }
+            }
+         }
+      }
+
+      /* make sure that also the end position of the last constraint is stored correctly
+       * (ntreerhs has been incremented already above)
+       */
+      reflsymdata->treebegins[reflsymdata->ntreerhs] = reflsymdata->ntrees;
+
+      break;
    default:
       SCIPinfoMessage(scip, NULL,
          "Terminate symmetry detection, because of unknown constraint type of constraint %s.\n",
          SCIPconsGetName(cons));
       return SCIP_ERROR;
    }
+
+   return SCIP_OKAY;
+}
+
+/** determines colors of variables, rhs, coefficients, values, and operators for reflection symmetry detection */
+static
+SCIP_RETCODE findColorsReflSym(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SYM_REFLSYMDATA*      reflsymdata,        /**< pointer to reflection symmetry data */
+   SYM_SPEC              fixedtype,          /**< variable types that must be fixed by symmetries */
+   SCIP_Bool*            success             /**< pointer to store whether colors could be found successfully */
+   )
+{
+   SYM_VARTYPE* uniquevararray;
+   SCIP_HASHTABLE* vartypemap;
+   SCIP_EXPRHDLR* oldop = NULL;
+   SCIP_EXPRHDLR* op;
+   int* perm;
+   SCIP_Real value;
+   SCIP_Real oldcoef = SCIP_INVALID;
+   int nuniquevararray = 0;
+   int lenperm;
+   int nvars;
+   int j;
+
+   assert( scip != NULL );
+   assert( reflsymdata != NULL );
+   assert( success != NULL );
+
+   *success = TRUE;
+
+   nvars = reflsymdata->ntreevars;
+
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &uniquevararray, nvars) );
+   SCIP_CALL( SCIPhashtableCreate(&vartypemap, SCIPblkmem(scip), 5 * nvars, SYMhashGetKeyVartype,
+         SYMhashKeyEQVartype, SYMhashKeyValVartype, (void*) scip) );
+   assert( vartypemap != NULL );
+
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &reflsymdata->varcolors, nvars) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &reflsymdata->coefcolors, reflsymdata->ntreecoefs) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &reflsymdata->valcolors, reflsymdata->ntreevals) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &reflsymdata->opscolors, reflsymdata->ntreeops) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &reflsymdata->rhscolors, reflsymdata->ntreerhs) );
+
+   /* find non-equivalent variables: same objective, lower and upper bounds, and variable type */
+   for (j = 0; j < nvars; ++j)
+   {
+      SCIP_VAR* var;
+
+      var = reflsymdata->treevars[j];
+      assert( var != NULL );
+
+      /* if the variable type should be fixed, just increase the color */
+      if ( SymmetryFixVar(fixedtype, var) )
+      {
+         reflsymdata->varcolors[j] = reflsymdata->nuniquevars++;
+#ifdef SCIP_OUTPUT
+         SCIPdebugMsg(scip, "Detected variable <%s> of fixed type %d - color %d.\n",
+            SCIPvarGetName(var), SCIPvarGetType(var), reflsymdata.nuniquevars - 1);
+#endif
+      }
+      else
+      {
+         SYM_VARTYPE* vt;
+
+         vt = &uniquevararray[nuniquevararray];
+         assert( nuniquevararray <= reflsymdata->nuniquevars );
+
+         vt->obj = SCIPvarGetObj(var);
+         vt->lb = SCIPvarGetLbGlobal(var);
+         vt->ub = SCIPvarGetUbGlobal(var);
+         vt->type = SCIPvarGetType(var);
+         vt->nconss = 0; /* @todo check whether we want to use this */
+
+         if ( ! SCIPhashtableExists(vartypemap, (void*) vt) )
+         {
+            SCIP_CALL( SCIPhashtableInsert(vartypemap, (void*) vt) );
+            vt->color = reflsymdata->nuniquevars;
+            reflsymdata->varcolors[j] = reflsymdata->nuniquevars++;
+            ++nuniquevararray;
+#ifdef SCIP_OUTPUT
+            SCIPdebugMsg(scip,
+               "Detected variable <%s> of new type (probindex: %d, obj: %g, lb: %g, ub: %g, type: %d) - color %d.\n",
+               SCIPvarGetName(var), SCIPvarGetProbindex(var), vt->obj, vt->lb, vt->ub, vt->type,
+               reflsymdata.nuniquevars - 1);
+#endif
+         }
+         else
+         {
+            SYM_VARTYPE* vtr;
+
+            vtr = (SYM_VARTYPE*) SCIPhashtableRetrieve(vartypemap, (void*) vt);
+            reflsymdata->varcolors[j] = vtr->color;
+         }
+      }
+   }
+
+   /* @todo check whether we want to use this, also if all variables have a different color,
+    * there might be reflection symmetries of individual variables with themselves
+    */
+#if SCIP_DISABLED_CODE
+   /* terminate early if all variables receive a different color */
+   if ( reflection->nuniquevars == nvars )
+   {
+      *success = FALSE;
+
+      SCIPfreeBlockMemoryArrayNull(scip, &perm, lenperm);
+      SCIPhashtableFree(&vartypemap);
+      SCIPfreeBlockMemoryArrayNull(scip, &uniquevararray, nvars);
+
+      return SCIP_OKAY;
+   }
+#endif
+
+   /* to identify colors of symmetry detection graph, identify unique coefficients/values/variables/operators/rhs */
+   lenperm = MAX(MAX(reflsymdata->ntreecoefs, reflsymdata->ntreeops),
+      MAX(reflsymdata->ntreevals, reflsymdata->ntreevaridx));
+
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &perm, lenperm) );
+
+   /* sort coefficients and identify colors of coefficients */
+   SCIPsort(perm, SYMsortMatCoef, (void*) reflsymdata->treecoefs, reflsymdata->ntreecoefs);
+
+   for (j = 0; j < reflsymdata->ntreecoefs; ++j)
+   {
+      int idx;
+
+      idx = perm[j];
+      assert( 0 <= idx && idx < reflsymdata->ntreecoefs );
+
+      value = reflsymdata->treecoefs[idx];
+      assert( oldcoef == SCIP_INVALID || oldcoef <= value ); /*lint !e777*/
+
+      if ( ! SCIPisEQ(scip, value, oldcoef) )
+      {
+#ifdef SCIP_OUTPUT
+         SCIPdebugMsg(scip, "Detected new matrix coefficient type %f - color: %d\n.", value, reflsymdata->nuniquecoefs);
+#endif
+         reflsymdata->coefcolors[idx] = reflsymdata->nuniquecoefs++;
+         oldcoef = value;
+      }
+      else
+      {
+         assert( reflsymdata->nuniquecoefs > 0 );
+         reflsymdata->coefcolors[idx] = reflsymdata->nuniquecoefs - 1;
+      }
+   }
+
+   /* sort values and identify colors of values */
+   SCIPsort(perm, SYMsortMatCoef, (void*) reflsymdata->treevals, reflsymdata->ntreevals);
+
+   oldcoef = SCIP_INVALID;
+   for (j = 0; j < reflsymdata->ntreevals; ++j)
+   {
+      int idx;
+
+      idx = perm[j];
+      assert( 0 <= idx && idx < reflsymdata->ntreevals );
+
+      value = reflsymdata->treevals[idx];
+      assert( oldcoef == SCIP_INVALID || oldcoef <= value ); /*lint !e777*/
+
+      if ( ! SCIPisEQ(scip, value, oldcoef) )
+      {
+#ifdef SCIP_OUTPUT
+         SCIPdebugMsg(scip, "Detected new matrix value type %f - color: %d\n.", value, reflsymdata->nuniquecoefs);
+#endif
+         reflsymdata->valcolors[idx] = reflsymdata->nuniquevals++;
+         oldcoef = value;
+      }
+      else
+      {
+         assert( reflsymdata->nuniquevals > 0 );
+         reflsymdata->valcolors[idx] = reflsymdata->nuniquevals - 1;
+      }
+   }
+
+   /* sort operators and identify colors of operators */
+   SCIPsort(perm, SYMsortOperators, (void*) reflsymdata->treeops, reflsymdata->ntreeops);
+
+   for (j = 0; j < reflsymdata->ntreeops; ++j)
+   {
+      int idx;
+
+      idx = perm[j];
+      assert( 0 <= idx && idx < reflsymdata->ntreeops );
+
+      op = reflsymdata->treeops[idx];
+      assert( oldop == NULL || oldop <= op ); /*lint !e777*/
+
+      if ( op != oldop )
+      {
+#ifdef SCIP_OUTPUT
+         SCIPdebugMsg(scip, "Detected new operator type %p - color: %d\n.", (void*) op, reflsymdata->nuniqueops);
+#endif
+         reflsymdata->opscolors[idx] = reflsymdata->nuniqueops++;
+         oldop = op;
+      }
+      else
+      {
+         assert( reflsymdata->nuniqueops > 0 );
+         reflsymdata->opscolors[idx] = reflsymdata->nuniqueops - 1;
+      }
+   }
+
+   /* sort rhs and identify colors of rhs */
+   SCIPsort(perm, SYMsortMatCoef, (void*) reflsymdata->treerhs, reflsymdata->ntreerhs);
+
+   oldcoef = SCIP_INVALID;
+   for (j = 0; j < reflsymdata->ntreerhs; ++j)
+   {
+      int idx;
+
+      idx = perm[j];
+      assert( 0 <= idx && idx < reflsymdata->ntreerhs );
+
+      value = reflsymdata->treerhs[idx];
+      assert( oldcoef == SCIP_INVALID || oldcoef <= value ); /*lint !e777*/
+
+      if ( ! SCIPisEQ(scip, oldcoef, value) )
+      {
+#ifdef SCIP_OUTPUT
+         SCIPdebugMsg(scip, "Detected new rhs type %f - color: %d\n.", value, reflsymdata->nuniqueops);
+#endif
+         reflsymdata->rhscolors[idx] = reflsymdata->nuniquerhs++;
+         oldcoef = value;
+      }
+      else
+      {
+         assert( reflsymdata->nuniquerhs > 0 );
+         reflsymdata->rhscolors[idx] = reflsymdata->nuniquerhs - 1;
+      }
+   }
+
+   SCIPfreeBlockMemoryArrayNull(scip, &perm, lenperm);
+
+   SCIPhashtableFree(&vartypemap);
+   SCIPfreeBlockMemoryArrayNull(scip, &uniquevararray, nvars);
 
    return SCIP_OKAY;
 }
@@ -2774,6 +3241,7 @@ SCIP_RETCODE computeReflectionSymmetryGroup(
    int nvars;
    int nconsvars;
    int c;
+   SCIP_Bool subsuccess;
 
    assert( scip != NULL );
    assert( success != NULL );
@@ -2834,6 +3302,18 @@ SCIP_RETCODE computeReflectionSymmetryGroup(
    reflsymdata.maxntreevals = 10 * nactiveconss;
    reflsymdata.maxntreeops = 10 * nactiveconss;
    reflsymdata.maxntreebegins = 2 * nactiveconss + 1;
+
+   reflsymdata.nuniquevars = 0;
+   reflsymdata.nuniquecoefs = 0;
+   reflsymdata.nuniqueops = 0;
+   reflsymdata.nuniquevals = 0;
+   reflsymdata.nuniquerhs = 0;
+
+   reflsymdata.varcolors = NULL;
+   reflsymdata.coefcolors = NULL;
+   reflsymdata.opscolors = NULL;
+   reflsymdata.valcolors = NULL;
+   reflsymdata.rhscolors = NULL;
 
    SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &vars, SCIPgetVars(scip), nvars) ); /*lint !e666*/
    assert( vars != NULL );
@@ -3011,11 +3491,11 @@ SCIP_RETCODE computeReflectionSymmetryGroup(
       {
          SCIP_CALL( storeSimpleConstraint(scip, &reflsymdata, cons, SYM_CONSTYPE_PSEUDOBOOL, consvars, consvals) );
       }
-      else if ( strcmp(conshdlrname, "sos1") == 0 )
+      else if ( strcmp(conshdlrname, "SOS1") == 0 )
       {
          SCIP_CALL( storeSimpleConstraint(scip, &reflsymdata, cons, SYM_CONSTYPE_SOS1, consvars, consvals) );
       }
-      else if ( strcmp(conshdlrname, "sos2") == 0 )
+      else if ( strcmp(conshdlrname, "SOS2") == 0 )
       {
          SCIP_CALL( storeSimpleConstraint(scip, &reflsymdata, cons, SYM_CONSTYPE_SOS2, consvars, consvals) );
       }
@@ -3023,15 +3503,38 @@ SCIP_RETCODE computeReflectionSymmetryGroup(
       {
          SCIP_CALL( storeSimpleConstraint(scip, &reflsymdata, cons, SYM_CONSTYPE_XOR, consvars, consvals) );
       }
+      else
+      {
+         /* if constraint is not one of the previous types, it cannot be handled */
+         SCIPerrorMessage("Cannot determine symmetries for constraint <%s> of constraint handler <%s>.\n",
+            SCIPconsGetName(cons), SCIPconshdlrGetName(conshdlr) );
+         return SCIP_ERROR;
+      }
    }
 
    SCIP_CALL( printReflectionSymmetryData(scip, &reflsymdata) );
 
+   SCIPdebugMsg(scip, "Collected information about problem. Prepare data for building symmetry detection graph.\n");
+
+   /* free memory no longer needed */
+   SCIPfreeBlockMemoryArrayNull(scip, &consvals, nvars + SCIPgetNFixedVars(scip));
+   SCIPfreeBlockMemoryArrayNull(scip, &consvars, nvars + SCIPgetNFixedVars(scip));
+
+   /* find colors of variables, rhs, operators, values, and coefficients */
+   SCIP_CALL( findColorsReflSym(scip, &reflsymdata, fixedtype, &subsuccess) );
+
+   if ( ! subsuccess )
+      goto FREEMEMORY;
+
    SCIPdebugMsg(scip, "Finished computing reflection symmetry group.\n");
 
    /* free memory */
-   SCIPfreeBlockMemoryArrayNull(scip, &consvals, nvars + SCIPgetNFixedVars(scip));
-   SCIPfreeBlockMemoryArrayNull(scip, &consvars, nvars + SCIPgetNFixedVars(scip));
+ FREEMEMORY:
+   SCIPfreeBlockMemoryArrayNull(scip, &reflsymdata.rhscolors, reflsymdata.ntreerhs);
+   SCIPfreeBlockMemoryArrayNull(scip, &reflsymdata.opscolors, reflsymdata.ntreeops);
+   SCIPfreeBlockMemoryArrayNull(scip, &reflsymdata.valcolors, reflsymdata.ntreevals);
+   SCIPfreeBlockMemoryArrayNull(scip, &reflsymdata.coefcolors, reflsymdata.ntreecoefs);
+   SCIPfreeBlockMemoryArrayNull(scip, &reflsymdata.varcolors, nvars);
 
    SCIPfreeBlockMemoryArrayNull(scip, &reflsymdata.opsidx, reflsymdata.maxntreeops);
    SCIPfreeBlockMemoryArrayNull(scip, &reflsymdata.validx, reflsymdata.maxntreevals);

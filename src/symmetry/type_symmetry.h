@@ -79,7 +79,8 @@ enum SYM_Constype
    SYM_CONSTYPE_SOS2     = 8,                /**< constraint of type SOS2 */
    SYM_CONSTYPE_XOR      = 9,                /**< constraint of type xor */
    SYM_CONSTYPE_GEQ      = 10,               /**< needed to encode >= in bounddisjunctions */
-   SYM_CONSTYPE_EQ       = 11                /**< needed to encode == in indicator constraints */
+   SYM_CONSTYPE_EQ       = 11,               /**< needed to encode == in indicator constraints */
+   SYM_CONSTYPE_TUPLE    = 12                /**< needed to encode pairs in SOS2 constraints */
 };
 typedef enum SYM_Constype SYM_CONSTYPE;
 
