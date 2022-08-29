@@ -4022,6 +4022,8 @@ SCIP_RETCODE determineSymmetry(
       return SCIP_OKAY;
 
    /* skip symmetry computation if there are constraints that cannot be handled by symmetry */
+   /* @todo rework this part; disabled for testing reflection symmetries */
+#if SCIP_DISABLED_CODE
    nconss = SCIPgetNActiveConss(scip);
    nhandleconss = getNSymhandableConss(scip, propdata->conshdlr_nonlinear);
    if ( nhandleconss < nconss )
@@ -4036,6 +4038,7 @@ SCIP_RETCODE determineSymmetry(
 
       return SCIP_OKAY;
    }
+#endif
 
    assert( propdata->npermvars == 0 );
    assert( propdata->permvars == NULL );
