@@ -2929,7 +2929,7 @@ SCIP_RETCODE storeSimpleConstraint(
                      reflsymdata->ntreevaridx + 1, reflsymdata->ntreevals + 1) );
 
                SCIP_CALL( addOperatorReflSym(reflsymdata, exprsum, mainopidx, &sumidx) );
-               SCIP_CALL( addVarReflSym(reflsymdata, constant, sumidx, NULL) );
+               SCIP_CALL( addValReflSym(reflsymdata, constant, sumidx, NULL) );
                SCIP_CALL( addCoefReflSym(reflsymdata, 1.0, sumidx, NULL) );
                SCIP_CALL( addVarReflSym(reflsymdata, SCIPvarGetProbindex(consvars[0]), sumidx, NULL) );
             }
