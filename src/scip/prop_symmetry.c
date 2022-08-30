@@ -3370,6 +3370,9 @@ SCIP_RETCODE storeObjective(
       assert( var != NULL );
       assert( SCIPvarGetProbindex(var) >= 0 );
 
+      if ( SCIPisZero(scip, SCIPvarGetObj(var)) )
+         continue;
+
       SCIP_CALL( addCoefReflSym(reflsymdata, SCIPvarGetObj(var), mainopidx, NULL) );
       SCIP_CALL( addVarReflSym(reflsymdata, SCIPvarGetProbindex(var), mainopidx, NULL) );
    }
