@@ -3114,8 +3114,11 @@ SCIP_RETCODE findColorsReflSym(
    SCIP_EXPRHDLR* op;
    int* perm;
    SCIP_Real value;
+   SCIP_Real lastcoef;
    SCIP_Real oldcoef = SCIP_INVALID;
    int nuniquevararray = 0;
+   int invcolor;
+   int lastpos;
    int lenperm;
    int nvars;
    int j;
@@ -3135,6 +3138,7 @@ SCIP_RETCODE findColorsReflSym(
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &reflsymdata->varcolors, nvars) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &reflsymdata->coefcolors, reflsymdata->ntreecoefs) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &reflsymdata->invcoefcolors, reflsymdata->ntreecoefs) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &reflsymdata->valcolors, reflsymdata->ntreevals) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &reflsymdata->opscolors, reflsymdata->ntreeops) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &reflsymdata->rhscolors, reflsymdata->ntreerhs) );
@@ -3218,15 +3222,26 @@ SCIP_RETCODE findColorsReflSym(
    /* sort coefficients and identify colors of coefficients */
    SCIPsort(perm, SYMsortMatCoef, (void*) reflsymdata->treecoefs, reflsymdata->ntreecoefs);
 
+   lastpos = reflsymdata->ntreecoefs - 1;
+   lastcoef = reflsymdata->treecoefs[perm[lastpos]];
+
    for (j = 0; j < reflsymdata->ntreecoefs; ++j)
    {
       int idx;
+      SCIP_Bool invexists = FALSE;
 
       idx = perm[j];
       assert( 0 <= idx && idx < reflsymdata->ntreecoefs );
 
       value = reflsymdata->treecoefs[idx];
       assert( oldcoef == SCIP_INVALID || oldcoef <= value ); /*lint !e777*/
+
+      /* check whether the inverse coefficient also appears in the list of coefficients, exploit sorting of list */
+      while ( SCIPisGT(scip, lastcoef, -value) && lastpos > 0 )
+         lastcoef = reflsymdata->treecoefs[perm[--lastpos]];
+
+      if ( SCIPisEQ(scip, value, -lastcoef) )
+         invexists = TRUE;
 
       if ( ! SCIPisEQ(scip, value, oldcoef) )
       {
@@ -3235,11 +3250,40 @@ SCIP_RETCODE findColorsReflSym(
 #endif
          reflsymdata->coefcolors[idx] = reflsymdata->nuniquecoefs++;
          oldcoef = value;
+
+         /* if inverse color exists, store its position, otherwise create a new color,
+          * distinguish both by their sign
+          */
+         if ( invexists )
+            reflsymdata->invcoefcolors[idx] = -(perm[lastpos] + 1);
+         else
+            reflsymdata->invcoefcolors[idx] = reflsymdata->nuniquecoefs++;
+         invcolor = reflsymdata->invcoefcolors[idx];
       }
       else
       {
          assert( reflsymdata->nuniquecoefs > 0 );
-         reflsymdata->coefcolors[idx] = reflsymdata->nuniquecoefs - 1;
+         assert( invcolor >= 0 || invexists );
+
+         if ( invexists )
+            reflsymdata->coefcolors[idx] = reflsymdata->nuniquecoefs - 1;
+         else
+            reflsymdata->coefcolors[idx] = reflsymdata->nuniquecoefs - 2;
+         reflsymdata->invcoefcolors[idx] = invcolor;
+      }
+   }
+
+   /* replace positions in invcoefcolors by their color */
+   for (j = 0; j < reflsymdata->ntreecoefs; ++j)
+   {
+      int col;
+
+      col = reflsymdata->invcoefcolors[j];
+      if ( col < 0 )
+      {
+         assert( SCIPisEQ(scip, reflsymdata->treecoefs[j], - reflsymdata->treecoefs[-col - 1]) );
+
+         reflsymdata->invcoefcolors[j] = reflsymdata->coefcolors[-col - 1];
       }
    }
 
@@ -3700,6 +3744,7 @@ SCIP_RETCODE computeReflectionSymmetryGroup(
    SCIPfreeBlockMemoryArrayNull(scip, &reflsymdata.rhscolors, reflsymdata.ntreerhs);
    SCIPfreeBlockMemoryArrayNull(scip, &reflsymdata.opscolors, reflsymdata.ntreeops);
    SCIPfreeBlockMemoryArrayNull(scip, &reflsymdata.valcolors, reflsymdata.ntreevals);
+   SCIPfreeBlockMemoryArrayNull(scip, &reflsymdata.invcoefcolors, reflsymdata.ntreecoefs);
    SCIPfreeBlockMemoryArrayNull(scip, &reflsymdata.coefcolors, reflsymdata.ntreecoefs);
    SCIPfreeBlockMemoryArrayNull(scip, &reflsymdata.varcolors, nvars);
 

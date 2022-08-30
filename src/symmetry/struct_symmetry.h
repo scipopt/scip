@@ -107,7 +107,7 @@ struct SYM_Reflsymdata
    SCIP_Real*            treerhs;            /**< right-hand side coefficients of trees */
    int*                  treeparentidx;      /**< array assigning each position in trees the position of its parent
                                               *   (or -1 in case the position corresponds to the root of a tree) */
-   int*                  treevaridx;         /**< indices of variables in expression trees (order according to trees) */
+   int*                  treevaridx;         /**< indices of variables in expression trees (order according t trees) */
    SCIP_Real*            treecoefs;          /**< var coefficients in expression trees (order according to trees) */
    SCIP_Real*            treevals;           /**< numerical values in expression trees (order according to trees) */
    SCIP_EXPRHDLR**       treeops;            /**< operators used in expression trees (order according to trees) */
@@ -134,6 +134,7 @@ struct SYM_Reflsymdata
    int                   maxntreebegins;     /**< maximum number of elements that fit into treebegins */
    int*                  varcolors;          /**< array to store colors of individual variables */
    int*                  coefcolors;         /**< array to store colors of individual coefficients */
+   int*                  invcoefcolors;      /**< array to store inverse colors of individual coefficients */
    int*                  opscolors;          /**< array to store colors of individual operators */
    int*                  valcolors;          /**< array to store colors of individual values */
    int*                  rhscolors;          /**< array to store colors of individual right-hand sides */
