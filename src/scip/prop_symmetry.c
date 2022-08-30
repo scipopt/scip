@@ -2116,6 +2116,8 @@ SCIP_RETCODE printReflectionSymmetryData(
                SCIPinfoMessage(scip, NULL, "SOS2 ");
             else if ( op == (SCIP_EXPRHDLR*) SYM_CONSTYPE_TUPLE )
                SCIPinfoMessage(scip, NULL, "tuple ");
+            else if ( op == (SCIP_EXPRHDLR*) SYM_CONSTYPE_OBJ )
+               SCIPinfoMessage(scip, NULL, "objective: ");
             else
                SCIPinfoMessage(scip, NULL, "? ");
             break;
@@ -3335,6 +3337,51 @@ SCIP_RETCODE findColorsReflSym(
    return SCIP_OKAY;
 }
 
+/** stores the objective in data for reflection symmetry detection */
+static
+SCIP_RETCODE storeObjective(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SYM_REFLSYMDATA*      reflsymdata         /**< pointer to reflection symmetry data */
+   )
+{
+   SCIP_VAR* var;
+   int mainopidx;
+   int nvars;
+   int j;
+
+   assert( scip != NULL );
+   assert( reflsymdata != NULL );
+
+   nvars = reflsymdata->ntreevars;
+
+   SCIP_CALL( ensureReflSymDataMemorySuffices(scip, reflsymdata,
+         reflsymdata->ntrees + 2 * nvars + 1, reflsymdata->ntreeops + 1,
+         reflsymdata->ntreecoefs + nvars, reflsymdata->ntreevaridx + nvars,
+         reflsymdata->ntreevals) );
+
+   /* initialize new tree */
+   reflsymdata->treebegins[reflsymdata->ntreerhs] = reflsymdata->ntrees;
+   reflsymdata->treerhs[reflsymdata->ntreerhs++] = 0.0;
+
+   SCIP_CALL( addOperatorReflSym(reflsymdata, (SCIP_EXPRHDLR*) SYM_CONSTYPE_OBJ, -1, &mainopidx) );
+   for (j = 0; j < nvars; ++j)
+   {
+      var = reflsymdata->treevars[j];
+      assert( var != NULL );
+      assert( SCIPvarGetProbindex(var) >= 0 );
+
+      SCIP_CALL( addCoefReflSym(reflsymdata, SCIPvarGetObj(var), mainopidx, NULL) );
+      SCIP_CALL( addVarReflSym(reflsymdata, SCIPvarGetProbindex(var), mainopidx, NULL) );
+   }
+
+   /* make sure that also the end position of the last constraint is stored correctly
+    * (ntreerhs has been incremented already above)
+    */
+   reflsymdata->treebegins[reflsymdata->ntreerhs] = reflsymdata->ntrees;
+
+   return SCIP_OKAY;
+}
+
 /** computes reflection symmetry group of a CIP */
 static
 SCIP_RETCODE computeReflectionSymmetryGroup(
@@ -3625,6 +3672,9 @@ SCIP_RETCODE computeReflectionSymmetryGroup(
          return SCIP_ERROR;
       }
    }
+
+   /* to easily incorporate objective coefficients in data structure, add objective as "constraint" */
+   SCIP_CALL( storeObjective(scip, &reflsymdata) );
 
    SCIP_CALL( printReflectionSymmetryData(scip, &reflsymdata) );
 
