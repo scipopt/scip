@@ -56,6 +56,14 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    SCIP_Real*            log10groupsize      /**< pointer to store log10 of size of group */
    );
 
+/** compute generators of reflection symmetry group */
+SCIP_EXPORT
+SCIP_RETCODE SYMcomputeReflectionSymmetryGenerators(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SYM_REFLSYMDATA*      reflsymdata,        /**< data for computing reflection symmetries */
+   int                   maxgenerators       /**< maximum number of generators to be computed */
+   );
+
 #ifdef __cplusplus
 }
 #endif

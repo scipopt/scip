@@ -252,6 +252,73 @@ void blisshook(
    data->perms[data->nperms++] = p;
 }
 
+/** callback function for bliss in case of reflection symmetries */
+static
+void blisshookReflSym(
+   void*                 user_param,         /**< parameter supplied at call to bliss */
+   unsigned int          n,                  /**< size of aut vector */
+   const unsigned int*   aut                 /**< automorphism */
+   )
+{
+   assert( aut != NULL );
+   assert( user_param != NULL );
+
+   BLISS_Data* data = static_cast<BLISS_Data*>(user_param);
+   assert( data->scip != NULL );
+   assert( 2 * data->npermvars < (int) n );
+   assert( data->maxgenerators >= 0);
+
+   /* make sure we do not generate more that maxgenerators many permutations, if the limit in bliss is not available */
+   if ( data->maxgenerators != 0 && data->nperms >= data->maxgenerators )
+      return;
+
+   /* copy first part of automorphism */
+   bool isIdentity = true;
+   int* p = 0;
+   if ( SCIPallocBlockMemoryArray(data->scip, &p, 2 * data->npermvars) != SCIP_OKAY )
+      return;
+
+   for (int j = 0; j < 2 * data->npermvars; ++j)
+   {
+      /* convert index of variable-level 0-nodes to variable indices */
+      p[j] = (int) aut[j];
+      if ( p[j] != j )
+         isIdentity = false;
+   }
+
+   /* ignore trivial generators, i.e. generators that only permute the constraints */
+   if ( isIdentity )
+   {
+      SCIPfreeBlockMemoryArray(data->scip, &p, 2 * data->npermvars);
+      return;
+   }
+
+   /* check whether we should allocate space for perms */
+   if ( data->nmaxperms <= 0 )
+   {
+      if ( data->maxgenerators == 0 )
+         data->nmaxperms = 100;   /* seems to cover many cases */
+      else
+         data->nmaxperms = data->maxgenerators;
+
+      if ( SCIPallocBlockMemoryArray(data->scip, &data->perms, data->nmaxperms) != SCIP_OKAY )
+         return;
+   }
+   else if ( data->nperms >= data->nmaxperms )    /* check whether we need to resize */
+   {
+      int newsize = SCIPcalcMemGrowSize(data->scip, data->nperms + 1);
+      assert( newsize >= data->nperms );
+      assert( data->maxgenerators == 0 );
+
+      if ( SCIPreallocBlockMemoryArray(data->scip, &data->perms, data->nmaxperms, newsize) != SCIP_OKAY )
+         return;
+
+      data->nmaxperms = newsize;
+   }
+
+   data->perms[data->nperms++] = p;
+}
+
 /** Creates the nodes in the graph that correspond to variables. Each variable type gets a unique color
  *
  *  @pre graph should be empty when this is called
@@ -946,6 +1013,195 @@ SCIP_RETCODE fillGraphByNonlinearConss(
    return SCIP_OKAY;
 }
 
+/** returns the color of a tree node in its respective class */
+int colorInClass(
+   int                   nodeidx,            /**< index of node in tree */
+   SYM_REFLSYMDATA*      reflsymdata,        /**< data for reflection symmetry detection */
+   SCIP_Bool             inverse             /**< whether the color of the negated input shall be returned */
+   )
+{
+   int color;
+
+   assert( reflsymdata != NULL );
+
+   switch ( reflsymdata->trees[nodeidx] )
+   {
+   case SYM_NODETYPE_OPERATOR :
+      color = reflsymdata->opscolors[reflsymdata->treemap[nodeidx]];
+      break;
+   case SYM_NODETYPE_COEF :
+      if ( inverse )
+         color = reflsymdata->invcoefcolors[reflsymdata->treemap[nodeidx]];
+      else
+         color = reflsymdata->coefcolors[reflsymdata->treemap[nodeidx]];
+      break;
+   case SYM_NODETYPE_VAR :
+      if ( inverse )
+         color = reflsymdata->invvarcolors[reflsymdata->treemap[nodeidx]];
+      else
+         color = reflsymdata->varcolors[reflsymdata->treemap[nodeidx]];
+      break;
+   default :
+      assert( reflsymdata->trees[nodeidx] == SYM_NODETYPE_VAL );
+      color = reflsymdata->valcolors[reflsymdata->treemap[nodeidx]];
+   }
+
+   return color;
+}
+
+/** creates the graph for detecting reflection symmetries */
+SCIP_RETCODE SCIPcreateReflectionSymmetryDetectionGraph(
+   SCIP*                 scip,               /**< SCIP pointer */
+   bliss::Graph*         G,                  /**< graph to be constructed */
+   SYM_REFLSYMDATA*      reflsymdata,        /**< data of CIP */
+   SCIP_Bool&            success             /**< whether the construction was successful */
+   )
+{
+   int nnodes = 0;
+   int nusedcolors = 0;
+
+   assert( scip != NULL );
+   assert( G != NULL );
+   assert( reflsymdata != NULL );
+
+   success = TRUE;
+
+   SCIPdebugMsg(scip, "Add variable nodes to symmetry detection graph.\n");
+
+   /* add nodes for variables */
+   for (int v = 0; v < reflsymdata->ntreevars; ++v)
+   {
+      const int color = reflsymdata->varcolors[v];
+      assert( 0 <= color && color < reflsymdata->nuniquevars );
+
+#ifndef NDEBUG
+      int node = (int) G->add_vertex((unsigned) color);
+      assert( node == v );
+#else
+      (void) G->add_vertex((unsigned) color);
+#endif
+
+      ++nnodes;
+   }
+
+   /* add nodes for negated variables and add edges to the original variable*/
+   for (int v = 0; v < reflsymdata->ntreevars; ++v)
+   {
+      const int color = reflsymdata->invvarcolors[v];
+      assert( 0 <= color && color < reflsymdata->nuniquevars );
+
+#ifndef NDEBUG
+      int node = (int) G->add_vertex((unsigned) color);
+      assert( node == reflsymdata->ntreevars + v );
+#else
+      (void) G->add_vertex((unsigned) color);
+#endif
+
+      G->add_edge(node, node - reflsymdata->ntreevars);
+
+      ++nnodes;
+   }
+   nusedcolors = reflsymdata->nuniquevars;
+
+   /* add nodes for rhs coefficients of constraints */
+   for (int c = 0; c < reflsymdata->nuniquerhs; ++c)
+   {
+#ifndef NDEBUG
+      int node = (int) G->add_vertex((unsigned) (nusedcolors + c));
+      assert( node == 2 * reflsymdata->ntreevars + c );
+#else
+      (void) G->add_vertex((unsigned) (nusedcolors + c));
+#endif
+   }
+   assert( (int) G->get_nof_vertices() == 2 * reflsymdata->ntreevars + reflsymdata->nuniquerhs );
+   nusedcolors += reflsymdata->nuniquerhs;
+
+   /* starting positions of different types of nodes */
+   int rhsstart = 2 * reflsymdata->ntreevars;
+
+   /* starting positions of colors of different type of nodes */
+   int rhscolstart = reflsymdata->nuniquevars;
+   int opcolstart = rhscolstart + reflsymdata->nuniquerhs;
+   int coefcolstart = opcolstart + reflsymdata->nuniqueops;
+   int valcolstart = coefcolstart + reflsymdata->nuniquecoefs;
+
+   /* add nodes and edges for constraints */
+   for (int c = 0; c < reflsymdata->ntreerhs; ++c)
+   {
+      /* keep track of path to root node, possible since tree is stored in DFS fashion */
+      std::vector<unsigned> pathtoroot;
+      std::vector<unsigned> pathtorootidx;
+
+      /* iterate through tree and create nodes and edges for constraint */
+      for (int i = reflsymdata->treebegins[c]; i < reflsymdata->treebegins[c + 1]; ++i)
+      {
+         /* remove elements from the path that are not predecessors of the current node */
+         while ( pathtoroot.size() > 0 && (int) pathtorootidx.back() > reflsymdata->treeparentidx[i] )
+         {
+            pathtorootidx.pop_back();
+            pathtoroot.pop_back();
+         }
+
+         if ( reflsymdata->treeparentidx[i] == -1 )
+         {
+            /* add root node and connect it with corresponding rhs node */
+            assert( reflsymdata->trees[i] == SYM_NODETYPE_OPERATOR );
+            unsigned node = G->add_vertex((unsigned) opcolstart + colorInClass(i, reflsymdata, FALSE));
+            G->add_edge(node, (unsigned) (rhsstart + reflsymdata->rhscolors[c]));
+
+            pathtoroot.push_back(node);
+            pathtorootidx.push_back(i);
+         }
+         else if ( reflsymdata->trees[i] == SYM_NODETYPE_OPERATOR )
+         {
+            /* create node for the operator and connect it with its parent node */
+            unsigned node = G->add_vertex((unsigned) opcolstart + colorInClass(i, reflsymdata, FALSE));
+            G->add_edge(node, pathtoroot.back());
+
+            pathtoroot.push_back(node);
+            pathtorootidx.push_back(i);
+         }
+         else if ( reflsymdata->trees[i] == SYM_NODETYPE_COEF )
+         {
+            /* create node for coefficient and its negation */
+            unsigned node = G->add_vertex((unsigned) coefcolstart + colorInClass(i, reflsymdata, FALSE));
+            unsigned node2 = G->add_vertex((unsigned) coefcolstart + colorInClass(i, reflsymdata, TRUE));
+
+            /* variable nodes have already been created, so construct the variable/coefficient gadget */
+            assert( i < reflsymdata->treebegins[c + 1] - 1 );
+            assert( reflsymdata->trees[i + 1] == SYM_NODETYPE_VAR );
+
+            ++i;
+            unsigned varnode = reflsymdata->treevaridx[reflsymdata->treemap[i]];
+            unsigned invvarnode = varnode + reflsymdata->ntreevars;
+
+            G->add_edge(node, node2);
+            G->add_edge(node, pathtoroot.back());
+            G->add_edge(node2, pathtoroot.back());
+            G->add_edge(node, varnode);
+            G->add_edge(node2, invvarnode);
+         }
+         else if ( reflsymdata->trees[i] == SYM_NODETYPE_VAR )
+         {
+            SCIPinfoMessage(scip, NULL, "ERROR: terminate construction of symmetry detection graph, each variable should have a coefficient.\n");
+
+            success = FALSE;
+         }
+         else
+         {
+            assert( reflsymdata->trees[i] == SYM_NODETYPE_VAL );
+
+            /* create node for value and connect it with its parent node */
+            unsigned node = G->add_vertex((unsigned) valcolstart + colorInClass(i, reflsymdata, FALSE));
+
+            G->add_edge(node, pathtoroot.back());
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /** return whether symmetry can be computed */
 SCIP_Bool SYMcanComputeSymmetry(void)
 {
@@ -1107,6 +1363,93 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
 
    /* determine log10 of symmetry group size */
    *log10groupsize = (SCIP_Real) log10l(stats.get_group_size_approx());
+
+   return SCIP_OKAY;
+}
+
+/** compute generators of reflection symmetry group */
+SCIP_RETCODE SYMcomputeReflectionSymmetryGenerators(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SYM_REFLSYMDATA*      reflsymdata,        /**< data for computing reflection symmetries */
+   int                   maxgenerators       /**< maximum number of generators to be computed */
+   )
+{
+   SCIP_Bool success;
+
+   assert( scip != NULL );
+   assert( reflsymdata != NULL );
+
+   /* create bliss graph */
+   bliss::Graph G(0);
+
+   /* create nodes corresponding to variables */
+   SCIP_CALL( SCIPcreateReflectionSymmetryDetectionGraph(scip, &G, reflsymdata, success) );
+
+   if ( !success )
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, 0, "Graph construction failed.\n");
+      return SCIP_OKAY;
+   }
+
+#ifdef SCIP_OUTPUT
+   G.write_dot("debug.dot");
+#endif
+   G.write_dot("debug.dot");
+
+   SCIPdebugMsg(scip, "Symmetry detection graph has %u nodes.\n", G.get_nof_vertices());
+
+   /* compute automorphisms */
+   bliss::Stats stats;
+   BLISS_Data data;
+   data.scip = scip;
+   data.npermvars = reflsymdata->ntreevars;
+   data.nperms = 0;
+   data.nmaxperms = 0;
+   data.maxgenerators = maxgenerators;
+   data.perms = NULL;
+
+   /* Prefer splitting partition cells corresponding to variables over those corresponding
+    * to inequalities. This is because we are only interested in the action
+    * of the automorphism group on the variables, and we need a base for this action */
+   G.set_splitting_heuristic(bliss::Graph::shs_f);
+   /* disable component recursion as advised by Tommi Junttila from bliss */
+   G.set_component_recursion(false);
+
+   /* do not use a node limit, but set generator limit */
+#ifdef BLISS_PATCH_PRESENT
+   G.set_search_limits(0, (unsigned) maxgenerators);
+#endif
+
+#if BLISS_VERSION_MAJOR >= 1 || BLISS_VERSION_MINOR >= 76
+   /* lambda function to have access to data and pass it to the blisshook above */
+   auto reportglue = [&](unsigned int n, const unsigned int* aut) {
+      blisshookReflSym((void*)&data, n, aut);
+   };
+
+   /* lambda function to have access to stats and terminate the search if maxgenerators are reached */
+   auto term = [&]() {
+      return (stats.get_nof_generators() >= (long unsigned int) maxgenerators);
+   };
+
+   /* start search */
+   G.find_automorphisms(stats, reportglue, term);
+#else
+   /* start search */
+   G.find_automorphisms(stats, blisshook, (void*) &data);
+#endif
+
+
+#ifdef SCIP_OUTPUT
+   (void) stats.print(stdout);
+#endif
+
+   for (int p = 0; p < data.nperms; ++p)
+   {
+      printf("perm %d:\n", p);
+      for (int v = 0; v < 2 * reflsymdata->ntreevars; ++v)
+         printf("%d ", data.perms[p][v]);
+      printf("\n");
+   }
 
    return SCIP_OKAY;
 }

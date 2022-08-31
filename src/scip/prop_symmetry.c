@@ -3785,6 +3785,10 @@ SCIP_RETCODE computeReflectionSymmetryGroup(
    if ( ! subsuccess )
       goto FREEMEMORY;
 
+   /* determine generators */
+   SCIPdebugMsg(scip, "Construct symmetry detection graph.\n");
+   SCIP_CALL( SYMcomputeReflectionSymmetryGenerators(scip, &reflsymdata, 1500) );
+
    SCIPdebugMsg(scip, "Finished computing reflection symmetry group.\n");
 
    /* free memory */

@@ -133,6 +133,7 @@ struct SYM_Reflsymdata
    int                   maxntreeops;        /**< maximum number of elements that fit into treeops */
    int                   maxntreebegins;     /**< maximum number of elements that fit into treebegins */
    int*                  varcolors;          /**< array to store colors of individual variables */
+   int*                  invvarcolors;       /**< array to store colors of individual negated variables */
    int*                  coefcolors;         /**< array to store colors of individual coefficients */
    int*                  invcoefcolors;      /**< array to store inverse colors of individual coefficients */
    int*                  opscolors;          /**< array to store colors of individual operators */
