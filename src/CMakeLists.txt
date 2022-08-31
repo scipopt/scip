@@ -27,6 +27,7 @@ set(scipsources
     scip/bandit.c
     scip/bandit_epsgreedy.c
     scip/bandit_exp3.c
+    scip/bandit_exp3ix.c
     scip/bandit_ucb.c
     scip/branch_allfullstrong.c
     scip/branch_cloud.c
@@ -457,6 +458,7 @@ set(scipheaders
     scip/bandit.h
     scip/bandit_epsgreedy.h
     scip/bandit_exp3.h
+    scip/bandit_exp3ix.h
     scip/bandit_ucb.h
     scip/benders.h
     scip/benders_default.h
@@ -694,6 +696,7 @@ set(scipheaders
     scip/pub_bandit.h
     scip/pub_bandit_epsgreedy.h
     scip/pub_bandit_exp3.h
+    scip/pub_bandit_exp3ix.h
     scip/pub_bandit_ucb.h
     scip/pub_benders.h
     scip/pub_benderscut.h
