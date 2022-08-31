@@ -1057,6 +1057,7 @@ SCIP_RETCODE SCIPcreateReflectionSymmetryDetectionGraph(
    SCIP_Bool&            success             /**< whether the construction was successful */
    )
 {
+   SCIP_EXPRHDLR* exprsum;
    int nnodes = 0;
    int nusedcolors = 0;
 
@@ -1125,12 +1126,15 @@ SCIP_RETCODE SCIPcreateReflectionSymmetryDetectionGraph(
    int coefcolstart = opcolstart + reflsymdata->nuniqueops;
    int valcolstart = coefcolstart + reflsymdata->nuniquecoefs;
 
+   exprsum = SCIPfindExprhdlr(scip, "sum");
+
    /* add nodes and edges for constraints */
    for (int c = 0; c < reflsymdata->ntreerhs; ++c)
    {
       /* keep track of path to root node, possible since tree is stored in DFS fashion */
       std::vector<unsigned> pathtoroot;
       std::vector<unsigned> pathtorootidx;
+      std::vector<SCIP_Bool> noflip;
 
       /* iterate through tree and create nodes and edges for constraint */
       for (int i = reflsymdata->treebegins[c]; i < reflsymdata->treebegins[c + 1]; ++i)
@@ -1140,17 +1144,28 @@ SCIP_RETCODE SCIPcreateReflectionSymmetryDetectionGraph(
          {
             pathtorootidx.pop_back();
             pathtoroot.pop_back();
+            noflip.pop_back();
          }
 
          if ( reflsymdata->treeparentidx[i] == -1 )
          {
             /* add root node and connect it with corresponding rhs node */
             assert( reflsymdata->trees[i] == SYM_NODETYPE_OPERATOR );
+
             unsigned node = G->add_vertex((unsigned) opcolstart + colorInClass(i, reflsymdata, FALSE));
             G->add_edge(node, (unsigned) (rhsstart + reflsymdata->rhscolors[c]));
 
             pathtoroot.push_back(node);
             pathtorootidx.push_back(i);
+
+            /* if we have a sum expression that contains a value, we don't allow to negate variables */
+            assert( reflsymdata->treeops[reflsymdata->treemap[i]] == (SCIP_EXPRHDLR*) SYM_CONSTYPE_OBJ ||
+               i < reflsymdata->treebegins[c + 1] - 1 );
+            if ( reflsymdata->treeops[reflsymdata->treemap[i]] == exprsum &&
+               reflsymdata->trees[i + 1] == SYM_NODETYPE_VAL )
+               noflip.push_back(TRUE);
+            else
+               noflip.push_back(FALSE);
          }
          else if ( reflsymdata->trees[i] == SYM_NODETYPE_OPERATOR )
          {
@@ -1160,26 +1175,39 @@ SCIP_RETCODE SCIPcreateReflectionSymmetryDetectionGraph(
 
             pathtoroot.push_back(node);
             pathtorootidx.push_back(i);
+
+            /* if we have a sum expression that contains a value, we don't allow to negate variables */
+            assert( i < reflsymdata->treebegins[c + 1] - 1);
+            if ( reflsymdata->treeops[reflsymdata->treemap[i]] == exprsum &&
+               reflsymdata->trees[i + 1] == SYM_NODETYPE_VAL )
+               noflip.push_back(TRUE);
+            else
+               noflip.push_back(FALSE);
          }
          else if ( reflsymdata->trees[i] == SYM_NODETYPE_COEF )
          {
-            /* create node for coefficient and its negation */
-            unsigned node = G->add_vertex((unsigned) coefcolstart + colorInClass(i, reflsymdata, FALSE));
-            unsigned node2 = G->add_vertex((unsigned) coefcolstart + colorInClass(i, reflsymdata, TRUE));
-
-            /* variable nodes have already been created, so construct the variable/coefficient gadget */
             assert( i < reflsymdata->treebegins[c + 1] - 1 );
             assert( reflsymdata->trees[i + 1] == SYM_NODETYPE_VAR );
 
-            ++i;
-            unsigned varnode = reflsymdata->treevaridx[reflsymdata->treemap[i]];
-            unsigned invvarnode = varnode + reflsymdata->ntreevars;
+            /* create node for coefficient (and its negation if flips are allowed) */
+            unsigned node = G->add_vertex((unsigned) coefcolstart + colorInClass(i, reflsymdata, FALSE));
+            unsigned varnode = reflsymdata->treevaridx[reflsymdata->treemap[i + 1]];
 
-            G->add_edge(node, node2);
             G->add_edge(node, pathtoroot.back());
-            G->add_edge(node2, pathtoroot.back());
             G->add_edge(node, varnode);
-            G->add_edge(node2, invvarnode);
+
+            if ( ! noflip.back() )
+            {
+               unsigned node2 = G->add_vertex((unsigned) coefcolstart + colorInClass(i, reflsymdata, TRUE));
+               unsigned invvarnode = varnode + reflsymdata->ntreevars;
+
+               G->add_edge(node, node2);
+               G->add_edge(node2, pathtoroot.back());
+               G->add_edge(node2, invvarnode);
+            }
+
+            /* we have already taken the variable into account */
+            ++i;
          }
          else if ( reflsymdata->trees[i] == SYM_NODETYPE_VAR )
          {
