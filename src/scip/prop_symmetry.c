@@ -143,7 +143,6 @@
 #include <scip/cons_nonlinear.h>
 #include <scip/cons_sos1.h>
 #include <scip/cons_sos2.h>
-#include <scip/cons_cardinality.h>
 #include <scip/pub_expr.h>
 #include <scip/misc.h>
 #include <scip/scip_datastructures.h>
@@ -1892,8 +1891,6 @@ int getNReflsymhandableConss(
    nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
    conshdlr = SCIPfindConshdlr(scip, "bounddisjunction");
    nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
-   conshdlr = SCIPfindConshdlr(scip, "cardinality");
-   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
    conshdlr = SCIPfindConshdlr(scip, "indicator");
    nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
    conshdlr = SCIPfindConshdlr(scip, "SOS1");
@@ -2489,93 +2486,6 @@ SCIP_RETCODE storeSimpleConstraint(
       {
          SCIP_CALL( addCoefReflSym(reflsymdata, consvals[i], mainopidx, NULL) );
          SCIP_CALL( addVarReflSym(reflsymdata, SCIPvarGetProbindex(consvars[i]), mainopidx, NULL) );
-      }
-
-      /* make sure that also the end position of the last constraint is stored correctly
-       * (ntreerhs has been incremented already above)
-       */
-      reflsymdata->treebegins[reflsymdata->ntreerhs] = reflsymdata->ntrees;
-      break;
-   case SYM_CONSTYPE_CARD :
-      /* enconde cardinality constraints as (CARD expr1 ... exprk)
-       *
-       * The expressions correspond to the variables in the cardinality constraint.
-       * If a variable is active, the corresponding expression is [coef var].
-       * Otherwise, the expression is the tree [+ val coef1 auxvar1 ... coefl auxvarl]
-       * representing the aggregation of the variable in the constraint.
-       *
-       * To avoid computing the number of needed expressions twice, we estimate the required memory
-       * by assuming each variable requires 1 numerical value and 3 auxiliary variables, and
-       * reallocate memory if needed. That is, an expression is assumed to be
-       * [+ val coef1 auxvar 1 coef2 auxvar2 coef3 auxvar3], which requires 8 positions.
-       */
-      nvars = SCIPgetNVarsCardinality(scip, cons);
-      exprsum = SCIPfindExprhdlr(scip, "sum");
-
-      SCIP_CALL( ensureReflSymDataMemorySuffices(scip, reflsymdata, reflsymdata->ntrees + 8 * nvars + 1,
-            reflsymdata->ntreeops + nvars + 1, reflsymdata->ntreecoefs + 3 * nvars,
-            reflsymdata->ntreevaridx + 3 * nvars, reflsymdata->ntreevals + nvars) );
-
-      /* initialize new tree */
-      reflsymdata->treebegins[reflsymdata->ntreerhs] = reflsymdata->ntrees;
-      reflsymdata->treerhs[reflsymdata->ntreerhs++] = SCIPgetCardvalCardinality(scip, cons);
-
-      /* indicate cardinality constraint */
-      SCIP_CALL( addOperatorReflSym(reflsymdata, expr, -1, &mainopidx) );
-
-      for (i = 0; i < nvars; ++i)
-      {
-         int nlocvars = 1.0;
-         int nlocvals;
-         int sumidx;
-
-         consvars[0] = SCIPgetVarsCardinality(scip, cons)[i];
-         consvals[0] = 1.0;
-         constant = 0.0;
-
-         SCIP_CALL( getActiveVariablesReflSym(scip, &consvars, &consvals,
-               &nlocvars, &constant, SCIPconsIsTransformed(cons)) );
-
-         if ( nlocvars == 1 )
-         {
-            nlocvals = SCIPisZero(scip, constant) ? 0 : 1;
-
-            /* ensure that [coef var] fits into the data structure */
-            SCIP_CALL( ensureReflSymDataMemorySuffices(scip, reflsymdata, reflsymdata->ntrees + 2 + 2 * nlocvals,
-            reflsymdata->ntreeops + nlocvals, reflsymdata->ntreecoefs + 1,
-            reflsymdata->ntreevaridx + 1, reflsymdata->ntreevals + nlocvals) );
-
-            sumidx = mainopidx;
-            if ( nlocvals == 1 )
-            {
-               SCIP_CALL( addOperatorReflSym(reflsymdata, exprsum, mainopidx, &sumidx) );
-               SCIP_CALL( addValReflSym(reflsymdata, constant, sumidx, NULL) );
-            }
-            SCIP_CALL( addCoefReflSym(reflsymdata, consvals[0], sumidx, NULL) );
-            SCIP_CALL( addVarReflSym(reflsymdata, SCIPvarGetProbindex(consvars[0]), sumidx, NULL) );
-         }
-         else
-         {
-            int j;
-
-            /* ensure that [+ val coef1 auxvar1 ... coefl auxvarl] fits into the data structure */
-            SCIP_CALL( ensureReflSymDataMemorySuffices(scip, reflsymdata, reflsymdata->ntrees + nlocvars + 2,
-            reflsymdata->ntreeops + 1, reflsymdata->ntreecoefs + nlocvars,
-            reflsymdata->ntreevaridx + nlocvars, reflsymdata->ntreevals + 1) );
-
-            /* add sum operator */
-            SCIP_CALL( addOperatorReflSym(reflsymdata, exprsum, mainopidx, &sumidx) );
-
-            if ( ! SCIPisZero(scip, constant) )
-            {
-               SCIP_CALL( addValReflSym(reflsymdata, constant, sumidx, NULL) );
-            }
-            for (j = 0; j < nlocvars; ++j)
-            {
-               SCIP_CALL( addCoefReflSym(reflsymdata, consvals[j], sumidx, NULL) );
-               SCIP_CALL( addVarReflSym(reflsymdata, SCIPvarGetProbindex(consvars[j]), sumidx, NULL) );
-            }
-         }
       }
 
       /* make sure that also the end position of the last constraint is stored correctly
@@ -3730,10 +3640,6 @@ SCIP_RETCODE computeReflectionSymmetryGroup(
       else if ( strcmp(conshdlrname, "bounddisjunction") == 0 )
       {
          SCIP_CALL( storeSimpleConstraint(scip, &reflsymdata, cons, SYM_CONSTYPE_BDDISJ, consvars, consvals) );
-      }
-      else if ( strcmp(conshdlrname, "cardinality") == 0 )
-      {
-         SCIP_CALL( storeSimpleConstraint(scip, &reflsymdata, cons, SYM_CONSTYPE_CARD, consvars, consvals) );
       }
       else if ( strcmp(conshdlrname, "indicator") == 0 )
       {
