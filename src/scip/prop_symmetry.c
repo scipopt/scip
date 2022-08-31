@@ -3131,12 +3131,13 @@ SCIP_RETCODE findColorsReflSym(
 
    nvars = reflsymdata->ntreevars;
 
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &uniquevararray, nvars) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &uniquevararray, 2 * nvars) );
    SCIP_CALL( SCIPhashtableCreate(&vartypemap, SCIPblkmem(scip), 5 * nvars, SYMhashGetKeyVartype,
          SYMhashKeyEQVartype, SYMhashKeyValVartype, (void*) scip) );
    assert( vartypemap != NULL );
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &reflsymdata->varcolors, nvars) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &reflsymdata->invvarcolors, nvars) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &reflsymdata->coefcolors, reflsymdata->ntreecoefs) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &reflsymdata->invcoefcolors, reflsymdata->ntreecoefs) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &reflsymdata->valcolors, reflsymdata->ntreevals) );
@@ -3159,17 +3160,33 @@ SCIP_RETCODE findColorsReflSym(
          SCIPdebugMsg(scip, "Detected variable <%s> of fixed type %d - color %d.\n",
             SCIPvarGetName(var), SCIPvarGetType(var), reflsymdata.nuniquevars - 1);
 #endif
+         reflsymdata->invvarcolors[j] = reflsymdata->nuniquevars++;
       }
       else
       {
          SYM_VARTYPE* vt;
+         SCIP_Real ub;
+         SCIP_Real lb;
 
          vt = &uniquevararray[nuniquevararray];
          assert( nuniquevararray <= reflsymdata->nuniquevars );
 
+         /* center range at origin in case of finite bounds */
+         lb = SCIPvarGetLbGlobal(var);
+         ub = SCIPvarGetUbGlobal(var);
+
+         if ( !SCIPisInfinity(scip, ub) && !SCIPisInfinity(scip, -lb) )
+         {
+            SCIP_Real center;
+
+            center = (ub + lb) / 2;
+            lb -= center;
+            ub -= center;
+         }
+
          vt->obj = SCIPvarGetObj(var);
-         vt->lb = SCIPvarGetLbGlobal(var);
-         vt->ub = SCIPvarGetUbGlobal(var);
+         vt->lb = lb;
+         vt->ub = ub;
          vt->type = SCIPvarGetType(var);
          vt->nconss = 0; /* @todo check whether we want to use this */
 
@@ -3193,6 +3210,37 @@ SCIP_RETCODE findColorsReflSym(
             vtr = (SYM_VARTYPE*) SCIPhashtableRetrieve(vartypemap, (void*) vt);
             reflsymdata->varcolors[j] = vtr->color;
          }
+
+         /* also assign colors to negated variables */
+         vt = &uniquevararray[nuniquevararray];
+         assert( nuniquevararray <= reflsymdata->nuniquevars );
+
+         vt->obj = -SCIPvarGetObj(var);
+         vt->lb = -ub;
+         vt->ub = -lb;
+         vt->type = SCIPvarGetType(var);
+         vt->nconss = 0; /* @todo check whether we want to use this */
+
+         if ( ! SCIPhashtableExists(vartypemap, (void*) vt) )
+         {
+            SCIP_CALL( SCIPhashtableInsert(vartypemap, (void*) vt) );
+            vt->color = reflsymdata->nuniquevars;
+            reflsymdata->invvarcolors[j] = reflsymdata->nuniquevars++;
+            ++nuniquevararray;
+#ifdef SCIP_OUTPUT
+            SCIPdebugMsg(scip,
+               "Detected (negated) variable <%s> of new type (probindex: %d, obj: %g, lb: %g, ub: %g, type: %d) - color %d.\n",
+               SCIPvarGetName(var), SCIPvarGetProbindex(var), vt->obj, vt->lb, vt->ub, vt->type,
+               reflsymdata.nuniquevars - 1);
+#endif
+         }
+         else
+         {
+            SYM_VARTYPE* vtr;
+
+            vtr = (SYM_VARTYPE*) SCIPhashtableRetrieve(vartypemap, (void*) vt);
+            reflsymdata->invvarcolors[j] = vtr->color;
+         }
       }
    }
 
@@ -3207,7 +3255,7 @@ SCIP_RETCODE findColorsReflSym(
 
       SCIPfreeBlockMemoryArrayNull(scip, &perm, lenperm);
       SCIPhashtableFree(&vartypemap);
-      SCIPfreeBlockMemoryArrayNull(scip, &uniquevararray, nvars);
+      SCIPfreeBlockMemoryArrayNull(scip, &uniquevararray, 2 * nvars);
 
       return SCIP_OKAY;
    }
@@ -3376,7 +3424,7 @@ SCIP_RETCODE findColorsReflSym(
    SCIPfreeBlockMemoryArrayNull(scip, &perm, lenperm);
 
    SCIPhashtableFree(&vartypemap);
-   SCIPfreeBlockMemoryArrayNull(scip, &uniquevararray, nvars);
+   SCIPfreeBlockMemoryArrayNull(scip, &uniquevararray, 2 * nvars);
 
    return SCIP_OKAY;
 }
@@ -3746,6 +3794,7 @@ SCIP_RETCODE computeReflectionSymmetryGroup(
    SCIPfreeBlockMemoryArrayNull(scip, &reflsymdata.valcolors, reflsymdata.ntreevals);
    SCIPfreeBlockMemoryArrayNull(scip, &reflsymdata.invcoefcolors, reflsymdata.ntreecoefs);
    SCIPfreeBlockMemoryArrayNull(scip, &reflsymdata.coefcolors, reflsymdata.ntreecoefs);
+   SCIPfreeBlockMemoryArrayNull(scip, &reflsymdata.invvarcolors, nvars);
    SCIPfreeBlockMemoryArrayNull(scip, &reflsymdata.varcolors, nvars);
 
    SCIPfreeBlockMemoryArrayNull(scip, &reflsymdata.opsidx, reflsymdata.maxntreeops);
