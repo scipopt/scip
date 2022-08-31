@@ -590,7 +590,7 @@ void RatSetString(
             exponent = std::stoi(s.substr(exponentidx + 1, s.length()));
             s = s.substr(0, exponentidx);
          }
-         // std::cout << s << std::endl;
+         SCIPdebug(std::cout << s << std::endl);
          if( s[0] == '.' )
             s.insert(0, "0");
 
@@ -615,7 +615,6 @@ void RatSetString(
          res->val *= pow(10, exponent);
 
          res->isinf = FALSE;
-         // RatPrint(res);
       }
    }
 
@@ -1159,7 +1158,7 @@ SCIP_Bool RatIsEqualReal(
    if( REALABS(real) >= infinity && rat->isinf )
       return (real > 0 && RatIsPositive(rat)) || (real < 0 && RatIsNegative(rat));
 
-   return !rat->isinf && rat->val == real;
+   return !rat->isinf && rat->val == Rational(real);
 }
 
 /** check if real approx of rational and a real are equal */
@@ -1963,122 +1962,189 @@ SCIP_Real RatApproxReal(
    return retval;
 }
 
+/* choose the best semiconvergent with demnominator <= maxdenom between p1/q1 and p2/q2 */
 static
-void binarySearchSemiconv(
-   long& resnum,
-   long& resden,
-   SCIP_Rational* src,
-   Integer* p,
-   Integer* q,
-   long maxdenom,
-   long ai
+void chooseSemiconv(
+   Integer&              resnum,             /**< the resulting numerator */
+   Integer&              resden,             /**< the resulting denominator */
+   Integer*              p,                  /**< the last 3 numerators of convergents */
+   Integer*              q,                  /**< the last 3 denominators of convergents */
+   long                  maxdenom            /**< the maximal denominator */
    )
 {
-   long maxmul;
-   long leftden, rightden, leftnum, rightnum, lastnum, lastden;
-   long currentmul, nextmul;
-   long uppermul, lowermul;
-   int maxiterations, niterations;
-   bool increasing, wrongdir, lessthan;
+   Integer j, resnumerator, resdenominator;
 
-   leftnum = p[0].convert_to<long>();
-   rightnum = p[1].convert_to<long>();
-   leftden = q[0].convert_to<long>();
-   rightden = q[1].convert_to<long>();
+   j = (Integer(maxdenom) - q[0]) / q[1];
 
-   increasing = ((double) leftnum) / leftden <= ((double) rightnum) / rightden;
+   resnum = j * p[1] + p[0];
+   resden = j * q[1] + q[0];
+}
 
-   maxmul = (maxdenom - leftden) / rightden;
-   maxmul = std::min(maxmul, ai);
+/* choose the best semiconvergent with demnominator <= maxdenom between p1/q1 and p2/q2 */
+static
+void chooseSemiconvLong(
+   SCIP_Longint&         resnum,             /**< the resulting numerator */
+   SCIP_Longint&         resden,             /**< the resulting denominator */
+   SCIP_Longint*         p,                  /**< the last 3 numerators of convergents */
+   SCIP_Longint*         q,                  /**< the last 3 denominators of convergents */
+   long                  maxdenom            /**< the maximal denominator */
+   )
+{
+   SCIP_Longint j;
 
-   nextmul = maxmul / 2;
-   currentmul = -1;
+   j = (maxdenom - q[0]) / q[1];
 
-   maxiterations = 5;
-   niterations = 0;
-   uppermul = maxmul;
-   lowermul = 0;
-   wrongdir = true;
-   lastnum = leftnum;
-   lastden = leftden;
-   lessthan = src->val.sign() < 0;
+   resnum = j * p[1] + p[0];
+   resden = j * q[1] + q[0];
+}
 
-   while(nextmul != currentmul && (niterations < maxiterations || wrongdir))
+void RatComputeApproximationLong(
+   SCIP_Rational*        res,
+   SCIP_Rational*        src,
+   SCIP_Longint          maxdenom,
+   int                   forcegreater        /**< 1 if res >= src should be enforced, -1 if res <= src should be enforced, 0 else */
+   )
+{
+   SCIP_Longint tn, td, temp, a0, ai, resnum, resden;
+   /* here we use p[2]=pk, p[1]=pk-1,p[0]=pk-2 and same for q */
+   SCIP_Longint p[3];
+   SCIP_Longint q[3];
+   int sign;
+   int done = 0;
+
+   assert(numerator(src->val) <= SCIP_LONGINT_MAX);
+   assert(denominator(src->val) <= SCIP_LONGINT_MAX);
+
+   /* setup n and d for computing a_i the cont. frac. rep */
+   tn = RatNumerator(src);
+   td = RatDenominator(src);
+
+   /* scale to positive to avoid unnecessary complications */
+   sign = tn >= 0 ? 1 : -1;
+   tn *= sign;
+
+   assert(td >= 0);
+   assert(tn >= 0);
+
+   if( td <= maxdenom )
    {
-      Rational nextval;
+      res->val = Rational(tn, td) * sign;
+   }
+   else
+   {
+      temp = 1;
+      a0 = tn / td;
+      temp = tn % td;
 
-      currentmul = nextmul;
-
-      lastnum = resnum;
-      lastden = resden;
-
-      resnum = leftnum + currentmul * rightnum;
-      resden = leftden + currentmul * rightden;
-
-      nextval = Rational(resnum, resden);
-
-      if( nextval > (src->val * src->val.sign()) )
+      /* if value is almost integer, we use the next best integer (while still adhering to <=/>= requirements) */
+      if( temp  < td / (maxdenom * 1.0) )
       {
-         if( !increasing )
-         {
-            lowermul = currentmul;
-            nextmul = currentmul + (uppermul - currentmul + 1) / 2;
-         }
-         else
-         {
-            uppermul = currentmul;
-            nextmul = currentmul / 2 + lowermul / 2;
-         }
-         if( !lessthan )
-            wrongdir = false;
+         res->val = a0 * sign;
+         if( forcegreater == 1 && res->val < src->val )
+            res->val += Rational(1,maxdenom);
+         if( forcegreater == -1 && res->val > src->val )
+            res->val -= Rational(1,maxdenom);
+         res->isinf = FALSE;
+         res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
+
+         SCIPdebug(std::cout << "approximating " << src->val << " by " << res->val << std::endl);
+
+         return;
       }
+
+      tn = td;
+      td = temp;
+
+      ai = tn / td;
+      temp = tn % td;
+
+      tn = td;
+      td = temp;
+
+      p[1] = a0;
+      p[2] = 1 + a0 * ai;
+
+      q[1] = 1;
+      q[2] = ai;
+
+      done = 0;
+
+      SCIPdebug(std::cout << "approximating " << src->val << " by continued fractions with maxdenom " << maxdenom << std::endl);
+      SCIPdebug(std::cout << "confrac initial values: p0 " << p[1] << " q0 " << q[1] << " p1 " << p[2] << " q1 " << q[2] << std::endl);
+
+      /* if q is already big, skip loop */
+      if( q[2] > maxdenom )
+         done = 1;
+
+      int cfcnt = 2;
+
+      while(!done && td != 0)
+      {
+         /* update everything: compute next ai, then update convergents */
+
+         /* update ai */
+         ai = tn / td;
+         temp = tn % td;
+
+         tn = td;
+         td = temp;
+
+         /* shift p,q */
+         q[0] = q[1];
+         q[1] = q[2];
+         p[0] = p[1];
+         p[1] = p[2];
+
+         /* compute next p,q */
+         p[2] = p[0] + p[1] * ai;
+         q[2] = q[0] + q[1] * ai;
+
+         SCIPdebug(std::cout << "ai " << ai << " pi " << p[2] << " qi " << q[2] << std::endl);
+
+         if( q[2] > maxdenom )
+            done = 1;
+
+         cfcnt++;
+      }
+
+      if( (forcegreater == 1 && Rational(p[2],q[2]) * sign < src->val) ||
+          (forcegreater == -1 && Rational(p[2],q[2]) * sign > src->val) )
+         res->val = Rational(p[1],q[1]) * sign;
       else
       {
-         if( increasing )
+         /* the corner case where p[2]/q[2] == res has to be considered separately, depending on the side that p[1]/q[1] lies on */
+         if( forcegreater != 0 && Rational(p[2],q[2]) * sign == src->val )
          {
-            lowermul = currentmul;
-            nextmul = currentmul + (uppermul - currentmul + 1) / 2;
+            /* if p[1]/q[1] is on the correct side we take it, otherwise we take the correct semiconvergent */
+            if( (forcegreater == 1 && Rational(p[1],q[1]) * sign > src->val)
+                || (forcegreater == -1 && Rational(p[1],q[1]) * sign < src->val) )
+            {
+               res->val = Rational(p[1],q[1]) * sign;
+            }
+            else
+            {
+               SCIPdebug(std::cout << " picking semiconvergent " << std::endl);
+               chooseSemiconvLong(resnum, resden, p, q, maxdenom);
+               SCIPdebug(std::cout << " use " << resnum << "/" << resden << std::endl);
+               res->val = Rational(resnum,resden) * sign;
+            }
          }
+         /* normal case -> pick semiconvergent for best approximation */
          else
          {
-            uppermul = currentmul;
-            nextmul = currentmul / 2 + lowermul / 2;
+            SCIPdebug(std::cout << " picking semiconvergent " << std::endl);
+            chooseSemiconvLong(resnum, resden, p, q, maxdenom);
+            SCIPdebug(std::cout << " use " << resnum << "/" << resden << std::endl);
+            res->val = Rational(resnum,resden) * sign;
          }
-         if( lessthan )
-            wrongdir = false;
-      }
-
-      niterations++;
-   }
-
-   /* we stopped because of the maximal allowed multiplier -> just use the right-most value */
-   if( wrongdir )
-   {
-      if( lessthan )
-      {
-         resnum = increasing ? leftnum : rightnum;
-         resden = increasing ? leftden : rightden;
-      }
-      else
-      {
-         resnum = !increasing ? leftnum : rightnum;
-         resden = !increasing ? leftden : rightden;
       }
    }
 
-   if( !wrongdir )
-   {
-      if(lessthan && Rational(resnum, resden) > (src->val * src->val.sign()) )
-      {
-         resnum = lastnum;
-         resden = lastden;
-      }
-      else if(!lessthan && Rational(resnum, resden) < (src->val * src->val.sign()) )
-      {
-         resnum = lastnum;
-         resden = lastden;
-      }
-   }
+   assert(forcegreater != 1 || res->val >= src->val);
+   assert(forcegreater != -1 || res->val <= src->val);
+
+   res->isinf = FALSE;
+   res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
 }
 
 /** compute an approximate number with denominator <= maxdenom, closest to src and save it in res using continued fractions */
@@ -2094,7 +2160,6 @@ void RatComputeApproximation(
    Integer temp;
    Integer td;
    Integer tn;
-   Integer Dbound = maxdenom;
 
    /* The following represent the continued fraction values a_i, the cont frac representation and p_i/q_i, the convergents */
    Integer a0;
@@ -2104,8 +2169,8 @@ void RatComputeApproximation(
    Integer p[3];
    Integer q[3];
 
-   long resnum;
-   long resden;
+   Integer resnum;
+   Integer resden;
 
    int sign;
 
@@ -2117,20 +2182,36 @@ void RatComputeApproximation(
       return;
    }
    /* close to 0, we can just set to 1/maxdenom or 0, depending on sign */
-   else if( src->val.sign() == 1 && forcegreater && RatApproxReal(src) < (1.0 / maxdenom) )
+   else if( src->val.sign() == 1 && RatApproxReal(src) < (1.0 / maxdenom) )
    {
-      RatSetInt(res, 1, maxdenom);
+      if( forcegreater == 1 )
+         RatSetInt(res, 1, maxdenom);
+      else
+         RatSetReal(res, 0.0);
+
       return;
    }
-   else if( src->val.sign() == -1 && forcegreater && RatApproxReal(src) > (-1.0 / maxdenom) )
+   else if( src->val.sign() == -1 && RatApproxReal(src) > (-1.0 / maxdenom) )
    {
-      RatSetReal(res, 0.0);
+
+      if( forcegreater == -1 )
+         RatSetInt(res, 1, maxdenom);
+      else
+         RatSetReal(res, 0.0);
+
       return;
    }
 
    /* setup n and d for computing a_i the cont. frac. rep */
    tn = numerator(src->val);
    td = denominator(src->val);
+
+   /* as long as the rational is small enough, we can do everythin we need in long long */
+   if( (tn * tn.sign() <= SCIP_LONGINT_MAX) && (td * td.sign() <= SCIP_LONGINT_MAX) )
+   {
+      RatComputeApproximationLong(res, src, maxdenom, forcegreater);
+      return;
+   }
 
    /* scale to positive to avoid unnecessary complications */
    sign = tn.sign();
@@ -2139,7 +2220,7 @@ void RatComputeApproximation(
    assert(td >= 0);
    assert(tn >= 0);
 
-   if( td <= Dbound )
+   if( td <= maxdenom )
    {
       res->val = Rational(tn, td) * sign;
    }
@@ -2148,14 +2229,18 @@ void RatComputeApproximation(
       temp = 1;
       divide_qr(tn, td, a0, temp);
 
-      /* if value is almost integer, we use the next best integer */
+      /* if value is almost integer, we use the next best integer (while still adhering to <=/>= requirements) */
       if( temp * maxdenom < td )
       {
          res->val = a0 * sign;
-         if( forcegreater && res->val < src->val )
+         if( forcegreater == 1 && res->val < src->val )
             res->val += Rational(1,maxdenom);
+         if( forcegreater == -1 && res->val > src->val )
+            res->val -= Rational(1,maxdenom);
          res->isinf = FALSE;
          res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
+
+         SCIPdebug(std::cout << "approximating " << src->val << " by " << res->val << std::endl);
 
          return;
       }
@@ -2176,8 +2261,11 @@ void RatComputeApproximation(
 
       done = 0;
 
+      SCIPdebug(std::cout << "approximating " << src->val << " by continued fractions with maxdenom " << maxdenom << std::endl);
+      SCIPdebug(std::cout << "confrac initial values: p0 " << p[1] << " q0 " << q[1] << " p1 " << p[2] << " q1 " << q[2] << std::endl);
+
       /* if q is already big, skip loop */
-      if( q[2] > Dbound )
+      if( q[2] > maxdenom )
          done = 1;
 
       int cfcnt = 2;
@@ -2201,35 +2289,45 @@ void RatComputeApproximation(
          p[2] = p[0] + p[1] * ai;
          q[2] = q[0] + q[1] * ai;
 
-         if( q[2] > Dbound )
+         SCIPdebug(std::cout << "ai " << ai << " pi " << p[2] << " qi " << q[2] << std::endl);
+
+         if( q[2] > maxdenom )
             done = 1;
 
          cfcnt++;
       }
 
-      binarySearchSemiconv(resnum, resden, src, p, q, maxdenom,
-         ai.convert_to<long>());
-      res->val = Rational(resnum,resden) * sign;
-
-      assert(res->val >= src->val);
-
-      // if( td == 0 && forcegreater == 1 )
-      // {
-      //    assert(Rational(p[1],q[1]) * sign <= src->val);
-
-      //    if( RatIsIntegral(res) )
-      //       res->val += Rational(1,maxdenom);
-      //    else
-      //       res->val = Rational(p[0],q[0]) * sign;
-      // }
-      // /* we know that we alternate between larger and smaller values, if we force on direction, we can just do one more iteration */
-      // else if( (forcegreater == 1 && res->val < src->val) || (forcegreater == -1 && res->val > src->val) )
-      // {
-      //    if( RatIsIntegral(res) )
-      //       res->val += Rational(1,maxdenom);
-      //    else
-      //       res->val = Rational(p[0],q[0]) * sign;
-      // }
+      if( (forcegreater == 1 && Rational(p[2],q[2]) * sign < src->val) ||
+          (forcegreater == -1 && Rational(p[2],q[2]) * sign > src->val) )
+         res->val = Rational(p[1],q[1]) * sign;
+      else
+      {
+         /* the corner case where p[2]/q[2] == res has to be considered separately, depending on the side that p[1]/q[1] lies on */
+         if( forcegreater != 0 && Rational(p[2],q[2]) * sign == src->val )
+         {
+            /* if p[1]/q[1] is on the correct side we take it, otherwise we take the correct semiconvergent */
+            if( (forcegreater == 1 && Rational(p[1],q[1]) * sign > src->val)
+                || (forcegreater == -1 && Rational(p[1],q[1]) * sign < src->val) )
+            {
+               res->val = Rational(p[1],q[1]) * sign;
+            }
+            else
+            {
+               SCIPdebug(std::cout << " picking semiconvergent " << std::endl);
+               chooseSemiconv(resnum, resden, p, q, maxdenom);
+               SCIPdebug(std::cout << " use " << resnum << "/" << resden << std::endl);
+               res->val = Rational(resnum,resden) * sign;
+            }
+         }
+         /* normal case -> pick semiconvergent for best approximation */
+         else
+         {
+            SCIPdebug(std::cout << " picking semiconvergent " << std::endl);
+            chooseSemiconv(resnum, resden, p, q, maxdenom);
+            SCIPdebug(std::cout << " use " << resnum << "/" << resden << std::endl);
+            res->val = Rational(resnum,resden) * sign;
+         }
+      }
    }
 
    assert(forcegreater != 1 || res->val >= src->val);

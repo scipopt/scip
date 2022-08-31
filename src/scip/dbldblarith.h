@@ -20,6 +20,7 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+/** @todo exip this needs to be disabled in exact solving mode, do a cleaner fix before merging to master */
 #define DISABLE_QUADPREC
 #ifndef _SCIP_DBLDBL_ARITH_
 #define _SCIP_DBLDBL_ARITH_

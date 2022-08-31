@@ -46,6 +46,7 @@ struct SCIP_CertificateBound
    SCIP_Longint          certificateindex;
 };
 
+/** data structure for storing necessary information to print verified aggregation of rows */
 struct SCIP_AggregationInfo
 {
    SCIP_AGGRROW*         aggrrow;            /**< aggregation row to be saved */
@@ -61,6 +62,7 @@ struct SCIP_AggregationInfo
    SCIP_Longint          arpos;              /**< position in the aggrinfo array, so we can access it from the hashmap */
 };
 
+/** data structure for certifying MIR cut (splitcoefs, rhs, fractionality f, 1/1-f, scaling factor, which bounds to use) */
 struct SCIP_MirInfo
 {
    SCIP_Real*            splitcoefficients;  /**< coefficients in the split, saved in the complemented variable space */
@@ -73,6 +75,8 @@ struct SCIP_MirInfo
    SCIP_Rational*        frac;               /**< fractionality of the rhs in the mir cut */
    SCIP_Longint          arpos;              /**< position in the mirinfo array, so we can access it from the hashmap */
    SCIP_INTERVAL         onedivoneminusf0;   /**< rounded value of 1/(1-f0) that was used in MIR procedure */
+   SCIP_Real             scale;              /**< scaling factor that was used in cut-postprocessing */
+   SCIP_Real             unroundedrhs;       /**< we need to save the rhs if we round down integral cuts for certification */
 };
 
 struct SCIP_Certnodedata

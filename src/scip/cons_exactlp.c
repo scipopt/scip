@@ -3486,7 +3486,7 @@ SCIP_Real consdataGetMinAbsval(
    return consdata->minabsval;
 }
 
-
+/** ensures that every nonzero is a least minval so that we don't get problem with SCIPs 0 in floating point representation */
 static
 void consdataScaleMinValue(
    SCIP*                 scip,               /**< SCIP data structure */

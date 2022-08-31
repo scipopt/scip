@@ -502,7 +502,8 @@
 #define SCIP_DEFAULT_EXACT_PSDUALCOLSELECTION 1 /**< strategy to select which dual columns to use for lp to compute interior point
                                                  *   (0: no sel, 1: active rows of inexact primal LP, 2: Active rows of exact primal LP) */
 #define SCIP_DEFAULT_EXACT_LPINFO         FALSE /**< should the exact LP solver display status messages? */
-#define SCIP_DEFAULT_CUTMAXDENOMSIZE    0       /**< maximal denominator in cut coefficient, leading to slightly weaker (default is 2^20)
+#define SCIP_DEFAULT_EXACT_WEAKENCUTS     FALSE /**< should cuts be weakened in exact mode? */
+#define SCIP_DEFAULT_CUTMAXDENOMSIZE     131072 /**< maximal denominator in cut coefficient, leading to slightly weaker (default is 2^20)
                                                  *   but numerically better cuts (0: disabled) */
 #define SCIP_DEFAULT_CUTAPPROXMAXBOUNDVAL 10000 /**< maximal absolute bound value for wich cut coefficient should
                                                  *   be approximated with bounded denominator (0: no restriction) */
@@ -2715,6 +2716,11 @@ SCIP_RETCODE SCIPsetCreate(
          "exact/allownegslack",
          "should the exact LP solver display status messages?",
          &(*set)->exact_allownegslack, FALSE, TRUE,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "exact/weakencuts",
+         "should cuts be weakenend in exact mode?",
+         &(*set)->exact_weakencuts, FALSE, FALSE,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddLongintParam(*set, messagehdlr, blkmem,
          "exact/cutmaxdenomsize",

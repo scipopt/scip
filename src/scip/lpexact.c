@@ -3272,14 +3272,16 @@ SCIP_RETCODE SCIProwExactCreate(
    return SCIP_OKAY;
 } /*lint !e715*/
 
+
+/** changes an exact row, so that all denominators are bounded by set->exact_cutmaxdenomsize */
 static
 SCIP_RETCODE SCIProwExactControlEncodingLength(
-   SCIP_ROWEXACT*        row,
-   SCIP_SET*             set,
-   SCIP_STAT*            stat,
-   BMS_BLKMEM*           blkmem,
-   SCIP_EVENTQUEUE*      eventqueue,
-   SCIP_LPEXACT*         lpexact
+   SCIP_ROWEXACT*        row,                /**< exact row */
+   SCIP_SET*             set,                /**< SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   BMS_BLKMEM*           blkmem,             /**< block memory structure */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< the eventqueue */
+   SCIP_LPEXACT*         lpexact             /**< the exact lp */
    )
 {
    int i;
@@ -3289,6 +3291,7 @@ SCIP_RETCODE SCIProwExactControlEncodingLength(
    SCIP_Rational* difference;
    SCIP_Real rhschange;
    int forcegreater;
+   SCIP_Bool onlyweaken;
 
    assert(row->fprow != NULL);
    assert(set->exact_cutmaxdenomsize > 0);
@@ -3303,11 +3306,12 @@ SCIP_RETCODE SCIProwExactControlEncodingLength(
    rhschange = 0;
    maxboundval = set->exact_cutapproxmaxboundval;
    maxdenom = set->exact_cutmaxdenomsize;
+   onlyweaken = set->exact_weakencuts;
 
    assert(maxdenom >= 0);
    assert(maxboundval >= 0);
 
-   for( i = row->len - 1; i >= 0 ; i-- )
+   for( i = row->len - 1; i >= 0; i-- )
    {
       SCIP_VAR* var = row->cols[i]->fpcol->var;
       SCIP_Rational* val = row->vals[i];
@@ -3342,8 +3346,11 @@ SCIP_RETCODE SCIProwExactControlEncodingLength(
       else
          RatAddProd(row->rhs, difference, SCIPvarGetLbGlobalExact(var));
 
-      SCIPintervalSetRational(&(row->valsinterval[i]), tmpval);
-      SCIProwExactChgCoef(row, blkmem, set, eventqueue, lpexact, row->cols[i], tmpval);
+      if( !onlyweaken )
+      {
+         SCIPintervalSetRational(&(row->valsinterval[i]), tmpval);
+         SCIProwExactChgCoef(row, blkmem, set, eventqueue, lpexact, row->cols[i], tmpval);
+      }
 
       if( RatIsNegative(SCIPvarGetLbGlobalExact(var)) )
       {
@@ -3353,7 +3360,9 @@ SCIP_RETCODE SCIProwExactControlEncodingLength(
 
    RatComputeApproximation(tmpval, row->rhs, maxdenom, 1);
    assert(RatIsGE(tmpval, row->rhs));
-   RatSet(row->rhs, tmpval);
+
+   if( !onlyweaken )
+      RatSet(row->rhs, tmpval);
 
    SCIProwExactSort(row);
 
@@ -3373,7 +3382,6 @@ SCIP_RETCODE SCIProwExactControlEncodingLength(
 
    SCIPdebugMessage("new row ");
    SCIPdebug(SCIPprintRowExact(set->scip, row, NULL));
-   assert(RatDenominator(row->rhs) <= maxdenom);
 
    return SCIP_OKAY;
 }
@@ -3445,6 +3453,7 @@ SCIP_RETCODE SCIProwExactCreateFromRow(
       col = SCIProwGetCols(fprow)[i];
 
       SCIP_CALL( SCIPvarAddToRowExact(SCIPcolGetVar(col), blkmem, set, stat, eventqueue, prob, lp, workrow, tmpval) );
+      assert(RatIsFpRepresentable(SCIProwExactGetVals(workrow)[SCIProwExactGetNNonz(workrow) -1]));
    }
 
    RatSetReal(tmpval, SCIProwGetConstant(fprow));
@@ -4509,6 +4518,7 @@ SCIP_RETCODE SCIPlpExactSolveAndEval(
    SCIP_Bool farkasvalid;
    SCIP_Bool fromscratch;
    int iterations;
+   SCIP_Real previoustime;
 
    assert(lp != NULL);
    assert(lpexact != NULL);
@@ -4526,9 +4536,15 @@ SCIP_RETCODE SCIPlpExactSolveAndEval(
    harditlim = (int) MIN(itlim, INT_MAX);
 
    if( usefarkas )
+   {
+      previoustime = SCIPclockGetTime(stat->provedinfeaslptime);
       SCIPclockStart(stat->provedinfeaslptime, set);
+   }
    else
+   {
+      previoustime = SCIPclockGetTime(stat->provedfeaslptime);
       SCIPclockStart(stat->provedfeaslptime, set);
+   }
 
    /* set initial LP solver settings */
    fromscratch = FALSE;
@@ -4922,11 +4938,15 @@ TERMINATE:
    {
       SCIPclockStop(stat->provedinfeaslptime, set);
       stat->nexlpinf++;
+      if( *lperror )
+         stat->timefailexlpinf += SCIPclockGetTime(stat->provedinfeaslptime) - previoustime;
    }
    else
    {
       SCIPclockStop(stat->provedfeaslptime, set);
       stat->nexlp++;
+      if( *lperror )
+         stat->timefailexlp += SCIPclockGetTime(stat->provedfeaslptime) - previoustime;
    }
 
    return retcode;

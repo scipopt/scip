@@ -210,7 +210,7 @@ void SCIPcertificatePrintCons(
    SCIP_Rational**       val                 /**< coefficient array */
    );
 
-/** prints constraint */
+/** prints verification of row as a MIR cut (viewed as a split cut) */
 SCIP_RETCODE SCIPcertificatePrintMirCut(
    SCIP_SET*             set,                /**< SCIP settings */
    SCIP_LP*              lp,                 /**< SCIP lp data structure */
@@ -305,6 +305,7 @@ SCIP_RETCODE SCIPcertificatePrintDualboundPseudo(
    SCIP_Real             psval               /**< the pseudo obj value */
    );
 
+/** prints the bound that a node inherits from its parent to the certificate */
 SCIP_RETCODE SCIPcertificatePrintInheritedBound(
    SCIP_SET*             set,                /**< general SCIP settings */
    SCIP_CERTIFICATE*     certificate,        /**< certificate data structure */

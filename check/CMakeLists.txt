@@ -962,10 +962,10 @@ if (UNIX)
                             # I assume that this test takes longer than 2 seconds
                             #
                             )
-
 endif (UNIX)
 endif()
 
+# @todo exip: this assumes you have vipr on your path, needs to be fixed eventually
 if(TEST_MIPEX)
     foreach(instance ${instances_MIPEX})
         split_instance(instance)
