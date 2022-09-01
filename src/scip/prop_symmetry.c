@@ -2469,6 +2469,9 @@ SCIP_RETCODE storeSimpleConstraint(
 
       SCIP_CALL( getActiveVariables(scip, &consvars, &consvals, &nvars, &constant, SCIPconsIsTransformed(cons)) );
 
+      if ( nvars == 0 )
+         break;
+
       /* enconde AND/OR constraints as (AND/OR coef1 var1 ... coefk vark) */
       SCIP_CALL( ensureReflSymDataMemorySuffices(scip, reflsymdata, reflsymdata->ntrees + 2 * nvars + 1,
             reflsymdata->ntreeops + 1, reflsymdata->ntreecoefs + nvars, reflsymdata->ntreevaridx + nvars,
@@ -2512,6 +2515,9 @@ SCIP_RETCODE storeSimpleConstraint(
 
       SCIP_CALL( getActiveVariablesReflSym(scip, &consvars, &consvals,
             &nvars, &constant, SCIPconsIsTransformed(cons)) );
+
+      if ( nvars == 0 )
+         break;
 
       /* enconde XOR constraints as (XOR coef1 var1 ... coefk vark) */
       SCIP_CALL( ensureReflSymDataMemorySuffices(scip, reflsymdata, reflsymdata->ntrees + 2 * nvars + 1,
