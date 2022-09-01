@@ -3032,6 +3032,8 @@ SCIP_RETCODE findColorsReflSym(
    SCIP_Real value;
    SCIP_Real lastcoef;
    SCIP_Real oldcoef = SCIP_INVALID;
+   SCIP_Real oldinvcoef = SCIP_INVALID;
+   SCIP_Bool oldinvexists = FALSE;
    int nuniquevararray = 0;
    int invcolor;
    int lastpos;
@@ -3207,7 +3209,10 @@ SCIP_RETCODE findColorsReflSym(
       if ( SCIPisEQ(scip, value, -lastcoef) )
          invexists = TRUE;
 
-      if ( ! SCIPisEQ(scip, value, oldcoef) )
+      /* decide whether we have found a new coefficient: due to numerics, we also need to check
+       * whether coefficients the inverse coefficients behave the same
+       */
+      if ( (! SCIPisEQ(scip, value, oldcoef)) || (oldinvexists != invexists) || (! SCIPisEQ(scip, value, -oldinvcoef)) )
       {
 #ifdef SCIP_OUTPUT
          SCIPdebugMsg(scip, "Detected new matrix coefficient type %f - color: %d\n.", value, reflsymdata->nuniquecoefs);
@@ -3223,13 +3228,15 @@ SCIP_RETCODE findColorsReflSym(
          else
             reflsymdata->invcoefcolors[idx] = reflsymdata->nuniquecoefs++;
          invcolor = reflsymdata->invcoefcolors[idx];
+         oldinvexists = invexists;
+         oldinvcoef = lastcoef;
       }
       else
       {
          assert( reflsymdata->nuniquecoefs > 0 );
          assert( invcolor >= 0 || invexists );
 
-         if ( invexists )
+         if ( invexists || oldinvexists )
             reflsymdata->coefcolors[idx] = reflsymdata->nuniquecoefs - 1;
          else
             reflsymdata->coefcolors[idx] = reflsymdata->nuniquecoefs - 2;
