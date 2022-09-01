@@ -7254,7 +7254,7 @@ SCIP_DECL_PROPPRESOL(propPresolSymmetry)
       SCIP_CALL( tryAddSymmetryHandlingConss(scip, prop, &nchanges, &earlyterm) );
 
       /* if we actually tried to add symmetry handling constraints */
-      if ( ! earlyterm )
+      if ( ! earlyterm ) /*lint !e774*/
       {
          *result = SCIP_DIDNOTFIND;
 
