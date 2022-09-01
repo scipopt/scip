@@ -2757,7 +2757,7 @@ SCIP_RETCODE SCIPparamsetWrite(
    }
 
    return SCIP_OKAY;
-}
+} /*lint !e593*/
 
 /** installs default values for all parameters */
 SCIP_RETCODE SCIPparamsetSetToDefaults(

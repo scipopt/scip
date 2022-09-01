@@ -76,6 +76,8 @@
 // function previously designated pure, assigns to pointer-to-non-const the address of  possibly non-local memory
 -esym(453,SCIPfeastol)
 -esym(453,SCIPdualfeastol)
+-esym(453,SCIPsetFeastol)
+-esym(453,SCIPsetDualfeastol)
 
 // duplicate initialization of object
 -emacro(485,SCIPsolveNlpi)
