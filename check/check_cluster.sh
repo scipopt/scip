@@ -72,7 +72,7 @@ EMPHBENCHMARK="${33}"
 
 
 # check if all variables defined (by checking the last one)
-if test -z "${PYTHON}"
+if test -z "${EMPHBENCHMARK}"
 then
     echo Skipping test since not all variables are defined
     echo "TSTNAME       = ${TSTNAME}"
