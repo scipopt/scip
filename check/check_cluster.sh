@@ -247,7 +247,7 @@ do
                 # check queue type
                 if test  "${QUEUETYPE}" = "srun"
                 then
-                    if test "${CLUSTERQUEUE}" != "moskito"
+                    if test "${CLUSTERQUEUE}" != "moskito" && test "${CLUSTERQUEUE}" != "prio"
                     then
                         # the space at the end is necessary
                         export SRUN="srun --cpu_bind=cores ${SRUN_FLAGS} "
