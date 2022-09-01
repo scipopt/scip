@@ -1418,7 +1418,6 @@ SCIP_RETCODE SYMcomputeReflectionSymmetryGenerators(
 #ifdef SCIP_OUTPUT
    G.write_dot("debug.dot");
 #endif
-   G.write_dot("debug.dot");
 
    SCIPdebugMsg(scip, "Symmetry detection graph has %u nodes.\n", G.get_nof_vertices());
 
