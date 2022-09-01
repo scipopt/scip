@@ -1091,12 +1091,8 @@ SCIP_RETCODE SCIPcreateReflectionSymmetryDetectionGraph(
       const int color = reflsymdata->invvarcolors[v];
       assert( 0 <= color && color < reflsymdata->nuniquevars );
 
-#ifndef NDEBUG
       int node = (int) G->add_vertex((unsigned) color);
       assert( node == reflsymdata->ntreevars + v );
-#else
-      (void) G->add_vertex((unsigned) color);
-#endif
 
       G->add_edge(node, node - reflsymdata->ntreevars);
 
