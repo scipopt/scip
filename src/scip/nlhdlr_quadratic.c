@@ -1855,8 +1855,8 @@ void computeVApexAndVRay(
    SCIP_Real*            raycoefs,           /**< coefficients of ray */
    int*                  rayidx,             /**< index of consvar the ray coef is associated to */
    int                   raynnonz,           /**< length of raycoefs and rayidx */
-   SCIP_Real*            vapex,              /**< array containing \f$v_i^T apex\f$ */
-   SCIP_Real*            vray                /**< array containing \f$v_i^T ray\f$ */
+   SCIP_Real*            vapex,              /**< array to store \f$v_i^T apex\f$ */
+   SCIP_Real*            vray                /**< array to store \f$v_i^T ray\f$ */
    )
 {
    SCIP_EXPR* qexpr;
@@ -1919,8 +1919,9 @@ SCIP_RETCODE computeMonoidalQuadCoefs(
    int                   raynnonz,           /**< length of raycoefs and rayidx */
    SCIP_Real*            vb,                 /**< array containing \f$v_i^T b\f$ for \f$i \in I_+ \cup I_-\f$ */
    SCIP_Real*            vzlp,               /**< array containing \f$v_i^T zlp_q\f$ for \f$i \in I_+ \cup I_-\f$ */
+   SCIP_Real*            vapex,              /**< array containing \f$v_i^T apex\f$ */
+   SCIP_Real*            vray,               /**< array containing \f$v_i^T ray\f$ */
    SCIP_Real             kappa,              /**< value of kappa */
-   SCIP_Real*            apex,               /**< array containing the apex of the S-free set in the original space */
    SCIP_Real             sidefactor,         /**< 1.0 if the violated constraint is q &le; rhs, -1.0 otherwise */
    SCIP_Real*            a,                  /**< pointer to store quadratic coefficient */
    SCIP_Real*            b,                  /**< pointer to store linear coefficient */
@@ -1931,17 +1932,10 @@ SCIP_RETCODE computeMonoidalQuadCoefs(
    int nquadexprs;
    SCIP_Real* eigenvectors;
    SCIP_Real* eigenvalues;
-   SCIP_Real* vapex;
-   SCIP_Real* vray;
    int i;
 
    qexpr = nlhdlrexprdata->qexpr;
    SCIPexprGetQuadraticData(qexpr, NULL, NULL, NULL, NULL, &nquadexprs, NULL, &eigenvalues, &eigenvectors);
-
-   /* compute v_i^T apex in vapex[i] and v_i^T ray in vray[i] */
-   SCIP_CALL( SCIPallocBufferArray(scip, &vapex, nquadexprs) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &vray, nquadexprs) );
-   computeVApexAndVRay(nlhdlrexprdata, apex, raycoefs, rayidx, raynnonz, vapex, vray);
 
    *a = 0.0;
    *b = 0.0;
@@ -1964,9 +1958,6 @@ SCIP_RETCODE computeMonoidalQuadCoefs(
 
    *b *= 2.0;
 
-   SCIPfreeBufferArray(scip, &vray);
-   SCIPfreeBufferArray(scip, &vapex);
-
    return SCIP_OKAY;
 }
 
@@ -1981,6 +1972,8 @@ SCIP_Bool isRayInStrip(
    int                   raynnonz,           /**< length of raycoefs and rayidx */
    SCIP_Real*            vb,                 /**< array containing \f$v_i^T b\f$ for \f$i \in I_+ \cup I_-\f$ */
    SCIP_Real*            vzlp,               /**< array containing \f$v_i^T zlp_q\f$ for \f$i \in I_+ \cup I_-\f$ */
+   SCIP_Real*            vapex,              /**< array containing \f$v_i^T apex\f$ */
+   SCIP_Real*            vray,               /**< array containing \f$v_i^T ray\f$ */
    SCIP_Real             kappa,              /**< value of kappa */
    SCIP_Real             sidefactor,         /**< 1.0 if the violated constraint is q &le; rhs, -1.0 otherwise */
    SCIP_Real             cutcoef             /**< optimal solution of the monoidal quadratic */
@@ -1990,46 +1983,36 @@ SCIP_Bool isRayInStrip(
    int nquadexprs;
    SCIP_Real* eigenvectors;
    SCIP_Real* eigenvalues;
-   SCIP_Real apos;
-   SCIP_Real bpos;
+   SCIP_Real num;
+   SCIP_Real denom;
    int i;
-   int j;
 
    qexpr = nlhdlrexprdata->qexpr;
    SCIPexprGetQuadraticData(qexpr, NULL, NULL, NULL, NULL, &nquadexprs, NULL, &eigenvalues, &eigenvectors);
 
-   apos = 0.0;
-   bpos = 0.0;
-   j = 0;
+   num = 0.0;
+   denom = 0.0;
    for( i = 0; i < nquadexprs; ++i )
    {
       SCIP_Real dot;
-      SCIP_Real rayentry;
-
-      /* get entry of ray -> check if current var index corresponds to a non-zero entry in ray */
-      if( j < raynnonz && i == rayidx[j] )
-      {
-         rayentry = raycoefs[j];
-         ++j;
-      }
-      else
-         rayentry = 0.0;
 
       if( sidefactor * eigenvalues[i] <= 0 )
          continue;
 
       dot = vzlp[i] + vb[i] / (2.0 * (sidefactor * eigenvalues[i]));
 
-      apos += sidefactor * eigenvalues[i] * SQR(dot);
-      bpos += SQRT(sidefactor * eigenvalues[i]) * dot * rayentry;
+      denom += sidefactor * eigenvalues[i] * SQR(dot);
+      num += sidefactor * eigenvalues[i] * dot * (cutcoef * (vapex[i] - vzlp[i]) + vapex[i] - vray[i] + vb[i] / (2.0 * (sidefactor * eigenvalues[i])));
    }
 
-   apos /= kappa;
-   bpos /= SQRT(kappa);
+   denom /= kappa;
+   denom += 1.0;
+   num /= kappa;
+   num += 1.0;
 
    printf("strip value = %g \n", 1.0 / (apos + 1.0) * bpos + cutcoef);
 
-   return  1.0 / (apos + 1.0) * bpos + cutcoef < 1 ? TRUE: FALSE;
+   return -num / denom < 0 ? TRUE: FALSE;
 }
 
 /** computes the smallest root of the quadratic function a*x^2 + b*x + c with a > 0
@@ -2185,13 +2168,23 @@ SCIP_RETCODE computeMonoidalStrengthCoef(
    if( (lppos >= 0 && SCIPvarGetType(SCIPcolGetVar(cols[lppos])) != SCIP_VARTYPE_CONTINUOUS) ||
        (lppos < 0 && SCIProwIsIntegral(rows[- lppos - 1])) )
    {
+      SCIP_Real* vapex;
+      SCIP_Real* vray;
       SCIP_Real a;
       SCIP_Real b;
       SCIP_Real c;
+      int nquadexprs;
+
+      SCIPexprGetQuadraticData(nlhdlrexprdata->qexpr, NULL, NULL, NULL, NULL, &nquadexprs, NULL, NULL, NULL);
+
+      /* compute v_i^T apex in vapex[i] and v_i^T ray in vray[i] */
+      SCIP_CALL( SCIPallocBufferArray(scip, &vapex, nquadexprs) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &vray, nquadexprs) );
+      computeVApexAndVRay(nlhdlrexprdata, apex, raycoefs, rayidx, raynnonz, vapex, vray);
 
       /* compute coefficients of the quadratic monoidal problem function */
       SCIP_CALL( computeMonoidalQuadCoefs(scip, nlhdlrexprdata, raycoefs, rayidx, raynnonz, vb,
-         vzlp, kappa, apex, sidefactor, &a, &b, &c) );
+         vzlp, vapex, vray, kappa, sidefactor, &a, &b, &c) );
 
       printf("monoidal coefs are: a = %g, b = %g, c = %g \n", a, b, c);
 
@@ -2204,12 +2197,15 @@ SCIP_RETCODE computeMonoidalStrengthCoef(
          *cutcoef = findMonoidalQuadRoot(scip, a, b, c);
 
          /* check if ray is in strip. If not, monoidal is possible and cutcoef is the strengthened cut coef */
-         //if( ! isRayInStrip(nlhdlrexprdata, raycoefs, rayidx, raynnonz, vb, vzlp, kappa, sidefactor, *cutcoef) )
+         if( ! isRayInStrip(nlhdlrexprdata, raycoefs, rayidx, raynnonz, vb, vzlp, vapex, vray, kappa, sidefactor, *cutcoef) )
          {
             *success = TRUE;
             printf("ray is not in strip \n");
          }
       }
+
+      SCIPfreeBufferArray(scip, &vray);
+      SCIPfreeBufferArray(scip, &vapex);
    }
 
    return SCIP_OKAY;
@@ -2240,10 +2236,31 @@ SCIP_RETCODE computeIntercut(
 {
    SCIP_COL** cols;
    SCIP_ROW** rows;
+   SCIP_Real* apex;
    int i;
 
    cols = SCIPgetLPCols(scip);
    rows = SCIPgetLPRows(scip);
+
+   printf("sidefactor = %f \n", sidefactor);
+
+   /* if we use monoidal and we are in the right case for it, compute the apex of the S-free set */
+   if( nlhdlrdata->usemonoidal && wcoefs == NULL && kappa > 0 )
+   {
+      int nquadexprs;
+
+      SCIPexprGetQuadraticData(nlhdlrexprdata->qexpr, NULL, NULL, NULL, NULL, &nquadexprs, NULL, NULL, NULL);
+
+      /* allocate memory for apex */
+      SCIP_CALL( SCIPallocBufferArray(scip, &apex, nquadexprs) );
+
+      computeApex(nlhdlrexprdata, vb, vzlp, kappa, sidefactor, apex);
+   }
+   else
+   {
+      apex = NULL;
+   }
+
 
    /* for every ray: compute cut coefficient and add var associated to ray into cut */
    for( i = 0; i < rays->nrays; ++i )
@@ -2297,6 +2314,12 @@ SCIP_RETCODE computeIntercut(
          cutcoef = SCIPisInfinity(scip, interpoint) ? 0.0 : 1.0 / interpoint;
       }
 
+      if( monoidalsuccess )
+      {
+         printf("Monoidal changed cutcoef: %g ----> %g \n", cutcoef, monoidalcutcoef);
+         assert(cutcoef >= monoidalcutcoef);
+      }
+
       /* add var to cut: if variable is nonbasic at upper we have to flip sign of cutcoef */
       lppos = rays->lpposray[i];
       if( lppos < 0 )
@@ -2341,11 +2364,11 @@ SCIP_RETCODE computeIntercut(
          }
       }
 
-      if( monoidalsuccess )
-      {
-         printf("Monoidal changed cutcoef: %g ----> %g \n", cutcoef, monoidalcutcoef);
-         assert(cutcoef > monoidalcutcoef);
-      }
+      //if( monoidalsuccess )
+      //{
+      //   printf("Monoidal changed cutcoef: %g ----> %g \n", cutcoef, monoidalcutcoef);
+      //   assert(cutcoef > monoidalcutcoef);
+      //}
    }
 
 TERMINATE:
