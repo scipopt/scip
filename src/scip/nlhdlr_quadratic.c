@@ -1127,6 +1127,9 @@ SCIP_RETCODE intercutsComputeCommonQuantities(
    *kappa *= -0.25;
    *kappa += constant;
 
+   if( SCIPisZero(scip, *kappa) )
+      *kappa = 0.0;
+
    /* finish w(zlp) computation: linear part (including auxvar, if applicable) */
    for( i = 0; i < nlinexprs; ++i )
    {
