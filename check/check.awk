@@ -656,6 +656,7 @@ BEGIN {
       pb = objlimit;
       db = objlimit;
       feasible = 1;
+      dbset = 1;
    }
    else if( $4 == "infeasible" || $4 == "infeasible\r" )
    {
