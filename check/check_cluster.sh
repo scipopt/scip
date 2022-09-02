@@ -72,7 +72,7 @@ EMPHBENCHMARK="${33}"
 
 
 # check if all variables defined (by checking the last one)
-if test -z "${PYTHON}"
+if test -z "${EMPHBENCHMARK}"
 then
     echo Skipping test since not all variables are defined
     echo "TSTNAME       = ${TSTNAME}"
@@ -247,7 +247,7 @@ do
                 # check queue type
                 if test  "${QUEUETYPE}" = "srun"
                 then
-                    if test "${CLUSTERQUEUE}" != "moskito"
+                    if test "${CLUSTERQUEUE}" != "moskito" && test "${CLUSTERQUEUE}" != "prio"
                     then
                         # the space at the end is necessary
                         export SRUN="srun --cpu_bind=cores ${SRUN_FLAGS} "
