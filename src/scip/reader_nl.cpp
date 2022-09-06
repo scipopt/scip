@@ -1531,6 +1531,7 @@ SCIP_RETCODE SCIPwriteSolutionNl(
       default:
          /* solve_result_num = 500; */
          SCIPerrorMessage("invalid status code <%d>\n", SCIPgetStatus(scip));
+         (void) fclose(solfile);
          return SCIP_INVALIDDATA;
    }
    SCIPinfoMessage(scip, solfile, "objno 0 %d\n", solve_result_num);
