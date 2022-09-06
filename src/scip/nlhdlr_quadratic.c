@@ -2112,24 +2112,24 @@ void computeApex(
       denom = 0;
       for( j = 0; j < nquadexprs; ++j )
       {
-         SCIP_Real dot;
+         entry -= eigenvectors[j * nquadexprs + i] * vb[j] / (2.0 * sidefactor * eigenvalues[j]);
 
-         /* skip indices corresponding to negative eigenvalues */
-         if( sidefactor * eigenvalues[j] <= 0 )
-            continue;
+         if( sidefactor * eigenvalues[j] > 0 )
+         {
+            SCIP_Real dot;
 
-         dot = vzlp[j] + vb[j] / (2.0 * (sidefactor * eigenvalues[j]));
+            dot = vzlp[j] + vb[j] / (2.0 * (sidefactor * eigenvalues[j]));
 
-         denom += sidefactor * eigenvalues[j] * SQR(dot);
-         num += eigenvectors[j * nquadexprs + i] * SQRT(sidefactor * eigenvalues[j]) * dot;
-         entry += eigenvectors[j * nquadexprs + i] * vb[j] / (2.0 * (sidefactor * eigenvalues[j]));
+            num += eigenvectors[j * nquadexprs + i] * SQRT(sidefactor * eigenvalues[j]) * dot;
+            denom += sidefactor * eigenvalues[j] * SQR(dot);
+         }
       }
       assert(denom > 0);
 
-      num *= kappa;
+      num *= -kappa;
       entry += num / denom;
 
-      apex[i] = -entry;
+      apex[i] = entry;
    }
 }
 
