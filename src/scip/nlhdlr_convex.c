@@ -1990,11 +1990,11 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateConvex)
    {
       SCIP_CALL( estimateConvexSecant(scip, nlhdlr, nlhdlrexprdata, sol, rowprep, success) );
 
-      (void) SCIPsnprintf(SCIProwprepGetName(rowprep), SCIP_MAXSTRLEN, "%sestimate_convexsecant%p_%s%d",
+      (void) SCIPsnprintf(SCIProwprepGetName(rowprep), SCIP_MAXSTRLEN, "%sestimate_convexsecant%p_%s%" SCIP_LONGINT_FORMAT,
          overestimate ? "over" : "under",
          (void*)expr,
          sol != NULL ? "sol" : "lp",
-         sol != NULL ? SCIPsolGetIndex(sol) : SCIPgetNLPs(scip));
+         sol != NULL ? (SCIP_Longint) SCIPsolGetIndex(sol) : SCIPgetNLPs(scip));
    }
 
    /* if secant method was not used or failed, then try with gradient */
@@ -2002,11 +2002,11 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateConvex)
    {
       SCIP_CALL( estimateGradient(scip, nlhdlrexprdata, sol, auxvalue, rowprep, success) );
 
-      (void) SCIPsnprintf(SCIProwprepGetName(rowprep), SCIP_MAXSTRLEN, "%sestimate_convexgradient%p_%s%d",
+      (void) SCIPsnprintf(SCIProwprepGetName(rowprep), SCIP_MAXSTRLEN, "%sestimate_convexgradient%p_%s%" SCIP_LONGINT_FORMAT,
          overestimate ? "over" : "under",
          (void*)expr,
          sol != NULL ? "sol" : "lp",
-         sol != NULL ? SCIPsolGetIndex(sol) : SCIPgetNLPs(scip));
+         sol != NULL ? (SCIP_Longint) SCIPsolGetIndex(sol) : SCIPgetNLPs(scip));
    }
 
    if( *success )
@@ -2309,11 +2309,11 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateConcave)
    {
       SCIP_CALL( SCIPsetPtrarrayVal(scip, rowpreps, 0, rowprep) );
 
-      (void) SCIPsnprintf(SCIProwprepGetName(rowprep), SCIP_MAXSTRLEN, "%sestimate_concave%p_%s%d",
+      (void) SCIPsnprintf(SCIProwprepGetName(rowprep), SCIP_MAXSTRLEN, "%sestimate_concave%p_%s%" SCIP_LONGINT_FORMAT,
          overestimate ? "over" : "under",
          (void*)expr,
          sol != NULL ? "sol" : "lp",
-         sol != NULL ? SCIPsolGetIndex(sol) : SCIPgetNLPs(scip));
+         sol != NULL ? (SCIP_Longint) SCIPsolGetIndex(sol) : SCIPgetNLPs(scip));
    }
    else
    {

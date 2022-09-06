@@ -302,7 +302,7 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaDefault)
             {
                /* if the rowprep didn't have to be changed, then turn it into a row, change this to an equality, and add it to the LP */
                /* TODO do this also if not actually needing both under- and overestimator (should still be valid, but also stronger?) */
-               (void) SCIPsnprintf(SCIProwprepGetName(rowprep), SCIP_MAXSTRLEN, "initestimate_sum", j);
+               (void) SCIPsnprintf(SCIProwprepGetName(rowprep), SCIP_MAXSTRLEN, "initestimate_sum%d", j);
 
                SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, cons) );
 
@@ -460,12 +460,12 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateDefault)
 
       SCIP_CALL( SCIPsetPtrarrayVal(scip, rowpreps, 0, rowprep) );
 
-      (void) SCIPsnprintf(SCIProwprepGetName(rowprep), SCIP_MAXSTRLEN, "%sestimate_%s%p_%s%d",
+      (void) SCIPsnprintf(SCIProwprepGetName(rowprep), SCIP_MAXSTRLEN, "%sestimate_%s%p_%s%" SCIP_LONGINT_FORMAT,
          overestimate ? "over" : "under",
          SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)),
          (void*)expr,
          sol != NULL ? "sol" : "lp",
-         sol != NULL ? SCIPsolGetIndex(sol) : SCIPgetNLPs(scip));
+         sol != NULL ? (SCIP_Longint) SCIPsolGetIndex(sol) : SCIPgetNLPs(scip));
    }
    else
    {

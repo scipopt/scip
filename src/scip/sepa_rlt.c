@@ -2184,7 +2184,7 @@ SCIP_RETCODE computeRltCut(
    *success = TRUE;
 
    /* create an empty row which we then fill with variables step by step */
-   (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "rlt_%scut_%s_%s_%s_%s_%d", useprojrow ? "proj" : "", rowname,
+   (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "rlt_%scut_%s_%s_%s_%s_%" SCIP_LONGINT_FORMAT, useprojrow ? "proj" : "", rowname,
                        uselhs ? "lhs" : "rhs", SCIPvarGetName(var), uselb ? "lb" : "ub", SCIPgetNLPs(scip));
    SCIP_CALL( SCIPcreateEmptyRowSepa(scip, cut, sepa, cutname, -SCIPinfinity(scip), SCIPinfinity(scip),
          SCIPgetDepth(scip) > 0 && local, FALSE, FALSE) );  /* TODO SCIPgetDepth() should be replaced by depth that is passed on to the SEPAEXEC calls (?) */
@@ -2730,7 +2730,7 @@ SCIP_RETCODE separateMcCormickImplicit(
 #endif
 
          /* create an empty row */
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "mccormick_%sestimate_implicit_%s*%s_%d",
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "mccormick_%sestimate_implicit_%s*%s_%" SCIP_LONGINT_FORMAT,
                              underestimate ? "under" : "over", SCIPvarGetName(terms[i].x), SCIPvarGetName(terms[i].y),
                              SCIPgetNLPs(scip));
 
