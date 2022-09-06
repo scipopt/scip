@@ -564,7 +564,9 @@ SCIP_RETCODE SCIPgetVanillafullstrongData(
    assert(scip != NULL);
 
    branchrule = SCIPfindBranchrule(scip, BRANCHRULE_NAME);
+   assert( branchrule != NULL );
    branchruledata = SCIPbranchruleGetData(branchrule);
+   assert( branchruledata != NULL );
 
    if( cands )
    {
