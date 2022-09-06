@@ -2,15 +2,21 @@
 
 @section RN802 SCIP 8.0.2
 *************************
+
 Features
 --------
+
 Performance improvements
 ------------------------
+
 Examples and applications
 -------------------------
+
 Interface changes
 -----------------
+
 ### New and changed callbacks
+
 ### Deleted and changed API methods
 
 - added input parameter SCIP_Bool initiallp to SCIPcutselsSelect

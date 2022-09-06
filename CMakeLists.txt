@@ -108,8 +108,9 @@ set_property(CACHE SYM PROPERTY STRINGS bliss none )  #define list of values GUI
 #search the selected symmetry computation program
 message(STATUS "Finding symmetry computation program \"${SYM}\"")
 
-set(BLISS_TARGET "")
+unset(BLISS_TARGET)
 if(SYM STREQUAL "bliss")
+    message(STATUS "Support SYM: bliss")
     set(sym symmetry/compute_symmetry_bliss.cpp)
 
     # modify configuration for bliss
