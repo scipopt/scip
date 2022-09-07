@@ -147,7 +147,7 @@ SCIP_RETCODE addCut(
    vars = SCIPgetVars(scip);
 
    /* construct cut name */
-   (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "mix%d_x%d", SCIPgetNLPs(scip), *ncuts);
+   (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "mix%" SCIP_LONGINT_FORMAT "_x%d", SCIPgetNLPs(scip), *ncuts);
 
    /* create empty cut */
    SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), cutrhs,
