@@ -1955,6 +1955,7 @@ SCIP_RETCODE computeMonoidalQuadCoefs(
    }
 
    *b *= 2.0;
+   *c += kappa;
 
    assert(*c != 0);
 
