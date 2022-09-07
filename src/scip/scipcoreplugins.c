@@ -30,6 +30,7 @@ SCIP_RETCODE SCIPincludeCorePlugins(
 {
    SCIP_CALL( SCIPincludeBanditvtableEpsgreedy(scip) );
    SCIP_CALL( SCIPincludeBanditvtableExp3(scip) );
+   SCIP_CALL( SCIPincludeBanditvtableExp3IX(scip) );
    SCIP_CALL( SCIPincludeBanditvtableUcb(scip) );
 
    return SCIP_OKAY;
