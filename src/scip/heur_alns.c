@@ -110,7 +110,7 @@
  * bandit algorithm parameters
  */
 #define DEFAULT_BESTSOLWEIGHT  1
-#define DEFAULT_BANDITALGO     'u'  /**< the default bandit algorithm: (u)pper confidence bounds, (e)xp.3, epsilon (g)reedy */
+#define DEFAULT_BANDITALGO     'i'  /**< the default bandit algorithm: (u)pper confidence bounds, (e)xp.3, epsilon (g)reedy, exp.3-(i)x */
 #define DEFAULT_REWARDCONTROL  0.8  /**< reward control to increase the weight of the simple solution indicator and decrease the weight of the closed gap reward */
 #define DEFAULT_SCALEBYEFFORT  TRUE /**< should the reward be scaled by the effort? */
 #define DEFAULT_RESETWEIGHTS   TRUE /**< should the bandit algorithms be reset when a new problem is read? */
