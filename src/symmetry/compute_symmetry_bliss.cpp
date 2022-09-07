@@ -1540,12 +1540,98 @@ SCIP_RETCODE SYMcomputeReflectionSymmetryGenerators(
    (void) stats.print(stdout);
 #endif
 
+   printf("Found %d generators, log10 group size %.1f\n", data.nperms, (SCIP_Real) log10l(stats.get_group_size_approx()));
    for (int p = 0; p < data.nperms; ++p)
    {
-      printf("perm %d:\n", p);
-      for (int v = 0; v < 2 * reflsymdata->ntreevars; ++v)
-         printf("%d ", data.perms[p][v]);
-      printf("\n");
+      SCIP_Bool hasreflection = FALSE;
+
+      for (int v = 0; v < data.npermvars; ++v)
+      {
+         if ( data.perms[p][v] >= data.npermvars )
+         {
+            hasreflection = TRUE;
+            break;
+         }
+      }
+
+      if ( hasreflection )
+      {
+         // print permutation in cycle representation
+         SCIP_Bool* covered;
+
+         SCIP_CALL( SCIPallocClearBufferArray(scip, &covered, data.npermvars) );
+
+         printf("perm %d: ", p);
+
+         for (int v = 0; v < data.npermvars; ++v)
+         {
+            if ( covered[v] )
+               continue;
+
+            if ( data.perms[p][v] == v )
+               continue;
+
+            printf("(%d", v);
+            covered[v] = TRUE;
+
+            int w = data.perms[p][v];
+            while ( w != v )
+            {
+               if ( w >= data.npermvars )
+               {
+                  printf(" -%d", w);
+                  covered[w - data.npermvars] = TRUE;
+               }
+               else
+               {
+                  printf(" %d", w);
+                  covered[w] = TRUE;
+               }
+
+               w = data.perms[p][w];
+            }
+            printf(")");
+         }
+
+         printf("\n");
+         for (int v = 0; v < data.npermvars; ++v)
+            covered[v] = FALSE;
+
+         for (int v = 0; v < data.npermvars; ++v)
+         {
+            if ( covered[v] )
+               continue;
+
+            if ( data.perms[p][v] == v )
+               continue;
+
+            printf("(%s", SCIPvarGetName(SCIPgetVars(scip)[v]));
+            covered[v] = TRUE;
+
+            int w = data.perms[p][v];
+            while ( w != v )
+            {
+               if ( w >= data.npermvars )
+               {
+                  printf(" -%s", SCIPvarGetName(SCIPgetVars(scip)[w - data.npermvars]));
+                  covered[w - data.npermvars] = TRUE;
+               }
+               else
+               {
+                  printf(" %s", SCIPvarGetName(SCIPgetVars(scip)[w]));
+                  covered[w] = TRUE;
+               }
+
+               w = data.perms[p][w];
+            }
+            printf(")");
+         }
+
+         SCIPfreeBufferArray(scip, &covered);
+         printf("\n\n");
+      }
+   }
+
    // @todo store data somewhere else
    for (int p = data.nperms - 1; p >= 0; --p)
    {
