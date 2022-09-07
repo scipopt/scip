@@ -46,7 +46,9 @@ extern "C" {
  */
 
 /** perform activity based coefficient tigthening on the given cut; returns TRUE if the cut was detected
- *  to be redundant due to acitvity bounds
+ *  to be redundant due to acitivity bounds
+ *
+ *  See also cons_linear.c:consdataTightenCoefs().
  */
 SCIP_EXPORT
 SCIP_Bool SCIPcutsTightenCoefficients(

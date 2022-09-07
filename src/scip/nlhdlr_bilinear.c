@@ -103,14 +103,14 @@ void getIneqViol(
    if( xcoef * ycoef >= 0 )
    {
       /* violation for top-left and bottom-right corner */
-      *viol1 = MAX(0, (xcoef * SCIPvarGetLbLocal(x)  - ycoef * SCIPvarGetUbLocal(y) - constant) / norm); /*lint !e666*/
-      *viol2 = MAX(0, (xcoef * SCIPvarGetUbLocal(x)  - ycoef * SCIPvarGetLbLocal(y) - constant) / norm); /*lint !e666*/
+      *viol1 = MAX(0, (xcoef * SCIPvarGetLbLocal(x)  - ycoef * SCIPvarGetUbLocal(y) - constant) / norm); /*lint !e666*/ /*lint !e661*/
+      *viol2 = MAX(0, (xcoef * SCIPvarGetUbLocal(x)  - ycoef * SCIPvarGetLbLocal(y) - constant) / norm); /*lint !e666*/ /*lint !e661*/
    }
    else
    {
       /* violation for top-right and bottom-left corner */
-      *viol1 = MAX(0, (xcoef * SCIPvarGetUbLocal(x)  - ycoef * SCIPvarGetUbLocal(y) - constant) / norm); /*lint !e666*/
-      *viol2 = MAX(0, (xcoef * SCIPvarGetLbLocal(x)  - ycoef * SCIPvarGetLbLocal(y) - constant) / norm); /*lint !e666*/
+      *viol1 = MAX(0, (xcoef * SCIPvarGetUbLocal(x)  - ycoef * SCIPvarGetUbLocal(y) - constant) / norm); /*lint !e666*/ /*lint !e661*/
+      *viol2 = MAX(0, (xcoef * SCIPvarGetLbLocal(x)  - ycoef * SCIPvarGetLbLocal(y) - constant) / norm); /*lint !e666*/ /*lint !e661*/
    }
 }
 
@@ -1632,11 +1632,12 @@ SCIP_RETCODE SCIPaddIneqBilinear(
       ineqs = nlhdlrexprdata->overineqs;
       nineqs = nlhdlrexprdata->noverineqs;
    }
+   assert( nineqs >= 0 );
 
    /* check for a duplicate */
    for( i = 0; i < nineqs; ++i )
    {
-      if( SCIPisFeasEQ(scip, xcoef, ineqs[3*i]) && SCIPisFeasEQ(scip, ycoef, ineqs[3*i+1])
+      if( SCIPisFeasEQ(scip, xcoef, ineqs[3*i]) && SCIPisFeasEQ(scip, ycoef, ineqs[3*i+1]) /*lint !e661*/
          && SCIPisFeasEQ(scip, constant, ineqs[3*i+2]) )
       {
          SCIPdebugMsg(scip, "inequality already found -> skip\n");
@@ -1651,22 +1652,22 @@ SCIP_RETCODE SCIPaddIneqBilinear(
       /* compute violations of existing inequalities */
       for( i = 0; i < nineqs; ++i )
       {
-         getIneqViol(x, y, ineqs[3*i], ineqs[3*i+1], ineqs[3*i+2], &viols1[i], &viols2[i]);
+         getIneqViol(x, y, ineqs[3*i], ineqs[3*i+1], ineqs[3*i+2], &viols1[i], &viols2[i]); /*lint !e661*/
 
          /* check whether an existing inequality is dominating the candidate */
-         if( SCIPisGE(scip, viols1[i], viol1) && SCIPisGE(scip, viols2[i], viol2) )
+         if( SCIPisGE(scip, viols1[i], viol1) && SCIPisGE(scip, viols2[i], viol2) ) /*lint !e661*/
          {
             SCIPdebugMsg(scip, "inequality is dominated by %d -> skip\n", i);
             return SCIP_OKAY;
          }
 
          /* replace inequality if candidate is dominating it */
-         if( SCIPisLT(scip, viols1[i], viol1) && SCIPisLT(scip, viols2[i], viol2) )
+         if( SCIPisLT(scip, viols1[i], viol1) && SCIPisLT(scip, viols2[i], viol2) ) /*lint !e661*/
          {
             SCIPdebugMsg(scip, "inequality dominates %d -> replace\n", i);
-            ineqs[3*i] = xcoef;
-            ineqs[3*i+1] = ycoef;
-            ineqs[3*i+2] = constant;
+            ineqs[3*i] = xcoef; /*lint !e661*/
+            ineqs[3*i+1] = ycoef; /*lint !e661*/
+            ineqs[3*i+2] = constant; /*lint !e661*/
             *success = TRUE;
          }
       }

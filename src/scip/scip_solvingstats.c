@@ -3202,7 +3202,7 @@ void SCIPprintHeuristicStatistics(
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  other solutions  :          -          -          - %10" SCIP_LONGINT_FORMAT "          -\n",
       scip->stat->nexternalsolsfound);
 
-   if ( ndivesets > 0 )
+   if ( ndivesets > 0 && scip->set->misc_showdivingstats )
    {
       int c;
       SCIP_DIVECONTEXT divecontexts[] = {SCIP_DIVECONTEXT_SINGLE, SCIP_DIVECONTEXT_ADAPTIVE};

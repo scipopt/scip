@@ -490,8 +490,8 @@ SCIP_RETCODE SCIPsepastoreAddCut(
          if( (SCIP_ROWORIGINTYPE) sepastore->cuts[0]->origintype == SCIP_ROWORIGINTYPE_SEPA )
          {
             SCIP_SEPA* sepa;
-            sepa = SCIProwGetOriginSepa(cut);
-            SCIPsepaDecNCutsAdded(sepa, cut->fromcutpool);
+            sepa = SCIProwGetOriginSepa(sepastore->cuts[0]);
+            SCIPsepaDecNCutsAdded(sepa, sepastore->cuts[0]->fromcutpool);
          }
       }
 

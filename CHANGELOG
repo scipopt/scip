@@ -2,15 +2,21 @@
 
 @section RN802 SCIP 8.0.2
 *************************
+
 Features
 --------
+
 Performance improvements
 ------------------------
+
 Examples and applications
 -------------------------
+
 Interface changes
 -----------------
+
 ### New and changed callbacks
+
 ### Deleted and changed API methods
 
 - added input parameter SCIP_Bool initiallp to SCIPcutselsSelect
@@ -27,8 +33,14 @@ Interface changes
 
 ### Command line interface
 ### Interfaces to external software
+
+- Added compatibility with Mosek 10.0.18.
+
 ### Changed parameters
 ### New parameters
+
+- new parameters to turn on more statistics: misc/showdivingstats (diving heuristics), heuristics/alns/shownbstats (ALNS), estimation/showstats (tree size estimation)
+
 ### Data structures
 
 - added nrootcalls and ncutsadded to SCIP_Cutpool
@@ -36,6 +48,7 @@ Interface changes
 - added ncalls, nrootcalls, nrootcutsselected, nrootcutsforced, nrootcutsfiltered, nlocalcutsselected, nlocalcutsforced, nlocalcutsfiltered to SCIP_Cutsel
 - added ncutsadded, ncutsaddedviapool, ncutsaddeddirect, ncutsappliedviapool, ncutsapplieddirect, nrootcalls to SCIP_Sepa
 - added ncutsadded, ncutsaddedviapool, ncutsaddeddirect to SCIP_Sepastore
+- fixed statistics of relaxators w.r.t. number of times conss/cuts were added
 
 Deleted files
 -------------
@@ -61,6 +74,14 @@ Fixed bugs
 - read objective offset from ZIMPL files
 - Make sure that objective limit is disabled if not all variables are in the LP. If we would run into
   an objective limit in this case, the results of the LP solver are unclear.
+- fixed bug in reopt.c, which occured for bounds outside of current valid bounds
+- fixed problem with recomputing symmetries after a restart
+- fixed bug in SCIPcalcMIR() with wrong order of arguments for removeZerosQuad()
+- fixed segmentation fault in update of cut statistic
+- fixed bug in presolving of and constraints by merging variables with multiple occurrences before cliquePresolve()
+- fixed bug in dual presolving of linear constraints by setting implicit integers to integers in multi-aggregation
+- fixed update of presolve statistics on added constraints and changed coefficients in constraint handler for nonlinear constraints
+- fixed bug with reading CIP files with large constraints split over several lines
 
 Miscellaneous
 -------------
@@ -68,6 +89,10 @@ Miscellaneous
 - Added extended cutselector statistics splitting between root node specific and general statistics
 - Added extended and refined cutpool statistics showing the number of cuts added from the cutpool to the sepastore
 - Added extended and refined separator statistics to get a better view of the individual generators performance
+- turned off output of statistics for the following information by default:
+  diving heuristics, ALNS neighborhood information and tree size estimation statistics;
+  they can be turned on using the following new parameters:
+  misc/showdivingstats (diving heuristics), heuristics/alns/shownbstats (ALNS), estimation/showstats (tree size estimation)
 
 Known bugs
 ----------
@@ -2845,6 +2870,7 @@ Features
   - the subnlp heuristic now gives ownership of a found solution to the heuristic that constructed the starting point, if any;
     as a consequence, MIP heuristics may now be shown more frequently for having found a solution when solving MINLPs, even
     though the solutions required an additional NLP solve
+  - new multistart heuristic for NLPs
 
 - Propagator:
   - add prop_nlobbt, a nonlinear optimization-based bound propagator solving two convex NLP relaxations for each variable
