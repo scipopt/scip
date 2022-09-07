@@ -1049,6 +1049,65 @@ int colorInClass(
    return color;
 }
 
+/** returns whether an operator corresponds to even function */
+static
+SCIP_Bool isEvenFunction(
+   SCIP*                 scip,               /**< SCIP instance */
+   SYM_REFLSYMDATA*      reflsymdata,        /**< data of CIP */
+   int                   opidx               /**< index of operator */
+   )
+{
+   SYM_NODETYPE* trees;
+   int* treemap;
+   SCIP_Real* treevals;
+   SCIP_EXPRHDLR** treeops;
+
+   assert( reflsymdata != NULL );
+   assert( 0 <= opidx && opidx < reflsymdata->ntrees );
+   assert( reflsymdata->trees[opidx] == SYM_NODETYPE_OPERATOR );
+
+   trees = reflsymdata->trees;
+   treemap = reflsymdata->treemap;
+   treevals = reflsymdata->treevals;
+   treeops = reflsymdata->treeops;
+
+   /* operators without proper arguments are not even */
+   if ( opidx >= reflsymdata->ntrees - 2 )
+      return FALSE;
+
+   /* check whether constraint has single variable as argument and satisfies even-properties */
+   if ( treeops[treemap[opidx]] == (SCIP_EXPRHDLR*) SYM_CONSTYPE_SIGNPOWER )
+   {
+      if ( trees[opidx + 1] == SYM_NODETYPE_VAL )
+      {
+         if ( trees[opidx + 2] != SYM_NODETYPE_COEF )
+            return FALSE;
+      }
+      else
+      {
+         if ( trees[opidx + 1] != SYM_NODETYPE_COEF )
+            return FALSE;
+      }
+   }
+   else if ( treeops[treemap[opidx]] == (SCIP_EXPRHDLR*) SYM_CONSTYPE_POWER )
+   {
+      /* power 1 is not even */
+      if ( trees[opidx + 1] != SYM_NODETYPE_VAL )
+         return FALSE;
+
+      /* has not a single variable as argument */
+      if ( trees[opidx + 2] != SYM_NODETYPE_COEF )
+         return FALSE;
+
+      /* exponent is not an even integer */
+      if ( ! SCIPisIntegral(scip, treevals[treemap[opidx + 1]]) ||
+         ((int) treevals[treemap[opidx + 1]] % 2 != 0) )
+         return FALSE;
+   }
+
+   return TRUE;
+}
+
 /** creates the graph for detecting reflection symmetries */
 SCIP_RETCODE SCIPcreateReflectionSymmetryDetectionGraph(
    SCIP*                 scip,               /**< SCIP pointer */
@@ -1130,7 +1189,7 @@ SCIP_RETCODE SCIPcreateReflectionSymmetryDetectionGraph(
       /* keep track of path to root node, possible since tree is stored in DFS fashion */
       std::vector<unsigned> pathtoroot;
       std::vector<unsigned> pathtorootidx;
-      std::vector<SCIP_Bool> noflip;
+      std::vector<int> flip;    // 0: no, 1: standard, 2: inside even function
 
       /* iterate through tree and create nodes and edges for constraint */
       for (int i = reflsymdata->treebegins[c]; i < reflsymdata->treebegins[c + 1]; ++i)
@@ -1140,7 +1199,7 @@ SCIP_RETCODE SCIPcreateReflectionSymmetryDetectionGraph(
          {
             pathtorootidx.pop_back();
             pathtoroot.pop_back();
-            noflip.pop_back();
+            flip.pop_back();
          }
 
          if ( reflsymdata->treeparentidx[i] == -1 )
@@ -1154,14 +1213,18 @@ SCIP_RETCODE SCIPcreateReflectionSymmetryDetectionGraph(
             pathtoroot.push_back(node);
             pathtorootidx.push_back(i);
 
-            /* if we have a sum expression that contains a value, we don't allow to negate variables */
+            /* check which types of flips are allowed due to this operator */
             assert( reflsymdata->treeops[reflsymdata->treemap[i]] == (SCIP_EXPRHDLR*) SYM_CONSTYPE_OBJ ||
                i < reflsymdata->treebegins[c + 1] - 1 );
+
+            /* sum expressions only allow flips if they don't have a constant term */
             if ( reflsymdata->treeops[reflsymdata->treemap[i]] == exprsum &&
-               reflsymdata->trees[i + 1] == SYM_NODETYPE_VAL )
-               noflip.push_back(TRUE);
+               reflsymdata->trees[i + 1] != SYM_NODETYPE_VAL )
+               flip.push_back(1);
+            else if ( isEvenFunction(scip, reflsymdata, i) )
+               flip.push_back(2);
             else
-               noflip.push_back(FALSE);
+               flip.push_back(0);
          }
          else if ( reflsymdata->trees[i] == SYM_NODETYPE_OPERATOR )
          {
@@ -1172,13 +1235,18 @@ SCIP_RETCODE SCIPcreateReflectionSymmetryDetectionGraph(
             pathtoroot.push_back(node);
             pathtorootidx.push_back(i);
 
-            /* if we have a sum expression that contains a value, we don't allow to negate variables */
-            assert( i < reflsymdata->treebegins[c + 1] - 1);
+            /* check which types of flips are allowed due to this operator */
+            assert( reflsymdata->treeops[reflsymdata->treemap[i]] == (SCIP_EXPRHDLR*) SYM_CONSTYPE_OBJ ||
+               i < reflsymdata->treebegins[c + 1] - 1 );
+
+            /* sum expressions only allow flips if they don't have a constant term */
             if ( reflsymdata->treeops[reflsymdata->treemap[i]] == exprsum &&
-               reflsymdata->trees[i + 1] == SYM_NODETYPE_VAL )
-               noflip.push_back(TRUE);
+               reflsymdata->trees[i + 1] != SYM_NODETYPE_VAL )
+               flip.push_back(1);
+            else if ( isEvenFunction(scip, reflsymdata, i) )
+               flip.push_back(2);
             else
-               noflip.push_back(FALSE);
+               flip.push_back(0);
          }
          else if ( reflsymdata->trees[i] == SYM_NODETYPE_COEF )
          {
@@ -1192,7 +1260,7 @@ SCIP_RETCODE SCIPcreateReflectionSymmetryDetectionGraph(
             G->add_edge(node, pathtoroot.back());
             G->add_edge(node, varnode);
 
-            if ( ! noflip.back() )
+            if ( flip.back() == 1 )
             {
                unsigned node2 = G->add_vertex((unsigned) coefcolstart + colorInClass(i, reflsymdata, TRUE));
                unsigned invvarnode = varnode + reflsymdata->ntreevars;
@@ -1200,6 +1268,12 @@ SCIP_RETCODE SCIPcreateReflectionSymmetryDetectionGraph(
                G->add_edge(node, node2);
                G->add_edge(node2, pathtoroot.back());
                G->add_edge(node2, invvarnode);
+            }
+            else if ( flip.back() == 2 )
+            {
+               unsigned invvarnode = varnode + reflsymdata->ntreevars;
+
+               G->add_edge(node, invvarnode);
             }
 
             /* we have already taken the variable into account */
