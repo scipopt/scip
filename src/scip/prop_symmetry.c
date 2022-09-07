@@ -144,6 +144,7 @@
 #include <scip/cons_sos1.h>
 #include <scip/cons_sos2.h>
 #include <scip/expr_pow.h>
+#include <scip/expr_product.h>
 #include <scip/pub_expr.h>
 #include <scip/misc.h>
 #include <scip/scip_datastructures.h>
@@ -2128,6 +2129,24 @@ SCIP_RETCODE printReflectionSymmetryData(
                SCIPinfoMessage(scip, NULL, "+ ");
             else if ( op == SCIPfindExprhdlr(scip, "prod") )
                SCIPinfoMessage(scip, NULL, "* ");
+            else if ( op == SCIPfindExprhdlr(scip, "abs") )
+               SCIPinfoMessage(scip, NULL, "abs ");
+            else if ( op == SCIPfindExprhdlr(scip, "entropy") )
+               SCIPinfoMessage(scip, NULL, "entropy ");
+            else if ( op == SCIPfindExprhdlr(scip, "exp") )
+               SCIPinfoMessage(scip, NULL, "exp ");
+            else if ( op == SCIPfindExprhdlr(scip, "pow") )
+               SCIPinfoMessage(scip, NULL, "pow ");
+            else if ( op == SCIPfindExprhdlr(scip, "signpower") )
+               SCIPinfoMessage(scip, NULL, "signpow ");
+            else if ( op == SCIPfindExprhdlr(scip, "sin") )
+               SCIPinfoMessage(scip, NULL, "sin ");
+            else if ( op == SCIPfindExprhdlr(scip, "cos") )
+               SCIPinfoMessage(scip, NULL, "cos ");
+            else if ( op == SCIPfindExprhdlr(scip, "log") )
+               SCIPinfoMessage(scip, NULL, "log ");
+            else if ( op == SCIPfindExprhdlr(scip, "erf") )
+               SCIPinfoMessage(scip, NULL, "erf ");
             else if ( op == (SCIP_EXPRHDLR*) SYM_CONSTYPE_AND )
                SCIPinfoMessage(scip, NULL, "AND ");
             else if ( op == (SCIP_EXPRHDLR*) SYM_CONSTYPE_OR )
@@ -2152,6 +2171,10 @@ SCIP_RETCODE printReflectionSymmetryData(
                SCIPinfoMessage(scip, NULL, "tuple ");
             else if ( op == (SCIP_EXPRHDLR*) SYM_CONSTYPE_OBJ )
                SCIPinfoMessage(scip, NULL, "objective: ");
+            else if ( op == (SCIP_EXPRHDLR*) SYM_CONSTYPE_POWER )
+               SCIPinfoMessage(scip, NULL, "pow ");
+            else if ( op == (SCIP_EXPRHDLR*) SYM_CONSTYPE_SIGNPOWER )
+               SCIPinfoMessage(scip, NULL, "signpow ");
             else
                SCIPinfoMessage(scip, NULL, "? ");
             break;
@@ -3080,25 +3103,26 @@ SCIP_RETCODE ensureOpenidxSize(
    return SCIP_OKAY;
 }
 
-/** stores information about a nonlinear constraint in reflection symmetry data structure */
+/** stores expression tree for rhs-bounded constraint in reflection symmetry data structure */
 static
-SCIP_RETCODE storeNonlinearConstraint(
+SCIP_RETCODE storeExpressionTree(
    SCIP*                 scip,               /**< SCIP pointer */
    SYM_REFLSYMDATA*      reflsymdata,        /**< pointer to reflection symmetry data structure */
-   SCIP_CONS*            cons,               /**< pointer to constraint that needs to be stored */
+   SCIP_EXPR*            rootexpr,           /**< root expression of expression tree */
+   SCIP_Real             rhs,                /**< right-hand side associated with expression tree */
+   int*                  openidx,            /**< allocated array (to store expression not handled completely yet) */
+   int*                  maxnopenidx,        /**< address of number of entries fitting into openidx */
    SCIP_VAR**            consvars,           /**< allocated array to store variables in constraints */
-   SCIP_Real*            consvals            /**< allocated array to store coefficients in constraints */
+   SCIP_Real*            consvals,           /**< allocated array to store coefficients in constraints */
+   SCIP_Bool             istransformed,      /**< whether constraint corresponding to expression tree is transformed */
+   SCIP_Bool             negated             /**< whether tree shall be negated */
    )
 {
    SCIP_EXPRITER* it;
-   SCIP_EXPR* rootexpr;
+   SCIP_EXPRHDLR* prodexprhdlr;
    SCIP_EXPR* expr;
    SCIP_Real constant;
-   SCIP_Real rhs;
-   SCIP_Real lhs;
-   int* openidx;
-   int nopenidx;
-   int maxnopenidx;
+   int nopenidx = 0;
    int parentidx;
    int opidx;
    int nconsvars;
@@ -3109,248 +3133,324 @@ SCIP_RETCODE storeNonlinearConstraint(
 
    assert( scip != NULL );
    assert( reflsymdata != NULL );
+   assert( ! SCIPisInfinity(scip, rhs) );
+   assert( openidx != NULL );
+   assert( maxnopenidx != NULL );
+   assert( *maxnopenidx > 0 );
+   assert( consvars != NULL );
+   assert( consvals != NULL );
+
+   prodexprhdlr = SCIPfindExprhdlr(scip, "prod");
+   assert( prodexprhdlr != NULL );
+
+   /* initialize new tree */
+   reflsymdata->treebegins[reflsymdata->ntreerhs] = reflsymdata->ntrees;
+   reflsymdata->treerhs[reflsymdata->ntreerhs++] = rhs;
+
+   /* add (* -1 ... ) to negate tree */
+   if ( negated )
+   {
+      SCIP_CALL( ensureReflSymDataMemorySuffices(scip, reflsymdata,
+               reflsymdata->ntrees + 2, reflsymdata->ntreeops + 1, reflsymdata->ntreecoefs,
+               reflsymdata->ntreevaridx, reflsymdata->ntreevals + 1) );
+
+      SCIP_CALL( addOperatorReflSym(reflsymdata, prodexprhdlr, -1, &parentidx) );
+      SCIP_CALL( addValReflSym(reflsymdata, -1.0, parentidx, NULL) );
+   }
+
+   SCIP_CALL( SCIPcreateExpriter(scip, &it) );
+
+   SCIP_CALL( SCIPexpriterInit(it, rootexpr, SCIP_EXPRITER_DFS, TRUE) );
+   SCIPexpriterSetStagesDFS(it, SCIP_EXPRITER_ENTEREXPR | SCIP_EXPRITER_LEAVEEXPR);
+
+   /* @todo find an estimate for the memory that needs to be allocated */
+   for (expr = SCIPexpriterGetCurrent(it); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it))
+   {
+      if ( SCIPexpriterGetStageDFS(it) == SCIP_EXPRITER_LEAVEEXPR )
+      {
+         --nopenidx;
+         continue;
+      }
+      assert( SCIPexpriterGetStageDFS(it) == SCIP_EXPRITER_ENTEREXPR );
+
+      /* find parentidx (in negated case and root expression, this has been done before already) */
+      if ( !negated && expr == rootexpr )
+         parentidx = -1;
+      else if ( nopenidx >= 1 )
+         parentidx = openidx[nopenidx - 1];
+      assert( (!negated && expr == rootexpr) || parentidx != -1 );
+
+      /* deal with different kind of expressions and store them in the symmetry data structure */
+      if ( SCIPisExprVar(scip, expr) )
+      {
+         /* needed to correctly reset value when leaving expression */
+         SCIP_CALL( ensureOpenidxSize(scip, &openidx, nopenidx, maxnopenidx) );
+
+         openidx[nopenidx++] = -1;
+
+         /* children of sum expressions are treated in their parent nodes already */
+         if ( SCIPisExprSum(scip, SCIPexpriterGetParentDFS(it)) )
+            continue;
+
+         nconsvars = 1;
+         consvars[0] = SCIPgetVarExprVar(expr);
+         consvals[0] = 1.0;
+         constant = 0.0;
+
+         SCIP_CALL( getActiveVariablesReflSym(scip, &consvars, &consvals, &nconsvars, &constant, istransformed) );
+
+         nlocvals = SCIPisZero(scip, constant) ? 0 : 1;
+         nlocvars = nconsvars == 1 ? 1 : nconsvars;
+         nlocops = nlocvals == 0 && nlocvars == 1 ? 0 : 1;
+
+         SCIP_CALL( ensureReflSymDataMemorySuffices(scip, reflsymdata,
+               reflsymdata->ntrees + 2 * nlocvars + nlocops + nlocvals,
+               reflsymdata->ntreeops + nlocops, reflsymdata->ntreecoefs + nlocvars,
+               reflsymdata->ntreevaridx + nlocvars, reflsymdata->ntreevals + nlocvals) );
+
+         if ( nlocops == 0 )
+         {
+            SCIP_CALL( addCoefReflSym(reflsymdata, consvals[0], parentidx, NULL) );
+            SCIP_CALL( addVarReflSym(reflsymdata, SCIPvarGetProbindex(consvars[0]), parentidx, NULL) );
+         }
+         else
+         {
+            int sumidx;
+
+            SCIP_CALL( addOperatorReflSym(reflsymdata, SCIPexprGetHdlr(expr), parentidx, &sumidx) );
+            if ( nlocvals == 1 )
+            {
+               SCIP_CALL( addValReflSym(reflsymdata, constant, sumidx, NULL) );
+            }
+            for (i = 0; i < nlocvars; ++i)
+            {
+               SCIP_CALL( addCoefReflSym(reflsymdata, consvals[i], sumidx, NULL) );
+               SCIP_CALL( addVarReflSym(reflsymdata, SCIPvarGetProbindex(consvars[i]), sumidx, NULL) );
+            }
+         }
+      }
+      else if ( SCIPisExprValue(scip, expr) )
+      {
+         SCIP_CALL( ensureReflSymDataMemorySuffices(scip, reflsymdata,
+               reflsymdata->ntrees + 1, reflsymdata->ntreeops, reflsymdata->ntreecoefs,
+               reflsymdata->ntreevaridx, reflsymdata->ntreevals + 1) );
+
+         SCIP_CALL( addValReflSym(reflsymdata, SCIPgetValueExprValue(expr), parentidx, NULL) );
+
+         /* needed to correctly reset value when leaving expression */
+         SCIP_CALL( ensureOpenidxSize(scip, &openidx, nopenidx, maxnopenidx) );
+
+         openidx[nopenidx++] = -1;
+      }
+      else
+      {
+         SCIP_Real coef = 1.0;
+         int subopidx;
+
+         /* check whether operator has a coefficient based on parent expression */
+         if ( SCIPexpriterGetParentDFS(it) != NULL && SCIPisExprSum(scip, SCIPexpriterGetParentDFS(it)) )
+         {
+            SCIP_EXPR* parent;
+
+            parent = SCIPexpriterGetParentDFS(it);
+            for (i = 0; i < SCIPexprGetNChildren(parent); ++i)
+            {
+               if ( SCIPexprGetChildren(parent)[i] == expr )
+               {
+                  coef = SCIPgetCoefsExprSum(parent)[i];
+                  break;
+               }
+            }
+         }
+
+         subopidx = parentidx;
+         if ( ! SCIPisEQ(scip, coef, 1.0) )
+         {
+            SCIP_CALL( addOperatorReflSym(reflsymdata, prodexprhdlr, parentidx, &subopidx) );
+            SCIP_CALL( addValReflSym(reflsymdata, coef, subopidx, NULL) );
+         }
+
+         /* check whether operators deal with constant values or variable coefficients */
+         if ( SCIPisExprSum(scip, expr) )
+         {
+            SCIP_EXPR** children;
+            int sumidx;
+            int childidx = 0;
+
+            /* extract all children being variables and compute the sum of
+             * active variables expression
+             */
+            nlocvars = 0;
+            children = SCIPexprGetChildren(expr);
+            for (childidx = 0; childidx < SCIPexprGetNChildren(expr); ++childidx)
+            {
+               if ( ! SCIPisExprVar(scip, children[childidx]) )
+                  continue;
+
+               consvars[nlocvars] = SCIPgetVarExprVar(children[childidx]);
+               consvals[nlocvars++] = SCIPgetCoefsExprSum(expr)[childidx];
+            }
+            constant = SCIPgetConstantExprSum(expr);
+
+            SCIP_CALL( getActiveVariablesReflSym(scip, &consvars, &consvals, &nlocvars, &constant, istransformed) );
+
+            SCIP_CALL( ensureReflSymDataMemorySuffices(scip, reflsymdata,
+                  reflsymdata->ntrees + 2 * nlocvars + 2,
+                  reflsymdata->ntreeops + 1, reflsymdata->ntreecoefs + nlocvars,
+                  reflsymdata->ntreevaridx + nlocvars, reflsymdata->ntreevals + 1) );
+
+            SCIP_CALL( addOperatorReflSym(reflsymdata, SCIPexprGetHdlr(expr), subopidx, &sumidx) );
+            SCIP_CALL( ensureOpenidxSize(scip, &openidx, nopenidx, maxnopenidx) );
+
+            /* add the linear part of the sum */
+            if ( ! SCIPisZero(scip, constant) )
+            {
+               SCIP_CALL( addValReflSym(reflsymdata, constant, sumidx, NULL) );
+            }
+            for (i = 0; i < nlocvars; ++i)
+            {
+               SCIP_CALL( addCoefReflSym(reflsymdata, consvals[i], sumidx, NULL) );
+               SCIP_CALL( addVarReflSym(reflsymdata, SCIPvarGetProbindex(consvars[i]), sumidx, NULL) );
+            }
+
+            /* needed to correctly reset value when leaving expression */
+            SCIP_CALL( ensureOpenidxSize(scip, &openidx, nopenidx, maxnopenidx) );
+
+            openidx[nopenidx++] = sumidx;
+         }
+         else if ( SCIPisExprProduct(scip, expr) )
+         {
+            SCIP_Real prodcoef;
+
+            prodcoef = SCIPgetCoefExprProduct(expr);
+
+            /* estimate size needed (also in recursive calls for children) */
+            SCIP_CALL( ensureReflSymDataMemorySuffices(scip, reflsymdata,
+                  reflsymdata->ntrees + 8 * SCIPexprGetNChildren(expr) + 2,
+                  reflsymdata->ntreeops + 1 + SCIPexprGetNChildren(expr),
+                  reflsymdata->ntreecoefs + 3 * SCIPexprGetNChildren(expr),
+                  reflsymdata->ntreevaridx + 3 * SCIPexprGetNChildren(expr),
+                  reflsymdata->ntreevals + SCIPexprGetNChildren(expr) + 1) );
+
+            SCIP_CALL( addOperatorReflSym(reflsymdata, SCIPexprGetHdlr(expr), subopidx, &opidx) );
+            if ( ! SCIPisEQ(scip, prodcoef, 1.0) )
+            {
+               SCIP_CALL( addValReflSym(reflsymdata, prodcoef, opidx, NULL) );
+            }
+
+            /* needed to correctly reset value when leaving expression */
+            SCIP_CALL( ensureOpenidxSize(scip, &openidx, nopenidx, maxnopenidx) );
+
+            openidx[nopenidx++] = opidx;
+         }
+         else if ( SCIPisExprPower(scip, expr) )
+         {
+            SCIP_Real exponent;
+
+            exponent = SCIPgetExponentExprPow(expr);
+
+            SCIP_CALL( ensureReflSymDataMemorySuffices(scip, reflsymdata,
+                  reflsymdata->ntrees + 14, reflsymdata->ntreeops + 2, reflsymdata->ntreecoefs + 5,
+                  reflsymdata->ntreevaridx + 5, reflsymdata->ntreevals + 2) );
+
+            if ( SCIPisExprSignpower(scip, expr) )
+            {
+               SCIP_CALL( addOperatorReflSym(reflsymdata, (SCIP_EXPRHDLR*) SYM_CONSTYPE_SIGNPOWER,
+                     subopidx, &opidx) );
+            }
+            else
+            {
+               SCIP_CALL( addOperatorReflSym(reflsymdata, (SCIP_EXPRHDLR*) SYM_CONSTYPE_POWER,
+                     subopidx, &opidx) );
+            }
+            if ( ! SCIPisEQ(scip, exponent, 1.0) )
+            {
+               SCIP_CALL( addValReflSym(reflsymdata, exponent, opidx, NULL) );
+            }
+
+            /* needed to correctly reset value when leaving expression */
+            SCIP_CALL( ensureOpenidxSize(scip, &openidx, nopenidx, maxnopenidx) );
+
+            openidx[nopenidx++] = opidx;
+         }
+         else
+         {
+            /* operator without constant values or coefficients */
+
+            /* estimate size needed (also in recursive calls for children) */
+            SCIP_CALL( ensureReflSymDataMemorySuffices(scip, reflsymdata,
+                  reflsymdata->ntrees + 8 * SCIPexprGetNChildren(expr) + 1,
+                  reflsymdata->ntreeops + 1 + SCIPexprGetNChildren(expr),
+                  reflsymdata->ntreecoefs + 3 * SCIPexprGetNChildren(expr),
+                  reflsymdata->ntreevaridx + 3 * SCIPexprGetNChildren(expr),
+                  reflsymdata->ntreevals + SCIPexprGetNChildren(expr)) );
+
+            SCIP_CALL( addOperatorReflSym(reflsymdata, SCIPexprGetHdlr(expr), subopidx, &opidx) );
+
+            /* needed to correctly reset value when leaving expression */
+            SCIP_CALL( ensureOpenidxSize(scip, &openidx, nopenidx, maxnopenidx) );
+
+            openidx[nopenidx++] = opidx;
+         }
+      }
+   }
+
+   /* make sure that also the end position of the last constraint is stored correctly
+    * (ntreerhs has been incremented already above)
+    */
+   reflsymdata->treebegins[reflsymdata->ntreerhs] = reflsymdata->ntrees;
+
+   SCIPfreeExpriter(&it);
+
+   return SCIP_OKAY;
+}
+
+/** stores information about a nonlinear constraint in reflection symmetry data structure */
+static
+SCIP_RETCODE storeNonlinearConstraint(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SYM_REFLSYMDATA*      reflsymdata,        /**< pointer to reflection symmetry data structure */
+   SCIP_CONS*            cons,               /**< pointer to constraint that needs to be stored */
+   SCIP_VAR**            consvars,           /**< allocated array to store variables in constraints */
+   SCIP_Real*            consvals            /**< allocated array to store coefficients in constraints */
+   )
+{
+   SCIP_EXPR* rootexpr;
+   SCIP_Real rhs;
+   SCIP_Real lhs;
+   int* openidx;
+   int maxnopenidx;
+
+   assert( scip != NULL );
+   assert( reflsymdata != NULL );
    assert( cons != NULL );
    assert( consvars != NULL );
    assert( consvals != NULL );
 
    rootexpr = SCIPgetExprNonlinear(cons);
-   SCIP_CALL( SCIPcreateExpriter(scip, &it) );
-
-   SCIP_CALL( SCIPexpriterInit(it, rootexpr, SCIP_EXPRITER_DFS, TRUE) );
-   SCIPexpriterSetStagesDFS(it, SCIP_EXPRITER_ENTEREXPR | SCIP_EXPRITER_LEAVEEXPR);
 
    rhs = SCIPgetRhsNonlinear(cons);
    lhs = SCIPgetLhsNonlinear(cons);
 
    /* store the idx of open nodes in DFS tree to correctly assign parent idx */
    maxnopenidx = 128;
-   nopenidx = 0;
    SCIP_CALL( SCIPallocBufferArray(scip, &openidx, maxnopenidx) );
 
-   /* depending on lhs/rhs add up to two constraints */
+   /* if rhs is non-trivial, store rhs constraint */
    if ( ! SCIPisInfinity(scip, rhs) )
    {
-      /* initialize new tree */
-      reflsymdata->treebegins[reflsymdata->ntreerhs] = reflsymdata->ntrees;
-      reflsymdata->treerhs[reflsymdata->ntreerhs++] = rhs;
-
-      /* @todo find an estimate for the memory that needs to be allocated */
-      for (expr = SCIPexpriterGetCurrent(it); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it))
-      {
-         if ( SCIPexpriterGetStageDFS(it) == SCIP_EXPRITER_LEAVEEXPR )
-         {
-            --nopenidx;
-            continue;
-         }
-         assert( SCIPexpriterGetStageDFS(it) == SCIP_EXPRITER_ENTEREXPR );
-
-         parentidx = expr == rootexpr ? -1 : openidx[nopenidx - 1];
-         assert( expr == rootexpr || parentidx != -1 );
-
-         /* deal with different kind of expressions and store them in the symmetry data structure */
-         if ( SCIPisExprVar(scip, expr) )
-         {
-            /* needed to correctly reset value when leaving expression */
-            SCIP_CALL( ensureOpenidxSize(scip, &openidx, nopenidx, &maxnopenidx) );
-
-            openidx[nopenidx++] = -1;
-
-            /* children of sum expressions are treated in their parent nodes already */
-            if ( SCIPisExprSum(scip, SCIPexpriterGetParentDFS(it)) )
-               continue;
-
-            nconsvars = 1;
-            consvars[0] = SCIPgetVarExprVar(expr);
-            consvals[0] = 1.0;
-            constant = 0.0;
-
-            SCIP_CALL( getActiveVariablesReflSym(scip, &consvars, &consvals, &nconsvars,
-                  &constant, SCIPconsIsTransformed(cons)) );
-
-            nlocvals = SCIPisZero(scip, constant) ? 0 : 1;
-            nlocvars = nconsvars == 1 ? 1 : nconsvars;
-            nlocops = nlocvals == 0 && nlocvars == 1 ? 0 : 1;
-
-            SCIP_CALL( ensureReflSymDataMemorySuffices(scip, reflsymdata,
-                  reflsymdata->ntrees + 2 * nlocvars + nlocops + nlocvals,
-                  reflsymdata->ntreeops + nlocops, reflsymdata->ntreecoefs + nlocvars,
-                  reflsymdata->ntreevaridx + nlocvars, reflsymdata->ntreevals + nlocvals) );
-
-            if ( nlocops == 0 )
-            {
-               SCIP_CALL( addCoefReflSym(reflsymdata, consvals[0], parentidx, NULL) );
-               SCIP_CALL( addVarReflSym(reflsymdata, SCIPvarGetProbindex(consvars[0]), parentidx, NULL) );
-            }
-            else
-            {
-               int sumidx;
-
-               SCIP_CALL( addOperatorReflSym(reflsymdata, SCIPexprGetHdlr(expr), parentidx, &sumidx) );
-               if ( nlocvals == 1 )
-               {
-                  SCIP_CALL( addValReflSym(reflsymdata, constant, sumidx, NULL) );
-               }
-               for (i = 0; i < nlocvars; ++i)
-               {
-                  SCIP_CALL( addCoefReflSym(reflsymdata, consvals[i], sumidx, NULL) );
-                  SCIP_CALL( addVarReflSym(reflsymdata, SCIPvarGetProbindex(consvars[i]), sumidx, NULL) );
-               }
-            }
-         }
-         else if ( SCIPisExprValue(scip, expr) )
-         {
-            SCIP_CALL( ensureReflSymDataMemorySuffices(scip, reflsymdata,
-                  reflsymdata->ntrees + 1, reflsymdata->ntreeops, reflsymdata->ntreecoefs,
-                  reflsymdata->ntreevaridx, reflsymdata->ntreevals + 1) );
-
-            SCIP_CALL( addValReflSym(reflsymdata, SCIPgetValueExprValue(expr), parentidx, NULL) );
-
-            /* needed to correctly reset value when leaving expression */
-            SCIP_CALL( ensureOpenidxSize(scip, &openidx, nopenidx, &maxnopenidx) );
-
-            openidx[nopenidx++] = -1;
-         }
-         else
-         {
-            /* check whether operators deal with constant values or variable coefficients */
-            if ( SCIPisExprSum(scip, expr) )
-            {
-               SCIP_EXPR** children;
-               int sumidx;
-               int childidx = 0;
-
-               /* extract all children being variables and compute the sum of
-                * active variables expression
-                */
-               nlocvars = 0;
-               children = SCIPexprGetChildren(expr);
-               for (childidx = 0; childidx < SCIPexprGetNChildren(expr); ++childidx)
-               {
-                  if ( ! SCIPisExprVar(scip, children[childidx]) )
-                     continue;
-
-                  consvars[nlocvars] = SCIPgetVarExprVar(children[childidx]);
-                  consvals[nlocvars++] = SCIPgetCoefsExprSum(expr)[childidx];
-               }
-               constant = SCIPgetConstantExprSum(expr);
-
-               SCIP_CALL( getActiveVariablesReflSym(scip, &consvars, &consvals, &nlocvars,
-                  &constant, SCIPconsIsTransformed(cons)) );
-
-               SCIP_CALL( ensureReflSymDataMemorySuffices(scip, reflsymdata,
-                     reflsymdata->ntrees + 2 * nlocvars + 2,
-                     reflsymdata->ntreeops + 1, reflsymdata->ntreecoefs + nlocvars,
-                     reflsymdata->ntreevaridx + nlocvars, reflsymdata->ntreevals + 1) );
-
-               SCIP_CALL( addOperatorReflSym(reflsymdata, SCIPexprGetHdlr(expr), parentidx, &sumidx) );
-               SCIP_CALL( ensureOpenidxSize(scip, &openidx, nopenidx, &maxnopenidx) );
-
-               /* add the linear part of the sum */
-               if ( ! SCIPisZero(scip, constant) )
-               {
-                  SCIP_CALL( addValReflSym(reflsymdata, constant, sumidx, NULL) );
-               }
-               for (i = 0; i < nlocvars; ++i)
-               {
-                  SCIP_CALL( addCoefReflSym(reflsymdata, consvals[i], sumidx, NULL) );
-                  SCIP_CALL( addVarReflSym(reflsymdata, SCIPvarGetProbindex(consvars[i]), sumidx, NULL) );
-               }
-
-               /* needed to correctly reset value when leaving expression */
-               SCIP_CALL( ensureOpenidxSize(scip, &openidx, nopenidx, &maxnopenidx) );
-
-               openidx[nopenidx++] = sumidx;
-            }
-            else if ( SCIPisExprProduct(scip, expr) )
-            {
-               SCIP_Real prodcoef;
-
-               prodcoef = SCIPgetCoefExprProduct(expr);
-
-               /* estimate size needed (also in recursive calls for children) */
-               SCIP_CALL( ensureReflSymDataMemorySuffices(scip, reflsymdata,
-                     reflsymdata->ntrees + 8 * SCIPexprGetNChildren(expr) + 2,
-                     reflsymdata->ntreeops + 1 + SCIPexprGetNChildren(expr),
-                     reflsymdata->ntreecoefs + 3 * SCIPexprGetNChildren(expr),
-                     reflsymdata->ntreevaridx + 3 * SCIPexprGetNChildren(expr),
-                     reflsymdata->ntreevals + SCIPexprGetNChildren(expr) + 1) );
-
-               SCIP_CALL( addOperatorReflSym(reflsymdata, SCIPexprGetHdlr(expr), parentidx, &opidx) );
-               if ( ! SCIPisEQ(scip, prodcoef, 1.0) )
-               {
-                  SCIP_CALL( addValReflSym(reflsymdata, prodcoef, opidx, NULL) );
-               }
-
-               /* needed to correctly reset value when leaving expression */
-               SCIP_CALL( ensureOpenidxSize(scip, &openidx, nopenidx, &maxnopenidx) );
-
-               openidx[nopenidx++] = opidx;
-            }
-            else if ( SCIPisExprPower(scip, expr) )
-            {
-               SCIP_Real exponent;
-
-               exponent = SCIPgetExponentExprPow(expr);
-
-               SCIP_CALL( ensureReflSymDataMemorySuffices(scip, reflsymdata,
-                     reflsymdata->ntrees + 14, reflsymdata->ntreeops + 2, reflsymdata->ntreecoefs + 5,
-                     reflsymdata->ntreevaridx + 5, reflsymdata->ntreevals + 2) );
-
-               if ( SCIPisExprSignpower(scip, expr) )
-               {
-                  SCIP_CALL( addOperatorReflSym(reflsymdata, (SCIP_EXPRHDLR*) SYM_CONSTYPE_SIGNPOWER,
-                        parentidx, &opidx) );
-               }
-               else
-               {
-                  SCIP_CALL( addOperatorReflSym(reflsymdata, (SCIP_EXPRHDLR*) SYM_CONSTYPE_POWER,
-                        parentidx, &opidx) );
-               }
-               if ( ! SCIPisEQ(scip, exponent, 1.0) )
-               {
-                  SCIP_CALL( addValReflSym(reflsymdata, exponent, opidx, NULL) );
-               }
-
-               /* needed to correctly reset value when leaving expression */
-               SCIP_CALL( ensureOpenidxSize(scip, &openidx, nopenidx, &maxnopenidx) );
-
-               openidx[nopenidx++] = opidx;
-            }
-            else
-            {
-               /* operator without constant values or coefficients */
-
-               /* estimate size needed (also in recursive calls for children) */
-               SCIP_CALL( ensureReflSymDataMemorySuffices(scip, reflsymdata,
-                     reflsymdata->ntrees + 8 * SCIPexprGetNChildren(expr) + 1,
-                     reflsymdata->ntreeops + 1 + SCIPexprGetNChildren(expr),
-                     reflsymdata->ntreecoefs + 3 * SCIPexprGetNChildren(expr),
-                     reflsymdata->ntreevaridx + 3 * SCIPexprGetNChildren(expr),
-                     reflsymdata->ntreevals + SCIPexprGetNChildren(expr)) );
-
-               SCIP_CALL( addOperatorReflSym(reflsymdata, SCIPexprGetHdlr(expr), parentidx, &opidx) );
-
-               /* needed to correctly reset value when leaving expression */
-               SCIP_CALL( ensureOpenidxSize(scip, &openidx, nopenidx, &maxnopenidx) );
-
-               openidx[nopenidx++] = opidx;
-            }
-         }
-      }
-
-      /* make sure that also the end position of the last constraint is stored correctly
-       * (ntreerhs has been incremented already above)
-       */
-      reflsymdata->treebegins[reflsymdata->ntreerhs] = reflsymdata->ntrees;
+      SCIP_CALL( storeExpressionTree(scip, reflsymdata, rootexpr, rhs,
+            openidx, &maxnopenidx, consvars, consvals, SCIPconsIsTransformed(cons), FALSE) );
    }
 
+   /* if lhs is non-trivial, store lhs constraint */
    if ( ! SCIPisInfinity(scip, -lhs) )
    {
-      ;
+      SCIP_CALL( storeExpressionTree(scip, reflsymdata, rootexpr, -lhs,
+            openidx, &maxnopenidx, consvars, consvals, SCIPconsIsTransformed(cons), TRUE) );
    }
 
    SCIPfreeBufferArray(scip, &openidx);
-   SCIPfreeExpriter(&it);
 
    return SCIP_OKAY;
 }
