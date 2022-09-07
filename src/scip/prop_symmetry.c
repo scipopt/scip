@@ -3650,9 +3650,10 @@ SCIP_RETCODE findColorsReflSym(
          invexists = TRUE;
 
       /* decide whether we have found a new coefficient: due to numerics, we also need to check
-       * whether coefficients the inverse coefficients behave the same
+       * whether the inverse coefficients behave the same
        */
-      if ( (! SCIPisEQ(scip, value, oldcoef)) || (oldinvexists != invexists) || (! SCIPisEQ(scip, value, -oldinvcoef)) )
+      if ( (! SCIPisEQ(scip, value, oldcoef)) || (oldinvexists != invexists) ||
+         (SCIPisNegative(scip, value * oldinvcoef) && ! SCIPisEQ(scip, value, -oldinvcoef)) )
       {
 #ifdef SCIP_OUTPUT
          SCIPdebugMsg(scip, "Detected new matrix coefficient type %f - color: %d\n.", value, reflsymdata->nuniquecoefs);
