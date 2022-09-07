@@ -1942,25 +1942,21 @@ SCIP_RETCODE computeMonoidalQuadCoefs(
    *c = 0.0;
    for( i = 0; i < nquadexprs; ++i )
    {
-      *a += sidefactor * eigenvalues[i] * SQR(vzlp[i] - vapex[i]);
+      SCIP_Real dot;
 
-      if( sidefactor * eigenvalues[i] > 0 )
-      {
-         *b += sidefactor * eigenvalues[i] * (vzlp[i] - vapex[i]) * (vray[i] + vb[i] / (2.0 * (sidefactor * eigenvalues[i])));
-         *c += sidefactor * eigenvalues[i] * SQR(vray[i] + vb[i] / (2.0 * (sidefactor * eigenvalues[i])));
-      }
-      else
-      {
-         *b += sidefactor * eigenvalues[i] * (vapex[i] - vzlp[i]) * (vapex[i] - vray[i] + vb[i] / (2.0 * (sidefactor * eigenvalues[i])));
-         *c += sidefactor * eigenvalues[i] * SQR(vapex[i] - vray[i] + vb[i] / (2.0 * (sidefactor * eigenvalues[i])));
-      }
+      dot = vray[i] + vb[i] / (2.0 * sidefactor * eigenvalues[i]);
+
+      *a += sidefactor * eigenvalues[i] * SQR(vzlp[i] - vapex[i]);
+      *b += sidefactor * eigenvalues[i] * (vzlp[i] - vapex[i]) * dot;
+      *c += sidefactor * eigenvalues[i] * SQR(dot);
    }
 
    *b *= 2.0;
 
+   assert(*c != 0);
+
    return SCIP_OKAY;
 }
-
 
 /* check if ray was in strip by checking if the point in the monoid corresponding to the cutcoef we just found
  * is "on the wrong side" of the hyperplane -(a - lambda^Ta lambda)^T x */
@@ -1983,36 +1979,23 @@ SCIP_Bool isRayInStrip(
    int nquadexprs;
    SCIP_Real* eigenvectors;
    SCIP_Real* eigenvalues;
-   SCIP_Real num;
-   SCIP_Real denom;
+   SCIP_Real value;
    int i;
 
    qexpr = nlhdlrexprdata->qexpr;
    SCIPexprGetQuadraticData(qexpr, NULL, NULL, NULL, NULL, &nquadexprs, NULL, &eigenvalues, &eigenvectors);
 
-   num = 0.0;
-   denom = 0.0;
+   value = 0.0;
    for( i = 0; i < nquadexprs; ++i )
    {
-      SCIP_Real dot;
-
       if( sidefactor * eigenvalues[i] <= 0 )
          continue;
 
-      dot = vzlp[i] + vb[i] / (2.0 * (sidefactor * eigenvalues[i]));
-
-      denom += sidefactor * eigenvalues[i] * SQR(dot);
-      num += sidefactor * eigenvalues[i] * dot * (cutcoef * (vapex[i] - vzlp[i]) + vapex[i] - vray[i] + vb[i] / (2.0 * (sidefactor * eigenvalues[i])));
+      value += sidefactor * eigenvalues[i] * (vzlp[i] + vb[i] / (2.0 * sidefactor * eigenvalues[i])) * (cutcoef * (vzlp[i] - vapex[i]) + vray[i]);
    }
+   //printf("strip value = %g \n", -num / denom);
 
-   denom /= kappa;
-   denom += 1.0;
-   num /= kappa;
-   num += 1.0;
-
-   printf("strip value = %g \n", 1.0 / (apos + 1.0) * bpos + cutcoef);
-
-   return -num / denom < 0 ? TRUE: FALSE;
+   return value < 0 ? TRUE: FALSE;
 }
 
 /** computes the smallest root of the quadratic function a*x^2 + b*x + c with a > 0
