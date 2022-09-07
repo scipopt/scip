@@ -1944,6 +1944,9 @@ SCIP_RETCODE computeMonoidalQuadCoefs(
    {
       SCIP_Real dot;
 
+      if( SCIPisZero(scip, sidefactor * eigenvalues[i]) )
+         continue;
+
       dot = vray[i] + vb[i] / (2.0 * sidefactor * eigenvalues[i]);
 
       *a += sidefactor * eigenvalues[i] * SQR(vzlp[i] - vapex[i]);
@@ -2095,6 +2098,10 @@ void computeApex(
       denom = 0;
       for( j = 0; j < nquadexprs; ++j )
       {
+
+         if( sidefactor * eigenvalues[j] == 0.0 )
+            continue;
+
          entry -= eigenvectors[j * nquadexprs + i] * vb[j] / (2.0 * sidefactor * eigenvalues[j]);
 
          if( sidefactor * eigenvalues[j] > 0 )
