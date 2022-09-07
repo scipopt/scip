@@ -1546,7 +1546,12 @@ SCIP_RETCODE SYMcomputeReflectionSymmetryGenerators(
       for (int v = 0; v < 2 * reflsymdata->ntreevars; ++v)
          printf("%d ", data.perms[p][v]);
       printf("\n");
+   // @todo store data somewhere else
+   for (int p = data.nperms - 1; p >= 0; --p)
+   {
+      SCIPfreeBlockMemoryArrayNull(scip, &data.perms[p], 2 * data.npermvars);
    }
+   SCIPfreeBlockMemoryArrayNull(scip, &data.perms, data.nmaxperms);
 
    return SCIP_OKAY;
 }
