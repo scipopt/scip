@@ -31,7 +31,6 @@
 #include "scip/scip_randnumgen.h"
 
 #define BANDIT_NAME "exp3ix"
-#define NUMTOL 1e-6
 
 /*
  * Data structures
@@ -140,13 +139,13 @@ SCIP_Real SCIPcomputeGamma(
 SCIP_DECL_BANDITUPDATE(SCIPbanditUpdateExp3IX)
 {  /*lint --e{715}*/
    SCIP_BANDITDATA* banditdata;
-   SCIP_Real eta;
+   SCIP_Real etaparam;
    SCIP_Real lossestim;
    SCIP_Real prob;
    SCIP_Real weightsum;
    SCIP_Real newweightsum;
    SCIP_Real* weights;
-   SCIP_Real gamma;
+   SCIP_Real gammaparam;
    int nactions;
 
    assert(bandit != NULL);
@@ -161,19 +160,19 @@ SCIP_DECL_BANDITUPDATE(SCIPbanditUpdateExp3IX)
    weights = banditdata->weights;
    weightsum = banditdata->weightsum;
    newweightsum = weightsum;
-   gamma = SCIPcomputeGamma(nactions, banditdata->iter);
-   eta = 2.0 * gamma;
+   gammaparam = SCIPcomputeGamma(nactions, banditdata->iter);
+   etaparam = 2.0 * gammaparam;
 
    /* probability of selection */
    prob = weights[selection] / weightsum;
 
    /* estimated loss */
-   lossestim = (1.0 - score) / (prob + gamma);
+   lossestim = (1.0 - score) / (prob + gammaparam);
    assert(lossestim >= 0);
 
    /* update the observation for the current arm */
    newweightsum -= weights[selection];
-   weights[selection] *= exp(-eta * lossestim);
+   weights[selection] *= exp(-etaparam * lossestim);
    newweightsum += weights[selection];
 
    banditdata->weightsum = newweightsum;
