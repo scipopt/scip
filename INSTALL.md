@@ -67,7 +67,7 @@ During the CMake configuration of the SCIP Optimization Suite the can be specifi
 Troubleshooting
 ---------------
 
-If you have a problem with your cmake configuration and just want to build scip with all the available dependencies, the simplest solution is to activate the `AUTOBUILD` option:
+If you have a problem with your cmake configuration and just want to build scip with all the available dependencies, the **simplest solution is to activate the `AUTOBUILD` option**:
 ```
 cmake .. -DAUTOBUILD=on
 ```
@@ -76,7 +76,7 @@ This option activates the automatic search for dependent packages like GMP, IPOP
 If you need a specific package that is not automatically found, you should try setting a hint to the installation with the specified variable.
 Specific packages can also be disabled individually.
 
-examples of errors and possible solutions:
+**Examples of errors and possible solutions:**
 
 Problem:
 ```
