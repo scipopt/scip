@@ -741,6 +741,7 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/bandit.o \
 			scip/bandit_epsgreedy.o \
 			scip/bandit_exp3.o \
+			scip/bandit_exp3ix.o \
 			scip/bandit_ucb.o \
 			scip/benders.o \
 			scip/benderscut.o \
