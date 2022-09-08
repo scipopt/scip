@@ -114,6 +114,9 @@ then
 elif test "${CLUSTERQUEUE}" = "moskito"
 then
     ACCOUNT="dopt"
+elif test "${CLUSTERQUEUE}" = "prio"
+then
+    ACCOUNT="dopt"
 fi
 
 # check if the slurm blades should be used exclusively

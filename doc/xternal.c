@@ -332,6 +332,7 @@
  * - @subpage OBJ     "Creating, capturing, releasing, and adding data objects"
  * - @subpage MEMORY  "Using the memory functions of SCIP"
  * - @subpage DEBUG   "Debugging"
+ * - @subpage STAGES  "SCIP stages"
  */
 /**@page HOWTOADD How to add ...
  *
@@ -1159,7 +1160,7 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-/**@page DOC How to search the documentation for interface methods
+/**@page DOC How to search the documentation and source files structure for public interface methods
  *
  * If you are looking for a method in order to perform a specific task, the public \ref PUBLICAPI "SCIP C-API" is the place to look.
  * - It contains interface methods for all SCIP structs, both in the solver core or in one of the plugins.
@@ -7733,6 +7734,32 @@
  * set the parameter <code>misc/debugsol = check/p0033.sol</code>, and run SCIP again it will output:
  * \include debugexamples/example2_2.txt
  * Further debug output would only appear, if the solution was cut off in the solving process.
+ */
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+/**@page STAGES SCIP stages
+ *
+ * The SCIP object goes through different stages during the solving process, the transitions from one to the next are presented in the following diagram.
+ * \image html stages.png
+ * More exhaustively, the stages are:
+ * \code
+ * SCIP_STAGE_INIT         =  0,        /**< SCIP data structures are initialized, no problem exists
+ * SCIP_STAGE_PROBLEM      =  1,        /**< the problem is being created and modified
+ * SCIP_STAGE_TRANSFORMING =  2,        /**< the problem is being transformed into solving data space
+ * SCIP_STAGE_TRANSFORMED  =  3,        /**< the problem was transformed into solving data space
+ * SCIP_STAGE_INITPRESOLVE =  4,        /**< presolving is initialized
+ * SCIP_STAGE_PRESOLVING   =  5,        /**< the problem is being presolved
+ * SCIP_STAGE_EXITPRESOLVE =  6,        /**< presolving is exited
+ * SCIP_STAGE_PRESOLVED    =  7,        /**< the problem was presolved
+ * SCIP_STAGE_INITSOLVE    =  8,        /**< the solving process data is being initialized
+ * SCIP_STAGE_SOLVING      =  9,        /**< the problem is being solved
+ * SCIP_STAGE_SOLVED       = 10,        /**< the problem was solved
+ * SCIP_STAGE_EXITSOLVE    = 11,        /**< the solving process data is being freed
+ * SCIP_STAGE_FREETRANS    = 12,        /**< the transformed problem is being freed
+ * SCIP_STAGE_FREE         = 13         /**< SCIP data structures are being freed
+ * \endcode
+ * Most functions can be called in a subset of the stages, this is then documented, a runtime check is often added and will throw a \ref SCIP_INVALIDCALL if the stage is not allowed.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

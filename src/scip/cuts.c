@@ -3973,7 +3973,7 @@ SCIP_RETCODE SCIPcalcMIR(
    }
    else
    {
-      *success = ! removeZerosQuad(scip, SCIPsumepsilon(scip), tmpislocal, tmpcoefs, QUAD(&rhs), &tmpnnz, tmpinds);
+      *success = ! removeZerosQuad(scip, SCIPsumepsilon(scip), tmpislocal, tmpcoefs, QUAD(&rhs), tmpinds, &tmpnnz);
    }
 
    SCIPdebug( printCutQuad(scip, sol, tmpcoefs, QUAD(rhs), tmpinds, tmpnnz, FALSE, FALSE) );

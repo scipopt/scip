@@ -3168,7 +3168,7 @@ SCIP_RETCODE lpSetTiming(
 
    assert(lp != NULL);
    assert(success != NULL);
-   assert((int) SCIP_CLOCKTYPE_CPU == 1 && (int) SCIP_CLOCKTYPE_WALL == 2); /*lint !e506*/
+   assert((int) SCIP_CLOCKTYPE_CPU == 1 && (int) SCIP_CLOCKTYPE_WALL == 2); /*lint !e506*//*lint !e1564*/
 
    SCIP_CALL( lpCheckIntpar(lp, SCIP_LPPAR_TIMING, lp->lpitiming) );
 
@@ -12836,7 +12836,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
 
                      SCIPsetDebugMsg(set, " ---> new objval = %f (solstat: %d, without fastmip)\n", objval, solstat);
                   }
-               }
+               }/*lint !e438*/
 
                /* check for lp errors */
                if( *lperror || solstat == SCIP_LPSOLSTAT_ERROR || solstat == SCIP_LPSOLSTAT_NOTSOLVED )

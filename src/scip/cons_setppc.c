@@ -269,7 +269,7 @@ int setppcCompare2(
    assert(consdata2 != NULL);
 
    /* the partitioning type should be the smallest value and the packing the second smallest */
-   assert(SCIP_SETPPCTYPE_PARTITIONING < SCIP_SETPPCTYPE_PACKING && SCIP_SETPPCTYPE_PACKING < SCIP_SETPPCTYPE_COVERING); /*lint !e506*/
+   assert(SCIP_SETPPCTYPE_PARTITIONING < SCIP_SETPPCTYPE_PACKING && SCIP_SETPPCTYPE_PACKING < SCIP_SETPPCTYPE_COVERING); /*lint !e506*//*lint !e1564*/
 
    if( consdata1->setppctype < consdata2->setppctype ||
       ((SCIP_SETPPCTYPE)consdata1->setppctype != SCIP_SETPPCTYPE_COVERING &&
