@@ -1983,23 +1983,36 @@ SCIP_Bool isRayInStrip(
    int nquadexprs;
    SCIP_Real* eigenvectors;
    SCIP_Real* eigenvalues;
-   SCIP_Real value;
+   SCIP_Real num;
+   SCIP_Real denom;
    int i;
 
    qexpr = nlhdlrexprdata->qexpr;
    SCIPexprGetQuadraticData(qexpr, NULL, NULL, NULL, NULL, &nquadexprs, NULL, &eigenvalues, &eigenvectors);
 
-   value = 0.0;
+   num = 0.0;
+   denom = 0.0;
    for( i = 0; i < nquadexprs; ++i )
    {
+      SCIP_Real dot;
+
       if( sidefactor * eigenvalues[i] <= 0 )
          continue;
 
-      value += sidefactor * eigenvalues[i] * (vzlp[i] + vb[i] / (2.0 * sidefactor * eigenvalues[i])) * (cutcoef * (vzlp[i] - vapex[i]) + vray[i]);
-   }
-   //printf("strip value = %g \n", -num / denom);
+      dot = (vzlp[i] + vb[i] / (2.0 * sidefactor * eigenvalues[i]));
 
-   return value < 0 ? TRUE: FALSE;
+      num += sidefactor * eigenvalues[i] * dot * (cutcoef * (vzlp[i] - vapex[i]) + vray[i]);
+      denom += sidefactor * eigenvalues[i] * SQR(dot);
+   }
+
+   num /= kappa;
+   num += 1.0;
+   denom /= kappa;
+   denom += 1.0;
+
+   assert(denom > 0);
+
+   return num / denom < 1 ? TRUE: FALSE;
 }
 
 /** computes the smallest root of the quadratic function a*x^2 + b*x + c with a > 0
