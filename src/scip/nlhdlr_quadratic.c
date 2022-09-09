@@ -2111,7 +2111,7 @@ void computeApex(
 
             dot = vzlp[j] + vb[j] / (2.0 * (sidefactor * eigenvalues[j]));
 
-            num += eigenvectors[j * nquadexprs + i] * SQRT(sidefactor * eigenvalues[j]) * dot;
+            num += eigenvectors[j * nquadexprs + i] * dot;
             denom += sidefactor * eigenvalues[j] * SQR(dot);
          }
       }
