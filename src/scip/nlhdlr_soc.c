@@ -538,7 +538,7 @@ SCIP_RETCODE generateCutSolSOC(
 
    if( SCIPgetRowprepViolation(scip, rowprep, sol, NULL) >= mincutviolation )
    {
-      (void) SCIPsnprintf(SCIProwprepGetName(rowprep), SCIP_MAXSTRLEN, "soc%d_%p_%d", nterms, (void*) expr, SCIPgetNLPs(scip));
+      (void) SCIPsnprintf(SCIProwprepGetName(rowprep), SCIP_MAXSTRLEN, "soc%d_%p_%" SCIP_LONGINT_FORMAT, nterms, (void*) expr, SCIPgetNLPs(scip));
       SCIP_CALL( SCIPgetRowprepRowCons(scip, cut, rowprep, cons) );
    }
    else
@@ -698,7 +698,7 @@ SCIP_RETCODE generateCutSolDisagg(
 
    if( SCIPgetRowprepViolation(scip, rowprep, sol, NULL) >= mincutviolation )
    {
-      (void) SCIPsnprintf(SCIProwprepGetName(rowprep), SCIP_MAXSTRLEN, "soc_%p_%d_%d", (void*) expr, disaggidx, SCIPgetNLPs(scip));
+      (void) SCIPsnprintf(SCIProwprepGetName(rowprep), SCIP_MAXSTRLEN, "soc_%p_%d_%" SCIP_LONGINT_FORMAT, (void*) expr, disaggidx, SCIPgetNLPs(scip));
       SCIP_CALL( SCIPgetRowprepRowCons(scip, cut, rowprep, cons) );
    }
    else

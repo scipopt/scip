@@ -11690,7 +11690,7 @@ SCIP_RETCODE SCIPprocessRowprepNonlinear(
          else if( !SCIPisEQ(scip, auxvalue, estimateval) )
          {
             char gap[40];
-            (void) sprintf(gap, "_estimategap=%g", REALABS(auxvalue - estimateval));
+            (void) SCIPsnprintf(gap, 40, "_estimategap=%g", REALABS(auxvalue - estimateval));
             strcat(SCIProwprepGetName(rowprep), gap);
          }
       }

@@ -4133,6 +4133,8 @@ SCIP_RETCODE printLinearCons(
    /* retransform given variables to active variables */
    if( nactivevars > 0 )
    {
+      assert( activevars != NULL );
+      assert( activevals != NULL );
       SCIP_CALL( getActiveVariables(scip, activevars, activevals, &nactivevars, &activeconstant, transformed) );
    }
 

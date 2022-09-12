@@ -3624,7 +3624,7 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoQuadratic)
       if( nlhdlrdata->useboundsasrays )
          nlhdlrdata->nboundcuts += 1;
 
-      (void) SCIPsnprintf(SCIProwprepGetName(rowprep), SCIP_MAXSTRLEN, "%s_intersection_quadratic%p_lp%d",
+      (void) SCIPsnprintf(SCIProwprepGetName(rowprep), SCIP_MAXSTRLEN, "%s_intersection_quadratic%p_lp%" SCIP_LONGINT_FORMAT,
          overestimate ? "over" : "under",
          (void*)expr,
          SCIPgetNLPs(scip));
