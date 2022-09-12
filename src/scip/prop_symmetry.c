@@ -3119,6 +3119,7 @@ SCIP_RETCODE storeExpressionTree(
    )
 {
    SCIP_EXPRITER* it;
+   SCIP_EXPRHDLR* sumexprhdlr;
    SCIP_EXPRHDLR* prodexprhdlr;
    SCIP_EXPR* expr;
    SCIP_Real constant;
@@ -3140,7 +3141,9 @@ SCIP_RETCODE storeExpressionTree(
    assert( consvars != NULL );
    assert( consvals != NULL );
 
+   sumexprhdlr = SCIPfindExprhdlr(scip, "sum");
    prodexprhdlr = SCIPfindExprhdlr(scip, "prod");
+   assert( sumexprhdlr != NULL );
    assert( prodexprhdlr != NULL );
 
    /* initialize new tree */
@@ -3217,7 +3220,7 @@ SCIP_RETCODE storeExpressionTree(
          {
             int sumidx;
 
-            SCIP_CALL( addOperatorReflSym(reflsymdata, SCIPexprGetHdlr(expr), parentidx, &sumidx) );
+            SCIP_CALL( addOperatorReflSym(reflsymdata, sumexprhdlr, parentidx, &sumidx) );
             if ( nlocvals == 1 )
             {
                SCIP_CALL( addValReflSym(reflsymdata, constant, sumidx, NULL) );
