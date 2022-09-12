@@ -88,6 +88,16 @@ enum SYM_Constype
 };
 typedef enum SYM_Constype SYM_CONSTYPE;
 
+/** define type of flips that are allowed for children of operators */
+enum SYM_Fliptype
+{
+   SYM_FLIPTYPE_NONE     = 0,                /**< no flips are permitted */
+   SYM_FLIPTYPE_ODD      = 1,                /**< flips for odd functions are permitted */
+   SYM_FLIPTYPE_EVEN     = 2,                /**< flips for even functions are permitted */
+   SYM_FLIPTYPE_SHIFT_ODD = 3                /**< flips for shift-odd functions are permitted */
+};
+typedef enum SYM_Fliptype SYM_FLIPTYPE;
+
 /* type of symmetry handling codes */
 #define SYM_HANDLETYPE_NONE             UINT32_C(0x00000000)  /**< no symmetry handling */
 #define SYM_HANDLETYPE_SYMBREAK         UINT32_C(0x00000001)  /**< symmetry breaking inequalities */
