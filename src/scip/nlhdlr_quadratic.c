@@ -1947,7 +1947,7 @@ SCIP_RETCODE computeMonoidalQuadCoefs(
       if( SCIPisZero(scip, sidefactor * eigenvalues[i]) )
          continue;
 
-      dot = vray[i] + vb[i] / (2.0 * sidefactor * eigenvalues[i]);
+      dot = vray[i] + vapex[i] + vb[i] / (2.0 * sidefactor * eigenvalues[i]);
 
       *a += sidefactor * eigenvalues[i] * SQR(vzlp[i] - vapex[i]);
       *b += sidefactor * eigenvalues[i] * (vzlp[i] - vapex[i]) * dot;
@@ -1999,9 +1999,9 @@ SCIP_Bool isRayInStrip(
       if( sidefactor * eigenvalues[i] <= 0 )
          continue;
 
-      dot = (vzlp[i] + vb[i] / (2.0 * sidefactor * eigenvalues[i]));
+      dot = vzlp[i] + vb[i] / (2.0 * sidefactor * eigenvalues[i]);
 
-      num += sidefactor * eigenvalues[i] * dot * (cutcoef * (vzlp[i] - vapex[i]) + vray[i]);
+      num += sidefactor * eigenvalues[i] * dot * (cutcoef * (vzlp[i] - vapex[i]) + vray[i] + vapex[i]);
       denom += sidefactor * eigenvalues[i] * SQR(dot);
    }
 
