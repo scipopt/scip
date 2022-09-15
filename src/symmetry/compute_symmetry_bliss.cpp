@@ -1251,29 +1251,33 @@ SCIP_RETCODE SCIPcreateReflectionSymmetryDetectionGraph(
             assert( reflsymdata->trees[i + 1] == SYM_NODETYPE_VAR );
 
             /* create node for coefficient (and its negation if flips are allowed) */
-            unsigned node = G->add_vertex((unsigned) coefcolstart + colorInClass(i, reflsymdata, FALSE));
+            unsigned coefnode = G->add_vertex((unsigned) coefcolstart + colorInClass(i, reflsymdata, FALSE));
             unsigned varnode = reflsymdata->treevaridx[reflsymdata->treemap[i + 1]];
 
-            G->add_edge(node, pathtoroot.back());
-            G->add_edge(node, varnode);
+            G->add_edge(coefnode, pathtoroot.back());
+            G->add_edge(coefnode, varnode);
 
             switch ( fliptypes.back() )
             {
             case SYM_FLIPTYPE_EVEN :
             {
                unsigned invvarnode = varnode + reflsymdata->ntreevars;
-               G->add_edge(node, invvarnode);
+               unsigned invcoefnode = G->add_vertex((unsigned) coefcolstart + colorInClass(i, reflsymdata, TRUE));
+               G->add_edge(coefnode, invcoefnode);
+               G->add_edge(invcoefnode, pathtoroot.back());
+               G->add_edge(invcoefnode, invvarnode);
+               G->add_edge(coefnode, invvarnode);
+               G->add_edge(invcoefnode, varnode);
                break;
             }
             case SYM_FLIPTYPE_SHIFT_ODD :
             case SYM_FLIPTYPE_ODD :
             {
-               unsigned node2 = G->add_vertex((unsigned) coefcolstart + colorInClass(i, reflsymdata, TRUE));
+               unsigned invcoefnode = G->add_vertex((unsigned) coefcolstart + colorInClass(i, reflsymdata, TRUE));
                unsigned invvarnode = varnode + reflsymdata->ntreevars;
-
-               G->add_edge(node, node2);
-               G->add_edge(node2, pathtoroot.back());
-               G->add_edge(node2, invvarnode);
+               G->add_edge(coefnode, invcoefnode);
+               G->add_edge(invcoefnode, pathtoroot.back());
+               G->add_edge(invcoefnode, invvarnode);
                break;
             }
             default :
