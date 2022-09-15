@@ -3123,6 +3123,7 @@ SCIP_RETCODE storeExpressionTree(
    SCIP_EXPRHDLR* prodexprhdlr;
    SCIP_EXPR* expr;
    SCIP_Real constant;
+   SCIP_Bool negatedrootsum = FALSE;
    int nopenidx = 0;
    int parentidx;
    int opidx;
@@ -3150,16 +3151,18 @@ SCIP_RETCODE storeExpressionTree(
    reflsymdata->treebegins[reflsymdata->ntreerhs] = reflsymdata->ntrees;
    reflsymdata->treerhs[reflsymdata->ntreerhs++] = rhs;
 
-   /* add (* -1 ... ) to negate tree */
-   if ( negated )
+   /* add (* -1 ... ) to negate tree, treat sum-expressions differently */
+   if ( negated && SCIPexprGetHdlr(rootexpr) != sumexprhdlr )
    {
       SCIP_CALL( ensureReflSymDataMemorySuffices(scip, reflsymdata,
-               reflsymdata->ntrees + 2, reflsymdata->ntreeops + 1, reflsymdata->ntreecoefs,
-               reflsymdata->ntreevaridx, reflsymdata->ntreevals + 1) );
+            reflsymdata->ntrees + 2, reflsymdata->ntreeops + 1, reflsymdata->ntreecoefs,
+            reflsymdata->ntreevaridx, reflsymdata->ntreevals + 1) );
 
       SCIP_CALL( addOperatorReflSym(reflsymdata, prodexprhdlr, -1, &parentidx) );
       SCIP_CALL( addValReflSym(reflsymdata, -1.0, parentidx, NULL) );
    }
+   else if ( negated )
+      negatedrootsum = TRUE;
 
    SCIP_CALL( SCIPcreateExpriter(scip, &it) );
 
@@ -3177,11 +3180,11 @@ SCIP_RETCODE storeExpressionTree(
       assert( SCIPexpriterGetStageDFS(it) == SCIP_EXPRITER_ENTEREXPR );
 
       /* find parentidx (in negated case and root expression, this has been done before already) */
-      if ( !negated && expr == rootexpr )
+      if ( (!negated || negatedrootsum) && expr == rootexpr )
          parentidx = -1;
       else if ( nopenidx >= 1 )
          parentidx = openidx[nopenidx - 1];
-      assert( (!negated && expr == rootexpr) || parentidx != -1 );
+      assert( ((!negated || negatedrootsum) && expr == rootexpr) || parentidx != -1 );
 
       /* deal with different kind of expressions and store them in the symmetry data structure */
       if ( SCIPisExprVar(scip, expr) )
@@ -3260,7 +3263,10 @@ SCIP_RETCODE storeExpressionTree(
             {
                if ( SCIPexprGetChildren(parent)[i] == expr )
                {
-                  coef = SCIPgetCoefsExprSum(parent)[i];
+                  if ( parent == rootexpr && negatedrootsum )
+                     coef = -SCIPgetCoefsExprSum(parent)[i];
+                  else
+                     coef = SCIPgetCoefsExprSum(parent)[i];
                   break;
                }
             }
@@ -3291,9 +3297,16 @@ SCIP_RETCODE storeExpressionTree(
                   continue;
 
                consvars[nlocvars] = SCIPgetVarExprVar(children[childidx]);
-               consvals[nlocvars++] = SCIPgetCoefsExprSum(expr)[childidx];
+               if ( expr == rootexpr && negatedrootsum )
+                  consvals[nlocvars++] = -SCIPgetCoefsExprSum(expr)[childidx];
+               else
+                  consvals[nlocvars++] = SCIPgetCoefsExprSum(expr)[childidx];
             }
-            constant = SCIPgetConstantExprSum(expr);
+
+            if ( expr == rootexpr && negatedrootsum )
+               constant = -SCIPgetConstantExprSum(expr);
+            else
+               constant = SCIPgetConstantExprSum(expr);
 
             SCIP_CALL( getActiveVariablesReflSym(scip, &consvars, &consvals, &nlocvars, &constant, istransformed) );
 
