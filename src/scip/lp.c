@@ -14671,15 +14671,14 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
    /* check if the values are already calculated */
    if( lp->validsollp == stat->lpcount )
       return SCIP_OKAY;
+   lp->validsollp = stat->lpcount;
 
    /* check if the LP solver is able to provide a primal unbounded ray */
    if( !SCIPlpiHasPrimalRay(lp->lpi) )
    {
-      SCIPerrorMessage("LP solver has no primal ray to prove unboundedness\n");
+      SCIPerrorMessage("LP solver has no primal ray to prove unboundedness.\n");
       return SCIP_LPERROR;
    }
-
-   lp->validsollp = stat->lpcount;
 
    SCIPsetDebugMsg(set, "getting new unbounded LP solution %" SCIP_LONGINT_FORMAT "\n", stat->lpcount);
 
@@ -14763,7 +14762,6 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
          for( c = row->nlpcols; c < row->len; ++c )
          {
             col = row->cols[c];
-
             assert( col != NULL );
 
             if( col->lppos >= 0 )
@@ -14798,9 +14796,8 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
             assert( lpicols[c] != NULL );
             assert( lpicols[c]->var != NULL );
 
-            /* check primal feasibility of (finite) primal solution; note that we also ensure that the primal
-             * solution is within SCIP's infinity bounds; otherwise the rayscale below is not well-defined
-             */
+            /* check whether primal solution satisfies the bounds; note that we also ensure that the primal
+             * solution is within SCIP's infinity bounds; otherwise the rayscale below is not well-defined */
             *primalfeasible = *primalfeasible
                && !SCIPsetIsInfinity(set, REALABS(primsol[c]))
                && SCIPlpIsFeasGE(set, lp, primsol[c], lpicols[c]->lb)
@@ -14827,14 +14824,12 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
    }
    else if( !SCIPsetIsNegative(set, rayobjval) )
    {
-      /* due to numerical problems, the objective of the ray might be nonnegative,
+      /* due to numerical problems, the objective of the ray might be nonnegative
        *
        * @todo How to check for negative objective value here?
        */
       if( rayfeasible != NULL )
-      {
          *rayfeasible = FALSE;
-      }
 
       rayscale = 0.0;
    }
@@ -14843,7 +14838,7 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
       assert(rayobjval != 0.0);
 
       /* scale the ray, such that the resulting point has infinite objective value */
-      rayscale = -2*SCIPsetInfinity(set)/rayobjval;
+      rayscale = -2.0 * SCIPsetInfinity(set) / rayobjval;
       assert(SCIPsetIsFeasPositive(set, rayscale));
 
       /* ensure that unbounded point does not violate the bounds of the variables */
@@ -14852,23 +14847,23 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
          if( SCIPsetIsPositive(set, ray[c]) )
          {
             if( !SCIPsetIsInfinity(set, primsol[c]) )
-               rayscale = MIN(rayscale, (lpicols[c]->ub - primsol[c])/ray[c]);
-            /* if the primsol is infinity, as well as the bound, don't scale the ray to 0 */
+               rayscale = MIN(rayscale, (lpicols[c]->ub - primsol[c]) / ray[c]);
+            /* if primsol is infinity, as well as the bound, don't scale the ray to 0 */
             else
             {
                assert(SCIPsetIsInfinity(set, lpicols[c]->ub));
-               rayscale = MIN(rayscale, 1/ray[c]);
+               rayscale = MIN(rayscale, 1.0 / ray[c]);
             }
          }
          else if( SCIPsetIsNegative(set, ray[c]) )
          {
             if( !SCIPsetIsInfinity(set, -primsol[c]) )
-               rayscale = MIN(rayscale, (lpicols[c]->lb - primsol[c])/ray[c]);
-            /* if the primsol is infinity, as well as the bound, don't scal the ray to 0 */
+               rayscale = MIN(rayscale, (lpicols[c]->lb - primsol[c]) / ray[c]);
+            /* if primsol is infinity, as well as the bound, don't scale the ray to 0 */
             else
             {
                assert(SCIPsetIsInfinity(set, -lpicols[c]->lb));
-               rayscale = MIN(rayscale, -1/ray[c]);
+               rayscale = MIN(rayscale, -1.0 / ray[c]);
             }
          }
 
