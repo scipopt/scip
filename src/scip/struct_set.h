@@ -282,6 +282,7 @@ struct SCIP_Set
    SCIP_Bool             conf_weakenreason;  /**< should the reason constraint be weakened? */
    SCIP_Bool             conf_weakenreasonall;/**< should all variables at bounds in the reason be weakened at once? */
    SCIP_Bool             conf_applycmir;     /**< should we apply cmir to strengthen the conflict constraints? */
+   SCIP_Bool             conf_applyresdualproof;/**< should we apply resolution initiated with the dual proof? */
 
    /* constraint settings */
    int                   cons_agelimit;      /**< maximum age an unnecessary constraint can reach before it is deleted

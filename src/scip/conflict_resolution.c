@@ -1848,7 +1848,7 @@ SCIPsetDebugMsg(set, " -> First bound change to resolve <%s> %s %.15g [status:%d
 
    SCIPdebug(resolutionsetPrintRow(conflictresolutionset, set, transprob, 0));
    /* weaken or just apply coefficient tightening for the conflict constraint */
-   if ( set->conf_weakenconflict )
+   if ( set->conf_weakenconflict || infeasibleLP )
    {
       int nvarsweakened;
       weakenResolutionSet(conflictresolutionset, set, transprob, bdchgidx, residx, &nvarsweakened, FALSE);
