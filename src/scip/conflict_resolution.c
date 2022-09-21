@@ -1242,6 +1242,11 @@ SCIP_RETCODE SCIPconflictFlushResolutionSets(
    assert(resolutionset != NULL);
    assert(0 <= resolutionset->validdepth);
 
+   /* todo think about the case of long resolution constraints */
+   if( resolutionsetGetNNzs(resolutionset) > maxsize )
+   {
+      SCIPsetDebugMsg(set, " -> resolution set is too long: %d > %d nnzs\n", resolutionsetGetNNzs(resolutionset), maxsize);
+   }
    /* if the resolution set is empty and the lhs negative, the node and its sub tree in the conflict set's valid depth
     *  can be cut off completely
     */
@@ -1370,6 +1375,8 @@ SCIP_RETCODE resolveWithReason(
    idxinreason = FALSE;
    *success = FALSE;
 
+   coefconf = 0.0;
+   coefreas = 0.0;
    /* find in the conflict resolution set the coefficient of the variable we are resolving */
    for( i = 0; i < resolutionsetGetNNzs(conflictresolutionset); i++ )
    {
@@ -1416,7 +1423,6 @@ SCIP_RETCODE resolveWithReason(
    assert((idxinconflict && idxinreason));
 
    coefreas = coefconf / coefreas;
-   coefconf = 1.0;
 
    /** stop if the linear combination of slacks is positive. @todo we do not have to stop;
     *  because of sub-additive slacks the resolved constraint may still have negative slack
@@ -1887,9 +1893,13 @@ SCIPsetDebugMsg(set, " -> First bound change to resolve <%s> %s %.15g [status:%d
          /* if no row exists conflict analysis is not applicable */
          if (reasonrow == NULL)
          {
-            SCIP_CONSHDLR* conshdlr;
-            conshdlr = SCIPconsGetHdlr(reasoncon);
-            SCIPsetDebugMsg(set, "No reason row for constraint %s of type %s \n", SCIPconsGetName(reasoncon), SCIPconshdlrGetName(conshdlr));
+            #ifdef SCIP_DEBUG
+            {
+               SCIP_CONSHDLR* conshdlr;
+               conshdlr = SCIPconsGetHdlr(reasoncon);
+               SCIPsetDebugMsg(set, "No reason row for constraint %s of type %s \n", SCIPconsGetName(reasoncon), SCIPconshdlrGetName(conshdlr));
+            }
+            #endif
             goto TERMINATE;
          }
 
