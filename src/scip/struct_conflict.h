@@ -103,6 +103,7 @@ struct SCIP_ResolutionSet
    int                   nnz;
    int                   size;
    int                   validdepth;
+   unsigned int          usescutoffbound:1;  /**< is the conflict based on the cutoff bound? */
    SCIP_CONFTYPE         conflicttype;       /**< conflict type: unknown, resolution */
 };
 

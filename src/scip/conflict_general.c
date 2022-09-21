@@ -2053,10 +2053,12 @@ SCIP_RETCODE conflictAnalyzeLP(
       && (((set->conf_useinflp == 'b' || set->conf_useinflp == 'c') && conflict->conflictset->conflicttype == SCIP_CONFTYPE_INFEASLP)
       || ((set->conf_useboundlp == 'b' || set->conf_useboundlp == 'c') && conflict->conflictset->conflicttype == SCIP_CONFTYPE_BNDEXCEEDING)) )
    {
+      SCIP_ROW* initialrow;
       SCIP_Real* farkascoefs;
       SCIP_Real farkaslhs;
       int* inds;
       int nnz;
+      SCIP_Bool success;
 
 #ifdef SCIP_DEBUG
       {
@@ -2087,18 +2089,18 @@ SCIP_RETCODE conflictAnalyzeLP(
          farkascoefs[i] = -SCIPaggrRowGetProbvarValue(farkasrow, i);
       }
 
-      SCIP_Bool success;
-      SCIP_ROW* initialrow;
-
-      SCIP_CALL( SCIProwCreate(&initialrow, blkmem, set, stat, "farkasproof", 0, NULL, NULL, farkaslhs, SCIPsetInfinity(set), \
-              SCIP_ROWORIGINTYPE_UNSPEC, NULL, (SCIPnodeGetDepth(tree->path[validdepth]) > 0 ), FALSE, TRUE) );
-
-      for( int i = 0; i < farkasrow->nnz; ++i )
+      if ( set->conf_applyresdualproof)
       {
-         SCIP_Real QUAD(val);
-         QUAD_ARRAY_LOAD(val, farkasrow->vals, farkasrow->inds[i]);
-         assert(SCIPvarGetProbindex(vars[farkasrow->inds[i]]) == farkasrow->inds[i]);
-         SCIPvarAddToRow(vars[farkasrow->inds[i]], blkmem, set, stat, eventqueue, transprob, lp, initialrow, -QUAD_TO_DBL(val));
+         SCIP_CALL( SCIProwCreate(&initialrow, blkmem, set, stat, "farkasproof", 0, NULL, NULL, farkaslhs, SCIPsetInfinity(set), \
+               SCIP_ROWORIGINTYPE_UNSPEC, NULL, (SCIPnodeGetDepth(tree->path[validdepth]) > 0 ), FALSE, TRUE) );
+
+         for( int i = 0; i < farkasrow->nnz; ++i )
+         {
+            SCIP_Real QUAD(val);
+            QUAD_ARRAY_LOAD(val, farkasrow->vals, farkasrow->inds[i]);
+            assert(SCIPvarGetProbindex(vars[farkasrow->inds[i]]) == farkasrow->inds[i]);
+            SCIPvarAddToRow(vars[farkasrow->inds[i]], blkmem, set, stat, eventqueue, transprob, lp, initialrow, -QUAD_TO_DBL(val));
+         }
       }
 
       SCIP_CALL( SCIPrunBoundHeuristic(conflict, set, stat, origprob, transprob, tree, reopt, lp, lpi, blkmem, farkascoefs,
@@ -2118,11 +2120,14 @@ SCIP_RETCODE conflictAnalyzeLP(
       SCIP_CALL( SCIPconflictFlushConss(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, \
             eventqueue, cliquetable) );
 
-      SCIP_CALL( SCIPconflictAnalyzeResolution(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp, \
-              branchcand, eventqueue, cliquetable, initialrow, validdepth, TRUE, &success) );
+      if ( set->conf_applyresdualproof)
+      {
+         SCIP_CALL( SCIPconflictAnalyzeResolution(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp, \
+               branchcand, eventqueue, cliquetable, initialrow, validdepth, TRUE, &success) );
 
-      initialrow->nuses = 0;
-      SCIP_CALL( SCIProwFree(&initialrow, blkmem, set, lp) );
+         initialrow->nuses = 0;
+         SCIP_CALL( SCIProwFree(&initialrow, blkmem, set, lp) );
+      }
    }
 
   FLUSHPROOFSETS:
