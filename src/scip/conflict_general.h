@@ -560,7 +560,6 @@ SCIP_RETCODE conflictAnalyzeResolution(
    SCIP_Bool             diving,             /**< are we in strong branching or diving mode? */
    int                   validdepth,         /**< minimal depth level at which the initial conflict set is valid */
    SCIP_Bool             infeasibleLP,       /**< does the conflict originate from an infeasible LP? */
-   SCIP_Bool             mustresolve,        /**< should the conflict set only be used, if a resolution was applied? */
    int*                  nconss,             /**< pointer to store the number of generated conflict constraints */
    int*                  nconfvars           /**< pointer to store the number of variables in generated conflict constraints */
    );

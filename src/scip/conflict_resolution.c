@@ -459,6 +459,7 @@ void conflictCleanUpbdchgqueue(
          var = bdchginfo->var;
          idxvar = SCIPvarGetProbindex(var);
          idxinrow = FALSE;
+         val = 0.0;
          for( j = 0; j < resolutionset->nnz; j++ )
          {
             if (resolutionset->inds[j] == idxvar)
@@ -696,7 +697,7 @@ void resolutionSetClear(
 
 /** weaken variables in the reason */
 static
-SCIP_RETCODE weakenVarReason(
+void weakenVarReason(
    SCIP_RESOLUTIONSET*   resolutionset,      /**< resolution set */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var,                /**< variable to weaken */
@@ -722,8 +723,6 @@ SCIP_RETCODE weakenVarReason(
    --resolutionset->nnz;
    resolutionset->vals[pos] = resolutionset->vals[resolutionset->nnz];
    resolutionset->inds[pos] = resolutionset->inds[resolutionset->nnz];
-
-   return SCIP_OKAY;
 }
 
 /* Removes a variable with zero coefficient in the resolutionset */
@@ -1742,7 +1741,6 @@ SCIP_RETCODE conflictAnalyzeResolution(
    SCIP_Bool             diving,             /**< are we in strong branching or diving mode? */
    int                   validdepth,         /**< minimal depth level at which the initial conflict set is valid */
    SCIP_Bool             infeasibleLP,       /**< does the conflict originate from an infeasible LP? */
-   SCIP_Bool             mustresolve,        /**< should the conflict set only be used, if a resolution was applied? */
    int*                  nconss,             /**< pointer to store the number of generated conflict constraints */
    int*                  nconfvars           /**< pointer to store the number of variables in generated conflict constraints */
    )
@@ -2193,7 +2191,7 @@ SCIP_RETCODE SCIPconflictAnalyzeResolution(
 
    /* analyze the conflict set, and create a conflict constraint on success */
    SCIP_CALL( conflictAnalyzeResolution(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, \
-          eventqueue, cliquetable, initialconflictrow, FALSE, validdepth, infeasibleLP, TRUE, &nconss, &nconfvars) );
+          eventqueue, cliquetable, initialconflictrow, FALSE, validdepth, infeasibleLP, &nconss, &nconfvars) );
 
    conflict->nressuccess += (nconss > 0 ? 1 : 0);
    conflict->nresconfconss += nconss;
