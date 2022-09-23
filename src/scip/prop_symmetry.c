@@ -2273,6 +2273,9 @@ SCIP_RETCODE addOperatorReflSym(
    )
 {
    assert( reflsymdata != NULL );
+   assert( operator != NULL );
+   assert( reflsymdata->ntrees < reflsymdata->maxntrees );
+   assert( reflsymdata->ntreeops < reflsymdata->maxntreeops );
 
    reflsymdata->trees[reflsymdata->ntrees] = SYM_NODETYPE_OPERATOR;
    reflsymdata->treemap[reflsymdata->ntrees] = reflsymdata->ntreeops;
@@ -2296,6 +2299,8 @@ SCIP_RETCODE addCoefReflSym(
    )
 {
    assert( reflsymdata != NULL );
+   assert( reflsymdata->ntrees < reflsymdata->maxntrees );
+   assert( reflsymdata->ntreecoefs < reflsymdata->maxntreecoefs );
 
    reflsymdata->trees[reflsymdata->ntrees] = SYM_NODETYPE_COEF;
    reflsymdata->treemap[reflsymdata->ntrees] = reflsymdata->ntreecoefs;
@@ -2319,6 +2324,7 @@ SCIP_RETCODE addVarReflSym(
    )
 {
    assert( reflsymdata != NULL );
+   assert( reflsymdata->ntrees < reflsymdata->maxntrees );
    assert( varidx >= 0 );
 
    reflsymdata->trees[reflsymdata->ntrees] = SYM_NODETYPE_VAR;
@@ -2343,6 +2349,8 @@ SCIP_RETCODE addValReflSym(
    )
 {
    assert( reflsymdata != NULL );
+   assert( reflsymdata->ntrees < reflsymdata->maxntrees );
+   assert( reflsymdata->ntreevals < reflsymdata->maxntreevals );
 
    reflsymdata->trees[reflsymdata->ntrees] = SYM_NODETYPE_VAL;
    reflsymdata->treemap[reflsymdata->ntrees] = reflsymdata->ntreevals;
@@ -3275,6 +3283,9 @@ SCIP_RETCODE storeExpressionTree(
          subopidx = parentidx;
          if ( ! SCIPisEQ(scip, coef, 1.0) )
          {
+            SCIP_CALL( ensureReflSymDataMemorySuffices(scip, reflsymdata,
+                  reflsymdata->ntrees + 2, reflsymdata->ntreeops + 1, reflsymdata->ntreecoefs,
+                  reflsymdata->ntreevaridx, reflsymdata->ntreevals + 1) );
             SCIP_CALL( addOperatorReflSym(reflsymdata, prodexprhdlr, parentidx, &subopidx) );
             SCIP_CALL( addValReflSym(reflsymdata, coef, subopidx, NULL) );
          }
