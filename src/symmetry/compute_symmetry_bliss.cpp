@@ -1128,6 +1128,8 @@ SYM_FLIPTYPE getOperatorFliptype(
       else
          return SYM_FLIPTYPE_ODD;
    }
+   else if ( treeops[treemap[opidx]] == (SCIP_EXPRHDLR*) SYM_CONSTYPE_BIPROD )
+      return SYM_FLIPTYPE_BIPROD;
 
    return SYM_FLIPTYPE_NONE;
 }
@@ -1241,9 +1243,46 @@ SCIP_RETCODE SCIPcreateReflectionSymmetryDetectionGraph(
             unsigned node = G->add_vertex((unsigned) opcolstart + colorInClass(i, reflsymdata, FALSE));
             G->add_edge(node, pathtoroot.back());
 
-            pathtoroot.push_back(node);
-            pathtorootidx.push_back(i);
-            fliptypes.push_back(getOperatorFliptype(scip, reflsymdata, i));
+            SYM_FLIPTYPE fliptype = getOperatorFliptype(scip, reflsymdata, i);
+            if ( fliptype != SYM_FLIPTYPE_BIPROD )
+            {
+               pathtoroot.push_back(node);
+               pathtorootidx.push_back(i);
+               fliptypes.push_back(fliptype);
+            }
+            else
+            {
+               /* already create nodes/edges for values, coefficients, and variables */
+               assert( i + 1 < reflsymdata->treebegins[c + 1] - 1 );
+               ++i;
+               if ( reflsymdata->trees[i] == SYM_NODETYPE_VAL )
+               {
+                  unsigned valnode = G->add_vertex((unsigned) valcolstart + colorInClass(i, reflsymdata, FALSE));
+                  G->add_edge(valnode, node);
+                  ++i;
+               }
+
+               assert( i < reflsymdata->treebegins[c + 1] - 3 );
+               assert( reflsymdata->trees[i] == SYM_NODETYPE_COEF );
+               assert( reflsymdata->trees[i + 1] == SYM_NODETYPE_VAR );
+               assert( reflsymdata->trees[i + 2] == SYM_NODETYPE_COEF );
+               assert( reflsymdata->trees[i + 3] == SYM_NODETYPE_VAR );
+               assert( colorInClass(i, reflsymdata, FALSE) == colorInClass(i + 2, reflsymdata, FALSE) );
+
+               unsigned coef1node = G->add_vertex((unsigned) coefcolstart + colorInClass(i, reflsymdata, FALSE));
+               unsigned var1node = reflsymdata->treevaridx[reflsymdata->treemap[i + 1]];
+               unsigned invvar1node = var1node + reflsymdata->ntreevars;
+               unsigned coef2node = G->add_vertex((unsigned) coefcolstart + colorInClass(i + 2, reflsymdata, FALSE));
+               unsigned var2node = reflsymdata->treevaridx[reflsymdata->treemap[i + 3]];
+               unsigned invvar2node = var2node + reflsymdata->ntreevars;
+               G->add_edge(coef1node, node);
+               G->add_edge(coef2node, node);
+               G->add_edge(var1node, coef1node);
+               G->add_edge(var2node, coef1node);
+               G->add_edge(invvar1node, coef2node);
+               G->add_edge(invvar2node, coef2node);
+               i += 3;
+            }
          }
          else if ( reflsymdata->trees[i] == SYM_NODETYPE_COEF )
          {

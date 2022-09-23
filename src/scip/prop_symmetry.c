@@ -2127,7 +2127,7 @@ SCIP_RETCODE printReflectionSymmetryData(
             SCIPinfoMessage(scip, NULL, " (");
             if (  op == SCIPfindExprhdlr(scip, "sum") )
                SCIPinfoMessage(scip, NULL, "+ ");
-            else if ( op == SCIPfindExprhdlr(scip, "prod") )
+            else if ( op == SCIPfindExprhdlr(scip, "prod") || op == (SCIP_EXPRHDLR*) SYM_CONSTYPE_BIPROD )
                SCIPinfoMessage(scip, NULL, "* ");
             else if ( op == SCIPfindExprhdlr(scip, "abs") )
                SCIPinfoMessage(scip, NULL, "abs ");
@@ -3348,8 +3348,12 @@ SCIP_RETCODE storeExpressionTree(
          else if ( SCIPisExprProduct(scip, expr) )
          {
             SCIP_Real prodcoef;
+            SCIP_EXPRHDLR* varexpr;
+            SCIP_EXPRHDLR* thisprodexpr;
 
             prodcoef = SCIPgetCoefExprProduct(expr);
+            varexpr = SCIPfindExprhdlr(scip, "var");
+            assert( varexpr != NULL );
 
             /* estimate size needed (also in recursive calls for children) */
             SCIP_CALL( ensureReflSymDataMemorySuffices(scip, reflsymdata,
@@ -3359,7 +3363,29 @@ SCIP_RETCODE storeExpressionTree(
                   reflsymdata->ntreevaridx + 3 * SCIPexprGetNChildren(expr),
                   reflsymdata->ntreevals + SCIPexprGetNChildren(expr) + 1) );
 
-            SCIP_CALL( addOperatorReflSym(reflsymdata, SCIPexprGetHdlr(expr), subopidx, &opidx) );
+            /* check whether this is a product of two variables (special symmetry handling) centered at 0 */
+            if ( SCIPexprGetNChildren(expr) == 2 && SCIPisExprVar(scip, SCIPexprGetChildren(expr)[0]) &&
+               SCIPisExprVar(scip, SCIPexprGetChildren(expr)[1]) )
+            {
+               SCIP_VAR* var1;
+               SCIP_VAR* var2;
+
+               var1 = SCIPgetVarExprVar(SCIPexprGetChildren(expr)[0]);
+               var2 = SCIPgetVarExprVar(SCIPexprGetChildren(expr)[1]);
+
+               /* variables need to be active, symmetric, and centered at the origin */
+               if ( SCIPvarGetProbindex(var1) == -1 || SCIPvarGetProbindex(var2) == -1 ||
+                  ! SCIPisEQ(scip, SCIPvarGetUbLocal(var1), - SCIPvarGetLbLocal(var1)) ||
+                  ! SCIPisEQ(scip, SCIPvarGetUbLocal(var2), - SCIPvarGetLbLocal(var2)) ||
+                  ! SCIPisEQ(scip, SCIPvarGetUbLocal(var1), SCIPvarGetUbLocal(var2)) )
+                  thisprodexpr = SCIPexprGetHdlr(expr);
+               else
+                  thisprodexpr = (SCIP_EXPRHDLR*) SYM_CONSTYPE_BIPROD;
+            }
+            else
+               thisprodexpr = SCIPexprGetHdlr(expr);
+
+            SCIP_CALL( addOperatorReflSym(reflsymdata, thisprodexpr, subopidx, &opidx) );
             if ( ! SCIPisEQ(scip, prodcoef, 1.0) )
             {
                SCIP_CALL( addValReflSym(reflsymdata, prodcoef, opidx, NULL) );

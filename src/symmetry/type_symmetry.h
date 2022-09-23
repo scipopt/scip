@@ -84,7 +84,8 @@ enum SYM_Constype
    SYM_CONSTYPE_OBJ      = 13,               /**< needed to model the objective */
    SYM_CONSTYPE_NONLINEAR = 14,              /**< constraint of type nonlinear */
    SYM_CONSTYPE_POWER    = 15,               /**< needed to distinguish power and signpower */
-   SYM_CONSTYPE_SIGNPOWER = 16               /**< needed to distinguish power and signpower */
+   SYM_CONSTYPE_SIGNPOWER = 16,              /**< needed to distinguish power and signpower */
+   SYM_CONSTYPE_BIPROD   = 17                /**< needed to indicate product of two variables */
 };
 typedef enum SYM_Constype SYM_CONSTYPE;
 
@@ -94,7 +95,8 @@ enum SYM_Fliptype
    SYM_FLIPTYPE_NONE     = 0,                /**< no flips are permitted */
    SYM_FLIPTYPE_ODD      = 1,                /**< flips for odd functions are permitted */
    SYM_FLIPTYPE_EVEN     = 2,                /**< flips for even functions are permitted */
-   SYM_FLIPTYPE_SHIFT_ODD = 3                /**< flips for shift-odd functions are permitted */
+   SYM_FLIPTYPE_SHIFT_ODD = 3,               /**< flips for shift-odd functions are permitted */
+   SYM_FLIPTYPE_BIPROD   = 4                 /**< flips for products of two variables */
 };
 typedef enum SYM_Fliptype SYM_FLIPTYPE;
 
