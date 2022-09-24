@@ -75,6 +75,11 @@ Fixed bugs
 - fixed bug in dual presolving of linear constraints by setting implicit integers to integers in multi-aggregation
 - fixed update of presolve statistics on added constraints and changed coefficients in constraint handler for nonlinear constraints
 - fixed bug with reading CIP files with large constraints split over several lines
+- fixed bug with infinite bounds in the computation of conflict cuts
+- Fixed check for unbounded solution constructed by SCIPlpGetUnboundedSol(): The constructed solution is very likely infeasible
+  since scaling increases small numerical feasibility violations. Therefore, the solution is now always accepted. However, the
+  feasibility of the ray is now checked. This fix now might lead to several rounds of separation in order to resolve unbounded solutions,
+  whereas previously SCIP started to branch immediately.
 
 Miscellaneous
 -------------
