@@ -3567,7 +3567,7 @@ SCIP_RETCODE findColorsReflSym(
          reflsymdata->varcolors[j] = reflsymdata->nuniquevars++;
 #ifdef SCIP_OUTPUT
          SCIPdebugMsg(scip, "Detected variable <%s> of fixed type %d - color %d.\n",
-            SCIPvarGetName(var), SCIPvarGetType(var), reflsymdata.nuniquevars - 1);
+            SCIPvarGetName(var), SCIPvarGetType(var), reflsymdata->nuniquevars - 1);
 #endif
          reflsymdata->invvarcolors[j] = reflsymdata->nuniquevars++;
       }
@@ -3609,7 +3609,7 @@ SCIP_RETCODE findColorsReflSym(
             SCIPdebugMsg(scip,
                "Detected variable <%s> of new type (probindex: %d, obj: %g, lb: %g, ub: %g, type: %d) - color %d.\n",
                SCIPvarGetName(var), SCIPvarGetProbindex(var), vt->obj, vt->lb, vt->ub, vt->type,
-               reflsymdata.nuniquevars - 1);
+               reflsymdata->nuniquevars - 1);
 #endif
          }
          else
@@ -3640,7 +3640,7 @@ SCIP_RETCODE findColorsReflSym(
             SCIPdebugMsg(scip,
                "Detected (negated) variable <%s> of new type (probindex: %d, obj: %g, lb: %g, ub: %g, type: %d) - color %d.\n",
                SCIPvarGetName(var), SCIPvarGetProbindex(var), vt->obj, vt->lb, vt->ub, vt->type,
-               reflsymdata.nuniquevars - 1);
+               reflsymdata->nuniquevars - 1);
 #endif
          }
          else
