@@ -3348,11 +3348,9 @@ SCIP_RETCODE storeExpressionTree(
          else if ( SCIPisExprProduct(scip, expr) )
          {
             SCIP_Real prodcoef;
-            SCIP_EXPRHDLR* varexpr;
             SCIP_EXPRHDLR* thisprodexpr;
 
             prodcoef = SCIPgetCoefExprProduct(expr);
-            varexpr = SCIPfindExprhdlr(scip, "var");
             assert( varexpr != NULL );
 
             /* estimate size needed (also in recursive calls for children) */
