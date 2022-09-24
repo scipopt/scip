@@ -3716,12 +3716,17 @@ SCIP_RETCODE findColorsReflSym(
           * distinguish both by their sign
           */
          if ( invexists )
+         {
             reflsymdata->invcoefcolors[idx] = -(perm[lastpos] + 1);
+            oldinvcoef = lastcoef;
+         }
          else
+         {
             reflsymdata->invcoefcolors[idx] = reflsymdata->nuniquecoefs++;
+            oldinvcoef = -oldcoef;
+         }
          invcolor = reflsymdata->invcoefcolors[idx];
          oldinvexists = invexists;
-         oldinvcoef = lastcoef;
       }
       else
       {
