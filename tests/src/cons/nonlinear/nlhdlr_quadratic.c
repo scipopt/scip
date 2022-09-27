@@ -2814,6 +2814,9 @@ Test(interCuts, monoidal, .description = "test cut for monoidal strengthening")
       SCIP_Real wcoefs[2];  /* coefficients affecting quadterms in w */
       SCIP_Real wzlp;     /* w(lpsol) */
       SCIP_Real kappa;
+      SCIP_Real apex[2];
+      SCIP_Real vapex[2];
+      SCIP_Real vray[2];
 
       SCIP_Real raycoefs[2] = {2.0, 2.0};
       int rayidx[2] = {0, 1};
@@ -2829,8 +2832,119 @@ Test(interCuts, monoidal, .description = "test cut for monoidal strengthening")
 
       SCIP_CALL( intercutsComputeCommonQuantities(scip, nlhdlrexprdata, NULL, 1.0, NULL, vb, vzlp, wcoefs, &wzlp, &kappa) );
 
+      /* compute apex */
+      computeApex(nlhdlrexprdata, vb, vzlp, kappa, 1.0, apex);
+
+      /* compute eigenvectors * ray and eigenvectors * apex */
+      computeVApexAndVRay(nlhdlrexprdata, apex, raycoefs, rayidx, raynnonz, vapex, vray);
+
       /* compute quadratic function of monoidal problem and the resulting cut coef */
-      computeMonoidalQuadCoefs(scip, nlhdlrexprdata, raycoefs, rayidx, raynnonz, vb, vzlp, kappa, 1.0, &a, &b, &c);
+      computeMonoidalQuadCoefs(scip, nlhdlrexprdata, raycoefs, rayidx, raynnonz, vb, vzlp, vapex, vray, kappa, 1.0, &a, &b, &c);
+      cutcoef = findMonoidalQuadRoot(scip, a, b, c);
+
+      /* check if coefs are correct */
+      cr_expect_eq(a, expectedquadcoefs[0], "e %g g %g\n", expectedquadcoefs[0], a);
+      cr_expect_eq(b, expectedquadcoefs[1], "e %g g %g\n", expectedquadcoefs[1], b);
+      cr_expect_eq(c, expectedquadcoefs[2], "e %g g %g\n", expectedquadcoefs[2], c);
+      cr_expect_eq(cutcoef, expectedcutcoef, "e %.10f g %.15f\n", expectedcutcoef, cutcoef);
+   }
+
+   SCIP_CALL( SCIPendProbing(scip) );
+
+   /* register enforcer info in expr and free */
+   registerAndFree(cons, nlhdlrexprdata);
+}
+
+Test(interCuts, monoidal2, .description = "test cut for monoidal strengthening")
+{
+   SCIP_Bool cutoff;
+   SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
+   SCIP_CONS* cons;
+   SCIP_Real* eigenvalues;
+
+   simplifyAndDetect(&cons, &nlhdlrexprdata, "[nonlinear] <test>: <x>*<y> - 3*<x> + 3*<y> <= 0");
+
+   /* skip if eigenvalue decomposition does not exist */
+   SCIPexprGetQuadraticData(nlhdlrexprdata->qexpr, NULL, NULL, NULL, NULL, NULL, NULL, &eigenvalues, NULL);
+   if( eigenvalues == NULL )
+   {
+      registerAndFree(cons, nlhdlrexprdata);
+      return;
+   }
+
+   /*
+    * build LP so that every var is non-basic
+    */
+   SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
+   cr_assert_not(cutoff);
+
+   SCIP_CALL( SCIPstartProbing(scip) );
+
+   buildAndSolveSimpleProbingLP3();
+
+   /* what rays should be
+    * x      2     0
+    * y  =   2 s1  4 s2
+    */
+   {
+      int expectednnonz = 3;
+      SCIP_Real expectedrayscoefs[3] = {
+         2.0, 2.0,
+         4.0
+      };
+      int expectedraysidx[4] = {
+         0, 1,
+         1
+      };
+      int expectednrays = 2;
+      int expectedlppos[2] = {-1, -2};
+      int expectedbegin[4] = {0, 2, 3};
+
+      int expectedncols = 6;
+      SCIP_VAR* vars[6] = {x, y, w, z, s, t};
+      SCIP_VAR* consvars[3] = {x, y};
+
+      testRays(nlhdlrexprdata, NULL, vars, consvars, expectedrayscoefs, expectedraysidx, expectedlppos, expectedbegin,
+            expectednrays, expectednnonz, expectedncols);
+   }
+
+   {
+      SCIP_Real vb[2];      /* eigenvectors * b */
+      SCIP_Real vzlp[2];    /* eigenvectors * lpsol */
+      SCIP_Real wcoefs[2];  /* coefficients affecting quadterms in w */
+      SCIP_Real wzlp;     /* w(lpsol) */
+      SCIP_Real kappa;
+      SCIP_Real apex[2];
+      SCIP_Real vapex[2];
+      SCIP_Real vray[2];
+
+      SCIP_Real raycoefs[2] = {-5.0, 12.0};
+      int rayidx[2] = {0, 1};
+      int raynnonz = 2;
+
+      SCIP_Real a;
+      SCIP_Real b;
+      SCIP_Real c;
+      SCIP_Real cutcoef;
+
+      SCIP_Real expectedapex[2] = {15.0, 21.0};
+      SCIP_Real expectedquadcoefs[3] = {340.0, -770.0, 399.0};
+      SCIP_Real expectedcutcoef = 1.46204;
+
+      SCIP_CALL( intercutsComputeCommonQuantities(scip, nlhdlrexprdata, NULL, 1.0, NULL, vb, vzlp, wcoefs, &wzlp, &kappa) );
+
+      /* compute apex */
+      computeApex(nlhdlrexprdata, vb, vzlp, kappa, 1.0, apex);
+
+      /* check if apex is correct */
+      cr_expect_eq(apex[0], expectedapex[0], "e %g g %g\n", expectedapex[0], apex[0]);
+      cr_expect_eq(apex[1], expectedapex[1], "e %g g %g\n", expectedapex[1], apex[1]);
+
+      /* compute eigenvectors * ray and eigenvectors * apex */
+      computeVApexAndVRay(nlhdlrexprdata, apex, raycoefs, rayidx, raynnonz, vapex, vray);
+
+      /* compute quadratic function of monoidal problem and the resulting cut coef */
+      computeMonoidalQuadCoefs(scip, nlhdlrexprdata, raycoefs, rayidx, raynnonz, vb, vzlp, vapex, vray, kappa, 1.0, &a, &b, &c);
       cutcoef = findMonoidalQuadRoot(scip, a, b, c);
 
       /* check if coefs are correct */
