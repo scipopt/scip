@@ -2118,7 +2118,8 @@ void computeApex(
    SCIP_Real*            vzlp,               /**< array containing \f$v_i^T zlp_q\f$ for \f$i \in I_+ \cup I_-\f$ */
    SCIP_Real             kappa,              /**< value of kappa */
    SCIP_Real             sidefactor,         /**< 1.0 if the violated constraint is q &le; rhs, -1.0 otherwise */
-   SCIP_Real*            apex                /**< array to store apex */
+   SCIP_Real*            apex,               /**< array to store apex */
+   SCIP_Bool*            success             /**< TRUE if computation of apex was successful */
    )
 {
    SCIP_EXPR* qexpr;
@@ -2129,6 +2130,8 @@ void computeApex(
 
    qexpr = nlhdlrexprdata->qexpr;
    SCIPexprGetQuadraticData(qexpr, NULL, NULL, NULL, NULL, &nquadexprs, NULL, &eigenvalues, &eigenvectors);
+
+   *success = TRUE;
 
    for( i = 0; i < nquadexprs; ++i )
    {
@@ -2157,6 +2160,12 @@ void computeApex(
             num += eigenvectors[j * nquadexprs + i] * dot;
             denom += sidefactor * eigenvalues[j] * SQR(dot);
          }
+      }
+
+      if( denom == 0.0 )
+      {
+         *success = FALSE;
+         return;
       }
       assert(denom > 0);
 
@@ -2288,13 +2297,16 @@ SCIP_RETCODE computeIntercut(
       /* allocate memory for apex */
       SCIP_CALL( SCIPallocBufferArray(scip, &apex, nquadexprs) );
 
-      computeApex(nlhdlrexprdata, vb, vzlp, kappa, sidefactor, apex);
+      computeApex(nlhdlrexprdata, vb, vzlp, kappa, sidefactor, apex, success);
+
+      /* if computation of apex was not successful, don't apply monoidal strengthening */
+      if( ! *success )
+         usemonoidal = FALSE;
    }
    else
    {
       apex = NULL;
    }
-
 
    /* for every ray: compute cut coefficient and add var associated to ray into cut */
    for( i = 0; i < rays->nrays; ++i )
