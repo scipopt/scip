@@ -2278,14 +2278,15 @@ SCIP_RETCODE computeIntercut(
    SCIP_ROW** rows;
    SCIP_Real* apex;
    int i;
+   SCIP_Bool usemonoidal;
 
    cols = SCIPgetLPCols(scip);
    rows = SCIPgetLPRows(scip);
 
-   printf("sidefactor = %f \n", sidefactor);
+   usemonoidal = nlhdlrdata->usemonoidal ? TRUE : FALSE;
 
    /* if we use monoidal and we are in the right case for it, compute the apex of the S-free set */
-   if( nlhdlrdata->usemonoidal && wcoefs == NULL && kappa > 0 )
+   if( usemonoidal && wcoefs == NULL && kappa > 0 )
    {
       int nquadexprs;
 
@@ -2315,18 +2316,17 @@ SCIP_RETCODE computeIntercut(
       SCIP_Real coefs4b[5];
       SCIP_Real coefscondition[3];
       SCIP_Bool monoidalsuccess;
-      SCIP_Real monoidalcutcoef;
 
       /* if we (can) use monoidal strengthening, compute the cut coefficient with that */
-      if( nlhdlrdata->usemonoidal )
+      if( usemonoidal )
       {
          SCIP_CALL( computeMonoidalStrengthCoef(scip, nlhdlrexprdata, rays->lpposray[i], &rays->rays[rays->raysbegin[i]],
                &rays->raysidx[rays->raysbegin[i]], rays->raysbegin[i + 1] - rays->raysbegin[i], vb, vzlp, wcoefs, kappa,
-               apex, sidefactor, &monoidalcutcoef, &monoidalsuccess) );
+               apex, sidefactor, &cutcoef, &monoidalsuccess) );
       }
 
       /* if we don't use monoidal or if monoidal couldn't be applied, use gauge to compute coef  */
-      //if( ! nlhdlrdata->usemonoidal || ! monoidalsuccess )
+      if( ! usemonoidal || ! monoidalsuccess )
       {
          /* restrict phi to ray */
          SCIP_CALL( computeRestrictionToRay(scip, nlhdlrexprdata, sidefactor, iscase4,
@@ -2355,12 +2355,6 @@ SCIP_RETCODE computeIntercut(
 
          /* compute cut coef */
          cutcoef = SCIPisInfinity(scip, interpoint) ? 0.0 : 1.0 / interpoint;
-      }
-
-      if( monoidalsuccess )
-      {
-         printf("Monoidal changed cutcoef: %g ----> %g \n", cutcoef, monoidalcutcoef);
-         assert(cutcoef >= monoidalcutcoef);
       }
 
       /* add var to cut: if variable is nonbasic at upper we have to flip sign of cutcoef */
