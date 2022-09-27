@@ -1099,6 +1099,7 @@ SCIP_RETCODE intercutsComputeCommonQuantities(
          SCIPexprGetQuadraticQuadTerm(qexpr, j, &expr, &lincoef, NULL, NULL, NULL, NULL);
 
          vdotb += (sidefactor * lincoef) * eigenvectors[offset + j];
+
 #ifdef INTERCUT_MOREDEBUG
          printf("vdotb: offset %d, eigenvector %d = %g, lincoef quad %g\n", offset, j,
                eigenvectors[offset + j], lincoef);
@@ -1957,7 +1958,9 @@ SCIP_RETCODE computeMonoidalQuadCoefs(
    *b *= 2.0;
    *c += kappa;
 
-   assert(*c != 0);
+   //assert(*c != 0);
+   assert(*a == *a);
+   //assert(*a > 0); /* I don't think we need it here */
 
    return SCIP_OKAY;
 }
@@ -2030,23 +2033,31 @@ SCIP_Real findMonoidalQuadRoot(
    SCIP_INTERVAL bounds;
    SCIP_INTERVAL result;
 
-   assert(a > 0);
+   //assert(a > 0);
    assert(SQR(b) - 4 * a * c >= 0);
 
-   SCIPintervalSetBounds(&bounds, - b / (2 * a), SCIPinfinity(scip));
-
-   /* find all positive x such that a x^2 + b x >= -c and x in bounds.*/
-   SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar(SCIP_INTERVAL_INFINITY, &result, a, b, -c, bounds);
-   sol = SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, result) ? SCIPinfinity(scip) : SCIPintervalGetInf(result);
-
-   /* if we didn't find any positive solutions, negate quadratic and find negative solutions */
-   if( SCIPisInfinity(scip, sol) )
+   if( SCIPisZero(scip, a) )
    {
-      SCIPintervalSetBounds(&bounds, b / (2 * a), SCIPinfinity(scip));
+      assert(b != 0.0);
+      sol = - c / b;
+   }
+   else
+   {
+      SCIPintervalSetBounds(&bounds, - b / (2 * a), SCIPinfinity(scip));
 
-      /* find all positive x such that a x^2 - b x >= -c and x in bounds.*/
-      SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar(SCIP_INTERVAL_INFINITY, &result, a, -b, -c, bounds);
-      sol = SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, result) ? SCIPinfinity(scip) : -SCIPintervalGetInf(result);
+      /* find all positive x such that a x^2 + b x >= -c and x in bounds.*/
+      SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar(SCIP_INTERVAL_INFINITY, &result, a, b, -c, bounds);
+      sol = SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, result) ? SCIPinfinity(scip) : SCIPintervalGetInf(result);
+
+      /* if we didn't find any positive solutions, negate quadratic and find negative solutions */
+      if( SCIPisInfinity(scip, sol) )
+      {
+         SCIPintervalSetBounds(&bounds, b / (2 * a), SCIPinfinity(scip));
+
+         /* find all positive x such that a x^2 - b x >= -c and x in bounds.*/
+         SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar(SCIP_INTERVAL_INFINITY, &result, a, -b, -c, bounds);
+         sol = SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, result) ? SCIPinfinity(scip) : -SCIPintervalGetInf(result);
+      }
    }
 
    /* check if that solution is close enough or if we need to improve it more with binary search */
@@ -2055,10 +2066,13 @@ SCIP_Real findMonoidalQuadRoot(
       SCIP_Real val;
       SCIP_Real lb;
       SCIP_Real ub;
+      SCIP_Real lastposval;
+      SCIP_Real lastpossol;
       int niter;
 
       lb = - b / (2 * a);
       ub = sol;
+      lastposval = SCIPinfinity(scip);
       val = SCIPinfinity(scip);
       niter = 0;
       while( niter < BINSEARCH_MAXITERS && ABS(val) > 1e-10 )
@@ -2074,8 +2088,24 @@ SCIP_Real findMonoidalQuadRoot(
          /* if we are close enough, return with (feasible) solution */
          if( val > 0 && val < 10e-6 )
             break;
+
+         if( val > 0 && lastposval > val )
+         {
+            lastposval = val;
+            lastpossol = sol;
+         }
+
+         ++niter;
       }
+      if( val < 0 && ! SCIPisZero(scip, val) )
+      {
+         sol = lastpossol;
+         val = lastposval;
+      }
+
+      assert( val > 0 || SCIPisZero(scip, val) );
    }
+   //assert(sol != 0);
 
    return sol;
 }
