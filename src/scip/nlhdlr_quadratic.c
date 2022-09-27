@@ -2229,8 +2229,6 @@ SCIP_RETCODE computeMonoidalStrengthCoef(
       SCIP_CALL( computeMonoidalQuadCoefs(scip, nlhdlrexprdata, raycoefs, rayidx, raynnonz, vb,
          vzlp, vapex, vray, kappa, sidefactor, &a, &b, &c) );
 
-      printf("monoidal coefs are: a = %g, b = %g, c = %g \n", a, b, c);
-
       assert(a == a);
 
       /* check if ray is in strip */
@@ -2243,7 +2241,6 @@ SCIP_RETCODE computeMonoidalStrengthCoef(
          if( ! isRayInStrip(nlhdlrexprdata, raycoefs, rayidx, raynnonz, vb, vzlp, vapex, vray, kappa, sidefactor, *cutcoef) )
          {
             *success = TRUE;
-            printf("ray is not in strip \n");
          }
       }
 
@@ -2377,7 +2374,6 @@ SCIP_RETCODE computeIntercut(
 
          /* flip cutcoef when necessary. Note: rows have flipped base status! */
          cutcoef = SCIProwGetBasisStatus(rows[lppos]) == SCIP_BASESTAT_UPPER ? cutcoef : -cutcoef;
-         monoidalcutcoef = SCIProwGetBasisStatus(rows[lppos]) == SCIP_BASESTAT_UPPER ? monoidalcutcoef : -monoidalcutcoef;
 
          SCIP_CALL( addRowToCut(scip, rowprep, cutcoef, rows[lppos], success) );
 
@@ -2397,7 +2393,6 @@ SCIP_RETCODE computeIntercut(
 
             /* flip cutcoef when necessary */
             cutcoef = SCIPcolGetBasisStatus(cols[lppos]) == SCIP_BASESTAT_UPPER ? -cutcoef : cutcoef;
-            monoidalcutcoef = SCIPcolGetBasisStatus(cols[lppos]) == SCIP_BASESTAT_UPPER ? -monoidalcutcoef : monoidalcutcoef;
 
             SCIP_CALL( addColToCut(scip, rowprep, sol, cutcoef, cols[lppos]) );
          }
@@ -2409,12 +2404,6 @@ SCIP_RETCODE computeIntercut(
             SCIP_CALL( addColToCut(scip, rowprep, sol, cutcoef, cols[lppos]) );
          }
       }
-
-      //if( monoidalsuccess )
-      //{
-      //   printf("Monoidal changed cutcoef: %g ----> %g \n", cutcoef, monoidalcutcoef);
-      //   assert(cutcoef > monoidalcutcoef);
-      //}
    }
 
 TERMINATE:
@@ -4108,7 +4097,7 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoQuadratic)
 
       SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, cons) );
 
-      /*printf("## New cut\n");
+      /* printf("## New cut\n");
       printf(" -> found maxquad-free cut <%s>: act=%f, lhs=%f, norm=%f, eff=%f, min=%f, max=%f (range=%f)\n\n",
             SCIProwGetName(row), SCIPgetRowLPActivity(scip, row), SCIProwGetLhs(row), SCIProwGetNorm(row),
             SCIPgetCutEfficacy(scip, NULL, row),
