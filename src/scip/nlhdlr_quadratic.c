@@ -128,9 +128,9 @@ struct SCIP_NlhdlrData
    int                   atwhichnodes;       /**< determines at which nodes cut is used (if it's -1, it's used only at the root node,
                                                   if it's n >= 0, it's used at every multiple of n) */
    int                   nstrengthlimit;     /**< limit for number of rays we do the strengthening for */
-   SCIP_Real             cutcoefsum;         /**< sum of average cutcoefs of a cut */
    SCIP_Bool             ignorebadrayrestriction; /**< should cut be generated even with bad numerics when restricting to ray? */
    SCIP_Bool             ignorehighre;       /**< should cut be added even when range / efficacy is large? */
+   SCIP_Bool             trackmore;          /**< for monoidal strengthening, should we track more statistics (more expensive) */
 
    /* statistics */
    int                   ncouldimprovedcoef; /**< number of times a coefficient could improve but didn't because of numerics */
@@ -140,8 +140,12 @@ struct SCIP_NlhdlrData
    int                   nphinonneg;         /**< number of times a cut was aborted because phi is nonnegative at 0 */
    int                   nstrengthenings;    /**< number of successful strengthenings */
    int                   nboundcuts;         /**< number of successful bound cuts */
+   int                   nmonoidal;          /**< number of successful monoidal strengthenings */
    SCIP_Real             ncalls;             /**< number of calls to separation */
    SCIP_Real             densitysum;         /**< sum of density of cuts */
+   SCIP_Real             cutcoefsum;         /**< sum of average cutcoefs of a cut */
+   SCIP_Real             monoidalimprovementsum; /**< sum of average improvement of a cut when using monoidal strengthening */
+   SCIP_Real             efficacysum;        /**< sum of efficacy of cuts */
 };
 
 /* structure to store rays. note that for a given ray, the entries in raysidx are sorted. */
@@ -179,8 +183,8 @@ SCIP_DECL_TABLEOUTPUT(tableOutputQuadratic)
    assert(nlhdlrdata);
 
    /* print statistics */
-   SCIPinfoMessage(scip, file, "Quadratic Nlhdlr   : %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s \n", "GenCuts", "AddCuts", "CouldImpr", "NLargeRE",
-         "AbrtBadRay", "AbrtPosPhi", "AbrtNonBas", "NStrength", "AveCutcoef", "AveDensity", "AveBCutsFrac");
+   SCIPinfoMessage(scip, file, "Quadratic Nlhdlr   : %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %20s %10s %10s %10s \n", "GenCuts", "AddCuts", "CouldImpr", "NLargeRE",
+         "AbrtBadRay", "AbrtPosPhi", "AbrtNonBas", "NStrength", "NMonoidal", "AveCutcoef", "AveMonoidalImprov", "AveDensity", "AveEfficacy", "AveBCutsFrac");
    SCIPinfoMessage(scip, file, "  %-17s:", "Quadratic Nlhdlr");
    SCIPinfoMessage(scip, file, " %10d", nlhdlrdata->ncutsgenerated);
    SCIPinfoMessage(scip, file, " %10d", nlhdlrdata->ncutsadded);
@@ -190,8 +194,11 @@ SCIP_DECL_TABLEOUTPUT(tableOutputQuadratic)
    SCIPinfoMessage(scip, file, " %10d", nlhdlrdata->nphinonneg);
    SCIPinfoMessage(scip, file, " %10d", nlhdlrdata->nbadnonbasic);
    SCIPinfoMessage(scip, file, " %10d", nlhdlrdata->nstrengthenings);
-   SCIPinfoMessage(scip, file, " %10g", nlhdlrdata->nstrengthenings > 0 ? nlhdlrdata->cutcoefsum / nlhdlrdata->nstrengthenings : 0.0);
-   SCIPinfoMessage(scip, file, " %10g", nlhdlrdata->ncutsadded > 0 ? nlhdlrdata->densitysum / nlhdlrdata->ncutsadded : 0.0);
+   SCIPinfoMessage(scip, file, " %10d", nlhdlrdata->nmonoidal);
+   SCIPinfoMessage(scip, file, " %10g", nlhdlrdata->ncutsgenerated > 0 ? nlhdlrdata->cutcoefsum / nlhdlrdata->ncutsgenerated : 0.0);
+   SCIPinfoMessage(scip, file, " %20g", (nlhdlrdata->nmonoidal > 0 && nlhdlrdata->trackmore) ? nlhdlrdata->monoidalimprovementsum / nlhdlrdata->nmonoidal : -1.0);
+   SCIPinfoMessage(scip, file, " %10g", nlhdlrdata->ncutsgenerated > 0 ? nlhdlrdata->densitysum / nlhdlrdata->ncutsgenerated : 0.0);
+   SCIPinfoMessage(scip, file, " %10g", nlhdlrdata->ncutsgenerated > 0 ? nlhdlrdata->efficacysum / nlhdlrdata->ncutsgenerated : 0.0);
    SCIPinfoMessage(scip, file, " %10g", nlhdlrdata->ncalls > 0 ? nlhdlrdata->nboundcuts / nlhdlrdata->ncalls : 0.0);
    SCIPinfoMessage(scip, file, "\n");
 
@@ -2277,13 +2284,24 @@ SCIP_RETCODE computeIntercut(
    SCIP_COL** cols;
    SCIP_ROW** rows;
    SCIP_Real* apex;
+   SCIP_Real avecutcoefsum;
+   SCIP_Real avemonoidalimprovsum;
+   int monoidalcounter;
+   int counter;
    int i;
    SCIP_Bool usemonoidal;
+   SCIP_Bool monoidalwasused;
 
    cols = SCIPgetLPCols(scip);
    rows = SCIPgetLPRows(scip);
 
    usemonoidal = nlhdlrdata->usemonoidal ? TRUE : FALSE;
+   monoidalwasused = FALSE;
+
+   counter = 0;
+   monoidalcounter = 0;
+   avecutcoefsum = 0.0;
+   avemonoidalimprovsum = 0.0;
 
    /* if we use monoidal and we are in the right case for it, compute the apex of the S-free set */
    if( usemonoidal && wcoefs == NULL && kappa > 0 )
@@ -2325,8 +2343,12 @@ SCIP_RETCODE computeIntercut(
                apex, sidefactor, &cutcoef, &monoidalsuccess) );
       }
 
+      /* track whether monoidal was successful at least once if it is used */
+      if( usemonoidal && ! monoidalwasused && monoidalsuccess )
+         monoidalwasused = TRUE;
+
       /* if we don't use monoidal or if monoidal couldn't be applied, use gauge to compute coef  */
-      if( ! usemonoidal || ! monoidalsuccess )
+      if( ! usemonoidal || ! monoidalsuccess || nlhdlrdata->trackmore )
       {
          /* restrict phi to ray */
          SCIP_CALL( computeRestrictionToRay(scip, nlhdlrexprdata, sidefactor, iscase4,
@@ -2353,9 +2375,28 @@ SCIP_RETCODE computeIntercut(
          if( interpoints != NULL )
             interpoints[i] = interpoint;
 
-         /* compute cut coef */
-         cutcoef = SCIPisInfinity(scip, interpoint) ? 0.0 : 1.0 / interpoint;
+         /* if we are only computing the "normal" cut coefficient to track statistics (and we have been successful
+          * with monoidal strengthening), don't overwrite cutcoef variable, but just track statistics */
+         if( nlhdlrdata->trackmore && monoidalsuccess )
+         {
+            SCIP_Real normalcutcoef;
+
+            normalcutcoef = SCIPisInfinity(scip, interpoint) ? 0.0 : 1.0 / interpoint;
+
+            if( cutcoef >= 0 )
+               avemonoidalimprovsum += cutcoef / normalcutcoef;
+            monoidalcounter += 1;
+          }
+          else
+          {
+            /* compute cut coef */
+            cutcoef = SCIPisInfinity(scip, interpoint) ? 0.0 : 1.0 / interpoint;
+          }
       }
+
+      /* keep track of average cut coefficient */
+      counter += 1;
+      avecutcoefsum += cutcoef;
 
       /* add var to cut: if variable is nonbasic at upper we have to flip sign of cutcoef */
       lppos = rays->lpposray[i];
@@ -2399,6 +2440,14 @@ SCIP_RETCODE computeIntercut(
          }
       }
    }
+
+   /* track statistics */
+   if( counter > 0 )
+      nlhdlrdata->cutcoefsum += avecutcoefsum / counter;
+   if( monoidalwasused )
+      nlhdlrdata->nmonoidal += 1;
+   if( monoidalcounter > 0 )
+      nlhdlrdata->monoidalimprovementsum += avemonoidalimprovsum / monoidalcounter;
 
 TERMINATE:
    if( apex != NULL )
@@ -4122,6 +4171,7 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoQuadratic)
             *result = SCIP_SEPARATED;
             nlhdlrdata->ncutsadded += 1;
             nlhdlrdata->densitysum += (SCIP_Real) SCIProwprepGetNVars(rowprep) / (SCIP_Real) SCIPgetNVars(scip);
+            nlhdlrdata->efficacysum += SCIPgetCutEfficacy(scip, NULL, row);
          }
       }
       else
@@ -4839,9 +4889,13 @@ SCIP_RETCODE SCIPincludeNlhdlrQuadratic(
          "should cut be added even when range / efficacy is large?",
          &nlhdlrdata->ignorehighre, FALSE, TRUE, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddBoolParam(scip, "nlhdlr/" NLHDLR_NAME "/trackmore",
+         "for monoidal strengthening, should we track more statistics (more expensive)?",
+         &nlhdlrdata->trackmore, FALSE, FALSE, NULL, NULL) );
+
    /* statistic table */
    assert(SCIPfindTable(scip, TABLE_NAME_QUADRATIC) == NULL);
-   SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_QUADRATIC, TABLE_DESC_QUADRATIC, FALSE,
+   SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_QUADRATIC, TABLE_DESC_QUADRATIC, TRUE,
          NULL, NULL, NULL, NULL, NULL, NULL, tableOutputQuadratic,
          NULL, TABLE_POSITION_QUADRATIC, TABLE_EARLIEST_STAGE_QUADRATIC) );
    return SCIP_OKAY;
