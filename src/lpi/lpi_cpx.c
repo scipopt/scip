@@ -3059,7 +3059,7 @@ SCIP_Bool SCIPlpiHasPrimalRay(
    assert(lpi->cpxenv != NULL);
    assert(lpi->solstat >= 0);
 
-   return (lpi->solstat == CPX_STAT_UNBOUNDED && CPXgetmethod(lpi->cpxenv, lpi->cpxlp) == CPX_ALG_PRIMAL);
+   return (lpi->solstat == CPX_STAT_UNBOUNDED );
 }
 
 /** returns TRUE iff LP is proven to be primal unbounded */
