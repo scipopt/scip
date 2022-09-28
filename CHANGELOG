@@ -168,9 +168,16 @@ Unit tests
 ----------
 Testing
 -------
+
 Build system
 ------------
+
 ### Cmake
+
+- new option `-DAUTOBUILD` that configures scip with dependencies on availability.
+  Packages like Ipopt, PaPILO, Readline, Zimpl, ZLIB, GMP, Worhp are automatically found and linked, otherwise ignored.
+  The individual flags for these packages are ignored. This makes a quick build easier. It is by default set to off.
+
 ### Makefile
 
 Fixed bugs
