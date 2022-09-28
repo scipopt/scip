@@ -24,6 +24,7 @@ Windows and platform independent build instructions
 To build SCIP you may use the CMake GUI to specify the path to SCIP and the desired location for the build.
 Available options are listed and can be modified to fit your needs.
 After the configuration step is done, open the generated Visual Studio solution file and compile it.
+Note that compilation is tested on MSVC version >= 12.
 
 Alternatively, you may use the command line to configure and build SCIP by creating a `build` directory and then building the configuration:
 
