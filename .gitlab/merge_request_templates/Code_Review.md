@@ -18,7 +18,7 @@
 
 ### Testing
 
-* [ ] ctest passes without errors (type some of `jenkins ctest {soplex master,soplex bugfix,cplex,gurobi,mosek,xpress}`).
+* [ ] ctest passes without errors (type some of `jenkins ctest {soplex master,soplex bugfix,cplex,gurobi,mosek,xpress,highs}`).
 * [ ] The performance impact has been checked (type some of `jenkins performance {mip,minlp,minlplib,mip quick,minlp quick,mip continue,minlp continue}`) **or** the changed code will not be executed by default.
 * [ ] The new code is sufficiently covered by tests (perhaps, new coverage settings or new unit tests have been added).
 
