@@ -98,7 +98,7 @@ Miscellaneous
   diving heuristics, ALNS neighborhood information and tree size estimation statistics;
   they can be turned on using the following new parameters:
   misc/showdivingstats (diving heuristics), heuristics/alns/shownbstats (ALNS), estimation/showstats (tree size estimation)
-- When an LP could not be solved accurately, scaling is now turned of as a last fall-back method.
+- When an LP could not be solved accurately, scaling is now turned off as a last fall-back method.
 
 Known bugs
 ----------
