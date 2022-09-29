@@ -14752,11 +14752,12 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
    /* check feasibility of heuristic primal solution */
    for( r = 0; r < nlpirows; ++r )
    {
-      SCIP_Real act = 0.0;
+      SCIP_Real act;
       SCIP_ROW* row;
 
       row = lpirows[r];
       assert( row != NULL );
+      act = row->constant;
 
       for( c = 0; c < row->nlpcols; ++c )
       {
@@ -14818,12 +14819,14 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
    /* compute activity and check feasibility of primal solution and ray */
    for( r = 0; r < nlpirows; ++r )
    {
-      SCIP_Real primact = 0.0;
+      SCIP_Real primact;
       SCIP_Real rayact = 0.0;
       SCIP_ROW* row;
 
       row = lpirows[r];
       assert( row != NULL );
+
+      primact = row->constant;
 
       for( c = 0; c < row->nlpcols; ++c )
       {
