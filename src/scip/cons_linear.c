@@ -16492,7 +16492,6 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
             if( !consdata->upgraded )
                (*nchgsides)++;
          }
-         assert(consdata->nvars >= 1); /* otherwise, it should be redundant or infeasible */
 
          /* handle empty constraint */
          if( consdata->nvars == 0 )
