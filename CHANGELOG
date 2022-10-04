@@ -21,6 +21,8 @@ Performance improvements
 
 - Variable conflict-based addition of Schreier-Sims cuts for symmetry handling in prop_symmetry.c does no longer use
   an expensive explicit conflict graph construction.
+- Added initialization of LP relaxation for SOC constraints.
+- Avoided some numerical issues when separating SOC constraints.
 
 Examples and applications
 -------------------------
