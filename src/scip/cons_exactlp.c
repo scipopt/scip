@@ -10072,7 +10072,11 @@ SCIP_RETCODE tightenBounds(
 
 
          /* if there was no progress, skip the rest of the binary variables */
-         if( *nchgbds > oldnchgbds )
+         if (*cutoff)
+         {
+            break;
+         }
+         else if( *nchgbds > oldnchgbds )
          {
             lastchange = v;
             ++v;
