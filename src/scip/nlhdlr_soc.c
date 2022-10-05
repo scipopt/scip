@@ -2696,7 +2696,7 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaSoc)
       int pos;
 
       i = nlhdlrexprdata->transcoefsidx[nlhdlrexprdata->termbegins[0]];
-      v1i = nlhdlrexprdata->transcoefs[0];
+      v1i = nlhdlrexprdata->transcoefs[nlhdlrexprdata->termbegins[0]];
       assert(v1i != 0.0);
 
       v2zero = nlhdlrexprdata->termbegins[1] == nlhdlrexprdata->termbegins[2];
@@ -2705,7 +2705,7 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaSoc)
       v2i = 0.0;
       if( !v2zero && SCIPsortedvecFindInt(nlhdlrexprdata->transcoefsidx + nlhdlrexprdata->termbegins[1], i, nlhdlrexprdata->termbegins[2] - nlhdlrexprdata->termbegins[1], &pos) )
       {
-         assert(nlhdlrexprdata->transcoefsidx[nlhdlrexprdata->termbegins[1] + pos] == j);
+         assert(nlhdlrexprdata->transcoefsidx[nlhdlrexprdata->termbegins[1] + pos] == i);
          v2i = nlhdlrexprdata->transcoefs[nlhdlrexprdata->termbegins[1] + pos];
       }
 
@@ -2719,9 +2719,9 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaSoc)
 
          /* get (v_1)_j; as it is a sparse vector, we need to search for j in transcoefsidx */
          v1j = 0.0;
-         if( SCIPsortedvecFindInt(nlhdlrexprdata->transcoefsidx + nlhdlrexprdata->termbegins[0], j, nlhdlrexprdata->termbegins[1] - nlhdlrexprdata->termbegins[0], &pos) )
+         if( SCIPsortedvecFindInt(nlhdlrexprdata->transcoefsidx + nlhdlrexprdata->termbegins[0], nlhdlrexprdata->transcoefsidx[k], nlhdlrexprdata->termbegins[1] - nlhdlrexprdata->termbegins[0], &pos) )
          {
-            assert(nlhdlrexprdata->transcoefsidx[nlhdlrexprdata->termbegins[0] + pos] == j);
+            assert(nlhdlrexprdata->transcoefsidx[nlhdlrexprdata->termbegins[0] + pos] == nlhdlrexprdata->transcoefsidx[k]);
             v1j = nlhdlrexprdata->transcoefs[nlhdlrexprdata->termbegins[0] + pos];
          }
 
@@ -2788,7 +2788,6 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaSoc)
                   SCIP_ROW* cut;
                   SCIP_CALL( SCIPgetRowprepRowCons(scip, &cut, rowprep, cons) );
                   SCIP_CALL( SCIPaddRow(scip, cut, FALSE, infeasible) );
-                  /* SCIPdebug( SCIPprintRow(scip, cut, NULL) ); */
                   SCIP_CALL( SCIPreleaseRow(scip, &cut) );
                }
 
@@ -2805,7 +2804,7 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaSoc)
       /* we have \sqrt{ \beta_1^2 + (v_2^T x + \beta_2)^2 } \leq v_3^T x + \beta_3
        * with v_2 != 0
        *
-       * we should linearize at points where the second term are -1 or 1
+       * we should linearize at points where the second term is -1 or 1
        *
        * set x = v_2 / ||v_2||^2 (+/-1 - beta_2)
        */
@@ -2916,7 +2915,6 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaSoc)
                   SCIP_ROW* cut;
                   SCIP_CALL( SCIPgetRowprepRowCons(scip, &cut, rowprep, cons) );
                   SCIP_CALL( SCIPaddRow(scip, cut, FALSE, infeasible) );
-                  /* SCIPdebug( SCIPprintRow(scip, cut, NULL) ); */
                   SCIP_CALL( SCIPreleaseRow(scip, &cut) );
                }
 
