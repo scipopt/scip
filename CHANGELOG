@@ -3,19 +3,8 @@
 @section RN802 SCIP 8.0.2
 *************************
 
-Features
---------
-
-Performance improvements
-------------------------
-
-Examples and applications
--------------------------
-
 Interface changes
 -----------------
-
-### New and changed callbacks
 
 ### Deleted and changed API methods
 
@@ -31,12 +20,10 @@ Interface changes
 - added SCIPcutpoolGetNRootCalls, SCIPcutpoolGetNCutsAdded, SCIPcutpoolAddMaxNCuts, SCIPcutpoolSetTime, SCIPcutpoolAddNCalls, SCIPcutpoolAddNRootCalls, SCIPcutpoolAddNCutsFound, SCIPcutpoolAddNCutsAdded,
 - added SCIPcutselGetNCalls, SCIPcutselGetNRootCalls, SCIPcutselGetNRootCuts, SCIPcutselGetNRootForcedCuts, SCIPcutselGetNRootCutsFiltered, SCIPcutselGetNLocalCuts, SCIPcutselGetNLocalForcedCuts, SCIPcutselGetNLocalCutsFiltered,
 
-### Command line interface
 ### Interfaces to external software
 
 - Added compatibility with Mosek 10.0.18.
 
-### Changed parameters
 ### New parameters
 
 - new parameters to turn on more statistics: misc/showdivingstats (diving heuristics), heuristics/alns/shownbstats (ALNS), estimation/showstats (tree size estimation)
@@ -50,13 +37,6 @@ Interface changes
 - added ncutsadded, ncutsaddedviapool, ncutsaddeddirect to SCIP_Sepastore
 - fixed statistics of relaxators w.r.t. number of times conss/cuts were added
 
-Deleted files
--------------
-Unit tests
-----------
-Testing
--------
-
 Build system
 ------------
 
@@ -65,8 +45,6 @@ Build system
 - new option `-DAUTOBUILD` that configures scip with dependencies on availability.
   Packages like Ipopt, PaPILO, Readline, Zimpl, ZLIB, GMP, Worhp are automatically found and linked, otherwise ignored.
   The individual flags for these packages are ignored. This makes a quick build easier. It is by default set to off.
-
-### Makefile
 
 Fixed bugs
 ----------
@@ -99,10 +77,6 @@ Miscellaneous
   diving heuristics, ALNS neighborhood information and tree size estimation statistics;
   they can be turned on using the following new parameters:
   misc/showdivingstats (diving heuristics), heuristics/alns/shownbstats (ALNS), estimation/showstats (tree size estimation)
-
-Known bugs
-----------
-
 
 @section RN801 SCIP 8.0.1
 *************************
