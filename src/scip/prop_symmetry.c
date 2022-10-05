@@ -3351,7 +3351,6 @@ SCIP_RETCODE storeExpressionTree(
             SCIP_EXPRHDLR* thisprodexpr;
 
             prodcoef = SCIPgetCoefExprProduct(expr);
-            assert( varexpr != NULL );
 
             /* estimate size needed (also in recursive calls for children) */
             SCIP_CALL( ensureReflSymDataMemorySuffices(scip, reflsymdata,
@@ -3704,7 +3703,8 @@ SCIP_RETCODE findColorsReflSym(
        * whether the inverse coefficients behave the same
        */
       if ( (! SCIPisEQ(scip, value, oldcoef)) || (oldinvexists != invexists) ||
-         (SCIPisNegative(scip, value * oldinvcoef) && ! SCIPisEQ(scip, value, -oldinvcoef)) )
+         (SCIPisNegative(scip, value * oldinvcoef) && ! SCIPisEQ(scip, value, -oldinvcoef)) ||
+         (invexists && ! SCIPisEQ(scip, value, -oldinvcoef) ))
       {
 #ifdef SCIP_OUTPUT
          SCIPdebugMsg(scip, "Detected new matrix coefficient type %f - color: %d\n.", value, reflsymdata->nuniquecoefs);
@@ -3717,6 +3717,8 @@ SCIP_RETCODE findColorsReflSym(
           */
          if ( invexists )
          {
+            assert( SCIPisEQ(scip, value, - reflsymdata->treecoefs[perm[lastpos]]) );
+
             reflsymdata->invcoefcolors[idx] = -(perm[lastpos] + 1);
             oldinvcoef = lastcoef;
          }
@@ -3737,6 +3739,7 @@ SCIP_RETCODE findColorsReflSym(
             reflsymdata->coefcolors[idx] = reflsymdata->nuniquecoefs - 1;
          else
             reflsymdata->coefcolors[idx] = reflsymdata->nuniquecoefs - 2;
+         assert( SCIPisEQ(scip, value, -oldinvcoef) );
          reflsymdata->invcoefcolors[idx] = invcolor;
       }
    }
@@ -4199,7 +4202,7 @@ SCIP_RETCODE computeReflectionSymmetryGroup(
    /* to easily incorporate objective coefficients in data structure, add objective as "constraint" */
    SCIP_CALL( storeObjective(scip, &reflsymdata) );
 
-   SCIP_CALL( printReflectionSymmetryData(scip, &reflsymdata) );
+   /* SCIP_CALL( printReflectionSymmetryData(scip, &reflsymdata) ); */
 
    SCIPdebugMsg(scip, "Collected information about problem. Prepare data for building symmetry detection graph.\n");
 
