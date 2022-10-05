@@ -7,6 +7,7 @@
 * [ ] The code change is correct.
 * [ ] The naming and place of new methods is clear and consistent **or** no new methods have been added.
 * [ ] Emphasis settings are up to date.
+* [ ] Ensure that new code and features use randomization where necessary to account for performance variability.
 * [ ] The code is sufficiently documented.
 * [ ] The coding style is OK, see https://scipopt.org/doc/html/CODE.php.
 
