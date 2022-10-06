@@ -2127,7 +2127,7 @@ SCIP_RETCODE printReflectionSymmetryData(
             SCIPinfoMessage(scip, NULL, " (");
             if (  op == SCIPfindExprhdlr(scip, "sum") )
                SCIPinfoMessage(scip, NULL, "+ ");
-            else if ( op == SCIPfindExprhdlr(scip, "prod") || op == (SCIP_EXPRHDLR*) SYM_CONSTYPE_BIPROD )
+            else if ( op == SCIPfindExprhdlr(scip, "prod") || op == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_BIPROD )
                SCIPinfoMessage(scip, NULL, "* ");
             else if ( op == SCIPfindExprhdlr(scip, "abs") )
                SCIPinfoMessage(scip, NULL, "abs ");
@@ -2147,33 +2147,33 @@ SCIP_RETCODE printReflectionSymmetryData(
                SCIPinfoMessage(scip, NULL, "log ");
             else if ( op == SCIPfindExprhdlr(scip, "erf") )
                SCIPinfoMessage(scip, NULL, "erf ");
-            else if ( op == (SCIP_EXPRHDLR*) SYM_CONSTYPE_AND )
+            else if ( op == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_AND )
                SCIPinfoMessage(scip, NULL, "AND ");
-            else if ( op == (SCIP_EXPRHDLR*) SYM_CONSTYPE_OR )
+            else if ( op == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_OR )
                SCIPinfoMessage(scip, NULL, "OR ");
-            else if ( op == (SCIP_EXPRHDLR*) SYM_CONSTYPE_XOR )
+            else if ( op == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_XOR )
                SCIPinfoMessage(scip, NULL, "XOR ");
-            else if ( op == (SCIP_EXPRHDLR*) SYM_CONSTYPE_CARD )
+            else if ( op == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_CARD )
                SCIPinfoMessage(scip, NULL, "CARD ");
-            else if ( op == (SCIP_EXPRHDLR*) SYM_CONSTYPE_BDDISJ )
+            else if ( op == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_BDDISJ )
                SCIPinfoMessage(scip, NULL, "BDDISJ ");
-            else if ( op == (SCIP_EXPRHDLR*) SYM_CONSTYPE_INDICATOR )
+            else if ( op == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_INDICATOR )
                SCIPinfoMessage(scip, NULL, "--> ");
-            else if ( op == (SCIP_EXPRHDLR*) SYM_CONSTYPE_EQ )
+            else if ( op == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_EQ )
                SCIPinfoMessage(scip, NULL, "== ");
-            else if ( op == (SCIP_EXPRHDLR*) SYM_CONSTYPE_GEQ )
+            else if ( op == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_GEQ )
                SCIPinfoMessage(scip, NULL, ">= ");
-            else if ( op == (SCIP_EXPRHDLR*) SYM_CONSTYPE_SOS1 )
+            else if ( op == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_SOS1 )
                SCIPinfoMessage(scip, NULL, "SOS1 ");
-            else if ( op == (SCIP_EXPRHDLR*) SYM_CONSTYPE_SOS2 )
+            else if ( op == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_SOS2 )
                SCIPinfoMessage(scip, NULL, "SOS2 ");
-            else if ( op == (SCIP_EXPRHDLR*) SYM_CONSTYPE_TUPLE )
+            else if ( op == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_TUPLE )
                SCIPinfoMessage(scip, NULL, "tuple ");
-            else if ( op == (SCIP_EXPRHDLR*) SYM_CONSTYPE_OBJ )
+            else if ( op == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_OBJ )
                SCIPinfoMessage(scip, NULL, "objective: ");
-            else if ( op == (SCIP_EXPRHDLR*) SYM_CONSTYPE_POWER )
+            else if ( op == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_POWER )
                SCIPinfoMessage(scip, NULL, "pow ");
-            else if ( op == (SCIP_EXPRHDLR*) SYM_CONSTYPE_SIGNPOWER )
+            else if ( op == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_SIGNPOWER )
                SCIPinfoMessage(scip, NULL, "signpow ");
             else
                SCIPinfoMessage(scip, NULL, "? ");
@@ -2497,7 +2497,7 @@ SCIP_RETCODE storeSimpleConstraint(
    SCIP*                 scip,               /**< SCIP pointer */
    SYM_REFLSYMDATA*      reflsymdata,        /**< pointer to reflection symmetry data structure */
    SCIP_CONS*            cons,               /**< pointer to constraint that needs to be stored */
-   SYM_CONSTYPE          constype,           /**< type of constraint that needs to be stored */
+   SYM_CONSOPTYPE        consoptype,         /**< type of constraint operator that needs to be stored */
    SCIP_VAR**            consvars,           /**< allocated array to store variables in constraints */
    SCIP_Real*            consvals            /**< allocated array to store coefficients in constraints */
    )
@@ -2514,17 +2514,17 @@ SCIP_RETCODE storeSimpleConstraint(
    assert( reflsymdata != NULL );
    assert( cons != NULL );
 
-   /* to identify simple constraint, we cast the constype to an exprhdlr pointer */
-   expr = (SCIP_EXPRHDLR*) constype;
+   /* to identify simple constraint, we cast the consoptype to an exprhdlr pointer */
+   expr = (SCIP_EXPRHDLR*) consoptype;
 
-   switch ( constype )
+   switch ( consoptype )
    {
-   case SYM_CONSTYPE_AND :
-   case SYM_CONSTYPE_OR :
-      nvars = constype == SYM_CONSTYPE_AND ? SCIPgetNVarsAnd(scip, cons) : SCIPgetNVarsOr(scip, cons);
+   case SYM_CONSOPTYPE_AND :
+   case SYM_CONSOPTYPE_OR :
+      nvars = consoptype == SYM_CONSOPTYPE_AND ? SCIPgetNVarsAnd(scip, cons) : SCIPgetNVarsOr(scip, cons);
 
       /* identify non-resultant variables by coefficient 1.0 */
-      vars = constype == SYM_CONSTYPE_AND ? SCIPgetVarsAnd(scip, cons) : SCIPgetVarsOr(scip, cons);
+      vars = consoptype == SYM_CONSOPTYPE_AND ? SCIPgetVarsAnd(scip, cons) : SCIPgetVarsOr(scip, cons);
       for (i = 0; i < nvars; ++i)
       {
          consvars[i] = vars[i];
@@ -2532,7 +2532,7 @@ SCIP_RETCODE storeSimpleConstraint(
       }
 
       /* use cofficient 2.0 to identify the resultant */
-      consvars[nvars] = constype == SYM_CONSTYPE_AND ? SCIPgetResultantAnd(scip, cons) : SCIPgetResultantOr(scip, cons);
+      consvars[nvars] = consoptype == SYM_CONSOPTYPE_AND ? SCIPgetResultantAnd(scip, cons) : SCIPgetResultantOr(scip, cons);
       consvals[nvars++] = 2.0;
 
       SCIP_CALL( getActiveVariables(scip, &consvars, &consvals, &nvars, &constant, SCIPconsIsTransformed(cons)) );
@@ -2564,7 +2564,7 @@ SCIP_RETCODE storeSimpleConstraint(
        */
       reflsymdata->treebegins[reflsymdata->ntreerhs] = reflsymdata->ntrees;
       break;
-   case SYM_CONSTYPE_XOR :
+   case SYM_CONSOPTYPE_XOR :
       nvars = SCIPgetNVarsXor(scip, cons);
 
       /* identify non-resultant variables by coefficient 1.0 */
@@ -2611,7 +2611,7 @@ SCIP_RETCODE storeSimpleConstraint(
        */
       reflsymdata->treebegins[reflsymdata->ntreerhs] = reflsymdata->ntrees;
       break;
-   case SYM_CONSTYPE_BDDISJ :
+   case SYM_CONSOPTYPE_BDDISJ :
       /* enconde bounddisjunction constraints as (BDDISJ expr1 ... exprk)
        *
        * The expressions correspond to the expressions in the bounddisjunction.
@@ -2659,7 +2659,7 @@ SCIP_RETCODE storeSimpleConstraint(
             reflsymdata->ntreeops + 1, reflsymdata->ntreecoefs + 1,
             reflsymdata->ntreevaridx + 1, reflsymdata->ntreevals + 1) );
 
-            SCIP_CALL( addOperatorReflSym(reflsymdata, (SCIP_EXPRHDLR*) SYM_CONSTYPE_GEQ, mainopidx, &subopidx) );
+            SCIP_CALL( addOperatorReflSym(reflsymdata, (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_GEQ, mainopidx, &subopidx) );
             if ( SCIPgetBoundtypesBounddisjunction(scip, cons)[i] == SCIP_BOUNDTYPE_LOWER )
             {
                SCIP_CALL( addValReflSym(reflsymdata, SCIPgetBoundsBounddisjunction(scip, cons)[i] - constant,
@@ -2685,7 +2685,7 @@ SCIP_RETCODE storeSimpleConstraint(
             reflsymdata->ntreevaridx + nlocvars, reflsymdata->ntreevals + 1) );
 
             /* add >= operator */
-            SCIP_CALL( addOperatorReflSym(reflsymdata, (SCIP_EXPRHDLR*) SYM_CONSTYPE_GEQ, mainopidx, &subopidx) );
+            SCIP_CALL( addOperatorReflSym(reflsymdata, (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_GEQ, mainopidx, &subopidx) );
 
             /* add numerical value*/
             if ( SCIPgetBoundtypesBounddisjunction(scip, cons)[i] == SCIP_BOUNDTYPE_LOWER )
@@ -2723,7 +2723,7 @@ SCIP_RETCODE storeSimpleConstraint(
       reflsymdata->treebegins[reflsymdata->ntreerhs] = reflsymdata->ntrees;
 
       break;
-   case SYM_CONSTYPE_INDICATOR :
+   case SYM_CONSOPTYPE_INDICATOR :
       /* encode indicator constraints \f$ y = b \Rightarrow a_1x_1 + \dots + a_kx_k \leq \beta \f$
        * as (INDICATOR (COMPARE y b) (+ a1 x1 ... ak xk)) and assign the indicator the expression
        * the right-hand side of the constraint.
@@ -2733,7 +2733,7 @@ SCIP_RETCODE storeSimpleConstraint(
        * of binary variables.
        */
    {
-      SCIP_EXPRHDLR* exprcompare = (SCIP_EXPRHDLR*) SYM_CONSTYPE_EQ;
+      SCIP_EXPRHDLR* exprcompare = (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_EQ;
       SCIP_CONS* lincons;
       int nlocvars = 1.0;
       int subopidx;
@@ -2859,7 +2859,7 @@ SCIP_RETCODE storeSimpleConstraint(
 
       break;
    }
-   case SYM_CONSTYPE_SOS1 :
+   case SYM_CONSOPTYPE_SOS1 :
       /* encode SOS1 constraints as (SOS1 1 x1 ... 1 xk). If a variable is aggregated, replace
        * the (1 xi) part by [+ ai1 yi1 ... ail yil].
        *
@@ -2943,7 +2943,7 @@ SCIP_RETCODE storeSimpleConstraint(
       reflsymdata->treebegins[reflsymdata->ntreerhs] = reflsymdata->ntrees;
 
       break;
-   case SYM_CONSTYPE_SOS2 :
+   case SYM_CONSOPTYPE_SOS2 :
       /* encode SOS2 constraints as (SOS2 (tuple 1 x11 1 x12) ... (tuple 1 xk1 1 xk2)).
        * If a variable is aggregated, replace [1 var] by  [+ ai1 yi1 ... ail yil].
        *
@@ -3005,7 +3005,7 @@ SCIP_RETCODE storeSimpleConstraint(
                reflsymdata->ntreeops + nsumops + 1, reflsymdata->ntreecoefs + neededvars,
                reflsymdata->ntreevaridx + neededvars, reflsymdata->ntreevals + nvals) );
 
-         SCIP_CALL( addOperatorReflSym(reflsymdata, (SCIP_EXPRHDLR*) SYM_CONSTYPE_TUPLE, mainopidx, &subopidx) );
+         SCIP_CALL( addOperatorReflSym(reflsymdata, (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_TUPLE, mainopidx, &subopidx) );
 
          /* add nodes for first variable in pair */
          for (j = 0; j < nlocvars; ++j)
@@ -3377,7 +3377,7 @@ SCIP_RETCODE storeExpressionTree(
                   ! SCIPisEQ(scip, SCIPvarGetUbLocal(var1), SCIPvarGetUbLocal(var2)) )
                   thisprodexpr = SCIPexprGetHdlr(expr);
                else
-                  thisprodexpr = (SCIP_EXPRHDLR*) SYM_CONSTYPE_BIPROD;
+                  thisprodexpr = (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_BIPROD;
             }
             else
                thisprodexpr = SCIPexprGetHdlr(expr);
@@ -3405,12 +3405,12 @@ SCIP_RETCODE storeExpressionTree(
 
             if ( SCIPisExprSignpower(scip, expr) )
             {
-               SCIP_CALL( addOperatorReflSym(reflsymdata, (SCIP_EXPRHDLR*) SYM_CONSTYPE_SIGNPOWER,
+               SCIP_CALL( addOperatorReflSym(reflsymdata, (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_SIGNPOWER,
                      subopidx, &opidx) );
             }
             else
             {
-               SCIP_CALL( addOperatorReflSym(reflsymdata, (SCIP_EXPRHDLR*) SYM_CONSTYPE_POWER,
+               SCIP_CALL( addOperatorReflSym(reflsymdata, (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_POWER,
                      subopidx, &opidx) );
             }
             if ( ! SCIPisEQ(scip, exponent, 1.0) )
@@ -3878,7 +3878,7 @@ SCIP_RETCODE storeObjective(
    reflsymdata->treebegins[reflsymdata->ntreerhs] = reflsymdata->ntrees;
    reflsymdata->treerhs[reflsymdata->ntreerhs++] = 0.0;
 
-   SCIP_CALL( addOperatorReflSym(reflsymdata, (SCIP_EXPRHDLR*) SYM_CONSTYPE_OBJ, -1, &mainopidx) );
+   SCIP_CALL( addOperatorReflSym(reflsymdata, (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_OBJ, -1, &mainopidx) );
    for (j = 0; j < nvars; ++j)
    {
       var = reflsymdata->treevars[j];
@@ -4156,35 +4156,35 @@ SCIP_RETCODE computeReflectionSymmetryGroup(
       }
       else if ( strcmp(conshdlrname, "and") == 0 )
       {
-         SCIP_CALL( storeSimpleConstraint(scip, &reflsymdata, cons, SYM_CONSTYPE_AND, consvars, consvals) );
+         SCIP_CALL( storeSimpleConstraint(scip, &reflsymdata, cons, SYM_CONSOPTYPE_AND, consvars, consvals) );
       }
       else if ( strcmp(conshdlrname, "bounddisjunction") == 0 )
       {
-         SCIP_CALL( storeSimpleConstraint(scip, &reflsymdata, cons, SYM_CONSTYPE_BDDISJ, consvars, consvals) );
+         SCIP_CALL( storeSimpleConstraint(scip, &reflsymdata, cons, SYM_CONSOPTYPE_BDDISJ, consvars, consvals) );
       }
       else if ( strcmp(conshdlrname, "indicator") == 0 )
       {
-         SCIP_CALL( storeSimpleConstraint(scip, &reflsymdata, cons, SYM_CONSTYPE_INDICATOR, consvars, consvals) );
+         SCIP_CALL( storeSimpleConstraint(scip, &reflsymdata, cons, SYM_CONSOPTYPE_INDICATOR, consvars, consvals) );
       }
       else if ( strcmp(conshdlrname, "or") == 0 )
       {
-         SCIP_CALL( storeSimpleConstraint(scip, &reflsymdata, cons, SYM_CONSTYPE_OR, consvars, consvals) );
+         SCIP_CALL( storeSimpleConstraint(scip, &reflsymdata, cons, SYM_CONSOPTYPE_OR, consvars, consvals) );
       }
       else if ( strcmp(conshdlrname, "pseudoboolean") == 0 )
       {
-         SCIP_CALL( storeSimpleConstraint(scip, &reflsymdata, cons, SYM_CONSTYPE_PSEUDOBOOL, consvars, consvals) );
+         SCIP_CALL( storeSimpleConstraint(scip, &reflsymdata, cons, SYM_CONSOPTYPE_PSEUDOBOOL, consvars, consvals) );
       }
       else if ( strcmp(conshdlrname, "SOS1") == 0 )
       {
-         SCIP_CALL( storeSimpleConstraint(scip, &reflsymdata, cons, SYM_CONSTYPE_SOS1, consvars, consvals) );
+         SCIP_CALL( storeSimpleConstraint(scip, &reflsymdata, cons, SYM_CONSOPTYPE_SOS1, consvars, consvals) );
       }
       else if ( strcmp(conshdlrname, "SOS2") == 0 )
       {
-         SCIP_CALL( storeSimpleConstraint(scip, &reflsymdata, cons, SYM_CONSTYPE_SOS2, consvars, consvals) );
+         SCIP_CALL( storeSimpleConstraint(scip, &reflsymdata, cons, SYM_CONSOPTYPE_SOS2, consvars, consvals) );
       }
       else if ( strcmp(conshdlrname, "xor") == 0 )
       {
-         SCIP_CALL( storeSimpleConstraint(scip, &reflsymdata, cons, SYM_CONSTYPE_XOR, consvars, consvals) );
+         SCIP_CALL( storeSimpleConstraint(scip, &reflsymdata, cons, SYM_CONSOPTYPE_XOR, consvars, consvals) );
       }
       else if ( strcmp(conshdlrname, "nonlinear") == 0 )
       {

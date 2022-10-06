@@ -65,29 +65,29 @@ enum SYM_Nodetype
 };
 typedef enum SYM_Nodetype SYM_NODETYPE;
 
-/** define type of simple constraints in symmetry detection */
-enum SYM_Constype
+/** define type of simple constraints/operators in symmetry detection */
+enum SYM_Consoptype
 {
-   SYM_CONSTYPE_UNKNOWN  = 0,                /**< unkown constraint type */
-   SYM_CONSTYPE_AND      = 1,                /**< constraint of type and */
-   SYM_CONSTYPE_BDDISJ   = 2,                /**< constraint of type bounddisjunction */
-   SYM_CONSTYPE_CARD     = 3,                /**< constraint of type cardinality */
-   SYM_CONSTYPE_INDICATOR = 4,               /**< constraint of type indicator */
-   SYM_CONSTYPE_OR       = 5,                /**< constraint of type or */
-   SYM_CONSTYPE_PSEUDOBOOL = 6,              /**< constraint of type pseudoboolean */
-   SYM_CONSTYPE_SOS1     = 7,                /**< constraint of type SOS1 */
-   SYM_CONSTYPE_SOS2     = 8,                /**< constraint of type SOS2 */
-   SYM_CONSTYPE_XOR      = 9,                /**< constraint of type xor */
-   SYM_CONSTYPE_GEQ      = 10,               /**< needed to encode >= in bounddisjunctions */
-   SYM_CONSTYPE_EQ       = 11,               /**< needed to encode == in indicator constraints */
-   SYM_CONSTYPE_TUPLE    = 12,               /**< needed to encode pairs in SOS2 constraints */
-   SYM_CONSTYPE_OBJ      = 13,               /**< needed to model the objective */
-   SYM_CONSTYPE_NONLINEAR = 14,              /**< constraint of type nonlinear */
-   SYM_CONSTYPE_POWER    = 15,               /**< needed to distinguish power and signpower */
-   SYM_CONSTYPE_SIGNPOWER = 16,              /**< needed to distinguish power and signpower */
-   SYM_CONSTYPE_BIPROD   = 17                /**< needed to indicate product of two variables */
+   SYM_CONSOPTYPE_UNKNOWN  = 0,              /**< unkown constraint type */
+   SYM_CONSOPTYPE_AND      = 1,              /**< constraint of type and */
+   SYM_CONSOPTYPE_BDDISJ   = 2,              /**< constraint of type bounddisjunction */
+   SYM_CONSOPTYPE_CARD     = 3,              /**< constraint of type cardinality */
+   SYM_CONSOPTYPE_INDICATOR = 4,             /**< constraint of type indicator */
+   SYM_CONSOPTYPE_OR       = 5,              /**< constraint of type or */
+   SYM_CONSOPTYPE_PSEUDOBOOL = 6,            /**< constraint of type pseudoboolean */
+   SYM_CONSOPTYPE_SOS1     = 7,              /**< constraint of type SOS1 */
+   SYM_CONSOPTYPE_SOS2     = 8,              /**< constraint of type SOS2 */
+   SYM_CONSOPTYPE_XOR      = 9,              /**< constraint of type xor */
+   SYM_CONSOPTYPE_GEQ      = 10,             /**< needed to encode >= in bounddisjunctions */
+   SYM_CONSOPTYPE_EQ       = 11,             /**< needed to encode == in indicator constraints */
+   SYM_CONSOPTYPE_TUPLE    = 12,             /**< needed to encode pairs in SOS2 constraints */
+   SYM_CONSOPTYPE_OBJ      = 13,             /**< needed to model the objective */
+   SYM_CONSOPTYPE_NONLINEAR = 14,            /**< constraint of type nonlinear */
+   SYM_CONSOPTYPE_POWER    = 15,             /**< needed to distinguish power and signpower */
+   SYM_CONSOPTYPE_SIGNPOWER = 16,            /**< needed to distinguish power and signpower */
+   SYM_CONSOPTYPE_BIPROD   = 17              /**< needed to indicate product of two variables */
 };
-typedef enum SYM_Constype SYM_CONSTYPE;
+typedef enum SYM_Consoptype SYM_CONSOPTYPE;
 
 /** define type of flips that are allowed for children of operators */
 enum SYM_Fliptype
