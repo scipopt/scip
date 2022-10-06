@@ -1516,7 +1516,11 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
 SCIP_RETCODE SYMcomputeReflectionSymmetryGenerators(
    SCIP*                 scip,               /**< SCIP pointer */
    SYM_REFLSYMDATA*      reflsymdata,        /**< data for computing reflection symmetries */
-   int                   maxgenerators       /**< maximum number of generators to be computed */
+   int                   maxgenerators,      /**< maximum number of generators to be computed */
+   int*                  nperms,             /**< pointer to store number of permutations */
+   int*                  nmaxperms,          /**< pointer to store maximal number of permutations (needed for freeing storage) */
+   int***                perms,              /**< pointer to store permutation generators as (nperms x npermvars) matrix */
+   SCIP_Real*            log10groupsize      /**< pointer to store size of group */
    )
 {
    SCIP_Bool success;
@@ -1582,10 +1586,26 @@ SCIP_RETCODE SYMcomputeReflectionSymmetryGenerators(
    G.find_automorphisms(stats, blisshook, (void*) &data);
 #endif
 
-
 #ifdef SCIP_OUTPUT
    (void) stats.print(stdout);
 #endif
+
+   /* prepare return values */
+   if ( data.nperms > 0 )
+   {
+      *perms = data.perms;
+      *nperms = data.nperms;
+      *nmaxperms = data.nmaxperms;
+   }
+   else
+   {
+      assert( data.perms == NULL );
+      assert( data.nmaxperms == 0 );
+   }
+
+   /* determine log10 of symmetry group size */
+   *log10groupsize = (SCIP_Real) log10l(stats.get_group_size_approx());
+
 
    printf("Found %d generators, log10 group size %.1f\n", data.nperms, (SCIP_Real) log10l(stats.get_group_size_approx()));
    for (int p = 0; p < data.nperms; ++p)
@@ -1678,13 +1698,6 @@ SCIP_RETCODE SYMcomputeReflectionSymmetryGenerators(
          printf("\n\n");
       }
    }
-
-   // @todo store data somewhere else
-   for (int p = data.nperms - 1; p >= 0; --p)
-   {
-      SCIPfreeBlockMemoryArrayNull(scip, &data.perms[p], 2 * data.npermvars);
-   }
-   SCIPfreeBlockMemoryArrayNull(scip, &data.perms, data.nmaxperms);
 
    return SCIP_OKAY;
 }

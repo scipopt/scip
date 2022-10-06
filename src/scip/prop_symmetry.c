@@ -3923,6 +3923,9 @@ SCIP_RETCODE computeReflectionSymmetryGroup(
    SCIP_VAR** vars;
    SCIP_VAR** consvars;
    SCIP_Real* consvals;
+   SCIP_Real log10groupsize;
+   int** perms;
+   int nmaxperms;
    int nconss;
    int nactiveconss;
    int nhandleconss;
@@ -3932,6 +3935,7 @@ SCIP_RETCODE computeReflectionSymmetryGroup(
    SCIP_Bool subsuccess;
 
    assert( scip != NULL );
+   assert( nperms != NULL );
    assert( success != NULL );
 
    /* initialize return values */
@@ -4228,7 +4232,8 @@ SCIP_RETCODE computeReflectionSymmetryGroup(
 
    /* determine generators */
    SCIPdebugMsg(scip, "Construct symmetry detection graph.\n");
-   SCIP_CALL( SYMcomputeReflectionSymmetryGenerators(scip, &reflsymdata, 1500) );
+   SCIP_CALL( SYMcomputeReflectionSymmetryGenerators(scip, &reflsymdata, 1500, nperms,
+         &nmaxperms, &perms, &log10groupsize) );
 
    SCIPdebugMsg(scip, "Finished computing reflection symmetry group.\n");
 
@@ -4258,6 +4263,13 @@ SCIP_RETCODE computeReflectionSymmetryGroup(
    SCIPfreeBlockMemoryArrayNull(scip, &reflsymdata.treebegins, reflsymdata.maxntreebegins);
    SCIPfreeBlockMemoryArrayNull(scip, &reflsymdata.trees, reflsymdata.maxntrees);
    SCIPfreeBlockMemoryArrayNull(scip, &vars, nvars);
+
+   /* @todo free permutations after they have been used */
+   for (c = *nperms - 1; c >= 0; --c)
+   {
+      SCIPfreeBlockMemoryArrayNull(scip, &perms[c], 2 * nvars);
+   }
+   SCIPfreeBlockMemoryArrayNull(scip, &perms, nmaxperms);
 
    return SCIP_OKAY;
 }

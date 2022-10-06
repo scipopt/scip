@@ -61,7 +61,11 @@ SCIP_EXPORT
 SCIP_RETCODE SYMcomputeReflectionSymmetryGenerators(
    SCIP*                 scip,               /**< SCIP pointer */
    SYM_REFLSYMDATA*      reflsymdata,        /**< data for computing reflection symmetries */
-   int                   maxgenerators       /**< maximum number of generators to be computed */
+   int                   maxgenerators,      /**< maximum number of generators to be computed */
+   int*                  nperms,             /**< pointer to store number of permutations */
+   int*                  nmaxperms,          /**< pointer to store maximal number of permutations (needed for freeing storage) */
+   int***                perms,              /**< pointer to store permutation generators as (nperms x npermvars) matrix */
+   SCIP_Real*            log10groupsize      /**< pointer to store size of group */
    );
 
 #ifdef __cplusplus
