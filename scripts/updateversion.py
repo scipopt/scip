@@ -30,7 +30,7 @@ if vpos == -1:
 
 # check correct usage
 if len(sys.argv) == 1 or len(sys.argv) > 4 or vpos == len(sys.argv)-1 or vpos == apos -1:
-    print "usage: scripts/updateversion.py [-a] [-v <MAJOR>.<MINOR>.<PATCH>[.<SUB>]]"
+    print("usage: scripts/updateversion.py [-a] [-v <MAJOR>.<MINOR>.<PATCH>[.<SUB>]]")
 else:
     # old version numbers
     oldversion = commands.getoutput("grep SCIP_VERSION src/scip/def.h").split()[2]
@@ -43,12 +43,12 @@ else:
     else:
         oldapiversion = newapiversion = None
         if apos != -1:
-            print "this SCIP version has no API version (yet), API version cannot be updated!"
+            print("this SCIP version has no API version (yet), API version cannot be updated!")
             apos = -1
 
     if apos != -1:
         newapiversion = str(int(oldapiversion)+1)
-        print "update SCIP API version from %s to %s" %(oldapiversion, newapiversion)
+        print("update SCIP API version from %s to %s" %(oldapiversion, newapiversion))
 
     if vpos != -1:
         tokens = sys.argv[vpos+1].split(".")
@@ -74,7 +74,7 @@ else:
         newversionstring += "." + newsubversion
 
     if newversionstring != oldversionstring:
-        print "update SCIP version from %s to %s" %(oldversionstring, newversionstring)
+        print("update SCIP version from %s to %s" %(oldversionstring, newversionstring))
 
     # update version numbers
     commands.getoutput('sed -i "s/\#define SCIP_VERSION.*%4s/\#define SCIP_VERSION               %4s/" src/scip/def.h' \
@@ -93,7 +93,7 @@ else:
         print("\nAPI versions before the change:")
         print(commands.getoutput('grep -e "APIVERSION" -e "VERSION_API" src/scip/def.h  CMakeLists.txt'))
         if newsubversion == "0":
-            print "\nWarning: API version increased for what seems to be a bugfix version (%s)" %(newversionstring)
+            print("\nWarning: API version increased for what seems to be a bugfix version (%s)" %(newversionstring))
         commands.getoutput('sed -i "s/\#define SCIP_APIVERSION.*%3s/\#define SCIP_APIVERSION             %3s/" src/scip/def.h' \
                            %(oldapiversion, newapiversion))
         commands.getoutput('sed -i "s/set(SCIP_VERSION_API [0-9]*)/set(SCIP_VERSION_API %s)/" CMakeLists.txt' \
