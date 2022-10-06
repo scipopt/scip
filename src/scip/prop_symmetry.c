@@ -1823,6 +1823,333 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
    return SCIP_OKAY;
 }
 
+/** checks whether given signed permutations form a reflection symmetry of a MIP */
+static
+SCIP_RETCODE checkReflectionSymmetriesAreSymmetries(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SYM_SPEC              fixedtype,          /**< variable types that must be fixed by symmetries */
+   SYM_REFLSYMDATA*      reflsymdata,        /**< data of CIP */
+   int                   nperms,             /**< number of permutations */
+   int**                 perms               /**< permutations */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+   SYM_CONSTYPE* treeconstype;
+   SYM_NODETYPE* trees;
+   SCIP_VAR** treevars;
+   SCIP_Real* treevals;
+   SCIP_Real* treerhs;
+   SCIP_Bool success = TRUE;
+   int* treevaridx;
+   int* treebegins;
+   int* treemap;
+   int nnonlinconss;
+   int ntreerhs;
+   int nvars;
+   int i;
+   int p;
+   int c1;
+   int c2;
+
+   assert( scip != NULL );
+   assert( reflsymdata != NULL );
+   assert( perms != NULL || nperms == 0 );
+
+   treeconstype = reflsymdata->treeconstype;
+   trees = reflsymdata->trees;
+   treevals = reflsymdata->treevals;
+   treevars = reflsymdata->treevars;
+   treerhs = reflsymdata->treerhs;
+   treevaridx = reflsymdata->treevaridx;
+   treebegins = reflsymdata->treebegins;
+   treemap = reflsymdata->treemap;
+   ntreerhs = reflsymdata->ntreerhs;
+   nvars = reflsymdata->ntreevars;
+
+   /*
+    * check whether symmetries respect fixed variable types
+    */
+   for (p = 0; p < nperms && success; ++p)
+   {
+      int* P;
+
+      P = perms[p];
+
+      for (i = 0; i < nvars; ++i)
+      {
+         if ( SymmetryFixVar(fixedtype, treevars[i]) && P[i] != i )
+         {
+            SCIPdebugMsg(scip, "Permutation does not fix types %u, moving variable %d.\n", fixedtype, i);
+            return SCIP_ERROR;
+         }
+      }
+   }
+
+   /*
+    * check symmetries on linear and simple part
+    */
+
+   /* check whether each computed symmetry indeed defines a symmetry */
+   for (p = 0; p < nperms && success; ++p)
+   {
+      int* P;
+
+      P = perms[p];
+
+      /* iterate over constraints and check whether their permutation also exists as constraint */
+      for (c1 = 0; c1 < ntreerhs && success; ++c1)
+      {
+         if ( treeconstype[c1] == SYM_CONSTYPE_LINEAR )
+         {
+            SCIP_Real* vals;
+            SCIP_Real permrhs;
+            SCIP_Real ub;
+            SCIP_Real lb;
+            int* varidx;
+            int nconsvars;
+            int lencons;
+            int pos;
+
+            lencons = treebegins[c1 + 1] - treebegins[c1];
+            SCIP_CALL( SCIPallocBufferArray(scip, &vals, lencons) );
+            SCIP_CALL( SCIPallocBufferArray(scip, &varidx, lencons) );
+
+            /* fill permuted constraints */
+            permrhs = treerhs[c1];
+            nconsvars = 0;
+            for (pos = treebegins[c1]; pos < treebegins[c1 + 1]; ++pos)
+            {
+               /* coefficients come first, variables second, so increment nconsvars only once */
+               if ( trees[pos] == SYM_NODETYPE_COEF )
+                  vals[nconsvars] = treevals[treemap[pos]];
+               else if ( trees[pos] == SYM_NODETYPE_VAR )
+                  varidx[nconsvars++] = P[treevaridx[treemap[pos]]];
+               else
+               {
+                  assert( trees[pos] != SYM_NODETYPE_VAL );
+               }
+            }
+
+            /* correct coefficients if variable gets reflected */
+            for (i = 0; i < nconsvars; ++i)
+            {
+               if ( varidx[i] >= nvars )
+               {
+                  varidx[i] -= nvars;
+
+                  ub = SCIPvarGetUbLocal(treevars[varidx[i]]);
+                  lb = SCIPvarGetLbLocal(treevars[varidx[i]]);
+
+                  vals[i] = ub + lb - vals[i];
+               }
+            }
+
+            /* check whether permuted constraint exists */
+            success = FALSE;
+            for (c2 = 0; c2 < ntreerhs; ++c2)
+            {
+               /* skip constraints of different type */
+               if ( treeconstype[c2] != SYM_CONSTYPE_LINEAR )
+                  continue;
+
+               /* skip constraints with different rhs or length */
+               if ( (! SCIPisEQ(scip, permrhs, treerhs[c2])) || treebegins[c2 + 1] - treebegins[c2] != lencons )
+                  continue;
+
+               /* check whether each variable occurs with the same coefficient */
+               for (i = 0; i < nconsvars; ++i)
+               {
+                  for (pos = treebegins[c2]; pos < treebegins[c2 + 1]; ++pos)
+                  {
+                     if ( trees[pos] == SYM_NODETYPE_COEF )
+                     {
+                        assert( pos < treebegins[c2 + 1] - 1 );
+                        assert( trees[pos + 1] == SYM_NODETYPE_VAR );
+
+                        /* stop if we have found the variable */
+                        if ( varidx[i] == treevaridx[treemap[pos + 1]] )
+                        {
+                           if ( SCIPisEQ(scip, treevals[treemap[pos]], vals[i]) )
+                              success = TRUE;
+                           else
+                              success = FALSE;
+                           break;
+                        }
+                     }
+                  }
+
+                  /* if variable does not exist in constraint or with wrong coefficient */
+                  if ( pos == treebegins[c2 + 1] || ! success )
+                     break;
+               }
+
+               if ( i < nconsvars )
+               {
+                  success = TRUE;
+                  break;
+               }
+            }
+
+            if ( ! success )
+            {
+               SCIPerrorMessage("Found permutation that is not a symmetry.\n");
+               return SCIP_ERROR;
+            }
+
+            SCIPfreeBufferArray(scip, &varidx);
+            SCIPfreeBufferArray(scip, &vals);
+         }
+         else if ( reflsymdata->treeconstype[c1] == SYM_CONSTYPE_SIMPLE )
+         {
+            ;
+         }
+         else
+         {
+            /* check nonlinear constraints differently */
+            assert( reflsymdata->treeconstype[c1] == SYM_CONSTYPE_EXPR );
+         }
+      }
+   }
+
+   /*
+    * check symmetries on nonlinear part
+    */
+
+   /* get info for non-linear part */
+   conshdlr = SCIPfindConshdlr(scip, "nonlinear");
+   nnonlinconss = conshdlr != NULL ? SCIPconshdlrGetNConss(conshdlr) : 0;
+
+   /* create hashmaps for variable permutation and constraints in non-linear part array for occuring variables */
+   if ( nnonlinconss > 0 )
+   {
+      SCIP_HASHMAP* varmap;
+      SCIP_HASHMAP* origvarmap;
+      SCIP_VAR** occuringvars;
+      SCIP_CONS* cons1;
+      int noccuringvars;
+      int j;
+      SCIP_Bool permuted = FALSE;
+
+      SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(scip), nvars) );
+      SCIP_CALL( SCIPhashmapCreate(&origvarmap, SCIPblkmem(scip), nvars) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &occuringvars, nvars) );
+
+      for (i = 0; i < nvars; ++i)
+      {
+         SCIP_CALL( SCIPhashmapInsert(origvarmap, treevars[i], treevars[i]) );
+      }
+
+      for (p = 0; p < nperms && success; ++p)
+      {
+         int* P;
+
+         P = perms[p];
+
+         /* fill hash map according to permutation */
+         for (i = 0; i < nvars; ++i)
+         {
+            SCIP_CALL( SCIPhashmapInsert(varmap, treevars[i], treevars[P[i] % nvars]) );
+         }
+
+         for (i = 0; i < nnonlinconss; ++i)
+         {
+            cons1 = SCIPconshdlrGetConss(conshdlr)[i];
+
+            SCIP_CALL( SCIPgetConsVars(scip, cons1, occuringvars, nvars, &success) );
+            assert(success);
+            SCIP_CALL( SCIPgetConsNVars(scip, cons1, &noccuringvars, &success) );
+            assert(success);
+
+            /* count number of affected variables in this constraint */
+            for (j = 0; j < noccuringvars && ! permuted; ++j)
+            {
+               int varidx;
+
+               varidx = SCIPvarGetProbindex(occuringvars[j]);
+               assert( varidx >= 0 && varidx < nvars );
+
+               if ( P[varidx] != varidx )
+                  permuted = TRUE;
+            }
+
+            /* if constraint is not affected by permutation, we do not have to check it */
+            if ( permuted )
+            {
+               SCIP_CONS* permutedcons = NULL;
+               SCIP_EXPR* permutedexpr;
+               SCIP_Bool found = FALSE;
+               SCIP_Bool infeasible;
+
+               /* copy contraints but exchange variables according to hashmap */
+               SCIP_CALL( SCIPgetConsCopy(scip, scip, cons1, &permutedcons, conshdlr, varmap, NULL, NULL,
+                     SCIPconsIsInitial(cons1), SCIPconsIsSeparated(cons1), SCIPconsIsEnforced(cons1),
+                     SCIPconsIsChecked(cons1), SCIPconsIsPropagated(cons1), SCIPconsIsLocal(cons1),
+                     SCIPconsIsModifiable(cons1), SCIPconsIsDynamic(cons1), SCIPconsIsRemovable(cons1),
+                     SCIPconsIsStickingAtNode(cons1), FALSE, &success) );
+               assert(success);
+               assert(permutedcons != NULL);
+
+               /* simplify permuted expr in order to guarantee sorted variables */
+               permutedexpr = SCIPgetExprNonlinear(permutedcons);
+               SCIP_CALL( SCIPsimplifyExpr(scip, permutedexpr, &permutedexpr, &success, &infeasible, NULL, NULL) );
+               assert( !infeasible );
+
+               /* look for a constraint with same lhs, rhs and expression */
+               for (j = 0; j < nnonlinconss; ++j)
+               {
+                  SCIP_CONS* origcons2;
+                  SCIP_CONS* cons2;
+                  SCIP_EXPR* exprcons2;
+
+                  /* copy contraints */
+                  origcons2 = SCIPconshdlrGetConss(conshdlr)[j];
+                  SCIP_CALL( SCIPgetConsCopy(scip, scip, origcons2, &cons2, conshdlr, origvarmap, NULL, NULL,
+                        SCIPconsIsInitial(origcons2), SCIPconsIsSeparated(origcons2), SCIPconsIsEnforced(origcons2),
+                        SCIPconsIsChecked(origcons2), SCIPconsIsPropagated(origcons2), SCIPconsIsLocal(origcons2),
+                        SCIPconsIsModifiable(origcons2), SCIPconsIsDynamic(origcons2), SCIPconsIsRemovable(origcons2),
+                        SCIPconsIsStickingAtNode(origcons2), FALSE, &success) );
+                  assert(success);
+                  assert(cons2 != NULL);
+                  exprcons2 = SCIPgetExprNonlinear(cons2);
+                  SCIP_CALL( SCIPsimplifyExpr(scip, exprcons2, &exprcons2, &success, &infeasible, NULL, NULL) );
+
+                  if ( SCIPisEQ(scip, SCIPgetRhsNonlinear(cons2), SCIPgetRhsNonlinear(permutedcons))
+                     && SCIPisEQ(scip, SCIPgetLhsNonlinear(cons2), SCIPgetLhsNonlinear(permutedcons))
+                     && (SCIPcompareExpr(scip, exprcons2, permutedexpr) == 0) )
+                     found = TRUE;
+
+                  /* release copied constraint and expression because simplify captures it */
+                  SCIP_CALL( SCIPreleaseExpr(scip, &exprcons2) );
+                  SCIP_CALL( SCIPreleaseCons(scip, &cons2) );
+
+                  if ( found )
+                     break;
+               }
+
+               /* release copied constraint and expression because simplify captures it */
+               SCIP_CALL( SCIPreleaseExpr(scip, &permutedexpr) );
+               SCIP_CALL( SCIPreleaseCons(scip, &permutedcons) );
+
+               assert( found );
+               if( !found ) /*lint !e774*/
+               {
+                  SCIPerrorMessage("Found permutation that is not a symmetry.\n");
+                  return SCIP_ERROR;
+               }
+            }
+         }
+
+         /* reset varmap */
+         SCIP_CALL( SCIPhashmapRemoveAll(varmap) );
+      }
+
+      SCIPhashmapFree(&varmap);
+      SCIPhashmapFree(&origvarmap);
+      SCIPfreeBufferArray(scip, &occuringvars);
+   }
+
+   return SCIP_OKAY;
+}
 
 /** returns the number of active constraints that can be handled by symmetry */
 static
@@ -4236,6 +4563,8 @@ SCIP_RETCODE computeReflectionSymmetryGroup(
          &nmaxperms, &perms, &log10groupsize) );
 
    SCIPdebugMsg(scip, "Finished computing reflection symmetry group.\n");
+
+   SCIP_CALL( checkReflectionSymmetriesAreSymmetries(scip, fixedtype, &reflsymdata, *nperms, perms) );
 
    /* free memory */
  FREEMEMORY:
