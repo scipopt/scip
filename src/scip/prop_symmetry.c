@@ -2445,7 +2445,8 @@ SCIP_RETCODE storeLinearConstraint(
    {
       /* initialize new tree */
       reflsymdata->treebegins[reflsymdata->ntreerhs] = reflsymdata->ntrees;
-      reflsymdata->treerhs[reflsymdata->ntreerhs++] = -lhs;
+      reflsymdata->treerhs[reflsymdata->ntreerhs] = -lhs;
+      reflsymdata->treeconstype[reflsymdata->ntreerhs++] = SYM_CONSTYPE_LINEAR;
 
       /* root expression of a linear constraint is the SUM-operator */
       SCIP_CALL( addOperatorReflSym(reflsymdata, exprsum, -1, &mainopidx) );
@@ -2467,7 +2468,8 @@ SCIP_RETCODE storeLinearConstraint(
    {
       /* initialize new tree */
       reflsymdata->treebegins[reflsymdata->ntreerhs] = reflsymdata->ntrees;
-      reflsymdata->treerhs[reflsymdata->ntreerhs++] = rhs;
+      reflsymdata->treerhs[reflsymdata->ntreerhs] = rhs;
+      reflsymdata->treeconstype[reflsymdata->ntreerhs++] = SYM_CONSTYPE_LINEAR;
 
       /* root expression of a linear constraint is the SUM-operator */
       SCIP_CALL( addOperatorReflSym(reflsymdata, exprsum, -1, &mainopidx) );
@@ -2547,7 +2549,8 @@ SCIP_RETCODE storeSimpleConstraint(
 
       /* initialize new tree */
       reflsymdata->treebegins[reflsymdata->ntreerhs] = reflsymdata->ntrees;
-      reflsymdata->treerhs[reflsymdata->ntreerhs++] = constant;
+      reflsymdata->treerhs[reflsymdata->ntreerhs] = constant;
+      reflsymdata->treeconstype[reflsymdata->ntreerhs++] = SYM_CONSTYPE_SIMPLE;
 
       /* indicate AND/OR constraint */
       SCIP_CALL( addOperatorReflSym(reflsymdata, expr, -1, &mainopidx) );
@@ -2594,7 +2597,8 @@ SCIP_RETCODE storeSimpleConstraint(
 
       /* initialize new tree */
       reflsymdata->treebegins[reflsymdata->ntreerhs] = reflsymdata->ntrees;
-      reflsymdata->treerhs[reflsymdata->ntreerhs++] = SCIPgetRhsXor(scip, cons) - constant;
+      reflsymdata->treerhs[reflsymdata->ntreerhs] = SCIPgetRhsXor(scip, cons) - constant;
+      reflsymdata->treeconstype[reflsymdata->ntreerhs++] = SYM_CONSTYPE_SIMPLE;
 
       /* indicate XOR constraint */
       SCIP_CALL( addOperatorReflSym(reflsymdata, expr, -1, &mainopidx) );
@@ -2635,7 +2639,8 @@ SCIP_RETCODE storeSimpleConstraint(
 
       /* initialize new tree */
       reflsymdata->treebegins[reflsymdata->ntreerhs] = reflsymdata->ntrees;
-      reflsymdata->treerhs[reflsymdata->ntreerhs++] = 0.0;
+      reflsymdata->treerhs[reflsymdata->ntreerhs] = 0.0;
+      reflsymdata->treeconstype[reflsymdata->ntreerhs++] = SYM_CONSTYPE_SIMPLE;
 
       /* indicate bounddisjunction constraint */
       SCIP_CALL( addOperatorReflSym(reflsymdata, expr, -1, &mainopidx) );
@@ -2834,6 +2839,7 @@ SCIP_RETCODE storeSimpleConstraint(
             &nlocvars, &constant, SCIPconsIsTransformed(lincons)) );
 
       /* set rhs of indicator constraint */
+      reflsymdata->treeconstype[reflsymdata->ntreerhs] = SYM_CONSTYPE_SIMPLE;
       if ( isleqcons )
          reflsymdata->treerhs[reflsymdata->ntreerhs++] = SCIPgetRhsLinear(scip, lincons) - constant;
       else
@@ -2876,6 +2882,7 @@ SCIP_RETCODE storeSimpleConstraint(
 
       /* initialize new tree */
       reflsymdata->treebegins[reflsymdata->ntreerhs] = reflsymdata->ntrees;
+      reflsymdata->treeconstype[reflsymdata->ntreerhs] = SYM_CONSTYPE_SIMPLE;
       reflsymdata->treerhs[reflsymdata->ntreerhs++] = 0.0;
 
       /* indicate SOS1 constraint */
@@ -2960,6 +2967,7 @@ SCIP_RETCODE storeSimpleConstraint(
 
       /* initialize new tree */
       reflsymdata->treebegins[reflsymdata->ntreerhs] = reflsymdata->ntrees;
+      reflsymdata->treeconstype[reflsymdata->ntreerhs] = SYM_CONSTYPE_SIMPLE;
       reflsymdata->treerhs[reflsymdata->ntreerhs++] = 0.0;
 
       /* indicate SOS2 constraint */
@@ -3157,6 +3165,7 @@ SCIP_RETCODE storeExpressionTree(
 
    /* initialize new tree */
    reflsymdata->treebegins[reflsymdata->ntreerhs] = reflsymdata->ntrees;
+   reflsymdata->treeconstype[reflsymdata->ntreerhs] = SYM_CONSTYPE_EXPR;
    reflsymdata->treerhs[reflsymdata->ntreerhs++] = rhs;
 
    /* add (* -1 ... ) to negate tree, treat sum-expressions differently */
@@ -4009,6 +4018,7 @@ SCIP_RETCODE computeReflectionSymmetryGroup(
    /* prepare arrays (use block memory since this can become large) */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &reflsymdata.trees, reflsymdata.maxntrees) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &reflsymdata.treebegins, reflsymdata.maxntreebegins) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &reflsymdata.treeconstype, reflsymdata.maxntreerhs) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &reflsymdata.treerhs, reflsymdata.maxntreerhs) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &reflsymdata.treeparentidx, reflsymdata.maxntrees) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &reflsymdata.treevaridx, reflsymdata.maxntreevaridx) );
@@ -4244,6 +4254,7 @@ SCIP_RETCODE computeReflectionSymmetryGroup(
    SCIPfreeBlockMemoryArrayNull(scip, &reflsymdata.treevaridx, reflsymdata.maxntreevaridx);
    SCIPfreeBlockMemoryArrayNull(scip, &reflsymdata.treeparentidx, reflsymdata.maxntrees);
    SCIPfreeBlockMemoryArrayNull(scip, &reflsymdata.treerhs, reflsymdata.maxntreerhs);
+   SCIPfreeBlockMemoryArrayNull(scip, &reflsymdata.treeconstype, reflsymdata.maxntreerhs);
    SCIPfreeBlockMemoryArrayNull(scip, &reflsymdata.treebegins, reflsymdata.maxntreebegins);
    SCIPfreeBlockMemoryArrayNull(scip, &reflsymdata.trees, reflsymdata.maxntrees);
    SCIPfreeBlockMemoryArrayNull(scip, &vars, nvars);

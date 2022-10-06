@@ -104,6 +104,7 @@ struct SYM_Reflsymdata
                                               *    the corresponding variables) */
    SCIP_VAR**            treevars;           /**< array of unique variables that appear in expression trees */
    int*                  treebegins;         /**< array containing begin positions of new tree in trees */
+   SYM_CONSTYPE*         treeconstype;       /**< array of constraint types stores in trees */
    SCIP_Real*            treerhs;            /**< right-hand side coefficients of trees */
    int*                  treeparentidx;      /**< array assigning each position in trees the position of its parent
                                               *   (or -1 in case the position corresponds to the root of a tree) */

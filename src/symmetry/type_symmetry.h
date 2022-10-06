@@ -65,6 +65,15 @@ enum SYM_Nodetype
 };
 typedef enum SYM_Nodetype SYM_NODETYPE;
 
+/** define the type of constraints used in symmetry detection */
+enum SYM_Constype
+{
+   SYM_CONSTYPE_LINEAR   = 0,                /**< linear constraint */
+   SYM_CONSTYPE_SIMPLE   = 1,                /**< simple constraint */
+   SYM_CONSTYPE_EXPR     = 2                 /**< constraints given by expression tree */
+};
+typedef enum SYM_Constype SYM_CONSTYPE;
+
 /** define type of simple constraints/operators in symmetry detection */
 enum SYM_Consoptype
 {
