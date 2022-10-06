@@ -27,6 +27,7 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+#define SCIP_DEBUG
 
 #include "lpi/lpi.h"
 #include "scip/conflict_resolution.h"
@@ -159,7 +160,7 @@ SCIP_RETCODE conflictInsertResolutionset(
    /* insert resolution into the resolutionsets array */
    SCIP_CALL( conflictEnsureResolutionsetsMem(conflict, set, conflict->nresolutionsets + 1) );
 
-   SCIPsetDebugMsg(set, "inserting resolution set (valid: %d):\n", (*resolutionset)->validdepth);
+   SCIPsetDebugMsg(set, "inserting resolution set (valid depth: %d):\n", (*resolutionset)->validdepth);
 
    conflict->resolutionsets[conflict->nresolutionsets] = *resolutionset;
    ++conflict->nresolutionsets;
@@ -252,6 +253,7 @@ SCIP_Bool tightenCoefLhs(
    if (SCIPisInfinity(scip, minact) )
    {
       redundant = TRUE;
+      assert(!redundant);
       goto TERMINATE;
    }
    /* no coefficients can be tightened */
@@ -268,7 +270,7 @@ SCIP_Bool tightenCoefLhs(
    }
 
    /* terminate, because coefficient tightening cannot be performed; also excludes the case in which no integral variable is present */
-   /* for lhs terminate if amin + maxabsval < rowlhs */
+   /* for lhs terminate if minact + maxabsval < rowlhs */
    if( SCIPisLT(scip, minact + maxabsval, *rowlhs) )
       goto TERMINATE;
 
@@ -390,7 +392,7 @@ SCIP_BDCHGINFO* conflictFirstCand(
       /* check if this candidate is valid */
       if( bdchginfoIsInvalid(conflict, bdchginfo) )
       {
-         SCIPdebugMessage("bound change info [%d:<%s> %s %g] is invaild -> pop it from the force queue\n", SCIPbdchginfoGetDepth(bdchginfo),
+         SCIPdebugMessage("bound change info [%d:<%s> %s %g] is invalid -> pop it from the force queue\n", SCIPbdchginfoGetDepth(bdchginfo),
             SCIPvarGetName(SCIPbdchginfoGetVar(bdchginfo)),
             SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
             SCIPbdchginfoGetNewbound(bdchginfo));
@@ -409,7 +411,7 @@ SCIP_BDCHGINFO* conflictFirstCand(
       /* check if this candidate is valid */
       if( bdchginfo != NULL && bdchginfoIsInvalid(conflict, bdchginfo) )
       {
-         SCIPdebugMessage("bound change info [%d:<%s> %s %g] is invaild -> pop it from the queue\n", SCIPbdchginfoGetDepth(bdchginfo),
+         SCIPdebugMessage("bound change info [%d:<%s> %s %g] is invalid -> pop it from the queue\n", SCIPbdchginfoGetDepth(bdchginfo),
             SCIPvarGetName(SCIPbdchginfoGetVar(bdchginfo)),
             SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
             SCIPbdchginfoGetNewbound(bdchginfo));
@@ -1045,9 +1047,10 @@ SCIP_RETCODE computecMIRfromResolutionSet(
       *success = cutsuccess;
 
       /* apply MIR */
-      SCIP_CALL( SCIPcutGenerationHeuristicCMIR(set->scip, refsol, POSTPROCESS, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, INT_MAX, \
-            NULL, NULL, MINFRAC, MAXFRAC, aggrrow, cutcoefs, cutrhs, cutinds, cutnnz, &cutefficacy, NULL, \
-            &islocal, &cutsuccess) );
+      SCIP_CALL( SCIPcalcMIR(set->scip, refsol, POSTPROCESS, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, FALSE, NULL, NULL, \
+      MINFRAC, MAXFRAC, 1.0,  aggrrow, cutcoefs, cutrhs, cutinds, cutnnz, &cutefficacy, NULL, \
+         &islocal, &cutsuccess) );
+
       *success = (*success || cutsuccess);
 
       /* try to tighten the coefficients of the cut */
@@ -1856,7 +1859,7 @@ SCIPsetDebugMsg(set, " -> First bound change to resolve <%s> %s %.15g [status:%d
    {
       int nvarsweakened;
       weakenResolutionSet(conflictresolutionset, set, transprob, bdchgidx, residx, &nvarsweakened, FALSE);
-      SCIPsetDebugMsgPrint(set, "Weakened %d variables, new conflict slack %f \n", nvarsweakened, conflictresolutionset->slack);
+      SCIPsetDebugMsg(set, "Weakened %d variables, new conflict slack %f \n", nvarsweakened, conflictresolutionset->slack);
       SCIPdebug(resolutionsetPrintRow(conflictresolutionset, set, transprob, 0));
    }
    else
@@ -1921,7 +1924,7 @@ SCIPsetDebugMsg(set, " -> First bound change to resolve <%s> %s %.15g [status:%d
          {
             int nvarsweakened;
             weakenResolutionSet(reasonresolutionset, set, transprob, bdchgidx, residx, &nvarsweakened, TRUE);
-            SCIPsetDebugMsgPrint(set, "Weakened %d variables, new reason slack %f \n", nvarsweakened, reasonresolutionset->slack);
+            SCIPsetDebugMsg(set, "Weakened %d variables, new reason slack %f \n", nvarsweakened, reasonresolutionset->slack);
             SCIPdebug(resolutionsetPrintRow(reasonresolutionset, set, transprob, 2));
          }
          /* @todo: in the binary case slack should become zero */
@@ -2227,6 +2230,7 @@ SCIP_RETCODE SCIPconflictAnalyzeResolution(
    conflict->resolutionminslack = 0.0;
    conflict->bdchgonlyresqueue = FALSE;
 
+   /* clear the bound change queues */
    SCIPpqueueClear(conflict->resbdchgqueue);
    SCIPpqueueClear(conflict->resforcedbdchgqueue);
 

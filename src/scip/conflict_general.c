@@ -2089,7 +2089,8 @@ SCIP_RETCODE conflictAnalyzeLP(
          farkascoefs[i] = -SCIPaggrRowGetProbvarValue(farkasrow, i);
       }
 
-      if ( set->conf_applyresdualproof)
+      initialrow = NULL;
+      if( set->conf_applyresdualproof )
       {
          SCIP_CALL( SCIProwCreate(&initialrow, blkmem, set, stat, "farkasproof", 0, NULL, NULL, farkaslhs, SCIPsetInfinity(set), \
                SCIP_ROWORIGINTYPE_UNSPEC, NULL, (SCIPnodeGetDepth(tree->path[validdepth]) > 0 ), FALSE, TRUE) );
@@ -2120,7 +2121,7 @@ SCIP_RETCODE conflictAnalyzeLP(
       SCIP_CALL( SCIPconflictFlushConss(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, \
             eventqueue, cliquetable) );
 
-      if ( set->conf_applyresdualproof)
+      if( set->conf_applyresdualproof )
       {
          SCIP_CALL( SCIPconflictAnalyzeResolution(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp, \
                branchcand, eventqueue, cliquetable, initialrow, validdepth, TRUE, &success) );
