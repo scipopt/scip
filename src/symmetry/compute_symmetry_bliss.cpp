@@ -1078,20 +1078,20 @@ SYM_FLIPTYPE getOperatorFliptype(
 
    /* check which types of flips are allowed by an operator */
    op = treeops[treemap[opidx]];
-   if ( op == (SCIP_EXPRHDLR*) SYM_CONSTYPE_OR || op == (SCIP_EXPRHDLR*) SYM_CONSTYPE_OR ||
-      op == (SCIP_EXPRHDLR*) SYM_CONSTYPE_BDDISJ || op == (SCIP_EXPRHDLR*) SYM_CONSTYPE_GEQ ||
-      op == (SCIP_EXPRHDLR*) SYM_CONSTYPE_OBJ || op == SCIPfindExprhdlr(scip, "sum") )
+   if ( op == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_OR || op == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_OR ||
+      op == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_BDDISJ || op == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_GEQ ||
+      op == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_OBJ || op == SCIPfindExprhdlr(scip, "sum") )
       return SYM_FLIPTYPE_SHIFT_ODD;
    else if ( treeops[treemap[opidx]] == SCIPfindExprhdlr(scip, "prod") ||
       treeops[treemap[opidx]] == SCIPfindExprhdlr(scip, "sin") )
       return SYM_FLIPTYPE_ODD;
-   else if ( op == (SCIP_EXPRHDLR*) SYM_CONSTYPE_SOS1 || op == (SCIP_EXPRHDLR*) SYM_CONSTYPE_SOS2 ||
+   else if ( op == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_SOS1 || op == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_SOS2 ||
       op ==  SCIPfindExprhdlr(scip, "abs") || op ==  SCIPfindExprhdlr(scip, "cos") )
       return SYM_FLIPTYPE_EVEN;
-   else if ( op == (SCIP_EXPRHDLR*) SYM_CONSTYPE_AND || op == (SCIP_EXPRHDLR*) SYM_CONSTYPE_INDICATOR ||
-      op == (SCIP_EXPRHDLR*) SYM_CONSTYPE_EQ )
+   else if ( op == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_AND || op == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_INDICATOR ||
+      op == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_EQ )
       return SYM_FLIPTYPE_NONE;
-   else if ( treeops[treemap[opidx]] == (SCIP_EXPRHDLR*) SYM_CONSTYPE_SIGNPOWER )
+   else if ( treeops[treemap[opidx]] == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_SIGNPOWER )
    {
       if ( trees[opidx + 1] == SYM_NODETYPE_VAL )
       {
@@ -1108,7 +1108,7 @@ SYM_FLIPTYPE getOperatorFliptype(
             return SYM_FLIPTYPE_EVEN;
       }
    }
-   else if ( treeops[treemap[opidx]] == (SCIP_EXPRHDLR*) SYM_CONSTYPE_POWER )
+   else if ( treeops[treemap[opidx]] == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_POWER )
    {
       /* power 1 yields odd function */
       if ( trees[opidx + 1] != SYM_NODETYPE_VAL )
@@ -1128,7 +1128,7 @@ SYM_FLIPTYPE getOperatorFliptype(
       else
          return SYM_FLIPTYPE_ODD;
    }
-   else if ( treeops[treemap[opidx]] == (SCIP_EXPRHDLR*) SYM_CONSTYPE_BIPROD )
+   else if ( treeops[treemap[opidx]] == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_BIPROD )
       return SYM_FLIPTYPE_BIPROD;
 
    return SYM_FLIPTYPE_NONE;
