@@ -70,7 +70,7 @@
 #define HEUR_DESC             "Large neighborhood search heuristic that orchestrates the popular neighborhoods Local Branching, RINS, RENS, DINS etc."
 #define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_LNS
 #define HEUR_PRIORITY         -1100500
-#define HEUR_FREQ             1
+#define HEUR_FREQ             20
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERNODE | SCIP_HEURTIMING_DURINGLPLOOP
