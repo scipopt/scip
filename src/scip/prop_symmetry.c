@@ -3784,28 +3784,33 @@ SCIP_RETCODE storeSimpleConstraint(
          SCIP_CALL( addOperatorReflSym(reflsymdata, (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_TUPLE, mainopidx, &subopidx) );
 
          /* add nodes for first variable in pair */
-         for (j = 0; j < nlocvars; ++j)
+         if ( nlocvars == 1 )
          {
-            if ( SCIPisZero(scip, constant) )
-            {
-               SCIP_CALL( addCoefReflSym(reflsymdata, 1.0, subopidx, NULL) );
-               SCIP_CALL( addVarReflSym(reflsymdata, SCIPvarGetProbindex(consvars[0]), subopidx, NULL) );
-            }
-            else
-            {
-               int sumidx;
-               int k;
+            int sumidx;
 
+            sumidx = subopidx;
+            if ( ! SCIPisZero(scip, constant) )
+            {
                SCIP_CALL( addOperatorReflSym(reflsymdata, exprsum, subopidx, &sumidx) );
-               if ( ! SCIPisZero(scip, constant) )
-               {
-                  SCIP_CALL( addValReflSym(reflsymdata, constant, sumidx, NULL) );
-               }
-               for (k = 0; k < nlocvars; ++k)
-               {
-                  SCIP_CALL( addCoefReflSym(reflsymdata, consvals[j], sumidx, NULL) );
-                  SCIP_CALL( addVarReflSym(reflsymdata, SCIPvarGetProbindex(consvars[j]), sumidx, NULL) );
-               }
+               SCIP_CALL( addValReflSym(reflsymdata, constant, sumidx, NULL) );
+            }
+            SCIP_CALL( addCoefReflSym(reflsymdata, 1.0, sumidx, NULL) );
+            SCIP_CALL( addVarReflSym(reflsymdata, SCIPvarGetProbindex(consvars[0]), sumidx, NULL) );
+
+         }
+         else
+         {
+            int sumidx;
+
+            SCIP_CALL( addOperatorReflSym(reflsymdata, exprsum, subopidx, &sumidx) );
+            if ( ! SCIPisZero(scip, constant) )
+            {
+               SCIP_CALL( addValReflSym(reflsymdata, constant, sumidx, NULL) );
+            }
+            for (j = 0; j < nlocvars; ++j)
+            {
+               SCIP_CALL( addCoefReflSym(reflsymdata, consvals[j], sumidx, NULL) );
+               SCIP_CALL( addVarReflSym(reflsymdata, SCIPvarGetProbindex(consvars[j]), sumidx, NULL) );
             }
          }
 
@@ -3817,28 +3822,33 @@ SCIP_RETCODE storeSimpleConstraint(
          SCIP_CALL( getActiveVariablesReflSym(scip, &consvars, &consvals,
                &nlocvars, &constant, SCIPconsIsTransformed(cons)) );
 
-         for (j = 0; j < nlocvars; ++j)
+         if ( nlocvars == 1 )
          {
-            if ( SCIPisZero(scip, constant) )
-            {
-               SCIP_CALL( addCoefReflSym(reflsymdata, 1.0, subopidx, NULL) );
-               SCIP_CALL( addVarReflSym(reflsymdata, SCIPvarGetProbindex(consvars[0]), subopidx, NULL) );
-            }
-            else
-            {
-               int sumidx;
-               int k;
+            int sumidx;
 
+            sumidx = subopidx;
+            if ( ! SCIPisZero(scip, constant) )
+            {
                SCIP_CALL( addOperatorReflSym(reflsymdata, exprsum, subopidx, &sumidx) );
-               if ( ! SCIPisZero(scip, constant) )
-               {
-                  SCIP_CALL( addValReflSym(reflsymdata, constant, sumidx, NULL) );
-               }
-               for (k = 0; k < nlocvars; ++k)
-               {
-                  SCIP_CALL( addCoefReflSym(reflsymdata, consvals[j], sumidx, NULL) );
-                  SCIP_CALL( addVarReflSym(reflsymdata, SCIPvarGetProbindex(consvars[j]), sumidx, NULL) );
-               }
+               SCIP_CALL( addValReflSym(reflsymdata, constant, sumidx, NULL) );
+            }
+            SCIP_CALL( addCoefReflSym(reflsymdata, 1.0, sumidx, NULL) );
+            SCIP_CALL( addVarReflSym(reflsymdata, SCIPvarGetProbindex(consvars[0]), sumidx, NULL) );
+
+         }
+         else
+         {
+            int sumidx;
+
+            SCIP_CALL( addOperatorReflSym(reflsymdata, exprsum, subopidx, &sumidx) );
+            if ( ! SCIPisZero(scip, constant) )
+            {
+               SCIP_CALL( addValReflSym(reflsymdata, constant, sumidx, NULL) );
+            }
+            for (j = 0; j < nlocvars; ++j)
+            {
+               SCIP_CALL( addCoefReflSym(reflsymdata, consvals[j], sumidx, NULL) );
+               SCIP_CALL( addVarReflSym(reflsymdata, SCIPvarGetProbindex(consvars[j]), sumidx, NULL) );
             }
          }
       }
