@@ -1823,6 +1823,183 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
    return SCIP_OKAY;
 }
 
+/** returns whether a simple constraint is represented linearly */
+static
+SCIP_Bool isSimpleConsLinear(
+   int                   considx,            /**< index of constrain in relfection symmetry data */
+   SYM_NODETYPE*         trees,              /**< trees of reflection symmetry data */
+   int*                  treemap,            /**< maps position in trees array to the corresponding position in
+                                              *   treecoefs/treevaridx (depending on node type) */
+   int*                  treebegins,         /**< array containing begin positions of new tree in trees */
+   SCIP_EXPRHDLR**       treeops             /**< operators used in expression trees (order according to trees) */
+   )
+{
+   SCIP_EXPRHDLR* consoptype;
+
+   assert( trees != NULL );
+   assert( treemap != NULL );
+   assert( treebegins != NULL );
+   assert( treeops != NULL );
+
+   consoptype = treeops[treemap[trees[treebegins[considx]]]];
+   if ( (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_AND == consoptype ||
+      (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_OR == consoptype ||
+      (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_XOR == consoptype )
+      return TRUE;
+
+   return FALSE;
+}
+
+/** checks whether a linearly represented constraints is identical to a constraint
+ *  in reflection symmetry data
+ */
+static
+SCIP_RETCODE checkLinConssAreIdentical(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real*            vals,               /**< coefficients of linear constraint */
+   SCIP_Real             rhs,                /**< rhs of linear constraint */
+   int*                  varidx,             /**< indices of variables in linear constraint */
+   int                   nvars,              /**< number of variables in linear constraint */
+   int                   encodelen,          /**< encoding length of linear constraint in reflection symmetry data */
+   SYM_NODETYPE*         trees,              /**< trees of reflection symmetry data */
+   int*                  treemap,            /**< maps position in trees array to the corresponding position in
+                                              *   treecoefs/treevaridx (depending on node type) */
+   int*                  treebegins,         /**< array containing begin positions of new tree in trees */
+   SCIP_Real*            treerhs,            /**< right-hand side coefficients of trees */
+   SCIP_Real*            treecoefs,          /**< var coefficients in expression trees (order according to trees) */
+   SCIP_EXPRHDLR**       treeops,            /**< operators used in expression trees (order according to trees) */
+   int*                  treevaridx,         /**< indices of variables in expression trees (order according t trees) */
+   SYM_CONSTYPE*         treeconstype,       /**< array of constraint types stores in trees */
+   int                   ntreerhs,           /**< number of elements in treerhs */
+   SCIP_Bool*            isidentical         /**< pointer to store whether we have found identifcal constraint */
+   )
+{
+   int pos;
+   int c;
+   int i;
+
+   assert( scip != NULL );
+   assert( vals != NULL );
+   assert( varidx != NULL );
+   assert( trees != NULL );
+   assert( treemap != NULL );
+   assert( treebegins != NULL );
+   assert( treerhs != NULL );
+   assert( treecoefs != NULL );
+   assert( treevaridx != NULL );
+   assert( treeconstype != NULL );
+   assert( isidentical != NULL );
+
+   *isidentical = FALSE;
+   for (c = 0; c < ntreerhs && ! *isidentical; ++c)
+   {
+      /* skip constraints of different type */
+      if ( treeconstype[c] != SYM_CONSTYPE_LINEAR && treeconstype[c] != SYM_CONSTYPE_SIMPLE )
+         continue;
+
+      /* skip simple constraints not being represented by linear constraints */
+      if ( treeconstype[c] == SYM_CONSTYPE_SIMPLE && ! isSimpleConsLinear(c, trees, treemap, treebegins, treeops) )
+
+      /* skip constraints with different rhs or length */
+      if ( (! SCIPisEQ(scip, rhs, treerhs[c])) || treebegins[c + 1] - treebegins[c] != encodelen )
+         continue;
+
+      /* check whether each variable occurs with the same coefficient */
+      for (i = 0; i < nvars; ++i)
+      {
+         for (pos = treebegins[c]; pos < treebegins[c + 1]; ++pos)
+         {
+            if ( trees[pos] == SYM_NODETYPE_COEF )
+            {
+               assert( pos < treebegins[c + 1] - 1 );
+               assert( trees[pos + 1] == SYM_NODETYPE_VAR );
+
+               /* stop if we have found the variable */
+               if ( varidx[i] == treevaridx[treemap[pos + 1]] )
+               {
+                  if ( SCIPisEQ(scip, treecoefs[treemap[pos]], vals[i]) )
+                     *isidentical = TRUE;
+                  else
+                     *isidentical = FALSE;
+                  break;
+               }
+            }
+         }
+
+         /* if variable does not exist in constraint or with wrong coefficient */
+         if ( pos == treebegins[c + 1] || ! *isidentical )
+         {
+            *isidentical = FALSE;
+            break;
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** collects information about permuted linearly represented constraints */
+static
+SCIP_RETCODE collectInformationPermLinearCons(
+   int                   considx,            /**< index of constraint in reflection symmetry data */
+   int*                  perm,               /**< permutation applied to variables in constraint */
+   SCIP_Real*            vals,               /**< allocated array to store coefficients of constraint */
+   int*                  varidx,             /**< allocated array to store indices of vars in constraint */
+   SCIP_Real*            rhs,                /**< pointer to rhs of constraint */
+   int*                  nvars,              /**< pointer to store number of variables in constraint */
+   SCIP_VAR**            treevars,           /**< list of different variables stored in trees */
+   int                   ntreevars,          /**< number of different variables stored in reflection data */
+   SYM_NODETYPE*         trees,              /**< trees of reflection symmetry data */
+   int*                  treemap,            /**< maps position in trees array to the corresponding position in
+                                              *   treecoefs/treevaridx (depending on node type) */
+   int*                  treebegins,         /**< array containing begin positions of new tree in trees */
+   SCIP_Real*            treerhs,            /**< right-hand side coefficients of trees */
+   SCIP_Real*            treecoefs,          /**< var coefficients in expression trees (order according to trees) */
+   int*                  treevaridx          /**< indices of variables in expression trees (order according t trees) */
+   )
+{
+   SCIP_Real ub;
+   SCIP_Real lb;
+   int pos;
+   int i;
+
+   /* fill permuted constraints */
+   *rhs = treerhs[considx];
+   *nvars = 0;
+   for (pos = treebegins[considx]; pos < treebegins[considx + 1]; ++pos)
+   {
+      /* coefficients come first, variables second, so increment nconsvars only once */
+      if ( trees[pos] == SYM_NODETYPE_COEF )
+         vals[*nvars] = treecoefs[treemap[pos]];
+      else if ( trees[pos] == SYM_NODETYPE_VAR )
+      {
+         varidx[*nvars] = perm[treevaridx[treemap[pos]]];
+         *nvars += 1;
+      }
+      else
+      {
+         assert( trees[pos] != SYM_NODETYPE_VAL );
+      }
+   }
+
+   /* correct coefficients if variable gets reflected */
+   for (i = 0; i < *nvars; ++i)
+   {
+      if ( varidx[i] >= ntreevars )
+      {
+         varidx[i] -= ntreevars;
+
+         ub = SCIPvarGetUbLocal(treevars[varidx[i]]);
+         lb = SCIPvarGetLbLocal(treevars[varidx[i]]);
+
+         *rhs -= vals[i] * (ub + lb);
+         vals[i] = - vals[i];
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /** checks whether given signed permutations form a reflection symmetry of a MIP */
 static
 SCIP_RETCODE checkReflectionSymmetriesAreSymmetries(
@@ -1836,20 +2013,25 @@ SCIP_RETCODE checkReflectionSymmetriesAreSymmetries(
    SCIP_CONSHDLR* conshdlr;
    SYM_CONSTYPE* treeconstype;
    SYM_NODETYPE* trees;
+   SCIP_EXPRHDLR** treeops;
    SCIP_VAR** treevars;
+   SCIP_Real* treecoefs;
    SCIP_Real* treevals;
    SCIP_Real* treerhs;
+   SCIP_Real* vals;
    SCIP_Bool success = TRUE;
+   int* varidx;
    int* treevaridx;
    int* treebegins;
    int* treemap;
+   int maxnvals;
    int nnonlinconss;
+   int ntreevars;
    int ntreerhs;
    int nvars;
    int i;
    int p;
-   int c1;
-   int c2;
+   int c;
 
    assert( scip != NULL );
    assert( reflsymdata != NULL );
@@ -1857,12 +2039,15 @@ SCIP_RETCODE checkReflectionSymmetriesAreSymmetries(
 
    treeconstype = reflsymdata->treeconstype;
    trees = reflsymdata->trees;
+   treeops = reflsymdata->treeops;
    treevals = reflsymdata->treevals;
+   treecoefs = reflsymdata->treecoefs;
    treevars = reflsymdata->treevars;
    treerhs = reflsymdata->treerhs;
    treevaridx = reflsymdata->treevaridx;
    treebegins = reflsymdata->treebegins;
    treemap = reflsymdata->treemap;
+   ntreevars = reflsymdata->ntreevars;
    ntreerhs = reflsymdata->ntreerhs;
    nvars = reflsymdata->ntreevars;
 
@@ -1889,6 +2074,10 @@ SCIP_RETCODE checkReflectionSymmetriesAreSymmetries(
     * check symmetries on linear and simple part
     */
 
+   maxnvals = nvars;
+   SCIP_CALL( SCIPallocBufferArray(scip, &vals, maxnvals) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &varidx, maxnvals) );
+
    /* check whether each computed symmetry indeed defines a symmetry */
    for (p = 0; p < nperms && success; ++p)
    {
@@ -1897,116 +2086,85 @@ SCIP_RETCODE checkReflectionSymmetriesAreSymmetries(
       P = perms[p];
 
       /* iterate over constraints and check whether their permutation also exists as constraint */
-      for (c1 = 0; c1 < ntreerhs && success; ++c1)
+      for (c = 0; c < ntreerhs && success; ++c)
       {
-         if ( treeconstype[c1] == SYM_CONSTYPE_LINEAR )
+         if ( treeconstype[c] == SYM_CONSTYPE_LINEAR )
          {
-            SCIP_Real* vals;
             SCIP_Real permrhs;
-            SCIP_Real ub;
-            SCIP_Real lb;
-            int* varidx;
             int nconsvars;
             int lencons;
-            int pos;
 
-            lencons = treebegins[c1 + 1] - treebegins[c1];
-            SCIP_CALL( SCIPallocBufferArray(scip, &vals, lencons) );
-            SCIP_CALL( SCIPallocBufferArray(scip, &varidx, lencons) );
+            lencons = treebegins[c + 1] - treebegins[c];
 
-            /* fill permuted constraints */
-            permrhs = treerhs[c1];
-            nconsvars = 0;
-            for (pos = treebegins[c1]; pos < treebegins[c1 + 1]; ++pos)
+            if ( lencons > maxnvals )
             {
-               /* coefficients come first, variables second, so increment nconsvars only once */
-               if ( trees[pos] == SYM_NODETYPE_COEF )
-                  vals[nconsvars] = treevals[treemap[pos]];
-               else if ( trees[pos] == SYM_NODETYPE_VAR )
-                  varidx[nconsvars++] = P[treevaridx[treemap[pos]]];
-               else
-               {
-                  assert( trees[pos] != SYM_NODETYPE_VAL );
-               }
+               int newsize;
+
+               newsize = SCIPcalcMemGrowSize(scip, maxnvals + 1);
+               SCIP_CALL( SCIPreallocBufferArray(scip, &vals, newsize) );
+               SCIP_CALL( SCIPreallocBufferArray(scip, &varidx, newsize) );
+               maxnvals = newsize;
             }
 
-            /* correct coefficients if variable gets reflected */
-            for (i = 0; i < nconsvars; ++i)
-            {
-               if ( varidx[i] >= nvars )
-               {
-                  varidx[i] -= nvars;
-
-                  ub = SCIPvarGetUbLocal(treevars[varidx[i]]);
-                  lb = SCIPvarGetLbLocal(treevars[varidx[i]]);
-
-                  vals[i] = ub + lb - vals[i];
-               }
-            }
+            SCIP_CALL( collectInformationPermLinearCons(c, P, vals, varidx, &permrhs, &nconsvars,
+                  treevars, ntreevars, trees, treemap, treebegins, treerhs, treecoefs, treevaridx) );
 
             /* check whether permuted constraint exists */
-            success = FALSE;
-            for (c2 = 0; c2 < ntreerhs; ++c2)
-            {
-               /* skip constraints of different type */
-               if ( treeconstype[c2] != SYM_CONSTYPE_LINEAR )
-                  continue;
-
-               /* skip constraints with different rhs or length */
-               if ( (! SCIPisEQ(scip, permrhs, treerhs[c2])) || treebegins[c2 + 1] - treebegins[c2] != lencons )
-                  continue;
-
-               /* check whether each variable occurs with the same coefficient */
-               for (i = 0; i < nconsvars; ++i)
-               {
-                  for (pos = treebegins[c2]; pos < treebegins[c2 + 1]; ++pos)
-                  {
-                     if ( trees[pos] == SYM_NODETYPE_COEF )
-                     {
-                        assert( pos < treebegins[c2 + 1] - 1 );
-                        assert( trees[pos + 1] == SYM_NODETYPE_VAR );
-
-                        /* stop if we have found the variable */
-                        if ( varidx[i] == treevaridx[treemap[pos + 1]] )
-                        {
-                           if ( SCIPisEQ(scip, treevals[treemap[pos]], vals[i]) )
-                              success = TRUE;
-                           else
-                              success = FALSE;
-                           break;
-                        }
-                     }
-                  }
-
-                  /* if variable does not exist in constraint or with wrong coefficient */
-                  if ( pos == treebegins[c2 + 1] || ! success )
-                     break;
-               }
-
-               if ( i < nconsvars )
-               {
-                  success = TRUE;
-                  break;
-               }
-            }
-
+            SCIP_CALL( checkLinConssAreIdentical(scip, vals, permrhs, varidx, nconsvars, lencons,
+                  trees, treemap, treebegins, treerhs, treecoefs, treeops, treevaridx, treeconstype,
+                  ntreerhs, &success) );
             if ( ! success )
             {
                SCIPerrorMessage("Found permutation that is not a symmetry.\n");
                return SCIP_ERROR;
             }
-
-            SCIPfreeBufferArray(scip, &varidx);
-            SCIPfreeBufferArray(scip, &vals);
          }
-         else if ( reflsymdata->treeconstype[c1] == SYM_CONSTYPE_SIMPLE )
+         else if ( reflsymdata->treeconstype[c] == SYM_CONSTYPE_SIMPLE )
          {
-            ;
+            SCIP_EXPRHDLR* consoptype;
+            int lencons;
+
+            assert( trees[treebegins[c]] == SYM_NODETYPE_OPERATOR );
+            consoptype = treeops[treemap[treebegins[c]]];
+
+            lencons = treebegins[c + 1] - treebegins[c];
+            if ( lencons > maxnvals )
+            {
+               int newsize;
+
+               newsize = SCIPcalcMemGrowSize(scip, maxnvals + 1);
+               SCIP_CALL( SCIPreallocBufferArray(scip, &vals, newsize) );
+               SCIP_CALL( SCIPreallocBufferArray(scip, &varidx, newsize) );
+               maxnvals = newsize;
+            }
+
+            if ( consoptype == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_AND ||
+               consoptype == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_OR ||
+               consoptype == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_XOR )
+            {
+               SCIP_Real permrhs;
+               int nconsvars;
+
+               SCIP_CALL( collectInformationPermLinearCons(c, P, vals, varidx, &permrhs, &nconsvars,
+                     treevars, ntreevars, trees, treemap, treebegins, treerhs, treecoefs, treevaridx) );
+
+               /* check whether permuted constraint exists */
+               SCIP_CALL( checkLinConssAreIdentical(scip, vals, permrhs, varidx, nconsvars, lencons,
+                     trees, treemap, treebegins, treerhs, treecoefs, treeops, treevaridx, treeconstype,
+                     ntreerhs, &success) );
+
+               if ( ! success )
+               {
+                  SCIPerrorMessage("Found permutation that is not a symmetry.\n");
+                  return SCIP_ERROR;
+               }
+            }
          }
          else
          {
-            /* check nonlinear constraints differently */
-            assert( reflsymdata->treeconstype[c1] == SYM_CONSTYPE_EXPR );
+            /* check nonlinear constraints and the objective differently */
+            assert( reflsymdata->treeconstype[c] == SYM_CONSTYPE_EXPR ||
+               reflsymdata->treeconstype[c] == SYM_CONSTYPE_OBJ );
          }
       }
    }
@@ -2063,12 +2221,12 @@ SCIP_RETCODE checkReflectionSymmetriesAreSymmetries(
             /* count number of affected variables in this constraint */
             for (j = 0; j < noccuringvars && ! permuted; ++j)
             {
-               int varidx;
+               int thisvaridx;
 
-               varidx = SCIPvarGetProbindex(occuringvars[j]);
-               assert( varidx >= 0 && varidx < nvars );
+               thisvaridx = SCIPvarGetProbindex(occuringvars[j]);
+               assert( thisvaridx >= 0 && thisvaridx < nvars );
 
-               if ( P[varidx] != varidx )
+               if ( P[thisvaridx] != thisvaridx )
                   permuted = TRUE;
             }
 
@@ -2147,6 +2305,9 @@ SCIP_RETCODE checkReflectionSymmetriesAreSymmetries(
       SCIPhashmapFree(&origvarmap);
       SCIPfreeBufferArray(scip, &occuringvars);
    }
+
+   SCIPfreeBufferArray(scip, &varidx);
+   SCIPfreeBufferArray(scip, &vals);
 
    return SCIP_OKAY;
 }
@@ -2767,6 +2928,7 @@ SCIP_RETCODE storeLinearConstraint(
    exprsum = SCIPfindExprhdlr(scip, "sum");
 
    assert( exprsum != NULL );
+   assert( ! (SCIPisInfinity(scip, -lhs) && SCIPisInfinity(scip, rhs)) );
 
    if ( ! SCIPisInfinity(scip, -lhs) )
    {
