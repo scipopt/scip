@@ -1955,7 +1955,7 @@ SCIP_RETCODE collectInformationPermLinearCons(
    int*                  treebegins,         /**< array containing begin positions of new tree in trees */
    SCIP_Real*            treerhs,            /**< right-hand side coefficients of trees */
    SCIP_Real*            treecoefs,          /**< var coefficients in expression trees (order according to trees) */
-   int*                  treevaridx          /**< indices of variables in expression trees (order according t trees) */
+   int*                  treevaridx          /**< indices of variables in expression trees (order according to trees) */
    )
 {
    int pos;
