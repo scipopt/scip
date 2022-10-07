@@ -3151,15 +3151,15 @@ SCIP_RETCODE storeSimpleConstraint(
             SCIP_CALL( addOperatorReflSym(reflsymdata, (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_GEQ, mainopidx, &subopidx) );
             if ( SCIPgetBoundtypesBounddisjunction(scip, cons)[i] == SCIP_BOUNDTYPE_LOWER )
             {
-               SCIP_CALL( addValReflSym(reflsymdata, SCIPgetBoundsBounddisjunction(scip, cons)[i] - constant,
-                     subopidx, NULL) );
-               SCIP_CALL( addCoefReflSym(reflsymdata, 1.0, subopidx, NULL) );
-            }
-            else
-            {
                SCIP_CALL( addValReflSym(reflsymdata, -SCIPgetBoundsBounddisjunction(scip, cons)[i] + constant,
                      subopidx, NULL) );
                SCIP_CALL( addCoefReflSym(reflsymdata, -1.0, subopidx, NULL) );
+            }
+            else
+            {
+               SCIP_CALL( addValReflSym(reflsymdata, SCIPgetBoundsBounddisjunction(scip, cons)[i] - constant,
+                     subopidx, NULL) );
+               SCIP_CALL( addCoefReflSym(reflsymdata, 1.0, subopidx, NULL) );
             }
             SCIP_CALL( addVarReflSym(reflsymdata, SCIPvarGetProbindex(consvars[0]), subopidx, NULL) );
          }
