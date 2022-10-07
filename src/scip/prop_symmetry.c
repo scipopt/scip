@@ -1950,6 +1950,7 @@ SCIP_RETCODE collectInformationPermLinearCons(
    SCIP_VAR**            treevars,           /**< list of different variables stored in trees */
    int                   ntreevars,          /**< number of different variables stored in reflection data */
    SYM_NODETYPE*         trees,              /**< trees of reflection symmetry data */
+   int                   ntreerhs,           /**< number of elements in treerhs */
    int*                  treemap,            /**< maps position in trees array to the corresponding position in
                                               *   treecoefs/treevaridx (depending on node type) */
    int*                  treebegins,         /**< array containing begin positions of new tree in trees */
@@ -1991,6 +1992,246 @@ SCIP_RETCODE collectInformationPermLinearCons(
          vals[i] = - vals[i];
       }
    }
+
+   return SCIP_OKAY;
+}
+
+/** collects information about permuted bounddisjunction constraints */
+static
+SCIP_RETCODE collectInformationPermBounddisjunctionCons(
+   int                   considx,            /**< index of constraint in reflection symmetry data */
+   int*                  perm,               /**< permutation applied to variables in constraint (or NULL) */
+   int*                  disjbegins,         /**< allocated array to store begin positions of disjunctions */
+   SCIP_Real*            disjubs,            /**< allocated array to store upper bounds of disjunctions */
+   SCIP_Real*            disjcoefs,          /**< allocated array to store coefficients of disjunctions */
+   int*                  disjvaridx,         /**< allocated array to store indices of variables of disjunctions */
+   int*                  ndisj,              /**< pointer to store number of disjunctions */
+   SCIP_VAR**            treevars,           /**< list of different variables stored in trees */
+   int                   ntreevars,          /**< number of different variables stored in reflection data */
+   SYM_NODETYPE*         trees,              /**< trees of reflection symmetry data */
+   int                   ntreerhs,           /**< number of elements in treerhs */
+   int*                  treemap,            /**< maps position in trees array to the corresponding position in
+                                              *   treecoefs/treevaridx (depending on node type) */
+   int*                  treebegins,         /**< array containing begin positions of new tree in trees */
+   SCIP_EXPRHDLR**       treeops,            /**< operators used in expression trees (order according to trees) */
+   SCIP_Real*            treecoefs,          /**< var coefficients in expression trees (order according to trees) */
+   SCIP_Real*            treevals,           /**< numerical values in expression trees (order according to trees) */
+   int*                  treevaridx          /**< indices of variables in expression trees (order according to trees) */
+   )
+{
+   int cnt;
+   int pos;
+
+   assert( disjbegins != NULL );
+   assert( disjubs != NULL );
+   assert( disjcoefs != NULL );
+   assert( disjvaridx != NULL );
+   assert( ndisj != NULL );
+   assert( treevaridx != NULL );
+   assert( trees != NULL );
+   assert( treemap != NULL );
+   assert( treebegins != NULL );
+   assert( treeops != NULL );
+   assert( treecoefs != NULL );
+   assert( treevals != NULL );
+   assert( treevaridx != NULL );
+
+   assert( trees[treebegins[considx]] == SYM_NODETYPE_OPERATOR );
+   assert( treeops[treemap[treebegins[considx]]] == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_BDDISJ );
+
+   *ndisj = 0;
+   cnt = 0;
+   for (pos = treebegins[considx]; pos < treebegins[considx + 1]; ++pos)
+   {
+      /* store the different disjunctions */
+      if ( trees[pos] == SYM_NODETYPE_OPERATOR &&
+         treeops[treemap[pos]] == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_GEQ )
+      {
+         disjbegins[*ndisj] = cnt;
+         *ndisj += 1;
+      }
+      else if ( trees[pos] == SYM_NODETYPE_VAL )
+         disjubs[*ndisj - 1] = treevals[treemap[pos]];
+      else if ( trees[pos] == SYM_NODETYPE_COEF )
+      {
+         assert( pos < treebegins[considx + 1] - 1 );
+         assert( trees[pos + 1] == SYM_NODETYPE_VAR );
+
+         disjcoefs[cnt] = treecoefs[treemap[pos]];
+      }
+      else if ( trees[pos] == SYM_NODETYPE_VAR )
+      {
+         int idx;
+
+         /* apply the variable permutation */
+         idx = treevaridx[treemap[pos]];
+         if ( perm != NULL )
+            idx = perm[idx];
+
+         /* apply negation to disjunction */
+         if ( idx >= ntreevars )
+         {
+            idx -= ntreevars;
+
+            /* constraints have already been stored with normalized variable domains,
+             * so negating a variable just means to flip the coefficient and bound does
+             * need to be adapted */
+            disjcoefs[cnt] *= -1;
+         }
+         disjvaridx[cnt++] = idx;
+      }
+   }
+
+   /* store end position of last disjunction */
+   disjbegins[*ndisj] = cnt;
+
+   return SCIP_OKAY;
+}
+
+/** checks whether a bounddisjunction constraint is identical to a constraint
+ *  in reflection symmetry data
+ */
+static
+SCIP_RETCODE checkBounddisjunctionConssAreIdentical(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int*                  disjbegins,         /**< allocated array to store begin positions of disjunctions */
+   SCIP_Real*            disjubs,            /**< allocated array to store upper bounds of disjunctions */
+   SCIP_Real*            disjcoefs,          /**< allocated array to store coefficients of disjunctions */
+   int*                  disjvaridx,         /**< allocated array to store indices of variables of disjunctions */
+   int                   ndisj,              /**< number of disjunctions */
+   int                   encodelen,          /**< encoding length of constraint in reflection symmetry data */
+   SCIP_VAR**            treevars,           /**< list of different variables stored in trees */
+   int                   ntreevars,          /**< number of different variables stored in reflection data */
+   SYM_NODETYPE*         trees,              /**< trees of reflection symmetry data */
+   int                   ntreerhs,           /**< number of elements in treerhs */
+   int*                  treemap,            /**< maps position in trees array to the corresponding position in
+                                              *   treecoefs/treevaridx (depending on node type) */
+   int*                  treebegins,         /**< array containing begin positions of new tree in trees */
+   SCIP_EXPRHDLR**       treeops,            /**< operators used in expression trees (order according to trees) */
+   SCIP_Real*            treecoefs,          /**< var coefficients in expression trees (order according to trees) */
+   SCIP_Real*            treevals,           /**< numerical values in expression trees (order according to trees) */
+   int*                  treevaridx,         /**< indices of variables in expression trees (order according to trees) */
+   SYM_CONSTYPE*         treeconstype,       /**< array of constraint types stores in trees */
+   SCIP_Bool*            isidentical         /**< pointer to store whether we have found an identical constraint */
+   )
+{
+   int* disjbegins2;
+   SCIP_Real* disjubs2;
+   SCIP_Real* disjcoefs2;
+   int* disjvaridx2;
+   int ndisj2;
+   int c;
+   int bd1;
+   int bd2;
+   int i1;
+   int i2;
+
+   assert( scip != NULL );
+   assert( disjbegins != NULL );
+   assert( disjubs != NULL );
+   assert( disjcoefs != NULL );
+   assert( disjvaridx != NULL );
+   assert( treevars != NULL );
+   assert( trees != NULL );
+   assert( treemap != NULL );
+   assert( treebegins != NULL );
+   assert( treeops != NULL );
+   assert( treecoefs != NULL );
+   assert( treevals != NULL );
+   assert( treevaridx != NULL );
+   assert( isidentical != NULL );
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &disjbegins2, encodelen) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &disjubs2, encodelen) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &disjcoefs2, encodelen) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &disjvaridx2, encodelen) );
+
+   *isidentical = FALSE;
+   for (c = 0; c < ntreerhs && ! *isidentical; ++c)
+   {
+      /* skip constraints of wrong type */
+      if ( treeconstype[c] != SYM_CONSTYPE_SIMPLE )
+         continue;
+
+      assert( trees[treebegins[c]] == SYM_NODETYPE_OPERATOR );
+      if ( treeops[treemap[treebegins[c]]] != (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_BDDISJ )
+         continue;
+
+      /* skip constraints with different lengths (rhs is always 0.0) */
+      if ( treebegins[c + 1] - treebegins[c] != encodelen )
+         continue;
+
+      /* get information about bounddisjunction constraint */
+      SCIP_CALL( collectInformationPermBounddisjunctionCons(c, NULL, disjbegins2, disjubs2, disjcoefs2,
+            disjvaridx2, &ndisj2, treevars, ntreevars, trees, ntreerhs, treemap, treebegins, treeops,
+            treecoefs, treevals, treevaridx) );
+
+      /* compare the two bounddisjunction constraints */
+      if ( ndisj2 != ndisj )
+         continue;
+
+      for (bd1 = 0; bd1 < ndisj; ++bd1)
+      {
+         int len1;
+         SCIP_Bool found;
+
+         len1 = disjbegins[bd1 + 1] - disjbegins[bd1];
+
+         /* check whether disjunction bd1 appears as one of the other constraint's disjunctions */
+         found = FALSE;
+         for (bd2 = 0; bd2 < ndisj2; ++bd2)
+         {
+            int len2;
+
+            len2 = disjbegins2[bd2 + 1] - disjbegins2[bd2];
+
+            /* skip disjunctions that cannot be equal */
+            if ( len1 != len2 || disjubs[bd1] != disjubs2[bd2] )
+               continue;
+
+            /* check whether each variable in the first conjuction has a counterpart */
+            for (i1 = disjbegins[bd1]; i1 < disjbegins[bd1 + 1]; ++i1)
+            {
+               for (i2 = disjbegins2[bd2]; i2 < disjbegins2[bd2 + 1]; ++i2)
+               {
+                  /* we have found the variable */
+                  if ( disjvaridx[i1] == disjvaridx2[i2] )
+                  {
+                     if ( SCIPisEQ(scip, disjcoefs[i1], disjcoefs2[i2]) )
+                        found = TRUE;
+                     else
+                        found = FALSE;
+                     break;
+                  }
+               }
+
+               /* if variable does not exist (with correct coefficient) in second disjunction */
+               if ( i2 == disjbegins2[bd2 + 1] || ! found )
+               {
+                  found = FALSE;
+                  break;
+               }
+            }
+
+            /* stop, we have found a matching disjunction */
+            if ( found )
+               break;
+         }
+
+         /* stop, if no disjunction in the second constraint matches the disjunction from the first */
+         if ( ! found )
+            break;
+      }
+
+      /* every disjunction has a counterpart in the second constraint */
+      if ( bd1 == ndisj )
+         *isidentical = TRUE;
+   }
+
+   SCIPfreeBufferArray(scip, &disjvaridx2);
+   SCIPfreeBufferArray(scip, &disjcoefs2);
+   SCIPfreeBufferArray(scip, &disjubs2);
+   SCIPfreeBufferArray(scip, &disjbegins2);
 
    return SCIP_OKAY;
 }
@@ -2102,7 +2343,7 @@ SCIP_RETCODE checkReflectionSymmetriesAreSymmetries(
             }
 
             SCIP_CALL( collectInformationPermLinearCons(c, P, vals, varidx, &permrhs, &nconsvars,
-                  treevars, ntreevars, trees, treemap, treebegins, treerhs, treecoefs, treevaridx) );
+                  treevars, ntreevars, trees, ntreerhs, treemap, treebegins, treerhs, treecoefs, treevaridx) );
 
             /* check whether permuted constraint exists */
             SCIP_CALL( checkLinConssAreIdentical(scip, vals, permrhs, varidx, nconsvars, lencons,
@@ -2141,18 +2382,61 @@ SCIP_RETCODE checkReflectionSymmetriesAreSymmetries(
                int nconsvars;
 
                SCIP_CALL( collectInformationPermLinearCons(c, P, vals, varidx, &permrhs, &nconsvars,
-                     treevars, ntreevars, trees, treemap, treebegins, treerhs, treecoefs, treevaridx) );
+                     treevars, ntreevars, trees, ntreerhs, treemap, treebegins, treerhs, treecoefs, treevaridx) );
 
                /* check whether permuted constraint exists */
                SCIP_CALL( checkLinConssAreIdentical(scip, vals, permrhs, varidx, nconsvars, lencons,
                      trees, treemap, treebegins, treerhs, treecoefs, treeops, treevaridx, treeconstype,
                      ntreerhs, &success) );
+            }
+            else if ( consoptype == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_BDDISJ )
+            {
+               int* disjbegins;
+               SCIP_Real* disjubs;
+               SCIP_Real* disjcoefs;
+               int* disjvaridx;
+               int ndisj;
 
-               if ( ! success )
-               {
-                  SCIPerrorMessage("Found permutation that is not a symmetry.\n");
-                  return SCIP_ERROR;
-               }
+               SCIP_CALL( SCIPallocBufferArray(scip, &disjbegins, lencons) );
+               SCIP_CALL( SCIPallocBufferArray(scip, &disjubs, lencons) );
+               SCIP_CALL( SCIPallocBufferArray(scip, &disjcoefs, lencons) );
+               SCIP_CALL( SCIPallocBufferArray(scip, &disjvaridx, lencons) );
+
+               SCIP_CALL( collectInformationPermBounddisjunctionCons(c, P, disjbegins, disjubs, disjcoefs,
+                     disjvaridx, &ndisj, treevars, ntreevars, trees, ntreerhs, treemap, treebegins, treeops,
+                     treecoefs, treevals, treevaridx) );
+
+               SCIP_CALL( checkBounddisjunctionConssAreIdentical(scip, disjbegins, disjubs, disjcoefs,
+                     disjvaridx, ndisj, lencons, treevars, ntreevars, trees, ntreerhs, treemap, treebegins, treeops,
+                     treecoefs, treevals, treevaridx, treeconstype, &success) );
+
+               SCIPfreeBufferArray(scip, &disjvaridx);
+               SCIPfreeBufferArray(scip, &disjcoefs);
+               SCIPfreeBufferArray(scip, &disjubs);
+               SCIPfreeBufferArray(scip, &disjbegins);
+            }
+            else if ( consoptype == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_INDICATOR )
+            {
+               ;
+            }
+            else if ( consoptype == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_SOS1 )
+            {
+               ;
+            }
+            else if ( consoptype == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_SOS2 )
+            {
+               ;
+            }
+            else
+            {
+               SCIPerrorMessage("Found constraint type not handable by symmetry in verification stage.\n");
+               return SCIP_ERROR;
+            }
+
+            if ( ! success )
+            {
+               SCIPerrorMessage("Found permutation that is not a symmetry.\n");
+               return SCIP_ERROR;
             }
          }
          else
