@@ -2088,6 +2088,128 @@ SCIP_RETCODE collectInformationPermBounddisjunctionCons(
    return SCIP_OKAY;
 }
 
+/** collects information about permuted SOS1/SOS2 constraints
+ *
+ * We store each variable in an SOS constraint as a separate term, i.e., each pair in an SOS2
+ * constraint is stored as two consecutive terms.
+ */
+static
+SCIP_RETCODE collectInformationPermSOSCons(
+   int                   considx,            /**< index of constraint in reflection symmetry data */
+   int*                  perm,               /**< permutation applied to variables in constraint (or NULL) */
+   int*                  termbegins,         /**< allocated array to store begin positions of terms */
+   SCIP_Real*            vals,               /**< allocated array to store constant values in var expressions */
+   SCIP_Real*            coefs,              /**< allocated array to store coefficients of variables */
+   int*                  varidx,             /**< allocated array to store indices of variables */
+   int*                  nterms,             /**< pointer to store number of terms */
+   SCIP_VAR**            treevars,           /**< list of different variables stored in trees */
+   int                   ntreevars,          /**< number of different variables stored in reflection data */
+   SYM_NODETYPE*         trees,              /**< trees of reflection symmetry data */
+   int                   ntreerhs,           /**< number of elements in treerhs */
+   int*                  treemap,            /**< maps position in trees array to the corresponding position in
+                                              *   treecoefs/treevaridx (depending on node type) */
+   int*                  treebegins,         /**< array containing begin positions of new tree in trees */
+   SCIP_EXPRHDLR**       treeops,            /**< operators used in expression trees (order according to trees) */
+   SCIP_Real*            treecoefs,          /**< var coefficients in expression trees (order according to trees) */
+   SCIP_Real*            treevals,           /**< numerical values in expression trees (order according to trees) */
+   int*                  treevaridx,         /**< indices of variables in expression trees (order according to trees) */
+   int*                  treeparentidx       /**< array assigning each position in trees the position of its parent */
+   )
+{
+   SCIP_Bool beginterm = TRUE;
+   int opidx;
+   int cnt;
+   int pos;
+
+   assert( termbegins != NULL );
+   assert( vals != NULL );
+   assert( coefs != NULL );
+   assert( varidx != NULL );
+   assert( nterms != NULL );
+   assert( treevaridx != NULL );
+   assert( trees != NULL );
+   assert( treemap != NULL );
+   assert( treebegins != NULL );
+   assert( treeops != NULL );
+   assert( treecoefs != NULL );
+   assert( treevals != NULL );
+   assert( treevaridx != NULL );
+
+   assert( trees[treebegins[considx]] == SYM_NODETYPE_OPERATOR );
+   assert( treeops[treemap[treebegins[considx]]] == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_SOS1 ||
+      treeops[treemap[treebegins[considx]]] == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_SOS2 );
+
+   *nterms = 0;
+   cnt = 0;
+   opidx = -1;
+   for (pos = treebegins[considx]; pos < treebegins[considx + 1]; ++pos)
+   {
+      if ( trees[pos] == SYM_NODETYPE_OPERATOR )
+      {
+         /* collect information about the main grouping operator of variables:
+          * for SOS1, SOS1-operator, for SOS2, tuple-operator */
+         if ( treeops[treemap[treebegins[considx]]] == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_SOS1 )
+         {
+            assert( treebegins[considx] == pos );
+            opidx = pos;
+         }
+         else
+         {
+            assert( treeops[treemap[treebegins[considx]]] == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_SOS2 );
+            if ( treeops[treemap[pos]] == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_TUPLE )
+               opidx = pos;
+         }
+      }
+      else if ( treeparentidx[pos] == opidx && beginterm )
+      {
+         /* we have found the start position of a new simple term, i.e., consisting of a single variable */
+         termbegins[*nterms] = cnt;
+         vals[*nterms] = 0.0;
+         *nterms += 1;
+      }
+
+      /* store the term */
+      if ( trees[pos] == SYM_NODETYPE_VAL )
+      {
+         beginterm = FALSE;
+         vals[*nterms - 1] = treevals[treemap[pos]];
+      }
+      else if ( trees[pos] == SYM_NODETYPE_COEF )
+      {
+         beginterm = FALSE;
+         coefs[cnt] = treecoefs[treemap[pos]];
+      }
+      else if ( trees[pos] == SYM_NODETYPE_VAR )
+      {
+         int idx;
+
+         beginterm = TRUE;
+
+         idx = treevaridx[treemap[pos]];
+         if ( perm != NULL )
+            idx = perm[idx];
+
+         /* only flip coefficient as variables normalized at 0 are stored */
+         if ( idx >= ntreevars )
+         {
+            idx -= ntreevars;
+            coefs[cnt] *= -1;
+         }
+         varidx[cnt++] = idx;
+      }
+   }
+
+   /* store end position of last disjunction */
+   termbegins[*nterms] = cnt;
+
+   if ( treeops[treemap[treebegins[considx]]] == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_SOS2 )
+   {
+      assert( *nterms % 2 == 0 );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** checks whether a bounddisjunction constraint is identical to a constraint
  *  in reflection symmetry data
  */
@@ -2236,6 +2358,178 @@ SCIP_RETCODE checkBounddisjunctionConssAreIdentical(
    return SCIP_OKAY;
 }
 
+/** checks whether an SOS constraint is identical to a constraint in reflection symmetry data */
+static
+SCIP_RETCODE checkSOSConssAreIdentical(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             isSOS2cons,         /**< whether we check an SOS2 constraint */
+   int*                  termbegins,         /**< begin positions of terms */
+   SCIP_Real*            vals,               /**< constant values in var expressions */
+   SCIP_Real*            coefs,              /**< coefficients of variables */
+   int*                  varidx,             /**< indices of variables */
+   int                   nterms,             /**< number of terms */
+   int                   encodelen,          /**< encoding length of constraint in reflection symmetry data */
+   SCIP_VAR**            treevars,           /**< list of different variables stored in trees */
+   int                   ntreevars,          /**< number of different variables stored in reflection data */
+   SYM_NODETYPE*         trees,              /**< trees of reflection symmetry data */
+   int                   ntreerhs,           /**< number of elements in treerhs */
+   int*                  treemap,            /**< maps position in trees array to the corresponding position in
+                                              *   treecoefs/treevaridx (depending on node type) */
+   int*                  treebegins,         /**< array containing begin positions of new tree in trees */
+   SCIP_EXPRHDLR**       treeops,            /**< operators used in expression trees (order according to trees) */
+   SCIP_Real*            treecoefs,          /**< var coefficients in expression trees (order according to trees) */
+   SCIP_Real*            treevals,           /**< numerical values in expression trees (order according to trees) */
+   int*                  treevaridx,         /**< indices of variables in expression trees (order according to trees) */
+   SYM_CONSTYPE*         treeconstype,       /**< array of constraint types stores in trees */
+   int*                  treeparentidx,      /**< array assigning each position in trees the position of its parent */
+   SCIP_Bool*            isidentical         /**< pointer to store whether we have found an identical constraint */
+   )
+{
+   int* termbegins2;
+   SCIP_Real* vals2;
+   SCIP_Real* coefs2;
+   int* varidx2;
+   int lastt2;
+   int nterms2;
+   int c;
+   int t1;
+   int t2;
+   int i1;
+   int i2;
+
+   assert( scip != NULL );
+   assert( termbegins != NULL );
+   assert( vals != NULL );
+   assert( coefs != NULL );
+   assert( varidx != NULL );
+   assert( treevars != NULL );
+   assert( trees != NULL );
+   assert( treemap != NULL );
+   assert( treebegins != NULL );
+   assert( treeops != NULL );
+   assert( treecoefs != NULL );
+   assert( treevals != NULL );
+   assert( treevaridx != NULL );
+   assert( isidentical != NULL );
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &termbegins2, encodelen) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vals2, encodelen) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &coefs2, encodelen) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &varidx2, encodelen) );
+
+   *isidentical = FALSE;
+   for (c = 0; c < ntreerhs && ! *isidentical; ++c)
+   {
+      /* skip constraints of wrong type */
+      if ( treeconstype[c] != SYM_CONSTYPE_SIMPLE )
+         continue;
+
+      assert( trees[treebegins[c]] == SYM_NODETYPE_OPERATOR );
+      if ( treeops[treemap[treebegins[c]]] != (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_SOS1 &&
+         treeops[treemap[treebegins[c]]] != (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_SOS2 )
+         continue;
+
+      /* skip constraints with different lengths (rhs is always 0.0) */
+      if ( treebegins[c + 1] - treebegins[c] != encodelen )
+         continue;
+
+      /* get information about SOS constraint */
+      SCIP_CALL( collectInformationPermSOSCons(c, NULL, termbegins2, vals2, coefs2,
+            varidx2, &nterms2, treevars, ntreevars, trees, ntreerhs, treemap, treebegins, treeops,
+            treecoefs, treevals, treevaridx, treeparentidx) );
+
+      /* compare the two SOS constraints */
+      if ( nterms2 != nterms )
+         continue;
+
+      lastt2 = -1;
+      for (t1 = 0; t1 < nterms; ++t1)
+      {
+         int len1;
+         int newt2;
+         int startval;
+         int endval;
+         SCIP_Bool found;
+         SCIP_Bool applySOS2 = FALSE;
+
+         len1 = termbegins[t1 + 1] - termbegins[t1];
+
+         /* for SOS2 constraints, we need to consider pairs of terms */
+         if ( t1 % 2 == 1 && isSOS2cons && lastt2 >= 0 )
+         {
+            if ( lastt2 % 2 == 0 )
+               newt2 = lastt2 + 1;
+            else
+               newt2 = lastt2 - 1;
+            applySOS2 = TRUE;
+         }
+
+         /* check whether term t1 appears as one of the other constraints' terms */
+         found = FALSE;
+         startval = applySOS2 ? newt2 : 0;
+         endval = applySOS2 ? newt2 + 1 : nterms2;
+         for (t2 = startval; t2 < endval; ++t2)
+         {
+            int len2;
+
+            len2 = termbegins2[t2 + 1] - termbegins2[t2];
+
+            /* skip disjunctions that cannot be equal */
+            if ( len1 != len2 )
+               continue;
+
+            /* check whether each variable in the first term has a counterpart */
+            for (i1 = termbegins[t1]; i1 < termbegins[t1 + 1]; ++i1)
+            {
+               for (i2 = termbegins2[t2]; i2 < termbegins2[t2 + 1]; ++i2)
+               {
+                  /* we have found the variable */
+                  if ( varidx[i1] == varidx2[i2] )
+                  {
+                     if ( SCIPisEQ(scip, coefs[i1], coefs2[i2]) )
+                        found = TRUE;
+                     else
+                        found = FALSE;
+                     break;
+                  }
+               }
+
+               /* if variable does not exist (with correct coefficient) in second term */
+               if ( i2 == termbegins2[t2 + 1] || ! found )
+               {
+                  found = FALSE;
+                  break;
+               }
+            }
+
+            /* stop, we have found a matching term */
+            if ( found )
+            {
+               lastt2 = t2;
+               break;
+            }
+            else
+               lastt2 = -1;
+         }
+
+         /* stop, if no term in the second constraint matches the term from the first */
+         if ( ! found )
+            break;
+      }
+
+      /* every term has a counterpart in the second constraint */
+      if ( t1 == nterms )
+         *isidentical = TRUE;
+   }
+
+   SCIPfreeBufferArray(scip, &varidx2);
+   SCIPfreeBufferArray(scip, &coefs2);
+   SCIPfreeBufferArray(scip, &vals2);
+   SCIPfreeBufferArray(scip, &termbegins2);
+
+   return SCIP_OKAY;
+}
+
 /** checks whether given signed permutations form a reflection symmetry of a MIP */
 static
 SCIP_RETCODE checkReflectionSymmetriesAreSymmetries(
@@ -2259,6 +2553,7 @@ SCIP_RETCODE checkReflectionSymmetriesAreSymmetries(
    int* varidx;
    int* treevaridx;
    int* treebegins;
+   int* treeparentidx;
    int* treemap;
    int maxnvals;
    int nnonlinconss;
@@ -2282,6 +2577,7 @@ SCIP_RETCODE checkReflectionSymmetriesAreSymmetries(
    treerhs = reflsymdata->treerhs;
    treevaridx = reflsymdata->treevaridx;
    treebegins = reflsymdata->treebegins;
+   treeparentidx = reflsymdata->treeparentidx;
    treemap = reflsymdata->treemap;
    ntreevars = reflsymdata->ntreevars;
    ntreerhs = reflsymdata->ntreerhs;
@@ -2419,13 +2715,36 @@ SCIP_RETCODE checkReflectionSymmetriesAreSymmetries(
             {
                ;
             }
-            else if ( consoptype == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_SOS1 )
+            else if ( consoptype == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_SOS1 ||
+               consoptype == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_SOS2 )
             {
-               ;
-            }
-            else if ( consoptype == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_SOS2 )
-            {
-               ;
+               int* termbegins;
+               SCIP_Real* termvals;
+               SCIP_Real* termcoefs;
+               int* termvaridx;
+               int nterms;
+               SCIP_Bool isSOS2cons = FALSE;
+
+               if ( consoptype == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_SOS2 )
+                  isSOS2cons = TRUE;
+
+               SCIP_CALL( SCIPallocBufferArray(scip, &termbegins, lencons) );
+               SCIP_CALL( SCIPallocBufferArray(scip, &termvals, lencons) );
+               SCIP_CALL( SCIPallocBufferArray(scip, &termcoefs, lencons) );
+               SCIP_CALL( SCIPallocBufferArray(scip, &termvaridx, lencons) );
+
+               SCIP_CALL( collectInformationPermSOSCons(c, P, termbegins, treevals, treecoefs, treevaridx, &nterms,
+                     treevars, ntreevars, trees, ntreerhs, treemap, treebegins, treeops, treecoefs,
+                     treevals, treevaridx, treeparentidx) );
+
+               SCIP_CALL( checkSOSConssAreIdentical(scip, isSOS2cons, termbegins, treevals, treecoefs, treevaridx,
+                     nterms, lencons, treevars, ntreevars, trees, ntreerhs, treemap, treebegins, treeops,
+                     treecoefs, treevals, treevaridx, treeconstype, treeparentidx, &success) );
+
+               SCIPfreeBufferArray(scip, &termvaridx);
+               SCIPfreeBufferArray(scip, &termcoefs);
+               SCIPfreeBufferArray(scip, &termvals);
+               SCIPfreeBufferArray(scip, &termbegins);
             }
             else
             {
