@@ -1958,8 +1958,6 @@ SCIP_RETCODE collectInformationPermLinearCons(
    int*                  treevaridx          /**< indices of variables in expression trees (order according t trees) */
    )
 {
-   SCIP_Real ub;
-   SCIP_Real lb;
    int pos;
    int i;
 
@@ -1989,10 +1987,7 @@ SCIP_RETCODE collectInformationPermLinearCons(
       {
          varidx[i] -= ntreevars;
 
-         ub = SCIPvarGetUbLocal(treevars[varidx[i]]);
-         lb = SCIPvarGetLbLocal(treevars[varidx[i]]);
-
-         *rhs -= vals[i] * (ub + lb);
+         /* we do not need to adapt the rhs, because trees store normalized variant of constraints */
          vals[i] = - vals[i];
       }
    }
