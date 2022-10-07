@@ -1078,7 +1078,7 @@ SYM_FLIPTYPE getOperatorFliptype(
 
    /* check which types of flips are allowed by an operator */
    op = treeops[treemap[opidx]];
-   if ( op == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_OR || op == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_OR ||
+   if ( op == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_OR || op == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_XOR ||
       op == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_BDDISJ || op == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_GEQ ||
       op == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_OBJ || op == SCIPfindExprhdlr(scip, "sum") )
       return SYM_FLIPTYPE_SHIFT_ODD;
