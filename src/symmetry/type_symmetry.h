@@ -70,7 +70,8 @@ enum SYM_Constype
 {
    SYM_CONSTYPE_LINEAR   = 0,                /**< linear constraint */
    SYM_CONSTYPE_SIMPLE   = 1,                /**< simple constraint */
-   SYM_CONSTYPE_EXPR     = 2                 /**< constraints given by expression tree */
+   SYM_CONSTYPE_EXPR     = 2,                /**< constraints given by expression tree */
+   SYM_CONSTYPE_OBJ      = 3                 /**< objective */
 };
 typedef enum SYM_Constype SYM_CONSTYPE;
 

@@ -4212,6 +4212,7 @@ SCIP_RETCODE storeObjective(
 
    /* initialize new tree */
    reflsymdata->treebegins[reflsymdata->ntreerhs] = reflsymdata->ntrees;
+   reflsymdata->treeconstype[reflsymdata->ntreerhs] = SYM_CONSTYPE_OBJ;
    reflsymdata->treerhs[reflsymdata->ntreerhs++] = 0.0;
 
    SCIP_CALL( addOperatorReflSym(reflsymdata, (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_OBJ, -1, &mainopidx) );
