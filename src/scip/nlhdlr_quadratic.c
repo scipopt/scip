@@ -146,6 +146,8 @@ struct SCIP_NlhdlrData
    SCIP_Real             cutcoefsum;         /**< sum of average cutcoefs of a cut */
    SCIP_Real             monoidalimprovementsum; /**< sum of average improvement of a cut when using monoidal strengthening */
    SCIP_Real             efficacysum;        /**< sum of efficacy of cuts */
+   SCIP_Real             currentavecutcoef;  /**< average cutcoef of current cut */
+   SCIP_Real             currentavemonoidalimprovement;/**< average improvement of current cut when using monoidal strengthening */
 };
 
 /* structure to store rays. note that for a given ray, the entries in raysidx are sorted. */
@@ -2443,11 +2445,11 @@ SCIP_RETCODE computeIntercut(
 
    /* track statistics */
    if( counter > 0 )
-      nlhdlrdata->cutcoefsum += avecutcoefsum / counter;
+      nlhdlrdata->currentavecutcoef = avecutcoefsum / counter;
    if( monoidalwasused )
       nlhdlrdata->nmonoidal += 1;
    if( monoidalcounter > 0 )
-      nlhdlrdata->monoidalimprovementsum += avemonoidalimprovsum / monoidalcounter;
+      nlhdlrdata->currentavemonoidalimprovement = avemonoidalimprovsum / monoidalcounter;
 
 TERMINATE:
    if( apex != NULL )
@@ -4169,6 +4171,8 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoQuadratic)
          else
          {
             *result = SCIP_SEPARATED;
+            nlhdlrdata->cutcoefsum += nlhdlrdata->currentavecutcoef;
+            nlhdlrdata->monoidalimprovementsum += nlhdlrdata->currentavemonoidalimprovement;
             nlhdlrdata->ncutsadded += 1;
             nlhdlrdata->densitysum += (SCIP_Real) SCIProwprepGetNVars(rowprep) / (SCIP_Real) SCIPgetNVars(scip);
             nlhdlrdata->efficacysum += SCIPgetCutEfficacy(scip, NULL, row);
@@ -4871,7 +4875,7 @@ SCIP_RETCODE SCIPincludeNlhdlrQuadratic(
 
    SCIP_CALL( SCIPaddRealParam(scip, "nlhdlr/" NLHDLR_NAME "/minviolation",
          "minimal violation the constraint must fulfill such that a cut is generated",
-         &nlhdlrdata->mincutviolation, FALSE, INTERCUTS_MINVIOL, 0.0, SCIPinfinity(scip), NULL, NULL) );
+         &nlhdlrdata->minviolation, FALSE, INTERCUTS_MINVIOL, 0.0, SCIPinfinity(scip), NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "nlhdlr/" NLHDLR_NAME "/atwhichnodes",
          "determines at which nodes cut is used (if it's -1, it's used only at the root node, if it's n >= 0, it's used at every multiple of n",
