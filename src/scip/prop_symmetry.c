@@ -1333,7 +1333,7 @@ SCIP_RETCODE getActiveVariablesReflSym(
       if ( SCIPisInfinity(scip, ub) || SCIPisInfinity(scip, -lb) )
          continue;
 
-      *constant += (*scalars)[v] * (ub + lb) / 2;
+      *constant += (*scalars)[v] * (ub + lb);
    }
 
    return SCIP_OKAY;
