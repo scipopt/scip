@@ -1901,7 +1901,7 @@ SCIP_RETCODE proposeFeasibleSolution(
 
 /** notify nonlinear handlers about new solution that has been found
  *
- * The idea is that the nonlinear handler add globally valid tight estimators in a given solution as cuts to the cutpool.
+ * The idea is that nonlinear handlers add globally valid tight estimators in a given solution as cuts to the cutpool.
  *
  * Essentially we want to ensure that the LP relaxation is tight in the new solution, if possible.
  * For convex constraints, we achieve this by linearizing.
