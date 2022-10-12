@@ -157,6 +157,7 @@ SCIP_RETCODE fromAmpl(
    char fullnlfilename[SCIP_MAXSTRLEN];
    char* logfile;
    SCIP_Bool printstat;
+   size_t nlfilenamelen;
 
    SCIP_CALL( SCIPaddBoolParam(scip, "display/statistics",
       "whether to print statistics on a solve",
@@ -192,7 +193,14 @@ SCIP_RETCODE fromAmpl(
    if( *logfile )
       SCIPsetMessagehdlrLogfile(scip, logfile);
 
-   (void) SCIPsnprintf(fullnlfilename, SCIP_MAXSTRLEN, "%s.nl", nlfilename);
+   /* AMPL calls solver with file without .nl extension, but others (Pyomo) may not
+    * so add .nl only if not already present
+    */
+   nlfilenamelen = strlen(nlfilename);
+   if( nlfilenamelen > 3 && strcmp(nlfilename + (nlfilenamelen-3), ".nl") == 0 )
+      (void) SCIPsnprintf(fullnlfilename, SCIP_MAXSTRLEN, "%s", nlfilename);
+   else
+      (void) SCIPsnprintf(fullnlfilename, SCIP_MAXSTRLEN, "%s.nl", nlfilename);
    SCIPinfoMessage(scip, NULL, "read problem <%s>\n", fullnlfilename);
    SCIPinfoMessage(scip, NULL, "============\n\n");
 
