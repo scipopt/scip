@@ -399,7 +399,7 @@ typedef unsigned int SCIP_NLHDLR_METHOD; /**< nlhdlr methods bitflags */
    SCIP_Bool*           success,         \
    SCIP_Bool*           addedbranchscores)
 
-/** nonlinear handler solution notify callback
+/** nonlinear handler solution linearization callback
  *
  * The callback is called when a new feasible solution has been found.
  * The nonlinear handler may add tight estimates on its nonlinear function to the cut pool of SCIP.
@@ -415,7 +415,7 @@ typedef unsigned int SCIP_NLHDLR_METHOD; /**< nlhdlr methods bitflags */
  * \param[in] overestimate       whether the expression needs is overestimated by the nlhdlr
  * \param[in] underestimate      whether the expression needs is underestimated by the nlhdlr
  */
-#define SCIP_DECL_NLHDLRSOLNOTIFY(x) SCIP_RETCODE x (\
+#define SCIP_DECL_NLHDLRSOLLINEARIZE(x) SCIP_RETCODE x (\
    SCIP*                scip,            \
    SCIP_CONSHDLR*       conshdlr,        \
    SCIP_CONS*           cons,            \

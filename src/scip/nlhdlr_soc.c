@@ -3075,7 +3075,7 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoSoc)
 }
 
 static
-SCIP_DECL_NLHDLRSOLNOTIFY(nlhdlrSolnotifySoc)
+SCIP_DECL_NLHDLRSOLLINEARIZE(nlhdlrSollinearizeSoc)
 { /*lint --e{715}*/
    SCIP_NLHDLRDATA* nlhdlrdata;
    SCIP_Real rhsval;
@@ -3155,7 +3155,7 @@ SCIP_RETCODE SCIPincludeNlhdlrSoc(
    SCIPnlhdlrSetFreeExprData(nlhdlr, nlhdlrFreeExprDataSoc);
    SCIPnlhdlrSetInitExit(nlhdlr, nlhdlrInitSoc, nlhdlrExitSoc);
    SCIPnlhdlrSetSepa(nlhdlr, nlhdlrInitSepaSoc, nlhdlrEnfoSoc, NULL, nlhdlrExitSepaSoc);
-   SCIPnlhdlrSetSolnotify(nlhdlr, nlhdlrSolnotifySoc);
+   SCIPnlhdlrSetSollinearize(nlhdlr, nlhdlrSollinearizeSoc);
 
    /* add soc nlhdlr parameters */
    /* TODO should we get rid of this and use separating/mineffiacy(root) instead, which is 1e-4? */

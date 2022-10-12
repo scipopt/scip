@@ -525,9 +525,9 @@ TERMINATE:
    return SCIP_OKAY;
 }
 
-/** solution notification callback */
+/** solution linearization callback */
 static
-SCIP_DECL_NLHDLRSOLNOTIFY(nlhdlrSolnotifyDefault)
+SCIP_DECL_NLHDLRSOLLINEARIZE(nlhdlrSollinearizeDefault)
 { /*lint --e{715}*/
    SCIP_Real constant;
    SCIP_Bool local;
@@ -542,7 +542,7 @@ SCIP_DECL_NLHDLRSOLNOTIFY(nlhdlrSolnotifyDefault)
    assert(scip != NULL);
    assert(expr != NULL);
 
-   SCIPdebug( SCIPinfoMessage(scip, NULL, "solnotify exprhdlr %s for expr ", SCIPexprhdlrGetName(SCIPexprGetHdlr(expr))) );
+   SCIPdebug( SCIPinfoMessage(scip, NULL, "sollinearize exprhdlr %s for expr ", SCIPexprhdlrGetName(SCIPexprGetHdlr(expr))) );
    SCIPdebug( SCIPprintExpr(scip, expr, NULL) );
    SCIPdebug( SCIPinfoMessage(scip, NULL, "\n") );
 
@@ -735,7 +735,7 @@ SCIP_RETCODE SCIPincludeNlhdlrDefault(
    SCIPnlhdlrSetCopyHdlr(nlhdlr, nlhdlrCopyhdlrDefault);
    SCIPnlhdlrSetFreeExprData(nlhdlr, nlhdlrFreeExprDataDefault);
    SCIPnlhdlrSetSepa(nlhdlr, nlhdlrInitSepaDefault, NULL, nlhdlrEstimateDefault, NULL);
-   SCIPnlhdlrSetSolnotify(nlhdlr, nlhdlrSolnotifyDefault);
+   SCIPnlhdlrSetSollinearize(nlhdlr, nlhdlrSollinearizeDefault);
    SCIPnlhdlrSetProp(nlhdlr, nlhdlrIntevalDefault, nlhdlrReversepropDefault);
 
    return SCIP_OKAY;

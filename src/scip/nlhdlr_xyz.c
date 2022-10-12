@@ -210,10 +210,10 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateXyz)
 #endif
 
 
-/** nonlinear handler solution notification callback */
+/** nonlinear handler solution linearization callback */
 #if !1
 static
-SCIP_DECL_NLHDLRSOLNOTIFY(nlhdlrSolnotifyXyz)
+SCIP_DECL_NLHDLRSOLLINEARIZE(nlhdlrSollinearizeXyz)
 { /*lint --e{715}*/
    SCIPerrorMessage("method of xyz nonlinear handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
@@ -221,7 +221,7 @@ SCIP_DECL_NLHDLRSOLNOTIFY(nlhdlrSolnotifyXyz)
    return SCIP_OKAY;
 }
 #else
-#define nlhdlrSolnotifyXyz NULL
+#define nlhdlrSollinearizeXyz NULL
 #endif
 
 
@@ -284,7 +284,7 @@ SCIP_RETCODE SCIPincludeNlhdlrXyz(
    SCIPnlhdlrSetInitExit(nlhdlr, nlhdlrInitXyz, nlhdlrExitXyz);
    SCIPnlhdlrSetSepa(nlhdlr, nlhdlrInitSepaXyz, nlhdlrEnfoXyz, nlhdlrEstimateXyz, nlhdlrExitSepaXyz);
    SCIPnlhdlrSetProp(nlhdlr, nlhdlrIntevalXyz, nlhdlrReversepropXyz);
-   SCIPnlhdlrSetSolnotify(nlhdlr, nlhdlrSolnotifyXyz);
+   SCIPnlhdlrSetSollinearize(nlhdlr, nlhdlrSollinearizeXyz);
 
    return SCIP_OKAY;
 }

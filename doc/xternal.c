@@ -4749,7 +4749,7 @@
  * For the quotient nonlinear handler, the estimators are computed as follows:
  * @refsnippet{src/scip/nlhdlr_quotient.c,SnippetNlhdlrEstimateQuotient}
  *
- * @subsection NLHDLRSOLNOTIFY
+ * @subsection NLHDLRSOLLINEARIZE
  *
  * This callback is called by the constraint handler when it has caught a solution event from SCIP and option constraints/nonlinear/linearizeheursol has been enabled.
  * The constraint handler then calls the nonlinear handlers for all expressions they currently handle.

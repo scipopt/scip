@@ -1186,9 +1186,9 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateQuotient)
    return SCIP_OKAY;
 }
 
-/** nonlinear handler solution notification callback */
+/** nonlinear handler solution linearization callback */
 static
-SCIP_DECL_NLHDLRSOLNOTIFY(nlhdlrSolnotifyQuotient)
+SCIP_DECL_NLHDLRSOLLINEARIZE(nlhdlrSollinearizeQuotient)
 { /*lint --e{715}*/
    SCIP_VAR* x;
    SCIP_Real lbx;
@@ -1341,7 +1341,7 @@ SCIP_RETCODE SCIPincludeNlhdlrQuotient(
    SCIPnlhdlrSetCopyHdlr(nlhdlr, nlhdlrCopyhdlrQuotient);
    SCIPnlhdlrSetFreeExprData(nlhdlr, nlhdlrFreeExprDataQuotient);
    SCIPnlhdlrSetSepa(nlhdlr, NULL, NULL, nlhdlrEstimateQuotient, NULL);
-   SCIPnlhdlrSetSolnotify(nlhdlr, nlhdlrSolnotifyQuotient);
+   SCIPnlhdlrSetSollinearize(nlhdlr, nlhdlrSollinearizeQuotient);
    SCIPnlhdlrSetProp(nlhdlr, nlhdlrIntevalQuotient, nlhdlrReversepropQuotient);
 
    return SCIP_OKAY;

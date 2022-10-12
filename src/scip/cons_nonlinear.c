@@ -1899,14 +1899,15 @@ SCIP_RETCODE proposeFeasibleSolution(
    return SCIP_OKAY;
 }
 
-/** notify nonlinear handlers about new solution that has been found
+/** notify nonlinear handlers to add linearization in new solution that has been found
  *
  * The idea is that nonlinear handlers add globally valid tight estimators in a given solution as cuts to the cutpool.
  *
  * Essentially we want to ensure that the LP relaxation is tight in the new solution, if possible.
- * For convex constraints, we achieve this by linearizing.
+ * As the nonlinear handlers define the extended formulation, they should know whether it is possible to generate a
+ * cut that is valid and supporting in the given solution.
+ * For example, for convex constraints, we achieve this by linearizing.
  * For SOC, we also linearize, but on a a convex reformulation.
- * Any nonlinear handler should know how to contribute.
  *
  * Since linearization may happen in auxiliary variables, we ensure that auxiliary variables are set
  * to the eval-value of its expression, i.e., we change sol so it is also feasible in the extended formulation.
@@ -1931,7 +1932,7 @@ SCIP_RETCODE notifyNlhdlrNewsol(
    assert(conshdlr != NULL);
    assert(conss != NULL || nconss == 0);
 
-   ENFOLOG( SCIPinfoMessage(scip, enfologfile, "call nlhdlr solnotify in new solution from <%s>\n", SCIPheurGetName(SCIPsolGetHeur(sol))); )
+   ENFOLOG( SCIPinfoMessage(scip, enfologfile, "call nlhdlr sollinearize in new solution from <%s>\n", SCIPheurGetName(SCIPsolGetHeur(sol))); )
 
    /* TODO probably we just evaluated all expressions when checking the sol before it was added
     * would be nice to recognize this and skip reevaluating
@@ -1985,11 +1986,11 @@ SCIP_RETCODE notifyNlhdlrNewsol(
             SCIP_CALL( SCIPsetSolVal(scip, sol, ownerdata->auxvar, SCIPexprGetEvalValue(expr)) );
          }
 
-         /* let nonlinear handler generate cuts by calling the solnotify callback */
+         /* let nonlinear handler generate cuts by calling the sollinearize callback */
          for( e = 0; e < ownerdata->nenfos; ++e )
          {
-            /* call solnotify callback, if implemented by nlhdlr */
-            SCIP_CALL( SCIPnlhdlrSolnotify(scip, conshdlr, conss[c],
+            /* call sollinearize callback, if implemented by nlhdlr */
+            SCIP_CALL( SCIPnlhdlrSollinearize(scip, conshdlr, conss[c],
                ownerdata->enfos[e]->nlhdlr, expr, ownerdata->enfos[e]->nlhdlrexprdata, sol, solisbest,
                ownerdata->enfos[e]->nlhdlrparticipation & SCIP_NLHDLR_METHOD_SEPAABOVE,
                ownerdata->enfos[e]->nlhdlrparticipation & SCIP_NLHDLR_METHOD_SEPABELOW) );

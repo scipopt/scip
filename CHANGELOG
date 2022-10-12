@@ -32,7 +32,7 @@ Interface changes
 
 ### New and changed callbacks
 
-- Added solution notification callback for nonlinear handlers.
+- Added solution linearization callback for nonlinear handlers.
   The nonlinear handler may use this callback to add tight cuts that use the given solution as reference point to the cutpool.
   The callback is called if option constraints/nonlinear/linearizeheursol is enabled.
 
@@ -56,7 +56,7 @@ Interface changes
 - SCIPsetParam()
 - SCIPgetPrimalDualIntegral() returns the primal dual integral stored in the statistics
 - SCIPgetNLPNlRowsStat() to retrieve counts on linear, convex, and nonconvex rows in NLP
-- SCIPnlhdlrSetSolnotify(), SCIPnlhdlrHasSolnotify()
+- SCIPnlhdlrSetSollinearize(), SCIPnlhdlrHasSollinearize()
 
 ### Command line interface
 

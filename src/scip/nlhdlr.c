@@ -45,7 +45,7 @@
 #undef SCIPnlhdlrSetInitExit
 #undef SCIPnlhdlrSetProp
 #undef SCIPnlhdlrSetSepa
-#undef SCIPnlhdlrSetSolnotify
+#undef SCIPnlhdlrSetSollinearize
 #undef SCIPnlhdlrGetName
 #undef SCIPnlhdlrGetDesc
 #undef SCIPnlhdlrGetDetectPriority
@@ -58,7 +58,7 @@
 #undef SCIPnlhdlrHasExitSepa
 #undef SCIPnlhdlrHasEnfo
 #undef SCIPnlhdlrHasEstimate
-#undef SCIPnlhdlrHasSolnotify
+#undef SCIPnlhdlrHasSollinearize
 #endif
 
 /** sets the copy handler callback of a nonlinear handler */
@@ -139,16 +139,16 @@ void SCIPnlhdlrSetSepa(
    nlhdlr->exitsepa = exitsepa;
 }
 
-/** sets the solution notification callback of a nonlinear handler */
-void SCIPnlhdlrSetSolnotify(
+/** sets the solution linearization callback of a nonlinear handler */
+void SCIPnlhdlrSetSollinearize(
    SCIP_NLHDLR*          nlhdlr,             /**< nonlinear handler */
-   SCIP_DECL_NLHDLRSOLNOTIFY((*solnotify))   /**< solution notify callback */
+   SCIP_DECL_NLHDLRSOLLINEARIZE((*sollinearize)) /**< solution linearization callback */
 )
 {
    assert(nlhdlr != NULL);
-   assert(solnotify != NULL);
+   assert(sollinearize != NULL);
 
-   nlhdlr->solnotify = solnotify;
+   nlhdlr->sollinearize = sollinearize;
 }
 
 /** gives name of nonlinear handler */
@@ -271,14 +271,14 @@ SCIP_Bool SCIPnlhdlrHasEstimate(
    return nlhdlr->estimate != NULL;
 }
 
-/** returns whether nonlinear handler implements the solution notification callback */
-SCIP_Bool SCIPnlhdlrHasSolnotify(
+/** returns whether nonlinear handler implements the solution linearization callback */
+SCIP_Bool SCIPnlhdlrHasSollinearize(
    SCIP_NLHDLR*          nlhdlr              /**< nonlinear handler */
 )
 {
    assert(nlhdlr != NULL);
 
-   return nlhdlr->solnotify != NULL;
+   return nlhdlr->sollinearize != NULL;
 }
 
 /** compares two nonlinear handlers by detection priority
@@ -694,15 +694,15 @@ SCIP_DECL_NLHDLRESTIMATE(SCIPnlhdlrEstimate)
 }
 
 /** call the solution notification callback of a nonlinear handler */
-SCIP_DECL_NLHDLRSOLNOTIFY(SCIPnlhdlrSolnotify)
+SCIP_DECL_NLHDLRSOLLINEARIZE(SCIPnlhdlrSollinearize)
 {
    assert(scip != NULL);
    assert(nlhdlr != NULL);
 
-   if( nlhdlr->solnotify == NULL )
+   if( nlhdlr->sollinearize == NULL )
       return SCIP_OKAY;
 
-   SCIP_CALL( nlhdlr->solnotify(scip, conshdlr, cons, nlhdlr, expr, nlhdlrexprdata, sol, solisbest, overestimate, underestimate) );
+   SCIP_CALL( nlhdlr->sollinearize(scip, conshdlr, cons, nlhdlr, expr, nlhdlrexprdata, sol, solisbest, overestimate, underestimate) );
 
    return SCIP_OKAY;
 }

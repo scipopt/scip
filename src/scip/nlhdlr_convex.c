@@ -1505,7 +1505,7 @@ SCIP_RETCODE estimateGradient(
 
    *success = FALSE;
 
-   /* compute gradient (TODO: this also re-evaluates (soltag=0), which shouldn't be necessary unless we tried ConvexSecant before or are called from Solnotify callback) */
+   /* compute gradient (TODO: this also re-evaluates (soltag=0), which shouldn't be necessary unless we tried ConvexSecant before or are called from Sollinearize callback) */
    SCIP_CALL( SCIPevalExprGradient(scip, nlexpr, sol, 0L) );
 
    /* gradient evaluation error -> skip */
@@ -2014,7 +2014,7 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateConvex)
 
 /** solution notification callback */
 static
-SCIP_DECL_NLHDLRSOLNOTIFY(nlhdlrSolnotifyConvex)
+SCIP_DECL_NLHDLRSOLLINEARIZE(nlhdlrSollinearizeConvex)
 { /*lint --e{715}*/
    SCIP_ROWPREP* rowprep;
    SCIP_Bool success = FALSE;
@@ -2136,7 +2136,7 @@ SCIP_RETCODE SCIPincludeNlhdlrConvex(
    SCIPnlhdlrSetCopyHdlr(nlhdlr, nlhdlrCopyhdlrConvex);
    SCIPnlhdlrSetFreeExprData(nlhdlr, nlhdlrfreeExprDataConvexConcave);
    SCIPnlhdlrSetSepa(nlhdlr, nlhdlrInitSepaConvex, NULL, nlhdlrEstimateConvex, NULL);
-   SCIPnlhdlrSetSolnotify(nlhdlr, nlhdlrSolnotifyConvex);
+   SCIPnlhdlrSetSollinearize(nlhdlr, nlhdlrSollinearizeConvex);
    SCIPnlhdlrSetInitExit(nlhdlr, NULL, nlhdlrExitConvex);
 
    return SCIP_OKAY;
