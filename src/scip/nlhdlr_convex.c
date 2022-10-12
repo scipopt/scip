@@ -18,8 +18,6 @@
  * @brief  nonlinear handlers for convex and concave expressions
  * @author Benjamin Mueller
  * @author Stefan Vigerske
- *
- * TODO convex: perturb reference point if separation fails due to too large numbers
  */
 
 #include <string.h>
@@ -50,8 +48,10 @@
 #define DEFAULT_CVXSIGNOMIAL          TRUE
 #define DEFAULT_CVXPRODCOMP           TRUE
 #define DEFAULT_HANDLETRIVIAL         FALSE
+#define DEFAULT_MAXPERTURB            0.01
 
 #define INITLPMAXVARVAL          1000.0 /**< maximal absolute value of variable for still generating a linearization cut at that point in initlp */
+#define RANDNUMINITSEED          220802 /**< initial seed for random number generator for point perturbation */
 
 /*lint -e440*/
 /*lint -e441*/
@@ -78,10 +78,12 @@ struct SCIP_NlhdlrData
    SCIP_Bool             isnlhdlrconvex;     /**< whether this data is used for the convex nlhdlr (TRUE) or the concave one (FALSE) */
    SCIP_SOL*             evalsol;            /**< solution used for evaluating expression in a different point,
                                                   e.g., for facet computation of vertex-polyhedral function */
+   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator used to perturb reference point in estimateGradient() */
 
    /* parameters */
    SCIP_Bool             detectsum;          /**< whether to run detection when the root of an expression is a non-quadratic sum */
    SCIP_Bool             extendedform;       /**< whether to create extended formulations instead of looking for maximal possible subexpression */
+   SCIP_Real             maxperturb;         /**< maximal perturbation of non-differentiable reference point */
 
    /* advanced parameters (maybe remove some day) */
    SCIP_Bool             cvxquadratic;       /**< whether to use convexity check on quadratics */
@@ -1478,7 +1480,7 @@ SCIP_RETCODE estimateVertexPolyhedral(
 
 /** adds an estimator computed via a gradient to a given rowprep */
 static
-SCIP_RETCODE estimateGradient(
+SCIP_RETCODE estimateGradientInner(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLHDLREXPRDATA*  nlhdlrexprdata,     /**< nonlinear handler expression data */
    SCIP_SOL*             sol,                /**< solution to use */
@@ -1490,6 +1492,7 @@ SCIP_RETCODE estimateGradient(
    SCIP_Real QUAD(constant);
    int i;
 
+   assert(scip != NULL);
    assert(nlhdlrexprdata != NULL);
    assert(rowprep != NULL);
    assert(success != NULL);
@@ -1497,18 +1500,10 @@ SCIP_RETCODE estimateGradient(
    nlexpr = nlhdlrexprdata->nlexpr;
    assert(nlexpr != NULL);
 
-#ifdef SCIP_DEBUG
-   SCIPinfoMessage(scip, NULL, "estimate expression ");
-   SCIPprintExpr(scip, nlexpr, NULL);
-   SCIPinfoMessage(scip, NULL, " by gradient\n");
-#endif
-
-   *success = FALSE;
-
    /* compute gradient (TODO: this also re-evaluates (soltag=0), which shouldn't be necessary unless we tried ConvexSecant before or are called from Sollinearize callback) */
    SCIP_CALL( SCIPevalExprGradient(scip, nlexpr, sol, 0L) );
 
-   /* gradient evaluation error -> skip */
+   /* if gradient evaluation error, then return */
    if( SCIPexprGetDerivative(nlexpr) == SCIP_INVALID )
    {
       SCIPdebugMsg(scip, "gradient evaluation error for %p\n", (void*)nlexpr);
@@ -1518,7 +1513,7 @@ SCIP_RETCODE estimateGradient(
    /* add gradient underestimator to rowprep: f(sol) + (x - sol) \nabla f(sol)
     * constant will store f(sol) - sol * \nabla f(sol)
     * to avoid some cancellation errors when linear variables take huge values (like 1e20),
-    * we use double-double arithemtic here
+    * we use double-double arithmetic here
     */
    QUAD_ASSIGN(constant, SCIPexprGetEvalValue(nlexpr)); /* f(sol) */
    for( i = 0; i < nlhdlrexprdata->nleafs; ++i )
@@ -1551,6 +1546,105 @@ SCIP_RETCODE estimateGradient(
    SCIProwprepSetLocal(rowprep, FALSE);
 
    *success = TRUE;
+
+   return SCIP_OKAY;
+}
+
+/** adds an estimator computed via a gradient to a given rowprep, possibly perturbing solution */
+static
+SCIP_RETCODE estimateGradient(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLHDLR*          nlhdlr,             /**< nonlinear handler */
+   SCIP_NLHDLREXPRDATA*  nlhdlrexprdata,     /**< nonlinear handler expression data */
+   SCIP_SOL*             sol,                /**< solution to use */
+   SCIP_ROWPREP*         rowprep,            /**< rowprep where to store estimator */
+   SCIP_Bool*            success             /**< buffer to store whether successful */
+   )
+{
+   SCIP_NLHDLRDATA* nlhdlrdata;
+   int i;
+
+   assert(nlhdlrexprdata != NULL);
+   assert(rowprep != NULL);
+   assert(success != NULL);
+
+#ifdef SCIP_DEBUG
+   SCIPinfoMessage(scip, NULL, "estimate expression ");
+   SCIPprintExpr(scip, nlhdlrexprdata->nlexpr, NULL);
+   SCIPinfoMessage(scip, NULL, " by gradient\n");
+#endif
+
+   *success = FALSE;
+
+   SCIP_CALL( estimateGradientInner(scip, nlhdlrexprdata, sol, rowprep, success) );
+
+   /* if succeeded, then there was no gradient evaluation error, so we are done */
+   if( *success )
+      return SCIP_OKAY;
+
+   nlhdlrdata = SCIPnlhdlrGetData(nlhdlr);
+   assert(nlhdlrdata != NULL);
+
+   /* we take maxperturb == 0 as signal to not try perturbation */
+   if( nlhdlrdata->maxperturb == 0.0 )
+   {
+      SCIPdebugMsg(scip, "gradient evaluation error, perturbation disabled\n");
+      return SCIP_OKAY;
+   }
+
+   SCIPdebugMsg(scip, "gradient evaluation error, try perturbed point\n");
+
+   if( nlhdlrdata->evalsol == NULL )
+   {
+      SCIP_CALL( SCIPcreateSol(scip, &nlhdlrdata->evalsol, NULL) );
+   }
+
+   if( nlhdlrdata->randnumgen == NULL )
+   {
+      SCIP_CALL( SCIPcreateRandom(scip, &nlhdlrdata->randnumgen, RANDNUMINITSEED, TRUE) );
+   }
+
+   for( i = 0; i < nlhdlrexprdata->nleafs; ++i )
+   {
+      SCIP_VAR* var;
+      SCIP_Real lb;
+      SCIP_Real ub;
+      SCIP_Real val;
+      SCIP_Real p;
+
+      var = SCIPgetVarExprVar(nlhdlrexprdata->leafexprs[i]);
+      assert(var != NULL);
+
+      lb = SCIPvarGetLbGlobal(var);
+      ub = SCIPvarGetUbGlobal(var);
+      val = SCIPgetSolVal(scip, sol, var);
+      val = MIN(ub, MAX(lb, val));
+
+      p = SCIPrandomGetReal(nlhdlrdata->randnumgen, -nlhdlrdata->maxperturb, nlhdlrdata->maxperturb);
+      if( !SCIPisZero(scip, val) )
+         p *= REALABS(val);
+
+      /* if perturbation to left underruns lower bound, then try perturb to right
+       * if perturbation to right exceeds lower bound, then try perturb to left
+       */
+      if( val + p <= lb )
+         val -= p;
+      else if( val + p >= ub )
+         val -= p;
+      else
+         val += p;
+
+      /* if still exceeding bound, then |ub-lb| < 2*maxperturb and we pick a random value between bounds
+       * (if ub-lb < 2eps, then SCIPrandomGetReal() still gives a reasonable number in [lb,ub])
+       */
+      if( val <= lb || val >= ub )
+         val = SCIPrandomGetReal(nlhdlrdata->randnumgen, lb + SCIPepsilon(scip), ub - SCIPepsilon(scip));
+
+      SCIP_CALL( SCIPsetSolVal(scip, nlhdlrdata->evalsol, var, val) );
+   }
+
+   /* try again with perturbed point */
+   SCIP_CALL( estimateGradientInner(scip, nlhdlrexprdata, nlhdlrdata->evalsol, rowprep, success) );
 
    return SCIP_OKAY;
 }
@@ -1684,6 +1778,7 @@ SCIP_DECL_NLHDLRFREEHDLRDATA(nlhdlrfreeHdlrDataConvexConcave)
    assert(nlhdlrdata != NULL);
    assert(*nlhdlrdata != NULL);
    assert((*nlhdlrdata)->evalsol == NULL);
+   assert((*nlhdlrdata)->randnumgen == NULL);
 
    SCIPfreeBlockMemory(scip, nlhdlrdata);
 
@@ -1720,6 +1815,9 @@ SCIP_DECL_NLHDLREXIT(nlhdlrExitConvex)
    {
       SCIP_CALL( SCIPfreeSol(scip, &nlhdlrdata->evalsol) );
    }
+
+   if( nlhdlrdata->randnumgen != NULL )
+      SCIPfreeRandom(scip, &nlhdlrdata->randnumgen);
 
    return SCIP_OKAY;
 }
@@ -1902,7 +2000,7 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaConvex)
       }
 
       SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, TRUE) );
-      SCIP_CALL( estimateGradient(scip, nlhdlrexprdata, sol, rowprep, &success) );
+      SCIP_CALL( estimateGradient(scip, nlhdlr, nlhdlrexprdata, sol, rowprep, &success) );
       if( !success )
       {
          SCIPdebugMsg(scip, "failed to linearize for k = %d\n", k);
@@ -1991,7 +2089,7 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateConvex)
    /* if secant method was not used or failed, then try with gradient (unless we had an evaluation error in sol before) */
    if( !*success && auxvalue != SCIP_INVALID )
    {
-      SCIP_CALL( estimateGradient(scip, nlhdlrexprdata, sol, rowprep, success) );
+      SCIP_CALL( estimateGradient(scip, nlhdlr, nlhdlrexprdata, sol, rowprep, success) );
 
       (void) SCIPsnprintf(SCIProwprepGetName(rowprep), SCIP_MAXSTRLEN, "%sestimate_convexgradient%p_%s%" SCIP_LONGINT_FORMAT,
          overestimate ? "over" : "under",
@@ -2049,7 +2147,7 @@ SCIP_DECL_NLHDLRSOLLINEARIZE(nlhdlrSollinearizeConvex)
    /* if secant method was not used or failed, then try with gradient */
    if( !success )
    {
-      SCIP_CALL( estimateGradient(scip, nlhdlrexprdata, sol, rowprep, &success) );
+      SCIP_CALL( estimateGradient(scip, nlhdlr, nlhdlrexprdata, sol, rowprep, &success) );
 
       (void) SCIPsnprintf(SCIProwprepGetName(rowprep), SCIP_MAXSTRLEN, "%sestimate_convexgradient%p_sol%dnotify",
          overestimate ? "over" : "under", (void*)expr, SCIPsolGetIndex(sol));
@@ -2103,6 +2201,7 @@ SCIP_RETCODE SCIPincludeNlhdlrConvex(
    SCIP_CALL( SCIPallocBlockMemory(scip, &nlhdlrdata) );
    nlhdlrdata->isnlhdlrconvex = TRUE;
    nlhdlrdata->evalsol = NULL;
+   nlhdlrdata->randnumgen = NULL;
 
    SCIP_CALL( SCIPincludeNlhdlrNonlinear(scip, &nlhdlr, CONVEX_NLHDLR_NAME, CONVEX_NLHDLR_DESC,
       CONVEX_NLHDLR_DETECTPRIORITY, CONVEX_NLHDLR_ENFOPRIORITY, nlhdlrDetectConvex, nlhdlrEvalAuxConvexConcave, nlhdlrdata) );
@@ -2115,6 +2214,10 @@ SCIP_RETCODE SCIPincludeNlhdlrConvex(
    SCIP_CALL( SCIPaddBoolParam(scip, "nlhdlr/" CONVEX_NLHDLR_NAME "/extendedform",
       "whether to create extended formulations instead of looking for maximal convex expressions",
       &nlhdlrdata->extendedform, FALSE, DEFAULT_EXTENDEDFORM, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "nlhdlr/" CONVEX_NLHDLR_NAME "/maxperturb",
+      "maximal relative perturbation of non-differentiable reference point",
+      &nlhdlrdata->maxperturb, FALSE, DEFAULT_MAXPERTURB, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "nlhdlr/" CONVEX_NLHDLR_NAME "/cvxquadratic",
       "whether to use convexity check on quadratics",
@@ -2154,6 +2257,7 @@ SCIP_DECL_NLHDLREXIT(nlhdlrExitConcave)
 
    nlhdlrdata = SCIPnlhdlrGetData(nlhdlr);
    assert(nlhdlrdata != NULL);
+   assert(nlhdlrdata->randnumgen == NULL); /* not used for concave nlhdlr so far */
 
    if( nlhdlrdata->evalsol != NULL )
    {
@@ -2461,6 +2565,7 @@ SCIP_RETCODE SCIPincludeNlhdlrConcave(
    SCIP_CALL( SCIPallocBlockMemory(scip, &nlhdlrdata) );
    nlhdlrdata->isnlhdlrconvex = FALSE;
    nlhdlrdata->evalsol = NULL;
+   nlhdlrdata->randnumgen = NULL;
 
    SCIP_CALL( SCIPincludeNlhdlrNonlinear(scip, &nlhdlr, CONCAVE_NLHDLR_NAME, CONCAVE_NLHDLR_DESC,
       CONCAVE_NLHDLR_DETECTPRIORITY, CONCAVE_NLHDLR_ENFOPRIORITY, nlhdlrDetectConcave, nlhdlrEvalAuxConvexConcave, nlhdlrdata) );
