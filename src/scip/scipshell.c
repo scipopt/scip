@@ -174,8 +174,18 @@ SCIP_RETCODE fromAmpl(
 
    if( defaultsetname != NULL )
    {
-      SCIP_CALL( readParams(scip, defaultsetname) );
-      SCIPinfoMessage(scip, NULL, "\n");
+      if( SCIPfileExists(defaultsetname) )
+      {
+         SCIPinfoMessage(scip, NULL, "reading user parameter file <%s>\n", defaultsetname);
+         SCIPinfoMessage(scip, NULL, "===========================\n\n");
+         SCIP_CALL( SCIPreadParams(scip, defaultsetname) );
+         SCIP_CALL( SCIPwriteParams(scip, NULL, FALSE, TRUE) );
+         SCIPinfoMessage(scip, NULL, "\n");
+      }
+      else
+      {
+         SCIPinfoMessage(scip, NULL, "user parameter file <%s> not found - using default parameters\n", defaultsetname);
+      }
    }
 
    SCIP_CALL( SCIPgetStringParam(scip, "display/logfile", &logfile) );
@@ -184,8 +194,7 @@ SCIP_RETCODE fromAmpl(
 
    (void) SCIPsnprintf(fullnlfilename, SCIP_MAXSTRLEN, "%s.nl", nlfilename);
    SCIPinfoMessage(scip, NULL, "read problem <%s>\n", fullnlfilename);
-   SCIPinfoMessage(scip, NULL, "============\n");
-   SCIPinfoMessage(scip, NULL, "\n");
+   SCIPinfoMessage(scip, NULL, "============\n\n");
 
    SCIP_CALL( SCIPreadProb(scip, fullnlfilename, "nl") );
 
