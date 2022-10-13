@@ -2298,14 +2298,21 @@ void sparsifyIntercut(
 
       /* if the variable is at its lower or upper bound and the coefficient has the correct sign, we can
        * set the cutcoef to 0 */
-      if( (SCIPisZero(scip, ub - solval) && coef > 0) || (SCIPisZero(scip, solval - lb) && coef < 0) )
+      if( SCIPisZero(scip, ub - solval) && coef > 0.0 )
       {
+         SCIProwprepAddSide(rowprep, -coef * ub);
+         SCIProwprepModifyCoef(rowprep, i, 0.0);
+         counter += 1;
+      }
+      else if( SCIPisZero(scip, solval - lb) && coef < 0.0 )
+      {
+         SCIProwprepAddSide(rowprep, -coef * lb);
          SCIProwprepModifyCoef(rowprep, i, 0.0);
          counter += 1;
       }
    }
 
-   //printf("removed %d / %d variables \n", counter, nvars);
+   printf("removed %d / %d variables \n", counter, nvars);
 
    return;
 }
