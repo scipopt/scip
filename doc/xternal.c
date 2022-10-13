@@ -4748,6 +4748,13 @@
  *
  * For the quotient nonlinear handler, the estimators are computed as follows:
  * @refsnippet{src/scip/nlhdlr_quotient.c,SnippetNlhdlrEstimateQuotient}
+ *
+ * @subsection NLHDLRSOLLINEARIZE
+ *
+ * This callback is called by the constraint handler when it has caught a solution event from SCIP and option constraints/nonlinear/linearizeheursol has been enabled.
+ * The constraint handler then calls the nonlinear handlers for all expressions they currently handle.
+ * The nonlinear handler may use this opportunity to add a cut that supports its nonlinear function in the given solution to the cutpool.
+ * For convex functions, this may help to accellerate proving optimality for a solution found by a NLP solver.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

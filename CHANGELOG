@@ -24,6 +24,7 @@ Performance improvements
   an expensive explicit conflict graph construction.
 - Added initialization of LP relaxation for SOC constraints.
 - Avoided some numerical issues when separating SOC constraints.
+- If differentation of convex expression fails in convex nlhdlr, then a perturbed point is tried.
 
 Examples and applications
 -------------------------
@@ -32,6 +33,10 @@ Interface changes
 -----------------
 
 ### New and changed callbacks
+
+- Added solution linearization callback for nonlinear handlers.
+  The nonlinear handler may use this callback to add tight cuts that use the given solution as reference point to the cutpool.
+  The callback is called if option constraints/nonlinear/linearizeheursol is enabled.
 
 ### Deleted and changed API methods
 
@@ -53,6 +58,7 @@ Interface changes
 - SCIPsetParam()
 - SCIPgetPrimalDualIntegral() returns the primal dual integral stored in the statistics
 - SCIPgetNLPNlRowsStat() to retrieve counts on linear, convex, and nonconvex rows in NLP
+- SCIPnlhdlrSetSollinearize(), SCIPnlhdlrHasSollinearize()
 
 ### Command line interface
 
@@ -76,6 +82,7 @@ Interface changes
 - expr/pow/expandmaxexponent to specify limit on exponent when to expand power of sum
 - expr/pow/distribfracexponent to enable expanding power of products with fractional exponents
 - expr/product/expandalways to enable expanding any product with sums as factor (that is, also when more than two factors)
+- nlhdlr/convex/maxperturb to specify maximal perturbation of non-differential reference points
 
 ### Data structures
 
