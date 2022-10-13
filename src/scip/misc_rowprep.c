@@ -630,6 +630,18 @@ SCIP_Real* SCIProwprepGetCoefs(
    return rowprep->coefs;
 }
 
+/** modifies coefficient idx of rowprep */
+void SCIProwprepModifyCoef(
+   SCIP_ROWPREP*         rowprep,            /**< rowprep */
+   int                   idx,                /**< index of coef to modify */
+   SCIP_Real             newcoef             /**< new coefficient */
+   )
+{
+   assert(rowprep != NULL);
+
+   rowprep->coefs[idx] = newcoef;
+}
+
 /** gives side of rowprep */
 SCIP_Real SCIProwprepGetSide(
    SCIP_ROWPREP*         rowprep             /**< rowprep */

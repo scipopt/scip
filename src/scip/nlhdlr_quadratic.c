@@ -128,6 +128,7 @@ struct SCIP_NlhdlrData
    int                   atwhichnodes;       /**< determines at which nodes cut is used (if it's -1, it's used only at the root node,
                                                   if it's n >= 0, it's used at every multiple of n) */
    int                   nstrengthlimit;     /**< limit for number of rays we do the strengthening for */
+   SCIP_Bool             sparsifycuts;       /**< should we try to sparisfy the intersection cuts? */
    SCIP_Bool             ignorebadrayrestriction; /**< should cut be generated even with bad numerics when restricting to ray? */
    SCIP_Bool             ignorehighre;       /**< should cut be added even when range / efficacy is large? */
    SCIP_Bool             trackmore;          /**< for monoidal strengthening, should we track more statistics (more expensive) */
@@ -2260,6 +2261,55 @@ SCIP_RETCODE computeMonoidalStrengthCoef(
    return SCIP_OKAY;
 }
 
+/** sparsify intersection cut by replacing non-basic variables with their bounds if their coefficient allows it */
+static
+void sparsifyIntercut(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROWPREP*         rowprep             /**< rowprep for the generated cut */
+   )
+{
+   int i;
+   int nvars;
+   int counter;
+
+   /* get number of variables in rowprep */
+   nvars = SCIProwprepGetNVars(rowprep);
+
+   /* go though all the variables in rowprep */
+   counter = 0;
+   for( i = 0; i < nvars; ++i )
+   {
+      SCIP_VAR* var;
+      SCIP_Real coef;
+      SCIP_Real lb;
+      SCIP_Real ub;
+      SCIP_Real solval;
+
+      /* get variable and its coefficient */
+      var = SCIProwprepGetVars(rowprep)[i];
+      coef = SCIProwprepGetCoefs(rowprep)[i];
+
+      /* get bounds of variable */
+      lb = SCIPvarGetLbLocal(var);
+      ub = SCIPvarGetUbLocal(var);
+
+      /* get LP solution value of variable */
+      solval = SCIPgetSolVal(scip, NULL, var);
+
+      /* if the variable is at its lower or upper bound and the coefficient has the correct sign, we can
+       * set the cutcoef to 0 */
+      if( (SCIPisZero(scip, ub - solval) && coef > 0) || (SCIPisZero(scip, solval - lb) && coef < 0) )
+      {
+         SCIProwprepModifyCoef(rowprep, i, 0.0);
+         counter += 1;
+      }
+   }
+
+   //printf("removed %d / %d variables \n", counter, nvars);
+
+   return;
+}
+
 /** computes intersection cut cuts off sol (because solution sol violates the quadratic constraint cons)
  * and stores it in rowprep. Here, we don't use any strengthening.
  */
@@ -4121,6 +4171,10 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoQuadratic)
       /* merge coefficients that belong to same variable */
       SCIPmergeRowprepTerms(scip, rowprep);
 
+      /* sparsify cut */
+      if( nlhdlrdata->sparsifycuts )
+         sparsifyIntercut(scip, rowprep);
+
       SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, nlhdlrdata->mincutviolation, &violation, &success) );
       INTERLOG(if( !success) printf("Clean up failed\n"); )
    }
@@ -4884,6 +4938,10 @@ SCIP_RETCODE SCIPincludeNlhdlrQuadratic(
    SCIP_CALL( SCIPaddIntParam(scip, "nlhdlr/" NLHDLR_NAME "/nstrengthlimit",
          "limit for number of rays we do the strengthening for",
          &nlhdlrdata->nstrengthlimit, FALSE, INT_MAX, 0, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "nlhdlr/" NLHDLR_NAME "/sparsifycuts",
+         "should we try to sparisfy the intersection cut?",
+         &nlhdlrdata->sparsifycuts, FALSE, TRUE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "nlhdlr/" NLHDLR_NAME "/ignorebadrayrestriction",
          "should cut be generated even with bad numerics when restricting to ray?",
