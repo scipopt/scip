@@ -257,6 +257,36 @@ int filterWithParallelism(
    return ncuts;
 }
 
+/** TODO */
+static
+int filterIntersectionCuts(
+   SCIP_ROW**            cuts,               /**< array with cuts to perform selection algorithm */
+   int                   ncuts              /**< number of cuts in given array */
+   )
+{
+  SCIP_Bool onlyIntersectionCuts = TRUE;
+  int i;
+
+  assert( ncuts == 0 || cuts != NULL );
+
+  for( i = 0; i < ncuts && onlyIntersectionCuts; i++)
+    onlyIntersectionCuts &= (strncmp(SCIProwGetName(cuts[i]), "intersection_quadratic", 22) == 0);
+
+  if( !onlyIntersectionCuts )
+  {
+    for( i = ncuts - 1; i >= 0; --i )
+    {
+      if( strncmp(SCIProwGetName(cuts[i]), "intersection_quadratic", 22) == 0 )
+      {
+        --ncuts;
+        SCIPswapPointers((void**) &cuts[i], (void**) &cuts[ncuts]);
+      }
+    }
+  }
+
+  return ncuts;
+}
+
 
 /*
  * Callback methods of cut selector
