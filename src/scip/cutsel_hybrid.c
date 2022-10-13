@@ -495,6 +495,8 @@ SCIP_RETCODE SCIPselectCutsHybrid(
 
    *nselectedcuts = 0;
 
+   ncuts = filterIntersectionCuts(cuts, ncuts);
+
    SCIP_CALL( SCIPallocBufferArray(scip, &scores, ncuts) );
 
    /* compute scores of cuts and max score of cuts and forced cuts (used to define goodscore) */
