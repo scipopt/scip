@@ -2312,8 +2312,6 @@ void sparsifyIntercut(
       }
    }
 
-   printf("removed %d / %d variables \n", counter, nvars);
-
    return;
 }
 
@@ -4948,7 +4946,7 @@ SCIP_RETCODE SCIPincludeNlhdlrQuadratic(
 
    SCIP_CALL( SCIPaddBoolParam(scip, "nlhdlr/" NLHDLR_NAME "/sparsifycuts",
          "should we try to sparisfy the intersection cut?",
-         &nlhdlrdata->sparsifycuts, FALSE, TRUE, NULL, NULL) );
+         &nlhdlrdata->sparsifycuts, FALSE, FALSE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "nlhdlr/" NLHDLR_NAME "/ignorebadrayrestriction",
          "should cut be generated even with bad numerics when restricting to ray?",
