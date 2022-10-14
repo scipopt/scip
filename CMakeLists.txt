@@ -107,6 +107,10 @@ set_property(CACHE LPS PROPERTY STRINGS spx cpx grb xprs clp glop msk qso none )
 set(SYM bliss CACHE STRING "options for symmetry computation")  #create the variable
 set_property(CACHE SYM PROPERTY STRINGS bliss none )  #define list of values GUI will offer for the variable
 
+if(NOT (CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo" OR CMAKE_BUILD_TYPE STREQUAL "MinSizeRel"))
+    message(FATAL_ERROR "You have not selected a valid CMAKE_BUILD_TYPE. Please select 'Release' or 'Debug'.")
+endif()
+
 if(AUTOBUILD)
     message(WARNING "You are using the automatic build option AUTOBUILD=ON to find and use dependencies automatically.")
 else()
