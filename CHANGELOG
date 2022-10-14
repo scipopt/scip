@@ -45,6 +45,8 @@ Build system
 
 ### Cmake
 
+- Forbid CMAKE_BUILD_TYPE nonstandard values
+
 ### Makefile
 
 Fixed bugs
