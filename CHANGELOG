@@ -76,6 +76,7 @@ Interface changes
 ### Changed parameters
 
 - Shrunk range of parameter "propagating/symmetry/sstleaderrule" from [0,3] to [0,2], removed "MAXCONFLICTS"-option.
+- Removed reading/gmsreader/freeints. A default upper bound of +inf is now assumed for integer variables in GAMS (which is the case since GAMS 23.1).
 
 ### New parameters
 
