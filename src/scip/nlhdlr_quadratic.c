@@ -2025,7 +2025,7 @@ SCIP_Bool isRayInStrip(
 
    assert(denom > 0);
 
-   return num / denom < 1 ? TRUE: FALSE;
+   return num / denom < 1;
 }
 
 /** computes the smallest root of the quadratic function a*x^2 + b*x + c with a > 0
@@ -2172,6 +2172,7 @@ void computeApex(
          }
       }
 
+      /* if denom = 0, the S-free set is just the strip, so we don't have an apex -> monoidal not possible */
       if( denom == 0.0 )
       {
          *success = FALSE;
@@ -2211,8 +2212,7 @@ SCIP_RETCODE computeMonoidalStrengthCoef(
    *success = FALSE;
 
    /* check if we are in the correct case (case 2) */
-   if( wcoefs != NULL || kappa <= 0 )
-      return SCIP_OKAY;
+   assert(wcoefs == NULL && kappa > 0);
 
     cols = SCIPgetLPCols(scip);
     rows = SCIPgetLPRows(scip);
