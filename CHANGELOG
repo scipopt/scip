@@ -174,6 +174,8 @@ Build system
 Fixed bugs
 ----------
 
+- fixed an incorrect handling of xor constraints
+
 Miscellaneous
 -------------
 
