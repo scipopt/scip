@@ -1546,8 +1546,8 @@ SCIP_RETCODE readRhsExact(
          }
          else
          {
-            val = atof(mpsinputField3(mpsi));
-            RatSetReal(valexact, val);
+            RatSetString(valexact, mpsinputField3(mpsi));
+            RatCanonicalize(valexact);
 
             /* find out the row sense */
             lhs = SCIPgetLhsExactLinear(scip, cons);
