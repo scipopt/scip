@@ -1960,17 +1960,17 @@ SCIP_RETCODE computeMonoidalQuadCoefs(
 
       dot = vray[i] + vapex[i] + vb[i] / (2.0 * sidefactor * eigenvalues[i]);
 
-      *a += sidefactor * eigenvalues[i] * SQR(vzlp[i] - vapex[i]);
-      *b += sidefactor * eigenvalues[i] * (vzlp[i] - vapex[i]) * dot;
-      *c += sidefactor * eigenvalues[i] * SQR(dot);
+      *a += ABS(sidefactor * eigenvalues[i]) * SQR(vzlp[i] - vapex[i]);
+      *b += ABS(sidefactor * eigenvalues[i]) * (vzlp[i] - vapex[i]) * dot;
+      *c += ABS(sidefactor * eigenvalues[i]) * SQR(dot);
    }
 
    *b *= 2.0;
    *c += kappa;
 
-   //assert(*c != 0);
+   assert(*c >= 0);
    assert(*a == *a);
-   //assert(*a > 0); /* I don't think we need it here */
+   assert(*a > 0);
 
    return SCIP_OKAY;
 }
