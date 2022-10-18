@@ -973,7 +973,8 @@ SCIP_RETCODE applyFixings(
          /* need to update integer variable, consider the following case:
           * xor(x1, x2, x3, x4, x5) = 0  (and x1 == x2) was change above to
           * xor(        x3, x4, x5) = 0
-          * assuming we have an integer variable y it needs to be replaced by z with y = x1 + z and z in [lb_y, ub_y]
+          * assuming we have an integer variable y it needs to be replaced by z with y = x1 + z and
+          * z in [max(lb_y-ub_x1, 0), ub_y-lb_x1]
           */
          if( consdata->intvar != NULL )
          {
@@ -985,8 +986,8 @@ SCIP_RETCODE applyFixings(
             char consname[SCIP_MAXSTRLEN];
 
             (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "agg_%s", SCIPvarGetName(consdata->intvar));
-            lb = SCIPvarGetLbGlobal(consdata->intvar);
-            ub = SCIPvarGetUbGlobal(consdata->intvar);
+            lb = MAX(SCIPvarGetLbGlobal(consdata->intvar) - SCIPvarGetUbGlobal(newvars[2]), 0); /*lint !e666*/
+            ub = MAX(SCIPvarGetUbGlobal(consdata->intvar) - SCIPvarGetLbGlobal(newvars[2]), 0); /*lint !e666*/
             vartype = SCIPvarGetType(consdata->intvar);
 
             SCIP_CALL( SCIPcreateVar(scip, &newvars[0], varname, lb, ub, 0.0, vartype,
@@ -1028,7 +1029,7 @@ SCIP_RETCODE applyFixings(
          /* need to update integer variable, consider the following case:
           * xor(x1, x2, x3, x4, x5) = 0  (and x1 = ~x2) was change above to
           * xor(        x3, x4, x5) = 1
-          * assuming we have an integer variable y it needs to be replaced by z with y = 1 + z and z in [lb_y, ub_y - 1]
+          * assuming we have an integer variable y it needs to be replaced by z with y = 1 + z and z in [max(lb_y - 1, 0), ub_y - 1]
           */
          if( consdata->rhs && consdata->intvar != NULL )
          {
@@ -1042,8 +1043,9 @@ SCIP_RETCODE applyFixings(
             SCIP_Bool redundant;
 
             (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "agg_%s", SCIPvarGetName(consdata->intvar));
-            ub = SCIPvarGetUbGlobal(consdata->intvar) - 1;
-            lb = MIN(ub, SCIPvarGetLbGlobal(consdata->intvar)); /*lint !e666*/
+            /* avoid infeasible cutoffs and guarantee non-negative bounds for the new artificial integer variable */
+            lb = MAX(SCIPvarGetLbGlobal(consdata->intvar) - 1, 0); /*lint !e666*/
+            ub = MAX(SCIPvarGetUbGlobal(consdata->intvar) - 1, 0); /*lint !e666*/
             vartype = (lb == 0 && ub == 1) ? SCIP_VARTYPE_BINARY : SCIPvarGetType(consdata->intvar);
 
             SCIP_CALL( SCIPcreateVar(scip, &newvar, varname, lb, ub, 0.0, vartype,
@@ -1056,6 +1058,7 @@ SCIP_RETCODE applyFixings(
 
             if( infeasible )
             {
+               SCIP_CALL( SCIPreleaseVar(scip, &newvar) );
                *cutoff = TRUE;
                break;
             }
