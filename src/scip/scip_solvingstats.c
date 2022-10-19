@@ -2918,6 +2918,22 @@ void SCIPprintConflictStatistics(
       ? (SCIP_Real)SCIPconflictGetNAppliedGlobalLiterals(scip->conflict)
       / (SCIP_Real)SCIPconflictGetNAppliedGlobalConss(scip->conflict) : 0,
       SCIPconflictGetNDualproofsInfGlobal(scip->conflict) + SCIPconflictGetNDualproofsBndGlobal(scip->conflict));
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  cmir on proof    : %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
+      SCIPconflictGetInfLPCMIRTime(scip->conflict),
+      SCIPconflictGetNInfeasLPCMIRCalls(scip->conflict),
+      SCIPconflictGetNInfeasLPCMIRSuccess(scip->conflict));
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  flowcover proof  : %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
+      SCIPconflictGetInfLPFlowCoverTime(scip->conflict),
+      SCIPconflictGetNInfeasLPFlowCoverCalls(scip->conflict),
+      SCIPconflictGetNInfeasLPFlowCoverSuccess(scip->conflict));
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  cmir on resset   : %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
+      SCIPconflictGetResCMIRTime(scip->conflict),
+      SCIPconflictGetNResCMIRCalls(scip->conflict),
+      SCIPconflictGetNResCMIRSuccess(scip->conflict));
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  flowcover resset : %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
+      SCIPconflictGetResFlowCoverTime(scip->conflict),
+      SCIPconflictGetNResFlowCoverCalls(scip->conflict),
+      SCIPconflictGetNResFlowCoverSuccess(scip->conflict));
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  applied locally  :          -          -          - %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10.1f          -          - %10" SCIP_LONGINT_FORMAT "          -          -\n",
       SCIPconflictGetNLocalChgBds(scip->conflict),
       SCIPconflictGetNAppliedLocalConss(scip->conflict),

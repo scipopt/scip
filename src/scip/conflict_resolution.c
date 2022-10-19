@@ -19,15 +19,17 @@
  * @author Gioni Mexi
  *
  * @todo Description
+ * @todo add param to skip resolution if slack remains negative even without the variable
  * @todo apply repropagation even if no constraint is added
  * @todo we do not need forced bdchg queue
  * @todo remove scip pointer
- * @todo implement division rule to replace coefficient tightening. Idea: Weaken and then apply division once
+ * @todo implement division rule to replace coefficient tightening. Idea: Weaken and then apply division once (roundingSAT)
+ * @todo apply MIR after each iteration
+ * @
  * @todo implement resolution for propagators
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-#define SCIP_DEBUG
 
 #include "lpi/lpi.h"
 #include "scip/conflict_resolution.h"
@@ -186,6 +188,7 @@ SCIP_Bool tightenCoefLhs(
    int*                  nchgcoefs           /**< number of changed coefficients */
    )
 {
+   /* @todo slack change */
    int i;
    int nintegralvars;
    SCIP_VAR** vars;
@@ -253,7 +256,6 @@ SCIP_Bool tightenCoefLhs(
    if (SCIPisInfinity(scip, minact) )
    {
       redundant = TRUE;
-      assert(!redundant);
       goto TERMINATE;
    }
    /* no coefficients can be tightened */
@@ -874,6 +876,8 @@ SCIP_RETCODE weakenResolutionSet(
    *nvarsweakened = 0;
    applytightening = FALSE;
 
+   /* @todo Keep track of the slack when weakening variables */
+   /* @todo Choose free variables first and later ones at their limits */
    while ( i < resolutionsetGetNNzs(resolutionset) )
    {
       SCIP_Bool varwasweakened;
@@ -952,6 +956,7 @@ SCIP_RETCODE weakenResolutionSet(
 */
 static
 SCIP_RETCODE computecMIRfromResolutionSet(
+   SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_RESOLUTIONSET*   resolutionset,      /**< resolution set */
    SCIP_PROB*            prob,               /**< problem data */
@@ -1044,13 +1049,20 @@ SCIP_RETCODE computecMIRfromResolutionSet(
       /* apply flow cover */
       SCIP_CALL( SCIPcalcFlowCover(set->scip, refsol, POSTPROCESS, BOUNDSWITCH, ALLOWLOCAL, aggrrow, \
             cutcoefs, cutrhs, cutinds, cutnnz, &cutefficacy, NULL, &islocal, &cutsuccess) );
+
       *success = cutsuccess;
+      conflict->nresflowcovercalls += 1;
+      if( cutsuccess )
+         conflict->nresflowcover += 1;
 
       /* apply MIR */
       SCIP_CALL( SCIPcalcMIR(set->scip, refsol, POSTPROCESS, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, FALSE, NULL, NULL, \
       MINFRAC, MAXFRAC, 1.0,  aggrrow, cutcoefs, cutrhs, cutinds, cutnnz, &cutefficacy, NULL, \
          &islocal, &cutsuccess) );
 
+      conflict->nresmircalls += 1;
+      if( cutsuccess )
+         conflict->nresmir += 1;
       *success = (*success || cutsuccess);
 
       /* try to tighten the coefficients of the cut */
@@ -2079,7 +2091,7 @@ SCIPsetDebugMsg(set, " -> First bound change to resolve <%s> %s %.15g [status:%d
             SCIP_CALL( SCIPsetAllocBufferArray(set, &cutinds, SCIPprobGetNVars(transprob)) );
 
             cutnnz = 0;
-            computecMIRfromResolutionSet(set, resolutionset, transprob, NULL, stat, tree, cutcoefs, cutinds, &cutrhs, &cutnnz, &success);
+            computecMIRfromResolutionSet(conflict, set, resolutionset, transprob, NULL, stat, tree, cutcoefs, cutinds, &cutrhs, &cutnnz, &success);
             if (success)
             {
                SCIP_RESOLUTIONSET* cutresolutionset;

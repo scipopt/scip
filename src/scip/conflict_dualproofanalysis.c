@@ -1340,16 +1340,37 @@ SCIP_RETCODE separateAlternativeProofs(
    cutnnz = 0;
    cutefficacy = -SCIPsetInfinity(set);
 
+   /* start timing */
+   SCIPclockStart(conflict->inflpflowcovertime, set);
+
    /* apply flow cover */
    SCIP_CALL( SCIPcalcFlowCover(set->scip, refsol, POSTPROCESS, BOUNDSWITCH, ALLOWLOCAL, proofrow, \
          cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, NULL, &islocal, &cutsuccess) );
+
+   SCIPclockStop( conflict->inflpflowcovertime, set);
+
    success = cutsuccess;
+   conflict->ninflpflowcovercalls += 1;
+
+   if( cutsuccess )
+      conflict->ninflpflowcover += 1;
+
+
+   /* start timing */
+   SCIPclockStart( conflict->inflpmirtime, set);
 
    /* apply MIR */
    SCIP_CALL( SCIPcutGenerationHeuristicCMIR(set->scip, refsol, POSTPROCESS, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, INT_MAX, \
          NULL, NULL, MINFRAC, MAXFRAC, proofrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, NULL, \
          &islocal, &cutsuccess) );
+
+   SCIPclockStop( conflict->inflpmirtime, set);
+
    success = (success || cutsuccess);
+   conflict->ninflpmircalls += 1;
+
+   if( cutsuccess )
+      conflict->ninflpmir += 1;
 
    /* replace the current proof */
    if( success && !islocal && SCIPsetIsPositive(set, cutefficacy) && cutefficacy * nnz > proofefficacy * cutnnz )

@@ -203,6 +203,16 @@ SCIP_Real SCIPconflictGetResTime(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
+/** gets time in seconds used for applying c-MIR during generalized resolution conflict analysis*/
+SCIP_Real SCIPconflictGetResCMIRTime(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
+/** gets time in seconds used for applying flow cover during generalized resolution conflict analysis*/
+SCIP_Real SCIPconflictGetResFlowCoverTime(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
 /** gets number of calls to propagation conflict analysis */
 SCIP_Longint SCIPconflictGetNPropCalls(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
@@ -265,6 +275,16 @@ SCIP_Real SCIPconflictGetInfeasibleLPTime(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
+/** gets time in seconds used for applying c-MIR during infeasible LP conflict analysis */
+SCIP_Real SCIPconflictGetInfLPCMIRTime(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
+/** gets time in seconds used for applying flow cover during infeasible LP conflict analysis */
+SCIP_Real SCIPconflictGetInfLPFlowCoverTime(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
 /** gets number of calls to infeasible LP conflict analysis */
 SCIP_Longint SCIPconflictGetNInfeasibleLPCalls(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
@@ -272,6 +292,46 @@ SCIP_Longint SCIPconflictGetNInfeasibleLPCalls(
 
 /** gets number of calls to infeasible LP conflict analysis that yield at least one conflict constraint */
 SCIP_Longint SCIPconflictGetNInfeasibleLPSuccess(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
+/** gets number of calls of c-MIR in dual proof analysis */
+SCIP_Longint SCIPconflictGetNInfeasLPCMIRCalls(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
+/** gets number of successful calls of c-MIR in dual proof analysis */
+SCIP_Longint SCIPconflictGetNInfeasLPCMIRSuccess(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
+/** gets number of calls of flow cover in dual proof analysis */
+SCIP_Longint SCIPconflictGetNInfeasLPFlowCoverCalls(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
+/** gets number of successful calls of flow cover in dual proof analysis */
+SCIP_Longint SCIPconflictGetNInfeasLPFlowCoverSuccess(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
+/** gets number of calls of c-MIR in generalized resolution conflict analysis */
+SCIP_Longint SCIPconflictGetNResCMIRCalls(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
+/** gets number of successful calls of c-MIR in generalized resolution conflict analysis */
+SCIP_Longint SCIPconflictGetNResCMIRSuccess(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
+/** gets number of calls of flow cover in generalized resolution conflict analysis */
+SCIP_Longint SCIPconflictGetNResFlowCoverCalls(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
+/** gets number of successful calls of flow cover in generalized resolution conflict analysis */
+SCIP_Longint SCIPconflictGetNResFlowCoverSuccess(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
