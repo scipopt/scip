@@ -2247,6 +2247,9 @@ SCIP_RETCODE computeMonoidalStrengthCoef(
          /* find smallest root of quadratic function a * x^2 + b * x + c -> this is the cut coef */
          *cutcoef = findMonoidalQuadRoot(scip, a, b, c);
 
+         /* if the cutcoef is negative, we have to set it to 0 */
+         *cutcoef = MAX(*cutcoef, 0.0);
+
          /* check if ray is in strip. If not, monoidal is possible and cutcoef is the strengthened cut coef */
          if( ! isRayInStrip(nlhdlrexprdata, raycoefs, rayidx, raynnonz, vb, vzlp, vapex, vray, kappa, sidefactor, *cutcoef) )
          {
