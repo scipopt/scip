@@ -3397,7 +3397,7 @@ SCIP_RETCODE SCIPaggrRowSumRows(
                   (lhsused && SCIPisExactlyIntegral(scip, row->rhs) &&  SCIPisExactlyIntegral(scip, row->constant))) )
                {
                   SCIPdebugMessage("row has integral slack\n");
-                  rowusedcert = TRUE;
+                  rowusedcert = FALSE;
                   integral = TRUE; //SCIP_CALL( addOneRowSafely(scip, certificaterow, rows[rowinds[k]], weights[rowinds[k]], sidetypebasis, allowlocal, negslack, maxaggrlen, &rowtoolong, &rowused, valid, &lhsused) );
                }
                else
@@ -5973,7 +5973,7 @@ SCIP_RETCODE cutsSubstituteMIRSafe(
    SCIP_Real splitcoef;
    SCIP_Real slackweight;
    SCIP_Real slackscale;
-   SCIP_Real slackorigcoef;
+   SCIP_Real slackroundeddown;
    int i;
    int currentnegslackrow;
 
@@ -6057,9 +6057,10 @@ SCIP_RETCODE cutsSubstituteMIRSafe(
          {
             SCIPintervalSet(&cutar, downar);
             splitcoef = downar;
-            slackweight = 0;
+            slackweight = weights[i];
+            //slackroundeddown = slacksign[i] == -1 ? fr.inf : fr.sup;
+            slackroundeddown = TRUE;
             SCIPintervalMul(SCIPinfinity(scip), &fr, fr, onedivoneminusf0);
-            slackorigcoef = slacksign[i] == -1 ? fr.inf : fr.sup;
             SCIPdebugMessage("fractionality %g, f0 %g -> round down to %g\n", fr, f0.inf, splitcoef);
          }
          else
@@ -6071,7 +6072,7 @@ SCIP_RETCODE cutsSubstituteMIRSafe(
             SCIPintervalAddScalar(SCIPinfinity(scip), &cutar, cutar, downar);
             splitcoef = downar + 1;
             slackweight = weights[i];
-            slackorigcoef = 0;
+            slackroundeddown = FALSE;
             SCIPdebugMessage("fractionality %g, f0 %g -> round up! splitcoef %g sub-coefficient %g", fr, f0.inf, splitcoef, cutar.inf);
          }
       }
@@ -6120,13 +6121,13 @@ SCIP_RETCODE cutsSubstituteMIRSafe(
             // save the value that goes into the v >= 0 part (residuals of rounded up parts in the split)
             // SCIPintervalMulScalar(SCIPinfinity(scip), &slackcont, slackfrac, slacksign[i]);
             // SCIPintervalMul(SCIPinfinity(scip), &slackcont, slackcont, onedivoneminusf0);
-            mirinfo->slackcontcoefs[mirinfo->nslacks] = slackweight;
+            mirinfo->slackweight[mirinfo->nslacks] = slackweight;
             mirinfo->slackscale[mirinfo->nslacks] = scale;
             mirinfo->slackusedcoef[mirinfo->nslacks] = mult;
 
             // save the value that goes into the certificate aggregation row (either downar or ar)
-            mirinfo->slackorigcoefs[mirinfo->nslacks] = slackorigcoef * (slacksign[i]); // * slacksign[i];
-            if( slackorigcoef != 0 )
+            mirinfo->slackroundeddown[mirinfo->nslacks] = slackroundeddown; // * slacksign[i];
+            if( slackroundeddown != 0 )
                mirinfo->nrounddownslacks++;
             mirinfo->nslacks++;
       }

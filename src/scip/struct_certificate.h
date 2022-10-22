@@ -63,8 +63,8 @@ struct SCIP_MirInfo
 {
    SCIP_Real*            splitcoefficients;  /**< coefficients in the split, saved in the complemented variable space */
    SCIP_Real*            slackcoefficients;  /**< coefficients for integer slacks that enter the split */
-   SCIP_Real*            slackcontcoefs;     /**< continuous part of integer slack that needs to be accounted for */
-   SCIP_Real*            slackorigcoefs;     /**< original part of integer slack that needs to be accounted for */
+   SCIP_Real*            slackweight;     /**< continuous part of integer slack that needs to be accounted for */
+   SCIP_Bool*            slackroundeddown;     /**< original part of integer slack that needs to be accounted for */
    SCIP_Real*            slackscale;         /**< original part of integer slack that needs to be accounted for */
    SCIP_Real*            slackusedcoef;      /**< coef that was actually used in the slack subsititution */
    SCIP_ROW**            slackrows;          /**< rows whos integer slack is in the split */

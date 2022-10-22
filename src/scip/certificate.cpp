@@ -744,8 +744,8 @@ void SCIPcertificateExit(
             BMSfreeBlockMemoryArray(certificate->blkmem, &(certificate->mirinfo[i]->slackrows), certificate->mirinfo[i]->nslacks);
             BMSfreeBlockMemoryArray(certificate->blkmem, &(certificate->mirinfo[i]->slacksign), certificate->mirinfo[i]->nslacks);
             BMSfreeBlockMemoryArray(certificate->blkmem, &(certificate->mirinfo[i]->slackcoefficients), certificate->mirinfo[i]->nslacks);
-            BMSfreeBlockMemoryArray(certificate->blkmem, &(certificate->mirinfo[i]->slackcontcoefs), certificate->mirinfo[i]->nslacks);
-            BMSfreeBlockMemoryArray(certificate->blkmem, &(certificate->mirinfo[i]->slackorigcoefs), certificate->mirinfo[i]->nslacks);
+            BMSfreeBlockMemoryArray(certificate->blkmem, &(certificate->mirinfo[i]->slackweight), certificate->mirinfo[i]->nslacks);
+            BMSfreeBlockMemoryArray(certificate->blkmem, &(certificate->mirinfo[i]->slackroundeddown), certificate->mirinfo[i]->nslacks);
             BMSfreeBlockMemoryArray(certificate->blkmem, &(certificate->mirinfo[i]->slackscale), certificate->mirinfo[i]->nslacks);
             BMSfreeBlockMemoryArray(certificate->blkmem, &(certificate->mirinfo[i]->slackusedcoef), certificate->mirinfo[i]->nslacks);
             BMSfreeBlockMemory(certificate->blkmem, &certificate->mirinfo[i]);
@@ -1676,16 +1676,16 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
        slackrow = SCIProwGetRowExact(mirinfo->slackrows[i]);
        SCIP_Longint upar;
 
-       SCIPdebugMessage("adding %g times row: ", mirinfo->slackcontcoefs[i]);
+       SCIPdebugMessage("adding %g times row: ", mirinfo->slackweight[i]);
        SCIPdebug(SCIProwExactPrint(slackrow, set->scip->messagehdlr, NULL));
        assert(slackrow != NULL);
        assert(SCIPhashmapExists(certificate->rowdatahash, (void*) slackrow));
-       if( mirinfo->slackcontcoefs[i] == 0 )
+       if( mirinfo->slackroundeddown[i] )
          RatSetReal(tmpval, 0);
        else
        {
          // value = weight * scale * sign -> compute (1 - fr)/(1-f0) where fr is the fractionality of value
-         RatSetReal(tmpval, mirinfo->slackcontcoefs[i]);
+         RatSetReal(tmpval, mirinfo->slackweight[i]);
          RatMultReal(tmpval, tmpval, mirinfo->slackscale[i]);
          RatMultReal(tmpval, tmpval, mirinfo->slacksign[i]);
          RatRoundInteger(&upar, tmpval, SCIP_R_ROUND_UPWARDS);
@@ -1702,7 +1702,7 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
        key = (size_t)SCIPhashmapGetImage(certificate->rowdatahash, (void*) slackrow);
        /* for ranged rows, the key always corresponds to the >= part of the row;
           therefore we need to increase it by one to get the correct key */
-       if( !RatIsAbsInfinity(slackrow->rhs) && !RatIsAbsInfinity(slackrow->lhs) && !RatIsEqual(slackrow->lhs, slackrow->rhs) && mirinfo->slackcontcoefs[i] >= 0 )
+       if( !RatIsAbsInfinity(slackrow->rhs) && !RatIsAbsInfinity(slackrow->lhs) && !RatIsEqual(slackrow->lhs, slackrow->rhs) && mirinfo->slackweight[i] >= 0 )
           key += 1;
 
        SCIPcertificatePrintProofMessage(certificate, " %d ", key);
@@ -1768,13 +1768,22 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
       SCIP_ROWEXACT* slackrow;
       slackrow = SCIProwGetRowExact(mirinfo->slackrows[i]);
 
-      RatSetReal(value, mirinfo->slackorigcoefs[i]);
-      //RatDiv(value, value, oneminusf0);
+      if( mirinfo->slackroundeddown[i] )
+      {
+         RatSetReal(value, mirinfo->slackweight[i]);
+         RatMultReal(value, value, mirinfo->slackscale[i]);
+         RatMultReal(value, value, mirinfo->slacksign[i]);
+         RatDiffReal(value, value, mirinfo->slackcoefficients[i] * (-mirinfo->slacksign[i]));
+         RatMultReal(value, value, mirinfo->slacksign[i]);
+         RatDiv(value, value, oneminusf0);
+      }
+      else
+         RatSetReal(value, 0.0);
 
 #ifdef SCIP_DISABLED_CODE
       RatDebugMessage("value 1 %g \n", RatApproxReal(value));
 
-      if( mirinfo->slackorigcoefs[i] == 0 )
+      if( mirinfo->slackroundeddown[i] == 0 )
          RatSetReal(value, 0);
       else
       {
@@ -1789,7 +1798,7 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
       , mirinfo->slackcoefficients[i], RatApproxReal(oneminusf0));
 #endif
 
-      SCIPdebugMessage("adding %g times row: ", RatApproxReal(value));
+      RatDebugMessage("adding %q times row: ", value);
       SCIPdebug(SCIProwExactPrint(slackrow, set->scip->messagehdlr, NULL));
 
       assert(slackrow != NULL);
@@ -1798,7 +1807,7 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
       key = (size_t)SCIPhashmapGetImage(certificate->rowdatahash, (void*) slackrow);
       /* for ranged rows, the key always corresponds to the >= part of the row;
          therefore we need to increase it by one to get the correct key */
-      if( !RatIsAbsInfinity(slackrow->rhs) && !RatIsAbsInfinity(slackrow->lhs) && !RatIsEqual(slackrow->lhs, slackrow->rhs) && mirinfo->slackorigcoefs[i] >= 0 )
+      if( !RatIsAbsInfinity(slackrow->rhs) && !RatIsAbsInfinity(slackrow->lhs) && !RatIsEqual(slackrow->lhs, slackrow->rhs) && mirinfo->slackroundeddown[i] >= 0 )
          key += 1;
 
       SCIPcertificatePrintProofMessage(certificate, " %d ", key);
@@ -1870,10 +1879,10 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
    BMSfreeBlockMemoryArray(certificate->blkmem, &(mirinfo->slackrows), mirinfo->nslacks);
    BMSfreeBlockMemoryArray(certificate->blkmem, &(mirinfo->slacksign), mirinfo->nslacks);
    BMSfreeBlockMemoryArray(certificate->blkmem, &(mirinfo->slackcoefficients), mirinfo->nslacks);
-   BMSfreeBlockMemoryArray(certificate->blkmem, &(mirinfo->slackcontcoefs), mirinfo->nslacks);
+   BMSfreeBlockMemoryArray(certificate->blkmem, &(mirinfo->slackweight), mirinfo->nslacks);
    BMSfreeBlockMemoryArray(certificate->blkmem, &(mirinfo->slackscale), mirinfo->nslacks);
    BMSfreeBlockMemoryArray(certificate->blkmem, &(mirinfo->slackusedcoef), mirinfo->nslacks);
-   BMSfreeBlockMemoryArray(certificate->blkmem, &(mirinfo->slackorigcoefs), mirinfo->nslacks);
+   BMSfreeBlockMemoryArray(certificate->blkmem, &(mirinfo->slackroundeddown), mirinfo->nslacks);
 
    BMSfreeBlockMemory(certificate->blkmem, &mirinfo);
    if( arraypos != certificate->nmirinfos - 1 )
@@ -2790,10 +2799,10 @@ SCIP_RETCODE SCIPcertificateNewMirInfo(
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(mirinfo->slackrows), SCIPgetNVars(scip)) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(mirinfo->slackcoefficients), SCIPgetNVars(scip)) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(mirinfo->slacksign), SCIPgetNVars(scip)) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(mirinfo->slackcontcoefs), SCIPgetNVars(scip)) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(mirinfo->slackweight), SCIPgetNVars(scip)) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(mirinfo->slackscale), SCIPgetNVars(scip)) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(mirinfo->slackusedcoef), SCIPgetNVars(scip)) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(mirinfo->slackorigcoefs), SCIPgetNVars(scip)) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(mirinfo->slackroundeddown), SCIPgetNVars(scip)) );
    mirinfo->varinds = NULL;
 
    certificate->nmirinfos++;
@@ -2884,10 +2893,10 @@ SCIP_RETCODE SCIPstoreCertificateActiveMirInfo(
    SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &mirinfo->slackrows, SCIPgetNVars(scip), mirinfo->nslacks) );
    SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &mirinfo->slacksign, SCIPgetNVars(scip), mirinfo->nslacks) );
    SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &mirinfo->slackcoefficients, SCIPgetNVars(scip), mirinfo->nslacks) );
-   SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &mirinfo->slackcontcoefs, SCIPgetNVars(scip), mirinfo->nslacks) );
+   SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &mirinfo->slackweight, SCIPgetNVars(scip), mirinfo->nslacks) );
    SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &mirinfo->slackscale, SCIPgetNVars(scip), mirinfo->nslacks) );
    SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &mirinfo->slackusedcoef, SCIPgetNVars(scip), mirinfo->nslacks) );
-   SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &mirinfo->slackorigcoefs, SCIPgetNVars(scip), mirinfo->nslacks) );
+   SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &mirinfo->slackroundeddown, SCIPgetNVars(scip), mirinfo->nslacks) );
 
    SCIP_CALL( SCIPhashmapSetImage(certificate->mirinfohash, (void*) row, (void*) mirinfo) );
 
@@ -2930,10 +2939,10 @@ SCIP_RETCODE SCIPfreeCertificateActiveMirInfo(
    SCIPfreeBlockMemoryArray(scip, &(mirinfo->slackrows), SCIPgetNVars(scip));
    SCIPfreeBlockMemoryArray(scip, &(mirinfo->slackcoefficients), SCIPgetNVars(scip));
    SCIPfreeBlockMemoryArray(scip, &(mirinfo->slacksign), SCIPgetNVars(scip));
-   SCIPfreeBlockMemoryArray(scip, &(mirinfo->slackcontcoefs), SCIPgetNVars(scip));
+   SCIPfreeBlockMemoryArray(scip, &(mirinfo->slackweight), SCIPgetNVars(scip));
    SCIPfreeBlockMemoryArray(scip, &(mirinfo->slackscale), SCIPgetNVars(scip));
    SCIPfreeBlockMemoryArray(scip, &(mirinfo->slackusedcoef), SCIPgetNVars(scip));
-   SCIPfreeBlockMemoryArray(scip, &(mirinfo->slackorigcoefs), SCIPgetNVars(scip));
+   SCIPfreeBlockMemoryArray(scip, &(mirinfo->slackroundeddown), SCIPgetNVars(scip));
    SCIPfreeBlockMemory(scip, &mirinfo);
    certificate->nmirinfos--;
    certificate->workingmirinfo = FALSE;
