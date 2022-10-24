@@ -178,6 +178,7 @@ SCIP_RETCODE SCIPcutselsSelect(
 
    /* Redefine maxnselectedcuts to be w.r.t the optional cuts. */
    maxnselectedcuts -= nforcedcuts;
+   maxnselectedcuts = MIN(maxnselectedcuts, ncuts);
 
    /* try all cut selectors until one succeeds */
    *nselectedcuts = 0;
