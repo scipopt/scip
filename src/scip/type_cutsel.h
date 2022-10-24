@@ -113,7 +113,7 @@ typedef struct SCIP_CutselData SCIP_CUTSELDATA; /**< cut selector specific data 
  *  - nforcedcuts     : number of forced cuts
  *  - root            : are we at the root node?
  *  - maxselectedcuts : maximum number of cuts that can be selected (upper bound for nselectedcuts)
- *  - nselectedcuts   : the first nselectedcuts from cuts are selected
+ *  - nselectedcuts   : the first nselectedcuts from cuts are selected in addition to the nforcedcuts forced cuts
  *  - result          : pointer to store the result of the cut selection call
  *
  *  possible return values for *result (if more than one applies, the first in the list should be used):

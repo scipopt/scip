@@ -176,6 +176,7 @@ Fixed bugs
 ----------
 
 - fixed an incorrect handling of xor constraints
+- add safeguard for number of selected cuts
 
 Miscellaneous
 -------------

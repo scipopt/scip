@@ -339,16 +339,12 @@ SCIP_DECL_CUTSELSELECT(cutselSelectHybrid)
    cutseldata = SCIPcutselGetData(cutsel);
    assert(cutseldata != NULL);
 
+   SCIP_Real minortho = cutseldata->minortho;
    if( root )
-   {
-      maxparall = 1.0 - cutseldata->minorthoroot;
-      goodmaxparall = MAX(0.5, 1.0 - cutseldata->minorthoroot);
-   }
-   else
-   {
-      maxparall = 1.0 - cutseldata->minortho;
-      goodmaxparall = MAX(0.5, 1.0 - cutseldata->minortho);
-   }
+      minortho = cutseldata->minorthoroot;
+
+   maxparall = 1.0 - minortho;
+   goodmaxparall = MAX(0.5, 1.0 - minortho);
 
    SCIP_CALL( SCIPselectCutsHybrid(scip, cuts, forcedcuts, cutseldata->randnumgen, cutseldata->goodscore, cutseldata->badscore,
          goodmaxparall, maxparall, cutseldata->dircutoffdistweight, cutseldata->efficacyweight,
