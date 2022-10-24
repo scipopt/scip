@@ -525,6 +525,7 @@ SCIP_RETCODE SCIPregForestFromFile(
    BMSclearMemory(*regforest);
    regforestptr = *regforest;
 
+   /* coverity[tainted_data] */
    SCIP_ALLOC_TERMINATE( retcode, BMSallocMemoryArray(&regforestptr->nbegin, ntrees), FREEFOREST );
    SCIP_ALLOC_TERMINATE( retcode, BMSallocMemoryArray(&regforestptr->child, 2 * size), FREEFOREST ); /*lint !e647*/
    SCIP_ALLOC_TERMINATE( retcode, BMSallocMemoryArray(&regforestptr->splitidx, size), FREEFOREST );

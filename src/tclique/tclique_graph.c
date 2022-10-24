@@ -633,6 +633,7 @@ TCLIQUE_Bool tcliqueLoadFile(
       return FALSE;
    }
 
+   /* coverity[tainted_data] */
    if( BMSallocMemoryArray(&(*tcliquegraph)->degrees, (*tcliquegraph)->nnodes) == NULL )   
    {
       infoMessage("Run out of memory while reading file %s.\n", filename);
@@ -640,6 +641,7 @@ TCLIQUE_Bool tcliqueLoadFile(
       return FALSE;
    }
 
+   /* coverity[tainted_data] */
    if( BMSallocMemoryArray(&(*tcliquegraph)->adjnodes, (*tcliquegraph)->nedges) == NULL )
    {
       infoMessage("Run out of memory while reading file %s.\n", filename);
@@ -647,6 +649,7 @@ TCLIQUE_Bool tcliqueLoadFile(
       return FALSE;
    }
 
+   /* coverity[tainted_data] */
    if( BMSallocMemoryArray(&(*tcliquegraph)->adjedges, (*tcliquegraph)->nnodes) == NULL )
    {
       infoMessage("Run out of memory while reading file %s.\n", filename);
