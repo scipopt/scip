@@ -2355,7 +2355,7 @@ SCIP_RETCODE computeIntercut(
    cols = SCIPgetLPCols(scip);
    rows = SCIPgetLPRows(scip);
 
-   usemonoidal = nlhdlrdata->usemonoidal ? TRUE : FALSE;
+   usemonoidal = nlhdlrdata->usemonoidal && wcoefs == NULL && kappa > 0;
    monoidalwasused = FALSE;
 
    counter = 0;
@@ -2364,7 +2364,7 @@ SCIP_RETCODE computeIntercut(
    avemonoidalimprovsum = 0.0;
 
    /* if we use monoidal and we are in the right case for it, compute the apex of the S-free set */
-   if( usemonoidal && wcoefs == NULL && kappa > 0 )
+   if( usemonoidal )
    {
       int nquadexprs;
 
