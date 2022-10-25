@@ -53,6 +53,8 @@ Fixed bugs
 ----------
 
 - fixed an incorrect handling of xor constraints
+- fixed an issue caused by aggregated variables not added to a hashmap in the xor constraint handler
+- changed function solveRowEchelonGF2 in cons_xor.c to avoid errors if rank is 0
 
 Miscellaneous
 -------------
