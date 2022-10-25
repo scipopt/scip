@@ -5662,6 +5662,21 @@ SCIP_DECL_CONSDELETE(consDeleteIndicator)
    SCIPdebugMsg(scip, "Deleting indicator constraint <%s>.\n", SCIPconsGetName(cons) );
 #endif
 
+   /* Make sure that the hash for binary variables is freed. If we read a problem and then another problem without
+    * solving (transforming) between, then no callback of constraint handlers are called. Thus, we cannot easily free the
+    * hash map there. */
+   if ( SCIPconshdlrGetNConss(conshdlr) == 0 )
+   {
+      SCIP_CONSHDLRDATA* conshdlrdata;
+
+      /* get constraint handler data */
+      conshdlrdata = SCIPconshdlrGetData(conshdlr);
+      assert( conshdlrdata != NULL );
+
+      if ( conshdlrdata->binslackvarhash != NULL )
+         SCIPhashmapFree(&conshdlrdata->binslackvarhash);
+   }
+
    /* drop events on transformed variables */
    if ( SCIPconsIsTransformed(cons) )
    {
@@ -8227,6 +8242,7 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinConsPure(
 
       SCIP_CALL( SCIPhashmapInsert(conshdlrdata->binslackvarhash, (void*) binvarinternal, (void*) slackvar) );
    }
+   assert( slackvar != NULL );
 
    /* if the problem should be decomposed (only if all variables are continuous) */
    if ( conshdlrdata->nolinconscont )
