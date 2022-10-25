@@ -8090,7 +8090,7 @@ SCIP_RETCODE SCIPcreateConsBasicIndicatorLinCons(
  *  @note @a binvar is checked to be binary only later. This enables a change of the type in
  *  procedures reading an instance.
  *
- *  @note The linear constraint has to be single sided only, i.e., either rhs or lhs have to be infinite.
+ *  @note The linear constraint must be single-sided, i.e., either rhs or lhs have to be infinite.
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  *
