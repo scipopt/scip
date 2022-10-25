@@ -7621,7 +7621,7 @@ SCIP_RETCODE SCIPcreateConsIndicatorGeneric(
       }
    }
 
-   /* Check awhether binary variable has been used for a different constraint; then use the same slack variable. */
+   /* Check whether binary variable has been used for a different constraint; then use the same slack variable. */
    if ( binvar != NULL )
    {
       SCIP_VAR* binvarinternal;
