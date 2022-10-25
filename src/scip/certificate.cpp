@@ -1677,8 +1677,6 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
        slackrow = SCIProwGetRowExact(mirinfo->slackrows[i]);
        SCIP_Longint upar;
 
-       SCIPdebugMessage("adding %g times row: ", mirinfo->slackweight[i]);
-       SCIPdebug(SCIProwExactPrint(slackrow, set->scip->messagehdlr, NULL));
        assert(slackrow != NULL);
        assert(SCIPhashmapExists(certificate->rowdatahash, (void*) slackrow));
        if( mirinfo->slackroundeddown[i] )
@@ -1780,24 +1778,6 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
       }
       else
          RatSetReal(value, 0.0);
-
-#ifdef SCIP_DISABLED_CODE
-      RatDebugMessage("value 1 %g \n", RatApproxReal(value));
-
-      if( mirinfo->slackroundeddown[i] == 0 )
-         RatSetReal(value, 0);
-      else
-      {
-         RatSet(value, tmpval);
-         RatMultReal(value, value, -mirinfo->slackcoefficients[i]);
-         RatAddReal(value, value, mirinfo->slackusedcoef[i]);
-
-         RatDiffReal(value, value, mirinfo->slackcoefficients[i] / RatApproxReal(oneminusf0));
-      }
-
-      RatDebugMessage("value 2 %g =  (usedcoef %g - slackcoef %g * (-f/1-f) %g - splitcoef %g / 1-f0 %g \n", RatApproxReal(value), mirinfo->slackusedcoef[i], mirinfo->slackcoefficients[i], RatApproxReal(tmpval)
-      , mirinfo->slackcoefficients[i], RatApproxReal(oneminusf0));
-#endif
 
       RatDebugMessage("adding %q times row: ", value);
       SCIPdebug(SCIProwExactPrint(slackrow, set->scip->messagehdlr, NULL));
