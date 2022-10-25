@@ -3286,7 +3286,7 @@ SCIP_RETCODE createVarUbs(
    int*                  ngen                /**< number of successful operations */
    )
 {
-   char name[50] = "\0";
+   char name[50] = "";
    int c;
 
    assert( scip != NULL );
@@ -8135,7 +8135,7 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinConsPure(
    SCIP_VARTYPE slackvartype;
    SCIP_VAR** vars;
    SCIP_Real* vals;
-   SCIP_Real sign = -1.0;
+   SCIP_Real sign;
    SCIP_Real lhs;
    SCIP_Real rhs;
    int nvars;
