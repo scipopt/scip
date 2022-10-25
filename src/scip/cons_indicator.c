@@ -8209,8 +8209,6 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinConsPure(
    assert( conshdlrdata->binslackvarhash != NULL );
    if ( SCIPhashmapExists(conshdlrdata->binslackvarhash, (void*) binvarinternal) )
    {
-      SCIP_Bool infeasible;
-
       /* determine slack variable */
       slackvar = (SCIP_VAR*) SCIPhashmapGetImage(conshdlrdata->binslackvarhash, (void*) binvarinternal);
       assert( slackvar != NULL );
@@ -8218,6 +8216,8 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinConsPure(
       /* make sure that the type of the slackvariable is as general as possible */
       if ( SCIPvarGetType(slackvar) == SCIP_VARTYPE_IMPLINT && slackvartype != SCIP_VARTYPE_IMPLINT )
       {
+         SCIP_Bool infeasible;
+
          SCIP_CALL( SCIPchgVarType(scip, slackvar, SCIP_VARTYPE_CONTINUOUS, &infeasible) );
          assert( ! infeasible );
       }
