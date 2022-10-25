@@ -154,8 +154,19 @@ int SCIPsepastoreGetNCuts(
    SCIP_SEPASTORE*       sepastore           /**< separation storage */
    );
 
-/** get total number of cuts found so far */
-int SCIPsepastoreGetNCutsFound(
+/** gets the total number of cutting planes added to the separation storage;
+ *  this is equal to the sum of added cuts directly and via the pool. */
+int SCIPsepastoreGetNCutsAdded(
+   SCIP_SEPASTORE*       sepastore           /**< separation storage */
+   );
+
+/** gets the number of cutting planes added to the separation storage from the cut pool */
+int SCIPsepastoreGetNCutsAddedViaPool(
+   SCIP_SEPASTORE*       sepastore           /**< separation storage */
+   );
+
+/** gets the number of cutting planes added to the separation storage directly */
+int SCIPsepastoreGetNCutsAddedDirect(
    SCIP_SEPASTORE*       sepastore           /**< separation storage */
    );
 
@@ -164,7 +175,7 @@ int SCIPsepastoreGetNCutsFoundRound(
    SCIP_SEPASTORE*       sepastore           /**< separation storage */
    );
 
-/** get total number of cuts applied to the LPs */
+/** gets the total number of cutting planes applied to the LP */
 int SCIPsepastoreGetNCutsApplied(
    SCIP_SEPASTORE*       sepastore           /**< separation storage */
    );

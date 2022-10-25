@@ -84,7 +84,7 @@ EMPHBENCHMARK  =   true
 
 # set SCIP version here for external projects
 # use underscore to make it compatible with def.h
-SCIP_VERSION	=	8.0.1.3
+SCIP_VERSION	=	8.0.2.4
 
 # compiling and linking parameters
 VERBOSE		=	false
@@ -227,7 +227,7 @@ GXXWARN = -pedantic -Wall -W
 
 # enable more warnings that are not in -Wall -W (probably in -Wextra, but we don't seem to use that)
 GCCWARN += -Wpointer-arith -Wcast-align -Wwrite-strings -Wshadow -Wredundant-decls -Wdisabled-optimization \
-           -Wsign-compare -Wstrict-prototypes -Wmissing-declarations -Wmissing-prototypes -Wdeclaration-after-statement
+           -Wsign-compare -Wstrict-prototypes -Wmissing-declarations -Wmissing-prototypes
 GXXWARN += -Wpointer-arith -Wcast-align -Wwrite-strings -Wshadow -Wredundant-decls -Wdisabled-optimization \
            -Wctor-dtor-privacy -Wnon-virtual-dtor -Wreorder -Woverloaded-virtual -Wsign-promo -Wsynth -Wcast-qual
 
@@ -266,12 +266,6 @@ LIBOBJSUBDIRS	=	$(LIBOBJDIR)/scip \
 			$(LIBOBJDIR)/dijkstra \
 			$(LIBOBJDIR)/symmetry \
 			$(LIBOBJDIR)/tinycthread
-ifeq ($(SYM),bliss)
-ifeq ($(BLISSEXTERNAL),false)
-LIBOBJSUBDIRS	+=      $(LIBOBJDIR)/bliss/src
-LIBOBJSUBDIRS	+=      $(LIBOBJDIR)/bliss
-endif
-endif
 SRCDIR		=	src
 BINDIR		=	bin
 LIBDIR		=	lib
@@ -540,6 +534,9 @@ TPILIBSHORTLINK	=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(TPILIBNAME).$(LIBEXT)
 ifeq ($(SYM),bliss)
 ifeq ($(BLISSEXTERNAL),true)
 LDFLAGS		+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCC_l)bliss.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
+else
+LIBOBJSUBDIRS	+=      $(LIBOBJDIR)/bliss/src
+LIBOBJSUBDIRS	+=      $(LIBOBJDIR)/bliss
 endif
 endif
 

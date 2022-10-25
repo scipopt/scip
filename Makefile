@@ -575,6 +575,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/heur_gins.o \
 			scip/heur_guideddiving.o \
 			scip/heur_indicator.o \
+			scip/heur_indicatordiving.o \
 			scip/heur_intdiving.o \
 			scip/heur_intshifting.o \
 			scip/heur_linesearchdiving.o \
@@ -740,6 +741,7 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/bandit.o \
 			scip/bandit_epsgreedy.o \
 			scip/bandit_exp3.o \
+			scip/bandit_exp3ix.o \
 			scip/bandit_ucb.o \
 			scip/benders.o \
 			scip/benderscut.o \

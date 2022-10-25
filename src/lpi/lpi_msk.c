@@ -1828,13 +1828,23 @@ SCIP_RETCODE getASlice(
       {
          MOSEK_CALL( MSK_getarowslicenumnz(lpi->task, first, last+1, nnonz) );
          surplus = *nnonz;
+#if MSK_VERSION_MAJOR == 9
          MOSEK_CALL( MSK_getarowslice(lpi->task, first, last+1, *nnonz, &surplus, beg, lpi->aptre, ind, val) );
+#else
+         MOSEK_CALL( MSK_getarowslice(lpi->task, first, last+1, *nnonz, beg, lpi->aptre, ind, val) );
+         (void)surplus;
+#endif
       }
       else
       {
          MOSEK_CALL( MSK_getacolslicenumnz(lpi->task, first, last+1, nnonz) );
          surplus = *nnonz;
+#if MSK_VERSION_MAJOR == 9
          MOSEK_CALL( MSK_getacolslice(lpi->task, first, last+1, *nnonz, &surplus, beg, lpi->aptre, ind, val) );
+#else
+         MOSEK_CALL( MSK_getacolslice(lpi->task, first, last+1, *nnonz, beg, lpi->aptre, ind, val) );
+         (void)surplus;
+#endif
       }
 #endif
 

@@ -8339,12 +8339,12 @@ SCIP_RETCODE SCIPdigraphComputeDirectedComponents(
                                               *   components */
    )
 {
-   int* lowlink;
-   int* dfsidx;
-   int* stack;
+   int* lowlink = NULL;
+   int* dfsidx = NULL;
+   int* stack = NULL;
    int stacksize;
-   SCIP_Bool* unprocessed;
-   SCIP_Bool* nodeinstack;
+   SCIP_Bool* unprocessed = NULL;
+   SCIP_Bool* nodeinstack = NULL;
    int maxdfs;
    int nstorednodes;
    int i;

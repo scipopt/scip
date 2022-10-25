@@ -1312,13 +1312,18 @@ SCIP_RETCODE computeRestrictionToRay(
 
    for( i = 0; i < nquadexprs; ++i )
    {
-      SCIP_Real dot;
+      SCIP_Real dot = 0.0;
       SCIP_Real vdotray;
 
-      if( SCIPisZero(scip, eigenvalues[i]) && wcoefs == NULL )
-         continue;
-
-      dot = vzlp[i] + vb[i] / (2.0 * (sidefactor * eigenvalues[i]));
+      if( SCIPisZero(scip, eigenvalues[i]) )
+      {
+         if( wcoefs == NULL )
+            continue;
+      }
+      else
+      {
+         dot = vzlp[i] + vb[i] / (2.0 * (sidefactor * eigenvalues[i]));
+      }
       vdotray = computeEigenvecDotRay(&eigenvectors[i * nquadexprs], nquadexprs, raycoefs, rayidx, raynnonz);
 
       if( SCIPisZero(scip, eigenvalues[i]) )
@@ -3619,7 +3624,7 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoQuadratic)
       if( nlhdlrdata->useboundsasrays )
          nlhdlrdata->nboundcuts += 1;
 
-      (void) SCIPsnprintf(SCIProwprepGetName(rowprep), SCIP_MAXSTRLEN, "%s_intersection_quadratic%p_lp%d",
+      (void) SCIPsnprintf(SCIProwprepGetName(rowprep), SCIP_MAXSTRLEN, "%s_intersection_quadratic%p_lp%" SCIP_LONGINT_FORMAT,
          overestimate ? "over" : "under",
          (void*)expr,
          SCIPgetNLPs(scip));

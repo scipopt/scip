@@ -202,7 +202,7 @@ SCIP_RETCODE getSimplexCoefficients(
 }
 
 
-/** computes a disjunctive cut inequality based on two simplex taubleau rows */
+/** computes a disjunctive cut inequality based on two simplex tableau rows */
 static
 SCIP_RETCODE generateDisjCutSOS1(
    SCIP*                 scip,               /**< SCIP pointer */

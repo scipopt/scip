@@ -50,6 +50,14 @@ struct SCIP_Cutsel
    SCIP_CUTSELDATA*      cutseldata;         /**< cut selector data */
    int                   priority;           /**< priority of the cut selector */
    SCIP_Bool             initialized;        /**< is cut selector initialized? */
+   SCIP_Longint          ncalls;             /**< number of times, this cutselector was called */
+   SCIP_Longint          nrootcalls;         /**< number of times, this cutselector was called */
+   SCIP_Longint          nrootcutsselected;  /**< number of cuts selected at the root */
+   SCIP_Longint          nrootcutsforced;    /**< number of forced cuts at the root */
+   SCIP_Longint          nrootcutsfiltered;  /**< number of cuts filtered at the root */
+   SCIP_Longint          nlocalcutsselected; /**< number of local cuts selected */
+   SCIP_Longint          nlocalcutsforced;   /**< number of forced local cuts */
+   SCIP_Longint          nlocalcutsfiltered; /**< number of local cuts filtered */
 };
 
 #ifdef __cplusplus

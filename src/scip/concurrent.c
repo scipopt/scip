@@ -652,9 +652,13 @@ SCIP_RETCODE SCIPcopyConcurrentSolvingStats(
       {
          sepas[i]->lastsepanode = sepa->lastsepanode;
          sepas[i]->ncalls += sepa->ncalls;
+         sepas[i]->nrootcalls += sepa->nrootcalls;
          sepas[i]->ncutoffs += sepa->ncutoffs;
          sepas[i]->ncutsfound += sepa->ncutsfound;
-         sepas[i]->ncutsapplied += sepa->ncutsapplied;
+         sepas[i]->ncutsaddedviapool += sepa->ncutsaddedviapool;
+         sepas[i]->ncutsaddeddirect += sepa->ncutsaddeddirect;
+         sepas[i]->ncutsappliedviapool += sepa->ncutsappliedviapool;
+         sepas[i]->ncutsapplieddirect += sepa->ncutsapplieddirect;
          sepas[i]->nconssfound += sepa->nconssfound;
          sepas[i]->ndomredsfound += sepa->ndomredsfound;
          sepas[i]->maxbounddist = MAX(sepas[i]->maxbounddist, sepa->maxbounddist);

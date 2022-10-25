@@ -1186,6 +1186,71 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateQuotient)
    return SCIP_OKAY;
 }
 
+/** nonlinear handler solution linearization callback */
+static
+SCIP_DECL_NLHDLRSOLLINEARIZE(nlhdlrSollinearizeQuotient)
+{ /*lint --e{715}*/
+   SCIP_VAR* x;
+   SCIP_Real lbx;
+   SCIP_Real ubx;
+   SCIP_Real solx;
+   int c;
+
+   assert(nlhdlr != NULL);
+   assert(expr != NULL);
+   assert(nlhdlrexprdata != NULL);
+
+   /* in the bivariate case, we do not get globally valid estimators */
+   if( nlhdlrexprdata->numexpr != nlhdlrexprdata->denomexpr )
+      return SCIP_OKAY;
+
+   x = SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->numexpr);
+   lbx = SCIPvarGetLbGlobal(x);
+   ubx = SCIPvarGetUbGlobal(x);
+   solx = SCIPgetSolVal(scip, sol, x);
+   solx = MAX(MIN(solx, ubx), lbx);
+
+   for( c = (overestimate ? 0 : 1); c < (underestimate ? 2 : 1); ++c )  /* c == 0: overestimate, c == 1: underestimate */
+   {
+      SCIP_ROWPREP* rowprep;
+      SCIP_Bool success = FALSE;
+      SCIP_Bool local = TRUE;
+      SCIP_Bool branchinguseful;
+      SCIP_Real coef;
+      SCIP_Real constant;
+
+      /* compute estimator, will be secant or gradient */
+      SCIP_CALL( estimateUnivariate(scip, lbx, ubx, lbx, ubx, solx,
+         nlhdlrexprdata->numcoef, nlhdlrexprdata->numconst, nlhdlrexprdata->denomcoef, nlhdlrexprdata->denomconst, nlhdlrexprdata->constant,
+         &coef, &constant, c == 0, &local, &branchinguseful, &success) );
+
+      /* skip if not successful, only locally valid, or just a secant (branchinguseful is TRUE) */
+      if( !success || local || branchinguseful )
+         continue;
+
+      SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, c == 0 ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, FALSE) );
+      SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, x, coef) );
+      SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, SCIPgetExprAuxVarNonlinear(expr), -1.0) );
+      SCIProwprepAddConstant(rowprep, constant);
+      (void) SCIPsnprintf(SCIProwprepGetName(rowprep), SCIP_MAXSTRLEN, "quot_%s_sol%d", SCIPvarGetName(x), SCIPsolGetIndex(sol));
+
+      SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, sol, SCIPgetHugeValue(scip), &success) );
+
+      /* if cleanup succeeded and rowprep is still global, add to cutpool */
+      if( success && !SCIProwprepIsLocal(rowprep) )
+      {
+         SCIP_ROW* row;
+
+         SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, cons) );
+         SCIP_CALL( SCIPaddPoolCut(scip, row) );
+         SCIP_CALL( SCIPreleaseRow(scip, &row) );
+      }
+
+      SCIPfreeRowprep(scip, &rowprep);
+   }
+
+   return SCIP_OKAY;
+}
 
 /** nonlinear handler interval evaluation callback */
 static
@@ -1276,6 +1341,7 @@ SCIP_RETCODE SCIPincludeNlhdlrQuotient(
    SCIPnlhdlrSetCopyHdlr(nlhdlr, nlhdlrCopyhdlrQuotient);
    SCIPnlhdlrSetFreeExprData(nlhdlr, nlhdlrFreeExprDataQuotient);
    SCIPnlhdlrSetSepa(nlhdlr, NULL, NULL, nlhdlrEstimateQuotient, NULL);
+   SCIPnlhdlrSetSollinearize(nlhdlr, nlhdlrSollinearizeQuotient);
    SCIPnlhdlrSetProp(nlhdlr, nlhdlrIntevalQuotient, nlhdlrReversepropQuotient);
 
    return SCIP_OKAY;

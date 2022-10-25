@@ -90,6 +90,9 @@ SCIP_DECL_NLHDLRENFO(SCIPnlhdlrEnfo);
 /** call the estimator callback of a nonlinear handler */
 SCIP_DECL_NLHDLRESTIMATE(SCIPnlhdlrEstimate);
 
+/** call the solution linearization callback of a nonlinear handler */
+SCIP_DECL_NLHDLRSOLLINEARIZE(SCIPnlhdlrSollinearize);
+
 /** reset number of detections counter for last round */
 void SCIPnlhdlrResetNDetectionslast(
    SCIP_NLHDLR*          nlhdlr              /**< nonlinear handler */

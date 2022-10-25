@@ -667,6 +667,7 @@ AbstractGraph::search(const bool canonical,
   in_search = false;
   /* Do not compute certificate when building the initial partition */
   refine_compare_certificate = false;
+  refine_equal_to_first = false;
   /* The 'eqref_hash' hash value is not computed when building
    * the initial partition as it is not used for anything at the moment.
    * This saves some cycles. */
@@ -811,6 +812,7 @@ AbstractGraph::search(const bool canonical,
     root.in_best_path = false;
     root.cmp_to_best_path = 0;
     root.long_prune_begin = 0;
+    root.needs_long_prune = true;
 
     root.failure_recording_ival = 0;
 

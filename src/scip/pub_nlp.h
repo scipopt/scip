@@ -99,13 +99,6 @@ SCIP_EXPRCURV SCIPnlrowGetCurvature(
    SCIP_NLROW*           nlrow               /**< NLP row */
    );
 
-/** sets the curvature of a nonlinear row */
-SCIP_EXPORT
-void SCIPnlrowSetCurvature(
-   SCIP_NLROW*           nlrow,              /**< NLP row */
-   SCIP_EXPRCURV         curvature           /**< curvature of NLP row */
-   );
-
 /** returns the name of a nonlinear row */
 SCIP_EXPORT
 const char* SCIPnlrowGetName(
@@ -145,7 +138,6 @@ SCIP_Real SCIPnlrowGetDualsol(
 #define SCIPnlrowGetLhs(nlrow)         (nlrow)->lhs
 #define SCIPnlrowGetRhs(nlrow)         (nlrow)->rhs
 #define SCIPnlrowGetCurvature(nlrow)   (nlrow)->curvature
-#define SCIPnlrowSetCurvature(nlrow, curvature_) (nlrow)->curvature = curvature_
 #define SCIPnlrowGetName(nlrow)        (nlrow)->name
 #define SCIPnlrowGetNLPPos(nlrow)      (nlrow)->nlpindex
 #define SCIPnlrowIsInNLP(nlrow)        ((nlrow)->nlpindex != -1)

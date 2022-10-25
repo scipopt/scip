@@ -141,88 +141,13 @@
 extern "C" {
 #endif
 
-/*#define SCIP_CONFGRAPH*/
-
-
-#ifdef SCIP_CONFGRAPH
-/*
- * Output of Conflict Graph
- */
-
-#include <stdio.h>
-
-static FILE*             confgraphfile = NULL;              /**< output file for current conflict graph */
-static SCIP_BDCHGINFO*   confgraphcurrentbdchginfo = NULL;  /**< currently resolved bound change */
-static int               confgraphnconflictsets = 0;        /**< number of conflict sets marked in the graph */
-
-/** writes a node section to the conflict graph file */
-static
-void confgraphWriteNode(
-   void*                 idptr,              /**< id of the node */
-   const char*           label,              /**< label of the node */
-   const char*           nodetype,           /**< type of the node */
-   const char*           fillcolor,          /**< color of the node's interior */
-   const char*           bordercolor         /**< color of the node's border */
-   );
-
-/** writes an edge section to the conflict graph file */
-static
-void confgraphWriteEdge(
-   void*                 source,             /**< source node of the edge */
-   void*                 target,             /**< target node of the edge */
-   const char*           color               /**< color of the edge */
-   );
-
-/** creates a file to output the current conflict graph into; adds the conflict vertex to the graph */
-static
-SCIP_RETCODE confgraphCreate(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
-   );
-
-/** closes conflict graph file */
-static
-void confgraphFree(
-   void
-   );
-
-/** adds a bound change node to the conflict graph and links it to the currently resolved bound change */
-static
-void confgraphAddBdchg(
-   SCIP_BDCHGINFO*       bdchginfo           /**< bound change to add to the conflict graph */
-   );
-
-/** links the already existing bound change node to the currently resolved bound change */
-static
-void confgraphLinkBdchg(
-   SCIP_BDCHGINFO*       bdchginfo           /**< bound change to add to the conflict graph */
-   );
-
-/** marks the given bound change to be the currently resolved bound change */
-static
-void confgraphSetCurrentBdchg(
-   SCIP_BDCHGINFO*       bdchginfo           /**< bound change to add to the conflict graph */
-   );
-
-/** marks given conflict set in the conflict graph */
-static
-void confgraphMarkConflictset(
-   SCIP_CONFLICTSET*     conflictset         /**< conflict set */
-   );
-
-#endif
-
-
-
 /** creates an empty conflict set */
-
 SCIP_RETCODE SCIPconflictsetCreate(
    SCIP_CONFLICTSET**    conflictset,        /**< pointer to store the conflict set */
    BMS_BLKMEM*           blkmem              /**< block memory of transformed problem */
    );
 
 /** frees a conflict set */
-
 void SCIPconflictsetFree(
    SCIP_CONFLICTSET**    conflictset,        /**< pointer to the conflict set */
    BMS_BLKMEM*           blkmem              /**< block memory of transformed problem */
@@ -396,9 +321,6 @@ SCIP_RETCODE SCIPundoBdchgsProof(
    SCIP_LPI*             lpi                 /**< pointer to LPi to access infinity of LP solver; necessary to set correct values */
    );
 
-
-
-
 /** applies conflict analysis starting with given bound changes, that could not be undone during previous
  *  infeasibility analysis
  */
@@ -418,7 +340,7 @@ SCIP_RETCODE SCIPconflictAnalyzeRemainingBdchgs(
    int*                  nreconvliterals     /**< pointer to store the number of literals generated reconvergence constraints */
    );
 
-   /** initializes the propagation conflict analysis by clearing the conflict candidate queue */
+/** initializes the propagation conflict analysis by clearing the conflict candidate queue */
 SCIP_RETCODE SCIPconflictInit(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -479,7 +401,7 @@ SCIP_Real SCIPconflictGetVarUb(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
-   /** try to find a subset of changed bounds leading to an infeasible LP
+/** try to find a subset of changed bounds leading to an infeasible LP
  *
  *  1. call undoBdchgsDualfarkas() or undoBdchgsDualsol()
  *     -> update lb/ubchginfoposs arrays
@@ -492,7 +414,6 @@ SCIP_Real SCIPconflictGetVarUb(
  *  4. analyze conflict
  *     -> put remaining changed bounds (see lb/ubchginfoposs arrays) into starting conflict set
  */
-
 SCIP_RETCODE SCIPrunBoundHeuristic(
    SCIP_CONFLICT*        conflict,           /**< conflict data */
    SCIP_SET*             set,                /**< global SCIP settings */

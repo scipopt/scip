@@ -1605,12 +1605,12 @@ public:
          char name[20];
          if( !issos2 )
          {
-            (void) sprintf(name, "sos1_%d", sosit->first);
+            (void) SCIPsnprintf(name, 20, "sos1_%d", sosit->first);
             SCIP_CALL_THROW( SCIPcreateConsBasicSOS1(scip, &cons, name, sosit->second.size(), setvars.data(), setweights.empty() ? NULL : setweights.data()) );
          }
          else
          {
-            (void) sprintf(name, "sos2_%d", -sosit->first);
+            (void) SCIPsnprintf(name, 20, "sos2_%d", -sosit->first);
             SCIP_CALL_THROW( SCIPcreateConsBasicSOS2(scip, &cons, name, sosit->second.size(), setvars.data(), setweights.data()) );
          }
          SCIP_CALL_THROW( SCIPaddCons(scip, cons) );
@@ -1926,6 +1926,7 @@ SCIP_RETCODE SCIPwriteSolutionNl(
       default:
          /* solve_result_num = 500; */
          SCIPerrorMessage("invalid status code <%d>\n", SCIPgetStatus(scip));
+         (void) fclose(solfile);
          return SCIP_INVALIDDATA;
    }
    SCIPinfoMessage(scip, solfile, "objno 0 %d\n", solve_result_num);

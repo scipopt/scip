@@ -41,6 +41,7 @@
 #include "scip/pub_misc.h"
 #include "scip/pub_message.h"
 #include "lpi/lpi.h"
+#include "tinycthread/tinycthread.h"
 
 #ifndef XPRS_LPQUICKPRESOLVE
 #define XPRS_LPQUICKPRESOLVE 8207
@@ -642,18 +643,17 @@ void invalidateSolution(
  * @{
  */
 
-//TODO: version is not added to name in threadsafe mode
-#ifndef SCIP_THREADSAFE
-static char xprsname[100];
+#ifdef _Thread_local
+static _Thread_local char xprsname[100];
 #else
-static char xprsname[] = {'X', 'p', 'r', 'e', 's', 's'};
+static char xprsname[] = {'X', 'p', 'r', 'e', 's', 's', ' ', '0' + XPVERSION / 10, '0' + XPVERSION % 10};
 #endif
 /** gets name and version of LP solver */
 const char* SCIPlpiGetSolverName(
    void
    )
 {
-#ifndef SCIP_THREADSAFE
+#ifdef _Thread_local
    char version[16];
 
    /* get version of Xpress */

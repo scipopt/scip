@@ -38,9 +38,15 @@ struct SCIP_Sepa
 {
    SCIP_Longint          lastsepanode;       /**< last (total) node where this separator was called */
    SCIP_Longint          ncalls;             /**< number of times, this separator was called */
+   SCIP_Longint          nrootcalls;         /**< number of times, this separator was called at the root */
    SCIP_Longint          ncutoffs;           /**< number of cutoffs found so far by this separator */
    SCIP_Longint          ncutsfound;         /**< number of cutting planes found so far by this separator */
-   SCIP_Longint          ncutsapplied;       /**< number of cutting planes applied to LP */
+   SCIP_Longint          ncutsadded;         /**< number of cutting planes added to sepastore equal to
+                                              *   the sum of added cuts via pool and direct.*/
+   SCIP_Longint          ncutsaddedviapool;  /**< number of cutting planes added from cutpool */
+   SCIP_Longint          ncutsaddeddirect;   /**< number of cutting planes added directly */
+   SCIP_Longint          ncutsappliedviapool;/**< number of cutting planes applied to LP via cutpool */
+   SCIP_Longint          ncutsapplieddirect; /**< number of cutting planes applied to LP directly from sepastore */
    SCIP_Longint          nconssfound;        /**< number of additional constraints added by this separator */
    SCIP_Longint          ndomredsfound;      /**< number of domain reductions found so far by this separator */
    SCIP_Real             maxbounddist;       /**< maximal relative distance from current node's dual bound to primal bound compared

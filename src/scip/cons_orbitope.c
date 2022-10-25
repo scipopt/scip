@@ -189,7 +189,6 @@ SCIP_RETCODE consdataFree(
    SCIP_CONSDATA**       consdata            /**< pointer to orbitope constraint data */
    )
 {
-   int i;
    int p;
    int q;
 
@@ -203,7 +202,7 @@ SCIP_RETCODE consdataFree(
 
    p = (*consdata)->nspcons;
    q = (*consdata)->nblocks;
-   for (i = 0; i < p; ++i)
+   for (int i = 0; i < p; ++i)
    {
       SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->cases[i]), q);    /*lint !e866*/
       SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->vars[i]), q);     /*lint !e866*/

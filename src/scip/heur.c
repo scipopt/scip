@@ -1711,6 +1711,10 @@ SCIP_RETCODE SCIPvariablegraphBreadthFirst(
 
    /* get variable data */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
+
+   if( nvars == 0 )
+      return SCIP_OKAY;
+
    nbinintvars = nbinvars + nintvars;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &queue, nvars) );

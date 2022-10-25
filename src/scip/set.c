@@ -300,6 +300,7 @@
                                                  *   orbitopes); 6: Schreier Sims cuts and orbital fixing; 7: Schreier Sims cuts, orbitopes, and orbital
                                                  *   fixing, see type_symmetry.h */
 #define SCIP_DEFAULT_MISC_SCALEOBJ         TRUE /**< should the objective function be scaled? */
+#define SCIP_DEFAULT_MISC_SHOWDIVINGSTATS FALSE /**< should detailed statistics for diving heuristics be shown? */
 
 #ifdef WITH_DEBUG_SOLUTION
 #define SCIP_DEFAULT_MISC_DEBUGSOLUTION     "-" /**< path to a debug solution */
@@ -2011,6 +2012,11 @@ SCIP_RETCODE SCIPsetCreate(
             "misc/scaleobj",
             "should the objective function be scaled so that it is always integer?",
             &(*set)->misc_scaleobj, FALSE, SCIP_DEFAULT_MISC_SCALEOBJ,
+            NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+            "misc/showdivingstats",
+            "should detailed statistics for diving heuristics be shown?",
+            &(*set)->misc_showdivingstats, FALSE, SCIP_DEFAULT_MISC_SHOWDIVINGSTATS,
             NULL, NULL) );
 
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,

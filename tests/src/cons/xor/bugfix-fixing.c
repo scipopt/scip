@@ -13,37 +13,46 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   scipcoreplugins.h
- * @ingroup INTERNALAPI
- * @brief  register additional core functionality that is designed as plugins
- * @author Gregor Hendel
+/**@file   bugfix-fixing.c
+ * @brief  unit test for bugfix on XOR constraint and bounds
+ * @author Mathieu Besançon
  */
-
-/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-
-#ifndef __SCIP_SCIPCOREPLUGINS_H__
-#define __SCIP_SCIPCOREPLUGINS_H__
 
 #include "scip/scip.h"
+#include "include/scip_test.h"
+#include "scip/cons_xor.h"
+#include "scip/scipdefplugins.h"
 
-/* include header files here, so that the SCIP core only needs to include the SCIP core plugins
- */
-#include "scip/bandit_epsgreedy.h"
-#include "scip/bandit_exp3.h"
-#include "scip/bandit_exp3ix.h"
-#include "scip/bandit_ucb.h"
+/** GLOBAL VARIABLES **/
+static SCIP* scip = NULL;
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+/* TEST SUITE */
 
-/** includes core SCIP plugins into SCIP */
-SCIP_RETCODE SCIPincludeCorePlugins(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-#ifdef __cplusplus
+/** create SCIP instance */
+static
+void setup(void)
+{
+   SCIP_CALL( SCIPcreate(&scip) );
+   SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
+   SCIP_CALL( SCIPcreateProbBasic(scip, "xor-bugcheck") );
 }
-#endif
 
-#endif
+/** free SCIP instance */
+static
+void teardown(void)
+{
+   SCIPfree(&scip);
+}
+
+TestSuite(bugfixxor, .init = setup, .fini = teardown);
+
+/* TESTS  */
+Test(bugfixxor, demofix, .description = "test checking that the optimal solution of a problem with XOR constraints is not cut off")
+{
+   SCIP_CALL( SCIPreadProb(scip, "src/cons/xor/Demo5.cip", NULL) );
+   SCIP_CALL( SCIPsolve(scip) );
+   int nsols = SCIPgetNSols(scip);
+   SCIP_SOL** sols = SCIPgetSols(scip);
+   cr_assert_geq(nsols, 1);
+   cr_assert_float_eq(SCIPgetSolOrigObj(scip, sols[0]), 2.0, 1e-5);
+}

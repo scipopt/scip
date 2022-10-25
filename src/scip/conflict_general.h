@@ -488,7 +488,6 @@ void SCIPconflictEnableOrDisableClocks(
  *  SCIPconflictAddRelaxedBound(), and on success, calls the conflict handlers to create a conflict constraint out of
  *  the resulting conflict set; afterwards the conflict queue and the conflict set is cleared
  */
-
 SCIP_RETCODE conflictAnalyze(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    BMS_BLKMEM*           blkmem,             /**< block memory of transformed problem */
@@ -520,7 +519,7 @@ SCIP_RETCODE SCIPgetFarkasProof(
    SCIP_Bool*            valid               /**< pointer store whether the proof constraint is valid */
    );
 
-/** calculates a Farkas proof from the current dual LP solution */
+/** calculates a dual proof from the current dual LP solution */
 SCIP_RETCODE SCIPgetDualProof(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            transprob,          /**< transformed problem */
@@ -535,6 +534,7 @@ SCIP_RETCODE SCIPgetDualProof(
    SCIP_Bool*            valid               /**< pointer store whether the proof constraint is valid */
    );
 
+/** calculates the minimal activity of a given aggregation row */
 SCIP_Real SCIPaggrRowGetMinActivity(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            transprob,          /**< transformed problem data */
