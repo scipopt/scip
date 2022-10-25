@@ -4652,18 +4652,7 @@ SCIP_RETCODE cutsTransformMIR(
   TERMINATE:
 
    if( SCIPisExactSolve(scip) )
-   {
-      SCIPintervalSetRoundingModeUpwards();
-      /* we need to track which bounds were used for the complementation of variables */
-      if( SCIPisCertificateActive(scip) )
-      {
-         RatSetReal(mirinfo->rhs, floor(QUAD_TO_DBL(*cutrhs)));
-         RatSetReal(mirinfo->frac, QUAD_TO_DBL(*cutrhs));
-         RatDiff(mirinfo->frac, mirinfo->frac, mirinfo->rhs);
-      }
-
       SCIPintervalSetRoundingMode(previousroundmode);
-   }
 
    /*free temporary memory */
    SCIPfreeBufferArray(scip, &selectedbounds);
@@ -6797,7 +6786,17 @@ SCIP_RETCODE SCIPcalcMIR(
    if( !SCIPisExactSolve(scip) )
       SCIPquadprecEpsFloorQ(downrhs, rhs, SCIPepsilon(scip)); /*lint !e666*/
    else
+   {
       SCIPquadprecFloorQ(downrhs, rhs);
+
+      if( SCIPisCertificateActive(scip)   )
+      {
+         SCIP_MIRINFO* mirinfo = SCIPgetCertificate(scip)->mirinfo[SCIPgetCertificate(scip)->nmirinfos - 1];
+         RatSetReal(mirinfo->rhs, downrhs);
+         RatSetReal(mirinfo->frac, rhs);
+         RatDiffReal(mirinfo->frac, mirinfo->frac, downrhs);
+      }
+   }
 
    SCIPquadprecSumQQ(f0, rhs, -downrhs);
    if( SCIPisExactSolve(scip) )
