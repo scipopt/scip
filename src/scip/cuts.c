@@ -6061,7 +6061,7 @@ SCIP_RETCODE cutsSubstituteMIRSafe(
             //slackroundeddown = slacksign[i] == -1 ? fr.inf : fr.sup;
             slackroundeddown = TRUE;
             SCIPintervalMul(SCIPinfinity(scip), &fr, fr, onedivoneminusf0);
-            SCIPdebugMessage("fractionality %g, f0 %g -> round down to %g\n", fr, f0.inf, splitcoef);
+            SCIPdebugMessage("fractionality %g, f0 %g -> round down to %g\n", fr.inf, f0.inf, splitcoef);
          }
          else
          {
@@ -6073,7 +6073,7 @@ SCIP_RETCODE cutsSubstituteMIRSafe(
             splitcoef = downar + 1;
             slackweight = weights[i];
             slackroundeddown = FALSE;
-            SCIPdebugMessage("fractionality %g, f0 %g -> round up! splitcoef %g sub-coefficient %g", fr, f0.inf, splitcoef, cutar.inf);
+            SCIPdebugMessage("fractionality %g, f0 %g -> round up! splitcoef %g sub-coefficient %g", fr.inf, f0.inf, splitcoef, cutar.inf);
          }
       }
       else

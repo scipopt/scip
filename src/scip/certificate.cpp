@@ -1572,6 +1572,10 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
 
    rowexact = SCIProwGetRowExact(row);
 
+   /* only do something if row does not already exist*/
+   if( SCIPhashmapExists(certificate->rowdatahash, (void*) rowexact) )
+      return SCIP_OKAY;
+
    SCIPdebugMessage("Printing MIR-certifiaction for row ");
    SCIPdebug(SCIProwExactPrint(rowexact,  set->scip->messagehdlr, NULL));
 
@@ -1653,9 +1657,6 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
        assert(slackrow != NULL);
        assert(SCIPhashmapExists(certificate->rowdatahash, (void*) slackrow));
        RatSetReal(tmpval, aggrinfo->substfactor[i]);
-#ifndef NDEBUG
-       assert(fabs(RatApproxReal(tmpval) - aggrinfo->negslackweights[i] / RatApproxReal(oneminusf0)) < 1e-9);
-#endif
 
        key = (size_t)SCIPhashmapGetImage(certificate->rowdatahash, (void*) slackrow);
        /* for ranged rows, the key always corresponds to the >= part of the row;

@@ -4993,9 +4993,9 @@ void SCIProwExactPrint(
       assert(SCIPvarGetName(row->cols[r]->var) != NULL);
       assert(SCIPvarGetStatus(row->cols[r]->var) == SCIP_VARSTATUS_COLUMN);
       if( RatIsPositive(row->vals[r]) )
-         SCIPmessageFPrintInfo(messagehdlr, file, "+%s<%s> ", buf, SCIPvarGetName(row->cols[r]->var));
+         SCIPmessageFPrintInfo(messagehdlr, file, "+%s(%g)<%s> ", buf, RatApproxReal(row->vals[r]), SCIPvarGetName(row->cols[r]->var));
       else
-         SCIPmessageFPrintInfo(messagehdlr, file, "%s<%s> ", buf, SCIPvarGetName(row->cols[r]->var));
+         SCIPmessageFPrintInfo(messagehdlr, file, "%s(%g)<%s> ", buf, RatApproxReal(row->vals[r]), SCIPvarGetName(row->cols[r]->var));
    }
 
    /* print constant */

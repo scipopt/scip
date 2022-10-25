@@ -46,6 +46,7 @@
  *  END
  */
 #define SCIP_DEBUG
+#include "struct_scip.h"
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
@@ -370,6 +371,13 @@ SCIP_RETCODE addCut(
                }
 
                ++(*naddedcuts);
+               if( SCIPisCertificateActive(scip) )
+               {
+                  SCIP_CALL( SCIPfreeCertificateActiveAggregationInfo(scip) );
+                  SCIP_CALL( SCIPfreeCertificateActiveMirInfo(scip) );
+
+                  SCIP_CALL( SCIPcertificatePrintMirCut(scip->set, scip->lp, SCIPgetCertificate(scip), scip->transprob, cut, 'L') );
+               }
             }
          }
       }
@@ -655,6 +663,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
       int ninds = -1;
       int cutnnz;
       int cutrank;
+      int cutslastround = 0;
 
       if( basisfrac[i] == 0.0 )
          break;
@@ -670,6 +679,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
 
       if( !success )
          continue;
+
+      cutslastround = naddedcuts;
 
       /* try to create a strong CG cut out of the aggregation row */
       if( separatescg && !SCIPisExactSolve(scip) )
@@ -706,7 +717,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
                   cutislocal, cutrank, strongcgsuccess, &cutoff, &naddedcuts, ninds, inds, binvrow) );
          }
       }
-      if( SCIPisCertificateActive(scip) )
+      if( SCIPisCertificateActive(scip) && !(naddedcuts > cutslastround) )
       {
          SCIP_CALL( SCIPfreeCertificateActiveAggregationInfo(scip) );
          SCIP_CALL( SCIPfreeCertificateActiveMirInfo(scip) );
