@@ -725,6 +725,7 @@ SCIP_RETCODE updateTreeProfile(
    )
 {
    int nodedepth;
+   int nbits;
    SCIP_Longint nodedepthcnt;
    SCIP_Longint maxnodes;
 
@@ -748,8 +749,9 @@ SCIP_RETCODE updateTreeProfile(
    /* Is this level fully explored? We assume binary branching. The first condition ensures that the bit shift operation
     * of the second condition represents a feasible power of unsigned int. The largest power of 2 representable
     * by unsigned int is 2^{8*sizeof(unsigned int) - 1}. */
+   nbits = 8*sizeof(unsigned int);
    /* coverity[overflow_before_widen] */
-   if( (unsigned int)nodedepth < 8*sizeof(unsigned int) && nodedepthcnt == (1U << nodedepth) )/*lint !e647*/
+   if( (unsigned int)nodedepth < nbits && nodedepthcnt == (1U << nodedepth) )/*lint !e647*/
    {
       SCIPdebugMsg(scip, "Level %d fully explored: %" SCIP_LONGINT_FORMAT " nodes\n", nodedepth, nodedepthcnt);
 
