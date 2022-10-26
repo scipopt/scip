@@ -4287,7 +4287,7 @@ SCIP_RETCODE getBinaryProductExprDo(
    SCIP_CONS* cons;
    SCIP_Real* coefs;
    SCIP_VAR* w;
-   char name[SCIP_MAXSTRLEN];
+   char* name;
    int nchildren;
    int i;
 
@@ -4299,12 +4299,13 @@ SCIP_RETCODE getBinaryProductExprDo(
    nchildren = SCIPexprGetNChildren(prodexpr);
    assert(nchildren >= 2);
 
-   /* memory to store the variables of the variable expressions (+1 for w) */
+   /* memory to store the variables of the variable expressions (+1 for w) and their name */
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, nchildren + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &coefs, nchildren + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &name, nchildren * (SCIP_MAXSTRLEN + 1) + 20) );
 
    /* prepare the names of the variable and the constraints */
-   (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "binreform");
+   strcpy(name, "binreform");
    for( i = 0; i < nchildren; ++i )
    {
       vars[i] = SCIPgetVarExprVar(SCIPexprGetChildren(prodexpr)[i]);
@@ -4373,6 +4374,7 @@ SCIP_RETCODE getBinaryProductExprDo(
    SCIP_CALL( SCIPreleaseVar(scip, &w) );
 
    /* free memory */
+   SCIPfreeBufferArray(scip, &name);
    SCIPfreeBufferArray(scip, &coefs);
    SCIPfreeBufferArray(scip, &vars);
 
