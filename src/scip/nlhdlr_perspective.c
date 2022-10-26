@@ -249,6 +249,7 @@ SCIP_RETCODE addSCVarIndicator(
    /* move entries if needed */
    for( i = scvdata->nbnds; i > pos; --i )
    {
+      // coverity[forward_null]
       scvdata->bvars[i] = scvdata->bvars[i-1];
       scvdata->vals0[i] = scvdata->vals0[i-1];
       scvdata->lbs1[i] = scvdata->lbs1[i-1];
@@ -409,6 +410,7 @@ SCIP_RETCODE varIsSemicontinuous(
    assert(vubvars != NULL || nvubs == 0);
    for( c = 0; c < nvubs; ++c )
    {
+      // coverity[forward_null]
       if( SCIPvarGetType(vubvars[c]) != SCIP_VARTYPE_BINARY )  /*lint !e613*/
          continue;
 
@@ -1024,7 +1026,7 @@ SCIP_RETCODE analyseVarOnoffBounds(
          if( indvalue == 0 )
          {
             assert(sclb == scub); /*lint !e777*/
-            SCIP_CALL( SCIPfixVar(scip, var, sclb, infeas, &bndchgsuccess) );
+            SCIP_CALL( SCIPfixVar(scip, var, scub, infeas, &bndchgsuccess) );
          }
          else
          {
@@ -1402,8 +1404,9 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectPerspective)
       SCIPinfoMessage(scip, NULL, "\n");
 #endif
    }
-   else if( *nlhdlrexprdata != NULL )
+   else
    {
+      assert(*nlhdlrexprdata != NULL);
       SCIP_CALL( nlhdlrFreeExprDataPerspective(scip, nlhdlr, expr, nlhdlrexprdata) );
    }
 
@@ -1800,6 +1803,7 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoPerspective)
          {
             SCIP_CALL( SCIPnlhdlrEvalaux(scip, nlhdlr2, expr, nlhdlr2exprdata, &nlhdlr2auxvalue, soladj) );
 
+            // coverity[copy_paste_error]
             SCIP_CALL( SCIPnlhdlrEstimate(scip, conshdlr, nlhdlr2, expr,
                   nlhdlr2exprdata, soladj,
                   nlhdlr2auxvalue, overestimate, SCIPgetSolVal(scip, solcopy, auxvar),

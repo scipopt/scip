@@ -237,8 +237,6 @@ SCIP_RETCODE addAdjacentVars(
 {
    int v1;
    int v2;
-   SCIP_Bool found;
-   int pos2;
    int i;
    ADJACENTVARDATA* adjacentvardata;
 
@@ -261,30 +259,38 @@ SCIP_RETCODE addAdjacentVars(
 
       assert(adjacentvardata != NULL);
 
-      /* look for second variable in adjacentvars */
+      /* look for second variable in adjacentvars of the first variable */
       if( adjacentvardata->adjacentvars == NULL )
       {
-         found = FALSE;
-         pos2 = 0;
+         /* we don't know how many adjacent vars there will be - take a guess */
+         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &adjacentvardata->adjacentvars, 4) );
+         adjacentvardata->adjacentvars[0] = vars[v2];
+         ++adjacentvardata->nadjacentvars;
+         adjacentvardata->sadjacentvars = 4;
       }
       else
       {
+         SCIP_Bool found;
+         int pos2;
+
          found = SCIPsortedvecFindPtr((void**) adjacentvardata->adjacentvars, SCIPvarComp, vars[v2],
                adjacentvardata->nadjacentvars, &pos2);
-      }
 
-      /* add second var to adjacentvardata->adjacentvars, if not already added */
-      if( !found )
-      {
-         /* ensure size of adjacentvardata->adjacentvars */
-         SCIP_CALL( SCIPensureBlockMemoryArray(scip, &adjacentvardata->adjacentvars, &adjacentvardata->sadjacentvars,
-               adjacentvardata->nadjacentvars + 1) );
+         /* add second var to adjacentvardata->adjacentvars, if not already added */
+         if( !found )
+         {
+            /* ensure size of adjacentvardata->adjacentvars */
+            SCIP_CALL( SCIPensureBlockMemoryArray(scip, &adjacentvardata->adjacentvars, &adjacentvardata->sadjacentvars,
+                  adjacentvardata->nadjacentvars + 1) );
 
-         /* insert second var at the correct position */
-         for( i = adjacentvardata->nadjacentvars; i > pos2; --i )
-            adjacentvardata->adjacentvars[i] = adjacentvardata->adjacentvars[i-1];
-         adjacentvardata->adjacentvars[pos2] = vars[v2];
-         ++adjacentvardata->nadjacentvars;
+            /* insert second var at the correct position */
+            for( i = adjacentvardata->nadjacentvars; i > pos2; --i )
+            {
+               adjacentvardata->adjacentvars[i] = adjacentvardata->adjacentvars[i-1];
+            }
+            adjacentvardata->adjacentvars[pos2] = vars[v2];
+            ++adjacentvardata->nadjacentvars;
+         }
       }
 
       /* if this is a self-adjacent var, only need to add the connection once */
@@ -1632,6 +1638,7 @@ SCIP_RETCODE createSepaData(
           SCIPvarIsRelaxationOnly(bilinterms[i].y)) )
          continue;
 
+      // coverity[forward_null]
       SCIP_CALL( addProductVars(scip, sepadata, bilinterms[i].x, bilinterms[i].y, varmap,
             bilinterms[i].nlockspos + bilinterms[i].nlocksneg) );
    }
@@ -1640,6 +1647,7 @@ SCIP_RETCODE createSepaData(
    {
       int oldnterms = sepadata->nbilinterms;
 
+      // coverity[forward_null]
       SCIP_CALL( detectHiddenProducts(scip, sepadata, varmap) );
 
       /* update nbilinterms and bilinterms, as detectHiddenProducts might have found new terms */
