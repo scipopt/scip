@@ -8175,6 +8175,7 @@ SCIP_RETCODE SCIPsetBinaryVarIndicator(
       SCIP_CONSHDLRDATA* conshdlrdata;
 
       /* make sure we have a transformed binary variable */
+      /* coverity[copy_paste_error] */
       SCIP_CALL( SCIPgetTransformedVar(scip, binvar, &var) );
       assert( var != NULL );
       if ( ! consdata->activeone )
