@@ -71,8 +71,9 @@ SCIP_RETCODE SCIPnlpiCreate(
    SCIP_NLPIDATA*                  nlpidata                     /**< NLP interface local data */
    )
 {  /*lint --e{715}*/
-   assert(nlpi != NULL);
+   SCIP_RETCODE retcode;
 
+   assert(nlpi != NULL);
    assert(name != NULL);
    assert(description != NULL);
    assert(nlpifree != NULL);
@@ -94,8 +95,19 @@ SCIP_RETCODE SCIPnlpiCreate(
 
    SCIP_ALLOC( BMSallocClearMemory(nlpi) );
 
-   SCIP_ALLOC( BMSduplicateMemoryArray(&(*nlpi)->name, name, strlen(name)+1) );
-   SCIP_ALLOC( BMSduplicateMemoryArray(&(*nlpi)->description, description, strlen(description)+1) );
+   if( BMSduplicateMemoryArray(&(*nlpi)->name, name, strlen(name)+1) == NULL )
+   {
+      BMSfreeMemory(nlpi);
+      return SCIP_NOMEMORY;
+   }
+
+   if( BMSduplicateMemoryArray(&(*nlpi)->description, description, strlen(description)+1) == NULL )
+   {
+      BMSfreeMemoryArray(&(*nlpi)->name);
+      BMSfreeMemory(nlpi);
+      return SCIP_NOMEMORY;
+   }
+
    (*nlpi)->priority = priority;
    (*nlpi)->nlpicopy = nlpicopy;
    (*nlpi)->nlpifree = nlpifree;
@@ -120,9 +132,15 @@ SCIP_RETCODE SCIPnlpiCreate(
    (*nlpi)->nlpigetstatistics = nlpigetstatistics;
    (*nlpi)->nlpidata = nlpidata;
 
-   SCIP_CALL( SCIPclockCreate(&(*nlpi)->problemtime, SCIP_CLOCKTYPE_DEFAULT) );
+   retcode = SCIPclockCreate(&(*nlpi)->problemtime, SCIP_CLOCKTYPE_DEFAULT);
+   if( retcode != SCIP_OKAY )
+   {
+      BMSfreeMemoryArray(&(*nlpi)->description);
+      BMSfreeMemoryArray(&(*nlpi)->name);
+      BMSfreeMemory(nlpi);
+   }
 
-   return SCIP_OKAY;
+   return retcode;
 }
 
 /** sets NLP solver priority */
