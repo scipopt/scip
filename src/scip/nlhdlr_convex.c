@@ -1915,8 +1915,7 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaConvex)
       if( !success )
       {
          SCIPdebugMsg(scip, "failed to linearize for k = %d\n", k);
-         if( rowprep != NULL )
-            SCIPfreeRowprep(scip, &rowprep);
+         SCIPfreeRowprep(scip, &rowprep);
          continue;
       }
 
@@ -1928,8 +1927,7 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaConvex)
       if( !success )
       {
          SCIPdebugMsg(scip, "failed to cleanup rowprep numerics for k = %d\n", k);
-         if( rowprep != NULL )
-            SCIPfreeRowprep(scip, &rowprep);
+         SCIPfreeRowprep(scip, &rowprep);
          continue;
       }
 

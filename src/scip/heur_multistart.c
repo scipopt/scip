@@ -520,6 +520,7 @@ SCIP_Real getRelDistance(
    )
 {
    SCIP_VAR** vars;
+   int nvars;
    SCIP_Real distance;
    SCIP_Real solx;
    SCIP_Real soly;
@@ -531,12 +532,13 @@ SCIP_Real getRelDistance(
    assert(y != NULL);
 
    vars = SCIPgetVars(scip);
+   nvars = SCIPgetNVars(scip);
    distance = 0.0;
 
-   if( SCIPgetNVars(scip) == 0 )
+   if( nvars == 0 )
       return 0.0;
 
-   for( i = 0; i < SCIPgetNVars(scip); ++i )
+   for( i = 0; i < nvars; ++i )
    {
       lb = SCIPvarGetLbLocal(vars[i]);
       ub = SCIPvarGetUbLocal(vars[i]);
@@ -565,7 +567,7 @@ SCIP_Real getRelDistance(
       distance += REALABS(solx - soly) / MAX(1.0, ub - lb);
    }
 
-   return distance / SCIPgetNVars(scip);
+   return distance / nvars;
 }
 
 /** cluster useful points with a greedy algorithm */

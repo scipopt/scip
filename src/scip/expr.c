@@ -2343,7 +2343,8 @@ SCIP_RETCODE SCIPexprPrintDotInit2(
       return SCIP_FILECREATEERROR;
    }
 
-   SCIP_CALL( SCIPexprPrintDotInit(set, stat, blkmem, printdata, f, whattoprint) );
+   SCIP_CALL_FINALLY( SCIPexprPrintDotInit(set, stat, blkmem, printdata, f, whattoprint),
+      fclose(f) );
    (*printdata)->closefile = TRUE;
 
    return SCIP_OKAY;

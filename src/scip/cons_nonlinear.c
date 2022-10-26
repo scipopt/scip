@@ -3479,6 +3479,7 @@ SCIP_RETCODE detectNlhdlr(
       nlhdlrparticipating = SCIP_NLHDLR_METHOD_NONE;
       conshdlrdata->registerusesactivitysepabelow = FALSE;  /* SCIPregisterExprUsageNonlinear() as called by detect may set this to TRUE */
       conshdlrdata->registerusesactivitysepaabove = FALSE;  /* SCIPregisterExprUsageNonlinear() as called by detect may set this to TRUE */
+      /* coverity[forward_null] */
       SCIP_CALL( SCIPnlhdlrDetect(scip, ownerdata->conshdlr, nlhdlr, expr, cons, &enforcemethodsnew, &nlhdlrparticipating, &nlhdlrexprdata) );
 
       /* nlhdlr might have claimed more than needed: clean up sepa flags */
@@ -9540,7 +9541,7 @@ SCIP_DECL_CONSFREE(consFreeNonlinear)
    assert(SCIPhashmapGetNElements(conshdlrdata->var2expr) == 0);
    SCIPhashmapFree(&conshdlrdata->var2expr);
 
-   SCIPfreeMemory(scip, &conshdlrdata);
+   SCIPfreeBlockMemory(scip, &conshdlrdata);
    SCIPconshdlrSetData(conshdlr, NULL);
 
    return SCIP_OKAY;
@@ -10839,7 +10840,7 @@ SCIP_RETCODE SCIPincludeConshdlrNonlinear(
    SCIP_DIALOG* parentdialog;
 
    /* create nonlinear constraint handler data */
-   SCIP_CALL( SCIPallocClearMemory(scip, &conshdlrdata) );
+   SCIP_CALL( SCIPallocClearBlockMemory(scip, &conshdlrdata) );
    conshdlrdata->intevalvar = intEvalVarBoundTightening;
    conshdlrdata->curboundstag = 1;
    conshdlrdata->lastboundrelax = 1;

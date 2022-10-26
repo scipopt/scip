@@ -385,6 +385,7 @@ SCIP_DECL_EXPRINITESTIMATES(initestimatesExp)
       if( !overest[i] )
       {
          assert(i < 3);
+         /* coverity[overrun] */
          addExpLinearization(scip, refpointsunder[i], SCIPexprIsIntegral(child), coefs[*nreturned], &constant[*nreturned], &success); /*lint !e661*/
       }
       else

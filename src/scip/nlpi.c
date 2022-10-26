@@ -577,7 +577,9 @@ SCIP_RETCODE SCIPnlpiSolve(
 
    SCIP_CALL( nlpi->nlpisolve(set->scip, nlpi, problem, *param) );
 
+   /* coverity[overrun] */
    ++nlpi->ntermstat[nlpi->nlpigettermstat(set->scip, nlpi, problem)];
+   /* coverity[overrun] */
    ++nlpi->nsolstat[nlpi->nlpigetsolstat(set->scip, nlpi, problem)];
 
    SCIP_CALL( nlpi->nlpigetstatistics(set->scip, nlpi, problem, &stats) );
