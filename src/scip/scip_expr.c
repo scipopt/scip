@@ -1561,13 +1561,15 @@ SCIP_RETCODE SCIPshowExpr(
    SCIP_EXPR*            expr                /**< expression to be printed */
    )
 {
+   SCIP_EXPRPRINTDATA* dotdata;
+   FILE* f;
+   SCIP_RETCODE retcode = SCIP_OKAY;;
+
    /* this function is for developers, so don't bother with C variants that don't have popen() */
 #if _POSIX_C_SOURCE < 2
    SCIPerrorMessage("No POSIX version 2. Try http://distrowatch.com/.");
    return SCIP_ERROR;
 #else
-   SCIP_EXPRPRINTDATA* dotdata;
-   FILE* f;
 
    assert(scip != NULL);
    assert(expr != NULL);
@@ -1581,14 +1583,15 @@ SCIP_RETCODE SCIPshowExpr(
    }
 
    /* print all of the expression into the pipe */
-   SCIP_CALL( SCIPprintExprDotInit(scip, &dotdata, f, SCIP_EXPRPRINT_ALL) );
-   SCIP_CALL( SCIPprintExprDot(scip, dotdata, expr) );
-   SCIP_CALL( SCIPprintExprDotFinal(scip, &dotdata) );
+   SCIP_CALL_TERMINATE( retcode, SCIPprintExprDotInit(scip, &dotdata, f, SCIP_EXPRPRINT_ALL), TERMINATE );
+   SCIP_CALL_TERMINATE( retcode, SCIPprintExprDot(scip, dotdata, expr), TERMINATE );
+   SCIP_CALL_TERMINATE( retcode, SCIPprintExprDotFinal(scip, &dotdata), TERMINATE );
 
+ TERMINATE:
    /* close the pipe */
    (void) pclose(f);
 
-   return SCIP_OKAY;
+   return retcode;
 #endif
 }
 

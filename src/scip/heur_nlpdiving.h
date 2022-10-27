@@ -19,10 +19,11 @@
  * @author Timo Berthold
  * @author Stefan Vigerske
  *
- * Diving heuristic: Iteratively fixes some fractional variable and resolves the NLP-relaxation, thereby simulating a
- * depth-first-search in the tree. Fractional Diving chooses the variable with the highest fractionality and rounds it to the
- * nearest integer. One-level backtracking is applied: If the NLP gets infeasible, the last fixing is undone, and the
- * opposite fixing is tried. If this is infeasible, too, the procedure aborts.
+ * Diving heuristic: Iteratively fixes some fractional variables and resolves the LP and NLP relaxations, thereby simulating a
+ * depth-first-search in the tree. Double Diving chooses the variable for which the sum of the distances from the relaxations'
+ * solutions to a common integer value is minimal and rounds it to thenearest integer.
+ * One-level backtracking is applied: If the NLP gets infeasible, the last fixing is undone, and the opposite fixing is tried.
+ * If this is infeasible, too, the procedure aborts.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

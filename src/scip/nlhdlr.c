@@ -359,12 +359,13 @@ SCIP_RETCODE SCIPnlhdlrCreate(
    assert(detect != NULL);
    assert(evalaux != NULL);
 
-   SCIP_CALL( SCIPallocClearMemory(scip, nlhdlr) );
+   SCIP_CALL( SCIPallocClearBlockMemory(scip, nlhdlr) );
 
    SCIP_CALL( SCIPduplicateMemoryArray(scip, &(*nlhdlr)->name, name, strlen(name)+1) );
    if( desc != NULL )
    {
-      SCIP_CALL( SCIPduplicateMemoryArray(scip, &(*nlhdlr)->desc, desc, strlen(desc)+1) );
+      SCIP_CALL_FINALLY( SCIPduplicateMemoryArray(scip, &(*nlhdlr)->desc, desc, strlen(desc)+1),
+         SCIPfreeMemoryArray(scip, &(*nlhdlr)->name) );
    }
 
    (*nlhdlr)->detectpriority = detectpriority;
@@ -408,7 +409,7 @@ SCIP_RETCODE SCIPnlhdlrFree(
    SCIPfreeMemory(scip, &(*nlhdlr)->name);
    SCIPfreeMemoryNull(scip, &(*nlhdlr)->desc);
 
-   SCIPfreeMemory(scip, nlhdlr);
+   SCIPfreeBlockMemory(scip, nlhdlr);
 
    return SCIP_OKAY;
 }

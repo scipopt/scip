@@ -463,6 +463,7 @@ SCIP_DECL_EXPRINITESTIMATES(initestimatesLog)
       if( overest[i] )
       {
          assert(i < 3);
+         /* coverity[overrun] */
          addLogLinearization(scip, refpointsover[i], SCIPexprIsIntegral(child), coefs[*nreturned], &constant[*nreturned], &success); /*lint !e661*/
          if( success )
          {
