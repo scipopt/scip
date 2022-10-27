@@ -725,7 +725,7 @@ SCIP_RETCODE updateTreeProfile(
    )
 {
    int nodedepth;
-   int nbits;
+   unsigned long nbits;
    SCIP_Longint nodedepthcnt;
    SCIP_Longint maxnodes;
 
