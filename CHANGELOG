@@ -53,6 +53,7 @@ Fixed bugs
 ----------
 
 - fixed an incorrect handling of xor constraints
+- the feasibility checker for integrality constraints now uses checkintegrality even for implied integers
 - fixed an issue caused by aggregated variables not added to a hashmap in the xor constraint handler
 - changed function solveRowEchelonGF2 in cons_xor.c to avoid errors if rank is 0
 

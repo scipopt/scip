@@ -188,41 +188,31 @@ SCIP_DECL_CONSCHECK(consCheckIntegral)
 
    *result = SCIP_FEASIBLE;
 
+   if( !checkintegrality )
+      return SCIP_OKAY;
+
    ninteger = nbin + nint;
 
-   if( checkintegrality )
+   for( v = 0; v < ninteger; ++v )
    {
-      for( v = 0; v < ninteger; ++v )
+      solval = SCIPgetSolVal(scip, sol, vars[v]);
+
+      if( sol != NULL )
+         SCIPupdateSolIntegralityViolation(scip, sol, EPSFRAC(solval, SCIPfeastol(scip)));
+
+      if( !SCIPisFeasIntegral(scip, solval) )
       {
-         solval = SCIPgetSolVal(scip, sol, vars[v]);
+         *result = SCIP_INFEASIBLE;
 
-         if( sol != NULL )
-            SCIPupdateSolIntegralityViolation(scip, sol, EPSFRAC(solval, SCIPfeastol(scip)));
-
-         if( !SCIPisFeasIntegral(scip, solval) )
+         if( printreason )
          {
-            *result = SCIP_INFEASIBLE;
-
-            if( printreason )
-            {
-               SCIPinfoMessage(scip, NULL, "violation: integrality condition of variable <%s> = %.15g\n", 
-                  SCIPvarGetName(vars[v]), solval);
-            }
-            if( !completely )
-               break;
+            SCIPinfoMessage(scip, NULL, "violation: integrality condition of variable <%s> = %.15g\n",
+               SCIPvarGetName(vars[v]), solval);
          }
+         if( !completely )
+            break;
       }
    }
-#ifndef NDEBUG
-   else
-   {
-      for( v = 0; v < ninteger; ++v )
-      {
-         solval = SCIPgetSolVal(scip, sol, vars[v]);
-         assert(SCIPisFeasIntegral(scip, solval));
-      }
-   }
-#endif
 
    nallinteger = ninteger + nimpl;
    for( v = ninteger; v < nallinteger; ++v )
