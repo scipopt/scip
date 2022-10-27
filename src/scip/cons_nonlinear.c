@@ -3479,6 +3479,7 @@ SCIP_RETCODE detectNlhdlr(
       nlhdlrparticipating = SCIP_NLHDLR_METHOD_NONE;
       conshdlrdata->registerusesactivitysepabelow = FALSE;  /* SCIPregisterExprUsageNonlinear() as called by detect may set this to TRUE */
       conshdlrdata->registerusesactivitysepaabove = FALSE;  /* SCIPregisterExprUsageNonlinear() as called by detect may set this to TRUE */
+      /* coverity[forward_null] */
       SCIP_CALL( SCIPnlhdlrDetect(scip, ownerdata->conshdlr, nlhdlr, expr, cons, &enforcemethodsnew, &nlhdlrparticipating, &nlhdlrexprdata) );
 
       /* nlhdlr might have claimed more than needed: clean up sepa flags */
@@ -4286,7 +4287,7 @@ SCIP_RETCODE getBinaryProductExprDo(
    SCIP_CONS* cons;
    SCIP_Real* coefs;
    SCIP_VAR* w;
-   char name[SCIP_MAXSTRLEN];
+   char* name;
    int nchildren;
    int i;
 
@@ -4298,12 +4299,13 @@ SCIP_RETCODE getBinaryProductExprDo(
    nchildren = SCIPexprGetNChildren(prodexpr);
    assert(nchildren >= 2);
 
-   /* memory to store the variables of the variable expressions (+1 for w) */
+   /* memory to store the variables of the variable expressions (+1 for w) and their name */
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, nchildren + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &coefs, nchildren + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &name, nchildren * (SCIP_MAXSTRLEN + 1) + 20) );
 
    /* prepare the names of the variable and the constraints */
-   (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "binreform");
+   strcpy(name, "binreform");
    for( i = 0; i < nchildren; ++i )
    {
       vars[i] = SCIPgetVarExprVar(SCIPexprGetChildren(prodexpr)[i]);
@@ -4372,6 +4374,7 @@ SCIP_RETCODE getBinaryProductExprDo(
    SCIP_CALL( SCIPreleaseVar(scip, &w) );
 
    /* free memory */
+   SCIPfreeBufferArray(scip, &name);
    SCIPfreeBufferArray(scip, &coefs);
    SCIPfreeBufferArray(scip, &vars);
 
@@ -9540,7 +9543,7 @@ SCIP_DECL_CONSFREE(consFreeNonlinear)
    assert(SCIPhashmapGetNElements(conshdlrdata->var2expr) == 0);
    SCIPhashmapFree(&conshdlrdata->var2expr);
 
-   SCIPfreeMemory(scip, &conshdlrdata);
+   SCIPfreeBlockMemory(scip, &conshdlrdata);
    SCIPconshdlrSetData(conshdlr, NULL);
 
    return SCIP_OKAY;
@@ -10839,7 +10842,7 @@ SCIP_RETCODE SCIPincludeConshdlrNonlinear(
    SCIP_DIALOG* parentdialog;
 
    /* create nonlinear constraint handler data */
-   SCIP_CALL( SCIPallocClearMemory(scip, &conshdlrdata) );
+   SCIP_CALL( SCIPallocClearBlockMemory(scip, &conshdlrdata) );
    conshdlrdata->intevalvar = intEvalVarBoundTightening;
    conshdlrdata->curboundstag = 1;
    conshdlrdata->lastboundrelax = 1;

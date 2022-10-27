@@ -245,6 +245,9 @@ public:
       probdata->filenamestub[probdata->filenamestublen] = '\0';
    }
 
+   AMPLProblemHandler(const AMPLProblemHandler&) = delete;
+   AMPLProblemHandler& operator=(const AMPLProblemHandler&) = delete;
+
    /// destructor
    ///
    /// only asserts that cleanup() has been called, as we cannot throw an exception or return a SCIP_RETCODE here
@@ -337,6 +340,7 @@ public:
                case SCIP_VARTYPE_CONTINUOUS :
                   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "x%d", i);
                   break;
+               // coverity[deadcode]
                default:
                   SCIPABORT();
                   break;

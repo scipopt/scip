@@ -516,7 +516,9 @@ SCIP_DECL_EXPRINITESTIMATES(initestimatesEntropy)
       { /*lint !e661*/
          /* -x*(1+log(x*)) + x* <= -x*log(x) */
          assert(i < 3);
+         /* coverity[overrun] */
          coefs[*nreturned][0] = -(1.0 + log(refpointsover[i]));
+         /* coverity[overrun] */
          constant[*nreturned] = refpointsover[i];
       }
       else

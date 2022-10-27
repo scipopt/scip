@@ -4144,6 +4144,7 @@ SCIP_RETCODE SCIPnlpWrite(
    const char*           fname               /**< file name */
    )
 {
+   SCIP_RETCODE retcode = SCIP_OKAY;
    FILE* file;
    int i;
 
@@ -4176,15 +4177,16 @@ SCIP_RETCODE SCIPnlpWrite(
    for( i = 0; i < nlp->nnlrows; ++i )
    {
       SCIPmessageFPrintInfo(messagehdlr, file, "  ");
-      SCIP_CALL( SCIPnlrowPrint(nlp->nlrows[i], blkmem, set, stat, messagehdlr, file) );
+      SCIP_CALL_TERMINATE( retcode, SCIPnlrowPrint(nlp->nlrows[i], blkmem, set, stat, messagehdlr, file), TERMINATE );
    }
 
+ TERMINATE:
    if( fname != NULL )
    {
       fclose(file);
    }
 
-   return SCIP_OKAY;
+   return retcode;
 }
 
 /** gets array with variables of the NLP */
