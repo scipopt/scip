@@ -548,6 +548,11 @@ LIBOBJSUBDIRS	+=      $(LIBOBJDIR)/bliss
 endif
 endif
 
+ifeq ($(SYM),sassy)
+LDFLAGS		+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCC_l)bliss.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
+CXXFLAGS	+=	-std=c++17
+endif
+
 ifeq ($(SYM),nauty)
 LDFLAGS		+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCC_l)nauty.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
 endif
