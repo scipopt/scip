@@ -1769,6 +1769,7 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
 
       if( mirinfo->slackroundeddown[i] )
       {
+         SCIPdebugMessage("Rounded down intger slack on row %s \n", mirinfo->slackrows[i]->name);
          RatSetReal(value, mirinfo->slackweight[i]);
          RatMultReal(value, value, mirinfo->slackscale[i]);
          RatMultReal(value, value, mirinfo->slacksign[i]);
@@ -1777,9 +1778,22 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
          RatDiv(value, value, oneminusf0);
       }
       else
-         RatSetReal(value, 0.0);
+      {
+         SCIPdebugMessage("Rounded up intger slack on row %s \n", mirinfo->slackrows[i]->name);
+         RatSetReal(value, mirinfo->slackweight[i]);
+         RatMultReal(value, value, mirinfo->slackscale[i]);
+         RatMultReal(value, value, mirinfo->slacksign[i]);
+         RatDiffReal(value, value, (mirinfo->slackcoefficients[i] * -mirinfo->slacksign[i]) - 1); // fr exactly
+         RatDiff(value, value, mirinfo->frac); // fr - f0
+         RatDiv(value, value, oneminusf0); // (fr-f0) / (1-f0)
+         RatAddReal(value, value, (mirinfo->slackcoefficients[i] * -mirinfo->slacksign[i]) - 1); // (down(ar) + (fr-f0) / (1-f0)
+         RatMultReal(value, value, mirinfo->slacksign[i]);
+         RatDebugMessage("Exact coefficient %q(%g), used coefficient %g\n", value, RatApproxReal(value), mirinfo->slackusedcoef[i]);
 
-      RatDebugMessage("adding %q times row: ", value);
+         RatAddReal(value, value, mirinfo->slackusedcoef[i]);
+      }
+
+      RatDebugMessage("adding %q(%g) times row: ", value, RatApproxReal(value));
       SCIPdebug(SCIProwExactPrint(slackrow, set->scip->messagehdlr, NULL));
 
       assert(slackrow != NULL);
