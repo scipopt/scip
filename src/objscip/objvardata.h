@@ -53,6 +53,12 @@ public:
    {
    }
 
+   /** Assignment of polymorphic classes causes slicing and is therefore disabled. */
+   ObjVardata& operator=(const ObjVardata& o) = delete;
+
+   /** Assignment of polymorphic classes causes slicing and is therefore disabled. */
+   ObjVardata& operator=(ObjVardata&& o) = delete;
+
    /** destructor of user variable data to free original user data (called when original variable is freed)
     *
     *  If the "deleteobject" flag in the SCIPcreateObjVar() method was set to TRUE, this method is not needed,

@@ -55,6 +55,12 @@ public:
    {
    }
 
+   /** Assignment of polymorphic classes causes slicing and is therefore disabled. */
+   ObjMessagehdlr& operator=(const ObjMessagehdlr& o) = delete;
+
+   /** Assignment of polymorphic classes causes slicing and is therefore disabled. */
+   ObjMessagehdlr& operator=(ObjMessagehdlr&& o) = delete;
+
    /** error message print method of message handler
     *
     *  @note This function can be activated by calling SCIPsetStaticErrorPrintingMessagehdlr().
