@@ -26,6 +26,7 @@
 
 #include <cassert>
 #include <cstring>
+#include <utility>
 
 #include "scip/scip.h"
 #include "objscip/objprobcloneable.h"

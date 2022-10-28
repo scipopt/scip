@@ -24,6 +24,7 @@
 #define __SCIP_OBJPRICER_H__
 
 #include <cstring>
+#include <utility>
 
 #include "scip/scip.h"
 #include "objscip/objprobcloneable.h"
