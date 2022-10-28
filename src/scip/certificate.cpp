@@ -2767,7 +2767,6 @@ SCIP_RETCODE SCIPcertificateNewMirInfo(
 
    if( certificate->mirinfosize == certificate->nmirinfos )
    {
-      printf("increasing mirinfo size to %d \n", certificate->nmirinfos + 100);
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &certificate->mirinfo, certificate->mirinfosize, certificate->mirinfosize + 100) );
       certificate->mirinfosize += 100;
    }
