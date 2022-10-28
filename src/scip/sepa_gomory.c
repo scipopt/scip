@@ -45,7 +45,6 @@
  *  y
  *  END
  */
-#define SCIP_DEBUG
 #include "struct_scip.h"
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -717,7 +716,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
                   cutislocal, cutrank, strongcgsuccess, &cutoff, &naddedcuts, ninds, inds, binvrow) );
          }
       }
-      if( SCIPisCertificateActive(scip) && !(naddedcuts > cutslastround) )
+      if( SCIPisCertificateActive(scip) )
       {
          SCIP_CALL( SCIPfreeCertificateActiveAggregationInfo(scip) );
          SCIP_CALL( SCIPfreeCertificateActiveMirInfo(scip) );

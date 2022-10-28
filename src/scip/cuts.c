@@ -13,8 +13,6 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#define SCIP_DEBUG
-
 /**@file   cuts.c
  * @ingroup OTHER_CFILES
  * @brief  methods for aggregation of rows
@@ -4817,7 +4815,7 @@ SCIP_RETCODE cutsRoundMIRSafe(
          fj = QUAD_TO_DBL(aj) -downaj;
          assert(fj >= -SCIPepsilon(scip) && fj <= 1.0);
 
-         if(  fj <= SCIPintervalGetInf(f0) )
+         if(  SCIPisLE(scip, fj, SCIPintervalGetInf(f0)) )
          {
             SCIPintervalSet(&cutaj, downaj);
 
@@ -6042,7 +6040,7 @@ SCIP_RETCODE cutsSubstituteMIRSafe(
 
          integralslack = TRUE;
 
-         if( fr.inf <= f0.inf )
+         if( SCIPisLE(scip, fr.inf, f0.inf) )
          {
             SCIPintervalSet(&cutar, downar);
             splitcoef = downar;

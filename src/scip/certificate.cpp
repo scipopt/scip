@@ -20,7 +20,6 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-#define SCIP_DEBUG
 #include <stdio.h>
 #include <assert.h>
 #include <string.h>
@@ -2768,6 +2767,7 @@ SCIP_RETCODE SCIPcertificateNewMirInfo(
 
    if( certificate->mirinfosize == certificate->nmirinfos )
    {
+      printf("increasing mirinfo size to %d \n", certificate->nmirinfos + 100);
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &certificate->mirinfo, certificate->mirinfosize, certificate->mirinfosize + 100) );
       certificate->mirinfosize += 100;
    }
@@ -2914,6 +2914,9 @@ SCIP_RETCODE SCIPfreeCertificateActiveMirInfo(
    certificate = SCIPgetCertificate(scip);
 
    assert(certificate != NULL);
+
+   if( certificate->nmirinfos == 0 )
+      return SCIP_OKAY;
 
    mirinfo = certificate->mirinfo[certificate->nmirinfos - 1];
 
