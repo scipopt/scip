@@ -85,6 +85,17 @@ public:
       SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip_, &scip_desc_, desc, std::strlen(desc)+1) );
    }
 
+   /** Copy constructor */
+   ObjPricer(const ObjPricer& o) : ObjPricer(o.scip_, o.scip_name_, o.scip_desc_, o.scip_priority_, o.scip_delay_) {}
+
+   /** Move constructor */
+   ObjPricer(ObjPricer&& o)
+       : scip_(o.scip_), scip_name_(0), scip_desc_(0), scip_priority_(o.scip_priority_), scip_delay_(o.scip_delay_)
+   {
+      std::swap(scip_name_, o.scip_name_);
+      std::swap(scip_desc_, o.scip_desc_);
+   }
+
    /** destructor */
    virtual ~ObjPricer()
    {
@@ -93,6 +104,12 @@ public:
       SCIPfreeMemoryArray(scip_, &scip_name_);
       SCIPfreeMemoryArray(scip_, &scip_desc_);
    }
+
+   /** Assignment of polymorphic classes causes slicing and is therefore disabled. */
+   ObjPricer& operator=(const ObjPricer& o) = delete;
+
+   /** Assignment of polymorphic classes causes slicing and is therefore disabled. */
+   ObjPricer& operator=(ObjPricer&& o) = delete;
 
    /** destructor of variable pricer to free user data (called when SCIP is exiting)
     *

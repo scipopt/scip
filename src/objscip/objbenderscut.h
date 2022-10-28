@@ -83,6 +83,20 @@ public:
       SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip_, &scip_desc_, desc, std::strlen(desc)+1) );
    }
 
+   /** Copy constructor */
+   ObjBenderscut(const ObjBenderscut& o)
+       : ObjBenderscut(o.scip_, o.scip_name_, o.scip_desc_, o.scip_priority_, o.scip_islpcut_)
+   {
+   }
+
+   /** Move constructor */
+   ObjBenderscut(ObjBenderscut&& o)
+       : scip_(o.scip_), scip_name_(0), scip_desc_(0), scip_priority_(o.scip_priority_), scip_islpcut_(o.scip_islpcut_)
+   {
+      std::swap(scip_name_, o.scip_name_);
+      std::swap(scip_desc_, o.scip_desc_);
+   }
+
    /** destructor */
    virtual ~ObjBenderscut()
    {
@@ -91,6 +105,12 @@ public:
       SCIPfreeMemoryArray(scip_, &scip_name_);
       SCIPfreeMemoryArray(scip_, &scip_desc_);
    }
+
+   /** Assignment of polymorphic classes causes slicing and is therefore disabled. */
+   ObjBenderscut& operator=(const ObjBenderscut& o) = delete;
+
+   /** Assignment of polymorphic classes causes slicing and is therefore disabled. */
+   ObjBenderscut& operator=(ObjBenderscut&& o) = delete;
 
    /** copy method for compression plugins (called when SCIP copies plugins)
     *

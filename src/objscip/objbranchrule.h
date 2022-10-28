@@ -91,6 +91,25 @@ public:
       SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip_, &scip_desc_, desc, std::strlen(desc)+1) );
    }
 
+   /** Copy constructor */
+   ObjBranchrule(const ObjBranchrule& o)
+       : ObjBranchrule(o.scip_, o.scip_name_, o.scip_desc_, o.scip_priority_, o.scip_maxdepth_, o.scip_maxbounddist_)
+   {
+   }
+
+   /** Move constructor */
+   ObjBranchrule(ObjBranchrule&& o)
+       : scip_(o.scip_),
+         scip_name_(0),
+         scip_desc_(0),
+         scip_priority_(o.scip_priority_),
+         scip_maxdepth_(o.scip_maxdepth_),
+         scip_maxbounddist_(o.scip_maxbounddist_)
+   {
+      std::swap(scip_name_, o.scip_name_);
+      std::swap(scip_desc_, o.scip_desc_);
+   }
+
    /** destructor */
    virtual ~ObjBranchrule()
    {
@@ -99,6 +118,12 @@ public:
       SCIPfreeMemoryArray(scip_, &scip_name_);
       SCIPfreeMemoryArray(scip_, &scip_desc_);
    }
+
+   /** Assignment of polymorphic classes causes slicing and is therefore disabled. */
+   ObjBranchrule& operator=(const ObjBranchrule& o) = delete;
+
+   /** Assignment of polymorphic classes causes slicing and is therefore disabled. */
+   ObjBranchrule& operator=(ObjBranchrule&& o) = delete;
 
    /** destructor of branching rule to free user data (called when SCIP is exiting)
     *

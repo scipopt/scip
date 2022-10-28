@@ -105,6 +105,30 @@ public:
       SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip_, &scip_desc_, desc, std::strlen(desc)+1) );
    }
 
+   /** Copy constructor */
+   ObjHeur(const ObjHeur& o)
+       : ObjHeur(o.scip_, o.scip_name_, o.scip_desc_, o.scip_dispchar_, o.scip_priority_, o.scip_freq_, o.scip_freqofs_,
+                 o.scip_maxdepth_, o.scip_timingmask_, o.scip_usessubscip_)
+   {
+   }
+
+   /** Move constructor */
+   ObjHeur(ObjHeur&& o)
+       : scip_(o.scip_),
+         scip_name_(0),
+         scip_desc_(0),
+         scip_dispchar_(o.scip_dispchar_),
+         scip_priority_(o.scip_priority_),
+         scip_freq_(o.scip_freq_),
+         scip_freqofs_(o.scip_freqofs_),
+         scip_maxdepth_(o.scip_maxdepth_),
+         scip_timingmask_(o.scip_timingmask_),
+         scip_usessubscip_(o.scip_usessubscip_)
+   {
+      std::swap(scip_name_, o.scip_name_);
+      std::swap(scip_desc_, o.scip_desc_);
+   }
+
    /** destructor */
    virtual ~ObjHeur()
    {
@@ -113,6 +137,12 @@ public:
       SCIPfreeMemoryArray(scip_, &scip_name_);
       SCIPfreeMemoryArray(scip_, &scip_desc_);
    }
+
+   /** Assignment of polymorphic classes causes slicing and is therefore disabled. */
+   ObjHeur& operator=(const ObjHeur& o) = delete;
+
+   /** Assignment of polymorphic classes causes slicing and is therefore disabled. */
+   ObjHeur& operator=(ObjHeur&& o) = delete;
 
    /** destructor of primal heuristic to free user data (called when SCIP is exiting)
     *

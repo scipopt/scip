@@ -68,6 +68,16 @@ public:
       SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip_, &scip_desc_, desc, std::strlen(desc)+1) );
    }
 
+   /** Copy constructor */
+   ObjEventhdlr(const ObjEventhdlr& o) : ObjEventhdlr(o.scip_, o.scip_name_, o.scip_desc_) {}
+
+   /** Move constructor */
+   ObjEventhdlr(ObjEventhdlr&& o) : scip_(o.scip_), scip_name_(0), scip_desc_(0)
+   {
+      std::swap(scip_name_, o.scip_name_);
+      std::swap(scip_desc_, o.scip_desc_);
+   }
+
    /** destructor */
    virtual ~ObjEventhdlr()
    {
@@ -76,6 +86,12 @@ public:
       SCIPfreeMemoryArray(scip_, &scip_name_);
       SCIPfreeMemoryArray(scip_, &scip_desc_);
    }
+
+   /** Assignment of polymorphic classes causes slicing and is therefore disabled. */
+   ObjEventhdlr& operator=(const ObjEventhdlr& o) = delete;
+
+   /** Assignment of polymorphic classes causes slicing and is therefore disabled. */
+   ObjEventhdlr& operator=(ObjEventhdlr&& o) = delete;
 
    /** destructor of event handler to free user data (called when SCIP is exiting)
     *
