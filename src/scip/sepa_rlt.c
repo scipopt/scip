@@ -1638,7 +1638,7 @@ SCIP_RETCODE createSepaData(
           SCIPvarIsRelaxationOnly(bilinterms[i].y)) )
          continue;
 
-      // coverity[forward_null]
+      /* coverity[forward_null] */
       SCIP_CALL( addProductVars(scip, sepadata, bilinterms[i].x, bilinterms[i].y, varmap,
             bilinterms[i].nlockspos + bilinterms[i].nlocksneg) );
    }
@@ -1647,7 +1647,7 @@ SCIP_RETCODE createSepaData(
    {
       int oldnterms = sepadata->nbilinterms;
 
-      // coverity[forward_null]
+      /* coverity[forward_null] */
       SCIP_CALL( detectHiddenProducts(scip, sepadata, varmap) );
 
       /* update nbilinterms and bilinterms, as detectHiddenProducts might have found new terms */
