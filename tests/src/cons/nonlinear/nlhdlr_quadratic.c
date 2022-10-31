@@ -2933,7 +2933,7 @@ Test(interCuts, monoidal2, .description = "test cut for monoidal strengthening")
 
       SCIP_Real expectedapex[2] = {15.0, 21.0};
       SCIP_Real expectedquadcoefs[3] = {340.0, -770.0, 399.0};
-      SCIP_Real expectedcutcoef = 1.46204;
+      SCIP_Real expectedcutcoef = 1.462040325870361;
 
       SCIP_CALL( intercutsComputeCommonQuantities(scip, nlhdlrexprdata, NULL, 1.0, NULL, vb, vzlp, wcoefs, &wzlp, &kappa) );
 
