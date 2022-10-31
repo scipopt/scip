@@ -2826,6 +2826,7 @@ Test(interCuts, monoidal, .description = "test cut for monoidal strengthening")
       SCIP_Real b;
       SCIP_Real c;
       SCIP_Real cutcoef;
+      SCIP_Bool success;
 
       SCIP_Real expectedquadcoefs[3] = {5.25, -16.5, 3.25};
       SCIP_Real expectedcutcoef = 2.931700653055780;
@@ -2833,7 +2834,9 @@ Test(interCuts, monoidal, .description = "test cut for monoidal strengthening")
       SCIP_CALL( intercutsComputeCommonQuantities(scip, nlhdlrexprdata, NULL, 1.0, NULL, vb, vzlp, wcoefs, &wzlp, &kappa) );
 
       /* compute apex */
-      computeApex(nlhdlrexprdata, vb, vzlp, kappa, 1.0, apex);
+      computeApex(nlhdlrexprdata, vb, vzlp, kappa, 1.0, apex, &success);
+
+      cr_assert(success);
 
       /* compute eigenvectors * ray and eigenvectors * apex */
       computeVApexAndVRay(nlhdlrexprdata, apex, raycoefs, rayidx, raynnonz, vapex, vray);
@@ -2843,10 +2846,10 @@ Test(interCuts, monoidal, .description = "test cut for monoidal strengthening")
       cutcoef = findMonoidalQuadRoot(scip, a, b, c);
 
       /* check if coefs are correct */
-      cr_expect_eq(a, expectedquadcoefs[0], "e %g g %g\n", expectedquadcoefs[0], a);
-      cr_expect_eq(b, expectedquadcoefs[1], "e %g g %g\n", expectedquadcoefs[1], b);
-      cr_expect_eq(c, expectedquadcoefs[2], "e %g g %g\n", expectedquadcoefs[2], c);
-      cr_expect_eq(cutcoef, expectedcutcoef, "e %.10f g %.15f\n", expectedcutcoef, cutcoef);
+      cr_expect_float_eq(a, expectedquadcoefs[0], 1e-8, "e %g g %g\n", expectedquadcoefs[0], a);
+      cr_expect_float_eq(b, expectedquadcoefs[1], 1e-8, "e %g g %g\n", expectedquadcoefs[1], b);
+      cr_expect_float_eq(c, expectedquadcoefs[2], 1e-8, "e %g g %g\n", expectedquadcoefs[2], c);
+      cr_expect_float_eq(cutcoef, expectedcutcoef, 1e-8, "e %.10f g %.15f\n", expectedcutcoef, cutcoef);
    }
 
    SCIP_CALL( SCIPendProbing(scip) );
@@ -2926,6 +2929,7 @@ Test(interCuts, monoidal2, .description = "test cut for monoidal strengthening")
       SCIP_Real b;
       SCIP_Real c;
       SCIP_Real cutcoef;
+      SCIP_Bool success;
 
       SCIP_Real expectedapex[2] = {15.0, 21.0};
       SCIP_Real expectedquadcoefs[3] = {340.0, -770.0, 399.0};
@@ -2934,11 +2938,13 @@ Test(interCuts, monoidal2, .description = "test cut for monoidal strengthening")
       SCIP_CALL( intercutsComputeCommonQuantities(scip, nlhdlrexprdata, NULL, 1.0, NULL, vb, vzlp, wcoefs, &wzlp, &kappa) );
 
       /* compute apex */
-      computeApex(nlhdlrexprdata, vb, vzlp, kappa, 1.0, apex);
+      computeApex(nlhdlrexprdata, vb, vzlp, kappa, 1.0, apex, &success);
+
+      cr_assert(success);
 
       /* check if apex is correct */
-      cr_expect_eq(apex[0], expectedapex[0], "e %g g %g\n", expectedapex[0], apex[0]);
-      cr_expect_eq(apex[1], expectedapex[1], "e %g g %g\n", expectedapex[1], apex[1]);
+      cr_expect_float_eq(apex[0], expectedapex[0], 1e-12, "e %g g %g\n", expectedapex[0], apex[0]);
+      cr_expect_float_eq(apex[1], expectedapex[1], 1e-12, "e %g g %g\n", expectedapex[1], apex[1]);
 
       /* compute eigenvectors * ray and eigenvectors * apex */
       computeVApexAndVRay(nlhdlrexprdata, apex, raycoefs, rayidx, raynnonz, vapex, vray);
@@ -2948,10 +2954,10 @@ Test(interCuts, monoidal2, .description = "test cut for monoidal strengthening")
       cutcoef = findMonoidalQuadRoot(scip, a, b, c);
 
       /* check if coefs are correct */
-      cr_expect_eq(a, expectedquadcoefs[0], "e %g g %g\n", expectedquadcoefs[0], a);
-      cr_expect_eq(b, expectedquadcoefs[1], "e %g g %g\n", expectedquadcoefs[1], b);
-      cr_expect_eq(c, expectedquadcoefs[2], "e %g g %g\n", expectedquadcoefs[2], c);
-      cr_expect_eq(cutcoef, expectedcutcoef, "e %.10f g %.15f\n", expectedcutcoef, cutcoef);
+      cr_expect_float_eq(a, expectedquadcoefs[0], 1e-8, "e %g g %g\n", expectedquadcoefs[0], a);
+      cr_expect_float_eq(b, expectedquadcoefs[1], 1e-8, "e %g g %g\n", expectedquadcoefs[1], b);
+      cr_expect_float_eq(c, expectedquadcoefs[2], 1e-8, "e %g g %g\n", expectedquadcoefs[2], c);
+      cr_expect_float_eq(cutcoef, expectedcutcoef, 1e-8, "e %.10f g %.15f\n", expectedcutcoef, cutcoef);
    }
 
    SCIP_CALL( SCIPendProbing(scip) );
