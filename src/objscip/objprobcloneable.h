@@ -43,10 +43,10 @@ namespace scip
    {
       virtual ~ObjProbCloneable() {}
 
-      /** Assignment of polymorphic classes causes slicing and is therefore disabled. */
+      /** assignment of polymorphic classes causes slicing and is therefore disabled. */
       ObjProbCloneable& operator=(const ObjProbCloneable& o) = delete;
 
-      /** Assignment of polymorphic classes causes slicing and is therefore disabled. */
+      /** assignment of polymorphic classes causes slicing and is therefore disabled. */
       ObjProbCloneable& operator=(ObjProbCloneable&& o) = delete;
 
       /** clone method which will be used to copy constraint handler and variable pricer objects */

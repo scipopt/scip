@@ -99,14 +99,14 @@ public:
       SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip_, &scip_desc_, desc, std::strlen(desc)+1) );
    }
 
-   /** Copy constructor */
+   /** copy constructor */
    ObjBenders(const ObjBenders& o)
        : ObjBenders(o.scip_, o.scip_name_, o.scip_desc_, o.scip_priority_, o.scip_cutlp_, o.scip_cutpseudo_,
                     o.scip_cutrelax_, o.scip_shareauxvars_)
    {
    }
 
-   /** Move constructor */
+   /** move constructor */
    ObjBenders(ObjBenders&& o)
        : scip_(o.scip_),
          scip_name_(0),
@@ -130,10 +130,10 @@ public:
       SCIPfreeMemoryArray(scip_, &scip_desc_);
    }
 
-   /** Assignment of polymorphic classes causes slicing and is therefore disabled. */
+   /** assignment of polymorphic classes causes slicing and is therefore disabled. */
    ObjBenders& operator=(const ObjBenders& o) = delete;
 
-   /** Assignment of polymorphic classes causes slicing and is therefore disabled. */
+   /** assignment of polymorphic classes causes slicing and is therefore disabled. */
    ObjBenders& operator=(ObjBenders&& o) = delete;
 
    /** copy method for benders plugins (called when SCIP copies plugins)

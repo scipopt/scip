@@ -76,10 +76,10 @@ public:
       SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip_, &scip_desc_, desc, std::strlen(desc)+1) );
    }
 
-   /** Copy constructor */
+   /** copy constructor */
    ObjDialog(const ObjDialog& o) : ObjDialog(o.scip_, o.scip_name_, o.scip_desc_, o.scip_issubmenu_) {}
 
-   /** Move constructor */
+   /** move constructor */
    ObjDialog(ObjDialog&& o) : scip_(o.scip_), scip_name_(0), scip_desc_(0), scip_issubmenu_(o.scip_issubmenu_)
    {
       std::swap(scip_name_, o.scip_name_);
@@ -95,10 +95,10 @@ public:
       SCIPfreeMemoryArray(scip_, &scip_desc_);
    }
 
-   /** Assignment of polymorphic classes causes slicing and is therefore disabled. */
+   /** assignment of polymorphic classes causes slicing and is therefore disabled. */
    ObjDialog& operator=(const ObjDialog& o) = delete;
 
-   /** Assignment of polymorphic classes causes slicing and is therefore disabled. */
+   /** assignment of polymorphic classes causes slicing and is therefore disabled. */
    ObjDialog& operator=(ObjDialog&& o) = delete;
 
    /** destructor of dialog to free user data (called when SCIP is exiting)

@@ -53,10 +53,10 @@ public:
    {
    }
 
-   /** Assignment of polymorphic classes causes slicing and is therefore disabled. */
+   /** assignment of polymorphic classes causes slicing and is therefore disabled. */
    ObjProbData& operator=(const ObjProbData& o) = delete;
 
-   /** Assignment of polymorphic classes causes slicing and is therefore disabled. */
+   /** assignment of polymorphic classes causes slicing and is therefore disabled. */
    ObjProbData& operator=(ObjProbData&& o) = delete;
 
    /** destructor of user problem data to free original user data (called when original problem is freed)

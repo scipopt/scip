@@ -80,13 +80,13 @@ public:
       SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip_, &scip_desc_, desc, std::strlen(desc)+1) );
    }
 
-   /** Copy constructor */
+   /** copy constructor */
    ObjNodesel(const ObjNodesel& o)
        : ObjNodesel(o.scip_, o.scip_name_, o.scip_desc_, o.scip_stdpriority_, o.scip_memsavepriority_)
    {
    }
 
-   /** Move constructor */
+   /** move constructor */
    ObjNodesel(ObjNodesel&& o)
        : scip_(o.scip_),
          scip_name_(0),
@@ -107,10 +107,10 @@ public:
       SCIPfreeMemoryArray(scip_, &scip_desc_);
    }
 
-   /** Assignment of polymorphic classes causes slicing and is therefore disabled. */
+   /** assignment of polymorphic classes causes slicing and is therefore disabled. */
    ObjNodesel& operator=(const ObjNodesel& o) = delete;
 
-   /** Assignment of polymorphic classes causes slicing and is therefore disabled. */
+   /** assignment of polymorphic classes causes slicing and is therefore disabled. */
    ObjNodesel& operator=(ObjNodesel&& o) = delete;
 
    /** destructor of node selector to free user data (called when SCIP is exiting)

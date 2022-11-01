@@ -39,10 +39,10 @@ namespace scip
    {
       virtual ~ObjCloneable() {}
 
-      /** Assignment of polymorphic classes causes slicing and is therefore disabled. */
+      /** assignment of polymorphic classes causes slicing and is therefore disabled. */
       ObjCloneable& operator=(const ObjCloneable& o) = delete;
 
-      /** Assignment of polymorphic classes causes slicing and is therefore disabled. */
+      /** assignment of polymorphic classes causes slicing and is therefore disabled. */
       ObjCloneable& operator=(ObjCloneable&& o) = delete;
 
       /** clone method, used to copy plugins which are not constraint handlers or variable pricer plugins */

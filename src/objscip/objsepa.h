@@ -97,14 +97,14 @@ public:
       SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip_, &scip_desc_, desc, std::strlen(desc)+1) );
    }
 
-   /** Copy constructor */
+   /** copy constructor */
    ObjSepa(const ObjSepa& o)
        : ObjSepa(o.scip_, o.scip_name_, o.scip_desc_, o.scip_priority_, o.scip_freq_, o.scip_maxbounddist_,
                  o.scip_usessubscip_, o.scip_delay_)
    {
    }
 
-   /** Move constructor */
+   /** move constructor */
    ObjSepa(ObjSepa&& o)
        : scip_(o.scip_),
          scip_name_(0),
@@ -128,10 +128,10 @@ public:
       SCIPfreeMemoryArray(scip_, &scip_desc_);
    }
 
-   /** Assignment of polymorphic classes causes slicing and is therefore disabled. */
+   /** assignment of polymorphic classes causes slicing and is therefore disabled. */
    ObjSepa& operator=(const ObjSepa& o) = delete;
 
-   /** Assignment of polymorphic classes causes slicing and is therefore disabled. */
+   /** assignment of polymorphic classes causes slicing and is therefore disabled. */
    ObjSepa& operator=(ObjSepa&& o) = delete;
 
    /** destructor of cut separator to free user data (called when SCIP is exiting) 

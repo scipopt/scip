@@ -97,14 +97,14 @@ public:
       SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip_, &scip_header_, header, std::strlen(header)+1) );
    }
 
-   /** Copy constructor */
+   /** copy constructor */
    ObjDisp(const ObjDisp& o)
        : ObjDisp(o.scip_, o.scip_name_, o.scip_desc_, o.scip_header_, o.scip_width_, o.scip_priority_, o.scip_position_,
                  o.scip_stripline_)
    {
    }
 
-   /** Move constructor */
+   /** move constructor */
    ObjDisp(ObjDisp&& o)
        : scip_(o.scip_),
          scip_name_(0),
@@ -130,10 +130,10 @@ public:
       SCIPfreeMemoryArray(scip_, &scip_header_);
    }
 
-   /** Assignment of polymorphic classes causes slicing and is therefore disabled. */
+   /** assignment of polymorphic classes causes slicing and is therefore disabled. */
    ObjDisp& operator=(const ObjDisp& o) = delete;
 
-   /** Assignment of polymorphic classes causes slicing and is therefore disabled. */
+   /** assignment of polymorphic classes causes slicing and is therefore disabled. */
    ObjDisp& operator=(ObjDisp&& o) = delete;
 
    /** destructor of display column to free user data (called when SCIP is exiting)

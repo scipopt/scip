@@ -55,10 +55,10 @@ public:
    {
    }
 
-   /** Assignment of polymorphic classes causes slicing and is therefore disabled. */
+   /** assignment of polymorphic classes causes slicing and is therefore disabled. */
    ObjMessagehdlr& operator=(const ObjMessagehdlr& o) = delete;
 
-   /** Assignment of polymorphic classes causes slicing and is therefore disabled. */
+   /** assignment of polymorphic classes causes slicing and is therefore disabled. */
    ObjMessagehdlr& operator=(ObjMessagehdlr&& o) = delete;
 
    /** error message print method of message handler

@@ -135,7 +135,7 @@ public:
       SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip_, &scip_desc_, desc, std::strlen(desc)+1) );
    }
 
-   /** Copy constructor */
+   /** copy constructor */
    ObjConshdlr(const ObjConshdlr& o)
        : ObjConshdlr(o.scip_, o.scip_name_, o.scip_desc_, o.scip_sepapriority_, o.scip_enfopriority_,
                      o.scip_checkpriority_, o.scip_sepafreq_, o.scip_propfreq_, o.scip_eagerfreq_, o.scip_maxprerounds_,
@@ -143,7 +143,7 @@ public:
    {
    }
 
-   /** Move constructor */
+   /** move constructor */
    ObjConshdlr(ObjConshdlr&& o)
        : scip_(o.scip_),
          scip_name_(0),
@@ -174,10 +174,10 @@ public:
       SCIPfreeMemoryArray(scip_, &scip_desc_);
    }
 
-   /** Assignment of polymorphic classes causes slicing and is therefore disabled. */
+   /** assignment of polymorphic classes causes slicing and is therefore disabled. */
    ObjConshdlr& operator=(const ObjConshdlr& o) = delete;
 
-   /** Assignment of polymorphic classes causes slicing and is therefore disabled. */
+   /** assignment of polymorphic classes causes slicing and is therefore disabled. */
    ObjConshdlr& operator=(ObjConshdlr&& o) = delete;
 
    /** destructor of constraint handler to free user data (called when SCIP is exiting)

@@ -80,12 +80,12 @@ public:
       SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip_, &scip_desc_, desc, std::strlen(desc)+1) );
    }
 
-   /** Copy constructor */
+   /** copy constructor */
    ObjTable(const ObjTable& o) : ObjTable(o.scip_, o.scip_name_, o.scip_desc_, o.scip_position_, o.scip_earlieststage_)
    {
    }
 
-   /** Move constructor */
+   /** move constructor */
    ObjTable(ObjTable&& o)
        : scip_(o.scip_),
          scip_name_(0),
@@ -106,10 +106,10 @@ public:
       SCIPfreeMemoryArray(scip_, &scip_desc_);
    }
 
-   /** Assignment of polymorphic classes causes slicing and is therefore disabled. */
+   /** assignment of polymorphic classes causes slicing and is therefore disabled. */
    ObjTable& operator=(const ObjTable& o) = delete;
 
-   /** Assignment of polymorphic classes causes slicing and is therefore disabled. */
+   /** assignment of polymorphic classes causes slicing and is therefore disabled. */
    ObjTable& operator=(ObjTable&& o) = delete;
 
    /** destructor of statistics table to free user data (called when SCIP is exiting)
