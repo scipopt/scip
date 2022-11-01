@@ -1247,6 +1247,189 @@ SCIP_Real computeWRayLinear(
    return retval;
 }
 
+/* TODO: add documentation */
+static
+void computeVApexAndVRay(
+   SCIP_NLHDLREXPRDATA*  nlhdlrexprdata,     /**< nlhdlr expression data */
+   SCIP_Real*            apex,               /**< array containing the apex of the S-free set in the original space */
+   SCIP_Real*            raycoefs,           /**< coefficients of ray */
+   int*                  rayidx,             /**< index of consvar the ray coef is associated to */
+   int                   raynnonz,           /**< length of raycoefs and rayidx */
+   SCIP_Real*            vapex,              /**< array to store \f$v_i^T apex\f$ */
+   SCIP_Real*            vray                /**< array to store \f$v_i^T ray\f$ */
+   )
+{
+   SCIP_EXPR* qexpr;
+   int nquadexprs;
+   SCIP_Real* eigenvectors;
+   SCIP_Real* eigenvalues;
+   int i;
+
+   qexpr = nlhdlrexprdata->qexpr;
+   SCIPexprGetQuadraticData(qexpr, NULL, NULL, NULL, NULL, &nquadexprs, NULL, &eigenvalues, &eigenvectors);
+
+   for( i = 0; i < nquadexprs; ++i )
+   {
+      SCIP_Real vdotapex;
+      SCIP_Real vdotray;
+      int offset;
+      int j;
+      int k;
+
+      offset = i * nquadexprs;
+
+      /* compute v_i^T apex and v_i^T ray */
+      vdotapex = 0;
+      vdotray = 0;
+      k = 0;
+      for( j = 0; j < nquadexprs; ++j )
+      {
+         SCIP_Real rayentry;
+
+         /* get entry of ray -> check if current var index corresponds to a non-zero entry in ray */
+         if( k < raynnonz && j == rayidx[k] )
+         {
+            rayentry = raycoefs[k];
+            ++k;
+         }
+         else
+            rayentry = 0.0;
+
+         vdotray += rayentry * eigenvectors[offset + j];
+         vdotapex += apex[j] * eigenvectors[offset + j];
+      }
+
+      vray[i] = vdotray;
+      vapex[i] = vdotapex;
+   }
+}
+/** calculate coefficients of restriction of the function to given ray.
+ *
+ * The restriction of the function representing the maximal S-free set to zlp + t * ray has the form
+ * SQRT(A t^2 + B t + C) - (D t + E) for cases 1, 2, and 3.
+ * For case 4 it is a piecewise defined function and each piece is of the aforementioned form.
+ *
+ * This function computes the coefficients A, B, C, D, E for the given ray.
+ * In case 4, it computes the coefficients for both pieces, in addition to coefficients needed to evaluate the condition
+ * in the piecewise definition of the function.
+ *
+ * The parameter iscase4 tells the function if it is case 4 or not.
+ */
+static
+SCIP_RETCODE computeRestrictionToLine(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLHDLREXPRDATA*  nlhdlrexprdata,     /**< nlhdlr expression data */
+   SCIP_Real             sidefactor,         /**< 1.0 if the violated constraint is q &le; rhs, -1.0 otherwise */
+   SCIP_Real*            raycoefs,           /**< coefficients of ray */
+   int*                  rayidx,             /**< index of consvar the ray coef is associated to */
+   int                   raynnonz,           /**< length of raycoefs and rayidx */
+   SCIP_Real*            vb,                 /**< array containing \f$v_i^T b\f$ for \f$i \in I_+ \cup I_-\f$ */
+   SCIP_Real*            vzlp,               /**< array containing \f$v_i^T zlp_q\f$ for \f$i \in I_+ \cup I_-\f$ */
+   SCIP_Real             kappa,              /**< value of kappa */
+   SCIP_Real*            apex,               /**< apex of C */
+   SCIP_Real*            coefs2,             /**< buffer to store A, B, C, D, and E of case 2 */
+   SCIP_Bool*            success             /**< did we successfully compute the coefficients? */
+   )
+{
+   SCIP_EXPR* qexpr;
+   int nquadexprs;
+   SCIP_Real* eigenvectors;
+   SCIP_Real* eigenvalues;
+   SCIP_Real* a;
+   SCIP_Real* b;
+   SCIP_Real* c;
+   SCIP_Real* d;
+   SCIP_Real* e;
+   SCIP_Real* vray;
+   SCIP_Real* vapex;
+   int i;
+
+   *success = TRUE;
+
+   qexpr = nlhdlrexprdata->qexpr;
+   SCIPexprGetQuadraticData(qexpr, NULL, NULL, NULL, NULL, &nquadexprs, NULL, &eigenvalues, &eigenvectors);
+
+#ifdef  DEBUG_INTERSECTIONCUT
+   SCIPinfoMessage(scip, NULL, "\n############################################\n");
+   SCIPinfoMessage(scip, NULL, "Restricting to line:\n");
+#endif
+
+   assert(coefs2 != NULL);
+
+   /* set all coefficients to zero */
+   memset(coefs2, 0, 5 * sizeof(SCIP_Real));
+
+   /* compute v_i^T apex in vapex[i] and v_i^T ray in vray[i] */
+   SCIP_CALL( SCIPallocBufferArray(scip, &vapex, nquadexprs) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vray, nquadexprs) );
+   computeVApexAndVRay(nlhdlrexprdata, apex, raycoefs, rayidx, raynnonz, vapex, vray);
+
+   a = coefs2;
+   b = coefs2 + 1;
+   c = coefs2 + 2;
+   d = coefs2 + 3;
+   e = coefs2 + 4;
+
+   for( i = 0; i < nquadexprs; ++i )
+   {
+      SCIP_Real dot;
+      SCIP_Real norm;
+      SCIP_Real eigval;
+
+      eigval = sidefactor * eigenvalues[i];
+
+      if( SCIPisZero(scip, eigval) )
+         continue;
+
+      dot = vzlp[i] + vb[i] / (2.0 * eigval);
+
+      norm = 1.0;
+      if( eigval > 0.0 )
+      {
+         *d += eigval * dot * (vzlp[i] - vapex[i]);
+         *e += eigval * dot * (vray[i] + vapex[i] + vb[i] / (2.0 * eigval));
+         norm += eigval * SQR(dot);
+      }
+      else
+      {
+         *a -= eigval * SQR(vzlp[i] - vapex[i]);
+         *b -= eigval * (vzlp[i] - vapex[i]) * (vray[i] + vapex[i] + vb[i] / (2.0 * eigval));
+         *c -= eigval * SQR(vray[i] + vapex[i] + vb[i] / (2.0 * eigval));
+      }
+
+      *a /= kappa;
+      *b /= kappa;
+      *c /= kappa;
+      *d /= kappa * norm;
+      *e /= kappa * norm;
+      *e += 1.0 / norm;
+
+      /* In theory, the function at 0 must be negative. Because of bad numerics this might not always hold, so we abort
+       * the generation of the cut in this case.
+       */
+      if( SQRT( *c ) - *e >= 0 )
+      {
+         /* check if it's really a numerical problem */
+         assert(SQRT( *c ) > 10e+15 || *e > 10e+15 || SQRT( *c ) - *e < 10e+9);
+
+         INTERLOG(printf("Bad numerics: phi(0) >= 0\n"); )
+         *success = FALSE;
+         return SCIP_OKAY;
+      }
+   }
+
+#ifdef  DEBUG_INTERSECTIONCUT
+   SCIPinfoMessage(scip, NULL, "Restriction yields case 2: a,b,c,d,e %g %g %g %g %g\n", coefs1234a[0], coefs1234a[1], coefs1234a[2],
+         coefs1234a[3], coefs1234a[4]);
+#endif
+
+   /* some sanity check applicable to all cases */
+   assert(*a >= 0); /* the function inside the root is convex */
+   assert(*c >= 0); /* radicand at zero */
+
+   return SCIP_OKAY;
+}
+
 /** calculate coefficients of restriction of the function to given ray.
  *
  * The restriction of the function representing the maximal S-free set to zlp + t * ray has the form
@@ -1858,62 +2041,6 @@ SCIP_Bool areCoefsNumericsGood(
    return TRUE;
 }
 
-/* TODO: add documentation */
-static
-void computeVApexAndVRay(
-   SCIP_NLHDLREXPRDATA*  nlhdlrexprdata,     /**< nlhdlr expression data */
-   SCIP_Real*            apex,               /**< array containing the apex of the S-free set in the original space */
-   SCIP_Real*            raycoefs,           /**< coefficients of ray */
-   int*                  rayidx,             /**< index of consvar the ray coef is associated to */
-   int                   raynnonz,           /**< length of raycoefs and rayidx */
-   SCIP_Real*            vapex,              /**< array to store \f$v_i^T apex\f$ */
-   SCIP_Real*            vray                /**< array to store \f$v_i^T ray\f$ */
-   )
-{
-   SCIP_EXPR* qexpr;
-   int nquadexprs;
-   SCIP_Real* eigenvectors;
-   SCIP_Real* eigenvalues;
-   int i;
-
-   qexpr = nlhdlrexprdata->qexpr;
-   SCIPexprGetQuadraticData(qexpr, NULL, NULL, NULL, NULL, &nquadexprs, NULL, &eigenvalues, &eigenvectors);
-
-   for( i = 0; i < nquadexprs; ++i )
-   {
-      SCIP_Real vdotapex;
-      SCIP_Real vdotray;
-      int offset;
-      int j;
-      int k;
-
-      offset = i * nquadexprs;
-
-      /* compute v_i^T apex and v_i^T ray */
-      vdotapex = 0;
-      vdotray = 0;
-      k = 0;
-      for( j = 0; j < nquadexprs; ++j )
-      {
-         SCIP_Real rayentry;
-
-         /* get entry of ray -> check if current var index corresponds to a non-zero entry in ray */
-         if( k < raynnonz && j == rayidx[k] )
-         {
-            rayentry = raycoefs[k];
-            ++k;
-         }
-         else
-            rayentry = 0.0;
-
-         vdotray += rayentry * eigenvectors[offset + j];
-         vdotapex += apex[j] * eigenvectors[offset + j];
-      }
-
-      vray[i] = vdotray;
-      vapex[i] = vdotapex;
-   }
-}
 
 /** computes the coefficients a, b, c defining the quadratic function defining set S restricted to the line
  *  theta * apex.
@@ -2348,11 +2475,12 @@ SCIP_RETCODE computeIntercut(
    int i;
    SCIP_Bool usemonoidal;
    SCIP_Bool monoidalwasused;
+   SCIP_Bool case2;
 
    cols = SCIPgetLPCols(scip);
    rows = SCIPgetLPRows(scip);
 
-   usemonoidal = nlhdlrdata->usemonoidal && wcoefs == NULL && kappa > 0;
+   case2 = wcoefs == NULL && kappa > 0;
    monoidalwasused = FALSE;
 
    counter = 0;
@@ -2361,7 +2489,7 @@ SCIP_RETCODE computeIntercut(
    avemonoidalimprovsum = 0.0;
 
    /* if we use monoidal and we are in the right case for it, compute the apex of the S-free set */
-   if( usemonoidal )
+   if( case2 )
    {
       int nquadexprs;
 
@@ -2374,12 +2502,14 @@ SCIP_RETCODE computeIntercut(
 
       /* if computation of apex was not successful, don't apply monoidal strengthening */
       if( ! *success )
-         usemonoidal = FALSE;
+         case2 = FALSE;
    }
    else
    {
       apex = NULL;
    }
+
+   usemonoidal = nlhdlrdata->usemonoidal && case2;
 
    /* for every ray: compute cut coefficient and add var associated to ray into cut */
    for( i = 0; i < rays->nrays; ++i )
@@ -2391,6 +2521,8 @@ SCIP_RETCODE computeIntercut(
       SCIP_Real coefs4b[5];
       SCIP_Real coefscondition[3];
       SCIP_Bool monoidalsuccess;
+
+      monoidalsuccess = FALSE;
 
       /* if we (can) use monoidal strengthening, compute the cut coefficient with that */
       if( usemonoidal )
@@ -2448,6 +2580,31 @@ SCIP_RETCODE computeIntercut(
           {
             /* compute cut coef */
             cutcoef = SCIPisInfinity(scip, interpoint) ? 0.0 : 1.0 / interpoint;
+          }
+
+          if( cutcoef == 0.0 && case2 )
+          {
+            /* restrict phi to the line defined by ray + apex + t*(f - apex) */
+            SCIP_CALL( computeRestrictionToLine(scip, nlhdlrexprdata, sidefactor,
+                     &rays->rays[rays->raysbegin[i]], &rays->raysidx[rays->raysbegin[i]], rays->raysbegin[i + 1] -
+                     rays->raysbegin[i], vb, vzlp, kappa, apex, coefs1234a, success) );
+
+            if( ! *success )
+               goto TERMINATE;
+
+            /* if restriction to ray is numerically nasty -> abort cut separation */
+            *success = areCoefsNumericsGood(scip, nlhdlrdata, coefs1234a, NULL, FALSE);
+
+            if( ! *success )
+               goto TERMINATE;
+
+            coefs1234a[1] *= -1.0;
+            coefs1234a[3] *= -1.0;
+
+            /* compute intersection point */
+            cutcoef = - computeRoot(scip, coefs1234a);
+
+            assert(cutcoef <= 0.0);
           }
       }
 
