@@ -5423,7 +5423,7 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
       /* aggregate the variable */
       SCIP_CALL( SCIPvarAggregate(varx, blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, cliquetable,
             branchcand, eventfilter, eventqueue, vary, scalar, constant, infeasible, aggregated) );
-      assert(*aggregated || *infeasible);
+      assert(*aggregated || *infeasible || SCIPvarDoNotAggr(varx));
    }
    else if( (SCIPvarGetType(varx) == SCIP_VARTYPE_INTEGER || SCIPvarGetType(varx) == SCIP_VARTYPE_IMPLINT)
       && (SCIPvarGetType(vary) == SCIP_VARTYPE_INTEGER || SCIPvarGetType(vary) == SCIP_VARTYPE_IMPLINT) )
