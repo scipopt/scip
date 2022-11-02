@@ -1414,7 +1414,7 @@ SCIP_RETCODE computeRestrictionToLine(
 
          INTERLOG(printf("Bad numerics: phi(0) >= 0\n"); )
          *success = FALSE;
-         return SCIP_OKAY;
+         goto TERMINATE;
       }
    }
 
@@ -1426,6 +1426,11 @@ SCIP_RETCODE computeRestrictionToLine(
    /* some sanity check applicable to all cases */
    assert(*a >= 0); /* the function inside the root is convex */
    assert(*c >= 0); /* radicand at zero */
+
+TERMINATE:
+   /* free memory */
+   SCIPfreeBufferArray(scip, &vray);
+   SCIPfreeBufferArray(scip, &vapex);
 
    return SCIP_OKAY;
 }
