@@ -261,7 +261,6 @@ SCIP_RETCODE createVariableNodes(
    bliss::Graph*         G,                  /**< Graph to be constructed */
    SYM_MATRIXDATA*       matrixdata,         /**< data for MIP matrix (also contains the relevant variables) */
    int&                  nnodes,             /**< returns number of nodes in graph */
-   const int&            nedges,             /**< returns number of edges in graph */
    int&                  nusedcolors         /**< returns number of used colors */
    )
 {
@@ -269,7 +268,6 @@ SCIP_RETCODE createVariableNodes(
    assert( G != NULL );
    assert( matrixdata != NULL );
    assert( nnodes == 0 );
-   assert( nedges == 0 );
    assert( nusedcolors == 0 );
    SCIPdebugMsg(scip, "Creating graph with colored nodes for variables.\n");
 
@@ -313,9 +311,9 @@ SCIP_RETCODE fillGraphByLinearConss(
    SCIP*                 scip,               /**< SCIP instance */
    bliss::Graph*         G,                  /**< Graph to be constructed */
    SYM_MATRIXDATA*       matrixdata,         /**< data for MIP matrix */
-   int&                  nnodes,             /**< buffer to store number of nodes in graph */
-   int&                  nedges,             /**< buffer to store number of edges in graph */
-   int&                  nusedcolors,        /**< buffer to store number of used colors */
+   int&                  nnodes,             /**< number of nodes in graph */
+   int&                  nedges,             /**< number of edges in graph */
+   int&                  nusedcolors,        /**< number of used colors */
    SCIP_Bool&            success             /**< whether the construction was successful */
    )
 {
@@ -475,9 +473,9 @@ SCIP_RETCODE fillGraphByNonlinearConss(
    SCIP*                 scip,               /**< SCIP instance */
    bliss::Graph*         G,                  /**< Graph to be constructed */
    SYM_EXPRDATA*         exprdata,           /**< data for nonlinear constraints */
-   int&                  nnodes,             /**< buffer to store number of nodes in graph */
-   int&                  nedges,             /**< buffer to store number of edges in graph */
-   int&                  nusedcolors,        /**< number of used colors in the graph so far */
+   int&                  nnodes,             /**< number of nodes in graph */
+   int&                  nedges,             /**< number of edges in graph */
+   int&                  nusedcolors,        /**< number of colors in the graph so far */
    SCIP_Bool&            success             /**< whether the construction was successful */
    )
 {
@@ -1008,7 +1006,7 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    bliss::Graph G(0);
 
    /* create nodes corresponding to variables */
-   SCIP_CALL( createVariableNodes(scip, &G, matrixdata, nnodes, nedges, nusedcolors) );
+   SCIP_CALL( createVariableNodes(scip, &G, matrixdata, nnodes, nusedcolors) );
 
    assert( nnodes == matrixdata->npermvars );
    assert( nusedcolors == matrixdata->nuniquevars );
