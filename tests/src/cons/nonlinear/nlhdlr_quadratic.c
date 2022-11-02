@@ -2755,6 +2755,130 @@ Test(interCuts, testBoundRays1)
    registerAndFree(cons, nlhdlrexprdata);
 }
 
+Test(interCuts, minrepresentation, .description = "test negative coef for minimal representation in case 2")
+{
+   SCIP_Bool cutoff;
+   SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
+   SCIP_CONS* cons;
+   SCIP_Real* eigenvalues;
+
+   simplifyAndDetect(&cons, &nlhdlrexprdata, "[nonlinear] <test>: <x>^2 - <y>^2 <= -1.0");
+
+   /* skip if eigenvalue decomposition does not exist */
+   SCIPexprGetQuadraticData(nlhdlrexprdata->qexpr, NULL, NULL, NULL, NULL, NULL, NULL, &eigenvalues, NULL);
+   if( eigenvalues == NULL )
+   {
+      registerAndFree(cons, nlhdlrexprdata);
+      return;
+   }
+
+   /*
+    * build LP so that every var is non-basic
+    */
+   SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
+   cr_assert_not(cutoff);
+
+   SCIP_CALL( SCIPstartProbing(scip) );
+
+   buildAndSolveSimpleProbingLP3();
+
+   /* what rays should be
+    * x      2     0
+    * y  =   2 s1  4 s2
+    */
+   {
+      int expectednnonz = 3;
+      SCIP_Real expectedrayscoefs[3] = {
+         2.0, 2.0,
+         4.0
+      };
+      int expectedraysidx[4] = {
+         0, 1,
+         1
+      };
+      int expectednrays = 2;
+      int expectedlppos[2] = {-1, -2};
+      int expectedbegin[4] = {0, 2, 3};
+
+      int expectedncols = 6;
+      SCIP_VAR* vars[6] = {x, y, w, z, s, t};
+      SCIP_VAR* consvars[3] = {x, y};
+
+      testRays(nlhdlrexprdata, NULL, vars, consvars, expectedrayscoefs, expectedraysidx, expectedlppos, expectedbegin,
+            expectednrays, expectednnonz, expectedncols);
+   }
+
+   {
+      SCIP_Real vb[2];      /* eigenvectors * b */
+      SCIP_Real vzlp[2];    /* eigenvectors * lpsol */
+      SCIP_Real wcoefs[2];  /* coefficients affecting quadterms in w */
+      SCIP_Real wzlp;     /* w(lpsol) */
+      SCIP_Real kappa;
+      SCIP_Real apex[2];
+      SCIP_Real vapex[2];
+      SCIP_Real vray[2];
+      SCIP_Real coefs[5];
+
+      /* pick ray in the strip, so that monoidal is not possible */
+      SCIP_Real raycoefs[2] = {-1.0, 0.0};
+      int rayidx[1] = {0};
+      int raynnonz = 1;
+
+      SCIP_Real a;
+      SCIP_Real b;
+      SCIP_Real c;
+      SCIP_Real cutcoef;
+      SCIP_Bool success;
+
+      /* expected coefficients of the monoidal quadratic */
+      SCIP_Real expectedquadcoefs[3] = {5.25, 2.5, 1.25};
+
+      /* expected coefficients of the minimal representation quadratic */
+      //SCIP_Real expectedminrepcoefs[5] = {};
+
+      /* expected cut coef */
+      SCIP_Real expectedcutcoef = -0.2763932022500210;
+
+      SCIP_CALL( intercutsComputeCommonQuantities(scip, nlhdlrexprdata, NULL, 1.0, NULL, vb, vzlp, wcoefs, &wzlp, &kappa) );
+
+      /* compute apex */
+      computeApex(nlhdlrexprdata, vb, vzlp, kappa, 1.0, apex, &success);
+
+      cr_assert(success);
+
+      /* compute eigenvectors * ray and eigenvectors * apex */
+      computeVApexAndVRay(nlhdlrexprdata, apex, raycoefs, rayidx, raynnonz, vapex, vray);
+
+      /* compute quadratic function of monoidal problem and check if thery are correct */
+      computeMonoidalQuadCoefs(scip, nlhdlrexprdata, raycoefs, rayidx, raynnonz, vb, vzlp, vapex, vray, kappa, 1.0, &a, &b, &c);
+      cr_expect_float_eq(a, expectedquadcoefs[0], 1e-8, "e %g g %g\n", expectedquadcoefs[0], a);
+      cr_expect_float_eq(b, expectedquadcoefs[1], 1e-8, "e %g g %g\n", expectedquadcoefs[1], b);
+      cr_expect_float_eq(c, expectedquadcoefs[2], 1e-8, "e %g g %g\n", expectedquadcoefs[2], c);
+
+      /* get coefficients of the minimal representation quadratic */
+      SCIP_CALL( computeRestrictionToLine(scip, nlhdlrexprdata, 1.0, raycoefs, rayidx, raynnonz, vb, vzlp, kappa, apex, coefs, &success) );
+
+      coefs[1] *= -1.0;
+      coefs[3] *= -1.0;
+
+      /* compute intersection point and check */
+      cutcoef = - computeRoot(scip, coefs);
+      cr_expect_float_eq(cutcoef, expectedcutcoef, 1e-8, "e %g g %g\n", expectedcutcoef, cutcoef);
+
+
+      /* check if coefs are correct */
+      //cr_expect_float_eq(coefs[0], expectedminrepcoefs[0], 1e-8, "e %g g %g\n", expectedminrepcoefs[0], coefs[0]);
+      //cr_expect_float_eq(coefs[1], expectedminrepcoefs[1], 1e-8, "e %g g %g\n", expectedminrepcoefs[1], coefs[1]);
+      //cr_expect_float_eq(coefs[2], expectedminrepcoefs[2], 1e-8, "e %g g %g\n", expectedminrepcoefs[2], coefs[2]);
+      //cr_expect_float_eq(coefs[3], expectedminrepcoefs[3], 1e-8, "e %g g %g\n", expectedminrepcoefs[3], coefs[3]);
+      //cr_expect_float_eq(coefs[4], expectedminrepcoefs[4], 1e-8, "e %g g %g\n", expectedminrepcoefs[4], coefs[4]);
+   }
+
+   SCIP_CALL( SCIPendProbing(scip) );
+
+   /* register enforcer info in expr and free */
+   registerAndFree(cons, nlhdlrexprdata);
+}
 Test(interCuts, monoidal, .description = "test cut for monoidal strengthening")
 {
    SCIP_Bool cutoff;
