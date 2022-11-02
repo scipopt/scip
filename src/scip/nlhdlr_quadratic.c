@@ -1342,6 +1342,7 @@ SCIP_RETCODE computeRestrictionToLine(
    SCIP_Real* e;
    SCIP_Real* vray;
    SCIP_Real* vapex;
+   SCIP_Real norm;
    int i;
 
    *success = TRUE;
@@ -1370,10 +1371,10 @@ SCIP_RETCODE computeRestrictionToLine(
    d = coefs2 + 3;
    e = coefs2 + 4;
 
+   norm = 0.0;
    for( i = 0; i < nquadexprs; ++i )
    {
       SCIP_Real dot;
-      SCIP_Real norm;
       SCIP_Real eigval;
 
       eigval = sidefactor * eigenvalues[i];
@@ -1383,7 +1384,6 @@ SCIP_RETCODE computeRestrictionToLine(
 
       dot = vzlp[i] + vb[i] / (2.0 * eigval);
 
-      norm = 1.0;
       if( eigval > 0.0 )
       {
          *d += eigval * dot * (vzlp[i] - vapex[i]);
@@ -1396,26 +1396,27 @@ SCIP_RETCODE computeRestrictionToLine(
          *b -= eigval * (vzlp[i] - vapex[i]) * (vray[i] + vapex[i] + vb[i] / (2.0 * eigval));
          *c -= eigval * SQR(vray[i] + vapex[i] + vb[i] / (2.0 * eigval));
       }
+   }
 
-      *a /= kappa;
-      *b /= kappa;
-      *c /= kappa;
-      *d /= kappa * norm;
-      *e /= kappa * norm;
-      *e += 1.0 / norm;
+   norm = SQRT(norm / kappa + 1.0);
+   *a /= kappa;
+   *b /= kappa;
+   *c /= kappa;
+   *d /= (kappa * norm);
+   *e /= (kappa * norm);
+   *e += 1.0 / norm;
 
-      /* In theory, the function at 0 must be negative. Because of bad numerics this might not always hold, so we abort
-       * the generation of the cut in this case.
-       */
-      if( SQRT( *c ) - *e >= 0 )
-      {
-         /* check if it's really a numerical problem */
-         assert(SQRT( *c ) > 10e+15 || *e > 10e+15 || SQRT( *c ) - *e < 10e+9);
+   /* In theory, the function at 0 must be negative. Because of bad numerics this might not always hold, so we abort
+    * the generation of the cut in this case.
+    */
+   if( SQRT( *c ) - *e >= 0 )
+   {
+      /* check if it's really a numerical problem */
+      assert(SQRT( *c ) > 10e+15 || *e > 10e+15 || SQRT( *c ) - *e < 10e+9);
 
-         INTERLOG(printf("Bad numerics: phi(0) >= 0\n"); )
-         *success = FALSE;
-         goto TERMINATE;
-      }
+      INTERLOG(printf("Bad numerics: phi(0) >= 0\n"); )
+      *success = FALSE;
+      goto TERMINATE;
    }
 
 #ifdef  DEBUG_INTERSECTIONCUT
