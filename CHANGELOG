@@ -148,6 +148,8 @@ Interface changes
 
 ### Command line interface
 
+- When running the AMPL interface, the .nl filename extension does not need to be omitted for the input file anymore.
+
 ### Interfaces to external software
 
 ### Changed parameters
