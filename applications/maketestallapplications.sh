@@ -100,7 +100,7 @@ done
 for APPLICATION in ${APPLICATIONS}
 do
    # See issues #1100 and #1169
-   if test ${APPLICATION} = "PolySCIP"
+   if test ${APPLICATION} = "PolySCIP" || test ${APPLICATION} = "STP":
    then
       continue
    fi

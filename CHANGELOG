@@ -137,6 +137,8 @@ Performance improvements
 Examples and applications
 -------------------------
 
+- Take out STP and PolySCIP applications
+
 Interface changes
 -----------------
 
@@ -187,6 +189,8 @@ Fixed bugs
 
 Miscellaneous
 -------------
+
+- Changed license to Apache 2.0, see https://www.apache.org/licenses/LICENSE-2.0.
 
 Known bugs
 ----------

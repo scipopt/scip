@@ -882,12 +882,8 @@ INPUT                  = . \
                          ../applications/CycleClustering/doc/xternal_cycleclustering.c \
                          ../applications/MinIISC/src \
                          ../applications/MinIISC/doc/xternal_miniisc.c \
-                         ../applications/PolySCIP/src \
-                         ../applications/PolySCIP/doc/xternal_polyscip.c \
                          ../applications/Ringpacking/src/ \
                          ../applications/Ringpacking/doc/xternal_ringpacking.c \
-                         ../applications/STP/src \
-                         ../applications/STP/doc/xternal_stp.c \
                          ../applications/Scheduler/src \
                          ../applications/Scheduler/doc/xternal_scheduler.c \
                          ../examples \
