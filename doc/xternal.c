@@ -1000,14 +1000,6 @@
  *  A solver for scheduling problems.
  *  </td>
  *  </tr>
- *  <tr>
- *  <td>
- *  @subpage STP_MAIN
- *  </td>
- *  <td>
- *  A solver for Steiner Tree Problems in graphs, based on a branch-and-cut approach.
- *  </td>
- *  </tr>
  *  </table>
  *
  */
@@ -2249,9 +2241,8 @@
  * @subsection PRICERFREE
  *
  * If you are using pricer data, you have to implement this method in order to free the pricer data.
- * This can be done by the following procedure:
- *
- * @refsnippet{applications/STP/src/pricer_stp.c,SnippetPricerFreeSTP}
+ * This can be done by the procedure described in stp/src/pricer_stp.c,
+ * see https://scipjack.zib.de/.
  *
  * If you have allocated memory for fields in your pricer data, remember to free this memory
  * before freeing the pricer data itself.
