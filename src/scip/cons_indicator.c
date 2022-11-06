@@ -4893,7 +4893,7 @@ void initConshdlrData(
 {
    assert( conshdlrdata != NULL );
 
-   conshdlrdata->boundhaschanged = FALSE;
+   conshdlrdata->boundhaschanged = TRUE;
    conshdlrdata->removable = TRUE;
    conshdlrdata->scaled = FALSE;
    conshdlrdata->altlp = NULL;
@@ -5288,6 +5288,8 @@ SCIP_DECL_CONSINITSOL(consInitsolIndicator)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
    assert( conshdlrdata->slackhash == NULL );
+
+   conshdlrdata->boundhaschanged = TRUE;  /* make sure that we propagate at the beginning */
 
    SCIP_CALL( SCIPgetCharParam(scip, "separating/efficacynorm", &conshdlrdata->normtype) );
 
@@ -6513,7 +6515,7 @@ SCIP_DECL_CONSPROP(consPropIndicator)
    assert( conshdlrdata != NULL );
 
    /* avoid propagation if no bound has changed */
-   if ( ! conshdlrdata->boundhaschanged )
+   if ( ! conshdlrdata->boundhaschanged && ! SCIPinRepropagation(scip) )
    {
       *result = SCIP_DIDNOTFIND;
       return SCIP_OKAY;
