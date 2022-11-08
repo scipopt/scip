@@ -33,6 +33,7 @@
 #define __SCIP_OBJNODESEL_H__
 
 #include <cstring>
+#include <utility>
 
 #include "scip/scip.h"
 #include "objscip/objcloneable.h"
@@ -88,6 +89,24 @@ public:
       SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip_, &scip_desc_, desc, std::strlen(desc)+1) );
    }
 
+   /** copy constructor */
+   ObjNodesel(const ObjNodesel& o)
+       : ObjNodesel(o.scip_, o.scip_name_, o.scip_desc_, o.scip_stdpriority_, o.scip_memsavepriority_)
+   {
+   }
+
+   /** move constructor */
+   ObjNodesel(ObjNodesel&& o)
+       : scip_(o.scip_),
+         scip_name_(0),
+         scip_desc_(0),
+         scip_stdpriority_(o.scip_stdpriority_),
+         scip_memsavepriority_(o.scip_memsavepriority_)
+   {
+      std::swap(scip_name_, o.scip_name_);
+      std::swap(scip_desc_, o.scip_desc_);
+   }
+
    /** destructor */
    virtual ~ObjNodesel()
    {
@@ -96,6 +115,12 @@ public:
       SCIPfreeMemoryArray(scip_, &scip_name_);
       SCIPfreeMemoryArray(scip_, &scip_desc_);
    }
+
+   /** assignment of polymorphic classes causes slicing and is therefore disabled. */
+   ObjNodesel& operator=(const ObjNodesel& o) = delete;
+
+   /** assignment of polymorphic classes causes slicing and is therefore disabled. */
+   ObjNodesel& operator=(ObjNodesel&& o) = delete;
 
    /** destructor of node selector to free user data (called when SCIP is exiting)
     *

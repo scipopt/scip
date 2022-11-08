@@ -33,6 +33,7 @@
 #define __SCIP_OBJRELAX_H__
 
 #include <cstring>
+#include <utility>
 
 #include "scip/scip.h"
 #include "objscip/objcloneable.h"
@@ -92,6 +93,25 @@ public:
       SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip_, &scip_desc_, desc, std::strlen(desc)+1) );
    }
 
+   /** copy constructor */
+   ObjRelax(const ObjRelax& o)
+       : ObjRelax(o.scip_, o.scip_name_, o.scip_desc_, o.scip_priority_, o.scip_priority_, o.scip_includeslp_)
+   {
+   }
+
+   /** move constructor */
+   ObjRelax(ObjRelax&& o)
+       : scip_(o.scip_),
+         scip_name_(0),
+         scip_desc_(0),
+         scip_priority_(o.scip_priority_),
+         scip_freq_(o.scip_freq_),
+         scip_includeslp_(o.scip_includeslp_)
+   {
+      std::swap(scip_name_, o.scip_name_);
+      std::swap(scip_desc_, o.scip_desc_);
+   }
+
    /** destructor */
    virtual ~ObjRelax()
    {
@@ -100,6 +120,12 @@ public:
       SCIPfreeMemoryArray(scip_, &scip_name_);
       SCIPfreeMemoryArray(scip_, &scip_desc_);
    }
+
+   /** assignment of polymorphic classes causes slicing and is therefore disabled. */
+   ObjRelax& operator=(const ObjRelax& o) = delete;
+
+   /** assignment of polymorphic classes causes slicing and is therefore disabled. */
+   ObjRelax& operator=(ObjRelax&& o) = delete;
 
    /** destructor of relaxator to free user data (called when SCIP is exiting)
     *

@@ -35,6 +35,7 @@
 
 #include <cassert>
 #include <cstring>
+#include <utility>
 
 #include "scip/scip.h"
 #include "objscip/objprobcloneable.h"
@@ -143,6 +144,36 @@ public:
       SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip_, &scip_desc_, desc, std::strlen(desc)+1) );
    }
 
+   /** copy constructor */
+   ObjConshdlr(const ObjConshdlr& o)
+       : ObjConshdlr(o.scip_, o.scip_name_, o.scip_desc_, o.scip_sepapriority_, o.scip_enfopriority_,
+                     o.scip_checkpriority_, o.scip_sepafreq_, o.scip_propfreq_, o.scip_eagerfreq_, o.scip_maxprerounds_,
+                     o.scip_delaysepa_, o.scip_delayprop_, o.scip_needscons_, o.scip_proptiming_, o.scip_presoltiming_)
+   {
+   }
+
+   /** move constructor */
+   ObjConshdlr(ObjConshdlr&& o)
+       : scip_(o.scip_),
+         scip_name_(0),
+         scip_desc_(0),
+         scip_sepapriority_(o.scip_sepapriority_),
+         scip_enfopriority_(o.scip_enfopriority_),
+         scip_checkpriority_(o.scip_checkpriority_),
+         scip_sepafreq_(o.scip_sepafreq_),
+         scip_propfreq_(o.scip_propfreq_),
+         scip_eagerfreq_(o.scip_eagerfreq_),
+         scip_maxprerounds_(o.scip_maxprerounds_),
+         scip_delaysepa_(o.scip_delaysepa_),
+         scip_delayprop_(o.scip_delayprop_),
+         scip_needscons_(o.scip_needscons_),
+         scip_proptiming_(o.scip_proptiming_),
+         scip_presoltiming_(o.scip_presoltiming_)
+   {
+      std::swap(scip_name_, o.scip_name_);
+      std::swap(scip_desc_, o.scip_desc_);
+   }
+
    /** destructor */
    virtual ~ObjConshdlr()
    {
@@ -151,6 +182,12 @@ public:
       SCIPfreeMemoryArray(scip_, &scip_name_);
       SCIPfreeMemoryArray(scip_, &scip_desc_);
    }
+
+   /** assignment of polymorphic classes causes slicing and is therefore disabled. */
+   ObjConshdlr& operator=(const ObjConshdlr& o) = delete;
+
+   /** assignment of polymorphic classes causes slicing and is therefore disabled. */
+   ObjConshdlr& operator=(ObjConshdlr&& o) = delete;
 
    /** destructor of constraint handler to free user data (called when SCIP is exiting)
     *

@@ -33,6 +33,7 @@
 #define __SCIP_OBJPRESOL_H__
 
 #include <cstring>
+#include <utility>
 
 #include "scip/scip.h"
 #include "objscip/objcloneable.h"
@@ -93,6 +94,25 @@ public:
       SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip_, &scip_desc_, desc, std::strlen(desc)+1) );
    }
 
+   /** copy constructor */
+   ObjPresol(const ObjPresol& o)
+       : ObjPresol(o.scip_, o.scip_name_, o.scip_desc_, o.scip_priority_, o.scip_maxrounds_, o.scip_timing_)
+   {
+   }
+
+   /** move constructor */
+   ObjPresol(ObjPresol&& o)
+       : scip_(o.scip_),
+         scip_name_(0),
+         scip_desc_(0),
+         scip_priority_(o.scip_priority_),
+         scip_maxrounds_(o.scip_maxrounds_),
+         scip_timing_(o.scip_timing_)
+   {
+      std::swap(scip_name_, o.scip_name_);
+      std::swap(scip_desc_, o.scip_desc_);
+   }
+
    /** destructor */
    virtual ~ObjPresol()
    {
@@ -101,6 +121,12 @@ public:
       SCIPfreeMemoryArray(scip_, &scip_name_);
       SCIPfreeMemoryArray(scip_, &scip_desc_);
    }
+
+   /** assignment of polymorphic classes causes slicing and is therefore disabled. */
+   ObjPresol& operator=(const ObjPresol& o) = delete;
+
+   /** assignment of polymorphic classes causes slicing and is therefore disabled. */
+   ObjPresol& operator=(ObjPresol&& o) = delete;
 
    /** destructor of presolver to free user data (called when SCIP is exiting)
     *
