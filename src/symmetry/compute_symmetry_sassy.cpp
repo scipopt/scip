@@ -1516,7 +1516,7 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    };
 
    /* call sassy to reduce graph */
-   sassy.reduce(&sassygraph, sassyglue);
+   sassy.reduce(&sassygraph, &sassyglue);
 
    /* create bliss graph */
    bliss::Graph blissgraph(0);
