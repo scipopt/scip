@@ -1525,8 +1525,20 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    convert_sassy_to_bliss(&sassygraph, &blissgraph);
 
 #ifdef SCIP_OUTPUT
-   G.write_dot("debug.dot");
+   blissgraph.write_dot("debug.dot");
 #endif
+
+#if SCIP_DISABLED_CODE
+   char filename[SCIP_MAXSTRLEN];
+   (void) SCIPsnprintf(filename, SCIP_MAXSTRLEN, "%s.dimacs", SCIPgetProbName(scip));
+   FILE* fp = fopen(filename, "w");
+   if ( fp )
+   {
+      blissgraph.write_dimacs(fp);
+      fclose(fp);
+   }
+#endif
+
 
    /* compute automorphisms */
    bliss::Stats stats;
