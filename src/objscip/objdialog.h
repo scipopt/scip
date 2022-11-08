@@ -33,6 +33,7 @@
 #define __SCIP_OBJDIALOG_H__
 
 #include <cstring>
+#include <utility>
 
 #include "scip/scip.h"
 #include "objscip/objcloneable.h"
@@ -84,6 +85,16 @@ public:
       SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip_, &scip_desc_, desc, std::strlen(desc)+1) );
    }
 
+   /** copy constructor */
+   ObjDialog(const ObjDialog& o) : ObjDialog(o.scip_, o.scip_name_, o.scip_desc_, o.scip_issubmenu_) {}
+
+   /** move constructor */
+   ObjDialog(ObjDialog&& o) : scip_(o.scip_), scip_name_(0), scip_desc_(0), scip_issubmenu_(o.scip_issubmenu_)
+   {
+      std::swap(scip_name_, o.scip_name_);
+      std::swap(scip_desc_, o.scip_desc_);
+   }
+
    /** destructor */
    virtual ~ObjDialog()
    {
@@ -92,6 +103,12 @@ public:
       SCIPfreeMemoryArray(scip_, &scip_name_);
       SCIPfreeMemoryArray(scip_, &scip_desc_);
    }
+
+   /** assignment of polymorphic classes causes slicing and is therefore disabled. */
+   ObjDialog& operator=(const ObjDialog& o) = delete;
+
+   /** assignment of polymorphic classes causes slicing and is therefore disabled. */
+   ObjDialog& operator=(ObjDialog&& o) = delete;
 
    /** destructor of dialog to free user data (called when SCIP is exiting)
     *
