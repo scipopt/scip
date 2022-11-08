@@ -1,15 +1,24 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
-/*                        This file is part of the program                   */
-/*                    TCLIQUE --- Algorithm for Maximum Cliques              */
+/*                  This file is part of the program                         */
+/*              TCLIQUE --- Algorithm for Maximum Cliques                    */
 /*                                                                           */
-/*    Copyright (C) 1996-2022 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 1996-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  TCLIQUE is distributed under the terms of the ZIB Academic License.      */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with TCLIQUE; see the file COPYING.                                */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with TCLIQUE; see the file LICENSE.                                */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -54,7 +63,7 @@ struct TCLIQUE_Graph
    int*                  cacheddests;        /**< destination nodes of cached edges */
    int                   ncachededges;       /**< number of cached edges (not yet inserted in all data structures) */
    int                   sizecachededges;    /**< size of arrays concerning cached edges */
-}; 
+};
 
 
 
@@ -104,15 +113,15 @@ TCLIQUE_ISEDGE(tcliqueIsEdge)
    if( currentadjedge > lastadjedge || *lastadjedge < node2 )
       return FALSE;
 
-   /* checks if node2 is contained in adjacency list of node1 
+   /* checks if node2 is contained in adjacency list of node1
     * (list is ordered by adjacent nodes) */
-   while( currentadjedge <= lastadjedge ) 
+   while( currentadjedge <= lastadjedge )
    {
       if( *currentadjedge >= node2 )
       {
          if( *currentadjedge == node2 )
             return TRUE;
-         else 
+         else
             break;
       }
       currentadjedge++;
@@ -140,7 +149,7 @@ TCLIQUE_SELECTADJNODES(tcliqueSelectAdjnodes)
    currentadjedge = tcliqueGetFirstAdjedge(tcliquegraph, node);
    lastadjedge = tcliqueGetLastAdjedge(tcliquegraph, node);
 
-   /* checks for each node in given set nodes, if it is adjacent to given node 
+   /* checks for each node in given set nodes, if it is adjacent to given node
     * (adjacent nodes are ordered by node index)
     */
    for( i = 0; i < nnodes; i++ )
@@ -154,11 +163,11 @@ TCLIQUE_SELECTADJNODES(tcliqueSelectAdjnodes)
             /* current node is adjacent to given node */
             if( *currentadjedge == nodes[i] )
             {
-               adjnodes[nadjnodes] = nodes[i]; 
+               adjnodes[nadjnodes] = nodes[i];
                nadjnodes++;
             }
             break;
-         } 
+         }
       }
    }
 
@@ -362,7 +371,7 @@ void tcliqueChangeWeight(
    tcliquegraph->weights[node] = weight;
 }
 
-/** adds edge (node1, node2) to graph data structure (node1 and node2 have to be contained in 
+/** adds edge (node1, node2) to graph data structure (node1 and node2 have to be contained in
  *  graph data structure)
  *
  *  New edges are cached, s.t. the graph data structures are not correct until a call to tcliqueFlush();
@@ -533,7 +542,7 @@ TCLIQUE_Bool tcliqueFlush(
          pos = tcliquegraph->adjedges[n].last;
       }
       assert(pos == tcliquegraph->nedges);
-   }   
+   }
 #endif
 
    return TRUE;
@@ -693,7 +702,7 @@ TCLIQUE_Bool tcliqueLoadFile(
          infoMessage("Invalid node index (%d) in file: %s.\n", node1 < 0 ? node1 : node2, filename);
          (void) fclose(file);
          return FALSE;
-      } 
+      }
 
       /* (node1, node2) is the first adjacent edge of node1 */
       if( node1 != currentnode )
@@ -868,7 +877,7 @@ void tcliquePrintGraph(
       int* currentadjedge;
       int* lastadjedge;
 
-      infoMessage("node %d: weight=%d, degree=%d, adjnodes=\n[ ", i, weights[i], degrees[i]);  
+      infoMessage("node %d: weight=%d, degree=%d, adjnodes=\n[ ", i, weights[i], degrees[i]);
 
       currentadjedge = tcliqueGetFirstAdjedge(tcliquegraph, i);
       lastadjedge = tcliqueGetLastAdjedge(tcliquegraph, i);
