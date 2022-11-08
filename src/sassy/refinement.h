@@ -383,10 +383,10 @@ namespace sassy {
                     break;
             }
 
-            // look at first 12 positions and pick the (first) smallest cell within these entries
+            // look at first 4 positions and pick the (first) smallest cell within these entries
             if (sm_j == -1) {
                 sm_j = cur_pos - 1;
-                for (int j = cur_pos - 1; j >= 0 && ((cur_pos - j) <= 12); --j) {
+                for (int j = cur_pos - 1; j >= 0 && ((cur_pos - j) <= 4); --j) {
                     //bool smaller_d = g->d[arr[j]] > g->d[arr[sm_j]];
                     const int size_sm_j = c->ptn[arr[sm_j]];
                     if (c->ptn[size_sm_j] == 0)
@@ -455,7 +455,6 @@ namespace sassy {
                              work_list *touched_color_list) {
             bool comp = true;
             singleton_hint.reset();
-            int individualize_pos = individualize_early;
             assure_initialized(g);
             int deviation_expander = 0;
 
@@ -552,9 +551,6 @@ namespace sassy {
                     }
 
                     c->cells += (old_class != new_class);
-                    int class_size = c->ptn[new_class];
-                    c->smallest_cell_lower_bound = ((class_size < c->smallest_cell_lower_bound) && class_size > 0) ?
-                                                   class_size : c->smallest_cell_lower_bound;
 
 #ifndef NDEBUG // debug code
                     if (color_class_splits.empty()) {
@@ -570,8 +566,6 @@ namespace sassy {
 
                     // detection if coloring is discrete
                     if (c->cells == g->v_size) {
-                        const int new_cells = c->cells - pre_cells;
-
                         color_class_splits.reset();
                         cell_todo.reset(&queue_pointer);
                         I->write_cells(c->cells);
@@ -607,7 +601,7 @@ namespace sassy {
 
                     // management code for skipping largest class resulting from old_class
                     color_class_splits.pop_back();
-                    int new_class_sz = c->ptn[new_class] + 1;
+                    // int new_class_sz = c->ptn[new_class] + 1;
 
                     if (skipped_largest || !is_largest) {
                         cell_todo.add_cell(&queue_pointer, new_class);
@@ -671,11 +665,9 @@ namespace sassy {
 
         // color refinement that does not produce an isomorphism-invariant partitioning, but uses more optimization
         // techniques -- meant to be used as the first refinement in automorphism computation
-        bool refine_coloring_first(sgraph *g, coloring *c,
-                                   int init_color_class) {
+        bool refine_coloring_first(sgraph *g, coloring *c, int init_color_class = -1) {
             assure_initialized(g);
             singleton_hint.reset();
-
             cell_todo.reset(&queue_pointer);
 
             if (init_color_class < 0) {
@@ -693,20 +685,19 @@ namespace sassy {
 
             while (!cell_todo.empty()) {
                 color_class_splits.reset();
-                const int next_color_class = cell_todo.next_cell(&queue_pointer, c, &singleton_hint);
+                const int next_color_class    = cell_todo.next_cell(&queue_pointer, c, &singleton_hint);
                 const int next_color_class_sz = c->ptn[next_color_class] + 1;
                 bool dense_dense = false;
                 //if(g->d[c->lab[next_color_class]] == 0) {
                 //   continue;
                 //}
-                if (g->d[c->lab[next_color_class]] > 5) {
+                if (g->dense && g->d[c->lab[next_color_class]] > 5) {
                     dense_dense = (g->d[c->lab[next_color_class]] > (g->v_size / (next_color_class_sz + 1)));
                 }
 
                 if (next_color_class_sz == 1 && !(g->dense && dense_dense)) {
                     // singleton
-                    refine_color_class_singleton_first(g, c, next_color_class, next_color_class_sz,
-                                                       &color_class_splits);
+                    refine_color_class_singleton_first(g, c, next_color_class, &color_class_splits);
                 } else if (g->dense) {
                     if (dense_dense) { // dense-dense
                         refine_color_class_dense_dense_first(g, c, next_color_class, next_color_class_sz,
@@ -727,15 +718,11 @@ namespace sassy {
                 // color class splits are sorted in reverse
                 // the old color class will always come last
                 while (!color_class_splits.empty()) {
-                    const int old_class = color_class_splits.last()->first.first;
-                    const int new_class = color_class_splits.last()->first.second;
+                    const int old_class   = color_class_splits.last()->first.first;
+                    const int new_class   = color_class_splits.last()->first.second;
                     const bool is_largest = color_class_splits.last()->second;
 
                     c->cells += (old_class != new_class);
-                    const int class_size = c->ptn[new_class] + 1;
-                    const int class_size_non_trivial = (class_size == 1) ? INT32_MAX : class_size;
-                    c->smallest_cell_lower_bound = (class_size < c->smallest_cell_lower_bound) ?
-                                                   class_size : c->smallest_cell_lower_bound;
 
 #ifndef NDEBUG // debug code
                     if (color_class_splits.empty()) {
@@ -761,13 +748,14 @@ namespace sassy {
                     }
 
                     color_class_splits.pop_back();
-                    const int new_class_sz = c->ptn[new_class] + 1;
 
 
                     if (skipped_largest || !is_largest) {
                         cell_todo.add_cell(&queue_pointer, new_class);
-                        if (new_class_sz == 1)
+                        const int new_class_sz = c->ptn[new_class] + 1;
+                        if (new_class_sz == 1) {
                             singleton_hint.push_back(new_class);
+                        }
                     } else {
                         skipped_largest = true;
 
@@ -775,6 +763,7 @@ namespace sassy {
                         int i = queue_pointer.get(old_class);
                         if (i >= 0) {
                             cell_todo.replace_cell(&queue_pointer, old_class, new_class);
+                            const int new_class_sz = c->ptn[new_class] + 1;
                             if (new_class_sz == 1)
                                 singleton_hint.push_back(new_class);
                         }
@@ -1643,30 +1632,130 @@ namespace sassy {
         }
 
         bool refine_color_class_singleton_first(sgraph *g, coloring *c,
-                                                int color_class, int class_size,
-                                                work_list_pair_bool *color_class_split_worklist) {
-            bool comp;
-            int i, cc, deg1_write_pos, deg1_read_pos;
-            cc = color_class; // iterate over color class
-            comp = true;
+                                                const int color_class, work_list_pair_bool *color_class_split_worklist) {
 
+            const int vc = c->lab[color_class];
+            const int pe = g->v[vc];
+            const int deg = g->d[vc];
+
+            // degree 0, 1
+            if(deg <= 1)
+                return true;
+
+            // degree 2
+            if(deg == 2) {
+                const int neighb1 = g->e[pe];
+                assert(pe + 1 < g->e_size);
+                const int neighb2 = g->e[pe + 1];
+
+                const int col_neighb1 = neighb1>=0?c->vertex_to_col[neighb1]:-1;
+                const int col_sz1     = neighb1>=0?c->ptn[col_neighb1]:-1;
+
+                const int col_neighb2 = neighb2>=0?c->vertex_to_col[neighb2]:-1;
+                const int col_sz2     = neighb2>=0?c->ptn[col_neighb2]:-1;
+
+                if(col_neighb1 != col_neighb2) {
+                    if(col_sz1 > 0 && neighb1 >= 0) {
+                        const int new_col_neighb1 = col_neighb1 + col_sz1;
+                        assert(new_col_neighb1 > 0 && new_col_neighb1 < g->v_size);
+
+                        c->ptn[col_neighb1]  -= 1;
+                        assert(c->ptn[col_neighb1] >= 0);
+                        c->ptn[new_col_neighb1]     = 0;
+                        assert(new_col_neighb1 - 1 >= col_neighb1);
+                        c->ptn[new_col_neighb1 - 1] = 0;
+
+                        const int v             = neighb1;
+                        const int vertex_at_pos = c->lab[new_col_neighb1];
+                        const int lab_pos       = c->vertex_to_lab[v];
+
+                        c->vertex_to_col[v] = new_col_neighb1;
+
+                        if(vertex_at_pos != v) {
+                            c->lab[new_col_neighb1] = v;
+                            c->vertex_to_lab[v] = new_col_neighb1;
+                            c->lab[lab_pos] = vertex_at_pos;
+                            assert(lab_pos >= 0 && lab_pos < g->v_size);
+                            c->vertex_to_lab[vertex_at_pos] = lab_pos;
+                            assert(c->vertex_to_col[vertex_at_pos] == col_neighb1);
+                            assert(vertex_at_pos >= 0 && vertex_at_pos < g->v_size);
+                        }
+                        assert(((c->ptn[col_neighb1] + 1) + (c->ptn[new_col_neighb1] + 1)) == (col_sz1 + 1));
+                        assert(col_neighb1 != new_col_neighb1);
+
+                        color_class_split_worklist->push_back(std::pair<std::pair<int, int>, bool>(
+                                std::pair<int, int>(col_neighb1, col_neighb1), true));
+                        color_class_split_worklist->push_back(std::pair<std::pair<int, int>, bool>(
+                                std::pair<int, int>(col_neighb1, new_col_neighb1), false));
+                    }
+                    if(col_sz2 > 0 && neighb2 >= 0) {
+                        const int new_col_neighb2 = col_neighb2 + col_sz2;
+                        assert(new_col_neighb2 > 0 && new_col_neighb2 < g->v_size);
+
+                        c->ptn[col_neighb2]  = col_sz2 - 1;
+                        c->ptn[new_col_neighb2] = 0;
+                        c->ptn[new_col_neighb2 - 1] = 0;
+
+                        const int v             = neighb2;
+                        const int vertex_at_pos = c->lab[new_col_neighb2];
+                        const int lab_pos       = c->vertex_to_lab[v];
+
+                        c->vertex_to_col[v] = new_col_neighb2;
+
+                        if(vertex_at_pos != v) {
+                            c->lab[new_col_neighb2] = v;
+                            c->vertex_to_lab[v] = new_col_neighb2;
+                            c->lab[lab_pos] = vertex_at_pos;
+                            assert(lab_pos >= 0 && lab_pos < g->v_size);
+                            c->vertex_to_lab[vertex_at_pos] = lab_pos;
+                            assert(c->vertex_to_col[vertex_at_pos] == col_neighb2);
+                            assert(vertex_at_pos >= 0 && vertex_at_pos < g->v_size);
+                        }
+                        assert(((c->ptn[col_neighb2] + 1) + (c->ptn[new_col_neighb2] + 1)) == (col_sz2 + 1));
+                        assert(col_neighb2 != new_col_neighb2);
+
+                        color_class_split_worklist->push_back(std::pair<std::pair<int, int>, bool>(
+                                std::pair<int, int>(col_neighb2, col_neighb2), true));
+                        color_class_split_worklist->push_back(std::pair<std::pair<int, int>, bool>(
+                                std::pair<int, int>(col_neighb2, new_col_neighb2), false));
+                    }
+
+                    return true;
+                } else {
+                    if(col_sz1 == 1) {
+                        return true;
+                    } else {
+                        if(col_neighb1 == -1)
+                            return true;
+
+                        // case not covered, falling back to general case...
+                    }
+                }
+            }
+
+            int deg1_write_pos, deg1_read_pos;
+            int* it;
             neighbours.reset();
             scratch_set.reset();
-            vertex_worklist.reset();
             old_color_classes.reset();
+            int  first_col = -1; // buffer strategy
 
-            const int vc = c->lab[cc];
-            const int pe = g->v[vc];
-            const int end_i = pe + g->d[vc];
-            for (i = pe; i < end_i; i++) {
-                const int v = g->e[i];
-                const int col = c->vertex_to_col[v];
-
-                if (c->ptn[col] == 0)
+            // arbitrary degree
+            const int* end_pt = g->e + pe + deg;
+            for (it = g->e + pe; it < end_pt; it++) {
+                const int v = *it;
+                const int col    = c->vertex_to_col[v];
+                const int col_sz = c->ptn[col];
+                if (col_sz == 0) {
                     continue;
+                }
 
-                if (!scratch_set.get(col)) {
-                    scratch_set.set(col);
+                if (first_col == -1 || (col != first_col && !scratch_set.get(col))) {
+                    if(first_col == -1) {
+                        first_col = col;
+                    } else {
+                        scratch_set.set(col);
+                    }
                     old_color_classes.push_back(col);
                     // neighbours acts as the write position for degree 1 vertices of col
                     // in the singleton scratchpad
@@ -1679,10 +1768,10 @@ namespace sassy {
             }
 
             while (!old_color_classes.empty()) {
-                const int deg0_col = old_color_classes.pop_back();
+                const int deg0_col    = old_color_classes.pop_back();
                 const int deg1_col_sz = neighbours.get(deg0_col) - deg0_col;
                 const int deg0_col_sz = (c->ptn[deg0_col] + 1) - deg1_col_sz;
-                const int deg1_col = deg0_col + deg0_col_sz;
+                const int deg1_col    = deg0_col + deg0_col_sz;
 
                 // no split? done...
                 if (deg0_col == deg1_col) {
@@ -1725,7 +1814,7 @@ namespace sassy {
                 neighbours.set(deg0_col, -1);
             }
 
-            return comp;
+            return true;
         }
 
         bool refine_color_class_dense_first(sgraph *g, coloring *c,
@@ -1958,6 +2047,7 @@ namespace sassy {
                                              work_list_pair_bool *color_class_split_worklist) {
             bool comp;
             int v_new_color, cc, largest_color_class_size, acc;
+            int* it;
 
             cc = color_class; // iterate over color class
             comp = true;
@@ -1971,13 +2061,13 @@ namespace sassy {
             while (cc < end_cc) { // increment value of neighbours of vc by 1
                 const int vc = c->lab[cc];
                 const int pe = g->v[vc];
-                const int end_i = pe + g->d[vc];
-                for (int i = pe; i < end_i; i++) {
-                    const int v = g->e[i];
+                const int* end_pt = g->e + pe + g->d[vc];
+                for (it = g->e + pe; it < end_pt; it++) {
+                    const int v = *it;
                     const int col = c->vertex_to_col[v];
-
-                    if (c->ptn[col] == 0)
+                    if (c->ptn[col] == 0) {
                         continue;
+                    }
 
                     neighbours.inc_nr(v);
                     if (neighbours.get(v) == 0) {

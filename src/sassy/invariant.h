@@ -30,7 +30,7 @@ namespace sassy {
         long comp_fail_acc = -1;
         int cur_pos = -1;
         int protocol_pos = -1;
-        long acc = 0;
+        unsigned long acc = 0;
 
         // currently a bit convoluted, really should be split into 2 functions...
         inline bool write_top_and_compare(int i) {

@@ -19,9 +19,9 @@ namespace sassy {
         sgraph   g;
         int*     c = nullptr;
         int*     edge_cnt;
-        int num_vertices_defined  = 0;
-        int num_edges_defined     = 0;
-        int num_deg_edges_defined = 0;
+        unsigned int num_vertices_defined  = 0;
+        unsigned int num_edges_defined     = 0;
+        unsigned int num_deg_edges_defined = 0;
         bool initialized;
         bool finalized = false;
     public:
@@ -32,7 +32,7 @@ namespace sassy {
             g.e_size = 2*ne;
             c = new int[nv];
             edge_cnt = new int[nv];
-            for(int i = 0; i < nv; ++i)
+            for(unsigned int i = 0; i < nv; ++i)
                 edge_cnt[i] = 0;
             initialized = true;
         };
@@ -60,7 +60,7 @@ namespace sassy {
             g.e_size = 2*ne;
             c = new int[nv];
             edge_cnt = new int[nv];
-            for(int i = 0; i < nv; ++i)
+            for(unsigned int i = 0; i < nv; ++i)
                 edge_cnt[i] = 0;
         };
 
@@ -71,7 +71,7 @@ namespace sassy {
                 throw std::logic_error("can not change finalized graph");
             const int vertex = num_vertices_defined;
             ++num_vertices_defined;
-            if(num_vertices_defined > g.v_size)
+            if(num_vertices_defined > (unsigned int) g.v_size)
                 throw std::out_of_range("vertices out-of-range, define more vertices initially");
             c[vertex]   = color;
             g.d[vertex] = deg;
@@ -110,9 +110,9 @@ namespace sassy {
             if(!finalized) {
                 if (!initialized)
                     throw std::logic_error("uninitialized graph");
-                if (num_vertices_defined != g.v_size)
+                if (num_vertices_defined != (unsigned int) g.v_size)
                     throw std::logic_error("did not add the number of vertices requested by constructor");
-                if (num_edges_defined != g.e_size)
+                if (num_edges_defined != (unsigned int) g.e_size)
                     throw std::logic_error("did not add the number of edges requested by constructor");
                 finalized = true;
             }
@@ -123,7 +123,7 @@ namespace sassy {
             if(!finalized) {
                 if (!initialized)
                     throw std::logic_error("uninitialized graph");
-                if (num_vertices_defined != g.v_size)
+                if (num_vertices_defined != (unsigned int) g.v_size)
                     throw std::logic_error("did not add the number of vertices requested by constructor, requested: " +
                                            std::to_string(g.v_size) + ", added: " +
                                            std::to_string(num_vertices_defined));
