@@ -4251,7 +4251,7 @@ namespace sassy {
         // Traces usage specific:
         static inline void traces_hook(int c, int* aut, int n) {
             auto p = preprocessor::save_preprocessor;
-            p->pre_consumer(n, (int *) aut, -1, nullptr, p->saved_hook);
+            p->pre_consumer(n, (const int *) aut, -1, nullptr, p->saved_hook);
         }
 
         void traces_save_my_preprocessor() {
@@ -4261,7 +4261,7 @@ namespace sassy {
         // nauty usage specific:
         static inline void nauty_hook(int c, int* aut, int* orb, int norb, int stabvert, int n) {
             auto p = preprocessor::save_preprocessor;
-            p->pre_consumer(n, (int *) aut, -1, nullptr, p->saved_hook);
+            p->pre_consumer(n, (const int *) aut, -1, nullptr, p->saved_hook);
         }
 
         void nauty_save_my_preprocessor() {
@@ -4271,7 +4271,7 @@ namespace sassy {
         // saucy usage specific:
         static inline int saucy_hook(int n, const int* aut, int nsupp, int* supp, void* user_param) {
             auto p = (preprocessor *) user_param;
-            p->pre_consumer(n, (int *) aut, nsupp, supp, p->saved_hook);
+            p->pre_consumer(n, (const int *) aut, nsupp, supp, p->saved_hook);
             return true;
         }
 
