@@ -1389,6 +1389,9 @@ SCIP_RETCODE certificatePrintMirSplit(
       SCIP_ROW* slackrow = mirinfo->slackrows[i];
       SCIP_Real slackval = mirinfo->slackcoefficients[i];
 
+      if( slackval == 0 )
+         continue;
+
       for( j = 0; j < SCIProwGetNNonz(slackrow); ++j)
       {
          SCIP_VAR* var = SCIPcolGetVar(SCIProwGetCols(slackrow)[j]);
@@ -1863,6 +1866,11 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
    /* remove the mirinfo, move last element to the now freed up one */
    arraypos = mirinfo->arpos;
    SCIP_CALL( SCIPhashmapRemove(certificate->mirinfohash, (void*) row) );
+   for( i = 0; i < mirinfo->nslacks; ++i)
+   {
+      SCIProwRelease(&(mirinfo->slackrows[i]), certificate->blkmem, set, lp);
+   }
+
    RatFreeBlock(certificate->blkmem, &(mirinfo->rhs));
    RatFreeBlock(certificate->blkmem, &(mirinfo->frac));
    BMSfreeBlockMemoryArray(certificate->blkmem, &(mirinfo->splitcoefficients), mirinfo->nsplitvars);
@@ -2904,6 +2912,7 @@ SCIP_RETCODE SCIPfreeCertificateActiveMirInfo(
 {
    SCIP_CERTIFICATE* certificate;
    SCIP_MIRINFO* mirinfo;
+   int i;
 
    assert(SCIPisExactSolve(scip));
 
@@ -2924,6 +2933,11 @@ SCIP_RETCODE SCIPfreeCertificateActiveMirInfo(
    /* if the mirinfo is used it gets tranformed into sparse format, don't free it in that case */
    if( !certificate->workingmirinfo )
       return SCIP_OKAY;
+
+   for(i = 0; i < mirinfo->nslacks; ++i)
+   {
+      SCIPreleaseRow(scip, &(mirinfo->slackrows[i]));
+   }
 
    assert(mirinfo->varinds == NULL);
 

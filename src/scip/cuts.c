@@ -6099,6 +6099,7 @@ SCIP_RETCODE cutsSubstituteMIRSafe(
             // save the value for the split disjunction for the integer slack and the continous part (for rounded up we subtract 1-f)
             // multiply by -slacksign (same as above) since slack = side - row
             mirinfo->slackrows[mirinfo->nslacks] = userow;
+            SCIPcaptureRow(scip, userow);
             mirinfo->slackcoefficients[mirinfo->nslacks] = splitcoef * (-slacksign[i]);
             mirinfo->slacksign[mirinfo->nslacks] = slacksign[i];
             assert(SCIPisExactlyIntegral(scip, splitcoef));
