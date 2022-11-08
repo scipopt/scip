@@ -9,21 +9,16 @@
 namespace sassy {
     class coloring {
     public:
-        int *bulk_alloc;
-        int *bulk_pt;
-
         int *lab;
         int *ptn;
-
         int lab_sz;
         int ptn_sz;
+
         bool init = false;
-        bool efficient_alloc = false;
         int *vertex_to_col;
         int *vertex_to_lab;
 
         int cells = 1;
-        int smallest_cell_lower_bound = INT32_MAX;
 
         ~coloring() {
             if (init) {
@@ -37,7 +32,6 @@ namespace sassy {
                 ptn = new int[sz];
                 vertex_to_col = new int[sz];
                 vertex_to_lab = new int[sz];
-                efficient_alloc = false;
                 init = true;
 
                 lab_sz = sz;
@@ -65,21 +59,12 @@ namespace sassy {
                     init = false;
                 } else {
                     cells = c->cells;
-                    if (!efficient_alloc || !c->efficient_alloc) {
-                        for (int i = 0; i < c->ptn_sz;) {
-                            const int rd = c->ptn[i];
-                            ptn[i] = rd;
-                            i += rd + 1;
-                        }
-                        memcpy(vertex_to_col, c->vertex_to_col, c->ptn_sz * sizeof(int));
-                    } else {
-                        for (int i = 0; i < c->ptn_sz;) {
-                            const int rd = c->ptn[i];
-                            ptn[i] = rd;
-                            i += rd + 1;
-                        }
-                        memcpy(vertex_to_col, c->vertex_to_col, c->ptn_sz * sizeof(int));
+                    for (int i = 0; i < c->ptn_sz;) {
+                        const int rd = c->ptn[i];
+                        ptn[i] = rd;
+                        i += rd + 1;
                     }
+                    memcpy(vertex_to_col, c->vertex_to_col, c->ptn_sz * sizeof(int));
                     return;
                 }
             }
@@ -105,7 +90,6 @@ namespace sassy {
             ptn_sz = c->ptn_sz;
 
             cells = c->cells;
-            smallest_cell_lower_bound = c->smallest_cell_lower_bound;
             init = true;
         }
 
@@ -138,7 +122,6 @@ namespace sassy {
             ptn_sz = c->ptn_sz;
 
             cells = c->cells;
-            smallest_cell_lower_bound = c->smallest_cell_lower_bound;
             init = true;
         }
 

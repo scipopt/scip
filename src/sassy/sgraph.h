@@ -152,13 +152,14 @@ namespace sassy {
                 }
 
                 int increment = 0;
-                for (int i = 0; i < colsize.size(); i++) {
+                for (size_t i = 0; i < colsize.size(); i++) {
                     const int col_sz = colsize[i];
                     colsize[i] += increment;
                     increment += col_sz;
                 }
                 assert(increment == v_size);
 
+                // cache inefficiency probably starts here... try to make these procedures more sequential
                 for (int i = 0; i < v_size; i++) {
                     const int v_col = vertex_to_col[i];
                     --colsize[v_col];

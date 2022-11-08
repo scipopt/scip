@@ -17,7 +17,7 @@ static void make_saucy_colmap(int* lab, int* smallcolmap, int* colmap, int colma
         lab[i] = i;
     }
 
-    int last_new_cell = 0;
+    // int last_new_cell = 0;
     std::sort(lab, lab + colmap_sz, colorComparatorSaucy(colmap));
 
     int col_small = -1;

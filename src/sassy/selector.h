@@ -137,9 +137,6 @@ namespace sassy {
                         if (smallest_cell_sz == 2) {
                             break;
                         }
-                        if (smallest_cell_sz == c->smallest_cell_lower_bound + 1) {
-                            break;
-                        }
                     }
                 }
             }

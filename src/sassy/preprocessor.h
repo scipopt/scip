@@ -1,6 +1,8 @@
 #ifndef DEJAVU_SASSY_H
 #define DEJAVU_SASSY_H
 
+#define SASSY_VERSION 1
+
 #include "utility.h"
 #include "refinement.h"
 #include "graph.h"
@@ -245,11 +247,11 @@ namespace sassy {
 
                         if (touched_color_cache.get(col_n1) && touched_color_cache.get(col_n2) &&
                             already_matched_n1_n2 && worklist_deg0[col_n1] == 1 && worklist_deg0[col_n2] == 1) {
-                            const bool matching_same_cols1 =
-                                    test_col.vertex_to_col[worklist_deg1[n1]] == test_col.vertex_to_col[n2];
-                            const bool matching_same_cols2 =
-                                    test_col.vertex_to_col[worklist_deg1[n2]] == test_col.vertex_to_col[n1];
-                            const bool match_same_cols = matching_same_cols1 && matching_same_cols2;
+                            // const bool matching_same_cols1 =
+                            //         test_col.vertex_to_col[worklist_deg1[n1]] == test_col.vertex_to_col[n2];
+                            // const bool matching_same_cols2 =
+                            //        test_col.vertex_to_col[worklist_deg1[n2]] == test_col.vertex_to_col[n1];
+                            // const bool match_same_cols = matching_same_cols1 && matching_same_cols2;
 
                             bool check_if_match = true;
                             for (int f = 0; f < test_col.ptn[i] + 1; ++f) {
@@ -279,7 +281,7 @@ namespace sassy {
                                     const int orig_test_v = translate_back(_test_v);
                                     const int orig_n1 = translate_back(can_n);
                                     canonical_recovery_string[orig_n1].push_back(orig_test_v);
-                                    for (int s = 0; s < canonical_recovery_string[orig_test_v].size(); ++s)
+                                    for (size_t s = 0; s < canonical_recovery_string[orig_test_v].size(); ++s)
                                         canonical_recovery_string[orig_n1].push_back(
                                                 canonical_recovery_string[orig_test_v][s]);
                                 }
@@ -322,7 +324,7 @@ namespace sassy {
 
                         found_match += test_col.ptn[i] + 1;
 
-                        const int debug_str_sz = canonical_recovery_string[translate_back(test_v)].size();
+                        const size_t debug_str_sz = canonical_recovery_string[translate_back(test_v)].size();
 
                         for (int f = 0; f < test_col.ptn[i] + 1; ++f) {
                             const int _test_v = test_col.lab[i + f];
@@ -331,7 +333,7 @@ namespace sassy {
                             const int _n2 = g->e[g->v[_test_v] + 1];
                             worklist_deg1[_n1] = _n2;
                             worklist_deg1[_n2] = _n1;
-                            for (int t = 0; t < add_edge_buff[_n2].size(); ++t)
+                            for (size_t t = 0; t < add_edge_buff[_n2].size(); ++t)
                                 assert(add_edge_buff[_n2][t] != _n1);
                             add_edge_buff[_n2].push_back(_n1);
                             add_edge_buff_act.set(_n2);
@@ -348,7 +350,7 @@ namespace sassy {
                             const int orig_n1 = translate_back(can_n);
                             assert(debug_str_sz == canonical_recovery_string[orig_test_v].size());
                             canonical_recovery_string[orig_n1].push_back(orig_test_v);
-                            for (int s = 0; s < canonical_recovery_string[orig_test_v].size(); ++s) {
+                            for (size_t s = 0; s < canonical_recovery_string[orig_test_v].size(); ++s) {
                                 canonical_recovery_string[orig_n1].push_back(canonical_recovery_string[orig_test_v][s]);
                             }
                         }
@@ -364,7 +366,7 @@ namespace sassy {
         }
 
 
-        void red_deg2_unique_endpoint(sgraph *g, int *colmap, sassy_hook hook) {
+        void red_deg2_unique_endpoint(sgraph *g, int *colmap, sassy_hook* hook) {
             if (g->v_size <= 1 || config->CONFIG_PREP_DEACT_DEG2)
                 return;
             add_edge_buff_act.reset();
@@ -716,7 +718,7 @@ namespace sassy {
 
         void write_canonical_recovery_string_to_automorphism(const int from, const int to) {
             assert(canonical_recovery_string[from].size() == canonical_recovery_string[to].size());
-            for (int i = 0; i < canonical_recovery_string[to].size(); ++i) {
+            for (size_t i = 0; i < canonical_recovery_string[to].size(); ++i) {
                 const int str_from = canonical_recovery_string[from][i];
                 const int str_to = canonical_recovery_string[to][i];
                 automorphism[str_to] = str_from;
@@ -727,7 +729,7 @@ namespace sassy {
         }
 
         // reduce vertices of degree 1 and 0, outputs corresponding automorphisms
-        void red_deg10_assume_cref(sgraph *g, int *colmap, sassy_hook consume) {
+        void red_deg10_assume_cref(sgraph *g, int *colmap, sassy_hook* consume) {
             g->initialize_coloring(&c, colmap);
             if (config->CONFIG_PREP_DEACT_DEG01)
                 return;
@@ -801,12 +803,12 @@ namespace sassy {
                 } else {
                     parentlist.reset();
                     is_parent.reset();
-                    int last_parent_child_count = -1;
+                    //int last_parent_child_count = -1;
                     for (int i = v_child_col; i < v_child_col + child_col_sz; ++i) {
                         int child = c.lab[i];
-                        int next_child = -1;
-                        if (i < v_child_col + child_col_sz - 1)
-                            next_child = c.lab[i + 1];
+                        //int next_child = -1;
+                        //if (i < v_child_col + child_col_sz - 1)
+                        //    next_child = c.lab[i + 1];
 
                         // search for parent
                         const int e_pos_child = g->v[child];
@@ -945,7 +947,7 @@ namespace sassy {
                         assert(g_old_v[pair_from] == 1);
                         assert(del.get(pair_to));
                         assert(del.get(pair_from));
-                        consume(g->v_size, automorphism.get_array(), automorphism_supp.cur_pos,
+                        (*consume)(g->v_size, automorphism.get_array(), automorphism_supp.cur_pos,
                                 automorphism_supp.get_array());
                         reset_automorphism(automorphism.get_array(), automorphism_supp.cur_pos,
                                            automorphism_supp.get_array());
@@ -960,7 +962,7 @@ namespace sassy {
                         const int original_parent = translate_back(first_pair_parent);
                         const int original_pair_to = translate_back(pair_to);
                         canonical_recovery_string[original_parent].push_back(original_pair_to);
-                        for (int s = 0; s < canonical_recovery_string[original_pair_to].size(); ++s)
+                        for (size_t s = 0; s < canonical_recovery_string[original_pair_to].size(); ++s)
                             canonical_recovery_string[original_parent].push_back(
                                     canonical_recovery_string[original_pair_to][s]);
 
@@ -979,7 +981,7 @@ namespace sassy {
                                 const int to_next = g->v[next] + childcount[next];
                                 const int orig_next = translate_back(next);
                                 canonical_recovery_string[original_parent].push_back(orig_next);
-                                for (int s = 0; s < canonical_recovery_string[orig_next].size(); ++s)
+                                for (size_t s = 0; s < canonical_recovery_string[orig_next].size(); ++s)
                                     canonical_recovery_string[original_parent].push_back(
                                             canonical_recovery_string[orig_next][s]);
                                 if (from_next != to_next)
@@ -1104,7 +1106,7 @@ namespace sassy {
                         assert(g_old_v[child_from] == 1);
                         assert(del.get(child_to));
                         assert(del.get(child_from));
-                        consume(g->v_size, automorphism.get_array(), automorphism_supp.cur_pos,
+                        (*consume)(g->v_size, automorphism.get_array(), automorphism_supp.cur_pos,
                                 automorphism_supp.get_array());
                         reset_automorphism(automorphism.get_array(), automorphism_supp.cur_pos,
                                            automorphism_supp.get_array());
@@ -1145,7 +1147,7 @@ namespace sassy {
                                 // orig_i
                                 assert(next != _i);
                                 assert(orig_next != orig_i);
-                                for (int j = 0; j < canonical_recovery_string[orig_next].size(); ++j)
+                                for (size_t j = 0; j < canonical_recovery_string[orig_next].size(); ++j)
                                     canonical_recovery_string[orig_i].push_back(
                                             canonical_recovery_string[orig_next][j]);
                                 stack1.push_back(std::pair<int, int>(from, to));
@@ -1189,16 +1191,16 @@ namespace sassy {
                     automorphism[orig_parent_from] = orig_parent_to;
                     automorphism_supp.push_back(orig_parent_from);
                     automorphism_supp.push_back(orig_parent_to);
-                    for (int i = 0; i < canonical_recovery_string[orig_parent_to].size(); ++i) {
-                        const int str_from = canonical_recovery_string[orig_parent_from][i];
-                        const int str_to = canonical_recovery_string[orig_parent_to][i];
+                    for (size_t k = 0; k < canonical_recovery_string[orig_parent_to].size(); ++k) {
+                        const int str_from = canonical_recovery_string[orig_parent_from][k];
+                        const int str_to = canonical_recovery_string[orig_parent_to][k];
                         automorphism[str_to] = str_from;
                         automorphism[str_from] = str_to;
                         automorphism_supp.push_back(str_from);
                         automorphism_supp.push_back(str_to);
                     }
 
-                    consume(g->v_size, automorphism.get_array(), automorphism_supp.cur_pos,
+                    (*consume)(g->v_size, automorphism.get_array(), automorphism_supp.cur_pos,
                             automorphism_supp.get_array());
                     reset_automorphism(automorphism.get_array(), automorphism_supp.cur_pos,
                                        automorphism_supp.get_array());
@@ -1209,7 +1211,7 @@ namespace sassy {
 
         // perform edge flips according to quotient graph
         void
-        red_quotient_edge_flip(sgraph *g, int *colmap, sassy_hook consume) { // TODO could still optimize further ...
+        red_quotient_edge_flip(sgraph *g, int *colmap, sassy_hook* consume) { // TODO could still optimize further ...
             if (g->v_size <= 1)
                 return;
 
@@ -1223,12 +1225,12 @@ namespace sassy {
             connected_col.initialize(g->v_size);
             is_not_matched.initialize(g->v_size);
 
-            int v_has_matching_color = 0;
+            // int v_has_matching_color = 0;
 
             coloring test_col;
             g->initialize_coloring(&test_col, colmap);
 
-            int cnt = 0;
+            // int cnt = 0;
             int edge_flip_pot = 0;
             int edge_cnt = 0;
 
@@ -1309,14 +1311,14 @@ namespace sassy {
 
             translate_layer_bwd.reserve(backward_translation_layers[backward_translation_layers.size() - 1].size());
             translate_layer_fwd.reserve(g->v_size);
-            for (int i = 0; i < backward_translation_layers[backward_translation_layers.size() - 1].size(); ++i)
+            for (size_t i = 0; i < backward_translation_layers[backward_translation_layers.size() - 1].size(); ++i)
                 translate_layer_bwd.push_back(
                         backward_translation_layers[backward_translation_layers.size() - 1][i]); // TODO this is shit
 
             // create translation array from old graph to new graph vertices
             int cnt = 0;
             int new_vsize = 0;
-            int pos_now = 0;
+            // int pos_now = 0;
             for (int i = 0; i < g->v_size; ++i) {
                 if (!del.get(i)) {
                     translate_layer_fwd.push_back(cnt);
@@ -1406,7 +1408,7 @@ namespace sassy {
             if (g->v_size <= 1)
                 return;
 
-            int pre_esize = g->e_size;
+            // int pre_esize = g->e_size;
             // copy some stuff
             g_old_v.clear();
             g_old_v.reserve(g->v_size);
@@ -1416,7 +1418,7 @@ namespace sassy {
             }
 
             // create translation array from old graph to new graph vertices
-            int cnt = 0;
+            // int cnt = 0;
             int new_vsize = g->v_size;
 
             // make graph smaller using the translation array
@@ -1462,7 +1464,7 @@ namespace sassy {
             translate_layer_fwd.clear();
             translate_layer_bwd.clear();
 
-            for (int i = 0; i < backward_translation_layers[backward_translation_layers.size() - 1].size(); ++i)
+            for (size_t i = 0; i < backward_translation_layers[backward_translation_layers.size() - 1].size(); ++i)
                 translate_layer_bwd.push_back(backward_translation_layers[backward_translation_layers.size() - 1][i]);
 
             // create translation array from old graph to new graph vertices
@@ -1585,7 +1587,7 @@ namespace sassy {
 
         // marks all discrete vertices in 'del'
         void mark_discrete_for_deletion(sgraph *g, int *colmap) {
-            int discrete_cnt = 0;
+            //int discrete_cnt = 0;
             worklist_deg0.reset();
             for (int i = 0; i < domain_size; ++i) {
                 worklist_deg0.push_back(0);
@@ -1633,7 +1635,7 @@ namespace sassy {
             translate_layer_fwd.clear();
             translate_layer_bwd.clear();
 
-            for (int i = 0; i < backward_translation_layers[backward_translation_layers.size() - 1].size(); ++i)
+            for (size_t i = 0; i < backward_translation_layers[backward_translation_layers.size() - 1].size(); ++i)
                 translate_layer_bwd.push_back(backward_translation_layers[backward_translation_layers.size() - 1][i]);
 
             g_old_v.reserve(g->v_size);
@@ -1671,7 +1673,7 @@ namespace sassy {
                     g->v[new_v] = epos;
                     for (int j = g_old_v[old_v]; j < g_old_v[old_v] + g->d[old_v]; ++j) {
                         const int ve = g->e[j];                          // assumes ascending order!
-                        const int new_ve = translate_layer_fwd[ve];
+                        const int new_ve = ve>=0?translate_layer_fwd[ve]:-1;
                         if (new_ve >= 0) {
                             assert(new_ve < new_vsize);
                             assert(new_ve >= 0);
@@ -1854,12 +1856,9 @@ namespace sassy {
         }
 
         // performs sparse probing for all color classes, but only for 1 individualization
-        void sparse_ir_probe(sgraph *g, int *colmap, sassy_hook consume, selector_type sel_type) {
+        void sparse_ir_probe(sgraph *g, int *colmap, sassy_hook* consume, selector_type sel_type) {
             if (g->v_size <= 1 || config->CONFIG_PREP_DEACT_PROBE)
                 return;
-
-            unsigned seed = std::chrono::system_clock::now().time_since_epoch().count() * ((1 * 5) * 5135235);
-            int selector_seed = seed;
 
             std::vector<int> individualize_later;
 
@@ -1910,8 +1909,6 @@ namespace sassy {
             I2.acc = 0;
 
             bool certify = true;
-            int start_search_here = 0;
-
             S.empty_cache();
 
             while (true) {
@@ -2102,8 +2099,8 @@ namespace sassy {
             }
 
             if (!individualize_later.empty()) {
-                PRINT("(pre-red) sparse-ir completed orbits: " << individualize_later.size());
-                for (int i = 0; i < individualize_later.size(); ++i) {
+                PRINT("(prep-red) sparse-ir completed orbits: " << individualize_later.size());
+                for (size_t i = 0; i < individualize_later.size(); ++i) {
                     const int ind_vert = individualize_later[i];
                     const int init_c = R1->individualize_vertex(&original_c, ind_vert);
                     R1->refine_coloring(g, &original_c, &I1, init_c, nullptr, -1, -1, nullptr, nullptr, nullptr);
@@ -2117,7 +2114,7 @@ namespace sassy {
         // given automorphism of reduced graph, reconstructs automorphism of the original graph
         // does not optimize for consecutive calls
         void pre_consumer_inplace(int _n, const int *_automorphism, int _supp, const int *_automorphism_supp,
-                                  sassy_hook consume) {
+                                  sassy_hook* consume) {
             automorphism_supp.reset();
 
             for (int i = 0; i < _supp; ++i) {
@@ -2138,7 +2135,7 @@ namespace sassy {
 
                 assert(canonical_recovery_string[orig_v_to].size() == canonical_recovery_string[orig_v_from].size());
 
-                for (int j = 0; j < canonical_recovery_string[orig_v_to].size(); ++j) {
+                for (size_t j = 0; j < canonical_recovery_string[orig_v_to].size(); ++j) {
                     const int v_from_t = canonical_recovery_string[orig_v_from][j];
                     const int v_to_t = canonical_recovery_string[orig_v_to][j];
                     assert(automorphism[v_from_t] == v_from_t);
@@ -2148,7 +2145,7 @@ namespace sassy {
             }
 
             if(consume != nullptr)
-                consume(domain_size, automorphism.get_array(), automorphism_supp.cur_pos, automorphism_supp.get_array());
+                (*consume)(domain_size, automorphism.get_array(), automorphism_supp.cur_pos, automorphism_supp.get_array());
             reset_automorphism(automorphism.get_array(), automorphism_supp.cur_pos, automorphism_supp.get_array());
             automorphism_supp.reset();
         }
@@ -2156,7 +2153,7 @@ namespace sassy {
     public:
         // given automorphism of reduced graph, reconstructs automorphism of the original graph
         void
-        pre_consumer(int _n, const int *_automorphism, int _supp, const int *_automorphism_supp, sassy_hook hook) {
+        pre_consumer(int _n, const int *_automorphism, int _supp, const int *_automorphism_supp, sassy_hook* hook) {
             meld_translation_layers();
             automorphism_supp.reset();
 
@@ -2167,9 +2164,9 @@ namespace sassy {
                     const int v_to = _automorphism[v_from];
                     assert(v_from != v_to);
                     const int orig_v_to = backward_translation[v_to];
-                    assert(v_from < backward_translation.size());
+                    assert((unsigned int)v_from < backward_translation.size());
                     assert(v_from >= 0);
-                    assert(v_to < backward_translation.size());
+                    assert((unsigned int)v_to < backward_translation.size());
                     assert(v_to >= 0);
                     assert(orig_v_from < domain_size);
                     assert(orig_v_from >= 0);
@@ -2182,7 +2179,7 @@ namespace sassy {
                     assert(canonical_recovery_string[orig_v_to].size() ==
                            canonical_recovery_string[orig_v_from].size());
 
-                    for (int j = 0; j < canonical_recovery_string[orig_v_to].size(); ++j) {
+                    for (size_t j = 0; j < canonical_recovery_string[orig_v_to].size(); ++j) {
                         const int v_from_t = canonical_recovery_string[orig_v_from][j];
                         const int v_to_t = canonical_recovery_string[orig_v_to][j];
                         assert(automorphism[v_from_t] == v_from_t);
@@ -2198,9 +2195,9 @@ namespace sassy {
                     if(v_from == v_to)
                         continue;
                     const int orig_v_to = backward_translation[v_to];
-                    assert(v_from < backward_translation.size());
+                    assert((unsigned int)v_from < backward_translation.size());
                     assert(v_from >= 0);
-                    assert(v_to < backward_translation.size());
+                    assert((unsigned int)v_to < backward_translation.size());
                     assert(v_to >= 0);
                     assert(orig_v_from < domain_size);
                     assert(orig_v_from >= 0);
@@ -2213,7 +2210,7 @@ namespace sassy {
                     assert(canonical_recovery_string[orig_v_to].size() ==
                            canonical_recovery_string[orig_v_from].size());
 
-                    for (int j = 0; j < canonical_recovery_string[orig_v_to].size(); ++j) {
+                    for (size_t j = 0; j < canonical_recovery_string[orig_v_to].size(); ++j) {
                         const int v_from_t = canonical_recovery_string[orig_v_from][j];
                         const int v_to_t = canonical_recovery_string[orig_v_to][j];
                         assert(automorphism[v_from_t] == v_from_t);
@@ -2224,7 +2221,7 @@ namespace sassy {
             }
 
             if(hook != nullptr) {
-                hook(domain_size, automorphism.get_array(), automorphism_supp.cur_pos, automorphism_supp.get_array());
+                (*hook)(domain_size, automorphism.get_array(), automorphism_supp.cur_pos, automorphism_supp.get_array());
             }
             reset_automorphism(automorphism.get_array(), automorphism_supp.cur_pos, automorphism_supp.get_array());
             automorphism_supp.reset();
@@ -2232,7 +2229,7 @@ namespace sassy {
 
     private:
         // compute or update quotient components
-        void compute_quotient_graph_components_update(sgraph *g, coloring *c1, sassy_hook consume) {
+        void compute_quotient_graph_components_update(sgraph *g, coloring *c1, sassy_hook* consume) {
             if (!init_quotient_arrays) {
                 seen_vertex.initialize(g->v_size);
                 seen_color.initialize(g->v_size);
@@ -2330,9 +2327,9 @@ namespace sassy {
                 }
             } else {
                 // go component by component and only check old touched components
-                int old_component = 0;
-                int new_component = 0;
-                int touched_comp_i = 0;
+                size_t old_component = 0;
+                size_t new_component = 0;
+                size_t touched_comp_i = 0;
                 quotient_component_worklist_col.clear();
                 quotient_component_worklist_col_sz.clear();
 
@@ -2342,17 +2339,17 @@ namespace sassy {
                         next_touched_old_component = quotient_component_touched_swap[touched_comp_i];
                     }
 
-                    if (old_component == next_touched_old_component) {
+                    if ((int)old_component == next_touched_old_component) {
                         ++touched_comp_i;
 
-                        int component_vstart = 0;
-                        int component_cstart = 0;
+                        size_t component_vstart = 0;
+                        //size_t component_cstart = 0;
                         if (old_component > 0) {
                             component_vstart = quotient_component_worklist_boundary_swap[old_component - 1].second;
-                            component_cstart = quotient_component_worklist_boundary_swap[old_component - 1].first;
+                            //component_cstart = quotient_component_worklist_boundary_swap[old_component - 1].first;
                         }
                         const int component_vend = quotient_component_worklist_boundary_swap[old_component].second;
-                        const int component_cend = quotient_component_worklist_boundary_swap[old_component].first;
+                        //const int component_cend = quotient_component_worklist_boundary_swap[old_component].first;
 
                         int v_write_pos = component_vstart;
                         quotient_component_workspace.clear();
@@ -2377,8 +2374,8 @@ namespace sassy {
                             ++new_component;
                         }
 
-                        int current_component_sz = 0;
-                        for (int vi = 0; vi < quotient_component_workspace.size(); ++vi) {
+                        size_t current_component_sz = 0;
+                        for (size_t vi = 0; vi < quotient_component_workspace.size(); ++vi) {
                             if (current_component_sz == quotient_component_workspace.size())
                                 break;
                             const int vs = quotient_component_workspace[vi];
@@ -2461,7 +2458,7 @@ namespace sassy {
         }
 
         // perform sparse probing for color classes of size 2, num_paths number of times
-        int sparse_ir_probe_sz2_quotient_components(sgraph *g, int *colmap, sassy_hook consume, int num_paths) {
+        int sparse_ir_probe_sz2_quotient_components(sgraph *g, int *colmap, sassy_hook* consume, int num_paths) {
             if (g->v_size <= 1 || config->CONFIG_PREP_DEACT_PROBE)
                 return 0;
 
@@ -2510,7 +2507,7 @@ namespace sassy {
                 quotient_component_touched_swap.swap(quotient_component_touched);
 
                 if (x == 0) {
-                    for (int i = 0; i < quotient_component_worklist_boundary.size(); ++i)
+                    for (size_t i = 0; i < quotient_component_worklist_boundary.size(); ++i)
                         quotient_component_touched_swap.push_back(i);
                 }
 
@@ -2528,12 +2525,12 @@ namespace sassy {
                 Ivec_wr.create_vector(500);
 
                 bool certify = true;
-                int quotient_component_start_pos = 0;
-                int quotient_component_start_pos_v = 0;
+                size_t quotient_component_start_pos = 0;
+                size_t quotient_component_start_pos_v = 0;
 
                 int component = 0;
-                int next_touched_component_i = 0;
-                int next_touched_component = -1;
+                size_t next_touched_component_i = 0;
+                size_t next_touched_component = -1;
                 if (next_touched_component_i < quotient_component_touched_swap.size()) {
                     next_touched_component = quotient_component_touched_swap[next_touched_component_i];
                 } else {
@@ -2541,18 +2538,18 @@ namespace sassy {
                     quotient_component_start_pos = quotient_component_worklist_boundary[component].first;
                     quotient_component_start_pos_v = quotient_component_worklist_boundary[component].second;
                 }
-                while (component < next_touched_component) {
+                while (component < (int) next_touched_component) {
                     quotient_component_start_pos = quotient_component_worklist_boundary[component].first;
                     quotient_component_start_pos_v = quotient_component_worklist_boundary[component].second;
                     ++component;
                 }
 
-                assert(component < quotient_component_worklist_boundary.size());
+                assert(component < (int) quotient_component_worklist_boundary.size());
 
                 int quotient_component_end_pos = quotient_component_worklist_boundary[component].first;
                 int quotient_component_end_pos_v = quotient_component_worklist_boundary[component].second;
 
-                assert(quotient_component_end_pos_v - 1 < quotient_component_worklist_v.size());
+                assert(quotient_component_end_pos_v - 1 < (int) quotient_component_worklist_v.size());
 
                 while (quotient_component_start_pos < quotient_component_worklist_col.size()) {
                     assert(quotient_component_start_pos_v < quotient_component_worklist_v.size());
@@ -2775,7 +2772,7 @@ namespace sassy {
                                 Ivec_rd.set_compare_invariant(&Ivec_wr);
                                 bool comp = true;
 
-                                for (int j = 0; j < ind_cols.size(); ++j) {
+                                for (size_t j = 0; j < ind_cols.size(); ++j) {
                                     const int rpos = ind_cols[j];
                                     const int v2 = c2.lab[rpos];
                                     const int init_color_class2 = R1->individualize_vertex(&c2, v2);
@@ -2810,9 +2807,8 @@ namespace sassy {
                                         //break;
                                     }
                                 }
-                                //std::cout << dont_bother_certify << std::endl;
 
-                                bool check_last_failure_again;
+                                //bool check_last_failure_again;
 
                                 certify = !dont_bother_certify;
                                 if (certify && last_failure >= 0) {
@@ -2912,7 +2908,7 @@ namespace sassy {
 
                                 for (int _i = quotient_component_start_pos_v; _i < quotient_component_end_pos_v; ++_i) {
                                     const int v = quotient_component_worklist_v[_i];
-                                    const int list_index = _i - quotient_component_start_pos_v;
+                                    //const int list_index = _i - quotient_component_start_pos_v;
                                     assert(c1.ptn[c1.vertex_to_col[v]] >= 0);
                                     assert(c1.lab[c1.vertex_to_lab[v]] == v);
                                     assert(c1.vertex_to_col[c1.lab[c1.vertex_to_col[v]]] == c1.vertex_to_col[v]);
@@ -2980,7 +2976,7 @@ namespace sassy {
                         next_touched_component = quotient_component_touched_swap[next_touched_component_i];
                     }
 
-                    while (component != next_touched_component &&
+                    while (component != (int) next_touched_component &&
                            quotient_component_start_pos < quotient_component_worklist_col.size()) {
                         quotient_component_start_pos = quotient_component_worklist_boundary[component].first;
                         quotient_component_start_pos_v = quotient_component_worklist_boundary[component].second;
@@ -3014,7 +3010,7 @@ namespace sassy {
                                         int max_cell_size) {
             bool only_discrete_prev = true;
             int cell = -1;
-            int cell_d = 1;
+            // int cell_d = 1;
             for (int _i = component_start_pos; _i < component_end_pos; ++_i) {
                 const int col = quotient_component_worklist_col[_i];
                 const int col_sz = quotient_component_worklist_col_sz[_i];
@@ -3038,7 +3034,7 @@ namespace sassy {
                     if (c1->ptn[i] >= 1 && c1->ptn[i] + 1 <= max_cell_size && (i_d != 1)) { // && (i_d != 1)
                         if (cell == -1 || c1->ptn[i] < c1->ptn[cell]) {
                             cell = i;
-                            cell_d = i_d;
+                            // cell_d = i_d;
                         }
                     }
                 }
@@ -3099,7 +3095,7 @@ namespace sassy {
         }
 
         // perform sparse probing for color classes of bounded size, num_paths number of times
-        int sparse_ir_probe_quotient_components(sgraph *g, int *colmap, sassy_hook consume, int max_col_size,
+        int sparse_ir_probe_quotient_components(sgraph *g, int *colmap, sassy_hook* consume, int max_col_size,
                                                 int num_paths) {
             if (g->v_size <= 1 || num_paths <= 0 || config->CONFIG_PREP_DEACT_PROBE)
                 return 0;
@@ -3148,7 +3144,7 @@ namespace sassy {
                 quotient_component_touched_swap.swap(quotient_component_touched);
 
                 if (x == 0) {
-                    for (int i = 0; i < quotient_component_worklist_boundary.size(); ++i)
+                    for (size_t i = 0; i < quotient_component_worklist_boundary.size(); ++i)
                         quotient_component_touched_swap.push_back(i);
                 }
 
@@ -3172,7 +3168,7 @@ namespace sassy {
                 int component = 0;
                 int next_touched_component_i = 0;
                 int next_touched_component = -1;
-                if (next_touched_component_i < quotient_component_touched_swap.size()) {
+                if (next_touched_component_i < (int) quotient_component_touched_swap.size()) {
                     next_touched_component = quotient_component_touched_swap[next_touched_component_i];
                 } else {
                     component = quotient_component_worklist_boundary.size() - 1;
@@ -3188,9 +3184,9 @@ namespace sassy {
                 int quotient_component_end_pos = quotient_component_worklist_boundary[component].first;
                 int quotient_component_end_pos_v = quotient_component_worklist_boundary[component].second;
 
-                while (quotient_component_start_pos < quotient_component_worklist_col.size()) {
-                    assert(quotient_component_start_pos_v < quotient_component_worklist_v.size());
-                    int start_search_here = quotient_component_start_pos;
+                while (quotient_component_start_pos < (int) quotient_component_worklist_col.size()) {
+                    assert(quotient_component_start_pos_v < (int) quotient_component_worklist_v.size());
+                    // int start_search_here = quotient_component_start_pos;
 
                     assert(quotient_component_worklist_col[quotient_component_start_pos] >= 0);
                     assert(quotient_component_worklist_v[quotient_component_start_pos_v] >= 0);
@@ -3224,7 +3220,6 @@ namespace sassy {
 
                         R1->refine_coloring(g, &c1, &I1, init_c1, nullptr, -1, -1,
                                            nullptr, &touched_color, &touched_color_list);
-                        long test_acc = I1.acc;
 
                         if (c2.ptn[cell] != 0) {
                             const int init_c2 = R1->individualize_vertex(&c2, ind_v2);
@@ -3403,7 +3398,7 @@ namespace sassy {
                                                nullptr, &touched_color, &touched_color_list);
 
                             int num_inds = 0;
-                            int touched_start_pos = 0;
+                            // int touched_start_pos = 0;
 
                             touched_color_cache.reset();
                             touched_color_list_cache.reset();
@@ -3543,7 +3538,7 @@ namespace sassy {
                                                                          _automorphism_supp.get_array());
                             }
 
-                            bool certify_before = certify;
+                            // bool certify_before = certify;
 
                             if (certify) {
                                 assert(R1->certify_automorphism(g, _automorphism.get_array()));
@@ -3608,8 +3603,8 @@ namespace sassy {
 
                                             col = ind_cols[repeat_num_inds];
 
-                                            assert(repeat_num_inds < ind_cols.size());
-                                            assert(num_inds == ind_cols.size());
+                                            assert(repeat_num_inds < (int) ind_cols.size());
+                                            assert(num_inds == (int) ind_cols.size());
                                             assert(col == ind_cols[repeat_num_inds]);
 
                                             if (col == -1) {
@@ -3727,7 +3722,7 @@ namespace sassy {
                             certify = all_certified;
 
                             if (certify) {
-                                int f = 0;
+                                // int f = 0;
                                 I1.acc = 0;
                                 assert(touched_color.get(c3.vertex_to_col[ind_v1]));
                                 const int init_c3 = R1->individualize_vertex(&c3, ind_v1);
@@ -3765,7 +3760,7 @@ namespace sassy {
 
                                 for (int _i = quotient_component_start_pos_v; _i < quotient_component_end_pos_v; ++_i) {
                                     const int v = quotient_component_worklist_v[_i];
-                                    const int list_index = _i - quotient_component_start_pos_v;
+                                    // const int list_index = _i - quotient_component_start_pos_v;
                                     assert(c1.ptn[c1.vertex_to_col[v]] >= 0);
                                     assert(c1.lab[c1.vertex_to_lab[v]] == v);
                                     assert(c1.vertex_to_col[c1.lab[c1.vertex_to_col[v]]] == c1.vertex_to_col[v]);
@@ -3780,7 +3775,7 @@ namespace sassy {
                                     assert(c2.ptn[c2.vertex_to_col[v]] == c3.ptn[c1.vertex_to_col[v]]);
                                 }
                             } else {
-                                int f = 0;
+                                // int f = 0;
                                 for (int _i = quotient_component_start_pos_v; _i < quotient_component_end_pos_v; ++_i) {
                                     const int v = quotient_component_worklist_v[_i];
 
@@ -3847,12 +3842,12 @@ namespace sassy {
                     quotient_component_end_pos_v = quotient_component_worklist_boundary[component].second;
 
                     ++next_touched_component_i;
-                    if (next_touched_component_i < quotient_component_touched_swap.size()) {
+                    if (next_touched_component_i < (int) quotient_component_touched_swap.size()) {
                         next_touched_component = quotient_component_touched_swap[next_touched_component_i];
                     }
 
                     while (component != next_touched_component &&
-                           quotient_component_start_pos < quotient_component_worklist_col.size()) {
+                           quotient_component_start_pos < (int) quotient_component_worklist_col.size()) {
                         quotient_component_start_pos = quotient_component_worklist_boundary[component].first;
                         quotient_component_start_pos_v = quotient_component_worklist_boundary[component].second;
 
@@ -3897,13 +3892,13 @@ namespace sassy {
                     g->d[v] = 0;
                     continue;
                 }
-                int write_pt_front = g->v[v];
-                int write_pt_back = g->v[v] + g->d[v] - 1;
+                // int write_pt_front = g->v[v];
+                // int write_pt_back = g->v[v] + g->d[v] - 1;
                 for (int n = g->v[v]; n < g->v[v] + g->d[v];) {
                     const int neigh = g->e[n];
-                    if (del.get(neigh)) {
+                    if (neigh == -1 || del.get(neigh)) {
                         const int swap_neigh = g->e[g->v[v] + g->d[v] - 1];
-                        g->e[g->v[v] + g->d[v] - 1] = neigh;
+                        //g->e[g->v[v] + g->d[v] - 1] = neigh; // removed this operation because unnecessary?
                         g->e[n] = swap_neigh;
                         --g->d[v];
                         ++rem_edges;
@@ -3918,7 +3913,7 @@ namespace sassy {
         void del_discrete_edges_inplace_component(sgraph *g, coloring *c, int component_start_pos) {
             int rem_edges = 0;
             int discrete_vert = 0;
-            for (int _i = component_start_pos; _i < quotient_component_worklist_col.size(); ++_i) {
+            for (size_t _i = component_start_pos; _i < quotient_component_worklist_col.size(); ++_i) {
                 const int col = quotient_component_worklist_col[_i];
                 const int col_sz = quotient_component_worklist_col_sz[_i];
 
@@ -3937,7 +3932,7 @@ namespace sassy {
                 }
             }
 
-            for (int _i = component_start_pos; _i < quotient_component_worklist_col.size(); ++_i) {
+            for (size_t _i = component_start_pos; _i < quotient_component_worklist_col.size(); ++_i) {
                 const int col = quotient_component_worklist_col[_i];
                 const int col_sz = quotient_component_worklist_col_sz[_i];
 
@@ -3952,8 +3947,8 @@ namespace sassy {
                         g->d[v] = 0;
                         continue;
                     }
-                    int write_pt_front = g->v[v];
-                    int write_pt_back = g->v[v] + g->d[v] - 1;
+                    // int write_pt_front = g->v[v];
+                    // int write_pt_back = g->v[v] + g->d[v] - 1;
                     for (int n = g->v[v]; n < g->v[v] + g->d[v];) {
                         const int neigh = g->e[n];
                         if (del.get(neigh)) {
@@ -3992,20 +3987,71 @@ namespace sassy {
             }
         }
 
+        void pre_cref(sgraph *g, int* colmap) {
+            int count = 0;
+            const int hash_ker = 2*g->v_size;
+            work_list hash_count;
+            hash_count.initialize(hash_ker);
+            for(int i = 0; i < hash_ker; ++i) {
+                hash_count[i] = 0;
+            }
+
+            work_list hash1;
+            hash1.initialize(g->v_size);
+            work_list hash2;
+            hash2.initialize(g->v_size);
+            work_list hash3;
+            hash3.initialize(g->v_size);
+            work_list hash4;
+            hash4.initialize(g->v_size);
+            for(int i = 0; i < g->v_size; ++i) {
+                hash1[i] = (colmap[i] + 1);
+                for(int j = g->v[i]; j < g->v[i] + g->d[i]; ++j) {
+                    hash1[i] += (colmap[g->e[j]] + 1);
+                }
+            }
+            for(int i = 0; i < g->v_size; ++i) {
+                for(int j = g->v[i]; j < g->v[i] + g->d[i]; ++j) {
+                    hash2[i] += (hash1[g->e[j]] + 1);
+                }
+            }
+            for(int i = 0; i < g->v_size; ++i) {
+                for(int j = g->v[i]; j < g->v[i] + g->d[i]; ++j) {
+                    hash3[i] += (hash2[g->e[j]] + 1);
+                }
+                hash3[i] = abs(hash3[i]) % hash_ker;
+                hash_count[hash3[i]] += 1;
+            }
+            for(int i = 0; i < g->v_size; ++i) {
+                for(int j = g->v[i]; j < g->v[i] + g->d[i]; ++j) {
+                    hash4[i] += (hash3[g->e[j]] + 1) + 3 * (hash2[g->e[j]] + 1)  + 7 * (hash1[g->e[j]] + 1);
+                }
+                hash4[i] = abs(hash4[i]) % hash_ker;
+                hash_count[hash4[i]] += 1;
+            }
+            for(int i = 0; i < g->v_size; ++i) {
+                if(hash_count[hash4[i]] == 1) {
+                    del.set(i);
+                    ++count;
+                }
+            }
+            std::cout << "del " << count << std::endl;
+        }
+
     public:
         void configure(configstruct* _config) {
             this->config = _config;
         }
 
-        void reduce(static_graph *g, sassy_hook hook, std::vector<preop> *schedule = nullptr) {
+        void reduce(static_graph *g, sassy_hook* hook, std::vector<preop> *schedule = nullptr) {
             reduce(g->get_sgraph(), g->get_coloring(), hook, schedule);
         }
 
 
         // main routine of the preprocessor, reduces (g, colmap) -- returns automorphisms through hook
         // optional parameter schedule defines the order of applied techniques
-        void reduce(sgraph *g, int *colmap, sassy_hook hook, std::vector<preop> *schedule = nullptr) {
-            std::vector<preop> default_schedule = {deg01, qcedgeflip, deg2ma, deg2ue, probe2qc, deg2ma, probeqc, redloop};
+        void reduce(sgraph *g, int *colmap, sassy_hook* hook, const std::vector<preop> *schedule = nullptr) {
+            const std::vector<preop> default_schedule = {deg01, qcedgeflip, deg2ma, deg2ue, probe2qc, deg2ma, probeqc, redloop};
             //std::vector<preop> alt_schedule = {deg01, qcedgeflip, deg2ma, deg2ue, probe2qc, probeflat, deg2ma};
             if(config == nullptr) {
                 config = &config_default;
@@ -4016,27 +4062,27 @@ namespace sassy {
             }
 
             domain_size = g->v_size;
-            saved_hook = &hook;
+            saved_hook = hook;
             preprocessor::save_preprocessor = this;
             if(g->v_size == 0)
                 return;
             g->dense = !(g->e_size < g->v_size || g->e_size / g->v_size < g->v_size / (g->e_size / g->v_size));
-            int deg0, deg1, deg2;
-            PRINT("(pre-red) before reduction (G, E) " << g->v_size << ", " << g->e_size);
 
+            PRINT("(prep-red) before reduction (G, E) " << g->v_size << ", " << g->e_size);
             g->initialize_coloring(&c, colmap);
             refinement R_stack = refinement(config);
             R1 = &R_stack;
             R1->refine_coloring_first(g, &c, -1);
 
             if (c.cells == g->v_size) {
+                PRINT("(prep-red) graph is discrete");
                 g->v_size = 0;
                 g->e_size = 0;
                 g->d_size = 0;
                 return;
             }
 
-
+            int deg0, deg1, deg2;
             add_edge_buff.initialize(domain_size);
             for (int i = 0; i < domain_size; ++i)
                 add_edge_buff.push_back(std::vector<int>()); // do this smarter... i know how many edges end up here
@@ -4056,7 +4102,7 @@ namespace sassy {
             backward_translation_layers.emplace_back(std::vector<int>());
             const int back_ind = backward_translation_layers.size() - 1;
             translation_layers.emplace_back(std::vector<int>());
-            const int fwd_ind = translation_layers.size() - 1;
+            // const int fwd_ind = translation_layers.size() - 1;
             backward_translation_layers[back_ind].reserve(g->v_size);
             for (int i = 0; i < g->v_size; ++i)
                 backward_translation_layers[back_ind].push_back(i);
@@ -4079,7 +4125,7 @@ namespace sassy {
                 del_e = mark_set();
                 del_e.initialize(g->e_size);
 
-                for (int pc = 0; pc < schedule->size(); ++pc) {
+                for (size_t pc = 0; pc < schedule->size(); ++pc) {
                     if (g->v_size <= 1) {
                         return;
                     }
@@ -4088,6 +4134,7 @@ namespace sassy {
                         case preop::deg01: {
                             red_deg10_assume_cref(g, colmap, hook);
                             perform_del(g, colmap);
+                            PRINT("(prep-red) after 01 reduction (G, E) " << g->v_size << ", " << g->e_size);
                             break;
                         }
                         case preop::deg2ma: {
@@ -4186,8 +4233,8 @@ namespace sassy {
             }
 
 
-            PRINT("(pre-red) after reduction (G, E) " << g->v_size << ", " << g->e_size);
-            g->sanity_check();
+            PRINT("(prep-red) after reduction (G, E) " << g->v_size << ", " << g->e_size);
+            // g->sanity_check();
             // could do multiple calls for now obviously independent components -- could use "buffer consumer" to translate domains
         }
 
@@ -4198,13 +4245,13 @@ namespace sassy {
         // bliss usage specific:
         static inline void bliss_hook(void *user_param, unsigned int n, const unsigned int *aut) {
             auto p = (preprocessor *) user_param;
-            p->pre_consumer(n, (const int *) aut, -1, nullptr, *p->saved_hook);
+            p->pre_consumer(n, (const int *) aut, -1, nullptr, p->saved_hook);
         }
 
         // Traces usage specific:
         static inline void traces_hook(int c, int* aut, int n) {
             auto p = preprocessor::save_preprocessor;
-            p->pre_consumer(n, (int *) aut, -1, nullptr, *p->saved_hook);
+            p->pre_consumer(n, (int *) aut, -1, nullptr, p->saved_hook);
         }
 
         void traces_save_my_preprocessor() {
@@ -4214,7 +4261,7 @@ namespace sassy {
         // nauty usage specific:
         static inline void nauty_hook(int c, int* aut, int* orb, int norb, int stabvert, int n) {
             auto p = preprocessor::save_preprocessor;
-            p->pre_consumer(n, (int *) aut, -1, nullptr, *p->saved_hook);
+            p->pre_consumer(n, (int *) aut, -1, nullptr, p->saved_hook);
         }
 
         void nauty_save_my_preprocessor() {
@@ -4224,7 +4271,7 @@ namespace sassy {
         // saucy usage specific:
         static inline int saucy_hook(int n, const int* aut, int nsupp, int* supp, void* user_param) {
             auto p = (preprocessor *) user_param;
-            p->pre_consumer(n, (const int *) aut, nsupp, supp, *p->saved_hook);
+            p->pre_consumer(n, (int *) aut, nsupp, supp, p->saved_hook);
             return true;
         }
 
