@@ -1431,7 +1431,7 @@ const char* SYMsymmetryGetName(void)
 /** return description of external program used to compute generators */
 const char* SYMsymmetryGetDesc(void)
 {
-   return "Computing Graph Automorphism Groups by T. Junttila and P. Kaski (https://users.aalto.fi/~tjunttil/bliss/); sassy preprocessor by Markus Anders";
+   return "bliss: Computing Graph Automorphisms by T. Junttila and P. Kaski (users.aalto.fi/~tjunttil/bliss/); sassy: preprocessor by Markus Anders (github.com/markusa4/sassy)";
 }
 
 /** compute generators of symmetry group */
