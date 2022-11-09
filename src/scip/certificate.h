@@ -347,6 +347,15 @@ SCIP_RETCODE SCIPcertificateFreeAggrInfo(
    SCIP_ROW*             row                 /**< new row, that info should be stored for */
    );
 
+/** free mir information for row */
+SCIP_RETCODE SCIPcertificateFreeMirInfo(
+   SCIP_SET*             set,                /**< general SCIP settings */
+   SCIP_CERTIFICATE*     certificate,        /**< SCIP certificate structure */
+   SCIP_LP*              lp,                 /**< SCIP lp data structure */
+   SCIP_MIRINFO*         mirinfo,           /**< SCIP mir info */
+   SCIP_ROW*             row                 /**< row that should be freed, or NULL if not needed */
+   );
+
 /** create a new aggregation info for a row */
 SCIP_RETCODE SCIPcertificateNewAggrInfo(
    SCIP*                 scip,               /**< SCIP data structure */

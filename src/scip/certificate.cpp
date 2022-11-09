@@ -681,8 +681,6 @@ void SCIPcertificateExit(
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    )
 {
-   int i;
-
    assert(certificate != NULL);
    assert(set != NULL);
 
@@ -1538,7 +1536,6 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
    SCIP_Longint leftdisjunctionindex;
    SCIP_Longint rightdisjunctionindex;
    SCIP_MIRINFO* mirinfo;
-   int arraypos;
    int i;
 
    /* check if certificate output should be created */
@@ -1839,41 +1836,11 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
    SCIP_CALL( SCIPhashmapInsert(certificate->rowdatahash, SCIProwGetRowExact(row), (void*)((size_t)certificate->indexcounter - 1)) );
 
    SCIP_CALL( SCIPcertificateFreeAggrInfo(set, certificate, lp, aggrinfo, row) );
+   SCIP_CALL( SCIPcertificateFreeMirInfo(set, certificate, lp, mirinfo, row) );
 
    RatFreeBuffer(set->buffer, &value);
    RatFreeBuffer(set->buffer, &oneminusf0);
    RatFreeBuffer(set->buffer, &tmpval);
-
-   /* remove the mirinfo, move last element to the now freed up one */
-   arraypos = mirinfo->arpos;
-   SCIP_CALL( SCIPhashmapRemove(certificate->mirinfohash, (void*) row) );
-   for( i = 0; i < mirinfo->nslacks; ++i)
-   {
-      SCIProwRelease(&(mirinfo->slackrows[i]), certificate->blkmem, set, lp);
-   }
-
-   RatFreeBlock(certificate->blkmem, &(mirinfo->rhs));
-   RatFreeBlock(certificate->blkmem, &(mirinfo->frac));
-   BMSfreeBlockMemoryArray(certificate->blkmem, &(mirinfo->splitcoefficients), mirinfo->nsplitvars);
-   BMSfreeBlockMemoryArray(certificate->blkmem, &(mirinfo->varinds), mirinfo->nsplitvars);
-   BMSfreeBlockMemoryArray(certificate->blkmem, &(mirinfo->upperused), mirinfo->nsplitvars);
-   BMSfreeBlockMemoryArray(certificate->blkmem, &(mirinfo->localbdused), mirinfo->nsplitvars);
-
-   BMSfreeBlockMemoryArray(certificate->blkmem, &(mirinfo->slackrows), mirinfo->nslacks);
-   BMSfreeBlockMemoryArray(certificate->blkmem, &(mirinfo->slacksign), mirinfo->nslacks);
-   BMSfreeBlockMemoryArray(certificate->blkmem, &(mirinfo->slackcoefficients), mirinfo->nslacks);
-   BMSfreeBlockMemoryArray(certificate->blkmem, &(mirinfo->slackweight), mirinfo->nslacks);
-   BMSfreeBlockMemoryArray(certificate->blkmem, &(mirinfo->slackscale), mirinfo->nslacks);
-   BMSfreeBlockMemoryArray(certificate->blkmem, &(mirinfo->slackusedcoef), mirinfo->nslacks);
-   BMSfreeBlockMemoryArray(certificate->blkmem, &(mirinfo->slackroundeddown), mirinfo->nslacks);
-
-   BMSfreeBlockMemory(certificate->blkmem, &mirinfo);
-   if( arraypos != certificate->nmirinfos - 1 )
-   {
-      certificate->mirinfo[arraypos] = certificate->mirinfo[certificate->nmirinfos - 1];
-      certificate->mirinfo[arraypos]->arpos = arraypos;
-   }
-   certificate->nmirinfos--;
 
    return SCIP_OKAY;
 }
@@ -2706,6 +2673,52 @@ SCIP_RETCODE SCIPcertificateFreeAggrInfo(
       certificate->aggrinfo[arraypos]->arpos = arraypos;
    }
    certificate->naggrinfos--;
+
+   return SCIP_OKAY;
+}
+
+/** free mir information for row */
+SCIP_RETCODE SCIPcertificateFreeMirInfo(
+   SCIP_SET*             set,                /**< general SCIP settings */
+   SCIP_CERTIFICATE*     certificate,        /**< SCIP certificate structure */
+   SCIP_LP*              lp,                 /**< SCIP lp data structure */
+   SCIP_MIRINFO*         mirinfo,           /**< SCIP mir info */
+   SCIP_ROW*             row                 /**< row that should be freed, or NULL if not needed */
+   )
+{
+   int arraypos;
+   int i;
+
+   /* remove the mirinfo, move last element to the now freed up one */
+   arraypos = mirinfo->arpos;
+   SCIP_CALL( SCIPhashmapRemove(certificate->mirinfohash, (void*) row) );
+   for( i = 0; i < mirinfo->nslacks; ++i)
+   {
+      SCIProwRelease(&(mirinfo->slackrows[i]), certificate->blkmem, set, lp);
+   }
+
+   RatFreeBlock(certificate->blkmem, &(mirinfo->rhs));
+   RatFreeBlock(certificate->blkmem, &(mirinfo->frac));
+   BMSfreeBlockMemoryArray(certificate->blkmem, &(mirinfo->splitcoefficients), mirinfo->nsplitvars);
+   BMSfreeBlockMemoryArray(certificate->blkmem, &(mirinfo->varinds), mirinfo->nsplitvars);
+   BMSfreeBlockMemoryArray(certificate->blkmem, &(mirinfo->upperused), mirinfo->nsplitvars);
+   BMSfreeBlockMemoryArray(certificate->blkmem, &(mirinfo->localbdused), mirinfo->nsplitvars);
+
+   BMSfreeBlockMemoryArray(certificate->blkmem, &(mirinfo->slackrows), mirinfo->nslacks);
+   BMSfreeBlockMemoryArray(certificate->blkmem, &(mirinfo->slacksign), mirinfo->nslacks);
+   BMSfreeBlockMemoryArray(certificate->blkmem, &(mirinfo->slackcoefficients), mirinfo->nslacks);
+   BMSfreeBlockMemoryArray(certificate->blkmem, &(mirinfo->slackweight), mirinfo->nslacks);
+   BMSfreeBlockMemoryArray(certificate->blkmem, &(mirinfo->slackscale), mirinfo->nslacks);
+   BMSfreeBlockMemoryArray(certificate->blkmem, &(mirinfo->slackusedcoef), mirinfo->nslacks);
+   BMSfreeBlockMemoryArray(certificate->blkmem, &(mirinfo->slackroundeddown), mirinfo->nslacks);
+
+   BMSfreeBlockMemory(certificate->blkmem, &mirinfo);
+   if( arraypos != certificate->nmirinfos - 1 )
+   {
+      certificate->mirinfo[arraypos] = certificate->mirinfo[certificate->nmirinfos - 1];
+      certificate->mirinfo[arraypos]->arpos = arraypos;
+   }
+   certificate->nmirinfos--;
 
    return SCIP_OKAY;
 }

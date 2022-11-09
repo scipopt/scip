@@ -134,6 +134,12 @@ SCIP_RETCODE SCIPaddCertificateMirInfo(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** free information that is possibly still stored about this row in the certifacte structure */
+SCIP_RETCODE SCIPfreeRowCertInfo(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW*             row                 /**< a SCIP row */
+   );
+
 /** stores the active aggregation information in the certificate data structures for a row */
 SCIP_EXPORT
 SCIP_RETCODE SCIPstoreCertificateActiveAggregationInfo(
