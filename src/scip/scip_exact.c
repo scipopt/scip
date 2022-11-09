@@ -131,6 +131,7 @@
 #include "scip/pub_misc.h"
 #include "scip/pub_sol.h"
 #include "scip/pub_var.h"
+#include "scip/pub_lpexact.h"
 #include "scip/struct_certificate.h"
 
 
