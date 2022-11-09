@@ -241,6 +241,8 @@ SCIP_RETCODE SCIPfreeRowCertInfo(
       mirinfo = (SCIP_MIRINFO*) SCIPhashmapGetImage(certificate->mirinfohash, (void*) row);
       SCIP_CALL( SCIPcertificateFreeMirInfo(scip->set, certificate, scip->lp, mirinfo, row) );
    }
+
+   return SCIP_OKAY;
 }
 
 /** agg aggregation information to certificate for one row */
