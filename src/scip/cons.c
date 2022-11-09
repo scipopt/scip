@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -3274,17 +3283,7 @@ SCIP_RETCODE SCIPconshdlrEnforceRelaxSol(
       SCIP_CALL( conshdlrForceUpdates(conshdlr, blkmem, set, stat) );
 
       /* update statistics */
-      if( *result != SCIP_DIDNOTRUN )
-         conshdlr->nenforelaxcalls++;
-      else
-      {
-         SCIPerrorMessage("enforcing method of constraint handler <%s> for relaxation returned an invalid result %d\n",
-            conshdlr->name, *result);
-         conshdlr->lastenforelaxresult = *result;
-
-         return SCIP_INVALIDRESULT;
-      }
-
+      conshdlr->nenforelaxcalls++;
       if( *result == SCIP_CUTOFF )
          conshdlr->ncutoffs++;
       conshdlr->ncutsfound += SCIPsepastoreGetNCuts(sepastore) - oldncuts; /*lint !e776*/
@@ -3313,8 +3312,7 @@ SCIP_RETCODE SCIPconshdlrEnforceRelaxSol(
          && *result != SCIP_BRANCHED
          && *result != SCIP_SOLVELP
          && *result != SCIP_INFEASIBLE
-         && *result != SCIP_FEASIBLE
-         && *result != SCIP_DIDNOTRUN )
+         && *result != SCIP_FEASIBLE )
       {
          SCIPerrorMessage("enforcing method of constraint handler <%s> for relaxation solutions returned invalid result <%d>\n",
             conshdlr->name, *result);
@@ -3433,7 +3431,7 @@ SCIP_RETCODE SCIPconshdlrEnforceLPSol(
          conshdlr->lastnusefulenfoconss = conshdlr->nusefulenfoconss;
 
          /* get the array of the constraints to be processed */
-         conss = &(conshdlr->enfoconss[firstcons]);
+         conss = nconss > 0 ? conshdlr->enfoconss + firstcons : NULL;
 
          oldncuts = SCIPsepastoreGetNCuts(sepastore);
          oldnactiveconss = stat->nactiveconss;
@@ -3468,8 +3466,7 @@ SCIP_RETCODE SCIPconshdlrEnforceLPSol(
          conshdlr->lastenfolpresult = *result;
 
          /* update statistics */
-         if( *result != SCIP_DIDNOTRUN )
-            conshdlr->nenfolpcalls++;
+         conshdlr->nenfolpcalls++;
          if( *result == SCIP_CUTOFF )
             conshdlr->ncutoffs++;
          conshdlr->ncutsfound += SCIPsepastoreGetNCuts(sepastore) - oldncuts; /*lint !e776*/
@@ -3731,6 +3728,14 @@ SCIP_RETCODE SCIPconshdlrEnforcePseudoSol(
          if( lastinfeasible && *result == SCIP_FEASIBLE )
             *result = SCIP_INFEASIBLE;
       }
+      else if( objinfeasible )
+      {
+         /*
+          * Even if nothing is enforced, the solution might still be infeasible due to violating lower bound.
+          * Make sure the result is updated in this case as well.
+          */
+         *result = SCIP_INFEASIBLE;
+      }
    }
 
    return SCIP_OKAY;
@@ -3882,7 +3887,7 @@ SCIP_RETCODE SCIPconshdlrPropagate(
             lastnusefulpropconss = conshdlr->nusefulpropconss;
 
             /* get the array of the constraints to be processed */
-            conss = &(conshdlr->propconss[firstcons]);
+            conss = nconss > 0 ? (conshdlr->propconss + firstcons) : NULL;
 
             oldndomchgs = stat->nboundchgs + stat->nholechgs;
             oldnprobdomchgs = stat->nprobboundchgs + stat->nprobholechgs;

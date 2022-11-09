@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -464,8 +473,8 @@ SCIP_RETCODE SCIPprobFree(
 
       if( SCIPvarGetNUses((*prob)->vars[v]) > 1 )
       {
-         SCIPmessageFPrintWarning(messagehdlr, "%s variable <%s> not released when freeing SCIP.\n",
-            (*prob)->transformed ? "Transformed" : "Original", SCIPvarGetName((*prob)->vars[v]));
+         SCIPmessageFPrintWarning(messagehdlr, "%s variable <%s> not released when freeing SCIP problem <%s>.\n",
+            (*prob)->transformed ? "Transformed" : "Original", SCIPvarGetName((*prob)->vars[v]), SCIPprobGetName(*prob));
 #ifndef NDEBUG
          unreleasedvar = TRUE;
 #endif
@@ -483,8 +492,8 @@ SCIP_RETCODE SCIPprobFree(
 
       if( SCIPvarGetNUses((*prob)->fixedvars[v]) > 1 )
       {
-         SCIPmessageFPrintWarning(messagehdlr, "%s variable <%s> not released when freeing SCIP.\n",
-            (*prob)->transformed ? "Transformed" : "Original", SCIPvarGetName((*prob)->fixedvars[v]));
+         SCIPmessageFPrintWarning(messagehdlr, "%s variable <%s> not released when freeing SCIP problem <%s>.\n",
+            (*prob)->transformed ? "Transformed" : "Original", SCIPvarGetName((*prob)->fixedvars[v]), SCIPprobGetName(*prob));
 #ifndef NDEBUG
          unreleasedvar = TRUE;
 #endif
@@ -1916,8 +1925,12 @@ SCIP_RETCODE SCIPprobExitSolve(
       SCIP_CALL( prob->probexitsol(set->scip, prob->probdata, restart) );
    }
 
-   /* convert all COLUMN variables back into LOOSE variables */
-   if( prob->ncolvars > 0 )
+   /* - convert all COLUMN variables back into LOOSE variables
+    * - mark relaxation-only variables for deletion, if possible and restarting
+    *   - initPresolve will then call SCIPprobPerformVarDeletions
+    *   - if no restart, then the whole transformed problem will be deleted anyway
+    */
+   if( prob->ncolvars > 0 || restart )
    {
       for( v = 0; v < prob->nvars; ++v )
       {
@@ -1929,6 +1942,27 @@ SCIP_RETCODE SCIPprobExitSolve(
 
          /* invalidate root reduced cost, root reduced solution, and root LP objective value for each variable */
          SCIPvarSetBestRootSol(var, 0.0, 0.0, SCIP_INVALID);
+
+         if( SCIPvarIsRelaxationOnly(var) && restart )
+         {
+            /* relaxation variables should be unlocked and only captured by prob at this moment */
+            assert(SCIPvarGetNLocksDown(var) == 0);
+            assert(SCIPvarGetNLocksUp(var) == 0);
+            assert(SCIPvarGetNUses(var) == 1);
+
+            if( SCIPvarIsDeletable(var) )
+            {
+               SCIP_Bool deleted;
+
+               SCIPsetDebugMsg(set, "queue relaxation-only variable <%s> for deletion\n", SCIPvarGetName(var));
+               SCIP_CALL( SCIPprobDelVar(prob, blkmem, set, eventqueue, var, &deleted) );
+               assert(deleted);
+            }
+            else
+            {
+               SCIPsetDebugMsg(set, "cannot queue relaxation-only variable <%s> for deletion because it is marked non-deletable\n", SCIPvarGetName(var));
+            }
+         }
       }
    }
    assert(prob->ncolvars == 0);

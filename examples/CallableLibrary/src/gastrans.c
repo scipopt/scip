@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -17,13 +26,13 @@
  * @brief  Simple Gas Transportation Model
  * @author Stefan Vigerske
  *
- * This example shows how to setup abspower constraints in SCIP when using SCIP as callable library.
+ * This example shows how to setup nonlinear constraints with signpower-expression when using SCIP as callable library.
  * The example implements a model for the distribution of gas through a network of pipelines, which
  * is formulated as a cost minimization subject to nonlinear flow-pressure relations, material balances,
  * and pressure bounds. The Belgian gas network is used as an example.
  *
  * The model is taken from the GAMS model library:
- * http://www.gams.com/modlib/libhtml/gastrans.htm
+ * https://www.gams.com/latest/gamslib_ml/libhtml/gamslib_gastrans.html
  *
  * Original model source:
  * @par
@@ -234,7 +243,7 @@ SCIP_RETCODE setupProblem(
    }
 
    /* create pressure difference constraints and add to problem
-    * pressurediff[node1 to node2] = pressure[node1] - pressure[2]
+    * pressurediff[node1 to node2] = pressure[node1] - pressure[node2]
     */
    for( i = 0; i < narcs; ++i )
    {
@@ -265,22 +274,31 @@ SCIP_RETCODE setupProblem(
     */
    for( i = 0; i < narcs; ++i )
    {
+      SCIP_EXPR* exprflow;
+      SCIP_EXPR* exprs[2];
+      SCIP_Real coefs[2];
+      SCIP_EXPR* exprsum;
       SCIP_Real coef;
-
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "pressureloss_%s_%s", nodedata[arcdata[i].node1].name, nodedata[arcdata[i].node2].name);
 
       coef = 96.074830e-15 * pow(arcdata[i].diameter, 5.0) * pow(2.0*log10(3.7*arcdata[i].diameter / rugosity), 2.0)
          / compressibility / gastemp / arcdata[i].length / density;
 
-      if( arcdata[i].active )
-      {
-         /* we can also use an abspower constraint here, because flow(i) is positive for active arcs */
-         SCIP_CALL( SCIPcreateConsBasicAbspower(scip, &pressureloss[i], name, flow[i], pressurediff[i], 2.0, 0.0,  coef, -SCIPinfinity(scip), 0.0) );
-      }
-      else
-      {
-         SCIP_CALL( SCIPcreateConsBasicAbspower(scip, &pressureloss[i], name, flow[i], pressurediff[i], 2.0, 0.0, -coef, 0.0, 0.0) );
-      }
+      /* we can always use the signpower-expression, because flow(i) is positive for active arcs */
+      SCIP_CALL( SCIPcreateExprVar(scip, &exprflow, flow[i], NULL, NULL) );
+      SCIP_CALL( SCIPcreateExprSignpower(scip, &exprs[0], exprflow, 2.0, NULL, NULL) );
+      SCIP_CALL( SCIPreleaseExpr(scip, &exprflow) );
+
+      SCIP_CALL( SCIPcreateExprVar(scip, &exprs[1], pressurediff[i], NULL, NULL) );
+
+      coefs[0] = 1.0;
+      coefs[1] = arcdata[i].active ? coef : -coef;
+      SCIP_CALL( SCIPcreateExprSum(scip, &exprsum, 2, exprs, coefs, 0.0, NULL, NULL) );
+      SCIP_CALL( SCIPreleaseExpr(scip, &exprs[1]) );
+      SCIP_CALL( SCIPreleaseExpr(scip, &exprs[0]) );
+
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "pressureloss_%s_%s", nodedata[arcdata[i].node1].name, nodedata[arcdata[i].node2].name);
+      SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &pressureloss[i], name, exprsum, arcdata[i].active ? -SCIPinfinity(scip) : 0.0, 0.0) );
+      SCIP_CALL( SCIPreleaseExpr(scip, &exprsum) );
 
       SCIP_CALL( SCIPaddCons(scip, pressureloss[i]) );
    }

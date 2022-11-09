@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -52,6 +61,26 @@
 #include "scip/struct_scip.h"
 #include "scip/struct_set.h"
 #include "scip/tree.h"
+
+/** returns row's cutoff distance in the direction of the given primal solution
+ *
+ *  @return the cutoff distance of the cut with respect to the LP solution in the direction of the given primal solution
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_Real SCIPgetCutLPSolCutoffDistance(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< solution to compute direction for cutoff distance; must not be NULL */
+   SCIP_ROW*             cut                 /**< separated cut */
+   )
+{
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetCutLPSolCutoffDistance", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(sol != NULL);
+
+   return SCIProwGetLPSolCutoffDistance(cut, scip->set, scip->stat, sol, scip->lp);
+}
 
 /** returns efficacy of the cut with respect to the given primal solution or the current LP solution:
  *  e = -feasibility/norm
@@ -583,6 +612,7 @@ SCIP_RETCODE SCIPseparateSolCutpool(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CUTPOOL*         cutpool,            /**< cut pool */
    SCIP_SOL*             sol,                /**< solution to be separated */
+   SCIP_Bool             pretendroot,        /**< should the cut separators be called as if we are at the root node? */
    SCIP_RESULT*          result              /**< pointer to store the result of the separation call */
    )
 {
@@ -597,7 +627,7 @@ SCIP_RETCODE SCIPseparateSolCutpool(
    }
 
    SCIP_CALL( SCIPcutpoolSeparate(cutpool, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->eventfilter,
-         scip->lp, scip->sepastore, sol, FALSE, (SCIPtreeGetCurrentDepth(scip->tree) == 0), result) );
+         scip->lp, scip->sepastore, sol, FALSE, pretendroot, result) );
 
    return SCIP_OKAY;
 }

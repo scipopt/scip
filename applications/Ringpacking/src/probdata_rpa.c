@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -746,8 +755,7 @@ SCIP_RETCODE setupProblem(
    probdata->enumtime += SCIPgetTotalTime(scip);
    probdata->ncppatternsunknownbeg = getNCPatterns(scip, probdata, SCIP_PACKABLE_UNKNOWN);
 
-   SCIPinfoMessage(scip, NULL, "+++++++++++++ starting with |CP|=%d\n", probdata->ncpatterns,
-      probdata->nrpatterns);
+   SCIPinfoMessage(scip, NULL, "+++++++++++++ starting with |CP|=%d\n", probdata->ncpatterns);
 
    /* create initial rectangular patterns */
    for( t = 0; t < ntypes; ++t )
@@ -2039,8 +2047,9 @@ SCIP_RETCODE SCIPverifyCircularPatternNLP(
          quadvars1[5] = yvars[l]; quadvars2[5] = yvars[l]; quadcoefs[5] =  1.0;
 
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "over_%d_%d", k, l);
-         SCIP_CALL( SCIPcreateConsBasicQuadratic(subscip, &cons, name, 0, NULL, NULL, 6, quadvars1, quadvars2,
-               quadcoefs, SQR(rexts[elemtype1] + rexts[elemtype2]), SCIPinfinity(subscip)) );
+         SCIP_CALL( SCIPcreateConsQuadraticNonlinear(subscip, &cons, name, 0, NULL, NULL, 6, quadvars1, quadvars2,
+               quadcoefs, SQR(rexts[elemtype1] + rexts[elemtype2]), SCIPinfinity(subscip),
+               TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
          SCIP_CALL( SCIPaddCons(subscip, cons) );
          SCIP_CALL( SCIPreleaseCons(subscip, &cons) );
@@ -2059,8 +2068,9 @@ SCIP_RETCODE SCIPverifyCircularPatternNLP(
       quadvars1[1] = yvars[k]; quadvars2[1] = yvars[k]; quadcoefs[1] = 1.0;
 
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "bound_%d", k);
-      SCIP_CALL( SCIPcreateConsBasicQuadratic(subscip, &cons, name, 0, NULL, NULL, 2, quadvars1, quadvars2, quadcoefs,
-            0.0, SQR(rints[type] - rexts[elemtype])) );
+      SCIP_CALL( SCIPcreateConsQuadraticNonlinear(subscip, &cons, name, 0, NULL, NULL, 2, quadvars1, quadvars2, quadcoefs,
+            0.0, SQR(rints[type] - rexts[elemtype]),
+            TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
       SCIP_CALL( SCIPaddCons(subscip, cons) );
       SCIP_CALL( SCIPreleaseCons(subscip, &cons) );

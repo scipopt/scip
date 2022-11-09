@@ -10,7 +10,7 @@ set(instances
     "instances/MIP/flugpl.mps\;1201500"
     "instances/MIP/gt2.mps\;21166"
     "instances/MIP/lseu.mps\;1120"
-    "instances/MINLP/circle.cip\;4.57424778"
+    "instances/MINLP/circle.lp\;4.57424778"
     "instances/MINLP/m3.osil\;37.8"
 #    "instances/MINLP/parincQuadratic.osil\;49920.5564"
 # this instance currently fails
@@ -21,7 +21,7 @@ set(instances
 # add a build test first
 #
 add_test(NAME examples-relaxator-build
-        COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target relaxator
+        COMMAND "${CMAKE_COMMAND}" --build "${CMAKE_BINARY_DIR}" --config $<CONFIG> --target relaxator
         )
 #
 # avoid that several build jobs try to concurrently build the SCIP library
@@ -47,5 +47,14 @@ foreach(instance ${instances})
         set_tests_properties(examples-relaxator-${basename}
                             PROPERTIES
                                 DEPENDS examples-relaxator-build
+                                RESOURCE_LOCK libscip
                             )
+        if(WIN32)
+            # on windows we need to execute the application and examples executables from the directory containing the libscip.dll,
+            # on other systems this directory does not exist.
+            set_tests_properties(examples-relaxator-${basename}
+                PROPERTIES
+                        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin/$<CONFIG>
+                )
+        endif()
 endforeach(instance)

@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -1287,7 +1296,7 @@ SCIP_Bool stoinputReadLine(
             return FALSE;
          stoi->lineno++;
       }
-      while( *stoi->buf == '*' );
+      while( *stoi->buf == '*' );   /* coverity[a_loop_bound] */
 
       /* Normalize line */
       len = (unsigned int) strlen(stoi->buf);
@@ -1392,6 +1401,7 @@ SCIP_RETCODE readStoch(
    stoinputSetProbname(stoi, (stoinputField1(stoi) == 0) ? "_STO_" : stoinputField1(stoi));
 
    /* This hat to be a new section */
+   /* coverity[tainted_data] */
    if( !stoinputReadLine(stoi) || (stoinputField0(stoi) == NULL) )
    {
       stoinputSyntaxerror(stoi);
@@ -1477,6 +1487,7 @@ SCIP_RETCODE readBlocks(
    numstages = 0;
    (void) SCIPsnprintf(stagenames, SCIP_MAXSTRLEN, "");
 
+   /* coverity[tainted_data] */
    while( stoinputReadLine(stoi) )
    {
       if( stoinputField0(stoi) != NULL )
@@ -1634,6 +1645,7 @@ SCIP_RETCODE readScenarios(
    SCIP_CALL( setScenarioNum(scip, readerdata->scenariotree, 0) );
    SCIP_CALL( setScenarioStageNum(scip, readerdata->scenariotree, 0) );
 
+   /* coverity[tainted_data] */
    while( stoinputReadLine(stoi) )
    {
       if( stoinputField0(stoi) != NULL )
@@ -1983,12 +1995,6 @@ SCIP_RETCODE addScenarioVarsToProb(
       obj = SCIPvarGetObj(vars[i])*probability;
 
       vartype = SCIPvarGetType(vars[i]);
-#if 0
-      if( getScenarioStageNum(scip, scenario) == 0 )
-         vartype = SCIPvarGetType(vars[i]);
-      else
-         vartype = SCIP_VARTYPE_CONTINUOUS;
-#endif
 
       /* creating a variable as a copy of the original variable. */
       getScenarioEntityName(name, SCIPvarGetName(vars[i]), getScenarioStageNum(scip, scenario), getScenarioNum(scip, scenario));
@@ -2627,6 +2633,7 @@ SCIP_RETCODE readSto(
    {
       if( stoinputSection(stoi) == STO_BLOCKS )
       {
+         /* coverity[tainted_data] */
          SCIP_CALL_TERMINATE( retcode, readBlocks(stoi, scip, readerdata), TERMINATE );
       }
 

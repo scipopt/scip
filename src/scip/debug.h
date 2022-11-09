@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -66,8 +75,13 @@ SCIP_RETCODE SCIPdebugReset(
    SCIP_SET*             set
    );
 
-/** frees debugging data */
+/** frees debugging data for the particular instance */
 SCIP_RETCODE SCIPdebugFreeDebugData(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** frees all debugging data */
+SCIP_RETCODE SCIPdebugFree(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
@@ -110,6 +124,19 @@ SCIP_RETCODE SCIPdebugCheckInference(
 
 /** informs solution debugger, that the given node will be freed */
 SCIP_RETCODE SCIPdebugRemoveNode(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NODE*            node                /**< node that will be freed */
+   );
+
+/** checks whether global lower bound does not exceed debuging solution value */
+SCIP_RETCODE SCIPdebugCheckGlobalLowerbound(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** checks whether local lower bound does not exceed debuging solution value */
+SCIP_RETCODE SCIPdebugCheckLocalLowerbound(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_NODE*            node                /**< node that will be freed */
@@ -234,18 +261,24 @@ SCIP_Bool SCIPdebugSolIsEnabled(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** check if SCIP is compiled with WITH_DEBUG_SOLUTION */
+SCIP_Bool SCIPwithDebugSol(void);
+
 #else
 
 #define SCIPdebugSolDataCreate(debugsoldata) SCIP_OKAY
 #define SCIPdebugFreeSol(set) SCIP_OKAY
 #define SCIPdebugReset(set) SCIP_OKAY
 #define SCIPdebugFreeDebugData(set) SCIP_OKAY
+#define SCIPdebugFree(set) SCIP_OKAY
 #define SCIPdebugCheckConss(scip,conss,nconss) SCIP_OKAY
 #define SCIPdebugCheckRow(set,row) SCIP_OKAY
 #define SCIPdebugCheckLbGlobal(scip,var,lb) SCIP_OKAY
 #define SCIPdebugCheckUbGlobal(scip,var,ub) SCIP_OKAY
 #define SCIPdebugCheckInference(blkmem,set,node,var,newbound,boundtype) SCIP_OKAY
 #define SCIPdebugRemoveNode(blkmem,set,node) SCIP_OKAY
+#define SCIPdebugCheckGlobalLowerbound(blkmem,set) SCIP_OKAY
+#define SCIPdebugCheckLocalLowerbound(blkmem,set,node) SCIP_OKAY
 #define SCIPdebugCheckVbound(set,var,vbtype,vbvar,vbcoef,vbconstant) SCIP_OKAY
 #define SCIPdebugCheckImplic(set,var,varfixing,implvar,impltype,implbound) SCIP_OKAY
 #define SCIPdebugCheckAggregation(set,var,aggrvars,scalars,constant,naggrvars) SCIP_OKAY
@@ -259,6 +292,8 @@ SCIP_Bool SCIPdebugSolIsEnabled(
 #define SCIPdebugSolEnable(scip) /**/
 #define SCIPdebugSolDisable(scip) /**/
 #define SCIPdebugSolIsEnabled(scip) FALSE
+#define SCIPwithDebugSol(void) FALSE
+
 #endif
 
 

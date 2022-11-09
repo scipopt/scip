@@ -1,0 +1,7 @@
+misc/usesymmetry = 4
+propagating/symmetry/ssttiebreakrule = 2
+propagating/symmetry/sstleaderrule = 0
+propagating/symmetry/sstleadervartype = 15
+propagating/symmetry/addconflictcuts = TRUE
+propagating/symmetry/sstaddcuts = TRUE
+propagating/symmetry/sstmixedcomponents = TRUE

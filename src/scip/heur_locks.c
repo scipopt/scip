@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -252,7 +261,7 @@ SCIP_RETCODE SCIPapplyLockFixings(
 
    updatelocks = heurdata->updatelocks && (SCIPgetNCheckConss(scip) == SCIPgetNLPRows(scip));
 
-   SCIPdebugMsg(scip, "%d constraints: %d logicor, updatelocks=%d\n", SCIPgetNConss(scip), SCIPconshdlrGetNCheckConss(SCIPfindConshdlr(scip, "logicor")), updatelocks);
+   SCIPdebugMsg(scip, "%d constraints: %d logicor, updatelocks=%u\n", SCIPgetNConss(scip), SCIPconshdlrGetNCheckConss(SCIPfindConshdlr(scip, "logicor")), updatelocks);
 
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, NULL, NULL, NULL) );
    assert(vars != NULL);
@@ -741,6 +750,7 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
    else
    {
       char strbuf[SCIP_MAXSTRLEN];
+      int ncols;
 
       if( SCIPgetNContVars(scip) > 0 )
       {
@@ -766,15 +776,28 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
             goto TERMINATE;
       }
 
-      /* print probing stats before LP */
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "Heuristic " HEUR_NAME " probing LP: %s\n",
+      /* print message if relatively large LP is solved from scratch, since this could lead to a longer period during
+       * which the user sees no output; more detailed probing stats only in debug mode */
+      ncols = SCIPgetNLPCols(scip);
+      if( !SCIPisLPSolBasic(scip) && ncols > 1000 )
+      {
+         int nunfixedcols = SCIPgetNUnfixedLPCols(scip);
+
+         if( nunfixedcols > 0.5 * ncols )
+         {
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL,
+               "Heuristic " HEUR_NAME " solving LP from scratch with %.1f %% unfixed columns (%d of %d) ...\n",
+               100.0 * (nunfixedcols / (SCIP_Real)ncols), nunfixedcols, ncols);
+         }
+      }
+      SCIPdebugMsg(scip, "Heuristic " HEUR_NAME " probing LP: %s\n",
          SCIPsnprintfProbingStats(scip, strbuf, SCIP_MAXSTRLEN));
 
-      SCIPdebugMsg(scip, "starting solving locks-lp at time %g\n", SCIPgetSolvingTime(scip));
       /* solve LP;
        * errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
        * hence in optimized mode, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
        */
+      SCIPdebugMsg(scip, "starting solving locks-lp at time %g\n", SCIPgetSolvingTime(scip));
 #ifdef NDEBUG
       {
          SCIP_Bool retstat;
@@ -936,17 +959,6 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
 
       /* speed up sub-SCIP by not checking dual LP feasibility */
       SCIP_CALL( SCIPsetBoolParam(subscip, "lp/checkdualfeas", FALSE) );
-
-      /* employ a limit on the number of enforcement rounds in the quadratic constraint handler; this fixes the issue that
-       * sometimes the quadratic constraint handler needs hundreds or thousands of enforcement rounds to determine the
-       * feasibility status of a single node without fractional branching candidates by separation (namely for uflquad
-       * instances); however, the solution status of the sub-SCIP might get corrupted by this; hence no deductions shall be
-       * made for the original SCIP
-       */
-      if( SCIPfindConshdlr(subscip, "quadratic") != NULL && !SCIPisParamFixed(subscip, "constraints/quadratic/enfolplimit") )
-      {
-         SCIP_CALL( SCIPsetIntParam(subscip, "constraints/quadratic/enfolplimit", 10) );
-      }
 
       /* if there is already a solution, add an objective cutoff */
       if( SCIPgetNSols(scip) > 0 )

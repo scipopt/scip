@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -17,12 +26,12 @@
 /* #define SCIP_DEBUG */
 
 /**@file   cons_lop.c
- * @brief  example constraint handler for linear ordering constraints
+ * @brief  constraint handler for linear ordering constraints
  * @author Marc Pfetsch
  *
  * We handle the following system of linear constraints:
- * - \f$ x_{ij} + x_{ji} = 1 \f$            (symmetry equations - added initially)
- * \f$ x_{ij} + x_{jk} + x_{ki} \leq 2 \f$  (triangle inequalities)
+ * - \f$ x_{ij} + x_{ji} = 1 \f$ for \f$i < j\f$                               (symmetry equations - added initially)
+ * - \f$ x_{ij} + x_{jk} + x_{ki} \leq 2 \f$ for \f$i < j, i < k, j \neq k\f$  (triangle inequalities - separated)
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -39,7 +48,7 @@
 #define CONSHDLR_SEPAPRIORITY       100 /**< priority of the constraint handler for separation */
 #define CONSHDLR_ENFOPRIORITY      -100 /**< priority of the constraint handler for constraint enforcing */
 #define CONSHDLR_CHECKPRIORITY     -100 /**< priority of the constraint handler for checking feasibility */
-#define CONSHDLR_SEPAFREQ            10 /**< frequency for separating cuts; zero means to separate only in the root node */
+#define CONSHDLR_SEPAFREQ             1 /**< frequency for separating cuts; zero means to separate only in the root node */
 #define CONSHDLR_PROPFREQ             1 /**< frequency for propagating domains; zero means only preprocessing propagation */
 #define CONSHDLR_EAGERFREQ          100 /**< frequency for using all instead of only the useful constraints in separation,
                                          *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
@@ -83,11 +92,9 @@ SCIP_RETCODE LOPseparate(
    *cutoff = FALSE;
    for (i = 0; i < n && ! (*cutoff); ++i)
    {
-      for (j = 0; j < n && ! (*cutoff); ++j)
+      for (j = i+1; j < n && ! (*cutoff); ++j)
       {
 	 SCIP_Real valIJ;
-	 if (j == i)
-	    continue;
 
 	 valIJ = SCIPgetSolVal(scip, sol, vars[i][j]);
 
@@ -115,11 +122,11 @@ SCIP_RETCODE LOPseparate(
 	 }
 
 	 /* check triangle inequalities */
-	 for (k = 0; k < n; ++k)
+	 for (k = i+1; k < n; ++k)
 	 {
 	    SCIP_Real sum;
 
-	    if (k == i || k == j)
+	    if ( k == j )
 	       continue;
 
 	    sum = valIJ + SCIPgetSolVal(scip, sol, vars[j][k]) + SCIPgetSolVal(scip, sol, vars[k][i]);
@@ -359,8 +366,10 @@ SCIP_DECL_CONSINITLP(consInitlpLOP)
    for (c = 0; c < nconss; ++c)
    {
       SCIP_CONSDATA* consdata;
-      int i, j, n;
       SCIP_VAR*** vars;
+      int i;
+      int j;
+      int n;
 
       assert( conss != NULL );
       assert( conss[c] != NULL );
@@ -530,11 +539,9 @@ SCIP_DECL_CONSENFOLP(consEnfolpLOP)
 
       for (i = 0; i < n; ++i)
       {
-	 for (j = 0; j < n; ++j)
+	 for (j = i + 1; j < n; ++j)
 	 {
 	    SCIP_Real valIJ;
-	    if (j == i)
-	       continue;
 
 	    valIJ = SCIPgetSolVal(scip, NULL, vars[i][j]);
 
@@ -566,11 +573,11 @@ SCIP_DECL_CONSENFOLP(consEnfolpLOP)
 	    }
 
 	    /* enforce triangle inequalities */
-	    for (k = 0; k < n; ++k)
+	    for (k = i + 1; k < n; ++k)
 	    {
 	       SCIP_Real sum;
 
-	       if (k == i || k == j)
+	       if ( k == j )
 		  continue;
 
 	       sum = valIJ + SCIPgetSolVal(scip, NULL, vars[j][k]) + SCIPgetSolVal(scip, NULL, vars[k][i]);
@@ -605,14 +612,17 @@ SCIP_DECL_CONSENFOLP(consEnfolpLOP)
 	    }
 	 }
       }
+
       if (nGen > 0)
       {
 	 *result = SCIP_SEPARATED;
 	 return SCIP_OKAY;
       }
+
    }
    SCIPdebugMsg(scip, "all linear ordering constraints are feasible.\n");
    *result = SCIP_FEASIBLE;
+
    return SCIP_OKAY;
 }
 
@@ -652,34 +662,38 @@ SCIP_DECL_CONSENFOPS(consEnfopsLOP)
       /* check triangle inequalities */
       for (i = 0; i < n; ++i)
       {
-	 for (j = 0; j < n; ++j)
+	 for (j = i + 1; j < n; ++j)
 	 {
 	    SCIP_Bool oneIJ;
-	    if (j == i)
-	       continue;
+            SCIP_Bool oneJI;
 
 	    /* the priorities should ensure that the solution is integral */
 	    assert( SCIPisFeasIntegral(scip, SCIPgetSolVal(scip, NULL, vars[i][j])) );
 	    assert( SCIPisFeasIntegral(scip, SCIPgetSolVal(scip, NULL, vars[j][i])) );
-	    oneIJ = SCIPisGT(scip, SCIPgetSolVal(scip, NULL, vars[i][j]), 0.5);
 
-	    if ( oneIJ == SCIPisGT(scip, SCIPgetSolVal(scip, NULL, vars[j][i]), 0.5) )
+            oneIJ = SCIPgetSolVal(scip, NULL, vars[i][j]) > 0.5 ? TRUE : FALSE;
+            oneJI = SCIPgetSolVal(scip, NULL, vars[j][i]) > 0.5 ? TRUE : FALSE;
+
+	    if ( oneIJ == oneJI )
 	    {
 	       SCIPdebugMsg(scip, "constraint <%s> infeasible (violated equation).\n", SCIPconsGetName(cons));
 	       *result = SCIP_INFEASIBLE;
 	       return SCIP_OKAY;
 	    }
 
-	    for (k = 0; k < n; ++k)
+	    for (k = i + 1; k < n; ++k)
 	    {
-	       SCIP_Bool oneJK, oneKI;
-	       if (k == i || k == j)
+	       SCIP_Bool oneJK;
+               SCIP_Bool oneKI;
+
+	       if ( k == j )
 		  continue;
 
 	       assert( SCIPisFeasIntegral(scip, SCIPgetSolVal(scip, NULL, vars[j][k])) );
 	       assert( SCIPisFeasIntegral(scip, SCIPgetSolVal(scip, NULL, vars[k][i])) );
-	       oneJK = SCIPisGT(scip, SCIPgetSolVal(scip, NULL, vars[j][k]), 0.5);
-	       oneKI = SCIPisGT(scip, SCIPgetSolVal(scip, NULL, vars[k][i]), 0.5);
+
+	       oneJK = SCIPgetSolVal(scip, NULL, vars[j][k]) > 0.5 ? TRUE : FALSE;
+	       oneKI = SCIPgetSolVal(scip, NULL, vars[k][i]) > 0.5 ? TRUE : FALSE;
 
 	       /* if triangle inequality is violated */
 	       if ( oneIJ && oneJK && oneKI )
@@ -694,6 +708,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsLOP)
    }
    SCIPdebugMsg(scip, "all linear ordering constraints are feasible.\n");
    *result = SCIP_FEASIBLE;
+
    return SCIP_OKAY;
 }
 
@@ -733,19 +748,20 @@ SCIP_DECL_CONSCHECK(consCheckLOP)
       /* check triangle inequalities and symmetry equations */
       for (i = 0; i < n; ++i)
       {
-	 for (j = 0; j < n; ++j)
+	 for (j = i + 1; j < n; ++j)
 	 {
 	    SCIP_Bool oneIJ;
-	    if (j == i)
-	       continue;
+            SCIP_Bool oneJI;
 
 	    /* the priorities should ensure that the solution is integral */
 	    assert( SCIPisFeasIntegral(scip, SCIPgetSolVal(scip, sol, vars[i][j])) );
 	    assert( SCIPisFeasIntegral(scip, SCIPgetSolVal(scip, sol, vars[j][i])) );
-	    oneIJ = SCIPisGT(scip, SCIPgetSolVal(scip, sol, vars[i][j]), 0.5);
+
+	    oneIJ = SCIPgetSolVal(scip, sol, vars[i][j]) > 0.5 ? TRUE : FALSE;
+            oneJI = SCIPgetSolVal(scip, sol, vars[j][i]) > 0.5 ? TRUE : FALSE;
 
 	    /* check symmetry equations */
-	    if ( oneIJ == SCIPisGT(scip, SCIPgetSolVal(scip, sol, vars[j][i]), 0.5) )
+	    if ( oneIJ == oneJI )
 	    {
 	       SCIPdebugMsg(scip, "constraint <%s> infeasible (violated equation).\n", SCIPconsGetName(cons));
 	       *result = SCIP_INFEASIBLE;
@@ -753,20 +769,23 @@ SCIP_DECL_CONSCHECK(consCheckLOP)
                {
                   SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
                   SCIPinfoMessage(scip, NULL, "violation: symmetry equation violated <%s> = %.15g and <%s> = %.15g\n",
-                     SCIPvarGetName(vars[i][j]), SCIPgetSolVal(scip, sol, vars[i][j]), 0.5,
-                     SCIPvarGetName(vars[j][i]), SCIPgetSolVal(scip, sol, vars[j][i]), 0.5);
+                     SCIPvarGetName(vars[i][j]), SCIPgetSolVal(scip, sol, vars[i][j]),
+                     SCIPvarGetName(vars[j][i]), SCIPgetSolVal(scip, sol, vars[j][i]));
                }
 	       return SCIP_OKAY;
 	    }
 
-	    for (k = 0; k < n; ++k)
+	    for (k = i + 1; k < n; ++k)
 	    {
-	       SCIP_Bool oneJK, oneKI;
-	       if (k == i || k == j)
+	       SCIP_Bool oneJK;
+               SCIP_Bool oneKI;
+
+	       if ( k == j )
 		  continue;
 
 	       assert( SCIPisFeasIntegral(scip, SCIPgetSolVal(scip, sol, vars[j][k])) );
 	       assert( SCIPisFeasIntegral(scip, SCIPgetSolVal(scip, sol, vars[k][i])) );
+
 	       oneJK = SCIPisGT(scip, SCIPgetSolVal(scip, sol, vars[j][k]), 0.5);
 	       oneKI = SCIPisGT(scip, SCIPgetSolVal(scip, sol, vars[k][i]), 0.5);
 
@@ -780,9 +799,9 @@ SCIP_DECL_CONSCHECK(consCheckLOP)
                      SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
                      SCIPinfoMessage(scip, NULL,
                         "violation: triangle inequality violated <%s> = %.15g, <%s> = %.15g, <%s> = %.15g\n",
-                        SCIPvarGetName(vars[i][j]), SCIPgetSolVal(scip, sol, vars[i][j]), 0.5,
-                        SCIPvarGetName(vars[j][k]), SCIPgetSolVal(scip, sol, vars[j][k]), 0.5,
-                        SCIPvarGetName(vars[k][i]), SCIPgetSolVal(scip, sol, vars[k][i]), 0.5);
+                        SCIPvarGetName(vars[i][j]), SCIPgetSolVal(scip, sol, vars[i][j]),
+                        SCIPvarGetName(vars[j][k]), SCIPgetSolVal(scip, sol, vars[j][k]),
+                        SCIPvarGetName(vars[k][i]), SCIPgetSolVal(scip, sol, vars[k][i]));
                   }
 		  return SCIP_OKAY;
 	       }
@@ -792,6 +811,7 @@ SCIP_DECL_CONSCHECK(consCheckLOP)
    }
    SCIPdebugMsg(scip, "all linear ordering constraints are feasible.\n");
    *result = SCIP_FEASIBLE;
+
    return SCIP_OKAY;
 }
 
@@ -837,15 +857,14 @@ SCIP_DECL_CONSPROP(consPropLOP)
       /* check triangle inequalities */
       for (i = 0; i < n; ++i)
       {
-	 for (j = 0; j < n; ++j)
+	 for (j = i + 1; j < n; ++j)
 	 {
-	    if (j == i)
-	       continue;
+            SCIP_Bool infeasible;
+            SCIP_Bool tightened;
 
-	    /* if x[i][j] == 1 then x[j][i] = 0 */
+            /* if x[i][j] == 1 then x[j][i] = 0 */
 	    if ( SCIPvarGetLbLocal(vars[i][j]) > 0.5 )
 	    {
-	       SCIP_Bool infeasible, tightened;
 	       SCIP_CALL( SCIPinferBinvarCons(scip, vars[j][i], FALSE, cons, i*n + j, &infeasible, &tightened) );
 	       if ( infeasible )
 	       {
@@ -864,7 +883,6 @@ SCIP_DECL_CONSPROP(consPropLOP)
 	    /* if x[i][j] == 0 then x[j][i] = 1 */
 	    if ( SCIPvarGetUbLocal(vars[i][j]) < 0.5 )
 	    {
-	       SCIP_Bool infeasible, tightened;
 	       SCIP_CALL( SCIPinferBinvarCons(scip, vars[j][i], TRUE, cons, i*n + j, &infeasible, &tightened) );
 	       if ( infeasible )
 	       {
@@ -880,15 +898,14 @@ SCIP_DECL_CONSPROP(consPropLOP)
 		  ++nGen;
 	    }
 
-	    for (k = 0; k < n; ++k)
+	    for (k = i + 1; k < n; ++k)
 	    {
-	       if (k == i || k == j)
+	       if ( k == j )
 		  continue;
 
 	       /* if x[i][j] == 1 and x[j][k] == 1 then x[k][i] = 0 */
 	       if ( SCIPvarGetLbLocal(vars[i][j]) > 0.5 && SCIPvarGetLbLocal(vars[j][k]) > 0.5 )
 	       {
-		  SCIP_Bool infeasible, tightened;
 		  SCIP_CALL( SCIPinferBinvarCons(scip, vars[k][i], FALSE, cons, n*n + i*n*n + j*n + k, &infeasible, &tightened) );
 		  if ( infeasible )
 		  {
@@ -910,9 +927,9 @@ SCIP_DECL_CONSPROP(consPropLOP)
 	 }
       }
    }
+   SCIPdebugMsg(scip, "propagated %d domains.\n", nGen);
    if (nGen > 0)
       *result = SCIP_REDUCEDDOM;
-   SCIPdebugMsg(scip, "propagated %d domains.\n", nGen);
 
    return SCIP_OKAY;
 }
@@ -1035,9 +1052,9 @@ SCIP_DECL_CONSLOCK(consLockLOP)
    {
       for (j = 0; j < n; ++j)
       {
-	 if (i != j)
+	 if ( i != j )
 	 {
-	    /* the constaint may be violated in any way */
+	    /* the constraint may be violated in any way */
 	    SCIP_CALL( SCIPaddVarLocksType(scip, vars[i][j], SCIP_LOCKTYPE_MODEL, nlockspos + nlocksneg, nlockspos + nlocksneg) );
 	 }
       }
@@ -1075,7 +1092,7 @@ SCIP_DECL_CONSPRINT(consPrintLOP)
       SCIPinfoMessage(scip, file, "(");
       for (j = 0; j < n; ++j)
       {
-	 if (j != i)
+	 if ( j != i )
 	 {
 	    if ( j > 0 && (i > 0 || j > 1) )
 	       SCIPinfoMessage(scip, file, ",");
@@ -1100,13 +1117,14 @@ SCIP_DECL_CONSCOPY(consCopyLOP)
    int j;
    int n;
 
-   assert( scip != 0 );
-   assert( sourceconshdlr != 0 );
+   assert( scip != NULL );
+   assert( sourceconshdlr != NULL );
    assert( strcmp(SCIPconshdlrGetName(sourceconshdlr), CONSHDLR_NAME) == 0 );
-   assert( cons != 0 );
-   assert( sourcescip != 0 );
-   assert( sourcecons != 0 );
-   assert( varmap != 0 );
+   assert( cons != NULL );
+   assert( sourcescip != NULL );
+   assert( sourcecons != NULL );
+   assert( varmap != NULL );
+   assert( valid != NULL );
 
    *valid = TRUE;
 
@@ -1159,10 +1177,9 @@ SCIP_RETCODE SCIPincludeConshdlrLOP(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSHDLR* conshdlr = NULL;
 
    /* include constraint handler */
-   conshdlr = NULL;
    SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
          consEnfolpLOP, consEnfopsLOP, consCheckLOP, consLockLOP, NULL) );
@@ -1226,7 +1243,7 @@ SCIP_RETCODE SCIPcreateConsLOP(
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(consdata->vars[i]), n) ); /*lint !e866*/
       for (j = 0; j < n; ++j)
       {
-	 if (j != i)
+	 if ( j != i )
 	 {
 	    assert( vars[i][j] != NULL );
 	    consdata->vars[i][j] = vars[i][j];

@@ -9,4 +9,3 @@ branching/pscost/priority = 1000000
 # frequency for propagating domains (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: -1]
 constraints/orbitope/propfreq = 1
-

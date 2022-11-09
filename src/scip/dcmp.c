@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -295,6 +304,102 @@ SCIP_Real SCIPdecompGetModularity(
    return decomp->modularity;
 }
 
+/** gets variable size for each block, sorted by increasing block label
+ *
+ * To get all variable sizes, set nlabels to SCIPdecompGetNBlocks() + 1.
+ * The first entry corresponds to the number of border variables.
+ *
+ * @note Ensure that SCIPcomputeDecompStats() has been called before.
+ *       If the decomposition was read from a file, this was done automatically.
+ */
+SCIP_RETCODE SCIPdecompGetVarsSize(
+   SCIP_DECOMP*          decomp,             /**< decomposition data structure */
+   int*                  varssize,           /**< array to store variable sizes of blocks*/
+   int                   nlabels             /**< length of variable sizes array */
+   )
+{
+   int i;
+   int nsizes;
+
+   assert(decomp != NULL);
+   assert(decomp->labels[0] == SCIP_DECOMP_LINKVAR);
+   assert(varssize != NULL);
+   assert(nlabels >= 0);
+
+   nsizes = MIN(nlabels, decomp->nblocks + 1);
+
+   /* store variable sizes */
+   for( i = 0; i < nsizes; ++i )
+   {
+      varssize[i] = decomp->varssize[i];
+   }
+
+   return SCIP_OKAY;
+}
+
+/** gets constraint size for each block, sorted by increasing block label
+ *
+ * To get all constraint sizes, set nlabels to SCIPdecompGetNBlocks() + 1.
+ * The first entry corresponds to the number of border constraints.
+ *
+ * @note Ensure that SCIPcomputeDecompStats() has been called before.
+ *       If the decomposition was read from a file, this was done automatically.
+ */
+SCIP_RETCODE SCIPdecompGetConssSize(
+   SCIP_DECOMP*          decomp,             /**< decomposition data structure */
+   int*                  consssize,          /**< array to store constraint sizes of blocks*/
+   int                   nlabels             /**< length of constraint sizes array */
+   )
+{
+   int i;
+   int nsizes;
+
+   assert(decomp != NULL);
+   assert(decomp->labels[0] == SCIP_DECOMP_LINKVAR);
+   assert(consssize != NULL);
+   assert(nlabels >= 0);
+
+   nsizes = MIN(nlabels, decomp->nblocks + 1);
+
+   /* store constraint sizes */
+   for( i = 0; i < nsizes; ++i )
+   {
+      consssize[i] = decomp->consssize[i];
+   }
+
+   return SCIP_OKAY;
+}
+
+/** gets number of border variables of this decomposition
+ *
+ * @note Ensure that SCIPcomputeDecompStats() has been called before.
+ *       If the decomposition was read from a file, this was done automatically.
+ */
+int SCIPdecompGetNBorderVars(
+   SCIP_DECOMP*          decomp              /**< decomposition data structure */
+   )
+{
+   assert(decomp != NULL);
+   assert(decomp->labels[0] == SCIP_DECOMP_LINKVAR);
+
+   return decomp->varssize[0];
+}
+
+/** gets number of border constraints of this decomposition
+ *
+ * @note Ensure that SCIPcomputeDecompStats() has been called before.
+ *       If the decomposition was read from a file, this was done automatically.
+ */
+int SCIPdecompGetNBorderConss(
+   SCIP_DECOMP*          decomp              /**< decomposition data structure */
+   )
+{
+   assert(decomp != NULL);
+   assert(decomp->labels[0] == SCIP_DECOMP_LINKVAR);
+
+   return decomp->consssize[0];
+}
+
 /** gets number of edges in the block-decomposition graph of this decomposition */
 int SCIPdecompGetNBlockGraphEdges(
    SCIP_DECOMP*          decomp              /**< decomposition data structure */
@@ -368,7 +473,7 @@ char* SCIPdecompPrintStats(
             decomp->nblocks == 0 ? 0 : decomp->varssize[decomp->idxlargestblock]);
    ptr += SCIPsnprintf(ptr, SCIP_MAXSTRLEN,
             "Smallest block: Block %d with %d constraints and %d variables\n",
-            decomp->nblocks == 0 ? 0 : decomp->labels[decomp->idxsmallestblock],
+            decomp->nblocks == 0 ? -1 : decomp->labels[decomp->idxsmallestblock],
             decomp->nblocks == 0 ? 0 : decomp->consssize[decomp->idxsmallestblock],
             decomp->nblocks == 0 ? 0 : decomp->varssize[decomp->idxsmallestblock]);
    ptr += SCIPsnprintf(ptr, SCIP_MAXSTRLEN,

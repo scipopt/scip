@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -20,7 +29,17 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "scip/scip.h"
-#include "nlpi/nlpi_ipopt.h"
+#include "scip/nlpi_ipopt.h"
+#include "scip/expr_varidx.h"
+#include "scip/expr_abs.h"
+#include "scip/expr_exp.h"
+#include "scip/expr_log.h"
+#include "scip/expr_pow.h"
+#include "scip/expr_product.h"
+#include "scip/expr_sum.h"
+#include "scip/expr_trig.h"
+#include "scip/expr_var.h"
+#include "scip/expr_value.h"
 
 #include "scip/sepa_gauge.c"
 
@@ -35,212 +54,115 @@ static SCIP_NLROW* nlrow2 = NULL;
 static SCIP_NLROW* nlrow3 = NULL;
 static SCIP_VAR* x;
 static SCIP_VAR* y;
+static SCIP_EXPRITER* exprit;
 
 /* methods to test:
  * computeInteriorPoint: uses SCIP's NLP to build a convex NLP relaxation, solves it and store the solution in the sepadata.
  * findBoundaryPoint: receives the nlrows, on which sides they are convex, indices of nlrows to separate, number of indices, the interior solution, the solution to separate and the final solution
- * generateCut: receives point where to compute gradient, exprinterpreter (?), the nlrow, the side which is convex and where to store the cut
+ * generateCut: receives point where to compute gradient, the nlrow, the side which is convex and where to store the cut
  */
 
 /* create log(exp(x) + exp(y)) <= 1 */
 static
 void createNlRow1(CONVEXSIDE convexside)
 {
-   SCIP_EXPRTREE* exprtree;
+   SCIP_EXPR* expr;
    SCIP_EXPRCURV curvature;
-   SCIP_EXPR* xexpr;
-   SCIP_EXPR* yexpr;
-   SCIP_EXPR* exp_x;
-   SCIP_EXPR* exp_y;
-   SCIP_EXPR* sum_exp;
-   SCIP_EXPR* lgexp;
-   SCIP_EXPR* finalexpr;
    SCIP_Real lhs;
    SCIP_Real rhs;
-   SCIP_VAR* vars[2];
-
-   /* setup expression for x and y */
-   SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &xexpr, SCIP_EXPR_VARIDX, 0) );
-   SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &yexpr, SCIP_EXPR_VARIDX, 1) );
-
-   /* setup expression for exp(x) and exp(y) */
-   SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &exp_x, SCIP_EXPR_EXP, xexpr) );
-   SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &exp_y, SCIP_EXPR_EXP, yexpr) );
-
-   /* setup expression for exp(x) + exp(y) */
-   SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &sum_exp, SCIP_EXPR_PLUS, exp_x, exp_y) );
-
-   /* setup expression for lg(sum) */
-   SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &lgexp, SCIP_EXPR_LOG, sum_exp) );
 
    /* decide curvature */
    if( convexside == RHS )
    {
+      SCIP_CALL( SCIPparseExpr(scip, &expr, (char*)"log(exp(<x>) + exp(<y>))", NULL, NULL, NULL) );
+
       curvature = SCIP_EXPRCURV_CONVEX;
       lhs = -SCIPinfinity(scip);
       rhs = 1.0;
-      finalexpr = lgexp;
    }
    else
    {
-      SCIP_EXPR* minusone;
+      SCIP_CALL( SCIPparseExpr(scip, &expr, (char*)"-(log(exp(<x>) + exp(<y>)))", NULL, NULL, NULL) );
+
       curvature = SCIP_EXPRCURV_CONCAVE;
       lhs = -1.0;
       rhs = SCIPinfinity(scip);
-      SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &minusone, SCIP_EXPR_CONST, -1.0) );
-      SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &finalexpr, SCIP_EXPR_MUL, minusone, lgexp) );
    }
 
-   /* setup expression tree with finalexpr as root expression */
-   SCIP_CALL( SCIPexprtreeCreate(SCIPblkmem(scip), &exprtree, finalexpr, 2, 0, NULL) );
-
-   /* assign SCIP variables to tree */
-   vars[0] = x;
-   vars[1] = y;
-   SCIP_CALL( SCIPexprtreeSetVars(exprtree, 2, vars) );
-
-   /* create nonlinear row for exprtree <= 1 */
-   SCIP_CALL( SCIPcreateNlRow(scip, &nlrow1, "lg(sum exp)", 0.0, 0, NULL, NULL, 0, NULL, 0, NULL, exprtree, lhs, rhs, curvature) );
+   /* create nonlinear row for expr <= 1 */
+   SCIP_CALL( SCIPcreateNlRow(scip, &nlrow1, "lg(sum exp)", 0.0, 0, NULL, NULL, expr, lhs, rhs, curvature) );
 
    /* release */
-   SCIP_CALL( SCIPexprtreeFree(&exprtree) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
 /* create x^2 <= y */
 static
 void createNlRow2(CONVEXSIDE convexside)
 {
-   SCIP_EXPRTREE* exprtree;
+   SCIP_EXPR* expr;
    SCIP_EXPRCURV curvature;
-   SCIP_EXPR* xexpr;
-   SCIP_EXPR* yexpr;
-   SCIP_EXPR* sqr_x;
-   SCIP_EXPR* diff;
    SCIP_Real lhs;
    SCIP_Real rhs;
-   SCIP_VAR* vars[2];
-
-   /* setup expression for x and y */
-   SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &xexpr, SCIP_EXPR_VARIDX, 0) );
-   SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &yexpr, SCIP_EXPR_VARIDX, 1) );
-
-   /* setup expression for x^2 */
-   SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &sqr_x, SCIP_EXPR_SQUARE, xexpr) );
 
    /* decide curvature */
    if( convexside == RHS )
    {
+      SCIP_CALL( SCIPparseExpr(scip, &expr, (char*)"<x>^2 - <y>", NULL, NULL, NULL) );
+
       curvature = SCIP_EXPRCURV_CONVEX;
       lhs = -SCIPinfinity(scip);
       rhs = 0.0;
-      /* setup expression for x^2 - y */
-      SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &diff, SCIP_EXPR_MINUS, sqr_x, yexpr) );
    }
    else
    {
+      SCIP_CALL( SCIPparseExpr(scip, &expr, (char*)"<y> - <x>^2", NULL, NULL, NULL) );
+
       curvature = SCIP_EXPRCURV_CONCAVE;
       lhs = 0.0;
       rhs = SCIPinfinity(scip);
-      /* setup expression for - x^2 + y */
-      SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &diff, SCIP_EXPR_MINUS, yexpr, sqr_x) );
    }
 
-   /* setup expression trees with exprs as root expression */
-   SCIP_CALL( SCIPexprtreeCreate(SCIPblkmem(scip), &exprtree, diff, 2, 0, NULL) );
-
-   /* assign SCIP variables to tree */
-   vars[0] = x;
-   vars[1] = y;
-   SCIP_CALL( SCIPexprtreeSetVars(exprtree, 2, vars) );
-
-   /* create nonlinear row for exprtree <= 0 */
-   SCIP_CALL( SCIPcreateNlRow(scip, &nlrow2, "x^2 ? y", 0.0, 0, NULL, NULL, 0, NULL, 0, NULL, exprtree, lhs, rhs, curvature) );
+   /* create nonlinear row for expr <= 1 */
+   SCIP_CALL( SCIPcreateNlRow(scip, &nlrow2, "quad", 0.0, 0, NULL, NULL, expr, lhs, rhs, curvature) );
 
    /* release */
-   SCIP_CALL( SCIPexprtreeFree(&exprtree) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
 /* 1.1*x+2.4*x^2 + 0.01*x*y + 0.3*y^2 + 0.2*log(0.5*exp(0.12*x+0.1)+2*exp(0.1*y)+0.7)  <= 0.5 */
 static
 void createNlRow3(CONVEXSIDE convexside)
 {
-   SCIP_EXPRTREE* exprtree;
+   SCIP_EXPR* expr;
    SCIP_EXPRCURV curvature;
-   SCIP_EXPR* xexpr;
-   SCIP_EXPR* arg_exp_x;
-   SCIP_EXPR* arg_exp_y;
-   SCIP_EXPR* arg_log;
-   SCIP_EXPR* yexpr;
-   SCIP_EXPR* exp_x;
-   SCIP_EXPR* exp_y;
-   SCIP_EXPR* lgexp;
-   SCIP_EXPR* finalexpr;
    SCIP_Real lhs;
    SCIP_Real rhs;
-   SCIP_Real side;
-   SCIP_VAR* vars[2];
-
-   /* expression for x and y */
-   SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &xexpr, SCIP_EXPR_VARIDX, 0) );
-   SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &yexpr, SCIP_EXPR_VARIDX, 1) );
-
-   /* expression for 0.12x+0.1 and 0.1*y */
-   SCIP_CALL( SCIPexprCreateLinear(SCIPblkmem(scip), &arg_exp_x, 1, &xexpr, (SCIP_Real[]){0.12}, 0.1) );
-   SCIP_CALL( SCIPexprCreateLinear(SCIPblkmem(scip), &arg_exp_y, 1, &yexpr, (SCIP_Real[]){0.1}, 0.0) );
-
-   /* expression for exp(0.12*x+0.1) and exp(0.1*y) */
-   SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &exp_x, SCIP_EXPR_EXP, arg_exp_x) );
-   SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &exp_y, SCIP_EXPR_EXP, arg_exp_y) );
-
-   /* expression for 0.5*exp(0.12*x+0.1) + 2*exp(0.1*y) + 0.7 */
-   SCIP_CALL( SCIPexprCreateLinear(SCIPblkmem(scip), &arg_log, 2,
-            (SCIP_EXPR*[]){exp_x, exp_y}, (SCIP_Real[]){0.5, 2.0}, 0.7) );
-
-   /* expression for lg(0.5*exp(0.12*x+0.1) + 2*exp(0.1*y) + 0.7) */
-   SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &lgexp, SCIP_EXPR_LOG, arg_log) );
 
    /* decide curvature */
    if( convexside == RHS )
    {
+      SCIP_CALL( SCIPparseExpr(scip, &expr, (char*)"1.1*<x>+2.4*<x>^2 + 0.01*<x>*<y> + 0.3*<y>^2 + 0.2*log(0.5*exp(0.12*<x>+0.1)+2*exp(0.1*<y>)+0.7)", NULL, NULL, NULL) );
+
       curvature = SCIP_EXPRCURV_CONVEX;
-      side = 1.0;
       lhs = -SCIPinfinity(scip);
       rhs = 0.5;
    }
    else
    {
+      SCIP_CALL( SCIPparseExpr(scip, &expr, (char*)"-(1.1*<x>+2.4*<x>^2 + 0.01*<x>*<y> + 0.3*<y>^2 + 0.2*log(0.5*exp(0.12*<x>+0.1)+2*exp(0.1*<y>)+0.7))", NULL, NULL, NULL) );
+
       curvature = SCIP_EXPRCURV_CONCAVE;
-      side = -1.0;
       lhs = -0.5;
       rhs = SCIPinfinity(scip);
    }
 
-   SCIP_CALL( SCIPexprCreateLinear(SCIPblkmem(scip), &finalexpr, 1,
-            &lgexp, (SCIP_Real[]){side * 0.2}, 0.0) );
 
-   /* build expression tree with log as root expression */
-   SCIP_CALL( SCIPexprtreeCreate(SCIPblkmem(scip), &exprtree, finalexpr, 2, 0, NULL) );
-
-   /* assign SCIP variables to tree */
-   vars[0] = x;
-   vars[1] = y;
-   SCIP_CALL( SCIPexprtreeSetVars(exprtree, 2, vars) );
-
-   SCIP_CALL( SCIPcreateNlRow(scip, &nlrow3, "complicated",
-            0.0, 1, &x, (SCIP_Real[]){side*1.1},
-            2, vars,
-            3,
-            (SCIP_QUADELEM[]){
-            {0, 0, side*2.4}, // 2.4 * x^2
-            {0, 1, side*0.01}, // 0.01*x*y
-            {1, 1, side*0.3}
-            },
-            exprtree, lhs, rhs, curvature) );
-
-
+   /* create nonlinear row for expr <= 1 */
+   SCIP_CALL( SCIPcreateNlRow(scip, &nlrow3, "complicated", 0.0, 0, NULL, NULL, expr, lhs, rhs, curvature) );
 
    /* release */
-   SCIP_CALL( SCIPexprtreeFree(&exprtree) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
 static
@@ -248,18 +170,23 @@ void evaluation_setup(void)
 {
    SCIP_CALL( SCIPcreate(&scip) );
 
-   /* include quadratic conshdlr (need to include nonlinear) */
-   //SCIP_CALL( SCIPincludeConshdlrNonlinear(scip) );
-   //SCIP_CALL( SCIPincludeConshdlrQuadratic(scip) );
+   /* include some expr handlers */
+   SCIP_CALL( SCIPincludeExprhdlrAbs(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrExp(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrLog(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrVar(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrValue(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrSum(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrPow(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrProduct(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrSin(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrCos(scip) );
 
-   /* include NLPI's */
-   SCIP_CALL( SCIPcreateNlpSolverIpopt(SCIPblkmem(scip), &nlpi) );
    /* if no IPOPT available, don't run test */
-   if( nlpi == NULL )
+   if( ! SCIPisIpoptAvailableIpopt() )
       return;
 
-   SCIP_CALL( SCIPincludeNlpi(scip, nlpi) );
-   SCIP_CALL( SCIPincludeExternalCodeInformation(scip, SCIPgetSolverNameIpopt(), SCIPgetSolverDescIpopt()) );
+   SCIPincludeNlpSolverIpopt(scip);
 
    /* create a problem */
    SCIP_CALL( SCIPcreateProbBasic(scip, "problem") );
@@ -273,14 +200,14 @@ void evaluation_setup(void)
    SCIP_CALL( SCIPaddVar(scip, x) );
    SCIP_CALL( SCIPaddVar(scip, y) );
 
+   /* create expression iterator */
+   SCIP_CALL( SCIPcreateExpriter(scip, &exprit) );
 }
 
 static
 void teardown(void)
 {
-   /* if no IPOPT available, don't run test */
-   if( nlpi == NULL )
-      return;
+   SCIPfreeExpriter(&exprit);
 
    SCIP_CALL( SCIPreleaseVar(scip, &x) );
    SCIP_CALL( SCIPreleaseVar(scip, &y) );
@@ -424,7 +351,6 @@ Test(evaluation, gradient_cut_convex)
 {
    SCIP_SOL* x0;
    SCIP_ROW* gradcut;
-   SCIP_EXPRINT* exprint;
    SCIP_Bool convex = TRUE;
    SCIP_Real* coefs;
    SCIP_Bool success = FALSE;
@@ -444,8 +370,7 @@ Test(evaluation, gradient_cut_convex)
    /* compute gradient cut */
    SCIP_CALL( SCIPcreateEmptyRowUnspec(scip, &gradcut, "gradcut", -SCIPinfinity(scip), SCIPinfinity(scip),
             FALSE, FALSE , FALSE) );
-   SCIP_CALL( SCIPexprintCreate(SCIPblkmem(scip), &exprint) );
-   SCIP_CALL( generateCut(scip, x0, exprint, nlrow1, convex, gradcut, &success) );
+   SCIP_CALL( generateCut(scip, x0, nlrow1, convex, exprit, gradcut, &success) );
    cr_assert(success);
 
    /* check coefficients */
@@ -455,7 +380,6 @@ Test(evaluation, gradient_cut_convex)
    cr_expect_float_eq(0.731058578630005, coefs[1], EPS, "for y got %f\n", coefs[1]);
    cr_expect_float_eq(0.417796891111782, SCIProwGetRhs(gradcut), EPS, "wrong rhs\n");
 
-   SCIP_CALL( SCIPexprintFree(&exprint) );
    SCIP_CALL( SCIPfreeSol(scip, &x0) );
    SCIP_CALL( SCIPreleaseRow(scip, &gradcut) );
 }
@@ -464,7 +388,6 @@ Test(evaluation, gradient_cut_concave)
 {
    SCIP_SOL* x0;
    SCIP_ROW* gradcut;
-   SCIP_EXPRINT* exprint;
    SCIP_Bool convex = FALSE;
    SCIP_Real* coefs;
    SCIP_Bool success = FALSE;
@@ -484,8 +407,7 @@ Test(evaluation, gradient_cut_concave)
    /* compute gradient cut */
    SCIP_CALL( SCIPcreateEmptyRowUnspec(scip, &gradcut, "gradcut", -SCIPinfinity(scip), SCIPinfinity(scip),
             FALSE, FALSE , FALSE) );
-   SCIP_CALL( SCIPexprintCreate(SCIPblkmem(scip), &exprint) );
-   SCIP_CALL( generateCut(scip, x0, exprint, nlrow1, convex, gradcut, &success) );
+   SCIP_CALL( generateCut(scip, x0, nlrow1, convex, exprit, gradcut, &success) );
    cr_assert(success);
 
    /* check coefficients */
@@ -495,7 +417,6 @@ Test(evaluation, gradient_cut_concave)
    cr_expect_float_eq(-0.731058578630005, coefs[1], EPS, "for y got %f\n", coefs[1]);
    cr_expect_float_eq(-0.417796891111782, SCIProwGetLhs(gradcut), EPS, "wrong rhs\n");
 
-   SCIP_CALL( SCIPexprintFree(&exprint) );
    SCIP_CALL( SCIPfreeSol(scip, &x0) );
    SCIP_CALL( SCIPreleaseRow(scip, &gradcut) );
 }
@@ -504,7 +425,6 @@ Test(evaluation, gradient_complicated_convex)
 {
    SCIP_SOL* x0;
    SCIP_ROW* gradcut;
-   SCIP_EXPRINT* exprint;
    SCIP_Bool convex = TRUE;
    SCIP_Real* coefs;
    SCIP_Bool success = FALSE;
@@ -524,8 +444,7 @@ Test(evaluation, gradient_complicated_convex)
    /* compute gradient cut */
    SCIP_CALL( SCIPcreateEmptyRowUnspec(scip, &gradcut, "gradcut", -SCIPinfinity(scip), SCIPinfinity(scip),
             FALSE, FALSE , FALSE) );
-   SCIP_CALL( SCIPexprintCreate(SCIPblkmem(scip), &exprint) );
-   SCIP_CALL( generateCut(scip, x0, exprint, nlrow3, convex, gradcut, &success) );
+   SCIP_CALL( generateCut(scip, x0, nlrow3, convex, exprit, gradcut, &success) );
    cr_assert(success);
 
    /* check coefficients */
@@ -535,7 +454,6 @@ Test(evaluation, gradient_complicated_convex)
    cr_expect_float_eq(0.307654681677814, coefs[1], EPS, "for y got %f\n", coefs[1]);
    cr_expect_float_eq(0.936777583155184, SCIProwGetRhs(gradcut), EPS, "wrong rhs\n");
 
-   SCIP_CALL( SCIPexprintFree(&exprint) );
    SCIP_CALL( SCIPfreeSol(scip, &x0) );
    SCIP_CALL( SCIPreleaseRow(scip, &gradcut) );
 }
@@ -544,7 +462,6 @@ Test(evaluation, gradient_complicated_concave)
 {
    SCIP_SOL* x0;
    SCIP_ROW* gradcut;
-   SCIP_EXPRINT* exprint;
    SCIP_Bool convex = FALSE;
    SCIP_Real* coefs;
    SCIP_Bool success = FALSE;
@@ -564,8 +481,7 @@ Test(evaluation, gradient_complicated_concave)
    /* compute gradient cut */
    SCIP_CALL( SCIPcreateEmptyRowUnspec(scip, &gradcut, "gradcut", -SCIPinfinity(scip), SCIPinfinity(scip),
             FALSE, FALSE , FALSE) );
-   SCIP_CALL( SCIPexprintCreate(SCIPblkmem(scip), &exprint) );
-   SCIP_CALL( generateCut(scip, x0, exprint, nlrow3, convex, gradcut, &success) );
+   SCIP_CALL( generateCut(scip, x0, nlrow3, convex, exprit, gradcut, &success) );
    cr_assert(success);
 
    /* check coefficients */
@@ -575,7 +491,6 @@ Test(evaluation, gradient_complicated_concave)
    cr_expect_float_eq(-0.307654681677814, coefs[1], EPS, "for y got %f\n", coefs[1]);
    cr_expect_float_eq(-0.936777583155184, SCIProwGetLhs(gradcut), EPS, "wrong rhs\n");
 
-   SCIP_CALL( SCIPexprintFree(&exprint) );
    SCIP_CALL( SCIPfreeSol(scip, &x0) );
    SCIP_CALL( SCIPreleaseRow(scip, &gradcut) );
 }
@@ -586,16 +501,25 @@ Test(interior_point, compute_interior_point)
    SCIP_SEPADATA* sepadata;
 
    SCIP_CALL( SCIPcreate(&scip) );
-
-   /* include NLPI's */
-   SCIP_CALL( SCIPcreateNlpSolverIpopt(SCIPblkmem(scip), &nlpi) );
+   SCIP_CALL( SCIPincludeExprhdlrAbs(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrExp(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrLog(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrValue(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrSum(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrPow(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrProduct(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrSin(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrCos(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrCos(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrVar(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrVaridx(scip) );
 
    /* if no IPOPT available, don't run test */
-   if( nlpi == NULL )
+   if( ! SCIPisIpoptAvailableIpopt() )
       return;
 
-   SCIP_CALL( SCIPincludeNlpi(scip, nlpi) );
-   SCIP_CALL( SCIPincludeExternalCodeInformation(scip, SCIPgetSolverNameIpopt(), SCIPgetSolverDescIpopt()) );
+   /* include NLPI's */
+   SCIPincludeNlpSolverIpopt(scip);
 
    /* include gauge separator */
    SCIP_CALL( SCIPincludeSepaGauge(scip) );
@@ -645,7 +569,6 @@ Test(interior_point, compute_interior_point)
    SCIP_CALL( SCIPreleaseVar(scip, &y) );
 
    /* free SCIP */
-   SCIP_CALL( SCIPexprintCreate(SCIPblkmem(scip), &sepadata->exprinterpreter) ); /* so that it doesn't complain */
    SCIP_CALL( SCIPfree(&scip) );
 
    /* check for memory leaks */

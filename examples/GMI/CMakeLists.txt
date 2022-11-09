@@ -2,7 +2,13 @@ cmake_minimum_required(VERSION 3.3)
 
 project(GMI)
 
-find_package(SCIP REQUIRED)
+if(TARGET SCIP::SCIP)
+  # find package by SCIP PATH
+  find_package(SCIP CONFIG PATHS ${SCIP_BINARY_DIR} REQUIRED)
+else()
+  find_package(SCIP REQUIRED)
+endif()
+
 include_directories(${SCIP_INCLUDE_DIRS})
 
 add_executable(gmi
@@ -50,7 +56,7 @@ set(settings
 # add the build of the binary as a test
 #
 add_test(NAME examples-gmi-build
-        COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target gmi
+        COMMAND "${CMAKE_COMMAND}" --build "${CMAKE_BINARY_DIR}" --config $<CONFIG> --target gmi
         )
 #
 # avoid that several build jobs try to concurrently build the SCIP library
@@ -79,5 +85,13 @@ foreach(instance ${instances})
                             PROPERTIES
                                 DEPENDS examples-gmi-build
                             )
+        if(WIN32)
+           # on windows we need to execute the application and examples executables from the directory containing the libscip.dll,
+           # on other systems this directory does not exist.
+            set_tests_properties(examples-gmi-${setting}-${basename}
+                PROPERTIES
+                        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin/$<CONFIG>
+                )
+        endif()
     endforeach(setting)
 endforeach(instance)

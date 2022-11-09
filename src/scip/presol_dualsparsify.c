@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -676,7 +685,7 @@ SCIP_RETCODE aggregation(
     */
    if( !isimpliedfree && (!SCIPisInfinity(scip, rhs) || !SCIPisInfinity(scip, -lhs)) )
    {
-      SCIPdebugMsg(scip, "create a linear constraint to ensure %g <= %g %s + %g <= %g\n", lhs, coefs[0], SCIPvarGetName(tmpvars[0]),
+      SCIPdebugMsg(scip, "create a linear constraint to ensure %g <= %g %s + %g %s <= %g\n", lhs, coefs[0], SCIPvarGetName(tmpvars[0]),
          coefs[1], SCIPvarGetName(tmpvars[1]), rhs);
       (void) SCIPsnprintf(newconsname, SCIP_MAXSTRLEN, "dualsparsifycons_%d", presoldata->naggregated);
 
@@ -729,12 +738,14 @@ SCIP_RETCODE cancelCol(
    SCIP_Real bestscale;
    SCIP_Real ncols;
    SCIP_Bool colishashing;
+   SCIP_Bool swapped = FALSE;
    int cancelcollen;
    int bestnfillin;
    int nretrieves;
    int maxfillin;
    int bestcand;
    int nchgcoef;
+
    ncols = SCIPmatrixGetNColumns(matrix);
    colishashing = ishashingcols[colidx];
    cancelcollen = SCIPmatrixGetColNNonzs(matrix, colidx);
@@ -1134,6 +1145,7 @@ CHECKFILLINAGAIN:
           */
          SCIPswapPointers((void**) &tmpinds, (void**) &cancelcolinds);
          SCIPswapPointers((void**) &tmpvals, (void**) &cancelcolvals);
+         swapped = ! swapped;
          cancelcollen = tmpcollen;
          SCIP_CALL( aggregation(scip, matrix, presoldata, vars, colidx, bestcand, ishashingcols[bestcand], -bestscale) );
 
@@ -1171,10 +1183,20 @@ CHECKFILLINAGAIN:
    }
 
    SCIPfreeBufferArray(scip, &scores);
-   SCIPfreeBufferArray(scip, &tmpvals);
-   SCIPfreeBufferArray(scip, &tmpinds);
-   SCIPfreeBufferArray(scip, &cancelcolvals);
-   SCIPfreeBufferArray(scip, &cancelcolinds);
+   if( swapped )
+   {
+      SCIPfreeBufferArray(scip, &cancelcolvals);
+      SCIPfreeBufferArray(scip, &cancelcolinds);
+      SCIPfreeBufferArray(scip, &tmpvals);
+      SCIPfreeBufferArray(scip, &tmpinds);
+   }
+   else
+   {
+      SCIPfreeBufferArray(scip, &tmpvals);
+      SCIPfreeBufferArray(scip, &tmpinds);
+      SCIPfreeBufferArray(scip, &cancelcolvals);
+      SCIPfreeBufferArray(scip, &cancelcolinds);
+   }
 
    return SCIP_OKAY;
 }
@@ -1349,7 +1371,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
 
       nnonz = SCIPmatrixGetColNNonzs(matrix, c);
 
-      getImpliedBounds(scip, matrix, c, &lbimplied, &ubimplied);
+      getImpliedBounds(scip, matrix, c, &ubimplied, &lbimplied);
 
       ishashingcols[c] = FALSE;
 
@@ -1412,6 +1434,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
 
                i1 = perm[(i + failshift) % nnonz];
                i2 = perm[(j + failshift) % nnonz];
+               /* coverity[var_deref_op] */
                conspairs[nconspairs].colindex = c;
 
                if( colinds[i1] < colinds[i2])

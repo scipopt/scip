@@ -3,30 +3,30 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scip_nlp.c
  * @ingroup OTHER_CFILES
- * @brief  public methods for nonlinear relaxations
- * @author Tobias Achterberg
- * @author Timo Berthold
- * @author Gerald Gamrath
- * @author Leona Gottwald
- * @author Stefan Heinz
- * @author Gregor Hendel
- * @author Thorsten Koch
- * @author Alexander Martin
- * @author Marc Pfetsch
- * @author Michael Winkler
- * @author Kati Wolter
+ * @brief  public methods for nonlinear relaxation
+ * @author Thorsten Gellermann
+ * @author Stefan Vigerske
  *
  * @todo check all SCIP_STAGE_* switches, and include the new stages TRANSFORMED and INITSOLVE
  */
@@ -34,7 +34,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "blockmemshell/memory.h"
-#include "nlpi/nlpi.h"
+#include "scip/nlpi.h"
 #include "scip/debug.h"
 #include "scip/nlp.h"
 #include "scip/pub_message.h"
@@ -52,107 +52,9 @@
 #include "scip/struct_set.h"
 #include "scip/struct_var.h"
 
-/** method to call, when the priority of an NLPI was changed */
-static
-SCIP_DECL_PARAMCHGD(paramChgdNlpiPriority)
-{  /*lint --e{715}*/
-   SCIP_PARAMDATA* paramdata;
-
-   paramdata = SCIPparamGetData(param);
-   assert(paramdata != NULL);
-
-   /* use SCIPsetSetPriorityNlpi() to mark the nlpis unsorted */
-   SCIP_CALL( SCIPsetNlpiPriority(scip, (SCIP_NLPI*)paramdata, SCIPparamGetInt(param)) );
-
-   return SCIP_OKAY;
-}
-/** includes an NLPI in SCIP */
-SCIP_RETCODE SCIPincludeNlpi(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLPI*            nlpi                /**< NLPI data structure */
-   )
-{
-   char paramname[SCIP_MAXSTRLEN];
-   char paramdesc[SCIP_MAXSTRLEN];
-
-   assert(scip != NULL);
-   assert(nlpi != NULL);
-
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPincludeNlpi", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-
-   /* check whether NLPI is already present */
-   if( SCIPfindNlpi(scip, SCIPnlpiGetName(nlpi)) != NULL )
-   {
-      SCIPerrorMessage("NLPI <%s> already included.\n", SCIPnlpiGetName(nlpi));
-      return SCIP_INVALIDDATA;
-   }
-
-   SCIP_CALL( SCIPsetIncludeNlpi(scip->set, nlpi) );
-
-   /* add parameters */
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "nlpi/%s/priority", SCIPnlpiGetName(nlpi));
-   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "priority of NLPI <%s>", SCIPnlpiGetName(nlpi));
-   SCIP_CALL( SCIPaddIntParam(scip, paramname, paramdesc,
-         NULL, FALSE, SCIPnlpiGetPriority(nlpi), INT_MIN/4, INT_MAX/4,
-         paramChgdNlpiPriority, (SCIP_PARAMDATA*)nlpi) ); /*lint !e740*/
-
-   /* pass message handler (may be NULL) */
-   SCIP_CALL( SCIPnlpiSetMessageHdlr(nlpi, scip->messagehdlr) );
-
-   return SCIP_OKAY;
-}
-
-/** returns the NLPI of the given name, or NULL if not existing */
-SCIP_NLPI* SCIPfindNlpi(
-   SCIP*                 scip,               /**< SCIP data structure */
-   const char*           name                /**< name of NLPI */
-   )
-{
-   assert(scip != NULL);
-   assert(scip->set != NULL);
-   assert(name != NULL);
-
-   return SCIPsetFindNlpi(scip->set, name);
-}
-
-/** returns the array of currently available NLPIs (sorted by priority) */
-SCIP_NLPI** SCIPgetNlpis(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   assert(scip != NULL);
-   assert(scip->set != NULL);
-
-   SCIPsetSortNlpis(scip->set);
-
-   return scip->set->nlpis;
-}
-
-/** returns the number of currently available NLPIs */
-int SCIPgetNNlpis(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   assert(scip != NULL);
-   assert(scip->set != NULL);
-
-   return scip->set->nnlpis;
-}
-
-/** sets the priority of an NLPI */
-SCIP_RETCODE SCIPsetNlpiPriority(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLPI*            nlpi,               /**< NLPI */
-   int                   priority            /**< new priority of the NLPI */
-   )
-{
-   assert(scip != NULL);
-   assert(scip->set != NULL);
-
-   SCIPsetSetPriorityNlpi(scip->set, nlpi, priority);
-
-   return SCIP_OKAY;
-}
+/**@addtogroup PublicNLPMethods
+ * @{
+ */
 
 /** returns whether the NLP relaxation has been enabled
  *
@@ -178,9 +80,9 @@ SCIP_Bool SCIPisNLPEnabled(
    return scip->transprob->nlpenabled;
 }
 
-/** marks that there are constraints that are representable by nonlinear rows
+/** notifies SCIP that the NLP relaxation should be initialized in INITSOLVE
  *
- *  This method should be called by a constraint handler if it has constraints that have a representation as nonlinear rows.
+ *  This method is typically called by a constraint handler that handles constraints that have a nonlinear representation as nonlinear rows, e.g., cons_nonlinear.
  *
  *  The function should be called before the branch-and-bound process is initialized, e.g., when presolve is exiting.
  *
@@ -189,14 +91,12 @@ SCIP_Bool SCIPisNLPEnabled(
  *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_EXITPRESOLVE
  *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
  */
 void SCIPenableNLP(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPenableNLP", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPenableNLP", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    scip->transprob->nlpenabled = TRUE;
 }
@@ -216,26 +116,28 @@ SCIP_Bool SCIPisNLPConstructed(
    return (scip->nlp != NULL);
 }
 
-/** returns whether the NLP has a continuous variable in a nonlinear term
+/** checks whether the NLP has a continuous variable in a nonlinear term
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-SCIP_Bool SCIPhasNLPContinuousNonlinearity(
-   SCIP*                 scip                /**< SCIP data structure */
+SCIP_RETCODE SCIPhasNLPContinuousNonlinearity(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool*            result              /**< buffer to store result */
    )
 {
-   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPhasNLPContinuousNonlinearity", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPhasNLPContinuousNonlinearity", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    if( scip->nlp == NULL )
    {
       SCIPerrorMessage("NLP has not been not constructed.\n");
-      SCIPABORT();
-      return FALSE; /*lint !e527*/
+      return SCIP_ERROR;
    }
 
-   return SCIPnlpHasContinuousNonlinearity(scip->nlp);
+   SCIP_CALL( SCIPnlpHasContinuousNonlinearity(scip->nlp, scip->mem->probmem, scip->set, scip->stat, result) );
+
+   return SCIP_OKAY;
 }
 
 /** gets current NLP variables along with the current number of NLP variables
@@ -312,7 +214,7 @@ int SCIPgetNNLPVars(
    return SCIPnlpGetNVars(scip->nlp);
 }
 
-/** computes for each variables the number of NLP rows in which the variable appears in a nonlinear var
+/** computes for each variables the number of NLP rows in which the variable appears in the nonlinear part
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_INITSOLVE
@@ -331,7 +233,7 @@ SCIP_RETCODE SCIPgetNLPVarsNonlinearity(
       return SCIP_INVALIDCALL;
    }
 
-   SCIP_CALL( SCIPnlpGetVarsNonlinearity(scip->nlp, nlcount) );
+   SCIP_CALL( SCIPnlpGetVarsNonlinearity(scip->nlp, scip->mem->probmem, scip->set, scip->stat, nlcount) );
 
    return SCIP_OKAY;
 }
@@ -476,7 +378,9 @@ SCIP_RETCODE SCIPaddNlRow(
    return SCIP_OKAY;
 }
 
-/** removes a nonlinear row from the NLP.
+/** removes a nonlinear row from the NLP
+ *
+ *  This row is released in the NLP.
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_INITSOLVE
@@ -497,7 +401,7 @@ SCIP_RETCODE SCIPdelNlRow(
       return SCIP_INVALIDCALL;
    }
 
-   SCIP_CALL( SCIPnlpDelNlRow(scip->nlp, SCIPblkmem(scip), scip->set, nlrow) );
+   SCIP_CALL( SCIPnlpDelNlRow(scip->nlp, SCIPblkmem(scip), scip->set, scip->stat, nlrow) );
 
    return SCIP_OKAY;
 }
@@ -520,7 +424,7 @@ SCIP_RETCODE SCIPflushNLP(
       return SCIP_INVALIDCALL;
    }
 
-   SCIP_CALL( SCIPnlpFlush(scip->nlp, scip->mem->probmem, scip->set) );
+   SCIP_CALL( SCIPnlpFlush(scip->nlp, scip->mem->probmem, scip->set, scip->stat) );
 
    return SCIP_OKAY;
 }
@@ -547,7 +451,7 @@ SCIP_RETCODE SCIPsetNLPInitialGuess(
       return SCIP_INVALIDCALL;
    }
 
-   SCIP_CALL( SCIPnlpSetInitialGuess(scip->nlp, SCIPblkmem(scip), initialguess) );
+   SCIP_CALL( SCIPnlpSetInitialGuess(scip->set, scip->nlp, SCIPblkmem(scip), initialguess) );
 
    return SCIP_OKAY;
 }
@@ -578,13 +482,25 @@ SCIP_RETCODE SCIPsetNLPInitialGuessSol(
 
    SCIP_CALL( SCIPallocBufferArray(scip, &vals, SCIPnlpGetNVars(scip->nlp)) );
    SCIP_CALL( SCIPgetSolVals(scip, sol, SCIPnlpGetNVars(scip->nlp), SCIPnlpGetVars(scip->nlp), vals) );
-   SCIP_CALL( SCIPnlpSetInitialGuess(scip->nlp, SCIPblkmem(scip), vals) );
+   SCIP_CALL( SCIPnlpSetInitialGuess(scip->set, scip->nlp, SCIPblkmem(scip), vals) );
    SCIPfreeBufferArray(scip, &vals);
 
    return SCIP_OKAY;
 }
 
-/** solves the current NLP
+/** solves the current NLP (or diving NLP if in diving mode) with given parameters
+ *
+ *  Typical use is
+ *
+ *      SCIP_NLPPARAM nlparam = { SCIP_NLPPARAM_DEFAULT(scip); }
+ *      nlpparam.iterlimit = 42;
+ *      SCIP_CALL( SCIPsolveNLPParam(scip, nlpparam) );
+ *
+ *  or, in one line:
+ *
+ *      SCIP_CALL( SCIPsolveNLPParam(scip, (SCIP_NLPPARAM){ SCIP_NLPPARAM_DEFAULT(scip), .iterlimit = 42 }) );
+ *
+ *  To get the latter, also \ref SCIPsolveNLP can be used.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -593,11 +509,12 @@ SCIP_RETCODE SCIPsetNLPInitialGuessSol(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-SCIP_RETCODE SCIPsolveNLP(
-   SCIP*                 scip                /**< SCIP data structure */
+SCIP_RETCODE SCIPsolveNLPParam(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLPPARAM         param               /**< NLP solve parameters */
    )
 {
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPsolveNLP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPsolveNLPParam", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    if( scip->nlp == NULL )
    {
@@ -605,10 +522,15 @@ SCIP_RETCODE SCIPsolveNLP(
       return SCIP_INVALIDCALL;
    }
 
-   SCIP_CALL( SCIPnlpSolve(scip->nlp, SCIPblkmem(scip), scip->set, scip->messagehdlr, scip->stat) );
+   SCIP_CALL( SCIPnlpSolve(scip->nlp, SCIPblkmem(scip), scip->set, scip->messagehdlr, scip->stat, scip->primal, scip->tree, &param) );
 
    return SCIP_OKAY;
 }
+
+#if defined(_MSC_VER) && _MSC_VER < 1800
+/* warn that SCIPsolveNLP() macro isn't perfect with ancient MSVC */
+#pragma message ( "Warning: designated initializers not supported by this version of MSVC. Parameters given to NLP solves may be ignored." )
+#endif
 
 /** gets solution status of current NLP
  *
@@ -676,7 +598,7 @@ SCIP_RETCODE SCIPgetNLPStatistics(
       return SCIP_INVALIDCALL;
    }
 
-   SCIP_CALL( SCIPnlpGetStatistics(scip->nlp, statistics) );
+   SCIP_CALL( SCIPnlpGetStatistics(scip->set, scip->nlp, statistics) );
 
    return SCIP_OKAY;
 }
@@ -704,8 +626,10 @@ SCIP_Real SCIPgetNLPObjval(
    }
 }
 
-/** indicates whether a feasible solution for the current NLP is available
- * thus, returns whether the solution status <= feasible
+/** indicates whether a solution for the current NLP is available
+ *
+ * The solution may be optimal, feasible, or infeasible.
+ * Thus, returns whether the NLP solution status is at most \ref SCIP_NLPSOLSTAT_LOCINFEASIBLE.
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_INITSOLVE
@@ -758,174 +682,6 @@ SCIP_RETCODE SCIPgetNLPFracVars(
    return SCIP_OKAY;
 }
 
-/** gets integer parameter of NLP
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- */
-SCIP_RETCODE SCIPgetNLPIntPar(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLPPARAM         type,               /**< parameter number */
-   int*                  ival                /**< pointer to store the parameter value */
-   )
-{
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPgetNLPIntPar", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
-
-   if( scip->nlp == NULL )
-   {
-      SCIPerrorMessage("NLP has not been constructed.\n");
-      return SCIP_INVALIDCALL;
-   }
-
-   SCIP_CALL( SCIPnlpGetIntPar(scip->nlp, type, ival) );
-
-   return SCIP_OKAY;
-}
-
-/** sets integer parameter of NLP
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- */
-SCIP_RETCODE SCIPsetNLPIntPar(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLPPARAM         type,               /**< parameter number */
-   int                   ival                /**< parameter value */
-   )
-{
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPsetNLPIntPar", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
-
-   if( scip->nlp == NULL )
-   {
-      SCIPerrorMessage("NLP has not been constructed.\n");
-      return SCIP_INVALIDCALL;
-   }
-
-   SCIP_CALL( SCIPnlpSetIntPar(scip->nlp, type, ival) );
-
-   return SCIP_OKAY;
-}
-
-/** gets floating point parameter of NLP
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- */
-SCIP_RETCODE SCIPgetNLPRealPar(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLPPARAM         type,               /**< parameter number */
-   SCIP_Real*            dval                /**< pointer to store the parameter value */
-   )
-{
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPgetNLPRealPar", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
-
-   if( scip->nlp == NULL )
-   {
-      SCIPerrorMessage("NLP has not been constructed.\n");
-      return SCIP_INVALIDCALL;
-   }
-
-   SCIP_CALL( SCIPnlpGetRealPar(scip->nlp, type, dval) );
-
-   return SCIP_OKAY;
-}
-
-/** sets floating point parameter of NLP
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- */
-SCIP_RETCODE SCIPsetNLPRealPar(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLPPARAM         type,               /**< parameter number */
-   SCIP_Real             dval                /**< parameter value */
-   )
-{
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPsetNLPRealPar", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
-
-   if( scip->nlp == NULL )
-   {
-      SCIPerrorMessage("NLP has not been constructed.\n");
-      return SCIP_INVALIDCALL;
-   }
-
-   SCIP_CALL( SCIPnlpSetRealPar(scip->nlp, type, dval) );
-
-   return SCIP_OKAY;
-}
-
-/** gets string parameter of NLP
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- */
-SCIP_RETCODE SCIPgetNLPStringPar(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLPPARAM         type,               /**< parameter number */
-   const char**          sval                /**< pointer to store the parameter value */
-   )
-{
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPgetNLPStringPar", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
-
-   if( scip->nlp == NULL )
-   {
-      SCIPerrorMessage("NLP has not been constructed.\n");
-      return SCIP_INVALIDCALL;
-   }
-
-   SCIP_CALL( SCIPnlpGetStringPar(scip->nlp, type, sval) );
-
-   return SCIP_OKAY;
-}
-
-/** sets string parameter of NLP
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- */
-SCIP_RETCODE SCIPsetNLPStringPar(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLPPARAM         type,               /**< parameter number */
-   const char*           sval                /**< parameter value */
-   )
-{
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPsetNLPStringPar", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
-
-   if( scip->nlp == NULL )
-   {
-      SCIPerrorMessage("NLP has not been constructed.\n");
-      return SCIP_INVALIDCALL;
-   }
-
-   SCIP_CALL( SCIPnlpSetStringPar(scip->nlp, type, sval) );
-
-   return SCIP_OKAY;
-}
-
 /** writes current NLP to a file
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -948,22 +704,20 @@ SCIP_RETCODE SCIPwriteNLP(
       return SCIP_INVALIDCALL;
    }
 
-   SCIP_CALL( SCIPnlpWrite(scip->nlp, scip->set, scip->messagehdlr, filename) );
+   SCIP_CALL( SCIPnlpWrite(scip->nlp, scip->mem->probmem, scip->set, scip->stat, scip->messagehdlr, filename) );
 
    return SCIP_OKAY;
 }
 
-/** gets the NLP interface and problem used by the SCIP NLP;
- *  with the NLPI and its problem you can use all of the methods defined in nlpi/nlpi.h;
+/** gets the NLP interface and problem used by the SCIP NLP
  *
- *  @warning You have to make sure, that the full internal state of the NLPI does not change or is recovered completely
- *           after the end of the method that uses the NLPI. In particular, if you manipulate the NLP or its solution
- *           (e.g. by calling one of the SCIPnlpiAdd...() or the SCIPnlpiSolve() method), you have to check in advance
- *           whether the NLP is currently solved.  If this is the case, you have to make sure, the internal solution
- *           status is recovered completely at the end of your method. Additionally you have to resolve the NLP with
- *           SCIPnlpiSolve() in order to reinstall the internal solution status.
- *
- *  @warning Make also sure, that all parameter values that you have changed are set back to their original values.
+ *  @warning With the NLPI and its problem, all methods defined in \ref scip_nlpi.h and \ref pub_nlpi.h can be used.
+ *           It needs to be ensured that the full internal state of the NLPI does not change or is recovered completely
+ *           after the end of the method that uses the NLPI. In particular, if the NLP or its solution is manipulated
+ *           (e.g. by calling one of the SCIPaddNlpi...() or the SCIPsolveNlpi() method), one has to check in advance
+ *           whether the NLP is currently solved.  If this is the case, one has to make sure that the internal solution
+ *           status is recovered completely again. Additionally one has to resolve the NLP with
+ *           SCIPsolveNlpi() in order to reinstall the internal solution status.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -995,15 +749,15 @@ SCIP_RETCODE SCIPgetNLPI(
    return SCIP_OKAY;
 }
 
+/** @} */
 
-/*
- * NLP diving methods
- */
+/**@addtogroup PublicNLPDiveMethods
+ * @{ */
 
-/**@name NLP Diving Methods */
-/**@{ */
-
-/** initiates NLP diving making methods SCIPchgVarObjDiveNLP(), SCIPchgVarBoundsDiveNLP(), SCIPchgVarsBoundsDiveNLP(), and SCIPsolveDiveNLP() available
+/** initiates NLP diving
+ *
+ *  Makes functions SCIPchgVarObjDiveNLP(), SCIPchgVarBoundsDiveNLP() and SCIPchgVarsBoundsDiveNLP() available.
+ *  Further, SCIPsolveNLP() can be used to solve the diving NLP.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -1024,7 +778,7 @@ SCIP_RETCODE SCIPstartDiveNLP(
       return SCIP_INVALIDCALL;
    }
 
-   SCIP_CALL( SCIPnlpStartDive(scip->nlp, SCIPblkmem(scip), scip->set) );
+   SCIP_CALL( SCIPnlpStartDive(scip->nlp, SCIPblkmem(scip), scip->set, scip->stat) );
 
    return SCIP_OKAY;
 }
@@ -1052,7 +806,7 @@ SCIP_RETCODE SCIPendDiveNLP(
       return SCIP_INVALIDCALL;
    }
 
-   SCIP_CALL( SCIPnlpEndDive(scip->nlp, SCIPblkmem(scip), scip->set) );
+   SCIP_CALL( SCIPnlpEndDive(scip->nlp, SCIPblkmem(scip), scip->set, scip->stat) );
 
    return SCIP_OKAY;
 }
@@ -1113,7 +867,7 @@ SCIP_RETCODE SCIPchgVarBoundsDiveNLP(
       return SCIP_INVALIDCALL;
    }
 
-   SCIP_CALL( SCIPnlpChgVarBoundsDive(scip->nlp, var, lb, ub) );
+   SCIP_CALL( SCIPnlpChgVarBoundsDive(scip->set, scip->nlp, var, lb, ub) );
 
    return SCIP_OKAY;
 }
@@ -1148,40 +902,13 @@ SCIP_RETCODE SCIPchgVarsBoundsDiveNLP(
    return SCIP_OKAY;
 }
 
-/** solves diving NLP
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- */
-SCIP_RETCODE SCIPsolveDiveNLP(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPsolveDiveNLP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+/** @} */
 
-   if( scip->nlp == NULL )
-   {
-      SCIPerrorMessage("NLP has not been constructed.\n");
-      return SCIP_INVALIDCALL;
-   }
-
-   SCIP_CALL( SCIPnlpSolveDive(scip->nlp, SCIPblkmem(scip), scip->set, scip->messagehdlr, scip->stat) );
-
-   return SCIP_OKAY;
-}
-
-/**@} */
-
-
-/*
- * NLP nonlinear row methods
+/**@addtogroup PublicNLRowMethods
+ * @{
  */
 
-/** creates and captures an NLP row
+/** creates and captures a nonlinear row
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -1199,11 +926,7 @@ SCIP_RETCODE SCIPcreateNlRow(
    int                   nlinvars,           /**< number of linear variables */
    SCIP_VAR**            linvars,            /**< linear variables, or NULL if nlinvars == 0 */
    SCIP_Real*            lincoefs,           /**< linear coefficients, or NULL if nlinvars == 0 */
-   int                   nquadvars,          /**< number variables in quadratic terms */
-   SCIP_VAR**            quadvars,           /**< variables in quadratic terms, or NULL if nquadvars == 0 */
-   int                   nquadelems,         /**< number of elements in quadratic term */
-   SCIP_QUADELEM*        quadelems,          /**< elements (i.e., monomials) in quadratic term, or NULL if nquadelems == 0 */
-   SCIP_EXPRTREE*        expression,         /**< nonlinear expression, or NULL */
+   SCIP_EXPR*            expr,               /**< nonlinear expression, or NULL */
    SCIP_Real             lhs,                /**< left hand side */
    SCIP_Real             rhs,                /**< right hand side */
    SCIP_EXPRCURV         curvature           /**< curvature of the nonlinear row */
@@ -1211,13 +934,13 @@ SCIP_RETCODE SCIPcreateNlRow(
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateNlRow", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPnlrowCreate(nlrow, scip->mem->probmem, scip->set,
-         name, constant, nlinvars, linvars, lincoefs, nquadvars, quadvars, nquadelems, quadelems, expression, lhs, rhs, curvature) );
+   SCIP_CALL( SCIPnlrowCreate(nlrow, scip->mem->probmem, scip->set, scip->stat,
+         name, constant, nlinvars, linvars, lincoefs, expr, lhs, rhs, curvature) );
 
    return SCIP_OKAY;
 }
 
-/** creates and captures an NLP nonlinear row without any coefficients
+/** creates and captures a nonlinear row without any coefficients
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -1237,13 +960,13 @@ SCIP_RETCODE SCIPcreateEmptyNlRow(
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateEmptyNlRow", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPnlrowCreate(nlrow, scip->mem->probmem, scip->set,
-         name, 0.0, 0, NULL, NULL, 0, NULL, 0, NULL, NULL, lhs, rhs, SCIP_EXPRCURV_UNKNOWN) );
+   SCIP_CALL( SCIPnlrowCreate(nlrow, scip->mem->probmem, scip->set, scip->stat,
+         name, 0.0, 0, NULL, NULL, NULL, lhs, rhs, SCIP_EXPRCURV_UNKNOWN) );
 
    return SCIP_OKAY;
 }
 
-/** creates and captures an NLP row from a linear row
+/** creates and captures a nonlinear row from a linear row
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -1261,12 +984,12 @@ SCIP_RETCODE SCIPcreateNlRowFromRow(
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateNlRowFromRow", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPnlrowCreateFromRow(nlrow, scip->mem->probmem, scip->set, row) );
+   SCIP_CALL( SCIPnlrowCreateFromRow(nlrow, scip->mem->probmem, scip->set, scip->stat, row) );
 
    return SCIP_OKAY;
 }
 
-/** increases usage counter of NLP nonlinear row
+/** increases usage counter of a nonlinear row
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -1288,7 +1011,7 @@ SCIP_RETCODE SCIPcaptureNlRow(
    return SCIP_OKAY;
 }
 
-/** decreases usage counter of NLP nonlinear row, and frees memory if necessary
+/** decreases usage counter of a nonlinear row, and frees memory if necessary
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -1306,12 +1029,12 @@ SCIP_RETCODE SCIPreleaseNlRow(
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPreleaseNlRow", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPnlrowRelease(nlrow, scip->mem->probmem, scip->set) );
+   SCIP_CALL( SCIPnlrowRelease(nlrow, scip->mem->probmem, scip->set, scip->stat) );
 
    return SCIP_OKAY;
 }
 
-/** changes left hand side of NLP nonlinear row
+/** changes left hand side of a nonlinear row
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -1334,7 +1057,7 @@ SCIP_RETCODE SCIPchgNlRowLhs(
    return SCIP_OKAY;
 }
 
-/** changes right hand side of NLP nonlinear row
+/** changes right hand side of a nonlinear row
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -1357,7 +1080,7 @@ SCIP_RETCODE SCIPchgNlRowRhs(
    return SCIP_OKAY;
 }
 
-/** changes constant of NLP nonlinear row
+/** changes constant of a nonlinear row
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -1380,7 +1103,7 @@ SCIP_RETCODE SCIPchgNlRowConstant(
    return SCIP_OKAY;
 }
 
-/** adds variable with a linear coefficient to the nonlinear row
+/** adds variable with a linear coefficient to a nonlinear row
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -1404,7 +1127,7 @@ SCIP_RETCODE SCIPaddLinearCoefToNlRow(
    return SCIP_OKAY;
 }
 
-/** adds variables with linear coefficients to the row
+/** adds variables with linear coefficients to a row
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -1438,10 +1161,10 @@ SCIP_RETCODE SCIPaddLinearCoefsToNlRow(
    return SCIP_OKAY;
 }
 
-/** changes linear coefficient of a variables in a row
+/** changes linear coefficient of a variables in a nonlinear row
  *
- *  Setting the coefficient to 0.0 means that it is removed from the row
- *  the variable does not need to exists before.
+ *  Setting the coefficient to 0.0 means that it is removed from the row.
+ *  The variable does not need to exists before.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -1467,9 +1190,7 @@ SCIP_RETCODE SCIPchgNlRowLinearCoef(
    return SCIP_OKAY;
 }
 
-/** adds quadratic variable to the nonlinear row
- *
- *  After adding a quadratic variable, it can be used to add quadratic elements.
+/** sets or deletes expression in a nonlinear row
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -1479,214 +1200,18 @@ SCIP_RETCODE SCIPchgNlRowLinearCoef(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-SCIP_RETCODE SCIPaddQuadVarToNlRow(
+SCIP_RETCODE SCIPsetNlRowExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW*           nlrow,              /**< NLP row */
-   SCIP_VAR*             var                 /**< problem variable */
+   SCIP_EXPR*            expr                /**< expression, or NULL */
    )
 {
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPaddQuadVarToNlRow", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPsetNlRowExpr", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPnlrowAddQuadVar(nlrow, scip->mem->probmem, scip->set, var) );
-
-   return SCIP_OKAY;
-}
-
-/** adds quadratic variables to the nonlinear row
- *
- *  After adding quadratic variables, they can be used to add quadratic elements.
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- */
-SCIP_RETCODE SCIPaddQuadVarsToNlRow(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLROW*           nlrow,              /**< NLP row */
-   int                   nvars,              /**< number of problem variables */
-   SCIP_VAR**            vars                /**< problem variables */
-   )
-{
-   int v;
-
-   assert(nvars == 0 || vars != NULL);
-
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPaddQuadVarsToNlRow", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
-
-   SCIP_CALL( SCIPnlrowEnsureQuadVarsSize(nlrow, scip->mem->probmem, scip->set, SCIPnlrowGetNQuadVars(nlrow) + nvars) );
-   for( v = 0; v < nvars; ++v )
-   {
-      SCIP_CALL( SCIPnlrowAddQuadVar(nlrow, scip->mem->probmem, scip->set, vars[v]) );
-   }
-
-   return SCIP_OKAY;
-}
-
-/** add a quadratic element to the nonlinear row
- *
- *  Variable indices of the quadratic element need to be relative to quadratic variables array of row.
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- */
-SCIP_RETCODE SCIPaddQuadElementToNlRow(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLROW*           nlrow,              /**< NLP row */
-   SCIP_QUADELEM         quadelem            /**< quadratic element */
-   )
-{
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPaddQuadElementToNlRow", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
-
-   SCIP_CALL( SCIPnlrowAddQuadElement(nlrow, scip->mem->probmem, scip->set, scip->stat, scip->nlp, quadelem) );
-
-   /* invalidate curvature */
-   if( quadelem.coef != 0.0 )
-      SCIPnlrowSetCurvature(nlrow, SCIP_EXPRCURV_UNKNOWN);
-
-   return SCIP_OKAY;
-}
-
-/** adds quadratic elements to the nonlinear row
- *
- *  Variable indices of the quadratic elements need to be relative to quadratic variables array of row.
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- */
-SCIP_RETCODE SCIPaddQuadElementsToNlRow(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLROW*           nlrow,              /**< NLP row */
-   int                   nquadelems,         /**< number of quadratic elements */
-   SCIP_QUADELEM*        quadelems           /**< quadratic elements */
-   )
-{
-   int v;
-
-   assert(nquadelems == 0 || quadelems != NULL);
-
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPaddQuadElementsToNlRow", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
-
-   SCIP_CALL( SCIPnlrowEnsureQuadElementsSize(nlrow, scip->mem->probmem, scip->set, SCIPnlrowGetNQuadElems(nlrow) + nquadelems) );
-   for( v = 0; v < nquadelems; ++v )
-   {
-      SCIP_CALL( SCIPnlrowAddQuadElement(nlrow, scip->mem->probmem, scip->set, scip->stat, scip->nlp, quadelems[v]) );
-   }
+   SCIP_CALL( SCIPnlrowChgExpr(nlrow, scip->mem->probmem, scip->set, scip->stat, scip->nlp, expr) );
 
    /* invalidate curvature */
    SCIPnlrowSetCurvature(nlrow, SCIP_EXPRCURV_UNKNOWN);
-
-   return SCIP_OKAY;
-}
-
-/** changes coefficient in quadratic part of a row
- *
- *  Setting the coefficient in the quadelement to 0.0 means that it is removed from the row
- *  the element does not need to exists before.
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- */
-SCIP_RETCODE SCIPchgNlRowQuadElement(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLROW*           nlrow,              /**< NLP row */
-   SCIP_QUADELEM         quadelement         /**< new quadratic element, or update for existing one */
-   )
-{
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPchgNlRowQuadElement", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
-
-   SCIP_CALL( SCIPnlrowChgQuadElem(nlrow, scip->mem->probmem, scip->set, scip->stat, scip->nlp, quadelement) );
-
-   return SCIP_OKAY;
-}
-
-/** sets or deletes expression tree in the nonlinear row
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- */
-SCIP_RETCODE SCIPsetNlRowExprtree(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLROW*           nlrow,              /**< NLP row */
-   SCIP_EXPRTREE*        exprtree            /**< expression tree, or NULL */
-   )
-{
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPsetNlRowExprtree", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
-
-   SCIP_CALL( SCIPnlrowChgExprtree(nlrow, scip->mem->probmem, scip->set, scip->stat, scip->nlp, exprtree) );
-
-   /* invalidate curvature */
-   SCIPnlrowSetCurvature(nlrow, SCIP_EXPRCURV_UNKNOWN);
-
-   return SCIP_OKAY;
-}
-
-/** sets a parameter of expression tree in the nonlinear row
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- */
-SCIP_RETCODE SCIPsetNlRowExprtreeParam(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLROW*           nlrow,              /**< NLP row */
-   int                   paramidx,           /**< index of parameter in expression tree */
-   SCIP_Real             paramval            /**< new value of parameter in expression tree */
-   )
-{
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPsetNlRowExprtreeParam", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
-
-   SCIP_CALL( SCIPnlrowChgExprtreeParam(nlrow, scip->mem->probmem, scip->set, scip->stat, scip->nlp, paramidx, paramval) );
-
-   return SCIP_OKAY;
-}
-
-/** sets parameters of expression tree in the nonlinear row
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- */
-SCIP_RETCODE SCIPsetNlRowExprtreeParams(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLROW*           nlrow,              /**< NLP row */
-   SCIP_Real*            paramvals           /**< new values of parameter in expression tree */
-   )
-{
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPsetNlRowExprtreeParams", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
-
-   SCIP_CALL( SCIPnlrowChgExprtreeParams(nlrow, scip->mem->probmem, scip->set, scip->stat, scip->nlp, paramvals) );
 
    return SCIP_OKAY;
 }
@@ -1706,7 +1231,7 @@ SCIP_RETCODE SCIPrecalcNlRowNLPActivity(
    SCIP_NLROW*           nlrow               /**< NLP nonlinear row */
    )
 {
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPrecalcNlRowNLPActivity", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPrecalcNlRowNLPActivity", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    if( scip->nlp == NULL )
    {
@@ -1714,7 +1239,7 @@ SCIP_RETCODE SCIPrecalcNlRowNLPActivity(
       return SCIP_INVALIDCALL;
    }
 
-   SCIP_CALL( SCIPnlrowRecalcNLPActivity(nlrow, scip->set, scip->stat, scip->nlp) );
+   SCIP_CALL( SCIPnlrowRecalcNLPActivity(nlrow, scip->mem->probmem, scip->set, scip->stat, scip->primal, scip->tree, scip->nlp) );
 
    return SCIP_OKAY;
 }
@@ -1742,7 +1267,7 @@ SCIP_RETCODE SCIPgetNlRowNLPActivity(
       return SCIP_INVALIDCALL;
    }
 
-   SCIP_CALL( SCIPnlrowGetNLPActivity(nlrow, scip->set, scip->stat, scip->nlp, activity) );
+   SCIP_CALL( SCIPnlrowGetNLPActivity(nlrow, scip->mem->probmem, scip->set, scip->stat, scip->primal, scip->tree, scip->nlp, activity) );
 
    return SCIP_OKAY;
 }
@@ -1770,7 +1295,7 @@ SCIP_RETCODE SCIPgetNlRowNLPFeasibility(
       return SCIP_INVALIDCALL;
    }
 
-   SCIP_CALL( SCIPnlrowGetNLPFeasibility(nlrow, scip->set, scip->stat, scip->nlp, feasibility) );
+   SCIP_CALL( SCIPnlrowGetNLPFeasibility(nlrow, scip->mem->probmem, scip->set, scip->stat, scip->primal, scip->tree, scip->nlp, feasibility) );
 
    return SCIP_OKAY;
 }
@@ -1791,7 +1316,7 @@ SCIP_RETCODE SCIPrecalcNlRowPseudoActivity(
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPrecalcNlRowPseudoActivity", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPnlrowRecalcPseudoActivity(nlrow, scip->set, scip->stat) );
+   SCIP_CALL( SCIPnlrowRecalcPseudoActivity(nlrow, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->primal, scip->tree, scip->lp) );
 
    return SCIP_OKAY;
 }
@@ -1813,7 +1338,7 @@ SCIP_RETCODE SCIPgetNlRowPseudoActivity(
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPgetNlRowPseudoActivity", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPnlrowGetPseudoActivity(nlrow, scip->set, scip->stat, pseudoactivity) );
+   SCIP_CALL( SCIPnlrowGetPseudoActivity(nlrow, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->primal, scip->tree, scip->lp, pseudoactivity) );
 
    return SCIP_OKAY;
 }
@@ -1835,7 +1360,7 @@ SCIP_RETCODE SCIPgetNlRowPseudoFeasibility(
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPgetNlRowPseudoFeasibility", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPnlrowGetPseudoFeasibility(nlrow, scip->set, scip->stat, pseudofeasibility) );
+   SCIP_CALL( SCIPnlrowGetPseudoFeasibility(nlrow, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->primal, scip->tree, scip->lp, pseudofeasibility) );
 
    return SCIP_OKAY;
 }
@@ -1858,11 +1383,11 @@ SCIP_RETCODE SCIPrecalcNlRowActivity(
 
    if( scip->nlp != NULL && SCIPnlpHasCurrentNodeNLP(scip->nlp) && SCIPnlpHasSolution(scip->nlp) )
    {
-      SCIP_CALL( SCIPnlrowRecalcNLPActivity(nlrow, scip->set, scip->stat, scip->nlp) );
+      SCIP_CALL( SCIPnlrowRecalcNLPActivity(nlrow, scip->mem->probmem, scip->set, scip->stat, scip->primal, scip->tree, scip->nlp) );
    }
    else
    {
-      SCIP_CALL( SCIPnlrowRecalcPseudoActivity(nlrow, scip->set, scip->stat) );
+      SCIP_CALL( SCIPnlrowRecalcPseudoActivity(nlrow, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->primal, scip->tree, scip->lp) );
    }
 
    return SCIP_OKAY;
@@ -1887,11 +1412,11 @@ SCIP_RETCODE SCIPgetNlRowActivity(
 
    if( scip->nlp != NULL && SCIPnlpHasCurrentNodeNLP(scip->nlp) && SCIPnlpHasSolution(scip->nlp) )
    {
-      SCIP_CALL( SCIPnlrowGetNLPActivity(nlrow, scip->set, scip->stat, scip->nlp, activity) );
+      SCIP_CALL( SCIPnlrowGetNLPActivity(nlrow, scip->mem->probmem, scip->set, scip->stat, scip->primal, scip->tree, scip->nlp, activity) );
    }
    else
    {
-      SCIP_CALL( SCIPnlrowGetPseudoActivity(nlrow, scip->set, scip->stat, activity) );
+      SCIP_CALL( SCIPnlrowGetPseudoActivity(nlrow, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->primal, scip->tree, scip->lp, activity) );
    }
 
    return SCIP_OKAY;
@@ -1916,11 +1441,11 @@ SCIP_RETCODE SCIPgetNlRowFeasibility(
 
    if( scip->nlp != NULL && SCIPnlpHasCurrentNodeNLP(scip->nlp) && SCIPnlpHasSolution(scip->nlp) )
    {
-      SCIP_CALL( SCIPnlrowGetNLPFeasibility(nlrow, scip->set, scip->stat, scip->nlp, feasibility) );
+      SCIP_CALL( SCIPnlrowGetNLPFeasibility(nlrow, scip->mem->probmem, scip->set, scip->stat, scip->primal, scip->tree, scip->nlp, feasibility) );
    }
    else
    {
-      SCIP_CALL( SCIPnlrowGetPseudoFeasibility(nlrow, scip->set, scip->stat, feasibility) );
+      SCIP_CALL( SCIPnlrowGetPseudoFeasibility(nlrow, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->primal, scip->tree, scip->lp, feasibility) );
    }
 
    return SCIP_OKAY;
@@ -1946,15 +1471,15 @@ SCIP_RETCODE SCIPgetNlRowSolActivity(
 
    if( sol != NULL )
    {
-      SCIP_CALL( SCIPnlrowGetSolActivity(nlrow, scip->set, scip->stat, sol, activity) );
+      SCIP_CALL( SCIPnlrowGetSolActivity(nlrow, scip->mem->probmem, scip->set, scip->stat, sol, activity) );
    }
    else if( scip->nlp != NULL && SCIPnlpHasCurrentNodeNLP(scip->nlp) && SCIPnlpHasSolution(scip->nlp) )
    {
-      SCIP_CALL( SCIPnlrowGetNLPActivity(nlrow, scip->set, scip->stat, scip->nlp, activity) );
+      SCIP_CALL( SCIPnlrowGetNLPActivity(nlrow, scip->mem->probmem, scip->set, scip->stat, scip->primal, scip->tree, scip->nlp, activity) );
    }
    else
    {
-      SCIP_CALL( SCIPnlrowGetPseudoActivity(nlrow, scip->set, scip->stat, activity) );
+      SCIP_CALL( SCIPnlrowGetPseudoActivity(nlrow, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->primal, scip->tree, scip->lp, activity) );
    }
 
    return SCIP_OKAY;
@@ -1980,15 +1505,15 @@ SCIP_RETCODE SCIPgetNlRowSolFeasibility(
 
    if( sol != NULL )
    {
-      SCIP_CALL( SCIPnlrowGetSolFeasibility(nlrow, scip->set, scip->stat, sol, feasibility) );
+      SCIP_CALL( SCIPnlrowGetSolFeasibility(nlrow, scip->mem->probmem, scip->set, scip->stat, sol, feasibility) );
    }
    else if( scip->nlp != NULL && SCIPnlpHasCurrentNodeNLP(scip->nlp) && SCIPnlpHasSolution(scip->nlp) )
    {
-      SCIP_CALL( SCIPnlrowGetNLPFeasibility(nlrow, scip->set, scip->stat, scip->nlp, feasibility) );
+      SCIP_CALL( SCIPnlrowGetNLPFeasibility(nlrow, scip->mem->probmem, scip->set, scip->stat, scip->primal, scip->tree, scip->nlp, feasibility) );
    }
    else
    {
-      SCIP_CALL( SCIPnlrowGetPseudoFeasibility(nlrow, scip->set, scip->stat, feasibility) );
+      SCIP_CALL( SCIPnlrowGetPseudoFeasibility(nlrow, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->primal, scip->tree, scip->lp, feasibility) );
    }
 
    return SCIP_OKAY;
@@ -2013,12 +1538,12 @@ SCIP_RETCODE SCIPgetNlRowActivityBounds(
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPgetNlRowActivityBounds", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPnlrowGetActivityBounds(nlrow, scip->set, scip->stat, minactivity, maxactivity) );
+   SCIP_CALL( SCIPnlrowGetActivityBounds(nlrow, scip->mem->probmem, scip->set, scip->stat, minactivity, maxactivity) );
 
    return SCIP_OKAY;
 }
 
-/** output nonlinear row to file stream
+/** prints a nonlinear row to file stream
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -2038,7 +1563,9 @@ SCIP_RETCODE SCIPprintNlRow(
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPprintNlRow", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPnlrowPrint(nlrow, scip->messagehdlr, file) );
+   SCIP_CALL( SCIPnlrowPrint(nlrow, scip->mem->probmem, scip->set, scip->stat, scip->messagehdlr, file) );
 
    return SCIP_OKAY;
 }
+
+/** @} */

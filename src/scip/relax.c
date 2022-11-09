@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -32,6 +41,7 @@
 #include "scip/clock.h"
 #include "scip/paramset.h"
 #include "scip/scip.h"
+#include "scip/scip_cut.h"
 #include "scip/sol.h"
 #include "scip/var.h"
 #include "scip/relax.h"
@@ -369,8 +379,13 @@ SCIP_RETCODE SCIPrelaxExec(
    if( (depth == 0 && relax->freq == 0) || (relax->freq > 0 && depth % relax->freq == 0) )
    {
       SCIP_Real starttime;
+      int oldnactiveconss;
+      int oldncuts;
 
       SCIPsetDebugMsg(set, "executing relaxation handler <%s>\n", relax->name);
+
+      oldnactiveconss = stat->nactiveconss;
+      oldncuts = SCIPgetNCuts(set->scip);
 
       /* start timing */
       starttime = SCIPclockGetTime(relax->relaxclock);
@@ -423,12 +438,12 @@ SCIP_RETCODE SCIPrelaxExec(
                relax->imprtime += SCIPclockGetTime(relax->relaxclock) - starttime;
             }
 
-            if( *result == SCIP_CONSADDED )
+            if( stat->nactiveconss > oldnactiveconss )
                ++relax->naddedconss;
-            else if( *result == SCIP_REDUCEDDOM )
-               ++relax->nreduceddom;
-            else if( *result == SCIP_SEPARATED )
+            if( SCIPgetNCuts(set->scip) > oldncuts )
                ++relax->nseparated;
+            if( *result == SCIP_REDUCEDDOM )
+               ++relax->nreduceddom;
          }
       }
    }

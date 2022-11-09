@@ -3,13 +3,22 @@
 /*                  This file is part of the library                         */
 /*          BMS --- Block Memory Shell                                       */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  BMS is distributed under the terms of the ZIB Academic License.          */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with BMS; see the file COPYING. If not email to scip@zib.de.       */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -55,7 +64,7 @@
  * checks enabled with the defines below.
  * The maintenance of the memlist, however, is not threadsafe.
  */
-#ifdef NPARASCIP
+#ifndef SCIP_THREADSAFE
 /*#define ENABLE_MEMLIST_CHECKS*/
 #endif
 
@@ -358,7 +367,7 @@ void* BMSallocClearMemory_call(
    if ( num > (MAXMEMSIZE / typesize) )
    {
       printErrorHeader(filename, line);
-      printError("Tried to allocate standard memory of size exceeding %u.\n", MAXMEMSIZE);
+      printError("Tried to allocate standard memory of size exceeding %lu.\n", MAXMEMSIZE);
       return NULL;
    }
 #endif
@@ -393,7 +402,7 @@ void* BMSallocMemory_call(
    if ( size > MAXMEMSIZE )
    {
       printErrorHeader(filename, line);
-      printError("Tried to allocate standard memory of size exceeding %u.\n", MAXMEMSIZE);
+      printError("Tried to allocate standard memory of size exceeding %lu.\n", MAXMEMSIZE);
       return NULL;
    }
 #endif
@@ -430,7 +439,7 @@ void* BMSallocMemoryArray_call(
    if ( num > (MAXMEMSIZE / typesize) )
    {
       printErrorHeader(filename, line);
-      printError("Tried to allocate standard memory of size exceeding %u.\n", MAXMEMSIZE);
+      printError("Tried to allocate standard memory of size exceeding %lu.\n", MAXMEMSIZE);
       return NULL;
    }
 #endif
@@ -467,7 +476,7 @@ void* BMSreallocMemory_call(
    if ( size > MAXMEMSIZE )
    {
       printErrorHeader(filename, line);
-      printError("Tried to allocate standard memory of size exceeding %llu.\n", MAXMEMSIZE);
+      printError("Tried to allocate standard memory of size exceeding %lu.\n", MAXMEMSIZE);
       return NULL;
    }
 #endif
@@ -505,7 +514,7 @@ void* BMSreallocMemoryArray_call(
    if ( num > (MAXMEMSIZE / typesize) )
    {
       printErrorHeader(filename, line);
-      printError("Tried to allocate standard memory of size exceeding %llu.\n", MAXMEMSIZE);
+      printError("Tried to allocate standard memory of size exceeding %lu.\n", MAXMEMSIZE);
       return NULL;
    }
 #endif
@@ -701,7 +710,7 @@ struct Freelist
 /** chunk of memory elements */
 struct Chunk
 {
-   SCIP_RBTREE_HOOKS;                        /**< organize chunks in a red black tree */
+   SCIP_RBTREE_HOOKS;                        /**< organize chunks in a red black tree */ /*lint !e768 */
    void*                 store;              /**< data storage */
    void*                 storeend;           /**< points to the first byte in memory not belonging to the chunk */
    FREELIST*             eagerfree;          /**< eager free list */
@@ -1890,12 +1899,29 @@ void* BMSallocBlockMemory_call(
    if ( size > MAXMEMSIZE )
    {
       printErrorHeader(filename, line);
-      printError("Tried to allocate block of size exceeding %u.\n", MAXMEMSIZE);
+      printError("Tried to allocate block of size exceeding %lu.\n", MAXMEMSIZE);
       return NULL;
    }
 #endif
 
    return BMSallocBlockMemory_work(blkmem, size, filename, line);
+}
+
+/** allocates memory in the block memory pool and clears it */
+void* BMSallocClearBlockMemory_call(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   size_t                size,               /**< size of memory element to allocate */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
+   )
+{
+   void* ptr;
+
+   ptr = BMSallocBlockMemory_call(blkmem, size, filename, line);
+   if( ptr != NULL )
+      BMSclearMemorySize(ptr, size);
+
+   return ptr;
 }
 
 /** allocates array in the block memory pool */
@@ -1911,7 +1937,7 @@ void* BMSallocBlockMemoryArray_call(
    if ( num > (MAXMEMSIZE / typesize) )
    {
       printErrorHeader(filename, line);
-      printError("Tried to allocate block of size exceeding %u.\n", MAXMEMSIZE);
+      printError("Tried to allocate block of size exceeding %lu.\n", MAXMEMSIZE);
       return NULL;
    }
 #endif
@@ -1959,7 +1985,7 @@ void* BMSreallocBlockMemory_call(
    if ( newsize > MAXMEMSIZE )
    {
       printErrorHeader(filename, line);
-      printError("Tried to allocate block of size exceeding %u.\n", MAXMEMSIZE);
+      printError("Tried to allocate block of size exceeding %lu.\n", MAXMEMSIZE);
       return NULL;
    }
 #endif
@@ -2000,7 +2026,7 @@ void* BMSreallocBlockMemoryArray_call(
    if ( newnum > (MAXMEMSIZE / typesize) )
    {
       printErrorHeader(filename, line);
-      printError("Tried to allocate array of size exceeding %u.\n", MAXMEMSIZE);
+      printError("Tried to allocate array of size exceeding %lu.\n", MAXMEMSIZE);
       return NULL;
    }
 #endif
@@ -2767,7 +2793,7 @@ void* BMSallocBufferMemory_call(
    if ( size > MAXMEMSIZE )
    {
       printErrorHeader(filename, line);
-      printError("Tried to allocate buffer of size exceeding %u.\n", MAXMEMSIZE);
+      printError("Tried to allocate buffer of size exceeding %lu.\n", MAXMEMSIZE);
       return NULL;
    }
 #endif
@@ -2788,7 +2814,7 @@ void* BMSallocBufferMemoryArray_call(
    if ( num > (MAXMEMSIZE / typesize) )
    {
       printErrorHeader(filename, line);
-      printError("Tried to allocate buffer of size exceeding %u.\n", MAXMEMSIZE);
+      printError("Tried to allocate buffer of size exceeding %lu.\n", MAXMEMSIZE);
       return NULL;
    }
 #endif
@@ -2900,7 +2926,7 @@ void* BMSreallocBufferMemory_call(
    if ( size > MAXMEMSIZE )
    {
       printErrorHeader(filename, line);
-      printError("Tried to allocate buffer of size exceeding %u.\n", MAXMEMSIZE);
+      printError("Tried to allocate buffer of size exceeding %lu.\n", MAXMEMSIZE);
       return NULL;
    }
 #endif
@@ -2922,7 +2948,7 @@ void* BMSreallocBufferMemoryArray_call(
    if ( num > (MAXMEMSIZE / typesize) )
    {
       printErrorHeader(filename, line);
-      printError("Tried to allocate array of size exceeding %u.\n", MAXMEMSIZE);
+      printError("Tried to allocate array of size exceeding %lu.\n", MAXMEMSIZE);
       return NULL;
    }
 #endif

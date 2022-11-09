@@ -1,6 +1,6 @@
-Copyright (C) 2002-2020 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)
+Copyright (C) 2002-2022 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)
 
-External codes: 
+External codes:
   Readline 7.0         GNU library for command line editing (gnu.org/s/readline)
   CPLEX 12.8.0.0       Linear Programming Solver developed by IBM (www.cplex.com)
   CppAD 20180000.0     Algorithmic Differentiation of C++ algorithms developed by B. Bell (www.coin-or.org/CppAD)
@@ -10,7 +10,7 @@ External codes:
 
 user parameter file <scip.set> not found - using default parameters
 
-SCIP> 
+SCIP>
 SCIP> set misc referencevalue -100.0
 misc/referencevalue = -100
 SCIP> set limits time 3600
@@ -63,7 +63,7 @@ presolved problem has 160 variables (80 bin, 0 int, 0 impl, 80 cont) and 401 con
     221 constraints of type <linear>
 Presolving Time: 0.92
 
- time | node  | left  |LP iter|LP it/n|mem/heur|mdpt |vars |cons |rows |cuts |sepa|confs|strbr|  dualbound   | primalbound  |  gap   | compl. 
+ time | node  | left  |LP iter|LP it/n|mem/heur|mdpt |vars |cons |rows |cuts |sepa|confs|strbr|  dualbound   | primalbound  |  gap   | compl.
 t 1.3s|     1 |     0 |     0 |     - | trivial|   0 | 160 | 401 |   0 |   0 |  0 |   0 |   0 |-3.600000e+02 |-4.000000e+01 | 800.00%| unknown
 p 1.3s|     1 |     0 |    42 |     - |  clique|   0 | 160 | 401 | 401 |   0 |  0 |   0 |   0 |-3.600000e+02 |-7.200000e+01 | 400.00%| unknown
 p 1.3s|     1 |     0 |   102 |     - |   locks|   0 | 160 | 401 | 401 |   0 |  0 |   0 |   0 |-3.600000e+02 |-7.600000e+01 | 373.68%| unknown
@@ -79,7 +79,7 @@ p 1.3s|     1 |     0 |   102 |     - |   locks|   0 | 160 | 401 | 401 |   0 |  
   1.4s|     1 |     0 |   512 |     - |  9167k |   0 | 160 | 401 | 443 |  42 |  9 |   0 |   0 |-1.020000e+02 |-7.600000e+01 |  34.21%| unknown
   1.5s|     1 |     0 |   559 |     - |  9246k |   0 | 160 | 401 | 445 |  44 | 10 |   0 |   0 |-1.020000e+02 |-7.600000e+01 |  34.21%| unknown
   1.5s|     1 |     0 |   575 |     - |  9419k |   0 | 160 | 401 | 449 |  48 | 11 |   0 |   0 |-1.020000e+02 |-7.600000e+01 |  34.21%| unknown
- time | node  | left  |LP iter|LP it/n|mem/heur|mdpt |vars |cons |rows |cuts |sepa|confs|strbr|  dualbound   | primalbound  |  gap   | compl. 
+ time | node  | left  |LP iter|LP it/n|mem/heur|mdpt |vars |cons |rows |cuts |sepa|confs|strbr|  dualbound   | primalbound  |  gap   | compl.
   1.5s|     1 |     0 |   609 |     - |  9470k |   0 | 160 | 401 | 451 |  50 | 12 |   0 |   0 |-1.020000e+02 |-7.600000e+01 |  34.21%| unknown
 o 1.5s|     1 |     0 |   795 |     - |feaspump|   0 | 160 | 401 | 451 |  50 | 12 |   0 |   0 |-1.020000e+02 |-8.800000e+01 |  15.91%| unknown
 L 2.1s|     1 |     0 |   795 |     - |    rens|   0 | 160 | 401 | 451 |  50 | 12 |   0 |   0 |-1.020000e+02 |-9.600000e+01 |   6.25%| unknown

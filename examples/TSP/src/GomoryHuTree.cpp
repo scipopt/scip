@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License.             */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -151,7 +160,7 @@ void fini_maxflow(void)
    free(number);
 }
 
-/** global relabel operation */\
+/** global relabel operation */
 static
 void global_relabel(
    GRAPH*                gr,                 /**< graph */
@@ -286,7 +295,7 @@ double maxflow(
          return FALSE;
       }
 
-      nptr->excess = 0.0L;
+      nptr->excess = 0.0;
       nptr->stack_link = NULL;
       nptr->alive = TRUE;
       nptr->unmarked = TRUE;
@@ -344,13 +353,13 @@ double maxflow(
       for ( nptr = &(gr->nodes[n-1]); nptr >= gr->nodes; --nptr )
       {
          if ( nptr->unmarked )
-            return (-1.0L);
+            return (-1.0);
       }
    }
 
    s_ptr->dist = (int) n; /* number[0] and number[n] not required */
    t_ptr->dist = 0L;
-   t_ptr->excess = 1.0L;  /* to be subtracted again */
+   t_ptr->excess = 1.0;  /* to be subtracted again */
 
    /* initial preflow push from source node */
    max_dist = 0L;  /* = max_dist of active nodes */
@@ -365,7 +374,7 @@ double maxflow(
          nptr->excess += cap;
          s_ptr->excess -= cap;
          eptr->back->rcap += cap;
-         eptr->rcap = 0.0L;
+         eptr->rcap = 0.0;
 
          if ( nptr != t_ptr && nptr->excess <= cap + EPS )
          {
@@ -411,7 +420,7 @@ double maxflow(
                /* perform a non saturating push */
                eptr->rcap -= incre;
                eptr->back->rcap += incre;
-               aptr->excess = 0.0L;
+               aptr->excess = 0.0;
                nptr->excess += incre;
 
                if ( nptr->excess <= incre + EPS )
@@ -433,7 +442,7 @@ double maxflow(
                eptr->back->rcap += incre;
                aptr->excess -= incre;
                nptr->excess += incre;
-               eptr->rcap = 0.0L;
+               eptr->rcap = 0.0;
 
                if ( nptr->excess <= incre + EPS )
                {

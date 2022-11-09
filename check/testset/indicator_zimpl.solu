@@ -1,7 +1,0 @@
-=opt=   sparse             26
-=opt=   mcf64-4-1          10
-=opt=   mcf128-4-1         14
-=opt=   mcf256-128-1       23
-=opt=   mcf64-4-1_int      10
-=opt=   mcf128-4-1_int     14
-=best=  mcf256-128-1_int   23

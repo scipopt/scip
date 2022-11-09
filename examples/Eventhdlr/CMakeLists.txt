@@ -2,7 +2,13 @@ cmake_minimum_required(VERSION 3.3)
 
 project(Eventhdlr)
 
-find_package(SCIP REQUIRED)
+if(TARGET SCIP::SCIP)
+  # find package by SCIP PATH
+  find_package(SCIP CONFIG PATHS ${SCIP_BINARY_DIR} REQUIRED)
+else()
+  find_package(SCIP REQUIRED)
+endif()
+
 include_directories(${SCIP_INCLUDE_DIRS})
 
 add_executable(eventhdlr
@@ -38,14 +44,14 @@ set(instances
     "instances/MIP/gt2.mps\;21166"
     "instances/MINLP/ex1266.mps\;16.3"
     "instances/MINLP/m3.osil\;37.8"
-    "instances/Orbitope/partorb_1-FullIns_3.cip\;4"
+    "instances/Symmetry/partorb_1-FullIns_3.cip\;4"
     )
 
 #
 #
 #
 add_test(NAME examples-eventhdlr-build
-        COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target eventhdlr
+        COMMAND "${CMAKE_COMMAND}" --build "${CMAKE_BINARY_DIR}" --config $<CONFIG> --target eventhdlr
         )
 #
 # avoid that several build jobs try to concurrently build the SCIP library
@@ -73,4 +79,12 @@ foreach(instance ${instances})
                             PASS_REGULAR_EXPRESSION "Validation         : Success"
                             DEPENDS examples-eventhdlr-build
                             )
+    if(WIN32)
+        # on windows we need to execute the application and examples executables from the directory containing the libscip.dll,
+        # on other systems this directory does not exist.
+        set_tests_properties(examples-eventhdlr-${basename}
+                PROPERTIES
+                    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin/$<CONFIG>
+            )
+    endif()
 endforeach(instance)

@@ -2,11 +2,15 @@
 <!-- using make doc from within scip or soplex -->
 
 <style>
+@media (prefers-color-scheme: light) {
 .reveal:hover {
     text-shadow: 1px 1px 1px #777;
 }
 .answer {
     background-color: #fff;
+}
+}
+.answer {
     padding-left:   1em;
 }
 </style>

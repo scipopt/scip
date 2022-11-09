@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -61,6 +70,7 @@
 #include "scip/scip_sol.h"
 #include "scip/scip_solve.h"
 #include "scip/scip_var.h"
+#include "symmetry/type_symmetry.h"
 #include <string.h>
 
 /* depending on whether the GMP library is available we use a GMP data type or a SCIP_Longint */
@@ -1831,21 +1841,24 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCountPresolve)
 {  /*lint --e{715}*/
    SCIP_Bool active;
    int usesymmetry;
-   int symcomptiming = 2;
 
    SCIP_CALL( SCIPgetIntParam(scip, "misc/usesymmetry", &usesymmetry) );
-   if ( usesymmetry == 1 || usesymmetry == 3 )
-   {
-      SCIP_CALL( SCIPgetIntParam(scip, "propagating/symmetry/addconsstiming", &symcomptiming) );
-   }
-   else if ( usesymmetry == 2 )
-   {
-      SCIP_CALL( SCIPgetIntParam(scip, "propagating/symmetry/ofsymcomptiming", &symcomptiming) );
-   }
 
    if ( usesymmetry != 0 )
    {
-      if ( symcomptiming < 2 &&
+      int symcomptiming = 2;
+
+      /* get timing of symmetry computation */
+      if ( ((unsigned) usesymmetry & SYM_HANDLETYPE_SYMCONS) != 0 )
+      {
+         SCIP_CALL( SCIPgetIntParam(scip, "propagating/symmetry/addconsstiming", &symcomptiming) );
+      }
+      else if ( usesymmetry == 2 )
+      {
+         SCIP_CALL( SCIPgetIntParam(scip, "propagating/symmetry/ofsymcomptiming", &symcomptiming) );
+      }
+
+      if ( symcomptiming < SYM_COMPUTETIMING_AFTERPRESOL &&
            (SCIPgetStage(scip) >= SCIP_STAGE_PRESOLVING || SCIPgetStage(scip) == SCIP_STAGE_INITPRESOLVE) )
       {
          SCIPerrorMessage("Symmetry handling and solution counting are not compatible. " \
@@ -1930,7 +1943,6 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
    int displayfeasST;
    int nrestarts;
    int usesymmetry;
-   int symcomptiming = 2;
 
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
    SCIPdialogMessage(scip, NULL, "\n");
@@ -1951,18 +1963,22 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
    }
 
    SCIP_CALL( SCIPgetIntParam(scip, "misc/usesymmetry", &usesymmetry) );
-   if ( usesymmetry == 1 || usesymmetry == 3 )
-   {
-      SCIP_CALL( SCIPgetIntParam(scip, "propagating/symmetry/addconsstiming", &symcomptiming) );
-   }
-   else if ( usesymmetry == 2 )
-   {
-      SCIP_CALL( SCIPgetIntParam(scip, "propagating/symmetry/ofsymcomptiming", &symcomptiming) );
-   }
 
    if ( usesymmetry != 0 )
    {
-      if ( symcomptiming < 2 &&
+      int symcomptiming = 2;
+
+      /* get timing of symmetry computation */
+      if ( ((unsigned) usesymmetry & SYM_HANDLETYPE_SYMCONS) != 0 )
+      {
+         SCIP_CALL( SCIPgetIntParam(scip, "propagating/symmetry/addconsstiming", &symcomptiming) );
+      }
+      else if ( usesymmetry == 2 )
+      {
+         SCIP_CALL( SCIPgetIntParam(scip, "propagating/symmetry/ofsymcomptiming", &symcomptiming) );
+      }
+
+      if ( symcomptiming < SYM_COMPUTETIMING_AFTERPRESOL &&
            (SCIPgetStage(scip) >= SCIP_STAGE_PRESOLVING || SCIPgetStage(scip) == SCIP_STAGE_INITPRESOLVE) )
       {
          SCIPerrorMessage("Symmetry handling and solution counting are not compatible. " \
@@ -2065,7 +2081,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
          SCIPfreeBufferArray(scip, &buffer);
       }
 
-      SCIPdialogMessage(scip, NULL, " (%d non-trivial feasible subtrees)\n", SCIPgetNCountedFeasSubtrees(scip));
+      SCIPdialogMessage(scip, NULL, " (%" SCIP_LONGINT_FORMAT " non-trivial feasible subtrees)\n", SCIPgetNCountedFeasSubtrees(scip));
 
       *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
@@ -2468,14 +2484,13 @@ SCIP_RETCODE createCountDialog(
 {
    SCIP_DIALOG* root;
    SCIP_DIALOG* dialog;
-   SCIP_DIALOG* setmenu;
    SCIP_DIALOG* submenu;
 
-   /* includes or updates the default dialog menus in SCIP */
-   SCIP_CALL( SCIPincludeDialogDefault(scip) );
-
    root = SCIPgetRootDialog(scip);
-   assert( root != NULL );
+
+   /* skip dialogs if they seem to be disabled */
+   if( root == NULL )
+      return SCIP_OKAY;
 
    /* add dialog entry for counting */
    if( !SCIPdialogHasEntry(root, "count") )
@@ -2511,14 +2526,6 @@ SCIP_RETCODE createCountDialog(
       SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
-
-   /* search for the "set" sub menu to find the "emphasis" sub menu */
-   if( SCIPdialogFindEntry(root, "set", &setmenu) != 1 )
-   {
-      SCIPerrorMessage("set sub menu not found\n");
-      return SCIP_PLUGINNOTFOUND;
-   }
-   assert(setmenu != NULL);
 
    return SCIP_OKAY;
 }

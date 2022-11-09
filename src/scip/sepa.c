@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -144,7 +153,11 @@ SCIP_RETCODE doSepaCreate(
    (*sepa)->ncalls = 0;
    (*sepa)->ncutoffs = 0;
    (*sepa)->ncutsfound = 0;
-   (*sepa)->ncutsapplied = 0;
+   (*sepa)->ncutsadded = 0;
+   (*sepa)->ncutsaddedviapool = 0;
+   (*sepa)->ncutsaddeddirect = 0;
+   (*sepa)->ncutsappliedviapool = 0;
+   (*sepa)->ncutsapplieddirect = 0;
    (*sepa)->nconssfound = 0;
    (*sepa)->ndomredsfound = 0;
    (*sepa)->ncallsatnode = 0;
@@ -152,6 +165,8 @@ SCIP_RETCODE doSepaCreate(
    (*sepa)->lpwasdelayed = FALSE;
    (*sepa)->solwasdelayed = FALSE;
    (*sepa)->initialized = FALSE;
+   (*sepa)->isparentsepa = FALSE;
+   (*sepa)->parentsepa = NULL;
 
    /* add parameters */
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "separating/%s/priority", name);
@@ -272,9 +287,14 @@ SCIP_RETCODE SCIPsepaInit(
 
       sepa->lastsepanode = -1;
       sepa->ncalls = 0;
+      sepa->nrootcalls = 0;
       sepa->ncutoffs = 0;
       sepa->ncutsfound = 0;
-      sepa->ncutsapplied = 0;
+      sepa->ncutsadded = 0;
+      sepa->ncutsaddedviapool = 0;
+      sepa->ncutsaddeddirect = 0;
+      sepa->ncutsappliedviapool = 0;
+      sepa->ncutsapplieddirect = 0;
       sepa->nconssfound = 0;
       sepa->ndomredsfound = 0;
       sepa->ncallsatnode = 0;
@@ -415,7 +435,7 @@ SCIP_RETCODE SCIPsepaExecLP(
          SCIP_CUTPOOL* delayedcutpool;
          SCIP_Longint oldndomchgs;
          SCIP_Longint oldnprobdomchgs;
-         int oldncuts;
+         int oldncutsfound;
          int oldnactiveconss;
          int ncutsfound;
 
@@ -425,7 +445,8 @@ SCIP_RETCODE SCIPsepaExecLP(
          delayedcutpool = SCIPgetDelayedGlobalCutpool(set->scip);
          oldndomchgs = stat->nboundchgs + stat->nholechgs;
          oldnprobdomchgs = stat->nprobboundchgs + stat->nprobholechgs;
-         oldncuts = SCIPsepastoreGetNCuts(sepastore) + SCIPcutpoolGetNCuts(cutpool) + SCIPcutpoolGetNCuts(delayedcutpool);
+         oldncutsfound = SCIPsepastoreGetNCuts(sepastore) + SCIPcutpoolGetNCuts(cutpool) + SCIPcutpoolGetNCuts(delayedcutpool);
+
          oldnactiveconss = stat->nactiveconss;
 
          /* reset the statistics for current node */
@@ -439,7 +460,7 @@ SCIP_RETCODE SCIPsepaExecLP(
          SCIPclockStart(sepa->sepaclock, set);
 
          /* call external separation method */
-         SCIP_CALL( sepa->sepaexeclp(set->scip, sepa, result, allowlocal) );
+         SCIP_CALL( sepa->sepaexeclp(set->scip, sepa, result, allowlocal, depth) );
 
          /* stop timing */
          SCIPclockStop(sepa->sepaclock, set);
@@ -448,15 +469,15 @@ SCIP_RETCODE SCIPsepaExecLP(
          if( *result != SCIP_DIDNOTRUN && *result != SCIP_DELAYED )
          {
             sepa->ncalls++;
+            if( depth == 0 )
+               sepa->nrootcalls++;
             sepa->ncallsatnode++;
             sepa->lastsepanode = stat->ntotalnodes;
          }
          if( *result == SCIP_CUTOFF )
             sepa->ncutoffs++;
 
-         ncutsfound = SCIPsepastoreGetNCuts(sepastore) + SCIPcutpoolGetNCuts(cutpool) +
-            SCIPcutpoolGetNCuts(delayedcutpool) - oldncuts;
-
+         ncutsfound = SCIPsepastoreGetNCuts(sepastore) + SCIPcutpoolGetNCuts(cutpool) + SCIPcutpoolGetNCuts(delayedcutpool) - oldncutsfound;
          sepa->ncutsfound += ncutsfound;
          sepa->ncutsfoundatnode += ncutsfound;
          sepa->nconssfound += MAX(stat->nactiveconss - oldnactiveconss, 0); /*lint !e776*/
@@ -528,7 +549,7 @@ SCIP_RETCODE SCIPsepaExecSol(
       {
          SCIP_Longint oldndomchgs;
          SCIP_Longint oldnprobdomchgs;
-         int oldncuts;
+         int oldncutsfound;
          int oldnactiveconss;
          int ncutsfound;
 
@@ -536,7 +557,7 @@ SCIP_RETCODE SCIPsepaExecSol(
 
          oldndomchgs = stat->nboundchgs + stat->nholechgs;
          oldnprobdomchgs = stat->nprobboundchgs + stat->nprobholechgs;
-         oldncuts = SCIPsepastoreGetNCuts(sepastore);
+         oldncutsfound = SCIPsepastoreGetNCuts(sepastore);
          oldnactiveconss = stat->nactiveconss;
 
          /* reset the statistics for current node */
@@ -550,7 +571,7 @@ SCIP_RETCODE SCIPsepaExecSol(
          SCIPclockStart(sepa->sepaclock, set);
 
          /* call external separation method */
-         SCIP_CALL( sepa->sepaexecsol(set->scip, sepa, sol, result, allowlocal) );
+         SCIP_CALL( sepa->sepaexecsol(set->scip, sepa, sol, result, allowlocal, depth) );
 
          /* stop timing */
          SCIPclockStop(sepa->sepaclock, set);
@@ -559,12 +580,16 @@ SCIP_RETCODE SCIPsepaExecSol(
          if( *result != SCIP_DIDNOTRUN && *result != SCIP_DELAYED )
          {
             sepa->ncalls++;
+            if( depth == 0 )
+               sepa->nrootcalls++;
             sepa->ncallsatnode++;
             sepa->lastsepanode = stat->ntotalnodes;
          }
          if( *result == SCIP_CUTOFF )
             sepa->ncutoffs++;
-         ncutsfound = SCIPsepastoreGetNCuts(sepastore) - oldncuts;
+
+         ncutsfound = SCIPsepastoreGetNCuts(sepastore) - oldncutsfound;
+
          sepa->ncutsfound += ncutsfound;
          sepa->ncutsfoundatnode += ncutsfound;
          sepa->nconssfound += MAX(stat->nactiveconss - oldnactiveconss, 0); /*lint !e776*/
@@ -693,6 +718,27 @@ void SCIPsepaSetExitsol(
    sepa->sepaexitsol = sepaexitsol;
 }
 
+/** declares separator to be a parent separator */
+void SCIPsepaSetIsParentsepa(
+   SCIP_SEPA*            sepa                /**< separator */
+   )
+{
+   assert(sepa != NULL);
+
+   sepa->isparentsepa = TRUE;
+}
+
+/** sets the parent separator */
+void SCIPsepaSetParentsepa(
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_SEPA*            parentsepa          /**< parent separator */
+   )
+{
+   assert(sepa != NULL);
+
+   sepa->parentsepa = parentsepa;
+}
+
 /** gets name of separator */
 const char* SCIPsepaGetName(
    SCIP_SEPA*            sepa                /**< separator */
@@ -810,7 +856,7 @@ SCIP_Real SCIPsepaGetTime(
    return SCIPclockGetTime(sepa->sepaclock);
 }
 
-/** gets the total number of times, the separator was called */
+/** gets the total number of times the separator was called */
 SCIP_Longint SCIPsepaGetNCalls(
    SCIP_SEPA*            sepa                /**< separator */
    )
@@ -818,6 +864,16 @@ SCIP_Longint SCIPsepaGetNCalls(
    assert(sepa != NULL);
 
    return sepa->ncalls;
+}
+
+/** gets the total number of times the separator was called at the root */
+SCIP_Longint SCIPsepaGetNRootCalls(
+   SCIP_SEPA*            sepa                /**< separator */
+   )
+{
+   assert(sepa != NULL);
+
+   return sepa->nrootcalls;
 }
 
 /** gets the number of times, the separator was called at the current node */
@@ -840,7 +896,7 @@ SCIP_Longint SCIPsepaGetNCutoffs(
    return sepa->ncutoffs;
 }
 
-/** gets the total number of cutting planes found by this separator */
+/** gets the total number of cutting planes added from the separator to the cut pool */
 SCIP_Longint SCIPsepaGetNCutsFound(
    SCIP_SEPA*            sepa                /**< separator */
    )
@@ -850,27 +906,136 @@ SCIP_Longint SCIPsepaGetNCutsFound(
    return sepa->ncutsfound;
 }
 
-/** gets the total number of cutting planes applied to lp */
+/** gets the total number of cutting planes added from the separator to the sepastore;
+ *  equal to the sum of added cuts directly and via the pool. */
+SCIP_Longint SCIPsepaGetNCutsAdded(
+   SCIP_SEPA*            sepa                /**< separator */
+   )
+{
+   assert(sepa != NULL);
+
+   return sepa->ncutsadded;
+}
+
+/** gets the number of cutting planes found by the separator added to the sepastore via the cut pool */
+SCIP_Longint SCIPsepaGetNCutsAddedViaPool(
+   SCIP_SEPA*            sepa                /**< separator */
+   )
+{
+   assert(sepa != NULL);
+
+   return sepa->ncutsaddedviapool;
+}
+
+/** gets the number of cutting planes found by the separator added directly to the sepastore */
+SCIP_Longint SCIPsepaGetNCutsAddedDirect(
+   SCIP_SEPA*            sepa                /**< separator */
+   )
+{
+   assert(sepa != NULL);
+
+   return sepa->ncutsaddeddirect;
+}
+
+/** gets the total number of cutting planes of the separator finally applied to the LP */
 SCIP_Longint SCIPsepaGetNCutsApplied(
    SCIP_SEPA*            sepa                /**< separator */
    )
 {
    assert(sepa != NULL);
 
-   return sepa->ncutsapplied;
+   return sepa->ncutsappliedviapool + sepa->ncutsapplieddirect;
 }
 
-/** increase count of applied cuts */
-void SCIPsepaIncNAppliedCuts(
+/** gets the total number of cutting planes of the separator applied to the LP via the cutpool */
+SCIP_Longint SCIPsepaGetNCutsAppliedViaPool(
    SCIP_SEPA*            sepa                /**< separator */
    )
 {
-   assert( sepa != NULL );
+   assert(sepa != NULL);
 
-   ++sepa->ncutsapplied;
+   return sepa->ncutsappliedviapool;
 }
 
-/** increase count of found cuts */
+/** gets the total number of cutting planes of the separator applied to the LP via the sepastore directly */
+SCIP_Longint SCIPsepaGetNCutsAppliedDirect(
+   SCIP_SEPA*            sepa                /**< separator */
+   )
+{
+   assert(sepa != NULL);
+
+   return sepa->ncutsapplieddirect;
+}
+
+/** increase count of applied cuts by one */
+void SCIPsepaIncNCutsApplied(
+   SCIP_SEPA*            sepa,                /**< separator */
+   SCIP_Bool             fromcutpool          /**< whether the cuts were added from the cutpool to sepastore */
+   )
+{
+   SCIP_SEPA* parentsepa;
+
+   assert( sepa != NULL );
+
+   if( fromcutpool )
+      ++sepa->ncutsappliedviapool;
+   else
+      ++sepa->ncutsapplieddirect;
+
+   parentsepa = SCIPsepaGetParentsepa(sepa);
+   if( parentsepa != NULL )
+   {
+      SCIPsepaIncNCutsApplied(parentsepa, fromcutpool);
+   }
+}
+
+/** increase count of added cuts by one */
+void SCIPsepaIncNCutsAdded(
+   SCIP_SEPA*            sepa,                /**< separator */
+   SCIP_Bool             fromcutpool          /**< whether the cuts were added from the cutpool to sepastore */
+   )
+{
+   SCIP_SEPA* parentsepa;
+
+   assert( sepa != NULL );
+
+   ++sepa->ncutsadded;
+   if( fromcutpool )
+      sepa->ncutsaddedviapool++;
+   else
+      sepa->ncutsaddeddirect++;
+
+   parentsepa = SCIPsepaGetParentsepa(sepa);
+   if( parentsepa != NULL )
+   {
+      SCIPsepaIncNCutsAdded(parentsepa, fromcutpool);
+   }
+}
+
+/** decrease the count of added cuts by one */
+void SCIPsepaDecNCutsAdded(
+   SCIP_SEPA*            sepa,                /**< separator */
+   SCIP_Bool             fromcutpool          /**< whether the cuts were added from the cutpool to sepastore */
+   )
+{
+   SCIP_SEPA* parentsepa;
+
+   assert( sepa != NULL );
+
+   sepa->ncutsadded--;
+   if( fromcutpool )
+      sepa->ncutsaddedviapool--;
+   else
+      sepa->ncutsaddeddirect--;
+
+   parentsepa = SCIPsepaGetParentsepa(sepa);
+   if( parentsepa != NULL )
+   {
+      SCIPsepaDecNCutsAdded(parentsepa, fromcutpool);
+   }
+}
+
+/** increase count of found cuts by one */
 void SCIPsepaIncNCutsFound(
    SCIP_SEPA*            sepa                /**< separator */
    )
@@ -880,7 +1045,7 @@ void SCIPsepaIncNCutsFound(
    ++sepa->ncutsfound;
 }
 
-/** increase count of found cuts at current node */
+/** increase count of found cuts at current node by one */
 void SCIPsepaIncNCutsFoundAtNode(
    SCIP_SEPA*            sepa                /**< separator */
    )
@@ -958,4 +1123,24 @@ SCIP_Bool SCIPsepaIsInitialized(
    assert(sepa != NULL);
 
    return sepa->initialized;
+}
+
+/** gets whether separator is a parent separator */
+SCIP_Bool SCIPsepaIsParentsepa(
+   SCIP_SEPA*            sepa                /**< separator */
+   )
+{
+   assert(sepa != NULL);
+
+   return sepa->isparentsepa;
+}
+
+/** gets parent separator (or NULL) */
+SCIP_SEPA* SCIPsepaGetParentsepa(
+   SCIP_SEPA*            sepa                /**< separator */
+   )
+{
+   assert(sepa != NULL);
+
+   return sepa->parentsepa;
 }

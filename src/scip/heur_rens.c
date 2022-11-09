@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -22,7 +31,6 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "blockmemshell/memory.h"
-#include "nlpi/type_nlpi.h"
 #include "scip/heuristics.h"
 #include "scip/heur_rens.h"
 #include "scip/pub_event.h"
@@ -41,6 +49,7 @@
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
 #include "scip/scip_nlp.h"
+#include "scip/scip_nlpi.h"
 #include "scip/scip_nodesel.h"
 #include "scip/scip_numerics.h"
 #include "scip/scip_param.h"
@@ -173,30 +182,24 @@ SCIP_RETCODE computeFixingrate(
    if( (*startsol) == 'n' )
    {
       SCIP_NLPSOLSTAT stat;
-      SCIPdebug( int nlpverblevel; )
 
       /* only call this function if NLP relaxation is available */
       assert(SCIPisNLPConstructed(scip));
-
-      /* activate NLP solver output if we are in SCIP's debug mode */
-      SCIPdebug( SCIP_CALL( SCIPgetNLPIntPar(scip, SCIP_NLPPAR_VERBLEVEL, &nlpverblevel) ) );
-      SCIPdebug( SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_VERBLEVEL, MAX(1,nlpverblevel)) ) );
 
       SCIPdebugMsg(scip, "try to solve NLP relaxation to obtain fixing values\n");
 
       /* set starting point to LP solution */
       SCIP_CALL( SCIPsetNLPInitialGuessSol(scip, NULL) );
 
-      /* solve NLP relaxation */
-      SCIP_CALL( SCIPsolveNLP(scip) );
+      /* solve NLP relaxation
+       * TODO pick some less arbitrary iterlimit
+       */
+      SCIP_CALL( SCIPsolveNLP(scip, .iterlimit = 3000) );  /*lint !e666*/
 
       /* get solution status of NLP solver */
       stat = SCIPgetNLPSolstat(scip);
       *success = (stat == SCIP_NLPSOLSTAT_GLOBOPT) || (stat == SCIP_NLPSOLSTAT_LOCOPT) || stat == (SCIP_NLPSOLSTAT_FEASIBLE);
       SCIPdebugMsg(scip, "solving NLP relaxation was %s successful (stat=%d)\n", *success ? "" : "not", stat);
-
-      /* reset NLP verblevel to the value it had before */
-      SCIPdebug( SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_VERBLEVEL, nlpverblevel) ) );
 
       /* it the NLP was not successfully solved we stop the heuristic right away */
       if( !(*success) )
@@ -477,17 +480,6 @@ SCIP_RETCODE setupAndSolveSubscip(
 
       /* speed up sub-SCIP by not checking dual LP feasibility */
       SCIP_CALL( SCIPsetBoolParam(subscip, "lp/checkdualfeas", FALSE) );
-
-      /* employ a limit on the number of enforcement rounds in the quadratic constraint handler; this fixes the issue that
-       * sometimes the quadratic constraint handler needs hundreds or thousands of enforcement rounds to determine the
-       * feasibility status of a single node without fractional branching candidates by separation (namely for uflquad
-       * instances); however, the solution status of the sub-SCIP might get corrupted by this; hence no deductions shall be
-       * made for the original SCIP
-       */
-      if( SCIPfindConshdlr(subscip, "quadratic") != NULL && !SCIPisParamFixed(subscip, "constraints/quadratic/enfolplimit") )
-      {
-         SCIP_CALL( SCIPsetIntParam(subscip, "constraints/quadratic/enfolplimit", 500) );
-      }
    }
 
    /* if there is already a solution, add an objective cutoff */

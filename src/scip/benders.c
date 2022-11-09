@@ -3,17 +3,26 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   scip/src/scip/benders.c
+/**@file   benders.c
  * @ingroup OTHER_CFILES
  * @brief  methods for Benders' decomposition
  * @author Stephen J. Maher
@@ -37,12 +46,8 @@
 #include "scip/benders.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
-#include "scip/pub_misc_linear.h"
-#include "scip/pub_misc_nonlinear.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_nonlinear.h"
-#include "scip/cons_quadratic.h"
-#include "scip/cons_abspower.h"
 
 #include "scip/struct_benders.h"
 #include "scip/struct_benderscut.h"
@@ -67,7 +72,8 @@
 #define SCIP_DEFAULT_STRENGTHENINTPOINT     'r'  /** where should the strengthening interior point be sourced from ('l'p relaxation, 'f'irst solution, 'i'ncumbent solution, 'r'elative interior point, vector of 'o'nes, vector of 'z'eros) */
 #define SCIP_DEFAULT_NUMTHREADS               1  /** the number of parallel threads to use when solving the subproblems */
 #define SCIP_DEFAULT_EXECFEASPHASE        FALSE  /** should a feasibility phase be executed during the root node processing */
-#define SCIP_DEFAULT_SLACKVARCOEF          1e+6  /** the objective coefficient of the slack variables in the subproblem */
+#define SCIP_DEFAULT_SLACKVARCOEF          1e+6  /** the initial objective coefficient of the slack variables in the subproblem */
+#define SCIP_DEFAULT_MAXSLACKVARCOEF       1e+9  /** the maximal objective coefficient of the slack variables in the subproblem */
 #define SCIP_DEFAULT_CHECKCONSCONVEXITY    TRUE  /** should the constraints of the subproblem be checked for convexity? */
 
 #define BENDERS_MAXPSEUDOSOLS                 5  /** the maximum number of pseudo solutions checked before suggesting
@@ -797,7 +803,7 @@ SCIP_RETCODE assignAuxiliaryVariables(
 
          (void) SCIPsnprintf(tmpprefix, len, "t_%s", prefix);
          len += 2;
-         strncpy(prefix, tmpprefix, len); /*lint !e732*/
+         (void) strncpy(prefix, tmpprefix, len); /*lint !e732*/
 
          j++;
       }
@@ -1172,8 +1178,13 @@ SCIP_RETCODE doBendersCreate(
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/slackvarcoef", name);
    SCIP_CALL( SCIPsetAddRealParam(set, messagehdlr, blkmem, paramname,
-         "the objective coefficient of the slack variables in the subproblem", &(*benders)->slackvarcoef, FALSE,
+         "the initial objective coefficient of the slack variables in the subproblem", &(*benders)->slackvarcoef, FALSE,
          SCIP_DEFAULT_SLACKVARCOEF, 0.0, SCIPsetInfinity(set), NULL, NULL) ); /*lint !e740*/
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/maxslackvarcoef", name);
+   SCIP_CALL( SCIPsetAddRealParam(set, messagehdlr, blkmem, paramname,
+         "the maximal objective coefficient of the slack variables in the subproblem", &(*benders)->maxslackvarcoef, FALSE,
+         SCIP_DEFAULT_MAXSLACKVARCOEF, 0.0, SCIPsetInfinity(set), NULL, NULL) ); /*lint !e740*/
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/checkconsconvexity", name);
    SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem, paramname,
@@ -1316,9 +1327,7 @@ SCIP_RETCODE addSlackVars(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_CONS*            cons,               /**< constraint to which the slack variable(s) is added to */
    SCIP_CONSHDLR**       linearconshdlrs,    /**< an array storing the linear constraint handlers */
-   SCIP_CONSHDLR*        conshdlr_nonlinear, /**< pointer to the non-linear constraint handler */
-   SCIP_CONSHDLR*        conshdlr_quadratic, /**< pointer to the quadratic constraint handler */
-   SCIP_CONSHDLR*        conshdlr_abspower,  /**< pointer to the absolute power constraint handler */
+   SCIP_CONSHDLR*        nlconshdlr,         /**< pointer to the nonlinear constraint handler */
    int                   nlinearconshdlrs    /**< the number of linear constraint handlers */
    )
 {
@@ -1347,8 +1356,7 @@ SCIP_RETCODE addSlackVars(
       }
    }
 
-   if( !linearcons
-      && (conshdlr != conshdlr_nonlinear && conshdlr != conshdlr_quadratic && conshdlr != conshdlr_abspower) )
+   if( !linearcons && conshdlr != nlconshdlr )
    {
       SCIPwarningMessage(scip, "The subproblem includes constraint <%s>. "
          "This is not supported and the slack variable will not be added to the constraint. Feasibility cuts may be invalid.\n",
@@ -1364,10 +1372,8 @@ SCIP_RETCODE addSlackVars(
    }
    else
    {
-      rhs = SCIPconsNonlinearGetRhs(scip, cons, &success);
-      assert(success);
-      lhs = SCIPconsNonlinearGetLhs(scip, cons, &success);
-      assert(success);
+      rhs = SCIPgetRhsNonlinear(cons);
+      lhs = SCIPgetLhsNonlinear(cons);
    }
 
    /* getting the objective coefficient for the slack variables */
@@ -1390,7 +1396,7 @@ SCIP_RETCODE addSlackVars(
       }
       else
       {
-         SCIP_CALL( SCIPconsNonlinearAddLinearCoef(scip, cons, var, -1.0) );
+         SCIP_CALL( SCIPaddLinearVarNonlinear(scip, cons, var, -1.0) );
       }
 
       /* releasing the variable */
@@ -1414,7 +1420,7 @@ SCIP_RETCODE addSlackVars(
       }
       else
       {
-         SCIP_CALL( SCIPconsNonlinearAddLinearCoef(scip, cons, var, 1.0) );
+         SCIP_CALL( SCIPaddLinearVarNonlinear(scip, cons, var, 1.0) );
       }
 
       /* releasing the variable */
@@ -1436,9 +1442,7 @@ SCIP_RETCODE addSlackVarsToConstraints(
 {
    SCIP* subproblem;
    SCIP_CONSHDLR* linearconshdlrs[NLINEARCONSHDLRS];
-   SCIP_CONSHDLR* conshdlr_nonlinear;
-   SCIP_CONSHDLR* conshdlr_quadratic;
-   SCIP_CONSHDLR* conshdlr_abspower;
+   SCIP_CONSHDLR* nlconshdlr;
    SCIP_CONS* cons;
    int i;
 
@@ -1455,17 +1459,14 @@ SCIP_RETCODE addSlackVarsToConstraints(
    linearconshdlrs[3] = SCIPfindConshdlr(subproblem, "setppc");
    linearconshdlrs[4] = SCIPfindConshdlr(subproblem, "varbound");
 
-   conshdlr_nonlinear = SCIPfindConshdlr(subproblem, "nonlinear");
-   conshdlr_quadratic = SCIPfindConshdlr(subproblem, "quadratic");
-   conshdlr_abspower = SCIPfindConshdlr(subproblem, "abspower");
+   nlconshdlr = SCIPfindConshdlr(subproblem, "nonlinear");
 
    for( i = 0; i < SCIPgetNOrigConss(subproblem); ++i )
    {
       cons = SCIPgetOrigConss(subproblem)[i];
 
       /* adding the slack variables to the constraint */
-      SCIP_CALL( addSlackVars(subproblem, benders, cons, linearconshdlrs, conshdlr_nonlinear, conshdlr_quadratic,
-            conshdlr_abspower, NLINEARCONSHDLRS) );
+      SCIP_CALL( addSlackVars(subproblem, benders, cons, linearconshdlrs, nlconshdlr, NLINEARCONSHDLRS) );
    }
 
    return SCIP_OKAY;
@@ -1560,8 +1561,8 @@ SCIP_RETCODE initialiseLPSubproblem(
  *
  * We check whether we can conclude that the CIP is actually an LP or a convex NLP.
  * To do this, we check that all variables are of continuous type and that every constraint is either handled by known
- * linear constraint handler (knapsack, linear, logicor, setppc, varbound) or a known nonlinear constraint handler
- * (nonlinear, quadratic, abspower). In the latter case, we also check whether the nonlinear constraint is convex.
+ * linear constraint handler (knapsack, linear, logicor, setppc, varbound) or the nonlinear constraint handler.
+ * In the latter case, we also check whether the nonlinear constraint is convex.
  * Further, nonlinear constraints are only considered if an NLP solver interface is available, i.e., and NLP could
  * be solved.
  * If constraints are present that cannot be identified as linear or convex nonlinear, then we assume that the
@@ -1589,9 +1590,7 @@ SCIP_RETCODE checkSubproblemConvexity(
    SCIP_Bool discretevar;
    SCIP_Bool isnonlinear;
    SCIP_CONSHDLR* linearconshdlrs[NLINEARCONSHDLRS];
-   SCIP_CONSHDLR* conshdlr_nonlinear = NULL;
-   SCIP_CONSHDLR* conshdlr_quadratic = NULL;
-   SCIP_CONSHDLR* conshdlr_abspower = NULL;
+   SCIP_CONSHDLR* nlconshdlr = NULL;
 
    assert(benders != NULL);
    assert(set != NULL);
@@ -1625,7 +1624,7 @@ SCIP_RETCODE checkSubproblemConvexity(
    linearconshdlrs[3] = SCIPfindConshdlr(subproblem, "setppc");
    linearconshdlrs[4] = SCIPfindConshdlr(subproblem, "varbound");
 
-   /* Get pointers to interesting nonlinear constraint handlers, if we also have an NLP solver to solve NLPs.
+   /* Get pointer to the nonlinear constraint handler if we also have an NLP solver to solve NLPs.
     * If there is no NLP solver, but there are (convex) nonlinear constraints, then the LP relaxation of subproblems
     * will (currently) not be sufficient to solve subproblems to optimality. Thus, we also take the presence of convex
     * nonlinear constraints as signal for having to solve the CIP eventually, thus, by abuse of notation,
@@ -1634,15 +1633,13 @@ SCIP_RETCODE checkSubproblemConvexity(
     */
    if( SCIPgetNNlpis(subproblem) > 0 )
    {
-      conshdlr_nonlinear = SCIPfindConshdlr(subproblem, "nonlinear");
-      conshdlr_quadratic = SCIPfindConshdlr(subproblem, "quadratic");
-      conshdlr_abspower = SCIPfindConshdlr(subproblem, "abspower");
+      nlconshdlr = SCIPfindConshdlr(subproblem, "nonlinear");
    }
 
-   /* if the quadratic constraint handler exists, then we create a hashmap of variables that can be assumed to be fixed.
+   /* if the nonlinear constraint handler exists, then we create a hashmap of variables that can be assumed to be fixed.
     * These variables correspond to the copies of the master variables in the subproblem
     */
-   if( probnumber >= 0 && conshdlr_quadratic != NULL )
+   if( probnumber >= 0 && nlconshdlr != NULL )
    {
       SCIP_VAR* mappedvar;
 
@@ -1680,16 +1677,41 @@ SCIP_RETCODE checkSubproblemConvexity(
          continue;
       }
 
-      /* if cons_nonlinear (and conshdlr_nonlinear != NULL), then check whether convex */
-      if( conshdlr == conshdlr_nonlinear )
+      /* if cons_nonlinear (and nlconshdlr != NULL), then check whether convex */
+      if( conshdlr == nlconshdlr )
       {
-         SCIP_EXPRCURV curvature;
+         SCIP_Bool isconvex;
+         SCIP_EXPRCURV curv;
+         SCIP_Bool havelhs;
+         SCIP_Bool haverhs;
 
          isnonlinear = TRUE;
 
-         SCIP_CALL( SCIPgetCurvatureNonlinear(subproblem, cons, TRUE, &curvature) );
-         if( ((SCIPisInfinity(subproblem, -SCIPgetLhsNonlinear(subproblem, cons)) || (curvature & SCIP_EXPRCURV_CONCAVE) == SCIP_EXPRCURV_CONCAVE)) &&
-             ((SCIPisInfinity(subproblem,  SCIPgetRhsNonlinear(subproblem, cons)) || (curvature & SCIP_EXPRCURV_CONVEX) == SCIP_EXPRCURV_CONVEX)) )
+         havelhs = !SCIPisInfinity(subproblem, -SCIPgetLhsNonlinear(cons));
+         haverhs = !SCIPisInfinity(subproblem,  SCIPgetRhsNonlinear(cons));
+         if( havelhs && haverhs )
+         {
+            isconvex = FALSE;
+         }
+         else
+         {
+            /* look at curvature stored in cons, though at this stage this will be unknown a.a. */
+            curv = SCIPgetCurvatureNonlinear(cons);
+            isconvex = ((!havelhs || (curv & SCIP_EXPRCURV_CONCAVE) == SCIP_EXPRCURV_CONCAVE)) &&
+                ((!haverhs || (curv & SCIP_EXPRCURV_CONVEX) == SCIP_EXPRCURV_CONVEX));
+
+            if( !isconvex )
+            {
+               /* if not found convex, compute curvature via nlhdlr_convex and decide again */
+
+               /* make sure activities are up to date. SCIPhasExprCurvature currently assumes that this is already the case */
+               SCIP_CALL( SCIPevalExprActivity(subproblem, SCIPgetExprNonlinear(cons)) );
+
+               SCIP_CALL( SCIPhasExprCurvature(subproblem, SCIPgetExprNonlinear(cons), havelhs ? SCIP_EXPRCURV_CONCAVE : SCIP_EXPRCURV_CONVEX, &isconvex, assumevarfixed) );
+            }
+         }
+
+         if( isconvex )
          {
 #ifdef SCIP_MOREDEBUG
             SCIPdebugMsg(subproblem, "subproblem <%s>: nonlinear constraint <%s> is convex\n", SCIPgetProbName(subproblem), SCIPconsGetName(cons));
@@ -1699,60 +1721,11 @@ SCIP_RETCODE checkSubproblemConvexity(
          else
          {
 #ifdef SCIP_MOREDEBUG
-            SCIPdebugMsg(subproblem, "subproblem <%s>: nonlinear constraint <%s> is not convex\n", SCIPgetProbName(subproblem), SCIPconsGetName(cons));
+            SCIPdebugMsg(subproblem, "subproblem <%s>: nonlinear constraint <%s> not convex\n", SCIPgetProbName(subproblem), SCIPconsGetName(cons));
 #endif
             goto TERMINATE;
          }
       }
-
-      /* if cons_quadratic (and conshdlr_quadratic != NULL), then check whether convex */
-      if( conshdlr == conshdlr_quadratic )
-      {
-         SCIP_Bool isconvex;
-         isnonlinear = TRUE;
-
-         SCIP_CALL( SCIPisConvexConsQuadratic(subproblem, cons, assumevarfixed, &isconvex) );
-
-         if( isconvex )
-         {
-#ifdef SCIP_MOREDEBUG
-            SCIPdebugMsg(subproblem, "subproblem <%s>: quadratic constraint <%s> is convex\n", SCIPgetProbName(subproblem), SCIPconsGetName(cons));
-#endif
-            continue;
-         }
-         else
-         {
-#ifdef SCIP_MOREDEBUG
-            SCIPdebugMsg(subproblem, "subproblem <%s>: quadratic constraint <%s> not convex\n", SCIPgetProbName(subproblem), SCIPconsGetName(cons));
-#endif
-            goto TERMINATE;
-         }
-      }
-
-      /* if cons_abspower (and conshdlr_abspower != NULL), then check whether convex */
-      if( conshdlr == conshdlr_abspower )
-      {
-         isnonlinear = TRUE;
-
-         if( SCIPisConvexAbspower(subproblem, cons) )
-         {
-#ifdef SCIP_MOREDEBUG
-            SCIPdebugMsg(subproblem, "subproblem <%s>: abspower constraint <%s> is convex\n", SCIPgetProbName(subproblem), SCIPconsGetName(cons));
-#endif
-            continue;
-         }
-         else
-         {
-#ifdef SCIP_MOREDEBUG
-            SCIPdebugMsg(subproblem, "subproblem <%s>: abspower constraint <%s> not convex\n", SCIPgetProbName(subproblem), SCIPconsGetName(cons));
-#endif
-            goto TERMINATE;
-         }
-      }
-
-      /* skip bivariate constraints: they are typically nonconvex
-       * skip soc constraints: it would depend how these are represented in the NLP eventually, which could be nonconvex
-       */
 
 #ifdef SCIP_MOREDEBUG
       SCIPdebugMsg(subproblem, "subproblem <%s>: potentially nonconvex constraint <%s>\n", SCIPgetProbName(subproblem), SCIPconsGetName(cons));
@@ -1793,7 +1766,7 @@ TERMINATE:
 
    if( probnumber >= 0 )
    {
-      SCIPdebugMsg(subproblem, "subproblem <%s> has been found to be of type %d\n", SCIPgetProbName(subproblem),
+      SCIPsetDebugMsg(set, "subproblem <%s> has been found to be of type %d\n", SCIPgetProbName(subproblem),
          SCIPbendersGetSubproblemType(benders, probnumber));
    }
 
@@ -1844,7 +1817,7 @@ SCIP_RETCODE createSubproblems(
        * not required.
        *
        * NOTE: since the subproblems are supplied as NULL pointers, the internal convexity check can not be performed.
-       * The user needs to specify whether the subproblems are convex or not.
+       * The user needs to explicitly specify the subproblem type.
        */
       if( subproblem != NULL )
       {
@@ -1893,6 +1866,9 @@ SCIP_RETCODE createSubproblems(
                   "copied of master problem variables has been changed to zero.\n");
             }
          }
+
+         /* changing all of the master problem variable to continuous. */
+         SCIP_CALL( SCIPbendersChgMastervarsToCont(benders, set, i) );
 
          /* checking the convexity of the subproblem. The convexity of the subproblem indicates whether the convex
           * relaxation is a valid relaxation for the problem
@@ -1970,6 +1946,17 @@ SCIP_RETCODE createSubproblems(
                SCIP_CALL( SCIPsetEventhdlrFree(subproblem, eventhdlr, eventFreeBendersUpperbound) );
                assert(eventhdlr != NULL);
             }
+         }
+      }
+      else
+      {
+         /* a user must specify the subproblem type if they are not supplying a SCIP instance. */
+         if( SCIPbendersGetSubproblemType(benders, i) == SCIP_BENDERSSUBTYPE_UNKNOWN )
+         {
+            SCIPerrorMessage("If the subproblem is set to NULL, then the subproblem type must be specified.\n");
+            SCIPerrorMessage("In the subproblem creation callback, call SCIPbendersSetSubproblemType with the appropriate problem type.\n");
+
+            return SCIP_ERROR;
          }
       }
    }
@@ -2948,6 +2935,7 @@ SCIP_RETCODE performInteriorSolCutStrengthening(
 
          /* if the number of iterations without improvement is less than 2*noimprovelimit, then perturbation is
           * performed
+          * TODO: This should be a random vector!!!!
           */
          if( perturbsol || benders->noimprovecount <= 2*benders->noimprovelimit )
             newsolval += benders->perturbeps;
@@ -3363,7 +3351,7 @@ SCIP_RETCODE solveBendersSubproblems(
    }
 
    /* setting the input parameters to the local variables */
-   SCIPsetDebugMsg(set, "Local variable values: nverified %d infeasible %d optimal %d stopped %d\n", locnverified,
+   SCIPsetDebugMsg(set, "Local variable values: nverified %d infeasible %u optimal %u stopped %u\n", locnverified,
       locinfeasible, locoptimal, locstopped);
    *nverified = locnverified;
    *infeasible = locinfeasible;
@@ -3622,7 +3610,7 @@ SCIP_RETCODE SCIPbendersExec(
    success = TRUE;
    stopped = FALSE;
 
-   SCIPsetDebugMsg(set, "Starting Benders' decomposition subproblem solving. type %d checkint %d\n", type, checkint);
+   SCIPsetDebugMsg(set, "Starting Benders' decomposition subproblem solving. type %d checkint %u\n", type, checkint);
 
 #ifdef SCIP_MOREDEBUG
    SCIP_CALL( SCIPprintSol(set->scip, sol, NULL, FALSE) );
@@ -3850,7 +3838,7 @@ SCIP_RETCODE SCIPbendersExec(
 
    allverified = (nverified == nsubproblems);
 
-   SCIPsetDebugMsg(set, "End Benders' decomposition subproblem solve. result %d infeasible %d auxviol %d nverified %d\n",
+   SCIPsetDebugMsg(set, "End Benders' decomposition subproblem solve. result %d infeasible %u auxviol %u nverified %d\n",
       *result, *infeasible, *auxviol, nverified);
 
 #ifdef SCIP_DEBUG
@@ -4028,7 +4016,7 @@ TERMINATE:
    /* increment the number of calls to the Benders' decomposition subproblem solve */
    benders->ncalls++;
 
-   SCIPsetDebugMsg(set, "End Benders' decomposition execution method. result %d infeasible %d auxviol %d\n", *result,
+   SCIPsetDebugMsg(set, "End Benders' decomposition execution method. result %d infeasible %u auxviol %u\n", *result,
       *infeasible, *auxviol);
 
    /* end timing */
@@ -4078,7 +4066,7 @@ TERMINATE:
       SCIP_Bool activeslack;
 
       SCIP_CALL( SCIPbendersSolSlackVarsActive(benders, &activeslack) );
-      SCIPsetDebugMsg(set, "Type: %d Active slack: %d Feasibility Phase: %d\n", type, activeslack,
+      SCIPsetDebugMsg(set, "Type: %d Active slack: %u Feasibility Phase: %u\n", type, activeslack,
          benders->feasibilityphase);
       if( activeslack )
       {
@@ -4087,9 +4075,16 @@ TERMINATE:
          else
          {
             /* increasing the value of the slack variable by a factor of 10 */
-            benders->slackvarcoef *= 10;
+            benders->slackvarcoef *= 10.0;
 
-            printf("Increasing the slack variable coefficient to %g\n", benders->slackvarcoef);
+            if( benders->slackvarcoef <= benders->maxslackvarcoef )
+            {
+               SCIPmessagePrintVerbInfo(SCIPgetMessagehdlr(set->scip), set->disp_verblevel, SCIP_VERBLEVEL_HIGH, "Increasing the slack variable coefficient to %g.\n", benders->slackvarcoef);
+            }
+            else
+            {
+               SCIPmessagePrintVerbInfo(SCIPgetMessagehdlr(set->scip), set->disp_verblevel, SCIP_VERBLEVEL_HIGH, "Fixing the slack variables to zero.\n");
+            }
 
             /* resolving the subproblems with an increased slack variable */
             SCIP_CALL( SCIPsolveBendersSubproblems(set->scip, benders, sol, result, infeasible, auxviol, type, checkint) );
@@ -4459,12 +4454,19 @@ SCIP_RETCODE SCIPbendersSetupSubproblem(
           */
          if( benders->feasibilityphase && SCIPgetDepth(set->scip) == 0 && type != SCIP_BENDERSENFOTYPE_CHECK )
          {
-            /* The coefficient update can only be performed if the subproblem is in probing mode. */
+            /* The coefficient update or variable fixing can only be performed if the subproblem is in probing mode.
+             * If the slack var coef gets very large, then we fix the slack variable to 0 instead.
+             */
             if( SCIPinProbing(subproblem) )
             {
-               SCIP_Real coef = benders->slackvarcoef;
-
-               SCIP_CALL( SCIPchgVarObjProbing(subproblem, vars[i], coef) );
+               if( benders->slackvarcoef <= benders->maxslackvarcoef )
+               {
+                  SCIP_CALL( SCIPchgVarObjProbing(subproblem, vars[i], benders->slackvarcoef) );
+               }
+               else
+               {
+                  SCIP_CALL( SCIPchgVarUbProbing(subproblem, vars[i], 0.0) );
+               }
             }
          }
          else
@@ -4700,7 +4702,9 @@ SCIP_RETCODE setSubproblemParams(
    /* do not abort subproblem on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(subproblem, "misc/catchctrlc", FALSE) );
 
+#ifndef SCIP_MOREDEBUG
    SCIP_CALL( SCIPsetIntParam(subproblem, "display/verblevel", (int)SCIP_VERBLEVEL_NONE) );
+#endif
 
    SCIP_CALL( SCIPsetIntParam(subproblem, "propagating/maxrounds", 0) );
    SCIP_CALL( SCIPsetIntParam(subproblem, "propagating/maxroundsroot", 0) );
@@ -4796,13 +4800,9 @@ SCIP_RETCODE SCIPbendersSolveSubproblemLP(
       SCIP_NLPTERMSTAT nlptermstat;
 #ifdef SCIP_MOREDEBUG
       SCIP_SOL* nlpsol;
-
-      SCIP_CALL( SCIPsetNLPIntPar(subproblem, SCIP_NLPPAR_VERBLEVEL, 1) );
 #endif
 
-      SCIP_CALL( SCIPsetNLPIntPar(subproblem, SCIP_NLPPAR_ITLIM, INT_MAX) );
-
-      SCIP_CALL( SCIPsolveNLP(subproblem) );
+      SCIP_CALL( SCIPsolveNLP(subproblem) );  /*lint !e666*/
 
       nlpsolstat = SCIPgetNLPSolstat(subproblem);
       nlptermstat = SCIPgetNLPTermstat(subproblem);
@@ -4832,9 +4832,13 @@ SCIP_RETCODE SCIPbendersSolveSubproblemLP(
             probnumber);
          SCIPABORT();
       }
-      else if( nlptermstat == SCIP_NLPTERMSTAT_TILIM )
+      else if( nlptermstat == SCIP_NLPTERMSTAT_TIMELIMIT )
       {
          (*solvestatus) = SCIP_STATUS_TIMELIMIT;
+      }
+      else if( nlptermstat == SCIP_NLPTERMSTAT_INTERRUPT )
+      {
+         (*solvestatus) = SCIP_STATUS_USERINTERRUPT;
       }
       else
       {
@@ -5186,13 +5190,8 @@ SCIP_RETCODE SCIPbendersComputeSubproblemLowerbound(
       {
          SCIP_NLPSOLSTAT nlpsolstat;
          SCIP_NLPTERMSTAT nlptermstat;
-#ifdef SCIP_MOREDEBUG
-         SCIP_CALL( SCIPsetNLPIntPar(subproblem, SCIP_NLPPAR_VERBLEVEL, 1) );
-#endif
 
-         SCIP_CALL( SCIPsetNLPIntPar(subproblem, SCIP_NLPPAR_ITLIM, INT_MAX) );
-
-         SCIP_CALL( SCIPsolveNLP(subproblem) );
+         SCIP_CALL( SCIPsolveNLP(subproblem) );  /*lint !e666*/
 
          nlpsolstat = SCIPgetNLPSolstat(subproblem);
          nlptermstat = SCIPgetNLPTermstat(subproblem);
@@ -5620,8 +5619,8 @@ SCIP_RETCODE SCIPbendersApplyDecomposition(
       SCIP_CALL( SCIPcreate(&subproblems[i]) );
 
       /* copying the plugins from the original SCIP instance to the subproblem SCIP */
-      SCIP_CALL( SCIPcopyPlugins(set->scip, subproblems[i], TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
-            TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, &valid) );
+      SCIP_CALL( SCIPcopyPlugins(set->scip, subproblems[i], TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
+            TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, &valid) );
 
       (void) SCIPsnprintf(subprobname, SCIP_MAXSTRLEN, "sub_%s_%d", SCIPgetProbName(set->scip), i);
       SCIP_CALL( SCIPcreateProbBasic(subproblems[i], subprobname) );
@@ -6555,7 +6554,7 @@ void SCIPbendersSetSubproblemIsIndependent(
     */
    if( benders->benderssolvesubconvex != NULL || benders->benderssolvesub != NULL || benders->bendersfreesub != NULL )
    {
-      SCIPerrorMessage("The user has defined either bendersSolvesubconvex%d, bendersSolvesub%d or bendersFreesub%s. "
+      SCIPerrorMessage("The user has defined either bendersSolvesubconvex%s, bendersSolvesub%s or bendersFreesub%s. "
          "Thus, it is not possible to declare the independence of a subproblem.\n", benders->name, benders->name,
          benders->name);
       SCIPABORT();

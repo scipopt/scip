@@ -25,4 +25,3 @@ heuristics/feaspump/usefp20 = TRUE
 # should we solve a local branching sub-MIP if no solution could be found?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 heuristics/feaspump/stage3 = TRUE
-

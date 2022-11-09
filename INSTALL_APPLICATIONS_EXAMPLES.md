@@ -1,5 +1,5 @@
-Building and installing the applications and examples                       {#INSTALL_APPLICATIONS_EXAMPLES}
-========================================
+Building and installing the applications and examples  {#INSTALL_APPLICATIONS_EXAMPLES}
+=====================================================
 
 Each application and example may be built in two ways, either by using Cmake
 or by using SCIP's own Makefile system. The choice of the
@@ -17,10 +17,8 @@ Applications
 | `Coloring`        | `coloring`        | `coloring`        |
 | `CycleClustering` | `cycleclustering` | `cycleclustering` |
 | `MinIISC`         | `miniisc`         | `miniisc`         |
-| `PolySCIP`        | `polyscip`        | `polyscip`        |
 | `Ringpacking`     | `ringpacking`     | `ringpacking`     |
 | `Scheduler`       | `scheduler`       | `scheduler`       |
-| `STP`             | `scipstp`         | `stp`             |
 
 Examples
 | Folder            | cmake target      | make target       |
@@ -88,7 +86,7 @@ If SCIP has been compiled into a build-directory as opposed to an installation d
 `SCIP_DIR` or `CMAKE_PREFIX_PATH` to this build directory.
 Finally, this specification should be used to give a local installation precedence over a systemwide installation of SCIP.
 
-Please refer to the [online documentation of SCIP](http://scipopt.org/doc/html/CMAKE.php)
+Please refer to the [online documentation of SCIP](https://scipopt.org/doc/html/md_INSTALL.php#CMAKE)
 for a list of available configuration options and available tests.
 
 
@@ -146,8 +144,8 @@ Here is what you have to do to compile and run the application or example projec
    - `OPT=opt`       to use optimized compilation mode (default)
    - `OPT=dbg`       to use debug compilation mode
    - `OPT=prf`       to use performance analysis compilation mode
-   - `LPS=spx`       to use SoPlex as LP solver (based on the new interface available since version 2.0, default)
-   - `LPS=spx1`      to use SoPlex as LP solver (based on the old interface for versions >= 1.4)
+   - `LPS=spx`       to use %SoPlex as LP solver (based on the new interface available since version 2.0, default)
+   - `LPS=spx1`      to use %SoPlex as LP solver (based on the old interface for versions >= 1.4)
    - `LPS=cpx`       to use CPLEX as LP solver
    - `LPS=grb`       to use Gurobi as LP solver
    - `LPS=xprs`      to use XPRESS as LP solver
@@ -158,19 +156,17 @@ Here is what you have to do to compile and run the application or example projec
    - `LPS=none`      to use no LP solver
    - `COMP=gnu`      to use GNU c/c++ compiler (default)
    - other compilers are available (see make/ directory)
-
-  For CallableLibrary:
-   - `IPOPT=true`    to enable using Ipopt as NLP solver
+   - `IPOPT=true`    to enable using Ipopt as NLP solver for CallableLibrary:
 
 4. To run the program enter `bin/scip_project_binary.$(OSTYPE).$(ARCH).$(COMP).$(OPT).$(LPS)`
    (e.g. `bin/scip_project_binary.linux.x86.gnu.opt.spx`) or `bin/scip_project_binary` which is a link
    to last compiled version
 
 5. To generate the documentation, you need to have doxygen installed.
-   Enter `make doc` in the project's `doc` folder if there exists a .dxy file for that project
+   Enter `make doc` in the project's folder if there exists a .dxy file in the project's doc folder
    or run `make doc` in scip's doc folder.
    Then open `html/index.html` in your favorite browser.
 
 On some machines, you should use gmake instead of make.
 For more information and a list of available flags please refer to
-the [online documentation of SCIP](http://scipopt.org/doc/html/MAKE.php)
+the [online documentation of SCIP](https://scipopt.org/doc/html/md_INSTALL.php#MAKE)

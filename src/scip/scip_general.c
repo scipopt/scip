@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -35,7 +44,7 @@
 
 #include "blockmemshell/memory.h"
 #include "lpi/lpi.h"
-#include "nlpi/exprinterpret.h"
+#include "scip/exprinterpret.h"
 #include "scip/clock.h"
 #include "scip/debug.h"
 #include "scip/dialog.h"
@@ -413,7 +422,14 @@ SCIP_RETCODE SCIPprintStage(
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "presolving is being exited");
       break;
    case SCIP_STAGE_PRESOLVED:
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "problem is presolved");
+      if( SCIPsolveIsStopped(scip->set, scip->stat, TRUE) )
+      {
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, "solving was interrupted [");
+         SCIP_CALL( SCIPprintStatus(scip, file) );
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, "]");
+      }
+      else
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, "problem is presolved");
       break;
    case SCIP_STAGE_INITSOLVE:
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "solving process initialization");
@@ -746,7 +762,7 @@ int SCIPgetNExternalCodes(
    return scip->set->nextcodes;
 }
 
-/** prints information on external codes to a file stream via the message handler system
+/** prints information on external libraries to a file stream via the message handler system
  *
  *  @note If the message handler is set to a NULL pointer nothing will be printed
  */
@@ -757,7 +773,7 @@ void SCIPprintExternalCodes(
 {
    int i;
 
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "External codes: ");
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "External libraries: ");
    if( scip->set->nextcodes == 0 )
    {
       SCIPinfoMessage(scip, file, "none\n");

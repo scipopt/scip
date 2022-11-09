@@ -4,13 +4,22 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            *
-#*                            fuer Informationstechnik Berlin                *
+#*  Copyright 2002-2022 Zuse Institute Berlin                                *
 #*                                                                           *
-#*  SCIP is distributed under the terms of the ZIB Academic License.         *
+#*  Licensed under the Apache License, Version 2.0 (the "License");          *
+#*  you may not use this file except in compliance with the License.         *
+#*  You may obtain a copy of the License at                                  *
 #*                                                                           *
-#*  You should have received a copy of the ZIB Academic License              *
-#*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
+#*      http://www.apache.org/licenses/LICENSE-2.0                           *
+#*                                                                           *
+#*  Unless required by applicable law or agreed to in writing, software      *
+#*  distributed under the License is distributed on an "AS IS" BASIS,        *
+#*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. *
+#*  See the License for the specific language governing permissions and      *
+#*  limitations under the License.                                           *
+#*                                                                           *
+#*  You should have received a copy of the Apache-2.0 license                *
+#*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #
@@ -72,7 +81,7 @@ BEGIN {
 #
 # problem name
 #
-/^@01/ { 
+/^@01/ {
    n  = split ($2, a, "/");
    m = split(a[n], b, ".");
    prob = b[1];
@@ -328,14 +337,14 @@ BEGIN {
 /^MIP - Unknown status / {
    pb = ($6 == "Objective") ? $8 : +infty;
 }
-/cuts applied/ { 
+/cuts applied/ {
    cuts += $NF;
 }
 /^Current MIP best bound =/ {
    db = $6;
    split ($9, a, ",");
    absgap = a[1];
-   if (opti == 1) 
+   if (opti == 1)
       absgap = 0.0;
 }
 /^Solution time/ {
@@ -347,7 +356,7 @@ BEGIN {
 #
 # evaluation
 #
-# solver status overview (in order of priority): 
+# solver status overview (in order of priority):
 # 1) solver broke before returning solution => abort
 # 2) solver cut off the optimal solution (solu-file-value is not between primal and dual bound) => fail
 #    (especially of problem is claimed to be solved but solution is not the optimal solution)
@@ -398,7 +407,7 @@ BEGIN {
       tablehead1 = tablehead1"--------\n";
       tablehead2 = tablehead2"       \n";
       tablehead3 = tablehead3"--------\n";
-   
+
       printf(tablehead1);
       printf(tablehead2);
       printf(tablehead3);
@@ -417,7 +426,7 @@ BEGIN {
       bbnodes = max(bbnodes, 1);  # in case solver reports 0 nodes if the primal heuristics find the optimal solution in the root node
 
       nprobs++;
-    
+
       optimal = 0;
       markersym = "\\g";
       if( abs(pb - db) < 1e-06 && pb < infty ) {
@@ -630,7 +639,7 @@ BEGIN {
 	 else
 	    printf("unknown\n");
       }
-     
+
       if( writesolufile ) {
          if( pb == +infty && db == +infty )
             printf("=inf= %-18s\n",prob)>NEWSOLUFILE;
@@ -641,7 +650,7 @@ BEGIN {
          else
             printf("=unkn= %-18s\n",prob)>NEWSOLUFILE;
       }
-   
+
       sbab     += bbnodes;
       scut     += cuts;
       stottime += tottime;

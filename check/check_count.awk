@@ -4,13 +4,22 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            *
-#*                            fuer Informationstechnik Berlin                *
+#*  Copyright 2002-2022 Zuse Institute Berlin                                *
 #*                                                                           *
-#*  SCIP is distributed under the terms of the ZIB Academic License.         *
+#*  Licensed under the Apache License, Version 2.0 (the "License");          *
+#*  you may not use this file except in compliance with the License.         *
+#*  You may obtain a copy of the License at                                  *
 #*                                                                           *
-#*  You should have received a copy of the ZIB Academic License              *
-#*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
+#*      http://www.apache.org/licenses/LICENSE-2.0                           *
+#*                                                                           *
+#*  Unless required by applicable law or agreed to in writing, software      *
+#*  distributed under the License is distributed on an "AS IS" BASIS,        *
+#*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. *
+#*  See the License for the specific language governing permissions and      *
+#*  limitations under the License.                                           *
+#*                                                                           *
+#*  You should have received a copy of the Apache-2.0 license                *
+#*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #
@@ -37,13 +46,13 @@ BEGIN {
    printf("------------------------+------+---------------+--------+--------+----------+-------+------------------+--------\n");
    printf("Name                    | Type | Conss |  Vars |Conftime| FeasST |   Nodes  |  Time |    Solutions     |\n");
    printf("------------------------+------+-------+-------+--------+--------+----------+-------+------------------+--------\n");
-  
+
    nprobs = 0;
    sbab = 0;
    stottime = 0.0;
    timeouts = 0;
    memouts = 0;
-   readerrors = 0; 
+   readerrors = 0;
    failtime = 0.0;
    fail = 0;
    pass = 0;
@@ -55,7 +64,7 @@ BEGIN {
 # read number of solutions from the solution file for comparison
 /^=sol=/  {  knownsols[$2] = $3; }
 
-/^@01/ { 
+/^@01/ {
    filename = $2;
 
    n  = split ($2, a, "/");
@@ -76,7 +85,7 @@ BEGIN {
    pprob = a[1];
    for( i = 2; i <= n; i++ )
       pprob = pprob "\\_" a[i];
- 
+
    vars = 0;
    binvars = 0;
    intvars = 0;
@@ -170,22 +179,22 @@ BEGIN {
 }
 /^  strong branching :/ {
    if( inconflict == 1 ) {
-      conftime += $4; 
+      conftime += $4;
    }
 }
 /^  pseudo solution  :/ {
    if( inconflict == 1 ) {
-      conftime += $4; 
+      conftime += $4;
    }
 }
 /^  applied globally :/ {
    if( inconflict == 1 ) {
-      confclauses += $7; 
+      confclauses += $7;
    }
 }
 /^  applied locally  :/ {
    if( inconflict == 1 ) {
-      confclauses += $7; 
+      confclauses += $7;
    }
 }
 
@@ -200,9 +209,9 @@ BEGIN {
 #
 # Solutions Colectd
 #
-/^Feasible Solutions :/ { 
-   sols = $4;  
-   feasST = substr($5, 2, length($5)-1); 
+/^Feasible Solutions :/ {
+   sols = $4;
+   feasST = substr($5, 2, length($5)-1);
 }
 
 #
@@ -210,9 +219,9 @@ BEGIN {
 #
 /^=ready=/ {
    nprobs++;
-  
+
    if( !readerror ) {
-      # figure problem type out 
+      # figure problem type out
       if( vars == 0 )
          probtype = "--";
       else if( binvars == 0 && intvars == 0 )
@@ -246,14 +255,14 @@ BEGIN {
             tottimestr = "timeout";
             timeouts++;
          }
-      }      
+      }
       else if( counted ) {
          pass++;
       }
       else {
          tottimestr = "error";
       }
-  
+
       if( knownsols[prob] == "" ) {
          status = "unknown";
       }
@@ -279,17 +288,17 @@ BEGIN {
       }
       else
          texsolsstr = sprintf("%s", solsstr);
-     
+
       printf("%-25s %-5s %7d %7d %8.1f %8d %10s %7.1f %18s %7s\n",
          shortprob, probtype, origcons, origvars,
          conftime, feasST, bbnodes, tottimestr, solsstr, status);
    }
-   else { 
+   else {
       # read error
       readerrors++;
-     
+
       printf("%-25s %-5s %7d %7d %8d %9d %7s %8d %8d %8d %18s %6s\n",
-         shortprob, "-", "-", "-", 
+         shortprob, "-", "-", "-",
          "-", "-", "-", "-", "-", "-", "readerror", "-");
    }
 }

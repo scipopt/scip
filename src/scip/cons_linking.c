@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -58,6 +67,7 @@
 #include "scip/scip_lp.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
+#include "scip/scip_nlp.h"
 #include "scip/scip_numerics.h"
 #include "scip/scip_param.h"
 #include "scip/scip_prob.h"
@@ -105,6 +115,8 @@ struct SCIP_ConsData
    SCIP_Real*            vals;               /**< coefficients */
    SCIP_ROW*             row1;               /**< LP row for the linking itself */
    SCIP_ROW*             row2;               /**< LP row ensuring the set partitioning condition of the binary variables */
+   SCIP_NLROW*           nlrow1;             /**< NLP row for the linking itself */
+   SCIP_NLROW*           nlrow2;             /**< NLP row ensuring the set partitioning condition of the binary variables */
    int                   nbinvars;           /**< number of binary variables */
    int                   sizebinvars;        /**< size of the binary variable array */
    int                   nfixedzeros;        /**< current number of variables fixed to zero in the constraint */
@@ -540,6 +552,8 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->sizebinvars = nbinvars;
    (*consdata)->row1 = NULL;
    (*consdata)->row2 = NULL;
+   (*consdata)->nlrow1 = NULL;
+   (*consdata)->nlrow2 = NULL;
    (*consdata)->cliqueadded = FALSE;
 
    /* initialize constraint state */
@@ -615,6 +629,15 @@ SCIP_RETCODE consdataFree(
 
       SCIP_CALL( SCIPreleaseRow(scip, &(*consdata)->row1) );
       SCIP_CALL( SCIPreleaseRow(scip, &(*consdata)->row2) );
+   }
+
+   /* release the nlrows */
+   if( (*consdata)->nlrow1 != NULL )
+   {
+      assert((*consdata)->nlrow2 != NULL);
+
+      SCIP_CALL( SCIPreleaseNlRow(scip, &(*consdata)->nlrow1) );
+      SCIP_CALL( SCIPreleaseNlRow(scip, &(*consdata)->nlrow2) );
    }
 
    /* capture variables */
@@ -1115,7 +1138,7 @@ SCIP_RETCODE tightenedLinkvar(
       /* analyze the cutoff if if SOLVING stage and conflict analysis is turned on */
       if( (SCIPgetStage(scip) == SCIP_STAGE_SOLVING && !SCIPinProbing(scip)) && SCIPisConflictAnalysisApplicable(scip) )
       {
-         SCIPdebugMsg(scip, "conflict at <%s> due to bounds and fixed binvars: [lb,ub] = [%g,%g]; b= %d; coef = %d \n",
+         SCIPdebugMsg(scip, "conflict at <%s> due to bounds and fixed binvars: [lb,ub] = [%g,%g]; b= %d; coef = %g \n",
             SCIPvarGetName(linkvar), SCIPvarGetLbLocal(linkvar), SCIPvarGetUbLocal(linkvar), b, vals[b]);
 
          SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
@@ -1164,7 +1187,7 @@ SCIP_RETCODE tightenedLinkvar(
       /* conflict analysis can only be applied in solving stage and if conflict analysis is turned on */
       if( (SCIPgetStage(scip) == SCIP_STAGE_SOLVING && !SCIPinProbing(scip)) && SCIPisConflictAnalysisApplicable(scip) )
       {
-         SCIPdebugMsg(scip, "conflict at <%s> due to bounds and fixed binvars: [lb,ub] = [%g,%g]; b = %d; coef = %d,\n",
+         SCIPdebugMsg(scip, "conflict at <%s> due to bounds and fixed binvars: [lb,ub] = [%g,%g]; b = %d; coef = %g,\n",
             SCIPvarGetName(linkvar), SCIPvarGetLbLocal(linkvar), SCIPvarGetUbLocal(linkvar), b, vals[b]);
 
          SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
@@ -1725,6 +1748,63 @@ SCIP_RETCODE addCuts(
    return SCIP_OKAY;
 }
 
+/** adds linking constraint as rows to the NLP, if not added yet */
+static
+SCIP_RETCODE addNlrow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< linking constraint */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert(SCIPisNLPConstructed(scip));
+
+   /* skip deactivated, redundant, or local constraints (the NLP does not allow for local rows at the moment) */
+   if( !SCIPconsIsActive(cons) || !SCIPconsIsChecked(cons) || SCIPconsIsLocal(cons) )
+      return SCIP_OKAY;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   if( consdata->nlrow1 == NULL )
+   {
+      char rowname[SCIP_MAXSTRLEN];
+      SCIP_Real* coefs;
+      int i;
+
+      assert(consdata->nlrow2 == NULL);
+
+      /* create the NLP row which captures the linking between the real and binary variables */
+      (void)SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "%s[link]", SCIPconsGetName(cons));
+
+      /* create nlrow1 with binary variables */
+      SCIP_CALL( SCIPcreateNlRow(scip, &consdata->nlrow1, rowname,
+         0.0, consdata->nbinvars, consdata->binvars, consdata->vals, NULL, 0.0, 0.0, SCIP_EXPRCURV_LINEAR) );
+      /* add linking variable to the row */
+      SCIP_CALL( SCIPaddLinearCoefToNlRow(scip, consdata->nlrow1, consdata->linkvar, -1.0) );
+
+      /* create the NLP row which captures the set partitioning condition of the binary variables */
+      (void)SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "%s[setppc]", SCIPconsGetName(cons));
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &coefs, consdata->nbinvars) );
+      for( i = 0; i < consdata->nbinvars; ++i )
+         coefs[i] = 1.0;
+
+      SCIP_CALL( SCIPcreateNlRow(scip, &consdata->nlrow2, rowname,
+         0.0, consdata->nbinvars, consdata->binvars, coefs, NULL, 1.0, 1.0, SCIP_EXPRCURV_LINEAR) );
+
+      SCIPfreeBufferArray(scip, &coefs);
+   }
+
+   assert(SCIPnlrowIsInNLP(consdata->nlrow1) == SCIPnlrowIsInNLP(consdata->nlrow2));
+   if( !SCIPnlrowIsInNLP(consdata->nlrow1) )
+   {
+      SCIP_CALL( SCIPaddNlRow(scip, consdata->nlrow1) );
+      SCIP_CALL( SCIPaddNlRow(scip, consdata->nlrow2) );
+   }
+
+   return SCIP_OKAY;
+}
 
 /** checks constraint for violation, and adds it as a cuts if possible */
 static
@@ -2006,6 +2086,23 @@ SCIP_DECL_CONSINITPRE(consInitpreLinking)
    return SCIP_OKAY;
 }
 
+/** solving process initialization method of constraint handler */
+static
+SCIP_DECL_CONSINITSOL(consInitsolLinking)
+{  /*lint --e{715}*/
+
+   /* add nlrow representations to NLP, if NLP had been constructed */
+   if( SCIPisNLPConstructed(scip) )
+   {
+      int c;
+      for( c = 0; c < nconss; ++c )
+      {
+         SCIP_CALL( addNlrow(scip, conss[c]) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
 
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
 static
@@ -2019,13 +2116,21 @@ SCIP_DECL_CONSEXITSOL(consExitsolLinking)
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
 
-      /* release the rows of all constraints */
+      /* release the rows and nlrows of all constraints */
       if( consdata->row1 != NULL )
       {
          assert(consdata->row2 != NULL);
 
          SCIP_CALL( SCIPreleaseRow(scip, &consdata->row1) );
          SCIP_CALL( SCIPreleaseRow(scip, &consdata->row2) );
+      }
+
+      if( consdata->nlrow1 != NULL )
+      {
+         assert(consdata->nlrow2 != NULL);
+
+         SCIP_CALL( SCIPreleaseNlRow(scip, &consdata->nlrow1) );
+         SCIP_CALL( SCIPreleaseNlRow(scip, &consdata->nlrow2) );
       }
    }
 
@@ -2524,7 +2629,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinking)
 
                if( infeasible )
                {
-                  SCIPdebugMsg(scip, "" CONSHDLR_NAME " constraint <%s>: infeasible fixing <%s> == %d\n",
+                  SCIPdebugMsg(scip, "" CONSHDLR_NAME " constraint <%s>: infeasible fixing <%s> == %g\n",
                      SCIPconsGetName(cons), SCIPvarGetName(consdata->linkvar), consdata->vals[v]);
 
                   *result = SCIP_CUTOFF;
@@ -2602,7 +2707,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinking)
 
          if( infeasible )
          {
-            SCIPdebugMsg(scip, "" CONSHDLR_NAME " constraint <%s>: infeasible fixing <%s> == %d\n",
+            SCIPdebugMsg(scip, CONSHDLR_NAME " constraint <%s>: infeasible fixing <%s> == %g\n",
                SCIPconsGetName(cons), SCIPvarGetName(consdata->linkvar), consdata->vals[v]);
 
             *result = SCIP_CUTOFF;
@@ -2970,6 +3075,49 @@ SCIP_DECL_CONSLOCK(consLockLinking)
    return SCIP_OKAY;
 }
 
+/** constraint activation notification method of constraint handler */
+static
+SCIP_DECL_CONSACTIVE(consActiveLinking)
+{  /*lint --e{715}*/
+   assert(cons != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(SCIPconsIsTransformed(cons));
+
+   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPisNLPConstructed(scip) )
+   {
+      SCIP_CALL( addNlrow(scip, cons) );
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** constraint deactivation notification method of constraint handler */
+static
+SCIP_DECL_CONSDEACTIVE(consDeactiveLinking)
+{  /*lint --e{715}*/
+   SCIP_CONSDATA* consdata;
+
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(SCIPconsIsTransformed(cons));
+
+   /* get constraint data */
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* remove row from NLP, if still in solving
+    * if we are in exitsolve, the whole NLP will be freed anyway
+    */
+   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && consdata->nlrow1 != NULL )
+   {
+      assert(consdata->nlrow2 != NULL);
+      SCIP_CALL( SCIPdelNlRow(scip, consdata->nlrow1) );
+      SCIP_CALL( SCIPdelNlRow(scip, consdata->nlrow2) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** constraint enabling notification method of constraint handler */
 static
 SCIP_DECL_CONSENABLE(consEnableLinking)
@@ -3298,8 +3446,11 @@ SCIP_RETCODE SCIPincludeConshdlrLinking(
 
    /* set non-fundamental callbacks via specific setter functions */
    SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyLinking, consCopyLinking) );
+   SCIP_CALL( SCIPsetConshdlrActive(scip, conshdlr, consActiveLinking) );
+   SCIP_CALL( SCIPsetConshdlrDeactive(scip, conshdlr, consDeactiveLinking) );
    SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteLinking) );
    SCIP_CALL( SCIPsetConshdlrEnable(scip, conshdlr, consEnableLinking) );
+   SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolLinking) );
    SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolLinking) );
    SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeLinking) );
    SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsLinking) );

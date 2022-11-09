@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -169,12 +178,6 @@ SCIP_Longint SCIPhistoryGetNActiveConflicts(
    SCIP_BRANCHDIR        dir                 /**< branching direction */
    );
 
-/** gets the average conflict length of the history entry */
-SCIP_Real SCIPhistoryGetAvgConflictlength(
-   SCIP_HISTORY*         history,            /**< branching and inference history */
-   SCIP_BRANCHDIR        dir                 /**< branching direction */
-   );
-
 /** increases the number of branchings counter */
 void SCIPhistoryIncNBranchings(
    SCIP_HISTORY*         history,            /**< branching and inference history */
@@ -199,12 +202,6 @@ void SCIPhistoryIncCutoffSum(
 
 /** get number of branchings counter */
 SCIP_Longint SCIPhistoryGetNBranchings(
-   SCIP_HISTORY*         history,            /**< branching and inference history */
-   SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
-   );
-
-/** get number of inferences counter */
-SCIP_Real SCIPhistoryGetInferenceSum(
    SCIP_HISTORY*         history,            /**< branching and inference history */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
@@ -276,14 +273,11 @@ void SCIPhistorySetRatioHistory(
 #define SCIPhistoryIncNActiveConflicts(history,dir,length) { (history)->nactiveconflicts[dir]++; \
       (history)->conflengthsum[dir] += length; }
 #define SCIPhistoryGetNActiveConflicts(history,dir) ((history)->nactiveconflicts[dir])
-#define SCIPhistoryGetAvgConflictlength(history,dir) ((history)->conflengthsum[dir] > 0.0 \
-      ? (SCIP_Real)(history)->nactiveconflicts[dir]/(SCIP_Real)(history)->conflengthsum[dir] : 0.0)
 #define SCIPhistoryIncNBranchings(history,dir,depth) { (history)->nbranchings[dir]++; \
       (history)->branchdepthsum[dir] += depth; }
 #define SCIPhistoryIncInferenceSum(history,dir,weight)     (history)->inferencesum[dir] += (weight)
 #define SCIPhistoryIncCutoffSum(history,dir,weight)        (history)->cutoffsum[dir] += (weight)
 #define SCIPhistoryGetNBranchings(history,dir)     ((history)->nbranchings[dir])
-#define SCIPhistoryGetInferenceSum(history,dir)     ((history)->inferencesum[dir])
 #define SCIPhistoryGetAvgInferences(history,dir)   ((history)->nbranchings[dir] > 0 \
       ? (SCIP_Real)(history)->inferencesum[dir]/(SCIP_Real)(history)->nbranchings[dir] : 0.0)
 #define SCIPhistoryGetAvgCutoffs(history,dir)      ((history)->nbranchings[dir] > 0 \

@@ -1,45 +1,39 @@
 cmake_minimum_required(VERSION 3.3)
 
+# option() honors normal variables.
+if(POLICY CMP0077)
+   cmake_policy(SET CMP0077 NEW)
+endif()
+
+# MSVC runtime library flags are selected by an abstraction.
+if(POLICY CMP0091)
+   cmake_policy(SET CMP0091 NEW)
+endif()
+
 set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_DEBUG} ${CMAKE_C_FLAGS_RELEASE}")
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_DEBUG} ${CMAKE_CXX_FLAGS_RELEASE}")
 
-project(SCIP)
-
-if(CMAKE_CXX_COMPILER_ID MATCHES "Intel")
-   # for intel compilers we need to set the fp-model precise flag to disable incorrect floating point optimizations
-   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fp-model precise")
-   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fp-model precise")
-   # to prevent symbols from svml exported twice we use the -shared-intel flag, see https://git.zib.de/integer/scip/issues/2872
-   # this happens with the cplex static lib
-   if(LPS MATCHES "cpx")
-     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -shared-intel ")
-     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -shared-intel ")
-   endif()
-endif()
-
-if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-psabi")
-   # require at least gcc 4.8
-   if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.8)
-     message(WARNING "GCC version not supported, should be at least 4.8!")
-   endif()
-endif()
-
-
-set(SCIP_VERSION_MAJOR 7)
+set(SCIP_VERSION_MAJOR 8)
 set(SCIP_VERSION_MINOR 0)
-set(SCIP_VERSION_PATCH 2)
+set(SCIP_VERSION_PATCH 3)
 set(SCIP_VERSION_SUB 0)
-set(SCIP_VERSION_API 68)
+set(SCIP_VERSION_API 104)
+
+project(SCIP
+    VERSION ${SCIP_VERSION_MAJOR}.${SCIP_VERSION_MINOR}.${SCIP_VERSION_PATCH}.${SCIP_VERSION_SUB}
+    LANGUAGES CXX C
+    DESCRIPTION "SCIP is currently one of the fastest non-commercial solvers for mixed integer programming (MIP) and mixed integer nonlinear programming (MINLP)"
+    )
 
 get_directory_property(hasParent PARENT_DIRECTORY)
 if(hasParent)
-    set(SCIPOptSuite_VERSION_MAJOR ${SCIP_VERSION_MAJOR} PARENT_SCOPE)
-    set(SCIPOptSuite_VERSION_MINOR ${SCIP_VERSION_MINOR} PARENT_SCOPE)
-    set(SCIPOptSuite_VERSION_PATCH ${SCIP_VERSION_PATCH} PARENT_SCOPE)
+  set(SCIPOptSuite_VERSION_MAJOR ${SCIP_VERSION_MAJOR} PARENT_SCOPE)
+  set(SCIPOptSuite_VERSION_MINOR ${SCIP_VERSION_MINOR} PARENT_SCOPE)
+  set(SCIPOptSuite_VERSION_PATCH ${SCIP_VERSION_PATCH} PARENT_SCOPE)
+  set(SCIP_DIR ${PROJECT_BINARY_DIR} PARENT_SCOPE)
 endif()
 
-set(CPACK_RESOURCE_FILE_LICENSE "${PROJECT_SOURCE_DIR}/COPYING")
+set(CPACK_RESOURCE_FILE_LICENSE "${PROJECT_SOURCE_DIR}/LICENSE")
 set(CPACK_PACKAGE_VERSION_MAJOR "${SCIP_VERSION_MAJOR}")
 set(CPACK_PACKAGE_VERSION_MINOR "${SCIP_VERSION_MINOR}")
 set(CPACK_PACKAGE_VERSION_PATCH "${SCIP_VERSION_PATCH}")
@@ -47,12 +41,19 @@ set(CPACK_PACKAGE_VENDOR "Zuse Institute Berlin")
 set(CPACK_PACKAGE_CONTACT "http://scipopt.org")
 include(CPack)
 
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/bin)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/lib)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/lib)
+
+if(SCIPOptSuite_BINARY_DIR)
+  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${SCIPOptSuite_BINARY_DIR}/bin)
+  set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${SCIPOptSuite_BINARY_DIR}/lib)
+  set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${SCIPOptSuite_BINARY_DIR}/lib)
+  #set(SCIP_DIR ${SCIPOptSuite_BINARY_DIR} PARENT_SCOPE)
+endif()
 
 # path to e.g. findGMP module
-set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/Modules)
+list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/Modules)
 
 option(SHARED "Build shared libraries" ON)
 set(BUILD_SHARED_LIBS ${SHARED})
@@ -65,15 +66,20 @@ endif()
 
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
+option(AUTOBUILD "find and use dependencies as available" OFF)
+set(AUTOBUILD_MSG "\nIf you have troubles configuring, you can consider setting AUTOBUILD=ON to try and find optional packages as available.")
 option(ZLIB "should zlib be linked" ON)
 option(READLINE "should readline be linked" ON)
 option(GMP "should gmp be linked" ON)
 option(STATIC_GMP "prefer static gmp library" OFF)
 option(PAPILO "should papilo library be linked" ON)
 option(ZIMPL "should zimpl be linked" ON)
+option(AMPL "should ampl interface be compiled" ON)
 option(IPOPT "should ipopt be linked" ON)
 option(WORHP "should worhp be linked" OFF)
-option(PARASCIP "should scip be compiled thread safe" OFF)
+# for backward compability
+option(PARASCIP "should scip be compiled thread safe (deprecated, use THREADSAFE)" OFF)
+option(THREADSAFE "should scip be compiled thread safe" ON)
 option(LPSCHECK "double check SoPlex results with CPLEX" OFF)
 option(LEGACY "build SCIP/SoPlex in legacy mode (spx1 interface)" OFF)
 option(NOBLKBUFMEM "should block and buffer memory be disabled" OFF)
@@ -82,7 +88,7 @@ option(NOBUFMEM "should buffer memory be disabled" OFF)
 option(DEBUGSOL "should the debug solution mechanism be enabled" OFF)
 option(SANITIZE_ADDRESS "should the address sanitizer be enabled in debug mode if available" OFF)
 option(SANITIZE_MEMORY "should the memory sanitizer be enabled in debug mode if available" OFF)
-option(SANITIZE_UNDEFINED "should the undefined behavior sanitizer be enabled in debug mode if available" ON)
+option(SANITIZE_UNDEFINED "should the undefined behavior sanitizer be enabled in debug mode if available" OFF)
 option(SANITIZE_THREAD "should the thread sanitizer be enabled in debug mode if available" OFF)
 option(COVERAGE "enable coverage support" OFF)
 SET(COVERAGE_CTEST_ARGS "" CACHE STRING "additional ctest arguments for coverage")
@@ -100,6 +106,79 @@ set_property(CACHE LPS PROPERTY STRINGS spx cpx grb xprs clp glop msk qso none )
 
 set(SYM bliss CACHE STRING "options for symmetry computation")  #create the variable
 set_property(CACHE SYM PROPERTY STRINGS bliss none )  #define list of values GUI will offer for the variable
+
+if(NOT (CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo" OR CMAKE_BUILD_TYPE STREQUAL "MinSizeRel"))
+    message(FATAL_ERROR "You have not selected a valid CMAKE_BUILD_TYPE. Please select 'Release' or 'Debug'.")
+endif()
+
+if(AUTOBUILD)
+    message(WARNING "You are using the automatic build option AUTOBUILD=ON to find and use dependencies automatically.")
+else()
+    message(WARNING "You are not using the automatic build option. ${AUTOBUILD_MSG}")
+endif() # AUTOBUILD
+
+#search the selected symmetry computation program
+message(STATUS "Finding symmetry computation program \"${SYM}\"")
+
+unset(BLISS_TARGET)
+if(SYM STREQUAL "bliss")
+    message(STATUS "Support SYM: bliss")
+    set(sym symmetry/compute_symmetry_bliss.cpp)
+
+    # modify configuration for bliss
+    set(BUILD_SHARED_LIBS OFF)
+    set(TMPFLAGS ${CMAKE_C_FLAGS})
+    set(TMXFLAGS ${CMAKE_CXX_FLAGS})
+    set(CMAKE_C_FLAGS -w)
+    set(CMAKE_CXX_FLAGS -w)
+
+    add_subdirectory(src/bliss)
+
+    # undo modification
+    set(CMAKE_C_FLAGS ${TMPFLAGS})
+    set(CMAKE_CXX_FLAGS ${TMXFLAGS})
+    set(BUILD_SHARED_LIBS ${SHARED})
+
+    set(BLISS_TARGET libbliss)
+    set(SYM_LIBRARIES libbliss)
+    set(SYM_PIC_LIBRARIES libbliss)
+elseif(SYM STREQUAL "none")
+    message(STATUS "Support SYM: OFF")
+    set(sym symmetry/compute_symmetry_none.cpp)
+else()
+    message(FATAL_ERROR "option SYM has wrong value")
+endif()
+
+# if changing these flags, also update GCCWARN/GXXWARN in make/make.project
+set(ADD_C_AND_CXX_FLAGS -pedantic -Wall -W -Wpointer-arith -Wcast-align -Wwrite-strings -Wshadow  -Wredundant-decls -Wdisabled-optimization -Wno-long-long -Wno-unknown-pragmas -Wno-unused-parameter)
+set(ADD_C_FLAGS -Wsign-compare -Wstrict-prototypes -Wmissing-declarations -Wmissing-prototypes -Wdeclaration-after-statement -Wno-override-init -Wno-uninitialized -Wno-maybe-uninitialized)
+set(ADD_CXX_FLAGS -Wctor-dtor-privacy -Wnon-virtual-dtor -Wreorder -Woverloaded-virtual -Wsign-promo -Wsynth -Wcast-qual -Wno-strict-overflow -Wno-psabi)
+
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+# clang specific suppressions
+set(ADD_C_AND_CXX_FLAGS ${ADD_C_AND_CXX_FLAGS} -Wno-unknown-warning-option)
+set(ADD_C_FLAGS ${ADD_C_FLAGS} -Wno-initializer-overrides)
+endif()
+
+if(CMAKE_CXX_COMPILER_ID MATCHES "Intel")
+   # for intel compilers we need to set the fp-model precise flag to disable incorrect floating point optimizations
+   add_compile_options(-fp-model precise)
+   # to prevent symbols from svml exported twice we use the -shared-intel flag, see https://git.zib.de/integer/scip/issues/2872
+   # this happens with the cplex static lib
+   if(LPS MATCHES "cpx")
+       add_compile_options(-shared-intel) # for c and cxx
+   endif()
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+    # require at least gcc 4.8
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.8)
+        message(WARNING "GCC version not supported, should be at least 4.8!")
+    endif()
+    add_compile_options(${ADD_C_AND_CXX_FLAGS})
+    add_compile_options("$<$<COMPILE_LANGUAGE:C>:${ADD_C_FLAGS}>$<$<COMPILE_LANGUAGE:CXX>:${ADD_CXX_FLAGS}>")
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    add_compile_options(${ADD_C_AND_CXX_FLAGS})
+    add_compile_options("$<$<COMPILE_LANGUAGE:C>:${ADD_C_FLAGS}>$<$<COMPILE_LANGUAGE:CXX>:${ADD_CXX_FLAGS}>")
+endif()
 
 #set options for memory management
 if( NOBLKBUFMEM )
@@ -136,24 +215,21 @@ endif()
 
 # Visual Studio compiler with static runtime libraries
 if(MSVC AND MT)
-    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
-    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
-    set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /MT")
-    set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /MTd")
+    add_compile_options("$<$<AND:$<COMPILE_LANGUAGE:CXX>,$<CONFIG:DEBUG>>:/MTd>$<$<AND:$<COMPILE_LANGUAGE:CXX>,$<CONFIG:RELEASE>>:/MT>$<$<AND:$<COMPILE_LANGUAGE:C>,$<CONFIG:DEBUG>>:/MTd>$<$<AND:$<COMPILE_LANGUAGE:C>,$<CONFIG:RELEASE>>:/MT>")
 endif()
 
 #set expression interpreter file that should be used
 if(EXPRINT STREQUAL "cppad")
-    set(exprinterpret nlpi/exprinterpret_cppad.cpp)
+    set(exprinterpret scip/exprinterpret_cppad.cpp)
 elseif(EXPRINT STREQUAL "none")
-    set(exprinterpret nlpi/exprinterpret_none.c)
+    set(exprinterpret scip/exprinterpret_none.c)
 else()
     message(FATAL_ERROR "EXPRINT option has wrong value")
 endif()
 
-#if tpi is not none force parascip to on
+# if tpi is not none force THREADSAFE to on
 if(NOT (TPI STREQUAL "none"))
-   set(PARASCIP ON FORCE)
+   set(THREADSAFE ON FORCE)
 endif()
 
 #set sources files, libraries and defines for tpi
@@ -171,100 +247,136 @@ elseif(TPI STREQUAL "omp")
     set(tpisources tpi/tpi_openmp.c)
     find_package(OpenMP REQUIRED)
     set(THREAD_LIBRARIES "")
-    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
-    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+    add_compile_options("$<$<COMPILE_LANGUAGE:C>:${OpenMP_C_FLAGS}>$<$<COMPILE_LANGUAGE:CXX>:${OpenMP_CXX_FLAGS}>")
+    add_link_options("${OpenMP_CXX_FLAGS}")
 else()
     message(FATAL_ERROR "TPI option has wrong value")
 endif()
 
-#set nparascip define if parascip is off
-if(NOT PARASCIP)
-    set(NPARASCIP on)
+# PARASCIP is deprecated, use THREADSAFE
+if(PARASCIP)
+  set(THREADSAFE ON FORCE)
+endif()
+
+#set SCIP_THREADSAFE define
+if(THREADSAFE)
+    set(SCIP_THREADSAFE on)
 endif()
 
 set(NEWLINE "\\\\n")
 
 # create a target for updating the current git hash
-file(WRITE ${CMAKE_BINARY_DIR}/scip_update_githash.cmake "
+file(WRITE ${PROJECT_BINARY_DIR}/scip_update_githash.cmake "
 find_program(GIT git)
 if(EXISTS \${DST})
    file(STRINGS \${DST} GITHASH_OLD)
-   string(REGEX REPLACE \"#define SCIP_GITHASH \\\"(.*)\\\"\" \"\\\\1\" GITHASH_OLD \${GITHASH_OLD})
+   string(REGEX REPLACE \"#define SCIP_GITHASH \\\"(.*)\\\"\" \"\\\\1\" GITHASH_OLD \"\${GITHASH_OLD}\")
 endif()
 if((GIT) AND (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/.git))
    execute_process(
       COMMAND \${GIT} describe --always --dirty
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
       OUTPUT_VARIABLE GITHASH OUTPUT_STRIP_TRAILING_WHITESPACE)
-   string(REGEX REPLACE \"^.*-g\" \"\" GITHASH \${GITHASH})
+   string(REGEX REPLACE \"^.*-g\" \"\" GITHASH \"\${GITHASH}\")
    if(NOT \${GITHASH} STREQUAL \"\${GITHASH_OLD}\")
       file(WRITE \${DST} \"#define SCIP_GITHASH \\\"\${GITHASH}\\\"\n\")
    endif()
 else()
    set(GITHASH \${GITHASH_OLD})
+   if(NOT GITHASH)
+      message(STATUS \"Compiling without git information\")
+      set(GITHASH \"NoGitInfo\")
+   endif()
+   file(WRITE \${DST} \"#define SCIP_GITHASH \\\"\${GITHASH}\\\"\n\")
 endif()
 message(STATUS \"Git hash: \" \${GITHASH})
 ")
 add_custom_target(scip_update_githash
-                  COMMAND ${CMAKE_COMMAND} -DDST=${PROJECT_SOURCE_DIR}/src/scip/githash.c
-                                           -P ${CMAKE_BINARY_DIR}/scip_update_githash.cmake)
+   COMMAND ${CMAKE_COMMAND}
+      -DDST=${PROJECT_SOURCE_DIR}/src/scip/githash.c
+      -P ${PROJECT_BINARY_DIR}/scip_update_githash.cmake)
 
 set(WITH_SCIPDEF on)
 
 # use C++14 standard
 set(CMAKE_CXX_STANDARD 14)
 
-# set function visibility default to hidden
-set(CMAKE_CXX_VISIBILITY_PRESET hidden)
-set(CMAKE_C_VISIBILITY_PRESET hidden)
-set(CMAKE_VISIBILITY_INLINES_HIDDEN 1)
-
 # ZLIB
-if(ZLIB)
-    find_package(ZLIB)
+if(ZLIB OR AUTOBUILD)
+    message(STATUS "Finding ZLIB")
+    if(NOT TARGET ZLIB::ZLIB)
+        find_package(ZLIB)
+        if((NOT ZLIB_FOUND) AND (NOT AUTOBUILD))
+            message(FATAL_ERROR "ZLIB not found, try specifying ZLIB_DIR. ${AUTOBUILD_MSG}")
+        endif()
+    endif()
 endif()
 if(ZLIB_FOUND)
-    include_directories(${ZLIB_INCLUDE_DIRS})
-    set(SCIP_WITH_ZLIB on)
+    message(STATUS "Finding ZLIB - found")
+    set(SCIP_WITH_ZLIB ON)
 else()
-    set(ZLIB_LIBRARIES "")
+    message(STATUS "Support ZLIB: OFF")
+    set(SCIP_WITH_ZLIB OFF)
 endif()
 
 # Readline
-if(READLINE)
+if(READLINE OR AUTOBUILD)
+    message(STATUS "Finding Readline")
     find_package(Readline)
+    if((NOT Readline_FOUND) AND (NOT AUTOBUILD))
+        message(FATAL_ERROR "READLINE not found, try specifying READLINE_DIR. ${AUTOBUILD_MSG}")
+    endif()
 endif()
-if(READLINE_FOUND)
+if(Readline_FOUND)
+    message(STATUS "Finding Readline - found")
     include_directories(${Readline_INCLUDE_DIRS})
-    set(SCIP_WITH_READLINE on)
+    set(SCIP_WITH_READLINE ON)
 else()
+    message(STATUS "Support Readline: OFF")
     set(Readline_LIBRARY "")
+    set(SCIP_WITH_READLINE OFF)
 endif()
 
 # GMP
-if(GMP)
+if(GMP OR AUTOBUILD)
+    message(STATUS "Finding GMP")
     find_package(GMP)
+    if((NOT GMP_FOUND) AND (NOT AUTOBUILD))
+        message(FATAL_ERROR "GMP not found, try specifying GMP_DIR. ${AUTOBUILD_MSG}")
+    endif()
 endif()
 if(GMP_FOUND)
+    message(STATUS "Finding GMP - found")
     include_directories(${GMP_INCLUDE_DIRS})
-    set(SCIP_WITH_GMP on)
+    set(SCIP_WITH_GMP ON)
 else()
+    message(STATUS "Support GMP: OFF")
     set(GMP_LIBRARIES "")
+    set(SCIP_WITH_GMP OFF)
 endif()
 
 # look for presolvelib
-if(PAPILO)
-   find_package(PAPILO CONFIG)
+if(PAPILO OR AUTOBUILD)
+    message(STATUS "Finding PAPILO")
+    find_package(PAPILO CONFIG HINTS ${PAPILO_DIR})
+    if((NOT PAPILO_FOUND) AND (NOT AUTOBUILD))
+        message(FATAL_ERROR "PAPILO not found, try specifying PAPILO_DIR. ${AUTOBUILD_MSG}")
+    endif()
 endif()
 if(PAPILO_FOUND)
-   set(SCIP_WITH_PAPILO on)
+    message(STATUS "Finding PAPILO - found")
+    set(SCIP_WITH_PAPILO ON)
 else()
-   set(PAPILO_IMPORTED_TARGETS "")
+    message(STATUS "Support PAPILO: OFF")
+    set(PAPILO_IMPORTED_TARGETS "")
+    set(SCIP_WITH_PAPILO OFF)
 endif()
 
 #search the selected LP solver library
+message(STATUS "Finding Solver \"${LPS}\"")
 if(LPS STREQUAL "spx")
-    find_package(SOPLEX REQUIRED CONFIG)
+    message(STATUS "Finding Soplex")
+    find_package(SOPLEX REQUIRED CONFIG HINTS ${SOPLEX_DIR})
     if(LPSCHECK)
         find_package(CPLEX REQUIRED)
         set(SCIP_WITH_LPSCHECK on)
@@ -272,6 +384,9 @@ if(LPS STREQUAL "spx")
 elseif(LPS STREQUAL "cpx")
     find_package(CPLEX REQUIRED)
 elseif(LPS STREQUAL "glop")
+    if(NOT TPI STREQUAL "tny")
+        message(FATAL_ERROR "When using GLOP as an lp solver, TPI needs to be set to 'tny'.")
+    endif()
     find_package(GLOP REQUIRED)
 elseif(LPS STREQUAL "grb")
     find_package(GUROBI REQUIRED)
@@ -293,6 +408,7 @@ endif()
 
 #setup the proper lpi file for the selected LP solver
 if(SOPLEX_FOUND)
+    message(STATUS "Finding SOPLEX - found")
     # SoPlex headers can be directly included
     include_directories(${SOPLEX_INCLUDE_DIRS})
     set(LPS_LIBRARIES ${SOPLEX_LIBRARIES})
@@ -306,16 +422,22 @@ if(SOPLEX_FOUND)
     else()
         set(lpi lpi/lpi_spx2.cpp)
     endif()
+else()
+    message(STATUS "Support SOPLEX: OFF")
 endif()
 
 if(CLP_FOUND)
+    message(STATUS "Finding CLP - found")
     include_directories(${CLP_INCLUDE_DIRS})
     set(lpi lpi/lpi_clp.cpp)
     set(LPS_LIBRARIES ${CLP_LIBRARIES})
     set(LPS_PIC_LIBRARIES ${LPS_LIBRARIES})
+else()
+    message(STATUS "Support CLP: OFF")
 endif()
 
 if(CPLEX_FOUND)
+    message(STATUS "Finding CPLEX - found")
     include_directories(${CPLEX_INCLUDE_DIRS})
     # only use lpi_cpx.c if LPSCHECK is not enabled
     if(LPS STREQUAL "cpx")
@@ -323,62 +445,60 @@ if(CPLEX_FOUND)
     endif()
     set(LPS_LIBRARIES ${LPS_LIBRARIES} ${CPLEX_LIBRARIES})
     set(LPS_PIC_LIBRARIES ${LPS_PIC_LIBRARIES} ${LPS_LIBRARIES})
+else()
+    message(STATUS "Support CPLEX: OFF")
 endif()
 
 if(GLOP_FOUND)
+    message(STATUS "Finding GLOP - found")
     include_directories(${GLOP_INCLUDE_DIRS})
     set(lpi lpi/lpi_glop.cpp)
     set(LPS_LIBRARIES ${GLOP_LIBRARIES})
     set(LPS_PIC_LIBRARIES ${LPS_LIBRARIES})
+    set(CMAKE_CXX_STANDARD 17)
+else()
+    message(STATUS "Support GLOP: OFF")
 endif()
 
 if(GUROBI_FOUND)
+    message(STATUS "Finding GUROBI - found")
     include_directories(${GUROBI_INCLUDE_DIRS})
     set(lpi lpi/lpi_grb.c)
     set(LPS_LIBRARIES ${GUROBI_LIBRARIES})
     set(LPS_PIC_LIBRARIES ${LPS_LIBRARIES})
+else()
+    message(STATUS "Support GUROBI: OFF")
 endif()
 
 if(XPRESS_FOUND)
+    message(STATUS "Finding XPRESS - found")
     include_directories(${XPRESS_INCLUDE_DIRS})
     set(lpi lpi/lpi_xprs.c)
     set(LPS_LIBRARIES ${XPRESS_LIBRARIES})
     set(LPS_PIC_LIBRARIES ${LPS_LIBRARIES})
+else()
+    message(STATUS "Support XPRESS: OFF")
 endif()
 
 if(MOSEK_FOUND)
+    message(STATUS "Finding MOSEK - found")
     include_directories(${MOSEK_INCLUDE_DIRS})
     set(lpi lpi/lpi_msk.c)
     set(LPS_LIBRARIES ${MOSEK_LIBRARIES})
     set(LPS_PIC_LIBRARIES ${LPS_LIBRARIES})
+else()
+    message(STATUS "Support MOSEK: OFF")
 endif()
 
 if(QSO_FOUND)
+    message(STATUS "Finding QSO - found")
     include_directories(${QSO_INCLUDE_DIRS})
     set(lpi lpi/lpi_qso.c)
     set(LPS_LIBRARIES ${QSO_LIBRARIES})
     set(LPS_PIC_LIBRARIES ${LPS_LIBRARIES})
-endif()
-
-#search the selected symmetry computation program
-if(SYM STREQUAL "bliss")
-    find_package(BLISS)
-    if(BLISS_FOUND)
-        include_directories(${BLISS_INCLUDE_DIRS})
-        set(sym symmetry/compute_symmetry_bliss.cpp)
-        set(SYM_LIBRARIES ${BLISS_LIBRARIES})
-        set(SYM_PIC_LIBRARIES ${BLISS_LIBRARIES})
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${BLISS_DEFINITIONS}")
-    else()
-        set(sym symmetry/compute_symmetry_none.cpp)
-    endif()
-elseif(SYM STREQUAL "none")
-    set(sym symmetry/compute_symmetry_none.cpp)
 else()
-    message(FATAL_ERROR "option SYM has wrong value")
+    message(STATUS "Support QSO: OFF")
 endif()
-
-
 
 #
 # enable coverage support
@@ -396,60 +516,90 @@ if( COVERAGE )
     # With a script file, the return code of the tests is simply ignored,
     # and a coverage report is generated even if some tests fail currently.
     #
-    file(WRITE ${CMAKE_BINARY_DIR}/RunCoverage.cmake "execute_process(COMMAND ctest ${CMAKE_CTEST_COMMAND} ${COVERAGE_CTEST_ARGS})")
+    file(WRITE ${PROJECT_BINARY_DIR}/RunCoverage.cmake "execute_process(COMMAND ctest ${CMAKE_CTEST_COMMAND} ${COVERAGE_CTEST_ARGS})")
 
     #
     # setup the coverage target to execute the RunCoverage script
     #
     SETUP_TARGET_FOR_COVERAGE(NAME coverage
-                          EXECUTABLE ${CMAKE_COMMAND} -P ${CMAKE_BINARY_DIR}/RunCoverage.cmake
+                          EXECUTABLE ${CMAKE_COMMAND} -P ${PROJECT_BINARY_DIR}/RunCoverage.cmake
                           DEPENDENCIES all_executables
                           )
+else()
+  message(STATUS "CodeCoverage: OFF")
 endif()
 
 # ZIMPL headers need to be copied to have the "zimpl/*.h" prefix
-if(ZIMPL)
-    find_package(ZIMPL CONFIG)
+if(ZIMPL OR AUTOBUILD)
+    message(STATUS "Finding ZIMPL")
+    find_package(ZIMPL 3.5.0 CONFIG HINTS ${ZIMPL_DIR})
+    if((NOT ZIMPL_FOUND) AND (NOT AUTOBUILD))
+        message(FATAL_ERROR "ZIMPL not found, try specifying ZIMPL_DIR. ${AUTOBUILD_MSG}")
+    endif()
 endif()
 if(ZIMPL_FOUND)
-    set(SCIP_WITH_ZIMPL on)
+    message(STATUS "Finding ZIMPL - found")
+    set(SCIP_WITH_ZIMPL ON)
     include_directories(${ZIMPL_INCLUDE_DIRS})
     if(NOT SHARED)
         set(ZIMPL_PIC_LIBRARIES ${ZIMPL_LIBRARIES})
     endif()
 else()
+    message(STATUS "Support ZIMPL: OFF")
     set(ZIMPL_LIBRARIES "")
     set(ZIMPL_PIC_LIBRARIES "")
+    set(SCIP_WITH_ZIMPL OFF)
+endif()
+
+if(AMPL)
+    set(SCIP_WITH_AMPL ON)
+    include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/amplmp/include)
+    set(amplsrc scip/reader_nl.cpp amplmp/src/format.cpp amplmp/src/expr-info.cpp amplmp/src/nl-reader.cpp amplmp/src/os.cpp amplmp/src/posix.cpp)
+else()
+    message(STATUS "Support AMPL: OFF")
+    set(SCIP_WITH_AMPL OFF)
 endif()
 
 # IPOPT
-if(IPOPT)
+if(IPOPT OR AUTOBUILD)
+    message(STATUS "Finding IPOPT")
     find_package(IPOPT 3.12.0)
+    if((NOT IPOPT_FOUND) AND (NOT AUTOBUILD))
+        message(FATAL_ERROR "IPOPT not found, try specifying IPOPT_DIR. ${AUTOBUILD_MSG}")
+    endif()
 endif()
 if(IPOPT_FOUND)
+    message(STATUS "Finding IPOPT - found")
     include_directories(${IPOPT_INCLUDE_DIRS})
     #on debian IPOPT package needs this definition to work
     set(HAVE_CSTDDEF on)
     set(NLPI_LIBRARIES ${IPOPT_LIBRARIES})
-    set(nlpi nlpi/nlpi_ipopt.cpp)
+    set(nlpi scip/nlpi_ipopt.cpp)
 else()
-    set(nlpi nlpi/nlpi_ipopt_dummy.c)
+    message(STATUS "Support IPOPT: OFF")
+    set(nlpi scip/nlpi_ipopt_dummy.c)
 endif()
 
 # WORHP
-if(WORHP)
+if(WORHP OR AUTOBUILD)
+    message(STATUS "Finding WORHP")
     find_package(WORHP)
+    if((NOT WORHP_FOUND) AND (NOT AUTOBUILD))
+        message(FATAL_ERROR "WORHP not found, try specifying WORPH_DIR. ${AUTOBUILD_MSG}")
+    endif()
 endif()
 if(WORHP_FOUND)
+    message(STATUS "Finding WORHP - found")
     include_directories(${WORHP_INCLUDE_DIRS})
-    set(nlpi ${nlpi} nlpi/nlpi_worhp.c)
+    set(nlpi ${nlpi} scip/nlpi_worhp.c)
     set(NLPI_LIBRARIES ${NLPI_LIBRARIES} ${WORHP_LIBRARIES})
 else()
-    set(nlpi ${nlpi} nlpi/nlpi_worhp_dummy.c)
+    message(STATUS "Support WORHP: OFF")
+    set(nlpi ${nlpi} scip/nlpi_worhp_dummy.c)
 endif()
 
 # FilterSQP (with CMake, nlpi_filtersqp doesn't build anyway)
-set(nlpi ${nlpi} nlpi/nlpi_filtersqp_dummy.c)
+set(nlpi ${nlpi} scip/nlpi_filtersqp_dummy.c)
 
 # run checks to figure out how the rounding mode can be set
 include(CheckSymbolExists)
@@ -465,68 +615,61 @@ else()
         if(MS_ROUNDING)
             set(SCIP_ROUNDING_MS on)
         else()
-            warning("cannot figure out how to set rounding mode")
+            message(WARNING "cannot figure out how to set rounding mode")
         endif()
     endif()
 endif()
 
+message(STATUS "Finding CRITERION")
 find_package(CRITERION)
+if(CRITERION_FOUND)
+    message(STATUS "Finding CRITERION - found")
+else()
+    message(STATUS "Finding CRITERION - not found")
+endif()
+
 
 # export compilation settings to header file
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/scip/config.h.in ${CMAKE_BINARY_DIR}/scip/config.h @ONLY)
-include_directories(${CMAKE_BINARY_DIR})
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/scip/config.h.in ${PROJECT_BINARY_DIR}/scip/config.h @ONLY)
 
 # go to src/ and compile the code
 add_subdirectory(src)
 
-#
-# we set the SCIP_DIR variable explicitly for the following examples/applications and unittests that depend on SCIP.
-#
-set(SCIP_DIR ${CMAKE_BINARY_DIR})
-#
-# add SCIP tests
-#
-add_subdirectory(check)
-
-#
-# add unit tests as a single target. Including tests will add the unit tests as single executables
-#
-add_custom_target(unittests)
-add_subdirectory(tests EXCLUDE_FROM_ALL)
-add_subdirectory(doc EXCLUDE_FROM_ALL)
-add_custom_target(all_executables DEPENDS scip unittests examples applications)
-#
-# add examples
-#
-# use sub directory bin/examples for executables of examples
-#
+# store directory
 set(OLD_CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-if(MSVC)
-  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OLD_CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-else()
-  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OLD_CMAKE_RUNTIME_OUTPUT_DIRECTORY}/examples)
-endif()
-add_subdirectory(examples)
 
-#
-# add applications
-#
-if(MSVC)
-  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OLD_CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-else()
-  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OLD_CMAKE_RUNTIME_OUTPUT_DIRECTORY}/applications)
-endif()
-add_subdirectory(applications)
+include(CTest)
+if(BUILD_TESTING)
+    #
+    # add SCIP tests
+    #
+    add_subdirectory(check)
 
-#
-# add AMPL interface
-#
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OLD_CMAKE_RUNTIME_OUTPUT_DIRECTORY}/interfaces/ampl)
-add_subdirectory(interfaces/ampl EXCLUDE_FROM_ALL)
+    #
+    # add unit tests as a single target. Including tests will add the unit tests as single executables
+    #
+    add_custom_target(unittests)
+    add_subdirectory(tests EXCLUDE_FROM_ALL)
+    add_subdirectory(doc EXCLUDE_FROM_ALL)
+
+    #
+    # add examples
+    #
+    # use sub directory bin/examples for executables of examples
+    #
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OLD_CMAKE_RUNTIME_OUTPUT_DIRECTORY}/examples)
+    add_subdirectory(examples)
+
+    #
+    # add applications
+    #
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OLD_CMAKE_RUNTIME_OUTPUT_DIRECTORY}/applications)
+    add_subdirectory(applications)
+
+    add_custom_target(all_executables DEPENDS scip unittests examples applications)
+endif()
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OLD_CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-
-enable_testing()
 
 if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
     include(FeatureSummary)

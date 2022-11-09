@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -50,6 +59,7 @@
 #include "scip/scip_lp.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
+#include "scip/scip_nlp.h"
 #include "scip/scip_numerics.h"
 #include "scip/scip_param.h"
 #include "scip/scip_prob.h"
@@ -219,6 +229,7 @@ struct SCIP_ConsData
    int*                  cliquepartition;    /**< clique indices of the clique partition */
    int*                  negcliquepartition; /**< clique indices of the negated clique partition */
    SCIP_ROW*             row;                /**< corresponding LP row */
+   SCIP_NLROW*           nlrow;              /**< corresponding NLP row */
    int                   nvars;              /**< number of variables in knapsack constraint */
    int                   varssize;           /**< size of vars, weights, and eventdata arrays */
    int                   ncliques;           /**< number of cliques in the clique partition */
@@ -692,6 +703,7 @@ SCIP_RETCODE consdataCreate(
          }
       }
       assert(k >= 0);
+      assert(constant >= 0);
 
       (*consdata)->nvars = k;
 
@@ -707,16 +719,13 @@ SCIP_RETCODE consdataCreate(
       SCIPfreeBufferArray(scip, &varsbuffer);
    }
 
-   /* capacity has to be greater or equal to zero */
-   assert(capacity >= 0);
-   assert(constant >= 0);
-
    (*consdata)->varssize = (*consdata)->nvars;
    (*consdata)->capacity = capacity - constant;
    (*consdata)->eventdata = NULL;
    (*consdata)->cliquepartition = NULL;
    (*consdata)->negcliquepartition = NULL;
    (*consdata)->row = NULL;
+   (*consdata)->nlrow = NULL;
    (*consdata)->weightsum = 0;
    (*consdata)->onesweightsum = 0;
    (*consdata)->ncliques = 0;
@@ -776,6 +785,10 @@ SCIP_RETCODE consdataFree(
    if( (*consdata)->row != NULL )
    {
       SCIP_CALL( SCIPreleaseRow(scip, &(*consdata)->row) );
+   }
+   if( (*consdata)->nlrow != NULL )
+   {
+      SCIP_CALL( SCIPreleaseNlRow(scip, &(*consdata)->nlrow) );
    }
    if( (*consdata)->eventdata != NULL )
    {
@@ -907,6 +920,50 @@ SCIP_RETCODE addRelaxation(
          SCIPconsGetName(cons), consdata->capacity);
       SCIPdebug( SCIP_CALL(SCIPprintRow(scip, consdata->row, NULL)) );
       SCIP_CALL( SCIPaddRow(scip, consdata->row, FALSE, cutoff) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** adds knapsack constraint as row to the NLP, if not added yet */
+static
+SCIP_RETCODE addNlrow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< knapsack constraint */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert(SCIPisNLPConstructed(scip));
+
+   /* skip deactivated, redundant, or local linear constraints (the NLP does not allow for local rows at the moment) */
+   if( !SCIPconsIsActive(cons) || !SCIPconsIsChecked(cons) || SCIPconsIsLocal(cons) )
+      return SCIP_OKAY;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   if( consdata->nlrow == NULL )
+   {
+      SCIP_Real* coefs;
+      int i;
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &coefs, consdata->nvars) );
+      for( i = 0; i < consdata->nvars; ++i )
+         coefs[i] = (SCIP_Real)consdata->weights[i];  /*lint !e613*/
+
+      SCIP_CALL( SCIPcreateNlRow(scip, &consdata->nlrow, SCIPconsGetName(cons), 0.0,
+            consdata->nvars, consdata->vars, coefs, NULL,
+            -SCIPinfinity(scip), (SCIP_Real)consdata->capacity, SCIP_EXPRCURV_LINEAR) );
+
+      assert(consdata->nlrow != NULL);
+
+      SCIPfreeBufferArray(scip, &coefs);
+   }
+
+   if( !SCIPnlrowIsInNLP(consdata->nlrow) )
+   {
+      SCIP_CALL( SCIPaddNlRow(scip, consdata->nlrow) );
    }
 
    return SCIP_OKAY;
@@ -1122,19 +1179,19 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
       if( weights[j] > capacity )
       {
          if( solitems != NULL )
-            nonsolitems[(*nnonsolitems)++] = items[j];
+            nonsolitems[(*nnonsolitems)++] = items[j]; /*lint !e413*/
       }
       /* item is not profitable */
       else if( profits[j] <= 0.0 )
       {
          if( solitems != NULL )
-            nonsolitems[(*nnonsolitems)++] = items[j];
+            nonsolitems[(*nnonsolitems)++] = items[j]; /*lint !e413*/
       }
       /* item always fits */
       else if( weights[j] == 0 )
       {
          if( solitems != NULL )
-            solitems[(*nsolitems)++] = items[j];
+            solitems[(*nsolitems)++] = items[j]; /*lint !e413*/
 
          if( solval != NULL )
             *solval += profits[j];
@@ -1180,7 +1237,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
       for( j = nmyitems - 1; j >= 0; --j )
       {
          if( solitems != NULL )
-            solitems[(*nsolitems)++] = myitems[j];
+            solitems[(*nsolitems)++] = myitems[j]; /*lint !e413*/
 
          if( solval != NULL )
             *solval += myprofits[j];
@@ -1238,6 +1295,8 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
       /* update solution information */
       if( solitems != NULL )
       {
+         assert(nsolitems != NULL && nonsolitems != NULL && nnonsolitems != NULL);
+
          solitems[(*nsolitems)++] = myitems[p];
          for( j = nmyitems - 1; j >= 0; --j )
          {
@@ -1268,6 +1327,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
 
          /* if all items would fit we had handled this case before */
          assert((SCIP_Longint) nmyitems > capacity);
+         assert(nsolitems != NULL && nonsolitems != NULL && nnonsolitems != NULL);
 
          /* take the first best items into the solution */
          for( i = capacity - 1; i >= 0; --i )
@@ -1345,6 +1405,8 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
       if( solitems != NULL )
       {
          int l;
+
+         assert(nsolitems != NULL && nonsolitems != NULL && nnonsolitems != NULL);
 
          /* collect items */
          for( l = 0; l < j; ++l )
@@ -1463,6 +1525,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    /* update optimal solution by following the table */
    if( solitems != NULL )
    {
+      assert(nsolitems != NULL && nonsolitems != NULL && nnonsolitems != NULL);
       d = intcap - 1;
 
       SCIPdebugMsg(scip, "Fill the solution vector after solving exactly.\n");
@@ -11921,6 +11984,8 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdKnapsack)
     * - all variables must be binary
     * - all coefficients must be integral
     * - exactly one of the sides must be infinite
+    * note that this includes the case of negative capacity, which has been
+    * observed to occur, e.g., when upgrading a conflict constraint
     */
    upgrade = (nposbin + nnegbin + nposimplbin + nnegimplbin == nvars)
       && (ncoeffspone + ncoeffsnone + ncoeffspint + ncoeffsnint == nvars)
@@ -12112,6 +12177,23 @@ SCIP_DECL_CONSEXITPRE(consExitpreKnapsack)
    return SCIP_OKAY;
 }
 
+/** solving process initialization method of constraint handler */
+static
+SCIP_DECL_CONSINITSOL(consInitsolKnapsack)
+{  /*lint --e{715}*/
+
+   /* add nlrow representation to NLP, if NLP had been constructed */
+   if( SCIPisNLPConstructed(scip) )
+   {
+      int c;
+      for( c = 0; c < nconss; ++c )
+      {
+         SCIP_CALL( addNlrow(scip, conss[c]) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
 
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
 static
@@ -12122,7 +12204,7 @@ SCIP_DECL_CONSEXITSOL(consExitsolKnapsack)
 
    assert( scip != NULL );
 
-   /* release the rows of all constraints */
+   /* release the rows and nlrows of all constraints */
    for( c = 0; c < nconss; ++c )
    {
       consdata = SCIPconsGetData(conss[c]);
@@ -12131,6 +12213,11 @@ SCIP_DECL_CONSEXITSOL(consExitsolKnapsack)
       if( consdata->row != NULL )
       {
          SCIP_CALL( SCIPreleaseRow(scip, &consdata->row) );
+      }
+
+      if( consdata->nlrow != NULL )
+      {
+         SCIP_CALL( SCIPreleaseNlRow(scip, &consdata->nlrow) );
       }
    }
 
@@ -12988,6 +13075,40 @@ SCIP_DECL_CONSLOCK(consLockKnapsack)
 }
 /**! [SnippetConsLockKnapsack] */
 
+/** constraint activation notification method of constraint handler */
+static
+SCIP_DECL_CONSACTIVE(consActiveKnapsack)
+{  /*lint --e{715}*/
+
+   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPisNLPConstructed(scip) )
+   {
+      SCIP_CALL( addNlrow(scip, cons) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** constraint deactivation notification method of constraint handler */
+static
+SCIP_DECL_CONSDEACTIVE(consDeactiveKnapsack)
+{  /*lint --e{715}*/
+   SCIP_CONSDATA* consdata;
+
+   assert(cons != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* remove row from NLP, if still in solving
+    * if we are in exitsolve, the whole NLP will be freed anyway
+    */
+   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && consdata->nlrow != NULL )
+   {
+      SCIP_CALL( SCIPdelNlRow(scip, consdata->nlrow) );
+   }
+
+   return SCIP_OKAY;
+}
 
 /** variable deletion method of constraint handler */
 static
@@ -13260,7 +13381,7 @@ SCIP_DECL_EVENTEXEC(eventExecKnapsack)
       consdata->varsdeleted = TRUE;
       break;
    default:
-      SCIPerrorMessage("invalid event type %x\n", SCIPeventGetType(event));
+      SCIPerrorMessage("invalid event type %" SCIP_EVENTTYPE_FORMAT "\n", SCIPeventGetType(event));
       return SCIP_INVALIDDATA;
    }
 
@@ -13307,10 +13428,13 @@ SCIP_RETCODE SCIPincludeConshdlrKnapsack(
 
    /* set non-fundamental callbacks via specific setter functions */
    SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyKnapsack, consCopyKnapsack) );
+   SCIP_CALL( SCIPsetConshdlrActive(scip, conshdlr, consActiveKnapsack) );
+   SCIP_CALL( SCIPsetConshdlrDeactive(scip, conshdlr, consDeactiveKnapsack) );
    SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteKnapsack) );
    SCIP_CALL( SCIPsetConshdlrDelvars(scip, conshdlr, consDelvarsKnapsack) );
    SCIP_CALL( SCIPsetConshdlrExit(scip, conshdlr, consExitKnapsack) );
    SCIP_CALL( SCIPsetConshdlrExitpre(scip, conshdlr, consExitpreKnapsack) );
+   SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolKnapsack) );
    SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolKnapsack) );
    SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeKnapsack) );
    SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsKnapsack) );

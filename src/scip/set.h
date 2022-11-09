@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -75,6 +84,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    SCIP_Bool             copypresolvers,     /**< should the presolvers be copied */
    SCIP_Bool             copyrelaxators,     /**< should the relaxators be copied */
    SCIP_Bool             copyseparators,     /**< should the separators be copied */
+   SCIP_Bool             copycutselectors,   /**< should the cut selectors be copied */
    SCIP_Bool             copypropagators,    /**< should the propagators be copied */
    SCIP_Bool             copyheuristics,     /**< should the heuristics be copied */
    SCIP_Bool             copyeventhdlrs,     /**< should the event handlers be copied */
@@ -83,6 +93,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    SCIP_Bool             copydisplays,       /**< should the display columns be copied */
    SCIP_Bool             copydialogs,        /**< should the dialogs be copied */
    SCIP_Bool             copytables,         /**< should the statistics tables be copied */
+   SCIP_Bool             copyexprhdlrs,      /**< should the expression handlers be copied */
    SCIP_Bool             copynlpis,          /**< should the NLP interfaces be copied */
    SCIP_Bool*            allvalid            /**< pointer to store whether all plugins  were validly copied */
    );
@@ -263,14 +274,6 @@ SCIP_RETCODE SCIPsetChgParamFixed(
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           name,               /**< name of the parameter */
    SCIP_Bool             fixed               /**< new fixing status of the parameter */
-   );
-
-/** changes the value of an existing parameter */
-SCIP_RETCODE SCIPsetSetParam(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   const char*           name,               /**< name of the parameter */
-   void*                 value               /**< new value of the parameter */
    );
 
 /** changes the value of an existing SCIP_Bool parameter */
@@ -665,6 +668,23 @@ void SCIPsetSortSepasName(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
+/** inserts cut selector in cut selector list */
+SCIP_RETCODE SCIPsetIncludeCutsel(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_CUTSEL*          cutsel              /**< cut selector */
+   );
+
+/** returns the cut selector of the given name, or NULL if not existing */
+SCIP_CUTSEL* SCIPsetFindCutsel(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of separator */
+   );
+
+/** sorts cut selectors by priorities */
+void SCIPsetSortCutsels(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
 /** inserts propagator in propagator list */
 SCIP_RETCODE SCIPsetIncludeProp(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -847,6 +867,24 @@ SCIP_Bool SCIPsetExistsDialog(
    SCIP_DIALOG*          dialog              /**< dialog */
    );
 
+/** inserts expression handler in expression handler list */
+SCIP_RETCODE SCIPsetIncludeExprhdlr(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
+   );
+
+/** returns the expression handler of the given name, or NULL if not existing */
+SCIP_EXPORT  /* need SCIP_EXPORT here, because func is exposed in API via SCIPfindExprhdlr() macro */
+SCIP_EXPRHDLR* SCIPsetFindExprhdlr(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of expression handler */
+   );
+
+/** sorts expression handlers by name */
+void SCIPsetSortExprhdlrs(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
 /** inserts NLPI in NLPI list */
 SCIP_RETCODE SCIPsetIncludeNlpi(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -1004,6 +1042,11 @@ int SCIPsetGetSepaMaxcuts(
    SCIP_Bool             root                /**< are we at the root node? */
    );
 
+/** returns the maximal ratio between coefficients to ensure in rowprep cleanup */
+SCIP_Real SCIPsetGetSepaMaxCoefRatioRowprep(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
 /** returns user defined objective value (in original space) for reference purposes */
 SCIP_Real SCIPsetGetReferencevalue(
    SCIP_SET*             set                 /**< global SCIP settings */
@@ -1060,6 +1103,9 @@ SCIP_Real SCIPsetSumepsilon(
    );
 
 /** returns feasibility tolerance for constraints */
+#ifdef __GNUC__
+__attribute__ ((pure))
+#endif
 SCIP_Real SCIPsetFeastol(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
@@ -1070,6 +1116,9 @@ SCIP_Real SCIPsetLPFeastolFactor(
    );
 
 /** returns feasibility tolerance for reduced costs */
+#ifdef __GNUC__
+__attribute__ ((pure))
+#endif
 SCIP_Real SCIPsetDualfeastol(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
@@ -1726,6 +1775,9 @@ SCIP_Bool SCIPsetGetSubscipsOff(
 
 
 /** prints a debug message */
+#ifdef __GNUC__
+__attribute__((format(printf, 4, 5)))
+#endif
 SCIP_EXPORT
 void SCIPsetPrintDebugMessage(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -1736,6 +1788,9 @@ void SCIPsetPrintDebugMessage(
    );
 
 /** prints a debug message without precode */
+#ifdef __GNUC__
+__attribute__((format(printf, 2, 3)))
+#endif
 SCIP_EXPORT
 void SCIPsetDebugMessagePrint(
    SCIP_SET*             set,                /**< global SCIP settings */

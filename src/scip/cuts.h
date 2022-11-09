@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -46,7 +55,9 @@ extern "C" {
  */
 
 /** perform activity based coefficient tigthening on the given cut; returns TRUE if the cut was detected
- *  to be redundant due to acitvity bounds
+ *  to be redundant due to acitivity bounds
+ *
+ *  See also cons_linear.c:consdataTightenCoefs().
  */
 SCIP_EXPORT
 SCIP_Bool SCIPcutsTightenCoefficients(
@@ -273,30 +284,6 @@ int SCIPaggrRowGetNRows(
    SCIP_AGGRROW*         aggrrow             /**< aggregation row */
    );
 
-/** perform a cut selection algorithm for the given array of cuts; the array is partitioned
- *  so that the selected cuts come first and the remaining ones are at the end of the array
- */
-SCIP_EXPORT
-SCIP_RETCODE SCIPselectCuts(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ROW**            cuts,               /**< array with cuts to perform selection algorithm */
-   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator for tie-breaking, or NULL */
-   SCIP_Real             goodscorefac,       /**< factor of best score among the given cuts to consider a cut good
-                                              *   and filter with less strict settings of the maximum parallelism */
-   SCIP_Real             badscorefac,        /**< factor of best score among the given cuts to consider a cut bad
-                                              *   and discard it regardless of its parallelism to other cuts */
-   SCIP_Real             goodmaxparall,      /**< maximum parallelism for good cuts */
-   SCIP_Real             maxparall,          /**< maximum parallelism for non-good cuts */
-   SCIP_Real             dircutoffdistweight,/**< weight of directed cutoff distance in score calculation */
-   SCIP_Real             efficacyweight,     /**< weight of efficacy (shortest cutoff distance) in score calculation */
-   SCIP_Real             objparalweight,     /**< weight of objective parallelism in score calculation */
-   SCIP_Real             intsupportweight,   /**< weight of integral support in score calculation */
-   int                   ncuts,              /**< number of cuts in given array */
-   int                   nforcedcuts,        /**< number of forced cuts at start of given array */
-   int                   maxselectedcuts,    /**< maximal number of cuts to select */
-   int*                  nselectedcuts       /**< pointer to return number of selected cuts */
-   );
-
 /** calculates an MIR cut out of the weighted sum of LP rows given by an aggregation row; the
  *  aggregation row must not contain non-zero weights for modifiable rows, because these rows cannot
  *  participate in an MIR cut.
@@ -384,7 +371,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
 
 /** calculates a lifted simple generalized flow cover cut out of the weighted sum of LP rows given by an aggregation row; the
  *  aggregation row must not contain non-zero weights for modifiable rows, because these rows cannot
- *  participate in an MIR cut.
+ *  participate in the cut.
  *  For further details we refer to:
  *
  *  Gu, Z., Nemhauser, G. L., & Savelsbergh, M. W. (1999). Lifted flow cover inequalities for mixed 0-1 integer programs.
@@ -404,6 +391,38 @@ SCIP_RETCODE SCIPcalcFlowCover(
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
    SCIP_Bool             postprocess,        /**< apply a post-processing step to the resulting cut? */
    SCIP_Real             boundswitch,        /**< fraction of domain up to which lower bound is used in transformation */
+   SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
+   SCIP_AGGRROW*         aggrrow,            /**< the aggregation row to compute flow cover cut for */
+   SCIP_Real*            cutcoefs,           /**< array to store the non-zero coefficients in the cut */
+   SCIP_Real*            cutrhs,             /**< pointer to store the right hand side of the cut */
+   int*                  cutinds,            /**< array to store the problem indices of variables with a non-zero coefficient in the cut */
+   int*                  cutnnz,             /**< pointer to store the number of non-zeros in the cut */
+   SCIP_Real*            cutefficacy,        /**< pointer to store the efficacy of the cut, or NULL */
+   int*                  cutrank,            /**< pointer to return rank of generated cut */
+   SCIP_Bool*            cutislocal,         /**< pointer to store whether the generated cut is only valid locally */
+   SCIP_Bool*            success             /**< pointer to store whether a valid cut was returned */
+   );
+
+/** calculates a lifted knapsack cover cut out of the weighted sum of LP rows given by an aggregation row; the
+ *  aggregation row must not contain non-zero weights for modifiable rows, because these rows cannot
+ *  participate in the cut.
+ *  For further details we refer to:
+ *
+ *  Letchford, A. N., & Souli, G. (2019). On lifted cover inequalities: A new lifting procedure with unusual properties.
+ *  Operations Research Letters, 47(2), 83-87.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcalcKnapsackCover(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
    SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
    SCIP_AGGRROW*         aggrrow,            /**< the aggregation row to compute flow cover cut for */
    SCIP_Real*            cutcoefs,           /**< array to store the non-zero coefficients in the cut */

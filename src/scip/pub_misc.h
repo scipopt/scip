@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -49,6 +58,7 @@
 #include "scip/pub_misc_select.h"
 #include "scip/pub_misc_sort.h"
 #include "scip/pub_misc_linear.h"
+#include "scip/pub_misc_rowprep.h"
 
 /* in optimized mode some of the function are handled via defines, for that the structs are needed */
 #ifdef NDEBUG
@@ -1793,6 +1803,22 @@ SCIP_Longint SCIPcalcBinomCoef(
    int                   m                   /**< number to choose out of the above */
    );
 
+/** calculates hash for floating-point number by using Fibonacci hashing */
+SCIP_EXPORT
+unsigned int SCIPcalcFibHash(
+   SCIP_Real             v                   /**< number to hash */
+   );
+
+#ifdef NDEBUG
+
+/* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
+ * speed up the algorithms.
+ */
+
+#define SCIPcalcFibHash(v)   ((v) >= 0 ? ((unsigned long long)((v) * 2654435769)) % UINT_MAX : ((unsigned long long)(-(v) * 683565275)) % UINT_MAX )
+
+#endif
+
 /** converts a real number into a (approximate) rational representation, and returns TRUE iff the conversion was
  *  successful
  */
@@ -1843,6 +1869,20 @@ SCIP_Real SCIPselectSimpleValue(
    SCIP_Real             lb,                 /**< lower bound of the interval */
    SCIP_Real             ub,                 /**< upper bound of the interval */
    SCIP_Longint          maxdnom             /**< maximal denominator allowed for resulting rational number */
+   );
+
+/** Performs the Newton Procedure from a given starting point to compute a root of the given function with
+ *  specified precision and maximum number of iterations. If the procedure fails, SCIP_INVALID is returned.
+ */
+SCIP_EXPORT
+SCIP_Real SCIPcalcRootNewton(
+   SCIP_DECL_NEWTONEVAL((*function)),       /**< pointer to function for which roots are computed */
+   SCIP_DECL_NEWTONEVAL((*derivative)),      /**< pointer to derivative of above function */
+   SCIP_Real*            params,            /**< parameters needed for function (can be NULL) */
+   int                   nparams,           /**< number of parameters (can be 0) */
+   SCIP_Real             x,                 /**< starting point */
+   SCIP_Real             eps,               /**< tolerance */
+   int                   k                  /**< iteration limit */
    );
 
 /* The C99 standard defines the function (or macro) isfinite.
@@ -1974,7 +2014,6 @@ SCIP_RETCODE SCIPgetRandomSubset(
    unsigned int          randseed            /**< seed value for random generator */
    );
 
-
 /**@} */
 
 /*
@@ -2084,7 +2123,11 @@ void SCIPpermuteArray(
  */
 
 
-/** computes set intersection (duplicates removed) of two arrays that are ordered ascendingly */
+/** computes set intersection (duplicates removed) of two integer arrays that are ordered ascendingly
+ *
+ * @deprecated Switch to SCIPcomputeArraysIntersectionInt().
+ */
+SCIP_DEPRECATED
 SCIP_EXPORT
 SCIP_RETCODE SCIPcomputeArraysIntersection(
    int*                  array1,             /**< first array (in ascending order) */
@@ -2097,9 +2140,53 @@ SCIP_RETCODE SCIPcomputeArraysIntersection(
                                               *   (note: it is possible to use narray1 for this input argument) */
    );
 
-/** computes set difference (duplicates removed) of two arrays that are ordered ascendingly */
+/** computes set intersection (duplicates removed) of two integer arrays that are ordered ascendingly */
+SCIP_EXPORT
+void SCIPcomputeArraysIntersectionInt(
+   int*                  array1,             /**< first array (in ascending order) */
+   int                   narray1,            /**< number of entries of first array */
+   int*                  array2,             /**< second array (in ascending order) */
+   int                   narray2,            /**< number of entries of second array */
+   int*                  intersectarray,     /**< intersection of array1 and array2
+                                              *   (note: it is possible to use array1 for this input argument) */
+   int*                  nintersectarray     /**< pointer to store number of entries of intersection array
+                                              *   (note: it is possible to use narray1 for this input argument) */
+   );
+
+/** computes set intersection (duplicates removed) of two void-pointer arrays that are ordered ascendingly */
+SCIP_EXPORT
+void SCIPcomputeArraysIntersectionPtr(
+   void**                array1,             /**< first array (in ascending order) */
+   int                   narray1,            /**< number of entries of first array */
+   void**                array2,             /**< second array (in ascending order) */
+   int                   narray2,            /**< number of entries of second array */
+   SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
+   void**                intersectarray,     /**< intersection of array1 and array2
+                                              *   (note: it is possible to use array1 for this input argument) */
+   int*                  nintersectarray     /**< pointer to store number of entries of intersection array
+                                              *   (note: it is possible to use narray1 for this input argument) */
+);
+
+/** computes set difference (duplicates removed) of two integer arrays that are ordered ascendingly
+ *
+ * @deprecated Switch to SCIPcomputeArraysSetminusInt().
+ */
+SCIP_DEPRECATED
 SCIP_EXPORT
 SCIP_RETCODE SCIPcomputeArraysSetminus(
+   int*                  array1,             /**< first array (in ascending order) */
+   int                   narray1,            /**< number of entries of first array */
+   int*                  array2,             /**< second array (in ascending order) */
+   int                   narray2,            /**< number of entries of second array */
+   int*                  setminusarray,      /**< array to store entries of array1 that are not an entry of array2
+                                              *   (note: it is possible to use array1 for this input argument) */
+   int*                  nsetminusarray      /**< pointer to store number of entries of setminus array
+                                              *   (note: it is possible to use narray1 for this input argument) */
+   );
+
+/** computes set difference (duplicates removed) of two integer arrays that are ordered ascendingly */
+SCIP_EXPORT
+void SCIPcomputeArraysSetminusInt(
    int*                  array1,             /**< first array (in ascending order) */
    int                   narray1,            /**< number of entries of first array */
    int*                  array2,             /**< second array (in ascending order) */

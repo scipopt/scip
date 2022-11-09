@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -44,6 +53,7 @@
 #include "scip/scip_lp.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
+#include "scip/scip_nlp.h"
 #include "scip/scip_numerics.h"
 #include "scip/scip_param.h"
 #include "scip/scip_prob.h"
@@ -135,6 +145,7 @@ struct SCIP_ConshdlrData
 struct SCIP_ConsData
 {
    SCIP_ROW*             row;                /**< LP row, if constraint is already stored in LP row format */
+   SCIP_NLROW*           nlrow;              /**< NLP row, if constraint has been added to NLP relaxation */
    SCIP_VAR**            vars;               /**< variables of the constraint */
    int                   varssize;           /**< size of vars array */
    int                   nvars;              /**< number of variables in the constraint */
@@ -264,6 +275,7 @@ SCIP_RETCODE consdataCreate(
    SCIP_CALL( SCIPallocBlockMemory(scip, consdata) );
 
    (*consdata)->row = NULL;
+   (*consdata)->nlrow = NULL;
    if( nvars > 0 )
    {
       SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vars, vars, nvars) );
@@ -331,6 +343,12 @@ SCIP_RETCODE consdataFree(
    if( (*consdata)->row != NULL )
    {
       SCIP_CALL( SCIPreleaseRow(scip, &(*consdata)->row) );
+   }
+
+   /* release the nlrow */
+   if( (*consdata)->nlrow != NULL )
+   {
+      SCIP_CALL( SCIPreleaseNlRow(scip, &(*consdata)->nlrow) );
    }
 
    /* release variables */
@@ -1607,6 +1625,48 @@ SCIP_RETCODE createRow(
    return SCIP_OKAY;
 }
 
+/** adds logicor constraint as row to the NLP, if not added yet */
+static
+SCIP_RETCODE addNlrow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< logicor constraint */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert(SCIPisNLPConstructed(scip));
+
+   /* skip deactivated, redundant, or local constraints (the NLP does not allow for local rows at the moment) */
+   if( !SCIPconsIsActive(cons) || !SCIPconsIsChecked(cons) || SCIPconsIsLocal(cons) )
+      return SCIP_OKAY;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   if( consdata->nlrow == NULL )
+   {
+      SCIP_Real* coefs;
+      int i;
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &coefs, consdata->nvars) );
+      for( i = 0; i < consdata->nvars; ++i )
+         coefs[i] = 1.0;
+
+      SCIP_CALL( SCIPcreateNlRow(scip, &consdata->nlrow, SCIPconsGetName(cons),
+         0.0, consdata->nvars, consdata->vars, coefs, NULL, 1.0, SCIPinfinity(scip), SCIP_EXPRCURV_LINEAR) );
+      assert(consdata->nlrow != NULL);
+
+      SCIPfreeBufferArray(scip, &coefs);
+   }
+
+   if( !SCIPnlrowIsInNLP(consdata->nlrow) )
+   {
+      SCIP_CALL( SCIPaddNlRow(scip, consdata->nlrow) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** adds logic or constraint as cut to the LP */
 static
 SCIP_RETCODE addCut(
@@ -1821,7 +1881,7 @@ void consdataSort(
 	    found = SCIPsortedvecFindPtr((void**)consdata->vars, SCIPvarComp, (void*)var1, consdata->nvars, &pos);
 	    assert(found);
 #else
-	    SCIPsortedvecFindPtr((void**)consdata->vars, SCIPvarComp, (void*)var1, consdata->nvars, &pos);
+	    (void) SCIPsortedvecFindPtr((void**)consdata->vars, SCIPvarComp, (void*)var1, consdata->nvars, &pos);
 #endif
 	    assert(pos >= 0 && pos < consdata->nvars);
 	    consdata->watchedvar1 = pos;
@@ -1832,7 +1892,7 @@ void consdataSort(
 	       found = SCIPsortedvecFindPtr((void**)consdata->vars, SCIPvarComp, (void*)var2, consdata->nvars, &pos);
 	       assert(found);
 #else
-	       SCIPsortedvecFindPtr((void**)consdata->vars, SCIPvarComp, (void*)var2, consdata->nvars, &pos);
+	       (void) SCIPsortedvecFindPtr((void**)consdata->vars, SCIPvarComp, (void*)var2, consdata->nvars, &pos);
 #endif
 	       assert(pos >= 0 && pos < consdata->nvars);
 	       consdata->watchedvar2 = pos;
@@ -3186,7 +3246,9 @@ SCIP_RETCODE shortenConss(
       consdata = SCIPconsGetData(cons);
       assert(consdata != NULL);
 
-      /* prepare constraint by removing fixings and merge it */
+      /* prepare constraint by removing fixings and merge it; we invalidate the presolved flag, because the calls to
+       * SCIPcleanupCliques() in this loop may have lead to fixed variables that are not yet removed */
+      consdata->presolved = FALSE;
       SCIP_CALL( prepareCons(scip, cons, eventhdlr, entries, nentries, &redundant, nfixedvars, nchgcoefs, ndelconss, cutoff) );
 
       if( redundant )
@@ -3235,7 +3297,11 @@ SCIP_RETCODE shortenConss(
             nfixedvars, &redundant, &glbinfeas, TRUE) );
 
       if( glbinfeas )
+      {
+         /* reset redundants array to FALSE */
+         BMSclearMemoryArray(redundants, nbinprobvars);
          goto TERMINATE;
+      }
 
       /* remove redundant constraint */
       if( redundant )
@@ -3244,20 +3310,7 @@ SCIP_RETCODE shortenConss(
          ++(*ndelconss);
 
          /* reset redundants array to FALSE */
-#if 1
          BMSclearMemoryArray(redundants, consdata->nvars);
-#else
-         if( nredvars > 0 )
-         {
-            for( v = consdata->nvars - 1; v >= 0; --v )
-            {
-               if( redundants[v] )
-               {
-                  redundants[v] = FALSE;
-               }
-            }
-         }
-#endif
          continue;
       }
 
@@ -3294,6 +3347,21 @@ SCIP_RETCODE shortenConss(
          }
          /* @todo might also upgrade a two variable constraint to a set-packing constraint */
       }
+   }
+
+   /* invalidate the presolved flags, because the calls to SCIPcleanupCliques() may have lead to fixed variables that
+    * are not yet removed */
+   for( c = nconss - 1; c >= 0; --c )
+   {
+      SCIP_CONS* cons = conss[c];
+      SCIP_CONSDATA* consdata;
+
+      assert(cons != NULL);
+
+      consdata = SCIPconsGetData(cons);
+      assert(consdata != NULL);
+
+      consdata->presolved = FALSE;
    }
 
  TERMINATE:
@@ -4064,6 +4132,23 @@ SCIP_DECL_CONSEXITPRE(consExitpreLogicor)
    return SCIP_OKAY;
 }
 
+/** solving process initialization method of constraint handler */
+static
+SCIP_DECL_CONSINITSOL(consInitsolLogicor)
+{  /*lint --e{715}*/
+
+   /* add nlrow representation to NLP, if NLP had been constructed */
+   if( SCIPisNLPConstructed(scip) )
+   {
+      int c;
+      for( c = 0; c < nconss; ++c )
+      {
+         SCIP_CALL( addNlrow(scip, conss[c]) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
 
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
 static
@@ -4072,7 +4157,7 @@ SCIP_DECL_CONSEXITSOL(consExitsolLogicor)
    SCIP_CONSDATA* consdata;
    int c;
 
-   /* release the rows of all constraints */
+   /* release the rows and nlrows of all constraints */
    for( c = 0; c < nconss; ++c )
    {
       consdata = SCIPconsGetData(conss[c]);
@@ -4081,6 +4166,11 @@ SCIP_DECL_CONSEXITSOL(consExitsolLogicor)
       if( consdata->row != NULL )
       {
          SCIP_CALL( SCIPreleaseRow(scip, &consdata->row) );
+      }
+
+      if( consdata->nlrow != NULL )
+      {
+         SCIP_CALL( SCIPreleaseNlRow(scip, &consdata->nlrow) );
       }
    }
 
@@ -4747,6 +4837,11 @@ SCIP_DECL_CONSACTIVE(consActiveLogicor)
             &consdata->filterpos2) );
    }
 
+   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPisNLPConstructed(scip) )
+   {
+      SCIP_CALL( addNlrow(scip, cons) );
+   }
+
    return SCIP_OKAY;
 }
 
@@ -4790,6 +4885,14 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveLogicor)
             consdata->filterpos2) );
       consdata->watchedvar2 = -1;
       consdata->filterpos2 = -1;
+   }
+
+   /* remove row from NLP, if still in solving
+    * if we are in exitsolve, the whole NLP will be freed anyway
+    */
+   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && consdata->nlrow != NULL )
+   {
+      SCIP_CALL( SCIPdelNlRow(scip, consdata->nlrow) );
    }
 
    return SCIP_OKAY;
@@ -5138,6 +5241,7 @@ SCIP_RETCODE SCIPincludeConshdlrLogicor(
    SCIP_CALL( SCIPsetConshdlrDeactive(scip, conshdlr, consDeactiveLogicor) );
    SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteLogicor) );
    SCIP_CALL( SCIPsetConshdlrExitpre(scip, conshdlr, consExitpreLogicor) );
+   SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolLogicor) );
    SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolLogicor) );
    SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeLogicor) );
    SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsLogicor) );

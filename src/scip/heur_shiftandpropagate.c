@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -598,7 +607,7 @@ SCIP_RETCODE initMatrix(
       cols = SCIProwGetCols(row);
       constant = SCIProwGetConstant(row);
 
-      SCIPdebugMsg(scip, " %s : lhs=%g, rhs=%g, maxval=%g \n", SCIProwGetName(row), matrix->lhs[i], matrix->rhs[i], maxval);
+      SCIPdebugMsg(scip, " %s : maxval=%g \n", SCIProwGetName(row), maxval);
       SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
       assert(!SCIPisInfinity(scip, constant));
 
@@ -1213,7 +1222,7 @@ SCIP_RETCODE updateTransformation(
 
    case TRANSFORMSTATUS_NONE:
    default:
-      SCIPerrorMessage("Error: Invalid variable status <%d> in shift and propagagate heuristic, aborting!\n");
+      SCIPerrorMessage("Error: Invalid variable status <%d> in shift and propagagate heuristic, aborting!\n", status);
       SCIPABORT();
       return SCIP_INVALIDDATA;   /*lint !e527*/
    }
@@ -2213,6 +2222,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
          char strbuf[SCIP_MAXSTRLEN];
          /* case that remaining LP has to be solved */
          SCIP_Bool lperror;
+         int ncols;
 
 #ifndef NDEBUG
          {
@@ -2224,13 +2234,28 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
             for( v = 0; v < ndiscvars; ++v )
             {
                if( SCIPvarIsInLP(vars[v]) )
+               {
                   assert(SCIPisFeasEQ(scip, SCIPvarGetLbLocal(vars[v]), SCIPvarGetUbLocal(vars[v])));
+               }
             }
          }
 #endif
 
-         /* print probing stats before LP */
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "Heuristic " HEUR_NAME " probing LP: %s\n",
+         /* print message if relatively large LP is solved from scratch, since this could lead to a longer period during
+          * which the user sees no output; more detailed probing stats only in debug mode */
+         ncols = SCIPgetNLPCols(scip);
+         if( !SCIPisLPSolBasic(scip) && ncols > 1000 )
+         {
+            int nunfixedcols = SCIPgetNUnfixedLPCols(scip);
+
+            if( nunfixedcols > 0.5 * ncols )
+            {
+               SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL,
+                  "Heuristic " HEUR_NAME " solving LP from scratch with %.1f %% unfixed columns (%d of %d) ...\n",
+                  100.0 * (nunfixedcols / (SCIP_Real)ncols), nunfixedcols, ncols);
+            }
+         }
+         SCIPdebugMsg(scip, "Heuristic " HEUR_NAME " probing LP: %s\n",
             SCIPsnprintfProbingStats(scip, strbuf, SCIP_MAXSTRLEN));
          SCIPdebugMsg(scip, " -> old LP iterations: %" SCIP_LONGINT_FORMAT "\n", SCIPgetNLPIterations(scip));
 

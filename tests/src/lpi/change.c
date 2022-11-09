@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -58,6 +67,8 @@ static SCIP_MESSAGEHDLR* messagehdlr = NULL;
 static
 SCIP_Bool initProb(int pos, int* ncols, int* nrows, int* nnonz, SCIP_OBJSEN* objsen)
 {
+   const char* rownames[] = { "row1", "row2" };
+   const char* colnames[] = { "x1", "x2" };
    SCIP_Real obj[100] = { 1.0, 1.0 };
    SCIP_Real  lb[100] = { 0.0, 0.0 };
    SCIP_Real  ub[100] = { SCIPlpiInfinity(lpi),  SCIPlpiInfinity(lpi) };
@@ -257,8 +268,8 @@ SCIP_Bool initProb(int pos, int* ncols, int* nrows, int* nnonz, SCIP_OBJSEN* obj
    }
 
    SCIP_CALL( SCIPlpiChgObjsen(lpi, *objsen) );
-   SCIP_CALL( SCIPlpiAddCols(lpi, *ncols, obj, lb, ub, NULL, 0, NULL, NULL, NULL) );
-   SCIP_CALL( SCIPlpiAddRows(lpi, *nrows, lhs, rhs, NULL, *nnonz, beg, ind, val) );
+   SCIP_CALL( SCIPlpiAddCols(lpi, *ncols, obj, lb, ub, (char**) colnames, 0, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPlpiAddRows(lpi, *nrows, lhs, rhs, (char**) rownames, *nnonz, beg, ind, val) );
    cr_assert( !SCIPlpiWasSolved(lpi) );
    SCIP_CALL( SCIPlpiSolvePrimal(lpi) );
    cr_assert( SCIPlpiWasSolved(lpi) );
@@ -940,6 +951,8 @@ Test(change, testlpiwritestatemethods)
    /* Ideally we want to check in the same matter as in testlpiwritereadlpmethods, but this is
     * not possible at the moment because we have no names for columns and rows. */
    SCIP_CALL( SCIPlpiClear(lpi) );
+
+   remove("testlpiwriteandreadstate.bas");
 }
 
 /** test SCIPlpiWriteLP, SCIPlpiReadLP, SCIPlpiClear */
@@ -985,4 +998,10 @@ Test(change, testlpiwritereadlpmethods)
    file = fopen("lpi_change_test_problem.lp", "r");
    file2 = fopen("lpi_change_test_problem2.lp", "r");
    cr_assert_file_contents_eq(file, file2);
+
+   fclose(file);
+   fclose(file2);
+
+   remove("lpi_change_test_problem.lp");
+   remove("lpi_change_test_problem2.lp");
 }

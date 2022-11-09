@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -1064,6 +1073,9 @@ SCIP_RETCODE SCIPnodeFree(
 
    SCIPsetDebugMsg(set, "free node #%" SCIP_LONGINT_FORMAT " at depth %d of type %d\n", SCIPnodeGetNumber(*node), SCIPnodeGetDepth(*node), SCIPnodeGetType(*node));
 
+   /* check lower bound w.r.t. debugging solution */
+   SCIP_CALL( SCIPdebugCheckGlobalLowerbound(blkmem, set) );
+
    if( SCIPnodeGetType(*node) != SCIP_NODETYPE_PROBINGNODE )
    {
       SCIP_EVENT event;
@@ -1856,7 +1868,7 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
          || (boundtype == SCIP_BOUNDTYPE_UPPER && SCIPsetIsLT(set, newbound, oldub))
          || (boundtype == SCIP_BOUNDTYPE_UPPER && newbound < oldub && newbound * oldub <= 0.0));
 
-   SCIPsetDebugMsg(set, "adding boundchange at node %llu at depth %u to variable <%s>: old bounds=[%g,%g], new %s bound: %g (infer%s=<%s>, inferinfo=%d)\n",
+   SCIPsetDebugMsg(set, "adding boundchange at node %" SCIP_LONGINT_FORMAT " at depth %u to variable <%s>: old bounds=[%g,%g], new %s bound: %g (infer%s=<%s>, inferinfo=%d)\n",
       node->number, node->depth, SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
       boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper", newbound, infercons != NULL ? "cons" : "prop",
       infercons != NULL ? SCIPconsGetName(infercons) : (inferprop != NULL ? SCIPpropGetName(inferprop) : "-"), inferinfo);
@@ -3534,6 +3546,7 @@ SCIP_RETCODE SCIPtreeLoadLPState(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< problem data */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp                  /**< current LP data */
@@ -3585,7 +3598,7 @@ SCIP_RETCODE SCIPtreeLoadLPState(
       if( SCIPnodeGetType(lpstatefork) == SCIP_NODETYPE_FORK )
       {
          assert(lpstatefork->data.fork != NULL);
-         SCIP_CALL( SCIPlpSetState(lp, blkmem, set, eventqueue, lpstatefork->data.fork->lpistate,
+         SCIP_CALL( SCIPlpSetState(lp, blkmem, set, prob, eventqueue, lpstatefork->data.fork->lpistate,
                lpstatefork->data.fork->lpwasprimfeas, lpstatefork->data.fork->lpwasprimchecked,
                lpstatefork->data.fork->lpwasdualfeas, lpstatefork->data.fork->lpwasdualchecked) );
       }
@@ -3593,7 +3606,7 @@ SCIP_RETCODE SCIPtreeLoadLPState(
       {
          assert(SCIPnodeGetType(lpstatefork) == SCIP_NODETYPE_SUBROOT);
          assert(lpstatefork->data.subroot != NULL);
-         SCIP_CALL( SCIPlpSetState(lp, blkmem, set, eventqueue, lpstatefork->data.subroot->lpistate,
+         SCIP_CALL( SCIPlpSetState(lp, blkmem, set, prob, eventqueue, lpstatefork->data.subroot->lpistate,
                lpstatefork->data.subroot->lpwasprimfeas, lpstatefork->data.subroot->lpwasprimchecked,
                lpstatefork->data.subroot->lpwasdualfeas, lpstatefork->data.subroot->lpwasdualchecked) );
       }
@@ -3775,7 +3788,7 @@ SCIP_RETCODE focusnodeCleanupVars(
       /* remove all additions to the LP at this node */
       SCIP_CALL( SCIPlpShrinkCols(lp, set, SCIPlpGetNCols(lp) - SCIPlpGetNNewcols(lp)) );
 
-      SCIP_CALL( SCIPlpFlush(lp, blkmem, set, eventqueue) );
+      SCIP_CALL( SCIPlpFlush(lp, blkmem, set, transprob, eventqueue) );
    }
 
    /* mark variables as deleted */
@@ -4033,11 +4046,8 @@ SCIP_RETCODE focusnodeToFork(
       SCIP_CALL( SCIPlpCleanupNew(lp, blkmem, set, stat, eventqueue, eventfilter, (tree->focusnode->depth == 0)) );
 
       /* resolve LP after cleaning up */
-      if( !lp->solved || !lp->flushed )
-      {
-         SCIPsetDebugMsg(set, "resolving LP after cleanup\n");
-         SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, transprob, -1LL, FALSE, FALSE, TRUE, &lperror) );
-      }
+      SCIPsetDebugMsg(set, "resolving LP after cleanup\n");
+      SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, transprob, -1LL, FALSE, FALSE, TRUE, &lperror) );
    }
    assert(lp->flushed);
    assert(lp->solved || lperror || lp->resolvelperror);
@@ -4157,11 +4167,8 @@ SCIP_RETCODE focusnodeToSubroot(
       }
 
       /* resolve LP after cleaning up */
-      if( !lp->solved || !lp->flushed )
-      {
-         SCIPsetDebugMsg(set, "resolving LP after cleanup\n");
-         SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, transprob, -1LL, FALSE, FALSE, TRUE, &lperror) );
-      }
+      SCIPsetDebugMsg(set, "resolving LP after cleanup\n");
+      SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, transprob, -1LL, FALSE, FALSE, TRUE, &lperror) );
    }
    assert(lp->flushed);
    assert(lp->solved || lperror);
@@ -4343,6 +4350,12 @@ SCIP_RETCODE SCIPnodeFocus(
    assert(lp != NULL);
    assert(conflictstore != NULL);
    assert(cutoff != NULL);
+
+   /* check global lower bound w.r.t. debugging solution */
+   SCIP_CALL( SCIPdebugCheckGlobalLowerbound(blkmem, set) );
+
+   /* check local lower bound w.r.t. debugging solution */
+   SCIP_CALL( SCIPdebugCheckLocalLowerbound(blkmem, set, *node) );
 
    SCIPsetDebugMsg(set, "focusing node #%" SCIP_LONGINT_FORMAT " of type %d in depth %d\n",
       *node != NULL ? SCIPnodeGetNumber(*node) : -1, *node != NULL ? (int)SCIPnodeGetType(*node) : 0,
@@ -5157,7 +5170,7 @@ SCIP_RETCODE SCIPtreeCutoff(
    for( i = tree->nsiblings-1; i >= 0; --i )
    {
       node = tree->siblings[i];
-      if( SCIPsetIsGE(set, node->lowerbound, cutoffbound) )
+      if( SCIPsetIsInfinity(set, node->lowerbound) || SCIPsetIsGE(set, node->lowerbound, cutoffbound) )
       {
          SCIPsetDebugMsg(set, "cut off sibling #%" SCIP_LONGINT_FORMAT " at depth %d with lowerbound=%g at position %d\n",
             SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), node->lowerbound, i);
@@ -5180,7 +5193,7 @@ SCIP_RETCODE SCIPtreeCutoff(
    for( i = tree->nchildren-1; i >= 0; --i )
    {
       node = tree->children[i];
-      if( SCIPsetIsGE(set, node->lowerbound, cutoffbound) )
+      if( SCIPsetIsInfinity(set, node->lowerbound) || SCIPsetIsGE(set, node->lowerbound, cutoffbound) )
       {
          SCIPsetDebugMsg(set, "cut off child #%" SCIP_LONGINT_FORMAT " at depth %d with lowerbound=%g at position %d\n",
             SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), node->lowerbound, i);
@@ -5493,7 +5506,7 @@ SCIP_RETCODE SCIPtreeBranchVar(
    /* ensure, that branching on continuous variables will only be performed when a branching point is given. */
    if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS && !validval )
    {
-      SCIPerrorMessage("Cannot branch on continuous variables without a given branching value.\n", SCIPvarGetName(var));
+      SCIPerrorMessage("Cannot branch on continuous variable <%s> without a given branching value.", SCIPvarGetName(var));
       SCIPABORT();
       return SCIP_INVALIDDATA; /*lint !e527*/
    }
@@ -5979,7 +5992,7 @@ SCIP_RETCODE SCIPtreeBranchVarNary(
    /* ensure, that branching on continuous variables will only be performed when a branching point is given. */
    if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS && !validval )
    {
-      SCIPerrorMessage("Cannot branch on continuous variables without a given branching value.\n", SCIPvarGetName(var));
+      SCIPerrorMessage("Cannot branch on continuous variable <%s> without a given branching value.", SCIPvarGetName(var));
       SCIPABORT();
       return SCIP_INVALIDDATA; /*lint !e527*/
    }
@@ -6566,6 +6579,7 @@ SCIP_RETCODE SCIPtreeLoadProbingLPState(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< problem data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp                  /**< current LP data */
    )
@@ -6625,7 +6639,7 @@ SCIP_RETCODE SCIPtreeLoadProbingLPState(
       /* set the LP state */
       if( lpistate != NULL )
       {
-         SCIP_CALL( SCIPlpSetState(lp, blkmem, set, eventqueue, lpistate,
+         SCIP_CALL( SCIPlpSetState(lp, blkmem, set, prob, eventqueue, lpistate,
                lpwasprimfeas, lpwasprimchecked, lpwasdualfeas, lpwasdualchecked) );
       }
 
@@ -6895,7 +6909,7 @@ SCIP_RETCODE SCIPtreeEndProbing(
    /* if the LP was flushed before probing starts, flush it again */
    if( tree->probinglpwasflushed )
    {
-      SCIP_CALL( SCIPlpFlush(lp, blkmem, set, eventqueue) );
+      SCIP_CALL( SCIPlpFlush(lp, blkmem, set, transprob, eventqueue) );
 
       /* if the LP was solved before probing starts, solve it again to restore the LP solution */
       if( tree->probinglpwassolved )
@@ -6915,7 +6929,7 @@ SCIP_RETCODE SCIPtreeEndProbing(
          }
          else
          {
-            SCIP_CALL( SCIPlpSetState(lp, blkmem, set, eventqueue, tree->probinglpistate,
+            SCIP_CALL( SCIPlpSetState(lp, blkmem, set, transprob, eventqueue, tree->probinglpistate,
                   tree->probinglpwasprimfeas, tree->probinglpwasprimchecked, tree->probinglpwasdualfeas,
                   tree->probinglpwasdualchecked) );
             SCIP_CALL( SCIPlpFreeState(lp, blkmem, &tree->probinglpistate) );
@@ -7562,7 +7576,7 @@ void SCIPnodeGetNDomchg(
       for( i = 0; i < (int) node->domchg->domchgbound.nboundchgs; i++ )
       {
          if( count_branchings && node->domchg->domchgbound.boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING )
-            (*nbranchings)++;
+            (*nbranchings)++; /*lint !e413*/
          else if( count_consprop && node->domchg->domchgbound.boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER )
             (*nconsprop)++; /*lint !e413*/
          else if( count_prop && node->domchg->domchgbound.boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER )
@@ -7686,10 +7700,10 @@ void SCIPnodeGetDualBoundchgs(
       j = 0;
       for( i = i+1; i < nboundchgs; i++)
       {
-         assert( boundchgs[i].boundchgtype != SCIP_BOUNDCHGTYPE_BRANCHING );
          if( boundchgs[i].var->vartype == SCIP_VARTYPE_BINARY || boundchgs[i].var->vartype == SCIP_VARTYPE_INTEGER
           || boundchgs[i].var->vartype == SCIP_VARTYPE_IMPLINT )
          {
+            assert( boundchgs[i].boundchgtype != SCIP_BOUNDCHGTYPE_BRANCHING );
             if( (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER
                   && boundchgs[i].data.inferencedata.reason.cons == NULL)
              || (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER

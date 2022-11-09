@@ -15,7 +15,7 @@ ifeq ($(SANITIZE),full)
 # -fsanitize=address does not work together with -fsanitize=thread
 # -fsanitize=leak is included in -fsanitize=address, but works together with -fsanitize=thread
 
-ifeq ($(PARASCIP),true)
+ifeq ($(THREADSAFE),true)
 # enable ThreadSanitizer (https://github.com/google/sanitizers/wiki/ThreadSanitizerCppManual)
 SANITIZERFLAGS = -fsanitize=thread
 
