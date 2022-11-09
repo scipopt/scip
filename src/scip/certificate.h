@@ -333,6 +333,11 @@ SCIP_RETCODE SCIPcertificateClearAggrinfo(
    SCIP*                 scip                /**< global SCIP data structure */
    );
 
+/** free all mir information */
+SCIP_RETCODE SCIPcertificateClearMirinfo(
+   SCIP*                 scip                /**< global SCIP data structure */
+   );
+
 /** free aggregation information */
 SCIP_RETCODE SCIPcertificateFreeAggrInfo(
    SCIP_SET*             set,                /**< general SCIP settings */
