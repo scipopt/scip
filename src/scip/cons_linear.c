@@ -10492,7 +10492,9 @@ SCIP_RETCODE checkParallelObjective(
       SCIP_Bool rhsfinite = !SCIPisInfinity(scip, consdata->rhs);
       SCIP_Bool lhsfinite = !SCIPisInfinity(scip, -consdata->lhs);
 
-      if( SCIPisPositive(scip, scale) )
+      assert(scale != 0.0);
+
+      if( scale > 0.0 )
       {
          if( conshdlrdata->detectcutoffbound && rhsfinite )
          {
