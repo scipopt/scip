@@ -394,6 +394,7 @@ SCIP_RETCODE determineGraphSize(
       }
       else
       {
+         SCIP_Bool newinternode = FALSE;
          int internode;
 
          /* if new group of coefficients has been reached */
@@ -423,6 +424,7 @@ SCIP_RETCODE determineGraphSize(
             /* ensure memory for degrees */
             SCIP_CALL( SCIPensureBlockMemoryArray(scip, degrees, maxdegrees, *nnodes) );
             (*degrees)[internodes[varrhsidx]] = 0;
+            newinternode = TRUE;
          }
          internode = internodes[varrhsidx];
          assert( internode >= matrixdata->npermvars + matrixdata->nrhscoef );
@@ -435,13 +437,30 @@ SCIP_RETCODE determineGraphSize(
             break;
          }
 
-         ++(*degrees)[varnode];
-         ++(*degrees)[internode];
-         ++(*nlinearedges);
-
-         ++(*degrees)[rhsnode];
-         ++(*degrees)[internode];
-         ++(*nlinearedges);
+         if ( groupByConstraints )
+         {
+            if ( newinternode )
+            {
+               ++(*degrees)[rhsnode];
+               ++(*degrees)[internode];
+               ++(*nlinearedges);
+            }
+            ++(*degrees)[varnode];
+            ++(*degrees)[internode];
+            ++(*nlinearedges);
+         }
+         else
+         {
+            if ( newinternode )
+            {
+               ++(*degrees)[varnode];
+               ++(*degrees)[internode];
+               ++(*nlinearedges);
+            }
+            ++(*degrees)[rhsnode];
+            ++(*degrees)[internode];
+            ++(*nlinearedges);
+         }
       }
    }
    SCIPfreeBufferArray(scip, &internodes);
@@ -915,6 +934,7 @@ SCIP_RETCODE fillGraphByConss(
       }
       else
       {
+         SCIP_Bool newinternode = FALSE;
          int internode;
 
          /* if new group of coefficients has been reached */
@@ -940,17 +960,33 @@ SCIP_RETCODE fillGraphByConss(
          {
             G->add_vertex(*nusedcolors + color, degrees[n]);
             internodes[varrhsidx] = n++;
+            newinternode = TRUE;
          }
          internode = internodes[varrhsidx];
          assert( internode >= matrixdata->npermvars + matrixdata->nrhscoef );
          assert( internode >= firstcolornodenumber );
          assert( internode < nnodes );
 
-         G->add_edge(varnode, internode);
-         ++m;
-
-         G->add_edge(rhsnode, internode);
-         ++m;
+         if ( groupByConstraints )
+         {
+            if ( newinternode )
+            {
+               G->add_edge(rhsnode, internode);
+               ++m;
+            }
+            G->add_edge(varnode, internode);
+            ++m;
+         }
+         else
+         {
+            if ( newinternode )
+            {
+               G->add_edge(varnode, internode);
+               ++m;
+            }
+            G->add_edge(rhsnode, internode);
+            ++m;
+         }
       }
    }
    assert( n == matrixdata->npermvars + matrixdata->nrhscoef + nlinearnodes );
