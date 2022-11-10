@@ -228,7 +228,7 @@ namespace sassy {
                 }
             }
 
-            // fwd - bwd test
+            /*// fwd - bwd test
             multiedge_test.initialize(v_size);
             for (int i = 0; i < v_size; ++i) {
                 multiedge_test.reset();
@@ -244,7 +244,7 @@ namespace sassy {
                     }
                     assert(found);
                 }
-            }
+            }*/
 #endif
         }
 
