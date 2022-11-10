@@ -24,6 +24,20 @@ namespace sassy {
         unsigned int num_deg_edges_defined = 0;
         bool initialized;
         bool finalized = false;
+
+    private:
+        void finalize() {
+            if(!finalized) {
+                if (!initialized)
+                    throw std::logic_error("uninitialized graph");
+                if (num_vertices_defined != (unsigned int) g.v_size)
+                    throw std::logic_error("did not add the number of vertices requested by constructor");
+                if (num_edges_defined != (unsigned int) g.e_size)
+                    throw std::logic_error("did not add the number of edges requested by constructor");
+                sanity_check();
+                finalized = true;
+            }
+        }
     public:
         static_graph(const unsigned int nv, const unsigned int ne) {
             g.initialize(nv, 2*ne);
@@ -106,29 +120,73 @@ namespace sassy {
             num_edges_defined += 2;
         };
 
-        sgraph* get_sgraph() {
-            if(!finalized) {
-                if (!initialized)
-                    throw std::logic_error("uninitialized graph");
-                if (num_vertices_defined != (unsigned int) g.v_size)
-                    throw std::logic_error("did not add the number of vertices requested by constructor");
-                if (num_edges_defined != (unsigned int) g.e_size)
-                    throw std::logic_error("did not add the number of edges requested by constructor");
-                finalized = true;
+        void sanity_check() {
+            g.sanity_check();
+        }
+
+        void dump_dimacs(std::string filename) {
+            finalize();
+            std::ofstream dumpfile;
+            dumpfile.open (filename, std::ios::out);
+
+            dumpfile << "p edge " << g.v_size << " " << g.e_size/2 << std::endl;
+
+            for(int i = 0; i < g.v_size; ++i) {
+                dumpfile << "n " << i+1 << " " << c[i] << std::endl;
             }
+
+            for(int i = 0; i < g.v_size; ++i) {
+                for(int j = g.v[i]; j < g.v[i]+g.d[i]; ++j) {
+                    const int neighbour = g.e[j];
+                    if(neighbour < i) {
+                        dumpfile << "e " << neighbour+1 << " " << i+1 << std::endl;
+                    }
+                }
+            }
+        }
+
+        void shuffle() {
+            std::cout << "graph shuffle ";
+            finalize();
+            std::vector<int> vec;
+            std::vector<int> old_v;
+            std::vector<int> old_d;
+            std::vector<int> old_e;
+            std::vector<int> old_col;
+            for(int i = 0; i < g.v_size; ++i) {
+                vec.push_back(i);
+                old_v.push_back(g.v[i]);
+                old_d.push_back(g.d[i]);
+                old_col.push_back(c[i]);
+            }
+
+            auto rd = std::random_device {};
+            auto rng = std::default_random_engine { rd() };
+            std::shuffle(std::begin(vec), std::end(vec), rng);
+
+            for(int i = 0; i < g.v_size; ++i) {
+                std::cout << vec[i] << " ";
+            }
+            std::cout << std::endl;
+
+            for(int i = 0; i < g.v_size; ++i) {
+                g.v[vec[i]] = old_v[i];
+                g.d[vec[i]] = old_d[i];
+                c[vec[i]]   = old_col[i];
+            }
+
+            for(int i = 0; i < g.e_size; ++i) {
+                g.e[i] = vec[g.e[i]];
+            }
+        }
+
+        sgraph* get_sgraph() {
+            finalize();
             return &g;
         };
 
         int*    get_coloring() {
-            if(!finalized) {
-                if (!initialized)
-                    throw std::logic_error("uninitialized graph");
-                if (num_vertices_defined != (unsigned int) g.v_size)
-                    throw std::logic_error("did not add the number of vertices requested by constructor, requested: " +
-                                           std::to_string(g.v_size) + ", added: " +
-                                           std::to_string(num_vertices_defined));
-                finalized = true;
-            }
+            finalize();
             return c;
         };
     };
