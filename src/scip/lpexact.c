@@ -3194,9 +3194,15 @@ SCIP_RETCODE SCIProwExactCreate(
    (*row)->integral = TRUE;
    (*row)->fprow = fprow;
    (*row)->fprowrhs = fprowrhs;
+   (*row)->nuses = 0;
+   (*row)->nlocks = 0;
    fprow->rowexact = (*row);
+   SCIProwExactCapture(*row);
    if( fprowrhs != NULL )
+   {
+      SCIProwExactCapture(*row);
       fprowrhs->rowexact = (*row);
+   }
 
    if( len > 0 )
    {
@@ -3252,7 +3258,6 @@ SCIP_RETCODE SCIProwExactCreate(
    (*row)->len = len;
    (*row)->nlpcols = 0;
    (*row)->nunlinked = len;
-   (*row)->nuses = 0;
    (*row)->lppos = -1;
    (*row)->lpipos = -1;
    (*row)->lpdepth = -1;
@@ -3261,11 +3266,7 @@ SCIP_RETCODE SCIProwExactCreate(
    (*row)->lpcolssorted = TRUE;
    (*row)->nonlpcolssorted = (len <= 1);
    (*row)->delaysort = FALSE;
-   (*row)->nlocks = 0;
    (*row)->fprelaxable = isfprelaxable;
-
-   /* capture the row */
-   SCIProwExactCapture(*row);
 
    return SCIP_OKAY;
 } /*lint !e715*/

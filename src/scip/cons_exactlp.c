@@ -7497,6 +7497,8 @@ SCIP_RETCODE createRows(
    SCIP_CALL( SCIPcreateEmptyRowConsExact(scip, &consdata->rowexact, consdata->rowlhs, consdata->rowrhs,
       consdata->lhs, consdata->rhs, consdata->hasfprelax) );
 
+   SCIP_CALL( SCIPcaptureRowExact(scip, consdata->rowexact) );
+
    SCIP_CALL( SCIPaddVarsToRowExact(scip, consdata->rowexact, consdata->nvars, consdata->vars, consdata->vals) );
 
    onerowrelax = TRUE;

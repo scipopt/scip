@@ -966,7 +966,6 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
             {
                SCIP_CALL( SCIProwExactCreateFromRow(cut, blkmem, set, stat, eventqueue, transprob, lp->lpexact) );
                SCIP_CALL( SCIPaddRowExact(set->scip, cut->rowexact));
-               SCIP_CALL( SCIPreleaseRowExact(set->scip, &(cut->rowexact)) );
             }
 
             /* add cut to the LP and update orthogonalities */

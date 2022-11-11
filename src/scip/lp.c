@@ -5476,6 +5476,7 @@ SCIP_RETCODE SCIProwFree(
          (*row)->rowexact->fprow = NULL;
       else
          (*row)->rowexact->fprowrhs = NULL;
+      SCIProwExactRelease(&(*row)->rowexact, blkmem, set, lp->lpexact);
    }
 
    BMSfreeBlockMemory(blkmem, row);
