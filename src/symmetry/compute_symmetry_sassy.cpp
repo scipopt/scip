@@ -1294,7 +1294,10 @@ SCIP_RETCODE fillGraphByConss(
                /* connect the current node with its parent */
                assert( parentnode != -1 );
 
-               G->add_edge(parentnode, node);
+               if ( parentnode < node )
+                  G->add_edge(parentnode, node);
+               else
+                  G->add_edge(node, parentnode);
                ++m;
                assert( m <= nedges );
 
@@ -1339,7 +1342,7 @@ SCIP_RETCODE fillGraphByConss(
 
                      assert( internode < nnodes );
 
-                     G->add_edge(internode, node);
+                     G->add_edge(node, internode);
                      ++m;
                      assert( m <= nedges );
                   }
@@ -1373,7 +1376,7 @@ SCIP_RETCODE fillGraphByConss(
 
                      assert( node < nnodes );
 
-                     G->add_edge(internode, node);
+                     G->add_edge(node, internode);
                      ++m;
                      assert( m <= nedges );
                   }
