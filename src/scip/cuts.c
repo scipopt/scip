@@ -6877,6 +6877,7 @@ SCIP_RETCODE SCIPcalcMIR(
       else
       {
          SCIP_CALL( postprocessCutQuadSafely(scip, tmpislocal, tmpinds, tmpcoefs, &tmpnnz, QUAD(&rhs), success) );
+         //*success = ! removeZerosQuadSafely(scip, SCIPsumepsilon(scip), tmpislocal, tmpcoefs, QUAD(&rhs), tmpinds, &tmpnnz);
       }
    }
    else

@@ -319,7 +319,7 @@ SCIP_RETCODE SCIPcreateRowExactFromRow(
    assert(fprow->rowexact == NULL);
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateRowExactFromRow", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
-   SCIP_CALL( SCIProwExactCreateFromRow(&(fprow->rowexact), fprow, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->transprob, scip->lpexact) );
+   SCIP_CALL( SCIProwExactCreateFromRow(fprow, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->transprob, scip->lpexact) );
 
    return SCIP_OKAY;
 }

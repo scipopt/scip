@@ -29,6 +29,7 @@
 #include "scip/set.h"
 #include "scip/stat.h"
 #include "scip/lp.h"
+#include "scip/lpexact.h"
 #include "scip/var.h"
 #include "scip/tree.h"
 #include "scip/reopt.h"
@@ -43,6 +44,8 @@
 #include "scip/struct_event.h"
 #include "scip/struct_sepastore.h"
 #include "scip/misc.h"
+#include "scip/pub_lpexact.h"
+#include "scip/scip_lpexact.h"
 
 
 
@@ -959,6 +962,13 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
 
          if( !applied )
          {
+            if( set->exact_enabled && SCIProwGetRowExact(cut) == NULL )
+            {
+               SCIP_CALL( SCIProwExactCreateFromRow(cut, blkmem, set, stat, eventqueue, transprob, lp->lpexact) );
+               SCIP_CALL( SCIPaddRowExact(set->scip, cut->rowexact));
+               SCIP_CALL( SCIPreleaseRowExact(set->scip, &(cut->rowexact)) );
+            }
+
             /* add cut to the LP and update orthogonalities */
             SCIPsetDebugMsg(set, " -> applying%s cut <%s>\n", (i < sepastore->nforcedcuts) ? " forced" : "", SCIProwGetName(cut));
             /*SCIPdebug( SCIProwPrint(cut, set->scip->messagehdlr, NULL));*/

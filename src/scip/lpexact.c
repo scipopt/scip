@@ -3386,7 +3386,6 @@ SCIP_RETCODE SCIProwExactControlEncodingLength(
 
 /** creates and captures an exact LP row from a fp row */
 SCIP_RETCODE SCIProwExactCreateFromRow(
-   SCIP_ROWEXACT**       row,                /**< pointer to LP row data */
    SCIP_ROW*             fprow,              /**< corresponding fp row to create from */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -3396,12 +3395,19 @@ SCIP_RETCODE SCIProwExactCreateFromRow(
    SCIP_LPEXACT*         lp                  /**< current LP data */
    )
 {
+   SCIP_ROWEXACT** row;
    SCIP_ROWEXACT* workrow;
    void* origin;
    int i;
+   int nlocks;
    SCIP_Rational* tmpval;
    SCIP_Rational* tmplhs;
    SCIP_Real* rowvals;
+
+   row = &(fprow->rowexact);
+
+   nlocks = fprow->nlocks;
+   fprow->nlocks = 0; // bit hacky: unlock the row to be able to change it (slightly)
 
    assert(row != NULL);
    assert(fprow != NULL);
@@ -3466,6 +3472,8 @@ SCIP_RETCODE SCIProwExactCreateFromRow(
 
    RatFreeBuffer(set->buffer, &tmplhs);
    RatFreeBuffer(set->buffer, &tmpval);
+
+   fprow->nlocks = nlocks;
 
    return SCIP_OKAY;
 }

@@ -294,18 +294,6 @@ SCIP_RETCODE addCut(
       /* flush all changes before adding the cut */
       SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
 
-      if( SCIPisExactSolve(scip) )
-      {
-         SCIP_ROWEXACT* rowexact;
-
-         SCIP_CALL( SCIPcreateRowExactFromRow(scip, cut) );
-
-         rowexact = SCIProwGetRowExact(cut);
-
-         SCIP_CALL( SCIPaddRowExact(scip, rowexact) );
-         SCIP_CALL( SCIPreleaseRowExact(scip, &(rowexact)) );
-      }
-
       if( SCIProwGetNNonz(cut) == 0 && !SCIPisExactSolve(scip) )
       {
          assert( SCIPisFeasNegative(scip, cutrhs) );
@@ -349,6 +337,17 @@ SCIP_RETCODE addCut(
                /* add global cuts which are not implicit bound changes to the cut pool */
                if( !cutislocal )
                {
+                  // if( SCIPisExactSolve(scip) )
+                  // {
+                  //    SCIP_ROWEXACT* rowexact;
+
+                  //    SCIP_CALL( SCIPcreateRowExactFromRow(scip, cut) );
+
+                  //    rowexact = SCIProwGetRowExact(cut);
+
+                  //    SCIP_CALL( SCIPaddRowExact(scip, rowexact) );
+                  //    SCIP_CALL( SCIPreleaseRowExact(scip, &(rowexact)) );
+                  // }
                   if( sepadata->delayedcuts )
                   {
                      SCIP_CALL( SCIPaddDelayedPoolCut(scip, cut) );
@@ -369,6 +368,8 @@ SCIP_RETCODE addCut(
                {
                   SCIP_CALL( SCIPstoreCertificateActiveAggregationInfo(scip, cut) );
                   SCIP_CALL( SCIPstoreCertificateActiveMirInfo(scip, cut) );
+
+                  //SCIP_CALL( SCIPcertificatePrintMirCut(scip->set, scip->lp, SCIPgetCertificate(scip), scip->transprob, cut, 'L') );
                }
             }
          }

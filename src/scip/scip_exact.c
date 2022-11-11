@@ -229,6 +229,9 @@ SCIP_RETCODE SCIPfreeRowCertInfo(
    if( SCIPhashmapExists(certificate->rowdatahash, (void*) SCIProwGetRowExact(row)) )
       return SCIP_OKAY;
 
+   if( certificate->workingaggrinfo || certificate->workingmirinfo )
+      return SCIP_OKAY;
+
    SCIPdebugMessage("Removing information stored in certificate for row \n");
 
    if( (certificate->aggrinfohash != NULL) && SCIPhashmapExists(certificate->aggrinfohash, (void*) row) )
