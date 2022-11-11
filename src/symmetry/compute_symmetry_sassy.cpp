@@ -201,22 +201,9 @@ static
 void sassyhook(
    void*                 user_param,         /**< parameter supplied at call to sassy */
    int                   n,                  /**< dimension */
-   const int*            p,                  /**< permutation */
+   const int*            aut,                /**< permutation */
    int                   nsupp,              /**< support size */
    const int*            suppa               /**< support list */
-   )
-{
-   assert( p != NULL );
-
-   /* currently do nothing */
-}
-
-/** callback function for bliss */
-static
-void blisshook(
-   void*                 user_param,         /**< parameter supplied at call to bliss */
-   unsigned int          n,                  /**< size of aut vector */
-   const unsigned int*   aut                 /**< automorphism */
    )
 {
    assert( aut != NULL );
@@ -1595,21 +1582,20 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
 #endif
 
 #if BLISS_VERSION_MAJOR >= 1 || BLISS_VERSION_MINOR >= 76
-   /* lambda function to have access to data and pass it to the blisshook above */
-   auto reportglue = [&](unsigned int n, const unsigned int* aut) {
-      blisshook((void*)&data, n, aut);
-   };
-
    /* lambda function to have access to stats and terminate the search if maxgenerators are reached */
    auto term = [&]() {
       return (stats.get_nof_generators() >= (long unsigned int) maxgenerators);
    };
 
+   auto hook = [&](unsigned int n, const unsigned int* aut) {
+      sassy.bliss_hook(n, aut);
+   };
+
    /* start search */
-   blissgraph.find_automorphisms(stats, reportglue, term);
+   blissgraph.find_automorphisms(stats, hook, term);
 #else
    /* start search */
-   blissgraph.find_automorphisms(stats, blisshook, (void*) &data);
+   error();
 #endif
 
 
