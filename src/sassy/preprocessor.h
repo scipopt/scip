@@ -4245,12 +4245,18 @@ namespace sassy {
         }
 
         // bliss usage specific:
-        static inline void bliss_hook(void *user_param, unsigned int n, const unsigned int *aut) {
-            auto p = (preprocessor *) user_param;
-            p->pre_consumer(n, (const int *) aut, -1, nullptr, p->saved_hook);
+#if BLISS_VERSION_MAJOR >= 1 || BLISS_VERSION_MINOR >= 76
+        void bliss_hook(unsigned int n, const unsigned int *aut) {
+           pre_consumer(n, (const int *) aut, -1, nullptr, saved_hook);
         }
+#else
+       static inline void bliss_hook(void *user_param, unsigned int n, const unsigned int *aut) {
+          auto p = (preprocessor *) user_param;
+          p->pre_consumer(n, (const int *) aut, -1, nullptr, p->saved_hook);
+       }
+#endif
 
-        // Traces usage specific:
+       // Traces usage specific:
         static inline void traces_hook(int c, int* aut, int n) {
             auto p = preprocessor::save_preprocessor;
             p->pre_consumer(n, (const int *) aut, -1, nullptr, p->saved_hook);
