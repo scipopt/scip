@@ -1595,7 +1595,7 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    blissgraph.find_automorphisms(stats, hook, term);
 #else
    /* start search */
-   error();
+   blissgraph.find_automorphisms(stats, sassy::preprocessor::bliss_hook, (void*) &sassy);
 #endif
 
 
