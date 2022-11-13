@@ -4074,7 +4074,7 @@ namespace sassy {
             R1 = &R_stack;
             R1->refine_coloring_first(g, &c, -1);
 
-            std::cout << "cells: " << c.cells << "/" << g->v_size << std::endl;
+            // std::cout << "cells: " << c.cells << "/" << g->v_size << std::endl;
 
             if (c.cells == g->v_size) {
                 PRINT("(prep-red) graph is discrete");
