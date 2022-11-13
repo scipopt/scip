@@ -455,6 +455,7 @@ SCIP_RETCODE determineGraphSize(
       }
       else
       {
+         SCIP_Bool newinternode = FALSE;
          int internode;
 
          /* if new group of coefficients has been reached */
@@ -484,6 +485,7 @@ SCIP_RETCODE determineGraphSize(
             /* ensure memory for degrees */
             SCIP_CALL( SCIPensureBlockMemoryArray(scip, degrees, maxdegrees, *nnodes) );
             (*degrees)[internodes[varrhsidx]] = 0;
+            newinternode = TRUE;
          }
          internode = internodes[varrhsidx];
          assert( internode >= matrixdata->npermvars + matrixdata->nrhscoef );
@@ -496,13 +498,30 @@ SCIP_RETCODE determineGraphSize(
             break;
          }
 
-         ++(*degrees)[varnode];
-         ++(*degrees)[internode];
-         ++(*nlinearedges);
-
-         ++(*degrees)[rhsnode];
-         ++(*degrees)[internode];
-         ++(*nlinearedges);
+         if ( groupByConstraints )
+         {
+            if ( newinternode )
+            {
+               ++(*degrees)[rhsnode];
+               ++(*degrees)[internode];
+               ++(*nlinearedges);
+            }
+            ++(*degrees)[varnode];
+            ++(*degrees)[internode];
+            ++(*nlinearedges);
+         }
+         else
+         {
+            if ( newinternode )
+            {
+               ++(*degrees)[varnode];
+               ++(*degrees)[internode];
+               ++(*nlinearedges);
+            }
+            ++(*degrees)[rhsnode];
+            ++(*degrees)[internode];
+            ++(*nlinearedges);
+         }
       }
    }
    SCIPfreeBufferArray(scip, &internodes);
@@ -927,7 +946,7 @@ SCIP_RETCODE fillGraphByConss(
    for (i = 0; i < nnodes; ++i)
    {
       SG->d[i] = degrees[i];   /* degree of node i */
-      SG->v[i] = (size_t) cnt;          /* position of edges for node i */
+      SG->v[i] = (size_t) cnt; /* position of edges for node i */
       pos[i] = cnt;            /* also store position */
       cnt += degrees[i];
    }
@@ -990,6 +1009,7 @@ SCIP_RETCODE fillGraphByConss(
       }
       else
       {
+         SCIP_Bool newinternode = FALSE;
          int internode;
 
          /* if new group of coefficients has been reached */
@@ -1015,19 +1035,37 @@ SCIP_RETCODE fillGraphByConss(
          {
             colors[n] = *nusedcolors + color;
             internodes[varrhsidx] = n++;
+            newinternode = TRUE;
          }
          internode = internodes[varrhsidx];
          assert( internode >= matrixdata->npermvars + matrixdata->nrhscoef );
          assert( internode >= firstcolornodenumber );
          assert( internode < nnodes );
 
-         SG->e[pos[varnode]++] = internode;
-         SG->e[pos[internode]++] = varnode;
-         ++m;
-
-         SG->e[pos[rhsnode]++] = internode;
-         SG->e[pos[internode]++] = rhsnode;
-         ++m;
+         if ( groupByConstraints )
+         {
+            if ( newinternode )
+            {
+               SG->e[pos[rhsnode]++] = internode;
+               SG->e[pos[internode]++] = rhsnode;
+               ++m;
+            }
+            SG->e[pos[varnode]++] = internode;
+            SG->e[pos[internode]++] = varnode;
+            ++m;
+         }
+         else
+         {
+            if ( newinternode )
+            {
+               SG->e[pos[varnode]++] = internode;
+               SG->e[pos[internode]++] = varnode;
+               ++m;
+            }
+            SG->e[pos[rhsnode]++] = internode;
+            SG->e[pos[internode]++] = rhsnode;
+            ++m;
+         }
 
          assert( varnode == nnodes - 1 || pos[varnode] <= (int) SG->v[varnode+1] );
          assert( internode == nnodes - 1 || pos[internode] <= (int) SG->v[internode+1] );

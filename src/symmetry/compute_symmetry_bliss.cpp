@@ -420,13 +420,17 @@ SCIP_RETCODE fillGraphByLinearConss(
             varrhsidx = matrixdata->matvaridx[idx];
          assert( 0 <= varrhsidx && varrhsidx < ninternodes );
 
+         SCIP_Bool newinternode = FALSE;
          if ( internodes[varrhsidx] < firstcolornodenumber )
          {
             internodes[varrhsidx] = (int) G->add_vertex((unsigned) (nusedcolors + color));
             ++nnodes;
+            newinternode = TRUE;
          }
-         assert( internodes[varrhsidx] >= matrixdata->npermvars + matrixdata->nrhscoef );
-         assert( internodes[varrhsidx] >= firstcolornodenumber );
+         int internode = internodes[varrhsidx];
+         assert( internode >= matrixdata->npermvars + matrixdata->nrhscoef );
+         assert( internode >= firstcolornodenumber );
+         assert( internode < nnodes );
 
          /* determine whether graph would be too large for bliss (can only handle int) */
          if ( nnodes >= INT_MAX/2 )
@@ -435,9 +439,26 @@ SCIP_RETCODE fillGraphByLinearConss(
             break;
          }
 
-         G->add_edge((unsigned) varnode, (unsigned) internodes[varrhsidx]);
-         G->add_edge((unsigned) rhsnode, (unsigned) internodes[varrhsidx]);
-         nedges += 2;
+         if ( groupByConstraints )
+         {
+            if ( newinternode )
+            {
+               G->add_edge((unsigned) rhsnode, (unsigned) internode);
+               ++nedges;
+            }
+            G->add_edge((unsigned) varnode, (unsigned) internode);
+            ++nedges;
+         }
+         else
+         {
+            if ( newinternode )
+            {
+               G->add_edge((unsigned) varnode, (unsigned) internode);
+               ++nedges;
+            }
+            G->add_edge((unsigned) rhsnode, (unsigned) internode);
+            ++nedges;
+         }
       }
    }
 
