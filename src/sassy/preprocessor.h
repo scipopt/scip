@@ -15,16 +15,7 @@ namespace sassy {
     };
 
     // preprocessor for symmetry detection
-    // Example usage:
-    // First, preprocess:
-    // static_graph g;
-    // ...
-    // preprocessor p;
-    // p.reduce(&g, hook);
-    //
-    // Next, call your GI solver of choice on g (graph may have to be adapated)
-    // all resulting automorphisms can be mapped to original graph using
-    // p.pre_consumer(int _n, const int* _automorphism, int _supp, const int* _automorphism_supp, sassy_hook hook)
+    // see README.md for usage!
     class preprocessor {
     public:
         double base = 1;
@@ -541,7 +532,7 @@ namespace sassy {
                 total_path_length += path_length;
             }
 
-            // detecting paths 1: mark nodes for deletion and add edges to edge buffer
+            // detecting paths 2: mark nodes for deletion and add edges to edge buffer
             path_done.reset();
             int num_paths2 = 0;
             int unique_smallest_endpoint_paths = 0;
@@ -947,7 +938,7 @@ namespace sassy {
                         assert(g_old_v[pair_from] == 1);
                         assert(del.get(pair_to));
                         assert(del.get(pair_from));
-                        (*consume)(g->v_size, automorphism.get_array(), automorphism_supp.cur_pos,
+                        (*consume)(domain_size, automorphism.get_array(), automorphism_supp.cur_pos,
                                 automorphism_supp.get_array());
                         reset_automorphism(automorphism.get_array(), automorphism_supp.cur_pos,
                                            automorphism_supp.get_array());
@@ -1106,7 +1097,7 @@ namespace sassy {
                         assert(g_old_v[child_from] == 1);
                         assert(del.get(child_to));
                         assert(del.get(child_from));
-                        (*consume)(g->v_size, automorphism.get_array(), automorphism_supp.cur_pos,
+                        (*consume)(domain_size, automorphism.get_array(), automorphism_supp.cur_pos,
                                 automorphism_supp.get_array());
                         reset_automorphism(automorphism.get_array(), automorphism_supp.cur_pos,
                                            automorphism_supp.get_array());
@@ -1200,7 +1191,7 @@ namespace sassy {
                         automorphism_supp.push_back(str_to);
                     }
 
-                    (*consume)(g->v_size, automorphism.get_array(), automorphism_supp.cur_pos,
+                    (*consume)(domain_size, automorphism.get_array(), automorphism_supp.cur_pos,
                             automorphism_supp.get_array());
                     reset_automorphism(automorphism.get_array(), automorphism_supp.cur_pos,
                                        automorphism_supp.get_array());
