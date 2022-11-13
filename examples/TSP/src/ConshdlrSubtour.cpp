@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License.             */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -123,6 +132,7 @@ SCIP_RETCODE sepaSubtour(
    int                   nconss,             /**< number of constraints to process */
    int                   nusefulconss,       /**< number of useful (non-obsolete) constraints to process */
    SCIP_SOL*             sol,                /**< primal solution that should be separated */
+   SCIP_Bool             enforce,            /**< whether we are in enforcing */
    SCIP_RESULT*          result              /**< pointer to store the result of the separation call */
    )
 {  /*lint --e{715}*/
@@ -193,8 +203,10 @@ SCIP_RETCODE sepaSubtour(
 
             SCIP_CALL( SCIPflushRowExtensions(scip, row) );
 
-            // add cut
-            if( SCIPisCutEfficacious(scip, sol, row) )
+            // Add violated cut. The cuts produced by ghc_tree are violated by at least the feasibility tolerance. If we
+            // are enforcing, then this is enough to add the cut. Otherwise (we are separating), we check whether the
+            // cut is efficacious.
+            if( enforce || SCIPisCutEfficacious(scip, sol, row) )
             {
                SCIP_Bool infeasible;
                SCIP_CALL( SCIPaddRow(scip, row, FALSE, &infeasible) );
@@ -272,7 +284,7 @@ SCIP_DECL_CONSTRANS(ConshdlrSubtour::scip_trans)
  */
 SCIP_DECL_CONSSEPALP(ConshdlrSubtour::scip_sepalp)
 {
-   SCIP_CALL( sepaSubtour(scip, conshdlr, conss, nconss, nusefulconss, NULL, result) );
+   SCIP_CALL( sepaSubtour(scip, conshdlr, conss, nconss, nusefulconss, NULL, FALSE, result) );
 
    return SCIP_OKAY;
 }
@@ -299,7 +311,7 @@ SCIP_DECL_CONSSEPALP(ConshdlrSubtour::scip_sepalp)
  */
 SCIP_DECL_CONSSEPASOL(ConshdlrSubtour::scip_sepasol)
 {
-   SCIP_CALL( sepaSubtour(scip, conshdlr, conss, nconss, nusefulconss, sol, result) );
+   SCIP_CALL( sepaSubtour(scip, conshdlr, conss, nconss, nusefulconss, sol, FALSE, result) );
 
    return SCIP_OKAY;
 }
@@ -339,27 +351,12 @@ SCIP_DECL_CONSENFOLP(ConshdlrSubtour::scip_enfolp)
 {  /*lint --e{715}*/
    assert(result != NULL);
 
-   *result = SCIP_FEASIBLE;
+   // search for subtour elimination cuts
+   SCIP_CALL( sepaSubtour(scip, conshdlr, conss, nconss, nusefulconss, NULL, TRUE, result) );
 
-   for( int i = 0; i < nconss; ++i )
-   {
-      SCIP_CONSDATA* consdata;
-      GRAPH* graph;
-      SCIP_Bool found;
-
-      assert(conss != NULL);
-      assert(conss[i] != NULL);
-      consdata = SCIPconsGetData(conss[i]);
-      assert(consdata != NULL);
-      graph = consdata->graph;
-      assert(graph != NULL);
-
-      found = findSubtour(scip, graph, NULL);
-
-      // if a subtour was found, we generate a cut constraint saying that there must be at least two outgoing edges
-      if( found )
-         *result = SCIP_INFEASIBLE;
-   }
+   // if separation could not find a subtour, then the solution is feasible for this constraint
+   if( *result == SCIP_DIDNOTFIND )
+      *result = SCIP_FEASIBLE;
 
    return SCIP_OKAY;
 }
@@ -398,26 +395,12 @@ SCIP_DECL_CONSENFOPS(ConshdlrSubtour::scip_enfops)
 {  /*lint --e{715}*/
    assert(result != NULL);
 
-   *result = SCIP_FEASIBLE;
+   // search for subtour elimination cuts
+   SCIP_CALL( sepaSubtour(scip, conshdlr, conss, nconss, nusefulconss, NULL, TRUE, result) );
 
-   for( int i = 0; i < nconss; ++i )
-   {
-      SCIP_CONSDATA* consdata;
-      GRAPH* graph;
-      SCIP_Bool found;
-
-      assert(conss != NULL);
-      assert(conss[i] != NULL);
-      consdata = SCIPconsGetData(conss[i]);
-      assert(consdata != NULL);
-      graph = consdata->graph;
-      assert(graph != NULL);
-
-      // if a subtour is found, the solution must be infeasible
-      found = findSubtour(scip, graph, NULL);
-      if( found )
-         *result = SCIP_INFEASIBLE;
-   }
+   // if separation could not find a subtour, then the solution is feasible for this constraint
+   if( *result == SCIP_DIDNOTFIND )
+      *result = SCIP_FEASIBLE;
 
    return SCIP_OKAY;
 }
@@ -608,7 +591,7 @@ SCIP_DECL_CONSPRINT(ConshdlrSubtour::scip_print)
 SCIP_DECL_CONSHDLRCLONE(ObjProbCloneable* ConshdlrSubtour::clone) /*lint !e665*/
 {
    assert(valid != NULL);
-   *valid = true;
+   *valid = TRUE;
    return new ConshdlrSubtour(scip);
 }
 
@@ -647,7 +630,7 @@ SCIP_DECL_CONSCOPY(ConshdlrSubtour::scip_copy)
          conshdlr, consdata, initial, separate, enforce, check,
          propagate, local, modifiable, dynamic, removable, FALSE) );
 
-   *valid = true;
+   *valid = TRUE;
 
    return SCIP_OKAY;
 }

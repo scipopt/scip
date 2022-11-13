@@ -220,9 +220,21 @@ set(settings_Or
 #
 # consecutive solve instances
 #
-set(instances_MIP_consecSolve
-    "instances/MIP/blend2.mps\;7.598985"
-    )
+set(instances_consecSolve
+  "instances/MIP/blend2.mps\;7.598985"
+  "instances/MIP/bell5.mps\;8966406.49"
+  "instances/MIP/stein27.fzn\;18"
+  "instances/MINLP/bip_cross_min.10.10.10.1.pip\;1"
+  "instances/MINLP/circle.lp\;4.57424778"
+  "instances/MINLP/ex1266.mps\;16.3"
+  "instances/MINLP/m3.osil\;37.8"
+  "instances/PseudoBoolean/normalized-bsg_10_4_5.opb\;-4"
+  "instances/MINLP/meanvarxsc.lp\;14.3692321148754"
+  "instances/SOS/sparse2.lp\;26.0"
+  "instances/Cardinality/atm_5_25_1.cip\;+1.40606905557936e+05"
+#  "instances/Stochastic/4node1.smps\;480.9"
+  "instances/SAT/bart10.shuffled.cnf\;0"
+  )
 
 #
 # read/write instances
@@ -938,7 +950,9 @@ endforeach()
 set(shell_tmp_dir ${PROJECT_BINARY_DIR}/check/temp)
 file(MAKE_DIRECTORY ${shell_tmp_dir})
 
-foreach(instance ${instances_MIP_consecSolve})
+# copy cmake file for comparision
+configure_file(interactiveshell/comparestatusfiles.cmake interactiveshell/comparestatusfiles.cmake COPYONLY)
+foreach(instance ${instances_consecSolve})
     split_instance(instance)
     #
     # configure the batch file for this test by substituting placeholders in the in.file
@@ -950,11 +964,11 @@ foreach(instance ${instances_MIP_consecSolve})
     # add a test for creating two log files from consecutive solves;
     # this test acts as a setup for the next test
     #
-    add_test(NAME MIP-consecutivesolve-${basename}-setup
+    add_test(NAME consecutivesolve-${basename}-setup
             COMMAND $<TARGET_FILE:scip> -b
             ${PROJECT_BINARY_DIR}/check/interactiveshell/consecutivesolve-${basename}.bat
             )
-    set_tests_properties(MIP-consecutivesolve-${basename}-setup
+    set_tests_properties(consecutivesolve-${basename}-setup
                         PROPERTIES
                             DEPENDS scip-build
                             FIXTURES_SETUP consecutivesolve-${basename}
@@ -962,14 +976,14 @@ foreach(instance ${instances_MIP_consecSolve})
 
     #
     # add a test for comparing two log files from consecutive solves
+    # use cmake file comparestatusfiles.cmake
     #
-    add_test(NAME MIP-consecutivesolve-${basename}-comparison
-      COMMAND ${CMAKE_COMMAND} -E compare_files
-      ${shell_tmp_dir}/${basename}_r1.stats ${shell_tmp_dir}/${basename}_r2.stats
-            )
-    set_tests_properties(MIP-consecutivesolve-${basename}-comparison
+    add_test(NAME consecutivesolve-${basename}-comparison
+      COMMAND ${CMAKE_COMMAND} -DFILE1=${shell_tmp_dir}/${basename}_r1.stats -DFILE2=${shell_tmp_dir}/${basename}_r2.stats -P interactiveshell/comparestatusfiles.cmake
+      )
+    set_tests_properties(consecutivesolve-${basename}-comparison
                         PROPERTIES
-                            DEPENDS MIP-consecutivesolve-${basename}-setup
+                            DEPENDS consecutivesolve-${basename}-setup
                             FIXTURES_REQUIRED consecutivesolve-${basename}
                         )
 endforeach(instance)

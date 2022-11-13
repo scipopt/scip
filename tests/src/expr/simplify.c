@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -57,6 +66,8 @@ ParameterizedTestParameters(simplify /* test suite */, simplify_test /* test nam
       {"(<x>^4)^0.5", "pow"},
       {"(<x>^2)^1.5", "pow"},  /* should be |x|^3 */
       {"(<y>^2)^2", "pow"},
+      {"(<x>*<y>)^3", "prod"},  /* should be x^3 y^3 by POW5 */
+      {"(<x>*<y>)^0.5", "pow"}, /* should remain (x*y)^0.5 because POW5a is off by default */
       {"1*2*(<x>+<y>)*<x>*4*0*5", "val"},
       {"(<x>^0.25)^2*(<x>^0.25)^2", "var"},
       {"(<x>)^0.25*(<x>)^0.25*(<x>)^0.25*(<x>)^0.25", "var"},
@@ -71,6 +82,8 @@ ParameterizedTestParameters(simplify /* test suite */, simplify_test /* test nam
       {"(2*<x>)^2", "sum"},
       {"(<x> + <y>)^2", "sum"},
       {"(<x> + <y> + 2)^2", "sum"},
+      {"(<x> + 2*<y> - 1)^3", "sum"},
+      {"(<x> + 2*<y> - 1)^10", "pow"},  // expandmaxexponent is < 10
       {"(<x> + <y>)*(<x> + 1)^2 - <x>^3 - <x>^2*<y> - 2*<x>^2 - 2*<y>*<x> -<y> -<x>", "val"},
       {"(<x> + <y>)^2 - <x>^2 - 2*<x>*<y>", "pow"},
       {"-<x>^2 + (<x> + <y>)^2 - 2*<x>*<y> - <y>^2", "val"}, // order is important to test the internal algorithms
@@ -95,6 +108,7 @@ ParameterizedTestParameters(simplify /* test suite */, simplify_test /* test nam
       {"((2*<x>)^0.5+1)*((1*<x>)^0.5 + 1)", "sum"},
       {"<x>*(<x>+1)", "sum"},
       {"2*<x>*(<x>+1)", "sum"},
+      {"<x>*(<x>+1)*<y>", "prod"},  /* products with more than 2 factors are by default not expanded */
       {"(<x>^0.5)^0.5*((<x>^0.5)^0.5+2) - 2*(<x>^0.5)^0.5 - <x>^0.5", "val"},
       {"(25.0 * <x>^2)^0.5", "sum"},
       {"exp(<x>)*exp(<y>)", "exp"},
@@ -319,6 +333,8 @@ void setup(void)
    /* include our presol which is needed for some tests */
    SCIP_CALL( SCIPincludePresolBasic(scip, NULL, "presol", "presol", 1, 1, SCIP_PRESOLTIMING_FAST, presolExec, NULL) );
 
+   SCIP_CALL( SCIPsetIntParam(scip, "expr/pow/expandmaxexponent", 3) );
+
    /* create problem */
    SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
 
@@ -420,4 +436,10 @@ Test(simplify, more_simplification_tests)
    cr_assert_not_null(simplified);
    cr_expect(SCIPisExprVar(scip, SCIPexprGetChildren(simplified)[0]));
    SCIP_CALL( SCIPreleaseExpr(scip, &simplified) );
+
+   SCIP_CALL( SCIPsetBoolParam(scip, "expr/pow/distribfracexponent", TRUE) );
+   parseSimplifyCheck(scip, "(<x>*<y>)^0.5", "prod", NULL);
+
+   SCIP_CALL( SCIPsetBoolParam(scip, "expr/prod/expandalways", TRUE) );
+   parseSimplifyCheck(scip, "<x>*(<x>+1)*<y>", "sum", NULL);
 }

@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -208,6 +217,27 @@ SCIP_NLROW** SCIPgetNLPNlRows(
 SCIP_EXPORT
 int SCIPgetNNLPNlRows(
    SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets statistics on convexity of rows in NLP
+ *
+ *  Reports counts on the current number of linear rows, convex inequalities, nonconvex inequalities, and nonlinear equalities or ranged rows.
+ *  - A nonlinear inequality with infinity left-hand-side is accounted as convex if its expression has been marked as convex.
+ *  - A nonlinear inequality with infinity right-hand-side is accounted as convex if its expression has been marked as concave.
+ *  - Other nonlinear rows are accounted as nonconvex. Note that convexity for a nonlinear row may just not have been detected.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPgetNLPNlRowsStat(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int*                  nlinear,            /**< buffer to store number of linear rows in NLP, or NULL */
+   int*                  nconvexineq,        /**< buffer to store number of convex inequalities in NLP, or NULL */
+   int*                  nnonconvexineq,     /**< buffer to store number of nonconvex inequalities in NLP, or NULL */
+   int*                  nnonlineareq        /**< buffer to store number of nonlinear equalities or ranged rows in NLP, or NULL */
    );
 
 /** adds a nonlinear row to the NLP. This row is captured by the NLP.
@@ -700,6 +730,14 @@ SCIP_RETCODE SCIPchgNlRowConstant(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW*           nlrow,              /**< NLP row */
    SCIP_Real             constant            /**< new value for constant */
+   );
+
+/** set curvature of a nonlinear row */
+SCIP_EXPORT
+void SCIPsetNlRowCurvature(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLROW*           nlrow,              /**< NLP row */
+   SCIP_EXPRCURV         curvature           /**< curvature of NLP row */
    );
 
 /** adds variable with a linear coefficient to a nonlinear row

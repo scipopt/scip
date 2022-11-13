@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -2638,7 +2647,7 @@ SCIP_RETCODE lpCheckRealpar(
 #endif
 
 /** should the objective limit of the LP solver be disabled */
-#define lpCutoffDisabled(set) (set->lp_disablecutoff == 1 || (set->nactivepricers > 0 && set->lp_disablecutoff == 2))
+#define lpCutoffDisabled(set,prob) (set->lp_disablecutoff == 1 || ((set->nactivepricers > 0 || !SCIPprobAllColsInLP(prob, set, lp)) && set->lp_disablecutoff == 2))
 
 /** sets the objective limit of the LP solver
  *
@@ -2648,6 +2657,7 @@ static
 SCIP_RETCODE lpSetObjlim(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< problem data */
    SCIP_Real             objlim,             /**< new objective limit */
    SCIP_Bool*            success             /**< pointer to store whether the parameter was actually changed */
    )
@@ -2659,9 +2669,9 @@ SCIP_RETCODE lpSetObjlim(
    *success = FALSE;
 
    /* We disabled the objective limit in the LP solver or we want so solve exactly and thus cannot rely on the LP
-    * solver's objective limit handling, so we return here and do not apply the objective limit. */
-   if( lpCutoffDisabled(set) || set->misc_exactsolve )
-      return SCIP_OKAY;
+    * solver's objective limit handling, so we make sure that the objective limit is inactive (infinity). */
+   if( lpCutoffDisabled(set, prob) || set->misc_exactsolve )
+      objlim = SCIPlpiInfinity(lp->lpi);
 
    /* convert SCIP infinity value to lp-solver infinity value if necessary */
    if( SCIPsetIsInfinity(set, objlim) )
@@ -3167,7 +3177,7 @@ SCIP_RETCODE lpSetTiming(
 
    assert(lp != NULL);
    assert(success != NULL);
-   assert((int) SCIP_CLOCKTYPE_CPU == 1 && (int) SCIP_CLOCKTYPE_WALL == 2); /*lint !e506*/
+   assert((int) SCIP_CLOCKTYPE_CPU == 1 && (int) SCIP_CLOCKTYPE_WALL == 2); /*lint !e506*//*lint !e1564*/
 
    SCIP_CALL( lpCheckIntpar(lp, SCIP_LPPAR_TIMING, lp->lpitiming) );
 
@@ -5212,6 +5222,7 @@ SCIP_RETCODE SCIProwCreate(
    (*row)->age = 0;
    (*row)->rank = 0;
    (*row)->obsoletenode = -1;
+   (*row)->fromcutpool = FALSE;
    (*row)->basisstatus = SCIP_BASESTAT_BASIC; /*lint !e641*/
    (*row)->lpcolssorted = TRUE;
    (*row)->nonlpcolssorted = (len <= 1);
@@ -8665,6 +8676,7 @@ SCIP_RETCODE SCIPlpFlush(
    SCIP_LP*              lp,                 /**< current LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< problem data */
    SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
    )
 {
@@ -8695,7 +8707,7 @@ SCIP_RETCODE SCIPlpFlush(
 
    /* if the cutoff bound was changed in between and it is not disabled (e.g. for column generation),
     * we want to re-optimize the LP even if nothing else has changed */
-   if( lp->cutoffbound != lp->lpiobjlim && lp->ncols > 0 && ! lpCutoffDisabled(set) ) /*lint !e777*/
+   if( lp->cutoffbound != lp->lpiobjlim && lp->ncols > 0 && ! lpCutoffDisabled(set, prob) ) /*lint !e777*/
    {
       lp->solved = FALSE;
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
@@ -9408,6 +9420,7 @@ SCIP_RETCODE SCIPlpReset(
    SCIP_LP*              lp,                 /**< LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< problem data */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter         /**< global event filter */
@@ -9416,7 +9429,7 @@ SCIP_RETCODE SCIPlpReset(
    assert(stat != NULL);
 
    SCIP_CALL( SCIPlpClear(lp, blkmem, set, eventqueue, eventfilter) );
-   SCIP_CALL( SCIPlpFlush(lp, blkmem, set, eventqueue) );
+   SCIP_CALL( SCIPlpFlush(lp, blkmem, set, prob, eventqueue) );
 
    /* mark the empty LP to be solved */
    lp->lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
@@ -10049,6 +10062,7 @@ SCIP_RETCODE SCIPlpSetState(
    SCIP_LP*              lp,                 /**< LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< problem data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LPISTATE*        lpistate,           /**< LP state information (like basis information) */
    SCIP_Bool             wasprimfeas,        /**< primal feasibility when LP state information was stored */
@@ -10061,7 +10075,7 @@ SCIP_RETCODE SCIPlpSetState(
    assert(blkmem != NULL);
 
    /* flush changes to the LP solver */
-   SCIP_CALL( SCIPlpFlush(lp, blkmem, set, eventqueue) );
+   SCIP_CALL( SCIPlpFlush(lp, blkmem, set, prob, eventqueue) );
    assert(lp->flushed);
 
    if( lp->solved && lp->solisbasic )
@@ -10219,7 +10233,7 @@ SCIP_RETCODE SCIPlpSetCutoffbound(
    /* if the cutoff bound is decreased below the current optimal value, the LP now exceeds the objective limit;
     * if the objective limit in the LP solver was disabled, the solution status of the LP is not changed
     */
-   else if( !lpCutoffDisabled(set) && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL
+   else if( !lpCutoffDisabled(set, prob) && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL
       && SCIPlpGetObjval(lp, set, prob) >= cutoffbound )
    {
       assert(lp->flushed);
@@ -11634,11 +11648,11 @@ SCIP_RETCODE lpSolveStable(
    /* solve with given settings (usually fast but imprecise) */
    if( SCIPsetIsInfinity(set, lp->cutoffbound) )
    {
-      SCIP_CALL( lpSetObjlim(lp, set, lp->cutoffbound, &success) );
+      SCIP_CALL( lpSetObjlim(lp, set, prob, lp->cutoffbound, &success) );
    }
    else
    {
-      SCIP_CALL( lpSetObjlim(lp, set, lp->cutoffbound - getFiniteLooseObjval(lp, set, prob), &success) );
+      SCIP_CALL( lpSetObjlim(lp, set, prob, lp->cutoffbound - getFiniteLooseObjval(lp, set, prob), &success) );
    }
    SCIP_CALL( lpSetIterationLimit(lp, itlim) );
    SCIP_CALL( lpSetFeastol(lp, tightprimfeastol ? FEASTOLTIGHTFAC * lp->feastol : lp->feastol, &success) );
@@ -12102,12 +12116,12 @@ SCIP_RETCODE lpSolve(
       /* if we did not disable the cutoff bound in the LP solver, the LP solution status should be objective limit
        * reached if the LP objective value is greater than the cutoff bound
        */
-      assert(lpCutoffDisabled(set) || lp->lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT || SCIPsetIsInfinity(set, lp->cutoffbound)
+      assert(lpCutoffDisabled(set, prob) || lp->lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT || SCIPsetIsInfinity(set, lp->cutoffbound)
          || SCIPsetIsLE(set, lp->lpobjval + getFiniteLooseObjval(lp, set, prob), lp->cutoffbound));
    }
    else if( SCIPlpiIsObjlimExc(lp->lpi) )
    {
-      assert(!lpCutoffDisabled(set));
+      assert(!lpCutoffDisabled(set, prob));
 
 #ifndef NDEBUG
       /* the LP solution objective should exceed the limit in this case */
@@ -12226,7 +12240,7 @@ SCIP_RETCODE lpFlushAndSolve(
    assert(lperror != NULL);
 
    /* flush changes to the LP solver */
-   SCIP_CALL( SCIPlpFlush(lp, blkmem, set, eventqueue) );
+   SCIP_CALL( SCIPlpFlush(lp, blkmem, set, prob, eventqueue) );
    fastmip = ((!lp->flushaddedcols && !lp->flushdeletedcols) ? fastmip : 0); /* turn off FASTMIP if columns were changed */
 
    /* select LP algorithm to apply */
@@ -12459,7 +12473,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
    }
 
    /* flush changes to the LP solver */
-   SCIP_CALL( SCIPlpFlush(lp, blkmem, set, eventqueue) );
+   SCIP_CALL( SCIPlpFlush(lp, blkmem, set, prob, eventqueue) );
    assert(lp->flushed);
 
    /* if the time limit was reached in the last call and the LP did not change, lp->solved is set to TRUE, but we want
@@ -12751,7 +12765,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
          break;
 
       case SCIP_LPSOLSTAT_OBJLIMIT:
-         assert(!lpCutoffDisabled(set));
+         assert(!lpCutoffDisabled(set, prob));
          /* Some LP solvers, e.g. CPLEX With FASTMIP setting, do not apply the final pivot to reach the dual solution
           * exceeding the objective limit. In some cases like branch-and-price, however, we must make sure that a dual
           * feasible solution exists that exceeds the objective limit. Therefore, we have to continue solving it without
@@ -12808,13 +12822,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                solstat = SCIPlpGetSolstat(lp);
                assert(solstat != SCIP_LPSOLSTAT_OBJLIMIT);
 
-               if( !(*lperror) && solstat != SCIP_LPSOLSTAT_ERROR && solstat != SCIP_LPSOLSTAT_NOTSOLVED )
-               {
-                  SCIPsetDebugMsg(set, " ---> new objval = %f (solstat: %d, 1 add. step)\n", objval, solstat);
-               }
-
-               /* disable fastmip for subsequent LP calls (if objective limit is not yet exceeded or LP solution is infeasible) */
-               fastmip = 0;
+               SCIPsetDebugMsg(set, " ---> new objval = %f (solstat: %d, 1 add. step)\n", objval, solstat);
 
                /* the solution is still not exceeding the objective limit and the solving process
                 * was stopped due to time or iteration limit, solve again with fastmip turned off
@@ -12822,19 +12830,22 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                if( solstat == SCIP_LPSOLSTAT_ITERLIMIT &&
                   SCIPsetIsLT(set, objval, lp->cutoffbound - getFiniteLooseObjval(lp, set, prob)) )
                {
-                  assert(!(*lperror));
+                  SCIP_Bool simplex = (lp->lastlpalgo == SCIP_LPALGO_PRIMALSIMPLEX || lp->lastlpalgo == SCIP_LPALGO_DUALSIMPLEX);
+                  if( !(lperror) && (fastmip > 0) && simplex )
+                  {
+                     fastmip = 0;
+                     SCIP_CALL( lpSolve(lp, set, messagehdlr, stat, prob, SCIP_LPALGO_DUALSIMPLEX, -1, -1,
+                           FALSE, FALSE, TRUE, fastmip, tightprimfeastol, tightdualfeastol, fromscratch, keepsol, lperror) );
 
-                  SCIP_CALL( lpSolve(lp, set, messagehdlr, stat, prob, SCIP_LPALGO_DUALSIMPLEX, -1, -1,
-                        FALSE, FALSE, TRUE, fastmip, tightprimfeastol, tightdualfeastol, fromscratch, keepsol, lperror) );
+                     /* get objective value */
+                     SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
 
-                  /* get objective value */
-                  SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
+                     /* get solution status for the lp */
+                     solstat = SCIPlpGetSolstat(lp);
 
-                  /* get solution status for the lp */
-                  solstat = SCIPlpGetSolstat(lp);
-
-                  SCIPsetDebugMsg(set, " ---> new objval = %f (solstat: %d, without fastmip)\n", objval, solstat);
-               }
+                     SCIPsetDebugMsg(set, " ---> new objval = %f (solstat: %d, without fastmip)\n", objval, solstat);
+                  }
+               }/*lint !e438*/
 
                /* check for lp errors */
                if( *lperror || solstat == SCIP_LPSOLSTAT_ERROR || solstat == SCIP_LPSOLSTAT_NOTSOLVED )
@@ -12849,7 +12860,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
 
                lp->solved = TRUE;
 
-               /* optimal solution / objlimit with fastmip turned off / itlimit or timelimit, but objlimit exceeded */
+               /* optimal solution / objlimit / itlimit or timelimit, but objlimit exceeded */
                if( solstat == SCIP_LPSOLSTAT_OPTIMAL || solstat == SCIP_LPSOLSTAT_OBJLIMIT
                   || ( (solstat == SCIP_LPSOLSTAT_ITERLIMIT || solstat == SCIP_LPSOLSTAT_TIMELIMIT)
                      && SCIPsetIsGE(set, objval, lp->cutoffbound - getFiniteLooseObjval(lp, set, prob)) ) )
@@ -14356,6 +14367,8 @@ SCIP_RETCODE SCIPlpGetSol(
    assert(stat != NULL);
    assert(lp->validsollp <= stat->lpcount);
 
+   assert(lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL);
+
    /* initialize return and feasibility flags; if primal oder dual feasibility shall not be checked, we set the
     * corresponding flag immediately to FALSE to skip all checks
     */
@@ -14639,7 +14652,6 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
    SCIP_ROW** lpirows;
    SCIP_Real* primsol;
    SCIP_Real* activity;
-   SCIP_Bool activityvalid = FALSE;  /* whether some meaningful values are stored in activity */
    SCIP_Real* ray;
    SCIP_Real rayobjval;
    SCIP_Real rayscale;
@@ -14667,15 +14679,14 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
    /* check if the values are already calculated */
    if( lp->validsollp == stat->lpcount )
       return SCIP_OKAY;
+   lp->validsollp = stat->lpcount;
 
    /* check if the LP solver is able to provide a primal unbounded ray */
    if( !SCIPlpiHasPrimalRay(lp->lpi) )
    {
-      SCIPerrorMessage("LP solver has no primal ray to prove unboundedness\n");
+      SCIPerrorMessage("LP solver has no primal ray to prove unboundedness.\n");
       return SCIP_LPERROR;
    }
-
-   lp->validsollp = stat->lpcount;
 
    SCIPsetDebugMsg(set, "getting new unbounded LP solution %" SCIP_LONGINT_FORMAT "\n", stat->lpcount);
 
@@ -14733,7 +14744,7 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
       assert( SCIPlpIsFeasGE(set, lp, primsol[c], col->lb) && SCIPlpIsFeasLE(set, lp, primsol[c], col->ub) );
    }
 
-   /* check feasibility of heuristic solution and compute activity */
+   /* check feasibility of heuristic primal solution */
    for( r = 0; r < nlpirows; ++r )
    {
       SCIP_Real act = 0.0;
@@ -14759,7 +14770,6 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
          for( c = row->nlpcols; c < row->len; ++c )
          {
             col = row->cols[c];
-
             assert( col != NULL );
 
             if( col->lppos >= 0 )
@@ -14771,44 +14781,91 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
       if( (! SCIPsetIsInfinity(set, -row->lhs) && SCIPlpIsFeasLT(set, lp, act, row->lhs) ) ||
           (! SCIPsetIsInfinity(set,  row->rhs) && SCIPlpIsFeasGT(set, lp, act, row->rhs) ) )
          break;
-
-      activity[r] = act;
    }
 
-   /* if heuristic solution is not feasible, try to obtain solution from LPI */
+   /* if heuristic primal solution is not feasible, try to obtain solution from LPI */
    if( r < nlpirows )
    {
       /* get primal feasible point */
-#ifdef SCIP_USE_LPSOLVER_ACTIVITY
-      SCIP_CALL( SCIPlpiGetSol(lp->lpi, NULL, primsol, NULL, activity, NULL) );
-      activityvalid = TRUE;
-#else
       SCIP_CALL( SCIPlpiGetSol(lp->lpi, NULL, primsol, NULL, NULL, NULL) );
-#endif
 
-      /* determine feasibility status */
+      /* check bounds of primal solution */
       if( primalfeasible != NULL )
       {
+         assert( *primalfeasible );
          for( c = 0; c < nlpicols; ++c )
          {
             assert( lpicols[c] != NULL );
             assert( lpicols[c]->var != NULL );
 
-            /* check primal feasibility of (finite) primal solution; note that we also ensure that the primal
-             * solution is within SCIP's infinity bounds; otherwise the rayscale below is not well-defined
-             */
-            *primalfeasible = *primalfeasible
-               && !SCIPsetIsInfinity(set, REALABS(primsol[c]))
-               && SCIPlpIsFeasGE(set, lp, primsol[c], lpicols[c]->lb)
-               && SCIPlpIsFeasLE(set, lp, primsol[c], lpicols[c]->ub);
+            /* check whether primal solution satisfies the bounds; note that we also ensure that the primal
+             * solution is within SCIP's infinity bounds; otherwise the rayscale below is not well-defined */
+            if( SCIPsetIsInfinity(set, REALABS(primsol[c])) || SCIPlpIsFeasLT(set, lp, primsol[c], lpicols[c]->lb) ||
+               SCIPlpIsFeasGT(set, lp, primsol[c], lpicols[c]->ub) )
+            {
+               *primalfeasible = FALSE;
+               break;
+            }
          }
       }
    }
-   else
+
+   /* compute activity and check feasibility of primal solution and ray */
+   for( r = 0; r < nlpirows; ++r )
    {
-      activityvalid = TRUE; /* previous for() loop computed activity for all rows */
-      if( primalfeasible != NULL )
-         *primalfeasible = TRUE;
+      SCIP_Real primact = 0.0;
+      SCIP_Real rayact = 0.0;
+      SCIP_ROW* row;
+
+      row = lpirows[r];
+      assert( row != NULL );
+
+      for( c = 0; c < row->nlpcols; ++c )
+      {
+         col = row->cols[c];
+
+         assert( col != NULL );
+         assert( col->lppos >= 0 );
+         assert( row->linkpos[c] >= 0 );
+         assert( primsol[col->lppos] < SCIP_INVALID );
+
+         primact += row->vals[c] * primsol[col->lppos];
+         rayact += row->vals[c] * ray[col->lppos];
+      }
+
+      if( row->nunlinked > 0 )
+      {
+         for( c = row->nlpcols; c < row->len; ++c )
+         {
+            col = row->cols[c];
+            assert( col != NULL );
+
+            if( col->lppos >= 0 )
+            {
+               primact += row->vals[c] * primsol[col->lppos];
+               rayact += row->vals[c] * ray[col->lppos];
+            }
+         }
+      }
+
+      /* check feasibility of primal solution */
+      if( primalfeasible != NULL && *primalfeasible )
+      {
+         if(( ! SCIPsetIsInfinity(set, -row->lhs) && SCIPlpIsFeasLT(set, lp, primact, row->lhs) ) ||
+            ( ! SCIPsetIsInfinity(set,  row->rhs) && SCIPlpIsFeasGT(set, lp, primact, row->rhs) ) )
+            *primalfeasible = FALSE;
+      }
+
+      /* check feasibility of ray */
+      if( rayfeasible != NULL && *rayfeasible )
+      {
+         if(( ! SCIPsetIsInfinity(set, -row->lhs) && SCIPlpIsFeasLT(set, lp, rayact, 0.0) ) ||
+            ( ! SCIPsetIsInfinity(set,  row->rhs) && SCIPlpIsFeasGT(set, lp, rayact, 0.0) ) )
+            *rayfeasible = FALSE;
+      }
+
+      /* store activity of primal solution */
+      activity[r] = primact;
    }
 
    if( primalfeasible != NULL && !(*primalfeasible) )
@@ -14823,14 +14880,12 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
    }
    else if( !SCIPsetIsNegative(set, rayobjval) )
    {
-      /* due to numerical problems, the objective of the ray might be nonnegative,
+      /* due to numerical problems, the objective of the ray might be nonnegative
        *
        * @todo How to check for negative objective value here?
        */
       if( rayfeasible != NULL )
-      {
          *rayfeasible = FALSE;
-      }
 
       rayscale = 0.0;
    }
@@ -14839,7 +14894,7 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
       assert(rayobjval != 0.0);
 
       /* scale the ray, such that the resulting point has infinite objective value */
-      rayscale = -2*SCIPsetInfinity(set)/rayobjval;
+      rayscale = -2.0 * SCIPsetInfinity(set) / rayobjval;
       assert(SCIPsetIsFeasPositive(set, rayscale));
 
       /* ensure that unbounded point does not violate the bounds of the variables */
@@ -14848,23 +14903,23 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
          if( SCIPsetIsPositive(set, ray[c]) )
          {
             if( !SCIPsetIsInfinity(set, primsol[c]) )
-               rayscale = MIN(rayscale, (lpicols[c]->ub - primsol[c])/ray[c]);
-            /* if the primsol is infinity, as well as the bound, don't scale the ray to 0 */
+               rayscale = MIN(rayscale, (lpicols[c]->ub - primsol[c]) / ray[c]);
+            /* if primsol is infinity, as well as the bound, don't scale the ray to 0 */
             else
             {
                assert(SCIPsetIsInfinity(set, lpicols[c]->ub));
-               rayscale = MIN(rayscale, 1/ray[c]);
+               rayscale = MIN(rayscale, 1.0 / ray[c]);
             }
          }
          else if( SCIPsetIsNegative(set, ray[c]) )
          {
             if( !SCIPsetIsInfinity(set, -primsol[c]) )
-               rayscale = MIN(rayscale, (lpicols[c]->lb - primsol[c])/ray[c]);
-            /* if the primsol is infinity, as well as the bound, don't scal the ray to 0 */
+               rayscale = MIN(rayscale, (lpicols[c]->lb - primsol[c]) / ray[c]);
+            /* if primsol is infinity, as well as the bound, don't scale the ray to 0 */
             else
             {
                assert(SCIPsetIsInfinity(set, -lpicols[c]->lb));
-               rayscale = MIN(rayscale, -1/ray[c]);
+               rayscale = MIN(rayscale, -1.0 / ray[c]);
             }
          }
 
@@ -14875,6 +14930,8 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
    SCIPsetDebugMsg(set, "unbounded LP solution: rayobjval=%f, rayscale=%f\n", rayobjval, rayscale);
 
    /* calculate the unbounded point: x' = x + rayscale * ray */
+   /* Note: We do not check the feasibility of the unbounded solution, because it will likely be infeasible due to the
+    * typically large values in scaling. */
    for( c = 0; c < nlpicols; ++c )
    {
       if( SCIPsetIsZero(set, ray[c]) )
@@ -14889,27 +14946,12 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
       lpicols[c]->validredcostlp = -1;
    }
 
-   /* transfer solution and check feasibility */
+   /* transfer solution */
    for( r = 0; r < nlpirows; ++r )
    {
       lpirows[r]->dualsol = SCIP_INVALID;
-      if( activityvalid )
-      {
-         /* use activity as computed above or given by LP solver to set activity in row */
-         lpirows[r]->activity = activity[r] + lpirows[r]->constant;
-         lpirows[r]->validactivitylp = lpcount;
-      }
-      else if( lpirows[r]->validactivitylp != lpcount )
-      {
-         /* recalculate activity from row if not valid */
-         SCIProwRecalcLPActivity(lpirows[r], stat);
-      }
-
-      /* check for feasibility of the rows */
-      if( primalfeasible != NULL )
-         *primalfeasible = *primalfeasible
-            && (SCIPsetIsInfinity(set, -lpirows[r]->lhs) || SCIPlpIsFeasGE(set, lp, lpirows[r]->activity, lpirows[r]->lhs))
-            && (SCIPsetIsInfinity(set,  lpirows[r]->rhs) || SCIPlpIsFeasLE(set, lp, lpirows[r]->activity, lpirows[r]->rhs));
+      lpirows[r]->activity = activity[r] + lpirows[r]->constant;
+      lpirows[r]->validactivitylp = lpcount;
    }
 
    /* free temporary memory */
@@ -16106,7 +16148,7 @@ SCIP_RETCODE SCIPlpEndDive(
    /* reload LPI state saved at start of diving and free it afterwards; it may be NULL, in which case simply nothing
     * happens
     */
-   SCIP_CALL( SCIPlpSetState(lp, blkmem, set, eventqueue, lp->divelpistate,
+   SCIP_CALL( SCIPlpSetState(lp, blkmem, set, prob, eventqueue, lp->divelpistate,
          lp->divelpwasprimfeas, lp->divelpwasprimchecked, lp->divelpwasdualfeas, lp->divelpwasdualchecked) );
    SCIP_CALL( SCIPlpFreeState(lp, blkmem, &lp->divelpistate) );
    lp->divelpwasprimfeas = TRUE;
@@ -16166,7 +16208,7 @@ SCIP_RETCODE SCIPlpEndDive(
          assert(lp->diving == lp->divinglazyapplied);
 
          /* flush changes to the LP solver */
-         SCIP_CALL( SCIPlpFlush(lp, blkmem, set, eventqueue) );
+         SCIP_CALL( SCIPlpFlush(lp, blkmem, set, prob, eventqueue) );
       }
 
       /* increment lp counter to ensure that we do not use solution values from the last solved diving lp */

@@ -8,7 +8,7 @@ SECTION: General Questions about SCIP
       and contains all necessary plugins to serve as a <b>standalone solver</b> for MIP and MINLP.
     </p>
     <ul>
-      <li>You can use the <a href="http://scipopt.org/#download">precompiled binaries</a>
+      <li>You can use the <a href="https://scipopt.org/#download">precompiled binaries</a>
           to solve MIPs and MINLPs. Learn more about the <a href="PATHTODOC/group__FILEREADERS.LINKEXT">file formats supported by SCIP</a>,
           and get <a href="PATHTODOC/WHATPROBLEMS.LINKEXT">an overview</a>
           of the supported problem classes and additional recommendations for solving them.
@@ -34,10 +34,7 @@ SECTION: General Questions about SCIP
     LABEL:licensefaq
     ANSWER:
     <p>
-      As long as you use it for academic, non-commercial purposes: No.
-      This will not change. For the other cases, check the explanation of the
-      <a href="http://scipopt.org/#license">ZIB academic license</a> and always feel free to ask us.
-      If you want to use SCIP commercially, please write an e-mail to koch@zib.de.
+      Since November 4, 2022, and SCIP version 8.0.3, SCIP is distributed under a permissive open source license, see the <a href="https://scipopt.org/index.php#license">SCIP homepage</a>.
     </p>
 
     QUESTION: How do I get started?
@@ -46,7 +43,7 @@ SECTION: General Questions about SCIP
     <p>
       An easy way is to use the SCIP-binaries and call SCIP from a shell, see <a href="PATHTODOC/SHELL.LINKEXT">here</a> for a tutorial.
       For that, you just have to use one of the installers from the
-      <a href="http://scipopt.org/#download">download section</a>, or the zipped source code and compile it
+      <a href="https://scipopt.org/#download">download section</a>, or the zipped source code and compile it
       with your favorite settings.
       Note that the coding examples are only contained in the source code bundle, but not in the precompiled packages.
       The compilation from source is described in detail in the <code><a href="PATHTODOC/INSTALL.LINKEXT">INSTALL</a></code> file in the SCIP main directory.
@@ -72,7 +69,7 @@ SECTION: General Questions about SCIP
       LP-solvers currently supported by SCIP are:
     </p>
     <ul>
-      <li><a href="http://soplex.zib.de/">SoPlex</a></li>
+      <li><a href="https://soplex.zib.de/">SoPlex</a></li>
       <li><a href="http://www-01.ibm.com/software/integration/optimization/cplex-optimizer/">IBM ILOG CPLEX</a></li>
       <li><a href="http://www.fico.com/en/Products/DMTools/Pages/FICO-Xpress-Optimization-Suite.aspx">FICO XPress</a></li>
       <li><a href="http://www.gurobi.com/">Gurobi</a> (version at least 7.0.2 required)</li>
@@ -86,10 +83,10 @@ SECTION: General Questions about SCIP
       <a href="https://projects.coin-or.org/Ipopt">Ipopt</a>). SCIP already comes with the CppAD expression interpreter (e.g., <a href="http://www.coin-or.org/CppAD/">CppAD</a>) as part of the source code.
     </p>
     <p>
-      Besides that, you might need a modeling language like <a href="http://zimpl.zib.de/">ZIMPL</a> to generate *.mps
+      Besides that, you might need a modeling language like <a href="https://zimpl.zib.de/">ZIMPL</a> to generate *.mps
       or *.lp files. ZIMPL files (.zpl extension) can also be read directly into SCIP.
       Downloading the SCIP Optimization Suite includes SCIP, SoPlex and ZIMPL, as well as GCG and UG. Find installers for different platforms
-      and the source code bundle of all versions <a href="http://scipopt.org/#download">here</a>.
+      and the source code bundle of all versions <a href="https://scipopt.org/#download">here</a>.
     </p>
 
     QUESTION: How can I build/compile SCIP?
@@ -136,7 +133,7 @@ SECTION: General Questions about SCIP
     ANSWER:
     <p>
       Read the <code><a href="PATHTODOC/INSTALL.LINKEXT">INSTALL</a></code> file in the SCIP root directory. It contains hints of how to get around problems. You can also try
-      the precompiled binaries by choosing one of the available installers from the <a href="http://scipopt.org#download">SCIP page</a> for your operating system.<br>
+      the precompiled binaries by choosing one of the available installers from the <a href="https://scipopt.org#download">SCIP page</a> for your operating system.<br>
     </p>
     <p>
       If you encounter compilation problems dealing with the <code>explicit</code> keyword you should try a newer compiler.
@@ -208,7 +205,7 @@ SECTION: General Questions about SCIP
     <p>
         Hence, if you need more, "LP specific", information than the primal solution, you are better off using an LP-Solver
         directly. If you are using the SCIP Optimization Suite, you could, e.g., use the included LP solver
-        <a href=http://soplex.zib.de>SoPlex</a>.  If you want to solve an LP not from the command line, but within your
+        <a href=https://soplex.zib.de>SoPlex</a>.  If you want to solve an LP not from the command line, but within your
         C/C++ program, you could also use SCIP's LP-Interface, see also <a href="#howtosolvelps">here</a>.
     </p>
 
@@ -287,7 +284,7 @@ SECTION: General Questions about SCIP
     </p>
     <ul>
         <li>
-            <a href="http://hydraw.zib.de/">HyDraw</a>
+            <a href="https://hydraw.zib.de/">HyDraw</a>
             can display a live visualization of the tree using JavaView.
         </li>
         <li>
@@ -370,7 +367,7 @@ SECTION: General Questions about SCIP
             the TPI option.</li>
             <li>Second, one can use the external UG framework for shared-memory
             and distributed-memory parallelization of the tree search.  See the
-            <a href="http://ug.zib.de"></a> UG web page</a> for further
+            <a href="https://ug.zib.de"></a> UG web page</a> for further
             details.</li>
         </ul>
     </p>

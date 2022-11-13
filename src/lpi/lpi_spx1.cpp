@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -1622,8 +1631,26 @@ void invalidateSolution(SCIP_LPI* lpi)
  * Miscellaneous Methods
  */
 
-static char spxname[100];
-static char spxdesc[200];
+char* initSpxDesc( );
+
+#if (SOPLEX_SUBVERSION > 0)
+   const static char spxname[20]= {'S', 'o', 'p', 'l', 'e', 'x', '1', ' ', SOPLEX_VERSION/100 + '0', '.', (SOPLEX_VERSION % 100)/10 + '0', '.', SOPLEX_VERSION % 10 + '0', '.', SOPLEX_SUBVERSION + '0'};
+#else
+   const static char spxname[20] = {'S', 'o', 'p', 'l', 'e', 'x', '1', ' ', SOPLEX_VERSION/100 + '0', '.', (SOPLEX_VERSION % 100)/10 + '0', '.', SOPLEX_VERSION % 10 + '0'};
+#endif
+
+static char* spxdesc = initSpxDesc();
+
+char* initSpxDesc( )
+{
+   spxdesc = new char[200];
+   (void)snprintf(spxdesc, 200, "%s [GitHash: %s]", "Linear Programming Solver developed at Zuse Institute Berlin (soplex.zib.de)"
+#ifdef SCIP_WITH_LPSCHECK
+         " - including CPLEX double check"
+#endif
+         , getGitHash());
+   return spxdesc;
+}
 
 /**@name Miscellaneous Methods */
 /**@{ */
@@ -1634,12 +1661,6 @@ const char* SCIPlpiGetSolverName(
    )
 {
    SCIPdebugMessage("calling SCIPlpiGetSolverName()\n");
-
-#if (SOPLEX_SUBVERSION > 0)
-   snprintf(spxname, 100, "SoPlex1 %d.%d.%d.%d", SOPLEX_VERSION/100, (SOPLEX_VERSION % 100)/10, SOPLEX_VERSION % 10, SOPLEX_SUBVERSION); /*lint !e778*/
-#else
-   snprintf(spxname, 100, "SoPlex1 %d.%d.%d", SOPLEX_VERSION/100, (SOPLEX_VERSION % 100)/10, SOPLEX_VERSION % 10); /*lint !e778*/
-#endif
    return spxname;
 }
 
@@ -1648,19 +1669,6 @@ const char* SCIPlpiGetSolverDesc(
    void
    )
 {
-#if (SOPLEX_VERSION >= 160)
-   snprintf(spxdesc, 200, "Linear Programming Solver developed at Zuse Institute Berlin (soplex.zib.de) [GitHash: %s]"
-#ifdef SCIP_WITH_LPSCHECK
-     " - including CPLEX double check"
-#endif
-   , getGitHash());
-#else
-   snprintf(spxdesc, 200, "Linear Programming Solver developed at Zuse Institute Berlin (soplex.zib.de)"
-#ifdef SCIP_WITH_LPSCHECK
-     " - including CPLEX double check"
-#endif
-   );
-#endif
    return spxdesc;
 }
 

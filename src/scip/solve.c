@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -1310,7 +1319,9 @@ SCIP_RETCODE SCIPconstructCurrentLP(
             /* keep all active global cuts that where applied in the previous node in the lp */
             if( !lp->rows[i]->local && lp->rows[i]->age == 0 )
             {
-               SCIP_CALL( SCIPsepastoreAddCut(sepastore, blkmem, set, stat, eventqueue, eventfilter, lp, lp->rows[i], TRUE, (SCIPtreeGetCurrentDepth(tree) == 0), cutoff) );
+               lp->rows[i]->fromcutpool = TRUE; /* this has no effect inside initial LP, but is set for consistency */
+               SCIP_CALL( SCIPsepastoreAddCut(sepastore, blkmem, set, stat, eventqueue, eventfilter, lp, lp->rows[i],
+                     TRUE, (SCIPtreeGetCurrentDepth(tree) == 0), cutoff) );
             }
          }
       }
@@ -1472,7 +1483,7 @@ SCIP_RETCODE solveNodeInitialLP(
       return SCIP_OKAY;
 
    /* load the LP state */
-   SCIP_CALL( SCIPtreeLoadLPState(tree, blkmem, set, stat, eventqueue, lp) );
+   SCIP_CALL( SCIPtreeLoadLPState(tree, blkmem, set, transprob, stat, eventqueue, lp) );
 
    focusnode = SCIPtreeGetFocusNode(tree);
 
@@ -2441,7 +2452,7 @@ SCIP_RETCODE priceAndCutLoop(
                      /* in the root node, remove redundant rows permanently from the LP */
                      if( root )
                      {
-                        SCIP_CALL( SCIPlpFlush(lp, blkmem, set, eventqueue) );
+                        SCIP_CALL( SCIPlpFlush(lp, blkmem, set, transprob, eventqueue) );
                         SCIP_CALL( SCIPlpRemoveRedundantRows(lp, blkmem, set, stat, eventqueue, eventfilter) );
                      }
 
@@ -2650,7 +2661,7 @@ SCIP_RETCODE priceAndCutLoop(
                   /* in the root node, remove redundant rows permanently from the LP */
                   if( root )
                   {
-                     SCIP_CALL( SCIPlpFlush(lp, blkmem, set, eventqueue) );
+                     SCIP_CALL( SCIPlpFlush(lp, blkmem, set, transprob, eventqueue) );
                      SCIP_CALL( SCIPlpRemoveRedundantRows(lp, blkmem, set, stat, eventqueue, eventfilter) );
                   }
                }

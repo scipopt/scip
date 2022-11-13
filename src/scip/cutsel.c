@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -90,6 +99,14 @@ SCIP_RETCODE doCutselCreate(
    (*cutsel)->cutselexitsol = cutselexitsol;
    (*cutsel)->cutselselect = cutselselect;
    (*cutsel)->cutseldata = cutseldata;
+   (*cutsel)->ncalls = 0;
+   (*cutsel)->nrootcalls = 0;
+   (*cutsel)->nrootcutsselected = 0;
+   (*cutsel)->nrootcutsforced = 0;
+   (*cutsel)->nrootcutsfiltered = 0;
+   (*cutsel)->nlocalcutsselected = 0;
+   (*cutsel)->nlocalcutsforced = 0;
+   (*cutsel)->nlocalcutsfiltered = 0;
    (*cutsel)->initialized = FALSE;
 
    /* create clocks */
@@ -155,6 +172,7 @@ SCIP_RETCODE SCIPcutselsSelect(
    int                   ncuts,              /**< length of cuts */
    int                   nforcedcuts,        /**< number of forced cuts at start of given array */
    SCIP_Bool             root,               /**< are we at the root node? */
+   SCIP_Bool             initiallp,          /**< is the separation storage currently being filled with the initial LP rows? */
    int                   maxnselectedcuts,   /**< maximum number of cuts to be selected */
    int*                  nselectedcuts       /**< pointer to return number of selected cuts */
    )
@@ -169,6 +187,7 @@ SCIP_RETCODE SCIPcutselsSelect(
 
    /* Redefine maxnselectedcuts to be w.r.t the optional cuts. */
    maxnselectedcuts -= nforcedcuts;
+   maxnselectedcuts = MIN(maxnselectedcuts, ncuts);
 
    /* try all cut selectors until one succeeds */
    *nselectedcuts = 0;
@@ -182,12 +201,41 @@ SCIP_RETCODE SCIPcutselsSelect(
       assert(ncuts - nforcedcuts > 0);
       assert(maxnselectedcuts > 0);
 
+      /* start timing */
+      SCIPclockStart(cutsel->cutseltime, set);
+
       SCIP_CALL( cutsel->cutselselect(set->scip, cutsel, &(cuts[nforcedcuts]), ncuts - nforcedcuts, cuts, nforcedcuts,
             root, maxnselectedcuts, nselectedcuts, &result) );
+
+      /* stop timing */
+      SCIPclockStop(cutsel->cutseltime, set);
 
       assert(*nselectedcuts <= maxnselectedcuts);
       assert(result == SCIP_SUCCESS || result == SCIP_DIDNOTFIND);
       assert(result != SCIP_DIDNOTFIND || *nselectedcuts == 0);
+
+      ++cutsel->ncalls;
+      if( root )
+        ++cutsel->nrootcalls;
+
+      if( result != SCIP_DIDNOTFIND && !initiallp )
+      {
+         assert(0 <= ncuts);
+         assert(0 <= *nselectedcuts && *nselectedcuts <= ncuts);
+
+         if( root )
+         {
+            cutsel->nrootcutsselected += *nselectedcuts;
+            cutsel->nrootcutsforced += nforcedcuts;
+            cutsel->nrootcutsfiltered += ncuts - *nselectedcuts; /*lint !e776*/
+         }
+         else
+         {
+            cutsel->nlocalcutsselected += *nselectedcuts;
+            cutsel->nlocalcutsforced += nforcedcuts;
+            cutsel->nlocalcutsfiltered += ncuts - *nselectedcuts; /*lint !e776*/
+         }
+      }
    }
 
    return SCIP_OKAY;
@@ -521,6 +569,86 @@ SCIP_Real SCIPcutselGetTime(
    assert(cutsel != NULL);
 
    return SCIPclockGetTime(cutsel->cutseltime);
+}
+
+/** get number of times the cutselector was called */
+SCIP_Longint SCIPcutselGetNCalls(
+   SCIP_CUTSEL*          cutsel              /**< cut selector */
+   )
+{
+  assert(cutsel != NULL);
+
+  return cutsel->ncalls;
+}
+
+/** get number of times the cutselector was called at the root */
+SCIP_Longint SCIPcutselGetNRootCalls(
+   SCIP_CUTSEL*          cutsel              /**< cut selector */
+   )
+{
+  assert(cutsel != NULL);
+
+  return cutsel->nrootcalls;
+}
+
+/** get total number of cuts that were selected at the root */
+SCIP_Longint SCIPcutselGetNRootCuts(
+   SCIP_CUTSEL*          cutsel              /**< cut selector */
+   )
+{
+   assert(cutsel != NULL);
+
+   return cutsel->nrootcutsselected;
+}
+
+/** get total number of forced cuts that were selected at the root */
+SCIP_Longint SCIPcutselGetNRootForcedCuts(
+   SCIP_CUTSEL*          cutsel              /**< cut selector */
+   )
+{
+   assert(cutsel != NULL);
+
+   return cutsel->nrootcutsforced;
+}
+
+/** get total number of root cuts that were filtered */
+SCIP_Longint SCIPcutselGetNRootCutsFiltered(
+   SCIP_CUTSEL*          cutsel              /**< cut selector */
+   )
+{
+   assert(cutsel != NULL);
+
+   return cutsel->nrootcutsfiltered;
+}
+
+/** get total number of local cuts that were selected */
+SCIP_Longint SCIPcutselGetNLocalCuts(
+   SCIP_CUTSEL*          cutsel              /**< cut selector */
+   )
+{
+   assert(cutsel != NULL);
+
+   return cutsel->nlocalcutsselected;
+}
+
+/** get total number of forced local cuts that were selected */
+SCIP_Longint SCIPcutselGetNLocalForcedCuts(
+   SCIP_CUTSEL*          cutsel              /**< cut selector */
+   )
+{
+   assert(cutsel != NULL);
+
+   return cutsel->nlocalcutsforced;
+}
+
+/** get total number of local cuts that were filtered */
+SCIP_Longint SCIPcutselGetNLocalCutsFiltered(
+   SCIP_CUTSEL*          cutsel              /**< cut selector */
+   )
+{
+   assert(cutsel != NULL);
+
+   return cutsel->nlocalcutsfiltered;
 }
 
 /** compares two cut selectors w. r. to their priority */

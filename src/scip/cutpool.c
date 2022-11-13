@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -430,7 +439,7 @@ SCIP_RETCODE SCIPcutpoolCreate(
 
    SCIP_CALL( SCIPclockCreate(&(*cutpool)->poolclock, SCIP_CLOCKTYPE_DEFAULT) );
 
-   SCIP_CALL( SCIPhashtableCreate(&(*cutpool)->hashtable, blkmem, 
+   SCIP_CALL( SCIPhashtableCreate(&(*cutpool)->hashtable, blkmem,
          (set->misc_usesmalltables ? SCIP_HASHSIZE_CUTPOOLS_SMALL : SCIP_HASHSIZE_CUTPOOLS),
          hashGetKeyCut, hashKeyEqCut, hashKeyValCut, (void*) set) );
 
@@ -447,7 +456,9 @@ SCIP_RETCODE SCIPcutpoolCreate(
    (*cutpool)->firstunprocessedsol = 0;
    (*cutpool)->maxncuts = 0;
    (*cutpool)->ncalls = 0;
+   (*cutpool)->nrootcalls = 0;
    (*cutpool)->ncutsfound = 0;
+   (*cutpool)->ncutsadded = 0;
    (*cutpool)->globalcutpool = globalcutpool;
 
    return SCIP_OKAY;
@@ -753,6 +764,7 @@ SCIP_RETCODE SCIPcutpoolAddNewRow(
    SCIP_CALL( cutpoolEnsureCutsMem(cutpool, set, cutpool->ncuts+1) );
    cutpool->cuts[cutpool->ncuts] = cut;
    cutpool->ncuts++;
+   cutpool->ncutsfound++;
    cutpool->maxncuts = MAX(cutpool->maxncuts, cutpool->ncuts);
    if( SCIProwIsRemovable(row) )
       cutpool->nremovablecuts++;
@@ -831,7 +843,8 @@ SCIP_RETCODE SCIPcutpoolSeparate(
    SCIP_Real minefficacy;
    SCIP_Bool retest;
    int firstunproc;
-   int oldncuts;
+   int oldncutsadded;
+   int oldncutsfound;
    int nefficaciouscuts;
    int c;
 
@@ -868,6 +881,8 @@ SCIP_RETCODE SCIPcutpoolSeparate(
 
    *result = SCIP_DIDNOTFIND;
    cutpool->ncalls++;
+   if( root )
+      cutpool->nrootcalls++;
    found = FALSE;
    if( set->sepa_filtercutpoolrel )
       minefficacy = stat->bestefficacy * stat->minefficacyfac;
@@ -891,7 +906,8 @@ SCIP_RETCODE SCIPcutpoolSeparate(
    SCIPclockStart(cutpool->poolclock, set);
 
    /* remember the current total number of found cuts */
-   oldncuts = SCIPsepastoreGetNCuts(sepastore);
+   oldncutsfound = SCIPsepastoreGetNCuts(sepastore);
+   oldncutsadded = SCIPsepastoreGetNCutsAdded(sepastore);
    nefficaciouscuts = 0;
 
    /* process all unprocessed cuts in the pool */
@@ -927,7 +943,10 @@ SCIP_RETCODE SCIPcutpoolSeparate(
              */
             if( !SCIProwIsModifiable(row) && SCIProwGetNNonz(row) == 1 )
             {
-               /* insert bound change cut into separation store which will force that cut */
+               /* insert bound change cut into separation store which will force that cut;
+                * fromcutpool is set for consistency.
+                */
+               row->fromcutpool = TRUE;
                SCIP_CALL( SCIPsepastoreAddCut(sepastore, blkmem, set, stat, eventqueue, eventfilter, lp, row, FALSE, root, &cutoff) );
                SCIP_CALL( cutpoolDelCut(cutpool, blkmem, set, stat, lp, cut) );
 
@@ -944,6 +963,7 @@ SCIP_RETCODE SCIPcutpoolSeparate(
             if( efficacy >= minefficacy )
             {
                /* insert cut in separation storage */
+               row->fromcutpool = TRUE;
                SCIPsetDebugMsg(set, " -> separated cut <%s> from the cut pool (feasibility: %g)\n",
                   SCIProwGetName(row), ( sol == NULL ) ? SCIProwGetLPFeasibility(row, set, stat, lp) : SCIProwGetSolFeasibility(row, set, stat, sol) );
                SCIP_CALL( SCIPsepastoreAddCut(sepastore, blkmem, set, stat, eventqueue, eventfilter, lp, row, FALSE, root, &cutoff) );
@@ -956,7 +976,7 @@ SCIP_RETCODE SCIPcutpoolSeparate(
                      SCIP_SEPA* sepa;
 
                      sepa = SCIProwGetOriginSepa(row);
-                     SCIPsepaIncNCutsFound(sepa);
+                     SCIPsepaIncNCutsAdded(sepa, TRUE);
                      SCIPsepaIncNCutsFoundAtNode(sepa);
                   }
                   else if ( SCIProwGetOriginConshdlr(row) != NULL )
@@ -996,15 +1016,14 @@ SCIP_RETCODE SCIPcutpoolSeparate(
       cutpool->processedlpsol = stat->lpcount;
       cutpool->firstunprocessedsol = cutpool->ncuts;
    }
-
-   /* update the number of found cuts */
-   cutpool->ncutsfound += SCIPsepastoreGetNCuts(sepastore) - oldncuts; /*lint !e776*/
+   /* update the number of found and added cuts */
+   cutpool->ncutsadded += SCIPsepastoreGetNCutsAdded(sepastore) - oldncutsadded; /*lint !e776*/
 
    /* check whether efficacy threshold should be tightened or relaxed */
    if( set->sepa_filtercutpoolrel && nefficaciouscuts > 0 )
    {
       int maxncuts = SCIPsetGetSepaMaxcuts(set, root);
-      int ncuts = SCIPsepastoreGetNCuts(sepastore) - oldncuts;
+      int ncuts = SCIPsepastoreGetNCuts(sepastore) - oldncutsfound;
 
       maxncuts = MIN(maxncuts, nefficaciouscuts);
 
@@ -1063,7 +1082,7 @@ int SCIPcutpoolGetNCuts(
 }
 
 /** gets maximum number of cuts that were stored in the cut pool at the same time */
-int SCIPcutpoolGetMaxNCuts(
+SCIP_Longint SCIPcutpoolGetMaxNCuts(
    SCIP_CUTPOOL*         cutpool             /**< cut pool */
    )
 {
@@ -1082,7 +1101,7 @@ SCIP_Real SCIPcutpoolGetTime(
    return SCIPclockGetTime(cutpool->poolclock);
 }
 
-/** get number of times, the cut pool was separated */
+/** get number of times the cut pool was separated */
 SCIP_Longint SCIPcutpoolGetNCalls(
    SCIP_CUTPOOL*         cutpool             /**< cut pool */
    )
@@ -1092,7 +1111,17 @@ SCIP_Longint SCIPcutpoolGetNCalls(
    return cutpool->ncalls;
 }
 
-/** get total number of cuts that were separated from the cut pool */
+/** get number of times the cut pool was separated at the root */
+SCIP_Longint SCIPcutpoolGetNRootCalls(
+   SCIP_CUTPOOL*         cutpool             /**< cut pool */
+   )
+{
+   assert(cutpool != NULL);
+
+   return cutpool->nrootcalls;
+}
+
+/** get total number of cuts that were added to the cut pool */
 SCIP_Longint SCIPcutpoolGetNCutsFound(
    SCIP_CUTPOOL*         cutpool             /**< cut pool */
    )
@@ -1102,3 +1131,84 @@ SCIP_Longint SCIPcutpoolGetNCutsFound(
    return cutpool->ncutsfound;
 }
 
+/** get total number of cuts that were added from the cut pool to sepastore */
+SCIP_Longint SCIPcutpoolGetNCutsAdded(
+   SCIP_CUTPOOL*         cutpool             /**< cut pool */
+   )
+{
+   assert(cutpool != NULL);
+
+   return cutpool->ncutsadded;
+}
+
+/** adds the maximum number of cuts that were stored in the pool;
+ *  this is primarily used to keep statistics when SCIP performs a restart */
+void SCIPcutpoolAddMaxNCuts(
+   SCIP_CUTPOOL*         cutpool,             /**< cut pool */
+   SCIP_Longint          ncuts                /**< number of cuts to add */
+   )
+{
+   assert(cutpool != NULL);
+
+   cutpool->maxncuts += ncuts;
+}
+
+/** sets time in seconds used for separating cuts from the pool;
+ *  this is primarily used to keep statistics when SCIP performs a restart */
+void SCIPcutpoolSetTime(
+   SCIP_CUTPOOL*         cutpool,             /**< cut pool */
+   SCIP_Real             time                 /**< poolclock time */
+   )
+{
+   assert(cutpool != NULL);
+
+   SCIPclockSetTime(cutpool->poolclock, time);
+}
+
+/** adds the number of times the cut pool was separated;
+ *  this is primarily used to keep statistics when SCIP performs a restart */
+void SCIPcutpoolAddNCalls(
+   SCIP_CUTPOOL*         cutpool,             /**< cut pool */
+   SCIP_Longint          ncalls               /**< ncalls */
+   )
+{
+   assert(cutpool != NULL);
+
+   cutpool->ncalls += ncalls;
+}
+
+/** adds the number of times the cut pool was separated at the root;
+ *  this is primarily used to keep statistics when SCIP performs a restart */
+void SCIPcutpoolAddNRootCalls(
+   SCIP_CUTPOOL*         cutpool,             /**< cut pool */
+   SCIP_Longint          nrootcalls           /**< nrootcalls */
+   )
+{
+   assert(cutpool != NULL);
+
+   cutpool->nrootcalls += nrootcalls;
+}
+
+/** adds the total number of cuts that were added to the pool;
+ *  this is primarily used to keep statistics when SCIP performs a restart */
+void SCIPcutpoolAddNCutsFound(
+   SCIP_CUTPOOL*         cutpool,             /**< cut pool */
+   SCIP_Longint          ncutsfound           /**< total number of cuts added to cut pool */
+   )
+{
+   assert(cutpool != NULL);
+
+   cutpool->ncutsfound += ncutsfound;
+}
+
+/** adds the total number of cuts that were separated from the pool;
+ *  this is primarily used to keep statistics when SCIP performs a restart */
+void SCIPcutpoolAddNCutsAdded(
+   SCIP_CUTPOOL*         cutpool,             /**< cut pool */
+   SCIP_Longint          ncutsadded           /**< total number of cuts added from cut pool to sepastore */
+)
+{
+   assert(cutpool != NULL);
+
+   cutpool->ncutsadded += ncutsadded;
+}

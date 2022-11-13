@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -1561,13 +1570,15 @@ SCIP_RETCODE SCIPshowExpr(
    SCIP_EXPR*            expr                /**< expression to be printed */
    )
 {
+   SCIP_EXPRPRINTDATA* dotdata;
+   FILE* f;
+   SCIP_RETCODE retcode = SCIP_OKAY;;
+
    /* this function is for developers, so don't bother with C variants that don't have popen() */
 #if _POSIX_C_SOURCE < 2
    SCIPerrorMessage("No POSIX version 2. Try http://distrowatch.com/.");
    return SCIP_ERROR;
 #else
-   SCIP_EXPRPRINTDATA* dotdata;
-   FILE* f;
 
    assert(scip != NULL);
    assert(expr != NULL);
@@ -1581,14 +1592,15 @@ SCIP_RETCODE SCIPshowExpr(
    }
 
    /* print all of the expression into the pipe */
-   SCIP_CALL( SCIPprintExprDotInit(scip, &dotdata, f, SCIP_EXPRPRINT_ALL) );
-   SCIP_CALL( SCIPprintExprDot(scip, dotdata, expr) );
-   SCIP_CALL( SCIPprintExprDotFinal(scip, &dotdata) );
+   SCIP_CALL_TERMINATE( retcode, SCIPprintExprDotInit(scip, &dotdata, f, SCIP_EXPRPRINT_ALL), TERMINATE );
+   SCIP_CALL_TERMINATE( retcode, SCIPprintExprDot(scip, dotdata, expr), TERMINATE );
+   SCIP_CALL_TERMINATE( retcode, SCIPprintExprDotFinal(scip, &dotdata), TERMINATE );
 
+ TERMINATE:
    /* close the pipe */
    (void) pclose(f);
 
-   return SCIP_OKAY;
+   return retcode;
 #endif
 }
 

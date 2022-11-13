@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -252,6 +261,7 @@ typedef struct TreeProfile TREEPROFILE;
 #define DEFAULT_SSG_NMAXSUBTREES     -1      /**< the maximum number of individual SSG subtrees; the old split is kept if
                                                *  a new split exceeds this number of subtrees ; -1: no limit */
 #define DEFAULT_SSG_NMINNODESLASTSPLIT   0L  /**< minimum number of nodes to process between two consecutive SSG splits */
+#define DEFAULT_SHOWSTATS            FALSE   /**< should statistics be shown at the end? */
 
 /** event handler data */
 struct SCIP_EventhdlrData
@@ -286,6 +296,7 @@ struct SCIP_EventhdlrData
    SCIP_Bool             treeisbinary;       /**< internal flag if all branching decisions produced 2 children */
    SCIP_Bool             restartnonlinear;   /**< whether to apply a restart when nonlinear constraints are present */
    SCIP_Bool             restartactpricers;  /**< whether to apply a restart when active pricers are used */
+   SCIP_Bool             showstats;          /**< should statistics be shown at the end? */
 };
 
 typedef struct SubtreeSumGap SUBTREESUMGAP;
@@ -523,6 +534,7 @@ SCIP_RETCODE SCIPregForestFromFile(
    BMSclearMemory(*regforest);
    regforestptr = *regforest;
 
+   /* coverity[tainted_data] */
    SCIP_ALLOC_TERMINATE( retcode, BMSallocMemoryArray(&regforestptr->nbegin, ntrees), FREEFOREST );
    SCIP_ALLOC_TERMINATE( retcode, BMSallocMemoryArray(&regforestptr->child, 2 * size), FREEFOREST ); /*lint !e647*/
    SCIP_ALLOC_TERMINATE( retcode, BMSallocMemoryArray(&regforestptr->splitidx, size), FREEFOREST );
@@ -722,6 +734,7 @@ SCIP_RETCODE updateTreeProfile(
    )
 {
    int nodedepth;
+   unsigned long nbits;
    SCIP_Longint nodedepthcnt;
    SCIP_Longint maxnodes;
 
@@ -745,8 +758,9 @@ SCIP_RETCODE updateTreeProfile(
    /* Is this level fully explored? We assume binary branching. The first condition ensures that the bit shift operation
     * of the second condition represents a feasible power of unsigned int. The largest power of 2 representable
     * by unsigned int is 2^{8*sizeof(unsigned int) - 1}. */
+   nbits = 8*sizeof(unsigned int);
    /* coverity[overflow_before_widen] */
-   if( (unsigned int)nodedepth < 8*sizeof(unsigned int) && nodedepthcnt == (1U << nodedepth) )/*lint !e647*/
+   if( (unsigned int)nodedepth < nbits && nodedepthcnt == (1U << nodedepth) )/*lint !e647*/
    {
       SCIPdebugMsg(scip, "Level %d fully explored: %" SCIP_LONGINT_FORMAT " nodes\n", nodedepth, nodedepthcnt);
 
@@ -2834,7 +2848,8 @@ SCIP_DECL_TABLEOUTPUT(tableOutputEstim)
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
 
-   SCIPinfoMessage(scip, file, "%s", printReport(scip, eventhdlrdata, strbuf, 0));
+   if( eventhdlrdata->showstats )
+      SCIPinfoMessage(scip, file, "%s", printReport(scip, eventhdlrdata, strbuf, 0));
 
    return SCIP_OKAY;
 }
@@ -2961,6 +2976,10 @@ SCIP_RETCODE SCIPincludeEventHdlrEstim(
    SCIP_CALL( SCIPaddBoolParam(scip, "estimation/useleafts",
          "use leaf nodes as basic observations for time series, or all nodes?",
          &eventhdlrdata->useleafts, TRUE, DEFAULT_USELEAFTS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "estimation/showstats",
+         "should statistics be shown at the end?",
+         &eventhdlrdata->showstats, TRUE, DEFAULT_SHOWSTATS, NULL, NULL) );
 
    /* SSG parameters */
    SCIP_CALL( SCIPaddIntParam(scip, "estimation/ssg/nmaxsubtrees",

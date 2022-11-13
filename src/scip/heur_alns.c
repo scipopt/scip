@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -27,6 +36,7 @@
 #include "scip/heuristics.h"
 #include "scip/pub_bandit_epsgreedy.h"
 #include "scip/pub_bandit_exp3.h"
+#include "scip/pub_bandit_exp3ix.h"
 #include "scip/pub_bandit.h"
 #include "scip/pub_bandit_ucb.h"
 #include "scip/pub_cons.h"
@@ -77,6 +87,8 @@
 
 #define NNEIGHBORHOODS 9
 
+#define DEFAULT_SHOWNBSTATS   FALSE /**< show statistics on neighborhoods? */
+
 /*
  * limit parameters for sub-SCIPs
  */
@@ -107,7 +119,7 @@
  * bandit algorithm parameters
  */
 #define DEFAULT_BESTSOLWEIGHT  1
-#define DEFAULT_BANDITALGO     'u'  /**< the default bandit algorithm: (u)pper confidence bounds, (e)xp.3, epsilon (g)reedy */
+#define DEFAULT_BANDITALGO     'i'  /**< the default bandit algorithm: (u)pper confidence bounds, (e)xp.3, epsilon (g)reedy, exp.3-(i)x */
 #define DEFAULT_REWARDCONTROL  0.8  /**< reward control to increase the weight of the simple solution indicator and decrease the weight of the closed gap reward */
 #define DEFAULT_SCALEBYEFFORT  TRUE /**< should the reward be scaled by the effort? */
 #define DEFAULT_RESETWEIGHTS   TRUE /**< should the bandit algorithms be reset when a new problem is read? */
@@ -206,7 +218,6 @@
 #define TABLE_DESC_NEIGHBORHOOD                  "ALNS neighborhood statistics"
 #define TABLE_POSITION_NEIGHBORHOOD              12500                  /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_NEIGHBORHOOD        SCIP_STAGE_TRANSFORMED /**< output of the statistics table is only printed from this stage onwards */
-
 
 /** reward types of ALNS */
 enum RewardType {
@@ -461,6 +472,7 @@ struct SCIP_HeurData
    SCIP_Bool             copycuts;           /**< should cutting planes be copied to the sub-SCIP? */
    SCIP_Bool             uselocalredcost;    /**< should local reduced costs be used for generic (un)fixing? */
    SCIP_Bool             initduringroot;     /**< should the heuristic be executed multiple times during the root node? */
+   SCIP_Bool             shownbstats;        /**< show statistics on neighborhoods? */
 };
 
 /** event handler data */
@@ -1089,8 +1101,11 @@ void printNeighborhoodStatistics(
    int j;
    HISTINDEX statusses[] = {HIDX_OPT, HIDX_INFEAS, HIDX_NODELIM, HIDX_STALLNODE, HIDX_SOLLIM, HIDX_USR, HIDX_OTHER};
 
-   SCIPinfoMessage(scip, file, "Neighborhoods      : %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %4s %4s %4s %4s %4s %4s %4s %4s\n",
-            "Calls", "SetupTime", "SolveTime", "SolveNodes", "Sols", "Best", "Exp3", "EpsGreedy", "UCB", "TgtFixRate",
+   if( ! heurdata->shownbstats )
+      return;
+
+   SCIPinfoMessage(scip, file, "Neighborhoods      : %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %4s %4s %4s %4s %4s %4s %4s %4s\n",
+            "Calls", "SetupTime", "SolveTime", "SolveNodes", "Sols", "Best", "Exp3", "Exp3-IX", "EpsGreedy", "UCB", "TgtFixRate",
             "Opt", "Inf", "Node", "Stal", "Sol", "Usr", "Othr", "Actv");
 
    /* loop over neighborhoods and fill in statistics */
@@ -1098,6 +1113,7 @@ void printNeighborhoodStatistics(
    {
       NH* neighborhood;
       SCIP_Real proba;
+      SCIP_Real probaix;
       SCIP_Real ucb;
       SCIP_Real epsgreedyweight;
 
@@ -1111,6 +1127,7 @@ void printNeighborhoodStatistics(
       SCIPinfoMessage(scip, file, " %10" SCIP_LONGINT_FORMAT, neighborhood->stats.nbestsolsfound);
 
       proba = 0.0;
+      probaix = 0.0;
       ucb = 1.0;
       epsgreedyweight = -1.0;
 
@@ -1127,12 +1144,16 @@ void printNeighborhoodStatistics(
          case 'e':
             proba = SCIPgetProbabilityExp3(heurdata->bandit, i);
             break;
+         case 'i':
+            probaix = SCIPgetProbabilityExp3IX(heurdata->bandit, i);
+            break;
          default:
             break;
          }
       }
 
       SCIPinfoMessage(scip, file, " %10.5f", proba);
+      SCIPinfoMessage(scip, file, " %10.5f", probaix);
       SCIPinfoMessage(scip, file, " %10.5f", epsgreedyweight);
       SCIPinfoMessage(scip, file, " %10.5f", ucb);
       SCIPinfoMessage(scip, file, " %10.3f", neighborhood->fixingrate.targetfixingrate);
@@ -1591,6 +1612,11 @@ SCIP_RETCODE createBandit(
    case 'e':
       SCIP_CALL( SCIPcreateBanditExp3(scip, &heurdata->bandit, priorities,
             heurdata->exp3_gamma, heurdata->exp3_beta, heurdata->nactiveneighborhoods, initseed) );
+      break;
+
+   case 'i':
+      SCIP_CALL( SCIPcreateBanditExp3IX(scip, &heurdata->bandit, priorities,
+            heurdata->nactiveneighborhoods, initseed) );
       break;
 
    case 'g':
@@ -4000,6 +4026,10 @@ SCIP_RETCODE SCIPincludeHeurAlns(
    SCIP_CALL( SCIPsetHeurInitsol(scip, heur, heurInitsolAlns) );
    SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitAlns) );
 
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/shownbstats",
+         "show statistics on neighborhoods?",
+         &heurdata->shownbstats, TRUE, DEFAULT_SHOWNBSTATS, NULL, NULL) );
+
    /* add alns primal heuristic parameters */
    SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/" HEUR_NAME "/maxnodes",
          "maximum number of nodes to regard in the subproblem",
@@ -4041,8 +4071,8 @@ SCIP_RETCODE SCIPincludeHeurAlns(
          &heurdata->nsolslim, FALSE, DEFAULT_NSOLSLIM, -1, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddCharParam(scip, "heuristics/" HEUR_NAME "/banditalgo",
-         "the bandit algorithm: (u)pper confidence bounds, (e)xp.3, epsilon (g)reedy",
-         &heurdata->banditalgo, TRUE, DEFAULT_BANDITALGO, "ueg", NULL, NULL) );
+         "the bandit algorithm: (u)pper confidence bounds, (e)xp.3, epsilon (g)reedy, exp.3-(i)x",
+         &heurdata->banditalgo, TRUE, DEFAULT_BANDITALGO, "uegi", NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/gamma",
          "weight between uniform (gamma ~ 1) and weight driven (gamma ~ 0) probability distribution for exp3",
@@ -4142,6 +4172,7 @@ SCIP_RETCODE SCIPincludeHeurAlns(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/usepscost",
          "should pseudo cost scores be used for variable priorization?",
          &heurdata->usepscost, TRUE, DEFAULT_USEPSCOST, NULL, NULL) );
+
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/initduringroot",
          "should the heuristic be executed multiple times during the root node?",
          &heurdata->initduringroot, TRUE, DEFAULT_INITDURINGROOT, NULL, NULL) );

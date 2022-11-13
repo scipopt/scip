@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -33,6 +42,9 @@
 #include "scip/cons_nonlinear.h"
 #include "scip/cons_sos1.h"
 #include "scip/cons_sos2.h"
+#include "scip/cons_and.h"
+#include "scip/cons_or.h"
+#include "scip/cons_xor.h"
 #include "scip/expr_var.h"
 #include "scip/expr_value.h"
 #include "scip/expr_sum.h"
@@ -130,6 +142,9 @@ private:
    // alternatively, one could encapsulate SCIP_EXPR* into a small class that handles proper reference counting
    std::vector<SCIP_EXPR*> exprstorelease;
 
+   // count on variables or constraints added for logical expressions
+   int logiccount;
+
    // SOS constraints
    // collected while handling suffixes in SuffixHandler
    // sosvars maps the SOS index (can be negative) to the indices of the variables in the SOS
@@ -181,6 +196,48 @@ private:
       return false;
    }
 
+   /// returns variable or value for given expression
+   ///
+   /// if expression is variable, ensure that it is a binary variable and set var
+   /// if expression is value, then set val to whether value is nonzero and set var to NULL
+   /// otherwise throw UnsupportedError exception
+   void LogicalExprToVarVal(
+      LogicalExpr        expr,
+      SCIP_VAR*&         var,
+      SCIP_Bool&         val
+      )
+   {
+      assert(expr != NULL);
+
+      if( SCIPisExprVar(scip, expr) )
+      {
+         var = SCIPgetVarExprVar(expr);
+         if( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY )
+         {
+            SCIP_Bool infeas;
+            SCIP_Bool tightened;
+            SCIP_CALL_THROW( SCIPchgVarType(scip, var, SCIP_VARTYPE_BINARY, &infeas) );
+            assert(!infeas);
+            SCIP_CALL_THROW( SCIPtightenVarLbGlobal(scip, var, 0.0, TRUE, &infeas, &tightened) );
+            assert(!infeas);
+            SCIP_CALL_THROW( SCIPtightenVarUbGlobal(scip, var, 1.0, TRUE, &infeas, &tightened) );
+            assert(!infeas);
+         }
+         val = FALSE;  // for scan-build
+
+         return;
+      }
+
+      if( SCIPisExprValue(scip, expr) )
+      {
+         var = NULL;
+         val = SCIPgetValueExprValue(expr) != 0.0;
+         return;
+      }
+
+      OnUnhandled("logical expression must be binary or constant");
+   }
+
 public:
    /// constructor
    ///
@@ -192,6 +249,7 @@ public:
    : scip(scip_),
      probdata(NULL),
      objexpr(NULL),
+     logiccount(0),
      initsol(NULL),
      colfile(NULL),
      rowfile(NULL)
@@ -244,6 +302,9 @@ public:
       }
       probdata->filenamestub[probdata->filenamestublen] = '\0';
    }
+
+   AMPLProblemHandler(const AMPLProblemHandler&) = delete;
+   AMPLProblemHandler& operator=(const AMPLProblemHandler&) = delete;
 
    /// destructor
    ///
@@ -337,6 +398,7 @@ public:
                case SCIP_VARTYPE_CONTINUOUS :
                   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "x%d", i);
                   break;
+               // coverity[deadcode]
                default:
                   SCIPABORT();
                   break;
@@ -355,7 +417,7 @@ public:
          }
       }
 
-      // alloc some space for constraints
+      // alloc some space for algebraic constraints
       probdata->nconss = h.num_algebraic_cons;
       SCIP_CALL_THROW( SCIPallocBlockMemoryArray(scip, &probdata->conss, probdata->nconss) );
       nlconslin.resize(h.num_nl_cons);
@@ -382,7 +444,7 @@ public:
          SCIP_CALL_THROW( SCIPcreateConsBasicLinear(scip, &probdata->conss[i], name, 0, NULL, NULL, -SCIPinfinity(scip), SCIPinfinity(scip)) );
       }
 
-      if( h.num_nl_cons == 0 && h.num_integer_vars() == 0 )
+      if( h.num_nl_cons == 0 && h.num_logical_cons == 0 && h.num_integer_vars() == 0 )
          probdata->islp = true;
 
       // alloc space for common expressions
@@ -657,6 +719,21 @@ public:
       if( expr != NULL )
       {
          SCIP_CALL_THROW( SCIPchgExprNonlinear(scip, probdata->conss[constraintIndex], expr) );
+      }
+   }
+
+   /// receives notification of a logical constraint expression
+   void OnLogicalCon(
+      int                index,
+      LogicalExpr        expr
+      )
+   {
+      if( expr != NULL )
+      {
+         SCIP_CONS* cons;
+         SCIP_CALL_THROW( SCIPcreateConsBasicNonlinear(scip, &cons, "logiccons", expr, 1.0, 1.0) );
+         SCIP_CALL_THROW( SCIPaddCons(scip, cons) );
+         SCIP_CALL_THROW( SCIPreleaseCons(scip, &cons) );
       }
    }
 
@@ -1125,6 +1202,337 @@ public:
       return LinearConHandler(*this, constraintIndex);
    }
 
+   /// receives notification of a `Boolean value <mp::expr::BOOL>`
+   LogicalExpr OnBool(
+      bool               value
+      )
+   {
+      SCIP_EXPR* expr;
+
+      SCIP_CALL_THROW( SCIPcreateExprValue(scip, &expr, value ? 1.0 : 0.0, NULL, NULL) );
+
+      // remember that we have to release this expr
+      exprstorelease.push_back(expr);
+
+      return expr;
+   }
+
+   /// receives notification of a `logical not <mp::expr::NOT>`
+   LogicalExpr OnNot(
+      LogicalExpr        arg
+      )
+   {
+      SCIP_EXPR* expr;
+      SCIP_VAR* var;
+      SCIP_Bool val;
+
+      LogicalExprToVarVal(arg, var, val);
+      if( var != NULL )
+      {
+         SCIP_CALL_THROW( SCIPgetNegatedVar(scip, var, &var) );
+         SCIP_CALL_THROW( SCIPcreateExprVar(scip, &expr, var, NULL, NULL) );
+      }
+      else
+      {
+         SCIP_CALL_THROW( SCIPcreateExprValue(scip, &expr, val ? 1.0 : 0.0, NULL, NULL) );
+      }
+
+      // remember that we have to release this expr
+      exprstorelease.push_back(expr);
+
+      return expr;
+   }
+
+   /// receives notification of a `binary logical expression <mp::expr::FIRST_BINARY_LOGICAL>`
+   LogicalExpr OnBinaryLogical(
+      mp::expr::Kind     kind,
+      LogicalExpr        lhs,
+      LogicalExpr        rhs
+      )
+   {
+      SCIP_VAR* lhsvar = NULL;
+      SCIP_VAR* rhsvar = NULL;
+      SCIP_Bool lhsval;
+      SCIP_Bool rhsval;
+      SCIP_EXPR* expr;
+
+      assert(lhs != NULL);
+      assert(rhs != NULL);
+
+      LogicalExprToVarVal(lhs, lhsvar, lhsval);
+      LogicalExprToVarVal(rhs, rhsvar, rhsval);
+
+      switch( kind )
+      {
+         case mp::expr::OR:
+         {
+            if( lhsvar == NULL && rhsvar == NULL )
+            {
+               SCIP_CALL_THROW( SCIPcreateExprValue(scip, &expr, lhsval != 0.0 || rhsval != 0.0 ? 1.0 : 0.0, NULL, NULL) );
+               exprstorelease.push_back(expr);
+               break;
+            }
+
+            if( (lhsvar == NULL && lhsval != 0.0) || (rhsvar == NULL && rhsval != 0.0) )
+            {
+               /* nonzero or rhs == 1, lhs or nonzero == 1 */
+               SCIP_CALL_THROW( SCIPcreateExprValue(scip, &expr, 1.0, NULL, NULL) );
+               exprstorelease.push_back(expr);
+               break;
+            }
+
+            if( lhsvar == NULL )
+            {
+               /* zero or rhs == rhs */
+               assert(lhsval == 0.0);
+               expr = rhs;
+               break;
+            }
+
+            if( rhsvar == NULL )
+            {
+               /* lhs or zero == lhs */
+               assert(rhsval == 0.0);
+               expr = lhs;
+               break;
+            }
+
+            /* create new resvar and constraint resvar = lhsvar or rhsvar */
+            SCIP_VAR* vars[2];
+            SCIP_VAR* resvar;
+            SCIP_CONS* cons;
+
+            std::string name = std::string("_logic") + std::to_string((long long)logiccount++);
+            SCIP_CALL_THROW( SCIPcreateVarBasic(scip, &resvar, name.c_str(), 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY) );
+            SCIP_CALL_THROW( SCIPaddVar(scip, resvar) );
+            SCIP_CALL_THROW( SCIPcreateExprVar(scip, &expr, resvar, NULL, NULL) );
+            exprstorelease.push_back(expr);
+
+            vars[0] = lhsvar;
+            vars[1] = rhsvar;
+            name += "def";
+            SCIP_CALL_THROW( SCIPcreateConsBasicOr(scip, &cons, name.c_str(), resvar, 2, vars) );
+            SCIP_CALL_THROW( SCIPaddCons(scip, cons) );
+
+            SCIP_CALL_THROW( SCIPreleaseVar(scip, &resvar) );
+            SCIP_CALL_THROW( SCIPreleaseCons(scip, &cons) );
+
+            break;
+         }
+
+         case mp::expr::AND:
+         {
+            if( lhsvar == NULL && rhsvar == NULL )
+            {
+               SCIP_CALL_THROW( SCIPcreateExprValue(scip, &expr, lhsval != 0.0 && rhsval != 0.0 ? 1.0 : 0.0, NULL, NULL) );
+               exprstorelease.push_back(expr);
+               break;
+            }
+
+            if( (lhsvar == NULL && lhsval == 0.0) || (rhsvar == NULL && rhsval == 0.0) )
+            {
+               /* zero and rhs == 0, lhs and zero == 0 */
+               SCIP_CALL_THROW( SCIPcreateExprValue(scip, &expr, 0.0, NULL, NULL) );
+               exprstorelease.push_back(expr);
+               break;
+            }
+
+            if( lhsvar == NULL )
+            {
+               /* nonzero and rhs == rhs */
+               assert(lhsval != 0.0);
+               expr = rhs;
+               break;
+            }
+
+            if( rhsvar == NULL )
+            {
+               /* lhs and nonzero == lhs */
+               assert(rhsval != 0.0);
+               expr = lhs;
+               break;
+            }
+
+            /* create new resvar and constraint resvar = lhsvar and rhsvar */
+            SCIP_VAR* vars[2];
+            SCIP_VAR* resvar;
+            SCIP_CONS* cons;
+
+            std::string name = std::string("_logic") + std::to_string((long long)logiccount++);
+            SCIP_CALL_THROW( SCIPcreateVarBasic(scip, &resvar, name.c_str(), 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY) );
+            SCIP_CALL_THROW( SCIPaddVar(scip, resvar) );
+            SCIP_CALL_THROW( SCIPcreateExprVar(scip, &expr, resvar, NULL, NULL) );
+            exprstorelease.push_back(expr);
+
+            vars[0] = lhsvar;
+            vars[1] = rhsvar;
+            name += "def";
+            SCIP_CALL_THROW( SCIPcreateConsBasicAnd(scip, &cons, name.c_str(), resvar, 2, vars) );
+            SCIP_CALL_THROW( SCIPaddCons(scip, cons) );
+
+            SCIP_CALL_THROW( SCIPreleaseVar(scip, &resvar) );
+            SCIP_CALL_THROW( SCIPreleaseCons(scip, &cons) );
+
+            break;
+         }
+
+         case mp::expr::IFF:
+         {
+            // the IFF operator returns 1 if both operands are nonzero or both are zero and returns zero otherwise
+            // so this is lhs == rhs
+            if( lhsvar == NULL && rhsvar == NULL )
+            {
+               SCIP_CALL_THROW( SCIPcreateExprValue(scip, &expr, lhsval == rhsval ? 1.0 : 0.0, NULL, NULL) );
+               exprstorelease.push_back(expr);
+               break;
+            }
+
+            if( lhsvar == NULL )
+            {
+               std::swap(lhs, rhs);
+               std::swap(lhsval, rhsval);
+               std::swap(lhsvar, rhsvar);
+            }
+            assert(lhsvar != NULL);
+
+            if( rhsvar == NULL )
+            {
+               // expression is lhsvar == true
+               // so we return lhsvar or ~lhsvar
+               if( rhsval == TRUE )
+               {
+                  expr = lhs;
+               }
+               else
+               {
+                  SCIP_CALL_THROW( SCIPgetNegatedVar(scip, lhsvar, &lhsvar) );
+                  SCIP_CALL_THROW( SCIPcreateExprVar(scip, &expr, lhsvar, NULL, NULL) );
+                  exprstorelease.push_back(expr);
+               }
+               break;
+            }
+
+            // expressions is lhsvar == rhsvar
+            // we create a new variable auxvar and add a constraint xor(auxvar, lhsvar, rhsvar, TRUE)
+            // to ensure auxvar = (lhsvar == rhsvar)
+            SCIP_VAR* vars[3];
+            SCIP_CONS* cons;
+            std::string name = std::string("_logic") + std::to_string((long long)logiccount++);
+            SCIP_CALL_THROW( SCIPcreateVarBasic(scip, &vars[0], name.c_str(), 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY) );
+            SCIP_CALL_THROW( SCIPaddVar(scip, vars[0]) );
+            SCIP_CALL_THROW( SCIPcreateExprVar(scip, &expr, vars[0], NULL, NULL) );
+            exprstorelease.push_back(expr);
+
+            vars[1] = lhsvar;
+            vars[2] = rhsvar;
+            name += "def";
+            SCIP_CALL_THROW( SCIPcreateConsBasicXor(scip, &cons, name.c_str(), TRUE, 3, vars) );
+            SCIP_CALL_THROW( SCIPaddCons(scip, cons) );
+
+            SCIP_CALL_THROW( SCIPreleaseVar(scip, &vars[0]) );
+            SCIP_CALL_THROW( SCIPreleaseCons(scip, &cons) );
+
+            break;
+         }
+
+         default:
+            OnUnhandled(mp::expr::str(kind));
+            return NULL;
+      }
+
+      return expr;
+   }
+
+   /// receives notification of a `relational expression <mp::expr::FIRST_RELATIONAL>`
+   /// we only handle equality or inequality between binary variables and boolean values here
+   LogicalExpr OnRelational(
+      mp::expr::Kind     kind,
+      NumericExpr        lhs,
+      NumericExpr        rhs
+      )
+   {
+      SCIP_VAR* lhsvar = NULL;
+      SCIP_VAR* rhsvar = NULL;
+      SCIP_Bool lhsval;
+      SCIP_Bool rhsval;
+      SCIP_EXPR* expr;
+
+      assert(lhs != NULL);
+      assert(rhs != NULL);
+
+      LogicalExprToVarVal(lhs, lhsvar, lhsval);
+      LogicalExprToVarVal(rhs, rhsvar, rhsval);
+
+      switch( kind )
+      {
+         case mp::expr::EQ:
+         case mp::expr::NE:
+         {
+            bool isne = (kind == mp::expr::NE);
+            if( lhsvar == NULL && rhsvar == NULL )
+            {
+               SCIP_CALL_THROW( SCIPcreateExprValue(scip, &expr, lhsval == rhsval ? (isne ? 0.0 : 1.0) : (isne ? 1.0 : 0.0), NULL, NULL) );
+               exprstorelease.push_back(expr);
+               break;
+            }
+
+            if( lhsvar == NULL )
+            {
+               std::swap(lhs, rhs);
+               std::swap(lhsval, rhsval);
+               std::swap(lhsvar, rhsvar);
+            }
+            assert(lhsvar != NULL);
+
+            if( rhsvar == NULL )
+            {
+               // expression is lhsvar == true or lhsvar == false if EQ
+               // so we return lhsvar or ~lhsvar, opposite if NE
+               if( rhsval == (isne ? FALSE : TRUE) )
+               {
+                  expr = lhs;
+               }
+               else
+               {
+                  SCIP_CALL_THROW( SCIPgetNegatedVar(scip, lhsvar, &lhsvar) );
+                  SCIP_CALL_THROW( SCIPcreateExprVar(scip, &expr, lhsvar, NULL, NULL) );
+                  exprstorelease.push_back(expr);
+               }
+               break;
+            }
+
+            // expressions is lhsvar == rhsvar or lhsvar != rhsvar
+            // we create a new variable auxvar and add a constraint xor(auxvar, lhsvar, rhsvar, isne ? FALSE : TRUE)
+            // to ensure auxvar = (lhsvar == rhsvar)  or  auxvar = (lhsvar != rhsvar)
+
+            SCIP_VAR* vars[3];
+            SCIP_CONS* cons;
+            std::string name = std::string("_logic") + std::to_string((long long)logiccount++);
+            SCIP_CALL_THROW( SCIPcreateVarBasic(scip, &vars[0], name.c_str(), 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY) );
+            SCIP_CALL_THROW( SCIPaddVar(scip, vars[0]) );
+            SCIP_CALL_THROW( SCIPcreateExprVar(scip, &expr, vars[0], NULL, NULL) );
+            exprstorelease.push_back(expr);
+
+            vars[1] = lhsvar;
+            vars[2] = rhsvar;
+            name += "def";
+            SCIP_CALL_THROW( SCIPcreateConsBasicXor(scip, &cons, name.c_str(), isne ? FALSE : TRUE, 3, vars) );
+            SCIP_CALL_THROW( SCIPaddCons(scip, cons) );
+
+            SCIP_CALL_THROW( SCIPreleaseVar(scip, &vars[0]) );
+            SCIP_CALL_THROW( SCIPreleaseCons(scip, &cons) );
+
+            break;
+         }
+
+         default:
+            OnUnhandled(mp::expr::str(kind));
+            return NULL;
+      }
+
+      return expr;
+   }
+
    /// receive notification of the end of the input
    ///
    /// - setup all nonlinear constraints and add them to SCIP
@@ -1210,12 +1618,12 @@ public:
          char name[20];
          if( !issos2 )
          {
-            (void) sprintf(name, "sos1_%d", sosit->first);
+            (void) SCIPsnprintf(name, 20, "sos1_%d", sosit->first);
             SCIP_CALL_THROW( SCIPcreateConsBasicSOS1(scip, &cons, name, sosit->second.size(), setvars.data(), setweights.empty() ? NULL : setweights.data()) );
          }
          else
          {
-            (void) sprintf(name, "sos2_%d", -sosit->first);
+            (void) SCIPsnprintf(name, 20, "sos2_%d", -sosit->first);
             SCIP_CALL_THROW( SCIPcreateConsBasicSOS2(scip, &cons, name, sosit->second.size(), setvars.data(), setweights.data()) );
          }
          SCIP_CALL_THROW( SCIPaddCons(scip, cons) );
@@ -1531,6 +1939,7 @@ SCIP_RETCODE SCIPwriteSolutionNl(
       default:
          /* solve_result_num = 500; */
          SCIPerrorMessage("invalid status code <%d>\n", SCIPgetStatus(scip));
+         (void) fclose(solfile);
          return SCIP_INVALIDDATA;
    }
    SCIPinfoMessage(scip, solfile, "objno 0 %d\n", solve_result_num);

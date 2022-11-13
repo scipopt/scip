@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -1312,13 +1321,18 @@ SCIP_RETCODE computeRestrictionToRay(
 
    for( i = 0; i < nquadexprs; ++i )
    {
-      SCIP_Real dot;
+      SCIP_Real dot = 0.0;
       SCIP_Real vdotray;
 
-      if( SCIPisZero(scip, eigenvalues[i]) && wcoefs == NULL )
-         continue;
-
-      dot = vzlp[i] + vb[i] / (2.0 * (sidefactor * eigenvalues[i]));
+      if( SCIPisZero(scip, eigenvalues[i]) )
+      {
+         if( wcoefs == NULL )
+            continue;
+      }
+      else
+      {
+         dot = vzlp[i] + vb[i] / (2.0 * (sidefactor * eigenvalues[i]));
+      }
       vdotray = computeEigenvecDotRay(&eigenvectors[i * nquadexprs], nquadexprs, raycoefs, rayidx, raynnonz);
 
       if( SCIPisZero(scip, eigenvalues[i]) )
@@ -3619,7 +3633,7 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoQuadratic)
       if( nlhdlrdata->useboundsasrays )
          nlhdlrdata->nboundcuts += 1;
 
-      (void) SCIPsnprintf(SCIProwprepGetName(rowprep), SCIP_MAXSTRLEN, "%s_intersection_quadratic%p_lp%d",
+      (void) SCIPsnprintf(SCIProwprepGetName(rowprep), SCIP_MAXSTRLEN, "%s_intersection_quadratic%p_lp%" SCIP_LONGINT_FORMAT,
          overestimate ? "over" : "under",
          (void*)expr,
          SCIPgetNLPs(scip));

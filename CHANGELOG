@@ -6,11 +6,25 @@
 Features
 --------
 
+- added simplification of abs(x)^n to x^n when n is even (simplify rule POW12)
+- in expression simplification, added possibility to expand power of sum with exponents larger than 2 (simplify rule POW7)
+- in expression simplification, added possibility to expand products with sums as factor when there are more than two factors (simplify rule SP12b)
+- in expression simplification, added possibility to allow expanding power of products with fractional exponent (simplify rule POW5a)
+- Can now build with Lapack (used for solving nonlinear problems). If IPOPT is used, then Lapack is accessed through it.
+  There	is an interface to Lapack in lapack_calls.
+- added support for logical constraints in binary variables and basic logical operators (and, or, not, equal) to AMPL .nl reader
+- new diving heuristic indicatordiving that focuses on indicator variables which control semicontinuous variables
+- updated statistics on NLP relaxation; information on convexity of NLP has been added
+- added new bandit method (EXP.3-IX) that is the new default of the ALNS heuristic
+
 Performance improvements
 ------------------------
 
 - Variable conflict-based addition of Schreier-Sims cuts for symmetry handling in prop_symmetry.c does no longer use
   an expensive explicit conflict graph construction.
+- Added initialization of LP relaxation for SOC constraints.
+- Avoided some numerical issues when separating SOC constraints.
+- If differentation of convex expression fails in convex nlhdlr, then a perturbed point is tried.
 
 Examples and applications
 -------------------------
@@ -20,26 +34,57 @@ Interface changes
 
 ### New and changed callbacks
 
+- Added solution linearization callback for nonlinear handlers.
+  The nonlinear handler may use this callback to add tight cuts that use the given solution as reference point to the cutpool.
+  The callback is called if option constraints/nonlinear/linearizeheursol is enabled.
+
 ### Deleted and changed API methods
 
 - SCIPtpiInitLock(), SCIPtpiDestroyLock(), SCIPtpiInitCondition(), SCIPtpiDestroyCondition() now take a double
   pointer to SCIP_LOCK/SCIP_CONDITION, respectively.
-
 - Renamed SCIPtpiSumbitJob() to SCIPtpiSubmitJob().
+- Replaced SCIPnlrowSetCurvature() by SCIPsetNlRowCurvature().
 
 ### New API functions
 
+- new functions for interfacing with Lapack:
+  SCIPlapackIsAvailable(), SCIPlapackIsAvailable(),
+  SCIPlapackComputeEigenvalues(), and SCIPlapackSolveLinearEquations
+
+  These functions should be used instead of SCIPisIpoptAvailableIpopt(), SCIPcallLapackDsyevIpopt(), and
+  SCIPsolveLinearEquationsIpopt() in the context of computing eigenvalues or solving linear equations. If IPOPT is available,
+  the calls will be passed on.
+- SCIPmultiplyBySumExprSum(), SCIPpowerExprSum()
+- SCIPsetParam()
+- SCIPgetPrimalDualIntegral() returns the primal dual integral stored in the statistics
+- SCIPgetNLPNlRowsStat() to retrieve counts on linear, convex, and nonconvex rows in NLP
+- SCIPnlhdlrSetSollinearize(), SCIPnlhdlrHasSollinearize()
+
 ### Command line interface
+
+- Added optional parameter -i when calling SCIP in AMPL-mode (-AMPL parameter).
+  If -i is specified, a SCIP shell is started where normally SCIPsolve() would be called.
 
 ### Interfaces to external software
 
 - added interface to nauty/traces for symmetry computation
+- Added interface to Lapack (used for solving nonlinear problems).
+- The AMPL interface now supports parameters specified in AMPL command scripts via option scip_options.
+  The value of scip_options is expected to be a sequence of parameter names and values, separated by a space, e.g.,
+    `option scip_options 'limits/time 10 display/verblevel 1';`.
+  String values should not be quoted and spaces in string values are not supported.
 
 ### Changed parameters
 
 - Shrunk range of parameter "propagating/symmetry/sstleaderrule" from [0,3] to [0,2], removed "MAXCONFLICTS"-option.
+- Removed reading/gmsreader/freeints. A default upper bound of +inf is now assumed for integer variables in GAMS (which is the case since GAMS 23.1).
 
 ### New parameters
+
+- expr/pow/expandmaxexponent to specify limit on exponent when to expand power of sum
+- expr/pow/distribfracexponent to enable expanding power of products with fractional exponents
+- expr/product/expandalways to enable expanding any product with sums as factor (that is, also when more than two factors)
+- nlhdlr/convex/maxperturb to specify maximal perturbation of non-differential reference points
 
 ### Data structures
 
@@ -59,12 +104,17 @@ Build system
 
 ### Cmake
 
+- New flag -DLAPACK=on for linking with Lapack (must be available in the system)
+
 ### Makefile
 
 - added flag option "nauty" for SYM variable to specify which graph automorphism package should be used
+- New flag LAPACK for linking with Lapack (must be available in the system)
 
 Fixed bugs
 ----------
+
+- add safeguard for number of selected cuts
 
 Miscellaneous
 -------------
@@ -77,44 +127,190 @@ Known bugs
 
 @page RN80 Release notes for SCIP 8.0
 
-@section RN000 SCIP 8.0.1
+@section RN000 SCIP 8.0.3
+*************************
+
+Features
+--------
+
+Performance improvements
+------------------------
+
+Examples and applications
+-------------------------
+
+- Take out STP and PolySCIP applications
+
+Interface changes
+-----------------
+
+### New and changed callbacks
+
+### Deleted and changed API methods
+
+### New API functions
+
+### Command line interface
+
+- When running the AMPL interface, the .nl filename extension does not need to be omitted for the input file anymore.
+
+### Interfaces to external software
+
+### Changed parameters
+
+### New parameters
+
+### Data structures
+
+Deleted files
+-------------
+
+Unit tests
+----------
+
+Testing
+-------
+
+Build system
+------------
+
+### Cmake
+
+- Forbid CMAKE_BUILD_TYPE nonstandard values
+
+### Makefile
+
+Fixed bugs
+----------
+
+- fixed an incorrect handling of xor constraints
+- the feasibility checker for integrality constraints now uses checkintegrality even for implied integers
+- fixed an issue caused by aggregated variables not added to a hashmap in the xor constraint handler
+- changed function solveRowEchelonGF2 in cons_xor.c to avoid errors if rank is 0
+- fixed that the implication presolver tried to aggregate or tighten bounds of multiaggregated variables
+
+Miscellaneous
+-------------
+
+- Changed license to Apache 2.0, see https://www.apache.org/licenses/LICENSE-2.0.
+
+Known bugs
+----------
+
+@section RN802 SCIP 8.0.2
+*************************
+
+Interface changes
+-----------------
+
+### Deleted and changed API methods
+
+- added input parameter SCIP_Bool initiallp to SCIPcutselsSelect
+- changed function type int to SCIP_Longint for SCIPcutpoolGetMaxNCuts
+- replaced SCIPsepastoreGetNCutsFound with SCIPsepastoreGetNCutsAdded following the naming convention for the new statistics
+- replaced SCIPsepaIncNAppliedCuts with SCIPsepaIncNCutsApplied
+
+### New API functions
+
+- added SCIPsepastoreGetNCutsAdded, SCIPsepastoreGetNCutsAddedViaPool, SCIPsepastoreGetNCutsAddedDirect
+- added SCIPsepaIncNCutsAdded, SCIPsepaDecNCutsAdded, SCIPsepaIncNCutsApplied, SCIPsepaGetNRootCalls, SCIPsepaGetNCutsAdded, SCIPsepaGetNCutsAddedViaPool, SCIPsepaGetNCutsAddedDirect, SCIPsepaGetNCutsAppliedViaPool, SCIPsepaGetNCutsAppliedDirect
+- added SCIPcutpoolGetNRootCalls, SCIPcutpoolGetNCutsAdded, SCIPcutpoolAddMaxNCuts, SCIPcutpoolSetTime, SCIPcutpoolAddNCalls, SCIPcutpoolAddNRootCalls, SCIPcutpoolAddNCutsFound, SCIPcutpoolAddNCutsAdded,
+- added SCIPcutselGetNCalls, SCIPcutselGetNRootCalls, SCIPcutselGetNRootCuts, SCIPcutselGetNRootForcedCuts, SCIPcutselGetNRootCutsFiltered, SCIPcutselGetNLocalCuts, SCIPcutselGetNLocalForcedCuts, SCIPcutselGetNLocalCutsFiltered,
+
+### Interfaces to external software
+
+- Added compatibility with Mosek 10.0.18.
+
+### New parameters
+
+- new parameters to turn on more statistics: misc/showdivingstats (diving heuristics), heuristics/alns/shownbstats (ALNS), estimation/showstats (tree size estimation)
+
+### Data structures
+
+- added nrootcalls and ncutsadded to SCIP_Cutpool
+- added fromcutpool flag to SCIP_Row and fixed 33 bit allocation
+- added ncalls, nrootcalls, nrootcutsselected, nrootcutsforced, nrootcutsfiltered, nlocalcutsselected, nlocalcutsforced, nlocalcutsfiltered to SCIP_Cutsel
+- added ncutsadded, ncutsaddedviapool, ncutsaddeddirect, ncutsappliedviapool, ncutsapplieddirect, nrootcalls to SCIP_Sepa
+- added ncutsadded, ncutsaddedviapool, ncutsaddeddirect to SCIP_Sepastore
+- fixed statistics of relaxators w.r.t. number of times conss/cuts were added
+
+Build system
+------------
+
+### Cmake
+
+- new option `-DAUTOBUILD` that configures scip with dependencies on availability.
+  Packages like Ipopt, PaPILO, Readline, Zimpl, ZLIB, GMP, Worhp are automatically found and linked, otherwise ignored.
+  The individual flags for these packages are ignored. This makes a quick build easier. It is by default set to off.
+
+Fixed bugs
+----------
+
+- read objective offset from ZIMPL files
+- Make sure that objective limit is disabled if not all variables are in the LP. If we would run into
+  an objective limit in this case, the results of the LP solver are unclear.
+- fixed bug in reopt.c, which occured for bounds outside of current valid bounds
+- fixed problem with recomputing symmetries after a restart
+- fixed bug in SCIPcalcMIR() with wrong order of arguments for removeZerosQuad()
+- fixed segmentation fault in update of cut statistic
+- fixed bug in presolving of and constraints by merging variables with multiple occurrences before cliquePresolve()
+- fixed bug in dual presolving of linear constraints by setting implicit integers to integers in multi-aggregation
+- fixed update of presolve statistics on added constraints and changed coefficients in constraint handler for nonlinear constraints
+- fixed bug with reading CIP files with large constraints split over several lines
+- fixed bug with infinite bounds in the computation of conflict cuts
+- fixed check for unbounded solution constructed by SCIPlpGetUnboundedSol(): The constructed solution is very likely infeasible
+  since scaling increases small numerical feasibility violations. Therefore, the solution is now always accepted. However, the
+  feasibility of the ray is now checked. This fix now might lead to several rounds of separation in order to resolve unbounded solutions,
+  whereas previously SCIP started to branch immediately.
+- changed to absolute tolerances in all redundancy checks for linear constraints
+
+Miscellaneous
+-------------
+
+- Added extended cutselector statistics splitting between root node specific and general statistics
+- Added extended and refined cutpool statistics showing the number of cuts added from the cutpool to the sepastore
+- Added extended and refined separator statistics to get a better view of the individual generators performance
+- turned off output of statistics for the following information by default:
+  diving heuristics, ALNS neighborhood information and tree size estimation statistics;
+  they can be turned on using the following new parameters:
+  misc/showdivingstats (diving heuristics), heuristics/alns/shownbstats (ALNS), estimation/showstats (tree size estimation)
+
+@section RN801 SCIP 8.0.1
 *************************
 Features
 --------
 
 - clique lifting in cons_setppc (parameter enablecliquelifting) is only disabled if it has been applied
+- avoid warning if Mosek has reached/exceeded the objective limit
 - improved curvature check for quadratic expressions when extended formulations are disabled
 
-Performance improvements
-------------------------
 Examples and applications
 -------------------------
+
+- Fixed handling of enforcing in the TSP example.
+
 Interface changes
 -----------------
-### New and changed callbacks
-### Deleted and changed API methods
-### New API functions
-### Command line interface
+
 ### Interfaces to external software
-### Changed parameters
-### New parameters
-### Data structures
-Deleted files
--------------
-Unit tests
-----------
-Testing
--------
+
+- Added compatibility with Mosek 10.0.13.
+
 Build system
 ------------
+
+- BLISS is now built from the vendored version from https://github.com/ds4dm/Bliss
+
 ### Cmake
 
 - avoid warnings about unrecognized compiler warning silencing options when compilation with GCC fails
 - adjust mosek find module to version 9.3
+- added cmake compatibility for ipopt versions 3.14.x
 
 ### Makefile
 
 - avoid warnings about unrecognized compiler warning silencing options when compilation with GCC fails
+- fixed that compilation with MS/Intel compilers on Windows and Cray compilers was broken when enabling PAPILO
 
 Fixed bugs
 ----------
@@ -125,11 +321,13 @@ Fixed bugs
 - fixed that recursive products in expressions were sometimes not flattened
 - fixed that expressions in original variables could not be simplified
 - fixed handling of objective limit with Mosek
-
-Miscellaneous
--------------
-Known bugs
-----------
+- made SCIPlpiGetSolverName()/SCIPlpiGetSolverDesc() thread-safe for LP Solvers (Cplex,Gurobi,Glop,Mosek,SoPlex,Xpress)
+- made SYMsymmetryGetName() thread-safe for Bliss
+- fixed memory allocation issue in detection of SOC nlhdlr
+- fixed that reaching the walltime limit in Ipopt was not handled properly
+- Deactivated dual fixing of unlocked variables with zero objective in presol_milp that SCIP is unable to postsolve.
+- set the column flag kImplInt for implicit integers in the papilo problem
+- fixed bug in propagation of indicator constraints (one case always reported a change through propagation)
 
 @section RN800 SCIP 8.0.0
 *************************
@@ -1184,6 +1382,7 @@ Fixed bugs
 - Improved separation for SOC constraint with multiaggregated variable on right-hand-side.
 - Fixed bug in presol_boundshift: do not shift non-active variables
 - Fixed bug in domain propagation for SOC constraints with negative coefficient for variable on right-hand-side.
+- Fixed a sign check in detection of linear constraints that are parallel to the objective
 - Fixed bug with multi-aggregated integer variables in cons_xor.
 - Fixed bug with changed number of variables in storing relaxation solution in probing/diving.
 - Fixed issues with scip statistics
@@ -2849,6 +3048,7 @@ Features
   - the subnlp heuristic now gives ownership of a found solution to the heuristic that constructed the starting point, if any;
     as a consequence, MIP heuristics may now be shown more frequently for having found a solution when solving MINLPs, even
     though the solutions required an additional NLP solve
+  - new multistart heuristic for NLPs
 
 - Propagator:
   - add prop_nlobbt, a nonlinear optimization-based bound propagator solving two convex NLP relaxations for each variable

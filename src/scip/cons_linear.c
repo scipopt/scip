@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -9423,8 +9432,8 @@ SCIP_RETCODE consdataTightenCoefs(
     * they can be removed from the constraint.
     * aggrrhs may contain some near-infinity value, but only if rhs is infinity.
     */
-   if( (SCIPisInfinity(scip, -consdata->lhs) || SCIPisFeasLT(scip, maxleftactivity, aggrlhs))
-      && (SCIPisInfinity(scip, consdata->rhs) || SCIPisFeasGT(scip, minleftactivity, aggrrhs)) )
+   if( (SCIPisInfinity(scip, -consdata->lhs) || SCIPisLT(scip, maxleftactivity, aggrlhs))
+      && (SCIPisInfinity(scip, consdata->rhs) || SCIPisGT(scip, minleftactivity, aggrrhs)) )
    {
       SCIP_Real minleftactivitypart;
       SCIP_Real maxleftactivitypart;
@@ -10469,7 +10478,7 @@ SCIP_RETCODE checkParallelObjective(
    offset = 0.0;
    scale = 1.0;
 
-   /* There are no variables in the ojective function and in the constraint. Thus, the constraint is redundant or proves
+   /* There are no variables in the objective function and in the constraint. Thus, the constraint is redundant or proves
     * infeasibility. Since we have a pure feasibility problem, we do not want to set a cutoff or lower bound.
     */
    if( nobjvars == 0 )
@@ -10483,7 +10492,9 @@ SCIP_RETCODE checkParallelObjective(
       SCIP_Bool rhsfinite = !SCIPisInfinity(scip, consdata->rhs);
       SCIP_Bool lhsfinite = !SCIPisInfinity(scip, -consdata->lhs);
 
-      if( SCIPisPositive(scip, scale) )
+      assert(scale != 0.0);
+
+      if( scale > 0.0 )
       {
          if( conshdlrdata->detectcutoffbound && rhsfinite )
          {
@@ -11102,6 +11113,26 @@ SCIP_RETCODE dualPresolve(
           * also convertLongEquality() early termination due to coefficients
           */
          SCIP_CALL( SCIPmultiaggregateVar(scip, bestvar, naggrs, aggrvars, aggrcoefs, aggrconst, &infeasible, &aggregated) );
+
+         /** if the multi-aggregate bestvar is integer, we need to convert implicit integers to integers because
+          *  the implicitness might rely on the constraint and the integrality of bestvar
+          */
+         if( !infeasible && aggregated && SCIPvarGetType(bestvar) == SCIP_VARTYPE_INTEGER )
+         {
+            SCIP_Bool infeasiblevartypechg;
+
+            for( j = 0; j < naggrs; ++j)
+            {
+               /** If the multi-aggregation was not infeasible, then setting implicit integers to integers should not
+                *  lead to infeasibility
+                */
+               if( SCIPvarGetType(aggrvars[j]) == SCIP_VARTYPE_IMPLINT )
+               {
+                  SCIP_CALL( SCIPchgVarType(scip, aggrvars[j], SCIP_VARTYPE_INTEGER, &infeasiblevartypechg) );
+                  assert(!infeasiblevartypechg);
+               }
+            }
+         }
       }
       else
       {
@@ -11862,8 +11893,8 @@ SCIP_RETCODE simplifyInequalities(
                siderest = gcd;
          }
 
-         rredundant = hasrhs && maxactsub <= siderest && SCIPisFeasGT(scip, minactsub, siderest - gcd);
-         lredundant = haslhs && SCIPisFeasLT(scip, maxactsub, siderest) && minactsub >= siderest - gcd;
+         rredundant = hasrhs && maxactsub <= siderest && SCIPisGT(scip, minactsub, siderest - gcd);
+         lredundant = haslhs && SCIPisLT(scip, maxactsub, siderest) && minactsub >= siderest - gcd;
 
          /* early termination if the activities deceed the gcd */
          if( offsetv == -1 && (rredundant || lredundant) )
@@ -11900,8 +11931,8 @@ SCIP_RETCODE simplifyInequalities(
       numericsok = REALABS(maxact) < MAXACTVAL && REALABS(maxactsub) < MAXACTVAL && REALABS(minact) < MAXACTVAL &&
             REALABS(minactsub) < MAXACTVAL;
 
-      rredundant = hasrhs && maxactsub <= siderest && SCIPisFeasGT(scip, minactsub, siderest - gcd);
-      lredundant = haslhs && SCIPisFeasLT(scip, maxactsub, siderest) && minactsub >= siderest - gcd;
+      rredundant = hasrhs && maxactsub <= siderest && SCIPisGT(scip, minactsub, siderest - gcd);
+      lredundant = haslhs && SCIPisLT(scip, maxactsub, siderest) && minactsub >= siderest - gcd;
 
       /* check if we can remove redundant variables */
       if( v < nvars && numericsok && (redundant || (offsetv == -1 && (rredundant || lredundant))) )
@@ -11952,8 +11983,8 @@ SCIP_RETCODE simplifyInequalities(
          }
 
          /* is the redundancy really fulfilled */
-         assert((hasrhs && SCIPisFeasLE(scip, tmpmaxactsub, siderest) && tmpminactsub > siderest - gcd) ||
-               (haslhs && tmpmaxactsub < siderest && SCIPisFeasGE(scip, tmpminactsub, siderest - gcd)));
+         assert((hasrhs && SCIPisLE(scip, tmpmaxactsub, siderest) && tmpminactsub > siderest - gcd) ||
+               (haslhs && tmpmaxactsub < siderest && SCIPisGE(scip, tmpminactsub, siderest - gcd)));
 #endif
 
          SCIPdebugMsg(scip, "removing %d last variables from constraint <%s>, because they never change anything on the feasibility of this constraint\n",
@@ -16445,7 +16476,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
             cutoff = TRUE;
             break;
          }
-         else if( SCIPisFeasGE(scip, minactivity, consdata->lhs) && SCIPisFeasLE(scip, maxactivity, consdata->rhs) )
+         else if( SCIPisGE(scip, minactivity, consdata->lhs) && SCIPisLE(scip, maxactivity, consdata->rhs) )
          {
             SCIPdebugMsg(scip, "linear constraint <%s> is redundant: activitybounds=[%.15g,%.15g], sides=[%.15g,%.15g]\n",
                SCIPconsGetName(cons), minactivity, maxactivity, consdata->lhs, consdata->rhs);
@@ -16456,7 +16487,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
                (*ndelconss)++;
             break;
          }
-         else if( !SCIPisInfinity(scip, -consdata->lhs) && SCIPisFeasGE(scip, minactivity, consdata->lhs) )
+         else if( !SCIPisInfinity(scip, -consdata->lhs) && SCIPisGE(scip, minactivity, consdata->lhs) )
          {
             SCIPdebugMsg(scip, "linear constraint <%s> left hand side is redundant: activitybounds=[%.15g,%.15g], sides=[%.15g,%.15g]\n",
                SCIPconsGetName(cons), minactivity, maxactivity, consdata->lhs, consdata->rhs);
@@ -16464,7 +16495,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
             if( !consdata->upgraded )
                (*nchgsides)++;
          }
-         else if( !SCIPisInfinity(scip, consdata->rhs) && SCIPisFeasLE(scip, maxactivity, consdata->rhs) )
+         else if( !SCIPisInfinity(scip, consdata->rhs) && SCIPisLE(scip, maxactivity, consdata->rhs) )
          {
             SCIPdebugMsg(scip, "linear constraint <%s> right hand side is redundant: activitybounds=[%.15g,%.15g], sides=[%.15g,%.15g]\n",
                SCIPconsGetName(cons), minactivity, maxactivity, consdata->lhs, consdata->rhs);
@@ -16472,7 +16503,6 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
             if( !consdata->upgraded )
                (*nchgsides)++;
          }
-         assert(consdata->nvars >= 1); /* otherwise, it should be redundant or infeasible */
 
          /* handle empty constraint */
          if( consdata->nvars == 0 )

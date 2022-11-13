@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -3537,6 +3546,7 @@ SCIP_RETCODE SCIPtreeLoadLPState(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< problem data */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp                  /**< current LP data */
@@ -3588,7 +3598,7 @@ SCIP_RETCODE SCIPtreeLoadLPState(
       if( SCIPnodeGetType(lpstatefork) == SCIP_NODETYPE_FORK )
       {
          assert(lpstatefork->data.fork != NULL);
-         SCIP_CALL( SCIPlpSetState(lp, blkmem, set, eventqueue, lpstatefork->data.fork->lpistate,
+         SCIP_CALL( SCIPlpSetState(lp, blkmem, set, prob, eventqueue, lpstatefork->data.fork->lpistate,
                lpstatefork->data.fork->lpwasprimfeas, lpstatefork->data.fork->lpwasprimchecked,
                lpstatefork->data.fork->lpwasdualfeas, lpstatefork->data.fork->lpwasdualchecked) );
       }
@@ -3596,7 +3606,7 @@ SCIP_RETCODE SCIPtreeLoadLPState(
       {
          assert(SCIPnodeGetType(lpstatefork) == SCIP_NODETYPE_SUBROOT);
          assert(lpstatefork->data.subroot != NULL);
-         SCIP_CALL( SCIPlpSetState(lp, blkmem, set, eventqueue, lpstatefork->data.subroot->lpistate,
+         SCIP_CALL( SCIPlpSetState(lp, blkmem, set, prob, eventqueue, lpstatefork->data.subroot->lpistate,
                lpstatefork->data.subroot->lpwasprimfeas, lpstatefork->data.subroot->lpwasprimchecked,
                lpstatefork->data.subroot->lpwasdualfeas, lpstatefork->data.subroot->lpwasdualchecked) );
       }
@@ -3778,7 +3788,7 @@ SCIP_RETCODE focusnodeCleanupVars(
       /* remove all additions to the LP at this node */
       SCIP_CALL( SCIPlpShrinkCols(lp, set, SCIPlpGetNCols(lp) - SCIPlpGetNNewcols(lp)) );
 
-      SCIP_CALL( SCIPlpFlush(lp, blkmem, set, eventqueue) );
+      SCIP_CALL( SCIPlpFlush(lp, blkmem, set, transprob, eventqueue) );
    }
 
    /* mark variables as deleted */
@@ -6569,6 +6579,7 @@ SCIP_RETCODE SCIPtreeLoadProbingLPState(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< problem data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp                  /**< current LP data */
    )
@@ -6628,7 +6639,7 @@ SCIP_RETCODE SCIPtreeLoadProbingLPState(
       /* set the LP state */
       if( lpistate != NULL )
       {
-         SCIP_CALL( SCIPlpSetState(lp, blkmem, set, eventqueue, lpistate,
+         SCIP_CALL( SCIPlpSetState(lp, blkmem, set, prob, eventqueue, lpistate,
                lpwasprimfeas, lpwasprimchecked, lpwasdualfeas, lpwasdualchecked) );
       }
 
@@ -6898,7 +6909,7 @@ SCIP_RETCODE SCIPtreeEndProbing(
    /* if the LP was flushed before probing starts, flush it again */
    if( tree->probinglpwasflushed )
    {
-      SCIP_CALL( SCIPlpFlush(lp, blkmem, set, eventqueue) );
+      SCIP_CALL( SCIPlpFlush(lp, blkmem, set, transprob, eventqueue) );
 
       /* if the LP was solved before probing starts, solve it again to restore the LP solution */
       if( tree->probinglpwassolved )
@@ -6918,7 +6929,7 @@ SCIP_RETCODE SCIPtreeEndProbing(
          }
          else
          {
-            SCIP_CALL( SCIPlpSetState(lp, blkmem, set, eventqueue, tree->probinglpistate,
+            SCIP_CALL( SCIPlpSetState(lp, blkmem, set, transprob, eventqueue, tree->probinglpistate,
                   tree->probinglpwasprimfeas, tree->probinglpwasprimchecked, tree->probinglpwasdualfeas,
                   tree->probinglpwasdualchecked) );
             SCIP_CALL( SCIPlpFreeState(lp, blkmem, &tree->probinglpistate) );

@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -43,6 +52,13 @@ SCIP_RETCODE SCIPincludePresolMILP(
 }
 
 #else
+
+/* disable some warnings that come up in header files of PAPILOs dependencies */
+#ifdef __GNUC__
+#pragma GCC diagnostic ignored "-Wshadow"
+#pragma GCC diagnostic ignored "-Wctor-dtor-privacy"
+#pragma GCC diagnostic ignored "-Wredundant-decls"
+#endif
 
 #include <assert.h>
 #include "scip/cons_linear.h"
@@ -158,8 +174,14 @@ Problem<SCIP_Real> buildProblem(
       builder.setColUb(i, ub);
       builder.setColLbInf(i, SCIPisInfinity(scip, -lb));
       builder.setColUbInf(i, SCIPisInfinity(scip, ub));
-
+#if PAPILO_VERSION_MAJOR > 2 || (PAPILO_VERSION_MAJOR == 2 && PAPILO_VERSION_MINOR >= 1)
+      if ( SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT )
+         builder.setColImplInt(i, TRUE);
+      else
+         builder.setColIntegral(i, SCIPvarIsIntegral(var));
+#else
       builder.setColIntegral(i, SCIPvarIsIntegral(var));
+#endif
       builder.setObj(i, SCIPvarGetObj(var));
    }
 
@@ -343,7 +365,13 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
    /* todo: parallel cols cannot be handled by SCIP currently
    * addPresolveMethod( uptr( new ParallelColDetection<SCIP_Real>() ) ); */
    presolve.addPresolveMethod( uptr( new SingletonStuffing<SCIP_Real>() ) );
+#if PAPILO_VERSION_MAJOR > 2 || (PAPILO_VERSION_MAJOR == 2 && PAPILO_VERSION_MINOR >= 1)
+   DualFix<SCIP_Real> *dualfix = new DualFix<SCIP_Real>();
+   dualfix->set_fix_to_infinity_allowed(false);
+   presolve.addPresolveMethod( uptr( dualfix ) );
+#else
    presolve.addPresolveMethod( uptr( new DualFix<SCIP_Real>() ) );
+#endif
    presolve.addPresolveMethod( uptr( new FixContinuous<SCIP_Real>() ) );
    presolve.addPresolveMethod( uptr( new SimplifyInequalities<SCIP_Real>() ) );
    presolve.addPresolveMethod( uptr( new SimpleSubstitution<SCIP_Real>() ) );
@@ -394,26 +422,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
 #ifdef SCIP_PRESOLLIB_ENABLE_OUTPUT
    problem.setName(SCIPgetProbName(scip));
 #else
-   switch( data->verbosity )
-   {
-      case 0:
-         presolve.setVerbosityLevel(VerbosityLevel::kQuiet);
-         break;
-      case 1:
-         presolve.setVerbosityLevel(VerbosityLevel::kError);
-         break;
-      case 2:
-         presolve.setVerbosityLevel(VerbosityLevel::kWarning);
-         break;
-      case 3:
-         presolve.setVerbosityLevel(VerbosityLevel::kInfo);
-         break;
-      case 4:
-         presolve.setVerbosityLevel(VerbosityLevel::kDetailed);
-         break;
-      default:
-         assert(false);
-   }
+   presolve.setVerbosityLevel((VerbosityLevel) data->verbosity);
 #endif
 
    /* communicate the time limit */
@@ -712,6 +721,8 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
 #if (PAPILO_VERSION_MAJOR <= 1 && PAPILO_VERSION_MINOR==0)
 #else
       case ReductionType::kFixedInfCol: {
+         /* todo: currently SCIP can not handle this kind of reduction (see issue #3391) */
+         assert(false);
          if(!constraintsReplaced)
             continue;
          SCIP_Bool infeas;

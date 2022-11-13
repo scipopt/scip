@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -997,8 +1006,22 @@ SCIP_RETCODE restoreLPData(
 /*
  * Miscellaneous Methods
  */
+/*lint --e{778}*/
+/*lint --e{835}*/
+static const char cpxname[]= {'C', 'P', 'L', 'E', 'X', ' ',
+#if (defined CPX_VERSION_VERSION) && (CPX_VERSION_VERSION >= 10) && (CPX_VERSION_RELEASE >= 10)
+   (CPX_VERSION_VERSION/10) + '0', (CPX_VERSION_VERSION%10) + '0', '.', (CPX_VERSION_RELEASE/10) + '0', (CPX_VERSION_RELEASE%10) + '0', '.', CPX_VERSION_MODIFICATION + '0', '.', CPX_VERSION_FIX + '0'
+#elif (defined CPX_VERSION_VERSION) && (CPX_VERSION_VERSION <= 9) && (CPX_VERSION_RELEASE <= 9)
+   CPX_VERSION_VERSION + '0', '.',CPX_VERSION_RELEASE + '0', '.', CPX_VERSION_MODIFICATION + '0', '.', CPX_VERSION_FIX + '0'
+#elif (defined CPX_VERSION_VERSION) && (CPX_VERSION_VERSION >= 10) && (CPX_VERSION_RELEASE <= 9)
+   (CPX_VERSION_VERSION/10) + '0', (CPX_VERSION_VERSION%10) + '0', '.', CPX_VERSION_RELEASE + '0', '.', CPX_VERSION_MODIFICATION + '0', '.', CPX_VERSION_FIX + '0'
+#elif (defined CPX_VERSION_VERSION) && (CPX_VERSION_VERSION <= 9) && (CPX_VERSION_RELEASE >= 10)
+   CPX_VERSION_VERSION + '0', '.', (CPX_VERSION_RELEASE/10) + '0', (CPX_VERSION_RELEASE%10) + '0', '.',  CPX_VERSION_MODIFICATION + '0', '.', CPX_VERSION_FIX + '0'
+#else
+   (CPX_VERSION / 100) + '0', '.', ((CPX_VERSION % 100) / 10) + '0', '.', (CPX_VERSION % 10) + '0', '.', CPX_SUBVERSION + '0'
+#endif
+};
 
-static char cpxname[100];
 
 /**@name Miscellaneous Methods */
 /**@{ */
@@ -1008,11 +1031,6 @@ const char* SCIPlpiGetSolverName(
    void
    )
 {
-#ifdef CPX_VERSION_VERSION
-   (void) snprintf(cpxname, 100, "CPLEX %d.%d.%d.%d", CPX_VERSION_VERSION, CPX_VERSION_RELEASE, CPX_VERSION_MODIFICATION, CPX_VERSION_FIX);
-#else
-   (void) sprintf(cpxname, 100, "CPLEX %d.%d.%d.%d", CPX_VERSION/100, (CPX_VERSION%100)/10, CPX_VERSION%10, CPX_SUBVERSION);
-#endif
    return cpxname;
 }
 
@@ -3050,7 +3068,7 @@ SCIP_Bool SCIPlpiHasPrimalRay(
    assert(lpi->cpxenv != NULL);
    assert(lpi->solstat >= 0);
 
-   return (lpi->solstat == CPX_STAT_UNBOUNDED && CPXgetmethod(lpi->cpxenv, lpi->cpxlp) == CPX_ALG_PRIMAL);
+   return (lpi->solstat == CPX_STAT_UNBOUNDED );
 }
 
 /** returns TRUE iff LP is proven to be primal unbounded */

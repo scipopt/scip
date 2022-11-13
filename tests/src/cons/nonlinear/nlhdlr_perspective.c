@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -492,6 +501,7 @@ Test(nlhdlrperspective, sepa, .init = setup, .fini = teardown)
    SCIP_CALL( nlhdlrDetectPerspective(scip, conshdlr, nlhdlr, expr, cons, &enforcing, &participating, &nlhdlrexprdata) );
    cr_expect_eq(participating, SCIP_NLHDLR_METHOD_SEPABELOW, "expecting sepabelow, got %d\n", participating);
    cr_assert_not_null(nlhdlrexprdata);
+   ownerdata->enfos[1]->nlhdlrexprdata = nlhdlrexprdata;
 
    cr_expect_eq(nlhdlrexprdata->nindicators, 2, "Expecting 2 indicator variables, got %d\n", nlhdlrexprdata->nindicators);
 
@@ -543,15 +553,6 @@ Test(nlhdlrperspective, sepa, .init = setup, .fini = teardown)
    SCIP_CALL( SCIPclearCuts(scip) );
    SCIP_CALL( SCIPfreePtrarray(scip, &rowpreps) );
    SCIP_CALL( SCIPfreeSol(scip, &sol) );
-
-   SCIP_CALL( freeAuxVar(scip, expr) );
-   SCIP_CALL( freeNlhdlrExprData(scip, nlhdlrexprdata) ); /* convex nlhdlr is freed when expr is released */
-   SCIPfreeBlockMemory(scip, &nlhdlrexprdata);
-
-   SCIPfreeBlockMemory(scip, &ownerdata->enfos[1]);
-   SCIPfreeBlockMemory(scip, &ownerdata->enfos[0]);
-   SCIPfreeBlockMemoryArray(scip, &ownerdata->enfos, 2);
-   ownerdata->nenfos = 0;
 
    SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );

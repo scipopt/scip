@@ -17,10 +17,8 @@ Applications
 | `Coloring`        | `coloring`        | `coloring`        |
 | `CycleClustering` | `cycleclustering` | `cycleclustering` |
 | `MinIISC`         | `miniisc`         | `miniisc`         |
-| `PolySCIP`        | `polyscip`        | `polyscip`        |
 | `Ringpacking`     | `ringpacking`     | `ringpacking`     |
 | `Scheduler`       | `scheduler`       | `scheduler`       |
-| `STP`             | `scipstp`         | `stp`             |
 
 Examples
 | Folder            | cmake target      | make target       |
@@ -146,8 +144,8 @@ Here is what you have to do to compile and run the application or example projec
    - `OPT=opt`       to use optimized compilation mode (default)
    - `OPT=dbg`       to use debug compilation mode
    - `OPT=prf`       to use performance analysis compilation mode
-   - `LPS=spx`       to use SoPlex as LP solver (based on the new interface available since version 2.0, default)
-   - `LPS=spx1`      to use SoPlex as LP solver (based on the old interface for versions >= 1.4)
+   - `LPS=spx`       to use %SoPlex as LP solver (based on the new interface available since version 2.0, default)
+   - `LPS=spx1`      to use %SoPlex as LP solver (based on the old interface for versions >= 1.4)
    - `LPS=cpx`       to use CPLEX as LP solver
    - `LPS=grb`       to use Gurobi as LP solver
    - `LPS=xprs`      to use XPRESS as LP solver
@@ -171,4 +169,4 @@ Here is what you have to do to compile and run the application or example projec
 
 On some machines, you should use gmake instead of make.
 For more information and a list of available flags please refer to
-the [online documentation of SCIP](http://scipopt.org/doc/html/MAKE.php)
+the [online documentation of SCIP](https://scipopt.org/doc/html/md_INSTALL.php#MAKE)

@@ -12,9 +12,7 @@ set(CMAKE_C_STANDARD_REQUIRED on)
 set(CMAKE_C_EXTENSIONS OFF)
 
 if(NOT WIN32)
-    add_compile_options(
-        "$<$<COMPILE_LANGUAGE:C>:-D_XOPEN_SOURCE=600>"
-    )
+    set(SCIP_COMP_OPTIONS ${SCIP_COMP_OPTIONS} "$<$<COMPILE_LANGUAGE:C>:-D_XOPEN_SOURCE=600>")
 endif()
 
 #configure the scipbuildflags.c source file for the build tree
@@ -29,6 +27,7 @@ set(scipsources
     scip/bandit.c
     scip/bandit_epsgreedy.c
     scip/bandit_exp3.c
+    scip/bandit_exp3ix.c
     scip/bandit_ucb.c
     scip/branch_allfullstrong.c
     scip/branch_cloud.c
@@ -118,6 +117,7 @@ set(scipsources
     scip/heur_gins.c
     scip/heur_guideddiving.c
     scip/heur_indicator.c
+    scip/heur_indicatordiving.c
     scip/heur_intdiving.c
     scip/heur_intshifting.c
     scip/heur_linesearchdiving.c
@@ -264,7 +264,9 @@ set(scipsources
     scip/clock.c
     scip/concsolver.c
     scip/concurrent.c
-    scip/conflict.c
+    scip/conflict_general.c
+    scip/conflict_graphanalysis.c
+    scip/conflict_dualproofanalysis.c
     scip/conflictstore.c
     scip/cons.c
     scip/cutpool.c
@@ -285,6 +287,7 @@ set(scipsources
     scip/implics.c
     scip/interrupt.c
     scip/intervalarith.c
+    scip/lapack_calls.c
     scip/lp.c
     scip/matrix.c
     scip/mem.c
@@ -455,6 +458,7 @@ set(scipheaders
     scip/bandit.h
     scip/bandit_epsgreedy.h
     scip/bandit_exp3.h
+    scip/bandit_exp3ix.h
     scip/bandit_ucb.h
     scip/benders.h
     scip/benders_default.h
@@ -490,6 +494,9 @@ set(scipheaders
     scip/concsolver_scip.h
     scip/concurrent.h
     scip/conflict.h
+    scip/conflict_graphanalysis.h
+    scip/conflict_dualproofanalysis.h
+    scip/conflict_general.h
     scip/conflictstore.h
     scip/cons_abspower.h
     scip/cons_and.h
@@ -574,6 +581,7 @@ set(scipheaders
     scip/heur_guideddiving.h
     scip/heur.h
     scip/heur_indicator.h
+    scip/heur_indicatordiving.h
     scip/heur_intdiving.h
     scip/heur_intshifting.h
     scip/heuristics.h
@@ -619,6 +627,7 @@ set(scipheaders
     scip/implics.h
     scip/interrupt.h
     scip/intervalarith.h
+    scip/lapack_calls.h
     scip/lp.h
     scip/mem.h
     scip/message_default.h
@@ -687,6 +696,7 @@ set(scipheaders
     scip/pub_bandit.h
     scip/pub_bandit_epsgreedy.h
     scip/pub_bandit_exp3.h
+    scip/pub_bandit_exp3ix.h
     scip/pub_bandit_ucb.h
     scip/pub_benders.h
     scip/pub_benderscut.h
@@ -986,7 +996,7 @@ if(CXXONLY)
 
     # for the clang compiler this suppresses the warnings about treating 'c' input as 'c++' when CXXONLY is enabled
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-       add_compile_options(-x c++)
+       set(SCIP_COMP_OPTIONS ${SCIP_COMP_OPTIONS} -x c++)
     endif()
 endif()
 
@@ -1014,13 +1024,15 @@ target_include_directories(libscip PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
     $<INSTALL_INTERFACE:include>)
 
-target_link_libraries(libscip PRIVATE
+target_link_libraries(libscip
+    PRIVATE
+    ${SYM_LIBRARIES}
     $<$<BOOL:${ZLIB}>:ZLIB::ZLIB>
     ${Readline_LIBRARY}
     ${GMP_LIBRARIES}
     ${THREAD_LIBRARIES}
     ${NLPI_LIBRARIES}
-    ${SYM_LIBRARIES}
+    ${LAPACK_LIBRARIES}
     ${PAPILO_IMPORTED_TARGETS})
 
 if(SHARED)
@@ -1031,13 +1043,24 @@ if(SHARED)
 else()
     set(SOPLEX_NEEDED ${SOPLEX_FOUND})
     set(ZIMPL_NEEDED ${ZIMPL_FOUND})
-    target_link_libraries(libscip PRIVATE ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES} ${SYM_LIBRARIES})
+    if(DEFINED BLISS_TARGET)
+        target_link_libraries(libscip PRIVATE ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES})
+    else()
+        target_link_libraries(libscip PRIVATE ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES} ${SYM_LIBRARIES})
+    endif()
     add_executable(scip main.c)
-    target_link_libraries(scip libscip)
+    if(DEFINED BLISS_TARGET)
+        target_link_libraries(scip libscip ${BLISS_TARGET})
+    else()
+        target_link_libraries(scip libscip)
+    endif()
 endif()
 
 add_executable(SCIP::SCIP ALIAS scip)
 add_library(SCIP::libscip ALIAS libscip)
+
+target_compile_options(scip PRIVATE ${SCIP_COMP_OPTIONS})
+target_compile_options(libscip PRIVATE ${SCIP_COMP_OPTIONS})
 
 include(GenerateExportHeader)
 generate_export_header(libscip BASE_NAME scip EXPORT_FILE_NAME ${PROJECT_BINARY_DIR}/scip/scip_export.h)
@@ -1052,14 +1075,15 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 endif()
 
 target_link_libraries(scip
+   ${SYM_LIBRARIES}
    $<$<BOOL:${ZLIB}>:ZLIB::ZLIB>
    ${Readline_LIBRARY}
    ${GMP_LIBRARIES}
    ${ZIMPL_LIBRARIES}
    ${LPS_LIBRARIES}
-   ${SYM_LIBRARIES}
    ${THREAD_LIBRARIES}
    ${NLPI_LIBRARIES}
+   ${LAPACK_LIBRARIES}
    ${PAPILO_IMPORTED_TARGETS})
 
 add_dependencies(libscip scip_update_githash)
@@ -1068,7 +1092,10 @@ add_dependencies(scip scip_update_githash)
 set_target_properties(libscip PROPERTIES
     VERSION ${SCIP_VERSION_MAJOR}.${SCIP_VERSION_MINOR}.${SCIP_VERSION_PATCH}.${SCIP_VERSION_SUB}
     SOVERSION ${SCIP_VERSION_MAJOR}.${SCIP_VERSION_MINOR}
-    INSTALL_RPATH_USE_LINK_PATH TRUE)
+    INSTALL_RPATH_USE_LINK_PATH TRUE
+    CXX_VISIBILITY_PRESET hidden
+    C_VISIBILITY_PRESET hidden
+    VISIBILITY_INLINES_HIDDEN 1)
 
 target_include_directories(scip PUBLIC
     $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}>
@@ -1092,7 +1119,7 @@ install(FILES ${xmlheaders} DESTINATION include/xml)
 install(FILES ${symheaders} DESTINATION include/symmetry)
 install(FILES ${blockmemshellheader} DESTINATION include/blockmemshell)
 
-# install the binary and the library to appropriate lcoations and add them to an export group
+# install the binary and the library to appropriate locations and add them to an export group
 install(TARGETS scip libscip EXPORT scip-targets
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib
@@ -1100,10 +1127,10 @@ install(TARGETS scip libscip EXPORT scip-targets
         INCLUDES DESTINATION include)
 
 # Add all targets to the build-tree export set
-export(TARGETS scip libscip
+export(TARGETS scip libscip ${BLISS_TARGET}
   FILE "${PROJECT_BINARY_DIR}/scip-targets.cmake")
 
-#make soplex and zimpl dir absolute for the config file
+# make soplex and zimpl dir absolute for the config file
 if(SOPLEX_NEEDED)
     get_filename_component(CONF_SOPLEX_DIR ${SOPLEX_DIR} REALPATH BASE_DIR ${CMAKE_SOURCE_DIR})
 endif()
@@ -1112,7 +1139,7 @@ if(ZIMPL_NEEDED)
     get_filename_component(CONF_ZIMPL_DIR ${ZIMPL_DIR} REALPATH BASE_DIR ${CMAKE_SOURCE_DIR})
 endif()
 
-#configure the config file for the build tree
+# configure the config file for the build tree
 set(CONF_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/src" "${PROJECT_BINARY_DIR}")
 configure_file(${PROJECT_SOURCE_DIR}/scip-config.cmake.in
   "${PROJECT_BINARY_DIR}/scip-config.cmake" @ONLY)
