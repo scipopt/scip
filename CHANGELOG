@@ -68,6 +68,8 @@ Interface changes
 ### Interfaces to external software
 
 - added interface to nauty/traces for symmetry computation
+- added interface to sassy, a preprocessor for symmetry computation
+- The directory src/sassy contains the source code of sassy.
 - Added interface to Lapack (used for solving nonlinear problems).
 - The AMPL interface now supports parameters specified in AMPL command scripts via option scip_options.
   The value of scip_options is expected to be a sequence of parameter names and values, separated by a space, e.g.,
@@ -109,6 +111,7 @@ Build system
 ### Makefile
 
 - added flag option "nauty" for SYM variable to specify which graph automorphism package should be used
+- added flag option "sassy" for SYM variable to specify which graph automorphism package should be used
 - New flag LAPACK for linking with Lapack (must be available in the system)
 
 Fixed bugs
