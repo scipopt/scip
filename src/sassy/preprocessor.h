@@ -4026,7 +4026,7 @@ namespace sassy {
                     ++count;
                 }
             }
-            std::cout << "del " << count << std::endl;
+            // std::cout << "del " << count << std::endl;
         }
 
     public:
