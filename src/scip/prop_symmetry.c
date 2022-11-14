@@ -2926,7 +2926,6 @@ SCIP_RETCODE checkReflectionSymmetriesAreSymmetries(
    int* treeparentidx;
    int* treemap;
    int* consperm;
-   int* postocons;
    int maxnvals;
    int nconstypes;
    int nnonlinconss;
@@ -2979,38 +2978,35 @@ SCIP_RETCODE checkReflectionSymmetriesAreSymmetries(
 
    /* sort constraints for quicker checks */
    maxnvals = 0;
+
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consperm, ntreerhs) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(consreflsymtype.encodelen), ntreerhs) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(consreflsymtype.consoptypes), ntreerhs) );
+
    consreflsymtype.constypes = treeconstype;
    consreflsymtype.rhs = treerhs;
    for (c = 0; c < ntreerhs; ++c)
    {
       consreflsymtype.encodelen[c] = treebegins[c + 1] - treebegins[c];
       consreflsymtype.consoptypes[c] = (SCIP_EXPRHDLR*) treeops[treemap[treebegins[c]]];
+
       if ( consreflsymtype.encodelen[c] > maxnvals )
          maxnvals = consreflsymtype.encodelen[c];
    }
 
    SCIPsort(consperm, SYMsortConsReflSym, (void*) &consreflsymtype, ntreerhs);
 
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &postocons, ntreerhs) );
-   for (c = 0; c < ntreerhs; ++c)
-      postocons[consperm[c]] = c;
-   SCIPfreeBlockMemoryArrayNull(scip, &consperm, ntreerhs);
-
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &constypebegins, ntreerhs + 1) );
    nconstypes = 1;
    constypebegins[0] = 0;
+
    for (c = 1; c < ntreerhs; ++c)
    {
-      if ( treeconstype[postocons[c]] != treeconstype[postocons[c - 1]] ||
-         consreflsymtype.encodelen[postocons[c]] != consreflsymtype.encodelen[postocons[c - 1]] ||
-         consreflsymtype.consoptypes[postocons[c]] != consreflsymtype.consoptypes[postocons[c] - 1] ||
-         ! SCIPisEQ(scip, treerhs[postocons[c]], treerhs[postocons[c - 1]]) )
-      {
+      if ( treeconstype[consperm[c]] != treeconstype[consperm[c - 1]] ||
+         consreflsymtype.encodelen[consperm[c]] != consreflsymtype.encodelen[consperm[c - 1]] ||
+         consreflsymtype.consoptypes[consperm[c]] != consreflsymtype.consoptypes[consperm[c - 1]] ||
+         ! SCIPisEQ(scip, treerhs[consperm[c]], treerhs[consperm[c - 1]]) )
          constypebegins[nconstypes++] = c;
-      }
    }
    constypebegins[nconstypes] = ntreerhs;
 
@@ -3036,7 +3032,7 @@ SCIP_RETCODE checkReflectionSymmetriesAreSymmetries(
       {
          for (pos = constypebegins[ct]; pos < constypebegins[ct + 1]; ++pos)
          {
-            c = postocons[pos];
+            c = consperm[pos];
 
             if ( treeconstype[c] == SYM_CONSTYPE_LINEAR )
             {
@@ -3053,7 +3049,7 @@ SCIP_RETCODE checkReflectionSymmetriesAreSymmetries(
                /* check whether permuted constraint exists */
                SCIP_CALL( checkLinConssAreIdentical(scip, vals, permrhs, varidx, nconsvars, lencons,
                      trees, treemap, treebegins, treerhs, treecoefs, treeops, treevaridx, treeconstype,
-                     ntreerhs, &success, postocons, constypebegins[ct], constypebegins[ct + 1]) );
+                     ntreerhs, &success, consperm, constypebegins[ct], constypebegins[ct + 1]) );
                if ( ! success )
                {
                   SCIPerrorMessage("Found permutation that is not a symmetry.\n");
@@ -3084,7 +3080,7 @@ SCIP_RETCODE checkReflectionSymmetriesAreSymmetries(
                   /* check whether permuted constraint exists */
                   SCIP_CALL( checkLinConssAreIdentical(scip, vals, permrhs, varidx, nconsvars, lencons,
                         trees, treemap, treebegins, treerhs, treecoefs, treeops, treevaridx, treeconstype,
-                        ntreerhs, &success, postocons, constypebegins[ct], constypebegins[ct + 1]) );
+                        ntreerhs, &success, consperm, constypebegins[ct], constypebegins[ct + 1]) );
                }
                else if ( consoptype == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_BDDISJ )
                {
@@ -3105,7 +3101,7 @@ SCIP_RETCODE checkReflectionSymmetriesAreSymmetries(
 
                   SCIP_CALL( checkBounddisjunctionConssAreIdentical(scip, disjbegins, disjubs, disjcoefs,
                         disjvaridx, ndisj, lencons, treevars, ntreevars, trees, ntreerhs, treemap, treebegins, treeops,
-                        treecoefs, treevals, treevaridx, treeconstype, &success, postocons, constypebegins[ct],
+                        treecoefs, treevals, treevaridx, treeconstype, &success, consperm, constypebegins[ct],
                         constypebegins[ct + 1]) );
 
                   SCIPfreeBufferArray(scip, &disjvaridx);
@@ -3137,7 +3133,7 @@ SCIP_RETCODE checkReflectionSymmetriesAreSymmetries(
                   SCIP_CALL( checkIndicatorConssAreIdentical(scip, c, nactvars, actcoefs, actvaridx, actconst, actval,
                         nlinvars, linconscoefs, linconsvaridx, rhs, lencons, treevars, ntreevars, trees, treerhs,
                         ntreerhs, treemap, treebegins, treeops, treecoefs, treevals, treevaridx, treeconstype, &success,
-                        postocons, constypebegins[ct], constypebegins[ct + 1]) );
+                        consperm, constypebegins[ct], constypebegins[ct + 1]) );
 
                   SCIPfreeBufferArray(scip, &linconsvaridx);
                   SCIPfreeBufferArray(scip, &linconscoefs);
@@ -3168,7 +3164,7 @@ SCIP_RETCODE checkReflectionSymmetriesAreSymmetries(
 
                   SCIP_CALL( checkSOSConssAreIdentical(scip, isSOS2cons, termbegins, treevals, treecoefs, treevaridx,
                         nterms, lencons, treevars, ntreevars, trees, ntreerhs, treemap, treebegins, treeops,
-                        treecoefs, treevals, treevaridx, treeconstype, treeparentidx, &success, postocons,
+                        treecoefs, treevals, treevaridx, treeconstype, treeparentidx, &success, consperm,
                         constypebegins[ct], constypebegins[ct + 1]) );
 
                   SCIPfreeBufferArray(scip, &termvaridx);
@@ -3336,7 +3332,7 @@ SCIP_RETCODE checkReflectionSymmetriesAreSymmetries(
    }
 
    SCIPfreeBlockMemoryArrayNull(scip, &constypebegins, ntreerhs + 1);
-   SCIPfreeBlockMemoryArrayNull(scip, &postocons, ntreerhs);
+   SCIPfreeBlockMemoryArrayNull(scip, &consperm, ntreerhs);
    SCIPfreeBufferArray(scip, &varidx);
    SCIPfreeBufferArray(scip, &vals);
 
