@@ -536,24 +536,24 @@ SCIP_DECL_DIALOGEXEC(dialogExecDisplaySymmetry)
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
 
    propdata = (SCIP_PROPDATA*)SCIPdialogGetData(dialog);
-   assert(propdata != NULL);
+   assert( propdata != NULL );
 
    SCIP_CALL( SCIPallocClearBufferArray(scip, &covered, propdata->npermvars) );
 
-   for( p = 0; p < propdata->nperms; ++p )
+   for (p = 0; p < propdata->nperms; ++p)
    {
       SCIPinfoMessage(scip, NULL, "Permutation %d:\n", p);
       perm = propdata->perms[p];
 
-      for( i = 0; i < propdata->npermvars; ++i )
+      for (i = 0; i < propdata->npermvars; ++i)
       {
-         if( perm[i] == i || covered[i] )
+         if ( perm[i] == i || covered[i] )
             continue;
 
          SCIPinfoMessage(scip, NULL, "  (<%s>", SCIPvarGetName(propdata->permvars[i]));
          j = perm[i];
          covered[i] = TRUE;
-         while( j != i )
+         while ( j != i )
          {
             covered[j] = TRUE;
             SCIPinfoMessage(scip, NULL, ",<%s>", SCIPvarGetName(propdata->permvars[j]));
@@ -562,7 +562,7 @@ SCIP_DECL_DIALOGEXEC(dialogExecDisplaySymmetry)
          SCIPinfoMessage(scip, NULL, ")\n");
       }
 
-      for( i = 0; i < propdata->npermvars; ++i )
+      for (i = 0; i < propdata->npermvars; ++i)
          covered[i] = FALSE;
    }
 
@@ -7708,7 +7708,7 @@ SCIP_RETCODE SCIPincludePropSymmetry(
       SCIPerrorMessage("display sub menu not found\n");
       return SCIP_PLUGINNOTFOUND;
    }
-   assert(!SCIPdialogHasEntry(displaymenu, "symmetries"));
+   assert( !SCIPdialogHasEntry(displaymenu, "symmetries") );
    SCIP_CALL( SCIPincludeDialog(scip, &dialog,
       NULL, dialogExecDisplaySymmetry, NULL, NULL,
       "symmetry", "display quality of the current LP solution, if available", FALSE, (SCIP_DIALOGDATA*)propdata) );
