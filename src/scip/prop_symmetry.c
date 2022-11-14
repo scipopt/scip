@@ -7711,7 +7711,8 @@ SCIP_RETCODE SCIPincludePropSymmetry(
    assert( !SCIPdialogHasEntry(displaymenu, "symmetries") );
    SCIP_CALL( SCIPincludeDialog(scip, &dialog,
       NULL, dialogExecDisplaySymmetry, NULL, NULL,
-      "symmetry", "display quality of the current LP solution, if available", FALSE, (SCIP_DIALOGDATA*)propdata) );
+      "symmetry", "display generators of symmetry group in cycle notation, if available",
+         FALSE, (SCIP_DIALOGDATA*)propdata) );
    SCIP_CALL( SCIPaddDialogEntry(scip, displaymenu, dialog) );
    SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
 
