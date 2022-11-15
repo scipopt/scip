@@ -705,6 +705,7 @@ SCIP_RETCODE SCIPanalyzeConflictCons(
       SCIP_ROW* conflictrow;
       conflictrow = SCIPconsCreateRow(scip, cons);
 
+      /* @todo just use one of them? E.g. if first fails use the second  */
       SCIP_CALL( SCIPconflictAnalyzeResolution(scip->conflict, scip->mem->probmem, scip->set, scip->stat,
                scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable, conflictrow, 0, FALSE, success) );
 

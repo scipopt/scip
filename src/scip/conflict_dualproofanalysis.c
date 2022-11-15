@@ -1323,14 +1323,21 @@ SCIP_RETCODE separateAlternativeProofs(
    for( i = 0; i < nnz; i++ )
    {
       SCIP_Real val = SCIPaggrRowGetProbvarValue(proofrow, inds[i]);
-
+      SCIP_Real meanbound = (SCIPvarGetUbGlobal(vars[inds[i]]) + SCIPvarGetLbGlobal(vars[inds[i]])) / 2.0;
       if( val > 0.0 )
       {
-         SCIP_CALL( SCIPsolSetVal(refsol, set, stat, tree, vars[inds[i]], curvarubs[inds[i]]) );
+         if( SCIPsetIsGE(set, curvarlbs[inds[i]], meanbound) )
+            SCIP_CALL( SCIPsolSetVal(refsol, set, stat, tree, vars[inds[i]], SCIPvarGetUbGlobal(vars[inds[i]])) );
+         else
+            SCIP_CALL( SCIPsolSetVal(refsol, set, stat, tree, vars[inds[i]], SCIPvarGetLbGlobal(vars[inds[i]])) );
       }
       else
       {
-         SCIP_CALL( SCIPsolSetVal(refsol, set, stat, tree, vars[inds[i]], curvarlbs[inds[i]]) );
+         if( SCIPsetIsGE(set, curvarubs[inds[i]], meanbound) )
+            SCIP_CALL( SCIPsolSetVal(refsol, set, stat, tree, vars[inds[i]], SCIPvarGetUbGlobal(vars[inds[i]])) );
+         else
+            SCIP_CALL( SCIPsolSetVal(refsol, set, stat, tree, vars[inds[i]], SCIPvarGetLbGlobal(vars[inds[i]])) );
+
       }
    }
 
@@ -1363,6 +1370,10 @@ SCIP_RETCODE separateAlternativeProofs(
    SCIP_CALL( SCIPcutGenerationHeuristicCMIR(set->scip, refsol, POSTPROCESS, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, INT_MAX, \
          NULL, NULL, MINFRAC, MAXFRAC, proofrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, NULL, \
          &islocal, &cutsuccess) );
+   /* @todo try using this MIR */
+   // SCIP_CALL( SCIPcalcMIR(set->scip, refsol, POSTPROCESS, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, FALSE, NULL, NULL, \
+   // MINFRAC, MAXFRAC, 1.0,  proofrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, NULL, \
+   //    &islocal, &cutsuccess) );
 
    SCIPclockStop( conflict->inflpmirtime, set);
 

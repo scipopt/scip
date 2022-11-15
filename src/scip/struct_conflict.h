@@ -100,6 +100,7 @@ struct SCIP_ResolutionSet
    SCIP_Real             origlhs;
    SCIP_Real             origrhs;
    SCIP_Real             slack;
+   SCIP_Real             coefquotient;
    int                   nnz;
    int                   size;
    int                   validdepth;

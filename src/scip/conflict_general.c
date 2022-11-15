@@ -2266,8 +2266,8 @@ SCIP_RETCODE conflictAnalyzeLP(
          SCIP_CALL( SCIPconflictAnalyzeResolution(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp, \
                branchcand, eventqueue, cliquetable, initialrow, validdepth, TRUE, &success) );
 
-         initialrow->nuses = 0;
-         SCIP_CALL( SCIProwFree(&initialrow, blkmem, set, lp) );
+         SCIP_CALL( SCIProwRelease(&initialrow, blkmem, set, lp) );
+         assert(!initialrow);
       }
    }
 

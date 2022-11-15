@@ -213,6 +213,7 @@ struct SCIP_Set
    int                   conf_maxconss;      /**< maximal number of conflict constraints accepted at an infeasible node
                                               *   (-1: use all generated conflict constraints) */
    int                   conf_maxstoresize;  /**< maximal size of conflict store */
+   int                   conf_maxresstoresize;/**< maximal size of resolution conflict store */
    int                   conf_reconvlevels;  /**< number of depth levels up to which UIP reconvergence constraints are
                                               *   generated (-1: generate reconvergence constraints in all depth levels) */
    int                   conf_maxnumressteps;/**< maximal number of resolution steps in generalized resolution
