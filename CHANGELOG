@@ -16,6 +16,7 @@ Features
 - new diving heuristic indicatordiving that focuses on indicator variables which control semicontinuous variables
 - updated statistics on NLP relaxation; information on convexity of NLP has been added
 - added new bandit method (EXP.3-IX) that is the new default of the ALNS heuristic
+- added dialog to display recognized permutation symmetries ("display symmetry")
 
 Performance improvements
 ------------------------
