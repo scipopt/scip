@@ -382,6 +382,7 @@
  * - @subpage DECOMP "How to provide a problem decomposition"
  * - @subpage BENDDECF "How to use the Benders' decomposition framework"
  * - @subpage TRAINESTIMATION "How to train custom tree size estimation for SCIP"
+ * - @subpage SYMMETRY "How to use symmetry handling in SCIP"
  */
 
 /**@page AUTHORS SCIP Authors
@@ -8276,6 +8277,77 @@
  *
  * If you do this, SCIP will collect all optimal solutions of the original problem.
  *
+ */
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+/** @page SYMMETRY How to use symmetry handling in SCIP
+ *
+ * Symmetry handling is an important feature of SCIP that allows to discard symmetric subproblems from the
+ * branch-and-bound tree, and thus, can substantially reduce the running time. To handle symmetries, SCIP
+ * automatically detects symmetries and then applies (combinations of) symmetry handling methods.
+ *
+ * @section SYMDETECT Symmetry detection
+ *
+ * In a purely integer linear setting
+ * \f[
+ *  \max \{ c^{\top} x : Ax \leq b,\; x \in \mathbb{Z}^n \},
+ * \f]
+ * a symmetry is a permutation \f$\gamma\f$ of \f$\{1,\dots,n\}\f$ that acts on vector \f$x\f$ by
+ * permuting its coordinates via \f$\gamma(x) = (x_{\gamma^{-1}(1)}, \dots, x_{\gamma^{-1}(n)})\f$
+ * such that
+ *
+ * -# \f$\gamma\f$ leaves the objective invariant, i.e., \f$c^{\top}x = c^{\top}\gamma(x)\f$, and
+ * -# \f$\gamma\f$ maps feasible solutions onto feasible solutions, i.e., \f$Ax \leq b\f$ if and only
+ *    if \f$A\gamma(x) \leq b\f$.
+ *
+ * Since this definition depends on the feasible region of the integer program, which is unknown
+ * in general, SCIP only computes symmetries that leave the formulation of the optimization problem
+ * invariant. To detect such formulation symmetries, SCIP builds an auxiliary colored graph whose
+ * color-preserving automorphisms correspond to symmetries of the integer program. The symmetries of
+ * the graph, and thus of the integer program, are then computed by an external graph automorphism
+ * code that needs to be linked to SCIP. Currently, SCIP only supports the automorphism code bliss,
+ * which is distributed together with SCIP, to detect symmetries.
+ *
+ * @note To detect symmetries, SCIP needs to be build with bliss, which can be achieved
+ * by using the options <code>SYM=bliss</code> and <code>DSYM=bliss</code> in the Makefile and CMake
+ * system, respectively.
+ *
+ * Besides purely integer linear problems, SCIP also supports symmetry detection for general
+ * constraint mixed-integer programs containing most of the constraint types that can be handled
+ * by SCIP. In particular, symmetries of mixed-integer nonlinear problems can be detected.
+ *
+ * @subsection SYMPROCESS Processing symmetry information
+ *
+ * After symmetries have been computed, SCIP has access to a list \f$\gamma_1,\dots,\gamma_m\f$ of
+ * permutations that generate a group \f$\Gamma\f$ of symmetries of the optimization problem. That
+ * is, SCIP has not access to all permutations in \f$\Gamma\f$, but only a set of generators. Based
+ * on these generators, SCIP analyzes the group \f$\Gamma\f$ and checks whether it can be split into
+ * independent factors. That is, whether there exist subgroups \f$\Gamma_1,\dots,\Gamma_k\f$ of
+ * \f$\Gamma\f$ that act on pairwise independent sets of variables such that \f$\bigcup_{i=1}^k \Gamma_i = \Gamma\f$.
+ * In this case, SCIP can handle the symmetries of the different subgroups independently. In particular,
+ * different subgroups can be treated by different symmetry handling methods.
+ *
+ * @section SYMMETHODS Symmetry handling methods
+ *
+ * To handle symmetries, SCIP uses three different classes of methods, which we detail below.
+ *
+ * @subsection SYMCONSS Symmetry handling constraints
+ *
+ * @subsection SYMOF Orbital fixing
+ *
+ * @subsection SYMSST SST cuts
+ *
+ * @subsection SYMMETHODSELECT Selecting symmetry handling methods
+ *
+ * The three symmetry handling methods explained above can be enabled and disabled via the parameter
+ * <code>misc/usesymmetry</code>, which encodes the enabled methods via a bitset that ranges between 0
+ * and 7: the 1-bit encodes symmetry handling constraints, the 2-bit encodes orbital fixing, and the
+ * 4-bit encodes SST cuts. For example, <code>misc/usesymmetry = 3</code> enables symmetry handling
+ * constraints and orbital fixing, whereas <code>misc/usesymmetry = 0</code> disables symmetry handling.
+ * In the following, we explain how the combination of different symmetry handling methods works.
+ *
+ * @subsection SYMTIMING Controlling the timing of symmetry computation
  */
 
 /**@page LICENSE License
