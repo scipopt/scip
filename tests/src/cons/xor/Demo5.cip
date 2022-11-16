@@ -1,0 +1,17 @@
+STATISTICS
+  Problem name     : model
+  Variables        : 6 (5 binary, 1 integer, 0 implicit integer, 0 continuous)
+  Constraints      : 0 initial, 2 maximal
+OBJECTIVE
+  Sense            : minimize
+VARIABLES
+  [binary] <x0>: obj=2, original bounds=[0,1]
+  [binary] <x1>: obj=1, original bounds=[0,1]
+  [binary] <x2>: obj=2, original bounds=[0,1]
+  [binary] <x3>: obj=1, original bounds=[0,1]
+  [binary] <x4>: obj=2, original bounds=[0,1]
+  [integer] <x5>: obj=0, original bounds=[1,2]
+CONSTRAINTS
+  [linear] <c0>: <x3>[B] +<x4>[B] == 1;
+  [xor] <c1>: xor(<x0>[B],<x1>[B],<x2>[B],<x3>[B],<x4>[B]) = 0 (intvar = <x5>[I]);
+END

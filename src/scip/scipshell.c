@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -157,6 +166,7 @@ SCIP_RETCODE fromAmpl(
    char fullnlfilename[SCIP_MAXSTRLEN];
    char* logfile;
    SCIP_Bool printstat;
+   size_t nlfilenamelen;
 
    SCIP_CALL( SCIPaddBoolParam(scip, "display/statistics",
       "whether to print statistics on a solve",
@@ -174,18 +184,34 @@ SCIP_RETCODE fromAmpl(
 
    if( defaultsetname != NULL )
    {
-      SCIP_CALL( readParams(scip, defaultsetname) );
-      SCIPinfoMessage(scip, NULL, "\n");
+      if( SCIPfileExists(defaultsetname) )
+      {
+         SCIPinfoMessage(scip, NULL, "reading user parameter file <%s>\n", defaultsetname);
+         SCIPinfoMessage(scip, NULL, "===========================\n\n");
+         SCIP_CALL( SCIPreadParams(scip, defaultsetname) );
+         SCIP_CALL( SCIPwriteParams(scip, NULL, FALSE, TRUE) );
+         SCIPinfoMessage(scip, NULL, "\n");
+      }
+      else
+      {
+         SCIPinfoMessage(scip, NULL, "user parameter file <%s> not found - using default parameters\n", defaultsetname);
+      }
    }
 
    SCIP_CALL( SCIPgetStringParam(scip, "display/logfile", &logfile) );
    if( *logfile )
       SCIPsetMessagehdlrLogfile(scip, logfile);
 
-   (void) SCIPsnprintf(fullnlfilename, SCIP_MAXSTRLEN, "%s.nl", nlfilename);
+   /* AMPL calls solver with file without .nl extension, but others (Pyomo) may not
+    * so add .nl only if not already present
+    */
+   nlfilenamelen = strlen(nlfilename);
+   if( nlfilenamelen > 3 && strcmp(nlfilename + (nlfilenamelen-3), ".nl") == 0 )
+      (void) SCIPsnprintf(fullnlfilename, SCIP_MAXSTRLEN, "%s", nlfilename);
+   else
+      (void) SCIPsnprintf(fullnlfilename, SCIP_MAXSTRLEN, "%s.nl", nlfilename);
    SCIPinfoMessage(scip, NULL, "read problem <%s>\n", fullnlfilename);
-   SCIPinfoMessage(scip, NULL, "============\n");
-   SCIPinfoMessage(scip, NULL, "\n");
+   SCIPinfoMessage(scip, NULL, "============\n\n");
 
    SCIP_CALL( SCIPreadProb(scip, fullnlfilename, "nl") );
 

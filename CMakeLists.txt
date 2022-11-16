@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.3)
+cmake_minimum_required(VERSION 3.9)
 
 # option() honors normal variables.
 if(POLICY CMP0077)
@@ -15,7 +15,7 @@ set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_DEBUG} ${CMAKE_CXX_FLAGS_R
 
 set(SCIP_VERSION_MAJOR 8)
 set(SCIP_VERSION_MINOR 0)
-set(SCIP_VERSION_PATCH 2)
+set(SCIP_VERSION_PATCH 3)
 set(SCIP_VERSION_SUB 0)
 set(SCIP_VERSION_API 104)
 
@@ -33,7 +33,7 @@ if(hasParent)
   set(SCIP_DIR ${PROJECT_BINARY_DIR} PARENT_SCOPE)
 endif()
 
-set(CPACK_RESOURCE_FILE_LICENSE "${PROJECT_SOURCE_DIR}/COPYING")
+set(CPACK_RESOURCE_FILE_LICENSE "${PROJECT_SOURCE_DIR}/LICENSE")
 set(CPACK_PACKAGE_VERSION_MAJOR "${SCIP_VERSION_MAJOR}")
 set(CPACK_PACKAGE_VERSION_MINOR "${SCIP_VERSION_MINOR}")
 set(CPACK_PACKAGE_VERSION_PATCH "${SCIP_VERSION_PATCH}")
@@ -106,6 +106,10 @@ set_property(CACHE LPS PROPERTY STRINGS spx cpx grb xprs clp glop msk qso none )
 
 set(SYM bliss CACHE STRING "options for symmetry computation")  #create the variable
 set_property(CACHE SYM PROPERTY STRINGS bliss none )  #define list of values GUI will offer for the variable
+
+if(NOT (CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo" OR CMAKE_BUILD_TYPE STREQUAL "MinSizeRel"))
+    message(FATAL_ERROR "You have not selected a valid CMAKE_BUILD_TYPE. Please select 'Release' or 'Debug'.")
+endif()
 
 if(AUTOBUILD)
     message(WARNING "You are using the automatic build option AUTOBUILD=ON to find and use dependencies automatically.")

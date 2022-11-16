@@ -1,6 +1,6 @@
 @page RN80 Release notes for SCIP 8.0
 
-@section RN802 SCIP 8.0.2
+@section RN000 SCIP 8.0.3
 *************************
 
 Features
@@ -12,10 +12,70 @@ Performance improvements
 Examples and applications
 -------------------------
 
+- Take out STP and PolySCIP applications
+
 Interface changes
 -----------------
 
 ### New and changed callbacks
+
+### Deleted and changed API methods
+
+### New API functions
+
+### Command line interface
+
+- When running the AMPL interface, the .nl filename extension does not need to be omitted for the input file anymore.
+
+### Interfaces to external software
+
+### Changed parameters
+
+### New parameters
+
+### Data structures
+
+Deleted files
+-------------
+
+Unit tests
+----------
+
+Testing
+-------
+
+Build system
+------------
+
+### Cmake
+
+- Forbid CMAKE_BUILD_TYPE nonstandard values
+
+### Makefile
+
+Fixed bugs
+----------
+
+- fixed an incorrect handling of xor constraints
+- the feasibility checker for integrality constraints now uses checkintegrality even for implied integers
+- skip integrality check in cons_integral for relaxation-only implicit-integer variables
+- fixed an issue caused by aggregated variables not added to a hashmap in the xor constraint handler
+- changed function solveRowEchelonGF2 in cons_xor.c to avoid errors if rank is 0
+- fixed that the implication presolver tried to aggregate or tighten bounds of multiaggregated variables
+
+Miscellaneous
+-------------
+
+- Changed license to Apache 2.0, see https://www.apache.org/licenses/LICENSE-2.0.
+
+Known bugs
+----------
+
+@section RN802 SCIP 8.0.2
+*************************
+
+Interface changes
+-----------------
 
 ### Deleted and changed API methods
 
@@ -31,12 +91,10 @@ Interface changes
 - added SCIPcutpoolGetNRootCalls, SCIPcutpoolGetNCutsAdded, SCIPcutpoolAddMaxNCuts, SCIPcutpoolSetTime, SCIPcutpoolAddNCalls, SCIPcutpoolAddNRootCalls, SCIPcutpoolAddNCutsFound, SCIPcutpoolAddNCutsAdded,
 - added SCIPcutselGetNCalls, SCIPcutselGetNRootCalls, SCIPcutselGetNRootCuts, SCIPcutselGetNRootForcedCuts, SCIPcutselGetNRootCutsFiltered, SCIPcutselGetNLocalCuts, SCIPcutselGetNLocalForcedCuts, SCIPcutselGetNLocalCutsFiltered,
 
-### Command line interface
 ### Interfaces to external software
 
 - Added compatibility with Mosek 10.0.18.
 
-### Changed parameters
 ### New parameters
 
 - new parameters to turn on more statistics: misc/showdivingstats (diving heuristics), heuristics/alns/shownbstats (ALNS), estimation/showstats (tree size estimation)
@@ -50,13 +108,6 @@ Interface changes
 - added ncutsadded, ncutsaddedviapool, ncutsaddeddirect to SCIP_Sepastore
 - fixed statistics of relaxators w.r.t. number of times conss/cuts were added
 
-Deleted files
--------------
-Unit tests
-----------
-Testing
--------
-
 Build system
 ------------
 
@@ -65,8 +116,6 @@ Build system
 - new option `-DAUTOBUILD` that configures scip with dependencies on availability.
   Packages like Ipopt, PaPILO, Readline, Zimpl, ZLIB, GMP, Worhp are automatically found and linked, otherwise ignored.
   The individual flags for these packages are ignored. This makes a quick build easier. It is by default set to off.
-
-### Makefile
 
 Fixed bugs
 ----------
@@ -100,10 +149,6 @@ Miscellaneous
   they can be turned on using the following new parameters:
   misc/showdivingstats (diving heuristics), heuristics/alns/shownbstats (ALNS), estimation/showstats (tree size estimation)
 - When an LP could not be solved accurately, scaling is now turned off as a last fall-back method.
-
-Known bugs
-----------
-
 
 @section RN801 SCIP 8.0.1
 *************************
@@ -1212,6 +1257,7 @@ Fixed bugs
 - Improved separation for SOC constraint with multiaggregated variable on right-hand-side.
 - Fixed bug in presol_boundshift: do not shift non-active variables
 - Fixed bug in domain propagation for SOC constraints with negative coefficient for variable on right-hand-side.
+- Fixed a sign check in detection of linear constraints that are parallel to the objective
 - Fixed bug with multi-aggregated integer variables in cons_xor.
 - Fixed bug with changed number of variables in storing relaxation solution in probing/diving.
 - Fixed issues with scip statistics

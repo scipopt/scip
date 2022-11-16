@@ -6,7 +6,7 @@
 # For release versions, only use VERSION="x.x.x".
 # For development versions, use VERSION="x.x.x.x" with subversion number.
 
-VERSION="8.0.2"
+VERSION="8.0.3"
 NAME="scip-$VERSION"
 if test ! -e release
 then
@@ -25,7 +25,7 @@ git ls-files | xargs dirname | sort -u | xargs chmod 750
 git ls-files | xargs chmod 640
 git ls-files "*.sh" "scripts/split_scip/*.py" | xargs chmod 750
 
-chmod 750 scripts/* check/cmpres.awk cmake/Modules/asan-wrapper applications/PolySCIP/mult_zimpl/mult_zimpl_to_mop.py
+chmod 750 scripts/* check/cmpres.awk cmake/Modules/asan-wrapper
 
 # pack files tracked by git and append $NAME to the front
 echo "pack files"
