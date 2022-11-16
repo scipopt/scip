@@ -3403,9 +3403,8 @@ SCIP_RETCODE rowExactCreateFromRowLimitEncodingLength(
    int i;
    SCIP_Longint maxdenom;
    SCIP_Longint maxboundval;
-   SCIP_Rational* tmpval;
    SCIP_Rational* val;
-   SCIP_Rational* tmplhs;
+   SCIP_Rational* newval;
    SCIP_Rational* difference;
    SCIP_Real rhschange;
    int forcegreater;
@@ -3417,10 +3416,9 @@ SCIP_RETCODE rowExactCreateFromRowLimitEncodingLength(
    SCIPdebugMessage("approximating row ");
    SCIPdebug(SCIPprintRow(set->scip, row, NULL));
 
-   SCIP_CALL( RatCreateBuffer(set->buffer, &tmpval) );
-   SCIP_CALL( RatCreateBuffer(set->buffer, &difference) );
-   SCIP_CALL( RatCreateBuffer(set->buffer, &tmplhs) );
    SCIP_CALL( RatCreateBuffer(set->buffer, &val) );
+   SCIP_CALL( RatCreateBuffer(set->buffer, &difference) );
+   SCIP_CALL( RatCreateBuffer(set->buffer, &newval) );
 
    rhschange = 0;
    maxboundval = set->exact_cutapproxmaxboundval;
@@ -3432,7 +3430,7 @@ SCIP_RETCODE rowExactCreateFromRowLimitEncodingLength(
    for( i = row->len - 1; i >= 0; i-- )
    {
       SCIP_VAR* var = row->cols[i]->var;
-      RatSetReal(tmpval, row->vals[i]);
+      RatSetReal(val, row->vals[i]);
 
       forcegreater = 0;
 
@@ -3444,28 +3442,28 @@ SCIP_RETCODE rowExactCreateFromRowLimitEncodingLength(
       else if( RatIsInfinity(SCIPvarGetUbGlobalExact(var)) )
          forcegreater = -1;
 
-      if( forcegreater == -2 || RatDenominatorIsLE(tmpval, maxdenom) ||
+      if( forcegreater == -2 || RatDenominatorIsLE(val, maxdenom) ||
             ((maxboundval > 0) && RatIsGTReal(SCIPvarGetUbGlobalExact(var), maxboundval)) ||
             RatIsLTReal(SCIPvarGetLbGlobalExact(var), -maxboundval) )
       {
-         RatSet(val, tmpval);
+         RatSet(newval, val);
       }
       else
-         RatComputeApproximation(val, tmpval, maxdenom, forcegreater);
+         RatComputeApproximation(newval, val, maxdenom, forcegreater);
 #ifndef NDEBUG
       if( forcegreater == 1 )
-         assert(RatIsGE(tmpval, val));
+         assert(RatIsGE(newval, val));
       else if( forcegreater == -1 )
-         assert(RatIsLE(tmpval, val));
+         assert(RatIsLE(newval, val));
 #endif
 
-      RatDiff(difference, tmpval, val);
+      RatDiff(difference, newval, val);
       if( RatIsPositive(difference) )
          RatAddProd(rowexact->rhs, difference, SCIPvarGetUbGlobalExact(var));
       else
          RatAddProd(rowexact->rhs, difference, SCIPvarGetLbGlobalExact(var));
 
-      SCIProwExactAddCoef(rowexact, blkmem, set, eventqueue, lpexact, SCIPcolGetColExact(row->cols[i]), val);
+      SCIProwExactAddCoef(rowexact, blkmem, set, eventqueue, lpexact, SCIPcolGetColExact(row->cols[i]), newval);
 
       if( RatIsNegative(SCIPvarGetLbGlobalExact(var)) )
       {
@@ -3473,10 +3471,10 @@ SCIP_RETCODE rowExactCreateFromRowLimitEncodingLength(
       }
    }
 
-   RatComputeApproximation(tmpval, rowexact->rhs, maxdenom, 1);
-   assert(RatIsGE(tmpval, rowexact->rhs));
+   RatComputeApproximation(newval, rowexact->rhs, maxdenom, 1);
+   assert(RatIsGE(newval, rowexact->rhs));
 
-   RatSet(rowexact->rhs, tmpval);
+   RatSet(rowexact->rhs, newval);
 
    SCIProwExactSort(rowexact);
 
@@ -3491,10 +3489,9 @@ SCIP_RETCODE rowExactCreateFromRowLimitEncodingLength(
 
    SCIProwChgRhs(rowexact->fprow, blkmem, set, eventqueue, lpexact->fplp, RatRoundReal(rowexact->rhs, SCIP_R_ROUND_UPWARDS) + rhschange);
 
-   RatFreeBuffer(set->buffer, &val);
-   RatFreeBuffer(set->buffer, &tmplhs);
+   RatFreeBuffer(set->buffer, &newval);
    RatFreeBuffer(set->buffer, &difference);
-   RatFreeBuffer(set->buffer, &tmpval);
+   RatFreeBuffer(set->buffer, &val);
 
    SCIPdebugMessage("new row ");
    SCIPdebug(SCIPprintRowExact(set->scip, rowexact, NULL));
