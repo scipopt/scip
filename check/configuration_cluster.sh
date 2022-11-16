@@ -35,7 +35,13 @@ QUEUETYPE="${4}" # either 'srun' or 'qsub'
 
 # new environment variables defined by this script:
 NICE=""
-ACCOUNT="mip"
+if [[ "$(uname -n)" =~ htc ]]; then
+  # z1 cluster
+  ACCOUNT="optimi"
+else
+  # opt machines
+  ACCOUNT="mip"
+fi
 CLUSTERQUEUE="${QUEUE}"
 
 # check if queue has been defined

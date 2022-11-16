@@ -226,6 +226,13 @@ SCIP_DECL_CONSCHECK(consCheckIntegral)
    nallinteger = ninteger + nimpl;
    for( v = ninteger; v < nallinteger; ++v )
    {
+      /* if a variable has been added for relaxation purposes, i.e., to formulate an (implicit) extended formulation,
+       * then there is no constraint that ensures that it will take an integer value
+       * since such variables have no counterpart in the original problem, it is ok if they violate an implicit integrality flag
+       */
+      if( SCIPvarIsRelaxationOnly(vars[v]) )
+         continue;
+
       solval = SCIPgetSolVal(scip, sol, vars[v]);
       if( !SCIPisFeasIntegral(scip, solval) )
       {
