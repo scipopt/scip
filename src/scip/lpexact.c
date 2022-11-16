@@ -3573,24 +3573,8 @@ SCIP_RETCODE SCIProwExactCreateFromRow(
 
    if( set->exact_cutmaxdenomsize > 0 )
    {
-      SCIP_CUTPOOL* cutpool = set->scip->cutpool;
-      SCIP_Bool poolcut = FALSE;
-      SCIP_CUT* cut;
-      if( !fprow->local )
-      {
-         cut = SCIPhashtableRetrieve(cutpool->hashtable, (void*) fprow);
-         if( cut != NULL )
-         {
-            poolcut = TRUE;
-            SCIPhashtableRemove(cutpool->hashtable, (void*) cut);
-         }
-      }
       rowExactCreateFromRowLimitEncodingLength(fprow, workrow, set, stat, blkmem, eventqueue, lp, origin);
       SCIProwRecalcNorms(fprow, set);
-      if( poolcut )
-      {
-         SCIPhashtableInsert(cutpool->hashtable, (void*) cut);
-      }
    }
    else
    {
