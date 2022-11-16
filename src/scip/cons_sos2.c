@@ -1671,14 +1671,14 @@ SCIP_DECL_CONSSEPALP(consSepalpSOS2)
       assert( consdata != NULL );
       SCIPdebugMsg(scip, "Separating inequalities for SOS2 constraint <%s>.\n", SCIPconsGetName(conss[c]) );
 
-      /* put corresponding rows into LP if they are useful */
-      row = consdata->row;
-
       /* possibly generate row if not yet done */
-      if ( row == NULL )
+      if ( consdata->row == NULL )
       {
          SCIP_CALL( generateRowSOS2(scip, conshdlr, conss[c], FALSE) );
       }
+
+      /* put corresponding rows into LP if they are useful */
+      row = consdata->row;
 
       /* possibly add row to LP if it is useful */
       if ( row != NULL && ! SCIProwIsInLP(row) && SCIPisCutEfficacious(scip, NULL, row) )
