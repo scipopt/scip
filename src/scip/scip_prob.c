@@ -3258,11 +3258,20 @@ SCIP_RETCODE SCIPaddConflict(
       SCIP_CALL( SCIPaddConsNode(scip, node, cons, validnode) );
    }
 
-   if( ( node == NULL || SCIPnodeGetType(node) != SCIP_NODETYPE_PROBINGNODE ) && conftype != SCIP_CONFTYPE_RESOLUTION )
+   if( ( node == NULL || SCIPnodeGetType(node) != SCIP_NODETYPE_PROBINGNODE ) )
    {
-      /* add the conflict to the conflict store */
-      SCIP_CALL( SCIPconflictstoreAddConflict(scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->tree,
-            scip->transprob, scip->reopt, cons, conftype, iscutoffinvolved, primalbound) );
+      if( conftype != SCIP_CONFTYPE_RESOLUTION )
+      {
+         /* add the conflict to the conflict store */
+         SCIP_CALL( SCIPconflictstoreAddConflict(scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->tree,
+               scip->transprob, scip->reopt, cons, conftype, iscutoffinvolved, primalbound) );
+      }
+      else if( conftype == SCIP_CONFTYPE_RESOLUTION )
+      {
+         /* add the conflict to the resolution conflict store */
+         SCIP_CALL( SCIPconflictstoreAddResConflict(scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->tree,
+               scip->transprob, scip->reopt, cons, conftype, iscutoffinvolved, primalbound) );
+      }
    }
 
    /* mark constraint to be a conflict */

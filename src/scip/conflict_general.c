@@ -1782,6 +1782,7 @@ SCIP_RETCODE SCIPconflictAnalyzePseudo(
 
    conflict->conflictset->conflicttype = SCIP_CONFTYPE_BNDEXCEEDING;
    conflict->conflictset->usescutoffbound = TRUE;
+   conflict->resolutionset->usescutoffbound = TRUE;
 
    /* start timing */
    SCIPclockStart(conflict->pseudoanalyzetime, set);
@@ -2664,6 +2665,7 @@ SCIP_RETCODE conflictAnalyzeBoundexceedingLP(
    /* mark the conflict to depend on the cutoff bound */
    conflict->conflictset->conflicttype = SCIP_CONFTYPE_BNDEXCEEDING;
    conflict->conflictset->usescutoffbound = TRUE;
+   conflict->resolutionset->usescutoffbound = TRUE;
 
    oldnsuccess = conflict->ndualproofsbndsuccess + conflict->ndualproofsinfsuccess;
 

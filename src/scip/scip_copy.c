@@ -2255,6 +2255,8 @@ SCIP_RETCODE SCIPcopyConflicts(
    else
       localconsmap = consmap;
 
+   /* @todo copy resolution conflicts to targetscip*/
+
    /* get number of conflicts stored in the conflict pool */
    sourceconfssize = SCIPconflictstoreGetNConflictsInStore(sourcescip->conflictstore);
 

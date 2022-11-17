@@ -120,6 +120,7 @@
 /* Conflict Analysis (conflict graph) */
 
 #define SCIP_DEFAULT_CONF_MAXSTORESIZE    10000 /**< maximal size of the conflict pool */
+#define SCIP_DEFAULT_CONF_MAXRESSTORESIZE  2000 /**< maximal size of the resolution conflict pool */
 #define SCIP_DEFAULT_CONF_RECONVLEVELS       -1 /**< number of depth levels up to which UIP reconvergence constraints are
                                                  *   generated (-1: generate reconvergence constraints in all depth levels) */
 #define SCIP_DEFAULT_CONF_CLEANBNDDEPEND   TRUE /**< should conflicts based on an old cutoff bound removed? */
@@ -131,6 +132,7 @@
                                                  *   (-1: use all generated conflict constraints) */
 #define SCIP_DEFAULT_CONF_PREFERBINARY    FALSE /**< should binary conflicts be preferred? */
 #define SCIP_DEFAULT_CONF_ALLOWLOCAL       TRUE /**< should conflict constraints be generated that are only valid locally? */
+#define SCIP_DEFAULT_CONF_RESALLOWLOCAL   FALSE /**< should resolution conflict constraints be generated that are only valid locally? */
 #define SCIP_DEFAULT_CONF_SETTLELOCAL     FALSE /**< should conflict constraints be attached only to the local subtree
                                                  *   where they can be useful? */
 #define SCIP_DEFAULT_CONF_REPROPAGATE      TRUE /**< should earlier nodes be repropagated in order to replace branching
@@ -1439,6 +1441,11 @@ SCIP_RETCODE SCIPsetCreate(
          "maximal size of conflict store (-1: auto, 0: disable storage)",
          &(*set)->conf_maxstoresize, TRUE, SCIP_DEFAULT_CONF_MAXSTORESIZE, -1, INT_MAX,
          NULL, NULL) );
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "conflict/maxresstoresize",
+         "maximal size of resolution conflict store (-1: auto, 0: disable storage)",
+         &(*set)->conf_maxresstoresize, TRUE, SCIP_DEFAULT_CONF_MAXRESSTORESIZE, -1, INT_MAX,
+         NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "conflict/preferbinary",
          "should binary conflicts be preferred?",
@@ -1453,6 +1460,11 @@ SCIP_RETCODE SCIPsetCreate(
          "conflict/allowlocal",
          "should conflict constraints be generated that are only valid locally?",
          &(*set)->conf_allowlocal, TRUE, SCIP_DEFAULT_CONF_ALLOWLOCAL,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "conflict/resallowlocal",
+         "should resolution conflict constraints be generated that are only valid locally?",
+         &(*set)->conf_resallowlocal, TRUE, SCIP_DEFAULT_CONF_RESALLOWLOCAL,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "conflict/settlelocal",

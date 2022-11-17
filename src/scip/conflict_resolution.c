@@ -703,8 +703,10 @@ void resolutionSetClear(
    resolutionset->origlhs = 0.0;
    resolutionset->origrhs = 0.0;
    resolutionset->slack = 0.0;
+   resolutionset->coefquotient = 0.0;
    resolutionset->validdepth = 0;
    resolutionset->conflicttype = SCIP_CONFTYPE_UNKNOWN;
+   resolutionset->usescutoffbound = FALSE;
 }
 
 /** weaken variables in the reason */
@@ -1227,7 +1229,7 @@ SCIP_RETCODE createAndAddResolutionCons(
    }
 
    /* add conflict to SCIP */
-   SCIP_CALL( SCIPaddConflict(scip, tree->path[insertdepth], cons, tree->path[resolutionset->validdepth], SCIP_CONFTYPE_RESOLUTION, FALSE) );
+   SCIP_CALL( SCIPaddConflict(scip, tree->path[insertdepth], cons, tree->path[resolutionset->validdepth], SCIP_CONFTYPE_RESOLUTION, conflict->resolutionset->usescutoffbound) );
 
    /* free temporary memory */
    SCIPfreeBufferArray(scip, &consvars);
@@ -1809,6 +1811,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
    int focusdepth;
    int currentdepth;
    int maxvaliddepth;
+   int maxsize;
    int nchgcoefs;
    int nressteps;
    SCIP_Real* cutcoefs;
@@ -1816,6 +1819,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
    SCIP_Real conflictslack;
    SCIP_Real reasonslack;
    SCIP_Bool successresolution;
+   SCIP_Bool usescutoffbound;
    int i;
 
    SCIP_VAR* vartoresolve;
@@ -1830,9 +1834,12 @@ SCIP_RETCODE conflictAnalyzeResolution(
    assert(nconss != NULL);
    assert(nconfvars != NULL);
 
+   usescutoffbound = conflict->resolutionset->usescutoffbound;
+
    resolutionSetClear(conflict->resolutionset);
    resolutionSetClear(conflict->reasonset);
    conflictresolutionset = conflict->resolutionset;
+   conflictresolutionset->usescutoffbound = usescutoffbound;
    reasonresolutionset = conflict->reasonset;
 
    focusdepth = SCIPtreeGetFocusDepth(tree);
@@ -1845,7 +1852,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
    /* check, whether local conflicts are allowed; however, don't generate conflict constraints that are only valid in the
     * probing path and not in the problem tree (i.e. that exceed the focusdepth)
     */
-   maxvaliddepth = (set->conf_allowlocal ? MIN(currentdepth-1, focusdepth) : 0);
+   maxvaliddepth = (set->conf_resallowlocal ? MIN(currentdepth-1, focusdepth) : 0);
    if( validdepth > maxvaliddepth )
       return SCIP_OKAY;
 
@@ -1853,6 +1860,15 @@ SCIP_RETCODE conflictAnalyzeResolution(
    if (initialconflictrow == NULL)
    {
       SCIPsetDebugMsg(set, "Conflict analysis not applicable since no row is available \n");
+      return SCIP_OKAY;
+   }
+
+   /* calculate the maximal size of each accepted conflict set */
+   maxsize = conflictCalcMaxsize(set, transprob);
+   if( SCIProwGetNNonz(initialconflictrow) > maxsize )
+   {
+      SCIPsetDebugMsg(set, "Number of nonzeros in conflict is larger than maxsize %d > %d\n",
+                      SCIProwGetNNonz(initialconflictrow), maxsize);
       return SCIP_OKAY;
    }
 
