@@ -8347,7 +8347,50 @@
  * constraints and orbital fixing, whereas <code>misc/usesymmetry = 0</code> disables symmetry handling.
  * In the following, we explain how the combination of different symmetry handling methods works.
  *
+ * The default strategy of SCIP is to handle symmetries via the bitset value 7, i.e., symmetry handling
+ * constraints, orbital fixings, and SST cuts are enabled. To make sure that the different methods are
+ * compatible, the following steps are carried out:
+ *
+ * -# SCIP determines independent subgroups \f$\Gamma_1,\dots,\Gamma_k\f$ as described in \ref SYMPROCESS.
+ *    Then, on each subgroups \f$\Gamma_i\f$, different symmetry handling methods can be applied.
+ * -# For each subgroup \f$\Gamma_i\f$, a heuristic is called that checks whether orbitopes are applicable
+ *    to handle the entire subgroup. If yes, this subgroup is handled by orbitopes and no other
+ *    symmetry handling methods.
+ * -# Otherwise, if parameter <code>propagating/symmetry/detectsubgroups</code> is <code>TRUE</code>, a
+ *    heuristic is called to detect whether "hidden" orbitopes are present. That is, whether some but not
+ *    all symmetries of \f$\Gamma_i\f$ can be handled by orbitopes. If sufficiently many symmetries can
+ *    be handled by orbitopes, orbitopes are applied and, if parameter <code>propagating/symmetry/addweaksbcs</code>
+ *    is TRUE, some compatible SST cuts are added, too. Besides this, no further symmetry handling methods
+ *    are applied for \f$\Gamma_i\f$.
+ * -# Otherwise, if the majority of variables affected by \f$\Gamma_i\f$ are non-binary, SST cuts are applied
+ *    to handle \f$\Gamma_i\f$. No further symmetry handling methods are applied for \f$\Gamma_i\f$.
+ * -# Finally, if none of the previous methods has been used to handle \f$\Gamma_i\f$, orbital fixing is
+ *    used.
+ *
+ * @note If one of the previous methods is disabled via <code>misc/usesymmetry</code>, it might be possible
+ *       that not all symmetries are handled. For instance, if orbital fixing is disabled and neither SST cuts
+ *       nor orbitopes are applied to handle \f$\Gamma_i\f$, the parameter <code>propagating/symmetry/addsymresacks</code>
+ *       needs to be set to <code>TRUE</code> to handle the symmetries of \f$\Gamma_i\f$. If this parameter is
+ *       <code>TRUE</code>, then orbisack/symresack constraints are also applied to subgroups that are handled
+ *       via hidden orbitopes or SST cuts (if these cuts are applied for binary variables).
+ *
+ *
  * @subsection SYMTIMING Controlling the timing of symmetry computation
+ *
+ * Since presolving might both remove and introduce formulation symmetries, the timining of computing symmetries
+ * can be changed via the parameters <code>propagating/symmetry/addconsstiming</code> and
+ * <code>propagating/symmetry/ofsymcomptiming</code> depending on whether symmetry handling constraints/SST cuts
+ * and orbital fixing are applied, respectively. If both are applied, <code>propagating/symmetry/addconsstiming</code>
+ * is dominant. Both parameters take values 0, 1, or 2, corresponding to computing symmetries before presolveing,
+ * during presolving, or when the symmetry handling methods are applied first, respectively. For the constraint-based
+ * approach, the latter means at the end of presolving; for orbital fixing, after the first branching decision.
+ *
+ * If a restart occurs, symmetry handling constraints and SST cuts can be inherited to the new run. Since orbital
+ * fixing depends on the branching history, wich is not available after a restart anymore, symmetries might needed
+ * to be recomputed. This is controlled via the parameter <code>propagating/symmetry/recomputerestart</code>, which
+ * takes values 0, 1, or 2, corresponding to never recomputing symmetries (i.e., disabling orbital fixing after a
+ * restart), always recompute symmetries, or only recomputing symmetries if orbital fixing found a reduction in
+ * the previous run, respectively.
  */
 
 /**@page LICENSE License
