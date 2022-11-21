@@ -5794,11 +5794,14 @@ SCIP_RETCODE computeReflectionSymmetryGroup(
    SCIPfreeBlockMemoryArrayNull(scip, &vars, nvars);
 
    /* @todo free permutations after they have been used */
-   for (c = *nperms - 1; c >= 0; --c)
+   if ( *nperms > 0 )
    {
-      SCIPfreeBlockMemoryArrayNull(scip, &perms[c], 2 * nvars);
+      for (c = *nperms - 1; c >= 0; --c)
+      {
+         SCIPfreeBlockMemoryArrayNull(scip, &perms[c], 2 * nvars);
+      }
+      SCIPfreeBlockMemoryArrayNull(scip, &perms, nmaxperms);
    }
-   SCIPfreeBlockMemoryArrayNull(scip, &perms, nmaxperms);
 
    return SCIP_OKAY;
 }
