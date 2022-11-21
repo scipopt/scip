@@ -50,6 +50,7 @@ Build system
 ### Cmake
 
 - Forbid CMAKE_BUILD_TYPE nonstandard values
+- Move -I/path/to/src/amplmp/include to front of compiler flags for include directories
 
 ### Makefile
 
