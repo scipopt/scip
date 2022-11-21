@@ -780,12 +780,13 @@ static
 SCIP_DECL_SORTINDCOMP(SYMsortConsReflSym)
 {
    SYM_SORTCONSREFLSYMTYPE* data;
+   SCIP_Real diffvals;
 
    data = (SYM_SORTCONSREFLSYMTYPE*) dataptr;
 
    if ( data->constypes[ind1] < data->constypes[ind2] )
       return -1;
-   else if ( data->constypes[ind1] > data->constypes[ind2] )
+   if ( data->constypes[ind1] > data->constypes[ind2] )
       return 1;
 
    if ( data->consoptypes[ind1] < data->consoptypes[ind2] )
@@ -798,9 +799,10 @@ SCIP_DECL_SORTINDCOMP(SYMsortConsReflSym)
    if ( data->encodelen[ind1] > data->encodelen[ind2] )
       return 1;
 
-   if ( data->rhs[ind1] < data->rhs[ind2] )
+   diffvals = data->rhs[ind1] - data->rhs[ind2];
+   if ( diffvals < 0.0 )
       return -1;
-   if ( data->rhs[ind1] > data->rhs[ind2] )
+   if ( diffvals > 0.0 )
       return 1;
 
    return 0;
