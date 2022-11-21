@@ -126,6 +126,48 @@ SCIP_RETCODE resolutionsetCopy(
    return SCIP_OKAY;
 }
 
+/** replaces a resolution set by another; allocate an additional amount of memory if needed*/
+static
+SCIP_RETCODE resolutionsetReplace(
+   SCIP_RESOLUTIONSET*   targetresolutionset,/**< pointer to store the resolution set */
+   BMS_BLKMEM*           blkmem,             /**< block memory of transformed problem */
+   SCIP_RESOLUTIONSET*   sourceresolutionset /**< source resolution set */
+   )
+{
+   int sourcesize;
+   int targetsize;
+
+   assert(targetresolutionset != NULL);
+   assert(sourceresolutionset != NULL);
+
+   sourcesize = sourceresolutionset->size;
+   targetsize = targetresolutionset->size;
+
+   if( targetsize < sourcesize )
+      {
+         SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &targetresolutionset->vals, targetsize, sourcesize) );
+         SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &targetresolutionset->inds, targetsize, sourcesize) );
+         targetresolutionset->size = sourcesize;
+      }
+
+   /* copy all data from source to target */
+   BMScopyMemoryArray(targetresolutionset->inds, sourceresolutionset->inds, sourcesize);
+   BMScopyMemoryArray(targetresolutionset->vals, sourceresolutionset->vals, sourcesize);
+
+   targetresolutionset->nnz = sourceresolutionset->nnz;
+   targetresolutionset->size = targetsize;
+   targetresolutionset->lhs = sourceresolutionset->lhs;
+   targetresolutionset->origlhs = sourceresolutionset->origlhs;
+   targetresolutionset->origrhs = sourceresolutionset->origrhs;
+   targetresolutionset->slack = sourceresolutionset->slack;
+   targetresolutionset->coefquotient = sourceresolutionset->coefquotient;
+   targetresolutionset->nnz = sourceresolutionset->nnz;
+   targetresolutionset->validdepth = sourceresolutionset->validdepth;
+   targetresolutionset->conflicttype = sourceresolutionset->conflicttype;
+
+   return SCIP_OKAY;
+}
+
 /** resizes resolutionsets array to be able to store at least num entries */
 static
 SCIP_RETCODE conflictEnsureResolutionsetsMem(
@@ -655,6 +697,7 @@ SCIP_RETCODE resolutionsetCreate(
    (*resolutionset)->size = 0;
    (*resolutionset)->validdepth = 0;
    (*resolutionset)->conflicttype = SCIP_CONFTYPE_UNKNOWN;
+   (*resolutionset)->usescutoffbound = FALSE;
 
    return SCIP_OKAY;
 }
@@ -994,7 +1037,6 @@ SCIP_RETCODE computecMIRfromResolutionSet(
    int nvars;
    int nnz;
    int i;
-   int j;
 
    SCIP_Bool islocal;
    SCIP_Bool cutsuccess;
@@ -1015,18 +1057,17 @@ SCIP_RETCODE computecMIRfromResolutionSet(
    assert(!SCIPisInfinity(set->scip, resolutionset->lhs) && !SCIPisInfinity(set->scip, -resolutionset->lhs));
 
    nnz = 0;
-   j = 0;
    for( i = 0; i < resolutionset->nnz; i++ )
    {
       if ( !SCIPsetIsZero(set, resolutionset->vals[i]) )
       {
-         rowinds[j] = resolutionset->inds[i];
-         rowvals[j] = -resolutionset->vals[i];
-         j++;
+         rowinds[i] = resolutionset->inds[i];
+         rowvals[i] = -resolutionset->vals[i];
+         nnz++;
       }
-      nnz = j;
    }
 
+   assert(resolutionsetGetNNzs(resolutionset) == nnz);
    if ( nnz > 0 )
    {
       /* create the aggregation row */
@@ -1042,7 +1083,7 @@ SCIP_RETCODE computecMIRfromResolutionSet(
       }
 
       /* set all variables that are part of the resolution set to their active local bounds */
-      for( i = 0; i < resolutionset->nnz; i++ )
+      for( i = 0; i < SCIPaggrRowGetNNz(aggrrow); i++ )
       {
          int v;
          SCIP_Real val;
@@ -1050,6 +1091,13 @@ SCIP_RETCODE computecMIRfromResolutionSet(
 
          v = resolutionset->inds[i];
          val = resolutionset->vals[i];
+#ifdef SCIP_DEBUG
+{
+         SCIP_Real aggrrow_val;
+         aggrrow_val = SCIPaggrRowGetProbvarValue(aggrrow, v);
+         assert(SCIPsetIsEQ(set, -val, aggrrow_val));
+}
+#endif
          meanbound = (SCIPvarGetUbGlobal(vars[v]) + SCIPvarGetLbGlobal(vars[v])) / 2.0;
 
          if( val > 0.0 )
@@ -1230,7 +1278,7 @@ SCIP_RETCODE createAndAddResolutionCons(
 
    /* add conflict to SCIP */
    SCIP_CALL( SCIPaddConflict(scip, tree->path[insertdepth], cons, tree->path[resolutionset->validdepth], SCIP_CONFTYPE_RESOLUTION, conflict->resolutionset->usescutoffbound) );
-
+   *success = TRUE;
    /* free temporary memory */
    SCIPfreeBufferArray(scip, &consvars);
 
@@ -1252,7 +1300,9 @@ SCIP_RETCODE SCIPconflictFlushResolutionSets(
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
-   SCIP_RESOLUTIONSET*   resolutionset       /**< resolution set to add to the tree */
+   SCIP_RESOLUTIONSET*   resolutionset,      /**< resolution set to add to the tree */
+   SCIP_Bool*            success             /**< true if the conflict is added to the problem */
+
    )
 {
 
@@ -1279,15 +1329,17 @@ SCIP_RETCODE SCIPconflictFlushResolutionSets(
    assert(resolutionset != NULL);
    assert(0 <= resolutionset->validdepth);
 
-   /* todo think about the case of long resolution constraints */
+   *success = FALSE;
+   /* do not add long conflicts */
    if( resolutionsetGetNNzs(resolutionset) > maxsize )
    {
       SCIPsetDebugMsg(set, " -> resolution set is too long: %d > %d nnzs\n", resolutionsetGetNNzs(resolutionset), maxsize);
+      return SCIP_OKAY;
    }
    /* if the resolution set is empty and the lhs negative, the node and its sub tree in the conflict set's valid depth
     *  can be cut off completely
     */
-   if( resolutionsetGetNNzs(resolutionset) == 0 && SCIPsetIsLT(set, resolutionset->lhs, 0.0))
+   else if( resolutionsetGetNNzs(resolutionset) == 0 && SCIPsetIsLT(set, resolutionset->lhs, 0.0))
    {
       SCIPsetDebugMsg(set, " -> empty resolution set with lhs %f in depth %d cuts off sub tree at depth %d\n",
          resolutionset->lhs, focusdepth, resolutionset->validdepth);
@@ -1299,11 +1351,9 @@ SCIP_RETCODE SCIPconflictFlushResolutionSets(
    /* @todo long conflicts can be used for repropagation */
    else
    {
-      SCIP_Bool success;
-
       /* @todo use the right insert depth and not valid depth */
       SCIP_CALL( createAndAddResolutionCons(conflict, blkmem, scip, set, stat, transprob, origprob, \
-                     tree, reopt, lp, branchcand, eventqueue, cliquetable, resolutionset, resolutionset->validdepth, &success) );
+                     tree, reopt, lp, branchcand, eventqueue, cliquetable, resolutionset, resolutionset->validdepth, success) );
       SCIPsetDebugMsg(set, " -> resolution set added (cdpt:%d, fdpt:%d, insert:%d, valid:%d, conf: -, reprop: - , len:%d):\n",
          SCIPtreeGetCurrentDepth(tree), SCIPtreeGetFocusDepth(tree),
          resolutionset->validdepth, resolutionset->validdepth, resolutionsetGetNNzs(resolutionset));
@@ -1980,6 +2030,7 @@ SCIPsetDebugMsg(set, " -> First bound change to resolve <%s> %s %.15g [status:%d
          /* if no row exists conflict analysis is not applicable */
          if (reasonrow == NULL)
          {
+            /* @todo variable and continue */
             #ifdef SCIP_DEBUG
             {
                SCIP_CONSHDLR* conshdlr;
@@ -2007,6 +2058,9 @@ SCIPsetDebugMsg(set, " -> First bound change to resolve <%s> %s %.15g [status:%d
          }
          reasonslack = getSlack(set->scip, transprob, reasonresolutionset, bdchgidx);
          reasonresolutionset->slack = reasonslack;
+         /* sort for linear time resolution */
+         SCIPsortIntReal(reasonresolutionset->inds, reasonresolutionset->vals, resolutionsetGetNNzs(reasonresolutionset));
+
          SCIPsetDebugMsg(set, "conflict resolution set: nnzs: %d, slack: %f \n", resolutionsetGetNNzs(conflictresolutionset), conflictslack);
          SCIPsetDebugMsg(set, "reason resolution set: nnzs: %d, slack: %f \n", resolutionsetGetNNzs(reasonresolutionset), reasonslack);
          SCIPdebug(resolutionsetPrintRow(reasonresolutionset, set, transprob, 2));
@@ -2075,37 +2129,39 @@ SCIPsetDebugMsg(set, " -> First bound change to resolve <%s> %s %.15g [status:%d
          if (SCIPsetIsLT(set, conflictresolutionset->slack, 0.0))
          {
             SCIP_RESOLUTIONSET* tmpconflictresolutionset;
-            // /* Apply cmir after each iteration to strengthen the conflict constraint */
-            // if(set->conf_applycmir)
-            // {
-            //    int cutnnz;
-            //    SCIP_Real cutrhs;
-            //    SCIP_Bool success;
+            /* Apply cmir after each iteration to strengthen the conflict constraint */
+            if(set->conf_applycmir)
+            {
+               int cutnnz;
+               SCIP_Real cutrhs;
+               SCIP_Bool success;
 
-            //    cutnnz = 0;
-            //    computecMIRfromResolutionSet(conflict, set, conflictresolutionset, transprob, NULL, stat, tree, cutcoefs, cutinds, &cutrhs, &cutnnz, &success);
+               cutnnz = 0;
+               computecMIRfromResolutionSet(conflict, set, conflictresolutionset, transprob, NULL, stat, tree, cutcoefs, cutinds, &cutrhs, &cutnnz, &success);
 
-            //    if( success )
-            //    {
-            //       SCIP_RESOLUTIONSET* cutresolutionset;
-            //       resolutionsetCreate(&cutresolutionset, blkmem);
-            //       resolutionsetAddSparseData(cutresolutionset, blkmem, cutcoefs, cutinds, cutnnz, -cutrhs,
-            //                                  conflictresolutionset->origrhs, conflictresolutionset->origlhs, NULL, TRUE);
-            //       // replace the current resolution set by the cut if the slack of the cut is negative
-            //       cutresolutionset->slack = getSlack(set->scip, transprob, cutresolutionset, bdchgidx);
-            //       if ( SCIPisLT(set->scip, cutresolutionset->slack, 0.0) )
-            //       {
-            //          // SCIPresolutionsetFree(&conflictresolutionset, blkmem);
-            //          // SCIP_CALL( resolutionsetCopy(&conflictresolutionset, blkmem, cutresolutionset) );
-            //       }
-            //    }
-            // }
+               if( success )
+               {
+                  SCIP_RESOLUTIONSET* cutresolutionset;
+                  resolutionsetCreate(&cutresolutionset, blkmem);
+                  resolutionsetAddSparseData(cutresolutionset, blkmem, cutcoefs, cutinds, cutnnz, -cutrhs,
+                                             conflictresolutionset->origrhs, conflictresolutionset->origlhs, NULL, TRUE);
+                  /* replace the current resolution set by the cut if the slack of the cut is negative */
+                  cutresolutionset->slack = getSlack(set->scip, transprob, cutresolutionset, bdchgidx);
+                  if ( SCIPisLT(set->scip, cutresolutionset->slack, 0.0) )
+                  {
+                     resolutionsetReplace(conflictresolutionset, blkmem, cutresolutionset);
+                  }
+                  SCIPsortIntReal(conflictresolutionset->inds, conflictresolutionset->vals, resolutionsetGetNNzs(conflictresolutionset));
+                  SCIPresolutionsetFree(&cutresolutionset, blkmem);
+               }
+            }
             SCIP_CALL( resolutionsetCopy(&tmpconflictresolutionset, blkmem, conflictresolutionset) );
             SCIP_CALL( conflictInsertResolutionset(conflict, set, &tmpconflictresolutionset) );
          }
       }
       else
       {
+         /* @todo variable and continue */
          goto TERMINATE;
       }
 
@@ -2113,6 +2169,7 @@ SCIPsetDebugMsg(set, " -> First bound change to resolve <%s> %s %.15g [status:%d
       if( set->conf_maxnumressteps > 0 && nressteps >= set->conf_maxnumressteps )
          goto TERMINATE;
 
+      /* @todo the cleanup is unnecessary */
       conflictCleanUpbdchgqueue(conflict, set, conflictresolutionset);
       addConflictBounds(set->scip, transprob, set, conflictresolutionset, bdchgidx);
 
@@ -2185,38 +2242,13 @@ SCIPsetDebugMsg(set, " -> First bound change to resolve <%s> %s %.15g [status:%d
 
          if ( SCIPsetIsLT(set, conflict->resolutionsets[i]->coefquotient, set->conf_generalresminmaxquot) )
          {
-            SCIPconflictFlushResolutionSets(conflict, blkmem, set->scip, set, stat, transprob, origprob, tree, reopt,
-                                            lp, branchcand, eventqueue, cliquetable, resolutionset);
-            (*nconss)++;
-            (*nconfvars) = resolutionsetGetNNzs(resolutionset);
-         }
-
-         /* @todo add parameter */
-         if ( set->conf_applycmir )
-         {
-            int cutnnz;
-            SCIP_Real cutslack;
-            SCIP_Real cutrhs;
             SCIP_Bool success;
-
-            cutnnz = 0;
-            computecMIRfromResolutionSet(conflict, set, resolutionset, transprob, NULL, stat, tree, cutcoefs, cutinds, &cutrhs, &cutnnz, &success);
-            if (success)
+            SCIPconflictFlushResolutionSets(conflict, blkmem, set->scip, set, stat, transprob, origprob, tree, reopt,
+                                            lp, branchcand, eventqueue, cliquetable, resolutionset, &success);
+            if( success )
             {
-               SCIP_RESOLUTIONSET* cutresolutionset;
-               resolutionsetCreate(&cutresolutionset, blkmem);
-               resolutionsetAddSparseData(cutresolutionset, blkmem, cutcoefs, cutinds, cutnnz, -cutrhs, cutrhs, -SCIPinfinity(set->scip), NULL, TRUE);
-
-               cutslack = getSlack(set->scip, transprob, cutresolutionset, NULL);
-
-               if( SCIPisLT(set->scip, cutslack, 0.0))
-               {
-                  SCIPdebug(resolutionsetPrintRow(cutresolutionset, set, transprob, 4));
-                  SCIPconflictFlushResolutionSets(conflict, blkmem, set->scip, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue, cliquetable, cutresolutionset);
-                  (*nconss)++;
-                  (*nconfvars) = resolutionsetGetNNzs(resolutionset);
-               }
-               SCIPresolutionsetFree(&cutresolutionset, blkmem);
+               (*nconss)++;
+               (*nconfvars) = resolutionsetGetNNzs(resolutionset);
             }
          }
       }

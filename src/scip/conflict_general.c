@@ -2252,7 +2252,13 @@ SCIP_RETCODE conflictAnalyzeLP(
       SCIPsetFreeBufferArray(set, &farkascoefs);
 
       if( !valid )
+      {
+         if( set->conf_applyresdualproof )
+         {
+            SCIP_CALL( SCIProwRelease(&initialrow, blkmem, set, lp) );
+         }
          goto FLUSHPROOFSETS;
+      }
 
       /* analyze the conflict starting with remaining bound changes */
       SCIP_CALL( SCIPconflictAnalyzeRemainingBdchgs(conflict, blkmem, set, stat, transprob, tree, diving, \

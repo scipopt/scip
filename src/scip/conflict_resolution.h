@@ -94,8 +94,10 @@ SCIP_RETCODE SCIPconflictFlushResolutionSets(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_CLIQUETABLE*     cliquetable,         /**< clique table data structure */
-   SCIP_RESOLUTIONSET*   resolutionset      /**< resolution set to add to the tree */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
+   SCIP_RESOLUTIONSET*   resolutionset,      /**< resolution set to add to the tree */
+   SCIP_Bool*            success             /**< true if the conflict is added to the problem */
+
    );
 
 /** creates and clears the resolutionset */
