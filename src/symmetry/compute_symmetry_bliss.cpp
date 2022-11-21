@@ -345,7 +345,7 @@ SCIP_RETCODE fillGraphByLinearConss(
       int node = (int) G->add_vertex((unsigned) (nusedcolors + color));
       assert( node == matrixdata->npermvars + c );
 #else
-      (void) G->add_vertex((unsigned) (matrixdata->nuniquevars + color));
+      (void) G->add_vertex((unsigned) (nusedcolors + color));
 #endif
 
       ++nnodes;
