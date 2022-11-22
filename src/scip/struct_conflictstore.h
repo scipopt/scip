@@ -54,11 +54,13 @@ struct SCIP_ConflictStore
    SCIP_Real             avgswitchlength;    /**< average length of switched paths */
    SCIP_Real             lastcutoffbound;    /**< last cutoff bound for which the conflict store was cleaned */
    SCIP_Longint          lastnodenum;        /**< number of the last seen node */
+   SCIP_Longint          lastnodenumres;     /**< number of the last seen node for resolution */
    SCIP_Longint          ncleanups;          /**< number of storage cleanups */
+   SCIP_Longint          nrescleanups;       /**< number of storage cleanups */
    SCIP_Longint          nnzdualrays;        /**< number of non-zeros in all stored proofs based on dual rays */
    SCIP_Longint          nnzdualsols;        /**< number of non-zeros in all stored proofs based on dual solutions */
    int                   conflictsize;       /**< size of conflict array (bounded by conflict->maxpoolsize) */
-   int                   resconflictsize;    /**< size of resolution conflict array (bounded by conflict->maxpoolsize) */
+   int                   resconflictsize;    /**< size of resolution conflict array (bounded by conflict->maxrespoolsize) */
    int                   origconflictsize;   /**< size of origconfs array */
    int                   nconflicts;         /**< number of stored conflicts */
    int                   nresconflicts;      /**< number of stored resolution conflicts */
