@@ -5525,12 +5525,12 @@ SCIP_RETCODE computeReflectionSymmetryGroup(
    reflsymdata.ntreeops = 0;
 
    reflsymdata.maxntrees = 20 * nactiveconss;
-   reflsymdata.maxntreerhs =  2 * nactiveconss; /* double memory, because constraints have lhs and rhs */
+   reflsymdata.maxntreerhs =  2 * nactiveconss + 1; /* double memory, because constraints have lhs and rhs + 1 for objective */
    reflsymdata.maxntreevaridx = 10 * nactiveconss;
    reflsymdata.maxntreecoefs = 10 * nactiveconss;
    reflsymdata.maxntreevals = 10 * nactiveconss;
    reflsymdata.maxntreeops = 10 * nactiveconss;
-   reflsymdata.maxntreebegins = 2 * nactiveconss + 1;
+   reflsymdata.maxntreebegins = 2 * nactiveconss + 2;
 
    reflsymdata.nuniquevars = 0;
    reflsymdata.nuniquecoefs = 0;
