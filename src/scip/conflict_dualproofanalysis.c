@@ -1367,9 +1367,9 @@ SCIP_RETCODE separateAlternativeProofs(
    SCIPclockStart( conflict->inflpmirtime, set);
 
    /* apply MIR */
-   SCIP_CALL( SCIPcalcMIR(set->scip, refsol, POSTPROCESS, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, FALSE, NULL, NULL, \
-   MINFRAC, MAXFRAC, 1.0,  proofrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, NULL, \
-      &islocal, &cutsuccess) );
+   SCIP_CALL( SCIPcutGenerationHeuristicCMIR(set->scip, refsol, POSTPROCESS, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, TRUE, INT_MAX, \
+         NULL, NULL, MINFRAC, MAXFRAC, proofrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, NULL, \
+         &islocal, &cutsuccess) );
 
    SCIPclockStop( conflict->inflpmirtime, set);
 

@@ -1126,8 +1126,8 @@ SCIP_RETCODE computecMIRfromResolutionSet(
          conflict->nresflowcover += 1;
 
       /* apply MIR */
-      SCIP_CALL( SCIPcalcMIR(set->scip, refsol, POSTPROCESS, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, FALSE, NULL, NULL, \
-      MINFRAC, MAXFRAC, 1.0,  aggrrow, cutcoefs, cutrhs, cutinds, cutnnz, &cutefficacy, NULL, \
+   SCIP_CALL( SCIPcutGenerationHeuristicCMIR(set->scip, refsol, POSTPROCESS, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, TRUE,  \
+         INT_MAX, NULL, NULL, MINFRAC, MAXFRAC, aggrrow, cutcoefs, cutrhs, cutinds, cutnnz, &cutefficacy, NULL, \
          &islocal, &cutsuccess) );
 
       conflict->nresmircalls += 1;
