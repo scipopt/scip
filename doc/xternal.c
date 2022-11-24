@@ -8334,7 +8334,45 @@
  *
  * @subsection SYMCONSS Symmetry handling constraints
  *
+ * SCIP contains three constraint handlers for handling symmetries of binary variables. Given a symmetry \f$\gamma\f$,
+ * the symresack constraint handler enforces that a solution vector \f$x\f$ is not lexicographically
+ * smaller than its image \f$\gamma(x)\f$. This constraint is enforced by a propagation algorithm
+ * and separating inequalities. Moreover, given the disjoint cycle decomposition of \f$\gamma\f$,
+ * SCIP checks, for each cycle of \f$\gamma\f$, whether all variables in the cycle are contained
+ * in set packing or partitioning constraints. If this is the case, specialized inequalities can
+ * be separated.
+ *
+ * In case the permutation \f$\gamma\f$ is an involution, i.e., \f$\gamma(\gamma(x)) = x\f$,
+ * specialized separation and propagation algorithms can be used, which are implemented in the
+ * orbitope constraint handler. For orbisack constraints, also facet defining inequalities of the
+ * convex hull of all binary points \f$x\f$ being not lexicographically smaller than \f$\gamma(x)\f$
+ * can be separated. Since the coefficients in these inequalities grow exponentially large, the
+ * separation of these inequalities is disabled by default, but can be enabled via the parameter
+ * <code>constraints/orbisack/orbiSeparation</code>. Furthermore, to avoid numerical instabilities, the
+ * parameter <code>constraints/orbisack/coeffbound</code> controls the maximum absolute value of
+ * a coefficient in separated facet defining inequalities.
+ *
+ * Finally, the orbitope constraint handler is able to handle symmetries of special symmetric groups \f$\Gamma\f$.
+ * For orbitopes to be applicable, the affected variables need to be arranged in a matrix \f$X\f$ such that
+ * the symmetries in \f$\Gamma\f$ permute the columns of \f$X\f$. Symmetries are then handled by orbitope
+ * constraints by enforcing to only compute solution matrices \f$X\f$ whose columns are sorted lexicographically
+ * non-increasingly. To this end, a propagation algorithm is used and inequalities are separated. In case
+ * the variables of each row of the matrix \f$X\f$ are contained in a set packing or partitioning constraint,
+ * specialized propagation and separation routines are used.
+ *
  * @subsection SYMOF Orbital fixing
+ *
+ * Orbital fixing is a propagation algorithm that derives fixings of binary variables based on
+ * already fixed variables. These fixings remove feasible solutions of the problem, while it is guaranteed
+ * that at least one symmetric solution remains feasible. The reductions found by orbital fixing
+ * are derived from the branching decisions. Thus, as SCIP might restart the branch-and-bound process,
+ * which removes previously made branching decisions, we need to make sure that correct reductions are
+ * found after a restart. This can be guaranteed by either disabling orbital fixing after a restart
+ * or recomputing symmetries. In SCIP, this is controlled via the parameter
+ * <code>propagating/symmetry/recomputerestart</code>. If it takes value 0, symmetries are not
+ * recomputed and orbital fixing is disabled; a value of 1 means that symmetries are always
+ * recomputed; if it has value 2, symmetries are only recomputed if orbital fixing has found a
+ * reduction before the restart.
  *
  * @subsection SYMSST SST cuts
  *
