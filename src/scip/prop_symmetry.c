@@ -3340,7 +3340,9 @@ SCIP_RETCODE checkReflectionSymmetriesAreSymmetries(
 
                if ( ! success )
                {
-                  SCIPerrorMessage("Found permutation that is not a symmetry.\n");
+                  SCIPerrorMessage("Found permutation that is not a symmetry:\n");
+                  SCIPerrorMessage("constraint encoded in tree %d has no symmetric counterpart.\n", c);
+                  SCIP_CALL( printReflectionSymmetryDataTree(scip, reflsymdata, c, NULL) );
                   return SCIP_ERROR;
                }
             }
