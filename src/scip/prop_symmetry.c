@@ -2900,6 +2900,164 @@ SCIP_RETCODE checkIndicatorConssAreIdentical(
    return SCIP_OKAY;
 }
 
+/** prints information of an expression tree used for computing reflection symmetries to screen */
+static
+SCIP_RETCODE printReflectionSymmetryDataTree(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SYM_REFLSYMDATA*      reflsymdata,        /**< pointer to reflection symmetry data structure */
+   int                   treeidx,            /**< index of tree to be printed */
+   int*                  opbuffer            /**< allocated array to store for which operators we have open brackets
+                                              *   (or NULL) */
+   )
+{
+   int nopenops = 0;
+   int j;
+   SCIP_Bool allocated = FALSE;
+
+   assert( scip != NULL );
+   assert( reflsymdata != NULL );
+   assert( 0 <= treeidx && treeidx < reflsymdata->ntreerhs );
+
+   SCIPinfoMessage(scip, NULL, "tree %d\n", treeidx);
+   SCIPinfoMessage(scip, NULL, "%f >=", reflsymdata->treerhs[treeidx]);
+
+   if ( opbuffer == NULL )
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &opbuffer, reflsymdata->ntreeops) );
+      allocated = TRUE;
+   }
+
+   for (j = reflsymdata->treebegins[treeidx]; j < reflsymdata->treebegins[treeidx + 1]; ++j)
+   {
+      SCIP_EXPRHDLR* op;
+
+      /* check whether we need to close brackets */
+      while ( nopenops > 0 && opbuffer[nopenops - 1] > reflsymdata->treeparentidx[j] )
+      {
+         SCIPinfoMessage(scip, NULL, ")");
+         --nopenops;
+      }
+
+      switch ( reflsymdata->trees[j] )
+      {
+      case SYM_NODETYPE_OPERATOR :
+         op = reflsymdata->treeops[reflsymdata->treemap[j]];
+         opbuffer[nopenops++] = j;
+
+         SCIPinfoMessage(scip, NULL, " (");
+         if (  op == SCIPfindExprhdlr(scip, "sum") )
+            SCIPinfoMessage(scip, NULL, "+ ");
+         else if ( op == SCIPfindExprhdlr(scip, "prod") || op == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_BIPROD )
+            SCIPinfoMessage(scip, NULL, "* ");
+         else if ( op == SCIPfindExprhdlr(scip, "abs") )
+            SCIPinfoMessage(scip, NULL, "abs ");
+         else if ( op == SCIPfindExprhdlr(scip, "entropy") )
+            SCIPinfoMessage(scip, NULL, "entropy ");
+         else if ( op == SCIPfindExprhdlr(scip, "exp") )
+            SCIPinfoMessage(scip, NULL, "exp ");
+         else if ( op == SCIPfindExprhdlr(scip, "pow") )
+            SCIPinfoMessage(scip, NULL, "pow ");
+         else if ( op == SCIPfindExprhdlr(scip, "signpower") )
+            SCIPinfoMessage(scip, NULL, "signpow ");
+         else if ( op == SCIPfindExprhdlr(scip, "sin") )
+            SCIPinfoMessage(scip, NULL, "sin ");
+         else if ( op == SCIPfindExprhdlr(scip, "cos") )
+            SCIPinfoMessage(scip, NULL, "cos ");
+         else if ( op == SCIPfindExprhdlr(scip, "log") )
+            SCIPinfoMessage(scip, NULL, "log ");
+         else if ( op == SCIPfindExprhdlr(scip, "erf") )
+            SCIPinfoMessage(scip, NULL, "erf ");
+         else if ( op == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_AND )
+            SCIPinfoMessage(scip, NULL, "AND ");
+         else if ( op == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_OR )
+            SCIPinfoMessage(scip, NULL, "OR ");
+         else if ( op == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_XOR )
+            SCIPinfoMessage(scip, NULL, "XOR ");
+         else if ( op == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_CARD )
+            SCIPinfoMessage(scip, NULL, "CARD ");
+         else if ( op == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_BDDISJ )
+            SCIPinfoMessage(scip, NULL, "BDDISJ ");
+         else if ( op == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_INDICATOR )
+            SCIPinfoMessage(scip, NULL, "--> ");
+         else if ( op == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_EQ )
+            SCIPinfoMessage(scip, NULL, "== ");
+         else if ( op == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_GEQ )
+            SCIPinfoMessage(scip, NULL, ">= ");
+         else if ( op == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_SOS1 )
+            SCIPinfoMessage(scip, NULL, "SOS1 ");
+         else if ( op == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_SOS2 )
+            SCIPinfoMessage(scip, NULL, "SOS2 ");
+         else if ( op == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_TUPLE )
+            SCIPinfoMessage(scip, NULL, "tuple ");
+         else if ( op == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_OBJ )
+            SCIPinfoMessage(scip, NULL, "objective: ");
+         else if ( op == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_POWER )
+            SCIPinfoMessage(scip, NULL, "pow ");
+         else if ( op == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_SIGNPOWER )
+            SCIPinfoMessage(scip, NULL, "signpow ");
+         else
+            SCIPinfoMessage(scip, NULL, "? ");
+         break;
+      case SYM_NODETYPE_VAR :
+         SCIPinfoMessage(scip, NULL, "%s] ", SCIPvarGetName(reflsymdata->treevars[reflsymdata->treevaridx[reflsymdata->treemap[j]]]));
+         break;
+      case SYM_NODETYPE_COEF :
+         SCIPinfoMessage(scip, NULL, "[%f ", reflsymdata->treecoefs[reflsymdata->treemap[j]]);
+         break;
+      case SYM_NODETYPE_VAL :
+         SCIPinfoMessage(scip, NULL, "%f ", reflsymdata->treevals[reflsymdata->treemap[j]]);
+         break;
+      default :
+         return SCIP_ERROR;
+      }
+   }
+
+   /* check whether we need to close brackets */
+   while ( nopenops > 0 )
+   {
+      SCIPinfoMessage(scip, NULL, ")");
+      --nopenops;
+   }
+   SCIPinfoMessage(scip, NULL, "\n");
+
+   if ( allocated )
+   {
+      SCIPfreeBufferArray(scip, &opbuffer);
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** prints the expression tree information used for computing reflection symmetries to screen */
+static
+SCIP_RETCODE printReflectionSymmetryData(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SYM_REFLSYMDATA*      reflsymdata         /**< pointer to reflection symmetry data structure */
+   )
+{
+   int* openops;
+   int i;
+   int j;
+
+   assert( scip != NULL );
+   assert( reflsymdata != NULL );
+
+   /* array to store for which operators we have open brackets */
+   SCIP_CALL( SCIPallocBufferArray(scip, &openops, reflsymdata->ntreeops) );
+
+   SCIPinfoMessage(scip, NULL, "There are %d trees stored in the symmetry detection data structure.\n", reflsymdata->ntreerhs);
+
+   for (i = 0; i < reflsymdata->ntreerhs; ++i)
+   {
+      SCIP_CALL( printReflectionSymmetryDataTree(scip, reflsymdata, i, openops) );
+   }
+
+   SCIPfreeBufferArray(scip, &openops);
+
+   return SCIP_OKAY;
+}
+
 /** checks whether given signed permutations form a reflection symmetry of a MIP */
 static
 SCIP_RETCODE checkReflectionSymmetriesAreSymmetries(
@@ -3595,130 +3753,6 @@ SCIP_RETCODE setSymmetryData(
          }
       }
    }
-
-   return SCIP_OKAY;
-}
-
-/** prints the expression tree information used for computing reflection symmetries to screen */
-static
-SCIP_RETCODE printReflectionSymmetryData(
-   SCIP*                 scip,               /**< SCIP pointer */
-   SYM_REFLSYMDATA*      reflsymdata         /** pointer to reflection symmetry data structure */
-   )
-{
-   int* openops;
-   int nopenops = 0;
-   int i;
-   int j;
-
-   assert( scip != NULL );
-   assert( reflsymdata != NULL );
-
-   /* array to store for which operators we have open brackets */
-   SCIP_CALL( SCIPallocBufferArray(scip, &openops, reflsymdata->ntreeops) );
-
-   SCIPinfoMessage(scip, NULL, "There are %d trees stored in the symmetry detection data structure.\n", reflsymdata->ntreerhs);
-
-   for (i = 0; i < reflsymdata->ntreerhs; ++i)
-   {
-      SCIPinfoMessage(scip, NULL, "tree %d\n", i);
-      SCIPinfoMessage(scip, NULL, "%f >=", reflsymdata->treerhs[i]);
-
-      for (j = reflsymdata->treebegins[i]; j < reflsymdata->treebegins[i + 1]; ++j)
-      {
-         SCIP_EXPRHDLR* op;
-
-         /* check whether we need to close brackets */
-         while ( nopenops > 0 && openops[nopenops - 1] > reflsymdata->treeparentidx[j] )
-         {
-            SCIPinfoMessage(scip, NULL, ")");
-            --nopenops;
-         }
-
-         switch ( reflsymdata->trees[j] )
-         {
-         case SYM_NODETYPE_OPERATOR :
-            op = reflsymdata->treeops[reflsymdata->treemap[j]];
-            openops[nopenops++] = j;
-
-            SCIPinfoMessage(scip, NULL, " (");
-            if (  op == SCIPfindExprhdlr(scip, "sum") )
-               SCIPinfoMessage(scip, NULL, "+ ");
-            else if ( op == SCIPfindExprhdlr(scip, "prod") || op == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_BIPROD )
-               SCIPinfoMessage(scip, NULL, "* ");
-            else if ( op == SCIPfindExprhdlr(scip, "abs") )
-               SCIPinfoMessage(scip, NULL, "abs ");
-            else if ( op == SCIPfindExprhdlr(scip, "entropy") )
-               SCIPinfoMessage(scip, NULL, "entropy ");
-            else if ( op == SCIPfindExprhdlr(scip, "exp") )
-               SCIPinfoMessage(scip, NULL, "exp ");
-            else if ( op == SCIPfindExprhdlr(scip, "pow") )
-               SCIPinfoMessage(scip, NULL, "pow ");
-            else if ( op == SCIPfindExprhdlr(scip, "signpower") )
-               SCIPinfoMessage(scip, NULL, "signpow ");
-            else if ( op == SCIPfindExprhdlr(scip, "sin") )
-               SCIPinfoMessage(scip, NULL, "sin ");
-            else if ( op == SCIPfindExprhdlr(scip, "cos") )
-               SCIPinfoMessage(scip, NULL, "cos ");
-            else if ( op == SCIPfindExprhdlr(scip, "log") )
-               SCIPinfoMessage(scip, NULL, "log ");
-            else if ( op == SCIPfindExprhdlr(scip, "erf") )
-               SCIPinfoMessage(scip, NULL, "erf ");
-            else if ( op == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_AND )
-               SCIPinfoMessage(scip, NULL, "AND ");
-            else if ( op == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_OR )
-               SCIPinfoMessage(scip, NULL, "OR ");
-            else if ( op == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_XOR )
-               SCIPinfoMessage(scip, NULL, "XOR ");
-            else if ( op == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_CARD )
-               SCIPinfoMessage(scip, NULL, "CARD ");
-            else if ( op == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_BDDISJ )
-               SCIPinfoMessage(scip, NULL, "BDDISJ ");
-            else if ( op == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_INDICATOR )
-               SCIPinfoMessage(scip, NULL, "--> ");
-            else if ( op == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_EQ )
-               SCIPinfoMessage(scip, NULL, "== ");
-            else if ( op == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_GEQ )
-               SCIPinfoMessage(scip, NULL, ">= ");
-            else if ( op == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_SOS1 )
-               SCIPinfoMessage(scip, NULL, "SOS1 ");
-            else if ( op == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_SOS2 )
-               SCIPinfoMessage(scip, NULL, "SOS2 ");
-            else if ( op == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_TUPLE )
-               SCIPinfoMessage(scip, NULL, "tuple ");
-            else if ( op == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_OBJ )
-               SCIPinfoMessage(scip, NULL, "objective: ");
-            else if ( op == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_POWER )
-               SCIPinfoMessage(scip, NULL, "pow ");
-            else if ( op == (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_SIGNPOWER )
-               SCIPinfoMessage(scip, NULL, "signpow ");
-            else
-               SCIPinfoMessage(scip, NULL, "? ");
-            break;
-         case SYM_NODETYPE_VAR :
-            SCIPinfoMessage(scip, NULL, "%s] ", SCIPvarGetName(reflsymdata->treevars[reflsymdata->treevaridx[reflsymdata->treemap[j]]]));
-            break;
-         case SYM_NODETYPE_COEF :
-            SCIPinfoMessage(scip, NULL, "[%f ", reflsymdata->treecoefs[reflsymdata->treemap[j]]);
-            break;
-         case SYM_NODETYPE_VAL :
-            SCIPinfoMessage(scip, NULL, "%f ", reflsymdata->treevals[reflsymdata->treemap[j]]);
-            break;
-         default :
-            return SCIP_ERROR;
-         }
-      }
-
-      /* check whether we need to close brackets */
-      while ( nopenops > 0 )
-      {
-         SCIPinfoMessage(scip, NULL, ")");
-         --nopenops;
-      }
-      SCIPinfoMessage(scip, NULL, "\n");
-   }
-
-   SCIPfreeBufferArray(scip, &openops);
 
    return SCIP_OKAY;
 }
