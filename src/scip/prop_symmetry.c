@@ -5784,7 +5784,9 @@ SCIP_RETCODE computeReflectionSymmetryGroup(
    /* to easily incorporate objective coefficients in data structure, add objective as "constraint" */
    SCIP_CALL( storeObjective(scip, &reflsymdata) );
 
-   /* SCIP_CALL( printReflectionSymmetryData(scip, &reflsymdata) ); */
+#ifdef SCIP_MORE_DEBUG
+   SCIP_CALL( printReflectionSymmetryData(scip, &reflsymdata) );
+#endif
 
    SCIPdebugMsg(scip, "Collected information about problem. Prepare data for building symmetry detection graph.\n");
 
