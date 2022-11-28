@@ -2331,6 +2331,7 @@ SCIP_RETCODE collectInformationPermIndicatorCons(
    *rhs = treerhs[considx];
    *nactvars = 0;
    *nlinvars = 0;
+   *actconst = 0;
 
    /* store information about activation */
    pos += 2;
@@ -2830,11 +2831,11 @@ SCIP_RETCODE checkIndicatorConssAreIdentical(
       assert( SCIPisEQ(scip, rhs, rhs2) );
 
       /* compare the two indicator constraints */
-      if ( nactvars2 != nactvars || nlinvars2 != nlinvars || ! SCIPisEQ(scip, actconst, actconst) )
+      if ( nactvars2 != nactvars || nlinvars2 != nlinvars || ! SCIPisEQ(scip, actconst, actconst2) )
          continue;
 
-      /* compare the activation part */
-      success = FALSE;
+      /* compare the activation part (all activation variables might have been fixed)*/
+      success = nactvars == 0 ? TRUE : FALSE;
       for (i1 = 0; i1 < nactvars; ++i1)
       {
          for (i2 = 0; i2 < nactvars2; ++i2)
@@ -2862,8 +2863,9 @@ SCIP_RETCODE checkIndicatorConssAreIdentical(
       if ( ! success )
          continue;
 
-      /* compare the linear constraint */
-      success = FALSE;
+      /* compare the linear constraint (it might happen that the linear constraint is empty if all
+       * contained variables are fixed) */
+      success = nlinvars == 0 ? TRUE : FALSE;
       for (i1 = 0; i1 < nlinvars; ++i1)
       {
          for (i2 = 0; i2 < nlinvars2; ++i2)
