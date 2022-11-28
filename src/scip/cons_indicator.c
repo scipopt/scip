@@ -3703,6 +3703,7 @@ SCIP_RETCODE propIndicator(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_CONSDATA*        consdata,           /**< constraint data */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
    SCIP_Bool             dualreductions,     /**< should dual reductions be performed? */
    SCIP_Bool             addopposite,        /**< add opposite inequalities if binary var = 0? */
    SCIP_Bool*            cutoff,             /**< whether a cutoff happened */
@@ -3989,6 +3990,92 @@ SCIP_RETCODE propIndicator(
        * consumption, because the linear constraints have to be stored in each node. */
    }
 
+   /* propagate maximal activity of linear constraint to upper bound of slack variable
+    *
+    * It is especially worth to tighten the upper bound if it is greater than maxcouplingvalue or sepacouplingvalue.
+    * But do not tighten it if slackvar is locked down by other constraints,
+    * or if it has a nonzero coefficient in the objective function (not implemented).
+    * 
+    * ax - s <= rhs  ->  s <= maxActivity(ax) - rhs
+    */
+   if( (SCIPvarGetUbLocal(consdata->slackvar) > conshdlrdata->maxcouplingvalue 
+         || SCIPvarGetUbLocal(consdata->slackvar) > conshdlrdata->sepacouplingvalue)
+         && SCIPvarGetNLocksDownType(consdata->slackvar, SCIP_LOCKTYPE_MODEL) <= 1
+         && SCIPvarGetObj(consdata->slackvar) == 0.0 )
+   {
+      SCIP_VAR** consvars;
+      SCIP_Real* consvals;
+      SCIP_Real maxactivity;
+      SCIP_Real newub;
+      SCIP_Real rhs;
+      int nlinconsvars;
+      SCIP_Bool success;
+      int j;
+
+      maxactivity = 0.0;
+
+      SCIP_CALL( SCIPgetConsNVars(scip, consdata->lincons, &nlinconsvars, &success) );
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nlinconsvars) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &consvals, nlinconsvars) );
+
+      SCIP_CALL( SCIPgetConsVars(scip, consdata->lincons, consvars, nlinconsvars, &success) );
+      SCIP_CALL( SCIPgetConsVals(scip, consdata->lincons, consvals, nlinconsvars, &success) );
+
+      /* calculate maximal activity of linear constraint without slackvar */
+      for( j = 0; j < nlinconsvars; ++j )
+      {
+         SCIP_VAR* var;
+         SCIP_Real val;
+         SCIP_Real ub;
+
+         val = consvals[j];
+         assert( ! SCIPisZero(scip, val) );
+
+         var = consvars[j];
+         assert( var != NULL );
+
+         /* skip slackvar */
+         if( var == consdata->slackvar )
+            continue;
+
+         if( val > 0.0 )
+            ub = SCIPvarGetUbLocal(var);
+         else
+            ub = SCIPvarGetLbLocal(var);
+
+         if ( SCIPisInfinity(scip, ub) )
+         {
+            maxactivity = SCIPinfinity(scip);
+            break;
+         }
+         else
+            maxactivity += val * ub;
+      }
+
+      /* substract rhs */
+      rhs = SCIPconsGetRhs(scip, consdata->lincons, &success);
+      assert(success);
+      assert(!SCIPisInfinity(scip, rhs));
+
+      newub = maxactivity - rhs;
+
+      if( SCIPisFeasLT(scip, newub, SCIPvarGetUbLocal(consdata->slackvar))
+            && !SCIPisInfinity(scip, maxactivity)
+            && newub > SCIPvarGetLbLocal(consdata->slackvar) )
+      {
+         /* propagate bound */
+         SCIP_CALL( SCIPinferVarUbCons(scip, consdata->slackvar, newub, cons, 3, FALSE, &infeasible, &tightened) );
+         assert( ! infeasible );
+         if ( tightened )
+            ++(*nGen);
+      }
+
+      /* free buffer */
+      SCIPfreeBufferArray(scip, &consvals);
+      SCIPfreeBufferArray(scip, &consvars);
+   }
+
    /* reset constraint age counter */
    if ( *nGen > 0 )
    {
@@ -4174,7 +4261,7 @@ SCIP_RETCODE enforceIndicators(
       }
 
       /* first perform propagation (it might happen that standard propagation is turned off) */
-      SCIP_CALL( propIndicator(scip, conss[c], consdata, dualreductions, conshdlrdata->addopposite, &cutoff, &cnt) );
+      SCIP_CALL( propIndicator(scip, conss[c], consdata, conshdlrdata, dualreductions, conshdlrdata->addopposite, &cutoff, &cnt) );
       if ( cutoff )
       {
          SCIPdebugMsg(scip, "Propagation in enforcing <%s> detected cutoff.\n", SCIPconsGetName(conss[c]));
@@ -6545,7 +6632,7 @@ SCIP_DECL_CONSPROP(consPropIndicator)
       SCIPdebugMsg(scip, "Propagating indicator constraint <%s>.\n", SCIPconsGetName(cons) );
 #endif
 
-      SCIP_CALL( propIndicator(scip, cons, consdata, dualreductions, conshdlrdata->addopposite, &cutoff, &cnt) );
+      SCIP_CALL( propIndicator(scip, cons, consdata, conshdlrdata, dualreductions, conshdlrdata->addopposite, &cutoff, &cnt) );
 
       if ( cutoff )
       {
