@@ -8344,7 +8344,7 @@
  *
  * In case the permutation \f$\gamma\f$ is an involution, i.e., \f$\gamma(\gamma(x)) = x\f$,
  * specialized separation and propagation algorithms can be used, which are implemented in the
- * orbitope constraint handler. For orbisack constraints, also facet defining inequalities of the
+ * orbisack constraint handler. For orbisack constraints, also facet defining inequalities of the
  * convex hull of all binary points \f$x\f$ being not lexicographically smaller than \f$\gamma(x)\f$
  * can be separated. Since the coefficients in these inequalities grow exponentially large, the
  * separation of these inequalities is disabled by default, but can be enabled via the parameter
@@ -8376,6 +8376,30 @@
  *
  * @subsection SYMSST SST cuts
  *
+ * SST cuts are special symmetry handling inequalities that are defined iteratively in rounds \f$r = 1,\dots,R\f$.
+ * In each round \f$r\f$, a leader variable \f$\ell_r\f$ is selected and the group
+ * \f$\Gamma_r = \{ \gamma \in \Gamma : \gamma(\ell_i) = \ell_i \text{ for all } i = 1,\dots,r-1\}\f$
+ * is considered. Then, the symmetry handling inequalities of round \f$r\f$ are defined as
+ * \f$x_{\ell_r} \geq x_j\f$ for all \f$j \in \{\gamma(i) : i \in \{1,\dots,n\}\}\f$.
+ * The latter set is called the orbit of leader \f$\ell_r\f$.
+ *
+ * SST cuts admit many degrees of freedom. In particular, they are not bound to binary variables
+ * but can be used for arbitrary variable types. A user can gain control over the selection process of
+ * SST cuts via several parameters. For instance,
+ *
+ * - <code>sstleadervartype</code> is a bitset encoding the variable types of leaders: the 1-bit models binary,
+ *   the 2-bit integer, the 4-bit implicit integer, and the 8-bit continuous variables. That is, a value
+ *   of 9 models that the leader can be a binary or continuous variable.
+ * - <code>sstleaderrule</code> ranges from 0 to 2 and models whether a leader is the first variable in
+ *   its orbit, the last variable in its orbit, or a variable with most conflicts with other variables in
+ *   the orbit, respectively.
+ * - <code>ssttiebreakrule</code> ranges from 0 to 2 and models whether an orbit of minimum size, maximum
+ *   size or with most variables being in conflict to the leader is selected, respectively.
+ * - <code>sstmixedcomponents</code> whether SST cuts are also applied if a symmetries do not only affect
+ *   variables of a single type.
+ * - <code>sstaddcuts</code> whether SST cuts are added to the problem. If no cuts are added, only
+ *   binary variables might be fixed to 0 if they are in conflict with the leader.
+ *
  * @subsection SYMMETHODSELECT Selecting symmetry handling methods
  *
  * The three symmetry handling methods explained above can be enabled and disabled via the parameter
@@ -8386,11 +8410,11 @@
  * In the following, we explain how the combination of different symmetry handling methods works.
  *
  * The default strategy of SCIP is to handle symmetries via the bitset value 7, i.e., symmetry handling
- * constraints, orbital fixings, and SST cuts are enabled. To make sure that the different methods are
+ * constraints, orbital fixing, and SST cuts are enabled. To make sure that the different methods are
  * compatible, the following steps are carried out:
  *
  * -# SCIP determines independent subgroups \f$\Gamma_1,\dots,\Gamma_k\f$ as described in \ref SYMPROCESS.
- *    Then, on each subgroups \f$\Gamma_i\f$, different symmetry handling methods can be applied.
+ *    Then, for each subgroup \f$\Gamma_i\f$, different symmetry handling methods can be applied.
  * -# For each subgroup \f$\Gamma_i\f$, a heuristic is called that checks whether orbitopes are applicable
  *    to handle the entire subgroup. If yes, this subgroup is handled by orbitopes and no other
  *    symmetry handling methods.
@@ -8415,16 +8439,16 @@
  *
  * @subsection SYMTIMING Controlling the timing of symmetry computation
  *
- * Since presolving might both remove and introduce formulation symmetries, the timining of computing symmetries
+ * Since presolving might both remove and introduce formulation symmetries, the timing of computing symmetries
  * can be changed via the parameters <code>propagating/symmetry/addconsstiming</code> and
  * <code>propagating/symmetry/ofsymcomptiming</code> depending on whether symmetry handling constraints/SST cuts
  * and orbital fixing are applied, respectively. If both are applied, <code>propagating/symmetry/addconsstiming</code>
- * is dominant. Both parameters take values 0, 1, or 2, corresponding to computing symmetries before presolveing,
+ * is dominant. Both parameters take values 0, 1, or 2, corresponding to computing symmetries before presolving,
  * during presolving, or when the symmetry handling methods are applied first, respectively. For the constraint-based
  * approach, the latter means at the end of presolving; for orbital fixing, after the first branching decision.
  *
  * If a restart occurs, symmetry handling constraints and SST cuts can be inherited to the new run. Since orbital
- * fixing depends on the branching history, wich is not available after a restart anymore, symmetries might needed
+ * fixing depends on the branching history, which is not available after a restart anymore, symmetries might needed
  * to be recomputed. This is controlled via the parameter <code>propagating/symmetry/recomputerestart</code>, which
  * takes values 0, 1, or 2, corresponding to never recomputing symmetries (i.e., disabling orbital fixing after a
  * restart), always recompute symmetries, or only recomputing symmetries if orbital fixing found a reduction in
