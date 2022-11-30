@@ -3031,6 +3031,7 @@ SCIP_RETCODE printReflectionSymmetryDataTree(
 }
 
 
+#ifdef SCIP_MORE_DEBUG
 /** prints the expression tree information used for computing reflection symmetries to screen */
 static
 SCIP_RETCODE printReflectionSymmetryData(
@@ -3040,7 +3041,6 @@ SCIP_RETCODE printReflectionSymmetryData(
 {
    int* openops;
    int i;
-   int j;
 
    assert( scip != NULL );
    assert( reflsymdata != NULL );
@@ -3059,6 +3059,7 @@ SCIP_RETCODE printReflectionSymmetryData(
 
    return SCIP_OKAY;
 }
+#endif
 
 /** checks whether given signed permutations form a reflection symmetry of a MIP */
 static
