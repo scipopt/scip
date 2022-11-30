@@ -8334,7 +8334,8 @@
  *
  * @subsection SYMCONSS Symmetry handling constraints
  *
- * SCIP contains three constraint handlers for handling symmetries of binary variables. Given a symmetry \f$\gamma\f$,
+ * SCIP contains three constraint handlers for handling symmetries of binary variables: the symresack,
+ * orbisack, and orbitope constraint handler. Given a symmetry \f$\gamma\f$,
  * the symresack constraint handler enforces that a solution vector \f$x\f$ is not lexicographically
  * smaller than its image \f$\gamma(x)\f$. This constraint is enforced by a propagation algorithm
  * and separating inequalities. Moreover, given the disjoint cycle decomposition of \f$\gamma\f$,
@@ -8346,11 +8347,11 @@
  * specialized separation and propagation algorithms can be used, which are implemented in the
  * orbisack constraint handler. For orbisack constraints, also facet-defining inequalities of the
  * convex hull of all binary points \f$x\f$ being not lexicographically smaller than \f$\gamma(x)\f$
- * can be separated. Since the coefficients in these inequalities grow exponentially large, the
- * separation of these inequalities is disabled by default, but can be enabled via the parameter
- * <code>constraints/orbisack/orbiSeparation</code>. Furthermore, to avoid numerical instabilities, the
- * parameter <code>constraints/orbisack/coeffbound</code> controls the maximum absolute value of
- * a coefficient in separated facet-defining inequalities.
+ * can be separated. Since the coefficients in these inequalities grow exponentially large which might
+ * cause numerical instabilities, the separation of these inequalities is disabled by default, but can be
+ * enabled via the parameter <code>constraints/orbisack/orbiSeparation</code>. Furthermore, to avoid
+ * numerical instabilities, the parameter <code>constraints/orbisack/coeffbound</code> controls the
+ * maximum absolute value of a coefficient in separated facet-defining inequalities.
  *
  * Finally, the orbitope constraint handler is able to handle symmetries of special symmetric groups \f$\Gamma\f$.
  * For orbitopes to be applicable, the affected variables need to be arranged in a matrix \f$X\f$ such that
@@ -8376,7 +8377,9 @@
  *
  * @subsection SYMSST SST cuts
  *
- * SST cuts are special symmetry handling inequalities that are defined iteratively in rounds \f$r = 1,\dots,R\f$.
+ * The Schreier-Sims table (SST) is a table that contains certain information about symmetry groups
+ * and can be used, among others, to derive symmetry handling inequalities. The corresponding SST cuts
+ * are symmetry handling inequalities that are defined iteratively in rounds \f$r = 1,\dots,R\f$.
  * In each round \f$r\f$, a leader variable \f$\ell_r\f$ is selected and the group
  * \f$\Gamma_r = \{ \gamma \in \Gamma : \gamma(\ell_i) = \ell_i \text{ for all } i = 1,\dots,r-1\}\f$
  * is considered. Then, the symmetry handling inequalities of round \f$r\f$ are defined as
