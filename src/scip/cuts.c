@@ -5959,7 +5959,6 @@ SCIP_RETCODE cutsSubstituteMIRSafe(
    SCIP_Real mult;
    SCIP_Real splitcoef;
    SCIP_Real slackweight;
-   SCIP_Real slackscale;
    SCIP_Real slackroundeddown;
    int i;
    int currentnegslackrow;
@@ -6094,8 +6093,6 @@ SCIP_RETCODE cutsSubstituteMIRSafe(
 
       if( SCIPisCertificateActive(scip) && integralslack)
       {
-            SCIP_INTERVAL slackcont;
-
             // save the value for the split disjunction for the integer slack and the continous part (for rounded up we subtract 1-f)
             // multiply by -slacksign (same as above) since slack = side - row
             mirinfo->slackrows[mirinfo->nslacks] = userow;
