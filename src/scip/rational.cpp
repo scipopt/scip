@@ -2149,8 +2149,11 @@ void RatComputeApproximationLong(
          /* normal case -> pick semiconvergent for best approximation */
          else
          {
+            if( forcegreater != 0 )
+               chooseSemiconvLong(resnum, resden, p, q, 1, maxdenom);
+            else
+               chooseSemiconvLong(resnum, resden, p, q, ai, maxdenom);
             SCIPdebug(std::cout << " picking semiconvergent " << std::endl);
-            chooseSemiconvLong(resnum, resden, p, q, ai, maxdenom);
             SCIPdebug(std::cout << " use " << resnum << "/" << resden << std::endl);
             res->val = Rational(resnum,resden) * sign;
          }
@@ -2339,8 +2342,11 @@ void RatComputeApproximation(
          /* normal case -> pick semiconvergent for best approximation */
          else
          {
+            if( forcegreater != 0 )
+               chooseSemiconv(resnum, resden, p, q, 1, maxdenom);
+            else
+               chooseSemiconv(resnum, resden, p, q, ai, maxdenom);
             SCIPdebug(std::cout << " picking semiconvergent " << std::endl);
-            chooseSemiconv(resnum, resden, p, q, ai, maxdenom);
             SCIPdebug(std::cout << " use " << resnum << "/" << resden << std::endl);
             res->val = Rational(resnum,resden) * sign;
          }
