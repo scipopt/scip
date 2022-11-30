@@ -8306,10 +8306,10 @@
  * invariant. To detect such formulation symmetries, SCIP builds an auxiliary colored graph whose
  * color-preserving automorphisms correspond to symmetries of the integer program. The symmetries of
  * the graph, and thus of the integer program, are then computed by an external graph automorphism
- * code that needs to be linked to SCIP. Currently, SCIP only supports the automorphism code bliss,
+ * library that needs to be linked to SCIP. Currently, SCIP only supports the automorphism library bliss,
  * which is distributed together with SCIP, to detect symmetries.
  *
- * @note To detect symmetries, SCIP needs to be build with bliss, which can be achieved
+ * @note To detect symmetries, SCIP needs to be built with bliss, which can be achieved
  * by using the options <code>SYM=bliss</code> and <code>DSYM=bliss</code> in the Makefile and CMake
  * system, respectively.
  *
@@ -8344,13 +8344,13 @@
  *
  * In case the permutation \f$\gamma\f$ is an involution, i.e., \f$\gamma(\gamma(x)) = x\f$,
  * specialized separation and propagation algorithms can be used, which are implemented in the
- * orbisack constraint handler. For orbisack constraints, also facet defining inequalities of the
+ * orbisack constraint handler. For orbisack constraints, also facet-defining inequalities of the
  * convex hull of all binary points \f$x\f$ being not lexicographically smaller than \f$\gamma(x)\f$
  * can be separated. Since the coefficients in these inequalities grow exponentially large, the
  * separation of these inequalities is disabled by default, but can be enabled via the parameter
  * <code>constraints/orbisack/orbiSeparation</code>. Furthermore, to avoid numerical instabilities, the
  * parameter <code>constraints/orbisack/coeffbound</code> controls the maximum absolute value of
- * a coefficient in separated facet defining inequalities.
+ * a coefficient in separated facet-defining inequalities.
  *
  * Finally, the orbitope constraint handler is able to handle symmetries of special symmetric groups \f$\Gamma\f$.
  * For orbitopes to be applicable, the affected variables need to be arranged in a matrix \f$X\f$ such that
@@ -8383,7 +8383,7 @@
  * \f$x_{\ell_r} \geq x_j\f$ for all \f$j \in \{\gamma(i) : i \in \{1,\dots,n\}\}\f$.
  * The latter set is called the orbit of leader \f$\ell_r\f$.
  *
- * SST cuts admit many degrees of freedom. In particular, they are not bound to binary variables
+ * SST cuts admit many degrees of freedom. In particular, they are not limited to binary variables
  * but can be used for arbitrary variable types. A user can gain control over the selection process of
  * SST cuts via several parameters. For instance,
  *
