@@ -1353,6 +1353,7 @@ SCIP_RETCODE cutTightenCoefsQuad(
    SCIPsortDownInd(cutinds, compareAbsCoefsQuad, (void*) cutcoefs, *cutnnz);
 
    /* loop over the integral variables and try to tighten the coefficients; see cons_linear for more details */
+#ifdef SCIP_DISABLED_CODE
    for( i = 0; i < *cutnnz; )
    {
       SCIP_Real QUAD(val);
@@ -1466,6 +1467,7 @@ SCIP_RETCODE cutTightenCoefsQuad(
 
       ++i;
    }
+#endif
 
    return SCIP_OKAY;
 }
@@ -1649,7 +1651,7 @@ SCIP_RETCODE cutTightenCoefsQuadSafely(
 
       SCIP_CALL( SCIPallocBufferArray(scip, &intcoeffs, *cutnnz) );
 
-      equiscale = 1.0 / MIN((SCIPintervalGetSup(maxact) - QUAD_TO_DBL(*cutrhs)), maxabsintval);
+      equiscale = 1.0 / MAX(maxabscontval, maxabsintval);
 
       for( i = 0; i < *cutnnz; ++i )
       {

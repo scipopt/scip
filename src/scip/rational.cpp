@@ -1976,7 +1976,7 @@ void chooseSemiconv(
 
    j = (Integer(maxdenom) - q[0]) / q[1];
 
-   if( j > ai / 2 )
+   if( j >= ai / 2 )
    {
       resnum = j * p[1] + p[0];
       resden = j * q[1] + q[0];
@@ -2003,7 +2003,7 @@ void chooseSemiconvLong(
 
    j = (maxdenom - q[0]) / q[1];
 
-   if( j > ai / 2 )
+   if( j >= ai / 2 )
    {
       resnum = j * p[1] + p[0];
       resden = j * q[1] + q[0];
