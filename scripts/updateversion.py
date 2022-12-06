@@ -85,14 +85,8 @@ else:
         print("\nAPI versions before the change:")
         print(commands.getoutput('grep -e "APIVERSION" -e "SCIP_VERSION_API" make/make.project CMakeLists.txt'))
         if newsubversion == "0":
-<<<<<<< HEAD
-            print("\nWarning: API version increased for what seems to be a bugfix version (%s)" %(newversionstring))
-        commands.getoutput('sed -i "s/\#define SCIP_APIVERSION.*%3s/\#define SCIP_APIVERSION             %3s/" src/scip/def.h' \
-                           %(oldapiversion, newapiversion))
-=======
             print "\nWarning: API version increased for what seems to be a bugfix version (%s)" %(newversionstring)
         commands.getoutput('sed -i "s/^SCIP_VERSION_API.*/SCIP_VERSION_API = %-s/" make/make.project' % newapiversion)
->>>>>>> acea3f92c9 (move SCIP versions from def.h into make.project)
         commands.getoutput('sed -i "s/set(SCIP_VERSION_API [0-9]*)/set(SCIP_VERSION_API %s)/" CMakeLists.txt' \
                            %(newapiversion))
         print("\nAPI versions after the change:")
