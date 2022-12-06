@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.3)
+cmake_minimum_required(VERSION 3.9)
 
 # option() honors normal variables.
 if(POLICY CMP0077)
@@ -33,7 +33,7 @@ if(hasParent)
   set(SCIP_DIR ${PROJECT_BINARY_DIR} PARENT_SCOPE)
 endif()
 
-set(CPACK_RESOURCE_FILE_LICENSE "${PROJECT_SOURCE_DIR}/COPYING")
+set(CPACK_RESOURCE_FILE_LICENSE "${PROJECT_SOURCE_DIR}/LICENSE")
 set(CPACK_PACKAGE_VERSION_MAJOR "${SCIP_VERSION_MAJOR}")
 set(CPACK_PACKAGE_VERSION_MINOR "${SCIP_VERSION_MINOR}")
 set(CPACK_PACKAGE_VERSION_PATCH "${SCIP_VERSION_PATCH}")
@@ -554,7 +554,7 @@ endif()
 
 if(AMPL)
     set(SCIP_WITH_AMPL ON)
-    include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/amplmp/include)
+    include_directories(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/src/amplmp/include)
     set(amplsrc scip/reader_nl.cpp amplmp/src/format.cpp amplmp/src/expr-info.cpp amplmp/src/nl-reader.cpp amplmp/src/os.cpp amplmp/src/posix.cpp)
 else()
     message(STATUS "Support AMPL: OFF")

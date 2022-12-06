@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -508,6 +517,62 @@ SCIP_DECL_EVENTEXEC(eventExecSymmetry)
 }
 
 
+/*
+ * Display dialog callback methods
+ */
+
+/** dialog execution method for the display symmetry information command */
+static
+SCIP_DECL_DIALOGEXEC(dialogExecDisplaySymmetry)
+{  /*lint --e{715}*/
+   SCIP_Bool* covered;
+   SCIP_PROPDATA* propdata;
+   int* perm;
+   int i;
+   int j;
+   int p;
+
+   /* add your dialog to history of dialogs that have been executed */
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
+
+   propdata = (SCIP_PROPDATA*)SCIPdialogGetData(dialog);
+   assert( propdata != NULL );
+
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &covered, propdata->npermvars) );
+
+   for (p = 0; p < propdata->nperms; ++p)
+   {
+      SCIPinfoMessage(scip, NULL, "Permutation %d:\n", p);
+      perm = propdata->perms[p];
+
+      for (i = 0; i < propdata->npermvars; ++i)
+      {
+         if ( perm[i] == i || covered[i] )
+            continue;
+
+         SCIPinfoMessage(scip, NULL, "  (<%s>", SCIPvarGetName(propdata->permvars[i]));
+         j = perm[i];
+         covered[i] = TRUE;
+         while ( j != i )
+         {
+            covered[j] = TRUE;
+            SCIPinfoMessage(scip, NULL, ",<%s>", SCIPvarGetName(propdata->permvars[j]));
+            j = perm[j];
+         }
+         SCIPinfoMessage(scip, NULL, ")\n");
+      }
+
+      for (i = 0; i < propdata->npermvars; ++i)
+         covered[i] = FALSE;
+   }
+
+   SCIPfreeBufferArray(scip, &covered);
+
+   /* next dialog will be root dialog again */
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   return SCIP_OKAY;
+}
 
 
 /*
@@ -7537,6 +7602,9 @@ SCIP_RETCODE SCIPincludePropSymmetry(
    SCIP_TABLEDATA* tabledata;
    SCIP_PROPDATA* propdata = NULL;
    SCIP_PROP* prop = NULL;
+   SCIP_DIALOG* rootdialog;
+   SCIP_DIALOG* displaymenu;
+   SCIP_DIALOG* dialog;
 
    SCIP_CALL( SCIPallocBlockMemory(scip, &propdata) );
    assert( propdata != NULL );
@@ -7631,6 +7699,22 @@ SCIP_RETCODE SCIPincludePropSymmetry(
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_ORBITALFIXING, TABLE_DESC_ORBITALFIXING, TRUE,
          NULL, tableFreeOrbitalfixing, NULL, NULL, NULL, NULL, tableOutputOrbitalfixing,
          tabledata, TABLE_POSITION_ORBITALFIXING, TABLE_EARLIEST_ORBITALFIXING) );
+
+   /* include display dialog */
+   rootdialog = SCIPgetRootDialog(scip);
+   assert(rootdialog != NULL);
+   if( SCIPdialogFindEntry(rootdialog, "display", &displaymenu) != 1 )
+   {
+      SCIPerrorMessage("display sub menu not found\n");
+      return SCIP_PLUGINNOTFOUND;
+   }
+   assert( !SCIPdialogHasEntry(displaymenu, "symmetries") );
+   SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+      NULL, dialogExecDisplaySymmetry, NULL, NULL,
+      "symmetry", "display generators of symmetry group in cycle notation, if available",
+         FALSE, (SCIP_DIALOGDATA*)propdata) );
+   SCIP_CALL( SCIPaddDialogEntry(scip, displaymenu, dialog) );
+   SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
 
    /* add parameters for computing symmetry */
    SCIP_CALL( SCIPaddIntParam(scip,

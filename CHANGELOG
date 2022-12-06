@@ -16,6 +16,7 @@ Features
 - new diving heuristic indicatordiving that focuses on indicator variables which control semicontinuous variables
 - updated statistics on NLP relaxation; information on convexity of NLP has been added
 - added new bandit method (EXP.3-IX) that is the new default of the ALNS heuristic
+- added dialog to display recognized permutation symmetries ("display symmetry")
 
 Performance improvements
 ------------------------
@@ -76,6 +77,7 @@ Interface changes
 ### Changed parameters
 
 - Shrunk range of parameter "propagating/symmetry/sstleaderrule" from [0,3] to [0,2], removed "MAXCONFLICTS"-option.
+- Removed reading/gmsreader/freeints. A default upper bound of +inf is now assumed for integer variables in GAMS (which is the case since GAMS 23.1).
 
 ### New parameters
 
@@ -113,6 +115,8 @@ Build system
 Fixed bugs
 ----------
 
+- add safeguard for number of selected cuts
+
 Miscellaneous
 -------------
 
@@ -136,6 +140,8 @@ Performance improvements
 Examples and applications
 -------------------------
 
+- Take out STP and PolySCIP applications
+
 Interface changes
 -----------------
 
@@ -146,6 +152,8 @@ Interface changes
 ### New API functions
 
 ### Command line interface
+
+- When running the AMPL interface, the .nl filename extension does not need to be omitted for the input file anymore.
 
 ### Interfaces to external software
 
@@ -170,14 +178,24 @@ Build system
 ### Cmake
 
 - Forbid CMAKE_BUILD_TYPE nonstandard values
+- Move -I/path/to/src/amplmp/include to front of compiler flags for include directories
 
 ### Makefile
 
 Fixed bugs
 ----------
 
+- fixed an incorrect handling of xor constraints
+- the feasibility checker for integrality constraints now uses checkintegrality even for implied integers
+- skip integrality check in cons_integral for relaxation-only implicit-integer variables
+- fixed an issue caused by aggregated variables not added to a hashmap in the xor constraint handler
+- changed function solveRowEchelonGF2 in cons_xor.c to avoid errors if rank is 0
+- fixed that the implication presolver tried to aggregate or tighten bounds of multiaggregated variables
+
 Miscellaneous
 -------------
+
+- Changed license to Apache 2.0, see https://www.apache.org/licenses/LICENSE-2.0.
 
 Known bugs
 ----------
@@ -259,6 +277,7 @@ Miscellaneous
   diving heuristics, ALNS neighborhood information and tree size estimation statistics;
   they can be turned on using the following new parameters:
   misc/showdivingstats (diving heuristics), heuristics/alns/shownbstats (ALNS), estimation/showstats (tree size estimation)
+- When an LP could not be solved accurately, scaling is now turned off as a last fall-back method.
 
 @section RN801 SCIP 8.0.1
 *************************
@@ -1367,6 +1386,7 @@ Fixed bugs
 - Improved separation for SOC constraint with multiaggregated variable on right-hand-side.
 - Fixed bug in presol_boundshift: do not shift non-active variables
 - Fixed bug in domain propagation for SOC constraints with negative coefficient for variable on right-hand-side.
+- Fixed a sign check in detection of linear constraints that are parallel to the objective
 - Fixed bug with multi-aggregated integer variables in cons_xor.
 - Fixed bug with changed number of variables in storing relaxation solution in probing/diving.
 - Fixed issues with scip statistics

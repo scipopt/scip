@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -71,8 +80,9 @@ SCIP_RETCODE SCIPnlpiCreate(
    SCIP_NLPIDATA*                  nlpidata                     /**< NLP interface local data */
    )
 {  /*lint --e{715}*/
-   assert(nlpi != NULL);
+   SCIP_RETCODE retcode;
 
+   assert(nlpi != NULL);
    assert(name != NULL);
    assert(description != NULL);
    assert(nlpifree != NULL);
@@ -94,8 +104,19 @@ SCIP_RETCODE SCIPnlpiCreate(
 
    SCIP_ALLOC( BMSallocClearMemory(nlpi) );
 
-   SCIP_ALLOC( BMSduplicateMemoryArray(&(*nlpi)->name, name, strlen(name)+1) );
-   SCIP_ALLOC( BMSduplicateMemoryArray(&(*nlpi)->description, description, strlen(description)+1) );
+   if( BMSduplicateMemoryArray(&(*nlpi)->name, name, strlen(name)+1) == NULL )
+   {
+      BMSfreeMemory(nlpi);
+      return SCIP_NOMEMORY;
+   }
+
+   if( BMSduplicateMemoryArray(&(*nlpi)->description, description, strlen(description)+1) == NULL )
+   {
+      BMSfreeMemoryArray(&(*nlpi)->name);
+      BMSfreeMemory(nlpi);
+      return SCIP_NOMEMORY;
+   }
+
    (*nlpi)->priority = priority;
    (*nlpi)->nlpicopy = nlpicopy;
    (*nlpi)->nlpifree = nlpifree;
@@ -120,9 +141,15 @@ SCIP_RETCODE SCIPnlpiCreate(
    (*nlpi)->nlpigetstatistics = nlpigetstatistics;
    (*nlpi)->nlpidata = nlpidata;
 
-   SCIP_CALL( SCIPclockCreate(&(*nlpi)->problemtime, SCIP_CLOCKTYPE_DEFAULT) );
+   retcode = SCIPclockCreate(&(*nlpi)->problemtime, SCIP_CLOCKTYPE_DEFAULT);
+   if( retcode != SCIP_OKAY )
+   {
+      BMSfreeMemoryArray(&(*nlpi)->description);
+      BMSfreeMemoryArray(&(*nlpi)->name);
+      BMSfreeMemory(nlpi);
+   }
 
-   return SCIP_OKAY;
+   return retcode;
 }
 
 /** sets NLP solver priority */
@@ -577,7 +604,9 @@ SCIP_RETCODE SCIPnlpiSolve(
 
    SCIP_CALL( nlpi->nlpisolve(set->scip, nlpi, problem, *param) );
 
+   /* coverity[overrun] */
    ++nlpi->ntermstat[nlpi->nlpigettermstat(set->scip, nlpi, problem)];
+   /* coverity[overrun] */
    ++nlpi->nsolstat[nlpi->nlpigetsolstat(set->scip, nlpi, problem)];
 
    SCIP_CALL( nlpi->nlpigetstatistics(set->scip, nlpi, problem, &stats) );

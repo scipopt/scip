@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -176,7 +185,8 @@
  * @subsection GETTINGSTARTED_BLACKBOX_WHY Why SCIP?
  *
  * Charlotte lectures at a university and she wants her students to get in touch with solving constraint integer programs (CIPs).
- * She would like to use SCIP for this purpose because its \ref LICENSE "license" allows free use for academic, non-commercial purposes.
+ * She would like to use SCIP for this purpose because it allows the students to look at the full source code
+ * and SCIP comes with a permissive open source \ref LICENSE "license".
  * Also, her advisor told her that there are various \ref INTERFACES "interfaces" to SCIP.
  *
  * @subsection GETTINGSTARTED_BLACKBOX_PROBLEMS What Kinds Of Problems?
@@ -990,14 +1000,6 @@
  *  </td>
  *  <td>
  *  A solver for scheduling problems.
- *  </td>
- *  </tr>
- *  <tr>
- *  <td>
- *  @subpage STP_MAIN
- *  </td>
- *  <td>
- *  A solver for Steiner Tree Problems in graphs, based on a branch-and-cut approach.
  *  </td>
  *  </tr>
  *  </table>
@@ -2241,9 +2243,8 @@
  * @subsection PRICERFREE
  *
  * If you are using pricer data, you have to implement this method in order to free the pricer data.
- * This can be done by the following procedure:
- *
- * @refsnippet{applications/STP/src/pricer_stp.c,SnippetPricerFreeSTP}
+ * This can be done by the procedure described in stp/src/pricer_stp.c,
+ * see https://scipjack.zib.de/.
  *
  * If you have allocated memory for fields in your pricer data, remember to free this memory
  * before freeing the pricer data itself.
@@ -8279,7 +8280,7 @@
 
 /**@page LICENSE License
  *
- * \verbinclude COPYING
+ * \verbinclude LICENSE
  */
 
 /**@page FAQ Frequently Asked Questions (FAQ)
