@@ -1430,8 +1430,8 @@ endif
 		@echo >> $@
 		@echo "#endif /* SCIP_CONFIG_H */" >> $@
 
-# we only need this file to be present, so it can be included
-# the cmake system writes into it, but the (fallback) logic in def.h is actually sufficient
+# We only need this file to be present, so it can be included.
+# The cmake system writes into it, but the (fallback) logic in def.h is actually sufficient.
 $(SCIPEXPORTHFILE) :
 		@mkdir -p $(@D)
 		@touch $@
