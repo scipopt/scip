@@ -1649,10 +1649,6 @@ SCIP_RETCODE probScaleObjExact(
    assert(transprob != NULL);
    assert(set != NULL);
 
-   /** @todo exip: make obj scaling safe and integrate it in certificate printing */
-   if( SCIPcertificateIsActive(set, stat->certificate) )
-      return SCIP_OKAY;
-
    /* do not change objective if there are pricers involved */
    if( set->nactivepricers != 0 || set->nactivebenders != 0 || !set->misc_scaleobj )
       return SCIP_OKAY;
@@ -1747,10 +1743,6 @@ SCIP_RETCODE SCIPprobScaleObj(
 
    assert(transprob != NULL);
    assert(set != NULL);
-
-   /** @todo exip: make obj scaling safe and integrate it in certificate printing */
-   if( SCIPcertificateIsActive(set, stat->certificate) )
-      return SCIP_OKAY;
 
    /* do not change objective if there are pricers involved */
    if( set->nactivepricers != 0 || set->nactivebenders != 0 || !set->misc_scaleobj )

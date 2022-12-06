@@ -3251,7 +3251,7 @@ SCIP_RETCODE printCertificateConsLinear(
    assert(cons != NULL);
 
    /* print constraint into certificate output */
-   if( SCIPcertificateIsActive(scip->set, SCIPgetCertificate(scip)) )
+   if( SCIPisCertificateActive(scip) )
    {
       certificate = SCIPgetCertificate(scip);
       consdata = SCIPconsGetData(cons);
@@ -3327,7 +3327,7 @@ SCIP_RETCODE printCertificateConsLinearOrig(
    assert(cons != NULL);
 
    /* print constraint into certificate output */
-   if( SCIPcertificateIsActive(scip->set, SCIPgetCertificate(scip)) )
+   if( SCIPisCertificateActive(scip) )
    {
       certificate = SCIPgetCertificate(scip);
       consdata = SCIPconsGetData(cons);

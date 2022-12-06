@@ -1453,7 +1453,7 @@ void SCIPdomchgAddCurrentCertificateIndex(
 {
    SCIP_BOUNDCHG* change;
 
-   if( !SCIPcertificateIsActive(set, certificate) )
+   if( !SCIPsetCertificateEnabled(set) )
       return;
 
    change = &(domchg->domchgdyn.boundchgs[domchg->domchgdyn.nboundchgs - 1]);

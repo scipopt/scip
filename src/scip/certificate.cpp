@@ -2172,7 +2172,7 @@ SCIP_RETCODE  SCIPcertificatePrintDualboundPseudo(
    assert((modifiedvarindex >= 0 && boundchangeindex >= 0) || (modifiedvarindex == -1 && boundchangeindex == -1) );
 
    /* only print if not -infinity and certificate is active */
-   if( !set->exact_enabled || !SCIPcertificateIsActive(set, certificate) || SCIPsetIsInfinity(set, -psval) )
+   if( !set->exact_enabled || !SCIPsetCertificateEnabled(set) || SCIPsetIsInfinity(set, -psval) )
       return SCIP_OKAY;
 
    if( psval < SCIPnodeGetLowerbound(node) )
