@@ -964,7 +964,18 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
          {
             if( set->exact_enabled && SCIProwGetRowExact(cut) == NULL )
             {
+               SCIP_Bool poolcut = FALSE;
+               if( !SCIProwIsLocal(cut) && !(SCIPisCutNew(set->scip, cut)) )
+               {
+                  poolcut = TRUE;
+                  SCIP_CALL( SCIPdelPoolCut(set->scip, cut) );
+               }
                SCIP_CALL( SCIProwExactCreateFromRow(cut, blkmem, set, stat, eventqueue, transprob, lp->lpexact) );
+               if( poolcut )
+               {
+                  SCIP_CALL( SCIPaddPoolCut(set->scip, cut) );
+               }
+
                SCIP_CALL( SCIPaddRowExact(set->scip, cut->rowexact));
             }
 
