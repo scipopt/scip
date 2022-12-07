@@ -267,21 +267,27 @@ do
                         sbatch --job-name=write-settings --mem=${HARDMEMLIMIT} -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=highm1 ${EXCLUSIVE} --output=/dev/null write-settings.sh
                     fi
 
+                    CONSTRAINT=""
+                    if test "${QUEUE}" = "Gold6338"
+                    then
+                        CONSTRAINT="Gold6338"
+                        CLUSTERQUEUE="big"
+                    fi
                     if test "${CLUSTERNODES}" = "all" && test "${EXCLUDENODES}" = "none"
                     then
-                        echo sbatch --job-name="${JOBNAME}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=highm1 ${EXCLUSIVE} --output=/dev/null run.sh
-                        sbatch --job-name="${JOBNAME}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=highm1 ${EXCLUSIVE} --output=/dev/null run.sh
+                        echo sbatch --job-name="${JOBNAME}" --constraint="${CONSTRAINT}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=highm1 ${EXCLUSIVE} --output=/dev/null run.sh
+                        sbatch --job-name="${JOBNAME}" --constraint="${CONSTRAINT}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=highm1 ${EXCLUSIVE} --output=/dev/null run.sh
                     elif test "${CLUSTERNODES}" != "all" && test "${EXCLUDENODES}" = "none"
                     then
-                        echo sbatch --job-name="${JOBNAME}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=highm1 ${EXCLUSIVE} -w "${CLUSTERNODES}" --output=/dev/null run.sh
-                        sbatch --job-name="${JOBNAME}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=highm1 ${EXCLUSIVE} -w "${CLUSTERNODES}" --output=/dev/null run.sh
+                        echo sbatch --job-name="${JOBNAME}" --constraint="${CONSTRAINT}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=highm1 ${EXCLUSIVE} -w "${CLUSTERNODES}" --output=/dev/null run.sh
+                        sbatch --job-name="${JOBNAME}" --constraint="${CONSTRAINT}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=highm1 ${EXCLUSIVE} -w "${CLUSTERNODES}" --output=/dev/null run.sh
                     elif test "${CLUSTERNODES}" = "all" && test "${EXCLUDENODES}" != "none"
                     then
-                        echo sbatch --job-name="${JOBNAME}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=highm1 ${EXCLUSIVE} -x "${EXCLUDENODES}" --output=/dev/null run.sh
-                        sbatch --job-name="${JOBNAME}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=highm1 ${EXCLUSIVE} -x "${EXCLUDENODES}" --output=/dev/null run.sh
+                        echo sbatch --job-name="${JOBNAME}" --constraint="${CONSTRAINT}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=highm1 ${EXCLUSIVE} -x "${EXCLUDENODES}" --output=/dev/null run.sh
+                        sbatch --job-name="${JOBNAME}" --constraint="${CONSTRAINT}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=highm1 ${EXCLUSIVE} -x "${EXCLUDENODES}" --output=/dev/null run.sh
                     else
-                        echo sbatch --job-name="${JOBNAME}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=highm1 ${EXCLUSIVE} -w "${CLUSTERNODES}" -x "${EXCLUDENODES}" --output=/dev/null run.sh
-                        sbatch --job-name="${JOBNAME}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=highm1 ${EXCLUSIVE} -w "${CLUSTERNODES}" -x "${EXCLUDENODES}" --output=/dev/null run.sh
+                        echo sbatch --job-name="${JOBNAME}" --constraint="${CONSTRAINT}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=highm1 ${EXCLUSIVE} -w "${CLUSTERNODES}" -x "${EXCLUDENODES}" --output=/dev/null run.sh
+                        sbatch --job-name="${JOBNAME}" --constraint="${CONSTRAINT}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=highm1 ${EXCLUSIVE} -w "${CLUSTERNODES}" -x "${EXCLUDENODES}" --output=/dev/null run.sh
                     fi
                 else
                     if test "${WRITESETTINGS}" = "true"
