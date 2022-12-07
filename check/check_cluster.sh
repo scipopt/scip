@@ -267,12 +267,6 @@ do
                         sbatch --job-name=write-settings --mem=${HARDMEMLIMIT} -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=highm1 ${EXCLUSIVE} --output=/dev/null write-settings.sh
                     fi
 
-                    CONSTRAINT=""
-                    if test "${QUEUE}" = "Gold6338"
-                    then
-                        CONSTRAINT="Gold6338"
-                        CLUSTERQUEUE="big"
-                    fi
                     if test "${CLUSTERNODES}" = "all" && test "${EXCLUDENODES}" = "none"
                     then
                         echo sbatch --job-name="${JOBNAME}" --constraint="${CONSTRAINT}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=highm1 ${EXCLUSIVE} --output=/dev/null run.sh
