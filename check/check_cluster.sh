@@ -121,7 +121,7 @@ then
 fi
 
 # configure cluster-related environment variables
-# defines the following environment variables: NICE, ACCOUNT, CLUSTERQUEUE
+# defines the following environment variables: NICE, ACCOUNT, CLUSTERQUEUE, CONSTRAINT
 . ./configuration_cluster.sh "${QUEUE}" "${PPN}" "${EXCLUSIVE}" "${QUEUETYPE}"
 
 # the srun queue requires a format duration HH:MM:SS (and optionally days),
