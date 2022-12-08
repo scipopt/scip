@@ -188,11 +188,9 @@ SCIP_Bool SCIPsolveIsStopped(
       && (SCIPsetIsLT(set, SCIPgetGap(set->scip), set->limit_gap)
          || SCIPsetIsLT(set, (SCIPgetUpperbound(set->scip) - SCIPgetLowerbound(set->scip)) * SCIPgetTransObjscale(set->scip), set->limit_absgap )) )
       stat->status = SCIP_STATUS_GAPLIMIT;
-   else if( set->limit_solutions >= 0 && set->stage >= SCIP_STAGE_PRESOLVED
-      && SCIPgetNLimSolsFound(set->scip) >= set->limit_solutions )
+   else if( set->limit_solutions >= 0 && SCIPgetNLimSolsFound(set->scip) >= set->limit_solutions )
       stat->status = SCIP_STATUS_SOLLIMIT;
-   else if( set->limit_bestsol >= 0 && set->stage >= SCIP_STAGE_PRESOLVED
-      && SCIPgetNBestSolsFound(set->scip) >= set->limit_bestsol )
+   else if( set->limit_bestsol >= 0 && SCIPgetNBestSolsFound(set->scip) >= set->limit_bestsol )
       stat->status = SCIP_STATUS_BESTSOLLIMIT;
    else if( checknodelimits && set->limit_nodes >= 0 && stat->nnodes >= set->limit_nodes )
       stat->status = SCIP_STATUS_NODELIMIT;
