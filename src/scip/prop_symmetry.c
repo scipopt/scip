@@ -4500,12 +4500,7 @@ SCIP_RETCODE storeSimpleConstraint(
        * of binary variables.
        */
    {
-      SCIP_EXPRHDLR* exprcompare = (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_EQ;
       SCIP_CONS* lincons;
-      int nlocvars = 1.0;
-      int subopidx;
-      int sumopidx;
-      SCIP_Bool isleqcons = TRUE;
 
       lincons = SCIPgetLinearConsIndicator(cons);
       assert( ! SCIPisInfinity(scip, -SCIPgetLhsLinear(scip, lincons)) ||
