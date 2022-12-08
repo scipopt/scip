@@ -145,3 +145,10 @@ then
 else
     EXCLUSIVE=""
 fi
+
+CONSTRAINT=""
+if test "${CLUSTERQUEUE}" = "Gold6338"
+then
+    CONSTRAINT="Gold6338"
+    CLUSTERQUEUE="big"
+fi
