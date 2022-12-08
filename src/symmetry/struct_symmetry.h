@@ -25,6 +25,7 @@
 /**@file   struct_symmetry.h
  * @brief  structs for symmetry computations
  * @author Marc Pfetsch
+ * @author Christopher Hojny
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -154,6 +155,49 @@ struct SYM_Reflsymdata
    int                   nuniqueops;         /**< number of unique operators */
    int                   nuniquevals;        /**< number of unique values */
    int                   nuniquerhs;         /**< number of unique right-hand sides */
+};
+
+/** information about a constraint used in symmetry computation */
+struct SYM_Consinfo
+{
+   SCIP_CONSHDLR*        conshdlr;           /**< pointer to the constraint handler of a constraint */
+   SCIP_Real             lhs;                /**< left-hand side of constraint */
+   SCIP_Real             rhs;                /**< right-hand side of constraint */
+};
+
+/** data to encode a node of a symmetry detection graph */
+struct SYM_Node
+{
+   int                   id;                 /**< ID of the node (must be unique in the graph) */
+   SYM_NODETYPE          nodetype;           /**< type of the node */
+   SCIP_EXPRHDLR*        op;                 /**< operator encoded by the node
+                                              *   (if nodetype is SYM_NODETYPE_OPERATOR) */
+   int                   varidx;             /**< index of variable encoded by the node
+                                              *   (if nodetype is SYM_NODETYPE_VAR) */
+   SCIP_Real             value;              /**< index of value encoded by the node
+                                              *   (if nodetype is SYM_NODETYPE_VAL) */
+   SCIP_Bool             hasinfo;            /**< whether the node encodes information about a constraint */
+   SYM_CONSINFO*         consinfo;           /**< pointer to information about constraint (or NULL) */
+};
+
+/** data to encode an edge of a symmetry detection graph */
+struct SYM_Edge
+{
+   SYM_NODE*             first;              /**< pointer to the first node of an edge */
+   SYM_NODE*             second;             /**< pointer to the second node of an edge */
+   SCIP_Bool             iscolored;          /**< whether the edge is colored */
+   SCIP_Real             color;              /**< color of the edge (if it is colored) */
+};
+
+/** data to encode a symmetry detection graph */
+struct SYM_Graph
+{
+   SYM_NODE**            nodes;              /**< array of nodes in the graph */
+   int                   nnodes;             /**< number of nodes encoded in nodes */
+   int                   maxnnodes;          /**< maximum number of nodes that can be hold by nodes */
+   SYM_EDGE**            edges;              /**< array of edges in the graph */
+   int                   nedges;             /**< number of edges encoded in edged */
+   int                   maxnedges;          /**< maximum number of edges that can be hold by edges */
 };
 
 #ifdef __cplusplus

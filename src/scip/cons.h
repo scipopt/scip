@@ -498,6 +498,13 @@ void SCIPconshdlrSetGetDiveBdChgs(
    SCIP_DECL_CONSGETDIVEBDCHGS((*consgetdivebdchgs)) /**< constraint handler diving solution enforcement method */
    );
 
+/** sets permutation symmetry detection graph getter method of constraint handler */
+void SCIPconshdlrSetGetPermsymGraph(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSGETPERMSYMGRAPH((*consgetpermsymgraph)) /**< constraint permutation symmetry detection graph
+                                                          *   getter method */
+   );
+
 /*
  * Constraint set change methods
  */
@@ -877,6 +884,21 @@ SCIP_RETCODE SCIPconsGetNVars(
    int*                  nvars,              /**< pointer to store the number of variables */
    SCIP_Bool*            success             /**< pointer to store whether the constraint successfully returned the number of variables */
    );
+
+/** method to collect the permutation symmetry detection graph of a constraint
+ *
+ *  @note The success pointer indicates if the contraint handler was able to return the graph
+ *
+ *  @note It might be that a constraint handler does not support this functionality, in that case the success pointer is
+ *        set to FALSE
+ */
+SCIP_RETCODE SCIPconsGetPermsymGraph(
+   SCIP_CONS*            cons,               /**< constraint to print */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SYM_GRAPH**           graph,              /**< pointer to the symmetry detection graph */
+   SCIP_Bool*            success             /**< pointer to store whether the constraint successfully returned the number of variables */
+   );
+
 
 /** globally removes constraint from all subproblems; removes constraint from the constraint set change data of the
  *  node, where it was created, or from the problem, if it was a problem constraint

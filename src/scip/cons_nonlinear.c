@@ -10600,6 +10600,20 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsNonlinear)
 #define consGetDiveBdChgsNonlinear NULL
 #endif
 
+/** constraint handler method which returns the permutation symmetry detection graph of a constraint (if possible) */
+#ifdef SCIP_DISABLED_CODE
+static
+SCIP_DECL_CONSGETDIVEBDCHGS(consGetPermsymGraphNonlinear)
+{  /*lint --e{715}*/
+   SCIPerrorMessage("method of nonlinear constraint handler not implemented yet\n");
+   SCIPABORT(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+#else
+#define consGetPermsymGraphNonlinear NULL
+#endif
+
 /** output method of statistics table to output file stream 'file' */
 static
 SCIP_DECL_TABLEOUTPUT(tableOutputNonlinear)
@@ -10732,7 +10746,7 @@ SCIP_RETCODE SCIPincludeConshdlrNonlinear(
          consActiveNonlinear, consDeactiveNonlinear,
          consEnableNonlinear, consDisableNonlinear, consDelvarsNonlinear,
          consPrintNonlinear, consCopyNonlinear, consParseNonlinear,
-         consGetVarsNonlinear, consGetNVarsNonlinear, consGetDiveBdChgsNonlinear, conshdlrdata) );
+         consGetVarsNonlinear, consGetNVarsNonlinear, consGetDiveBdChgsNonlinear, consGetPermsymGraphNonlinear, conshdlrdata) );
 
    /* add nonlinear constraint handler parameters */
    /* TODO organize into more subcategories */

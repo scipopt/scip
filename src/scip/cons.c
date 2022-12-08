@@ -4545,6 +4545,18 @@ void SCIPconshdlrSetGetDiveBdChgs(
    conshdlr->consgetdivebdchgs = consgetdivebdchgs;
 }
 
+/** sets permutation symmetry detection graph getter method of constraint handler */
+void SCIPconshdlrSetGetPermsymGraph(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSGETPERMSYMGRAPH((*consgetpermsymgraph)) /**< constraint permutation symmetry detection graph
+                                                          *   getter method */
+   )
+{
+   assert(conshdlr != NULL);
+
+   conshdlr->consgetpermsymgraph = consgetpermsymgraph;
+}
+
 /** gets array with constraints of constraint handler; the first SCIPconshdlrGetNActiveConss() entries are the active
  *  constraints, the last SCIPconshdlrGetNConss() - SCIPconshdlrGetNActiveConss() constraints are deactivated
  *
@@ -6345,6 +6357,42 @@ SCIP_RETCODE SCIPconsGetNVars(
    else
    {
       (*nvars) = 0;
+      (*success) = FALSE;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** method to collect the permutation symmetry detection graph of a constraint
+ *
+ *  @note The success pointer indicates if the contraint handler was able to return the graph
+ *
+ *  @note It might be that a constraint handler does not support this functionality, in that case the success pointer is
+ *        set to FALSE
+ */
+SCIP_RETCODE SCIPconsGetPermsymGraph(
+   SCIP_CONS*            cons,               /**< constraint to print */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SYM_GRAPH**           graph,              /**< pointer to the symmetry detection graph */
+   SCIP_Bool*            success             /**< pointer to store whether the constraint successfully returned the number of variables */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+
+   assert(cons != NULL);
+   assert(set != NULL);
+   assert(cons->scip == set->scip);
+
+   conshdlr = cons->conshdlr;
+   assert(conshdlr != NULL);
+
+   if( conshdlr->consgetpermsymgraph != NULL )
+   {
+      SCIP_CALL( conshdlr->consgetpermsymgraph(set->scip, conshdlr, cons, graph, success) );
+   }
+   else
+   {
+      graph = NULL;
       (*success) = FALSE;
    }
 

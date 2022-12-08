@@ -25,6 +25,7 @@
 /**@file   type_symmetry.h
  * @brief  type definitions for symmetry computations
  * @author Marc Pfetsch
+ * @author Christopher Hojny
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -135,6 +136,9 @@ typedef struct SYM_Rhstype SYM_RHSTYPE;      /**< data of constraint sides that 
 typedef struct SYM_Matrixdata SYM_MATRIXDATA;/**< data for symmetry group computation on linear constraints */
 typedef struct SYM_Reflsymdata SYM_REFLSYMDATA ;/**< data for reflection symmetry group computation */
 typedef struct SYM_Exprdata SYM_EXPRDATA;    /**< data for symmetry group computation on nonlinear constraints */
+typedef struct SYM_Consinfo SYM_CONSINFO;    /**< information about a constraint used in symmetry computation */
+typedef struct SYM_Node SYM_NODE;            /**< data to encode a node of a symmetry detection graph */
+typedef struct SYM_Edge SYM_EDGE;            /**< data to encode an edge of a symmetry detection graph */
 
 /** selection rules for leaders in SST cuts */
 enum SCIP_LeaderRule
@@ -181,7 +185,6 @@ enum SCIP_RecomputesymType
    SCIP_RECOMPUTESYM_OFFOUNDRED    = 2        /**< only if orbital fixing found a reduction in previous run */
 };
 typedef enum SCIP_RecomputesymType SCIP_RECOMPUTESYMTYPE;
-
 
 #ifdef __cplusplus
 }

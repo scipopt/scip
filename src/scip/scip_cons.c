@@ -31,6 +31,7 @@
  * @author Leona Gottwald
  * @author Stefan Heinz
  * @author Gregor Hendel
+ * @author Christopher Hojny
  * @author Thorsten Koch
  * @author Alexander Martin
  * @author Marc Pfetsch
@@ -128,6 +129,8 @@ SCIP_RETCODE SCIPincludeConshdlr(
    SCIP_DECL_CONSGETVARS ((*consgetvars)),   /**< constraint get variables method */
    SCIP_DECL_CONSGETNVARS((*consgetnvars)),  /**< constraint get number of variable method */
    SCIP_DECL_CONSGETDIVEBDCHGS((*consgetdivebdchgs)), /**< constraint handler diving solution enforcement method */
+   SCIP_DECL_CONSGETPERMSYMGRAPH((*consgetpermsymgraph)), /**< constraint permutation symmetry detection graph
+                                                           *   getter method */
    SCIP_CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */
    )
 {
@@ -881,6 +884,36 @@ SCIP_RETCODE SCIPsetConshdlrGetDiveBdChgs(
 
    return SCIP_OKAY;
 }
+
+/** sets permutation symmetry detection graph getter method of constraint handler
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_RETCODE SCIPsetConshdlrGetPermsymGraph(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSGETPERMSYMGRAPH((*consgetpermsymgraph)) /**< constraint permutation symmetry detection graph
+                                                          *   getter method */
+   )
+{
+   assert(scip != NULL);
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPsetConshdlrGetPermsymGraph", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPconshdlrSetGetPermsymGraph(conshdlr, consgetpermsymgraph);
+
+   return SCIP_OKAY;
+}
+
 /** returns the constraint handler of the given name, or NULL if not existing */
 /** returns the constraint handler of the given name, or NULL if not existing */
 SCIP_CONSHDLR* SCIPfindConshdlr(
@@ -2579,6 +2612,39 @@ SCIP_RETCODE SCIPgetConsNVars(
    assert(success != NULL);
 
    SCIP_CALL( SCIPconsGetNVars(cons, scip->set, nvars, success) );
+
+   return SCIP_OKAY;
+}
+
+/** method to get the permutation symmetry detection graph of a constraint
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_RETCODE SCIPgetConsPermsymGraph(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint for which the number of variables is wanted */
+   SYM_GRAPH**           graph,              /**< pointer to the symmetry detection graph */
+   SCIP_Bool*            success             /**< pointer to store whether the constraint successfully returned the number of graph */
+   )
+{
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPgetConsGetPermsymGraph", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(graph != NULL);
+   assert(success != NULL);
+
+   SCIP_CALL( SCIPconsGetPermsymGraph(cons, scip->set, graph, success) );
 
    return SCIP_OKAY;
 }
