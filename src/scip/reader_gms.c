@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -1293,10 +1302,6 @@ SCIP_RETCODE SCIPincludeReaderGms(
 
    /* add gms reader parameters for writing routines*/
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "reading/gmsreader/freeints", "have integer variables no upper bound by default (depending on GAMS version)?",
-         NULL, FALSE, FALSE, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam(scip,
          "reading/gmsreader/replaceforbiddenchars", "shall characters '#', '*', '+', '/', and '-' in variable and constraint names be replaced by '_'?",
          NULL, FALSE, FALSE, NULL, NULL) );
 
@@ -1361,7 +1366,6 @@ SCIP_RETCODE SCIPwriteGms(
    SCIP_VAR* objvar;
    SCIP_Real lb;
    SCIP_Real ub;
-   SCIP_Bool freeints;
    SCIP_Bool nondefbounds;
    SCIP_Bool nlcons = FALSE;  /* whether there are nonlinear constraints */
    SCIP_Bool nqcons = TRUE;   /* whether nonlinear constraints are at most quadratic */
@@ -1496,7 +1500,6 @@ SCIP_RETCODE SCIPwriteGms(
 
    /* print variable bounds */
    SCIPinfoMessage(scip, file, "* Variable bounds\n");
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/gmsreader/freeints", &freeints) );
    nondefbounds = FALSE;
 
    for( v = 0; v < nvars; ++v )
@@ -1535,15 +1538,13 @@ SCIP_RETCODE SCIPwriteGms(
       /* lower bound */
       if( v < nbinvars + nintvars )
       {
-         /* default lower bound of binaries and integers is 0 (also in recent gams versions if pf4=0 is given) */
+         /* default lower bound of binaries and integers is 0 */
          if( !SCIPisZero(scip, lb) )
          {
             if( !SCIPisInfinity(scip, -lb) )
                SCIPinfoMessage(scip, file, " %s.lo = %g;\n", varname, SCIPceil(scip, lb));
-            else if( freeints )
-               SCIPinfoMessage(scip, file, " %s.lo = -inf;\n", varname); /* -inf is allowed when running gams with pf4=0, which we assume if freeints is TRUE */
             else
-               SCIPinfoMessage(scip, file, " %s.lo = %g;\n", varname, -SCIPinfinity(scip)); /* sorry, -inf not allowed in gams file here */
+               SCIPinfoMessage(scip, file, " %s.lo = -inf;\n", varname);
             nondefbounds = TRUE;
          }
       }
@@ -1557,40 +1558,35 @@ SCIP_RETCODE SCIPwriteGms(
       /* upper bound */
       if( v < nbinvars )
       {
+         /* binary variables have default upper bound 1.0 */
          if( !SCIPisFeasEQ(scip, ub, 1.0) )
          {
             SCIPinfoMessage(scip, file, " %s.up = %g;\n", varname, SCIPfeasFloor(scip, ub));
             nondefbounds = TRUE;
          }
       }
-      else if( v < nbinvars + nintvars && !freeints )
+      else if( v < nbinvars + nintvars )
       {
-         /* freeints == FALSE: integer variables have upper bound 100 by default */
-         if( !SCIPisFeasEQ(scip, ub, 100.0) )
+         /* integer variables have default upper bound +inf */
+         if( !SCIPisInfinity(scip, ub) )
          {
-            if( !SCIPisInfinity(scip, ub) )
-               SCIPinfoMessage(scip, file, " %s.up = %g;\n", varname, SCIPfeasFloor(scip, ub));
-            else
-               SCIPinfoMessage(scip, file, " %s.up = +inf;\n", varname);
+            SCIPinfoMessage(scip, file, " %s.up = %g;\n", varname, SCIPfeasFloor(scip, ub));
             nondefbounds = TRUE;
          }
       }
-      else if( v < nbinvars + nintvars && !SCIPisInfinity(scip, ub) )
+      else
       {
-         /* freeints == TRUE: integer variables have no upper bound by default */
-         SCIPinfoMessage(scip, file, " %s.up = %g;\n", varname, SCIPfloor(scip, ub));
-         nondefbounds = TRUE;
-      }
-      else if( v >= nbinvars + nintvars && !SCIPisInfinity(scip, ub) )
-      {
-         /* continuous variables are free by default */
-         SCIPinfoMessage(scip, file, " %s.up = %.15g;\n", varname, ub);
-         nondefbounds = TRUE;
+         /* continuous variables have default upper bound +inf */
+         if( !SCIPisInfinity(scip, ub) )
+         {
+            SCIPinfoMessage(scip, file, " %s.up = %.15g;\n", varname, ub);
+            nondefbounds = TRUE;
+         }
       }
    }
 
    if( !nondefbounds )
-      SCIPinfoMessage(scip, file, "* (All other bounds at default value: binary [0,1], integer [%s], continuous [-inf,+inf].)\n", freeints ? "0,+inf" : "0,100");
+      SCIPinfoMessage(scip, file, "* (All other bounds at default value: binary [0,1], integer [0,+inf], continuous [-inf,+inf].)\n");
    SCIPinfoMessage(scip, file, "\n");
 
    /* print equations section */
@@ -1828,7 +1824,9 @@ SCIP_RETCODE SCIPwriteGms(
 
    /* set some options to reduce listing file size */
    SCIPinfoMessage(scip, file, "option limrow = 0;\n");
-   SCIPinfoMessage(scip, file, "option limcol = 0;\n\n");
+   SCIPinfoMessage(scip, file, "option limcol = 0;\n");
+   /* if GAMS >= 24.2, then set option to ensure default upper bound on integer vars is inf (since 32.1 this is also the default) */
+   SCIPinfoMessage(scip, file, "$if gamsversion 242 option intvarup = 0;\n\n");
 
    /* print solve command */
    (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%s%s",

@@ -17,10 +17,8 @@ Applications
 | `Coloring`        | `coloring`        | `coloring`        |
 | `CycleClustering` | `cycleclustering` | `cycleclustering` |
 | `MinIISC`         | `miniisc`         | `miniisc`         |
-| `PolySCIP`        | `polyscip`        | `polyscip`        |
 | `Ringpacking`     | `ringpacking`     | `ringpacking`     |
 | `Scheduler`       | `scheduler`       | `scheduler`       |
-| `STP`             | `scipstp`         | `stp`             |
 
 Examples
 | Folder            | cmake target      | make target       |

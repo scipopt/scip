@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -95,7 +104,7 @@
  *
  * \verbinclude output.log
  *
- * @version  8.0.1.3
+ * @version  8.0.2.4
  *
  * \image html scippy.png
  */
@@ -176,7 +185,8 @@
  * @subsection GETTINGSTARTED_BLACKBOX_WHY Why SCIP?
  *
  * Charlotte lectures at a university and she wants her students to get in touch with solving constraint integer programs (CIPs).
- * She would like to use SCIP for this purpose because its \ref LICENSE "license" allows free use for academic, non-commercial purposes.
+ * She would like to use SCIP for this purpose because it allows the students to look at the full source code
+ * and SCIP comes with a permissive open source \ref LICENSE "license".
  * Also, her advisor told her that there are various \ref INTERFACES "interfaces" to SCIP.
  *
  * @subsection GETTINGSTARTED_BLACKBOX_PROBLEMS What Kinds Of Problems?
@@ -332,6 +342,7 @@
  * - @subpage OBJ     "Creating, capturing, releasing, and adding data objects"
  * - @subpage MEMORY  "Using the memory functions of SCIP"
  * - @subpage DEBUG   "Debugging"
+ * - @subpage STAGES  "SCIP stages"
  */
 /**@page HOWTOADD How to add ...
  *
@@ -991,14 +1002,6 @@
  *  A solver for scheduling problems.
  *  </td>
  *  </tr>
- *  <tr>
- *  <td>
- *  @subpage STP_MAIN
- *  </td>
- *  <td>
- *  A solver for Steiner Tree Problems in graphs, based on a branch-and-cut approach.
- *  </td>
- *  </tr>
  *  </table>
  *
  */
@@ -1159,7 +1162,7 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-/**@page DOC How to search the documentation for interface methods
+/**@page DOC How to search the documentation and source files structure for public interface methods
  *
  * If you are looking for a method in order to perform a specific task, the public \ref PUBLICAPI "SCIP C-API" is the place to look.
  * - It contains interface methods for all SCIP structs, both in the solver core or in one of the plugins.
@@ -2240,9 +2243,8 @@
  * @subsection PRICERFREE
  *
  * If you are using pricer data, you have to implement this method in order to free the pricer data.
- * This can be done by the following procedure:
- *
- * @refsnippet{applications/STP/src/pricer_stp.c,SnippetPricerFreeSTP}
+ * This can be done by the procedure described in stp/src/pricer_stp.c,
+ * see https://scipjack.zib.de/.
  *
  * If you have allocated memory for fields in your pricer data, remember to free this memory
  * before freeing the pricer data itself.
@@ -4747,6 +4749,13 @@
  *
  * For the quotient nonlinear handler, the estimators are computed as follows:
  * @refsnippet{src/scip/nlhdlr_quotient.c,SnippetNlhdlrEstimateQuotient}
+ *
+ * @subsection NLHDLRSOLLINEARIZE
+ *
+ * This callback is called by the constraint handler when it has caught a solution event from SCIP and option constraints/nonlinear/linearizeheursol has been enabled.
+ * The constraint handler then calls the nonlinear handlers for all expressions they currently handle.
+ * The nonlinear handler may use this opportunity to add a cut that supports its nonlinear function in the given solution to the cutpool.
+ * For convex functions, this may help to accellerate proving optimality for a solution found by a NLP solver.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -7737,6 +7746,32 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+/**@page STAGES SCIP stages
+ *
+ * The SCIP object goes through different stages during the solving process, the transitions from one to the next are presented in the following diagram.
+ * \image html stages.png
+ * More exhaustively, the stages are:
+ * \code
+ * SCIP_STAGE_INIT         =  0,        /**< SCIP data structures are initialized, no problem exists
+ * SCIP_STAGE_PROBLEM      =  1,        /**< the problem is being created and modified
+ * SCIP_STAGE_TRANSFORMING =  2,        /**< the problem is being transformed into solving data space
+ * SCIP_STAGE_TRANSFORMED  =  3,        /**< the problem was transformed into solving data space
+ * SCIP_STAGE_INITPRESOLVE =  4,        /**< presolving is initialized
+ * SCIP_STAGE_PRESOLVING   =  5,        /**< the problem is being presolved
+ * SCIP_STAGE_EXITPRESOLVE =  6,        /**< presolving is exited
+ * SCIP_STAGE_PRESOLVED    =  7,        /**< the problem was presolved
+ * SCIP_STAGE_INITSOLVE    =  8,        /**< the solving process data is being initialized
+ * SCIP_STAGE_SOLVING      =  9,        /**< the problem is being solved
+ * SCIP_STAGE_SOLVED       = 10,        /**< the problem was solved
+ * SCIP_STAGE_EXITSOLVE    = 11,        /**< the solving process data is being freed
+ * SCIP_STAGE_FREETRANS    = 12,        /**< the transformed problem is being freed
+ * SCIP_STAGE_FREE         = 13         /**< SCIP data structures are being freed
+ * \endcode
+ * Most functions can be called in a subset of the stages, this is then documented, a runtime check is often added and will throw a \ref SCIP_INVALIDCALL if the stage is not allowed.
+ */
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
 /**@page TEST How to run automated tests with SCIP
  *
  *  SCIP comes along with a set of useful tools that allow to perform automated tests. The
@@ -8245,7 +8280,7 @@
 
 /**@page LICENSE License
  *
- * \verbinclude COPYING
+ * \verbinclude LICENSE
  */
 
 /**@page FAQ Frequently Asked Questions (FAQ)
