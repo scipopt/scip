@@ -31,7 +31,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 // #define SCIP_STATISTIC
-// #define SCIP_DEBUG
+#define SCIP_DEBUG
 
 #include "lpi/lpi.h"
 #include "scip/conflict_resolution.h"
@@ -1822,6 +1822,41 @@ void resolutionsetPrintRow(
       }
       SCIPsetDebugMsgPrint(set, ">= %f \n", resolutionset->lhs);
 }
+
+/** prints all bound changes in the queue in debug mode
+ */
+static
+void printBoundChanges(
+   SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   SCIP_BDCHGINFO* bdchginfo;
+   SCIP_VAR* var;
+   int i;
+
+   assert(conflict != NULL);
+
+      for( i = 0; i < SCIPpqueueNElems(conflict->resbdchgqueue); ++i )
+      {
+         bdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueElems(conflict->resbdchgqueue)[i]);
+         var = bdchginfo->var;
+         SCIPsetDebugMsg(set, " -> Bound change %d: <%s> %s %.15g [status:%d, type:%d, depth:%d, pos:%d, reason:<%s>, info:%d] \n",
+      i, SCIPvarGetName(var),
+      SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
+      SCIPbdchginfoGetNewbound(bdchginfo),
+      SCIPvarGetStatus(var), SCIPvarGetType(var),
+      SCIPbdchginfoGetDepth(bdchginfo), SCIPbdchginfoGetPos(bdchginfo),
+      SCIPbdchginfoGetChgtype(bdchginfo) == SCIP_BOUNDCHGTYPE_BRANCHING ? "branch"
+      : (SCIPbdchginfoGetChgtype(bdchginfo) == SCIP_BOUNDCHGTYPE_CONSINFER
+         ? SCIPconsGetName(SCIPbdchginfoGetInferCons(bdchginfo))
+         : (SCIPbdchginfoGetInferProp(bdchginfo) != NULL ? SCIPpropGetName(SCIPbdchginfoGetInferProp(bdchginfo))
+            : "none")),
+      SCIPbdchginfoGetChgtype(bdchginfo) != SCIP_BOUNDCHGTYPE_BRANCHING ? SCIPbdchginfoGetInferInfo(bdchginfo) : -1);
+
+      }
+}
+
 #endif
 
 /** analyzes conflicting bound changes that were added with calls to SCIPconflictAddBound() and
@@ -1944,18 +1979,20 @@ SCIP_RETCODE conflictAnalyzeResolution(
    /* check if the variable we are resolving is active */
    assert(SCIPvarIsActive(vartoresolve));
 
-SCIPsetDebugMsg(set, " -> First bound change to resolve <%s> %s %.15g [status:%d, type:%d, depth:%d, pos:%d, reason:<%s>, info:%d] \n",
-   SCIPvarGetName(vartoresolve),
-   SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
-   SCIPbdchginfoGetNewbound(bdchginfo),
-   SCIPvarGetStatus(vartoresolve), SCIPvarGetType(vartoresolve),
-   SCIPbdchginfoGetDepth(bdchginfo), SCIPbdchginfoGetPos(bdchginfo),
-   SCIPbdchginfoGetChgtype(bdchginfo) == SCIP_BOUNDCHGTYPE_BRANCHING ? "branch"
-   : (SCIPbdchginfoGetChgtype(bdchginfo) == SCIP_BOUNDCHGTYPE_CONSINFER
-      ? SCIPconsGetName(SCIPbdchginfoGetInferCons(bdchginfo))
-      : (SCIPbdchginfoGetInferProp(bdchginfo) != NULL ? SCIPpropGetName(SCIPbdchginfoGetInferProp(bdchginfo))
-         : "none")),
-   SCIPbdchginfoGetChgtype(bdchginfo) != SCIP_BOUNDCHGTYPE_BRANCHING ? SCIPbdchginfoGetInferInfo(bdchginfo) : -1);
+   printBoundChanges(conflict, set);
+
+   SCIPsetDebugMsg(set, " -> First bound change to resolve <%s> %s %.15g [status:%d, type:%d, depth:%d, pos:%d, reason:<%s>, info:%d] \n",
+      SCIPvarGetName(vartoresolve),
+      SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
+      SCIPbdchginfoGetNewbound(bdchginfo),
+      SCIPvarGetStatus(vartoresolve), SCIPvarGetType(vartoresolve),
+      SCIPbdchginfoGetDepth(bdchginfo), SCIPbdchginfoGetPos(bdchginfo),
+      SCIPbdchginfoGetChgtype(bdchginfo) == SCIP_BOUNDCHGTYPE_BRANCHING ? "branch"
+      : (SCIPbdchginfoGetChgtype(bdchginfo) == SCIP_BOUNDCHGTYPE_CONSINFER
+         ? SCIPconsGetName(SCIPbdchginfoGetInferCons(bdchginfo))
+         : (SCIPbdchginfoGetInferProp(bdchginfo) != NULL ? SCIPpropGetName(SCIPbdchginfoGetInferProp(bdchginfo))
+            : "none")),
+      SCIPbdchginfoGetChgtype(bdchginfo) != SCIP_BOUNDCHGTYPE_BRANCHING ? SCIPbdchginfoGetInferInfo(bdchginfo) : -1);
 
 
    /* if the bound change was not infered by a constraint then conflict analysis is not applicable */
@@ -2287,6 +2324,7 @@ SCIP_RETCODE SCIPconflictAnalyzeResolution(
    SCIP_ROW*             initialconflictrow, /**< row of constraint that detected the conflict */
    int                   validdepth,         /**< minimal depth level at which the initial conflict set is valid */
    SCIP_Bool             infeasibleLP,       /**< does the conflict originate from an infeasible LP? */
+   SCIP_Bool             pseudoobj,          /**< does the conflict originate from a violated pseudo objective bound? */
    SCIP_Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
    )
 {

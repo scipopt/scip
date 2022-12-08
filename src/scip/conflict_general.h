@@ -121,6 +121,7 @@ SCIP_RETCODE SCIPconflictAnalyzeResolution(
    SCIP_ROW*             initialconflictrow, /**< row of constraint that detected the conflict */
    int                   validdepth,         /**< minimal depth level at which the initial conflict set is valid */
    SCIP_Bool             infeasibleLP,       /**< does the conflict originate from an infeasible LP? */
+   SCIP_Bool             pseudoobj,          /**< does the conflict originate from a violated pseudo objective bound? */
    SCIP_Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
    );
 

@@ -1747,6 +1747,7 @@ SCIP_RETCODE SCIPconflictAnalyzePseudo(
 {
    SCIP_VAR** vars;
    SCIP_VAR* var;
+   SCIP_ROW* initialrow;
    SCIP_Real* curvarlbs;
    SCIP_Real* curvarubs;
    int* lbchginfoposs;
@@ -1816,6 +1817,13 @@ SCIP_RETCODE SCIPconflictAnalyzePseudo(
     */
    pseudolhs = -(lp->cutoffbound - SCIPsetSumepsilon(set));
 
+   initialrow = NULL;
+   if( set->conf_applyrespseudoobj )
+   {
+      SCIP_CALL( SCIProwCreate(&initialrow, blkmem, set, stat, "pseudoobj", 0, NULL, NULL, pseudolhs, SCIPsetInfinity(set), \
+            SCIP_ROWORIGINTYPE_UNSPEC, NULL, FALSE, FALSE, TRUE) );
+   }
+
    /* store the objective values as infeasibility proof coefficients, and recalculate the pseudo activity */
    pseudoact = 0.0;
    for( v = 0; v < nvars; ++v )
@@ -1831,6 +1839,11 @@ SCIP_RETCODE SCIPconflictAnalyzePseudo(
       {
          pseudocoefs[v] = 0.0;
          continue;
+      }
+
+      if( set->conf_applyrespseudoobj )
+      {
+         SCIPvarAddToRow(var, blkmem, set, stat, eventqueue, transprob, lp, initialrow, pseudocoefs[v]);
       }
 
       if( pseudocoefs[v] > 0.0 )
@@ -1863,6 +1876,12 @@ SCIP_RETCODE SCIPconflictAnalyzePseudo(
       conflict->npseudoreconvliterals += nreconvliterals;
       if( success != NULL )
          *success = (nconss > 0);
+
+      if( set->conf_applyrespseudoobj )
+      {
+         SCIP_CALL( SCIPconflictAnalyzeResolution(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp, \
+               branchcand, eventqueue, cliquetable, initialrow, 0, FALSE, TRUE, success) );
+      }
    }
 
    /* free temporary memory */
@@ -1871,6 +1890,12 @@ SCIP_RETCODE SCIPconflictAnalyzePseudo(
    SCIPsetFreeBufferArray(set, &lbchginfoposs);
    SCIPsetFreeBufferArray(set, &curvarubs);
    SCIPsetFreeBufferArray(set, &curvarlbs);
+
+   if( set->conf_applyrespseudoobj )
+   {
+      SCIP_CALL( SCIProwRelease(&initialrow, blkmem, set, lp) );
+      assert(!initialrow);
+   }
 
    /* flush conflict set storage */
    SCIP_CALL( SCIPconflictFlushConss(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue, cliquetable) );
@@ -2271,7 +2296,7 @@ SCIP_RETCODE conflictAnalyzeLP(
       if( set->conf_applyresdualproof )
       {
          SCIP_CALL( SCIPconflictAnalyzeResolution(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp, \
-               branchcand, eventqueue, cliquetable, initialrow, validdepth, TRUE, &success) );
+               branchcand, eventqueue, cliquetable, initialrow, validdepth, TRUE, FALSE, &success) );
 
          SCIP_CALL( SCIProwRelease(&initialrow, blkmem, set, lp) );
          assert(!initialrow);
