@@ -35,6 +35,7 @@
 #include "scip/scip.h"
 #include "scip/misc.h"
 #include "scip/cons_setppc.h"
+#include <symmetry/struct_symmetry.h>
 #include <symmetry/type_symmetry.h>
 
 
@@ -1363,6 +1364,223 @@ SCIP_RETCODE SCIPisPackingPartitioningOrbitope(
    SCIPfreeCleanBufferArray(scip, &rowcoveragesetppc);
    SCIPfreeBufferArray(scip, &rowidxvar);
    SCIPfreeBufferArray(scip, &covered);
+
+   return SCIP_OKAY;
+}
+
+/** Transforms given variables, scalars, and constant to the corresponding active variables, scalars, and constant.
+ *
+ *  @note @p constant needs to be initialized!
+ */
+SCIP_RETCODE SCIPgetActiveVariables(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR***           vars,               /**< pointer to vars array to get active variables for */
+   SCIP_Real**           scalars,            /**< pointer to scalars a_1, ..., a_n in linear sum a_1*x_1 + ... + a_n*x_n + c */
+   int*                  nvars,              /**< pointer to number of variables and values in vars and vals array */
+   SCIP_Real*            constant,           /**< pointer to constant c in linear sum a_1*x_1 + ... + a_n*x_n + c */
+   SCIP_Bool             transformed         /**< transformed constraint? */
+   )
+{
+   int requiredsize;
+   int v;
+
+   assert( scip != NULL );
+   assert( vars != NULL );
+   assert( scalars != NULL );
+   assert( *vars != NULL );
+   assert( *scalars != NULL );
+   assert( nvars != NULL );
+   assert( constant != NULL );
+
+   if ( transformed )
+   {
+      SCIP_CALL( SCIPgetProbvarLinearSum(scip, *vars, *scalars, nvars, *nvars, constant, &requiredsize, TRUE) );
+
+      if ( requiredsize > *nvars )
+      {
+         SCIP_CALL( SCIPreallocBufferArray(scip, vars, requiredsize) );
+         SCIP_CALL( SCIPreallocBufferArray(scip, scalars, requiredsize) );
+
+         SCIP_CALL( SCIPgetProbvarLinearSum(scip, *vars, *scalars, nvars, requiredsize, constant, &requiredsize, TRUE) );
+         assert( requiredsize <= *nvars );
+      }
+   }
+   else
+   {
+      for (v = 0; v < *nvars; ++v)
+      {
+         SCIP_CALL( SCIPvarGetOrigvarSum(&(*vars)[v], &(*scalars)[v], constant) );
+      }
+   }
+   return SCIP_OKAY;
+}
+
+/** creates a node of a symmetry detection graph */
+SCIP_RETCODE SCIPcreateSymgraphNode(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SYM_GRAPH*            symgraph,           /**< symmetry detection graph */
+   int                   id,                 /**< ID of the node (needs to be unique in graph) */
+   SYM_NODETYPE          nodetype,           /**< type of the node */
+   SCIP_EXPRHDLR*        op,                 /**< operator encoded by the node
+                                              *   (if nodetype is SYM_NODETYPE_OPERATOR) */
+   int                   varidx,             /**< index of variable encoded by the node
+                                              *   (if nodetype is SYM_NODETYPE_VAR) */
+   SCIP_Real             value,              /**< index of value encoded by the node
+                                              *   (if nodetype is SYM_NODETYPE_VAL) */
+   SCIP_Bool             hasinfo,            /**< whether the node encodes information about a constraint */
+   SCIP_Real             lhs,                /**< left-hand side of constraint */
+   SCIP_Real             rhs,                /**< right-hand side of constraint */
+   SCIP_CONSHDLR*        conshdlr            /**< pointer to constraint handler of constraint */
+   )
+{
+   SYM_NODE** node;
+
+   assert(scip != NULL);
+   assert(symgraph != NULL);
+   assert(nodetype != SYM_NODETYPE_OPERATOR || op != NULL);
+   assert(nodetype != SYM_NODETYPE_VAR || varidx >= 0);
+   assert(nodetype != SYM_NODETYPE_VAL || !(SCIPisInfinity(scip, value) || SCIPisInfinity(scip, -value)));
+   assert(nodetype != SYM_NODETYPE_RHS || hasinfo);
+   assert(!hasinfo || conshdlr != NULL);
+
+   /* possibly reallocate memory */
+   if( symgraph->nnodes == symgraph->maxnnodes )
+   {
+      int newsize;
+
+      newsize = SCIPcalcMemGrowSize(scip, symgraph->nnodes + 1);
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(symgraph->nodes), symgraph->nnodes, newsize) );
+      symgraph->maxnnodes = newsize;
+   }
+
+   /* store node information */
+   SCIP_CALL( SCIPallocBlockMemory(scip, &(symgraph->nodes[symgraph->nnodes])) );
+   node = &(symgraph->nodes[symgraph->nnodes++]);
+
+   (*node)->id = id;
+   (*node)->nodetype = nodetype;
+   (*node)->op = op;
+   (*node)->varidx = varidx;
+   (*node)->value = value;
+   (*node)->hasinfo = hasinfo;
+
+   if( hasinfo )
+   {
+      SCIP_CALL( SCIPallocBlockMemory(scip, &((*node)->consinfo)) );
+
+      (*node)->consinfo->lhs = lhs;
+      (*node)->consinfo->rhs = rhs;
+      (*node)->consinfo->conshdlr = conshdlr;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** creates an edge of a symmetry detection graph */
+SCIP_RETCODE SCIPcreateSymgraphEdge(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SYM_GRAPH*            symgraph,           /**< pointer to symmetry detection graph */
+   SYM_NODE*             first,              /**< first node of an edge */
+   SYM_NODE*             second,             /**< second node of an edge */
+   SCIP_Bool             iscolored,          /**< whether the edge is colored */
+   SCIP_Real             color               /**< color of the edge (if it is colored) */
+   )
+{
+   SYM_EDGE** edge;
+
+   assert(scip != NULL);
+   assert(symgraph != NULL);
+   assert(first != NULL);
+   assert(second != NULL);
+   assert(!iscolored || !(SCIPisInfinity(scip, color) || SCIPisInfinity(scip, -color)));
+
+   /* possibly reallocate memory */
+   if( symgraph->nedges == symgraph->maxnedges )
+   {
+      int newsize;
+
+      newsize = SCIPcalcMemGrowSize(scip, symgraph->nedges + 1);
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(symgraph->edges), symgraph->nedges, newsize) );
+      symgraph->maxnedges = newsize;
+   }
+
+   /* store node information */
+   SCIP_CALL( SCIPallocBlockMemory(scip, &(symgraph->edges[symgraph->nedges])) );
+   edge = &(symgraph->edges[symgraph->nedges++]);
+
+   (*edge)->first = first;
+   (*edge)->second = second;
+   (*edge)->iscolored = iscolored;
+   (*edge)->color = color;
+
+   return SCIP_OKAY;
+}
+
+/** creates a symmetry detection graph */
+SCIP_RETCODE SCIPcreateSymgraph(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SYM_GRAPH**           graph,              /**< pointer to hold symmetry detection graph */
+   int                   nvars               /**< number of variables corresponding to graph */
+   )
+{
+   assert(scip != NULL);
+   assert(graph != NULL);
+
+   SCIP_CALL( SCIPallocBlockMemory(scip, graph) );
+
+   /* initialize graph (seems to cover many [linear] cases) */
+   (*graph)->nnodes = 0;
+   (*graph)->maxnnodes = nvars + 1;
+   (*graph)->nedges = 0;
+   (*graph)->maxnedges = nvars;
+
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &((*graph)->nodes), (*graph)->maxnnodes) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &((*graph)->edges), (*graph)->maxnedges) );
+
+   return SCIP_OKAY;
+}
+
+/** creates permutation symmetry detection graph for linear constraints */
+SCIP_RETCODE SCIPcreatePermsymDetectionGraphLinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SYM_GRAPH**           graph,              /**< pointer to hold symmetry detection graph */
+   SCIP_VAR**            vars,               /**< variable array of linear constraint */
+   SCIP_Real*            vals,               /**< coefficients of linear constraint */
+   int                   nvars,              /**< number of variables in linear constraint */
+   SCIP_Real             lhs,                /**< left-hand side of linear constraint */
+   SCIP_Real             rhs,                /**< right-hand side of linear constraint */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler of corresponding constraint */
+   SCIP_Bool*            success             /**< pointer to store whether graph could be built */
+   )
+{
+   int i;
+
+   assert(scip != NULL);
+   assert(graph != NULL);
+   assert(vars != NULL);
+   assert(vals != NULL);
+   assert(nvars >= 0);
+   assert(success != NULL);
+
+   *success = TRUE;
+
+   SCIP_CALL( SCIPcreateSymgraph(scip, graph, nvars) );
+
+   /* create nodes for each variable */
+   for( i = 0; i < nvars; ++i )
+   {
+      SCIP_CALL( SCIPcreateSymgraphNode(scip, *graph, i, SYM_NODETYPE_VAR, NULL, SCIPvarGetProbindex(vars[i]),
+            0.0, FALSE, 0.0, 0.0, NULL) );
+   }
+
+   /* create node corresponding to right-hand side */
+   SCIP_CALL( SCIPcreateSymgraphNode(scip, *graph, nvars, SYM_NODETYPE_RHS, NULL, -1, 0.0, TRUE, lhs, rhs, conshdlr) );
+
+   /* create edges */
+   for( i = 0; i < nvars; ++i )
+   {
+      SCIP_CALL( SCIPcreateSymgraphEdge(scip, *graph, (*graph)->nodes[i], (*graph)->nodes[nvars-1], TRUE, vals[i]) );
+   }
 
    return SCIP_OKAY;
 }

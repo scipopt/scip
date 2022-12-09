@@ -71,7 +71,8 @@ enum SYM_Nodetype
    SYM_NODETYPE_OPERATOR = 0,                /**< operator node */
    SYM_NODETYPE_VAR      = 1,                /**< variable node */
    SYM_NODETYPE_COEF     = 2,                /**< coefficient node */
-   SYM_NODETYPE_VAL      = 3                 /**< numerical value node */
+   SYM_NODETYPE_VAL      = 3,                /**< numerical value node */
+   SYM_NODETYPE_RHS      = 4                 /**< rhs node */
 };
 typedef enum SYM_Nodetype SYM_NODETYPE;
 

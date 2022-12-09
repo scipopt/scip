@@ -256,6 +256,85 @@ SCIP_RETCODE SCIPisPackingPartitioningOrbitope(
    SCIP_ORBITOPETYPE*    type                /**< pointer to store type of orbitope constraint after strengthening */
    );
 
+/** Transforms given variables, scalars, and constant to the corresponding active variables, scalars, and constant.
+ *
+ *  @note @p constant needs to be initialized!
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPgetActiveVariables(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR***           vars,               /**< pointer to vars array to get active variables for */
+   SCIP_Real**           scalars,            /**< pointer to scalars a_1, ..., a_n in linear sum a_1*x_1 + ... + a_n*x_n + c */
+   int*                  nvars,              /**< pointer to number of variables and values in vars and vals array */
+   SCIP_Real*            constant,           /**< pointer to constant c in linear sum a_1*x_1 + ... + a_n*x_n + c */
+   SCIP_Bool             transformed         /**< transformed constraint? */
+   );
+
+/** creates a node of a symmetry detection graph
+ *
+ *  @note at some point, the node needs to be freed!
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcreateSymgraphNode(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SYM_GRAPH*            symgraph,           /**< symmetry detection graph */
+   int                   id,                 /**< ID of the node (needs to be unique in graph) */
+   SYM_NODETYPE          nodetype,           /**< type of the node */
+   SCIP_EXPRHDLR*        op,                 /**< operator encoded by the node
+                                              *   (if nodetype is SYM_NODETYPE_OPERATOR) */
+   int                   varidx,             /**< index of variable encoded by the node
+                                              *   (if nodetype is SYM_NODETYPE_VAR) */
+   SCIP_Real             value,              /**< index of value encoded by the node
+                                              *   (if nodetype is SYM_NODETYPE_VAL) */
+   SCIP_Bool             hasinfo,            /**< whether the node encodes information about a constraint */
+   SCIP_Real             lhs,                /**< left-hand side of constraint */
+   SCIP_Real             rhs,                /**< right-hand side of constraint */
+   SCIP_CONSHDLR*        conshdlr            /**< pointer to constraint handler of constraint */
+   );
+
+/** creates an edge of a symmetry detection graph
+ *
+ *  @note at some point, the edge needs to be freed!
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcreateSymgraphEdge(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SYM_GRAPH*            symgraph,           /**< symmetry detection graph */
+   SYM_NODE*             first,              /**< first node of an edge */
+   SYM_NODE*             second,             /**< second node of an edge */
+   SCIP_Bool             iscolored,          /**< whether the edge is colored */
+   SCIP_Real             color               /**< color of the edge (if it is colored) */
+   );
+
+/** creates a symmetry detection graph
+ *
+ *  @note at some point, the graph needs to be freed!
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcreateSymgraph(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SYM_GRAPH**           symgraph,           /**< pointer to hold symmetry detection graph */
+   int                   nvars               /**< number of variables corresponding to graph */
+   );
+
+/** creates permutation symmetry detection graph for linear constraints
+ *
+ *  @note at some point, the graph needs to be freed!
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcreatePermsymDetectionGraphLinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SYM_GRAPH**           graph,              /**< pointer to hold symmetry detection graph */
+   SCIP_VAR**            vars,               /**< variable array of linear constraint */
+   SCIP_Real*            vals,               /**< coefficients of linear constraint */
+   int                   nvars,              /**< number of variables in linear constraint */
+   SCIP_Real             lhs,                /**< left-hand side of linear constraint */
+   SCIP_Real             rhs,                /**< right-hand side of linear constraint */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler of corresponding constraint */
+   SCIP_Bool*            success             /**< pointer to store whether graph could be built */
+   );
+
+
 /** @} */
 
 #ifdef __cplusplus
