@@ -60,6 +60,8 @@
 #include "scip/scip_sol.h"
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_var.h"
+#include "scip/symmetry.h"
+#include "symmetry/struct_symmetry.h"
 #include <ctype.h>
 #include <string.h>
 
@@ -8867,6 +8869,60 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsSetppc)
    return SCIP_OKAY;
 }
 
+/** constraint handler method which returns the permutation symmetry detection graph of a constraint */
+static
+SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphSetppc)
+{  /*lint --e{715}*/
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR** vars;
+   SCIP_Real* vals;
+   SCIP_Real constant = 0.0;
+   SCIP_Real lhs;
+   SCIP_Real rhs;
+   int nlocvars;
+   int nvars;
+   int i;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* get active variables of the constraint */
+   nvars = SCIPgetNVars(scip);
+   nlocvars = consdata->nvars;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vals, nvars) );
+
+   for( i = 0; i < consdata->nvars; ++i )
+      vars[i] = consdata->vars[i];
+   for( i = 0; i < consdata->nvars; ++i )
+      vals[i] = 1.0;
+
+   SCIP_CALL( SCIPgetActiveVariables(scip, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
+
+   lhs = -SCIPinfinity(scip);
+   rhs = SCIPinfinity(scip);
+   if ( consdata->setppctype == SCIP_SETPPCTYPE_PACKING )
+      rhs = 1.0 - constant;
+   else if ( consdata->setppctype == SCIP_SETPPCTYPE_COVERING )
+      lhs = 1.0 - constant;
+   else
+   {
+      assert(consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING);
+
+      rhs = 1.0 - constant;
+      lhs = 1.0 - constant;
+   }
+
+   SCIP_CALL( SCIPcreatePermsymDetectionGraphLinear(scip, graph, vars, vals, nlocvars,
+         lhs, rhs, SCIPfindConshdlr(scip, CONSHDLR_NAME), success) );
+
+   SCIPfreeBufferArray(scip, &vals);
+   SCIPfreeBufferArray(scip, &vars);
+
+   return SCIP_OKAY;
+}
+
 /*
  * Callback methods of event handler
  */
@@ -9147,6 +9203,7 @@ SCIP_RETCODE SCIPincludeConshdlrSetppc(
          CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransSetppc) );
    SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxSetppc) );
+   SCIP_CALL( SCIPsetConshdlrGetPermsymGraph(scip, conshdlr, consGetPermsymGraphSetppc) );
 
    conshdlrdata->conshdlrlinear = SCIPfindConshdlr(scip,"linear");
 

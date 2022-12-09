@@ -65,6 +65,8 @@
 #include "scip/scip_sol.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
+#include "scip/symmetry.h"
+#include "symmetry/struct_symmetry.h"
 #include <string.h>
 
 
@@ -2016,6 +2018,50 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsOr)
    return SCIP_OKAY;
 }
 
+/** constraint handler method which returns the permutation symmetry detection graph of a constraint */
+static
+SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphOr)
+{  /*lint --e{715}*/
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR** tmpvars;
+   SCIP_VAR** vars;
+   SCIP_Real* vals;
+   SCIP_Real constant = 0.0;
+   int nlocvars;
+   int nvars;
+   int i;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* get active variables of the constraint */
+   nvars = SCIPgetNVars(scip);
+   nlocvars = SCIPgetNVarsOr(scip, cons);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vals, nvars) );
+
+   tmpvars = SCIPgetVarsOr(scip, cons);
+   for( i = 0; i < consdata->nvars; ++i )
+      vars[i] = tmpvars[i];
+   for( i = 0; i < consdata->nvars; ++i )
+      vals[i] = 1.0;
+
+   assert(SCIPgetResultantOr(scip, cons) != NULL);
+   vars[nlocvars] = SCIPgetResultantOr(scip, cons);
+   vals[nlocvars++] = 2.0;
+   assert(nlocvars <= nvars);
+
+   SCIP_CALL( SCIPgetActiveVariables(scip, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
+
+   SCIP_CALL( SCIPcreatePermsymDetectionGraphLinear(scip, graph, vars, vals, nlocvars,
+         -constant, -constant, SCIPfindConshdlr(scip, CONSHDLR_NAME), success) );
+
+   SCIPfreeBufferArray(scip, &vals);
+   SCIPfreeBufferArray(scip, &vars);
+
+   return SCIP_OKAY;
+}
 
 /*
  * Callback methods of event handler
@@ -2088,6 +2134,7 @@ SCIP_RETCODE SCIPincludeConshdlrOr(
          CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransOr) );
    SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxOr) );
+   SCIP_CALL( SCIPsetConshdlrGetPermsymGraph(scip, conshdlr, consGetPermsymGraphOr) );
 
    return SCIP_OKAY;
 }

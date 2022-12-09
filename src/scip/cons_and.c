@@ -76,6 +76,8 @@
 #include "scip/scip_sol.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
+#include "scip/symmetry.h"
+#include "symmetry/struct_symmetry.h"
 #include <string.h>
 
 
@@ -4906,6 +4908,50 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsAnd)
    return SCIP_OKAY;
 }
 
+/** constraint handler method which returns the permutation symmetry detection graph of a constraint */
+static
+SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphAnd)
+{  /*lint --e{715}*/
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR** tmpvars;
+   SCIP_VAR** vars;
+   SCIP_Real* vals;
+   SCIP_Real constant = 0.0;
+   int nlocvars;
+   int nvars;
+   int i;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* get active variables of the constraint */
+   nvars = SCIPgetNVars(scip);
+   nlocvars = SCIPgetNVarsAnd(scip, cons);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vals, nvars) );
+
+   tmpvars = SCIPgetVarsAnd(scip, cons);
+   for( i = 0; i < consdata->nvars; ++i )
+      vars[i] = tmpvars[i];
+   for( i = 0; i < consdata->nvars; ++i )
+      vals[i] = 1.0;
+
+   assert(SCIPgetResultantAnd(scip, cons) != NULL);
+   vars[nlocvars] = SCIPgetResultantAnd(scip, cons);
+   vals[nlocvars++] = 2.0;
+   assert(nlocvars <= nvars);
+
+   SCIP_CALL( SCIPgetActiveVariables(scip, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
+
+   SCIP_CALL( SCIPcreatePermsymDetectionGraphLinear(scip, graph, vars, vals, nlocvars,
+         -constant, -constant, SCIPfindConshdlr(scip, CONSHDLR_NAME), success) );
+
+   SCIPfreeBufferArray(scip, &vals);
+   SCIPfreeBufferArray(scip, &vars);
+
+   return SCIP_OKAY;
+}
 
 /*
  * Callback methods of event handler
@@ -4986,6 +5032,7 @@ SCIP_RETCODE SCIPincludeConshdlrAnd(
          CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransAnd) );
    SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxAnd) );
+   SCIP_CALL( SCIPsetConshdlrGetPermsymGraph(scip, conshdlr, consGetPermsymGraphAnd) );
 
    /* add AND-constraint handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
