@@ -891,13 +891,8 @@ SCIP_RETCODE SCIPsetConshdlrGetDiveBdChgs(
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_TRANSFORMED
- *       - \ref SCIP_STAGE_INITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVING
- *       - \ref SCIP_STAGE_EXITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
  */
 SCIP_RETCODE SCIPsetConshdlrGetPermsymGraph(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -907,7 +902,7 @@ SCIP_RETCODE SCIPsetConshdlrGetPermsymGraph(
    )
 {
    assert(scip != NULL);
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPsetConshdlrGetPermsymGraph", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPsetConshdlrGetPermsymGraph", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIPconshdlrSetGetPermsymGraph(conshdlr, consgetpermsymgraph);
 
