@@ -31,7 +31,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 // #define SCIP_STATISTIC
-#define SCIP_DEBUG
+// #define SCIP_DEBUG
 
 #include "lpi/lpi.h"
 #include "scip/conflict_resolution.h"
@@ -1116,6 +1116,8 @@ SCIP_RETCODE computecMIRfromResolutionSet(
          }
       }
 
+      cutefficacy = 0.0;
+
       /* apply flow cover */
       SCIP_CALL( SCIPcalcFlowCover(set->scip, refsol, POSTPROCESS, BOUNDSWITCH, ALLOWLOCAL, aggrrow, \
             cutcoefs, cutrhs, cutinds, cutnnz, &cutefficacy, NULL, &islocal, &cutsuccess) );
@@ -1126,9 +1128,18 @@ SCIP_RETCODE computecMIRfromResolutionSet(
          conflict->nresflowcover += 1;
 
       /* apply MIR */
-   SCIP_CALL( SCIPcutGenerationHeuristicCMIR(set->scip, refsol, POSTPROCESS, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, TRUE,  \
-         INT_MAX, NULL, NULL, MINFRAC, MAXFRAC, aggrrow, cutcoefs, cutrhs, cutinds, cutnnz, &cutefficacy, NULL, \
-         &islocal, &cutsuccess) );
+      if( set->conf_applycmir )
+      {
+         SCIP_CALL( SCIPcutGenerationHeuristicCMIR(set->scip, refsol, POSTPROCESS, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, TRUE,  \
+            INT_MAX, NULL, NULL, MINFRAC, MAXFRAC, aggrrow, cutcoefs, cutrhs, cutinds, cutnnz, &cutefficacy, NULL, \
+            &islocal, &cutsuccess) );
+      }
+      else if( set->conf_applysimplemir )
+      {
+         SCIP_CALL( SCIPcalcMIR(set->scip, refsol, POSTPROCESS, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, \
+            FALSE, NULL, NULL, MINFRAC, MAXFRAC, 1.0, aggrrow, cutcoefs, cutrhs, cutinds, cutnnz, &cutefficacy, NULL, \
+            &islocal, &cutsuccess) );
+      }
 
       conflict->nresmircalls += 1;
       if( cutsuccess )
@@ -1979,7 +1990,11 @@ SCIP_RETCODE conflictAnalyzeResolution(
    /* check if the variable we are resolving is active */
    assert(SCIPvarIsActive(vartoresolve));
 
+#ifdef SCIP_DEBUG
+{
    printBoundChanges(conflict, set);
+}
+#endif
 
    SCIPsetDebugMsg(set, " -> First bound change to resolve <%s> %s %.15g [status:%d, type:%d, depth:%d, pos:%d, reason:<%s>, info:%d] \n",
       SCIPvarGetName(vartoresolve),
@@ -2041,7 +2056,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
 
    nressteps = 0;
 
-   if( set->conf_applycmir )
+   if( set->conf_applycmir || set->conf_applysimplemir)
    {
       SCIP_CALL( SCIPsetAllocBufferArray(set, &cutcoefs, SCIPprobGetNVars(transprob)) );
       SCIP_CALL( SCIPsetAllocBufferArray(set, &cutinds, SCIPprobGetNVars(transprob)) );
@@ -2167,7 +2182,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
          {
             SCIP_RESOLUTIONSET* tmpconflictresolutionset;
             /* Apply cmir after each iteration to strengthen the conflict constraint */
-            if(set->conf_applycmir)
+            if( set->conf_applycmir || set->conf_applysimplemir)
             {
                int cutnnz;
                SCIP_Real cutrhs;
@@ -2291,7 +2306,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
       }
    }
 
-   if ( set->conf_applycmir )
+   if( set->conf_applycmir || set->conf_applysimplemir)
    {
       SCIPsetFreeBufferArray(set, &cutinds);
       SCIPsetFreeBufferArray(set, &cutcoefs);

@@ -169,6 +169,7 @@
 #define SCIP_DEFAULT_CONF_WEAKENCONFLICT  FALSE /**< should the conflict constraint be weakened? */
 #define SCIP_DEFAULT_CONF_WEAKENREASON    FALSE /**< should the reason constraint be weakened? */
 #define SCIP_DEFAULT_CONF_WEAKENREASONALL FALSE /**< should all variables at bounds in the reason constraint be weakened at once? */
+#define SCIP_DEFAULT_CONF_APPLYSIMPLEMIR  FALSE /**<  should we apply mir with scaling 1.0 to strengthen the conflict constraints? */
 #define SCIP_DEFAULT_CONF_APPLYCMIR       FALSE /**< should we apply cmir to strengthen the conflict constraints? */
 #define SCIP_DEFAULT_CONF_RESDUALPROOF    FALSE /**< should we apply resolution initiated with the dual proof? */
 #define SCIP_DEFAULT_CONF_RESPSEUDOOBJ    FALSE /**< should we apply resolution initiated with the violated pseudo-objective? */
@@ -1511,6 +1512,11 @@ SCIP_RETCODE SCIPsetCreate(
       "conflict/weakenreasonall",
       "should all variables at bounds in the reason be weakened at once?",
       &(*set)->conf_weakenreasonall, TRUE, SCIP_DEFAULT_CONF_WEAKENREASONALL,
+      NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+      "conflict/applysimplemir",
+      " should we apply mir with scaling 1.0 to strengthen the conflict constraints?",
+      &(*set)->conf_applysimplemir, TRUE, SCIP_DEFAULT_CONF_APPLYSIMPLEMIR,
       NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
       "conflict/applycmir",
