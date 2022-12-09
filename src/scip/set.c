@@ -114,6 +114,7 @@
 #define SCIP_DEFAULT_CONF_USEPSEUDO        TRUE /**< should pseudo solution conflict analysis be used? */
 #define SCIP_DEFAULT_CONF_PREFINFPROOF     TRUE /**< prefer infeasibility proof to boundexceeding proof */
 #define SCIP_DEFAULT_CONF_SEPARATE         TRUE /**< should the conflict constraints be separated? */
+#define SCIP_DEFAULT_CONF_SEPARESOLUTION  FALSE /**< should the resolution conflict constraints be separated? */
 #define SCIP_DEFAULT_CONF_DYNAMIC          TRUE /**< should the conflict constraints be subject to aging? */
 
 
@@ -1487,6 +1488,11 @@ SCIP_RETCODE SCIPsetCreate(
          "conflict/separate",
          "should the conflict constraints be separated?",
          &(*set)->conf_separate, TRUE, SCIP_DEFAULT_CONF_SEPARATE,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "conflict/separesolution",
+         "should the resolutionconflict constraints be separated?",
+         &(*set)->conf_separesolution, TRUE, SCIP_DEFAULT_CONF_SEPARESOLUTION,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "conflict/dynamic",
