@@ -39,6 +39,8 @@ Miscellaneous
 -------------
 
 - Changed license to Apache 2.0, see https://www.apache.org/licenses/LICENSE-2.0.
+- enabled the solution limit checks in SCIPsolveIsStopped in solve.c when in SCIP_STAGE_PRESOLVING
+- extended documentation of the parameter limits/solutions to point out that the limit is first checked in presolving
 
 Known bugs
 ----------
