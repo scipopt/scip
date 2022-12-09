@@ -494,7 +494,6 @@ SCIP_DECL_EVENTEXEC(eventExecIndicatorBound)
       if ( ! SCIPisFeasPositive(scip, oldbound) && SCIPisFeasPositive(scip, newbound) )
       {
          ++(consdata->nfixednonzero);
-         conshdlrdata->boundhaschanged = TRUE;
 #ifdef SCIP_MORE_DEBUG
          SCIPdebugMsg(scip, "Changed lower bound of variable <%s> from %g to %g (nfixednonzero: %d).\n",
             SCIPvarGetName(SCIPeventGetVar(event)), oldbound, newbound, consdata->nfixednonzero);
@@ -507,7 +506,6 @@ SCIP_DECL_EVENTEXEC(eventExecIndicatorBound)
       if ( ! SCIPisFeasNegative(scip, oldbound) && SCIPisFeasNegative(scip, newbound) )
       {
          ++(consdata->nfixednonzero);
-         conshdlrdata->boundhaschanged = TRUE;
 #ifdef SCIP_MORE_DEBUG
          SCIPdebugMsg(scip, "Changed upper bound of variable <%s> from %g to %g (nfixednonzero: %d).\n",
             SCIPvarGetName(SCIPeventGetVar(event)), oldbound, newbound, consdata->nfixednonzero);
@@ -520,7 +518,6 @@ SCIP_DECL_EVENTEXEC(eventExecIndicatorBound)
       if ( SCIPisFeasPositive(scip, oldbound) && ! SCIPisFeasPositive(scip, newbound) )
       {
          --(consdata->nfixednonzero);
-         conshdlrdata->boundhaschanged = TRUE;
 #ifdef SCIP_MORE_DEBUG
          SCIPdebugMsg(scip, "Changed lower bound of variable <%s> from %g to %g (nfixednonzero: %d).\n",
             SCIPvarGetName(SCIPeventGetVar(event)), oldbound, newbound, consdata->nfixednonzero);
@@ -533,7 +530,6 @@ SCIP_DECL_EVENTEXEC(eventExecIndicatorBound)
       if ( SCIPisFeasNegative(scip, oldbound) && ! SCIPisFeasNegative(scip, newbound) )
       {
          --(consdata->nfixednonzero);
-         conshdlrdata->boundhaschanged = TRUE;
 #ifdef SCIP_MORE_DEBUG
          SCIPdebugMsg(scip, "Changed upper bound of variable <%s> from %g to %g (nfixednonzero: %d).\n",
             SCIPvarGetName(SCIPeventGetVar(event)), oldbound, newbound, consdata->nfixednonzero);
@@ -547,6 +543,9 @@ SCIP_DECL_EVENTEXEC(eventExecIndicatorBound)
       return SCIP_INVALIDDATA; /*lint !e527*/
    }
    assert( 0 <= consdata->nfixednonzero && consdata->nfixednonzero <= 2 );
+
+   /* mark that some variable has changed */
+   conshdlrdata->boundhaschanged = TRUE;
 
    return SCIP_OKAY;
 }
