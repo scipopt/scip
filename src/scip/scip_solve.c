@@ -1338,9 +1338,10 @@ SCIP_RETCODE presolve(
 
    *infeasible = FALSE;
    *unbounded = (*unbounded) || (SCIPgetNSols(scip) > 0 && SCIPisInfinity(scip, -SCIPgetSolOrigObj(scip, SCIPgetBestSol(scip))));
+   *vanished = scip->transprob->nvars == 0 && scip->transprob->nconss == 0 && scip->set->nactivepricers == 0;
 
    finished = (scip->set->presol_maxrounds != -1 && scip->stat->npresolrounds >= scip->set->presol_maxrounds)
-         || (*unbounded) || (scip->set->reopt_enable && scip->stat->nreoptruns >= 1);
+         || (*unbounded) || (*vanished) || (scip->set->reopt_enable && scip->stat->nreoptruns >= 1);
    stopped = SCIPsolveIsStopped(scip->set, scip->stat, TRUE);
 
    /* perform presolving rounds */
