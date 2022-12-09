@@ -106,7 +106,8 @@ enum SYM_Consoptype
    SYM_CONSOPTYPE_NONLINEAR = 14,            /**< constraint of type nonlinear */
    SYM_CONSOPTYPE_POWER    = 15,             /**< needed to distinguish power and signpower */
    SYM_CONSOPTYPE_SIGNPOWER = 16,            /**< needed to distinguish power and signpower */
-   SYM_CONSOPTYPE_BIPROD   = 17              /**< needed to indicate product of two variables */
+   SYM_CONSOPTYPE_BIPROD   = 17,             /**< needed to indicate product of two variables */
+   SYM_CONSOPTYPE_SUM      = 18              /**< needed to indicate sums if sum-expr undefined */
 };
 typedef enum SYM_Consoptype SYM_CONSOPTYPE;
 
