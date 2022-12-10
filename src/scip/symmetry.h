@@ -334,6 +334,19 @@ SCIP_RETCODE SCIPcreatePermsymDetectionGraphLinear(
    SCIP_Bool*            success             /**< pointer to store whether graph could be built */
    );
 
+/** adds nodes and edges corresponding to the aggregation of a variable to a symmetry detection graph */
+SCIP_EXPORT
+SCIP_RETCODE SCIPaddSymgraphVarAggegration(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SYM_GRAPH*            graph,              /**< symmetry detection graph */
+   int                   rootidx,            /**< index of root of the aggegration */
+   int*                  idx,                /**< pointer to store index of lastly added node
+                                              *   (initialized with index of first node to be added) */
+   SCIP_VAR**            vars,               /**< array of variables in aggregation */
+   SCIP_Real*            vals,               /**< coefficients of variables */
+   int                   nvars,              /**< number of variables in aggregation */
+   SCIP_Real             constant            /**< constant of aggregation */
+   );
 
 /** @} */
 

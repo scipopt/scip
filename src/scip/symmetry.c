@@ -1584,3 +1584,51 @@ SCIP_RETCODE SCIPcreatePermsymDetectionGraphLinear(
 
    return SCIP_OKAY;
 }
+
+/** adds nodes and edges corresponding to the aggregation of a variable to a symmetry detection graph */
+SCIP_RETCODE SCIPaddSymgraphVarAggegration(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SYM_GRAPH*            graph,              /**< symmetry detection graph */
+   int                   rootidx,            /**< index of root of the aggegration */
+   int*                  idx,                /**< pointer to store index of lastly added node
+                                              *   (initialized with index of first node to be added) */
+   SCIP_VAR**            vars,               /**< array of variables in aggregation */
+   SCIP_Real*            vals,               /**< coefficients of variables */
+   int                   nvars,              /**< number of variables in aggregation */
+   SCIP_Real             constant            /**< constant of aggregation */
+   )
+{
+   int j;
+
+   assert(scip != NULL);
+   assert(graph != NULL);
+   assert(rootidx >= 0);
+   assert(idx != NULL);
+   assert(vars != NULL);
+   assert(vals != NULL);
+   assert(nvars >= 0);
+
+   /* add nodes and edges for variables in aggregation */
+   for( j = 0; j < nvars; ++j )
+   {
+      SCIP_CALL( SCIPcreateSymgraphNode(scip, graph, *idx, SYM_NODETYPE_VAR,
+            NULL, SCIPvarGetProbindex(vars[j]), 0.0, FALSE, 0.0, 0.0, NULL) );
+
+      SCIP_CALL( SCIPcreateSymgraphEdge(scip, graph, graph->nodes[rootidx], graph->nodes[*idx],
+            TRUE, vals[j]) );
+      ++(*idx);
+   }
+
+   /* possibly add node for constant */
+   if( !SCIPisZero(scip, constant) )
+   {
+      SCIP_CALL( SCIPcreateSymgraphNode(scip, graph, *idx, SYM_NODETYPE_VAL,
+            NULL, -1.0, constant, FALSE, 0.0, 0.0, NULL) );
+
+      SCIP_CALL( SCIPcreateSymgraphEdge(scip, graph, graph->nodes[rootidx], graph->nodes[*idx],
+            FALSE, 0.0) );
+      ++(*idx);
+   }
+
+   return SCIP_OKAY;
+}
