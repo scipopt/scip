@@ -33,6 +33,7 @@
 #define __SCIP_OBJREADER_H__
 
 #include <cstring>
+#include <utility>
 
 #include "scip/scip.h"
 #include "objscip/objcloneable.h"
@@ -83,6 +84,17 @@ public:
       SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip_, &scip_extension_, extension, std::strlen(extension)+1) );
    }
 
+   /** copy constructor */
+   ObjReader(const ObjReader& o) : ObjReader(o.scip_, o.scip_name_, o.scip_desc_, o.scip_extension_) {}
+
+   /** move constructor */
+   ObjReader(ObjReader&& o) : scip_(o.scip_), scip_name_(0), scip_desc_(0), scip_extension_(0)
+   {
+      std::swap(scip_name_, o.scip_name_);
+      std::swap(scip_desc_, o.scip_desc_);
+      std::swap(scip_extension_, o.scip_extension_);
+   }
+
    /** destructor */
    virtual ~ObjReader()
    {
@@ -92,6 +104,12 @@ public:
       SCIPfreeMemoryArray(scip_, &scip_desc_);
       SCIPfreeMemoryArray(scip_, &scip_extension_);
    }
+
+   /** assignment of polymorphic classes causes slicing and is therefore disabled. */
+   ObjReader& operator=(const ObjReader& o) = delete;
+
+   /** assignment of polymorphic classes causes slicing and is therefore disabled. */
+   ObjReader& operator=(ObjReader&& o) = delete;
 
    /** destructor of file reader to free user data (called when SCIP is exiting)
     *

@@ -22,50 +22,46 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   objcloneable.h
- * @brief  definition of base class for all clonable classes
- * @author Michael Winkler
+/**@file   indicator-bugfix.c
+ * @brief  unit test for bugfix on indicator constraint presolving
+ * @author Mathieu Besançon
  */
 
-/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-
-#ifndef __SCIP_OBJCLONEABLE_H__
-#define __SCIP_OBJCLONEABLE_H__
-
-#include "scip/def.h"
 #include "scip/scip.h"
-#include "objscip/type_objcloneable.h"
+#include "include/scip_test.h"
+#include "scip/scipdefplugins.h"
 
+/** GLOBAL VARIABLES **/
+static SCIP* scip = NULL;
 
-namespace scip
+/* TEST SUITE */
+
+/** create SCIP instance */
+static
+void setup(void)
 {
-   /** @brief Definition of base class for all clonable classes
-    *
-    * All C++ wrapper object plugins should extend this class, except constraint handlers and variable pricers. This is
-    * needed to be able to copy (clone) a SCIP instance.
-    */
-   struct ObjCloneable
-   {
-      virtual ~ObjCloneable() {}
-
-      /** assignment of polymorphic classes causes slicing and is therefore disabled. */
-      ObjCloneable& operator=(const ObjCloneable& o) = delete;
-
-      /** assignment of polymorphic classes causes slicing and is therefore disabled. */
-      ObjCloneable& operator=(ObjCloneable&& o) = delete;
-
-      /** clone method, used to copy plugins which are not constraint handlers or variable pricer plugins */
-      virtual SCIP_DECL_OBJCLONEABLECLONE(ObjCloneable* clone)
-      {
-         return 0;
-      }
-
-      /** returns whether the plugin object is copyable */
-      virtual SCIP_DECL_OBJCLONEABLEISCLONEABLE(iscloneable)
-      {
-         return false;
-      }
-   };
+   SCIP_CALL( SCIPcreate(&scip) );
+   SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
+   SCIP_CALL( SCIPcreateProbBasic(scip, "indicator-bugcheck") );
 }
 
-#endif
+/** free SCIP instance */
+static
+void teardown(void)
+{
+   SCIPfree(&scip);
+}
+
+TestSuite(bugfixxor, .init = setup, .fini = teardown);
+
+/* TESTS  */
+Test(bugfixxor, demofix, .description = "test checking that a problem with indicator constraint is not unbounded")
+{
+   SCIP_CALL( SCIPreadProb(scip, "src/cons/superindicator/indicator-bugfix-instance.cip", NULL) );
+   SCIP_CALL( SCIPsolve(scip) );
+   cr_assert_geq(SCIPgetNSols(scip), 1);
+   SCIP_SOL* sol = SCIPgetBestSol(scip);
+   cr_assert(sol != NULL);
+   cr_assert_eq(SCIPgetStatus(scip), SCIP_STATUS_OPTIMAL);
+   cr_assert(EPSEQ(SCIPgetSolOrigObj(scip, sol), 28.75, SCIPfeastol(scip)));
+}

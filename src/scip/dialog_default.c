@@ -4461,7 +4461,7 @@ SCIP_RETCODE SCIPincludeDialogDefaultBasic(
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
 
-   /* display varbranchstatistics */
+   /* display lpsolquality */
    if( !SCIPdialogHasEntry(submenu, "lpsolquality") )
    {
       SCIP_CALL( SCIPincludeDialog(scip, &dialog,
