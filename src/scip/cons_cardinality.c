@@ -3117,7 +3117,6 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphCardinality)
    int nvars;
    int cnt;
    int i;
-   int j;
 
    sumexpr = (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_SUM;
 
@@ -3165,28 +3164,9 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphCardinality)
          SCIP_CALL( SCIPcreateSymgraphEdge(scip, *graph, (*graph)->nodes[0], (*graph)->nodes[cnt], hascolor, val) );
          ++cnt;
 
-         /* add nodes for variables in aggregation */
-         for( j = 0; j < nlocvars; ++j )
-         {
-            SCIP_CALL( SCIPcreateSymgraphNode(scip, *graph, cnt, SYM_NODETYPE_VAR,
-                  NULL, SCIPvarGetProbindex(vars[j]), 0.0, FALSE, 0.0, 0.0, NULL) );
-
-            hascolor = !SCIPisEQ(scip, vals[j], 1.0);
-            SCIP_CALL( SCIPcreateSymgraphEdge(scip, *graph, (*graph)->nodes[varrootid], (*graph)->nodes[cnt],
-                  hascolor, vals[j]) );
-            ++cnt;
-         }
-
-         /* possibly add node for constant */
-         if( !SCIPisZero(scip, constant) )
-         {
-            SCIP_CALL( SCIPcreateSymgraphNode(scip, *graph, cnt, SYM_NODETYPE_VAL,
-                  NULL, -1.0, constant, FALSE, 0.0, 0.0, NULL) );
-
-            SCIP_CALL( SCIPcreateSymgraphEdge(scip, *graph, (*graph)->nodes[varrootid], (*graph)->nodes[cnt],
-                  FALSE, 0.0) );
-            ++cnt;
-         }
+         /* add nodes and edges for variables in aggregation */
+         SCIP_CALL( SCIPaddSymgraphVarAggegration(scip, *graph, varrootid, &cnt, vars, vals, nlocvars, constant) );
+         assert((cnt == varrootid + nlocvars && SCIPisZero(scip, constant)) || cnt == varrootid + nlocvars + 1);
       }
       else
       {
