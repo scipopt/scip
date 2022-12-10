@@ -2924,7 +2924,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphBounddisjunction)
    bdexpr = (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_BDDISJ;
 
    /* create graph */
-   SCIP_CALL( SCIPcreateSymgraph(scip, graph, nconsvars) );
+   SCIP_CALL( SCIPcreateSymgraph(scip, graph, 3 * nconsvars) );
 
    /* add node initializing constraint (with artificial rhs) */
    SCIP_CALL( SCIPcreateSymgraphNode(scip, *graph, 0, SYM_NODETYPE_RHS, NULL, -1.0, 0.0, TRUE,
