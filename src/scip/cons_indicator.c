@@ -5784,7 +5784,7 @@ SCIP_DECL_CONSTRANS(consTransIndicator)
    /* check for linear constraint */
    if ( sourcedata->lincons == NULL )
    {
-      SCIPerrorMessage("The indicator constraint <%s> needs a linear constraint variable.\n", SCIPconsGetName(sourcecons));
+      SCIPerrorMessage("The indicator constraint <%s> needs a linear constraint.\n", SCIPconsGetName(sourcecons));
       return SCIP_INVALIDDATA;
    }
    assert( sourcedata->lincons != NULL );
@@ -5921,6 +5921,7 @@ SCIP_DECL_CONSPRESOL(consPresolIndicator)
    assert( result != NULL );
 
    *result = SCIP_DIDNOTRUN;
+
    /* get constraint handler data */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
@@ -6356,6 +6357,7 @@ SCIP_DECL_CONSCHECK(consCheckIndicator)
       {
          SCIP_Real absviol = REALABS(SCIPgetSolVal(scip, sol, consdata->slackvar));
          SCIP_Real relviol = SCIPrelDiff(absviol, 0.0);
+
          if( sol != NULL )
             SCIPupdateSolConsViolation(scip, sol, absviol, relviol);
 
@@ -6381,7 +6383,7 @@ SCIP_DECL_CONSCHECK(consCheckIndicator)
          {
             SCIPdebugMsg(scip, "Indicator constraint %s is not feasible.\n", SCIPconsGetName(conss[c]));
 
-            if( !completely )
+            if ( ! completely )
                return SCIP_OKAY;
          }
       }
@@ -7133,7 +7135,7 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsIndicator)
    assert( nvars != NULL );
    assert( success != NULL );
 
-   (*success) = TRUE;
+   *success = TRUE;
    *nvars = 0;
 
    /* if indicator constraint is already deleted */
@@ -7193,7 +7195,7 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsIndicator)
    for (c = 0; c < nindconss; ++c)
    {
       /* check whether constraint is violated */
-      if( SCIPisViolatedIndicator(scip, indconss[c], sol) )
+      if ( SCIPisViolatedIndicator(scip, indconss[c], sol) )
       {
          SCIP_VAR* binvar;
          SCIP_Real solval;
@@ -7202,7 +7204,7 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsIndicator)
          solval = SCIPgetSolVal(scip, sol, binvar);
 
          /* we only treat indicator variables with integral solution values that are not yet fixed */
-         if( SCIPisFeasIntegral(scip, solval) && SCIPvarGetLbLocal(binvar) < SCIPvarGetUbLocal(binvar) - 0.5 )
+         if ( SCIPisFeasIntegral(scip, solval) && SCIPvarGetLbLocal(binvar) < SCIPvarGetUbLocal(binvar) - 0.5 )
          {
             SCIP_Real score;
             SCIP_Bool roundup;
@@ -7211,7 +7213,7 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsIndicator)
                   &score, &roundup) );
 
             /* best candidate maximizes the score */
-            if( score > bestscore )
+            if ( score > bestscore )
             {
                bestscore = score;
                *success = TRUE;
@@ -7224,7 +7226,7 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsIndicator)
 
    assert(! *success || bestvar != NULL);
 
-   if( *success )
+   if ( *success )
    {
       /* if the diving score voted for fixing the best variable to 1.0, we add this as the preferred bound change */
       SCIP_CALL( SCIPaddDiveBoundChange(scip, bestvar, SCIP_BRANCHDIR_UPWARDS, 1.0, bestvarroundup) );
