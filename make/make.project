@@ -92,8 +92,12 @@ PYTHON  =   none
 EMPHBENCHMARK  =   true
 
 # set SCIP version here for external projects
-# use underscore to make it compatible with def.h
-SCIP_VERSION	=	8.0.2.4
+SCIP_VERSION_MAJOR = 8
+SCIP_VERSION_MINOR = 0
+SCIP_VERSION_PATCH = 2
+SCIP_VERSION_SUB = 4
+SCIP_VERSION_API = 108
+SCIP_VERSION = $(SCIP_VERSION_MAJOR).$(SCIP_VERSION_MINOR).$(SCIP_VERSION_PATCH).$(SCIP_VERSION_SUB)
 
 # compiling and linking parameters
 VERBOSE		=	false
@@ -212,7 +216,7 @@ LN_s		= 	ln -s
 LN_sf		=	ln -sf
 
 # initial compiler and linker flags
-FLAGS		=	-I$(SRCDIR) -DWITH_SCIPDEF -DFNAME_$(FORTRAN_NAMING_CONVENTION) -I$(SCIPDIR)/src
+FLAGS		=	-I$(SRCDIR) -DFNAME_$(FORTRAN_NAMING_CONVENTION) -I$(SCIPDIR)/src
 OFLAGS		=
 CFLAGS		=
 CXXFLAGS	=
@@ -282,6 +286,8 @@ INCLUDEDIR	=	include
 EXEEXTENSION	=
 ALLSRC		=
 
+# find scip/config.h in build dir
+FLAGS += -I$(SCIPDIR)/$(OBJDIR)/include
 
 #-----------------------------------------------------------------------------
 # include additional make files
@@ -329,24 +335,6 @@ CXXFLAGS	+=	$(USRCXXFLAGS)
 LDFLAGS		+=	$(USRLDFLAGS)
 ARFLAGS		+=	$(USRARFLAGS)
 
-# skip config header
-FLAGS		+=  -DNO_CONFIG_HEADER
-
-#-----------------------------------------------------------------------------
-# Memory Management
-#-----------------------------------------------------------------------------
-
-ifeq ($(NOBLKBUFMEM),true)
-	FLAGS		+=	-DBMS_NOBLOCKMEM -DSCIP_NOBUFFERMEM
-else
-  ifeq ($(NOBLKMEM),true)
-	FLAGS		+=	-DBMS_NOBLOCKMEM
-  endif
-  ifeq ($(NOBUFMEM),true)
-	FLAGS		+=	-DSCIP_NOBUFFERMEM
-  endif
-endif
-
 #-----------------------------------------------------------------------------
 # THREADSAFE
 #-----------------------------------------------------------------------------
@@ -356,7 +344,6 @@ ifeq ($(PARASCIP),true)
 endif
 
 ifeq ($(THREADSAFE),true)
-   FLAGS	+=	-DSCIP_THREADSAFE
    ifeq ($(FILTERSQP),true)
       LDFLAGS 	+=	$(LINKCC_l)pthread$(LINKLIBSUFFIX)
    endif
@@ -566,7 +553,7 @@ ZLIB		=	false
 endif
 
 ifeq ($(ZLIB),true)
-FLAGS		+=	-DSCIP_WITH_ZLIB $(ZLIB_FLAGS)
+FLAGS		+=	$(ZLIB_FLAGS)
 LDFLAGS		+=	$(ZLIB_LDFLAGS)
 endif
 
@@ -593,7 +580,7 @@ LPSLIBFILES	+=      $(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE)/libzimpl.$(OSTYPE).$
 endif
 
 ifeq ($(GMP),true)
-FLAGS		+=	-DSCIP_WITH_GMP $(GMP_FLAGS)
+FLAGS		+=	$(GMP_FLAGS)
 LDFLAGS		+=	$(GMP_LDFLAGS)
 endif
 
@@ -602,7 +589,7 @@ READLINE	=	false
 endif
 
 ifeq ($(READLINE),true)
-FLAGS		+=	-DSCIP_WITH_READLINE $(READLINE_FLAGS)
+FLAGS		+=	$(READLINE_FLAGS)
 LDFLAGS		+=	$(READLINE_LDFLAGS)
 endif
 
@@ -612,7 +599,6 @@ LAPACK		=	false
 endif
 
 ifeq ($(LAPACK),true)
-FLAGS		+=	-DSCIP_WITH_LAPACK
 LDFLAGS		+= 	$(LINKCXX_l)lapack$(LINKLIBSUFFIX)
 endif
 

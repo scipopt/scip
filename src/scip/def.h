@@ -48,10 +48,8 @@
 /*
  * include build configuration flags
  */
-#ifndef NO_CONFIG_HEADER
 #include "scip/config.h"
 #include "scip/scip_export.h"
-#endif
 
 /*
  * GNU COMPILER VERSION define
@@ -112,10 +110,10 @@
 #endif
 
 /*
- * Define the marco SCIP_EXPORT if it is not included from the generated header
+ * Define the macro SCIP_EXPORT if it is not included from the generated header
  */
 #ifndef SCIP_EXPORT
-#if defined(_WIN32) || defined(_WIN64)
+#if defined(_WIN32)
 #define SCIP_EXPORT __declspec(dllexport)
 #elif defined(__GNUC__) && __GNUC__ >= 4
 #define SCIP_EXPORT __attribute__((__visibility__("default")))
@@ -144,9 +142,9 @@ extern "C" {
 #endif
 
 
-#define SCIP_VERSION                802 /**< SCIP version number (multiplied by 100 to get integer number) */
-#define SCIP_SUBVERSION               4 /**< SCIP sub version number */
-#define SCIP_APIVERSION             108 /**< SCIP API version number */
+#define SCIP_VERSION     (100*SCIP_VERSION_MAJOR + 10*SCIP_VERSION_MINOR + SCIP_VERSION_PATCH) /**< SCIP version number (multiplied by 100 to get integer number) */
+#define SCIP_SUBVERSION  SCIP_VERSION_SUB  /**< SCIP sub version number */
+#define SCIP_APIVERSION  SCIP_VERSION_API  /**< SCIP API version number */
 #define SCIP_COPYRIGHT   "Copyright (C) 2002-2022 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
 
 
