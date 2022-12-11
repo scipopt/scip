@@ -3907,6 +3907,15 @@ SCIP_RETCODE propIndicator(
          /* remove constraint if we are not in probing */
          if ( ! SCIPinProbing(scip) )
          {
+            /* mark linear constraint to be update-able */
+            if ( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING && SCIPconsIsActive(consdata->lincons) )
+            {
+               SCIPconsAddUpgradeLocks(consdata->lincons, -1);
+               assert( SCIPconsGetNUpgradeLocks(consdata->lincons) == 0 );
+            }
+
+            /* delete constraint locally */
+            assert( ! SCIPconsIsModifiable(cons) );
             SCIP_CALL( SCIPdelConsLocal(scip, cons) );
          }
       }
