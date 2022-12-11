@@ -536,6 +536,12 @@ void SCIPconshdlrSetPresolTiming(
    SCIP_PRESOLTIMING     presoltiming        /** timing mask to be set */
    );
 
+/** returns whether conshdlr supports permutation symmetry detection */
+SCIP_EXPORT
+SCIP_Bool SCIPconshdlrSupportsPermsymDetection(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
 /** @} */
 
 /*

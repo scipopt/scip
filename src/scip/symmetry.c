@@ -1476,6 +1476,25 @@ SCIP_RETCODE SCIPcreateSymgraphNode(
    return SCIP_OKAY;
 }
 
+/** frees node of a symmetry detection graph */
+SCIP_RETCODE SCIPfreeSymgraphNode(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SYM_NODE**            node                /**< pointer to hold node */
+   )
+{
+   assert( scip != NULL );
+   assert( node != NULL );
+
+   if ( (*node)->hasinfo )
+   {
+      SCIPfreeBlockMemory(scip, &((*node)->consinfo));
+   }
+
+   SCIPfreeBlockMemory(scip, node);
+
+   return SCIP_OKAY;
+}
+
 /** creates an edge of a symmetry detection graph */
 SCIP_RETCODE SCIPcreateSymgraphEdge(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1516,6 +1535,20 @@ SCIP_RETCODE SCIPcreateSymgraphEdge(
    return SCIP_OKAY;
 }
 
+/** frees edge of a symmetry detection graph */
+SCIP_RETCODE SCIPfreeSymgraphEdge(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SYM_EDGE**            edge                /**< pointer to hold edge */
+   )
+{
+   assert( scip != NULL );
+   assert( edge != NULL );
+
+   SCIPfreeBlockMemory(scip, edge);
+
+   return SCIP_OKAY;
+}
+
 /** creates a symmetry detection graph */
 SCIP_RETCODE SCIPcreateSymgraph(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1536,6 +1569,36 @@ SCIP_RETCODE SCIPcreateSymgraph(
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &((*graph)->nodes), (*graph)->maxnnodes) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &((*graph)->edges), (*graph)->maxnedges) );
+
+   return SCIP_OKAY;
+}
+
+/** frees a symmetry detection graph */
+SCIP_RETCODE SCIPfreeSymgraph(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SYM_GRAPH**           graph               /**< pointer to hold symmetry detection graph */
+   )
+{
+   int i;
+
+   assert(scip != NULL);
+   assert(graph != NULL);
+
+   /* free edges */
+   for (i = 0; i < (*graph)->nedges; ++i)
+   {
+      SCIP_CALL( SCIPfreeSymgraphEdge(scip, &((*graph)->edges[i])) );
+   }
+   SCIPfreeBlockMemoryArrayNull(scip, &((*graph)->edges), (*graph)->maxnedges);
+
+   /* free nodes */
+   for (i = 0; i < (*graph)->nnodes; ++i)
+   {
+      SCIP_CALL( SCIPfreeSymgraphNode(scip, &((*graph)->nodes[i])) );
+   }
+   SCIPfreeBlockMemoryArrayNull(scip, &((*graph)->nodes), (*graph)->maxnnodes);
+
+   SCIPfreeBlockMemory(scip, graph);
 
    return SCIP_OKAY;
 }

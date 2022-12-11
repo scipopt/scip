@@ -5903,7 +5903,7 @@ SCIP_RETCODE computeReflectionSymmetryGroup(
 
    SCIPdebugMsg(scip, "Finished computing reflection symmetry group.\n");
 
-   SCIP_CALL( checkReflectionSymmetriesAreSymmetries(scip, fixedtype, &reflsymdata, *nperms, perms) );
+   /* SCIP_CALL( checkReflectionSymmetriesAreSymmetries(scip, fixedtype, &reflsymdata, *nperms, perms) ); */
 
    /* free memory */
  FREEMEMORY:
@@ -5945,6 +5945,172 @@ SCIP_RETCODE computeReflectionSymmetryGroup(
    return SCIP_OKAY;
 }
 
+/** returns whether all constraint handlers with constraints can provide permutation symmetry information */
+static
+SCIP_Bool conshdlrsCanProvidePermsymInformation(
+   SCIP*                 scip                /**< SCIP pointer */
+   )
+{
+   SCIP_CONSHDLR** conshdlrs;
+   SCIP_CONSHDLR* conshdlr;
+   int nconshdlrs;
+   int c;
+
+   conshdlrs = SCIPgetConshdlrs(scip);
+   assert( conshdlrs != NULL );
+
+   nconshdlrs = SCIPgetNConshdlrs(scip);
+   for (c = 0; c < nconshdlrs; ++c)
+   {
+      conshdlr = conshdlrs[c];
+      assert( conshdlr != NULL );
+
+      if ( !SCIPconshdlrSupportsPermsymDetection(conshdlr) && SCIPconshdlrGetNConss(conshdlr) > 0 )
+         return FALSE;
+   }
+
+   return TRUE;
+}
+
+#ifdef SCIP_DISABLED_CODE
+/** computes symmetry group of a CIP */
+static
+SCIP_RETCODE computeSymmetryGroup2(
+   SCIP*                 scip,               /**< SCIP pointer */
+   int                   maxgenerators,      /**< maximal number of generators constructed (= 0 if unlimited) */
+   SYM_SPEC              fixedtype,          /**< variable types that must be fixed by symmetries */
+   SCIP_Bool             checksymmetries,    /**< Should all symmetries be checked after computation? */
+   SCIP_Bool*            success             /**< pointer to store whether symmetry computation was successful */
+   )
+{
+   SCIP_CONS** conss;
+   SYM_GRAPH** graphs;
+   SYM_NODE** nodes;
+   SYM_EDGE** edges;
+   int* nodeperm;
+   int* edgeperm;
+   int* nodecolors;
+   int* edgecolors;
+   int nconss;
+   int c;
+   int i;
+   int pos;
+   int nnodes = 0;
+   int nedges = 0;
+   int curcolor = 0;
+
+   assert( scip != NULL );
+   assert( success != NULL );
+
+   *success = TRUE;
+
+   /* check whether all constraints can provide symmetry information */
+   if ( ! conshdlrsCanProvidePermsymInformation(scip) )
+   {
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+
+   /* get symmetry detection graphs from constraints */
+   conss = SCIPgetConss(scip);
+   assert( conss != NULL );
+
+   nconss = SCIPgetNConss(scip);
+   SCIP_CALL( SCIPallocBufferArray(scip, &graphs, nconss) );
+   for (c = 0; c < nconss && *success; ++c)
+   {
+      SCIP_CALL( SCIPgetConsPermsymGraph(scip, conss[c], &(graphs[c]), success) );
+
+      nnodes += graphs[c]->nnodes;
+      nedges += graphs[c]->nedges;
+   }
+
+   if ( ! *success )
+   {
+      int cc;
+
+      /* free already returned graphs */
+      for (cc = 0; cc < c; ++cc)
+      {
+         SCIP_CALL( SCIPfreeSymgraph(scip, &graphs[cc]) );
+      }
+
+      SCIPfreeBufferArray(scip, &graphs);
+
+      return SCIP_OKAY;
+   }
+
+   /*
+    * compute node colors
+    */
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodes, nnodes) );
+   for (c = 0, pos = 0; c < nconss; ++c)
+   {
+      for (i = 0; i < graphs[c]->nnodes; ++i, ++pos)
+         nodes[pos] = graphs[c]->nodes[i];
+   }
+
+   /* sort nodes to determine colors */
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodeperm, nnodes) );
+   SCIPsort(nodeperm, SYMsortNodes, nodes, nnodes);
+
+   /* assign colors */
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodecolors, nnodes) );
+   nodecolors[0] = curcolor;
+   for (i = 0; i < nnodes; ++i)
+   {
+      /* if a new node type has been found */
+      if ( compareNodes(nodes[nodeperm[i-1]], nodes[nodeperm[i]]) != 0 )
+         ++curcolor;
+      nodecolors[nodeperm[i]] = curcolor;
+   }
+
+   /*
+    * compute edge colors
+    */
+   SCIP_CALL( SCIPallocBufferArray(scip, &edges, nedges) );
+   for (c = 0, pos = 0; c < nconss; ++c)
+   {
+      for (i = 0; i < graphs[c]->nedges; ++i, ++pos)
+         edges[pos] = graphs[c]->edges[i];
+   }
+
+   /* sort edges to determine colors */
+   SCIP_CALL( SCIPallocBufferArray(scip, &edgeperm, nedges) );
+   SCIPsort(edgeperm, SYMsortEdges, edges, nedges);
+
+   /* assign colors */
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodecolors, nnodes) );
+   edgecolors[0] = -1;          /* uncolored edges get color -1 */
+   for (i = 0; i < nedges; ++i)
+   {
+      /* if a new edge type has been found */
+      if ( compareEdges(edges[edgeperm[i-1]], edges[edgeperm[i]]) != 0 )
+         edgecolors[edgeperm[i]] = ++curcolor;
+      else
+         edgecolors[edgeperm[i]] = edgecolors[edgeperm[i-1]];
+   }
+
+   /*
+    * actually compute symmetries
+    */
+
+   /* free symmetry graphs */
+   for (c = 0; c < nconss; ++c)
+   {
+      SCIP_CALL( SCIPfreeSymgraph(scip, &graphs[c]) );
+   }
+
+   SCIPfreeBufferArray(scip, &edgeperm);
+   SCIPfreeBufferArray(scip, &edges);
+   SCIPfreeBufferArray(scip, &nodecolors);
+   SCIPfreeBufferArray(scip, &nodeperm);
+   SCIPfreeBufferArray(scip, &nodes);
+   SCIPfreeBufferArray(scip, &graphs);
+
+   return SCIP_OKAY;
+}
+#endif
 
 /** computes symmetry group of a MIP */
 static
@@ -6034,12 +6200,12 @@ SCIP_RETCODE computeSymmetryGroup(
    nvarsorig = nvars;
 
    /* @todo remove this temporary function call, which is used for testing */
-   {
-      SCIP_Bool tmpsuccess;
-      int ntmpperms;
+   /* { */
+   /*    SCIP_Bool tmpsuccess; */
+   /*    int ntmpperms; */
 
-      SCIP_CALL( computeReflectionSymmetryGroup(scip, fixedtype, &ntmpperms, &tmpsuccess) );
-   }
+   /*    SCIP_CALL( computeReflectionSymmetryGroup(scip, fixedtype, &ntmpperms, &tmpsuccess) ); */
+   /* } */
 
    /* exit if no constraints or no variables are available */
    if ( nconss == 0 || nvars == 0 )
@@ -6967,6 +7133,20 @@ SCIP_RETCODE determineSymmetry(
          &propdata->npermvars, &propdata->nbinpermvars, &propdata->permvars, &propdata->nperms, &propdata->nmaxperms,
          &propdata->perms, &propdata->log10groupsize, &propdata->nmovedvars, &propdata->isnonlinvar,
          &propdata->binvaraffected, &propdata->compressed, &successful) );
+
+#ifdef SCIP_DISABLED_CODE
+   {
+      SCIP_Bool success;
+
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) new symmetry computation started\n",
+         SCIPgetSolvingTime(scip));
+
+      SCIP_CALL( computeSymmetryGroup2(scip, maxgenerators, symspecrequirefixed, propdata->checksymmetries, &success) );
+
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) new symmetry computation finished (success: %d)\n",
+         SCIPgetSolvingTime(scip), success);
+   }
+#endif
 
    /* mark that we have computed the symmetry group */
    propdata->computedsymmetry = TRUE;

@@ -5262,6 +5262,15 @@ void SCIPconshdlrSetPresolTiming(
    conshdlr->presoltiming = presoltiming;
 }
 
+/** returns whether conshdlr supports permutation symmetry detection */
+SCIP_Bool SCIPconshdlrSupportsPermsymDetection(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return conshdlr->consgetpermsymgraph != NULL;
+}
 
 /*
  * Constraint set change methods

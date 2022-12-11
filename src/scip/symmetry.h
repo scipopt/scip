@@ -292,6 +292,12 @@ SCIP_RETCODE SCIPcreateSymgraphNode(
    SCIP_CONSHDLR*        conshdlr            /**< pointer to constraint handler of constraint */
    );
 
+/** frees node of a symmetry detection graph */
+SCIP_RETCODE SCIPfreeSymgraphNode(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SYM_NODE**            node                /**< pointer to hold node */
+   );
+
 /** creates an edge of a symmetry detection graph
  *
  *  @note at some point, the edge needs to be freed!
@@ -306,6 +312,12 @@ SCIP_RETCODE SCIPcreateSymgraphEdge(
    SCIP_Real             color               /**< color of the edge (if it is colored) */
    );
 
+/** frees edge of a symmetry detection graph */
+SCIP_RETCODE SCIPfreeSymgraphEdge(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SYM_EDGE**            edge                /**< pointer to hold edge */
+   );
+
 /** creates a symmetry detection graph
  *
  *  @note at some point, the graph needs to be freed!
@@ -315,6 +327,12 @@ SCIP_RETCODE SCIPcreateSymgraph(
    SCIP*                 scip,               /**< SCIP data structure */
    SYM_GRAPH**           symgraph,           /**< pointer to hold symmetry detection graph */
    int                   nvars               /**< number of variables corresponding to graph */
+   );
+
+/** frees a symmetry detection graph */
+SCIP_RETCODE SCIPfreeSymgraph(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SYM_GRAPH**           graph               /**< pointer to hold symmetry detection graph */
    );
 
 /** creates permutation symmetry detection graph for linear constraints
