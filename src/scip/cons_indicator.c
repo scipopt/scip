@@ -3343,14 +3343,6 @@ SCIP_RETCODE createVarUbs(
          {
             SCIPdebugMsg(scip, "Removing indicator constraint <%s>.\n", SCIPconsGetName(conss[c]));
             assert( ! SCIPconsIsModifiable(conss[c]) );
-
-            /* mark linear constraint to be upgrade-able */
-            if ( SCIPconsIsActive(consdata->lincons) )
-            {
-               SCIPconsAddUpgradeLocks(consdata->lincons, -1);
-               assert( SCIPconsGetNUpgradeLocks(consdata->lincons) == 0 );
-            }
-
             SCIP_CALL( SCIPdelCons(scip, conss[c]) );
          }
 
@@ -3412,13 +3404,6 @@ SCIP_RETCODE presolRoundIndicator(
       if ( fixed )
          ++(*nfixedvars);
 
-      /* mark linear constraint to be update-able */
-      if ( SCIPconsIsActive(consdata->lincons) )
-      {
-         SCIPconsAddUpgradeLocks(consdata->lincons, -1);
-         assert( SCIPconsGetNUpgradeLocks(consdata->lincons) == 0 );
-      }
-
       /* delete indicator constraint (leave linear constraint) */
       assert( ! SCIPconsIsModifiable(cons) );
       SCIP_CALL( SCIPdelCons(scip, cons) );
@@ -3431,13 +3416,6 @@ SCIP_RETCODE presolRoundIndicator(
    if ( SCIPvarGetUbLocal(consdata->binvar) < 0.5 )
    {
       SCIPdebugMsg(scip, "Presolving <%s>: Binary variable <%s> fixed to 0, deleting indicator constraint.\n", SCIPconsGetName(cons), SCIPvarGetName(consdata->binvar));
-
-      /* mark linear constraint to be update-able */
-      if ( SCIPconsIsActive(consdata->lincons) )
-      {
-         SCIPconsAddUpgradeLocks(consdata->lincons, -1);
-         assert( SCIPconsGetNUpgradeLocks(consdata->lincons) == 0 );
-      }
 
       /* delete indicator constraint */
       assert( ! SCIPconsIsModifiable(cons) );
@@ -3466,13 +3444,6 @@ SCIP_RETCODE presolRoundIndicator(
       assert( ! infeasible );
       if ( fixed )
          ++(*nfixedvars);
-
-      /* mark linear constraint to be update-able */
-      if ( SCIPconsIsActive(consdata->lincons) )
-      {
-         SCIPconsAddUpgradeLocks(consdata->lincons, -1);
-         assert( SCIPconsGetNUpgradeLocks(consdata->lincons) == 0 );
-      }
 
       /* delete constraint */
       assert( ! SCIPconsIsModifiable(cons) );
@@ -3536,13 +3507,6 @@ SCIP_RETCODE presolRoundIndicator(
       }
 
       SCIPdebugMsg(scip, "Presolving <%s>: Slack variable fixed to zero, delete redundant indicator constraint.\n", SCIPconsGetName(cons));
-
-      /* mark linear constraint to be upgrade-able */
-      if ( SCIPconsIsActive(consdata->lincons) )
-      {
-         SCIPconsAddUpgradeLocks(consdata->lincons, -1);
-         assert( SCIPconsGetNUpgradeLocks(consdata->lincons) == 0 );
-      }
 
       /* delete constraint */
       assert( ! SCIPconsIsModifiable(cons) );
@@ -3803,13 +3767,6 @@ SCIP_RETCODE propIndicator(
       /* remove constraint if we are not in probing */
       if ( ! SCIPinProbing(scip) )
       {
-         /* mark linear constraint to be update-able */
-         if ( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING && SCIPconsIsActive(consdata->lincons) )
-         {
-            SCIPconsAddUpgradeLocks(consdata->lincons, -1);
-            assert( SCIPconsGetNUpgradeLocks(consdata->lincons) == 0 );
-         }
-
          /* delete constraint locally */
          assert( ! SCIPconsIsModifiable(cons) );
          SCIP_CALL( SCIPdelConsLocal(scip, cons) );
@@ -3907,13 +3864,6 @@ SCIP_RETCODE propIndicator(
          /* remove constraint if we are not in probing */
          if ( ! SCIPinProbing(scip) )
          {
-            /* mark linear constraint to be update-able */
-            if ( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING && SCIPconsIsActive(consdata->lincons) )
-            {
-               SCIPconsAddUpgradeLocks(consdata->lincons, -1);
-               assert( SCIPconsGetNUpgradeLocks(consdata->lincons) == 0 );
-            }
-
             /* delete constraint locally */
             assert( ! SCIPconsIsModifiable(cons) );
             SCIP_CALL( SCIPdelConsLocal(scip, cons) );
@@ -3980,13 +3930,6 @@ SCIP_RETCODE propIndicator(
          /* remove constraint if we are not in probing */
          if ( ! SCIPinProbing(scip) )
          {
-            /* mark linear constraint to be update-able */
-            if ( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING && SCIPconsIsActive(consdata->lincons) )
-            {
-               SCIPconsAddUpgradeLocks(consdata->lincons, -1);
-               assert( SCIPconsGetNUpgradeLocks(consdata->lincons) == 0 );
-            }
-
             SCIP_CALL( SCIPdelConsLocal(scip, cons) );
          }
       }
@@ -5734,6 +5677,13 @@ SCIP_DECL_CONSDELETE(consDeleteIndicator)
 
    /* Can there be cases where lincons is NULL, e.g., if presolve found the problem infeasible? */
    assert( (*consdata)->lincons != NULL );
+
+   /* mark linear constraint to be upgrade-able */
+   if ( SCIPconsIsActive((*consdata)->lincons) )
+   {
+      SCIPconsAddUpgradeLocks((*consdata)->lincons, -1);
+      assert( SCIPconsGetNUpgradeLocks((*consdata)->lincons) == 0 );
+   }
 
    /* release linear constraint and slack variable */
    SCIP_CALL( SCIPreleaseVar(scip, &(*consdata)->slackvar) );
