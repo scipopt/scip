@@ -356,7 +356,7 @@ SCIP_RETCODE SCIPdialoghdlrCreate(
    SCIPdialoghdlrClearBuffer(*dialoghdlr);
 
 #ifdef SCIP_WITH_READLINE
-   (void) SCIPsnprintf(readlineversion, sizeof(readlineversion), "Readline %s", rl_library_version);
+   (void) SCIPsnprintf(readlineversion, (int)sizeof(readlineversion), "Readline %s", rl_library_version);
    SCIP_CALL( SCIPsetIncludeExternalCode(set, readlineversion, "GNU library for command line editing (gnu.org/s/readline)") );
 #endif
 
