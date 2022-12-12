@@ -34,6 +34,7 @@ Fixed bugs
 - fixed an issue caused by aggregated variables not added to a hashmap in the xor constraint handler
 - changed function solveRowEchelonGF2 in cons_xor.c to avoid errors if rank is 0
 - fixed that the implication presolver tried to aggregate or tighten bounds of multiaggregated variables
+- do not assume aggregation is successful in cons_setppc.c
 
 Miscellaneous
 -------------
