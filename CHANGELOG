@@ -170,6 +170,9 @@ Miscellaneous
 
 - Changed license to Apache 2.0, see https://www.apache.org/licenses/LICENSE-2.0.
 - When an LP could not be solved accurately, scaling is now turned off as a last fall-back method.
+- Methods for using the debug solution mechanism SCIPdebugAddSolVal, SCIPdebugGetSol, SCIPdebugGetSolVal,
+  SCIPdebugSolIsValidInSubtree, SCIPdebugIsMainscip, SCIPdebugSolEnable, SCIPdebugSolDisable, SCIPdebugSolIsEnabled,
+  SCIPwithDebugSol are now exported
 
 Known bugs
 ----------
