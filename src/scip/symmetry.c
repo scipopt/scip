@@ -1648,7 +1648,7 @@ SCIP_RETCODE SCIPcreatePermsymDetectionGraphLinear(
    /* create edges */
    for( i = 0; i < nvars; ++i )
    {
-      SCIP_CALL( SCIPcreateSymgraphEdge(scip, *graph, (*graph)->nodes[i], (*graph)->nodes[nvars-1], TRUE, vals[i]) );
+      SCIP_CALL( SCIPcreateSymgraphEdge(scip, *graph, (*graph)->nodes[i], (*graph)->nodes[nvars], TRUE, vals[i]) );
    }
 
    return SCIP_OKAY;
