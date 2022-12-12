@@ -2470,7 +2470,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
       assert(SCIPvarIsActive(vartoresolve));
 
       /* if this is a UIP we stop resolving with the reason */
-      if( nextbdchginfo == NULL || SCIPbdchginfoGetDepth(nextbdchginfo) != bdchgdepth )
+      if( !bdchginfoIsResolvable(bdchginfo) && (nextbdchginfo == NULL || SCIPbdchginfoGetDepth(nextbdchginfo) != bdchgdepth ) )
       {
          SCIPsetDebugMsgPrint(set, " reached First UIP \n");
          goto TERMINATE;
