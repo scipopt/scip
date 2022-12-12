@@ -134,7 +134,7 @@ Known bugs
 Examples and applications
 -------------------------
 
-- Take out STP and PolySCIP applications
+- Externalize STP and PolySCIP applications
 
 Interface changes
 -----------------
@@ -162,11 +162,14 @@ Fixed bugs
 - fixed an issue caused by aggregated variables not added to a hashmap in the xor constraint handler
 - changed function solveRowEchelonGF2 in cons_xor.c to avoid errors if rank is 0
 - fixed that the implication presolver tried to aggregate or tighten bounds of multiaggregated variables
+- fixed a sign check in detection of linear constraints that are parallel to the objective
+- fixed bug in Clp and lpi_clp with missing basis information when calling the barrier with crossover; needs new Clp version
 
 Miscellaneous
 -------------
 
 - Changed license to Apache 2.0, see https://www.apache.org/licenses/LICENSE-2.0.
+- When an LP could not be solved accurately, scaling is now turned off as a last fall-back method.
 
 Known bugs
 ----------
@@ -248,7 +251,6 @@ Miscellaneous
   diving heuristics, ALNS neighborhood information and tree size estimation statistics;
   they can be turned on using the following new parameters:
   misc/showdivingstats (diving heuristics), heuristics/alns/shownbstats (ALNS), estimation/showstats (tree size estimation)
-- When an LP could not be solved accurately, scaling is now turned off as a last fall-back method.
 
 @section RN801 SCIP 8.0.1
 *************************
@@ -1357,7 +1359,6 @@ Fixed bugs
 - Improved separation for SOC constraint with multiaggregated variable on right-hand-side.
 - Fixed bug in presol_boundshift: do not shift non-active variables
 - Fixed bug in domain propagation for SOC constraints with negative coefficient for variable on right-hand-side.
-- Fixed a sign check in detection of linear constraints that are parallel to the objective
 - Fixed bug with multi-aggregated integer variables in cons_xor.
 - Fixed bug with changed number of variables in storing relaxation solution in probing/diving.
 - Fixed issues with scip statistics
