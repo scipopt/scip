@@ -958,14 +958,18 @@ SCIP_Real getSlack(
       if( coef > 0.0 )
       {
          SCIPquadprecProdDD(delta, coef, SCIPgetVarUbAtIndex(scip, vars[v], currbdchgidx, TRUE));
+         // SCIPdebugMessage("<%s>, coef = %f, varub = %f \n ", SCIPvarGetName(vars[v]) , coef, SCIPgetVarUbAtIndex(scip, vars[v], currbdchgidx, TRUE));
       }
       else
       {
          SCIPquadprecProdDD(delta, coef, SCIPgetVarLbAtIndex(scip, vars[v], currbdchgidx, TRUE));
+         // SCIPdebugMessage("<%s>, coef = %f, varlb = %f \n ", SCIPvarGetName(vars[v]), coef, SCIPgetVarLbAtIndex(scip, vars[v], currbdchgidx, TRUE));
       }
       SCIPquadprecSumQQ(slack, slack, delta);
+   // SCIPdebugMessage("slack = %f \n", QUAD_TO_DBL(slack));
    }
    SCIPquadprecSumQD(slack, slack, -resolutionset->lhs);
+   // SCIPdebugMessage("slack = %f \n", QUAD_TO_DBL(slack));
    return QUAD_TO_DBL(slack);
 }
 
@@ -1000,12 +1004,12 @@ void FixVarConflict(
          if( resolutionset->vals[i] > 0 )
          {
             assert(SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_UPPER);
-            SCIPsetDebugMessagePrint(set, "at current upper bound %f \n", SCIPbdchginfoGetNewbound(bdchginfo));
+            SCIPsetDebugMsgPrint(set, " at current upper bound %f \n", SCIPbdchginfoGetNewbound(bdchginfo));
          }
          else
          {
             assert(SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER);
-            SCIPsetDebugMessagePrint(set, "at current lower bound %f \n", SCIPbdchginfoGetNewbound(bdchginfo));
+            SCIPsetDebugMsgPrint(set, " at current lower bound %f \n", SCIPbdchginfoGetNewbound(bdchginfo));
          }
          break;
       }
@@ -2266,6 +2270,11 @@ SCIP_RETCODE conflictAnalyzeResolution(
          {
             /* fix variable corresponding to the bound change and continue */
             FixVarConflict(conflictresolutionset, set, transprob, bdchginfo, vartoresolve);
+            /** todo this can be avoided if we scan through the constraint
+             * instead of updating the queue the whole time
+             */
+            addConflictBounds(set->scip, transprob, set, conflictresolutionset, bdchgidx);
+
             SCIPdebug(resolutionsetPrintRow(conflictresolutionset, set, transprob, 1));
             /* get the next bound change */
             bdchginfo = conflictFirstCand(conflict);
@@ -2276,16 +2285,15 @@ SCIP_RETCODE conflictAnalyzeResolution(
             vartoresolve = SCIPbdchginfoGetVar(bdchginfo);
             residx = SCIPvarGetProbindex(vartoresolve);
 
-            /* get the bound change before bdchginfo*/
-            nextbdchginfo = conflictFirstCand(conflict);
-
             /* check if the variable we are resolving is active */
             assert(SCIPvarIsActive(vartoresolve));
 
-            /* if this is a UIP we stop resolving with the reason */
-            if( nextbdchginfo == NULL || SCIPbdchginfoGetDepth(nextbdchginfo) != bdchgdepth )
+            /* todo if we still have not resolved and reached a branching decision we continue for the 2-FUIP */
+            // if( nressteps == 0 && SCIPbdchginfoGetChgtype(bdchginfo) == SCIP_BOUNDCHGTYPE_BRANCHING )
+            // {...}
+            if( SCIPbdchginfoGetDepth(bdchginfo) != bdchgdepth )
             {
-               SCIPsetDebugMessagePrint(set, " reached First UIP \n");
+               SCIPsetDebugMsgPrint(set, " reached First UIP \n");
                goto TERMINATE;
             }
             continue;
@@ -2460,7 +2468,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
       /* if this is a UIP we stop resolving with the reason */
       if( nextbdchginfo == NULL || SCIPbdchginfoGetDepth(nextbdchginfo) != bdchgdepth )
       {
-         SCIPsetDebugMessagePrint(set, " reached First UIP \n");
+         SCIPsetDebugMsgPrint(set, " reached First UIP \n");
          goto TERMINATE;
       }
 
