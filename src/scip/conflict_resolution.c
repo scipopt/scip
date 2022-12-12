@@ -979,18 +979,19 @@ void FixVarConflict(
    SCIP_RESOLUTIONSET*   resolutionset,      /**< resolution set */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            prob,               /**< problem data */
-   SCIP_BDCHGINFO*       bdchginfo,          /**< bound change information */
-   SCIP_VAR*             var                 /**< variable to fix */
+   SCIP_BDCHGINFO*       bdchginfo           /**< bound change information */
    )
 {
    int i;
    int varidx;
    SCIP_Bool found;
+   SCIP_VAR* var;
 
    assert(resolutionset != NULL);
    assert(resolutionset->nnz > 0);
+
+   var = SCIPbdchginfoGetVar(bdchginfo);
    assert(var != NULL);
-   assert(var == SCIPbdchginfoGetVar(bdchginfo));
 
    varidx = SCIPvarGetProbindex(var);
 
@@ -1022,7 +1023,6 @@ void FixVarConflict(
       --resolutionset->nnz;
       resolutionset->vals[i] = resolutionset->vals[resolutionset->nnz];
       resolutionset->inds[i] = resolutionset->inds[resolutionset->nnz];
-      assert(resolutionset->slack == getSlack(set->scip, prob, resolutionset, SCIPbdchginfoGetIdx(bdchginfo)));
    }
 }
 
@@ -2251,6 +2251,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
        */
       if ( !bdchginfoIsResolvable(bdchginfo) )
       {
+            addConflictBounds(set->scip, transprob, set, conflictresolutionset, bdchgidx);
 #ifdef SCIP_DEBUG
          {
             printNonResolvableReasonType(set, bdchginfo);
@@ -2269,26 +2270,15 @@ SCIP_RETCODE conflictAnalyzeResolution(
          if( existsResolvablebdchginfo(conflict) )
          {
             /* fix variable corresponding to the bound change and continue */
-            FixVarConflict(conflictresolutionset, set, transprob, bdchginfo, vartoresolve);
+            FixVarConflict(conflictresolutionset, set, transprob, bdchginfo);
             /** todo this can be avoided if we scan through the constraint
              * instead of updating the queue the whole time
              */
-            addConflictBounds(set->scip, transprob, set, conflictresolutionset, bdchgidx);
+            bdchginfo = conflictRemoveCand(conflict);
 
-            SCIPdebug(resolutionsetPrintRow(conflictresolutionset, set, transprob, 1));
-            /* get the next bound change */
-            bdchginfo = conflictFirstCand(conflict);
             if( bdchginfo == NULL )
                goto TERMINATE;
-            bdchginfo = conflictRemoveCand(conflict);
-            bdchgidx = SCIPbdchginfoGetIdx(bdchginfo);
-            vartoresolve = SCIPbdchginfoGetVar(bdchginfo);
-            residx = SCIPvarGetProbindex(vartoresolve);
-
-            /* check if the variable we are resolving is active */
-            assert(SCIPvarIsActive(vartoresolve));
-
-            /* todo if we still have not resolved and reached a branching decision we continue for the 2-FUIP */
+            /* todo if we still have not resolved and reached a branching decision we can continue for the 2-FUIP */
             // if( nressteps == 0 && SCIPbdchginfoGetChgtype(bdchginfo) == SCIP_BOUNDCHGTYPE_BRANCHING )
             // {...}
             if( SCIPbdchginfoGetDepth(bdchginfo) != bdchgdepth )
@@ -2296,7 +2286,21 @@ SCIP_RETCODE conflictAnalyzeResolution(
                SCIPsetDebugMsgPrint(set, " reached First UIP \n");
                goto TERMINATE;
             }
-            continue;
+
+            bdchgidx = SCIPbdchginfoGetIdx(bdchginfo);
+            vartoresolve = SCIPbdchginfoGetVar(bdchginfo);
+            residx = SCIPvarGetProbindex(vartoresolve);
+
+            SCIPdebug(resolutionsetPrintRow(conflictresolutionset, set, transprob, 1));
+
+            conflictresolutionset->slack = getSlack(set->scip, transprob, conflictresolutionset, SCIPbdchginfoGetIdx(bdchginfo));
+
+            /* check if the variable we are resolving is active */
+            assert(SCIPvarIsActive(vartoresolve));
+
+            /* todo if we still have not resolved and reached a branching decision we can continue for the 2-FUIP */
+            // if( nressteps == 0 && SCIPbdchginfoGetChgtype(bdchginfo) == SCIP_BOUNDCHGTYPE_BRANCHING )
+            // {...}
 
 #ifdef SCIP_DEBUG
          {
