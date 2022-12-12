@@ -2388,7 +2388,7 @@ SCIP_RETCODE conflictQueueBound(
          if (set->conf_useprop && !conflict->bdchgonlyresqueue)
             SCIP_CALL( SCIPpqueueInsert(conflict->forcedbdchgqueue, (void*)bdchginfo) );
          if (set->conf_usegeneralres && !conflict->bdchgonlyconfqueue)
-            SCIP_CALL( SCIPpqueueInsert(conflict->resforcedbdchgqueue, (void*)bdchginfo) );
+            SCIP_CALL( SCIPpqueueInsert(conflict->resbdchgqueue, (void*)bdchginfo) );
       }
 
 #ifdef SCIP_CONFGRAPH

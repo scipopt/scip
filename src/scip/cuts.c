@@ -4261,6 +4261,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
       {
          SCIP_Real lb = SCIPvarGetLbGlobal(var);
          SCIP_Real ub = SCIPvarGetLbGlobal(var);
+         assert(!SCIPisZero(scip, QUAD_TO_DBL(coef)));
 
          if( SCIPisGT(scip, QUAD_TO_DBL(coef), 0.0) && SCIPisGT(scip, primsol, lb) )
          {

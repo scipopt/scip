@@ -21,11 +21,9 @@
  * @todo Description
  * @todo add param to skip resolution if slack remains negative even without the variable
  * @todo we do not need forced bdchg queue
- * @todo remove scip pointer
- * @todo implement division rule to replace coefficient tightening. Idea: Weaken and then apply division once (RoundingSAT)
- * @todo apply cMIR to reduce the reason constraint. Think for a reference point
- * @todo apply MIR after each resolution step. If successful do we continue with  both constraints?
+ * @todo apply cMIR to reduce the reason constraint. The reference point is the propagated one before rounding
  * @todo implement resolution for propagators
+ * @todo remove scip pointer
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -421,6 +419,71 @@ SCIP_Bool tightenCoefLhs(
    return redundant;
 }
 
+/*returns whether a bound change is resolvable or not */
+static
+SCIP_Bool bdchginfoIsResolvable(
+   SCIP_BDCHGINFO*       bdchginfo           /**< bound change to check */
+   )
+{
+   SCIP_CONSHDLR *conshdlr;
+   SCIP_BOUNDCHGTYPE bdchgtype;
+   const char* conshdlrname;
+
+   bdchgtype = SCIPbdchginfoGetChgtype(bdchginfo);
+   if (bdchgtype == SCIP_BOUNDCHGTYPE_BRANCHING)
+      return FALSE;
+   else if (bdchgtype == SCIP_BOUNDCHGTYPE_PROPINFER)
+   {
+      /* todo some propagators can be resolved */
+      return FALSE;
+   }
+   assert(bdchgtype == SCIP_BOUNDCHGTYPE_CONSINFER);
+   conshdlr = SCIPconsGetHdlr(SCIPbdchginfoGetInferCons(bdchginfo));
+   conshdlrname = SCIPconshdlrGetName(conshdlr);
+
+   if( strcmp(conshdlrname, "linear") == 0 )
+   {
+      return TRUE;
+   }
+   else if( strcmp(conshdlrname, "setppc") == 0 )
+   {
+      return TRUE;
+   }
+   else if( strcmp(conshdlrname, "logicor") == 0 )
+   {
+      return TRUE;
+   }
+   else if( strcmp(conshdlrname, "knapsack") == 0 )
+   {
+      return TRUE;
+   }
+   else if( strcmp(conshdlrname, "varbound") == 0 )
+   {
+      return TRUE;
+   }
+   return FALSE;
+}
+
+/** returns whether there exists a resolvable bound change or not */
+static
+SCIP_Bool existsResolvablebdchginfo(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   )
+{
+   SCIP_BDCHGINFO* bdchginfo;
+   int i;
+
+   /* todo decide if we want to use resforcedbdchgqueue (atm we do now use it) */
+   /* loop through bound change and check if there exists a resolvable bound change */
+   for( i = 0; i < SCIPpqueueNElems(conflict->resbdchgqueue); ++i )
+   {
+      bdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueElems(conflict->resbdchgqueue)[i]);
+      if (bdchginfoIsResolvable(bdchginfo))
+         return TRUE;
+   }
+   return FALSE;
+}
+
 /** returns next conflict analysis candidate from the candidate queue without removing it */
 static
 SCIP_BDCHGINFO* conflictFirstCand(
@@ -431,6 +494,9 @@ SCIP_BDCHGINFO* conflictFirstCand(
 
    assert(conflict != NULL);
 
+   /** todo remove resforcedbdchgqueue since we do not want to force the removal of continuous variables.
+    * On the contrary, our focus is to resolve binaries.
+    */
    if( SCIPpqueueNElems(conflict->resforcedbdchgqueue) > 0 )
    {
       /* get next potential candidate */
@@ -901,6 +967,55 @@ SCIP_Real getSlack(
    }
    SCIPquadprecSumQD(slack, slack, -resolutionset->lhs);
    return QUAD_TO_DBL(slack);
+}
+
+/** fix a variable in the conflict if it cannot be resolved */
+static
+void FixVarConflict(
+   SCIP_RESOLUTIONSET*   resolutionset,      /**< resolution set */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_BDCHGINFO*       bdchginfo,          /**< bound change information */
+   SCIP_VAR*             var                 /**< variable to fix */
+   )
+{
+   int i;
+   int varidx;
+   SCIP_Bool found;
+
+   assert(resolutionset != NULL);
+   assert(resolutionset->nnz > 0);
+   assert(var != NULL);
+   assert(var == SCIPbdchginfoGetVar(bdchginfo));
+
+   varidx = SCIPvarGetProbindex(var);
+   found = FALSE;
+   for( i = 0; i < resolutionset->nnz; i++ )
+   {
+      if( resolutionset->inds[i] == varidx )
+      {
+         found = TRUE;
+         if( resolutionset->vals[i] > 0 )
+         {
+            assert(SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_UPPER);
+         }
+         else
+         {
+            assert(SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER);
+         }
+         break;
+      }
+   }
+   assert(found);
+
+   if( found )
+   {
+      resolutionset->lhs -= resolutionset->vals[i] * SCIPbdchginfoGetNewbound(bdchginfo);
+      --resolutionset->nnz;
+      resolutionset->vals[i] = resolutionset->vals[resolutionset->nnz];
+      resolutionset->inds[i] = resolutionset->inds[resolutionset->nnz];
+      assert(resolutionset->slack == getSlack(set->scip, prob, resolutionset, SCIPbdchginfoGetIdx(bdchginfo)));
+   }
 }
 
 /** weaken a row by removing all variables that do not affect the slack */
@@ -1834,10 +1949,33 @@ void resolutionsetPrintRow(
       SCIPsetDebugMsgPrint(set, ">= %f \n", resolutionset->lhs);
 }
 
+/** print a single bound change in debug mode
+*/
+static
+void printSingleBoundChange(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_BDCHGINFO*       bdchginfo           /**< bound change to print */
+)
+{
+      SCIP_VAR* var;
+      var = SCIPbdchginfoGetVar(bdchginfo);
+      SCIPsetDebugMsg(set, " -> Bound change <%s> %s %.15g [status:%d, type:%d, depth:%d, pos:%d, reason:<%s>, info:%d] \n",
+      SCIPvarGetName(var),
+      SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
+      SCIPbdchginfoGetNewbound(bdchginfo),
+      SCIPvarGetStatus(var), SCIPvarGetType(var),
+      SCIPbdchginfoGetDepth(bdchginfo), SCIPbdchginfoGetPos(bdchginfo),
+      SCIPbdchginfoGetChgtype(bdchginfo) == SCIP_BOUNDCHGTYPE_BRANCHING ? "branch"
+      : (SCIPbdchginfoGetChgtype(bdchginfo) == SCIP_BOUNDCHGTYPE_CONSINFER
+         ? SCIPconsGetName(SCIPbdchginfoGetInferCons(bdchginfo))
+         : (SCIPbdchginfoGetInferProp(bdchginfo) != NULL ? SCIPpropGetName(SCIPbdchginfoGetInferProp(bdchginfo))
+            : "none")),
+      SCIPbdchginfoGetChgtype(bdchginfo) != SCIP_BOUNDCHGTYPE_BRANCHING ? SCIPbdchginfoGetInferInfo(bdchginfo) : -1);
+}
 /** prints all bound changes in the queue in debug mode
  */
 static
-void printBoundChanges(
+void printAllBoundChanges(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    SCIP_SET*             set                 /**< global SCIP settings */
    )
@@ -1848,11 +1986,12 @@ void printBoundChanges(
 
    assert(conflict != NULL);
 
-      for( i = 0; i < SCIPpqueueNElems(conflict->resbdchgqueue); ++i )
-      {
-         bdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueElems(conflict->resbdchgqueue)[i]);
-         var = bdchginfo->var;
-         SCIPsetDebugMsg(set, " -> Bound change %d: <%s> %s %.15g [status:%d, type:%d, depth:%d, pos:%d, reason:<%s>, info:%d] \n",
+   SCIPsetDebugMsg(set, " -> Bound changes in queue: \n");
+   for( i = 0; i < SCIPpqueueNElems(conflict->resbdchgqueue); ++i )
+   {
+      bdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueElems(conflict->resbdchgqueue)[i]);
+      var = bdchginfo->var;
+      SCIPsetDebugMsg(set, " -> Bound change %d: <%s> %s %.15g [status:%d, type:%d, depth:%d, pos:%d, reason:<%s>, info:%d] \n",
       i, SCIPvarGetName(var),
       SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
       SCIPbdchginfoGetNewbound(bdchginfo),
@@ -1864,8 +2003,38 @@ void printBoundChanges(
          : (SCIPbdchginfoGetInferProp(bdchginfo) != NULL ? SCIPpropGetName(SCIPbdchginfoGetInferProp(bdchginfo))
             : "none")),
       SCIPbdchginfoGetChgtype(bdchginfo) != SCIP_BOUNDCHGTYPE_BRANCHING ? SCIPbdchginfoGetInferInfo(bdchginfo) : -1);
+   }
+   SCIPsetDebugMsg(set, " -> End of bound changes in queue. \n");
+}
 
-      }
+/* print the type of the non resolvable reason in debug mode */
+static
+void printNonResolvableReasonType(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_BDCHGINFO*       bdchginfo           /**< bound change to check */
+   )
+{
+   SCIP_BOUNDCHGTYPE bdchgtype;
+
+   bdchgtype = SCIPbdchginfoGetChgtype(bdchginfo);
+   if (bdchgtype == SCIP_BOUNDCHGTYPE_BRANCHING)
+   {
+      SCIPsetDebugMsg(set, " -> Not resolvable bound change: branching ");
+   }
+   else if (bdchgtype == SCIP_BOUNDCHGTYPE_PROPINFER)
+   {
+      SCIP_PROP* reasonprop;
+      reasonprop = SCIPbdchginfoGetInferProp(bdchginfo);
+
+      /* todo check why the propagator can be none */
+      SCIPsetDebugMsg(set, " -> Not resolvable bound change: propagation %s",
+      reasonprop != NULL ? SCIPpropGetName(reasonprop) : "none");
+   }
+   else
+   {
+      assert(bdchgtype == SCIP_BOUNDCHGTYPE_CONSINFER);
+      SCIPsetDebugMsg(set, " -> Not resolvable bound change: constraint %s", SCIPconsGetName(SCIPbdchginfoGetInferCons(bdchginfo)));
+   }
 }
 
 #endif
@@ -1891,6 +2060,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
    SCIP_Bool             diving,             /**< are we in strong branching or diving mode? */
    int                   validdepth,         /**< minimal depth level at which the initial conflict set is valid */
    SCIP_Bool             infeasibleLP,       /**< does the conflict originate from an infeasible LP? */
+   SCIP_Bool             pseudoobj,          /**< does the conflict originate from a violated pseudo objective bound? */
    int*                  nconss,             /**< pointer to store the number of generated conflict constraints */
    int*                  nconfvars           /**< pointer to store the number of variables in generated conflict constraints */
    )
@@ -1973,9 +2143,22 @@ SCIP_RETCODE conflictAnalyzeResolution(
    /* last bound change that led to infeasibility */
    bdchginfo = conflictFirstCand(conflict);
 
-   if (bdchginfo == NULL)
+   if ( bdchginfo == NULL )
    {
       SCIPsetDebugMsg(set, "Conflict analysis not applicable since resbdchginfo is empty \n");
+      return SCIP_OKAY;
+   }
+
+#ifdef SCIP_DEBUG
+{
+   printAllBoundChanges(conflict, set);
+}
+#endif
+
+   /* if no bound change was infered by a resolvable constraint then we terminate */
+   if ( !existsResolvablebdchginfo(conflict) )
+   {
+      SCIPsetDebugMsg(set, "Conflict analysis not applicable since no resolvable bounds exist \n");
       return SCIP_OKAY;
    }
 
@@ -1989,33 +2172,12 @@ SCIP_RETCODE conflictAnalyzeResolution(
 
    /* check if the variable we are resolving is active */
    assert(SCIPvarIsActive(vartoresolve));
-
 #ifdef SCIP_DEBUG
-{
-   printBoundChanges(conflict, set);
-}
-#endif
-
-   SCIPsetDebugMsg(set, " -> First bound change to resolve <%s> %s %.15g [status:%d, type:%d, depth:%d, pos:%d, reason:<%s>, info:%d] \n",
-      SCIPvarGetName(vartoresolve),
-      SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
-      SCIPbdchginfoGetNewbound(bdchginfo),
-      SCIPvarGetStatus(vartoresolve), SCIPvarGetType(vartoresolve),
-      SCIPbdchginfoGetDepth(bdchginfo), SCIPbdchginfoGetPos(bdchginfo),
-      SCIPbdchginfoGetChgtype(bdchginfo) == SCIP_BOUNDCHGTYPE_BRANCHING ? "branch"
-      : (SCIPbdchginfoGetChgtype(bdchginfo) == SCIP_BOUNDCHGTYPE_CONSINFER
-         ? SCIPconsGetName(SCIPbdchginfoGetInferCons(bdchginfo))
-         : (SCIPbdchginfoGetInferProp(bdchginfo) != NULL ? SCIPpropGetName(SCIPbdchginfoGetInferProp(bdchginfo))
-            : "none")),
-      SCIPbdchginfoGetChgtype(bdchginfo) != SCIP_BOUNDCHGTYPE_BRANCHING ? SCIPbdchginfoGetInferInfo(bdchginfo) : -1);
-
-
-   /* if the bound change was not infered by a constraint then conflict analysis is not applicable */
-   if ( SCIPbdchginfoGetChgtype(bdchginfo) != SCIP_BOUNDCHGTYPE_CONSINFER )
    {
-      SCIPsetDebugMsg(set, "Conflict analysis not applicable since no reason row exists \n");
-      return SCIP_OKAY;
+      SCIPsetDebugMsgPrint(set, " First bound change to resolve \n");
+      printSingleBoundChange(set, bdchginfo);
    }
+#endif
 
    conflictresolutionset->validdepth = validdepth;
 
@@ -2034,6 +2196,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
    }
    else
    {
+      /* always apply coefficient tightening. It can only reduce the slack even further */
       tightenCoefLhs(set->scip, transprob, FALSE, conflictresolutionset->vals, &conflictresolutionset->lhs,
                      conflictresolutionset->inds, &conflictresolutionset->nnz, &nchgcoefs);
       /* sort for linear time resolution */
@@ -2042,13 +2205,22 @@ SCIP_RETCODE conflictAnalyzeResolution(
       conflictresolutionset->slack = conflictslack;
    }
 
-   /** slack should be negative. The only case where this may not be true is if the conflict is found
-    *  by a negated clique in the knapsack constraint handler
-    * @todo find a fix for this
-    */
+   /* the slack should be negative */
    if ( SCIPsetIsGE(set, conflictresolutionset->slack, 0.0) )
    {
+      /** The only case where this may not be true is if the conflict is found
+       *  by a negated clique in the knapsack constraint handler
+       *  @todo find a fix for this (still able to resolve by considering the negated clique
+       * and the knapsack constraint)
+       */
+      SCIP_CONSHDLR* conshdlr;
       SCIPsetDebugMsg(set, "Slack of conflict constraint is not negative \n");
+
+      assert(!infeasibleLP && !pseudoobj);
+
+      conshdlr = SCIProwGetOriginConshdlr(initialconflictrow);
+      SCIPsetDebugMsg(set, "%s",SCIPconshdlrGetName(conshdlr));
+      assert(strcmp(SCIPconshdlrGetName(conshdlr), "knapsack") == 0);
       return SCIP_OKAY;
    }
 
@@ -2068,7 +2240,71 @@ SCIP_RETCODE conflictAnalyzeResolution(
    /* main loop */
    while( bdchginfo != NULL && validdepth <= maxvaliddepth )
    {
-      if ( SCIPbdchginfoGetChgtype(bdchginfo) == SCIP_BOUNDCHGTYPE_CONSINFER )
+      /** check if the bound change is resolvable. If it is not, we can fix the variable and continue
+       * with the next bound change
+       */
+      if ( !bdchginfoIsResolvable(bdchginfo) )
+      {
+#ifdef SCIP_DEBUG
+         {
+            printNonResolvableReasonType(set, bdchginfo);
+         }
+#endif
+            if ( SCIPbdchginfoGetChgtype(bdchginfo) == SCIP_BOUNDCHGTYPE_CONSINFER )
+            {
+               reasoncon = SCIPbdchginfoGetInferCons(bdchginfo);
+               /* @todo add local case SCIPconsGetValidDepth(reasoncon) <= validdepth */
+               if(!SCIPconsIsGlobal(reasoncon))
+               {
+                  goto TERMINATE;
+               }
+            }
+
+         if( existsResolvablebdchginfo(conflict) )
+         {
+            /* fix variable corresponding to the bound change and continue */
+            FixVarConflict(conflictresolutionset, set, transprob, bdchginfo, vartoresolve);
+            /* get the next bound change */
+            bdchginfo = conflictFirstCand(conflict);
+            if( bdchginfo == NULL )
+               goto TERMINATE;
+            bdchginfo = conflictRemoveCand(conflict);
+            bdchgidx = SCIPbdchginfoGetIdx(bdchginfo);
+            vartoresolve = SCIPbdchginfoGetVar(bdchginfo);
+            residx = SCIPvarGetProbindex(vartoresolve);
+
+            /* get the bound change before bdchginfo*/
+            nextbdchginfo = conflictFirstCand(conflict);
+
+            /* check if the variable we are resolving is active */
+            assert(SCIPvarIsActive(vartoresolve));
+
+            /* if this is a UIP we stop resolving with the reason */
+            if( nextbdchginfo == NULL || SCIPbdchginfoGetDepth(nextbdchginfo) != bdchgdepth )
+            {
+               SCIPsetDebugMessagePrint(set, " reached First UIP \n");
+               goto TERMINATE;
+            }
+            continue;
+
+#ifdef SCIP_DEBUG
+         {
+            SCIPsetDebugMsgPrint(set, " First bound change in queue (next one to resolve) \n");
+            printSingleBoundChange(set, bdchginfo);
+
+            if( nextbdchginfo != NULL )
+            {
+               SCIPsetDebugMsgPrint(set, " Next bound change in queue \n");
+               printSingleBoundChange(set, nextbdchginfo);
+            }
+         }
+#endif
+         }
+         /* if no bound change was infered by a resolvable constraint then we terminate */
+         else
+            goto TERMINATE;
+      }
+      else
       {
          reasoncon = SCIPbdchginfoGetInferCons(bdchginfo);
 
@@ -2079,19 +2315,8 @@ SCIP_RETCODE conflictAnalyzeResolution(
          }
          /* get the corresponding reason row */
          reasonrow = SCIPconsCreateRow(set->scip, reasoncon);
-         /* if no row exists conflict analysis is not applicable */
-         if (reasonrow == NULL)
-         {
-            /* @todo variable and continue */
-            #ifdef SCIP_DEBUG
-            {
-               SCIP_CONSHDLR* conshdlr;
-               conshdlr = SCIPconsGetHdlr(reasoncon);
-               SCIPsetDebugMsg(set, "No reason row for constraint %s of type %s \n", SCIPconsGetName(reasoncon), SCIPconshdlrGetName(conshdlr));
-            }
-            #endif
-            goto TERMINATE;
-         }
+
+         assert(reasonrow != NULL);
 
          /* get the resolution set of the conflict row */
          SCIP_CALL( reasonResolutionsetFromRow(set, blkmem, reasonrow, reasonresolutionset, bdchginfo) );
@@ -2133,20 +2358,10 @@ SCIP_RETCODE conflictAnalyzeResolution(
 
 #ifdef SCIP_DEBUG
       {
-         SCIPsetDebugMsg(set, " -> Resolve bound change <%s> %s %.15g [status:%d, type:%d, depth:%d, pos:%d, reason:<%s>, info:%d] \n",
-            SCIPvarGetName(vartoresolve),
-            SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
-            SCIPbdchginfoGetNewbound(bdchginfo),
-            SCIPvarGetStatus(vartoresolve), SCIPvarGetType(vartoresolve),
-            SCIPbdchginfoGetDepth(bdchginfo), SCIPbdchginfoGetPos(bdchginfo),
-            SCIPbdchginfoGetChgtype(bdchginfo) == SCIP_BOUNDCHGTYPE_BRANCHING ? "branch"
-            : (SCIPbdchginfoGetChgtype(bdchginfo) == SCIP_BOUNDCHGTYPE_CONSINFER
-               ? SCIPconsGetName(SCIPbdchginfoGetInferCons(bdchginfo))
-               : (SCIPbdchginfoGetInferProp(bdchginfo) != NULL ? SCIPpropGetName(SCIPbdchginfoGetInferProp(bdchginfo))
-                  : "none")),
-            SCIPbdchginfoGetChgtype(bdchginfo) != SCIP_BOUNDCHGTYPE_BRANCHING ? SCIPbdchginfoGetInferInfo(bdchginfo) : -1);
+         printSingleBoundChange(set, bdchginfo);
       }
 #endif
+         SCIPsetDebugMsg(set, " Resolving conflict and reason on variable <%s>\n", SCIPvarGetName(vartoresolve));
          /* resolution step */
          resolveWithReason(set->scip, set, conflictresolutionset, reasonresolutionset, blkmem, transprob, residx, (conflict->nresolutionsets > 0), &successresolution);
          nressteps++;
@@ -2211,28 +2426,28 @@ SCIP_RETCODE conflictAnalyzeResolution(
             SCIP_CALL( conflictInsertResolutionset(conflict, set, &tmpconflictresolutionset) );
          }
       }
-      else
-      {
-         /* @todo variable and continue */
-         goto TERMINATE;
-      }
 
       /* terminate after at most nressteps resolution iterations */
       if( set->conf_maxnumressteps > 0 && nressteps >= set->conf_maxnumressteps )
          goto TERMINATE;
 
       /* @todo the cleanup is unnecessary */
+      /** we do not need to mainted the queue; we need to just loop over the variables
+       * and mark the variables with the latest depth, position bound changes
+       */
       conflictCleanUpbdchgqueue(conflict, set, conflictresolutionset);
       addConflictBounds(set->scip, transprob, set, conflictresolutionset, bdchgidx);
 
+      /* get the next bound change */
       bdchginfo = conflictFirstCand(conflict);
       if( bdchginfo == NULL )
          goto TERMINATE;
       bdchginfo = conflictRemoveCand(conflict);
       bdchgidx = SCIPbdchginfoGetIdx(bdchginfo);
-      vartoresolve = bdchginfo->var;
+      vartoresolve = SCIPbdchginfoGetVar(bdchginfo);
       residx = SCIPvarGetProbindex(vartoresolve);
 
+      /* get the bound change before bdchginfo*/
       nextbdchginfo = conflictFirstCand(conflict);
 
       /* check if the variable we are resolving is active */
@@ -2240,37 +2455,23 @@ SCIP_RETCODE conflictAnalyzeResolution(
 
       /* if this is a UIP we stop resolving with the reason */
       if( nextbdchginfo == NULL || SCIPbdchginfoGetDepth(nextbdchginfo) != bdchgdepth )
+      {
+         SCIPsetDebugMessagePrint(set, " reached First UIP \n");
          goto TERMINATE;
+      }
 
-      SCIPsetDebugMsg(set, " -> Next bound change <%s> %s %.15g [status:%d, type:%d, depth:%d, pos:%d, reason:<%s>, info:%d] \n",
-      SCIPvarGetName(vartoresolve),
-      SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
-      SCIPbdchginfoGetNewbound(bdchginfo),
-      SCIPvarGetStatus(vartoresolve), SCIPvarGetType(vartoresolve),
-      SCIPbdchginfoGetDepth(bdchginfo), SCIPbdchginfoGetPos(bdchginfo),
-      SCIPbdchginfoGetChgtype(bdchginfo) == SCIP_BOUNDCHGTYPE_BRANCHING ? "branch"
-      : (SCIPbdchginfoGetChgtype(bdchginfo) == SCIP_BOUNDCHGTYPE_CONSINFER
-         ? SCIPconsGetName(SCIPbdchginfoGetInferCons(bdchginfo))
-         : (SCIPbdchginfoGetInferProp(bdchginfo) != NULL ? SCIPpropGetName(SCIPbdchginfoGetInferProp(bdchginfo))
-            : "none")),
-      SCIPbdchginfoGetChgtype(bdchginfo) != SCIP_BOUNDCHGTYPE_BRANCHING ? SCIPbdchginfoGetInferInfo(bdchginfo) : -1);
+#ifdef SCIP_DEBUG
+   {
+      SCIPsetDebugMsgPrint(set, " First bound change in queue (next one to resolve) \n");
+      printSingleBoundChange(set, bdchginfo);
 
       if( nextbdchginfo != NULL )
       {
-         assert(SCIPvarIsActive(nextbdchginfo->var));
-         SCIPsetDebugMsg(set, " -> After next bound change <%s> %s %.15g [status:%d, type:%d, depth:%d, pos:%d, reason:<%s>, info:%d] \n",
-         SCIPvarGetName(nextbdchginfo->var),
-         SCIPbdchginfoGetBoundtype(nextbdchginfo) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
-         SCIPbdchginfoGetNewbound(nextbdchginfo),
-         SCIPvarGetStatus(nextbdchginfo->var), SCIPvarGetType(nextbdchginfo->var),
-         SCIPbdchginfoGetDepth(nextbdchginfo), SCIPbdchginfoGetPos(nextbdchginfo),
-         SCIPbdchginfoGetChgtype(nextbdchginfo) == SCIP_BOUNDCHGTYPE_BRANCHING ? "branch"
-         : (SCIPbdchginfoGetChgtype(nextbdchginfo) == SCIP_BOUNDCHGTYPE_CONSINFER
-            ? SCIPconsGetName(SCIPbdchginfoGetInferCons(nextbdchginfo))
-            : (SCIPbdchginfoGetInferProp(nextbdchginfo) != NULL ? SCIPpropGetName(SCIPbdchginfoGetInferProp(nextbdchginfo))
-               : "none")),
-         SCIPbdchginfoGetChgtype(nextbdchginfo) != SCIP_BOUNDCHGTYPE_BRANCHING ? SCIPbdchginfoGetInferInfo(nextbdchginfo) : -1);
+         SCIPsetDebugMsgPrint(set, " Next bound change in queue \n");
+         printSingleBoundChange(set, nextbdchginfo);
       }
+   }
+#endif
 
    }
 
@@ -2401,7 +2602,7 @@ SCIP_RETCODE SCIPconflictAnalyzeResolution(
 
    /* analyze the conflict set, and create a conflict constraint on success */
    SCIP_CALL( conflictAnalyzeResolution(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, \
-          eventqueue, cliquetable, initialconflictrow, FALSE, validdepth, infeasibleLP, &nconss, &nconfvars) );
+          eventqueue, cliquetable, initialconflictrow, FALSE, validdepth, infeasibleLP, pseudoobj, &nconss, &nconfvars) );
 
    conflict->nressuccess += (nconss > 0 ? 1 : 0);
    conflict->nresconfconss += nconss;
