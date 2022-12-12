@@ -36,6 +36,7 @@ Fixed bugs
 - fixed that the implication presolver tried to aggregate or tighten bounds of multiaggregated variables
 - fixed a sign check in detection of linear constraints that are parallel to the objective
 - fixed bug in Clp and lpi_clp with missing basis information when calling the barrier with crossover; needs new Clp version
+- do not assume aggregation is successful in cons_setppc.c
 
 Miscellaneous
 -------------
