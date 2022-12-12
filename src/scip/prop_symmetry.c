@@ -873,6 +873,178 @@ SCIP_DECL_SORTINDCOMP(SYMsortConsReflSym)
    return 0;
 }
 
+/** compares two nodes of a symmetry detection graph
+ *
+ *  Nodes are sorted first by their nodetype, then by the value of the corresponding
+ *  type information, and then by their consinfo (first lhs, then rhs, then conshdlr).
+ *
+ *  result:
+ *    < 0: ind1 comes before (is better than) ind2
+ *    = 0: both indices have the same value
+ *    > 0: ind2 comes after (is worse than) ind2
+ */
+static
+int compareNodes(
+   SYM_NODE*             node1,              /**< first node for comparison */
+   SYM_NODE*             node2               /**< second node for comparison */
+   )
+{
+   assert( node1 != NULL );
+   assert( node2 != NULL );
+
+   if ( node1->nodetype < node2->nodetype )
+      return -1;
+   if ( node1->nodetype > node2->nodetype )
+      return 1;
+
+   if ( node1->nodetype == SYM_NODETYPE_VAR )
+   {
+      assert( node2->nodetype == SYM_NODETYPE_VAR );
+
+      if ( SCIPvarGetType(node1->var) < SCIPvarGetType(node2->var) )
+         return -1;
+      if ( SCIPvarGetType(node1->var) > SCIPvarGetType(node2->var) )
+         return 1;
+
+      if ( SCIPvarGetObj(node1->var) < SCIPvarGetObj(node2->var) )
+         return -1;
+      if ( SCIPvarGetObj(node1->var) > SCIPvarGetObj(node2->var) )
+         return 1;
+
+      if ( SCIPvarGetLbGlobal(node1->var) < SCIPvarGetLbGlobal(node2->var) )
+         return -1;
+      if ( SCIPvarGetLbGlobal(node1->var) > SCIPvarGetLbGlobal(node2->var) )
+         return 1;
+
+      if ( SCIPvarGetUbGlobal(node1->var) < SCIPvarGetUbGlobal(node2->var) )
+         return -1;
+      if ( SCIPvarGetUbGlobal(node1->var) > SCIPvarGetUbGlobal(node2->var) )
+         return 1;
+   }
+   else if ( node1->nodetype == SYM_NODETYPE_OPERATOR )
+   {
+      assert( node2->nodetype == SYM_NODETYPE_OPERATOR );
+
+      if ( node1->op < node2->op )
+         return -1;
+      if ( node1->op > node2->op )
+         return 1;
+   }
+   else if ( node1->nodetype == SYM_NODETYPE_VAL )
+   {
+      assert( node2->nodetype == SYM_NODETYPE_VAL );
+
+      if ( node1->value < node2->value )
+         return -1;
+      if ( node1->value > node2->value )
+         return 1;
+   }
+   else
+   {
+      assert( node1->nodetype == SYM_NODETYPE_RHS );
+      assert( node2->nodetype == SYM_NODETYPE_RHS );
+      assert( node1->hasinfo && node2->hasinfo );
+   }
+
+   if ( !node1->hasinfo && node2->hasinfo )
+      return -1;
+   if ( node1->hasinfo && !node2->hasinfo )
+      return 1;
+
+   if ( node1->hasinfo )
+   {
+      if ( node1->consinfo->lhs < node2->consinfo->lhs )
+         return -1;
+      if ( node1->consinfo->lhs > node2->consinfo->lhs )
+         return 1;
+
+      if ( node1->consinfo->rhs < node2->consinfo->rhs )
+         return -1;
+      if ( node1->consinfo->rhs > node2->consinfo->rhs )
+         return 1;
+
+      if ( node1->consinfo->conshdlr < node2->consinfo->conshdlr )
+         return -1;
+      if ( node1->consinfo->conshdlr > node2->consinfo->conshdlr )
+         return 1;
+   }
+
+   return 0;
+}
+
+/** sorts nodes of a symmetry detection graph
+ *
+ *  Nodes are sorted first by their nodetype, then by the value of the corresponding
+ *  type information, and then by their consinfo (first lhs, then rhs, then conshdlr).
+ *
+ *  result:
+ *    < 0: ind1 comes before (is better than) ind2
+ *    = 0: both indices have the same value
+ *    > 0: ind2 comes after (is worse than) ind2
+ */
+static
+SCIP_DECL_SORTINDCOMP(SYMsortNodes)
+{
+   SYM_NODE** nodes;
+
+   nodes = (SYM_NODE**) dataptr;
+
+   return compareNodes(nodes[ind1], nodes[ind2]);
+}
+
+/** sorts edges of a symmetry detection graph
+ *
+ *  Edges are sorted first by whether they are colored and then by their color.
+ *
+ *  result:
+ *    < 0: ind1 comes before (is better than) ind2
+ *    = 0: both indices have the same value
+ *    > 0: ind2 comes after (is worse than) ind2
+ */
+static
+int compareEdges(
+   SYM_EDGE*             edge1,              /**< first edge for comparison */
+   SYM_EDGE*             edge2               /**< second edge for comparison */
+   )
+{
+   assert( edge1 != NULL );
+   assert( edge2 != NULL );
+
+   if ( !edge1->iscolored && edge2->iscolored )
+      return -1;
+   if ( !edge1->iscolored && !edge2->iscolored )
+      return 1;
+
+   if ( edge1->iscolored )
+   {
+      if ( edge1->color < edge2->color )
+         return -1;
+      if ( edge1->color > edge2->color )
+         return 1;
+   }
+
+   return 0;
+}
+
+/** sorts edges of a symmetry detection graph
+ *
+ *  Edges are sorted first by whether they are colored and then by their color.
+ *
+ *  result:
+ *    < 0: ind1 comes before (is better than) ind2
+ *    = 0: both indices have the same value
+ *    > 0: ind2 comes after (is worse than) ind2
+ */
+static
+SCIP_DECL_SORTINDCOMP(SYMsortEdges)
+{
+   SYM_EDGE** edges;
+
+   edges = (SYM_EDGE**) dataptr;
+
+   return compareEdges(edges[ind1], edges[ind2]);
+}
+
 /*
  * Local methods
  */
@@ -5972,7 +6144,32 @@ SCIP_Bool conshdlrsCanProvidePermsymInformation(
    return TRUE;
 }
 
-#ifdef SCIP_DISABLED_CODE
+/** returns whether a node of the symmetry detection graph needs to be fixed */
+static
+SCIP_RETCODE isFixedNode(
+   SYM_NODE*             node,               /**< node of symmetry detection graph */
+   SYM_SPEC              fixedtype           /**< variable types that must be fixed by symmetries */
+   )
+{
+   SCIP_VAR* var;
+   assert( node != NULL );
+
+   if ( node->nodetype != SYM_NODETYPE_VAR )
+      return FALSE;
+
+   var = node->var;
+   assert( var != NULL );
+
+   if ( (fixedtype & SYM_SPEC_INTEGER) && SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER )
+      return TRUE;
+   if ( (fixedtype & SYM_SPEC_BINARY) && SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
+      return TRUE;
+   if ( (fixedtype & SYM_SPEC_REAL) &&
+      (SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT) )
+      return TRUE;
+   return FALSE;
+}
+
 /** computes symmetry group of a CIP */
 static
 SCIP_RETCODE computeSymmetryGroup2(
@@ -6059,8 +6256,8 @@ SCIP_RETCODE computeSymmetryGroup2(
    nodecolors[0] = curcolor;
    for (i = 0; i < nnodes; ++i)
    {
-      /* if a new node type has been found */
-      if ( compareNodes(nodes[nodeperm[i-1]], nodes[nodeperm[i]]) != 0 )
+      /* if a new node type has been found or a node needs to be fixed */
+      if ( compareNodes(nodes[nodeperm[i-1]], nodes[nodeperm[i]]) != 0 || isFixedNode(nodes[nodeperm[i]], fixedtype) )
          ++curcolor;
       nodecolors[nodeperm[i]] = curcolor;
    }
@@ -6080,7 +6277,7 @@ SCIP_RETCODE computeSymmetryGroup2(
    SCIPsort(edgeperm, SYMsortEdges, edges, nedges);
 
    /* assign colors */
-   SCIP_CALL( SCIPallocBufferArray(scip, &nodecolors, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &edgecolors, nedges) );
    edgecolors[0] = -1;          /* uncolored edges get color -1 */
    for (i = 0; i < nedges; ++i)
    {
@@ -6101,6 +6298,7 @@ SCIP_RETCODE computeSymmetryGroup2(
       SCIP_CALL( SCIPfreeSymgraph(scip, &graphs[c]) );
    }
 
+   SCIPfreeBufferArray(scip, &edgecolors);
    SCIPfreeBufferArray(scip, &edgeperm);
    SCIPfreeBufferArray(scip, &edges);
    SCIPfreeBufferArray(scip, &nodecolors);
@@ -6110,7 +6308,6 @@ SCIP_RETCODE computeSymmetryGroup2(
 
    return SCIP_OKAY;
 }
-#endif
 
 /** computes symmetry group of a MIP */
 static
@@ -7134,7 +7331,6 @@ SCIP_RETCODE determineSymmetry(
          &propdata->perms, &propdata->log10groupsize, &propdata->nmovedvars, &propdata->isnonlinvar,
          &propdata->binvaraffected, &propdata->compressed, &successful) );
 
-#ifdef SCIP_DISABLED_CODE
    {
       SCIP_Bool success;
 
@@ -7146,7 +7342,6 @@ SCIP_RETCODE determineSymmetry(
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) new symmetry computation finished (success: %d)\n",
          SCIPgetSolvingTime(scip), success);
    }
-#endif
 
    /* mark that we have computed the symmetry group */
    propdata->computedsymmetry = TRUE;

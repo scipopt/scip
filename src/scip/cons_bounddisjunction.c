@@ -2927,7 +2927,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphBounddisjunction)
    SCIP_CALL( SCIPcreateSymgraph(scip, graph, 3 * nconsvars) );
 
    /* add node initializing constraint (with artificial rhs) */
-   SCIP_CALL( SCIPcreateSymgraphNode(scip, *graph, 0, SYM_NODETYPE_RHS, NULL, -1.0, 0.0, TRUE,
+   SCIP_CALL( SCIPcreateSymgraphNode(scip, *graph, 0, SYM_NODETYPE_RHS, NULL, NULL, -1.0, 0.0, TRUE,
          0.0, 0.0, SCIPfindConshdlr(scip, CONSHDLR_NAME)) );
 
    /* create nodes and edges for each literal in the bounddisjunction */
@@ -2947,14 +2947,14 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphBounddisjunction)
 
       /* add node and edge for bound expression of literal */
       SCIP_CALL( SCIPcreateSymgraphNode(scip, *graph, cnt, SYM_NODETYPE_OPERATOR,
-            bdexpr, -1, 0.0, FALSE, 0.0, 0.0, NULL) );
+            bdexpr, NULL, -1, 0.0, FALSE, 0.0, 0.0, NULL) );
       SCIP_CALL( SCIPcreateSymgraphEdge(scip, *graph, (*graph)->nodes[0], (*graph)->nodes[cnt], FALSE, 0.0) );
       ++cnt;
 
       /* add node and edge for bound on literal */
       bound = consdata->boundtypes[i] == SCIP_BOUNDTYPE_UPPER ? consdata->bounds[i] : -consdata->bounds[i];
       SCIP_CALL( SCIPcreateSymgraphNode(scip, *graph, cnt, SYM_NODETYPE_VAL,
-            NULL, -1, bound, FALSE, 0.0, 0.0, NULL) );
+            NULL, NULL, -1, bound, FALSE, 0.0, 0.0, NULL) );
       SCIP_CALL( SCIPcreateSymgraphEdge(scip, *graph, (*graph)->nodes[cnt - 1], (*graph)->nodes[cnt], FALSE, 0.0) );
       ++cnt;
 
@@ -2965,7 +2965,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphBounddisjunction)
       {
          /* encode aggregation by a sum-expression and connect it to bdexpr node */
          SCIP_CALL( SCIPcreateSymgraphNode(scip, *graph, cnt, SYM_NODETYPE_OPERATOR,
-               sumexpr, -1, 0.0, FALSE, 0.0, 0.0, NULL) );
+               sumexpr, NULL, -1, 0.0, FALSE, 0.0, 0.0, NULL) );
          SCIP_CALL( SCIPcreateSymgraphEdge(scip, *graph, (*graph)->nodes[cnt - 2], (*graph)->nodes[cnt], FALSE, 0.0) );
          ++cnt;
 
@@ -2978,7 +2978,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphBounddisjunction)
       else
       {
          SCIP_CALL( SCIPcreateSymgraphNode(scip, *graph, cnt, SYM_NODETYPE_VAR,
-               NULL, SCIPvarGetProbindex(vars[0]), 0.0, FALSE, 0.0, 0.0, NULL) );
+               NULL, vars[0], SCIPvarGetProbindex(vars[0]), 0.0, FALSE, 0.0, 0.0, NULL) );
          SCIP_CALL( SCIPcreateSymgraphEdge(scip, *graph, (*graph)->nodes[cnt - 2], (*graph)->nodes[cnt], FALSE, 0.0) );
          ++cnt;
       }

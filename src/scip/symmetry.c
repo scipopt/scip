@@ -1423,6 +1423,8 @@ SCIP_RETCODE SCIPcreateSymgraphNode(
    SYM_NODETYPE          nodetype,           /**< type of the node */
    SCIP_EXPRHDLR*        op,                 /**< operator encoded by the node
                                               *   (if nodetype is SYM_NODETYPE_OPERATOR) */
+   SCIP_VAR*             var,                /**< variable encoded by the node
+                                              *   (if nodetype is SYM_NODETYPE_VAR) */
    int                   varidx,             /**< index of variable encoded by the node
                                               *   (if nodetype is SYM_NODETYPE_VAR) */
    SCIP_Real             value,              /**< index of value encoded by the node
@@ -1439,6 +1441,7 @@ SCIP_RETCODE SCIPcreateSymgraphNode(
    assert(symgraph != NULL);
    assert(nodetype != SYM_NODETYPE_OPERATOR || op != NULL);
    assert(nodetype != SYM_NODETYPE_VAR || varidx >= 0);
+   assert(nodetype != SYM_NODETYPE_VAR || var != NULL);
    assert(nodetype != SYM_NODETYPE_VAL || !(SCIPisInfinity(scip, value) || SCIPisInfinity(scip, -value)));
    assert(nodetype != SYM_NODETYPE_RHS || hasinfo);
    assert(!hasinfo || conshdlr != NULL);
@@ -1461,6 +1464,7 @@ SCIP_RETCODE SCIPcreateSymgraphNode(
    (*node)->nodetype = nodetype;
    (*node)->op = op;
    (*node)->varidx = varidx;
+   (*node)->var = var;
    (*node)->value = value;
    (*node)->hasinfo = hasinfo;
 
@@ -1632,12 +1636,12 @@ SCIP_RETCODE SCIPcreatePermsymDetectionGraphLinear(
    /* create nodes for each variable */
    for( i = 0; i < nvars; ++i )
    {
-      SCIP_CALL( SCIPcreateSymgraphNode(scip, *graph, i, SYM_NODETYPE_VAR, NULL, SCIPvarGetProbindex(vars[i]),
+      SCIP_CALL( SCIPcreateSymgraphNode(scip, *graph, i, SYM_NODETYPE_VAR, NULL, vars[i], SCIPvarGetProbindex(vars[i]),
             0.0, FALSE, 0.0, 0.0, NULL) );
    }
 
    /* create node corresponding to right-hand side */
-   SCIP_CALL( SCIPcreateSymgraphNode(scip, *graph, nvars, SYM_NODETYPE_RHS, NULL, -1, 0.0, TRUE, lhs, rhs, conshdlr) );
+   SCIP_CALL( SCIPcreateSymgraphNode(scip, *graph, nvars, SYM_NODETYPE_RHS, NULL, NULL, -1, 0.0, TRUE, lhs, rhs, conshdlr) );
 
    /* create edges */
    for( i = 0; i < nvars; ++i )
@@ -1675,7 +1679,7 @@ SCIP_RETCODE SCIPaddSymgraphVarAggegration(
    for( j = 0; j < nvars; ++j )
    {
       SCIP_CALL( SCIPcreateSymgraphNode(scip, graph, *idx, SYM_NODETYPE_VAR,
-            NULL, SCIPvarGetProbindex(vars[j]), 0.0, FALSE, 0.0, 0.0, NULL) );
+            NULL, vars[j], SCIPvarGetProbindex(vars[j]), 0.0, FALSE, 0.0, 0.0, NULL) );
 
       SCIP_CALL( SCIPcreateSymgraphEdge(scip, graph, graph->nodes[rootidx], graph->nodes[*idx],
             TRUE, vals[j]) );
@@ -1686,7 +1690,7 @@ SCIP_RETCODE SCIPaddSymgraphVarAggegration(
    if( !SCIPisZero(scip, constant) )
    {
       SCIP_CALL( SCIPcreateSymgraphNode(scip, graph, *idx, SYM_NODETYPE_VAL,
-            NULL, -1.0, constant, FALSE, 0.0, 0.0, NULL) );
+            NULL, NULL, -1.0, constant, FALSE, 0.0, 0.0, NULL) );
 
       SCIP_CALL( SCIPcreateSymgraphEdge(scip, graph, graph->nodes[rootidx], graph->nodes[*idx],
             FALSE, 0.0) );

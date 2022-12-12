@@ -172,6 +172,8 @@ struct SYM_Node
    SYM_NODETYPE          nodetype;           /**< type of the node */
    SCIP_EXPRHDLR*        op;                 /**< operator encoded by the node
                                               *   (if nodetype is SYM_NODETYPE_OPERATOR) */
+   SCIP_VAR*             var;                /**< variable encoded by the node
+                                              *   (if nodetype is SYM_NODETYPE_VAR) */
    int                   varidx;             /**< index of variable encoded by the node
                                               *   (if nodetype is SYM_NODETYPE_VAR) */
    SCIP_Real             value;              /**< index of value encoded by the node

@@ -7211,7 +7211,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphIndicator)
    SCIP_CALL( SCIPcreateSymgraph(scip, graph, nvarslincons + 7) );
 
    /* add node initializing constraint (with lhs/rhs of linear constraint) */
-   SCIP_CALL( SCIPcreateSymgraphNode(scip, *graph, 0, SYM_NODETYPE_RHS, NULL, -1.0, 0.0, TRUE,
+   SCIP_CALL( SCIPcreateSymgraphNode(scip, *graph, 0, SYM_NODETYPE_RHS, NULL, NULL, -1.0, 0.0, TRUE,
          lhs, rhs, SCIPfindConshdlr(scip, CONSHDLR_NAME)) );
 
    nvars = SCIPgetNVars(scip);
@@ -7220,11 +7220,11 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphIndicator)
    SCIP_CALL( SCIPallocBufferArray(scip, &vals, nvars) );
 
    /* create nodes and edges for activation of constraint */
-   SCIP_CALL( SCIPcreateSymgraphNode(scip, *graph, 1, SYM_NODETYPE_OPERATOR, eqexpr, -1.0, 0.0,
+   SCIP_CALL( SCIPcreateSymgraphNode(scip, *graph, 1, SYM_NODETYPE_OPERATOR, eqexpr, NULL, -1.0, 0.0,
          FALSE, 0.0, 0.0, NULL) );
    SCIP_CALL( SCIPcreateSymgraphEdge(scip, *graph, (*graph)->nodes[0], (*graph)->nodes[1], FALSE, 0.0) );
 
-   SCIP_CALL( SCIPcreateSymgraphNode(scip, *graph, 2, SYM_NODETYPE_VAL, NULL, -1.0, (SCIP_Real) consdata->activeone,
+   SCIP_CALL( SCIPcreateSymgraphNode(scip, *graph, 2, SYM_NODETYPE_VAL, NULL, NULL, -1.0, (SCIP_Real) consdata->activeone,
          FALSE, 0.0, 0.0, NULL) );
    SCIP_CALL( SCIPcreateSymgraphEdge(scip, *graph, (*graph)->nodes[1], (*graph)->nodes[2], FALSE, 0.0) );
    cnt = 3;
@@ -7241,7 +7241,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphIndicator)
    {
       /* encode aggregation by a sum-expression and connect it to bdexpr node */
       SCIP_CALL( SCIPcreateSymgraphNode(scip, *graph, cnt, SYM_NODETYPE_OPERATOR,
-            sumexpr, -1, 0.0, FALSE, 0.0, 0.0, NULL) );
+            sumexpr, NULL, -1, 0.0, FALSE, 0.0, 0.0, NULL) );
       SCIP_CALL( SCIPcreateSymgraphEdge(scip, *graph, (*graph)->nodes[1], (*graph)->nodes[cnt], FALSE, 0.0) );
       ++cnt;
 
@@ -7254,7 +7254,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphIndicator)
    else
    {
       SCIP_CALL( SCIPcreateSymgraphNode(scip, *graph, cnt, SYM_NODETYPE_VAR,
-            NULL, SCIPvarGetProbindex(vars[0]), 0.0, FALSE, 0.0, 0.0, NULL) );
+            NULL, vars[0], SCIPvarGetProbindex(vars[0]), 0.0, FALSE, 0.0, 0.0, NULL) );
       SCIP_CALL( SCIPcreateSymgraphEdge(scip, *graph, (*graph)->nodes[1], (*graph)->nodes[cnt], FALSE, 0.0) );
       ++cnt;
    }
@@ -7266,7 +7266,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphIndicator)
    nlocvars = 1;
 
    SCIP_CALL( SCIPcreateSymgraphNode(scip, *graph, cnt, SYM_NODETYPE_OPERATOR,
-         slackexpr, -1, 0.0, FALSE, 0.0, 0.0, NULL) );
+         slackexpr, NULL, -1, 0.0, FALSE, 0.0, 0.0, NULL) );
    SCIP_CALL( SCIPcreateSymgraphEdge(scip, *graph, (*graph)->nodes[0], (*graph)->nodes[cnt], FALSE, 0.0) );
    ++cnt;
 
@@ -7276,7 +7276,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphIndicator)
    {
       /* encode aggregation by a sum-expression and connect it to root node */
       SCIP_CALL( SCIPcreateSymgraphNode(scip, *graph, cnt, SYM_NODETYPE_OPERATOR,
-            sumexpr, -1, 0.0, FALSE, 0.0, 0.0, NULL) );
+            sumexpr, NULL, -1, 0.0, FALSE, 0.0, 0.0, NULL) );
       SCIP_CALL( SCIPcreateSymgraphEdge(scip, *graph, (*graph)->nodes[cnt - 1], (*graph)->nodes[cnt], FALSE, 0.0) );
       ++cnt;
 
@@ -7289,7 +7289,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphIndicator)
    else
    {
       SCIP_CALL( SCIPcreateSymgraphNode(scip, *graph, cnt, SYM_NODETYPE_VAR,
-            NULL, SCIPvarGetProbindex(vars[0]), 0.0, FALSE, 0.0, 0.0, NULL) );
+            NULL, vars[0], SCIPvarGetProbindex(vars[0]), 0.0, FALSE, 0.0, 0.0, NULL) );
       SCIP_CALL( SCIPcreateSymgraphEdge(scip, *graph, (*graph)->nodes[cnt - 1], (*graph)->nodes[cnt], FALSE, 0.0) );
       ++cnt;
    }
@@ -7303,7 +7303,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphIndicator)
    nlocvars = nvarslincons;
 
    SCIP_CALL( SCIPcreateSymgraphNode(scip, *graph, cnt, SYM_NODETYPE_OPERATOR,
-         sumexpr, -1, 0.0, FALSE, 0.0, 0.0, NULL) );
+         sumexpr, NULL, -1, 0.0, FALSE, 0.0, 0.0, NULL) );
    SCIP_CALL( SCIPcreateSymgraphEdge(scip, *graph, (*graph)->nodes[0], (*graph)->nodes[cnt], FALSE, 0.0) );
    ++cnt;
 
