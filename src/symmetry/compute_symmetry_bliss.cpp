@@ -1573,7 +1573,7 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators2(
       int node = (int) G.add_vertex((unsigned) color);
       assert( node == v );
 #else
-      (void) G->add_vertex((unsigned) color);
+      (void) G.add_vertex((unsigned) color);
 #endif
 
       ++nnodes;
@@ -1592,11 +1592,7 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators2(
          {
             const int color = nodes[v]->computedcolor;
 
-#ifndef NDEBUG
             int node = (int) G.add_vertex((unsigned) color);
-#else
-            (void) G->add_vertex((unsigned) color);
-#endif
 
             nodeidx[v] = node;
 
@@ -1625,7 +1621,20 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators2(
             second = edges[e]->second->varidx;
          }
 
-         G.add_edge(first, second);
+         /* possibly split edge if it is colored */
+         if ( edges[e]->computedcolor != -1 )
+         {
+            const int color = edges[e]->computedcolor;
+
+            int inter = G.add_vertex((unsigned) color);
+
+            G.add_edge(first, inter);
+            G.add_edge(second, inter);
+
+            ++nnodes;
+         }
+         else
+            G.add_edge(first, second);
          ++nedges;
       }
    }
