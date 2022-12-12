@@ -6146,7 +6146,7 @@ SCIP_Bool conshdlrsCanProvidePermsymInformation(
 
 /** returns whether a node of the symmetry detection graph needs to be fixed */
 static
-SCIP_RETCODE isFixedNode(
+SCIP_Bool isFixedNode(
    SYM_NODE*             node,               /**< node of symmetry detection graph */
    SYM_SPEC              fixedtype           /**< variable types that must be fixed by symmetries */
    )
@@ -6186,6 +6186,8 @@ SCIP_RETCODE computeSymmetryGroup2(
    SYM_EDGE** edges;
    int* nodeperm;
    int* edgeperm;
+   int* varcolors;
+   int nvars;
    int nconss;
    int c;
    int i;
@@ -6193,6 +6195,7 @@ SCIP_RETCODE computeSymmetryGroup2(
    int nnodes = 0;
    int nedges = 0;
    int curcolor = 0;
+   int maxnnodesgraph = 0;
 
    assert( scip != NULL );
    assert( success != NULL );
@@ -6218,6 +6221,9 @@ SCIP_RETCODE computeSymmetryGroup2(
 
       nnodes += graphs[c]->nnodes;
       nedges += graphs[c]->nedges;
+
+      if ( graphs[c]->nnodes > maxnnodesgraph )
+         maxnnodesgraph = graphs[c]->nnodes;
    }
 
    if ( ! *success )
@@ -6249,14 +6255,38 @@ SCIP_RETCODE computeSymmetryGroup2(
    SCIP_CALL( SCIPallocBufferArray(scip, &nodeperm, nnodes) );
    SCIPsort(nodeperm, SYMsortNodes, nodes, nnodes);
 
-   /* assign colors */
+   /* assign colors, store colors for variables separately */
+   nvars = SCIPgetNVars(scip);
+   SCIP_CALL( SCIPallocBufferArray(scip, &varcolors, nvars) );
+#ifndef NDEBUG
+   for (i = 0; i < nvars; ++i)
+      varcolors[i] = -1;
+#endif
+
    nodes[nodeperm[0]]->computedcolor = curcolor;
+   if ( nodes[nodeperm[0]]->nodetype == SYM_NODETYPE_VAR )
+      varcolors[nodes[nodeperm[0]]->varidx] = curcolor;
    for (i = 1; i < nnodes; ++i)
    {
       /* if a new node type has been found or a node needs to be fixed */
       if ( compareNodes(nodes[nodeperm[i-1]], nodes[nodeperm[i]]) != 0 || isFixedNode(nodes[nodeperm[i]], fixedtype) )
-         ++curcolor;
-      nodes[nodeperm[i]]->computedcolor = curcolor;
+      {
+         /* make sure to not increment fixed variables twice */
+         if ( isFixedNode(nodes[nodeperm[i]], fixedtype) && varcolors[nodes[nodeperm[i]]->varidx] == -1 )
+            ++curcolor;
+      }
+
+      /* treat variable nodes differently, because they can be fixed */
+      if ( nodes[nodeperm[i]]->nodetype == SYM_NODETYPE_VAR )
+      {
+         if ( varcolors[nodes[nodeperm[i]]->varidx] == -1 )
+         {
+            nodes[nodeperm[i]]->computedcolor = curcolor;
+            varcolors[nodes[nodeperm[i]]->varidx] = curcolor;
+         }
+      }
+      else
+         nodes[nodeperm[i]]->computedcolor = curcolor;
    }
 
    /*
@@ -6291,6 +6321,24 @@ SCIP_RETCODE computeSymmetryGroup2(
    /*
     * actually compute symmetries
     */
+   {
+      int** perms;
+      int nperms;
+      int nmaxperms;
+      SCIP_Real log10groupsize;
+      int p;
+
+      SCIP_CALL( SYMcomputeSymmetryGenerators2(scip, maxgenerators, graphs, nconss, maxnnodesgraph,
+            varcolors, nvars, &nperms, &nmaxperms, &perms, &log10groupsize) );
+
+      printf("new symmetry found %d generators\n", nperms);
+
+      for (p = nperms - 1; p >= 0; --p)
+      {
+         SCIPfreeBlockMemoryArrayNull(scip, &perms[p], nvars);
+      }
+      SCIPfreeBlockMemoryArrayNull(scip, &perms, nmaxperms);
+   }
 
    /* free symmetry graphs */
    for (c = 0; c < nconss; ++c)
@@ -6300,6 +6348,7 @@ SCIP_RETCODE computeSymmetryGroup2(
 
    SCIPfreeBufferArray(scip, &edgeperm);
    SCIPfreeBufferArray(scip, &edges);
+   SCIPfreeBufferArray(scip, &varcolors);
    SCIPfreeBufferArray(scip, &nodeperm);
    SCIPfreeBufferArray(scip, &nodes);
    SCIPfreeBufferArray(scip, &graphs);

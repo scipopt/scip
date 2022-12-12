@@ -1521,6 +1521,186 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    return SCIP_OKAY;
 }
 
+/** compute generators of symmetry group */
+SCIP_RETCODE SYMcomputeSymmetryGenerators2(
+   SCIP*                 scip,               /**< SCIP pointer */
+   int                   maxgenerators,      /**< maximal number of generators constructed (= 0 if unlimited) */
+   SYM_GRAPH**           graphs,             /**< array of symmetry detection graphs */
+   int                   ngraphs,            /**< number of graphs encoded in graphs */
+   int                   maxnnodesgraph,     /**< maximum number of nodes encoded in a graph */
+   int*                  varcolors,          /**< colors of variable nodes */
+   int                   nvars,              /**< number of active problem variables */
+   int*                  nperms,             /**< pointer to store number of permutations */
+   int*                  nmaxperms,          /**< pointer to store maximal number of permutations (needed for freeing storage) */
+   int***                perms,              /**< pointer to store permutation generators as (nperms x npermvars) matrix */
+   SCIP_Real*            log10groupsize      /**< pointer to store log10 of size of group */
+   )
+{
+   SYM_NODE** nodes;
+   SYM_EDGE** edges;
+   int* nodeidx;
+   int first;
+   int second;
+   int nnodes = 0;
+   int nedges = 0;
+
+   assert( scip != NULL );
+   assert( graphs != NULL );
+   assert( nperms != NULL );
+   assert( nmaxperms != NULL );
+   assert( perms != NULL );
+   assert( log10groupsize != NULL );
+
+   /* init */
+   *nperms = 0;
+   *nmaxperms = 0;
+   *perms = NULL;
+   *log10groupsize = 0;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodeidx, maxnnodesgraph) );
+
+   /* create bliss graph */
+   bliss::Graph G(0);
+
+   /* add nodes for variables
+    *
+    * variable nodes come first since they will be the same for all constraints */
+   for (int v = 0; v < nvars; ++v)
+   {
+      const int color = varcolors[v];
+
+#ifndef NDEBUG
+      int node = (int) G.add_vertex((unsigned) color);
+      assert( node == v );
+#else
+      (void) G->add_vertex((unsigned) color);
+#endif
+
+      ++nnodes;
+   }
+
+   /* iterate over graphs and add nodes and edges, identify variable nodes with each other */
+   for (int g = 0; g < ngraphs; ++g)
+   {
+      /* add nodes */
+      nodes = graphs[g]->nodes;
+      assert( graphs[g]->nnodes <= maxnnodesgraph );
+
+      for (int v = 0; v < graphs[g]->nnodes; ++v)
+      {
+         if ( nodes[v]->nodetype != SYM_NODETYPE_VAR )
+         {
+            const int color = nodes[v]->computedcolor;
+
+#ifndef NDEBUG
+            int node = (int) G.add_vertex((unsigned) color);
+#else
+            (void) G->add_vertex((unsigned) color);
+#endif
+
+            nodeidx[v] = node;
+
+            ++nnodes;
+         }
+         else
+            nodeidx[v] = -1;
+      }
+
+      /* add edges */
+      edges = graphs[g]->edges;
+      for (int e = 0; e < graphs[g]->nedges; ++e)
+      {
+         first = nodeidx[edges[e]->first->id];
+         second = nodeidx[edges[e]->second->id];
+         assert( first >= 0 || second >= 0 );
+
+         if ( first == -1 )
+         {
+            assert( edges[e]->first->nodetype == SYM_NODETYPE_VAR );
+            first = edges[e]->first->varidx;
+         }
+         else if ( second == -1 )
+         {
+            assert( edges[e]->second->nodetype == SYM_NODETYPE_VAR );
+            second = edges[e]->second->varidx;
+         }
+
+         G.add_edge(first, second);
+         ++nedges;
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &nodeidx);
+
+   assert( (int) G.get_nof_vertices() == nnodes );
+   SCIPdebugMsg(scip, "Symmetry detection graph has %d nodes and %d edges.\n", nnodes, nedges);
+
+
+   /* compute automorphisms */
+   bliss::Stats stats;
+   BLISS_Data data;
+   data.scip = scip;
+   data.npermvars = nvars;
+   data.nperms = 0;
+   data.nmaxperms = 0;
+   data.maxgenerators = maxgenerators;
+   data.perms = NULL;
+
+   /* Prefer splitting partition cells corresponding to variables over those corresponding
+    * to inequalities. This is because we are only interested in the action
+    * of the automorphism group on the variables, and we need a base for this action */
+   G.set_splitting_heuristic(bliss::Graph::shs_f);
+   /* disable component recursion as advised by Tommi Junttila from bliss */
+   G.set_component_recursion(false);
+
+   /* do not use a node limit, but set generator limit */
+#ifdef BLISS_PATCH_PRESENT
+   G.set_search_limits(0, (unsigned) maxgenerators);
+#endif
+
+#if BLISS_VERSION_MAJOR >= 1 || BLISS_VERSION_MINOR >= 76
+   /* lambda function to have access to data and pass it to the blisshook above */
+   auto reportglue = [&](unsigned int n, const unsigned int* aut) {
+      blisshook((void*)&data, n, aut);
+   };
+
+   /* lambda function to have access to stats and terminate the search if maxgenerators are reached */
+   auto term = [&]() {
+      return (stats.get_nof_generators() >= (long unsigned int) maxgenerators);
+   };
+
+   /* start search */
+   G.find_automorphisms(stats, reportglue, term);
+#else
+   /* start search */
+   G.find_automorphisms(stats, blisshook, (void*) &data);
+#endif
+
+
+#ifdef SCIP_OUTPUT
+   (void) stats.print(stdout);
+#endif
+
+   /* prepare return values */
+   if ( data.nperms > 0 )
+   {
+      *perms = data.perms;
+      *nperms = data.nperms;
+      *nmaxperms = data.nmaxperms;
+   }
+   else
+   {
+      assert( data.perms == NULL );
+      assert( data.nmaxperms == 0 );
+   }
+
+   /* determine log10 of symmetry group size */
+   *log10groupsize = (SCIP_Real) log10l(stats.get_group_size_approx());
+
+
+   return SCIP_OKAY;
+}
+
 /** compute generators of reflection symmetry group */
 SCIP_RETCODE SYMcomputeReflectionSymmetryGenerators(
    SCIP*                 scip,               /**< SCIP pointer */
