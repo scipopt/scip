@@ -1973,8 +1973,12 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
    */
 
    // call barrier
+#if CLP_VERSION_MAJOR >= 1 && CLP_VERSION_MINOR > 17
    int startFinishOptions = 1;
    int status = lpi->clp->barrier(crossover, startFinishOptions);
+#else
+   int status = lpi->clp->barrier(crossover);
+#endif
 
    lpi->lastalgorithm = 2;
    lpi->solved = TRUE;
