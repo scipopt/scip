@@ -1467,6 +1467,7 @@ SCIP_RETCODE SCIPcreateSymgraphNode(
    (*node)->var = var;
    (*node)->value = value;
    (*node)->hasinfo = hasinfo;
+   (*node)->computedcolor = -1;
 
    if( hasinfo )
    {
@@ -1535,6 +1536,7 @@ SCIP_RETCODE SCIPcreateSymgraphEdge(
    (*edge)->second = second;
    (*edge)->iscolored = iscolored;
    (*edge)->color = color;
+   (*edge)->computedcolor = -1;
 
    return SCIP_OKAY;
 }

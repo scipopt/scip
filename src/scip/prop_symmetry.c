@@ -6186,8 +6186,6 @@ SCIP_RETCODE computeSymmetryGroup2(
    SYM_EDGE** edges;
    int* nodeperm;
    int* edgeperm;
-   int* nodecolors;
-   int* edgecolors;
    int nconss;
    int c;
    int i;
@@ -6252,14 +6250,13 @@ SCIP_RETCODE computeSymmetryGroup2(
    SCIPsort(nodeperm, SYMsortNodes, nodes, nnodes);
 
    /* assign colors */
-   SCIP_CALL( SCIPallocBufferArray(scip, &nodecolors, nnodes) );
-   nodecolors[0] = curcolor;
-   for (i = 0; i < nnodes; ++i)
+   nodes[nodeperm[0]]->computedcolor = curcolor;
+   for (i = 1; i < nnodes; ++i)
    {
       /* if a new node type has been found or a node needs to be fixed */
       if ( compareNodes(nodes[nodeperm[i-1]], nodes[nodeperm[i]]) != 0 || isFixedNode(nodes[nodeperm[i]], fixedtype) )
          ++curcolor;
-      nodecolors[nodeperm[i]] = curcolor;
+      nodes[nodeperm[i]]->computedcolor = curcolor;
    }
 
    /*
@@ -6276,16 +6273,19 @@ SCIP_RETCODE computeSymmetryGroup2(
    SCIP_CALL( SCIPallocBufferArray(scip, &edgeperm, nedges) );
    SCIPsort(edgeperm, SYMsortEdges, edges, nedges);
 
-   /* assign colors */
-   SCIP_CALL( SCIPallocBufferArray(scip, &edgecolors, nedges) );
-   edgecolors[0] = -1;          /* uncolored edges get color -1 */
-   for (i = 0; i < nedges; ++i)
+   /* assign colors, uncolored edges get color -1 */
+   if ( edges[edgeperm[0]]->iscolored )
+      edges[edgeperm[0]]->computedcolor = ++curcolor;
+   else
+      edges[edgeperm[0]]->computedcolor = -1;
+
+   for (i = 1; i < nedges; ++i)
    {
       /* if a new edge type has been found */
       if ( compareEdges(edges[edgeperm[i-1]], edges[edgeperm[i]]) != 0 )
-         edgecolors[edgeperm[i]] = ++curcolor;
+         edges[edgeperm[i]]->computedcolor = ++curcolor;
       else
-         edgecolors[edgeperm[i]] = edgecolors[edgeperm[i-1]];
+         edges[edgeperm[i]]->computedcolor = edges[edgeperm[i-1]]->computedcolor;
    }
 
    /*
@@ -6298,10 +6298,8 @@ SCIP_RETCODE computeSymmetryGroup2(
       SCIP_CALL( SCIPfreeSymgraph(scip, &graphs[c]) );
    }
 
-   SCIPfreeBufferArray(scip, &edgecolors);
    SCIPfreeBufferArray(scip, &edgeperm);
    SCIPfreeBufferArray(scip, &edges);
-   SCIPfreeBufferArray(scip, &nodecolors);
    SCIPfreeBufferArray(scip, &nodeperm);
    SCIPfreeBufferArray(scip, &nodes);
    SCIPfreeBufferArray(scip, &graphs);

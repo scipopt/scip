@@ -180,6 +180,7 @@ struct SYM_Node
                                               *   (if nodetype is SYM_NODETYPE_VAL) */
    SCIP_Bool             hasinfo;            /**< whether the node encodes information about a constraint */
    SYM_CONSINFO*         consinfo;           /**< pointer to information about constraint (or NULL) */
+   int                   computedcolor;      /**< color computed for symmetry detection */
 };
 
 /** data to encode an edge of a symmetry detection graph */
@@ -189,6 +190,7 @@ struct SYM_Edge
    SYM_NODE*             second;             /**< pointer to the second node of an edge */
    SCIP_Bool             iscolored;          /**< whether the edge is colored */
    SCIP_Real             color;              /**< color of the edge (if it is colored) */
+   int                   computedcolor;      /**< color computed for symmetry detection */
 };
 
 /** data to encode a symmetry detection graph */
