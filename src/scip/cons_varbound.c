@@ -5167,7 +5167,6 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsVarbound)
 static
 SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphVarbound)
 {  /*lint --e{715}*/
-   SCIP_CONSDATA* consdata;
    SCIP_VAR** vars;
    SCIP_Real* vals;
    SCIP_Real constant = 0.0;
@@ -5175,9 +5174,6 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphVarbound)
    SCIP_Real rhs;
    int nlocvars;
    int nvars;
-
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
 
    /* get active variables of the constraint */
    nvars = SCIPgetNVars(scip);
