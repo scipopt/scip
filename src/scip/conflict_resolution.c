@@ -2266,7 +2266,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
          {
             /* fix variable corresponding to the bound change and continue */
             FixVarConflict(conflictresolutionset, set, transprob, bdchginfo, vartoresolve);
-            resolutionsetPrintRow(conflictresolutionset, set, transprob, 1);
+            SCIPdebug(resolutionsetPrintRow(conflictresolutionset, set, transprob, 1));
             /* get the next bound change */
             bdchginfo = conflictFirstCand(conflict);
             if( bdchginfo == NULL )
