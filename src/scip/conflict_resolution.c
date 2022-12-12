@@ -989,6 +989,8 @@ void FixVarConflict(
    assert(var == SCIPbdchginfoGetVar(bdchginfo));
 
    varidx = SCIPvarGetProbindex(var);
+
+   SCIPsetDebugMsg(set, "fixing variable <%s> in conflict", SCIPvarGetName(var));
    found = FALSE;
    for( i = 0; i < resolutionset->nnz; i++ )
    {
@@ -998,10 +1000,12 @@ void FixVarConflict(
          if( resolutionset->vals[i] > 0 )
          {
             assert(SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_UPPER);
+            SCIPsetDebugMessagePrint(set, "at current upper bound %f \n", SCIPbdchginfoGetNewbound(bdchginfo));
          }
          else
          {
             assert(SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER);
+            SCIPsetDebugMessagePrint(set, "at current lower bound %f \n", SCIPbdchginfoGetNewbound(bdchginfo));
          }
          break;
       }
@@ -2019,7 +2023,7 @@ void printNonResolvableReasonType(
    bdchgtype = SCIPbdchginfoGetChgtype(bdchginfo);
    if (bdchgtype == SCIP_BOUNDCHGTYPE_BRANCHING)
    {
-      SCIPsetDebugMsg(set, " -> Not resolvable bound change: branching ");
+      SCIPsetDebugMsg(set, " -> Not resolvable bound change: branching \n");
    }
    else if (bdchgtype == SCIP_BOUNDCHGTYPE_PROPINFER)
    {
@@ -2027,13 +2031,13 @@ void printNonResolvableReasonType(
       reasonprop = SCIPbdchginfoGetInferProp(bdchginfo);
 
       /* todo check why the propagator can be none */
-      SCIPsetDebugMsg(set, " -> Not resolvable bound change: propagation %s",
+      SCIPsetDebugMsg(set, " -> Not resolvable bound change: propagation %s \n",
       reasonprop != NULL ? SCIPpropGetName(reasonprop) : "none");
    }
    else
    {
       assert(bdchgtype == SCIP_BOUNDCHGTYPE_CONSINFER);
-      SCIPsetDebugMsg(set, " -> Not resolvable bound change: constraint %s", SCIPconsGetName(SCIPbdchginfoGetInferCons(bdchginfo)));
+      SCIPsetDebugMsg(set, " -> Not resolvable bound change: constraint %s \n", SCIPconsGetName(SCIPbdchginfoGetInferCons(bdchginfo)));
    }
 }
 
@@ -2199,8 +2203,6 @@ SCIP_RETCODE conflictAnalyzeResolution(
       /* always apply coefficient tightening. It can only reduce the slack even further */
       tightenCoefLhs(set->scip, transprob, FALSE, conflictresolutionset->vals, &conflictresolutionset->lhs,
                      conflictresolutionset->inds, &conflictresolutionset->nnz, &nchgcoefs);
-      /* sort for linear time resolution */
-      SCIPsortIntReal(conflictresolutionset->inds, conflictresolutionset->vals, resolutionsetGetNNzs(conflictresolutionset));
       conflictslack = getSlack(set->scip, transprob, conflictresolutionset, bdchgidx);
       conflictresolutionset->slack = conflictslack;
    }
@@ -2264,6 +2266,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
          {
             /* fix variable corresponding to the bound change and continue */
             FixVarConflict(conflictresolutionset, set, transprob, bdchginfo, vartoresolve);
+            resolutionsetPrintRow(conflictresolutionset, set, transprob, 1);
             /* get the next bound change */
             bdchginfo = conflictFirstCand(conflict);
             if( bdchginfo == NULL )
@@ -2336,6 +2339,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
          reasonslack = getSlack(set->scip, transprob, reasonresolutionset, bdchgidx);
          reasonresolutionset->slack = reasonslack;
          /* sort for linear time resolution */
+         SCIPsortIntReal(conflictresolutionset->inds, conflictresolutionset->vals, resolutionsetGetNNzs(conflictresolutionset));
          SCIPsortIntReal(reasonresolutionset->inds, reasonresolutionset->vals, resolutionsetGetNNzs(reasonresolutionset));
 
          SCIPsetDebugMsg(set, "conflict resolution set: nnzs: %d, slack: %f \n", resolutionsetGetNNzs(conflictresolutionset), conflictslack);
