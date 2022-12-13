@@ -1573,10 +1573,10 @@ SCIP_RETCODE resolveWithReason(
    SCIP_RESOLUTIONSET*   conflictresolutionset, /**< conflict resolution set */
    SCIP_RESOLUTIONSET*   reasonresolutionset,   /**< reason resolution set */
    BMS_BLKMEM*           blkmem,                /**< block memory */
-   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_PROB*            transprob,             /**< transformed problem */
    int                   residx,                /**< index of variable to resolve */
    SCIP_Bool             wasresolved,           /**< resolution has been applied */
-   SCIP_Bool*            success               /**< apply resolution */
+   SCIP_Bool*            success                /**< apply resolution */
    )
 {
    int i;
@@ -1721,17 +1721,17 @@ SCIP_RETCODE resolveWithReason(
          largestcoef = MAX(largestcoef, conflictresolutionset->vals[i]);
       }
    }
-      SCIPsetDebugMsg(set, "Nonzeros in resolved constraint: %d \n", resolutionsetGetNNzs(conflictresolutionset));
-      SCIPdebug(resolutionsetPrintRow(conflictresolutionset, set, transprob, 3));
+   SCIPsetDebugMsg(set, "Nonzeros in resolved constraint: %d \n", resolutionsetGetNNzs(conflictresolutionset));
+   SCIPdebug(resolutionsetPrintRow(conflictresolutionset, set, transprob, 3));
 
-      /* check if the quotient of coefficients in the resolvent exceeds the max allowed quotient */
-      conflictresolutionset->coefquotient = (conflictresolutionset->nnz > 0) ? fabs(largestcoef / smallestcoef) : 0.0;
-      if ( SCIPsetIsGT(set, conflictresolutionset->coefquotient, set->conf_generalresminmaxquot) )
-      {
-         *success = FALSE;
-         SCIPsetDebugMsg(set, "Quotient %f exceeds max allowed quotient", (conflictresolutionset->nnz > 0) ? fabs(largestcoef / smallestcoef) : 0.0);
-         return SCIP_OKAY;
-      }
+   /* check if the quotient of coefficients in the resolvent exceeds the max allowed quotient */
+   conflictresolutionset->coefquotient = (conflictresolutionset->nnz > 0) ? fabs(largestcoef / smallestcoef) : 0.0;
+   if ( SCIPsetIsGT(set, conflictresolutionset->coefquotient, set->conf_generalresminmaxquot) )
+   {
+      *success = FALSE;
+      SCIPsetDebugMsg(set, "Quotient %f exceeds max allowed quotient", (conflictresolutionset->nnz > 0) ? fabs(largestcoef / smallestcoef) : 0.0);
+      return SCIP_OKAY;
+   }
 
    /* sort for linear time resolution */
    SCIPsortIntReal(conflictresolutionset->inds, conflictresolutionset->vals, resolutionsetGetNNzs(conflictresolutionset));
@@ -2067,7 +2067,6 @@ SCIP_RETCODE conflictAnalyzeResolution(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_ROW*             initialconflictrow, /**< row of constraint that detected the conflict */
-   SCIP_Bool             diving,             /**< are we in strong branching or diving mode? */
    int                   validdepth,         /**< minimal depth level at which the initial conflict set is valid */
    SCIP_Bool             infeasibleLP,       /**< does the conflict originate from an infeasible LP? */
    SCIP_Bool             pseudoobj,          /**< does the conflict originate from a violated pseudo objective bound? */
@@ -2200,7 +2199,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
    if ( set->conf_weakenconflict )
    {
       int nvarsweakened;
-      weakenResolutionSet(conflictresolutionset, set, transprob, bdchgidx, residx, &nvarsweakened, FALSE);
+      SCIP_CALL( weakenResolutionSet(conflictresolutionset, set, transprob, bdchgidx, residx, &nvarsweakened, FALSE) );
       SCIPsetDebugMsg(set, "Weakened %d variables, new conflict slack %f \n", nvarsweakened, conflictresolutionset->slack);
       SCIPdebug(resolutionsetPrintRow(conflictresolutionset, set, transprob, 0));
    }
@@ -2363,7 +2362,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
          if ( set->conf_weakenreason )
          {
             int nvarsweakened;
-            weakenResolutionSet(reasonresolutionset, set, transprob, bdchgidx, residx, &nvarsweakened, TRUE);
+            SCIP_CALL( weakenResolutionSet(reasonresolutionset, set, transprob, bdchgidx, residx, &nvarsweakened, TRUE) );
             SCIPsetDebugMsg(set, "Weakened %d variables, new reason slack %f \n", nvarsweakened, reasonresolutionset->slack);
             SCIPdebug(resolutionsetPrintRow(reasonresolutionset, set, transprob, 2));
          }
@@ -2381,7 +2380,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
 #endif
          SCIPsetDebugMsg(set, " Resolving conflict and reason on variable <%s>\n", SCIPvarGetName(vartoresolve));
          /* resolution step */
-         resolveWithReason(set->scip, set, conflictresolutionset, reasonresolutionset, blkmem, transprob, residx, (conflict->nresolutionsets > 0), &successresolution);
+         SCIP_CALL( resolveWithReason(set->scip, set, conflictresolutionset, reasonresolutionset, blkmem, transprob, residx, (conflict->nresolutionsets > 0), &successresolution) );
          nressteps++;
          SCIPstatisticPrintf("ConflictSTAT: %d %d %f %f\n", nressteps, resolutionsetGetNNzs(conflictresolutionset), conflictresolutionset->coefquotient, conflictresolutionset->slack);
 
@@ -2585,12 +2584,13 @@ SCIP_RETCODE SCIPconflictAnalyzeResolution(
    vars = SCIPprobGetVars(transprob);
    nvars = SCIPprobGetNVars(transprob);
 
-   SCIPallocBufferArray(set->scip, &tmp_conflictlb, nvars);
-   SCIPallocBufferArray(set->scip, &tmp_conflictub, nvars);
-   SCIPallocBufferArray(set->scip, &tmp_conflictrelaxedlb, nvars);
-   SCIPallocBufferArray(set->scip, &tmp_conflictrelaxedub, nvars);
-   SCIPallocBufferArray(set->scip, &tmp_conflictlbcount, nvars);
-   SCIPallocBufferArray(set->scip, &tmp_conflictubcount, nvars);
+   /* todo by duplicating some functions from graph conflict analysis we do not need the temporary arrays */
+   SCIPallocBufferArray(set->scip, &tmp_conflictlb, nvars); /*lint !e522*/
+   SCIPallocBufferArray(set->scip, &tmp_conflictub, nvars); /*lint !e522*/
+   SCIPallocBufferArray(set->scip, &tmp_conflictrelaxedlb, nvars); /*lint !e522*/
+   SCIPallocBufferArray(set->scip, &tmp_conflictrelaxedub, nvars); /*lint !e522*/
+   SCIPallocBufferArray(set->scip, &tmp_conflictlbcount, nvars); /*lint !e522*/
+   SCIPallocBufferArray(set->scip, &tmp_conflictubcount, nvars); /*lint !e522*/
 
    assert(conflict != NULL);
    assert(set != NULL);
@@ -2623,7 +2623,7 @@ SCIP_RETCODE SCIPconflictAnalyzeResolution(
 
    /* analyze the conflict set, and create a conflict constraint on success */
    SCIP_CALL( conflictAnalyzeResolution(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, \
-          eventqueue, cliquetable, initialconflictrow, FALSE, validdepth, infeasibleLP, pseudoobj, &nconss, &nconfvars) );
+          eventqueue, cliquetable, initialconflictrow, validdepth, infeasibleLP, pseudoobj, &nconss, &nconfvars) );
 
    conflict->nressuccess += (nconss > 0 ? 1 : 0);
    conflict->nresconfconss += nconss;

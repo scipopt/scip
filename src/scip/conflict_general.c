@@ -1843,7 +1843,7 @@ SCIP_RETCODE SCIPconflictAnalyzePseudo(
 
       if( set->conf_applyrespseudoobj )
       {
-         SCIPvarAddToRow(var, blkmem, set, stat, eventqueue, transprob, lp, initialrow, pseudocoefs[v]);
+         SCIP_CALL( SCIPvarAddToRow(var, blkmem, set, stat, eventqueue, transprob, lp, initialrow, pseudocoefs[v]) );
       }
 
       if( pseudocoefs[v] > 0.0 )
@@ -2266,7 +2266,7 @@ SCIP_RETCODE conflictAnalyzeLP(
             SCIP_Real QUAD(val);
             QUAD_ARRAY_LOAD(val, farkasrow->vals, farkasrow->inds[i]);
             assert(SCIPvarGetProbindex(vars[farkasrow->inds[i]]) == farkasrow->inds[i]);
-            SCIPvarAddToRow(vars[farkasrow->inds[i]], blkmem, set, stat, eventqueue, transprob, lp, initialrow, -QUAD_TO_DBL(val));
+            SCIP_CALL( SCIPvarAddToRow(vars[farkasrow->inds[i]], blkmem, set, stat, eventqueue, transprob, lp, initialrow, -QUAD_TO_DBL(val)) );
          }
       }
 
