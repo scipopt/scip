@@ -216,11 +216,11 @@ SCIP_RETCODE conflictInsertResolutionset(
 }
 
 
-/** perform activity based coefficient tightening on a row defined with a left hand side; returns TRUE if the row
- *  is redundant due to acitvity bounds
+/** perform activity based coefficient tightening on a row defined with a left hand side; returns if the row
+ *  is redundant due to activity bounds
  */
 static
-SCIP_Bool tightenCoefLhs(
+SCIP_RETCODE tightenCoefLhs(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_Bool             localbounds,        /**< do we use local bounds? */
@@ -228,7 +228,8 @@ SCIP_Bool tightenCoefLhs(
    SCIP_Real*            rowlhs,             /**< the left hand side of the row */
    int*                  rowinds,            /**< array of indices of variables with a non-zero coefficient in the row */
    int*                  rownnz,             /**< the number of non-zeros in the row */
-   int*                  nchgcoefs           /**< number of changed coefficients */
+   int*                  nchgcoefs,          /**< number of changed coefficients */
+   SCIP_Bool*            redundant           /**< pointer to store whether the row is redundant */
    )
 {
    /* @todo slack change */
@@ -239,7 +240,6 @@ SCIP_Bool tightenCoefLhs(
    SCIP_Real QUAD(minacttmp);
    SCIP_Real minact;
    SCIP_Real maxabsval = 0.0;
-   SCIP_Bool redundant = FALSE;
 
    assert(nchgcoefs != NULL);
 
@@ -251,6 +251,9 @@ SCIP_Bool tightenCoefLhs(
 
    assert(nchgcoefs != NULL);
    *nchgcoefs = 0;
+
+   if (redundant != NULL)
+      *redundant = FALSE;
 
    for( i = 0; i < *rownnz; ++i )
    {
@@ -298,7 +301,8 @@ SCIP_Bool tightenCoefLhs(
    /* row is redundant if minact is infinity */
    if (SCIPisInfinity(scip, minact) )
    {
-      redundant = TRUE;
+      if (redundant != NULL)
+         *redundant = TRUE;
       goto TERMINATE;
    }
    /* no coefficients can be tightened */
@@ -310,7 +314,8 @@ SCIP_Bool tightenCoefLhs(
    /* row is redundant in activity bounds */
    if( SCIPisFeasGE(scip, minact, *rowlhs) )
    {
-      redundant = TRUE;
+      if (redundant != NULL)
+         *redundant = TRUE;
       goto TERMINATE;
    }
 
@@ -416,7 +421,7 @@ SCIP_Bool tightenCoefLhs(
   TERMINATE:
    SCIPfreeBufferArrayNull(scip, &absvals);
 
-   return redundant;
+   return SCIP_OKAY;
 }
 
 /*returns whether a bound change is resolvable or not */
@@ -621,16 +626,19 @@ void conflictCleanUpbdchgqueue(
          SCIP_Bool idxinrow;
          SCIP_Real val;
          int idxvar;
+
          bdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueElems(conflict->resbdchgqueue)[i - deleted]);
          var = bdchginfo->var;
          idxvar = SCIPvarGetProbindex(var);
          idxinrow = FALSE;
+         val = 0.0;
          for( j = 0; j < resolutionset->nnz; j++ )
          {
             if (resolutionset->inds[j] == idxvar)
             {
                idxinrow = TRUE;
                val = resolutionset->vals[j];
+               assert(!SCIPsetIsZero(set, val));
                break;
             }
          }
@@ -1096,8 +1104,8 @@ SCIP_RETCODE weakenResolutionSet(
          if ( isreason && !set->conf_weakenreasonall && (set->conf_batchcoeftight > 0) &&
             (*nvarsweakened % set->conf_batchcoeftight == 0) )
          {
-            tightenCoefLhs(set->scip, prob, FALSE, resolutionset->vals, &resolutionset->lhs,
-                           resolutionset->inds, &resolutionset->nnz, &nchgcoefs);
+            SCIP_CALL( tightenCoefLhs(set->scip, prob, FALSE, resolutionset->vals, &resolutionset->lhs,
+                           resolutionset->inds, &resolutionset->nnz, &nchgcoefs, NULL) );
             applytightening = FALSE;
          }
       }
@@ -1106,8 +1114,8 @@ SCIP_RETCODE weakenResolutionSet(
    }
    if (applytightening)
    {
-      tightenCoefLhs(set->scip, prob, FALSE, resolutionset->vals, &resolutionset->lhs, resolutionset->inds,
-                     &resolutionset->nnz, &nchgcoefs);
+      SCIP_CALL( tightenCoefLhs(set->scip, prob, FALSE, resolutionset->vals, &resolutionset->lhs, resolutionset->inds,
+                     &resolutionset->nnz, &nchgcoefs, NULL) );
    }
 
    previousslack = resolutionset->slack;
@@ -1588,6 +1596,7 @@ SCIP_RETCODE resolveWithReason(
    int newsize;
    int cidx;
    int previousnnz;
+   int newnnz;
 
    SCIP_Bool idxinconflict;
    SCIP_Bool idxinreason;
@@ -1705,15 +1714,16 @@ SCIP_RETCODE resolveWithReason(
    }
    conflictresolutionset->lhs = conflictresolutionset->lhs + fabs(coefreas) * reasonresolutionset->lhs;
 
+   newnnz = resolutionsetGetNNzs(conflictresolutionset);
+
    largestcoef = -SCIPsetInfinity(set);
    smallestcoef = SCIPsetInfinity(set);
-   /* remove coefficients that are almost zero (10^-9 tolerance) */
-   for( i = 0; i < resolutionsetGetNNzs(conflictresolutionset); i++ )
+   /* remove coefficients that are almost zero (10^-9 tolerance), loop backwards */
+   for( i = newnnz - 1; i >= 0 ; i-- )
    {
       if (SCIPsetIsZero(set, conflictresolutionset->vals[i] ))
       {
          resolutionsetRemoveZeroVar(conflictresolutionset, set, i);
-         i--;
       }
       else
       {
@@ -2206,8 +2216,8 @@ SCIP_RETCODE conflictAnalyzeResolution(
    else
    {
       /* always apply coefficient tightening. It can only reduce the slack even further */
-      tightenCoefLhs(set->scip, transprob, FALSE, conflictresolutionset->vals, &conflictresolutionset->lhs,
-                     conflictresolutionset->inds, &conflictresolutionset->nnz, &nchgcoefs);
+      SCIP_CALL( tightenCoefLhs(set->scip, transprob, FALSE, conflictresolutionset->vals, &conflictresolutionset->lhs,
+                     conflictresolutionset->inds, &conflictresolutionset->nnz, &nchgcoefs, NULL) );
       conflictslack = getSlack(set->scip, transprob, conflictresolutionset, bdchgidx);
       conflictresolutionset->slack = conflictslack;
    }
@@ -2399,7 +2409,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
             goto TERMINATE;
          }
 
-         tightenCoefLhs(set->scip, transprob, FALSE, conflictresolutionset->vals, &conflictresolutionset->lhs, conflictresolutionset->inds, &conflictresolutionset->nnz, &nchgcoefs);
+         SCIP_CALL( tightenCoefLhs(set->scip, transprob, FALSE, conflictresolutionset->vals, &conflictresolutionset->lhs, conflictresolutionset->inds, &conflictresolutionset->nnz, &nchgcoefs, NULL) );
          if (nchgcoefs > 0)
          {
             SCIP_Real previousslack;
