@@ -153,6 +153,8 @@ Build system
 
 ### Makefile
 
+- Use SYM=bliss by default, since bliss now is shipped with SCIP.
+
 Fixed bugs
 ----------
 
