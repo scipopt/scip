@@ -131,6 +131,7 @@
 #include "scip/pub_misc.h"
 #include "scip/pub_sol.h"
 #include "scip/pub_var.h"
+#include "scip/pub_lpexact.h"
 #include "scip/struct_certificate.h"
 
 
@@ -209,11 +210,49 @@ SCIP_CERTIFICATE* SCIPgetCertificate(
    return scip->stat->certificate;
 }
 
+/** free information that is possibly still stored about this row in the certifacte structure */
+SCIP_RETCODE SCIPfreeRowCertInfo(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW*             row                 /**< a SCIP row */
+   )
+{
+   SCIP_CERTIFICATE* certificate;
+   SCIP_AGGREGATIONINFO* aggrinfo;
+   SCIP_MIRINFO* mirinfo;
+
+   if( !SCIPisExactSolve(scip) || !SCIPisCertificateActive(scip) )
+      return SCIP_OKAY;
+
+   certificate = SCIPgetCertificate(scip);
+
+   /* only do something if row does not already exist*/
+   if( SCIPhashmapExists(certificate->rowdatahash, (void*) SCIProwGetRowExact(row)) )
+      return SCIP_OKAY;
+
+   if( certificate->workingaggrinfo || certificate->workingmirinfo )
+      return SCIP_OKAY;
+
+   SCIPdebugMessage("Removing information stored in certificate for row \n");
+
+   if( (certificate->aggrinfohash != NULL) && SCIPhashmapExists(certificate->aggrinfohash, (void*) row) )
+   {
+      aggrinfo = (SCIP_AGGREGATIONINFO*) SCIPhashmapGetImage(certificate->aggrinfohash, (void*) row);
+      SCIP_CALL( SCIPcertificateFreeAggrInfo(scip->set, certificate, scip->lp, aggrinfo, row) );
+   }
+
+   if( (certificate->mirinfohash != NULL) && SCIPhashmapExists(certificate->mirinfohash, (void*) row) )
+   {
+      mirinfo = (SCIP_MIRINFO*) SCIPhashmapGetImage(certificate->mirinfohash, (void*) row);
+      SCIP_CALL( SCIPcertificateFreeMirInfo(scip->set, certificate, scip->lp, mirinfo, row) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** agg aggregation information to certificate for one row */
 SCIP_RETCODE SCIPaddCertificateAggregation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_AGGRROW*         aggrrow,            /**< agrrrow that results from the aggregation */
-   SCIP_AGGRROW*         negslackrow,        /**< agrrrow that results from the aggregation with implicitly defined negative slack added */
    SCIP_ROW**            aggrrows,           /**< array of rows used fo the aggregation */
    SCIP_Real*            weights,            /**< array of weights */
    int                   naggrrows,          /**< length of the arrays */
@@ -225,7 +264,7 @@ SCIP_RETCODE SCIPaddCertificateAggregation(
    assert(scip != NULL);
    assert(scip->stat != NULL);
 
-   SCIP_CALL( SCIPcertificateNewAggrInfo(scip, aggrrow, negslackrow, aggrrows, weights, naggrrows, negslackrows, negslackweights, nnegslackrows) );
+   SCIP_CALL( SCIPcertificateNewAggrInfo(scip, aggrrow, aggrrows, weights, naggrrows, negslackrows, negslackweights, nnegslackrows) );
 
    return SCIP_OKAY;
 }

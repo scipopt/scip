@@ -137,6 +137,34 @@ SCIP_Bool SCIPgenerateFpRowsFromRowExact(
    SCIP_Bool*            hasfprelax          /**< is it possible to generate relaxations at all for this row? */
    );
 
+/** adds row to exact separation storage
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPaddRowExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROWEXACT*        rowexact            /**< exact row to add */
+   );
+
+/** increases usage counter of exact LP row
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_RETCODE SCIPcaptureRowExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROWEXACT*        row                 /**< row to capture */
+   );
+
 /** decreases usage counter of LP row, and frees memory if necessary
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref

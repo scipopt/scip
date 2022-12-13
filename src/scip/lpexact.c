@@ -29,6 +29,7 @@
 #include "lpiexact/lpiexact.h"
 #include "scip/clock.h"
 #include "scip/cons.h"
+#include "scip/cutpool.h"
 #include "scip/event.h"
 #include "scip/intervalarith.h"
 #include "scip/lp.h"
@@ -54,6 +55,7 @@
 #include "scip/struct_set.h"
 #include "scip/struct_stat.h"
 #include "scip/struct_var.h"
+#include "scip/struct_cutpool.h"
 #include "scip/var.h"
 #include <string.h>
 #include <inttypes.h>
@@ -2673,10 +2675,11 @@ SCIP_RETCODE SCIPlpExactDelRowset(
 
    nrows = lp->nrows;
    nlpirows = lp->nlpirows;
+   if( nlpirows == 0 )
+      return SCIP_OKAY;
 
    /* delete rows in LP solver */
    SCIP_CALL( SCIPlpiExactDelRowset(lp->lpiexact, rowdstat) );
-
 
    /* set the correct status for rows that never made it to the lpi (this is special for the exact lp) */
    c = lp->nlpirows - 1;
@@ -3193,9 +3196,15 @@ SCIP_RETCODE SCIProwExactCreate(
    (*row)->integral = TRUE;
    (*row)->fprow = fprow;
    (*row)->fprowrhs = fprowrhs;
+   (*row)->nuses = 0;
+   (*row)->nlocks = 0;
    fprow->rowexact = (*row);
+   SCIProwExactCapture(*row);
    if( fprowrhs != NULL )
+   {
+      SCIProwExactCapture(*row);
       fprowrhs->rowexact = (*row);
+   }
 
    if( len > 0 )
    {
@@ -3251,7 +3260,6 @@ SCIP_RETCODE SCIProwExactCreate(
    (*row)->len = len;
    (*row)->nlpcols = 0;
    (*row)->nunlinked = len;
-   (*row)->nuses = 0;
    (*row)->lppos = -1;
    (*row)->lpipos = -1;
    (*row)->lpdepth = -1;
@@ -3260,132 +3268,126 @@ SCIP_RETCODE SCIProwExactCreate(
    (*row)->lpcolssorted = TRUE;
    (*row)->nonlpcolssorted = (len <= 1);
    (*row)->delaysort = FALSE;
-   (*row)->nlocks = 0;
    (*row)->fprelaxable = isfprelaxable;
-
-   /* capture the row */
-   SCIProwExactCapture(*row);
 
    return SCIP_OKAY;
 } /*lint !e715*/
 
-
 /** changes an exact row, so that all denominators are bounded by set->exact_cutmaxdenomsize */
 static
-SCIP_RETCODE SCIProwExactControlEncodingLength(
-   SCIP_ROWEXACT*        row,                /**< exact row */
+SCIP_RETCODE rowExactCreateFromRowLimitEncodingLength(
+   SCIP_ROW*             row,                /**< SCIP row */
+   SCIP_ROWEXACT*        rowexact,           /**< exact row */
    SCIP_SET*             set,                /**< SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    BMS_BLKMEM*           blkmem,             /**< block memory structure */
    SCIP_EVENTQUEUE*      eventqueue,         /**< the eventqueue */
-   SCIP_LPEXACT*         lpexact             /**< the exact lp */
+   SCIP_LPEXACT*         lpexact,            /**< the exact lp */
+   void*                 origin              /**< pointer to constraint handler or separator who created the row (NULL if unkown) */
    )
 {
    int i;
    SCIP_Longint maxdenom;
    SCIP_Longint maxboundval;
-   SCIP_Rational* tmpval;
+   SCIP_Rational* val;
+   SCIP_Rational* newval;
    SCIP_Rational* difference;
    SCIP_Real rhschange;
    int forcegreater;
-   SCIP_Bool onlyweaken;
 
-   assert(row->fprow != NULL);
+   assert(row != NULL);
    assert(set->exact_cutmaxdenomsize > 0);
    assert(set->exact_cutapproxmaxboundval >= 0);
 
    SCIPdebugMessage("approximating row ");
-   SCIPdebug(SCIPprintRowExact(set->scip, row, NULL));
+   SCIPdebug(SCIPprintRow(set->scip, row, NULL));
 
-   SCIP_CALL( RatCreateBuffer(set->buffer, &tmpval) );
+   SCIP_CALL( RatCreateBuffer(set->buffer, &val) );
    SCIP_CALL( RatCreateBuffer(set->buffer, &difference) );
+   SCIP_CALL( RatCreateBuffer(set->buffer, &newval) );
 
    rhschange = 0;
    maxboundval = set->exact_cutapproxmaxboundval;
    maxdenom = set->exact_cutmaxdenomsize;
-   onlyweaken = set->exact_weakencuts;
 
    assert(maxdenom >= 0);
    assert(maxboundval >= 0);
 
    for( i = row->len - 1; i >= 0; i-- )
    {
-      SCIP_VAR* var = row->cols[i]->fpcol->var;
-      SCIP_Rational* val = row->vals[i];
+      SCIP_VAR* var = row->cols[i]->var;
+      RatSetReal(val, row->vals[i]);
 
       forcegreater = 0;
 
       /** @todo exip: we only need one bound if we can control the direction we look in */
       if( RatIsNegInfinity(SCIPvarGetLbGlobalExact(var)) && RatIsInfinity(SCIPvarGetUbGlobalExact(var)) )
-         continue;
+         forcegreater = -2;
       else if( RatIsNegInfinity(SCIPvarGetLbGlobalExact(var)) )
          forcegreater = 1;
       else if( RatIsInfinity(SCIPvarGetUbGlobalExact(var)) )
          forcegreater = -1;
 
-      if( RatDenominatorIsLE(val, maxdenom) )
-         continue;
-
-      if( (maxboundval > 0) && (RatIsGTReal(SCIPvarGetUbGlobalExact(var), maxboundval) || RatIsLTReal(SCIPvarGetLbGlobalExact(var), -maxboundval)) )
-         continue;
-
-      RatComputeApproximation(tmpval, val, maxdenom, forcegreater);
+      if( forcegreater == -2 || RatDenominatorIsLE(val, maxdenom) ||
+            ((maxboundval > 0) && RatIsGTReal(SCIPvarGetUbGlobalExact(var), maxboundval)) ||
+            RatIsLTReal(SCIPvarGetLbGlobalExact(var), -maxboundval) )
+      {
+         RatSet(newval, val);
+      }
+      else
+         RatComputeApproximation(newval, val, maxdenom, forcegreater);
 #ifndef NDEBUG
       if( forcegreater == 1 )
-         assert(RatIsGE(tmpval, val));
+         assert(RatIsGE(newval, val));
       else if( forcegreater == -1 )
-         assert(RatIsLE(tmpval, val));
+         assert(RatIsLE(newval, val));
 #endif
 
-      RatDiff(difference, tmpval, val);
+      RatDiff(difference, newval, val);
       if( RatIsPositive(difference) )
-         RatAddProd(row->rhs, difference, SCIPvarGetUbGlobalExact(var));
+         RatAddProd(rowexact->rhs, difference, SCIPvarGetUbGlobalExact(var));
       else
-         RatAddProd(row->rhs, difference, SCIPvarGetLbGlobalExact(var));
+         RatAddProd(rowexact->rhs, difference, SCIPvarGetLbGlobalExact(var));
 
-      if( !onlyweaken )
-      {
-         SCIPintervalSetRational(&(row->valsinterval[i]), tmpval);
-         SCIProwExactChgCoef(row, blkmem, set, eventqueue, lpexact, row->cols[i], tmpval);
-      }
+      SCIProwExactAddCoef(rowexact, blkmem, set, eventqueue, lpexact, SCIPcolGetColExact(row->cols[i]), newval);
 
       if( RatIsNegative(SCIPvarGetLbGlobalExact(var)) )
       {
-         rhschange += (SCIPintervalGetInf(row->valsinterval[i]) - SCIPintervalGetSup(row->valsinterval[i])) * SCIPvarGetLbGlobal(var);
+         rhschange += (SCIPintervalGetInf(rowexact->valsinterval[i]) - SCIPintervalGetSup(rowexact->valsinterval[i])) * SCIPvarGetLbGlobal(var);
       }
    }
 
-   RatComputeApproximation(tmpval, row->rhs, maxdenom, 1);
-   assert(RatIsGE(tmpval, row->rhs));
+   RatComputeApproximation(newval, rowexact->rhs, maxdenom, 1);
+   assert(RatIsGE(newval, rowexact->rhs));
 
-   if( !onlyweaken )
-      RatSet(row->rhs, tmpval);
+   RatSet(rowexact->rhs, newval);
 
-   SCIProwExactSort(row);
+   SCIProwExactSort(rowexact);
 
-   for( i = row->fprow-> len-1; i >= 0; i-- )
+   for( i = rowexact->fprow-> len-1; i >= 0; i-- )
    {
-      SCIProwDelCoef(row->fprow, blkmem, set, eventqueue, lpexact->fplp, row->fprow->cols[i]);
+      SCIProwDelCoef(rowexact->fprow, blkmem, set, eventqueue, lpexact->fplp, rowexact->fprow->cols[i]);
    }
-   for( i = 0; i < row->len; i++ )
+   for( i = 0; i < rowexact->len; i++ )
    {
-      SCIProwAddCoef(row->fprow, blkmem, set, eventqueue, lpexact->fplp, row->cols[i]->fpcol, RatRoundReal(row->vals[i], SCIP_R_ROUND_DOWNWARDS));
+      SCIProwAddCoef(rowexact->fprow, blkmem, set, eventqueue, lpexact->fplp, rowexact->cols[i]->fpcol, RatRoundReal(rowexact->vals[i], SCIP_R_ROUND_DOWNWARDS));
    }
 
-   SCIProwChgRhs(row->fprow, blkmem, set, eventqueue, lpexact->fplp, RatRoundReal(row->rhs, SCIP_R_ROUND_UPWARDS) + rhschange);
+   SCIProwChgRhs(rowexact->fprow, blkmem, set, eventqueue, lpexact->fplp, RatRoundReal(rowexact->rhs, SCIP_R_ROUND_UPWARDS) + rhschange);
 
+   RatFreeBuffer(set->buffer, &newval);
    RatFreeBuffer(set->buffer, &difference);
-   RatFreeBuffer(set->buffer, &tmpval);
+   RatFreeBuffer(set->buffer, &val);
 
    SCIPdebugMessage("new row ");
-   SCIPdebug(SCIPprintRowExact(set->scip, row, NULL));
+   SCIPdebug(SCIPprintRowExact(set->scip, rowexact, NULL));
 
    return SCIP_OKAY;
 }
 
+
 /** creates and captures an exact LP row from a fp row */
 SCIP_RETCODE SCIProwExactCreateFromRow(
-   SCIP_ROWEXACT**       row,                /**< pointer to LP row data */
    SCIP_ROW*             fprow,              /**< corresponding fp row to create from */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -3395,12 +3397,19 @@ SCIP_RETCODE SCIProwExactCreateFromRow(
    SCIP_LPEXACT*         lp                  /**< current LP data */
    )
 {
+   SCIP_ROWEXACT** row;
    SCIP_ROWEXACT* workrow;
    void* origin;
    int i;
+   int nlocks;
    SCIP_Rational* tmpval;
    SCIP_Rational* tmplhs;
    SCIP_Real* rowvals;
+
+   row = &(fprow->rowexact);
+
+   nlocks = fprow->nlocks;
+   fprow->nlocks = 0; // bit hacky: unlock the row to be able to change it (slightly)
 
    assert(row != NULL);
    assert(fprow != NULL);
@@ -3423,6 +3432,7 @@ SCIP_RETCODE SCIProwExactCreateFromRow(
          break;
    }
 
+
    SCIP_CALL( RatCreateBuffer(set->buffer, &tmpval) );
    SCIP_CALL( RatCreateBuffer(set->buffer, &tmplhs) );
 
@@ -3442,29 +3452,34 @@ SCIP_RETCODE SCIProwExactCreateFromRow(
    rowvals = SCIProwGetVals(fprow);
    workrow->removable = TRUE;
 
-   for( i = 0; i < SCIProwGetNNonz(fprow); i++ )
-   {
-      SCIP_COL* col;
-
-      RatSetReal(tmpval, rowvals[i]);
-      col = SCIProwGetCols(fprow)[i];
-
-      SCIP_CALL( SCIPvarAddToRowExact(SCIPcolGetVar(col), blkmem, set, stat, eventqueue, prob, lp, workrow, tmpval) );
-      assert(RatIsFpRepresentable(SCIProwExactGetVals(workrow)[SCIProwExactGetNNonz(workrow) -1]));
-   }
+   SCIP_CALL( SCIProwExactEnsureSize(workrow, blkmem, set, fprow->size) );
 
    RatSetReal(tmpval, SCIProwGetConstant(fprow));
    SCIProwExactAddConstant(workrow, blkmem, set, stat, eventqueue, lp, tmpval);
 
-   /** @todo exip: replace this with a proper parameter */
    if( set->exact_cutmaxdenomsize > 0 )
    {
-      SCIP_CALL( SCIProwExactControlEncodingLength(workrow, set, stat, blkmem, eventqueue, lp) );
+      rowExactCreateFromRowLimitEncodingLength(fprow, workrow, set, stat, blkmem, eventqueue, lp, origin);
       SCIProwRecalcNorms(fprow, set);
+   }
+   else
+   {
+      for( i = 0; i < SCIProwGetNNonz(fprow); i++ )
+      {
+         SCIP_COL* col;
+
+         RatSetReal(tmpval, rowvals[i]);
+         col = SCIProwGetCols(fprow)[i];
+
+         SCIP_CALL( SCIPvarAddToRowExact(SCIPcolGetVar(col), blkmem, set, stat, eventqueue, prob, lp, workrow, tmpval) );
+         assert(RatIsFpRepresentable(SCIProwExactGetVals(workrow)[SCIProwExactGetNNonz(workrow) -1]));
+      }
    }
 
    RatFreeBuffer(set->buffer, &tmplhs);
    RatFreeBuffer(set->buffer, &tmpval);
+
+   fprow->nlocks = nlocks;
 
    return SCIP_OKAY;
 }
@@ -4992,9 +5007,9 @@ void SCIProwExactPrint(
       assert(SCIPvarGetName(row->cols[r]->var) != NULL);
       assert(SCIPvarGetStatus(row->cols[r]->var) == SCIP_VARSTATUS_COLUMN);
       if( RatIsPositive(row->vals[r]) )
-         SCIPmessageFPrintInfo(messagehdlr, file, "+%s<%s> ", buf, SCIPvarGetName(row->cols[r]->var));
+         SCIPmessageFPrintInfo(messagehdlr, file, "+%s(%g)<%s> ", buf, RatApproxReal(row->vals[r]), SCIPvarGetName(row->cols[r]->var));
       else
-         SCIPmessageFPrintInfo(messagehdlr, file, "%s<%s> ", buf, SCIPvarGetName(row->cols[r]->var));
+         SCIPmessageFPrintInfo(messagehdlr, file, "%s(%g)<%s> ", buf, RatApproxReal(row->vals[r]), SCIPvarGetName(row->cols[r]->var));
    }
 
    /* print constant */

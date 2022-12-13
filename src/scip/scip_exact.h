@@ -120,7 +120,6 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPaddCertificateAggregation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_AGGRROW*         aggrrow,            /**< agrrrow that results from the aggregation */
-   SCIP_AGGRROW*         negslackrow,        /**< agrrrow that results from the aggregation with implicitly defined negative slack added */
    SCIP_ROW**            aggrrows,           /**< array of rows used fo the aggregation */
    SCIP_Real*            weights,            /**< array of weights */
    int                   naggrrows,          /**< length of the arrays */
@@ -133,6 +132,12 @@ SCIP_RETCODE SCIPaddCertificateAggregation(
 SCIP_EXPORT
 SCIP_RETCODE SCIPaddCertificateMirInfo(
    SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** free information that is possibly still stored about this row in the certifacte structure */
+SCIP_RETCODE SCIPfreeRowCertInfo(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW*             row                 /**< a SCIP row */
    );
 
 /** stores the active aggregation information in the certificate data structures for a row */
@@ -190,20 +195,6 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPbranchLPexact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_RESULT*          result              /**< pointer to store the result of the branching (s. branch.h) */
-   );
-
-/** adds row to exact separation storage
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if @p scip is in one of the following stages:
- *       - \ref SCIP_STAGE_SOLVING
- */
-SCIP_EXPORT
-SCIP_RETCODE SCIPaddRowExact(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ROWEXACT*        rowexact            /**< exact row to add */
    );
 
 #ifdef __cplusplus

@@ -250,7 +250,6 @@ SCIP_RETCODE SCIProwExactCreate(
 
 /** creates and captures an exact LP row from a fp row */
 SCIP_RETCODE SCIProwExactCreateFromRow(
-   SCIP_ROWEXACT**       row,                /**< pointer to LP row data */
    SCIP_ROW*             fprow,              /**< corresponding fp row to create from */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
