@@ -115,8 +115,6 @@ SCIP_RETCODE SCIPconflictAnalyzeResolution(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< LP data */
-   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_ROW*             initialconflictrow, /**< row of constraint that detected the conflict */
    int                   validdepth,         /**< minimal depth level at which the initial conflict set is valid */
@@ -614,8 +612,6 @@ SCIP_RETCODE conflictAnalyzeResolution(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< LP data */
-   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_ROW*             initialconflictrow, /**< row of constraint that detected the conflict */
    int                   validdepth,         /**< minimal depth level at which the initial conflict set is valid */
