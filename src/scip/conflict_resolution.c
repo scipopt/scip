@@ -1782,6 +1782,7 @@ SCIP_RETCODE reasonResolutionsetFromRow(
    SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &inds, nnz) );
 
    isincon = FALSE;
+   changesign = FALSE;
    for( i = 0; i < nnz; i++ )
    {
       SCIP_VAR* var;
@@ -1870,6 +1871,7 @@ SCIP_RETCODE conflictResolutionsetFromRow(
    SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &inds, nnz) );
 
    isincon = FALSE;
+   changesign = FALSE;
    for( i = 0; i < nnz; i++ )
    {
       var = SCIPcolGetVar(cols[i]);
@@ -2251,7 +2253,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
        */
       if ( !bdchginfoIsResolvable(bdchginfo) )
       {
-            addConflictBounds(set->scip, transprob, set, conflictresolutionset, bdchgidx);
+            SCIP_CALL( addConflictBounds(set->scip, transprob, set, conflictresolutionset, bdchgidx) );
 #ifdef SCIP_DEBUG
          {
             printNonResolvableReasonType(set, bdchginfo);
@@ -2370,7 +2372,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
          //   assert(SCIPsetIsEQ(set, reasonresolutionset->slack, 0.0));
 
          if ( SCIPsetIsGE(set, conflictresolutionset->slack + reasonresolutionset->slack, 0.0) )
-         goto TERMINATE;
+            goto TERMINATE;
 
 #ifdef SCIP_DEBUG
       {
@@ -2420,19 +2422,19 @@ SCIP_RETCODE conflictAnalyzeResolution(
                SCIP_Bool success;
 
                cutnnz = 0;
-               computecMIRfromResolutionSet(conflict, set, conflictresolutionset, transprob, NULL, stat, tree, cutcoefs, cutinds, &cutrhs, &cutnnz, &success);
+               SCIP_CALL( computecMIRfromResolutionSet(conflict, set, conflictresolutionset, transprob, NULL, stat, tree, cutcoefs, cutinds, &cutrhs, &cutnnz, &success) );
 
                if( success )
                {
                   SCIP_RESOLUTIONSET* cutresolutionset;
-                  resolutionsetCreate(&cutresolutionset, blkmem);
-                  resolutionsetAddSparseData(cutresolutionset, blkmem, cutcoefs, cutinds, cutnnz, -cutrhs,
-                                             conflictresolutionset->origrhs, conflictresolutionset->origlhs, NULL, TRUE);
+                  SCIP_CALL( resolutionsetCreate(&cutresolutionset, blkmem) );
+                  SCIP_CALL( resolutionsetAddSparseData(cutresolutionset, blkmem, cutcoefs, cutinds, cutnnz, -cutrhs,
+                                             conflictresolutionset->origrhs, conflictresolutionset->origlhs, NULL, TRUE) );
                   /* replace the current resolution set by the cut if the slack of the cut is negative */
                   cutresolutionset->slack = getSlack(set->scip, transprob, cutresolutionset, bdchgidx);
                   if ( SCIPisLT(set->scip, cutresolutionset->slack, 0.0) )
                   {
-                     resolutionsetReplace(conflictresolutionset, blkmem, cutresolutionset);
+                     SCIP_CALL( resolutionsetReplace(conflictresolutionset, blkmem, cutresolutionset) );
                   }
                   SCIPsortIntReal(conflictresolutionset->inds, conflictresolutionset->vals, resolutionsetGetNNzs(conflictresolutionset));
                   SCIPresolutionsetFree(&cutresolutionset, blkmem);
@@ -2452,7 +2454,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
        * and mark the variables with the latest depth, position bound changes
        */
       conflictCleanUpbdchgqueue(conflict, set, conflictresolutionset);
-      addConflictBounds(set->scip, transprob, set, conflictresolutionset, bdchgidx);
+      SCIP_CALL( addConflictBounds(set->scip, transprob, set, conflictresolutionset, bdchgidx) );
 
       /* get the next bound change */
       bdchginfo = conflictFirstCand(conflict);
@@ -2512,8 +2514,8 @@ SCIP_RETCODE conflictAnalyzeResolution(
          if ( SCIPsetIsLT(set, conflict->resolutionsets[i]->coefquotient, set->conf_generalresminmaxquot) )
          {
             SCIP_Bool success;
-            SCIPconflictFlushResolutionSets(conflict, blkmem, set->scip, set, stat, transprob, origprob, tree, reopt,
-                                            lp, branchcand, eventqueue, cliquetable, resolutionset, &success);
+            SCIP_CALL( SCIPconflictFlushResolutionSets(conflict, blkmem, set->scip, set, stat, transprob, origprob, tree, reopt,
+                                            lp, branchcand, eventqueue, cliquetable, resolutionset, &success) );
             if( success )
             {
                (*nconss)++;
