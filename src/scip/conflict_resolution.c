@@ -2289,7 +2289,6 @@ SCIP_RETCODE conflictAnalyzeResolution(
 
             bdchgidx = SCIPbdchginfoGetIdx(bdchginfo);
             vartoresolve = SCIPbdchginfoGetVar(bdchginfo);
-            residx = SCIPvarGetProbindex(vartoresolve);
 
             SCIPdebug(resolutionsetPrintRow(conflictresolutionset, set, transprob, 1));
 
@@ -2321,6 +2320,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
       }
       else
       {
+         residx = SCIPvarGetProbindex(vartoresolve);
          reasoncon = SCIPbdchginfoGetInferCons(bdchginfo);
 
          /* @todo add local case SCIPconsGetValidDepth(reasoncon) <= validdepth */
