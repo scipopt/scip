@@ -2565,6 +2565,7 @@ SCIP_RETCODE SCIPconflictAnalyzeResolution(
 
    SCIP_VAR** vars;
    int nconss;
+   int nvars;
    int nconfvars;
    int i;
 
@@ -2581,12 +2582,15 @@ SCIP_RETCODE SCIPconflictAnalyzeResolution(
    if( !SCIPconflictResolutionApplicable(set) )
       return SCIP_OKAY;
 
-   SCIPallocBufferArray(set->scip, &tmp_conflictlb, transprob->nvars);
-   SCIPallocBufferArray(set->scip, &tmp_conflictub, transprob->nvars);
-   SCIPallocBufferArray(set->scip, &tmp_conflictrelaxedlb, transprob->nvars);
-   SCIPallocBufferArray(set->scip, &tmp_conflictrelaxedub, transprob->nvars);
-   SCIPallocBufferArray(set->scip, &tmp_conflictlbcount, transprob->nvars);
-   SCIPallocBufferArray(set->scip, &tmp_conflictubcount, transprob->nvars);
+   vars = SCIPprobGetVars(transprob);
+   nvars = SCIPprobGetNVars(transprob);
+
+   SCIPallocBufferArray(set->scip, &tmp_conflictlb, nvars);
+   SCIPallocBufferArray(set->scip, &tmp_conflictub, nvars);
+   SCIPallocBufferArray(set->scip, &tmp_conflictrelaxedlb, nvars);
+   SCIPallocBufferArray(set->scip, &tmp_conflictrelaxedub, nvars);
+   SCIPallocBufferArray(set->scip, &tmp_conflictlbcount, nvars);
+   SCIPallocBufferArray(set->scip, &tmp_conflictubcount, nvars);
 
    assert(conflict != NULL);
    assert(set != NULL);
@@ -2599,9 +2603,8 @@ SCIP_RETCODE SCIPconflictAnalyzeResolution(
    SCIPsetDebugMsg(set, "resolution based conflict analysis after infeasible propagation in depth %d\n", SCIPtreeGetCurrentDepth(tree));
 
    tmp_count = conflict->count;
-   vars = SCIPprobGetVars(transprob);
 
-   for (i = 0; i < transprob->nvars; i++)
+   for (i = 0; i < nvars; i++)
    {
       tmp_conflictlb[i] = vars[i]->conflictlb;
       tmp_conflictub[i] = vars[i]->conflictub;
@@ -2629,7 +2632,7 @@ SCIP_RETCODE SCIPconflictAnalyzeResolution(
       *success = (nconss > 0);
 
    /* Set variable information related to conflict analysis to the values before using generalized resolution */
-   for (i = 0; i < transprob->nvars; i++)
+   for (i = 0; i < nvars; i++)
    {
       vars[i]->conflictlb = tmp_conflictlb[i];
       vars[i]->conflictub = tmp_conflictub[i];

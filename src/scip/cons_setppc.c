@@ -9570,10 +9570,10 @@ SCIP_ROW* SCIPcreateRowSetppc(
       return NULL;
    }
 
-   SCIPcreateEmptyRowCons(scip, &consdata->row, cons, SCIPconsGetName(cons), lhs, rhs,
-         SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons));
+   SCIP_CALL_ABORT( SCIPcreateEmptyRowCons(scip, &consdata->row, cons, SCIPconsGetName(cons), lhs, rhs,
+         SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
 
-   SCIPaddVarsToRowSameCoef(scip, consdata->row, consdata->nvars, consdata->vars, 1.0);
+   SCIP_CALL_ABORT( SCIPaddVarsToRowSameCoef(scip, consdata->row, consdata->nvars, consdata->vars, 1.0) );
 
    return consdata->row;
 }

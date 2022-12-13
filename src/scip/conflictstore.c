@@ -43,7 +43,6 @@
 #define CONFLICTSTORE_DUALRAYSIZE  100 /* default size of conflict store */
 #define CONFLICTSTORE_DUALSOLSIZE   75 /* default size of conflict store */
 #define CONFLICTSTORE_MINSIZE     2000 /* default minimal size of a dynamic conflict store */
-#define CONFLICTSTORERES_MINSIZE   400 /* default minimal size of a dynamic conflict store for resolution */
 #define CONFLICTSTORE_MAXSIZE    60000 /* maximal size of a dynamic conflict store (multiplied by 3) */
 #define CONFLICTSTORERES_MAXSIZE 10000 /* maximal size of a dynamic conflict store for resolution (multiplied by 3) */
 #define CONFLICTSTORE_SIZE       10000 /* default size of conflict store */

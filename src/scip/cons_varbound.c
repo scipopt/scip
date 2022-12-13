@@ -5560,10 +5560,10 @@ SCIP_ROW* SCIPcreateRowVarbound(
    assert(consdata != NULL);
    assert(consdata->row == NULL);
 
-   SCIPcreateEmptyRowCons(scip, &consdata->row, cons, SCIPconsGetName(cons), consdata->lhs, consdata->rhs,
-         SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons));
-   SCIPaddVarToRow(scip, consdata->row, consdata->var, 1.0);
-   SCIPaddVarToRow(scip, consdata->row, consdata->vbdvar, consdata->vbdcoef);
+   SCIP_CALL_ABORT( SCIPcreateEmptyRowCons(scip, &consdata->row, cons, SCIPconsGetName(cons), consdata->lhs, consdata->rhs,
+         SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
+   SCIP_CALL_ABORT( SCIPaddVarToRow(scip, consdata->row, consdata->var, 1.0) );
+   SCIP_CALL_ABORT( SCIPaddVarToRow(scip, consdata->row, consdata->vbdvar, consdata->vbdcoef) );
 
    return consdata->row;
 }

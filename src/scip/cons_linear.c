@@ -18726,10 +18726,10 @@ SCIP_ROW* SCIPcreateRowLinear(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   SCIPcreateEmptyRowCons(scip, &consdata->row, cons, SCIPconsGetName(cons), consdata->lhs, consdata->rhs,
-         SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons));
+   SCIP_CALL_ABORT( SCIPcreateEmptyRowCons(scip, &consdata->row, cons, SCIPconsGetName(cons), consdata->lhs, consdata->rhs,
+         SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
 
-   SCIPaddVarsToRow(scip, consdata->row, consdata->nvars, consdata->vars, consdata->vals);
+   SCIP_CALL_ABORT( SCIPaddVarsToRow(scip, consdata->row, consdata->nvars, consdata->vars, consdata->vals) ) ;
 
    return consdata->row;
 }

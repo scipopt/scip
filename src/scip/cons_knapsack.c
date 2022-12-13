@@ -13878,16 +13878,17 @@ SCIP_ROW* SCIPcreateRowKnapsack(
    assert(consdata != NULL);
    assert(consdata->row == NULL);
 
-   SCIPcreateEmptyRowCons(scip, &consdata->row, cons, SCIPconsGetName(cons),
-         -SCIPinfinity(scip), (SCIP_Real)consdata->capacity,
-         SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons));
 
-   SCIPcacheRowExtensions(scip, consdata->row);
+   SCIP_CALL_ABORT( SCIPcreateEmptyRowCons(scip, &consdata->row, cons, SCIPconsGetName(cons),
+         -SCIPinfinity(scip), (SCIP_Real)consdata->capacity,
+         SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
+
+   SCIP_CALL_ABORT( SCIPcacheRowExtensions(scip, consdata->row) );
    for( i = 0; i < consdata->nvars; ++i )
    {
-      SCIPaddVarToRow(scip, consdata->row, consdata->vars[i], (SCIP_Real)consdata->weights[i]);
+      SCIP_CALL_ABORT( SCIPaddVarToRow(scip, consdata->row, consdata->vars[i], (SCIP_Real)consdata->weights[i]) );
    }
-   SCIPflushRowExtensions(scip, consdata->row);
+   SCIP_CALL_ABORT( SCIPflushRowExtensions(scip, consdata->row) );
 
    return consdata->row;
 }
