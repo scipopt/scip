@@ -494,7 +494,6 @@ SCIP_DECL_EVENTEXEC(eventExecIndicatorBound)
       if ( ! SCIPisFeasPositive(scip, oldbound) && SCIPisFeasPositive(scip, newbound) )
       {
          ++(consdata->nfixednonzero);
-         conshdlrdata->boundhaschanged = TRUE;
 #ifdef SCIP_MORE_DEBUG
          SCIPdebugMsg(scip, "Changed lower bound of variable <%s> from %g to %g (nfixednonzero: %d).\n",
             SCIPvarGetName(SCIPeventGetVar(event)), oldbound, newbound, consdata->nfixednonzero);
@@ -507,7 +506,6 @@ SCIP_DECL_EVENTEXEC(eventExecIndicatorBound)
       if ( ! SCIPisFeasNegative(scip, oldbound) && SCIPisFeasNegative(scip, newbound) )
       {
          ++(consdata->nfixednonzero);
-         conshdlrdata->boundhaschanged = TRUE;
 #ifdef SCIP_MORE_DEBUG
          SCIPdebugMsg(scip, "Changed upper bound of variable <%s> from %g to %g (nfixednonzero: %d).\n",
             SCIPvarGetName(SCIPeventGetVar(event)), oldbound, newbound, consdata->nfixednonzero);
@@ -520,7 +518,6 @@ SCIP_DECL_EVENTEXEC(eventExecIndicatorBound)
       if ( SCIPisFeasPositive(scip, oldbound) && ! SCIPisFeasPositive(scip, newbound) )
       {
          --(consdata->nfixednonzero);
-         conshdlrdata->boundhaschanged = TRUE;
 #ifdef SCIP_MORE_DEBUG
          SCIPdebugMsg(scip, "Changed lower bound of variable <%s> from %g to %g (nfixednonzero: %d).\n",
             SCIPvarGetName(SCIPeventGetVar(event)), oldbound, newbound, consdata->nfixednonzero);
@@ -533,7 +530,6 @@ SCIP_DECL_EVENTEXEC(eventExecIndicatorBound)
       if ( SCIPisFeasNegative(scip, oldbound) && ! SCIPisFeasNegative(scip, newbound) )
       {
          --(consdata->nfixednonzero);
-         conshdlrdata->boundhaschanged = TRUE;
 #ifdef SCIP_MORE_DEBUG
          SCIPdebugMsg(scip, "Changed upper bound of variable <%s> from %g to %g (nfixednonzero: %d).\n",
             SCIPvarGetName(SCIPeventGetVar(event)), oldbound, newbound, consdata->nfixednonzero);
@@ -547,6 +543,9 @@ SCIP_DECL_EVENTEXEC(eventExecIndicatorBound)
       return SCIP_INVALIDDATA; /*lint !e527*/
    }
    assert( 0 <= consdata->nfixednonzero && consdata->nfixednonzero <= 2 );
+
+   /* mark that some variable has changed */
+   conshdlrdata->boundhaschanged = TRUE;
 
    return SCIP_OKAY;
 }
@@ -3344,14 +3343,6 @@ SCIP_RETCODE createVarUbs(
          {
             SCIPdebugMsg(scip, "Removing indicator constraint <%s>.\n", SCIPconsGetName(conss[c]));
             assert( ! SCIPconsIsModifiable(conss[c]) );
-
-            /* mark linear constraint to be upgrade-able */
-            if ( SCIPconsIsActive(consdata->lincons) )
-            {
-               SCIPconsAddUpgradeLocks(consdata->lincons, -1);
-               assert( SCIPconsGetNUpgradeLocks(consdata->lincons) == 0 );
-            }
-
             SCIP_CALL( SCIPdelCons(scip, conss[c]) );
          }
 
@@ -3413,13 +3404,6 @@ SCIP_RETCODE presolRoundIndicator(
       if ( fixed )
          ++(*nfixedvars);
 
-      /* mark linear constraint to be update-able */
-      if ( SCIPconsIsActive(consdata->lincons) )
-      {
-         SCIPconsAddUpgradeLocks(consdata->lincons, -1);
-         assert( SCIPconsGetNUpgradeLocks(consdata->lincons) == 0 );
-      }
-
       /* delete indicator constraint (leave linear constraint) */
       assert( ! SCIPconsIsModifiable(cons) );
       SCIP_CALL( SCIPdelCons(scip, cons) );
@@ -3432,13 +3416,6 @@ SCIP_RETCODE presolRoundIndicator(
    if ( SCIPvarGetUbLocal(consdata->binvar) < 0.5 )
    {
       SCIPdebugMsg(scip, "Presolving <%s>: Binary variable <%s> fixed to 0, deleting indicator constraint.\n", SCIPconsGetName(cons), SCIPvarGetName(consdata->binvar));
-
-      /* mark linear constraint to be update-able */
-      if ( SCIPconsIsActive(consdata->lincons) )
-      {
-         SCIPconsAddUpgradeLocks(consdata->lincons, -1);
-         assert( SCIPconsGetNUpgradeLocks(consdata->lincons) == 0 );
-      }
 
       /* delete indicator constraint */
       assert( ! SCIPconsIsModifiable(cons) );
@@ -3467,13 +3444,6 @@ SCIP_RETCODE presolRoundIndicator(
       assert( ! infeasible );
       if ( fixed )
          ++(*nfixedvars);
-
-      /* mark linear constraint to be update-able */
-      if ( SCIPconsIsActive(consdata->lincons) )
-      {
-         SCIPconsAddUpgradeLocks(consdata->lincons, -1);
-         assert( SCIPconsGetNUpgradeLocks(consdata->lincons) == 0 );
-      }
 
       /* delete constraint */
       assert( ! SCIPconsIsModifiable(cons) );
@@ -3537,13 +3507,6 @@ SCIP_RETCODE presolRoundIndicator(
       }
 
       SCIPdebugMsg(scip, "Presolving <%s>: Slack variable fixed to zero, delete redundant indicator constraint.\n", SCIPconsGetName(cons));
-
-      /* mark linear constraint to be upgrade-able */
-      if ( SCIPconsIsActive(consdata->lincons) )
-      {
-         SCIPconsAddUpgradeLocks(consdata->lincons, -1);
-         assert( SCIPconsGetNUpgradeLocks(consdata->lincons) == 0 );
-      }
 
       /* delete constraint */
       assert( ! SCIPconsIsModifiable(cons) );
@@ -3805,13 +3768,6 @@ SCIP_RETCODE propIndicator(
       /* remove constraint if we are not in probing */
       if ( ! SCIPinProbing(scip) )
       {
-         /* mark linear constraint to be update-able */
-         if ( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING && SCIPconsIsActive(consdata->lincons) )
-         {
-            SCIPconsAddUpgradeLocks(consdata->lincons, -1);
-            assert( SCIPconsGetNUpgradeLocks(consdata->lincons) == 0 );
-         }
-
          /* delete constraint locally */
          assert( ! SCIPconsIsModifiable(cons) );
          SCIP_CALL( SCIPdelConsLocal(scip, cons) );
@@ -3909,6 +3865,8 @@ SCIP_RETCODE propIndicator(
          /* remove constraint if we are not in probing */
          if ( ! SCIPinProbing(scip) )
          {
+            /* delete constraint locally */
+            assert( ! SCIPconsIsModifiable(cons) );
             SCIP_CALL( SCIPdelConsLocal(scip, cons) );
          }
       }
@@ -3973,13 +3931,6 @@ SCIP_RETCODE propIndicator(
          /* remove constraint if we are not in probing */
          if ( ! SCIPinProbing(scip) )
          {
-            /* mark linear constraint to be update-able */
-            if ( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING && SCIPconsIsActive(consdata->lincons) )
-            {
-               SCIPconsAddUpgradeLocks(consdata->lincons, -1);
-               assert( SCIPconsGetNUpgradeLocks(consdata->lincons) == 0 );
-            }
-
             SCIP_CALL( SCIPdelConsLocal(scip, cons) );
          }
       }
@@ -5814,6 +5765,13 @@ SCIP_DECL_CONSDELETE(consDeleteIndicator)
    /* Can there be cases where lincons is NULL, e.g., if presolve found the problem infeasible? */
    assert( (*consdata)->lincons != NULL );
 
+   /* mark linear constraint to be upgrade-able */
+   if ( SCIPconsIsActive((*consdata)->lincons) )
+   {
+      SCIPconsAddUpgradeLocks((*consdata)->lincons, -1);
+      assert( SCIPconsGetNUpgradeLocks((*consdata)->lincons) == 0 );
+   }
+
    /* release linear constraint and slack variable */
    SCIP_CALL( SCIPreleaseVar(scip, &(*consdata)->slackvar) );
    SCIP_CALL( SCIPreleaseCons(scip, &(*consdata)->lincons) );
@@ -5863,7 +5821,7 @@ SCIP_DECL_CONSTRANS(consTransIndicator)
    /* check for linear constraint */
    if ( sourcedata->lincons == NULL )
    {
-      SCIPerrorMessage("The indicator constraint <%s> needs a linear constraint variable.\n", SCIPconsGetName(sourcecons));
+      SCIPerrorMessage("The indicator constraint <%s> needs a linear constraint.\n", SCIPconsGetName(sourcecons));
       return SCIP_INVALIDDATA;
    }
    assert( sourcedata->lincons != NULL );
@@ -6000,6 +5958,7 @@ SCIP_DECL_CONSPRESOL(consPresolIndicator)
    assert( result != NULL );
 
    *result = SCIP_DIDNOTRUN;
+
    /* get constraint handler data */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
@@ -6435,6 +6394,7 @@ SCIP_DECL_CONSCHECK(consCheckIndicator)
       {
          SCIP_Real absviol = REALABS(SCIPgetSolVal(scip, sol, consdata->slackvar));
          SCIP_Real relviol = SCIPrelDiff(absviol, 0.0);
+
          if( sol != NULL )
             SCIPupdateSolConsViolation(scip, sol, absviol, relviol);
 
@@ -6460,7 +6420,7 @@ SCIP_DECL_CONSCHECK(consCheckIndicator)
          {
             SCIPdebugMsg(scip, "Indicator constraint %s is not feasible.\n", SCIPconsGetName(conss[c]));
 
-            if( !completely )
+            if ( ! completely )
                return SCIP_OKAY;
          }
       }
@@ -7212,7 +7172,7 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsIndicator)
    assert( nvars != NULL );
    assert( success != NULL );
 
-   (*success) = TRUE;
+   *success = TRUE;
    *nvars = 0;
 
    /* if indicator constraint is already deleted */
@@ -7272,7 +7232,7 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsIndicator)
    for (c = 0; c < nindconss; ++c)
    {
       /* check whether constraint is violated */
-      if( SCIPisViolatedIndicator(scip, indconss[c], sol) )
+      if ( SCIPisViolatedIndicator(scip, indconss[c], sol) )
       {
          SCIP_VAR* binvar;
          SCIP_Real solval;
@@ -7281,7 +7241,7 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsIndicator)
          solval = SCIPgetSolVal(scip, sol, binvar);
 
          /* we only treat indicator variables with integral solution values that are not yet fixed */
-         if( SCIPisFeasIntegral(scip, solval) && SCIPvarGetLbLocal(binvar) < SCIPvarGetUbLocal(binvar) - 0.5 )
+         if ( SCIPisFeasIntegral(scip, solval) && SCIPvarGetLbLocal(binvar) < SCIPvarGetUbLocal(binvar) - 0.5 )
          {
             SCIP_Real score;
             SCIP_Bool roundup;
@@ -7290,7 +7250,7 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsIndicator)
                   &score, &roundup) );
 
             /* best candidate maximizes the score */
-            if( score > bestscore )
+            if ( score > bestscore )
             {
                bestscore = score;
                *success = TRUE;
@@ -7303,7 +7263,7 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsIndicator)
 
    assert(! *success || bestvar != NULL);
 
-   if( *success )
+   if ( *success )
    {
       /* if the diving score voted for fixing the best variable to 1.0, we add this as the preferred bound change */
       SCIP_CALL( SCIPaddDiveBoundChange(scip, bestvar, SCIP_BRANCHDIR_UPWARDS, 1.0, bestvarroundup) );
@@ -8666,6 +8626,7 @@ SCIP_RETCODE SCIPsetBinaryVarIndicator(
       SCIP_CONSHDLRDATA* conshdlrdata;
 
       /* make sure we have a transformed binary variable */
+      /* coverity[copy_paste_error] */
       SCIP_CALL( SCIPgetTransformedVar(scip, binvar, &var) );
       assert( var != NULL );
       if ( ! consdata->activeone )

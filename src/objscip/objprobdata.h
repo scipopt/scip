@@ -62,6 +62,12 @@ public:
    {
    }
 
+   /** assignment of polymorphic classes causes slicing and is therefore disabled. */
+   ObjProbData& operator=(const ObjProbData& o) = delete;
+
+   /** assignment of polymorphic classes causes slicing and is therefore disabled. */
+   ObjProbData& operator=(ObjProbData&& o) = delete;
+
    /** destructor of user problem data to free original user data (called when original problem is freed)
     *
     *  If the "deleteobject" flag in the SCIPcreateObjProb() method was set to TRUE, this method is not needed,
