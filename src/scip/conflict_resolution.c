@@ -424,8 +424,6 @@ SCIP_RETCODE tightenCoefLhs(
    return SCIP_OKAY;
 }
 
-
-
 /* returns whether a bound change is resolvable or not */
 static
 SCIP_Bool bdchginfoIsResolvable(
@@ -2540,7 +2538,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
       /** check if the bound change is resolvable. If it is not, we can fix the variable and continue
        * with the next bound change
        */
-      if ( !bdchginfoIsResolvable(bdchginfo) )
+      if ( !bdchginfoIsResolvable(bdchginfo) && set->conf_fixandcontinue)
       {
             SCIP_CALL( addConflictBounds(set->scip, transprob, set, conflictresolutionset, bdchgidx) );
 #ifdef SCIP_DEBUG
@@ -2608,6 +2606,10 @@ SCIP_RETCODE conflictAnalyzeResolution(
          /* if no bound change was infered by a resolvable constraint then we terminate */
          else
             goto TERMINATE;
+      }
+      else if( !bdchginfoIsResolvable(bdchginfo) )
+      {
+         goto TERMINATE;
       }
       else
       {
