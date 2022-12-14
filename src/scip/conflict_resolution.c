@@ -1168,6 +1168,249 @@ SCIP_RETCODE weakenResolutionSet(
    return SCIP_OKAY;
 }
 
+/** reference solution besed on the conflict resolution set to use in cMIR */
+static
+SCIP_RETCODE computeReferenceSolutionConflict(
+   SCIP_RESOLUTIONSET*   resolutionset,      /**< conflict resolution set */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_SOL*             sol,                /**< solution to use as reference */
+   SCIP_BDCHGINFO*        bdchginfo,          /**< bound change information */
+   SCIP_Bool*            success             /**< pointer to store whether the reference solution was successfully computed */
+   )
+{
+   SCIP_VAR** vars;
+   SCIP_BDCHGIDX* bdchgidx;
+   int nvars;
+   int i;
+
+   assert(resolutionset != NULL);
+   assert(set != NULL);
+   assert(prob != NULL);
+   assert(sol != NULL);
+
+   *success = TRUE;
+   vars = SCIPprobGetVars(prob);
+   assert(vars != NULL);
+   nvars = SCIPprobGetNVars(prob);
+
+
+   bdchgidx = SCIPbdchginfoGetIdx(bdchginfo);
+   /* initialize with average solution */
+   for( i = 0; i < nvars; i++ )
+   {
+      SCIP_CALL( SCIPsolSetVal(sol, set, stat, tree, vars[i], SCIPvarGetAvgSol(vars[i])) );
+   }
+
+   /* todo initialize with root solution? */
+   // for( i = 0; i < nvars; i++ )
+   // {
+   //    SCIP_CALL( SCIPsolSetVal(sol, set, stat, tree, vars[i], SCIPvarGetRootSol(vars[i])) );
+   // }
+
+   /* set all variables that are part of the resolution set to their active local bounds */
+   for( i = 0; i < resolutionsetGetNNzs(resolutionset); i++ )
+   {
+      int v;
+      SCIP_Real val;
+      SCIP_Real lb;
+      SCIP_Real ub;
+
+      v = resolutionset->inds[i];
+      lb = SCIPvarGetLbGlobal(vars[v]);
+      ub = SCIPvarGetUbGlobal(vars[v]);
+      /* take the negation of the value since the aggregation of the resolution set is a <= constraint */
+      val = -resolutionset->vals[i];
+
+      /* stop if both bounds are infinite */
+      if( SCIPsetIsInfinity(set, -lb) && SCIPsetIsInfinity(set, ub) )
+      {
+         *success = FALSE;
+         return SCIP_OKAY;
+      }
+      else if( !SCIPsetIsInfinity(set, -lb) || !SCIPsetIsInfinity(set, ub) )
+      {
+
+         SCIP_Real meanbound;
+
+         /* take the negation of the value since the aggregation is a <= constraint */
+         meanbound = ( ub + lb ) / 2.0;
+
+         if( val > 0.0 )
+         {
+            SCIP_Real locallb;
+
+            locallb = SCIPvarGetLbAtIndex(vars[v], bdchgidx, TRUE);
+            if( SCIPsetIsGE(set, locallb, meanbound) )
+               SCIP_CALL( SCIPsolSetVal(sol, set, stat, tree, vars[v], SCIPvarGetUbGlobal(vars[v])) );
+            else
+               SCIP_CALL( SCIPsolSetVal(sol, set, stat, tree, vars[v], SCIPvarGetLbGlobal(vars[v])) );
+         }
+         else
+         {
+            SCIP_Real localub;
+
+            localub = SCIPvarGetUbAtIndex(vars[v], bdchgidx, TRUE);
+            if( SCIPsetIsGE(set, localub, meanbound) )
+               SCIP_CALL( SCIPsolSetVal(sol, set, stat, tree, vars[v], SCIPvarGetUbGlobal(vars[v])) );
+            else
+               SCIP_CALL( SCIPsolSetVal(sol, set, stat, tree, vars[v], SCIPvarGetLbGlobal(vars[v])) );
+         }
+      }
+      else if( !SCIPsetIsInfinity(set, -lb) )
+      {
+         SCIP_CALL( SCIPsolSetVal(sol, set, stat, tree, vars[v], lb) );
+      }
+      else
+      {
+         assert(!SCIPsetIsInfinity(set, ub));
+         SCIP_CALL( SCIPsolSetVal(sol, set, stat, tree, vars[v], ub) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** reference solution besed on the reason resolution set to use in cMIR */
+static
+SCIP_RETCODE computeReferenceSolutionReason(
+   SCIP_RESOLUTIONSET*   resolutionset,      /**< conflict resolution set */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_SOL*             sol,                /**< solution to use as reference */
+   SCIP_BDCHGINFO*       bdchginfo,          /**< bound change information */
+   SCIP_Bool*            success             /**< pointer to store whether the reference solution was successfully computed */
+   )
+{
+   SCIP_VAR** vars;
+   SCIP_BDCHGIDX* bdchgidx;
+   int nvars;
+   int i;
+
+   assert(resolutionset != NULL);
+   assert(set != NULL);
+   assert(prob != NULL);
+   assert(sol != NULL);
+
+   *success = TRUE;
+   vars = SCIPprobGetVars(prob);
+   assert(vars != NULL);
+   nvars = SCIPprobGetNVars(prob);
+   bdchgidx = SCIPbdchginfoGetIdx(bdchginfo);
+
+   /* initialize with average solution */
+   for( i = 0; i < nvars; i++ )
+   {
+      SCIP_CALL( SCIPsolSetVal(sol, set, stat, tree, vars[i], SCIPvarGetAvgSol(vars[i])) );
+   }
+
+   /* set all variables that are part of the resolution set to their active local bounds */
+   for( i = 0; i < resolutionsetGetNNzs(resolutionset); i++ )
+   {
+      int v;
+      SCIP_Real val;
+      SCIP_Real locallb;
+      SCIP_Real localub;
+
+      v = resolutionset->inds[i];
+      locallb = SCIPvarGetLbAtIndex(vars[v], bdchgidx, TRUE);
+      localub = SCIPvarGetUbAtIndex(vars[v], bdchgidx, TRUE);
+      /* take the negation of the value since the aggregation of the resolution set is a <= constraint */
+      val = resolutionset->vals[i];
+
+      /* assert that not both bounds are infinite since if they were no propagation would have happened */
+      assert( !(SCIPsetIsInfinity(set, -locallb) && SCIPsetIsInfinity(set, localub)) );
+
+      if( vars[v] == SCIPbdchginfoGetVar(bdchginfo) )
+      {
+         SCIP_Real solval;
+
+         if( val > 0.0 )
+         {
+            /* it the case of >= constraints we get tight propagation at the point (coef * ub - slack) / coef */
+            solval = MIN( SCIPvarGetUbGlobal(vars[v]), ( val * SCIPvarGetUbAtIndex(vars[v], bdchgidx, TRUE) - resolutionset->slack ) / val );
+            /* this can only happen if the reason was a negated clique in the knapsack constraint handler */
+            if( SCIPsetIsLT(set, solval, SCIPvarGetLbGlobal(vars[v])) )
+            {
+               assert(strcmp(SCIPconshdlrGetName(bdchginfo->inferencedata.reason.cons->conshdlr), "knapsack") == 0);
+               solval = SCIPvarGetUbAtIndex(vars[v], bdchgidx, TRUE);
+            }
+         }
+         else
+         {
+            assert(val < 0.0);
+            solval = MAX( SCIPvarGetLbGlobal(vars[v]), ( val * SCIPvarGetLbAtIndex(vars[v], bdchgidx, TRUE) - resolutionset->slack ) / val );
+            if( SCIPsetIsGT(set, solval, SCIPvarGetUbGlobal(vars[v])) )
+            {
+               assert(strcmp(SCIPconshdlrGetName(bdchginfo->inferencedata.reason.cons->conshdlr), "knapsack") == 0);
+               solval = SCIPvarGetLbAtIndex(vars[v], bdchgidx, TRUE);
+            }
+         }
+
+         SCIP_CALL( SCIPsolSetVal(sol, set, stat, tree, vars[v], solval) );
+         SCIPsetDebugMsg(set, " reference point value for resolving variable <%s> in reason: %f \n", SCIPvarGetName(vars[v]), solval);
+      }
+
+      else if( val > 0.0 )
+      {
+         assert(!SCIPsetIsInfinity(set, -locallb));
+         SCIP_CALL( SCIPsolSetVal(sol, set, stat, tree, vars[v], locallb) );
+      }
+      else
+      {
+         assert(val < 0.0);
+         assert(!SCIPsetIsInfinity(set, localub));
+         SCIP_CALL( SCIPsolSetVal(sol, set, stat, tree, vars[v], localub) );
+      }
+   }
+   return SCIP_OKAY;
+}
+
+/** calculates efficacy of a given aggregation row w.r.t. a given reference point */
+static
+SCIP_Real aggrRowGetEfficacy(
+   SCIP_AGGRROW*         aggrrow,            /**< aggregation row */
+   SCIP_PROB*            transprob,          /**< transformed problem data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
+   SCIP_SOL*             sol                 /**< reference point */
+   )
+{
+   SCIP_VAR** vars;
+   SCIP_Real activity;
+   SCIP_Real norm;
+   int* inds;
+   int nnz;
+   int i;
+
+   assert(set != NULL);
+
+   vars = SCIPprobGetVars(transprob);
+   assert(vars != NULL);
+
+   activity = 0.0;
+   nnz = SCIPaggrRowGetNNz(aggrrow);
+   inds = SCIPaggrRowGetInds(aggrrow);
+
+   for( i = 0; i < nnz; i++ )
+   {
+      SCIP_Real val;
+      int v = inds[i];
+
+      assert(SCIPvarGetProbindex(vars[v]) == v);
+
+      val = SCIPaggrRowGetProbvarValue(aggrrow, v);
+      activity += val * SCIPsolGetVal(sol, set, stat, vars[v]);
+   }
+
+   norm = SCIPaggrRowCalcEfficacyNorm(set->scip, aggrrow);
+   return (activity - SCIPaggrRowGetRhs(aggrrow)) / MAX(1e-6, norm);
+}
+
 /** calculates a c-MIR cut from the coefficients of the resolution set
  * @todo add debug messages, asserts
 */
@@ -1183,26 +1426,25 @@ SCIP_RETCODE computecMIRfromResolutionSet(
    int*                  cutinds,            /**< the variable indices of the MIR cut */
    SCIP_Real*            cutrhs,             /**< the RHS of the MIR cut */
    int*                  cutnnz,             /**< the number of non-zeros in the cut */
+   SCIP_Bool             isconflict,         /**< distinguish between reason and conflict constraint */
+   SCIP_BDCHGINFO*       bdchginfo,          /**< bound change information */
    SCIP_Bool*            success             /**< was the MIR cut successfully computed? */
    )
 {
-   SCIP_VAR** vars;
    SCIP_AGGRROW* aggrrow;
    SCIP_SOL* refsol;
 
    SCIP_Real* rowvals;
    int* rowinds;
 
+   SCIP_Real resolutionefficacy;
    SCIP_Real cutefficacy;
-   int nvars;
    int nnz;
    int i;
 
    SCIP_Bool islocal;
    SCIP_Bool cutsuccess;
 
-   vars = SCIPprobGetVars(prob);
-   nvars = SCIPprobGetNVars(prob);
    *success = FALSE;
 
    /* creating the aggregation row. There will be only a single row in this aggregation, since it is only used to
@@ -1233,48 +1475,36 @@ SCIP_RETCODE computecMIRfromResolutionSet(
       /* create the aggregation row */
       SCIP_CALL( SCIPaggrRowAddCustomCons(set->scip, aggrrow, rowinds, rowvals, nnz, -resolutionset->lhs, 1.0, 1, FALSE) );
 
+#ifdef SCIP_DEBUG
+{
+      SCIP_VAR** vars;
+      vars = SCIPprobGetVars(prob);
+
+      for( i = 0; i < SCIPaggrRowGetNNz(aggrrow); i++ )
+      {
+         SCIP_Real aggrrow_val;
+         aggrrow_val = SCIPaggrRowGetProbvarValue(aggrrow, SCIPvarGetProbindex(vars[resolutionset->inds[i]]));
+         assert(SCIPsetIsEQ(set, -resolutionset->vals[i], aggrrow_val));
+      }
+}
+#endif
+
       /* create reference solution */
       SCIP_CALL( SCIPcreateSol(set->scip, &refsol, NULL) );
 
-      /* initialize with average solution */
-      for( i = 0; i < nvars; i++ )
+      if ( isconflict )
       {
-         SCIP_CALL( SCIPsolSetVal(refsol, set, stat, tree, vars[i], SCIPvarGetAvgSol(vars[i])) );
+         /* compute the reference point */
+         SCIP_CALL( computeReferenceSolutionConflict(resolutionset, set, prob, stat, tree, refsol, bdchginfo, success ) );
+      }
+      else
+      {
+         /* compute the cut efficacy */
+         SCIP_CALL( computeReferenceSolutionReason(resolutionset, set, prob, stat, tree, refsol, bdchginfo, success ) );
       }
 
-      /* set all variables that are part of the resolution set to their active local bounds */
-      for( i = 0; i < SCIPaggrRowGetNNz(aggrrow); i++ )
-      {
-         int v;
-         SCIP_Real val;
-         SCIP_Real meanbound;
-
-         v = resolutionset->inds[i];
-         val = resolutionset->vals[i];
-#ifdef SCIP_DEBUG
-{
-         SCIP_Real aggrrow_val;
-         aggrrow_val = SCIPaggrRowGetProbvarValue(aggrrow, v);
-         assert(SCIPsetIsEQ(set, -val, aggrrow_val));
-}
-#endif
-         meanbound = (SCIPvarGetUbGlobal(vars[v]) + SCIPvarGetLbGlobal(vars[v])) / 2.0;
-
-         if( val > 0.0 )
-         {
-            if( SCIPsetIsGE(set, SCIPvarGetUbLocal(vars[v]), meanbound) )
-               SCIP_CALL( SCIPsolSetVal(refsol, set, stat, tree, vars[v], SCIPvarGetUbGlobal(vars[v])) );
-            else
-               SCIP_CALL( SCIPsolSetVal(refsol, set, stat, tree, vars[v], SCIPvarGetLbGlobal(vars[v])) );
-         }
-         else
-         {
-            if( SCIPsetIsGE(set, SCIPvarGetLbLocal(vars[v]), meanbound) )
-               SCIP_CALL( SCIPsolSetVal(refsol, set, stat, tree, vars[v], SCIPvarGetUbGlobal(vars[v])) );
-            else
-               SCIP_CALL( SCIPsolSetVal(refsol, set, stat, tree, vars[v], SCIPvarGetLbGlobal(vars[v])) );
-         }
-      }
+      resolutionefficacy = aggrRowGetEfficacy(aggrrow, prob, set, stat, refsol);
+      SCIPdebugMessage("efficacy of resolution set: %f \n", resolutionefficacy);
 
       cutefficacy = 0.0;
 
@@ -1288,7 +1518,7 @@ SCIP_RETCODE computecMIRfromResolutionSet(
          conflict->nresflowcover += 1;
 
       /* apply MIR */
-      if( set->conf_applycmir )
+      if( set->conf_applycmir || !isconflict )
       {
          SCIP_CALL( SCIPcutGenerationHeuristicCMIR(set->scip, refsol, POSTPROCESS, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, TRUE,  \
             INT_MAX, NULL, NULL, MINFRAC, MAXFRAC, aggrrow, cutcoefs, cutrhs, cutinds, cutnnz, &cutefficacy, NULL, \
@@ -2252,7 +2482,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
 
    nressteps = 0;
 
-   if( set->conf_applycmir || set->conf_applysimplemir)
+   if( set->conf_applycmirreason || set->conf_applycmir || set->conf_applysimplemir)
    {
       SCIP_CALL( SCIPsetAllocBufferArray(set, &cutcoefs, SCIPprobGetNVars(transprob)) );
       SCIP_CALL( SCIPsetAllocBufferArray(set, &cutinds, SCIPprobGetNVars(transprob)) );
@@ -2368,6 +2598,41 @@ SCIP_RETCODE conflictAnalyzeResolution(
          }
          reasonslack = getSlack(set->scip, transprob, reasonresolutionset, bdchgidx);
          reasonresolutionset->slack = reasonslack;
+         SCIPdebug(resolutionsetPrintRow(reasonresolutionset, set, transprob, 2));
+
+         /* Apply cmir after each iteration to strengthen the reason constraint */
+         if( SCIPsetIsGT(set, reasonslack, 0.0) && set->conf_applycmirreason )
+         {
+            int cutnnz;
+            SCIP_Real cutrhs;
+            SCIP_Bool success;
+
+            cutnnz = 0;
+            /* todo rethink about the reference point and the scaling in SCIPcalcMIR */
+            SCIP_CALL( computecMIRfromResolutionSet(conflict, set, reasonresolutionset, transprob, stat, tree, cutcoefs,
+                                                    cutinds, &cutrhs, &cutnnz, FALSE, bdchginfo, &success) ); /*lint !e644*/
+
+            if( success )
+            {
+               SCIP_RESOLUTIONSET* cutresolutionset;
+               SCIP_CALL( resolutionsetCreate(&cutresolutionset, blkmem) );
+               SCIP_CALL( resolutionsetAddSparseData(cutresolutionset, blkmem, cutcoefs, cutinds, cutnnz, -cutrhs,
+                                          reasonresolutionset->origrhs, reasonresolutionset->origlhs, TRUE) );
+
+               /* replace the current resolution set by the cut if the slack of the cut is smaller */
+               cutresolutionset->slack = getSlack(set->scip, transprob, cutresolutionset, bdchgidx);
+               if ( SCIPisLT(set->scip, cutresolutionset->slack, reasonslack) )
+               {
+                  SCIPdebug(resolutionsetPrintRow(reasonresolutionset, set, transprob, 2));
+                  SCIPsetDebugMsg(set, "replacing reason resolution set by cMIR cut resolution set \n");
+                  SCIP_CALL( resolutionsetReplace(reasonresolutionset, blkmem, cutresolutionset) );
+                  reasonresolutionset->slack = reasonslack;
+               }
+               SCIPsortIntReal(reasonresolutionset->inds, reasonresolutionset->vals, resolutionsetGetNNzs(reasonresolutionset));
+               SCIPresolutionsetFree(&cutresolutionset, blkmem);
+            }
+         }
+
          /* sort for linear time resolution */
          SCIPsortIntReal(conflictresolutionset->inds, conflictresolutionset->vals, resolutionsetGetNNzs(conflictresolutionset));
          SCIPsortIntReal(reasonresolutionset->inds, reasonresolutionset->vals, resolutionsetGetNNzs(reasonresolutionset));
@@ -2397,9 +2662,11 @@ SCIP_RETCODE conflictAnalyzeResolution(
 #endif
          SCIPsetDebugMsg(set, " Resolving conflict and reason on variable <%s>\n", SCIPvarGetName(vartoresolve));
          /* resolution step */
-         SCIP_CALL( resolveWithReason(set->scip, set, conflictresolutionset, reasonresolutionset, blkmem, transprob, residx, (conflict->nresolutionsets > 0), &successresolution) );
+         SCIP_CALL( resolveWithReason(set->scip, set, conflictresolutionset, reasonresolutionset, blkmem, transprob,
+                                      residx, (conflict->nresolutionsets > 0), &successresolution) );
          nressteps++;
-         SCIPstatisticPrintf("ConflictSTAT: %d %d %f %f\n", nressteps, resolutionsetGetNNzs(conflictresolutionset), conflictresolutionset->coefquotient, conflictresolutionset->slack);
+         SCIPstatisticPrintf("ConflictSTAT: %d %d %f %f\n", nressteps, resolutionsetGetNNzs(conflictresolutionset),
+                             conflictresolutionset->coefquotient, conflictresolutionset->slack);
 
          if (!successresolution)
             goto TERMINATE;
@@ -2410,11 +2677,8 @@ SCIP_RETCODE conflictAnalyzeResolution(
 
          SCIPsetDebugMsg(set, "Slack of resolved row: %f \n", conflictslack);
 
-         if (SCIPsetIsGE(set, conflictslack, 0.0))
-         {
-            /* @todo if we add previous conflicts to the resolutionsets we can still add a constraint */
+         if (SCIPsetIsGE(set, conflictslack, 0.0) || resolutionsetGetNNzs(conflictresolutionset) > maxsize)
             goto TERMINATE;
-         }
 
          SCIP_CALL( tightenCoefLhs(set->scip, transprob, FALSE, conflictresolutionset->vals, &conflictresolutionset->lhs, conflictresolutionset->inds, &conflictresolutionset->nnz, &nchgcoefs, NULL) );
          if (nchgcoefs > 0)
@@ -2441,8 +2705,8 @@ SCIP_RETCODE conflictAnalyzeResolution(
                assert(cutcoefs != NULL);
 
                cutnnz = 0;
-               SCIP_CALL( computecMIRfromResolutionSet(conflict, set, conflictresolutionset, transprob, stat, tree, cutcoefs, cutinds, &cutrhs, &cutnnz, &success) ); /*lint !e644*/
-
+               SCIP_CALL( computecMIRfromResolutionSet(conflict, set, conflictresolutionset, transprob, stat, tree,
+                                      cutcoefs, cutinds, &cutrhs, &cutnnz, TRUE, bdchginfo, &success) ); /*lint !e644*/
 
                if( success )
                {
@@ -2545,7 +2809,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
       }
    }
 
-   if( set->conf_applycmir || set->conf_applysimplemir)
+   if( set->conf_applycmirreason || set->conf_applycmir || set->conf_applysimplemir)
    {
       SCIPsetFreeBufferArray(set, &cutinds);
       SCIPsetFreeBufferArray(set, &cutcoefs);

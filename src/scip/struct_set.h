@@ -286,6 +286,7 @@ struct SCIP_Set
    SCIP_Bool             conf_weakenreasonall;/**< should all variables at bounds in the reason be weakened at once? */
    SCIP_Bool             conf_applysimplemir;/**< should we apply mir with scaling 1.0 to strengthen the conflict constraints? */
    SCIP_Bool             conf_applycmir;     /**< should we apply cmir to strengthen the conflict constraints? */
+   SCIP_Bool             conf_applycmirreason;/**< should we apply cmir to strengthen the reason constraints? */
    SCIP_Bool             conf_applyresdualproof;/**< should we apply resolution initiated with the dual proof? */
    SCIP_Bool             conf_applyrespseudoobj;/**< should we apply resolution initiated with the violated pseudo-objective? */
 
