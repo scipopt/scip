@@ -1,6 +1,6 @@
 @page RN80 Release notes for SCIP 8.0
 
-@section RN000 SCIP 8.0.4
+@section RN804 SCIP 8.0.4
 *************************
 
 Features
@@ -56,7 +56,7 @@ Miscellaneous
 Known bugs
 ----------
 
-@section RN000 SCIP 8.0.3
+@section RN803 SCIP 8.0.3
 *************************
 
 Examples and applications
