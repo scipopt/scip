@@ -12128,7 +12128,7 @@ SCIP_RETCODE lpSolve(
 #ifndef NDEBUG
       /* the LP solution objective should exceed the limit in this case */
       SCIP_CALL( SCIPlpiGetObjval(lp->lpi, &lp->lpobjval) );
-      assert(SCIPsetIsRelGE(set, lp->lpobjval, lp->lpiobjlim));
+      assert(!set->lp_checkstability || SCIPsetIsRelGE(set, lp->lpobjval, lp->lpiobjlim));
 #endif
 
       lp->lpsolstat = SCIP_LPSOLSTAT_OBJLIMIT;
