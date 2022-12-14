@@ -1495,7 +1495,6 @@ void consdataRecomputeGlbMaxactivity(
    /* the activity was just computed from scratch, mark it to be reliable */
    consdata->lastglbmaxactivity = consdata->glbmaxactivity;
 }
-#endif
 
 /** calculates maximum absolute value of coefficients */
 static
@@ -1517,6 +1516,7 @@ void consdataCalcMaxAbsval(
          RatAbs(consdata->maxabsval, consdata->vals[i]);
    }
 }
+#endif
 
 /** calculates minimum absolute value of coefficients */
 static

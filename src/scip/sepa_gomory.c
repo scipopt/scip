@@ -643,7 +643,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
       int ninds = -1;
       int cutnnz;
       int cutrank;
-      int cutslastround = 0;
 
       if( basisfrac[i] == 0.0 )
          break;
@@ -659,8 +658,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
 
       if( !success )
          continue;
-
-      cutslastround = naddedcuts;
 
       /* try to create a strong CG cut out of the aggregation row */
       if( separatescg && !SCIPisExactSolve(scip) )

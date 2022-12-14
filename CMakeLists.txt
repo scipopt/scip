@@ -258,7 +258,7 @@ if(EXACTSOLVE)
     find_package(Boost 1.65.0)
 
     if(Boost_FOUND)
-        include_directories(${Boost_INCLUDE_DIRS})
+        include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
         add_definitions(-DSCIP_WITH_BOOST)
         if(LPSEXACT STREQUAL "spxexact")
             find_package(SOPLEX REQUIRED CONFIG)
