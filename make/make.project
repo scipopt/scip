@@ -93,7 +93,7 @@ EMPHBENCHMARK  =   true
 
 # set SCIP version here for external projects
 # use underscore to make it compatible with def.h
-SCIP_VERSION	=	8.0.3
+SCIP_VERSION	=	8.0.4
 
 # compiling and linking parameters
 VERBOSE		=	false
