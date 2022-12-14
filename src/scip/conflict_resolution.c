@@ -424,7 +424,9 @@ SCIP_RETCODE tightenCoefLhs(
    return SCIP_OKAY;
 }
 
-/*returns whether a bound change is resolvable or not */
+
+
+/* returns whether a bound change is resolvable or not */
 static
 SCIP_Bool bdchginfoIsResolvable(
    SCIP_BDCHGINFO*       bdchginfo           /**< bound change to check */
@@ -904,6 +906,47 @@ int resolutionsetGetNNzs(
    assert(resolutionset != NULL);
 
    return resolutionset->nnz;
+}
+
+/* returns if the variable index is in the conflict resolution set */
+static
+SCIP_Bool varIdxInResolutionset(
+   SCIP_RESOLUTIONSET*   resolutionset,      /**< conflict resolution set */
+   int                   varidx              /**< variable index to check */
+   )
+{
+   int i;
+
+   assert(resolutionset != NULL);
+   assert(varidx >= 0);
+
+   for( i = 0; i < resolutionsetGetNNzs(resolutionset); ++i )
+   {
+      if( resolutionset->inds[i] == varidx )
+         return TRUE;
+   }
+   return FALSE;
+}
+
+/* returns if the variable index is in the indices array */
+static
+SCIP_Bool varIdxInArray(
+   int*                  inds,               /**< array of variable indices */
+   int                   ninds,              /**< number of variable indices in array */
+   int                   varidx              /**< variable index to check */
+   )
+{
+   int i;
+
+   assert(inds != NULL);
+   assert(varidx >= 0);
+
+   for( i = 0; i < ninds; ++i )
+   {
+      if( inds[i] == varidx )
+         return TRUE;
+   }
+   return FALSE;
 }
 
 /** returns the quotient of the largest and smallest value in an array */
@@ -2612,8 +2655,9 @@ SCIP_RETCODE conflictAnalyzeResolution(
             SCIP_CALL( computecMIRfromResolutionSet(conflict, set, reasonresolutionset, transprob, stat, tree, cutcoefs,
                                                     cutinds, &cutrhs, &cutnnz, FALSE, bdchginfo, &success) ); /*lint !e644*/
 
-            if( success )
+            if( success && varIdxInArray(cutinds, cutnnz, residx))
             {
+
                SCIP_RESOLUTIONSET* cutresolutionset;
                SCIP_CALL( resolutionsetCreate(&cutresolutionset, blkmem) );
                SCIP_CALL( resolutionsetAddSparseData(cutresolutionset, blkmem, cutcoefs, cutinds, cutnnz, -cutrhs,
@@ -2623,8 +2667,10 @@ SCIP_RETCODE conflictAnalyzeResolution(
                cutresolutionset->slack = getSlack(set->scip, transprob, cutresolutionset, bdchgidx);
                if ( SCIPisLT(set->scip, cutresolutionset->slack, reasonslack) )
                {
+
                   SCIPdebug(resolutionsetPrintRow(reasonresolutionset, set, transprob, 2));
-                  SCIPsetDebugMsg(set, "replacing reason resolution set by cMIR cut resolution set \n");
+                  SCIPsetDebugMsg(set, "replacing reason resolution set by cMIR cut resolution set: new slack %f < old slack %f \n",
+                                         cutresolutionset->slack, reasonslack);
                   SCIP_CALL( resolutionsetReplace(reasonresolutionset, blkmem, cutresolutionset) );
                   reasonresolutionset->slack = reasonslack;
                }
@@ -2749,7 +2795,8 @@ SCIP_RETCODE conflictAnalyzeResolution(
       vartoresolve = SCIPbdchginfoGetVar(bdchginfo);
       residx = SCIPvarGetProbindex(vartoresolve);
 
-      /* get the bound change before bdchginfo*/
+      assert(varIdxInResolutionset(conflictresolutionset, residx));
+      /* get the bound change before bdchginfo */
       nextbdchginfo = conflictFirstCand(conflict);
 
       /* check if the variable we are resolving is active */
