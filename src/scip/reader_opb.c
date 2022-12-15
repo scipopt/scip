@@ -1605,7 +1605,7 @@ SCIP_RETCODE getMaxAndConsDim(
 
          opbinput->linebuf[newsize-2] = '\0';
          if ( SCIPfgets(opbinput->linebuf + opbinput->linebufsize - 1, newsize - opbinput->linebufsize + 1, opbinput->file) == NULL )
-            return FALSE;
+            return SCIP_READERROR;
          opbinput->linebufsize = newsize;
       }
       opbinput->linebuf[opbinput->linebufsize - 1] = '\0'; /* we want to use lookahead of one char -> we need two \0 at the end */
