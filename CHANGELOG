@@ -51,6 +51,7 @@ Fixed bugs
 ----------
 
 - relax condition of assert in lpSolve to hold only if lp/checkstability is true
+- OPB reader: dynamically increase the size of the line buffer for reading in getMaxAndConsDim()
 
 Miscellaneous
 -------------

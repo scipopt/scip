@@ -893,6 +893,7 @@ SCIP_RETCODE readCoefficients(
    haveweightend = FALSE;
    ntmpcoefs = 0;
    ntmpvars = 0;
+
    while( getNextToken(scip, opbinput) && !hasError(opbinput) )
    {
       if( isEndLine(opbinput) )
@@ -1585,6 +1586,7 @@ SCIP_RETCODE getMaxAndConsDim(
    nproducts = NULL;
 
    *objoffset = 0.0;
+   opbinput->linebuf[opbinput->linebufsize - 2] = '\0';
 
    do
    {
@@ -1593,6 +1595,22 @@ SCIP_RETCODE getMaxAndConsDim(
          assert( SCIPfeof(opbinput->file) );
          break;
       }
+
+      /* if line is too long for our buffer reallocate buffer */
+      while( opbinput->linebuf[opbinput->linebufsize - 2] != '\0' )
+      {
+         int newsize;
+
+         newsize = SCIPcalcMemGrowSize(scip, opbinput->linebufsize + 1);
+         SCIP_CALL_ABORT( SCIPreallocBlockMemoryArray(scip, &opbinput->linebuf, opbinput->linebufsize, newsize) );
+
+         opbinput->linebuf[newsize-2] = '\0';
+         if ( SCIPfgets(opbinput->linebuf + opbinput->linebufsize - 1, newsize - opbinput->linebufsize + 1, opbinput->file) == NULL )
+            return SCIP_READERROR;
+         opbinput->linebufsize = newsize;
+      }
+      opbinput->linebuf[opbinput->linebufsize - 1] = '\0'; /* we want to use lookahead of one char -> we need two \0 at the end */
+
 
       /* read characters after comment symbol */
       for( i = 0; commentchars[i] != '\0'; ++i )
