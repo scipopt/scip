@@ -1586,6 +1586,7 @@ SCIP_RETCODE getMaxAndConsDim(
    nproducts = NULL;
 
    *objoffset = 0.0;
+   opbinput->linebuf[opbinput->linebufsize - 2] = '\0';
 
    do
    {
