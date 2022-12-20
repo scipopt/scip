@@ -3789,7 +3789,7 @@ SCIP_RETCODE cutsSubstituteMIR(
    }
 
    /* relax rhs to zero, if it's very close to 0 */
-   if( QUAD_TO_DBL(*cutrhs) < 0.0 && QUAD_TO_DBL(*cutrhs) >= SCIPepsilon(scip) )
+   if( QUAD_TO_DBL(*cutrhs) < 0.0 && QUAD_TO_DBL(*cutrhs) >= -SCIPepsilon(scip) )
       QUAD_ASSIGN(*cutrhs, 0.0);
 
    return SCIP_OKAY;
@@ -7337,7 +7337,7 @@ SCIP_RETCODE generateLiftedFlowCoverCut(
    *cutrhs = QUAD_TO_DBL(rhs);
 
    /* relax rhs to zero, if it's very close to 0 */
-   if( *cutrhs < 0.0 && *cutrhs >= SCIPepsilon(scip) )
+   if( *cutrhs < 0.0 && *cutrhs >= -SCIPepsilon(scip) )
       *cutrhs = 0.0;
 
    return SCIP_OKAY;
@@ -8877,7 +8877,7 @@ SCIP_RETCODE cutsSubstituteStrongCG(
    }
 
    /* relax rhs to zero, if it's very close to 0 */
-   if( QUAD_TO_DBL(*cutrhs) < 0.0 && QUAD_TO_DBL(*cutrhs) >= SCIPepsilon(scip) )
+   if( QUAD_TO_DBL(*cutrhs) < 0.0 && QUAD_TO_DBL(*cutrhs) >= -SCIPepsilon(scip) )
       QUAD_ASSIGN(*cutrhs, 0.0);
 
    return SCIP_OKAY;
