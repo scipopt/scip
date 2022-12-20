@@ -205,6 +205,58 @@ SCIP_RETCODE varVecAddScaledRowCoefsQuad(
    return SCIP_OKAY;
 }
 
+/** add a scaled row to a dense vector indexed over the problem variables and keep the
+ *  index of non-zeros up-to-date
+ *
+ *  This is the quad precision version of varVecAddScaledRowCoefs() with a quad precision scaling factor.
+ */
+static
+SCIP_RETCODE varVecAddScaledRowCoefsQuadScale(
+   int*RESTRICT          inds,               /**< pointer to array with variable problem indices of non-zeros in variable vector */
+   SCIP_Real*RESTRICT    vals,               /**< array with values of variable vector */
+   int*RESTRICT          nnz,                /**< number of non-zeros coefficients of variable vector */
+   SCIP_ROW*             row,                /**< row coefficients to add to variable vector */
+   QUAD(SCIP_Real        scale)              /**< scale for adding given row to variable vector */
+   )
+{
+   int i;
+
+   assert(inds != NULL);
+   assert(vals != NULL);
+   assert(nnz != NULL);
+   assert(row != NULL);
+
+   /* add the non-zeros to the aggregation row and keep non-zero index up to date */
+   for( i = 0 ; i < row->len; ++i )
+   {
+      SCIP_Real QUAD(val);
+      SCIP_Real QUAD(rowval);
+      int probindex;
+
+      probindex = row->cols[i]->var_probindex;
+      QUAD_ARRAY_LOAD(val, vals, probindex);
+
+      if( QUAD_HI(val) == 0.0 )
+      {
+         inds[(*nnz)++] = probindex;
+         SCIPquadprecProdQD(val, scale, row->vals[i]);
+      }
+      else
+      {
+         SCIPquadprecProdQD(rowval, scale, row->vals[i]);
+         SCIPquadprecSumQQ(val, val, rowval);
+      }
+
+      /* the value must not be exactly zero due to sparsity pattern */
+      QUAD_HI(val) = NONZERO(QUAD_HI(val));
+      assert(QUAD_HI(val) != 0.0);
+
+      QUAD_ARRAY_STORE(vals, probindex, val);
+   }
+
+   return SCIP_OKAY;
+}
+
 /** calculates the cut efficacy for the given solution */
 static
 SCIP_Real calcEfficacy(
@@ -3693,7 +3745,7 @@ SCIP_RETCODE cutsSubstituteMIR(
       SCIP_Real QUAD(cutar);
       SCIP_Real QUAD(fr);
       SCIP_Real QUAD(tmp);
-      SCIP_Real mul;
+      SCIP_Real QUAD(myprod);
       int r;
 
       r = rowinds[i]; /*lint !e613*/
@@ -3750,10 +3802,10 @@ SCIP_RETCODE cutsSubstituteMIR(
        *   a*x + c + s == rhs  =>  s == - a*x - c + rhs,  or  a*x + c - s == lhs  =>  s == a*x + c - lhs
        * substitute a^_r * s_r by adding a^_r times the slack's definition to the cut.
        */
-      mul = -slacksign[i] * QUAD_TO_DBL(cutar); /*lint !e613*/
+      SCIPquadprecProdQD(myprod, cutar, -slacksign[i]);
 
       /* add the slack's definition multiplied with a^_j to the cut */
-      SCIP_CALL( varVecAddScaledRowCoefsQuad(cutinds, cutcoefs, nnz, row, mul) );
+      SCIP_CALL( varVecAddScaledRowCoefsQuadScale(cutinds, cutcoefs, nnz, row, QUAD(myprod)) );
 
       /* move slack's constant to the right hand side */
       if( slacksign[i] == +1 ) /*lint !e613*/
@@ -3768,8 +3820,8 @@ SCIP_RETCODE cutsSubstituteMIR(
             /* the right hand side was implicitly rounded down in row aggregation */
             QUAD_ASSIGN(rowrhs, SCIPfloor(scip, QUAD_TO_DBL(rowrhs)));
          }
-         SCIPquadprecProdQQ(tmp, cutar, rowrhs);
-         SCIPquadprecSumQQ(*cutrhs, *cutrhs, -tmp);
+         SCIPquadprecProdQQ(tmp, myprod, rowrhs);
+         SCIPquadprecSumQQ(*cutrhs, *cutrhs, tmp);
       }
       else
       {
@@ -3783,7 +3835,7 @@ SCIP_RETCODE cutsSubstituteMIR(
             /* the left hand side was implicitly rounded up in row aggregation */
             QUAD_ASSIGN(rowlhs, SCIPceil(scip, QUAD_TO_DBL(rowlhs)));
          }
-         SCIPquadprecProdQQ(tmp, cutar, rowlhs);
+         SCIPquadprecProdQQ(tmp, myprod, rowlhs);
          SCIPquadprecSumQQ(*cutrhs, *cutrhs, tmp);
       }
    }
