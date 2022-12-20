@@ -2955,8 +2955,8 @@ void performBoundSubstitutionSimple(
  *  Transform variables (lb or ub):
  *  \f[
  *  \begin{array}{llll}
- *    x^\prime_j := x_j - lb_j,&   x_j = x^\prime_j + lb_j,&   a^\prime_j =  a_j,&   \mbox{if lb is used in transformation}\\
- *    x^\prime_j := ub_j - x_j,&   x_j = ub_j - x^\prime_j,&   a^\prime_j = -a_j,&   \mbox{if ub is used in transformation}
+ *    x^\prime_j := x_j - lb_j,&   x_j = x^\prime_j + lb_j,&   a^\prime_j =  a_j,&   \mbox{if lb is used in transformation},\\
+ *    x^\prime_j := ub_j - x_j,&   x_j = ub_j - x^\prime_j,&   a^\prime_j = -a_j,&   \mbox{if ub is used in transformation},
  *  \end{array}
  *  \f]
  *  and move the constant terms \f$ a_j\, lb_j \f$ or \f$ a_j\, ub_j \f$ to the rhs.
@@ -3297,8 +3297,8 @@ SCIP_RETCODE cutsTransformMIR(
  *  (lb or ub):
  * \f[
  * \begin{array}{lllll}
- *    x^\prime_j := x_j - lb_j,&   x_j = x^\prime_j + lb_j,&   a^\prime_j =  a_j,&   \hat{a}_j :=  \tilde{a}_j,&   \mbox{if lb was used in transformation} \\
- *    x^\prime_j := ub_j - x_j,&   x_j = ub_j - x^\prime_j,&   a^\prime_j = -a_j,&   \hat{a}_j := -\tilde{a}_j,&   \mbox{if ub was used in transformation}
+ *    x^\prime_j := x_j - lb_j,&   x_j = x^\prime_j + lb_j,&   a^\prime_j =  a_j,&   \hat{a}_j :=  \tilde{a}_j,&   \mbox{if lb was used in transformation}, \\
+ *    x^\prime_j := ub_j - x_j,&   x_j = ub_j - x^\prime_j,&   a^\prime_j = -a_j,&   \hat{a}_j := -\tilde{a}_j,&   \mbox{if ub was used in transformation},
  * \end{array}
  * \f]
  *  and move the constant terms
@@ -3481,7 +3481,7 @@ SCIP_RETCODE cutsRoundMIR(
       }
    }
 
-   /* now process the continuous variables; postpone deletetion of zeros till all continuous variables have been processed */
+   /* now process the continuous variables; postpone deletion of zeros untill all continuous variables have been processed */
    ndelcontvars = 0;
    while( i >= ndelcontvars )
    {
@@ -3505,7 +3505,7 @@ SCIP_RETCODE cutsRoundMIR(
       if( QUAD_TO_DBL(aj) * varsign[i] >= 0.0 )
          QUAD_ASSIGN(cutaj, 0.0);
       else
-         SCIPquadprecProdQQ(cutaj, onedivoneminusf0, aj); /* cutaj = varsign[i] * aj * onedivoneminusf0; // a^_j */
+         SCIPquadprecProdQQ(cutaj, onedivoneminusf0, aj); /* cutaj = varsign[i] * aj * onedivoneminusf0 */
 
       /* remove zero cut coefficients from cut; move a continuous var from the beginning
        * to the current position, so that all integral variables stay behind the continuous
@@ -3637,15 +3637,15 @@ SCIP_RETCODE cutsRoundMIR(
 /** substitute aggregated slack variables:
  *
  *  The coefficient of the slack variable s_r is equal to the row's weight times the slack's sign, because the slack
- *  variable only appears in its own row: \f$ a^\prime_r = scale * weight[r] * slacksign[r]. \f$
+ *  variable only appears in its own row: \f$ a^\prime_r = scale \cdot weight[r] \cdot slacksign[r]. \f$
  *
  *  Depending on the slacks type (integral or continuous), its coefficient in the cut calculates as follows:
  *  \f[
  *  \begin{array}{rll}
- *    integers : & \hat{a}_r = \tilde{a}_r = down(a^\prime_r),                      & \mbox{if}\qquad f_r <= f0 \\
- *               & \hat{a}_r = \tilde{a}_r = down(a^\prime_r) + (f_r - f0)/(1 - f0),& \mbox{if}\qquad f_r >  f0 \\
- *    continuous:& \hat{a}_r = \tilde{a}_r = 0,                                     & \mbox{if}\qquad a^\prime_r >= 0 \\
- *               & \hat{a}_r = \tilde{a}_r = a^\prime_r/(1 - f0),                   & \mbox{if}\qquad a^\prime_r <  0
+ *    integers : & \hat{a}_r = \tilde{a}_r = down(a^\prime_r),                        & \mbox{if}\qquad f_r \leq f_0 \\
+ *               & \hat{a}_r = \tilde{a}_r = down(a^\prime_r) + (f_r - f_0)/(1 - f_0),& \mbox{if}\qquad f_r >  f_0 \\
+ *    continuous:& \hat{a}_r = \tilde{a}_r = 0,                                       & \mbox{if}\qquad a^\prime_r \geq 0 \\
+ *               & \hat{a}_r = \tilde{a}_r = a^\prime_r/(1 - f_0),                    & \mbox{if}\qquad a^\prime_r <  0
  *  \end{array}
  *  \f]
  *
