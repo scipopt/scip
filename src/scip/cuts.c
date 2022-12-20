@@ -65,7 +65,7 @@ void printCutQuad(
    QUAD(SCIP_Real        cutrhs),            /**< right hand side of the MIR row */
    int*                  cutinds,            /**< indices of problem variables for non-zero coefficients */
    int                   cutnnz,             /**< number of non-zeros in cut */
-   SCIP_Bool             ignorsol,
+   SCIP_Bool             ignoresol,
    SCIP_Bool             islocal
    )
 {
@@ -86,7 +86,7 @@ void printCutQuad(
 
       SCIPdebugPrintf(" %+g<%s>", QUAD_TO_DBL(coef), SCIPvarGetName(vars[cutinds[i]]));
 
-      if( !ignorsol )
+      if( ! ignoresol )
       {
          SCIPquadprecProdQD(coef, coef, (sol == NULL ? SCIPvarGetLPSol(vars[cutinds[i]]) : SCIPgetSolVal(scip, sol, vars[cutinds[i]])));
       }
