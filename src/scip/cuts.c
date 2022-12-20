@@ -3816,7 +3816,7 @@ SCIP_RETCODE cutsSubstituteMIR(
          if( row->integral )
          {
             /* the right hand side was implicitly rounded down in row aggregation */
-            SCIPquadprecEpsFloorQ(rowrhs, rowrhs, SCIPepsilon(scip));
+            SCIPquadprecEpsFloorQ(rowrhs, rowrhs, SCIPepsilon(scip)); /*lint !e666*/
          }
          SCIPquadprecProdQQ(tmp, myprod, rowrhs);
          SCIPquadprecSumQQ(*cutrhs, *cutrhs, tmp);
@@ -3831,7 +3831,7 @@ SCIP_RETCODE cutsSubstituteMIR(
          if( row->integral )
          {
             /* the left hand side was implicitly rounded up in row aggregation */
-            SCIPquadprecEpsCeilQ(rowlhs, rowlhs, SCIPepsilon(scip));
+            SCIPquadprecEpsCeilQ(rowlhs, rowlhs, SCIPepsilon(scip)); /*lint !e666*/
          }
          SCIPquadprecProdQQ(tmp, myprod, rowlhs);
          SCIPquadprecSumQQ(*cutrhs, *cutrhs, tmp);
