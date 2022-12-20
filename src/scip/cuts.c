@@ -3769,7 +3769,7 @@ SCIP_RETCODE cutsSubstituteMIR(
           *    a^_r = a~_r = down(a'_r)                      , if f_r <= f0
           *    a^_r = a~_r = down(a'_r) + (f_r - f0)/(1 - f0), if f_r >  f0
           */
-         downar = EPSFLOOR(ar, QUAD_EPSILON);
+         downar = EPSFLOOR(ar, SCIPepsilon(scip));
          SCIPquadprecSumDD(fr, ar, -downar);
          if( SCIPisLE(scip, QUAD_TO_DBL(fr), QUAD_TO_DBL(f0)) )
             QUAD_ASSIGN(cutar, downar);
@@ -3812,11 +3812,11 @@ SCIP_RETCODE cutsSubstituteMIR(
 
          /* a*x + c + s == rhs  =>  s == - a*x - c + rhs: move a^_r * (rhs - c) to the right hand side */
          assert(!SCIPisInfinity(scip, row->rhs));
-         SCIPquadprecSumDD(rowrhs, row->rhs, -row->constant);
+         QUAD_ASSIGN(rowrhs, row->rhs - row->constant);
          if( row->integral )
          {
             /* the right hand side was implicitly rounded down in row aggregation */
-            QUAD_ASSIGN(rowrhs, SCIPfloor(scip, QUAD_TO_DBL(rowrhs)));
+            SCIPquadprecEpsFloorQ(rowrhs, rowrhs, SCIPepsilon(scip));
          }
          SCIPquadprecProdQQ(tmp, myprod, rowrhs);
          SCIPquadprecSumQQ(*cutrhs, *cutrhs, tmp);
@@ -3827,11 +3827,11 @@ SCIP_RETCODE cutsSubstituteMIR(
 
          /* a*x + c - s == lhs  =>  s == a*x + c - lhs: move a^_r * (c - lhs) to the right hand side */
          assert(!SCIPisInfinity(scip, -row->lhs));
-         SCIPquadprecSumDD(rowlhs, row->lhs, -row->constant);
+         QUAD_ASSIGN(rowlhs, row->lhs - row->constant);
          if( row->integral )
          {
             /* the left hand side was implicitly rounded up in row aggregation */
-            QUAD_ASSIGN(rowlhs, SCIPceil(scip, QUAD_TO_DBL(rowlhs)));
+            SCIPquadprecEpsCeilQ(rowlhs, rowlhs, SCIPepsilon(scip));
          }
          SCIPquadprecProdQQ(tmp, myprod, rowlhs);
          SCIPquadprecSumQQ(*cutrhs, *cutrhs, tmp);
