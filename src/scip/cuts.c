@@ -3763,9 +3763,7 @@ SCIP_RETCODE cutsSubstituteMIR(
       ar = slacksign[i] * scale * weights[i]; /*lint !e613*/
 
       /* calculate slack variable's coefficient a^_r in the cut */
-      if( row->integral
-         && ((slacksign[i] == +1 && SCIPisFeasIntegral(scip, row->rhs - row->constant))
-            || (slacksign[i] == -1 && SCIPisFeasIntegral(scip, row->lhs - row->constant))) ) /*lint !e613*/
+      if( row->integral )
       {
          /* slack variable is always integral:
           *    a^_r = a~_r = down(a'_r)                      , if f_r <= f0
