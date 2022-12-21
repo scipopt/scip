@@ -5192,7 +5192,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphVarbound)
    rhs = SCIPgetRhsVarbound(scip, cons) - constant;
 
    SCIP_CALL( SCIPcreatePermsymDetectionGraphLinear(scip, graph, vars, vals, nlocvars,
-         lhs, rhs, SCIPfindConshdlr(scip, CONSHDLR_NAME), success) );
+         lhs, rhs, cons, SCIPfindConshdlr(scip, CONSHDLR_NAME), success) );
 
    SCIPfreeBufferArray(scip, &vals);
    SCIPfreeBufferArray(scip, &vars);

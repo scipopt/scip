@@ -291,6 +291,7 @@ SCIP_RETCODE SCIPcreateSymgraphNode(
    SCIP_Bool             hasinfo,            /**< whether the node encodes information about a constraint */
    SCIP_Real             lhs,                /**< left-hand side of constraint */
    SCIP_Real             rhs,                /**< right-hand side of constraint */
+   SCIP_CONS*            cons,               /**< constraint for which we encode symmetries */
    SCIP_CONSHDLR*        conshdlr            /**< pointer to constraint handler of constraint */
    );
 
@@ -350,6 +351,7 @@ SCIP_RETCODE SCIPcreatePermsymDetectionGraphLinear(
    int                   nvars,              /**< number of variables in linear constraint */
    SCIP_Real             lhs,                /**< left-hand side of linear constraint */
    SCIP_Real             rhs,                /**< right-hand side of linear constraint */
+   SCIP_CONS*            cons,               /**< constraint for which we encode symmetries */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler of corresponding constraint */
    SCIP_Bool*            success             /**< pointer to store whether graph could be built */
    );

@@ -13360,7 +13360,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphKnapsack)
    rhs = (SCIP_Real) SCIPgetCapacityKnapsack(scip, cons) - constant;
 
    SCIP_CALL( SCIPcreatePermsymDetectionGraphLinear(scip, graph, vars, vals, nlocvars,
-         -SCIPinfinity(scip), rhs, SCIPfindConshdlr(scip, CONSHDLR_NAME), success) );
+         -SCIPinfinity(scip), rhs, cons, SCIPfindConshdlr(scip, CONSHDLR_NAME), success) );
 
    SCIPfreeBufferArray(scip, &vals);
    SCIPfreeBufferArray(scip, &vars);

@@ -161,6 +161,7 @@ struct SYM_Reflsymdata
 struct SYM_Consinfo
 {
    SCIP_CONSHDLR*        conshdlr;           /**< pointer to the constraint handler of a constraint */
+   SCIP_CONS*            cons;               /**< pointer to the constraint */
    SCIP_Real             lhs;                /**< left-hand side of constraint */
    SCIP_Real             rhs;                /**< right-hand side of constraint */
 };
