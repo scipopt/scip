@@ -1045,6 +1045,46 @@ SCIP_DECL_SORTINDCOMP(SYMsortEdges)
    return compareEdges(edges[ind1], edges[ind2]);
 }
 
+/** sorts colored graphs */
+static
+SCIP_DECL_SORTINDCOMP(SYMsortColGraph)
+{
+   SYM_COMPGRAPH* data;
+   int v;
+   int nneighbors;
+
+   data = (SYM_COMPGRAPH*) dataptr;
+
+   if ( data->nodecolors[ind1] < data->nodecolors[ind2] )
+      return -1;
+   if ( data->nodecolors[ind1] > data->nodecolors[ind2] )
+      return 1;
+
+   if ( data->nneighbors[ind1] < data->nneighbors[ind2] )
+      return -1;
+   if ( data->nneighbors[ind1] > data->nneighbors[ind2] )
+      return 1;
+
+   nneighbors = data->nneighbors[ind1];
+   for (v = 0; v < nneighbors; ++v)
+   {
+      if ( data->adjacentnodecolors[ind1][v] < data->adjacentnodecolors[ind2][v] )
+         return -1;
+      if ( data->adjacentnodecolors[ind1][v] > data->adjacentnodecolors[ind2][v] )
+         return 1;
+   }
+
+   for (v = 0; v < nneighbors; ++v)
+   {
+      if ( data->incidentedgecolors[ind1][v] < data->incidentedgecolors[ind2][v] )
+         return -1;
+      if ( data->incidentedgecolors[ind1][v] > data->incidentedgecolors[ind2][v] )
+         return 1;
+   }
+
+   return 0;
+}
+
 /*
  * Local methods
  */
@@ -6170,6 +6210,282 @@ SCIP_Bool isFixedNode(
    return FALSE;
 }
 
+/** checks whether a symmetry is actually a symmetry
+ *
+ * To this end, we compare the colored symmetry detection graphs returned by the individual constraints.
+ */
+static
+SCIP_RETCODE checkSymmetryIsSymmetry(
+   SCIP*                 scip,               /**< SCIP pointer */
+   int*                  varperm,            /**< permutation of variable indicies */
+   int                   nvars,              /**< number of variable indices */
+   int*                  consperm,           /**< permutation of the constraints/graphs */
+   int                   nconss,             /**< number of constraints */
+   SYM_GRAPH**           graphs,             /**< array of symmetry detection graphs */
+   int*                  varcolors,          /**< array assigning each variable index a color */
+   SCIP_Bool*            success             /**< pointer to store whether the symmetry is a symmetry */
+   )
+{
+   SYM_COMPGRAPH* compdata;
+   SYM_EDGE* edge;
+   int** adjacentnodecolors;
+   int** incidentedgecolors;
+   int** adjacentnodecolors2;
+   int** incidentedgecolors2;
+   int* nodecolors;
+   int* nneighbors;
+   int* nneighbors2;
+   int* nodeperm;
+   int* nodeperm2;
+   int beginpos;
+   int beginval;
+   int c;
+   int e;
+   int v;
+   int varidx;
+   int nnodes;
+   int nedges;
+
+   assert( scip != NULL );
+   assert( varperm != NULL );
+   assert( consperm != NULL );
+   assert( graphs != NULL );
+   assert( varcolors != NULL );
+
+   *success = TRUE;
+
+   for (c = 0; c < nconss && *success; ++c)
+   {
+      /* check whether constraint/graph is affected by symmetry */
+      SCIP_Bool affected = FALSE;
+
+      for (v = 0; v < graphs[c]->nnodes; ++v)
+      {
+         if ( graphs[c]->nodes[v]->nodetype == SYM_NODETYPE_VAR )
+         {
+            varidx = graphs[c]->nodes[v]->varidx;
+
+            if ( varperm[varidx] != varidx )
+            {
+               affected = TRUE;
+               break;
+            }
+         }
+      }
+
+      if ( !affected )
+         continue;
+
+      /* some trivial checks */
+      if ( graphs[c]->nnodes != graphs[consperm[c]]->nnodes
+         || graphs[c]->nedges != graphs[consperm[c]]->nedges )
+      {
+         *success = FALSE;
+         return SCIP_OKAY;
+      }
+
+      /* check whether constraint c's graph is symmetric to graph of constraint consperm[c] by
+       * comparing sorted adjacency lists */
+      nnodes = graphs[c]->nnodes;
+      nedges = graphs[c]->nedges;
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &adjacentnodecolors, nnodes) );
+      for (v = 0; v < nnodes; ++v)
+      {
+         SCIP_CALL( SCIPallocBufferArray(scip, &adjacentnodecolors[v], nnodes) );
+      }
+      SCIP_CALL( SCIPallocBufferArray(scip, &adjacentnodecolors2, nnodes) );
+      for (v = 0; v < nnodes; ++v)
+      {
+         SCIP_CALL( SCIPallocBufferArray(scip, &adjacentnodecolors2[v], nnodes) );
+      }
+      SCIP_CALL( SCIPallocBufferArray(scip, &incidentedgecolors, nnodes) );
+      for (v = 0; v < nnodes; ++v)
+      {
+         SCIP_CALL( SCIPallocBufferArray(scip, &incidentedgecolors[v], nnodes) );
+      }
+      SCIP_CALL( SCIPallocBufferArray(scip, &incidentedgecolors2, nnodes) );
+      for (v = 0; v < nnodes; ++v)
+      {
+         SCIP_CALL( SCIPallocBufferArray(scip, &incidentedgecolors2[v], nnodes) );
+      }
+      SCIP_CALL( SCIPallocClearBufferArray(scip, &nneighbors, nnodes) );
+      SCIP_CALL( SCIPallocClearBufferArray(scip, &nneighbors2, nnodes) );
+
+      /* fill first arrays with data of permuted constraint c */
+      for (e = 0; e < nedges; ++e)
+      {
+         edge = graphs[c]->edges[e];
+
+#ifndef NDEBUG
+         if ( edge->first->nodetype == SYM_NODETYPE_VAR )
+         {
+            assert( varcolors[varperm[edge->first->varidx]] == edge->first->computedcolor );
+         }
+         if ( edge->second->nodetype == SYM_NODETYPE_VAR )
+         {
+            assert( varcolors[varperm[edge->second->varidx]] == edge->second->computedcolor );
+         }
+#endif
+
+         adjacentnodecolors[edge->first->id][nneighbors[edge->first->id]] = edge->second->computedcolor;
+         adjacentnodecolors[edge->second->id][nneighbors[edge->second->id]] = edge->first->computedcolor;
+         incidentedgecolors[edge->first->id][nneighbors[edge->first->id]] = edge->computedcolor;
+         incidentedgecolors[edge->second->id][nneighbors[edge->second->id]] = edge->computedcolor;
+         nneighbors[edge->first->id] += 1;
+         nneighbors[edge->second->id] += 1;
+      }
+
+      /* fill second arrays with data of constraint consperm[c] */
+      for (e = 0; e < nedges; ++e)
+      {
+         edge = graphs[consperm[c]]->edges[e];
+         adjacentnodecolors2[edge->first->id][nneighbors2[edge->first->id]] = edge->second->computedcolor;
+         adjacentnodecolors2[edge->second->id][nneighbors2[edge->second->id]] = edge->first->computedcolor;
+         incidentedgecolors2[edge->first->id][nneighbors2[edge->first->id]] = edge->computedcolor;
+         incidentedgecolors2[edge->second->id][nneighbors2[edge->second->id]] = edge->computedcolor;
+         nneighbors2[edge->first->id] += 1;
+         nneighbors2[edge->second->id] += 1;
+      }
+
+      /* sort adjacency lists */
+      for (v = 0; v < nnodes; ++v)
+      {
+         SCIPsortIntInt(adjacentnodecolors[v], incidentedgecolors[v], nneighbors[v]);
+         SCIPsortIntInt(adjacentnodecolors2[v], incidentedgecolors2[v], nneighbors2[v]);
+
+         /* sort incidence lists in sub-segments of equivalent adjacency colors */
+         beginpos = 0;
+         beginval = adjacentnodecolors[v][0];
+         for (e = beginpos; e < nneighbors[v]; ++e)
+         {
+            if ( adjacentnodecolors[v][e] != beginval )
+            {
+               SCIPsortInt(&incidentedgecolors[v][beginpos], e - beginpos);
+
+               beginval = adjacentnodecolors[v][e];
+               beginpos = e;
+            }
+         }
+
+         beginpos = 0;
+         beginval = adjacentnodecolors2[v][0];
+         for (e = beginpos; e < nneighbors2[v]; ++e)
+         {
+            if ( adjacentnodecolors2[v][e] != beginval )
+            {
+               SCIPsortInt(&incidentedgecolors2[v][beginpos], e - beginpos);
+
+               beginval = adjacentnodecolors2[v][e];
+               beginpos = e;
+            }
+         }
+      }
+
+      /* sort nodes of both graphs */
+      SCIP_CALL( SCIPallocBlockMemory(scip, &compdata) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &nodecolors, nnodes) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &nodeperm, nnodes) );
+
+      for (v = 0; v < nnodes; ++v)
+         nodecolors[v] = graphs[c]->nodes[v]->computedcolor;
+
+      compdata->adjacentnodecolors = adjacentnodecolors;
+      compdata->incidentedgecolors = incidentedgecolors;
+      compdata->nneighbors = nneighbors;
+      compdata->nodecolors = nodecolors;
+
+      SCIPsort(nodeperm, SYMsortColGraph, compdata, nnodes);
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &nodeperm2, nnodes) );
+
+      for (v = 0; v < nnodes; ++v)
+         nodecolors[v] = graphs[consperm[c]]->nodes[v]->computedcolor;
+
+      compdata->adjacentnodecolors = adjacentnodecolors2;
+      compdata->incidentedgecolors = incidentedgecolors2;
+      compdata->nneighbors = nneighbors2;
+      compdata->nodecolors = nodecolors;
+
+      SCIPsort(nodeperm2, SYMsortColGraph, compdata, nnodes);
+
+      SCIPfreeBlockMemory(scip, &compdata);
+
+      /* compare sorted graphs */
+      for (v = 0; v < nnodes && *success; ++v)
+      {
+         int pv;
+         int pv2;
+
+         pv = nodeperm[v];
+         pv2 = nodeperm2[v];
+         if ( graphs[c]->nodes[pv]->computedcolor != graphs[consperm[c]]->nodes[pv2]->computedcolor )
+         {
+            *success = FALSE;
+            SCIPdebugMsg(scip,
+               "Symmetry is not a symmetry: the node colors in symmetry detection graphs do not match.\n");
+            break;
+         }
+
+         if ( nneighbors[pv2] != nneighbors2[pv2] )
+         {
+            *success = FALSE;
+            SCIPdebugMsg(scip,
+               "Symmetry is not a symmetry: the node degrees in the symmetry detection graphs do not match.\n");
+            break;
+         }
+
+         for (e = 0; e < nneighbors[pv]; ++e)
+         {
+            if ( adjacentnodecolors[pv][e] != adjacentnodecolors2[pv2][e] )
+            {
+               *success = FALSE;
+               SCIPdebugMsg(scip,
+                  "Symmetry is not a symmetry: color patterns of adjacent nodes do not match.\n");
+               break;
+            }
+            if ( incidentedgecolors[pv][e] != incidentedgecolors2[pv2][e] )
+            {
+               *success = FALSE;
+               SCIPdebugMsg(scip,
+                  "Symmetry is not a symmetry: color patterns of incident edges do not match.\n");
+               break;
+            }
+         }
+      }
+
+      SCIPfreeBufferArray(scip, &nodeperm2);
+      SCIPfreeBufferArray(scip, &nodeperm);
+      SCIPfreeBufferArray(scip, &nodecolors);
+
+      /* free buffer memory */
+      SCIPfreeBufferArray(scip, &nneighbors2);
+      SCIPfreeBufferArray(scip, &nneighbors);
+      for (v = nnodes - 1; v >= 0; --v)
+      {
+         SCIPfreeBufferArray(scip, &incidentedgecolors2[v]);
+      }
+      SCIPfreeBufferArray(scip, &incidentedgecolors2);
+      for (v = nnodes - 1; v >= 0; --v)
+      {
+         SCIPfreeBufferArray(scip, &incidentedgecolors[v]);
+      }
+      SCIPfreeBufferArray(scip, &incidentedgecolors);
+      for (v = nnodes - 1; v >= 0; --v)
+      {
+         SCIPfreeBufferArray(scip, &adjacentnodecolors2[v]);
+      }
+      SCIPfreeBufferArray(scip, &adjacentnodecolors2);
+      for (v = nnodes - 1; v >= 0; --v)
+      {
+         SCIPfreeBufferArray(scip, &adjacentnodecolors[v]);
+      }
+      SCIPfreeBufferArray(scip, &adjacentnodecolors);
+   }
+
+   return SCIP_OKAY;
+}
+
 /** computes symmetry group of a CIP */
 static
 SCIP_RETCODE computeSymmetryGroup2(
@@ -6330,21 +6646,47 @@ SCIP_RETCODE computeSymmetryGroup2(
     */
    {
       int** perms;
+      int** consperms;
       int nperms;
       int nmaxperms;
       SCIP_Real log10groupsize;
       int p;
+      SCIP_Bool checksuccess = TRUE;
 
       SCIP_CALL( SYMcomputeSymmetryGenerators2(scip, maxgenerators, graphs, nconss, maxnnodesgraph,
-            varcolors, nvars, &nperms, &nmaxperms, &perms, &log10groupsize) );
+            varcolors, nvars, &nperms, &nmaxperms, &perms, &consperms, &log10groupsize) );
 
-      printf("new symmetry found %d generators\n", nperms);
+      SCIPinfoMessage(scip, NULL, "new symmetry found %d generators (log10: %.1f)\n", nperms, log10groupsize);
 
+      /* check symmetries are symmetries */
+      for (p = 0; p < nperms; ++p)
+      {
+         SCIP_CALL( checkSymmetryIsSymmetry(scip, perms[p], nvars, consperms[p], nconss,
+               graphs, varcolors, &checksuccess) );
+
+         if ( !checksuccess )
+         {
+            SCIPerrorMessage("Found a symmetry which is not a symmetry.\n");
+            return SCIP_ERROR;
+         }
+      }
+
+      for (p = nperms - 1; p >= 0; --p)
+      {
+         SCIPfreeBlockMemoryArrayNull(scip, &consperms[p], nconss);
+      }
+      if ( nmaxperms != 0 )
+      {
+         SCIPfreeBlockMemoryArrayNull(scip, &consperms, nmaxperms);
+      }
       for (p = nperms - 1; p >= 0; --p)
       {
          SCIPfreeBlockMemoryArrayNull(scip, &perms[p], nvars);
       }
-      SCIPfreeBlockMemoryArrayNull(scip, &perms, nmaxperms);
+      if ( nmaxperms != 0 )
+      {
+         SCIPfreeBlockMemoryArrayNull(scip, &perms, nmaxperms);
+      }
    }
 
    /* free symmetry graphs */

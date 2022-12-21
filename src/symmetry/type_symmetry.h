@@ -136,6 +136,7 @@ typedef struct SYM_Vartype SYM_VARTYPE;      /**< data of variables that are con
 typedef struct SYM_Optype SYM_OPTYPE;        /**< data of operators that are considered to be equivalent */
 typedef struct SYM_Consttype SYM_CONSTTYPE;  /**< data of constants that are considered to be equivalent */
 typedef struct SYM_Rhstype SYM_RHSTYPE;      /**< data of constraint sides that are considered to be equivalent */
+typedef struct SYM_Compgraph SYM_COMPGRAPH;
 typedef struct SYM_Matrixdata SYM_MATRIXDATA;/**< data for symmetry group computation on linear constraints */
 typedef struct SYM_Reflsymdata SYM_REFLSYMDATA ;/**< data for reflection symmetry group computation */
 typedef struct SYM_Exprdata SYM_EXPRDATA;    /**< data for symmetry group computation on nonlinear constraints */

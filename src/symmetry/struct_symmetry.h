@@ -75,6 +75,15 @@ struct SYM_Rhstype
    int                   color;              /**< store color */
 };
 
+/** data to compare a graph */
+struct SYM_Compgraph
+{
+   int**                 adjacentnodecolors;
+   int**                 incidentedgecolors;
+   int*                  nneighbors;
+   int*                  nodecolors;
+};
+
 /** data for symmetry group computation on linear constraints */
 struct SYM_Matrixdata
 {
