@@ -1,5 +1,36 @@
 @page RN80 Release notes for SCIP 8.0
 
+@section RN000 SCIP 8.0.4
+*************************
+
+Examples and applications
+-------------------------
+
+Interface changes
+-----------------
+
+### Command line interface
+
+Build system
+------------
+
+### Cmake
+
+### Makefile
+
+Fixed bugs
+----------
+
+
+Miscellaneous
+-------------
+
+- Enabled the solution limit checks in SCIPsolveIsStopped in solve.c when in SCIP_STAGE_PRESOLVING
+- Extended documentation of the parameter limits/solutions to point out that the limit is first checked in presolving
+
+Known bugs
+----------
+
 @section RN000 SCIP 8.0.3
 *************************
 
@@ -41,8 +72,6 @@ Miscellaneous
 -------------
 
 - Changed license to Apache 2.0, see https://www.apache.org/licenses/LICENSE-2.0.
-- enabled the solution limit checks in SCIPsolveIsStopped in solve.c when in SCIP_STAGE_PRESOLVING
-- extended documentation of the parameter limits/solutions to point out that the limit is first checked in presolving
 - When an LP could not be solved accurately, scaling is now turned off as a last fall-back method.
 
 Known bugs
