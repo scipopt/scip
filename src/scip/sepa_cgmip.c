@@ -2026,7 +2026,7 @@ SCIP_RETCODE createSubscip(
          sepadata->addviolationcons ? "_vc" : "",
          sepadata->skipmultbounds ? "_ub" : "",
          sepadata->primalseparation ? "_ps" : "",
-         SCIPgetProbName(scip));
+         SCIPgetProbName(origscip));
       SCIP_CALL( SCIPwriteOrigProblem(subscip, name, "lp", FALSE) );
       SCIPinfoMessage(origscip, NULL, "Wrote subscip to file <%s>.\n", name);
    }
@@ -2158,6 +2158,21 @@ SCIP_RETCODE subscipSetParams(
 
       /* use fast separation */
       SCIP_CALL( SCIPsetSeparating(subscip, SCIP_PARAMSETTING_FAST, TRUE) );
+   }
+#endif
+
+#ifdef SCIP_WRITEPROB
+   {
+      char name[SCIP_MAXSTRLEN];
+
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "cgsepa%s%s%s%s_%s.set",
+         sepadata->objlone ? "_l1" : "",
+         sepadata->addviolationcons ? "_vc" : "",
+         sepadata->skipmultbounds ? "_ub" : "",
+         sepadata->primalseparation ? "_ps" : "",
+         SCIPgetProbName(mipdata->scip));
+      SCIP_CALL( SCIPwriteParams(subscip, name, TRUE, FALSE) );
+      SCIPinfoMessage(mipdata->scip, NULL, "Wrote settings to file <%s>.\n", name);
    }
 #endif
 

@@ -1,7 +1,13 @@
 @page RN80 Release notes for SCIP 8.0
 
-@section RN000 SCIP 8.0.4
+@section RN804 SCIP 8.0.4
 *************************
+
+Features
+--------
+
+Performance improvements
+------------------------
 
 Examples and applications
 -------------------------
@@ -9,7 +15,30 @@ Examples and applications
 Interface changes
 -----------------
 
+### New and changed callbacks
+
+### Deleted and changed API methods
+
+### New API functions
+
 ### Command line interface
+
+### Interfaces to external software
+
+### Changed parameters
+
+### New parameters
+
+### Data structures
+
+Deleted files
+-------------
+
+Unit tests
+----------
+
+Testing
+-------
 
 Build system
 ------------
@@ -21,17 +50,18 @@ Build system
 Fixed bugs
 ----------
 
+- relax condition of assert in lpSolve to hold only if lp/checkstability is true
+- OPB reader: dynamically increase the size of the line buffer for reading in getMaxAndConsDim()
+- Enabled the solution limit checks in SCIPsolveIsStopped in solve.c when in SCIP_STAGE_PRESOLVING
+- Extended documentation of the parameter limits/solutions to point out that the limit is first checked in presolving
 
 Miscellaneous
 -------------
 
-- Enabled the solution limit checks in SCIPsolveIsStopped in solve.c when in SCIP_STAGE_PRESOLVING
-- Extended documentation of the parameter limits/solutions to point out that the limit is first checked in presolving
-
 Known bugs
 ----------
 
-@section RN000 SCIP 8.0.3
+@section RN803 SCIP 8.0.3
 *************************
 
 Examples and applications
@@ -56,6 +86,8 @@ Build system
 
 ### Makefile
 
+- Use SYM=bliss by default, since bliss now is shipped with SCIP.
+
 Fixed bugs
 ----------
 
@@ -67,12 +99,16 @@ Fixed bugs
 - fixed that the implication presolver tried to aggregate or tighten bounds of multiaggregated variables
 - fixed a sign check in detection of linear constraints that are parallel to the objective
 - fixed bug in Clp and lpi_clp with missing basis information when calling the barrier with crossover; needs new Clp version
+- do not assume aggregation is successful in cons_setppc.c
 
 Miscellaneous
 -------------
 
 - Changed license to Apache 2.0, see https://www.apache.org/licenses/LICENSE-2.0.
 - When an LP could not be solved accurately, scaling is now turned off as a last fall-back method.
+- Methods for using the debug solution mechanism SCIPdebugAddSolVal, SCIPdebugGetSol, SCIPdebugGetSolVal,
+  SCIPdebugSolIsValidInSubtree, SCIPdebugIsMainscip, SCIPdebugSolEnable, SCIPdebugSolDisable, SCIPdebugSolIsEnabled,
+  SCIPwithDebugSol are now exported
 
 Known bugs
 ----------
