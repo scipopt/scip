@@ -1652,7 +1652,7 @@ SCIP_RETCODE SCIPsetCreate(
          SCIPparamChgdLimit, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "limits/solutions",
-         "solving stops, if the given number of solutions were found (-1: no limit)",
+         "solving stops, if the given number of solutions were found; this limit is first checked in presolving (-1: no limit)",
          &(*set)->limit_solutions, FALSE, SCIP_DEFAULT_LIMIT_SOLUTIONS, -1, INT_MAX,
          SCIPparamChgdLimit, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
