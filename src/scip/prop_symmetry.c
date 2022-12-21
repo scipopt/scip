@@ -6258,10 +6258,8 @@ SCIP_RETCODE computeSymmetryGroup2(
    /* assign colors, store colors for variables separately */
    nvars = SCIPgetNVars(scip);
    SCIP_CALL( SCIPallocBufferArray(scip, &varcolors, nvars) );
-#ifndef NDEBUG
    for (i = 0; i < nvars; ++i)
       varcolors[i] = -1;
-#endif
 
    nodes[nodeperm[0]]->computedcolor = curcolor;
    if ( nodes[nodeperm[0]]->nodetype == SYM_NODETYPE_VAR )
@@ -6279,10 +6277,19 @@ SCIP_RETCODE computeSymmetryGroup2(
       /* treat variable nodes differently, because they can be fixed */
       if ( nodes[nodeperm[i]]->nodetype == SYM_NODETYPE_VAR )
       {
-         if ( varcolors[nodes[nodeperm[i]]->varidx] == -1 )
+         int varnodeidx;
+
+         varnodeidx = nodes[nodeperm[i]]->varidx;
+         if ( varcolors[varnodeidx] == -1 )
          {
             nodes[nodeperm[i]]->computedcolor = curcolor;
-            varcolors[nodes[nodeperm[i]]->varidx] = curcolor;
+            varcolors[varnodeidx] = curcolor;
+         }
+         else
+         {
+            assert(nodes[nodeperm[i]]->computedcolor == -1 ||
+               nodes[nodeperm[i]]->computedcolor == varcolors[varnodeidx]);
+            nodes[nodeperm[i]]->computedcolor = varcolors[varnodeidx];
          }
       }
       else
