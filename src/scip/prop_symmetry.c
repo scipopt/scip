@@ -6586,7 +6586,12 @@ SCIP_RETCODE computeSymmetryGroup2(
       if ( compareNodes(nodes[nodeperm[i-1]], nodes[nodeperm[i]]) != 0 || isFixedNode(nodes[nodeperm[i]], fixedtype) )
       {
          /* make sure to not increment fixed variables twice */
-         if ( isFixedNode(nodes[nodeperm[i]], fixedtype) && varcolors[nodes[nodeperm[i]]->varidx] == -1 )
+         if ( isFixedNode(nodes[nodeperm[i]], fixedtype) )
+         {
+            if ( varcolors[nodes[nodeperm[i]]->varidx] == -1 )
+               ++curcolor;
+         }
+         else
             ++curcolor;
       }
 
