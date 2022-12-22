@@ -6644,12 +6644,14 @@ SCIP_RETCODE computeSymmetryGroup2(
       {
          if ( nodecolormap[i] != nodecolormap[i-1] )
          {
-            if ( compareNodes(nodes[nodeorder[i-1]], nodes[nodeorder[i]]) == 0 )
+            if ( compareNodes(nodes[nodeorder[i-1]], nodes[nodeorder[i]]) == 0
+               && !isFixedNode(nodes[nodeperm[i]], fixedtype) )
                break;
          }
          else
          {
-            if ( compareNodes(nodes[nodeorder[i-1]], nodes[nodeorder[i]]) != 0 )
+            if ( compareNodes(nodes[nodeorder[i-1]], nodes[nodeorder[i]]) != 0
+               || isFixedNode(nodes[nodeperm[i]], fixedtype) )
                break;
          }
       }
@@ -6685,7 +6687,7 @@ SCIP_RETCODE computeSymmetryGroup2(
       edges[edgeperm[0]]->computedcolor = -1;
 
    if ( checksymmetries )
-      initedgecolor = edges[edgeperm[0]]->iscolored ? curcolor : -1;
+      initedgecolor = edges[edgeperm[0]]->iscolored ? curcolor : curcolor + 1;
 
    for (i = 1; i < nedges; ++i)
    {
@@ -6706,7 +6708,7 @@ SCIP_RETCODE computeSymmetryGroup2(
       nedgecolors = curcolor - initedgecolor + 1;
 
       SCIP_CALL( SCIPallocBufferArray(scip, &edgecolormap, nedgecolors) );
-      for (i = 0; i < nedges; ++i)
+      for (i = 0; i < nedgecolors; ++i)
          edgecolormap[i] = -1;
 
       for (i = 0; i < nedges; ++i)
@@ -6731,7 +6733,7 @@ SCIP_RETCODE computeSymmetryGroup2(
          }
       }
 
-      SCIPfreeBufferArray(scip, &nedgecolors);
+      SCIPfreeBufferArray(scip, &edgecolormap);
    }
 
    /*
