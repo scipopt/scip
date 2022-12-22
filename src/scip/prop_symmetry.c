@@ -6518,6 +6518,7 @@ SCIP_RETCODE computeSymmetryGroup2(
    int nedges = 0;
    int curcolor = 0;
    int maxnnodesgraph = 0;
+   int initedgecolor;
 
    assert( scip != NULL );
    assert( success != NULL );
@@ -6623,6 +6624,46 @@ SCIP_RETCODE computeSymmetryGroup2(
          nodes[nodeperm[i]]->computedcolor = curcolor;
    }
 
+   /* possibly check consistency of node colors */
+   if ( checksymmetries )
+   {
+      int* nodecolormap;
+      int* nodeorder;
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &nodecolormap, nnodes) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &nodeorder, nnodes) );
+
+      for (i = 0; i < nnodes; ++i)
+         nodecolormap[i] = nodes[i]->computedcolor;
+      for (i = 0; i < nnodes; ++i)
+         nodeorder[i] = i;
+
+      SCIPsortIntInt(nodecolormap, nodeorder, nnodes);
+
+      for (i = 1; i < nnodes; ++i)
+      {
+         if ( nodecolormap[i] != nodecolormap[i-1] )
+         {
+            if ( compareNodes(nodes[nodeorder[i-1]], nodes[nodeorder[i]]) == 0 )
+               break;
+         }
+         else
+         {
+            if ( compareNodes(nodes[nodeorder[i-1]], nodes[nodeorder[i]]) != 0 )
+               break;
+         }
+      }
+
+      if ( i < nnodes )
+      {
+         SCIPerrorMessage("Symmetry detection: node colors are inconsistent.\n");
+         return SCIP_ERROR;
+      }
+
+      SCIPfreeBufferArray(scip, &nodeorder);
+      SCIPfreeBufferArray(scip, &nodecolormap);
+   }
+
    /*
     * compute edge colors
     */
@@ -6643,6 +6684,9 @@ SCIP_RETCODE computeSymmetryGroup2(
    else
       edges[edgeperm[0]]->computedcolor = -1;
 
+   if ( checksymmetries )
+      initedgecolor = edges[edgeperm[0]]->iscolored ? curcolor : -1;
+
    for (i = 1; i < nedges; ++i)
    {
       /* if a new edge type has been found */
@@ -6650,6 +6694,44 @@ SCIP_RETCODE computeSymmetryGroup2(
          edges[edgeperm[i]]->computedcolor = ++curcolor;
       else
          edges[edgeperm[i]]->computedcolor = edges[edgeperm[i-1]]->computedcolor;
+   }
+
+   /* possibly check consistency of edge colors */
+   if ( checksymmetries )
+   {
+      int* edgecolormap;
+      int nedgecolors;
+      int transcol;
+
+      nedgecolors = curcolor - initedgecolor + 1;
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &edgecolormap, nedgecolors) );
+      for (i = 0; i < nedges; ++i)
+         edgecolormap[i] = -1;
+
+      for (i = 0; i < nedges; ++i)
+      {
+         if ( edges[i]->iscolored )
+         {
+            transcol = edges[i]->computedcolor - initedgecolor;
+            assert( 0 <= transcol && transcol < nedgecolors );
+
+            if ( edgecolormap[transcol] == -1 )
+               edgecolormap[transcol] = edges[i]->computedcolor;
+            else if ( edgecolormap[transcol] != edges[i]->computedcolor )
+            {
+               SCIPerrorMessage("Symmetry detection: edge colors are inconsistent.\n");
+               return SCIP_ERROR;
+            }
+         }
+         else if ( edges[i]->computedcolor != -1 )
+         {
+            SCIPerrorMessage("Symmetry detection: edge colors are inconsistent.\n");
+            return SCIP_ERROR;
+         }
+      }
+
+      SCIPfreeBufferArray(scip, &nedgecolors);
    }
 
    /*
