@@ -6422,7 +6422,7 @@ SCIP_RETCODE checkSymmetryIsSymmetry(
          if ( graphs[c]->nodes[pv]->computedcolor != graphs[consperm[c]]->nodes[pv2]->computedcolor )
          {
             *success = FALSE;
-            SCIPdebugMsg(scip,
+            SCIPerrorMessage(
                "Symmetry is not a symmetry: the node colors in symmetry detection graphs do not match.\n");
             break;
          }
@@ -6430,7 +6430,7 @@ SCIP_RETCODE checkSymmetryIsSymmetry(
          if ( nneighbors[pv2] != nneighbors2[pv2] )
          {
             *success = FALSE;
-            SCIPdebugMsg(scip,
+            SCIPerrorMessage(
                "Symmetry is not a symmetry: the node degrees in the symmetry detection graphs do not match.\n");
             break;
          }
@@ -6440,14 +6440,14 @@ SCIP_RETCODE checkSymmetryIsSymmetry(
             if ( adjacentnodecolors[pv][e] != adjacentnodecolors2[pv2][e] )
             {
                *success = FALSE;
-               SCIPdebugMsg(scip,
+               SCIPerrorMessage(
                   "Symmetry is not a symmetry: color patterns of adjacent nodes do not match.\n");
                break;
             }
             if ( incidentedgecolors[pv][e] != incidentedgecolors2[pv2][e] )
             {
                *success = FALSE;
-               SCIPdebugMsg(scip,
+               SCIPerrorMessage(
                   "Symmetry is not a symmetry: color patterns of incident edges do not match.\n");
                break;
             }
