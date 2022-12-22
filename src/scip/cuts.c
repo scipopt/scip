@@ -7932,9 +7932,9 @@ SCIP_Real evaluateLiftingFunctionKnapsack(
    while( h < coversize )
    {
       SCIPquadprecSumQD(tmp, x, -covervals[h]); /* recall: covervals[h] = S^-(h+1) */
-      if( !SCIPisPositive(scip,QUAD_TO_DBL(tmp)) ) { // TODO: FIX THIS QUADPRECISION COMPARE CGRACZY
+      if( !SCIPisPositive(scip,QUAD_TO_DBL(tmp)) )
          break;
-      }
+
       ++h;
    }
 
