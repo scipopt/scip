@@ -6368,6 +6368,9 @@ SCIP_RETCODE checkSymmetryIsSymmetry(
             }
          }
 
+         /* also sort last segment */
+         SCIPsortInt(&incidentedgecolors[v][beginpos], e - beginpos);
+
          beginpos = 0;
          beginval = adjacentnodecolors2[v][0];
          for (e = beginpos; e < nneighbors2[v]; ++e)
@@ -6380,6 +6383,9 @@ SCIP_RETCODE checkSymmetryIsSymmetry(
                beginpos = e;
             }
          }
+
+         /* also sort last segment */
+         SCIPsortInt(&incidentedgecolors2[v][beginpos], e - beginpos);
       }
 
       /* sort nodes of both graphs */
