@@ -6650,8 +6650,12 @@ SCIP_RETCODE computeSymmetryGroup2(
          }
          else
          {
-            if ( compareNodes(nodes[nodeorder[i-1]], nodes[nodeorder[i]]) != 0
-               || isFixedNode(nodes[nodeperm[i]], fixedtype) )
+            if ( compareNodes(nodes[nodeorder[i-1]], nodes[nodeorder[i]]) != 0 )
+               break;
+            else if ( isFixedNode(nodes[nodeperm[i]], fixedtype)
+               && nodes[nodeorder[i]]->nodetype == SYM_NODETYPE_VAR
+               && nodes[nodeorder[i-1]]->nodetype == SYM_NODETYPE_VAR
+               && nodes[nodeorder[i-1]]->varidx != nodes[nodeorder[i]]->varidx )
                break;
          }
       }
