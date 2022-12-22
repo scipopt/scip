@@ -2587,13 +2587,15 @@ SCIP_RETCODE conflictAnalyzeResolution(
 
          if( existsResolvablebdchginfo(conflict) )
          {
-            SCIP_BOUNDCHGTYPE boundtype;
+            SCIP_BOUNDTYPE boundtype;
+            SCIP_BOUNDCHGTYPE bdchgtype;
 
             /* if a bound for the variable has already been ignored then abort */
             if( fixinds[SCIPvarGetProbindex(SCIPbdchginfoGetVar(bdchginfo))] != 0 )
                goto TERMINATE;
 
-            boundtype = SCIPbdchginfoGetChgtype(bdchginfo);
+            boundtype = SCIPbdchginfoGetBoundtype(bdchginfo);
+            bdchgtype = SCIPbdchginfoGetChgtype(bdchginfo);
             /* fix variable corresponding to the bound change and continue */
             // FixVarConflict(conflictresolutionset, set, bdchginfo);
             fixinds[SCIPvarGetProbindex(SCIPbdchginfoGetVar(bdchginfo))] = boundtype == SCIP_BOUNDTYPE_UPPER ? 1 : -1;
@@ -2610,7 +2612,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
             if( bdchginfo == NULL )
                goto TERMINATE;
             /* todo if we still have not resolved and reached a branching decision we can continue for the 2-FUIP */
-            if( nressteps == 0 && boundtype == SCIP_BOUNDCHGTYPE_BRANCHING )
+            if( nressteps == 0 && bdchgtype == SCIP_BOUNDCHGTYPE_BRANCHING )
             {
                bdchgdepth = SCIPbdchginfoGetDepth(bdchginfo);
             }
