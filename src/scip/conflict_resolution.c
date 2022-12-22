@@ -2587,7 +2587,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
 
          if( existsResolvablebdchginfo(conflict) )
          {
-            SCIP_BOUNDCHGTYPE boundtype
+            SCIP_BOUNDCHGTYPE boundtype;
 
             /* if a bound for the variable has already been ignored then abort */
             if( fixinds[SCIPvarGetProbindex(SCIPbdchginfoGetVar(bdchginfo))] != 0 )
