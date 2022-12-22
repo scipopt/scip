@@ -1009,7 +1009,7 @@ SCIP_Real getSlack(
       /* get the latest bound change before currbdchgidx */
       if( coef > 0.0 )
       {
-         if (fixinds[v] == 1 ) /* if the variable is fixed */
+         if ( fixinds != NULL && fixinds[v] == 1 ) /* if the variable is fixed */
          {
             bound = fixbounds[v];
          }
@@ -1022,7 +1022,7 @@ SCIP_Real getSlack(
       }
       else
       {
-         if (fixinds[v] == -1) /* if the variable is fixed */
+         if (fixinds != NULL && fixinds[v] == -1) /* if the variable is fixed */
          {
             bound = fixbounds[v];
          }
@@ -2495,16 +2495,6 @@ SCIP_RETCODE conflictAnalyzeResolution(
    }
 #endif
 
-   /* initialize indices and bounds for the unresolvable bound changes */
-   SCIP_CALL( SCIPsetAllocBufferArray(set, &fixinds, SCIPprobGetNVars(transprob)) );
-   SCIP_CALL( SCIPsetAllocBufferArray(set, &fixbounds, SCIPprobGetNVars(transprob)) );
-   /** set value in fixed indices to 0 to indicate that they are not set
-    * if a variable is set at an upper bound, then the value is 1
-    * if a variable is set at a lower bound, then the value is -1
-    */
-   for( i = 0; i < SCIPprobGetNVars(transprob); ++i )
-      fixinds[i] = 0;
-
    conflictresolutionset->validdepth = validdepth;
 
    /* get the resolution set of the conflict row */
@@ -2525,7 +2515,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
       /* always apply coefficient tightening. It can only reduce the slack even further */
       SCIP_CALL( tightenCoefLhs(set->scip, transprob, FALSE, conflictresolutionset->vals, &conflictresolutionset->lhs,
                      conflictresolutionset->inds, &conflictresolutionset->nnz, &nchgcoefs, NULL) );
-      conflictslack = getSlack(set->scip, transprob, conflictresolutionset, bdchgidx, fixbounds, fixinds);
+      conflictslack = getSlack(set->scip, transprob, conflictresolutionset, bdchgidx, NULL, NULL);
       /* todo assert that the slack is not larger than before? */
       conflictresolutionset->slack = conflictslack;
    }
@@ -2550,6 +2540,16 @@ SCIP_RETCODE conflictAnalyzeResolution(
    }
 
    conflictresolutionset->coefquotient = getQuotLargestSmallestCoef(set, conflictresolutionset->vals, conflictresolutionset->nnz);
+
+   /* initialize indices and bounds for the unresolvable bound changes */
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &fixinds, SCIPprobGetNVars(transprob)) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &fixbounds, SCIPprobGetNVars(transprob)) );
+   /** set value in fixed indices to 0 to indicate that they are not set
+    * if a variable is set at an upper bound, then the value is 1
+    * if a variable is set at a lower bound, then the value is -1
+    */
+   for( i = 0; i < SCIPprobGetNVars(transprob); ++i )
+      fixinds[i] = 0;
 
    nressteps = 0;
 
@@ -2627,7 +2627,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
 
             SCIPdebug(resolutionsetPrintRow(conflictresolutionset, set, transprob, 1));
 
-            assert(SCIPsetIsEQ(set, conflictresolutionset->slack, getSlack(set->scip, transprob, conflictresolutionset, bdchgidx, fixbounds, fixinds)));
+            assert(SCIPsetIsLT(set, getSlack(set->scip, transprob, conflictresolutionset, bdchgidx, fixbounds, fixinds), 0.0));
             /* check if the variable we are resolving is active */
             assert(SCIPvarIsActive(vartoresolve));
 
