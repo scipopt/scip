@@ -3313,7 +3313,7 @@ SCIP_RETCODE rowExactCreateFromRowLimitEncodingLength(
    assert(maxdenom >= 0);
    assert(maxboundval >= 0);
 
-   for( i = row->len - 1; i >= 0; i-- )
+   for( i = 0; i <= row->len - 1; ++i )
    {
       SCIP_VAR* var = row->cols[i]->var;
       RatSetReal(val, row->vals[i]);
@@ -3351,9 +3351,9 @@ SCIP_RETCODE rowExactCreateFromRowLimitEncodingLength(
 
       SCIProwExactAddCoef(rowexact, blkmem, set, eventqueue, lpexact, SCIPcolGetColExact(row->cols[i]), newval);
 
-      if( RatIsNegative(SCIPvarGetLbGlobalExact(var)) )
+      if( RatIsNegative(SCIPvarGetLbGlobalExact(var)) && !RatIsZero(newval) )
       {
-         rhschange += (SCIPintervalGetInf(rowexact->valsinterval[i]) - SCIPintervalGetSup(rowexact->valsinterval[i])) * SCIPvarGetLbGlobal(var);
+         rhschange += (SCIPintervalGetInf(rowexact->valsinterval[rowexact->len - 1]) - SCIPintervalGetSup(rowexact->valsinterval[rowexact->len - 1])) * SCIPvarGetLbGlobal(var);
       }
    }
 
