@@ -7932,7 +7932,8 @@ SCIP_Real evaluateLiftingFunctionKnapsack(
    while( h < coversize )
    {
       SCIPquadprecSumQD(tmp, x, -covervals[h]); /* recall: covervals[h] = S^-(h+1) */
-      if( !SCIPisPositive(scip,QUAD_TO_DBL(tmp)) )
+      /* compare to an increased epsilon since computation involves abar, which is computed like an activity */
+      if( QUAD_TO_DBL(tmp) <= 1000.0*QUAD_EPSILON )
          break;
 
       ++h;
