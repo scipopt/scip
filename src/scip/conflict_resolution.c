@@ -607,6 +607,21 @@ void conflictCleanUpbdchgqueue(
                      : "none")),
                SCIPbdchginfoGetChgtype(bdchginfo) != SCIP_BOUNDCHGTYPE_BRANCHING ? SCIPbdchginfoGetInferInfo(bdchginfo) : -1);
 
+               /* mark the bound change to be no longer in the conflict (it will be either added again to the conflict set or
+               * replaced by resolving, which might add a weaker change on the same bound to the queue)
+               */
+               if( SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER )
+               {
+                  var->conflictlbcount = 0;
+                  var->conflictrelaxedlb = SCIP_REAL_MIN;
+               }
+               else
+               {
+                  assert(SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_UPPER);
+                  var->conflictubcount = 0;
+                  var->conflictrelaxedub = SCIP_REAL_MAX;
+               }
+
                SCIPpqueueDelPos(conflict->resforcedbdchgqueue, i - deleted);
                deleted++;
                if (i - deleted >= nelems) break;
@@ -657,6 +672,21 @@ void conflictCleanUpbdchgqueue(
                   : (SCIPbdchginfoGetInferProp(bdchginfo) != NULL ? SCIPpropGetName(SCIPbdchginfoGetInferProp(bdchginfo))
                      : "none")),
                SCIPbdchginfoGetChgtype(bdchginfo) != SCIP_BOUNDCHGTYPE_BRANCHING ? SCIPbdchginfoGetInferInfo(bdchginfo) : -1);
+
+               /* mark the bound change to be no longer in the conflict (it will be either added again to the conflict set or
+               * replaced by resolving, which might add a weaker change on the same bound to the queue)
+               */
+               if( SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER )
+               {
+                  var->conflictlbcount = 0;
+                  var->conflictrelaxedlb = SCIP_REAL_MIN;
+               }
+               else
+               {
+                  assert(SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_UPPER);
+                  var->conflictubcount = 0;
+                  var->conflictrelaxedub = SCIP_REAL_MAX;
+               }
 
                SCIPpqueueDelPos(conflict->resbdchgqueue, i - deleted);
                deleted++;
@@ -2532,10 +2562,9 @@ SCIP_RETCODE conflictAnalyzeResolution(
    /* the slack should be negative */
    if ( SCIPsetIsGE(set, conflictresolutionset->slack, 0.0) )
    {
-      /** The only case where this may not be true is if the conflict is found
-       *  by a negated clique in the knapsack constraint handler
-       *  @todo find a fix for this (still able to resolve by considering the negated clique
-       * and the knapsack constraint)
+      /** The only cases where this may not be true is if the conflict is found:
+       *  - by a negated clique in the knapsack constraint handler
+       *  - by propagating a ranged row
        */
       SCIP_CONSHDLR* conshdlr;
       SCIPsetDebugMsg(set, "Slack of conflict constraint is not negative \n");
@@ -2544,7 +2573,8 @@ SCIP_RETCODE conflictAnalyzeResolution(
 
       conshdlr = SCIProwGetOriginConshdlr(initialconflictrow);
       SCIPsetDebugMsg(set, "%s",SCIPconshdlrGetName(conshdlr));
-      assert(strcmp(SCIPconshdlrGetName(conshdlr), "knapsack") == 0);
+      /* relaxed assertion */
+      assert(strcmp(SCIPconshdlrGetName(conshdlr), "knapsack") == 0 || strcmp(SCIPconshdlrGetName(conshdlr), "linear") == 0);
       return SCIP_OKAY;
    }
 
