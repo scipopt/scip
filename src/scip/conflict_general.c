@@ -401,6 +401,19 @@ SCIP_RETCODE SCIPconflictFree(
    return SCIP_OKAY;
 }
 
+/** clears conflict analysis  bound changes queues for propagation conflicts */
+SCIP_RETCODE SCIPconflictClearQueues(
+   SCIP_CONFLICT*        conflict            /**< pointer to conflict analysis data */
+   )
+{
+   assert(conflict != NULL);
+
+   SCIPpqueueClear(conflict->bdchgqueue);
+   SCIPpqueueClear(conflict->forcedbdchgqueue);
+
+   return SCIP_OKAY;
+}
+
 /** returns the conflict lower bound if the variable is present in the current conflict set; otherwise the global lower
  *  bound
  */

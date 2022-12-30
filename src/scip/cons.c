@@ -5889,6 +5889,7 @@ SCIP_RETCODE SCIPconsCreate(
    (*cons)->conflict = FALSE;
    (*cons)->enabled = FALSE;
    (*cons)->obsolete = FALSE;
+   (*cons)->useful = FALSE;
    (*cons)->markpropagate = TRUE;
    (*cons)->deleted = FALSE;
    (*cons)->update = FALSE;
@@ -7158,6 +7159,7 @@ SCIP_RETCODE SCIPconsResetAge(
 
    conshdlrUpdateAgeresetavg(cons->conshdlr, cons->age);
    cons->age = 0.0;
+   cons->useful = TRUE;
 
    if( cons->obsolete )
    {
@@ -8306,6 +8308,16 @@ SCIP_Bool SCIPconsIsPropagated(
    assert(cons != NULL);
 
    return cons->propagate;
+}
+
+/** returns TRUE iff constraint is useful */
+SCIP_Bool SCIPconsIsUseful(
+   SCIP_CONS*            cons                /**< constraint */
+   )
+{
+   assert(cons != NULL);
+
+   return cons->useful;
 }
 
 /** returns TRUE iff constraint is globally valid */

@@ -38,6 +38,7 @@
 #include "scip/def.h"
 #include "scip/cons_linear.h"
 #include "scip/struct_conflictstore.h"
+#include "scip/struct_stat.h"
 
 
 #define CONFLICTSTORE_DUALRAYSIZE  100 /* default size of conflict store */
@@ -410,6 +411,9 @@ SCIP_RETCODE delPosConflict(
       assert(transprob != NULL);
       SCIP_CALL( SCIPconsDelete(conflictstore->conflicts[pos], blkmem, set, stat, transprob, reopt) );
    }
+   if (SCIPconsIsUseful(conflict))
+      stat->nusefulpropconflicts++;
+
    SCIP_CALL( SCIPconsRelease(&conflictstore->conflicts[pos], blkmem, set) );
 
    /* replace with conflict at the last position */
@@ -469,6 +473,9 @@ SCIP_RETCODE delPosResConflict(
       assert(transprob != NULL);
       SCIP_CALL( SCIPconsDelete(conflictstore->resconflicts[pos], blkmem, set, stat, transprob, reopt) );
    }
+      if (SCIPconsIsUseful(conflict))
+         stat->nusefulresconflicts++;
+
    SCIP_CALL( SCIPconsRelease(&conflictstore->resconflicts[pos], blkmem, set) );
 
    /* replace with conflict at the last position */

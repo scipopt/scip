@@ -42,6 +42,7 @@
 #include "scip/scip_conflict.h"
 #include "scip/scip_tree.h"
 #include "scip/set.h"
+#include "scip/struct_conflict.h"
 #include "scip/struct_mem.h"
 #include "scip/struct_scip.h"
 #include "scip/struct_set.h"
@@ -703,14 +704,26 @@ SCIP_RETCODE SCIPanalyzeConflictCons(
    if( SCIPconsIsGlobal(cons) )
    {
       SCIP_ROW* conflictrow;
+      SCIP_Bool conflictlearned;
       conflictrow = SCIPconsCreateRow(scip, cons);
 
-      /* @todo just use one of them? E.g. if first fails use the second  */
+      conflictlearned = FALSE;
       SCIP_CALL( SCIPconflictAnalyzeResolution(scip->conflict, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
-                scip->origprob, scip->tree, scip->reopt, scip->lp, scip->cliquetable, conflictrow, 0, FALSE, FALSE, success) );
+                scip->origprob, scip->tree, scip->reopt, scip->lp, scip->cliquetable, conflictrow, 0, FALSE, FALSE, &conflictlearned) );
 
-      SCIP_CALL( SCIPconflictAnalyze(scip->conflict, scip->mem->probmem, scip->set, scip->stat,
-            scip->transprob, scip->tree, 0, success) );
+      if( !(scip->set->conf_favorresolution) || !(conflictlearned) )
+      {
+         SCIP_CALL( SCIPconflictAnalyze(scip->conflict, scip->mem->probmem, scip->set, scip->stat,
+               scip->transprob, scip->tree, 0, &conflictlearned) );
+      }
+      else
+      {
+         SCIPdebugMessage("clear bound changes queues if graph conflict analysis is not called \n");
+         SCIPconflictClearQueues(scip->conflict);
+
+      }
+      if( success != NULL )
+         *success = conflictlearned;
    }
    else if( SCIPconsIsActive(cons) )
    {

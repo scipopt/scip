@@ -87,6 +87,12 @@ SCIP_RETCODE SCIPconflictFree(
    BMS_BLKMEM*           blkmem              /**< block memory of transformed problem */
    );
 
+/** clears conflict analysis  bound changes queues for propagation conflicts */
+SCIP_RETCODE SCIPconflictClearQueues(
+   SCIP_CONFLICT*        conflict            /**< pointer to conflict analysis data */
+   );
+
+
 /** analyzes conflicting bound changes that were added with calls to SCIPconflictAddBound() and
  *  SCIPconflictAddRelaxedBound(), and on success, calls the conflict handlers to create a conflict constraint out of
  *  the resulting conflict set; updates statistics for propagation conflict analysis

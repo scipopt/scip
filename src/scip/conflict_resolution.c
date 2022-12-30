@@ -1564,14 +1564,21 @@ SCIP_RETCODE computecMIRfromResolutionSet(
 
       cutefficacy = 0.0;
 
+      /* start timing flowcover */
+      SCIPclockStart(conflict->resflowcovertime, set);
+
       /* apply flow cover */
       SCIP_CALL( SCIPcalcFlowCover(set->scip, refsol, POSTPROCESS, BOUNDSWITCH, ALLOWLOCAL, aggrrow, \
             cutcoefs, cutrhs, cutinds, cutnnz, &cutefficacy, NULL, &islocal, &cutsuccess) );
 
+      SCIPclockStop(conflict->resflowcovertime, set);
       *success = cutsuccess;
       conflict->nresflowcovercalls += 1;
       if( cutsuccess )
          conflict->nresflowcover += 1;
+
+      /* start timing MIR */
+      SCIPclockStart(conflict->resmirtime, set);
 
       /* apply MIR */
       if( set->conf_applycmir || !isconflict )
@@ -1586,6 +1593,8 @@ SCIP_RETCODE computecMIRfromResolutionSet(
             FALSE, NULL, NULL, MINFRAC, MAXFRAC, 1.0, aggrrow, cutcoefs, cutrhs, cutinds, cutnnz, &cutefficacy, NULL, \
             &islocal, &cutsuccess) );
       }
+
+      SCIPclockStop(conflict->resmirtime, set);
 
       conflict->nresmircalls += 1;
       if( cutsuccess )

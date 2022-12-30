@@ -290,7 +290,7 @@ struct SCIP_Set
    SCIP_Bool             conf_applyresdualproof;/**< should we apply resolution initiated with the dual proof? */
    SCIP_Bool             conf_applyrespseudoobj;/**< should we apply resolution initiated with the violated pseudo-objective? */
    SCIP_Bool             conf_fixandcontinue;/**< should we fix unresolvable bound changes and continue? */
-
+   SCIP_Bool             conf_favorresolution;/**< should we apply graph conflict analysis only when resolution is unsuccessful? */
    /* constraint settings */
    int                   cons_agelimit;      /**< maximum age an unnecessary constraint can reach before it is deleted
                                               *   (0: dynamic, -1: disable aging) */

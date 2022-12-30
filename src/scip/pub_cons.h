@@ -676,6 +676,12 @@ SCIP_Bool SCIPconsIsPropagated(
    SCIP_CONS*            cons                /**< constraint */
    );
 
+/** returns TRUE iff constraint is useful */
+SCIP_EXPORT
+SCIP_Bool SCIPconsIsUseful(
+   SCIP_CONS*            cons                /**< constraint */
+   );
+
 /** returns TRUE iff constraint is globally valid */
 SCIP_EXPORT
 SCIP_Bool SCIPconsIsGlobal(

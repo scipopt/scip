@@ -78,6 +78,7 @@ struct SCIP_Cons
    unsigned int          conflict:1;         /**< TRUE iff constraint is a conflict */
    unsigned int          enabled:1;          /**< TRUE iff constraint is enforced, separated, and propagated in current node */
    unsigned int          obsolete:1;         /**< TRUE iff constraint is too seldomly used and therefore obsolete */
+   unsigned int          useful:1;           /**< TRUE iff constraint is useful in propagation */
    unsigned int          markpropagate:1;    /**< TRUE iff constraint is marked to be propagated in the next round */
    unsigned int          deleted:1;          /**< TRUE iff constraint was globally deleted */
    unsigned int          update:1;           /**< TRUE iff constraint has to be updated in update phase */

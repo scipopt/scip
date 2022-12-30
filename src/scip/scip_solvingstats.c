@@ -2941,6 +2941,56 @@ void SCIPprintConflictStatistics(
       ? (SCIP_Real)SCIPconflictGetNAppliedLocalLiterals(scip->conflict)
       / (SCIP_Real)SCIPconflictGetNAppliedLocalConss(scip->conflict) : 0,
       SCIPconflictGetNDualproofsInfLocal(scip->conflict) + SCIPconflictGetNDualproofsBndLocal(scip->conflict));
+
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Resolution CA      :       Time      Calls    Success  Conflicts    Reconvs    Useless   (pool size: [%s,%s])\n", initstoresize, maxstoresize);
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  resolution prop  : %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "          - %10" SCIP_LONGINT_FORMAT "\n",
+      SCIPconflictGetResTime(scip->conflict),
+      SCIPconflictGetNResCalls(scip->conflict),
+      SCIPconflictGetNResSuccess(scip->conflict),
+      SCIPconflictGetNResConflictConss(scip->conflict),
+      SCIPconflictGetNResConflictConss(scip->conflict) - scip->stat->nusefulresconflicts);
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  graph prop       : %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
+      SCIPconflictGetPropTime(scip->conflict),
+      SCIPconflictGetNPropCalls(scip->conflict),
+      SCIPconflictGetNPropSuccess(scip->conflict),
+      SCIPconflictGetNPropConflictConss(scip->conflict),
+      SCIPconflictGetNPropReconvergenceConss(scip->conflict),
+      SCIPconflictGetNPropConflictConss(scip->conflict) - scip->stat->nusefulpropconflicts);
+
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  graph prop inf LP: %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
+      SCIPconflictGetInfeasibleLPTime(scip->conflict),
+      SCIPconflictGetNInfeasibleLPCalls(scip->conflict),
+      SCIPconflictGetNInfeasibleLPSuccess(scip->conflict),
+      SCIPconflictGetNInfeasibleLPConflictConss(scip->conflict),
+      SCIPconflictGetNInfeasibleLPReconvergenceConss(scip->conflict));
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  graph prop bd LP : %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
+      SCIPconflictGetBoundexceedingLPTime(scip->conflict),
+      SCIPconflictGetNBoundexceedingLPCalls(scip->conflict),
+      SCIPconflictGetNBoundexceedingLPSuccess(scip->conflict),
+      SCIPconflictGetNBoundexceedingLPConflictConss(scip->conflict),
+      SCIPconflictGetNBoundexceedingLPReconvergenceConss(scip->conflict));
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  graph prop pseudo: %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
+      SCIPconflictGetPseudoTime(scip->conflict),
+      SCIPconflictGetNPseudoCalls(scip->conflict),
+      SCIPconflictGetNPseudoSuccess(scip->conflict),
+      SCIPconflictGetNPseudoConflictConss(scip->conflict),
+      SCIPconflictGetNPseudoReconvergenceConss(scip->conflict));
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  MIR conflict     : %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
+      SCIPconflictGetResCMIRTime(scip->conflict),
+      SCIPconflictGetNResCMIRCalls(scip->conflict),
+      SCIPconflictGetNResCMIRSuccess(scip->conflict));
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Cover conflict   : %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
+      SCIPconflictGetResFlowCoverTime(scip->conflict),
+      SCIPconflictGetNResFlowCoverCalls(scip->conflict),
+      SCIPconflictGetNResFlowCoverSuccess(scip->conflict));
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  MIR dualproof    : %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
+      SCIPconflictGetInfLPCMIRTime(scip->conflict),
+      SCIPconflictGetNInfeasLPCMIRCalls(scip->conflict),
+      SCIPconflictGetNInfeasLPCMIRSuccess(scip->conflict));
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Cover dualproof  : %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
+      SCIPconflictGetInfLPFlowCoverTime(scip->conflict),
+      SCIPconflictGetNInfeasLPFlowCoverCalls(scip->conflict),
+      SCIPconflictGetNInfeasLPFlowCoverSuccess(scip->conflict));
 }
 
 /** outputs separator statistics
