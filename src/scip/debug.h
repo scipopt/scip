@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -202,6 +211,7 @@ SCIP_RETCODE SCIPdebugIncludeProp(
 /** adds a solution value for a new variable in the transformed problem that has no original counterpart
  * a value can only be set if no value has been set for this variable before
  */
+SCIP_EXPORT
 SCIP_RETCODE SCIPdebugAddSolVal(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable for which to add a value */
@@ -209,6 +219,7 @@ SCIP_RETCODE SCIPdebugAddSolVal(
    );
 
 /** gets pointer to the debug solution */
+SCIP_EXPORT
 SCIP_RETCODE SCIPdebugGetSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL**            sol                 /**< buffer to store pointer to the debug solution */
@@ -218,6 +229,7 @@ SCIP_RETCODE SCIPdebugGetSol(
  *
  * if no value is stored for the variable, gives 0.0
  */
+SCIP_EXPORT
 SCIP_RETCODE SCIPdebugGetSolVal(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable for which to get the value */
@@ -225,6 +237,7 @@ SCIP_RETCODE SCIPdebugGetSolVal(
    );
 
 /** check whether the debugging solution is valid in the current node */
+SCIP_EXPORT
 SCIP_RETCODE SCIPdebugSolIsValidInSubtree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool*            isvalidinsubtree    /**< pointer to store whether the solution is valid in the current
@@ -233,26 +246,31 @@ SCIP_RETCODE SCIPdebugSolIsValidInSubtree(
    );
 
 /** checks whether SCIP data structure is the main SCIP (the one for which debugging is enabled) */
+SCIP_EXPORT
 SCIP_Bool SCIPdebugIsMainscip(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** enabling solution debugging mechanism */
+SCIP_EXPORT
 void SCIPdebugSolEnable(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** disabling solution debugging mechanism */
+SCIP_EXPORT
 void SCIPdebugSolDisable(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** check if solution debugging mechanism is enabled */
+SCIP_EXPORT
 SCIP_Bool SCIPdebugSolIsEnabled(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** check if SCIP is compiled with WITH_DEBUG_SOLUTION */
+SCIP_EXPORT
 SCIP_Bool SCIPwithDebugSol(void);
 
 #else
