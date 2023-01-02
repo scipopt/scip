@@ -1012,7 +1012,7 @@ int compareEdges(
 
    if ( !edge1->iscolored && edge2->iscolored )
       return -1;
-   if ( !edge1->iscolored && !edge2->iscolored )
+   if ( edge1->iscolored && !edge2->iscolored )
       return 1;
 
    if ( edge1->iscolored )
@@ -6697,6 +6697,10 @@ SCIP_RETCODE computeSymmetryGroup2(
    {
       /* if a new edge type has been found */
       if ( compareEdges(edges[edgeperm[i-1]], edges[edgeperm[i]]) != 0 )
+      /* if a new edge type has been found, uncolored edges get color -1 */
+      if ( ! edges[edgeperm[i]]->iscolored )
+         edges[edgeperm[i]]->computedcolor = -1;
+      else if ( compareEdges(edges[edgeperm[i-1]], edges[edgeperm[i]]) != 0 )
          edges[edgeperm[i]]->computedcolor = ++curcolor;
       else
          edges[edgeperm[i]]->computedcolor = edges[edgeperm[i-1]]->computedcolor;
