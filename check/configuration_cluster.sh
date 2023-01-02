@@ -135,7 +135,7 @@ then
 fi
 
 # check if the slurm blades should be used exclusively
-if test "${EXCLUSIVE}" = "true"
+if test "${EXCLUSIVE}" = "TRUE"
 then
     EXCLUSIVE=" --exclusive"
     if test "${CLUSTERQUEUE}" = "opt"
@@ -150,6 +150,10 @@ CONSTRAINT=""
 if test "${CLUSTERQUEUE}" = "Gold6338"
 then
     CONSTRAINT="Gold6338"
+    CLUSTERQUEUE="big"
+elif test "${CLUSTERQUEUE}" = "Gold6342"
+then
+    CONSTRAINT="Gold6342"
     CLUSTERQUEUE="big"
 elif test "${CLUSTERQUEUE}" = "M640v2"
 then
