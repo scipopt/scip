@@ -151,7 +151,7 @@ if test "${CLUSTERQUEUE}" = "Gold6338"
 then
     CONSTRAINT="Gold6338"
     CLUSTERQUEUE="big"
-if test "${CLUSTERQUEUE}" = "Gold6342"
+elif test "${CLUSTERQUEUE}" = "Gold6342"
 then
     CONSTRAINT="Gold6342"
     CLUSTERQUEUE="big"
