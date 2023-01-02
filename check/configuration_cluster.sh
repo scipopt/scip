@@ -135,7 +135,7 @@ then
 fi
 
 # check if the slurm blades should be used exclusively
-if test "${EXCLUSIVE}" = "true"
+if test "${EXCLUSIVE}" = "TRUE"
 then
     EXCLUSIVE=" --exclusive"
     if test "${CLUSTERQUEUE}" = "opt"
