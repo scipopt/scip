@@ -71,6 +71,8 @@
 #include "scip/lapack_calls.h"
 #include "scip/debug.h"
 #include "scip/dialog_default.h"
+#include "scip/symmetry.h"
+#include "symmetry/struct_symmetry.h"
 
 /* fundamental constraint handler properties */
 #define CONSHDLR_NAME          "nonlinear"
@@ -9317,6 +9319,65 @@ SCIP_RETCODE computeVertexPolyhedralFacetBivariate(
    return SCIP_OKAY;
 }
 
+/** ensures that we can store information about open expressions in an array */
+static
+SCIP_RETCODE ensureOpenArraySize(
+   SCIP*                 scip,               /**< SCIP pointer */
+   int**                 array,              /**< address of openidx array */
+   int                   nelems,             /**< number of elements that need to be stored */
+   int*                  maxnelems           /**< address of maximum number that can be stored */
+   )
+{
+   assert(scip != NULL);
+   assert(array != NULL);
+   assert(maxnelems != NULL);
+
+   if( nelems >= *maxnelems )
+   {
+      int newsize;
+
+      newsize = SCIPcalcMemGrowSize(scip, *maxnelems + 1);
+      assert(newsize > *maxnelems);
+
+      SCIP_CALL( SCIPreallocBufferArray(scip, array, newsize) );
+
+      *maxnelems = newsize;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** ensures that we can store information about local variables in an array */
+static
+SCIP_RETCODE ensureLocVarsArraySize(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_VAR***           vararray,           /**< address of variable array */
+   SCIP_Real**           valarray,           /**< address of value array */
+   int                   nelems,             /**< number of elements that need to be stored */
+   int*                  maxnelems           /**< address of maximum number that can be stored */
+   )
+{
+   assert(scip != NULL);
+   assert(vararray != NULL);
+   assert(valarray != NULL);
+   assert(maxnelems != NULL);
+
+   if( nelems >= *maxnelems )
+   {
+      int newsize;
+
+      newsize = SCIPcalcMemGrowSize(scip, *maxnelems + 1);
+      assert(newsize > *maxnelems);
+
+      SCIP_CALL( SCIPreallocBufferArray(scip, vararray, newsize) );
+      SCIP_CALL( SCIPreallocBufferArray(scip, valarray, newsize) );
+
+      *maxnelems = newsize;
+   }
+
+   return SCIP_OKAY;
+}
+
 /*
  * Callback methods of constraint handler
  */
@@ -10601,18 +10662,346 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsNonlinear)
 #endif
 
 /** constraint handler method which returns the permutation symmetry detection graph of a constraint (if possible) */
-#ifdef SCIP_DISABLED_CODE
 static
-SCIP_DECL_CONSGETDIVEBDCHGS(consGetPermsymGraphNonlinear)
+SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphNonlinear)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of nonlinear constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   SCIP_EXPRITER* it;
+   SCIP_EXPRHDLR* sumexprhdlr;
+   SCIP_EXPRHDLR* prodexprhdlr;
+   SCIP_EXPR* rootexpr;
+   SCIP_EXPR* expr;
+   SCIP_VAR** consvars;
+   SCIP_Real* consvals;
+   SCIP_Real constant;
+   SCIP_Real color;
+   int* openidx;
+   int parentidx;
+   int nconsvars;
+   int maxnconsvars;
+   int maxnopenidx;
+   int nlocvars;
+   int nlocvals;
+   int nlocops;
+   int nopenidx = 0;
+   int nodeestim = 0;
+   int nodecnt = 0;
+   int i;
+   SCIP_Bool iscolored;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+
+   sumexprhdlr = SCIPgetExprhdlrSum(scip);
+   prodexprhdlr = SCIPgetExprhdlrProduct(scip);
+   assert(sumexprhdlr != NULL);
+   assert(prodexprhdlr != NULL);
+
+   /* get number of nodes in tree */
+   expr = SCIPgetExprNonlinear(cons);
+   assert(expr != NULL);
+
+   SCIP_CALL( SCIPcreateExpriter(scip, &it) );
+   SCIP_CALL( SCIPexpriterInit(it, expr, SCIP_EXPRITER_BFS, FALSE) );
+
+   for( expr = SCIPexpriterGetCurrent(it); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )
+      nodeestim += SCIPexprGetNChildren(expr);
+
+   SCIPfreeExpriter(&it);
+
+   /* store expression tree as symmetry detection graph */
+   SCIP_CALL( SCIPcreateSymgraph(scip, graph, nodeestim) );
+
+   /* store lhs/rhs */
+   SCIP_CALL( SCIPcreateSymgraphNode(scip, *graph, nodecnt++, SYM_NODETYPE_RHS, NULL, NULL, -1.0, 0.0, TRUE,
+         SCIPgetLhsNonlinear(cons), SCIPgetRhsNonlinear(cons), cons, SCIPfindConshdlr(scip, CONSHDLR_NAME)) );
+
+   rootexpr = SCIPgetExprNonlinear(cons);
+   assert(rootexpr != NULL);
+
+   SCIP_CALL( SCIPcreateExpriter(scip, &it) );
+   SCIP_CALL( SCIPexpriterInit(it, rootexpr, SCIP_EXPRITER_DFS, TRUE) );
+   SCIPexpriterSetStagesDFS(it, SCIP_EXPRITER_ENTEREXPR | SCIP_EXPRITER_LEAVEEXPR);
+
+   /* allocate arrays to store operators not completely handled yet (due to DFS) and variables in constraint */
+   maxnopenidx = nodeestim;
+   SCIP_CALL( SCIPallocBufferArray(scip, &openidx, maxnopenidx) );
+
+   maxnconsvars = SCIPgetNVars(scip);
+   SCIP_CALL( SCIPallocBufferArray(scip, &consvars, maxnconsvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &consvals, maxnconsvars) );
+
+   /* iterate over expression tree and store nodes/edges */
+   for( expr = SCIPexpriterGetCurrent(it); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )
+   {
+      /* due to DFS, we can remove the expression from the list of open expressions */
+      if( SCIPexpriterGetStageDFS(it) == SCIP_EXPRITER_LEAVEEXPR )
+      {
+         --nopenidx;
+         continue;
+      }
+      assert(SCIPexpriterGetStageDFS(it) == SCIP_EXPRITER_ENTEREXPR);
+
+      /* find parentidx */
+      if( expr == rootexpr )
+         parentidx = 0;
+      else if( nopenidx >= 1 )
+         parentidx = openidx[nopenidx - 1];
+      assert( expr == rootexpr || parentidx > 0 );
+
+      /* deal with different kinds of expressions and store them in the symmetry data structure */
+      if( SCIPisExprVar(scip, expr) )
+      {
+         /* needed to correctly reset value when leaving expression */
+         SCIP_CALL( ensureOpenArraySize(scip, &openidx, nopenidx, &maxnopenidx) );
+
+         openidx[nopenidx++] = -1;
+
+         /* children of sum expressions are treated in their parent nodes already */
+         if( SCIPisExprSum(scip, SCIPexpriterGetParentDFS(it)) )
+            continue;
+         assert(maxnconsvars > 0);
+
+         nconsvars = 1;
+         consvars[0] = SCIPgetVarExprVar(expr);
+         consvals[0] = 1.0;
+         constant = 0.0;
+
+         SCIP_CALL( SCIPgetActiveVariables(scip, &consvars, &consvals, &nconsvars, &constant,
+               SCIPconsIsTransformed(cons)) );
+
+         nlocvals = SCIPisZero(scip, constant) ? 0 : 1;
+         nlocvars = nconsvars;
+         nlocops = nlocvals == 0 && nlocvars == 1 ? 0 : 1;
+
+         if( nlocops == 0 )
+         {
+            SCIP_CALL( SCIPcreateSymgraphNode(scip, *graph, nodecnt, SYM_NODETYPE_VAR,
+                  NULL, consvars[0], SCIPvarGetProbindex(consvars[0]), 0.0, FALSE, 0.0, 0.0, NULL, NULL) );
+
+            if( SCIPisEQ(scip, consvals[0], 1.0) )
+               iscolored = FALSE;
+            else
+               iscolored = TRUE;
+            color = consvals[0];
+
+            SCIP_CALL( SCIPcreateSymgraphEdge(scip, *graph, (*graph)->nodes[parentidx], (*graph)->nodes[nodecnt++],
+                  iscolored, color) );
+         }
+         else
+         {
+            int sumidx;
+
+            /* add node and edge for sum operator */
+            SCIP_CALL( SCIPcreateSymgraphNode(scip, *graph, nodecnt, SYM_NODETYPE_OPERATOR,
+                  sumexprhdlr, NULL, -1, 0.0, FALSE, 0.0, 0.0, NULL, NULL) );
+            SCIP_CALL( SCIPcreateSymgraphEdge(scip, *graph, (*graph)->nodes[parentidx], (*graph)->nodes[nodecnt],
+                  FALSE, 0.0) );
+            sumidx = nodecnt++;
+
+            /* add nodes and edges for summands */
+            if( nlocvals == 1 )
+            {
+               SCIP_CALL( SCIPcreateSymgraphNode(scip, *graph, nodecnt, SYM_NODETYPE_VAL,
+                     NULL, NULL, -1, constant, FALSE, 0.0, 0.0, NULL, NULL) );
+               SCIP_CALL( SCIPcreateSymgraphEdge(scip, *graph, (*graph)->nodes[sumidx], (*graph)->nodes[nodecnt++],
+                     FALSE, 0.0) );
+            }
+
+            SCIP_CALL( ensureLocVarsArraySize(scip, &consvars, &consvals, nlocvals, &maxnconsvars) );
+
+            for( i = 0; i < nlocvars; ++i )
+            {
+               SCIP_CALL( SCIPcreateSymgraphNode(scip, *graph, nodecnt, SYM_NODETYPE_VAR,
+                     NULL, consvars[i], SCIPvarGetProbindex(consvars[i]), 0.0, FALSE, 0.0, 0.0, NULL, NULL) );
+
+               if( SCIPisEQ(scip, consvals[i], 1.0) )
+                  iscolored = FALSE;
+               else
+                  iscolored = TRUE;
+               color = consvals[i];
+
+               SCIP_CALL( SCIPcreateSymgraphEdge(scip, *graph, (*graph)->nodes[sumidx], (*graph)->nodes[nodecnt++],
+                     iscolored, color) );
+            }
+         }
+      }
+      else if( SCIPisExprValue(scip, expr) )
+      {
+         SCIP_CALL( SCIPcreateSymgraphNode(scip, *graph, nodecnt, SYM_NODETYPE_VAL,
+               NULL, NULL, -1, SCIPgetValueExprValue(expr), FALSE, 0.0, 0.0, NULL, NULL) );
+         SCIP_CALL( SCIPcreateSymgraphEdge(scip, *graph, (*graph)->nodes[parentidx], (*graph)->nodes[nodecnt++],
+               FALSE, 0.0) );
+
+         /* needed to correctly reset value when leaving expression */
+         SCIP_CALL( ensureOpenArraySize(scip, &openidx, nopenidx, &maxnopenidx) );
+
+         openidx[nopenidx++] = -1;
+      }
+      else
+      {
+         SCIP_Real coef = 1.0;
+         iscolored = FALSE;
+
+         /* check whether operator has a coefficient based on parent expression */
+         if( SCIPexpriterGetParentDFS(it) != NULL && SCIPisExprSum(scip, SCIPexpriterGetParentDFS(it)) )
+         {
+            SCIP_EXPR* parent;
+
+            parent = SCIPexpriterGetParentDFS(it);
+            for( i = 0; i < SCIPexprGetNChildren(parent); ++i )
+            {
+               if( SCIPexprGetChildren(parent)[i] == expr )
+               {
+                  coef = SCIPgetCoefsExprSum(parent)[i];
+                  iscolored = TRUE;
+                  break;
+               }
+            }
+         }
+
+         /* check whether operators deal with constant values or variable coefficients */
+         if( SCIPisExprSum(scip, expr) )
+         {
+            SCIP_EXPR** children;
+            int sumidx;
+            int childidx = 0;
+
+            /* extract all children being variables and compute the sum of
+             * active variables expression
+             */
+            nlocvars = 0;
+            children = SCIPexprGetChildren(expr);
+
+            SCIP_CALL( ensureLocVarsArraySize(scip, &consvars, &consvals, SCIPexprGetNChildren(expr), &maxnconsvars) );
+
+            for( childidx = 0; childidx < SCIPexprGetNChildren(expr); ++childidx )
+            {
+               if( !SCIPisExprVar(scip, children[childidx]) )
+                  continue;
+
+               consvars[nlocvars] = SCIPgetVarExprVar(children[childidx]);
+               consvals[nlocvars++] = SCIPgetCoefsExprSum(expr)[childidx];
+            }
+
+            constant = SCIPgetConstantExprSum(expr);
+
+            SCIP_CALL( SCIPgetActiveVariables(scip, &consvars, &consvals, &nlocvars, &constant,
+                  SCIPconsIsTransformed(cons)) );
+
+            SCIP_CALL( SCIPcreateSymgraphNode(scip, *graph, nodecnt, SYM_NODETYPE_OPERATOR,
+                  SCIPexprGetHdlr(expr), NULL, -1, 0.0, FALSE, 0.0, 0.0, NULL, NULL) );
+            SCIP_CALL( SCIPcreateSymgraphEdge(scip, *graph, (*graph)->nodes[parentidx], (*graph)->nodes[nodecnt],
+                  iscolored, coef) );
+            sumidx = nodecnt++;
+
+            /* add the linear part of the sum */
+            if( !SCIPisZero(scip, constant) )
+            {
+               SCIP_CALL( SCIPcreateSymgraphNode(scip, *graph, nodecnt, SYM_NODETYPE_VAL,
+                     NULL, NULL, -1, constant * coef, FALSE, 0.0, 0.0, NULL, NULL) );
+               SCIP_CALL( SCIPcreateSymgraphEdge(scip, *graph, (*graph)->nodes[sumidx], (*graph)->nodes[nodecnt++],
+                     FALSE, 0.0) );
+            }
+            for( i = 0; i < nlocvars; ++i )
+            {
+               SCIP_CALL( SCIPcreateSymgraphNode(scip, *graph, nodecnt, SYM_NODETYPE_VAR,
+                     NULL, consvars[i], SCIPvarGetProbindex(consvars[i]), 0.0, FALSE, 0.0, 0.0, NULL, NULL) );
+
+               if( SCIPisEQ(scip, coef * consvals[i], 1.0) )
+                  iscolored = FALSE;
+               else
+                  iscolored = TRUE;
+
+               SCIP_CALL( SCIPcreateSymgraphEdge(scip, *graph, (*graph)->nodes[sumidx], (*graph)->nodes[nodecnt++],
+                     iscolored, coef * consvals[i]) );
+            }
+
+            /* needed to correctly reset value when leaving expression */
+            SCIP_CALL( ensureOpenArraySize(scip, &openidx, nopenidx, &maxnopenidx) );
+
+            openidx[nopenidx++] = sumidx;
+         }
+         else if( SCIPisExprProduct(scip, expr) )
+         {
+            SCIP_Real prodcoef;
+            int prodidx;
+
+            prodcoef = SCIPgetCoefExprProduct(expr);
+
+            SCIP_CALL( SCIPcreateSymgraphNode(scip, *graph, nodecnt, SYM_NODETYPE_OPERATOR,
+                  prodexprhdlr, NULL, -1, 0.0, FALSE, 0.0, 0.0, NULL, NULL) );
+            SCIP_CALL( SCIPcreateSymgraphEdge(scip, *graph, (*graph)->nodes[parentidx], (*graph)->nodes[nodecnt],
+                  FALSE, 0.0) );
+            prodidx = nodecnt++;
+
+            if ( ! SCIPisEQ(scip, prodcoef, 1.0) )
+            {
+               SCIP_CALL( SCIPcreateSymgraphNode(scip, *graph, nodecnt, SYM_NODETYPE_VAL,
+                     NULL, NULL, -1, prodcoef, FALSE, 0.0, 0.0, NULL, NULL) );
+               SCIP_CALL( SCIPcreateSymgraphEdge(scip, *graph, (*graph)->nodes[parentidx], (*graph)->nodes[nodecnt++],
+                     FALSE, 0.0) );
+            }
+
+            /* needed to correctly reset value when leaving expression */
+            SCIP_CALL( ensureOpenArraySize(scip, &openidx, nopenidx, &maxnopenidx) );
+
+            openidx[nopenidx++] = prodidx;
+         }
+         else if( SCIPisExprPower(scip, expr) )
+         {
+            SCIP_EXPRHDLR* ophdlr;
+            SCIP_Real exponent;
+            int opidx;
+
+            exponent = SCIPgetExponentExprPow(expr);
+
+            if( SCIPisExprSignpower(scip, expr) )
+               ophdlr = (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_SIGNPOWER;
+            else
+               ophdlr = (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_POWER;
+
+            SCIP_CALL( SCIPcreateSymgraphNode(scip, *graph, nodecnt, SYM_NODETYPE_OPERATOR,
+                  ophdlr, NULL, -1, 0.0, FALSE, 0.0, 0.0, NULL, NULL) );
+            SCIP_CALL( SCIPcreateSymgraphEdge(scip, *graph, (*graph)->nodes[parentidx], (*graph)->nodes[nodecnt],
+                  FALSE, 0.0) );
+            opidx = nodecnt++;
+
+            if( !SCIPisEQ(scip, exponent, 1.0) )
+            {
+               SCIP_CALL( SCIPcreateSymgraphNode(scip, *graph, nodecnt, SYM_NODETYPE_VAL,
+                     NULL, NULL, -1, exponent, FALSE, 0.0, 0.0, NULL, NULL) );
+               SCIP_CALL( SCIPcreateSymgraphEdge(scip, *graph, (*graph)->nodes[opidx], (*graph)->nodes[nodecnt++],
+                     FALSE, 0.0) );
+            }
+
+            /* needed to correctly reset value when leaving expression */
+            SCIP_CALL( ensureOpenArraySize(scip, &openidx, nopenidx, &maxnopenidx) );
+
+            openidx[nopenidx++] = opidx;
+         }
+         else
+         {
+            /* operator without constant values or coefficients */
+            SCIP_CALL( SCIPcreateSymgraphNode(scip, *graph, nodecnt, SYM_NODETYPE_OPERATOR,
+                  SCIPexprGetHdlr(expr), NULL, -1, 0.0, FALSE, 0.0, 0.0, NULL, NULL) );
+            SCIP_CALL( SCIPcreateSymgraphEdge(scip, *graph, (*graph)->nodes[parentidx], (*graph)->nodes[nodecnt],
+                  FALSE, 0.0) );
+
+            /* needed to correctly reset value when leaving expression */
+            SCIP_CALL( ensureOpenArraySize(scip, &openidx, nopenidx, &maxnopenidx) );
+
+            openidx[nopenidx++] = nodecnt++;
+         }
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &consvals);
+   SCIPfreeBufferArray(scip, &consvars);
+   SCIPfreeBufferArray(scip, &openidx);
+   SCIPfreeExpriter(&it);
 
    return SCIP_OKAY;
 }
-#else
-#define consGetPermsymGraphNonlinear NULL
-#endif
 
 /** output method of statistics table to output file stream 'file' */
 static
