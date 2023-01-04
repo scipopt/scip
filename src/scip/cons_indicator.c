@@ -3959,19 +3959,17 @@ SCIP_RETCODE propIndicator(
       SCIP_Real maxactivity;
       SCIP_Real newub;
       SCIP_Real rhs;
+      SCIP_Real coeffslack;
       int nlinconsvars;
       SCIP_Bool success;
       int j;
 
       maxactivity = 0.0;
+      coeffslack = -1.0;
 
-      SCIP_CALL( SCIPgetConsNVars(scip, consdata->lincons, &nlinconsvars, &success) );
-
-      SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nlinconsvars) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &consvals, nlinconsvars) );
-
-      SCIP_CALL( SCIPgetConsVars(scip, consdata->lincons, consvars, nlinconsvars, &success) );
-      SCIP_CALL( SCIPgetConsVals(scip, consdata->lincons, consvals, nlinconsvars, &success) );
+      nlinconsvars = SCIPgetNVarsLinear(scip, consdata->lincons);
+      consvars = SCIPgetVarsLinear(scip, consdata->lincons);
+      consvals = SCIPgetValsLinear(scip, consdata->lincons);
 
       /* calculate maximal activity of linear constraint without slackvar */
       for( j = 0; j < nlinconsvars; ++j )
@@ -3988,7 +3986,10 @@ SCIP_RETCODE propIndicator(
 
          /* skip slackvar */
          if( var == consdata->slackvar )
+         {
+            coeffslack = val;
             continue;
+         }
 
          if( val > 0.0 )
             ub = SCIPvarGetUbLocal(var);
@@ -4004,27 +4005,30 @@ SCIP_RETCODE propIndicator(
             maxactivity += val * ub;
       }
 
-      /* substract rhs */
-      rhs = SCIPconsGetRhs(scip, consdata->lincons, &success);
-      assert(success);
-      assert(!SCIPisInfinity(scip, rhs));
-
-      newub = maxactivity - rhs;
-
-      if( SCIPisFeasLT(scip, newub, SCIPvarGetUbLocal(consdata->slackvar))
-            && !SCIPisInfinity(scip, maxactivity)
-            && newub > SCIPvarGetLbLocal(consdata->slackvar) )
+      /* continue only if maxactivity is not infinity */
+      if( !SCIPisInfinity(scip, maxactivity) )
       {
-         /* propagate bound */
-         SCIP_CALL( SCIPinferVarUbCons(scip, consdata->slackvar, newub, cons, 3, FALSE, &infeasible, &tightened) );
-         assert( ! infeasible );
-         if ( tightened )
-            ++(*nGen);
-      }
+         /* substract rhs */
+         rhs = SCIPconsGetRhs(scip, consdata->lincons, &success);
+         assert(success);
+         assert(!SCIPisInfinity(scip, rhs));
 
-      /* free buffer */
-      SCIPfreeBufferArray(scip, &consvals);
-      SCIPfreeBufferArray(scip, &consvars);
+         newub = maxactivity - rhs;
+         assert(!SCIPisInfinity(scip, newub));
+
+         /* divide by coeff of slackvar */
+         newub = newub / (-1.0 * coeffslack);
+
+         if( SCIPisFeasLT(scip, newub, SCIPvarGetUbLocal(consdata->slackvar))
+               && newub > SCIPvarGetLbLocal(consdata->slackvar) )
+         {
+            /* propagate bound */
+            SCIP_CALL( SCIPinferVarUbCons(scip, consdata->slackvar, newub, cons, 3, FALSE, &infeasible, &tightened) );
+            assert( ! infeasible );
+            if ( tightened )
+               ++(*nGen);
+         }
+      }
    }
 
    /* reset constraint age counter */
