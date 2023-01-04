@@ -7931,13 +7931,16 @@ SCIP_Real evaluateLiftingFunctionKnapsack(
    while( h < coversize )
    {
       SCIPquadprecSumQD(tmp, x, -covervals[h]); /* recall: covervals[h] = S^-(h+1) */
-      if( QUAD_TO_DBL(tmp) <= QUAD_EPSILON )
+      /* compare to an increased epsilon since computation involves abar, which is computed like an activity */
+      if( QUAD_TO_DBL(tmp) <= 1000.0*QUAD_EPSILON )
          break;
+
       ++h;
    }
 
    cutcoef += h;
 
+   SCIPdebugMessage("x is %g, coversize is %d, h is %d\n", QUAD_TO_DBL(x), coversize, h );
    /* the lifted coefficient is h increased possibly by 0.5 for the case checked above */
    SCIPdebugMessage("lifted coef %g < %g <= %g to %g\n", h == 0 ? 0 : covervals[h-1], QUAD_TO_DBL(x),
          covervals[h], cutcoef);
@@ -8121,6 +8124,7 @@ SCIP_RETCODE SCIPcalcKnapsackCover(
        * we store the cut coefficients in tmpcoef
        */
 
+      SCIPdebugMessage("call prepareLiftingData: \n");
       /* prepare data required to evaluate lifting function */
       prepareLiftingData(scip, tmpcoefs, tmpinds, QUAD(rhs), coverpos, coversize,
             QUAD(coverweight), covervals, coverstatus, QUAD(&abar), &cplussize);
@@ -8137,8 +8141,13 @@ SCIP_RETCODE SCIPcalcKnapsackCover(
          else
          { /* variables is either in C^+ or not in the cover and its coefficient value is computed with the lifing function */
             SCIP_Real QUAD(coef);
+
+            SCIPdebugMessage("load QUAD(coef) from tmpcoefs[tmpinds[k] = %d]\n",tmpinds[k]);
             QUAD_ARRAY_LOAD(coef, tmpcoefs, tmpinds[k]);
 
+            SCIPdebugMessage("coef is QUAD_HI=%g, QUAD_LO=%g, QUAD_TO_DBL = %g\n",QUAD_HI(coef), QUAD_LO(coef), QUAD_TO_DBL(coef));
+
+            SCIPdebugMessage("call evaluateLiftingFunctionKnapsack:\n");
             cutcoef = evaluateLiftingFunctionKnapsack(QUAD(coef), QUAD(abar), covervals, coversize, cplussize, &scale);
 
             /* if the coefficient value is zero then remove the nonzero entry and continue */
