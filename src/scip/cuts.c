@@ -7866,7 +7866,6 @@ void prepareLiftingData(
 /** evaluate the lifting function based on the given values */
 static
 SCIP_Real evaluateLiftingFunctionKnapsack(
-   SCIP*                 scip,               /**< SCIP datastructure */
    QUAD(SCIP_Real        x),                 /**< value to evaluate the lifting function at */
    QUAD(SCIP_Real        abar),              /**< the reciprocal value of \bar{a} */
    SCIP_Real*            covervals,          /**< the running sum of S^-(*) values */
@@ -8149,7 +8148,7 @@ SCIP_RETCODE SCIPcalcKnapsackCover(
             SCIPdebugMessage("coef is QUAD_HI=%g, QUAD_LO=%g, QUAD_TO_DBL = %g\n",QUAD_HI(coef), QUAD_LO(coef), QUAD_TO_DBL(coef));
 
             SCIPdebugMessage("call evaluateLiftingFunctionKnapsack:\n");
-            cutcoef = evaluateLiftingFunctionKnapsack(scip, QUAD(coef), QUAD(abar), covervals, coversize, cplussize, &scale);
+            cutcoef = evaluateLiftingFunctionKnapsack(QUAD(coef), QUAD(abar), covervals, coversize, cplussize, &scale);
 
             /* if the coefficient value is zero then remove the nonzero entry and continue */
             if( cutcoef == 0.0 )
