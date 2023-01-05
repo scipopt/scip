@@ -6695,8 +6695,6 @@ SCIP_RETCODE computeSymmetryGroup2(
 
    for (i = 1; i < nedges; ++i)
    {
-      /* if a new edge type has been found */
-      if ( compareEdges(edges[edgeperm[i-1]], edges[edgeperm[i]]) != 0 )
       /* if a new edge type has been found, uncolored edges get color -1 */
       if ( ! edges[edgeperm[i]]->iscolored )
          edges[edgeperm[i]]->computedcolor = -1;
