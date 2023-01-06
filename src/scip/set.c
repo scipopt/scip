@@ -174,10 +174,12 @@
 
 /* Conflict Analysis (generalized resolution) */
 
-#define SCIP_DEFAULT_CONF_RESOLUTIONCONS      1 /**< number of resolution constraints to add (-1: add every conflict constraint) */
+#define SCIP_DEFAULT_CONF_RESOLUTIONCONS     10 /**< number of resolution constraints to add (-1: add every conflict constraint) */
 #define SCIP_DEFAULT_CONF_MAXNUMRESSTEPS   1000 /**< maximal number of resolution steps in generalized resolution (-1: resolve till FirstUIP) */
+#define SCIP_DEFAULT_CONF_RESFUIPLEVELS      -1 /**< number of depth levels up to which first UIP's are used in resolution conflict
+                                                 *   analysis (-1: use All-FirstUIP rule) */
 #define SCIP_DEFAULT_CONF_WEAKENCONFLICT  FALSE /**< should the conflict constraint be weakened? */
-#define SCIP_DEFAULT_CONF_WEAKENREASON    FALSE /**< should the reason constraint be weakened? */
+#define SCIP_DEFAULT_CONF_WEAKENREASON    FALSE  /**< should the reason constraint be weakened? */
 #define SCIP_DEFAULT_CONF_WEAKENREASONALL FALSE /**< should all variables at bounds in the reason constraint be weakened at once? */
 #define SCIP_DEFAULT_CONF_APPLYSIMPLEMIR  FALSE /**<  should we apply mir with scaling 1.0 to strengthen the conflict constraints? */
 #define SCIP_DEFAULT_CONF_APPLYCMIR       FALSE /**< should we apply cmir to strengthen the conflict constraints? */
@@ -1415,6 +1417,11 @@ SCIP_RETCODE SCIPsetCreate(
          "conflict/fuiplevels",
          "number of depth levels up to which first UIP's are used in conflict analysis (-1: use All-FirstUIP rule)",
          &(*set)->conf_fuiplevels, TRUE, SCIP_DEFAULT_CONF_FUIPLEVELS, -1, INT_MAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "conflict/resfuiplevels",
+         "number of depth levels up to which first UIP's are used in conflict analysis (-1: use All-FirstUIP rule)",
+         &(*set)->conf_resfuiplevels, TRUE, SCIP_DEFAULT_CONF_RESFUIPLEVELS, -1, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "conflict/resolutioncons",

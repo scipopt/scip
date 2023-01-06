@@ -217,6 +217,8 @@ struct SCIP_Set
                                               *   (-1: no limit) */
    int                   conf_fuiplevels;    /**< number of depth levels up to which first UIP's are used in conflict
                                               *   analysis (-1: use All-FirstUIP rule) */
+   int                   conf_resfuiplevels; /**< number of depth levels up to which first UIP's are used in resolution
+                                              *   conflict analysis (-1: use All-FirstUIP rule) */
    int                   conf_interconss;    /**< maximal number of intermediate conflict constraints generated in conflict
                                               *   graph (-1: use every intermediate constraint) */
    int                   conf_maxconss;      /**< maximal number of conflict constraints accepted at an infeasible node
