@@ -99,6 +99,8 @@
 #include "scip/scip_prob.h"
 #include "scip/scip_sol.h"
 #include "scip/scip_var.h"
+#include "scip/symmetry.h"
+#include "symmetry/struct_symmetry.h"
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
@@ -2211,6 +2213,106 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsSOS2)
 }
 
 
+/** constraint handler method which returns the permutation symmetry detection graph of a constraint */
+static
+SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphSOS2)
+{  /*lint --e{715}*/
+   SCIP_EXPRHDLR* sumop;
+   SCIP_EXPRHDLR* pairop;
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR** consvars;
+   SCIP_VAR** locvars;
+   SCIP_Real* locvals;
+   SCIP_Real color;
+   SCIP_Real constant = 0.0;
+   SCIP_Bool iscolored;
+   int nconsvars;
+   int nlocvars;
+   int pairid;
+   int nnodes;
+   int nvars;
+   int i;
+   int j;
+
+   sumop = SCIPgetExprhdlrSum(scip);
+   pairop = (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_TUPLE;
+   consdata = SCIPconsGetData(cons);
+   assert(sumop != NULL);
+   assert(consdata != NULL);
+
+   /* get active variables of the constraint */
+   nvars = SCIPgetNVars(scip);
+   nconsvars = consdata->nvars;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nconsvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &locvars, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &locvals, nvars) );
+
+   for( i = 0; i < nconsvars; ++i )
+      consvars[i] = consdata->vars[i];
+
+   /* create graph */
+   SCIP_CALL( SCIPcreateSymgraph(scip, graph, nconsvars) );
+
+   /* add node initializing constraint (with artificial rhs) */
+   SCIP_CALL( SCIPcreateSymgraphNode(scip, *graph, 0, SYM_NODETYPE_RHS, NULL, NULL, -1.0, 0.0, TRUE,
+         0.0, 0.0, cons, SCIPfindConshdlr(scip, CONSHDLR_NAME)) );
+   nnodes = 1;
+
+   /* for all pairs of variables, add a node indicating a tuple and add nodes for (aggregated) variables */
+   for( i = 0; i < nconsvars - 1; ++i )
+   {
+      SCIP_CALL( SCIPcreateSymgraphNode(scip, *graph, nnodes, SYM_NODETYPE_OPERATOR,
+            pairop, NULL, -1.0, 0.0, FALSE, 0.0, 0.0, NULL, NULL) );
+      pairid = nnodes++;
+
+      for( j = i; j < i + 2; ++j )
+      {
+         locvars[0] = consvars[j];
+         locvals[0] = 1.0;
+         constant = 0.0;
+         nlocvars = 1;
+
+         SCIP_CALL( SCIPgetActiveVariables(scip, &locvars, &locvals, &nlocvars, &constant, SCIPisTransformed(scip)) );
+
+         if( nlocvars == 1 && SCIPisZero(scip, constant) && SCIPisEQ(scip, locvals[j], 1.0) )
+         {
+            SCIP_CALL( SCIPcreateSymgraphNode(scip, *graph, nnodes, SYM_NODETYPE_VAR, NULL,
+                  locvars[0], SCIPvarGetProbindex(locvars[0]), 0.0, FALSE, 0.0, 0.0, NULL, NULL) );
+
+            iscolored = consdata->weights != NULL ? TRUE : FALSE;
+            color = iscolored ? consdata->weights[j] : 0.0;
+
+            SCIP_CALL( SCIPcreateSymgraphEdge(scip, *graph, (*graph)->nodes[pairid], (*graph)->nodes[nnodes],
+                  iscolored, color) );
+            ++nnodes;
+         }
+         else
+         {
+            SCIP_CALL( SCIPcreateSymgraphNode(scip, *graph, nnodes, SYM_NODETYPE_OPERATOR, sumop,
+                  NULL, -1, 0.0, FALSE, 0.0, 0.0, NULL, NULL) );
+
+            iscolored = consdata->weights != NULL ? TRUE : FALSE;
+            color = iscolored ? consdata->weights[i] : 0.0;
+
+            SCIP_CALL( SCIPcreateSymgraphEdge(scip, *graph, (*graph)->nodes[pairid], (*graph)->nodes[nnodes],
+                  iscolored, color) );
+            ++nnodes;
+
+            SCIP_CALL( SCIPaddSymgraphVarAggegration(scip, *graph, nnodes - 1, &nnodes,
+                  locvars, locvals, nlocvars, constant) );
+         }
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &locvals);
+   SCIPfreeBufferArray(scip, &locvars);
+   SCIPfreeBufferArray(scip, &consvars);
+
+   return SCIP_OKAY;
+}
+
+
 /* ---------------- Callback methods of event handler ---------------- */
 
 /* exec the event handler
@@ -2343,6 +2445,7 @@ SCIP_RETCODE SCIPincludeConshdlrSOS2(
    SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpSOS2, consSepasolSOS2, CONSHDLR_SEPAFREQ, CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransSOS2) );
    SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxSOS2) );
+   SCIP_CALL( SCIPsetConshdlrGetPermsymGraph(scip, conshdlr, consGetPermsymGraphSOS2) );
 
    return SCIP_OKAY;
 }
