@@ -84,7 +84,6 @@ SCIP_Longint SCIPconflictGetNResCalls(
 SCIP_RETCODE SCIPconflictFlushResolutionSets(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_PROB*            transprob,          /**< transformed problem */
