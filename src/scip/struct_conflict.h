@@ -113,6 +113,8 @@ struct SCIP_ResolutionSet
    int                   nnz;
    int                   size;
    int                   validdepth;
+   int                   conflictdepth;
+   int                   repropdepth;
    unsigned int          usescutoffbound:1;  /**< is the conflict based on the cutoff bound? */
    SCIP_CONFTYPE         conflicttype;       /**< conflict type: unknown, resolution */
 };
@@ -219,6 +221,7 @@ struct SCIP_Conflict
    SCIP_PROOFSET**       proofsets;          /**< proof sets found at the current node */
    SCIP_RESOLUTIONSET*   resolutionset;      /**< resolution sets for the current conflict */
    SCIP_RESOLUTIONSET*   reasonset;          /**< resolution sets for the current reason */
+   SCIP_RESOLUTIONSET*   prevresolutionset;  /**< resolution sets for the previous conflict */
    SCIP_RESOLUTIONSET**  resolutionsets;     /**< resolution sets found at the current node */
    SCIP_CONFLICTSET*     conflictset;        /**< bound changes resembling the current conflict set */
    SCIP_CONFLICTSET**    conflictsets;       /**< conflict sets found at the current node */

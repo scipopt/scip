@@ -3278,7 +3278,7 @@ SCIP_RETCODE SCIPaddConflict(
       /* conftype == SCIP_CONFTYPE_RESOLUTION */
       else
       {
-         /* add the conflict to the resolution conflict store */
+         /* todo: we do not need the distinction since we do not call both conflict analysis types at the same time */
          SCIP_CALL( SCIPconflictstoreAddResConflict(scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->tree,
                scip->transprob, scip->reopt, cons, conftype, iscutoffinvolved, primalbound) );
       }
