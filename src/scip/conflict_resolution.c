@@ -1417,9 +1417,7 @@ SCIP_RETCODE addConflictBounds(
 {
 
    /* scan through the row and add bound changes that make the constraint infeasible */
-   /* stop adding bounds when infeasibility is detected */
    SCIP_VAR** vars;
-   SCIP_Real slack;
    int i;
 
    vars = SCIPprobGetVars(prob);
@@ -1445,7 +1443,6 @@ SCIP_RETCODE addConflictBounds(
             if ( SCIPsetIsLT(set, bnd, SCIPvarGetUbGlobal(vars[v])) )
             {
                SCIP_CALL( SCIPaddConflictUb(set->scip, vars[v], inferbdchgidx) );
-               slack += coef * bnd;
             }
          }
       }
@@ -1458,13 +1455,9 @@ SCIP_RETCODE addConflictBounds(
             if ( SCIPsetIsGT(set, bnd, SCIPvarGetLbGlobal(vars[v])) )
             {
                SCIP_CALL( SCIPaddConflictLb(set->scip, vars[v], inferbdchgidx) );
-               slack += coef * bnd;
             }
          }
       }
-      /* we stop adding bound changes as soon as the resolution set becomes infeasible */
-      if ( SCIPsetIsLT(set, slack, resolutionset->lhs) )
-            break;
    }
    return SCIP_OKAY;
 }
