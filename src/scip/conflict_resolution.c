@@ -1417,15 +1417,13 @@ SCIP_RETCODE addConflictBounds(
 {
 
    /* scan through the row and add bound changes that make the constraint infeasible */
-   /* stop adding bounds when infeasibility is detected */
+   /* todo stop adding bounds when infeasibility is detected */
    SCIP_VAR** vars;
-   SCIP_Real slack;
    int i;
 
    vars = SCIPprobGetVars(prob);
    assert(vars != NULL);
 
-   slack = 0.0;
    for( i = 0; i < resolutionsetGetNNzs(resolutionset); i++ )
    {
       SCIP_Real coef;
@@ -1445,7 +1443,6 @@ SCIP_RETCODE addConflictBounds(
             if ( SCIPsetIsLT(set, bnd, SCIPvarGetUbGlobal(vars[v])) )
             {
                SCIP_CALL( SCIPaddConflictUb(set->scip, vars[v], inferbdchgidx) );
-               slack += coef * bnd;
             }
          }
       }
@@ -1458,13 +1455,9 @@ SCIP_RETCODE addConflictBounds(
             if ( SCIPsetIsGT(set, bnd, SCIPvarGetLbGlobal(vars[v])) )
             {
                SCIP_CALL( SCIPaddConflictLb(set->scip, vars[v], inferbdchgidx) );
-               slack += coef * bnd;
             }
          }
       }
-      /* we stop adding bound changes as soon as the resolution set becomes infeasible */
-      if ( SCIPsetIsLT(set, slack, resolutionset->lhs) )
-            break;
    }
    return SCIP_OKAY;
 }
@@ -2706,9 +2699,6 @@ SCIP_RETCODE conflictAnalyzeResolution(
           *    - Knapsack constraints that use negated cliques in the propagation
           *    - Ranged row propagation (gcd argument)
           */
-         if ( SCIPsetIsGE(set, conflictresolutionset->slack + reasonresolutionset->slack, 0.0) )
-            goto TERMINATE;
-
 #ifdef SCIP_DEBUG
       {
          printSingleBoundChange(set, bdchginfo);
