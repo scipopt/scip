@@ -175,7 +175,7 @@
 /* Conflict Analysis (generalized resolution) */
 
 #define SCIP_DEFAULT_CONF_RESOLUTIONCONS     10 /**< number of resolution constraints to add (-1: add every conflict constraint) */
-#define SCIP_DEFAULT_CONF_MAXNUMRESSTEPS   1000 /**< maximal number of resolution steps in generalized resolution (-1: resolve till FirstUIP) */
+#define SCIP_DEFAULT_CONF_MAXNUMRESSTEPS     -1 /**< maximal number of resolution steps in generalized resolution (-1: resolve till (All) FirstUIP) */
 #define SCIP_DEFAULT_CONF_RESFUIPLEVELS      -1 /**< number of depth levels up to which first UIP's are used in resolution conflict
                                                  *   analysis (-1: use All-FirstUIP rule) */
 #define SCIP_DEFAULT_CONF_WEAKENCONFLICT  FALSE /**< should the conflict constraint be weakened? */
@@ -1440,7 +1440,7 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "conflict/maxnumressteps",
-         "maximal number of resolution steps in generalized resolution (-1: resolve till FirstUIP)",
+         "maximal number of resolution steps in generalized resolution (-1: resolve till (All) FirstUIP)",
          &(*set)->conf_maxnumressteps, TRUE, SCIP_DEFAULT_CONF_MAXNUMRESSTEPS, -1, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,

@@ -135,6 +135,7 @@ struct SCIP_Conflict
 {
    SCIP_Longint          nglbchgbds;         /**< total number of applied global bound changes */
    SCIP_Longint          nappliedglbconss;   /**< total number of conflict constraints added globally to the problem */
+   SCIP_Longint          nappliedglbresconss;/**< total number of resolution conflict constraints added globally to the problem */
    SCIP_Longint          nappliedglbliterals;/**< total number of literals in globally applied conflict constraints */
    SCIP_Longint          nlocchgbds;         /**< total number of applied local bound changes */
    SCIP_Longint          nappliedlocconss;   /**< total number of conflict constraints added locally to the problem */
@@ -219,9 +220,9 @@ struct SCIP_Conflict
    SCIP_PQUEUE*          resforcedbdchgqueue;/**< unprocessed conflict bound changes used in generalized resolution that must be resolved */
    SCIP_PROOFSET*        proofset;           /**< proof sets found at the current node */
    SCIP_PROOFSET**       proofsets;          /**< proof sets found at the current node */
-   SCIP_RESOLUTIONSET*   resolutionset;      /**< resolution sets for the current conflict */
-   SCIP_RESOLUTIONSET*   reasonset;          /**< resolution sets for the current reason */
-   SCIP_RESOLUTIONSET*   prevresolutionset;  /**< resolution sets for the previous conflict */
+   SCIP_RESOLUTIONSET*   resolutionset;      /**< resolution set for the current conflict */
+   SCIP_RESOLUTIONSET*   reasonset;          /**< resolution set for the current reason */
+   SCIP_RESOLUTIONSET*   prevresolutionset;  /**< resolution set for the previous conflict */
    SCIP_RESOLUTIONSET**  resolutionsets;     /**< resolution sets found at the current node */
    SCIP_CONFLICTSET*     conflictset;        /**< bound changes resembling the current conflict set */
    SCIP_CONFLICTSET**    conflictsets;       /**< conflict sets found at the current node */

@@ -130,6 +130,16 @@ SCIP_Longint SCIPconflictGetNAppliedConss(
    return conflict->nappliedglbconss + conflict->nappliedlocconss;
 }
 
+/** returns the total number of resolution conflict constraints that were added to the problem */
+SCIP_Longint SCIPconflictGetNAppliedResConss(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   )
+{
+   assert(conflict != NULL);
+
+   return conflict->nappliedglbresconss;
+}
+
 /** returns the total number of literals in conflict constraints that were added to the problem */
 SCIP_Longint SCIPconflictGetNAppliedLiterals(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
@@ -158,6 +168,16 @@ SCIP_Longint SCIPconflictGetNAppliedGlobalConss(
    assert(conflict != NULL);
 
    return conflict->nappliedglbconss;
+}
+
+/** returns the total number of resolution conflict constraints that were added globally to the problem */
+SCIP_Longint SCIPconflictGetNAppliedGlobalResConss(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   )
+{
+   assert(conflict != NULL);
+
+   return conflict->nappliedglbresconss;
 }
 
 /** returns the total number of literals in conflict constraints that were added globally to the problem */
@@ -296,6 +316,7 @@ SCIP_RETCODE SCIPconflictCreate(
    (*conflict)->count = 0;
    (*conflict)->nglbchgbds = 0;
    (*conflict)->nappliedglbconss = 0;
+   (*conflict)->nappliedglbresconss = 0;
    (*conflict)->nappliedglbliterals = 0;
    (*conflict)->nlocchgbds = 0;
    (*conflict)->nappliedlocconss = 0;

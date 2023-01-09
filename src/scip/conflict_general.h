@@ -167,6 +167,11 @@ SCIP_Longint SCIPconflictGetNAppliedConss(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
+/** returns the total number of resolution conflict constraints that were added to the problem */
+SCIP_Longint SCIPconflictGetNAppliedResConss(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
 /** returns the total number of literals in conflict constraints that were added to the problem */
 SCIP_Longint SCIPconflictGetNAppliedLiterals(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
@@ -179,6 +184,11 @@ SCIP_Longint SCIPconflictGetNGlobalChgBds(
 
 /** returns the total number of conflict constraints that were added globally to the problem */
 SCIP_Longint SCIPconflictGetNAppliedGlobalConss(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
+/** returns the total number of resolution conflict constraints that were added globally to the problem */
+SCIP_Longint SCIPconflictGetNAppliedGlobalResConss(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
