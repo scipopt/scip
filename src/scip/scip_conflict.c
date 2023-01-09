@@ -44,6 +44,9 @@
 
 #include "scip/conflict.h"
 #include "scip/debug.h"
+#include "misc.h"
+#include "lp.h"
+#include "var.h"
 #include "scip/pub_cons.h"
 #include "scip/pub_message.h"
 #include "scip/pub_var.h"
@@ -679,8 +682,66 @@ SCIP_RETCODE SCIPanalyzeConflict(
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPanalyzeConflict", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPconflictAnalyze(scip->conflict, scip->mem->probmem, scip->set, scip->stat,
-         scip->transprob, scip->tree, validdepth, success) );
+
+   SCIP_Bool conflictlearned;
+   conflictlearned = FALSE;
+
+   if(validdepth == 0 && SCIPsetGetStage(scip->set) == SCIP_STAGE_SOLVING)
+   {
+      SCIP_Bool isbinary;
+      SCIP_Real lhs;
+
+      isbinary = TRUE;
+      lhs = 1.0;
+
+      /* given the set of bound changes that renders infeasibility
+         create a non-good cut as initial conflict */
+      /** E.g. if x = 1, y = 1, and z = 0 leads to infeasibility then the initial conflict
+       *  constraint is (1 - x) + (1 - y) + z >= 1
+       */
+      for(int i = 0; i < SCIPpqueueNElems(scip->conflict->resbdchgqueue); i++)
+      {
+         SCIP_BDCHGINFO* bdchginfo;
+         bdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueElems(scip->conflict->resbdchgqueue)[i]);
+
+         if( !SCIPvarIsBinary(SCIPbdchginfoGetVar(bdchginfo)) )
+         {
+            isbinary = FALSE;
+            break;
+         }
+         if (SCIPbdchginfoGetNewbound(bdchginfo) == 1.0)
+            lhs--;
+      }
+
+      if( isbinary )
+      {
+         SCIP_ROW* conflictrow;
+
+         SCIP_CALL( SCIProwCreate(&conflictrow, scip->mem->probmem, scip->set, scip->stat, "temprow", 0, NULL, NULL,
+                     lhs, SCIPsetInfinity(scip->set), SCIP_ROWORIGINTYPE_UNSPEC, NULL, FALSE, FALSE, TRUE) );
+
+         for(int i = 0; i < SCIPpqueueNElems(scip->conflict->resbdchgqueue); i++)
+         {
+            SCIP_BDCHGINFO* bdchginfo;
+            SCIP_VAR* var;
+            SCIP_Real coef;
+
+            bdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueElems(scip->conflict->resbdchgqueue)[i]);
+            coef = SCIPbdchginfoGetNewbound(bdchginfo) == 1.0 ? -1.0 : 1.0;
+            var = SCIPbdchginfoGetVar(bdchginfo);
+            SCIP_CALL( SCIPvarAddToRow(var, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,
+            scip->transprob, scip->lp, conflictrow, coef) );
+         }
+
+         SCIP_CALL( SCIPconflictAnalyzeResolution(scip->conflict, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
+                  scip->origprob, scip->tree, scip->reopt, scip->lp, scip->cliquetable, conflictrow, 0, FALSE, FALSE, &conflictlearned) );
+      }
+   }
+   if( !(scip->set->conf_favorresolution) || !(conflictlearned) )
+   {
+      SCIP_CALL( SCIPconflictAnalyze(scip->conflict, scip->mem->probmem, scip->set, scip->stat,
+            scip->transprob, scip->tree, validdepth, success) );
+   }
 
    return SCIP_OKAY;
 }
@@ -717,8 +778,63 @@ SCIP_RETCODE SCIPanalyzeConflictCons(
       conflictrow = SCIPconsCreateRow(scip, cons);
 
       conflictlearned = FALSE;
-      SCIP_CALL( SCIPconflictAnalyzeResolution(scip->conflict, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
-                scip->origprob, scip->tree, scip->reopt, scip->lp, scip->cliquetable, conflictrow, 0, FALSE, FALSE, &conflictlearned) );
+
+      if(conflictrow == NULL && SCIPsetGetStage(scip->set) == SCIP_STAGE_SOLVING)
+      {
+         SCIP_Bool isbinary;
+         SCIP_Real lhs;
+
+         isbinary = TRUE;
+         lhs = 1.0;
+
+         /* given the set of bound changes that renders infeasibility
+            create a non-good cut as initial conflict */
+         /** E.g. if x = 1, y = 1, and z = 0 leads to infeasibility then the initial conflict
+          *  constraint is (1 - x) + (1 - y) + z >= 1
+          */
+         for(int i = 0; i < SCIPpqueueNElems(scip->conflict->resbdchgqueue); i++)
+         {
+            SCIP_BDCHGINFO* bdchginfo;
+            bdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueElems(scip->conflict->resbdchgqueue)[i]);
+
+            if( !SCIPvarIsBinary(SCIPbdchginfoGetVar(bdchginfo)) )
+            {
+               isbinary = FALSE;
+               break;
+            }
+            if (SCIPbdchginfoGetNewbound(bdchginfo) == 1.0)
+               lhs--;
+         }
+
+         if( isbinary )
+         {
+            SCIP_ROW* conflictrow;
+
+            SCIP_CALL( SCIProwCreate(&conflictrow, scip->mem->probmem, scip->set, scip->stat, "temprow", 0, NULL, NULL,
+                        lhs, SCIPsetInfinity(scip->set), SCIP_ROWORIGINTYPE_UNSPEC, NULL, FALSE, FALSE, TRUE) );
+
+            for(int i = 0; i < SCIPpqueueNElems(scip->conflict->resbdchgqueue); i++)
+            {
+               SCIP_BDCHGINFO* bdchginfo;
+               SCIP_VAR* var;
+               SCIP_Real coef;
+
+               bdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueElems(scip->conflict->resbdchgqueue)[i]);
+               coef = SCIPbdchginfoGetNewbound(bdchginfo) == 1.0 ? -1.0 : 1.0;
+               var = SCIPbdchginfoGetVar(bdchginfo);
+               SCIP_CALL( SCIPvarAddToRow(var, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,
+               scip->transprob, scip->lp, conflictrow, coef) );
+            }
+            SCIP_CALL( SCIPconflictAnalyzeResolution(scip->conflict, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
+                        scip->origprob, scip->tree, scip->reopt, scip->lp, scip->cliquetable, conflictrow, 0, FALSE, FALSE, &   conflictlearned) );
+            SCIP_CALL( SCIProwRelease(&conflictrow, scip->mem->probmem, scip->set, scip->lp) );
+            assert(!conflictrow);
+         }
+
+      }
+      else
+         SCIP_CALL( SCIPconflictAnalyzeResolution(scip->conflict, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
+                  scip->origprob, scip->tree, scip->reopt, scip->lp, scip->cliquetable, conflictrow, 0, FALSE, FALSE, &   conflictlearned) );
 
       if( !(scip->set->conf_favorresolution) || !(conflictlearned) )
       {

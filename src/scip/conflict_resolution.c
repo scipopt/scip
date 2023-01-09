@@ -524,7 +524,7 @@ SCIP_BDCHGINFO* conflictFirstCand(
  * in case signs of variables are changed which means that some bdchgs may not be relevant any more
  */
 static
-void conflictCleanUpbdchgqueue(
+void cleanBdchgQueue(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_RESOLUTIONSET*   resolutionset       /**< resolution set */
@@ -1409,7 +1409,7 @@ SCIP_RETCODE computecMIRfromResolutionSet(
 
 /** for every variable in the row, except the inferred variable, add bound changes */
 static
-SCIP_RETCODE addConflictBounds(
+SCIP_RETCODE updateBdchgQueue(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_RESOLUTIONSET*   resolutionset,      /**< resolution set */
@@ -1565,7 +1565,7 @@ SCIP_RETCODE SCIPconflictFlushResolutionSets(
 
    /* todo Maybe remove the maxsize for individual constraints? */
    /* calculate the maximal size of each accepted conflict set */
-   maxsize = transprob->nvars / 2;
+   maxsize = transprob->nvars;
 
    SCIPsetDebugMsg(set, "flushing %d resolution sets at focus depth %d (vd: %d, cd: %d, rd: %d, maxsize: %d)\n",
       1, focusdepth, resolutionset->validdepth, resolutionset->conflictdepth, resolutionset->repropdepth, maxsize);
@@ -2525,7 +2525,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
     * - Ignore & Continue: if we can't explain the bound change, i.e. the reason
     *   is a branching or non-linear then we ignore it and continue with the
     *   next bound change. We have to ignore all other bound changes for
-    *   this variable
+    *   this variable ( @todo resolve with no-good)
     * - if the bound change is resolvable:
     *   * get the reason row for the bound change
     *   * apply coefficient tightening to the reason (maybe also cMIR?)
@@ -2636,7 +2636,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
 
          assert(reasonrow != NULL);
 
-         /* get the resolution set of the conflict row */
+         /* get the resolution set of the reason row */
          SCIP_CALL( reasonResolutionsetFromRow(set, blkmem, reasonrow, reasonresolutionset, bdchginfo) );
 
          /* this happens if the reason is a negated clique found in the knapsack constraint handler */
@@ -2696,11 +2696,12 @@ SCIP_RETCODE conflictAnalyzeResolution(
          SCIPsetDebugMsg(set, "reason resolution set: nnzs: %d, slack: %f \n", resolutionsetGetNNzs(reasonresolutionset), reasonslack);
          SCIPdebug(resolutionsetPrintRow(reasonresolutionset, set, transprob, 2));
 
-
+         assert(SCIPsetIsGE(set, reasonresolutionset->slack, 0.0));
          if ( set->conf_weakenreason && reasonresolutionset->slack > 0.0 )
          {
             SCIP_Real scale;
             scale = computeScaleReason(set, conflictresolutionset, reasonresolutionset, residx, (conflict->nresolutionsets > 0));
+            /* todo resolve here */
             if ( conflictresolutionset->slack + scale * reasonresolutionset->slack > 0.0 )
             {
                int nvarsweakened;
@@ -2733,6 +2734,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
 
          SCIPsetDebugMsg(set, "Slack of resolved row: %f \n", conflictslack);
 
+         /* todo check that we fail for a valid reason */
          if (SCIPsetIsGE(set, conflictslack, 0.0))
             goto TERMINATE;
 
@@ -2749,11 +2751,12 @@ SCIP_RETCODE conflictAnalyzeResolution(
             assert(SCIPsetIsRelLE(set, conflictresolutionset->slack, previousslack));
          }
          /* sort for linear time resolution */
+         /* todo check if we can remove this */
          SCIPsortIntReal(conflictresolutionset->inds, conflictresolutionset->vals, resolutionsetGetNNzs(conflictresolutionset));
          if (SCIPsetIsLT(set, conflictresolutionset->slack, 0.0))
          {
             /* Apply cmir after each iteration to strengthen the conflict constraint */
-            if( set->conf_applycmir || set->conf_applysimplemir)
+            if( set->conf_applycmir || set->conf_applysimplemir )
             {
                int cutnnz;
                SCIP_Real cutrhs;
@@ -2794,9 +2797,9 @@ SCIP_RETCODE conflictAnalyzeResolution(
          /** clean up the queue of bound changes, e.g.
           * if variables get canceled during resolution
           */
-         conflictCleanUpbdchgqueue(conflict, set, conflictresolutionset);
+         cleanBdchgQueue(conflict, set, conflictresolutionset);
 
-         SCIP_CALL( addConflictBounds(set, transprob, conflictresolutionset, bdchgidx) );
+         SCIP_CALL( updateBdchgQueue(set, transprob, conflictresolutionset, bdchgidx) );
 
          /* get the next bound change */
          bdchginfo = conflictFirstCand(conflict);
