@@ -312,7 +312,7 @@ struct SCIP_Set
    SCIP_Longint          limit_totalnodes;   /**< maximal number of total nodes (incl. restarts) to process (-1: no limit) */
    SCIP_Longint          limit_stallnodes;   /**< solving stops, if the given number of nodes was processed since the
                                               *   last improvement of the primal solution value (-1: no limit) */
-   int                   limit_solutions;    /**< solving stops, if the given number of solutions were found (-1: no limit) */
+   int                   limit_solutions;    /**< solving stops, if the given number of solutions were found; this limit is first checked in presolving (-1: no limit) */
    int                   limit_bestsol;      /**< solving stops, if the given number of solution improvements were found
                                               *   (-1: no limit) */
    int                   limit_maxsol;       /**< maximal number of solutions to store in the solution storage */

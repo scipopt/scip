@@ -102,7 +102,7 @@ SCIP_Real SCIPversion(
    void
    )
 {
-   return (SCIP_Real)(SCIP_VERSION)/100.0;
+   return SCIP_VERSION_MAJOR + SCIP_VERSION_MINOR/100.0;  /*lint !e835*/
 }
 
 /** returns SCIP major version
@@ -113,7 +113,7 @@ int SCIPmajorVersion(
    void
    )
 {
-   return SCIP_VERSION/100;
+   return SCIP_VERSION_MAJOR;
 }
 
 /** returns SCIP minor version
@@ -124,7 +124,7 @@ int SCIPminorVersion(
    void
    )
 {
-   return (SCIP_VERSION/10) % 10; /*lint !e778*/
+   return SCIP_VERSION_MINOR;
 }
 
 /** returns SCIP technical version
@@ -135,7 +135,7 @@ int SCIPtechVersion(
    void
    )
 {
-   return SCIP_VERSION % 10; /*lint !e778*/
+   return SCIP_VERSION_PATCH;
 }
 
 /** returns SCIP sub version number

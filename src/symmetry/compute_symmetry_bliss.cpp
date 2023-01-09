@@ -971,9 +971,9 @@ initStaticBlissName( )
 {
    blissname = new char[100];
 #ifdef BLISS_PATCH_PRESENT
-   (void) snprintf(blissname, 100, "bliss %sp", bliss::version);
+   (void) SCIPsnprintf(blissname, 100, "bliss %sp", bliss::version);
 #else
-   (void) snprintf(blissname, 100, "bliss %s", bliss::version);
+   (void) SCIPsnprintf(blissname, 100, "bliss %s", bliss::version);
 #endif
    return blissname;
 }

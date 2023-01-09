@@ -40,7 +40,7 @@ installheaders:
 ifneq ($(INSTALLDIR),)
 		@echo "-> install SCIP headers into INSTALLDIR <$(INSTALLDIR)>"
 		@-install -m 755 -d $(INSTALLDIR)/$(INCLUDEDIR)/scip/ $(INSTALLDIR)/$(INCLUDEDIR)/objscip/ $(INSTALLDIR)/$(INCLUDEDIR)/lpi/ $(INSTALLDIR)/$(INCLUDEDIR)/blockmemshell/ $(INSTALLDIR)/$(INCLUDEDIR)/dijkstra/ $(INSTALLDIR)/$(INCLUDEDIR)/symmetry/ $(INSTALLDIR)/$(INCLUDEDIR)/tclique/ $(INSTALLDIR)/$(INCLUDEDIR)/xml/
-		@-install -m 644 -p $(SRCDIR)/scip/*.h $(INSTALLDIR)/$(INCLUDEDIR)/scip/
+		@-install -m 644 -p $(SRCDIR)/scip/*.h $(SCIPCONFIGHFILE) $(SCIPEXPORTHFILE) $(INSTALLDIR)/$(INCLUDEDIR)/scip/
 		@-install -m 644 -p $(OBJSCIPINCSRC) $(INSTALLDIR)/$(INCLUDEDIR)/objscip/
 		@-install -m 644 -p $(SRCDIR)/lpi/*.h $(INSTALLDIR)/$(INCLUDEDIR)/lpi/
 		@-install -m 644 -p $(SRCDIR)/blockmemshell/*.h $(INSTALLDIR)/$(INCLUDEDIR)/blockmemshell/

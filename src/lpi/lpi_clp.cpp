@@ -1962,7 +1962,7 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
    assert(lpi != NULL);
    assert(lpi->clp != NULL);
 
-   SCIPdebugMessage("calling Clp barrier(): %d cols, %d rows\n", lpi->clp->numberColumns(), lpi->clp->numberRows());
+   SCIPdebugMessage("calling Clp barrier(): %d cols, %d rows; crossover: %u\n", lpi->clp->numberColumns(), lpi->clp->numberRows(), crossover);
 
    invalidateSolution(lpi);
 
@@ -1973,7 +1973,12 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
    */
 
    // call barrier
+#if (CLP_VERSION_MAJOR >= 1 && CLP_VERSION_MINOR > 17) || CLP_VERSION_MAJOR >= 2
+   int startFinishOptions = 1;
+   int status = lpi->clp->barrier(crossover, startFinishOptions);
+#else
    int status = lpi->clp->barrier(crossover);
+#endif
 
    lpi->lastalgorithm = 2;
    lpi->solved = TRUE;

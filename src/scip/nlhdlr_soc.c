@@ -2586,6 +2586,9 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaSoc)
    assert(expr != NULL);
    assert(nlhdlrexprdata != NULL);
 
+   /* already needed for debug solution */
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &nlhdlrexprdata->varvals, nlhdlrexprdata->nvars) );
+
    /* if we have 3 or more terms in lhs create variable and row for disaggregation */
    if( nlhdlrexprdata->nterms > 3 )
    {
@@ -2646,8 +2649,6 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaSoc)
       /* create the disaggregation row and store it in nlhdlrexprdata */
       SCIP_CALL( createDisaggrRow(scip, conshdlr, expr, nlhdlrexprdata) );
    }
-
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &nlhdlrexprdata->varvals, nlhdlrexprdata->nvars) );
 
 #ifdef SCIP_DEBUG
    SCIPdebugMsg(scip, "initlp for \n");
