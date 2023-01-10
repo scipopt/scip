@@ -2234,7 +2234,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphSOS2)
    int i;
    int j;
 
-   sumop = SCIPgetExprhdlrSum(scip);
+   sumop = (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_SUM;
    pairop = (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_TUPLE;
    consdata = SCIPconsGetData(cons);
    assert(sumop != NULL);

@@ -10178,9 +10178,8 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphSOS1)
    int nvars;
    int i;
 
-   sumop = SCIPgetExprhdlrSum(scip);
+   sumop = (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_SUM;
    consdata = SCIPconsGetData(cons);
-   assert(sumop != NULL);
    assert(consdata != NULL);
 
    /* get active variables of the constraint */

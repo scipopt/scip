@@ -10667,7 +10667,6 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphNonlinear)
 {  /*lint --e{715}*/
    SCIP_EXPRITER* it;
    SCIP_EXPRHDLR* sumexprhdlr;
-   SCIP_EXPRHDLR* prodexprhdlr;
    SCIP_EXPR* rootexpr;
    SCIP_EXPR* expr;
    SCIP_VAR** consvars;
@@ -10691,10 +10690,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphNonlinear)
    assert(scip != NULL);
    assert(cons != NULL);
 
-   sumexprhdlr = SCIPgetExprhdlrSum(scip);
-   prodexprhdlr = SCIPgetExprhdlrProduct(scip);
-   assert(sumexprhdlr != NULL);
-   assert(prodexprhdlr != NULL);
+   sumexprhdlr = (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_SUM;
 
    /* get number of nodes in tree */
    expr = SCIPgetExprNonlinear(cons);
@@ -10929,7 +10925,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphNonlinear)
             prodcoef = SCIPgetCoefExprProduct(expr);
 
             SCIP_CALL( SCIPcreateSymgraphNode(scip, *graph, nodecnt, SYM_NODETYPE_OPERATOR,
-                  prodexprhdlr, NULL, -1, 0.0, FALSE, 0.0, 0.0, NULL, NULL) );
+                  SCIPexprGetHdlr(expr), NULL, -1, 0.0, FALSE, 0.0, 0.0, NULL, NULL) );
             SCIP_CALL( SCIPcreateSymgraphEdge(scip, *graph, (*graph)->nodes[parentidx], (*graph)->nodes[nodecnt],
                   FALSE, 0.0) );
             prodidx = nodecnt++;
