@@ -2111,6 +2111,7 @@ SCIP_RETCODE addOneRow(
 {
    SCIP_Real sideval;
    SCIP_Bool uselhs;
+   SCIP_Real QUAD(aggrrowaddval);
    int i;
 
    assert( rowtoolong != NULL );
@@ -2171,7 +2172,9 @@ SCIP_RETCODE addOneRow(
    }
 
    /* add right hand side, update rank and local flag */
-   SCIPquadprecSumQD(aggrrow->rhs, aggrrow->rhs, sideval * weight);
+   SCIPquadprecProdDD(aggrrowaddval, sideval, weight);
+
+   SCIPquadprecSumQQ(aggrrow->rhs, aggrrow->rhs, aggrrowaddval);
    aggrrow->rank = MAX(aggrrow->rank, row->rank);
    aggrrow->local = aggrrow->local || row->local;
 
