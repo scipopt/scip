@@ -735,6 +735,8 @@ SCIP_RETCODE SCIPanalyzeConflict(
 
          SCIP_CALL( SCIPconflictAnalyzeResolution(scip->conflict, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
                   scip->origprob, scip->tree, scip->reopt, scip->lp, scip->cliquetable, conflictrow, 0, FALSE, FALSE, &conflictlearned) );
+         SCIP_CALL( SCIProwRelease(&conflictrow, scip->mem->probmem, scip->set, scip->lp) );
+         assert(!conflictrow);
       }
    }
    if( !(scip->set->conf_favorresolution) || !(conflictlearned) )

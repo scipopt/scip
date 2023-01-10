@@ -1704,26 +1704,25 @@ SCIP_Real computeScaleReason(
    /* find in the reason resolution set the coefficient of the variable we are resolving */
    idxinreason = getCoefInResolutionSet(reasonresolutionset, residx, &coefreas);
 
-   assert(wasresolved || !SCIPsetIsZero(set, coefconf));
-   assert(!SCIPsetIsZero(set, coefreas));
+   assert((idxinconflict && idxinreason));
+   assert(!SCIPsetIsZero(set, coefreas) && !SCIPsetIsZero(set, coefconf));
 
-   if ( wasresolved )
-   {
-      if ( SCIPsetIsZero(set, coefconf) )
-      {
-         SCIPsetDebugMsg(set, "Coefficient of resolvent in conflict is zero");
-         return SCIPsetInfinity(set);
-      }
-      assert((idxinconflict && idxinreason));
-      if (SCIPsetIsGE(set, coefconf * coefreas, 0.0))
-      {
-         SCIPsetDebugMsg(set, "Coefficient of resolvent has the same sign in both conflict and reason");
-         return SCIPsetInfinity(set);
-      }
-   }
+   // if ( wasresolved )
+   // {
+   //    if ( SCIPsetIsZero(set, coefconf) )
+   //    {
+   //       SCIPsetDebugMsg(set, "Coefficient of resolvent in conflict is zero");
+   //       return SCIPsetInfinity(set);
+   //    }
+   //    assert((idxinconflict && idxinreason));
+   //    if (SCIPsetIsGE(set, coefconf * coefreas, 0.0))
+   //    {
+   //       SCIPsetDebugMsg(set, "Coefficient of resolvent has the same sign in both conflict and reason");
+   //       return SCIPsetInfinity(set);
+   //    }
+   // }
 
    assert(coefconf * coefreas < 0);
-   assert((idxinconflict && idxinreason));
 
    scale = REALABS( coefconf / coefreas );
 
@@ -2696,7 +2695,11 @@ SCIP_RETCODE conflictAnalyzeResolution(
          SCIPsetDebugMsg(set, "reason resolution set: nnzs: %d, slack: %f \n", resolutionsetGetNNzs(reasonresolutionset), reasonslack);
          SCIPdebug(resolutionsetPrintRow(reasonresolutionset, set, transprob, 2));
 
-         assert(SCIPsetIsGE(set, reasonresolutionset->slack, 0.0));
+         /** todo add the following: if the slack of the reason is negative, we
+          * can restart conflict analysis with the reason as conflict constraint
+          * (this may happen in depending on the order of propagation)
+          */
+
          if ( set->conf_weakenreason && reasonresolutionset->slack > 0.0 )
          {
             SCIP_Real scale;
