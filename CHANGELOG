@@ -37,6 +37,8 @@ Deleted files
 Unit tests
 ----------
 
+- added new checks for objective, bounds and sides inside the scaling tests in lpi/change.c
+
 Testing
 -------
 
