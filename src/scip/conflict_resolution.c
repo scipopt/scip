@@ -314,7 +314,7 @@ SCIP_RETCODE tightenCoefLhs(
    }
 
    /* propagating constraint cannot be redundant */
-   assert(!SCIPisFeasGE(set->scip, minact, *rowlhs));
+   assert(!SCIPisGE(set->scip, minact, *rowlhs));
 
    /* terminate, because coefficient tightening cannot be performed; also
    excludes the case in which no integral variable is present */
