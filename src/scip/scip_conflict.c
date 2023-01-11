@@ -727,7 +727,7 @@ SCIP_RETCODE SCIPanalyzeConflict(
             SCIP_Real coef;
 
             bdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueElems(scip->conflict->resbdchgqueue)[i]);
-            coef = SCIPbdchginfoGetNewbound(bdchginfo) == 1.0 ? -1.0 : 1.0;
+            coef = SCIPbdchginfoGetNewbound(bdchginfo) > 0.5 ? -1.0 : 1.0;
             var = SCIPbdchginfoGetVar(bdchginfo);
             SCIP_CALL( SCIPvarAddToRow(var, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,
             scip->transprob, scip->lp, conflictrow, coef) );
@@ -822,7 +822,7 @@ SCIP_RETCODE SCIPanalyzeConflictCons(
                SCIP_Real coef;
 
                bdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueElems(scip->conflict->resbdchgqueue)[i]);
-               coef = SCIPbdchginfoGetNewbound(bdchginfo) == 1.0 ? -1.0 : 1.0;
+               coef = SCIPbdchginfoGetNewbound(bdchginfo) > 0.5 ? -1.0 : 1.0;
                var = SCIPbdchginfoGetVar(bdchginfo);
                SCIP_CALL( SCIPvarAddToRow(var, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,
                scip->transprob, scip->lp, conflictrow, coef) );

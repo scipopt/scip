@@ -420,6 +420,7 @@ SCIP_RETCODE SCIPconflictFree(
    SCIPresolutionsetFree(&(*conflict)->resolutionset, blkmem);
    SCIPresolutionsetFree(&(*conflict)->reasonset, blkmem);
    SCIPresolutionsetFree(&(*conflict)->prevresolutionset, blkmem);
+   SCIPresolutionsetFree(&(*conflict)->resolvedresolutionset, blkmem);
    SCIPproofsetFree(&(*conflict)->proofset, blkmem);
 
    BMSfreeMemoryArrayNull(&(*conflict)->conflictsets);

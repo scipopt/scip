@@ -223,6 +223,7 @@ struct SCIP_Conflict
    SCIP_RESOLUTIONSET*   resolutionset;      /**< resolution set for the current conflict */
    SCIP_RESOLUTIONSET*   reasonset;          /**< resolution set for the current reason */
    SCIP_RESOLUTIONSET*   prevresolutionset;  /**< resolution set for the previous conflict */
+   SCIP_RESOLUTIONSET*   resolvedresolutionset;/**< resolution set for the conflict */
    SCIP_RESOLUTIONSET**  resolutionsets;     /**< resolution sets found at the current node */
    SCIP_CONFLICTSET*     conflictset;        /**< bound changes resembling the current conflict set */
    SCIP_CONFLICTSET**    conflictsets;       /**< conflict sets found at the current node */
