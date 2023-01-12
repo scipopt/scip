@@ -2040,6 +2040,7 @@ SCIP_RETCODE SCIPaggrRowAddCustomCons(
    SCIP_Bool             local               /**< is constraint only valid locally */
    )
 {
+   SCIP_Real QUAD(quadprod);
    int i;
 
    assert(weight >= 0.0);
@@ -2058,7 +2059,6 @@ SCIP_RETCODE SCIPaggrRowAddCustomCons(
    /* add the non-zeros to the aggregation row and keep non-zero index up to date */
    for( i = 0 ; i < len; ++i )
    {
-      SCIP_Real QUAD(quadprod);
       SCIP_Real QUAD(val);
       int probindex = inds[i];
 
