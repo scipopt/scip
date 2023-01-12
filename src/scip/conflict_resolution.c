@@ -538,76 +538,73 @@ void cleanBdchgQueue(
    SCIP_BDCHGINFO* bdchginfo;
    SCIP_VAR* var;
 
-   int nelems;
-   int deleted;
    int i;
 
    assert(conflict != NULL);
 
-   nelems = SCIPpqueueNElems(conflict->resbdchgqueue);
-   deleted = 0;
-
-   /* @todo this is inefficient */
-   if( nelems > 0 )
+   for( i = SCIPpqueueNElems(conflict->resbdchgqueue) - 1; i >= 0; --i )
    {
-      for( i = 0; i < nelems; ++i )
+      int j;
+      SCIP_Bool idxinrow;
+      SCIP_Real val;
+      int idxvar;
+
+      bdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueElems(conflict->resbdchgqueue)[i]);
+
+      var = bdchginfo->var;
+      idxvar = SCIPvarGetProbindex(var);
+      idxinrow = FALSE;
+      val = 0.0;
+      for( j = 0; j < resolutionset->nnz; j++ )
       {
-         int j;
-         SCIP_Bool idxinrow;
-         SCIP_Real val;
-         int idxvar;
-
-         bdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueElems(conflict->resbdchgqueue)[i - deleted]);
-         var = bdchginfo->var;
-         idxvar = SCIPvarGetProbindex(var);
-         idxinrow = FALSE;
-         val = 0.0;
-         for( j = 0; j < resolutionset->nnz; j++ )
+         if (resolutionset->inds[j] == idxvar)
          {
-            if (resolutionset->inds[j] == idxvar)
+            idxinrow = TRUE;
+            val = resolutionset->vals[j];
+            assert(!SCIPsetIsZero(set, val));
+            break;
+         }
+      }
+
+      if ( !idxinrow || (SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_UPPER && val < 0) ||
+         (SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER && val > 0) )
+      {
+         SCIPsetDebugMsg(set, " -> Remove bound change <%s> %s %.15g [status:%d, type:%d, depth:%d, pos:%d, reason:<%s>, info:%d] \n",
+            SCIPvarGetName(var),
+            SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
+            SCIPbdchginfoGetNewbound(bdchginfo),
+            SCIPvarGetStatus(var), SCIPvarGetType(var),
+            SCIPbdchginfoGetDepth(bdchginfo), SCIPbdchginfoGetPos(bdchginfo),
+            SCIPbdchginfoGetChgtype(bdchginfo) == SCIP_BOUNDCHGTYPE_BRANCHING ? "branch"
+            : (SCIPbdchginfoGetChgtype(bdchginfo) == SCIP_BOUNDCHGTYPE_CONSINFER
+               ? SCIPconsGetName(SCIPbdchginfoGetInferCons(bdchginfo))
+               : (SCIPbdchginfoGetInferProp(bdchginfo) != NULL ? SCIPpropGetName(SCIPbdchginfoGetInferProp(bdchginfo))
+                  : "none")),
+            SCIPbdchginfoGetChgtype(bdchginfo) != SCIP_BOUNDCHGTYPE_BRANCHING ? SCIPbdchginfoGetInferInfo(bdchginfo) : -1);
+
+            /* mark the bound change to be no longer in the conflict (it will be either added again to the resolution set or
+            * replaced by resolving, which might add a weaker change on the same bound to the queue)
+            */
+            if( SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER )
             {
-               idxinrow = TRUE;
-               val = resolutionset->vals[j];
-               assert(!SCIPsetIsZero(set, val));
-               break;
+               var->conflictlbcount = 0;
+               var->conflictrelaxedlb = SCIP_REAL_MIN;
             }
-         }
+            else
+            {
+               assert(SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_UPPER);
+               var->conflictubcount = 0;
+               var->conflictrelaxedub = SCIP_REAL_MAX;
+            }
 
-         if ( !idxinrow || (SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_UPPER && val < 0) ||
-            (SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER && val > 0) )
-         {
-            SCIPsetDebugMsg(set, " -> Remove bound change <%s> %s %.15g [status:%d, type:%d, depth:%d, pos:%d, reason:<%s>, info:%d] \n",
-               SCIPvarGetName(var),
-               SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
-               SCIPbdchginfoGetNewbound(bdchginfo),
-               SCIPvarGetStatus(var), SCIPvarGetType(var),
-               SCIPbdchginfoGetDepth(bdchginfo), SCIPbdchginfoGetPos(bdchginfo),
-               SCIPbdchginfoGetChgtype(bdchginfo) == SCIP_BOUNDCHGTYPE_BRANCHING ? "branch"
-               : (SCIPbdchginfoGetChgtype(bdchginfo) == SCIP_BOUNDCHGTYPE_CONSINFER
-                  ? SCIPconsGetName(SCIPbdchginfoGetInferCons(bdchginfo))
-                  : (SCIPbdchginfoGetInferProp(bdchginfo) != NULL ? SCIPpropGetName(SCIPbdchginfoGetInferProp(bdchginfo))
-                     : "none")),
-               SCIPbdchginfoGetChgtype(bdchginfo) != SCIP_BOUNDCHGTYPE_BRANCHING ? SCIPbdchginfoGetInferInfo(bdchginfo) : -1);
-
-               /* mark the bound change to be no longer in the conflict (it will be either added again to the resolution set or
-               * replaced by resolving, which might add a weaker change on the same bound to the queue)
-               */
-               if( SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER )
-               {
-                  var->conflictlbcount = 0;
-                  var->conflictrelaxedlb = SCIP_REAL_MIN;
-               }
-               else
-               {
-                  assert(SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_UPPER);
-                  var->conflictubcount = 0;
-                  var->conflictrelaxedub = SCIP_REAL_MAX;
-               }
-
-               SCIPpqueueDelPos(conflict->resbdchgqueue, i - deleted);
-               deleted++;
-               if (i - deleted >= nelems) break;
-         }
+            /* todo fix this hack */
+            if ( i == SCIPpqueueNElems(conflict->resbdchgqueue))
+               SCIPpqueueDelPos(conflict->resbdchgqueue, i);
+            else if ( i != SCIPpqueueNElems(conflict->resbdchgqueue) )
+            {
+               SCIPpqueueDelPos(conflict->resbdchgqueue, i);
+               i = SCIPpqueueNElems(conflict->resbdchgqueue);
+            }
       }
    }
 
@@ -1897,7 +1894,8 @@ SCIP_RETCODE tighteningBasedReduction(
    int                   residx,             /**< index of variable to resolve */
    int*                  nvarsweakened,      /**< number of weakened variables */
    SCIP_Real*            fixbounds,          /**< array of fixed bounds */
-   int*                  fixinds             /**< array of indices of fixed variables */
+   int*                  fixinds,            /**< array of indices of fixed variables */
+   SCIP_Bool*            successresolution   /**< pointer to store whether the resolution was successful */
    )
 {
    SCIP_VAR** vars;
@@ -1906,7 +1904,6 @@ SCIP_RETCODE tighteningBasedReduction(
    int i;
    SCIP_Bool applytightening;
    int nchgcoefs;
-   SCIP_Bool successresolution;
 
    assert(conflict != NULL);
 
@@ -1919,7 +1916,7 @@ SCIP_RETCODE tighteningBasedReduction(
    previousslack = resolutionset->slack;
 
    rescaleAndResolve(set, conflict->resolutionset, resolutionset, conflict->resolvedresolutionset, blkmem, prob,
-                        residx, &successresolution);
+                        residx, successresolution);
 
    while ( SCIPsetIsGE(set, getSlack(set, prob, conflict->resolvedresolutionset, currbdchgidx, fixbounds, fixinds), 0.0) &&         applytightening )
    {
@@ -1976,7 +1973,7 @@ SCIP_RETCODE tighteningBasedReduction(
                SCIPsetDebugMsg(set, "slack after tightening: %g \n", resolutionset->slack);
                assert(SCIPsetIsLE(set, resolutionset->slack, previousslack));
                rescaleAndResolve(set, conflict->resolutionset, resolutionset, conflict->resolvedresolutionset, blkmem, prob,
-                                    residx, &successresolution);
+                                    residx, successresolution);
                break;
                }
          }
@@ -2723,10 +2720,10 @@ SCIP_RETCODE conflictAnalyzeResolution(
          {
              int nvarsweakened;
             SCIPsetDebugMsg(set, " Applying tightening based reduction with resolving variable <%s>\n", SCIPvarGetName(vartoresolve));
-            tighteningBasedReduction(conflict, set, transprob, blkmem, bdchgidx, residx, &nvarsweakened, fixbounds, fixinds );
+            tighteningBasedReduction(conflict, set, transprob, blkmem, bdchgidx, residx, &nvarsweakened, fixbounds, fixinds, &successresolution );
          }
 
-         /** Unfortunately we cannot guarrante that the slack becomes zero after reducing the reason
+         /** Unfortunately we cannot guarrante that the slack becomes zero after reducing the reason (even if we have only binary variables)
           *  TIll now there are two major problems:
           *    - Knapsack constraints that use negated cliques in the propagation
           *    - Ranged row propagation (gcd argument)
