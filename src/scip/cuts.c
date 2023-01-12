@@ -194,7 +194,7 @@ SCIP_RETCODE varVecAddScaledRowCoefsQuad(
       if( QUAD_HI(val) == 0.0 )
          inds[(*nnz)++] = probindex;
 
-      SCIPquadprecProdDD(scaledval, row->vals[i], scale);
+      SCIPquadprecProdDD(scaledrowval, row->vals[i], scale);
       SCIPquadprecSumQQ(val, val, scaledrowval);
 
       /* the value must not be exactly zero due to sparsity pattern */
