@@ -1996,6 +1996,7 @@ SCIP_RETCODE SCIPaggrRowAddObjectiveFunction(
       /* add the non-zeros to the aggregation row and keep non-zero index up to date */
       for( i = 0 ; i < nvars; ++i )
       {
+         SCIP_Real varobj;
          assert(SCIPvarGetProbindex(vars[i]) == i);
 
          /* skip all variables with zero objective coefficient */
@@ -2007,7 +2008,8 @@ SCIP_RETCODE SCIPaggrRowAddObjectiveFunction(
          if( QUAD_HI(val) == 0.0 )
             aggrrow->inds[aggrrow->nnz++] = i;
 
-         SCIPquadprecProdDD(quadprod, scale, SCIPvarGetObj(vars[i]));
+         varobj = SCIPvarGetObj(vars[i]);
+         SCIPquadprecProdDD(quadprod, scale, varobj);
          SCIPquadprecSumQQ(val, val, quadprod);
 
          /* the value must not be exactly zero due to sparsity pattern */
