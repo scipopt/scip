@@ -175,7 +175,6 @@ SCIP_RETCODE varVecAddScaledRowCoefsQuad(
    )
 {
    int i;
-   SCIP_Real QUAD(scaledval);
 
    assert(inds != NULL);
    assert(vals != NULL);
@@ -185,6 +184,7 @@ SCIP_RETCODE varVecAddScaledRowCoefsQuad(
    /* add the non-zeros to the aggregation row and keep non-zero index up to date */
    for( i = 0 ; i < row->len; ++i )
    {
+      SCIP_Real QUAD(scaledrowval);
       SCIP_Real QUAD(val);
       int probindex;
 
@@ -194,8 +194,8 @@ SCIP_RETCODE varVecAddScaledRowCoefsQuad(
       if( QUAD_HI(val) == 0.0 )
          inds[(*nnz)++] = probindex;
 
-      SCIPquadprecProdDD(scaledval, row->vals[i],scale);
-      SCIPquadprecSumQQ(val, val, scaledval);
+      SCIPquadprecProdDD(scaledval, row->vals[i], scale);
+      SCIPquadprecSumQQ(val, val, scaledrowval);
 
       /* the value must not be exactly zero due to sparsity pattern */
       QUAD_HI(val) = NONZERO(QUAD_HI(val));
@@ -2040,7 +2040,6 @@ SCIP_RETCODE SCIPaggrRowAddCustomCons(
    SCIP_Bool             local               /**< is constraint only valid locally */
    )
 {
-   SCIP_Real QUAD(quadprod);
    int i;
 
    assert(weight >= 0.0);
@@ -2059,6 +2058,7 @@ SCIP_RETCODE SCIPaggrRowAddCustomCons(
    /* add the non-zeros to the aggregation row and keep non-zero index up to date */
    for( i = 0 ; i < len; ++i )
    {
+      SCIP_Real QUAD(quadprod);
       SCIP_Real QUAD(val);
       int probindex = inds[i];
 
@@ -4654,7 +4654,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
 #endif
 
       /* compute this: newrhs = mksetrhs + tmpcoefs[k - intstart] * (bestlb - bestub); */
-      SCIPquadprecProdDD(quadprod, tmpcoefs[k - intstart], (bestlb - bestub));
+      SCIPquadprecProdDD(quadprod, tmpcoefs[k - intstart], bestlb - bestub);
       SCIPquadprecSumQQ(newrhs, mksetrhs, quadprod);
       tmpcoefs[k - intstart] = -tmpcoefs[k - intstart];
 
