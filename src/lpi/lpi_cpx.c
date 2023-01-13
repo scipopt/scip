@@ -2883,8 +2883,8 @@ SCIP_RETCODE SCIPlpiStrongbranchesFrac(
    for( j = 0; j < ncols; ++j )
    {
       /* results of CPLEX are valid in any case */
-      *downvalid = TRUE;
-      *upvalid = TRUE;
+      downvalid[j] = TRUE;
+      upvalid[j] = TRUE;
 
       assert( !EPSISINT(psols[j], lpi->feastol) );
    }
