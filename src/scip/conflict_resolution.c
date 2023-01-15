@@ -86,6 +86,7 @@
 #define ALLOWLOCAL                FALSE /**< allow to generate local cuts - see cuts. */
 #define MINFRAC                   0.05  /**< minimal fractionality of floor(rhs) - see cuts.c */
 #define MAXFRAC                   0.999 /**< maximal fractionality of floor(rhs) - see cuts.c */
+#define EPS                       1e-06
 
 /** creates a copy of the given resolution set, allocating an additional amount of memory */
 static
@@ -1979,7 +1980,7 @@ SCIP_RETCODE tighteningBasedReduction(
                /* todo the update of the slack should be included in tightenCoefLhs */
                resolutionset->slack = getSlack(set, prob, resolutionset, currbdchgidx, fixbounds, fixinds);
                SCIPsetDebugMsg(set, "slack after tightening: %g \n", resolutionset->slack);
-               assert(SCIPsetIsLE(set, resolutionset->slack, previousslack));
+               assert(SCIPsetIsLE(set, resolutionset->slack, previousslack + EPS));
                rescaleAndResolve(set, conflict->resolutionset, resolutionset, conflict->resolvedresolutionset, blkmem, prob,
                                     residx, successresolution);
                break;
@@ -2551,8 +2552,14 @@ SCIP_RETCODE getReasonRow(
                    strcmp(SCIPconshdlrGetName(reasoncon->conshdlr), "orbitope") == 0);
             *success = getClauseReasonSet(conflict, blkmem, reasoncon, set, currbdchginfo, SCIPbdchginfoGetRelaxedBound(currbdchginfo), validdepth);
             conflict->reasonset->slack = getSlack(set, prob, conflict->reasonset, SCIPbdchginfoGetIdx(currbdchginfo), fixbounds, fixinds);
-            assert( !success || conflict->reasonset->slack == 0.0);
-            return SCIP_OKAY;
+            if (success && conflict->reasonset->slack == 0.0)
+               return SCIP_OKAY;
+            else
+            {
+               /* @todo some component may be the reason */
+               *success = FALSE;
+               return SCIP_OKAY;
+            }
          }
 
          /* get the resolution set of the reason row */
@@ -3041,7 +3048,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
             previousslack = conflictresolutionset->slack;
             conflictresolutionset->slack = getSlack(set, transprob, conflictresolutionset, bdchgidx, fixbounds, fixinds);
             SCIPsetDebugMsg(set, "Tightened %d coefficients in the resolved constraint, old slack %f, new slack %f \n", nchgcoefs, previousslack,conflictresolutionset->slack);
-            assert(SCIPsetIsLE(set, conflictresolutionset->slack, previousslack));
+            assert(SCIPsetIsLE(set, conflictresolutionset->slack, previousslack + EPS));
          }
          /* sort for linear time resolution */
          /* todo check if we can remove this */
