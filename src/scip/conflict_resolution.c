@@ -2432,6 +2432,7 @@ static
 SCIP_Bool getClauseReasonSet(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_PROB*            prob,               /**< problem data */
    SCIP_CONS*            cons,               /**< constraint to get the reason set for */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_BDCHGINFO*       currbdchginfo,      /**< bound change to resolve */
@@ -2455,7 +2456,7 @@ SCIP_Bool getClauseReasonSet(
       SCIPsetDebugMsg(set, "Could not obtain a reason set \n");
       return FALSE;
    }
-   if(validdepth == 0)
+   else if(validdepth == 0)
    {
       SCIP_Bool isbinary;
       SCIP_Real lhs;
@@ -2484,12 +2485,25 @@ SCIP_Bool getClauseReasonSet(
 
       if( isbinary )
       {
+         int nvars;
          conflict->reasonset->nnz = SCIPpqueueNElems(conflict->separatebdchgqueue) + 1;
          conflict->reasonset->lhs = lhs;
          conflict->reasonset->origlhs = lhs;
          conflict->reasonset->origrhs = SCIPsetInfinity(set);
 
-         if( conflict->reasonset->size < conflict->reasonset->nnz )
+         nvars = SCIPprobGetNVars(prob);
+         if( conflict->reasonset->size == 0 )
+         {
+            assert(conflict->reasonset->vals == NULL);
+            assert(conflict->reasonset->inds == NULL);
+
+            /* todo the next line is a temporay fix for the vector size */
+            conflict->reasonset->size = nvars;
+            SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &conflict->reasonset->vals, nvars) );
+            SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &conflict->reasonset->inds, nvars) );
+         }
+
+         else if( conflict->reasonset->size < conflict->reasonset->nnz )
          {
             conflict->reasonset->size = conflict->reasonset->nnz;
             SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &conflict->reasonset->vals, conflict->reasonset->size, conflict->reasonset->nnz) );
@@ -2497,8 +2511,8 @@ SCIP_Bool getClauseReasonSet(
          }
          /* add the variable we are resolving and update lhs */
          conflict->reasonset->vals[0] = SCIPbdchginfoGetNewbound(currbdchginfo) > 0.5 ? 1.0 : -1.0;
-         conflict->reasonset->lhs += SCIPbdchginfoGetNewbound(currbdchginfo) > 0.5 ? 0.0 : -1.0;
          conflict->reasonset->inds[0] = SCIPvarGetProbindex(SCIPbdchginfoGetVar(currbdchginfo));
+         conflict->reasonset->lhs += SCIPbdchginfoGetNewbound(currbdchginfo) > 0.5 ? 0.0 : -1.0;
 
          for( int i = 0; i < conflict->reasonset->nnz - 1; i++ )
          {
@@ -2507,6 +2521,11 @@ SCIP_Bool getClauseReasonSet(
             conflict->reasonset->vals[i+1] = SCIPbdchginfoGetNewbound(bdchginfo) > 0.5 ? -1.0 : 1.0;
             conflict->reasonset->inds[i+1] = SCIPvarGetProbindex(SCIPbdchginfoGetVar(bdchginfo));
          }
+      }
+      else
+      {
+         SCIPsetDebugMsg(set, "Could not obtain a reason set \n");
+         return FALSE;
       }
    }
    return TRUE;
@@ -2526,7 +2545,7 @@ SCIP_RETCODE getReasonRow(
    SCIP_Bool*            success             /**< pointer to store whether we could get a linear reason */
 )
 {
-   assert(success!= NULL);
+   assert(success !=  NULL);
 
    if (bdchginfoIsResolvable(currbdchginfo))
    {
@@ -2542,6 +2561,7 @@ SCIP_RETCODE getReasonRow(
             return SCIP_OKAY;
          }
 
+         *success = TRUE;
          /* get the corresponding reason row */
          reasonrow = SCIPconsCreateRow(set->scip, reasoncon);
 
@@ -2550,10 +2570,14 @@ SCIP_RETCODE getReasonRow(
          {
             assert(strcmp(SCIPconshdlrGetName(reasoncon->conshdlr), "orbisack") == 0 ||
                    strcmp(SCIPconshdlrGetName(reasoncon->conshdlr), "orbitope") == 0);
-            *success = getClauseReasonSet(conflict, blkmem, reasoncon, set, currbdchginfo, SCIPbdchginfoGetRelaxedBound(currbdchginfo), validdepth);
+            *success = getClauseReasonSet(conflict, blkmem, prob, reasoncon, set, currbdchginfo, SCIPbdchginfoGetRelaxedBound(currbdchginfo), validdepth);
+            assert(conflict->reasonset->nnz > 1);
             conflict->reasonset->slack = getSlack(set, prob, conflict->reasonset, SCIPbdchginfoGetIdx(currbdchginfo), fixbounds, fixinds);
             if (success && conflict->reasonset->slack == 0.0)
+            {
+               *success = TRUE;
                return SCIP_OKAY;
+            }
             else
             {
                /* @todo some component may be the reason */
@@ -2576,7 +2600,7 @@ SCIP_RETCODE getReasonRow(
          else if(SCIPsetIsInfinity(set, -conflict->reasonset->lhs) || SCIPsetIsInfinity(set, conflict->reasonset->lhs))
          {
             /* to be able to continue we construct a linearized clause as reason */
-            *success = getClauseReasonSet(conflict, blkmem, reasoncon, set, currbdchginfo, SCIPbdchginfoGetRelaxedBound(currbdchginfo), validdepth);
+            *success = getClauseReasonSet(conflict, blkmem, prob, reasoncon, set, currbdchginfo, SCIPbdchginfoGetRelaxedBound(currbdchginfo), validdepth);
             return SCIP_OKAY;
 
          }
@@ -2595,7 +2619,7 @@ SCIP_RETCODE getReasonRow(
             {
                if (strcmp(SCIPconshdlrGetName(reasoncon->conshdlr), "knapsack") == 0)
                {
-                  *success = getClauseReasonSet(conflict, blkmem, reasoncon, set, currbdchginfo, SCIPbdchginfoGetRelaxedBound(currbdchginfo), validdepth);
+                  *success = getClauseReasonSet(conflict, blkmem, prob, reasoncon, set, currbdchginfo, SCIPbdchginfoGetRelaxedBound(currbdchginfo), validdepth);
                   return SCIP_OKAY;
                }
             }
@@ -2604,7 +2628,7 @@ SCIP_RETCODE getReasonRow(
                assert(!SCIPsetIsZero(set, coef));
                if (strcmp(SCIPconshdlrGetName(reasoncon->conshdlr), "knapsack") == 0)
                {
-                  *success = getClauseReasonSet(conflict, blkmem, reasoncon, set, currbdchginfo, SCIPbdchginfoGetRelaxedBound(currbdchginfo), validdepth);
+                  *success = getClauseReasonSet(conflict, blkmem, prob, reasoncon, set, currbdchginfo, SCIPbdchginfoGetRelaxedBound(currbdchginfo), validdepth);
                   return SCIP_OKAY;
                }
             }
