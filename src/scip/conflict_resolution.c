@@ -2571,17 +2571,14 @@ SCIP_RETCODE getReasonRow(
             assert(strcmp(SCIPconshdlrGetName(reasoncon->conshdlr), "orbisack") == 0 ||
                    strcmp(SCIPconshdlrGetName(reasoncon->conshdlr), "orbitope") == 0);
             *success = getClauseReasonSet(conflict, blkmem, prob, reasoncon, set, currbdchginfo, SCIPbdchginfoGetRelaxedBound(currbdchginfo), validdepth);
-            assert(conflict->reasonset->nnz > 1);
-            conflict->reasonset->slack = getSlack(set, prob, conflict->reasonset, SCIPbdchginfoGetIdx(currbdchginfo), fixbounds, fixinds);
-            if (success && conflict->reasonset->slack == 0.0)
+            if (success)
             {
-               *success = TRUE;
+               conflict->reasonset->slack = getSlack(set, prob, conflict->reasonset, SCIPbdchginfoGetIdx(currbdchginfo), fixbounds, fixinds);
                return SCIP_OKAY;
             }
             else
             {
                /* @todo some component may be the reason */
-               *success = FALSE;
                return SCIP_OKAY;
             }
          }
