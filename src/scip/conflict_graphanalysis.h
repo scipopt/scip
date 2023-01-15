@@ -356,7 +356,8 @@ SCIP_RETCODE SCIPconflictAddBound(
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_BOUNDTYPE        boundtype,          /**< type of bound that was changed: lower or upper bound */
-   SCIP_BDCHGIDX*        bdchgidx            /**< bound change index (time stamp of bound change), or NULL for current time */
+   SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index (time stamp of bound change), or NULL for current time */
+   SCIP_Bool             separatequeue       /**< should the variable be added to the separate conflict queue? */
    );
 
 /** adds variable's bound to conflict candidate queue with the additional information of a relaxed bound */

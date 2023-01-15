@@ -290,11 +290,11 @@ SCIP_RETCODE SCIPaddRow(
 
                   if ( val > 0.0 )
                   {
-                     SCIP_CALL( SCIPaddConflictUb(scip, var, NULL) );
+                     SCIP_CALL( SCIPaddConflictUb(scip, var, NULL, FALSE) );
                   }
                   else
                   {
-                     SCIP_CALL( SCIPaddConflictLb(scip, var, NULL) );
+                     SCIP_CALL( SCIPaddConflictLb(scip, var, NULL, FALSE) );
                   }
                }
             }
@@ -316,11 +316,11 @@ SCIP_RETCODE SCIPaddRow(
 
                   if ( val > 0.0 )
                   {
-                     SCIP_CALL( SCIPaddConflictLb(scip, var, NULL) );
+                     SCIP_CALL( SCIPaddConflictLb(scip, var, NULL, FALSE) );
                   }
                   else
                   {
-                     SCIP_CALL( SCIPaddConflictUb(scip, var, NULL) );
+                     SCIP_CALL( SCIPaddConflictUb(scip, var, NULL, FALSE) );
                   }
                }
             }

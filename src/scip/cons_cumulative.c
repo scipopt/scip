@@ -2706,8 +2706,8 @@ SCIP_RETCODE resolvePropagationCoretimes(
          }
          else
          {
-            SCIP_CALL( SCIPaddConflictLb(scip, var, bdchgidx) );
-            SCIP_CALL( SCIPaddConflictUb(scip, var, bdchgidx) );
+            SCIP_CALL( SCIPaddConflictLb(scip, var, bdchgidx, FALSE) );
+            SCIP_CALL( SCIPaddConflictUb(scip, var, bdchgidx, FALSE) );
          }
 
          if( explanation != NULL )
@@ -2987,7 +2987,7 @@ SCIP_RETCODE analyzeEnergyRequirement(
             }
             else
             {
-               SCIP_CALL( SCIPaddConflictUb(scip, var, bdchgidx) );
+               SCIP_CALL( SCIPaddConflictUb(scip, var, bdchgidx, FALSE) );
             }
          }
          else
@@ -3034,7 +3034,7 @@ SCIP_RETCODE analyzeEnergyRequirement(
             }
             else
             {
-               SCIP_CALL( SCIPaddConflictLb(scip, var, bdchgidx) );
+               SCIP_CALL( SCIPaddConflictLb(scip, var, bdchgidx, FALSE) );
             }
          }
 
@@ -3272,7 +3272,7 @@ SCIP_RETCODE respropCumulativeCondition(
          else
          {
             /* old upper bound of variable itself is part of the explanation */
-            SCIP_CALL( SCIPaddConflictUb(scip, infervar, bdchgidx) );
+            SCIP_CALL( SCIPaddConflictUb(scip, infervar, bdchgidx, FALSE) );
          }
       }
       else
@@ -3286,7 +3286,7 @@ SCIP_RETCODE respropCumulativeCondition(
          else
          {
             /* old lower bound of variable itself is part of the explanation */
-            SCIP_CALL( SCIPaddConflictLb(scip, infervar, bdchgidx) );
+            SCIP_CALL( SCIPaddConflictLb(scip, infervar, bdchgidx, FALSE) );
          }
       }
 
@@ -3991,8 +3991,8 @@ SCIP_RETCODE analyseInfeasibelCoreInsertion(
       }
       else
       {
-         SCIP_CALL( SCIPaddConflictLb(scip, infervar, NULL) );
-         SCIP_CALL( SCIPaddConflictUb(scip, infervar, NULL) );
+         SCIP_CALL( SCIPaddConflictLb(scip, infervar, NULL, FALSE) );
+         SCIP_CALL( SCIPaddConflictUb(scip, infervar, NULL, FALSE) );
       }
 
       *initialized = TRUE;
@@ -4530,7 +4530,7 @@ SCIP_RETCODE tightenLbTTEF(
          SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
 
          /* added to upper bound (which was overcut be new lower bound) of the variable */
-         SCIP_CALL( SCIPaddConflictUb(scip, var, NULL) );
+         SCIP_CALL( SCIPaddConflictUb(scip, var, NULL, FALSE) );
 
          /* analyze the infeasible */
          SCIP_CALL( analyzeEnergyRequirement(scip, nvars, vars, durations, demands, capacity,
@@ -4644,7 +4644,7 @@ SCIP_RETCODE tightenUbTTEF(
          SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
 
          /* added to lower bound (which was undercut be new upper bound) of the variable */
-         SCIP_CALL( SCIPaddConflictLb(scip, var, NULL) );
+         SCIP_CALL( SCIPaddConflictLb(scip, var, NULL, FALSE) );
 
          /* analyze the infeasible */
          SCIP_CALL( analyzeEnergyRequirement(scip, nvars, vars, durations, demands, capacity,
@@ -4984,7 +4984,7 @@ SCIP_RETCODE propagateUbTTEF(
                   relaxedbd = lst + 1.0;
 
                   /* added to upper bound (which was overcut be new lower bound) of the variable */
-                  SCIP_CALL( SCIPaddConflictUb(scip, vars[lbcand], NULL) );
+                  SCIP_CALL( SCIPaddConflictUb(scip, vars[lbcand], NULL, FALSE) );
 
                   SCIP_CALL( analyzeEnergyRequirement(scip, nvars, vars, durations, demands, capacity,
                         begin, end, vars[lbcand], SCIP_BOUNDTYPE_LOWER, NULL, relaxedbd,
@@ -5315,7 +5315,7 @@ SCIP_RETCODE propagateLbTTEF(
                   relaxedbd = ect - duration - 1.0;
 
                   /* added to lower bound (which was undercut be new upper bound) of the variable */
-                  SCIP_CALL( SCIPaddConflictUb(scip, vars[ubcand], NULL) );
+                  SCIP_CALL( SCIPaddConflictUb(scip, vars[ubcand], NULL, FALSE) );
 
                   SCIP_CALL( analyzeEnergyRequirement(scip, nvars, vars, durations, demands, capacity,
                         begin, end, vars[ubcand], SCIP_BOUNDTYPE_UPPER, NULL, relaxedbd,
@@ -5523,7 +5523,7 @@ SCIP_RETCODE propagateTTEF(
             assert(begin < end);
 
             /* added to lower bound (which was undercut be new upper bound) of the variable */
-            SCIP_CALL( SCIPaddConflictLb(scip, var, NULL) );
+            SCIP_CALL( SCIPaddConflictLb(scip, var, NULL, FALSE) );
 
             /* analysis the upper bound change */
             SCIP_CALL( analyzeEnergyRequirement(scip, nvars, vars, durations, demands, capacity,
@@ -6551,8 +6551,8 @@ SCIP_RETCODE analyzeConflictOverload(
       }
       else
       {
-         SCIP_CALL( SCIPaddConflictLb(scip, nodedata->var, NULL) );
-         SCIP_CALL( SCIPaddConflictUb(scip, nodedata->var, NULL) );
+         SCIP_CALL( SCIPaddConflictLb(scip, nodedata->var, NULL, FALSE) );
+         SCIP_CALL( SCIPaddConflictUb(scip, nodedata->var, NULL, FALSE) );
       }
 
       if( explanation != NULL )
@@ -6772,8 +6772,8 @@ SCIP_RETCODE inferboundsEdgeFinding(
                   SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
 
                   /* add lower and upper bound of variable which leads to the infeasibilty */
-                  SCIP_CALL( SCIPaddConflictLb(scip, leafdata->var, NULL) );
-                  SCIP_CALL( SCIPaddConflictUb(scip, leafdata->var, NULL) );
+                  SCIP_CALL( SCIPaddConflictLb(scip, leafdata->var, NULL, FALSE) );
+                  SCIP_CALL( SCIPaddConflictUb(scip, leafdata->var, NULL, FALSE) );
 
                   if( explanation != NULL )
                      explanation[leafdata->idx] = TRUE;
@@ -6784,8 +6784,8 @@ SCIP_RETCODE inferboundsEdgeFinding(
                      nodedata = (SCIP_NODEDATA*)SCIPbtnodeGetData(omegaset[i]);
                      assert(nodedata != NULL);
 
-                     SCIP_CALL( SCIPaddConflictLb(scip, nodedata->var, NULL) );
-                     SCIP_CALL( SCIPaddConflictUb(scip, nodedata->var, NULL) );
+                     SCIP_CALL( SCIPaddConflictLb(scip, nodedata->var, NULL, FALSE) );
+                     SCIP_CALL( SCIPaddConflictUb(scip, nodedata->var, NULL, FALSE) );
 
                      if( explanation != NULL )
                         explanation[nodedata->idx] = TRUE;

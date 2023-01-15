@@ -3736,8 +3736,8 @@ SCIP_RETCODE propIndicator(
       /* perform conflict analysis */
       SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
 
-      SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->binvar) );
-      SCIP_CALL( SCIPaddConflictLb(scip, consdata->slackvar, NULL) );
+      SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->binvar, FALSE) );
+      SCIP_CALL( SCIPaddConflictLb(scip, consdata->slackvar, NULL, FALSE) );
       SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
 
       return SCIP_OKAY;
@@ -6537,7 +6537,7 @@ SCIP_DECL_CONSRESPROP(consRespropIndicator)
       assert( SCIPgetVarLbAtIndex(scip, consdata->binvar, bdchgidx, FALSE) > 0.5 );
       assert( infervar != consdata->binvar );
 
-      SCIP_CALL( SCIPaddConflictLb(scip, consdata->binvar, bdchgidx) );
+      SCIP_CALL( SCIPaddConflictLb(scip, consdata->binvar, bdchgidx, FALSE) );
    }
    else if ( inferinfo == 1 )
    {
@@ -6546,14 +6546,14 @@ SCIP_DECL_CONSRESPROP(consRespropIndicator)
       /* Use a weaker comparison to SCIPvarGetLbAtIndex here (i.e., SCIPisPositive instead of SCIPisFeasPositive),
        * because SCIPvarGetLbAtIndex might differ from the local bound at time bdchgidx by epsilon. */
       assert( SCIPisPositive(scip, SCIPgetVarLbAtIndex(scip, consdata->slackvar, bdchgidx, FALSE)) );
-      SCIP_CALL( SCIPaddConflictLb(scip, consdata->slackvar, bdchgidx) );
+      SCIP_CALL( SCIPaddConflictLb(scip, consdata->slackvar, bdchgidx, FALSE) );
    }
    else
    {
       assert( inferinfo == 2 );
       assert( SCIPisFeasZero(scip, SCIPgetVarUbAtIndex(scip, consdata->slackvar, bdchgidx, FALSE)) );
       assert( SCIPconshdlrGetData(conshdlr)->dualreductions && SCIPallowStrongDualReds(scip) && SCIPallowWeakDualReds(scip) );
-      SCIP_CALL( SCIPaddConflictUb(scip, consdata->slackvar, bdchgidx) );
+      SCIP_CALL( SCIPaddConflictUb(scip, consdata->slackvar, bdchgidx, FALSE) );
    }
    *result = SCIP_SUCCESS;
 

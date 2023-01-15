@@ -357,15 +357,17 @@ SCIP_RETCODE SCIPinitConflictAnalysis(
 SCIP_RETCODE SCIPaddConflictLb(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable whose lower bound should be added to conflict candidate queue */
-   SCIP_BDCHGIDX*        bdchgidx            /**< bound change index representing time on path to current node, when the
+   SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node, when the
                                               *   conflicting bound was valid, NULL for current local bound */
+   SCIP_Bool             separatequeue       /**< should the bound change be added to the separate conflict queue? */
+
    )
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPaddConflictLb", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    assert( var->scip == scip );
 
-   SCIP_CALL( SCIPconflictAddBound(scip->conflict, scip->mem->probmem, scip->set, scip->stat, var, SCIP_BOUNDTYPE_LOWER, bdchgidx) );
+   SCIP_CALL( SCIPconflictAddBound(scip->conflict, scip->mem->probmem, scip->set, scip->stat, var, SCIP_BOUNDTYPE_LOWER, bdchgidx, separatequeue) );
 
    return SCIP_OKAY;
 }
@@ -424,15 +426,16 @@ SCIP_RETCODE SCIPaddConflictRelaxedLb(
 SCIP_RETCODE SCIPaddConflictUb(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable whose upper bound should be added to conflict candidate queue */
-   SCIP_BDCHGIDX*        bdchgidx            /**< bound change index representing time on path to current node, when the
+   SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node, when the
                                               *   conflicting bound was valid, NULL for current local bound */
+   SCIP_Bool             separatequeue       /**< should the bound change be added to the separate conflict queue? */
    )
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPaddConflictUb", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    assert( var->scip == scip );
 
-   SCIP_CALL( SCIPconflictAddBound(scip->conflict, scip->mem->probmem, scip->set, scip->stat, var, SCIP_BOUNDTYPE_UPPER, bdchgidx) );
+   SCIP_CALL( SCIPconflictAddBound(scip->conflict, scip->mem->probmem, scip->set, scip->stat, var, SCIP_BOUNDTYPE_UPPER, bdchgidx, separatequeue) );
 
    return SCIP_OKAY;
 }
@@ -501,7 +504,7 @@ SCIP_RETCODE SCIPaddConflictBd(
 
    assert( var->scip == scip );
 
-   SCIP_CALL( SCIPconflictAddBound(scip->conflict, scip->mem->probmem, scip->set, scip->stat, var, boundtype, bdchgidx) );
+   SCIP_CALL( SCIPconflictAddBound(scip->conflict, scip->mem->probmem, scip->set, scip->stat, var, boundtype, bdchgidx, FALSE) );
 
    return SCIP_OKAY;
 }
@@ -560,7 +563,8 @@ SCIP_RETCODE SCIPaddConflictRelaxedBd(
  */
 SCIP_RETCODE SCIPaddConflictBinvar(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             var                 /**< binary variable whose changed bound should be added to conflict queue */
+   SCIP_VAR*             var,                /**< binary variable whose changed bound should be added to conflict queue */
+   SCIP_Bool             separatequeue       /**< should the variable be added to the separate conflict queue? */
    )
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPaddConflictBinvar", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
@@ -570,11 +574,11 @@ SCIP_RETCODE SCIPaddConflictBinvar(
 
    if( SCIPvarGetLbLocal(var) > 0.5 )
    {
-      SCIP_CALL( SCIPconflictAddBound(scip->conflict, scip->mem->probmem, scip->set, scip->stat, var, SCIP_BOUNDTYPE_LOWER, NULL) );
+      SCIP_CALL( SCIPconflictAddBound(scip->conflict, scip->mem->probmem, scip->set, scip->stat, var, SCIP_BOUNDTYPE_LOWER, NULL, separatequeue) );
    }
    else if( SCIPvarGetUbLocal(var) < 0.5 )
    {
-      SCIP_CALL( SCIPconflictAddBound(scip->conflict, scip->mem->probmem, scip->set, scip->stat, var, SCIP_BOUNDTYPE_UPPER, NULL) );
+      SCIP_CALL( SCIPconflictAddBound(scip->conflict, scip->mem->probmem, scip->set, scip->stat, var, SCIP_BOUNDTYPE_UPPER, NULL,separatequeue) );
    }
 
    return SCIP_OKAY;

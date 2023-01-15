@@ -2050,7 +2050,7 @@ SCIP_RETCODE analyzeConflictZero(
 
    for( v = 0; v < consdata->nvars; ++v )
    {
-      SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[v]) );
+      SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[v], FALSE) );
    }
 
    /* analyze the conflict */
@@ -2089,7 +2089,7 @@ SCIP_RETCODE analyzeConflictOne(
    {
       if( SCIPvarGetLbLocal(consdata->vars[v]) > 0.5 )
       {
-         SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[v]) );
+         SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[v], FALSE) );
          n++;
       }
    }
@@ -8489,7 +8489,7 @@ SCIP_DECL_CONSRESPROP(consRespropSetppc)
          {
             /* the reason variable must be assigned to zero */
             assert(SCIPgetVarUbAtIndex(scip, consdata->vars[v], bdchgidx, FALSE) < 0.5);
-            SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[v]) );
+            SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[v], FALSE) );
          }
 #ifndef NDEBUG
          else
@@ -8511,7 +8511,7 @@ SCIP_DECL_CONSRESPROP(consRespropSetppc)
       if( inferinfo >= 0 )
       {
          assert(SCIPgetVarLbAtIndex(scip, consdata->vars[inferinfo], bdchgidx, FALSE) > 0.5);
-         SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[inferinfo]) );
+         SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[inferinfo], FALSE) );
       }
       else
       {
@@ -8519,7 +8519,7 @@ SCIP_DECL_CONSRESPROP(consRespropSetppc)
          {
             if( SCIPgetVarLbAtIndex(scip, consdata->vars[v], bdchgidx, FALSE) > 0.5 )
             {
-               SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[v]) );
+               SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[v], FALSE) );
                break;
             }
          }

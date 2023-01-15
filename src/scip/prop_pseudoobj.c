@@ -1861,7 +1861,7 @@ SCIP_RETCODE addConflictBounds(
       if( SCIPisGT(scip, loclb, glblb) )
       {
          SCIPdebugMsg(scip, "  add bound change <%s>[%g] >= <%g>\n", SCIPvarGetName(var), objval, loclb);
-         SCIP_CALL( SCIPaddConflictLb(scip, var, bdchgidx) );
+         SCIP_CALL( SCIPaddConflictLb(scip, var, bdchgidx, FALSE) );
 
          /* hard comparison  is enough to make requiredpseudoobjval nonincreasing */
          assert((loclb - glblb) * objval > 0.0);
@@ -1882,7 +1882,7 @@ SCIP_RETCODE addConflictBounds(
       if( SCIPisLT(scip, locub, glbub) )
       {
          SCIPdebugMsg(scip, "  add bound change <%s>[%g] <= <%g>\n", SCIPvarGetName(var), objval, locub);
-         SCIP_CALL( SCIPaddConflictUb(scip, var, bdchgidx) );
+         SCIP_CALL( SCIPaddConflictUb(scip, var, bdchgidx, FALSE) );
 
          /* hard comparison  is enough to make requiredpseudoobjval nonincreasing */
          assert((locub - glbub) * objval > 0.0);
@@ -1985,7 +1985,7 @@ SCIP_RETCODE addConflictBinvar(
       if( foundimplics || SCIPisPositive(scip, objval) )
       {
          SCIPdebugMsg(scip, "  add bound change <%s>[%g] >= <%g> bdchgidx [%g,%g]\n", SCIPvarGetName(var), objval, lb, lb, ub);
-         SCIP_CALL( SCIPaddConflictLb(scip, var, NULL) );
+         SCIP_CALL( SCIPaddConflictLb(scip, var, NULL, FALSE) );
 
          (*reqpseudoobjval) -= MAX(0.0, objval);
 
@@ -2011,7 +2011,7 @@ SCIP_RETCODE addConflictBinvar(
       if( foundimplics || SCIPisNegative(scip, objval) )
       {
          SCIPdebugMsg(scip, "  add bound change <%s>[%g] <= <%g> bdchgidx=[%g,%g]\n", SCIPvarGetName(var), objval, ub, lb, ub);
-         SCIP_CALL( SCIPaddConflictUb(scip, var, NULL) );
+         SCIP_CALL( SCIPaddConflictUb(scip, var, NULL, FALSE) );
 
          (*reqpseudoobjval) +=  MIN(0.0, objval);
 

@@ -302,7 +302,7 @@ SCIP_RETCODE consdataCatchEvents(
    assert(consdata != NULL);
 
    /* catch bound change events for both bounds on resultant variable */
-   SCIP_CALL( SCIPcatchVarEvent(scip, consdata->resvar, SCIP_EVENTTYPE_BOUNDCHANGED, 
+   SCIP_CALL( SCIPcatchVarEvent(scip, consdata->resvar, SCIP_EVENTTYPE_BOUNDCHANGED,
          eventhdlr, (SCIP_EVENTDATA*)consdata, NULL) );
 
    /* catch tightening events for upper bound and relaxed events for lower bounds on operator variables */
@@ -1280,8 +1280,8 @@ SCIP_RETCODE analyzeConflictOne(
    /* initialize conflict analysis, and add resultant and single operand variable to conflict candidate queue */
    SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
 
-   SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->resvar) );
-   SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[falsepos]) );
+   SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->resvar, FALSE) );
+   SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[falsepos], FALSE) );
 
    /* analyze the conflict */
    SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
@@ -1312,11 +1312,11 @@ SCIP_RETCODE analyzeConflictZero(
    /* initialize conflict analysis, and add all variables of infeasible constraint to conflict candidate queue */
    SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
 
-   SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->resvar) );
+   SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->resvar, FALSE) );
    for( v = 0; v < consdata->nvars; ++v )
    {
       assert(SCIPvarGetLbLocal(consdata->vars[v]) > 0.5);
-      SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[v]) );
+      SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[v], FALSE) );
    }
 
    /* analyze the conflict */
@@ -1985,7 +1985,7 @@ SCIP_RETCODE resolvePropagation(
       {
          if( SCIPgetVarUbAtIndex(scip, vars[i], bdchgidx, FALSE) < 0.5 )
          {
-            SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i]) );
+            SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i], FALSE) );
             break;
          }
       }
@@ -1997,7 +1997,7 @@ SCIP_RETCODE resolvePropagation(
       /* the operand variable was infered to TRUE, because the resultant was TRUE */
       assert(SCIPgetVarLbAtIndex(scip, infervar, bdchgidx, TRUE) > 0.5);
       assert(SCIPgetVarLbAtIndex(scip, consdata->resvar, bdchgidx, FALSE) > 0.5);
-      SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->resvar) );
+      SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->resvar, FALSE) );
       *result = SCIP_SUCCESS;
       break;
 
@@ -2008,7 +2008,7 @@ SCIP_RETCODE resolvePropagation(
       for( i = 0; i < nvars; ++i )
       {
          assert(SCIPgetVarLbAtIndex(scip, vars[i], bdchgidx, FALSE) > 0.5);
-         SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i]) );
+         SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i], FALSE) );
       }
       *result = SCIP_SUCCESS;
       break;
@@ -2017,13 +2017,13 @@ SCIP_RETCODE resolvePropagation(
       /* the operand variable was infered to FALSE, because the resultant was FALSE and all other operands were TRUE */
       assert(SCIPgetVarUbAtIndex(scip, infervar, bdchgidx, TRUE) < 0.5);
       assert(SCIPgetVarUbAtIndex(scip, consdata->resvar, bdchgidx, FALSE) < 0.5);
-      SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->resvar) );
+      SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->resvar, FALSE) );
       for( i = 0; i < nvars; ++i )
       {
          if( vars[i] != infervar )
          {
             assert(SCIPgetVarLbAtIndex(scip, vars[i], bdchgidx, FALSE) > 0.5);
-            SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i]) );
+            SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i], FALSE) );
          }
       }
       *result = SCIP_SUCCESS;
@@ -3342,7 +3342,7 @@ SCIP_RETCODE cliquePresolve(
 static
 SCIP_DECL_HASHGETKEY(hashGetKeyAndcons)
 {  /*lint --e{715}*/
-   /* the key is the element itself */ 
+   /* the key is the element itself */
    return elem;
 }
 
@@ -3414,8 +3414,8 @@ SCIP_DECL_HASHKEYVAL(hashKeyValAndcons)
    return SCIPhashFour(consdata->nvars, minidx, mididx, maxidx);
 }
 
-/** compares each constraint with all other constraints for possible redundancy and removes or changes constraint 
- *  accordingly; in contrast to removeRedundantConstraints(), it uses a hash table 
+/** compares each constraint with all other constraints for possible redundancy and removes or changes constraint
+ *  accordingly; in contrast to removeRedundantConstraints(), it uses a hash table
  */
 static
 SCIP_RETCODE detectRedundantConstraints(
@@ -4561,7 +4561,7 @@ SCIP_DECL_CONSPRESOL(consPresolAnd)
    {
       if( *nfixedvars == oldnfixedvars && *naggrvars == oldnaggrvars )
       {
-         if( firstchange < nconss ) 
+         if( firstchange < nconss )
          {
             /* detect redundant constraints; fast version with hash table instead of pairwise comparison */
             SCIP_CALL( detectRedundantConstraints(scip, SCIPblkmem(scip), conss, nconss, &firstchange, &cutoff, naggrvars, ndelconss) );
@@ -4750,10 +4750,10 @@ SCIP_DECL_CONSCOPY(consCopyAnd)
       consname = SCIPconsGetName(sourcecons);
 
    /* creates and captures a AND-constraint */
-   SCIP_CALL( SCIPcreateConsAnd(scip, cons, consname, resvar, nvars, vars, 
+   SCIP_CALL( SCIPcreateConsAnd(scip, cons, consname, resvar, nvars, vars,
          initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
 
- TERMINATE:   
+ TERMINATE:
    /* free buffer array */
    SCIPfreeBufferArray(scip, &vars);
 

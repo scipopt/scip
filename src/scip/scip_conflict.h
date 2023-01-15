@@ -238,8 +238,9 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPaddConflictLb(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable whose lower bound should be added to conflict candidate queue */
-   SCIP_BDCHGIDX*        bdchgidx            /**< bound change index representing time on path to current node, when the
+   SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node, when the
                                               *   conflicting bound was valid, NULL for current local bound */
+   SCIP_Bool             separatequeue       /**< should the bound change be added to the separate conflict queue? */
    );
 
 /** adds lower bound of variable at the time of the given bound change index to the conflict analysis' candidate storage
@@ -289,9 +290,9 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPaddConflictUb(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable whose upper bound should be added to conflict candidate queue */
-   SCIP_BDCHGIDX*        bdchgidx            /**< bound change index representing time on path to current node, when the
+   SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node, when the
                                               *   conflicting bound was valid, NULL for current local bound */
-   );
+   SCIP_Bool             separatequeue       /**< should the bound change be added to the separate queue? */   );
 
 /** adds upper bound of variable at the time of the given bound change index to the conflict analysis' candidate storage
  *  with the additional information of a relaxed upper bound; this relaxed upper bound is the one which would be enough
@@ -393,7 +394,8 @@ SCIP_RETCODE SCIPaddConflictRelaxedBd(
 SCIP_EXPORT
 SCIP_RETCODE SCIPaddConflictBinvar(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             var                 /**< binary variable whose changed bound should be added to conflict queue */
+   SCIP_VAR*             var,                /**< binary variable whose changed bound should be added to conflict queue */
+   SCIP_Bool             separatequeue       /**< should the variable be added to the separate conflict queue? */
    );
 
 /** checks if the given variable is already part of the current conflict set or queued for resolving with the same or

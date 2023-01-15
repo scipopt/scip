@@ -1161,7 +1161,7 @@ SCIP_RETCODE analyzeConflict(
 
    for( v = 0; v < consdata->nvars; ++v )
    {
-      SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[v]) );
+      SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[v], FALSE) );
    }
 
    /* analyze the conflict */
@@ -4764,7 +4764,7 @@ SCIP_DECL_CONSRESPROP(consRespropLogicor)
       {
          /* the reason variable must have been assigned to zero */
          assert(SCIPgetVarUbAtIndex(scip, consdata->vars[v], bdchgidx, FALSE) < 0.5);
-         SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[v]) );
+         SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[v], FALSE) );
       }
 #ifndef NDEBUG
       else

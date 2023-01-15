@@ -275,7 +275,7 @@ SCIP_RETCODE consdataCatchEvents(
    assert(consdata != NULL);
 
    /* catch bound change events for both bounds on resultant variable */
-   SCIP_CALL( SCIPcatchVarEvent(scip, consdata->resvar, SCIP_EVENTTYPE_BOUNDCHANGED, 
+   SCIP_CALL( SCIPcatchVarEvent(scip, consdata->resvar, SCIP_EVENTTYPE_BOUNDCHANGED,
          eventhdlr, (SCIP_EVENTDATA*)consdata, NULL) );
 
    /* catch tightening events for lower bound and relaxed events for upper bounds on operator variables */
@@ -700,7 +700,7 @@ SCIP_RETCODE applyFixings(
  *   - for each operator variable vi:  resvar - vi            >= 0
  *   - one additional row:             resvar - v1 - ... - vn <= 0
  */
-static 
+static
 SCIP_RETCODE createRelaxation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint to check */
@@ -814,7 +814,7 @@ SCIP_RETCODE checkCons(
          mustcheck = !SCIProwIsInLP(consdata->rows[r]);
          if( mustcheck )
             break;
-      }         
+      }
    }
 
    /* check feasibility of constraint if necessary */
@@ -864,12 +864,12 @@ SCIP_RETCODE checkCons(
             if( i == consdata->nvars )
             {
                SCIPinfoMessage(scip, NULL, " all operands are FALSE and resultant <%s> = TRUE\n",
-                  SCIPvarGetName(consdata->resvar)); 
+                  SCIPvarGetName(consdata->resvar));
             }
             else
             {
                SCIPinfoMessage(scip, NULL, " operand <%s> = TRUE and resultant <%s> = FALSE\n",
-                  SCIPvarGetName(consdata->vars[i-1]), SCIPvarGetName(consdata->resvar)); 
+                  SCIPvarGetName(consdata->vars[i-1]), SCIPvarGetName(consdata->resvar));
             }
          }
       }
@@ -951,8 +951,8 @@ SCIP_RETCODE analyzeConflictZero(
    /* initialize conflict analysis, and add resultant and single operand variable to conflict candidate queue */
    SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
 
-   SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->resvar) );
-   SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[truepos]) );
+   SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->resvar, FALSE) );
+   SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[truepos], FALSE) );
 
    /* analyze the conflict */
    SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
@@ -983,11 +983,11 @@ SCIP_RETCODE analyzeConflictOne(
    /* initialize conflict analysis, and add all variables of infeasible constraint to conflict candidate queue */
    SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
 
-   SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->resvar) );
+   SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->resvar, FALSE) );
    for( v = 0; v < consdata->nvars; ++v )
    {
       assert(SCIPvarGetUbLocal(consdata->vars[v]) < 0.5);
-      SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[v]) );
+      SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[v], FALSE) );
    }
 
    /* analyze the conflict */
@@ -1273,7 +1273,7 @@ SCIP_RETCODE resolvePropagation(
       {
          if( SCIPgetVarLbAtIndex(scip, vars[i], bdchgidx, FALSE) > 0.5 )
          {
-            SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i]) );
+            SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i], FALSE) );
             break;
          }
       }
@@ -1285,7 +1285,7 @@ SCIP_RETCODE resolvePropagation(
       /* the operand variable was infered to FALSE, because the resultant was FALSE */
       assert(SCIPgetVarUbAtIndex(scip, infervar, bdchgidx, TRUE) < 0.5);
       assert(SCIPgetVarUbAtIndex(scip, consdata->resvar, bdchgidx, FALSE) < 0.5);
-      SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->resvar) );
+      SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->resvar, FALSE) );
       *result = SCIP_SUCCESS;
       break;
 
@@ -1296,7 +1296,7 @@ SCIP_RETCODE resolvePropagation(
       for( i = 0; i < nvars; ++i )
       {
          assert(SCIPgetVarUbAtIndex(scip, vars[i], bdchgidx, FALSE) < 0.5);
-         SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i]) );
+         SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i], FALSE) );
       }
       *result = SCIP_SUCCESS;
       break;
@@ -1305,13 +1305,13 @@ SCIP_RETCODE resolvePropagation(
       /* the operand variable was infered to TRUE, because the resultant was TRUE and all other operands were FALSE */
       assert(SCIPgetVarLbAtIndex(scip, infervar, bdchgidx, TRUE) > 0.5);
       assert(SCIPgetVarLbAtIndex(scip, consdata->resvar, bdchgidx, FALSE) > 0.5);
-      SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->resvar) );
+      SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->resvar, FALSE) );
       for( i = 0; i < nvars; ++i )
       {
          if( vars[i] != infervar )
          {
             assert(SCIPgetVarUbAtIndex(scip, vars[i], bdchgidx, FALSE) < 0.5);
-            SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i]) );
+            SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i], FALSE) );
          }
       }
       *result = SCIP_SUCCESS;
@@ -1451,7 +1451,7 @@ SCIP_DECL_CONSDELETE(consDeleteOr)
 }
 
 
-/** transforms constraint data into data belonging to the transformed problem */ 
+/** transforms constraint data into data belonging to the transformed problem */
 static
 SCIP_DECL_CONSTRANS(consTransOr)
 {  /*lint --e{715}*/
@@ -1473,7 +1473,7 @@ SCIP_DECL_CONSTRANS(consTransOr)
    SCIP_CALL( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
          SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
          SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
-         SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons), 
+         SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons),
          SCIPconsIsDynamic(sourcecons), SCIPconsIsRemovable(sourcecons), SCIPconsIsStickingAtNode(sourcecons)) );
 
    return SCIP_OKAY;
@@ -1863,7 +1863,7 @@ SCIP_DECL_CONSCOPY(consCopyOr)
    resvar = NULL;
 
    /* get variables that need to be copied */
-   sourceresvar = SCIPgetResultantOr(sourcescip, sourcecons); 
+   sourceresvar = SCIPgetResultantOr(sourcescip, sourcecons);
    sourcevars = SCIPgetVarsOr(sourcescip, sourcecons);
    nvars = SCIPgetNVarsOr(sourcescip, sourcecons);
 
@@ -1889,7 +1889,7 @@ SCIP_DECL_CONSCOPY(consCopyOr)
       if( *valid )
       {
          assert(resvar != NULL);
-         SCIP_CALL( SCIPcreateConsOr(scip, cons, SCIPconsGetName(sourcecons), resvar, nvars, vars, 
+         SCIP_CALL( SCIPcreateConsOr(scip, cons, SCIPconsGetName(sourcecons), resvar, nvars, vars,
                initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
       }
    }
@@ -1920,9 +1920,9 @@ SCIP_DECL_CONSPARSE(consParseOr)
    SCIP_CALL( SCIPduplicateBufferArray(scip, &strcopy, str, (int)(strlen(str)+1)));
 
    /* cutoff "or" form the constraint string */
-   token = SCIPstrtok(strcopy, "=", &saveptr ); 
+   token = SCIPstrtok(strcopy, "=", &saveptr );
 
-   /* parse variable name */ 
+   /* parse variable name */
    SCIP_CALL( SCIPparseVarName(scip, token, &resvar, &endptr) );
 
    if( resvar == NULL )
@@ -1933,10 +1933,10 @@ SCIP_DECL_CONSPARSE(consParseOr)
    else
    {
       /* cutoff "or" form the constraint string */
-      (void) SCIPstrtok(NULL, "(", &saveptr ); 
+      (void) SCIPstrtok(NULL, "(", &saveptr );
 
       /* cutoff ")" form the constraint string */
-      token = SCIPstrtok(NULL, ")", &saveptr ); 
+      token = SCIPstrtok(NULL, ")", &saveptr );
 
       varssize = 100;
       nvars = 0;
@@ -1964,7 +1964,7 @@ SCIP_DECL_CONSPARSE(consParseOr)
          assert(varssize >= requiredsize);
 
          /* create and constraint */
-         SCIP_CALL( SCIPcreateConsOr(scip, cons, name, resvar, nvars, vars, 
+         SCIP_CALL( SCIPcreateConsOr(scip, cons, name, resvar, nvars, vars,
                initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
       }
 

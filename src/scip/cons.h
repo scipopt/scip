@@ -605,7 +605,7 @@ SCIP_RETCODE SCIPconsCreate(
                                               *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
                                               *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
@@ -680,7 +680,7 @@ SCIP_RETCODE SCIPconsParse(
                                               *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
                                               *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
@@ -1113,6 +1113,7 @@ SCIP_RETCODE SCIPconsResolvePropagation(
    SCIP_BOUNDTYPE        inferboundtype,     /**< bound that was deduced (lower or upper bound) */
    SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index, representing the point of time where change took place */
    SCIP_Real             relaxedbd,          /**< the relaxed bound */
+   SCIP_Bool             separatequeue,      /**< should the reason bound changes be added to the separate conflict queue? */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 

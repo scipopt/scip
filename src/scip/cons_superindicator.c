@@ -1555,7 +1555,7 @@ SCIP_DECL_CONSRESPROP(consRespropSuperindicator)
    assert(SCIPisFeasEQ(scip, SCIPgetVarUbAtIndex(scip, consdata->binvar, bdchgidx, TRUE), 1.0));
 
    /* add tightened lower bound on binvar to conflict set */
-   SCIP_CALL( SCIPaddConflictLb(scip, consdata->binvar, bdchgidx) );
+   SCIP_CALL( SCIPaddConflictLb(scip, consdata->binvar, bdchgidx, FALSE) );
 
    /* call propagation conflict resolving method for the slack constraint */
    SCIP_CALL( SCIPrespropCons(scip, consdata->slackcons, infervar, inferinfo, boundtype, bdchgidx, relaxedbd, result) );
