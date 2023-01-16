@@ -2087,7 +2087,7 @@ bool ScipNLP::get_var_con_metadata(
          else
          {
             char buffer[20];
-            (void) sprintf(buffer, "nlpivar%8d", i);
+            (void) SCIPsnprintf(buffer, 20, "nlpivar%8d", i);
             varnamesvec.push_back(buffer);
          }
       }
@@ -2104,7 +2104,7 @@ bool ScipNLP::get_var_con_metadata(
       else
       {
          char buffer[20];
-         (void) sprintf(buffer, "nlpicons%8d", i);
+         (void) SCIPsnprintf(buffer, 20, "nlpicons%8d", i);
          consnamesvec.push_back(buffer);  /*lint !e3701*/
       }
    }
