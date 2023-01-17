@@ -109,6 +109,7 @@ enum SYM_Consoptype
    SYM_CONSOPTYPE_BIPROD   = 17,             /**< needed to indicate product of two variables */
    SYM_CONSOPTYPE_SUM      = 18,             /**< needed to indicate sums if sum-expr undefined */
    SYM_CONSOPTYPE_SLACK    = 19,             /**< needed to indicate slack vars in indicator constraints */
+   SYM_CONSOPTYPE_COEF     = 20,             /**< needed to indicate coefficients from parent expressions */
 };
 typedef enum SYM_Consoptype SYM_CONSOPTYPE;
 

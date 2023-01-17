@@ -1706,3 +1706,72 @@ SCIP_RETCODE SCIPaddSymgraphVarAggegration(
 
    return SCIP_OKAY;
 }
+
+/** frees symmetry information of an expression */
+SCIP_RETCODE SCIPfreeSymdataExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SYM_EXPRDATA2**       symdata             /**< symmetry information of an expression */
+   )
+{
+   assert( scip != NULL );
+   assert( symdata != NULL );
+
+   if( (*symdata)->nconstants > 0 )
+   {
+      SCIPfreeBlockMemoryArrayNull(scip, &(*symdata)->constants, (*symdata)->nconstants);
+   }
+   if( (*symdata)->ncoefficients > 0 )
+   {
+      SCIPfreeBlockMemoryArrayNull(scip, &(*symdata)->coefficients, (*symdata)->ncoefficients);
+      SCIPfreeBlockMemoryArrayNull(scip, &(*symdata)->children, (*symdata)->ncoefficients);
+   }
+   SCIPfreeBlockMemory(scip, symdata);
+
+   return SCIP_OKAY;
+}
+
+/** gets coefficient of expression from parent expression */
+SCIP_RETCODE SCIPgetCoefSymdata(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr,               /**< expression for which coefficient needs to be found */
+   SCIP_EXPR*            parentexpr,         /**< parent of expr */
+   SCIP_Real*            coef,               /**< buffer to store coefficient */
+   SCIP_Bool*            success             /**< whether a coefficient is found */
+   )
+{
+   SYM_EXPRDATA2* symdata;
+   int i;
+
+   assert( scip != NULL );
+   assert( expr != NULL );
+   assert( parentexpr != NULL );
+   assert( coef != NULL );
+   assert( success != NULL );
+
+   *success = FALSE;
+
+   /* parent does not assign coefficients to its children */
+   if ( SCIPexprhdlrHasGetSymdata(SCIPexprGetHdlr(parentexpr)) )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPgetSymdataExpr(scip, parentexpr, &symdata) );
+
+   /* parent does not assign coefficients to its children */
+   if ( symdata->ncoefficients < 1 )
+      return SCIP_OKAY;
+
+   /* search for expr in the children of parentexpr */
+   for (i = 0; i < symdata->ncoefficients; ++i)
+   {
+      if ( symdata->children[i] == expr )
+      {
+         *coef = symdata->coefficients[i];
+         *success = TRUE;
+         break;
+      }
+   }
+
+   SCIP_CALL( SCIPfreeSymdataExpr(scip, &symdata) );
+
+   return SCIP_OKAY;
+}

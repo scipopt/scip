@@ -967,6 +967,7 @@ SCIP_EXPRHDLR* SCIPgetExprhdlrPower(
 #undef SCIPcallExprInitestimates
 #undef SCIPcallExprSimplify
 #undef SCIPcallExprReverseprop
+#undef SCIPcallExprGetSymdata
 #endif
 
 /** creates and captures an expression with given expression data and children */
@@ -1789,6 +1790,22 @@ SCIP_RETCODE SCIPsimplifyExpr(
    return SCIP_OKAY;
 }
 
+/* retrieves symmetry information from an expression */
+SCIP_RETCODE SCIPgetSymdataExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr,               /**< expression from which information needs to be retrieved */
+   SYM_EXPRDATA2**       symdata             /**< buffer to store symmetry data */
+   )
+{
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(symdata != NULL);
+
+   SCIP_CALL( SCIPexprGetSymdata(scip->set, expr, symdata) );
+
+   return SCIP_OKAY;
+}
+
 /** replaces common sub-expressions in a given expression graph by using a hash key for each expression
  *
  *  The algorithm consists of two steps:
@@ -2294,6 +2311,22 @@ SCIP_DECL_EXPRREVERSEPROP(SCIPcallExprReverseprop)
    assert(scip != NULL);
 
    SCIP_CALL( SCIPexprhdlrReversePropExpr(SCIPexprGetHdlr(expr), scip->set, expr, bounds, childrenbounds, infeasible) );
+
+   return SCIP_OKAY;
+}
+
+/** calls the symmetry data callback for an expression
+ *
+ * Returns no information if not implemented.
+ */
+SCIP_EXPORT
+SCIP_DECL_EXPRGETSYMDATA(SCIPcallExprGetSymdata)
+{
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(symdata != NULL);
+
+   SCIP_CALL( SCIPexprGetSymdata(scip->set, expr, symdata) );
 
    return SCIP_OKAY;
 }

@@ -40,6 +40,7 @@
 #include "scip/expr_product.h"
 #include "scip/expr_exp.h"
 #include "scip/expr_pow.h"
+#include "symmetry/struct_symmetry.h"
 
 #define EXPRHDLR_NAME         "sum"
 #define EXPRHDLR_DESC         "summation with coefficients and a constant"
@@ -532,6 +533,39 @@ SCIP_DECL_EXPRSIMPLIFY(simplifySum)
    SCIPfreeBufferArrayNull(scip, &newchildren);
    SCIPfreeBufferArrayNull(scip, &order);
    SCIP_CALL( SCIPreleaseExpr(scip, &duplicate) );
+
+   return SCIP_OKAY;
+}
+
+/** expression callback to get information for symmetry detection */
+static
+SCIP_DECL_EXPRGETSYMDATA(getsymdataSum)
+{  /*lint --e{715}*/
+   SCIP_EXPRDATA* exprdata;
+   int i;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(exprdata != NULL);
+
+   exprdata = SCIPexprGetData(expr);
+   assert(exprdata != NULL);
+
+   SCIP_CALL( SCIPallocBlockMemory(scip, symdata) );
+
+   (*symdata)->nconstants = 1;
+   (*symdata)->ncoefficients = exprdata->coefssize;
+
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*symdata)->constants, 1) );
+   (*symdata)->constants[0] = exprdata->constant;
+
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*symdata)->coefficients, exprdata->coefssize) );
+   for( i = 0; i < exprdata->coefssize; ++i )
+      (*symdata)->coefficients[i] = exprdata->coefficients[i];
+
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*symdata)->children, exprdata->coefssize) );
+   for( i = 0; i < exprdata->coefssize; ++i )
+      (*symdata)->children[i] = SCIPexprGetChildren(expr)[i];
 
    return SCIP_OKAY;
 }
@@ -1072,6 +1106,7 @@ SCIP_RETCODE SCIPincludeExprhdlrSum(
    SCIPexprhdlrSetCurvature(exprhdlr, curvatureSum);
    SCIPexprhdlrSetMonotonicity(exprhdlr, monotonicitySum);
    SCIPexprhdlrSetIntegrality(exprhdlr, integralitySum);
+   SCIPexprhdlrSetGetSymdata(exprhdlr, getsymdataSum);
 
    return SCIP_OKAY;
 }

@@ -370,6 +370,23 @@ SCIP_RETCODE SCIPaddSymgraphVarAggegration(
    SCIP_Real             constant            /**< constant of aggregation */
    );
 
+/** frees symmetry information of an expression */
+SCIP_EXPORT
+SCIP_RETCODE SCIPfreeSymdataExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SYM_EXPRDATA2**       symdata             /**< symmetry information of an expression */
+   );
+
+/** gets coefficient of expression from parent expression */
+SCIP_EXPORT
+SCIP_RETCODE SCIPgetCoefSymdata(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr,               /**< expression for which coefficient needs to be found */
+   SCIP_EXPR*            parentexpr,         /**< parent of expr */
+   SCIP_Real*            coef,               /**< buffer to store coefficient */
+   SCIP_Bool*            success             /**< whether a coefficient is found */
+   );
+
 /** @} */
 
 #ifdef __cplusplus

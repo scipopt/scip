@@ -52,6 +52,7 @@
 
 typedef struct SCIP_ExprData  SCIP_EXPRDATA;     /**< expression data, e.g., coefficients */
 typedef struct SCIP_Expr      SCIP_EXPR;         /**< expression */
+typedef struct SYM_ExprData2 SYM_EXPRDATA2;      /**< data to encode symmetry information */
 
 /** curvature types */
 typedef enum
@@ -657,6 +658,19 @@ typedef struct SCIP_ExprhdlrData SCIP_EXPRHDLRDATA; /**< expression handler data
    SCIP_INTERVAL  bounds,         \
    SCIP_INTERVAL* childrenbounds, \
    SCIP_Bool*     infeasible)
+
+/** expression callback to get information for symmetry detection
+ *
+ * The method returns information regarding constants and coefficients used in an expression.
+ *
+ *  \param[in] scip            SCIP main data structure
+ *  \param[in] expr            expression to retrieve information from
+ *  \param[out] exprdata       buffer to store retrieved data
+ */
+#define SCIP_DECL_EXPRGETSYMDATA(x) SCIP_RETCODE x (\
+   SCIP*          scip,                        \
+   SCIP_EXPR*     expr,                        \
+   SYM_EXPRDATA2** symdata)
 
 /** @} */  /* expression handler */
 

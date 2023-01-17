@@ -214,6 +214,16 @@ struct SYM_Graph
    int                   maxnedges;          /**< maximum number of edges that can be hold by edges */
 };
 
+/** (additional) data used to encode an expression, which is not encoded as another expression */
+struct SYM_ExprData2
+{
+   SCIP_Real*            constants;          /**< constants used in an expression */
+   int                   nconstants;         /**< number of constants */
+   SCIP_Real*            coefficients;       /**< coefficients of children */
+   int                   ncoefficients;      /**< number of coefficients */
+   SCIP_EXPR**           children;           /**< children of expression with a coefficient */
+};
+
 #ifdef __cplusplus
 }
 #endif
