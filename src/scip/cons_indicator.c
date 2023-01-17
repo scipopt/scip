@@ -3996,7 +3996,7 @@ SCIP_RETCODE propIndicator(
          else
             ub = SCIPvarGetLbLocal(var);
 
-         if ( SCIPisInfinity(scip, ub) )
+         if( SCIPisInfinity(scip, ub) )
          {
             maxactivity = SCIPinfinity(scip);
             break;
@@ -4011,22 +4011,25 @@ SCIP_RETCODE propIndicator(
          /* substract rhs */
          rhs = SCIPconsGetRhs(scip, consdata->lincons, &success);
          assert(success);
-         assert(!SCIPisInfinity(scip, rhs));
 
-         newub = maxactivity - rhs;
-         assert(!SCIPisInfinity(scip, newub));
-
-         /* divide by coeff of slackvar */
-         newub = newub / (-1.0 * coeffslack);
-
-         if( SCIPisFeasLT(scip, newub, SCIPvarGetUbLocal(consdata->slackvar))
-               && newub > SCIPvarGetLbLocal(consdata->slackvar) )
+         /* continue if rhs is not finite; happens, e.g., if variables are multiaggregated; we would need the minimal activity in this case */
+         if( !SCIPisInfinity(scip, rhs) )
          {
-            /* propagate bound */
-            SCIP_CALL( SCIPinferVarUbCons(scip, consdata->slackvar, newub, cons, 3, FALSE, &infeasible, &tightened) );
-            assert( ! infeasible );
-            if ( tightened )
-               ++(*nGen);
+            newub = maxactivity - rhs;
+            assert(!SCIPisInfinity(scip, newub));
+
+            /* divide by coeff of slackvar */
+            newub = newub / (-1.0 * coeffslack);
+
+            if( SCIPisFeasLT(scip, newub, SCIPvarGetUbLocal(consdata->slackvar))
+                  && newub > SCIPvarGetLbLocal(consdata->slackvar) )
+            {
+               /* propagate bound */
+               SCIP_CALL( SCIPinferVarUbCons(scip, consdata->slackvar, newub, cons, 3, FALSE, &infeasible, &tightened) );
+               assert(!infeasible);
+               if( tightened )
+                  ++(*nGen);
+            }
          }
       }
    }
