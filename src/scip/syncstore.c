@@ -667,6 +667,11 @@ void SCIPsyncdataSetStatus(
          syncdata->winner = solverid;
       }
    }
+   else if( syncdata->winner < 0 )
+   {
+      syncdata->status = status;
+      syncdata->winner = solverid;
+   }
 }
 
 /** adds memory used to the synchronization data */
