@@ -4060,6 +4060,13 @@ SCIP_RETCODE propIndicator(
             /* divide by coeff of slackvar */
             newub = newub / (-1.0 * coeffslack);
 
+            /* round if slackvar is (implicit) integer */
+            if( SCIPvarGetType(consdata->slackvar) <= SCIP_VARTYPE_IMPLINT )
+            {
+               if( !SCIPisIntegral(scip, newub) )
+                  newub = SCIPceil(scip, newub);
+            }
+
             if( SCIPisFeasLT(scip, newub, SCIPvarGetUbLocal(consdata->slackvar))
                   && newub > SCIPvarGetLbLocal(consdata->slackvar) )
             {
