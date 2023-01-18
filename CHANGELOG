@@ -185,11 +185,13 @@ Fixed bugs
 - relax condition of assert in lpSolve to hold only if lp/checkstability is true
 - OPB reader: dynamically increase the size of the line buffer for reading in getMaxAndConsDim()
 - Enabled the solution limit checks in SCIPsolveIsStopped in solve.c when in SCIP_STAGE_PRESOLVING
-- Extended documentation of the parameter limits/solutions to point out that the limit is first checked in presolving
 - fix quad precision comparison for the calculation of knapsackcover constraints.
+- force copying of symmetry constraints for concurrent solve
 
 Miscellaneous
 -------------
+
+- Extended documentation of the parameter limits/solutions to point out that the limit is first checked in presolving
 
 Known bugs
 ----------
