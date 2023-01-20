@@ -3,20 +3,30 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   presol_sparsify.c
+ * @ingroup DEFPLUGINS_PRESOL
  * @brief  cancel non-zeros of the constraint matrix
  * @author Dieter Weninger
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  * @author Ambros Gleixner
  *
  * This presolver attempts to cancel non-zero entries of the constraint
@@ -145,7 +155,7 @@ SCIP_DECL_HASHKEYVAL(varPairHashval)
 
    varpair = (ROWVARPAIR*) key;
 
-   return SCIPhashTwo(SCIPcombineTwoInt(varpair->varindex1, varpair->varindex2),
+   return SCIPhashThree(varpair->varindex1, varpair->varindex2,
                       SCIPrealHashCode(varpair->varcoef2 / varpair->varcoef1));
 }
 
@@ -693,6 +703,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
    SCIP_MATRIX* matrix;
    SCIP_Bool initialized;
    SCIP_Bool complete;
+   SCIP_Bool infeasible;
    int nrows;
    int r;
    int i;
@@ -747,7 +758,18 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
    *result = SCIP_DIDNOTFIND;
 
    matrix = NULL;
-   SCIP_CALL( SCIPmatrixCreate(scip, &matrix, &initialized, &complete) );
+   SCIP_CALL( SCIPmatrixCreate(scip, &matrix, TRUE, &initialized, &complete, &infeasible,
+      naddconss, ndelconss, nchgcoefs, nchgbds, nfixedvars) );
+
+   /* if infeasibility was detected during matrix creation, return here */
+   if( infeasible )
+   {
+      if( initialized )
+         SCIPmatrixFree(scip, &matrix);
+
+      *result = SCIP_CUTOFF;
+      return SCIP_OKAY;
+   }
 
    /* we only work on pure MIPs currently */
    if( initialized && complete )
@@ -884,6 +906,14 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
 
          if( insert )
          {
+            /* prevent the insertion of too many variable pairs into the hashtable.
+             * a safety margin of factor 4 is built into the 8=2*4.
+             */
+            if( ((SCIP_Longint)SCIPhashtableGetNEntries(pairtable) * (SCIP_Longint)(8 * sizeof(void*))) > (SCIP_Longint)INT_MAX )
+            {
+               break;
+            }
+
             SCIP_CALL( SCIPhashtableInsert(pairtable, (void*) &varpairs[r]) );
          }
       }
@@ -918,7 +948,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
       maxuseless = (SCIP_Longint)(presoldata->maxretrievefac * (SCIP_Real)nrows);
       nuseless = 0;
       oldnchgcoefs = *nchgcoefs;
-      for( r = 0; r < nrows && nuseless <= maxuseless; r++ )
+      for( r = 0; r < nrows && nuseless <= maxuseless && !SCIPisStopped(scip); r++ )
       {
          int rowidx;
 

@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -23,7 +32,7 @@
  * @author Marc Pfetsch
  * @author Kati Wolter
  * @author Gregor Hendel
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -40,25 +49,6 @@
 #include "scip/type_retcode.h"
 #include "scip/type_scip.h"
 #include "scip/type_var.h"
-
-/* In debug mode, we include the SCIP's structure in scip.c, such that no one can access
- * this structure except the interface methods in scip.c.
- * In optimized mode, the structure is included in scip.h, because some of the methods
- * are implemented as defines for performance reasons (e.g. the numerical comparisons).
- * Additionally, the internal "set.h" is included, such that the defines in set.h are
- * available in optimized mode.
- */
-#ifdef NDEBUG
-#include "scip/struct_scip.h"
-#include "scip/struct_stat.h"
-#include "scip/set.h"
-#include "scip/tree.h"
-#include "scip/misc.h"
-#include "scip/var.h"
-#include "scip/cons.h"
-#include "scip/solve.h"
-#include "scip/debug.h"
-#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -82,7 +72,7 @@ extern "C" {
  *        in future releases; consider using SCIPincludeReaderBasic() and setter functions
  *        if you seek for a method which is less likely to change in future releases
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeReader(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of reader */
@@ -108,7 +98,7 @@ SCIP_RETCODE SCIPincludeReader(
  *
  *  @note if you want to set all callbacks with a single method call, consider using SCIPincludeReader() instead
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeReaderBasic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_READER**         readerptr,          /**< reference to reader pointer, or NULL */
@@ -127,7 +117,7 @@ SCIP_RETCODE SCIPincludeReaderBasic(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetReaderCopy(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_READER*          reader,             /**< reader */
@@ -143,7 +133,7 @@ SCIP_RETCODE SCIPsetReaderCopy(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetReaderFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_READER*          reader,             /**< reader */
@@ -159,7 +149,7 @@ SCIP_RETCODE SCIPsetReaderFree(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetReaderRead(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_READER*          reader,             /**< reader */
@@ -175,7 +165,7 @@ SCIP_RETCODE SCIPsetReaderRead(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetReaderWrite(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_READER*          reader,             /**< reader */
@@ -183,25 +173,25 @@ SCIP_RETCODE SCIPsetReaderWrite(
    );
 
 /** returns the reader of the given name, or NULL if not existing */
-EXTERN
+SCIP_EXPORT
 SCIP_READER* SCIPfindReader(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of reader */
    );
 
 /** returns the array of currently available readers */
-EXTERN
+SCIP_EXPORT
 SCIP_READER** SCIPgetReaders(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** returns the number of currently available readers */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNReaders(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

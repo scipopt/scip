@@ -1,0 +1,5 @@
+# SCIP version 2.1.1.6
+
+# solution that is used for fixing values ('l'p relaxation, 'n'lp relaxation)
+# [type: char, range: {nl}, default: l]
+heuristics/rens/startsol = n

@@ -3,17 +3,27 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_superindicator.c
+ * @ingroup DEFPLUGINS_CONS
  * @brief  constraint handler for indicator constraints over arbitrary constraint types
  * @author Ambros Gleixner
  * @author Frederic Pythoud
@@ -221,7 +231,7 @@ SCIP_RETCODE consdataCheckSuperindicator(
  *  with respect to its global bounds
  */
 static
-SCIP_RETCODE extractLinearValues(
+void extractLinearValues(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< pointer to linear constraint */
    SCIP_Real*            minactivity,        /**< pointer to return the minimal activity */
@@ -294,8 +304,6 @@ SCIP_RETCODE extractLinearValues(
 
    if( ismaxinfinity )
       *maxactivity = SCIPinfinity(scip);
-
-   return SCIP_OKAY;
 }
 
 /** tries to upgrade superindicator constraint to an indicator constraint */
@@ -488,7 +496,7 @@ SCIP_RETCODE upgradeLinearSuperindicator(
    }
 
    /* if linear slack constraint is redundant due to bounded activities we can delete the superindicator constraint */
-   SCIP_CALL( extractLinearValues(scip, slackcons, &minact, &maxact, &minabscoef) );
+   extractLinearValues(scip, slackcons, &minact, &maxact, &minabscoef);
    assert(!SCIPisInfinity(scip, minact));
    assert(!SCIPisInfinity(scip, -maxact));
 
@@ -664,7 +672,7 @@ SCIP_RETCODE upgradeSuperindicator(
    return SCIP_OKAY;
 }
 
-/** helper function to enforce constraints */
+/** helper function to enforce constraints */   /*lint -e{715}*/
 static
 SCIP_RETCODE enforceConstraint(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1762,6 +1770,7 @@ SCIP_DECL_CONSPARSE(consParseSuperindicator)
    *success = FALSE;
 
    /* extract binary variable name and value which triggers slack constraint */
+   /* coverity[secure_coding] */
    nargs = sscanf(str, " <%1023[^>]>[B] = %d", binvarname, &zeroone);
 
    if( nargs != 2 || (zeroone != 0 && zeroone != 1) )
@@ -1922,39 +1931,38 @@ SCIP_RETCODE SCIPincludeConshdlrSuperindicator(
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransSuperindicator) );
    SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxSuperindicator) );
 
-   /* includes or updates the default dialog menus in SCIP */
-   SCIP_CALL( SCIPincludeDialogDefault(scip) );
-
+   /* add dialogs if they are not disabled */
    root = SCIPgetRootDialog(scip);
-   assert(root != NULL);
-
-   /* find change menu */
-   if( !SCIPdialogHasEntry(root, "change") )
+   if( root != NULL )
    {
-      SCIP_CALL( SCIPincludeDialog(scip, &changemenu,
+      /* find change menu */
+      if( !SCIPdialogHasEntry(root, "change") )
+      {
+         SCIP_CALL( SCIPincludeDialog(scip, &changemenu,
             NULL,
             SCIPdialogExecMenu, NULL, NULL,
             "change", "change the problem", TRUE, NULL) );
-      SCIP_CALL( SCIPaddDialogEntry(scip, root, changemenu) );
-      SCIP_CALL( SCIPreleaseDialog(scip, &changemenu) );
-   }
+         SCIP_CALL( SCIPaddDialogEntry(scip, root, changemenu) );
+         SCIP_CALL( SCIPreleaseDialog(scip, &changemenu) );
+      }
 
-   if( SCIPdialogFindEntry(root, "change", &changemenu) != 1 )
-   {
-      SCIPerrorMessage("change sub menu not found\n");
-      return SCIP_PLUGINNOTFOUND;
-   }
+      if( SCIPdialogFindEntry(root, "change", &changemenu) != 1 )
+      {
+         SCIPerrorMessage("change sub menu not found\n");
+         return SCIP_PLUGINNOTFOUND;
+      }
 
-   /* add minuc dialog */
-   if( !SCIPdialogHasEntry(changemenu, "minuc") )
-   {
-      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+      /* add minuc dialog */
+      if( !SCIPdialogHasEntry(changemenu, "minuc") )
+      {
+         SCIP_CALL( SCIPincludeDialog(scip, &dialog,
             NULL,
             SCIPdialogExecChangeMinUC, NULL, NULL,
             "minuc", "transforms the current problem into a MinUC problem minimizing the number of unsatisfied constraints",
             FALSE, NULL) );
-      SCIP_CALL( SCIPaddDialogEntry(scip, changemenu, dialog) );
-      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+         SCIP_CALL( SCIPaddDialogEntry(scip, changemenu, dialog) );
+         SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+      }
    }
 
    /* add constraint handler parameters */
@@ -2039,9 +2047,7 @@ SCIP_RETCODE SCIPcreateConsSuperindicator(
 
    /* only allow types of slack constraints that can be handled */
    if( conshdlrdata->checkslacktype &&
-      strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "abspower") != 0 &&
       strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "and") != 0 &&
-      strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "bivariate") != 0 &&
       strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "bounddisjunction") != 0 &&
       strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "conjunction") != 0 &&
       strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "disjunction") != 0 &&
@@ -2051,8 +2057,6 @@ SCIP_RETCODE SCIPcreateConsSuperindicator(
       strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "logicor") != 0 &&
       strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "nonlinear") != 0 &&
       strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "or") != 0 &&
-      strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "quadratic") != 0 &&
-      strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "soc") != 0 &&
       strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "SOS1") != 0 &&
       strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "SOS2") != 0 &&
       strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "cumulative") != 0 &&

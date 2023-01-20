@@ -15,13 +15,15 @@
 #cmakedefine TPI_NONE
 #cmakedefine TPI_TNYC
 #cmakedefine TPI_OMP
-#cmakedefine NPARASCIP
+#cmakedefine SCIP_THREADSAFE
 #cmakedefine WITH_SCIPDEF
+#cmakedefine SCIP_WITH_PAPILO
 #cmakedefine SCIP_WITH_ZLIB
 #cmakedefine SCIP_WITH_READLINE
 #cmakedefine SCIP_WITH_GMP
 #cmakedefine SCIP_WITH_LPSCHECK
 #cmakedefine SCIP_WITH_ZIMPL
+#cmakedefine SCIP_WITH_AMPL
 #cmakedefine SCIP_ROUNDING_FE
 #cmakedefine SCIP_ROUNDING_FP
 #cmakedefine SCIP_ROUNDING_MS

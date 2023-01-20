@@ -1,0 +1,5 @@
+# SCIP version 2.1.1.6
+
+# which variable selection should be used? ('f'ractionality, 'c'oefficient, 'p'seudocost, 'g'uided, 'd'ouble, 'v'eclen)
+# [type: char, range: {fcpgdv}, default: d]
+heuristics/nlpdiving/varselrule = v

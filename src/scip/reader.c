@@ -3,17 +3,27 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader.c
+ * @ingroup OTHER_CFILES
  * @brief  interface for input file readers
  * @author Tobias Achterberg
  */
@@ -278,25 +288,20 @@ SCIP_RETCODE SCIPreaderWrite(
    /* check, if reader is applicable on the given file */
    if( readerIsApplicable(reader, extension) && reader->readerwrite != NULL )
    {
-      SCIP_VAR** vars;
-      int nvars;
-      SCIP_VAR** fixedvars;
-      int nfixedvars;
-      SCIP_CONS** conss;
-      int nconss;
-      int i;
-
-      SCIP_CONS* cons;
-
-      char* name;
       const char* consname;
-      const char** varnames;
-      const char** fixedvarnames;
-      const char** consnames;
-
-      varnames = NULL;
-      fixedvarnames = NULL; 
-      consnames = NULL;
+      const char** varnames = NULL;
+      const char** fixedvarnames = NULL;
+      const char** consnames = NULL;
+      SCIP_VAR** vars;
+      SCIP_VAR** fixedvars;
+      SCIP_CONS** conss;
+      SCIP_CONS* cons;
+      SCIP_Real objscale;
+      char* name;
+      int nfixedvars;
+      int nconss;
+      int nvars;
+      int i;
 
       vars = prob->vars;
       nvars = prob->nvars;
@@ -420,11 +425,16 @@ SCIP_RETCODE SCIPreaderWrite(
          }
       }
 
+      /* adapt objective scale for transformed problem (for the original no change is necessary) */
+      objscale = prob->objscale;
+      if( prob->transformed && prob->objsense == SCIP_OBJSENSE_MAXIMIZE )
+         objscale *= -1.0;
+
       /* call reader to write problem */
       retcode = reader->readerwrite(set->scip, reader, file, prob->name, prob->probdata, prob->transformed,
-         prob->transformed ? SCIP_OBJSENSE_MINIMIZE : prob->objsense, prob->objscale, prob->objoffset,
-         vars, nvars, prob->nbinvars, prob->nintvars, prob->nimplvars, prob->ncontvars, 
-         fixedvars, nfixedvars, prob->startnvars, 
+         prob->objsense, objscale, prob->objoffset,
+         vars, nvars, prob->nbinvars, prob->nintvars, prob->nimplvars, prob->ncontvars,
+         fixedvars, nfixedvars, prob->startnvars,
          conss, nconss, prob->maxnconss, prob->startnconss, genericnames, result);
 
       /* reset variable and constraint names to original names */

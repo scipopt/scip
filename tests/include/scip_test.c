@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -34,6 +43,15 @@ SCIP_DECL_HEUREXEC(heurExecTest)
    return SCIP_OKAY;
 }
 
+/** reduced cost pricing method of variable pricer for feasible LPs */
+static
+SCIP_DECL_PRICERREDCOST(pricerRedcostTest)
+{  /*lint --e{715}*/
+   *result = SCIP_SUCCESS;
+
+   return SCIP_OKAY;
+}
+
 /* it can be called in SCIP_STAGE_PROBLEM and can get to
  *  SCIP_STAGE_TRANSFORMED
  *  SCIP_STAGE_PRESOLVING
@@ -47,7 +65,7 @@ SCIP_RETCODE TESTscipSetStage(SCIP* scip, SCIP_STAGE stage, SCIP_Bool enableNLP)
 {
    /* no output nor warnings */
    /* @todo reset output to previous level! */
-   SCIP_CALL( SCIPsetParam(scip, "display/verblevel", 0) );
+   SCIP_CALL( SCIPsetIntParam(scip, "display/verblevel", 0) );
 
    /* make sure that at least DFS is included; we need one node selector to call SCIPtransformProb, which is also called
     * by SCIP(pre)solve */
@@ -60,6 +78,21 @@ SCIP_RETCODE TESTscipSetStage(SCIP* scip, SCIP_STAGE stage, SCIP_Bool enableNLP)
    if ( SCIPfindConshdlr(scip, "integral") == NULL )
    {
       SCIP_CALL( SCIPincludeConshdlrIntegral(scip) );
+   }
+
+   /* SCIP can go to SOLVED after presolving if there are no vars, cons, nor pricer; we add a pricer to avoid this */
+   switch( stage )
+   {
+      case SCIP_STAGE_PRESOLVED:
+      case SCIP_STAGE_PRESOLVING:
+      case SCIP_STAGE_SOLVING:
+         SCIP_CALL( SCIPincludePricerBasic(scip, NULL, "pricerTest", "pricer to avoid SCIP skipping SOLVING", 0, FALSE,
+                  pricerRedcostTest, NULL, NULL) );
+         SCIP_CALL( SCIPactivatePricer(scip, SCIPfindPricer(scip, "pricerTest")) );
+         break;
+
+      default:
+         break;
    }
 
    switch( stage )

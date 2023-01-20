@@ -4,13 +4,22 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            *
-#*                            fuer Informationstechnik Berlin                *
+#*  Copyright 2002-2022 Zuse Institute Berlin                                *
 #*                                                                           *
-#*  SCIP is distributed under the terms of the ZIB Academic License.         *
+#*  Licensed under the Apache License, Version 2.0 (the "License");          *
+#*  you may not use this file except in compliance with the License.         *
+#*  You may obtain a copy of the License at                                  *
 #*                                                                           *
-#*  You should have received a copy of the ZIB Academic License              *
-#*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
+#*      http://www.apache.org/licenses/LICENSE-2.0                           *
+#*                                                                           *
+#*  Unless required by applicable law or agreed to in writing, software      *
+#*  distributed under the License is distributed on an "AS IS" BASIS,        *
+#*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. *
+#*  See the License for the specific language governing permissions and      *
+#*  limitations under the License.                                           *
+#*                                                                           *
+#*  You should have received a copy of the Apache-2.0 license                *
+#*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #
@@ -21,6 +30,7 @@
 #@author  Marc Pfetsch
 #@author  Robert Waniek
 #@author  Michael Winkler
+#@author  Marc Pfetsch
 #
 function abs(x)
 {
@@ -44,7 +54,6 @@ BEGIN {
    infty = +1e+20;
    headerprinted = 0;
    namelength = 18;             # maximal length of instance names (can be increased)
-   simplexiterline = 0; # only used as flag to read next line once
    timeline = 0;        # only used as flag to read next line once
 
    nprobs   = 0;
@@ -128,7 +137,7 @@ BEGIN {
 /@03/ { starttime = $2; }
 /@04/ { endtime = $2; }
 
-/^FICO Xpress Optimizer 64-bit / { version = $5; }
+/^FICO Xpress Solver 64bit/ { version = $5; }
 
 /^timelimit/ {
    timelimit = abs($2);
@@ -164,8 +173,8 @@ BEGIN {
    }
 }
 /^Best integer solution found is/ {
-      pb = $6;
-      feasible = 1;
+   pb = $6;
+   feasible = 1;
 }
 /^Best bound is/ {
    if( feasible == 1 )
@@ -192,40 +201,25 @@ BEGIN {
    timeline = 0;
 }
 }
-/^Final objective/ {
-   pb = $4;
-   db = $4;
-}
 # this is not "per simplex iteration" but "per Xpress iteration"
 / microseconds per iteration/ {
    if( tottime == 0.0 )
       tottime = $1 / 1000000;
 }
 /^ \*\*\* Search completed \*\*\*     Time:/ {
-   bbnodes   = $8;
+   bbnodes = $8;
    tottime = $6;
-   aborted   = 0;
+   aborted = 0;
+}
+/^ \*\*\* Search unfinished \*\*\*    Time:/ {
+   bbnodes = $8;
+   tottime = $6;
+   aborted = 0;
+   timeout = 1;
 }
 /^simplexiter/{
-   simplexiterline = 1;
+   iters = 1;
    next;
-}
-// {if( simplexiterline )
-{
-   iters = $1;
-   simplexiterline = 0;
-}
-}
-
-/^bariter/{
-   bariterline = 1;
-   next;
-}
-// {if( bariterline )
-{
-   iters = $1;
-   bariterline = 0;
-}
 }
 
 #

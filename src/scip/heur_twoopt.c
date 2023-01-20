@@ -3,17 +3,27 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_twoopt.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  primal heuristic to improve incumbent solution by flipping pairs of variables
  * @author Timo Berthold
  * @author Gregor Hendel
@@ -44,7 +54,7 @@
 
 #define HEUR_NAME             "twoopt"
 #define HEUR_DESC             "primal heuristic to improve incumbent solution by flipping pairs of variables"
-#define HEUR_DISPCHAR         'B'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_ITERATIVE
 #define HEUR_PRIORITY         -20100
 #define HEUR_FREQ             -1
 #define HEUR_FREQOFS          0
@@ -54,13 +64,13 @@
 #define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
 
 /* default parameter values */
-#define DEFAULT_INTOPT                FALSE /**< optional integer optimization is applied by default */
-#define DEFAULT_WAITINGNODES              0 /**< default number of nodes to wait after current best solution before calling heuristic */
-#define DEFAULT_MATCHINGRATE            0.5 /**< default percentage by which two variables have to match in their LP-row set to be
-                                             *   associated as pair by heuristic */
-#define DEFAULT_MAXNSLAVES              199 /**< default number of slave candidates for a master variable */
-#define DEFAULT_ARRAYSIZE                10 /**< the default array size for temporary arrays */
-#define DEFAULT_RANDSEED                 37 /**< initial random seed */
+#define DEFAULT_INTOPT                FALSE  /**< optional integer optimization is applied by default */
+#define DEFAULT_WAITINGNODES              0  /**< default number of nodes to wait after current best solution before calling heuristic */
+#define DEFAULT_MATCHINGRATE            0.5  /**< default percentage by which two variables have to match in their LP-row set to be
+                                              *   associated as pair by heuristic */
+#define DEFAULT_MAXNSLAVES              199  /**< default number of slave candidates for a master variable */
+#define DEFAULT_ARRAYSIZE                10  /**< the default array size for temporary arrays */
+#define DEFAULT_RANDSEED                 37  /**< initial random seed */
 
 /*
  * Data structures
@@ -335,6 +345,10 @@ SCIP_Bool checkConstraintMatching(
    if( nnonzeros1 == 0 && nnonzeros2 == 0 )
       return TRUE;
 
+   /* if matching rate is 0.0, we don't need to check anything */
+   if( matchingrate == 0.0 )
+      return TRUE;
+
    /* initialize the counters for the number of rows not shared. */
    nrowmaximum = MAX(nnonzeros1, nnonzeros2);
 
@@ -378,6 +392,8 @@ SCIP_Bool checkConstraintMatching(
 
    /* now apply the ratio based comparison, that is if the ratio of shared rows is greater or equal the matching rate
     * for each variable */
+   /* nnonzeros1 = 0 or nnonzeros2 = 0 iff matching rate is 0, but in this case, we return TRUE at the beginning */
+   /* coverity[divide_by_zero] */
    return ( SCIPisFeasLE(scip, matchingrate, (nnonzeros1 - nrows1not2) / (SCIP_Real)(nnonzeros1)) ||
       SCIPisFeasLE(scip, matchingrate, (nnonzeros2 - nrows2not1) / (SCIP_Real)(nnonzeros2)) );  /*lint !e795 */
 }

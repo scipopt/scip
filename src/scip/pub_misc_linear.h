@@ -3,18 +3,27 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pub_misc_linear.h
- * @ingroup INTERNALAPI
+ * @ingroup PUBLICCOREAPI
  * @brief  internal miscellaneous methods for linear constraints
  * @author Jakob Witzig
  */
@@ -39,7 +48,7 @@ extern "C" {
  *
  *  @note The success pointer indicates if the individual contraint handler was able to return the involved values
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPconsGetRhs(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint for which right-hand side is queried */
@@ -50,7 +59,7 @@ SCIP_Real SCIPconsGetRhs(
  *
  *  @note The success pointer indicates if the individual contraint handler was able to return the involved values
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPconsGetLhs(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to get left hand side for */
@@ -64,7 +73,7 @@ SCIP_Real SCIPconsGetLhs(
  *
  *  @note The success pointer indicates if the individual contraint handler was able to return the involved values
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetConsVals(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint for which the coefficients are wanted */
@@ -77,7 +86,7 @@ SCIP_RETCODE SCIPgetConsVals(
  *
  *  @note The success pointer indicates if the individual contraint handler was able to return the dual farkas solution
  */
-EXTERN
+SCIP_EXPORT
 void SCIPconsGetDualfarkas(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to get left hand side for */
@@ -89,6 +98,7 @@ void SCIPconsGetDualfarkas(
  *
  *  @note The success pointer indicates if the individual contraint handler was able to return the dual solution
  */
+SCIP_EXPORT
 void SCIPconsGetDualsol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to get left hand side for */
@@ -99,12 +109,24 @@ void SCIPconsGetDualsol(
 /** returns the row of an arbitrary SCIP constraint that can be represented as a single linear constraint
  *  or NULL of no row is awailable
  */
-EXTERN
+SCIP_EXPORT
 SCIP_ROW* SCIPconsGetRow(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint to get left hand side for */
    );
 
+/** adds the given variable to the input constraint.
+ *  If the constraint is setppc or logicor the value is ignored. If the constraint is knapsack, then the value is
+ *  converted to an int. A warning is passed if the SCIP_Real is not an integer.
+ *  TODO: Allow val to be a pointer.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPconsAddCoef(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint for which row is queried */
+   SCIP_VAR*             var,                /**< variable of the constraint entry */
+   SCIP_Real             val                 /**< the coefficient of the constraint entry */
+   );
 
 #ifdef __cplusplus
 }

@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -25,6 +34,7 @@
 #include "sepa_edge.h"
 
 #include "probdata_cyc.h"
+#include "scip/cutsel_hybrid.h"
 
 #define SEPA_NAME                "edge"
 #define SEPA_DESC              "separator to separate triangle-inequalities in cycle-clustering application"
@@ -314,31 +324,35 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpEdge)
       }
    }
 
-   /* apply the cuts with the highest violation or use cut-selection */
-   if( usecutselection )
+   if( ncutscreated > 0 )
    {
-      SCIP_CALL( SCIPgetRealParam(scip, "cycleclustering/goodscorefac", &goodscorefac) );
-      SCIP_CALL( SCIPgetRealParam(scip, "cycleclustering/badscorefac", &badscorefac) );
-      SCIP_CALL( SCIPgetRealParam(scip, "cycleclustering/goodmaxparall", &goodmaxparall) );
-      SCIP_CALL( SCIPgetRealParam(scip, "cycleclustering/maxparall", &maxparall) );
-      SCIP_CALL( SCIPgetRealParam(scip, "cycleclustering/dircutoffdist", &dircutoffdist) );
-      SCIP_CALL( SCIPgetRealParam(scip, "cycleclustering/efficacyweight", &efficacyweight) );
-      SCIP_CALL( SCIPgetRealParam(scip, "cycleclustering/objparalweight", &objparalweight) );
-      SCIP_CALL( SCIPgetRealParam(scip, "cycleclustering/intsuppweight", &intsuppweight) );
+      /* apply the cuts with the highest violation or use cut-selection */
+      if( usecutselection )
+      {
+         SCIP_CALL( SCIPgetRealParam(scip, "cycleclustering/goodscorefac", &goodscorefac) );
+         SCIP_CALL( SCIPgetRealParam(scip, "cycleclustering/badscorefac", &badscorefac) );
+         SCIP_CALL( SCIPgetRealParam(scip, "cycleclustering/goodmaxparall", &goodmaxparall) );
+         SCIP_CALL( SCIPgetRealParam(scip, "cycleclustering/maxparall", &maxparall) );
+         SCIP_CALL( SCIPgetRealParam(scip, "cycleclustering/dircutoffdist", &dircutoffdist) );
+         SCIP_CALL( SCIPgetRealParam(scip, "cycleclustering/efficacyweight", &efficacyweight) );
+         SCIP_CALL( SCIPgetRealParam(scip, "cycleclustering/objparalweight", &objparalweight) );
+         SCIP_CALL( SCIPgetRealParam(scip, "cycleclustering/intsuppweight", &intsuppweight) );
 
-      SCIP_CALL( SCIPselectCuts(scip, cuts, NULL, goodscorefac, badscorefac, goodmaxparall, maxparall, dircutoffdist,
-         efficacyweight, objparalweight, intsuppweight, ncutscreated, 0, MAXCUTS, &ncutsapplied ) );
-   }
-   else
-   {
-      SCIPsortDownRealPtr(violation, ((void **) cuts), ncutscreated);
-      ncutsapplied = MIN(ncutscreated, MAXCUTS);
-   }
+         SCIP_CALL( SCIPselectCutsHybrid(scip, cuts, NULL, NULL, goodscorefac, badscorefac,
+               goodmaxparall, maxparall, dircutoffdist, efficacyweight, objparalweight, intsuppweight,
+               ncutscreated, 0, MAXCUTS, &ncutsapplied) );
+      }
+      else
+      {
+         SCIPsortDownRealPtr(violation, ((void **) cuts), ncutscreated);
+         ncutsapplied = MIN(ncutscreated, MAXCUTS);
+      }
 
-   for( j = 0; j < ncutsapplied; ++j )
-   {
-      SCIP_CALL( SCIPaddPoolCut(scip, cuts[j]) );
-      *result = SCIP_SEPARATED;
+      for( j = 0; j < ncutsapplied; ++j )
+      {
+         SCIP_CALL( SCIPaddPoolCut(scip, cuts[j]) );
+         *result = SCIP_SEPARATED;
+      }
    }
 
    /* free memory */

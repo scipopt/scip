@@ -3,17 +3,27 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_conflictdiving.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  LP diving heuristic that chooses fixings w.r.t. conflict locks
  * @author Jakob Witzig
  */
@@ -36,14 +46,15 @@
 
 #define HEUR_NAME                    "conflictdiving"
 #define HEUR_DESC                    "LP diving heuristic that chooses fixings w.r.t. conflict locks"
-#define HEUR_DISPCHAR                '~'
+#define HEUR_DISPCHAR                SCIP_HEURDISPCHAR_DIVING
 #define HEUR_PRIORITY                -1000100
-#define HEUR_FREQ                    -1
+#define HEUR_FREQ                    10
 #define HEUR_FREQOFS                 0
 #define HEUR_MAXDEPTH                -1
 #define HEUR_TIMING                  SCIP_HEURTIMING_AFTERLPPLUNGE
 #define HEUR_USESSUBSCIP             FALSE  /**< does the heuristic use a secondary SCIP instance? */
 #define DIVESET_DIVETYPES            SCIP_DIVETYPE_INTEGRALITY | SCIP_DIVETYPE_SOS1VARIABLE /**< bit mask that represents all supported dive types */
+#define DIVESET_ISPUBLIC             FALSE  /**< is this dive set publicly available (ie., can be used by other primal heuristics?) */
 #define DEFAULT_RANDSEED             151 /**< default random seed */
 
 /*
@@ -65,7 +76,7 @@
 #define DEFAULT_LPSOLVEFREQ           0 /**< LP solve frequency for diving heuristics */
 #define DEFAULT_ONLYLPBRANCHCANDS FALSE /**< should only LP branching candidates be considered instead of the slower but
                                          *   more general constraint handler diving variable selection? */
-#define DEFAULT_LOCKWEIGHT          1.0 /**< weight used in a convex combination of conflict and variable locks */
+#define DEFAULT_LOCKWEIGHT         0.75 /**< weight used in a convex combination of conflict and variable locks */
 #define DEFAULT_LIKECOEF          FALSE /**< perform rounding like coefficient diving */
 #define DEFAULT_MAXVIOL            TRUE /**< prefer rounding direction with most violation */
 #define DEFAULT_MINCONFLICTLOCKS      5 /**< threshold for penalizing the score */
@@ -179,7 +190,7 @@ SCIP_DECL_HEUREXEC(heurExecConflictdiving) /*lint --e{715}*/
    if( SCIPgetNConflictConssFound(scip) == 0 )
       return SCIP_OKAY;
 
-   SCIP_CALL( SCIPperformGenericDivingAlgorithm(scip, diveset, heurdata->sol, heur, result, nodeinfeasible) );
+   SCIP_CALL( SCIPperformGenericDivingAlgorithm(scip, diveset, heurdata->sol, heur, result, nodeinfeasible, -1L, SCIP_DIVECONTEXT_SINGLE) );
 
    return SCIP_OKAY;
 }
@@ -191,10 +202,8 @@ SCIP_DECL_HEUREXEC(heurExecConflictdiving) /*lint --e{715}*/
 static
 SCIP_RETCODE getScoreLikeCoefdiving(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_HEUR*            heur,               /**< heuristic data structure */
    SCIP_HEURDATA*        heurdata,           /**< heuristic data */
    SCIP_RANDNUMGEN*      rng,                /**< random number generator of the diveset */
-   SCIP_DIVESET*         diveset,            /**< diveset of the heuristic */
    SCIP_DIVETYPE         divetype,           /**< divetype of the heuristic */
    SCIP_VAR*             cand,               /**< diving candidate */
    SCIP_Real             candsol,            /**< diving candidate solution */
@@ -305,10 +314,8 @@ SCIP_RETCODE getScoreLikeCoefdiving(
 static
 SCIP_RETCODE getScore(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_HEUR*            heur,               /**< heuristic data structure */
    SCIP_HEURDATA*        heurdata,           /**< heuristic data */
    SCIP_RANDNUMGEN*      rng,                /**< random number generator of the diveset */
-   SCIP_DIVESET*         diveset,            /**< diveset of the heuristic */
    SCIP_DIVETYPE         divetype,           /**< divetype of the heuristic */
    SCIP_VAR*             cand,               /**< diving candidate */
    SCIP_Real             candsol,            /**< diving candidate solution */
@@ -328,7 +335,6 @@ SCIP_RETCODE getScore(
    int nconflictlocksdown;
 
    assert(scip != NULL);
-   assert(heur != NULL);
    assert(heurdata != NULL);
    assert(rng != NULL);
 
@@ -466,11 +472,11 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreConflictdiving)
 
    if( heurdata->likecoefdiving )
    {
-      SCIP_CALL( getScoreLikeCoefdiving(scip, heur, heurdata, rng, diveset, divetype, cand, candsol, candsfrac, score, roundup) );
+      SCIP_CALL( getScoreLikeCoefdiving(scip, heurdata, rng, divetype, cand, candsol, candsfrac, score, roundup) );
    }
    else
    {
-      SCIP_CALL( getScore(scip, heur, heurdata, rng, diveset, divetype, cand, candsol, candsfrac, score, roundup) );
+      SCIP_CALL( getScore(scip, heurdata, rng, divetype, cand, candsol, candsfrac, score, roundup) );
    }
 
    /* check, if candidate is new best candidate: prefer unroundable candidates in any case */
@@ -482,6 +488,8 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreConflictdiving)
 /*
  * heuristic specific interface methods
  */
+
+#define divesetAvailableConflictdiving NULL
 
 /** creates the conflictdiving heuristic and includes it in SCIP */
 SCIP_RETCODE SCIPincludeHeurConflictdiving(
@@ -509,7 +517,8 @@ SCIP_RETCODE SCIPincludeHeurConflictdiving(
    /* create a diveset (this will automatically install some additional parameters for the heuristic)*/
    SCIP_CALL( SCIPcreateDiveset(scip, NULL, heur, HEUR_NAME, DEFAULT_MINRELDEPTH, DEFAULT_MAXRELDEPTH, DEFAULT_MAXLPITERQUOT,
          DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL, DEFAULT_MAXDIVEAVGQUOTNOSOL, DEFAULT_LPRESOLVEDOMCHGQUOT,
-         DEFAULT_LPSOLVEFREQ, DEFAULT_MAXLPITEROFS, DEFAULT_RANDSEED, DEFAULT_BACKTRACK, DEFAULT_ONLYLPBRANCHCANDS, DIVESET_DIVETYPES, divesetGetScoreConflictdiving) );
+         DEFAULT_LPSOLVEFREQ, DEFAULT_MAXLPITEROFS, DEFAULT_RANDSEED, DEFAULT_BACKTRACK, DEFAULT_ONLYLPBRANCHCANDS,
+         DIVESET_ISPUBLIC, DIVESET_DIVETYPES, divesetGetScoreConflictdiving, divesetAvailableConflictdiving) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/maxviol", "try to maximize the violation",
          &heurdata->maxviol, TRUE, DEFAULT_MAXVIOL, NULL, NULL) );

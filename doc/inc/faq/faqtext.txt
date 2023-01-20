@@ -8,7 +8,7 @@ SECTION: General Questions about SCIP
       and contains all necessary plugins to serve as a <b>standalone solver</b> for MIP and MINLP.
     </p>
     <ul>
-      <li>You can use the <a href="http://scip.zib.de/#download">precompiled binaries</a>
+      <li>You can use the <a href="https://scipopt.org/#download">precompiled binaries</a>
           to solve MIPs and MINLPs. Learn more about the <a href="PATHTODOC/group__FILEREADERS.LINKEXT">file formats supported by SCIP</a>,
           and get <a href="PATHTODOC/WHATPROBLEMS.LINKEXT">an overview</a>
           of the supported problem classes and additional recommendations for solving them.
@@ -26,18 +26,15 @@ SECTION: General Questions about SCIP
     ANSWER:
     <p>
       If you are either looking for a fast non-commercial MIP/MINLP-solver or for a
-      branch-cut-and-price-framework in which you can directly implement your own methods
-      and allows full control of the solving process.
+      branch-cut-and-price-framework into which you can directly implement your own methods.
+      SCIP allows full control of the solving process through parametrization and user callbacks.
     </p>
 
     QUESTION: I heard something about licenses. Do I have to pay for using SCIP?
     LABEL:licensefaq
     ANSWER:
     <p>
-      As long as you use it for academic, non-commercial purposes: No.
-      This will not change. For the other cases, check the explanation of the
-      <a href="http://scip.zib.de/#license">ZIB academic license</a> and always feel free to ask us.
-      If you want to use SCIP commercially, please write an e-mail to koch@zib.de.
+      Since November 4, 2022, and SCIP version 8.0.3, SCIP is distributed under a permissive open source license, see the <a href="https://scipopt.org/index.php#license">SCIP homepage</a>.
     </p>
 
     QUESTION: How do I get started?
@@ -45,9 +42,11 @@ SECTION: General Questions about SCIP
     ANSWER:
     <p>
       An easy way is to use the SCIP-binaries and call SCIP from a shell, see <a href="PATHTODOC/SHELL.LINKEXT">here</a> for a tutorial.
-      For that, you just have to download one of the precompiled binaries from the
-      <a href="http://scip.zib.de/#download">download section</a>, or the zipped source code and compile it
-      with your favorite settings. This is described in detail in the <code><a href="PATHTODOC/INSTALL.LINKEXT">INSTALL</a></code> file in the SCIP main directory.
+      For that, you just have to use one of the installers from the
+      <a href="https://scipopt.org/#download">download section</a>, or the zipped source code and compile it
+      with your favorite settings.
+      Note that the coding examples are only contained in the source code bundle, but not in the precompiled packages.
+      The compilation from source is described in detail in the <code><a href="PATHTODOC/INSTALL.LINKEXT">INSTALL</a></code> file in the SCIP main directory.
     </p>
     <p>
       Another way is to use SCIP as a solver integrated into your own program source code.
@@ -57,7 +56,7 @@ SECTION: General Questions about SCIP
     <p>
       A third way is to implement your own plugins into SCIP.
       This is explained in the HowTos for all plugin types, which you can find in the
-      <a href="PATHTODOC/index.LINKEXT">doxygen documentation</a>.
+      <a href="PATHTODOC/HOWTOADD.LINKEXT">"How to add" section</a>.
       See also <a href="PATHTODOC/START.LINKEXT">How to start a new project</a>.
     </p>
 
@@ -70,7 +69,7 @@ SECTION: General Questions about SCIP
       LP-solvers currently supported by SCIP are:
     </p>
     <ul>
-      <li><a href="http://soplex.zib.de/">SoPlex</a></li>
+      <li><a href="https://soplex.zib.de/">SoPlex</a></li>
       <li><a href="http://www-01.ibm.com/software/integration/optimization/cplex-optimizer/">IBM ILOG CPLEX</a></li>
       <li><a href="http://www.fico.com/en/Products/DMTools/Pages/FICO-Xpress-Optimization-Suite.aspx">FICO XPress</a></li>
       <li><a href="http://www.gurobi.com/">Gurobi</a> (version at least 7.0.2 required)</li>
@@ -80,44 +79,61 @@ SECTION: General Questions about SCIP
       <li><a href="http://www2.isye.gatech.edu/~wcook/qsopt/">QSopt</a> (experimental)</li>
     </ul>
     <p>
-      We also provide some <a href="http://scip.zib.de/#download">precompiled binaries</a>. Besides that,
-      you might need a modeling language like <a href="http://zimpl.zib.de/">ZIMPL</a> to generate *.mps
-      or *.lp files. ZIMPL files can also directly be read by SCIP.
-      You can download a package which includes SCIP, SoPlex and ZIMPL <a href="http://scip.zib.de/#download">here</a>.
-    </p>
-    <p>
       If you want to use SCIP for mixed integer nonlinear programming, you might want to use an underlying NLP solver (e.g.,
       <a href="https://projects.coin-or.org/Ipopt">Ipopt</a>). SCIP already comes with the CppAD expression interpreter (e.g., <a href="http://www.coin-or.org/CppAD/">CppAD</a>) as part of the source code.
     </p>
+    <p>
+      Besides that, you might need a modeling language like <a href="https://zimpl.zib.de/">ZIMPL</a> to generate *.mps
+      or *.lp files. ZIMPL files (.zpl extension) can also be read directly into SCIP.
+      Downloading the SCIP Optimization Suite includes SCIP, SoPlex and ZIMPL, as well as GCG and UG. Find installers for different platforms
+      and the source code bundle of all versions <a href="https://scipopt.org/#download">here</a>.
+    </p>
+
+    QUESTION: How can I build/compile SCIP?
+    LABEL:howtousemakefiles
+    ANSWER:
+    <p>
+        SCIP can be compiled using either <a href="PATHTODOC/MAKE.LINKEXT">Makefiles</a>
+        or <a href="PATHTODOC/CMAKE.LINKEXT">CMake</a>. It's strongly recommended to use the new CMake build system both for new
+        and long-time users of SCIP. Consult the CMake documentation for further information about the changes introduced
+        in the new system (like Linux-conform naming conventions for libraries). We still support the traditional Makefile
+        system for backwards compatibility but it might be discontinued at some point.
+    </p>
+
+    QUESTION: What are the main differences between the CMake and the Makefile system?
+    LABEL: differencescmakevsmake
+    ANSWER:
+    <p>
+        SCIP and the SCIP Optimization Suite provide two ways of compilation, one by using the Cross-Platform configuration system CMake, and the
+        alternative of using the manually maintained Makefile-system.
+        Find instructions how to use each of them in the <a href="PATHTODOC/INSTALL.LINKEXT">INSTALL</a> file in the SCIP root directory.
+        The most notable difference is that the CMake system creates a single (complete) library "libscip" to link against, whereas the Makefile system only generates
+        a partial library "libscip" and requires linking of further libraries for a successful compilation of a SCIP project.
+    </p>
+    <p>
+        The following list highlights some of the advantages of the CMake system, which we recommend for new users.
+    </p>
+    <ul>
+        <li>Configuration step detects the required system libraries such as readline. Missing libraries turn off the corresponding options</li>
+        <li>Use of our <a href="PATHTODOC/INTERFACES.LINKEXT">Python and Java Interfaces</a> depends on a library "libscip" built with CMake</li>
+        <li>Generation of Visual Studio project files under Windows</li>
+        <li>Support of build systems other than <code>make</code>, such as <code>ninja</code></li>
+    </ul>
+    <p>
+        The following list highlights some of the advantages of the Makefile system.
+    </p>
+    <ul>
+        <li>Backwards compatibility when switching to older SCIP versions (CMake support introduced with SCIP version 4.0.1) </li>
+        <li>Situations (old operating systems) where CMake is unavailable</li>
+        <li>Compilation of the UG framework is not (yet) supported by CMake, only possible using make</li>
+    </ul>
 
     QUESTION: I have installation problems. What can I do?
     LABEL:installationproblems
     ANSWER:
     <p>
       Read the <code><a href="PATHTODOC/INSTALL.LINKEXT">INSTALL</a></code> file in the SCIP root directory. It contains hints of how to get around problems. You can also try
-      the binaries available on the <a href="http://scip.zib.de">SCIP page</a>. <br>
-      If you want to use <a href="http://soplex.zib.de/">SoPlex</a> as the underlying LP-solver, you can try the
-      following:
-    </p>
-    <p>
-      First, download the <a href="http://scip.zib.de">SCIP Optimization Suite</a>.
-      Then, extract the file, change into the scipoptsuite directory, and enter 'make'.
-      As long as you have all the necessary libraries installed in your system, it should generate a SCIP
-      binary linked to ZIMPL and Soplex. The necessary system libraries are:
-    </p>
-    <ol>
-        <li>ZLIB (libz.a)</li>
-        <li>GMP (libgmp.a)</li>
-        <li>Readline (libreadline.a)</li>
-    </ol>
-    <p>
-      If you do not have all of these libraries, read the <code><a href="PATHTODOC/INSTALL.LINKEXT">INSTALL</a></code> file
-      in the SCIP Optimization Suite directory.
-    </p>
-    <p>
-      As a summary, the call of <code>make ZIMPL=false ZLIB=false READLINE=false</code> should work on most systems.
-      If you have any problems while using an LP-solver different from SoPlex,
-      please read the SCIP <code><a href="PATHTODOC/INSTALL.LINKEXT">INSTALL</a></code> file first.
+      the precompiled binaries by choosing one of the available installers from the <a href="https://scipopt.org#download">SCIP page</a> for your operating system.<br>
     </p>
     <p>
       If you encounter compilation problems dealing with the <code>explicit</code> keyword you should try a newer compiler.
@@ -135,7 +151,7 @@ SECTION: General Questions about SCIP
     LABEL:howtodebug
     ANSWER:
     <p>
-      Compile SCIP in debug mode: <code>make OPT=dbg</code>. Put the binary into a debugger, e.g., <a href="http://www.gnu.org/s/gdb/">gdb</a>
+      Compile SCIP in debug mode (<code>"cmake -DCMAKE_BUILD_TYPE=Debug"</code> in CMake or <code>make OPT=dbg</code> using the Makefile system). Put the binary into a debugger, e.g., <a href="http://www.gnu.org/s/gdb/">gdb</a>
       and let it run again. If you get an impression which component is causing the trouble, set <code>#define SCIP_DEBUG</code> as the first
       line of the corresponding *.c file, recompile and let it run again. This will print debug messages from that piece of code.
       Find a short debugging tutorial <a href="PATHTODOC/DEBUG.LINKEXT">here</a>.
@@ -147,7 +163,7 @@ SECTION: General Questions about SCIP
     <p>
        <a href="#howtodebug">See above.</a> Often, the asserts that show up in debug mode already help to clarify misunderstandings
        and suggest fixes, if you were calling SCIP functions in an unexpected manner. For sending bug reports,
-       please see our <a href="scip.zib.de/#contact">Contact information</a> from which you can directly access an online form for reporting bugs.
+       please see our <a href="scipopt.org/#contact">Contact information</a> from which you can directly access an online form for reporting bugs.
     </p>
 
     QUESTION: I would like to check whether some functionality is implemented in SCIP.
@@ -168,7 +184,7 @@ SECTION: General Questions about SCIP
     <p>
         Yes. SCIP can be used as a pure CP/SAT Solver by typing
         <code>set emphasis cpsolver</code> in the shell or by using the function <code>SCIPsetEmphasis()</code>.
-        Furthermore, you can compile SCIP without any LP-Solver by <code>make LPS=none</code>.
+        Furthermore, you can compile SCIP without any LP-Solver by <code>cmake -DLPS=none</code> (<code>make LPS=none</code> in the Makefile system).
         See <a href="#howtochangebehaviour">here</a> for more on changing the behavior of SCIP.
     </p>
 
@@ -189,7 +205,7 @@ SECTION: General Questions about SCIP
     <p>
         Hence, if you need more, "LP specific", information than the primal solution, you are better off using an LP-Solver
         directly. If you are using the SCIP Optimization Suite, you could, e.g., use the included LP solver
-        <a href=http://soplex.zib.de>SoPlex</a>.  If you want to solve an LP not from the command line, but within your
+        <a href=https://soplex.zib.de>SoPlex</a>.  If you want to solve an LP not from the command line, but within your
         C/C++ program, you could also use SCIP's LP-Interface, see also <a href="#howtosolvelps">here</a>.
     </p>
 
@@ -209,17 +225,6 @@ SECTION: General Questions about SCIP
         robust as the rest of SCIP.
         Missing bounds on nonlinear variables and tiny or huge coefficients can easily lead to numerical problems,
         which can be avoided by careful modeling.
-    </p>
-
-    QUESTION: How can I build/compile SCIP?
-    LABEL:howtousemakefiles
-    ANSWER:
-    <p>
-        SCIP can be compiled using either <a href="PATHTODOC/MAKE.LINKEXT">Makefiles</a>
-        or <a href="PATHTODOC/CMAKE.LINKEXT">CMake</a>. It's recommended to use the new CMake build system both for new
-        and long-time users of SCIP. Consult the CMake documentation for further information about the changes introduced
-        in the new system (like Linux-conform naming conventions for libraries). We still support the traditional Makefile
-        system for backwards compatibility but it might be discontinued at some point.
     </p>
 
     QUESTION: What is this business with .a and .so libraries in the directory <code>lib/</code>?
@@ -266,7 +271,7 @@ SECTION: General Questions about SCIP
     ANSWER:
     <p>
         In fact, there is a slight difference: <code>SCIPvarGetSol()</code> is also able to return pseudo solution values.
-        If you do not have an idea, what pseudo solutions are, <code>SCIPgetVarSol()</code> should be just fine. This
+        If you do not have an idea what pseudo solutions are, <code>SCIPgetVarSol()</code> should be just fine. This
         should be the only case of 'duplicate methods'. If you find, however, another one, please contact us.
     </p>
 
@@ -279,7 +284,7 @@ SECTION: General Questions about SCIP
     </p>
     <ul>
         <li>
-            <a href="http://hydraw.zib.de/">HyDraw</a>
+            <a href="https://hydraw.zib.de/">HyDraw</a>
             can display a live visualization of the tree using JavaView.
         </li>
         <li>
@@ -328,10 +333,9 @@ SECTION: General Questions about SCIP
     <p>
         An alternative definition of the gap is
         <code>(dual bound - primal bound) / abs(primal bound)</code>.
-        Using this definiton, a finite gap is computed as soon as a dual and primal bound have been found.
-        However, the gap may increase during the solving process, if both bounds have opposite signs in the beginning.
+        As in the previous gap definition, if primal and dual bound have opposite signs, the gap is "Infinity".
         In SCIP, this definition can be included in the output by enabling the display column "primalgap":
-        <code>display/primalgap/active = 2</code>
+        <code>display/primalgap/active = 2</code>.
     </p>
 
     QUESTION: SCIP crashes during symmetry detection with bliss. What can I do?
@@ -346,6 +350,26 @@ SECTION: General Questions about SCIP
         or with the SCIP parameter <code>misc/usesymmetry = 0</code>.
         Otherwise it can be resolved by either adding the macro definition with the compile flag <code>-DBLISS_USE_GMP</code>
         or by compiling bliss differently, i.e. without GMP support.
+    </p>
+
+    QUESTION: How can I run SCIP in parallel?
+    LABEL:howtorunscipinparallel
+    ANSWER:
+    <p>
+       SCIP itself is mostly a sequential solver and does not feature internal parallelism, e.g., to process branch-and-bound nodes in parallel.
+       However, there are two ways to make use of parallel hardware:
+        <ul>
+            <li>First, using the command <code>concurrentopt</code> in the
+            interactive shell or the method <code>SCIPsolveConcurrent()</code>
+            one can spawn multiple solves in parallel, which exchange bound
+            changes and primal solutions and will terminate as soon as the
+            fastest solver terminates. For this to work, SCIP must be built with
+            the TPI option.</li>
+            <li>Second, one can use the external UG framework for shared-memory
+            and distributed-memory parallelization of the tree search.  See the
+            <a href="https://ug.zib.de"></a> UG web page</a> for further
+            details.</li>
+        </ul>
     </p>
 
 SECTION: Using SCIP as a standalone solver
@@ -414,7 +438,7 @@ SECTION: Using SCIP as a standalone solver
         This way you can see, which of the presolvers, propagators or constraint
         handlers performed the reductions.
         Then, add a <code>#define SCIP_DEBUG</code> as first line of the corresponding *.c file
-        in src/scip (e.g. cons_linear.c or presol_probing.c)
+        in src/scip (e.g. cons_linear.c or prop_probing.c)
         Recompile and run again. You will get heaps of information now.
         Looking into the code and documentation of the corresponding plugin and ressources from the literature
         helps with the investigation.
@@ -546,6 +570,57 @@ SECTION: Using SCIP as a standalone solver
         LP relaxations. Depending on the problem, however, additional symmetry handling inequalities might interact
         with other cutting plane separators such that stronger cuts can be found. So, if you are dealing with a
         class of optimization problems, you should test which of both methods performs better.
+    </p>
+
+    QUESTION: SCIP's incumbent solution is infeasible in the original space. What can I do?
+    LABEL:useemphasisnumericssetting
+    ANSWER:
+    <p>
+        SCIP uses a relative feasibility tolerance to check if a solution satisfies a constraint.
+        Thus, the acceptable violation of a constraint (in absolute terms) is higher for large left/right hand sides.
+        Certain computations that change the lhs/rhs of constraints can lead to an increased tolerance in the
+        transformed space while solving. In such cases,
+        SCIP may find solutions that are infeasible in the original problem space, since the feasibility tolerance in
+        the original space is smaller. Most of the time, this is due to (multi-)aggregations of variables,
+        because SCIP cannot centrally guarantee that a (multi-)aggregation requested by one constraint handler does not lead to numerical
+        instability of other constraints.
+    </p>
+    <p>
+       The emphasis/numerics setting disables and enables different settings in SCIP to prevent violations in the original problem space.
+       This numerical stability comes at the sacrifice of performance.
+       You can enable it in one of the following ways:
+       <ul>
+            <li>In the interactive shell: <code> SCIP&gt; set emphasis numerics</code>,</li>
+            <li>Through the C API: <code> SCIP_CALL( SCIPsetEmphasis(scip, SCIP_PARAMEMPHASIS_NUMERICS, quiet) );</code></li>
+        </ul>
+       If even this emphasis setting does not help, consider disabling (multi-)aggregations completely and decreasing the feasibility tolerance.
+    </p>
+
+    QUESTION: What is displayed in the column "compl." of the SCIP output?
+    LABEL:searchcompletioncolumn
+    ANSWER:
+    <p>
+        This display column displays an approximate percentage of search completion. Ideally, the displayed percentage is a close approximation
+        of the fraction of completed search nodes (with respect to the end of the search).
+        The column makes use of different search tree statistics to compute this approximation.
+        The concrete method that is used can be changed via the <code>estimation/completiontype</code> user parameter.
+        Several methods can be trained to perform well on instances of interest, see also <a href="PATHTODOC/TRAINESTIMATION.LINKEXT">this tutorial</a>.
+    </p>
+
+    QUESTION: What is the difference between SCIP's search tree and the "Estimation Tree" in the SCIP statistics?
+    LABEL:estimationtree
+    ANSWER:
+    <p>
+        The size of the search tree is reported in the SCIP statistics as "nodes" at termination does not necessarily include
+        all nodes that have been created by branching. This statistic only reports the number of nodes that were processed during
+        the search.
+        In particular open nodes that are pruned from the search tree when a new and better incumbent solution becomes available,
+        are unaccounted for.
+        Several of the estimation methods rely on counting also these pruned nodes, such that the estimation tree is in fact
+        a binary tree at all steps. Every pruned node is counted as a solved node by the estimation tree.
+        Because of this discrepancy how nodes are counted, the estimation tree may contain more nodes than the actual search tree.
+        Note that the estimation tree is not stored explicitly in memory, but only represented by a constant number of
+        node counters and its tree weight.
     </p>
 
 
@@ -996,6 +1071,60 @@ SECTION: Using SCIP as a Branch-Cut-And-Price-Framework
         Yes, you can write your own symmetry handling plugin. To avoid conflicts with the internal symmetry handling methods
         of SCIP, you should deactivate SCIP's symmetry handling routines by calling
         <code>SCIP_CALL( SCIPsetIntParam(scip, "misc/usesymmetry", 0) )</code>.
+    </p>
+
+    QUESTION: What is the difference between sepastore and cutpool, and when should one add a cut to one or the other?
+    LABEL:sepastorecutpool
+    ANSWER:
+    <p>
+        Both, a sepastore and a cutpool, are data structures that can hold cuts.
+        However, their main difference is how they are used by SCIP.
+    </p>
+    <p>
+        In each separation round, cutting planes are added to SCIP's internal separation storage, that is, SCIP's
+        sepastore.
+        The cuts are added to the sepastore with <code>SCIPaddRow()</code>.
+        Before the cuts from the sepastore are added to the current relaxation, they are filtered through the
+        cutselectors.
+        Note that by adding cuts with <code>SCIPaddRow()</code> one has the option to force the cut.
+        This means that the cut is not going to be filtered out by the cutselectors.
+        Moreover, if in a separation round all cutting planes are forced, then the cutselectors are not called.
+        After each separation round, all cutting planes in the sepastore are removed.
+    </p>
+    <p>
+        Cutting planes are mainly generated by constraint handlers and separators.
+        In addition to adding cuts to SCIP with <code>SCIPaddRow()</code>, they can also add cuts with
+        <code>SCIPaddPoolCut()</code> (although only when they are globally valid).
+        The difference is that a cut added with <code>SCIPaddPoolCut()</code> does not go to the sepastore, but to
+        SCIP's global cutpool.
+        In each separation round, the global cutpool can then also add cuts to SCIP's sepastore.
+    </p>
+    <p>
+        If a cut in the global cutpool is not added to the sepastore (e.g. because it is not efficacious enough),
+        its age is increased. If its age reaches <code>separating/cutagelimit</code>, then the cut is removed from the
+        cutpool. As soon as a cut from the cutpool is added to the sepastore, its age counter goes down to 0 and its
+        age remains 0 as long as the cut is in the LP relaxation.
+        In particular, this means that cuts from the global cutpool added to the sepastore are not removed from the
+        global cutpool.
+        This might make sense because of the following reasons.
+        Even if the cut makes it to the sepastore, it does not mean it is going to enter the LP
+        relaxation, because it might be filtered out by a cutselector.
+        Furthermore, if the cut enters the LP it can still age out of the LP (e.g. because it is not active in enough
+        consecutive LP relaxations), but the cut might still be interesting in other parts of the search tree.
+        Thus, it makes sense to add cuts to the global cutpool that are known to be strong or expensive to generate.
+    </p>
+    <p>
+        Another difference between sepastore and cutpool is that any plugin can create its own cutpool, while only the
+        SCIP core can create a sepastore.
+    </p>
+    <p>
+        As a summary, the purpose of the global cutpool is to store globally valid cuts that can be reused in later
+        separation rounds, while the purpose of the sepastore is to collect the cuts that are to be added in a single
+        separation round.
+        In each separation round, constraint handlers and separators can add cuts to the global cutpool, and
+        contraint handlers, separators and the global cutpool can add cuts directly to the sepastore.
+        Furthermore, locally valid cuts can only be added to the sepastore and expensive globally valid cuts might be
+        better suited for the global cutpool.
     </p>
 
 SECTION: Specific questions about Column Generation and Branch-And-Price with SCIP

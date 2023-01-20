@@ -3,17 +3,27 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sepa_oddcycle.c
+ * @ingroup DEFPLUGINS_SEPA
  * @brief  oddcycle separator
  * @author Robert Waniek
  * @author Marc Pfetsch
@@ -1250,6 +1260,7 @@ SCIP_RETCODE checkArraySizesHeur(
 {
    SCIP_Real memorylimit;
    unsigned int additional;
+   SCIP_Bool avoidmemout;
 
    assert(scip != NULL);
    assert(graph != NULL);
@@ -1278,8 +1289,9 @@ SCIP_RETCODE checkArraySizesHeur(
       memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
    }
 
+   SCIP_CALL( SCIPgetBoolParam(scip, "misc/avoidmemout", &avoidmemout) );
    /* if memorylimit would be exceeded or any other limit is reached free all data and exit */
-   if( memorylimit <= additional/1048576.0 || SCIPisStopped(scip) )
+   if( (avoidmemout && memorylimit <= additional/1048576.0) || SCIPisStopped(scip) )
    {
       *success = FALSE;
       SCIPdebugMsg(scip, "...memory limit exceeded\n");
@@ -1295,6 +1307,8 @@ SCIP_RETCODE checkArraySizesHeur(
    }
    else
    {
+      assert(sourceAdjArray != NULL);
+      assert(targetAdjArray != NULL);
       SCIP_CALL( SCIPreallocBufferArray(scip, sourceAdjArray, (int) MIN(graph->maxarcs, *size)) );
       SCIP_CALL( SCIPreallocBufferArray(scip, targetAdjArray, (int) MIN(graph->maxarcs, *size)) );
    }
@@ -1307,7 +1321,7 @@ SCIP_RETCODE checkArraySizesHeur(
       memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
    }
 
-   if( memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
+   if( avoidmemout && memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
    {
       *success = FALSE;
       SCIPdebugMsg(scip, "...memory limit exceeded\n");
@@ -1793,11 +1807,12 @@ SCIP_RETCODE findShortestPathToRoot(
    assert(queue != NULL);
    assert(inQueue != NULL);
    assert(parentTree != NULL);
+   assert(scale >= 0);
 
    /* initialize distances */
    for( i = 0; i < graph->maxnodes; ++i )
    {
-      distance[i] = 2*(graph->nnodes)*scale;
+      distance[i] = 2 * (graph->nnodes) * (unsigned) scale;
       parentTree[i] = -1;
       inQueue[i] = FALSE;
    }
@@ -1975,6 +1990,7 @@ findUnblockedShortestPathToRoot(
    assert(distance != NULL);
    assert(queue != NULL);
    assert(inQueue != NULL);
+   assert(scale >= 0);
 
    /* allocate temporary memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &parentTree, (int) graph->maxnodes) );
@@ -1986,7 +2002,7 @@ findUnblockedShortestPathToRoot(
    /* initialize distances */
    for( i = 0; i < graph->maxnodes; ++i )
    {
-      distance[i] = 2*(graph->nnodes)*scale;
+      distance[i] = 2 * (graph->nnodes) * (unsigned)scale;
       parentTree[i] = -1;
       parentTreeBackward[i] = -1;
       transform[i] = -1;
@@ -2529,8 +2545,8 @@ SCIP_RETCODE separateHeur(
 
             /* calculate maximal cuts in this level due to cut limitations (per level, per root, per separation round) */
             maxcutslevel = (unsigned int) sepadata->maxcutslevel;
-            maxcutslevel = (unsigned int) MIN(maxcutslevel, ncutsroot-sepadata->maxcutsroot);
-            maxcutslevel = (unsigned int) MIN(maxcutslevel, sepadata->maxsepacutsround + sepadata->oldncuts - sepadata->ncuts);
+            maxcutslevel = (unsigned int) MIN((int) maxcutslevel, (int) ncutsroot - sepadata->maxcutsroot);
+            maxcutslevel = (unsigned int) MIN((int) maxcutslevel, sepadata->maxsepacutsround + (int) sepadata->oldncuts - (int) sepadata->ncuts);
 
             /* for each cross edge in this level find both shortest paths to root (as long as no limits are reached) */
             for( j = graph.levelAdj[graph.nlevels+1]; j < graph.levelAdj[graph.nlevels+2]
@@ -2661,12 +2677,12 @@ SCIP_RETCODE separateHeur(
                SCIPfreeBufferArray(scip, &incycle);
                SCIPfreeBufferArray(scip, &pred);
 
-               if ( *result == SCIP_CUTOFF )
+               if ( *result == SCIP_CUTOFF || *result == SCIP_REDUCEDDOM )
                   break;
             }
          }
 
-         if ( *result == SCIP_CUTOFF )
+         if ( *result == SCIP_CUTOFF || *result == SCIP_REDUCEDDOM )
             break;
 
          /* copy new level to current one */
@@ -3488,14 +3504,13 @@ SCIP_RETCODE separateOddCycles(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SEPA*            sepa,               /**< separator */
    SCIP_SOL*             sol,                /**< given primal solution */
+   int                   depth,              /**< current depth */
    SCIP_RESULT*          result              /**< pointer to store the result of the separation call */
    )
 {
    SCIP_SEPADATA* sepadata;
-   int depth;
    int ncalls;
-   /* cppcheck-suppress unassignedVariable */
-   int oldnliftedcuts;
+   SCIPdebug( int oldnliftedcuts; )
    int nfrac = 0;
 
    *result = SCIP_DIDNOTRUN;
@@ -3504,7 +3519,6 @@ SCIP_RETCODE separateOddCycles(
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
 
-   depth = SCIPgetDepth(scip);
    ncalls = SCIPsepaGetNCallsAtNode(sepa);
 
    /* only call separator a given number of rounds at each b&b node */
@@ -3596,8 +3610,8 @@ SCIP_RETCODE separateOddCycles(
 
    if( sepadata->ncuts - sepadata->oldncuts > 0 )
    {
-      SCIPdebugMsg(scip, "added %u cuts (%d allowed), %d lifted.\n", sepadata->ncuts - sepadata->oldncuts,
-         sepadata->maxsepacutsround, sepadata->nliftedcuts - oldnliftedcuts);
+      SCIPdebug( SCIPdebugMsg(scip, "added %u cuts (%d allowed), %d lifted.\n", sepadata->ncuts - sepadata->oldncuts,
+         sepadata->maxsepacutsround, sepadata->nliftedcuts - oldnliftedcuts); )
       sepadata->nunsucessfull = 0;
    }
    else
@@ -3691,7 +3705,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpOddcycle)
    assert(scip != NULL);
    assert(result != NULL);
 
-   SCIP_CALL( separateOddCycles(scip, sepa, NULL, result) );
+   SCIP_CALL( separateOddCycles(scip, sepa, NULL, depth, result) );
 
    return SCIP_OKAY;
 }
@@ -3705,7 +3719,7 @@ SCIP_DECL_SEPAEXECSOL(sepaExecsolOddcycle)
    assert(scip != NULL);
    assert(result != NULL);
 
-   SCIP_CALL( separateOddCycles(scip, sepa, sol, result) );
+   SCIP_CALL( separateOddCycles(scip, sepa, sol, depth, result) );
 
    return SCIP_OKAY;
 }

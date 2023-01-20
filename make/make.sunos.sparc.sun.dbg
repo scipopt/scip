@@ -5,7 +5,6 @@ LINKCXX		=	CC
 FLAGS		+=	-I/client/include -DNO_STRERROR_R -DSCIP_ROUNDING_FE
 OFLAGS		+=	-g
 CFLAGS		+=	-Xa -errtags=yes -erroff=E_STATEMENT_NOT_REACHED
-CXXFLAGS	+=	-std=c++0x
 LINKRPATH =
 AR		=	CC
 ARFLAGS		=	$(FLAGS) $(CXXFLAGS) -xar -o

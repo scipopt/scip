@@ -3,13 +3,22 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            *
-#*                            fuer Informationstechnik Berlin                *
+#*  Copyright 2002-2022 Zuse Institute Berlin                                *
 #*                                                                           *
-#*  SCIP is distributed under the terms of the ZIB Academic License.         *
+#*  Licensed under the Apache License, Version 2.0 (the "License");          *
+#*  you may not use this file except in compliance with the License.         *
+#*  You may obtain a copy of the License at                                  *
 #*                                                                           *
-#*  You should have received a copy of the ZIB Academic License              *
-#*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
+#*      http://www.apache.org/licenses/LICENSE-2.0                           *
+#*                                                                           *
+#*  Unless required by applicable law or agreed to in writing, software      *
+#*  distributed under the License is distributed on an "AS IS" BASIS,        *
+#*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. *
+#*  See the License for the specific language governing permissions and      *
+#*  limitations under the License.                                           *
+#*                                                                           *
+#*  You should have received a copy of the Apache-2.0 license                *
+#*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
@@ -28,7 +37,7 @@ UNITTESTSSRC	=	$(shell find src/ -name *.c)
 
 # remove unittests in src/bugs if BUGS is not true
 ifneq ($(BUGS),true)
-	UNITTESTSSRC 	:= $(filter-out $(shell find src/bugs/ -name *.c),$(UNITTESTSSRC))
+	UNITTESTSSRC 	:= $(filter-out $(wildcard src/bugs/*.c),$(UNITTESTSSRC))
 endif
 
 # removes `src/` prefix and file.c postfix, then sorts, which removes duplicates!
@@ -47,11 +56,10 @@ SCIPDIR		=	..
 
 ifneq ("$(wildcard $(SCIPDIR)/bin/scip)","")
 # put an @ at the end of each line of scip -v to use as a marker for sed
-SCIPVERSION			:=$(shell $(SCIPDIR)/bin/scip -v | sed -e 's/$$/@/')
+SCIPVERSION		:=$(shell $(SCIPDIR)/bin/scip -v | sed -e 's/$$/@/')
 override ARCH		:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* ARCH=\([^@]*\).*/\1/')
 override COMP		:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* COMP=\([^@]*\).*/\1/')
 override EXPRINT	:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* EXPRINT=\([^@]*\).*/\1/')
-override GAMS		:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* GAMS=\([^@]*\).*/\1/')
 override GMP		:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* GMP=\([^@]*\).*/\1/')
 override SYM		:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* SYM=\([^@]*\).*/\1/')
 override IPOPT		:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* IPOPT=\([^@]*\).*/\1/')
@@ -64,14 +72,13 @@ override NOBLKMEM	:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* NOBLKMEM=\([^@]
 override NOBUFMEM	:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* NOBUFMEM=\([^@]*\).*/\1/')
 override OPT		:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* OPT=\([^@]*\).*/\1/')
 override OSTYPE		:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* OSTYPE=\([^@]*\).*/\1/')
-override PARASCIP	:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* PARASCIP=\([^@]*\).*/\1/')
+override THREADSAFE	:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* THREADSAFE=\([^@]*\).*/\1/')
 override READLINE	:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* READLINE=\([^@]*\).*/\1/')
 override SANITIZE	:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* SANITIZE=\([^@]*\).*/\1/')
 override SHARED		:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* SHARED=\([^@]*\).*/\1/')
 override USRARFLAGS	:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* USRARFLAGS=\([^@]*\).*/\1/')
 override USRCFLAGS	:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* USRCFLAGS=\([^@]*\).*/\1/')
 override USRCXXFLAGS	:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* USRCXXFLAGS=\([^@]*\).*/\1/')
-override USRDFLAGS	:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* USRDFLAGS=\([^@]*\).*/\1/')
 override USRFLAGS	:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* USRFLAGS=\([^@]*\).*/\1/')
 override USRLDFLAGS	:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* USRLDFLAGS=\([^@]*\).*/\1/')
 override USROFLAGS	:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* USROFLAGS=\([^@]*\).*/\1/')
@@ -79,15 +86,6 @@ override VERSION	:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* VERSION=\([^@]*\
 override ZIMPL		:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* ZIMPL=\([^@]*\).*/\1/')
 override ZIMPLOPT	:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* ZIMPLOPT=\([^@]*\).*/\1/')
 override ZLIB		:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* ZLIB=\([^@]*\).*/\1/')
-ifeq ($(SHARED), false)
-$(error Please compile SCIP with SHARED=true)
-endif
-ifneq ($(OPT), dbg)
-$(error Please compile SCIP with OPT=dbg)
-endif
-else
-override OPT	=	dbg
-override SHARED	=	true
 endif
 
 #-----------------------------------------------------------------------------
@@ -125,12 +123,15 @@ UNITTESTS 	= 	$(basename $(UNITTESTSSRC))
 UNITTESTSOBJ 	= 	$(call src2obj, $(UNITTESTSSRC))
 #$(warning unittestobj: $(UNITTESTSOBJ))
 
+# build dependency files from object files: obj/O.linux.../cons/expr/free.d, etc
+UNITTESTSDEP 	= 	$(UNITTESTSOBJ:.o=.d)
+#$(warning unittestdep: $(UNITTESTSDEP))
+
 # substitute src/ for $(OBJDIR) and append $(BASESUFFIX) to UNITTESTS: bin/cons/expr/free.linux..., etc
 UNITTESTSBIN 	= 	$(addsuffix $(BASESUFFIX), $(patsubst $(SRCDIR)%,$(BINDIR)%,$(UNITTESTS)))
 #$(warning unittestsbin: $(UNITTESTSBIN))
 
 UNITTESTSEXECS	=	$(addsuffix $(BASESUFFIX), $(UNITTESTS))
-UNITTESTSDEP	=	$(SRCDIR)/depend.$(OPT)
 
 #-----------------------------------------------------------------------------
 # Flags
@@ -144,8 +145,6 @@ ifeq ($(COMP), clang)
 CFLAGS 		:=	$(filter-out -Wcast-align, $(CFLAGS))
 endif
 CFLAGS 		+=	-std=c99
-# DFLAGS (flags for make depend) uses the -MM option which creates a make target with dependencies. -MT target-name specifies the name of target
-DFLAGS 		+= 	-MT
 # to find include/scip_test.h
 FLAGS 		+= 	-I.
 
@@ -153,7 +152,7 @@ FLAGS 		+= 	-I.
 # Criterion Framework
 #-----------------------------------------------------------------------------
 CR_INC		=	$(wildcard Criterion/include)
-CR_LIBDIR	=	$(wildcard Criterion/build)
+CR_LIBDIR	=	$(wildcard Criterion/lib)
 CR_LIB		=	criterion
 
 #-----------------------------------------------------------------------------
@@ -213,7 +212,7 @@ ctestrunner: 	$(UNITTESTSBIN)
 clean:
 		@echo "-> remove main object files"
 		$(foreach dir, $(OBJDIRS) $(OBJDIR), \
-			@-rm -f $(dir)/*.o)
+			@-rm -f $(dir)/*.o $(dir)/*.d)
 		@echo "-> remove binaries"
 		$(foreach bin, $(UNITTESTSBIN), \
 			@-rm -f $(bin))
@@ -233,7 +232,8 @@ depend:		$(SCIPDIR)
 
 -include	$(UNITTESTSDEP)
 
-$(BINDIR)/%$(BASESUFFIX): $(OBJDIR)/%.o $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(TPILIBFILE)
+
+$(BINDIR)/%$(BASESUFFIX): $(OBJDIR)/%.o $(SCIPLIBFILE) $(LPILIBFILE) $(TPILIBFILE)
 		@echo "-> linking $@"
 		$(LINKCXX) $< $(LINKCXXSCIPALL) \
 		$(LINKCXX_l)$(TPILIB) \
@@ -241,35 +241,34 @@ $(BINDIR)/%$(BASESUFFIX): $(OBJDIR)/%.o $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFI
 		$(LINKCXX_l)$(CR_LIB) \
 		$(LINKRPATH)$(realpath $(SCIPDIR)/lib/shared) \
 		$(addprefix $(LINKRPATH),$(realpath $(CR_LIBDIR))) \
-		$(SANITZERFLAGS) \
+		$(SANITIZERFLAGS) \
 		$(LINKCXX_o)$@
 
 $(LPILIBFILE):
-		$(error $@ not available. SCIP must be compiled with OPT=dbg SHARED=true IPOPT=$(IPOPT) LPS=$(LPS))
+		$(error $@ not available. SCIP must be compiled with OPT=$(OPT) SHARED=$(SHARED) LPS=$(LPS))
 $(SCIPLIBFILE):
-		$(error $@ not available. SCIP must be compiled with OPT=dbg SHARED=true IPOPT=$(IPOPT) LPS=$(LPS))
-$(NLPILIBFILE):
-		$(error $@ not available. SCIP must be compiled with OPT=dbg SHARED=true IPOPT=$(IPOPT) LPS=$(LPS))
+		$(error $@ not available. SCIP must be compiled with OPT=$(OPT) SHARED=$(SHARED))
 $(TPILIBFILE):
-		$(error $@ not available. SCIP must be compiled with OPT=dbg SHARED=true IPOPT=$(IPOPT) LPS=$(LPS) TPI=$(TPI))
+		$(error $@ not available. SCIP must be compiled with OPT=$(OPT) SHARED=$(SHARED) TPI=$(TPI))
 
+-include	$(UNITTESTSDEP)
 
 $(OBJDIR)/%.o : $(SRCDIR)/%.c | $(OBJDIR) $(OBJDIRS) $(BINDIRS)
 		@echo "-> compiling $@"
-		$(CC) $(addprefix -I,$(CR_INC)) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CFLAGS) -c $< $(CC_o)$@
+		$(CC) $(addprefix -I,$(CR_INC)) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CFLAGS) $(DFLAGS) -c $< $(CC_o)$@
 
 $(OBJDIR)/%.o:	%.cpp
 		@echo "-> compiling $@"
-		$(CXX) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CXXFLAGS) -c $< $(CXX_o)$@
+		$(CXX) $(addprefix -I,$(CR_INC)) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CXXFLAGS) $(DFLAGS) -c $< $(CXX_o)$@
 
-# TODO: checkout v2.3.0 when it becomes available
 Criterion:
 	@echo -n "Criterion not found, downloading and building it in"
 	@for (( count=3; $$count ; count-- )) do echo -n " $$count" ; sleep 1 ; done ; echo
-	git clone --depth 1 -b v2.2.2 https://github.com/Snaipe/Criterion
+	git clone --depth 1 -b v2.3.3 https://github.com/Snaipe/Criterion
 	cd Criterion; \
 	mkdir build; \
 	cd build; \
-	cmake ..; \
-	make
+	cmake .. -DCMAKE_INSTALL_PREFIX=..; \
+	make; \
+	make install
 #---- EOF --------------------------------------------------------------------

@@ -1,0 +1,9 @@
+# SCIP version 6.0.0.2
+
+# used symmetry handling technique (0: off; 1: polyhedral; 2: orbital fixing)
+# [type: int, advanced: FALSE, range: [0,2], default: 2]
+misc/usesymmetry = 1
+
+# Should all symmetries be checked after computation?
+# [type: bool, advanced: TRUE, range: {TRUE,FALSE}, default: FALSE]
+propagating/symmetry/checksymmetries = TRUE

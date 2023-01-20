@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -95,7 +104,7 @@
 
 /* default values of parameters */
 #define DEFAULT_VERIFICATION_NLPTILIMSOFT    1e+20     /**< soft time limit for each verification NLP */
-#define DEFAULT_VERIFICATION_NLPNODELIMSOFT  1000L     /**< soft node limit for each verification NLP */
+#define DEFAULT_VERIFICATION_NLPNODELIMSOFT  100L      /**< soft node limit for each verification NLP */
 #define DEFAULT_VERIFICATION_HEURTILIMSOFT   1e+20     /**< soft time limit for heuristic verification */
 #define DEFAULT_VERIFICATION_HEURITERLIMSOFT 100       /**< soft iteration limit for each heuristic verification */
 #define DEFAULT_VERIFICATION_TOTALTILIMSOFT  1e+20     /**< total time limit for all verification problems during the enumeration */
@@ -207,14 +216,14 @@ SCIP_DECL_READERREAD(readerReadRpa)
 
       if( r_int > r_ext )
       {
-         SCIPwarningMessage(scip, "invalid input line %d in file <%s>: internal radius is greater than the external one\n");
+         SCIPwarningMessage(scip, "invalid input line %d in file <%s>: internal radius is greater than the external one\n", lineno, filename);
          error = TRUE;
          break;
       }
 
       if( demand <= 0 )
       {
-         SCIPwarningMessage(scip, "invalid input line %d in file <%s>: demand has to be positive\n");
+         SCIPwarningMessage(scip, "invalid input line %d in file <%s>: demand has to be positive\n", lineno, filename);
          error = TRUE;
          break;
       }

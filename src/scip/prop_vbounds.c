@@ -3,21 +3,32 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   prop_vbounds.c
+ * @ingroup DEFPLUGINS_PROP
  * @brief  variable upper and lower bound propagator
  * @author Stefan Heinz
  * @author Jens Schulz
  * @author Gerald Gamrath
+ * @author Marc Pfetsch
  *
  * This propagator uses global bound information provided by SCIP to deduce global and local bound changes.
  * It can take into account
@@ -274,7 +285,6 @@ INFERINFO getInferInfo(
    INFERINFO inferinfo;
 
    assert(boundtype == SCIP_BOUNDTYPE_LOWER || boundtype == SCIP_BOUNDTYPE_UPPER);
-   assert((int)boundtype >= 0 && (int)boundtype <= 1); /*lint !e685 !e568q*/
    assert(pos >= 0);
 
    inferinfo.val.asbits.pos = (unsigned int) pos; /*lint !e732*/
@@ -294,9 +304,14 @@ int varGetLbIndex(
    SCIP_VAR*             var                 /**< variable to get the index for */
    )
 {
-   assert(SCIPhashmapExists(propdata->varhashmap, var) == (SCIPhashmapGetImageInt(propdata->varhashmap, var) > 0));
+   int i;
 
-   return getLbIndex(SCIPhashmapGetImageInt(propdata->varhashmap, var) - 1);
+   i = SCIPhashmapGetImageInt(propdata->varhashmap, var);
+
+   assert(SCIPhashmapExists(propdata->varhashmap, var) == (i != INT_MAX));
+   assert(i >= 0);
+
+   return getLbIndex(i == INT_MAX ? -1 : i);
 }
 
 /* returns the upper bound index of a variable */
@@ -306,9 +321,14 @@ int varGetUbIndex(
    SCIP_VAR*             var                 /**< variable to get the index for */
    )
 {
-   assert(SCIPhashmapExists(propdata->varhashmap, var) == (SCIPhashmapGetImageInt(propdata->varhashmap, var) > 0));
+   int i;
 
-   return getUbIndex(SCIPhashmapGetImageInt(propdata->varhashmap, var) - 1);
+   i = SCIPhashmapGetImageInt(propdata->varhashmap, var);
+
+   assert(SCIPhashmapExists(propdata->varhashmap, var) == (i != INT_MAX));
+   assert(i >= 0);
+
+   return getUbIndex(i == INT_MAX ? -1 : i);
 }
 
 /** reset propagation data */
@@ -1194,7 +1214,7 @@ SCIP_RETCODE initData(
    propdata->initialized = TRUE;
 
    /* prepare priority queue structure */
-   SCIP_CALL( SCIPpqueueCreate(&propdata->propqueue, nvars, 2.0, compVarboundIndices) );
+   SCIP_CALL( SCIPpqueueCreate(&propdata->propqueue, nvars, 2.0, compVarboundIndices, NULL) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->inqueue, nbounds) );
    BMSclearMemoryArray(propdata->inqueue, nbounds);
 
@@ -1206,7 +1226,7 @@ SCIP_RETCODE initData(
 
    for( v = 0; v < nvars; ++v )
    {
-      SCIP_CALL( SCIPhashmapInsertInt(propdata->varhashmap, propdata->vars[v], v + 1) );
+      SCIP_CALL( SCIPhashmapInsertInt(propdata->varhashmap, propdata->vars[v], v) );
    }
 
    /* allocate memory for the arrays of the propdata */
@@ -1795,6 +1815,8 @@ SCIP_RETCODE propagateVbounds(
    SCIP_BOUNDTYPE starttype;
    SCIP_Real startbound;
    SCIP_Real globalbound;
+   int* queuelist = NULL;
+   int nqueuelist = 0;
    int startpos;
    int topopos;
    int v;
@@ -1863,12 +1885,14 @@ SCIP_RETCODE propagateVbounds(
 
    /* return if no bound changes are in the priority queue (no changed bounds to handle since last propagation) */
    if( SCIPpqueueNElems(propdata->propqueue) == 0 )
-   {
-      (*result) = SCIP_DIDNOTFIND;
       return SCIP_OKAY;
-   }
 
    nchgbds = 0;
+
+   (*result) = SCIP_DIDNOTFIND;
+
+   /* allocate space for variables added to the queue - needed to clean up data */
+   SCIP_CALL( SCIPallocBufferArray(scip, &queuelist, nbounds) );
 
    SCIPdebugMsg(scip, "varbound propagator: %d elements in the propagation queue\n", SCIPpqueueNElems(propdata->propqueue));
 
@@ -1882,7 +1906,11 @@ SCIP_RETCODE propagateVbounds(
       assert(propdata->inqueue[topopos]);
       startpos = propdata->topoorder[topopos];
       assert(startpos >= 0);
-      propdata->inqueue[topopos] = FALSE;
+      queuelist[nqueuelist++] = topopos;
+      assert( nqueuelist <= nbounds );
+
+      /* do not directly set propdata->inqueue[topopos] = FALSE: we allow only one propagation sweep through the
+       * topologically ordered bounds; otherwise an infinite loop could occur */
 
       startvar = vars[getVarIndex(startpos)];
       starttype = getBoundtype(startpos);
@@ -1953,8 +1981,10 @@ SCIP_RETCODE propagateVbounds(
                   }
 
                   if( *result == SCIP_CUTOFF )
-                     return SCIP_OKAY;
+                     break;
                }
+               if( *result == SCIP_CUTOFF )
+                  break;
             }
          }
 
@@ -2005,16 +2035,19 @@ SCIP_RETCODE propagateVbounds(
                         SCIP_CALL( tightenVarLb(scip, prop, propdata, cliquevars[n], 1.0, global, startvar, starttype,
                               force, 0.0, 0.0, FALSE, &nchgbds, result) );
                      }
+
                      if( *result == SCIP_CUTOFF )
-                        return SCIP_OKAY;
+                        break;
                   }
                }
+               if( *result == SCIP_CUTOFF )
+                  break;
             }
          }
       }
 
       /* propagate vbounds */
-      if( propdata->usevbounds )
+      if( propdata->usevbounds && ! SCIPisInfinity(scip, REALABS(startbound)) )
       {
          SCIP_VAR* boundedvar;
          SCIP_Real newbound;
@@ -2044,18 +2077,37 @@ SCIP_RETCODE propagateVbounds(
             }
 
             if( *result == SCIP_CUTOFF )
-               return SCIP_OKAY;
+               break;
          }
+         if( *result == SCIP_CUTOFF )
+            break;
       }
    }
+
+   /* clean up inqueue */
+   for( v = 0; v < nqueuelist; ++v )
+   {
+      assert( 0 <= queuelist[v] && queuelist[v] < nbounds );
+      propdata->inqueue[queuelist[v]] = FALSE;
+      assert( SCIPpqueueFind(propdata->propqueue, (void*)(size_t) (queuelist[v] + 1)) == -1 ); /*lint !e571*//*lint !e776*/
+   }
+   SCIPfreeBufferArray(scip, &queuelist);
+
+#ifdef SCIP_DEBUG
+   for( v = 0; v < nbounds; ++v)
+   {
+      if( propdata->inqueue[v] )
+         assert( SCIPpqueueFind(propdata->propqueue, (void*)(size_t) (v + 1)) >= 0 );
+      else
+         assert( SCIPpqueueFind(propdata->propqueue, (void*)(size_t) (v + 1)) == -1 );
+   }
+#endif
 
    SCIPdebugMsg(scip, "tightened %d variable bounds\n", nchgbds);
 
    /* set the result depending on whether bound changes were found or not */
-   if( nchgbds > 0 )
+   if( *result != SCIP_CUTOFF && nchgbds > 0 )
       (*result) = SCIP_REDUCEDDOM;
-   else
-      (*result) = SCIP_DIDNOTFIND;
 
    return SCIP_OKAY;
 }
@@ -2577,6 +2629,7 @@ SCIP_RETCODE tarjan(
       /* in a pure dfs, the node would now leave the stack, add it to the array of nodes in reverse topological order */
       if( topoorder != NULL && (stacksize > 0 || label > *startindex + 1) )
       {
+         assert(nordered != NULL);
          topoorder[*nordered] = curridx;
          ++(*nordered);
       }
@@ -2634,7 +2687,7 @@ SCIP_RETCODE applyFixingsAndAggregations(
 
          SCIP_CALL( SCIPfixVar(scip, var, lower ? 0.0 : 1.0, infeasible, &fixed) );
 
-         SCIPdebugMsg(scip, "fix <%s>[%d] to %g: inf=%d, fixed=%d\n",
+         SCIPdebugMsg(scip, "fix <%s>[%d] to %g: inf=%u, fixed=%u\n",
             SCIPvarGetName(var), infeasnodes[i], lower ? 0.0 : 1.0, *infeasible, fixed);
 
          /* fixing was infeasible */
@@ -2686,7 +2739,7 @@ SCIP_RETCODE applyFixingsAndAggregations(
                   lower == isIndexLowerbound(sccvars[v]) ? 0.0 : 1.0,
                   infeasible, &redundant, &aggregated) );
 
-            SCIPdebugMsg(scip, "aggregate <%s> + %g <%s> = %g: inf=%d, red=%d, aggr=%d\n",
+            SCIPdebugMsg(scip, "aggregate <%s> + %g <%s> = %g: inf=%u, red=%u, aggr=%u\n",
                SCIPvarGetName(startvar), lower == isIndexLowerbound(sccvars[v]) ? -1.0 : 1.0,
                SCIPvarGetName(vars[getVarIndex(sccvars[v])]), lower == isIndexLowerbound(sccvars[v]) ? 0.0 : 1.0,
                *infeasible, redundant, aggregated);
@@ -3036,7 +3089,7 @@ SCIP_DECL_EVENTEXEC(eventExecVbound)
    idx = (int) (size_t) eventdata;
    assert(idx >= 0);
 
-   SCIPdebugMsg(scip, "eventexec (type=%llu): try to add sort index %d: %s(%s) to priority queue\n", SCIPeventGetType(event),
+   SCIPdebugMsg(scip, "eventexec (type=%" SCIP_EVENTTYPE_FORMAT "): try to add sort index %d: %s(%s) to priority queue\n", SCIPeventGetType(event),
       idx, indexGetBoundString(propdata->topoorder[idx]),
       SCIPvarGetName(propdata->vars[getVarIndex(propdata->topoorder[idx])]));
 
@@ -3057,18 +3110,14 @@ SCIP_DECL_EVENTEXEC(eventExecVbound)
    {
       SCIP_CALL( SCIPpqueueInsert(propdata->propqueue, (void*)(size_t)(idx + 1)) ); /*lint !e571 !e776*/
       propdata->inqueue[idx] = TRUE;
+      assert(SCIPpqueueNElems(propdata->propqueue) > 0);
    }
-   assert(SCIPpqueueNElems(propdata->propqueue) > 0);
 
    return SCIP_OKAY;
 }
 
 /**@} */
 
-/**@name Interface methods
- *
- * @{
- */
 
 /** creates the vbounds propagator and includes it in SCIP */
 SCIP_RETCODE SCIPincludePropVbounds(
@@ -3173,5 +3222,3 @@ SCIP_RETCODE SCIPexecPropVbounds(
 
    return SCIP_OKAY;
 }
-
-/**@} */

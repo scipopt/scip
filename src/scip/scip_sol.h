@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -23,7 +32,7 @@
  * @author Marc Pfetsch
  * @author Kati Wolter
  * @author Gregor Hendel
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -39,25 +48,6 @@
 #include "scip/type_scip.h"
 #include "scip/type_sol.h"
 #include "scip/type_var.h"
-
-/* In debug mode, we include the SCIP's structure in scip.c, such that no one can access
- * this structure except the interface methods in scip.c.
- * In optimized mode, the structure is included in scip.h, because some of the methods
- * are implemented as defines for performance reasons (e.g. the numerical comparisons).
- * Additionally, the internal "set.h" is included, such that the defines in set.h are
- * available in optimized mode.
- */
-#ifdef NDEBUG
-#include "scip/struct_scip.h"
-#include "scip/struct_stat.h"
-#include "scip/set.h"
-#include "scip/tree.h"
-#include "scip/misc.h"
-#include "scip/var.h"
-#include "scip/cons.h"
-#include "scip/solve.h"
-#include "scip/debug.h"
-#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -84,7 +74,7 @@ extern "C" {
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL**            sol,                /**< pointer to store the solution */
@@ -99,7 +89,7 @@ SCIP_RETCODE SCIPcreateSol(
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateLPSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL**            sol,                /**< pointer to store the solution */
@@ -114,7 +104,7 @@ SCIP_RETCODE SCIPcreateLPSol(
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateNLPSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL**            sol,                /**< pointer to store the solution */
@@ -129,7 +119,7 @@ SCIP_RETCODE SCIPcreateNLPSol(
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateRelaxSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL**            sol,                /**< pointer to store the solution */
@@ -144,7 +134,7 @@ SCIP_RETCODE SCIPcreateRelaxSol(
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreatePseudoSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL**            sol,                /**< pointer to store the solution */
@@ -160,7 +150,7 @@ SCIP_RETCODE SCIPcreatePseudoSol(
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateCurrentSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL**            sol,                /**< pointer to store the solution */
@@ -175,7 +165,7 @@ SCIP_RETCODE SCIPcreateCurrentSol(
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreatePartialSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL**            sol,                /**< pointer to store the solution */
@@ -197,7 +187,7 @@ SCIP_RETCODE SCIPcreatePartialSol(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateUnknownSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL**            sol,                /**< pointer to store the solution */
@@ -222,7 +212,7 @@ SCIP_RETCODE SCIPcreateUnknownSol(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateOrigSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL**            sol,                /**< pointer to store the solution */
@@ -246,7 +236,7 @@ SCIP_RETCODE SCIPcreateOrigSol(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateSolCopy(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL**            sol,                /**< pointer to store the solution */
@@ -272,7 +262,7 @@ SCIP_RETCODE SCIPcreateSolCopy(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateSolCopyOrig(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL**            sol,                /**< pointer to store the solution */
@@ -299,7 +289,7 @@ SCIP_RETCODE SCIPcreateSolCopyOrig(
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateFiniteSolCopy(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL**            sol,                /**< pointer to store the solution */
@@ -326,7 +316,7 @@ SCIP_RETCODE SCIPcreateFiniteSolCopy(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPfreeSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL**            sol                 /**< pointer to the solution */
@@ -340,7 +330,7 @@ SCIP_RETCODE SCIPfreeSol(
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPlinkLPSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol                 /**< primal solution */
@@ -354,7 +344,7 @@ SCIP_RETCODE SCIPlinkLPSol(
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPlinkNLPSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol                 /**< primal solution */
@@ -368,7 +358,7 @@ SCIP_RETCODE SCIPlinkNLPSol(
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPlinkRelaxSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol                 /**< primal solution */
@@ -383,7 +373,7 @@ SCIP_RETCODE SCIPlinkRelaxSol(
  *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPlinkPseudoSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol                 /**< primal solution */
@@ -397,7 +387,7 @@ SCIP_RETCODE SCIPlinkPseudoSol(
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPlinkCurrentSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol                 /**< primal solution */
@@ -422,7 +412,7 @@ SCIP_RETCODE SCIPlinkCurrentSol(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPclearSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol                 /**< primal solution */
@@ -444,7 +434,7 @@ SCIP_RETCODE SCIPclearSol(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPunlinkSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol                 /**< primal solution */
@@ -469,7 +459,7 @@ SCIP_RETCODE SCIPunlinkSol(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetSolVal(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal solution */
@@ -496,7 +486,7 @@ SCIP_RETCODE SCIPsetSolVal(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetSolVals(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal solution */
@@ -524,7 +514,7 @@ SCIP_RETCODE SCIPsetSolVals(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincSolVal(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal solution */
@@ -552,7 +542,7 @@ SCIP_RETCODE SCIPincSolVal(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetSolVal(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal solution, or NULL for current LP/pseudo solution */
@@ -578,7 +568,7 @@ SCIP_Real SCIPgetSolVal(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetSolVals(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal solution, or NULL for current LP/pseudo solution */
@@ -605,7 +595,7 @@ SCIP_RETCODE SCIPgetSolVals(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetSolOrigObj(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol                 /**< primal solution, or NULL for current LP/pseudo objective value */
@@ -628,7 +618,7 @@ SCIP_Real SCIPgetSolOrigObj(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetSolTransObj(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol                 /**< primal solution, or NULL for current LP/pseudo objective value */
@@ -645,7 +635,7 @@ SCIP_Real SCIPgetSolTransObj(
  *       - \ref SCIP_STAGE_SOLVING
  *
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPrecomputeSolObj(
    SCIP*                 scip,
    SCIP_SOL*             sol
@@ -666,7 +656,7 @@ SCIP_RETCODE SCIPrecomputeSolObj(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPtransformObj(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             obj                 /**< original space objective value to transform */
@@ -687,7 +677,7 @@ SCIP_Real SCIPtransformObj(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPretransformObj(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             obj                 /**< transformed objective value to retransform in original space */
@@ -710,7 +700,7 @@ SCIP_Real SCIPretransformObj(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetSolTime(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol                 /**< primal solution */
@@ -733,7 +723,7 @@ SCIP_Real SCIPgetSolTime(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 int SCIPgetSolRunnum(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol                 /**< primal solution */
@@ -756,7 +746,7 @@ int SCIPgetSolRunnum(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Longint SCIPgetSolNodenum(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol                 /**< primal solution */
@@ -779,7 +769,7 @@ SCIP_Longint SCIPgetSolNodenum(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 SCIP_HEUR* SCIPgetSolHeur(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol                 /**< primal solution */
@@ -803,7 +793,7 @@ SCIP_HEUR* SCIPgetSolHeur(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPareSolsEqual(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol1,               /**< first primal CIP solution */
@@ -819,7 +809,7 @@ SCIP_Bool SCIPareSolsEqual(
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPadjustImplicitSolVals(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal CIP solution */
@@ -854,7 +844,7 @@ SCIP_RETCODE SCIPadjustImplicitSolVals(
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPprintSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal solution, or NULL for current LP/pseudo solution */
@@ -878,7 +868,7 @@ SCIP_RETCODE SCIPprintSol(
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPprintTransSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal solution, or NULL for current LP/pseudo solution */
@@ -903,7 +893,7 @@ SCIP_RETCODE SCIPprintTransSol(
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPprintMIPStart(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal solution */
@@ -911,7 +901,7 @@ SCIP_RETCODE SCIPprintMIPStart(
    );
 
 /** returns dual solution value of a constraint */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetDualSolVal(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint for which the dual solution should be returned */
@@ -928,7 +918,7 @@ SCIP_RETCODE SCIPgetDualSolVal(
  * @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPisDualSolAvailable(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             printreason         /**< print warning message if dualsol is not available? */
@@ -945,7 +935,7 @@ SCIP_Bool SCIPisDualSolAvailable(
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPprintDualSol(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file (or NULL for standard output) */
@@ -970,7 +960,7 @@ SCIP_RETCODE SCIPprintDualSol(
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPprintRay(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal solution representing ray */
@@ -997,7 +987,7 @@ SCIP_RETCODE SCIPprintRay(
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNSols(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -1019,7 +1009,7 @@ int SCIPgetNSols(
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-EXTERN
+SCIP_EXPORT
 SCIP_SOL** SCIPgetSols(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -1042,7 +1032,7 @@ SCIP_SOL** SCIPgetSols(
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-EXTERN
+SCIP_EXPORT
 SCIP_SOL* SCIPgetBestSol(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -1067,7 +1057,7 @@ SCIP_SOL* SCIPgetBestSol(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREE
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPprintBestSol(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file (or NULL for standard output) */
@@ -1094,7 +1084,7 @@ SCIP_RETCODE SCIPprintBestSol(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREE
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPprintBestTransSol(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file (or NULL for standard output) */
@@ -1109,7 +1099,7 @@ SCIP_RETCODE SCIPprintBestTransSol(
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIProundSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal solution */
@@ -1135,7 +1125,7 @@ SCIP_RETCODE SCIProundSol(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPretransformSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol                 /**< primal CIP solution */
@@ -1156,7 +1146,7 @@ SCIP_RETCODE SCIPretransformSol(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPreadSol(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename            /**< name of the input file */
@@ -1177,7 +1167,7 @@ SCIP_RETCODE SCIPreadSol(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPreadSolFile(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename,           /**< name of the input file */
@@ -1204,7 +1194,7 @@ SCIP_RETCODE SCIPreadSolFile(
  *
  *  @note Do not call during propagation, use heur_trysol instead.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal CIP solution */
@@ -1228,7 +1218,7 @@ SCIP_RETCODE SCIPaddSol(
  *
  *  @note Do not call during propagation, use heur_trysol instead.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddSolFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL**            sol,                /**< pointer to primal CIP solution; is cleared in function call */
@@ -1244,7 +1234,7 @@ SCIP_RETCODE SCIPaddSolFree(
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddCurrentSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEUR*            heur,               /**< heuristic that found the solution */
@@ -1266,7 +1256,7 @@ SCIP_RETCODE SCIPaddCurrentSol(
  *
  *  @note Do not call during propagation, use heur_trysol instead.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPtrySol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal CIP solution */
@@ -1293,7 +1283,7 @@ SCIP_RETCODE SCIPtrySol(
  *
  *  @note Do not call during propagation, use heur_trysol instead.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPtrySolFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL**            sol,                /**< pointer to primal CIP solution; is cleared in function call */
@@ -1314,7 +1304,7 @@ SCIP_RETCODE SCIPtrySolFree(
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPtryCurrentSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEUR*            heur,               /**< heuristic that found the solution */
@@ -1336,7 +1326,7 @@ SCIP_RETCODE SCIPtryCurrentSol(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_SOL** SCIPgetPartialSols(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -1372,7 +1362,7 @@ int SCIPgetNPartialSols(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcheckSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal CIP solution */
@@ -1401,7 +1391,7 @@ SCIP_RETCODE SCIPcheckSol(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcheckSolOrig(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal CIP solution */
@@ -1411,7 +1401,7 @@ SCIP_RETCODE SCIPcheckSolOrig(
    );
 
 /** update integrality violation of a solution */
-EXTERN
+SCIP_EXPORT
 void SCIPupdateSolIntegralityViolation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal CIP solution */
@@ -1419,7 +1409,7 @@ void SCIPupdateSolIntegralityViolation(
    );
 
 /** update bound violation of a solution */
-EXTERN
+SCIP_EXPORT
 void SCIPupdateSolBoundViolation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal CIP solution */
@@ -1428,7 +1418,7 @@ void SCIPupdateSolBoundViolation(
    );
 
 /** update LP row violation of a solution */
-EXTERN
+SCIP_EXPORT
 void SCIPupdateSolLPRowViolation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal CIP solution */
@@ -1437,7 +1427,7 @@ void SCIPupdateSolLPRowViolation(
    );
 
 /** update constraint violation of a solution */
-EXTERN
+SCIP_EXPORT
 void SCIPupdateSolConsViolation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal CIP solution */
@@ -1446,7 +1436,7 @@ void SCIPupdateSolConsViolation(
    );
 
 /** update LP row and constraint violations of a solution */
-EXTERN
+SCIP_EXPORT
 void SCIPupdateSolLPConsViolation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal CIP solution */
@@ -1455,13 +1445,13 @@ void SCIPupdateSolLPConsViolation(
    );
 
 /** allow violation updates */
-EXTERN
+SCIP_EXPORT
 void SCIPactivateSolViolationUpdates(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** disallow violation updates */
-EXTERN
+SCIP_EXPORT
 void SCIPdeactivateSolViolationUpdates(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -1474,7 +1464,7 @@ void SCIPdeactivateSolViolationUpdates(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPhasPrimalRay(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -1488,7 +1478,7 @@ SCIP_Bool SCIPhasPrimalRay(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetPrimalRayVal(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< variable to get value for */
@@ -1507,7 +1497,7 @@ SCIP_Real SCIPgetPrimalRayVal(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPupdatePrimalRay(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             primalray           /**< the new primal ray */

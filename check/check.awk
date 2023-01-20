@@ -4,13 +4,22 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            *
-#*                            fuer Informationstechnik Berlin                *
+#*  Copyright 2002-2022 Zuse Institute Berlin                                *
 #*                                                                           *
-#*  SCIP is distributed under the terms of the ZIB Academic License.         *
+#*  Licensed under the Apache License, Version 2.0 (the "License");          *
+#*  you may not use this file except in compliance with the License.         *
+#*  You may obtain a copy of the License at                                  *
 #*                                                                           *
-#*  You should have received a copy of the ZIB Academic License              *
-#*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
+#*      http://www.apache.org/licenses/LICENSE-2.0                           *
+#*                                                                           *
+#*  Unless required by applicable law or agreed to in writing, software      *
+#*  distributed under the License is distributed on an "AS IS" BASIS,        *
+#*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. *
+#*  See the License for the specific language governing permissions and      *
+#*  limitations under the License.                                           *
+#*                                                                           *
+#*  You should have received a copy of the Apache-2.0 license                *
+#*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #
@@ -62,7 +71,7 @@ function setStatusToLimit()
       printf("Warning: Trying to set limit status for problem %s, but no limit was reached.\n", prob);
 
    timeouttime += tottime;
-   timeouts++;
+   nlimits++;
 }
 
 # set a file status and increase timers and counters accordingly
@@ -192,7 +201,7 @@ BEGIN {
    shiftedtimetofirstgeom = timegeomshift;
    shiftedtimetobestgeom = timegeomshift;
    timeouttime = 0.0;
-   timeouts = 0;
+   nlimits = 0;
    failtime = 0.0;
    fail = 0;
    pass = 0;
@@ -253,14 +262,25 @@ BEGIN {
    prob = b[1];
    if( b[m] == "gz" || b[m] == "z" || b[m] == "GZ" || b[m] == "Z" )
       m--;
-   for( i = 2; i < m; ++i )
+
+   if( $3 == "==MISSING==" )
+   {
+      # if out was missing, then we now have something like bzfviger.MINLP_convex.463_polygon75.scip-6.0.1.3.linux.x86_64.gnu.dbg.spx2.none.opt.minlp
+      # take the 3rd entry, hoping that the instance name didn't have a dot
+      prob = b[3];
+      # now remove the number at the begin
+      sub("^[0-9]*_", "", prob);
+   }
+   else for( i = 2; i < m; ++i )
       prob = prob "." b[i];
 
    if( useshortnames && length(prob) > namelength )
-      shortprob = substr(prob, length(prob)-namelength-1, namelength);
+   {
+      # take latest #namelength characters of instancename
+      shortprob = substr(prob, length(prob)-namelength+1, namelength);
+   }
    else
       shortprob = prob;
-
    # Escape _ for TeX
    n = split(prob, a, "_");
    pprob = a[1];
@@ -284,6 +304,7 @@ BEGIN {
    objectivelimit = +infty;
    firstpb = +infty;
    db = -infty;
+   objlimit = +infty;
    dbset = 0;
    dbforobjsense = -infty;
    simpiters = 0;
@@ -323,6 +344,7 @@ BEGIN {
    valgrinderror = 0;
    valgrindleaks = 0;
    bestsolfeas = 1;
+   infeasobjlimit = 0;
    reoptimization = 0;
    niter = 0;
 }
@@ -362,6 +384,8 @@ BEGIN {
       lpsname = "qso";
    else if( $13 == "Xpress" )
       lpsname = "xprs";
+   else if( $13 == "Glop" )
+      lpsname = "glop";
 
     # get LP solver version
    if( NF >= 16 )
@@ -567,17 +591,25 @@ BEGIN {
 /^Original Problem   : no problem exists./ {
    readerror = 1;
 }
+/^no problem exists/ {
+   readerror = 1;
+}
 /^SCIP Status        :/ {
    # replace / by \/ in filename
    fname = filename
    gsub(/\//, "\\/",fname);
 
    #grep between filename and next @01 for an error
-   command = "sed -n '/"fname"/,/@01/p' "ERRFILE" | grep 'returned with error code'";
-   command | getline grepresult;
+   if( ERRFILE != "" )
+   {
+      command = "test -e "ERRFILE" && sed -n '/"fname"/,/@01/p' "ERRFILE" | grep 'returned with error code'";
+      command | getline grepresult;
 
-   # set aborted flag correctly
-   if( grepresult == "" )
+      # set aborted flag correctly
+      if( grepresult == "" )
+         aborted = 0;
+   }
+   else
       aborted = 0;
 
    close(command)
@@ -604,10 +636,16 @@ BEGIN {
 }
 /problem is solved/ {
    timeout = 0;
+   if( $8 == "(objective" && $9 == "limit" && $10 == "reached)" )
+   {
+      infeasobjlimit = 1;
+   }
 }
 /best solution is not feasible in original problem/ {
    bestsolfeas = 0;
 }
+
+/^objective value limit set to/ {objlimit = $6; }
 
 /Check SOL:/ {
    intcheck = $4;
@@ -622,12 +660,28 @@ BEGIN {
    firstpb = $4;
 }
 /^  Primal Bound     :/ {
-   if( $4 == "infeasible" || $4 == "infeasible\r" )
+   if( infeasobjlimit )
    {
-      pb = +infty;
-      db = +infty;
+      pb = objlimit;
+      db = objlimit;
+      feasible = 1;
       dbset = 1;
-      feasible = 0;
+   }
+   else if( $4 == "infeasible" || $4 == "infeasible\r" )
+   {
+      if( ($5 == "(objective" && $6 == "limit" && $7 == "reached)") )
+      {
+	 pb = objlimit;
+	 db = objlimit;
+	 feasible = 1;
+      }
+      else
+      {
+	 pb = +infty;
+	 db = +infty;
+	 feasible = 0;
+      }
+      dbset = 1;
    }
    else if( $4 == "-"  || $4 == "-\r")
    {
@@ -647,10 +701,13 @@ BEGIN {
    }
 }
 /^  Dual Bound       :/ {
-   if( $4 != "-" && $4 != "-\r" )
+   if( dbset == 0 )
    {
-      db = $4;
-      dbset = 1;
+      if( $4 != "-" && $4 != "-\r" )
+      {
+	 db = $4;
+	 dbset = 1;
+      }
    }
 }
 /^Dual Bound         :/ {
@@ -748,8 +805,7 @@ BEGIN {
 # 8) solver reached any other limit (like time or nodes) => timeout
 # 9) otherwise => unknown
 #
-/^=ready=/ {
-
+/^=ready=/ || /==MISSING==/ {
    #since the header depends on the parameter printsoltimes and settings it is no longer possible to print it in the BEGIN section
    if( !headerprinted )
    {
@@ -898,6 +954,8 @@ BEGIN {
          gap = -1.0;
       else if( pb*db < 0.0 )
          gap = -1.0;
+      else if( (pb >= +infty && db >= +infty) || (pb <= -infty && db <= -infty) )
+         gap = 0.0;
       else if( abs(db) >= +infty )
          gap = -1.0;
       else if( abs(pb) >= +infty )
@@ -1019,6 +1077,10 @@ BEGIN {
       {
          setStatusToFail("fail (readerror)");
       }
+      else if( $3 == "==MISSING==" )
+      {
+         setStatusToFail("fail (missing)");
+      }
       else if( aborted )
       {
          setStatusToFail("fail (abort)");
@@ -1026,6 +1088,11 @@ BEGIN {
       else if( checksol && !bestsolfeas )
       {
          setStatusToFail("fail (solution infeasible)");
+      }
+      else if( !feasible && !isLimitReached() && solstatus[prob] != "inf" && solstatus[prob] != "unkn" )
+      {
+         # SCIP terminated properly but could not find a feasible solution -> assume that it proved infeasibility
+         setStatusToFail("fail (objective value)")
       }
       else if( solstatus[prob] == "opt" )
       {
@@ -1337,21 +1404,22 @@ END {
    printf(tablehead3);
    printf("\n");
 
-   tablefooter1 = "------------------------------[Nodes]---------------[Time]------";
-   tablefooter2 = "  Cnt  Pass  Time  Fail  total(k)     geom.     total     geom.";
-   tablefooter3 = "----------------------------------------------------------------";
+   tablefooter1 = "-------------------------------[Nodes]---------------[Time]------";
+   tablefooter2 = "  Cnt  Pass  Limits  Fail  total(k)     geom.     total     geom.";
+   tablefooter3 = "-----------------------------------------------------------------";
 
    if( analyseconf == 1 )
    {
-      tablebottom1 = tablebottom1"--------[NConf]-----------[ConfTime]-----";
-      tablebottom2 = tablebottom2"     total     geom.     total     geom.";
-      tablebottom3 = tablebottom3"-----------------------------------------";
+      tablefooter1 = tablefooter1"--------[NConf]-----------[ConfTime]-----";
+      tablefooter2 = tablefooter2"     total     geom.     total     geom.";
+      tablefooter3 = tablefooter3"-----------------------------------------";
    }
 
-   if( printsoltimes ) {
-      tablebottom1 = tablebottom1"--------[ToFirst]-----------[ToLast]-----";
-      tablebottom2 = tablebottom2"     total     geom.     total     geom.";
-      tablebottom3 = tablebottom3"-----------------------------------------";
+   if( printsoltimes )
+   {
+      tablefooter1 = tablefooter1"--------[ToFirst]-----------[ToLast]-----";
+      tablefooter2 = tablefooter2"     total     geom.     total     geom.";
+      tablefooter3 = tablefooter3"-----------------------------------------";
    }
 
    tablefooter1 = tablefooter1"\n";
@@ -1362,8 +1430,8 @@ END {
    printf(tablefooter2);
    printf(tablefooter3);
 
-   printf("%5d %5d %5d %5d %9d %9.1f %9.1f %9.1f ",
-          nprobs, pass, timeouts, fail, sbab / 1000, nodegeom, stottime, timegeom);
+   printf("%5d %5d %7d %5d %9d %9.1f %9.1f %9.1f ",
+          nprobs, pass, nlimits, fail, sbab / 1000, nodegeom, stottime, timegeom);
 
    if( analyseconf == 1 )
      printf("%9d %9.1f %9.1f %9.1f", sumconfs, confgeom, conftottime, conftimegeom);
@@ -1372,7 +1440,7 @@ END {
       printf("%9.1f %9.1f %9.1f %9.1f", stimetofirst, timetofirstgeom, stimetobest, timetobestgeoconftimem);
 
    printf("\n");
-   printf(" shifted geom. [%5d/%5.1f]      %9.1f           %9.1f ",
+   printf(" shifted geom. [%5d/%5.1f]        %9.1f           %9.1f ",
           nodegeomshift, timegeomshift, shiftednodegeom, shiftedtimegeom);
    if( analyseconf )
       printf("          %9.1f           %9.1f ", shiftedconfgeom, shiftedconftimegeom);

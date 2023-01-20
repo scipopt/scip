@@ -1,9 +1,0 @@
-# SCIP version 2.1.1.6
-
-# should we only fix variables in order to obtain a convex problem?
-# [type: bool, range: {TRUE,FALSE}, default: FALSE]
-heuristics/undercover/onlyconvexify = TRUE
-
-# feasibility tolerance factor; for checking the feasibility of the best solution
-# [type: real, advanced: FALSE, range: [0,1.79769313486232e+308], default: 1]
-numerics/checkfeastolfac = 10

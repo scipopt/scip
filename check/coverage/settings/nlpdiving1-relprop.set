@@ -1,0 +1,9 @@
+# SCIP version 3.0.2.1
+
+# maximum number of propagation rounds to be performed during strong branching before solving the LP (-1: no limit, -2: parameter settings)
+# [type: int, range: [-2,2147483647], default: 0]
+branching/relpscost/maxproprounds = -2
+
+# which variable selection should be used? ('f'ractionality, 'c'oefficient, 'p'seudocost, 'g'uided, 'd'ouble, 'v'eclen)
+# [type: char, range: {fcpgdv}, default: d]
+heuristics/nlpdiving/varselrule = c

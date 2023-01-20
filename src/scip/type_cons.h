@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -24,6 +33,11 @@
  *  - \ref CONS "Instructions for implementing a constraint handler"
  *  - \ref CONSHDLRS "List of available constraint handlers"
  *  - \ref scip::ObjConshdlr "C++ wrapper class"
+ */
+
+/** @defgroup DEFPLUGINS_CONS Default constraint handlers
+ *  @ingroup DEFPLUGINS
+ *  @brief implementation files (.c files) of the default constraint handlers of SCIP
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -337,9 +351,10 @@ typedef enum SCIP_LinConstype SCIP_LINCONSTYPE;
  *
  *  possible return values for *result (if more than one applies, the first in the list should be used):
  *  - SCIP_CUTOFF     : the node is infeasible in the variable's bounds and can be cut off
- *  - SCIP_CONSADDED  : an additional constraint was generated
+ *  - SCIP_CONSADDED  : an additional constraint was generated (added constraints must have initial flag = TRUE)
  *  - SCIP_REDUCEDDOM : a variable's domain was reduced
  *  - SCIP_SEPARATED  : a cutting plane was generated
+ *  - SCIP_SOLVELP    : the LP should be solved again because the LP primal feasibility tolerance has been tightened
  *  - SCIP_BRANCHED   : no changes were made to the problem, but a branching was applied to resolve an infeasibility
  *  - SCIP_INFEASIBLE : at least one constraint is infeasible, but it was not resolved
  *  - SCIP_FEASIBLE   : all constraints of the handler are feasible
@@ -361,14 +376,13 @@ typedef enum SCIP_LinConstype SCIP_LINCONSTYPE;
  *
  *  possible return values for *result (if more than one applies, the first in the list should be used):
  *  - SCIP_CUTOFF     : the node is infeasible in the variable's bounds and can be cut off
- *  - SCIP_CONSADDED  : an additional constraint was generated
+ *  - SCIP_CONSADDED  : an additional constraint was generated (added constraints must have initial flag = TRUE)
  *  - SCIP_REDUCEDDOM : a variable's domain was reduced
  *  - SCIP_SEPARATED  : a cutting plane was generated
  *  - SCIP_BRANCHED   : no changes were made to the problem, but a branching was applied to resolve an infeasibility
  *  - SCIP_SOLVELP    : at least one constraint is infeasible, and this can only be resolved by solving the LP
  *  - SCIP_INFEASIBLE : at least one constraint is infeasible, but it was not resolved
  *  - SCIP_FEASIBLE   : all constraints of the handler are feasible
- *  - SCIP_DIDNOTRUN  : the enforcement was skipped (only possible, if objinfeasible is true)
  */
 #define SCIP_DECL_CONSENFORELAX(x) SCIP_RETCODE x (SCIP* scip, SCIP_SOL* sol, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss, int nusefulconss, \
       SCIP_Bool solinfeasible, SCIP_RESULT* result)
@@ -466,7 +480,7 @@ typedef enum SCIP_LinConstype SCIP_LINCONSTYPE;
  *  nconss - nusefulconss constraints.
  *
  *  @note if the constraint handler uses dual information in propagation it is nesassary to check via calling
- *        SCIPallowDualReds and SCIPallowObjProp if dual reductions and propgation with the current cutoff bound, resp.,
+ *        SCIPallowWeakDualReds and SCIPallowStrongDualReds if dual reductions and propgation with the current cutoff bound, resp.,
  *        are allowed.
  *
  *  input:
@@ -516,8 +530,8 @@ typedef enum SCIP_LinConstype SCIP_LINCONSTYPE;
  *  @note the counters state the changes since the last call including the changes of this presolving method during its
  *        call
  *
- *  @note if the constraint handler performs dual presolving it is nesassary to check via calling SCIPallowDualReds
- *        if dual reductions are allowed.
+ *  @note if the constraint handler performs dual presolving it is nesassary to check via calling SCIPallowWeakDualReds
+ *        and SCIPallowStrongDualReds if dual reductions are allowed.
  *
  *  input/output:
  *  - nfixedvars      : pointer to count total number of variables fixed of all presolvers

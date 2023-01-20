@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -41,6 +50,7 @@
 #include "scip/pub_misc.h"
 #include "scip/pub_message.h"
 #include "lpi/lpi.h"
+#include "tinycthread/tinycthread.h"
 
 #ifndef XPRS_LPQUICKPRESOLVE
 #define XPRS_LPQUICKPRESOLVE 8207
@@ -52,7 +62,7 @@
 #define CHECK_ZERO(messagehdlr, x) { int _restat_;                      \
       if( (_restat_ = (x)) != 0 )                                       \
       {                                                                 \
-         SCIPmessagePrintWarning((messagehdlr), "LP Error: Xpress returned %d\n", _restat_); \
+         SCIPmessagePrintWarning((messagehdlr), "%s:%d: LP Error: Xpress returned %d\n", __FILE__, __LINE__, _restat_); \
          return SCIP_LPERROR;                                           \
       }                                                                 \
    }
@@ -642,21 +652,25 @@ void invalidateSolution(
  * @{
  */
 
-static char xprsname[100];
-
+#ifdef _Thread_local
+static _Thread_local char xprsname[100];
+#else
+static char xprsname[] = {'X', 'p', 'r', 'e', 's', 's', ' ', '0' + XPVERSION / 10, '0' + XPVERSION % 10};
+#endif
 /** gets name and version of LP solver */
 const char* SCIPlpiGetSolverName(
    void
    )
 {
+#ifdef _Thread_local
    char version[16];
 
    /* get version of Xpress */
    if( XPRSgetversion(version) == 0 )
-      sprintf(xprsname, "Xpress %s", version);
+      (void) sprintf(xprsname, "Xpress %s", version);
    else
-      sprintf(xprsname, "Xpress %d", XPVERSION);
-
+      (void) sprintf(xprsname, "Xpress %d", XPVERSION);
+#endif
    return xprsname;
 }
 
@@ -686,6 +700,10 @@ SCIP_RETCODE SCIPlpiSetIntegralityInformation(
    int*                  intInfo             /**< integrality array (0: continuous, 1: integer). May be NULL iff ncols is 0.  */
    )
 { /*lint --e{715}*/
+   assert(lpi != NULL);
+   assert(ncols >= 0);
+   assert(ncols == 0 || intInfo != NULL);
+
    SCIPerrorMessage("SCIPlpiSetIntegralityInformation() has not been implemented yet.\n");
    return SCIP_LPERROR;
 }
@@ -732,8 +750,8 @@ SCIP_RETCODE SCIPlpiCreate(
 {
    int zero = 0;
 
-   assert(sizeof(SCIP_Real) == sizeof(double)); /* Xpress only works with doubles as floating points */
-   assert(sizeof(SCIP_Bool) == sizeof(int));    /* Xpress only works with ints as bools */
+   assert(sizeof(SCIP_Real) == sizeof(double)); /*lint !e506*/ /* Xpress only works with doubles as floating points */
+   assert(sizeof(SCIP_Bool) == sizeof(int));    /*lint !e506*/ /* Xpress only works with ints as bools */
    assert(lpi != NULL);
    assert(name != NULL);
 
@@ -874,6 +892,8 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    assert(beg != NULL);
    assert(ind != NULL);
    assert(val != NULL);
+   SCIP_UNUSED(colnames);
+   SCIP_UNUSED(rownames);
 
    SCIPdebugMessage("loading LP in column format into Xpress: %d cols, %d rows\n", ncols, nrows);
 
@@ -933,6 +953,7 @@ SCIP_RETCODE SCIPlpiAddCols(
    assert(nnonz == 0 || beg != NULL);
    assert(nnonz == 0 || ind != NULL);
    assert(nnonz == 0 || val != NULL);
+   SCIP_UNUSED(colnames);
 
    SCIPdebugMessage("adding %d columns with %d nonzeros to Xpress\n", ncols, nnonz);
 
@@ -1075,6 +1096,7 @@ SCIP_RETCODE SCIPlpiAddRows(
    assert(nnonz == 0 || beg != NULL);
    assert(nnonz == 0 || ind != NULL);
    assert(nnonz == 0 || val != NULL);
+   SCIP_UNUSED(rownames);
 
    SCIPdebugMessage("adding %d rows with %d nonzeros to Xpress\n", nrows, nnonz);
 
@@ -1667,6 +1689,8 @@ SCIP_RETCODE SCIPlpiGetColNames(
    assert(namestorage != NULL || namestoragesize == 0);
    assert(namestoragesize >= 0);
    assert(storageleft != NULL);
+   assert(0 <= firstcol && firstcol <= lastcol);
+
    SCIPerrorMessage("SCIPlpiGetColNames() has not been implemented yet.\n");
    return SCIP_LPERROR;
 }
@@ -1688,6 +1712,8 @@ SCIP_RETCODE SCIPlpiGetRowNames(
    assert(namestorage != NULL || namestoragesize == 0);
    assert(namestoragesize >= 0);
    assert(storageleft != NULL);
+   assert(0 <= firstrow && firstrow <= lastrow);
+
    SCIPerrorMessage("SCIPlpiGetRowNames() has not been implemented yet.\n");
    return SCIP_LPERROR;
 }
@@ -2304,7 +2330,7 @@ SCIP_Bool SCIPlpiWasSolved(
  *  The feasibility information is with respect to the last solving call and it is only relevant if SCIPlpiWasSolved()
  *  returns true. If the LP is changed, this information might be invalidated.
  *
- *  Note that @a primalfeasible and @dualfeasible should only return true if the solver has proved the respective LP to
+ *  Note that @a primalfeasible and @a dualfeasible should only return true if the solver has proved the respective LP to
  *  be feasible. Thus, the return values should be equal to the values of SCIPlpiIsPrimalFeasible() and
  *  SCIPlpiIsDualFeasible(), respectively. Note that if feasibility cannot be proved, they should return false (even if
  *  the problem might actually be feasible).
@@ -2803,6 +2829,7 @@ SCIP_RETCODE SCIPlpiGetRealSolQuality(
 {  /*lint --e{715}*/
    assert(lpi != NULL);
    assert(quality != NULL);
+   SCIP_UNUSED(qualityindicator);
 
    *quality = SCIP_INVALID;
 
@@ -2830,6 +2857,7 @@ SCIP_RETCODE SCIPlpiGetBase(
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
 
+   /*lint --e{506}*/
    assert((int) SCIP_BASESTAT_LOWER == 0);
    assert((int) SCIP_BASESTAT_BASIC == 1);
    assert((int) SCIP_BASESTAT_UPPER == 2);
@@ -2878,6 +2906,7 @@ SCIP_RETCODE SCIPlpiSetBase(
    assert(cstat != NULL || ncols == 0);
    assert(rstat != NULL || nrows == 0);
 
+   /*lint --e{506}*/
    assert((int) SCIP_BASESTAT_LOWER == 0);
    assert((int) SCIP_BASESTAT_BASIC == 1);
    assert((int) SCIP_BASESTAT_UPPER == 2);
@@ -2925,6 +2954,7 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
    int r;
 
    /* In the basis methods we assume that xprs basis flags coincide with scip, so assert it */
+   /*lint --e{506}*/
    assert((int) SCIP_BASESTAT_LOWER == 0);
    assert((int) SCIP_BASESTAT_BASIC == 1);
    assert((int) SCIP_BASESTAT_UPPER == 2);
@@ -2979,6 +3009,7 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
    assert(coef != NULL);
+   SCIP_UNUSED(inds);
 
    SCIPdebugMessage("getting binv-row %d\n", row);
 
@@ -3020,6 +3051,7 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
    assert(coef != NULL);
+   SCIP_UNUSED(inds);
 
    SCIPdebugMessage("getting binv-col %d\n", c);
 
@@ -3047,7 +3079,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   r,                  /**< row number */
    const SCIP_Real*      binvrow,            /**< row in (A_B)^-1 from prior call to SCIPlpiGetBInvRow(), or NULL */
-   SCIP_Real*            coef,               /**< vector to return coefficients */
+   SCIP_Real*            coef,               /**< vector to return coefficients of the row */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
                                               *   (-1: if we do not store sparsity information) */
@@ -3120,7 +3152,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
 SCIP_RETCODE SCIPlpiGetBInvACol(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   c,                  /**< column number */
-   SCIP_Real*            coef,               /**< vector to return coefficients */
+   SCIP_Real*            coef,               /**< vector to return coefficients of the column */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
                                               *   (-1: if we do not store sparsity information) */
@@ -3135,6 +3167,7 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
    assert(coef != NULL);
+   SCIP_UNUSED(inds);
 
    SCIPdebugMessage("getting binv-col %d\n", c);
 
@@ -3411,7 +3444,9 @@ SCIP_RETCODE SCIPlpiSetNorms(
    const SCIP_LPINORMS*  lpinorms            /**< LPi pricing norms information, or NULL */
    )
 { /*lint --e{715}*/
+   assert(lpi != NULL);
    assert(lpinorms == NULL);
+   SCIP_UNUSED(blkmem);
 
    /* no work necessary */
    return SCIP_OKAY;
@@ -3424,7 +3459,9 @@ SCIP_RETCODE SCIPlpiFreeNorms(
    SCIP_LPINORMS**       lpinorms            /**< pointer to LPi pricing norms information, or NULL */
    )
 { /*lint --e{715}*/
+   assert(lpi != NULL);
    assert(lpinorms == NULL);
+   SCIP_UNUSED(blkmem);
 
    /* no work necessary */
    return SCIP_OKAY;
@@ -3564,7 +3601,9 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_OUTPUTLOG, (ival == TRUE) ? 1 : 0) );
       break;
    case SCIP_LPPAR_LPITLIM:
-      ival = MIN(ival, XPRS_MAXINT); /*lint !e685*/
+      assert( ival >= 0 );
+      /* 0 <= ival, 0 stopping immediately */
+      ival = MIN(ival, XPRS_MAXINT); /*lint !e685*//*lint !e2650*//*lint !e587*/
       CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_LPITERLIMIT, ival) );
       break;
    case SCIP_LPPAR_THREADS:
@@ -3609,7 +3648,8 @@ SCIP_RETCODE SCIPlpiGetRealpar(
       break;
    case SCIP_LPPAR_LPTILIM:
       CHECK_ZERO( lpi->messagehdlr, XPRSgetintcontrol(lpi->xprslp, XPRS_MAXTIME, &ictrlval) );
-      *dval = (double) ictrlval;
+      /* ictrlval is the negative of the timelimit (see SCIPlpiSetRealpar) */
+      *dval = (double) -ictrlval;
       break;
    case SCIP_LPPAR_MARKOWITZ:
       CHECK_ZERO( lpi->messagehdlr, XPRSgetdblcontrol(lpi->xprslp, XPRS_MARKOWITZTOL, &dctrlval) );
@@ -3641,36 +3681,68 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    switch( type )
    {
    case SCIP_LPPAR_FEASTOL:
+      /* Xpress does not pose any restriction on dval, its absolute value is used as tolerance.
+       * For consistency we assert it to be strictly positive.
+       */
+      assert( dval > 0.0 );
       CHECK_ZERO( lpi->messagehdlr, XPRSsetdblcontrol(lpi->xprslp, XPRS_FEASTOL, dval) );
       break;
    case SCIP_LPPAR_DUALFEASTOL:
+      /* Xpress does not pose any restriction on dval,
+       * however for consistency we assert it to be strictly positive.
+       */
+      assert( dval > 0.0 );
       CHECK_ZERO( lpi->messagehdlr, XPRSsetdblcontrol(lpi->xprslp, XPRS_OPTIMALITYTOL, dval) );
       break;
    case SCIP_LPPAR_BARRIERCONVTOL:
+      assert( dval >= 0.0 );
+      /* Xpress poses no restriction on dval
+       * However for consistency we assert it to be nonnegative.
+       */
       CHECK_ZERO( lpi->messagehdlr, XPRSsetdblcontrol(lpi->xprslp, XPRS_BARGAPSTOP, dval) );
       break;
    case SCIP_LPPAR_LPTILIM:
    {
      int ival;
 
-     /* if the double value is larger than INT_MAX, we set maxtime to 0 which implies no time limit */
-     if (dval >= INT_MAX)
-       ival = 0;
-     else
-       ival = (int) floor(dval);
+     /* From the Xpress documentation:
+      * dval>0   If an integer solution has been found, stop MIP search after dval seconds,
+      *   otherwise continue until an integer solution is finally found.
+      * dval<0   Stop in LP or MIP search after dval seconds.
+      * dval=0   No time limit
+      */
+      assert( dval > 0.0 );
+      if( dval >= INT_MAX )
+         ival = 0;
+      else
+         ival = (int) -floor(dval);
 
-     CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_MAXTIME, ival) );
-     break;
+      CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_MAXTIME, ival) );
+      break;
    }
    case SCIP_LPPAR_MARKOWITZ:
+      /* no restriction on dval */
       CHECK_ZERO( lpi->messagehdlr, XPRSsetdblcontrol(lpi->xprslp, XPRS_MARKOWITZTOL, dval) );
       break;
    case SCIP_LPPAR_OBJLIM:
+      /* no restriction on dval */
       CHECK_ZERO( lpi->messagehdlr, XPRSsetdblcontrol(lpi->xprslp, XPRS_MIPABSCUTOFF, dval) );
       break;
    default:
       return SCIP_PARAMETERUNKNOWN;
    }  /*lint !e788*/
+
+   return SCIP_OKAY;
+}
+
+/** interrupts the currently ongoing lp solve or disables the interrupt */
+SCIP_RETCODE SCIPlpiInterrupt(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   SCIP_Bool             interrupt           /**< TRUE if interrupt should be set, FALSE if it should be disabled */
+   )
+{
+   /*lint --e{715}*/
+   assert(lpi != NULL);
 
    return SCIP_OKAY;
 }

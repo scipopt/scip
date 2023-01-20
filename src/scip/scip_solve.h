@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -23,7 +32,7 @@
  * @author Marc Pfetsch
  * @author Kati Wolter
  * @author Gregor Hendel
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -38,25 +47,6 @@
 #include "scip/type_sol.h"
 #include "scip/type_tree.h"
 #include "scip/type_var.h"
-
-/* In debug mode, we include the SCIP's structure in scip.c, such that no one can access
- * this structure except the interface methods in scip.c.
- * In optimized mode, the structure is included in scip.h, because some of the methods
- * are implemented as defines for performance reasons (e.g. the numerical comparisons).
- * Additionally, the internal "set.h" is included, such that the defines in set.h are
- * available in optimized mode.
- */
-#ifdef NDEBUG
-#include "scip/struct_scip.h"
-#include "scip/struct_stat.h"
-#include "scip/set.h"
-#include "scip/tree.h"
-#include "scip/misc.h"
-#include "scip/var.h"
-#include "scip/cons.h"
-#include "scip/solve.h"
-#include "scip/debug.h"
-#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -91,7 +81,7 @@ extern "C" {
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPtransformProb(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -106,6 +96,7 @@ SCIP_RETCODE SCIPtransformProb(
  *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVED
  *
  *  @post After calling this method \SCIP reaches one of the following stages:
  *        - \ref SCIP_STAGE_PRESOLVING if the presolving process was interrupted
@@ -114,7 +105,7 @@ SCIP_RETCODE SCIPtransformProb(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPpresolve(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -141,7 +132,7 @@ SCIP_RETCODE SCIPpresolve(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsolve(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -170,7 +161,7 @@ SCIP_RETCODE SCIPsolve(
  *
  *  @deprecated Please use SCIPsolveConcurrent() instead.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsolveParallel(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -197,7 +188,7 @@ SCIP_RETCODE SCIPsolveParallel(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsolveConcurrent(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -222,35 +213,10 @@ SCIP_RETCODE SCIPsolveConcurrent(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPfreeSolve(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             restart             /**< should certain data be preserved for improved restarting? */
-   );
-
-/** frees branch and bound tree and all solution process data; statistics, presolving data and transformed problem is
- *  preserved
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if @p scip is in one of the following stages:
- *       - \ref SCIP_STAGE_INIT
- *       - \ref SCIP_STAGE_PROBLEM
- *       - \ref SCIP_STAGE_TRANSFORMED
- *       - \ref SCIP_STAGE_PRESOLVING
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_SOLVING
- *       - \ref SCIP_STAGE_SOLVED
- *
- *  @post If this method is called in \SCIP stage \ref SCIP_STAGE_INIT or \ref SCIP_STAGE_PROBLEM, the stage of
- *        \SCIP is not changed; otherwise, the \SCIP stage is changed to \ref SCIP_STAGE_PRESOLVED.
- *
- *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
- */
-EXTERN
-SCIP_RETCODE SCIPfreeReoptSolve(
-   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** frees all solution process data including presolving and transformed problem, only original problem is kept
@@ -273,7 +239,7 @@ SCIP_RETCODE SCIPfreeReoptSolve(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPfreeTransform(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -299,8 +265,33 @@ SCIP_RETCODE SCIPfreeTransform(
  *
  *  @note the \SCIP stage does not get changed
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPinterruptSolve(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** indicates whether \SCIP has been informed that the solving process should be interrupted as soon as possible
+ *
+ *  This function returns whether SCIPinterruptSolve() has been called, which is different from SCIPinterrupted(),
+ *  which returns whether a SIGINT signal has been received by the SCIP signal handler.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ *
+ *  @note the \SCIP stage does not get changed
+ */
+SCIP_EXPORT
+SCIP_Bool SCIPisSolveInterrupted(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -318,102 +309,9 @@ SCIP_RETCODE SCIPinterruptSolve(
  *
  *  @note the \SCIP stage does not get changed
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPrestartSolve(
    SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** include specific heuristics and branching rules for reoptimization
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if @p scip is in one of the following stages:
- *       - \ref SCIP_STAGE_PROBLEM
- */
-EXTERN
-SCIP_RETCODE SCIPenableReoptimization(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             enable              /**< enable reoptimization (TRUE) or disable it (FALSE) */
-   );
-
-/** returns whether reoptimization is enabled or not */
-EXTERN
-SCIP_Bool SCIPisReoptEnabled(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** returns the stored solutions corresponding to a given run */
-EXTERN
-SCIP_RETCODE SCIPgetReoptSolsRun(
-   SCIP*                 scip,               /**< SCIP data structue */
-   int                   run,                /**< number of the run */
-   SCIP_SOL**            sols,               /**< array to store solutions */
-   int                   allocmem,           /**< allocated size of the array */
-   int*                  nsols               /**< number of solutions */
-   );
-
-/** mark all stored solutions as not updated */
-EXTERN
-void SCIPresetReoptSolMarks(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** check if the reoptimization process should be restarted
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if @p scip is in one of the following stages:
- *       - \ref SCIP_STAGE_TRANSFORMED
- *       - \ref SCIP_STAGE_SOLVING
- */
-EXTERN
-SCIP_RETCODE SCIPcheckReoptRestart(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NODE*            node,               /**< current node of the branch and bound tree (or NULL) */
-   SCIP_Bool*            restart             /**< pointer to store of the reoptimitation process should be restarted */
-   );
-
-/** save bound change based on dual information in the reoptimization tree
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if @p scip is in one of the following stages:
- *       - \ref SCIP_STAGE_SOLVING
- *       - \ref SCIP_STAGE_SOLVED
- */
-EXTERN
-SCIP_RETCODE SCIPaddReoptDualBndchg(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NODE*            node,               /**< node of the search tree */
-   SCIP_VAR*             var,                /**< variable whose bound changed */
-   SCIP_Real             newbound,           /**< new bound of the variable */
-   SCIP_Real             oldbound            /**< old bound of the variable */
-   );
-
-/** returns the optimal solution of the last iteration or NULL of none exists */
-EXTERN
-SCIP_SOL* SCIPgetReoptLastOptSol(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** returns the objective coefficent of a given variable in a previous iteration
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if @p scip is in one of the following stages:
- *       - \ref SCIP_STAGE_PRESOLVING
- *       - \ref SCIP_STAGE_SOLVING
- */
-EXTERN
-SCIP_RETCODE SCIPgetReoptOldObjCoef(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             var,                /**< variable */
-   int                   run,                /**< number of the run */
-   SCIP_Real*            objcoef             /**< pointer to store the objective coefficient */
    );
 
 /** returns whether we are in the restarting phase
@@ -431,9 +329,134 @@ SCIP_RETCODE SCIPgetReoptOldObjCoef(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPisInRestart(
    SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/**@} */
+
+/**@addtogroup PublicReoptimizationMethods
+ *
+ * @{
+ */
+
+/** frees branch and bound tree and all solution process data; statistics, presolving data and transformed problem is
+ *  preserved
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *
+ *  @post If this method is called in \SCIP stage \ref SCIP_STAGE_INIT or \ref SCIP_STAGE_PROBLEM, the stage of
+ *        \SCIP is not changed; otherwise, the \SCIP stage is changed to \ref SCIP_STAGE_PRESOLVED.
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPfreeReoptSolve(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** include specific heuristics and branching rules for reoptimization
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPenableReoptimization(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             enable              /**< enable reoptimization (TRUE) or disable it (FALSE) */
+   );
+
+/** returns whether reoptimization is enabled or not */
+SCIP_EXPORT
+SCIP_Bool SCIPisReoptEnabled(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns the stored solutions corresponding to a given run */
+SCIP_EXPORT
+SCIP_RETCODE SCIPgetReoptSolsRun(
+   SCIP*                 scip,               /**< SCIP data structue */
+   int                   run,                /**< number of the run */
+   SCIP_SOL**            sols,               /**< array to store solutions */
+   int                   allocmem,           /**< allocated size of the array */
+   int*                  nsols               /**< number of solutions */
+   );
+
+/** mark all stored solutions as not updated */
+SCIP_EXPORT
+void SCIPresetReoptSolMarks(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** check if the reoptimization process should be restarted
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcheckReoptRestart(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODE*            node,               /**< current node of the branch and bound tree (or NULL) */
+   SCIP_Bool*            restart             /**< pointer to store of the reoptimitation process should be restarted */
+   );
+
+/** save bound change based on dual information in the reoptimization tree
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPaddReoptDualBndchg(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODE*            node,               /**< node of the search tree */
+   SCIP_VAR*             var,                /**< variable whose bound changed */
+   SCIP_Real             newbound,           /**< new bound of the variable */
+   SCIP_Real             oldbound            /**< old bound of the variable */
+   );
+
+/** returns the optimal solution of the last iteration or NULL of none exists */
+SCIP_EXPORT
+SCIP_SOL* SCIPgetReoptLastOptSol(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns the objective coefficent of a given variable in a previous iteration
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPgetReoptOldObjCoef(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable */
+   int                   run,                /**< number of the run */
+   SCIP_Real*            objcoef             /**< pointer to store the objective coefficient */
    );
 
 /**@} */

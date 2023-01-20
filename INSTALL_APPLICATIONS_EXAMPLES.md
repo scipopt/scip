@@ -1,5 +1,5 @@
-Building and installing the applications and examples                       {#INSTALL_APPLICATIONS_EXAMPLES}
-========================================
+Building and installing the applications and examples  {#INSTALL_APPLICATIONS_EXAMPLES}
+=====================================================
 
 Each application and example may be built in two ways, either by using Cmake
 or by using SCIP's own Makefile system. The choice of the
@@ -17,10 +17,8 @@ Applications
 | `Coloring`        | `coloring`        | `coloring`        |
 | `CycleClustering` | `cycleclustering` | `cycleclustering` |
 | `MinIISC`         | `miniisc`         | `miniisc`         |
-| `PolySCIP`        | `polyscip`        | `polyscip`        |
 | `Ringpacking`     | `ringpacking`     | `ringpacking`     |
 | `Scheduler`       | `scheduler`       | `scheduler`       |
-| `STP`             | `scipstp`         | `stp`             |
 
 Examples
 | Folder            | cmake target      | make target       |
@@ -54,37 +52,42 @@ and the application or example target is `scip_project_binary`,
 simply execute
 
 ```
-cd build
-make scip_project_binary
+cmake --build build --target <scip_project_binary>
 ```
 
 To build all applications at once, use
 
 ```
-make applications
+cmake --build build --target applications
 ```
 
 To build all examples at once, use
 
 ```
-make examples
+cmake --build build --target examples
+```
+It is also possible to build `scip_project_binary` in a stand-alone
+build directory. Therefore, it is necessary to create the
+stand-alone build directory first and configure the build using
+CMake. This approach requires a systemwide installation of SCIP.
+If SCIP is not installed systemwide, but in a local directory "/path/to/scip/installation",
+this needs to be communicated as follows, by either specifying the `SCIP_DIR` variable or
+adjusting the `CMAKE_PREFIX_PATH` variable.
+The following commands need to be issued from the root directory of the example or application that should be built.
+
+```
+cmake -Bbuild -H. [-DSCIP_DIR=/path/to/scip/installation/lib/cmake/scip] [-DCMAKE_PREFIX_PATH=/path/to/scip/installation]
+cmake --build build
 ```
 
-It is also possible to build the applications and examples in a stand-alone
-build directory. For that, it is necessary to create the
-stand-alone build directory first and generate the Makefile using
-CMake. It might be necessary to specify the SCIP build directory
-or installation directory, if SCIP has not yet been installed systemwide.
+If you are unsure what an installation directory is, "/path/to/scip/installation" should contain the directories "include" and "lib"
+or the equivalents on your target operating systems.
+If SCIP has been compiled into a build-directory as opposed to an installation directory, it is possible to point either of the two variables
+`SCIP_DIR` or `CMAKE_PREFIX_PATH` to this build directory.
+Finally, this specification should be used to give a local installation precedence over a systemwide installation of SCIP.
 
-```
-mkdir build
-cd build
-cmake .. [-DSCIP_DIR=../../]
-make
-```
-
-Please refer to the [online documentation of SCIP](http://scip.zib.de/doc/html/CMAKE.php)
-for a list of available configuration options for this application or exmple, and available tests.
+Please refer to the [online documentation of SCIP](https://scipopt.org/doc/html/md_INSTALL.php#CMAKE)
+for a list of available configuration options and available tests.
 
 
 Installation information for SCIP's custom Makefile system on Linux
@@ -117,7 +120,7 @@ compilation settings:
              `dbg`, `opt`, or `prf`
 
 - `LPS`:    the LP solver to use
-             `spx`, `spx132`, `clp`, `cpx`, `xprs`, `msk`
+             `spx` (= `spx2`), `spx1`, `clp`, `cpx`, `xprs`, `msk`, `grb`, `glop`, `qso`, `none`
 
 For example, if you want to install SCIP on a Linux system with a x86 processor
 using the gnu compiler in debug mode, and using Soplex version >= 1.4.0
@@ -141,27 +144,29 @@ Here is what you have to do to compile and run the application or example projec
    - `OPT=opt`       to use optimized compilation mode (default)
    - `OPT=dbg`       to use debug compilation mode
    - `OPT=prf`       to use performance analysis compilation mode
-   - `LPS=spx`       to use SOPLEX Version >= 1.4.0 as LP solver (default)
-   - `LPS=spx132`    to use SOPLEX Version 1.3.2 as LP solver
+   - `LPS=spx`       to use %SoPlex as LP solver (based on the new interface available since version 2.0, default)
+   - `LPS=spx1`      to use %SoPlex as LP solver (based on the old interface for versions >= 1.4)
    - `LPS=cpx`       to use CPLEX as LP solver
+   - `LPS=grb`       to use Gurobi as LP solver
    - `LPS=xprs`      to use XPRESS as LP solver
    - `LPS=msk`       to use MOSEK as LP solver
    - `LPS=clp`       to use CLP as LP solver
+   - `LPS=glop`      to use Glop as LP solver
+   - `LPS=qso`       to use QSopt as LP solver
+   - `LPS=none`      to use no LP solver
    - `COMP=gnu`      to use GNU c/c++ compiler (default)
    - other compilers are available (see make/ directory)
-
-  For CallableLibrary:
-   - `IPOPT=true`    to enable using Ipopt as NLP solver
+   - `IPOPT=true`    to enable using Ipopt as NLP solver for CallableLibrary:
 
 4. To run the program enter `bin/scip_project_binary.$(OSTYPE).$(ARCH).$(COMP).$(OPT).$(LPS)`
    (e.g. `bin/scip_project_binary.linux.x86.gnu.opt.spx`) or `bin/scip_project_binary` which is a link
    to last compiled version
 
 5. To generate the documentation, you need to have doxygen installed.
-   Enter `make doc` in the project's `doc` folder if there exists a .dxy file for that project
+   Enter `make doc` in the project's folder if there exists a .dxy file in the project's doc folder
    or run `make doc` in scip's doc folder.
    Then open `html/index.html` in your favorite browser.
 
 On some machines, you should use gmake instead of make.
 For more information and a list of available flags please refer to
-the [online documentation of SCIP](http://scip.zib.de/doc/html/MAKE.php)
+the [online documentation of SCIP](https://scipopt.org/doc/html/md_INSTALL.php#MAKE)

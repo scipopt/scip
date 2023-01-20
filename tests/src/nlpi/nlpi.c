@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -19,12 +28,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include "nlpi/nlpi_ipopt.h"
-#include "nlpi/nlpi_worhp.h"
-#include "nlpi/nlpi_all.h"
-#include "nlpi/nlpioracle.h"
-#include "nlpi/nlpi.h"
-
+#include "scip/scipdefplugins.h"
+#include "scip/nlpioracle.h"
 #include "include/scip_test.h"
 
 #define INF 1e+20
@@ -38,40 +43,14 @@ static
 void setup(void)
 {
    SCIP_CALL( SCIPcreate(&scip) );
+   SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
 
-   /* check whether WORHP is available */
-   if( SCIPisWorhpAvailableWorhp() )
-   {
-      /* WORHP-IP */
-      SCIP_CALL( SCIPcreateNlpSolverWorhp(SCIPblkmem(scip), &worhpip, TRUE) );
-      cr_assert(worhpip != NULL);
-      SCIP_CALL( SCIPincludeNlpi(scip, worhpip) );
+   /* need a problem to have stat created, which is used by expr iterators */
+   SCIP_CALL( SCIPcreateProbBasic(scip, "dummy") );
 
-      /* WORHP-SQP */
-      SCIP_CALL( SCIPcreateNlpSolverWorhp(SCIPblkmem(scip), &worhpsqp, FALSE) );
-      cr_assert(worhpsqp != NULL);
-      SCIP_CALL( SCIPincludeNlpi(scip, worhpsqp) );
-
-      SCIP_CALL( SCIPincludeExternalCodeInformation(scip, SCIPgetSolverNameWorhp(), SCIPgetSolverDescWorhp()) );
-   }
-
-   /* check whether Ipopt is available */
-   if( SCIPisIpoptAvailableIpopt() )
-   {
-      SCIP_CALL( SCIPcreateNlpSolverIpopt(SCIPblkmem(scip), &ipopt) );
-      cr_assert(ipopt != NULL);
-      SCIP_CALL( SCIPincludeNlpi(scip, ipopt) );
-      SCIP_CALL( SCIPincludeExternalCodeInformation(scip, SCIPgetSolverNameIpopt(), SCIPgetSolverDescIpopt()) );
-   }
-
-   if( SCIPgetNNlpis(scip) > 1 )
-   {
-      SCIP_NLPI* nlpi;
-
-      SCIP_CALL( SCIPcreateNlpSolverAll(SCIPblkmem(scip), &nlpi, SCIPgetNlpis(scip), SCIPgetNNlpis(scip)) );
-      SCIP_CALL( SCIPincludeNlpi(scip, nlpi) );
-      cr_assert(nlpi != NULL);
-   }
+   ipopt = SCIPfindNlpi(scip, "ipopt");
+   worhpip = SCIPfindNlpi(scip, "worhp-ip");
+   worhpsqp = SCIPfindNlpi(scip, "worhp-sqp");
 }
 
 static
@@ -85,7 +64,7 @@ void teardown(void)
 static
 SCIP_RETCODE testNlpi(SCIP_NLPI* nlpi)
 {
-   SCIP_NLPSTATISTICS* statistics;
+   SCIP_NLPSTATISTICS statistics;
    SCIP_NLPIPROBLEM* nlpiprob;
    SCIP_Real* dualcons;
    SCIP_Real* duallb;
@@ -94,8 +73,10 @@ SCIP_RETCODE testNlpi(SCIP_NLPI* nlpi)
 
    /* variables */
    const char* varnames[4] = {"x0", "x1", "x2", "x3"};
+   SCIP_EXPR* varexprs[4];
    SCIP_Real lbs[4] = {-0.5, -2, 0, -2};
    SCIP_Real ubs[4] = {INF, INF, 2, 2};
+   SCIP_Real start[4] = {0.1,0.6,1.1,2.9};
 
    /* objective */
    SCIP_Real objvals[1] = {-1};
@@ -106,11 +87,15 @@ SCIP_RETCODE testNlpi(SCIP_NLPI* nlpi)
    SCIP_Real lhss[3] = {1, -INF, 2.5};
    SCIP_Real rhss[3] = {1, -1, 5};
    SCIP_Real initguess[4];
-   SCIP_QUADELEM* quadelems;
    SCIP_Real* linvals;
    int* lininds;
-   int nquadelems;
    int nlinds;
+
+   SCIP_EXPR* x0sqr;
+   SCIP_EXPR* x1sqr;
+   SCIP_EXPR* x2sqr;
+   SCIP_EXPR* x0x2;
+   SCIP_EXPR* expr;
 
    /*-----------------------------------------------------------------------
     *
@@ -131,55 +116,67 @@ SCIP_RETCODE testNlpi(SCIP_NLPI* nlpi)
     *-----------------------------------------------------------------------*/
 
    /* create NLPI problem */
-   SCIP_CALL( SCIPallocBufferArray(scip, &quadelems, 3) );
    SCIP_CALL( SCIPallocBufferArray(scip, &lininds, 2) );
    SCIP_CALL( SCIPallocBufferArray(scip, &linvals, 2) );
-   SCIP_CALL( SCIPnlpiCreateProblem(nlpi, &nlpiprob, "convex_NLP") );
-   SCIP_CALL( SCIPnlpiAddVars(nlpi, nlpiprob, 4, lbs, ubs, varnames) );
+   SCIP_CALL( SCIPcreateNlpiProblem(scip, nlpi, &nlpiprob, "convex_NLP") );
+   SCIP_CALL( SCIPaddNlpiVars(scip, nlpi, nlpiprob, 4, lbs, ubs, varnames) );
+
+   /* create expressions */
+   SCIP_CALL( SCIPcreateExprVaridx(scip, &varexprs[0], 0, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprVaridx(scip, &varexprs[1], 1, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprVaridx(scip, &varexprs[2], 2, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprVaridx(scip, &varexprs[3], 3, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprPow(scip, &x0sqr, varexprs[0], 2.0, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprPow(scip, &x1sqr, varexprs[1], 2.0, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprPow(scip, &x2sqr, varexprs[2], 2.0, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprProduct(scip, &x0x2, 1, &varexprs[0], 1.0, NULL, NULL) );
+   SCIP_CALL( SCIPappendExprChild(scip, x0x2, varexprs[2]) );
 
    /* set objective */
-   quadelems[0].idx1 = 0; quadelems[0].idx2 = 0; quadelems[0].coef = 1;
-   quadelems[1].idx1 = 1; quadelems[1].idx2 = 1; quadelems[1].coef = 2;
-   SCIP_CALL( SCIPnlpiSetObjective(nlpi, nlpiprob, 1, objinds, objvals, 2, quadelems, NULL, NULL, 0.0) );
+   SCIP_CALL( SCIPcreateExprSum(scip, &expr, 1, &x0sqr, NULL, 0.0, NULL, NULL) );
+   SCIP_CALL( SCIPappendExprSumExpr(scip, expr, x1sqr, 2.0) );
+   SCIP_CALL( SCIPsetNlpiObjective(scip, nlpi, nlpiprob, 1, objinds, objvals, expr, 0.0) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 
    /* constraints */
-   nquadelems = 3;
-   quadelems[0].idx1 = 0; quadelems[0].idx2 = 0; quadelems[0].coef = 1;
-   quadelems[1].idx1 = 2; quadelems[1].idx2 = 2; quadelems[1].coef = 1;
-   quadelems[2].idx1 = 0; quadelems[2].idx2 = 2; quadelems[2].coef = 1;
-   SCIP_CALL( SCIPnlpiAddConstraints(nlpi, nlpiprob, 1, &lhss[0], &rhss[0], NULL, NULL, NULL, &nquadelems, &quadelems,
-         NULL, NULL, &consnames[0]) );
+   SCIP_CALL( SCIPcreateExprSum(scip, &expr, 1, &x0sqr, NULL, 0.0, NULL, NULL) );
+   SCIP_CALL( SCIPappendExprSumExpr(scip, expr, x2sqr, 1.0) );
+   SCIP_CALL( SCIPappendExprSumExpr(scip, expr, x0x2, 1.0) );
+   SCIP_CALL( SCIPaddNlpiConstraints(scip, nlpi, nlpiprob, 1, &lhss[0], &rhss[0], NULL, NULL, NULL, &expr, &consnames[0]) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 
    nlinds = 2;
    lininds[0] = 2;
    linvals[0] = 1;
    lininds[1] = 3;
    linvals[1] = -1;
-   SCIP_CALL( SCIPnlpiAddConstraints(nlpi, nlpiprob, 1, &lhss[1], &rhss[1], &nlinds, &lininds, &linvals, NULL, NULL,
-         NULL, NULL, &consnames[1]) );
+   SCIP_CALL( SCIPaddNlpiConstraints(scip, nlpi, nlpiprob, 1, &lhss[1], &rhss[1], &nlinds, &lininds, &linvals, NULL, &consnames[1]) );
 
    nlinds = 2;
    lininds[0] = 1;
    linvals[0] = 1;
    lininds[1] = 3;
    linvals[1] = 1;
-   SCIP_CALL( SCIPnlpiAddConstraints(nlpi, nlpiprob, 1, &lhss[2], &rhss[2], &nlinds, &lininds, &linvals, NULL, NULL,
-         NULL, NULL, &consnames[2]) );
+   SCIP_CALL( SCIPaddNlpiConstraints(scip, nlpi, nlpiprob, 1, &lhss[2], &rhss[2], &nlinds, &lininds, &linvals, NULL, &consnames[2]) );
+
+#ifdef SCIP_DEBUG
+   SCIP_CALL( SCIPsetNlpiIntPar(scip, nlpi, nlpiprob, SCIP_NLPPAR_VERBLEVEL, 1) );
+#endif
+
+   /* set a starting point close to solution to improve likelihood to converge to expected solution on this nonconvex NLP */
+   SCIP_CALL( SCIPsetNlpiInitialGuess(scip, nlpi, nlpiprob, start, NULL, NULL, NULL) );
 
    /* solve NLP */
-   SCIP_CALL( SCIPnlpiSetRealPar(nlpi, nlpiprob, SCIP_NLPPAR_FEASTOL, 1e-9) );
-   SCIP_CALL( SCIPnlpiSolve(nlpi, nlpiprob) );
-   cr_expect(SCIPnlpiGetTermstat(nlpi, nlpiprob) == SCIP_NLPTERMSTAT_OKAY);
-   cr_expect(SCIPnlpiGetSolstat(nlpi, nlpiprob) <= SCIP_NLPSOLSTAT_LOCOPT);
+   SCIP_CALL( SCIPsolveNlpi(scip, nlpi, nlpiprob, .feastol = 1e-9) );
+   cr_expect(SCIPgetNlpiTermstat(scip, nlpi, nlpiprob) == SCIP_NLPTERMSTAT_OKAY);
+   cr_expect(SCIPgetNlpiSolstat(scip, nlpi, nlpiprob) <= SCIP_NLPSOLSTAT_LOCOPT);
 
    /* collect statistics */
-   SCIP_CALL( SCIPnlpStatisticsCreate(SCIPblkmem(scip), &statistics) );
-   SCIP_CALL( SCIPnlpiGetStatistics(nlpi, nlpiprob, statistics) );
-   cr_expect(SCIPnlpStatisticsGetNIterations(statistics) > 0);
-   cr_expect(SCIPnlpStatisticsGetTotalTime(statistics) >= 0.0);
-   SCIPnlpStatisticsFree(SCIPblkmem(scip), &statistics);
+   SCIP_CALL( SCIPgetNlpiStatistics(scip, nlpi, nlpiprob, &statistics) );
+   cr_expect(statistics.niterations > 0);
+   cr_expect(statistics.totaltime >= 0.0);
 
-   SCIP_CALL( SCIPnlpiGetSolution(nlpi, nlpiprob, &primal, &dualcons, &duallb, &dualub, NULL) );
+   SCIP_CALL( SCIPgetNlpiSolution(scip, nlpi, nlpiprob, &primal, &dualcons, &duallb, &dualub, NULL) );
 
    /* check primal solution */
    cr_expect(SCIPisFeasEQ(scip, primal[0], 0.0));
@@ -204,29 +201,26 @@ SCIP_RETCODE testNlpi(SCIP_NLPI* nlpi)
    lininds[0] = 2;
    lbs[0] = 0.0;
    ubs[0] = 0.5;
-   SCIP_CALL( SCIPnlpiChgVarBounds(nlpi, nlpiprob, 1, lininds, lbs, ubs) );
+   SCIP_CALL( SCIPchgNlpiVarBounds(scip, nlpi, nlpiprob, 1, lininds, lbs, ubs) );
 
    /* set the initial guess to the previous solution */
    initguess[0] = 0.6;
    initguess[1] = 0.5;
    initguess[2] = 0.4;
    initguess[3] = 2.0;
-   SCIP_CALL( SCIPnlpiSetInitialGuess(nlpi, nlpiprob, initguess, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPsetNlpiInitialGuess(scip, nlpi, nlpiprob, initguess, NULL, NULL, NULL) );
 
    /* solve NLP */
-   SCIP_CALL( SCIPnlpiSetRealPar(nlpi, nlpiprob, SCIP_NLPPAR_FEASTOL, 1e-9) );
-   SCIP_CALL( SCIPnlpiSolve(nlpi, nlpiprob) );
-   cr_expect(SCIPnlpiGetTermstat(nlpi, nlpiprob) == SCIP_NLPTERMSTAT_OKAY);
-   cr_expect(SCIPnlpiGetSolstat(nlpi, nlpiprob) <= SCIP_NLPSOLSTAT_LOCOPT);
+   SCIP_CALL( SCIPsolveNlpi(scip, nlpi, nlpiprob, .feastol = 1e-9) );
+   cr_expect(SCIPgetNlpiTermstat(scip, nlpi, nlpiprob) == SCIP_NLPTERMSTAT_OKAY);
+   cr_expect(SCIPgetNlpiSolstat(scip, nlpi, nlpiprob) <= SCIP_NLPSOLSTAT_LOCOPT);
 
    /* collect statistics */
-   SCIP_CALL( SCIPnlpStatisticsCreate(SCIPblkmem(scip), &statistics) );
-   SCIP_CALL( SCIPnlpiGetStatistics(nlpi, nlpiprob, statistics) );
-   cr_expect(SCIPnlpStatisticsGetNIterations(statistics) > 0);
-   cr_expect(SCIPnlpStatisticsGetTotalTime(statistics) >= 0.0);
-   SCIPnlpStatisticsFree(SCIPblkmem(scip), &statistics);
+   SCIP_CALL( SCIPgetNlpiStatistics(scip, nlpi, nlpiprob, &statistics) );
+   cr_expect(statistics.niterations > 0);
+   cr_expect(statistics.totaltime >= 0.0);
 
-   SCIP_CALL( SCIPnlpiGetSolution(nlpi, nlpiprob, &primal, &dualcons, &duallb, &dualub, NULL) );
+   SCIP_CALL( SCIPgetNlpiSolution(scip, nlpi, nlpiprob, &primal, &dualcons, &duallb, &dualub, NULL) );
 
    /* check primal solution */
    cr_expect(SCIPisFeasEQ(scip, primal[0], 0.6513878189));
@@ -250,8 +244,16 @@ SCIP_RETCODE testNlpi(SCIP_NLPI* nlpi)
    /* free memory */
    SCIPfreeBufferArray(scip, &linvals);
    SCIPfreeBufferArray(scip, &lininds);
-   SCIPfreeBufferArray(scip, &quadelems);
-   SCIP_CALL( SCIPnlpiFreeProblem(nlpi, &nlpiprob) );
+   SCIP_CALL( SCIPfreeNlpiProblem(scip, nlpi, &nlpiprob) );
+
+   SCIP_CALL( SCIPreleaseExpr(scip, &x0x2) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &x2sqr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &x1sqr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &x0sqr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &varexprs[3]) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &varexprs[2]) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &varexprs[1]) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &varexprs[0]) );
 
    return SCIP_OKAY;
 }
@@ -271,10 +273,12 @@ SCIP_RETCODE solveQP(
    SCIP_NLPTERMSTAT* nlptermstat
    )
 {
-   SCIP_NLPSTATISTICS* statistics;
    SCIP_NLPIPROBLEM* nlpiprob;
+   SCIP_NLPPARAM nlpparam = SCIP_NLPPARAM_DEFAULT(scip);
    SCIP_RANDNUMGEN* randnumgen;
-   SCIP_QUADELEM* quadelems;
+   SCIP_EXPR** varexprs;
+   SCIP_EXPR* sumexpr;
+   SCIP_EXPR* prodexpr;
    SCIP_Real* primal;
    SCIP_Real* vals;
    SCIP_Real* lbs;
@@ -283,12 +287,9 @@ SCIP_RETCODE solveQP(
    SCIP_Real lhs;
    SCIP_Real rhs;
    int* inds;
-   int nquadelems;
    int nlininds;
    int objind;
    int i;
-   int k;
-
 
    *solval = SCIP_INVALID;
    *nlpsolstat = SCIP_NLPSOLSTAT_UNKNOWN;
@@ -300,80 +301,75 @@ SCIP_RETCODE solveQP(
    SCIP_CALL( SCIPallocBufferArray(scip, &ubs, n+1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &inds, n) );
    SCIP_CALL( SCIPallocBufferArray(scip, &vals, n) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &quadelems, n*n) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &varexprs, n) );
 
-   SCIP_CALL( SCIPnlpiCreateProblem(nlpi, &nlpiprob, "QP") );
+   SCIP_CALL( SCIPcreateNlpiProblem(scip, nlpi, &nlpiprob, "QP") );
 
    /* create variables */
    for( i = 0; i < n; ++i )
    {
       lbs[i] = SCIPrandomGetReal(randnumgen, minlb, maxub);
       ubs[i] = SCIPrandomGetReal(randnumgen, lbs[i], maxub);
+      SCIP_CALL( SCIPcreateExprVaridx(scip, &varexprs[i], i, NULL, NULL) );
    }
    lbs[n] = -SCIPinfinity(scip);
    ubs[n] = SCIPinfinity(scip);
-   SCIP_CALL( SCIPnlpiAddVars(nlpi, nlpiprob, n+1, lbs, ubs, NULL) );
+   SCIP_CALL( SCIPaddNlpiVars(scip, nlpi, nlpiprob, n+1, lbs, ubs, NULL) );
 
    /* set objective */
    objind = n;
    objval = 1.0;
-   SCIP_CALL( SCIPnlpiSetObjective(nlpi, nlpiprob, 1, &objind, &objval, 0, NULL, NULL, NULL, 0.0) );
+   SCIP_CALL( SCIPsetNlpiObjective(scip, nlpi, nlpiprob, 1, &objind, &objval, NULL, 0.0) );
 
    /* create constraint */
    for( i = 0; i < n; ++i )
       vals[i] = SCIPrandomGetReal(randnumgen, -10.0, 10.0);
 
-   k = 0;
+   SCIP_CALL( SCIPcreateExprSum(scip, &sumexpr, 0, NULL, NULL, 0.0, NULL, NULL) );
    for( i = 0; i < n; ++i )
    {
       int j;
-
       for( j = 0; j <= i; ++j )
       {
-         quadelems[k].coef = (j < i) ? 2.0 * vals[i] * vals[j] : vals[i] * vals[j];
-         quadelems[k].idx1 = j;
-         quadelems[k].idx2 = i;
-         ++k;
+         SCIP_CALL( SCIPcreateExprProduct(scip, &prodexpr, 2, (SCIP_EXPR*[2]){ varexprs[j], varexprs[i] }, 1.0, NULL, NULL) );
+         SCIP_CALL( SCIPappendExprSumExpr(scip, sumexpr, prodexpr, (j < i) ? 2.0 * vals[i] * vals[j] : vals[i] * vals[j]) );
+         SCIP_CALL( SCIPreleaseExpr(scip, &prodexpr) );
       }
    }
-   assert(k <= n*n);
 
-   nquadelems = k;
    nlininds = 1;
    inds[0] = n;
    vals[0] = -1.0;
    lhs = 0.0;
    rhs = 0.0;
-   SCIP_CALL( SCIPnlpiAddConstraints(nlpi, nlpiprob, 1, &lhs, &rhs, &nlininds, &inds, &vals, &nquadelems, &quadelems,
-         NULL, NULL, NULL) );
+   SCIP_CALL( SCIPaddNlpiConstraints(scip, nlpi, nlpiprob, 1, &lhs, &rhs, &nlininds, &inds, &vals, &sumexpr, NULL) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &sumexpr) );
 
    /* set parameters */
-   SCIP_CALL( SCIPnlpiSetRealPar(nlpi, nlpiprob, SCIP_NLPPAR_FEASTOL, 1e-9) );
-   SCIP_CALL( SCIPnlpiSetRealPar(nlpi, nlpiprob, SCIP_NLPPAR_TILIM, timelim) );
-   SCIP_CALL( SCIPnlpiSetIntPar(nlpi, nlpiprob, SCIP_NLPPAR_ITLIM, iterlim) );
-
+   nlpparam.timelimit = timelim;
+   nlpparam.iterlimit = iterlim;
 #ifdef SCIP_DEBUG
-   SCIP_CALL( SCIPnlpiSetIntPar(nlpi, nlpiprob, SCIP_NLPPAR_VERBLEVEL, 1) );
+   nlpparam.verblevel = 1;
 #endif
 
    /* solve NLP */
-   SCIP_CALL( SCIPnlpiSolve(nlpi, nlpiprob) );
-   SCIP_CALL( SCIPnlpiGetSolution(nlpi, nlpiprob, &primal, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPsolveNlpiParam(scip, nlpi, nlpiprob, nlpparam) );
+   SCIP_CALL( SCIPgetNlpiSolution(scip, nlpi, nlpiprob, &primal, NULL, NULL, NULL, NULL) );
 
    *solval = primal[n];
-   *nlpsolstat = SCIPnlpiGetSolstat(nlpi, nlpiprob);
-   *nlptermstat = SCIPnlpiGetTermstat(nlpi, nlpiprob);
-
-   /* collect statistics */
-   SCIP_CALL( SCIPnlpStatisticsCreate(SCIPblkmem(scip), &statistics) );
-   SCIP_CALL( SCIPnlpiGetStatistics(nlpi, nlpiprob, statistics) );
-   SCIPnlpStatisticsFree(SCIPblkmem(scip), &statistics);
+   *nlpsolstat = SCIPgetNlpiSolstat(scip, nlpi, nlpiprob);
+   *nlptermstat = SCIPgetNlpiTermstat(scip, nlpi, nlpiprob);
 
    /* free memory */
-   SCIP_CALL( SCIPnlpiFreeProblem(nlpi, &nlpiprob) );
-   SCIPfreeBufferArray(scip, &quadelems);
-   SCIPfreeBufferArray(scip, &inds);
+   SCIP_CALL( SCIPfreeNlpiProblem(scip, nlpi, &nlpiprob) );
+
+   for( i = n-1; i >= 0; --i )
+   {
+      SCIP_CALL( SCIPreleaseExpr(scip, &varexprs[i]) );
+   }
+   SCIPfreeBufferArray(scip, &varexprs);
    SCIPfreeBufferArray(scip, &vals);
+   SCIPfreeBufferArray(scip, &inds);
    SCIPfreeBufferArray(scip, &ubs);
    SCIPfreeBufferArray(scip, &lbs);
    SCIPfreeRandom(scip, &randnumgen);
@@ -393,6 +389,8 @@ Test(nlpi, interface, .init = setup, .fini = teardown,
    }
 }
 
+#define DIM 50
+
 Test(nlpi, solveQP, .init = setup, .fini = teardown,
    .description = "solves convex QP with different NLPIs"
    )
@@ -408,26 +406,26 @@ Test(nlpi, solveQP, .init = setup, .fini = teardown,
    SCIP_Real worhpsqpval;
    int i;
 
-   for( i = 0; i < 10; ++i )
+   for( i = 0; i < 3; ++i )
    {
       /* solve QP with Ipopt */
       if( ipopt != NULL )
       {
-         SCIP_CALL( solveQP(ipopt, i+1, 100, -100.0, 100.0, SCIPinfinity(scip), INT_MAX, &ipoptval,
+         SCIP_CALL( solveQP(ipopt, i+1, DIM, -100.0, 100.0, SCIPinfinity(scip), INT_MAX, &ipoptval,
                &ipoptsolstat, &ipopttermstat) );
       }
 
       /* solve QP with WORHP-IP */
       if( worhpip != NULL )
       {
-         SCIP_CALL( solveQP(worhpip, i+1, 100, -100.0, 100.0, SCIPinfinity(scip), INT_MAX, &worhpipval,
+         SCIP_CALL( solveQP(worhpip, i+1, DIM, -100.0, 100.0, SCIPinfinity(scip), INT_MAX, &worhpipval,
                &worhpipsolstat, &worhpiptermstat) );
       }
 
       /* solve QP with WORHP-SQP */
       if( worhpsqp != NULL )
       {
-         SCIP_CALL( solveQP(worhpsqp, i+1, 100, -100.0, 100.0, SCIPinfinity(scip), INT_MAX, &worhpsqpval,
+         SCIP_CALL( solveQP(worhpsqp, i+1, DIM, -100.0, 100.0, SCIPinfinity(scip), INT_MAX, &worhpsqpval,
                &worhpsqpsolstat, &worhpsqptermstat) );
       }
 
@@ -459,22 +457,22 @@ Test(nlpi, workinglimits, .init = setup, .fini = teardown,
    {
       /* set a small iteration limit */
       SCIP_CALL( solveQP(worhpip, 1, 100, -100.0, 100.0, SCIPinfinity(scip), 5, &solval, &solstat, &termstat) );
-      cr_expect(termstat == SCIP_NLPTERMSTAT_ITLIM);
+      cr_expect(termstat == SCIP_NLPTERMSTAT_ITERLIMIT);
 
       /* set a small time limit */
       SCIP_CALL( solveQP(worhpip, 1, 500, -100.0, 100.0, 1.0, INT_MAX, &solval, &solstat, &termstat) );
-      cr_expect(termstat == SCIP_NLPTERMSTAT_TILIM);
+      cr_expect(termstat == SCIP_NLPTERMSTAT_TIMELIMIT);
    }
 
    if( worhpsqp != NULL )
    {
       /* set a small iteration limit */
       SCIP_CALL( solveQP(worhpsqp, 1, 100, -100.0, 100.0, SCIPinfinity(scip), 5, &solval, &solstat, &termstat) );
-      cr_expect(termstat == SCIP_NLPTERMSTAT_ITLIM);
+      cr_expect(termstat == SCIP_NLPTERMSTAT_ITERLIMIT);
 
       /* set a small time limit */
       SCIP_CALL( solveQP(worhpsqp, 1, 500, -100.0, 100.0, 1.0, INT_MAX, &solval, &solstat, &termstat) );
-      cr_expect(termstat == SCIP_NLPTERMSTAT_TILIM);
+      cr_expect(termstat == SCIP_NLPTERMSTAT_TIMELIMIT);
    }
 }
 
@@ -494,40 +492,39 @@ SCIP_RETCODE resolveAfterFixingVars(
    SCIP_CALL( SCIPallocBufferArray(scip, &inds, 2) );
    SCIP_CALL( SCIPallocBufferArray(scip, &vals, 2) );
 
-   SCIP_CALL( SCIPnlpiCreateProblem(nlpi, &nlpiprob, "QP") );
-   SCIP_CALL( SCIPnlpiSetRealPar(nlpi, nlpiprob, SCIP_NLPPAR_FEASTOL, 1e-6) );
+   SCIP_CALL( SCIPcreateNlpiProblem(scip, nlpi, &nlpiprob, "LP") );
 
    /* add variables */
-   SCIP_CALL( SCIPnlpiAddVars(nlpi, nlpiprob, 2, lbs, ubs, varnames) );
+   SCIP_CALL( SCIPaddNlpiVars(scip, nlpi, nlpiprob, 2, lbs, ubs, varnames) );
 
    /* add objective */
    inds[0] = 0;
    inds[1] = 1;
    vals[0] = -1.0;
    vals[1] = +1.0;
-   SCIP_CALL( SCIPnlpiSetObjective(nlpi, nlpiprob, 2, inds, vals, 0, NULL, NULL, NULL, 0.0) );
+   SCIP_CALL( SCIPsetNlpiObjective(scip, nlpi, nlpiprob, 2, inds, vals, NULL, 0.0) );
 
    /* first solve */
-   SCIP_CALL( SCIPnlpiSolve(nlpi, nlpiprob) );
-   cr_expect(SCIPnlpiGetTermstat(nlpi, nlpiprob) == SCIP_NLPTERMSTAT_OKAY);
-   cr_expect(SCIPnlpiGetSolstat(nlpi, nlpiprob) <= SCIP_NLPSOLSTAT_LOCOPT);
-   SCIP_CALL( SCIPnlpiGetSolution(nlpi, nlpiprob, &primal, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPsolveNlpi(scip, nlpi, nlpiprob) );
+   cr_expect(SCIPgetNlpiTermstat(scip, nlpi, nlpiprob) == SCIP_NLPTERMSTAT_OKAY);
+   cr_expect(SCIPgetNlpiSolstat(scip, nlpi, nlpiprob) <= SCIP_NLPSOLSTAT_LOCOPT);
+   SCIP_CALL( SCIPgetNlpiSolution(scip, nlpi, nlpiprob, &primal, NULL, NULL, NULL, NULL) );
    cr_expect(SCIPisFeasEQ(scip, primal[0], 1.0));
    cr_expect(SCIPisFeasEQ(scip, primal[1], -2.0));
 
    /* fix x0 and resolve */
    lbs[0] = 0.0;
    ubs[0] = 0.0;
-   SCIP_CALL( SCIPnlpiChgVarBounds(nlpi, nlpiprob, 1, inds, lbs, ubs) );
-   SCIP_CALL( SCIPnlpiSolve(nlpi, nlpiprob) );
-   cr_expect(SCIPnlpiGetTermstat(nlpi, nlpiprob) == SCIP_NLPTERMSTAT_OKAY);
-   cr_expect(SCIPnlpiGetSolstat(nlpi, nlpiprob) <= SCIP_NLPSOLSTAT_LOCOPT);
-   SCIP_CALL( SCIPnlpiGetSolution(nlpi, nlpiprob, &primal, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPchgNlpiVarBounds(scip, nlpi, nlpiprob, 1, inds, lbs, ubs) );
+   SCIP_CALL( SCIPsolveNlpi(scip, nlpi, nlpiprob) );
+   cr_expect(SCIPgetNlpiTermstat(scip, nlpi, nlpiprob) == SCIP_NLPTERMSTAT_OKAY);
+   cr_expect(SCIPgetNlpiSolstat(scip, nlpi, nlpiprob) <= SCIP_NLPSOLSTAT_LOCOPT);
+   SCIP_CALL( SCIPgetNlpiSolution(scip, nlpi, nlpiprob, &primal, NULL, NULL, NULL, NULL) );
    cr_expect(SCIPisFeasEQ(scip, primal[0], 0.0));
    cr_expect(SCIPisFeasEQ(scip, primal[1], -2.0));
 
    /* free memory */
-   SCIP_CALL( SCIPnlpiFreeProblem(nlpi, &nlpiprob) );
+   SCIP_CALL( SCIPfreeNlpiProblem(scip, nlpi, &nlpiprob) );
    SCIPfreeBufferArray(scip, &inds);
    SCIPfreeBufferArray(scip, &vals);
 

@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -99,12 +108,12 @@
 /** primal heuristic data */
 struct SCIP_HeurData
 {
-   SCIP_Bool usetabu;   /* should the tabu search heuristic be used in order to improve the greedy-solution? */
-   int maxiter;         /* maximal number of iterations to be performed in each tabu-run */
-   int tabubase;        /* constant part of the tabu-duration */
-   SCIP_Real tabugamma; /* factor for the linear part of the tabu-duration */
-   int output;          /* verbosity level for the output of the tabu search, 0: no output, 1: normal, 2: high */
-   int dispfreq;        /* frequency for displaying status information, only active with output verbosity level 2 */
+   SCIP_Bool             usetabu;            /**< should the tabu search heuristic be used in order to improve the greedy-solution? */
+   int                   maxiter;            /**< maximal number of iterations to be performed in each tabu-run */
+   int                   tabubase;           /**< constant part of the tabu-duration */
+   SCIP_Real             tabugamma;          /**< factor for the linear part of the tabu-duration */
+   int                   output;             /**< verbosity level for the output of the tabu search, 0: no output, 1: normal, 2: high */
+   int                   dispfreq;           /**< frequency for displaying status information, only active with output verbosity level 2 */
 };
 
 
@@ -343,11 +352,14 @@ SCIP_RETCODE runTabuCol(
 
    srand( seed ); /*lint !e732*/
 
-   /* init random coloring */
+   /* init random coloring, optionally keeping colors from a previous coloring */
    for( i = 0; i < nnodes; i++ )
    {
-      int rnd = rand();
-      colors[i] = rnd % maxcolors;
+      if( colors[i] < 0 || colors[i] >= maxcolors )
+      {
+         int rnd = rand();
+         colors[i] = rnd % maxcolors;
+      }
       assert( 0 <= colors[i] && colors[i] < maxcolors );
    }
 
@@ -447,7 +459,7 @@ SCIP_RETCODE runTabuCol(
                }
             }
             if( aspiration )
-            break;
+               break;
          }
 
          /* if no candidate could be found - tabu list is too restrictive: just skip current iteration */
@@ -572,6 +584,8 @@ SCIP_DECL_HEUREXEC(heurExecInit)
    SCIP_CONS** constraints;
    TCLIQUE_GRAPH* graph;
    SCIP_HEURDATA* heurdata;
+   SCIP_Bool onlybest;
+   int maxvarsround;
 
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
@@ -579,6 +593,7 @@ SCIP_DECL_HEUREXEC(heurExecInit)
    *result = SCIP_DIDNOTFIND;
    nnodes = COLORprobGetNNodes(scip);
    graph = COLORprobGetGraph(scip);
+
    /* create stable sets if no solution was read */
    if( COLORprobGetNStableSets(scip) == 0 )
    {
@@ -600,16 +615,15 @@ SCIP_DECL_HEUREXEC(heurExecInit)
          while( success )
          {
             ncolors--;
+
+            /* initialize with colors from previous iteration; the last color is randomized */
             SCIP_CALL( runTabuCol(graph, 0, ncolors, colors, heurdata, &success) );
 
             if( success )
             {
                for( i = 0; i < nnodes; i++ )
-               {
                   bestcolors[i] = colors[i];
-               }
             }
-
          }
       }
 
@@ -626,6 +640,7 @@ SCIP_DECL_HEUREXEC(heurExecInit)
                nstablesetnodes++;
             }
          }
+
          /* try to add more nodes to the stable set without violating the stability */
          for( j = 0; j < nnodes; j++ )
          {
@@ -638,12 +653,14 @@ SCIP_DECL_HEUREXEC(heurExecInit)
                   break;
                }
             }
+
             if( indnode == TRUE )
             {
                colors[nstablesetnodes] = j;
                nstablesetnodes++;
             }
          }
+
          /* create variable for the stable set and add it to SCIP */
          SCIPsortDownInt(colors, nstablesetnodes);
          SCIP_CALL( COLORprobAddNewStableSet(scip, colors, nstablesetnodes, &setnumber) );
@@ -662,16 +679,15 @@ SCIP_DECL_HEUREXEC(heurExecInit)
             /* add variable to node constraints of nodes in the set */
             SCIP_CALL( SCIPaddCoefSetppc(scip, constraints[colors[j]], var) );
          }
-
-
       }
 
       SCIPfreeBufferArray(scip, &bestcolors);
       SCIPfreeBufferArray(scip, &colors);
 
    }
-   /* create solution consisting of all yet created stable sets,
-      that means all sets of the solution given by the solution file or created by the greedy and tabu search */
+
+   /* create solution consisting of all yet created stable sets, i.e., all sets of the solution given by the solution
+    * file or created by the greedy and tabu search */
    SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
    assert(sol != NULL);
    for( i = 0; i < COLORprobGetNStableSets(scip); i++ )
@@ -682,8 +698,12 @@ SCIP_DECL_HEUREXEC(heurExecInit)
    assert(stored);
 
    /* set maximal number of variables to be priced in each round */
-   SCIP_CALL( SCIPsetIntParam(scip, "pricers/coloring/maxvarsround",
-         COLORprobGetNStableSets(scip)*COLORprobGetNNodes(scip)/50) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "pricers/coloring/onlybest", &onlybest) );
+   if( onlybest )
+      maxvarsround = COLORprobGetNStableSets(scip) * COLORprobGetNNodes(scip)/50;
+   else
+      maxvarsround = 1;
+   SCIP_CALL( SCIPsetIntParam(scip, "pricers/coloring/maxvarsround", maxvarsround) );
 
    *result = SCIP_FOUNDSOL;
 

@@ -1,0 +1,5 @@
+# SCIP version 2.1.1.6
+
+# should we only fix variables in order to obtain a convex problem?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+heuristics/undercover/onlyconvexify = TRUE

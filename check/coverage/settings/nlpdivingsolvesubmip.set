@@ -1,0 +1,9 @@
+# SCIP version 2.1.1.6
+
+# should an iterative round-and-propagate scheme be used to find the integral points?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+heuristics/feaspump/usefp20 = TRUE
+
+# should a sub-MIP be solved if all cover variables are fixed?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+heuristics/nlpdiving/solvesubmip = TRUE

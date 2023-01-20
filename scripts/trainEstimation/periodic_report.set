@@ -1,0 +1,9 @@
+# SCIP version 7.0.0
+
+# report frequency on estimation: -1: never, 0:always, k >= 1: k times evenly during search
+# [type: int, advanced: TRUE, range: [-1,1073741823], default: -1]
+estimation/reportfreq = 100
+
+# should the event handler collect data?
+# [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: FALSE]
+estimation/treeprofile/enabled = TRUE

@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -23,7 +32,7 @@
  * @author Marc Pfetsch
  * @author Kati Wolter
  * @author Gregor Hendel
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -43,25 +52,6 @@
 #include "scip/type_scip.h"
 #include "scip/type_sol.h"
 #include "scip/type_var.h"
-
-/* In debug mode, we include the SCIP's structure in scip.c, such that no one can access
- * this structure except the interface methods in scip.c.
- * In optimized mode, the structure is included in scip.h, because some of the methods
- * are implemented as defines for performance reasons (e.g. the numerical comparisons).
- * Additionally, the internal "set.h" is included, such that the defines in set.h are
- * available in optimized mode.
- */
-#ifdef NDEBUG
-#include "scip/struct_scip.h"
-#include "scip/struct_stat.h"
-#include "scip/set.h"
-#include "scip/tree.h"
-#include "scip/misc.h"
-#include "scip/var.h"
-#include "scip/cons.h"
-#include "scip/solve.h"
-#include "scip/debug.h"
-#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -88,7 +78,7 @@ extern "C" {
  *        added in future releases; consider using SCIPincludeBendersBasic() and setter functions
  *        if you seek for a method which is less likely to change in future releases
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeBenders(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of Benders' decomposition */
@@ -134,7 +124,7 @@ SCIP_RETCODE SCIPincludeBenders(
  *
  *  @note if you want to set all callbacks with a single method call, consider using SCIPincludeBenders() instead
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeBendersBasic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS**        bendersptr,         /**< reference to a benders, or NULL */
@@ -159,7 +149,7 @@ SCIP_RETCODE SCIPincludeBendersBasic(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetBendersCopy(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
@@ -175,7 +165,7 @@ SCIP_RETCODE SCIPsetBendersCopy(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetBendersFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
@@ -191,7 +181,7 @@ SCIP_RETCODE SCIPsetBendersFree(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetBendersInit(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
@@ -207,7 +197,7 @@ SCIP_RETCODE SCIPsetBendersInit(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetBendersExit(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
@@ -223,7 +213,7 @@ SCIP_RETCODE SCIPsetBendersExit(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetBendersInitpre(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
@@ -239,7 +229,7 @@ SCIP_RETCODE SCIPsetBendersInitpre(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetBendersExitpre(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
@@ -255,7 +245,7 @@ SCIP_RETCODE SCIPsetBendersExitpre(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetBendersInitsol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
@@ -271,7 +261,7 @@ SCIP_RETCODE SCIPsetBendersInitsol(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetBendersExitsol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
@@ -287,7 +277,7 @@ SCIP_RETCODE SCIPsetBendersExitsol(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetBendersPresubsolve(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
@@ -303,7 +293,7 @@ SCIP_RETCODE SCIPsetBendersPresubsolve(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetBendersSolveAndFreesub(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
@@ -321,15 +311,31 @@ SCIP_RETCODE SCIPsetBendersSolveAndFreesub(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetBendersPostsolve(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_DECL_BENDERSPOSTSOLVE((*benderspostsolve))/**< solving process deinitialization method of Benders' decomposition */
    );
 
+/** sets the subproblem comparison method for determining the solving order in Benders' decomposition
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPsetBendersSubproblemComp(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_DECL_SORTPTRCOMP((*benderssubcomp))  /**< a comparator for defining the solving order of the subproblems */
+   );
+
 /** returns the Benders' decomposition of the given name, or NULL if not existing */
-EXTERN
+SCIP_EXPORT
 SCIP_BENDERS* SCIPfindBenders(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of Benders' decomposition */
@@ -338,18 +344,19 @@ SCIP_BENDERS* SCIPfindBenders(
 /** returns the array of currently available Benders' decomposition; active Benders' decomposition are in the first
  * slots of the array
  */
-EXTERN
+SCIP_EXPORT
 SCIP_BENDERS** SCIPgetBenders(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** returns the number of currently available Benders' decomposition */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNBenders(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** returns the number of currently active Benders' decomposition */
+SCIP_EXPORT
 int SCIPgetNActiveBenders(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -367,6 +374,7 @@ int SCIPgetNActiveBenders(
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  */
+SCIP_EXPORT
 SCIP_RETCODE SCIPactivateBenders(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders,            /**< the Benders' decomposition structure */
@@ -382,13 +390,14 @@ SCIP_RETCODE SCIPactivateBenders(
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
+SCIP_EXPORT
 SCIP_RETCODE SCIPdeactivateBenders(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders             /**< the Benders' decomposition structure */
    );
 
 /** sets the priority of a Benders' decomposition */
-EXTERN
+SCIP_EXPORT
 void SCIPsetBendersPriority(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
@@ -414,7 +423,7 @@ void SCIPsetBendersPriority(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsolveBendersSubproblems(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
@@ -442,7 +451,7 @@ SCIP_RETCODE SCIPsolveBendersSubproblems(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetBendersMasterVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
@@ -466,7 +475,7 @@ SCIP_RETCODE SCIPgetBendersMasterVar(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetBendersSubproblemVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
@@ -479,7 +488,7 @@ SCIP_RETCODE SCIPgetBendersSubproblemVar(
  *
  *  @return the number of subproblems in the Benders' decomposition
  */
-EXTERN
+SCIP_EXPORT
 int SCIPgetBendersNSubproblems(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
@@ -494,7 +503,7 @@ int SCIPgetBendersNSubproblems(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddBendersSubproblem(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
@@ -518,12 +527,13 @@ SCIP_RETCODE SCIPaddBendersSubproblem(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetupBendersSubproblem(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders,            /**< the Benders' decomposition data structure */
    SCIP_SOL*             sol,                /**< primal solution used to setup tht problem, NULL for LP solution */
-   int                   probnumber          /**< the subproblem number */
+   int                   probnumber,         /**< the subproblem number */
+   SCIP_BENDERSENFOTYPE  type                /**< the enforcement type calling this function */
    );
 
 /** calls the solving method for a single Benders' decomposition subproblem
@@ -543,14 +553,13 @@ SCIP_RETCODE SCIPsetupBendersSubproblem(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsolveBendersSubproblem(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_SOL*             sol,                /**< primal CIP solution, can be NULL for the current LP/Pseudo solution */
    int                   probnumber,         /**< the subproblem number */
    SCIP_Bool*            infeasible,         /**< returns whether the current subproblem is infeasible */
-   SCIP_BENDERSENFOTYPE  type,               /**< the enforcement type calling this function */
    SCIP_Bool             solvecip,           /**< directly solve the CIP subproblem */
    SCIP_Real*            objective           /**< the objective function value of the subproblem, can be NULL */
    );
@@ -575,7 +584,7 @@ SCIP_RETCODE SCIPsolveBendersSubproblem(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPfreeBendersSubproblem(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
@@ -597,7 +606,7 @@ SCIP_RETCODE SCIPfreeBendersSubproblem(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcheckBendersSubproblemOptimality(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders,            /**< the benders' decomposition structure */
@@ -607,7 +616,7 @@ SCIP_RETCODE SCIPcheckBendersSubproblemOptimality(
    );
 
 /** returns the value of the auxiliary variable for a given subproblem */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetBendersAuxiliaryVarVal(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders,            /**< the benders' decomposition structure */
@@ -629,6 +638,7 @@ SCIP_Real SCIPgetBendersAuxiliaryVarVal(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
+SCIP_EXPORT
 SCIP_RETCODE SCIPcomputeBendersSubproblemLowerbound(
    SCIP*                 scip,               /**< the SCIP data structure */
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
@@ -660,7 +670,7 @@ SCIP_RETCODE SCIPcomputeBendersSubproblemLowerbound(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPmergeBendersSubproblemIntoMaster(
    SCIP*                 scip,               /**< the SCIP data structure */
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
@@ -671,7 +681,27 @@ SCIP_RETCODE SCIPmergeBendersSubproblemIntoMaster(
    int                   probnumber          /**< the number of the subproblem that will be merged into the master problem*/
    );
 
-/* @} */
+/** applies a Benders' decomposition to the selected decomposition from the decomposition store
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPapplyBendersDecomposition(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   int                   decompindex         /**< the index of the decomposition that will be applied */
+   );
+
+/** @} */
 
 /**@addtogroup PublicBenderscutsMethods
  *
@@ -695,7 +725,7 @@ SCIP_RETCODE SCIPmergeBendersSubproblemIntoMaster(
  *        added in future releases; consider using SCIPincludeBendersBasic() and setter functions
  *        if you seek for a method which is less likely to change in future releases
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeBenderscut(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
@@ -730,7 +760,7 @@ SCIP_RETCODE SCIPincludeBenderscut(
  *
  *  @note if you want to set all callbacks with a single method call, consider using SCIPincludeBenders() instead
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeBenderscutBasic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
@@ -752,7 +782,7 @@ SCIP_RETCODE SCIPincludeBenderscutBasic(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetBenderscutCopy(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cut */
@@ -768,7 +798,7 @@ SCIP_RETCODE SCIPsetBenderscutCopy(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetBenderscutFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERSCUT*      benderscut,         /**< benderscut */
@@ -784,7 +814,7 @@ SCIP_RETCODE SCIPsetBenderscutFree(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetBenderscutInit(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERSCUT*      benderscut,         /**< benderscut */
@@ -800,7 +830,7 @@ SCIP_RETCODE SCIPsetBenderscutInit(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetBenderscutExit(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERSCUT*      benderscut,         /**< benderscut */
@@ -816,7 +846,7 @@ SCIP_RETCODE SCIPsetBenderscutExit(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetBenderscutInitsol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERSCUT*      benderscut,         /**< benderscut */
@@ -832,7 +862,7 @@ SCIP_RETCODE SCIPsetBenderscutInitsol(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetBenderscutExitsol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERSCUT*      benderscut,         /**< benderscut */
@@ -848,7 +878,7 @@ SCIP_RETCODE SCIPsetBenderscutExitsol(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetBenderscutPriority(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERSCUT*      benderscut,         /**< benderscut */
@@ -868,10 +898,10 @@ SCIP_RETCODE SCIPsetBenderscutPriority(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
-SCIP_RETCODE SCIPstoreBenderscutCut(
+SCIP_EXPORT
+SCIP_RETCODE SCIPstoreBendersCut(
    SCIP*                 scip,               /**< the SCIP data structure */
-   SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cuts */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_VAR**            vars,               /**< the variables that have non-zero coefficients in the cut */
    SCIP_Real*            vals,               /**< the coefficients of the variables in the cut */
    SCIP_Real             lhs,                /**< the left hand side of the cut */
@@ -879,7 +909,28 @@ SCIP_RETCODE SCIPstoreBenderscutCut(
    int                   nvars               /**< the number of variables with non-zero coefficients in the cut */
    );
 
-/* @} */
+/** applies the Benders' decomposition cuts in storage to the input SCIP instance
+ *
+ *  When calling the function, the user must be sure that the variables are associated with the input SCIP instance.
+ *  The main use of this method is to transfer Benders' cuts between solvers in ParaSCIP.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_RETCODE SCIPapplyBendersStoredCuts(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
+   );
+
+/** @} */
 
 #ifdef __cplusplus
 }

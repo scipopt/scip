@@ -25,7 +25,7 @@ if(BLISS_DIR)
       find_path(BLISS_HEADER_DIR
          NAMES graph.hh
          PATHS ${BLISS_DIR}
-         PATH_SUFFIXES include
+         PATH_SUFFIXES include src
          NO_DEFAULT_PATH
          )
 
@@ -36,12 +36,23 @@ if(BLISS_DIR)
    endif()
 
    # Look for the library in the bliss directory
-   find_library(BLISS_LIBRARY
-      NAMES bliss
-      PATHS ${BLISS_DIR}
-      PATH_SUFFIXES lib
-      NO_DEFAULT_PATH
-      )
+
+   if(BLISS_LIBRARY_DIR)
+     find_library(BLISS_LIBRARY
+        NAMES bliss
+        PATHS ${BLISS_LIBRARY_DIR}
+        PATH_SUFFIXES lib build
+        NO_DEFAULT_PATH
+        )
+
+   else()
+     find_library(BLISS_LIBRARY
+        NAMES bliss
+        PATHS ${BLISS_DIR}
+        PATH_SUFFIXES lib build
+        NO_DEFAULT_PATH
+        )
+   endif()
 
    # If requested, copy the bliss headers to the <binary dir>/bliss/ and set include dir to <binary dir>.
    if(BLISS_LIBRARY AND COPY_BLISS_HEADERS)
@@ -55,11 +66,11 @@ endif()
 if(NOT BLISS_INCLUDE_DIR OR NOT BLISS_LIBRARY)
    find_path(BLISS_INCLUDE_DIR
        NAMES bliss/graph.hh
-       PATH_SUFFIXES include)
+       PATH_SUFFIXES include src)
 
    find_library(BLISS_LIBRARY
        NAMES bliss
-       PATH_SUFFIXES lib)
+       PATH_SUFFIXES lib build)
 endif()
 
 if(BLISS_INCLUDE_DIR AND BLISS_LIBRARY)
@@ -68,10 +79,10 @@ if(BLISS_INCLUDE_DIR AND BLISS_LIBRARY)
 
    # Check if bliss requires GMP.
 
-   file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/check_bliss_uses_gmp.cpp" "#include <bliss/graph.hh>\n\nint main()\n{\n  bliss::Graph graph(0);\n  bliss::Stats stats;\n  graph.find_automorphisms(stats, NULL, NULL);\n  return 0;\n}\n")
-   try_compile(COMPILE_RESULT "${CMAKE_CURRENT_BINARY_DIR}/" "${CMAKE_CURRENT_BINARY_DIR}/check_bliss_uses_gmp.cpp" LINK_LIBRARIES "${BLISS_LIBRARY}" CMAKE_FLAGS "-DINCLUDE_DIRECTORIES=${BLISS_INCLUDE_DIR}" OUTPUT_VARIABLE COMPILE_OUTPUT)
+   file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/check_bliss_uses_gmp.cpp" "#include <bliss/graph.hh>\n\nint main()\n{\n  bliss::Graph graph(32);\n  bliss::Stats stats;\n  graph.find_automorphisms(stats, NULL, NULL);\n  stats.print(stdout);\n  return 0;\n}\n")
+   try_run(RUN_RESULT COMPILE_RESULT "${CMAKE_CURRENT_BINARY_DIR}/" "${CMAKE_CURRENT_BINARY_DIR}/check_bliss_uses_gmp.cpp" LINK_LIBRARIES "${BLISS_LIBRARY}" CMAKE_FLAGS "-DINCLUDE_DIRECTORIES=${BLISS_INCLUDE_DIR}")
 
-   if(NOT COMPILE_RESULT)
+   if(NOT COMPILE_RESULT OR RUN_RESULT MATCHES FAILED_TO_RUN)
       # Bliss requires GMP.
       if(BLISS_FIND_REQUIRED)
          if(BLISS_FIND_QUIETLY)

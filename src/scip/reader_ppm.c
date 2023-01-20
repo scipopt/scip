@@ -3,17 +3,27 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_ppm.c
+ * @ingroup DEFPLUGINS_READER
  * @brief  file writer for portable pixmap file format (PPM), open with common graphic viewer programs (e.g. xview)
  * @author Michael Winkler
  *
@@ -182,11 +192,11 @@ void appendLine(
    assert( linecnt != NULL );
    assert( extension != NULL );
 
-   if( *linecnt + strlen(extension) > PPM_MAX_LINELEN - 1 )
+   if( *linecnt + (int)strlen(extension) > PPM_MAX_LINELEN - 1 )
       endLine(scip, file, readerdata, linebuffer, linecnt);
 
    /* append extension to linebuffer */
-   strncat(linebuffer, extension, PPM_MAX_LINELEN - (unsigned int)(*linecnt) - 1);
+   (void) strncat(linebuffer, extension, PPM_MAX_LINELEN - (unsigned int)(*linecnt) - 1);
    (*linecnt) += (int) strlen(extension);
 }
 
@@ -561,6 +571,7 @@ SCIP_RETCODE SCIPwritePpm(
 
    assert( scip != NULL );
    assert(readerdata != NULL);
+   assert(vars != NULL); /* for lint */
 
    /* print statistics as comment to file */
    if(readerdata->rgb_ascii)
@@ -683,5 +694,5 @@ SCIP_RETCODE SCIPwritePpm(
 
    *result = SCIP_SUCCESS;
 
-   return SCIP_OKAY;
+   return SCIP_OKAY;  /*lint !e438*/
 }

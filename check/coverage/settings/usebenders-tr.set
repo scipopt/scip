@@ -1,0 +1,17 @@
+# SCIP version 6.0.0.2
+
+# should Benders' decomposition be used?
+# [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: FALSE]
+reading/storeader/usebenders = TRUE
+
+# priority of heuristic <trustregion>
+# [type: int, advanced: TRUE, range: [-536870912,536870911], default: -1102000]
+heuristics/trustregion/priority = 0
+
+# frequency for calling primal heuristic <trustregion> (-1: never, 0: only at depth freqofs)
+# [type: int, advanced: FALSE, range: [-1,65534], default: -1]
+heuristics/trustregion/freq = 1
+
+# the number of binary variables necessary to run the heuristic
+# [type: int, advanced: FALSE, range: [1,2147483647], default: 10]
+heuristics/trustregion/minbinvars = 1

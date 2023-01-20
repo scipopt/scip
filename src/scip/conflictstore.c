@@ -3,17 +3,27 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   conflictstore.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for storing conflicts
  * @author Jakob Witzig
  */
@@ -133,10 +143,10 @@ SCIP_DECL_SORTPTRCOMP(compareConss)
       int nvars2;
 
       SCIP_CALL( SCIPgetConsNVars(scip, cons1, &nvars1, &success) );
-      assert(success)
+      assert(success);
 
       SCIP_CALL( SCIPgetConsNVars(scip, cons2, &nvars2, &success) );
-      assert(success)
+      assert(success);
 
       if( nvars1 >= nvars2 )
          return -1;
@@ -403,9 +413,11 @@ SCIP_RETCODE delPosDualray(
    if( pos < lastpos )
    {
       conflictstore->dualrayconfs[pos] = conflictstore->dualrayconfs[lastpos];
+      conflictstore->drayrelaxonly[pos] = conflictstore->drayrelaxonly[lastpos];
 
 #ifndef NDEBUG
       conflictstore->dualrayconfs[lastpos] = NULL;
+      conflictstore->drayrelaxonly[lastpos] = TRUE;
 #endif
    }
 
@@ -467,12 +479,14 @@ SCIP_RETCODE delPosDualsol(
       conflictstore->dualprimalbnds[pos] = conflictstore->dualprimalbnds[lastpos];
       conflictstore->scalefactors[pos] = conflictstore->scalefactors[lastpos];
       conflictstore->updateside[pos] = conflictstore->updateside[lastpos];
+      conflictstore->dsolrelaxonly[pos] = conflictstore->dsolrelaxonly[lastpos];
 
 #ifndef NDEBUG
       conflictstore->dualsolconfs[lastpos] = NULL;
       conflictstore->dualprimalbnds[lastpos] = SCIP_UNKNOWN;
       conflictstore->scalefactors[lastpos] = 1.0;
       conflictstore->updateside[lastpos] = FALSE;
+      conflictstore->dsolrelaxonly[lastpos] = TRUE;
 #endif
    }
 
@@ -688,7 +702,7 @@ SCIP_RETCODE conflictstoreCleanUpStorage(
    SCIPsetDebugMsg(set, "clean-up #%lld: removed %d/%d conflicts, %d depending on cutoff bound\n",
          conflictstore->ncleanups, ndelconfs, conflictstore->nconflicts+ndelconfs, conflictstore->ncbconflicts);
 
-   return SCIP_OKAY;
+   return SCIP_OKAY; /*lint !e438*/
 }
 
 /** adds an original conflict constraint to the store
@@ -742,6 +756,8 @@ SCIP_RETCODE SCIPconflictstoreCreate(
    (*conflictstore)->dualprimalbnds = NULL;
    (*conflictstore)->scalefactors = NULL;
    (*conflictstore)->updateside = NULL;
+   (*conflictstore)->drayrelaxonly = NULL;
+   (*conflictstore)->dsolrelaxonly = NULL;
    (*conflictstore)->dualrayconfs = NULL;
    (*conflictstore)->dualsolconfs = NULL;
    (*conflictstore)->origconfs = NULL;
@@ -794,10 +810,12 @@ SCIP_RETCODE SCIPconflictstoreFree(
    BMSfreeBlockMemoryArrayNull(blkmem, &(*conflictstore)->conflicts, (*conflictstore)->conflictsize);
    BMSfreeBlockMemoryArrayNull(blkmem, &(*conflictstore)->confprimalbnds, (*conflictstore)->conflictsize);
    BMSfreeBlockMemoryArrayNull(blkmem, &(*conflictstore)->dualrayconfs, CONFLICTSTORE_DUALRAYSIZE);
+   BMSfreeBlockMemoryArrayNull(blkmem, &(*conflictstore)->drayrelaxonly, CONFLICTSTORE_DUALRAYSIZE);
    BMSfreeBlockMemoryArrayNull(blkmem, &(*conflictstore)->dualsolconfs, CONFLICTSTORE_DUALSOLSIZE);
    BMSfreeBlockMemoryArrayNull(blkmem, &(*conflictstore)->dualprimalbnds, CONFLICTSTORE_DUALSOLSIZE);
    BMSfreeBlockMemoryArrayNull(blkmem, &(*conflictstore)->scalefactors, CONFLICTSTORE_DUALSOLSIZE);
    BMSfreeBlockMemoryArrayNull(blkmem, &(*conflictstore)->updateside, CONFLICTSTORE_DUALSOLSIZE);
+   BMSfreeBlockMemoryArrayNull(blkmem, &(*conflictstore)->dsolrelaxonly, CONFLICTSTORE_DUALSOLSIZE);
    BMSfreeMemoryNull(conflictstore);
 
    return SCIP_OKAY;
@@ -872,6 +890,7 @@ SCIP_RETCODE SCIPconflictstoreClean(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
+   SCIP_PROB*            transprob,          /**< transformed problem */
    SCIP_REOPT*           reopt               /**< reoptimization data */
    )
 {
@@ -882,7 +901,7 @@ SCIP_RETCODE SCIPconflictstoreClean(
    assert(conflictstore != NULL);
 
    SCIPsetDebugMsg(set, "cleaning conflict store: %d conflicts, %d dual proofs\n",
-         conflictstore->norigconfs, conflictstore->nconflicts, conflictstore->ndualrayconfs + conflictstore->ndualsolconfs);
+         conflictstore->nconflicts, conflictstore->ndualrayconfs + conflictstore->ndualsolconfs);
 
    ndelconfs = 0;
    ndeldualray = 0;
@@ -910,8 +929,26 @@ SCIP_RETCODE SCIPconflictstoreClean(
    if( SCIPisInRestart(set->scip) )
    {
       int i;
-      for( i = 0; i < conflictstore->ndualsolconfs; i++ )
-         conflictstore->updateside[i] = FALSE;
+
+      for( i = conflictstore->ndualrayconfs-1; i >= 0 ; i-- )
+      {
+         if( conflictstore->drayrelaxonly[i] )
+         {
+            SCIP_CALL( delPosDualray(conflictstore, set, stat, transprob, blkmem, reopt, i, TRUE) );
+         }
+      }
+
+      for( i = conflictstore->ndualsolconfs-1; i >= 0 ; i-- )
+      {
+         if( conflictstore->dsolrelaxonly[i] )
+         {
+            SCIP_CALL( delPosDualsol(conflictstore, set, stat, transprob, blkmem, reopt, i, TRUE) );
+         }
+         else
+         {
+            conflictstore->updateside[i] = FALSE;
+         }
+      }
    }
 
    return SCIP_OKAY;
@@ -928,7 +965,9 @@ SCIP_RETCODE SCIPconflictstoreAddDualraycons(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
    SCIP_PROB*            transprob,          /**< transformed problem */
-   SCIP_REOPT*           reopt               /**< reoptimization data */
+   SCIP_REOPT*           reopt,              /**< reoptimization data */
+   SCIP_Bool             hasrelaxvar         /**< does the dual proof contain at least one variable that exists in
+                                              *   the current relaxation only? */
    )
 {
    int nvars;
@@ -944,6 +983,7 @@ SCIP_RETCODE SCIPconflictstoreAddDualraycons(
    if( conflictstore->dualrayconfs == NULL )
    {
       SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &conflictstore->dualrayconfs, CONFLICTSTORE_DUALRAYSIZE) );
+      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &conflictstore->drayrelaxonly, CONFLICTSTORE_DUALRAYSIZE) );
    }
 
    /* the store is full, we proceed as follows
@@ -961,21 +1001,36 @@ SCIP_RETCODE SCIPconflictstoreAddDualraycons(
       /* if we could not remove a dual ray that is already marked as deleted we need to remove the oldest active one */
       if( ndeleted == 0 )
       {
+         SCIP_Bool local = SCIPconsIsLocal(dualproof);
+         int pos = 0;
+
          /* sort dual rays */
-         SCIPsortPtr((void**)conflictstore->dualrayconfs, compareConss, conflictstore->ndualrayconfs);
+         SCIPsortPtrBool((void**)conflictstore->dualrayconfs, conflictstore->drayrelaxonly, compareConss,
+            conflictstore->ndualrayconfs);
          assert(SCIPsetIsGE(set, SCIPconsGetAge(conflictstore->dualrayconfs[0]),
                SCIPconsGetAge(conflictstore->dualrayconfs[conflictstore->ndualrayconfs-1])));
 
-         SCIP_CALL( delPosDualray(conflictstore, set, stat, transprob, blkmem, reopt, 0, TRUE) );
+         while( pos < conflictstore->ndualrayconfs-1 && local != SCIPconsIsLocal(conflictstore->dualrayconfs[pos]) )
+            pos++;
+
+         /* we don't want to keep the dual proof */
+         if( pos >= conflictstore->ndualrayconfs )
+         {
+            SCIP_CALL( SCIPconsDelete(dualproof, blkmem, set, stat, transprob, reopt) );
+            return SCIP_OKAY;
+         }
+
+         SCIP_CALL( delPosDualray(conflictstore, set, stat, transprob, blkmem, reopt, pos, TRUE) );
       }
    }
 
    /* add the new constraint based on a dual ray at the last position */
    SCIPconsCapture(dualproof);
    conflictstore->dualrayconfs[conflictstore->ndualrayconfs] = dualproof;
+   conflictstore->drayrelaxonly[conflictstore->ndualrayconfs] = hasrelaxvar;
    ++conflictstore->ndualrayconfs;
 
-   /* add soft locks */
+   /* add conflict locks */
    SCIP_CALL( SCIPconsAddLocks(dualproof, set, SCIP_LOCKTYPE_CONFLICT, +1, 0) );
 
    /* increase the number of non-zeros */
@@ -999,7 +1054,9 @@ SCIP_RETCODE SCIPconflictstoreAddDualsolcons(
    SCIP_PROB*            transprob,          /**< transformed problem */
    SCIP_REOPT*           reopt,              /**< reoptimization data */
    SCIP_Real             scale,              /**< scaling factor that needs to be considered when updating the side */
-   SCIP_Bool             updateside          /**< should the side be updated if a new incumbent is found */
+   SCIP_Bool             updateside,         /**< should the side be updated if a new incumbent is found */
+   SCIP_Bool             hasrelaxvar         /**< does the dual proof contain at least one variable that exists in
+                                              *   the current relaxation only? */
    )
 {
    int nvars;
@@ -1018,6 +1075,7 @@ SCIP_RETCODE SCIPconflictstoreAddDualsolcons(
       SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &conflictstore->dualprimalbnds, CONFLICTSTORE_DUALSOLSIZE) );
       SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &conflictstore->scalefactors, CONFLICTSTORE_DUALSOLSIZE) );
       SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &conflictstore->updateside, CONFLICTSTORE_DUALSOLSIZE) );
+      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &conflictstore->dsolrelaxonly, CONFLICTSTORE_DUALSOLSIZE) );
    }
 
    /* the store is full, we proceed as follows
@@ -1035,13 +1093,27 @@ SCIP_RETCODE SCIPconflictstoreAddDualsolcons(
       /* if we could not remove a dual proof that is already marked as deleted we need to remove the oldest active one */
       if( ndeleted == 0 )
       {
+         SCIP_Bool local = SCIPconsIsLocal(dualproof);
+         int pos = 0;
+
          /* sort dual rays */
-         SCIPsortPtrRealRealInt((void**)conflictstore->dualsolconfs, conflictstore->dualprimalbnds,
-               conflictstore->scalefactors, (int*)conflictstore->updateside, compareConss, conflictstore->ndualsolconfs);
+         SCIPsortPtrRealRealBoolBool((void**)conflictstore->dualsolconfs, conflictstore->dualprimalbnds,
+               conflictstore->scalefactors, conflictstore->updateside, conflictstore->dsolrelaxonly,
+               compareConss, conflictstore->ndualsolconfs);
          assert(SCIPsetIsGE(set, SCIPconsGetAge(conflictstore->dualsolconfs[0]),
                SCIPconsGetAge(conflictstore->dualsolconfs[conflictstore->ndualsolconfs-1])));
 
-         SCIP_CALL( delPosDualsol(conflictstore, set, stat, transprob, blkmem, reopt, 0, TRUE) );
+         while( pos < conflictstore->ndualsolconfs-1 && local != SCIPconsIsLocal(conflictstore->dualsolconfs[pos]) )
+            pos++;
+
+         /* we don't want to keep the dual proof */
+         if( pos >= conflictstore->ndualsolconfs )
+         {
+            SCIP_CALL( SCIPconsDelete(dualproof, blkmem, set, stat, transprob, reopt) );
+            return SCIP_OKAY;
+         }
+
+         SCIP_CALL( delPosDualsol(conflictstore, set, stat, transprob, blkmem, reopt, pos, TRUE) );
       }
    }
 
@@ -1051,9 +1123,10 @@ SCIP_RETCODE SCIPconflictstoreAddDualsolcons(
    conflictstore->dualprimalbnds[conflictstore->ndualsolconfs] = SCIPgetCutoffbound(set->scip) - SCIPsetSumepsilon(set);
    conflictstore->scalefactors[conflictstore->ndualsolconfs] = scale;
    conflictstore->updateside[conflictstore->ndualsolconfs] = updateside;
+   conflictstore->dsolrelaxonly[conflictstore->ndualsolconfs] = hasrelaxvar;
    ++conflictstore->ndualsolconfs;
 
-   /* add soft locks */
+   /* add conflict locks */
    SCIP_CALL( SCIPconsAddLocks(dualproof, set, SCIP_LOCKTYPE_CONFLICT, +1, 0) );
 
    /* increase the number of non-zeros */
@@ -1149,7 +1222,7 @@ SCIP_RETCODE SCIPconflictstoreAddConflict(
    ++conflictstore->nconflicts;
    ++conflictstore->nconflictsfound;
 
-   /* add softlocks */
+   /* add conflict locks */
    SCIP_CALL( SCIPconsAddLocks(cons, set, SCIP_LOCKTYPE_CONFLICT, +1, 0) );
 
 #ifdef SCIP_PRINT_DETAILS
@@ -1269,11 +1342,11 @@ SCIP_RETCODE SCIPconflictstoreCleanNewIncumbent(
 
          assert(SCIPsetIsGT(set, conflictstore->dualprimalbnds[i], cutoffbound));
 
-         rhs = SCIPgetRhsLinear(NULL, dualproof);
+         rhs = SCIPgetRhsLinear(set->scip, dualproof);
 
          if( !SCIPsetIsInfinity(set, rhs) )
          {
-            assert(SCIPsetIsInfinity(set, -SCIPgetLhsLinear(NULL, dualproof)));
+            assert(SCIPsetIsInfinity(set, -SCIPgetLhsLinear(set->scip, dualproof)));
             assert(SCIPsetIsPositive(set, conflictstore->scalefactors[i]));
 
             /* get unscaled rhs */
@@ -1288,7 +1361,9 @@ SCIP_RETCODE SCIPconflictstoreCleanNewIncumbent(
          }
          else
          {
-            SCIP_Real lhs = SCIPgetLhsLinear(NULL, dualproof);
+            SCIP_Real lhs;
+
+            lhs = SCIPgetLhsLinear(set->scip, dualproof);
             assert(!SCIPsetIsInfinity(set, -lhs));
             assert(SCIPsetIsNegative(set, conflictstore->scalefactors[i]));
 

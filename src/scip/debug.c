@@ -3,17 +3,27 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   debug.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for debugging
  * @author Tobias Achterberg
  */
@@ -646,7 +656,7 @@ SCIP_RETCODE isSolutionInNode(
                if( !(*solcontained) && SCIPboundchgGetBoundchgtype(&boundchgs[i]) != SCIP_BOUNDCHGTYPE_BRANCHING )
                {
                   SCIPerrorMessage("debugging solution was cut off in local node %p at depth %d by inference <%s>[%.15g] %s %.15g\n",
-                     node, SCIPnodeGetDepth(node), SCIPvarGetName(boundchgs[i].var), varsol,
+                     (void*) node, SCIPnodeGetDepth(node), SCIPvarGetName(boundchgs[i].var), varsol,
                      SCIPboundchgGetBoundtype(&boundchgs[i]) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", boundchgs[i].newbound);
                   SCIPABORT();
                }
@@ -705,7 +715,7 @@ SCIP_RETCODE SCIPdebugReset(
    return SCIP_OKAY;
 }
 
-/** frees all debugging solution data */
+/** frees debugging data for the particular instance */
 SCIP_RETCODE SCIPdebugFreeDebugData(
    SCIP_SET*             set                 /**< global SCIP settings */
    )
@@ -734,6 +744,22 @@ SCIP_RETCODE SCIPdebugFreeDebugData(
    /* free the debug solution */
    SCIP_CALL( SCIPdebugFreeSol(set) );
 
+   return SCIP_OKAY;
+}
+
+/** frees all debugging data */
+SCIP_RETCODE SCIPdebugFree(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   SCIP_DEBUGSOLDATA* debugsoldata;
+
+   assert(set != NULL);
+
+   debugsoldata = SCIPsetGetDebugSolData(set);
+   assert(debugsoldata != NULL);
+
+   SCIP_CALL( SCIPdebugFreeDebugData(set) );
    BMSfreeMemoryNull(&debugsoldata);
 
    set->debugsoldata = NULL;
@@ -887,10 +913,10 @@ SCIP_RETCODE SCIPdebugCheckRow(
       SCIProwGetName(row), lhs, minactivity, maxactivity, rhs);
 
    /* check row for violation, using absolute LP feasibility tolerance (as LP solver should do) */
-   if( maxactivity + SCIPsetLpfeastol(set) < lhs || minactivity - SCIPsetLpfeastol(set) > rhs )
+   if( maxactivity + SCIPgetLPFeastol(set->scip) < lhs || minactivity - SCIPgetLPFeastol(set->scip) > rhs )
    {
       printf("***** debug: row <%s> violates debugging solution (lhs=%.15g, rhs=%.15g, activity=[%.15g,%.15g], local=%u, lpfeastol=%g)\n",
-         SCIProwGetName(row), lhs, rhs, minactivity, maxactivity, SCIProwIsLocal(row), SCIPsetLpfeastol(set));
+         SCIProwGetName(row), lhs, rhs, minactivity, maxactivity, SCIProwIsLocal(row), SCIPgetLPFeastol(set->scip));
       SCIProwPrint(row, SCIPgetMessagehdlr(set->scip), NULL);
 
       /* output row with solution values */
@@ -934,6 +960,16 @@ SCIP_RETCODE SCIPdebugCheckLbGlobal(
    if( SCIPgetStage(scip) == SCIP_STAGE_PROBLEM )
       return SCIP_OKAY;
 
+   /* skip unused relaxation-only variables
+    * Relaxation-only variables are not part of any constraints or the original problem and thus there is no need to check their solution value.
+    * However, for relaxation-only variables that are still in use for the current solve round and for which a debug solution value has been set,
+    * checking against the debug solution value is helpful. If they not in use anymore, they will be captured only by the transformed problem
+    * and they may get fixed to some arbitrary value, e.g., in dual fixing.
+    * Thus, we skip checking bound changes on unused relaxation-only variables.
+    */
+   if( SCIPvarIsRelaxationOnly(var) && SCIPvarGetNUses(var) == 1 )
+      return SCIP_OKAY;
+
    /* check if the incumbent solution is at least as good as the debug solution, so we can stop to check the debug solution */
    if( debugSolIsAchieved(scip->set) )
       return SCIP_OKAY;
@@ -973,6 +1009,10 @@ SCIP_RETCODE SCIPdebugCheckUbGlobal(
       return SCIP_OKAY;
 
    if( SCIPgetStage(scip) == SCIP_STAGE_PROBLEM )
+      return SCIP_OKAY;
+
+   /* skip unused relaxation-only variables, see also comment in SCIPdebugCheckLbGlobal() */
+   if( SCIPvarIsRelaxationOnly(var) && SCIPvarGetNUses(var) == 1 )
       return SCIP_OKAY;
 
    /* check if the incumbent solution is at least as good as the debug solution, so we can stop to check the debug solution */
@@ -1094,7 +1134,7 @@ SCIP_RETCODE SCIPdebugRemoveNode(
       if( solisinnode )
       {
          SCIPerrorMessage("debugging solution was cut off in local node #%" SCIP_LONGINT_FORMAT " (%p) at depth %d\n",
-            node->number, node, SCIPnodeGetDepth(node));
+            node->number, (void*) node, SCIPnodeGetDepth(node));
          SCIPABORT();
       }
    }
@@ -1103,6 +1143,131 @@ SCIP_RETCODE SCIPdebugRemoveNode(
    if( debugsoldata->solinnode != NULL )
    {
       SCIP_CALL( SCIPhashmapRemove(debugsoldata->solinnode, (void*)node) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** checks whether global lower bound does not exceed debuging solution value */
+SCIP_RETCODE SCIPdebugCheckGlobalLowerbound(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   SCIP_DEBUGSOLDATA* debugsoldata;
+   SCIP_Real treelowerbound;
+
+   assert(set != NULL);
+   assert(blkmem != NULL);
+
+   /* when debugging was disabled the solution is not defined to be not valid in the current subtree */
+   if( !SCIPdebugSolIsEnabled(set->scip) )
+      return SCIP_OKAY;
+
+   /* check whether a debug solution is available */
+   if( !debugSolutionAvailable(set) )
+      return SCIP_OKAY;
+
+   if( SCIPgetStage(set->scip) <= SCIP_STAGE_INITSOLVE || SCIPgetStage(set->scip) >= SCIP_STAGE_EXITSOLVE )
+      return SCIP_OKAY;
+
+   if( SCIPgetStatus(set->scip) == SCIP_STATUS_INFORUNBD || SCIPgetStatus(set->scip) == SCIP_STATUS_UNBOUNDED )
+      return SCIP_OKAY;
+
+   /* if there are no leaves then SCIPtreeGetLowerbound() will return infintiy */
+   if( SCIPgetNLeaves(set->scip) <= 0 )
+      return SCIP_OKAY;
+
+   debugsoldata = SCIPsetGetDebugSolData(set);
+   assert(debugsoldata != NULL);
+
+   /* make sure a debug solution has been read */
+   if( debugsoldata->debugsol == NULL )
+   {
+      SCIP_CALL( readSolution(set) );
+   }
+
+   /* get global lower bound of tree (do not use SCIPgetLowerbound() since this adjusts the value using the primal bound) */
+   treelowerbound = SCIPtreeGetLowerbound(set->scip->tree, set);
+   treelowerbound = SCIPprobExternObjval(set->scip->transprob, set->scip->origprob, set, treelowerbound);
+
+   if( SCIPgetObjsense(set->scip) == SCIP_OBJSENSE_MINIMIZE && SCIPsetIsGT(set, treelowerbound, SCIPsolGetOrigObj(debugsoldata->debugsol)) )
+   {
+      SCIPerrorMessage("global lower bound %g is larger than the value of the debugging solution %g.\n", treelowerbound, SCIPsolGetOrigObj(debugsoldata->debugsol));
+      SCIPABORT();
+   }
+   else if( SCIPgetObjsense(set->scip) == SCIP_OBJSENSE_MAXIMIZE && SCIPsetIsLT(set, treelowerbound, SCIPsolGetOrigObj(debugsoldata->debugsol)) )
+   {
+      SCIPerrorMessage("global upper bound %g is smaller than the value of the debugging solution %g.\n", treelowerbound, SCIPsolGetOrigObj(debugsoldata->debugsol));
+      SCIPABORT();
+   }
+
+   return SCIP_OKAY;
+}
+
+/** checks whether local lower bound does not exceed debuging solution value */
+SCIP_RETCODE SCIPdebugCheckLocalLowerbound(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NODE*            node                /**< node that will be freed */
+   )
+{
+   SCIP_DEBUGSOLDATA* debugsoldata;
+   SCIP_Bool solisinnode;
+
+   assert(set != NULL);
+   assert(blkmem != NULL);
+
+   /* exit if we do not have a node to check */
+   if( node == NULL )
+      return SCIP_OKAY;
+
+   /* when debugging was disabled the solution is not defined to be not valid in the current subtree */
+   if( !SCIPdebugSolIsEnabled(set->scip) )
+      return SCIP_OKAY;
+
+   /* check whether a debug solution is available */
+   if( !debugSolutionAvailable(set) )
+      return SCIP_OKAY;
+
+   if( SCIPgetStage(set->scip) <= SCIP_STAGE_INITSOLVE )
+      return SCIP_OKAY;
+
+   if( SCIPgetStatus(set->scip) == SCIP_STATUS_INFORUNBD || SCIPgetStatus(set->scip) == SCIP_STATUS_UNBOUNDED )
+      return SCIP_OKAY;
+
+   debugsoldata = SCIPsetGetDebugSolData(set);
+   assert(debugsoldata != NULL);
+
+   /* make sure a debug solution has been read */
+   if( debugsoldata->debugsol == NULL )
+   {
+      SCIP_CALL( readSolution(set) );
+   }
+
+   /* check local lower bound */
+   SCIP_CALL( isSolutionInNode(blkmem, set, node, &solisinnode) );
+
+   /* if we are in a node that contains the given debug solution, the lower bound should not exceed the solution's objective */
+   if( solisinnode )
+   {
+      SCIP_Real localbound;
+
+      localbound = SCIPnodeGetLowerbound(node);
+      localbound = SCIPprobExternObjval(set->scip->transprob, set->scip->origprob, set, localbound);
+
+      if( SCIPgetObjsense(set->scip) == SCIP_OBJSENSE_MINIMIZE && SCIPsetIsGT(set, localbound, SCIPsolGetOrigObj(debugsoldata->debugsol)) )
+      {
+         SCIPerrorMessage("local lower bound %g of node #%" SCIP_LONGINT_FORMAT " at depth %d is larger than the value of the debugging solution %g contained in this node.\n",
+            localbound, node->number, SCIPnodeGetDepth(node), SCIPsolGetOrigObj(debugsoldata->debugsol));
+         SCIPABORT();
+      }
+      else if( SCIPgetObjsense(set->scip) == SCIP_OBJSENSE_MAXIMIZE && SCIPsetIsLT(set, localbound, SCIPsolGetOrigObj(debugsoldata->debugsol)) )
+      {
+         SCIPerrorMessage("local upper bound %g of node #%" SCIP_LONGINT_FORMAT " at depth %d is smaller than the value of the debugging solution %g contained in this node.\n",
+            localbound, node->number, SCIPnodeGetDepth(node), SCIPsolGetOrigObj(debugsoldata->debugsol));
+         SCIPABORT();
+      }
    }
 
    return SCIP_OKAY;
@@ -1277,7 +1442,7 @@ SCIP_RETCODE SCIPdebugCheckAggregation(
    }
 
    /* print debug message if the aggregation violates the debugging solution */
-   if( !SCIPsetIsEQ(set, solval, val) )
+   if( !SCIPsetIsRelEQ(set, solval, val) )
    {
       if( naggrvars == 1 )
       {
@@ -1286,13 +1451,13 @@ SCIP_RETCODE SCIPdebugCheckAggregation(
          /* get solution value of y variable */
          SCIP_CALL( getSolutionValue(set, aggrvars[0], &aggrsolval) );
 
-         SCIPerrorMessage("aggregation <%s>[%g] = %g<%s>[%g] + %g violates debugging solution\n",
-            SCIPvarGetName(var), solval, scalars[0], SCIPvarGetName(aggrvars[0]), aggrsolval, constant);
+         SCIPerrorMessage("aggregation <%s>[%g] = %g<%s>[%g] + %g violates debugging solution (expected %g)\n",
+            SCIPvarGetName(var), solval, scalars[0], SCIPvarGetName(aggrvars[0]), aggrsolval, constant, val);
       }
       else
       {
-         SCIPerrorMessage("multi-aggregation <%s>[%g] = ... %d vars ... + %g violates debugging solution\n",
-            SCIPvarGetName(var), solval, naggrvars, constant);
+         SCIPerrorMessage("multi-aggregation <%s>[%g] = ... %d vars ... + %g violates debugging solution (expected %g)\n",
+            SCIPvarGetName(var), solval, naggrvars, constant, val);
       }
       SCIPABORT();
    }
@@ -1726,6 +1891,17 @@ SCIP_Bool SCIPdebugSolIsEnabled(
 
    return (!debugsoldata->debugsoldisabled);
 }
+
+/** check if SCIP is compiled with WITH_DEBUG_SOLUTION */
+SCIP_Bool SCIPwithDebugSol(void)
+{
+#ifdef WITH_DEBUG_SOLUTION
+   return TRUE;
+#else
+   return FALSE;
+#endif
+}
+
 
 /** propagator to force finding the debugging solution */
 static
@@ -2338,4 +2514,3 @@ SCIP_RETCODE SCIPcheckStage(
    }
 }
 #endif
-

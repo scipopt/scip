@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -41,106 +50,88 @@ extern "C" {
  */
 
 /** compares two Benders' decomposition cuts w. r. to their priority */
-EXTERN
+SCIP_EXPORT
 SCIP_DECL_SORTPTRCOMP(SCIPbenderscutComp);
 
 /** comparison method for sorting Benders' decomposition cuts w.r.t. to their name */
-EXTERN
+SCIP_EXPORT
 SCIP_DECL_SORTPTRCOMP(SCIPbenderscutCompName);
 
 /** gets user data of the Benders' decomposition cut */
-EXTERN
+SCIP_EXPORT
 SCIP_BENDERSCUTDATA* SCIPbenderscutGetData(
    SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cut */
    );
 
 /** sets user data of the Benders' decomposition cut; user has to free old data in advance! */
-EXTERN
+SCIP_EXPORT
 void SCIPbenderscutSetData(
    SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cut */
    SCIP_BENDERSCUTDATA*  benderscutdata      /**< new Benders' decomposition cut user data */
    );
 
 /** gets name of the Benders' decomposition cut */
-EXTERN
+SCIP_EXPORT
 const char* SCIPbenderscutGetName(
    SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cut */
    );
 
 /** gets description of the Benders' decomposition cut */
-EXTERN
+SCIP_EXPORT
 const char* SCIPbenderscutGetDesc(
    SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cut */
    );
 
 /** gets priority of the Benders' decomposition cut */
-EXTERN
+SCIP_EXPORT
 int SCIPbenderscutGetPriority(
    SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cut */
    );
 
 /** gets the number of times, the Benders' decomposition cut was called and tried to find a violated cut */
-EXTERN
+SCIP_EXPORT
 SCIP_Longint SCIPbenderscutGetNCalls(
    SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cut */
    );
 
 /** gets the number of the cuts found by this Benders' decomposition cut */
-EXTERN
+SCIP_EXPORT
 SCIP_Longint SCIPbenderscutGetNFound(
    SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cut */
    );
 
 /** is the Benders' decomposition cut initialized? */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPbenderscutIsInitialized(
    SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cut */
    );
 
 /** gets time in seconds used in this Benders' decomposition cut for setting up for next stages */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPbenderscutGetSetupTime(
    SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cut */
    );
 
 /** gets time in seconds used in this Benders' decomposition cut */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPbenderscutGetTime(
    SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cut */
    );
 
-/** returns the number of cuts that have been added for storage */
-EXTERN
-int SCIPbenderscutGetNAddedCuts(
-   SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cut */
-   );
-
-/** returns the data for the cuts that have been added by the Benders' cut plugin */
-EXTERN
-SCIP_RETCODE SCIPbenderscutGetAddedCutData(
-   SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cut */
-   int                   cutidx,             /**< the index for the cut data that is requested */
-   SCIP_VAR***           vars,               /**< the variables that have non-zero coefficients in the cut */
-   SCIP_Real**           vals,               /**< the coefficients of the variables in the cut */
-   SCIP_Real*            lhs,                /**< the left hand side of the cut */
-   SCIP_Real*            rhs,                /**< the right hand side of the cut */
-   int*                  nvars               /**< the number of variables with non-zero coefficients in the cut */
-   );
-
 /** returns whether the Benders' cut uses the LP information */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPbenderscutIsLPCut(
    SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cut */
    );
 
 /** sets the enabled flag of the Benders' decomposition cut method */
-EXTERN
+SCIP_EXPORT
 void SCIPbenderscutSetEnabled(
    SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cut */
    SCIP_Bool             enabled             /**< flag to indicate whether the Benders' decomposition cut is enabled */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

@@ -3,17 +3,27 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   branch.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for branching rules and branching candidate storage
  * @author Tobias Achterberg
  * @author Timo Berthold
@@ -217,19 +227,6 @@ SCIP_RETCODE branchcandCalcLPCands(
    SCIPsetDebugMsg(set, "calculating LP branching candidates: validlp=%" SCIP_LONGINT_FORMAT ", lpcount=%" SCIP_LONGINT_FORMAT "\n",
       branchcand->validlpcandslp, stat->lpcount);
 
-   if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
-   {
-      branchcand->lpmaxpriority = INT_MIN / 2;
-      branchcand->nlpcands = 0;
-      branchcand->npriolpcands = 0;
-      branchcand->npriolpbins = 0;
-      branchcand->nimpllpfracs = 0;
-      branchcand->validlpcandslp = stat->lpcount;
-
-      SCIPsetDebugMsg(set, " LP is unbounded -> no branching candidates\n");
-      return SCIP_OKAY;
-   }
-
    /* check, if the current LP branching candidate array is invalid */
    if( branchcand->validlpcandslp < stat->lpcount )
    {
@@ -268,6 +265,10 @@ SCIP_RETCODE branchcandCalcLPCands(
          assert(primsol < SCIP_INVALID);
          assert(SCIPsetIsInfinity(set, -col->lb) || SCIPsetIsFeasGE(set, primsol, col->lb));
          assert(SCIPsetIsInfinity(set, col->ub) || SCIPsetIsFeasLE(set, primsol, col->ub));
+
+         /* count values at infinity as integral */
+         if( SCIPsetIsInfinity(set, REALABS(primsol)) )
+            continue;
 
          var = col->var;
          assert(var != NULL);
@@ -2335,13 +2336,43 @@ SCIP_Real SCIPbranchGetBranchingPoint(
    }
    else
    {
-      /* if no point is suggested and the value in LP solution is not too big, try the LP or pseudo LP solution
-       * otherwise, if the value in the LP or pseudosolution is large (here 1e+12), use 0.0
-       * in both cases, project onto bounds of course
-       */
+      /* if no point is suggested, try the LP or pseudo solution */
       branchpoint = SCIPvarGetSol(var, SCIPtreeHasCurrentNodeLP(tree));
+
       if( REALABS(branchpoint) > 1e+12 )
+      {
+         /* if the value in the LP or pseudosolution is large (here 1e+12), use 0.0 (will be projected onto bounds below) */
          branchpoint = 0.0;
+      }
+      else if( SCIPtreeHasCurrentNodeLP(tree) && set->branch_midpull > 0.0 && !SCIPsetIsInfinity(set, -lb) && !SCIPsetIsInfinity(set, ub) )
+      {
+         /* if the value is from the LP and midpull is activated, then push towards middle of domain */
+         SCIP_Real midpull = set->branch_midpull;
+         SCIP_Real glb;
+         SCIP_Real gub;
+         SCIP_Real reldomainwidth;
+
+         /* shrink midpull if width of local domain, relative to global domain, is small
+          * that is, if there has been already one or several branchings on this variable, then give more emphasis on LP solution
+          *
+          * do this only if the relative domain width is below the minreldomainwidth value
+          */
+         glb = SCIPvarGetLbGlobal(var);
+         gub = SCIPvarGetUbGlobal(var);
+         assert(glb < gub);
+
+         if( !SCIPsetIsInfinity(set, -glb) && !SCIPsetIsInfinity(set, gub) )
+            reldomainwidth = (ub - lb) / (gub - glb);
+         else
+            reldomainwidth = SCIPsetEpsilon(set);
+
+         if( reldomainwidth < set->branch_midpullreldomtrig )
+            midpull *= reldomainwidth;
+
+         branchpoint = midpull * (lb+ub) / 2.0 + (1.0 - midpull) * branchpoint;
+      }
+
+      /* make sure branchpoint is on interval, below we make sure that it is within bounds for continuous vars */
       branchpoint = MAX(lb, MIN(branchpoint, ub));
    }
 

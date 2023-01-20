@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -102,9 +111,11 @@
 #define READER_EXTENSION        "cap"
 
 
-#define DEFAULT_USEBENDERS       FALSE
+#define DEFAULT_USEBENDERS       TRUE
 #define DEFAULT_NUMSCENARIOS      250
 #define DEFAULT_RANDOMSEED          1
+#define DEFAULT_QUADCOSTS       FALSE   /**< should the problem be formulated with quadratic costs */
+
 
 #define MAXNCOSTS                   7
 
@@ -113,6 +124,7 @@ struct SCIP_ReaderData
    SCIP_Bool             usebenders;         /**< should Benders' decomposition be used to solve the problem */
    int                   nscenarios;         /**< the number of scenarios */
    int                   randomseed;         /**< the random seed used to generate the scenarios */
+   SCIP_Bool             quadcosts;          /**< should the problem be formulated with quadratic costs */
 };
 
 /**@} */
@@ -422,7 +434,7 @@ SCIP_DECL_READERREAD(readerReadScflp)
 
       /* create a new problem in SCIP */
       SCIP_CALL( SCIPprobdataCreate(scip, name, costs, demands, capacity, fixedcost, ncustomers, nfacilities,
-              nscenarios, readerdata->usebenders) );
+              nscenarios, readerdata->usebenders, readerdata->quadcosts) );
    }
 
    (void)SCIPfclose(file);
@@ -492,6 +504,10 @@ SCIP_RETCODE SCIPincludeReaderScflp(
          "reading/" READER_NAME "/randomseed",
          "the random seed used to generate the scenarios",
          &readerdata->randomseed, FALSE, DEFAULT_RANDOMSEED, 1, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "reading/" READER_NAME "/quadcosts", "should the problem be formulated with quadratic costs",
+         &readerdata->quadcosts, FALSE, DEFAULT_QUADCOSTS, NULL, NULL) );
 
    return SCIP_OKAY;
 }

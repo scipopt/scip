@@ -3,22 +3,32 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scip_branch.c
+ * @ingroup OTHER_CFILES
  * @brief  public methods for branching rule plugins and branching
  * @author Tobias Achterberg
  * @author Timo Berthold
  * @author Gerald Gamrath
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  * @author Stefan Heinz
  * @author Gregor Hendel
  * @author Thorsten Koch
@@ -37,6 +47,7 @@
 #include "scip/lp.h"
 #include "scip/pub_message.h"
 #include "scip/pub_var.h"
+#include "scip/var.h"
 #include "scip/scip_branch.h"
 #include "scip/scip_numerics.h"
 #include "scip/set.h"
@@ -435,7 +446,7 @@ int SCIPgetNLPBranchCands(
 
    if( retcode != SCIP_OKAY )
    {
-      SCIPerrorMessage("Error <%u> during computation of the number of LP branching candidates\n", retcode);
+      SCIPerrorMessage("Error <%d> during computation of the number of LP branching candidates\n", retcode);
       SCIPABORT();
       return 0; /*lint !e527*/
    }
@@ -473,7 +484,7 @@ int SCIPgetNPrioLPBranchCands(
 
    if( retcode != SCIP_OKAY )
    {
-      SCIPerrorMessage("Error <%u> during computation of the number of LP branching candidates with maximal priority\n", retcode);
+      SCIPerrorMessage("Error <%d> during computation of the number of LP branching candidates with maximal priority\n", retcode);
       SCIPABORT();
       return 0; /*lint !e527*/
    }
@@ -944,6 +955,53 @@ SCIP_Real SCIPcalcChildEstimate(
    assert( var->scip == scip );
 
    return SCIPtreeCalcChildEstimate(scip->tree, scip->set, scip->stat, var, targetvalue);
+}
+
+/** calculates the increase of the estimate for the objective of the best feasible solution contained in the subtree
+ *  after applying the given branching
+ *
+ *  @return the increase of the estimate for the objective of the best feasible solution contained in the subtree after
+ *          applying the given branching.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+SCIP_Real SCIPcalcChildEstimateIncrease(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable on which the branching is applied */
+   SCIP_Real             varsol,             /**< solution value of variable */
+   SCIP_Real             targetvalue         /**< new value of the variable in the child node */
+   )
+{
+   SCIP_Real estimateinc;
+
+   assert(scip != NULL);
+   assert(var != NULL);
+
+   /* compute increase above parent node's (i.e., focus node's) estimate value */
+   if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+      estimateinc = SCIPvarGetPseudocost(var, scip->stat, targetvalue - varsol);
+   else
+   {
+      SCIP_Real pscdown;
+      SCIP_Real pscup;
+
+      /* calculate estimate based on pseudo costs:
+       *   estimate = lowerbound + sum(min{f_j * pscdown_j, (1-f_j) * pscup_j})
+       *            = parentestimate - min{f_b * pscdown_b, (1-f_b) * pscup_b} + (targetvalue-oldvalue)*{pscdown_b or pscup_b}
+       */
+      pscdown = SCIPvarGetPseudocost(var, scip->stat, SCIPsetFeasFloor(scip->set, varsol) - varsol);
+      pscup = SCIPvarGetPseudocost(var, scip->stat, SCIPsetFeasCeil(scip->set, varsol) - varsol);
+      estimateinc = SCIPvarGetPseudocost(var, scip->stat, targetvalue - varsol) - MIN(pscdown, pscup);
+   }
+
+   /* due to rounding errors estimateinc might be slightly negative */
+   if( estimateinc > 0.0 )
+      estimateinc = 0.0;
+
+   return estimateinc;
 }
 
 /** creates a child node of the focus node

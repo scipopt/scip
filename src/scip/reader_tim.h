@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -55,7 +64,7 @@ extern "C" {
  *
  *  @ingroup FileReaderIncludes
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeReaderTim(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -66,33 +75,33 @@ SCIP_RETCODE SCIPincludeReaderTim(
  */
 
 /** reads the stage information for a stochastic programming instance in SMPS format */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPreadTim(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename,           /**< full path and name of file to read, or NULL if stdin should be used */
    SCIP_RESULT*          result              /**< pointer to store the result of the file reading call */
    );
 
-/* @} */
+/** @} */
 
 /*
  * Interface methods for the cor and sto files
  */
 
 /* return whether the tim file has been read */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPtimHasRead(
    SCIP_READER*          reader              /**< the file reader itself */
    );
 
 /* returns the number of stages */
-EXTERN
+SCIP_EXPORT
 int SCIPtimGetNStages(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /* returns the name for a given stage */
-EXTERN
+SCIP_EXPORT
 const char* SCIPtimGetStageName(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   stagenum            /**< the number of the requested stage */
@@ -105,35 +114,35 @@ const char* SCIPtimConsGetStageName(
    );
 
 /* returns the number for a given stage */
-EXTERN
+SCIP_EXPORT
 int SCIPtimFindStage(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           stage               /**< the name of the requested stage */
    );
 
 /* returns the array of variables for a given stage */
-EXTERN
+SCIP_EXPORT
 SCIP_VAR** SCIPtimGetStageVars(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   stagenum            /**< the number of the requested stage */
    );
 
 /* returns an array of constraints for a given stage */
-EXTERN
+SCIP_EXPORT
 SCIP_CONS** SCIPtimGetStageConss(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   stagenum            /**< the number of the requested stage */
    );
 
 /* returns the number of variables for a given stage */
-EXTERN
+SCIP_EXPORT
 int SCIPtimGetStageNVars(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   stagenum            /**< the number of the requested stage */
    );
 
 /* returns the number of constraints for a given stage */
-EXTERN
+SCIP_EXPORT
 int SCIPtimGetStageNConss(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   stagenum            /**< the number of the requested stage */

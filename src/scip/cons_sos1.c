@@ -3,17 +3,27 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_sos1.c
+ * @ingroup DEFPLUGINS_CONS
  * @brief  constraint handler for SOS type 1 constraints
  * @author Tobias Fischer
  * @author Marc Pfetsch
@@ -176,6 +186,8 @@
 /* event handler properties */
 #define EVENTHDLR_NAME         "SOS1"
 #define EVENTHDLR_DESC         "bound change event handler for SOS1 constraints"
+
+#define EVENTHDLR_EVENT_TYPE   (SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_GBDCHANGED)
 
 /* defines */
 #define DIVINGCUTOFFVALUE     1e6
@@ -745,7 +757,8 @@ SCIP_RETCODE lockVariableSOS1(
    assert( var != NULL );
 
    /* rounding down == bad if lb < 0, rounding up == bad if ub > 0 */
-   SCIP_CALL( SCIPlockVarCons(scip, var, cons, SCIPisFeasNegative(scip, SCIPvarGetLbLocal(var)), SCIPisFeasPositive(scip, SCIPvarGetUbLocal(var))) );
+   SCIP_CALL( SCIPlockVarCons(scip, var, cons, SCIPisFeasNegative(scip, SCIPvarGetLbGlobal(var)),
+         SCIPisFeasPositive(scip, SCIPvarGetUbGlobal(var))) );
 
    return SCIP_OKAY;
 }
@@ -764,7 +777,8 @@ SCIP_RETCODE unlockVariableSOS1(
    assert( var != NULL );
 
    /* rounding down == bad if lb < 0, rounding up == bad if ub > 0 */
-   SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIPisFeasNegative(scip, SCIPvarGetLbLocal(var)), SCIPisFeasPositive(scip, SCIPvarGetUbLocal(var))) );
+   SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIPisFeasNegative(scip, SCIPvarGetLbGlobal(var)),
+         SCIPisFeasPositive(scip, SCIPvarGetUbGlobal(var))) );
 
    return SCIP_OKAY;
 }
@@ -824,7 +838,7 @@ SCIP_RETCODE handleNewVariableSOS1(
       assert( conshdlrdata->eventhdlr != NULL );
 
       /* catch bound change events of variable */
-      SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlr,
+      SCIP_CALL( SCIPcatchVarEvent(scip, var, EVENTHDLR_EVENT_TYPE, conshdlrdata->eventhdlr,
             (SCIP_EVENTDATA*)cons, NULL) ); /*lint !e740*/
 
       /* if the variable if fixed to nonzero */
@@ -1079,7 +1093,7 @@ SCIP_RETCODE deleteVarSOS1(
    SCIP_CALL( unlockVariableSOS1(scip, cons, consdata->vars[pos]) );
 
    /* drop events on variable */
-   SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[pos], SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, (SCIP_EVENTDATA*)cons, -1) ); /*lint !e740*/
+   SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[pos], EVENTHDLR_EVENT_TYPE, eventhdlr, (SCIP_EVENTDATA*)cons, -1) ); /*lint !e740*/
 
    /* delete variable - need to copy since order is important */
    for (j = pos; j < consdata->nvars-1; ++j)
@@ -1165,10 +1179,9 @@ SCIP_RETCODE extensionOperatorSOS1(
 #ifdef SCIP_DEBUG
    for (i = 0; i < nexts; ++i)
    {
-      int vertex = workingset[i];
       for (j = nexts; j < nworkingset; ++j)
       {
-         assert( isConnectedSOS1(adjacencymatrix, NULL, vertex, workingset[j]) );
+         assert( isConnectedSOS1(adjacencymatrix, NULL, workingset[i], workingset[j]) );
       }
    }
 #endif
@@ -1266,7 +1279,7 @@ SCIP_RETCODE extensionOperatorSOS1(
          SCIPsortInt(cliques[*ncliques], cliquesizes[*ncliques]);
 
          /* create new constraint */
-         (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "extsos1_%" SCIP_LONGINT_FORMAT, conshdlrdata->cntextsos1, conshdlrdata->cntextsos1);
+         (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "extsos1_%d", conshdlrdata->cntextsos1);
 
          SCIP_CALL( SCIPcreateConsSOS1(scip, &newcons, consname, cliquesizes[*ncliques], vars, weights,
                SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons),
@@ -1650,8 +1663,8 @@ SCIP_RETCODE presolRoundConsSOS1(
       if ( SCIPisZero(scip, constant) && ! SCIPisZero(scip, scalar) && var != vars[j] )
       {
          SCIPdebugMsg(scip, "substituted variable <%s> by <%s>.\n", SCIPvarGetName(vars[j]), SCIPvarGetName(var));
-         SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[j], SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, (SCIP_EVENTDATA*)cons, -1) ); /*lint !e740*/
-         SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, (SCIP_EVENTDATA*)cons, NULL) ); /*lint !e740*/
+         SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[j], EVENTHDLR_EVENT_TYPE, eventhdlr, (SCIP_EVENTDATA*)cons, -1) ); /*lint !e740*/
+         SCIP_CALL( SCIPcatchVarEvent(scip, var, EVENTHDLR_EVENT_TYPE, eventhdlr, (SCIP_EVENTDATA*)cons, NULL) ); /*lint !e740*/
 
          /* change the rounding locks */
          SCIP_CALL( unlockVariableSOS1(scip, cons, consdata->vars[j]) );
@@ -1996,7 +2009,7 @@ SCIP_RETCODE presolRoundConssSOS1(
                   }
 
                   /* get intersection with comsucc */
-                  SCIP_CALL( SCIPcomputeArraysIntersection(comsucc, ncomsucc, succ, nsucc, comsucc, &ncomsucc) );
+                  SCIPcomputeArraysIntersectionInt(comsucc, ncomsucc, succ, nsucc, comsucc, &ncomsucc);
                }
             }
 
@@ -4242,12 +4255,14 @@ SCIP_RETCODE getBranchingPrioritiesSOS1(
 
    bestprior = -SCIPinfinity(scip);
 
+   /* make sure data is initialized */
+   if ( vertexbestprior != NULL )
+      *vertexbestprior = -1;
+
    for (i = 0; i < nsos1vars; ++i)
    {
       SCIP_Real prior;
       SCIP_Real solval;
-      SCIP_Real sum1;
-      SCIP_Real sum2;
       int nfixingsnode1;
       int nfixingsnode2;
       int nsucc;
@@ -4261,12 +4276,13 @@ SCIP_RETCODE getBranchingPrioritiesSOS1(
       {
          SCIP_Bool iszero1 = TRUE;
          SCIP_Bool iszero2 = TRUE;
+         SCIP_Real sum1 = 0.0;
+         SCIP_Real sum2 = 0.0;
 
          /* get vertices of variables that will be fixed to zero for each strong branching execution */
          assert( ! verticesarefixed[i] );
          SCIP_CALL( getBranchingVerticesSOS1(scip, conflictgraph, sol, verticesarefixed, bipbranch, i, fixingsnode1, &nfixingsnode1, fixingsnode2, &nfixingsnode2) );
 
-         sum1 = 0.0;
          for (j = 0; j < nfixingsnode1; ++j)
          {
             solval = SCIPgetSolVal(scip, sol, SCIPnodeGetVarSOS1(conflictgraph, fixingsnode1[j]));
@@ -4277,7 +4293,6 @@ SCIP_RETCODE getBranchingPrioritiesSOS1(
             }
          }
 
-         sum2 = 0.0;
          for (j = 0; j < nfixingsnode2; ++j)
          {
             solval = SCIPgetSolVal(scip, sol, SCIPnodeGetVarSOS1(conflictgraph, fixingsnode2[j]));
@@ -4514,6 +4529,7 @@ SCIP_RETCODE getBranchingDecisionStrongbranchSOS1(
    if ( relsolfeas )
    {
       SCIPdebugMsg(scip, "all the SOS1 constraints are feasible.\n");
+      *vertexbestprior = -1;
       *result = SCIP_FEASIBLE;
 
       /* free memory */
@@ -4563,6 +4579,7 @@ SCIP_RETCODE getBranchingDecisionStrongbranchSOS1(
    /* determine branching variable by strong branching or reduce domain */
    ndomainfixings = 0;
    lastscorechange = -1;
+   assert( nsos1vars > 0 );
    *vertexbestprior = indsos1vars[0]; /* for the case that nstrongrounds = 0 */
    bestscore = -SCIPinfinity(scip);
    *bestobjval1 = -SCIPinfinity(scip);
@@ -4589,7 +4606,8 @@ SCIP_RETCODE getBranchingDecisionStrongbranchSOS1(
 
          /* get vertices of variables that will be fixed to zero for each strong branching execution */
          assert( ! verticesarefixed[testvertex] );
-         SCIP_CALL( getBranchingVerticesSOS1(scip, conflictgraph, sol, verticesarefixed, bipbranch, testvertex, fixingsnode1, &nfixingsnode1, fixingsnode2, &nfixingsnode2) );
+         SCIP_CALL( getBranchingVerticesSOS1(scip, conflictgraph, sol, verticesarefixed, bipbranch, testvertex,
+               fixingsnode1, &nfixingsnode1, fixingsnode2, &nfixingsnode2) );
 
          /* get information for first strong branching execution */
          SCIP_CALL( performStrongbranchSOS1(scip, conflictgraph, fixingsnode1, nfixingsnode1, fixingsnode2, nfixingsnode2,
@@ -4623,7 +4641,7 @@ SCIP_RETCODE getBranchingDecisionStrongbranchSOS1(
             /* if domain has not been reduced in this for-loop */
             if ( ndomainfixings == 0 )
             {
-               score = MAX( REALABS( objval1 - lpobjval ), SCIPfeastol(scip) ) * MAX( REALABS( objval2 - lpobjval ), SCIPfeastol(scip) );/*lint !e666*/
+               score = MAX( REALABS(objval1 - lpobjval), SCIPfeastol(scip) ) * MAX( REALABS(objval2 - lpobjval), SCIPfeastol(scip) );/*lint !e666*/
 
                if ( SCIPisPositive(scip, score - bestscore) )
                {
@@ -5041,13 +5059,13 @@ SCIP_RETCODE addBranchingComplementaritiesSOS1(
             }
 
             /* compute second partition of fixingsnode2 (that is fixingsnode2 \setminus fixingsnode21 ) */
-            SCIP_CALL( SCIPcomputeArraysSetminus(fixingsnode2, nfixingsnode2, fixingsnode21, nfixingsnode21, fixingsnode22, &nfixingsnode22) );
+            SCIPcomputeArraysSetminusInt(fixingsnode2, nfixingsnode2, fixingsnode21, nfixingsnode21, fixingsnode22, &nfixingsnode22);
             assert ( nfixingsnode22 + nfixingsnode21 == nfixingsnode2 );
 
             /* compute cover set (that are all the vertices not in fixingsnode1 and fixingsnode21, whose neighborhood covers all the vertices of fixingsnode22) */
             SCIP_CALL( getCoverVertices(conflictgraph, verticesarefixed, -1, fixingsnode22, nfixingsnode22, coverarray, &ncoverarray) );
-            SCIP_CALL( SCIPcomputeArraysSetminus(coverarray, ncoverarray, fixingsnode1, nfixingsnode1, coverarray, &ncoverarray) );
-            SCIP_CALL( SCIPcomputeArraysSetminus(coverarray, ncoverarray, fixingsnode21, nfixingsnode21, coverarray, &ncoverarray) );
+            SCIPcomputeArraysSetminusInt(coverarray, ncoverarray, fixingsnode1, nfixingsnode1, coverarray, &ncoverarray);
+            SCIPcomputeArraysSetminusInt(coverarray, ncoverarray, fixingsnode21, nfixingsnode21, coverarray, &ncoverarray);
 
             for (j = 0; j < ncoverarray; ++j)
             {
@@ -5185,7 +5203,7 @@ SCIP_RETCODE addBranchingComplementaritiesSOS1(
                      if ( SCIPisGT(scip, feas, conshdlrdata->addcompsfeas) )
                      {
                         /* create SOS1 constraint */
-                        (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "sos1_branchnode_%i_no_%i", SCIPnodeGetNumber(node), *naddedconss);
+                        (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "sos1_branchnode_%" SCIP_LONGINT_FORMAT "_no_%i", SCIPnodeGetNumber(node), *naddedconss);
                         SCIP_CALL( SCIPcreateConsSOS1(scip, &conssos1, name, 0, NULL, NULL, TRUE, TRUE, TRUE, FALSE, TRUE,
                               TRUE, FALSE, FALSE, FALSE) );
 
@@ -5206,7 +5224,7 @@ SCIP_RETCODE addBranchingComplementaritiesSOS1(
                      {
                         /* possibly create linear constraint of the form x_i/u_i + x_j/u_j <= t if a bound variable t with x_i <= u_i * t and x_j <= u_j * t exists.
                          * Otherwise try to create a constraint of the form x_i/u_i + x_j/u_j <= 1. Try the same for the lower bounds. */
-                        (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "boundcons_branchnode_%i_no_%i", SCIPnodeGetNumber(node), *naddedconss);
+                        (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "boundcons_branchnode_%" SCIP_LONGINT_FORMAT "_no_%i", SCIPnodeGetNumber(node), *naddedconss);
                         if ( takebound )
                         {
                            /* create constraint with right hand side = 0.0 */
@@ -5289,7 +5307,7 @@ SCIP_RETCODE resetConflictgraphSOS1(
          nsucc = SCIPdigraphGetNSuccessors(conflictgraph, j);
 
          /* reset number of successors */
-         SCIP_CALL( SCIPcomputeArraysSetminus(succ, nsucc, succloc, nsuccloc, succ, &k) );
+         SCIPcomputeArraysSetminusInt(succ, nsucc, succloc, nsuccloc, succ, &k);
          SCIP_CALL( SCIPdigraphSetNSuccessors(conflictgraph, j, k) );
          SCIP_CALL( SCIPdigraphSetNSuccessors(localconflicts, j, 0) );
       }
@@ -5369,6 +5387,13 @@ SCIP_RETCODE enforceConflictgraph(
    /* get number of SOS1 variables */
    nsos1vars = conshdlrdata->nsos1vars;
 
+   /* exit for trivial cases */
+   if ( nsos1vars == 0 || nconss == 0 )
+   {
+      *result = SCIP_FEASIBLE;
+      return SCIP_OKAY;
+   }
+
    /* get conflict graph */
    conflictgraph = conshdlrdata->conflictgraph;
    assert( ! conshdlrdata->isconflocal ); /* conflictgraph should be the one of the root node */
@@ -5378,7 +5403,8 @@ SCIP_RETCODE enforceConflictgraph(
    {
       SCIP_CONSDATA* consdata;
       SCIP_CONS* cons;
-      SCIP_Bool cutoff;int ngen;
+      SCIP_Bool cutoff;
+      int ngen = 0;
 
       cons = conss[c];
       assert( cons != NULL );
@@ -5390,7 +5416,6 @@ SCIP_RETCODE enforceConflictgraph(
          continue;
 
       /* first perform propagation (it might happen that standard propagation is turned off) */
-      ngen = 0;
       SCIP_CALL( propConsSOS1(scip, cons, consdata, &cutoff, &ngen) );
       SCIPdebugMsg(scip, "propagating <%s> in enforcing (cutoff: %u, domain reductions: %d).\n", SCIPconsGetName(cons), cutoff, ngen);
       if ( cutoff )
@@ -5535,7 +5560,8 @@ SCIP_RETCODE enforceConflictgraph(
       SCIP_Bool relsolfeas;
 
       /* get branching vertex using most infeasible branching */
-      SCIP_CALL( getBranchingPrioritiesSOS1(scip, conshdlrdata, conflictgraph, sol, nsos1vars, verticesarefixed, bipbranch, fixingsnode1, fixingsnode2, NULL, &branchvertex, &relsolfeas) );
+      SCIP_CALL( getBranchingPrioritiesSOS1(scip, conshdlrdata, conflictgraph, sol, nsos1vars, verticesarefixed,
+            bipbranch, fixingsnode1, fixingsnode2, NULL, &branchvertex, &relsolfeas) );
 
       /* if LP relaxation solution is feasible */
       if ( relsolfeas )
@@ -5563,8 +5589,9 @@ SCIP_RETCODE enforceConflictgraph(
    else
    {
       /* get branching vertex using strong branching */
-      SCIP_CALL( getBranchingDecisionStrongbranchSOS1(scip, conshdlrdata, conflictgraph, sol, nsos1vars, lpobjval, bipbranch, nstrongrounds, verticesarefixed,
-            fixingsnode1, fixingsnode2, &branchvertex, &bestobjval1, &bestobjval2, result) );
+      SCIP_CALL( getBranchingDecisionStrongbranchSOS1(scip, conshdlrdata, conflictgraph, sol, nsos1vars, lpobjval,
+            bipbranch, nstrongrounds, verticesarefixed, fixingsnode1, fixingsnode2, &branchvertex, &bestobjval1,
+            &bestobjval2, result) );
 
       if ( *result == SCIP_CUTOFF || *result == SCIP_FEASIBLE || *result == SCIP_REDUCEDDOM )
       {
@@ -5584,7 +5611,7 @@ SCIP_RETCODE enforceConflictgraph(
       }
    }
 
-   /* if we shouldleave branching decision to branching rules */
+   /* if we should leave branching decision to branching rules */
    if ( ! conshdlrdata->branchsos )
    {
       /* remove local conflicts from conflict graph */
@@ -5594,6 +5621,12 @@ SCIP_RETCODE enforceConflictgraph(
 	 conshdlrdata->isconflocal = FALSE;
       }
 
+      /* free memory */
+      SCIPfreeBufferArrayNull(scip, &fixingsnode2);
+      SCIPfreeBufferArrayNull(scip, &fixingsnode1);
+      SCIPfreeBufferArrayNull(scip, &verticesarefixed);
+
+      assert( branchvertex >= 0 && branchvertex < nsos1vars );
       if ( SCIPvarIsBinary(SCIPnodeGetVarSOS1(conflictgraph, branchvertex)) )
       {
          *result = SCIP_INFEASIBLE;
@@ -5611,21 +5644,21 @@ SCIP_RETCODE enforceConflictgraph(
    /* get vertices of variables that will be fixed to zero for each node */
    assert( branchvertex >= 0 && branchvertex < nsos1vars );
    assert( ! verticesarefixed[branchvertex] );
-   SCIP_CALL( getBranchingVerticesSOS1(scip, conflictgraph, sol, verticesarefixed, bipbranch, branchvertex, fixingsnode1, &nfixingsnode1, fixingsnode2, &nfixingsnode2) );
+   SCIP_CALL( getBranchingVerticesSOS1(scip, conflictgraph, sol, verticesarefixed, bipbranch, branchvertex,
+         fixingsnode1, &nfixingsnode1, fixingsnode2, &nfixingsnode2) );
 
    /* calculate node selection and objective estimate for node 1 */
    nodeselest = 0.0;
-   objest = 0.0;
+   objest = SCIPgetLocalTransEstimate(scip);
    for (j = 0; j < nfixingsnode1; ++j)
    {
       SCIP_VAR* var;
 
       var = SCIPnodeGetVarSOS1(conflictgraph, fixingsnode1[j]);
+      objest += SCIPcalcChildEstimateIncrease(scip, var, SCIPgetSolVal(scip, sol, var), 0.0);
       nodeselest += SCIPcalcNodeselPriority(scip, var, SCIP_BRANCHDIR_DOWNWARDS, 0.0);
-      objest += SCIPcalcChildEstimate(scip, var, 0.0);
    }
-   /* take the average of the individual estimates */
-   objest = objest/((SCIP_Real) nfixingsnode1);
+   assert( objest >= SCIPgetLocalTransEstimate(scip) );
 
    /* create node 1 */
    SCIP_CALL( SCIPcreateChild(scip, &node1, nodeselest, objest) );
@@ -5670,6 +5703,7 @@ SCIP_RETCODE enforceConflictgraph(
          }
       }
    }
+
    for (j = 0; j < nfixingsnode1; ++j)
    {
       /* fix variable to zero */
@@ -5679,18 +5713,16 @@ SCIP_RETCODE enforceConflictgraph(
 
    /* calculate node selection and objective estimate for node 2 */
    nodeselest = 0.0;
-   objest = 0.0;
+   objest = SCIPgetLocalTransEstimate(scip);
    for (j = 0; j < nfixingsnode2; ++j)
    {
       SCIP_VAR* var;
 
-      var = SCIPnodeGetVarSOS1(conflictgraph, fixingsnode2[j]);
+      var = SCIPnodeGetVarSOS1(conflictgraph, fixingsnode1[j]);
+      objest += SCIPcalcChildEstimateIncrease(scip, var, SCIPgetSolVal(scip, sol, var), 0.0);
       nodeselest += SCIPcalcNodeselPriority(scip, var, SCIP_BRANCHDIR_DOWNWARDS, 0.0);
-      objest += SCIPcalcChildEstimate(scip, var, 0.0);
    }
-
-   /* take the average of the individual estimates */
-   objest = objest/((SCIP_Real) nfixingsnode2);
+   assert( objest >= SCIPgetLocalTransEstimate(scip) );
 
    /* create node 2 */
    SCIP_CALL( SCIPcreateChild(scip, &node2, nodeselest, objest) );
@@ -5979,14 +6011,13 @@ SCIP_RETCODE enforceConssSOS1(
 
       /* calculate node selection and objective estimate for node 1 */
       nodeselest = 0.0;
-      objest = 0.0;
+      objest = SCIPgetLocalTransEstimate(scip);
       for (j = 0; j <= ind; ++j)
       {
+         objest += SCIPcalcChildEstimateIncrease(scip, vars[j], SCIPgetSolVal(scip, sol, vars[j]), 0.0);
          nodeselest += SCIPcalcNodeselPriority(scip, vars[j], SCIP_BRANCHDIR_DOWNWARDS, 0.0);
-         objest += SCIPcalcChildEstimate(scip, vars[j], 0.0);
       }
-      /* take the average of the individual estimates */
-      objest = objest/(SCIP_Real)(ind + 1.0);
+      assert( objest >= SCIPgetLocalTransEstimate(scip) );
 
       /* create node 1 */
       SCIP_CALL( SCIPcreateChild(scip, &node1, nodeselest, objest) );
@@ -5998,14 +6029,13 @@ SCIP_RETCODE enforceConssSOS1(
 
       /* calculate node selection and objective estimate for node 1 */
       nodeselest = 0.0;
-      objest = 0.0;
+      objest = SCIPgetLocalTransEstimate(scip);
       for (j = ind+1; j < nvars; ++j)
       {
+         objest += SCIPcalcChildEstimateIncrease(scip, vars[j], SCIPgetSolVal(scip, sol, vars[j]), 0.0);
          nodeselest += SCIPcalcNodeselPriority(scip, vars[j], SCIP_BRANCHDIR_DOWNWARDS, 0.0);
-         objest += SCIPcalcChildEstimate(scip, vars[j], 0.0);
       }
-      /* take the average of the individual estimates */
-      objest = objest/((SCIP_Real) (nvars - ind - 1));
+      assert( objest >= SCIPgetLocalTransEstimate(scip) );
 
       /* create node 2 */
       SCIP_CALL( SCIPcreateChild(scip, &node2, nodeselest, objest) );
@@ -6383,7 +6413,7 @@ SCIP_RETCODE generateBoundInequalityFromSOS1Nodes(
                useboundvar = FALSE;
 
                /* restart 'for'-loop */
-               j = -1;
+               j = -1;  /*lint !e850*/
                cnt = 0;
                continue;
             }
@@ -6430,7 +6460,7 @@ SCIP_RETCODE generateBoundInequalityFromSOS1Nodes(
 
             /* create upper bound inequality if at least two of the bounds are finite and nonzero */
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "sosub#%s", nameext);
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, rowub, conshdlr, name, -SCIPinfinity(scip), 0.0, localubs, FALSE, removable) );
+            SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, rowub, conshdlr, name, -SCIPinfinity(scip), 0.0, localubs, FALSE, removable) );
             SCIP_CALL( SCIPaddVarsToRow(scip, *rowub, cnt, vars, vals) );
             SCIPdebug( SCIP_CALL( SCIPprintRow(scip, *rowub, NULL) ) );
          }
@@ -6438,7 +6468,7 @@ SCIP_RETCODE generateBoundInequalityFromSOS1Nodes(
          {
             /* create upper bound inequality if at least two of the bounds are finite and nonzero */
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "sosub#%s", nameext);
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, rowub, conshdlr, name, -SCIPinfinity(scip), rhs, localubs, FALSE, removable) );
+            SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, rowub, conshdlr, name, -SCIPinfinity(scip), rhs, localubs, FALSE, removable) );
             SCIP_CALL( SCIPaddVarsToRow(scip, *rowub, cnt, vars, vals) );
             SCIPdebug( SCIP_CALL( SCIPprintRow(scip, *rowub, NULL) ) );
          }
@@ -6506,7 +6536,7 @@ SCIP_RETCODE generateBoundInequalityFromSOS1Nodes(
                useboundvar = FALSE;
 
                /* restart 'for'-loop */
-               j = -1;
+               j = -1;  /*lint !e850*/
                cnt = 0;
                continue;
             }
@@ -6553,7 +6583,7 @@ SCIP_RETCODE generateBoundInequalityFromSOS1Nodes(
 
             /* create upper bound inequality if at least two of the bounds are finite and nonzero */
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "soslb#%s", nameext);
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, rowlb, conshdlr, name, -SCIPinfinity(scip), 0.0, locallbs, FALSE, TRUE) );
+            SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, rowlb, conshdlr, name, -SCIPinfinity(scip), 0.0, locallbs, FALSE, TRUE) );
             SCIP_CALL( SCIPaddVarsToRow(scip, *rowlb, cnt, vars, vals) );
             SCIPdebug( SCIP_CALL( SCIPprintRow(scip, *rowlb, NULL) ) );
          }
@@ -6561,7 +6591,7 @@ SCIP_RETCODE generateBoundInequalityFromSOS1Nodes(
          {
             /* create upper bound inequality if at least two of the bounds are finite and nonzero */
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "soslb#%s", nameext);
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, rowlb, conshdlr, name, -SCIPinfinity(scip), rhs, locallbs, FALSE, TRUE) );
+            SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, rowlb, conshdlr, name, -SCIPinfinity(scip), rhs, locallbs, FALSE, TRUE) );
             SCIP_CALL( SCIPaddVarsToRow(scip, *rowlb, cnt, vars, vals) );
             SCIPdebug( SCIP_CALL( SCIPprintRow(scip, *rowlb, NULL) ) );
          }
@@ -6708,7 +6738,7 @@ TCLIQUE_NEWSOL(tcliqueNewsolClique)
          }
          else
             *stopsolving = TRUE;
-      }
+      } /*lint !e438*/
    }
 }
 
@@ -7125,7 +7155,7 @@ SCIP_RETCODE sepaImplBoundCutsSOS1(
                {
                   if ( SCIPisFeasGT(scip, solval * (bound2-impl) + solvalsucc * bound1, lhsrhs) )
                   {
-                     SCIP_CALL( SCIPcreateEmptyRowCons(scip, &cut, conshdlr, "", -SCIPinfinity(scip), lhsrhs, FALSE, FALSE, TRUE) );
+                     SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &cut, conshdlr, "", -SCIPinfinity(scip), lhsrhs, FALSE, FALSE, TRUE) );
                   }
                   else
                      continue;
@@ -7134,7 +7164,7 @@ SCIP_RETCODE sepaImplBoundCutsSOS1(
                {
                   if ( SCIPisFeasLT(scip, solval * (bound2-impl) + solvalsucc * bound1, lhsrhs) )
                   {
-                     SCIP_CALL( SCIPcreateEmptyRowCons(scip, &cut, conshdlr, "", lhsrhs, SCIPinfinity(scip), FALSE, FALSE, TRUE) );
+                     SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &cut, conshdlr, "", lhsrhs, SCIPinfinity(scip), FALSE, FALSE, TRUE) );
                   }
                   else
                      continue;
@@ -7648,6 +7678,7 @@ SCIP_RETCODE makeSOS1conflictgraphFeasible(
    assert( conshdlr != NULL );
    assert( sol != NULL );
    assert( changed != NULL );
+   assert( allroundable != NULL );
 
    *allroundable = TRUE;
    *changed = FALSE;
@@ -7776,6 +7807,7 @@ SCIP_RETCODE makeSOS1constraintsFeasible(
    assert( conshdlr != NULL );
    assert( sol != NULL );
    assert( changed != NULL );
+   assert( allroundable != NULL );
 
    *allroundable = TRUE;
    *changed = FALSE;
@@ -9072,7 +9104,7 @@ SCIP_DECL_CONSDELETE(consDeleteSOS1)
 
       for (j = 0; j < (*consdata)->nvars; ++j)
       {
-         SCIP_CALL( SCIPdropVarEvent(scip, (*consdata)->vars[j], SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlr,
+         SCIP_CALL( SCIPdropVarEvent(scip, (*consdata)->vars[j], EVENTHDLR_EVENT_TYPE, conshdlrdata->eventhdlr,
                (SCIP_EVENTDATA*)cons, -1) ); /*lint !e737 !e740*/
       }
    }
@@ -9179,7 +9211,7 @@ SCIP_DECL_CONSTRANS(consTransSOS1)
    /* catch bound change events on variable */
    for (j = 0; j < consdata->nvars; ++j)
    {
-      SCIP_CALL( SCIPcatchVarEvent(scip, consdata->vars[j], SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlr,
+      SCIP_CALL( SCIPcatchVarEvent(scip, consdata->vars[j], EVENTHDLR_EVENT_TYPE, conshdlrdata->eventhdlr,
             (SCIP_EVENTDATA*)*targetcons, NULL) ); /*lint !e740*/
    }
 
@@ -9200,14 +9232,10 @@ static
 SCIP_DECL_CONSPRESOL(consPresolSOS1)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
-   /* cppcheck-suppress unassignedVariable */
-   int oldnfixedvars;
-   /* cppcheck-suppress unassignedVariable */
-   int oldnchgbds;
-   /* cppcheck-suppress unassignedVariable */
-   int oldndelconss;
-   /* cppcheck-suppress unassignedVariable */
-   int oldnupgdconss;
+   SCIPdebug( int oldnfixedvars = *nfixedvars; )
+   SCIPdebug( int oldnchgbds = *nchgbds; )
+   SCIPdebug( int oldndelconss = *ndelconss; )
+   SCIPdebug( int oldnupgdconss = *nupgdconss; )
    int nremovedvars;
 
    assert( scip != NULL );
@@ -9222,10 +9250,6 @@ SCIP_DECL_CONSPRESOL(consPresolSOS1)
 
    *result = SCIP_DIDNOTRUN;
 
-   SCIPdebug( oldnfixedvars = *nfixedvars; )
-   SCIPdebug( oldnchgbds = *nchgbds; )
-   SCIPdebug( oldndelconss = *ndelconss; )
-   SCIPdebug( oldnupgdconss = *nupgdconss; )
    nremovedvars = 0;
 
    /* only run if success if possible */
@@ -9315,8 +9339,8 @@ SCIP_DECL_CONSPRESOL(consPresolSOS1)
    }
    (*nchgcoefs) += nremovedvars;
 
-   SCIPdebugMsg(scip, "presolving fixed %d variables, changed %d bounds, removed %d variables, deleted %d constraints, and upgraded %d constraints.\n",
-                *nfixedvars - oldnfixedvars, *nchgbds - oldnchgbds, nremovedvars, *ndelconss - oldndelconss, *nupgdconss - oldnupgdconss);
+   SCIPdebug( SCIPdebugMsg(scip, "presolving fixed %d variables, changed %d bounds, removed %d variables, deleted %d constraints, and upgraded %d constraints.\n",
+                *nfixedvars - oldnfixedvars, *nchgbds - oldnchgbds, nremovedvars, *ndelconss - oldndelconss, *nupgdconss - oldnupgdconss); )
 
    return SCIP_OKAY;
 }
@@ -9679,7 +9703,7 @@ SCIP_DECL_CONSRESPROP(consRespropSOS1)
       assert( inferinfo >= -conshdlrdata->nsos1vars );
       assert( inferinfo <= -1 );
 
-      var = SCIPnodeGetVarSOS1(conshdlrdata->conflictgraph, -inferinfo - 1);
+      var = SCIPnodeGetVarSOS1(conshdlrdata->conflictgraph, -inferinfo - 1);  /*lint !e2704*/
    }
    else
    {
@@ -9754,13 +9778,13 @@ SCIP_DECL_CONSLOCK(consLockSOS1)
       var = vars[j];
 
       /* if lower bound is negative, rounding down may violate constraint */
-      if ( SCIPisFeasNegative(scip, SCIPvarGetLbLocal(var)) )
+      if ( SCIPisFeasNegative(scip, SCIPvarGetLbGlobal(var)) )
       {
          SCIP_CALL( SCIPaddVarLocksType(scip, var, locktype, nlockspos, nlocksneg) );
       }
 
       /* additionally: if upper bound is positive, rounding up may violate constraint */
-      if ( SCIPisFeasPositive(scip, SCIPvarGetUbLocal(var)) )
+      if ( SCIPisFeasPositive(scip, SCIPvarGetUbGlobal(var)) )
       {
          SCIP_CALL( SCIPaddVarLocksType(scip, var, locktype, nlocksneg, nlockspos) );
       }
@@ -9981,6 +10005,7 @@ SCIP_DECL_EVENTEXEC(eventExecSOS1)
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSDATA* consdata;
    SCIP_CONS* cons;
+   SCIP_VAR* var;
    SCIP_Real oldbound;
    SCIP_Real newbound;
 
@@ -10054,6 +10079,30 @@ SCIP_DECL_EVENTEXEC(eventExecSOS1)
       /* if variable is not fixed to be nonzero anymore */
       if ( SCIPisFeasNegative(scip, oldbound) && ! SCIPisFeasNegative(scip, newbound) )
          --(consdata->nfixednonzeros);
+      break;
+
+   case SCIP_EVENTTYPE_GLBCHANGED:
+      var = SCIPeventGetVar(event);
+      assert(var != NULL);
+
+      /* global lower bound is not negative anymore -> remove down lock */
+      if ( SCIPisFeasNegative(scip, oldbound) && ! SCIPisFeasNegative(scip, newbound) )
+         SCIP_CALL( SCIPunlockVarCons(scip, var, cons, TRUE, FALSE) );
+      /* global lower bound turned negative -> add down lock */
+      else if ( ! SCIPisFeasNegative(scip, oldbound) && SCIPisFeasNegative(scip, newbound) )
+         SCIP_CALL( SCIPlockVarCons(scip, var, cons, TRUE, FALSE) );
+      break;
+
+   case SCIP_EVENTTYPE_GUBCHANGED:
+      var = SCIPeventGetVar(event);
+      assert(var != NULL);
+
+      /* global upper bound is not positive anymore -> remove up lock */
+      if ( SCIPisFeasPositive(scip, oldbound) && ! SCIPisFeasPositive(scip, newbound) )
+         SCIP_CALL( SCIPunlockVarCons(scip, var, cons, FALSE, TRUE) );
+      /* global upper bound turned positive -> add up lock */
+      else if ( ! SCIPisFeasPositive(scip, oldbound) && SCIPisFeasPositive(scip, newbound) )
+         SCIP_CALL( SCIPlockVarCons(scip, var, cons, FALSE, TRUE) );
       break;
 
    default:
@@ -10782,7 +10831,7 @@ SCIP_RETCODE SCIPmakeSOS1sFeasible(
       SCIP_CALL( makeSOS1conflictgraphFeasible(scip, conshdlr, sol, changed, &allroundable) );
    }
 
-   if ( ! allroundable )
+   if ( ! allroundable ) /*lint !e774*/
       return SCIP_OKAY;
 
    /* check whether objective value of rounded solution is good enough */

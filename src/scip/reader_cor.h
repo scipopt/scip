@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -56,7 +65,7 @@ extern "C" {
  *
  *  @ingroup FileReaderIncludes
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeReaderCor(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -67,7 +76,7 @@ SCIP_RETCODE SCIPincludeReaderCor(
  */
 
 /** reads problem from file */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPreadCor(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename,           /**< full path and name of file to read, or NULL if stdin should be used */
@@ -79,38 +88,38 @@ SCIP_RETCODE SCIPreadCor(
  */
 
 /** returns whether the COR file has been successfully read. This is used by the TIM and STO readers. */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPcorHasRead(
    SCIP_READER*          reader              /**< the file reader itself */
    );
 
 /** returns the number of variable names in the COR problem */
-EXTERN
+SCIP_EXPORT
 int SCIPcorGetNVarNames(
    SCIP_READER*          reader              /**< the file reader itself */
    );
 
 /** returns the number of constraint names in the COR problem */
-EXTERN
+SCIP_EXPORT
 int SCIPcorGetNConsNames(
    SCIP_READER*          reader              /**< the file reader itself */
    );
 
 /** returns the variable name for the given index */
-EXTERN
+SCIP_EXPORT
 const char* SCIPcorGetVarName(
    SCIP_READER*          reader,             /**< the file reader itself */
    int                   i                   /**< the index of the variable that is requested */
    );
 
 /** returns the constraint name for the given index */
-EXTERN
+SCIP_EXPORT
 const char* SCIPcorGetConsName(
    SCIP_READER*          reader,             /**< the file reader itself */
    int                   i                   /**< the index of the constraint that is requested */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

@@ -3,17 +3,28 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_and.c
+ * @ingroup DEFPLUGINS_CONS
+ * @ingroup CONSHDLRS
  * @brief  Constraint handler for AND-constraints,  \f$r = x_1 \wedge x_2 \wedge \dots  \wedge x_n\f$
  * @author Tobias Achterberg
  * @author Stefan Heinz
@@ -32,13 +43,13 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "blockmemshell/memory.h"
-#include "nlpi/pub_expr.h"
 #include "scip/cons_and.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_logicor.h"
-#include "scip/cons_nonlinear.h"
 #include "scip/cons_pseudoboolean.h"
 #include "scip/cons_setppc.h"
+#include "scip/expr_product.h"
+#include "scip/expr_var.h"
 #include "scip/debug.h"
 #include "scip/pub_cons.h"
 #include "scip/pub_event.h"
@@ -52,10 +63,12 @@
 #include "scip/scip_copy.h"
 #include "scip/scip_cut.h"
 #include "scip/scip_event.h"
+#include "scip/scip_expr.h"
 #include "scip/scip_general.h"
 #include "scip/scip_lp.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
+#include "scip/scip_nlp.h"
 #include "scip/scip_numerics.h"
 #include "scip/scip_param.h"
 #include "scip/scip_prob.h"
@@ -98,7 +111,6 @@
 #define DEFAULT_PRESOLUSEHASHING   TRUE /**< should hash table be used for detecting redundant constraints in advance */
 #define NMINCOMPARISONS          200000 /**< number for minimal pairwise presolving comparisons */
 #define MINGAINPERNMINCOMPARISONS 1e-06 /**< minimal gain per minimal pairwise presolving comparisons to repeat pairwise comparison round */
-#define EXPRGRAPHREFORM_PRIORITY 100000 /**< priority of expression graph node reformulation method */
 
 /* @todo maybe use event SCIP_EVENTTYPE_VARUNLOCKED to decide for another dual-presolving run on a constraint */
 
@@ -113,6 +125,7 @@ struct SCIP_ConsData
    SCIP_VAR*             resvar;             /**< resultant variable */
    SCIP_ROW**            rows;               /**< rows for linear relaxation of AND-constraint */
    SCIP_ROW*             aggrrow;            /**< aggregated row for linear relaxation of AND-constraint */
+   SCIP_NLROW*           nlrow;              /**< row for representation in nonlinear relaxation */
    int                   nvars;              /**< number of variables in AND-constraint */
    int                   varssize;           /**< size of vars array */
    int                   nrows;              /**< number of rows for linear relaxation of AND-constraint */
@@ -218,7 +231,7 @@ SCIP_RETCODE conshdlrdataCreate(
 
 /** frees constraint handler data */
 static
-SCIP_RETCODE conshdlrdataFree(
+void conshdlrdataFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLRDATA**   conshdlrdata        /**< pointer to the constraint handler data */
    )
@@ -227,8 +240,6 @@ SCIP_RETCODE conshdlrdataFree(
    assert(*conshdlrdata != NULL);
 
    SCIPfreeBlockMemory(scip, conshdlrdata);
-
-   return SCIP_OKAY;
 }
 
 /** catches events for the watched variable at given position */
@@ -442,6 +453,7 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->resvar = resvar;
    (*consdata)->rows = NULL;
    (*consdata)->aggrrow = NULL;
+   (*consdata)->nlrow = NULL;
    (*consdata)->nvars = nvars;
    (*consdata)->varssize = nvars;
    (*consdata)->nrows = 0;
@@ -556,6 +568,12 @@ SCIP_RETCODE consdataFree(
 
    /* release and free the rows */
    SCIP_CALL( consdataFreeRows(scip, *consdata) );
+
+   /* release the nlrow */
+   if( (*consdata)->nlrow != NULL )
+   {
+      SCIP_CALL( SCIPreleaseNlRow(scip, &(*consdata)->nlrow) );
+   }
 
    /* release vars */
    for( v = 0; v < (*consdata)->nvars; v++ )
@@ -767,7 +785,7 @@ void consdataSort(
 	    found = SCIPsortedvecFindPtr((void**)consdata->vars, SCIPvarComp, (void*)var1, consdata->nvars, &pos);
 	    assert(found);
 #else
-	    SCIPsortedvecFindPtr((void**)consdata->vars, SCIPvarComp, (void*)var1, consdata->nvars, &pos);
+	    (void) SCIPsortedvecFindPtr((void**)consdata->vars, SCIPvarComp, (void*)var1, consdata->nvars, &pos);
 #endif
 	    assert(pos >= 0 && pos < consdata->nvars);
 	    consdata->watchedvar1 = pos;
@@ -778,7 +796,7 @@ void consdataSort(
 	       found = SCIPsortedvecFindPtr((void**)consdata->vars, SCIPvarComp, (void*)var2, consdata->nvars, &pos);
 	       assert(found);
 #else
-	       SCIPsortedvecFindPtr((void**)consdata->vars, SCIPvarComp, (void*)var2, consdata->nvars, &pos);
+	       (void) SCIPsortedvecFindPtr((void**)consdata->vars, SCIPvarComp, (void*)var2, consdata->nvars, &pos);
 #endif
 	       assert(pos >= 0 && pos < consdata->nvars);
 	       consdata->watchedvar2 = pos;
@@ -929,7 +947,7 @@ SCIP_RETCODE createRelaxation(
 
    /* create additional row */
    (void) SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "%s_add", SCIPconsGetName(cons));
-   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->rows[0], SCIPconsGetHdlr(cons), rowname, -consdata->nvars + 1.0, SCIPinfinity(scip),
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->rows[0], cons, rowname, -consdata->nvars + 1.0, SCIPinfinity(scip),
          SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
    SCIP_CALL( SCIPaddVarToRow(scip, consdata->rows[0], consdata->resvar, 1.0) );
    SCIP_CALL( SCIPaddVarsToRowSameCoef(scip, consdata->rows[0], nvars, consdata->vars, -1.0) );
@@ -938,7 +956,7 @@ SCIP_RETCODE createRelaxation(
    for( i = 0; i < nvars; ++i )
    {
       (void) SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "%s_%d", SCIPconsGetName(cons), i);
-      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->rows[i+1], SCIPconsGetHdlr(cons), rowname, -SCIPinfinity(scip), 0.0,
+      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->rows[i+1], cons, rowname, -SCIPinfinity(scip), 0.0,
             SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
       SCIP_CALL( SCIPaddVarToRow(scip, consdata->rows[i+1], consdata->resvar, 1.0) );
       SCIP_CALL( SCIPaddVarToRow(scip, consdata->rows[i+1], consdata->vars[i], -1.0) );
@@ -975,7 +993,7 @@ SCIP_RETCODE addRelaxation(
       char rowname[SCIP_MAXSTRLEN];
 
       (void) SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "%s_operators", SCIPconsGetName(cons));
-      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->aggrrow, SCIPconsGetHdlr(cons), rowname, -SCIPinfinity(scip), 0.0,
+      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->aggrrow, cons, rowname, -SCIPinfinity(scip), 0.0,
             SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
       SCIP_CALL( SCIPaddVarToRow(scip, consdata->aggrrow, consdata->resvar, (SCIP_Real) consdata->nvars) );
       SCIP_CALL( SCIPaddVarsToRowSameCoef(scip, consdata->aggrrow, consdata->nvars, consdata->vars, -1.0) );
@@ -1002,6 +1020,59 @@ SCIP_RETCODE addRelaxation(
       {
          SCIP_CALL( SCIPaddRow(scip, consdata->rows[0], FALSE, infeasible) );
       }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** adds constraint as row to the NLP, if not added yet */
+static
+SCIP_RETCODE addNlrow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< and constraint */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert(SCIPisNLPConstructed(scip));
+
+   /* skip deactivated, redundant, or local constraints (the NLP does not allow for local rows at the moment) */
+   if( !SCIPconsIsActive(cons) || !SCIPconsIsChecked(cons) || SCIPconsIsLocal(cons) )
+      return SCIP_OKAY;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(consdata->resvar != NULL);
+
+   if( consdata->nlrow == NULL )
+   {
+      SCIP_EXPR* expr;
+      SCIP_EXPR** varexprs;
+      SCIP_Real minusone = -1.0;
+      int i;
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &varexprs, consdata->nvars) );
+      for( i = 0; i < consdata->nvars; ++i )
+      {
+         SCIP_CALL( SCIPcreateExprVar(scip, &varexprs[i], consdata->vars[i], NULL, NULL) );
+      }
+      SCIP_CALL( SCIPcreateExprProduct(scip, &expr, consdata->nvars, varexprs, 1.0, NULL, NULL) );
+
+      SCIP_CALL( SCIPcreateNlRow(scip, &consdata->nlrow, SCIPconsGetName(cons),
+         0.0, 1, &consdata->resvar, &minusone, expr, 0.0, 0.0, SCIP_EXPRCURV_UNKNOWN) );
+      assert(consdata->nlrow != NULL);
+
+      SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
+      for( i = 0; i < consdata->nvars; ++i )
+      {
+         SCIP_CALL( SCIPreleaseExpr(scip, &varexprs[i]) );
+      }
+      SCIPfreeBufferArray(scip, &varexprs);
+   }
+
+   if( !SCIPnlrowIsInNLP(consdata->nlrow) )
+   {
+      SCIP_CALL( SCIPaddNlRow(scip, consdata->nlrow) );
    }
 
    return SCIP_OKAY;
@@ -2816,7 +2887,7 @@ SCIP_RETCODE cliquePresolve(
 	       ++(*nfixedvars);
 
 	    /* create clique constraint which lead to the last fixing */
-	    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_clq", SCIPconsGetName(cons), v2);
+	    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_clq_%d", SCIPconsGetName(cons), v2);
 
 	    if( value1 )
 	       consvars[0] = var1;
@@ -3340,8 +3411,7 @@ SCIP_DECL_HASHKEYVAL(hashKeyValAndcons)
    maxidx = SCIPvarGetIndex(consdata->vars[consdata->nvars - 1]);
    assert(minidx >= 0 && minidx <= maxidx);
 
-   return SCIPhashTwo(SCIPcombineTwoInt(consdata->nvars, minidx),
-                      SCIPcombineTwoInt(mididx, maxidx));
+   return SCIPhashFour(consdata->nvars, minidx, mididx, maxidx);
 }
 
 /** compares each constraint with all other constraints for possible redundancy and removes or changes constraint 
@@ -3741,127 +3811,6 @@ SCIP_RETCODE preprocessConstraintPairs(
    return SCIP_OKAY;
 }
 
-/** tries to reformulate an expression graph node that is a product of binary variables via introducing an AND-constraint */
-static
-SCIP_DECL_EXPRGRAPHNODEREFORM(exprgraphnodeReformAnd)
-{
-   SCIP_EXPRGRAPHNODE* child;
-   char name[SCIP_MAXSTRLEN];
-   int nchildren;
-   SCIP_CONS* cons;
-   SCIP_VAR** vars;
-   SCIP_VAR* var;
-   int c;
-
-   assert(scip != NULL);
-   assert(exprgraph != NULL);
-   assert(node != NULL);
-   assert(naddcons != NULL);
-   assert(reformnode != NULL);
-
-   *reformnode = NULL;
-
-   /* allow only products given as EXPR_PRODUCT or EXPR_POLYNOMIAL with only 1 monomial */
-   if( SCIPexprgraphGetNodeOperator(node) != SCIP_EXPR_PRODUCT &&
-       (SCIPexprgraphGetNodeOperator(node) != SCIP_EXPR_POLYNOMIAL || SCIPexprgraphGetNodePolynomialNMonomials(node) > 1)
-     )
-      return SCIP_OKAY;
-
-   nchildren = SCIPexprgraphGetNodeNChildren(node);
-
-   /* for a polynomial with only one monomial, all children should appear as factors in the monomial
-    * since we assume that the factors have been merged, this means that the number of factors in the monomial should equal the number of children of the node
-    */
-   assert(SCIPexprgraphGetNodeOperator(node) != SCIP_EXPR_POLYNOMIAL || SCIPexprGetMonomialNFactors(SCIPexprgraphGetNodePolynomialMonomials(node)[0]) == nchildren);
-
-   /* check only products with at least 3 variables (2 variables are taken of by cons_quadratic) */
-   if( nchildren <= 2 )
-      return SCIP_OKAY;
-
-   /* check if all factors correspond to binary variables, and if so, setup vars array */
-   for( c = 0; c < nchildren; ++c )
-   {
-      child = SCIPexprgraphGetNodeChildren(node)[c];
-
-      if( SCIPexprgraphGetNodeOperator(child) != SCIP_EXPR_VARIDX )
-         return SCIP_OKAY;
-
-      var = (SCIP_VAR*)SCIPexprgraphGetNodeVar(exprgraph, child);
-      if( !SCIPvarIsBinary(var) )
-         return SCIP_OKAY;
-   }
-
-   /* node corresponds to product of binary variables (maybe with coefficient and constant, if polynomial) */
-   SCIPdebugMsg(scip, "reformulate node %p via AND-constraint\n", (void*)node);
-
-   /* collect variables in product */
-   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nchildren) );
-   for( c = 0; c < nchildren; ++c )
-   {
-      child = SCIPexprgraphGetNodeChildren(node)[c];
-      vars[c] = (SCIP_VAR*)SCIPexprgraphGetNodeVar(exprgraph, child);
-   }
-
-   /* create variable for resultant
-    * cons_and wants to add implications for resultant, which is only possible for binary variables currently
-    * so choose binary as vartype, even though implicit integer had been sufficient
-    */
-   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "nlreform%dand", *naddcons);
-   SCIP_CALL( SCIPcreateVar(scip, &var, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY,
-      TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
-   SCIP_CALL( SCIPaddVar(scip, var) );
-
-#ifdef WITH_DEBUG_SOLUTION
-   if( SCIPdebugIsMainscip(scip) )
-   {
-      SCIP_Bool debugval;
-      SCIP_Real varval;
-
-      debugval = TRUE;
-      for( c = 0; c < nchildren; ++c )
-      {
-         SCIP_CALL( SCIPdebugGetSolVal(scip, vars[c], &varval) );
-         debugval = debugval && (varval > 0.5);
-      }
-      SCIP_CALL( SCIPdebugAddSolVal(scip, var, debugval ? 1.0 : 0.0) );
-   }
-#endif
-
-   /* create AND-constraint */
-   SCIP_CALL( SCIPcreateConsAnd(scip, &cons, name, var, nchildren, vars,
-      TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-   SCIP_CALL( SCIPaddCons(scip, cons) );
-   SCIPdebugPrintCons(scip, cons, NULL);
-   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-   ++*naddcons;
-
-   SCIPfreeBufferArray(scip, &vars);
-
-   /* add var to exprgraph */
-   SCIP_CALL( SCIPexprgraphAddVars(exprgraph, 1, (void**)&var, reformnode) );
-   SCIP_CALL( SCIPreleaseVar(scip, &var) );
-
-   /* if we have coefficient and constant, then replace reformnode by linear expression in reformnode */
-   if( SCIPexprgraphGetNodeOperator(node) == SCIP_EXPR_POLYNOMIAL )
-   {
-      SCIP_Real coef;
-      SCIP_Real constant;
-
-      coef = SCIPexprGetMonomialCoef(SCIPexprgraphGetNodePolynomialMonomials(node)[0]);
-      constant = SCIPexprgraphGetNodePolynomialConstant(node);
-
-      if( coef != 1.0 || constant != 0.0 )
-      {
-         SCIP_EXPRGRAPHNODE* linnode;
-         SCIP_CALL( SCIPexprgraphCreateNodeLinear(SCIPblkmem(scip), &linnode, 1, &coef, constant) );
-         SCIP_CALL( SCIPexprgraphAddNode(exprgraph, linnode, -1, 1, reformnode) );
-         *reformnode = linnode;
-      }
-   }
-
-   return SCIP_OKAY;
-}
-
 /*
  * Callback methods of constraint handler
  */
@@ -3892,7 +3841,7 @@ SCIP_DECL_CONSFREE(consFreeAnd)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   SCIP_CALL( conshdlrdataFree(scip, &conshdlrdata) );
+   conshdlrdataFree(scip, &conshdlrdata);
 
    SCIPconshdlrSetData(conshdlr, NULL);
 
@@ -4183,6 +4132,23 @@ SCIP_DECL_CONSEXITPRE(consExitpreAnd)
 }
 #endif
 
+/** solving process initialization method of constraint handler */
+static
+SCIP_DECL_CONSINITSOL(consInitsolAnd)
+{  /*lint --e{715}*/
+   /* add nlrow representation to NLP, if NLP had been constructed */
+   if( SCIPisNLPConstructed(scip) )
+   {
+      int c;
+      for( c = 0; c < nconss; ++c )
+      {
+         SCIP_CALL( addNlrow(scip, conss[c]) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
 static
 SCIP_DECL_CONSEXITSOL(consExitsolAnd)
@@ -4190,13 +4156,18 @@ SCIP_DECL_CONSEXITSOL(consExitsolAnd)
    SCIP_CONSDATA* consdata;
    int c;
 
-   /* release and free the rows of all constraints */
+   /* release and free the rows and nlrow of all constraints */
    for( c = 0; c < nconss; ++c )
    {
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
 
       SCIP_CALL( consdataFreeRows(scip, consdata) );
+
+      if( consdata->nlrow != NULL )
+      {
+         SCIP_CALL( SCIPreleaseNlRow(scip, &consdata->nlrow) );
+      }
    }
 
    return SCIP_OKAY;
@@ -4546,7 +4517,7 @@ SCIP_DECL_CONSPRESOL(consPresolAnd)
    }
 
    /* perform dual presolving on AND-constraints */
-   if( conshdlrdata->dualpresolving && !cutoff && !SCIPisStopped(scip) && SCIPallowDualReds(scip))
+   if( conshdlrdata->dualpresolving && !cutoff && !SCIPisStopped(scip) && SCIPallowStrongDualReds(scip))
    {
       SCIP_CALL( dualPresolve(scip, conss, nconss, conshdlrdata->eventhdlr, &entries, &nentries, &cutoff, nfixedvars, naggrvars, nchgcoefs, ndelconss, nupgdconss, naddconss) );
    }
@@ -4556,11 +4527,29 @@ SCIP_DECL_CONSPRESOL(consPresolAnd)
    {
       for( c = 0; c < nconss && !cutoff && !SCIPisStopped(scip); ++c )
       {
-	 if( SCIPconsIsActive(conss[c]) )
-	 {
-	    /* check if at least two operands are in one clique */
-	    SCIP_CALL( cliquePresolve(scip, conss[c], conshdlrdata->eventhdlr, &cutoff, nfixedvars, naggrvars, nchgcoefs, ndelconss, naddconss) );
-	 }
+         cons = conss[c];
+         assert(cons != NULL);
+
+         if( !SCIPconsIsActive(cons) )
+            continue;
+
+         /* cliquePresolve() may aggregate variables which need to be removed from other constraints, we also need
+          * to make sure that we remove fixed variables by calling propagateCons() to make sure that applyFixing()
+          * and mergeMultiples() work
+          */
+         SCIP_CALL( propagateCons(scip, cons, conshdlrdata->eventhdlr, &cutoff, nfixedvars, nupgdconss) );
+
+         if( !cutoff && !SCIPconsIsDeleted(cons) )
+         {
+            /* remove all variables that are fixed to one; merge multiple entries of the same variable;
+             * fix resultant to zero if a pair of negated variables is contained in the operand variables
+             */
+            SCIP_CALL( applyFixings(scip, cons, conshdlrdata->eventhdlr, nchgcoefs) );
+            SCIP_CALL( mergeMultiples(scip, cons, conshdlrdata->eventhdlr, &entries, &nentries, nfixedvars, nchgcoefs, ndelconss) );
+
+            /* check if at least two operands are in one clique */
+            SCIP_CALL( cliquePresolve(scip, cons, conshdlrdata->eventhdlr, &cutoff, nfixedvars, naggrvars, nchgcoefs, ndelconss, naddconss) );
+         }
       }
    }
 
@@ -4662,6 +4651,40 @@ SCIP_DECL_CONSLOCK(consLockAnd)
    return SCIP_OKAY;
 }
 
+/** constraint activation notification method of constraint handler */
+static
+SCIP_DECL_CONSACTIVE(consActiveAnd)
+{  /*lint --e{715}*/
+
+   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPisNLPConstructed(scip) )
+   {
+      SCIP_CALL( addNlrow(scip, cons) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** constraint deactivation notification method of constraint handler */
+static
+SCIP_DECL_CONSDEACTIVE(consDeactiveAnd)
+{  /*lint --e{715}*/
+   SCIP_CONSDATA* consdata;
+
+   assert(cons != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* remove row from NLP, if still in solving
+    * if we are in exitsolve, the whole NLP will be freed anyway
+    */
+   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && consdata->nlrow != NULL )
+   {
+      SCIP_CALL( SCIPdelNlRow(scip, consdata->nlrow) );
+   }
+
+   return SCIP_OKAY;
+}
 
 /** constraint display method of constraint handler */
 static
@@ -4789,9 +4812,9 @@ SCIP_DECL_CONSPARSE(consParseAnd)
 
       if( endptr > startptr )
       {
-         /* copy string for parsing */
-         SCIP_CALL( SCIPduplicateBufferArray(scip, &strcopy, startptr, (int)(endptr-startptr)) );
-
+         /* copy string for parsing; note that isspace() in SCIPparseVarsList() requires that strcopy ends with '\0' */
+         SCIP_CALL( SCIPduplicateBufferArray(scip, &strcopy, startptr, (int)(endptr-startptr+1)) );
+         strcopy[endptr-startptr] = '\0';
          varssize = 100;
          nvars = 0;
 
@@ -4940,10 +4963,13 @@ SCIP_RETCODE SCIPincludeConshdlrAnd(
 
    /* set non-fundamental callbacks via specific setter functions */
    SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyAnd, consCopyAnd) );
+   SCIP_CALL( SCIPsetConshdlrActive(scip, conshdlr, consActiveAnd) );
+   SCIP_CALL( SCIPsetConshdlrDeactive(scip, conshdlr, consDeactiveAnd) );
    SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteAnd) );
 #ifdef GMLGATEPRINTING
    SCIP_CALL( SCIPsetConshdlrExitpre(scip, conshdlr, consExitpreAnd) );
 #endif
+   SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolAnd) );
    SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolAnd) );
    SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeAnd) );
    SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsAnd) );
@@ -4990,12 +5016,6 @@ SCIP_RETCODE SCIPincludeConshdlrAnd(
          "constraints/" CONSHDLR_NAME "/dualpresolving",
          "should dual presolving be performed?",
          &conshdlrdata->dualpresolving, TRUE, DEFAULT_DUALPRESOLVING, NULL, NULL) );
-
-   if( SCIPfindConshdlr(scip, "nonlinear") != NULL )
-   {
-      /* include the AND-constraint upgrade in the nonlinear constraint handler */
-      SCIP_CALL( SCIPincludeNonlinconsUpgrade(scip, NULL, exprgraphnodeReformAnd, EXPRGRAPHREFORM_PRIORITY, TRUE, CONSHDLR_NAME) );
-   }
 
    return SCIP_OKAY;
 }
@@ -5161,7 +5181,7 @@ SCIP_VAR** SCIPgetVarsAnd(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    )
-{
+{  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
 
    assert(scip != NULL);
@@ -5181,7 +5201,7 @@ SCIP_VAR** SCIPgetVarsAnd(
 }
 
 
-/** gets the resultant variable in AND-constraint */
+/** gets the resultant variable in AND-constraint */   /*lint -e715*/
 SCIP_VAR* SCIPgetResultantAnd(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */

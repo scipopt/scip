@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -23,7 +32,7 @@
  * @author Marc Pfetsch
  * @author Kati Wolter
  * @author Gregor Hendel
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -37,25 +46,6 @@
 #include "scip/type_result.h"
 #include "scip/type_retcode.h"
 #include "scip/type_scip.h"
-
-/* In debug mode, we include the SCIP's structure in scip.c, such that no one can access
- * this structure except the interface methods in scip.c.
- * In optimized mode, the structure is included in scip.h, because some of the methods
- * are implemented as defines for performance reasons (e.g. the numerical comparisons).
- * Additionally, the internal "set.h" is included, such that the defines in set.h are
- * available in optimized mode.
- */
-#ifdef NDEBUG
-#include "scip/struct_scip.h"
-#include "scip/struct_stat.h"
-#include "scip/set.h"
-#include "scip/tree.h"
-#include "scip/misc.h"
-#include "scip/var.h"
-#include "scip/cons.h"
-#include "scip/solve.h"
-#include "scip/debug.h"
-#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -73,7 +63,7 @@ extern "C" {
  *        in future releases; consider using SCIPincludeRelaxBasic() and setter functions
  *        if you seek for a method which is less likely to change in future releases
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeRelax(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of relaxation handler */
@@ -97,7 +87,7 @@ SCIP_RETCODE SCIPincludeRelax(
  *
  *  @note if you want to set all callbacks with a single method call, consider using SCIPincludeRelax() instead
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeRelaxBasic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_RELAX**          relaxptr,           /**< reference to relaxation pointer, or NULL */
@@ -110,7 +100,7 @@ SCIP_RETCODE SCIPincludeRelaxBasic(
    );
 
 /** sets copy method of relaxation handler */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetRelaxCopy(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_RELAX*           relax,              /**< relaxation handler */
@@ -118,7 +108,7 @@ SCIP_RETCODE SCIPsetRelaxCopy(
    );
 
 /** sets destructor method of relaxation handler */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetRelaxFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_RELAX*           relax,              /**< relaxation handler */
@@ -126,7 +116,7 @@ SCIP_RETCODE SCIPsetRelaxFree(
    );
 
 /** sets initialization method of relaxation handler */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetRelaxInit(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_RELAX*           relax,              /**< relaxation handler */
@@ -134,7 +124,7 @@ SCIP_RETCODE SCIPsetRelaxInit(
    );
 
 /** sets deinitialization method of relaxation handler */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetRelaxExit(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_RELAX*           relax,              /**< relaxation handler */
@@ -142,7 +132,7 @@ SCIP_RETCODE SCIPsetRelaxExit(
    );
 
 /** sets solving process initialization method of relaxation handler */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetRelaxInitsol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_RELAX*           relax,              /**< relaxation handler */
@@ -150,7 +140,7 @@ SCIP_RETCODE SCIPsetRelaxInitsol(
    );
 
 /** sets solving process deinitialization method of relaxation handler */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetRelaxExitsol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_RELAX*           relax,              /**< relaxation handler */
@@ -158,33 +148,33 @@ SCIP_RETCODE SCIPsetRelaxExitsol(
    );
 
 /** returns the relaxation handler of the given name, or NULL if not existing */
-EXTERN
+SCIP_EXPORT
 SCIP_RELAX* SCIPfindRelax(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of relaxation handler */
    );
 
 /** returns the array of currently available relaxation handlers  */
-EXTERN
+SCIP_EXPORT
 SCIP_RELAX** SCIPgetRelaxs(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** returns the number of currently available relaxation handlers  */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNRelaxs(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** sets the priority of a relaxation handler*/
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetRelaxPriority(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_RELAX*           relax,              /**< relaxation handler */
    int                   priority            /**< new priority of the relaxation handler */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

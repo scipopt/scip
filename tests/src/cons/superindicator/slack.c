@@ -3,21 +3,30 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   initlp.c
- * @brief  unit test for checking behaviour of the initlp callback
+/**@file   slack.c
+ * @brief  unit test for checking slack models
  *
- * TODO: how to specify the path of the file?
- * What should the test actually test?
+ * test the solution of a slack model minizing the violation of constraints and/or variable bounds
+ *
  *
  */
 
@@ -40,6 +49,7 @@ enum SCIP_SlackType
 };
 typedef enum SCIP_SlackType SCIP_SLACKTYPE;
 
+#ifndef NDEBUG
 /** find the position of a variable in an array of variables; returns -1 if not found */
 static
 int findvarpos(
@@ -61,6 +71,7 @@ int findvarpos(
 
    return -1;
 }
+#endif
 
 /** copies an array of variables and objective values */
 static
@@ -362,9 +373,9 @@ SCIP_RETCODE SCIPsolveSlack(
          {
             SCIP_CONS* cons;
 
+            /* constraint is captured/release when creating/freeing the superindicator constraint below */
             cons = copiedconsgroups[c][d];
             assert(cons != NULL);
-            SCIP_CALL( SCIPcaptureCons(scip, cons) );
 
             /* avoid to construct a superindicator constraint of a superindicator constraint */
             if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0 )
@@ -378,14 +389,12 @@ SCIP_RETCODE SCIPsolveSlack(
             /* constructing the superindicator constraint and capturing (hence have to release it latter) */
             SCIP_CALL( SCIPcreateConsSuperindicator(scip, &supindconsgroups[c][d], name, negbinvar, cons,
                   FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
-            SCIP_CALL( SCIPcaptureCons(scip, supindconsgroups[c][d]) );
 
             /* don´t realease the constraint  as it is not yet added to scip and we will use it later */
             assert(supindconsgroups[c][d] != 0);
 
             /* remove the constraint which is now replaced by a superindicator constraint */
             SCIP_CALL( SCIPdelCons(scip, cons) );
-
          }
 
          /* release the binary variable */
@@ -459,10 +468,10 @@ SCIP_RETCODE SCIPsolveSlack(
 
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_bound_cons", SCIPvarGetName(copiedvargroups[c][0]) );
 
+            /* constraint is captured/released by superindicator constraint */
             SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, 1, &(vargroups[c][d]), &one, lbound, ubound,
                   FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
             assert(cons != NULL);
-            SCIP_CALL( SCIPcaptureCons(scip, cons) );
 
             if(consviols != NULL)
             {
@@ -496,11 +505,9 @@ SCIP_RETCODE SCIPsolveSlack(
             SCIP_CALL ( SCIPcreateConsSuperindicator(scip, &supindvarboundgroups[c][d], name, negbinvar, cons,
                   FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-            SCIP_CALL( SCIPcaptureCons(scip, supindvarboundgroups[c][d]) );
-
             /* remove the constraint which is now replaced by a superindicator constraint */
             SCIP_CALL( SCIPdelCons(scip, cons) );
-
+            SCIP_CALL( SCIPreleaseCons(scip, &cons) );
          }
 
          /* releasing the variables will add the binvar later */
@@ -811,7 +818,7 @@ SCIP_RETCODE SCIPsolveSlack(
    {
       SCIP_Bool stored;
 
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "solving the realaxed original problem with original objective function\n");
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "solving the relaxed original problem with original objective function\n");
 
       /* adding the last set of solutions */
       for(c = 0; c < nsols; ++c)

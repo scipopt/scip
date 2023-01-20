@@ -214,6 +214,7 @@ private:
 		const VectorSet&         s         ,
 		VectorSet&               h
 	);
+public: // SV made RevSparseHesCase public to avoid having to copy result h
 	// ------------------------------------------------------------
 	// vector of bool version of RevSparseHes
 	// (see doxygen in rev_sparse_hes.hpp)
@@ -235,6 +236,7 @@ private:
 		const VectorSet&         s         ,
 		VectorSet&               h
 	);
+private: // SV
 	// ------------------------------------------------------------
 	// Forward mode version of SparseJacobian
 	// (see doxygen in sparse_jacobian.hpp)
@@ -258,6 +260,7 @@ private:
 		      VectorBase&           jac             ,
 		      sparse_jacobian_work& work
 	);
+public: // SV made SparseHessianCompute public to allow reuse of work
 	// ------------------------------------------------------------
 	// combined sparse_list and sparse_pack version of
 	// SparseHessian (see doxygen in sparse_hessian.hpp)

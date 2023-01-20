@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -23,7 +32,7 @@
  * @author Marc Pfetsch
  * @author Kati Wolter
  * @author Gregor Hendel
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -48,14 +57,8 @@
  */
 #ifdef NDEBUG
 #include "scip/struct_scip.h"
-#include "scip/struct_stat.h"
-#include "scip/set.h"
+#include "scip/struct_set.h"
 #include "scip/tree.h"
-#include "scip/misc.h"
-#include "scip/var.h"
-#include "scip/cons.h"
-#include "scip/solve.h"
-#include "scip/debug.h"
 #endif
 
 #ifdef __cplusplus
@@ -74,7 +77,7 @@ extern "C" {
  *        in future releases; consider using SCIPincludeSepaBasic() and setter functions
  *        if you seek for a method which is less likely to change in future releases
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeSepa(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of separator */
@@ -103,7 +106,7 @@ SCIP_RETCODE SCIPincludeSepa(
  *
  *  @note if you want to set all callbacks with a single method call, consider using SCIPincludeSepa() instead
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeSepaBasic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SEPA**           sepa,               /**< reference to a separator, or NULL */
@@ -121,7 +124,7 @@ SCIP_RETCODE SCIPincludeSepaBasic(
    );
 
 /** sets copy method of separator */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetSepaCopy(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SEPA*            sepa,               /**< separator */
@@ -129,7 +132,7 @@ SCIP_RETCODE SCIPsetSepaCopy(
    );
 
 /** sets destructor method of separator */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetSepaFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SEPA*            sepa,               /**< separator */
@@ -137,7 +140,7 @@ SCIP_RETCODE SCIPsetSepaFree(
    );
 
 /** sets initialization method of separator */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetSepaInit(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SEPA*            sepa,               /**< separator */
@@ -145,7 +148,7 @@ SCIP_RETCODE SCIPsetSepaInit(
    );
 
 /** sets deinitialization method of separator */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetSepaExit(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SEPA*            sepa,               /**< separator */
@@ -153,7 +156,7 @@ SCIP_RETCODE SCIPsetSepaExit(
    );
 
 /** sets solving process initialization method of separator */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetSepaInitsol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SEPA*            sepa,               /**< separator */
@@ -161,7 +164,7 @@ SCIP_RETCODE SCIPsetSepaInitsol(
    );
 
 /** sets solving process deinitialization method of separator */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetSepaExitsol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SEPA*            sepa,               /**< separator */
@@ -169,30 +172,52 @@ SCIP_RETCODE SCIPsetSepaExitsol(
    );
 
 /** returns the separator of the given name, or NULL if not existing */
-EXTERN
+SCIP_EXPORT
 SCIP_SEPA* SCIPfindSepa(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of separator */
    );
 
 /** returns the array of currently available separators */
-EXTERN
+SCIP_EXPORT
 SCIP_SEPA** SCIPgetSepas(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** returns the number of currently available separators */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNSepas(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** sets the priority of a separator */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetSepaPriority(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SEPA*            sepa,               /**< separator */
    int                   priority            /**< new priority of the separator */
+   );
+
+/** declares separator to be a parent separator
+ *
+ *  Parent separators generate cuts of several types. To distinguish these cuts, they create child separators, which are
+ *  only needed to detect which cuts are applied.
+ */
+SCIP_EXPORT
+void SCIPsetSepaIsParentsepa(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa                /**< separator */
+   );
+
+/** sets the parent separator
+ *
+ *  Informs SCIP that the separator @p sepa depends on the parent separator @p parentsepa.
+ */
+SCIP_EXPORT
+void SCIPsetSepaParentsepa(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_SEPA*            parentsepa          /**< parent separator */
    );
 
 /** gets value of minimal efficacy for a cut to enter the LP
@@ -202,7 +227,7 @@ SCIP_RETCODE SCIPsetSepaPriority(
  *
  *  @return value of "separating/minefficacyroot" if at root node, otherwise value of "separating/minefficacy"
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetSepaMinEfficacy(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -211,7 +236,7 @@ SCIP_Real SCIPgetSepaMinEfficacy(
 #define SCIPgetSepaMinEfficacy(scip)         (SCIPtreeGetCurrentDepth((scip)->tree) == 0 ? (scip)->set->sepa_minefficacyroot : (scip)->set->sepa_minefficacy)
 #endif
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

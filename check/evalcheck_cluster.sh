@@ -4,17 +4,35 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            *
-#*                            fuer Informationstechnik Berlin                *
+#*  Copyright 2002-2022 Zuse Institute Berlin                                *
 #*                                                                           *
-#*  SCIP is distributed under the terms of the ZIB Academic License.         *
+#*  Licensed under the Apache License, Version 2.0 (the "License");          *
+#*  you may not use this file except in compliance with the License.         *
+#*  You may obtain a copy of the License at                                  *
 #*                                                                           *
-#*  You should have received a copy of the ZIB Academic License              *
-#*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
+#*      http://www.apache.org/licenses/LICENSE-2.0                           *
+#*                                                                           *
+#*  Unless required by applicable law or agreed to in writing, software      *
+#*  distributed under the License is distributed on an "AS IS" BASIS,        *
+#*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. *
+#*  See the License for the specific language governing permissions and      *
+#*  limitations under the License.                                           *
+#*                                                                           *
+#*  You should have received a copy of the Apache-2.0 license                *
+#*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
+# Evaluates a testrun and concatenates the individual logfiles, possibly uploads to rubberband.
+#
+# If the environment variable RBCLI_TAG is set, then it will be passed as tags to rbcli.
+#
+# Usage: from folder 'check' call
+# ./evalcheck_cluster.sh results/check.*.eval
+
+
 export LANG=C
+export LC_NUMERIC=C
 
 REMOVE=0
 UPLOAD=0
@@ -25,187 +43,180 @@ FILES=""
 
 for i in $@
 do
-  if test ! -e $i
-  then
-      if test "$i" = "-r"
-      then
-          REMOVE=1
-      elif test "$i" = "-R"
-      then
-          REMOVE=1
-          UPLOAD=1
-      elif test "$i" = "-T"
-      then
-          REMOVE=1
-          UPLOAD=1
-          EXPIRE=1
-      else
-          AWKARGS="$AWKARGS $i"
-      fi
-  else
-      FILES="$FILES $i"
-  fi
+    if test ! -e "${i}"
+    then
+        if test "${i}" = "-r"
+        then
+            REMOVE=1
+        elif test "${i}" = "-U"
+        then
+            UPLOAD=1
+        elif test "${i}" = "-E"
+        then
+            UPLOAD=1
+            EXPIRE=1
+        elif test "${i}" = "-R"
+        then
+            REMOVE=1
+            UPLOAD=1
+        elif test "${i}" = "-T"
+        then
+            REMOVE=1
+            UPLOAD=1
+            EXPIRE=1
+        else
+            AWKARGS="${AWKARGS} ${i}"
+        fi
+    else
+        FILES="${FILES} ${i}"
+    fi
 done
 
-for FILE in $FILES
+for FILE in ${FILES}
 do
 
-  DIR=`dirname $FILE`
-  EVALFILE=`basename $FILE .eval`
-  EVALFILE=`basename $EVALFILE .out`
+    DIR=$(dirname "${FILE}")
+    EVALFILE=$(basename "${FILE}" .eval)
+    EVALFILE=$(basename "${EVALFILE}" .out)
 
-  OUTFILE=$DIR/$EVALFILE.out
-  ERRFILE=$DIR/$EVALFILE.err
-  SETFILE=$DIR/$EVALFILE.set
-  METAFILE=$DIR/$EVALFILE.meta
-  RESFILE=$DIR/$EVALFILE.res
-  TEXFILE=$DIR/$EVALFILE.tex
-  PAVFILE=$DIR/$EVALFILE.pav
+    OUTFILE="${DIR}/${EVALFILE}.out"
+    ERRFILE="${DIR}/${EVALFILE}.err"
+    SETFILE="${DIR}/${EVALFILE}.set"
+    METAFILE="${DIR}/${EVALFILE}.meta"
 
-  # check if the eval file exists; if this is the case construct the overall solution files
-  if test -e $DIR/$EVALFILE.eval
-  then
-      # in case an output file exists, copy it away to save the results
-      DATEINT=`date +"%s"`
-      if test -e $OUTFILE
-      then
-          cp $OUTFILE $OUTFILE.old-$DATEINT
-      fi
-      if test -e $ERRFILE
-      then
-          cp $ERRFILE $ERRFILE.old-$DATEINT
-      fi
+    # check if the eval file exists; if this is the case construct the overall solution files
+    if test -e "${DIR}/${EVALFILE}.eval"
+    then
+        # in case an output file exists, copy it away to save the results
+        DATEINT=$(date +"%s")
+        if test -e "${OUTFILE}"
+        then
+            cp "${OUTFILE}" "${OUTFILE}.old-${DATEINT}"
+        fi
+        if test -e "${ERRFILE}"
+        then
+            cp "${ERRFILE}" "${ERRFILE}.old-${DATEINT}"
+        fi
 
-      echo > $OUTFILE
-      echo > $ERRFILE
-      echo ""
-      echo create overall output and error file for $EVALFILE
+        echo > "${OUTFILE}"
+        echo > "${ERRFILE}"
+        echo ""
+        echo "create overall output and error file for ${EVALFILE}"
 
-      for i in `cat $DIR/$EVALFILE.eval` DONE
+        # check first if all out and err files exist for this eval-file.
+        NMISSING=0
+        for i in $(cat "${DIR}/${EVALFILE}.eval") DONE
         do
-        if test "$i" = "DONE"
-        then
-            break
-        fi
-
-        FILE=$i.out
-        if test -e $FILE
-        then
-            cat $FILE >> $OUTFILE
-            if test "$REMOVE" = "1"
+            if test "${i}" = "DONE"
             then
-                rm -f $FILE
+                break
             fi
-        else
-            echo Missing $FILE --
 
-            echo @01 $FILE ==MISSING==  >> $OUTFILE
-            echo                        >> $OUTFILE
-        fi
+            for extension in out err
+            do
+                FILE="${i}.${extension}"
+                if ! test -e "${FILE}"
+                then
+                    echo "Missing ${FILE}"
+                    ((NMISSING++))
+                fi
+            done
+        done
 
-        FILE=$i.err
-        if test -e $FILE
+        if [ "${NMISSING}" -gt 0 -a "${REMOVE}" -eq 1 ]
         then
-            cat $FILE >> $ERRFILE
-            if test "$REMOVE" = "1"
-            then
-                rm -f $FILE
-            fi
-        else
-            echo Missing $FILE --
-
-            echo @01 $FILE ==MISSING==  >> $ERRFILE
-            echo                        >> $ERRFILE
+            echo "Exiting because ${NMISSING} out/err file$([ ${NMISSING} -gt 1 ] && echo "s are" || echo " is" ) missing, please rerun without the REMOVE flag"
+            exit
         fi
 
-        FILE=$i.set
-        if test -e $FILE
+        for i in $(cat "${DIR}/${EVALFILE}.eval") DONE
+        do
+            if test "${i}" = "DONE"
+            then
+                break
+            fi
+
+            FILE="${i}.out"
+            if test -e "${FILE}"
+            then
+                cat "${FILE}" >> "${OUTFILE}"
+                if test "${REMOVE}" = "1"
+                then
+                    rm -f "${FILE}"
+                fi
+            else
+                echo "@01 ${FILE} ==MISSING=="  >> "${OUTFILE}"
+                echo                            >> "${OUTFILE}"
+            fi
+
+            FILE="${i}.err"
+            if test -e "${FILE}"
+            then
+                cat "${FILE}" >> "${ERRFILE}"
+                if test "${REMOVE}" = "1"
+                then
+                    rm -f "${FILE}"
+                fi
+            else
+                echo "@01 ${FILE} ==MISSING=="  >> "${ERRFILE}"
+                echo                            >> "${ERRFILE}"
+            fi
+
+            FILE="${i}.set"
+            if test -e "${FILE}"
+            then
+                if ! test -e $SETFILE
+                then
+                    cp "${FILE}" "${SETFILE}"
+                fi
+                if test "${REMOVE}" = "1"
+                then
+                    rm -f "${FILE}"
+                fi
+            fi
+
+            FILE="${i}".tmp
+            if test -e "${FILE}"
+            then
+                if test "${REMOVE}" = "1"
+                then
+                    rm -f "${FILE}"
+                fi
+            fi
+        done
+
+        if test "${REMOVE}" = "1"
         then
-            cp $FILE $SETFILE
-            if test "$REMOVE" = "1"
-            then
-                rm -f $FILE
-            fi
+            rm -f "${DIR}/${EVALFILE}.eval"
         fi
+    fi
 
-        FILE=$i.tmp
-        if test -e $FILE
+    # check if the out file exists
+    if test -e "${OUTFILE}"
+    then
+        echo "create results for ${EVALFILE}"
+
+        # run check.awk (or the solver specialization) to evaluate the outfile
+        . ./evaluate.sh "${OUTFILE}"
+
+        # upload results to rubberband.zib.de
+        if test "${UPLOAD}" = "1"
         then
-            if test "$REMOVE" = "1"
+            if test "${EXPIRE}" = "1"
             then
-                rm -f $FILE
+                RB_EXP_DATE=$(date '+%Y-%b-%d' -d "+6 weeks")
+                echo "rbcli -e ${RB_EXP_DATE} up ${OUTFILE} ${ERRFILE} ${SETFILE} ${METAFILE}"
+                rbcli -e "${RB_EXP_DATE}" up "${OUTFILE}" "${ERRFILE}" "${SETFILE}" "${METAFILE}"
+            else
+                if test -z "${RBCLI_TAG}"
+                then
+                    echo "rbcli up ${OUTFILE} ${ERRFILE} ${SETFILE} ${METAFILE}"
+                    rbcli up "${OUTFILE}" "${ERRFILE}" "${SETFILE}" "${METAFILE}"
+                else
+                    echo "rbcli --tags ${RBCLI_TAG} up ${OUTFILE} ${ERRFILE} ${SETFILE} ${METAFILE}"
+                    rbcli --tags "${RBCLI_TAG}" up "${OUTFILE}" "${ERRFILE}" "${SETFILE}" "${METAFILE}"
+                fi
             fi
         fi
-      done
-
-      if test "$REMOVE" = "1"
-      then
-          rm -f $DIR/$EVALFILE.eval
-      fi
-  fi
-
-  # check if the out file exists
-  if test -e $DIR/$EVALFILE.out
-  then
-      echo create results for $EVALFILE
-
-      # detect test set
-      TSTNAME=`echo $EVALFILE | sed 's/check.\([a-zA-Z0-9_-]*\).*/\1/g'`
-
-      # detect test used solver
-      SOLVER=`echo $EVALFILE | sed 's/check.\([a-zA-Z0-9_-]*\).\([a-zA-Z0-9_]*\).*/\2/g'`
-
-      echo "Testset " $TSTNAME
-      echo "Solver  " $SOLVER
-
-      if test -f testset/$TSTNAME.test
-      then
-          TESTFILE=testset/$TSTNAME.test
-      else
-          TESTFILE=""
-      fi
-
-      # look for solufiles under the name of the test, the name of the test with everything after the first "_" stripped, and all
-      SOLUFILE=""
-      for f in $TSTNAME ${TSTNAME%%_*} ${TSTNAME%%-*} all
-      do
-          if test -f testset/${f}.solu
-          then
-              SOLUFILE=testset/${f}.solu
-              break
-          fi
-      done
-
-      if test "$SOLVER" = "gurobi_cl"
-      then
-          awk -f check_gurobi.awk -v "TEXFILE=$TEXFILE" -v "PAVFILE=$PAVFILE" $AWKARGS $TESTFILE $SOLUFILE $OUTFILE | tee $RESFILE
-      elif test  "$SOLVER" = "cplex"
-      then
-          awk -f check_cplex.awk -v "TEXFILE=$TEXFILE" $AWKARGS $SOLUFILE $OUTFILE | tee $RESFILE
-      elif test  "$SOLVER" = "xpress"
-      then
-          awk -f check_xpress.awk -v "TEXFILE=$TEXFILE" $AWKARGS $SOLUFILE $OUTFILE | tee $RESFILE
-      elif test  "$SOLVER" = "mosek"
-      then
-          awk -f check_mosek.awk -v "TEXFILE=$TEXFILE" $AWKARGS $SOLUFILE $OUTFILE | tee $RESFILE
-      elif test  "$SOLVER" = "cbc"
-      then
-          awk -f check_cbc.awk -v "TEXFILE=$TEXFILE" -v "PAVFILE=$PAVFILE" $AWKARGS $TESTFILE $SOLUFILE $OUTFILE | tee $RESFILE
-      # we should not check for SOLVER = scip here, because check.awk needs also to be called for examples with other names
-      else
-          awk -f check.awk -v "TEXFILE=$TEXFILE" -v "PAVFILE=$PAVFILE" -v "ERRFILE=$ERRFILE" $AWKARGS $TESTFILE $SOLUFILE $OUTFILE | tee $RESFILE
-      fi
-
-      # upload results to rubberband.zib.de
-      if test "$UPLOAD" = "1"
-      then
-          if test "$EXPIRE" = "1"
-          then
-              RB_EXP_DATE=`date '+%Y-%b-%d' -d "+2 weeks"`
-              rbcli -e $RB_EXP_DATE up $OUTFILE $ERRFILE $SETFILE $METAFILE
-          else
-              rbcli up $OUTFILE $ERRFILE $SETFILE $METAFILE
-          fi
-      fi
-  fi
+    fi
 done

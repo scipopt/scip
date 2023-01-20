@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -38,6 +47,16 @@
 #include <signal.h>
 #include "include/scip_test.h"
 
+/** macro to keep control of infinity
+ *
+ *  Some LPIs use std::numeric_limits<SCIP_Real>::infinity() as infinity value. Comparing two infinty values then yields
+ *  nan. This is a workaround. */
+#define cr_assert_float_eq_inf(Actual, Expected, Epsilon) \
+   if ( fabs(Actual) > 1e30 || fabs(Expected) > 1e30 )    \
+      cr_assert( Actual == Expected );                    \
+   else                                                   \
+      cr_assert_float_eq(Actual, Expected, Epsilon);
+
 #define EPS 1e-6
 
 /* GLOBAL VARIABLES */
@@ -48,6 +67,8 @@ static SCIP_MESSAGEHDLR* messagehdlr = NULL;
 static
 SCIP_Bool initProb(int pos, int* ncols, int* nrows, int* nnonz, SCIP_OBJSEN* objsen)
 {
+   const char* rownames[] = { "row1", "row2" };
+   const char* colnames[] = { "x1", "x2" };
    SCIP_Real obj[100] = { 1.0, 1.0 };
    SCIP_Real  lb[100] = { 0.0, 0.0 };
    SCIP_Real  ub[100] = { SCIPlpiInfinity(lpi),  SCIPlpiInfinity(lpi) };
@@ -247,8 +268,8 @@ SCIP_Bool initProb(int pos, int* ncols, int* nrows, int* nnonz, SCIP_OBJSEN* obj
    }
 
    SCIP_CALL( SCIPlpiChgObjsen(lpi, *objsen) );
-   SCIP_CALL( SCIPlpiAddCols(lpi, *ncols, obj, lb, ub, NULL, 0, NULL, NULL, NULL) );
-   SCIP_CALL( SCIPlpiAddRows(lpi, *nrows, lhs, rhs, NULL, *nnonz, beg, ind, val) );
+   SCIP_CALL( SCIPlpiAddCols(lpi, *ncols, obj, lb, ub, (char**) colnames, 0, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPlpiAddRows(lpi, *nrows, lhs, rhs, (char**) rownames, *nnonz, beg, ind, val) );
    cr_assert( !SCIPlpiWasSolved(lpi) );
    SCIP_CALL( SCIPlpiSolvePrimal(lpi) );
    cr_assert( SCIPlpiWasSolved(lpi) );
@@ -309,7 +330,7 @@ void checkChgCoef(int row, int col, SCIP_Real newval)
    cr_assert( !SCIPlpiWasSolved(lpi) );
 
    SCIP_CALL( SCIPlpiGetCoef(lpi, row, col, &val) );
-   cr_assert_float_eq(newval, val, EPS);
+   cr_assert_float_eq_inf(newval, val, EPS);
 }
 
 TheoryDataPoints(change, testchgcoef) =
@@ -674,8 +695,8 @@ Test(change, testrowmethods)
          /* check each row seperately */
          for( j = 0; j < nrows; j++ )
          {
-            cr_assert_float_eq(lhs[j], newlhs[j], 1e-16);
-            cr_assert_float_eq(rhs[j], newrhs[j], 1e-16);
+            cr_assert_float_eq_inf(lhs[j], newlhs[j], 1e-16);
+            cr_assert_float_eq_inf(rhs[j], newrhs[j], 1e-16);
 
             /* We add a row where the indices are not sorted, some lp solvers give them back sorted (e.g. soplex), some others don't (e.g. cplex).
              * Therefore we cannot simply assert the ind and val arrays to be equal, but have to search for and check each value individually. */
@@ -912,19 +933,26 @@ Test(change, testlpiwritestatemethods)
    int cstat[2];
    int rstat[2];
    SCIP_OBJSEN sense;
+   SCIP_RETCODE retcode;
 
    /* 2x2 problem */
    cr_assume( initProb(5, &ncols, &nrows, &nnonz, &sense) );
 
    SCIP_CALL( SCIPlpiSolvePrimal(lpi) );
 
-   SCIP_CALL( SCIPlpiWriteState(lpi, "testlpiwriteandreadstate.bas") );
+   retcode = SCIPlpiWriteState(lpi, "testlpiwriteandreadstate.bas");
+   if ( retcode != SCIP_OKAY && retcode != SCIP_NOTIMPLEMENTED )
+   {
+      SCIP_CALL( retcode );
+   }
    SCIP_CALL( SCIPlpiGetBase(lpi, cstat, rstat) );
    SCIP_CALL( SCIPlpiClearState(lpi) );
 
    /* Ideally we want to check in the same matter as in testlpiwritereadlpmethods, but this is
     * not possible at the moment because we have no names for columns and rows. */
    SCIP_CALL( SCIPlpiClear(lpi) );
+
+   remove("testlpiwriteandreadstate.bas");
 }
 
 /** test SCIPlpiWriteLP, SCIPlpiReadLP, SCIPlpiClear */
@@ -970,4 +998,10 @@ Test(change, testlpiwritereadlpmethods)
    file = fopen("lpi_change_test_problem.lp", "r");
    file2 = fopen("lpi_change_test_problem2.lp", "r");
    cr_assert_file_contents_eq(file, file2);
+
+   fclose(file);
+   fclose(file2);
+
+   remove("lpi_change_test_problem.lp");
+   remove("lpi_change_test_problem2.lp");
 }

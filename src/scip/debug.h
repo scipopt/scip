@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -62,19 +71,21 @@ SCIP_RETCODE SCIPdebugFreeSol(
    );
 
 /** resets the data structure after restart */
-extern
 SCIP_RETCODE SCIPdebugReset(
    SCIP_SET*             set
    );
 
-/** frees debugging data */
-extern
+/** frees debugging data for the particular instance */
 SCIP_RETCODE SCIPdebugFreeDebugData(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
+/** frees all debugging data */
+SCIP_RETCODE SCIPdebugFree(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
 /** checks for validity of the debugging solution in given constraints */
-extern
 SCIP_RETCODE SCIPdebugCheckConss(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           conss,              /**< constraints to check for validity */
@@ -82,14 +93,12 @@ SCIP_RETCODE SCIPdebugCheckConss(
    );
 
 /** checks whether given row is valid for the debugging solution */
-extern
 SCIP_RETCODE SCIPdebugCheckRow(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_ROW*             row                 /**< row to check for validity */
    );
 
 /** checks whether given global lower bound is valid for the debugging solution */
-extern
 SCIP_RETCODE SCIPdebugCheckLbGlobal(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
@@ -97,7 +106,6 @@ SCIP_RETCODE SCIPdebugCheckLbGlobal(
    );
 
 /** checks whether given global upper bound is valid for the debugging solution */
-extern
 SCIP_RETCODE SCIPdebugCheckUbGlobal(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
@@ -105,7 +113,6 @@ SCIP_RETCODE SCIPdebugCheckUbGlobal(
    );
 
 /** checks whether given local bound implication is valid for the debugging solution */
-extern
 SCIP_RETCODE SCIPdebugCheckInference(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -116,15 +123,26 @@ SCIP_RETCODE SCIPdebugCheckInference(
    );
 
 /** informs solution debugger, that the given node will be freed */
-extern
 SCIP_RETCODE SCIPdebugRemoveNode(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_NODE*            node                /**< node that will be freed */
    );
 
+/** checks whether global lower bound does not exceed debuging solution value */
+SCIP_RETCODE SCIPdebugCheckGlobalLowerbound(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** checks whether local lower bound does not exceed debuging solution value */
+SCIP_RETCODE SCIPdebugCheckLocalLowerbound(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NODE*            node                /**< node that will be freed */
+   );
+
 /** checks whether given variable bound is valid for the debugging solution */
-extern
 SCIP_RETCODE SCIPdebugCheckVbound(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var,                /**< problem variable x in x <= b*z + d  or  x >= b*z + d */
@@ -135,7 +153,6 @@ SCIP_RETCODE SCIPdebugCheckVbound(
    );
 
 /** checks whether given implication is valid for the debugging solution */
-extern
 SCIP_RETCODE SCIPdebugCheckImplic(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var,                /**< problem variable */
@@ -156,7 +173,6 @@ SCIP_RETCODE SCIPdebugCheckAggregation(
    );
 
 /** check whether given clique is valid for the debugging solution */
-extern
 SCIP_RETCODE SCIPdebugCheckClique(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR**            vars,               /**< binary variables in the clique: at most one can be set to the given value */
@@ -165,7 +181,6 @@ SCIP_RETCODE SCIPdebugCheckClique(
    );
 
 /** checks whether given conflict is valid for the debugging solution */
-extern
 SCIP_RETCODE SCIPdebugCheckConflict(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -176,7 +191,6 @@ SCIP_RETCODE SCIPdebugCheckConflict(
    );
 
 /** checks whether given conflict graph frontier is valid for the debugging solution */
-extern
 SCIP_RETCODE SCIPdebugCheckConflictFrontier(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -190,7 +204,6 @@ SCIP_RETCODE SCIPdebugCheckConflictFrontier(
    );
 
 /** creates the debugging propagator and includes it in SCIP */
-extern
 SCIP_RETCODE SCIPdebugIncludeProp(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -198,7 +211,7 @@ SCIP_RETCODE SCIPdebugIncludeProp(
 /** adds a solution value for a new variable in the transformed problem that has no original counterpart
  * a value can only be set if no value has been set for this variable before
  */
-extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPdebugAddSolVal(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable for which to add a value */
@@ -206,7 +219,7 @@ SCIP_RETCODE SCIPdebugAddSolVal(
    );
 
 /** gets pointer to the debug solution */
-extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPdebugGetSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL**            sol                 /**< buffer to store pointer to the debug solution */
@@ -216,7 +229,7 @@ SCIP_RETCODE SCIPdebugGetSol(
  *
  * if no value is stored for the variable, gives 0.0
  */
-extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPdebugGetSolVal(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable for which to get the value */
@@ -224,7 +237,7 @@ SCIP_RETCODE SCIPdebugGetSolVal(
    );
 
 /** check whether the debugging solution is valid in the current node */
-extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPdebugSolIsValidInSubtree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool*            isvalidinsubtree    /**< pointer to store whether the solution is valid in the current
@@ -233,28 +246,32 @@ SCIP_RETCODE SCIPdebugSolIsValidInSubtree(
    );
 
 /** checks whether SCIP data structure is the main SCIP (the one for which debugging is enabled) */
-extern
+SCIP_EXPORT
 SCIP_Bool SCIPdebugIsMainscip(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** enabling solution debugging mechanism */
-extern
+SCIP_EXPORT
 void SCIPdebugSolEnable(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** disabling solution debugging mechanism */
-extern
+SCIP_EXPORT
 void SCIPdebugSolDisable(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** check if solution debugging mechanism is enabled */
-extern
+SCIP_EXPORT
 SCIP_Bool SCIPdebugSolIsEnabled(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/** check if SCIP is compiled with WITH_DEBUG_SOLUTION */
+SCIP_EXPORT
+SCIP_Bool SCIPwithDebugSol(void);
 
 #else
 
@@ -262,12 +279,15 @@ SCIP_Bool SCIPdebugSolIsEnabled(
 #define SCIPdebugFreeSol(set) SCIP_OKAY
 #define SCIPdebugReset(set) SCIP_OKAY
 #define SCIPdebugFreeDebugData(set) SCIP_OKAY
+#define SCIPdebugFree(set) SCIP_OKAY
 #define SCIPdebugCheckConss(scip,conss,nconss) SCIP_OKAY
 #define SCIPdebugCheckRow(set,row) SCIP_OKAY
 #define SCIPdebugCheckLbGlobal(scip,var,lb) SCIP_OKAY
 #define SCIPdebugCheckUbGlobal(scip,var,ub) SCIP_OKAY
 #define SCIPdebugCheckInference(blkmem,set,node,var,newbound,boundtype) SCIP_OKAY
 #define SCIPdebugRemoveNode(blkmem,set,node) SCIP_OKAY
+#define SCIPdebugCheckGlobalLowerbound(blkmem,set) SCIP_OKAY
+#define SCIPdebugCheckLocalLowerbound(blkmem,set,node) SCIP_OKAY
 #define SCIPdebugCheckVbound(set,var,vbtype,vbvar,vbcoef,vbconstant) SCIP_OKAY
 #define SCIPdebugCheckImplic(set,var,varfixing,implvar,impltype,implbound) SCIP_OKAY
 #define SCIPdebugCheckAggregation(set,var,aggrvars,scalars,constant,naggrvars) SCIP_OKAY
@@ -281,6 +301,8 @@ SCIP_Bool SCIPdebugSolIsEnabled(
 #define SCIPdebugSolEnable(scip) /**/
 #define SCIPdebugSolDisable(scip) /**/
 #define SCIPdebugSolIsEnabled(scip) FALSE
+#define SCIPwithDebugSol(void) FALSE
+
 #endif
 
 
@@ -291,7 +313,6 @@ SCIP_Bool SCIPdebugSolIsEnabled(
 
 /* check if the coef is the r-th line of the inverse matrix B^-1; this is
  * the case if (coef * B) is the r-th unit vector */
-extern
 SCIP_RETCODE SCIPdebugCheckBInvRow(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   r,                  /**< row number */

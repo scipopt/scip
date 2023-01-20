@@ -1,0 +1,3 @@
+misc/usesymmetry = 2
+propagating/symmetry/ofsymcomptiming = 1
+propagating/symmetry/performpresolving = TRUE

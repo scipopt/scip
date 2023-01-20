@@ -1,0 +1,29 @@
+# SCIP version 3.0.0
+
+# Generate logicor constraints instead of cuts?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/indicator/genlogicor = TRUE
+
+# Should the coupling inequalities be separated dynamically?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/indicator/sepacouplingcuts = TRUE
+
+# Allow to use local bounds in order to separated coupling inequalities?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/indicator/sepacouplinglocal = TRUE
+
+# In enforcing try to generate cuts (only if sepaalternativelp is true)?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/indicator/enforcecuts = TRUE
+
+# Separate using the alternative LP?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/indicator/sepaalternativelp = TRUE
+
+# Update bounds of original variables for separation?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/indicator/updatebounds = TRUE
+
+# Use objective cut with current best solution to alternative LP?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/indicator/useobjectivecut = TRUE

@@ -3,17 +3,27 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   branch_distribution.c
+ * @ingroup DEFPLUGINS_BRANCH
  * @ingroup BRANCHINGRULES
  * @brief  probability based branching rule based on an article by J. Pryor and J.W. Chinneck
  * @author Gregor Hendel
@@ -823,7 +833,6 @@ void branchruledataFreeArrays(
  */
 static
 void branchruledataAddBoundChangeVar(
-   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BRANCHRULEDATA*  branchruledata,     /**< branchrule data */
    SCIP_VAR*             var                 /**< the variable whose bound changes need to be processed */
    )
@@ -866,7 +875,6 @@ void branchruledataAddBoundChangeVar(
 /** returns the next unprocessed variable (last in, first out) with pending bound changes, or NULL */
 static
 SCIP_VAR* branchruledataPopBoundChangeVar(
-   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BRANCHRULEDATA*  branchruledata      /**< branchrule data */
    )
 {
@@ -971,8 +979,9 @@ SCIP_RETCODE varProcessBoundChanges(
       {
          SCIP_Real coeff;
          SCIP_Real coeffsquared;
+         /*lint -e777*/
          assert(branchruledata->rowvariances[rowpos] != SCIP_INVALID
-               && SCIPisFeasGE(scip, branchruledata->rowvariances[rowpos], 0.0)); /*lint !e777*/
+               && SCIPisFeasGE(scip, branchruledata->rowvariances[rowpos], 0.0));
 
          coeff = colvals[r];
          coeffsquared = SQUARED(coeff);
@@ -1162,7 +1171,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpDistribution)
       SCIP_VAR* nextvar;
 
       /* pop the next variable from the queue and process its bound changes */
-      nextvar = branchruledataPopBoundChangeVar(scip, branchruledata);
+      nextvar = branchruledataPopBoundChangeVar(branchruledata);
       assert(nextvar != NULL);
       SCIP_CALL( varProcessBoundChanges(scip, branchruledata, nextvar) );
    }
@@ -1193,11 +1202,12 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpDistribution)
       assert(SCIPisFeasLE(scip, SCIPvarGetLbLocal(lpcand), SCIPvarGetUbLocal(lpcand)));
       assert(0 <= varindex && varindex < branchruledata->varpossmemsize);
 
-      assert((branchruledata->currentlbs[varindex] == SCIP_INVALID) == (branchruledata->currentubs[varindex] == SCIP_INVALID)); /*lint !e777*/
+      /*lint -e777*/
+      assert((branchruledata->currentlbs[varindex] == SCIP_INVALID) == (branchruledata->currentubs[varindex] == SCIP_INVALID));
       assert((branchruledata->currentlbs[varindex] == SCIP_INVALID)
-            || SCIPisFeasEQ(scip, SCIPvarGetLbLocal(lpcand), branchruledata->currentlbs[varindex])); /*lint !e777*/
+            || SCIPisFeasEQ(scip, SCIPvarGetLbLocal(lpcand), branchruledata->currentlbs[varindex]));
       assert((branchruledata->currentubs[varindex] == SCIP_INVALID)
-                  || SCIPisFeasEQ(scip, SCIPvarGetUbLocal(lpcand), branchruledata->currentubs[varindex])); /*lint !e777*/
+                  || SCIPisFeasEQ(scip, SCIPvarGetUbLocal(lpcand), branchruledata->currentubs[varindex]));
 
       /* if the branching rule has not captured the variable bounds yet, this can be done now */
       if( branchruledata->currentlbs[varindex] == SCIP_INVALID ) /*lint !e777*/
@@ -1297,7 +1307,7 @@ SCIP_DECL_EVENTEXEC(eventExecDistribution)
    var = SCIPeventGetVar(event);
 
    /* add the variable to the queue of unprocessed variables; method itself ensures that every variable is added at most once */
-   branchruledataAddBoundChangeVar(scip, branchruledata, var);
+   branchruledataAddBoundChangeVar(branchruledata, var);
 
    return SCIP_OKAY;
 }

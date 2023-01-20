@@ -3,17 +3,27 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   presolve.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for presolving
  * @author Michael Winkler
  */
@@ -674,6 +684,8 @@ void collectNonBinaryImplicationData(
 
          if( implboundtypes[w] == SCIP_BOUNDTYPE_UPPER )
          {
+            SCIP_Bool redundant;
+
             idx += nvars;
 
             assert(counts[idx] <= pos - nredvars + 1);
@@ -691,8 +703,11 @@ void collectNonBinaryImplicationData(
                break;
             }
 
+            /* ignore implications that are redundant with respect to the current global bounds (see #2888) */
+            redundant = SCIPisLE(scip, SCIPvarGetUbGlobal(implvars[w]), implbounds[w]);
+
             /* update implication counter and implied upper bound */
-            if( counts[idx] == pos - nredvars )
+            if( counts[idx] == pos - nredvars && !redundant )
             {
                ++counts[idx];
 
@@ -741,6 +756,8 @@ void collectNonBinaryImplicationData(
          }
          else
          {
+            SCIP_Bool redundant;
+
             assert(counts[idx] <= pos - nredvars + 1);
 
             /* set variable 'var' with bound implies other set variable 'implvars[w]' with a non-worse bound than the
@@ -756,8 +773,11 @@ void collectNonBinaryImplicationData(
                break;
             }
 
+            /* ignore implications that are redundant with respect to the current global bounds (see #2888) */
+            redundant = SCIPisGE(scip, SCIPvarGetLbGlobal(implvars[w]), implbounds[w]);
+
             /* update implication counter */
-            if( counts[idx] == pos - nredvars )
+            if( counts[idx] == pos - nredvars && !redundant )
             {
                ++counts[idx];
 
@@ -1143,6 +1163,7 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
       if( issetvar[varidx] < 0 )
       {
          SCIP_VAR** probvars;
+         int probidx;
 
          SCIPdebugMsg(scip, "marked variable <%s> as redundant variable in variable set\n", SCIPvarGetName(var));
 
@@ -1162,17 +1183,10 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
             if( implidx[w] == countnonzeros[ncountnonzeros-1] && counts[implidx[w]] == 0 )
                --ncountnonzeros;
 
+            probidx = implidx[w] < nprobvars ? implidx[w] : implidx[w] - nprobvars;
             /* only for non-binary variables we need to correct the bounds */
-            if( implidx[w] < nprobvars )
-            {
-               if( !SCIPvarIsBinary(probvars[implidx[w]]) && lastbounds[w] != SCIP_INVALID )/*lint !e777*/
-                  newbounds[implidx[w]] = lastbounds[w];
-            }
-            else
-            {
-               if( !SCIPvarIsBinary(probvars[implidx[w] - nprobvars]) && lastbounds[w] != SCIP_INVALID )/*lint !e777*/
-                  newbounds[implidx[w] - nprobvars] = lastbounds[w];
-            }
+            if( !SCIPvarIsBinary(probvars[probidx]) && lastbounds[w] != SCIP_INVALID )/*lint !e777*/
+               newbounds[implidx[w]] = lastbounds[w];
          }
 
          reducedset = TRUE;

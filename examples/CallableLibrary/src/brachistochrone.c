@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -18,7 +27,7 @@
  * @author Anass Meskini
  * @author Stefan Vigerske
  *
- * This is an example that uses expressions and expression trees to set up non-linear constraints in SCIP when used as
+ * This is an example that uses expressions to setup non-linear constraints in SCIP when used as
  * a callable library. This example implements a discretized model to obtain the trajectory associated with the shortest
  * time to go from point A to B for a particle under gravity only.
  *
@@ -28,7 +37,7 @@
  * \f$(x_0,y_0)\f$ to \f$ (x_N,y_N)\f$ for a given trajectory by \f[T = \sqrt{\frac{2}{g}}
  * \sum_{0}^{N-1} \frac{\sqrt{(y_{i+1} - y_i)^2 + (x_{i+1} - x_i)^2}}{\sqrt{1-y_{i+1}} + \sqrt{1 - y_i}}.\f]
  * We seek to minimize \f$T\f$.
- * A more detailed description of the model can be found in the brachistochrone directory of http://scip.zib.de/workshop2018/pyscipopt-exercises.tgz
+ * A more detailed description of the model can be found in the brachistochrone directory of http://scipopt.org/workshop2018/pyscipopt-exercises.tgz
  *
  * Passing this equation as it is to SCIP does not lead to satisfying results, though, so we reformulate a bit.
  * Let \f$t_i \geq \frac{\sqrt{(y_{i+1} - y_i)^2 + (x_{i+1} - x_i)^2}}{\sqrt{1-y_{i+1}} + \sqrt{1 - y_i}}\f$.
@@ -174,15 +183,16 @@ SCIP_RETCODE setupProblem(
       SCIP_CONS* cons;
       char consname[SCIP_MAXSTRLEN];
 
-      /* child expressions:
+      /* variable expressions:
        * yplusexpr: expression for y[i+1]
        * yexpr: expression for y[i]
-       * texpr, texpr2: expression for t[i]
+       * texpr: expression for t[i]
+       * vexpr: expression for v[i]
        */
       SCIP_EXPR* yplusexpr;
       SCIP_EXPR* yexpr;
       SCIP_EXPR* texpr;
-      SCIP_EXPR* texpr2;
+      SCIP_EXPR* vexpr;
 
       /* intermediary expressions */
       SCIP_EXPR* expr1;
@@ -191,25 +201,23 @@ SCIP_RETCODE setupProblem(
       SCIP_EXPR* expr4;
       SCIP_EXPR* expr5;
       SCIP_EXPR* expr6;
-
-      /* trees to hold the non-linear parts of the constraint */
-      SCIP_EXPRTREE* exprtree[2];
+      SCIP_EXPR* expr7;
 
       SCIP_Real minusone = -1.0;
 
-      /* at each iteration create an expression for the non-linear part of the i-th constraint and add it the problem */
       for( i = 0; i < n; ++i )
       {
-         /* vars to be added to the exprtree in this step of the loop */
-         SCIP_VAR* varstoadd[3] = { y[i+1], y[i], t[i] };
+         SCIP_EXPR* exprs[3];
+         SCIP_Real coefs[3];
+         SCIP_VAR* quadvars1[7];
+         SCIP_VAR* quadvars2[7];
+         SCIP_Real quadcoefs[7];
 
-         /* create expressions meant to be child expressions in the tree. give different indexes to the expressions to
-          * assign the correct variables to them later
-          */
-         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &yplusexpr, SCIP_EXPR_VARIDX, 0) );
-         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &yexpr, SCIP_EXPR_VARIDX, 1) );
-         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &texpr, SCIP_EXPR_VARIDX, 2) );
-         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &texpr2, SCIP_EXPR_VARIDX, 2) );
+         /* create expressions for variables that are used in nonlinear constraint */
+         SCIP_CALL( SCIPcreateExprVar(scip, &yplusexpr, y[i+1], NULL, NULL) );
+         SCIP_CALL( SCIPcreateExprVar(scip, &yexpr, y[i], NULL, NULL) );
+         SCIP_CALL( SCIPcreateExprVar(scip, &texpr, t[i], NULL, NULL) );
+         SCIP_CALL( SCIPcreateExprVar(scip, &vexpr, v[i], NULL, NULL) );
 
          /* set up the i-th constraint
           * expr1: 1 - y[i+1]
@@ -218,43 +226,55 @@ SCIP_RETCODE setupProblem(
           * expr4: sqrt(1 - y[i])
           * expr5: t[i] * sqrt(1 - y[i+1])
           * expr6: t[i] * sqrt(1 - y[i])
+          * expr7: t[i] * sqrt(1 - y[i+1]) + t[i] * sqrt(1 - y[i]) - v[i]
           */
-         SCIP_CALL( SCIPexprCreateLinear(SCIPblkmem(scip), &expr1, 1, &yplusexpr, &minusone, 1.0) );
-         SCIP_CALL( SCIPexprCreateLinear(SCIPblkmem(scip), &expr2, 1, &yexpr, &minusone, 1.0) );
-         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr3, SCIP_EXPR_SQRT, expr1) );
-         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr4, SCIP_EXPR_SQRT, expr2) );
-         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr5, SCIP_EXPR_MUL, expr3, texpr) );
-         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr6, SCIP_EXPR_MUL, expr4, texpr2) );
+         SCIP_CALL( SCIPcreateExprSum(scip, &expr1, 1, &yplusexpr, &minusone, 1.0, NULL, NULL) );
+         SCIP_CALL( SCIPcreateExprSum(scip, &expr2, 1, &yexpr, &minusone, 1.0, NULL, NULL) );
+         SCIP_CALL( SCIPcreateExprPow(scip, &expr3, expr1, 0.5, NULL, NULL) );
+         SCIP_CALL( SCIPcreateExprPow(scip, &expr4, expr2, 0.5, NULL, NULL) );
+         exprs[0] = expr3;
+         exprs[1] = texpr;
+         SCIP_CALL( SCIPcreateExprProduct(scip, &expr5, 2, exprs, 1.0, NULL, NULL) );
+         exprs[0] = expr4;
+         SCIP_CALL( SCIPcreateExprProduct(scip, &expr6, 2, exprs, 1.0, NULL, NULL) );
+         exprs[0] = expr5;  coefs[0] =  1.0;
+         exprs[1] = expr6;  coefs[1] =  1.0;
+         exprs[2] = vexpr;  coefs[2] = -1.0;
+         SCIP_CALL( SCIPcreateExprSum(scip, &expr7, 3, exprs, coefs, 0.0, NULL, NULL) );
 
-         /* create the expression trees with expr5 and expr6 as root */
-         SCIP_CALL( SCIPexprtreeCreate(SCIPblkmem(scip), &exprtree[0], expr5, 3, 0, NULL) );
-         SCIP_CALL( SCIPexprtreeCreate(SCIPblkmem(scip), &exprtree[1], expr6, 3, 0, NULL) );
-         SCIP_CALL( SCIPexprtreeSetVars(exprtree[0], 3, varstoadd) );
-         SCIP_CALL( SCIPexprtreeSetVars(exprtree[1], 3, varstoadd) );
-
-         /* use the tree and a linear term to add the constraint exprtree0 + exprtree1 - v_i >= 0 */
+         /* create the constraint expr7 >= 0, add to the problem, and release it */
          SCIPsnprintf(consname, SCIP_MAXSTRLEN, "timestep(%d)", i);
-         SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, consname, 1, &v[i],
-                                                 &minusone, 2, exprtree, NULL, 0.0, SCIPinfinity(scip)) );
-
-         /* add the constraint to the problem, release the constraint and free the trees */
+         SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, consname, expr7, 0.0, SCIPinfinity(scip)) );
          SCIP_CALL( SCIPaddCons(scip, cons) );
          SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-         SCIP_CALL( SCIPexprtreeFree(&exprtree[0]) );
-         SCIP_CALL( SCIPexprtreeFree(&exprtree[1]) );
 
-         /* add constraint v_i^2 >= (y_{i+1}^2 - 2*y_{i+1}y_i + y_i^2) + (x_{i+1}^2 - 2*x_{i+1}x_i + x_i^2)
-          * SCIP should recognize that this can be formulated as SOC and do this reformulation
+         /* release exprs */
+         SCIP_CALL( SCIPreleaseExpr(scip, &expr7) );
+         SCIP_CALL( SCIPreleaseExpr(scip, &expr6) );
+         SCIP_CALL( SCIPreleaseExpr(scip, &expr5) );
+         SCIP_CALL( SCIPreleaseExpr(scip, &expr4) );
+         SCIP_CALL( SCIPreleaseExpr(scip, &expr3) );
+         SCIP_CALL( SCIPreleaseExpr(scip, &expr2) );
+         SCIP_CALL( SCIPreleaseExpr(scip, &expr1) );
+
+         SCIP_CALL( SCIPreleaseExpr(scip, &vexpr) );
+         SCIP_CALL( SCIPreleaseExpr(scip, &texpr) );
+         SCIP_CALL( SCIPreleaseExpr(scip, &yexpr) );
+         SCIP_CALL( SCIPreleaseExpr(scip, &yplusexpr) );
+
+         /* create constraint v_i^2 >= (y_{i+1}^2 - 2*y_{i+1}y_i + y_i^2) + (x_{i+1}^2 - 2*x_{i+1}x_i + x_i^2)
+          * SCIP should recognize that this can be formulated as SOC
           */
+         quadvars1[0] = y[i];   quadvars2[0] = y[i];   quadcoefs[0] =  1.0;
+         quadvars1[1] = y[i+1]; quadvars2[1] = y[i+1]; quadcoefs[1] =  1.0;
+         quadvars1[2] = x[i];   quadvars2[2] = x[i];   quadcoefs[2] =  1.0;
+         quadvars1[3] = x[i+1]; quadvars2[3] = x[i+1]; quadcoefs[3] =  1.0;
+         quadvars1[4] = y[i];   quadvars2[4] = y[i+1]; quadcoefs[4] = -2.0;
+         quadvars1[5] = x[i];   quadvars2[5] = x[i+1]; quadcoefs[5] = -2.0;
+         quadvars1[6] = v[i];   quadvars2[6] = v[i];   quadcoefs[6] = -1.0;
+
          SCIPsnprintf(consname, SCIP_MAXSTRLEN, "steplength(%d)", i);
-         SCIP_CALL( SCIPcreateConsBasicQuadratic(scip, &cons, consname, 0, NULL, NULL, 0, NULL, NULL, NULL, -SCIPinfinity(scip), 0.0) );
-         SCIP_CALL( SCIPaddSquareCoefQuadratic(scip, cons, y[i], 1.0) );
-         SCIP_CALL( SCIPaddSquareCoefQuadratic(scip, cons, y[i+1], 1.0) );
-         SCIP_CALL( SCIPaddSquareCoefQuadratic(scip, cons, x[i], 1.0) );
-         SCIP_CALL( SCIPaddSquareCoefQuadratic(scip, cons, x[i+1], 1.0) );
-         SCIP_CALL( SCIPaddBilinTermQuadratic(scip, cons, y[i], y[i+1], -2.0) );
-         SCIP_CALL( SCIPaddBilinTermQuadratic(scip, cons, x[i], x[i+1], -2.0) );
-         SCIP_CALL( SCIPaddSquareCoefQuadratic(scip, cons, v[i], -1.0) );
+         SCIP_CALL( SCIPcreateConsQuadraticNonlinear(scip, &cons, consname, 0, NULL, NULL, 7, quadvars1, quadvars2, quadcoefs, -SCIPinfinity(scip), 0.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
          /* add the constraint to the problem and forget it */
          SCIP_CALL( SCIPaddCons(scip, cons) );

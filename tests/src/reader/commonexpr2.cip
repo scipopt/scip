@@ -1,0 +1,13 @@
+STATISTICS
+  Problem name     : commonexpr2
+  Variables        : 1 (0 binary, 0 integer, 0 implicit integer, 1 continuous)
+  Constraints      : 0 initial, 3 maximal
+OBJECTIVE
+  Sense            : minimize
+VARIABLES
+  [continuous] <x0>: obj=1, original bounds=[0,+inf]
+CONSTRAINTS
+  [nonlinear] <nlc0>: (<x0>)^2 >= 1;
+  [nonlinear] <nlc1>: (<x0>)^0.5+(<x0>)^2 >= 1;
+  [nonlinear] <nlc2>: (<x0>)^0.5+(<x0>)^3+(<x0>)^2 >= 1;
+END

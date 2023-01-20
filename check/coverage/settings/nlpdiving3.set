@@ -1,0 +1,13 @@
+# SCIP version 3.1.0.1
+
+# should the extended formulation be added in presolving?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/xor/addextendedform = TRUE
+
+# should the extended flow formulation be added (nonsymmetric formulation otherwise)?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/xor/addflowextended = TRUE
+
+# which variable selection should be used? ('f'ractionality, 'c'oefficient, 'p'seudocost, 'g'uided, 'd'ouble, 'v'eclen)
+# [type: char, range: {fcpgdv}, default: d]
+heuristics/nlpdiving/varselrule = g

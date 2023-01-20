@@ -1,0 +1,23 @@
+STATISTICS
+  Problem name     : 
+  Variables        : 7 (3 binary, 0 integer, 0 implicit integer, 4 continuous)
+  Constraints      : 7 initial, 7 maximal
+OBJECTIVE
+  Sense            : maximize
+VARIABLES
+  [binary] <x0>: obj=0, original bounds=[0,1]
+  [binary] <x1>: obj=0, original bounds=[0,1]
+  [binary] <x2>: obj=0, original bounds=[0,1]
+  [continuous] <x3>: obj=3, original bounds=[-inf,+inf]
+  [continuous] <x4>: obj=2, original bounds=[-inf,+inf]
+  [continuous] <x5>: obj=0, original bounds=[0,+inf]
+  [continuous] <x6>: obj=0, original bounds=[0,+inf]
+CONSTRAINTS
+  [linear] <c0>: <x0>[B] +<x2>[B] == 1;
+  [linear] <c1>: <x3>[C] -<x5>[C] <= 8;
+  [indicator] <c2>: <x2> = 1 -> <x5> = 0 (<c1>);
+  [linear] <c3>:  +0.2<x4>[C] +<x3>[C] -<x6>[C] <= 9;
+  [indicator] <c4>: <x1> = 1 -> <x6> = 0 (<c3>);
+  [linear] <c5>: <x4>[C] +<x3>[C] <= 10;
+  [linear] <c6>:  -<x0>[B] +<x1>[B] >= 0;
+END

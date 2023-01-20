@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -41,6 +50,7 @@
  */
 #ifndef NO_CONFIG_HEADER
 #include "scip/config.h"
+#include "scip/scip_export.h"
 #endif
 
 /*
@@ -56,10 +66,24 @@
 
 /*
  * define whether compiler allows variadic macros
+ * __STDC_VERSION__ only exists for C code
+ * added the extra check using the GCC_VERSION to enable variadic macros also with C++ code with GCC atleast
+ *
  */
-#if defined(_MSC_VER) || ( __STDC_VERSION__ >= 199901L )
+#if defined(_MSC_VER) || ( __STDC_VERSION__ >= 199901L ) || ( GCC_VERSION >= 480 )
 #define SCIP_HAVE_VARIADIC_MACROS 1
 #endif
+
+/** get the first parameter and all-but-the-first arguments from variadic arguments
+ *
+ * normally, SCIP_VARARGS_FIRST_ should be sufficient
+ * the SCIP_VARARGS_FIRST_/SCIP_VARARGS_FIRST kludge is to work around a bug in MSVC (https://stackoverflow.com/questions/4750688/how-to-single-out-the-first-parameter-sent-to-a-macro-taking-only-a-variadic-par)
+ */
+#define SCIP_VARARGS_FIRST_(firstarg, ...) firstarg
+#define SCIP_VARARGS_FIRST(args) SCIP_VARARGS_FIRST_ args
+
+/** get all but the first parameter from variadic arguments */
+#define SCIP_VARARGS_REST(firstarg, ...) __VA_ARGS__
 
 /*
  * Boolean values
@@ -78,27 +102,31 @@
 #endif
 
 /*
- * Define the marco EXTERN and some functions depending if the OS is Windows or not
+ * Add some macros for differing functions on Windows
  */
 #if defined(_WIN32) || defined(_WIN64)
 
 #define strcasecmp _stricmp
 #define strncasecmp _strnicmp
 #define getcwd _getcwd
-
-#ifndef EXTERN
-#define EXTERN __declspec(dllexport)
 #endif
 
+/*
+ * Define the marco SCIP_EXPORT if it is not included from the generated header
+ */
+#ifndef SCIP_EXPORT
+#if defined(_WIN32) || defined(_WIN64)
+#define SCIP_EXPORT __declspec(dllexport)
+#elif defined(__GNUC__) && __GNUC__ >= 4
+#define SCIP_EXPORT __attribute__((__visibility__("default")))
 #else
-#ifndef EXTERN
-#define EXTERN extern
+#define SCIP_EXPORT
 #endif
 #endif
 
 /* define INLINE */
 #ifndef INLINE
-#if defined(_WIN32) || defined(_WIN64) || defined(__STDC__)
+#if defined(_WIN32) || defined(__STDC__)
 #define INLINE                 __inline
 #else
 #define INLINE                 inline
@@ -109,16 +137,17 @@
 
 #include "scip/type_retcode.h"
 #include "scip/type_message.h"
+#include "scip/pub_message.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 
-#define SCIP_VERSION                601 /**< SCIP version number (multiplied by 100 to get integer number) */
+#define SCIP_VERSION                804 /**< SCIP version number (multiplied by 100 to get integer number) */
 #define SCIP_SUBVERSION               0 /**< SCIP sub version number */
-#define SCIP_APIVERSION              34 /**< SCIP API version number */
-#define SCIP_COPYRIGHT   "Copyright (C) 2002-2019 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
+#define SCIP_APIVERSION             104 /**< SCIP API version number */
+#define SCIP_COPYRIGHT   "Copyright (C) 2002-2022 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
 
 
 /*
@@ -164,7 +193,7 @@ extern "C" {
 #define SCIP_DEFAULT_SUMEPSILON       1e-06  /**< default upper bound for sums of floating points to be considered zero */
 #define SCIP_DEFAULT_FEASTOL          1e-06  /**< default feasibility tolerance for constraints */
 #define SCIP_DEFAULT_CHECKFEASTOLFAC    1.0  /**< default factor to change the feasibility tolerance when testing the best solution for feasibility (after solving process) */
-#define SCIP_DEFAULT_LPFEASTOL        1e-06  /**< default primal feasibility tolerance of LP solver */
+#define SCIP_DEFAULT_LPFEASTOLFACTOR    1.0  /**< default factor w.r.t. primal feasibility tolerance that determines default (and maximal) primal feasibility tolerance of LP solver */
 #define SCIP_DEFAULT_DUALFEASTOL      1e-07  /**< default feasibility tolerance for reduced costs */
 #define SCIP_DEFAULT_BARRIERCONVTOL   1e-10  /**< default convergence tolerance used in barrier algorithm */
 #define SCIP_DEFAULT_BOUNDSTREPS       0.05  /**< default minimal relative improve for strengthening bounds */
@@ -176,7 +205,7 @@ extern "C" {
 #define SCIP_MINEPSILON               1e-20  /**< minimum value for any numerical epsilon */
 #define SCIP_INVALID          (double)1e+99  /**< floating point value is not valid */
 #define SCIP_UNKNOWN          (double)1e+98  /**< floating point value is not known (in primal solution) */
-
+#define SCIP_INTERVAL_INFINITY (double)1e+300 /**< infinity value for interval computations */
 
 #define REALABS(x)        (fabs(x))
 #define EPSEQ(x,y,eps)    (REALABS((x)-(y)) <= (eps))
@@ -199,6 +228,15 @@ extern "C" {
 #define SQRT(x)       (sqrt(x))
 #endif
 
+/* platform-dependent specification of the log1p, which is numerically more stable around x = 0.0 */
+#ifndef LOG1P
+#if defined(_WIN32) || defined(_WIN64)
+#define LOG1P(x) (log(1.0+x))
+#else
+#define LOG1P(x) (log1p(x))
+#endif
+#endif
+
 #ifndef LOG2
 #if defined(_MSC_VER) && (_MSC_VER < 1800)
 #define LOG2(x) (log(x) / log(2.0))
@@ -212,22 +250,19 @@ extern "C" {
 #endif
 
 #ifndef MAX
-#define MAX(x,y)      ((x) >= (y) ? (x) : (y))     /**< returns maximum of x and y */
-#define MIN(x,y)      ((x) <= (y) ? (x) : (y))     /**< returns minimum of x and y */
+#define MAX(x, y) ((x) >= (y) ? (x) : (y)) /**< returns maximum of x and y */
+#endif
+
+#ifndef MIN
+#define MIN(x, y) ((x) <= (y) ? (x) : (y)) /**< returns minimum of x and y */
 #endif
 
 #ifndef MAX3
-#define MAX3(x,y,z) ((x) >= (y) ? MAX(x,z) : MAX(y,z))  /**< returns maximum of x, y, and z */
-#define MIN3(x,y,z) ((x) <= (y) ? MIN(x,z) : MIN(y,z))  /**< returns minimum of x, y, and z */
+#define MAX3(x, y, z) ((x) >= (y) ? MAX(x, z) : MAX(y, z)) /**< returns maximum of x, y, and z */
 #endif
 
-/* platform-dependent specification of the log1p, which is numerically more stable around x = 0.0 */
-#ifndef LOG1P
-#if defined(_WIN32) || defined(_WIN64)
-#define LOG1P(x) (log(1.0+x))
-#else
-#define LOG1P(x) (log1p(x))
-#endif
+#ifndef MIN3
+#define MIN3(x, y, z) ((x) <= (y) ? MIN(x, z) : MIN(y, z)) /**< returns minimum of x, y, and z */
 #endif
 
 #ifndef COPYSIGN
@@ -285,7 +320,7 @@ extern "C" {
 #define SCIP_DEFAULT_MEM_ARRAYGROWFAC   1.2 /**< memory growing factor for dynamically allocated arrays */
 #define SCIP_DEFAULT_MEM_ARRAYGROWINIT    4 /**< initial size of dynamically allocated arrays */
 
-#define SCIP_MEM_NOLIMIT (SCIP_Longint)SCIP_LONGINT_MAX/1048576.0/**< initial size of dynamically allocated arrays */
+#define SCIP_MEM_NOLIMIT (SCIP_Longint)(SCIP_LONGINT_MAX >> 20)/**< initial size of dynamically allocated arrays */
 
 /*
  * Tree settings
@@ -343,7 +378,7 @@ extern "C" {
                        {                                                                                      \
                           if( NULL == (x) )                                                                   \
                           {                                                                                   \
-                             SCIPerrorMessage("No memory in function call\n", __FILE__, __LINE__);            \
+                             SCIPerrorMessage("No memory in function call\n");                                \
                              SCIPABORT();                                                                     \
                           }                                                                                   \
                        }                                                                                      \
@@ -409,12 +444,14 @@ extern "C" {
  * Define to mark deprecated API functions
  */
 
+#ifndef SCIP_DEPRECATED
 #if defined(_MSC_VER)
 #  define SCIP_DEPRECATED __declspec(deprecated)
 #elif defined(__GNUC__)
 #  define SCIP_DEPRECATED __attribute__ ((deprecated))
 #else
 #  define SCIP_DEPRECATED
+#endif
 #endif
 
 #ifdef __cplusplus

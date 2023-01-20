@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -35,14 +44,12 @@
 #include "scip/def.h"
 
 /** free memory allocated for an nxn matrix */
-extern
 SCIP_RETCODE freeMatrix(
    SCIP_Real**           matrix,             /**< the matrix to be freed */
    int                   nbins               /**< the size*/
    );
 
 /** gets the minmal non-zero value in a n x n matrix */
-extern
 SCIP_Real getMinNonZero(
    SCIP*                 scip,               /**< SCIP data structure*/
    SCIP_Real**           matrix,             /**< the matrix*/
@@ -50,37 +57,31 @@ SCIP_Real getMinNonZero(
    );
 
 /** getter methods for the probdata */
-extern
 SCIP_Real** SCIPcycGetCmatrix(
    SCIP*                 scip                /**< SCIP data structure*/
    );
 
 /** returns the number of states */
-extern
 int SCIPcycGetNBins(
    SCIP*                 scip                /**< SCIP data structure*/
    );
 
 /** returns the number of clusters */
-extern
 int SCIPcycGetNCluster(
    SCIP*                 scip                /**< SCIP data structure*/
    );
 
 /** returns the state-variable-matrix */
-extern
 SCIP_VAR*** SCIPcycGetBinvars(
    SCIP*                 scip                /**< SCIP data structure*/
    );
 
 /** returns the edge variables */
-extern
 SCIP_VAR**** SCIPcycGetEdgevars(
    SCIP*                 scip                /**< SCIP data structure*/
    );
 
 /** Return one specific edge variable */
-extern
 SCIP_VAR* getEdgevar(
    SCIP_VAR****          edgevars,           /**< edgevar data structure*/
    int                   state1,             /**< first state */
@@ -89,7 +90,6 @@ SCIP_VAR* getEdgevar(
    );
 
 /** check for an array of states, if all possible edge-combinations exist */
-extern
 SCIP_Bool edgesExist(
    SCIP_VAR****          edgevars,           /**< edgevar data structure */
    int*                  states,             /**< state array */
@@ -98,26 +98,22 @@ SCIP_Bool edgesExist(
 
 
 /** returns the edge-graph */
-extern
 SCIP_DIGRAPH* SCIPcycGetEdgeGraph(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** returns the number of scaling parameter */
-extern
 SCIP_Real SCIPcycGetScale(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** print all the relevant solution data */
-extern
 SCIP_RETCODE SCIPcycPrintSolutionValues(
    SCIP*               scip,                 /**< SCIP data structure*/
    SCIP_SOL*           sol                   /**< the solution containing the values*/
    );
 
 /** create the probdata for a cycle clustering problem */
-extern
 SCIP_RETCODE SCIPcreateProbCyc(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< problem name */
@@ -127,21 +123,18 @@ SCIP_RETCODE SCIPcreateProbCyc(
    );
 
 /** function that returns the successive cluster along the cycle */
-extern
 int phi(
    int                   k,                  /**< the cluster */
    int                   ncluster            /**< the number of clusters*/
    );
 
 /** function that returns the previous cluster along the cycle */
-extern
 int phiinv(
    int                   k,                  /**< the cluster */
    int                   ncluster            /**< the number of clusters*/
    );
 
 /** assign the variables in scip according to the found clustering. */
-extern
 SCIP_RETCODE assignVars(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< the SCIP solution */
@@ -151,7 +144,6 @@ SCIP_RETCODE assignVars(
    );
 
 /** check if the clustering has exactly one state in every cluster. */
-extern
 SCIP_Bool isPartition(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real**           solclustering,      /**< matrix with the clustering */

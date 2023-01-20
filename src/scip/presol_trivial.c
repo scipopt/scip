@@ -3,17 +3,27 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   presol_trivial.c
+ * @ingroup DEFPLUGINS_PRESOL
  * @brief  trivial presolver: round fractional bounds on integer variables, fix variables with equal bounds
  * @author Tobias Achterberg
  */
@@ -164,7 +174,10 @@ SCIP_DECL_PRESOLEXEC(presolExecTrivial)
 #ifdef FIXSIMPLEVALUE
             fixval = SCIPselectSimpleValue(lb - 0.9 * SCIPepsilon(scip), ub + 0.9 * SCIPepsilon(scip), MAXDNOM);
 #else
-            fixval = (lb + ub)/2;
+            /* prefer integral values (especially 0) over midpoint */
+            fixval = SCIPround(scip, lb);
+            if( fixval < lb || fixval > ub )
+               fixval = (lb + ub)/2;
 #endif
             SCIPdebugMsg(scip, "fixing continuous variable <%s>[%.17f,%.17f] to %.17f\n", SCIPvarGetName(vars[v]), lb, ub, fixval);
             SCIP_CALL( SCIPfixVar(scip, vars[v], fixval, &infeasible, &fixed) );

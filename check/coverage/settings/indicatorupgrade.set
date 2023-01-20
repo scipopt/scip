@@ -1,0 +1,5 @@
+# SCIP version 6.0.2
+
+# Try to upgrade linear constraints to indicator constraints?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/indicator/upgradelinear = TRUE

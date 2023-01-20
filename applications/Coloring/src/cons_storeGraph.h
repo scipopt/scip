@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -76,28 +85,24 @@ enum COLOR_ConsType
 typedef enum COLOR_ConsType COLOR_CONSTYPE;
 
 /** returns the store graph constraint of the current node, needs the pointer to the constraint handler */
-extern
 SCIP_CONS* COLORconsGetActiveStoreGraphConsFromHandler(
    SCIP_CONSHDLR*        conshdlr            /**< constaint handler for store-graph constraints */
    );
 
 
 /** returns the store graph constraint of the current node, needs only the pointer to scip */
-extern
 SCIP_CONS* COLORconsGetActiveStoreGraphCons(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 
 /** returns array of representatives of all nodes */
-extern
 int* COLORconsGetRepresentatives(
    SCIP*                 scip                 /**< SCIP data structure */
    );
 
 
 /** returns the current graph */
-extern
 TCLIQUE_GRAPH* COLORconsGetCurrentGraph(
    SCIP*                 scip            /**< SCIP data structure */
    );
@@ -110,7 +115,6 @@ TCLIQUE_GRAPH* COLORconsGetComplementaryGraph(
 
 
 /** returns representative of the union which contains a given node */
-extern
 int COLORconsGetRepresentative(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   node                /**< the node, for wich the representative is searched */
@@ -118,7 +122,6 @@ int COLORconsGetRepresentative(
 
 
 /** returns array of all unions, a union is saved in the array at the position of its representative */
-extern
 void COLORconsGetUnions(
    SCIP*                 scip,               /**< SCIP data structure */
    int***                unions,             /**< output: array containing array which contains nodes in the union */
@@ -127,7 +130,6 @@ void COLORconsGetUnions(
 
 
 /** returns the union which has a given node as representative */
-extern
 void COLORconsGetUnion(
    SCIP*                 scip,               /**< SCIP data structure */
    int**                 unionSet,           /**< output: array containig nodes in the union */
@@ -137,13 +139,11 @@ void COLORconsGetUnion(
 
 
 /** creates the handler for graph storing constraints and includes it in SCIP */
-extern
 SCIP_RETCODE COLORincludeConshdlrStoreGraph(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** creates and captures a storeGraph constraint, uses knowledge of the B&B-father*/
-extern
 SCIP_RETCODE COLORcreateConsStoreGraph(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -157,7 +157,6 @@ SCIP_RETCODE COLORcreateConsStoreGraph(
 
 
 /** returns the stack and the number of elements on it */
-extern
 void COLORconsGetStack(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS***          stack,              /**< return value: pointer to the stack */

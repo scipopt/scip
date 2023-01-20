@@ -3,17 +3,27 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_knapsack.c
+ * @ingroup DEFPLUGINS_CONS
  * @brief  Constraint handler for knapsack constraints of the form  \f$a^T x \le b\f$, x binary and \f$a \ge 0\f$.
  * @author Tobias Achterberg
  * @author Xin Liu
@@ -49,6 +59,7 @@
 #include "scip/scip_lp.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
+#include "scip/scip_nlp.h"
 #include "scip/scip_numerics.h"
 #include "scip/scip_param.h"
 #include "scip/scip_prob.h"
@@ -218,6 +229,7 @@ struct SCIP_ConsData
    int*                  cliquepartition;    /**< clique indices of the clique partition */
    int*                  negcliquepartition; /**< clique indices of the negated clique partition */
    SCIP_ROW*             row;                /**< corresponding LP row */
+   SCIP_NLROW*           nlrow;              /**< corresponding NLP row */
    int                   nvars;              /**< number of variables in knapsack constraint */
    int                   varssize;           /**< size of vars, weights, and eventdata arrays */
    int                   ncliques;           /**< number of cliques in the clique partition */
@@ -691,6 +703,7 @@ SCIP_RETCODE consdataCreate(
          }
       }
       assert(k >= 0);
+      assert(constant >= 0);
 
       (*consdata)->nvars = k;
 
@@ -706,16 +719,13 @@ SCIP_RETCODE consdataCreate(
       SCIPfreeBufferArray(scip, &varsbuffer);
    }
 
-   /* capacity has to be greater or equal to zero */
-   assert(capacity >= 0);
-   assert(constant >= 0);
-
    (*consdata)->varssize = (*consdata)->nvars;
    (*consdata)->capacity = capacity - constant;
    (*consdata)->eventdata = NULL;
    (*consdata)->cliquepartition = NULL;
    (*consdata)->negcliquepartition = NULL;
    (*consdata)->row = NULL;
+   (*consdata)->nlrow = NULL;
    (*consdata)->weightsum = 0;
    (*consdata)->onesweightsum = 0;
    (*consdata)->ncliques = 0;
@@ -775,6 +785,10 @@ SCIP_RETCODE consdataFree(
    if( (*consdata)->row != NULL )
    {
       SCIP_CALL( SCIPreleaseRow(scip, &(*consdata)->row) );
+   }
+   if( (*consdata)->nlrow != NULL )
+   {
+      SCIP_CALL( SCIPreleaseNlRow(scip, &(*consdata)->nlrow) );
    }
    if( (*consdata)->eventdata != NULL )
    {
@@ -863,7 +877,7 @@ SCIP_RETCODE createRelaxation(
    assert(consdata != NULL);
    assert(consdata->row == NULL);
 
-   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->row, SCIPconsGetHdlr(cons), SCIPconsGetName(cons),
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->row, cons, SCIPconsGetName(cons),
          -SCIPinfinity(scip), (SCIP_Real)consdata->capacity,
          SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
 
@@ -906,6 +920,50 @@ SCIP_RETCODE addRelaxation(
          SCIPconsGetName(cons), consdata->capacity);
       SCIPdebug( SCIP_CALL(SCIPprintRow(scip, consdata->row, NULL)) );
       SCIP_CALL( SCIPaddRow(scip, consdata->row, FALSE, cutoff) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** adds knapsack constraint as row to the NLP, if not added yet */
+static
+SCIP_RETCODE addNlrow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< knapsack constraint */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert(SCIPisNLPConstructed(scip));
+
+   /* skip deactivated, redundant, or local linear constraints (the NLP does not allow for local rows at the moment) */
+   if( !SCIPconsIsActive(cons) || !SCIPconsIsChecked(cons) || SCIPconsIsLocal(cons) )
+      return SCIP_OKAY;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   if( consdata->nlrow == NULL )
+   {
+      SCIP_Real* coefs;
+      int i;
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &coefs, consdata->nvars) );
+      for( i = 0; i < consdata->nvars; ++i )
+         coefs[i] = (SCIP_Real)consdata->weights[i];  /*lint !e613*/
+
+      SCIP_CALL( SCIPcreateNlRow(scip, &consdata->nlrow, SCIPconsGetName(cons), 0.0,
+            consdata->nvars, consdata->vars, coefs, NULL,
+            -SCIPinfinity(scip), (SCIP_Real)consdata->capacity, SCIP_EXPRCURV_LINEAR) );
+
+      assert(consdata->nlrow != NULL);
+
+      SCIPfreeBufferArray(scip, &coefs);
+   }
+
+   if( !SCIPnlrowIsInNLP(consdata->nlrow) )
+   {
+      SCIP_CALL( SCIPaddNlRow(scip, consdata->nlrow) );
    }
 
    return SCIP_OKAY;
@@ -1121,19 +1179,19 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
       if( weights[j] > capacity )
       {
          if( solitems != NULL )
-            nonsolitems[(*nnonsolitems)++] = items[j];
+            nonsolitems[(*nnonsolitems)++] = items[j]; /*lint !e413*/
       }
       /* item is not profitable */
       else if( profits[j] <= 0.0 )
       {
          if( solitems != NULL )
-            nonsolitems[(*nnonsolitems)++] = items[j];
+            nonsolitems[(*nnonsolitems)++] = items[j]; /*lint !e413*/
       }
       /* item always fits */
       else if( weights[j] == 0 )
       {
          if( solitems != NULL )
-            solitems[(*nsolitems)++] = items[j];
+            solitems[(*nsolitems)++] = items[j]; /*lint !e413*/
 
          if( solval != NULL )
             *solval += profits[j];
@@ -1163,7 +1221,6 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    for( j = 0; j < nmyitems && intprofits; ++j )
       intprofits = intprofits && SCIPisIntegral(scip, myprofits[j]);
 
-
    /* if no item is left then goto end */
    if( nmyitems == 0 )
    {
@@ -1180,7 +1237,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
       for( j = nmyitems - 1; j >= 0; --j )
       {
          if( solitems != NULL )
-            solitems[(*nsolitems)++] = myitems[j];
+            solitems[(*nsolitems)++] = myitems[j]; /*lint !e413*/
 
          if( solval != NULL )
             *solval += myprofits[j];
@@ -1238,6 +1295,8 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
       /* update solution information */
       if( solitems != NULL )
       {
+         assert(nsolitems != NULL && nonsolitems != NULL && nnonsolitems != NULL);
+
          solitems[(*nsolitems)++] = myitems[p];
          for( j = nmyitems - 1; j >= 0; --j )
          {
@@ -1268,6 +1327,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
 
          /* if all items would fit we had handled this case before */
          assert((SCIP_Longint) nmyitems > capacity);
+         assert(nsolitems != NULL && nonsolitems != NULL && nnonsolitems != NULL);
 
          /* take the first best items into the solution */
          for( i = capacity - 1; i >= 0; --i )
@@ -1346,6 +1406,8 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
       {
          int l;
 
+         assert(nsolitems != NULL && nonsolitems != NULL && nnonsolitems != NULL);
+
          /* collect items */
          for( l = 0; l < j; ++l )
             solitems[(*nsolitems)++] = myitems[l];
@@ -1378,7 +1440,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    intcap = (int)capacity;
    assert(intcap >= 0);
    assert(nmyitems > 0);
-   assert(sizeof(size_t) >= sizeof(int)); /* no following conversion should be messed up */
+   assert(sizeof(size_t) >= sizeof(int)); /*lint !e506*/ /* no following conversion should be messed up */
 
    /* this condition checks whether we will try to allocate a correct number of bytes and do not have an overflow, while
     * computing the size for the allocation
@@ -1463,6 +1525,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    /* update optimal solution by following the table */
    if( solitems != NULL )
    {
+      assert(nsolitems != NULL && nonsolitems != NULL && nnonsolitems != NULL);
       d = intcap - 1;
 
       SCIPdebugMsg(scip, "Fill the solution vector after solving exactly.\n");
@@ -1689,7 +1752,7 @@ SCIP_RETCODE GUBconsCreate(
 
 /** frees GUB constraint */
 static
-SCIP_RETCODE GUBconsFree(
+void GUBconsFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_GUBCONS**        gubcons             /**< pointer to GUB constraint data structure */
    )
@@ -1703,8 +1766,6 @@ SCIP_RETCODE GUBconsFree(
    SCIPfreeBufferArray(scip, &(*gubcons)->gubvarsstatus);
    SCIPfreeBufferArray(scip, &(*gubcons)->gubvars);
    SCIPfreeBuffer(scip, gubcons);
-
-   return SCIP_OKAY;
 }
 
 /** adds variable to given GUB constraint */
@@ -1835,7 +1896,7 @@ SCIP_RETCODE GUBsetMoveVar(
 #endif
 
       /* free old GUB constraint */
-      SCIP_CALL( GUBconsFree(scip, &gubset->gubconss[oldgubcons]) );
+      GUBconsFree(scip, &gubset->gubconss[oldgubcons]);
 
       /* if empty GUB was not the last one in GUB set data structure, replace it by last GUB constraint */
       if( oldgubcons != gubset->ngubconss-1 )
@@ -1961,7 +2022,7 @@ SCIP_RETCODE GUBsetCreate(
 
 /** frees GUB set data structure */
 static
-SCIP_RETCODE GUBsetFree(
+void GUBsetFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_GUBSET**         gubset              /**< pointer to GUB set data structure */
    )
@@ -1979,7 +2040,7 @@ SCIP_RETCODE GUBsetFree(
    for( i = (*gubset)->ngubconss-1; i >= 0; --i )
    {
       assert((*gubset)->gubconss[i] != NULL);
-      SCIP_CALL( GUBconsFree(scip, &(*gubset)->gubconss[i]) );
+      GUBconsFree(scip, &(*gubset)->gubconss[i]);
    }
 
    /* free allocated memory */
@@ -1988,8 +2049,6 @@ SCIP_RETCODE GUBsetFree(
    SCIPfreeBufferArray( scip, &(*gubset)->gubconsstatus );
    SCIPfreeBufferArray( scip, &(*gubset)->gubconss );
    SCIPfreeBuffer(scip, gubset);
-
-   return SCIP_OKAY;
 }
 
 #ifndef NDEBUG
@@ -2898,9 +2957,6 @@ SCIP_RETCODE getLiftingSequenceGUB(
    int*                  maxgubvarssize      /**< pointer to store the maximal size of GUB constraints */
    )
 {
-#if 0 /* not required */
-   SORTKEYPAIR** sortkeypairsF;
-#endif
    SORTKEYPAIR** sortkeypairsGFC1;
    SORTKEYPAIR* sortkeypairsGFC1store;
    SCIP_Real* sortkeysC1;
@@ -2972,9 +3028,6 @@ SCIP_RETCODE getLiftingSequenceGUB(
 
    /* allocates temporary memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &sortkeysC1, nvarsC1) );
-#if 0 /* not required */
-   SCIP_CALL( SCIPallocBufferArray(scip, &sortkeypairsF, nvarsF) );
-#endif
    SCIP_CALL( SCIPallocBufferArray(scip, &sortkeysC2, nvarsC2) );
    SCIP_CALL( SCIPallocBufferArray(scip, &sortkeysR, nvarsR) );
 
@@ -3006,13 +3059,6 @@ SCIP_RETCODE getLiftingSequenceGUB(
     */
    for( j = 0; j < nvarsF; j++ )
    {
-#if 0 /* not required */
-      /* gets sortkeys */
-      SCIP_CALL( SCIPallocBuffer(scip, &sortkeypairsF[j]) );
-      sortkeypairsF[j]->key1 = solvals[varsF[j]];
-      sortkeypairsF[j]->key2 = (SCIP_Real) weights[varsF[j]];
-#endif
-
       /* update status of variable in its gub constraint */
       gubconsidx = gubset->gubconssidx[varsF[j]];
       varidx = gubset->gubvarsidx[varsF[j]];
@@ -3050,16 +3096,9 @@ SCIP_RETCODE getLiftingSequenceGUB(
    }
 
    /* sorts C1, F, C2 and R */
-   if( nvarsC1 > 0 )
-   {
-      SCIPsortRealInt(sortkeysC1, varsC1, nvarsC1);
-   }
-#if 0 /* not required */
-   if( nvarsF > 0 )
-   {
-      SCIPsortDownPtrInt((void**)sortkeypairsF, varsF, compSortkeypairs, nvarsF);
-   }
-#endif
+   assert(nvarsC1 > 0);
+   SCIPsortRealInt(sortkeysC1, varsC1, nvarsC1);
+
    if( nvarsC2 > 0 )
    {
       SCIPsortDownRealInt(sortkeysC2, varsC2, nvarsC2);
@@ -3072,11 +3111,6 @@ SCIP_RETCODE getLiftingSequenceGUB(
    /* frees temporary memory */
    SCIPfreeBufferArray(scip, &sortkeysR);
    SCIPfreeBufferArray(scip, &sortkeysC2);
-#if 0 /* not required */
-   for( j = nvarsF-1; j >= 0; j-- )
-      SCIPfreeBuffer(scip, &sortkeypairsF[j]);
-   SCIPfreeBufferArray(scip, &sortkeypairsF);
-#endif
    SCIPfreeBufferArray(scip, &sortkeysC1);
 
    /* allocate and initialize temporary memory for sorting GUB constraints */
@@ -4921,7 +4955,7 @@ SCIP_RETCODE separateSequLiftedMinimalCoverInequality(
       if ( cons != NULL )
       {
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_mcseq%" SCIP_LONGINT_FORMAT "", SCIPconsGetName(cons), SCIPconshdlrGetNCutsFound(SCIPconsGetHdlr(cons)));
-         SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), name, -SCIPinfinity(scip), (SCIP_Real)liftrhs,
+         SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, cons, name, -SCIPinfinity(scip), (SCIP_Real)liftrhs,
             cons != NULL ? SCIPconsIsLocal(cons) : FALSE, FALSE,
             cons != NULL ? SCIPconsIsRemovable(cons) : TRUE) );
       }
@@ -4932,7 +4966,7 @@ SCIP_RETCODE separateSequLiftedMinimalCoverInequality(
       }
       else
       {
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "nn_mcseq_%" SCIP_LONGINT_FORMAT "", *ncuts);
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "nn_mcseq_%d", *ncuts);
          SCIP_CALL( SCIPcreateEmptyRowUnspec(scip, &row, name, -SCIPinfinity(scip), (SCIP_Real)liftrhs, FALSE, FALSE, TRUE) );
       }
 
@@ -5088,7 +5122,7 @@ SCIP_RETCODE separateSequLiftedExtendedWeightInequality(
       if( cons != NULL )
       {
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_ewseq%" SCIP_LONGINT_FORMAT "", SCIPconsGetName(cons), SCIPconshdlrGetNCutsFound(SCIPconsGetHdlr(cons)));
-         SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), name, -SCIPinfinity(scip), (SCIP_Real)liftrhs,
+         SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &row, SCIPconsGetHdlr(cons), name, -SCIPinfinity(scip), (SCIP_Real)liftrhs,
                cons != NULL ? SCIPconsIsLocal(cons) : FALSE, FALSE,
                cons != NULL ? SCIPconsIsRemovable(cons) : TRUE) );
       }
@@ -5099,7 +5133,7 @@ SCIP_RETCODE separateSequLiftedExtendedWeightInequality(
       }
       else
       {
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "nn_ewseq_%" SCIP_LONGINT_FORMAT "", *ncuts);
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "nn_ewseq_%d", *ncuts);
          SCIP_CALL( SCIPcreateEmptyRowUnspec(scip, &row, name, -SCIPinfinity(scip), (SCIP_Real)liftrhs, FALSE, FALSE, TRUE) );
       }
 
@@ -5215,7 +5249,7 @@ SCIP_RETCODE separateSupLiftedMinimalCoverInequality(
       if ( cons != NULL )
       {
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_mcsup%" SCIP_LONGINT_FORMAT "", SCIPconsGetName(cons), SCIPconshdlrGetNCutsFound(SCIPconsGetHdlr(cons)));
-         SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), name, -SCIPinfinity(scip), (SCIP_Real)liftrhs,
+         SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &row, SCIPconsGetHdlr(cons), name, -SCIPinfinity(scip), (SCIP_Real)liftrhs,
                cons != NULL ? SCIPconsIsLocal(cons) : FALSE, FALSE,
                cons != NULL ? SCIPconsIsRemovable(cons) : TRUE) );
       }
@@ -5226,7 +5260,7 @@ SCIP_RETCODE separateSupLiftedMinimalCoverInequality(
       }
       else
       {
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "nn_mcsup_%" SCIP_LONGINT_FORMAT "", *ncuts);
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "nn_mcsup_%d", *ncuts);
          SCIP_CALL( SCIPcreateEmptyRowUnspec(scip, &row, name, -SCIPinfinity(scip), (SCIP_Real)liftrhs, FALSE, FALSE, TRUE) );
       }
 
@@ -5620,7 +5654,7 @@ SCIP_RETCODE SCIPseparateKnapsackCuts(
          SCIPdebugMsg(scip, "   LMCI1-GUB terminated by no variable with fractional LP value.\n");
 
          /* frees memory for GUB set data structure */
-         SCIP_CALL( GUBsetFree(scip, &gubset) );
+         GUBsetFree(scip, &gubset);
 
          goto TERMINATE;
       }
@@ -5652,7 +5686,7 @@ SCIP_RETCODE SCIPseparateKnapsackCuts(
       }
 
       /* frees memory for GUB set data structure */
-      SCIP_CALL( GUBsetFree(scip, &gubset) );
+      GUBsetFree(scip, &gubset);
    }
    else
    {
@@ -6073,7 +6107,7 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
     *  - scale a~_j = a_j * intscalar
     *  - substitute x~_j = 1 - x_j if a~_j < 0
     */
-   rhs = rhs*intscalar;
+   rhs = rhs * intscalar;
 
    SCIPdebugMsg(scip, " -> rhs = %.15g\n", rhs);
    minact = 0;
@@ -6083,7 +6117,7 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
       SCIP_VAR* var;
       SCIP_Longint val;
 
-      val = (SCIP_Longint)SCIPfloor(scip, binvals[i]*intscalar);
+      val = (SCIP_Longint)SCIPfloor(scip, binvals[i] * intscalar);
       if( val == 0 )
          continue;
 
@@ -6098,7 +6132,7 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
          assert(val < 0);
 
          SCIP_CALL( SCIPgetNegatedVar(scip, binvars[i], &var) );
-         val = -val;
+         val = -val;  /*lint !e2704*/
          rhs += val;
          SCIPdebugMsg(scip, " -> negative scaled binary variable %+" SCIP_LONGINT_FORMAT "<%s> (unscaled %.15g): substituted by (1 - <%s>) (rhs=%.15g)\n",
             -val, SCIPvarGetName(binvars[i]), binvals[i], SCIPvarGetName(var), rhs);
@@ -6946,6 +6980,9 @@ SCIP_RETCODE checkParallelObjective(
 
          cutoffbound = (consdata->capacity - offset) / scale;
 
+         SCIPdebugMsg(scip, "constraint <%s> is parallel to objective function and provids a cutoff bound <%g>\n",
+            SCIPconsGetName(cons), cutoffbound);
+
          /* increase the cutoff bound value by an epsilon to ensue that solution with the value of the cutoff bound are
           * still excepted
           */
@@ -7254,7 +7291,8 @@ SCIP_RETCODE applyFixings(
 
                if( !SCIPvarIsBinary(aggrvars[i]) )
                {
-                  SCIPerrorMessage("try to resolve a multi-aggregation with a non-binary variable <%s>\n", aggrvars[i]);
+                  SCIPerrorMessage("try to resolve a multi-aggregation with a non-binary %svariable <%s> with bounds [%g,%g]\n",
+                     SCIPvarIsIntegral(aggrvars[i]) ? "integral " : "", SCIPvarGetName(aggrvars[i]),  SCIPvarGetLbGlobal(aggrvars[i]), SCIPvarGetUbGlobal(aggrvars[i]));
                   return SCIP_ERROR;
                }
                if( !SCIPisIntegral(scip, weight * aggrscalars[i]) )
@@ -7546,13 +7584,14 @@ SCIP_RETCODE propagateCons(
                         SCIP_CALL( SCIPresetConsAge(scip, cons) );
                      }
                   }
-                  if( *cutoff )
-                     break;
 
                   /* reset local minweightsum for clique because all fixed to one variables are now counted in consdata->onesweightsum */
                   localminweightsum = 0;
                   /* we can jump to the end of this clique */
                   i = cliqueendposs[c - 1];
+
+                  if( *cutoff )
+                     break;
                }
             }
             ++i;
@@ -11421,6 +11460,7 @@ SCIP_DECL_HASHKEYVAL(hashKeyValKnapsackcons)
    SCIP* scip;
 #endif
    SCIP_CONSDATA* consdata;
+   uint64_t firstweight;
    int minidx;
    int mididx;
    int maxidx;
@@ -11443,8 +11483,8 @@ SCIP_DECL_HASHKEYVAL(hashKeyValKnapsackcons)
    assert(minidx >= 0 && mididx >= 0 && maxidx >= 0);
 
    /* hash value depends on vectors of variable indices */
-   return SCIPhashTwo(SCIPcombineFourInt(consdata->nvars, minidx, mididx, maxidx),
-                      consdata->weights[0]);
+   firstweight = (uint64_t)consdata->weights[0];
+   return SCIPhashSix(consdata->nvars, minidx, mididx, maxidx, firstweight>>32, firstweight);
 }
 
 /** compares each constraint with all other constraints for possible redundancy and removes or changes constraint 
@@ -11606,6 +11646,10 @@ SCIP_RETCODE preprocessConstraintPairs(
    /* sort the constraint */
    sortItems(consdata0);
 
+   /* see #2970 */
+   if( consdata0->capacity == 0 )
+      return SCIP_OKAY;
+
    /* check constraint against all prior constraints */
    for( c = (consdata0->presolvedtiming == SCIP_PRESOLTIMING_EXHAUSTIVE ? firstchange : 0); c < chkind; ++c )
    {
@@ -11635,6 +11679,10 @@ SCIP_RETCODE preprocessConstraintPairs(
 
       /* sort the constraint */
       sortItems(consdata1);
+
+      /* see #2970 */
+      if( consdata1->capacity == 0 )
+         continue;
 
       quotient = ((SCIP_Real) consdata0->capacity) / ((SCIP_Real) consdata1->capacity);
 
@@ -11688,8 +11736,8 @@ SCIP_RETCODE preprocessConstraintPairs(
          }
 
          assert(v == v0 || v == v1);
-	 assert(v0 >= 0);
-	 assert(v1 >= 0);
+         assert(v0 >= 0);
+         assert(v1 >= 0);
 
          /* both variables are the same */
          if( consdata0->vars[v0] == consdata1->vars[v1] )
@@ -11907,7 +11955,7 @@ SCIP_RETCODE createNormalizedKnapsack(
       else
       {
          SCIP_CALL( SCIPgetNegatedVar(scip, vars[v], &transvars[v]) );
-         weights[v] = -weight;
+         weights[v] = -weight; /*lint !e2704*/
          capacity -= weight;
       }
       assert(transvars[v] != NULL);
@@ -11936,6 +11984,8 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdKnapsack)
     * - all variables must be binary
     * - all coefficients must be integral
     * - exactly one of the sides must be infinite
+    * note that this includes the case of negative capacity, which has been
+    * observed to occur, e.g., when upgrading a conflict constraint
     */
    upgrade = (nposbin + nnegbin + nposimplbin + nnegimplbin == nvars)
       && (ncoeffspone + ncoeffsnone + ncoeffspint + ncoeffsnint == nvars)
@@ -12127,6 +12177,23 @@ SCIP_DECL_CONSEXITPRE(consExitpreKnapsack)
    return SCIP_OKAY;
 }
 
+/** solving process initialization method of constraint handler */
+static
+SCIP_DECL_CONSINITSOL(consInitsolKnapsack)
+{  /*lint --e{715}*/
+
+   /* add nlrow representation to NLP, if NLP had been constructed */
+   if( SCIPisNLPConstructed(scip) )
+   {
+      int c;
+      for( c = 0; c < nconss; ++c )
+      {
+         SCIP_CALL( addNlrow(scip, conss[c]) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
 
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
 static
@@ -12137,7 +12204,7 @@ SCIP_DECL_CONSEXITSOL(consExitsolKnapsack)
 
    assert( scip != NULL );
 
-   /* release the rows of all constraints */
+   /* release the rows and nlrows of all constraints */
    for( c = 0; c < nconss; ++c )
    {
       consdata = SCIPconsGetData(conss[c]);
@@ -12146,6 +12213,11 @@ SCIP_DECL_CONSEXITSOL(consExitsolKnapsack)
       if( consdata->row != NULL )
       {
          SCIP_CALL( SCIPreleaseRow(scip, &consdata->row) );
+      }
+
+      if( consdata->nlrow != NULL )
+      {
+         SCIP_CALL( SCIPreleaseNlRow(scip, &consdata->nlrow) );
       }
    }
 
@@ -12470,7 +12542,7 @@ SCIP_DECL_CONSPROP(consPropKnapsack)
    else
       *result = SCIP_DIDNOTFIND;
 
-   return SCIP_OKAY;
+   return SCIP_OKAY; /*lint !e438*/
 }
 
 /** presolving method of constraint handler */
@@ -12616,7 +12688,7 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
 
          if( SCIPconsIsActive(cons) )
          {
-            if( conshdlrdata->dualpresolving && SCIPallowDualReds(scip) && (presoltiming & SCIP_PRESOLTIMING_MEDIUM) != 0 )
+            if( conshdlrdata->dualpresolving && SCIPallowStrongDualReds(scip) && (presoltiming & SCIP_PRESOLTIMING_MEDIUM) != 0 )
             {
                /* in case the knapsack constraints is independent of everything else, solve the knapsack and apply the
                 * dual reduction
@@ -13003,6 +13075,40 @@ SCIP_DECL_CONSLOCK(consLockKnapsack)
 }
 /**! [SnippetConsLockKnapsack] */
 
+/** constraint activation notification method of constraint handler */
+static
+SCIP_DECL_CONSACTIVE(consActiveKnapsack)
+{  /*lint --e{715}*/
+
+   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPisNLPConstructed(scip) )
+   {
+      SCIP_CALL( addNlrow(scip, cons) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** constraint deactivation notification method of constraint handler */
+static
+SCIP_DECL_CONSDEACTIVE(consDeactiveKnapsack)
+{  /*lint --e{715}*/
+   SCIP_CONSDATA* consdata;
+
+   assert(cons != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* remove row from NLP, if still in solving
+    * if we are in exitsolve, the whole NLP will be freed anyway
+    */
+   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && consdata->nlrow != NULL )
+   {
+      SCIP_CALL( SCIPdelNlRow(scip, consdata->nlrow) );
+   }
+
+   return SCIP_OKAY;
+}
 
 /** variable deletion method of constraint handler */
 static
@@ -13275,7 +13381,7 @@ SCIP_DECL_EVENTEXEC(eventExecKnapsack)
       consdata->varsdeleted = TRUE;
       break;
    default:
-      SCIPerrorMessage("invalid event type %x\n", SCIPeventGetType(event));
+      SCIPerrorMessage("invalid event type %" SCIP_EVENTTYPE_FORMAT "\n", SCIPeventGetType(event));
       return SCIP_INVALIDDATA;
    }
 
@@ -13322,10 +13428,13 @@ SCIP_RETCODE SCIPincludeConshdlrKnapsack(
 
    /* set non-fundamental callbacks via specific setter functions */
    SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyKnapsack, consCopyKnapsack) );
+   SCIP_CALL( SCIPsetConshdlrActive(scip, conshdlr, consActiveKnapsack) );
+   SCIP_CALL( SCIPsetConshdlrDeactive(scip, conshdlr, consDeactiveKnapsack) );
    SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteKnapsack) );
    SCIP_CALL( SCIPsetConshdlrDelvars(scip, conshdlr, consDelvarsKnapsack) );
    SCIP_CALL( SCIPsetConshdlrExit(scip, conshdlr, consExitKnapsack) );
    SCIP_CALL( SCIPsetConshdlrExitpre(scip, conshdlr, consExitpreKnapsack) );
+   SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolKnapsack) );
    SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolKnapsack) );
    SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeKnapsack) );
    SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsKnapsack) );
@@ -13540,6 +13649,7 @@ SCIP_RETCODE SCIPaddCoefKnapsack(
    )
 {
    assert(var != NULL);
+   assert(scip != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -13559,6 +13669,8 @@ SCIP_Longint SCIPgetCapacityKnapsack(
    )
 {
    SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -13584,6 +13696,8 @@ SCIP_RETCODE SCIPchgCapacityKnapsack(
    )
 {
    SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -13613,6 +13727,8 @@ int SCIPgetNVarsKnapsack(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(scip != NULL);
+
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       SCIPerrorMessage("constraint is not a knapsack constraint\n");
@@ -13633,6 +13749,8 @@ SCIP_VAR** SCIPgetVarsKnapsack(
    )
 {
    SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -13655,6 +13773,8 @@ SCIP_Longint* SCIPgetWeightsKnapsack(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(scip != NULL);
+
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       SCIPerrorMessage("constraint is not a knapsack constraint\n");
@@ -13675,6 +13795,8 @@ SCIP_Real SCIPgetDualsolKnapsack(
    )
 {
    SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -13699,6 +13821,8 @@ SCIP_Real SCIPgetDualfarkasKnapsack(
    )
 {
    SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -13726,6 +13850,8 @@ SCIP_ROW* SCIPgetRowKnapsack(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(scip != NULL);
+
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       SCIPerrorMessage("constraint is not a knapsack\n");
@@ -13737,4 +13863,37 @@ SCIP_ROW* SCIPgetRowKnapsack(
    assert(consdata != NULL);
 
    return consdata->row;
+}
+
+/** cleans up (multi-)aggregations and fixings from knapsack constraints */
+SCIP_RETCODE SCIPcleanupConssKnapsack(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             onlychecked,        /**< should only checked constraints be cleaned up? */
+   SCIP_Bool*            infeasible          /**< pointer to return whether the problem was detected to be infeasible */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONS** conss;
+   int nconss;
+   int i;
+
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   if( conshdlr == NULL )
+      return SCIP_OKAY;
+
+   assert(infeasible != NULL);
+   *infeasible = FALSE;
+
+   nconss = onlychecked ? SCIPconshdlrGetNCheckConss(conshdlr) : SCIPconshdlrGetNActiveConss(conshdlr);
+   conss = onlychecked ? SCIPconshdlrGetCheckConss(conshdlr) : SCIPconshdlrGetConss(conshdlr);
+
+   for( i = 0; i < nconss; ++i )
+   {
+      SCIP_CALL( applyFixings(scip, conss[i], infeasible) );
+
+      if( *infeasible )
+         break;
+   }
+
+   return SCIP_OKAY;
 }

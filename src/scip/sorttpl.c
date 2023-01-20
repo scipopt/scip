@@ -3,17 +3,27 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sorttpl.c
+ * @ingroup OTHER_CFILES
  * @brief  template functions for sorting
  * @author Michael Winkler
  * @author Tobias Achterberg
@@ -36,6 +46,7 @@
  * #define SORTTPL_BACKWARDS               should the array be sorted other way around
  */
 #include "scip/def.h"
+#include "scip/dbldblarith.h"
 #define SORTTPL_SHELLSORTMAX    25 /* maximal size for shell sort */
 #define SORTTPL_MINSIZENINTHER 729 /* minimum input size to use ninther (median of nine) for pivot selection */
 
@@ -807,25 +818,31 @@ void SORTTPL_NAME(sorttpl_checkWeightedSelection, SORTTPL_NAMEEXT)
    )
 {
    int i;
-   SCIP_Real weightsum = 0.0;
+   SCIP_Real QUAD(weightsum);
+   QUAD_ASSIGN(weightsum, -capacity);
 
    for( i = 0; i < len; i++ )
    {
       if ( weights != NULL )
-         weightsum += weights[i];
+      {
+         SCIPquadprecSumQD(weightsum, weightsum, weights[i]);
+      }
       else
-         weightsum += 1.0;
+      {
+         SCIPquadprecSumQD(weightsum, weightsum, 1.0);
+      }
 
       /* check that the weight sum exceeds the capacity at the median element */
       if( i == medianpos )
       {
-         assert(weightsum > capacity);
+         assert(QUAD_TO_DBL(weightsum) >  -SCIP_DEFAULT_EPSILON);
       }
       else if( i < medianpos )
       {
          /* check that the partial sorting is correct w.r.t. the median element and that capacity is not exceeded */
          assert(medianpos == len || ! SORTTPL_ISBETTER(key[medianpos], key[i]));
-         assert(weightsum <= capacity);
+
+         assert(QUAD_TO_DBL(weightsum) <= SCIP_DEFAULT_EPSILON );
       }
       else
       {

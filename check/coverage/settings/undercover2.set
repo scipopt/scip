@@ -1,0 +1,9 @@
+# SCIP version 2.1.1.6
+
+# maximum number of recoverings
+# [type: int, range: [0,2147483647], default: 0]
+heuristics/undercover/maxrecovers = 2
+
+# should we only fix variables in order to obtain a convex problem?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+heuristics/undercover/onlyconvexify = TRUE

@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -44,7 +53,6 @@ extern "C" {
 #endif
 
 /** creates the healthcare variable pricer and includes it in SCIP */
-extern
 SCIP_RETCODE SCIPincludePricerColoring(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -53,7 +61,6 @@ SCIP_RETCODE SCIPincludePricerColoring(
     if onlybest is true, only the best n variables are added to the lp, while onlybest = false means, that 
     the first n variables with negative reduced costs are added
     Here, n is the value set by setNVarsCreatedPerRound */
-extern
 void COLORpricerUseOnlyBestStableSets(
    SCIP*                 scip,               /**< SCIP data structure */  
    SCIP_Bool             onlybest            /**< true, if only the best vars should be used */
@@ -61,7 +68,6 @@ void COLORpricerUseOnlyBestStableSets(
 
 
 /* sets, whether the pricing should use the greedy-method */
-extern
 void COLORpricerUseGreedy(
    SCIP*                 scip,               /**< SCIP data structure */  
    SCIP_Bool             usegreedy           /**< true, if the greedy should be used */
@@ -69,7 +75,6 @@ void COLORpricerUseGreedy(
 
 
 /* sets whether the pricing should use the tclique-method for finding new variables */
-extern
 void COLORpricerUseTclique(
    SCIP*                 scip,               /**< SCIP data structure */  
    SCIP_Bool             usetclique          /**< true, if the tclique-algorithm should be used */
@@ -77,7 +82,6 @@ void COLORpricerUseTclique(
 
 
 /* sets the number of variables that the pricer is allowed to create in one round of pricing */
-extern
 void COLORpricerSetNVarsCreatedPerRound(
    SCIP*                 scip,               /**< SCIP data structure */  
    int                   nvars               /**< maximal number of variables that should be created in one round */

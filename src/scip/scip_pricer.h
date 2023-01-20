@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -23,7 +32,7 @@
  * @author Marc Pfetsch
  * @author Kati Wolter
  * @author Gregor Hendel
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -37,25 +46,6 @@
 #include "scip/type_result.h"
 #include "scip/type_retcode.h"
 #include "scip/type_scip.h"
-
-/* In debug mode, we include the SCIP's structure in scip.c, such that no one can access
- * this structure except the interface methods in scip.c.
- * In optimized mode, the structure is included in scip.h, because some of the methods
- * are implemented as defines for performance reasons (e.g. the numerical comparisons).
- * Additionally, the internal "set.h" is included, such that the defines in set.h are
- * available in optimized mode.
- */
-#ifdef NDEBUG
-#include "scip/struct_scip.h"
-#include "scip/struct_stat.h"
-#include "scip/set.h"
-#include "scip/tree.h"
-#include "scip/misc.h"
-#include "scip/var.h"
-#include "scip/cons.h"
-#include "scip/solve.h"
-#include "scip/debug.h"
-#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -81,7 +71,7 @@ extern "C" {
  *        in future releases; consider using SCIPincludePricerBasic() and setter functions
  *        if you seek for a method which is less likely to change in future releases
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludePricer(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of variable pricer */
@@ -120,7 +110,7 @@ SCIP_RETCODE SCIPincludePricer(
  *
  *  @note if you want to set all callbacks with a single method call, consider using SCIPincludePricer() instead
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludePricerBasic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PRICER**         pricerptr,          /**< reference to a pricer, or NULL */
@@ -146,7 +136,7 @@ SCIP_RETCODE SCIPincludePricerBasic(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetPricerCopy(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PRICER*          pricer,             /**< pricer */
@@ -162,7 +152,7 @@ SCIP_RETCODE SCIPsetPricerCopy(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetPricerFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PRICER*          pricer,             /**< pricer */
@@ -178,7 +168,7 @@ SCIP_RETCODE SCIPsetPricerFree(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetPricerInit(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PRICER*          pricer,             /**< pricer */
@@ -194,7 +184,7 @@ SCIP_RETCODE SCIPsetPricerInit(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetPricerExit(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PRICER*          pricer,             /**< pricer */
@@ -210,7 +200,7 @@ SCIP_RETCODE SCIPsetPricerExit(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetPricerInitsol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PRICER*          pricer,             /**< pricer */
@@ -226,7 +216,7 @@ SCIP_RETCODE SCIPsetPricerInitsol(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetPricerExitsol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PRICER*          pricer,             /**< pricer */
@@ -234,32 +224,32 @@ SCIP_RETCODE SCIPsetPricerExitsol(
    );
 
 /** returns the variable pricer of the given name, or NULL if not existing */
-EXTERN
+SCIP_EXPORT
 SCIP_PRICER* SCIPfindPricer(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of variable pricer */
    );
 
 /** returns the array of currently available variable pricers; active pricers are in the first slots of the array */
-EXTERN
+SCIP_EXPORT
 SCIP_PRICER** SCIPgetPricers(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** returns the number of currently available variable pricers */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNPricers(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** returns the number of currently active variable pricers, that are used in the LP solving loop */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNActivePricers(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** sets the priority of a variable pricer */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetPricerPriority(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PRICER*          pricer,             /**< variable pricer */
@@ -277,7 +267,7 @@ SCIP_RETCODE SCIPsetPricerPriority(
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPactivatePricer(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PRICER*          pricer              /**< variable pricer */
@@ -292,13 +282,13 @@ SCIP_RETCODE SCIPactivatePricer(
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPdeactivatePricer(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PRICER*          pricer              /**< variable pricer */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

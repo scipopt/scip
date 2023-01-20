@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -1953,7 +1962,7 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
    assert(lpi != NULL);
    assert(lpi->clp != NULL);
 
-   SCIPdebugMessage("calling Clp barrier(): %d cols, %d rows\n", lpi->clp->numberColumns(), lpi->clp->numberRows());
+   SCIPdebugMessage("calling Clp barrier(): %d cols, %d rows; crossover: %u\n", lpi->clp->numberColumns(), lpi->clp->numberRows(), crossover);
 
    invalidateSolution(lpi);
 
@@ -1964,7 +1973,12 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
    */
 
    // call barrier
+#if (CLP_VERSION_MAJOR >= 1 && CLP_VERSION_MINOR > 17) || CLP_VERSION_MAJOR >= 2
+   int startFinishOptions = 1;
+   int status = lpi->clp->barrier(crossover, startFinishOptions);
+#else
    int status = lpi->clp->barrier(crossover);
+#endif
 
    lpi->lastalgorithm = 2;
    lpi->solved = TRUE;
@@ -2357,6 +2371,7 @@ SCIP_RETCODE SCIPlpiStrongbranchesInt(
    return SCIP_OKAY;
 }
 
+/**@} */
 
 
 
@@ -2382,7 +2397,7 @@ SCIP_Bool SCIPlpiWasSolved(
  *  The feasibility information is with respect to the last solving call and it is only relevant if SCIPlpiWasSolved()
  *  returns true. If the LP is changed, this information might be invalidated.
  *
- *  Note that @a primalfeasible and @dualfeasible should only return true if the solver has proved the respective LP to
+ *  Note that @a primalfeasible and @a dualfeasible should only return true if the solver has proved the respective LP to
  *  be feasible. Thus, the return values should be equal to the values of SCIPlpiIsPrimalFeasible() and
  *  SCIPlpiIsDualFeasible(), respectively. Note that if feasibility cannot be proved, they should return false (even if
  *  the problem might actually be feasible).
@@ -3171,7 +3186,6 @@ SCIP_RETCODE SCIPlpiSetBase(
 
 
 /** returns the indices of the basic columns and rows; basic column n gives value n, basic row m gives value -1-m */
-extern
 SCIP_RETCODE SCIPlpiGetBasisInd(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int*                  bind                /**< pointer to store basis indices ready to keep number of rows entries */
@@ -3301,7 +3315,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   r,                  /**< row number */
    const SCIP_Real*      binvrow,            /**< row in (A_B)^-1 from prior call to SCIPlpiGetBInvRow(), or NULL */
-   SCIP_Real*            coef,               /**< vector to return coefficients */
+   SCIP_Real*            coef,               /**< vector to return coefficients of the row */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
                                               *   (-1: if we do not store sparsity information) */
@@ -3335,7 +3349,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
 SCIP_RETCODE SCIPlpiGetBInvACol(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   c,                  /**< column number */
-   SCIP_Real*            coef,               /**< vector to return coefficients */
+   SCIP_Real*            coef,               /**< vector to return coefficients of the column */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
                                               *   (-1: if we do not store sparsity information) */
@@ -3759,6 +3773,8 @@ SCIP_RETCODE SCIPlpiSetIntpar(
          lpi->clp->setLogLevel(0);
       break;
    case SCIP_LPPAR_LPITLIM:
+      /* ival >= 0, 0 stop immediately */
+      assert( ival >= 0 );
       lpi->clp->setMaximumIterations(ival);
       break;
    case SCIP_LPPAR_FASTMIP:
@@ -3829,23 +3845,60 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    switch( type )
    {
    case SCIP_LPPAR_FEASTOL:
+      assert( dval > 0.0 );
+      /* 0 < dval < 1e10 */
+      if( dval > 1e+10 )
+      {
+         /* however dval is required to be strictly less than 1e+10 */
+         dval = 9e+9;
+      }
+
       lpi->clp->setPrimalTolerance(dval);
       break;
    case SCIP_LPPAR_DUALFEASTOL:
+      assert( dval > 0.0 );
+      /* 0 < dval < 1e10 */
+      if( dval > 1e+10 )
+      {
+         /* however dval is required to be strictly less than 1e+10 */
+         dval = 9e+9;
+      }
+
       lpi->clp->setDualTolerance(dval);
       break;
    case SCIP_LPPAR_BARRIERCONVTOL:
       /* @todo add BARRIERCONVTOL parameter */
       return SCIP_PARAMETERUNKNOWN;
    case SCIP_LPPAR_OBJLIM:
+      /* no restriction on dval */
+
       lpi->clp->setDualObjectiveLimit(dval);
       break;
    case SCIP_LPPAR_LPTILIM:
+      assert( dval > 0.0 );
+      /* clp poses no restrictions on dval
+       * (it handles the case dval < 0 internally and sets param to -1 meaning no time limit.)
+       *
+       * However for consistency we assert the timelimit to be strictly positive.
+       */
+
       lpi->clp->setMaximumSeconds(dval);
       break;
    default:
       return SCIP_PARAMETERUNKNOWN;
    }
+
+   return SCIP_OKAY;
+}
+
+/** interrupts the currently ongoing lp solve or disables the interrupt */
+SCIP_RETCODE SCIPlpiInterrupt(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   SCIP_Bool             interrupt           /**< TRUE if interrupt should be set, FALSE if it should be disabled */
+   )
+{
+   /*lint --e{715}*/
+   assert(lpi != NULL);
 
    return SCIP_OKAY;
 }

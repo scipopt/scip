@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -33,16 +42,6 @@
 extern "C" {
 #endif
 
-struct SCIP_BenderscutCut
-{
-   SCIP_VAR**            vars;               /**< the variables forming the cut */
-   SCIP_Real*            vals;               /**< the coefficients of the variables in the cut */
-   SCIP_Real             lhs;                /**< the left hand side of the cut */
-   SCIP_Real             rhs;                /**< the right hand side of the cut */
-   int                   nvars;              /**< the number of variables in the cut */
-};
-typedef struct SCIP_BenderscutCut SCIP_BENDERSCUTCUT;
-
 /** Benders' decomposition cuts data */
 struct SCIP_Benderscut
 {
@@ -63,10 +62,6 @@ struct SCIP_Benderscut
    int                   priority;           /**< priority of the Benders' decomposition cuts */
    SCIP_Bool             islpcut;            /**< does this Benders' cut use LP information? */
    SCIP_Bool             initialized;        /**< has the Benders' decomposition cut been initialized? */
-
-   SCIP_BENDERSCUTCUT**  addedcuts;          /**< array to store the data required to form a cut/constraint */
-   int                   addedcutssize;      /**< the size of the added cuts array */
-   int                   naddedcuts;         /**< the number of the added cuts */
 
    /* additional Benders' decomposition cuts parameters */
    SCIP_Bool             enabled;            /**< is this Benders' decomposition cut enabled? */
