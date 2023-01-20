@@ -1338,9 +1338,10 @@ SCIP_RETCODE presolve(
 
    *infeasible = FALSE;
    *unbounded = (*unbounded) || (SCIPgetNSols(scip) > 0 && SCIPisInfinity(scip, -SCIPgetSolOrigObj(scip, SCIPgetBestSol(scip))));
+   *vanished = scip->transprob->nvars == 0 && scip->transprob->nconss == 0 && scip->set->nactivepricers == 0;
 
    finished = (scip->set->presol_maxrounds != -1 && scip->stat->npresolrounds >= scip->set->presol_maxrounds)
-         || (*unbounded) || (scip->set->reopt_enable && scip->stat->nreoptruns >= 1);
+         || (*unbounded) || (*vanished) || (scip->set->reopt_enable && scip->stat->nreoptruns >= 1);
    stopped = SCIPsolveIsStopped(scip->set, scip->stat, TRUE);
 
    /* perform presolving rounds */
@@ -1387,8 +1388,9 @@ SCIP_RETCODE presolve(
 
       SCIPdebugMsg(scip, "presolving round %d returned with unbounded = %u, infeasible = %u, finished = %u\n", scip->stat->npresolrounds, *unbounded, *infeasible, finished);
 
-      /* check whether problem is infeasible or unbounded */
-      finished = finished || *unbounded || *infeasible;
+      /* check whether problem is infeasible or unbounded or vanished */
+      *vanished = scip->transprob->nvars == 0 && scip->transprob->nconss == 0 && scip->set->nactivepricers == 0;
+      finished = finished || *unbounded || *infeasible || *vanished;
 
       /* increase round number */
       scip->stat->npresolrounds++;
@@ -1444,12 +1446,12 @@ SCIP_RETCODE presolve(
 
       if( scip->set->nactivepricers == 0 )
       {
+         assert(*vanished);
+
          if( scip->primal->nlimsolsfound > 0 )
             scip->stat->status = SCIP_STATUS_OPTIMAL;
          else
             scip->stat->status = SCIP_STATUS_INFEASIBLE;
-
-         *vanished = TRUE;
       }
    }
 
