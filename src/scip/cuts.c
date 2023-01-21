@@ -84,7 +84,12 @@ void printCutQuad(
 
       QUAD_ARRAY_LOAD(coef, cutcoefs, cutinds[i]);
 
-      SCIPdebugPrintf(" %+g<%s>", QUAD_TO_DBL(coef), SCIPvarGetName(vars[cutinds[i]]));
+      if( SCIPvarGetType(vars[cutinds[i]]) == SCIP_VARTYPE_BINARY )
+         SCIPdebugMsgPrint(scip, " %+g<%s>[B]", QUAD_TO_DBL(coef), SCIPvarGetName(vars[cutinds[i]]));
+      else if( SCIPvarGetType(vars[cutinds[i]]) == SCIP_VARTYPE_INTEGER )
+         SCIPdebugMsgPrint(scip, " %+g<%s>[I]", QUAD_TO_DBL(coef), SCIPvarGetName(vars[cutinds[i]]));
+      else
+         SCIPdebugMsgPrint(scip, " %+g<%s>[C]", QUAD_TO_DBL(coef), SCIPvarGetName(vars[cutinds[i]]));
 
       if( ! ignoresol )
       {
