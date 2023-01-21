@@ -3393,8 +3393,7 @@ SCIP_RETCODE cutsRoundMIR(
    int*RESTRICT          nnz,                /**< number of non-zeros in cut */
    int*RESTRICT          varsign,            /**< stores the sign of the transformed variable in summation */
    int*RESTRICT          boundtype,          /**< stores the bound used for transformed variable (vlb/vub_idx or -1 for lb/ub) */
-   QUAD(SCIP_Real        f0),                /**< fractional value of rhs */
-   int*                  nintvarcoefchanged  /**< pointer to store the number of coefficients of integral variables that have been changed */
+   QUAD(SCIP_Real        f0)                 /**< fractional value of rhs */
    )
 {
    SCIP_Real QUAD(tmp);
@@ -3411,9 +3410,6 @@ SCIP_RETCODE cutsRoundMIR(
    assert(boundtype != NULL);
    assert(varsign != NULL);
    assert(0.0 < QUAD_TO_DBL(f0) && QUAD_TO_DBL(f0) < 1.0);
-   assert(nintvarcoefchanged != NULL);
-
-   *nintvarcoefchanged = 0;
 
    SCIPquadprecSumQD(onedivoneminusf0, -f0, 1.0);
    SCIPquadprecDivDQ(onedivoneminusf0, 1.0, onedivoneminusf0);
@@ -3476,10 +3472,6 @@ SCIP_RETCODE cutsRoundMIR(
             SCIPquadprecProdQQ(tmp, tmp, onedivoneminusf0);
             SCIPquadprecSumQQ(cutaj, tmp, downaj);
          }
-
-         if( ! SCIPisEQ(scip, QUAD_TO_DBL(aj), QUAD_TO_DBL(cutaj)) )
-            ++(*nintvarcoefchanged);
-
          QUAD_SCALE(cutaj, varsign[i]);
       }
 
@@ -3890,7 +3882,6 @@ SCIP_RETCODE SCIPcalcMIR(
    int* boundtype;
    int* tmpinds;
    SCIP_Real* tmpcoefs;
-   int nintvarcoefchanged = 0;
 
    SCIP_Real QUAD(rhs);
    SCIP_Real QUAD(downrhs);
@@ -4010,7 +4001,7 @@ SCIP_RETCODE SCIPcalcMIR(
 
    if( tmpnnz > 0 )
    {
-      SCIP_CALL( cutsRoundMIR(scip, tmpcoefs, QUAD(&rhs), tmpinds, &tmpnnz, varsign, boundtype, QUAD(f0), &nintvarcoefchanged) );
+      SCIP_CALL( cutsRoundMIR(scip, tmpcoefs, QUAD(&rhs), tmpinds, &tmpnnz, varsign, boundtype, QUAD(f0)) );
       SCIPdebug(printCutQuad(scip, sol, tmpcoefs, QUAD(rhs), tmpinds, tmpnnz, FALSE, FALSE));
    }
 
@@ -4045,13 +4036,6 @@ SCIP_RETCODE SCIPcalcMIR(
    }
 
    SCIPdebug( printCutQuad(scip, sol, tmpcoefs, QUAD(rhs), tmpinds, tmpnnz, FALSE, FALSE) );
-
-   /* check whether cut is redundant: if the coefficients of the integral variables have not changed and the final rhs is integral. */
-   if( nintvarcoefchanged == 0 && SCIPisIntegral(scip, QUAD_TO_DBL(rhs)) )
-   {
-      SCIPdebugMsg(scip, "Cut is redundant: all coeffcients of integral variables are unchanged and the final right hand side is integral.\n");
-      *success = FALSE;
-   }
 
    if( *success )
    {
@@ -4743,7 +4727,6 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
       SCIP_Real QUAD(downrhs);
       SCIP_Real QUAD(f0);
       SCIP_Real scale;
-      int nintvarcoefchanged;
 
       scale = 1.0 / bestdelta;
       SCIPquadprecProdQD(mksetrhs, mksetrhs, scale);
@@ -4767,7 +4750,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
 
       QUAD_ASSIGN_Q(mksetrhs, downrhs);
 
-      SCIP_CALL( cutsRoundMIR(scip, mksetcoefs, QUAD(&mksetrhs), mksetinds, &mksetnnz, varsign, boundtype, QUAD(f0), &nintvarcoefchanged) );
+      SCIP_CALL( cutsRoundMIR(scip, mksetcoefs, QUAD(&mksetrhs), mksetinds, &mksetnnz, varsign, boundtype, QUAD(f0)) );
 
       SCIPdebugMessage("rounded MIR cut:\n");
       SCIPdebug(printCutQuad(scip, sol, mksetcoefs, QUAD(mksetrhs), mksetinds, mksetnnz, FALSE, FALSE));
@@ -4825,13 +4808,6 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
 
       SCIPdebugMessage("post-processed cut (success = %s):\n", *success ? "TRUE" : "FALSE");
       SCIPdebug(printCutQuad(scip, sol, mksetcoefs, QUAD(mksetrhs), mksetinds, mksetnnz, FALSE, FALSE));
-
-      /* check whether cut is redundant: if the coefficients of the integral variables have not changed and the final rhs is integral. */
-      if( nintvarcoefchanged == 0 && SCIPisIntegral(scip, QUAD_TO_DBL(mksetrhs)) )
-      {
-         SCIPdebugMsg(scip, "Cut is redundant: all coeffcients of integral variables are unchanged and the final right hand side is integral.\n");
-         *success = FALSE;
-      }
 
       if( *success )
       {

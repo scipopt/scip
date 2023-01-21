@@ -6,8 +6,6 @@
 Features
 --------
 
-- filter out CMIR cuts that are redundant (coefficients of integral variables unchanged, final rhs integral)
-
 Performance improvements
 ------------------------
 
