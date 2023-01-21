@@ -465,7 +465,7 @@ SCIP_RETCODE determineGraphSize(
    /* now treat nonlinear constraints */
    conshdlr = SCIPfindConshdlr(scip, "nonlinear");
    nconss = conshdlr != NULL ? SCIPconshdlrGetNConss(conshdlr) : 0;
-   if ( nconss > 0 )
+   if ( nconss > 0 && *success )
    {
       SCIP_CONS** conss;
       SCIP_EXPRITER* it;
