@@ -981,11 +981,12 @@ SCIP_Bool SYMcanComputeSymmetry(void)
    return TRUE;
 }
 
-char*
-initStaticBlissName( );
+/* forward declaration */
+char* initStaticBlissName( );
 
 static char* blissname = initStaticBlissName();
 
+/** return name of external program used to compute generators */
 char*
 initStaticBlissName( )
 {

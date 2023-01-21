@@ -1441,11 +1441,12 @@ SCIP_Bool SYMcanComputeSymmetry(void)
    return TRUE;
 }
 
-char*
-initStaticSymmetryName( );
+/* forward declaration */
+char* initStaticSymmetryName( );
 
 static char* symmetryname = initStaticSymmetryName();
 
+/** return name of external program used to compute generators */
 char*
 initStaticSymmetryName( )
 {
