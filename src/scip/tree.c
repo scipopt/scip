@@ -4740,9 +4740,10 @@ SCIP_RETCODE SCIPnodeFocus(
    tree->focuslpconstructed = FALSE;
    lp->resolvelperror = FALSE;
 
-   /* track the path from the old focus node to the new node, free dead end, and perform domain and constraint set changes */
+   /* track the path from the old focus node to the new node, free dead end, set new focus node, and perform domain and constraint set changes */
    SCIP_CALL( treeSwitchPath(tree, reopt, blkmem, set, stat, transprob, origprob, primal, lp, branchcand, conflict,
          eventfilter, eventqueue, cliquetable, fork, *node, cutoff) );
+   assert(tree->focusnode == *node);
    assert(tree->pathlen >= 0);
    assert(*node != NULL || tree->pathlen == 0);
    assert(*node == NULL || tree->pathlen-1 <= (int)(*node)->depth);
