@@ -209,7 +209,7 @@ SCIP_DECL_HASHKEYVAL(SYMhashKeyValRhstype)
 static
 void sassyhook(
    void*                 user_param,         /**< parameter supplied at call to sassy */
-   int                   n,                  /**< dimension */
+   int                   n,                  /**< dimension of permutations */
    const int*            aut,                /**< permutation */
    int                   nsupp,              /**< support size */
    const int*            suppa               /**< support list */
