@@ -221,7 +221,7 @@ void sassyhook(
    SYMMETRY_Data* data = static_cast<SYMMETRY_Data*>(user_param);
    assert( data->scip != NULL );
    assert( data->npermvars < (int) n );
-   assert( data->maxgenerators >= 0);
+   assert( data->maxgenerators >= 0 );
 
    /* make sure we do not generate more that maxgenerators many permutations, if the limit in bliss is not available */
    if ( data->maxgenerators != 0 && data->nperms >= data->maxgenerators )
