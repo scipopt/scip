@@ -76,7 +76,7 @@ void printCutQuad(
    assert(scip != NULL);
    vars = SCIPgetVars(scip);
 
-   SCIPdebugMessage("CUT:");
+   SCIPdebugMsg(scip, "CUT:");
    QUAD_ASSIGN(activity, 0.0);
    for( i = 0; i < cutnnz; ++i )
    {
@@ -104,7 +104,7 @@ void printCutQuad(
 
       SCIPquadprecSumQQ(activity, activity, coef);
    }
-   SCIPdebugPrintf(" <= %.6f (activity: %g)\n", QUAD_TO_DBL(cutrhs), QUAD_TO_DBL(activity));
+   SCIPdebugMsgPrint(scip, " <= %.6f (activity: %g)\n", QUAD_TO_DBL(cutrhs), QUAD_TO_DBL(activity));
 }
 #endif
 
@@ -1075,7 +1075,7 @@ SCIP_RETCODE cutTightenCoefsQuad(
             SCIPquadprecProdQD(delta, delta, lb);
 
             SCIPquadprecSumQQ(tmp, delta, *cutrhs);
-            SCIPdebugPrintf("tightened coefficient from %g to %g; rhs changed from %g to %g; the bounds are [%g,%g]\n",
+            SCIPdebugMsg(scip, "tightened coefficient from %g to %g; rhs changed from %g to %g; the bounds are [%g,%g]\n",
                QUAD_TO_DBL(val), QUAD_TO_DBL(coef), QUAD_TO_DBL(*cutrhs), QUAD_TO_DBL(tmp), lb,
                cutislocal ? SCIPvarGetUbLocal(vars[cutinds[i]]) : SCIPvarGetUbGlobal(vars[cutinds[i]]));
 
@@ -1122,7 +1122,7 @@ SCIP_RETCODE cutTightenCoefsQuad(
             SCIPquadprecProdQD(delta, delta, ub);
 
             SCIPquadprecSumQQ(tmp, delta, *cutrhs);
-            SCIPdebugPrintf("tightened coefficient from %g to %g; rhs changed from %g to %g; the bounds are [%g,%g]\n",
+            SCIPdebugMsg(scip, "tightened coefficient from %g to %g; rhs changed from %g to %g; the bounds are [%g,%g]\n",
                QUAD_TO_DBL(val), QUAD_TO_DBL(coef), QUAD_TO_DBL(*cutrhs), QUAD_TO_DBL(tmp),
                cutislocal ? SCIPvarGetLbLocal(vars[cutinds[i]]) : SCIPvarGetLbGlobal(vars[cutinds[i]]), ub);
 
@@ -1437,7 +1437,7 @@ SCIP_RETCODE cutTightenCoefs(
             SCIPquadprecProdQD(delta, delta, lb);
 
             SCIPquadprecSumQQ(tmp, delta, *cutrhs);
-            SCIPdebugPrintf("tightened coefficient from %g to %g; rhs changed from %g to %g; the bounds are [%g,%g]\n",
+            SCIPdebugMsg(scip, "tightened coefficient from %g to %g; rhs changed from %g to %g; the bounds are [%g,%g]\n",
                val, QUAD_TO_DBL(coef), QUAD_TO_DBL(*cutrhs), QUAD_TO_DBL(tmp), lb,
                cutislocal ? SCIPvarGetUbLocal(vars[cutinds[i]]) : SCIPvarGetUbGlobal(vars[cutinds[i]]));
 
@@ -1483,7 +1483,7 @@ SCIP_RETCODE cutTightenCoefs(
             SCIPquadprecProdQD(delta, delta, ub);
 
             SCIPquadprecSumQQ(tmp, delta, *cutrhs);
-            SCIPdebugPrintf("tightened coefficient from %g to %g; rhs changed from %g to %g; the bounds are [%g,%g]\n",
+            SCIPdebugMsg(scip, "tightened coefficient from %g to %g; rhs changed from %g to %g; the bounds are [%g,%g]\n",
                val, QUAD_TO_DBL(coef), QUAD_TO_DBL(*cutrhs), QUAD_TO_DBL(tmp),
                cutislocal ? SCIPvarGetLbLocal(vars[cutinds[i]]) : SCIPvarGetLbGlobal(vars[cutinds[i]]), ub);
 
@@ -1632,7 +1632,7 @@ SCIP_Bool SCIPcutsTightenCoefficients(
             SCIPquadprecProdQD(delta, delta, lb);
 
             SCIPquadprecSumQD(tmp, delta, *cutrhs);
-            SCIPdebugPrintf("tightened coefficient from %g to %g; rhs changed from %g to %g; the bounds are [%g,%g]\n",
+            SCIPdebugMsg(scip, "tightened coefficient from %g to %g; rhs changed from %g to %g; the bounds are [%g,%g]\n",
                cutcoefs[i], coef, (*cutrhs), QUAD_TO_DBL(tmp), lb,
                cutislocal ? SCIPvarGetUbLocal(vars[cutinds[i]]) : SCIPvarGetUbGlobal(vars[cutinds[i]]));
 
@@ -1673,7 +1673,7 @@ SCIP_Bool SCIPcutsTightenCoefficients(
             SCIPquadprecProdQD(delta, delta, ub);
 
             SCIPquadprecSumQD(tmp, delta, *cutrhs);
-            SCIPdebugPrintf("tightened coefficient from %g to %g; rhs changed from %g to %g; the bounds are [%g,%g]\n",
+            SCIPdebugMsg(scip, "tightened coefficient from %g to %g; rhs changed from %g to %g; the bounds are [%g,%g]\n",
                cutcoefs[i], coef, (*cutrhs), QUAD_TO_DBL(tmp),
                cutislocal ? SCIPvarGetLbLocal(vars[cutinds[i]]) : SCIPvarGetLbGlobal(vars[cutinds[i]]), ub);
 
@@ -3894,7 +3894,7 @@ SCIP_RETCODE SCIPcalcMIR(
    assert(SCIPisPositive(scip, scale));
    assert(success != NULL);
 
-   SCIPdebugMessage("calculating MIR cut (scale: %g)\n", scale);
+   SCIPdebugMsg(scip, "calculating MIR cut (scale: %g)\n", scale);
 
    *success = FALSE;
 
@@ -3951,6 +3951,8 @@ SCIP_RETCODE SCIPcalcMIR(
 
       if( freevariable )
          goto TERMINATE;
+
+      SCIPdebugMsg(scip, "Aggregated and transformed:\n");
       SCIPdebug(printCutQuad(scip, sol, tmpcoefs, QUAD(rhs), tmpinds, tmpnnz, FALSE, FALSE));
    }
 
@@ -4002,6 +4004,8 @@ SCIP_RETCODE SCIPcalcMIR(
    if( tmpnnz > 0 )
    {
       SCIP_CALL( cutsRoundMIR(scip, tmpcoefs, QUAD(&rhs), tmpinds, &tmpnnz, varsign, boundtype, QUAD(f0)) );
+
+      SCIPdebugMsg(scip, "After MIR rounding:\n");
       SCIPdebug(printCutQuad(scip, sol, tmpcoefs, QUAD(rhs), tmpinds, tmpnnz, FALSE, FALSE));
    }
 
@@ -4021,6 +4025,8 @@ SCIP_RETCODE SCIPcalcMIR(
     */
    SCIP_CALL( cutsSubstituteMIR(scip, aggrrow->rowweights, aggrrow->slacksign, aggrrow->rowsinds,
          aggrrow->nrows, scale, tmpcoefs, QUAD(&rhs), tmpinds, &tmpnnz, QUAD(f0)) );
+
+   SCIPdebugMsg(scip, "After slack substitution:\n");
    SCIPdebug( printCutQuad(scip, sol, tmpcoefs, QUAD(rhs), tmpinds, tmpnnz, FALSE, FALSE) );
 
    if( postprocess )
@@ -4035,6 +4041,7 @@ SCIP_RETCODE SCIPcalcMIR(
       *success = ! removeZerosQuad(scip, SCIPsumepsilon(scip), tmpislocal, tmpcoefs, QUAD(&rhs), tmpinds, &tmpnnz);
    }
 
+   SCIPdebugMsg(scip, "After post processing:\n");
    SCIPdebug( printCutQuad(scip, sol, tmpcoefs, QUAD(rhs), tmpinds, tmpnnz, FALSE, FALSE) );
 
    if( *success )
@@ -4300,7 +4307,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
    if( freevariable )
       goto TERMINATE;
 
-   SCIPdebugMessage("transformed aggrrow row:\n");
+   SCIPdebugMsg(scip, "transformed aggrrow row:\n");
    SCIPdebug( printCutQuad(scip, sol, mksetcoefs, QUAD(mksetrhs), mksetinds, mksetnnz, FALSE, FALSE) );
 
    /* found positions of integral variables that are strictly between their bounds */
@@ -4745,14 +4752,14 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
          SCIPquadprecProdQD(coef, coef, scale);
          QUAD_ARRAY_STORE(mksetcoefs, mksetinds[i], coef);
       }
-      SCIPdebugMessage("applied best scale (=%.13g):\n", scale);
+      SCIPdebugMsg(scip, "applied best scale (=%.13g):\n", scale);
       SCIPdebug(printCutQuad(scip, sol, mksetcoefs, QUAD(mksetrhs), mksetinds, mksetnnz, FALSE, FALSE));
 
       QUAD_ASSIGN_Q(mksetrhs, downrhs);
 
       SCIP_CALL( cutsRoundMIR(scip, mksetcoefs, QUAD(&mksetrhs), mksetinds, &mksetnnz, varsign, boundtype, QUAD(f0)) );
 
-      SCIPdebugMessage("rounded MIR cut:\n");
+      SCIPdebugMsg(scip, "rounded MIR cut:\n");
       SCIPdebug(printCutQuad(scip, sol, mksetcoefs, QUAD(mksetrhs), mksetinds, mksetnnz, FALSE, FALSE));
 
       /* substitute aggregated slack variables:
@@ -4772,7 +4779,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
       SCIP_CALL( cutsSubstituteMIR(scip, aggrrow->rowweights, aggrrow->slacksign, aggrrow->rowsinds,
             aggrrow->nrows, scale, mksetcoefs, QUAD(&mksetrhs), mksetinds, &mksetnnz, QUAD(f0)) );
 
-      SCIPdebugMessage("substituted slacks in MIR cut:\n");
+      SCIPdebugMsg(scip, "substituted slacks in MIR cut:\n");
       SCIPdebug(printCutQuad(scip, sol, mksetcoefs, QUAD(mksetrhs), mksetinds, mksetnnz, FALSE, FALSE));
 
 #ifndef NDEBUG
@@ -4787,7 +4794,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
 
          if( !EPSZ(SCIPrelDiff(efficacy, bestefficacy), 1e-4) )
          {
-            SCIPdebugMessage("efficacy of cmir cut is different than expected efficacy: %f != %f\n", efficacy, bestefficacy);
+            SCIPdebugMsg(scip, "efficacy of cmir cut is different than expected efficacy: %f != %f\n", efficacy, bestefficacy);
          }
       }
 #endif
@@ -4806,7 +4813,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
          *success = ! removeZerosQuad(scip, SCIPsumepsilon(scip), *cutislocal, mksetcoefs, QUAD(&mksetrhs), mksetinds, &mksetnnz);
       }
 
-      SCIPdebugMessage("post-processed cut (success = %s):\n", *success ? "TRUE" : "FALSE");
+      SCIPdebugMsg(scip, "post-processed cut (success = %s):\n", *success ? "TRUE" : "FALSE");
       SCIPdebug(printCutQuad(scip, sol, mksetcoefs, QUAD(mksetrhs), mksetinds, mksetnnz, FALSE, FALSE));
 
       if( *success )
@@ -7791,7 +7798,7 @@ SCIP_Bool computeInitialKnapsackCover(
    if( SCIPisFeasLE(scip, QUAD_TO_DBL(*coverweight), cutrhs) || *coversize == 0 )
       return FALSE;
 
-   SCIPdebugMessage("coverweight is %g and right hand side is %g\n", QUAD_TO_DBL(*coverweight), cutrhs);
+   SCIPdebugMsg(scip, "coverweight is %g and right hand side is %g\n", QUAD_TO_DBL(*coverweight), cutrhs);
    assert(*coversize > 0);
 
    return TRUE;
@@ -7906,7 +7913,7 @@ void prepareLiftingData(
          SCIPquadprecSumQQ(tmp, tmp, coef);
       }
       covervals[k] = QUAD_TO_DBL(tmp);
-      SCIPdebugMessage("S^-(%d) = %g\n", k + 1, covervals[k]);
+      SCIPdebugMsg(scip, "S^-(%d) = %g\n", k + 1, covervals[k]);
    }
 
    /* set abar to its reciprocal for faster computation of the lifting coefficients */
@@ -7916,6 +7923,7 @@ void prepareLiftingData(
 /** evaluate the lifting function based on the given values */
 static
 SCIP_Real evaluateLiftingFunctionKnapsack(
+   SCIP*                 scip,               /**< SCIP datastructure */
    QUAD(SCIP_Real        x),                 /**< value to evaluate the lifting function at */
    QUAD(SCIP_Real        abar),              /**< the reciprocal value of \bar{a} */
    SCIP_Real*            covervals,          /**< the running sum of S^-(*) values */
@@ -7935,7 +7943,7 @@ SCIP_Real evaluateLiftingFunctionKnapsack(
     * therefore we start the search for the correct h at floor(a_k / \bar{a})
     */
 
-   SCIPdebugMessage("coef is %g, coversize is %d\n", QUAD_TO_DBL(x), coversize );
+   SCIPdebugMsg(scip, "coef is %g, coversize is %d\n", QUAD_TO_DBL(x), coversize );
 
    SCIPquadprecProdQQ(hfrac, x, abar);
 
@@ -7989,7 +7997,7 @@ SCIP_Real evaluateLiftingFunctionKnapsack(
    cutcoef += h;
 
    /* the lifted coefficient is h increased possibly by 0.5 for the case checked above */
-   SCIPdebugMessage("lifted coef %g < %g <= %g to %g\n", h == 0 ? 0 : covervals[h-1], QUAD_TO_DBL(x),
+   SCIPdebugMsg(scip, "lifted coef %g < %g <= %g to %g\n", h == 0 ? 0 : covervals[h-1], QUAD_TO_DBL(x),
          covervals[h], cutcoef);
 
    return cutcoef;
@@ -8096,7 +8104,7 @@ SCIP_RETCODE SCIPcalcKnapsackCover(
 
       QUAD_ARRAY_STORE(tmpcoefs, j, coef);
    }
-   SCIPdebugMessage("Computing lifted knapsack cover for ");
+   SCIPdebugMsg(scip, "Computing lifted knapsack cover for ");
    SCIPdebug(printCutQuad(scip, NULL, tmpcoefs, QUAD(rhs), tmpinds, nnz, FALSE, FALSE));
 
    /* Transform aggregated row into a (fractional, i.e. with possibly fractional weights) knapsack constraint.
@@ -8112,14 +8120,14 @@ SCIP_RETCODE SCIPcalcKnapsackCover(
    if( !transformed )
       goto TERMINATE;
 
-   SCIPdebugMessage("Transformed knapsack relaxation ");
+   SCIPdebugMsg(scip, "Transformed knapsack relaxation ");
    SCIPdebug(printCutQuad(scip, NULL, tmpcoefs, QUAD(rhs), tmpinds, nnz, FALSE, FALSE));
 
    if( !computeInitialKnapsackCover(scip, sol, tmpcoefs, tmpinds, QUAD_TO_DBL(rhs), nnz, varsign, coverstatus,
             coverpos, covervals, &coversize, QUAD(&coverweight)) )
       goto TERMINATE;
 
-   SCIPdebugMessage("coverweight is %g and right hand side is %g\n", QUAD_TO_DBL(coverweight), QUAD_TO_DBL(rhs));
+   SCIPdebugMsg(scip, "coverweight is %g and right hand side is %g\n", QUAD_TO_DBL(coverweight), QUAD_TO_DBL(rhs));
    assert(coversize > 0);
 
    /* by default do not scale the cut */
@@ -8189,7 +8197,7 @@ SCIP_RETCODE SCIPcalcKnapsackCover(
             SCIP_Real QUAD(coef);
             QUAD_ARRAY_LOAD(coef, tmpcoefs, tmpinds[k]);
 
-            cutcoef = evaluateLiftingFunctionKnapsack(QUAD(coef), QUAD(abar), covervals, coversize, cplussize, &scale);
+            cutcoef = evaluateLiftingFunctionKnapsack(scip, QUAD(coef), QUAD(abar), covervals, coversize, cplussize, &scale);
 
             /* if the coefficient value is zero then remove the nonzero entry and continue */
             if( cutcoef == 0.0 )
@@ -8226,7 +8234,7 @@ SCIP_RETCODE SCIPcalcKnapsackCover(
    efficacy = calcEfficacyDenseStorageQuad(scip, sol, tmpcoefs, QUAD_TO_DBL(rhs), tmpinds, nnz);
    *success = efficacy > *cutefficacy;
 
-   SCIPdebugMessage("FINAL LCI:");
+   SCIPdebugMsg(scip, "FINAL LCI:");
    SCIPdebug(printCutQuad(scip, sol, tmpcoefs, QUAD(rhs), tmpinds, nnz, FALSE, FALSE));
 
    if( *success )
@@ -8278,7 +8286,7 @@ SCIP_RETCODE SCIPcalcKnapsackCover(
    {
       if(tmpcoefs[k] != 0.0)
       {
-         SCIPdebugMessage("tmpcoefs have not been reset\n");
+         SCIPdebugMsg(scip, "tmpcoefs have not been reset\n");
          SCIPABORT();
       }
    }
@@ -8965,7 +8973,7 @@ SCIP_RETCODE SCIPcalcStrongCG(
    assert(success != NULL);
    assert(cutislocal != NULL);
 
-   SCIPdebugMessage("calculating strong CG cut (scale: %g)\n", scale);
+   SCIPdebugMsg(scip, "calculating strong CG cut (scale: %g)\n", scale);
 
    *success = FALSE;
 
