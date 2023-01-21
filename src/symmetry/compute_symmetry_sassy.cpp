@@ -308,6 +308,7 @@ SCIP_RETCODE determineGraphSize(
 
    assert( scip != NULL );
    assert( matrixdata != NULL );
+   assert( exprdata != NULL );
    assert( nnodes != NULL );
    assert( nedges != NULL );
    assert( nlinearnodes != NULL );
