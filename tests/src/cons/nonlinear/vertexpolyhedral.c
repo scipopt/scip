@@ -100,6 +100,12 @@ SCIP_DECL_VERTEXPOLYFUN(prodfunction)
    for( i = 0; i < nargs; ++i )
       ret *= args[i];
 
+   /* these products can get fairly large when nargs is high, which is troublesome for new aspiring LP solvers;
+    * let's take a sqrt() if we have more than 10 args
+    */
+   if( nargs > 10 )
+      ret = sqrt(fabs(ret)) * (ret < 0.0 ? -1.0 : 1.0);
+
    return ret;
 }
 

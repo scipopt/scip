@@ -1193,7 +1193,7 @@ void testCut(
    SCIP_Real enorm;
    SCIP_Real cutnorm;
    SCIP_Real side;
-   SCIP_Real nnonz;
+   int nnonz;
    SCIP_Bool success;
 
    /* compute expected cut's norm: this norm does not have to be equal to cutnorm! */
@@ -1219,8 +1219,14 @@ void testCut(
    cols = SCIProwGetCols(cut);
    coefs = SCIProwGetVals(cut);
 
-   /* check same number of coefficients and norm not zero */
-   cr_expect_eq(nnonz, expectedncoefs);
+   SCIPprintRow(scip, cut, NULL);
+
+   /* ~~check same number of coefficients~~
+    * currently not, as with HiGHS a coef of 2e-9 is obtained, which messes up nonzero count but still passes the coef checks below
+    */
+   /* cr_expect_eq(nnonz, expectedncoefs, "expected %d coefs, but got %d\n", expectedncoefs, nnonz); */
+
+   /* check norm not zero */
    cr_assert(cutnorm > 0);
 
    /* check side */
@@ -1229,14 +1235,26 @@ void testCut(
    cr_expect_float_eq(side / cutnorm, expectedlhs / enorm, 1e-6, "expecting lhs %g, got %g\n", expectedlhs / enorm, side
          / cutnorm);
 
-   /* check coefficients */
-   for( int j = 0; j < expectedncoefs; j++ )
-      for( int i = 0; i < expectedncoefs; i++ )
+    /* check coefficients */
+   for( int j = 0; j < nnonz; j++ )
+   {
+      SCIP_Real expcoeffound = 0.0;
+       for( int i = 0; i < expectedncoefs; i++ )
+          if( SCIPcolGetVar(cols[j]) == expectedvars[i] )
+            expcoeffound = expectedcoefs[i];
+      cr_expect_float_eq(coefs[j] / cutnorm, expcoeffound / enorm, 1e-6, "expecting cut coef %g, got %g\n",
+         expcoeffound / enorm, coefs[j] / cutnorm);
+   }
+   /* and another round to check that there isn't an expected coef missing */
+   for( int i = 0; i < expectedncoefs; i++ )
+   {
+      SCIP_Real coeffound = 0.0;
+      for( int j = 0; j < nnonz; j++ )
          if( SCIPcolGetVar(cols[j]) == expectedvars[i] )
-         {
-            cr_expect_float_eq(coefs[j] / cutnorm, expectedcoefs[i] / enorm, 1e-6, "expecting cut coef %g, got %g\n",
-                  expectedcoefs[i] / enorm, coefs[j] / cutnorm);
-         }
+            coeffound = coefs[j];
+      cr_expect_float_eq(coeffound / cutnorm, expectedcoefs[i] / enorm, 1e-6, "expecting cut coef %g, got %g\n",
+         expectedcoefs[i] / enorm, coeffound / cutnorm);
+   }
 
    /* free cut */
    SCIPreleaseRow(scip, &cut);

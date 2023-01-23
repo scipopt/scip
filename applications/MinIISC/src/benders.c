@@ -359,7 +359,7 @@ SCIP_RETCODE runBenders(
       case BENDERS_STATUS_ADDEDCUT:
          break;
 
-      case BENDERS_STATUS_SUCESS:
+      case BENDERS_STATUS_SUCCESS:
          success = TRUE;
          primalbound = mastersolobj;
          break;
