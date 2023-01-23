@@ -2928,7 +2928,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphBounddisjunction)
 
    /* add node initializing constraint (with artificial rhs) */
    SCIP_CALL( SCIPcreateSymgraphNode(scip, *graph, 0, SYM_NODETYPE_RHS, NULL, NULL, -1.0, 0.0, TRUE,
-         0.0, 0.0, cons, SCIPfindConshdlr(scip, CONSHDLR_NAME)) );
+         0.0, 0.0, cons, conshdlr) );
 
    /* create nodes and edges for each literal in the bounddisjunction */
    nvars = SCIPgetNVars(scip);

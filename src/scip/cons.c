@@ -6379,9 +6379,9 @@ SCIP_RETCODE SCIPconsGetNVars(
 
 /** method to collect the permutation symmetry detection graph of a constraint
  *
- *  @note The success pointer indicates if the contraint handler was able to return the graph
+ *  @note The success pointer indicates whether the constraint handler was able to return the graph
  *
- *  @note It might be that a constraint handler does not support this functionality, in that case the success pointer is
+ *  @note It might be that a constraint handler does not support this functionality, in this case the success pointer is
  *        set to FALSE
  */
 SCIP_RETCODE SCIPconsGetPermsymGraph(
@@ -6407,7 +6407,7 @@ SCIP_RETCODE SCIPconsGetPermsymGraph(
    else
    {
       graph = NULL;
-      (*success) = FALSE;
+      *success = FALSE;
    }
 
    return SCIP_OKAY;

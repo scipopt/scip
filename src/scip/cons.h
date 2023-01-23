@@ -891,7 +891,7 @@ SCIP_RETCODE SCIPconsGetNVars(
  *
  *  @note The success pointer indicates if the contraint handler was able to return the graph
  *
- *  @note It might be that a constraint handler does not support this functionality, in that case the success pointer is
+ *  @note It might be that a constraint handler does not support this functionality, in this case the success pointer is
  *        set to FALSE
  */
 SCIP_RETCODE SCIPconsGetPermsymGraph(
