@@ -10185,13 +10185,11 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphSOS1)
    /* get active variables of the constraint */
    nvars = SCIPgetNVars(scip);
    nconsvars = consdata->nvars;
+   consvars = SCIPgetVarsSOS1(scip, cons);
+   assert(consvars != NULL);
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nconsvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &locvars, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &locvals, nvars) );
-
-   for( i = 0; i < nconsvars; ++i )
-      consvars[i] = consdata->vars[i];
 
    /* create graph */
    SCIP_CALL( SCIPcreateSymgraph(scip, graph, nconsvars) );
@@ -10242,7 +10240,6 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphSOS1)
 
    SCIPfreeBufferArray(scip, &locvals);
    SCIPfreeBufferArray(scip, &locvars);
-   SCIPfreeBufferArray(scip, &consvars);
 
    return SCIP_OKAY;
 }

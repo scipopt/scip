@@ -3391,9 +3391,10 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphLinking)
 
    /* get binary variables */
    for( i = 0; i < consdata->nbinvars; ++i )
+   {
       vars[i] = consdata->binvars[i];
-   for( i = 0; i < consdata->nbinvars; ++i )
       vals[i] = consdata->vals[i];
+   }
 
    /* get linking variable */
    vars[consdata->nbinvars] = consdata->linkvar;

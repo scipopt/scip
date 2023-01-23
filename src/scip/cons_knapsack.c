@@ -13352,9 +13352,10 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphKnapsack)
    SCIP_CALL( SCIPallocBufferArray(scip, &vals, nvars) );
 
    for( i = 0; i < consdata->nvars; ++i )
+   {
       vars[i] = consdata->vars[i];
-   for( i = 0; i < consdata->nvars; ++i )
       vals[i] = (SCIP_Real) consdata->weights[i];
+   }
 
    SCIP_CALL( SCIPgetActiveVariables(scip, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
    rhs = (SCIP_Real) SCIPgetCapacityKnapsack(scip, cons) - constant;

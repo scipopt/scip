@@ -17260,9 +17260,10 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphLinear)
    SCIP_CALL( SCIPallocBufferArray(scip, &vals, nvars) );
 
    for( i = 0; i < nlocvars; ++i )
+   {
       vars[i] = consdata->vars[i];
-   for( i = 0; i < nlocvars; ++i )
       vals[i] = consdata->vals[i];
+   }
 
    SCIP_CALL( SCIPgetActiveVariables(scip, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
 

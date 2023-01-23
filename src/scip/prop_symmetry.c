@@ -6760,15 +6760,18 @@ SCIP_RETCODE computeSymmetryGroup2(
       SCIPinfoMessage(scip, NULL, "new symmetry found %d generators (log10: %.1f)\n", nperms, log10groupsize);
 
       /* check symmetries are symmetries */
-      for (p = 0; p < nperms; ++p)
+      if ( checksymmetries )
       {
-         SCIP_CALL( checkSymmetryIsSymmetry(scip, perms[p], nvars, consperms[p], nconss,
-               graphs, varcolors, &checksuccess) );
-
-         if ( !checksuccess )
+         for (p = 0; p < nperms; ++p)
          {
-            SCIPerrorMessage("Found a symmetry which is not a symmetry.\n");
-            return SCIP_ERROR;
+            SCIP_CALL( checkSymmetryIsSymmetry(scip, perms[p], nvars, consperms[p], nconss,
+                  graphs, varcolors, &checksuccess) );
+
+            if ( !checksuccess )
+            {
+               SCIPerrorMessage("Found a symmetry which is not a symmetry.\n");
+               return SCIP_ERROR;
+            }
          }
       }
 

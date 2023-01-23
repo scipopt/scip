@@ -3109,8 +3109,6 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphCardinality)
    SCIP_Real* vals;
    SCIP_Real constant;
    SCIP_Real rhs;
-   SCIP_Real val;
-   SCIP_Bool hascolor;
    int varrootid;
    int nconsvars;
    int nlocvars;
@@ -3158,10 +3156,9 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphCardinality)
          SCIP_CALL( SCIPcreateSymgraphNode(scip, *graph, cnt, SYM_NODETYPE_OPERATOR,
                sumexpr, NULL, -1, 0.0, FALSE, 0.0, 0.0, NULL, NULL) );
 
-         /* connect edge colored according to the weight of the variable in constraint */
-         hascolor = consdata->weights != NULL;
-         val = hascolor ? consdata->weights[i] : 0.0;
-         SCIP_CALL( SCIPcreateSymgraphEdge(scip, *graph, (*graph)->nodes[0], (*graph)->nodes[cnt], hascolor, val) );
+         /* we do not need to take weights of variables into account;
+          * they are only used to sort variables within the constraint */
+         SCIP_CALL( SCIPcreateSymgraphEdge(scip, *graph, (*graph)->nodes[0], (*graph)->nodes[cnt], FALSE, 0.0) );
          ++cnt;
 
          /* add nodes and edges for variables in aggregation */
@@ -3173,9 +3170,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphCardinality)
          SCIP_CALL( SCIPcreateSymgraphNode(scip, *graph, cnt, SYM_NODETYPE_VAR,
                NULL, vars[0], SCIPvarGetProbindex(vars[0]), 0.0, FALSE, 0.0, 0.0, NULL, NULL) );
 
-         hascolor = consdata->weights != NULL;
-         val = hascolor ? consdata->weights[i] : 0.0;
-         SCIP_CALL( SCIPcreateSymgraphEdge(scip, *graph, (*graph)->nodes[0], (*graph)->nodes[cnt], hascolor, val) );
+         SCIP_CALL( SCIPcreateSymgraphEdge(scip, *graph, (*graph)->nodes[0], (*graph)->nodes[cnt], FALSE, 0.0) );
          ++cnt;
       }
    }

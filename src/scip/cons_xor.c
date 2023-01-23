@@ -5755,9 +5755,10 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphXor)
 
    tmpvars = SCIPgetVarsXor(scip, cons);
    for( i = 0; i < consdata->nvars; ++i )
+   {
       vars[i] = tmpvars[i];
-   for( i = 0; i < consdata->nvars; ++i )
       vals[i] = 1.0;
+   }
 
    if( SCIPgetIntVarXor(scip, cons) != NULL )
    {

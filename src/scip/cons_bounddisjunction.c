@@ -2940,11 +2940,6 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphBounddisjunction)
    cnt = 1;
    for( i = 0; i < nconsvars; ++i )
    {
-      vars[0] = consdata->vars[i];
-      vals[0] = consdata->boundtypes[i] == SCIP_BOUNDTYPE_UPPER ? 1.0 : -1.0;
-      nlocvars = 1;
-      constant = 0.0;
-
       /* add node and edge for bound expression of literal */
       SCIP_CALL( SCIPcreateSymgraphNode(scip, *graph, cnt, SYM_NODETYPE_OPERATOR,
             bdexpr, NULL, -1, 0.0, FALSE, 0.0, 0.0, NULL, NULL) );
@@ -2958,6 +2953,12 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphBounddisjunction)
       SCIP_CALL( SCIPcreateSymgraphEdge(scip, *graph, (*graph)->nodes[cnt - 1], (*graph)->nodes[cnt], FALSE, 0.0) );
       ++cnt;
 
+      /* get active variables */
+      vars[0] = consdata->vars[i];
+      vals[0] = consdata->boundtypes[i] == SCIP_BOUNDTYPE_UPPER ? 1.0 : -1.0;
+      nlocvars = 1;
+      constant = 0.0;
+
       SCIP_CALL( SCIPgetActiveVariables(scip, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
 
       /* check whether variable is (multi-) aggregated or negated (or if boundtype lower) */
@@ -2967,9 +2968,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphBounddisjunction)
          SCIP_CALL( SCIPcreateSymgraphNode(scip, *graph, cnt, SYM_NODETYPE_OPERATOR,
                sumexpr, NULL, -1, 0.0, FALSE, 0.0, 0.0, NULL, NULL) );
          SCIP_CALL( SCIPcreateSymgraphEdge(scip, *graph, (*graph)->nodes[cnt - 2], (*graph)->nodes[cnt], FALSE, 0.0) );
-         ++cnt;
-
-         varrootid = cnt - 1;
+         varrootid = cnt++;
 
          /* add nodes and edges for variables in aggregation */
          SCIP_CALL( SCIPaddSymgraphVarAggegration(scip, *graph, varrootid, &cnt, vars, vals, nlocvars, constant) );

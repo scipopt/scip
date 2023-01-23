@@ -9320,17 +9320,19 @@ SCIP_RETCODE computeVertexPolyhedralFacetBivariate(
    return SCIP_OKAY;
 }
 
-/** ensures that we can store information about open expressions in an array */
+/** ensures that we can store information about open expressions (i.e, not fully encoded in the symmetry detection
+    graph yet) in an array
+*/
 static
 SCIP_RETCODE ensureOpenArraySize(
    SCIP*                 scip,               /**< SCIP pointer */
-   int**                 array,              /**< address of openidx array */
+   int**                 openidx,            /**< address of openidx array */
    int                   nelems,             /**< number of elements that need to be stored */
    int*                  maxnelems           /**< address of maximum number that can be stored */
    )
 {
    assert(scip != NULL);
-   assert(array != NULL);
+   assert(openidx != NULL);
    assert(maxnelems != NULL);
 
    if( nelems >= *maxnelems )
@@ -9340,7 +9342,7 @@ SCIP_RETCODE ensureOpenArraySize(
       newsize = SCIPcalcMemGrowSize(scip, *maxnelems + 1);
       assert(newsize > *maxnelems);
 
-      SCIP_CALL( SCIPreallocBufferArray(scip, array, newsize) );
+      SCIP_CALL( SCIPreallocBufferArray(scip, openidx, newsize) );
 
       *maxnelems = newsize;
    }
@@ -9352,15 +9354,15 @@ SCIP_RETCODE ensureOpenArraySize(
 static
 SCIP_RETCODE ensureLocVarsArraySize(
    SCIP*                 scip,               /**< SCIP pointer */
-   SCIP_VAR***           vararray,           /**< address of variable array */
-   SCIP_Real**           valarray,           /**< address of value array */
+   SCIP_VAR***           vars,               /**< address of variable array */
+   SCIP_Real**           vals,               /**< address of value array */
    int                   nelems,             /**< number of elements that need to be stored */
    int*                  maxnelems           /**< address of maximum number that can be stored */
    )
 {
    assert(scip != NULL);
-   assert(vararray != NULL);
-   assert(valarray != NULL);
+   assert(vars != NULL);
+   assert(vals != NULL);
    assert(maxnelems != NULL);
 
    if( nelems >= *maxnelems )
@@ -9370,8 +9372,8 @@ SCIP_RETCODE ensureLocVarsArraySize(
       newsize = SCIPcalcMemGrowSize(scip, *maxnelems + 1);
       assert(newsize > *maxnelems);
 
-      SCIP_CALL( SCIPreallocBufferArray(scip, vararray, newsize) );
-      SCIP_CALL( SCIPreallocBufferArray(scip, valarray, newsize) );
+      SCIP_CALL( SCIPreallocBufferArray(scip, vars, newsize) );
+      SCIP_CALL( SCIPreallocBufferArray(scip, vals, newsize) );
 
       *maxnelems = newsize;
    }
@@ -10786,9 +10788,18 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphNonlinear)
          SCIP_CALL( SCIPgetActiveVariables(scip, &consvars, &consvals, &nconsvars, &constant,
                SCIPconsIsTransformed(cons)) );
 
-         nlocvals = SCIPisZero(scip, constant) ? 0 : 1;
          nlocvars = nconsvars;
-         nlocops = nlocvals == 0 && nlocvars == 1 ? 0 : 1;
+         nlocops = 1;
+
+         /* check wheter aggregation becomes trivial, i.e., only one variable without constant */
+         if( SCIPisZero(scip, constant) )
+         {
+            nlocvals = 0;
+            if( nlocvars == 1 )
+               nlocops = 0;
+         }
+         else
+            nlocvals = 1;
 
          if( nlocops == 0 )
          {

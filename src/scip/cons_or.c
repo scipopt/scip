@@ -2043,9 +2043,10 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphOr)
 
    tmpvars = SCIPgetVarsOr(scip, cons);
    for( i = 0; i < consdata->nvars; ++i )
+   {
       vars[i] = tmpvars[i];
-   for( i = 0; i < consdata->nvars; ++i )
       vals[i] = 1.0;
+   }
 
    assert(SCIPgetResultantOr(scip, cons) != NULL);
    vars[nlocvars] = SCIPgetResultantOr(scip, cons);
