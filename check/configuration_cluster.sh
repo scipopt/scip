@@ -159,8 +159,8 @@ elif test "${CLUSTERQUEUE}" = "M640v2"
 then
     CONSTRAINT="Gold5222"
     CLUSTERQUEUE="opt_int"
-elif test "${CLUSTERQUEUE}" = "M640"
-then
-    CONSTRAINT="Gold5122"
-    CLUSTERQUEUE="opt_int"
+# elif test "${CLUSTERQUEUE}" = "M640"
+# then
+#     CONSTRAINT="Gold5122"
+#     CLUSTERQUEUE="opt_int"
 fi
