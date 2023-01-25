@@ -1784,7 +1784,7 @@ SCIP_RETCODE rescaleAndResolve(
       return SCIP_OKAY;
    }
 
-   resolutionsetReplace(resolvedresolutionset, blkmem, conflictresolutionset);
+   SCIP_CALL( resolutionsetReplace(resolvedresolutionset, blkmem, conflictresolutionset) );
 
    newsize = resolutionsetGetNNzs(resolvedresolutionset) + resolutionsetGetNNzs(reasonresolutionset);
    if ( resolvedresolutionset->size < newsize )
@@ -1909,8 +1909,8 @@ SCIP_RETCODE tighteningBasedReduction(
    applytightening = TRUE;
    previousslack = resolutionset->slack;
 
-   rescaleAndResolve(set, conflict->resolutionset, resolutionset, conflict->resolvedresolutionset, blkmem, prob,
-                        residx, successresolution);
+   SCIP_CALL( rescaleAndResolve(set, conflict->resolutionset, resolutionset, conflict->resolvedresolutionset, blkmem, prob,
+                        residx, successresolution) );
 
    while ( SCIPsetIsGE(set, getSlack(set, prob, conflict->resolvedresolutionset, currbdchgidx, fixbounds, fixinds), 0.0) &&         applytightening )
    {
@@ -1966,8 +1966,8 @@ SCIP_RETCODE tighteningBasedReduction(
                resolutionset->slack = getSlack(set, prob, resolutionset, currbdchgidx, fixbounds, fixinds);
                SCIPsetDebugMsg(set, "slack after tightening: %g \n", resolutionset->slack);
                assert(SCIPsetIsLE(set, resolutionset->slack, previousslack + EPS));
-               rescaleAndResolve(set, conflict->resolutionset, resolutionset, conflict->resolvedresolutionset, blkmem, prob,
-                                    residx, successresolution);
+               SCIP_CALL( rescaleAndResolve(set, conflict->resolutionset, resolutionset, conflict->resolvedresolutionset, blkmem, prob,
+                                    residx, successresolution) );
                break;
                }
          }
@@ -2434,7 +2434,7 @@ SCIP_RETCODE reasonBoundChanges(
 
 /* get a resolution set from bound changes */
 static
-SCIP_Bool getClauseReasonSet(
+SCIP_RETCODE getClauseReasonSet(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_PROB*            prob,               /**< problem data */
@@ -2442,11 +2442,10 @@ SCIP_Bool getClauseReasonSet(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_BDCHGINFO*       currbdchginfo,      /**< bound change to resolve */
    SCIP_Real             relaxedbd,          /**< the relaxed bound */
-   int                   validdepth          /**< minimal depth level at which the conflict is valid */
+   int                   validdepth,         /**< minimal depth level at which the conflict is valid */
+   SCIP_Bool*            success             /**< pointer to store whether we could find a reason*/
 )
 {
-   SCIP_RETCODE retcode;
-   SCIP_Bool success;
 
    /* make sure that the separate bound change queue is empty */
    if (SCIPpqueueNElems(conflict->separatebdchgqueue) != 0)
@@ -2455,17 +2454,19 @@ SCIP_Bool getClauseReasonSet(
    }
    assert(SCIPpqueueNElems(conflict->separatebdchgqueue) == 0);
 
-   retcode = reasonBoundChanges(conflict, set, currbdchginfo, relaxedbd, validdepth, &success);
-   if (retcode != SCIP_OKAY || SCIPpqueueNElems(conflict->separatebdchgqueue) == 0)
+   SCIP_CALL( reasonBoundChanges(conflict, set, currbdchginfo, relaxedbd, validdepth, success) );
+   if ( SCIPpqueueNElems(conflict->separatebdchgqueue) == 0 )
    {
       SCIPsetDebugMsg(set, "Could not obtain a reason set \n");
-      return FALSE;
+      *success = FALSE;
+      return SCIP_OKAY;
    }
-   else if(validdepth == 0)
+   else
    {
       SCIP_Bool isbinary;
       SCIP_Real lhs;
 
+      *success = FALSE;
       isbinary = TRUE;
       lhs = 1.0;
 
@@ -2526,14 +2527,16 @@ SCIP_Bool getClauseReasonSet(
             conflict->reasonset->vals[i+1] = SCIPbdchginfoGetNewbound(bdchginfo) > 0.5 ? -1.0 : 1.0;
             conflict->reasonset->inds[i+1] = SCIPvarGetProbindex(SCIPbdchginfoGetVar(bdchginfo));
          }
+         *success = TRUE;
       }
       else
       {
          SCIPsetDebugMsg(set, "Could not obtain a reason set \n");
-         return FALSE;
+         *success = FALSE;
+         return SCIP_OKAY;
       }
    }
-   return TRUE;
+   return SCIP_OKAY;
 }
 
 static
@@ -2576,7 +2579,7 @@ SCIP_RETCODE getReasonRow(
             assert(strcmp(SCIPconshdlrGetName(reasoncon->conshdlr), "orbisack") == 0 ||
                    strcmp(SCIPconshdlrGetName(reasoncon->conshdlr), "orbitope") == 0 ||
                    strcmp(SCIPconshdlrGetName(reasoncon->conshdlr), "and") == 0);
-            *success = getClauseReasonSet(conflict, blkmem, prob, reasoncon, set, currbdchginfo, SCIPbdchginfoGetRelaxedBound(currbdchginfo), validdepth);
+            SCIP_CALL( getClauseReasonSet(conflict, blkmem, prob, reasoncon, set, currbdchginfo, SCIPbdchginfoGetRelaxedBound(currbdchginfo), validdepth, success) );
             if (success)
             {
                conflict->reasonset->slack = getSlack(set, prob, conflict->reasonset, SCIPbdchginfoGetIdx(currbdchginfo), fixbounds, fixinds);
@@ -2603,7 +2606,7 @@ SCIP_RETCODE getReasonRow(
          else if(SCIPsetIsInfinity(set, -conflict->reasonset->lhs) || SCIPsetIsInfinity(set, conflict->reasonset->lhs))
          {
             /* to be able to continue we construct a linearized clause as reason */
-            *success = getClauseReasonSet(conflict, blkmem, prob, reasoncon, set, currbdchginfo, SCIPbdchginfoGetRelaxedBound(currbdchginfo), validdepth);
+            SCIP_CALL( getClauseReasonSet(conflict, blkmem, prob, reasoncon, set, currbdchginfo, SCIPbdchginfoGetRelaxedBound(currbdchginfo), validdepth, success) );
             return SCIP_OKAY;
 
          }
@@ -2622,7 +2625,7 @@ SCIP_RETCODE getReasonRow(
             {
                if (strcmp(SCIPconshdlrGetName(reasoncon->conshdlr), "knapsack") == 0)
                {
-                  *success = getClauseReasonSet(conflict, blkmem, prob, reasoncon, set, currbdchginfo, SCIPbdchginfoGetRelaxedBound(currbdchginfo), validdepth);
+                  SCIP_CALL( getClauseReasonSet(conflict, blkmem, prob, reasoncon, set, currbdchginfo, SCIPbdchginfoGetRelaxedBound(currbdchginfo), validdepth, success) );
                   return SCIP_OKAY;
                }
             }
@@ -2631,7 +2634,7 @@ SCIP_RETCODE getReasonRow(
                assert(!SCIPsetIsZero(set, coef));
                if (strcmp(SCIPconshdlrGetName(reasoncon->conshdlr), "knapsack") == 0)
                {
-                  *success = getClauseReasonSet(conflict, blkmem, prob, reasoncon, set, currbdchginfo, SCIPbdchginfoGetRelaxedBound(currbdchginfo), validdepth);
+                  SCIP_CALL( getClauseReasonSet(conflict, blkmem, prob, reasoncon, set, currbdchginfo, SCIPbdchginfoGetRelaxedBound(currbdchginfo), validdepth, success) );
                   return SCIP_OKAY;
                }
             }
@@ -2941,7 +2944,8 @@ SCIP_RETCODE conflictAnalyzeResolution(
             /* get next bound change from queue */
             nextbdchginfo = conflictFirstCand(conflict);
 
-            /* todo if we still have not resolved and reached a branching decision we can continue for the 2-FUIP */
+            /* if we still have not resolved and the current bound change is a
+            branching decision we can continue for the 2-FUIP */
             if( nressteps == 0 && bdchgtype == SCIP_BOUNDCHGTYPE_BRANCHING )
             {
                bdchgdepth = SCIPbdchginfoGetDepth(bdchginfo);
@@ -3030,8 +3034,8 @@ SCIP_RETCODE conflictAnalyzeResolution(
          {
             SCIPsetDebugMsg(set, " Applying resolution to remove variable <%s>\n", SCIPvarGetName(vartoresolve));
 
-            rescaleAndResolve(set, conflictresolutionset, reasonresolutionset, resolvedresolutionset, blkmem, transprob,
-                                 residx, &successresolution);
+            SCIP_CALL( rescaleAndResolve(set, conflictresolutionset, reasonresolutionset, resolvedresolutionset, blkmem, transprob,
+                                 residx, &successresolution) );
             if (!successresolution)
                goto TERMINATE;
          }
@@ -3143,8 +3147,11 @@ SCIP_RETCODE conflictAnalyzeResolution(
 
          residx = SCIPvarGetProbindex(vartoresolve);
 
+#ifdef SCIP_DEBUG
+{
          assert(varIdxInResolutionset(conflictresolutionset, residx));
-
+}
+#endif
          /* get the bound change before bdchginfo */
          nextbdchginfo = conflictFirstCand(conflict);
 

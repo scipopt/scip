@@ -814,7 +814,6 @@ SCIP_RETCODE SCIPanalyzeConflictCons(
 
          if( isbinary )
          {
-            SCIP_ROW* conflictrow;
 
             SCIP_CALL( SCIProwCreate(&conflictrow, scip->mem->probmem, scip->set, scip->stat, "temprow", 0, NULL, NULL,
                         lhs, SCIPsetInfinity(scip->set), SCIP_ROWORIGINTYPE_UNSPEC, NULL, FALSE, FALSE, TRUE) );
@@ -850,7 +849,7 @@ SCIP_RETCODE SCIPanalyzeConflictCons(
       else
       {
          SCIPdebugMessage("clear bound changes queues if graph conflict analysis is not called \n");
-         SCIPconflictClearQueues(scip->conflict);
+         SCIP_CALL( SCIPconflictClearQueues(scip->conflict) );
 
       }
       if( success != NULL )
