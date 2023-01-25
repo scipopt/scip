@@ -619,7 +619,7 @@ void cleanBdchgQueue(
                i = SCIPpqueueNElems(conflict->resbdchgqueue);/*lint !e850*/
             }
       }
-   }
+   }/*lint !e850*/
 
 }
 
