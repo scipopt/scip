@@ -870,8 +870,8 @@ SCIP_DECL_CONSPROP(consPropLOP)
 	       {
 		  SCIPdebugMsg(scip, " -> node infeasible.\n");
                   SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
-                  SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][j]) );
-                  SCIP_CALL( SCIPaddConflictBinvar(scip, vars[j][i]) );
+                  SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][j], FALSE) );
+                  SCIP_CALL( SCIPaddConflictBinvar(scip, vars[j][i], FALSE) );
                   SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
 		  *result = SCIP_CUTOFF;
 		  return SCIP_OKAY;
@@ -888,8 +888,8 @@ SCIP_DECL_CONSPROP(consPropLOP)
 	       {
 		  SCIPdebugMsg(scip, " -> node infeasible.\n");
                   SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
-                  SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][j]) );
-                  SCIP_CALL( SCIPaddConflictBinvar(scip, vars[j][i]) );
+                  SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][j], FALSE) );
+                  SCIP_CALL( SCIPaddConflictBinvar(scip, vars[j][i]), FALSE );
                   SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
 		  *result = SCIP_CUTOFF;
 		  return SCIP_OKAY;
@@ -911,9 +911,9 @@ SCIP_DECL_CONSPROP(consPropLOP)
 		  {
 		     SCIPdebugMsg(scip, " -> node infeasible.\n");
                      SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
-                     SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][j]) );
-                     SCIP_CALL( SCIPaddConflictBinvar(scip, vars[j][k]) );
-                     SCIP_CALL( SCIPaddConflictBinvar(scip, vars[k][i]) );
+                     SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][j], FALSE) );
+                     SCIP_CALL( SCIPaddConflictBinvar(scip, vars[j][k], FALSE) );
+                     SCIP_CALL( SCIPaddConflictBinvar(scip, vars[k][i], FALSE) );
                      SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
 		     *result = SCIP_CUTOFF;
 		     return SCIP_OKAY;
@@ -979,7 +979,7 @@ SCIP_DECL_CONSRESPROP(consRespropLOP)
       {
 	 SCIPdebugMsg(scip, " -> reason for x[%d][%d] == 0 was x[%d][%d] = 1.\n", index2, index1, index1, index2);
 	 /* the reason was that x[i][j] was fixed to 1 */
-	 SCIP_CALL( SCIPaddConflictLb(scip, vars[index1][index2], bdchgidx) );
+	 SCIP_CALL( SCIPaddConflictLb(scip, vars[index1][index2], bdchgidx, FALSE) );
 	 *result = SCIP_SUCCESS;
 	 return SCIP_OKAY;
       }
@@ -989,7 +989,7 @@ SCIP_DECL_CONSRESPROP(consRespropLOP)
       {
 	 SCIPdebugMsg(scip, " -> reason for x[%d][%d] == 1 was x[%d][%d] = 0.\n", index2, index1, index1, index2);
 	 /* the reason was that x[i][j] was fixed to 0 */
-	 SCIP_CALL( SCIPaddConflictUb(scip, vars[index1][index2], bdchgidx) );
+	 SCIP_CALL( SCIPaddConflictUb(scip, vars[index1][index2], bdchgidx, FALSE) );
 	 *result = SCIP_SUCCESS;
 	 return SCIP_OKAY;
       }
@@ -1016,8 +1016,8 @@ SCIP_DECL_CONSRESPROP(consRespropLOP)
 
       /* the reason was that x[index1][index2] and x[index2][index3] were fixed to 1 */
       SCIPdebugMsg(scip, " -> reason for x[%d][%d] == 0 was x[%d][%d] = x[%d][%d] = 1.\n", index3, index1, index1, index2, index2, index3);
-      SCIP_CALL( SCIPaddConflictLb(scip, vars[index1][index2], bdchgidx) );
-      SCIP_CALL( SCIPaddConflictLb(scip, vars[index2][index3], bdchgidx) );
+      SCIP_CALL( SCIPaddConflictLb(scip, vars[index1][index2], bdchgidx, FALSE) );
+      SCIP_CALL( SCIPaddConflictLb(scip, vars[index2][index3], bdchgidx, FALSE) );
       *result = SCIP_SUCCESS;
    }
 

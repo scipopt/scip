@@ -1345,7 +1345,7 @@ SCIP_RETCODE computecMIRfromResolutionSet(
       {
          assert(SCIPsetIsEQ(set, -resolutionset->vals[i], SCIPaggrRowGetProbvarValue(aggrrow, SCIPvarGetProbindex(vars[resolutionset->inds[i]]))));
       }
-         SCIP_UNUSED(vars);
+      SCIP_UNUSED(vars);
 #endif
 
       /* create reference solution */
