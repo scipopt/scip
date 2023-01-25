@@ -551,7 +551,7 @@ void cleanBdchgQueue(
    SCIP_BDCHGINFO* bdchginfo;
    SCIP_VAR* var;
 
-   int i;
+   int i;/*lint !e850*/
 
    assert(conflict != NULL);
 
@@ -619,9 +619,9 @@ void cleanBdchgQueue(
                i = SCIPpqueueNElems(conflict->resbdchgqueue);/*lint !e850*/
             }
       }
-   }/*lint !e850*/
+   }
 
-}
+}/*lint !e850*/
 
 /** removes and returns next conflict analysis candidate from the candidate queue */
 static
@@ -1343,9 +1343,7 @@ SCIP_RETCODE computecMIRfromResolutionSet(
 
       for( i = 0; i < SCIPaggrRowGetNNz(aggrrow); i++ )
       {
-         SCIP_Real aggrrow_val;
-         aggrrow_val = SCIPaggrRowGetProbvarValue(aggrrow, SCIPvarGetProbindex(vars[resolutionset->inds[i]]));
-         assert(SCIPsetIsEQ(set, -resolutionset->vals[i], aggrrow_val));
+         assert(SCIPsetIsEQ(set, -resolutionset->vals[i], SCIPaggrRowGetProbvarValue(aggrrow, SCIPvarGetProbindex(vars[resolutionset->inds[i]]))));
       }
 #endif
 
@@ -2240,6 +2238,27 @@ void printAllBoundChanges(
    SCIPsetDebugMsg(set, " -> End of bound changes in queue. \n");
 }
 
+
+/* returns if the variable index is in the conflict resolution set */
+static
+SCIP_Bool varIdxInResolutionset(
+   SCIP_RESOLUTIONSET*   resolutionset,      /**< conflict resolution set */
+   int                   varidx              /**< variable index to check */
+   )
+{
+   int i;
+
+   assert(resolutionset != NULL);
+   assert(varidx >= 0);
+
+   for( i = 0; i < resolutionsetGetNNzs(resolutionset); ++i )
+   {
+      if( resolutionset->inds[i] == varidx )
+         return TRUE;
+   }
+   return FALSE;
+}
+
 /* print the type of the non resolvable reason in debug mode */
 static
 void printNonResolvableReasonType(
@@ -2268,26 +2287,6 @@ void printNonResolvableReasonType(
       assert(bdchgtype == SCIP_BOUNDCHGTYPE_CONSINFER);
       SCIPsetDebugMsg(set, " -> Not resolvable bound change: constraint %s \n", SCIPconsGetName(SCIPbdchginfoGetInferCons(bdchginfo)));
    }
-}
-
-/* returns if the variable index is in the conflict resolution set */
-static
-SCIP_Bool varIdxInResolutionset(
-   SCIP_RESOLUTIONSET*   resolutionset,      /**< conflict resolution set */
-   int                   varidx              /**< variable index to check */
-   )
-{
-   int i;
-
-   assert(resolutionset != NULL);
-   assert(varidx >= 0);
-
-   for( i = 0; i < resolutionsetGetNNzs(resolutionset); ++i )
-   {
-      if( resolutionset->inds[i] == varidx )
-         return TRUE;
-   }
-   return FALSE;
 }
 
 #endif
