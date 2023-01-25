@@ -1345,6 +1345,7 @@ SCIP_RETCODE computecMIRfromResolutionSet(
       {
          assert(SCIPsetIsEQ(set, -resolutionset->vals[i], SCIPaggrRowGetProbvarValue(aggrrow, SCIPvarGetProbindex(vars[resolutionset->inds[i]]))));
       }
+         SCIP_UNUSED(vars);
 #endif
 
       /* create reference solution */
@@ -2238,27 +2239,6 @@ void printAllBoundChanges(
    SCIPsetDebugMsg(set, " -> End of bound changes in queue. \n");
 }
 
-
-/* returns if the variable index is in the conflict resolution set */
-static
-SCIP_Bool varIdxInResolutionset(
-   SCIP_RESOLUTIONSET*   resolutionset,      /**< conflict resolution set */
-   int                   varidx              /**< variable index to check */
-   )
-{
-   int i;
-
-   assert(resolutionset != NULL);
-   assert(varidx >= 0);
-
-   for( i = 0; i < resolutionsetGetNNzs(resolutionset); ++i )
-   {
-      if( resolutionset->inds[i] == varidx )
-         return TRUE;
-   }
-   return FALSE;
-}
-
 /* print the type of the non resolvable reason in debug mode */
 static
 void printNonResolvableReasonType(
@@ -3124,9 +3104,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
 
          residx = SCIPvarGetProbindex(vartoresolve);
 
-#ifdef SCIP_DEBUG
-         assert(varIdxInResolutionset(conflictresolutionset, residx));
-#endif
+         assert(getVarIdxInResolutionset(conflictresolutionset, residx) >= 0);
          /* get the bound change before bdchginfo */
          nextbdchginfo = conflictFirstCand(conflict);
 
