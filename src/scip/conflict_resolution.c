@@ -555,7 +555,7 @@ void cleanBdchgQueue(
 
    assert(conflict != NULL);
 
-   for( i = SCIPpqueueNElems(conflict->resbdchgqueue) - 1; i >= 0; --i )
+   for( i = SCIPpqueueNElems(conflict->resbdchgqueue) - 1; i >= 0; --i )/*lint !e850*/
    {
       int j;
       SCIP_Bool idxinrow;
@@ -616,7 +616,7 @@ void cleanBdchgQueue(
             else if ( i != SCIPpqueueNElems(conflict->resbdchgqueue) )
             {
                SCIPpqueueDelPos(conflict->resbdchgqueue, i);
-               i = SCIPpqueueNElems(conflict->resbdchgqueue);
+               i = SCIPpqueueNElems(conflict->resbdchgqueue);/*lint !e850*/
             }
       }
    }
@@ -1550,7 +1550,7 @@ SCIP_RETCODE createAndAddResolutionCons(
    SCIPfreeBufferArray(set->scip, &consvars);
 
    return SCIP_OKAY;
-} /* lint !e715 */
+}/*lint !e715*/
 
 /** create resolution constraints out of resolution sets */
 SCIP_RETCODE SCIPconflictFlushResolutionSets(
@@ -1626,7 +1626,7 @@ SCIP_RETCODE SCIPconflictFlushResolutionSets(
    }
 
    return SCIP_OKAY;
-}
+}/*lint !e715*/
 
 /** adds given data as row to the resolution set */
 static
@@ -2562,7 +2562,7 @@ SCIP_RETCODE getReasonRow(
                    strcmp(SCIPconshdlrGetName(reasoncon->conshdlr), "orbitope") == 0 ||
                    strcmp(SCIPconshdlrGetName(reasoncon->conshdlr), "and") == 0);
             SCIP_CALL( getClauseReasonSet(conflict, blkmem, prob, set, currbdchginfo, SCIPbdchginfoGetRelaxedBound(currbdchginfo), validdepth, success) );
-            if (success)
+            if (*success)
             {
                conflict->reasonset->slack = getSlack(set, prob, conflict->reasonset, SCIPbdchginfoGetIdx(currbdchginfo), fixbounds, fixinds);
                return SCIP_OKAY;
@@ -2742,9 +2742,9 @@ SCIP_RETCODE conflictAnalyzeResolution(
    if ( bdchginfo == NULL || !existsResolvablebdchginfo(conflict) )
    {
 #ifdef SCIP_DEBUG
-   /* if at least one bound change is in the queue, print them all */
-   if(bdchginfo != NULL)
-      printAllBoundChanges(conflict, set);
+      /* if at least one bound change is in the queue, print them all */
+      if(bdchginfo != NULL)
+         printAllBoundChanges(conflict, set);
 #endif
       SCIPsetDebugMsg(set, "Conflict analysis not applicable since no resolvable bounds exist \n");
       return SCIP_OKAY;
@@ -2859,7 +2859,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
     *       - if there is no other bound change in the queue from the same depth level
     *         then we are at a UIP -> keep this constraint and continue
     */
-   while( TRUE )
+   while( TRUE )  /*lint !e716*/
    {
 #ifdef SCIP_DEBUG
       {
