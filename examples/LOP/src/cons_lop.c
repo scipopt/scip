@@ -889,7 +889,7 @@ SCIP_DECL_CONSPROP(consPropLOP)
 		  SCIPdebugMsg(scip, " -> node infeasible.\n");
                   SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
                   SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][j], FALSE) );
-                  SCIP_CALL( SCIPaddConflictBinvar(scip, vars[j][i]), FALSE );
+                  SCIP_CALL( SCIPaddConflictBinvar(scip, vars[j][i], FALSE) );
                   SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
 		  *result = SCIP_CUTOFF;
 		  return SCIP_OKAY;
