@@ -28,7 +28,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 // #define SCIP_STATISTIC
-// #define SCIP_DEBUG
+#define SCIP_DEBUG
 
 #include "lpi/lpi.h"
 #include "scip/conflict_resolution.h"
@@ -1185,11 +1185,15 @@ SCIP_RETCODE computeReferenceSolutionReason(
       if( vars[v] == SCIPbdchginfoGetVar(bdchginfo) )
       {
          SCIP_Real solval;
+         SCIP_Real bnd;
+         SCIP_Real tightval;
 
          if( val > 0.0 )
          {
+            bnd = SCIPvarGetUbGlobal(vars[v]);
+            tightval = (val * SCIPvarGetUbAtIndex(vars[v], bdchgidx, TRUE) - resolutionset->slack ) / val;
             /* it the case of >= constraints we get tight propagation at the point (coef * ub - slack) / coef */
-            solval = MIN( SCIPvarGetUbGlobal(vars[v]), ( val * SCIPvarGetUbAtIndex(vars[v], bdchgidx, TRUE) - resolutionset->slack ) / val );
+            solval = MIN( bnd, tightval );
             /* this can only happen if the reason was a negated clique in the knapsack constraint handler */
             if( SCIPsetIsLT(set, solval, SCIPvarGetLbGlobal(vars[v])) )
             {
@@ -1200,7 +1204,9 @@ SCIP_RETCODE computeReferenceSolutionReason(
          else
          {
             assert(val < 0.0);
-            solval = MAX( SCIPvarGetLbGlobal(vars[v]), ( val * SCIPvarGetLbAtIndex(vars[v], bdchgidx, TRUE) - resolutionset->slack ) / val );
+            bnd = SCIPvarGetLbGlobal(vars[v]);
+            tightval = (val * SCIPvarGetLbAtIndex(vars[v], bdchgidx, TRUE) - resolutionset->slack ) / val;
+            solval = MAX( bnd, tightval );
             if( SCIPsetIsGT(set, solval, SCIPvarGetUbGlobal(vars[v])) )
             {
                assert(strcmp(SCIPconshdlrGetName(bdchginfo->inferencedata.reason.cons->conshdlr), "knapsack") == 0);
@@ -1697,8 +1703,7 @@ SCIP_Real computeScaleReason(
    SCIP_SET*             set,                   /**< global SCIP settings */
    SCIP_RESOLUTIONSET*   conflictresolutionset, /**< conflict resolution set */
    SCIP_RESOLUTIONSET*   reasonresolutionset,   /**< reason resolution set */
-   int                   residx,                /**< index of variable to resolve */
-   SCIP_Bool             wasresolved            /**< resolution has been applied */
+   int                   residx                 /**< index of variable to resolve */
    )
 {
    SCIP_Real coefconf;
@@ -1707,9 +1712,6 @@ SCIP_Real computeScaleReason(
 
    SCIP_Bool idxinconflict;
    SCIP_Bool idxinreason;
-
-   idxinconflict = FALSE;
-   idxinreason = FALSE;
 
    coefconf = 0.0;
    coefreas = 0.0;
@@ -1722,21 +1724,6 @@ SCIP_Real computeScaleReason(
 
    assert((idxinconflict && idxinreason));
    assert(!SCIPsetIsZero(set, coefreas) && !SCIPsetIsZero(set, coefconf));
-
-   // if ( wasresolved )
-   // {
-   //    if ( SCIPsetIsZero(set, coefconf) )
-   //    {
-   //       SCIPsetDebugMsg(set, "Coefficient of resolvent in conflict is zero");
-   //       return SCIPsetInfinity(set);
-   //    }
-   //    assert((idxinconflict && idxinreason));
-   //    if (SCIPsetIsGE(set, coefconf * coefreas, 0.0))
-   //    {
-   //       SCIPsetDebugMsg(set, "Coefficient of resolvent has the same sign in both conflict and reason");
-   //       return SCIPsetInfinity(set);
-   //    }
-   // }
 
    assert(coefconf * coefreas < 0);
 
@@ -1775,7 +1762,7 @@ SCIP_RETCODE rescaleAndResolve(
 
    *success = FALSE;
 
-   scale = computeScaleReason(set, conflictresolutionset, reasonresolutionset, residx, FALSE);
+   scale = computeScaleReason(set, conflictresolutionset, reasonresolutionset, residx);
 
    /* stop if the scale becomes too large */
    if ( SCIPsetIsGE(set, scale,  set->conf_generalresminmaxquot) )
@@ -2859,8 +2846,8 @@ SCIP_RETCODE conflictAnalyzeResolution(
    SCIPstatisticPrintf("ConflictSTAT: %d %d %f %f\n", nressteps, resolutionsetGetNNzs(conflictresolutionset),
                                                       conflictresolutionset->coefquotient, conflictresolutionset->slack);
 
-   resolutionsetReplace(prevconflictresolutionset, blkmem, conflictresolutionset);
-   resolutionsetReplace(resolvedresolutionset, blkmem, conflictresolutionset);
+   SCIP_CALL( resolutionsetReplace(prevconflictresolutionset, blkmem, conflictresolutionset) );
+   SCIP_CALL( resolutionsetReplace(resolvedresolutionset, blkmem, conflictresolutionset) );
 
    /** main loop: All-FUIP RESOLUTION
     * --------------------------------
@@ -3044,7 +3031,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
          {
              int nvarsweakened;
             SCIPsetDebugMsg(set, " Applying tightening based reduction with resolving variable <%s>\n", SCIPvarGetName(vartoresolve));
-            tighteningBasedReduction(conflict, set, transprob, blkmem, bdchgidx, residx, &nvarsweakened, fixbounds, fixinds, &successresolution );
+            SCIP_CALL( tighteningBasedReduction(conflict, set, transprob, blkmem, bdchgidx, residx, &nvarsweakened, fixbounds, fixinds, &successresolution ) );
          }
 
          /** Unfortunately we cannot guarrante that the slack becomes zero after reducing the reason (even if we have only binary variables)
@@ -3053,7 +3040,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
           *    - Ranged row propagation (gcd argument)
           */
 
-         resolutionsetReplace(conflictresolutionset, blkmem, resolvedresolutionset);
+         SCIP_CALL( resolutionsetReplace(conflictresolutionset, blkmem, resolvedresolutionset) );
 
          SCIPstatisticPrintf("ConflictSTAT: %d %d %f %f\n", nressteps, resolutionsetGetNNzs(conflictresolutionset),
                              conflictresolutionset->coefquotient, conflictresolutionset->slack);
