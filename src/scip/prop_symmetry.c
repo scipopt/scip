@@ -6634,9 +6634,10 @@ SCIP_RETCODE computeSymmetryGroup2(
       SCIP_CALL( SCIPallocBufferArray(scip, &nodeorder, nnodes) );
 
       for (i = 0; i < nnodes; ++i)
+      {
          nodecolormap[i] = nodes[i]->computedcolor;
-      for (i = 0; i < nnodes; ++i)
          nodeorder[i] = i;
+      }
 
       SCIPsortIntInt(nodecolormap, nodeorder, nnodes);
 
