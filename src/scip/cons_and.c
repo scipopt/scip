@@ -1960,6 +1960,7 @@ SCIP_RETCODE resolvePropagation(
    SCIP_VAR*             infervar,           /**< variable that was deduced */
    PROPRULE              proprule,           /**< propagation rule that deduced the value */
    SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index (time stamp of bound change), or NULL for current time */
+   SCIP_Bool             separatequeue,      /**< should the bound changes be added to the separate queue? */
    SCIP_RESULT*          result              /**< pointer to store the result of the propagation conflict resolving call */
    )
 {
@@ -1985,7 +1986,7 @@ SCIP_RETCODE resolvePropagation(
       {
          if( SCIPgetVarUbAtIndex(scip, vars[i], bdchgidx, FALSE) < 0.5 )
          {
-            SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i], FALSE) );
+            SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i], separatequeue) );
             break;
          }
       }
@@ -1997,7 +1998,7 @@ SCIP_RETCODE resolvePropagation(
       /* the operand variable was infered to TRUE, because the resultant was TRUE */
       assert(SCIPgetVarLbAtIndex(scip, infervar, bdchgidx, TRUE) > 0.5);
       assert(SCIPgetVarLbAtIndex(scip, consdata->resvar, bdchgidx, FALSE) > 0.5);
-      SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->resvar, FALSE) );
+      SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->resvar, separatequeue) );
       *result = SCIP_SUCCESS;
       break;
 
@@ -2008,7 +2009,7 @@ SCIP_RETCODE resolvePropagation(
       for( i = 0; i < nvars; ++i )
       {
          assert(SCIPgetVarLbAtIndex(scip, vars[i], bdchgidx, FALSE) > 0.5);
-         SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i], FALSE) );
+         SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i], separatequeue) );
       }
       *result = SCIP_SUCCESS;
       break;
@@ -2017,13 +2018,13 @@ SCIP_RETCODE resolvePropagation(
       /* the operand variable was infered to FALSE, because the resultant was FALSE and all other operands were TRUE */
       assert(SCIPgetVarUbAtIndex(scip, infervar, bdchgidx, TRUE) < 0.5);
       assert(SCIPgetVarUbAtIndex(scip, consdata->resvar, bdchgidx, FALSE) < 0.5);
-      SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->resvar, FALSE) );
+      SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->resvar, separatequeue) );
       for( i = 0; i < nvars; ++i )
       {
          if( vars[i] != infervar )
          {
             assert(SCIPgetVarLbAtIndex(scip, vars[i], bdchgidx, FALSE) > 0.5);
-            SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i], FALSE) );
+            SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i], separatequeue) );
          }
       }
       *result = SCIP_SUCCESS;
@@ -4621,7 +4622,7 @@ SCIP_DECL_CONSPRESOL(consPresolAnd)
 static
 SCIP_DECL_CONSRESPROP(consRespropAnd)
 {  /*lint --e{715}*/
-   SCIP_CALL( resolvePropagation(scip, cons, infervar, (PROPRULE)inferinfo, bdchgidx, result) );
+   SCIP_CALL( resolvePropagation(scip, cons, infervar, (PROPRULE)inferinfo, bdchgidx, separatequeue, result) );
 
    return SCIP_OKAY;
 }

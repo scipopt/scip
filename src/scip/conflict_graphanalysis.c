@@ -122,6 +122,7 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+// #define SCIP_STATISTIC
 
 #include "lpi/lpi.h"
 #include "scip/conflict_graphanalysis.h"
@@ -3740,6 +3741,10 @@ SCIP_RETCODE conflictAnalyze(
       SCIP_Real relaxedbd;
       SCIP_Bool forceresolve;
       int bdchgdepth;
+
+      SCIPstatisticPrintf("ConflictSTAT: %d %d %f %f\n", nresolutions, SCIPpqueueNElems(conflict->forcedbdchgqueue) + SCIPpqueueNElems(conflict->bdchgqueue) + conflict->conflictset->nbdchginfos,
+                                                      1.0, -1.0);
+
 
       assert(!SCIPbdchginfoIsRedundant(bdchginfo));
 

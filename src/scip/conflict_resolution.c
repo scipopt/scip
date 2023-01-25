@@ -481,6 +481,10 @@ SCIP_Bool bdchginfoIsResolvable(
    {
       return TRUE;
    }
+   else if( strcmp(conshdlrname, "and") == 0 )
+   {
+      return TRUE;
+   }
    return FALSE;
 }
 
@@ -867,25 +871,6 @@ int resolutionsetGetNNzs(
    return resolutionset->nnz;
 }
 
-/* returns if the variable index is in the conflict resolution set */
-static
-SCIP_Bool varIdxInResolutionset(
-   SCIP_RESOLUTIONSET*   resolutionset,      /**< conflict resolution set */
-   int                   varidx              /**< variable index to check */
-   )
-{
-   int i;
-
-   assert(resolutionset != NULL);
-   assert(varidx >= 0);
-
-   for( i = 0; i < resolutionsetGetNNzs(resolutionset); ++i )
-   {
-      if( resolutionset->inds[i] == varidx )
-         return TRUE;
-   }
-   return FALSE;
-}
 /* returns the index of a variable in the conflict resolution set */
 static
 int getVarIdxInResolutionset(
@@ -2302,6 +2287,26 @@ void printNonResolvableReasonType(
    }
 }
 
+/* returns if the variable index is in the conflict resolution set */
+static
+SCIP_Bool varIdxInResolutionset(
+   SCIP_RESOLUTIONSET*   resolutionset,      /**< conflict resolution set */
+   int                   varidx              /**< variable index to check */
+   )
+{
+   int i;
+
+   assert(resolutionset != NULL);
+   assert(varidx >= 0);
+
+   for( i = 0; i < resolutionsetGetNNzs(resolutionset); ++i )
+   {
+      if( resolutionset->inds[i] == varidx )
+         return TRUE;
+   }
+   return FALSE;
+}
+
 #endif
 
 /** tries to resolve given bound change */
@@ -2569,7 +2574,8 @@ SCIP_RETCODE getReasonRow(
          if (reasonrow == NULL)
          {
             assert(strcmp(SCIPconshdlrGetName(reasoncon->conshdlr), "orbisack") == 0 ||
-                   strcmp(SCIPconshdlrGetName(reasoncon->conshdlr), "orbitope") == 0);
+                   strcmp(SCIPconshdlrGetName(reasoncon->conshdlr), "orbitope") == 0 ||
+                   strcmp(SCIPconshdlrGetName(reasoncon->conshdlr), "and") == 0);
             *success = getClauseReasonSet(conflict, blkmem, prob, reasoncon, set, currbdchginfo, SCIPbdchginfoGetRelaxedBound(currbdchginfo), validdepth);
             if (success)
             {
