@@ -145,10 +145,10 @@ SCIP_RETCODE resolutionsetReplace(
 
    /* allocate additional memory for the inds and vals arrays if needed */
    if( targetsize < sourcesize )
-      {
-         SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &targetresolutionset->vals, targetsize, sourcesize) );
-         SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &targetresolutionset->inds, targetsize, sourcesize) );
-      }
+   {
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &targetresolutionset->vals, targetsize, sourcesize) );
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &targetresolutionset->inds, targetsize, sourcesize) );
+   }
    targetresolutionset->size = MAX(sourcesize, targetsize);
    /* copy all data from source to target */
    BMScopyMemoryArray(targetresolutionset->inds, sourceresolutionset->inds, sourcesize);
@@ -2452,29 +2452,27 @@ SCIP_RETCODE getClauseReasonSet(
 
       if( isbinary )
       {
-         int nvars;
          conflict->reasonset->nnz = SCIPpqueueNElems(conflict->separatebdchgqueue) + 1;
          conflict->reasonset->lhs = lhs;
          conflict->reasonset->origlhs = lhs;
          conflict->reasonset->origrhs = SCIPsetInfinity(set);
 
-         nvars = SCIPprobGetNVars(prob);
          if( conflict->reasonset->size == 0 )
          {
             assert(conflict->reasonset->vals == NULL);
             assert(conflict->reasonset->inds == NULL);
 
             /* todo the next line is a temporay fix for the vector size */
-            conflict->reasonset->size = nvars;
-            SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &conflict->reasonset->vals, nvars) );
-            SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &conflict->reasonset->inds, nvars) );
+            SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &conflict->reasonset->vals, conflict->reasonset->nnz) );
+            SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &conflict->reasonset->inds, conflict->reasonset->nnz) );
+            conflict->reasonset->size = conflict->reasonset->nnz;
          }
 
          else if( conflict->reasonset->size < conflict->reasonset->nnz )
          {
-            conflict->reasonset->size = conflict->reasonset->nnz;
             SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &conflict->reasonset->vals, conflict->reasonset->size, conflict->reasonset->nnz) );
             SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &conflict->reasonset->inds, conflict->reasonset->size, conflict->reasonset->nnz) );
+            conflict->reasonset->size = conflict->reasonset->nnz;
          }
          /* add the variable we are resolving and update lhs */
          conflict->reasonset->vals[0] = SCIPbdchginfoGetNewbound(currbdchginfo) > 0.5 ? 1.0 : -1.0;
