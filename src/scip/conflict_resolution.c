@@ -2399,7 +2399,6 @@ static
 SCIP_RETCODE getClauseReasonSet(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_PROB*            prob,               /**< problem data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_BDCHGINFO*       currbdchginfo,      /**< bound change to resolve */
    SCIP_Real             relaxedbd,          /**< the relaxed bound */
@@ -2538,7 +2537,7 @@ SCIP_RETCODE getReasonRow(
             assert(strcmp(SCIPconshdlrGetName(reasoncon->conshdlr), "orbisack") == 0 ||
                    strcmp(SCIPconshdlrGetName(reasoncon->conshdlr), "orbitope") == 0 ||
                    strcmp(SCIPconshdlrGetName(reasoncon->conshdlr), "and") == 0);
-            SCIP_CALL( getClauseReasonSet(conflict, blkmem, prob, set, currbdchginfo, SCIPbdchginfoGetRelaxedBound(currbdchginfo), validdepth, success) );
+            SCIP_CALL( getClauseReasonSet(conflict, blkmem,  set, currbdchginfo, SCIPbdchginfoGetRelaxedBound(currbdchginfo), validdepth, success) );
             if (*success)
             {
                conflict->reasonset->slack = getSlack(set, prob, conflict->reasonset, SCIPbdchginfoGetIdx(currbdchginfo), fixbounds, fixinds);
@@ -2565,7 +2564,7 @@ SCIP_RETCODE getReasonRow(
          else if(SCIPsetIsInfinity(set, -conflict->reasonset->lhs) || SCIPsetIsInfinity(set, conflict->reasonset->lhs))
          {
             /* to be able to continue we construct a linearized clause as reason */
-            SCIP_CALL( getClauseReasonSet(conflict, blkmem, prob, set, currbdchginfo, SCIPbdchginfoGetRelaxedBound(currbdchginfo), validdepth, success) );
+            SCIP_CALL( getClauseReasonSet(conflict, blkmem, set, currbdchginfo, SCIPbdchginfoGetRelaxedBound(currbdchginfo), validdepth, success) );
             return SCIP_OKAY;
 
          }
@@ -2584,7 +2583,7 @@ SCIP_RETCODE getReasonRow(
             {
                if (strcmp(SCIPconshdlrGetName(reasoncon->conshdlr), "knapsack") == 0)
                {
-                  SCIP_CALL( getClauseReasonSet(conflict, blkmem, prob, set, currbdchginfo, SCIPbdchginfoGetRelaxedBound(currbdchginfo), validdepth, success) );
+                  SCIP_CALL( getClauseReasonSet(conflict, blkmem, set, currbdchginfo, SCIPbdchginfoGetRelaxedBound(currbdchginfo), validdepth, success) );
                   return SCIP_OKAY;
                }
             }
@@ -2593,7 +2592,7 @@ SCIP_RETCODE getReasonRow(
                assert(!SCIPsetIsZero(set, coef));
                if (strcmp(SCIPconshdlrGetName(reasoncon->conshdlr), "knapsack") == 0)
                {
-                  SCIP_CALL( getClauseReasonSet(conflict, blkmem, prob, set, currbdchginfo, SCIPbdchginfoGetRelaxedBound(currbdchginfo), validdepth, success) );
+                  SCIP_CALL( getClauseReasonSet(conflict, blkmem, set, currbdchginfo, SCIPbdchginfoGetRelaxedBound(currbdchginfo), validdepth, success) );
                   return SCIP_OKAY;
                }
             }
