@@ -1,5 +1,5 @@
-#ifndef DEJAVU_INVARIANT_H
-#define DEJAVU_INVARIANT_H
+#ifndef SASSY_INVARIANT_H
+#define SASSY_INVARIANT_H
 
 
 #include <stack>
@@ -185,4 +185,4 @@ namespace sassy {
     };
 }
 
-#endif //DEJAVU_INVARIANT_H
+#endif //SASSY_INVARIANT_H

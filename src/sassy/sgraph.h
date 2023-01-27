@@ -1,5 +1,5 @@
-#ifndef DEJAVU_GRAPH_H
-#define DEJAVU_GRAPH_H
+#ifndef SASSY_GRAPH_H
+#define SASSY_GRAPH_H
 
 #include <vector>
 #include "bijection.h"
@@ -248,6 +248,43 @@ namespace sassy {
 #endif
         }
 
+        void permute_graph(sgraph_t<vertex_t, degree_t, edge_t>* ng, int* p) {
+            ng->initialize(v_size, e_size);
+            ng->v_size = v_size;
+            ng->d_size = d_size;
+            ng->e_size = e_size;
+            ng->max_degree = max_degree;
+
+            bijection<vertex_t> p_inv;
+            p_inv.initialize_empty(ng->v_size);
+            //p_inv.copy(p);
+            //p_inv.initialize_empty(ng->v_size);
+            p_inv.read_from_array(p, ng->v_size);
+            p_inv.inverse();
+
+            int epos = 0;
+            for(int i = 0; i < v_size; ++i) {
+                int mapped_v = p[i];
+                assert(p_inv.map_vertex(mapped_v) == i);
+                assert(mapped_v < v_size);
+                ng->d[i] = d[mapped_v];
+                ng->v[i] = epos;
+                for(int j = v[mapped_v]; j < v[mapped_v] + d[mapped_v]; j++) {
+                    assert(j < e_size);
+                    ng->e[epos] = p_inv.map_vertex(e[j]);
+                    epos += 1;
+                }
+                //epos += ng->d[i];
+            }
+
+            assert(ng->v_size == v_size);
+            assert(ng->e_size == e_size);
+            assert(ng->d_size == d_size);
+            assert(epos == ng->e_size);
+
+            return;
+        }
+
         void copy_graph(sgraph_t<vertex_t, degree_t, edge_t> *g) {
             if (initialized) {
                 delete[] v;
@@ -264,6 +301,8 @@ namespace sassy {
             e_size = g->e_size;
             max_degree = g->max_degree;
         }
+
+
 
         void print() {
             std::cout << "v_size: " << v_size << std::endl;
@@ -344,4 +383,4 @@ namespace sassy {
     typedef sgraph_t<int, int, int> sgraph;
 }
 
-#endif //DEJAVU_GRAPH_H
+#endif //SASSY_GRAPH_H
