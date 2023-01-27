@@ -151,6 +151,10 @@ if test "${CLUSTERQUEUE}" = "Gold6338"
 then
     CONSTRAINT="Gold6338"
     CLUSTERQUEUE="big"
+elif test "${CLUSTERQUEUE}" = "Gold6342"
+then
+    CONSTRAINT="Gold6342"
+    CLUSTERQUEUE="big"
 elif test "${CLUSTERQUEUE}" = "M640v2"
 then
     CONSTRAINT="Gold5222"
