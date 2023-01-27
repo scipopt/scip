@@ -1032,7 +1032,7 @@ void SCIPfreeExprQuadratic(
 
 /** evaluates quadratic term in a solution
  *
- * \note This requires that every expressiion used in the quadratic data is a variable expression.
+ * \note This requires that every expression used in the quadratic data is a variable expression.
  */
 SCIP_EXPORT
 SCIP_Real SCIPevalExprQuadratic(
@@ -1072,6 +1072,27 @@ SCIP_RETCODE SCIPcomputeExprQuadraticCurvature(
 #define SCIPcheckExprQuadratic(scip, expr, isquadratic)  SCIPexprCheckQuadratic((scip)->set, (scip)->mem->probmem, expr, isquadratic)
 #define SCIPfreeExprQuadratic(scip, expr)                SCIPexprFreeQuadratic((scip)->mem->probmem, expr)
 #define SCIPcomputeExprQuadraticCurvature(scip, expr, curv, assumevarfixed, storeeigeninfo)  SCIPexprComputeQuadraticCurvature((scip)->set, (scip)->mem->probmem, (scip)->mem->buffer, (scip)->messagehdlr, expr, curv, assumevarfixed, storeeigeninfo)
+#endif
+
+/** @} */
+
+/**@name Signomial Expressions */
+/**@{ */
+
+/** checks whether an expression is signomial
+ *
+ * An expression is signomial if it is a sum of signomial terms, and a signomial term is a product of real powers of
+ * nonnegative variables.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcheckExprSignomial(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_Bool*            issignomial         /**< buffer to store result */
+   );
+
+#ifdef NDEBUG
+#define SCIPcheckExprSignomial(scip, expr, issignomial)  SCIPexprCheckSignomial((scip)->set, (scip)->mem->probmem, expr, issignomial)
 #endif
 
 /** @} */

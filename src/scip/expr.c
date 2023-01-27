@@ -4188,4 +4188,55 @@ SCIP_Bool SCIPexprAreQuadraticExprsVariables(
    return expr->quaddata->allexprsarevars;
 }
 
+/** checks whether an expression is signomial
+ *
+ * An expression is signomial if it is a sum of signomial terms, and a signomial term is a product of real powers of
+ * nonnegative variables.
+ */
+SCIP_RETCODE SCIPexprCheckSignomial(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_Bool*            issignomial         /**< buffer to store result */
+   )
+{
+   assert(set != NULL);
+   assert(blkmem != NULL);
+   assert(expr != NULL);
+   assert(issignomial != NULL);
+
+   *issignomial = TRUE;
+
+   if( SCIPexprIsVar(set, expr) || SCIPexprIsValue(set, expr) )
+      return SCIP_OKAY;
+
+   if( SCIPexprIsPower(set, expr) && SCIPexprIsVar(set, SCIPexprGetChildren(expr)[0]) )
+      return SCIP_OKAY;
+
+   if( SCIPexprIsProduct(set, expr) )
+   {
+      SCIP_EXPR* child;
+      int c;
+
+      for( c = 0; c < SCIPexprGetNChildren(expr); ++c )
+      {
+         child = SCIPexprGetChildren(expr)[c];
+
+         if( SCIPexprIsVar(set, child) )
+            continue;
+
+         if( SCIPexprIsPower(set, child) && SCIPexprIsVar(set, SCIPexprGetChildren(child)[0]) )
+            continue;
+
+         *issignomial = FALSE;
+         break;
+      }
+
+      return SCIP_OKAY;
+   }
+
+   *issignomial = FALSE;
+   return SCIP_OKAY;
+}
+
 /**@} */

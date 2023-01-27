@@ -736,6 +736,24 @@ SCIP_RETCODE SCIPexprComputeQuadraticCurvature(
 
 /**@} */
 
+/**@name Signomial expression functions */
+/**@{ */
+
+/** checks whether an expression is signomial
+ *
+ * An expression is signomial if it is a sum of signomial terms, and a signomial term is a product of real powers of
+ * nonnegative variables.
+ */
+SCIP_EXPORT  /* need SCIP_EXPORT here, because func is exposed in API via SCIPcheckExprSignomial() macro */
+SCIP_RETCODE SCIPexprCheckSignomial(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_Bool*            issignomial         /**< buffer to store result */
+   );
+
+/**@} */
+
 #ifdef __cplusplus
 }
 #endif
