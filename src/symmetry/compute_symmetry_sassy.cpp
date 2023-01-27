@@ -1452,9 +1452,9 @@ initStaticSymmetryName( )
 {
    symmetryname = new char[100];
 #ifdef BLISS_PATCH_PRESENT
-   (void) snprintf(symmetryname, 100, "bliss %sp, sassy %d", bliss::version, SASSY_VERSION);
+   (void) snprintf(symmetryname, 100, "bliss %sp, sassy v%d", bliss::version, SASSY_VERSION);
 #else
-   (void) snprintf(symmetryname, 100, "bliss %s, sassy %d", bliss::version, SASSY_VERSION);
+   (void) snprintf(symmetryname, 100, "bliss %s, sassy v%d", bliss::version, SASSY_VERSION);
 #endif
    return symmetryname;
 }
