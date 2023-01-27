@@ -1,5 +1,5 @@
-#ifndef DEJAVU_COLORING_H
-#define DEJAVU_COLORING_H
+#ifndef SASSY_COLORING_H
+#define SASSY_COLORING_H
 
 
 #include <vector>
@@ -143,7 +143,6 @@ namespace sassy {
                 --counter;
                 if (counter == 0) {
                     counter = ptn[i] + 1;
-                    last_col = i;
                     assert(ptn[i] >= 0 && ptn[i] < lab_sz);
                 } else {
                     assert(vertex_to_col[lab[i]] == last_col);
@@ -159,4 +158,4 @@ namespace sassy {
     };
 }
 
-#endif //DEJAVU_COLORING_H
+#endif //SASSY_COLORING_H

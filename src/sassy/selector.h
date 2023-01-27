@@ -1,5 +1,5 @@
-#ifndef DEJAVU_SELECTOR_H
-#define DEJAVU_SELECTOR_H
+#ifndef SASSY_SELECTOR_H
+#define SASSY_SELECTOR_H
 
 #include "refinement.h"
 #include "coloring.h"
@@ -184,4 +184,4 @@ namespace sassy {
         }
     };
 }
-#endif // DEJAVU_SELECTOR_H
+#endif // SASSY_SELECTOR_H

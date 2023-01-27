@@ -11,8 +11,8 @@
 #include <queue>
 #include <memory>
 
-#ifndef DEJAVU_UTILITY_H
-#define DEJAVU_UTILITY_H
+#ifndef SASSY_UTILITY_H
+#define SASSY_UTILITY_H
 
 namespace sassy {
 
@@ -27,7 +27,8 @@ namespace sassy {
 #define MASH4(i) (((unsigned long) i + 1) * (23524361 - (unsigned long) i * 3))
 #define MASH5(i) (((unsigned long) i + 1) * (23524361 - (unsigned long) i * 3))
 
-#define PRINT(str) {if(config->CONFIG_PRINT) {std::cout << str << std::endl;}}
+//#define PRINT(str) {if(config->CONFIG_PRINT) {std::cout << str << std::endl;}}
+#define PRINT(str) {}
 
 // metrics used to compare strategies
     struct strategy_metrics {
@@ -41,6 +42,10 @@ namespace sassy {
         int sz = -1;
         bool init = false;
     public:
+        mark_set() {};
+        mark_set(int size) {
+            initialize(size);
+        };
         void initialize(int size) {
             if(init)
                 delete[] s;
@@ -147,4 +152,4 @@ namespace sassy {
     };
 }
 
-#endif //DEJAVU_UTILITY_H
+#endif //SASSY_UTILITY_H

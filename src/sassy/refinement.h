@@ -1,5 +1,5 @@
-#ifndef DEJAVU_REFINEMENT_H
-#define DEJAVU_REFINEMENT_H
+#ifndef SASSY_REFINEMENT_H
+#define SASSY_REFINEMENT_H
 
 #include "utility.h"
 #include "coloring.h"
@@ -70,6 +70,11 @@ namespace sassy {
     template<class T>
     class work_list_t {
     public:
+        work_list_t() {};
+        work_list_t(int size) {
+            initialize(size);
+        };
+
         void initialize(int size) {
             if(init)
                 delete[] arr;
@@ -686,6 +691,7 @@ namespace sassy {
             while (!cell_todo.empty()) {
                 color_class_splits.reset();
                 const int next_color_class    = cell_todo.next_cell(&queue_pointer, c, &singleton_hint);
+                //const int next_color_class    = cell_todo.next_cell(&queue_pointer, c);
                 const int next_color_class_sz = c->ptn[next_color_class] + 1;
                 bool dense_dense = false;
                 //if(g->d[c->lab[next_color_class]] == 0) {
@@ -813,6 +819,22 @@ namespace sassy {
             return true;
         }
 
+        bool is_adjacent(sgraph*g, int vert1, int vert2) {
+            if(g->d[vert1] < g->d[vert2]) {
+                for(int i = 0; i < g->d[vert1]; ++i) {
+                    if(g->e[g->v[vert1] + i] == vert2)
+                        return true;
+                }
+                return false;
+            } else {
+                for(int i = 0; i < g->d[vert2]; ++i) {
+                    if(g->e[g->v[vert2] + i] == vert1)
+                        return true;
+                }
+                return false;
+            }
+        }
+
         // certify an automorphism on a graph
         bool certify_automorphism(sgraph *g, const int *colmap, const int *p) {
             int i, found;
@@ -823,10 +845,12 @@ namespace sassy {
                 const int image_i = p[i];
                 if (image_i == i)
                     continue;
-                if (g->d[i] != g->d[image_i]) // degrees must be equal
+                if (g->d[i] != g->d[image_i]) { // degrees must be equal
                     return false;
-                if (colmap[i] != colmap[image_i]) // colors must be equal
+                }
+                if (colmap[i] != colmap[image_i]) { // colors must be equal
                     return false;
+                }
 
                 scratch_set.reset();
                 // automorphism must preserve neighbours
@@ -1638,101 +1662,6 @@ namespace sassy {
             const int pe = g->v[vc];
             const int deg = g->d[vc];
 
-            // degree 0, 1
-            if(deg <= 1)
-                return true;
-
-            // degree 2
-            if(deg == 2) {
-                const int neighb1 = g->e[pe];
-                assert(pe + 1 < g->e_size);
-                const int neighb2 = g->e[pe + 1];
-
-                const int col_neighb1 = neighb1>=0?c->vertex_to_col[neighb1]:-1;
-                const int col_sz1     = neighb1>=0?c->ptn[col_neighb1]:-1;
-
-                const int col_neighb2 = neighb2>=0?c->vertex_to_col[neighb2]:-1;
-                const int col_sz2     = neighb2>=0?c->ptn[col_neighb2]:-1;
-
-                if(col_neighb1 != col_neighb2) {
-                    if(col_sz1 > 0 && neighb1 >= 0) {
-                        const int new_col_neighb1 = col_neighb1 + col_sz1;
-                        assert(new_col_neighb1 > 0 && new_col_neighb1 < g->v_size);
-
-                        c->ptn[col_neighb1]  -= 1;
-                        assert(c->ptn[col_neighb1] >= 0);
-                        c->ptn[new_col_neighb1]     = 0;
-                        assert(new_col_neighb1 - 1 >= col_neighb1);
-                        c->ptn[new_col_neighb1 - 1] = 0;
-
-                        const int v             = neighb1;
-                        const int vertex_at_pos = c->lab[new_col_neighb1];
-                        const int lab_pos       = c->vertex_to_lab[v];
-
-                        c->vertex_to_col[v] = new_col_neighb1;
-
-                        if(vertex_at_pos != v) {
-                            c->lab[new_col_neighb1] = v;
-                            c->vertex_to_lab[v] = new_col_neighb1;
-                            c->lab[lab_pos] = vertex_at_pos;
-                            assert(lab_pos >= 0 && lab_pos < g->v_size);
-                            c->vertex_to_lab[vertex_at_pos] = lab_pos;
-                            assert(c->vertex_to_col[vertex_at_pos] == col_neighb1);
-                            assert(vertex_at_pos >= 0 && vertex_at_pos < g->v_size);
-                        }
-                        assert(((c->ptn[col_neighb1] + 1) + (c->ptn[new_col_neighb1] + 1)) == (col_sz1 + 1));
-                        assert(col_neighb1 != new_col_neighb1);
-
-                        color_class_split_worklist->push_back(std::pair<std::pair<int, int>, bool>(
-                                std::pair<int, int>(col_neighb1, col_neighb1), true));
-                        color_class_split_worklist->push_back(std::pair<std::pair<int, int>, bool>(
-                                std::pair<int, int>(col_neighb1, new_col_neighb1), false));
-                    }
-                    if(col_sz2 > 0 && neighb2 >= 0) {
-                        const int new_col_neighb2 = col_neighb2 + col_sz2;
-                        assert(new_col_neighb2 > 0 && new_col_neighb2 < g->v_size);
-
-                        c->ptn[col_neighb2]  = col_sz2 - 1;
-                        c->ptn[new_col_neighb2] = 0;
-                        c->ptn[new_col_neighb2 - 1] = 0;
-
-                        const int v             = neighb2;
-                        const int vertex_at_pos = c->lab[new_col_neighb2];
-                        const int lab_pos       = c->vertex_to_lab[v];
-
-                        c->vertex_to_col[v] = new_col_neighb2;
-
-                        if(vertex_at_pos != v) {
-                            c->lab[new_col_neighb2] = v;
-                            c->vertex_to_lab[v] = new_col_neighb2;
-                            c->lab[lab_pos] = vertex_at_pos;
-                            assert(lab_pos >= 0 && lab_pos < g->v_size);
-                            c->vertex_to_lab[vertex_at_pos] = lab_pos;
-                            assert(c->vertex_to_col[vertex_at_pos] == col_neighb2);
-                            assert(vertex_at_pos >= 0 && vertex_at_pos < g->v_size);
-                        }
-                        assert(((c->ptn[col_neighb2] + 1) + (c->ptn[new_col_neighb2] + 1)) == (col_sz2 + 1));
-                        assert(col_neighb2 != new_col_neighb2);
-
-                        color_class_split_worklist->push_back(std::pair<std::pair<int, int>, bool>(
-                                std::pair<int, int>(col_neighb2, col_neighb2), true));
-                        color_class_split_worklist->push_back(std::pair<std::pair<int, int>, bool>(
-                                std::pair<int, int>(col_neighb2, new_col_neighb2), false));
-                    }
-
-                    return true;
-                } else {
-                    if(col_sz1 == 1) {
-                        return true;
-                    } else {
-                        if(col_neighb1 == -1)
-                            return true;
-
-                        // case not covered, falling back to general case...
-                    }
-                }
-            }
-
             int deg1_write_pos, deg1_read_pos;
             int* it;
             neighbours.reset();
@@ -2229,4 +2158,4 @@ namespace sassy {
     };
 }
 
-#endif //DEJAVU_REFINEMENT_H
+#endif //SASSY_REFINEMENT_H

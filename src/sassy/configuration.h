@@ -1,5 +1,5 @@
-#ifndef DEJAVU_CONFIGURATION_H
-#define DEJAVU_CONFIGURATION_H
+#ifndef SASSY_CONFIGURATION_H
+#define SASSY_CONFIGURATION_H
 
 #include <functional>
 
@@ -24,7 +24,8 @@ namespace sassy {
         bool CONFIG_PREP_DEACT_DEG01 = false; // preprocessor: no degree 0,1 processing
         bool CONFIG_PREP_DEACT_DEG2 = false;  // preprocessor: no degree 2   processing
         bool CONFIG_IR_REFINE_EARLYOUT_LATE = false;
+        bool CONFIG_TRANSLATE_ONLY = false;
     };
 }
 
-#endif //DEJAVU_CONFIGURATION_H
+#endif //SASSY_CONFIGURATION_H

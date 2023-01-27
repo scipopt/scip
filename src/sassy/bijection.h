@@ -1,5 +1,5 @@
-#ifndef DEJAVU_BIJECTION_H
-#define DEJAVU_BIJECTION_H
+#ifndef SASSY_BIJECTION_H
+#define SASSY_BIJECTION_H
 
 #include "coloring.h"
 #include <algorithm>
@@ -178,4 +178,4 @@ namespace sassy {
     };
 }
 
-#endif //DEJAVU_BIJECTION_H
+#endif //SASSY_BIJECTION_H
