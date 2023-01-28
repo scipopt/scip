@@ -377,7 +377,6 @@ endif
 
 SYMOPTIONS	+=	sassy
 ifeq ($(SYM),sassy)
-FLAGS		+=	-I$(LIBDIR)/include/
 SYMOBJ		=	symmetry/compute_symmetry_sassy.o
 SYMOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(SYMOBJ))
 SYMSRC  	=	$(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.cpp))
@@ -395,6 +394,8 @@ BLISSOBJ	+=	bliss/src/uintseqhash.o
 BLISSOBJ	+=	bliss/src/utils.o
 SYMOBJFILES	+=	$(addprefix $(LIBOBJDIR)/,$(BLISSOBJ))
 SYMSRC  	+=	$(addprefix $(SRCDIR)/,$(BLISSOBJ:.o=.cc))
+else
+FLAGS		+=	-I$(LIBDIR)/include/
 endif
 ALLSRC		+=	$(SYMSRC)
 ifeq ($(BLISSEXTERNAL),true)
