@@ -3253,7 +3253,7 @@ SCIP_RETCODE checkTwoCyclePermsAreOrbitope(
    }
 
    /* in the subgroup case it might happen that a generator has less than ntwocycles many 2-cyles */
-   if ( row < ntwocycles )
+   if ( row != ntwocycles )
    {
       *isorbitope = FALSE;
       SCIPfreeBufferArray(scip, &usedperm);
@@ -5086,7 +5086,7 @@ SCIP_RETCODE detectOrbitopes(
          SCIP_CALL( SCIPisInvolutionPerm(perms[components[j]], permvars, npermvars,
                &ntwocyclesperm, &nbincyclesperm, FALSE) );
 
-         if ( ntwocyclescomp == 0 )
+         if ( ntwocyclesperm == 0 )
          {
             isorbitope = FALSE;
             break;
