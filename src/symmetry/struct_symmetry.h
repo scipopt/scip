@@ -166,52 +166,49 @@ struct SYM_Reflsymdata
    int                   nuniquerhs;         /**< number of unique right-hand sides */
 };
 
-/** information about a constraint used in symmetry computation */
-struct SYM_Consinfo
-{
-   SCIP_CONSHDLR*        conshdlr;           /**< pointer to the constraint handler of a constraint */
-   SCIP_CONS*            cons;               /**< pointer to the constraint */
-   SCIP_Real             lhs;                /**< left-hand side of constraint */
-   SCIP_Real             rhs;                /**< right-hand side of constraint */
-};
-
-/** data to encode a node of a symmetry detection graph */
-struct SYM_Node
-{
-   int                   id;                 /**< ID of the node (must be unique in the graph) */
-   SYM_NODETYPE          nodetype;           /**< type of the node */
-   SCIP_EXPRHDLR*        op;                 /**< operator encoded by the node
-                                              *   (if nodetype is SYM_NODETYPE_OPERATOR) */
-   SCIP_VAR*             var;                /**< variable encoded by the node
-                                              *   (if nodetype is SYM_NODETYPE_VAR) */
-   int                   varidx;             /**< index of variable encoded by the node
-                                              *   (if nodetype is SYM_NODETYPE_VAR) */
-   SCIP_Real             value;              /**< index of value encoded by the node
-                                              *   (if nodetype is SYM_NODETYPE_VAL) */
-   SCIP_Bool             hasinfo;            /**< whether the node encodes information about a constraint */
-   SYM_CONSINFO*         consinfo;           /**< pointer to information about constraint (or NULL) */
-   int                   computedcolor;      /**< color computed for symmetry detection */
-};
-
-/** data to encode an edge of a symmetry detection graph */
-struct SYM_Edge
-{
-   SYM_NODE*             first;              /**< pointer to the first node of an edge */
-   SYM_NODE*             second;             /**< pointer to the second node of an edge */
-   SCIP_Bool             iscolored;          /**< whether the edge is colored */
-   SCIP_Real             color;              /**< color of the edge (if it is colored) */
-   int                   computedcolor;      /**< color computed for symmetry detection */
-};
-
 /** data to encode a symmetry detection graph */
 struct SYM_Graph
 {
-   SYM_NODE**            nodes;              /**< array of nodes in the graph */
-   int                   nnodes;             /**< number of nodes encoded in nodes */
-   int                   maxnnodes;          /**< maximum number of nodes that can be hold by nodes */
-   SYM_EDGE**            edges;              /**< array of edges in the graph */
-   int                   nedges;             /**< number of edges encoded in edged */
-   int                   maxnedges;          /**< maximum number of edges that can be hold by edges */
+   /* information about nodes and node arrays */
+   int                   nnodes;             /**< number of nodes in graph */
+   int                   maxnnodes;          /**< maximum number of entries in node-based arrays */
+   int                   nopnodes;           /**< number of operator nodes in graph */
+   int                   maxnopnodes;        /**< maximum number of entries in operator-based arrays */
+   int                   nvarnodes;          /**< number of variable nodes in graph */
+   int                   maxnvarnodes;       /**< maximum number of entries in variable-based arrays */
+   int                   nvalnodes;          /**< number of value nodes in graph */
+   int                   maxnvalnodes;       /**< maximum number of entries in value-based arrays */
+   int                   rhsnode;            /**< index of rhs node (-1 if not existing) */
+   int                   rhssymcolor;        /**< color of rhs node used for symmetry detection */
+   SCIP_Bool             hassymnodecolors;   /**< whether node colors for symmetry computation have been computed */
+
+   /* node-based arrays */
+   SYM_NODETYPE*         nodetypes;          /**< array storing each node's type */
+   int*                  nodeinfopos;        /**< array assigning each node the position in the corresponding
+                                              *   containing its information (operator, variable, or value) */
+   int*                  symnodecolors;      /**< array of node colors used for symmetry detection */
+
+   /* information-based arrays */
+   SCIP_EXPRHDLR**       ops;                /**< operators corresponding to nodes in graph */
+   SCIP_VAR**            vars;               /**< variables corresponding to nodes in graph */
+   SCIP_Real*            vals;               /**< values corresponding to nodes in graph */
+
+   /* information about edges and edge arrays */
+   int                   nedges;             /**< number of edges in graph */
+   int                   maxnedges;          /**< maximum number of entries in edge-based arrays */
+   SCIP_Bool             hassymedgecolors;   /**< whether edge colors for symmetry computation have been computed */
+
+   /* edge-based arrays */
+   int*                  edgefirst;          /**< array of first nodes of edges */
+   int*                  edgesecond;         /**< array of second nodes of edges */
+   SCIP_Real*            edgecolors;         /**< array assigning each edge a color (SCIPinfinity is uncolored) */
+   int*                  symedgecolors;      /**< array of edge colors used for symmetry detection (-1 uncolored) */
+
+   /* constraint information of graphs */
+   SCIP_Bool             hasconsinfo;        /**< whether graph stores information about a constraint */
+   SCIP_CONS*            cons;               /**< pointer to the constraint (if hasconsinfo is TRUE) */
+   SCIP_Real             lhs;                /**< left-hand side of constraint (if hasconsinfo is TRUE)  */
+   SCIP_Real             rhs;                /**< right-hand side of constraint (if hasconsinfo is TRUE)  */
 };
 
 /** (additional) data used to encode an expression, which is not encoded as another expression */

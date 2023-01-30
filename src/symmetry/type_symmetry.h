@@ -110,6 +110,7 @@ enum SYM_Consoptype
    SYM_CONSOPTYPE_SUM      = 18,             /**< needed to indicate sums if sum-expr undefined */
    SYM_CONSOPTYPE_SLACK    = 19,             /**< needed to indicate slack vars in indicator constraints */
    SYM_CONSOPTYPE_COEF     = 20,             /**< needed to indicate coefficients from parent expressions */
+   SYM_CONSOPTYPE_RHS      = 21              /**< needed to indicate rhs/lhs of constraints */
 };
 typedef enum SYM_Consoptype SYM_CONSOPTYPE;
 
@@ -141,9 +142,6 @@ typedef struct SYM_Compgraph SYM_COMPGRAPH;
 typedef struct SYM_Matrixdata SYM_MATRIXDATA;/**< data for symmetry group computation on linear constraints */
 typedef struct SYM_Reflsymdata SYM_REFLSYMDATA ;/**< data for reflection symmetry group computation */
 typedef struct SYM_Exprdata SYM_EXPRDATA;    /**< data for symmetry group computation on nonlinear constraints */
-typedef struct SYM_Consinfo SYM_CONSINFO;    /**< information about a constraint used in symmetry computation */
-typedef struct SYM_Node SYM_NODE;            /**< data to encode a node of a symmetry detection graph */
-typedef struct SYM_Edge SYM_EDGE;            /**< data to encode an edge of a symmetry detection graph */
 
 /** selection rules for leaders in SST cuts */
 enum SCIP_LeaderRule

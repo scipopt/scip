@@ -1851,7 +1851,6 @@ static
 SCIP_DECL_EXPRGETSYMDATA(getsymdataPow)
 {  /*lint --e{715}*/
    SCIP_EXPRDATA* exprdata;
-   int i;
 
    assert(scip != NULL);
    assert(expr != NULL);

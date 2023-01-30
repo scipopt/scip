@@ -777,6 +777,28 @@ SCIP_DECL_SORTINDCOMP(SYMsortMatCoef)
    return 0;
 }
 
+/** compares two operators
+ *
+ *  Operators are sorted by their pointer values.
+ *
+ *  result:
+ *    < 0: ind1 comes before (is better than) ind2
+ *    = 0: both indices have the same value
+ *    > 0: ind2 comes after (is worse than) ind2
+ */
+static
+int compareOps(
+   SCIP_EXPRHDLR*        op1,                /**< first operator in comparison */
+   SCIP_EXPRHDLR*        op2                 /**< second operator in comparison */
+   )
+{
+   if ( op1 < op2 )
+      return -1;
+   else if ( op1 > op2 )
+      return 1;
+
+   return 0;
+}
 
 /** sorts operators corresponding to SCIP_EXPRHDLR*
  *
@@ -792,12 +814,7 @@ SCIP_DECL_SORTINDCOMP(SYMsortOperators)
 
    vals = (SCIP_EXPRHDLR**) dataptr;
 
-   if ( vals[ind1] < vals[ind2] )
-      return -1;
-   else if ( vals[ind1] > vals[ind2] )
-      return 1;
-
-   return 0;
+   return compareOps(vals[ind1], vals[ind2]);
 }
 
 
@@ -830,6 +847,84 @@ SCIP_DECL_SORTINDCOMP(SYMsortGraphCompVars)
    return 0;
 }
 
+/** compares symmetry graphs
+ *
+ *  Graphs are sorted by whether they have constraint information, then by
+ *  the type of constraint, then by the lhs, and then by the rhs.
+ *
+ *  result:
+ *    < 0: ind1 comes before (is better than) ind2
+ *    = 0: both indices have the same value
+ *    > 0: ind2 comes after (is worse than) ind2
+ */
+static
+int compareSymgraphs(
+   SYM_GRAPH*            G1,                 /**< first graph in comparison */
+   SYM_GRAPH*            G2                  /**< second graph in comparison */
+   )
+{
+   SCIP_Bool hasconsinfo1;
+   SCIP_Bool hasconsinfo2;
+   SCIP_CONS* cons1;
+   SCIP_CONS* cons2;
+   SCIP_Real lhs1;
+   SCIP_Real lhs2;
+   SCIP_Real rhs1;
+   SCIP_Real rhs2;
+
+   assert( G1 != NULL );
+   assert( G2 != NULL );
+
+   if ( SCIPhasSymgraphRhsnode(G1) && ! SCIPhasSymgraphRhsnode(G2) )
+      return -1;
+   if ( ! SCIPhasSymgraphRhsnode(G1) && SCIPhasSymgraphRhsnode(G2) )
+      return 1;
+
+   SCIP_CALL( SCIPgetSymgraphConsinfo(G1, &hasconsinfo1, &cons1, &lhs1, &rhs1) );
+   SCIP_CALL( SCIPgetSymgraphConsinfo(G1, &hasconsinfo2, &cons2, &lhs2, &rhs2) );
+
+   if ( hasconsinfo1 && ! hasconsinfo2 )
+      return -1;
+   if ( ! hasconsinfo1 && hasconsinfo2 )
+      return 1;
+
+   if ( SCIPconsGetHdlr(cons1) < SCIPconsGetHdlr(cons2) )
+      return -1;
+   if ( SCIPconsGetHdlr(cons1) > SCIPconsGetHdlr(cons2) )
+      return 1;
+
+   if ( lhs1 < lhs2 )
+      return -1;
+   if ( lhs1 > lhs2 )
+      return 1;
+
+   if ( rhs1 < rhs2 )
+      return -1;
+   if ( rhs1 > rhs2 )
+      return 1;
+
+   return 0;
+}
+
+/** sorts symmetry graphs
+ *
+ *  Graphs are sorted by whether they have constraint information, then by
+ *  the type of constraint, then by the lhs, and then by the rhs.
+ *
+ *  result:
+ *    < 0: ind1 comes before (is better than) ind2
+ *    = 0: both indices have the same value
+ *    > 0: ind2 comes after (is worse than) ind2
+ */
+static
+SCIP_DECL_SORTINDCOMP(SYMsortSymgraphs)
+{
+   SYM_GRAPH** data;
+
+   data = (SYM_GRAPH**) dataptr;
+
+   return compareSymgraphs(data[ind1], data[ind2]);
+}
 
 /** sorts constraints in reflection symmetry data by their type
  *
@@ -873,10 +968,10 @@ SCIP_DECL_SORTINDCOMP(SYMsortConsReflSym)
    return 0;
 }
 
-/** compares two nodes of a symmetry detection graph
+/** compares two variables for symmetry detection
  *
- *  Nodes are sorted first by their nodetype, then by the value of the corresponding
- *  type information, and then by their consinfo (first lhs, then rhs, then conshdlr).
+ *  Variables are sorted first by their type, then by their objective coefficient,
+ *  then by their lower bound, and then by their upper bound.
  *
  *  result:
  *    < 0: ind1 comes before (is better than) ind2
@@ -884,90 +979,33 @@ SCIP_DECL_SORTINDCOMP(SYMsortConsReflSym)
  *    > 0: ind2 comes after (is worse than) ind2
  */
 static
-int compareNodes(
-   SYM_NODE*             node1,              /**< first node for comparison */
-   SYM_NODE*             node2               /**< second node for comparison */
+int compareVars(
+   SCIP_VAR*             var1,               /**< first variable for comparison */
+   SCIP_VAR*             var2                /**< second variable for comparison */
    )
 {
-   assert( node1 != NULL );
-   assert( node2 != NULL );
+   assert( var1 != NULL );
+   assert( var2 != NULL );
 
-   if ( node1->nodetype < node2->nodetype )
+   if ( SCIPvarGetType(var1) < SCIPvarGetType(var2) )
       return -1;
-   if ( node1->nodetype > node2->nodetype )
+   if ( SCIPvarGetType(var1) > SCIPvarGetType(var2) )
       return 1;
 
-   if ( node1->nodetype == SYM_NODETYPE_VAR )
-   {
-      assert( node2->nodetype == SYM_NODETYPE_VAR );
-
-      if ( SCIPvarGetType(node1->var) < SCIPvarGetType(node2->var) )
-         return -1;
-      if ( SCIPvarGetType(node1->var) > SCIPvarGetType(node2->var) )
-         return 1;
-
-      if ( SCIPvarGetObj(node1->var) < SCIPvarGetObj(node2->var) )
-         return -1;
-      if ( SCIPvarGetObj(node1->var) > SCIPvarGetObj(node2->var) )
-         return 1;
-
-      if ( SCIPvarGetLbGlobal(node1->var) < SCIPvarGetLbGlobal(node2->var) )
-         return -1;
-      if ( SCIPvarGetLbGlobal(node1->var) > SCIPvarGetLbGlobal(node2->var) )
-         return 1;
-
-      if ( SCIPvarGetUbGlobal(node1->var) < SCIPvarGetUbGlobal(node2->var) )
-         return -1;
-      if ( SCIPvarGetUbGlobal(node1->var) > SCIPvarGetUbGlobal(node2->var) )
-         return 1;
-   }
-   else if ( node1->nodetype == SYM_NODETYPE_OPERATOR )
-   {
-      assert( node2->nodetype == SYM_NODETYPE_OPERATOR );
-
-      if ( node1->op < node2->op )
-         return -1;
-      if ( node1->op > node2->op )
-         return 1;
-   }
-   else if ( node1->nodetype == SYM_NODETYPE_VAL )
-   {
-      assert( node2->nodetype == SYM_NODETYPE_VAL );
-
-      if ( node1->value < node2->value )
-         return -1;
-      if ( node1->value > node2->value )
-         return 1;
-   }
-   else
-   {
-      assert( node1->nodetype == SYM_NODETYPE_RHS );
-      assert( node2->nodetype == SYM_NODETYPE_RHS );
-      assert( node1->hasinfo && node2->hasinfo );
-   }
-
-   if ( !node1->hasinfo && node2->hasinfo )
+   if ( SCIPvarGetObj(var1) < SCIPvarGetObj(var2) )
       return -1;
-   if ( node1->hasinfo && !node2->hasinfo )
+   if ( SCIPvarGetObj(var1) > SCIPvarGetObj(var2) )
       return 1;
 
-   if ( node1->hasinfo )
-   {
-      if ( node1->consinfo->lhs < node2->consinfo->lhs )
-         return -1;
-      if ( node1->consinfo->lhs > node2->consinfo->lhs )
-         return 1;
+   if ( SCIPvarGetLbGlobal(var1) < SCIPvarGetLbGlobal(var2) )
+      return -1;
+   if ( SCIPvarGetLbGlobal(var1) > SCIPvarGetLbGlobal(var2) )
+      return 1;
 
-      if ( node1->consinfo->rhs < node2->consinfo->rhs )
-         return -1;
-      if ( node1->consinfo->rhs > node2->consinfo->rhs )
-         return 1;
-
-      if ( node1->consinfo->conshdlr < node2->consinfo->conshdlr )
-         return -1;
-      if ( node1->consinfo->conshdlr > node2->consinfo->conshdlr )
-         return 1;
-   }
+   if ( SCIPvarGetUbGlobal(var1) < SCIPvarGetUbGlobal(var2) )
+      return -1;
+   if ( SCIPvarGetUbGlobal(var1) > SCIPvarGetUbGlobal(var2) )
+      return 1;
 
    return 0;
 }
@@ -983,67 +1021,103 @@ int compareNodes(
  *    > 0: ind2 comes after (is worse than) ind2
  */
 static
-SCIP_DECL_SORTINDCOMP(SYMsortNodes)
+SCIP_DECL_SORTINDCOMP(SYMsortVars)
 {
-   SYM_NODE** nodes;
+   SCIP_VAR** vars;
 
-   nodes = (SYM_NODE**) dataptr;
+   vars = (SCIP_VAR**) dataptr;
 
-   return compareNodes(nodes[ind1], nodes[ind2]);
+   return compareVars(vars[ind1], vars[ind2]);
 }
 
-/** sorts edges of a symmetry detection graph
- *
- *  Edges are sorted first by whether they are colored and then by their color.
- *
- *  result:
- *    < 0: ind1 comes before (is better than) ind2
- *    = 0: both indices have the same value
- *    > 0: ind2 comes after (is worse than) ind2
- */
-static
-int compareEdges(
-   SYM_EDGE*             edge1,              /**< first edge for comparison */
-   SYM_EDGE*             edge2               /**< second edge for comparison */
-   )
-{
-   assert( edge1 != NULL );
-   assert( edge2 != NULL );
+/* static */
+/* int compareNodes( */
+/*    SYM_NODE*             node1,              /\**< first node for comparison *\/ */
+/*    SYM_NODE*             node2               /\**< second node for comparison *\/ */
+/*    ) */
+/* { */
+/*    assert( node1 != NULL ); */
+/*    assert( node2 != NULL ); */
 
-   if ( !edge1->iscolored && edge2->iscolored )
-      return -1;
-   if ( edge1->iscolored && !edge2->iscolored )
-      return 1;
+/*    if ( node1->nodetype < node2->nodetype ) */
+/*       return -1; */
+/*    if ( node1->nodetype > node2->nodetype ) */
+/*       return 1; */
 
-   if ( edge1->iscolored )
-   {
-      if ( edge1->color < edge2->color )
-         return -1;
-      if ( edge1->color > edge2->color )
-         return 1;
-   }
+/*    if ( node1->nodetype == SYM_NODETYPE_VAR ) */
+/*    { */
+/*       assert( node2->nodetype == SYM_NODETYPE_VAR ); */
 
-   return 0;
-}
+/*       if ( SCIPvarGetType(node1->var) < SCIPvarGetType(node2->var) ) */
+/*          return -1; */
+/*       if ( SCIPvarGetType(node1->var) > SCIPvarGetType(node2->var) ) */
+/*          return 1; */
 
-/** sorts edges of a symmetry detection graph
- *
- *  Edges are sorted first by whether they are colored and then by their color.
- *
- *  result:
- *    < 0: ind1 comes before (is better than) ind2
- *    = 0: both indices have the same value
- *    > 0: ind2 comes after (is worse than) ind2
- */
-static
-SCIP_DECL_SORTINDCOMP(SYMsortEdges)
-{
-   SYM_EDGE** edges;
+/*       if ( SCIPvarGetObj(node1->var) < SCIPvarGetObj(node2->var) ) */
+/*          return -1; */
+/*       if ( SCIPvarGetObj(node1->var) > SCIPvarGetObj(node2->var) ) */
+/*          return 1; */
 
-   edges = (SYM_EDGE**) dataptr;
+/*       if ( SCIPvarGetLbGlobal(node1->var) < SCIPvarGetLbGlobal(node2->var) ) */
+/*          return -1; */
+/*       if ( SCIPvarGetLbGlobal(node1->var) > SCIPvarGetLbGlobal(node2->var) ) */
+/*          return 1; */
 
-   return compareEdges(edges[ind1], edges[ind2]);
-}
+/*       if ( SCIPvarGetUbGlobal(node1->var) < SCIPvarGetUbGlobal(node2->var) ) */
+/*          return -1; */
+/*       if ( SCIPvarGetUbGlobal(node1->var) > SCIPvarGetUbGlobal(node2->var) ) */
+/*          return 1; */
+/*    } */
+/*    else if ( node1->nodetype == SYM_NODETYPE_OPERATOR ) */
+/*    { */
+/*       assert( node2->nodetype == SYM_NODETYPE_OPERATOR ); */
+
+/*       if ( node1->op < node2->op ) */
+/*          return -1; */
+/*       if ( node1->op > node2->op ) */
+/*          return 1; */
+/*    } */
+/*    else if ( node1->nodetype == SYM_NODETYPE_VAL ) */
+/*    { */
+/*       assert( node2->nodetype == SYM_NODETYPE_VAL ); */
+
+/*       if ( node1->value < node2->value ) */
+/*          return -1; */
+/*       if ( node1->value > node2->value ) */
+/*          return 1; */
+/*    } */
+/*    else */
+/*    { */
+/*       assert( node1->nodetype == SYM_NODETYPE_RHS ); */
+/*       assert( node2->nodetype == SYM_NODETYPE_RHS ); */
+/*       assert( node1->hasinfo && node2->hasinfo ); */
+/*    } */
+
+/*    if ( !node1->hasinfo && node2->hasinfo ) */
+/*       return -1; */
+/*    if ( node1->hasinfo && !node2->hasinfo ) */
+/*       return 1; */
+
+/*    if ( node1->hasinfo ) */
+/*    { */
+/*       if ( node1->consinfo->lhs < node2->consinfo->lhs ) */
+/*          return -1; */
+/*       if ( node1->consinfo->lhs > node2->consinfo->lhs ) */
+/*          return 1; */
+
+/*       if ( node1->consinfo->rhs < node2->consinfo->rhs ) */
+/*          return -1; */
+/*       if ( node1->consinfo->rhs > node2->consinfo->rhs ) */
+/*          return 1; */
+
+/*       if ( node1->consinfo->conshdlr < node2->consinfo->conshdlr ) */
+/*          return -1; */
+/*       if ( node1->consinfo->conshdlr > node2->consinfo->conshdlr ) */
+/*          return 1; */
+/*    } */
+
+/*    return 0; */
+/* } */
 
 /** sorts colored graphs */
 static
@@ -6186,18 +6260,11 @@ SCIP_Bool conshdlrsCanProvidePermsymInformation(
 
 /** returns whether a node of the symmetry detection graph needs to be fixed */
 static
-SCIP_Bool isFixedNode(
-   SYM_NODE*             node,               /**< node of symmetry detection graph */
+SCIP_Bool isFixedVar(
+   SCIP_VAR*             var,                /**< active problem variable */
    SYM_SPEC              fixedtype           /**< variable types that must be fixed by symmetries */
    )
 {
-   SCIP_VAR* var;
-   assert( node != NULL );
-
-   if ( node->nodetype != SYM_NODETYPE_VAR )
-      return FALSE;
-
-   var = node->var;
    assert( var != NULL );
 
    if ( (fixedtype & SYM_SPEC_INTEGER) && SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER )
@@ -6227,7 +6294,8 @@ SCIP_RETCODE checkSymmetryIsSymmetry(
    )
 {
    SYM_COMPGRAPH* compdata;
-   SYM_EDGE* edge;
+   SYM_GRAPH* G;
+   SYM_GRAPH* Gp;
    int** adjacentnodecolors;
    int** incidentedgecolors;
    int** adjacentnodecolors2;
@@ -6239,12 +6307,18 @@ SCIP_RETCODE checkSymmetryIsSymmetry(
    int* nodeperm2;
    int beginpos;
    int beginval;
+   int first;
+   int second;
    int c;
    int e;
    int v;
    int varidx;
    int nnodes;
    int nedges;
+#ifndef NDEBUG
+   int varcolor;
+   int symcolor;
+#endif
 
    assert( scip != NULL );
    assert( varperm != NULL );
@@ -6258,12 +6332,14 @@ SCIP_RETCODE checkSymmetryIsSymmetry(
    {
       /* check whether constraint/graph is affected by symmetry */
       SCIP_Bool affected = FALSE;
+      G = graphs[c];
+      Gp = graphs[consperm[c]];
 
-      for (v = 0; v < graphs[c]->nnodes; ++v)
+      for (v = 0; v < SCIPgetSymgraphNnodes(G); ++v)
       {
-         if ( graphs[c]->nodes[v]->nodetype == SYM_NODETYPE_VAR )
+         if ( SCIPisSymgraphNodeVarnode(G, v) )
          {
-            varidx = graphs[c]->nodes[v]->varidx;
+            varidx = SCIPvarGetProbindex(SCIPgetSymgraphVarnodeVar(G, v));
 
             if ( varperm[varidx] != varidx )
             {
@@ -6277,8 +6353,8 @@ SCIP_RETCODE checkSymmetryIsSymmetry(
          continue;
 
       /* some trivial checks */
-      if ( graphs[c]->nnodes != graphs[consperm[c]]->nnodes
-         || graphs[c]->nedges != graphs[consperm[c]]->nedges )
+      if ( SCIPgetSymgraphNnodes(G) != SCIPgetSymgraphNnodes(Gp)
+         || SCIPgetSymgraphNedges(G) != SCIPgetSymgraphNedges(Gp) )
       {
          *success = FALSE;
          return SCIP_OKAY;
@@ -6286,8 +6362,8 @@ SCIP_RETCODE checkSymmetryIsSymmetry(
 
       /* check whether constraint c's graph is symmetric to graph of constraint consperm[c] by
        * comparing sorted adjacency lists */
-      nnodes = graphs[c]->nnodes;
-      nedges = graphs[c]->nedges;
+      nnodes = SCIPgetSymgraphNnodes(G);
+      nedges = SCIPgetSymgraphNedges(G);
 
       SCIP_CALL( SCIPallocBufferArray(scip, &adjacentnodecolors, nnodes) );
       for (v = 0; v < nnodes; ++v)
@@ -6315,37 +6391,44 @@ SCIP_RETCODE checkSymmetryIsSymmetry(
       /* fill first arrays with data of permuted constraint c */
       for (e = 0; e < nedges; ++e)
       {
-         edge = graphs[c]->edges[e];
+         first = SCIPgetSymgraphEdgeFirst(G, e);
+         second = SCIPgetSymgraphEdgeSecond(G, e);
 
 #ifndef NDEBUG
-         if ( edge->first->nodetype == SYM_NODETYPE_VAR )
+         if ( SCIPisSymgraphNodeVarnode(G, first) )
          {
-            assert( varcolors[varperm[edge->first->varidx]] == edge->first->computedcolor );
+            varcolor = varcolors[varperm[SCIPvarGetProbindex(SCIPgetSymgraphVarnodeVar(G, first))]];
+            symcolor = SCIPgetSymgraphNodeSymcolor(G, first);
+            assert( varcolor == symcolor );
          }
-         if ( edge->second->nodetype == SYM_NODETYPE_VAR )
+         if ( SCIPisSymgraphNodeVarnode(G, second) )
          {
-            assert( varcolors[varperm[edge->second->varidx]] == edge->second->computedcolor );
+            varcolor = varcolors[varperm[SCIPvarGetProbindex(SCIPgetSymgraphVarnodeVar(G, second))]];
+            symcolor = SCIPgetSymgraphNodeSymcolor(G, second);
+            assert( varcolor == symcolor );
          }
 #endif
 
-         adjacentnodecolors[edge->first->id][nneighbors[edge->first->id]] = edge->second->computedcolor;
-         adjacentnodecolors[edge->second->id][nneighbors[edge->second->id]] = edge->first->computedcolor;
-         incidentedgecolors[edge->first->id][nneighbors[edge->first->id]] = edge->computedcolor;
-         incidentedgecolors[edge->second->id][nneighbors[edge->second->id]] = edge->computedcolor;
-         nneighbors[edge->first->id] += 1;
-         nneighbors[edge->second->id] += 1;
+         adjacentnodecolors[first][nneighbors[first]] = SCIPgetSymgraphNodeSymcolor(G, second);
+         adjacentnodecolors[second][nneighbors[second]] = SCIPgetSymgraphNodeSymcolor(G, first);
+         incidentedgecolors[first][nneighbors[first]] = SCIPgetSymgraphEdgeColor(G, e);
+         incidentedgecolors[second][nneighbors[second]] = SCIPgetSymgraphEdgeColor(G, e);
+         nneighbors[first] += 1;
+         nneighbors[second] += 1;
       }
 
       /* fill second arrays with data of constraint consperm[c] */
       for (e = 0; e < nedges; ++e)
       {
-         edge = graphs[consperm[c]]->edges[e];
-         adjacentnodecolors2[edge->first->id][nneighbors2[edge->first->id]] = edge->second->computedcolor;
-         adjacentnodecolors2[edge->second->id][nneighbors2[edge->second->id]] = edge->first->computedcolor;
-         incidentedgecolors2[edge->first->id][nneighbors2[edge->first->id]] = edge->computedcolor;
-         incidentedgecolors2[edge->second->id][nneighbors2[edge->second->id]] = edge->computedcolor;
-         nneighbors2[edge->first->id] += 1;
-         nneighbors2[edge->second->id] += 1;
+         first = SCIPgetSymgraphEdgeFirst(Gp, e);
+         second = SCIPgetSymgraphEdgeSecond(Gp, e);
+
+         adjacentnodecolors2[first][nneighbors2[first]] = SCIPgetSymgraphNodeSymcolor(Gp, second);
+         adjacentnodecolors2[second][nneighbors2[second]] = SCIPgetSymgraphNodeSymcolor(Gp, first);
+         incidentedgecolors2[first][nneighbors2[first]] = SCIPgetSymgraphEdgeColor(Gp, e);
+         incidentedgecolors2[second][nneighbors2[second]] = SCIPgetSymgraphEdgeColor(Gp, e);
+         nneighbors2[first] += 1;
+         nneighbors2[second] += 1;
       }
 
       /* sort adjacency lists */
@@ -6394,7 +6477,7 @@ SCIP_RETCODE checkSymmetryIsSymmetry(
       SCIP_CALL( SCIPallocBufferArray(scip, &nodeperm, nnodes) );
 
       for (v = 0; v < nnodes; ++v)
-         nodecolors[v] = graphs[c]->nodes[v]->computedcolor;
+         nodecolors[v] = SCIPgetSymgraphNodeSymcolor(graphs[c], v);
 
       compdata->adjacentnodecolors = adjacentnodecolors;
       compdata->incidentedgecolors = incidentedgecolors;
@@ -6406,7 +6489,7 @@ SCIP_RETCODE checkSymmetryIsSymmetry(
       SCIP_CALL( SCIPallocBufferArray(scip, &nodeperm2, nnodes) );
 
       for (v = 0; v < nnodes; ++v)
-         nodecolors[v] = graphs[consperm[c]]->nodes[v]->computedcolor;
+         nodecolors[v] = SCIPgetSymgraphNodeSymcolor(Gp, v);
 
       compdata->adjacentnodecolors = adjacentnodecolors2;
       compdata->incidentedgecolors = incidentedgecolors2;
@@ -6425,7 +6508,7 @@ SCIP_RETCODE checkSymmetryIsSymmetry(
 
          pv = nodeperm[v];
          pv2 = nodeperm2[v];
-         if ( graphs[c]->nodes[pv]->computedcolor != graphs[consperm[c]]->nodes[pv2]->computedcolor )
+         if ( SCIPgetSymgraphNodeSymcolor(G, pv) != SCIPgetSymgraphNodeSymcolor(Gp, pv2) )
          {
             *success = FALSE;
             SCIPerrorMessage(
@@ -6504,21 +6587,33 @@ SCIP_RETCODE computeSymmetryGroup2(
 {
    SCIP_CONS** conss;
    SYM_GRAPH** graphs;
-   SYM_NODE** nodes;
-   SYM_EDGE** edges;
-   int* nodeperm;
-   int* edgeperm;
+   SYM_GRAPH* G;
+   SYM_GRAPH* G2;
+   SCIP_VAR** vars;
+   SCIP_VAR* var;
+   SCIP_EXPRHDLR** graphops;
+   SCIP_Real* graphvals;
+   int* arrayperm;
+   int* graphidx;
+   int* idxingraph;
    int* varcolors;
+   int idx;
+   int idx2;
    int nvars;
    int nconss;
    int c;
    int i;
-   int pos;
+   int nargs;
+   int arraylen;
+   int nedgecolors = 0;
+   int nopnodes = 0;
+   int nvarnodes = 0;
+   int nvalnodes = 0;
+   int nrhsnodes = 0;
    int nnodes = 0;
    int nedges = 0;
    int curcolor = 0;
    int maxnnodesgraph = 0;
-   int initedgecolor;
 
    assert( scip != NULL );
    assert( success != NULL );
@@ -6542,206 +6637,302 @@ SCIP_RETCODE computeSymmetryGroup2(
    {
       SCIP_CALL( SCIPgetConsPermsymGraph(scip, conss[c], &(graphs[c]), success) );
 
-      nnodes += graphs[c]->nnodes;
-      nedges += graphs[c]->nedges;
-
-      if ( graphs[c]->nnodes > maxnnodesgraph )
-         maxnnodesgraph = graphs[c]->nnodes;
-   }
-
-   if ( ! *success )
-   {
-      int cc;
-
-      /* free already returned graphs */
-      for (cc = 0; cc < c; ++cc)
+      /* terminate early if graph could not be returned */
+      if ( ! *success )
       {
-         SCIP_CALL( SCIPfreeSymgraph(scip, &graphs[cc]) );
+         int cc;
+
+         /* free already returned graphs */
+         for (cc = 0; cc < c; ++cc)
+         {
+            SCIP_CALL( SCIPfreeSymgraph(scip, &graphs[cc]) );
+         }
+
+         SCIPfreeBufferArray(scip, &graphs);
+
+         return SCIP_OKAY;
       }
 
-      SCIPfreeBufferArray(scip, &graphs);
+      nopnodes += SCIPgetSymgraphNopnodes(graphs[c]);
+      nvarnodes += SCIPgetSymgraphNvarnodes(graphs[c]);
+      nvalnodes += SCIPgetSymgraphNvalnodes(graphs[c]);
+      if ( SCIPhasSymgraphRhsnode(graphs[c]) )
+         ++nrhsnodes;
+      nnodes += SCIPgetSymgraphNnodes(graphs[c]);
+      nedges += SCIPgetSymgraphNedges(graphs[c]);
 
-      return SCIP_OKAY;
+      if ( SCIPgetSymgraphNnodes(graphs[c]) > maxnnodesgraph )
+         maxnnodesgraph = SCIPgetSymgraphNnodes(graphs[c]);
    }
 
    /*
-    * compute node colors
+    * compute node colors (separately for the four different classes of nodes)
     */
-   SCIP_CALL( SCIPallocBufferArray(scip, &nodes, nnodes) );
-   for (c = 0, pos = 0; c < nconss; ++c)
+
+   /* arrays used to hold information about different node classes */
+   arraylen = MAX3(MAX(nopnodes, nvarnodes), MAX(nvalnodes, nrhsnodes), nedges);
+   SCIP_CALL( SCIPallocBufferArray(scip, &graphidx, arraylen) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &idxingraph, arraylen) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &arrayperm, arraylen) );
+
+   /* sort variable nodes w/o explicitly copying variable array */
+   for (c = 0, nargs = 0; c < nconss; ++c)
    {
-      for (i = 0; i < graphs[c]->nnodes; ++i, ++pos)
-         nodes[pos] = graphs[c]->nodes[i];
+      for (i = 0; i < SCIPgetSymgraphNnodes(graphs[c]); ++i)
+      {
+         if ( SCIPisSymgraphNodeVarnode(graphs[c], i) )
+         {
+            graphidx[nargs] = c;
+            idxingraph[nargs++] = i;
+         }
+      }
    }
 
    /* sort nodes to determine colors */
-   SCIP_CALL( SCIPallocBufferArray(scip, &nodeperm, nnodes) );
-   SCIPsort(nodeperm, SYMsortNodes, nodes, nnodes);
-
-   /* assign colors, store colors for variables separately */
+   vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);
+   SCIPsort(arrayperm, SYMsortVars, (void*) SCIPgetVars(scip), nvars);
+
+   /* assign colors; store colors for variables separately */
    SCIP_CALL( SCIPallocBufferArray(scip, &varcolors, nvars) );
    for (i = 0; i < nvars; ++i)
       varcolors[i] = -1;
 
-   nodes[nodeperm[0]]->computedcolor = curcolor;
-   if ( nodes[nodeperm[0]]->nodetype == SYM_NODETYPE_VAR )
-      varcolors[nodes[nodeperm[0]]->varidx] = curcolor;
-   for (i = 1; i < nnodes; ++i)
+   varcolors[arrayperm[0]] = curcolor;
+   for (i = 1; i < nvars; ++i)
    {
-      /* if a new node type has been found or a node needs to be fixed */
-      if ( compareNodes(nodes[nodeperm[i-1]], nodes[nodeperm[i]]) != 0 || isFixedNode(nodes[nodeperm[i]], fixedtype) )
-      {
-         /* make sure to not increment fixed variables twice */
-         if ( isFixedNode(nodes[nodeperm[i]], fixedtype) )
-         {
-            if ( varcolors[nodes[nodeperm[i]]->varidx] == -1 )
-               ++curcolor;
-         }
-         else
-            ++curcolor;
-      }
+      /* if a new variable type has been found or a varible needs to be fixed */
+      if ( compareVars(vars[arrayperm[i-1]], vars[arrayperm[i]]) != 0 || isFixedVar(vars[arrayperm[i]], fixedtype) )
+         ++curcolor;
 
-      /* treat variable nodes differently, because they can be fixed */
-      if ( nodes[nodeperm[i]]->nodetype == SYM_NODETYPE_VAR )
-      {
-         int varnodeidx;
-
-         varnodeidx = nodes[nodeperm[i]]->varidx;
-         if ( varcolors[varnodeidx] == -1 )
-         {
-            nodes[nodeperm[i]]->computedcolor = curcolor;
-            varcolors[varnodeidx] = curcolor;
-         }
-         else
-         {
-            assert(nodes[nodeperm[i]]->computedcolor == -1 ||
-               nodes[nodeperm[i]]->computedcolor == varcolors[varnodeidx]);
-            nodes[nodeperm[i]]->computedcolor = varcolors[varnodeidx];
-         }
-      }
-      else
-         nodes[nodeperm[i]]->computedcolor = curcolor;
+      varcolors[arrayperm[i]] = curcolor;
    }
 
-   /* possibly check consistency of node colors */
-   if ( checksymmetries )
+   /* assign nodes their color */
+   for (i = 0; i < nargs; ++i)
    {
-      int* nodecolormap;
-      int* nodeorder;
+      G = graphs[graphidx[i]];
+      c = idxingraph[i];
+      assert( SCIPisSymgraphNodeVarnode(G, c) );
 
-      SCIP_CALL( SCIPallocBufferArray(scip, &nodecolormap, nnodes) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &nodeorder, nnodes) );
+      var = SCIPgetSymgraphVarnodeVar(G, c);
+      SCIP_CALL( SCIPsetSymgraphNodeSymcolor(G, c, varcolors[SCIPvarGetProbindex(var)]) );
+   }
 
-      for (i = 0; i < nnodes; ++i)
+   /* find colors for operator nodes */
+   SCIP_CALL( SCIPallocBufferArray(scip, &graphops, nopnodes) );
+
+   for (c = 0, nargs = 0; c < nconss; ++c)
+   {
+      for (i = 0; i < SCIPgetSymgraphNnodes(graphs[c]); ++i)
       {
-         nodecolormap[i] = nodes[i]->computedcolor;
-         nodeorder[i] = i;
-      }
-
-      SCIPsortIntInt(nodecolormap, nodeorder, nnodes);
-
-      for (i = 1; i < nnodes; ++i)
-      {
-         if ( nodecolormap[i] != nodecolormap[i-1] )
+         if ( SCIPisSymgraphNodeOpnode(graphs[c], i) )
          {
-            if ( compareNodes(nodes[nodeorder[i-1]], nodes[nodeorder[i]]) == 0
-               && !isFixedNode(nodes[nodeperm[i]], fixedtype) )
-               break;
-         }
-         else
-         {
-            if ( compareNodes(nodes[nodeorder[i-1]], nodes[nodeorder[i]]) != 0 )
-               break;
-            else if ( isFixedNode(nodes[nodeperm[i]], fixedtype)
-               && nodes[nodeorder[i]]->nodetype == SYM_NODETYPE_VAR
-               && nodes[nodeorder[i-1]]->nodetype == SYM_NODETYPE_VAR
-               && nodes[nodeorder[i-1]]->varidx != nodes[nodeorder[i]]->varidx )
-               break;
+            graphops[nargs] = SCIPgetSymgraphNodeOperator(graphs[c], i);
+            graphidx[nargs] = c;
+            idxingraph[nargs++] = i;
          }
       }
+   }
 
-      if ( i < nnodes )
+   /* sort nodes to determine colors */
+   SCIPsort(arrayperm, SYMsortOperators, (void*) graphops, nargs);
+
+   /* assign colors to operator nodes */
+   ++curcolor;
+   for (i = 0; i < nargs; ++i)
+   {
+      /* if a new operator type has been found */
+      if ( compareOps(graphops[arrayperm[i-1]], graphops[arrayperm[i]]) != 0 )
+         ++curcolor;
+
+      SCIP_CALL( SCIPsetSymgraphNodeSymcolor(graphs[graphidx[arrayperm[i]]], idxingraph[arrayperm[i]], curcolor) );
+   }
+
+   SCIPfreeBufferArray(scip, &graphops);
+
+   /* find colors for value nodes */
+   SCIP_CALL( SCIPallocBufferArray(scip, &graphvals, MAX(nvalnodes, nedges)) );
+
+   for (c = 0, nargs = 0; c < nconss; ++c)
+   {
+      for (i = 0; i < SCIPgetSymgraphNnodes(graphs[c]); ++i)
       {
-         SCIPerrorMessage("Symmetry detection: node colors are inconsistent.\n");
-         return SCIP_ERROR;
+         if ( SCIPisSymgraphNodeValnode(graphs[c], i) )
+         {
+            graphvals[nargs] = SCIPgetSymgraphNodeVal(graphs[c], i);
+            graphidx[nargs] = c;
+            idxingraph[nargs++] = i;
+         }
       }
+   }
 
-      SCIPfreeBufferArray(scip, &nodeorder);
-      SCIPfreeBufferArray(scip, &nodecolormap);
+   /* sort nodes to determine colors */
+   SCIPsort(arrayperm, SYMsortMatCoef, (void*) graphvals, nargs);
+
+   /* assign colors to operator nodes */
+   ++curcolor;
+   for (i = 0; i < nargs; ++i)
+   {
+      /* if a new operator type has been found */
+      if ( graphvals[arrayperm[i-1]] < graphvals[arrayperm[i]] )
+         ++curcolor;
+
+      SCIP_CALL( SCIPsetSymgraphNodeSymcolor(graphs[graphidx[arrayperm[i]]], idxingraph[arrayperm[i]], curcolor) );
+   }
+
+   /* sort rhs nodes to determine color */
+   SCIPsort(arrayperm, SYMsortSymgraphs, (void*) graphs, nconss);
+
+   ++curcolor;
+   for (i = 0; i < nconss; ++i)
+   {
+      /* skip graphs without rhs node (coming last in sorting) */
+      if ( ! SCIPhasSymgraphRhsnode(graphs[arrayperm[i]]) )
+         break;
+
+      if ( i == 0 )
+      {
+         SCIP_CALL( SCIPsetSymgraphRhscolor(graphs[arrayperm[i]], curcolor) );
+      }
+      else if ( compareSymgraphs(graphs[arrayperm[i-1]], graphs[arrayperm[i]]) != 0 )
+      {
+         SCIP_CALL( SCIPsetSymgraphRhscolor(graphs[arrayperm[i]], ++curcolor) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPsetSymgraphRhscolor(graphs[arrayperm[i]], curcolor) );
+      }
    }
 
    /*
     * compute edge colors
     */
-   SCIP_CALL( SCIPallocBufferArray(scip, &edges, nedges) );
-   for (c = 0, pos = 0; c < nconss; ++c)
+   for (c = 0, nargs = 0; c < nconss; ++c)
    {
-      for (i = 0; i < graphs[c]->nedges; ++i, ++pos)
-         edges[pos] = graphs[c]->edges[i];
+      for (i = 0; i < SCIPgetSymgraphNedges(graphs[c]); ++i, ++nargs)
+      {
+         graphidx[nargs] = c;
+         idxingraph[nargs] = i;
+         graphvals[nargs] = SCIPgetSymgraphEdgeColor(graphs[c], i);
+      }
    }
 
    /* sort edges to determine colors */
-   SCIP_CALL( SCIPallocBufferArray(scip, &edgeperm, nedges) );
-   SCIPsort(edgeperm, SYMsortEdges, edges, nedges);
+   SCIPsort(arrayperm, SYMsortMatCoef, graphvals, nargs);
 
    /* assign colors, uncolored edges get color -1 */
-   if ( edges[edgeperm[0]]->iscolored )
-      edges[edgeperm[0]]->computedcolor = ++curcolor;
+   ++curcolor;
+
+   if ( SCIPisSymgraphEdgeColored(scip, graphs[graphidx[arrayperm[0]]], idxingraph[arrayperm[0]]) )
+   {
+      SCIP_CALL( SCIPsetSymgraphEdgeSymcolor(graphs[graphidx[arrayperm[0]]], idxingraph[arrayperm[0]], curcolor) );
+      ++nedgecolors;
+   }
    else
-      edges[edgeperm[0]]->computedcolor = -1;
-
-   if ( checksymmetries )
-      initedgecolor = edges[edgeperm[0]]->iscolored ? curcolor : curcolor + 1;
-
-   for (i = 1; i < nedges; ++i)
    {
+      SCIP_CALL( SCIPsetSymgraphEdgeSymcolor(graphs[graphidx[arrayperm[0]]], idxingraph[arrayperm[0]], -1) );
+   }
+
+   for (i = 1; i < nargs; ++i)
+   {
+      G = graphs[graphidx[arrayperm[i]]];
+      idx = idxingraph[arrayperm[i]];
+
       /* if a new edge type has been found, uncolored edges get color -1 */
-      if ( ! edges[edgeperm[i]]->iscolored )
-         edges[edgeperm[i]]->computedcolor = -1;
-      else if ( compareEdges(edges[edgeperm[i-1]], edges[edgeperm[i]]) != 0 )
-         edges[edgeperm[i]]->computedcolor = ++curcolor;
-      else
-         edges[edgeperm[i]]->computedcolor = edges[edgeperm[i-1]]->computedcolor;
-   }
-
-   /* possibly check consistency of edge colors */
-   if ( checksymmetries )
-   {
-      int* edgecolormap;
-      int nedgecolors;
-      int transcol;
-
-      nedgecolors = curcolor - initedgecolor + 1;
-
-      SCIP_CALL( SCIPallocBufferArray(scip, &edgecolormap, nedgecolors) );
-      for (i = 0; i < nedgecolors; ++i)
-         edgecolormap[i] = -1;
-
-      for (i = 0; i < nedges; ++i)
+      if ( ! SCIPisSymgraphEdgeColored(scip, G, idx) )
       {
-         if ( edges[i]->iscolored )
-         {
-            transcol = edges[i]->computedcolor - initedgecolor;
-            assert( 0 <= transcol && transcol < nedgecolors );
-
-            if ( edgecolormap[transcol] == -1 )
-               edgecolormap[transcol] = edges[i]->computedcolor;
-            else if ( edgecolormap[transcol] != edges[i]->computedcolor )
-            {
-               SCIPerrorMessage("Symmetry detection: edge colors are inconsistent.\n");
-               return SCIP_ERROR;
-            }
-         }
-         else if ( edges[i]->computedcolor != -1 )
-         {
-            SCIPerrorMessage("Symmetry detection: edge colors are inconsistent.\n");
-            return SCIP_ERROR;
-         }
+         SCIP_CALL( SCIPsetSymgraphEdgeSymcolor(G, idxingraph[arrayperm[i]], -1) );
       }
+      else if ( graphvals[arrayperm[i-1]] < graphvals[arrayperm[i]] )
+      {
+         SCIP_CALL( SCIPsetSymgraphEdgeSymcolor(G, idx, ++curcolor) );
+         ++nedgecolors;
+      }
+      else
+      {
+         G2 = graphs[graphidx[arrayperm[i-1]]];
+         idx2 = idxingraph[arrayperm[i-1]];
+         assert( SCIPisEQ(scip, graphvals[arrayperm[i-1]], graphvals[arrayperm[i]]) );
 
-      SCIPfreeBufferArray(scip, &edgecolormap);
+         SCIP_CALL( SCIPsetSymgraphEdgeSymcolor(G, idxingraph[arrayperm[i]],
+               SCIPgetSymgraphEdgeSymcolor(G2, idx2)) );
+      }
    }
+
+   /* possibly check consistency of edge and node colors */
+   /* if ( checksymmetries ) */
+   /* { */
+   /*    /\* check edge colors *\/ */
+   /*    SCIPsortIntIntInt(graphvals, graphidx, idxingraph, nedges); */
+
+   /*    for (i = 1; i < nedges; ++i) */
+   /*    { */
+   /*       G = graphs[graphidx[i-1]]; */
+   /*       idx = idxingraph[i-1]; */
+   /*       G2 = graphs[graphidx[i]]; */
+   /*       idx = idxingraph[i]; */
+
+   /*       if ( SCIPisEQ(scip, graphvals[i-1], graphvals[i]) */
+   /*          && SCIPgetSymgraphEdgeSymcolor(G, idx) != SCIPgetSymgraphEdgeSymcolor(G2, idx2) ) */
+   /*       { */
+   /*          SCIPerrorMessage("Symmetry detection: identical edges are colored differently.\n"); */
+   /*          return SCIP_ERROR; */
+   /*       } */
+   /*       if ( ! SCIPisEQ(scip, graphvals[i-1], graphvals[i]) */
+   /*          && SCIPgetSymgraphEdgeSymcolor(G, idx) == SCIPgetSymgraphEdgeSymcolor(G2, idx2) ) */
+   /*       { */
+   /*          SCIPerrorMessage("Symmetry detection: different edges are colored identically.\n"); */
+   /*          return SCIP_ERROR; */
+   /*       } */
+   /*    } */
+
+   /*    /\* */
+   /*     * check node colors (separately for different types of nodes) */
+   /*     *\/ */
+
+   /*    /\* value nodes *\/ */
+   /*    for (c = 0, nargs = 0; c < nconss; ++c) */
+   /*    { */
+   /*       for (i = 0; i < SCIPgetSymgraphNnodes(graphs[c]); ++i) */
+   /*       { */
+   /*          if ( SCIPisSymgraphNodeValnode(graphs[c], i) ) */
+   /*          { */
+   /*             graphvals[nargs] = SCIPgetSymgraphNodeVal(graphs[c], i); */
+   /*             graphidx[nargs] = c; */
+   /*             idxingraph[nargs++] = i; */
+   /*          } */
+   /*       } */
+   /*    } */
+   /*    assert( nargs == nvalnodes ); */
+
+   /*    SCIPsort(arrayperm, SYMsortMatCoef, graphvals, nargs); */
+
+   /*    for (i = 1; i < nvalnodes; ++i) */
+   /*    { */
+   /*       G = graphs[graphidx[arrayperm[i-1]]]; */
+   /*       idx = idxingraph[arrayperm[i-1]]; */
+   /*       G2 = graphs[arrayperm[graphidx[i]]]; */
+   /*       idx = idxingraph[arrayperm[i]]; */
+
+   /*       if ( SCIPisEQ(scip, graphvals[arrayperm[i-1]], graphvals[arrayperm[i]]) */
+   /*          && SCIPgetSymgraphNodeSymcolor(G, idx) != SCIPgetSymgraphNodeSymcolor(G2, idx2) ) */
+   /*       { */
+   /*          SCIPerrorMessage("Symmetry detection: identical value nodes are colored differently.\n"); */
+   /*          return SCIP_ERROR; */
+   /*       } */
+   /*       if ( ! SCIPisEQ(scip, graphvals[arrayperm[i-1]], graphvals[arrayperm[i]]) */
+   /*          && SCIPgetSymgraphNodeSymcolor(G, idx) == SCIPgetSymgraphNodeSymcolor(G2, idx2) ) */
+   /*       { */
+   /*          SCIPerrorMessage("Symmetry detection: different value nodes are colored identically.\n"); */
+   /*          return SCIP_ERROR; */
+   /*       } */
+   /*    } */
+
+   /*    /\* variable nodes *\/ */
+   /* } */
+
+   SCIPfreeBufferArray(scip, &graphvals);
 
    /*
     * actually compute symmetries
@@ -6800,11 +6991,10 @@ SCIP_RETCODE computeSymmetryGroup2(
       SCIP_CALL( SCIPfreeSymgraph(scip, &graphs[c]) );
    }
 
-   SCIPfreeBufferArray(scip, &edgeperm);
-   SCIPfreeBufferArray(scip, &edges);
    SCIPfreeBufferArray(scip, &varcolors);
-   SCIPfreeBufferArray(scip, &nodeperm);
-   SCIPfreeBufferArray(scip, &nodes);
+   SCIPfreeBufferArray(scip, &arrayperm);
+   SCIPfreeBufferArray(scip, &idxingraph);
+   SCIPfreeBufferArray(scip, &graphidx);
    SCIPfreeBufferArray(scip, &graphs);
 
    return SCIP_OKAY;

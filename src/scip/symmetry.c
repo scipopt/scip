@@ -1415,202 +1415,6 @@ SCIP_RETCODE SCIPgetActiveVariables(
    return SCIP_OKAY;
 }
 
-/** creates a node of a symmetry detection graph */
-SCIP_RETCODE SCIPcreateSymgraphNode(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SYM_GRAPH*            symgraph,           /**< symmetry detection graph */
-   int                   id,                 /**< ID of the node (needs to be unique in graph) */
-   SYM_NODETYPE          nodetype,           /**< type of the node */
-   SCIP_EXPRHDLR*        op,                 /**< operator encoded by the node
-                                              *   (if nodetype is SYM_NODETYPE_OPERATOR) */
-   SCIP_VAR*             var,                /**< variable encoded by the node
-                                              *   (if nodetype is SYM_NODETYPE_VAR) */
-   int                   varidx,             /**< index of variable encoded by the node
-                                              *   (if nodetype is SYM_NODETYPE_VAR) */
-   SCIP_Real             value,              /**< index of value encoded by the node
-                                              *   (if nodetype is SYM_NODETYPE_VAL) */
-   SCIP_Bool             hasinfo,            /**< whether the node encodes information about a constraint */
-   SCIP_Real             lhs,                /**< left-hand side of constraint */
-   SCIP_Real             rhs,                /**< right-hand side of constraint */
-   SCIP_CONS*            cons,               /**< constraint for which we encode symmetries */
-   SCIP_CONSHDLR*        conshdlr            /**< pointer to constraint handler of constraint */
-   )
-{
-   SYM_NODE** node;
-
-   assert(scip != NULL);
-   assert(symgraph != NULL);
-   assert(nodetype != SYM_NODETYPE_OPERATOR || op != NULL);
-   assert(nodetype != SYM_NODETYPE_VAR || varidx >= 0);
-   assert(nodetype != SYM_NODETYPE_VAR || var != NULL);
-   assert(nodetype != SYM_NODETYPE_VAL || !(SCIPisInfinity(scip, value) || SCIPisInfinity(scip, -value)));
-   assert(nodetype != SYM_NODETYPE_RHS || hasinfo);
-   assert(!hasinfo || conshdlr != NULL);
-
-   /* possibly reallocate memory */
-   if( symgraph->nnodes == symgraph->maxnnodes )
-   {
-      int newsize;
-
-      newsize = SCIPcalcMemGrowSize(scip, symgraph->nnodes + 1);
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(symgraph->nodes), symgraph->nnodes, newsize) );
-      symgraph->maxnnodes = newsize;
-   }
-
-   /* store node information */
-   SCIP_CALL( SCIPallocBlockMemory(scip, &(symgraph->nodes[symgraph->nnodes])) );
-   node = &(symgraph->nodes[symgraph->nnodes++]);
-
-   (*node)->id = id;
-   (*node)->nodetype = nodetype;
-   (*node)->op = op;
-   (*node)->varidx = varidx;
-   (*node)->var = var;
-   (*node)->value = value;
-   (*node)->hasinfo = hasinfo;
-   (*node)->computedcolor = -1;
-
-   if( hasinfo )
-   {
-      SCIP_CALL( SCIPallocBlockMemory(scip, &((*node)->consinfo)) );
-
-      (*node)->consinfo->lhs = lhs;
-      (*node)->consinfo->rhs = rhs;
-      (*node)->consinfo->cons = cons;
-      (*node)->consinfo->conshdlr = conshdlr;
-   }
-
-   return SCIP_OKAY;
-}
-
-/** frees node of a symmetry detection graph */
-SCIP_RETCODE SCIPfreeSymgraphNode(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SYM_NODE**            node                /**< pointer to hold node */
-   )
-{
-   assert( scip != NULL );
-   assert( node != NULL );
-
-   if ( (*node)->hasinfo )
-   {
-      SCIPfreeBlockMemory(scip, &((*node)->consinfo));
-   }
-
-   SCIPfreeBlockMemory(scip, node);
-
-   return SCIP_OKAY;
-}
-
-/** creates an edge of a symmetry detection graph */
-SCIP_RETCODE SCIPcreateSymgraphEdge(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SYM_GRAPH*            symgraph,           /**< pointer to symmetry detection graph */
-   SYM_NODE*             first,              /**< first node of an edge */
-   SYM_NODE*             second,             /**< second node of an edge */
-   SCIP_Bool             iscolored,          /**< whether the edge is colored */
-   SCIP_Real             color               /**< color of the edge (if it is colored) */
-   )
-{
-   SYM_EDGE** edge;
-
-   assert(scip != NULL);
-   assert(symgraph != NULL);
-   assert(first != NULL);
-   assert(second != NULL);
-   assert(!iscolored || !(SCIPisInfinity(scip, color) || SCIPisInfinity(scip, -color)));
-
-   /* possibly reallocate memory */
-   if( symgraph->nedges == symgraph->maxnedges )
-   {
-      int newsize;
-
-      newsize = SCIPcalcMemGrowSize(scip, symgraph->nedges + 1);
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(symgraph->edges), symgraph->nedges, newsize) );
-      symgraph->maxnedges = newsize;
-   }
-
-   /* store node information */
-   SCIP_CALL( SCIPallocBlockMemory(scip, &(symgraph->edges[symgraph->nedges])) );
-   edge = &(symgraph->edges[symgraph->nedges++]);
-
-   (*edge)->first = first;
-   (*edge)->second = second;
-   (*edge)->iscolored = iscolored;
-   (*edge)->color = color;
-   (*edge)->computedcolor = -1;
-
-   return SCIP_OKAY;
-}
-
-/** frees edge of a symmetry detection graph */
-SCIP_RETCODE SCIPfreeSymgraphEdge(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SYM_EDGE**            edge                /**< pointer to hold edge */
-   )
-{
-   assert( scip != NULL );
-   assert( edge != NULL );
-
-   SCIPfreeBlockMemory(scip, edge);
-
-   return SCIP_OKAY;
-}
-
-/** creates a symmetry detection graph */
-SCIP_RETCODE SCIPcreateSymgraph(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SYM_GRAPH**           graph,              /**< pointer to hold symmetry detection graph */
-   int                   nvars               /**< number of variables corresponding to graph */
-   )
-{
-   assert(scip != NULL);
-   assert(graph != NULL);
-
-   SCIP_CALL( SCIPallocBlockMemory(scip, graph) );
-
-   /* initialize graph (seems to cover many [linear] cases) */
-   (*graph)->nnodes = 0;
-   (*graph)->maxnnodes = nvars + 1;
-   (*graph)->nedges = 0;
-   (*graph)->maxnedges = nvars;
-
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &((*graph)->nodes), (*graph)->maxnnodes) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &((*graph)->edges), (*graph)->maxnedges) );
-
-   return SCIP_OKAY;
-}
-
-/** frees a symmetry detection graph */
-SCIP_RETCODE SCIPfreeSymgraph(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SYM_GRAPH**           graph               /**< pointer to hold symmetry detection graph */
-   )
-{
-   int i;
-
-   assert(scip != NULL);
-   assert(graph != NULL);
-
-   /* free edges */
-   for (i = 0; i < (*graph)->nedges; ++i)
-   {
-      SCIP_CALL( SCIPfreeSymgraphEdge(scip, &((*graph)->edges[i])) );
-   }
-   SCIPfreeBlockMemoryArrayNull(scip, &((*graph)->edges), (*graph)->maxnedges);
-
-   /* free nodes */
-   for (i = 0; i < (*graph)->nnodes; ++i)
-   {
-      SCIP_CALL( SCIPfreeSymgraphNode(scip, &((*graph)->nodes[i])) );
-   }
-   SCIPfreeBlockMemoryArrayNull(scip, &((*graph)->nodes), (*graph)->maxnnodes);
-
-   SCIPfreeBlockMemory(scip, graph);
-
-   return SCIP_OKAY;
-}
-
 /** creates permutation symmetry detection graph for linear constraints */
 SCIP_RETCODE SCIPcreatePermsymDetectionGraphLinear(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1621,7 +1425,6 @@ SCIP_RETCODE SCIPcreatePermsymDetectionGraphLinear(
    SCIP_Real             lhs,                /**< left-hand side of linear constraint */
    SCIP_Real             rhs,                /**< right-hand side of linear constraint */
    SCIP_CONS*            cons,               /**< constraint for which we encode symmetries */
-   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler of corresponding constraint */
    SCIP_Bool*            success             /**< pointer to store whether graph could be built */
    )
 {
@@ -1637,23 +1440,21 @@ SCIP_RETCODE SCIPcreatePermsymDetectionGraphLinear(
 
    *success = TRUE;
 
-   SCIP_CALL( SCIPcreateSymgraph(scip, graph, nvars) );
+   SCIP_CALL( SCIPcreateSymgraph(scip, graph, 1, nvars, 0, nvars) );
 
    /* create nodes for each variable */
    for( i = 0; i < nvars; ++i )
    {
-      SCIP_CALL( SCIPcreateSymgraphNode(scip, *graph, i, SYM_NODETYPE_VAR, NULL, vars[i], SCIPvarGetProbindex(vars[i]),
-            0.0, FALSE, 0.0, 0.0, NULL, NULL) );
+      SCIP_CALL( SCIPaddSymgraphVarnode(scip, *graph, vars[i]) );
    }
 
    /* create node corresponding to right-hand side */
-   SCIP_CALL( SCIPcreateSymgraphNode(scip, *graph, nvars, SYM_NODETYPE_RHS, NULL, NULL, -1, 0.0,
-         TRUE, lhs, rhs, cons, conshdlr) );
+   SCIP_CALL( SCIPaddSymgraphRhsnode(scip, *graph, cons, lhs, rhs) );
 
    /* create edges */
    for( i = 0; i < nvars; ++i )
    {
-      SCIP_CALL( SCIPcreateSymgraphEdge(scip, *graph, (*graph)->nodes[i], (*graph)->nodes[nvars], TRUE, vals[i]) );
+      SCIP_CALL( SCIPaddSymgraphEdge(scip, *graph, i, nvars, TRUE, vals[i]) );
    }
 
    return SCIP_OKAY;
@@ -1685,22 +1486,18 @@ SCIP_RETCODE SCIPaddSymgraphVarAggegration(
    /* add nodes and edges for variables in aggregation */
    for( j = 0; j < nvars; ++j )
    {
-      SCIP_CALL( SCIPcreateSymgraphNode(scip, graph, *idx, SYM_NODETYPE_VAR,
-            NULL, vars[j], SCIPvarGetProbindex(vars[j]), 0.0, FALSE, 0.0, 0.0, NULL, NULL) );
+      SCIP_CALL( SCIPaddSymgraphVarnode(scip, graph, vars[j]) );
 
-      SCIP_CALL( SCIPcreateSymgraphEdge(scip, graph, graph->nodes[rootidx], graph->nodes[*idx],
-            TRUE, vals[j]) );
+      SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, rootidx, *idx, TRUE, vals[j]) );
       ++(*idx);
    }
 
    /* possibly add node for constant */
    if( !SCIPisZero(scip, constant) )
    {
-      SCIP_CALL( SCIPcreateSymgraphNode(scip, graph, *idx, SYM_NODETYPE_VAL,
-            NULL, NULL, -1.0, constant, FALSE, 0.0, 0.0, NULL, NULL) );
+      SCIP_CALL( SCIPaddSymgraphValnode(scip, graph, constant) );
 
-      SCIP_CALL( SCIPcreateSymgraphEdge(scip, graph, graph->nodes[rootidx], graph->nodes[*idx],
-            FALSE, 0.0) );
+      SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, rootidx, *idx, FALSE, 0.0) );
       ++(*idx);
    }
 
@@ -1772,6 +1569,709 @@ SCIP_RETCODE SCIPgetCoefSymdata(
    }
 
    SCIP_CALL( SCIPfreeSymdataExpr(scip, &symdata) );
+
+   return SCIP_OKAY;
+}
+
+
+/** creates and initializes a symmetry detection graph with memory for the given number of nodes and edges */
+SCIP_RETCODE SCIPcreateSymgraph(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SYM_GRAPH**           graph,              /**< pointer to hold symmetry detection graph */
+   int                   nopnodes,           /**< number of operator nodes */
+   int                   nvarnodes,          /**< number of variable nodes */
+   int                   nvalnodes,          /**< number of value nodes */
+   int                   nedges              /**< number of edges */
+   )
+{
+   assert(scip != NULL);
+   assert(graph != NULL);
+   assert(nopnodes >= 0);
+   assert(nvarnodes >= 0);
+   assert(nvalnodes >= 0);
+   assert(nedges >= 0);
+
+   SCIP_CALL( SCIPallocBlockMemory(scip, graph) );
+
+   /* initialize graph */
+   (*graph)->nnodes = 0;
+   (*graph)->maxnnodes = nopnodes + nvarnodes + nvalnodes;
+   (*graph)->nopnodes = 0;
+   (*graph)->maxnopnodes = nopnodes;
+   (*graph)->nvarnodes = 0;
+   (*graph)->maxnvarnodes = nvarnodes;
+   (*graph)->nvalnodes = 0;
+   (*graph)->maxnvalnodes = nvalnodes;
+   (*graph)->rhsnode = -1;
+   (*graph)->hassymnodecolors = FALSE;
+   (*graph)->nedges = 0;
+   (*graph)->maxnedges = nedges;
+   (*graph)->hassymedgecolors = FALSE;
+   (*graph)->hasconsinfo = FALSE;
+   (*graph)->cons = NULL;
+   (*graph)->lhs = 0.0;
+   (*graph)->rhs = 0.0;
+
+   /* allocate memory for arrays */
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &((*graph)->nodetypes), (*graph)->maxnnodes) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &((*graph)->nodeinfopos), (*graph)->maxnnodes) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &((*graph)->symnodecolors), (*graph)->maxnnodes) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &((*graph)->ops), (*graph)->maxnopnodes) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &((*graph)->vars), (*graph)->maxnvarnodes) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &((*graph)->vals), (*graph)->maxnvalnodes) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &((*graph)->edgefirst), (*graph)->maxnedges) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &((*graph)->edgesecond), (*graph)->maxnedges) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &((*graph)->edgecolors), (*graph)->maxnedges) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &((*graph)->symedgecolors), (*graph)->maxnedges) );
+
+   return SCIP_OKAY;
+}
+
+/** frees a symmetry detection graph */
+SCIP_RETCODE SCIPfreeSymgraph(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SYM_GRAPH**           graph               /**< pointer to hold symmetry detection graph */
+   )
+{
+   assert(scip != NULL);
+   assert(graph != NULL);
+
+   /* free memory of arrays */
+   SCIPfreeBlockMemoryArrayNull(scip, &((*graph)->symedgecolors), (*graph)->maxnedges);
+   SCIPfreeBlockMemoryArrayNull(scip, &((*graph)->edgecolors), (*graph)->maxnedges);
+   SCIPfreeBlockMemoryArrayNull(scip, &((*graph)->symnodecolors), (*graph)->maxnnodes);
+   SCIPfreeBlockMemoryArrayNull(scip, &((*graph)->edgesecond), (*graph)->maxnedges);
+   SCIPfreeBlockMemoryArrayNull(scip, &((*graph)->edgefirst), (*graph)->maxnedges);
+   SCIPfreeBlockMemoryArrayNull(scip, &((*graph)->vals), (*graph)->maxnvalnodes);
+   SCIPfreeBlockMemoryArrayNull(scip, &((*graph)->vars), (*graph)->maxnvarnodes);
+   SCIPfreeBlockMemoryArrayNull(scip, &((*graph)->ops), (*graph)->maxnopnodes);
+   SCIPfreeBlockMemoryArrayNull(scip, &((*graph)->symnodecolors), (*graph)->maxnnodes);
+   SCIPfreeBlockMemoryArrayNull(scip, &((*graph)->nodeinfopos), (*graph)->maxnnodes);
+   SCIPfreeBlockMemoryArrayNull(scip, &((*graph)->nodetypes), (*graph)->maxnnodes);
+
+   /* free graph */
+   SCIPfreeBlockMemory(scip, graph);
+
+   return SCIP_OKAY;
+}
+
+/** adds a node to a symmetry detection graph */
+static
+SCIP_RETCODE SCIPaddSymgraphNode(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SYM_GRAPH*            graph,              /**< pointer to symmetry detection graph */
+   SYM_NODETYPE          nodetype,           /**< type of node to be added */
+   SCIP_EXPRHDLR*        op,                 /**< operator of node to be added (or NULL) */
+   SCIP_VAR*             var,                /**< variable of node to be added (or NULL) */
+   SCIP_Real             val,                /**< value of node to be added (or 0.0) */
+   SCIP_CONS*            cons,               /**< constraint associated with the node */
+   SCIP_Real             lhs,                /**< lhs associated with the node */
+   SCIP_Real             rhs                 /**< rhs associated with the node */
+   )
+{
+   int newsize;
+
+   assert(scip != NULL);
+   assert(graph != NULL);
+   assert(nodetype != SYM_NODETYPE_OPERATOR || op != NULL);
+   assert(nodetype != SYM_NODETYPE_VAR || var != NULL);
+
+   /* possibly reallocate memory for node-based arrays */
+   if( graph->nnodes >= graph->maxnnodes )
+   {
+      newsize = SCIPcalcMemGrowSize(scip, graph->nnodes + 1);
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &graph->nodetypes, graph->maxnnodes, newsize) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &graph->nodeinfopos, graph->maxnnodes, newsize) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &graph->symnodecolors, graph->maxnnodes, newsize) );
+      graph->maxnnodes = newsize;
+   }
+
+   /* possibly reallocate memory for information-based arrays */
+   switch( nodetype )
+   {
+   case SYM_NODETYPE_VAR:
+      if( graph->nvarnodes >= graph->maxnvarnodes )
+      {
+         newsize = SCIPcalcMemGrowSize(scip, graph->nvarnodes + 1);
+         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &graph->vars, graph->maxnvarnodes, newsize) );
+         graph->maxnvarnodes = newsize;
+      }
+      break;
+   case SYM_NODETYPE_VAL:
+      if( graph->nvalnodes >= graph->maxnvalnodes )
+      {
+         newsize = SCIPcalcMemGrowSize(scip, graph->nvalnodes + 1);
+         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &graph->vals, graph->maxnvalnodes, newsize) );
+         graph->maxnvalnodes = newsize;
+      }
+      break;
+   case SYM_NODETYPE_OPERATOR:
+      if( graph->nopnodes >= graph->maxnopnodes )
+      {
+         newsize = SCIPcalcMemGrowSize(scip, graph->nopnodes + 1);
+         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &graph->ops, graph->maxnopnodes, newsize) );
+         graph->maxnopnodes = newsize;
+      }
+      break;
+   default:
+      assert(nodetype == SYM_NODETYPE_RHS);
+      graph->hasconsinfo = TRUE;
+      graph->cons = cons;
+      graph->lhs = lhs;
+      graph->rhs = rhs;
+   }
+
+   /* add information about node to graph */
+   switch( nodetype )
+   {
+   case SYM_NODETYPE_VAR:
+      graph->vars[graph->nvarnodes] = var;
+      graph->nodeinfopos[graph->nnodes] = graph->nvarnodes++;
+      break;
+   case SYM_NODETYPE_VAL:
+      graph->vals[graph->nvalnodes] = val;
+      graph->nodeinfopos[graph->nnodes] = graph->nvalnodes++;
+      break;
+   case SYM_NODETYPE_OPERATOR:
+      graph->ops[graph->nopnodes] = op;
+      graph->nodeinfopos[graph->nnodes] = graph->nopnodes++;
+      break;
+   default:
+      assert(nodetype == SYM_NODETYPE_RHS);
+      assert(graph->rhsnode == -1);
+      graph->rhsnode = graph->nnodes;
+   }
+   graph->nodetypes[graph->nnodes++] = nodetype;
+
+   return SCIP_OKAY;
+}
+
+/** adds an operator node to a symmetry detection graph */
+SCIP_RETCODE SCIPaddSymgraphOpnode(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SYM_GRAPH*            graph,              /**< pointer to symmetry detection graph */
+   SCIP_EXPRHDLR*        op                  /**< operator of node to be added */
+   )
+{
+   assert(scip != NULL);
+   assert(graph != NULL);
+   assert(op != NULL);
+   assert(!graph->hassymnodecolors);
+
+   SCIP_CALL( SCIPaddSymgraphNode(scip, graph, SYM_NODETYPE_OPERATOR, op, NULL, 0.0, NULL, 0.0, 0.0) );
+
+   return SCIP_OKAY;
+}
+
+/** adds a variable node to a symmetry detection graph */
+SCIP_RETCODE SCIPaddSymgraphVarnode(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SYM_GRAPH*            graph,              /**< pointer to symmetry detection graph */
+   SCIP_VAR*             var                 /**< variable of node to be added */
+   )
+{
+   assert(scip != NULL);
+   assert(graph != NULL);
+   assert(var != NULL);
+   assert(!graph->hassymnodecolors);
+
+   SCIP_CALL( SCIPaddSymgraphNode(scip, graph, SYM_NODETYPE_VAR, NULL, var, 0.0, NULL, 0.0, 0.0) );
+
+   return SCIP_OKAY;
+}
+
+/** adds a value node to a symmetry detection graph */
+SCIP_RETCODE SCIPaddSymgraphValnode(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SYM_GRAPH*            graph,              /**< pointer to symmetry detection graph */
+   SCIP_Real             val                 /**< value of node to be added */
+   )
+{
+   assert(scip != NULL);
+   assert(graph != NULL);
+   assert(!graph->hassymnodecolors);
+
+   SCIP_CALL( SCIPaddSymgraphNode(scip, graph, SYM_NODETYPE_VAL, NULL, NULL, val, NULL, 0.0, 0.0) );
+
+   return SCIP_OKAY;
+}
+
+/** adds a rhs node to a symmetry detection graph */
+SCIP_RETCODE SCIPaddSymgraphRhsnode(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SYM_GRAPH*            graph,              /**< pointer to symmetry detection graph */
+   SCIP_CONS*            cons,               /**< constraint associated with the node */
+   SCIP_Real             lhs,                /**< lhs associated with the node */
+   SCIP_Real             rhs                 /**< rhs associated with the node */
+   )
+{
+   assert(scip != NULL);
+   assert(graph != NULL);
+   assert(!graph->hassymnodecolors);
+   assert(cons != NULL);
+
+   SCIP_CALL( SCIPaddSymgraphNode(scip, graph, SYM_NODETYPE_RHS, NULL, NULL, 0.0, cons, lhs, rhs) );
+
+   return SCIP_OKAY;
+}
+
+
+/** adds edge to a symmetry detection graph */
+SCIP_RETCODE SCIPaddSymgraphEdge(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SYM_GRAPH*            graph,              /**< pointer to symmetry detection graph */
+   int                   first,              /**< node index of first node in edge */
+   int                   second,             /**< node index of second node in edge */
+   SCIP_Bool             iscolored,          /**< whether the edge is colored */
+   SCIP_Real             color               /**< color of edge (if it is colored) */
+   )
+{
+   int newsize;
+
+   assert(scip != NULL);
+   assert(graph != NULL);
+   assert(first >= 0);
+   assert(second >= 0);
+   assert(first != second);
+   assert(!iscolored || !SCIPisInfinity(scip, color));
+   assert(!graph->hassymedgecolors);
+
+   /* possibly reallocate memory */
+   if( graph->nedges >= graph->maxnedges )
+   {
+      newsize = SCIPcalcMemGrowSize(scip, graph->nedges + 1);
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &graph->edgefirst, graph->maxnedges, newsize) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &graph->edgesecond, graph->maxnedges, newsize) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &graph->edgecolors, graph->maxnedges, newsize) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &graph->symedgecolors, graph->maxnedges, newsize) );
+      graph->maxnedges = newsize;
+   }
+
+   graph->edgefirst[graph->nedges] = first;
+   graph->edgesecond[graph->nedges] = second;
+   graph->edgecolors[graph->nedges] = iscolored ? color : SCIPinfinity(scip);
+   graph->nedges++;
+
+   return SCIP_OKAY;
+}
+
+/** returns type of a node */
+SYM_NODETYPE SCIPgetSymgraphNodeType(
+   SYM_GRAPH*            graph,              /**< pointer to symmetry detection graph */
+   int                   nodeidx             /**< index of node whose type needs to be returned */
+   )
+{
+   assert(graph != NULL);
+   assert(graph->nodetypes != NULL);
+   assert(0 <= nodeidx && nodeidx < graph->nnodes);
+
+   return graph->nodetypes[nodeidx];
+}
+
+/** returns operator of an operator node */
+SCIP_EXPRHDLR* SCIPgetSymgraphNodeOperator(
+   SYM_GRAPH*            graph,              /**< pointer to symmetry detection graph */
+   int                   nodeidx             /**< index of node whose operator needs to be returned */
+   )
+{
+   assert(graph != NULL);
+   assert(graph->nodetypes != NULL);
+   assert(graph->nodeinfopos != NULL);
+   assert(graph->ops != NULL);
+   assert(0 <= nodeidx && nodeidx < graph->nnodes);
+   assert(graph->nodetypes[nodeidx] == SYM_NODETYPE_OPERATOR || graph->nodetypes[nodeidx] == SYM_NODETYPE_RHS);
+   assert(0 <= graph->nodeinfopos[nodeidx] && graph->nodeinfopos[nodeidx] < graph->nopnodes);
+
+   return graph->ops[graph->nodeinfopos[nodeidx]];
+}
+
+/** returns variable of a variable node */
+SCIP_VAR* SCIPgetSymgraphNodeVar(
+   SYM_GRAPH*            graph,              /**< pointer to symmetry detection graph */
+   int                   nodeidx             /**< index of node whose variable needs to be returned */
+   )
+{
+   assert(graph != NULL);
+   assert(graph->nodetypes != NULL);
+   assert(graph->nodeinfopos != NULL);
+   assert(graph->ops != NULL);
+   assert(0 <= nodeidx && nodeidx < graph->nnodes);
+   assert(graph->nodetypes[nodeidx] == SYM_NODETYPE_VAR);
+   assert(0 <= graph->nodeinfopos[nodeidx] && graph->nodeinfopos[nodeidx] < graph->nvarnodes);
+
+   return graph->vars[graph->nodeinfopos[nodeidx]];
+}
+
+/** returns value of a value node */
+SCIP_Real SCIPgetSymgraphNodeVal(
+   SYM_GRAPH*            graph,              /**< pointer to symmetry detection graph */
+   int                   nodeidx             /**< index of node whose value needs to be returned */
+   )
+{
+   assert(graph != NULL);
+   assert(graph->nodetypes != NULL);
+   assert(graph->nodeinfopos != NULL);
+   assert(graph->ops != NULL);
+   assert(0 <= nodeidx && nodeidx < graph->nnodes);
+   assert(graph->nodetypes[nodeidx] == SYM_NODETYPE_VAL);
+   assert(0 <= graph->nodeinfopos[nodeidx] && graph->nodeinfopos[nodeidx] < graph->nvalnodes);
+
+   return graph->vals[graph->nodeinfopos[nodeidx]];
+}
+
+/** returns whether node colors for symmetry detection have been computed */
+SCIP_Bool SCIPhasSymgraphNodeSymcolor(
+   SYM_GRAPH*            graph,              /**< pointer to symmetry detection graph */
+   int                   nodeidx             /**< index of node whose color needs to be returned */
+   )
+{
+   assert(graph != NULL);
+
+   return graph->hassymnodecolors;
+}
+
+/** returns node color used for symmetry detection */
+int SCIPgetSymgraphNodeSymcolor(
+   SYM_GRAPH*            graph,              /**< pointer to symmetry detection graph */
+   int                   nodeidx             /**< index of node whose color needs to be returned */
+   )
+{
+   assert(graph != NULL);
+   assert(graph->hassymnodecolors);
+   assert(0 <= nodeidx && nodeidx < graph->nnodes);
+   assert(graph->symnodecolors != NULL);
+
+   return graph->symnodecolors[nodeidx];
+}
+
+/** returns node color of rhs node (or -1 if node does not exist) */
+int SCIPgetSymgraphRhsnodeSymcolor(
+   SYM_GRAPH*            graph               /**< pointer to symmetry detection graph */
+   )
+{
+   assert(graph != NULL);
+
+   if ( ! SCIPhasSymgraphRhsnode(graph) )
+      return -1;
+
+   return graph->rhssymcolor;
+}
+
+/** sets node color used for symmetry detection */
+SCIP_RETCODE SCIPsetSymgraphNodeSymcolor(
+   SYM_GRAPH*            graph,              /**< pointer to symmetry detection graph */
+   int                   nodeidx,            /**< index of node whose color needs to be returned */
+   int                   color               /**< color used for symmetry detection */
+   )
+{
+   assert(graph != NULL);
+   assert(0 <= nodeidx && nodeidx < graph->nnodes);
+   assert(graph->symnodecolors != NULL);
+
+   graph->hassymnodecolors = TRUE;
+   graph->symnodecolors[nodeidx] = color;
+
+   return SCIP_OKAY;
+}
+
+/** sets rhs node color used for symmetry detection */
+SCIP_RETCODE SCIPsetSymgraphRhscolor(
+   SYM_GRAPH*            graph,              /**< pointer to symmetry detection graph */
+   int                   color               /**< color used for symmetry detection */
+   )
+{
+   assert(graph != NULL);
+   assert(color >= 0);
+
+   graph->rhssymcolor = color;
+
+   return SCIP_OKAY;
+}
+
+/** gets first and second node of an edge */
+SCIP_RETCODE SCIPgetSymgraphEdge(
+   SYM_GRAPH*            graph,              /**< pointer to symmetry detection graph */
+   int                   edgeidx,            /**< index of edge that needs to be returned */
+   int*                  first,              /**< buffer to store first index of node in edge */
+   int*                  second              /**< buffer to store second index of node in edge */
+   )
+{
+   assert(graph != NULL);
+   assert(0 <= edgeidx && edgeidx < graph->nedges);
+   assert(graph->edgefirst != NULL);
+   assert(graph->edgesecond != NULL);
+   assert(first != NULL);
+   assert(second != NULL);
+
+   *first = graph->edgefirst[edgeidx];
+   *second = graph->edgesecond[edgeidx];
+
+   return SCIP_OKAY;
+}
+
+/** returns whether an edge is colored */
+SCIP_RETCODE SCIPisSymgraphEdgeColored(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SYM_GRAPH*            graph,              /**< pointer to symmetry detection graph */
+   int                   edgeidx             /**< index of edge */
+   )
+{
+   assert(graph != NULL);
+   assert(0 <= edgeidx && edgeidx < graph->nedges);
+   assert(graph->edgecolors != NULL);
+
+   return !SCIPisInfinity(scip, graph->edgecolors[edgeidx]);
+}
+
+/** returns the color of an edge (or infinity if not colored) */
+SCIP_Real SCIPgetSymgraphEdgeColor(
+   SYM_GRAPH*            graph,              /**< pointer to symmetry detection graph */
+   int                   edgeidx             /**< index of edge */
+   )
+{
+   assert(graph != NULL);
+   assert(0 <= edgeidx && edgeidx < graph->nedges);
+   assert(graph->edgecolors != NULL);
+
+   return graph->edgecolors[edgeidx];
+}
+
+/** returns edge color used for symmetry detection */
+int SCIPgetSymgraphEdgeSymcolor(
+   SYM_GRAPH*            graph,              /**< pointer to symmetry detection graph */
+   int                   edgeidx             /**< index of edge whose color needs to be returned */
+   )
+{
+   assert(graph != NULL);
+   assert(graph->hassymedgecolors);
+   assert(0 <= edgeidx && edgeidx < graph->nedges);
+   assert(graph->symedgecolors != NULL);
+
+   return graph->symedgecolors[edgeidx];
+}
+
+/** sets edge color used for symmetry detection */
+SCIP_RETCODE SCIPsetSymgraphEdgeSymcolor(
+   SYM_GRAPH*            graph,              /**< pointer to symmetry detection graph */
+   int                   edgeidx,            /**< index of edge whose color needs to be returned */
+   int                   color               /**< color used for symmetry detection */
+   )
+{
+   assert(graph != NULL);
+   assert(0 <= edgeidx && edgeidx < graph->nedges);
+   assert(graph->symedgecolors != NULL);
+
+   graph->hassymedgecolors = TRUE;
+   graph->symedgecolors[edgeidx] = color;
+
+   return SCIP_OKAY;
+}
+
+/** returns whether edge colors for symmetry detection have been computed */
+SCIP_Bool SCIPhasSymgraphEdgeSymcolor(
+   SYM_GRAPH*            graph               /**< pointer to symmetry detection graph */
+   )
+{
+   assert(graph != NULL);
+
+   return graph->hassymedgecolors;
+}
+
+/** gets constraint information from a symmetry detection graph */
+SCIP_RETCODE SCIPgetSymgraphConsinfo(
+   SYM_GRAPH*            graph,              /**< pointer to symmetry detection graph */
+   SCIP_Bool*            hasconsinfo,        /**< buffer to store whether graph has constraint information */
+   SCIP_CONS**           cons,               /**< buffer to store pointer to constraint (if graph has information) */
+   SCIP_Real*            lhs,                /**< buffer to store lhs (if graph has information) */
+   SCIP_Real*            rhs                 /**< buffer to store rhs (if graph has information) */
+   )
+{
+   assert(graph != NULL);
+   assert(hasconsinfo != NULL);
+   assert(cons != NULL);
+   assert(lhs != NULL);
+   assert(rhs != NULL);
+
+   *hasconsinfo = graph->hasconsinfo;
+   if( !graph->hasconsinfo )
+      return SCIP_OKAY;
+
+   *cons = graph->cons;
+   *lhs = graph->lhs;
+   *rhs = graph->rhs;
+
+   return SCIP_OKAY;
+}
+
+/** return the number of nodes in a symmetry detection graph */
+int SCIPgetSymgraphNnodes(
+   SYM_GRAPH*            graph               /**< pointer to symmetry detection graph */
+   )
+{
+   assert(graph != NULL);
+
+   return graph->nnodes;
+}
+
+/** return the number of operator nodes in a symmetry detection graph */
+int SCIPgetSymgraphNopnodes(
+   SYM_GRAPH*            graph               /**< pointer to symmetry detection graph */
+   )
+{
+   assert(graph != NULL);
+
+   return graph->nopnodes;
+}
+
+/** return the number of variable nodes in a symmetry detection graph */
+int SCIPgetSymgraphNvarnodes(
+   SYM_GRAPH*            graph               /**< pointer to symmetry detection graph */
+   )
+{
+   assert(graph != NULL);
+
+   return graph->nvarnodes;
+}
+
+/** return the number of value nodes in a symmetry detection graph */
+int SCIPgetSymgraphNvalnodes(
+   SYM_GRAPH*            graph               /**< pointer to symmetry detection graph */
+   )
+{
+   assert(graph != NULL);
+
+   return graph->nvalnodes;
+}
+
+/** return whether the graph has a rhs node */
+SCIP_Bool SCIPhasSymgraphRhsnode(
+   SYM_GRAPH*            graph               /**< pointer to symmetry detection graph */
+   )
+{
+   assert(graph != NULL);
+
+   return graph->rhsnode != -1;
+}
+
+/** return the number of edges in a symmetry detection graph */
+int SCIPgetSymgraphNedges(
+   SYM_GRAPH*            graph               /**< pointer to symmetry detection graph */
+   )
+{
+   assert(graph != NULL);
+
+   return graph->nedges;
+}
+
+/** returns whether a node of a symmetry detection graph is an operator node */
+SCIP_Bool SCIPisSymgraphNodeOpnode(
+   SYM_GRAPH*            graph,              /**< pointer to symmetry detection graph */
+   int                   nodeidx             /**< index of node in graph */
+   )
+{
+   assert(graph != NULL);
+   assert(0 <= nodeidx && nodeidx < SCIPgetSymgraphNnodes(graph));
+
+   return graph->nodetypes[nodeidx] == SYM_NODETYPE_OPERATOR;
+}
+
+/** returns whether a node of a symmetry detection graph is a variable node */
+SCIP_Bool SCIPisSymgraphNodeVarnode(
+   SYM_GRAPH*            graph,              /**< pointer to symmetry detection graph */
+   int                   nodeidx             /**< index of node in graph */
+   )
+{
+   assert(graph != NULL);
+   assert(0 <= nodeidx && nodeidx < SCIPgetSymgraphNnodes(graph));
+
+   return graph->nodetypes[nodeidx] == SYM_NODETYPE_VAR;
+}
+
+/** returns whether a node of a symmetry detection graph is a value node */
+SCIP_Bool SCIPisSymgraphNodeValnode(
+   SYM_GRAPH*            graph,              /**< pointer to symmetry detection graph */
+   int                   nodeidx             /**< index of node in graph */
+   )
+{
+   assert(graph != NULL);
+   assert(0 <= nodeidx && nodeidx < SCIPgetSymgraphNnodes(graph));
+
+   return graph->nodetypes[nodeidx] == SYM_NODETYPE_VAL;
+}
+
+/** returns whether a node of a symmetry detection graph is a rhs node */
+SCIP_Bool SCIPisSymgraphNodeRhsnode(
+   SYM_GRAPH*            graph,              /**< pointer to symmetry detection graph */
+   int                   nodeidx             /**< index of node in graph */
+   )
+{
+   assert(graph != NULL);
+   assert(0 <= nodeidx && nodeidx < SCIPgetSymgraphNnodes(graph));
+
+   return graph->nodetypes[nodeidx] == SYM_NODETYPE_RHS;
+}
+
+/** returns the variable of a variable node */
+SCIP_VAR* SCIPgetSymgraphVarnodeVar(
+   SYM_GRAPH*            graph,              /**< pointer to symmetry detection graph */
+   int                   nodeidx             /**< index of node in graph */
+   )
+{
+   assert(graph != NULL);
+   assert(0 <= nodeidx && nodeidx < SCIPgetSymgraphNnodes(graph));
+   assert(SCIPisSymgraphNodeVarnode(graph, nodeidx));
+
+   return graph->vars[graph->nodeinfopos[nodeidx]];
+}
+
+/** returns the first node index of an edge */
+int SCIPgetSymgraphEdgeFirst(
+   SYM_GRAPH*            graph,              /**< pointer to symmetry detection graph */
+   int                   edgeidx             /**< index of edge in graph */
+   )
+{
+   assert(graph != NULL);
+   assert(0 <= edgeidx && edgeidx < SCIPgetSymgraphNedges(graph));
+
+   return graph->edgefirst[edgeidx];
+}
+
+/** returns the second node index of an edge */
+int SCIPgetSymgraphEdgeSecond(
+   SYM_GRAPH*            graph,              /**< pointer to symmetry detection graph */
+   int                   edgeidx             /**< index of edge in graph */
+   )
+{
+   assert(graph != NULL);
+   assert(0 <= edgeidx && edgeidx < SCIPgetSymgraphNedges(graph));
+
+   return graph->edgesecond[edgeidx];
+}
+
+/** updates lhs constraint information of a symmetry detection graph */
+SCIP_RETCODE SCIPupdateSymgraphLhs(
+   SYM_GRAPH*            graph,              /**< pointer to symmetry detection graph */
+   SCIP_Real             lhs                 /**< lhs */
+   )
+{
+   assert(graph != NULL);
+   assert(graph->hasconsinfo);
+
+   graph->lhs = lhs;
+
+   return SCIP_OKAY;
+}
+
+/** updates rhs constraint information of a symmetry detection graph */
+SCIP_RETCODE SCIPupdateSymgraphRhs(
+   SYM_GRAPH*            graph,              /**< pointer to symmetry detection graph */
+   SCIP_Real             rhs                 /**< rhs */
+   )
+{
+   assert(graph != NULL);
+   assert(graph->hasconsinfo);
+
+   graph->rhs = rhs;
 
    return SCIP_OKAY;
 }

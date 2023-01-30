@@ -270,74 +270,6 @@ SCIP_RETCODE SCIPgetActiveVariables(
    SCIP_Bool             transformed         /**< transformed constraint? */
    );
 
-/** creates a node of a symmetry detection graph
- *
- *  @note at some point, the node needs to be freed!
- */
-SCIP_EXPORT
-SCIP_RETCODE SCIPcreateSymgraphNode(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SYM_GRAPH*            symgraph,           /**< symmetry detection graph */
-   int                   id,                 /**< ID of the node (needs to be unique in graph) */
-   SYM_NODETYPE          nodetype,           /**< type of the node */
-   SCIP_EXPRHDLR*        op,                 /**< operator encoded by the node
-                                              *   (if nodetype is SYM_NODETYPE_OPERATOR) */
-   SCIP_VAR*             var,                /**< variable encoded by the node
-                                              *   (if nodetype is SYM_NODETYPE_VAR) */
-   int                   varidx,             /**< index of variable encoded by the node
-                                              *   (if nodetype is SYM_NODETYPE_VAR) */
-   SCIP_Real             value,              /**< index of value encoded by the node
-                                              *   (if nodetype is SYM_NODETYPE_VAL) */
-   SCIP_Bool             hasinfo,            /**< whether the node encodes information about a constraint */
-   SCIP_Real             lhs,                /**< left-hand side of constraint */
-   SCIP_Real             rhs,                /**< right-hand side of constraint */
-   SCIP_CONS*            cons,               /**< constraint for which we encode symmetries */
-   SCIP_CONSHDLR*        conshdlr            /**< pointer to constraint handler of constraint */
-   );
-
-/** frees node of a symmetry detection graph */
-SCIP_RETCODE SCIPfreeSymgraphNode(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SYM_NODE**            node                /**< pointer to hold node */
-   );
-
-/** creates an edge of a symmetry detection graph
- *
- *  @note at some point, the edge needs to be freed!
- */
-SCIP_EXPORT
-SCIP_RETCODE SCIPcreateSymgraphEdge(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SYM_GRAPH*            symgraph,           /**< symmetry detection graph */
-   SYM_NODE*             first,              /**< first node of an edge */
-   SYM_NODE*             second,             /**< second node of an edge */
-   SCIP_Bool             iscolored,          /**< whether the edge is colored */
-   SCIP_Real             color               /**< color of the edge (if it is colored) */
-   );
-
-/** frees edge of a symmetry detection graph */
-SCIP_RETCODE SCIPfreeSymgraphEdge(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SYM_EDGE**            edge                /**< pointer to hold edge */
-   );
-
-/** creates a symmetry detection graph
- *
- *  @note at some point, the graph needs to be freed!
- */
-SCIP_EXPORT
-SCIP_RETCODE SCIPcreateSymgraph(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SYM_GRAPH**           symgraph,           /**< pointer to hold symmetry detection graph */
-   int                   nvars               /**< number of variables corresponding to graph */
-   );
-
-/** frees a symmetry detection graph */
-SCIP_RETCODE SCIPfreeSymgraph(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SYM_GRAPH**           graph               /**< pointer to hold symmetry detection graph */
-   );
-
 /** creates permutation symmetry detection graph for linear constraints
  *
  *  @note at some point, the graph needs to be freed!
@@ -352,7 +284,6 @@ SCIP_RETCODE SCIPcreatePermsymDetectionGraphLinear(
    SCIP_Real             lhs,                /**< left-hand side of linear constraint */
    SCIP_Real             rhs,                /**< right-hand side of linear constraint */
    SCIP_CONS*            cons,               /**< constraint for which we encode symmetries */
-   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler of corresponding constraint */
    SCIP_Bool*            success             /**< pointer to store whether graph could be built */
    );
 
@@ -385,6 +316,285 @@ SCIP_RETCODE SCIPgetCoefSymdata(
    SCIP_EXPR*            parentexpr,         /**< parent of expr */
    SCIP_Real*            coef,               /**< buffer to store coefficient */
    SCIP_Bool*            success             /**< whether a coefficient is found */
+   );
+
+/** creates and initializes a symmetry detection graph with memory for the given number of nodes and edges */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcreateSymgraph(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SYM_GRAPH**           graph,              /**< pointer to hold symmetry detection graph */
+   int                   nopnodes,           /**< number of operator nodes */
+   int                   nvarnodes,          /**< number of variable nodes */
+   int                   nvalnodes,          /**< number of value nodes */
+   int                   nedges              /**< number of edges */
+   );
+
+/** frees a symmetry detection graph */
+SCIP_EXPORT
+SCIP_RETCODE SCIPfreeSymgraph(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SYM_GRAPH**           graph               /**< pointer to hold symmetry detection graph */
+   );
+
+/** adds an operator node to a symmetry detection graph */
+SCIP_EXPORT
+SCIP_RETCODE SCIPaddSymgraphOpnode(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SYM_GRAPH*            graph,              /**< pointer to symmetry detection graph */
+   SCIP_EXPRHDLR*        op                  /**< operator of node to be added */
+   );
+
+/** adds a variable node to a symmetry detection graph */
+SCIP_EXPORT
+SCIP_RETCODE SCIPaddSymgraphVarnode(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SYM_GRAPH*            graph,              /**< pointer to symmetry detection graph */
+   SCIP_VAR*             var                 /**< variable of node to be added */
+   );
+
+/** adds a value node to a symmetry detection graph */
+SCIP_EXPORT
+SCIP_RETCODE SCIPaddSymgraphValnode(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SYM_GRAPH*            graph,              /**< pointer to symmetry detection graph */
+   SCIP_Real             val                 /**< value of node to be added */
+   );
+
+/** adds a rhs node to a symmetry detection graph */
+SCIP_RETCODE SCIPaddSymgraphRhsnode(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SYM_GRAPH*            graph,              /**< pointer to symmetry detection graph */
+   SCIP_CONS*            cons,               /**< constraint associated with the node */
+   SCIP_Real             lhs,                /**< lhs associated with the node */
+   SCIP_Real             rhs                 /**< rhs associated with the node */
+   );
+
+/** adds edge to a symmetry detection graph */
+SCIP_EXPORT
+SCIP_RETCODE SCIPaddSymgraphEdge(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SYM_GRAPH*            graph,              /**< pointer to symmetry detection graph */
+   int                   first,              /**< node index of first node in edge */
+   int                   second,             /**< node index of second node in edge */
+   SCIP_Bool             iscolored,          /**< whether the edge is colored */
+   SCIP_Real             color               /**< color of edge (if it is colored) */
+   );
+
+/** returns type of a node */
+SCIP_EXPORT
+SYM_NODETYPE SCIPgetSymgraphNodeType(
+   SYM_GRAPH*            graph,              /**< pointer to symmetry detection graph */
+   int                   nodeidx             /**< index of node whose type needs to be returned */
+   );
+
+/** returns operator of an operator node */
+SCIP_EXPORT
+SCIP_EXPRHDLR* SCIPgetSymgraphNodeOperator(
+   SYM_GRAPH*            graph,              /**< pointer to symmetry detection graph */
+   int                   nodeidx             /**< index of node whose operator needs to be returned */
+   );
+
+/** returns variable of a variable node */
+SCIP_EXPORT
+SCIP_VAR* SCIPgetSymgraphNodeVar(
+   SYM_GRAPH*            graph,              /**< pointer to symmetry detection graph */
+   int                   nodeidx             /**< index of node whose variable needs to be returned */
+   );
+
+/** returns value of a value node */
+SCIP_EXPORT
+SCIP_Real SCIPgetSymgraphNodeVal(
+   SYM_GRAPH*            graph,              /**< pointer to symmetry detection graph */
+   int                   nodeidx             /**< index of node whose value needs to be returned */
+   );
+
+/** returns node color used for symmetry detection */
+SCIP_EXPORT
+int SCIPgetSymgraphNodeSymcolor(
+   SYM_GRAPH*            graph,              /**< pointer to symmetry detection graph */
+   int                   nodeidx             /**< index of node whose color needs to be returned */
+   );
+
+/** returns node color of rhs node (or -1 if node does not exist) */
+SCIP_EXPORT
+int SCIPgetSymgraphRhsnodeSymcolor(
+   SYM_GRAPH*            graph               /**< pointer to symmetry detection graph */
+   );
+
+/** returns node color used for symmetry detection */
+SCIP_EXPORT
+SCIP_Bool SCIPhasSymgraphNodeSymcolor(
+   SYM_GRAPH*            graph,              /**< pointer to symmetry detection graph */
+   int                   nodeidx             /**< index of node whose color needs to be returned */
+   );
+
+/** sets node color used for symmetry detection */
+SCIP_EXPORT
+SCIP_RETCODE SCIPsetSymgraphNodeSymcolor(
+   SYM_GRAPH*            graph,              /**< pointer to symmetry detection graph */
+   int                   nodeidx,            /**< index of node whose color needs to be returned */
+   int                   color               /**< color used for symmetry detection */
+   );
+
+/** sets rhs node color used for symmetry detection */
+SCIP_EXPORT
+SCIP_RETCODE SCIPsetSymgraphRhscolor(
+   SYM_GRAPH*            graph,              /**< pointer to symmetry detection graph */
+   int                   color               /**< color used for symmetry detection */
+   );
+
+/** gets first and second node of an edge */
+SCIP_EXPORT
+SCIP_RETCODE SCIPgetSymgraphEdge(
+   SYM_GRAPH*            graph,              /**< pointer to symmetry detection graph */
+   int                   edgeidx,            /**< index of edge that needs to be returned */
+   int*                  first,              /**< buffer to store first index of node in edge */
+   int*                  second              /**< buffer to store second index of node in edge */
+   );
+
+/** returns whether an edge is colored */
+SCIP_EXPORT
+SCIP_RETCODE SCIPisSymgraphEdgeColored(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SYM_GRAPH*            graph,              /**< pointer to symmetry detection graph */
+   int                   edgeidx             /**< index of edge */
+   );
+
+/** returns the color of an edge (or infinity if not colored) */
+SCIP_EXPORT
+SCIP_Real SCIPgetSymgraphEdgeColor(
+   SYM_GRAPH*            graph,              /**< pointer to symmetry detection graph */
+   int                   edgeidx             /**< index of edge */
+   );
+
+/** returns edge color used for symmetry detection */
+SCIP_EXPORT
+int SCIPgetSymgraphEdgeSymcolor(
+   SYM_GRAPH*            graph,              /**< pointer to symmetry detection graph */
+   int                   edgeidx             /**< index of edge whose color needs to be returned */
+   );
+
+/** sets edge color used for symmetry detection */
+SCIP_EXPORT
+SCIP_RETCODE SCIPsetSymgraphEdgeSymcolor(
+   SYM_GRAPH*            graph,              /**< pointer to symmetry detection graph */
+   int                   edgeidx,            /**< index of edge whose color needs to be returned */
+   int                   color               /**< color used for symmetry detection */
+   );
+
+/** returns whether edge colors for symmetry detection have been computed */
+SCIP_EXPORT
+SCIP_Bool SCIPhasSymgraphEdgeSymcolor(
+   SYM_GRAPH*            graph               /**< pointer to symmetry detection graph */
+   );
+
+/** gets constraint information from a symmetry detection graph */
+SCIP_EXPORT
+SCIP_RETCODE SCIPgetSymgraphConsinfo(
+   SYM_GRAPH*            graph,              /**< pointer to symmetry detection graph */
+   SCIP_Bool*            hasconsinfo,        /**< buffer to store whether graph has constraint information */
+   SCIP_CONS**           cons,               /**< buffer to store pointer to constraint (if graph has information) */
+   SCIP_Real*            lhs,                /**< buffer to store lhs (if graph has information) */
+   SCIP_Real*            rhs                 /**< buffer to store rhs (if graph has information) */
+   );
+
+/** return the number of nodes in a symmetry detection graph */
+SCIP_EXPORT
+int SCIPgetSymgraphNnodes(
+   SYM_GRAPH*            graph               /**< pointer to symmetry detection graph */
+   );
+
+/** return the number of operator nodes in a symmetry detection graph */
+SCIP_EXPORT
+int SCIPgetSymgraphNopnodes(
+   SYM_GRAPH*            graph               /**< pointer to symmetry detection graph */
+   );
+
+/** return the number of variable nodes in a symmetry detection graph */
+SCIP_EXPORT
+int SCIPgetSymgraphNvarnodes(
+   SYM_GRAPH*            graph               /**< pointer to symmetry detection graph */
+   );
+
+/** return the number of value nodes in a symmetry detection graph */
+SCIP_EXPORT
+int SCIPgetSymgraphNvalnodes(
+   SYM_GRAPH*            graph               /**< pointer to symmetry detection graph */
+   );
+
+/** return whether the graph has a rhs node */
+SCIP_EXPORT
+SCIP_Bool SCIPhasSymgraphRhsnode(
+   SYM_GRAPH*            graph               /**< pointer to symmetry detection graph */
+   );
+
+/** return the number of edges in a symmetry detection graph */
+SCIP_EXPORT
+int SCIPgetSymgraphNedges(
+   SYM_GRAPH*            graph               /**< pointer to symmetry detection graph */
+   );
+
+/** returns whether a node of a symmetry detection graph is an operator node */
+SCIP_EXPORT
+SCIP_Bool SCIPisSymgraphNodeOpnode(
+   SYM_GRAPH*            graph,              /**< pointer to symmetry detection graph */
+   int                   nodeidx             /**< index of node in graph */
+   );
+
+/** returns whether a node of a symmetry detection graph is a variable node */
+SCIP_EXPORT
+SCIP_Bool SCIPisSymgraphNodeVarnode(
+   SYM_GRAPH*            graph,              /**< pointer to symmetry detection graph */
+   int                   nodeidx             /**< index of node in graph */
+   );
+
+/** returns whether a node of a symmetry detection graph is a value node */
+SCIP_EXPORT
+SCIP_Bool SCIPisSymgraphNodeValnode(
+   SYM_GRAPH*            graph,              /**< pointer to symmetry detection graph */
+   int                   nodeidx             /**< index of node in graph */
+   );
+
+/** returns whether a node of a symmetry detection graph is a rhs node */
+SCIP_EXPORT
+SCIP_Bool SCIPisSymgraphNodeRhsnode(
+   SYM_GRAPH*            graph,              /**< pointer to symmetry detection graph */
+   int                   nodeidx             /**< index of node in graph */
+   );
+
+/** returns the variable of a variable node */
+SCIP_EXPORT
+SCIP_VAR* SCIPgetSymgraphVarnodeVar(
+   SYM_GRAPH*            graph,              /**< pointer to symmetry detection graph */
+   int                   nodeidx             /**< index of node in graph */
+   );
+
+/** returns the first node index of an edge */
+SCIP_EXPORT
+int SCIPgetSymgraphEdgeFirst(
+   SYM_GRAPH*            graph,              /**< pointer to symmetry detection graph */
+   int                   edgeidx             /**< index of edge in graph */
+   );
+
+/** returns the second node index of an edge */
+SCIP_EXPORT
+int SCIPgetSymgraphEdgeSecond(
+   SYM_GRAPH*            graph,              /**< pointer to symmetry detection graph */
+   int                   edgeidx             /**< index of edge in graph */
+   );
+
+/** updates lhs constraint information of a symmetry detection graph */
+SCIP_EXPORT
+SCIP_RETCODE SCIPupdateSymgraphLhs(
+   SYM_GRAPH*            graph,              /**< pointer to symmetry detection graph */
+   SCIP_Real             lhs                 /**< lhs */
+   );
+
+/** updates rhs constraint information of a symmetry detection graph */
+SCIP_EXPORT
+SCIP_RETCODE SCIPupdateSymgraphRhs(
+   SYM_GRAPH*            graph,              /**< pointer to symmetry detection graph */
+   SCIP_Real             rhs                 /**< rhs */
    );
 
 /** @} */

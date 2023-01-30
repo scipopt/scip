@@ -10172,6 +10172,10 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphSOS1)
    SCIP_Real color;
    SCIP_Real constant = 0.0;
    SCIP_Bool iscolored;
+   int nopnodes;
+   int nvarnodes;
+   int nvalnodes;
+   int nedges;
    int nconsvars;
    int nlocvars;
    int nnodes;
@@ -10191,12 +10195,17 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphSOS1)
    SCIP_CALL( SCIPallocBufferArray(scip, &locvars, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &locvals, nvars) );
 
+   /* find potential number of nodes and edges of graph */
+   nopnodes = 1;
+   nvarnodes = nconsvars;
+   nvalnodes = 0;
+   nedges = nconsvars;
+
    /* create graph */
-   SCIP_CALL( SCIPcreateSymgraph(scip, graph, nconsvars) );
+   SCIP_CALL( SCIPcreateSymgraph(scip, graph, nopnodes, nvarnodes, nvalnodes, nedges) );
 
    /* add node initializing constraint (with artificial rhs) */
-   SCIP_CALL( SCIPcreateSymgraphNode(scip, *graph, 0, SYM_NODETYPE_RHS, NULL, NULL, -1.0, 0.0, TRUE,
-         0.0, 0.0, cons, SCIPfindConshdlr(scip, CONSHDLR_NAME)) );
+   SCIP_CALL( SCIPaddSymgraphRhsnode(scip, *graph, cons, 0.0, 0.0) );
    nnodes = 1;
 
    /* for all (aggregation of) variables, add a node to graph and connect it with the root */
@@ -10211,26 +10220,22 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphSOS1)
 
       if( nlocvars == 1 && SCIPisZero(scip, constant) && SCIPisEQ(scip, locvals[i], 1.0) )
       {
-         SCIP_CALL( SCIPcreateSymgraphNode(scip, *graph, nnodes, SYM_NODETYPE_VAR, NULL,
-               locvars[0], SCIPvarGetProbindex(locvars[0]), 0.0, FALSE, 0.0, 0.0, NULL, NULL) );
+         SCIP_CALL( SCIPaddSymgraphVarnode(scip, *graph, locvars[0]) );
 
          iscolored = consdata->weights != NULL ? TRUE : FALSE;
          color = iscolored ? consdata->weights[i] : 0.0;
 
-         SCIP_CALL( SCIPcreateSymgraphEdge(scip, *graph, (*graph)->nodes[0], (*graph)->nodes[nnodes],
-               iscolored, color) );
+         SCIP_CALL( SCIPaddSymgraphEdge(scip, *graph, 0, nnodes, iscolored, color) );
          ++nnodes;
       }
       else
       {
-         SCIP_CALL( SCIPcreateSymgraphNode(scip, *graph, nnodes, SYM_NODETYPE_OPERATOR, sumop,
-               NULL, -1, 0.0, FALSE, 0.0, 0.0, NULL, NULL) );
+         SCIP_CALL( SCIPaddSymgraphOpnode(scip, *graph, sumop) );
 
          iscolored = consdata->weights != NULL ? TRUE : FALSE;
          color = iscolored ? consdata->weights[i] : 0.0;
 
-         SCIP_CALL( SCIPcreateSymgraphEdge(scip, *graph, (*graph)->nodes[0], (*graph)->nodes[nnodes],
-               iscolored, color) );
+         SCIP_CALL( SCIPaddSymgraphEdge(scip, *graph, 0, nnodes, iscolored, color) );
          ++nnodes;
 
          SCIP_CALL( SCIPaddSymgraphVarAggegration(scip, *graph, nnodes - 1, &nnodes,

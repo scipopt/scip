@@ -48,6 +48,7 @@
 #include "scip/expr.h"
 #include "scip/cons_nonlinear.h"
 #include "scip/cons_linear.h"
+#include "scip/symmetry.h"
 
 using std::vector;
 
@@ -1634,8 +1635,6 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators2(
    SCIP_Real*            log10groupsize      /**< pointer to store log10 of size of group */
    )
 {
-   SYM_NODE** nodes;
-   SYM_EDGE** edges;
    SCIP_HASHMAP* revconsidx;
    int* nodeidx;
    int* considx;
@@ -1685,20 +1684,26 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators2(
    for (int g = 0; g < ngraphs; ++g)
    {
       /* add nodes */
-      nodes = graphs[g]->nodes;
-      assert( graphs[g]->nnodes <= maxnnodesgraph );
-
-      for (int v = 0; v < graphs[g]->nnodes; ++v)
+      for (int v = 0; v < SCIPgetSymgraphNnodes(graphs[g]); ++v)
       {
-         if ( nodes[v]->nodetype != SYM_NODETYPE_VAR )
+         if ( ! SCIPisSymgraphNodeVarnode(graphs[g], v) )
          {
-            const int color = nodes[v]->computedcolor;
+            int node;
 
-            int node = (int) G.add_vertex((unsigned) color);
+            if ( SCIPisSymgraphNodeRhsnode(graphs[g], v) )
+            {
+               const int color = SCIPgetSymgraphRhsnodeSymcolor(graphs[g]);
+               node = (int) G.add_vertex((unsigned) color);
+            }
+            else
+            {
+               const int color = SCIPgetSymgraphNodeSymcolor(graphs[g], v);
+               node = (int) G.add_vertex((unsigned) color);
+            }
 
             nodeidx[v] = node;
 
-            if ( nodes[v]->nodetype == SYM_NODETYPE_RHS )
+            if ( SCIPisSymgraphNodeRhsnode(graphs[g], v) )
             {
                considx[g] = node;
                SCIP_CALL( SCIPhashmapInsertInt(revconsidx, (void*) (long) node, g) );
@@ -1711,28 +1716,27 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators2(
       }
 
       /* add edges */
-      edges = graphs[g]->edges;
-      for (int e = 0; e < graphs[g]->nedges; ++e)
+      for (int e = 0; e < SCIPgetSymgraphNedges(graphs[g]); ++e)
       {
-         first = nodeidx[edges[e]->first->id];
-         second = nodeidx[edges[e]->second->id];
+         first = nodeidx[SCIPgetSymgraphEdgeFirst(graphs[g], e)];
+         second = nodeidx[SCIPgetSymgraphEdgeSecond(graphs[g], e)];
          assert( first >= 0 || second >= 0 );
 
          if ( first == -1 )
          {
-            assert( edges[e]->first->nodetype == SYM_NODETYPE_VAR );
-            first = edges[e]->first->varidx;
+            assert( SCIPisSymgraphNodeVarnode(graphs[g], SCIPgetSymgraphEdgeFirst(graphs[g], e)) );
+            first = SCIPvarGetProbindex(SCIPgetSymgraphVarnodeVar(graphs[g], SCIPgetSymgraphEdgeFirst(graphs[g], e)));
          }
          else if ( second == -1 )
          {
-            assert( edges[e]->second->nodetype == SYM_NODETYPE_VAR );
-            second = edges[e]->second->varidx;
+            assert( SCIPisSymgraphNodeVarnode(graphs[g], SCIPgetSymgraphEdgeSecond(graphs[g], e)) );
+            second = SCIPvarGetProbindex(SCIPgetSymgraphVarnodeVar(graphs[g], SCIPgetSymgraphEdgeSecond(graphs[g], e)));
          }
 
          /* possibly split edge if it is colored */
-         if ( edges[e]->computedcolor != -1 )
+         if ( SCIPisSymgraphEdgeColored(scip, graphs[g], e) )
          {
-            const int color = edges[e]->computedcolor;
+            const int color = SCIPgetSymgraphEdgeSymcolor(graphs[g], e);
 
             int inter = G.add_vertex((unsigned) color);
 

@@ -3109,6 +3109,10 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphCardinality)
    SCIP_Real* vals;
    SCIP_Real constant;
    SCIP_Real rhs;
+   int nopnodes;
+   int nvarnodes;
+   int nvalnodes;
+   int nedges;
    int varrootid;
    int nconsvars;
    int nlocvars;
@@ -3123,14 +3127,18 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphCardinality)
 
    nconsvars = consdata->nvars;
 
+   /* find potential number of nodes and edges in graph */
+   nopnodes = 1;
+   nvarnodes = nconsvars;
+   nvalnodes = 0;
+   nedges = nconsvars;
+
    /* create graph */
-   SCIP_CALL( SCIPcreateSymgraph(scip, graph, nconsvars) );
+   rhs = (SCIP_Real) consdata->cardval;
+   SCIP_CALL( SCIPcreateSymgraph(scip, graph, nopnodes, nvarnodes, nvalnodes, nedges) );
 
    /* add node for rhs */
-   rhs = (SCIP_Real) consdata->cardval;
-
-   SCIP_CALL( SCIPcreateSymgraphNode(scip, *graph, 0, SYM_NODETYPE_RHS, NULL, NULL, -1.0, rhs, TRUE,
-         -SCIPinfinity(scip), rhs, cons, SCIPfindConshdlr(scip, CONSHDLR_NAME)) );
+   SCIP_CALL( SCIPaddSymgraphRhsnode(scip, *graph, cons, -SCIPinfinity(scip), rhs) );
 
    /* create nodes and edges for each variable */
    nvars = SCIPgetNVars(scip);
@@ -3153,12 +3161,11 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphCardinality)
          varrootid = cnt;
 
          /* encode aggregation by a sum-expression */
-         SCIP_CALL( SCIPcreateSymgraphNode(scip, *graph, cnt, SYM_NODETYPE_OPERATOR,
-               sumexpr, NULL, -1, 0.0, FALSE, 0.0, 0.0, NULL, NULL) );
+         SCIP_CALL( SCIPaddSymgraphOpnode(scip, *graph, sumexpr) );
 
          /* we do not need to take weights of variables into account;
           * they are only used to sort variables within the constraint */
-         SCIP_CALL( SCIPcreateSymgraphEdge(scip, *graph, (*graph)->nodes[0], (*graph)->nodes[cnt], FALSE, 0.0) );
+         SCIP_CALL( SCIPaddSymgraphEdge(scip, *graph, 0, cnt, FALSE, 0.0) );
          ++cnt;
 
          /* add nodes and edges for variables in aggregation */
@@ -3167,10 +3174,9 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphCardinality)
       }
       else
       {
-         SCIP_CALL( SCIPcreateSymgraphNode(scip, *graph, cnt, SYM_NODETYPE_VAR,
-               NULL, vars[0], SCIPvarGetProbindex(vars[0]), 0.0, FALSE, 0.0, 0.0, NULL, NULL) );
+         SCIP_CALL( SCIPaddSymgraphVarnode(scip, *graph, vars[0]) );
 
-         SCIP_CALL( SCIPcreateSymgraphEdge(scip, *graph, (*graph)->nodes[0], (*graph)->nodes[cnt], FALSE, 0.0) );
+         SCIP_CALL( SCIPaddSymgraphEdge(scip, *graph, 0, cnt, FALSE, 0.0) );
          ++cnt;
       }
    }

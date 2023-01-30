@@ -7185,6 +7185,10 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphIndicator)
    SCIP_Real lhs;
    SCIP_Real rhs;
    SCIP_Bool suc;
+   int nopnodes;
+   int nvarnodes;
+   int nvalnodes;
+   int nedges;
    int varrootid;
    int nvarslincons;
    int nlocvars;
@@ -7207,21 +7211,24 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphIndicator)
    lhs = SCIPgetLhsLinear(scip, lincons);
    rhs = SCIPgetRhsLinear(scip, lincons);
 
-   /* create graph */
-   SCIP_CALL( SCIPcreateSymgraph(scip, graph, nvarslincons + 7) );
+   /* find potential number of nodes and edges in graph */
+   nopnodes = 4;
+   nvarnodes = nvarslincons + 2;
+   nvalnodes = 1;
+   nedges = nvarslincons + 6;
+
+   /* create graph (lhs/rhs might get updated later on) */
+   SCIP_CALL( SCIPcreateSymgraph(scip, graph, nopnodes, nvarnodes, nvalnodes, nedges) );
 
    /* add node initializing constraint (with lhs/rhs of linear constraint) */
-   SCIP_CALL( SCIPcreateSymgraphNode(scip, *graph, 0, SYM_NODETYPE_RHS, NULL, NULL, -1.0, 0.0, TRUE,
-         lhs, rhs, cons, SCIPfindConshdlr(scip, CONSHDLR_NAME)) );
+   SCIP_CALL( SCIPaddSymgraphRhsnode(scip, *graph, cons, lhs, rhs) );
 
    /* create nodes and edges for activation of constraint */
-   SCIP_CALL( SCIPcreateSymgraphNode(scip, *graph, 1, SYM_NODETYPE_OPERATOR, eqexpr, NULL, -1.0, 0.0,
-         FALSE, 0.0, 0.0, NULL, NULL) );
-   SCIP_CALL( SCIPcreateSymgraphEdge(scip, *graph, (*graph)->nodes[0], (*graph)->nodes[1], FALSE, 0.0) );
+   SCIP_CALL( SCIPaddSymgraphOpnode(scip, *graph, eqexpr) );
+   SCIP_CALL( SCIPaddSymgraphEdge(scip, *graph, 0, 1, FALSE, 0.0) );
 
-   SCIP_CALL( SCIPcreateSymgraphNode(scip, *graph, 2, SYM_NODETYPE_VAL, NULL, NULL, -1.0, (SCIP_Real) consdata->activeone,
-         FALSE, 0.0, 0.0, NULL, NULL) );
-   SCIP_CALL( SCIPcreateSymgraphEdge(scip, *graph, (*graph)->nodes[1], (*graph)->nodes[2], FALSE, 0.0) );
+   SCIP_CALL( SCIPaddSymgraphValnode(scip, *graph, (SCIP_Real) consdata->activeone) );
+   SCIP_CALL( SCIPaddSymgraphEdge(scip, *graph, 1, 2, FALSE, 0.0) );
    cnt = 3;
 
    /* create nodes and edges for (possibly aggregated) activation variable */
@@ -7240,9 +7247,8 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphIndicator)
    if( nlocvars > 1 || !SCIPisEQ(scip, vals[0], 1.0) || !SCIPisZero(scip, constant) )
    {
       /* encode aggregation by a sum-expression and connect it to bdexpr node */
-      SCIP_CALL( SCIPcreateSymgraphNode(scip, *graph, cnt, SYM_NODETYPE_OPERATOR,
-            sumexpr, NULL, -1, 0.0, FALSE, 0.0, 0.0, NULL, NULL) );
-      SCIP_CALL( SCIPcreateSymgraphEdge(scip, *graph, (*graph)->nodes[1], (*graph)->nodes[cnt], FALSE, 0.0) );
+      SCIP_CALL( SCIPaddSymgraphOpnode(scip, *graph, sumexpr) );
+      SCIP_CALL( SCIPaddSymgraphEdge(scip, *graph, 1, cnt, FALSE, 0.0) );
 
       varrootid = cnt++;
 
@@ -7252,15 +7258,13 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphIndicator)
    }
    else
    {
-      SCIP_CALL( SCIPcreateSymgraphNode(scip, *graph, cnt, SYM_NODETYPE_VAR,
-            NULL, vars[0], SCIPvarGetProbindex(vars[0]), 0.0, FALSE, 0.0, 0.0, NULL, NULL) );
-      SCIP_CALL( SCIPcreateSymgraphEdge(scip, *graph, (*graph)->nodes[1], (*graph)->nodes[cnt], FALSE, 0.0) );
+      SCIP_CALL( SCIPaddSymgraphVarnode(scip, *graph, vars[0]) );
+      SCIP_CALL( SCIPaddSymgraphEdge(scip, *graph, 1, cnt, FALSE, 0.0) );
       ++cnt;
    }
 
-   SCIP_CALL( SCIPcreateSymgraphNode(scip, *graph, cnt, SYM_NODETYPE_OPERATOR,
-         slackexpr, NULL, -1, 0.0, FALSE, 0.0, 0.0, NULL, NULL) );
-   SCIP_CALL( SCIPcreateSymgraphEdge(scip, *graph, (*graph)->nodes[0], (*graph)->nodes[cnt], FALSE, 0.0) );
+   SCIP_CALL( SCIPaddSymgraphOpnode(scip, *graph, slackexpr) );
+   SCIP_CALL( SCIPaddSymgraphEdge(scip, *graph, 0, cnt, FALSE, 0.0) );
    ++cnt;
 
    /* create nodes and edges for (possibly aggregated) slack variable */
@@ -7274,9 +7278,8 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphIndicator)
    if( nlocvars > 1 || !SCIPisEQ(scip, vals[0], 1.0) || !SCIPisZero(scip, constant) )
    {
       /* encode aggregation by a sum-expression and connect it to root node */
-      SCIP_CALL( SCIPcreateSymgraphNode(scip, *graph, cnt, SYM_NODETYPE_OPERATOR,
-            sumexpr, NULL, -1, 0.0, FALSE, 0.0, 0.0, NULL, NULL) );
-      SCIP_CALL( SCIPcreateSymgraphEdge(scip, *graph, (*graph)->nodes[cnt - 1], (*graph)->nodes[cnt], FALSE, 0.0) );
+      SCIP_CALL( SCIPaddSymgraphOpnode(scip, *graph, sumexpr) );
+      SCIP_CALL( SCIPaddSymgraphEdge(scip, *graph, cnt - 1, cnt, FALSE, 0.0) );
       varrootid = cnt++;
 
       /* add nodes and edges for variables in aggregation */
@@ -7285,9 +7288,8 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphIndicator)
    }
    else
    {
-      SCIP_CALL( SCIPcreateSymgraphNode(scip, *graph, cnt, SYM_NODETYPE_VAR,
-            NULL, vars[0], SCIPvarGetProbindex(vars[0]), 0.0, FALSE, 0.0, 0.0, NULL, NULL) );
-      SCIP_CALL( SCIPcreateSymgraphEdge(scip, *graph, (*graph)->nodes[cnt - 1], (*graph)->nodes[cnt], FALSE, 0.0) );
+      SCIP_CALL( SCIPaddSymgraphVarnode(scip, *graph, vars[0]) );
+      SCIP_CALL( SCIPaddSymgraphEdge(scip, *graph, cnt - 1, cnt, FALSE, 0.0) );
       ++cnt;
    }
 
@@ -7299,9 +7301,8 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphIndicator)
    }
    nlocvars = nvarslincons;
 
-   SCIP_CALL( SCIPcreateSymgraphNode(scip, *graph, cnt, SYM_NODETYPE_OPERATOR,
-         sumexpr, NULL, -1, 0.0, FALSE, 0.0, 0.0, NULL, NULL) );
-   SCIP_CALL( SCIPcreateSymgraphEdge(scip, *graph, (*graph)->nodes[0], (*graph)->nodes[cnt], FALSE, 0.0) );
+   SCIP_CALL( SCIPaddSymgraphOpnode(scip, *graph, sumexpr) );
+   SCIP_CALL( SCIPaddSymgraphEdge(scip, *graph, 0, cnt, FALSE, 0.0) );
    varrootid = cnt++;
 
    SCIP_CALL( SCIPgetActiveVariables(scip, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
@@ -7313,11 +7314,10 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphIndicator)
    /* possibly adapt lhs/rhs of root node */
    if( !SCIPisZero(scip, constant) )
    {
-      assert((*graph)->nodes[0]->nodetype == SYM_NODETYPE_RHS);
-      assert((*graph)->nodes[0]->consinfo != NULL);
+      assert(SCIPgetSymgraphNodeType(*graph, 0) == SYM_NODETYPE_RHS);
 
-      (*graph)->nodes[0]->consinfo->lhs -= constant;
-      (*graph)->nodes[0]->consinfo->rhs -= constant;
+      SCIP_CALL( SCIPupdateSymgraphLhs(*graph, lhs - constant) );
+      SCIP_CALL( SCIPupdateSymgraphRhs(*graph, rhs - constant) );
    }
 
    SCIPfreeBufferArray(scip, &vals);
