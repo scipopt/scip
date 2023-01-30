@@ -993,9 +993,9 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
 
          for( b = 0; b < scdata->nbnds; b++ )
          {
-            if( (scdata->bvars[b] == cand || (SCIPvarIsNegated(cand) && scdata->bvars[0] == SCIPvarGetNegationVar(cand))) )
+            if( (scdata->bvars[b] == cand || (SCIPvarIsNegated(cand) && scdata->bvars[0] == SCIPvarGetNegationVar(cand)))
+                  && SCIPisEQ(scip, side, scdata->vals0[b]) )
             {
-               assert(SCIPisEQ(scip, side, scdata->vals0[b]));
 
                /* TODO: handle also more general variables;
                 * currently we handle only variables with domain vals0 < lb1 <= ub1 */
