@@ -187,6 +187,9 @@ Fixed bugs
 - Enabled the solution limit checks in SCIPsolveIsStopped in solve.c when in SCIP_STAGE_PRESOLVING
 - fix quad precision comparison for the calculation of knapsackcover constraints.
 - force copying of symmetry constraints for concurrent solve
+- increase the precision of double multiplications in quad precision environments
+- corrected handling of different variable types in symmetry
+- orbitope detection: refine computation of overlap structure and fixed bug in finding orbitope generators
 
 Miscellaneous
 -------------
@@ -235,7 +238,6 @@ Fixed bugs
 - fixed a sign check in detection of linear constraints that are parallel to the objective
 - fixed bug in Clp and lpi_clp with missing basis information when calling the barrier with crossover; needs new Clp version
 - do not assume aggregation is successful in cons_setppc.c
-- increase the precision of double multiplications in quad precision environments
 
 Miscellaneous
 -------------
