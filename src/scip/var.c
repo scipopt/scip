@@ -2379,6 +2379,8 @@ SCIP_RETCODE SCIPvarCopyExactData(
 
 
    SCIP_CALL( RatCopy(blkmem, &targetvar->exactdata->obj, sourcevar->exactdata->obj) );
+   if( negateobj )
+      RatNegate(targetvar->exactdata->obj, targetvar->exactdata->obj);
    targetvar->exactdata->colexact = NULL;
    targetvar->exactdata->varstatusexact = SCIP_VARSTATUS_LOOSE;
    targetvar->exactdata->certificateindex = sourcevar->exactdata->certificateindex;
