@@ -1784,8 +1784,7 @@ SCIP_RETCODE SCIPconflictFlushResolutionSets(
    assert(SCIPtreeGetCurrentDepth(tree) == tree->pathlen-1);
 
    /* calculate the maximal size of each accepted conflict set */
-   /* todo think of some limits */
-   maxsize = transprob->nvars;
+   maxsize = (int) (set->conf_maxvarsfracres * transprob->nvars);
 
    SCIPsetDebugMsg(set, "flushing %d resolution sets at focus depth %d (vd: %d, cd: %d, rd: %d, maxsize: %d)\n",
       1, focusdepth, resolutionset->validdepth, resolutionset->conflictdepth, resolutionset->repropdepth, maxsize);
@@ -2103,7 +2102,6 @@ SCIP_RETCODE DivisionBasedReduction(
    assert(idxinreason >= 0);
 
    coefinreason = fabs(reasonset->vals[idxinreason]);
-   resolutionsetPrintRow(reasonset, set, prob, 2);
    SCIP_CALL( rescaleAndResolve(set, conflict->resolutionset, reasonset, conflict->resolvedresolutionset, blkmem,
                         residx, successresolution) );
 
@@ -2174,8 +2172,6 @@ SCIP_RETCODE DivisionBasedReduction(
                reducedreason->slack = getSlack(set, prob, reducedreason, currbdchgidx, fixbounds, fixinds);
                SCIPsetDebugMsg(set, "slack before tightening: %g \n",  previousslack);
                SCIPsetDebugMsg(set, "slack after tightening: %g \n", reducedreason->slack);
-               resolutionsetPrintRow(reasonset, set, prob, 2);
-               resolutionsetPrintRow(reducedreason, set, prob, 2);
                SCIP_CALL( rescaleAndResolve(set, conflict->resolutionset, reducedreason, conflict->resolvedresolutionset, blkmem, residx, successresolution) );
                SCIPresolutionsetFree(&reducedreason, blkmem);
                break;
@@ -3168,8 +3164,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
    }
 
    /* calculate the maximal size of each accepted conflict set */
-   /* todo think of some limits */
-   maxsize = transprob->nvars;
+   maxsize = (int) (set->conf_maxvarsfac * transprob->nvars);
    if( SCIProwGetNNonz(initialconflictrow) > maxsize )
    {
       SCIPsetDebugMsg(set, "Number of nonzeros in conflict is larger than maxsize %d > %d\n",

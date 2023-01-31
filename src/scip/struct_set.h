@@ -210,6 +210,7 @@ struct SCIP_Set
 
    /* conflict analysis settings */
    SCIP_Real             conf_maxvarsfac;    /**< maximal fraction of variables involved in a conflict constraint */
+   SCIP_Real             conf_maxvarsfracres;/**< maximal fraction of variables involved in a resolution conflict constraint */
    int                   conf_minmaxvars;    /**< minimal absolute maximum of variables involved in a conflict constraint */
    int                   conf_maxlploops;    /**< maximal number of LP resolving loops during conflict analysis
                                               *   (-1: no limit) */

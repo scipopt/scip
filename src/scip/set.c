@@ -174,6 +174,7 @@
 
 /* Conflict Analysis (generalized resolution) */
 
+#define SCIP_DEFAULT_CONF_MAXVARSFRACRES     0.3 /**< maximal fraction of variables involved in a resolution conflict constraint */
 #define SCIP_DEFAULT_CONF_RESOLUTIONCONS     10 /**< number of resolution constraints to add (-1: add every conflict constraint) */
 #define SCIP_DEFAULT_CONF_MAXNUMRESSTEPS     -1 /**< maximal number of resolution steps in generalized resolution (-1: resolve till (All) FirstUIP) */
 #define SCIP_DEFAULT_CONF_RESFUIPLEVELS      -1 /**< number of depth levels up to which first UIP's are used in resolution conflict
@@ -1405,6 +1406,11 @@ SCIP_RETCODE SCIPsetCreate(
          "conflict/maxvarsfac",
          "maximal fraction of variables involved in a conflict constraint",
          &(*set)->conf_maxvarsfac, TRUE, SCIP_DEFAULT_CONF_MAXVARSFAC, 0.0, SCIP_REAL_MAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "conflict/maxvarsfracres",
+         "maximal fraction of variables involved in a resolution conflict constraint",
+         &(*set)->conf_maxvarsfracres, TRUE, SCIP_DEFAULT_CONF_MAXVARSFRACRES, 0.0, SCIP_REAL_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "conflict/minmaxvars",
