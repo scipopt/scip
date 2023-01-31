@@ -162,7 +162,7 @@ namespace sassy {
                 old_col.push_back(c[i]);
             }
 
-            auto rd = std::random_device {};
+            std::random_device rd;
             auto rng = std::default_random_engine { rd() };
             std::shuffle(std::begin(vec), std::end(vec), rng);
 
