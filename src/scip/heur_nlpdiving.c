@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -1747,6 +1747,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
    {
       SCIP_NLPSTATISTICS nlpstatistics;
 
+      /* cppcheck-suppress syntaxError */
       SCIP_CALL( SCIPsolveNLP(scip,
          .iterlimit = maxnnlpiterations - heurdata->nnlpiterations,
          .fastfail = heurdata->nlpfastfail ? SCIP_NLPPARAM_FASTFAIL_AGGRESSIVE : SCIP_NLPPARAM_FASTFAIL_CONSERVATIVE) );  /*lint !e666*/
