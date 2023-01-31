@@ -808,7 +808,7 @@ SCIP_RETCODE SCIPanalyzeConflictCons(
                isbinary = FALSE;
                break;
             }
-            if (SCIPbdchginfoGetNewbound(bdchginfo) == 1.0)
+            if (SCIPbdchginfoGetNewbound(bdchginfo) >= 0.5)
                lhs--;
          }
 
