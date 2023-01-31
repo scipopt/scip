@@ -830,6 +830,7 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/solve.o \
 			scip/stat.o \
 			scip/symmetry.o \
+			scip/symmetry_orbitopal.o \
 			scip/syncstore.o \
 			scip/table.o \
 			scip/tree.o \

@@ -5443,6 +5443,25 @@ SCIP_DECL_SORTPTRCOMP(SCIPsortCompInt)
    return 0;
 }
 
+/** implements argsort
+ *
+ * The data pointer is a lookup array.
+ */
+SCIP_DECL_SORTINDCOMP(SCIPsortArgsortInt)
+{
+   int* args;
+   args = (int*) dataptr;
+
+   if( args[ind1] < args[ind2] )
+      return -1;
+
+   if( args[ind1] > args[ind2] )
+      return 1;
+
+   return 0;
+}
+
+
 /* first all upwards-sorting methods */
 
 /** sort an indexed element set in non-decreasing order, resulting in a permutation index array */

@@ -59,6 +59,14 @@ extern "C" {
 SCIP_EXPORT
 SCIP_DECL_SORTPTRCOMP(SCIPsortCompInt);
 
+
+/** implements argsort
+ *
+ * The data pointer is a lookup array.
+ */
+SCIP_EXPORT
+SCIP_DECL_SORTINDCOMP(SCIPsortArgsortInt);
+
 /* first all upwards-sorting methods */
 
 /** sort an indexed element set in non-decreasing order, resulting in a permutation index array */
