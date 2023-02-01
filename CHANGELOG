@@ -63,11 +63,13 @@ Fixed bugs
 - corrected handling of different variable types in symmetry
 - orbitope detection: refine computation of overlap structure and fixed bug in finding orbitope generators
 - ensure that winner is always determined in concurrent mode
+- when a row with invalid index range is added to the global cutpool, update the indices instead of failing with an assert
 
 Miscellaneous
 -------------
 
 - Extended documentation of the parameter limits/solutions to point out that the limit is first checked in presolving
+- Added more information about using SCIPcache- and SCIPflushRowExtensions() to documentation and comments
 
 Known bugs
 ----------
@@ -1309,7 +1311,6 @@ Fixed bugs
 - Improved separation for SOC constraint with multiaggregated variable on right-hand-side.
 - Fixed bug in presol_boundshift: do not shift non-active variables
 - Fixed bug in domain propagation for SOC constraints with negative coefficient for variable on right-hand-side.
-- When a row with invalid minidx and maxidx is added to global cutpool, update the indices instead of failing as assert
 - Fixed bug with multi-aggregated integer variables in cons_xor.
 - Fixed bug with changed number of variables in storing relaxation solution in probing/diving.
 - Fixed issues with scip statistics
@@ -1318,8 +1319,6 @@ Fixed bugs
 
 Miscellaneous
 -------------
-
-- Added more information about using SCIPcache- and SCIPflushRowExtensions() to the documentation and comments
 
 Known bugs
 ----------
