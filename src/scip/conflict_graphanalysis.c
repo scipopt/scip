@@ -3247,7 +3247,7 @@ SCIP_RETCODE conflictResolveBound(
             SCIPgetVarBdAtIndex(set->scip, infervar, inferboundtype, bdchgidx, TRUE),
             SCIPpropGetName(inferprop), inferinfo);
 
-         SCIP_CALL( SCIPpropResolvePropagation(inferprop, set, infervar, inferinfo, inferboundtype, bdchgidx, relaxedbd, &result) );
+         SCIP_CALL( SCIPpropResolvePropagation(inferprop, set, infervar, inferinfo, inferboundtype, bdchgidx, relaxedbd, FALSE, &result) );
          *resolved = (result == SCIP_SUCCESS);
       }
       break;

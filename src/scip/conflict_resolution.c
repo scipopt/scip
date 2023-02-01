@@ -647,8 +647,13 @@ SCIP_Bool bdchginfoIsResolvable(
       return FALSE;
    else if (bdchgtype == SCIP_BOUNDCHGTYPE_PROPINFER)
    {
-      /* todo some propagators can be resolved */
-      return FALSE;
+      /* todo also other propagators can be resolved */
+      if (SCIPbdchginfoGetInferProp(bdchginfo) == NULL)
+         return FALSE;
+      else if( strcmp(SCIPpropGetName(SCIPbdchginfoGetInferProp(bdchginfo)), "pseudoobj") == 0 )
+         return TRUE;
+      else
+         return FALSE;
    }
    assert(bdchgtype == SCIP_BOUNDCHGTYPE_CONSINFER);
    conshdlr = SCIPconsGetHdlr(SCIPbdchginfoGetInferCons(bdchginfo));
@@ -2656,6 +2661,7 @@ SCIP_RETCODE reasonBoundChanges(
 {
    SCIP_VAR* actvar;
    SCIP_CONS* infercons;
+   SCIP_PROP* inferprop;
    SCIP_RESULT result;
 
 #ifndef NDEBUG
@@ -2743,7 +2749,36 @@ SCIP_RETCODE reasonBoundChanges(
       break;
 
    case SCIP_BOUNDCHGTYPE_PROPINFER:
-      assert(!(*resolved));
+      inferprop = SCIPbdchginfoGetInferProp(bdchginfo);
+      if( inferprop != NULL )
+      {
+         SCIP_VAR* infervar;
+         int inferinfo;
+         SCIP_BOUNDTYPE inferboundtype;
+         SCIP_BDCHGIDX* bdchgidx;
+
+         /* resolve bound change by asking the propagator that infered the bound to put all bounds that were
+          * the reasons for the conflicting bound change on the priority queue
+          */
+         infervar = SCIPbdchginfoGetInferVar(bdchginfo);
+         inferinfo = SCIPbdchginfoGetInferInfo(bdchginfo);
+         inferboundtype = SCIPbdchginfoGetInferBoundtype(bdchginfo);
+         bdchgidx = SCIPbdchginfoGetIdx(bdchginfo);
+         assert(infervar != NULL);
+
+         SCIPsetDebugMsg(set, "getting reason for <%s> %s %g(%g) [status:%d, depth:%d, pos:%d]: <%s> %s %g [prop:<%s>, info:%d]\n",
+            SCIPvarGetName(actvar),
+            SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
+            SCIPbdchginfoGetNewbound(bdchginfo), relaxedbd,
+            SCIPvarGetStatus(actvar), SCIPbdchginfoGetDepth(bdchginfo), SCIPbdchginfoGetPos(bdchginfo),
+            SCIPvarGetName(infervar),
+            inferboundtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
+            SCIPgetVarBdAtIndex(set->scip, infervar, inferboundtype, bdchgidx, TRUE),
+            SCIPpropGetName(inferprop), inferinfo);
+
+         SCIP_CALL( SCIPpropResolvePropagation(inferprop, set, infervar, inferinfo, inferboundtype, bdchgidx, relaxedbd, TRUE, &result) );
+         *resolved = (result == SCIP_SUCCESS);
+      }
       break;
 
    case SCIP_BOUNDCHGTYPE_BRANCHING:
@@ -2981,7 +3016,7 @@ SCIP_RETCODE getReasonRow(
 {
    assert(success !=  NULL);
 
-   if (bdchginfoIsResolvable(currbdchginfo))
+   if (bdchginfoIsResolvable(currbdchginfo) && SCIPbdchginfoGetChgtype(currbdchginfo) == SCIP_BOUNDCHGTYPE_CONSINFER)
    {
          SCIP_CONS* reasoncon;
          SCIP_ROW* reasonrow;
@@ -3072,6 +3107,22 @@ SCIP_RETCODE getReasonRow(
                }
             }
          }
+   }
+   else if (bdchginfoIsResolvable(currbdchginfo) && SCIPbdchginfoGetChgtype(currbdchginfo) == SCIP_BOUNDCHGTYPE_PROPINFER)
+   {
+      SCIP_CALL( getClauseReasonSet(conflict, blkmem,  set, currbdchginfo, SCIPbdchginfoGetRelaxedBound(currbdchginfo), validdepth, success) );
+      if (*success)
+      {
+         assert(SCIPsetIsZero(set, getSlack(set, prob, conflict->reasonset, SCIPbdchginfoGetIdx(currbdchginfo), fixbounds, fixinds)));
+         conflict->reasonset->slack = 0.0;
+         return SCIP_OKAY;
+      }
+      else
+      {
+         /* @todo some component may be the reason */
+         return SCIP_OKAY;
+      }
+
    }
    else
    {
@@ -3172,7 +3223,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
    }
 
    /* calculate the maximal size of each accepted conflict set */
-   maxsize = (int) (set->conf_maxvarsfac * transprob->nvars);
+   maxsize = (int) (set->conf_maxvarsfracres * transprob->nvars);
    if( SCIProwGetNNonz(initialconflictrow) > maxsize )
    {
       SCIPsetDebugMsg(set, "Number of nonzeros in conflict is larger than maxsize %d > %d\n",

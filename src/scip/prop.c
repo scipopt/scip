@@ -708,7 +708,7 @@ SCIP_RETCODE SCIPpropExec(
             && *result != SCIP_DELAYED
             && *result != SCIP_DELAYNODE )
          {
-            SCIPerrorMessage("execution method of propagator <%s> returned invalid result <%d>\n", 
+            SCIPerrorMessage("execution method of propagator <%s> returned invalid result <%d>\n",
                prop->name, *result);
             return SCIP_INVALIDRESULT;
          }
@@ -742,6 +742,7 @@ SCIP_RETCODE SCIPpropResolvePropagation(
    SCIP_BOUNDTYPE        inferboundtype,     /**< bound that was deduced (lower or upper bound) */
    SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index, representing the point of time where change took place */
    SCIP_Real             relaxedbd,          /**< the relaxed bound */
+   SCIP_Bool             separatequeue,      /**< should the reason bound changes be added to the separate conflict queue? */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
@@ -754,13 +755,26 @@ SCIP_RETCODE SCIPpropResolvePropagation(
 
    *result = SCIP_DIDNOTRUN;
 
-   if( prop->propresprop != NULL )
+   if (prop->propresprop != NULL && separatequeue)
+   {
+         SCIP_CALL( prop->propresprop(set->scip, prop, infervar, inferinfo, inferboundtype, bdchgidx,
+            relaxedbd, TRUE, result) );
+      /* check result code */
+      if( *result != SCIP_SUCCESS && *result != SCIP_DIDNOTFIND )
+      {
+         SCIPerrorMessage("propagation conflict resolving method of propagator <%s> returned invalid result <%d>\n",
+            prop->name, *result);
+         return SCIP_INVALIDRESULT;
+      }
+
+   }
+   else if( prop->propresprop != NULL )
    {
       /* start timing */
       SCIPclockStart(prop->resproptime, set);
 
       SCIP_CALL( prop->propresprop(set->scip, prop, infervar, inferinfo, inferboundtype, bdchgidx,
-            relaxedbd, result) );
+            relaxedbd, FALSE, result) );
 
       /* stop timing */
       SCIPclockStop(prop->resproptime, set);
@@ -771,7 +785,7 @@ SCIP_RETCODE SCIPpropResolvePropagation(
       /* check result code */
       if( *result != SCIP_SUCCESS && *result != SCIP_DIDNOTFIND )
       {
-         SCIPerrorMessage("propagation conflict resolving method of propagator <%s> returned invalid result <%d>\n", 
+         SCIPerrorMessage("propagation conflict resolving method of propagator <%s> returned invalid result <%d>\n",
             prop->name, *result);
          return SCIP_INVALIDRESULT;
       }

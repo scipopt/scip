@@ -256,7 +256,7 @@ typedef struct SCIP_PropData SCIP_PROPDATA;       /**< locally defined propagato
  *  @note it is sufficient to explain/resolve the relaxed bound
  */
 #define SCIP_DECL_PROPRESPROP(x) SCIP_RETCODE x (SCIP* scip, SCIP_PROP* prop, SCIP_VAR* infervar, int inferinfo, \
-      SCIP_BOUNDTYPE boundtype, SCIP_BDCHGIDX* bdchgidx, SCIP_Real relaxedbd, SCIP_RESULT* result)
+      SCIP_BOUNDTYPE boundtype, SCIP_BDCHGIDX* bdchgidx, SCIP_Real relaxedbd, SCIP_Bool separatequeue, SCIP_RESULT* result)
 
 #ifdef __cplusplus
 }
