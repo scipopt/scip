@@ -4188,54 +4188,58 @@ SCIP_Bool SCIPexprAreQuadraticExprsVariables(
    return expr->quaddata->allexprsarevars;
 }
 
-/** checks whether an expression is signomial
+/** returns a monomial representation of an expression
  *
- * An expression is signomial if it is a sum of signomial terms, and a signomial term is a product of real powers of
- * nonnegative variables.
+ * The array to store all factor expressions needs to be of size the number of
+ * children in the expression which is given by SCIPexprGetNChildren().
+ *
+ * Given a non-trivial monomial expression, the function finds its representation as \f$cx^\alpha\f$, where
+ * \f$c\f$ is a real coefficient, \f$x\f$ is a vector of auxiliary or original variables (where some entries can
+ * be NULL is the auxuliary variable has not been created yet), and \f$\alpha\f$ is a real vector of exponents.
+ *
+ * A non-trivial monomial is a product of a least two expressions.
  */
-SCIP_RETCODE SCIPexprCheckSignomial(
+SCIP_RETCODE SCIPexprGetMonomialData(
    SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_EXPR*            expr,               /**< expression */
-   SCIP_Bool*            issignomial         /**< buffer to store result */
+   SCIP_Real*            coef,               /**< coefficient \f$c\f$ */
+   SCIP_Real*            exponents,          /**< exponents \f$\alpha\f$ */
+   SCIP_EXPR**           factors             /**< factor expressions \f$x\f$ */
    )
 {
+   SCIP_EXPR* child;
+   int c;
+   int nexprs;
+
    assert(set != NULL);
    assert(blkmem != NULL);
    assert(expr != NULL);
-   assert(issignomial != NULL);
+   assert(coef != NULL);
+   assert(exponents != NULL);
+   assert(factors != NULL);
 
-   *issignomial = TRUE;
+   assert(SCIPexprIsProduct(set, expr));
 
-   if( SCIPexprIsVar(set, expr) || SCIPexprIsValue(set, expr) )
-      return SCIP_OKAY;
+   *coef = SCIPgetCoefExprProduct(expr);
+   nexprs = SCIPexprGetNChildren(expr);
 
-   if( SCIPexprIsPower(set, expr) && SCIPexprIsVar(set, SCIPexprGetChildren(expr)[0]) )
-      return SCIP_OKAY;
-
-   if( SCIPexprIsProduct(set, expr) )
+   for( c = 0; c < nexprs; ++c )
    {
-      SCIP_EXPR* child;
-      int c;
+      child = SCIPexprGetChildren(expr)[c];
 
-      for( c = 0; c < SCIPexprGetNChildren(expr); ++c )
+      if( SCIPexprIsPower(set, child) )
       {
-         child = SCIPexprGetChildren(expr)[c];
-
-         if( SCIPexprIsVar(set, child) )
-            continue;
-
-         if( SCIPexprIsPower(set, child) && SCIPexprIsVar(set, SCIPexprGetChildren(child)[0]) )
-            continue;
-
-         *issignomial = FALSE;
-         break;
+         exponents[c] = SCIPgetExponentExprPow(child);
+         factors[c] = SCIPexprGetChildren(child)[0];
       }
-
-      return SCIP_OKAY;
+      else
+      {
+         exponents[c] = 1.0;
+         factors[c] = child;
+      }
    }
 
-   *issignomial = FALSE;
    return SCIP_OKAY;
 }
 

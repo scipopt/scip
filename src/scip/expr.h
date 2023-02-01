@@ -736,20 +736,28 @@ SCIP_RETCODE SCIPexprComputeQuadraticCurvature(
 
 /**@} */
 
-/**@name Signomial expression functions */
+/**@name Monomial expression functions */
 /**@{ */
 
-/** checks whether an expression is signomial
+/** returns a monomial representation of an expression
  *
- * An expression is signomial if it is a sum of signomial terms, and a signomial term is a product of real powers of
- * nonnegative variables.
+ * The array to store all factor expressions needs to be of size the number of
+ * children in the expression which is given by SCIPexprGetNChildren().
+ *
+ * Given a non-trivial monomial expression, the function finds its representation as \f$cx^\alpha\f$, where
+ * \f$c\f$ is a real coefficient, \f$x\f$ is a vector of auxiliary or original variables (where some entries can
+ * be NULL is the auxuliary variable has not been created yet), and \f$\alpha\f$ is a real vector of exponents.
+ *
+ * A non-trivial monomial is a product of a least two expressions.
  */
-SCIP_EXPORT  /* need SCIP_EXPORT here, because func is exposed in API via SCIPcheckExprSignomial() macro */
-SCIP_RETCODE SCIPexprCheckSignomial(
+SCIP_EXPORT  /* need SCIP_EXPORT here, because func is exposed in API via SCIPgetExprMonomialData() macro */
+SCIP_RETCODE SCIPexprGetMonomialData(
    SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_EXPR*            expr,               /**< expression */
-   SCIP_Bool*            issignomial         /**< buffer to store result */
+   SCIP_Real*            coef,               /**< coefficient \f$c\f$ */
+   SCIP_Real*            exponents,          /**< exponents \f$\alpha\f$ */
+   SCIP_EXPR**           exprs               /**< expressions \f$x\f$ */
    );
 
 /**@} */
