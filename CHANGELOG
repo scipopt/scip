@@ -191,11 +191,14 @@ Fixed bugs
 - increase the precision of double multiplications in quad precision environments
 - corrected handling of different variable types in symmetry
 - orbitope detection: refine computation of overlap structure and fixed bug in finding orbitope generators
+- ensure that winner is always determined in concurrent mode
+- when a row with invalid index range is added to the global cutpool, update the indices instead of failing with an assert
 
 Miscellaneous
 -------------
 
 - Extended documentation of the parameter limits/solutions to point out that the limit is first checked in presolving
+- Added more information about using SCIPcache- and SCIPflushRowExtensions() to documentation and comments
 
 Known bugs
 ----------

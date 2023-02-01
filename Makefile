@@ -3,7 +3,7 @@
 #*                  This file is part of the program and library             *#
 #*         SCIP --- Solving Constraint Integer Programs                      *#
 #*                                                                           *#
-#*  Copyright 2002-2022 Zuse Institute Berlin                                *#
+#*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      *#
 #*                                                                           *#
 #*  Licensed under the Apache License, Version 2.0 (the "License");          *#
 #*  you may not use this file except in compliance with the License.         *#
@@ -1395,7 +1395,7 @@ ifeq ($(TPI),none)
 		@echo "#define TPI_NONE" >> $@
 endif
 ifeq ($(TPI),tny)
-		@echo "#define TPI_TNYC" >> $@
+		@echo "#define TPI_TNY" >> $@
 endif
 ifeq ($(TPI),omp)
 		@echo "#define TPI_OMP" >> $@
