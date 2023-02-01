@@ -526,6 +526,10 @@ SCIP_RETCODE SCIPconcurrentSolve(
    idx = SCIPsyncstoreGetWinner(syncstore);
    assert(idx >= 0 && idx < nconcsolvers);
 
+   /* a paranoid safeguard for running in optimized mode */
+   if( idx < 0 || idx >= nconcsolvers )
+      idx = 0;
+
    SCIP_CALL( SCIPconcsolverGetSolvingData(concsolvers[idx], scip) );
 
    return retcode;
