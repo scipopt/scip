@@ -68,8 +68,14 @@ class ADTape {
 		(const AD<Base> &left, const AD<Base> &right);
 	friend AD<Base> CppAD::operator - <Base>
 		(const AD<Base> &left, const AD<Base> &right);
+# ifdef _MSC_VER
+    // see https://github.com/coin-or/CppAD/issues/60
+	template <class Type> friend AD<Type> CppAD::operator * <Type>
+		(const AD<Type> &left, const AD<Type> &right);
+# else
 	friend AD<Base> CppAD::operator * <Base>
 		(const AD<Base> &left, const AD<Base> &right);
+# endif
 	friend AD<Base> CppAD::operator / <Base>
 		(const AD<Base> &left, const AD<Base> &right);
 
@@ -82,10 +88,18 @@ class ADTape {
 		(const AD<Base> &left, const AD<Base> &right);
 	friend bool CppAD::operator >= <Base>
 		(const AD<Base> &left, const AD<Base> &right);
+# ifdef _MSC_VER
+    // see https://github.com/coin-or/CppAD/issues/60
+	template <class Type> friend bool CppAD::operator == <Type>
+		(const AD<Type> &left, const AD<Type> &right);
+	template <class Type> friend bool CppAD::operator != <Type>
+		(const AD<Type> &left, const AD<Type> &right);
+# else
 	friend bool CppAD::operator == <Base>
 		(const AD<Base> &left, const AD<Base> &right);
 	friend bool CppAD::operator != <Base>
 		(const AD<Base> &left, const AD<Base> &right);
+# endif
 	// ======================================================================
 
 // --------------------------------------------------------------------------

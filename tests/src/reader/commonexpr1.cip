@@ -1,0 +1,11 @@
+STATISTICS
+  Problem name     : commonexpr1
+  Variables        : 1 (0 binary, 0 integer, 0 implicit integer, 1 continuous)
+  Constraints      : 0 initial, 1 maximal
+OBJECTIVE
+  Sense            : minimize
+VARIABLES
+  [continuous] <x0>: obj=1, original bounds=[0,+inf]
+CONSTRAINTS
+  [nonlinear] <nlc0>: (<x0>)^2-exp((<x0>)^2)+<x0> >= 1;
+END

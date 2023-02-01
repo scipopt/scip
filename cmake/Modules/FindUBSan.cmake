@@ -41,6 +41,11 @@ function (add_sanitize_undefined TARGET)
     if (NOT SANITIZE_UNDEFINED)
         return()
     endif ()
-
     sanitizer_add_flags(${TARGET} "UndefinedBehaviorSanitizer" "UBSan")
 endfunction ()
+
+include(FindPackageHandleStandardArgs)
+find_package_handle_standard_args(UBSan
+   REQUIRED_VARS
+   UBSan_FLAG_DETECTED
+)

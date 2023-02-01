@@ -1,6 +1,6 @@
-Copyright (C) 2002-2020 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)
+Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)
 
-External codes: 
+External codes:
   Readline 7.0         GNU library for command line editing (gnu.org/s/readline)
   CPLEX 12.8.0.0       Linear Programming Solver developed by IBM (www.cplex.com)
   CppAD 20180000.0     Algorithmic Differentiation of C++ algorithms developed by B. Bell (www.coin-or.org/CppAD)
@@ -10,7 +10,7 @@ External codes:
 
 user parameter file <scip.set> not found - using default parameters
 
-SCIP> 
+SCIP>
 SCIP> set misc referencevalue -74.0
 misc/referencevalue = -74
 SCIP> set limits time 3600
@@ -64,7 +64,7 @@ presolved problem has 234 variables (117 bin, 0 int, 0 impl, 117 cont) and 633 c
 Presolving Time: 0.03
 transformed 1/1 original solutions to the transformed problem space
 
- time | node  | left  |LP iter|LP it/n|mem/heur|mdpt |vars |cons |rows |cuts |sepa|confs|strbr|  dualbound   | primalbound  |  gap   | compl. 
+ time | node  | left  |LP iter|LP it/n|mem/heur|mdpt |vars |cons |rows |cuts |sepa|confs|strbr|  dualbound   | primalbound  |  gap   | compl.
 p 0.2s|     1 |     0 |    65 |     - |  clique|   0 | 234 | 633 | 633 |   0 |  0 |   0 |   0 |-2.340000e+02 |-3.600000e+01 | 550.00%| unknown
 p 0.2s|     1 |     0 |   136 |     - |   locks|   0 | 234 | 633 | 633 |   0 |  0 |   0 |   0 |-2.340000e+02 |-3.800000e+01 | 515.79%| unknown
 p 0.2s|     1 |     0 |   205 |     - | vbounds|   0 | 234 | 633 | 633 |   0 |  0 |   0 |   0 |-2.340000e+02 |-5.200000e+01 | 350.00%| unknown
@@ -80,7 +80,7 @@ p 0.2s|     1 |     0 |   205 |     - | vbounds|   0 | 234 | 633 | 633 |   0 |  
   0.5s|     1 |     0 |  1199 |     - |    15M |   0 | 234 | 633 | 656 |  23 |  9 |   0 |   0 |-7.800000e+01 |-5.200000e+01 |  50.00%| unknown
   0.5s|     1 |     0 |  1208 |     - |    17M |   0 | 234 | 633 | 658 |  25 | 10 |   0 |   0 |-7.800000e+01 |-5.200000e+01 |  50.00%| unknown
   0.6s|     1 |     0 |  1241 |     - |    17M |   0 | 234 | 633 | 659 |  26 | 11 |   0 |   0 |-7.800000e+01 |-5.200000e+01 |  50.00%| unknown
- time | node  | left  |LP iter|LP it/n|mem/heur|mdpt |vars |cons |rows |cuts |sepa|confs|strbr|  dualbound   | primalbound  |  gap   | compl. 
+ time | node  | left  |LP iter|LP it/n|mem/heur|mdpt |vars |cons |rows |cuts |sepa|confs|strbr|  dualbound   | primalbound  |  gap   | compl.
 o 0.6s|     1 |     0 |  1537 |     - |feaspump|   0 | 234 | 633 | 659 |  26 | 11 |   0 |   0 |-7.800000e+01 |-5.800000e+01 |  34.48%| unknown
 L 0.8s|     1 |     0 |  1537 |     - |    alns|   0 | 234 | 633 | 659 |  26 | 11 |   0 |   0 |-7.800000e+01 |-6.000000e+01 |  30.00%| unknown
   0.8s|     1 |     0 |  1537 |     - |    17M |   0 | 234 | 633 | 659 |  26 | 11 |   0 |   0 |-7.800000e+01 |-6.000000e+01 |  30.00%| unknown
@@ -253,7 +253,7 @@ presolved problem has 234 variables (117 bin, 0 int, 0 impl, 117 cont) and 761 c
 Presolving Time: 0.04
 transformed 23/23 original solutions to the transformed problem space
 
- time | node  | left  |LP iter|LP it/n|mem/heur|mdpt |vars |cons |rows |cuts |sepa|confs|strbr|  dualbound   | primalbound  |  gap   | compl. 
+ time | node  | left  |LP iter|LP it/n|mem/heur|mdpt |vars |cons |rows |cuts |sepa|confs|strbr|  dualbound   | primalbound  |  gap   | compl.
   6.4s|     1 |     0 | 24305 |     - |    25M |   0 | 234 | 761 | 622 |   0 |  0 | 150 | 563 |-7.724242e+01 |-7.300000e+01 |   5.81%| unknown
   6.4s|     1 |     0 | 24343 |     - |    25M |   0 | 234 | 761 | 627 |   5 |  1 | 150 | 563 |-7.724242e+01 |-7.300000e+01 |   5.81%| unknown
   6.4s|     1 |     0 | 24357 |     - |    26M |   0 | 234 | 761 | 629 |   7 |  2 | 150 | 563 |-7.724242e+01 |-7.300000e+01 |   5.81%| unknown

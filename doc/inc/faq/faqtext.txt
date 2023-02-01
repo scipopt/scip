@@ -8,7 +8,7 @@ SECTION: General Questions about SCIP
       and contains all necessary plugins to serve as a <b>standalone solver</b> for MIP and MINLP.
     </p>
     <ul>
-      <li>You can use the <a href="http://scipopt.org/#download">precompiled binaries</a>
+      <li>You can use the <a href="https://scipopt.org/#download">precompiled binaries</a>
           to solve MIPs and MINLPs. Learn more about the <a href="PATHTODOC/group__FILEREADERS.LINKEXT">file formats supported by SCIP</a>,
           and get <a href="PATHTODOC/WHATPROBLEMS.LINKEXT">an overview</a>
           of the supported problem classes and additional recommendations for solving them.
@@ -34,10 +34,7 @@ SECTION: General Questions about SCIP
     LABEL:licensefaq
     ANSWER:
     <p>
-      As long as you use it for academic, non-commercial purposes: No.
-      This will not change. For the other cases, check the explanation of the
-      <a href="http://scipopt.org/#license">ZIB academic license</a> and always feel free to ask us.
-      If you want to use SCIP commercially, please write an e-mail to koch@zib.de.
+      Since November 4, 2022, and SCIP version 8.0.3, SCIP is distributed under a permissive open source license, see the <a href="https://scipopt.org/index.php#license">SCIP homepage</a>.
     </p>
 
     QUESTION: How do I get started?
@@ -46,7 +43,7 @@ SECTION: General Questions about SCIP
     <p>
       An easy way is to use the SCIP-binaries and call SCIP from a shell, see <a href="PATHTODOC/SHELL.LINKEXT">here</a> for a tutorial.
       For that, you just have to use one of the installers from the
-      <a href="http://scipopt.org/#download">download section</a>, or the zipped source code and compile it
+      <a href="https://scipopt.org/#download">download section</a>, or the zipped source code and compile it
       with your favorite settings.
       Note that the coding examples are only contained in the source code bundle, but not in the precompiled packages.
       The compilation from source is described in detail in the <code><a href="PATHTODOC/INSTALL.LINKEXT">INSTALL</a></code> file in the SCIP main directory.
@@ -72,7 +69,7 @@ SECTION: General Questions about SCIP
       LP-solvers currently supported by SCIP are:
     </p>
     <ul>
-      <li><a href="http://soplex.zib.de/">SoPlex</a></li>
+      <li><a href="https://soplex.zib.de/">SoPlex</a></li>
       <li><a href="http://www-01.ibm.com/software/integration/optimization/cplex-optimizer/">IBM ILOG CPLEX</a></li>
       <li><a href="http://www.fico.com/en/Products/DMTools/Pages/FICO-Xpress-Optimization-Suite.aspx">FICO XPress</a></li>
       <li><a href="http://www.gurobi.com/">Gurobi</a> (version at least 7.0.2 required)</li>
@@ -86,10 +83,10 @@ SECTION: General Questions about SCIP
       <a href="https://projects.coin-or.org/Ipopt">Ipopt</a>). SCIP already comes with the CppAD expression interpreter (e.g., <a href="http://www.coin-or.org/CppAD/">CppAD</a>) as part of the source code.
     </p>
     <p>
-      Besides that, you might need a modeling language like <a href="http://zimpl.zib.de/">ZIMPL</a> to generate *.mps
+      Besides that, you might need a modeling language like <a href="https://zimpl.zib.de/">ZIMPL</a> to generate *.mps
       or *.lp files. ZIMPL files (.zpl extension) can also be read directly into SCIP.
       Downloading the SCIP Optimization Suite includes SCIP, SoPlex and ZIMPL, as well as GCG and UG. Find installers for different platforms
-      and the source code bundle of all versions <a href="http://scipopt.org/#download">here</a>.
+      and the source code bundle of all versions <a href="https://scipopt.org/#download">here</a>.
     </p>
 
     QUESTION: How can I build/compile SCIP?
@@ -136,7 +133,7 @@ SECTION: General Questions about SCIP
     ANSWER:
     <p>
       Read the <code><a href="PATHTODOC/INSTALL.LINKEXT">INSTALL</a></code> file in the SCIP root directory. It contains hints of how to get around problems. You can also try
-      the precompiled binaries by choosing one of the available installers from the <a href="http://scipopt.org#download">SCIP page</a> for your operating system.<br>
+      the precompiled binaries by choosing one of the available installers from the <a href="https://scipopt.org#download">SCIP page</a> for your operating system.<br>
     </p>
     <p>
       If you encounter compilation problems dealing with the <code>explicit</code> keyword you should try a newer compiler.
@@ -208,7 +205,7 @@ SECTION: General Questions about SCIP
     <p>
         Hence, if you need more, "LP specific", information than the primal solution, you are better off using an LP-Solver
         directly. If you are using the SCIP Optimization Suite, you could, e.g., use the included LP solver
-        <a href=http://soplex.zib.de>SoPlex</a>.  If you want to solve an LP not from the command line, but within your
+        <a href=https://soplex.zib.de>SoPlex</a>.  If you want to solve an LP not from the command line, but within your
         C/C++ program, you could also use SCIP's LP-Interface, see also <a href="#howtosolvelps">here</a>.
     </p>
 
@@ -287,7 +284,7 @@ SECTION: General Questions about SCIP
     </p>
     <ul>
         <li>
-            <a href="http://hydraw.zib.de/">HyDraw</a>
+            <a href="https://hydraw.zib.de/">HyDraw</a>
             can display a live visualization of the tree using JavaView.
         </li>
         <li>
@@ -353,6 +350,26 @@ SECTION: General Questions about SCIP
         or with the SCIP parameter <code>misc/usesymmetry = 0</code>.
         Otherwise it can be resolved by either adding the macro definition with the compile flag <code>-DBLISS_USE_GMP</code>
         or by compiling bliss differently, i.e. without GMP support.
+    </p>
+
+    QUESTION: How can I run SCIP in parallel?
+    LABEL:howtorunscipinparallel
+    ANSWER:
+    <p>
+       SCIP itself is mostly a sequential solver and does not feature internal parallelism, e.g., to process branch-and-bound nodes in parallel.
+       However, there are two ways to make use of parallel hardware:
+        <ul>
+            <li>First, using the command <code>concurrentopt</code> in the
+            interactive shell or the method <code>SCIPsolveConcurrent()</code>
+            one can spawn multiple solves in parallel, which exchange bound
+            changes and primal solutions and will terminate as soon as the
+            fastest solver terminates. For this to work, SCIP must be built with
+            the TPI option.</li>
+            <li>Second, one can use the external UG framework for shared-memory
+            and distributed-memory parallelization of the tree search.  See the
+            <a href="https://ug.zib.de"></a> UG web page</a> for further
+            details.</li>
+        </ul>
     </p>
 
 SECTION: Using SCIP as a standalone solver
@@ -1054,6 +1071,60 @@ SECTION: Using SCIP as a Branch-Cut-And-Price-Framework
         Yes, you can write your own symmetry handling plugin. To avoid conflicts with the internal symmetry handling methods
         of SCIP, you should deactivate SCIP's symmetry handling routines by calling
         <code>SCIP_CALL( SCIPsetIntParam(scip, "misc/usesymmetry", 0) )</code>.
+    </p>
+
+    QUESTION: What is the difference between sepastore and cutpool, and when should one add a cut to one or the other?
+    LABEL:sepastorecutpool
+    ANSWER:
+    <p>
+        Both, a sepastore and a cutpool, are data structures that can hold cuts.
+        However, their main difference is how they are used by SCIP.
+    </p>
+    <p>
+        In each separation round, cutting planes are added to SCIP's internal separation storage, that is, SCIP's
+        sepastore.
+        The cuts are added to the sepastore with <code>SCIPaddRow()</code>.
+        Before the cuts from the sepastore are added to the current relaxation, they are filtered through the
+        cutselectors.
+        Note that by adding cuts with <code>SCIPaddRow()</code> one has the option to force the cut.
+        This means that the cut is not going to be filtered out by the cutselectors.
+        Moreover, if in a separation round all cutting planes are forced, then the cutselectors are not called.
+        After each separation round, all cutting planes in the sepastore are removed.
+    </p>
+    <p>
+        Cutting planes are mainly generated by constraint handlers and separators.
+        In addition to adding cuts to SCIP with <code>SCIPaddRow()</code>, they can also add cuts with
+        <code>SCIPaddPoolCut()</code> (although only when they are globally valid).
+        The difference is that a cut added with <code>SCIPaddPoolCut()</code> does not go to the sepastore, but to
+        SCIP's global cutpool.
+        In each separation round, the global cutpool can then also add cuts to SCIP's sepastore.
+    </p>
+    <p>
+        If a cut in the global cutpool is not added to the sepastore (e.g. because it is not efficacious enough),
+        its age is increased. If its age reaches <code>separating/cutagelimit</code>, then the cut is removed from the
+        cutpool. As soon as a cut from the cutpool is added to the sepastore, its age counter goes down to 0 and its
+        age remains 0 as long as the cut is in the LP relaxation.
+        In particular, this means that cuts from the global cutpool added to the sepastore are not removed from the
+        global cutpool.
+        This might make sense because of the following reasons.
+        Even if the cut makes it to the sepastore, it does not mean it is going to enter the LP
+        relaxation, because it might be filtered out by a cutselector.
+        Furthermore, if the cut enters the LP it can still age out of the LP (e.g. because it is not active in enough
+        consecutive LP relaxations), but the cut might still be interesting in other parts of the search tree.
+        Thus, it makes sense to add cuts to the global cutpool that are known to be strong or expensive to generate.
+    </p>
+    <p>
+        Another difference between sepastore and cutpool is that any plugin can create its own cutpool, while only the
+        SCIP core can create a sepastore.
+    </p>
+    <p>
+        As a summary, the purpose of the global cutpool is to store globally valid cuts that can be reused in later
+        separation rounds, while the purpose of the sepastore is to collect the cuts that are to be added in a single
+        separation round.
+        In each separation round, constraint handlers and separators can add cuts to the global cutpool, and
+        contraint handlers, separators and the global cutpool can add cuts directly to the sepastore.
+        Furthermore, locally valid cuts can only be added to the sepastore and expensive globally valid cuts might be
+        better suited for the global cutpool.
     </p>
 
 SECTION: Specific questions about Column Generation and Branch-And-Price with SCIP

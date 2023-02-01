@@ -12,6 +12,8 @@ echo "Running all tests on examples."
 set -e
 
 EXAMPLES=$(for f in *;do if [[ -d $f  ]]; then echo $f;fi; done)
+# Sudoku doesn't have a test
+EXAMPLES=$(echo "$EXAMPLES" |grep -v Sudoku)
 
 LPSOLVERS=(spx2)
 OPTS=(dbg)
@@ -86,7 +88,7 @@ do
          echo "Error: "${LPILIB}" does not exist, please compile SCIP with OPT="${OPT}" and LPS="${LPS}"."
          exit 1
       fi
-      SCIPLIB=../lib/${LIBTYPE}/libscip.${OSTYPE}.${ARCH}.gnu.${OPT}.${LIBEXT}
+      SCIPLIB=../lib/${LIBTYPE}/libscipbase.${OSTYPE}.${ARCH}.gnu.${OPT}.${LIBEXT}
       if test ! -e ${SCIPLIB}
       then
          echo "Error: "${SCIPLIB}" does not exist, please compile SCIP with OPT="${OPT}" and LPS="${LPS}"." >> ${EXAMPLELOG}

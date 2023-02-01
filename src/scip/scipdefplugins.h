@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -45,11 +54,9 @@
 #include "scip/branch_vanillafullstrong.h"
 #include "scip/compr_largestrepr.h"
 #include "scip/compr_weakcompr.h"
-#include "scip/cons_abspower.h"
 #include "scip/cons_and.h"
 #include "scip/cons_benders.h"
 #include "scip/cons_benderslp.h"
-#include "scip/cons_bivariate.h"
 #include "scip/cons_bounddisjunction.h"
 #include "scip/cons_cardinality.h"
 #include "scip/cons_conjunction.h"
@@ -67,9 +74,7 @@
 #include "scip/cons_orbisack.h"
 #include "scip/cons_orbitope.h"
 #include "scip/cons_pseudoboolean.h"
-#include "scip/cons_quadratic.h"
 #include "scip/cons_setppc.h"
-#include "scip/cons_soc.h"
 #include "scip/cons_sos1.h"
 #include "scip/cons_sos2.h"
 #include "scip/cons_superindicator.h"
@@ -78,9 +83,20 @@
 #include "scip/cons_xor.h"
 #include "scip/cons_components.h"
 #include "scip/disp_default.h"
+#include "scip/dialog_default.h"
 #include "scip/event_estim.h"
 #include "scip/event_solvingphase.h"
 #include "scip/event_softtimelimit.h"
+#include "scip/expr_abs.h"
+#include "scip/expr_entropy.h"
+#include "scip/expr_exp.h"
+#include "scip/expr_log.h"
+#include "scip/expr_pow.h"
+#include "scip/expr_product.h"
+#include "scip/expr_sum.h"
+#include "scip/expr_trig.h"
+#include "scip/expr_value.h"
+#include "scip/expr_var.h"
 #include "scip/heur_actconsdiving.h"
 #include "scip/heur_adaptivediving.h"
 #include "scip/heur_bound.h"
@@ -91,6 +107,7 @@
 #include "scip/heur_crossover.h"
 #include "scip/heur_dins.h"
 #include "scip/heur_distributiondiving.h"
+#include "scip/heur_dps.h"
 #include "scip/heur_dualval.h"
 #include "scip/heur_farkasdiving.h"
 #include "scip/heur_feaspump.h"
@@ -138,6 +155,13 @@
 #include "scip/heur_veclendiving.h"
 #include "scip/heur_zeroobj.h"
 #include "scip/heur_zirounding.h"
+#include "scip/nlhdlr_bilinear.h"
+#include "scip/nlhdlr_convex.h"
+#include "scip/nlhdlr_default.h"
+#include "scip/nlhdlr_perspective.h"
+#include "scip/nlhdlr_quadratic.h"
+#include "scip/nlhdlr_quotient.h"
+#include "scip/nlhdlr_soc.h"
 #include "scip/nodesel_bfs.h"
 #include "scip/nodesel_breadthfirst.h"
 #include "scip/nodesel_dfs.h"
@@ -154,9 +178,7 @@
 #include "scip/presol_gateextraction.h"
 #include "scip/presol_implics.h"
 #include "scip/presol_inttobinary.h"
-#ifdef SCIP_WITH_PAPILO
 #include "scip/presol_milp.h"
-#endif
 #include "scip/presol_redvub.h"
 #include "scip/presol_qpkktref.h"
 #include "scip/presol_trivial.h"
@@ -187,6 +209,7 @@
 #include "scip/reader_lp.h"
 #include "scip/reader_mps.h"
 #include "scip/reader_mst.h"
+#include "scip/reader_nl.h"
 #include "scip/reader_opb.h"
 #include "scip/reader_osil.h"
 #include "scip/reader_pip.h"
@@ -209,21 +232,27 @@
 #include "scip/sepa_gauge.h"
 #include "scip/sepa_gomory.h"
 #include "scip/sepa_impliedbounds.h"
+#include "scip/sepa_interminor.h"
 #include "scip/sepa_intobj.h"
 #include "scip/sepa_mcf.h"
+#include "scip/sepa_minor.h"
+#include "scip/sepa_mixing.h"
 #include "scip/sepa_oddcycle.h"
 #include "scip/sepa_rapidlearning.h"
-#include "scip/sepa_strongcg.h"
+#include "scip/sepa_rlt.h"
 #include "scip/sepa_zerohalf.h"
 #include "scip/scipshell.h"
+#include "scip/symmetry.h"
 #include "scip/table_default.h"
 #include "scip/concsolver_scip.h"
 #include "scip/benders_default.h"
+#include "scip/cutsel_hybrid.h"
 
-#include "nlpi/nlpi_ipopt.h"
-#include "nlpi/nlpi_filtersqp.h"
-#include "nlpi/nlpi_worhp.h"
-#include "nlpi/nlpi_all.h"
+#include "scip/expr_varidx.h"
+#include "scip/nlpi_ipopt.h"
+#include "scip/nlpi_filtersqp.h"
+#include "scip/nlpi_worhp.h"
+#include "scip/nlpi_all.h"
 
 #ifdef __cplusplus
 extern "C" {

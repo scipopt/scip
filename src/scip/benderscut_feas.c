@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -21,8 +30,7 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include "nlpi/exprinterpret.h"
-#include "nlpi/pub_expr.h"
+#include "scip/pub_expr.h"
 #include "scip/benderscut_feas.h"
 #include "scip/benderscut_opt.h"
 #include "scip/cons_linear.h"
@@ -41,6 +49,7 @@
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
 #include "scip/scip_nlp.h"
+#include "scip/scip_nlpi.h"
 #include "scip/scip_numerics.h"
 #include "scip/scip_prob.h"
 #include "scip/scip_solvingstats.h"
@@ -226,10 +235,7 @@ SCIP_RETCODE computeStandardNLPFeasibilityCut(
    SCIP_Bool*            success             /**< was the cut generation successful? */
    )
 {
-   SCIP_EXPRINT* exprinterpreter;
-   SCIP_VAR** subvars;
    int nrows;
-   int nsubvars;
    SCIP_Real activity;
    SCIP_Real dirderiv;
    SCIP_Real dualsol;
@@ -243,13 +249,8 @@ SCIP_RETCODE computeStandardNLPFeasibilityCut(
 
    (*success) = FALSE;
 
-   nsubvars = SCIPgetNNLPVars(subproblem);
-   subvars = SCIPgetNLPVars(subproblem);
-
    *lhs = 0.0;
    dirderiv = 0.0;
-
-   SCIP_CALL( SCIPexprintCreate(SCIPblkmem(subproblem), &exprinterpreter) );
 
    /* looping over all NLP rows and setting the corresponding coefficients of the cut */
    nrows = SCIPgetNNLPNlRows(subproblem);
@@ -266,7 +267,7 @@ SCIP_RETCODE computeStandardNLPFeasibilityCut(
       if( SCIPisZero(subproblem, dualsol) )
          continue;
 
-      SCIP_CALL( SCIPaddNlRowGradientBenderscutOpt(masterprob, subproblem, benders, nlrow, exprinterpreter, -dualsol,
+      SCIP_CALL( SCIPaddNlRowGradientBenderscutOpt(masterprob, subproblem, benders, nlrow, -dualsol,
             NULL, NULL, &dirderiv, vars, vals, nvars, varssize) );
 
       SCIP_CALL( SCIPgetNlRowActivity(subproblem, nlrow, &activity) );
@@ -283,34 +284,6 @@ SCIP_RETCODE computeStandardNLPFeasibilityCut(
       }
    }
 
-   SCIP_CALL( SCIPexprintFree(&exprinterpreter) );
-
-   /* looping over all variable bounds and updating the corresponding coefficients of the cut; compute checkobj */
-   for( i = 0; i < nsubvars; i++ )
-   {
-      SCIP_VAR* var;
-      SCIP_VAR* mastervar;
-      SCIP_Real coef;
-
-      var = subvars[i];
-
-      /* retrieving the master problem variable for the given subproblem variable. */
-      SCIP_CALL( SCIPgetBendersMasterVar(masterprob, benders, var, &mastervar) );
-
-      dualsol = SCIPgetNLPVarsUbDualsol(subproblem)[i] - SCIPgetNLPVarsLbDualsol(subproblem)[i];
-
-      /* checking whether the subproblem variable has a corresponding master variable. */
-      if( mastervar == NULL || dualsol == 0.0 )
-         continue;
-
-      coef = -dualsol;
-
-      /* adding the variable to the storage */
-      SCIP_CALL( addVariableToArray(masterprob, vars, vals, mastervar, coef, nvars, varssize) );
-
-      dirderiv += coef * SCIPvarGetNLPSol(var);
-   }
-
    *lhs += dirderiv;
 
    /* if the side became infinite or dirderiv was infinite, then the cut generation terminates. */
@@ -318,7 +291,7 @@ SCIP_RETCODE computeStandardNLPFeasibilityCut(
       || SCIPisInfinity(masterprob, dirderiv) || SCIPisInfinity(masterprob, -dirderiv))
    {
       (*success) = FALSE;
-      SCIPdebugMsg(masterprob, "Infinite bound when generating feasibility cut. lhs = %g dirderiv = %g.\n", lhs, dirderiv);
+      SCIPdebugMsg(masterprob, "Infinite bound when generating feasibility cut. lhs = %g dirderiv = %g.\n", *lhs, dirderiv);
       return SCIP_OKAY;
    }
 

@@ -7,7 +7,3 @@ branching/relpscost/maxproprounds = -2
 # which variable selection should be used? ('f'ractionality, 'c'oefficient, 'p'seudocost, 'g'uided, 'd'ouble, 'v'eclen)
 # [type: char, range: {fcpgdv}, default: d]
 heuristics/nlpdiving/varselrule = c
-
-# feasibility tolerance factor; for checking the feasibility of the best solution
-# [type: real, advanced: FALSE, range: [0,1.79769313486232e+308], default: 1]
-numerics/checkfeastolfac = 10

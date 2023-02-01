@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -502,7 +511,7 @@ SCIP_RETCODE consdataPrint(
    SCIP_CALL( SCIPwriteVarsList(scip, file, consdata->vars, consdata->nvars, TRUE, ',') );
 
    /* close variable list and write right hand side */
-   SCIPinfoMessage(scip, file, ") = %d", consdata->rhs);
+   SCIPinfoMessage(scip, file, ") = %u", consdata->rhs);
 
    /* write integer variable if it exists */
    if( consdata->intvar != NULL )
@@ -973,7 +982,8 @@ SCIP_RETCODE applyFixings(
          /* need to update integer variable, consider the following case:
           * xor(x1, x2, x3, x4, x5) = 0  (and x1 == x2) was change above to
           * xor(        x3, x4, x5) = 0
-          * assuming we have an integer variable y it needs to be replaced by z with y = x1 + z and z in [lb_y, ub_y]
+          * assuming we have an integer variable y it needs to be replaced by z with y = x1 + z and
+          * z in [max(lb_y-ub_x1, 0), ub_y-lb_x1]
           */
          if( consdata->intvar != NULL )
          {
@@ -985,8 +995,8 @@ SCIP_RETCODE applyFixings(
             char consname[SCIP_MAXSTRLEN];
 
             (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "agg_%s", SCIPvarGetName(consdata->intvar));
-            lb = SCIPvarGetLbGlobal(consdata->intvar);
-            ub = SCIPvarGetUbGlobal(consdata->intvar);
+            lb = MAX(SCIPvarGetLbGlobal(consdata->intvar) - SCIPvarGetUbGlobal(newvars[2]), 0); /*lint !e666*/
+            ub = MAX(SCIPvarGetUbGlobal(consdata->intvar) - SCIPvarGetLbGlobal(newvars[2]), 0); /*lint !e666*/
             vartype = SCIPvarGetType(consdata->intvar);
 
             SCIP_CALL( SCIPcreateVar(scip, &newvars[0], varname, lb, ub, 0.0, vartype,
@@ -1028,7 +1038,7 @@ SCIP_RETCODE applyFixings(
          /* need to update integer variable, consider the following case:
           * xor(x1, x2, x3, x4, x5) = 0  (and x1 = ~x2) was change above to
           * xor(        x3, x4, x5) = 1
-          * assuming we have an integer variable y it needs to be replaced by z with y = 1 + z and z in [lb_y, ub_y - 1]
+          * assuming we have an integer variable y it needs to be replaced by z with y = 1 + z and z in [max(lb_y - 1, 0), ub_y - 1]
           */
          if( consdata->rhs && consdata->intvar != NULL )
          {
@@ -1042,8 +1052,9 @@ SCIP_RETCODE applyFixings(
             SCIP_Bool redundant;
 
             (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "agg_%s", SCIPvarGetName(consdata->intvar));
-            ub = SCIPvarGetUbGlobal(consdata->intvar) - 1;
-            lb = MIN(ub, SCIPvarGetLbGlobal(consdata->intvar)); /*lint !e666*/
+            /* avoid infeasible cutoffs and guarantee non-negative bounds for the new artificial integer variable */
+            lb = MAX(SCIPvarGetLbGlobal(consdata->intvar) - 1, 0); /*lint !e666*/
+            ub = MAX(SCIPvarGetUbGlobal(consdata->intvar) - 1, 0); /*lint !e666*/
             vartype = (lb == 0 && ub == 1) ? SCIP_VARTYPE_BINARY : SCIPvarGetType(consdata->intvar);
 
             SCIP_CALL( SCIPcreateVar(scip, &newvar, varname, lb, ub, 0.0, vartype,
@@ -1056,6 +1067,7 @@ SCIP_RETCODE applyFixings(
 
             if( infeasible )
             {
+               SCIP_CALL( SCIPreleaseVar(scip, &newvar) );
                *cutoff = TRUE;
                break;
             }
@@ -2132,7 +2144,7 @@ SCIP_RETCODE separateCons(
    return SCIP_OKAY;
 }
 
-/** Transform linear system \f$A x = b\f$ into row echolon form via the Gauss algorithm with row pivoting over GF2
+/** Transform linear system \f$A x = b\f$ into row echelon form via the Gauss algorithm with row pivoting over GF2
  *  @returns the rank of @p A
  *
  *  Here, \f$A \in R^{m \times n},\; b \in R^m\f$. On exit, the vector @p p contains a permutation of the row indices
@@ -2140,12 +2152,12 @@ SCIP_RETCODE separateCons(
  *  s[i] contains the column index of the first nonzero in row @p i.
  */
 static
-int computeRowEcholonGF2(
+int computeRowEchelonGF2(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   m,                  /**< number of rows */
    int                   n,                  /**< number of columns */
    int*                  p,                  /**< row permutation */
-   int*                  s,                  /**< steps indicators of the row echolon form */
+   int*                  s,                  /**< steps indicators of the row echelon form */
    Type**                A,                  /**< matrix */
    Type*                 b                   /**< rhs */
    )
@@ -2167,7 +2179,7 @@ int computeRowEcholonGF2(
       s[i] = i;
    }
 
-   /* loop through possible steps in echolon form (stop at min {n, m}) */
+   /* loop through possible steps in echelon form (stop at min {n, m}) */
    for (i = 0; i < m && i < n; ++i)
    {
       assert( s[i] == i );
@@ -2245,16 +2257,16 @@ int computeRowEcholonGF2(
    return m;
 }
 
-/** Construct solution from matrix in row echolon form over GF2
+/** Construct solution from matrix in row echelon form over GF2
  *
- *  Compute solution of \f$A x = b\f$, which is already in row echolon form (@see computeRowEcholonGF2()) */
+ *  Compute solution of \f$A x = b\f$, which is already in row echelon form (@see computeRowEchelonGF2()) */
 static
-void solveRowEcholonGF2(
+void solveRowEchelonGF2(
    int                   m,                  /**< number of rows */
    int                   n,                  /**< number of columns */
    int                   r,                  /**< rank of matrix */
    int*                  p,                  /**< row permutation */
-   int*                  s,                  /**< steps indicators of the row echolon form */
+   int*                  s,                  /**< steps indicators of the row echelon form */
    Type**                A,                  /**< matrix */
    Type*                 b,                  /**< rhs */
    Type*                 x                   /**< solution vector on exit */
@@ -2274,11 +2286,8 @@ void solveRowEcholonGF2(
    for (k = 0; k < n; ++k)
       x[k] = 0;
 
-   /* init last entry */
-   x[s[r-1]] = b[p[r-1]];
-
    /* loop backwards through solution vector */
-   for (i = r-2; i >= 0; --i)
+   for (i = r-1; i >= 0; --i)
    {
       Type val;
 
@@ -2301,11 +2310,11 @@ void solveRowEcholonGF2(
 /** solve equation system over GF 2 by Gauss algorithm and create solution out of it or return cutoff
  *
  *  Collect all information in xor constraints into a linear system over GF2. Then solve the system by computing a row
- *  echolon form. If the system is infeasible, the current node is infeasible. Otherwise, we can compute a solution for
+ *  echelon form. If the system is infeasible, the current node is infeasible. Otherwise, we can compute a solution for
  *  the xor constraints given. We check whether this gives a solution for the whole problem.
  *
  *  We sort the columns with respect to the product of the objective coefficients and 1 minus the current LP solution
- *  value. The idea is that columns that are likely to provide the steps in the row echolon form should appear towards
+ *  value. The idea is that columns that are likely to provide the steps in the row echelon form should appear towards
  *  the front of the matrix. The smaller the product, the more it makes sense to set the variable to 1 (because the
  *  solution value is already close to 1 and the objective function is small).
  *
@@ -2384,8 +2393,11 @@ SCIP_RETCODE checkSystemGF2(
             var = SCIPvarGetNegatedVar(var);
          assert( var != NULL );
 
+         /* get the active variable */
+         while ( var != NULL && SCIPvarGetStatus(var) == SCIP_VARSTATUS_AGGREGATED )
+            var = SCIPisEQ(scip, SCIPvarGetAggrScalar(var), 0.0) ? NULL : SCIPvarGetAggrVar(var);
          /* consider nonfixed variables */
-         if ( SCIPcomputeVarLbLocal(scip, var) < 0.5 && SCIPcomputeVarUbLocal(scip, var) > 0.5 )
+         if ( var != NULL && SCIPcomputeVarLbLocal(scip, var) < 0.5 && SCIPcomputeVarUbLocal(scip, var) > 0.5 )
          {
             /* consider active variables and collect only new ones */
             if ( SCIPvarIsActive(var) && ! SCIPhashmapExists(varhash, var) )
@@ -2449,7 +2461,7 @@ SCIP_RETCODE checkSystemGF2(
 
    /* Sort variables non-decreasingly with respect to product of objective and 1 minus the current solution value: the
     * smaller the value the better it would be to set the variable to 1. This is more likely if the variable appears
-    * towards the front of the matrix, because only the entries on the steps in the row echolon form will have the
+    * towards the front of the matrix, because only the entries on the steps in the row echelon form will have the
     * chance to be nonzero.
     */
    SCIPsortRealIntPtr(xorvals, xoridx, (void**) xorvars, nvarsmat);
@@ -2579,7 +2591,7 @@ SCIP_RETCODE checkSystemGF2(
    rank = -1;
    if ( ! SCIPisStopped(scip) )
    {
-      rank = computeRowEcholonGF2(scip, nconssmat, nvarsmat, p, s, A, b);
+      rank = computeRowEchelonGF2(scip, nconssmat, nvarsmat, p, s, A, b);
       assert( rank <= nconssmat && rank <= nvarsmat );
    }
 
@@ -2620,7 +2632,7 @@ SCIP_RETCODE checkSystemGF2(
 
             /* construct solution */
             SCIP_CALL( SCIPallocBufferArray(scip, &x, nvarsmat) );
-            solveRowEcholonGF2(nconssmat, nvarsmat, rank, p, s, A, b, x);
+            solveRowEchelonGF2(nconssmat, nvarsmat, rank, p, s, A, b, x);
 
 #ifdef SCIP_OUTPUT
             SCIPinfoMessage(scip, NULL, "Solution:\n");
@@ -2670,7 +2682,7 @@ SCIP_RETCODE checkSystemGF2(
 
                /* construct solution */
                SCIP_CALL( SCIPallocBufferArray(scip, &x, nvarsmat) );
-               solveRowEcholonGF2(nconssmat, nvarsmat, rank, p, s, A, b, x);
+               solveRowEchelonGF2(nconssmat, nvarsmat, rank, p, s, A, b, x);
 
 #ifdef SCIP_OUTPUT
                SCIPinfoMessage(scip, NULL, "Solution:\n");
@@ -5036,7 +5048,7 @@ SCIP_DECL_CONSCHECK(consCheckXor)
 
             if( consdata->intvar != NULL )
             {
-               SCIPinfoMessage(scip, NULL, ";\nviolation: %d operands are set to TRUE but integer variable has value of %g\n", SCIPgetSolVal(scip, sol, consdata->intvar));
+               SCIPinfoMessage(scip, NULL, ";\nviolation: %d operands are set to TRUE but integer variable has value of %g\n", sum, SCIPgetSolVal(scip, sol, consdata->intvar));
             }
             else
             {

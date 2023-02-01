@@ -86,7 +86,7 @@ do
          echo "Error: "${LPILIB}" does not exist, please compile SCIP with OPT="${OPT}" and LPS="${LPS}"."
          exit 1
       fi
-      SCIPLIB=../lib/${LIBTYPE}/libscip.${OSTYPE}.${ARCH}.gnu.${OPT}.${LIBEXT}
+      SCIPLIB=../lib/${LIBTYPE}/libscipbase.${OSTYPE}.${ARCH}.gnu.${OPT}.${LIBEXT}
       if test ! -e ${SCIPLIB}
       then
          echo "Error: "${SCIPLIB}" does not exist, please compile SCIP with OPT="${OPT}" and LPS="${LPS}"." >> ${APPLICATIONLOG}
@@ -100,7 +100,7 @@ done
 for APPLICATION in ${APPLICATIONS}
 do
    # See issues #1100 and #1169
-   if test ${APPLICATION} = "PolySCIP"
+   if test ${APPLICATION} = "PolySCIP" || test ${APPLICATION} = "STP";
    then
       continue
    fi

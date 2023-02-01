@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -24,7 +33,6 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "blockmemshell/memory.h"
-#include "nlpi/nlpi.h"
 #include "scip/cons_linear.h"
 #include "scip/dialog_default.h"
 #include "scip/pub_benders.h"
@@ -32,8 +40,10 @@
 #include "scip/pub_compr.h"
 #include "scip/pub_conflict.h"
 #include "scip/pub_cons.h"
+#include "scip/pub_cutsel.h"
 #include "scip/pub_dialog.h"
 #include "scip/pub_disp.h"
+#include "scip/pub_expr.h"
 #include "scip/pub_heur.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
@@ -53,14 +63,17 @@
 #include "scip/scip_compr.h"
 #include "scip/scip_conflict.h"
 #include "scip/scip_cons.h"
+#include "scip/scip_cutsel.h"
 #include "scip/scip_dialog.h"
 #include "scip/scip_disp.h"
+#include "scip/scip_expr.h"
 #include "scip/scip_general.h"
 #include "scip/scip_heur.h"
 #include "scip/scip_lp.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
 #include "scip/scip_nlp.h"
+#include "scip/scip_nlpi.h"
 #include "scip/scip_nodesel.h"
 #include "scip/scip_numerics.h"
 #include "scip/scip_param.h"
@@ -321,8 +334,10 @@ SCIP_DECL_DIALOGCOPY(dialogCopyDefault)
    assert(scip != NULL);
    assert(dialog != NULL);
 
-   /* call inclusion method of dialog */
-   SCIP_CALL( SCIPincludeDialogDefault(scip) );
+   /* call inclusion method of basic dialog entries
+    * "set" and "fix" dialog entries will be added when SCIPstartInteraction() is called on target SCIP
+    */
+   SCIP_CALL( SCIPincludeDialogDefaultBasic(scip) );
 
    return SCIP_OKAY;
 }
@@ -931,10 +946,73 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayDisplaycols)
    return SCIP_OKAY;
 }
 
+/** dialog execution method for the display exprhdlrs command */
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayExprhdlrs)
+{  /*lint --e{715}*/
+   SCIP_EXPRHDLR **exprhdlrs;
+   int nexprhdlrs;
+   int i;
+
+   SCIP_CALL(SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE));
+
+   exprhdlrs = SCIPgetExprhdlrs(scip);
+   nexprhdlrs = SCIPgetNExprhdlrs(scip);
+
+   /* display list of expression handler */
+   SCIPdialogMessage(scip, NULL, "\n");
+   SCIPdialogMessage(scip, NULL, " expression handler  precedence  description\n");
+   SCIPdialogMessage(scip, NULL, " ------------------  ----------  -----------\n");
+   for( i = 0; i < nexprhdlrs; ++i )
+   {
+      SCIPdialogMessage(scip, NULL, " %-18s ", SCIPexprhdlrGetName(exprhdlrs[i]));
+      SCIPdialogMessage(scip, NULL, " %10u ", SCIPexprhdlrGetPrecedence(exprhdlrs[i]));
+      SCIPdialogMessage(scip, NULL, " %s", SCIPexprhdlrGetDescription(exprhdlrs[i]));
+      SCIPdialogMessage(scip, NULL, "\n");
+   }
+   SCIPdialogMessage(scip, NULL, "\n");
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   return SCIP_OKAY;
+}
+
+/** dialog execution method for the display cutselectors command */
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayCutselectors)
+{  /*lint --e{715}*/
+   SCIP_CUTSEL** cutsels;
+   int ncutsels;
+   int i;
+
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
+
+   cutsels = SCIPgetCutsels(scip);
+   ncutsels = SCIPgetNCutsels(scip);
+
+   /* display list of cut selectors */
+   SCIPdialogMessage(scip, NULL, "\n");
+   SCIPdialogMessage(scip, NULL, " cut selector         priority  description\n");
+   SCIPdialogMessage(scip, NULL, " ------------         --------  -----------\n");
+   for( i = 0; i < ncutsels; ++i )
+   {
+      SCIPdialogMessage(scip, NULL, " %-20s ", SCIPcutselGetName(cutsels[i]));
+      if( strlen(SCIPcutselGetName(cutsels[i])) > 20 )
+         SCIPdialogMessage(scip, NULL, "\n %20s ", "-->");
+      SCIPdialogMessage(scip, NULL, "%8d ", SCIPcutselGetPriority(cutsels[i]));
+      SCIPdialogMessage(scip, NULL, "%s", SCIPcutselGetDesc(cutsels[i]));
+      SCIPdialogMessage(scip, NULL, "\n");
+   }
+   SCIPdialogMessage(scip, NULL, "\n");
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   return SCIP_OKAY;
+}
+
 /** dialog execution method for the display heuristics command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayHeuristics)
 {  /*lint --e{715}*/
    SCIP_HEUR** heurs;
+   SCIP_HEUR** sorted;
    int nheurs;
    int i;
 
@@ -943,23 +1021,32 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayHeuristics)
    heurs = SCIPgetHeurs(scip);
    nheurs = SCIPgetNHeurs(scip);
 
-   /* display list of primal heuristics */
+   /* copy heurs array into temporary memory for sorting */
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &sorted, heurs, nheurs) );
+
+   /* sort the heuristics */
+   SCIPsortPtr((void**)sorted, SCIPheurCompPriority, nheurs);
+
+   /* display sorted list of primal heuristics */
    SCIPdialogMessage(scip, NULL, "\n");
    SCIPdialogMessage(scip, NULL, " primal heuristic     c priority freq ofs  description\n");
    SCIPdialogMessage(scip, NULL, " ----------------     - -------- ---- ---  -----------\n");
    for( i = 0; i < nheurs; ++i )
    {
-      SCIPdialogMessage(scip, NULL, " %-20s ", SCIPheurGetName(heurs[i]));
-      if( strlen(SCIPheurGetName(heurs[i])) > 20 )
+      SCIPdialogMessage(scip, NULL, " %-20s ", SCIPheurGetName(sorted[i]));
+      if( strlen(SCIPheurGetName(sorted[i])) > 20 )
          SCIPdialogMessage(scip, NULL, "\n %20s ", "-->");
-      SCIPdialogMessage(scip, NULL, "%c ", SCIPheurGetDispchar(heurs[i]));
-      SCIPdialogMessage(scip, NULL, "%8d ", SCIPheurGetPriority(heurs[i]));
-      SCIPdialogMessage(scip, NULL, "%4d ", SCIPheurGetFreq(heurs[i]));
-      SCIPdialogMessage(scip, NULL, "%3d  ", SCIPheurGetFreqofs(heurs[i]));
-      SCIPdialogMessage(scip, NULL, "%s", SCIPheurGetDesc(heurs[i]));
+      SCIPdialogMessage(scip, NULL, "%c ", SCIPheurGetDispchar(sorted[i]));
+      SCIPdialogMessage(scip, NULL, "%8d ", SCIPheurGetPriority(sorted[i]));
+      SCIPdialogMessage(scip, NULL, "%4d ", SCIPheurGetFreq(sorted[i]));
+      SCIPdialogMessage(scip, NULL, "%3d  ", SCIPheurGetFreqofs(sorted[i]));
+      SCIPdialogMessage(scip, NULL, "%s", SCIPheurGetDesc(sorted[i]));
       SCIPdialogMessage(scip, NULL, "\n");
    }
    SCIPdialogMessage(scip, NULL, "\n");
+
+   /* free temporary memory */
+   SCIPfreeBufferArray(scip, &sorted);
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
@@ -3077,10 +3164,9 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisCounter)
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
-   /* reset SCIP parameters */
-   SCIP_CALL( SCIPresetParams(scip) );
-
-   /* set parameters for counting problems */
+   /* set parameters for counting problems; we do not reset parameters to their default values first, since the user
+    * should be able to combine emphasis settings in the interactive shell
+    */
    SCIP_CALL( SCIPsetEmphasis(scip, SCIP_PARAMEMPHASIS_COUNTER, FALSE) );
 
    return SCIP_OKAY;
@@ -3093,10 +3179,9 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisCpsolver)
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
-   /* reset SCIP parameters */
-   SCIP_CALL( SCIPresetParams(scip) );
-
-   /* set parameters for CP like search problems */
+   /* set parameters for CP like search problems; we do not reset parameters to their default values first, since the
+    * user should be able to combine emphasis settings in the interactive shell
+    */
    SCIP_CALL( SCIPsetEmphasis(scip, SCIP_PARAMEMPHASIS_CPSOLVER, FALSE) );
 
    return SCIP_OKAY;
@@ -3109,10 +3194,9 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisEasycip)
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
-   /* reset SCIP parameters */
-   SCIP_CALL( SCIPresetParams(scip) );
-
-   /* set parameters for easy CIP problems */
+   /* set parameters for easy CIP problems; we do not reset parameters to their default values first, since the user
+    * should be able to combine emphasis settings in the interactive shell
+    */
    SCIP_CALL( SCIPsetEmphasis(scip, SCIP_PARAMEMPHASIS_EASYCIP, FALSE) );
 
    return SCIP_OKAY;
@@ -3125,10 +3209,9 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisFeasibility)
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
-   /* reset SCIP parameters */
-   SCIP_CALL( SCIPresetParams(scip) );
-
-   /* set parameters for feasibility problems */
+   /* set parameters for feasibility problems; we do not reset parameters to their default values first, since the user
+    * should be able to combine emphasis settings in the interactive shell
+    */
    SCIP_CALL( SCIPsetEmphasis(scip, SCIP_PARAMEMPHASIS_FEASIBILITY, FALSE) );
 
    return SCIP_OKAY;
@@ -3141,10 +3224,9 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisHardlp)
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
-   /* reset SCIP parameters */
-   SCIP_CALL( SCIPresetParams(scip) );
-
-   /* set parameters for problems with hard LP */
+   /* set parameters for problems with hard LP; we do not reset parameters to their default values first, since the user
+    * should be able to combine emphasis settings in the interactive shell
+    */
    SCIP_CALL( SCIPsetEmphasis(scip, SCIP_PARAMEMPHASIS_HARDLP, FALSE) );
 
    return SCIP_OKAY;
@@ -3157,10 +3239,9 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisOptimality)
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
-   /* reset SCIP parameters */
-   SCIP_CALL( SCIPresetParams(scip) );
-
-   /* set parameters for problems to prove optimality fast */
+   /* set parameters for problems to prove optimality fast; we do not reset parameters to their default values first,
+    * since the user should be able to combine emphasis settings in the interactive shell
+    */
    SCIP_CALL( SCIPsetEmphasis(scip, SCIP_PARAMEMPHASIS_OPTIMALITY, FALSE) );
 
    return SCIP_OKAY;
@@ -3173,11 +3254,25 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisNumerics)
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
-   /* reset SCIP parameters */
-   SCIP_CALL( SCIPresetParams(scip) );
-
-   /* set parameters for problems to prove optimality fast */
+   /* set parameters for problems to prove optimality fast; we do not reset parameters to their default values first,
+    * since the user should be able to combine emphasis settings in the interactive shell
+    */
    SCIP_CALL( SCIPsetEmphasis(scip, SCIP_PARAMEMPHASIS_NUMERICS, FALSE) );
+
+   return SCIP_OKAY;
+}
+
+/** dialog execution method for the set emphasis benchmark command */
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisBenchmark)
+{  /*lint --e{715}*/
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   /* set parameters for problems to run in benchmark mode; we do not reset parameters to their default values first,
+    * since the user should be able to combine emphasis settings in the interactive shell
+    */
+   SCIP_CALL( SCIPsetEmphasis(scip, SCIP_PARAMEMPHASIS_BENCHMARK, FALSE) );
 
    return SCIP_OKAY;
 }
@@ -3723,13 +3818,13 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteFiniteSolution)
             else
             {
                SCIPmessageFPrintInfo(SCIPgetMessagehdlr(scip), file, "finite solution could not be created\n");
-               SCIPdialogMessage(scip, NULL, "finite solution could not be created\n", filename);
+               SCIPdialogMessage(scip, NULL, "finite solution could not be created\n");
             }
          }
          else
          {
             SCIPmessageFPrintInfo(SCIPgetMessagehdlr(scip), file, "no solution available\n");
-            SCIPdialogMessage(scip, NULL, "no solution available\n", filename);
+            SCIPdialogMessage(scip, NULL, "no solution available\n");
          }
 
          fclose(file);
@@ -3923,8 +4018,8 @@ SCIP_RETCODE SCIPcreateRootDialog(
 }
 
 
-/** includes or updates the default dialog menus in SCIP */
-SCIP_RETCODE SCIPincludeDialogDefault(
+/** includes or updates the default dialog menus in SCIP except for menus "fix" and "set" */
+SCIP_RETCODE SCIPincludeDialogDefaultBasic(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -4088,6 +4183,27 @@ SCIP_RETCODE SCIPincludeDialogDefault(
             NULL,
             SCIPdialogExecDisplayDisplaycols, NULL, NULL,
             "displaycols", "display display columns", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+
+   /* display exprhdlrs */
+   if( !SCIPdialogHasEntry(submenu, "exprhdlrs") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+            NULL,
+            SCIPdialogExecDisplayExprhdlrs, NULL, NULL,
+            "exprhdlrs", "display expression handlers", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+
+   /* display cut selectors */
+   if( !SCIPdialogHasEntry(submenu, "cutselectors") ) {
+      SCIP_CALL(SCIPincludeDialog(scip, &dialog,
+            NULL,
+            SCIPdialogExecDisplayCutselectors, NULL, NULL,
+            "cutselectors", "display cut selectors", FALSE, NULL));
       SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
@@ -4345,7 +4461,7 @@ SCIP_RETCODE SCIPincludeDialogDefault(
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
 
-   /* display varbranchstatistics */
+   /* display lpsolquality */
    if( !SCIPdialogHasEntry(submenu, "lpsolquality") )
    {
       SCIP_CALL( SCIPincludeDialog(scip, &dialog,
@@ -4478,12 +4594,6 @@ SCIP_RETCODE SCIPincludeDialogDefault(
       SCIP_CALL( SCIPaddDialogEntry(scip, root, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
-
-   /* set */
-   SCIP_CALL( SCIPincludeDialogDefaultSet(scip) );
-
-   /* fix */
-   SCIP_CALL( SCIPincludeDialogDefaultFix(scip) );
 
    /* write */
    if( !SCIPdialogHasEntry(root, "write") )
@@ -4938,6 +5048,7 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
    SCIP_BRANCHRULE** branchrules; 
    SCIP_CONFLICTHDLR** conflicthdlrs;
    SCIP_CONSHDLR** conshdlrs;
+   SCIP_CUTSEL** cutsels;
    SCIP_DISP** disps;
    SCIP_HEUR** heurs;
    SCIP_NLPI** nlpis;
@@ -4949,6 +5060,7 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
    int nbranchrules;
    int nconflicthdlrs;
    int nconshdlrs;
+   int ncutsels;
    int ndisps;
    int nheurs;
    int nnlpis;
@@ -5144,6 +5256,38 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
       }
    }
 
+   /* set cutselection */
+   if( !SCIPdialogHasEntry(setmenu, "cutselection") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &submenu,
+            NULL,
+            SCIPdialogExecMenu, NULL, NULL,
+            "cutselection", "change parameters for cut selectors", TRUE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, setmenu, submenu) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
+   }
+   if( SCIPdialogFindEntry(setmenu, "cutselection", &submenu) != 1 )
+   {
+      SCIPerrorMessage("cutselection sub menu not found\n");
+      return SCIP_PLUGINNOTFOUND;
+   }
+
+   ncutsels = SCIPgetNCutsels(scip);
+   cutsels = SCIPgetCutsels(scip);
+
+   for( i = 0; i < ncutsels; ++i )
+   {
+      if( !SCIPdialogHasEntry(submenu, SCIPcutselGetName(cutsels[i])) )
+      {
+         SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+               NULL,
+               SCIPdialogExecMenu, NULL, NULL,
+               SCIPcutselGetName(cutsels[i]), SCIPcutselGetDesc(cutsels[i]), TRUE, NULL) );
+         SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+         SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+      }
+   }
+
    /* set display */
    if( !SCIPdialogHasEntry(setmenu, "display") )
    {
@@ -5182,6 +5326,16 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
       SCIP_CALL( SCIPincludeDialog(scip, &submenu,
             NULL, SCIPdialogExecMenu, NULL, NULL,
             "estimation", "change parameters for restarts and tree size estimation", TRUE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, setmenu, submenu) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
+   }
+
+   /* set expr */
+   if( !SCIPdialogHasEntry(setmenu, "expr") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &submenu,
+            NULL, SCIPdialogExecMenu, NULL, NULL,
+            "expr", "change parameters for expression handlers", TRUE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, setmenu, submenu) );
       SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
    }
@@ -5298,7 +5452,7 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
       SCIP_CALL( SCIPincludeDialog(scip, &submenu,
             NULL,
             SCIPdialogExecMenu, NULL, NULL,
-            "nlp", "change parameters for nonlinear programming relaxations", TRUE, NULL) );
+            "nlp", "change parameters for nonlinear programming relaxation", TRUE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, setmenu, submenu) );
       SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
    }
@@ -5321,6 +5475,16 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
             NULL,
             SCIPdialogExecMenu, NULL, NULL,
             "misc", "change parameters for miscellaneous stuff", TRUE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, setmenu, submenu) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
+   }
+
+   /* set nlhdlr */
+   if( !SCIPdialogHasEntry(setmenu, "nlhdlr") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &submenu,
+            NULL, SCIPdialogExecMenu, NULL, NULL,
+            "nlhdlr", "change parameters for nonlinear handlers", TRUE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, setmenu, submenu) );
       SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
    }
@@ -5737,6 +5901,15 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
 
+   /* add "benchmark" dialog to "set/emphasis" sub menu */
+   if( !SCIPdialogHasEntry(submenu, "benchmark") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog, NULL, SCIPdialogExecSetEmphasisBenchmark, NULL, NULL,
+            "benchmark", "predefined parameter settings for running in benchmark mode", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+
    return SCIP_OKAY;
 }
 
@@ -5757,6 +5930,7 @@ SCIP_RETCODE SCIPincludeDialogDefaultFix(
    SCIP_BRANCHRULE** branchrules;
    SCIP_CONFLICTHDLR** conflicthdlrs;
    SCIP_CONSHDLR** conshdlrs;
+   SCIP_CUTSEL** cutsels;
    SCIP_DISP** disps;
    SCIP_HEUR** heurs;
    SCIP_NLPI** nlpis;
@@ -5768,6 +5942,7 @@ SCIP_RETCODE SCIPincludeDialogDefaultFix(
    int nbranchrules;
    int nconflicthdlrs;
    int nconshdlrs;
+   int ncutsels;
    int ndisps;
    int nheurs;
    int nnlpis;
@@ -5891,6 +6066,38 @@ SCIP_RETCODE SCIPincludeDialogDefaultFix(
                NULL,
                SCIPdialogExecMenu, NULL, NULL,
                SCIPconshdlrGetName(conshdlrs[i]), SCIPconshdlrGetDesc(conshdlrs[i]), TRUE, NULL) );
+         SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+         SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+      }
+   }
+
+   /* fix cutselection */
+   if( !SCIPdialogHasEntry(fixmenu, "cutselection") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &submenu,
+            NULL,
+            SCIPdialogExecMenu, NULL, NULL,
+            "cutselection", "fix parameters for cut selectors", TRUE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, fixmenu, submenu) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
+   }
+   if( SCIPdialogFindEntry(fixmenu, "cutselection", &submenu) != 1 )
+   {
+      SCIPerrorMessage("cutselection sub menu not found\n");
+      return SCIP_PLUGINNOTFOUND;
+   }
+
+   ncutsels = SCIPgetNCutsels(scip);
+   cutsels = SCIPgetCutsels(scip);
+
+   for( i = 0; i < ncutsels; ++i )
+   {
+      if( !SCIPdialogHasEntry(submenu, SCIPcutselGetName(cutsels[i])) )
+      {
+         SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+               NULL,
+               SCIPdialogExecMenu, NULL, NULL,
+               SCIPcutselGetName(cutsels[i]), SCIPcutselGetDesc(cutsels[i]), TRUE, NULL) );
          SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
          SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
       }

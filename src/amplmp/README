@@ -1,0 +1,6 @@
+This directory contains some of the source of AMPL/MP taken from https://github.com/ampl/mp.
+AMPL/MP is used by SCIP to read .nl files.
+See LICENSE.rst for the license that applies to the files below this directory.
+
+If updating source here, also update the version number (githash or tag)
+src/scip/reader_nl.c::SCIPincludeReaderNl().

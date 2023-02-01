@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -39,6 +48,7 @@
 #include "scip/debug.h"
 #include "scip/scip.h"
 #include "scip/cuts.h"
+#include "scip/cutsel.h"
 #include "scip/struct_event.h"
 #include "scip/struct_sepastore.h"
 #include "scip/misc.h"
@@ -88,7 +98,9 @@ SCIP_RETCODE SCIPsepastoreCreate(
    (*sepastore)->cutssize = 0;
    (*sepastore)->ncuts = 0;
    (*sepastore)->nforcedcuts = 0;
-   (*sepastore)->ncutsfound = 0;
+   (*sepastore)->ncutsadded = 0;
+   (*sepastore)->ncutsaddedviapool = 0;
+   (*sepastore)->ncutsaddeddirect = 0;
    (*sepastore)->ncutsfoundround = 0;
    (*sepastore)->ncutsapplied = 0;
    (*sepastore)->initiallp = FALSE;
@@ -241,8 +253,8 @@ SCIP_Bool sepastoreIsCutRedundantOrInfeasible(
       return TRUE;
    }
 
-   if( (!SCIPsetIsInfinity(set, rhs) && SCIPsetIsFeasGT(set, minactivity, rhs)) ||
-       (!SCIPsetIsInfinity(set, -lhs) &&  SCIPsetIsFeasLT(set, maxactivity, lhs) ))
+   if( (!SCIPsetIsInfinity(set,  rhs) && SCIPsetIsFeasPositive(set, minactivity - rhs)) ||
+       (!SCIPsetIsInfinity(set, -lhs) && SCIPsetIsFeasNegative(set, maxactivity - lhs)) )
    {
       SCIPsetDebugMsg(set, "cut <%s> is infeasible (sides=[%g,%g], act=[%g,%g])\n",
          SCIProwGetName(cut), lhs, rhs, minactivity, maxactivity);
@@ -388,6 +400,21 @@ SCIP_RETCODE sepastoreDelCut(
    }
 
    /* release the row */
+   if( !sepastore->initiallp )
+   {
+      sepastore->ncutsadded--;
+      if( sepastore->cuts[pos]->fromcutpool )
+         sepastore->ncutsaddedviapool--;
+      else
+         sepastore->ncutsaddeddirect--;
+
+      if( (SCIP_ROWORIGINTYPE) sepastore->cuts[pos]->origintype == SCIP_ROWORIGINTYPE_SEPA )
+      {
+         SCIP_SEPA* sepa;
+         sepa = SCIProwGetOriginSepa(sepastore->cuts[pos]);
+         SCIPsepaDecNCutsAdded(sepa, sepastore->cuts[pos]->fromcutpool);
+      }
+   }
    SCIP_CALL( SCIProwRelease(&sepastore->cuts[pos], blkmem, set, lp) );
 
    /* move last cut to the empty position */
@@ -426,13 +453,6 @@ SCIP_RETCODE SCIPsepastoreAddCut(
    /* debug: check cut for feasibility */
    SCIP_CALL( SCIPdebugCheckRow(set, cut) ); /*lint !e506 !e774*/
 
-   /* update statistics of total number of found cuts */
-   if( !sepastore->initiallp )
-   {
-      sepastore->ncutsfound++;
-      sepastore->ncutsfoundround++;
-   }
-
    /* the cut will be forced to enter the LP if the dual must be collected and the initial LP is being constructed */
    forcecut = forcecut || (set->lp_alwaysgetduals && sepastore->initiallp);
 
@@ -466,6 +486,22 @@ SCIP_RETCODE SCIPsepastoreAddCut(
 
          SCIP_CALL( SCIPeventCreateRowDeletedSepa(&event, blkmem, sepastore->cuts[0]) );
          SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, eventfilter, &event) );
+      }
+      /* update statistics of total number of found cuts */
+      if( !sepastore->initiallp )
+      {
+         sepastore->ncutsadded--;
+         if( sepastore->cuts[0]->fromcutpool )
+            sepastore->ncutsaddedviapool--;
+         else
+            sepastore->ncutsaddeddirect--;
+
+         if( (SCIP_ROWORIGINTYPE) sepastore->cuts[0]->origintype == SCIP_ROWORIGINTYPE_SEPA )
+         {
+            SCIP_SEPA* sepa;
+            sepa = SCIProwGetOriginSepa(sepastore->cuts[0]);
+            SCIPsepaDecNCutsAdded(sepa, sepastore->cuts[0]->fromcutpool);
+         }
       }
 
       SCIP_CALL( SCIProwRelease(&sepastore->cuts[0], blkmem, set, lp) );
@@ -506,6 +542,25 @@ SCIP_RETCODE SCIPsepastoreAddCut(
       pos = sepastore->ncuts;
 
    sepastore->cuts[pos] = cut;
+
+   /* update statistics of total number of found cuts */
+   if( !sepastore->initiallp )
+   {
+      sepastore->ncutsadded++;
+      sepastore->ncutsfoundround++;
+      if( cut->fromcutpool )
+         sepastore->ncutsaddedviapool++;
+      else
+         sepastore->ncutsaddeddirect++;
+
+      if( (SCIP_ROWORIGINTYPE) cut->origintype == SCIP_ROWORIGINTYPE_SEPA )
+      {
+         SCIP_SEPA* sepa;
+
+         sepa = SCIProwGetOriginSepa(cut);
+         SCIPsepaIncNCutsAdded(sepa, cut->fromcutpool);
+      }
+   }
    sepastore->ncuts++;
 
    /* check, if the row addition to separation storage events are tracked if so, issue ROWADDEDSEPA event */
@@ -831,7 +886,8 @@ SCIP_RETCODE sepastoreApplyCut(
          sepastore->ncutsapplied++;
 
          /* increase count of applied cuts for origins of row */
-         switch ( cut->origintype )
+         /* TODO: adjust conshdlr statistics to mirror cut statistics */
+         switch ( (SCIP_ROWORIGINTYPE) cut->origintype )
          {
          case SCIP_ROWORIGINTYPE_CONSHDLR:
             assert( cut->origin != NULL );
@@ -843,14 +899,14 @@ SCIP_RETCODE sepastoreApplyCut(
             break;
          case SCIP_ROWORIGINTYPE_SEPA:
             assert( cut->origin != NULL );
-            SCIPsepaIncNAppliedCuts((SCIP_SEPA*) cut->origin);
+            SCIPsepaIncNCutsApplied((SCIP_SEPA*)cut->origin, cut->fromcutpool);
             break;
          case SCIP_ROWORIGINTYPE_UNSPEC:
          case SCIP_ROWORIGINTYPE_REOPT:
             /* do nothing - cannot update statistics */
             break;
          default:
-            SCIPerrorMessage("unkown type of row origin.\n");
+            SCIPerrorMessage("unknown type of row origin.\n");
             return SCIP_INVALIDDATA;
          }
       }
@@ -882,8 +938,6 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
    )
 {
    SCIP_NODE* node;
-   SCIP_Real maxparall;
-   SCIP_Real goodmaxparall;
    int maxsepacuts;
    int ncutsapplied;
    int nselectedcuts;
@@ -898,37 +952,42 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
 
    SCIP_UNUSED(efficiacychoice);
 
-   *cutoff = FALSE;
+   SCIPsetDebugMsg(set, "selecting from %d cuts\n", sepastore->ncuts);
 
-   SCIPsetDebugMsg(set, "applying %d cuts\n", sepastore->ncuts);
+   /* get maximal number of cuts to add to the LP */
+   maxsepacuts = SCIPsetGetSepaMaxcuts(set, root);
+
+   /* if all cuts are forced cuts, no selection is required */
+   if( sepastore->nforcedcuts >= MIN(sepastore->ncuts, maxsepacuts) )
+   {
+      nselectedcuts = sepastore->nforcedcuts;
+   }
+   else
+   {
+      /* call cut selection algorithms */
+      nselectedcuts = 0;
+      SCIP_CALL( SCIPcutselsSelect(set, sepastore->cuts, sepastore->ncuts, sepastore->nforcedcuts, root, sepastore->initiallp, maxsepacuts,
+            &nselectedcuts) );
+      assert(nselectedcuts + sepastore->nforcedcuts <= maxsepacuts);
+
+      /* note that cut selector statistics are updated here also when in probing mode; this may lead to an offset with
+       * separator/constraint handler statistics */
+      /* @todo do not update cutselector statistics if SCIPtreeProbing(scip->tree) */
+      nselectedcuts += sepastore->nforcedcuts;
+   }
+
+   /*
+    * apply all selected cuts
+    */
+   ncutsapplied = 0;
+   *cutoff = FALSE;
 
    node = SCIPtreeGetCurrentNode(tree);
    assert(node != NULL);
 
-   /* get maximal number of cuts to add to the LP */
-   maxsepacuts = SCIPsetGetSepaMaxcuts(set, root);
-   ncutsapplied = 0;
-
    /* get depth of current node */
    depth = SCIPnodeGetDepth(node);
 
-   if( root )
-   {
-      maxparall = 1.0 - set->sepa_minorthoroot;
-      goodmaxparall = MAX(0.5, 1.0 - set->sepa_minorthoroot);
-   }
-   else
-   {
-      maxparall = 1.0 - set->sepa_minortho;
-      goodmaxparall = MAX(0.5, 1.0 - set->sepa_minortho);
-   }
-
-   /* call cut selection algorithm */
-   SCIP_CALL( SCIPselectCuts(set->scip, sepastore->cuts, sepastore->randnumgen, 0.9, 0.0, goodmaxparall, maxparall,
-         set->sepa_dircutoffdistfac, set->sepa_efficacyfac, set->sepa_objparalfac, set->sepa_intsupportfac,
-         sepastore->ncuts, sepastore->nforcedcuts, maxsepacuts, &nselectedcuts) );
-
-   /* apply all selected cuts */
    for( i = 0; i < nselectedcuts && !(*cutoff); i++ )
    {
       SCIP_ROW* cut;
@@ -945,7 +1004,6 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
             SCIPsetDebugMsg(set, " -> applying forced cut <%s> as boundchange\n", SCIProwGetName(cut));
             SCIP_CALL( sepastoreApplyBdchg(sepastore, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand,
                   eventqueue, cliquetable, cut, &applied, cutoff) );
-
             assert(applied || !sepastoreIsBdchgApplicable(set, cut));
          }
 
@@ -1097,14 +1155,35 @@ int SCIPsepastoreGetNCuts(
    return sepastore->ncuts;
 }
 
-/** get total number of cuts found so far */
-int SCIPsepastoreGetNCutsFound(
+/** gets the total number of cutting planes added to the separation storage;
+ *  this is equal to the sum of added cuts directly and via the pool. */
+int SCIPsepastoreGetNCutsAdded(
    SCIP_SEPASTORE*       sepastore           /**< separation storage */
    )
 {
    assert(sepastore != NULL);
 
-   return sepastore->ncutsfound;
+   return sepastore->ncutsadded;
+}
+
+/** gets the number of cutting planes added to the separation storage from the cut pool */
+int SCIPsepastoreGetNCutsAddedViaPool(
+   SCIP_SEPASTORE*       sepastore           /**< separation storage */
+   )
+{
+   assert(sepastore != NULL);
+
+   return sepastore->ncutsaddedviapool;
+}
+
+/** gets the number of cutting planes added to the separation storage directly */
+int SCIPsepastoreGetNCutsAddedDirect(
+   SCIP_SEPASTORE*       sepastore           /**< separation storage */
+   )
+{
+   assert(sepastore != NULL);
+
+   return sepastore->ncutsaddeddirect;
 }
 
 /** get number of cuts found so far in current separation round */
@@ -1117,7 +1196,7 @@ int SCIPsepastoreGetNCutsFoundRound(
    return sepastore->ncutsfoundround;
 }
 
-/** get total number of cuts applied to the LPs */
+/** gets the total number of cutting planes applied to the LP */
 int SCIPsepastoreGetNCutsApplied(
    SCIP_SEPASTORE*       sepastore           /**< separation storage */
    )

@@ -1,0 +1,5 @@
+# SCIP version 7.0.1.3
+
+# should cutpool separation filter for efficacy?
+# [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: TRUE]
+separating/filtercutpoolrel = FALSE

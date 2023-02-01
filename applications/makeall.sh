@@ -3,7 +3,7 @@
 # run with bash -e makeall.sh to stop on errors
 #
 
-APPLICATIONS=(Coloring CycleClustering MinIISC PolySCIP Ringpacking Scheduler STP)
+APPLICATIONS=(Coloring CycleClustering MinIISC Ringpacking Scheduler)
 LPSOLVERS=(clp cpx none spx spx2)
 OPTS=(opt dbg)
 LIBTYPE=(static shared)
@@ -56,7 +56,7 @@ ARCH=`uname -m | \
                   LIBEXT="a"
                fi
 
-               SCIPLIB=../../lib/$TYPE/libscip.$OSTYPE.$ARCH.gnu.$OPT.$LPS.$LIBEXT
+               SCIPLIB=../../lib/$TYPE/libscipsolver.$OSTYPE.$ARCH.gnu.$OPT.$LPS.$LIBEXT
                if test -e $SCIPLIB
                then
                   echo make OPT=$OPT LPS=$LPS SHARED=$SHAREDVAL clean

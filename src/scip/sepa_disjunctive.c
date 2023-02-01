@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -202,11 +211,12 @@ SCIP_RETCODE getSimplexCoefficients(
 }
 
 
-/** computes a disjunctive cut inequality based on two simplex taubleau rows */
+/** computes a disjunctive cut inequality based on two simplex tableau rows */
 static
 SCIP_RETCODE generateDisjCutSOS1(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_SEPA*            sepa,               /**< separator */
+   int                   depth,              /**< current depth */
    SCIP_ROW**            rows,               /**< LP rows */
    int                   nrows,              /**< number of LP rows */
    SCIP_COL**            cols,               /**< LP columns */
@@ -382,11 +392,10 @@ SCIP_RETCODE generateDisjCutSOS1(
    }
 
    /* create cut */
-   (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "%s_%d_%d", SCIPsepaGetName(sepa), SCIPgetNLPs(scip), ndisjcuts);
-   if ( SCIPgetDepth(scip) == 0 )
-      SCIP_CALL( SCIPcreateEmptyRowSepa(scip, row, sepa, cutname, cutlhs, SCIPinfinity(scip), FALSE, FALSE, TRUE) );
-   else
-      SCIP_CALL( SCIPcreateEmptyRowSepa(scip, row, sepa, cutname, cutlhs, SCIPinfinity(scip), TRUE, FALSE, TRUE) );
+   (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "%s_%" SCIP_LONGINT_FORMAT "_%d", SCIPsepaGetName(sepa), SCIPgetNLPs(scip), ndisjcuts);
+
+   /* we create the cut as locally valid, SCIP will make it globally valid if we are at the root node */
+   SCIP_CALL( SCIPcreateEmptyRowSepa(scip, row, sepa, cutname, cutlhs, SCIPinfinity(scip), TRUE, FALSE, TRUE) );
 
    SCIP_CALL( SCIPcacheRowExtensions(scip, *row) );
    for (c = 0; c < ncols; ++c)
@@ -408,16 +417,16 @@ SCIP_RETCODE generateDisjCutSOS1(
       SCIP_Longint maxdnom;
       SCIP_Real maxscale;
 
-      assert( SCIPgetDepth(scip) >= 0 );
-      if( SCIPgetDepth(scip) == 0 )
+      assert( depth >= 0 );
+      if( depth == 0 )
       {
-	 maxdnom = 100;
-	 maxscale = 100.0;
+         maxdnom = 100;
+	      maxscale = 100.0;
       }
       else
       {
-	 maxdnom = 10;
-	 maxscale = 10.0;
+         maxdnom = 10;
+         maxscale = 10.0;
       }
 
       SCIP_CALL( SCIPmakeRowIntegral(scip, *row, -SCIPepsilon(scip), SCIPsumepsilon(scip), maxdnom, maxscale, TRUE, madeintegral) );
@@ -510,7 +519,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
    int nconss;
    int maxcuts;
    int ncalls;
-   int depth;
    int ncols;
    int nrows;
    int ind;
@@ -565,7 +573,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
       return SCIP_OKAY;
 
    /* check for maxdepth < depth, maxinvcutsroot = 0 and maxinvcuts = 0 */
-   depth = SCIPgetDepth(scip);
    if ( ( sepadata->maxdepth >= 0 && sepadata->maxdepth < depth )
       || ( depth == 0 && sepadata->maxinvcutsroot == 0 )
       || ( depth > 0 && sepadata->maxinvcuts == 0 ) )
@@ -677,7 +684,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
    SCIPfreeBufferArrayNull(scip, &violationarray);
 
    /* compute maximal number of cuts */
-   if ( SCIPgetDepth(scip) == 0 )
+   if ( depth == 0 )
       maxcuts = MIN(sepadata->maxinvcutsroot, nrelevantedges);
    else
       maxcuts = MIN(sepadata->maxinvcuts, nrelevantedges);
@@ -814,7 +821,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
          bound2 = SCIPcolGetLb(col);
 
       /* add coefficients to cut */
-      SCIP_CALL( generateDisjCutSOS1(scip, sepa, rows, nrows, cols, ncols, ndisjcuts, MAKECONTINTEGRAL, sepadata->strengthen, cutlhs1, cutlhs2, bound1, bound2, simplexcoefs1, simplexcoefs2, cutcoefs, &row, &madeintegral) );
+      SCIP_CALL( generateDisjCutSOS1(scip, sepa, depth, rows, nrows, cols, ncols, ndisjcuts, MAKECONTINTEGRAL, sepadata->strengthen, cutlhs1, cutlhs2, bound1, bound2, simplexcoefs1, simplexcoefs2, cutcoefs, &row, &madeintegral) );
       if ( row == NULL )
          continue;
 

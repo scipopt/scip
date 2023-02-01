@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -22,6 +31,16 @@
 
 #include "scip/nodesel_bfs.h"
 #include "scip/heur_multistart.c"
+#include "scip/expr_varidx.h"
+#include "scip/expr_abs.h"
+#include "scip/expr_exp.h"
+#include "scip/expr_log.h"
+#include "scip/expr_pow.h"
+#include "scip/expr_product.h"
+#include "scip/expr_sum.h"
+#include "scip/expr_trig.h"
+#include "scip/expr_var.h"
+#include "scip/expr_value.h"
 
 #include "include/scip_test.h"
 
@@ -31,7 +50,6 @@ static SCIP_VAR* y;
 static SCIP_HEUR* heursubnlp;
 static SCIP_HEUR* heurmultistart;
 static SCIP_HASHMAP* varindex;
-static SCIP_EXPRINT* exprint;
 static SCIP_SOL* sol;
 static SCIP_RANDNUMGEN* randumgen;
 
@@ -53,6 +71,16 @@ void setup(void)
 
    SCIP_CALL( SCIPincludeHeurMultistart(scip) );
    SCIP_CALL( SCIPincludeHeurSubNlp(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrAbs(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrExp(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrLog(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrVar(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrValue(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrSum(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrPow(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrProduct(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrSin(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrCos(scip) );
 
    SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_SOLVING, FALSE) );
 
@@ -67,8 +95,12 @@ void setup(void)
    SCIP_CALL( SCIPreleaseVar(scip, &origx) );
    SCIP_CALL( SCIPreleaseVar(scip, &origy) );
 
-   /* expression interpreter */
-   SCIP_CALL( SCIPexprintCreate(SCIPblkmem(scip), &exprint) );
+   /* create useless variables to get around assert(SCIPgetNTotalVars(scip) >= *nvarexprs + 1); in SCIPgetExprVarExprs */
+   SCIP_CALL( SCIPcreateVarBasic(scip, &origx, "bla", -10.0, 10.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPreleaseVar(scip, &origx) );
+
+   SCIP_CALL( SCIPcreateVarBasic(scip, &origx, "ble", -10.0, 10.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPreleaseVar(scip, &origx) );
 
    /* solution */
    SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
@@ -87,7 +119,6 @@ void teardown(void)
 {
    SCIPfreeRandom(scip, &randumgen);
    SCIP_CALL( SCIPfreeSol(scip, &sol) );
-   SCIP_CALL( SCIPexprintFree(&exprint) );
    SCIPhashmapFree(&varindex);
    SCIP_CALL( SCIPfree(&scip) );
 }
@@ -118,7 +149,6 @@ Test(heuristic, sampleRandomPoints, .init = setup, .fini = teardown,
    SCIPfreeBufferArray(scip, &rndpoints);
 }
 
-
 Test(heuristic, computeGradient, .init = setup, .fini = teardown,
    .description = "check computeGradient subroutine of the multi-start heuristic"
    )
@@ -126,84 +156,60 @@ Test(heuristic, computeGradient, .init = setup, .fini = teardown,
    SCIP_NLROW* nlrow;
    SCIP_VAR* linvars[2];
    SCIP_Real lincoefs[2];
-   SCIP_VAR* quadvars[2];
-   SCIP_QUADELEM quadelems[3];
    SCIP_Real grad[2];
-   SCIP_EXPRTREE* tree;
-   SCIP_EXPR* expexpr;
-   SCIP_EXPR* xexpr;
-   SCIP_EXPR* yexpr;
    SCIP_EXPR* expr;
-   SCIP_EXPR* exprs[2];
    SCIP_Real norm;
+   SCIP_EXPRITER* exprit;
 
    linvars[0] = x;
    linvars[1] = y;
    lincoefs[0] = 2.3;
    lincoefs[1] = -3.1;
-   quadvars[0] = x;
-   quadvars[1] = y;
-   quadelems[0].idx1 = 0;
-   quadelems[0].idx2 = 0;
-   quadelems[0].coef = 2.0;
-   quadelems[1].idx1 = 1;
-   quadelems[1].idx2 = 1;
-   quadelems[1].coef = -4.0;
-   quadelems[2].idx1 = 0;
-   quadelems[2].idx2 = 1;
-   quadelems[2].coef = 5.0;
+
+   SCIP_CALL( SCIPcreateExpriter(scip, &exprit) );
 
    /* compute the gradient for 2.3*x - 3.1*y at point (x,y) = (-2,3) */
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, -2.0) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, y, 3.0) );
-   SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, "nlrow", 5.0, 2, linvars, lincoefs, 0, NULL, 0, NULL, NULL, 1.0, 1.0,
+   SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, "nlrow", 5.0, 2, linvars, lincoefs, NULL, 1.0, 1.0,
          SCIP_EXPRCURV_UNKNOWN) );
-   SCIP_CALL( computeGradient(scip, nlrow, exprint, sol, varindex, grad, &norm) );
+   SCIP_CALL( computeGradient(scip, nlrow, sol, varindex, exprit, grad, &norm) );
    SCIP_CALL( SCIPreleaseNlRow(scip, &nlrow) );
 
    cr_assert( SCIPisEQ(scip, grad[0], 2.3) );
    cr_assert( SCIPisEQ(scip, grad[1], -3.1) );
 
-   /* compute the gradient for 2*x^2 -4*y^2 at point (x,y) = (-2,3) */
-   SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, "nlrow", 5.0, 0, NULL, NULL, 2, quadvars, 2, quadelems, NULL, 1.0, 1.0,
-         SCIP_EXPRCURV_UNKNOWN) );
-   SCIP_CALL( computeGradient(scip, nlrow, exprint, sol, varindex, grad, &norm) );
-   SCIP_CALL( SCIPreleaseNlRow(scip, &nlrow) );
-
-   cr_assert( SCIPisEQ(scip, grad[0], 4 * (-2)) );
-   cr_assert( SCIPisEQ(scip, grad[1], -8 * 3) );
-
    /* compute the gradient for 2.3*x - 3.1*y + 2*x^2 -4*y^2 + 5xy at point (x,y) = (1,-7) */
+   SCIP_CALL( SCIPparseExpr(scip, &expr, (char*)"2*<t_x>^2 + 5.0*<t_x>*<t_y> -4*<t_y>^2", NULL, NULL, NULL) );
+
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 1.0) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, y, -7.0) );
-   SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, "nlrow", 5.0, 2, linvars, lincoefs, 2, quadvars, 3, quadelems, NULL, 1.0, 1.0,
+   SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, "nlrow", 5.0, 2, linvars, lincoefs, expr, 1.0, 1.0,
          SCIP_EXPRCURV_UNKNOWN) );
-   SCIP_CALL( computeGradient(scip, nlrow, exprint, sol, varindex, grad, &norm) );
+   SCIP_CALL( computeGradient(scip, nlrow, sol, varindex, exprit, grad, &norm) );
    SCIP_CALL( SCIPreleaseNlRow(scip, &nlrow) );
 
-   cr_assert( SCIPisEQ(scip, grad[0], 2.3 + 4 * 1 + 5 * (-7)) );
+   cr_assert( SCIPisEQ(scip, grad[0], 2.3 + 4 * 1 + 5 * (-7)), "expecting %g, got %g\n", 2.3 + 4 * 1 + 5 * (-7), grad[0]);
    cr_assert( SCIPisEQ(scip, grad[1], -3.1 - 8 * (-7) + 5 * 1) );
 
    /* create expression tree for 2.3*x - 3.1*y + 2*x^2 -4*y^2 + 5xy + x*e^y at point (x,y) = (3,3) */
+   SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
+   SCIP_CALL( SCIPparseExpr(scip, &expr, (char*)"2*<t_x>^2 -4*<t_y>^2 + 5*<t_x>*<t_y> + <t_x>*exp(<t_y>)", NULL, NULL, NULL) );
+
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 3.0) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, y, 3.0) );
-   SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &xexpr, SCIP_EXPR_VARIDX, 0) );
-   SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &yexpr, SCIP_EXPR_VARIDX, 1) );
-   SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expexpr, SCIP_EXPR_EXP, yexpr) );
-   exprs[0] = xexpr;
-   exprs[1] = expexpr;
-   SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr, SCIP_EXPR_PRODUCT, 2, exprs) );
-   SCIP_CALL( SCIPexprtreeCreate(SCIPblkmem(scip), &tree, expr, 2, 0, NULL) );
-   SCIP_CALL( SCIPexprtreeSetVars(tree, 2, linvars) );
-   SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, "nlrow", 5.0, 2, linvars, lincoefs, 2, quadvars, 3, quadelems, tree, 1.0, 1.0,
+
+   /* create expression tree for 2.3*x - 3.1*y + 2*x^2 -4*y^2 + 5xy + x*e^y at point (x,y) = (3,3) */
+   SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, "nlrow", 5.0, 2, linvars, lincoefs, expr, 1.0, 1.0,
          SCIP_EXPRCURV_UNKNOWN) );
-   SCIP_CALL( computeGradient(scip, nlrow, exprint, sol, varindex, grad, &norm) );
+   SCIP_CALL( computeGradient(scip, nlrow, sol, varindex, exprit, grad, &norm) );
 
    cr_assert( SCIPisEQ(scip, grad[0], 2.3 + 4 * 3 + 5 * 3 + exp(3)) );
    cr_assert( SCIPisEQ(scip, grad[1], -3.1 - 8 * 3 + 5 * 3 + 3*exp(3)) );
 
+   SCIPfreeExpriter(&exprit);
    SCIP_CALL( SCIPreleaseNlRow(scip, &nlrow) );
-   SCIP_CALL( SCIPexprtreeFree(&tree) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
 Test(heuristic, improvePoint, .init = setup, .fini = teardown,
@@ -212,11 +218,11 @@ Test(heuristic, improvePoint, .init = setup, .fini = teardown,
 {
    SCIP_VAR* vars[2];
    SCIP_Real lincoefs[2];
-   SCIP_QUADELEM quadelems[2];
    SCIP_NLROW* nlrows[2];
    SCIP_Real nlrowgradcosts[2];
    SCIP_Real gradcosts;
    SCIP_Real minfeas;
+   SCIP_EXPR* expr;
 
    nlrowgradcosts[0] = 1.0;
    nlrowgradcosts[1] = 1.0;
@@ -232,46 +238,42 @@ Test(heuristic, improvePoint, .init = setup, .fini = teardown,
     */
    lincoefs[0] = 5.0;
    lincoefs[1] = 1.0;
-   SCIP_CALL( SCIPcreateNlRow(scip, &nlrows[0], "nlrow1", 0.0, 2, vars, lincoefs, 0, NULL, 0, NULL, NULL, 1.0, 1.0,
+   SCIP_CALL( SCIPcreateNlRow(scip, &nlrows[0], "nlrow1", 0.0, 2, vars, lincoefs, NULL, 1.0, 1.0,
          SCIP_EXPRCURV_UNKNOWN) );
-   SCIP_CALL( improvePoint(scip, nlrows, 1, varindex, exprint, sol, 1, 0.0, INT_MAX, &minfeas, nlrowgradcosts, &gradcosts) );
+   SCIP_CALL( improvePoint(scip, nlrows, 1, varindex, sol, 1, 0.0, INT_MAX, &minfeas, nlrowgradcosts, &gradcosts) );
    cr_expect(SCIPisFeasEQ(scip, minfeas, 0.0));
    cr_expect(gradcosts > 0.0);
 
    /* consider one quadratic constraint of the form sqrt(x^2 + y^2) = 0.5 */
-   quadelems[0].idx1 = 0;
-   quadelems[0].idx2 = 0;
-   quadelems[0].coef = 1.0;
-   quadelems[1].idx1 = 1;
-   quadelems[1].idx2 = 1;
-   quadelems[1].coef = 1.0;
-   SCIP_CALL( SCIPcreateNlRow(scip, &nlrows[1], "nlrow2", 0.0, 0, NULL, NULL, 2, vars, 2, quadelems, NULL, 0.25, 0.25,
+   SCIP_CALL( SCIPparseExpr(scip, &expr, (char*)"<t_x>^2 + <t_y>^2", NULL, NULL, NULL) );
+   SCIP_CALL( SCIPcreateNlRow(scip, &nlrows[1], "nlrow2", 0.0, 0, NULL, NULL, expr, 0.25, 0.25,
          SCIP_EXPRCURV_UNKNOWN) );
 
    /* start inside the ball */
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 0.1) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, y, 0.2) );
-   SCIP_CALL( improvePoint(scip, &nlrows[1], 1, varindex, exprint, sol, 10, 0.0, INT_MAX, &minfeas, nlrowgradcosts, &gradcosts) );
-   cr_expect(SCIPisFeasGE(scip, minfeas, -EPS));
+   SCIP_CALL( improvePoint(scip, &nlrows[1], 1, varindex, sol, 10, 0.0, INT_MAX, &minfeas, nlrowgradcosts, &gradcosts) );
+   cr_expect(SCIPisFeasGE(scip, minfeas, -EPS), "expecting minfeas %g > -eps (%g)\n", minfeas, -EPS);
    cr_expect(gradcosts > 0.0);
 
    /* start outside the ball */
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 1.0) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, y, 5.0) );
-   SCIP_CALL( improvePoint(scip, &nlrows[1], 1, varindex, exprint, sol, 100, 0.0, INT_MAX, &minfeas, nlrowgradcosts, &gradcosts) );
-   cr_expect(SCIPisFeasGE(scip, minfeas, -EPS));
+   SCIP_CALL( improvePoint(scip, &nlrows[1], 1, varindex, sol, 100, 0.0, INT_MAX, &minfeas, nlrowgradcosts, &gradcosts) );
+   cr_expect(SCIPisFeasGE(scip, minfeas, -EPS), "expecting minfeas %g > -eps (%g)\n", minfeas, -EPS);
    cr_expect(gradcosts > 0.0);
 
    /* consider linear and quadratic constraint */
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, -1.0) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, y, -10.0) );
-   SCIP_CALL( improvePoint(scip, nlrows, 2, varindex, exprint, sol, 100, 0.0, INT_MAX, &minfeas, nlrowgradcosts, &gradcosts) );
-   cr_expect(SCIPisFeasGE(scip, minfeas, -EPS));
+   SCIP_CALL( improvePoint(scip, nlrows, 2, varindex, sol, 100, 0.0, INT_MAX, &minfeas, nlrowgradcosts, &gradcosts) );
+   cr_expect(SCIPisFeasGE(scip, minfeas, -EPS), "expecting minfeas %g > -eps (%g)\n", minfeas, -EPS);
    cr_expect(gradcosts > 0.0);
 
    /* free nlrows */
    SCIP_CALL( SCIPreleaseNlRow(scip, &nlrows[1]) );
    SCIP_CALL( SCIPreleaseNlRow(scip, &nlrows[0]) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
 Test(heuristic, filterPoints, .init = setup, .fini = teardown,

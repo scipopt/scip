@@ -28,7 +28,7 @@
 =opt= meanvarx           14.3692321148754
 =opt= tltr                  48.0666666667
 =opt= semicon1                        1.1
-=opt= meanvarxsc                 14.36918
+=opt= meanvarxsc         14.3692321148754
 =opt= factor-mod-size=9-P0=67-P1=349-P2=67-P3=499-P4=79-P5=347-P6=307-B 3
 =opt= normalized-bsg_10_4_5            -4
 =opt= normalized-mds_10_4_3             2
@@ -46,3 +46,5 @@
 =opt= packorb_1-FullIns_3              28
 =opt= partorb_1-FullIns_3               4
 =opt= disj_conj_rail     1324.43557422969
+=opt= sos1a                          0.72
+=opt= sos2a                           0.1

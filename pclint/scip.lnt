@@ -3,13 +3,22 @@
 //*                  This file is part of the program and library             */
 //*         SCIP --- Solving Constraint Integer Programs                      */
 //*                                                                           */
-//*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
-//*                            fuer Informationstechnik Berlin                */
+//*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 //*                                                                           */
-//*  SCIP is distributed under the terms of the ZIB Academic License.         */
+//*  Licensed under the Apache License, Version 2.0 (the "License");          */
+//*  you may not use this file except in compliance with the License.         */
+//*  You may obtain a copy of the License at                                  */
 //*                                                                           */
-//*  You should have received a copy of the ZIB Academic License              */
-//*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+//*      http://www.apache.org/licenses/LICENSE-2.0                           */
+//*                                                                           */
+//*  Unless required by applicable law or agreed to in writing, software      */
+//*  distributed under the License is distributed on an "AS IS" BASIS,        */
+//*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+//*  See the License for the specific language governing permissions and      */
+//*  limitations under the License.                                           */
+//*                                                                           */
+//*  You should have received a copy of the Apache-2.0 license                */
+//*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 //*                                                                           */
 //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -21,6 +30,19 @@
 
 // underlying type for enum is always int
 +fei
+
+// do not attribute responsibility for last write in callee to caller (this avoids frequent warnings if returned values are not used)
+-fcw
+
+// declare SCIP_ABORT to not return
+-sem(SCIP_ABORT, r_no)
+
+// declare __assert_fail as pure
+-sem(__assert_fail,pure)
+
+// declare some functions pure that are not recognized by pclint
+-sem(SCIPsetFeastol,pure)
+-sem(SCIPsetDualFeastol,pure)
 
 // turn off the following warning, because this often arises from old lint versions
 -e72
@@ -50,12 +72,25 @@
 // for the time being turn off warning 666 (expression with side effects passed to repeated parameter of macro), since it currently produces too much noise
 -e666
 
-// turn off all warnings for exprinterpret_cppad.cpp because the code is not ours
--efile(*,src/nlpi/exprinterpret_cppad.cpp)
+// turn off all warnings for exprinterpret_cppad.cpp and reader_nl.cpp because they includes a lot of code that is not ours
+-efile(*,src/scip/exprinterpret_cppad.cpp)
+-efile(*,src/scip/reader_nl.cpp)
+// turn off warnings for third-party code
+-efile(*,src/amplmp/*)
 
 // last value assigned to '_restat_' not used
 -emacro(438,SCIP_CALL)
 -emacro(438,SCIP_CALL_ABORT)
+
+// function previously designated pure, assigns to pointer-to-non-const the address of  possibly non-local memory
+-esym(453,SCIPfeastol)
+-esym(453,SCIPdualfeastol)
+-esym(453,SCIPsetFeastol)
+-esym(453,SCIPsetDualfeastol)
+
+// duplicate initialization of object
+-emacro(485,SCIPsolveNlpi)
+-emacro(485,SCIPsolveNLP)
 
 // redundant left argument to comma
 -emacro(505,SCIPtpiInitLock)
@@ -79,6 +114,8 @@
 -emacro(506,debugPrintf)
 -emacro(506,SCIPABORT)
 
+// expression statement involving a 'conditional operator' lacks side effects
+-emacro(523,assert)
 
 // is likely uninitialized
 -emacro(530,va_*)
@@ -98,6 +135,7 @@
 
 // turn off messages for quad precision
 -emacro(644,SCIPquadprecSumQD)
+-emacro(644,SCIPquadprecSumQQ)
 -emacro(644,SCIPquadprecProdQD)
 -emacro(644,QUAD_ASSIGN)
 -emacro(644,QUAD_TO_DBL)
@@ -187,6 +225,13 @@
 // previous value assigned to 'retcode' not used
 -emacro(838,SCIP_CALL_TERMINATE)
 
+// indeterminable mutex
+-emacro(2751,SCIPtpiInitLock)
+-emacro(2751,SCIPtpiAcquireLock)
+-emacro(2751,SCIPtpiReleaseLock)
+-emacro(2751,SCIPtpiDestroyLock)
+-emacro(2751,SCIPtpiInitCondition)
+-emacro(2751,SCIPtpiWaitCondition)
+
 // constant out of range for '>' portion of compound comparison operator '>='
 -estring(2650, ">=")
-

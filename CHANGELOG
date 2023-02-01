@@ -1,6 +1,1236 @@
+@page RN80 Release notes for SCIP 8.0
+
+@section RN804 SCIP 8.0.4
+*************************
+
+Features
+--------
+
+Performance improvements
+------------------------
+
+Examples and applications
+-------------------------
+
+Interface changes
+-----------------
+
+### New and changed callbacks
+
+### Deleted and changed API methods
+
+### New API functions
+
+### Command line interface
+
+### Interfaces to external software
+
+- updated XPRESS interface to work with XPRESS 41 as well
+
+### Changed parameters
+
+### New parameters
+
+### Data structures
+
+Deleted files
+-------------
+
+Unit tests
+----------
+
+- added new checks for objective, bounds and sides inside the scaling tests in lpi/change.c
+
+Testing
+-------
+
+Build system
+------------
+
+### Cmake
+
+### Makefile
+
+Fixed bugs
+----------
+
+- relax condition of assert in lpSolve to hold only if lp/checkstability is true
+- OPB reader: dynamically increase the size of the line buffer for reading in getMaxAndConsDim()
+- Enabled the solution limit checks in SCIPsolveIsStopped in solve.c when in SCIP_STAGE_PRESOLVING
+- fix quad precision comparison for the calculation of knapsackcover constraints.
+- force copying of symmetry constraints for concurrent solve
+- increase the precision of double multiplications in quad precision environments
+- corrected handling of different variable types in symmetry
+- orbitope detection: refine computation of overlap structure and fixed bug in finding orbitope generators
+- ensure that winner is always determined in concurrent mode
+
+Miscellaneous
+-------------
+
+- Extended documentation of the parameter limits/solutions to point out that the limit is first checked in presolving
+
+Known bugs
+----------
+
+@section RN803 SCIP 8.0.3
+*************************
+
+Examples and applications
+-------------------------
+
+- Externalize STP and PolySCIP applications
+
+Interface changes
+-----------------
+
+### Command line interface
+
+- When running the AMPL interface, the .nl filename extension does not need to be omitted for the input file anymore.
+
+Build system
+------------
+
+### Cmake
+
+- Forbid CMAKE_BUILD_TYPE nonstandard values
+- Move -I/path/to/src/amplmp/include to front of compiler flags for include directories
+
+### Makefile
+
+- Use SYM=bliss by default, since bliss now is shipped with SCIP.
+
+Fixed bugs
+----------
+
+- fixed an incorrect handling of xor constraints
+- the feasibility checker for integrality constraints now uses checkintegrality even for implied integers
+- skip integrality check in cons_integral for relaxation-only implicit-integer variables
+- fixed an issue caused by aggregated variables not added to a hashmap in the xor constraint handler
+- changed function solveRowEchelonGF2 in cons_xor.c to avoid errors if rank is 0
+- fixed that the implication presolver tried to aggregate or tighten bounds of multiaggregated variables
+- fixed a sign check in detection of linear constraints that are parallel to the objective
+- fixed bug in Clp and lpi_clp with missing basis information when calling the barrier with crossover; needs new Clp version
+- do not assume aggregation is successful in cons_setppc.c
+
+Miscellaneous
+-------------
+
+- Changed license to Apache 2.0, see https://www.apache.org/licenses/LICENSE-2.0.
+- When an LP could not be solved accurately, scaling is now turned off as a last fall-back method.
+- Methods for using the debug solution mechanism SCIPdebugAddSolVal, SCIPdebugGetSol, SCIPdebugGetSolVal,
+  SCIPdebugSolIsValidInSubtree, SCIPdebugIsMainscip, SCIPdebugSolEnable, SCIPdebugSolDisable, SCIPdebugSolIsEnabled,
+  SCIPwithDebugSol are now exported
+
+Known bugs
+----------
+
+@section RN802 SCIP 8.0.2
+*************************
+
+Interface changes
+-----------------
+
+### Deleted and changed API methods
+
+- added input parameter SCIP_Bool initiallp to SCIPcutselsSelect
+- changed function type int to SCIP_Longint for SCIPcutpoolGetMaxNCuts
+- replaced SCIPsepastoreGetNCutsFound with SCIPsepastoreGetNCutsAdded following the naming convention for the new statistics
+- replaced SCIPsepaIncNAppliedCuts with SCIPsepaIncNCutsApplied
+
+### New API functions
+
+- added SCIPsepastoreGetNCutsAdded, SCIPsepastoreGetNCutsAddedViaPool, SCIPsepastoreGetNCutsAddedDirect
+- added SCIPsepaIncNCutsAdded, SCIPsepaDecNCutsAdded, SCIPsepaIncNCutsApplied, SCIPsepaGetNRootCalls, SCIPsepaGetNCutsAdded, SCIPsepaGetNCutsAddedViaPool, SCIPsepaGetNCutsAddedDirect, SCIPsepaGetNCutsAppliedViaPool, SCIPsepaGetNCutsAppliedDirect
+- added SCIPcutpoolGetNRootCalls, SCIPcutpoolGetNCutsAdded, SCIPcutpoolAddMaxNCuts, SCIPcutpoolSetTime, SCIPcutpoolAddNCalls, SCIPcutpoolAddNRootCalls, SCIPcutpoolAddNCutsFound, SCIPcutpoolAddNCutsAdded,
+- added SCIPcutselGetNCalls, SCIPcutselGetNRootCalls, SCIPcutselGetNRootCuts, SCIPcutselGetNRootForcedCuts, SCIPcutselGetNRootCutsFiltered, SCIPcutselGetNLocalCuts, SCIPcutselGetNLocalForcedCuts, SCIPcutselGetNLocalCutsFiltered,
+
+### Interfaces to external software
+
+- Added compatibility with Mosek 10.0.18.
+
+### New parameters
+
+- new parameters to turn on more statistics: misc/showdivingstats (diving heuristics), heuristics/alns/shownbstats (ALNS), estimation/showstats (tree size estimation)
+
+### Data structures
+
+- added nrootcalls and ncutsadded to SCIP_Cutpool
+- added fromcutpool flag to SCIP_Row and fixed 33 bit allocation
+- added ncalls, nrootcalls, nrootcutsselected, nrootcutsforced, nrootcutsfiltered, nlocalcutsselected, nlocalcutsforced, nlocalcutsfiltered to SCIP_Cutsel
+- added ncutsadded, ncutsaddedviapool, ncutsaddeddirect, ncutsappliedviapool, ncutsapplieddirect, nrootcalls to SCIP_Sepa
+- added ncutsadded, ncutsaddedviapool, ncutsaddeddirect to SCIP_Sepastore
+- fixed statistics of relaxators w.r.t. number of times conss/cuts were added
+
+Build system
+------------
+
+### Cmake
+
+- new option `-DAUTOBUILD` that configures scip with dependencies on availability.
+  Packages like Ipopt, PaPILO, Readline, Zimpl, ZLIB, GMP, Worhp are automatically found and linked, otherwise ignored.
+  The individual flags for these packages are ignored. This makes a quick build easier. It is by default set to off.
+
+Fixed bugs
+----------
+
+- read objective offset from ZIMPL files
+- Make sure that objective limit is disabled if not all variables are in the LP. If we would run into
+  an objective limit in this case, the results of the LP solver are unclear.
+- fixed bug in reopt.c, which occured for bounds outside of current valid bounds
+- fixed problem with recomputing symmetries after a restart
+- fixed bug in SCIPcalcMIR() with wrong order of arguments for removeZerosQuad()
+- fixed segmentation fault in update of cut statistic
+- fixed bug in presolving of and constraints by merging variables with multiple occurrences before cliquePresolve()
+- fixed bug in dual presolving of linear constraints by setting implicit integers to integers in multi-aggregation
+- fixed update of presolve statistics on added constraints and changed coefficients in constraint handler for nonlinear constraints
+- fixed bug with reading CIP files with large constraints split over several lines
+- fixed bug with infinite bounds in the computation of conflict cuts
+- fixed check for unbounded solution constructed by SCIPlpGetUnboundedSol(): The constructed solution is very likely infeasible
+  since scaling increases small numerical feasibility violations. Therefore, the solution is now always accepted. However, the
+  feasibility of the ray is now checked. This fix now might lead to several rounds of separation in order to resolve unbounded solutions,
+  whereas previously SCIP started to branch immediately.
+- changed to absolute tolerances in all redundancy checks for linear constraints
+
+Miscellaneous
+-------------
+
+- Added extended cutselector statistics splitting between root node specific and general statistics
+- Added extended and refined cutpool statistics showing the number of cuts added from the cutpool to the sepastore
+- Added extended and refined separator statistics to get a better view of the individual generators performance
+- turned off output of statistics for the following information by default:
+  diving heuristics, ALNS neighborhood information and tree size estimation statistics;
+  they can be turned on using the following new parameters:
+  misc/showdivingstats (diving heuristics), heuristics/alns/shownbstats (ALNS), estimation/showstats (tree size estimation)
+
+@section RN801 SCIP 8.0.1
+*************************
+Features
+--------
+
+- clique lifting in cons_setppc (parameter enablecliquelifting) is only disabled if it has been applied
+- avoid warning if Mosek has reached/exceeded the objective limit
+- improved curvature check for quadratic expressions when extended formulations are disabled
+
+Examples and applications
+-------------------------
+
+- Fixed handling of enforcing in the TSP example.
+
+Interface changes
+-----------------
+
+### Interfaces to external software
+
+- Added compatibility with Mosek 10.0.13.
+
+Build system
+------------
+
+- BLISS is now built from the vendored version from https://github.com/ds4dm/Bliss
+
+### Cmake
+
+- avoid warnings about unrecognized compiler warning silencing options when compilation with GCC fails
+- adjust mosek find module to version 9.3
+- added cmake compatibility for ipopt versions 3.14.x
+
+### Makefile
+
+- avoid warnings about unrecognized compiler warning silencing options when compilation with GCC fails
+- fixed that compilation with MS/Intel compilers on Windows and Cray compilers was broken when enabling PAPILO
+
+Fixed bugs
+----------
+
+- fixed uninitialized array in detection of suborbitopes
+- Fixed problem with reading long lines in LP/FZN/OPB/Diff-files. The buffer is now reallocated,
+  which also should be much faster.
+- fixed that recursive products in expressions were sometimes not flattened
+- fixed that expressions in original variables could not be simplified
+- fixed handling of objective limit with Mosek
+- made SCIPlpiGetSolverName()/SCIPlpiGetSolverDesc() thread-safe for LP Solvers (Cplex,Gurobi,Glop,Mosek,SoPlex,Xpress)
+- made SYMsymmetryGetName() thread-safe for Bliss
+- fixed memory allocation issue in detection of SOC nlhdlr
+- fixed that reaching the walltime limit in Ipopt was not handled properly
+- Deactivated dual fixing of unlocked variables with zero objective in presol_milp that SCIP is unable to postsolve.
+- set the column flag kImplInt for implicit integers in the papilo problem
+- fixed bug in propagation of indicator constraints (one case always reported a change through propagation)
+
+@section RN800 SCIP 8.0.0
+*************************
+
+Features
+--------
+
+- Variables that were marked as relaxation-only and that were not used in any solution (SCIP_SOL)
+  are now deleted when during a restart.
+- New symmetry handling method, symmetry handling inequalities based on the Schreier Sims table,
+  which is able to handle symmetries of arbitrary kinds of variables.
+- Revise way in which external memory (e.g., of LP-solver) is estimated.
+- The symmetry code can now heuristically search for orbitopes that do not completely handle
+  a symmetry component and add certain Schreier Sims cuts to such components.
+- The LPIs for Gurobi and Mosek are thread-safe now.
+- The complete code is now thread-safe by default.
+- New separator to generate mixing cuts (works well for stochastic programming with probabilistic constraint).
+- New parsing routines for cons_orbisack and cons_symresack.
+- Variables can now be marked to forbid aggregation.
+- Heuristic PADM can now reoptimize found solution with original objective function.
+- Added code to support debugging of catching or releasing of variables to var.c (prints backtrace
+  when catching and releasing).
+- SCIPintervalSin() and SCIPintervalCos() are now rounding-safe.
+- Removed special handling of second-order cones in undercover heuristic for now.
+- Removed use of Hessian sparsity pattern for nonquadratic nonlinear constraints in undercover heuristic.
+- Added reader for AMPL .nl files.
+- New separator sepa_rlt to compute cuts via the reformulation-linearization technique (RLT).
+- New separator sepa_minor to compute cuts from 2x2 minors of a violated semidefiniteness constraint that is
+  implied by the extended formulation for bilinear products.
+- New separator sepa_interminor to compute intersection cuts from 2x2 (not only principle) minors of a violated
+  rank-one constraint that is implied by the extended formulation for bilinear products.
+- Symmetry handling has been extended to detect also symmetries between variables that also appear in nonlinear constraints.
+- Improved OBBT propagator by only considering variables that are contained in at least one nonconvex expression that has an auxiliary variable.
+- Default parameter settings for NLP solves are now defined independently of the NLP solver.
+- Added table to print statistics on NLP solvers.
+- Knapsack, linear, logicor, setppc, and varbound constraints now add themselves to the NLP relaxation, if enabled.
+  And, linking constraints and bounddisjunctions in one variable are added to the NLP relaxation now.
+- Ipopt interface now supports warmstarts from a full primal/dual solution pair.
+- Extended data structure SCIP_ROWPREP and routines to assemble a linear inequality before it is turned into a SCIP row and
+  made it available via the API.
+- MIR procedure is now available for strengthening the Benders' optimality cut
+- SCIPbranchcandCalcLPCands() now also returns fractional variables in unbounded solutions.
+- New emphasis "benchmark" to avoid different solving paths that may come from checking remaining memory.
+- New plugin type for cut selection: users can now include their own cut selection rules, default rule moved to cutsel_hybrid.
+- New construction heuristic DPS which additionally needs a user-provided decomposition and splits the problem into several sub-SCIPs
+  according to this decomposition. The sub-SCIPs are solved and updated repeatedly until a feasible solution of the original problem is found.
+
+Expressions:
+- Removed support for expression types min and max for now. Removed support for expression type sign.
+  Removed complex expression types sum, product, linear, quadratic, polynomial.
+  Removed support for parameterized expressions.
+- Added support for expression types sin, cos, and entropy. Added an expression type that stores a SCIP variable.
+- Added handling of sin and cos expressions in OSiL reader.
+- Added handling of sin, cos, and tan expressions in ZIMPL reader.
+- Added expression handler plugin type, removed user expression type.
+- Replaced expressions, expression trees, and expression graphs by a new implementation of expressions.
+- Added differentiation methods (Gradients and Hessian directions) to expressions.
+- Added integrality information to expressions.
+- Added comparison and hashing of expressions.
+- Improved simplification of expressions and identification of common subexpressions, in particular terms that appear
+  equally in several quadratic functions are now identified.
+- Expression simplification now expands powers also when the resulting exponents will be larger than 2.
+- Added table to print statistics on expression handlers.
+- Removed interval-arithmetic evaluation from expression interpreter (interfaces to automatic differentiation codes).
+- Hessians for user-provided expression handlers are not available in the NLP solver interfaces for now.
+- Sparse Hessians are now returned by expression interpreter. Removed dense Hessians.
+
+Constraint handlers for NLP:
+- cons_nonlinear has been completely rewritten and now handles constraints of the form lhs <= expr <= rhs, where
+  expr is an expression using the new expression type. A linear part of a nonlinear constraint is no longer distinguished.
+- Methods that work on a particular nonlinear structure are now implemented via nonlinear handlers (nlhdlr).
+  These handlers are plugins of cons_nonlinear and interact with cons_nonlinear by detecting structures in expressions and
+  providing propagation and separation mechanisms.
+- Added nlhdlr "default" as a mandatory nlhdlr: this is a nlhdlr that gets active on expressions that no other nlhdlr handles.
+  It then uses the callbacks implemented in expression handlers to provide domain propagation and linear under/overestimates.
+- Added nlhdlr for quadratic expressions: domain propagation that was previously part of cons_quadratic; separation via intersection cuts (currently disabled).
+- Added nlhdlr for bilinear expressions: collects bilinear products and provides under/overestimation of a product over a 2D-projection of the LP.
+- Added nlhdlr for convex and concave expressions: detection of convex/concave subexpressions and linear under/overestimation.
+- Added nlhdlr for quotients: detects quotients, provides specialized linear under/overestimation and domain propagation for univariate quotients.
+- Added nlhdlr for perspective reformulations: detects expressions in semi-continuous variables and tightens linear
+  under/overestimates of these expressions by applying a perspective transformation.
+- Added nlhdlr for second-order cones: detects second-order cone constraints (as ||x|| <= t or a quadratic that can written like that) and
+  separates on a disaggregated reformulation (similar to cons_soc previously).
+- Removed constraint handlers abspower, bivariate, quadratic, and soc.
+- Removed simplification of duplicate abspower constraints for now.
+  Removed simplification of abspower constraints with loose variables.
+  Removed resolving of domain propagation (ConsResProp callback) and conflict analysis for abspower constraints.
+  Removed propagation of varbounds for variables of abspower constraints.
+  Removed reformulation of abs(x)^p * x into signpower expression for now.
+- Removed reformulation of SOC constraints when adding to the NLP.
+  Removed possibility to add linearizations a la Glineur or BenTal&Nemirovski for SOC constraints.
+- Removed possibility to disaggregate quadratic constraints.
+  Removed lifted tangent inequalities for bilinear terms in quadratic constraints.
+  Removed option to project LP solution onto feasible region of a quadratic constraint via interior point or gauge function.
+  Removed handling of unbounded LPs when enforcing quadratic constraints.
+- Removed construction of cuts from interval gradients for nonlinear constraints.
+  Removed possibility to pretend that all nonlinear constraints are convex.
+  Removed possibility to create local or non-initial nonlinear constraints for now.
+- Removed explicit reformulation of nonlinear constraints in presolve.
+  An extended formulation is now generated implicitly and used to construct the LP relaxation,
+  but the original formulation is used to check feasibility, propagate variable domains, etc.
+  Variables that are added for the extended formulation are now marked as relaxation-only.
+- Improved locking of nonlinear variables in nonlinear constraints by taking monotonicity into account.
+- Improved mechanisms to detect and handle structures in nonlinear constraints, which allows for several algorithms
+  to work simultaneously on equal or overlapping expressions.
+- Improved linearization of (sums of) products of binary variables, e.g., clique information is now taken into account.
+  Removed option to linearize products between a binary and a non-binary variable.
+- Nonlinear constraints with the same function (but possibly different left- or right-hand-side) are now merged.
+- When a variable appears in only one concave less-or-equal constraint, it will be fixed to one of its bounds in more cases now.
+- New branching rule for variables in nonlinear constraints (implemented in cons_nonlinear) that scores candidates
+  based on constraint violation, variable type, and pseudo-costs simultaneously.
+- Added tables to print statistics of nonlinear constraint handler and nonlinear handlers.
+
+Performance improvements
+------------------------
+
+- Use the objective cutoff row as base row for separation in sepa_aggregation.c.
+- Separate lifted cover cuts based on newer lifting function of Letchford and Souli (2019) in sepa_aggregation.c.
+- In-tree restarts due to tree size estimation have been made compatible with orbital fixing.
+- Improved upgrade of orbisacks to packing/partitioning orbitopes.
+- Improved running time of symresack cover separation.
+- Improved propagation algorithm for orbisack and symresack.
+- Improved handling for expressions of type signpower in CppAD interface by making use of CppADs conditional expressions.
+- Faster reevaluation of Hessian for quadratic expressions in CppAD interface.
+- Enabled optimization of taped expressions in the CppAD interface.
+- Sparse Hessian evaluation for expressions with sparse Hessian in the CppAD interface.
+- Disabled branching on variables that are added for the extended formulation of a nonlinear constraint.
+- Prefer branching on variables in nonconvex terms of nonlinear constraints also if a cut could be generated but would yield a small reduction in the convexification gap only.
+- When violations of nonlinear constraints are tiny, the feasibility tolerance for the LP relaxation may now be reduced temporarily to allow for cuts to have an effect.
+- Improved under/overestimation of multidimensional vertex-polyhedral (e.g., multilinear or concave) functions by use of scaling and keeping the cut-generating LP around.
+- Products in nonlinear constraints are no longer disaggregated for the extended formulation.
+- No longer relax bounds of integral variables when computing bounds on activity in nonlinear constraints.
+- Revised and improved Ipopt interface.
+- Revised and improved subNLP primal heuristic, in particular choice of iteration limit and starting condition and reuse of subSCIP.
+- Merge strongcg into the gomory separator to avoid computing the same base equality twice. The files
+  sepa_strongcg.{h|c} have been removed.
+- The RENS neighborhood in ALNS now fixes fractional variables if necessary for reaching its target fixing rate.
+- Use cpsolver emphasis in sepa_rapidlearning.
+- If decomposition/maxgraphedge = 0, the computation of the block graph is completely turned off.
+- Fixed a performance bug in cons_integral.c where rounding information was passed incorrectly to the generic diving algorithm.
+
+Examples and applications
+-------------------------
+
+- Add c++ Sudoku example
+- Removed circle.c and renamed string.c to spring.c in CallableLibrary example.
+- SCIP-Jack (Steiner tree application):
+  Most files have been modified and many new ones have been added (code base more than doubled).
+  Two new problem classes are supported: maximum-weight connected subgraph problem with budget constraints, partial-terminal node-weighted Steiner tree problem.
+  Major performance improvements accross all problem classes that are supported.
+
+Interface changes
+-----------------
+
+### New and changed callbacks
+
+- extend SEPAEXEC{LP,SOL} callbacks by parameter "depth", which should be used within separation instead of SCIPgetCurrentDepth()
+- extend SCIPseparateSolCutpool() by parameter "pretendroot", which is passed to SCIPcutpoolSeparate() instead of SCIPtreeGetCurrentDepth(scip->tree) == 0
+- removed SCIP_DECL_EXPRGRAPHVARADDED, SCIP_DECL_EXPRGRAPHVARREMOVE, SCIP_DECL_EXPRGRAPHVARCHGIDX
+- removed SCIP_DECL_USEREXPRESTIMATE, SCIP_DECL_USEREXPREVAL, SCIP_DECL_USEREXPRINTEVAL, SCIP_DECL_USEREXPRCURV, SCIP_DECL_USEREXPRPROP, SCIP_DECL_USEREXPRCOPYDATA, SCIP_DECL_USEREXPRFREEDATA, SCIP_DECL_USEREXPRPRINT
+- added SCIP_DECL_EXPR_OWNERFREE, SCIP_DECL_EXPR_OWNERPRINT, SCIP_DECL_EXPR_OWNEREVALACTIVITY, SCIP_DECL_EXPR_OWNERCREATE
+- added SCIP_DECL_EXPR_INTEVALVAR, SCIP_DECL_EXPR_MAPEXPR
+- added SCIP_DECL_EXPRCOPYHDLR, SCIP_DECL_EXPRFREEHDLR, SCIP_DECL_EXPRCOPYDATA, SCIP_DECL_EXPRFREEDATA, SCIP_DECL_EXPRPRINT, SCIP_DECL_EXPRPARSE, SCIP_DECL_EXPRCURVATURE, SCIP_DECL_EXPRMONOTONICITY, SCIP_DECL_EXPRINTEGRALITY, SCIP_DECL_EXPRHASH, SCIP_DECL_EXPRCOMPARE, SCIP_DECL_EXPREVAL, SCIP_DECL_EXPRBWDIFF, SCIP_DECL_EXPRFWDIFF, SCIP_DECL_EXPRBWFWDIFF, SCIP_DECL_EXPRINTEVAL, SCIP_DECL_EXPRESTIMATE, SCIP_DECL_EXPRINITESTIMATES, SCIP_DECL_EXPRSIMPLIFY, SCIP_DECL_EXPRREVERSEPROP
+- removed SCIP_DECL_QUADCONSUPGD
+- added SCIP_DECL_VERTEXPOLYFUN
+- added argument nvarexprs to SCIP_DECL_NONLINCONSUPGD to inform upgrade method about number of variables in constraint
+- removed SCIP_DECL_EXPRGRAPHNODEREFORM
+- added SCIP_DECL_NLHDLRCOPYHDLR, SCIP_DECL_NLHDLRFREEHDLRDATA, SCIP_DECL_NLHDLRFREEEXPRDATA, SCIP_DECL_NLHDLRINIT, SCIP_DECL_NLHDLREXIT, SCIP_DECL_NLHDLRDETECT, SCIP_DECL_NLHDLREVALAUX, SCIP_DECL_NLHDLRINTEVAL, SCIP_DECL_NLHDLRREVERSEPROP, SCIP_DECL_NLHDLRINITSEPA, SCIP_DECL_NLHDLREXITSEPA, SCIP_DECL_NLHDLRENFO, SCIP_DECL_NLHDLRESTIMATE
+- replaced BMS_BLKMEM* blkmem argument of SCIP_DECL_NLPICOPY by SCIP* scip, removed targetnlpi argument
+- added SCIP* scip and SCIP_NLPIDATA** nlpidata arguments to SCIP_DECL_NLPIFREE
+- added SCIP* scip to SCIP_DECL_NLPIGETSOLVERPOINTER, SCIP_DECL_NLPICREATEPROBLEM, SCIP_DECL_NLPIFREEPROBLEM, SCIP_DECL_NLPIGETPROBLEMPOINTER, SCIP_DECL_NLPIADDVARS, SCIP_DECL_NLPIADDCONSTRAINTS, SCIP_DECL_NLPISETOBJECTIVE, SCIP_DECL_NLPICHGVARBOUNDS, SCIP_DECL_NLPICHGCONSSIDES, SCIP_DECL_NLPIDELVARSET, SCIP_DECL_NLPIDELCONSSET, SCIP_DECL_NLPICHGLINEARCOEFS, SCIP_DECL_NLPICHGOBJCONSTANT, SCIP_DECL_NLPISETINITIALGUESS, SCIP_DECL_NLPISOLVE, SCIP_DECL_NLPIGETSOLSTAT, SCIP_DECL_NLPIGETTERMSTAT, SCIP_DECL_NLPIGETSOLUTION, SCIP_DECL_NLPIGETSTATISTICS
+- replaced SCIP_DECL_NLPICHGEXPRTREE by SCIP_DECL_NLPICHGEXPR
+- removed nquadelems, quadelems, exprvaridxs arguments from SCIP_DECL_NLPIADDCONSTRAINTS, changed exprtrees argument to exprs
+- removed nquadelems, quadelems, exprvaridxs arguments from SCIP_DECL_NLPISETOBJECTIVE, changed exprtree argument to expr
+- removed SCIP_DECL_NLPICHGQUADCOEFS, SCIP_DECL_NLPICHGNONLINCOEF, SCIP_DECL_NLPISETMESSAGEHDLR
+- added SCIP_NLPIPROBLEM* problem to SCIP_DECL_NLPIGETSOLVERPOINTER
+
+### Deleted and changed API methods
+
+- When calling SCIPdelVar() in the SCIP_STAGE_PROBLEM stage, it is now documented as the user's responsibility to ensure
+  the variable is not present in any constraints. Otherwise, SCIPsolve() now returns SCIP_INVALIDDATA.
+- removed SCIPselectCuts(), replaced by SCIPselectCutsHybrid() of the hybrid cut selector plugin
+- If SCIPvarMarkRelaxationOnly() is called for a variable, then this now need to happen before the
+  variable is added to the transformed problem (SCIPaddVar()).
+  SCIPvarMarkRelaxationOnly() will automatically call SCIPvarMarkDeletable().
+- SCIPcomputeOrbitsFilterSym() and SCIPcomputeComponentsSym(): Type of argument componentblocked
+  changed from SCIP_Shortbool* to unsigned*.
+- removed SCIPsetParam()
+- SCIPcreateConsOrbitope() and SCIPcreateConsBasicOrbitope() have two new arguments "usedynamicprop"
+  and "mayinteract" to encode whether a dynamic reordering of the orbitope rows shall be used in
+  full orbitope propagation and whether the orbitope might interact with other symmetry handling
+  methods, respectively.
+- internal function SCIPgetPropertiesPerm() has been replaced by SCIPisInvolutionPerm()
+- internal function SCIPgenerateOrbitopeVarsMatrix() has new arguments "storelexorder", "lexorder",
+  "nvarsorder", "maxnvarsorder" to compute and store the lexicographic order defined by an orbitope
+- renamed SCIPcomputeArraysIntersection() and SCIPcomputeArraysSetminus() to
+  SCIPcomputeArraysIntersectionInt() and SCIPcomputeArraysSetminusInt(), respectively, and changed
+  their return type from SCIP_RETCODE (which _always_ was SCIP_OKAY) to void
+- removed SCIPincludeDialogDefault(), use SCIPincludeDialogDefaultBasic() instead and check whether you also need SCIPincludeDialogDefaultSet() and SCIPincludeDialogDefaultFix()
+- removed exprint argument from SCIPaddNlRowGradientBenderscutOpt()
+- added copyexprhdlrs argument to SCIPcopyPlugins() (19th position)
+- added copycutselectors argument to SCIPcopyPlugins() (10th position)
+- removed refpoint argument from SCIPaddSquareSecant()
+- added argument exprdata to SYMcomputeSymmetryGenerators()
+- removed SCIPconsNonlinearGetRhs(), SCIPconsNonlinearGetLhs(), SCIPconsNonlinearAddLinearCoef()
+- removed arguments timelimit, minimprove, itercontingent, and iterused from SCIPapplyHeurSubNlp()
+- removed SCIPresolveSolHeurSubNlp(), SCIPgetSubScipHeurSubNlp(), SCIPgetVarMappingScip2SubScipHeurSubNlp(), SCIPgetVarMappingSubScip2ScipHeurSubNlp()
+- SCIPlockVarCons() and SCIPunlockVarCons() are now allowed in stage TRANSFORMED as well
+- Added functions SCIPsetSepaIsParentsepa(), SCIPsetSepaParentsepa() [in scip_sepa.h], SCIPsepaSetIsParentsepa(), SCIPsepaSetParentsepa() [in sepa.h],
+  SCIPsepaIsParentsepa(), SCIPsepaGetParentsepa() [in pub_sepa.h]
+- Added function SCIPpruneTree() to immediately delete nodes that were marked to be deleted with SCIPcutoffNode
+
+NLP:
+- SCIPhasNLPContinuousNonlinearity() now returns SCIP_RETCODE and has additional argument result
+- removed SCIPnlrowGetNQuadVars(), SCIPnlrowGetQuadVars(), SCIPnlrowSearchQuadVar(), SCIPnlrowGetNQuadElems(), SCIPnlrowGetQuadElems(), SCIPnlrowGetQuadData()
+- renamed SCIPnlrowGetExprtree() to SCIPnlrowGetExpr() and changed return type to SCIP_EXPR*
+- removed arguments nquadvars, quadvars, nquadelems, quadelems from SCIPcreateNlRow(); argument expr(ession) is now of type SCIP_EXPR*
+- removed SCIPaddQuadVarToNlRow(), SCIPaddQuadVarsToNlRow(), SCIPaddQuadElementToNlRow(), SCIPaddQuadElementsToNlRow(), SCIPchgNlRowQuadElement(), SCIPsetNlRowExprtreeParam(), SCIPsetNlRowExprtreeParams()
+- renamed SCIPsetNlRowExprtree() to SCIPsetNlRowExpr() and changed type of expr(tree) argument to SCIP_EXPR*
+- SCIPenableNLP() is no longer allowed in stages INITSOLVE and SOLVING
+- removed SCIPaddLinearConsToNlpHeurSubNlp()
+- SCIPhasNLPSolution() now returns true also if a infeasible solution to the NLP exists; SCIPcreateNLPSol() can now also be used when only an infeasible solution to the NLP exists
+- renamed SCIPsolveNLP() to SCIPsolveNLPParam() and added parameter SCIP_NLPPARAM param
+- removed SCIPsolveDiveNLP(), use SCIPsolveNLPParam() instead
+
+NLPI:
+- removed SCIPnlpiCopy(), SCIPnlpiFree(), SCIPnlpiChgQuadCoefs(), SCIPnlpiChgNonlinCoef(), SCIPnlpiSetMessageHdlr()
+- removed SCIPnlpiCreate() from public API, use SCIPincludeNlpi() instead
+- removed SCIPnlpiGetSolverPointer() from public API, use SCIPgetNlpiSolverPointer() instead
+- removed SCIPnlpiCreateProblem() from public API, use SCIPcreateNlpiProblem() instead
+- removed SCIPnlpiFreeProblem() from public API, use SCIPfreeNlpiProblem() instead
+- removed SCIPnlpiGetProblemPointer() from public API, use SCIPgetNlpiProblemPointer() instead
+- removed SCIPnlpiAddVars() from public API, use SCIPaddNlpiVars() instead
+- removed SCIPnlpiAddConstraints() from public API, use SCIPaddNlpiConstraints() instead
+- removed SCIPnlpiSetObjective() from public API, use SCIPsetNlpiObjective() instead
+- removed SCIPnlpiChgVarBounds() from public API, use SCIPchgNlpiVarBounds() instead
+- removed SCIPnlpiChgConsSides() from public API, use SCIPchgNlpiConsSides() instead
+- removed SCIPnlpiDelVarSet() from public API, use SCIPdelNlpiVarSet() instead
+- removed SCIPnlpiDelConsSet() from public API, use SCIPdelNlpiConsSet() instead
+- removed SCIPnlpiChgLinearCoefs() from public API, use SCIPchgNlpiLinearCoefs() instead
+- removed SCIPnlpiChgExprtree() from public API, use SCIPchgNlpiExpr() instead
+- removed SCIPnlpiChgObjConstant() from public API, use SCIPchgNlpiObjConstant() instead
+- removed SCIPnlpiSetInitialGuess() from public API, use SCIPsetNlpiInitialGuess() instead
+- removed SCIPnlpiSolve() from public API, use SCIPsolveNlpiParam() instead
+- removed SCIPnlpiGetSolstat() from public API, use SCIPgetNlpiSolstat() instead
+- removed SCIPnlpiGetTermstat() from public API, use SCIPgetNlpiTermstat() instead
+- removed SCIPnlpiGetSolution() from public API, use SCIPgetNlpiSolution() instead
+- removed SCIPnlpiGetStatistics() from public API, use SCIPgetNlpiStatistics() instead
+- removed SCIPnlpiGetWarmstartSize()
+- removed SCIPnlpiGetWarmstartMemo()
+- removed SCIPnlpiSetWarmstartMemo()
+- removed SCIPnlpiGetIntPar()
+- removed SCIPnlpiSetIntPar()
+- removed SCIPnlpiGetRealPar()
+- removed SCIPnlpiSetRealPar()
+- removed SCIPnlpiGetStringPar(),
+- removed SCIPnlpiSetStringPar()
+- removed SCIPnlpiSetPriority() from public API, use SCIPsetNlpiPriority() instead
+- removed argument nlpi from SCIPincludeNlpi() and added name, description, priority,
+  nlpicopy, nlpifree, nlpigetsolverpointer, nlpicreateproblem, nlpifreeproblem, nlpigetproblempointer, nlpiaddvars, nlpiaddconstraints, nlpisetobjective, nlpichgvarbounds, nlpichgconssides, nlpidelvarset, nlpidelconsset, nlpichglinearcoefs, nlpichgexpr, nlpichgobjconstant, nlpisetinitialguess, nlpisolve, nlpigetsolstat, nlpigettermstat, nlpigetsolution, nlpigetstatistics, nlpidata
+- removed SCIPcreateNlpSolverAll(), use SCIPincludeNlpSolverAll() instead
+- removed SCIPcreateNlpSolverFilterSQP(), use SCIPincludeNlpSolverFilterSQP() instead
+- removed SCIPcreateNlpSolverIpopt(), use SCIPincludeNlpSolverIpopt() instead
+- removed SCIPcreateNlpSolverWorhp(), use SCIPincludeNlpSolverWorhp() instead
+- replaced argument BMS_BLKMEM* blkmem of SCIPnlpiOracleCreate() by SCIP* scip
+- added argument SCIP* scip to SCIPnlpiOracleFree(), SCIPnlpiOracleSetProblemName(), SCIPnlpiOracleAddVars(), SCIPnlpiOracleAddConstraints(), SCIPnlpiOracleSetObjective(), SCIPnlpiOracleChgVarBounds(), SCIPnlpiOracleChgConsSides(), SCIPnlpiOracleDelVarSet(), SCIPnlpiOracleDelConsSet(), SCIPnlpiOracleChgLinearCoefs(), SCIPnlpiOracleChgObjConstant(), SCIPnlpiOracleGetEvalCapability(), SCIPnlpiOracleEvalObjectiveValue(), SCIPnlpiOracleEvalConstraintValue(), SCIPnlpiOracleEvalConstraintValues(), SCIPnlpiOracleEvalObjectiveGradient(), SCIPnlpiOracleEvalConstraintGradient(), SCIPnlpiOracleGetJacobianSparsity(), SCIPnlpiOracleEvalJacobian(), SCIPnlpiOracleGetHessianLagSparsity(), SCIPnlpiOracleEvalHessianLag(), SCIPnlpiOraclePrintProblem(), SCIPnlpiOraclePrintProblemGams()
+- removed arguments nquadelems, quadelems, exprvaridxs, exprtrees from SCIPnlpiOracleAddConstraints(), added argument SCIP_EXPR** exprs
+- removed arguments nquadelems, quadelems, exprvaridxs, exprtree from SCIPnlpiOracleSetObjective(), added argument SCIP_EXPR* expr
+- replaced arguments isnewx of SCIPnlpiOracleEvalHessianLag() by two arguments isnewx_obj and isnewx_cons
+- removed SCIPnlpiOracleChgExprtree(), use SCIPnlpiOracleChgExpr() instead
+- removed SCIPnlpiOracleSetInfinity(), SCIPnlpiOracleGetInfinity(), SCIPnlpiOracleChgQuadCoefs(), SCIPnlpiOracleChgExprParam(), SCIPnlpiOracleGetMaxDegree()
+- removed SCIPnlpiOracleGetVarDegree() and SCIPnlpiOracleGetVarDegrees(), use SCIPnlpiOracleIsVarNonlinear() and SCIPnlpiOracleGetVarCounts(), respectively, instead
+- removed SCIPnlpiOracleGetConstraintDegree(), use SCIPnlpiOracleIsConstraintNonlinear() instead
+- removed argument messagehdlr from SCIPnlpiOraclePrintProblem() and SCIPnlpiOraclePrintProblemGams()
+- removed SCIPcreateNlpiProb(), use SCIPcreateNlpiProblemFromNlRows() instead
+- renamed SCIPupdateNlpiProb() to SCIPupdateNlpiProblem() and moved into scip_nlpi.{h,c}
+- renamed SCIPaddNlpiProbRows() to SCIPaddNlpiProblemRows() and moved into scip_nlpi.{h,c}
+- removed SCIPsetModifiedDefaultSettingsIpopt()
+- removed SCIPgetIpoptApplicationPointerIpopt(), use SCIPgetNlpiSolverPointer() instead
+- removed SCIPnlpStatisticsCreate(), SCIPnlpStatisticsFree(), SCIPnlpStatisticsGetNIterations(), SCIPnlpStatisticsGetTotalTime(), SCIPnlpStatisticsSetNIterations(), SCIPnlpStatisticsSetTotalTime(), the struct is public now
+- renamed LapackDsyev() to SCIPcallLapackDsyevIpopt()
+- renamed SCIPsolveLinearProb() to SCIPsolveLinearEquationsIpopt()
+
+Expression interpreter:
+- removed functions that operated with SCIPInterval
+- changed first argument of SCIPexprintCreate() to SCIP*
+- added SCIP* as first argument to SCIPexprintFree()
+- added SCIP* as first argument to SCIPexprintCompile(), changed third argument to SCIP_EXPR*, added fourth argument SCIP_EXPRINTDATA**
+- added arguments SCIP*, SCIP_EXPRINT*, and SCIP_EXPR* as first arguments to SCIPexprintFreeData()
+- renamed SCIPexprintGetExprtreeCapability() to SCIPexprintGetExprCapability();
+  added SCIP* as first argument, changed third argument to SCIP_EXPR*, added fourth argument SCIP_EXPRINTDATA*
+- removed SCIPexprintNewParametrization()
+- SCIPexprintEval(): added SCIP* as first argument, changed third argument to SCIP_EXPR*, added fourth argument SCIP_EXPRINTDATA*
+- removed SCIPexprintEvalInt()
+- SCIPexprintGrad(): added SCIP* as first argument, changed third argument to SCIP_EXPR*, added fourth argument SCIP_EXPRINTDATA*
+- removed SCIPexprintGradInt()
+- removed SCIPexprintHessianSparsityDense() and SCIPexprintHessianDense, use SCIPexprintHessianSparsity() and SCIPexprintHessian() instead
+
+Expressions:
+- removed SCIPexpropGetName(), use SCIPexprhdlrGetName() instead
+- removed SCIPexpropGetNChildren()
+- removed SCIPexprGetOperator(), use SCIPexprGetHdlr() instead
+- removed SCIPexprGetOpIndex(), SCIPexprGetOpReal(), SCIPexprGetOpData(), use SCIPexprGetData() instead
+- removed SCIPexprGetRealPowerExponent(), SCIPexprGetIntPowerExponent(), SCIPexprGetSignPowerExponent(), use SCIPgetExponentExprPow() instead
+- removed SCIPexprGetLinearCoefs(), SCIPexprGetLinearConstant(), use SCIPgetCoefsExprSum() and SCIPgetConstantExprSum() instead
+- removed SCIPexprGetQuadElements(), SCIPexprGetQuadConstant(), SCIPexprGetQuadLinearCoefs(), SCIPexprGetNQuadElements(), use SCIPexprGetQuadraticData(), SCIPexprGetQuadraticQuadTerm(), SCIPexprGetQuadraticBilinTerm() instead
+- removed SCIPexprGetMonomials(), SCIPexprGetNMonomials, SCIPexprGetPolynomialConstant(), SCIPexprGetMonomialCoef(), SCIPexprGetMonomialNFactors(), SCIPexprGetMonomialChildIndices(), SCIPexprGetMonomialExponents()
+- removed SCIPexprGetUserData(), SCIPexprHasUserEstimator(), SCIPexprGetUserEvalCapability()
+- removed SCIPexprCreate(), use SCIPcreateExpr() instead
+- removed SCIPexprCopyDeep(), use SCIPduplicateExpr() instead
+- removed SCIPexprFreeDeep(), use SCIPreleaseExpr() instead
+- removed SCIPexprFreeShallow()
+- removed SCIPexprAdd(), SCIPexprMulConstant()
+- removed SCIPexprCreateLinear(), use SCIPcreateExprSum() instead
+- replaced SCIPexprAddToLinear() by SCIPappendExprSumExpr()
+- replaced SCIPexprCreateQuadratic() by SCIPcreateExprQuadratic()
+- removed SCIPexprSortQuadElems()
+- removed SCIPexprCreatePolynomial(), SCIPexprAddMonomials(), SCIPexprChgPolynomialConstant(), SCIPexprMultiplyPolynomialByConstant(), SCIPexprMultiplyPolynomialByMonomial(), SCIPexprMultiplyPolynomialByPolynomial(), SCIPexprPolynomialPower()
+- removed SCIPexprMergeMonomials(), SCIPexprFreeMonomial(), SCIPexprSortMonomialFactors(), SCIPexprFindMonomialFactor(), SCIPexprAreMonomialsEqual(), SCIPexprAddMonomialFactors(), SCIPexprChgMonomialCoef(), SCIPexprMultiplyMonomialByMonomial(), SCIPexprMonomialPower(), SCIPexprMergeMonomialFactors(), SCIPexprSortMonomials()
+- replaced SCIPexprCreateMonomial() by SCIPcreateExprMonomial()
+- removed SCIPexprCreateUser(), use SCIPincludeExprhdlr() instead
+- removed SCIPexprHasParam(), SCIPexprGetMaxDegree(), SCIPexprGetVarsUsage()
+- replaced SCIPexprAreEqual() by SCIPcompareExpr()
+- replaced SCIPexprSimplify() by SCIPsimplifyExpr()
+- replaced SCIPexprEvalShallow() by SCIPcallExprEval()
+- replaced SCIPexprEval() by SCIPevalExpr()
+- replaced SCIPexprEvalIntShallow() by SCIPcallExprInteval()
+- replaced SCIPexprEvalInt() by SCIPevalExprActivity()
+- removed SCIPexprEvalUser(), SCIPexprEvalIntUser(), SCIPexprEstimateUser()
+- replaced SCIPexprCheckCurvature() by SCIPcomputeExprCurvature()
+- removed SCIPexprSubstituteVars(), use SCIPcopyExpr() instead
+- removed SCIPexprReindexVars(), SCIPexprReindexParams()
+- replaced SCIPexprPrint() by SCIPprintExpr()
+- replaced SCIPexprParse() by SCIPparseExpr()
+
+Expression tree:
+- removed SCIPexprtreeGetVars(), SCIPexprtreeSetVars(), SCIPexprtreeAddVars(), SCIPexprtreePrintWithNames(), SCIPexprtreeFindVar()
+- removed SCIPexprtreeGetRoot(), SCIPexprtreeGetNVars(), SCIPexprtreeGetNParams(), SCIPexprtreeGetParamVals(), SCIPexprtreeSetParamVal(), SCIPexprtreeHasParam()
+- removed SCIPexprtreeGetInterpreterData(), SCIPexprtreeSetInterpreterData(), SCIPexprtreeFreeInterpreterData()
+- removed SCIPexprtreeGetMaxDegree()
+- removed SCIPexprtreeEval(), use SCIPevalExpr() instead
+- removed SCIPexprtreeEvalInt(), use SCIPevalExprActivity() instead
+- removed SCIPexprtreePrint(), use SCIPprintExpr() instead
+- removed SCIPexprtreeCreate()
+- removed SCIPexprtreeCopy(), use SCIPduplicateExpr() instead
+- removed SCIPexprtreeFree(), use SCIPreleaseExpr() instead
+- removed SCIPexprtreeSetParams(), SCIPexprtreeGetVarsUsage()
+- removed SCIPexprtreeSimplify(), use SCIPsimplifyExpr() instead
+- removed SCIPexprtreeAddExpr()
+- removed SCIPexprtreeCheckCurvature(), use SCIPcomputeExprCurvature() instead
+- removed SCIPexprtreeSubstituteVars(), use SCIPcopyExpr() instead
+- removed SCIPquadelemSort(), SCIPquadelemSortedFind(), SCIPquadelemSqueeze()
+
+Expression graph:
+- removed SCIPexprgraphCaptureNode(), use SCIPcaptureExpr() instead
+- removed SCIPexprgraphIsNodeEnabled()
+- removed SCIPexprgraphGetNodeNChildren(), use SCIPexprGetNChildren() instead
+- removed SCIPexprgraphGetNodeChildren(), use SCIPexprGetChildren() instead
+- removed SCIPexprgraphGetNodeNParents(), SCIPexprgraphGetNodeParents(), SCIPexprgraphGetNodeDepth(), SCIPexprgraphGetNodePosition()
+- removed SCIPexprgraphGetNodeOperator(), use SCIPexprGetHdlr() instead
+- removed SCIPexprgraphGetNodeOperatorIndex(), SCIPexprgraphGetNodeOperatorReal(), use SCIPexprGetData() instead
+- removed SCIPexprgraphGetNodeVar(), use SCIPgetVarExprVar() instead
+- removed SCIPexprgraphGetNodeRealPowerExponent(), SCIPexprgraphGetNodeIntPowerExponent(), SCIPexprgraphGetNodeSignPowerExponent(), use SCIPgetExponentExprPow() instead
+- removed SCIPexprgraphGetNodeLinearCoefs(), SCIPexprgraphGetNodeLinearConstant(), use SCIPgetCoefsExprSum(), SCIPgetConstantExprSum() instead
+- removed SCIPexprgraphGetNodeQuadraticConstant(), SCIPexprgraphGetNodeQuadraticLinearCoefs(), SCIPexprgraphGetNodeQuadraticQuadElements(), SCIPexprgraphGetNodeQuadraticNQuadElements(), use SCIPexprGetQuadraticData(), SCIPexprGetQuadraticQuadTerm(), SCIPexprGetQuadraticBilinTerm() instead
+- removed SCIPexprgraphGetNodePolynomialMonomials(), SCIPexprgraphGetNodePolynomialNMonomials(), SCIPexprgraphGetNodePolynomialConstant(), SCIPexprgraphGetNodePolynomialMonomialCurvature()
+- removed SCIPexprgraphGetNodeUserData(), SCIPexprgraphHasNodeUserEstimator()
+- removed SCIPexprgraphGetNodeBounds(), use SCIPexprGetActivity() instead
+- removed SCIPexprgraphGetNodeVal(), use SCIPexprGetEvalValue() instead
+- removed SCIPexprgraphGetNodeCurvature(), use SCIPexprGetCurvature() instead
+- removed SCIPexprgraphCreateNode()
+- removed SCIPexprgraphCreateNodeLinear(), use SCIPcreateExprSum() instead
+- removed SCIPexprgraphCreateNodeQuadratic(), use SCIPcreateExprQuadratic() instead
+- removed SCIPexprgraphCreateNodePolynomial(), SCIPexprgraphNodePolynomialAddMonomials()
+- removed SCIPexprgraphCreateNodeUser(), removed SCIPexprgraphNodeSplitOffLinear(), SCIPexprgraphMoveNodeParents()
+- removed SCIPexprgraphReleaseNode(), use SCIPreleaseExpr() instead
+- removed SCIPexprgraphFreeNode(), use SCIPreleaseExpr() instead
+- removed SCIPexprgraphEnableNode(), SCIPexprgraphDisableNode()
+- removed SCIPexprgraphHasNodeSibling(), SCIPexprgraphAreAllNodeChildrenVars(), SCIPexprgraphHasNodeNonlinearAncestor()
+- removed SCIPexprgraphPrintNode(), SCIPprintExpr() instead
+- removed SCIPexprgraphTightenNodeBounds()
+- removed SCIPexprgraphUpdateNodeBoundsCurvature(), use SCIPevalExprActivity() and SCIPcomputeExprCurvature() instead
+- removed SCIPexprgraphGetDepth(), SCIPexprgraphGetNNodes(), SCIPexprgraphGetNodes(), SCIPexprgraphGetNVars(), SCIPexprgraphGetVars()
+- removed SCIPexprgraphGetVarNodes(), SCIPexprgraphSetVarNodeValue(), SCIPexprgraphSetVarsBounds(), SCIPexprgraphSetVarBounds(), SCIPexprgraphSetVarNodeBounds(), SCIPexprgraphSetVarNodeLb(), SCIPexprgraphSetVarNodeUb(), SCIPexprgraphGetVarsBounds()
+- removed SCIPexprgraphCreate(), SCIPexprgraphFree()
+- removed SCIPexprgraphAddNode(), SCIPexprgraphAddVars(), SCIPexprgraphAddConst(), SCIPexprgraphAddExprtreeSum()
+- removed SCIPexprgraphReplaceVarByLinearSum(), SCIPexprgraphFindVarNode(), SCIPexprgraphFindConstNode()
+- replaced SCIPexprgraphPrintDot() by SCIPprintExprDotInit[2](), SCIPprintExprDot(), SCIPprintExprDotFinal()
+- removed SCIPexprgraphEval(), use SCIPevalExpr() instead
+- removed SCIPexprgraphPropagateVarBounds(), SCIPexprgraphPropagateNodeBounds()
+- removed SCIPexprgraphCheckCurvature(), use SCIPcomputeExprCurvature() instead
+- removed SCIPexprgraphSimplify(), use SCIPsimplifyExpr() instead
+- removed SCIPexprgraphGetTree(), SCIPexprgraphGetSeparableTrees(), SCIPexprgraphGetSubtreeVarsUsage(), SCIPexprgraphGetSumTreesNSummands(), SCIPexprgraphGetSumTrees()
+
+Constraint handlers for NLP:
+- removed SCIPincludeConshdlrAbspower()
+- deprecated SCIPcreateConsAbspower() and SCIPcreateConsBasicAbspower(), use SCIPcreateConsBasicSignpowerNonlinear() instead
+- deprecated SCIPgetNlRowAbspower(), use SCIPgetNlRowNonlinear() instead
+- removed SCIPgetNonlinearVarAbspower(), SCIPgetLinearVarAbspower(), SCIPgetExponentAbspower(), SCIPgetOffsetAbspower(), SCIPgetCoefLinearAbspower(), SCIPgetLhsAbspower(), SCIPgetRhsAbspower()
+- removed SCIPgetViolationAbspower(), use SCIPgetAbsViolationNonlinear() instead
+- removed SCIPisConvexAbspower(), use SCIPhasExprCurvature() instead
+- removed SCIPincludeConshdlrBivariate(), SCIPcreateConsBivariate(), SCIPcreateConsBasicBivariate()
+- removed SCIPgetLinearVarBivariate(), SCIPgetLinearCoefBivariate(), SCIPgetExprtreeBivariate(), SCIPgetLhsBivariate(), SCIPgetRhsBivariate()
+- removed SCIPincludeConshdlrQuadratic(), use SCIPincludeNlhdlrQuadratic() instead
+- removed SCIPincludeQuadconsUpgrade()
+- removed SCIPcreateConsQuadratic2(), SCIPcreateConsBasicQuadratic2()
+- deprecated SCIPcreateConsBasicQuadratic(), use SCIPcreateConsBasicQuadraticNonlinear() instead
+- deprecated SCIPcreateConsBasicQuadratic(), use SCIPcreateConsQuadraticNonlinear() instead
+- deprecated SCIPaddConstantQuadratic(), use SCIPgetLhsNonlinear() and SCIPgetRhsNonlinear() instead
+- deprecated SCIPaddLinearVarQuadratic(), use SCIPaddLinearVarNonlinear() instead
+- deprecated SCIPaddQuadVarQuadratic(), use SCIPaddLinearVarNonlinear() and SCIPaddExprNonlinear() instead
+- deprecated SCIPaddQuadVarLinearCoefQuadratic(), use SCIPaddLinearVarNonlinear() instead
+- deprecated SCIPaddSquareCoefQuadratic(), use SCIPaddExprNonlinear() instead
+- deprecated SCIPaddBilinTermQuadratic(), use SCIPaddExprNonlinear() instead
+- deprecated SCIPchgLhsQuadratic(), use SCIPgetLhsNonlinear() instead
+- deprecated SCIPchgRhsQuadratic(), use SCIPgetRhsNonlinear() instead
+- deprecated SCIPgetNlRowQuadratic(), use SCIPgetNlRowNonlinear() instead
+- removed SCIPgetNLinearVarsQuadratic(), SCIPgetLinearVarsQuadratic(), SCIPgetCoefsLinearVarsQuadratic(), SCIPgetNQuadVarTermsQuadratic(), SCIPgetQuadVarTermsQuadratic(), SCIPsortQuadVarTermsQuadratic(), SCIPfindQuadVarTermQuadratic(), SCIPgetNBilinTermsQuadratic(), SCIPgetBilinTermsQuadratic(), SCIPgetLhsQuadratic(), SCIPgetRhsQuadratic()
+- removed SCIPgetLinvarMayDecreaseQuadratic(), SCIPgetLinvarMayIncreaseQuadratic()
+- removed SCIPcheckCurvatureQuadratic() and SCIPisConvexConsQuadratic(), use SCIPcomputeExprQuadraticCurvature() instead
+- removed SCIPisConvexQuadratic(), SCIPisConcaveQuadratic()
+- removed SCIPgetViolationQuadratic() and SCIPgetFeasibilityQuadratic(), use SCIPgetAbsViolationNonlinear() instead
+- removed SCIPisLinearLocalQuadratic(), SCIPaddToNlpiProblemQuadratic()
+- removed SCIPchgLinearCoefQuadratic(), SCIPchgSquareCoefQuadratic(), SCIPchgBilinCoefQuadratic()
+- renamed SCIPgetNAllBilinearTermsQuadratic() to SCIPgetNBilinTermsNonlinear() and changed argument from SCIP* to SCIP_CONSHDLR*
+- renamed SCIPgetAllBilinearTermsQuadratic() to SCIPgetBilinTermsNonlinear() and replaced arguments by SCIP_CONSHDLR* and changed return type to SCIP_CONSNONLINEAR_BILINTERM*
+- removed SCIPaddBilinearIneqQuadratic(), use SCIPinsertBilinearTermImplicitNonlinear() instead
+- renamed SCIPcreateConsQuadratic() to SCIPcreateConsQuadraticNonlinear() and removed argument stickingatnode
+- removed SCIPincludeConshdlrSOC()
+- replaced SCIPcreateConsBasicSOC() by SCIPcreateConsBasicSOCNonlinear()
+- deprecated SCIPcreateConsSOC(), use SCIPcreateConsBasicSOCNonlinear() instead
+- deprecated SCIPgetNlRowSOC(), use SCIPgetNlRowNonlinear() instead
+- removed SCIPgetNLhsVarsSOC(), SCIPgetLhsVarsSOC(), SCIPgetLhsCoefsSOC(), SCIPgetLhsOffsetsSOC(), SCIPgetLhsConstantSOC(), SCIPgetRhsVarSOC(), SCIPgetRhsCoefSOC(), SCIPgetRhsOffsetSOC(), use SCIPisSOCNonlinear() instead
+- removed SCIPaddToNlpiProblemSOC()
+- renamed SCIPincludeNonlinconsUpgrade() to SCIPincludeConsUpgradeNonlinear() and removed nodereform argument
+- removed arguments nlinvars, linvars, lincoefs, nexprtrees, exprtrees, nonlincoefs, stickingatnode from SCIPcreateConsNonlinear() and added SCIP_EXPR* argument
+- removed arguments nlinvars, linvars, lincoefs, nexprtrees, exprtrees, nonlincoefs from SCIPcreateConsBasicNonlinear() and added SCIP_EXPR* argument
+- removed SCIPcreateConsNonlinear2(), SCIPcreateConsBasicNonlinear2()
+- removed SCIPsetExprtreesNonlinear(), use SCIPchgExprNonlinear() instead
+- removed SCIPaddExprtreesNonlinear()
+- removed SCIPgetNLinearVarsNonlinear(), SCIPgetLinearVarsNonlinear(), SCIPgetLinearCoefsNonlinear()
+- removed SCIPgetNExprtreesNonlinear(), SCIPgetExprtreesNonlinear(), SCIPgetExprtreeCoefsNonlinear(), SCIPgetExprgraphNodeNonlinear(), use SCIPgetExprNonlinear() instead
+- removed argument scip from SCIPgetLhsNonlinear() and SCIPgetRhsNonlinear()
+- removed SCIPcheckCurvatureNonlinear(), SCIPgetCurvatureNonlinear(), and SCIPgetExprtreeCurvaturesNonlinear(), use SCIPhasExprCurvature() instead
+- renamed SCIPgetViolationNonlinear() to SCIPgetAbsViolationNonlinear()
+- added arguments var and coef to SCIPgetLinvarMayDecreaseNonlinear() and SCIPgetLinvarMayIncreaseNonlinear() and changed return type to void
+- removed SCIPgetExprgraphNonlinear()
+- removed SCIPcomputeHyperplaneThreePoints(), use SCIPcomputeFacetVertexPolyhedralNonlinear() instead
+
+### New API functions
+
+- added SCIPallocClearMemory() and SCIPallocClearBlockMemory() to allocate a chunk of (block) memory
+  that is initialized to zeros
+- New internal functions for changing the default values of parameters:
+    SCIPparamsetSetDefaultLongint(), SCIPparamsetSetDefaultReal(), SCIPparamsetSetDefaultChar(),
+    SCIPparamsetSetDefaultString() and
+    SCIPparamSetDefaultLongint(), SCIPparamSetDefaultReal(), SCIPparamSetDefaultChar(),
+    SCIPparamSetDefaultString()
+- new internal function SCIPisPackingPartitioningOrbitope() to check whether an orbitope is of
+  packing or partitioning type
+- new internal function SCIPcomputeOrbitVar() to compute the symmetry orbit of a variable
+- added SCIPcalcFibHash(SCIP_Real) to hash a floating-point value to an unsigned integer
+- added SCIPcomputeArraysIntersectionPtr() to compute intersection of two sorted arrays of pointers
+- new function SCIPinterruptLP() (intended to be called from a different thread) that interrupts ongoing lp solve
+- added SCIPcreateConsIndicatorGeneric() and SCIPcreateConsIndicatorGenericLinCons()
+  which copy the interface of SCIPcreateConsIndicator() and SCIPcreateConsIndicatorLinCons() and
+  add an activeone argument to specify whether the indicator constraint should be activated on 0 or 1.
+  SCIPcreateConsIndicator() also adds a lessthanineq flag to choose whether the linear constraint is a less-than or greater-than inequality.
+- added SCIPmarkDoNotAggrVar() to mark that a variable should not be aggregated
+- added SCIPdoNotAggrVar() to query whether a variable should not be aggregated
+- added SCIPdecompGetNBorderVars() and SCIPdecompGetNBorderConss() to get number of border variables/constraints
+- added SCIPdecompGetVarsSize() and SCIPdecompGetConssSize() to get variable/constraint size for each block of a decomposition
+- added SCIPincludeDialogDefaultBasic()
+- added SCIPintervalAreDisjointEps(), SCIPintervalIntersectEps()
+- added SCIPintervalEntropy()
+- added SCIPintervalPropagateWeightedSum()
+- added SCIPcalcRootNewton()
+- added SCIPvarGetImplicVarBounds()
+- added SCIPcreateRowprep(), SCIPfreeRowprep(), SCIPcopyRowprep(),
+  SCIProwprepGetNVars(), SCIProwprepGetVars(), SCIProwprepGetCoefs(), SCIProwprepGetSide(), SCIProwprepGetSidetype(), SCIProwprepIsLocal(), SCIProwprepGetName(), SCIProwprepGetNModifiedVars(), SCIProwprepGetModifiedVars(),
+  SCIProwprepReset(), SCIProwprepAddSide(), SCIProwprepAddConstant(), SCIProwprepSetSidetype(), SCIProwprepSetLocal(), SCIProwprepRecordModifications(),
+  SCIPprintRowprep(), SCIPprintRowprepSol(), SCIPensureRowprepSize(), SCIPaddRowprepTerm(), SCIPaddRowprepTerms(), SCIPgetRowprepViolation(), SCIPisRowprepViolationReliable(),
+  SCIPmergeRowprepTerms(), SCIPcleanupRowprep(), SCIPcleanupRowprep2(), SCIPscaleupRowprep(), SCIPscaleRowprep(),
+  SCIPgetRowprepRowConshdlr(), SCIPgetRowprepRowCons(), SCIPgetRowprepRowSepa()
+- added SCIPsetClockEnabled()
+- added SCIPisSolveInterrupted() to check whether SCIPinterruptSolve() has been called
+- added SCIPgetNPresolRounds()
+- added SCIPgetNUnfixedLPCols()
+- moved SCIPhistoryGetInferenceSum() and SCIPhistoryGetAvgConflictlength() from internal to public API
+
+Expression handler:
+- added SCIPincludeExprhdlr(), SCIPgetExprhdlrs(), SCIPgetNExprhdlrs(), SCIPfindExprhdlr()
+- added SCIPgetExprhdlrVar(), SCIPgetExprhdlrValue(), SCIPgetExprhdlrSum(), SCIPgetExprhdlrProduct(), SCIPgetExprhdlrPower()
+- added SCIPexprhdlrSetCopyFreeHdlr(), SCIPexprhdlrSetCopyFreeData(), SCIPexprhdlrSetPrint(), SCIPexprhdlrSetParse(), SCIPexprhdlrSetCurvature(), SCIPexprhdlrSetMonotonicity(), SCIPexprhdlrSetIntegrality(), SCIPexprhdlrSetHash(), SCIPexprhdlrSetCompare(), SCIPexprhdlrSetDiff(), SCIPexprhdlrSetIntEval(), SCIPexprhdlrSetSimplify(), SCIPexprhdlrSetReverseProp(), SCIPexprhdlrSetEstimate()
+- added SCIPexprhdlrGetName(), SCIPexprhdlrGetDescription(), SCIPexprhdlrGetPrecedence(), SCIPexprhdlrGetData(), SCIPexprhdlrHasPrint(), SCIPexprhdlrHasBwdiff(), SCIPexprhdlrHasFwdiff(), SCIPexprhdlrHasIntEval(), SCIPexprhdlrHasEstimate(), SCIPexprhdlrHasInitEstimates(), SCIPexprhdlrHasSimplify(), SCIPexprhdlrHasCurvature(), SCIPexprhdlrHasMonotonicity(), SCIPexprhdlrHasReverseProp()
+- added SCIPexprhdlrComp()
+- added SCIPexprhdlrGetNIntevalCalls(), SCIPexprhdlrGetIntevalTime(), SCIPexprhdlrGetNReversepropCalls(), SCIPexprhdlrGetReversepropTime(), SCIPexprhdlrGetNCutoffs(), SCIPexprhdlrGetNDomainReductions(), SCIPexprhdlrIncrementNDomainReductions(), SCIPexprhdlrGetNEstimateCalls(), SCIPexprhdlrGetEstimateTime(), SCIPexprhdlrGetNBranchings(), SCIPexprhdlrIncrementNBranchings(), SCIPexprhdlrGetNSimplifyCalls(), SCIPexprhdlrGetSimplifyTime(), SCIPexprhdlrGetNSimplifications()
+- added SCIPprintExpressionHandlerStatistics()
+- added SCIPincludeExprhdlrEntropy(), SCIPcreateExprEntropy(), SCIPisExprEntropy()
+- added SCIPincludeExprhdlrErf(), SCIPcreateExprErf(), SCIPisExprErf()
+- added SCIPcreateExprAbs(), SCIPincludeExprhdlrAbs(), SCIPisExprAbs()
+- added SCIPcreateExprExp(), SCIPincludeExprhdlrExp(), SCIPisExprExp()
+- added SCIPcreateExprLog(), SCIPincludeExprhdlrLog(), SCIPisExprLog()
+- added SCIPcreateExprPow(), SCIPcreateExprSignpower(), SCIPincludeExprhdlrPow(), SCIPincludeExprhdlrSignpower(), SCIPisExprSignpower(), SCIPgetExponentExprPow(), SCIPisExprPower()
+- added SCIPincludeExprhdlrProduct(), SCIPcreateExprProduct(), SCIPgetCoefExprProduct(), SCIPisExprProduct()
+- added SCIPincludeExprhdlrSum(), SCIPcreateExprSum(), SCIPsetConstantExprSum(), SCIPappendExprSumExpr(), SCIPmultiplyByConstantExprSum(), SCIPgetCoefsExprSum(), SCIPgetConstantExprSum(), SCIPisExprSum()
+- added SCIPincludeExprhdlrSin(), SCIPcreateExprSin(), SCIPincludeExprhdlrCos(), SCIPcreateExprCos(), SCIPisExprSin(), SCIPisExprCos()
+- added SCIPincludeExprhdlrValue(), SCIPcreateExprValue(), SCIPgetValueExprValue(), SCIPisExprValue()
+- added SCIPincludeExprhdlrVar(), SCIPcreateExprVar(), SCIPgetVarExprVar(), SCIPisExprVar()
+- added SCIPincludeExprhdlrVaridx(), SCIPcreateExprVaridx(), SCIPisExprVaridx(), SCIPgetIndexExprVaridx(), SCIPsetIndexExprVaridx()
+
+Expression:
+- added SCIPcaptureExpr(), SCIPreleaseExpr(), SCIPexprGetNUses()
+- added SCIPexprGetHdlr(), SCIPexprGetData(), SCIPexprSetData(), SCIPexprGetOwnerData()
+- added SCIPevalExpr(), SCIPgetExprNewSoltag(), SCIPexprGetEvalValue(), SCIPexprGetEvalTag()
+- added SCIPevalExprGradient(), SCIPevalExprHessianDir(), SCIPexprGetDerivative(), SCIPexprGetDot(), SCIPexprGetBardot(), SCIPexprGetDiffTag()
+- added SCIPevalExprActivity(), SCIPexprGetActivity(), SCIPexprGetActivityTag(), SCIPexprSetActivity()
+- added SCIPcomputeExprCurvature(), SCIPexprGetCurvature(), SCIPexprSetCurvature()
+- added SCIPcomputeExprIntegrality(), SCIPexprIsIntegral(), SCIPexprSetIntegrality()
+- added SCIPcheckExprQuadratic(), SCIPfreeExprQuadratic(), SCIPevalExprQuadratic(), SCIPprintExprQuadratic(), SCIPcomputeExprQuadraticCurvature()
+- added SCIPexprGetQuadraticData(), SCIPexprGetQuadraticQuadTerm(), SCIPexprGetQuadraticBilinTerm(), SCIPexprAreQuadraticExprsVariables()
+- added SCIPcreateExpr(), SCIPcreateExpr2(), SCIPcreateExprQuadratic(), SCIPcreateExprMonomial()
+- added SCIPappendExprChild(), SCIPreplaceExprChild(), SCIPremoveExprChildren()
+- added SCIPduplicateExpr(), SCIPduplicateExprShallow(), SCIPcopyExpr()
+- added SCIPparseExpr()
+- added SCIPprintExpr(), SCIPdismantleExpr()
+- added SCIPprintExprDotInit(), SCIPprintExprDotInit2(), SCIPprintExprDot(), SCIPprintExprDotFinal(), SCIPshowExpr()
+- added SCIPcompareExpr(), SCIPhashExpr()
+- added SCIPsimplifyExpr(), SCIPreplaceCommonSubexpressions()
+- added SCIPgetExprNVars(), SCIPgetExprVarExprs()
+- added SCIPcallExprPrint(), SCIPcallExprCurvature(), SCIPcallExprMonotonicity(), SCIPcallExprEval(), SCIPcallExprEvalFwdiff(), SCIPcallExprInteval(), SCIPcallExprEstimate(), SCIPcallExprInitestimates(), SCIPcallExprSimplify(), SCIPcallExprReverseprop()
+- added SCIPexprcurvPowerInv(), SCIPexprcurvMonomialInv()
+
+Expression iterator:
+- added SCIPcreateExpriter(), SCIPfreeExpriter()
+- added SCIPexpriterIsInit(), SCIPexpriterInit()
+- added SCIPexpriterRestartDFS(), SCIPexpriterSetStagesDFS(), SCIPexpriterGetCurrent(), SCIPexpriterGetStageDFS(), SCIPexpriterGetChildIdxDFS(), SCIPexpriterGetChildExprDFS(), SCIPexpriterGetParentDFS()
+- added SCIPexpriterGetCurrentUserData(), SCIPexpriterGetChildUserDataDFS(), SCIPexpriterGetExprUserData(), SCIPexpriterSetCurrentUserData(), SCIPexpriterSetExprUserData(), SCIPexpriterSetChildUserData()
+- added SCIPexpriterGetNext(), SCIPexpriterSkipDFS(), SCIPexpriterIsEnd()
+- added SCIPexprintHessianSparsity(), SCIPexprintHessian()
+
+Constraint handlers for NLP:
+- added SCIPgetCurBoundsTagNonlinear(), SCIPgetLastBoundRelaxTagNonlinear(), SCIPincrementCurBoundsTagNonlinear()
+- added SCIPgetVarExprHashmapNonlinear()
+- added SCIPprocessRowprepNonlinear()
+- added SCIPassumeConvexNonlinear()
+- added SCIPcollectBilinTermsNonlinear(), SCIPgetBilinTermIdxNonlinear(), SCIPgetBilinTermNonlinear(), SCIPevalBilinAuxExprNonlinear(), SCIPinsertBilinearTermExistingNonlinear(), SCIPinsertBilinearTermImplicitNonlinear()
+- added SCIPcomputeFacetVertexPolyhedralNonlinear()
+- added SCIPgetExprNonlinear()
+- added SCIPcheckQuadraticNonlinear(), SCIPchgLhsNonlinear(), SCIPchgRhsNonlinear(), SCIPchgExprNonlinear(), SCIPaddExprNonlinear()
+- added SCIPgetRelViolationNonlinear()
+- added SCIPgetExprNLocksPosNonlinear(), SCIPgetExprNLocksNegNonlinear(), SCIPgetExprAuxVarNonlinear(), SCIPgetExprNEnfosNonlinear(), SCIPgetExprEnfoDataNonlinear(), SCIPsetExprEnfoAuxValueNonlinear()
+- added SCIPgetExprNPropUsesActivityNonlinear(), SCIPgetExprNSepaUsesActivityNonlinear(), SCIPgetExprNAuxvarUsesNonlinear(), SCIPregisterExprUsageNonlinear()
+- added SCIPgetExprAbsOrigViolationNonlinear(), SCIPgetExprAbsAuxViolationNonlinear(), SCIPgetExprRelAuxViolationNonlinear()
+- added SCIPgetExprBoundsNonlinear(), SCIPtightenExprIntervalNonlinear(), SCIPmarkExprPropagateNonlinear()
+- added SCIPaddExprViolScoreNonlinear(), SCIPaddExprsViolScoreNonlinear(), SCIPgetExprViolScoreNonlinear()
+- added SCIPgetExprPartialDiffNonlinear(), SCIPgetExprPartialDiffGradientDirNonlinear()
+- added SCIPevalExprQuadraticAuxNonlinear()
+- added SCIPincludeNlhdlrNonlinear(), SCIPfindNlhdlrNonlinear(), SCIPgetNNlhdlrsNonlinear(), SCIPgetNlhdlrsNonlinear(), SCIPgetNlhdlrExprDataNonlinear()
+- added SCIPcreateConsQuadraticNonlinear() and SCIPcreateConsBasicQuadraticNonlinear() to create a nonlinear constraint that is quadratic
+- added SCIPcreateConsBasicSignpowerNonlinear() to create a nonlinear constraint that looks like the former abspower or signpower constraints
+
+Nonlinear Handler:
+- added SCIPincludeNlhdlrBilinear(), SCIPgetExprsBilinear(), SCIPgetExprsdataBilinear(), SCIPgetNExprsBilinear(), SCIPaddIneqBilinear()
+- added SCIPincludeNlhdlrConvex(), SCIPincludeNlhdlrConcave(), SCIPhasExprCurvature()
+- added SCIPincludeNlhdlrDefault()
+- added SCIPincludeNlhdlrPerspective()
+- added SCIPincludeNlhdlrQuadratic()
+- added SCIPincludeNlhdlrQuotient()
+- added SCIPincludeNlhdlrSoc(), SCIPisSOCNonlinear(), SCIPfreeSOCArraysNonlinear()
+- added SCIPnlhdlrSetCopyHdlr(), SCIPnlhdlrSetFreeHdlrData(), SCIPnlhdlrSetFreeExprData(), SCIPnlhdlrSetInitExit(), SCIPnlhdlrSetProp(), SCIPnlhdlrSetSepa()
+- added SCIPnlhdlrGetName(), SCIPnlhdlrGetDesc(), SCIPnlhdlrGetDetectPriority(), SCIPnlhdlrGetEnfoPriority(), SCIPnlhdlrIsEnabled(), SCIPnlhdlrGetData()
+- added SCIPnlhdlrHasIntEval(), SCIPnlhdlrHasReverseProp(), SCIPnlhdlrHasInitSepa(), SCIPnlhdlrHasExitSepa(), SCIPnlhdlrHasEnfo(), SCIPnlhdlrHasEstimate()
+- added SCIPnlhdlrComp()
+
+NLPI:
+- added SCIPgetNlpiSolverPointer(), SCIPcreateNlpiProblem(), SCIPfreeNlpiProblem(), SCIPgetNlpiProblemPointer(), SCIPaddNlpiVars(), SCIPaddNlpiConstraints(), SCIPsetNlpiObjective(), SCIPchgNlpiVarBounds(), SCIPchgNlpiConsSides(), SCIPdelNlpiVarSet(), SCIPdelNlpiConsSet(), SCIPchgNlpiLinearCoefs(), SCIPchgNlpiExpr(), SCIPchgNlpiObjConstant(), SCIPsetNlpiInitialGuess(), SCIPsolveNlpiParam(), SCIPgetNlpiSolstat(), SCIPgetNlpiTermstat(), SCIPgetNlpiSolution(), SCIPgetNlpiStatistics()
+- added SCIPincludeNlpSolverAll()
+- added SCIPincludeNlpSolverFilterSQP(), SCIPgetSolverNameFilterSQP(), SCIPgetSolverDescFilterSQP(), SCIPisFilterSQPAvailableFilterSQP()
+- added SCIPincludeNlpSolverIpopt()
+- added SCIPincludeNlpSolverWorhp()
+- added SCIPnlpiOracleChgExpr()
+- added SCIPcreateNlpiProblemFromNlRows()
+- added SCIPnlpiOracleGetObjectiveConstant()
+- added SCIPnlpiOracleIsVarNonlinear(), SCIPnlpiOracleGetVarCounts(), SCIPnlpiOracleIsConstraintNonlinear()
+- added SCIPnlpiGetNProblems(), SCIPnlpiGetProblemTime(), SCIPnlpiGetNSolves(), SCIPnlpiGetSolveTime(), SCIPnlpiGetEvalTime(), SCIPnlpiGetNIterations(), SCIPnlpiGetNTermStat(), SCIPnlpiGetNSolStat(), SCIPnlpiMergeStatistics()
+- added SCIPmergeNLPIStatistics(), SCIPprintNLPIStatistics()
+- added SCIPnlpiOracleResetEvalTime(), SCIPnlpiOracleGetEvalTime()
+- added SCIPaddNlpiProblemNlRows()
+
+Cut Selector:
+- added SCIPincludeCutsel(), SCIPincludeCutselBasic(), SCIPsetCutselCopy(), SCIPsetCutselFree(), SCIPsetCutselInit(), SCIPsetCutselExit(),  SCIPsetCutselInitsol(), SCIPsetCutselExitsol(), SCIPfindCutsel(), SCIPgetCutsels(), SCIPgetNCutsels(), SCIPsetCutselPriority()
+- added SCIPcutselGetName(), SCIPcutselGetData(), SCIPcutselGetDesc(), SCIPcutselGetPriority(), SCIPcutselSetData(), SCIPcutselIsInitialized(), SCIPcutselGetSetupTime(), SCIPcutselGetTime()
+
+### Command line interface
+### Interfaces to external software
+
+- removed GAMS interface (originally in interfaces/gams) and reading capability of gms reader;
+  the removed interface was a poorly maintained copy of the GAMS/SCIP interface that is available at
+  https://github.com/coin-or/GAMSlinks
+- integrated AMPL interface into main SCIP executable, that is, added possibility to use SCIP executable as solver in AMPL
+  (AMPL calls solver with name of .nl file and -AMPL as arguments; SCIP will then attempt to solve the problem and write an AMPL solution file)
+- the ZIMPL interface has been updated to support ZIMPL 3.4.1;
+  the minimal required ZIMPL version is now 3.4.1
+
+### Changed parameters
+
+- Extended range of parameter "misc/usesymmetry" from [0,3] to [0,7], changed default from 3 to 5
+- deleted parameter "constraints/orbitope/usedynamicprop"
+- changed type of parameter "propagating/symmetry/recomputerestart" from SCIP_Bool to int with range [0,2]
+- deleted parameter "propagating/symmetry/disableofrestart"
+- parameter "heuristics/padm/original" is now an advanced parameter
+- removed constraints/nonlinear/linfeasshift, constraints/nonlinear/reformulate, constraints/nonlinear/maxexpansionexponent, constraints/nonlinear/sepanlpmincont
+- removed constraints/nonlinear/upgrade/abspower
+- removed constraints/nonlinear/upgrade/and, use constraints/nonlinear/reformbinprodsand instead
+- removed constraints/nonlinear/upgrade/bivariate
+- removed constraints/nonlinear/upgrade/quadratic, use nlhdlr/quadratic/enabled instead
+- changed default of constraints/nonlinear/maxproprounds from 1 to 10
+- replaced constraints/nonlinear/enfocutsremovable by constraints/nonlinear/rownotremovable
+- replaced constraints/nonlinear/cutmaxrange by separating/maxcoefratiofacrowprep
+- removed constraints/quadratic/sepafreq, constraints/quadratic/propfreq, constraints/quadratic/proptiming, constraints/quadratic/eagerfreq, constraints/quadratic/maxprerounds, constraints/quadratic/delaysepa, constraints/quadratic/delayprop, constraints/quadratic/presoltiming
+- removed constraints/quadratic/replacebinaryprod, use constraints/nonlinear/reformbinprodsfac instead
+- removed constraints/quadratic/empathy4and, use constraints/nonlinear/reformbinprodsand instead
+- removed constraints/quadratic/binreforminitial, constraints/quadratic/binreformbinaryonly, constraints/quadratic/binreformmaxcoef
+- removed constraints/quadratic/cutmaxrange, constraints/quadratic/mincurvcollectbilinterms, constraints/quadratic/linearizeheursol, constraints/quadratic/checkcurvature, constraints/quadratic/checkfactorable, constraints/quadratic/checkquadvarlocks, constraints/quadratic/linfeasshift
+- removed constraints/quadratic/maxdisaggrsize, constraints/quadratic/disaggrmergemethod, constraints/quadratic/maxproprounds, constraints/quadratic/maxproproundspresolve, constraints/quadratic/enfolplimit, constraints/quadratic/sepanlpmincont, constraints/quadratic/enfocutsremovable
+- removed constraints/quadratic/gaugecuts, constraints/quadratic/interiorcomputation, constraints/quadratic/projectedcuts, constraints/quadratic/branchscoring, constraints/quadratic/usebilinineqbranch, constraints/quadratic/bilinineqmaxseparounds,
+- removed constraints/quadratic/minscorebilinterms, use nlhdlr/bilinear/enabled instead
+- removed constraints/quadratic/upgrade/linear, constraints/quadratic/upgrade/abspower, constraints/quadratic/upgrade/bivariate, constraints/quadratic/upgrade/bounddisjunction
+- removed constraints/quadratic/upgrade/soc, use nlhdlr/soc/enabled instead
+- renamed constraints/quadratic/upgrade/setppc to constraints/nonlinear/upgrade/setppc
+- removed constraints/abspower/sepafreq, constraints/abspower/propfreq, constraints/abspower/proptiming, constraints/abspower/eagerfreq, constraints/abspower/maxprerounds, constraints/abspower/delaysepa, constraints/abspower/delayprop, constraints/abspower/presoltiming
+- removed constraints/abspower/cutmaxrange, constraints/abspower/projectrefpoint, constraints/abspower/preferzerobranch, constraints/abspower/branchminconverror, constraints/abspower/addvarboundcons, constraints/abspower/linfeasshift, constraints/abspower/dualpresolve, constraints/abspower/sepainboundsonly, constraints/abspower/sepanlpmincont, constraints/abspower/enfocutsremovable
+- removed constraints/bivariate/sepafreq, constraints/bivariate/propfreq, constraints/bivariate/proptiming, constraints/bivariate/eagerfreq, constraints/bivariate/maxprerounds, constraints/bivariate/delaysepa, constraints/bivariate/delayprop, constraints/bivariate/presoltiming
+- removed constraints/bivariate/cutmaxrange, constraints/bivariate/linfeasshift, constraints/bivariate/maxproprounds, constraints/bivariate/ninitlprefpoints, constraints/bivariate/enfocutsremovable
+- removed constraints/soc/sepafreq, constraints/soc/propfreq, constraints/soc/proptiming, constraints/soc/eagerfreq, constraints/soc/maxprerounds, constraints/soc/delaysepa, constraints/soc/delayprop, constraints/soc/presoltiming
+- removed constraints/soc/projectpoint, constraints/soc/nauxvars, constraints/soc/glineur, constraints/soc/sparsify, constraints/soc/sparsifymaxloss, constraints/soc/sparsifynzgrowth, constraints/soc/linfeasshift, constraints/soc/nlpform, constraints/soc/sepanlpmincont, constraints/soc/enfocutsremovable, constraints/soc/disaggregate
+- removed constraints/soc/generalsocupgrade, use nlhdlr/soc/compeigenvalues instead
+- changed default of presolving/qpkktref/maxrounds from -1 to 0
+- changed default of propagating/obbt/onlynonconvexvars from FALSE to TRUE
+- changed default of heuristics/subnlp/resolvetolfactor from 0.001 to 1.0
+- removed heuristics/subnlp/nlpoptfile, use nlpi/ipopt/optfile instead
+- removed separating/convexproj/nlptimelimit
+- removed separating/gauge/nlptimelimit
+- removed heuristics/subnlp/nlptimelimit and heuristics/subnlp/nlpiterlimit
+- removed heuristics/subnlp/resolvetolfactor and heuristics/subnlp/resolvefromscratch
+- changed default of heuristics/subnlp/itermin to 20
+- renamed heuristics/subnlp/iteroffset to heuristics/subnlp/nodesoffset
+- renamed heuristics/subnlp/iterquotient to heuristics/subnlp/nodesfactor
+- removed heuristics/subnlp/runalways, use heuristics/subnlp/nodesoffset=INT_MAX and heuristics/subnlp/successrateexp = 0.0 instead
+- removed heuristics/subnlp/minimprove, heuristics/multistart/nlpminimpr
+- Removed parameters for strongcg separator: separating/strongcg/..., i.e.,
+  maxrounds, maxroundsroot, maxsepacutsroot, maxsepacuts, dynamiccuts. One can control the
+  strongcg behavior throught the parameters of sepa_gomory.
+- renamed separating/{minortho,minorthoroot,objparalfac,intsupportfac} to cutselection/hybrid/{minortho,minorthoroot,objparalweight,intsupportweight}
+
+### New parameters
+
+- It is now possible to add orbitope constraints to handle symmetries even if not all variables
+  in a component of the symmetry group are binary. This feature can be enabled using the
+  parameter "propagating/symmetry/onlybinorbitope".
+
+- new parameter "propagating/symmetry/sstleaderrule" to select a rule for selecting the
+  leader in SST cuts
+- new parameter "propagating/symmetry/ssttiebreakrule" to select a tiebreak rule for selecting the
+  leader in SST cuts
+- new parameter "propagating/symmetry/sstleadervartype" to select the possible variable types
+  for a leader in SST cuts
+- new parameter "propagating/symmetry/addconflictcuts" to control whether SST cuts are added if
+  a binary leader variable is in conflict with a variable in its orbit
+- new parameter "propagating/symmetry/sstaddcuts" to control whether SST cuts are added
+- new parameter "propagating/symmetry/sstmixedcomponents" to control whether SST cuts are added
+  if a symmetry component contains variables of different types
+- new parameter "propagating/symmetry/detectsubgroups" to search for orbitopes defined by subgroups
+- new parameter "propagating/symmetry/addweaksbcs" to add Schreier Sims cuts for a single
+  variable orbit in case an orbitope subgroup is detected
+- new parameter "propagating/symmetry/addstrongsbcs" to add symretope facets for a single
+  variable orbit on which the symmetry group acts like a symmetric group
+- new parameter "propagating/symmetry/maxnconsssubgroup" to control up to which number of
+  constraints subgroups are detected
+- new parameter "propagating/symmetry/preferlessrows" to control whether orbitopes with
+  smallest number of rows shall be computed by the subgroup detection heuristic
+- new parameter "propagating/symmetry/usedynamicprop" to control if rows of full orbitope
+  shall be ordered dynamically in propagation
+- new parameter "separating/filtercutpoolrel" to control whether cutpool uses
+  a dynamic strategy to separate only cuts with high relative efficacy
+- if run from AMPL: display/statistics to enable printing detailed solve statistics after solve
+- if run from AMPL: display/logfile to specify name of file to write SCIP log to (additionally to writing to stdout)
+- constraints/nonlinear/propauxvars, constraints/nonlinear/varboundrelax, constraints/nonlinear/varboundrelaxamount, constraints/nonlinear/conssiderelaxamount
+- constraints/nonlinear/vpmaxperturb, constraints/nonlinear/vpadjfacetthresh, constraints/nonlinear/vpdualsimplex
+- constraints/nonlinear/bilinmaxnauxexprs, constraints/nonlinear/forbidmultaggrnlvar, constraints/nonlinear/checkvarlocks, constraints/nonlinear/violscale
+- constraints/nonlinear/reformbinprods, constraints/nonlinear/reformbinprodsand, constraints/nonlinear/reformbinprodsfac
+- constraints/nonlinear/tightenlpfeastol, constraints/nonlinear/propinenforce, constraints/nonlinear/weakcutthreshold, constraints/nonlinear/strongcutmaxcoef, constraints/nonlinear/strongcutefficacy, constraints/nonlinear/forcestrongcut, constraints/nonlinear/enfoauxviolfactor, constraints/nonlinear/weakcutminviolfactor
+- constraints/nonlinear/branching/aux, constraints/nonlinear/branching/external, constraints/nonlinear/branching/highviolfactor, constraints/nonlinear/branching/highscorefactor, constraints/nonlinear/branching/violweight, constraints/nonlinear/branching/dualweight, constraints/nonlinear/branching/pscostweight, constraints/nonlinear/branching/domainweight, constraints/nonlinear/branching/vartypeweight, constraints/nonlinear/branching/scoreagg, constraints/nonlinear/branching/violsplit, constraints/nonlinear/branching/pscostreliable
+- constraints/nonlinear/linearizeheursol
+- nlhdlr/default/enabled
+- nlhdlr/convex/enabled, nlhdlr/convex/detectsum, nlhdlr/convex/extendedform, nlhdlr/convex/cvxquadratic, nlhdlr/convex/cvxsignomial, nlhdlr/convex/cvxprodcomp, nlhdlr/convex/handletrivial
+- nlhdlr/concave/enabled, nlhdlr/concave/detectsum, nlhdlr/concave/cvxquadratic, nlhdlr/concave/cvxsignomial, nlhdlr/concave/cvxprodcomp, nlhdlr/concave/handletrivial
+- nlhdlr/bilinear/enabled, nlhdlr/bilinear/useinteval, nlhdlr/bilinear/usereverseprop, nlhdlr/bilinear/maxseparoundsroot, nlhdlr/bilinear/maxseparounds, nlhdlr/bilinear/maxsepadepth
+- nlhdlr/perspective/enabled, nlhdlr/perspective/maxproprounds, nlhdlr/perspective/mindomreduction, nlhdlr/perspective/minviolprobing, nlhdlr/perspective/probingonlyinsepa, nlhdlr/perspective/probingfreq, nlhdlr/perspective/convexonly, nlhdlr/perspective/tightenbounds, nlhdlr/perspective/adjrefpoint
+- nlhdlr/quadratic/enabled, nlhdlr/quadratic/useintersectioncuts, nlhdlr/quadratic/usestrengthening, nlhdlr/quadratic/useboundsasrays, nlhdlr/quadratic/ncutslimit, nlhdlr/quadratic/ncutslimitroot, nlhdlr/quadratic/maxrank, nlhdlr/quadratic/mincutviolation, nlhdlr/quadratic/minviolation, nlhdlr/quadratic/atwhichnodes, nlhdlr/quadratic/nstrengthlimit, nlhdlr/quadratic/ignorebadrayrestriction, nlhdlr/quadratic/ignorehighre
+- nlhdlr/quotient/enabled
+- nlhdlr/soc/enabled, nlhdlr/soc/mincutefficacy, nlhdlr/soc/compeigenvalues
+- propagating/obbt/createlincons
+- propagating/symmetry/onlybinarysymmetry
+- separating/minor/priority, separating/minor/freq, separating/minor/maxbounddist, separating/minor/delay, separating/minor/expbackoff, separating/minor/maxminorsconst, separating/minor/maxminorsfac, separating/minor/mincutviol, separating/minor/maxrounds, separating/minor/maxroundsroot, separating/minor/ignorepackingconss
+- separating/rlt/priority, separating/rlt/freq, separating/rlt/maxbounddist, separating/rlt/delay, separating/rlt/expbackoff, separating/rlt/maxncuts, separating/rlt/maxunknownterms, separating/rlt/maxusedvars, separating/rlt/maxrounds, separating/rlt/maxroundsroot, separating/rlt/onlyeqrows, separating/rlt/onlycontrows, separating/rlt/onlyoriginal, separating/rlt/useinsubscip, separating/rlt/useprojection, separating/rlt/detecthidden, separating/rlt/hiddenrlt, separating/rlt/addtopool, separating/rlt/goodscore, separating/rlt/badscore, separating/rlt/objparalweight, separating/rlt/efficacyweight, separating/rlt/dircutoffdistweight, separating/rlt/goodmaxparall, separating/rlt/maxparall
+- separating/interminor/usestrengthening, separating/interminor/usebounds, separating/interminor/mincutviol, separating/interminor/maxrounds, separating/interminor/maxroundsroot
+- table/cons_nonlinear/active, table/nlhdlr/active, table/exprhdlr/active, table/nlpi/active, table/nlhdlr_bilinear/active, table/nlhdlr_quadratic/active
+- expr/log/minzerodistance, expr/pow/minzerodistance
+- benders/default/maxslackvarcoef to specify maximal coefficient for slack variables; if exceeded, slack variables are fixed to zero
+- nlpi/ipopt/optfile to specify name of Ipopt options file to use for every solve with Ipopt
+- nlpi/ipopt/print_level, nlpi/ipopt/hsllib, nlpi/ipopt/pardisolib, nlpi/ipopt/linear_solver, nlpi/ipopt/linear_system_scaling, nlpi/ipopt/nlp_scaling_method, nlpi/ipopt/mu_strategy, nlpi/ipopt/hessian_approximation
+- nlpi/ipopt/warm_start_push
+- timing/nlpieval
+- heuristics/subnlp/iterinit, heuristics/subnlp/ninitsolves, heuristics/subnlp/successrateexp
+- heuristics/subnlp/expectinfeas, heuristics/subnlp/opttol, heuristics/subnlp/feastolfactor
+- heuristics/subnlp/presolveemphasis, heuristics/subnlp/setcutoff
+- new parameters "branching/inference/conflictprio" and "branching/inference/cutoffprio" that allow
+  using the different score criteria in inference branching hierarchically
+- new parameters "heuristics/alns/nodesquotmin", "heuristics/alns/maxcallssamesol" and "heuristics/alns/initduringroot"
+  to control neighborhoods in ALNS
+- new parameter "benders/default/benderscut/optimality/mir" to control whether mixed-integer rounding procedure is applied to Benders optimality cuts
+- new parameter "misc/avoidmemout" to try to avoid running into memory limit
+- cutselection/hybrid/dircutoffdistweight, cutselection/hybrid/efficacyweight, cutselection/hybrid/intsupportweight, cutselection/hybrid/objparalweight, cutselection/hybrid/priority
+- new parameter "decomposition/disablemeasures" to disable expensive measures in SCIPcomputeDecompStats()
+- new parameter "presolving/milp/probfilename" filename to write the problem to a file before MILP presolving starts
+
+### Data structures
+
+- removed quadratic terms from NLROWs
+- removed SCIP_NLPPAR_INFINITY from SCIP_NLPPARAM enum
+- added types SYM_OPTYPE, SYM_CONSTTYPE, SYM_RHSTYPE, SYM_EXPRDATA
+- removed class SCIPInterval
+- removed enum SCIP_EXPROP
+- removed union SCIP_EXPROPDATA, added SCIP_EXPRDATA
+- removed struct SCIP_EXPRTREE, use SCIP_EXPR instead
+- removed structs SCIP_QUADELEM, SCIP_EXPRDATA_QUADRATIC, SCIP_EXPRDATA_MONOMIAL, SCIP_EXPRDATA_POLYNOMIAL, SCIP_EXPRDATA_USER
+- removed structs SCIP_EXPRGRAPHNODE, SCIP_EXPRGRAPH
+- removed type SCIP_EXPRBOUNDSTATUS
+- removed struct SCIP_USEREXPRDATA
+- added enum SCIP_MONOTONE
+- added structs SCIP_EXPRHDLR, SCIP_EXPRHDLRDATA
+- added union SCIP_EXPRITER_USERDATA
+- added enum SCIP_EXPRITER_TYPE
+- added structs SCIP_EXPRITERDATA, SCIP_EXPRITER
+- added type SCIP_EXPRPRINT_WHAT, struct SCIP_EXPRPRINTDATA
+- removed enum SCIP_BIVAR_CONVEXITY
+- removed structs SCIP_QUADVAREVENTDATA, SCIP_QUADVARTERM, SCIP_BILINTERM
+- added structs SCIP_CONSNONLINEAR_AUXEXPR, SCIP_CONSNONLINEAR_BILINTERM
+- added type SCIP_NLHDLR_METHOD
+- added structs SCIP_NLHDLR, SCIP_NLHDLRDATA, SCIP_NLHDLREXPRDATA
+- enum SCIP_NLPPARAM has been changed to a struct that holds values of parameters for an NLP solve
+- removed SCIP_NLPPAR_OPTFILE/optfile from SCIP_NLPPARAM
+- added SCIP_NLPTERMSTAT_INTERRUPT to SCIP_NLPTERMSTAT enum; returned from NLP solver if SCIPinterruptSolve() has been called
+- renamed SCIP_NLPTERMSTAT_TILIM to SCIP_NLPTERMSTAT_TIMELIMIT
+- renamed SCIP_NLPTERMSTAT_ITLIM to SCIP_NLPTERMSTAT_ITERLIMIT
+- renamed SCIP_NLPTERMSTAT_LOBJLIM to SCIP_NLPTERMSTAT_LOBJLIMIT
+- renamed SCIP_NLPTERMSTAT_NUMERR to SCIP_NLPTERMSTAT_NUMERICERROR
+- renamed SCIP_NLPTERMSTAT_EVALERR to SCIP_NLPTERMSTAT_EVALERROR
+- renamed SCIP_NLPTERMSTAT_MEMERR to SCIP_NLPTERMSTAT_OUTOFMEMORY
+- renamed SCIP_NLPTERMSTAT_LICERR to SCIP_NLPTERMSTAT_LICENSEERROR
+- added evaltime to SCIP_NLPSTATISTICS
+- added structs SCIP_CUTSEL, SCIP_CUTSELDATA
+
+Deleted files
+-------------
+
+- interfaces/gams/*
+- interfaces/ampl/*
+- src/nlpi/*
+- src/scip/cons_bivariate.{c,h}
+- src/scip/pub_misc_nonlinear.h
+- src/scip/misc_nonlinear.c
+- src/scip/scip_nonlinear.{c,h}
+- src/scip/sepa_strongcg.{h|c}
+
+Unit tests
+----------
+
+- added cons/linear/nonlinupgd.c
+- added cons/nonlinear/addcons.c
+- added cons/nonlinear/bilinhash.c
+- added cons/nonlinear/check.c
+- added cons/nonlinear/copy.c
+- added cons/nonlinear/create_nlrow.c
+- added cons/nonlinear/curvature.c
+- added cons/nonlinear/glbconss.c
+- added cons/nonlinear/hessian.c
+- added cons/nonlinear/locks.c
+- added cons/nonlinear/nlhdlr.c
+- added cons/nonlinear/nlhdlr_bilinear.c
+- added cons/nonlinear/nlhdlr_concave.c
+- added cons/nonlinear/nlhdlr_convex.c
+- added cons/nonlinear/nlhdlr_perspective.c
+- added cons/nonlinear/nlhdlr_quadratic.c
+- added cons/nonlinear/nlhdlr_quotient.c
+- added cons/nonlinear/nlhdlr_soc.c
+- added cons/nonlinear/parse.c
+- added cons/nonlinear/presolve.c
+- added cons/nonlinear/propagate.c
+- added cons/nonlinear/readers.c
+- added cons/nonlinear/reformbinprods.c
+- added cons/nonlinear/repair.c
+- added cons/nonlinear/transform.c
+- added cons/nonlinear/vertexpolyhedral.c
+- removed cons/nonlinear/getCoeffsAndConstantFromLinearExpr.c
+- removed cons/soc/upgrade.c
+- added expr/abs/estimation.c
+- added expr/commonsubexprs.c
+- added expr/compare.c
+- added expr/copy.c
+- added expr/cos/cos.c
+- added expr/cos/estimation.c
+- added expr/curvature.c
+- added expr/derivative.c
+- added expr/entropy/entropy.c
+- added expr/entropy/estimation.c
+- added expr/eval.c
+- added expr/exp/estimation.c
+- added expr/free.c
+- added expr/getvarexprs.c
+- added expr/hash.c
+- added expr/hessian.c
+- added expr/integrality.c
+- added expr/iterator.c
+- added expr/log/estimation.c
+- added expr/monotonicity.c
+- added expr/parse.c
+- added expr/pow/estimation.c
+- added expr/pow/pow.c
+- added expr/product/estimation.c
+- added expr/quad.c
+- added expr/simplify.c
+- added expr/sin/estimation.c
+- added expr/sin/sin.c
+- added expr/sum/estimation.c
+- added nlpi/exprinterpret.c
+- speedup test nlpi:solveQP in nlpi/nlpi.c
+- added test projection:transitivity in prob/obbt.c
+- added reader/nl.c
+- added test intervalarith:sincos in scip/intervalarith.c
+- added sepa/minor.c
+- added sepa/rlt/cuts.c
+- added sepa/rlt/product_detection.c
+- added sepa/rlt/separation.c
+- added tests test_compute_symmetry:expr{1,2,3,4} in symmetry/compute.c
+
+Testing
+-------
+
+Build system
+------------
+
+- the separate NLPI library has been integrated into the main SCIP library;
+  uses of NLPILIBFILE or NLPILIBSRC in Makefiles that use make/make.project
+  should be removed
+
+### Cmake
+
+- replace flag PARASCIP by THREADSAFE
+- option AMPL is now ON by default
+- add -D_XOPEN_SOURCE=600 cflag for compilation on systems other than windows
+- add compile options directly instead of modifying CMAKE_C_FLAGS and CMAKE_CXX_FLAGS
+
+### Makefile
+
+- prefix PKG_CONFIG_PATH with Ipopt's pkgconfig dir instead of postfixing
+- replace flag PARASCIP by THREADSAFE
+- flag AMPL is now true by default
+- libscip has been renamed to libscipbase and libscipsolver has been renamed to libscip
+  in order to have the same library names for makefiles and cmake. For downward
+  compatibility libscipsolver still exists (as a link).
+
+Fixed bugs
+----------
+
+- fixed handling of multi-aggregation in cons_symresack and cons_orbisack
+- SCIPgetLowerbound() now consistently returns infinity when status is infeasible
+- improved the likelihood that a solution that satisfies the nonlinear constraints in the transformed (presolved) problem is also feasible for the original problem
+- worked around a problem with derivatives of pow at 0 with non-integer exponents in CppAD
+- fixed that setting of feasiblity and optimiality tolerance for NLP relaxation was overwritten with defaults when solving NLP
+- fixed variance computation in t-value computation in hypothesis testing of reliability branching
+- fixed potential overflow in cuts.c:evaluateLiftingFunctionKnapsack()
+- do not transfer dual reductions to main SCIP in sepa_rapidlearning if strong dual reductions are forbidden
+- fixed a bug in cons_setppc.c:removeDoubleAndSingletonsAndPerformDualpresolve() which led to wrong variable aggregations
+- added missing redundancy check to coefficient tightening routine in cons_varbound that led to wrong variable locks
+- added a check of numerics to avoid wrong reductions in cons_linear.c:simplifyInequalities()
+- fixed a bug in cons_logicor.c regarding fixed variables that were not removed
+- presol_milp.c handles variable fixings, suggested by PaPILO, more carefully to cover all cases that can appear
+- fixed several reproducability bugs that led to different solving paths across multiple runs with one SCIP environment
+- fixed check of limits/absgap, which was incorrectly applied to the scaled objective of the transformed problem
+
+Miscellaneous
+-------------
+
+- in LP, use absolute instead of relative tolerances to check whether solutions from LP solver are primal feasible
+- when a restart occurs, SCIP now asserts (during EXITSOLVE) that all relaxation-only variables are unlocked and
+  only captured by the transformed problem.
+- Avoid redundant calls to LP solver when LP is already flushed and solved
+- In SCIPdebugMsg(), SCIPsetDebugMsg(), SCIPstatDebugMsg() strip directory from filename.
+- Recompute activity of rows when checking LP solutions instead of trusting the value given by the LP solver
+- The define NPARASCIP has been replaced by SCIP_THREADSAFE
+- Parameters are not reset to their default values before activating an emphasis setting; this now allows to combine
+  different emphasis settings.
+- If a lazy bound is set to a value that is tighter than the current global bound, then the global bound is now tightened accordingly.
+
+Known bugs
+----------
+
 @page RN70 Release notes for SCIP 7.0
 
-@section RN000 SCIP 7.0.2
+@section RN703 SCIP 7.0.3
+*************************
+
+Interface changes
+-----------------
+
+### New API functions
+
+- added function SCIPwithDebugSol() to determine whether SCIP was compiled with WITH_DEBUG_SOLUTION
+
+- New function SCIPcreateConsBounddisjunctionRedundant() and SCIPcreateConsBasicBounddisjunctionRedundant() that allow
+  the input to contain redundant literals.
+
+### Changed API functions
+
+- added __attribute__((format(printf,,,))) to variadic SCIP message printing functions;
+  this enables warnings about mismatches between format string and variadic function arguments if using GCC.
+
+### Interfaces to external software
+
+- removed MATLAB interface from interfaces/matlab
+
+Build system
+------------
+
+- Compilation will now also work in a raw tarball of the scip git repository
+
+### Cmake
+
+- Make find_package more verbose and require packages to be found. Now enabled packages that are not found result in an error.
+
+Fixed bugs
+----------
+
+- Fixed numerical bug by creating and checking the empty solution when problem vanishes in presolving.
+- Fixed several bugs in reoptimization.
+- Fixed bug in cons_bounddisjunction in which a constraint leads to a cutoff.
+- Fixed bug in reoptimization by avoiding redundant literals for bound disjunctions.
+- Replace wrong usage of CMAKE_BINARY_DIR by PROJECT_BINARY_DIR in CMake system
+- Fixed lpi_glop to use absl flag instead of GFlags
+- Fixed invalid initialization of limits/softtime parameter in cons_components
+- Fixed MIN macro not defined in some cases.
+- Safeguard some API methods for querying solving statistics against segmentation faults after SCIPpresolve()
+- Fixed unfreed solution in concurrent solving
+- Make sure that logicor constraints are enforced/separated if genlogicor is true in cons_indicator.
+  Thus, do not change constraints/logicor/sepafreq anymore, but output warning.
+- Fixed assert that assumed infeasibility cannot occur in presol_boundshift.
+- Fixed sign bug during creation of conflict constraints with almost zero left-hand side.
+- Disabled call of conflict handler for conflict sets that contain relaxation-only variables.
+- Fixed bug in cons_symresack by initializing all constraint data in constrans
+- Avoid allowing the upgrade of linear constraints corresponding to indicators in propagation of nodes.
+- Fixed bug in computing lex. min/max faces in dynamic orbitope propagation.
+- Limit vbounds propagator to one sweep through all bounds per call in order to avoid an infinite loop.
+- Fixed mismatches between formatter strings and arguments in calls to SCIP message printing functions.
+
+Miscellaneous
+-------------
+
+- To avoid performance variablity during reoptimization, the active constraints are now stored in the same order as in the
+  original problem.
+- Added workaround for bug in MSVS 2019 when compiling CppAD source.
+- The original order of variables is now only restored after presolve if `randomization/permutevars` is set to FALSE.
+
+@section RN702 SCIP 7.0.2
 *************************
 
 Features
@@ -9,12 +1239,16 @@ Features
 - Extended check for valid variable and constraint names in PIP writer.
 - Indicator constraints now write the name of the linear constraint in CIP format. This avoids a complicated
   name matching during parsing. The old format is still supported.
+- The objective scale and offset are now taken into account when reading/writing problems in lp/mps/fzn/pip format.
+  This often changes the behavior when writing transformed problems.
 
 Performance improvements
 ------------------------
 
 Examples and applications
 -------------------------
+
+- Add c++ Sudoku example
 
 Interface changes
 -----------------
@@ -71,12 +1305,16 @@ Fixed bugs
 - Fixed bug in writing fzn format
 - Revert to old parameter value when parameter change is rejected in PARAMCHGD callback
 - Fixed order of linker flags when building AMPL interface with cmake system.
+- Fixed bug with ofsymcomptiming == 0: now symmetry is actually computed
 - Improved separation for SOC constraint with multiaggregated variable on right-hand-side.
 - Fixed bug in presol_boundshift: do not shift non-active variables
 - Fixed bug in domain propagation for SOC constraints with negative coefficient for variable on right-hand-side.
 - When a row with invalid minidx and maxidx is added to global cutpool, update the indices instead of failing as assert
 - Fixed bug with multi-aggregated integer variables in cons_xor.
 - Fixed bug with changed number of variables in storing relaxation solution in probing/diving.
+- Fixed issues with scip statistics
+- Fixed issue with multi-aggregated variables
+- Fixed issue in with buffer memory in cons_cumulative
 
 Miscellaneous
 -------------
@@ -393,6 +1631,9 @@ Interface changes
   + arguments of functions SCIPbendersSolveSubproblemLP(), SCIPbendersSolveSubproblemCIP(), and SCIPbendersOnlyCheckConvexRelax() changed
   - removed SCIPbenderscutGetNAddedCuts() and SCIPbenderscutGetAddedCutData()
 
+
+### New API functions
+
 - new argument "onlyifcomplete" in SCIPmatrixCreate() to skip matrix creation right after detecting unsupported constraint types
   and new arguments to count statistics when doing a clean-up of inactive variables in the constraints before building the matrix
 
@@ -449,7 +1690,7 @@ Interface changes
   The meaning of the argument 'heur' in all creation methods for primal solutions such as SCIPcreateSol() stays unchanged.
 - added SCIProwGetOriginConshdlr(), SCIPcreateRowConshdlr(), SCIPcreateEmptyRowConshdlr()
 - new API functions SCIPsetCommonSubscipParams(), SCIPtranslateSubSol(), and SCIPtranslateSubSols() shared by several Large Neighborhood Search heuristics.
-- new API function SCIPgetLPDegeneracy() to get two measures for the degeneracy of the current LP
+- new API function SCIPgetLPDualDegeneracy() to get two measures for the dual degeneracy of the current LP
 - new API functions SCIPdivesetIsAvailable() to check preconditions of a dive set and SCIPdivesetIsPublic() to check if the dive set can be used
   by other primal heuristics.
 - new API functions SCIPcomputeOrbitsSym(), SCIPcomputeOrbitsFilterSym(), SCIPgetPropertiesPerm(), SCIPdetermineBinvarAffectedSym(),
@@ -1296,7 +2537,7 @@ Interface changes
   - added new abstract selection algorithm `SCIP_BANDIT` together with callbacks
   - added new types for symmetry handling
 
-- LP interface:
+- NLP interface:
   - dropped NLP termination status `SCIP_NLPTERMSTAT_UOBJLIM`
 
 - NLP callbacks:
@@ -1374,7 +2615,7 @@ Interface changes
   - methods SCIPrandomCreate() and SCIPrandomFree() are no longer public and should be replaced by SCIPcreateRandom() and
     SCIPfreeRandom(), respectively (the new methods respect the global parameter `randomization/randomseedshift` automatically)
   - methods SCIPdigraphCreate() and SCIPdigraphCopy() are no longer public and should be replaced by SCIPcreateDigraph() and
-    SCIPcopyDigraph(), respectively, which receive a \SCIP argument and are more robust towards future interface changes
+    SCIPcopyDigraph(), respectively, which receive a SCIP argument and are more robust towards future interface changes
 
 - Bilinear:
   - SCIPgetAllBilinearTermsQuadratic() to access data of all existing bilinear terms in quadratic constraints
@@ -1481,6 +2722,8 @@ Interface changes
   number of binary variable for performing clique table analysis
 - `separating/maxincrounds`
 - `separating/maxlocalbounddist`, `separating/maxcoefratio` and `separating/intsupportfac`
+- if PaPILO >= 2.1: `presolving/milp/maxbadgesizepar` to limit the maximal badge size if PaPILO is called in parallel mode
+- if PaPILO >= 2.1: `presolving/milp/maxbadgesizeseq` to limit the maximal badge size if PaPILO is called in sequential mode
 
 ### Data structures
 
@@ -1734,6 +2977,7 @@ Features
   - the subnlp heuristic now gives ownership of a found solution to the heuristic that constructed the starting point, if any;
     as a consequence, MIP heuristics may now be shown more frequently for having found a solution when solving MINLPs, even
     though the solutions required an additional NLP solve
+  - new multistart heuristic for NLPs
 
 - Propagator:
   - add prop_nlobbt, a nonlinear optimization-based bound propagator solving two convex NLP relaxations for each variable
@@ -2574,6 +3818,7 @@ Fixed bugs
 - fix bug which lead to wrong global bound tightenings in prop_genvbounds.c
 - fix call to random generator for Windows operating systems in misc.c
 - fixed again a bug in backward propagation of linear expressions in expression graph
+- fixed bug in prop_symmetry.c, where an incorrect weak symmetry handling constraint got added.
 
 - NLP:
   - fixed bug in heur_nlpdiving.c: wrong counting of fix variables

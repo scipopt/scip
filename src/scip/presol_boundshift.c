@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -37,6 +46,7 @@
 #include "scip/scip_presol.h"
 #include "scip/scip_prob.h"
 #include "scip/scip_var.h"
+#include "scip/debug.h"
 #include <string.h>
 
 #define PRESOL_NAME            "boundshift"
@@ -208,6 +218,32 @@ SCIP_DECL_PRESOLEXEC(presolExecBoundshift)
                SCIPvarIsInitial(var), SCIPvarIsRemovable(var), NULL, NULL, NULL, NULL, NULL) );
          SCIP_CALL( SCIPaddVar(scip, newvar) );
 
+#ifdef WITH_DEBUG_SOLUTION
+         if( SCIPdebugIsMainscip(scip) )
+         {
+            /* calculate and store debug solution value of shift variable */
+            SCIP_Real val;
+
+            SCIP_CALL( SCIPdebugGetSolVal(scip, var, &val) );
+            SCIPdebugMsg(scip, "debug solution value: <%s> = %g", SCIPvarGetName(var), val);
+
+            if( presoldata->flipping )
+            {
+               if( REALABS(ub) < REALABS(lb) )
+                  val = ub - val;
+               else
+                  val = val - lb;
+            }
+            else
+            {
+               val = val - lb;
+            }
+            SCIPdebugMsgPrint(scip, " -> <%s> = %g\n", SCIPvarGetName(newvar), val);
+
+            SCIP_CALL( SCIPdebugAddSolVal(scip, newvar, val) );
+         }
+#endif
+
          /* aggregate old variable with new variable */
          if( presoldata->flipping )
          {
@@ -225,18 +261,22 @@ SCIP_DECL_PRESOLEXEC(presolExecBoundshift)
             SCIP_CALL( SCIPaggregateVars(scip, var, newvar, 1.0, -1.0, lb, &infeasible, &redundant, &aggregated) );
          }
 
-         assert(!infeasible);
-         assert(redundant);
-         assert(aggregated);
-         SCIPdebugMsg(scip, "var <%s> with bounds [%f,%f] has obj %f\n",
-            SCIPvarGetName(newvar), SCIPvarGetLbGlobal(newvar), SCIPvarGetUbGlobal(newvar), SCIPvarGetObj(newvar));
+         if( infeasible )
+            *result = SCIP_CUTOFF;
+         else
+         {
+            assert(redundant);
+            assert(aggregated);
+            SCIPdebugMsg(scip, "var <%s> with bounds [%f,%f] has obj %f\n",
+               SCIPvarGetName(newvar), SCIPvarGetLbGlobal(newvar), SCIPvarGetUbGlobal(newvar), SCIPvarGetObj(newvar));
+
+            /* take care of statistics */
+            (*naggrvars)++;
+            *result = SCIP_SUCCESS;
+         }
 
          /* release variable */
          SCIP_CALL( SCIPreleaseVar(scip, &newvar) );
-
-         /* take care of statistics */
-         (*naggrvars)++;
-         *result = SCIP_SUCCESS;
       }
    }
 

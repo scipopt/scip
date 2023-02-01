@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -456,10 +465,10 @@ SCIP_RETCODE createSubscip(
    /* copy plugins, we omit pricers (because we do not run if there are active pricers) and dialogs */
 #ifdef SCIP_MORE_DEBUG /* we print statistics later, so we need to copy statistics tables */
    SCIP_CALL( SCIPcopyPlugins(scip, *subscip, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE,
-         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, &success) );
+         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, &success) );
 #else
    SCIP_CALL( SCIPcopyPlugins(scip, *subscip, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE,
-         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, &success) );
+         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, TRUE, &success) );
 #endif
 
    /* the plugins were successfully copied */
@@ -660,8 +669,8 @@ SCIP_RETCODE solveSubscip(
    )
 {
    SCIP_Real timelimit;
-   SCIP_Real softtimelimit;
    SCIP_Real memorylimit;
+   SCIP_Bool avoidmemout;
 
    assert(scip != NULL);
    assert(subscip != NULL);
@@ -674,15 +683,6 @@ SCIP_RETCODE solveSubscip(
       timelimit += SCIPgetSolvingTime(subscip);
    }
 
-   /* set soft time limit, if specified in main SCIP */
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/softtime", &softtimelimit) );
-   if( softtimelimit > -0.5 )
-   {
-      softtimelimit -= SCIPgetSolvingTime(scip);
-      softtimelimit += SCIPgetSolvingTime(subscip);
-      softtimelimit = MAX(softtimelimit, 0.0);
-   }
-
    /* substract the memory already used by the main SCIP and the estimated memory usage of external software */
    /* @todo count memory of other components */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
@@ -692,10 +692,19 @@ SCIP_RETCODE solveSubscip(
       memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
    }
 
-   /* abort if no time is left or not enough memory to create a copy of SCIP, including external memory usage */
-   if( timelimit <= 0.0 || memorylimit <= 0.0)
+   /* check if mem limit needs to be avoided */
+   SCIP_CALL( SCIPgetBoolParam(scip, "misc/avoidmemout", &avoidmemout) );
+
+   /* abort if no time is left or not enough memory (we don't abort in this case if misc_avoidmemout == TRUE)
+    * to create a copy of SCIP, including external memory usage */
+   if( avoidmemout && memorylimit <= 0.0 )
    {
-      SCIPdebugMessage("--> not solved (not enough memory or time left)\n");
+      SCIPdebugMessage("--> not solved (not enough memory left)\n");
+      return SCIP_OKAY;
+   }
+   else if( timelimit <= 0.0 )
+   {
+      SCIPdebugMessage("--> not solved (not enough time left)\n");
       return SCIP_OKAY;
    }
 
@@ -706,7 +715,23 @@ SCIP_RETCODE solveSubscip(
 
    /* set time and memory limit for the subproblem */
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
-   SCIP_CALL( SCIPsetRealParam(subscip, "limits/softtime", softtimelimit) );
+
+   /* only set soft time limit if it exists */
+   if( SCIPgetParam(scip, "limits/softtime") != NULL )
+   {
+      SCIP_Real softtimelimit;
+
+       /* set soft time limit, if specified in main SCIP and if it exists */
+      SCIP_CALL( SCIPgetRealParam(scip, "limits/softtime", &softtimelimit) );
+      if( softtimelimit > -0.5 )
+      {
+         softtimelimit -= SCIPgetSolvingTime(scip);
+         softtimelimit += SCIPgetSolvingTime(subscip);
+         softtimelimit = MAX(softtimelimit, 0.0);
+      }
+
+      SCIP_CALL( SCIPsetRealParam(subscip, "limits/softtime", softtimelimit) );
+   }
 
    /* set gap limit */
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/gap", gaplimit) );
@@ -2525,11 +2550,6 @@ SCIP_DECL_CONSINITSOL(consInitsolComponents)
 #define consEnfopsComponents NULL
 #define consCheckComponents NULL
 
-/**@name Interface methods
- *
- * @{
- */
-
 /** creates the components constraint handler and includes it in SCIP */
 SCIP_RETCODE SCIPincludeConshdlrComponents(
    SCIP*                 scip                /**< SCIP data structure */
@@ -2593,5 +2613,3 @@ SCIP_RETCODE SCIPincludeConshdlrComponents(
 
    return SCIP_OKAY;
 }
-
-/**@} */

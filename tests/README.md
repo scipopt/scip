@@ -11,7 +11,7 @@ Write and run unit tests for SCIP.
 
 ## Overview
 
-A unit test is an automated piece of code that invokes a unit of work in the system and then checks a single assumption about the behavior of that unit of work. The SCIP Unit Test Suite leverages [Criterion](http://criterion.readthedocs.io/en/master/) as the testing framework and [ctest](https://cmake.org/cmake/help/v2.8.8/ctest.html) as the runner. The SCIP Unit Test Suite is very much in a state of development. Check out the [unit test suite milestone](https://git.zib.de/integer/scip/milestones/2) for more information.
+A unit test is an automated piece of code that invokes a unit of work in the system and then checks a single assumption about the behavior of that unit of work. The SCIP Unit Test Suite leverages [Criterion](http://criterion.readthedocs.io/en/master/) as the testing framework and [ctest](https://cmake.org/cmake/help/v2.8.8/ctest.html) as the runner. The SCIP Unit Test Suite is very much in a state of development. Check out the [unit test suite milestone](https://git.zib.de/integer/scip/-/milestones/2) for more information.
 
 ## Write
 
@@ -47,6 +47,10 @@ assume `SHARED=true` and `OPT=dbg`.
 
 This command will check for [Criterion](http://criterion.readthedocs.io/en/master/) in ./Criterion, download and install it if not found, and compile and run all tests in `src/`.
 If you already have installed Criterion on you system, execute `touch Criterion` or `mkdir Criterion` before calling make.
+
+**NOTE** It might happen that Criterion does not compile with the following error
+`<path/to/scip/tests/Criterion/src/io/output.c:3:19: fatal error: khash.h: No such file or directory`
+Go to `Criterion/dependencies/klib` and execute `git co cdb7e92` and then go to `Criterion/build` and run `make`
 
 **NOTE** Some tests might need to include c files from SCIP. For tests to be recompilied the included c file gets recompiled, run `make depend`.
 

@@ -18,32 +18,32 @@
 
 \section{Preface}
 
-In this tutorial we give a short introduction to the constraint integer programming framework SCIP 
-(\underline{s}olving \underline{c}onstraint \underline{i}nteger \underline{p}rograms) which was developed 
-by Tobias Achterberg \cite{scip} as part of his PhD thesis. SCIP combines constraint programming and mixed 
-integer programming (MIP) into one framework. We will focus on the mixed integer part here. 
+In this tutorial we give a short introduction to the constraint integer programming framework SCIP
+(\underline{s}olving \underline{c}onstraint \underline{i}nteger \underline{p}rograms) which was developed
+by Tobias Achterberg \cite{scip} as part of his PhD thesis. SCIP combines constraint programming and mixed
+integer programming (MIP) into one framework. We will focus on the mixed integer part here.
 We show how to use SCIP as a MIP solver backend using the $n$-queens example.
-This introduction is currently adapted to SCIP 2.0 and will probably be extended to the development of 
+This introduction is currently adapted to SCIP 2.0 and will probably be extended to the development of
 plugins in the future.
 
-SCIP is free for academical use, but you will also need an LP solver. For this purpose you can use SoPlex, 
-which was developed by Roland Wunderling \cite{soplex} as part of his PhD thesis and is distributed under 
-the same conditions as SCIP. The easiest way is to download the ZIB Optimization Suite, which contains 
+SCIP is open source, but you will also need an LP solver. For this purpose you can use SoPlex,
+which was developed by Roland Wunderling \cite{soplex} as part of his PhD thesis and is distributed under
+the same conditions as SCIP. The easiest way is to download the SCIP Optimization Suite, which contains
 SCIP/SoPlex and the mathematical modeling language Zimpl~\cite{zimpl}.
 
-A good starting point for SCIP is to look at the examples bundled with the source code. As a reference you 
-can use the doxygen documentation, which is available online at \url{http://scipopt.org/doc/html}. 
-You should start by looking at ``File List $\rightarrow$ scip.h''. Here you find the most important functions, 
-sorted by categories like ``Global Problem Methods'', ``Variable Methods'', ``Constraint Methods'' and so on. 
-Another place to look at is ``File Members $\rightarrow$ All $\rightarrow$ s. Here you also find functions like 
-\verb+SCIPcreateConsLinear+ which is not defined in ``scip.h'' -- since it is a plugin -- but in 
+A good starting point for SCIP is to look at the examples bundled with the source code. As a reference you
+can use the doxygen documentation, which is available online at \url{http://scipopt.org/doc/html}.
+You should start by looking at ``File List $\rightarrow$ scip.h''. Here you find the most important functions,
+sorted by categories like ``Global Problem Methods'', ``Variable Methods'', ``Constraint Methods'' and so on.
+Another place to look at is ``File Members $\rightarrow$ All $\rightarrow$ s. Here you also find functions like
+\verb+SCIPcreateConsLinear+ which is not defined in ``scip.h'' -- since it is a plugin -- but in
 ``cons\_linear.h''. The most useful SCIP functions start with the prefix ``SCIP''.
 
 
 \section{Using SCIP as a MIP solver backend}
 
-In this section we show how to use SCIP as a backend for solving mixed integer programs by developing a solver 
-for the $n$-queens problem. We first give a brief introduction into the problem and than describe a C++ program 
+In this section we show how to use SCIP as a backend for solving mixed integer programs by developing a solver
+for the $n$-queens problem. We first give a brief introduction into the problem and than describe a C++ program
 for solving it. The model is based on the one described in the Zimpl documentation.
 
 \subsection{The $n$-queens problem}
@@ -54,8 +54,8 @@ The $n$-queens problem asks how to place $n$ queens on an $n \times n$ chess boa
 \item In each horizontal line of the board only one queen is allowed, these lines will be called rows later on.
 \item In each diagonal line only one queen is allowed.
 \end{itemize}
-This can be modeled as a binary program in the following way: Let $x_{i,j} \in \{0,1\}$ denote whether a queen 
-is placed on the $i$th row and the $j$th column of the chess board. Since the problem is to find a placement, 
+This can be modeled as a binary program in the following way: Let $x_{i,j} \in \{0,1\}$ denote whether a queen
+is placed on the $i$th row and the $j$th column of the chess board. Since the problem is to find a placement,
 the objective function is irrelevant. We add, however, the redundant objective to maximize the number of placed queens:
 \[
 \max \sum_{i=1}^n \sum_{j=1}^n x_{i,j}
@@ -76,9 +76,9 @@ The diagonal rows are a little bit more complicated to write up:
 \subsection{Error handling in SCIP}
 
 Before we transform the $n$-queens IP program into a SCIP program, we first consider a general point when working with
-SCIP functions: Most SCIP functions return a value of the type \verb+SCIP_RETCODE+. If this is equal to 
-\verb+SCIP_OKAY+, then everything went well, otherwise it indicates an error code. Therefore the normal call of a 
-SCIP function returning a \verb+SCIP_RETCODE+ (we use \verb+SCIPfunction+ as a generic name -- replace it with 
+SCIP functions: Most SCIP functions return a value of the type \verb+SCIP_RETCODE+. If this is equal to
+\verb+SCIP_OKAY+, then everything went well, otherwise it indicates an error code. Therefore the normal call of a
+SCIP function returning a \verb+SCIP_RETCODE+ (we use \verb+SCIPfunction+ as a generic name -- replace it with
 whatever function you are calling) is
 \begin{verbatim}
 SCIP_RETCODE retcode;
@@ -89,7 +89,7 @@ if (retcode != SCIP_OKAY)
 }
 \end{verbatim}
 Since this is a lot of code for every function call, SCIP provides two macros namely \verb+SCIP_CALL+ and
-\verb+SCIP_CALL_ABORT+. The second one just aborts the execution by calling \verb+abort()+ if an error occured. 
+\verb+SCIP_CALL_ABORT+. The second one just aborts the execution by calling \verb+abort()+ if an error occured.
 The first one calls the SCIP function and, in the error case, returns the retcode. This results in the following code:
 \begin{verbatim}
 SCIP_RETCODE myfunction(void)
@@ -106,9 +106,9 @@ int main(int args, char * argv)
    }
 }
 \end{verbatim}
-While this is nice for C programs, there is a problem when using \verb+SCIP_CALL+ from C++: A C++ constructor is not 
-allowed to return a value. The same is true for destructors. Therefore we supply a third method, the 
-\verb+SCIP_CALL_EXC+ macro. This behaves just like \verb+SCIP_CALL+, but instead of returning the error code it 
+While this is nice for C programs, there is a problem when using \verb+SCIP_CALL+ from C++: A C++ constructor is not
+allowed to return a value. The same is true for destructors. Therefore we supply a third method, the
+\verb+SCIP_CALL_EXC+ macro. This behaves just like \verb+SCIP_CALL+, but instead of returning the error code it
 throws an exception of a new type \verb+SCIPException+. So the example above would now be written as:
 \begin{verbatim}
 int main(int args, char * argv)
@@ -129,12 +129,12 @@ int main(int args, char * argv)
 
 For a SCIP based project there are three main header files to consider. The first and most important one is of course
 ``scip/scip.h''. It declares the \verb+SCIP+ pointer and all public functions. You may have noticed that SCIP can be
-extended by plugins. 
-In fact most parts of the MIP solver like heuristics, separators, etc.\ are implemented as plugins. To use them, include 
+extended by plugins.
+In fact most parts of the MIP solver like heuristics, separators, etc.\ are implemented as plugins. To use them, include
 ``scip/scipdefplugins.h''.
 
 These two header files are C type. In early versions of SCIP it was necessary to wrap them in an \verb+extern "C"+
-statement. As of version 1.1 SCIP now detects a C++ compiler and adds \verb+extern "C"+ own its own. 
+statement. As of version 1.1 SCIP now detects a C++ compiler and adds \verb+extern "C"+ own its own.
 
 The last header file to consider is ``objscip/objscip.h'' if you want to use the C++ wrapper classes distributed  with
 SCIP. For the queens example we do not develop own plugins, so we just use
@@ -155,12 +155,12 @@ When you use SCIP you have to do the following steps:
 \item access results
 \item free the SCIP environment
 \end{itemize}
-You can of course cycle through some of these steps like accessing the results, modifying the problem and 
+You can of course cycle through some of these steps like accessing the results, modifying the problem and
 solving again. We will now describe these steps in more detail for the queens solver.
 
 \subsubsection{Initializing the SCIP environment}
 
-In this section, we start developing our queens solver. Before you can do anything with SCIP, you have to 
+In this section, we start developing our queens solver. Before you can do anything with SCIP, you have to
 create a valid \verb+SCIP+ pointer. For this purpose use the \verb+SCIPcreate+ function:
 \begin{verbatim}
 SCIP* scip;
@@ -169,11 +169,11 @@ SCIP_CALL_EXC(SCIPcreate(& scip));
 
 \subsubsection{Loading all desired plugins}
 
-After we created our \verb+SCIP+ pointer we load the plugins. In SCIP nearly everything is a plugin: 
-heuristics, separators, constraint handlers, etc. Whenever you want to use one you first have to include 
-it. This is done by various \verb+SCIPinclude+ functions like \verb+SCIPincludeHeur+ for heuristics 
-or \verb+SCIPincludeConshdlr+ for constraint handlers. This also activates the default display plugins 
-which writes various messages to standard output. (If you do not like this you can disable it by a call of 
+After we created our \verb+SCIP+ pointer we load the plugins. In SCIP nearly everything is a plugin:
+heuristics, separators, constraint handlers, etc. Whenever you want to use one you first have to include
+it. This is done by various \verb+SCIPinclude+ functions like \verb+SCIPincludeHeur+ for heuristics
+or \verb+SCIPincludeConshdlr+ for constraint handlers. This also activates the default display plugins
+which writes various messages to standard output. (If you do not like this you can disable it by a call of
 \verb+SCIPsetMessagehdlr(NULL)+.) All together we get:
 \begin{verbatim}
 SCIP_CALL_EXC(SCIPincludeDefaultPlugins(scip));
@@ -184,8 +184,8 @@ SCIP_CALL_EXC(SCIPincludeDefaultPlugins(scip));
 \subsubsection{Creating a problem}
 
 Now we can create the IP model for the queens solver in SCIP. First we create an empty problem with
-\verb+SCIPcreateProb+. The first argument is our \verb+SCIP+ pointer and the second is the name 
-of the problem. You can also supply user specific problem data and call back functions to handle them, 
+\verb+SCIPcreateProb+. The first argument is our \verb+SCIP+ pointer and the second is the name
+of the problem. You can also supply user specific problem data and call back functions to handle them,
 but normally you will not need them and can safely set them to \verb+NULL+:
 \begin{verbatim}
 SCIP_CALL_EXC(SCIPcreateProb(scip, "queens", NULL, NULL,
@@ -199,9 +199,9 @@ SCIP_CALL_EXC(SCIPsetObjsense(scip, SCIP_OBJSENSE_MAXIMIZE));
 
 \subsubsection{Creating variables}
 
-Now it is time to fill the empty problem with information. We start by creating variables, one binary variable for every 
-field on the chess board. Variables are accessed through the type \verb+SCIP_VAR*+. Associated with each variable is a 
-type (continuous, integer, or binary), lower and upper bound and a objective. In our case, the type is binary for all 
+Now it is time to fill the empty problem with information. We start by creating variables, one binary variable for every
+field on the chess board. Variables are accessed through the type \verb+SCIP_VAR*+. Associated with each variable is a
+type (continuous, integer, or binary), lower and upper bound and a objective. In our case, the type is binary for all
 variables, the lower bound is naturally 0, the upper bound 1, and the objective is 1 for all variables:
 \begin{verbatim}
 SCIP_VAR* var;
@@ -209,10 +209,10 @@ SCIP_CALL_EXC(SCIPcreateVar(scip, & var, "x#i#j", 0.0, 1.0, 1.0,
                             SCIP_VARTYPE_BINARY, TRUE, FALSE,
                             NULL, NULL, NULL, NULL, NULL));
 \end{verbatim}
-Here, you should replace $i$ and $j$ by the actually row and column number of the variable. The fourth argument is the 
-lower bound, the fifth the upper bound, the sixth the objective, and the seventh the type. After that you specify two 
-boolean parameters indicating whether this variable is in the initial (root) LP and whether it is allowed to be removed 
-during aging. Like in \verb+SCIPcreateProb+ you can use the last five parameters to specify user data. We set these 
+Here, you should replace $i$ and $j$ by the actually row and column number of the variable. The fourth argument is the
+lower bound, the fifth the upper bound, the sixth the objective, and the seventh the type. After that you specify two
+boolean parameters indicating whether this variable is in the initial (root) LP and whether it is allowed to be removed
+during aging. Like in \verb+SCIPcreateProb+ you can use the last five parameters to specify user data. We set these
 parameters to \verb+NULL+. After creating the \verb+SCIP_VAR+ pointer it is time to add it to the SCIP problem:
 \begin{verbatim}
 SCIP_CALL_EXC(SCIPaddVar(scip, var));

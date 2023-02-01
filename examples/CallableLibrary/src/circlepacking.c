@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -265,7 +274,7 @@ SCIP_RETCODE visualizeSolutionAscii(
    picture[width/2-8+i] = '*';
 
    /* show plot */
-   SCIPinfoMessage(scip, NULL, picture);
+   SCIPinfoMessage(scip, NULL, "%s", picture);
 
    SCIPfreeBufferArray(scip, &picture);
 
@@ -335,6 +344,7 @@ static SCIP_RETCODE setupProblem(
 {
    char name[SCIP_MAXSTRLEN];
    SCIP_CONS* cons;
+   SCIP_Real minusone = -1.0;
    SCIP_Real one = 1.0;
    int i, j;
 
@@ -485,8 +495,8 @@ static SCIP_RETCODE setupProblem(
     * If the size the rectangle is fixed, then w, h, and a have been fixed above.
     * We could actually omit this constraint, but here SCIP presolve will take care of removing it.
     */
-   SCIP_CALL( SCIPcreateConsBasicQuadratic(scip, &cons, "area", 0, NULL, NULL, 1, &w, &h, &one, -SCIPinfinity(scip), 0.0) );
-   SCIP_CALL( SCIPaddLinearVarQuadratic(scip, cons, a, -1.0) );
+   SCIP_CALL( SCIPcreateConsQuadraticNonlinear(scip, &cons, "area", 1, &a, &minusone, 1, &w, &h, &one, -SCIPinfinity(scip),
+      0.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
@@ -506,24 +516,28 @@ static SCIP_RETCODE setupProblem(
    {
       for( j = i + 1; j < ncircles; ++j )
       {
+         SCIP_VAR* quadvars1[6] = {x[i], x[j], x[i], y[i], y[j], y[i]};
+         SCIP_VAR* quadvars2[6] = {x[i], x[j], x[j], y[i], y[j], y[j]};
+         SCIP_Real quadcoefs[6] = {1.0, 1.0, -2.0, 1.0, 1.0, -2.0};
+         SCIP_VAR* linvars[2] = {NULL, NULL};
+         SCIP_Real lincoefs[2] = {0.0, 0.0};
+         int nlinvars = 0;
+
          /* create empty quadratic constraint with right-hand-side +/- (r_i - r_j)^2 */
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "nooverlap_%d,%d", i, j);
-         SCIP_CALL( SCIPcreateConsBasicQuadratic(scip, &cons, name, 0, NULL, NULL, 0, NULL, NULL, NULL, (minarea ? 1.0 : -1.0) * SQR(r[i] + r[j]), SCIPinfinity(scip)) );
-
-         SCIP_CALL( SCIPaddSquareCoefQuadratic(scip, cons, x[i], 1.0) ); /* x_i^2 */
-         SCIP_CALL( SCIPaddSquareCoefQuadratic(scip, cons, x[j], 1.0) ); /* x_j^2 */
-         SCIP_CALL( SCIPaddBilinTermQuadratic(scip, cons, x[i], x[j], -2.0) ); /* - 2 x_i x_j */
-
-         SCIP_CALL( SCIPaddSquareCoefQuadratic(scip, cons, y[i], 1.0) ); /* y_i^2 */
-         SCIP_CALL( SCIPaddSquareCoefQuadratic(scip, cons, y[j], 1.0) ); /* y_j^2 */
-         SCIP_CALL( SCIPaddBilinTermQuadratic(scip, cons, y[i], y[j], -2.0) ); /* - 2 y_i y_j */
 
          if( !minarea )
          {
-            /* add -(r_i+r_j)^2 (b_i + b_j) */
-            SCIP_CALL( SCIPaddLinearVarQuadratic(scip, cons, b[i], -SQR(r[i] + r[j])) );
-            SCIP_CALL( SCIPaddLinearVarQuadratic(scip, cons, b[j], -SQR(r[i] + r[j])) );
+            linvars[0] = b[i];
+            lincoefs[0] = -SQR(r[i] + r[j]);
+            linvars[1] = b[j];
+            lincoefs[1] = -SQR(r[i] + r[j]);
+            nlinvars = 2;
          }
+
+         SCIP_CALL( SCIPcreateConsQuadraticNonlinear(scip, &cons, name, nlinvars, linvars, lincoefs, 6, quadvars1,
+            quadvars2, quadcoefs, (minarea ? 1.0 : -1.0) * SQR(r[i] + r[j]), SCIPinfinity(scip),
+            TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
          SCIP_CALL( SCIPaddCons(scip, cons) );
          SCIP_CALL( SCIPreleaseCons(scip, &cons) );

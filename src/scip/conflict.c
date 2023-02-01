@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file   conflict.c
@@ -1278,6 +1287,7 @@ void conflictsetClear(
    conflictset->repropdepth = 0;
    conflictset->repropagate = TRUE;
    conflictset->usescutoffbound = FALSE;
+   conflictset->hasrelaxonlyvar = FALSE;
    conflictset->conflicttype = SCIP_CONFTYPE_UNKNOWN;
 }
 
@@ -1332,6 +1342,7 @@ SCIP_RETCODE conflictsetCopy(
    (*targetconflictset)->conflictdepth = sourceconflictset->conflictdepth;
    (*targetconflictset)->repropdepth = sourceconflictset->repropdepth;
    (*targetconflictset)->usescutoffbound = sourceconflictset->usescutoffbound;
+   (*targetconflictset)->hasrelaxonlyvar = sourceconflictset->hasrelaxonlyvar;
    (*targetconflictset)->conflicttype = sourceconflictset->conflicttype;
 
    return SCIP_OKAY;
@@ -1584,6 +1595,9 @@ SCIP_RETCODE conflictsetAddBound(
       }
    }
 
+   if( SCIPvarIsRelaxationOnly(var) )
+      conflictset->hasrelaxonlyvar = TRUE;
+
    return SCIP_OKAY;
 }
 
@@ -1676,6 +1690,9 @@ SCIP_RETCODE conflictsetAddBounds(
          confrelaxedbds[confnbdchginfos] = SCIPbdchginfoGetRelaxedBound(bdchginfo);
          confsortvals[confnbdchginfos] = sortval;
          ++confnbdchginfos;
+
+         if( SCIPvarIsRelaxationOnly(SCIPbdchginfoGetVar(bdchginfo)) )
+            conflictset->hasrelaxonlyvar = TRUE;
       }
       else
       {
@@ -2432,6 +2449,9 @@ SCIP_RETCODE detectImpliedBounds(
       if( glbinfeas )
       {
          SCIPsetDebugMsg(set, "conflict set (%p) led to global infeasibility\n", (void*) conflictset);
+
+         /* clear the memory array before freeing it */
+         BMSclearMemoryArray(redundants, nbdchginfos);
          goto TERMINATE;
       }
 
@@ -2695,11 +2715,21 @@ SCIP_Real aggrRowGetMinActivity(
       if( val > 0.0 )
       {
          SCIP_Real bnd = (curvarlbs == NULL ? SCIPvarGetLbGlobal(vars[v]) : curvarlbs[v]);
+         if( infdelta != NULL && SCIPsetIsInfinity(set, -bnd) )
+         {
+            *infdelta = TRUE;
+            goto TERMINATE;
+         }
          SCIPquadprecProdDD(delta, val, bnd);
       }
       else
       {
          SCIP_Real bnd = (curvarubs == NULL ? SCIPvarGetUbGlobal(vars[v]) : curvarubs[v]);
+         if( infdelta != NULL && SCIPsetIsInfinity(set, bnd) )
+         {
+            *infdelta = TRUE;
+            goto TERMINATE;
+         }
          SCIPquadprecProdDD(delta, val, bnd);
       }
 
@@ -3163,7 +3193,7 @@ SCIP_RETCODE createAndAddProofcons(
          {
             if( SCIPsetIsZero(set, side) )
             {
-               scale = 1.0;
+               scale = -1.0;
             }
             else
             {
@@ -3475,7 +3505,7 @@ SCIP_RETCODE conflictAddConflictCons(
       *success = TRUE;
       SCIP_CALL( updateStatistics(conflict, blkmem, set, stat, conflictset, insertdepth) );
    }
-   else
+   else if( !conflictset->hasrelaxonlyvar )
    {
       /* sort conflict handlers by priority */
       SCIPsetSortConflicthdlrs(set);
@@ -3500,6 +3530,11 @@ SCIP_RETCODE conflictAddConflictCons(
             SCIPconflicthdlrGetName(set->conflicthdlrs[h]), SCIPconflicthdlrGetPriority(set->conflicthdlrs[h]),
             conflictset->nbdchginfos, result);
       }
+   }
+   else
+   {
+      SCIPsetDebugMsg(set, " -> skip conflict set with relaxation-only variable\n");
+      /* TODO would be nice to still create a constraint?, if we can make sure that we the constraint does not survive a restart */
    }
 
    return SCIP_OKAY;
@@ -6906,12 +6941,12 @@ SCIP_RETCODE addLocalRows(
       if( !infdelta && SCIPsetIsInfinity(set, REALABS(*proofact)) )
       {
          *valid = FALSE;
-         SCIPsetDebugMsg(set, " -> proof is not valid: %g <= %g [infdelta: %d]\n", *proofact, SCIPaggrRowGetRhs(proofrow), infdelta);
+         SCIPsetDebugMsg(set, " -> proof is not valid: %g <= %g [infdelta: %u]\n", *proofact, SCIPaggrRowGetRhs(proofrow), infdelta);
       }
       else if( infdelta || SCIPsetIsLE(set, *proofact, SCIPaggrRowGetRhs(proofrow)) )
       {
          *valid = FALSE;
-         SCIPsetDebugMsg(set, " -> proof is not valid: %g <= %g [infdelta: %d]\n", *proofact, SCIPaggrRowGetRhs(proofrow), infdelta);
+         SCIPsetDebugMsg(set, " -> proof is not valid: %g <= %g [infdelta: %u]\n", *proofact, SCIPaggrRowGetRhs(proofrow), infdelta);
       }
    }
 
@@ -7057,7 +7092,7 @@ SCIP_RETCODE getFarkasProof(
    /* calculate the current Farkas activity, always using the best bound w.r.t. the Farkas coefficient */
    *farkasact = aggrRowGetMinActivity(set, prob, farkasrow, curvarlbs, curvarubs, &infdelta);
 
-   SCIPsetDebugMsg(set, " -> farkasact=%g farkasrhs=%g [infdelta: %d], \n",
+   SCIPsetDebugMsg(set, " -> farkasact=%g farkasrhs=%g [infdelta: %u], \n",
       (*farkasact), SCIPaggrRowGetRhs(farkasrow), infdelta);
 
    /* The constructed proof is not valid, this can happen due to numerical reasons,
@@ -7077,8 +7112,7 @@ SCIP_RETCODE getFarkasProof(
       else
       {
          (*valid) = FALSE;
-         SCIPsetDebugMsg(set, " -> proof is not valid to due infinite activity delta\n",
-            *farkasact, SCIPaggrRowGetRhs(farkasrow));
+         SCIPsetDebugMsg(set, " -> proof is not valid to due infinite activity delta\n");
       }
    }
 
@@ -7282,7 +7316,7 @@ SCIP_RETCODE getDualProof(
    /* check validity of the proof */
    *farkasact = aggrRowGetMinActivity(set, transprob, farkasrow, curvarlbs, curvarubs, &infdelta);
 
-   SCIPsetDebugMsg(set, " -> farkasact=%g farkasrhs=%g [infdelta: %d], \n",
+   SCIPsetDebugMsg(set, " -> farkasact=%g farkasrhs=%g [infdelta: %u], \n",
       (*farkasact), SCIPaggrRowGetRhs(farkasrow), infdelta);
 
    /* The constructed proof is not valid, this can happen due to numerical reasons,
@@ -7302,8 +7336,7 @@ SCIP_RETCODE getDualProof(
       else
       {
          (*valid) = FALSE;
-         SCIPsetDebugMsg(set, " -> proof is not valid to due infinite activity delta\n",
-            *farkasact, SCIPaggrRowGetRhs(farkasrow));
+         SCIPsetDebugMsg(set, " -> proof is not valid to due infinite activity delta\n");
       }
    }
 

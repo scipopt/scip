@@ -17,4 +17,3 @@ nodeselection/hybridestim/stdpriority = 1000000
 # priority of branching rule <random>
 # [type: int, range: [-536870912,536870911], default: -100000]
 branching/random/priority = 10000000
-

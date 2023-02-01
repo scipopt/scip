@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -58,6 +67,8 @@ static SCIP_MESSAGEHDLR* messagehdlr = NULL;
 static
 SCIP_Bool initProb(int pos, int* ncols, int* nrows, int* nnonz, SCIP_OBJSEN* objsen)
 {
+   const char* rownames[] = { "row1", "row2" };
+   const char* colnames[] = { "x1", "x2" };
    SCIP_Real obj[100] = { 1.0, 1.0 };
    SCIP_Real  lb[100] = { 0.0, 0.0 };
    SCIP_Real  ub[100] = { SCIPlpiInfinity(lpi),  SCIPlpiInfinity(lpi) };
@@ -257,8 +268,8 @@ SCIP_Bool initProb(int pos, int* ncols, int* nrows, int* nnonz, SCIP_OBJSEN* obj
    }
 
    SCIP_CALL( SCIPlpiChgObjsen(lpi, *objsen) );
-   SCIP_CALL( SCIPlpiAddCols(lpi, *ncols, obj, lb, ub, NULL, 0, NULL, NULL, NULL) );
-   SCIP_CALL( SCIPlpiAddRows(lpi, *nrows, lhs, rhs, NULL, *nnonz, beg, ind, val) );
+   SCIP_CALL( SCIPlpiAddCols(lpi, *ncols, obj, lb, ub, (char**) colnames, 0, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPlpiAddRows(lpi, *nrows, lhs, rhs, (char**) rownames, *nnonz, beg, ind, val) );
    cr_assert( !SCIPlpiWasSolved(lpi) );
    SCIP_CALL( SCIPlpiSolvePrimal(lpi) );
    cr_assert( SCIPlpiWasSolved(lpi) );
@@ -503,10 +514,89 @@ Theory((SCIP_OBJSEN newsense, int prob), change, testchgobjsen)
    cr_assert_eq( newsense, probsense, "Expected: %d, got %d\n", newsense, probsense );
 }
 
+/** Helper method that is used in the scaling tests */
+static
+void assertScaledBounds(SCIP_Real boundbefore, SCIP_Real boundafter, SCIP_Real oppositeboundafter, SCIP_Real scale)
+{
+   if( SCIPlpiIsInfinity(lpi, boundbefore) || SCIPlpiIsInfinity(lpi, -boundbefore) )
+   {
+      /* if infinite, check for equality */
+      if( scale > 0 )
+      {
+         cr_assert_eq( boundbefore, boundafter,
+         "bound before scaling %.20f, bound after scaling %.20f, scale %.20f\n",
+         boundbefore, boundafter, scale );
+      }
+      else
+      {
+         cr_assert_eq( -boundbefore, oppositeboundafter,
+         "bound before scaling %.20f, bound after scaling %.20f, scale %.20f\n",
+         boundbefore, oppositeboundafter, scale );
+      }
+   }
+   else
+   {
+      /* if finite, check for correct scaling */
+      if( scale > 0 )
+      {
+         cr_assert_float_eq( boundbefore / scale, boundafter, EPS,
+         "bound before scaling %.20f, bound after scaling %.20f, scale %.20f\n",
+         boundbefore, boundafter, scale );
+      }
+      else
+      {
+         cr_assert_float_eq( boundbefore / scale, oppositeboundafter, EPS,
+         "bound before scaling %.20f, bound after scaling %.20f, scale %.20f\n",
+         boundbefore, oppositeboundafter, scale );
+      }
+   }
+}
+
+/** Helper method that is used in the scaling tests */
+static
+void assertScaledSides(SCIP_Real sidebefore, SCIP_Real sideafter, SCIP_Real oppositesideafter, SCIP_Real scale)
+{
+   if( SCIPlpiIsInfinity(lpi, sidebefore) || SCIPlpiIsInfinity(lpi, -sidebefore) )
+   {
+      /* if infinite, check for equality */
+      if( scale > 0 )
+      {
+         cr_assert_eq( sidebefore, sideafter,
+         "side before scaling %.20f, side after scaling %.20f, scale %.20f\n",
+         sidebefore, sideafter, scale );
+      }
+      else
+      {
+         cr_assert_eq( -sidebefore, oppositesideafter,
+         "side before scaling %.20f, side after scaling %.20f, scale %.20f\n",
+         sidebefore, oppositesideafter, scale );
+      }
+   }
+   else
+   {
+      /* if finite, check for correct scaling */
+      if( scale > 0 )
+      {
+         cr_assert_float_eq( sidebefore * scale, sideafter, EPS,
+         "side before scaling %.20f, side after scaling %.20f, scale %.20f\n",
+         sidebefore, sideafter, scale );
+      }
+      else
+      {
+         cr_assert_float_eq( sidebefore * scale, oppositesideafter, EPS,
+         "side before scaling %.20f, side after scaling %.20f, scale %.20f\n",
+         sidebefore, oppositesideafter, scale );
+      }
+   }
+}
+
 /** Test SCIPlpiScaleCol */
 TheoryDataPoints(change, testscalecol) =
 {
    DataPoints(SCIP_Real, 1e10, 1e-10, 1, -1, 2, -2),
+   /* @todo on the current problems we cannot test the effect of column scaling on bounds, because all problems have
+    * bounds zero or infinity; add new problems with finite bounds not zero
+    */
    DataPoints(int, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9),
 };
 
@@ -528,6 +618,12 @@ Theory((SCIP_Real scale, int prob), change, testscalecol)
    for( col = 0; col < ncols; col++ )
    {
       SCIP_Real colbefore[100];
+      SCIP_Real objbefore;
+      SCIP_Real lbbefore;
+      SCIP_Real ubbefore;
+      SCIP_Real objafter;
+      SCIP_Real lbafter;
+      SCIP_Real ubafter;
 
       for( i = 0; i < nrows; i++ )
       {
@@ -536,6 +632,10 @@ Theory((SCIP_Real scale, int prob), change, testscalecol)
          SCIP_CALL( SCIPlpiGetCoef(lpi, i, col, &coef) );
          colbefore[i] = coef;
       }
+
+      SCIP_CALL( SCIPlpiGetObj(lpi, col, col, &objbefore) );
+
+      SCIP_CALL( SCIPlpiGetBounds(lpi, col, col, &lbbefore, &ubbefore) );
 
       SCIP_CALL( SCIPlpiScaleCol(lpi, col, scale) );
       for( i = 0; i < nrows; i++ )
@@ -547,6 +647,17 @@ Theory((SCIP_Real scale, int prob), change, testscalecol)
             "Found values: scale %.20f, colbefore[i] %.20f, colafter %.20f, i %d\n",
             scale, colbefore[i], colafter, i );
       }
+
+      SCIP_CALL( SCIPlpiGetObj(lpi, col, col, &objafter) );
+
+      cr_assert_float_eq( objbefore * scale, objafter, EPS,
+            "Found values: scale %.20f, objbefore %.20f, objafter %.20f",
+            scale, objbefore, objafter );
+
+      SCIP_CALL( SCIPlpiGetBounds(lpi, col, col, &lbafter, &ubafter) );
+
+      assertScaledBounds(lbbefore, lbafter, ubafter, scale);
+      assertScaledBounds(ubbefore, ubafter, lbafter, scale);
    }
 }
 
@@ -575,11 +686,18 @@ Theory((SCIP_Real scale, int prob), change, testscalerow)
    for( row = 0; row < nrows; row++ )
    {
       SCIP_Real rowbefore[100];
+      SCIP_Real lhsbefore;
+      SCIP_Real rhsbefore;
+      SCIP_Real lhsafter;
+      SCIP_Real rhsafter;
 
       for( i = 0; i < ncols; i++ )
       {
          SCIP_CALL( SCIPlpiGetCoef(lpi, row, i, &rowbefore[i]) );
       }
+
+      SCIP_CALL( SCIPlpiGetSides(lpi, row, row, &lhsbefore, &rhsbefore) );
+
       SCIP_CALL( SCIPlpiScaleRow(lpi, row, scale) );
 
       for( i = 0; i < ncols; i++ )
@@ -591,6 +709,11 @@ Theory((SCIP_Real scale, int prob), change, testscalerow)
             "Found values: scale %.20f, rowbefore[i] %.20f, rowafter %.20f, i %d\n",
             scale, rowbefore[i], rowafter, i );
       }
+
+      SCIP_CALL( SCIPlpiGetSides(lpi, row, row, &lhsafter, &rhsafter) );
+
+      assertScaledSides(lhsbefore, lhsafter, rhsafter, scale);
+      assertScaledSides(rhsbefore, rhsafter, lhsafter, scale);
    }
 }
 
@@ -940,6 +1063,8 @@ Test(change, testlpiwritestatemethods)
    /* Ideally we want to check in the same matter as in testlpiwritereadlpmethods, but this is
     * not possible at the moment because we have no names for columns and rows. */
    SCIP_CALL( SCIPlpiClear(lpi) );
+
+   remove("testlpiwriteandreadstate.bas");
 }
 
 /** test SCIPlpiWriteLP, SCIPlpiReadLP, SCIPlpiClear */
@@ -985,4 +1110,10 @@ Test(change, testlpiwritereadlpmethods)
    file = fopen("lpi_change_test_problem.lp", "r");
    file2 = fopen("lpi_change_test_problem2.lp", "r");
    cr_assert_file_contents_eq(file, file2);
+
+   fclose(file);
+   fclose(file2);
+
+   remove("lpi_change_test_problem.lp");
+   remove("lpi_change_test_problem2.lp");
 }

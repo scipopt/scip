@@ -3,13 +3,22 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            *
-#*                            fuer Informationstechnik Berlin                *
+#*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      *
 #*                                                                           *
-#*  SCIP is distributed under the terms of the ZIB Academic License.         *
+#*  Licensed under the Apache License, Version 2.0 (the "License");          *
+#*  you may not use this file except in compliance with the License.         *
+#*  You may obtain a copy of the License at                                  *
 #*                                                                           *
-#*  You should have received a copy of the ZIB Academic License              *
-#*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
+#*      http://www.apache.org/licenses/LICENSE-2.0                           *
+#*                                                                           *
+#*  Unless required by applicable law or agreed to in writing, software      *
+#*  distributed under the License is distributed on an "AS IS" BASIS,        *
+#*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. *
+#*  See the License for the specific language governing permissions and      *
+#*  limitations under the License.                                           *
+#*                                                                           *
+#*  You should have received a copy of the Apache-2.0 license                *
+#*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
@@ -30,12 +39,10 @@ install:	installheaders installlibs installbinary
 installheaders:
 ifneq ($(INSTALLDIR),)
 		@echo "-> install SCIP headers into INSTALLDIR <$(INSTALLDIR)>"
-		@-install -m 755 -d $(INSTALLDIR)/$(INCLUDEDIR)/scip/ $(INSTALLDIR)/$(INCLUDEDIR)/objscip/ $(INSTALLDIR)/$(INCLUDEDIR)/lpi/ $(INSTALLDIR)/$(INCLUDEDIR)/nlpi/ $(INSTALLDIR)/$(INCLUDEDIR)/blockmemshell/ $(INSTALLDIR)/$(INCLUDEDIR)/dijkstra/ $(INSTALLDIR)/$(INCLUDEDIR)/symmetry/ $(INSTALLDIR)/$(INCLUDEDIR)/tclique/ $(INSTALLDIR)/$(INCLUDEDIR)/xml/
-		@-install -m 644 -p $(SCIPPLUGININCSRC) $(INSTALLDIR)/$(INCLUDEDIR)/scip/
+		@-install -m 755 -d $(INSTALLDIR)/$(INCLUDEDIR)/scip/ $(INSTALLDIR)/$(INCLUDEDIR)/objscip/ $(INSTALLDIR)/$(INCLUDEDIR)/lpi/ $(INSTALLDIR)/$(INCLUDEDIR)/blockmemshell/ $(INSTALLDIR)/$(INCLUDEDIR)/dijkstra/ $(INSTALLDIR)/$(INCLUDEDIR)/symmetry/ $(INSTALLDIR)/$(INCLUDEDIR)/tclique/ $(INSTALLDIR)/$(INCLUDEDIR)/xml/
 		@-install -m 644 -p $(SRCDIR)/scip/*.h $(INSTALLDIR)/$(INCLUDEDIR)/scip/
 		@-install -m 644 -p $(OBJSCIPINCSRC) $(INSTALLDIR)/$(INCLUDEDIR)/objscip/
 		@-install -m 644 -p $(SRCDIR)/lpi/*.h $(INSTALLDIR)/$(INCLUDEDIR)/lpi/
-		@-install -m 644 -p $(SRCDIR)/nlpi/*.h $(INSTALLDIR)/$(INCLUDEDIR)/nlpi/
 		@-install -m 644 -p $(SRCDIR)/blockmemshell/*.h $(INSTALLDIR)/$(INCLUDEDIR)/blockmemshell/
 		@-install -m 644 -p $(SRCDIR)/dijkstra/*.h $(INSTALLDIR)/$(INCLUDEDIR)/dijkstra/
 		@-install -m 644 -p $(SRCDIR)/symmetry/*.h $(INSTALLDIR)/$(INCLUDEDIR)/symmetry/
@@ -52,18 +59,15 @@ installlibs:	libs
 ifneq ($(INSTALLDIR),)
 		@echo "-> install SCIP libraries into INSTALLDIR <$(INSTALLDIR)>"
 		@-install -m 755 -d $(INSTALLDIR)/$(LIBDIR)/
-		@-install -m 644 -p $(LPILIBFILE) $(NLPILIBFILE) $(TPILIBFILE) $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(INSTALLDIR)/$(LIBDIR)/
+		@-install -m 644 -p $(LPILIBFILE) $(TPILIBFILE) $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(INSTALLDIR)/$(LIBDIR)/
 ifeq ($(SHARED)$(OSTYPE),truedarwin)
 		@install_name_tool -id $(realpath $(INSTALLDIR)/$(LIBDIR)/$(notdir $(LPILIBFILE))) $(INSTALLDIR)/$(LIBDIR)/$(notdir $(LPILIBFILE))
-		@install_name_tool -id $(realpath $(INSTALLDIR)/$(LIBDIR)/$(notdir $(NLPILIBFILE))) $(INSTALLDIR)/$(LIBDIR)/$(notdir $(NLPILIBFILE))
 		@install_name_tool -id $(realpath $(INSTALLDIR)/$(LIBDIR)/$(notdir $(TPILIBFILE))) $(INSTALLDIR)/$(LIBDIR)/$(notdir $(TPILIBFILE))
 		@install_name_tool -id $(realpath $(INSTALLDIR)/$(LIBDIR)/$(notdir $(SCIPLIBFILE))) $(INSTALLDIR)/$(LIBDIR)/$(notdir $(SCIPLIBFILE))
 		@install_name_tool -id $(realpath $(INSTALLDIR)/$(LIBDIR)/$(notdir $(OBJSCIPLIBFILE))) $(INSTALLDIR)/$(LIBDIR)/$(notdir $(OBJSCIPLIBFILE))
 endif
 		@-(cd $(INSTALLDIR)/$(LIBDIR)/ && rm -f $(notdir $(LPILIBLINK)) && $(LN_s) $(notdir $(LPILIBFILE)) $(notdir $(LPILIBLINK)));
 		@-(cd $(INSTALLDIR)/$(LIBDIR)/ && rm -f $(notdir $(LPILIBSHORTLINK)) && $(LN_s) $(notdir $(LPILIBLINK)) $(notdir $(LPILIBSHORTLINK)));
-		@-(cd $(INSTALLDIR)/$(LIBDIR)/ && rm -f $(notdir $(NLPILIBLINK)) && $(LN_s) $(notdir $(NLPILIBFILE)) $(notdir $(NLPILIBLINK)));
-		@-(cd $(INSTALLDIR)/$(LIBDIR)/ && rm -f $(notdir $(NLPILIBSHORTLINK)) && $(LN_s) $(notdir $(NLPILIBLINK)) $(notdir $(NLPILIBSHORTLINK)));
 		@-(cd $(INSTALLDIR)/$(LIBDIR)/ && rm -f $(notdir $(SCIPLIBLINK)) && $(LN_s) $(notdir $(SCIPLIBFILE)) $(notdir $(SCIPLIBLINK)));
 		@-(cd $(INSTALLDIR)/$(LIBDIR)/ && rm -f $(notdir $(SCIPLIBSHORTLINK)) && $(LN_s) $(notdir $(SCIPLIBLINK)) $(notdir $(SCIPLIBSHORTLINK)));
 		@-(cd $(INSTALLDIR)/$(LIBDIR)/ && rm -f $(notdir $(OBJSCIPLIBLINK)) && $(LN_s) $(notdir $(OBJSCIPLIBFILE)) $(notdir $(OBJSCIPLIBLINK)));
@@ -80,7 +84,6 @@ ifneq ($(INSTALLDIR),)
 		@-install -m 755 -p $(MAINFILE) $(INSTALLDIR)/$(BINDIR)/
 ifeq ($(SHARED)$(OSTYPE),truedarwin)  # update library paths when using shared libs on Mac OS X
 		@install_name_tool -change $(LPILIBFILE) @loader_path/../$(LIBDIR)/$(notdir $(LPILIBFILE)) $(INSTALLDIR)/$(MAINFILE)
-		@install_name_tool -change $(NLPILIBFILE) @loader_path/../$(LIBDIR)/$(notdir $(NLPILIBFILE)) $(INSTALLDIR)/$(MAINFILE)
 		@install_name_tool -change $(TPILIBFILE) @loader_path/../$(LIBDIR)/$(notdir $(TPILIBFILE)) $(INSTALLDIR)/$(MAINFILE)
 		@install_name_tool -change $(SCIPLIBFILE) @loader_path/../$(LIBDIR)/$(notdir $(SCIPLIBFILE)) $(INSTALLDIR)/$(MAINFILE)
 		@install_name_tool -change $(OBJSCIPLIBFILE) @loader_path/../$(LIBDIR)/$(notdir $(OBJSCIPLIBFILE)) $(INSTALLDIR)/$(MAINFILE)
@@ -96,7 +99,7 @@ ifneq ($(INSTALLDIR),)
 		@echo "-> remove binary from INSTALLDIR <$(INSTALLDIR)>"
 		@-(cd $(INSTALLDIR) && rm -vf $(MAINFILE) $(MAINLINK) $(MAINSHORTLINK));
 		@echo "-> remove libraries from INSTALLDIR <$(INSTALLDIR)>"
-		@-(cd $(INSTALLDIR) && rm -vf $(LPILIBFILE) $(LPILIBLINK) $(LPILIBSHORTLINK) $(NLPILIBFILE) $(NLPILIBLINK) $(NLPILIBSHORTLINK) $(SCIPLIBFILE) $(SCIPLIBLINK) $(SCIPLIBSHORTLINK) $(OBJSCIPLIBFILE) $(OBJSCIPLIBLINK) $(OBJSCIPLIBSHORTLINK));
+		@-(cd $(INSTALLDIR) && rm -vf $(LPILIBFILE) $(LPILIBLINK) $(LPILIBSHORTLINK) $(SCIPLIBFILE) $(SCIPLIBLINK) $(SCIPLIBSHORTLINK) $(OBJSCIPLIBFILE) $(OBJSCIPLIBLINK) $(OBJSCIPLIBSHORTLINK));
 ifeq ($(DELHEADERS), true)
 		@echo "-> remove scip headers from INSTALLDIR <$(INSTALLDIR)>"
 		@-mkdir -p $(INSTALLDIR)/$(INCLUDEDIR)/scip
@@ -105,8 +108,6 @@ ifeq ($(DELHEADERS), true)
 		@-rm -f $(INSTALLDIR)/$(INCLUDEDIR)/objscip/*.h
 		@-mkdir -p $(INSTALLDIR)/$(INCLUDEDIR)/lpi/
 		@-rm -f $(INSTALLDIR)/$(INCLUDEDIR)/lpi/*.h
-		@-mkdir -p $(INSTALLDIR)/$(INCLUDEDIR)/nlpi/
-		@-rm -f $(INSTALLDIR)/$(INCLUDEDIR)/nlpi/*.h
 		@-mkdir -p $(INSTALLDIR)/$(INCLUDEDIR)/blockmemshell/
 		@-rm -f $(INSTALLDIR)/$(INCLUDEDIR)/blockmemshell/*.h
 		@-mkdir -p $(INSTALLDIR)/$(INCLUDEDIR)/dijkstra/
@@ -117,7 +118,7 @@ ifeq ($(DELHEADERS), true)
 		@-rm -f $(INSTALLDIR)/$(INCLUDEDIR)/tclique/*.h
 		@-mkdir -p $(INSTALLDIR)/$(INCLUDEDIR)/xml/
 		@-rm -f $(INSTALLDIR)/$(INCLUDEDIR)/xml/*.h
-		@-rmdir $(INSTALLDIR)/$(INCLUDEDIR)/scip $(INSTALLDIR)/$(INCLUDEDIR)/objscip $(INSTALLDIR)/$(INCLUDEDIR)/lpi/ $(INSTALLDIR)/$(INCLUDEDIR)/nlpi/ $(INSTALLDIR)/$(INCLUDEDIR)/blockmemshell/ $(INSTALLDIR)/$(INCLUDEDIR)/dijkstra/ $(INSTALLDIR)/$(INCLUDEDIR)/symmetry/ $(INSTALLDIR)/$(INCLUDEDIR)/tclique/ $(INSTALLDIR)/$(INCLUDEDIR)/xml/
+		@-rmdir $(INSTALLDIR)/$(INCLUDEDIR)/scip $(INSTALLDIR)/$(INCLUDEDIR)/objscip $(INSTALLDIR)/$(INCLUDEDIR)/lpi/ $(INSTALLDIR)/$(INCLUDEDIR)/blockmemshell/ $(INSTALLDIR)/$(INCLUDEDIR)/dijkstra/ $(INSTALLDIR)/$(INCLUDEDIR)/symmetry/ $(INSTALLDIR)/$(INCLUDEDIR)/tclique/ $(INSTALLDIR)/$(INCLUDEDIR)/xml/
 else
 		@echo "-> keeping scip headers under <$(INSTALLDIR)/$(INCLUDEDIR)>; rerun with 'DELHEADERS=true' to force deletion"
 endif

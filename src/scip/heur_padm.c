@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -19,10 +28,10 @@
  *         by Martin Schmidt, Lars Schewe, and Dieter Weninger
  * @author Dieter Weninger
  * @author Katrin Halbig
- * 
+ *
  * The penalty alternating direction method (PADM) heuristic is a construction heuristic which additionally needs a
  * user decomposition with linking variables only.
- * 
+ *
  * PADM splits the problem into several sub-SCIPs according to the decomposition, whereby the linking variables get
  * copied and the difference is penalized. Then the sub-SCIPs are solved on an alternating basis until they arrive at
  * the same values of the linking variables (ADM-loop). If they don't reconcile after a couple of iterations,
@@ -40,7 +49,6 @@
 #include "scip/heur_padm.h"
 #include "scip/heuristics.h"
 #include "scip/pub_cons.h"
-#include "scip/pub_event.h"
 #include "scip/pub_tree.h"
 #include "scip/pub_heur.h"
 #include "scip/pub_message.h"
@@ -53,7 +61,6 @@
 #include "scip/scip_cons.h"
 #include "scip/scip_copy.h"
 #include "scip/scip_dcmp.h"
-#include "scip/scip_event.h"
 #include "scip/scip_general.h"
 #include "scip/scip_heur.h"
 #include "scip/scip_lp.h"
@@ -182,6 +189,7 @@ struct SCIP_HeurData
                                                   (0: before, 1: after, 2: both) */
    SCIP_Real             nodefac;            /**< factor to control nodelimits of subproblems */
    SCIP_Real             gap;                /**< mipgap at start */
+   SCIP_Bool             reoptimize;         /**< should the problem get reoptimized with the original objective function? */
    SCIP_Bool             scaling;            /**< enable sigmoid rescaling of penalty parameters */
    SCIP_Bool             assignlinking;      /**< should linking constraints be assigned? */
    SCIP_Bool             original;           /**< should the original problem be used? */
@@ -316,15 +324,30 @@ SCIP_RETCODE createSubscip(
    SCIP**                subscip             /**< pointer to store created sub-SCIP */
    )
 {
+   SCIP_Real infvalue;
+
    /* create a new SCIP instance */
    SCIP_CALL( SCIPcreate(subscip) );
 
    SCIP_CALL( SCIPincludeDefaultPlugins(*subscip) );
 
+   /* copy value for infinity */
+   SCIP_CALL( SCIPgetRealParam(scip, "numerics/infinity", &infvalue) );
+   SCIP_CALL( SCIPsetRealParam(*subscip, "numerics/infinity", infvalue) );
+
    SCIP_CALL( SCIPcopyLimits(scip, *subscip) );
 
    /* avoid recursive calls */
    SCIP_CALL( SCIPsetSubscipsOff(*subscip, TRUE) );
+
+   /* disable cutting plane separation */
+   SCIP_CALL( SCIPsetSeparating(*subscip, SCIP_PARAMSETTING_OFF, TRUE) );
+
+   /* disable expensive presolving */
+   SCIP_CALL( SCIPsetPresolving(*subscip, SCIP_PARAMSETTING_FAST, TRUE) );
+
+   /* disable expensive techniques */
+   SCIP_CALL( SCIPsetIntParam(*subscip, "misc/usesymmetry", 0) );
 
    /* do not abort subproblem on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(*subscip, "misc/catchctrlc", FALSE) );
@@ -352,6 +375,7 @@ SCIP_RETCODE copyToSubscip(
    SCIP_HASHMAP*         varmap,             /**< hashmap used for the copy process of variables */
    SCIP_HASHMAP*         consmap,            /**< hashmap used for the copy process of constraints */
    int                   nconss,             /**< number of constraints to copy */
+   SCIP_Bool             useorigprob,        /**< do we use the original problem? */
    SCIP_Bool*            success             /**< pointer to store whether copying was successful */
    )
 {
@@ -374,9 +398,16 @@ SCIP_RETCODE copyToSubscip(
    for( i = 0; i < nconss; ++i )
    {
       assert(conss[i] != NULL);
-      assert(!SCIPconsIsModifiable(conss[i]));
-      assert(SCIPconsIsActive(conss[i]));
-      assert(!SCIPconsIsDeleted(conss[i]));
+
+      /* do not check this if we use the original problem
+       * Since constraints can be deleted etc. during presolving, these assertions would fail.
+       */
+      if( !useorigprob )
+      {
+         assert(!SCIPconsIsModifiable(conss[i]));
+         assert(SCIPconsIsActive(conss[i]));
+         assert(!SCIPconsIsDeleted(conss[i]));
+      }
 
       /* copy the constraint */
       SCIP_CALL( SCIPgetConsCopy(scip, subscip, conss[i], &newcons, SCIPconsGetHdlr(conss[i]), varmap, consmap, NULL,
@@ -403,6 +434,7 @@ SCIP_RETCODE blockCreateSubscip(
    SCIP_HASHMAP*         consmap,            /**< constraint hashmap used to improve performance */
    SCIP_CONS**           conss,              /**< constraints contained in this block */
    int                   nconss,             /**< number of constraints contained in this block */
+   SCIP_Bool             useorigprob,        /**< do we use the original problem? */
    SCIP_Bool*            success             /**< pointer to store whether the copying process was successful */
    )
 {
@@ -434,7 +466,7 @@ SCIP_RETCODE blockCreateSubscip(
       /* get name of the original problem and add "comp_nr" */
       (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_comp_%d", problem->name, block->number);
 
-      SCIP_CALL( copyToSubscip(scip, block->subscip, name, conss, varmap, consmap, nconss, success) );
+      SCIP_CALL( copyToSubscip(scip, block->subscip, name, conss, varmap, consmap, nconss, useorigprob, success) );
 
       if( !(*success) )
       {
@@ -471,9 +503,11 @@ static
 SCIP_RETCODE createAndSplitProblem(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           sortedconss,        /**< array of (checked) constraints sorted by blocks */
-   int*                  blockstartsconss,   /**< start points of blocks in sortedconss array */
+   int                   nconss,             /**< number of constraints */
+   int*                  consssize,          /**< number of constraints per block (and border at index 0) */
    int                   nblocks,            /**< number of blocks */
    PROBLEM**             problem,            /**< pointer to store problem structure */
+   SCIP_Bool             useorigprob,        /**< do we use the original problem? */
    SCIP_Bool*            success             /**< pointer to store whether the process was successful */
    )
 {
@@ -481,6 +515,7 @@ SCIP_RETCODE createAndSplitProblem(
    SCIP_HASHMAP* varmap;
    SCIP_HASHMAP* consmap;
    SCIP_CONS** blockconss;
+   int nhandledconss;
    int nblockconss;
    int b;
 
@@ -491,7 +526,7 @@ SCIP_RETCODE createAndSplitProblem(
    assert((*problem)->blocks != NULL);
 
    /* hashmap mapping from original constraints to constraints in the sub-SCIPs (for performance reasons) */
-   SCIP_CALL( SCIPhashmapCreate(&consmap, SCIPblkmem(scip), blockstartsconss[nblocks]) );
+   SCIP_CALL( SCIPhashmapCreate(&consmap, SCIPblkmem(scip), nconss) );
 
    for( b = 0; b < nblocks; b++ )
    {
@@ -499,6 +534,7 @@ SCIP_RETCODE createAndSplitProblem(
    }
 
    /* loop over all blocks and create subscips */
+   nhandledconss = 0;
    for( b = 0; b < nblocks; b++ )
    {
       block = &(*problem)->blocks[b];
@@ -506,13 +542,14 @@ SCIP_RETCODE createAndSplitProblem(
       SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(scip), SCIPgetNVars(scip)) );
 
       /* get block constraints */
-      blockconss = &(sortedconss[blockstartsconss[b]]);
-      nblockconss = blockstartsconss[b + 1] - blockstartsconss[b];
+      blockconss = &(sortedconss[nhandledconss]);
+      nblockconss = consssize[b + 1];
 
       /* build subscip for block */
-      SCIP_CALL( blockCreateSubscip(block, varmap, consmap, blockconss, nblockconss, success) );
+      SCIP_CALL( blockCreateSubscip(block, varmap, consmap, blockconss, nblockconss, useorigprob, success) );
 
       SCIPhashmapFree(&varmap);
+      nhandledconss += nblockconss;
 
       if( !(*success) )
          break;
@@ -533,21 +570,17 @@ SCIP_RETCODE createAndSplitProblem(
 static
 SCIP_RETCODE assignLinking(
    SCIP*                 scip,               /**< SCIP data structure */
-   const SCIP_DECOMP*    decomp,             /**< decomposition */
    SCIP_DECOMP*          newdecomp,          /**< decomposition with (partially) assigned linking constraints */
    SCIP_VAR**            vars,               /**< array of variables */
    SCIP_CONS**           sortedconss,        /**< sorted array of constraints */
    int*                  varlabels,          /**< array of variable labels */
    int*                  conslabels,         /**< sorted array of constraint labels */
    int                   nvars,              /**< number of variables */
-   int                   nconss              /**< number of constraints */
+   int                   nconss,             /**< number of constraints */
+   int                   nlinkconss          /**< number of linking constraints */
    )
 {
-   int nlinkconss;
-   int c;
-
    assert(scip != NULL);
-   assert(decomp != NULL);
    assert(vars != NULL);
    assert(sortedconss != NULL);
    assert(varlabels != NULL);
@@ -556,15 +589,6 @@ SCIP_RETCODE assignLinking(
    /* copy the labels */
    SCIP_CALL( SCIPdecompSetVarsLabels(newdecomp, vars, varlabels, nvars) );
    SCIP_CALL( SCIPdecompSetConsLabels(newdecomp, sortedconss, conslabels, nconss) );
-
-   nlinkconss = 0;
-   for( c = 0; c < nconss; c++ )
-   {
-      if( conslabels[c] == SCIP_DECOMP_LINKCONS )
-         nlinkconss++;
-      else
-         break;
-   }
 
    SCIPdebugMsg(scip, "try to assign %d linking constraints\n", nlinkconss);
 
@@ -609,7 +633,7 @@ SCIP_RETCODE reuseSolution(
    /* no solution in solution candidate storage found */
    if( nsols == 0 )
       return SCIP_OKAY;
-   
+
    SCIP_CALL( SCIPallocBufferArray(subscip, &consvars, COUPLINGSIZE) );
 
    sols = SCIPgetSols(subscip);
@@ -669,9 +693,170 @@ SCIP_RETCODE reuseSolution(
    {
       SCIPdebugMsg(subscip, "Correcting solution successful\n");
    }
-   
+
    SCIPfreeBufferArray(subscip, &blockvals);
    SCIPfreeBufferArray(subscip, &consvars);
+
+   return SCIP_OKAY;
+}
+
+/** reoptimizes the heuristic solution with original objective function
+ *
+ * Since the main algorithm of padm ignores the objective function, this method can be called to obtain better solutions.
+ * It copies the main scip, fixes the linking variables at the values of the already found solution
+ * and solves the new problem with small limits.
+ */
+static
+SCIP_RETCODE reoptimize(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEUR*            heur,               /**< pointer to heuristic*/
+   SCIP_SOL*             sol,                /**< heuristic solution  */
+   SCIP_VAR**            vars,               /**< pointer to variables */
+   int                   nvars,              /**< number of variables */
+   SCIP_VAR**            linkvars,           /**< pointer to linking variables */
+   int                   nlinkvars,          /**< number of linking variables */
+   SCIP_SOL**            newsol,             /**< pointer to store improved solution */
+   SCIP_Bool*            success             /**< pointer to store whether reoptimization was successful */
+   )
+{
+   SCIP* scipcopy;
+   SCIP_SOL* startsol;
+   SCIP_HASHMAP* varmap;
+   SCIP_VAR** subvars;
+   SCIP_STATUS status;
+   SCIP_Real* linkvals;
+   SCIP_Real time;
+   int v;
+
+   assert(scip != NULL);
+   assert(heur != NULL);
+   assert(sol != NULL);
+   assert(vars != NULL);
+   assert(linkvars != NULL);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &linkvals, nlinkvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
+
+   SCIP_CALL( SCIPgetSolVals(scip, sol, nlinkvars, linkvars, linkvals) );
+
+   /* initializing the problem copy*/
+   SCIP_CALL( SCIPcreate(&scipcopy) );
+
+   /* - create the variable mapping hash map
+    * - create a problem copy of main SCIP
+    */
+   if( SCIPheurGetData(heur)->original )
+   {
+      SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(scipcopy), SCIPgetNOrigVars(scip)) );
+      SCIP_CALL( SCIPcopyOrigConsCompression(scip, scipcopy, varmap, NULL, "reopt_padm", linkvars, linkvals, nlinkvars,
+               FALSE, FALSE, TRUE, success) );
+   }
+   else
+   {
+      SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(scipcopy), SCIPgetNVars(scip)) );
+      SCIP_CALL( SCIPcopyConsCompression(scip, scipcopy, varmap, NULL, "reopt_padm", linkvars, linkvals, nlinkvars,
+               TRUE, FALSE, FALSE, TRUE, success) );
+   }
+   for( v = 0; v < nvars; v++ )
+   {
+      subvars[v] = (SCIP_VAR*) SCIPhashmapGetImage(varmap, vars[v]);
+   }
+
+   /* do not abort subproblem on CTRL-C */
+   SCIP_CALL( SCIPsetBoolParam(scipcopy, "misc/catchctrlc", FALSE) );
+
+   /* forbid recursive call of heuristics and separators solving sub-SCIPs */
+   SCIP_CALL( SCIPsetSubscipsOff(scipcopy, TRUE) );
+
+#ifdef SCIP_DEBUG
+   /* for debugging, enable full output */
+   SCIP_CALL( SCIPsetIntParam(scipcopy, "display/verblevel", 5) );
+   SCIP_CALL( SCIPsetIntParam(scipcopy, "display/freq", 100000000) );
+#else
+   /* disable statistic timing inside sub SCIP and output to console */
+   SCIP_CALL( SCIPsetIntParam(scipcopy, "display/verblevel", 0) );
+   SCIP_CALL( SCIPsetBoolParam(scipcopy, "timing/statistictiming", FALSE) );
+#endif
+
+   /* disable cutting plane separation */
+   SCIP_CALL( SCIPsetSeparating(scipcopy, SCIP_PARAMSETTING_OFF, TRUE) );
+
+   /* disable expensive presolving but enable components presolver */
+   SCIP_CALL( SCIPsetPresolving(scipcopy, SCIP_PARAMSETTING_FAST, TRUE) );
+   SCIP_CALL( SCIPsetIntParam(scipcopy, "constraints/components/maxprerounds", 1) );
+   SCIP_CALL( SCIPsetLongintParam(scipcopy, "constraints/components/nodelimit", 0LL) );
+
+   /* disable expensive techniques */
+   SCIP_CALL( SCIPsetIntParam(scipcopy, "misc/usesymmetry", 0) );
+
+   /* speed up sub-SCIP by not checking dual LP feasibility */
+   SCIP_CALL( SCIPsetBoolParam(scipcopy, "lp/checkdualfeas", FALSE) );
+
+   /* add heuristic solution as start solution */
+   SCIP_CALL( SCIPtransformProb(scipcopy) );
+   *success = FALSE;
+   if( SCIPisLT(scip, SCIPgetSolOrigObj(scip, sol), SCIPinfinity(scip)) )
+   {
+      SCIP_CALL( SCIPcreateSol(scipcopy, &startsol, heur) );
+      for( v = 0; v < nvars; v++ )
+      {
+         SCIP_VAR* subvar;
+         subvar = (SCIP_VAR*) SCIPhashmapGetImage(varmap, vars[v]);
+         if( subvar != NULL )
+         {
+            SCIP_CALL( SCIPsetSolVal(scipcopy, startsol, subvar, SCIPgetSolVal(scip, sol, vars[v])) );
+         }
+      }
+
+      SCIP_CALL( SCIPtrySolFree(scipcopy, &startsol, FALSE, FALSE, FALSE, FALSE, FALSE, success) );
+      if( *success )
+         SCIPdebugMsg(scip, "set start solution\n");
+      else
+         SCIPdebugMsg(scip, "start solution for reoptimizing is not feasible\n");
+   }
+
+   /* set limits; do not use more time than the heuristic has already used */
+   SCIP_CALL( SCIPcopyLimits(scip, scipcopy) );
+   SCIP_CALL( SCIPsetLongintParam(scipcopy, "limits/nodes", 1LL) );
+   SCIP_CALL( SCIPgetRealParam(scipcopy, "limits/time", &time) );
+   if( SCIPheurGetTime(heur) < time - 1.0 )
+   {
+      SCIP_CALL( SCIPsetRealParam(scipcopy, "limits/time", SCIPheurGetTime(heur) + 1.0) );
+   }
+   if( *success )
+   {
+      SCIP_CALL( SCIPsetIntParam(scipcopy, "limits/bestsol", 2) ); /* first solution is start solution */
+   }
+   else
+   {
+      SCIP_CALL( SCIPsetIntParam(scipcopy, "limits/bestsol", 1) );
+   }
+
+   /* reoptimize problem */
+   SCIP_CALL_ABORT( SCIPsolve(scipcopy) );
+   status = SCIPgetStatus(scipcopy);
+
+   /* copy solution to main scip */
+   if( status == SCIP_STATUS_BESTSOLLIMIT || status == SCIP_STATUS_OPTIMAL )
+   {
+      SCIP_SOL* solcopy;
+
+      solcopy = SCIPgetBestSol(scipcopy);
+      SCIP_CALL( SCIPtranslateSubSol(scip, scipcopy, solcopy, heur, subvars, newsol) );
+
+      SCIPdebugMsg(scip, "Objective value of reoptimized solution %.2f\n", SCIPgetSolOrigObj(scip, *newsol));
+      *success = TRUE;
+   }
+   else
+   {
+      *success = FALSE;
+   }
+
+   /* free data */
+   SCIPhashmapFree(&varmap);
+   SCIP_CALL( SCIPfree(&scipcopy) );
+   SCIPfreeBufferArray(scip, &subvars);
+   SCIPfreeBufferArray(scip, &linkvals);
 
    return SCIP_OKAY;
 }
@@ -814,6 +999,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    PROBLEM* problem;
    SCIP_DECOMP** alldecomps;
    SCIP_DECOMP* decomp;
+   SCIP_DECOMP* assigneddecomp;
    SCIP_VAR** vars;
    SCIP_VAR** linkvars;
    SCIP_VAR** tmpcouplingvars;
@@ -825,7 +1011,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    SCIP_HASHTABLE* htable;
    int* varlabels;
    int* conslabels;
-   int* blockstartsconss;
+   int* consssize;
    int* alllinkvartoblocks; /* for efficient memory allocation */
    SCIP_Bool* varonlyobj;
    SCIP_Real* tmpcouplingcoef;
@@ -840,6 +1026,9 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    SCIP_Bool doscaling;
    SCIP_Bool istimeleft;
    SCIP_Bool success;
+   SCIP_Bool avoidmemout;
+   SCIP_Bool disablemeasures;
+   int maxgraphedge;
    int ndecomps;
    int nconss;
    int nvars;
@@ -866,14 +1055,14 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    *result = SCIP_DIDNOTRUN;
 
    problem = NULL;
+   assigneddecomp = NULL;
    sortedconss = NULL;
    varlabels = NULL;
    conslabels = NULL;
-   blockstartsconss = NULL;
+   consssize = NULL;
    alllinkvartoblocks = NULL;
    linkvars = NULL;
    linkvartoblocks = NULL;
-   numlinkvars = 0;
    blocktolinkvars = NULL;
    tmpcouplingvars = NULL;
    tmpcouplingcoef = NULL;
@@ -902,9 +1091,16 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    SCIP_CALL( SCIPwriteTransProblem(scip, "trans_problem", NULL, FALSE) );
 #endif
 
-   /* take original problem */
+   /* take original problem (This is only for testing and not recommended!) */
    if( heurdata->original )
    {
+      /* multiaggregation of variables has to be switched off */
+      if( !SCIPdoNotMultaggr(scip) )
+      {
+         SCIPwarningMessage(scip, "Heuristic %s does not support multiaggregation when the original problem is used.\nPlease turn multiaggregation off to use this feature.\n", HEUR_NAME);
+         return SCIP_OKAY;
+      }
+
       SCIPgetDecomps(scip, &alldecomps, &ndecomps, TRUE);
       if( ndecomps == 0)
          return SCIP_OKAY;
@@ -948,10 +1144,23 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
 
    /* estimate required memory for all blocks and terminate if not enough memory is available */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memory) );
-   if( ((SCIPgetMemUsed(scip) + SCIPgetMemExternEstim(scip))/1048576.0) * nblocks >= memory )
+   SCIP_CALL( SCIPgetBoolParam(scip, "misc/avoidmemout", &avoidmemout) );
+   if( avoidmemout && (((SCIPgetMemUsed(scip) + SCIPgetMemExternEstim(scip))/1048576.0) * nblocks >= memory) )
    {
       SCIPdebugMsg(scip, "The estimated memory usage for %d blocks is too large.\n", nblocks);
       goto TERMINATE;
+   }
+
+   /* we do not need the block decomposition graph and expensive measures of the decomposition statistics */
+   SCIP_CALL( SCIPgetIntParam(scip, "decomposition/maxgraphedge", &maxgraphedge) );
+   if( !SCIPisParamFixed(scip, "decomposition/maxgraphedge") )
+   {
+      SCIP_CALL( SCIPsetIntParam(scip, "decomposition/maxgraphedge", 0) );
+   }
+   SCIP_CALL( SCIPgetBoolParam(scip, "decomposition/disablemeasures", &disablemeasures) );
+   if( !SCIPisParamFixed(scip, "decomposition/disablemeasures") )
+   {
+      SCIP_CALL( SCIPsetBoolParam(scip, "decomposition/disablemeasures", TRUE) );
    }
 
    /* don't change problem by sorting constraints */
@@ -959,7 +1168,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
 
    SCIP_CALL( SCIPallocBufferArray(scip, &varlabels, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &conslabels, nconss) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &blockstartsconss, nconss + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &consssize, nblocks + 1) );
 
    SCIPdecompGetConsLabels(decomp, conss, conslabels, nconss);
    SCIPdecompGetVarsLabels(decomp, vars, varlabels, nvars);
@@ -971,31 +1180,39 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    if( heurdata->assignlinking && conslabels[0] == SCIP_DECOMP_LINKCONS )
    {
       /* create new decomposition; don't change the decompositions in the decompstore */
-      SCIP_DECOMP* newdecomp = NULL;
-      SCIP_CALL( SCIPcreateDecomp(scip, &newdecomp, nblocks, heurdata->original, SCIPdecompUseBendersLabels(decomp)) );
+      SCIP_CALL( SCIPcreateDecomp(scip, &assigneddecomp, nblocks, heurdata->original, SCIPdecompUseBendersLabels(decomp)) );
 
-      SCIP_CALL( assignLinking(scip, decomp, newdecomp, vars, sortedconss, varlabels, conslabels, nvars, nconss) );
-      decomp = newdecomp;
+      SCIP_CALL( assignLinking(scip, assigneddecomp, vars, sortedconss, varlabels, conslabels, nvars, nconss, SCIPdecompGetNBorderConss(decomp)) );
+      assert(SCIPdecompGetNBlocks(decomp) >= SCIPdecompGetNBlocks(assigneddecomp));
+      decomp = assigneddecomp;
 
-      /* number of blocks can have changed */
+      /* number of blocks can get smaller (since assigning constraints can lead to empty blocks) */
       nblocks = SCIPdecompGetNBlocks(decomp);
-
-      /* new decomp can already be deleted here because we don't need it anymore */
-      SCIPfreeDecomp(scip, &newdecomp);
+   }
+   else
+   {
+      /* The decomposition statistics were computed during transformation of the decomposition store.
+       * Since propagators can have changed the number of constraints/variables,
+       * the statistics are no longer up-to-date and have to be recomputed.
+       */
+      SCIP_CALL( SCIPcomputeDecompStats(scip, decomp, TRUE) );
+      nblocks = SCIPdecompGetNBlocks(decomp);
    }
 
-   if( conslabels[0] == SCIP_DECOMP_LINKCONS )
+   /* reset parameters */
+   SCIP_CALL( SCIPsetIntParam(scip, "decomposition/maxgraphedge", maxgraphedge) );
+   SCIP_CALL( SCIPsetBoolParam(scip, "decomposition/disablemeasures", disablemeasures) );
+
+   /* @note the terms 'linking' and 'border' (constraints/variables) are used interchangeably */
+
+   if( SCIPdecompGetNBorderConss(decomp) != 0 )
    {
       SCIPdebugMsg(scip, "No support for linking contraints\n");
       goto TERMINATE;
    }
 
-   /* count linking variables */
-   for( i = 0; i < nvars; i++ )
-   {
-      if( varlabels[i] == SCIP_DECOMP_LINKVAR )
-         numlinkvars++;
-   }
+   /* get number of linking variables */
+   numlinkvars = SCIPdecompGetNBorderVars(decomp);
    SCIPdebugMsg(scip, "%d linking variables\n", numlinkvars);
 
    if( numlinkvars == 0 )
@@ -1006,23 +1223,11 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
 
    *result = SCIP_DIDNOTFIND;
 
-   /* determine start indices of blocks in sorted conss array */
-   i = 0;
-   for( b = 0; b < nblocks + 1; ++b )
-   {
-      blockstartsconss[b] = i;
-      if( i == nconss )
-         break;
-
-      do
-      {
-         ++i;
-      }
-      while( i < nconss && conslabels[i] == conslabels[i-1] );
-   }
+   /* get for every block the number of constraints (first entry belongs to border) */
+   SCIP_CALL( SCIPdecompGetConssSize(decomp, consssize, nblocks + 1) );
 
    /* create blockproblems */
-   SCIP_CALL( createAndSplitProblem(scip, sortedconss, blockstartsconss, nblocks, &problem, &success) );
+   SCIP_CALL( createAndSplitProblem(scip, sortedconss, nconss, consssize, nblocks, &problem, heurdata->original, &success) );
 
    if( !success )
    {
@@ -1400,8 +1605,12 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
                nnodes = MAX( heurdata->minnodes, nnodes );
                SCIP_CALL( SCIPsetLongintParam((problem->blocks[b]).subscip, "limits/nodes", nnodes) );
 
-               /* solve block */
-               SCIP_CALL( SCIPsolve((problem->blocks[b]).subscip) );
+               /* solve block
+                *
+                * errors in solving the subproblem should not kill the overall solving process;
+                * hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
+                */
+               SCIP_CALL_ABORT( SCIPsolve((problem->blocks[b]).subscip) );
                status = SCIPgetStatus((problem->blocks[b]).subscip);
 
                /* subtract used nodes from the total nodelimit */
@@ -1415,7 +1624,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
                 */
                if( status == SCIP_STATUS_OPTIMAL || status == SCIP_STATUS_GAPLIMIT ||
                      (status == SCIP_STATUS_NODELIMIT && SCIPgetNSols((problem->blocks[b]).subscip) > 0) ||
-                     (status == SCIP_STATUS_TIMELIMIT && SCIPgetNSols((problem->blocks[b]).subscip) > 0 && 
+                     (status == SCIP_STATUS_TIMELIMIT && SCIPgetNSols((problem->blocks[b]).subscip) > 0 &&
                      SCIPisEQ(scip, SCIPgetSolOrigObj((problem->blocks[b]).subscip, SCIPgetBestSol((problem->blocks[b]).subscip)), 0.0) ) )
                {
                   SCIPdebugMsg(scip, "Block is optimal or reached gaplimit or nodelimit.\n");
@@ -1512,7 +1721,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
             }
             while( status != SCIP_STATUS_OPTIMAL && status != SCIP_STATUS_GAPLIMIT &&
                    !(status == SCIP_STATUS_NODELIMIT && SCIPgetNSols((problem->blocks[b]).subscip) > 0) &&
-                   !(status == SCIP_STATUS_TIMELIMIT && SCIPgetNSols((problem->blocks[b]).subscip) > 0 && 
+                   !(status == SCIP_STATUS_TIMELIMIT && SCIPgetNSols((problem->blocks[b]).subscip) > 0 &&
                    SCIPisEQ(scip, SCIPgetSolOrigObj((problem->blocks[b]).subscip, SCIPgetBestSol((problem->blocks[b]).subscip)), 0.0) ) );
          }
       }
@@ -1654,14 +1863,14 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
 
             origvar = SCIPfindVar(scip, SCIPvarGetName(blockvars[i]));
             solval = blocksolvals[i];
-            SCIP_CALL( SCIPsetSolVal(scip, newsol, origvar, solval) );
+            SCIP_CALL_ABORT( SCIPsetSolVal(scip, newsol, origvar, solval) );
          }
       }
 
       /* treat variables with no constraints; set value of variable to bound */
       for( i = 0; i < numlinkvars; i++ )
       {
-         if( varonlyobj[i] == TRUE )
+         if( varonlyobj[i] )
          {
             SCIP_Real fixedvalue;
             if( SCIPvarGetObj(linkvars[i]) < 0 )
@@ -1676,22 +1885,51 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
                if( SCIPisInfinity(scip, fixedvalue) )
                   break; // todo: maybe we should return the status UNBOUNDED instead
             }
-            SCIP_CALL( SCIPsetSolVal(scip, newsol, linkvars[i], fixedvalue) );
+            SCIP_CALL_ABORT( SCIPsetSolVal(scip, newsol, linkvars[i], fixedvalue) );
          }
       }
 
       SCIPdebugMsg(scip, "Objective value %.2f\n", SCIPgetSolOrigObj(scip, newsol));
 
-      SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, &success) );
-      if( !success )
+      /* fix linking variables and reoptimize with original objective function */
+      if( heurdata->reoptimize )
       {
-         SCIPdebugMsg(scip, "Solution copy failed\n");
-         *result = SCIP_DIDNOTFIND;
+         SCIP_SOL* improvedsol = NULL;
+         SCIP_CALL( reoptimize(scip, heur, newsol, vars, nvars, linkvars, numlinkvars, &improvedsol, &success) );
+         assert(improvedsol != NULL || success == FALSE);
+
+         if( success )
+         {
+            SCIP_CALL( SCIPtrySolFree(scip, &improvedsol, FALSE, FALSE, TRUE, TRUE, TRUE, &success) );
+            if( !success )
+            {
+               SCIPdebugMsg(scip, "Reoptimizing solution failed\n");
+            }
+            else
+            {
+               SCIPdebugMsg(scip, "Reoptimizing solution successful\n");
+               *result = SCIP_FOUNDSOL;
+            }
+         }
+      }
+
+      /* if reoptimization is turned off or reoptimization found no solution, try initial solution */
+      if( *result != SCIP_FOUNDSOL )
+      {
+         SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, &success) );
+         if( !success )
+         {
+            SCIPdebugMsg(scip, "Solution copy failed\n");
+         }
+         else
+         {
+            SCIPdebugMsg(scip, "Solution copy successful\n");
+            *result = SCIP_FOUNDSOL;
+         }
       }
       else
       {
-         SCIPdebugMsg(scip, "Solution copy successful after %f sec\n", SCIPgetSolvingTime(scip));
-         *result = SCIP_FOUNDSOL;
+         SCIP_CALL( SCIPfreeSol(scip, &newsol) );
       }
 
       SCIPfreeBufferArray(scip, &blocksolvals);
@@ -1767,8 +2005,11 @@ TERMINATE:
    if( linkvartoblocks != NULL )
       SCIPfreeBufferArray(scip, &linkvartoblocks);
 
-   if( blockstartsconss != NULL )
-      SCIPfreeBufferArray(scip, &blockstartsconss);
+   if( assigneddecomp != NULL )
+      SCIPfreeDecomp(scip, &assigneddecomp);
+
+   if( consssize != NULL )
+      SCIPfreeBufferArray(scip, &consssize);
 
    if( conslabels != NULL )
       SCIPfreeBufferArray(scip, &conslabels);
@@ -1839,6 +2080,9 @@ SCIP_RETCODE SCIPincludeHeurPADM(
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/gap",
       "mipgap at start", &heurdata->gap, TRUE, DEFAULT_GAP, 0.0, 16.0, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/reoptimize",
+      "should the problem get reoptimized with the original objective function?", &heurdata->reoptimize, FALSE, TRUE, NULL, NULL) );
+
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/scaling",
       "enable sigmoid rescaling of penalty parameters", &heurdata->scaling, TRUE, TRUE, NULL, NULL) );
 
@@ -1846,7 +2090,7 @@ SCIP_RETCODE SCIPincludeHeurPADM(
       "should linking constraints be assigned?", &heurdata->assignlinking, FALSE, TRUE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/original",
-      "should the original problem be used?", &heurdata->original, FALSE, FALSE, NULL, NULL) );
+      "should the original problem be used? This is only for testing and not recommended!", &heurdata->original, TRUE, FALSE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/timing",
       "should the heuristic run before or after the processing of the node? (0: before, 1: after, 2: both)",

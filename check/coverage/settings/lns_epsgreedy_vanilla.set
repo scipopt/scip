@@ -31,4 +31,3 @@ heuristics/alns/banditalgo = g
 # reward control to increase the weight of the simple solution indicator and decrease the weight of the closed gap reward
 # [type: real, advanced: TRUE, range: [0,1], default: 0.8]
 heuristics/alns/rewardcontrol = 0
-

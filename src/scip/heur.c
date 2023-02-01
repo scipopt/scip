@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -38,7 +47,7 @@
 
 #include "scip/struct_heur.h"
 
-/** compares two heuristics w. r. to their delay positions and their priority */
+/** compares two heuristics w.r.t. to their delay positions and priorities */
 SCIP_DECL_SORTPTRCOMP(SCIPheurComp)
 {  /*lint --e{715}*/
    SCIP_HEUR* heur1 = (SCIP_HEUR*)elem1;
@@ -48,7 +57,10 @@ SCIP_DECL_SORTPTRCOMP(SCIPheurComp)
    assert(heur2 != NULL);
 
    if( heur1->delaypos == heur2->delaypos )
-      return heur2->priority - heur1->priority; /* prefer higher priorities */
+      if( heur1->priority != heur2->priority )
+         return heur2->priority - heur1->priority; /* prefer higher priorities */
+      else
+         return (strcmp(heur1->name, heur2->name)); /* tiebreaker */
    else if( heur1->delaypos == -1 )
       return +1;                                /* prefer delayed heuristics */
    else if( heur2->delaypos == -1 )
@@ -61,6 +73,12 @@ SCIP_DECL_SORTPTRCOMP(SCIPheurComp)
       return heur1->delaypos - heur2->delaypos; /* prefer lower delay positions */
 }
 
+/** compares two heuristics w.r.t. to their priority values */
+SCIP_DECL_SORTPTRCOMP(SCIPheurCompPriority)
+{
+   return SCIPheurGetPriority((SCIP_HEUR*)elem2) -
+     SCIPheurGetPriority((SCIP_HEUR*)elem1);
+}
 
 /** comparison method for sorting heuristics w.r.t. to their name */
 SCIP_DECL_SORTPTRCOMP(SCIPheurCompName)
@@ -1064,6 +1082,9 @@ SCIP_RETCODE SCIPheurInit(
       heur->ncalls = 0;
       heur->nsolsfound = 0;
       heur->nbestsolsfound = 0;
+
+      set->heurssorted = FALSE;
+      set->heursnamesorted = FALSE;
    }
 
    if( heur->heurinit != NULL )
@@ -1699,6 +1720,10 @@ SCIP_RETCODE SCIPvariablegraphBreadthFirst(
 
    /* get variable data */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
+
+   if( nvars == 0 )
+      return SCIP_OKAY;
+
    nbinintvars = nbinvars + nintvars;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &queue, nvars) );
