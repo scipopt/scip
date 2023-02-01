@@ -2833,8 +2833,16 @@ SCIP_RETCODE getClauseConflictSet(
             SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &conflict->resolutionset->inds, conflict->resolutionset->size, conflict->resolutionset->nnz) );
             conflict->resolutionset->size = conflict->resolutionset->nnz;
          }
-            conflict->resolutionset->vals[0] = SCIPbdchginfoGetNewbound(currbdchginfo) > 0.5 ? -1.0 : 1.0;
-            conflict->resolutionset->inds[0] = SCIPvarGetProbindex(SCIPbdchginfoGetVar(currbdchginfo));
+
+         /* for the current bound change */
+         if (SCIPbdchginfoGetNewbound(currbdchginfo) > 0.5)
+         {
+            conflict->resolutionset->vals[0] = -1.0;
+            conflict->resolutionset->lhs -= 1.0;
+         }
+         else
+            conflict->resolutionset->vals[0] = 1.0;
+         conflict->resolutionset->inds[0] = SCIPvarGetProbindex(SCIPbdchginfoGetVar(currbdchginfo));
 
          for( int i = 0; i < conflict->resolutionset->nnz - 1; i++ )
          {
@@ -3239,9 +3247,13 @@ SCIP_RETCODE conflictAnalyzeResolution(
       /* relaxed assertion */
       assert(strcmp(SCIPconshdlrGetName(conshdlr), "knapsack") == 0 || strcmp(SCIPconshdlrGetName(conshdlr), "linear") == 0);
       getClauseConflictSet(conflict, blkmem, set, bdchginfo, &success);
+
       if (!success)
       {
          SCIPsetDebugMsg(set, "Initial conflict could not be retrieved \n");
+         conflictresolutionset->slack = -1.0;
+         assert( getSlack(set, transprob, conflictresolutionset, bdchgidx, NULL, NULL) == -1);
+
          return SCIP_OKAY;
       }
    }
