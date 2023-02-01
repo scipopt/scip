@@ -948,6 +948,9 @@ SCIP_RETCODE freeSymmetryData(
    assert( scip != NULL );
    assert( propdata != NULL );
 
+   assert( propdata->orbitopalfixingdata != NULL );
+   SCIP_CALL( SCIPorbitopalFixingReset(scip, propdata->orbitopalfixingdata) );
+
    if ( propdata->permvarmap != NULL )
    {
       SCIPhashmapFree(&propdata->permvarmap);
@@ -8113,6 +8116,9 @@ SCIP_DECL_PROPFREE(propFreeSymmetry)
 
    propdata = SCIPpropGetData(prop);
    assert( propdata != NULL );
+
+   assert( propdata->orbitopalfixingdata != NULL );
+   SCIP_CALL( SCIPorbitopalFixingFree(scip, &propdata->orbitopalfixingdata) );
 
    SCIPfreeBlockMemory(scip, &propdata);
 

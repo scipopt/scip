@@ -87,6 +87,13 @@ SCIP_RETCODE SCIPorbitopalFixingReset(
    );
 
 
+/** free orbitopal fixing data */
+SCIP_RETCODE SCIPorbitopalFixingFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ORBITOPALFIXINGDATA** orbifixdata    /**< pointer to orbitopal fixing structure to populate */
+   );
+
+
 /** initializes structures needed for orbitopal fixing
  * This is only done exactly once.
  */
