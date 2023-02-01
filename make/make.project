@@ -216,7 +216,7 @@ LN_s		= 	ln -s
 LN_sf		=	ln -sf
 
 # initial compiler and linker flags
-FLAGS		=	-I$(SRCDIR) -DFNAME_$(FORTRAN_NAMING_CONVENTION) -I$(SCIPDIR)/src
+FLAGS		=	-I$(SRCDIR) -I$(SCIPDIR)/src
 OFLAGS		=
 CFLAGS		=
 CXXFLAGS	=

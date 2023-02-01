@@ -395,7 +395,7 @@ BENDERS_CUTORACLE(cutoracle)
       {
          /* if the problem is infeasible in the first step, we are successful */
          if ( step == 0 )
-            *status = BENDERS_STATUS_SUCESS;
+            *status = BENDERS_STATUS_SUCCESS;
 
          SCIPdebugMessage("   size: %4d  produced possible cover with objective value %f.\n", size, value);
          break;
