@@ -3032,8 +3032,13 @@ SCIP_RETCODE propagateCons(
             odd = !odd;
             ++nfixedones;
          }
-         else if( SCIPvarGetUbLocal(vars[i]) > 0.5 )
+         else if( SCIPvarGetUbLocal(vars[i]) < 0.5 )
+            ++nfixedzeros;
+         else
          {
+            assert(SCIPvarGetUbLocal(vars[i]) > 0.5);
+            assert(SCIPvarGetLbLocal(vars[i]) < 0.5);
+
             if( watchedvar1 == -1 )
             {
                assert(watchedvar2 == -1);
@@ -3045,8 +3050,6 @@ SCIP_RETCODE propagateCons(
                break;
             }
          }
-         else if ( SCIPvarGetUbLocal(vars[i]) < 0.5 )
-            ++nfixedzeros;
       }
    }
    assert(watchedvar1 != -1 || watchedvar2 == -1);
