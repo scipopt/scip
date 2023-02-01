@@ -45,6 +45,7 @@ Interface changes
   pointer to SCIP_LOCK/SCIP_CONDITION, respectively.
 - Renamed SCIPtpiSumbitJob() to SCIPtpiSubmitJob().
 - Replaced SCIPnlrowSetCurvature() by SCIPsetNlRowCurvature().
+- SCIPsnprintf() now returns the required string length in case reallocation is necessary.
 
 ### New API functions
 
