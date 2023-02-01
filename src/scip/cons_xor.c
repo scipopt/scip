@@ -3044,10 +3044,9 @@ SCIP_RETCODE propagateCons(
                assert(watchedvar2 == -1);
                watchedvar1 = i;
             }
-            else if( watchedvar1 != i )
+            else if( watchedvar2 == -1 && watchedvar1 != i )
             {
                watchedvar2 = i;
-               break;
             }
          }
       }
