@@ -178,6 +178,7 @@ struct SYM_Graph
    int                   maxnvalnodes;       /**< maximum number of entries in value-based arrays */
    int                   nconsnodes;         /**< number of constraint nodes */
    int                   maxnconsnodes;      /**< maximum number of constraint-based arrays */
+   int                   nvarcolors;         /**< number of variable colors */
    SCIP_Bool             islocked;           /**< whether graph is locked, i.e., cannot be modified anymore
                                               *   (computing colors will lock the graph to avoid incosistencies) */
 

@@ -62,7 +62,8 @@ SCIP_RETCODE SCIPcreateSymgraph(
    int                   nopnodes,           /**< number of operator nodes */
    int                   nvalnodes,          /**< number of value nodes */
    int                   nconsnodes,         /**< number of constraint nodes */
-   int                   nedges              /**< number of edges */
+   int                   nedges,             /**< number of edges */
+   SYM_SPEC              fixedtype           /**< variable types that must be fixed by symmetries */
    );
 
 /** frees a symmetry detection graph */
@@ -242,6 +243,13 @@ SCIP_Bool SCIPgetSymgraphEdgeColor(
    SYM_GRAPH*            graph,              /**< symmetry detection graph */
    int                   edgeidx             /**< index of edge */
    );
+
+/** returns the number of unique variable colors in the graph */
+SCIP_EXPORT
+int SCIPgetSymgraphNVarcolors(
+   SYM_GRAPH*            graph               /**< symmetry detection graph */
+   );
+
 
 /** Transforms given variables, scalars, and constant to the corresponding active variables, scalars, and constant.
  *

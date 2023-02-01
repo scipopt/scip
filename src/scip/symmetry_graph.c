@@ -36,6 +36,141 @@
 #include <symmetry/struct_symmetry.h>
 #include <symmetry/type_symmetry.h>
 
+
+/** compares two variables for symmetry detection
+ *
+ *  Variables are sorted first by their type, then by their objective coefficient,
+ *  then by their lower bound, and then by their upper bound.
+ *
+ *  result:
+ *    < 0: ind1 comes before (is better than) ind2
+ *    = 0: both indices have the same value
+ *    > 0: ind2 comes after (is worse than) ind2
+ */
+static
+int compareVars(
+   SCIP_VAR*             var1,               /**< first variable for comparison */
+   SCIP_VAR*             var2                /**< second variable for comparison */
+   )
+{
+   assert(var1 != NULL);
+   assert(var2 != NULL);
+
+   if( SCIPvarGetType(var1) < SCIPvarGetType(var2) )
+      return -1;
+   if( SCIPvarGetType(var1) > SCIPvarGetType(var2) )
+      return 1;
+
+   if( SCIPvarGetObj(var1) < SCIPvarGetObj(var2) )
+      return -1;
+   if( SCIPvarGetObj(var1) > SCIPvarGetObj(var2) )
+      return 1;
+
+   if( SCIPvarGetLbGlobal(var1) < SCIPvarGetLbGlobal(var2) )
+      return -1;
+   if( SCIPvarGetLbGlobal(var1) > SCIPvarGetLbGlobal(var2) )
+      return 1;
+
+   if( SCIPvarGetUbGlobal(var1) < SCIPvarGetUbGlobal(var2) )
+      return -1;
+   if( SCIPvarGetUbGlobal(var1) > SCIPvarGetUbGlobal(var2) )
+      return 1;
+
+   return 0;
+}
+
+/** sorts nodes of a symmetry detection graph
+ *
+ *  Nodes are sorted first by their nodetype, then by the value of the corresponding
+ *  type information, and then by their consinfo (first lhs, then rhs, then conshdlr).
+ *
+ *  result:
+ *    < 0: ind1 comes before (is better than) ind2
+ *    = 0: both indices have the same value
+ *    > 0: ind2 comes after (is worse than) ind2
+ */
+static
+SCIP_DECL_SORTINDCOMP(SYMsortVarnodes)
+{
+   SCIP_VAR** vars;
+
+   vars = (SCIP_VAR**) dataptr;
+
+   return compareVars(vars[ind1], vars[ind2]);
+}
+
+/** returns whether a node of the symmetry detection graph needs to be fixed */
+static
+SCIP_Bool isFixedVar(
+   SCIP_VAR*             var,                /**< active problem variable */
+   SYM_SPEC              fixedtype           /**< variable types that must be fixed by symmetries */
+   )
+{
+   assert( var != NULL );
+
+   if ( (fixedtype & SYM_SPEC_INTEGER) && SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER )
+      return TRUE;
+   if ( (fixedtype & SYM_SPEC_BINARY) && SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
+      return TRUE;
+   if ( (fixedtype & SYM_SPEC_REAL) &&
+      (SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT) )
+      return TRUE;
+   return FALSE;
+}
+
+/** computes colors for variables */
+static
+SCIP_RETCODE computeVarcolors(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            symvars,            /**< variables used in symmetry detection */
+   int                   nsymvars,           /**< number of variables used in symmetry detection */
+   int*                  varcolors,          /**< allocated array to hold variable colors */
+   int*                  nvarcolors,         /**< buffer to store number of variable colors */
+   SYM_SPEC              fixedtype           /**< variable types that must be fixed by symmetries */
+   )
+{
+   SCIP_VAR* prevvar;
+   SCIP_VAR* thisvar;
+   int* perm;
+   int color = 0;
+   int i;
+   SCIP_Real symtime;
+
+   assert(scip != NULL);
+   assert(symvars != NULL);
+   assert(varcolors != NULL);
+   assert(nvarcolors != NULL);
+
+   symtime = -SCIPgetSolvingTime(scip);
+   SCIP_CALL( SCIPallocBufferArray(scip, &perm, nsymvars) );
+
+   /* find colors of variable nodes */
+   SCIPsort(perm, SYMsortVarnodes, (void*) symvars, nsymvars);
+
+   varcolors[perm[0]] = color;
+   if( isFixedVar(symvars[perm[0]], fixedtype) )
+      ++color;
+   prevvar = symvars[perm[0]];
+
+   for( i = 1; i < nsymvars; ++i )
+   {
+      thisvar = symvars[perm[i]];
+
+      if( compareVars(prevvar, thisvar) != 0 || isFixedVar(thisvar, fixedtype) )
+         ++color;
+
+      varcolors[perm[i]] = color;
+      prevvar = thisvar;
+   }
+
+   SCIPfreeBufferArray(scip, &perm);
+
+   *nvarcolors = color + 1;
+   symtime += SCIPgetSolvingTime(scip);
+
+   return SCIP_OKAY;
+}
+
 /** creates and initializes a symmetry detection graph with memory for the given number of nodes and edges
  *
  *  @note at some point, the graph needs to be freed!
@@ -48,7 +183,8 @@ SCIP_RETCODE SCIPcreateSymgraph(
    int                   nopnodes,           /**< number of operator nodes */
    int                   nvalnodes,          /**< number of value nodes */
    int                   nconsnodes,         /**< number of constraint nodes */
-   int                   nedges              /**< number of edges */
+   int                   nedges,             /**< number of edges */
+   SYM_SPEC              fixedtype           /**< variable types that must be fixed by symmetries */
    )
 {
    int nnodes;
@@ -95,12 +231,18 @@ SCIP_RETCODE SCIPcreateSymgraph(
    (*graph)->maxnedges = nedges;
    (*graph)->symvars = symvars;
    (*graph)->nsymvars = nsymvars;
+   (*graph)->nvarcolors = -1;
 
    /* to avoid reallocation, allocate memory for colors later */
    (*graph)->opcolors = NULL;
    (*graph)->valcolors = NULL;
    (*graph)->conscolors = NULL;
    (*graph)->edgecolors = NULL;
+
+   /* determine colors of variables */
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*graph)->varcolors, nsymvars) );
+
+   SCIP_CALL( computeVarcolors(scip, symvars, nsymvars, (*graph)->varcolors, &(*graph)->nvarcolors, fixedtype) );
 
    return SCIP_OKAY;
 }
@@ -517,68 +659,6 @@ SCIP_RETCODE SCIPaddSymgraphEdge(
  * methods to compute colors
  */
 
-/** compares two variables for symmetry detection
- *
- *  Variables are sorted first by their type, then by their objective coefficient,
- *  then by their lower bound, and then by their upper bound.
- *
- *  result:
- *    < 0: ind1 comes before (is better than) ind2
- *    = 0: both indices have the same value
- *    > 0: ind2 comes after (is worse than) ind2
- */
-static
-int compareVars(
-   SCIP_VAR*             var1,               /**< first variable for comparison */
-   SCIP_VAR*             var2                /**< second variable for comparison */
-   )
-{
-   assert(var1 != NULL);
-   assert(var2 != NULL);
-
-   if( SCIPvarGetType(var1) < SCIPvarGetType(var2) )
-      return -1;
-   if( SCIPvarGetType(var1) > SCIPvarGetType(var2) )
-      return 1;
-
-   if( SCIPvarGetObj(var1) < SCIPvarGetObj(var2) )
-      return -1;
-   if( SCIPvarGetObj(var1) > SCIPvarGetObj(var2) )
-      return 1;
-
-   if( SCIPvarGetLbGlobal(var1) < SCIPvarGetLbGlobal(var2) )
-      return -1;
-   if( SCIPvarGetLbGlobal(var1) > SCIPvarGetLbGlobal(var2) )
-      return 1;
-
-   if( SCIPvarGetUbGlobal(var1) < SCIPvarGetUbGlobal(var2) )
-      return -1;
-   if( SCIPvarGetUbGlobal(var1) > SCIPvarGetUbGlobal(var2) )
-      return 1;
-
-   return 0;
-}
-
-/** sorts nodes of a symmetry detection graph
- *
- *  Nodes are sorted first by their nodetype, then by the value of the corresponding
- *  type information, and then by their consinfo (first lhs, then rhs, then conshdlr).
- *
- *  result:
- *    < 0: ind1 comes before (is better than) ind2
- *    = 0: both indices have the same value
- *    > 0: ind2 comes after (is worse than) ind2
- */
-static
-SCIP_DECL_SORTINDCOMP(SYMsortVarnodes)
-{
-   SCIP_VAR** vars;
-
-   vars = (SCIP_VAR**) dataptr;
-
-   return compareVars(vars[ind1], vars[ind2]);
-}
-
 /** compares two operators
  *
  *  Operators are sorted by their pointer values.
@@ -741,25 +821,6 @@ SCIP_DECL_SORTINDCOMP(SYMsortEdges)
    return 0;
 }
 
-/** returns whether a node of the symmetry detection graph needs to be fixed */
-static
-SCIP_Bool isFixedVar(
-   SCIP_VAR*             var,                /**< active problem variable */
-   SYM_SPEC              fixedtype           /**< variable types that must be fixed by symmetries */
-   )
-{
-   assert( var != NULL );
-
-   if ( (fixedtype & SYM_SPEC_INTEGER) && SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER )
-      return TRUE;
-   if ( (fixedtype & SYM_SPEC_BINARY) && SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
-      return TRUE;
-   if ( (fixedtype & SYM_SPEC_REAL) &&
-      (SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT) )
-      return TRUE;
-   return FALSE;
-}
-
 /** computes colors of nodes and edges
  *
  * Colors are detected by sorting different types of nodes (variables, operators, values, and constraint) and edges.
@@ -771,8 +832,6 @@ SCIP_RETCODE SCIPcomputeSymgraphColors(
    SYM_SPEC              fixedtype           /**< variable types that must be fixed by symmetries */
    )
 {
-   SCIP_VAR* prevvar;
-   SCIP_VAR* thisvar;
    SCIP_Real prevval;
    SCIP_Real thisval;
    int* perm;
@@ -791,35 +850,15 @@ SCIP_RETCODE SCIPcomputeSymgraphColors(
    graph->islocked = TRUE;
 
    /* allocate memory for colors */
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &graph->varcolors, graph->nsymvars) );
+   /* SCIP_CALL( SCIPallocBlockMemoryArray(scip, &graph->varcolors, graph->nsymvars) ); */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &graph->opcolors, graph->nopnodes) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &graph->valcolors, graph->nvalnodes) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &graph->conscolors, graph->nconsnodes) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &graph->edgecolors, graph->nedges) );
 
    /* allocate permutation of arrays, will be initialized by SCIPsort() */
-   len = MAX(MAX3(graph->nsymvars, graph->nopnodes, graph->nvalnodes), MAX(graph->nconsnodes, graph->nedges));
+   len = MAX(MAX(graph->nopnodes, graph->nvalnodes), MAX(graph->nconsnodes, graph->nedges));
    SCIP_CALL( SCIPallocBufferArray(scip, &perm, len) );
-
-   /* find colors of variable nodes */
-   assert(graph->nsymvars > 0);
-   SCIPsort(perm, SYMsortVarnodes, (void*) graph->symvars, graph->nsymvars);
-
-   graph->varcolors[perm[0]] = color;
-   if( isFixedVar(graph->symvars[perm[0]], fixedtype) )
-      ++color;
-   prevvar = graph->symvars[perm[0]];
-
-   for( i = 1; i < graph->nsymvars; ++i )
-   {
-      thisvar = graph->symvars[perm[i]];
-
-      if( compareVars(prevvar, thisvar) != 0 || isFixedVar(thisvar, fixedtype) )
-         ++color;
-
-      graph->varcolors[perm[i]] = color;
-      prevvar = thisvar;
-   }
 
    /* find colors of operator nodes */
    if( graph->nopnodes > 0 )
@@ -1032,6 +1071,19 @@ SCIP_Bool SCIPgetSymgraphEdgeColor(
    assert(SCIPisSymgraphEdgeColored(graph, edgeidx));
 
    return graph->edgecolors[edgeidx];
+}
+
+/** returns the number of unique variable colors in the graph */
+int SCIPgetSymgraphNVarcolors(
+   SYM_GRAPH*            graph               /**< symmetry detection graph */
+   )
+{
+   assert(graph != NULL);
+
+   if( graph->nvarcolors < 0 )
+      return graph->nsymvars;
+
+   return graph->nvarcolors;
 }
 
 /** returns the color of a symmetry */
