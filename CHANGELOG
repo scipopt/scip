@@ -59,7 +59,6 @@ Fixed bugs
 - Enabled the solution limit checks in SCIPsolveIsStopped in solve.c when in SCIP_STAGE_PRESOLVING
 - fix quad precision comparison for the calculation of knapsackcover constraints.
 - force copying of symmetry constraints for concurrent solve
-- apply effective root changes before fork is repropagated during treeSwitchPath in tree.c
 
 Miscellaneous
 -------------
