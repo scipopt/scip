@@ -1691,6 +1691,9 @@ SCIP_RETCODE SCIPflushRowExtensions(
  *        added to the row, but the corresponding constant is added. Similarly, if the input variable is aggregated (as
  *        given by the status SCIP_VARSTATUS_AGGREGATED), then the input variable is substituted with its aggregation.
  *        For other cases, and to better understand the function behavior, please check the code of SCIPvarAddToRow.
+ *
+ *  @note When several variables are added to a row with the use of this function, performance can be improved by
+ *        calling SCIPcacheRowExtensions() before these additions and SCIPflushRowExtensions() after.
  */
 SCIP_RETCODE SCIPaddVarToRow(
    SCIP*                 scip,               /**< SCIP data structure */
