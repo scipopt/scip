@@ -324,7 +324,7 @@ extern "C" {
  * Tree settings
  */
 
-#define SCIP_MAXTREEDEPTH             65534  /**< maximal allowed depth of the branch-and-bound tree */
+#define SCIP_MAXTREEDEPTH       1000000      /**< maximal allowed depth of the branch-and-bound tree */
 
 /*
  * Probing scoring settings
