@@ -62,9 +62,9 @@ static
 SCIP_DECL_PROPCOPY(propCopyObj)
 {  /*lint --e{715}*/
    SCIP_PROPDATA* propdata;
-   
+
    assert(scip != NULL);
-   
+
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
    assert(propdata->objprop != NULL);
@@ -103,7 +103,7 @@ SCIP_DECL_PROPFREE(propFreeObj)
    /* free prop data */
    delete propdata;
    SCIPpropSetData(prop, NULL); /*lint !e64*/
-   
+
    return SCIP_OKAY;
 }
 
@@ -260,7 +260,7 @@ SCIP_DECL_PROPRESPROP(propRespropObj)
    assert(propdata->objprop != NULL);
 
    /* call virtual method of prop object */
-   SCIP_CALL( propdata->objprop->scip_resprop(scip, prop, infervar, inferinfo, boundtype, bdchgidx, relaxedbd, result) );
+   SCIP_CALL( propdata->objprop->scip_resprop(scip, prop, infervar, inferinfo, boundtype, bdchgidx, relaxedbd, FALSE, result) );
 
    return SCIP_OKAY;
 }
@@ -318,7 +318,7 @@ scip::ObjProp* SCIPfindObjProp(
 
    return propdata->objprop;
 }
-   
+
 /** returns the prop object for the given propagator */
 scip::ObjProp* SCIPgetObjProp(
    SCIP*                 scip,               /**< SCIP data structure */
