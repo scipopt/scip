@@ -68,11 +68,11 @@ typedef enum SYM_Rhssense SYM_RHSSENSE;
 /** define type of nodes in symmetry detection expression trees */
 enum SYM_Nodetype
 {
-   SYM_NODETYPE_VAR      = 0,                /**< variable node */
-   SYM_NODETYPE_OPERATOR = 1,                /**< operator node */
-   SYM_NODETYPE_COEF     = 2,                /**< coefficient node */
-   SYM_NODETYPE_VAL      = 3,                /**< numerical value node */
-   SYM_NODETYPE_RHS      = 4                 /**< rhs node */
+   SYM_NODETYPE_OPERATOR = 0,                /**< operator node */
+   SYM_NODETYPE_COEF     = 1,                /**< coefficient node */
+   SYM_NODETYPE_VAL      = 2,                /**< numerical value node */
+   SYM_NODETYPE_CONS     = 3,                /**< constraint node */
+   SYM_NODETYPE_VAR      = 4                 /**< variable node */
 };
 typedef enum SYM_Nodetype SYM_NODETYPE;
 

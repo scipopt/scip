@@ -174,41 +174,45 @@ struct SYM_Graph
    int                   maxnnodes;          /**< maximum number of entries in node-based arrays */
    int                   nopnodes;           /**< number of operator nodes in graph */
    int                   maxnopnodes;        /**< maximum number of entries in operator-based arrays */
-   int                   nvarnodes;          /**< number of variable nodes in graph */
-   int                   maxnvarnodes;       /**< maximum number of entries in variable-based arrays */
    int                   nvalnodes;          /**< number of value nodes in graph */
    int                   maxnvalnodes;       /**< maximum number of entries in value-based arrays */
-   int                   rhsnode;            /**< index of rhs node (-1 if not existing) */
-   int                   rhssymcolor;        /**< color of rhs node used for symmetry detection */
-   SCIP_Bool             hassymnodecolors;   /**< whether node colors for symmetry computation have been computed */
+   int                   nconsnodes;         /**< number of constraint nodes */
+   int                   maxnconsnodes;      /**< maximum number of constraint-based arrays */
+   SCIP_Bool             islocked;           /**< whether graph is locked, i.e., cannot be modified anymore
+                                              *   (computing colors will lock the graph to avoid incosistencies) */
 
    /* node-based arrays */
    SYM_NODETYPE*         nodetypes;          /**< array storing each node's type */
    int*                  nodeinfopos;        /**< array assigning each node the position in the corresponding
                                               *   containing its information (operator, variable, or value) */
-   int*                  symnodecolors;      /**< array of node colors used for symmetry detection */
 
    /* information-based arrays */
    SCIP_EXPRHDLR**       ops;                /**< operators corresponding to nodes in graph */
-   SCIP_VAR**            vars;               /**< variables corresponding to nodes in graph */
    SCIP_Real*            vals;               /**< values corresponding to nodes in graph */
+   SCIP_CONS**           conss;              /**< constraints corresponding to cons nodes */
+   SCIP_Real*            lhs;                /**< array of left-hand sides for cons nodes */
+   SCIP_Real*            rhs;                /**< array of right-hand sides for cons nodes */
 
    /* information about edges and edge arrays */
    int                   nedges;             /**< number of edges in graph */
    int                   maxnedges;          /**< maximum number of entries in edge-based arrays */
-   SCIP_Bool             hassymedgecolors;   /**< whether edge colors for symmetry computation have been computed */
 
-   /* edge-based arrays */
+   /* edge-based arrays; negative entries in edgefirst and edgesecond correspond to variables */
    int*                  edgefirst;          /**< array of first nodes of edges */
    int*                  edgesecond;         /**< array of second nodes of edges */
-   SCIP_Real*            edgecolors;         /**< array assigning each edge a color (SCIPinfinity is uncolored) */
-   int*                  symedgecolors;      /**< array of edge colors used for symmetry detection (-1 uncolored) */
+   SCIP_Real*            edgevals;           /**< array assigning each edge a value (SCIPinfinity if unassigned) */
 
-   /* constraint information of graphs */
-   SCIP_Bool             hasconsinfo;        /**< whether graph stores information about a constraint */
-   SCIP_CONS*            cons;               /**< pointer to the constraint (if hasconsinfo is TRUE) */
-   SCIP_Real             lhs;                /**< left-hand side of constraint (if hasconsinfo is TRUE)  */
-   SCIP_Real             rhs;                /**< right-hand side of constraint (if hasconsinfo is TRUE)  */
+   /* information about variables */
+   SCIP_VAR**            symvars;            /**< variables on which symmetries act */
+   int                   nsymvars;           /**< number of variables in symvars */
+   SCIP_HASHMAP*         symvarmap;          /**< hashmap mapping a variable to its negated index in symvars */
+
+   /* arrays of colors used for symmetry detection */
+   int*                  varcolors;          /**< variable colors for symmetry detection */
+   int*                  opcolors;           /**< operator colors for symmetry detection */
+   int*                  valcolors;          /**< value colors for symmetry detection */
+   int*                  conscolors;         /**< constraint colors for symmetry detection */
+   int*                  edgecolors;         /**< edge colors used for symmetry detection (-1 uncolored) */
 };
 
 /** (additional) data used to encode an expression, which is not encoded as another expression */

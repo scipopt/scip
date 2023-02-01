@@ -60,7 +60,7 @@
 #include "scip/scip_sol.h"
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_var.h"
-#include "scip/symmetry.h"
+#include "scip/symmetry_graph.h"
 #include "symmetry/struct_symmetry.h"
 #include <ctype.h>
 #include <string.h>
@@ -8915,8 +8915,8 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphSetppc)
       lhs = 1.0 - constant;
    }
 
-   SCIP_CALL( SCIPcreatePermsymDetectionGraphLinear(scip, graph, vars, vals, nlocvars,
-         lhs, rhs, cons, success) );
+   SCIP_CALL( SCIPextendPermsymDetectionGraphLinear(scip, graph, vars, vals, nlocvars,
+         cons, lhs, rhs, success) );
 
    SCIPfreeBufferArray(scip, &vals);
    SCIPfreeBufferArray(scip, &vars);

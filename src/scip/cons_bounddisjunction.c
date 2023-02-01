@@ -63,7 +63,7 @@
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
-#include "scip/symmetry.h"
+#include "scip/symmetry_graph.h"
 #include "symmetry/struct_symmetry.h"
 #include <ctype.h>
 #include <string.h>
@@ -2910,34 +2910,23 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphBounddisjunction)
    SCIP_Real* vals;
    SCIP_Real constant;
    SCIP_Real bound;
-   int nopnodes;
-   int nvarnodes;
-   int nvalnodes;
-   int nedges;
-   int varrootid;
+   int consnodeidx;
+   int opnodeidx;
+   int nodeidx;
    int nconsvars;
    int nlocvars;
    int nvars;
-   int cnt;
    int i;
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
+   assert(graph != NULL);
 
    sumexpr = (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_SUM;
    bdexpr = (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_BDDISJ;
 
-   /* find potential number of nodes and edges of graph */
-   nopnodes = 1 + nconsvars;
-   nvarnodes = nconsvars;
-   nvalnodes = nconsvars;
-   nedges = 3 * nconsvars;
-
-   /* create graph */
-   SCIP_CALL( SCIPcreateSymgraph(scip, graph, nopnodes, nvarnodes, nvalnodes, nedges) );
-
    /* add node initializing constraint (with artificial rhs) */
-   SCIP_CALL( SCIPaddSymgraphRhsnode(scip, *graph, cons, 0.0, 0.0) );
+   consnodeidx = SCIPaddSymgraphConsnode(scip, graph, cons, 0.0, 0.0);
 
    /* create nodes and edges for each literal in the bounddisjunction */
    nvars = SCIPgetNVars(scip);
@@ -2946,19 +2935,16 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphBounddisjunction)
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &vals, nvars) );
 
-   cnt = 1;
    for( i = 0; i < nconsvars; ++i )
    {
       /* add node and edge for bound expression of literal */
-      SCIP_CALL( SCIPaddSymgraphOpnode(scip, *graph,  bdexpr) );
-      SCIP_CALL( SCIPaddSymgraphEdge(scip, *graph, 0, cnt, FALSE, 0.0) );
-      ++cnt;
+      opnodeidx = SCIPaddSymgraphOpnode(scip, graph,  bdexpr);
+      SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, consnodeidx, nodeidx, FALSE, 0.0) );
 
       /* add node and edge for bound on literal */
       bound = consdata->boundtypes[i] == SCIP_BOUNDTYPE_UPPER ? consdata->bounds[i] : -consdata->bounds[i];
-      SCIP_CALL( SCIPaddSymgraphValnode(scip, *graph, bound) );
-      SCIP_CALL( SCIPaddSymgraphEdge(scip, *graph, cnt - 1, cnt, FALSE, 0.0) );
-      ++cnt;
+      nodeidx = SCIPaddSymgraphValnode(scip, graph, bound);
+      SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, opnodeidx, nodeidx, FALSE, 0.0) );
 
       /* get active variables */
       vars[0] = consdata->vars[i];
@@ -2972,19 +2958,16 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphBounddisjunction)
       if( nlocvars > 1 || !SCIPisEQ(scip, vals[0], 1.0) || !SCIPisZero(scip, constant) )
       {
          /* encode aggregation by a sum-expression and connect it to bdexpr node */
-         SCIP_CALL( SCIPaddSymgraphOpnode(scip, *graph, sumexpr) );
-         SCIP_CALL( SCIPaddSymgraphEdge(scip, *graph, cnt - 2, cnt, FALSE, 0.0) );
-         varrootid = cnt++;
+         nodeidx = SCIPaddSymgraphOpnode(scip, graph, sumexpr);
+         SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, opnodeidx, nodeidx, FALSE, 0.0) );
 
          /* add nodes and edges for variables in aggregation */
-         SCIP_CALL( SCIPaddSymgraphVarAggegration(scip, *graph, varrootid, &cnt, vars, vals, nlocvars, constant) );
-         assert((cnt == varrootid + nlocvars + 1 && SCIPisZero(scip, constant)) || cnt == varrootid + nlocvars + 2);
+         SCIP_CALL( SCIPaddSymgraphVarAggegration(scip, graph, nodeidx, vars, vals, nlocvars, constant) );
       }
       else
       {
-         SCIP_CALL( SCIPaddSymgraphVarnode(scip, *graph, vars[0]) );
-         SCIP_CALL( SCIPaddSymgraphEdge(scip, *graph, cnt - 2, cnt, FALSE, 0.0) );
-         ++cnt;
+         nodeidx = SCIPgetSymgraphVarnodeidx(scip, graph, vars[0]);
+         SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, opnodeidx, nodeidx, FALSE, 0.0) );
       }
    }
 

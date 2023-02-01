@@ -70,15 +70,10 @@ SCIP_EXPORT
 SCIP_RETCODE SYMcomputeSymmetryGenerators2(
    SCIP*                 scip,               /**< SCIP pointer */
    int                   maxgenerators,      /**< maximal number of generators constructed (= 0 if unlimited) */
-   SYM_GRAPH**           graphs,             /**< array of symmetry detection graphs */
-   int                   ngraphs,            /**< number of graphs encoded in graphs */
-   int                   maxnnodesgraph,     /**< maximum number of nodes encoded in a graph */
-   int*                  varcolors,          /**< colors of variable nodes */
-   int                   nvars,              /**< number of active problem variables */
+   SYM_GRAPH*            graph,              /**< symmetry detection graph */
    int*                  nperms,             /**< pointer to store number of permutations */
    int*                  nmaxperms,          /**< pointer to store maximal number of permutations (needed for freeing storage) */
    int***                perms,              /**< pointer to store permutation generators as (nperms x npermvars) matrix */
-   int***                consperms,          /**< pointer to store permutation of constraints as (nperms x npermvars) matrix */
    SCIP_Real*            log10groupsize      /**< pointer to store log10 of size of group */
    );
 

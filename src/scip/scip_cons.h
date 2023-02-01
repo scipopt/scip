@@ -1811,7 +1811,7 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPgetConsPermsymGraph(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint for which the number of variables is wanted */
-   SYM_GRAPH**           graph,              /**< pointer to the symmetry detection graph */
+   SYM_GRAPH*            graph,              /**< symmetry detection graph */
    SCIP_Bool*            success             /**< pointer to store whether the constraint successfully returned the number of graph */
    );
 

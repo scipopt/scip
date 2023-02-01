@@ -897,8 +897,8 @@ SCIP_RETCODE SCIPconsGetNVars(
 SCIP_RETCODE SCIPconsGetPermsymGraph(
    SCIP_CONS*            cons,               /**< constraint to print */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SYM_GRAPH**           graph,              /**< pointer to the symmetry detection graph */
-   SCIP_Bool*            success             /**< pointer to store whether the constraint successfully returned the number of variables */
+   SYM_GRAPH*            graph,              /**< symmetry detection graph */
+   SCIP_Bool*            success             /**< pointer to store whether the constraint successfully returned graph */
    );
 
 

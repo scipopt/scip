@@ -70,7 +70,7 @@
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
-#include "scip/symmetry.h"
+#include "scip/symmetry_graph.h"
 #include "symmetry/struct_symmetry.h"
 #include <ctype.h>
 #include <stdlib.h>
@@ -3109,43 +3109,30 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphCardinality)
    SCIP_Real* vals;
    SCIP_Real constant;
    SCIP_Real rhs;
-   int nopnodes;
-   int nvarnodes;
-   int nvalnodes;
-   int nedges;
-   int varrootid;
+   int consnodeidx;
+   int nodeidx;
    int nconsvars;
    int nlocvars;
    int nvars;
-   int cnt;
    int i;
 
    sumexpr = (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_SUM;
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
+   assert(graph != NULL);
 
    nconsvars = consdata->nvars;
-
-   /* find potential number of nodes and edges in graph */
-   nopnodes = 1;
-   nvarnodes = nconsvars;
-   nvalnodes = 0;
-   nedges = nconsvars;
-
-   /* create graph */
    rhs = (SCIP_Real) consdata->cardval;
-   SCIP_CALL( SCIPcreateSymgraph(scip, graph, nopnodes, nvarnodes, nvalnodes, nedges) );
 
-   /* add node for rhs */
-   SCIP_CALL( SCIPaddSymgraphRhsnode(scip, *graph, cons, -SCIPinfinity(scip), rhs) );
+   /* add node for constraint */
+   consnodeidx = SCIPaddSymgraphConsnode(scip, graph, cons, -SCIPinfinity(scip), rhs);
 
    /* create nodes and edges for each variable */
    nvars = SCIPgetNVars(scip);
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &vals, nvars) );
 
-   cnt = 1;
    for( i = 0; i < nconsvars; ++i )
    {
       vars[0] = consdata->vars[i];
@@ -3158,26 +3145,21 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphCardinality)
       /* check whether variable is (multi-) aggregated or negated */
       if( nlocvars > 1 || !SCIPisEQ(scip, vals[0], 1.0) || !SCIPisZero(scip, constant) )
       {
-         varrootid = cnt;
-
          /* encode aggregation by a sum-expression */
-         SCIP_CALL( SCIPaddSymgraphOpnode(scip, *graph, sumexpr) );
+         nodeidx = SCIPaddSymgraphOpnode(scip, graph, sumexpr);
 
          /* we do not need to take weights of variables into account;
           * they are only used to sort variables within the constraint */
-         SCIP_CALL( SCIPaddSymgraphEdge(scip, *graph, 0, cnt, FALSE, 0.0) );
-         ++cnt;
+         SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, consnodeidx, nodeidx, FALSE, 0.0) );
 
          /* add nodes and edges for variables in aggregation */
-         SCIP_CALL( SCIPaddSymgraphVarAggegration(scip, *graph, varrootid, &cnt, vars, vals, nlocvars, constant) );
-         assert((cnt == varrootid + nlocvars && SCIPisZero(scip, constant)) || cnt == varrootid + nlocvars + 1);
+         SCIP_CALL( SCIPaddSymgraphVarAggegration(scip, graph, nodeidx, vars, vals, nlocvars, constant) );
       }
       else
       {
-         SCIP_CALL( SCIPaddSymgraphVarnode(scip, *graph, vars[0]) );
+         nodeidx = SCIPgetSymgraphVarnodeidx(scip, graph, vars[0]);
 
-         SCIP_CALL( SCIPaddSymgraphEdge(scip, *graph, 0, cnt, FALSE, 0.0) );
-         ++cnt;
+         SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, consnodeidx, nodeidx, FALSE, 0.0) );
       }
    }
 

@@ -68,7 +68,7 @@
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
-#include "scip/symmetry.h"
+#include "scip/symmetry_graph.h"
 #include "symmetry/struct_symmetry.h"
 #include <ctype.h>
 #include <string.h>
@@ -13343,6 +13343,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphKnapsack)
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
+   assert(graph != NULL);
 
    /* get active variables of the constraint */
    nvars = SCIPgetNVars(scip);
@@ -13360,8 +13361,8 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphKnapsack)
    SCIP_CALL( SCIPgetActiveVariables(scip, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
    rhs = (SCIP_Real) SCIPgetCapacityKnapsack(scip, cons) - constant;
 
-   SCIP_CALL( SCIPcreatePermsymDetectionGraphLinear(scip, graph, vars, vals, nlocvars,
-         -SCIPinfinity(scip), rhs, cons, success) );
+   SCIP_CALL( SCIPextendPermsymDetectionGraphLinear(scip, graph, vars, vals, nlocvars,
+         cons, -SCIPinfinity(scip), rhs, success) );
 
    SCIPfreeBufferArray(scip, &vals);
    SCIPfreeBufferArray(scip, &vars);

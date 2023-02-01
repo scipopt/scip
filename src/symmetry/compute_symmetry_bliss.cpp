@@ -49,6 +49,7 @@
 #include "scip/cons_nonlinear.h"
 #include "scip/cons_linear.h"
 #include "scip/symmetry.h"
+#include "scip/symmetry_graph.h"
 
 using std::vector;
 
@@ -62,23 +63,6 @@ struct BLISS_Data
    int**                 perms;              /**< permutation generators as (nperms x npermvars) matrix */
    int                   nmaxperms;          /**< maximal number of permutations */
    int                   maxgenerators;      /**< maximal number of generators constructed (= 0 if unlimited) */
-};
-
-/** struct for bliss callback */
-struct BLISS_Data2
-{
-   SCIP*                 scip;               /**< SCIP pointer */
-   int                   npermvars;          /**< number of variables for permutations */
-   int                   nperms;             /**< number of permutations */
-   int**                 perms;              /**< permutation generators as (nperms x npermvars) matrix */
-   int                   nmaxperms;          /**< maximal number of permutations */
-   int                   maxgenerators;      /**< maximal number of generators constructed (= 0 if unlimited) */
-   int                   nconss;             /**< number of constraints for which we compute symmetries */
-   int**                 consperms;          /**< constraint permutations as (nperms x nconss) matrix */
-   int*                  considx;            /**< array modeling map from constraint index to corresponding
-                                              *   right-hand side node in bliss graph */
-   SCIP_HASHMAP*         revconsidx;         /**< map from bliss graph node to corresponding
-                                              *   index of constraint */
 };
 
 /* ------------------- map for operator types ------------------- */
@@ -275,86 +259,6 @@ void blisshook(
 
       data->nmaxperms = newsize;
    }
-
-   data->perms[data->nperms++] = p;
-}
-
-/** callback function for bliss */
-static
-void blisshook2(
-   void*                 user_param,         /**< parameter supplied at call to bliss */
-   unsigned int          n,                  /**< size of aut vector */
-   const unsigned int*   aut                 /**< automorphism */
-   )
-{
-   assert( aut != NULL );
-   assert( user_param != NULL );
-
-   BLISS_Data2* data = static_cast<BLISS_Data2*>(user_param);
-   assert( data->scip != NULL );
-   assert( data->npermvars < (int) n );
-   assert( data->maxgenerators >= 0);
-
-   /* make sure we do not generate more that maxgenerators many permutations, if the limit in bliss is not available */
-   if ( data->maxgenerators != 0 && data->nperms >= data->maxgenerators )
-      return;
-
-   /* copy first part of automorphism */
-   bool isIdentity = true;
-   int* p = 0;
-   if ( SCIPallocBlockMemoryArray(data->scip, &p, data->npermvars) != SCIP_OKAY )
-      return;
-
-   for (int j = 0; j < data->npermvars; ++j)
-   {
-      /* convert index of variable-level 0-nodes to variable indices */
-      p[j] = (int) aut[j];
-      if ( p[j] != j )
-         isIdentity = false;
-   }
-
-   /* ignore trivial generators, i.e. generators that only permute the constraints */
-   if ( isIdentity )
-   {
-      SCIPfreeBlockMemoryArray(data->scip, &p, data->npermvars);
-      return;
-   }
-
-   /* check whether we should allocate space for perms */
-   if ( data->nmaxperms <= 0 )
-   {
-      if ( data->maxgenerators == 0 )
-         data->nmaxperms = 100;   /* seems to cover many cases */
-      else
-         data->nmaxperms = data->maxgenerators;
-
-      if ( SCIPallocBlockMemoryArray(data->scip, &data->perms, data->nmaxperms) != SCIP_OKAY )
-         return;
-      if ( SCIPallocBlockMemoryArray(data->scip, &data->consperms, data->nmaxperms) != SCIP_OKAY )
-         return;
-   }
-   else if ( data->nperms >= data->nmaxperms )    /* check whether we need to resize */
-   {
-      int newsize = SCIPcalcMemGrowSize(data->scip, data->nperms + 1);
-      assert( newsize >= data->nperms );
-      assert( data->maxgenerators == 0 );
-
-      if ( SCIPreallocBlockMemoryArray(data->scip, &data->perms, data->nmaxperms, newsize) != SCIP_OKAY )
-         return;
-      if ( SCIPreallocBlockMemoryArray(data->scip, &data->consperms, data->nmaxperms, newsize) != SCIP_OKAY )
-         return;
-
-      data->nmaxperms = newsize;
-   }
-
-   /* store permutation of constraints and variables */
-   if ( SCIPallocBlockMemoryArray(data->scip, &data->consperms[data->nperms], data->nconss) != SCIP_OKAY )
-   {
-      SCIPfreeBlockMemoryArray(data->scip, &data->perms[data->nperms], data->npermvars);
-   }
-
-   for (int c = 0; c < data->nconss; ++c)
-      data->consperms[data->nperms][c] = SCIPhashmapGetImageInt(data->revconsidx, (void*) (long) aut[data->considx[c]]);
 
    data->perms[data->nperms++] = p;
 }
@@ -1623,28 +1527,20 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
 SCIP_RETCODE SYMcomputeSymmetryGenerators2(
    SCIP*                 scip,               /**< SCIP pointer */
    int                   maxgenerators,      /**< maximal number of generators constructed (= 0 if unlimited) */
-   SYM_GRAPH**           graphs,             /**< array of symmetry detection graphs */
-   int                   ngraphs,            /**< number of graphs encoded in graphs */
-   int                   maxnnodesgraph,     /**< maximum number of nodes encoded in a graph */
-   int*                  varcolors,          /**< colors of variable nodes */
-   int                   nvars,              /**< number of active problem variables */
+   SYM_GRAPH*            graph,              /**< symmetry detection graph */
    int*                  nperms,             /**< pointer to store number of permutations */
    int*                  nmaxperms,          /**< pointer to store maximal number of permutations (needed for freeing storage) */
    int***                perms,              /**< pointer to store permutation generators as (nperms x npermvars) matrix */
-   int***                consperms,          /**< pointer to store permutation of constraints as (nperms x npermvars) matrix */
    SCIP_Real*            log10groupsize      /**< pointer to store log10 of size of group */
    )
 {
-   SCIP_HASHMAP* revconsidx;
-   int* nodeidx;
-   int* considx;
    int first;
    int second;
    int nnodes = 0;
    int nedges = 0;
 
    assert( scip != NULL );
-   assert( graphs != NULL );
+   assert( graph != NULL );
    assert( nperms != NULL );
    assert( nmaxperms != NULL );
    assert( perms != NULL );
@@ -1656,19 +1552,17 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators2(
    *perms = NULL;
    *log10groupsize = 0;
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &considx, ngraphs) );
-   SCIP_CALL( SCIPhashmapCreate(&revconsidx, SCIPblkmem(scip), ngraphs) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &nodeidx, maxnnodesgraph) );
 
    /* create bliss graph */
    bliss::Graph G(0);
 
    /* add nodes for variables
     *
-    * variable nodes come first since they will be the same for all constraints */
-   for (int v = 0; v < nvars; ++v)
+    * variable nodes come first to easily extract the variable permutation */
+   int nsymvars = SCIPgetSymgraphNVars(graph);
+   for (int v = 0; v < nsymvars; ++v)
    {
-      const int color = varcolors[v];
+      const int color = SCIPgetSymgraphVarnodeColor(graph, v);
 
 #ifndef NDEBUG
       int node = (int) G.add_vertex((unsigned) color);
@@ -1680,95 +1574,70 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators2(
       ++nnodes;
    }
 
-   /* iterate over graphs and add nodes and edges, identify variable nodes with each other */
-   for (int g = 0; g < ngraphs; ++g)
+   /* add nodes for non-variable nodes */
+   int nsymnodes = SCIPgetSymgraphNNodes(graph);
+   for (int v = 0; v < nsymnodes; ++v)
    {
-      /* add nodes */
-      for (int v = 0; v < SCIPgetSymgraphNnodes(graphs[g]); ++v)
-      {
-         if ( ! SCIPisSymgraphNodeVarnode(graphs[g], v) )
-         {
-            int node;
+      const int color = SCIPgetSymgraphNodeColor(graph, v);
 
-            if ( SCIPisSymgraphNodeRhsnode(graphs[g], v) )
-            {
-               const int color = SCIPgetSymgraphRhsnodeSymcolor(graphs[g]);
-               node = (int) G.add_vertex((unsigned) color);
-            }
-            else
-            {
-               const int color = SCIPgetSymgraphNodeSymcolor(graphs[g], v);
-               node = (int) G.add_vertex((unsigned) color);
-            }
+#ifndef NDEBUG
+      int node = (int) G.add_vertex((unsigned) color);
+      assert( node == nsymvars + v );
+#else
+      (void) G.add_vertex((unsigned) color);
+#endif
 
-            nodeidx[v] = node;
-
-            if ( SCIPisSymgraphNodeRhsnode(graphs[g], v) )
-            {
-               considx[g] = node;
-               SCIP_CALL( SCIPhashmapInsertInt(revconsidx, (void*) (long) node, g) );
-            }
-
-            ++nnodes;
-         }
-         else
-            nodeidx[v] = -1;
-      }
-
-      /* add edges */
-      for (int e = 0; e < SCIPgetSymgraphNedges(graphs[g]); ++e)
-      {
-         first = nodeidx[SCIPgetSymgraphEdgeFirst(graphs[g], e)];
-         second = nodeidx[SCIPgetSymgraphEdgeSecond(graphs[g], e)];
-         assert( first >= 0 || second >= 0 );
-
-         if ( first == -1 )
-         {
-            assert( SCIPisSymgraphNodeVarnode(graphs[g], SCIPgetSymgraphEdgeFirst(graphs[g], e)) );
-            first = SCIPvarGetProbindex(SCIPgetSymgraphVarnodeVar(graphs[g], SCIPgetSymgraphEdgeFirst(graphs[g], e)));
-         }
-         else if ( second == -1 )
-         {
-            assert( SCIPisSymgraphNodeVarnode(graphs[g], SCIPgetSymgraphEdgeSecond(graphs[g], e)) );
-            second = SCIPvarGetProbindex(SCIPgetSymgraphVarnodeVar(graphs[g], SCIPgetSymgraphEdgeSecond(graphs[g], e)));
-         }
-
-         /* possibly split edge if it is colored */
-         if ( SCIPisSymgraphEdgeColored(scip, graphs[g], e) )
-         {
-            const int color = SCIPgetSymgraphEdgeSymcolor(graphs[g], e);
-
-            int inter = G.add_vertex((unsigned) color);
-
-            G.add_edge(first, inter);
-            G.add_edge(second, inter);
-
-            ++nnodes;
-         }
-         else
-            G.add_edge(first, second);
-         ++nedges;
-      }
+      ++nnodes;
    }
 
-   SCIPfreeBufferArray(scip, &nodeidx);
+   /* add edges to bliss graph */
+   int nsymedges = SCIPgetSymgraphNEdges(graph);
+   for (int e = 0; e < nsymedges; ++e)
+   {
+      first = SCIPgetSymgraphEdgeFirst(graph, e);
+      second = SCIPgetSymgraphEdgeSecond(graph, e);
 
+      /* translate symgraph indices into bliss graph indices */
+      if( first < 0 )
+         first = -first - 1;
+      else
+         first += nsymvars;
+      assert(0 <= first && first < nnodes);
+      if( second < 0 )
+         second = -second - 1;
+      else
+         second += nsymvars;
+      assert(0 <= second && second < nnodes);
+
+      /* possibly split edge if it is colored */
+      if ( SCIPisSymgraphEdgeColored(graph, e) )
+      {
+         const int color = SCIPgetSymgraphEdgeColor(graph, e);
+
+         int inter = G.add_vertex((unsigned) color);
+
+         G.add_edge(first, inter);
+         G.add_edge(second, inter);
+
+         ++nnodes;
+         ++nedges;
+      }
+      else
+         G.add_edge(first, second);
+      ++nedges;
+   }
    assert( (int) G.get_nof_vertices() == nnodes );
    SCIPdebugMsg(scip, "Symmetry detection graph has %d nodes and %d edges.\n", nnodes, nedges);
 
    /* compute automorphisms */
    bliss::Stats stats;
-   BLISS_Data2 data;
+   BLISS_Data data;
    data.scip = scip;
-   data.npermvars = nvars;
+   data.npermvars = nsymvars;
    data.nperms = 0;
    data.nmaxperms = 0;
    data.maxgenerators = maxgenerators;
    data.perms = NULL;
-   data.consperms = NULL;
-   data.nconss = ngraphs;
-   data.considx = considx;
-   data.revconsidx = revconsidx;
 
    /* Prefer splitting partition cells corresponding to variables over those corresponding
     * to inequalities. This is because we are only interested in the action
@@ -1785,7 +1654,7 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators2(
 #if BLISS_VERSION_MAJOR >= 1 || BLISS_VERSION_MINOR >= 76
    /* lambda function to have access to data and pass it to the blisshook above */
    auto reportglue = [&](unsigned int n, const unsigned int* aut) {
-      blisshook2((void*)&data, n, aut);
+      blisshook((void*)&data, n, aut);
    };
 
    /* lambda function to have access to stats and terminate the search if maxgenerators are reached */
@@ -1797,7 +1666,7 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators2(
    G.find_automorphisms(stats, reportglue, term);
 #else
    /* start search */
-   G.find_automorphisms(stats, blisshook2, (void*) &data);
+   G.find_automorphisms(stats, blisshook, (void*) &data);
 #endif
 
 
@@ -1809,7 +1678,6 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators2(
    if ( data.nperms > 0 )
    {
       *perms = data.perms;
-      *consperms = data.consperms;
       *nperms = data.nperms;
       *nmaxperms = data.nmaxperms;
    }
@@ -1821,9 +1689,6 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators2(
 
    /* determine log10 of symmetry group size */
    *log10groupsize = (SCIP_Real) log10l(stats.get_group_size_approx());
-
-   SCIPhashmapFree(&revconsidx);
-   SCIPfreeBufferArray(scip, &considx);
 
    return SCIP_OKAY;
 }

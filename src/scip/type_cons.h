@@ -931,11 +931,11 @@ typedef enum SCIP_LinConstype SCIP_LINCONSTYPE;
  *  - cons            : constraint for which the number of variables is wanted
  *
  *  output:
- *  - graph           : pointer to the permutation symmetry detection graph
+ *  - graph           : symmetry detection graph
  *  - success         : pointer to store whether the constraint successfully returned the symmetry detection graph
  */
 #define SCIP_DECL_CONSGETPERMSYMGRAPH(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS* cons, \
-      SYM_GRAPH** graph, SCIP_Bool* success)
+      SYM_GRAPH* graph, SCIP_Bool* success)
 
 #ifdef __cplusplus
 }
