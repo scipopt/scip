@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -539,15 +539,53 @@ void assertScaledBounds(SCIP_Real boundbefore, SCIP_Real boundafter, SCIP_Real o
       /* if finite, check for correct scaling */
       if( scale > 0 )
       {
-         cr_assert_float_eq( boundbefore * scale, boundafter, EPS,
+         cr_assert_float_eq( boundbefore / scale, boundafter, EPS,
          "bound before scaling %.20f, bound after scaling %.20f, scale %.20f\n",
          boundbefore, boundafter, scale );
       }
       else
       {
-         cr_assert_float_eq( boundbefore * scale, oppositeboundafter, EPS,
+         cr_assert_float_eq( boundbefore / scale, oppositeboundafter, EPS,
          "bound before scaling %.20f, bound after scaling %.20f, scale %.20f\n",
          boundbefore, oppositeboundafter, scale );
+      }
+   }
+}
+
+/** Helper method that is used in the scaling tests */
+static
+void assertScaledSides(SCIP_Real sidebefore, SCIP_Real sideafter, SCIP_Real oppositesideafter, SCIP_Real scale)
+{
+   if( SCIPlpiIsInfinity(lpi, sidebefore) || SCIPlpiIsInfinity(lpi, -sidebefore) )
+   {
+      /* if infinite, check for equality */
+      if( scale > 0 )
+      {
+         cr_assert_eq( sidebefore, sideafter,
+         "side before scaling %.20f, side after scaling %.20f, scale %.20f\n",
+         sidebefore, sideafter, scale );
+      }
+      else
+      {
+         cr_assert_eq( -sidebefore, oppositesideafter,
+         "side before scaling %.20f, side after scaling %.20f, scale %.20f\n",
+         sidebefore, oppositesideafter, scale );
+      }
+   }
+   else
+   {
+      /* if finite, check for correct scaling */
+      if( scale > 0 )
+      {
+         cr_assert_float_eq( sidebefore * scale, sideafter, EPS,
+         "side before scaling %.20f, side after scaling %.20f, scale %.20f\n",
+         sidebefore, sideafter, scale );
+      }
+      else
+      {
+         cr_assert_float_eq( sidebefore * scale, oppositesideafter, EPS,
+         "side before scaling %.20f, side after scaling %.20f, scale %.20f\n",
+         sidebefore, oppositesideafter, scale );
       }
    }
 }
@@ -556,6 +594,9 @@ void assertScaledBounds(SCIP_Real boundbefore, SCIP_Real boundafter, SCIP_Real o
 TheoryDataPoints(change, testscalecol) =
 {
    DataPoints(SCIP_Real, 1e10, 1e-10, 1, -1, 2, -2),
+   /* @todo on the current problems we cannot test the effect of column scaling on bounds, because all problems have
+    * bounds zero or infinity; add new problems with finite bounds not zero
+    */
    DataPoints(int, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9),
 };
 
@@ -671,8 +712,8 @@ Theory((SCIP_Real scale, int prob), change, testscalerow)
 
       SCIP_CALL( SCIPlpiGetSides(lpi, row, row, &lhsafter, &rhsafter) );
 
-      assertScaledBounds(lhsbefore, lhsafter, rhsafter, scale);
-      assertScaledBounds(rhsbefore, rhsafter, lhsafter, scale);
+      assertScaledSides(lhsbefore, lhsafter, rhsafter, scale);
+      assertScaledSides(rhsbefore, rhsafter, lhsafter, scale);
    }
 }
 
