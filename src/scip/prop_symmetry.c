@@ -155,8 +155,10 @@
 
 #include <scip/prop_symmetry.h>
 #include <symmetry/compute_symmetry.h>
+#include <scip/event_shadowtree.h>
 #include <scip/symmetry.h>
 #include <scip/symmetry_orbitopal.h>
+#include <scip/symmetry_orbital.h>
 
 #include <string.h>
 
@@ -349,6 +351,7 @@ struct SCIP_PropData
    SCIP_Bool             sstaddcuts;         /**< Should Schreier Sims constraints be added? */
    SCIP_Bool             sstmixedcomponents; /**< Should Schreier Sims constraints be added if a symmetry component contains variables of different types? */
 
+   SCIP_EVENTHDLR*       shadowtreeeventhdlr;/**< pointer to event handler for shadow tree */
    SCIP_ORBITOPALFIXINGDATA* orbitopalfixingdata; /**< container for the orbitopal fixing data */
 };
 
@@ -8403,7 +8406,11 @@ SCIP_RETCODE SCIPincludePropSymmetry(
    }
 
    /* depending functionality */
+   SCIPincludeEventHdlrShadowTree(scip, &propdata->shadowtreeeventhdlr);
+   assert( propdata->shadowtreeeventhdlr != NULL );
+
    SCIPorbitopalFixingInclude(scip, &propdata->orbitopalfixingdata);
+   assert( propdata->orbitopalfixingdata != NULL );
 
    return SCIP_OKAY;
 }

@@ -82,6 +82,7 @@ set(scipsources
     scip/dialog_default.c
     scip/event_globalbnd.c
     scip/event_estim.c
+    scip/event_shadowtree.c
     scip/event_softtimelimit.c
     scip/event_solvingphase.c
     scip/expr_abs.c
@@ -368,6 +369,7 @@ set(scipsources
     scip/stat.c
     scip/symmetry.c
     scip/symmetry_orbitopal.c
+    scip/symmetry_orbital.c
     scip/syncstore.c
     scip/table.c
     scip/tree.c
@@ -546,6 +548,7 @@ set(scipheaders
     scip/event_globalbnd.h
     scip/event.h
     scip/event_estim.h
+    scip/event_shadowtree.h
     scip/event_softtimelimit.h
     scip/event_solvingphase.h
     scip/expr.h
@@ -900,6 +903,7 @@ set(scipheaders
     scip/struct_visual.h
     scip/symmetry.h
     scip/symmetry_orbitopal.h
+    scip/symmetry_orbital.h
     scip/syncstore.h
     scip/table_default.h
     scip/table.h
