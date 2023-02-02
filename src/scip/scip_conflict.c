@@ -781,65 +781,12 @@ SCIP_RETCODE SCIPanalyzeConflictCons(
    {
       SCIP_ROW* conflictrow;
       SCIP_Bool conflictlearned;
-      conflictrow = SCIPconsCreateRow(scip, cons);
 
+      conflictrow = SCIPconsCreateRow(scip, cons);
       conflictlearned = FALSE;
 
-      if(conflictrow == NULL && SCIPsetGetStage(scip->set) == SCIP_STAGE_SOLVING)
-      {
-         SCIP_Bool isbinary;
-         SCIP_Real lhs;
-
-         isbinary = TRUE;
-         lhs = 1.0;
-
-         /* given the set of bound changes that renders infeasibility
-            create a non-good cut as initial conflict */
-         /** E.g. if x = 1, y = 1, and z = 0 leads to infeasibility then the initial conflict
-          *  constraint is (1 - x) + (1 - y) + z >= 1
-          */
-         for(int i = 0; i < SCIPpqueueNElems(scip->conflict->resbdchgqueue); i++)
-         {
-            SCIP_BDCHGINFO* bdchginfo;
-            bdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueElems(scip->conflict->resbdchgqueue)[i]);
-
-            if( !SCIPvarIsBinary(SCIPbdchginfoGetVar(bdchginfo)) )
-            {
-               isbinary = FALSE;
-               break;
-            }
-            if (SCIPbdchginfoGetNewbound(bdchginfo) >= 0.5)
-               lhs--;
-         }
-
-         if( isbinary )
-         {
-
-            SCIP_CALL( SCIProwCreate(&conflictrow, scip->mem->probmem, scip->set, scip->stat, "temprow", 0, NULL, NULL,
-                        lhs, SCIPsetInfinity(scip->set), SCIP_ROWORIGINTYPE_UNSPEC, NULL, FALSE, FALSE, TRUE) );
-
-            for(int i = 0; i < SCIPpqueueNElems(scip->conflict->resbdchgqueue); i++)
-            {
-               SCIP_BDCHGINFO* bdchginfo;
-               SCIP_VAR* var;
-               SCIP_Real coef;
-
-               bdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueElems(scip->conflict->resbdchgqueue)[i]);
-               coef = SCIPbdchginfoGetNewbound(bdchginfo) > 0.5 ? -1.0 : 1.0;
-               var = SCIPbdchginfoGetVar(bdchginfo);
-               SCIP_CALL( SCIPvarAddToRow(var, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,
-               scip->transprob, scip->lp, conflictrow, coef) );
-            }
-            SCIP_CALL( SCIPconflictAnalyzeResolution(scip->conflict, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
-                        scip->origprob, scip->tree, scip->reopt, scip->lp, scip->cliquetable, conflictrow, 0, FALSE, FALSE, &   conflictlearned) );
-            SCIP_CALL( SCIProwRelease(&conflictrow, scip->mem->probmem, scip->set, scip->lp) );
-            assert(!conflictrow);
-         }
-
-      }
-      else
-         SCIP_CALL( SCIPconflictAnalyzeResolution(scip->conflict, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
-                  scip->origprob, scip->tree, scip->reopt, scip->lp, scip->cliquetable, conflictrow, 0, FALSE, FALSE, &   conflictlearned) );
+      SCIP_CALL( SCIPconflictAnalyzeResolution(scip->conflict, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
+                  scip->origprob, scip->tree, scip->reopt, scip->lp, scip->cliquetable, conflictrow, 0, FALSE, FALSE, &conflictlearned) );
 
       if( !(scip->set->conf_favorresolution) || !(conflictlearned) )
       {
