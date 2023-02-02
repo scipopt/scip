@@ -38,12 +38,66 @@
 #include "scip/type_retcode.h"
 #include "scip/type_scip.h"
 #include "scip/type_var.h"
+#include "scip/type_event.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+/*
+ * Data structures
+ */
 
+/** data for dynamic orbital fixing propagator */
+struct SCIP_OrbitalFixingData;
+typedef struct SCIP_OrbitalFixingData SCIP_ORBITALFIXINGDATA;
+
+/*
+ * Interface methods
+ */
+
+/** propagate orbital fixing */
+SCIP_RETCODE SCIPorbitalFixingPropagate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ORBITALFIXINGDATA* orbifixdata,      /**< orbitopal fixing data structure */
+   SCIP_Bool*            infeasible,         /**< whether infeasibility is found */
+   int*                  nred                /**< number of domain reductions */
+   );
+
+
+/** adds component for orbital fixing */
+SCIP_RETCODE SCIPorbitalFixingAddComponent(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ORBITALFIXINGDATA* orbifixdata,      /**< orbital fixing data structure */
+   SCIP_VAR**            permvars,           /**< variable array of the permutation */
+   int                   npermvars,          /**< number of variables in that array */
+   int**                 perms,              /**< permutations in the component */
+   int                   nperms              /**< number of permutations in the component */
+   );
+
+
+/** resets orbital fixing data structure (clears all components) */
+SCIP_RETCODE SCIPorbitalFixingReset(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ORBITALFIXINGDATA* orbifixdata       /**< orbital fixing data structure */
+   );
+
+
+/** free orbital fixing data */
+SCIP_RETCODE SCIPorbitalFixingFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ORBITALFIXINGDATA** orbifixdata      /**< orbital fixing data structure */
+   );
+
+
+/** initializes structures needed for orbital fixing
+ * This is only done exactly once.
+ */
+SCIP_RETCODE SCIPorbitalFixingInclude(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ORBITALFIXINGDATA** orbifixdata,     /**< pointer to orbital fixing data structure to populate */
+   SCIP_EVENTHDLR*       shadowtreeeventhdlr /**< pointer to the shadow tree eventhdlr */
+   );
 
 #ifdef __cplusplus
 }

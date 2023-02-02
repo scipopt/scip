@@ -353,6 +353,7 @@ struct SCIP_PropData
 
    SCIP_EVENTHDLR*       shadowtreeeventhdlr;/**< pointer to event handler for shadow tree */
    SCIP_ORBITOPALFIXINGDATA* orbitopalfixingdata; /**< container for the orbitopal fixing data */
+   SCIP_ORBITALFIXINGDATA* orbitalfixingdata;/**< container for orbital fixing data */
 };
 
 /** conflict data structure for SST cuts */
@@ -8120,6 +8121,9 @@ SCIP_DECL_PROPFREE(propFreeSymmetry)
    propdata = SCIPpropGetData(prop);
    assert( propdata != NULL );
 
+   assert( propdata->orbitalfixingdata != NULL );
+   SCIP_CALL( SCIPorbitalFixingFree(scip, &propdata->orbitalfixingdata) );
+
    assert( propdata->orbitopalfixingdata != NULL );
    SCIP_CALL( SCIPorbitopalFixingFree(scip, &propdata->orbitopalfixingdata) );
 
@@ -8406,11 +8410,14 @@ SCIP_RETCODE SCIPincludePropSymmetry(
    }
 
    /* depending functionality */
-   SCIPincludeEventHdlrShadowTree(scip, &propdata->shadowtreeeventhdlr);
+   SCIP_CALL( SCIPincludeEventHdlrShadowTree(scip, &propdata->shadowtreeeventhdlr) );
    assert( propdata->shadowtreeeventhdlr != NULL );
 
-   SCIPorbitopalFixingInclude(scip, &propdata->orbitopalfixingdata);
+   SCIP_CALL( SCIPorbitopalFixingInclude(scip, &propdata->orbitopalfixingdata) );
    assert( propdata->orbitopalfixingdata != NULL );
+
+   SCIP_CALL( SCIPorbitalFixingInclude(scip, &propdata->orbitalfixingdata, propdata->shadowtreeeventhdlr) );
+   assert( propdata->orbitalfixingdata != NULL );
 
    return SCIP_OKAY;
 }

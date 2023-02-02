@@ -2229,7 +2229,7 @@ SCIP_RETCODE propagateOrbitope(
 
 
 /*
- * constraint specific interface methods
+ * Interface methods
  */
 
 /** propagates orbitopal fixing */
