@@ -694,6 +694,71 @@ SCIP_Bool bdchginfoIsResolvable(
    return FALSE;
 }
 
+/** returns if the we can extract the reason bound changed by reverse propagation
+ *  todo at the moment not all constraints/propagators are supported
+ */
+static
+SCIP_Bool reasonIsLinearizable(
+   SCIP_BDCHGINFO*       bdchginfo           /**< bound change to check */
+   )
+{
+   SCIP_CONSHDLR *conshdlr;
+   SCIP_BOUNDCHGTYPE bdchgtype;
+   const char* conshdlrname;
+
+   bdchgtype = SCIPbdchginfoGetChgtype(bdchginfo);
+   if (bdchgtype == SCIP_BOUNDCHGTYPE_BRANCHING)
+      return FALSE;
+   else if (bdchgtype == SCIP_BOUNDCHGTYPE_PROPINFER)
+   {
+      /* todo also other propagators can be resolved */
+      if (SCIPbdchginfoGetInferProp(bdchginfo) == NULL)
+         return FALSE;
+      else if( strcmp(SCIPpropGetName(SCIPbdchginfoGetInferProp(bdchginfo)), "pseudoobj") == 0 )
+         return TRUE;
+      else
+         return FALSE;
+   }
+   assert(bdchgtype == SCIP_BOUNDCHGTYPE_CONSINFER);
+   conshdlr = SCIPconsGetHdlr(SCIPbdchginfoGetInferCons(bdchginfo));
+   conshdlrname = SCIPconshdlrGetName(conshdlr);
+
+   if( strcmp(conshdlrname, "linear") == 0 )
+   {
+      return TRUE;
+   }
+   else if( strcmp(conshdlrname, "setppc") == 0 )
+   {
+      return TRUE;
+   }
+   else if( strcmp(conshdlrname, "logicor") == 0 )
+   {
+      return TRUE;
+   }
+   else if( strcmp(conshdlrname, "knapsack") == 0 )
+   {
+      return TRUE;
+   }
+   else if( strcmp(conshdlrname, "varbound") == 0 )
+   {
+      /* todo the problem here are the relaxed bounds */
+      return FALSE;
+   }
+   else if( strcmp(conshdlrname, "orbisack") == 0 )
+   {
+      return TRUE;
+   }
+   else if( strcmp(conshdlrname, "orbitope") == 0 )
+   {
+      return TRUE;
+   }
+   else if( strcmp(conshdlrname, "and") == 0 )
+   {
+      return TRUE;
+   }
+   return FALSE;
+}
+
 /** returns whether there exists a resolvable bound change or not */
 static
 SCIP_Bool existsResolvablebdchginfo(
@@ -2910,6 +2975,12 @@ SCIP_RETCODE getClauseReasonSet(
 )
 {
 
+   /* if the current bound change is on a non-binary variable then we cannot find a linear reason */
+   if( !SCIPvarIsBinary(SCIPbdchginfoGetVar(currbdchginfo)) || !reasonIsLinearizable(currbdchginfo))
+   {
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
    /* make sure that the separate bound change queue is empty */
    if (SCIPpqueueNElems(conflict->separatebdchgqueue) != 0)
    {
@@ -3016,6 +3087,7 @@ SCIP_RETCODE getReasonRow(
 {
    assert(success !=  NULL);
 
+   *success = FALSE;
    if (bdchginfoIsResolvable(currbdchginfo) && SCIPbdchginfoGetChgtype(currbdchginfo) == SCIP_BOUNDCHGTYPE_CONSINFER)
    {
          SCIP_CONS* reasoncon;
@@ -3026,33 +3098,29 @@ SCIP_RETCODE getReasonRow(
          if(!SCIPconsIsGlobal(reasoncon))
          {
             SCIPsetDebugMsg(set, "Reason constraint is not global \n");
-            *success = FALSE;
             return SCIP_OKAY;
          }
 
-         *success = TRUE;
          /* get the corresponding reason row */
          reasonrow = SCIPconsCreateRow(set->scip, reasoncon);
 
-         /* in case of orbitope/orbisack constaints we construct a linearized clause as reason */
-         if (reasonrow == NULL)
+         /* in case of orbitope-, orbisack-, and-constaints we construct a linearized clause as reason */
+         if( reasonrow == NULL )
          {
             assert(SCIPsetGetStage(set) != SCIP_STAGE_SOLVING ||
                    strcmp(SCIPconshdlrGetName(reasoncon->conshdlr), "orbisack") == 0 ||
                    strcmp(SCIPconshdlrGetName(reasoncon->conshdlr), "orbitope") == 0 ||
                    strcmp(SCIPconshdlrGetName(reasoncon->conshdlr), "and") == 0);
-            SCIP_CALL( getClauseReasonSet(conflict, blkmem,  set, currbdchginfo, SCIPbdchginfoGetRelaxedBound(currbdchginfo), validdepth, success) );
-            if (*success)
-            {
-               assert(SCIPsetIsZero(set, getSlack(set, prob, conflict->reasonset, SCIPbdchginfoGetIdx(currbdchginfo), fixbounds, fixinds)));
-               conflict->reasonset->slack = 0.0;
-               return SCIP_OKAY;
-            }
-            else
-            {
-               /* @todo some component may be the reason */
-               return SCIP_OKAY;
-            }
+
+               SCIP_CALL( getClauseReasonSet(conflict, blkmem,  set, currbdchginfo, SCIPbdchginfoGetRelaxedBound(currbdchginfo), validdepth, success) );
+               if (*success)
+               {
+                  assert(SCIPsetIsZero(set, getSlack(set, prob, conflict->reasonset, SCIPbdchginfoGetIdx(currbdchginfo), fixbounds, fixinds)));
+                  conflict->reasonset->slack = 0.0;
+                  return SCIP_OKAY;
+               }
+               else
+                  return SCIP_OKAY;
          }
 
          /* get the resolution set of the reason row */
@@ -3070,8 +3138,11 @@ SCIP_RETCODE getReasonRow(
          {
             /* to be able to continue we construct a linearized clause as reason */
             SCIP_CALL( getClauseReasonSet(conflict, blkmem, set, currbdchginfo, SCIPbdchginfoGetRelaxedBound(currbdchginfo), validdepth, success) );
-            assert(SCIPsetIsZero(set, getSlack(set, prob, conflict->reasonset, SCIPbdchginfoGetIdx(currbdchginfo), fixbounds, fixinds)));
-            conflict->reasonset->slack = 0.0;
+            if (*success)
+            {
+               assert(SCIPsetIsZero(set, getSlack(set, prob, conflict->reasonset, SCIPbdchginfoGetIdx(currbdchginfo), fixbounds, fixinds)));
+               conflict->reasonset->slack = 0.0;
+            }
             return SCIP_OKAY;
 
          }
@@ -3091,8 +3162,11 @@ SCIP_RETCODE getReasonRow(
                if (strcmp(SCIPconshdlrGetName(reasoncon->conshdlr), "knapsack") == 0)
                {
                   SCIP_CALL( getClauseReasonSet(conflict, blkmem, set, currbdchginfo, SCIPbdchginfoGetRelaxedBound(currbdchginfo), validdepth, success) );
-                  assert(SCIPsetIsZero(set, getSlack(set, prob, conflict->reasonset, SCIPbdchginfoGetIdx(currbdchginfo), fixbounds, fixinds)));
-                  conflict->reasonset->slack = 0.0;
+                  if (*success)
+                  {
+                     assert(SCIPsetIsZero(set, getSlack(set, prob, conflict->reasonset, SCIPbdchginfoGetIdx(currbdchginfo), fixbounds, fixinds)));
+                     conflict->reasonset->slack = 0.0;
+                  }
                   return SCIP_OKAY;
                }
             }
@@ -3102,8 +3176,11 @@ SCIP_RETCODE getReasonRow(
                if (strcmp(SCIPconshdlrGetName(reasoncon->conshdlr), "knapsack") == 0)
                {
                   SCIP_CALL( getClauseReasonSet(conflict, blkmem, set, currbdchginfo, SCIPbdchginfoGetRelaxedBound(currbdchginfo), validdepth, success) );
-                  assert(SCIPsetIsZero(set, getSlack(set, prob, conflict->reasonset, SCIPbdchginfoGetIdx(currbdchginfo), fixbounds, fixinds)));
-                  conflict->reasonset->slack = 0.0;
+                  if (*success)
+                  {
+                     assert(SCIPsetIsZero(set, getSlack(set, prob, conflict->reasonset, SCIPbdchginfoGetIdx(currbdchginfo), fixbounds, fixinds)));
+                     conflict->reasonset->slack = 0.0;
+                  }
                   return SCIP_OKAY;
                }
             }
@@ -3116,13 +3193,8 @@ SCIP_RETCODE getReasonRow(
       {
          assert(SCIPsetIsZero(set, getSlack(set, prob, conflict->reasonset, SCIPbdchginfoGetIdx(currbdchginfo), fixbounds, fixinds)));
          conflict->reasonset->slack = 0.0;
-         return SCIP_OKAY;
       }
-      else
-      {
-         /* @todo some component may be the reason */
          return SCIP_OKAY;
-      }
 
    }
    else

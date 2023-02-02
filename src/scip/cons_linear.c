@@ -5082,7 +5082,7 @@ SCIP_RETCODE addConflictBounds(
       else
       {
          /* lhs is reason and coeff is positive, or rhs is reason and coeff is negative -> upper bound is responsible */
-         SCIP_CALL( SCIPaddConflictUb(scip, vars[i], bdchgidx,separatequeue) );
+         SCIP_CALL( SCIPaddConflictUb(scip, vars[i], bdchgidx, separatequeue) );
       }
    }
 
