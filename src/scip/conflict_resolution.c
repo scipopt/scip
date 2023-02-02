@@ -25,7 +25,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 // #define SCIP_STATISTIC
-// #define SCIP_DEBUG
+#define SCIP_DEBUG
 
 #include "lpi/lpi.h"
 #include "scip/conflict_resolution.h"
@@ -3037,7 +3037,8 @@ SCIP_RETCODE getReasonRow(
          /* in case of orbitope/orbisack constaints we construct a linearized clause as reason */
          if (reasonrow == NULL)
          {
-            assert(strcmp(SCIPconshdlrGetName(reasoncon->conshdlr), "orbisack") == 0 ||
+            assert(SCIPsetGetStage(set) != SCIP_STAGE_SOLVING ||
+                   strcmp(SCIPconshdlrGetName(reasoncon->conshdlr), "orbisack") == 0 ||
                    strcmp(SCIPconshdlrGetName(reasoncon->conshdlr), "orbitope") == 0 ||
                    strcmp(SCIPconshdlrGetName(reasoncon->conshdlr), "and") == 0);
             SCIP_CALL( getClauseReasonSet(conflict, blkmem,  set, currbdchginfo, SCIPbdchginfoGetRelaxedBound(currbdchginfo), validdepth, success) );
@@ -3215,23 +3216,8 @@ SCIP_RETCODE conflictAnalyzeResolution(
    if( validdepth > maxvaliddepth )
       return SCIP_OKAY;
 
-   /* if no row exists conflict analysis is not applicable */
-   if (initialconflictrow == NULL)
-   {
-      SCIPsetDebugMsg(set, "Conflict analysis not applicable since no row is available \n");
-      return SCIP_OKAY;
-   }
-
    /* calculate the maximal size of each accepted conflict set */
    maxsize = (int) (set->conf_maxvarsfracres * transprob->nvars);
-   if( SCIProwGetNNonz(initialconflictrow) > maxsize )
-   {
-      SCIPsetDebugMsg(set, "Number of nonzeros in conflict is larger than maxsize %d > %d\n",
-                      SCIProwGetNNonz(initialconflictrow), maxsize);
-      return SCIP_OKAY;
-   }
-
-   SCIPsetDebugMsg(set, "Initial conflict Row: %s \n", SCIProwGetName(initialconflictrow));
 
    /* last bound change that led to infeasibility */
    bdchginfo = conflictFirstCand(conflict);
@@ -3268,46 +3254,60 @@ SCIP_RETCODE conflictAnalyzeResolution(
    /* the valid depth is always 0 (global case) */
    conflictresolutionset->validdepth = validdepth;
 
-   /* get the resolution set of the conflict row */
-   SCIP_CALL( conflictResolutionsetFromRow(set, blkmem, initialconflictrow, conflictresolutionset, bdchginfo) );
-   SCIP_CALL( conflictResolutionsetFromRow(set, blkmem, initialconflictrow, prevconflictresolutionset, bdchginfo) );
-   SCIP_CALL( conflictResolutionsetFromRow(set, blkmem, initialconflictrow, resolvedresolutionset, bdchginfo) );
-
-   SCIPdebug(resolutionsetPrintRow(conflictresolutionset, set, transprob, 0));
-
-   /* compute the slack */
-   conflictresolutionset->slack = getSlack(set, transprob, conflictresolutionset, bdchgidx, NULL, NULL);
-
-   /* the slack should be negative */
-   /* todo in the binary case we could still continue with conflict analysis by
-      using a clause from the current bound change and the ones in the queue */
-   if ( SCIPsetIsGE(set, conflictresolutionset->slack, 0.0) )
+   if (initialconflictrow != NULL)
    {
-      /** The only cases where this may not be true is if the conflict is found:
-       *  - by a negated clique in the knapsack constraint handler
-       *  - by propagating a ranged row
-       */
+      if( SCIProwGetNNonz(initialconflictrow) > maxsize )
+      {
+         SCIPsetDebugMsg(set, "Number of nonzeros in conflict is larger than maxsize %d > %d\n",
+                        SCIProwGetNNonz(initialconflictrow), maxsize);
+         return SCIP_OKAY;
+      }
+      SCIPsetDebugMsg(set, "Initial conflict Row: %s \n", SCIProwGetName(initialconflictrow));
+      /* get the resolution set of the conflict row */
+      SCIP_CALL( conflictResolutionsetFromRow(set, blkmem, initialconflictrow, conflictresolutionset, bdchginfo) );
+
+      /* compute the slack */
+      conflictresolutionset->slack = getSlack(set, transprob, conflictresolutionset, bdchgidx, NULL, NULL);
+
+   }
+
+   /** if no row exists create the resolution set (if possible) from the bound changes that lead to infeasibility
+    * Moreover the slack should be negative. If not (for a good reason) create again the resolution set
+    * (if possible) from the bound changes.
+    * The only cases where this may not be true is if the conflict is found:
+    *  - by a negated clique in the knapsack constraint handler
+    *  - by propagating a ranged row
+    */
+   if ( initialconflictrow == NULL || SCIPsetIsGE(set, conflictresolutionset->slack, 0.0) )
+   {
+
       SCIP_Bool success;
       SCIP_CONSHDLR* conshdlr;
       SCIPsetDebugMsg(set, "Slack of conflict constraint is not negative \n");
 
       assert(!infeasibleLP && !pseudoobj);
+      if (initialconflictrow != NULL)
+      {
+         conshdlr = SCIProwGetOriginConshdlr(initialconflictrow);
+         SCIPsetDebugMsg(set, "%s",SCIPconshdlrGetName(conshdlr));
+         /* relaxed assertion */
+         assert(strcmp(SCIPconshdlrGetName(conshdlr), "knapsack") == 0 || strcmp(SCIPconshdlrGetName(conshdlr), "linear") == 0);
+      }
 
-      conshdlr = SCIProwGetOriginConshdlr(initialconflictrow);
-      SCIPsetDebugMsg(set, "%s",SCIPconshdlrGetName(conshdlr));
-      /* relaxed assertion */
-      assert(strcmp(SCIPconshdlrGetName(conshdlr), "knapsack") == 0 || strcmp(SCIPconshdlrGetName(conshdlr), "linear") == 0);
       getClauseConflictSet(conflict, blkmem, set, bdchginfo, &success);
-
       if (!success)
       {
          SCIPsetDebugMsg(set, "Initial conflict could not be retrieved \n");
-         conflictresolutionset->slack = -1.0;
-         assert( getSlack(set, transprob, conflictresolutionset, bdchgidx, NULL, NULL) == -1);
-
          return SCIP_OKAY;
       }
+      conflictresolutionset->slack = -1.0;
+      assert( getSlack(set, transprob, conflictresolutionset, bdchgidx, NULL, NULL) == -1);
    }
+
+   SCIP_CALL( resolutionsetReplace(prevconflictresolutionset, blkmem, conflictresolutionset) );
+   SCIP_CALL( resolutionsetReplace(resolvedresolutionset, blkmem, conflictresolutionset) );
+
+   SCIPdebug(resolutionsetPrintRow(conflictresolutionset, set, transprob, 0));
 
    /* Apply coefficient tightening to the conflict constraint should never hurt */
    SCIP_CALL( tightenCoefLhs(set, transprob, FALSE, conflictresolutionset->vals, &conflictresolutionset->lhs,
@@ -3350,8 +3350,6 @@ SCIP_RETCODE conflictAnalyzeResolution(
    SCIPstatisticPrintf("ConflictSTAT: %d %d %f %f\n", nressteps, resolutionsetGetNNzs(conflictresolutionset),
                                                       conflictresolutionset->coefquotient, conflictresolutionset->slack);
 
-   SCIP_CALL( resolutionsetReplace(prevconflictresolutionset, blkmem, conflictresolutionset) );
-   SCIP_CALL( resolutionsetReplace(resolvedresolutionset, blkmem, conflictresolutionset) );
 
    /** main loop: All-FUIP RESOLUTION
     * --------------------------------

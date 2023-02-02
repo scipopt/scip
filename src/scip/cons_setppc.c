@@ -8511,7 +8511,7 @@ SCIP_DECL_CONSRESPROP(consRespropSetppc)
       if( inferinfo >= 0 )
       {
          assert(SCIPgetVarLbAtIndex(scip, consdata->vars[inferinfo], bdchgidx, FALSE) > 0.5);
-         SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[inferinfo], FALSE) );
+         SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[inferinfo], separatequeue) );
       }
       else
       {
@@ -8519,7 +8519,7 @@ SCIP_DECL_CONSRESPROP(consRespropSetppc)
          {
             if( SCIPgetVarLbAtIndex(scip, consdata->vars[v], bdchgidx, FALSE) > 0.5 )
             {
-               SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[v], FALSE) );
+               SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[v], separatequeue) );
                break;
             }
          }
