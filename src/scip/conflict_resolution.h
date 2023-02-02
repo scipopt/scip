@@ -80,6 +80,11 @@ SCIP_Longint SCIPconflictGetNResCalls(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
+/** gets number of calls that resolution conflict analysis stopped for an unknown reason*/
+SCIP_Longint SCIPconflictGetNResUnkTerm(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
 /* create resolution constraints out of resolution sets */
 SCIP_RETCODE SCIPconflictFlushResolutionSets(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
