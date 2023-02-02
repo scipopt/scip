@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -693,7 +693,7 @@ SCIP_RETCODE SCIPextendSubOrbitope(
             ++(*nusedelems)[perm[idx1]];
 
             /* if an element appears too often in the orbitope matrix */
-            if ( (*nusedelems)[idx1] > 2 || (*nusedelems)[perm[idx1]] > 2 )
+            if ( (*nusedelems)[idx1] + (*nusedelems)[perm[idx1]] > 3 )
             {
                *infeasible = TRUE;
                break;
@@ -716,7 +716,7 @@ SCIP_RETCODE SCIPextendSubOrbitope(
             ++(*nusedelems)[perm[idx2]];
 
             /* if an element appears too often in the orbitope matrix */
-            if ( (*nusedelems)[idx2] > 2 || (*nusedelems)[perm[idx2]] > 2 )
+            if ( (*nusedelems)[idx2] + (*nusedelems)[perm[idx2]] > 3 )
             {
                *infeasible = TRUE;
                break;
@@ -743,7 +743,7 @@ SCIP_RETCODE SCIPextendSubOrbitope(
             ++(*nusedelems)[perm[idx1]];
 
             /* if an element appears to often in the orbitope matrix */
-            if ( (*nusedelems)[idx1] > 2 || (*nusedelems)[perm[idx1]] > 2 )
+            if ( (*nusedelems)[idx1] + (*nusedelems)[perm[idx1]] > 3 )
             {
                *infeasible = TRUE;
                break;
