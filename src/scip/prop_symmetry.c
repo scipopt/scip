@@ -7025,6 +7025,14 @@ SCIP_RETCODE tryAddSymmetryHandlingConssDynamic(
       }
       else
       {
+         /* handle component permutations with orbital fixing */
+         if ( (propdata->usesymmetry & SYM_HANDLETYPE_ORBITALFIXING) != 0 )
+         {
+            SCIP_CALL( SCIPorbitalFixingAddComponent(scip, propdata->orbitalfixingdata, 
+               propdata->permvars, propdata->npermvars, componentperms, componentsize) );
+         }
+
+         /* handle component permutations with the dynamic symresack propagator */
          /* @todo */
       }
 
@@ -7997,6 +8005,14 @@ SCIP_DECL_PROPEXEC(propExecSymmetry)
 
    /* apply orbitopal fixing */
    SCIP_CALL( SCIPorbitopalFixingPropagate(scip, propdata->orbitopalfixingdata, &infeasible, &nred) );
+   if ( infeasible )
+   {
+      *result = SCIP_CUTOFF;
+      return SCIP_OKAY;
+   }
+
+   /* apply orbital fixing */
+   SCIP_CALL( SCIPorbitalFixingPropagate(scip, propdata->orbitalfixingdata, &infeasible, &nred) );
    if ( infeasible )
    {
       *result = SCIP_CUTOFF;
