@@ -1399,7 +1399,7 @@ SCIP_RETCODE orbitalFixingDynamicApplyOrbitalFixingPropagations(
 static
 SCIP_RETCODE orbitalFixingPropagateComponent(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ORBITALFIXINGDATA* orbifixdata,      /**< orbitopal fixing data structure */
+   SCIP_ORBITALFIXINGDATA* orbifixdata,      /**< orbital fixing data structure */
    OFDATA*               ofdata,             /**< orbital fixing component data */
    SCIP_SHADOWTREE*      shadowtree,         /**< pointer to shadow tree */
    SCIP_Bool*            infeasible,         /**< whether infeasibility is found */
@@ -1604,7 +1604,7 @@ SCIP_RETCODE freeComponent(
 /** propagate orbital fixing */
 SCIP_RETCODE SCIPorbitalFixingPropagate(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ORBITALFIXINGDATA* orbifixdata,      /**< orbitopal fixing data structure */
+   SCIP_ORBITALFIXINGDATA* orbifixdata,      /**< orbital fixing data structure */
    SCIP_Bool*            infeasible,         /**< whether infeasibility is found */
    int*                  nred                /**< number of domain reductions */
    )
@@ -1671,7 +1671,6 @@ SCIP_RETCODE SCIPorbitalFixingAddComponent(
    /* dynamic symmetry reductions cannot be performed on original problem */
    assert( SCIPisTransformed(scip) );
 
-   /* create constraint data */
    SCIP_CALL( addComponent(scip, orbifixdata, permvars, npermvars, perms, nperms) );
 
    return SCIP_OKAY;
