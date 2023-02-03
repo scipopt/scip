@@ -4369,9 +4369,9 @@ SCIP_RETCODE SCIPnodeFocus(
     */
    treeFindSwitchForks(tree, *node, &fork, &lpfork, &lpstatefork, &subroot, cutoff);
    SCIPsetDebugMsg(set, "focus node: focusnodedepth=%d, forkdepth=%d, lpforkdepth=%d, lpstateforkdepth=%d, subrootdepth=%d, cutoff=%u\n",
-      *node != NULL ? (*node)->depth : -1, fork != NULL ? fork->depth : -1, /*lint !e705 */
-      lpfork != NULL ? lpfork->depth : -1, lpstatefork != NULL ? lpstatefork->depth : -1, /*lint !e705 */
-      subroot != NULL ? subroot->depth : -1, *cutoff); /*lint !e705 */
+      *node != NULL ? (int)((*node)->depth) : -1, fork != NULL ? (int)(fork->depth) : -1, /*lint !e705 */
+      lpfork != NULL ? (int)(lpfork->depth) : -1, lpstatefork != NULL ? (int)(lpstatefork->depth) : -1, /*lint !e705 */
+      subroot != NULL ? (int)(subroot->depth) : -1, *cutoff); /*lint !e705 */
 
    /* free the new node, if it is located in a cut off subtree */
    if( *cutoff )
