@@ -193,6 +193,7 @@ Fixed bugs
 - orbitope detection: refine computation of overlap structure and fixed bug in finding orbitope generators
 - ensure that winner is always determined in concurrent mode
 - when a row with invalid index range is added to the global cutpool, update the indices instead of failing with an assert
+- update of watched literals in cons_xor.c and ensure that fixed variables are counted in propacateCons()
 
 Miscellaneous
 -------------
