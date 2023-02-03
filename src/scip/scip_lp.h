@@ -1170,6 +1170,9 @@ SCIP_RETCODE SCIPflushRowExtensions(
  *        creating the column, changes the solution value (variable than has status SCIP_VARSTATUS_COLUMN, and the
  *        initialization sets the lp solution value) to 0.0. (This leads to the conclusion that, if a constraint was
  *        violated, the linear relaxation might not be violated anymore.)
+ *
+ *  @note When several variables are added to a row with the use of this function, performance can be improved by
+ *        calling SCIPcacheRowExtensions() before these additions and SCIPflushRowExtensions() after.
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPaddVarToRow(

@@ -315,7 +315,7 @@ TPIOPTIONS	+=	tny
 ifeq ($(TPI),tny)
 TPILIBOBJ	=	tpi/tpi_tnycthrd.o \
 			tinycthread/tinycthread.o
-FLAGS		+=	-DTPI_TNYC
+FLAGS		+=	-DTPI_TNY
 endif
 
 TPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(TPILIBOBJ:.o=.c))
