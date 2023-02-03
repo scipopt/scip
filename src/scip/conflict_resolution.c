@@ -121,6 +121,8 @@ SCIP_RETCODE resolutionsetCopy(
    (*targetresolutionset)->conflictdepth = sourceresolutionset->conflictdepth;
    (*targetresolutionset)->repropdepth = sourceresolutionset->repropdepth;
    (*targetresolutionset)->conflicttype = sourceresolutionset->conflicttype;
+   (*targetresolutionset)->usescutoffbound = sourceresolutionset->usescutoffbound;
+   (*targetresolutionset)->isbinary = sourceresolutionset->isbinary;
 
    return SCIP_OKAY;
 }
@@ -164,6 +166,8 @@ SCIP_RETCODE resolutionsetReplace(
    targetresolutionset->conflictdepth = sourceresolutionset->conflictdepth;
    targetresolutionset->repropdepth = sourceresolutionset->repropdepth;
    targetresolutionset->conflicttype = sourceresolutionset->conflicttype;
+   targetresolutionset->usescutoffbound = sourceresolutionset->usescutoffbound;
+   targetresolutionset->isbinary = sourceresolutionset->isbinary;
 
    return SCIP_OKAY;
 }
@@ -339,7 +343,7 @@ SCIP_RETCODE tightenCoefLhs(
          SCIP_Real newcoef = minact - (*rowlhs);
          SCIP_Real ub = localbounds ? SCIPvarGetUbLocal(vars[rowinds[i]]) : SCIPvarGetUbGlobal(vars[rowinds[i]]);
 
-         assert(SCIPisGE(set->scip, newcoef, rowcoefs[i]));
+         assert(SCIPisGE(set->scip, newcoef + EPS, rowcoefs[i]));
          assert(!SCIPisPositive(set->scip, newcoef));
 
          if( newcoef > rowcoefs[i] )
@@ -691,6 +695,18 @@ SCIP_Bool bdchginfoIsResolvable(
    {
       return TRUE;
    }
+   if( strcmp(conshdlrname, "xor") == 0 )
+   {
+      return TRUE;
+   }
+   if( strcmp(conshdlrname, "or") == 0 )
+   {
+      return TRUE;
+   }
+   if( strcmp(conshdlrname, "bounddisjunction") == 0 )
+   {
+      return TRUE;
+   }
    return FALSE;
 }
 
@@ -753,6 +769,18 @@ SCIP_Bool reasonIsLinearizable(
       return TRUE;
    }
    else if( strcmp(conshdlrname, "and") == 0 )
+   {
+      return TRUE;
+   }
+   if( strcmp(conshdlrname, "xor") == 0 )
+   {
+      return TRUE;
+   }
+   if( strcmp(conshdlrname, "or") == 0 )
+   {
+      return TRUE;
+   }
+   if( strcmp(conshdlrname, "bounddisjunction") == 0 )
    {
       return TRUE;
    }
@@ -1010,6 +1038,7 @@ SCIP_RETCODE resolutionsetCreate(
    (*resolutionset)->repropdepth = 0;
    (*resolutionset)->conflicttype = SCIP_CONFTYPE_UNKNOWN;
    (*resolutionset)->usescutoffbound = FALSE;
+   (*resolutionset)->isbinary = FALSE;
 
    return SCIP_OKAY;
 }
@@ -1066,6 +1095,7 @@ void resolutionSetClear(
    resolutionset->repropdepth = 0;
    resolutionset->conflicttype = SCIP_CONFTYPE_UNKNOWN;
    resolutionset->usescutoffbound = FALSE;
+   resolutionset->isbinary = FALSE;
 }
 
 /** weaken variables in the reason */
@@ -3113,7 +3143,6 @@ SCIP_RETCODE getReasonRow(
 
          if(!SCIPconsIsGlobal(reasoncon))
          {
-            conflict->ncorrectaborts++;
             SCIPsetDebugMsg(set, "Reason constraint is not global \n");
             return SCIP_OKAY;
          }
@@ -3216,7 +3245,6 @@ SCIP_RETCODE getReasonRow(
    }
    else
    {
-      conflict->ncorrectaborts++;
       SCIPsetDebugMsg(set, "Could not obtain a reason row \n");
       *success = FALSE;
    }
@@ -3607,6 +3635,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
          SCIP_CALL( getReasonRow(conflict, blkmem, transprob, set, bdchginfo, residx, validdepth, fixbounds, fixinds, &obtainedreason) );
          if( !obtainedreason )
          {
+            conflict->ncorrectaborts++;
             SCIPsetDebugMsgPrint(set, "Could not obtain reason row for bound change \n");
             goto TERMINATE;
          }
@@ -3701,10 +3730,12 @@ SCIP_RETCODE conflictAnalyzeResolution(
           *    - Ranged row propagation (gcd argument)
           */
 
-         /* todo check that we fail for a valid reason */
+         /* check that we fail for a valid reason */
          if (SCIPsetIsGE(set, conflictslack, 0.0))
          {
-
+            /* todo either remove the member isbinary in the resolution sets or update it */
+            if ( set->conf_reductiontechnique == 'o' || !isBinaryResolutionSet(set, transprob, conflictresolutionset))
+               conflict->ncorrectaborts++;
             goto TERMINATE;
          }
 
@@ -3721,7 +3752,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
             assert(SCIPsetIsLE(set, conflictresolutionset->slack, previousslack + EPS));
          }
          /* sort for linear time resolution */
-         /* todo check if we can remove this */
+         /* todo this can be removed if we do not apply coefficient tightening */
          SCIPsortIntReal(conflictresolutionset->inds, conflictresolutionset->vals, resolutionsetGetNNzs(conflictresolutionset));
          if (SCIPsetIsLT(set, conflictresolutionset->slack, 0.0))
          {
@@ -3780,7 +3811,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
          /* in case we have applied resolution steps we keep the last conflict constraint */
          if( bdchginfo == NULL )
          {
-            /* todo this can happen only if we already have resolved and some
+            /* this can happen only if we already have resolved and some
             and it means that we have already reached a FUIP */
             SCIPsetDebugMsgPrint(set, " reached UIP in depth %d \n", bdchgdepth);
             /* add the previous conflict in the list of resolution sets */

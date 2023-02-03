@@ -344,8 +344,9 @@ SCIP_RETCODE SCIPaddConflictBd(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable whose upper bound should be added to conflict candidate queue */
    SCIP_BOUNDTYPE        boundtype,          /**< the type of the conflicting bound (lower or upper bound) */
-   SCIP_BDCHGIDX*        bdchgidx            /**< bound change index representing time on path to current node, when the
+   SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node, when the
                                               *   conflicting bound was valid, NULL for current local bound */
+   SCIP_Bool             separatequeue       /**< should the variable be added to the separate conflict queue? */
    );
 
 /** adds lower or upper bound of variable at the time of the given bound change index to the conflict analysis'
