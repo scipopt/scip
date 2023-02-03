@@ -3192,32 +3192,30 @@ SCIP_RETCODE getReasonRow(
 
          /* If the slack is greater than 0, we check that the reason actually
          propagated the variable we resolve. It propagates a variable x_i if
-         (slack - x_i) is smaller than 0 */
-         if (SCIPsetIsGE(set, conflict->reasonset->slack, 0.0))
+         (slack - a_i * (oldbound - newbound) is smaller than 0 */
+         if (SCIPsetIsGT(set, conflict->reasonset->slack, 0.0))
          {
+            SCIP_VAR* var;
+            SCIP_BDCHGIDX* currbdchgidx;
             SCIP_Real coef;
+            SCIP_Real boundusedinslack;
+
+            currbdchgidx = SCIPbdchginfoGetIdx(currbdchginfo);
+            var = SCIPbdchginfoGetVar(currbdchginfo);
+            assert(var != NULL);
+            assert(SCIPvarGetProbindex(var) == residx);
 
             coef = conflict->reasonset->vals[getVarIdxInResolutionset(conflict->reasonset, residx)];
+            boundusedinslack = coef > 0 ? SCIPgetVarUbAtIndex(set->scip, var, currbdchgidx, TRUE) : SCIPgetVarLbAtIndex(set->scip, var, currbdchgidx, TRUE);
 
-            if (coef > 0.0 && !SCIPsetIsLT(set, conflict->reasonset->slack - coef, 0.0))
+            if (!SCIPsetIsLT(set, conflict->reasonset->slack - coef * ( boundusedinslack - SCIPbdchginfoGetOldbound(currbdchginfo) ) , 0.0))
             {
+
                assert( (strcmp(SCIPconshdlrGetName(reasoncon->conshdlr), "knapsack") == 0) || (strcmp(SCIPconshdlrGetName(reasoncon->conshdlr), "linear") == 0) );
                SCIP_CALL( getClauseReasonSet(conflict, blkmem, set, currbdchginfo, SCIPbdchginfoGetRelaxedBound(currbdchginfo), validdepth, success) );
                if (*success)
                {
-                  assert(SCIPsetIsZero(set, getSlack(set, prob, conflict->reasonset, SCIPbdchginfoGetIdx(currbdchginfo), fixbounds, fixinds)));
-                  conflict->reasonset->slack = 0.0;
-               }
-               return SCIP_OKAY;
-            }
-            else if(coef < 0.0 && !SCIPsetIsLT(set, conflict->reasonset->slack + coef, 0.0))
-            {
-               assert(!SCIPsetIsZero(set, coef));
-               assert( (strcmp(SCIPconshdlrGetName(reasoncon->conshdlr), "knapsack") == 0) || (strcmp(SCIPconshdlrGetName(reasoncon->conshdlr), "linear") == 0) );
-               SCIP_CALL( getClauseReasonSet(conflict, blkmem, set, currbdchginfo, SCIPbdchginfoGetRelaxedBound(currbdchginfo), validdepth, success) );
-               if (*success)
-               {
-                  assert(SCIPsetIsZero(set, getSlack(set, prob, conflict->reasonset, SCIPbdchginfoGetIdx(currbdchginfo), fixbounds, fixinds)));
+                  assert(SCIPsetIsZero(set, getSlack(set, prob, conflict->reasonset, currbdchgidx, fixbounds, fixinds)));
                   conflict->reasonset->slack = 0.0;
                }
                return SCIP_OKAY;
