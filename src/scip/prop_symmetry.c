@@ -7987,18 +7987,6 @@ SCIP_DECL_PROPEXEC(propExecSymmetry)
 
    *result = SCIP_DIDNOTRUN;
 
-   /* do not run if we are in the root or not yet solving */
-   if ( SCIPgetDepth(scip) <= 0 || SCIPgetStage(scip) < SCIP_STAGE_SOLVING )
-      return SCIP_OKAY;
-
-   /* do nothing if we are in a probing node */
-   if ( SCIPinProbing(scip) )
-      return SCIP_OKAY;
-
-   /* do not run again in repropagation, since the path to the root might have changed */
-   if ( SCIPinRepropagation(scip) )
-      return SCIP_OKAY;
-
    /* get data */
    propdata = SCIPpropGetData(prop);
    assert( propdata != NULL );
@@ -8018,6 +8006,18 @@ SCIP_DECL_PROPEXEC(propExecSymmetry)
       *result = SCIP_CUTOFF;
       return SCIP_OKAY;
    }
+
+   /* do not run if we are in the root or not yet solving */
+   if ( SCIPgetDepth(scip) <= 0 || SCIPgetStage(scip) < SCIP_STAGE_SOLVING )
+      return SCIP_OKAY;
+
+   /* do nothing if we are in a probing node */
+   if ( SCIPinProbing(scip) )
+      return SCIP_OKAY;
+
+   /* do not run again in repropagation, since the path to the root might have changed */
+   if ( SCIPinRepropagation(scip) )
+      return SCIP_OKAY;
 
    /* if usesymmetry has not been read so far */
    if ( propdata->usesymmetry < 0 )
