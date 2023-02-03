@@ -116,6 +116,7 @@ struct SCIP_ResolutionSet
    int                   conflictdepth;
    int                   repropdepth;
    unsigned int          usescutoffbound:1;  /**< is the conflict based on the cutoff bound? */
+   unsigned int          isbinary:1;         /**< is the constraint binary? */
    SCIP_CONFTYPE         conflicttype;       /**< conflict type: unknown, resolution */
 };
 

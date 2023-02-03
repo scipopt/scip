@@ -496,15 +496,16 @@ SCIP_RETCODE SCIPaddConflictBd(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable whose upper bound should be added to conflict candidate queue */
    SCIP_BOUNDTYPE        boundtype,          /**< the type of the conflicting bound (lower or upper bound) */
-   SCIP_BDCHGIDX*        bdchgidx            /**< bound change index representing time on path to current node, when the
+   SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node, when the
                                               *   conflicting bound was valid, NULL for current local bound */
+   SCIP_Bool             separatequeue       /**< should the variable be added to the separate conflict queue? */
    )
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPaddConflictBd", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    assert( var->scip == scip );
 
-   SCIP_CALL( SCIPconflictAddBound(scip->conflict, scip->mem->probmem, scip->set, scip->stat, var, boundtype, bdchgidx, FALSE) );
+   SCIP_CALL( SCIPconflictAddBound(scip->conflict, scip->mem->probmem, scip->set, scip->stat, var, boundtype, bdchgidx, separatequeue) );
 
    return SCIP_OKAY;
 }
