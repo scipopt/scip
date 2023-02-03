@@ -1115,14 +1115,12 @@ void weakenVarReason(
    /* weaken with global upper bound */
    if( SCIPsetIsGT(set, resolutionset->vals[pos], 0.0) )
    {
-      assert( SCIPsetIsEQ(set, SCIPvarGetUbGlobal(var), SCIPvarGetUbLocal(var)) );
       resolutionset->lhs -= resolutionset->vals[pos] * SCIPvarGetUbGlobal(var);
    }
    /* weaken with global lower bound */
    else
    {
       assert( SCIPsetIsLT(set, resolutionset->vals[pos], 0.0) );
-      assert( SCIPsetIsEQ(set, SCIPvarGetLbGlobal(var), SCIPvarGetLbLocal(var)) );
       resolutionset->lhs -= resolutionset->vals[pos] * SCIPvarGetLbGlobal(var);
    }
 
@@ -2242,9 +2240,10 @@ SCIP_RETCODE DivisionBasedReduction(
          {
             if( reasonset->vals[i] > 0.0 && !SCIPsetIsZero(set, fmod(reasonset->vals[i], coefinreason)) )
             {
-               int nubchgs;
-               nubchgs = SCIPvarGetNBdchgInfosUb(vars[reasonset->inds[i]]);
-               if ( nubchgs == 0 )
+               SCIP_Real ub;
+               ub = SCIPgetVarUbAtIndex(set->scip, vartoweaken, currbdchgidx, TRUE);
+
+               if( SCIPsetIsEQ(set, ub, SCIPvarGetUbGlobal(vartoweaken)) )
                {
                   weakenVarReason(reasonset, set, vartoweaken, i);
                   varwasweakened = TRUE;
@@ -2254,9 +2253,9 @@ SCIP_RETCODE DivisionBasedReduction(
             }
             else if( reasonset->vals[i] < 0.0 && !SCIPsetIsZero(set, fmod(reasonset->vals[i], coefinreason)) )
             {
-               int nubchgs;
-               nubchgs = SCIPvarGetNBdchgInfosLb(vars[reasonset->inds[i]]);
-               if ( nubchgs == 0 )
+               SCIP_Real lb;
+               lb = SCIPgetVarLbAtIndex(set->scip, vartoweaken, currbdchgidx, TRUE);
+               if( SCIPsetIsEQ(set, lb, SCIPvarGetLbGlobal(vartoweaken)) )
                {
                   weakenVarReason(reasonset, set, vartoweaken, i);
                   varwasweakened = TRUE;
@@ -2305,7 +2304,7 @@ SCIP_RETCODE DivisionBasedReduction(
 
       SCIPsortIntReal(reducedreason->inds, reducedreason->vals, resolutionsetGetNNzs(reducedreason));
 
-      /* todo the update of the slack should be included in MirLhs */
+      /* todo the update of the slack should be included in the division algorithms */
       reducedreason->slack = getSlack(set, prob, reducedreason, currbdchgidx, fixbounds, fixinds);
       SCIPsetDebugMsg(set, "slack before tightening: %g \n",  previousslack);
       SCIPsetDebugMsg(set, "slack after tightening: %g \n", reducedreason->slack);
