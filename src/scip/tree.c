@@ -4993,6 +4993,7 @@ SCIP_RETCODE SCIPtreeCreateRoot(
    assert(tree->root->depth - 1 == SCIP_MAXTREEDEPTH); /*lint !e650*/
    assert(tree->root->repropsubtreemark == MAXREPROPMARK);
    tree->root->repropsubtreemark++; /* this should produce an overflow and reset the value to 0 */
+   tree->root->depth = 0; /* replaces a previous overflow mechanism */
    assert(tree->root->depth == 0);
    assert((SCIP_NODETYPE)tree->root->nodetype == SCIP_NODETYPE_CHILD);
    assert(!tree->root->active);
