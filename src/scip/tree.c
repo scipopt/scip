@@ -1284,7 +1284,7 @@ void SCIPnodeMarkPropagated(
    node->reprop = FALSE;
 
    /* if the node was the highest repropagation node in the path, update the repropdepth in the tree data */
-   if( node->active && node->depth == tree->repropdepth )
+   if( node->active && (int)(node->depth) == tree->repropdepth )
    {
       do
       {
