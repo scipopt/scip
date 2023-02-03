@@ -3230,7 +3230,7 @@ SCIP_RETCODE getReasonRow(
          assert(SCIPsetIsZero(set, getSlack(set, prob, conflict->reasonset, SCIPbdchginfoGetIdx(currbdchginfo), fixbounds, fixinds)));
          conflict->reasonset->slack = 0.0;
       }
-         return SCIP_OKAY;
+      return SCIP_OKAY;
 
    }
    else
