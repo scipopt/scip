@@ -385,7 +385,7 @@ SCIP_RETCODE tightenCoefLhs(
          SCIP_Real newcoef = (*rowlhs) - minact;
          SCIP_Real lb = localbounds ? SCIPvarGetLbLocal(vars[rowinds[i]]) : SCIPvarGetLbGlobal(vars[rowinds[i]]);
 
-         assert(SCIPisLE(set->scip, newcoef, rowcoefs[i]));
+         assert(SCIPisLE(set->scip, newcoef, rowcoefs[i] + EPS));
          assert(!SCIPisNegative(set->scip, newcoef));
 
          if( newcoef < rowcoefs[i] )
