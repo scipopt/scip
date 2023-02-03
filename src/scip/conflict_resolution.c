@@ -596,7 +596,7 @@ SCIP_RETCODE MirLhs(
    /* divide the lhs by the divisor and subtract the sum of fractionalities */
    resolutionset->lhs = resolutionset->lhs / divisor;
    fraclhs = resolutionset->lhs - SCIPsetFloor(set, resolutionset->lhs);
-
+   resolutionset->lhs = SCIPsetCeil(set, resolutionset->lhs);
    SCIPsetDebugMsg(set, "New lhs %f with fractionality %f\n" , resolutionset->lhs, fraclhs);
 
    /* todo extend MIR for continuous and general integer variables */
@@ -3152,11 +3152,6 @@ SCIP_RETCODE getReasonRow(
          /* in case of orbitope-, orbisack-, and-constaints we construct a linearized clause as reason */
          if( reasonrow == NULL )
          {
-            assert(SCIPsetGetStage(set) != SCIP_STAGE_SOLVING ||
-                   strcmp(SCIPconshdlrGetName(reasoncon->conshdlr), "orbisack") == 0 ||
-                   strcmp(SCIPconshdlrGetName(reasoncon->conshdlr), "orbitope") == 0 ||
-                   strcmp(SCIPconshdlrGetName(reasoncon->conshdlr), "and") == 0);
-
                SCIP_CALL( getClauseReasonSet(conflict, blkmem,  set, currbdchginfo, SCIPbdchginfoGetRelaxedBound(currbdchginfo), validdepth, success) );
                if (*success)
                {
