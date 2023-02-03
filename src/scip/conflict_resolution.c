@@ -2378,9 +2378,11 @@ SCIP_RETCODE tighteningBasedReduction(
          {
             if( resolutionset->vals[i] > 0.0 )
             {
-               int nubchgs;
-               nubchgs = SCIPvarGetNBdchgInfosUb(vars[resolutionset->inds[i]]);
-               if ( nubchgs == 0 )
+               SCIP_Real ub;
+
+               ub = SCIPgetVarUbAtIndex(set->scip, vartoweaken, currbdchgidx, TRUE);
+
+               if( SCIPsetIsEQ(set, ub, SCIPvarGetUbGlobal(vartoweaken)) )
                {
                   weakenVarReason(resolutionset, set, vartoweaken, i);
                   varwasweakened = TRUE;
@@ -2390,11 +2392,11 @@ SCIP_RETCODE tighteningBasedReduction(
             }
             else
             {
-               int nlbchgs;
-               nlbchgs = SCIPvarGetNBdchgInfosLb(vars[resolutionset->inds[i]]);
+               SCIP_Real lb;
 
-               assert( resolutionset->vals[i] < 0.0);
-               if ( nlbchgs == 0 )
+               lb = SCIPgetVarLbAtIndex(set->scip, vartoweaken, currbdchgidx, TRUE);
+
+               if( SCIPsetIsEQ(set, lb, SCIPvarGetLbGlobal(vartoweaken)) )
                {
                   weakenVarReason(resolutionset, set, vartoweaken, i);
                   varwasweakened = TRUE;
@@ -2424,7 +2426,7 @@ SCIP_RETCODE tighteningBasedReduction(
          }
       }
    }
-   if ( !set->conf_weakenreasonall && (*nvarsweakened) > 0 )
+   if ( set->conf_weakenreasonall && *nvarsweakened > 0 )
    {
       SCIP_CALL( tightenCoefLhs(set, prob, FALSE, resolutionset->vals, &resolutionset->lhs,
                      resolutionset->inds, &resolutionset->nnz, &nchgcoefs, NULL) );
@@ -3199,30 +3201,26 @@ SCIP_RETCODE getReasonRow(
 
             if (coef > 0.0 && !SCIPsetIsLT(set, conflict->reasonset->slack - coef, 0.0))
             {
-               if (strcmp(SCIPconshdlrGetName(reasoncon->conshdlr), "knapsack") == 0)
+               assert( (strcmp(SCIPconshdlrGetName(reasoncon->conshdlr), "knapsack") == 0) || (strcmp(SCIPconshdlrGetName(reasoncon->conshdlr), "linear") == 0) );
+               SCIP_CALL( getClauseReasonSet(conflict, blkmem, set, currbdchginfo, SCIPbdchginfoGetRelaxedBound(currbdchginfo), validdepth, success) );
+               if (*success)
                {
-                  SCIP_CALL( getClauseReasonSet(conflict, blkmem, set, currbdchginfo, SCIPbdchginfoGetRelaxedBound(currbdchginfo), validdepth, success) );
-                  if (*success)
-                  {
-                     assert(SCIPsetIsZero(set, getSlack(set, prob, conflict->reasonset, SCIPbdchginfoGetIdx(currbdchginfo), fixbounds, fixinds)));
-                     conflict->reasonset->slack = 0.0;
-                  }
-                  return SCIP_OKAY;
+                  assert(SCIPsetIsZero(set, getSlack(set, prob, conflict->reasonset, SCIPbdchginfoGetIdx(currbdchginfo), fixbounds, fixinds)));
+                  conflict->reasonset->slack = 0.0;
                }
+               return SCIP_OKAY;
             }
             else if(coef < 0.0 && !SCIPsetIsLT(set, conflict->reasonset->slack + coef, 0.0))
             {
                assert(!SCIPsetIsZero(set, coef));
-               if (strcmp(SCIPconshdlrGetName(reasoncon->conshdlr), "knapsack") == 0)
+               assert( (strcmp(SCIPconshdlrGetName(reasoncon->conshdlr), "knapsack") == 0) || (strcmp(SCIPconshdlrGetName(reasoncon->conshdlr), "linear") == 0) );
+               SCIP_CALL( getClauseReasonSet(conflict, blkmem, set, currbdchginfo, SCIPbdchginfoGetRelaxedBound(currbdchginfo), validdepth, success) );
+               if (*success)
                {
-                  SCIP_CALL( getClauseReasonSet(conflict, blkmem, set, currbdchginfo, SCIPbdchginfoGetRelaxedBound(currbdchginfo), validdepth, success) );
-                  if (*success)
-                  {
-                     assert(SCIPsetIsZero(set, getSlack(set, prob, conflict->reasonset, SCIPbdchginfoGetIdx(currbdchginfo), fixbounds, fixinds)));
-                     conflict->reasonset->slack = 0.0;
-                  }
-                  return SCIP_OKAY;
+                  assert(SCIPsetIsZero(set, getSlack(set, prob, conflict->reasonset, SCIPbdchginfoGetIdx(currbdchginfo), fixbounds, fixinds)));
+                  conflict->reasonset->slack = 0.0;
                }
+               return SCIP_OKAY;
             }
          }
    }
