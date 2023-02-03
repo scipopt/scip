@@ -510,7 +510,7 @@ SCIP_RETCODE ChvatalGomoryLhs(
 {
    /* todo check instance 10teams where a local bound does not seem to have a bdchginfo */
    SCIP_Real negcoefsum;
-   int negcoeffloorsum;
+   SCIP_Real negcoeffloorsum;
 
    assert(set != NULL);
    assert(prob != NULL);
@@ -2270,7 +2270,7 @@ SCIP_RETCODE DivisionBasedReduction(
                (*nvarsweakened % set->conf_batchcoeftight == 0) )
             {
                SCIP_RESOLUTIONSET *reducedreason;
-               resolutionsetCopy(&reducedreason, blkmem, reasonset);
+               SCIP_CALL( resolutionsetCopy(&reducedreason, blkmem, reasonset) );
 
                /* apply the chosen reduction technique */
                if (set->conf_reductiontechnique == 'd')
@@ -2294,7 +2294,7 @@ SCIP_RETCODE DivisionBasedReduction(
    if ( set->conf_weakenreasonall && *nvarsweakened > 0 )
    {
       SCIP_RESOLUTIONSET *reducedreason;
-      resolutionsetCopy(&reducedreason, blkmem, reasonset);
+      SCIP_CALL( resolutionsetCopy(&reducedreason, blkmem, reasonset) );
 
       /* apply the chosen reduction technique */
       if (set->conf_reductiontechnique == 'd')
@@ -3230,7 +3230,7 @@ SCIP_RETCODE getReasonRow(
          assert(SCIPsetIsZero(set, getSlack(set, prob, conflict->reasonset, SCIPbdchginfoGetIdx(currbdchginfo), fixbounds, fixinds)));
          conflict->reasonset->slack = 0.0;
       }
-         return SCIP_OKAY;
+      return SCIP_OKAY;
 
    }
    else
@@ -3407,7 +3407,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
          assert(strcmp(SCIPconshdlrGetName(conshdlr), "knapsack") == 0 || strcmp(SCIPconshdlrGetName(conshdlr), "linear") == 0);
       }
 
-      getClauseConflictSet(conflict, blkmem, set, bdchginfo, &success);
+      SCIP_CALL( getClauseConflictSet(conflict, blkmem, set, bdchginfo, &success) );
       if (!success)
       {
          SCIPsetDebugMsg(set, "Initial conflict could not be retrieved \n");
