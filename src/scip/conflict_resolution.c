@@ -3152,7 +3152,7 @@ SCIP_RETCODE getReasonRow(
          reasonrow = SCIPconsCreateRow(set->scip, reasoncon);
 
          /* in case of orbitope-, orbisack-, and-constaints we construct a linearized clause as reason */
-         if( reasonrow == NULL )
+         if( reasonrow == NULL || set->conf_clausegenres)
          {
                SCIP_CALL( getClauseReasonSet(conflict, blkmem,  set, currbdchginfo, SCIPbdchginfoGetRelaxedBound(currbdchginfo), validdepth, success) );
                if (*success)
@@ -3366,7 +3366,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
    /* the valid depth is always 0 (global case) */
    conflictresolutionset->validdepth = validdepth;
 
-   if (initialconflictrow != NULL)
+   if (initialconflictrow != NULL && !set->conf_clausegenres)
    {
       if( SCIProwGetNNonz(initialconflictrow) > maxsize )
       {
@@ -3391,7 +3391,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
     *  - by a negated clique in the knapsack constraint handler
     *  - by propagating a ranged row
     */
-   if ( initialconflictrow == NULL || SCIPsetIsGE(set, conflictresolutionset->slack, 0.0) )
+   if ( set->conf_clausegenres || initialconflictrow == NULL || SCIPsetIsGE(set, conflictresolutionset->slack, 0.0) )
    {
 
       SCIP_Bool success;
@@ -3399,7 +3399,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
       SCIPsetDebugMsg(set, "Slack of conflict constraint is not negative \n");
 
       assert(!infeasibleLP && !pseudoobj);
-      if (initialconflictrow != NULL)
+      if (initialconflictrow != NULL && !set->conf_clausegenres)
       {
          conshdlr = SCIProwGetOriginConshdlr(initialconflictrow);
          SCIPsetDebugMsg(set, "%s",SCIPconshdlrGetName(conshdlr));

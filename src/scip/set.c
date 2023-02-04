@@ -111,6 +111,7 @@
                                                  *   (-1: no limit) */
 #define SCIP_DEFAULT_CONF_USEPROP          TRUE /**< should propagation conflict analysis be used? */
 #define SCIP_DEFAULT_CONF_USEGENRES        TRUE /**< should generalized resolution conflict analysis be used? */
+#define SCIP_DEFAULT_CONF_CLAUSEGENRES    FALSE /**< should the clause version of generalized resolution conflict analysis be used? */
 
 #define SCIP_DEFAULT_CONF_USEINFLP          'b' /**< should infeasible LP conflict analysis be used?
                                                  *   ('o'ff, 'c'onflict graph, 'd'ual ray, 'b'oth conflict graph and dual ray)
@@ -1376,6 +1377,11 @@ SCIP_RETCODE SCIPsetCreate(
          "conflict/usegeneralres",
          "should generalized resolution conflict analysis be used?",
          &(*set)->conf_usegeneralres, FALSE, SCIP_DEFAULT_CONF_USEGENRES,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "conflict/clausegenres",
+         "should generalized resolution conflict analysis be used?",
+         &(*set)->conf_clausegenres, FALSE, SCIP_DEFAULT_CONF_CLAUSEGENRES,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddCharParam(*set, messagehdlr, blkmem,
          "conflict/useinflp",
