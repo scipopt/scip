@@ -8896,7 +8896,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphSetppc)
    for( i = 0; i < consdata->nvars; ++i )
    {
       vars[i] = consdata->vars[i];
-      vals[i] = 1.0;
+      vals[i] = consdata->setppctype == SCIP_SETPPCTYPE_COVERING ? -1.0 : 1.0;
    }
 
    SCIP_CALL( SCIPgetActiveVariables(scip, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
