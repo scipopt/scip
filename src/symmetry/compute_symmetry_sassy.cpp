@@ -1547,7 +1547,7 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    /* set up sassy preprocessor */
    sassy::preprocessor sassy;
 
-   /* turn off some preprocessing that generates redudant permuatations */
+   /* turn off some preprocessing that generates redudant permutations */
    sassy::configstruct sconfig;
    sconfig.CONFIG_PREP_DEACT_PROBE = true;
    sassy.configure(&sconfig);
