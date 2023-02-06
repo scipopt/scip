@@ -188,7 +188,6 @@ SCIP_RETCODE SCIPcreateSymgraph(
    )
 {
    int nnodes;
-   int v;
 
    assert(scip != NULL);
    assert(graph != NULL);
@@ -211,12 +210,6 @@ SCIP_RETCODE SCIPcreateSymgraph(
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*graph)->edgefirst, nedges) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*graph)->edgesecond, nedges) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*graph)->edgevals, nedges) );
-
-   SCIP_CALL( SCIPhashmapCreate(&(*graph)->symvarmap, SCIPblkmem(scip), nsymvars) );
-   for( v = 0; v < nsymvars; ++v )
-   {
-      SCIP_CALL( SCIPhashmapInsertInt((*graph)->symvarmap, symvars[v], -(v+1)) );
-   }
 
    (*graph)->nnodes = 0;
    (*graph)->maxnnodes = nnodes;
@@ -256,10 +249,6 @@ SCIP_RETCODE SCIPfreeSymgraph(
    assert(scip != NULL);
    assert(graph != NULL);
 
-   if ( (*graph)->symvarmap != NULL )
-   {
-      SCIPhashmapFree(&(*graph)->symvarmap);
-   }
    SCIPfreeBlockMemoryArrayNull(scip, &(*graph)->edgecolors, (*graph)->nedges);
    SCIPfreeBlockMemoryArrayNull(scip, &(*graph)->conscolors, (*graph)->nconsnodes);
    SCIPfreeBlockMemoryArrayNull(scip, &(*graph)->valcolors, (*graph)->nvalnodes);
@@ -311,10 +300,9 @@ SCIP_RETCODE SCIPextendPermsymDetectionGraphLinear(
 
 #ifndef NDEBUG
    /* check whether variable nodes exist in the graph */
-   assert(graph->symvarmap != NULL);
    for( i = 0; i < nvars; ++i )
    {
-      assert(SCIPhashmapExists(graph->symvarmap, vars[i]));
+      assert(0 <= SCIPvarGetProbindex(vars[i]) && SCIPvarGetProbindex(vars[i]) < graph->nsymvars);
    }
 #endif
 
@@ -354,10 +342,9 @@ SCIP_RETCODE SCIPaddSymgraphVarAggegration(
 
 #ifndef NDEBUG
    /* check whether variable nodes exist in the graph */
-   assert(graph->symvarmap != NULL);
    for( j = 0; j < nvars; ++j )
    {
-      assert(SCIPhashmapExists(graph->symvarmap, vars[j]));
+      assert(0 <= SCIPvarGetProbindex(vars[j]) && SCIPvarGetProbindex(vars[j]) < graph->nsymvars);
    }
 #endif
 
@@ -551,9 +538,8 @@ int SCIPgetSymgraphVarnodeidx(
    assert(scip != NULL);
    assert(graph != NULL);
    assert(var != NULL);
-   assert(graph->symvarmap != NULL);
 
-   nodeidx = SCIPhashmapGetImageInt(graph->symvarmap, var);
+   nodeidx = -SCIPvarGetProbindex(var) - 1;
    assert(nodeidx != INT_MAX);
 
    return nodeidx;
