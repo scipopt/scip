@@ -62,8 +62,7 @@ SCIP_RETCODE SCIPcreateSymgraph(
    int                   nopnodes,           /**< number of operator nodes */
    int                   nvalnodes,          /**< number of value nodes */
    int                   nconsnodes,         /**< number of constraint nodes */
-   int                   nedges,             /**< number of edges */
-   SYM_SPEC              fixedtype           /**< variable types that must be fixed by symmetries */
+   int                   nedges              /**< number of edges */
    );
 
 /** frees a symmetry detection graph */

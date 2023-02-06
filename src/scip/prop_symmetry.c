@@ -6132,15 +6132,7 @@ SCIP_RETCODE computeSymmetryGroup2(
 
    /* create graph */
    SCIP_CALL( SCIPcreateSymgraph(scip, &graph, SCIPgetVars(scip), SCIPgetNVars(scip),
-         nopnodes, nvalnodes, nconsnodes, nedges, fixedtype) );
-
-   /* terminate early in case all variables are different */
-   if ( SCIPgetSymgraphNVarcolors(graph) == SCIPgetNVars(scip) )
-   {
-      SCIP_CALL( SCIPfreeSymgraph(scip, &graph) );
-
-      return SCIP_OKAY;
-   }
+         nopnodes, nvalnodes, nconsnodes, nedges) );
 
    for (c = 0; c < nconss && *success; ++c)
    {
@@ -6156,6 +6148,14 @@ SCIP_RETCODE computeSymmetryGroup2(
    }
 
    SCIP_CALL( SCIPcomputeSymgraphColors(scip, graph, fixedtype) );
+
+   /* terminate early in case all variables are different */
+   if ( SCIPgetSymgraphNVarcolors(graph) == SCIPgetNVars(scip) )
+   {
+      SCIP_CALL( SCIPfreeSymgraph(scip, &graph) );
+
+      return SCIP_OKAY;
+   }
 
    /*
     * actually compute symmetries
