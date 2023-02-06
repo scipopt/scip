@@ -1523,6 +1523,54 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    return SCIP_OKAY;
 }
 
+/** returns whether an edge is considered in grouping process */
+SCIP_Bool isEdgeGroupable(
+   SYM_GRAPH*            graph,              /**< symmetry detection graph */
+   int                   edgeidx,            /**< index of edge to be checked */
+   SCIP_Bool             groupbycons         /**< whether edges are grouped by constraints */
+   )
+{
+   assert(graph != NULL);
+
+   int first = SCIPgetSymgraphEdgeFirst(graph, edgeidx);
+   int second = SCIPgetSymgraphEdgeSecond(graph, edgeidx);
+
+   /* two variable nodes are connected */
+   if ( first < 0 && second < 0 )
+      return FALSE;
+
+   if ( ! groupbycons )
+   {
+      /* grouping by variables requires one variable node */
+      if ( first < 0 || second < 0 )
+         return TRUE;
+   }
+   else
+   {
+      /* check whether there is exactly one constraint node in edge */
+      if ( first >= 0 && second >= 0 )
+      {
+         if ( (SCIPgetSymgraphNodeType(graph, first) == SYM_NODETYPE_CONS
+               && SCIPgetSymgraphNodeType(graph, second) != SYM_NODETYPE_CONS)
+            || (SCIPgetSymgraphNodeType(graph, first) != SYM_NODETYPE_CONS
+               && SCIPgetSymgraphNodeType(graph, second) == SYM_NODETYPE_CONS) )
+            return TRUE;
+      }
+      else if ( first >= 0 )
+      {
+         if ( SCIPgetSymgraphNodeType(graph, first) == SYM_NODETYPE_CONS )
+            return TRUE;
+      }
+      else
+      {
+         if ( SCIPgetSymgraphNodeType(graph, second) == SYM_NODETYPE_CONS )
+            return TRUE;
+      }
+   }
+
+   return FALSE;
+}
+
 /** compute generators of symmetry group */
 SCIP_RETCODE SYMcomputeSymmetryGenerators2(
    SCIP*                 scip,               /**< SCIP pointer */
@@ -1590,42 +1638,125 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators2(
       ++nnodes;
    }
 
-   /* add edges to bliss graph */
+   /* add edges to bliss graph
+    *
+    * Edges containing neither a variable or constraint node are added immediately.
+    * Remaining edges are collected and we group these edges based on their weight.
+    */
+   const bool groupByConstraints = SCIPgetSymgraphNConsnodes(graph) < SCIPgetSymgraphNVars(graph);
    int nsymedges = SCIPgetSymgraphNEdges(graph);
+   int* groupfirsts;
+   int* groupseconds;
+   int* groupcolors;
+   int ngroupedges = 0;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &groupfirsts, nsymedges) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &groupseconds, nsymedges) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &groupcolors, nsymedges) );
+
    for (int e = 0; e < nsymedges; ++e)
    {
       first = SCIPgetSymgraphEdgeFirst(graph, e);
       second = SCIPgetSymgraphEdgeSecond(graph, e);
 
-      /* translate symgraph indices into bliss graph indices */
-      if( first < 0 )
+      if ( first < 0 )
          first = -first - 1;
       else
          first += nsymvars;
-      assert(0 <= first && first < nnodes);
-      if( second < 0 )
+      if ( second < 0 )
          second = -second - 1;
       else
          second += nsymvars;
-      assert(0 <= second && second < nnodes);
 
-      /* possibly split edge if it is colored */
-      if ( SCIPisSymgraphEdgeColored(graph, e) )
+      /* check whether edge is used for grouping */
+      if ( ! SCIPhasGraphUniqueEdgetype(graph) && isEdgeGroupable(graph, e, groupByConstraints) )
       {
-         const int color = SCIPgetSymgraphEdgeColor(graph, e);
+         /* store edge, first becomes the cons or var node */
+         SYM_NODETYPE comparetype = groupByConstraints ? SYM_NODETYPE_CONS : SYM_NODETYPE_VAR;
 
-         int inter = G.add_vertex((unsigned) color);
-
-         G.add_edge(first, inter);
-         G.add_edge(second, inter);
-
-         ++nnodes;
-         ++nedges;
+         if ( SCIPgetSymgraphNodeType(graph, SCIPgetSymgraphEdgeFirst(graph, e)) == comparetype )
+         {
+            groupfirsts[ngroupedges] = first;
+            groupseconds[ngroupedges] = second;
+         }
+         else
+         {
+            groupfirsts[ngroupedges] = second;
+            groupseconds[ngroupedges] = first;
+         }
+         groupcolors[ngroupedges++] = SCIPgetSymgraphEdgeColor(graph, e);
       }
       else
-         G.add_edge(first, second);
-      ++nedges;
+      {
+         /* immediately add edge */
+         assert(0 <= first && first < nnodes);
+         assert(0 <= second && second < nnodes);
+
+         /* possibly split edge if it is colored */
+         if ( ! SCIPhasGraphUniqueEdgetype(graph) && SCIPisSymgraphEdgeColored(graph, e) )
+         {
+            const int color = SCIPgetSymgraphEdgeColor(graph, e);
+
+            int inter = G.add_vertex((unsigned) color);
+
+            G.add_edge(first, inter);
+            G.add_edge(second, inter);
+
+            ++nnodes;
+            ++nedges;
+         }
+         else
+            G.add_edge(first, second);
+         ++nedges;
+      }
    }
+
+   /* possibly add groupable edges */
+   if ( ngroupedges > 0 )
+   {
+      /* sort edges to find grouping
+       *
+       * First, sort by the first node in an edge; second, sort edges incident with the first node by their color.
+       */
+      SCIPsortIntIntInt(groupfirsts, groupseconds, groupcolors, ngroupedges);
+
+      int firstidx = 0;
+      int firstnodeidx = groupfirsts[0];
+      for (int i = 1; i < ngroupedges; ++i)
+      {
+         /* sort edges incident with firstnodeidx according to their color */
+         if ( groupfirsts[i] != firstnodeidx || i == ngroupedges - 1 )
+         {
+            /* get number of edges to be grouped */
+            int nsort = i - firstidx;
+            if ( i == ngroupedges - 1 )
+               ++nsort;
+
+            SCIPsortIntInt(&groupcolors[firstidx], &groupseconds[firstidx], nsort);
+
+            /* introduce one intermediate node for entire group and connect endpoints of grouped edges */
+            const int color = groupcolors[firstidx];
+
+            int internode = (int) G.add_vertex((unsigned) color);
+            ++nnodes;
+
+            G.add_edge(firstnodeidx, internode);
+
+            /* add grouped edges, use firstidx + nsort as upper bound rather than i to take care of last iteration */
+            for (int e = firstidx; e < firstidx + nsort; ++e)
+               G.add_edge(internode, groupseconds[e]);
+            nedges += nsort + 1;
+
+            firstidx = i;
+            firstnodeidx = groupfirsts[i];
+         }
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &groupcolors);
+   SCIPfreeBufferArray(scip, &groupseconds);
+   SCIPfreeBufferArray(scip, &groupfirsts);
+
    assert( (int) G.get_nof_vertices() == nnodes );
    SCIPdebugMsg(scip, "Symmetry detection graph has %d nodes and %d edges.\n", nnodes, nedges);
 

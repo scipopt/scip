@@ -225,6 +225,7 @@ SCIP_RETCODE SCIPcreateSymgraph(
    (*graph)->symvars = symvars;
    (*graph)->nsymvars = nsymvars;
    (*graph)->nvarcolors = -1;
+   (*graph)->uniqueedgetype = FALSE;
 
    /* to avoid reallocation, allocate memory for colors later */
    (*graph)->opcolors = NULL;
@@ -928,6 +929,10 @@ SCIP_RETCODE SCIPcomputeSymgraphColors(
          prevval = thisval;
       }
 
+      /* check whether all edges are equivalent */
+      if( i == graph->nedges && graph->edgecolors[perm[0]] == graph->edgecolors[perm[i-1]] )
+         graph->uniqueedgetype = TRUE;
+
       /* assign uncolored edges color -1 */
       for( ; i < graph->nedges; ++i )
          graph->edgecolors[perm[i]] = -1;
@@ -949,6 +954,16 @@ int SCIPgetSymgraphNVars(
    assert(graph != NULL);
 
    return graph->nsymvars;
+}
+
+/** returns the number of constraint nodes in a symemtry detection graph */
+int SCIPgetSymgraphNConsnodes(
+   SYM_GRAPH*            graph               /**< symmetry detection graph */
+   )
+{
+   assert(graph != NULL);
+
+   return graph->nconsnodes;
 }
 
 /** returns the number of non-variable nodes in a graph */
@@ -1006,6 +1021,18 @@ int SCIPgetSymgraphVarnodeColor(
    assert(graph->islocked);
 
    return graph->varcolors[nodeidx];
+}
+
+/** returns the type of a node */
+SYM_NODETYPE SCIPgetSymgraphNodeType(
+   SYM_GRAPH*            graph,              /**< symmetry detection graph */
+   int                   nodeidx             /**< index of variable node */
+   )
+{
+   assert(graph != NULL);
+   assert(0 <= nodeidx && nodeidx < graph->nnodes);
+
+   return graph->nodetypes[nodeidx];
 }
 
 /** returns the color of a non-variable node */
@@ -1070,6 +1097,16 @@ int SCIPgetSymgraphNVarcolors(
       return graph->nsymvars;
 
    return graph->nvarcolors;
+}
+
+/** returns whether the graph has a unique edge type */
+SCIP_Bool SCIPhasGraphUniqueEdgetype(
+   SYM_GRAPH*            graph               /**< symmetry detection graph */
+   )
+{
+   assert(graph != NULL);
+
+   return graph->uniqueedgetype;
 }
 
 /** returns the color of a symmetry */

@@ -190,6 +190,12 @@ int SCIPgetSymgraphNVars(
    SYM_GRAPH*            graph               /**< symmetry detection graph */
    );
 
+/** returns the number of constraint nodes in a symemtry detection graph */
+SCIP_EXPORT
+int SCIPgetSymgraphNConsnodes(
+   SYM_GRAPH*            graph               /**< symmetry detection graph */
+   );
+
 /** returns the number of non-variable nodes in a graph */
 SCIP_EXPORT
 int SCIPgetSymgraphNNodes(
@@ -223,6 +229,13 @@ int SCIPgetSymgraphVarnodeColor(
    int                   nodeidx             /**< index of variable node */
    );
 
+/** returns the type of a node */
+SCIP_EXPORT
+SYM_NODETYPE SCIPgetSymgraphNodeType(
+   SYM_GRAPH*            graph,              /**< symmetry detection graph */
+   int                   nodeidx             /**< index of variable node */
+   );
+
 /** returns the color of a non-variable node */
 SCIP_EXPORT
 int SCIPgetSymgraphNodeColor(
@@ -250,6 +263,11 @@ int SCIPgetSymgraphNVarcolors(
    SYM_GRAPH*            graph               /**< symmetry detection graph */
    );
 
+/** returns whether the graph has a unique edge type */
+SCIP_EXPORT
+SCIP_Bool SCIPhasGraphUniqueEdgetype(
+   SYM_GRAPH*            graph               /**< symmetry detection graph */
+   );
 
 /** Transforms given variables, scalars, and constant to the corresponding active variables, scalars, and constant.
  *

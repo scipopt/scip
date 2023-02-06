@@ -213,6 +213,7 @@ struct SYM_Graph
    int*                  valcolors;          /**< value colors for symmetry detection */
    int*                  conscolors;         /**< constraint colors for symmetry detection */
    int*                  edgecolors;         /**< edge colors used for symmetry detection (-1 uncolored) */
+   SCIP_Bool             uniqueedgetype;     /**< whether all edges are equivalent */
 };
 
 /** (additional) data used to encode an expression, which is not encoded as another expression */
