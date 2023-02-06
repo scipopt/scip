@@ -6944,23 +6944,26 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
       (propdata->usesymmetry & SYM_HANDLETYPE_DYNAMICSYMBREAK) != 0 );
 
    /* if constraints have already been added */
-   if ( propdata->triedaddconss && isSymmetryRecomputationRequired(scip, propdata) )
+   if ( propdata->triedaddconss )
    {
-      /* remove symmetry handling constraints to be prepared for a recomputation */
-      SCIP_CALL( delSymConss(scip, propdata) );
-      SCIP_CALL( freeSymmetryData(scip, propdata) );
+      if ( isSymmetryRecomputationRequired(scip, propdata) )
+      {
+         /* remove symmetry handling constraints to be prepared for a recomputation */
+         SCIP_CALL( delSymConss(scip, propdata) );
+         SCIP_CALL( freeSymmetryData(scip, propdata) );
 
-      propdata->lastrestart = SCIPgetNRuns(scip);
-      propdata->symfoundreduction = FALSE;
-   }
-   else if ( propdata->triedaddconss )
-   {
-      assert( propdata->nperms > 0 );
+         propdata->lastrestart = SCIPgetNRuns(scip);
+         propdata->symfoundreduction = FALSE;
+      }
+      else
+      {
+         assert( propdata->nperms > 0 );
 
-      if ( earlyterm != NULL )
-         *earlyterm = TRUE;
+         if ( earlyterm != NULL )
+            *earlyterm = TRUE;
 
-      return SCIP_OKAY;
+         return SCIP_OKAY;
+      }
    }
 
    /* dynamic symmetry handling constraints */
