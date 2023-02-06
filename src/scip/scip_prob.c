@@ -3278,8 +3278,10 @@ SCIP_RETCODE SCIPaddConflict(
       /* conftype == SCIP_CONFTYPE_RESOLUTION */
       else
       {
-         /* todo: we do not need the distinction since we do not call both conflict analysis types at the same time */
-         SCIP_CALL( SCIPconflictstoreAddResConflict(scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->tree,
+         /* todo: use the alternative conflict store */
+         // SCIP_CALL( SCIPconflictstoreAddResConflict(scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->tree,
+         //       scip->transprob, scip->reopt, cons, conftype, iscutoffinvolved, primalbound) );
+         SCIP_CALL( SCIPconflictstoreAddConflict(scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->tree,
                scip->transprob, scip->reopt, cons, conftype, iscutoffinvolved, primalbound) );
       }
    }

@@ -8489,7 +8489,7 @@ SCIP_DECL_CONSRESPROP(consRespropSetppc)
          {
             /* the reason variable must be assigned to zero */
             assert(SCIPgetVarUbAtIndex(scip, consdata->vars[v], bdchgidx, FALSE) < 0.5);
-            SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[v], FALSE) );
+            SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[v], separatequeue) );
          }
 #ifndef NDEBUG
          else

@@ -1109,7 +1109,8 @@ SCIP_Longint SCIPgetNConflictConssFound(
       + SCIPconflictGetNPseudoConflictConss(scip->conflict)
       + SCIPconflictGetNPseudoReconvergenceConss(scip->conflict)
       + SCIPconflictGetNDualproofsBndGlobal(scip->conflict)
-      + SCIPconflictGetNDualproofsInfGlobal(scip->conflict));
+      + SCIPconflictGetNDualproofsInfGlobal(scip->conflict)
+      + SCIPconflictGetNResConflictConss(scip->conflict));
 }
 
 /** get number of conflict constraints found so far at the current node
