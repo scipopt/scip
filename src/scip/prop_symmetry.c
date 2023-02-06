@@ -2733,6 +2733,8 @@ SCIP_RETCODE requireSymmetryPermvarmap(
    {
       SCIP_CALL( SCIPhashmapInsertInt(propdata->permvarmap, propdata->permvars[v], v) );
    }
+   
+   return SCIP_OKAY;
 }
 
 
@@ -2761,6 +2763,8 @@ SCIP_RETCODE requireSymmetryPermstrans(
       for (p = 0; p < propdata->nperms; ++p)
          propdata->permstrans[v][p] = propdata->perms[p][v];
    }
+
+   return SCIP_OKAY;
 }
 
 
@@ -6174,7 +6178,6 @@ SCIP_RETCODE addSSTConss(
    int* norbitleadercomponent;
 
    int c;
-   int v;
    int p;
 
    assert( scip != NULL );
