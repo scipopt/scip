@@ -1547,6 +1547,11 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    /* set up sassy preprocessor */
    sassy::preprocessor sassy;
 
+   /* turn off some preprocessing that generates redudant permuatations */
+   sassy::configstruct sconfig;
+   sconfig.CONFIG_PREP_DEACT_PROBE = true;
+   sassy.configure(&sconfig);
+
    /* lambda function to have access to data and pass it to sassyhook above */
    sassy::sassy_hook sassyglue = [&](int n, const int* p, int nsupp, const int* suppa) {
       sassyhook((void*)&data, n, p, nsupp, suppa);
