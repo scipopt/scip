@@ -5099,7 +5099,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphLogicor)
    for( i = 0; i < consdata->nvars; ++i )
    {
       vars[i] = tmpvars[i];
-      vals[i] = -1.0;
+      vals[i] = 1.0;
    }
 
    SCIP_CALL( SCIPgetActiveVariables(scip, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
