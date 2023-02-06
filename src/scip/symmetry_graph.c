@@ -846,10 +846,12 @@ SCIP_RETCODE SCIPcomputeSymgraphColors(
          thisval = graph->vals[perm[i]];
 
          if( !SCIPisEQ(scip, prevval, thisval) )
+         {
             ++color;
+            prevval = thisval;
+         }
 
          graph->valcolors[perm[i]] = color;
-         prevval = thisval;
       }
    }
 
@@ -886,10 +888,12 @@ SCIP_RETCODE SCIPcomputeSymgraphColors(
             break;
 
          if( !SCIPisEQ(scip, prevval, thisval) )
+         {
             ++color;
+            prevval = thisval;
+         }
 
          graph->edgecolors[perm[i]] = color;
-         prevval = thisval;
       }
 
       /* check whether all edges are equivalent */
