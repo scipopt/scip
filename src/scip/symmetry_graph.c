@@ -808,6 +808,7 @@ SCIP_RETCODE SCIPcomputeSymgraphColors(
       graph->varcolors[perm[i]] = color;
       prevvar = thisvar;
    }
+   graph->nvarcolors = color;
 
    /* find colors of operator nodes */
    if( graph->nopnodes > 0 )
