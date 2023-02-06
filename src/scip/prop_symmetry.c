@@ -1108,6 +1108,9 @@ SCIP_RETCODE delSymConss(
       propdata->ngenlinconss = 0;
    }
 
+   SCIP_CALL( SCIPorbitalFixingReset(scip, propdata->orbitalfixingdata) );
+   SCIP_CALL( SCIPorbitopalFixingReset(scip, propdata->orbitopalfixingdata) );
+
    /* free pointers to symmetry group and binary variables */
    assert( propdata->nperms > 0 || propdata->genorbconss == NULL );
    assert( propdata->nperms >= propdata->ngenorbconss || propdata->genorbconss == NULL );
