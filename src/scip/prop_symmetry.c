@@ -6950,7 +6950,9 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
       {
          /* remove symmetry handling constraints to be prepared for a recomputation */
          SCIP_CALL( delSymConss(scip, propdata) );
+         assert( !propdata->triedaddconss );
          SCIP_CALL( freeSymmetryData(scip, propdata) );
+         assert( !propdata->computedsymmetry );
 
          propdata->lastrestart = SCIPgetNRuns(scip);
          propdata->symfoundreduction = FALSE;
@@ -6965,6 +6967,9 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
          return SCIP_OKAY;
       }
    }
+   assert( checkSymmetryDataFree(propdata) );
+   assert( !propdata->triedaddconss );
+   assert( !propdata->computedsymmetry );
 
    /* dynamic symmetry handling constraints */
    if ( (propdata->usesymmetry & SYM_HANDLETYPE_DYNAMICSYMBREAK) != 0 ) /* todo4J: replace by field in propdata */
