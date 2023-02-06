@@ -1591,9 +1591,11 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    int*                  nperms,             /**< pointer to store number of permutations */
    int*                  nmaxperms,          /**< pointer to store maximal number of permutations (needed for freeing storage) */
    int***                perms,              /**< pointer to store permutation generators as (nperms x npermvars) matrix */
-   SCIP_Real*            log10groupsize      /**< pointer to store size of group */
+   SCIP_Real*            log10groupsize,     /**< pointer to store size of group */
+   SCIP_Real*            symcodetime         /**< pointer to store the time for symmetry code */
    )
 {
+   SCIP_Real oldtime;
    SCIP_Bool success = FALSE;
    int* degrees;
    int* colors;
@@ -1629,12 +1631,14 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    assert( perms != NULL );
    assert( log10groupsize != NULL );
    assert( maxgenerators >= 0 );
+   assert( symcodetime != NULL );
 
    /* init */
    *nperms = 0;
    *nmaxperms = 0;
    *perms = NULL;
    *log10groupsize = 0;
+   *symcodetime = 0.0;
 
    /* init options */
 #ifdef NAUTY
@@ -1709,11 +1713,13 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    data_.perms = NULL;
 
    /* call nauty/traces */
+   oldtime = SCIPgetSolvingTime(scip);
 #ifdef NAUTY
    sparsenauty(&SG, lab, ptn, orbits, &options, &stats, NULL);
 #else
    Traces(&SG, lab, ptn, orbits, &options, &stats, NULL);
 #endif
+   *symcodetime = SCIPgetSolvingTime(scip) - oldtime;
 
    SCIPfreeBufferArray(scip, &orbits);
    SCIPfreeBufferArray(scip, &ptn);
