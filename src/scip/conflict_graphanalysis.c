@@ -3732,6 +3732,13 @@ SCIP_RETCODE conflictAnalyze(
    bdchginfo = conflictFirstCand(conflict);
    nfirstuips = 0;
 
+   /*todo there may be an issue since the currentdepth may exceed the resolvedepth. The commented lines may fix this */
+   // if ( bdchginfo != NULL )
+   // {
+   //    lastconsresoldepth = SCIPbdchginfoGetDepth(bdchginfo);
+   //    resolvedepth = SCIPbdchginfoGetDepth(bdchginfo);
+   // }
+
    /* check if the initial reason on debugging solution */
    SCIP_CALL( SCIPdebugCheckConflictFrontier(blkmem, set, tree->path[validdepth], \
          NULL, conflict->conflictset->bdchginfos, conflict->conflictset->relaxedbds, conflict->conflictset->nbdchginfos, \
