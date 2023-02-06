@@ -2669,6 +2669,155 @@ SCIP_RETCODE computeSymmetryGroup(
 }
 
 
+/** requires that the symmetry components are already computed */
+static
+SCIP_RETCODE requireSymmetryComponents(
+   SCIP*                 scip,               /**< SCIP instance */
+   SCIP_PROPDATA*        propdata            /**< propagator data */
+)
+{
+   /* symmetries must be determined */
+   assert( propdata->nperms >= 0 );
+
+   /* stop if already computed */
+   if ( propdata->ncomponents >= 0 )
+      return SCIP_OKAY;
+
+   /* compute components */
+   assert( propdata->ncomponents == -1 );
+   assert( propdata->components == NULL );
+   assert( propdata->componentbegins == NULL );
+   assert( propdata->vartocomponent == NULL );
+
+#ifdef SCIP_OUTPUT_COMPONENT
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) component computation started\n", SCIPgetSolvingTime(scip));
+#endif
+
+   SCIP_CALL( SCIPcomputeComponentsSym(scip, propdata->perms, propdata->nperms, propdata->permvars,
+         propdata->npermvars, FALSE, &propdata->components, &propdata->componentbegins,
+         &propdata->vartocomponent, &propdata->componentblocked, &propdata->ncomponents) );
+
+#ifdef SCIP_OUTPUT_COMPONENT
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) component computation finished\n", SCIPgetSolvingTime(scip));
+#endif
+
+   assert( propdata->components != NULL );
+   assert( propdata->componentbegins != NULL );
+   assert( propdata->ncomponents > 0 );
+
+   return SCIP_OKAY;
+}
+
+
+/** requires that permvarmap is initialized */
+static
+SCIP_RETCODE requireSymmetryPermvarmap(
+   SCIP*                 scip,               /**< SCIP instance */
+   SCIP_PROPDATA*        propdata            /**< propagator data */
+)
+{
+   int v;
+   
+   /* symmetries must be determined */
+   assert( propdata->nperms >= 0 );
+
+   /* stop if already computed */
+   if ( propdata->permvarmap != NULL )
+      return SCIP_OKAY;
+
+   /* create hashmap for storing the indices of variables */
+   SCIP_CALL( SCIPhashmapCreate(&propdata->permvarmap, SCIPblkmem(scip), propdata->npermvars) );
+
+   /* insert variables into hashmap  */
+   for (v = 0; v < propdata->npermvars; ++v)
+   {
+      SCIP_CALL( SCIPhashmapInsertInt(propdata->permvarmap, propdata->permvars[v], v) );
+   }
+}
+
+
+static
+SCIP_RETCODE requireSymmetryPermstrans(
+   SCIP*                 scip,               /**< SCIP instance */
+   SCIP_PROPDATA*        propdata            /**< propagator data */
+)
+{
+   int v;
+   int p;
+
+   /* symmetries must be determined */
+   assert( propdata->nperms >= 0 );
+
+   /* stop if already computed */
+   if ( propdata->permstrans != NULL )
+      return SCIP_OKAY;
+   
+   /* transpose symmetries matrix here */
+   assert( propdata->permstrans == NULL );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->permstrans, propdata->npermvars) );
+   for (v = 0; v < propdata->npermvars; ++v)
+   {
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(propdata->permstrans[v]), propdata->nmaxperms) );
+      for (p = 0; p < propdata->nperms; ++p)
+         propdata->permstrans[v][p] = propdata->perms[p][v];
+   }
+}
+
+
+static
+SCIP_RETCODE requireSymmetryMovedpermvarscounts(
+   SCIP*                 scip,               /**< SCIP instance */
+   SCIP_PROPDATA*        propdata            /**< propagator data */
+)
+{
+   int v;
+   int p;
+
+   /* symmetries must be determined */
+   assert( propdata->nperms >= 0 );
+
+   /* stop if already computed */
+   if ( propdata->nmovedpermvars >= 0 )
+      return SCIP_OKAY;
+   assert( propdata->nmovedpermvars == -1 );
+
+   propdata->nmovedpermvars = 0;
+   propdata->nmovedbinpermvars = 0;
+   propdata->nmovedintpermvars = 0;
+   propdata->nmovedimplintpermvars = 0;
+   propdata->nmovedcontpermvars = 0;
+
+   for (v = 0; v < propdata->npermvars; ++v)
+   {
+      for (p = 0; p < propdata->nperms; ++p)
+      {
+         if ( propdata->perms[p][v] != v )
+         {
+            ++propdata->nmovedpermvars;
+
+            switch ( SCIPvarGetType(propdata->permvars[v]) )
+            {
+            case SCIP_VARTYPE_BINARY:
+               ++propdata->nmovedbinpermvars;
+               break;
+            case SCIP_VARTYPE_INTEGER:
+               ++propdata->nmovedintpermvars;
+               break;
+            case SCIP_VARTYPE_IMPLINT:
+               ++propdata->nmovedimplintpermvars;
+               break;
+            case SCIP_VARTYPE_CONTINUOUS:
+            default:
+               ++propdata->nmovedcontpermvars;
+            }
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /** determines symmetry */
 static
 SCIP_RETCODE determineSymmetry(
@@ -2948,104 +3097,6 @@ SCIP_RETCODE determineSymmetry(
 
    assert( propdata->nperms > 0 );
    assert( propdata->npermvars > 0 );
-
-   /* compute components */
-   assert( propdata->components == NULL );
-   assert( propdata->componentbegins == NULL );
-   assert( propdata->vartocomponent == NULL );
-
-#ifdef SCIP_OUTPUT_COMPONENT
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) component computation started\n", SCIPgetSolvingTime(scip));
-#endif
-
-   /* we only need the components for orbital fixing, orbitope and subgroup detection, and Schreier Sims constraints */
-   if ( propdata->ofenabled || ( propdata->symconsenabled && propdata->detectorbitopes )
-      || propdata->detectsubgroups || propdata->sstenabled
-      || (propdata->usesymmetry & SYM_HANDLETYPE_DYNAMICSYMBREAK) != 0 ) /* todo4J: replace by field in propdata */
-   {
-      SCIP_CALL( SCIPcomputeComponentsSym(scip, propdata->perms, propdata->nperms, propdata->permvars,
-            propdata->npermvars, FALSE, &propdata->components, &propdata->componentbegins,
-            &propdata->vartocomponent, &propdata->componentblocked, &propdata->ncomponents) );
-   }
-
-#ifdef SCIP_OUTPUT_COMPONENT
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) component computation finished\n", SCIPgetSolvingTime(scip));
-#endif
-
-   /* set up data for OF */
-   if ( propdata->ofenabled )
-   {
-      int componentidx;
-      int v;
-
-      /* transpose symmetries matrix here if necessary */
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->permstrans, propdata->npermvars) );
-      for (v = 0; v < propdata->npermvars; ++v)
-      {
-         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(propdata->permstrans[v]), propdata->nmaxperms) );
-         for (p = 0; p < propdata->nperms; ++p)
-         {
-            if ( SCIPvarIsBinary(propdata->permvars[v]) || propdata->sstenabled )
-               propdata->permstrans[v][p] = propdata->perms[p][v];
-            else
-               propdata->permstrans[v][p] = v; /* ignore symmetry information on non-binary variables */
-         }
-      }
-
-      /* create hashmap for storing the indices of variables */
-      assert( propdata->permvarmap == NULL );
-      SCIP_CALL( SCIPhashmapCreate(&propdata->permvarmap, SCIPblkmem(scip), propdata->npermvars) );
-
-      /* insert variables into hashmap  */
-      assert( propdata->nmovedpermvars == -1 );
-      propdata->nmovedpermvars = 0;
-      for (v = 0; v < propdata->npermvars; ++v)
-      {
-         SCIP_CALL( SCIPhashmapInsertInt(propdata->permvarmap, propdata->permvars[v], v) );
-
-         /* collect number of moved permvars */
-         componentidx = propdata->vartocomponent[v];
-         if ( componentidx > -1 && ! propdata->componentblocked[componentidx] )
-         {
-            propdata->nmovedpermvars += 1;
-
-            if ( SCIPvarGetType(propdata->permvars[v]) == SCIP_VARTYPE_BINARY )
-               ++propdata->nmovedbinpermvars;
-            else if ( SCIPvarGetType(propdata->permvars[v]) == SCIP_VARTYPE_INTEGER )
-               ++propdata->nmovedintpermvars;
-            else if ( SCIPvarGetType(propdata->permvars[v]) == SCIP_VARTYPE_IMPLINT )
-               ++propdata->nmovedimplintpermvars;
-            else
-               ++propdata->nmovedcontpermvars;
-         }
-      }
-   }
-
-   /* set up data for Schreier Sims constraints or subgroup detection */
-   if ( (propdata->sstenabled || propdata->detectsubgroups) && ! propdata->ofenabled )
-   {
-      int v;
-
-      /* transpose symmetries matrix here if necessary */
-      assert( propdata->permstrans == NULL );
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->permstrans, propdata->npermvars) );
-      for (v = 0; v < propdata->npermvars; ++v)
-      {
-         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(propdata->permstrans[v]), propdata->nmaxperms) );
-         for (p = 0; p < propdata->nperms; ++p)
-            propdata->permstrans[v][p] = propdata->perms[p][v];
-      }
-
-      /* create hashmap for storing the indices of variables */
-      assert( propdata->permvarmap == NULL );
-      SCIP_CALL( SCIPhashmapCreate(&propdata->permvarmap, SCIPblkmem(scip), propdata->npermvars) );
-
-      /* insert variables into hashmap  */
-      for (v = 0; v < propdata->npermvars; ++v)
-      {
-         SCIP_CALL( SCIPhashmapInsertInt(propdata->permvarmap, propdata->permvars[v], v) );
-      }
-   }
 
    /* handle several general aspects */
 #ifndef NDEBUG
@@ -4064,6 +4115,10 @@ SCIP_RETCODE addWeakSBCsSubgroup(
 
    /* We will store the newest and the largest orbit and activeorb will be used to mark at which entry of the array
     * orbit the newly computed one will be stored. */
+   if ( ncompcolors > 0 )
+   {
+      SCIP_CALL( requireSymmetryPermstrans(scip, propdata) );
+   }
    for (j = 0; j < ncompcolors; ++j)
    {
       int graphcomp;
@@ -4419,10 +4474,12 @@ SCIP_RETCODE detectAndHandleSubgroups(
    assert( scip != NULL );
    assert( propdata != NULL );
    assert( propdata->computedsymmetry );
+   assert( propdata->nperms >= 0 );
+
+   SCIP_CALL( requireSymmetryComponents(scip, propdata) );
    assert( propdata->components != NULL );
    assert( propdata->componentbegins != NULL );
    assert( propdata->ncomponents > 0 );
-   assert( propdata->nperms >= 0 );
 
    /* exit if no symmetry is present */
    if ( propdata->nperms == 0 )
@@ -6122,34 +6179,33 @@ SCIP_RETCODE addSSTConss(
 
    assert( scip != NULL );
    assert( propdata != NULL );
+   assert( propdata->computedsymmetry );
 
    permvars = propdata->permvars;
    npermvars = propdata->npermvars;
-   permvarmap = propdata->permvarmap;
-   permstrans = propdata->permstrans;
    nperms = propdata->nperms;
+   assert( permvars != NULL );
+   assert( npermvars > 0 );
+   assert( nperms > 0 );
+
+   SCIP_CALL( requireSymmetryPermvarmap(scip, propdata) );
+   permvarmap = propdata->permvarmap;
+   assert( permvarmap != NULL );
+
+   SCIP_CALL( requireSymmetryPermstrans(scip, propdata) );
+   permstrans = propdata->permstrans;
+   assert( permstrans != NULL );
+
+   SCIP_CALL( requireSymmetryComponents(scip, propdata) );
    components = propdata->components;
    componentbegins = propdata->componentbegins;
    componentblocked = propdata->componentblocked;
    vartocomponent = propdata->vartocomponent;
    ncomponents = propdata->ncomponents;
-   nmovedpermvars = propdata->nmovedpermvars;
-   nmovedbinpermvars = propdata->nmovedbinpermvars;
-   nmovedintpermvars = propdata->nmovedintpermvars;
-   nmovedimplintpermvars = propdata->nmovedimplintpermvars;
-   nmovedcontpermvars = propdata->nmovedcontpermvars;
-
-   assert( permvars != NULL );
-   assert( npermvars > 0 );
-   assert( permvarmap != NULL );
-   assert( permstrans != NULL );
-   assert( nperms > 0 );
    assert( components != NULL );
    assert( componentbegins != NULL );
    assert( vartocomponent != NULL );
    assert( ncomponents > 0 );
-   assert( nmovedpermvars > 0 || ! propdata->ofenabled );
-   assert( nmovedbinpermvars > 0 || ! propdata->ofenabled );
 
    leaderrule = propdata->sstleaderrule;
    tiebreakrule = propdata->ssttiebreakrule;
@@ -6157,41 +6213,14 @@ SCIP_RETCODE addSSTConss(
    mixedcomponents = propdata->sstmixedcomponents;
 
    /* if not already computed, get number of affected vars */
-   if ( nmovedpermvars == -1 )
-   {
-      nmovedpermvars = 0;
-
-      for (v = 0; v < npermvars; ++v)
-      {
-         for (p = 0; p < nperms; ++p)
-         {
-            if ( permstrans[v][p] != v )
-            {
-               ++nmovedpermvars;
-
-               switch ( SCIPvarGetType(permvars[v]) )
-               {
-               case SCIP_VARTYPE_BINARY:
-                  ++nmovedbinpermvars;
-                  break;
-               case SCIP_VARTYPE_INTEGER:
-                  ++nmovedintpermvars;
-                  break;
-               case SCIP_VARTYPE_IMPLINT:
-                  ++nmovedimplintpermvars;
-                  break;
-               case SCIP_VARTYPE_CONTINUOUS:
-               default:
-                  ++nmovedcontpermvars;
-               }
-            }
-         }
-      }
-   }
-   propdata->nmovedbinpermvars = nmovedbinpermvars;
-   propdata->nmovedintpermvars = nmovedintpermvars;
-   propdata->nmovedimplintpermvars = nmovedimplintpermvars;
-   propdata->nmovedcontpermvars = nmovedcontpermvars;
+   SCIP_CALL( requireSymmetryMovedpermvarscounts(scip, propdata) );
+   nmovedpermvars = propdata->nmovedpermvars;
+   nmovedbinpermvars = propdata->nmovedbinpermvars;
+   nmovedintpermvars = propdata->nmovedintpermvars;
+   nmovedimplintpermvars = propdata->nmovedimplintpermvars;
+   nmovedcontpermvars = propdata->nmovedcontpermvars;
+   assert( nmovedpermvars > 0 );
+   assert( nmovedbinpermvars > 0 );
 
    /* determine the leader's vartype */
    nvarsselectedtype = 0;
@@ -6733,8 +6762,10 @@ SCIP_RETCODE tryAddSymmetryHandlingConssDynamic(
    SCIP_CALL( determineSymmetry(scip, propdata, SYM_SPEC_BINARY | SYM_SPEC_INTEGER | SYM_SPEC_REAL, 0) );
 
    /* do nothing if there are no symmetries */
-   if ( propdata->nperms <= 0 )
+   assert( propdata->nperms >= 0 );
+   if ( propdata->nperms == 0 )
       return SCIP_OKAY;
+   SCIP_CALL( requireSymmetryComponents(scip, propdata) );
 
    for (c = 0; c < propdata->ncomponents; ++c)
    {
@@ -6989,35 +7020,42 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
    if ( propdata->symconsenabled )
    {
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->genorbconss, propdata->nperms) );
+      assert( propdata->ngenorbconss == 0 );
 
       if ( propdata->detectorbitopes )
       {
+         SCIP_CALL( requireSymmetryComponents(scip, propdata) );
          SCIP_CALL( detectOrbitopes(scip, propdata, propdata->components, propdata->componentbegins, propdata->ncomponents) );
+
+         /* disable orbital fixing if all components are handled by orbitopes */
+         if ( propdata->ncomponents == propdata->norbitopes )
+            propdata->ofenabled = FALSE;
       }
-   }
 
-   /* disable orbital fixing if all components are handled by orbitopes */
-   if ( propdata->ncomponents == propdata->norbitopes )
-      propdata->ofenabled = FALSE;
-
-   /* possibly stop */
-   if ( SCIPisStopped(scip) )
-   {
-      if ( propdata->ngenorbconss == 0 )
+      /* possibly stop */
+      if ( SCIPisStopped(scip) )
       {
-         SCIPfreeBlockMemoryArrayNull(scip, &propdata->genorbconss, propdata->nperms);
+         if ( propdata->ngenorbconss == 0 )
+         {
+            SCIPfreeBlockMemoryArrayNull(scip, &propdata->genorbconss, propdata->nperms);
+         }
+         return SCIP_OKAY;
       }
+
+      if ( propdata->detectsubgroups 
+         && ( propdata->ncomponents < 0 || (propdata->ncompblocked < propdata->ncomponents) ) )
+      {
+         /* @TODO: create array only when needed */
+         propdata->genlinconsssize = propdata->nperms;
+         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->genlinconss, propdata->genlinconsssize) );
+
+         SCIP_CALL( requireSymmetryComponents(scip, propdata) );
+         SCIP_CALL( detectAndHandleSubgroups(scip, propdata) );
+      }
+   }
+
+   if ( SCIPisStopped(scip) )
       return SCIP_OKAY;
-   }
-
-   if ( propdata->ncompblocked < propdata->ncomponents && propdata->detectsubgroups && propdata->symconsenabled )
-   {
-      /* @TODO: create array only when needed */
-      propdata->genlinconsssize = propdata->nperms;
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->genlinconss, propdata->genlinconsssize) );
-
-      SCIP_CALL( detectAndHandleSubgroups(scip, propdata) );
-   }
 
    if ( propdata->sstenabled )
    {
@@ -7025,24 +7063,28 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
    }
 
    /* possibly stop */
-   if ( SCIPisStopped(scip) || ! propdata->symconsenabled )
+   if ( SCIPisStopped(scip) )
       return SCIP_OKAY;
 
-   /* add symmetry breaking constraints if orbital fixing is not used outside orbitopes */
-   if ( ! propdata->ofenabled )
+   if ( propdata->symconsenabled )
    {
-      /* exit if no or only trivial symmetry group is available */
-      if ( propdata->nperms < 1 || ! propdata->binvaraffected )
-         return SCIP_OKAY;
-
-      if ( propdata->addsymresacks )
+      /* add symmetry breaking constraints if orbital fixing is not used outside orbitopes */
+      if ( ! propdata->ofenabled )
       {
-         SCIP_CALL( addSymresackConss(scip, prop, propdata->components, propdata->componentbegins, propdata->ncomponents) );
-      }
+         /* exit if no or only trivial symmetry group is available */
+         if ( propdata->nperms < 1 || ! propdata->binvaraffected )
+            return SCIP_OKAY;
 
-      /* free symmetry conss if no orbitope/symresack constraints have been found (may happen if Schreier-Sims constraints are active) */
-      if ( propdata->ngenorbconss == 0 )
-         SCIPfreeBlockMemoryArrayNull(scip, &propdata->genorbconss, propdata->nperms);
+         if ( propdata->addsymresacks )
+         {
+            SCIP_CALL( requireSymmetryComponents(scip, propdata) );
+            SCIP_CALL( addSymresackConss(scip, prop, propdata->components, propdata->componentbegins, propdata->ncomponents) );
+         }
+
+         /* free symmetry conss if no orbitope/symresack constraints have been found (may happen if Schreier-Sims constraints are active) */
+         if ( propdata->ngenorbconss == 0 )
+            SCIPfreeBlockMemoryArrayNull(scip, &propdata->genorbconss, propdata->nperms);
+      }
    }
 
    return SCIP_OKAY;
@@ -7773,7 +7815,13 @@ SCIP_RETCODE SCIPgetSymmetry(
    *permvars = propdata->permvars;
 
    if ( permvarmap != NULL )
+   {
+      if ( propdata->nperms > 0 )
+      {
+         SCIP_CALL( requireSymmetryPermvarmap(scip, propdata) );
+      }
       *permvarmap = propdata->permvarmap;
+   }
 
    *nperms = propdata->nperms;
    if ( perms != NULL )
@@ -7784,6 +7832,10 @@ SCIP_RETCODE SCIPgetSymmetry(
 
    if ( permstrans != NULL )
    {
+      if ( propdata->nperms > 0 )
+      {
+         SCIP_CALL( requireSymmetryPermstrans(scip, propdata) );
+      }
       *permstrans = propdata->permstrans;
       assert( *permstrans != NULL || *nperms <= 0 );
    }
@@ -7793,6 +7845,11 @@ SCIP_RETCODE SCIPgetSymmetry(
 
    if ( binvaraffected != NULL )
       *binvaraffected = propdata->binvaraffected;
+
+   if ( components != NULL || componentbegins != NULL || vartocomponent != NULL || ncomponents != NULL )
+   {
+      SCIP_CALL( requireSymmetryComponents(scip, propdata) );
+   }
 
    if ( components != NULL )
       *components = propdata->components;
