@@ -1480,9 +1480,11 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    int*                  nperms,             /**< pointer to store number of permutations */
    int*                  nmaxperms,          /**< pointer to store maximal number of permutations (needed for freeing storage) */
    int***                perms,              /**< pointer to store permutation generators as (nperms x npermvars) matrix */
-   SCIP_Real*            log10groupsize      /**< pointer to store size of group */
+   SCIP_Real*            log10groupsize,     /**< pointer to store size of group */
+   SCIP_Real*            symcodetime         /**< pointer to store the time for symmetry code */
    )
 {
+   SCIP_Real oldtime;
    SCIP_Bool success = FALSE;
    int* degrees;
    int maxdegrees;
@@ -1502,12 +1504,14 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    assert( perms != NULL );
    assert( log10groupsize != NULL );
    assert( maxgenerators >= 0 );
+   assert( symcodetime != NULL );
 
    /* init */
    *nperms = 0;
    *nmaxperms = 0;
    *perms = NULL;
    *log10groupsize = 0;
+   *symcodetime = 0.0;
 
    /* determine number of nodes and edges */
    SCIP_CALL( determineGraphSize(scip, matrixdata, exprdata,
@@ -1543,6 +1547,8 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    data.nmaxperms = 0;
    data.maxgenerators = maxgenerators;
    data.perms = NULL;
+
+   oldtime = SCIPgetSolvingTime(scip);
 
    /* set up sassy preprocessor */
    sassy::preprocessor sassy;
@@ -1613,7 +1619,7 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    /* start search */
    blissgraph.find_automorphisms(stats, sassy::preprocessor::bliss_hook, (void*) &sassy);
 #endif
-
+   *symcodetime = SCIPgetSolvingTime(scip) - oldtime;
 
 #ifdef SCIP_OUTPUT
    (void) stats.print(stdout);

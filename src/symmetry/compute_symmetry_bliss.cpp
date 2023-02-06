@@ -1021,9 +1021,12 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    int*                  nperms,             /**< pointer to store number of permutations */
    int*                  nmaxperms,          /**< pointer to store maximal number of permutations (needed for freeing storage) */
    int***                perms,              /**< pointer to store permutation generators as (nperms x npermvars) matrix */
-   SCIP_Real*            log10groupsize      /**< pointer to store size of group */
+   SCIP_Real*            log10groupsize,     /**< pointer to store size of group */
+   SCIP_Real*            symcodetime         /**< pointer to store the time for symmetry code */
    )
 {
+   SCIP_Real oldtime;
+
    assert( scip != NULL );
    assert( matrixdata != NULL );
    assert( exprdata != NULL );
@@ -1032,12 +1035,14 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    assert( perms != NULL );
    assert( log10groupsize != NULL );
    assert( maxgenerators >= 0 );
+   assert( symcodetime != NULL );
 
    /* init */
    *nperms = 0;
    *nmaxperms = 0;
    *perms = NULL;
    *log10groupsize = 0;
+   *symcodetime = 0.0;
 
    int nnodes = 0;
    int nedges = 0;
@@ -1110,6 +1115,7 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    G.set_search_limits(0, (unsigned) maxgenerators);
 #endif
 
+   oldtime = SCIPgetSolvingTime(scip);
 #if BLISS_VERSION_MAJOR >= 1 || BLISS_VERSION_MINOR >= 76
    /* lambda function to have access to data and pass it to the blisshook above */
    auto reportglue = [&](unsigned int n, const unsigned int* aut) {
@@ -1127,7 +1133,7 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    /* start search */
    G.find_automorphisms(stats, blisshook, (void*) &data);
 #endif
-
+   *symcodetime = SCIPgetSolvingTime(scip) - oldtime;
 
 #ifdef SCIP_OUTPUT
    (void) stats.print(stdout);
