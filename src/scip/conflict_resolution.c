@@ -1765,6 +1765,7 @@ SCIP_RETCODE updateBdchgQueue(
 
       if( coef > 0.0 )
       {
+         /* todo this may not work for multiple bdchgs ie problems with continuous and general integers */
          SCIP_Real bnd;
          if ( SCIPvarGetNBdchgInfosUb(vars[v]) > 0 )
          {
@@ -2449,10 +2450,14 @@ SCIP_RETCODE rescaleAndResolve(
       conflict->resolutionset->slack = -1.0;
       if( success)
       {
+         SCIPsortIntReal(conflictresolutionset->inds, conflictresolutionset->vals, resolutionsetGetNNzs(conflictresolutionset));
          /* todo add correct validdepth for local conflicts */
          SCIP_CALL( getClauseReasonSet(conflict, blkmem,  set, currbdchginfo, SCIPbdchginfoGetRelaxedBound(currbdchginfo), 0, &success) );
          if (success)
+         {
+            SCIPsortIntReal(reasonresolutionset->inds, reasonresolutionset->vals, resolutionsetGetNNzs(reasonresolutionset));
             conflict->reasonset->slack = 0.0;
+         }
          else
             return SCIP_OKAY;
       }
@@ -3845,7 +3850,6 @@ SCIP_RETCODE conflictAnalyzeResolution(
           * if variables get canceled during resolution
           */
          cleanBdchgQueue(conflict, set, conflictresolutionset);
-
          SCIP_CALL( updateBdchgQueue(set, transprob, conflictresolutionset, bdchgidx) );
 
          /* get the next bound change */
