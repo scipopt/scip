@@ -2958,6 +2958,7 @@ SCIP_RETCODE propagateCons(
    SCIP_Bool infeasible;
    SCIP_Bool tightened;
    SCIP_Bool odd;
+   SCIP_Bool counted;
    int nvars;
    int nfixedones;
    int nfixedzeros;
@@ -3023,6 +3024,7 @@ SCIP_RETCODE propagateCons(
    odd = consdata->rhs;
    nfixedones = 0;
    nfixedzeros = 0;
+   counted = FALSE;
    if( watchedvar2 == -1 )
    {
       for( i = 0; i < nvars; ++i )
@@ -3032,22 +3034,25 @@ SCIP_RETCODE propagateCons(
             odd = !odd;
             ++nfixedones;
          }
-         else if( SCIPvarGetUbLocal(vars[i]) > 0.5 )
+         else if( SCIPvarGetUbLocal(vars[i]) < 0.5 )
+            ++nfixedzeros;
+         else
          {
+            assert(SCIPvarGetUbLocal(vars[i]) > 0.5);
+            assert(SCIPvarGetLbLocal(vars[i]) < 0.5);
+
             if( watchedvar1 == -1 )
             {
                assert(watchedvar2 == -1);
                watchedvar1 = i;
             }
-            else if( watchedvar1 != i )
+            else if( watchedvar2 == -1 && watchedvar1 != i )
             {
                watchedvar2 = i;
-               break;
             }
          }
-         else if ( SCIPvarGetUbLocal(vars[i]) < 0.5 )
-            ++nfixedzeros;
       }
+      counted = TRUE;
    }
    assert(watchedvar1 != -1 || watchedvar2 == -1);
 
@@ -3055,6 +3060,7 @@ SCIP_RETCODE propagateCons(
    if( watchedvar1 == -1 )
    {
       assert(watchedvar2 == -1);
+      assert(counted);
 
       if( odd )
       {
@@ -3136,6 +3142,7 @@ SCIP_RETCODE propagateCons(
    if( watchedvar2 == -1 )
    {
       assert(watchedvar1 != -1);
+      assert(counted);
 
       SCIPdebugMsg(scip, "constraint <%s>: only one unfixed variable -> fix <%s> to %u\n",
          SCIPconsGetName(cons), SCIPvarGetName(vars[watchedvar1]), odd);
@@ -3218,6 +3225,19 @@ SCIP_RETCODE propagateCons(
       int nonesmin;
       int nonesmax;
 
+      if( !counted )
+      {
+         assert(nfixedzeros == 0);
+         assert(nfixedones == 0);
+
+         for( i = 0; i < nvars; ++i )
+         {
+            if( SCIPvarGetLbLocal(vars[i]) > 0.5 )
+               ++nfixedones;
+            else if( SCIPvarGetUbLocal(vars[i]) < 0.5 )
+               ++nfixedzeros;
+         }
+      }
       assert( nfixedones + nfixedzeros < nvars );
 
       assert( SCIPisFeasIntegral(scip, SCIPvarGetLbLocal(consdata->intvar)) );
