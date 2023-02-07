@@ -1848,7 +1848,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyPow)
 
 /** expression callback to get information for symmetry detection */
 static
-SCIP_DECL_EXPRGETSYMDATA(getsymdataPow)
+SCIP_DECL_EXPRGETSYMDATA(getSymDataPow)
 {  /*lint --e{715}*/
    SCIP_EXPRDATA* exprdata;
 
@@ -3271,7 +3271,7 @@ SCIP_RETCODE SCIPincludeExprhdlrSignpower(
    SCIPexprhdlrSetCurvature(exprhdlr, curvatureSignpower);
    SCIPexprhdlrSetMonotonicity(exprhdlr, monotonicitySignpower);
    SCIPexprhdlrSetIntegrality(exprhdlr, integralityPow);
-   SCIPexprhdlrSetGetSymdata(exprhdlr, getsymdataPow);
+   SCIPexprhdlrSetGetSymdata(exprhdlr, getSymDataPow);
 
    return SCIP_OKAY;
 }

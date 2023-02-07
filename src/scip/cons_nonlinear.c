@@ -10921,7 +10921,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphNonlinear)
             {
                SYM_EXPRDATA2* symdata;
 
-               SCIP_CALL( SCIPgetSymdataExpr(scip, expr, &symdata) );
+               SCIP_CALL( SCIPgetSymDataExpr(scip, expr, &symdata) );
                assert(symdata != NULL);
 
                /* if expression has multiple constants, assign colors to edges to distinguish them */

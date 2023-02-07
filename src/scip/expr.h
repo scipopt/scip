@@ -654,10 +654,10 @@ SCIP_RETCODE SCIPexprSimplify(
 
 /** retrieves symmetry information from an expression
  *
- * @see SCIPgetSymdataExpr
+ * @see SCIPgetSymDataExpr
  */
 SCIP_EXPORT  /* need SCIP_EXPORT here, because func is exposed in API via SCIPgetSymdataExpr() macro */
-SCIP_RETCODE SCIPexprGetSymdata(
+SCIP_RETCODE SCIPexprGetSymData(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EXPR*            expr,               /**< expression from which information is retrieved */
    SYM_EXPRDATA2**       symdata             /**< buffer to store symmetry information */

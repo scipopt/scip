@@ -539,7 +539,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifySum)
 
 /** expression callback to get information for symmetry detection */
 static
-SCIP_DECL_EXPRGETSYMDATA(getsymdataSum)
+SCIP_DECL_EXPRGETSYMDATA(getSymDataSum)
 {  /*lint --e{715}*/
    SCIP_EXPRDATA* exprdata;
    int i;
@@ -1106,7 +1106,7 @@ SCIP_RETCODE SCIPincludeExprhdlrSum(
    SCIPexprhdlrSetCurvature(exprhdlr, curvatureSum);
    SCIPexprhdlrSetMonotonicity(exprhdlr, monotonicitySum);
    SCIPexprhdlrSetIntegrality(exprhdlr, integralitySum);
-   SCIPexprhdlrSetGetSymdata(exprhdlr, getsymdataSum);
+   SCIPexprhdlrSetGetSymdata(exprhdlr, getSymDataSum);
 
    return SCIP_OKAY;
 }

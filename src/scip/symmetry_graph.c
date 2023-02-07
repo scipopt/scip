@@ -1239,7 +1239,7 @@ SCIP_RETCODE SCIPgetCoefSymdata(
    if( SCIPexprhdlrHasGetSymdata(SCIPexprGetHdlr(parentexpr)) )
       return SCIP_OKAY;
 
-   SCIP_CALL( SCIPgetSymdataExpr(scip, parentexpr, &symdata) );
+   SCIP_CALL( SCIPgetSymDataExpr(scip, parentexpr, &symdata) );
 
    /* parent does not assign coefficients to its children */
    if( symdata->ncoefficients < 1 )
