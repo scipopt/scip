@@ -891,6 +891,94 @@ SCIP_DECL_SORTINDCOMP(SYMsortConsReflSym)
    return 0;
 }
 
+/** compares two symmetry detection graphs
+ *
+ *  Graphs are compared by their number of consnodes, then their constypes, then by their lhs,
+ *  then by their rhs, then by their total number of nodes, then by the number of operator nodes,
+ *  then by their number of value nodes, and then by their number of edges.
+ *
+ *  result:
+ *    < 0: ind1 comes before (is better than) ind2
+ *    = 0: both indices have the same value
+ *    > 0: ind2 comes after (is worse than) ind2
+ */
+static
+int compareSymgraphs(
+   SYM_GRAPH*            G1,                 /**< first graph in comparison */
+   SYM_GRAPH*            G2                  /**< second graph in comparison */
+   )
+{
+  if ( G1->nconsnodes < G2->nconsnodes )
+      return -1;
+   if ( G1->nconsnodes > G2->nconsnodes )
+      return 1;
+
+   if ( G1->nconsnodes == 1 )
+   {
+      if ( SCIPconsGetHdlr(G1->conss[0]) < SCIPconsGetHdlr(G2->conss[0]) )
+         return -1;
+      if ( SCIPconsGetHdlr(G1->conss[0]) > SCIPconsGetHdlr(G2->conss[0]) )
+         return 1;
+
+      if ( G1->lhs[0] < G2->lhs[0] )
+         return -1;
+      if ( G1->lhs[0] > G2->lhs[0] )
+         return 1;
+
+      if ( G1->rhs[0] < G2->rhs[0] )
+         return -1;
+      if ( G1->rhs[0] > G2->rhs[0] )
+         return 1;
+   }
+
+   if ( G1->nnodes < G2->nnodes )
+      return -1;
+   if ( G1->nnodes > G2->nnodes )
+      return 1;
+
+   if ( G1->nopnodes < G2->nopnodes )
+      return -1;
+   if ( G1->nopnodes > G2->nopnodes )
+      return 1;
+
+   if ( G1->nvalnodes < G2->nvalnodes )
+      return -1;
+   if ( G1->nvalnodes > G2->nvalnodes )
+      return 1;
+
+   if ( G1->nedges < G2->nedges )
+      return -1;
+   if ( G1->nedges > G2->nedges )
+      return 1;
+
+   return 0;
+}
+
+/** sorts symmetry detection graphs
+ *
+ *  Graphs are sorted by their number of consnodes, then their constypes, then by their lhs,
+ *  then by their rhs, then by their total number of nodes, then by the number of operator nodes,
+ *  then by their number of value nodes, and then by their number of edges.
+ *
+ *  result:
+ *    < 0: ind1 comes before (is better than) ind2
+ *    = 0: both indices have the same value
+ *    > 0: ind2 comes after (is worse than) ind2
+ */
+static
+SCIP_DECL_SORTINDCOMP(SYMsortSymgraphs)
+{
+   SYM_GRAPH** data;
+   SYM_GRAPH* G1;
+   SYM_GRAPH* G2;
+
+   data = (SYM_GRAPH**) dataptr;
+   G1 = data[ind1];
+   G2 = data[ind2];
+
+   return compareSymgraphs(G1, G2);
+}
+
 /*
  * Local methods
  */
@@ -6090,6 +6178,114 @@ SCIP_RETCODE estimateSymgraphSize(
    return SCIP_OKAY;
 }
 
+/** checks whether computed symmetries are indeed symmetries */
+static
+SCIP_RETCODE checkSymmetriesAreSymmetries2(
+   SCIP*                 scip,               /**< SCIP pointer */
+   int**                 perms,              /**< array of permutations */
+   int                   nperms,             /**< number of permutations */
+   int                   npermvars,          /**< number of variables permutations act on */
+   SYM_SPEC              fixedtype           /**< variable types that must be fixed by symmetries */
+   )
+{
+   SYM_GRAPH** graphs;
+   SCIP_CONS** conss;
+   SCIP_VAR** symvars;
+   SCIP_Bool success;
+   int* graphperm;
+   int* groupbegins;
+   int ngroups = 1;
+   int nsymvars;
+   int nconss;
+   int p;
+   int c;
+   int g;
+
+   assert( scip != NULL );
+   assert( perms != NULL );
+   assert( nperms > 0 );
+   assert( npermvars > 0 );
+
+   /* get symmetry detection graphs for all constraints */
+   nconss = SCIPgetNConss(scip);
+   conss = SCIPgetConss(scip);
+   assert( conss != NULL );
+
+   symvars = SCIPgetVars(scip);
+   nsymvars = SCIPgetNVars(scip);
+   assert( nsymvars == npermvars );
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &graphs, nconss) );
+
+   for (c = 0; c < nconss; ++c)
+   {
+      SCIP_CALL( SCIPcreateSymgraph(scip, &graphs[c], symvars, nsymvars, 10, 10, 1, 100) );
+      SCIP_CALL( SCIPgetConsPermsymGraph(scip, conss[c], graphs[c], &success) );
+      SCIP_CALL( SCIPcomputeSymgraphColors(scip, graphs[c], fixedtype) );
+
+      assert( success );
+   }
+
+   /* sort graphs for quicker comparisons */
+   SCIP_CALL( SCIPallocBufferArray(scip, &graphperm, nconss) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &groupbegins, nconss + 1) );
+   SCIPsort(graphperm, SYMsortSymgraphs, graphs, nconss);
+
+   groupbegins[0] = 0;
+   for (c = 1; c < nconss; ++c)
+   {
+      if ( compareSymgraphs(graphs[graphperm[c]], graphs[graphperm[c-1]]) != 0 )
+         groupbegins[ngroups++] = c;
+   }
+   groupbegins[ngroups] = nconss;
+
+   /* iterate over all permutations and check whether they define symmetries */
+   for (p = 0; p < nperms; ++p)
+   {
+      SYM_GRAPH* graph;
+      SCIP_Bool found = TRUE;
+      int d;
+
+      /* for every constraint, create permuted graph by copying nodes and edges */
+      for (g = 0; g < ngroups; ++g)
+      {
+         for (c = groupbegins[g]; c < groupbegins[g+1] && found; ++c)
+         {
+            found = FALSE;
+
+            SCIP_CALL( SCIPcopySymgraph(scip, &graph, graphs[graphperm[c]], perms[p], fixedtype) );
+
+            /* if adapted graph is equivalent to original graph, we don't need to check further graphs */
+            if ( SYMcheckGraphsAreIdentical(scip, graph, graphs[graphperm[c]]) )
+               continue;
+
+            /* check whether graph has an isomorphic counterpart */
+            for (d = groupbegins[g]; d < groupbegins[g+1] && ! found; ++d)
+               found = SYMcheckGraphsAreIdentical(scip, graph, graphs[graphperm[d]]);
+
+            SCIP_CALL( SCIPfreeSymgraph(scip, &graph) );
+
+            if ( ! found )
+            {
+               SCIPerrorMessage("permutation %d is not a symmetry\n", p);
+               return SCIP_ERROR;
+            }
+         }
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &groupbegins);
+   SCIPfreeBufferArray(scip, &graphperm);
+
+   for (c = nconss - 1; c >= 0; --c)
+   {
+      SCIP_CALL( SCIPfreeSymgraph(scip, &graphs[c]) );
+   }
+   SCIPfreeBufferArray(scip, &graphs);
+
+   return SCIP_OKAY;
+}
+
 /** computes symmetry group of a CIP */
 static
 SCIP_RETCODE computeSymmetryGroup2(
@@ -6170,6 +6366,12 @@ SCIP_RETCODE computeSymmetryGroup2(
 
       SCIP_CALL( SYMcomputeSymmetryGenerators2(scip, maxgenerators, graph,
             &nperms, &nmaxperms, &perms, &log10groupsize) );
+
+      if ( checksymmetries )
+      {
+         SCIP_CALL( checkSymmetriesAreSymmetries2(scip, perms, nperms, SCIPgetNVars(scip), fixedtype) );
+      }
+
 
       SCIPinfoMessage(scip, NULL, "new symmetry found %d generators (log10: %.1f)\n", nperms, log10groupsize);
 

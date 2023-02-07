@@ -1589,11 +1589,10 @@ SCIP_RETCODE addGroupedEdges(
    )
 {
    assert( G != NULL );
-   assert( groupfirsts != NULL );
-   assert( groupseconds != NULL );
-   assert( groupcolors != NULL );
-   assert( nnodes != NULL );
-   assert( nedges != NULL );
+   assert( neighbors != NULL );
+   assert( colors != NULL );
+   assert( naddednodes != NULL );
+   assert( naddededges != NULL );
 
    *naddednodes = 0;
    *naddededges = 0;
@@ -1662,7 +1661,6 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators2(
    *nmaxperms = 0;
    *perms = NULL;
    *log10groupsize = 0;
-
 
    /* create bliss graph */
    bliss::Graph G(0);
@@ -1878,6 +1876,199 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators2(
    *log10groupsize = (SCIP_Real) log10l(stats.get_group_size_approx());
 
    return SCIP_OKAY;
+}
+
+/** returns whether two given graphs are identical */
+SCIP_Bool SYMcheckGraphsAreIdentical(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SYM_GRAPH*            G1,                 /**< first graph */
+   SYM_GRAPH*            G2                  /**< second graph */
+   )
+{
+   int* nvarused1;
+   int* nvarused2;
+   int* varlabel;
+   int nusedvars = 0;
+   int nvars;
+   int i;
+   int maxgenerators = 1500;
+
+   assert( scip != NULL );
+   assert( G1 != NULL );
+   assert( G2 != NULL );
+
+   /* some simple checks */
+   if ( G1->nnodes != G2->nnodes ||  G1->nopnodes != G2->nopnodes || G1->nvalnodes != G2->nvalnodes
+      || G1->nconsnodes != G2->nconsnodes || G1->nedges != G2->nedges )
+      return FALSE;
+
+   /* check whether the variables used in G1 are the same as in G2 */
+   nvars = G1->nsymvars;
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &nvarused1, nvars) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &nvarused2, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &varlabel, nvars) );
+
+   for (i = 0; i < G1->nedges; ++i)
+   {
+      if ( G1->edgefirst[i] < 0 )
+         nvarused1[-G1->edgefirst[i] - 1] += 1;
+      if ( G2->edgefirst[i] < 0 )
+         nvarused2[-G2->edgefirst[i] - 1] += 1;
+      if ( G1->edgesecond[i] < 0 )
+         nvarused1[-G1->edgesecond[i] - 1] += 1;
+      if ( G2->edgesecond[i] < 0 )
+         nvarused2[-G2->edgesecond[i] - 1] += 1;
+   }
+
+   for (i = 0; i < nvars; ++i)
+   {
+      if ( nvarused1[i] != nvarused2[i] )
+      {
+         SCIPfreeBufferArray(scip, &varlabel);
+         SCIPfreeBufferArray(scip, &nvarused2);
+         SCIPfreeBufferArray(scip, &nvarused1);
+
+         return FALSE;
+      }
+
+      /* relabel variables by restricting to variables used in constraint */
+      if ( nvarused1[i] > 0 )
+         varlabel[i] = nusedvars++;
+      else
+         varlabel[i] = -1;
+   }
+
+   /* construct bliss graph containing the (disjoint) union of the two graphs */
+   bliss::Graph G(0);
+
+   /* copy of G1 */
+   for (i = 0; i < nusedvars; ++i)
+      G.add_vertex(i);
+
+   for (i = 0; i < G1->nnodes; ++i)
+      G.add_vertex(nusedvars + SCIPgetSymgraphNodeColor(G1, i));
+
+   for (i = 0; i < G1->nedges; ++i)
+   {
+      int first = G1->edgefirst[i];
+      int second = G1->edgesecond[i];
+
+      if ( first < 0 )
+         first = varlabel[-first - 1];
+      else
+         first = nusedvars + first;
+      assert( first >= 0 );
+
+      if ( second < 0 )
+         second = varlabel[-second - 1];
+      else
+         second = nusedvars + second;
+      assert( second >= 0 );
+
+      if ( SCIPisSymgraphEdgeColored(G1, i) )
+      {
+         int inter = G.add_vertex(SCIPgetSymgraphEdgeColor(G1, i));
+         G.add_edge(first, inter);
+         G.add_edge(second, inter);
+      }
+      else
+         G.add_edge(first, second);
+
+   }
+
+   /* copy of G2 */
+   int nodeshift = G.get_nof_vertices();
+   for (i = 0; i < nusedvars; ++i)
+      G.add_vertex(i);
+
+   for (i = 0; i < G2->nnodes; ++i)
+      G.add_vertex(nusedvars + SCIPgetSymgraphNodeColor(G1, i));
+
+   for (i = 0; i < G2->nedges; ++i)
+   {
+      int first = G2->edgefirst[i];
+      int second = G2->edgesecond[i];
+
+      if ( first < 0 )
+         first = nodeshift + varlabel[-first - 1];
+      else
+         first = nodeshift + nusedvars + first;
+      assert( first >= 0 );
+
+      if ( second < 0 )
+         second = nodeshift + varlabel[-second - 1];
+      else
+         second = nodeshift + nusedvars + second;
+      assert( second >= 0 );
+
+      if ( SCIPisSymgraphEdgeColored(G2, i) )
+      {
+         int inter = G.add_vertex(SCIPgetSymgraphEdgeColor(G2, i));
+         G.add_edge(first, inter);
+         G.add_edge(second, inter);
+      }
+      else
+         G.add_edge(first, second);
+   }
+
+   /* compute automorphisms */
+   bliss::Stats stats;
+   BLISS_Data data;
+   data.scip = scip;
+   data.npermvars = G1->nsymvars;
+   data.nperms = 0;
+   data.nmaxperms = 0;
+   data.maxgenerators = maxgenerators;
+   data.perms = NULL;
+
+   /* Prefer splitting partition cells corresponding to variables over those corresponding
+    * to inequalities. This is because we are only interested in the action
+    * of the automorphism group on the variables, and we need a base for this action */
+   G.set_splitting_heuristic(bliss::Graph::shs_f);
+   /* disable component recursion as advised by Tommi Junttila from bliss */
+   G.set_component_recursion(false);
+
+   /* do not use a node limit, but set generator limit */
+#ifdef BLISS_PATCH_PRESENT
+   G.set_search_limits(0, (unsigned) maxgenerators);
+#endif
+
+#if BLISS_VERSION_MAJOR >= 1 || BLISS_VERSION_MINOR >= 76
+   /* lambda function to have access to data and pass it to the blisshook above */
+   auto reportglue = [&](unsigned int n, const unsigned int* aut) {
+      blisshook((void*)&data, n, aut);
+   };
+
+   /* lambda function to have access to stats and terminate the search if maxgenerators are reached */
+   auto term = [&]() {
+      return (stats.get_nof_generators() >= (long unsigned int) maxgenerators);
+   };
+
+   /* start search */
+   G.find_automorphisms(stats, reportglue, term);
+#else
+   /* start search */
+   G.find_automorphisms(stats, blisshook, (void*) &data);
+#endif
+
+   /* since G1 and G2 are connected and disjoint, they are isomorphic iff there is a permutation
+    * mapping a node from G1 to a node of G2
+    */
+   SCIP_Bool success = FALSE;
+   for (int p = 0; p < data.nperms && ! success; ++p)
+   {
+      for (i = 0; i < nodeshift; ++i)
+      {
+         if ( data.perms[p][i] >= nodeshift )
+            success = TRUE;
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &varlabel);
+   SCIPfreeBufferArray(scip, &nvarused2);
+   SCIPfreeBufferArray(scip, &nvarused1);
+
+   return success;
 }
 
 /** compute generators of reflection symmetry group */

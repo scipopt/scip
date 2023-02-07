@@ -77,6 +77,14 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators2(
    SCIP_Real*            log10groupsize      /**< pointer to store log10 of size of group */
    );
 
+/** returns whether two given graphs are identical */
+SCIP_EXPORT
+SCIP_Bool SYMcheckGraphsAreIdentical(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SYM_GRAPH*            G1,                 /**< first graph */
+   SYM_GRAPH*            G2                  /**< second graph */
+   );
+
 /** compute generators of reflection symmetry group */
 SCIP_EXPORT
 SCIP_RETCODE SYMcomputeReflectionSymmetryGenerators(

@@ -72,6 +72,16 @@ SCIP_RETCODE SCIPfreeSymgraph(
    SYM_GRAPH**           graph               /**< pointer to hold symmetry detection graph */
    );
 
+/** copies an existing graph and changes variable nodes according to a permutation */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcopySymgraph(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SYM_GRAPH**           graph,              /**< pointer to hold copy of symmetry detection graph */
+   SYM_GRAPH*            origgraph,          /**< graph to be copied */
+   int*                  perm,               /**< permutation of variables */
+   SYM_SPEC              fixedtype           /**< variable types that must be fixed by symmetries */
+   );
+
 /** adds a symmetry detection graph for linear constraint to existing graph */
 SCIP_EXPORT
 SCIP_RETCODE SCIPextendPermsymDetectionGraphLinear(

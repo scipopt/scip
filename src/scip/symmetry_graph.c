@@ -132,6 +132,73 @@ SCIP_RETCODE SCIPfreeSymgraph(
    return SCIP_OKAY;
 }
 
+/** copies an existing graph and changes variable nodes according to a permutation */
+SCIP_RETCODE SCIPcopySymgraph(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SYM_GRAPH**           graph,              /**< pointer to hold copy of symmetry detection graph */
+   SYM_GRAPH*            origgraph,          /**< graph to be copied */
+   int*                  perm,               /**< permutation of variables */
+   SYM_SPEC              fixedtype           /**< variable types that must be fixed by symmetries */
+   )
+{
+   SYM_NODETYPE nodetype;
+   int* nodeinfopos;
+   int nnodes;
+   int first;
+   int second;
+   int i;
+
+   assert(scip != NULL);
+   assert(graph != NULL);
+   assert(origgraph != NULL);
+   assert(perm != NULL);
+
+   SCIP_CALL( SCIPcreateSymgraph(scip, graph, origgraph->symvars, origgraph->nsymvars,
+         origgraph->nopnodes, origgraph->nvalnodes, origgraph->nconsnodes, origgraph->nedges) );
+
+   /* copy nodes */
+   nnodes = origgraph->nnodes;
+   nodeinfopos = origgraph->nodeinfopos;
+   for( i = 0; i < nnodes; ++i )
+   {
+      nodetype = origgraph->nodetypes[i];
+
+      switch( nodetype )
+      {
+      case SYM_NODETYPE_OPERATOR:
+         (void) SCIPaddSymgraphOpnode(scip, *graph, origgraph->ops[nodeinfopos[i]]);
+         break;
+      case SYM_NODETYPE_VAL:
+         (void) SCIPaddSymgraphValnode(scip, *graph, origgraph->vals[nodeinfopos[i]]);
+         break;
+      default:
+         assert(nodetype == SYM_NODETYPE_CONS);
+         (void) SCIPaddSymgraphConsnode(scip, *graph, origgraph->conss[nodeinfopos[i]],
+               origgraph->lhs[nodeinfopos[i]], origgraph->rhs[nodeinfopos[i]]);
+      }
+   }
+
+   /* copy edges */
+   for( i = 0; i < origgraph->nedges; ++i )
+   {
+      first = SCIPgetSymgraphEdgeFirst(origgraph, i);
+      second = SCIPgetSymgraphEdgeSecond(origgraph, i);
+
+      /* possibly adapt edges due to permutation of variables */
+      if( first < 0 )
+         first = -perm[-first - 1] - 1;
+      if( second < 0 )
+         second = -perm[-second - 1] - 1;
+
+      SCIP_CALL( SCIPaddSymgraphEdge(scip, *graph, first, second,
+            !SCIPisEQ(scip, SCIPinfinity(scip), origgraph->edgevals[i]), origgraph->edgevals[i]) );
+   }
+
+   SCIP_CALL( SCIPcomputeSymgraphColors(scip, *graph, fixedtype) );
+
+   return SCIP_OKAY;
+}
+
 /** adds a symmetry detection graph for linear constraint to existing graph */
 SCIP_RETCODE SCIPextendPermsymDetectionGraphLinear(
    SCIP*                 scip,               /**< SCIP data structure */
