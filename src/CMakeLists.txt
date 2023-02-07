@@ -370,6 +370,7 @@ set(scipsources
     scip/symmetry.c
     scip/symmetry_orbitopal.c
     scip/symmetry_orbital.c
+    scip/symmetry_lexred.c
     scip/syncstore.c
     scip/table.c
     scip/tree.c
@@ -904,6 +905,7 @@ set(scipheaders
     scip/symmetry.h
     scip/symmetry_orbitopal.h
     scip/symmetry_orbital.h
+    scip/symmetry_lexred.h
     scip/syncstore.h
     scip/table_default.h
     scip/table.h

@@ -330,7 +330,7 @@ SCIP_DECL_EVENTEXEC(eventExecNodeDeleted)
    /* It is possible that deletedshadownode has a non-deleted sibling.
     * If the branching variable of this sibling differs from deletedshadownode's,
     * then in the variable branching order also the branching variables of deletedshadownode must be included,
-    * e.g. see `shadowtreeFillNodeDepthBranchIndices` in cons_symresack_dynamic.c.
+    * e.g. see `shadowtreeFillNodeDepthBranchIndices` in symmetry_lexred.c.
     * As such, we may not delete deletedshadownode just yet. However, we can delete its children.
     * So, mark deletedshadownode as 'ready to delete' by freeing its children, and setting nchildren to -1.
     * SCIP always deletes leaf nodes only, so if `deletedshadownode` is removed,

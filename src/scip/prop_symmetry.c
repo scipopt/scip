@@ -159,6 +159,7 @@
 #include <scip/symmetry.h>
 #include <scip/symmetry_orbitopal.h>
 #include <scip/symmetry_orbital.h>
+#include <scip/symmetry_lexred.h>
 
 #include <string.h>
 
