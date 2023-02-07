@@ -104,6 +104,7 @@
 
 #define SCIP_DEFAULT_CONF_ENABLE           TRUE /**< conflict analysis be enabled? */
 #define SCIP_DEFAULT_CONF_MAXVARSFAC       0.15 /**< maximal fraction of variables involved in a conflict constraint */
+#define SCIP_DEFAULT_CONF_LINEARHDLRONLY  FALSE /**< should only the linear conflict handler be used for conflict analysis? */
 #define SCIP_DEFAULT_CONF_MINMAXVARS          0 /**< minimal absolute maximum of variables involved in a conflict constraint */
 #define SCIP_DEFAULT_CONF_MAXLPLOOPS          2 /**< maximal number of LP resolving loops during conflict analysis
                                                  *   (-1: no limit) */
@@ -1542,6 +1543,11 @@ SCIP_RETCODE SCIPsetCreate(
          "conflict/removable",
          "should the conflict's relaxations be subject to LP aging and cleanup?",
          &(*set)->conf_removable, TRUE, SCIP_DEFAULT_CONF_REMOVEABLE,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "conflict/linearhdlronly",
+         "use only the linear conflict handler to add conflict constraints?",
+         &(*set)->conf_linearhdlronly, FALSE, SCIP_DEFAULT_CONF_LINEARHDLRONLY,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "conflict/weakenconflict",

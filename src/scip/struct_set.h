@@ -271,6 +271,7 @@ struct SCIP_Set
    SCIP_Real             conf_scorefac;      /**< factor to decrease importance of variables' earlier conflict scores */
    int                   conf_restartnum;    /**< number of successful conflict analysis calls that trigger a restart
                                               *   (0: disable conflict restarts) */
+   SCIP_Bool             conf_linearhdlronly;/**< use only the linear conflict handler to add conflict constraints? */
    SCIP_Real             conf_restartfac;    /**< factor to increase restartnum with after each restart */
    SCIP_Bool             conf_ignorerelaxedbd;/**< should relaxed bounds be ignored? */
    int                   conf_maxvarsdetectimpliedbounds;/**< maximal number of variables to try to detect global bound

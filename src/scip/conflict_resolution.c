@@ -25,7 +25,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 // #define SCIP_STATISTIC
-// #define SCIP_DEBUG
+#define SCIP_DEBUG
 
 #include "lpi/lpi.h"
 #include "scip/conflict_resolution.h"
@@ -3449,11 +3449,11 @@ SCIP_RETCODE conflictAnalyzeResolution(
 
       SCIP_Bool success;
       SCIP_CONSHDLR* conshdlr;
-      SCIPsetDebugMsg(set, "Slack of conflict constraint is not negative \n");
 
       assert(!infeasibleLP && !pseudoobj);
       if (initialconflictrow != NULL && !set->conf_clausegenres)
       {
+         SCIPsetDebugMsg(set, "Slack of conflict constraint is not negative \n");
          conshdlr = SCIProwGetOriginConshdlr(initialconflictrow);
          SCIPsetDebugMsg(set, "%s",SCIPconshdlrGetName(conshdlr));
          /* relaxed assertion */
@@ -3923,14 +3923,14 @@ SCIP_RETCODE conflictAnalyzeResolution(
 
    if ( conflict->nresolutionsets > 0 )
    {
-      // int nconstoadd;
+      int nconstoadd;
 
       /** add the conflict constraints to the current node
        * (all operations are done only on global constraints -> add conflict constraints to the root node)
        */
-      // nconstoadd = (set->conf_resolutioncons > 0) ? MIN(set->conf_resolutioncons, conflict->nresolutionsets) : conflict->nresolutionsets;
+      nconstoadd = (set->conf_resolutioncons > 0) ? MIN(set->conf_resolutioncons, conflict->nresolutionsets) : conflict->nresolutionsets;
 
-      for( i = 0; i < nfuips; i++ )
+      for( i = 0; i < nconstoadd; i++ )
       {
          SCIP_RESOLUTIONSET* resolutionset;
          resolutionset = conflict->resolutionsets[i];

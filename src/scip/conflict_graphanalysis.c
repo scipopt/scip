@@ -1838,6 +1838,8 @@ SCIP_RETCODE conflictAddConflictCons(
 
          assert(conflictset->conflicttype != SCIP_CONFTYPE_UNKNOWN);
 
+         if (set->conf_linearhdlronly && strcmp(SCIPconflicthdlrGetName(set->conflicthdlrs[h]), "linear") != 0)
+            continue;
          SCIP_CALL( SCIPconflicthdlrExec(set->conflicthdlrs[h], set, tree->path[insertdepth],
                tree->path[conflictset->validdepth], conflictset->bdchginfos, conflictset->relaxedbds,
                conflictset->nbdchginfos, conflictset->conflicttype, conflictset->usescutoffbound, *success, &result) );
@@ -3732,12 +3734,12 @@ SCIP_RETCODE conflictAnalyze(
    bdchginfo = conflictFirstCand(conflict);
    nfirstuips = 0;
 
-   /*todo there may be an issue since the currentdepth may exceed the resolvedepth. The commented lines may fix this */
-   // if ( bdchginfo != NULL )
-   // {
-   //    lastconsresoldepth = SCIPbdchginfoGetDepth(bdchginfo);
-   //    resolvedepth = SCIPbdchginfoGetDepth(bdchginfo);
-   // }
+   /*todo there may be an issue since the currentdepth may exceed the resolvedepth. The next lines should fix this issue */
+   if ( bdchginfo != NULL )
+   {
+      lastconsresoldepth = SCIPbdchginfoGetDepth(bdchginfo);
+      resolvedepth = SCIPbdchginfoGetDepth(bdchginfo);
+   }
 
    /* check if the initial reason on debugging solution */
    SCIP_CALL( SCIPdebugCheckConflictFrontier(blkmem, set, tree->path[validdepth], \
