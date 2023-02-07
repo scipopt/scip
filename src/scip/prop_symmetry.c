@@ -297,6 +297,7 @@ struct SCIP_PropData
    SCIP_CONS**           genorbconss;        /**< list of generated orbitope/orbisack/symresack constraints */
    SCIP_CONS**           genlinconss;        /**< list of generated linear constraints */
    int                   ngenorbconss;       /**< number of generated orbitope/orbisack/symresack constraints */
+   int                   genorbconsssize;    /**< size of generated orbitope/orbisack/symresack constraints array */
    int                   ngenlinconss;       /**< number of generated linear constraints */
    int                   genlinconsssize;    /**< size of linear constraints array */
    int                   nsymresacks;        /**< number of symresack constraints */
@@ -726,6 +727,10 @@ SCIP_Bool checkSymmetryDataFree(
    assert( propdata->permvarmap == NULL );
    assert( propdata->genorbconss == NULL );
    assert( propdata->genlinconss == NULL );
+   assert( propdata->ngenlinconss == 0 );
+   assert( propdata->ngenorbconss == 0 );
+   assert( propdata->genorbconsssize == 0 );
+   assert( propdata->genlinconsssize == 0 );
    assert( propdata->sstconss == NULL );
    assert( propdata->leaders == NULL );
 
@@ -895,7 +900,7 @@ SCIP_RETCODE freeSymmetryData(
       }
 
       /* free pointers to symmetry group and binary variables */
-      SCIPfreeBlockMemoryArray(scip, &propdata->genorbconss, propdata->nperms);
+      SCIPfreeBlockMemoryArray(scip, &propdata->genorbconss, propdata->genorbconsssize);
       propdata->ngenorbconss = 0;
    }
 
@@ -1020,27 +1025,21 @@ SCIP_RETCODE delSymConss(
    assert( scip != NULL );
    assert( propdata != NULL );
 
-   if ( propdata->ngenorbconss == 0 )
+   assert( (propdata->genorbconss == NULL) == (propdata->ngenorbconss == 0) );
+   assert( (propdata->genorbconss == NULL) == (propdata->genorbconsssize == 0) );
+
+   for (i = 0; i < propdata->ngenorbconss; ++i)
    {
-      SCIPfreeBlockMemoryArrayNull(scip, &propdata->genorbconss, propdata->nperms);
+      assert( propdata->genorbconss[i] != NULL );
+
+      SCIP_CALL( SCIPdelCons(scip, propdata->genorbconss[i]) );
+      SCIP_CALL( SCIPreleaseCons(scip, &propdata->genorbconss[i]) );
    }
-   else
-   {
-      assert( propdata->genorbconss != NULL );
-      assert( propdata->nperms > 0 );
-      assert( propdata->nperms >= propdata->ngenorbconss );
 
-      for (i = 0; i < propdata->ngenorbconss; ++i)
-      {
-         assert( propdata->genorbconss[i] != NULL );
-
-         SCIP_CALL( SCIPdelCons(scip, propdata->genorbconss[i]) );
-         SCIP_CALL( SCIPreleaseCons(scip, &propdata->genorbconss[i]) );
-      }
-
-      SCIPfreeBlockMemoryArray(scip, &propdata->genorbconss, propdata->nperms);
-      propdata->ngenorbconss = 0;
-   }
+   SCIPfreeBlockMemoryArrayNull(scip, &propdata->genorbconss, propdata->genorbconsssize);
+   propdata->ngenorbconss = 0;
+   propdata->genorbconsssize = 0;
+   propdata->genorbconss = NULL;
 
    /* free Schreier Sims data */
    if ( propdata->nsstconss > 0 )
@@ -1058,36 +1057,69 @@ SCIP_RETCODE delSymConss(
       propdata->maxnsstconss = 0;
    }
 
-   if ( propdata->ngenlinconss == 0 )
+   /* linear constraints*/
+   assert( (propdata->genlinconss == NULL) == (propdata->ngenlinconss == 0) );
+   assert( (propdata->genlinconss == NULL) == (propdata->genlinconsssize == 0) );
+
+   for (i = 0; i < propdata->ngenorbconss; ++i)
    {
-      SCIPfreeBlockMemoryArrayNull(scip, &propdata->genlinconss, propdata->genlinconsssize);
-   }
-   else
-   {
-      assert( propdata->genlinconss != NULL );
-      assert( propdata->nperms > 0 );
+      assert( propdata->genlinconss[i] != NULL );
 
-      for (i = 0; i < propdata->ngenlinconss; ++i)
-      {
-         assert( propdata->genlinconss[i] != NULL );
-
-         SCIP_CALL( SCIPdelCons(scip, propdata->genlinconss[i]) );
-         SCIP_CALL( SCIPreleaseCons(scip, &propdata->genlinconss[i]) );
-      }
-
-      SCIPfreeBlockMemoryArray(scip, &propdata->genlinconss, propdata->genlinconsssize);
-      propdata->ngenlinconss = 0;
+      SCIP_CALL( SCIPdelCons(scip, propdata->genlinconss[i]) );
+      SCIP_CALL( SCIPreleaseCons(scip, &propdata->genlinconss[i]) );
    }
 
+   SCIPfreeBlockMemoryArrayNull(scip, &propdata->genlinconss, propdata->genlinconsssize);
+   propdata->ngenlinconss = 0;
+   propdata->genlinconsssize = 0;
+   propdata->genlinconss = NULL;
+
+   /* propagators managed by a different file */
    SCIP_CALL( SCIPorbitalFixingReset(scip, propdata->orbitalfixingdata) );
    SCIP_CALL( SCIPorbitopalFixingReset(scip, propdata->orbitopalfixingdata) );
 
-   /* free pointers to symmetry group and binary variables */
-   assert( propdata->nperms > 0 || propdata->genorbconss == NULL );
-   assert( propdata->nperms >= propdata->ngenorbconss || propdata->genorbconss == NULL );
-   SCIPfreeBlockMemoryArrayNull(scip, &propdata->genorbconss, propdata->nperms);
-   propdata->ngenorbconss = 0;
    propdata->triedaddconss = FALSE;
+
+   return SCIP_OKAY;
+}
+
+
+static
+SCIP_RETCODE ensureDynamicConsArrayAllocatedAndSufficientlyLarge(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_CONS***          consarrptr,         /**< constraint array pointer */
+   int*                  consarrsizeptr,     /**< constraint array size pointer */
+   int                   consarrsizereq      /**< constraint array size required */
+)
+{
+   int newsize;
+
+   assert( scip != NULL );
+   assert( consarrptr != NULL );
+   assert( consarrsizeptr != NULL );
+   assert( consarrsizereq > 0 );
+   assert( *consarrsizeptr >= 0 );
+   assert( (*consarrsizeptr == 0) == (*consarrptr == NULL) );
+
+   /* array is already sufficiently large */
+   if ( consarrsizereq <= *consarrsizeptr )
+      return SCIP_OKAY;
+
+   /* compute new size */
+   newsize = SCIPcalcMemGrowSize(scip, consarrsizereq);
+   assert( newsize > *consarrsizeptr );
+
+   /* allocate or reallocate */
+   if ( *consarrptr == NULL )
+   {
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, consarrptr, newsize) );
+   }
+   else
+   {
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, consarrptr, *consarrsizeptr, newsize) );
+   }
+
+   *consarrsizeptr = newsize;
 
    return SCIP_OKAY;
 }
@@ -3821,6 +3853,8 @@ SCIP_RETCODE addOrbitopeSubgroup(
    *success = TRUE;
 
    /* do not release constraint here - will be done later */
+   SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, propdata->genorbconss, 
+      &propdata->genorbconsssize, propdata->ngenorbconss + 1) );
    propdata->genorbconss[propdata->ngenorbconss++] = cons;
    ++propdata->norbitopes;
 
@@ -3912,18 +3946,8 @@ SCIP_RETCODE addStrongSBCsSubgroup(
 #endif
 
       /* check whether we need to resize */
-      if ( propdata->ngenlinconss >= propdata->genlinconsssize )
-      {
-         int newsize;
-
-         newsize = SCIPcalcMemGrowSize(scip, propdata->ngenlinconss + 1);
-         assert( newsize > propdata->ngenlinconss );
-
-         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &propdata->genlinconss, propdata->genlinconsssize, newsize) );
-
-         propdata->genlinconsssize = newsize;
-      }
-
+      SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, propdata->genlinconss, 
+         &propdata->genlinconsssize, propdata->ngenlinconss) );
       propdata->genlinconss[propdata->ngenlinconss] = cons;
       ++propdata->ngenlinconss;
    }
@@ -4102,18 +4126,8 @@ SCIP_RETCODE addWeakSBCsSubgroup(
 #endif
 
          /* check whether we need to resize */
-         if ( propdata->ngenlinconss >= propdata->genlinconsssize )
-         {
-            int newsize;
-
-            newsize = SCIPcalcMemGrowSize(scip, propdata->ngenlinconss + 1);
-            assert( newsize > propdata->ngenlinconss );
-
-            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &propdata->genlinconss, propdata->genlinconsssize, newsize) );
-
-            propdata->genlinconsssize = newsize;
-         }
-
+         SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, propdata->genlinconss, 
+            &propdata->genlinconsssize, propdata->ngenlinconss) );
          propdata->genlinconss[propdata->ngenlinconss] = cons;
          ++propdata->ngenlinconss;
       }
@@ -4570,6 +4584,8 @@ SCIP_RETCODE detectAndHandleSubgroups(
             SCIP_CALL( SCIPaddCons(scip, cons));
 
             /* do not release constraint here - will be done later */
+            SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, propdata->genorbconss, 
+               &propdata->genorbconsssize, propdata->ngenorbconss + 1) );
             propdata->genorbconss[propdata->ngenorbconss++] = cons;
             ++propdata->nsymresacks;
 
@@ -4816,6 +4832,8 @@ SCIP_RETCODE detectAndHandleSubgroups(
             SCIP_CALL( SCIPaddCons(scip, cons));
 
             /* do not release constraint here - will be done later */
+            SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, propdata->genorbconss, 
+               &propdata->genorbconsssize, propdata->ngenorbconss + 1) );
             propdata->genorbconss[propdata->ngenorbconss++] = cons;
             ++propdata->nsymresacks;
 
@@ -5127,6 +5145,8 @@ SCIP_RETCODE detectOrbitopes(
          SCIP_CALL( SCIPaddCons(scip, cons) );
 
          /* do not release constraint here - will be done later */
+         SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, propdata->genorbconss, 
+            &propdata->genorbconsssize, propdata->ngenorbconss + 1) );
          propdata->genorbconss[propdata->ngenorbconss++] = cons;
          ++propdata->norbitopes;
 
@@ -5545,6 +5565,8 @@ SCIP_RETCODE addSymresackConss(
          SCIP_CALL( SCIPaddCons(scip, cons) );
 
          /* do not release constraint here - will be done later */
+         SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, propdata->genorbconss, 
+            &propdata->genorbconsssize, propdata->ngenorbconss + 1) );
          propdata->genorbconss[propdata->ngenorbconss++] = cons;
          ++propdata->nsymresacks;
          ++nsymresackcons;
@@ -5598,6 +5620,8 @@ SCIP_RETCODE addSymresackConss(
             SCIP_CALL( SCIPaddCons(scip, cons) );
 
             /* do not release constraint here - will be done later */
+            SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, propdata->genorbconss, 
+               &propdata->genorbconsssize, propdata->ngenorbconss + 1) );
             propdata->genorbconss[propdata->ngenorbconss++] = cons;
             ++propdata->nsymresacks;
             ++nsymresackcons;
@@ -6718,17 +6742,8 @@ SCIP_RETCODE tryAddOrbitopesDynamic(
          SCIP_CALL( SCIPaddCons(scip, cons) );
 
          /* check whether we need to resize */ /* todo4J: Why isn't this stored in genorbconss? */
-         if ( propdata->ngenlinconss >= propdata->genlinconsssize )
-         {
-            int newsize;
-
-            newsize = SCIPcalcMemGrowSize(scip, propdata->ngenlinconss + 1);
-            assert( newsize > propdata->ngenlinconss );
-
-            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &propdata->genlinconss, propdata->genlinconsssize, newsize) );
-
-            propdata->genlinconsssize = newsize;
-         }
+         SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, propdata->genlinconss, 
+            &propdata->genlinconsssize, propdata->ngenlinconss + 1) );
          propdata->genlinconss[propdata->ngenlinconss++] = cons;
 
          /* mark component as blocked */
@@ -6860,6 +6875,8 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
    SCIP_Bool*            earlyterm           /**< pointer to store whether we terminated early (or NULL) */
    )
 {
+   /* @todo CHECK THE FREE AND ALLOC SITUATIONS WITH orbconss and linconss */
+   /* preferably, just allocate and resize them when they are first asked for */
    SCIP_PROPDATA* propdata;
 
    assert( prop != NULL );
@@ -6870,7 +6887,7 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
 
    if ( nchgbds != NULL )
       *nchgbds = 0;
-   if (earlyterm != NULL )
+   if ( earlyterm != NULL )
       *earlyterm = FALSE;
 
    /* if constraints have already been added */
@@ -6897,6 +6914,7 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
          return SCIP_OKAY;
       }
    }
+
    /* double-check that no symmetry handling is present */
    assert( checkSymmetryDataFree(propdata) );
    assert( !propdata->triedaddconss );
@@ -6933,21 +6951,15 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
    if ( !ISSYMDYNAMICACTIVE(propdata->usesymmetry) && ISSYMRETOPESACTIVE(propdata->usesymmetry) 
       && propdata->detectorbitopes && propdata->binvaraffected )
    {
-      assert( propdata->genorbconss == NULL );
-      assert( propdata->ngenorbconss == 0 );
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->genorbconss, propdata->nperms) );
+      assert( (propdata->genorbconss == NULL) == (propdata->ngenorbconss == 0) );
+      assert( propdata->ngenorbconss >= 0 );
+      assert( propdata->ngenorbconss <= propdata->genorbconsssize );
       SCIP_CALL( requireSymmetryComponents(scip, propdata) );
       SCIP_CALL( detectOrbitopes(scip, propdata, propdata->components, propdata->componentbegins, propdata->ncomponents) );
 
       /* possibly stop */
       if ( SCIPisStopped(scip) )
-      {
-         if ( propdata->ngenorbconss == 0 )
-         {
-            SCIPfreeBlockMemoryArrayNull(scip, &propdata->genorbconss, propdata->nperms);
-         }
          return SCIP_OKAY;
-      }
    }
 
 
@@ -6966,10 +6978,6 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
    if ( ISSYMRETOPESACTIVE(propdata->usesymmetry) && propdata->detectsubgroups && propdata->binvaraffected 
       && propdata->ncompblocked < propdata->ncomponents )
    {
-      /* @TODO: create array only when needed */
-      propdata->genlinconsssize = propdata->nperms;
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->genlinconss, propdata->genlinconsssize) );
-
       SCIP_CALL( requireSymmetryComponents(scip, propdata) );
       SCIP_CALL( detectAndHandleSubgroups(scip, propdata) );
 
@@ -6992,10 +7000,6 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
    if ( ISSYMRETOPESACTIVE(propdata->usesymmetry) && propdata->addsymresacks && propdata->binvaraffected )
    {
       SCIP_CALL( addSymresackConss(scip, prop, propdata->components, propdata->componentbegins, propdata->ncomponents) );
-
-      /* free symmetry conss if no orbitope/symresack constraints have been found (may happen if Schreier-Sims constraints are active) */
-      if ( propdata->ngenorbconss == 0 )
-         SCIPfreeBlockMemoryArrayNull(scip, &propdata->genorbconss, propdata->nperms);
 
       if ( SCIPisStopped(scip) )
          return SCIP_OKAY;
@@ -7443,6 +7447,7 @@ SCIP_RETCODE SCIPincludePropSymmetry(
    propdata->genlinconss = NULL;
    propdata->ngenorbconss = 0;
    propdata->ngenlinconss = 0;
+   propdata->genorbconsssize = 0;
    propdata->genlinconsssize = 0;
    propdata->nsymresacks = 0;
    propdata->norbitopes = 0;
