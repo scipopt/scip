@@ -1715,17 +1715,6 @@ int getNSymhandableConss(
    return nhandleconss;
 }
 
-/** returns whether there are any active nonlinear constraints */
-static
-SCIP_Bool hasNonlinearConstraints(
-   SCIP_PROPDATA*        propdata            /**< propagator data */
-   )
-{
-   assert(propdata != NULL);
-
-   return propdata->conshdlr_nonlinear != NULL && SCIPconshdlrGetNActiveConss(propdata->conshdlr_nonlinear) > 0;
-}
-
 /** set symmetry data */
 static
 SCIP_RETCODE setSymmetryData(
@@ -3853,7 +3842,7 @@ SCIP_RETCODE addOrbitopeSubgroup(
    *success = TRUE;
 
    /* do not release constraint here - will be done later */
-   SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, propdata->genorbconss, 
+   SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, &propdata->genorbconss, 
       &propdata->genorbconsssize, propdata->ngenorbconss + 1) );
    propdata->genorbconss[propdata->ngenorbconss++] = cons;
    ++propdata->norbitopes;
@@ -3946,7 +3935,7 @@ SCIP_RETCODE addStrongSBCsSubgroup(
 #endif
 
       /* check whether we need to resize */
-      SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, propdata->genlinconss, 
+      SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, &propdata->genlinconss, 
          &propdata->genlinconsssize, propdata->ngenlinconss) );
       propdata->genlinconss[propdata->ngenlinconss] = cons;
       ++propdata->ngenlinconss;
@@ -4126,7 +4115,7 @@ SCIP_RETCODE addWeakSBCsSubgroup(
 #endif
 
          /* check whether we need to resize */
-         SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, propdata->genlinconss, 
+         SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, &propdata->genlinconss, 
             &propdata->genlinconsssize, propdata->ngenlinconss) );
          propdata->genlinconss[propdata->ngenlinconss] = cons;
          ++propdata->ngenlinconss;
@@ -4584,7 +4573,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
             SCIP_CALL( SCIPaddCons(scip, cons));
 
             /* do not release constraint here - will be done later */
-            SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, propdata->genorbconss, 
+            SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, &propdata->genorbconss, 
                &propdata->genorbconsssize, propdata->ngenorbconss + 1) );
             propdata->genorbconss[propdata->ngenorbconss++] = cons;
             ++propdata->nsymresacks;
@@ -4832,7 +4821,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
             SCIP_CALL( SCIPaddCons(scip, cons));
 
             /* do not release constraint here - will be done later */
-            SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, propdata->genorbconss, 
+            SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, &propdata->genorbconss, 
                &propdata->genorbconsssize, propdata->ngenorbconss + 1) );
             propdata->genorbconss[propdata->ngenorbconss++] = cons;
             ++propdata->nsymresacks;
@@ -5145,7 +5134,7 @@ SCIP_RETCODE detectOrbitopes(
          SCIP_CALL( SCIPaddCons(scip, cons) );
 
          /* do not release constraint here - will be done later */
-         SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, propdata->genorbconss, 
+         SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, &propdata->genorbconss, 
             &propdata->genorbconsssize, propdata->ngenorbconss + 1) );
          propdata->genorbconss[propdata->ngenorbconss++] = cons;
          ++propdata->norbitopes;
@@ -5565,7 +5554,7 @@ SCIP_RETCODE addSymresackConss(
          SCIP_CALL( SCIPaddCons(scip, cons) );
 
          /* do not release constraint here - will be done later */
-         SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, propdata->genorbconss, 
+         SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, &propdata->genorbconss, 
             &propdata->genorbconsssize, propdata->ngenorbconss + 1) );
          propdata->genorbconss[propdata->ngenorbconss++] = cons;
          ++propdata->nsymresacks;
@@ -5620,7 +5609,7 @@ SCIP_RETCODE addSymresackConss(
             SCIP_CALL( SCIPaddCons(scip, cons) );
 
             /* do not release constraint here - will be done later */
-            SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, propdata->genorbconss, 
+            SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, &propdata->genorbconss, 
                &propdata->genorbconsssize, propdata->ngenorbconss + 1) );
             propdata->genorbconss[propdata->ngenorbconss++] = cons;
             ++propdata->nsymresacks;
@@ -6742,7 +6731,7 @@ SCIP_RETCODE tryAddOrbitopesDynamic(
          SCIP_CALL( SCIPaddCons(scip, cons) );
 
          /* check whether we need to resize */ /* todo4J: Why isn't this stored in genorbconss? */
-         SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, propdata->genlinconss, 
+         SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, &propdata->genlinconss, 
             &propdata->genlinconsssize, propdata->ngenlinconss + 1) );
          propdata->genlinconss[propdata->ngenlinconss++] = cons;
 
