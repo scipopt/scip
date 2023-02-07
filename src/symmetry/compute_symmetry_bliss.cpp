@@ -1571,6 +1571,69 @@ SCIP_Bool isEdgeGroupable(
    return FALSE;
 }
 
+/** adds grouped edges all of which have one common endpoint to a graph
+ *
+ * The grouping mechanism works by sorting the edges according to their color. If two
+ * edges have the same color, they share the same intermediate node, which is connected
+ * to the common node and the other endpoints of equivalent edges.
+ */
+static
+SCIP_RETCODE addGroupedEdges(
+   bliss::Graph*         G,                  /**< pointer to graph which gets extended */
+   int                   commonnodeidx,      /**< index of common node in G */
+   int*                  neighbors,          /**< neighbors of common node */
+   int*                  colors,             /**< colors of edges to neighbors */
+   int                   nneighbors,         /**< number of neighbors */
+   int*                  naddednodes,        /**< buffer to hold number of nodes added to G */
+   int*                  naddededges         /**< buffer to hold number of edges added to G */
+   )
+{
+   assert( G != NULL );
+   assert( groupfirsts != NULL );
+   assert( groupseconds != NULL );
+   assert( groupcolors != NULL );
+   assert( nnodes != NULL );
+   assert( nedges != NULL );
+
+   *naddednodes = 0;
+   *naddededges = 0;
+
+   /* sort edges according to color */
+   SCIPsortIntInt(colors, neighbors, nneighbors);
+
+   /* iterate over groups of identical edges and group them, ignoring the last group */
+   int curcolor = colors[0];
+   int curstart = 0;
+   for (int e = 1; e < nneighbors; ++e)
+   {
+      /* if a new group started, add edges for previous group */
+      if ( colors[e] != curcolor )
+      {
+         int internode = (*G).add_vertex(curcolor);
+         (*G).add_edge(commonnodeidx, internode);
+         *naddednodes += 1;
+
+         for (int f = curstart; f < e; ++f)
+            (*G).add_edge(internode, neighbors[f]);
+         *naddededges += e - curstart + 1;
+
+         curcolor = colors[e];
+         curstart = e;
+      }
+   }
+
+   /* add edges of last group */
+   int internode = (*G).add_vertex(curcolor);
+   (*G).add_edge(commonnodeidx, internode);
+   *naddednodes += 1;
+
+   for (int f = curstart; f < nneighbors; ++f)
+      (*G).add_edge(internode, neighbors[f]);
+   *naddededges += nneighbors - curstart + 1;
+
+   return SCIP_OKAY;
+}
+
 /** compute generators of symmetry group */
 SCIP_RETCODE SYMcomputeSymmetryGenerators2(
    SCIP*                 scip,               /**< SCIP pointer */
@@ -1714,43 +1777,36 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators2(
    /* possibly add groupable edges */
    if ( ngroupedges > 0 )
    {
-      /* sort edges to find grouping
-       *
-       * First, sort by the first node in an edge; second, sort edges incident with the first node by their color.
-       */
+      /* sort edges according to their first nodes */
       SCIPsortIntIntInt(groupfirsts, groupseconds, groupcolors, ngroupedges);
 
       int firstidx = 0;
       int firstnodeidx = groupfirsts[0];
+      int naddednodes;
+      int naddededges;
+
       for (int i = 1; i < ngroupedges; ++i)
       {
-         /* sort edges incident with firstnodeidx according to their color */
-         if ( groupfirsts[i] != firstnodeidx || i == ngroupedges - 1 )
+         /* if a new first node has been found, group the edges of the previous first node; ignoring the last group */
+         if ( groupfirsts[i] != firstnodeidx )
          {
-            /* get number of edges to be grouped */
-            int nsort = i - firstidx;
-            if ( i == ngroupedges - 1 )
-               ++nsort;
-
-            SCIPsortIntInt(&groupcolors[firstidx], &groupseconds[firstidx], nsort);
-
-            /* introduce one intermediate node for entire group and connect endpoints of grouped edges */
-            const int color = groupcolors[firstidx];
-
-            int internode = (int) G.add_vertex((unsigned) color);
-            ++nnodes;
-
-            G.add_edge(firstnodeidx, internode);
-
-            /* add grouped edges, use firstidx + nsort as upper bound rather than i to take care of last iteration */
-            for (int e = firstidx; e < firstidx + nsort; ++e)
-               G.add_edge(internode, groupseconds[e]);
-            nedges += nsort + 1;
+            SCIP_CALL( addGroupedEdges(&G, firstnodeidx, &groupseconds[firstidx],
+                  &groupcolors[firstidx], i - firstidx, &naddednodes, &naddededges) );
 
             firstidx = i;
             firstnodeidx = groupfirsts[i];
+
+            nnodes += naddednodes;
+            nedges += naddededges;
          }
       }
+
+      /* process the last group */
+      SCIP_CALL( addGroupedEdges(&G, firstnodeidx, &groupseconds[firstidx],
+            &groupcolors[firstidx], ngroupedges - firstidx, &naddednodes, &naddededges) );
+
+      nnodes += naddednodes;
+      nedges += naddededges;
    }
 
    SCIPfreeBufferArray(scip, &groupcolors);
