@@ -341,6 +341,7 @@ struct SCIP_PropData
    SCIP_EVENTHDLR*       shadowtreeeventhdlr;/**< pointer to event handler for shadow tree */
    SCIP_ORBITOPALFIXINGDATA* orbitopalfixingdata; /**< container for the orbitopal fixing data */
    SCIP_ORBITALFIXINGDATA* orbitalfixingdata;/**< container for orbital fixing data */
+   SCIP_LEXICOGRAPHICREDUCTIONDATA* lexreddata;/**< container for lexicographic reduction propagation */
 };
 
 /** conflict data structure for SST cuts */
@@ -1078,6 +1079,7 @@ SCIP_RETCODE delSymConss(
    /* propagators managed by a different file */
    SCIP_CALL( SCIPorbitalFixingReset(scip, propdata->orbitalfixingdata) );
    SCIP_CALL( SCIPorbitopalFixingReset(scip, propdata->orbitopalfixingdata) );
+   SCIP_CALL( SCIPlexicographicReductionReset(scip, propdata->lexreddata) );
 
    propdata->triedaddconss = FALSE;
 
@@ -6801,6 +6803,9 @@ SCIP_RETCODE tryAddOrbitalFixingLexfix(
    int c;
    int p;
 
+   SCIP_Bool checkof;
+   SCIP_Bool checklexred;
+
    assert( scip != NULL );
    assert( propdata != NULL );
    assert( ISORBITALFIXINGACTIVE(propdata->usesymmetry) 
@@ -6810,6 +6815,12 @@ SCIP_RETCODE tryAddOrbitalFixingLexfix(
          && propdata->addsymresacks 
       ) );
    assert( propdata->nperms > 0 );
+
+   /* in this function orbital fixing or dynamic symresack propagation must be enabled */
+   checkof = ISORBITALFIXINGACTIVE(propdata->usesymmetry);
+   checklexred = ISSYMRETOPESACTIVE(propdata->usesymmetry) && ISSYMDYNAMICACTIVE(propdata->usesymmetry)
+      && propdata->addsymresacks;
+   assert( checkof || checklexred );
 
    SCIP_CALL( requireSymmetryComponents(scip, propdata) );
    assert( propdata->ncomponents > 0 );
@@ -6830,7 +6841,7 @@ SCIP_RETCODE tryAddOrbitalFixingLexfix(
          componentperms[p] = propdata->perms[propdata->components[propdata->componentbegins[c] + p]];
 
       /* handle component permutations with orbital fixing */
-      if ( ISORBITALFIXINGACTIVE(propdata->usesymmetry) )
+      if ( checkof )
       {
          SCIP_CALL( SCIPorbitalFixingAddComponent(scip, propdata->orbitalfixingdata, 
             propdata->permvars, propdata->npermvars, componentperms, componentsize) );
@@ -6838,10 +6849,15 @@ SCIP_RETCODE tryAddOrbitalFixingLexfix(
       }
 
       /* handle component permutations with the dynamic symresack propagator */
-      if (ISSYMRETOPESACTIVE(propdata->usesymmetry) && ISSYMDYNAMICACTIVE(propdata->usesymmetry)
-         && propdata->addsymresacks )
+      if ( checklexred )
       {
-         /* @todo */
+         /* handle every permutation in the component with the dynamic lexicographic order propagator */
+         for (p = 0; p < componentsize; ++p)
+         {
+            assert( componentperms[p] != NULL );
+            SCIP_CALL( SCIPlexicographicReductionAddPermutation(scip, propdata->lexreddata, 
+               propdata->permvars, propdata->npermvars, componentperms[p]) );
+         }
          propdata->componentblocked[c] |= SYM_HANDLETYPE_SYMBREAK | SYM_HANDLETYPE_DYNAMIC;
       }
 
@@ -7025,6 +7041,12 @@ SCIP_RETCODE propagateSymmetry(
 
    /* apply orbital fixing */
    SCIP_CALL( SCIPorbitalFixingPropagate(scip, propdata->orbitalfixingdata, infeasible, &nredlocal) );
+   *nred += nredlocal;
+   if ( *infeasible )
+      return SCIP_OKAY;
+
+   /* apply dynamic lexicographic reduction */
+   SCIP_CALL( SCIPlexicographicReductionPropagate(scip, propdata->lexreddata, infeasible, &nredlocal) );
    *nred += nredlocal;
    if ( *infeasible )
       return SCIP_OKAY;
@@ -7374,6 +7396,9 @@ SCIP_DECL_PROPFREE(propFreeSymmetry)
    propdata = SCIPpropGetData(prop);
    assert( propdata != NULL );
 
+   assert( propdata->lexreddata != NULL );
+   SCIP_CALL( SCIPlexicographicReductionFree(scip, &propdata->lexreddata) );
+
    assert( propdata->orbitalfixingdata != NULL );
    SCIP_CALL( SCIPorbitalFixingFree(scip, &propdata->orbitalfixingdata) );
 
@@ -7655,6 +7680,9 @@ SCIP_RETCODE SCIPincludePropSymmetry(
 
    SCIP_CALL( SCIPorbitalFixingInclude(scip, &propdata->orbitalfixingdata, propdata->shadowtreeeventhdlr) );
    assert( propdata->orbitalfixingdata != NULL );
+
+   SCIP_CALL( SCIPlexicographicReductionInclude(scip, &propdata->lexreddata, propdata->shadowtreeeventhdlr) );
+   assert( propdata->lexreddata != NULL );
 
    return SCIP_OKAY;
 }

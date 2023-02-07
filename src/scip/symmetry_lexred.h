@@ -18,7 +18,7 @@ extern "C" {
 
 /** data for dynamic lexicographic reduction propagator */
 struct SCIP_LexicographicReductionData;
-typedef struct SCIP_LexicographicReductionData LEXICOGRAPHICREDUCTIONDATA;
+typedef struct SCIP_LexicographicReductionData SCIP_LEXICOGRAPHICREDUCTIONDATA;
 
 /*
  * Interface methods
@@ -27,7 +27,7 @@ typedef struct SCIP_LexicographicReductionData LEXICOGRAPHICREDUCTIONDATA;
 /** apply lexicographic reduction propagation */
 SCIP_RETCODE SCIPlexicographicReductionPropagate(
    SCIP*                 scip,               /**< SCIP data structure */
-   LEXICOGRAPHICREDUCTIONDATA* masterdata,   /**< pointer to global data for lexicogrpahic order propagator */
+   SCIP_LEXICOGRAPHICREDUCTIONDATA* masterdata,/**< pointer to global data for lexicogrpahic order propagator */
    SCIP_Bool*            infeasible,         /**< whether infeasibility is found */
    int*                  nred                /**< number of domain reductions */
    );
@@ -36,7 +36,7 @@ SCIP_RETCODE SCIPlexicographicReductionPropagate(
 /** adds permutation for lexicographic reduction propagation */
 SCIP_RETCODE SCIPlexicographicReductionAddPermutation(
    SCIP*                 scip,               /**< SCIP data structure */
-   LEXICOGRAPHICREDUCTIONDATA* masterdata,   /**< pointer to global data for lexicogrpahic order propagator */
+   SCIP_LEXICOGRAPHICREDUCTIONDATA* masterdata,/**< pointer to global data for lexicogrpahic order propagator */
    SCIP_VAR**            permvars,           /**< variable array of the permutation */
    int                   npermvars,          /**< number of variables in that array */
    int*                  perm                /**< permutation */
@@ -46,14 +46,14 @@ SCIP_RETCODE SCIPlexicographicReductionAddPermutation(
 /** resets lexicographic reduction propagation (removes all permutations) */
 SCIP_RETCODE SCIPlexicographicReductionReset(
    SCIP*                 scip,               /**< SCIP data structure */
-   LEXICOGRAPHICREDUCTIONDATA* masterdata    /**< pointer to global data for lexicogrpahic order propagator */
+   SCIP_LEXICOGRAPHICREDUCTIONDATA* masterdata/**< pointer to global data for lexicogrpahic order propagator */
    );
 
 
 /** free lexicographic reduction data */
 SCIP_RETCODE SCIPlexicographicReductionFree(
    SCIP*                 scip,               /**< SCIP data structure */
-   LEXICOGRAPHICREDUCTIONDATA** masterdata   /**< pointer to global data for lexicogrpahic order propagator */
+   SCIP_LEXICOGRAPHICREDUCTIONDATA** masterdata/**< pointer to global data for lexicogrpahic order propagator */
    );
 
 
@@ -62,7 +62,7 @@ SCIP_RETCODE SCIPlexicographicReductionFree(
  */
 SCIP_RETCODE SCIPlexicographicReductionInclude(
    SCIP*                 scip,               /**< SCIP data structure */
-   LEXICOGRAPHICREDUCTIONDATA** masterdata,  /**< pointer to global data for lexicogrpahic order propagator */
+   SCIP_LEXICOGRAPHICREDUCTIONDATA** masterdata,/**< pointer to global data for lexicogrpahic order propagator */
    SCIP_EVENTHDLR*       shadowtreeeventhdlr /**< pointer to the shadow tree eventhdlr */
    );
 
