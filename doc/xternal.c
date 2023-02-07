@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -1793,6 +1793,8 @@
  *
  * Usually, a separation callback searches and produces cuts, that are added with a call to SCIPaddCut().
  * If the cut should be remembered in the global cut pool, it may also call SCIPaddPoolCut().
+ * If the cut is constructed via multiple calls to SCIPaddVarToRow(), then performance can be improved by calling
+ * SCIPcacheRowExtensions() before these additions and SCIPflushRowExtensions() after.
  * However, the callback may also produce domain reductions or add other constraints.
  *
  * The CONSSEPALP callback has the following options:
@@ -1819,6 +1821,8 @@
  *
  * Usually, a separation callback searches and produces cuts, that are added with a call to SCIPaddCut().
  * If the cut should be remembered in the global cut pool, it may also call SCIPaddPoolCut().
+ * If the cut is constructed via multiple calls to SCIPaddVarToRow(), then performance can be improved by calling
+ * SCIPcacheRowExtensions() before these additions and SCIPflushRowExtensions() after.
  * However, the callback may also produce domain reductions or add other constraints.
  *
  * The CONSSEPASOL callback has the following options:
@@ -2674,6 +2678,8 @@
  *
  * Usually, the callback searches and produces cuts, that are added with a call to SCIPaddCut().
  * If the cut should be added to the global cut pool, it calls SCIPaddPoolCut().
+ * If the cut is constructed via multiple calls to SCIPaddVarToRow(), then performance can be improved by calling
+ * SCIPcacheRowExtensions() before these additions and SCIPflushRowExtensions() after.
  * In addition to LP rows, the callback may also produce domain reductions or add additional constraints.
  *
  * Overall, the SEPAEXECLP callback has the following options, which is indicated by the possible return values of
@@ -2701,6 +2707,8 @@
  *
  * Usually, the callback searches and produces cuts, that are added with a call to SCIPaddCut().
  * If the cut should be added to the global cut pool, it calls SCIPaddPoolCut().
+ * If the cut is constructed via multiple calls to SCIPaddVarToRow(), then performance can be improved by calling
+ * SCIPcacheRowExtensions() before these additions and SCIPflushRowExtensions() after.
  * In addition to LP rows, the callback may also produce domain reductions or add other constraints.
  *
  * Overall, the SEPAEXECSOL callback has the following options, which is indicated by the possible return values of
