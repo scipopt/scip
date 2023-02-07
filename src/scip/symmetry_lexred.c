@@ -1219,7 +1219,8 @@ SCIP_RETCODE SCIPlexicographicReductionPropagate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_LEXICOGRAPHICREDUCTIONDATA* masterdata,/**< pointer to global data for lexicogrpahic order propagator */
    SCIP_Bool*            infeasible,         /**< whether infeasibility is found */
-   int*                  nred                /**< number of domain reductions */
+   int*                  nred,               /**< number of domain reductions */
+   SCIP_Bool*            didrun              /**< whether propagator actually ran */
    )
 {
    int nlocalred; 
@@ -1232,7 +1233,7 @@ SCIP_RETCODE SCIPlexicographicReductionPropagate(
    assert( masterdata != NULL );
    assert( (masterdata->lexdatas == NULL) == (masterdata->nlexdatas == 0) );
    assert( masterdata->nlexdatas >= 0 );
-   assert( masterdata->maxnlexdatas <= masterdata->nlexdatas );
+   assert( masterdata->nlexdatas <= masterdata->maxnlexdatas );
    assert( infeasible != NULL );
    assert( nred != NULL );
 
@@ -1267,12 +1268,13 @@ SCIP_RETCODE SCIPlexicographicReductionPropagate(
       SCIP_CALL( propagateLexicographicReductionPerm(scip, masterdata, masterdata->lexdatas[p], 
          nodedepthbranchindices, masterdata->nsymvars, infeasible, &nlocalred) );
 
+      /* keep track of the total number of fixed vars */
+      *nred += nlocalred;
+      *didrun = TRUE;
+
       /* stop if we find infeasibility */
       if ( *infeasible )
          break;
-
-      /* keep track of the total number of fixed vars */
-      *nred += nlocalred;
    }
 
    /* clean the node-depth-branch-indices structure */
@@ -1296,7 +1298,7 @@ SCIP_RETCODE SCIPlexicographicReductionAddPermutation(
    assert( masterdata != NULL );
    assert( (masterdata->lexdatas == NULL) == (masterdata->nlexdatas == 0) );
    assert( masterdata->nlexdatas >= 0 );
-   assert( masterdata->maxnlexdatas <= masterdata->nlexdatas );
+   assert( masterdata->nlexdatas <= masterdata->maxnlexdatas );
    assert( masterdata->shadowtreeeventhdlr != NULL );
    assert( permvars != NULL );
    assert( npermvars > 0 );
@@ -1342,7 +1344,7 @@ SCIP_RETCODE SCIPlexicographicReductionReset(
    assert( masterdata != NULL );
    assert( (masterdata->lexdatas == NULL) == (masterdata->nlexdatas == 0) );
    assert( masterdata->nlexdatas >= 0 );
-   assert( masterdata->maxnlexdatas <= masterdata->nlexdatas );
+   assert( masterdata->nlexdatas <= masterdata->maxnlexdatas );
    assert( masterdata->shadowtreeeventhdlr != NULL );
 
    while ( masterdata->nlexdatas > 0 )

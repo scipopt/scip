@@ -1606,7 +1606,8 @@ SCIP_RETCODE SCIPorbitalFixingPropagate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ORBITALFIXINGDATA* orbifixdata,      /**< orbital fixing data structure */
    SCIP_Bool*            infeasible,         /**< whether infeasibility is found */
-   int*                  nred                /**< number of domain reductions */
+   int*                  nred,               /**< number of domain reductions */
+   SCIP_Bool*            didrun              /**< whether propagator actually ran */
    )
 {
    OFDATA* ofdata;
@@ -1642,6 +1643,7 @@ SCIP_RETCODE SCIPorbitalFixingPropagate(
       assert( ofdata != NULL );
       assert( ofdata->nperms > 0 );
       SCIP_CALL( orbitalFixingPropagateComponent(scip, orbifixdata, ofdata, shadowtree, infeasible, nred) );
+      *didrun = TRUE;
 
       if ( *infeasible ) 
          return SCIP_OKAY;

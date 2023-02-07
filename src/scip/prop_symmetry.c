@@ -7020,7 +7020,8 @@ SCIP_RETCODE propagateSymmetry(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_PROPDATA*        propdata,           /**< propagator data */
    SCIP_Bool*            infeasible,         /**< pointer for storing feasibility state */
-   int*                  nred                /**< pointer for number of reductions */
+   int*                  nred,               /**< pointer for number of reductions */
+   SCIP_Bool*            didrun              /**< pointer for storing whether a propagator actually ran */
 )
 {
    int nredlocal;
@@ -7029,24 +7030,26 @@ SCIP_RETCODE propagateSymmetry(
    assert( propdata != NULL );
    assert( infeasible != NULL );
    assert( nred != NULL );
+   assert( didrun != NULL );
 
    *nred = 0;
    *infeasible = FALSE;
+   *didrun = FALSE;
 
    /* apply orbitopal fixing */
-   SCIP_CALL( SCIPorbitopalFixingPropagate(scip, propdata->orbitopalfixingdata, infeasible, &nredlocal) );
+   SCIP_CALL( SCIPorbitopalFixingPropagate(scip, propdata->orbitopalfixingdata, infeasible, &nredlocal, didrun) );
    *nred += nredlocal;
    if ( *infeasible )
       return SCIP_OKAY;
 
    /* apply orbital fixing */
-   SCIP_CALL( SCIPorbitalFixingPropagate(scip, propdata->orbitalfixingdata, infeasible, &nredlocal) );
+   SCIP_CALL( SCIPorbitalFixingPropagate(scip, propdata->orbitalfixingdata, infeasible, &nredlocal, didrun) );
    *nred += nredlocal;
    if ( *infeasible )
       return SCIP_OKAY;
 
    /* apply dynamic lexicographic reduction */
-   SCIP_CALL( SCIPlexicographicReductionPropagate(scip, propdata->lexreddata, infeasible, &nredlocal) );
+   SCIP_CALL( SCIPlexicographicReductionPropagate(scip, propdata->lexreddata, infeasible, &nredlocal, didrun) );
    *nred += nredlocal;
    if ( *infeasible )
       return SCIP_OKAY;
@@ -7255,6 +7258,7 @@ SCIP_DECL_PROPPRESOL(propPresolSymmetry)
       {
          SCIP_Bool infeasible;
          int nprop;
+         SCIP_Bool didrun;
 
          /* if we have not tried to add symmetry handling constraints */
          if ( *result == SCIP_DIDNOTRUN )
@@ -7262,7 +7266,7 @@ SCIP_DECL_PROPPRESOL(propPresolSymmetry)
 
          SCIPdebugMsg(scip, "Presolving <%s>.\n", PROP_NAME);
 
-         SCIP_CALL( propagateSymmetry(scip, propdata, &infeasible, &nprop) );
+         SCIP_CALL( propagateSymmetry(scip, propdata, &infeasible, &nprop, &didrun) );
 
          if ( infeasible )
          {
@@ -7274,6 +7278,10 @@ SCIP_DECL_PROPPRESOL(propPresolSymmetry)
             *result = SCIP_SUCCESS;
             *nfixedvars += nprop;
             propdata->symfoundreduction = TRUE;
+         }
+         else if ( didrun && *result == SCIP_DIDNOTRUN )
+         {
+            *result = SCIP_DIDNOTFIND;
          }
       }
       else if ( propdata->symcomptiming == SYM_COMPUTETIMING_DURINGPRESOL )
@@ -7293,6 +7301,7 @@ SCIP_DECL_PROPEXEC(propExecSymmetry)
 {  /*lint --e{715}*/
    SCIP_PROPDATA* propdata;
    SCIP_Bool infeasible;
+   SCIP_Bool didrun;
    int nred;
 
    assert( scip != NULL );
@@ -7312,7 +7321,7 @@ SCIP_DECL_PROPEXEC(propExecSymmetry)
    if ( propdata->usesymmetry < 0 )
       return SCIP_OKAY;
 
-   SCIP_CALL( propagateSymmetry(scip, propdata, &infeasible, &nred) );
+   SCIP_CALL( propagateSymmetry(scip, propdata, &infeasible, &nred, &didrun) );
 
    if ( infeasible )
    {
@@ -7322,9 +7331,12 @@ SCIP_DECL_PROPEXEC(propExecSymmetry)
    }
    if ( nred > 0 )
    {
+      assert( didrun );
       *result = SCIP_REDUCEDDOM;
       propdata->symfoundreduction = TRUE;
    }
+   else if ( didrun )
+      *result = SCIP_DIDNOTFIND;
 
    return SCIP_OKAY;
 }

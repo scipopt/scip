@@ -29,7 +29,8 @@ SCIP_RETCODE SCIPlexicographicReductionPropagate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_LEXICOGRAPHICREDUCTIONDATA* masterdata,/**< pointer to global data for lexicogrpahic order propagator */
    SCIP_Bool*            infeasible,         /**< whether infeasibility is found */
-   int*                  nred                /**< number of domain reductions */
+   int*                  nred,               /**< number of domain reductions */
+   SCIP_Bool*            didrun              /**< whether propagator actually ran */
    );
 
 

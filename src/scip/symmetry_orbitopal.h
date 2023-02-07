@@ -66,7 +66,8 @@ SCIP_RETCODE SCIPorbitopalFixingPropagate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ORBITOPALFIXINGDATA*  orbifixdata,        /**< orbitopal fixing data structure */
    SCIP_Bool*            infeasible,         /**< whether infeasibility is found */
-   int*                  nred                /**< number of domain reductions */
+   int*                  nred,               /**< number of domain reductions */
+   SCIP_Bool*            didrun              /**< whether propagator actually ran */
    );
 
 
