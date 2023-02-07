@@ -24,7 +24,7 @@
 
 /**@file   symmetry_lexred.c
  * @ingroup OTHER_CFILES
- * @brief  methods for handling symmetries by dynamic lexicographic order ing reduction
+ * @brief  methods for handling symmetries by dynamic lexicographic ordering reduction
  * @author Jasper van Doornmalen
  * @author Christopher Hojny
  */
@@ -284,7 +284,7 @@ SCIP_Bool GT(SCIP* scip, SCIP_Real val1, SCIP_Real val2)
 static
 SCIP_RETCODE lexdataFree(
    SCIP*                 scip,               /**< SCIP data structure */
-   LEXDATA**             lexdata             /**< pointer to individual constraint datas */
+   LEXDATA**             lexdata             /**< pointer to individual lexicographic reduction propagator datas */
    )
 {
    assert( scip != NULL );
@@ -325,9 +325,9 @@ SCIP_RETCODE lexdataCreate(
    SCIP*                 scip,               /**< SCIP data structure */
    LEXICOGRAPHICREDUCTIONDATA* masterdata,   /**< pointer to global data for lexicogrpahic order propagator */
    LEXDATA**             lexdata,            /**< pointer to store the data for this permutation */
-   SCIP_VAR*const*       vars,               /**< input variables of the constraint handler */
-   int                   nvars,              /**< input number of variables of the constraint handler */
-   int*                  perm                /**< input permutation of the constraint handler */
+   SCIP_VAR*const*       vars,               /**< input variables of the lexicographic reduction propagator */
+   int                   nvars,              /**< input number of variables of the lexicographic reduction propagator */
+   int*                  perm                /**< input permutation of the lexicographic reduction propagator */
    )
 {
    SCIP_VAR* var;
@@ -344,7 +344,7 @@ SCIP_RETCODE lexdataCreate(
    assert( SCIPisTransformed(scip) );
    assert( masterdata->shadowtreeeventhdlr != NULL );
 
-   /* initialize the data structures, similar to the ones in cons_symresack.c */
+   /* initialize the data structures */
    SCIP_CALL( SCIPallocBlockMemory(scip, lexdata) );
 
    /* remove fixed points */
@@ -399,8 +399,7 @@ SCIP_RETCODE lexdataCreate(
    SCIPfreeBufferArray(scip, &indexcorrection);
 
    /* get transformed variables, if we are in the transformed problem */
-   /* Make sure that all variables cannot be multiaggregated (cannot be handled by cons_symresack, since one cannot
-      * easily eliminate single variables from a dynamic symresack constraint. */
+   /* Make sure that all variables cannot be multiaggregated */
    for (i = 0; i < (*lexdata)->nvars; ++i)
    {
       assert( SCIPvarIsTransformed((*lexdata)->vars[i]) );
@@ -1027,7 +1026,7 @@ SCIP_RETCODE propagateSymresackDynamic(
 }
 
 
-/** propagation method for a single dynamic symresack constraint */
+/** propagation method for applying dynamic lexicographic reduction for a single permutation */
 static
 SCIP_RETCODE propagateLexicographicReductionPerm(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1260,7 +1259,7 @@ SCIP_RETCODE SCIPlexicographicReductionPropagate(
    SCIP_CALL( shadowtreeFillNodeDepthBranchIndices(scip, masterdata, nodedepthbranchindices, shadowtree, focusnode) );
    /* ... Do everything using this nodedepthbranchindices structure */
 
-   /* propagate all useful constraints */
+   /* propagate all dynamic lexicographic order constraints */
    for (p = 0; p < masterdata->nlexdatas; ++p)
    {
       assert( masterdata->lexdatas[p] != NULL );
@@ -1268,7 +1267,7 @@ SCIP_RETCODE SCIPlexicographicReductionPropagate(
       SCIP_CALL( propagateLexicographicReductionPerm(scip, masterdata, masterdata->lexdatas[p], 
          nodedepthbranchindices, masterdata->nsymvars, infeasible, &nlocalred) );
 
-      /* stop if we find infeasibility in one of the constraints */
+      /* stop if we find infeasibility */
       if ( *infeasible )
          break;
 
