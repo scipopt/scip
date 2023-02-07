@@ -10704,10 +10704,6 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphNonlinear)
    rootexpr = SCIPgetExprNonlinear(cons);
    assert(rootexpr != NULL);
 
-   SCIP_CALL( SCIPcreateExpriter(scip, &it) );
-   SCIP_CALL( SCIPexpriterInit(it, rootexpr, SCIP_EXPRITER_DFS, TRUE) );
-   SCIPexpriterSetStagesDFS(it, SCIP_EXPRITER_ENTEREXPR | SCIP_EXPRITER_LEAVEEXPR);
-
    /* allocate arrays to store operators not completely handled yet (due to DFS) and variables in constraint */
    expr = SCIPgetExprNonlinear(cons);
    assert(expr != NULL);
@@ -10725,7 +10721,6 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphNonlinear)
 
       ++maxnopenidx;
    }
-   SCIPfreeExpriter(&it);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &openidx, maxnopenidx) );
 
@@ -10734,6 +10729,9 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphNonlinear)
    SCIP_CALL( SCIPallocBufferArray(scip, &consvals, maxnconsvars) );
 
    /* iterate over expression tree and store nodes/edges */
+   SCIP_CALL( SCIPexpriterInit(it, expr, SCIP_EXPRITER_DFS, TRUE) );
+   SCIPexpriterSetStagesDFS(it, SCIP_EXPRITER_ENTEREXPR | SCIP_EXPRITER_LEAVEEXPR);
+
    for( expr = SCIPexpriterGetCurrent(it); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )
    {
       /* due to DFS, we can remove the expression from the list of open expressions */
