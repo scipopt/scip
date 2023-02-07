@@ -6378,12 +6378,9 @@ SCIP_RETCODE computeSymmetryGroup2(
       nsymvars = SCIPgetSymgraphNVars(graph);
       for (p = nperms - 1; p >= 0; --p)
       {
-         SCIPfreeBlockMemoryArrayNull(scip, &perms[p], nsymvars);
+         SCIPfreeBlockMemoryArray(scip, &perms[p], nsymvars);
       }
-      if ( nmaxperms != 0 )
-      {
-         SCIPfreeBlockMemoryArrayNull(scip, &perms, nmaxperms);
-      }
+      SCIPfreeBlockMemoryArrayNull(scip, &perms, nmaxperms);
    }
 
    /* free symmetry graph */
