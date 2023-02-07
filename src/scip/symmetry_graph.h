@@ -294,14 +294,14 @@ SCIP_RETCODE SCIPgetActiveVariables(
 
 /** frees symmetry information of an expression */
 SCIP_EXPORT
-SCIP_RETCODE SCIPfreeSymdataExpr(
+SCIP_RETCODE SCIPfreeSymDataExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    SYM_EXPRDATA2**       symdata             /**< symmetry information of an expression */
    );
 
 /** gets coefficient of expression from parent expression */
 SCIP_EXPORT
-SCIP_RETCODE SCIPgetCoefSymdata(
+SCIP_RETCODE SCIPgetCoefSymData(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPR*            expr,               /**< expression for which coefficient needs to be found */
    SCIP_EXPR*            parentexpr,         /**< parent of expr */

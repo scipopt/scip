@@ -10752,7 +10752,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphNonlinear)
       /* possibly find a coefficient assigned to the expression by the parent */
       if ( expr != rootexpr )
       {
-         SCIP_CALL( SCIPgetCoefSymdata(scip, expr, SCIPexpriterGetParentDFS(it), &parentcoef, &hasparentcoef) );
+         SCIP_CALL( SCIPgetCoefSymData(scip, expr, SCIPexpriterGetParentDFS(it), &parentcoef, &hasparentcoef) );
       }
 
       /* deal with different kinds of expressions and store them in the symmetry data structure */
@@ -10917,7 +10917,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphNonlinear)
             SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, parentidx, opidx, hasparentcoef, parentcoef) );
 
             /* possibly add constants of expression */
-            if( SCIPexprhdlrHasGetSymdata(SCIPexprGetHdlr(expr)) )
+            if( SCIPexprhdlrHasGetSymData(SCIPexprGetHdlr(expr)) )
             {
                SYM_EXPRDATA2* symdata;
 
@@ -10932,7 +10932,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphNonlinear)
                   SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, opidx, nodeidx, iscolored, (SCIP_Real) i+1) );
                }
 
-               SCIP_CALL( SCIPfreeSymdataExpr(scip, &symdata) );
+               SCIP_CALL( SCIPfreeSymDataExpr(scip, &symdata) );
             }
 
             SCIP_CALL( ensureOpenArraySize(scip, &openidx, nopenidx, &maxnopenidx) );

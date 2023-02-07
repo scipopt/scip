@@ -683,7 +683,7 @@ SCIP_Bool SCIPexprhdlrHasReverseProp(
 }
 
 /** returns whether expression handler implements the symmetry information callback */
-SCIP_Bool SCIPexprhdlrHasGetSymdata(
+SCIP_Bool SCIPexprhdlrHasGetSymData(
    SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
    )
 {
