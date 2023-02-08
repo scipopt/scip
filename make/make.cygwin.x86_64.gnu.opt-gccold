@@ -13,3 +13,4 @@ READLINE_LDFLAGS=	-lreadline
 ifeq ($(SHARED),true)
 FLAGS		+=	-fPIC
 endif
+LINK_shared		=	-shared

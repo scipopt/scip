@@ -16,3 +16,4 @@ READLINE_LDFLAGS=	-lreadline -lncurses
 ifeq ($(SHARED),true)
 FLAGS		+=	-fPIC
 endif
+LINK_shared		=	-shared

@@ -20,3 +20,4 @@ GCCWARN += -Wno-initializer-overrides
 ifeq ($(SHARED),true)
 FLAGS		+=	-fPIC
 endif
+LINK_shared		=	-shared

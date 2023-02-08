@@ -14,3 +14,4 @@ FORTRAN_NAMING_CONVENTION = LCASE_DECOR
 ifeq ($(SHARED),true)
 FLAGS		+=	-fPIC
 endif
+LINK_shared		=	-shared

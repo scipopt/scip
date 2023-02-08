@@ -18,3 +18,4 @@ CXX14FLAG       =       -h std=c++14
 ifeq ($(SHARED),true)
 FLAGS		+=	-fPIC
 endif
+LINK_shared		=	-shared
