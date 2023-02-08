@@ -13,6 +13,7 @@ endif
 
 ifeq ($(SHARED),true)
 LIBBUILDFLAGS   =	-dynamiclib -undefined suppress -flat_namespace
+FLAGS		+=	-fPIC
 endif
 
 CXXFLAGS	=	-fno-stack-check
