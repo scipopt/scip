@@ -891,19 +891,19 @@ SCIP_RETCODE freeSymmetryData(
    /* free data of added orbitope/orbisack/symresack constraints */
    if ( propdata->genorbconss != NULL )
    {
-      assert( propdata->ngenorbconss + propdata->ngenlinconss > 0
-         || (ISORBITALFIXINGACTIVE(propdata->usesymmetry) && propdata->norbitopes == 0) );
+      assert( propdata->ngenorbconss > 0 );
 
       /* release constraints */
-      for (i = 0; i < propdata->ngenorbconss; ++i)
+      while ( propdata->ngenorbconss > 0 )
       {
-         assert( propdata->genorbconss[i] != NULL );
-         SCIP_CALL( SCIPreleaseCons(scip, &propdata->genorbconss[i]) );
+         assert( propdata->genorbconss[propdata->ngenorbconss - 1] != NULL );
+         SCIP_CALL( SCIPreleaseCons(scip, &propdata->genorbconss[--propdata->ngenorbconss]) );
       }
+      assert( propdata->ngenorbconss == 0 );
 
       /* free pointers to symmetry group and binary variables */
       SCIPfreeBlockMemoryArray(scip, &propdata->genorbconss, propdata->genorbconsssize);
-      propdata->ngenorbconss = 0;
+      propdata->genorbconsssize = 0;
    }
 
    /* free data of added constraints */
