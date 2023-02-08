@@ -679,14 +679,99 @@ SCIP_RETCODE addGroupedEdges(
    return SCIP_OKAY;
 }
 
+/** computes autormorphisms of a graph */
+static
+SCIP_RETCODE computeAutomorphisms(
+   SCIP*                 scip,               /**< SCIP pointer */
+   bliss::Graph*         G,                  /**< pointer to graph for that automorphisms are computed */
+   int                   nsymvars,           /**< number of variables encoded in graph */
+   int                   maxgenerators,      /**< maximum number of generators to be constructed (=0 if unlimited) */
+   int***                perms,              /**< pointer to store generators as (nperms x npermvars) matrix */
+   int*                  nperms,             /**< pointer to store number of permutations */
+   int*                  nmaxperms,          /**< pointer to store maximal number of permutations
+                                              *   (needed for freeing storage) */
+   SCIP_Real*            log10groupsize      /**< pointer to store log10 of size of group */
+   )
+{
+   assert( scip != NULL );
+   assert( G != NULL );
+   assert( perms != NULL );
+   assert( nperms != NULL );
+   assert( nmaxperms != NULL );
+   assert( log10groupsize != NULL );
+
+   bliss::Stats stats;
+   BLISS_Data data;
+   data.scip = scip;
+   data.npermvars = nsymvars;
+   data.nperms = 0;
+   data.nmaxperms = 0;
+   data.maxgenerators = maxgenerators;
+   data.perms = NULL;
+
+   /* Prefer splitting partition cells corresponding to variables over those corresponding
+    * to inequalities. This is because we are only interested in the action
+    * of the automorphism group on the variables, and we need a base for this action */
+   G->set_splitting_heuristic(bliss::Graph::shs_f);
+   /* disable component recursion as advised by Tommi Junttila from bliss */
+   G->set_component_recursion(false);
+
+   /* do not use a node limit, but set generator limit */
+#ifdef BLISS_PATCH_PRESENT
+   G->set_search_limits(0, (unsigned) maxgenerators);
+#endif
+
+#if BLISS_VERSION_MAJOR >= 1 || BLISS_VERSION_MINOR >= 76
+   /* lambda function to have access to data and pass it to the blisshook above */
+   auto reportglue = [&](unsigned int n, const unsigned int* aut) {
+      blisshook((void*)&data, n, aut);
+   };
+
+   /* lambda function to have access to stats and terminate the search if maxgenerators are reached */
+   auto term = [&]() {
+      return (stats.get_nof_generators() >= (long unsigned int) maxgenerators);
+   };
+
+   /* start search */
+   G->find_automorphisms(stats, reportglue, term);
+#else
+   /* start search */
+   G->find_automorphisms(stats, blisshook, (void*) &data);
+#endif
+
+
+#ifdef SCIP_OUTPUT
+   (void) stats.print(stdout);
+#endif
+
+   /* prepare return values */
+   if ( data.nperms > 0 )
+   {
+      *perms = data.perms;
+      *nperms = data.nperms;
+      *nmaxperms = data.nmaxperms;
+   }
+   else
+   {
+      assert( data.perms == NULL );
+      assert( data.nmaxperms == 0 );
+   }
+
+   /* determine log10 of symmetry group size */
+   *log10groupsize = (SCIP_Real) log10l(stats.get_group_size_approx());
+
+   return SCIP_OKAY;
+}
+
 /** compute generators of symmetry group */
 SCIP_RETCODE SYMcomputeSymmetryGenerators(
    SCIP*                 scip,               /**< SCIP pointer */
    int                   maxgenerators,      /**< maximal number of generators constructed (= 0 if unlimited) */
    SYM_GRAPH*            graph,              /**< symmetry detection graph */
    int*                  nperms,             /**< pointer to store number of permutations */
-   int*                  nmaxperms,          /**< pointer to store maximal number of permutations (needed for freeing storage) */
-   int***                perms,              /**< pointer to store permutation generators as (nperms x npermvars) matrix */
+   int*                  nmaxperms,          /**< pointer to store maximal number of permutations
+                                              *   (needed for freeing storage) */
+   int***                perms,              /**< pointer to store generators as (nperms x npermvars) matrix */
    SCIP_Real*            log10groupsize      /**< pointer to store log10 of size of group */
    )
 {
@@ -861,65 +946,7 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    SCIPdebugMsg(scip, "Symmetry detection graph has %d nodes and %d edges.\n", nnodes, nedges);
 
    /* compute automorphisms */
-   bliss::Stats stats;
-   BLISS_Data data;
-   data.scip = scip;
-   data.npermvars = nsymvars;
-   data.nperms = 0;
-   data.nmaxperms = 0;
-   data.maxgenerators = maxgenerators;
-   data.perms = NULL;
-
-   /* Prefer splitting partition cells corresponding to variables over those corresponding
-    * to inequalities. This is because we are only interested in the action
-    * of the automorphism group on the variables, and we need a base for this action */
-   G.set_splitting_heuristic(bliss::Graph::shs_f);
-   /* disable component recursion as advised by Tommi Junttila from bliss */
-   G.set_component_recursion(false);
-
-   /* do not use a node limit, but set generator limit */
-#ifdef BLISS_PATCH_PRESENT
-   G.set_search_limits(0, (unsigned) maxgenerators);
-#endif
-
-#if BLISS_VERSION_MAJOR >= 1 || BLISS_VERSION_MINOR >= 76
-   /* lambda function to have access to data and pass it to the blisshook above */
-   auto reportglue = [&](unsigned int n, const unsigned int* aut) {
-      blisshook((void*)&data, n, aut);
-   };
-
-   /* lambda function to have access to stats and terminate the search if maxgenerators are reached */
-   auto term = [&]() {
-      return (stats.get_nof_generators() >= (long unsigned int) maxgenerators);
-   };
-
-   /* start search */
-   G.find_automorphisms(stats, reportglue, term);
-#else
-   /* start search */
-   G.find_automorphisms(stats, blisshook, (void*) &data);
-#endif
-
-
-#ifdef SCIP_OUTPUT
-   (void) stats.print(stdout);
-#endif
-
-   /* prepare return values */
-   if ( data.nperms > 0 )
-   {
-      *perms = data.perms;
-      *nperms = data.nperms;
-      *nmaxperms = data.nmaxperms;
-   }
-   else
-   {
-      assert( data.perms == NULL );
-      assert( data.nmaxperms == 0 );
-   }
-
-   /* determine log10 of symmetry group size */
-   *log10groupsize = (SCIP_Real) log10l(stats.get_group_size_approx());
+   SCIP_CALL( computeAutomorphisms(scip, &G, nsymvars, maxgenerators, perms, nperms, nmaxperms, log10groupsize) );
 
    return SCIP_OKAY;
 }
@@ -1058,57 +1085,32 @@ SCIP_Bool SYMcheckGraphsAreIdentical(
    }
 
    /* compute automorphisms */
-   bliss::Stats stats;
-   BLISS_Data data;
-   data.scip = scip;
-   data.npermvars = G1->nsymvars;
-   data.nperms = 0;
-   data.nmaxperms = 0;
-   data.maxgenerators = maxgenerators;
-   data.perms = NULL;
+   int** perms;
+   int nperms;
+   int nmaxperms;
+   SCIP_Real log10groupsize;
 
-   /* Prefer splitting partition cells corresponding to variables over those corresponding
-    * to inequalities. This is because we are only interested in the action
-    * of the automorphism group on the variables, and we need a base for this action */
-   G.set_splitting_heuristic(bliss::Graph::shs_f);
-   /* disable component recursion as advised by Tommi Junttila from bliss */
-   G.set_component_recursion(false);
-
-   /* do not use a node limit, but set generator limit */
-#ifdef BLISS_PATCH_PRESENT
-   G.set_search_limits(0, (unsigned) maxgenerators);
-#endif
-
-#if BLISS_VERSION_MAJOR >= 1 || BLISS_VERSION_MINOR >= 76
-   /* lambda function to have access to data and pass it to the blisshook above */
-   auto reportglue = [&](unsigned int n, const unsigned int* aut) {
-      blisshook((void*)&data, n, aut);
-   };
-
-   /* lambda function to have access to stats and terminate the search if maxgenerators are reached */
-   auto term = [&]() {
-      return (stats.get_nof_generators() >= (long unsigned int) maxgenerators);
-   };
-
-   /* start search */
-   G.find_automorphisms(stats, reportglue, term);
-#else
-   /* start search */
-   G.find_automorphisms(stats, blisshook, (void*) &data);
-#endif
+   SCIP_CALL( computeAutomorphisms(scip, &G, nusedvars, maxgenerators,
+         &perms, &nperms, &nmaxperms, &log10groupsize) );
 
    /* since G1 and G2 are connected and disjoint, they are isomorphic iff there is a permutation
     * mapping a node from G1 to a node of G2
     */
    SCIP_Bool success = FALSE;
-   for (int p = 0; p < data.nperms && ! success; ++p)
+   for (int p = 0; p < nperms && ! success; ++p)
    {
-      for (i = 0; i < nodeshift; ++i)
+      for (i = 0; i < G1->nnodes; ++i)
       {
-         if ( data.perms[p][i] >= nodeshift )
+         if ( perms[p][i] >= G1->nnodes )
             success = TRUE;
       }
    }
+
+   for (int p = 0; p < nperms; ++p)
+   {
+      SCIPfreeBlockMemoryArray(scip, &perms[p], nusedvars);
+   }
+   SCIPfreeBlockMemoryArrayNull(scip, &perms, nmaxperms);
 
    SCIPfreeBufferArray(scip, &varlabel);
    SCIPfreeBufferArray(scip, &nvarused2);
