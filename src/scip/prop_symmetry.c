@@ -5739,7 +5739,12 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
 
             /* if adapted graph is equivalent to original graph, we don't need to check further graphs */
             if ( SYMcheckGraphsAreIdentical(scip, graph, graphs[graphperm[c]]) )
+            {
+               SCIP_CALL( SCIPfreeSymgraph(scip, &graph) );
+               found = TRUE;
+
                continue;
+            }
 
             /* check whether graph has an isomorphic counterpart */
             for (d = groupbegins[g]; d < groupbegins[g+1] && ! found; ++d)
