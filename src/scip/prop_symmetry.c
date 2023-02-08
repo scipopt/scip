@@ -6912,7 +6912,7 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
       }
       else
       {
-         assert( propdata->nperms > 0 );
+         assert( propdata->nperms >= 0 );
 
          if ( earlyterm != NULL )
             *earlyterm = TRUE;
