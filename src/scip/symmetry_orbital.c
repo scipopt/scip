@@ -1437,8 +1437,8 @@ SCIP_RETCODE addComponent(
    int p;
    int* origperm;
    int* newperm;
-   int origidx;
-   int origpermidx;
+   int newidx;
+   int newpermidx;
 
    assert( scip != NULL );
    assert( orbifixdata != NULL );
@@ -1477,13 +1477,16 @@ SCIP_RETCODE addComponent(
    j = 0;
    for (i = 0; i < npermvars; ++i)
    {
+      /* permvars array must be unique */
+      assert( SCIPhashmapGetImageInt(ofdata->permvarmap, (void*) permvars[i]) == INT_MAX );
+
       /* is index i moved by any of the permutations in the component? */
       for (p = 0; p < nperms; ++p)
       {
          if ( perms[p][i] != i )
          {
             ofdata->permvars[j] = permvars[i];
-            SCIP_CALL( SCIPhashmapInsertInt(ofdata->permvarmap, permvars[i], j) );
+            SCIP_CALL( SCIPhashmapInsertInt(ofdata->permvarmap, (void*) permvars[i], j) );
             ++j;
             break;
          }
@@ -1491,7 +1494,7 @@ SCIP_RETCODE addComponent(
    }
    assert( j == ofdata->npermvars );
 
-   /* and reindex the permutation */
+   /* allocate permutations */
    ofdata->nperms = nperms;
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &ofdata->perms, nperms) );
    for (p = 0; p < nperms; ++p)
@@ -1500,16 +1503,20 @@ SCIP_RETCODE addComponent(
       origperm = perms[p];
       newperm = ofdata->perms[p];
 
-      for (i = 0; i < ofdata->npermvars; ++i) 
+      for (i = 0; i < npermvars; ++i)
       {
-         /* get the original index of the variable at new index i */
-         origidx = SCIPhashmapGetImageInt(ofdata->permvarmap, (void*) ofdata->permvars[i]);
-         /* get the original index of the permuted variable */
-         origpermidx = origperm[origidx];
-         /* get the position in the reindexed array */
-         newperm[i] = SCIPhashmapGetImageInt(ofdata->permvarmap, (void*) permvars[origpermidx]);
-         assert( newperm[i] >= 0 && newperm[i] < ofdata->npermvars );
-         assert( ofdata->permvars[newperm[i]] == permvars[origpermidx] );
+         newidx = SCIPhashmapGetImageInt(ofdata->permvarmap, (void*) permvars[i]);
+         if ( newidx >= ofdata->npermvars )
+            continue;
+         assert( newidx >= 0 );
+         assert( newidx < ofdata->npermvars );
+         assert( ofdata->permvars[newidx] == permvars[i] );
+         newpermidx = SCIPhashmapGetImageInt(ofdata->permvarmap, (void*) permvars[origperm[i]]);
+         assert( newpermidx >= 0 );
+         assert( newidx < ofdata->npermvars ); /* this is in the orbit of any permutation, so cannot be INT_MAX */
+         assert( ofdata->permvars[newpermidx] == permvars[origperm[i]] );
+         
+         newperm[newidx] = newpermidx;
       }
    }
 
