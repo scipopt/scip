@@ -6926,9 +6926,6 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
    assert( !propdata->triedaddconss );
    assert( !propdata->computedsymmetry );
 
-   /* mark that constraints are now tried to be added */
-   propdata->triedaddconss = TRUE;
-
    /* compute symmetries */
    SCIP_CALL( determineSymmetry(scip, propdata, SYM_SPEC_BINARY | SYM_SPEC_INTEGER | SYM_SPEC_REAL, 0) );
 
@@ -6936,6 +6933,8 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
    if ( !propdata->computedsymmetry )
       return SCIP_OKAY;
 
+   /* mark that constraints are now tried to be added */
+   propdata->triedaddconss = TRUE;
    assert( propdata->nperms >= 0 );
 
    /* no symmetries present, so nothing to be handled */
