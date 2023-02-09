@@ -289,7 +289,7 @@ SCIP_RETCODE SCIPaddSymgraphVarAggegration(
    {
       nodeidx = SCIPaddSymgraphValnode(scip, graph, constant);
 
-      SCIPaddSymgraphEdge(scip, graph, rootidx, nodeidx, FALSE, 0.0);
+      SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, rootidx, nodeidx, FALSE, 0.0) );
    }
 
    return SCIP_OKAY;
@@ -872,7 +872,7 @@ SCIP_RETCODE SCIPcomputeSymgraphColors(
       if( compareVars(prevvar, thisvar) != 0 || isFixedVar(prevvar, fixedtype) )
          ++color;
 
-      graph->varcolors[perm[i]] = color;
+      graph->varcolors[perm[i]] = color + 1;
       prevvar = thisvar;
    }
    graph->nvarcolors = color;
