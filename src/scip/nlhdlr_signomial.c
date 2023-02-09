@@ -149,7 +149,7 @@ void validCutProb(
       for( int j = 0; j < nlhdlrexprdata->nfactors; j++ )
       {
          SCIP_VAR* xvar = nlhdlrexprdata->vars[j];
-         SCIP_Real coef = SCIPinfinity(scip);
+         SCIP_Real coef = 0;
          for( int k = 0; k < nvars; k++ )
          {
             if( vars[k] == xvar ){
@@ -157,12 +157,11 @@ void validCutProb(
                break;
             }
          }
-         
          SCIP_Real xval = SCIPrandomGetReal(randnumgen, nlhdlrexprdata->intervals[j].inf, nlhdlrexprdata->intervals[j].sup);
          cutval += xval * coef;
          yval *= xval;
       }
-      SCIP_Real ycoef = SCIPinfinity(scip);
+      SCIP_Real ycoef = 0;
       for( int k = 0; k < nvars; k++ )
       {
          if( vars[k] == nlhdlrexprdata->vars[nlhdlrexprdata->nfactors] ){
@@ -170,11 +169,11 @@ void validCutProb(
             break;
          }
       }     
-      assert(ycoef != SCIPinfinity(scip)); 
       cutval += yval * ycoef;
       if( SCIProwprepGetSidetype(rowprep) == SCIP_SIDETYPE_LEFT)
       {
          if( cutval < side ){
+            SCIPdebugMsg(scip, "(lhs) %f <= %f \n", side, cutval);
             *isvalid = FALSE;
             break;
          }
@@ -182,6 +181,7 @@ void validCutProb(
       else
       {
          if( cutval > side ){
+            SCIPdebugMsg(scip, "%f <= %f (rhs) \n", cutval, side);
             *isvalid = FALSE;
             break;
          }
@@ -505,16 +505,20 @@ SCIP_RETCODE underEstimatePower(
    SCIP_Real *box;
    SCIP_CALL( SCIPallocBufferArray(scip, &xstar, nsignvars));
    SCIP_CALL( SCIPallocBufferArray(scip, &box, 2 * (nsignvars)));
+
    /* compute box constraints and reference value of variables*/
+   int  j = 0;
    for( int i = 0; i < nlhdlrexprdata->nvars; ++i )
    {
       if( nlhdlrexprdata->signs[i] != sign )
          continue;
-      box[2 * i] = nlhdlrexprdata->intervals[i].inf;
-      box[2 * i + 1] = nlhdlrexprdata->intervals[i].sup;
+
+      box[2 * j] = nlhdlrexprdata->intervals[i].inf;
+      box[2 * j + 1] = nlhdlrexprdata->intervals[i].sup;
       SCIP_Real scale = i == (nlhdlrexprdata->nvars - 1) ? nlhdlrexprdata->coef : 1;
-      xstar[i] = SCIPgetSolVal(scip, sol, nlhdlrexprdata->vars[i]) / scale;
-      assert(xstar[i] != SCIP_INVALID);
+      xstar[j] = SCIPgetSolVal(scip, sol, nlhdlrexprdata->vars[i]) / scale;
+      assert(xstar[j] != SCIP_INVALID);
+      j++;
    }
 
 
@@ -533,7 +537,7 @@ SCIP_RETCODE underEstimatePower(
 
    /* set coefficients in the rowprep */
    SCIProwprepAddConstant(rowprep, -multiplier * facetconstant);
-   int j = 0;
+   j = 0;
    for( int i = 0; i < nlhdlrexprdata->nvars; ++i )
    {
       if( nlhdlrexprdata->signs[i] != sign )
@@ -542,6 +546,15 @@ SCIP_RETCODE underEstimatePower(
       SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, nlhdlrexprdata->vars[i], multiplier * facetcoefs[j] / scale));
       j++;
    }
+
+#ifdef SCIP_DEBUG
+   SCIPdebugMsg(scip, "computed underestimator: ");
+   SCIPprintRowprep(scip, rowprep, NULL);
+   SCIP_Bool isvalid;
+   int nsample = 10000;
+   validCutProb(scip, nlhdlrexprdata, rowprep, nsample, &isvalid);
+   assert(isvalid);
+#endif
 
 #ifdef SCIP_MORE_DEBUG
    SCIPinfoMessage(scip, NULL, "computed estimator: ");
