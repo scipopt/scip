@@ -265,6 +265,9 @@ struct SCIP_PropData
    int                   nmovedcontpermvars; /**< number of continuous variables moved by any permutation */
    SCIP_Shortbool*       nonbinpermvarcaptured; /**< array to store which non-binary variables have been captured
                                                  *   (only necessary for SST cuts) */
+   SCIP_HASHMAP*         customsymopnodetypes; /**< types of operator nodes introduced
+                                                *   by a user for symmetry detection */
+   int                   nopnodetypes;       /**< current number of operator node types used for symmetry detection */
 
    /* components of symmetry group */
    int                   ncomponents;        /**< number of components of symmetry group */
@@ -968,6 +971,7 @@ SCIP_Bool checkSymmetryDataFree(
    assert( propdata->genlinconss == NULL );
    assert( propdata->sstconss == NULL );
    assert( propdata->leaders == NULL );
+   assert( propdata->customsymopnodetypes == NULL );
 
    assert( propdata->permvars == NULL );
    assert( propdata->permvarsobj == NULL );
@@ -1099,6 +1103,10 @@ SCIP_RETCODE freeSymmetryData(
    if ( propdata->permvarmap != NULL )
    {
       SCIPhashmapFree(&propdata->permvarmap);
+   }
+   if ( propdata->customsymopnodetypes != NULL )
+   {
+      SCIPhashmapFree(&propdata->customsymopnodetypes);
    }
 
    /* drop events */
@@ -10795,6 +10803,9 @@ SCIP_RETCODE SCIPincludePropSymmetry(
    propdata->nleaders = 0;
    propdata->maxnleaders = 0;
 
+   SCIP_CALL( SCIPhashmapCreate(&propdata->customsymopnodetypes, SCIPblkmem(scip), 10) );
+   propdata->nopnodetypes = (int) SYM_CONSOPTYPE_LAST;
+
    /* create event handler */
    propdata->eventhdlr = NULL;
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &(propdata->eventhdlr), EVENTHDLR_SYMMETRY_NAME, EVENTHDLR_SYMMETRY_DESC,
@@ -11111,4 +11122,83 @@ int SCIPgetSymmetryNGenerators(
       return 0;
    else
       return propdata->nperms;
+}
+
+/** creates new operator node type (used for symmetry detection) and returns its representation
+ *
+ * If the operator node already exists, the function terminates with SCIP_INVALIDDATA.
+ */
+SCIP_RETCODE SCIPcreateSymOpNodeType(
+   SCIP*                 scip,               /**< SCIP pointer */
+   const char*           opnodename,         /**< name of new operator node type */
+   SCIP_EXPRHDLR**       nodetype            /**< buffer to hold the new node type */
+   )
+{
+   SCIP_PROP* prop;
+   SCIP_PROPDATA* propdata;
+
+   assert( scip != NULL );
+   assert( nodetype != NULL );
+
+   prop = SCIPfindProp(scip, PROP_NAME);
+   if ( prop == NULL )
+   {
+      SCIPerrorMessage("Cannot create operator node type, symmetry propagator has not been included.\n");
+      return SCIP_PLUGINNOTFOUND;
+   }
+
+   propdata = SCIPpropGetData(prop);
+   assert( propdata != NULL );
+   assert( propdata->customsymopnodetypes != NULL );
+
+   if ( SCIPhashmapExists(propdata->customsymopnodetypes, (void*) opnodename) )
+   {
+      SCIPerrorMessage("Cannot create operator node type %s, it already exists.\n", opnodename);
+      return SCIP_INVALIDDATA;
+   }
+
+   SCIP_CALL( SCIPhashmapInsertInt(propdata->customsymopnodetypes, (void*) opnodename, propdata->nopnodetypes) );
+   *nodetype = (SCIP_EXPRHDLR*) (size_t) propdata->nopnodetypes++;
+
+   return SCIP_OKAY;
+}
+
+/** returns representation of an operator node type.
+ *
+ * If the node type does not already exist, a new node type will be created.
+ */
+SCIP_RETCODE SCIPgetSymOpNodeType(
+   SCIP*                 scip,               /**< SCIP pointer */
+   const char*           opnodename,         /**< name of new operator node type */
+   SCIP_EXPRHDLR**       nodetype            /**< buffer to hold the node type */
+   )
+{
+   SCIP_PROP* prop;
+   SCIP_PROPDATA* propdata;
+   SCIP_EXPRHDLR* newtype;
+
+   assert( scip != NULL );
+
+   prop = SCIPfindProp(scip, PROP_NAME);
+   if ( prop == NULL )
+   {
+      SCIPerrorMessage("Cannot return operator node type, symmetry propagator has not been included.\n");
+      return SCIP_PLUGINNOTFOUND;
+   }
+
+   propdata = SCIPpropGetData(prop);
+   assert( propdata != NULL );
+   assert( propdata->customsymopnodetypes != NULL );
+
+   if ( ! SCIPhashmapExists(propdata->customsymopnodetypes, (void*) opnodename) )
+   {
+      SCIP_CALL( SCIPcreateSymOpNodeType(scip, opnodename, nodetype) );
+   }
+   else
+   {
+      newtype = (SCIP_EXPRHDLR*) (size_t) SCIPhashmapGetImageInt(propdata->customsymopnodetypes, (void*) opnodename);
+      *nodetype = newtype;
+   }
+
+   return SCIP_OKAY;
 }

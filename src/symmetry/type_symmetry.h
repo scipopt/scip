@@ -110,7 +110,9 @@ enum SYM_Consoptype
    SYM_CONSOPTYPE_SUM      = 18,             /**< needed to indicate sums if sum-expr undefined */
    SYM_CONSOPTYPE_SLACK    = 19,             /**< needed to indicate slack vars in indicator constraints */
    SYM_CONSOPTYPE_COEF     = 20,             /**< needed to indicate coefficients from parent expressions */
-   SYM_CONSOPTYPE_RHS      = 21              /**< needed to indicate rhs/lhs of constraints */
+   SYM_CONSOPTYPE_RHS      = 21,             /**< needed to indicate rhs/lhs of constraints */
+   SYM_CONSOPTYPE_LAST     = 22              /**< stores number of used enum types, needs to always
+                                              *   hold the biggest value */
 };
 typedef enum SYM_Consoptype SYM_CONSOPTYPE;
 
