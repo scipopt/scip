@@ -5894,7 +5894,7 @@ SCIP_RETCODE computeSymmetryGroup(
    SCIP_CALL( SYMcomputeSymmetryGenerators(scip, maxgenerators, graph, nperms, nmaxperms,
          perms, log10groupsize) );
 
-   if ( checksymmetries )
+   if ( checksymmetries && *nperms > 0 )
    {
       SCIP_CALL( checkSymmetriesAreSymmetries(scip, *perms, *nperms, SCIPgetNVars(scip), fixedtype) );
    }
@@ -6126,6 +6126,10 @@ SCIP_RETCODE determineSymmetry(
    /* return if not successful */
    if ( ! successful )
    {
+      if ( propdata->customsymopnodetypes != NULL )
+      {
+         SCIPhashmapFree(&propdata->customsymopnodetypes);
+      }
       assert( checkSymmetryDataFree(propdata) );
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) could not compute symmetry\n", SCIPgetSolvingTime(scip));
 
@@ -6139,6 +6143,10 @@ SCIP_RETCODE determineSymmetry(
    /* return if no symmetries found */
    if ( propdata->nperms == 0 )
    {
+      if ( propdata->customsymopnodetypes != NULL )
+      {
+         SCIPhashmapFree(&propdata->customsymopnodetypes);
+      }
       assert( checkSymmetryDataFree(propdata) );
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) no symmetry present\n", SCIPgetSolvingTime(scip));
 
