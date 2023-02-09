@@ -452,7 +452,7 @@ SCIP_RETCODE estimateDegeneratedPower(
                   facetconstant = powinf - facetcoef * inf;
                }
                SCIProwprepAddConstant(rowprep, -multiplier * facetconstant);
-               SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, var, multiplier * facetconstant / scale));
+               SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, var, multiplier * facetcoef / scale));
             }
          }
       }
@@ -507,7 +507,7 @@ SCIP_RETCODE underEstimatePower(
    SCIP_CALL( SCIPallocBufferArray(scip, &box, 2 * (nsignvars)));
 
    /* compute box constraints and reference value of variables*/
-   int  j = 0;
+   int j = 0;
    for( int i = 0; i < nlhdlrexprdata->nvars; ++i )
    {
       if( nlhdlrexprdata->signs[i] != sign )
@@ -548,7 +548,7 @@ SCIP_RETCODE underEstimatePower(
    }
 
 #ifdef SCIP_DEBUG
-   SCIPdebugMsg(scip, "computed underestimator: ");
+   SCIPdebugMsg(scip, "computed underestimator with mulitplier %f: ", multiplier);
    SCIPprintRowprep(scip, rowprep, NULL);
    SCIP_Bool isvalid;
    int nsample = 10000;
@@ -556,10 +556,6 @@ SCIP_RETCODE underEstimatePower(
    assert(isvalid);
 #endif
 
-#ifdef SCIP_MORE_DEBUG
-   SCIPinfoMessage(scip, NULL, "computed estimator: ");
-   SCIPprintRowprep(scip, rowprep, NULL);
-#endif
 
    TERMINATE: 
    SCIPfreeBufferArray(scip, &box);
