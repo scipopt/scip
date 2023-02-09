@@ -215,7 +215,7 @@ void getVars(
    nlhdlrexprdata->isgetvars = TRUE;
 }
 
-/** get bounds of variables $x$ and check whether they are signomial variables */
+/** get bounds of variables $x,t$ and check whether they are signomial variables */
 static
 void getCheckBds(
    SCIP*                 scip,
@@ -242,8 +242,10 @@ void getCheckBds(
       }
       nlhdlrexprdata->intervals[c].inf = inf;
       nlhdlrexprdata->intervals[c].sup = sup;
-      productinf *= pow(inf, nlhdlrexprdata->exponents[c]);
-      productsup *= pow(sup, nlhdlrexprdata->exponents[c]);
+      SCIP_Real powinf = pow(inf, nlhdlrexprdata->exponents[c]);
+      SCIP_Real powsup = pow(sup, nlhdlrexprdata->exponents[c]);
+      productinf *= fmin(powinf, powsup);
+      productsup *= fmax(powinf, powsup);
    }
 
    /* compute bounds of \f$ t \f$  by bounds of \f$ x \f$ */
