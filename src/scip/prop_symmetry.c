@@ -6123,8 +6123,7 @@ SCIP_RETCODE addSSTConss(
    nmovedintpermvars = propdata->nmovedintpermvars;
    nmovedimplintpermvars = propdata->nmovedimplintpermvars;
    nmovedcontpermvars = propdata->nmovedcontpermvars;
-   assert( nmovedpermvars > 0 );
-   assert( nmovedbinpermvars > 0 );
+   assert( nmovedpermvars > 0 );  /* nperms > 0 implies this */
 
    /* determine the leader's vartype */
    nvarsselectedtype = 0;
