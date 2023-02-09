@@ -78,7 +78,6 @@ void blisshook(
 
    BLISS_Data* data = static_cast<BLISS_Data*>(user_param);
    assert( data->scip != NULL );
-   assert( data->npermvars < (int) n );
    assert( data->maxgenerators >= 0);
 
    /* make sure we do not generate more that maxgenerators many permutations, if the limit in bliss is not available */
@@ -728,8 +727,11 @@ SCIP_RETCODE computeAutomorphisms(
    };
 
    /* lambda function to have access to stats and terminate the search if maxgenerators are reached */
+   long unsigned int terminatesearch = INT_MAX;
+   if ( maxgenerators != 0 )
+      terminatesearch = (long unsigned int) maxgenerators;
    auto term = [&]() {
-      return (stats.get_nof_generators() >= (long unsigned int) maxgenerators);
+      return (stats.get_nof_generators() >= terminatesearch);
    };
 
    /* start search */
@@ -755,6 +757,9 @@ SCIP_RETCODE computeAutomorphisms(
    {
       assert( data.perms == NULL );
       assert( data.nmaxperms == 0 );
+
+      *perms = NULL;
+      *nperms = 0;
    }
 
    /* determine log10 of symmetry group size */
@@ -964,7 +969,6 @@ SCIP_Bool SYMcheckGraphsAreIdentical(
    int nusedvars = 0;
    int nvars;
    int i;
-   int maxgenerators = 1500;
 
    assert( scip != NULL );
    assert( G1 != NULL );
@@ -1006,7 +1010,7 @@ SCIP_Bool SYMcheckGraphsAreIdentical(
 
       /* relabel variables by restricting to variables used in constraint */
       if ( nvarused1[i] > 0 )
-         varlabel[i] = nusedvars++;
+         varlabel[i] = nusedvars;
       else
          varlabel[i] = -1;
    }
@@ -1055,7 +1059,7 @@ SCIP_Bool SYMcheckGraphsAreIdentical(
       G.add_vertex(i);
 
    for (i = 0; i < G2->nnodes; ++i)
-      G.add_vertex(nusedvars + SCIPgetSymgraphNodeColor(G1, i));
+      G.add_vertex(nusedvars + SCIPgetSymgraphNodeColor(G2, i));
 
    for (i = 0; i < G2->nedges; ++i)
    {
@@ -1089,8 +1093,10 @@ SCIP_Bool SYMcheckGraphsAreIdentical(
    int nperms;
    int nmaxperms;
    SCIP_Real log10groupsize;
+   int n = G.get_nof_vertices();
+   int nnodesfromG1 = nusedvars + G1->nnodes;
 
-   SCIP_CALL( computeAutomorphisms(scip, &G, nusedvars, maxgenerators,
+   SCIP_CALL( computeAutomorphisms(scip, &G, n, 0,
          &perms, &nperms, &nmaxperms, &log10groupsize) );
 
    /* since G1 and G2 are connected and disjoint, they are isomorphic iff there is a permutation
@@ -1099,16 +1105,16 @@ SCIP_Bool SYMcheckGraphsAreIdentical(
    SCIP_Bool success = FALSE;
    for (int p = 0; p < nperms && ! success; ++p)
    {
-      for (i = 0; i < G1->nnodes; ++i)
+      for (i = 0; i < nnodesfromG1; ++i)
       {
-         if ( perms[p][i] >= G1->nnodes )
+         if ( perms[p][i] >= nnodesfromG1 )
             success = TRUE;
       }
    }
 
    for (int p = 0; p < nperms; ++p)
    {
-      SCIPfreeBlockMemoryArray(scip, &perms[p], nusedvars);
+      SCIPfreeBlockMemoryArray(scip, &perms[p], n);
    }
    SCIPfreeBlockMemoryArrayNull(scip, &perms, nmaxperms);
 
