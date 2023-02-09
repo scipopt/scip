@@ -122,6 +122,76 @@ void freeExprDataMem(
 }
 
 
+/** validate a rowprep probabilistically by sampling */
+static 
+void validCutProb(
+   SCIP*                 scip,
+   SCIP_NLHDLREXPRDATA*  nlhdlrexprdata,
+   SCIP_ROWPREP*         rowprep,
+   int                   nsample,
+   SCIP_Bool*            isvalid
+   )
+{
+   unsigned int seedp  = 2132;
+   SCIP_RANDNUMGEN* randnumgen;
+   SCIPcreateRandom(scip, &randnumgen, seedp, TRUE);
+   assert(randnumgen);
+
+   *isvalid = TRUE;
+   SCIP_Real* coefs =  SCIProwprepGetCoefs(rowprep);
+   SCIP_Real side = SCIProwprepGetSide(rowprep);
+   SCIP_VAR** vars = SCIProwprepGetVars(rowprep);
+   int nvars = SCIProwprepGetNVars(rowprep);
+   SCIP_Real cutval = 0;
+   for( int i = 0; i < nsample; i++ )
+   {
+      SCIP_Real yval = nlhdlrexprdata->coef;
+      for( int j = 0; j < nlhdlrexprdata->nfactors; j++ )
+      {
+         SCIP_VAR* xvar = nlhdlrexprdata->vars[j];
+         SCIP_Real coef = SCIPinfinity(scip);
+         for( int k = 0; k < nvars; k++ )
+         {
+            if( vars[k] == xvar ){
+               coef = coefs[k];
+               break;
+            }
+         }
+         
+         SCIP_Real xval = SCIPrandomGetReal(randnumgen, nlhdlrexprdata->intervals[j].inf, nlhdlrexprdata->intervals[j].sup);
+         cutval += xval * coef;
+         yval *= xval;
+      }
+      SCIP_Real ycoef = SCIPinfinity(scip);
+      for( int k = 0; k < nvars; k++ )
+      {
+         if( vars[k] == nlhdlrexprdata->vars[nlhdlrexprdata->nfactors] ){
+            ycoef = coefs[k];
+            break;
+         }
+      }     
+      assert(ycoef != SCIPinfinity(scip)); 
+      cutval += yval * ycoef;
+      if( SCIProwprepGetSidetype(rowprep) == SCIP_SIDETYPE_LEFT)
+      {
+         if( cutval < side ){
+            *isvalid = FALSE;
+            break;
+         }
+      }
+      else
+      {
+         if( cutval > side ){
+            *isvalid = FALSE;
+            break;
+         }
+      }
+   }
+   SCIPfreeRandom(scip, &randnumgen);
+
+}
+
+
 /** print the information on a signomial term */
 static 
 SCIP_RETCODE printSignomial(
@@ -237,9 +307,7 @@ void getCheckBds(
       SCIP_Real sup = SCIPvarGetUbLocal(nlhdlrexprdata->vars[c]);
       /* if the bounds of the variable are not positive and finite, then the expression is not a signomial */
       if( !SCIPisPositive(scip, inf) || !SCIPisPositive(scip, sup) || SCIPisInfinity(scip, sup) )
-      {
          return;
-      }
       nlhdlrexprdata->intervals[c].inf = inf;
       nlhdlrexprdata->intervals[c].sup = sup;
       SCIP_Real powinf = pow(inf, nlhdlrexprdata->exponents[c]);
@@ -251,10 +319,6 @@ void getCheckBds(
    /* compute bounds of \f$ t \f$  by bounds of \f$ x \f$ */
    nlhdlrexprdata->intervals[c].inf = productinf;
    nlhdlrexprdata->intervals[c].sup = productsup;
-
-#ifdef SCIP_MORE_DEBUG
-   SCIPdebugMsg(scip, " product bound: (%f,%f), auxvar bound: (%f,%f) \n", productinf, productsup, SCIPvarGetLbLocal(nlhdlrexprdata->vars[c]), SCIPvarGetUbLocal(nlhdlrexprdata->vars[c]));
-#endif
 
    *issignomial = TRUE;
 
@@ -672,11 +736,14 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateSignomial)
          SCIP_CALL( overEstimatePower(scip, nlhdlrexprdata, oversign, overmultiplier, sol, rowprep, success));
    }
 
-   *success = FALSE;
 
    #ifdef SCIP_DEBUG
       SCIPdebugMsg(scip, "computed estimator: ");
       SCIPprintRowprep(scip, rowprep, NULL);
+      SCIP_Bool isvalid;
+      int nsample = 10000;
+      validCutProb(scip, nlhdlrexprdata, rowprep, nsample, &isvalid);
+      assert(isvalid);
    #endif
 
    if( *success )
@@ -799,13 +866,15 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectSignomial)
             SCIPcaptureExpr((*nlhdlrexprdata)->factors[c]);
             if( SCIPisPositive(scip, (*nlhdlrexprdata)->exponents[c]) )
             {
+               /* add a positive exponent */
                sumlexponents += (*nlhdlrexprdata)->exponents[c];
                (*nlhdlrexprdata)->signs[c] = TRUE;
                nposvars++;
             }
             else
             {
-               sumrexponents += (*nlhdlrexprdata)->exponents[c];
+               /* minus a negative exponent */
+               sumrexponents -= (*nlhdlrexprdata)->exponents[c];
                (*nlhdlrexprdata)->signs[c] = FALSE;
             }
          }
