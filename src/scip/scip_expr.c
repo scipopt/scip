@@ -1794,7 +1794,7 @@ SCIP_RETCODE SCIPsimplifyExpr(
 SCIP_RETCODE SCIPgetSymDataExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPR*            expr,               /**< expression from which information needs to be retrieved */
-   SYM_EXPRDATA2**       symdata             /**< buffer to store symmetry data */
+   SYM_EXPRDATA**        symdata             /**< buffer to store symmetry data */
    )
 {
    assert(scip != NULL);

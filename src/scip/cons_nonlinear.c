@@ -10919,16 +10919,16 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphNonlinear)
             /* possibly add constants of expression */
             if( SCIPexprhdlrHasGetSymData(SCIPexprGetHdlr(expr)) )
             {
-               SYM_EXPRDATA2* symdata;
+               SYM_EXPRDATA* symdata;
 
                SCIP_CALL( SCIPgetSymDataExpr(scip, expr, &symdata) );
                assert(symdata != NULL);
 
                /* if expression has multiple constants, assign colors to edges to distinguish them */
-               iscolored = symdata->nconstants > 1 ? TRUE : FALSE;
-               for( i = 0; i < symdata->nconstants; ++i )
+               iscolored = SCIPgetSymExprdataNConstants(symdata) > 1 ? TRUE : FALSE;
+               for( i = 0; i < SCIPgetSymExprdataNConstants(symdata); ++i )
                {
-                  nodeidx = SCIPaddSymgraphValnode(scip, graph, symdata->constants[i]);
+                  nodeidx = SCIPaddSymgraphValnode(scip, graph, SCIPgetSymExprdataConstants(symdata)[i]);
                   SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, opidx, nodeidx, iscolored, (SCIP_Real) i+1) );
                }
 

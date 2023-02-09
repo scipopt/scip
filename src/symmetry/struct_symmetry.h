@@ -107,14 +107,6 @@ struct SYM_Matrixdata
    int                   nuniquemat;         /**< number of unique matrix coefficients */
 };
 
-/** data for symmetry group computation on nonlinear constraints */
-struct SYM_Exprdata
-{
-   int                   nuniqueconstants;   /**< number of unique constants */
-   int                   nuniqueoperators;   /**< number of unique operators */
-   int                   nuniquecoefs;       /**< number of unique coefficients */
-};
-
 /** data for reflection symmetry group computation */
 struct SYM_Reflsymdata
 {
@@ -217,7 +209,7 @@ struct SYM_Graph
 };
 
 /** (additional) data used to encode an expression, which is not encoded as another expression */
-struct SYM_ExprData2
+struct SYM_ExprData
 {
    SCIP_Real*            constants;          /**< constants used in an expression */
    int                   nconstants;         /**< number of constants */

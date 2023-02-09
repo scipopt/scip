@@ -296,7 +296,19 @@ SCIP_RETCODE SCIPgetActiveVariables(
 SCIP_EXPORT
 SCIP_RETCODE SCIPfreeSymDataExpr(
    SCIP*                 scip,               /**< SCIP data structure */
-   SYM_EXPRDATA2**       symdata             /**< symmetry information of an expression */
+   SYM_EXPRDATA**        symdata             /**< symmetry information of an expression */
+   );
+
+/** returns number of coefficients form exprdata */
+SCIP_EXPORT
+int SCIPgetSymExprdataNConstants(
+   SYM_EXPRDATA*         symdata             /**< symmetry information of an expression */
+   );
+
+/** returns number of coefficients form exprdata */
+SCIP_EXPORT
+SCIP_Real* SCIPgetSymExprdataConstants(
+   SYM_EXPRDATA*         symdata             /**< symmetry information of an expression */
    );
 
 /** gets coefficient of expression from parent expression */

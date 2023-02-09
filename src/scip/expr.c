@@ -3289,7 +3289,7 @@ SCIP_RETCODE SCIPexprSimplify(
 SCIP_RETCODE SCIPexprGetSymData(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EXPR*            expr,               /**< expression from which information is retrieved */
-   SYM_EXPRDATA2**       symdata             /**< buffer to store symmetry information */
+   SYM_EXPRDATA**        symdata             /**< buffer to store symmetry information */
    )
 {
    SCIP_EXPRHDLR* exprhdlr;

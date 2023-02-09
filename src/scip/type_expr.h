@@ -52,7 +52,8 @@
 
 typedef struct SCIP_ExprData  SCIP_EXPRDATA;     /**< expression data, e.g., coefficients */
 typedef struct SCIP_Expr      SCIP_EXPR;         /**< expression */
-typedef struct SYM_ExprData2 SYM_EXPRDATA2;      /**< data to encode symmetry information */
+typedef struct SYM_ExprData SYM_EXPRDATA;        /**< (additional) data used to encode an expression,
+                                                  *   which is not encoded as another expression */
 
 /** curvature types */
 typedef enum
@@ -670,7 +671,7 @@ typedef struct SCIP_ExprhdlrData SCIP_EXPRHDLRDATA; /**< expression handler data
 #define SCIP_DECL_EXPRGETSYMDATA(x) SCIP_RETCODE x (\
    SCIP*          scip,                        \
    SCIP_EXPR*     expr,                        \
-   SYM_EXPRDATA2** symdata)
+   SYM_EXPRDATA** symdata)
 
 /** @} */  /* expression handler */
 

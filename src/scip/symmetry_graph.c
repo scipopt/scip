@@ -1195,7 +1195,7 @@ SCIP_RETCODE SCIPgetActiveVariables(
 /** frees symmetry information of an expression */
 SCIP_RETCODE SCIPfreeSymDataExpr(
    SCIP*                 scip,               /**< SCIP data structure */
-   SYM_EXPRDATA2**       symdata             /**< symmetry information of an expression */
+   SYM_EXPRDATA**        symdata             /**< symmetry information of an expression */
    )
 {
    assert(scip != NULL);
@@ -1215,6 +1215,26 @@ SCIP_RETCODE SCIPfreeSymDataExpr(
    return SCIP_OKAY;
 }
 
+/** returns number of coefficients form exprdata */
+int SCIPgetSymExprdataNConstants(
+   SYM_EXPRDATA*         symdata             /**< symmetry information of an expression */
+   )
+{
+   assert( symdata != NULL );
+
+   return symdata->nconstants;
+}
+
+/** returns number of coefficients form exprdata */
+SCIP_Real* SCIPgetSymExprdataConstants(
+   SYM_EXPRDATA*         symdata             /**< symmetry information of an expression */
+   )
+{
+   assert( symdata != NULL );
+
+   return symdata->constants;
+}
+
 /** gets coefficient of expression from parent expression */
 SCIP_RETCODE SCIPgetCoefSymData(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1224,7 +1244,7 @@ SCIP_RETCODE SCIPgetCoefSymData(
    SCIP_Bool*            success             /**< whether a coefficient is found */
    )
 {
-   SYM_EXPRDATA2* symdata;
+   SYM_EXPRDATA* symdata;
    int i;
 
    assert(scip != NULL);

@@ -660,7 +660,7 @@ SCIP_EXPORT  /* need SCIP_EXPORT here, because func is exposed in API via SCIPge
 SCIP_RETCODE SCIPexprGetSymData(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EXPR*            expr,               /**< expression from which information is retrieved */
-   SYM_EXPRDATA2**       symdata             /**< buffer to store symmetry information */
+   SYM_EXPRDATA**        symdata             /**< buffer to store symmetry information */
    );
 
 #ifdef NDEBUG

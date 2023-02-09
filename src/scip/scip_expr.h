@@ -761,7 +761,7 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPgetSymDataExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPR*            expr,               /**< expression from which information needs to be retrieved */
-   SYM_EXPRDATA2**       symdata             /**< buffer to store symmetry data */
+   SYM_EXPRDATA**        symdata             /**< buffer to store symmetry data */
    );
 
 /** replaces common sub-expressions in a given expression graph by using a hash key for each expression
