@@ -379,6 +379,7 @@ SCIP_RETCODE estimateDegeneratedPower(
    assert(isdegenerated != NULL);
    assert(success != NULL);
 
+   *success = FALSE;
    SCIP_Bool allfixed = TRUE;
 
    /* check whether all variables are fixed */
@@ -410,7 +411,7 @@ SCIP_RETCODE estimateDegeneratedPower(
    if( nsignvars == 0 )
    {
       /* constant case */
-      SCIProwprepAddConstant(rowprep, -multiplier * 1);
+      SCIProwprepAddConstant(rowprep, multiplier * 1);
       *success = TRUE;
    }
    else if( nsignvars == 1 )
@@ -444,20 +445,29 @@ SCIP_RETCODE estimateDegeneratedPower(
                }
                else
                {
-                  /* underestimate by secant approximation: ((sup^h - inf^h) / (sup - inf)) (w - inf) + inf^h */
+                  /* underestimate by secant approximation: \f$ ((sup^h - inf^h) / (sup - inf)) (w - inf) + inf^h \f$ */
                   SCIP_Real inf = nlhdlrexprdata->intervals[i].inf;
                   SCIP_Real sup = nlhdlrexprdata->intervals[i].sup;
                   SCIP_Real powinf = pow(inf, refexponent);
                   facetcoef = (pow(sup, refexponent) - powinf) / (sup - inf);
                   facetconstant = powinf - facetcoef * inf;
                }
-               SCIProwprepAddConstant(rowprep, -multiplier * facetconstant);
+               SCIProwprepAddConstant(rowprep,  multiplier * facetconstant);
                SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, var, multiplier * facetcoef / scale));
             }
          }
       }
       *success = TRUE;
    }
+
+
+#ifdef SCIP_DEBUG
+   if( *success && *isdegenerated )
+   {
+      SCIPdebugMsg(scip, "computed degenerated estimator: ");
+      SCIPprintRowprep(scip, rowprep, NULL);
+   }
+#endif
 
    return SCIP_OKAY;
 }
@@ -535,8 +545,10 @@ SCIP_RETCODE underEstimatePower(
       goto TERMINATE;
    }
 
+
+
    /* set coefficients in the rowprep */
-   SCIProwprepAddConstant(rowprep, -multiplier * facetconstant);
+   SCIProwprepAddConstant(rowprep, multiplier * facetconstant);
    j = 0;
    for( int i = 0; i < nlhdlrexprdata->nvars; ++i )
    {
@@ -547,15 +559,10 @@ SCIP_RETCODE underEstimatePower(
       j++;
    }
 
-#ifdef SCIP_DEBUG
-   SCIPdebugMsg(scip, "computed underestimator with mulitplier %f: ", multiplier);
+#ifdef SCIP_MORE_DEBUG
+   SCIPdebugMsg(scip, "computed underestimator: ");
    SCIPprintRowprep(scip, rowprep, NULL);
-   SCIP_Bool isvalid;
-   int nsample = 10000;
-   validCutProb(scip, nlhdlrexprdata, rowprep, nsample, &isvalid);
-   assert(isvalid);
 #endif
-
 
    TERMINATE: 
    SCIPfreeBufferArray(scip, &box);
@@ -604,9 +611,9 @@ static SCIP_RETCODE overEstimatePower(
       funcval *= pow(val, refexponent);
    }
 
-   /* overestimate by gradient cut: w'^h + h w'^(h - 1)(w - w') */
+   /* overestimate by gradient cut:  \f$ w'^h + h w'^(h - 1)(w - w')  \f$ */
    SCIP_Real facetconstant = (1 - sumrefexponents) * funcval;
-   SCIProwprepAddConstant(rowprep, -multiplier * facetconstant);
+   SCIProwprepAddConstant(rowprep,  multiplier * facetconstant);
    for( int i = 0; i < nlhdlrexprdata->nvars; ++i )
    {
       if( nlhdlrexprdata->signs[i] != sign )
@@ -730,6 +737,7 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateSignomial)
    {
       /* compute underestimator */
       isdegenerated = FALSE;
+      SCIPdebugMsg(scip, "underestimate\n");
       /* check and compute the degenerated case */
       SCIP_CALL( estimateDegeneratedPower(scip, nlhdlrexprdata, undersign, undermultiplier, FALSE, sol, rowprep, &isdegenerated, success));
       if( !isdegenerated )
@@ -739,6 +747,7 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateSignomial)
    {
       /* compute overestimator */
       isdegenerated = FALSE;
+      SCIPdebugMsg(scip, "overestimate\n");
       /* check and compute the degenerated case */
       SCIP_CALL( estimateDegeneratedPower(scip, nlhdlrexprdata, oversign, overmultiplier, TRUE, sol, rowprep, &isdegenerated, success));
       if( !isdegenerated )
