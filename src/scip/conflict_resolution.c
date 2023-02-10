@@ -2700,8 +2700,8 @@ SCIP_RETCODE DivisionBasedReduction(
          }
       }
    }
-   /* weaken all and apply strengthening once */
-   if ( set->conf_weakenreasonall && *nvarsweakened > 0 )
+   /* apply a division cut (CG or MIR) after weakening as much as possible */
+   if ( set->conf_weakenreasonall )
    {
       SCIP_RESOLUTIONSET *reducedreason;
       SCIP_CALL( resolutionsetCopy(&reducedreason, blkmem, reasonset) );
@@ -2845,7 +2845,8 @@ SCIP_RETCODE tighteningBasedReduction(
          }
       }
    }
-   if ( set->conf_weakenreasonall && *nvarsweakened > 0 )
+   /* apply tightening once after weakening as much as possible */
+   if ( set->conf_weakenreasonall )
    {
       SCIP_CALL( tightenCoefLhs(set, prob, FALSE, reasonset->vals, &reasonset->lhs,
                      reasonset->inds, &reasonset->nnz, &nchgcoefs, NULL) );
@@ -3920,6 +3921,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
    conflict in the list of resolution set */
    if ( nressteps >= 1 && nresstepslast != nressteps )
    {
+      conflict->ncorrectaborts--;
       SCIP_RESOLUTIONSET* tmpconflictresolutionset;
       SCIP_CALL( resolutionsetCopy(&tmpconflictresolutionset, blkmem, prevconflictresolutionset) );
       SCIP_CALL( conflictInsertResolutionset(conflict, set, &tmpconflictresolutionset) );
@@ -3938,7 +3940,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
        */
       nconstoadd = (set->conf_resolutioncons > 0) ? MIN(set->conf_resolutioncons, conflict->nresolutionsets) : conflict->nresolutionsets;
 
-      for( i = 0; i < nfuips; i++ )
+      for( i = 0; i < nconstoadd; i++ )
       {
          SCIP_RESOLUTIONSET* resolutionset;
          resolutionset = conflict->resolutionsets[i];
