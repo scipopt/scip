@@ -981,24 +981,21 @@ SCIP_Bool SYMcanComputeSymmetry(void)
    return TRUE;
 }
 
-/* forward declaration */
-char* initStaticBlissName( );
-
-static char* blissname = initStaticBlissName();
-
 /** return name of external program used to compute generators */
 char*
 initStaticBlissName( )
 {
-   blissname = new char[100];
+   char* name = new char[100];
 #ifdef BLISS_PATCH_PRESENT
-   (void) snprintf(blissname, 100, "bliss %sp", bliss::version);
+   (void) snprintf(name, 100, "bliss %sp", bliss::version);
 #else
-   (void) snprintf(blissname, 100, "bliss %s", bliss::version);
+   (void) snprintf(name, 100, "bliss %s", bliss::version);
 #endif
-   return blissname;
+   return name;
 }
 
+/* static name for bliss */
+static char* blissname = initStaticBlissName();
 
 /** return name of external program used to compute generators */
 const char* SYMsymmetryGetName(void)
@@ -1010,6 +1007,18 @@ const char* SYMsymmetryGetName(void)
 const char* SYMsymmetryGetDesc(void)
 {
    return "Computing Graph Automorphism Groups by T. Junttila and P. Kaski (https://users.aalto.fi/~tjunttil/bliss/)";
+}
+
+/** return name of additional external program used for computing symmetries */
+const char* SYMsymmetryGetAddName(void)
+{
+   return NULL;
+}
+
+/** return description of additional external program used to compute symmetries */
+const char* SYMsymmetryGetAddDesc(void)
+{
+   return NULL;
 }
 
 /** compute generators of symmetry group */

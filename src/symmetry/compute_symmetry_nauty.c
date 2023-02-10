@@ -1582,6 +1582,18 @@ const char* SYMsymmetryGetDesc(void)
 #endif
 }
 
+/** return name of additional external program used for computing symmetries */
+const char* SYMsymmetryGetAddName(void)
+{
+   return NULL;
+}
+
+/** return description of additional external program used to compute symmetries */
+const char* SYMsymmetryGetAddDesc(void)
+{
+   return NULL;
+}
+
 /** compute generators of symmetry group */
 SCIP_RETCODE SYMcomputeSymmetryGenerators(
    SCIP*                 scip,               /**< SCIP pointer */
