@@ -114,6 +114,8 @@ struct SCIP_OrbitopalFixingData
    ORBITOPEDATA**        orbitopes;          /**< array of pointers to orbitope datas */
    int                   norbitopes;         /**< number of orbitope datas in array */
    int                   maxnorbitopes;      /**< allocated orbitopes array size */
+   SCIP_CONSHDLR*        conshdlr_nonlinear; /**< nonlinear constraint handler, used for determining if branchingvar */
+   SCIP_Bool             conshdlr_nonlinear_checked; /**< nonlinear constraint handler is already added? */
 };
 
 /*
@@ -286,6 +288,7 @@ SCIP_Bool GT(SCIP* scip, SCIP_Real val1, SCIP_Real val2)
 /** get whether a variable type is a branchrow-type */
 static
 SCIP_Bool vartypeIsBranchRowType(
+   SCIP_ORBITOPALFIXINGDATA* orbifixdata,    /**< pointer to the dynamic orbitopal fixing data */
    SCIP_VARTYPE          vartype             /**< var type */
 )
 {
@@ -296,7 +299,10 @@ SCIP_Bool vartypeIsBranchRowType(
       return TRUE;
    case SCIP_VARTYPE_CONTINUOUS:
    case SCIP_VARTYPE_IMPLINT:
-      return FALSE;
+      /* potential branching variables if nonlinear constraints exist */
+      assert( orbifixdata->conshdlr_nonlinear_checked );
+      return orbifixdata->conshdlr_nonlinear == NULL ? FALSE : 
+         SCIPconshdlrGetNActiveConss(orbifixdata->conshdlr_nonlinear) > 0;
    default:
       assert( FALSE );
       /* resolve compiler warning: no asserts in optimized mode */
@@ -1027,7 +1033,8 @@ SCIP_DECL_EVENTEXEC(eventExec)
 /** returns whether a row contains potential branching variables */
 static
 SCIP_Bool rowIsBranchRow(
-   ORBITOPEDATA*        consdata,           /**< dynamic orbitope constraint data */
+   SCIP_ORBITOPALFIXINGDATA* orbifixdata,    /**< pointer to the dynamic orbitopal fixing data */
+   ORBITOPEDATA*         orbidata,           /**< dynamic orbitope constraint data */
    int                   rowid               /**< row id for which to check */
 )
 {
@@ -1036,30 +1043,30 @@ SCIP_Bool rowIsBranchRow(
    int c;
 #endif
 
-   assert( consdata != NULL );
-   assert( consdata->nrows > 0 );
-   assert( consdata->ncols > 0 );
+   assert( orbidata != NULL );
+   assert( orbidata->nrows > 0 );
+   assert( orbidata->ncols > 0 );
    assert( rowid >= 0 );
-   assert( rowid < consdata->nrows );
-   assert( consdata->vars != NULL );
-   assert( consdata->vars[rowid * consdata->ncols + 0] );
+   assert( rowid < orbidata->nrows );
+   assert( orbidata->vars != NULL );
+   assert( orbidata->vars[rowid * orbidata->ncols + 0] );
 
    /* get the first variable from the row */
-   var = consdata->vars[rowid * consdata->ncols];
+   var = orbidata->vars[rowid * orbidata->ncols];
 
    /* debugging: the variable types in a row should all be the same */
 #ifndef NDEBUG
-   for (c = 1; c < consdata->ncols; ++c)
+   for (c = 1; c < orbidata->ncols; ++c)
    {
       /* the actual vartypes can be different,
        * for example when an INTEGER vartype turns into BINARY due to bound changes
        */
-      assert( vartypeIsBranchRowType(SCIPvarGetType(var)) ==
-         vartypeIsBranchRowType(SCIPvarGetType(consdata->vars[rowid * consdata->ncols + c])) );
+      assert( vartypeIsBranchRowType(orbifixdata, SCIPvarGetType(var)) ==
+         vartypeIsBranchRowType(orbifixdata, SCIPvarGetType(orbidata->vars[rowid * orbidata->ncols + c])) );
    }
 #endif
 
-   return vartypeIsBranchRowType(SCIPvarGetType(var));
+   return vartypeIsBranchRowType(orbifixdata, SCIPvarGetType(var));
 }
 
 
@@ -1335,7 +1342,7 @@ SCIP_RETCODE computeSuborbitopesAndInitialize(
 static
 SCIP_RETCODE addOrbitope(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ORBITOPALFIXINGDATA*  orbifixdata,        /**< pointer to the dynamic orbitopal fixing data */
+   SCIP_ORBITOPALFIXINGDATA* orbifixdata,    /**< pointer to the dynamic orbitopal fixing data */
    SCIP_VAR**            vars,               /**< variables array, must have size nrows * ncols */
    int                   nrows,              /**< number of rows in orbitope */
    int                   ncols               /**< number of columns in orbitope */
@@ -1393,7 +1400,7 @@ SCIP_RETCODE addOrbitope(
    /* @todo at getRowData: If nselrows == nbranchrows, append the non-branch rows (like before) */
    for (i = 0; i < nrows; ++i)
    {
-      if ( rowIsBranchRow(orbidata, i) )
+      if ( rowIsBranchRow(orbifixdata, orbidata, i) )
          ++orbidata->nbranchrows;
    }
 
@@ -2305,6 +2312,13 @@ SCIP_RETCODE SCIPorbitopalFixingAddOrbitope(
    /* dynamic symmetry reductions cannot be performed on original problem */
    assert( SCIPisTransformed(scip) );
 
+   /* if this is the first time adding an orbitope, check if the nonlinear conshlr exists */
+   if ( !orbifixdata->conshdlr_nonlinear_checked )
+   {
+      orbifixdata->conshdlr_nonlinear = SCIPfindConshdlr(scip, "nonlinear");
+      orbifixdata->conshdlr_nonlinear_checked = TRUE;
+   }
+
    /* create constraint data */
    SCIP_CALL( addOrbitope(scip, orbifixdata, vars, nrows, ncols) );
 
@@ -2389,6 +2403,10 @@ SCIP_RETCODE SCIPorbitopalFixingInclude(
    (*orbifixdata)->orbitopes = NULL;
    (*orbifixdata)->norbitopes = 0;
    (*orbifixdata)->maxnorbitopes = 0;
+
+   /* conshdlr nonlinear */
+   (*orbifixdata)->conshdlr_nonlinear = NULL;
+   (*orbifixdata)->conshdlr_nonlinear_checked = FALSE;
 
    return SCIP_OKAY;
 }
