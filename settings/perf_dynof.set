@@ -1,0 +1,6 @@
+misc/usesymmetry = 10
+propagating/symmetry/addsymresacks = FALSE
+propagating/symmetry/detectorbitopes = FALSE
+propagating/symmetry/detectsubgroups = FALSE
+propagating/symmetry/onlybinarysymmetry = FALSE
+limits/restarts = 0
