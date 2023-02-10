@@ -79,6 +79,9 @@ struct SCIP_NlhdlrExprData
    SCIP_Bool             isgetvars;          /**< are all variables already got */
    SCIP_VAR**            vars;               /**< variables \f$ (x,y) \f$ */
    SCIP_INTERVAL*        intervals;          /**< intervals storing lower and upper bounds of variables \f$ (x,y) \f$ */
+   SCIP_Real*            box;
+   SCIP_Real*            xstar;
+   SCIP_Real*            facetcoefs;
 };
 
 /** nonlinear handler data */
@@ -442,13 +445,13 @@ SCIP_DECL_VERTEXPOLYFUN(nlhdlrExprEvalPower)
 
 
 
-/** determine whether a power function \f$ w^h \f$ is degenerated and add an overunderestimator or underestimator to a given rowprep
+/** determine whether a power function \f$ w^h \f$ is special and add an overunderestimator or underestimator to a given rowprep
  * 
- * \f$ w^h \f$ is degenerated, if all variables are fixed, or it is univariate or a constant. The estimator is multiplied
+ * \f$ w^h \f$ is special, if all variables are fixed, or it is univariate or a constant. The estimator is multiplied
  * by the multiplier and stored in the rowprep.
  */
 static 
-SCIP_RETCODE estimateDegeneratedPower(
+SCIP_RETCODE estimateSpecialPower(
    SCIP*                 scip,                               /**< SCIP data structure */
    SCIP_NLHDLREXPRDATA   *nlhdlrexprdata,                    /**< nonlinear handler expression data */
    SCIP_Bool             sign,                               /**< the sign of variables of the power function */     
@@ -456,14 +459,14 @@ SCIP_RETCODE estimateDegeneratedPower(
    SCIP_Bool             overestimate,                       /**< whether overestimate or underestimator the power function */ 
    SCIP_SOL*             sol,                                /**< solution \f$ w' \f$  to use in estimation */
    SCIP_ROWPREP*         rowprep,                            /**< rowprep where to store estimator */
-   SCIP_Bool*            isdegenerated,                      /**< buffer to store whether this function is a degenerated case */ 
+   SCIP_Bool*            isspecial,                          /**< buffer to store whether this function is a special case */ 
    SCIP_Bool*            success                             /**< buffer to store whether successful */
    )
 {
    assert(scip != NULL);
    assert(nlhdlrexprdata != NULL);
    assert(rowprep != NULL);
-   assert(isdegenerated != NULL);
+   assert(isspecial != NULL);
    assert(success != NULL);
 
    *success = FALSE;
@@ -480,20 +483,20 @@ SCIP_RETCODE estimateDegeneratedPower(
    }
 
 
-   /* allfixed is a degenerated case */
+   /* allfixed is a special case */
    if( allfixed )
    {
       /* SCIPcomputeFacetVertexPolyhedralNonlinear prints a warning and does not succeed if all is fixed */
       SCIPdebugMsg(scip, "all variables fixed, skip estimate\n");
-      *isdegenerated = TRUE;
+      *isspecial = TRUE;
       return SCIP_OKAY;
    }
 
    /* number of variables in the power function */
    int nsignvars = sign ? nlhdlrexprdata->nposvars : nlhdlrexprdata->nnegvars;
 
-   /* if the power function has less than 2 variables, this a degenerated case */
-   *isdegenerated = nsignvars < 2;
+   /* if the power function has less than 2 variables, this a special case */
+   *isspecial = nsignvars < 2;
 
    if( nsignvars == 0 )
    {
@@ -549,9 +552,9 @@ SCIP_RETCODE estimateDegeneratedPower(
 
 
 #ifdef SCIP_CUT_DEBUG
-   if( *success && *isdegenerated )
+   if( *success && *isspecial )
    {
-      SCIPdebugMsg(scip, "computed degenerated estimator: ");
+      SCIPdebugMsg(scip, "computed special estimator: ");
       SCIPprintRowprep(scip, rowprep, NULL);
    }
 #endif
@@ -598,10 +601,11 @@ SCIP_RETCODE underEstimatePower(
    evaldata.nsignvars = nsignvars;
    evaldata.scip = scip;
 
-   SCIP_Real *xstar;
-   SCIP_Real *box;
-   SCIP_CALL( SCIPallocBufferArray(scip, &xstar, nsignvars));
-   SCIP_CALL( SCIPallocBufferArray(scip, &box, 2 * (nsignvars)));
+   SCIP_Real* xstar = nlhdlrexprdata->xstar;
+   SCIP_Real* box = nlhdlrexprdata->box;
+   SCIP_Real* facetcoefs = nlhdlrexprdata->facetcoefs;
+   //SCIP_CALL( SCIPallocBufferArray(scip, &xstar, nsignvars));
+   //SCIP_CALL( SCIPallocBufferArray(scip, &box, 2 * (nsignvars)));
 
    /* compute box constraints and reference value of variables*/
    int j = 0;
@@ -619,8 +623,8 @@ SCIP_RETCODE underEstimatePower(
    }
 
    SCIP_Real facetconstant;
-   SCIP_Real *facetcoefs;
-   SCIP_CALL( SCIPallocBufferArray(scip, &facetcoefs, nsignvars));
+   //SCIP_Real *facetcoefs;
+   //SCIP_CALL( SCIPallocBufferArray(scip, &facetcoefs, nsignvars));
    /* find a facet of the underestimator */
    SCIP_CALL( SCIPcomputeFacetVertexPolyhedralNonlinear(scip, conshdlr, FALSE, nlhdlrExprEvalPower, (void*)&evaldata, xstar, box,
       nsignvars, targetvalue, success, facetcoefs, &facetconstant));
@@ -651,9 +655,9 @@ SCIP_RETCODE underEstimatePower(
 #endif
 
    TERMINATE: 
-   SCIPfreeBufferArray(scip, &box);
-   SCIPfreeBufferArray(scip, &xstar);
-   SCIPfreeBufferArray(scip, &facetcoefs);
+   //SCIPfreeBufferArray(scip, &box);
+   //SCIPfreeBufferArray(scip, &xstar);
+   //SCIPfreeBufferArray(scip, &facetcoefs);
 
    return SCIP_OKAY;
 }
@@ -740,7 +744,7 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateSignomial)
    *success = FALSE;
    *addedbranchscores = FALSE;
 
-   return SCIP_OKAY;
+   //return SCIP_OKAY;
 
 #ifdef SCIP_MORE_DEBUG
    SCIPdebugMsg(scip, "ptrs in estimate: %p %p\n", (void *)expr, (void *)nlhdlrexprdata);
@@ -819,15 +823,15 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateSignomial)
    SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, TRUE));
    SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, nlhdlrexprdata->nvars + 1));
 
-   SCIP_Bool isdegenerated;
+   SCIP_Bool isspecial;
    /* only underesimate a concave function, if the number of variables satisfy the criteria */
    if( nundervars <= 1 || nundervars <= nlhdlrdata->maxnundervars )
    {
       /* compute underestimator */
-      isdegenerated = FALSE;
-      /* check and compute the degenerated case */
-      SCIP_CALL( estimateDegeneratedPower(scip, nlhdlrexprdata, undersign, undermultiplier, FALSE, sol, rowprep, &isdegenerated, success));
-      if( !isdegenerated )
+      isspecial = FALSE;
+      /* check and compute the special case */
+      SCIP_CALL( estimateSpecialPower(scip, nlhdlrexprdata, undersign, undermultiplier, FALSE, sol, rowprep, &isspecial, success));
+      if( !isspecial )
          SCIP_CALL( underEstimatePower(scip, conshdlr, nlhdlr, nlhdlrexprdata, undersign, undermultiplier, sol, targetunder, rowprep, success));
       #ifdef SCIP_CUT_DEBUG
          SCIPdebugMsg(scip, "underestimate:");
@@ -841,13 +845,13 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateSignomial)
    if( *success )
    {
       /* compute overestimator */
-      isdegenerated = FALSE;
+      isspecial = FALSE;
       #ifdef SCIP_CUT_DEBUG
       SCIP_Real prevconstant =  SCIProwprepGetSide(rowprep);
       #endif
-      /* check and compute the degenerated case */
-      SCIP_CALL( estimateDegeneratedPower(scip, nlhdlrexprdata, oversign, overmultiplier, TRUE, sol, rowprep, &isdegenerated, success));
-      if( !isdegenerated )
+      /* check and compute the special case */
+      SCIP_CALL( estimateSpecialPower(scip, nlhdlrexprdata, oversign, overmultiplier, TRUE, sol, rowprep, &isspecial, success));
+      if( !isspecial )
          SCIP_CALL( overEstimatePower(scip, nlhdlrexprdata, oversign, overmultiplier, sol, rowprep, success));
       #ifdef SCIP_CUT_DEBUG
          SCIPdebugMsg(scip, "overestimate: ");
@@ -946,6 +950,9 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectSignomial)
       SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->refexponents, nc + 1);
       SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->vars, nc + 1);
       SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->intervals, nc + 1);
+      SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->xstar, nc + 1);
+      SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->facetcoefs, (nc + 1));
+      SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->box, 2 * (nc + 1));
 
       /* get monomial information */
       SCIP_CALL( SCIPgetExprMonomialData(scip, expr, &((*nlhdlrexprdata)->coef), (*nlhdlrexprdata)->exponents, (*nlhdlrexprdata)->factors));
