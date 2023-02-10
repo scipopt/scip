@@ -52,6 +52,14 @@ const char* SYMsymmetryGetName(void);
 SCIP_EXPORT
 const char* SYMsymmetryGetDesc(void);
 
+/** return name of additional external program used for computing symmetries */
+SCIP_EXPORT
+const char* SYMsymmetryGetAddName(void);
+
+/** return description of additional external program used to compute symmetries */
+SCIP_EXPORT
+const char* SYMsymmetryGetAddDesc(void);
+
 /** compute generators of symmetry group */
 SCIP_EXPORT
 SCIP_RETCODE SYMcomputeSymmetryGenerators(

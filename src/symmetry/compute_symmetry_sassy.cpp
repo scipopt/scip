@@ -1441,23 +1441,30 @@ SCIP_Bool SYMcanComputeSymmetry(void)
    return TRUE;
 }
 
-/* forward declaration */
-char* initStaticSymmetryName( );
-
-static char* symmetryname = initStaticSymmetryName();
-
 /** return name of external program used to compute generators */
 char*
 initStaticSymmetryName( )
 {
-   symmetryname = new char[100];
+   char* blissname = new char[100];
 #ifdef BLISS_PATCH_PRESENT
-   (void) snprintf(symmetryname, 100, "bliss %sp, sassy %d.%d", bliss::version, SASSY_VERSION_MAJOR, SASSY_VERSION_MINOR);
+   (void) snprintf(blissname, 100, "bliss %sp", bliss::version);
 #else
-   (void) snprintf(symmetryname, 100, "bliss %s, sassy %d.%d", bliss::version, SASSY_VERSION_MAJOR, SASSY_VERSION_MINOR);
+   (void) snprintf(blissname, 100, "bliss %s", bliss::version);
 #endif
-   return symmetryname;
+   return blissname;
 }
+
+/** return name of external program used to compute generators */
+char*
+initStaticSymmetryAddName( )
+{
+   char* sassyname = new char[100];
+   (void) snprintf(sassyname, 100, "sassy %d.%d", SASSY_VERSION_MAJOR, SASSY_VERSION_MINOR);
+   return sassyname;
+}
+
+static char* symmetryname = initStaticSymmetryName();
+static char* symmetryaddname = initStaticSymmetryAddName();
 
 /** return name of external program used to compute generators */
 const char* SYMsymmetryGetName(void)
@@ -1468,8 +1475,21 @@ const char* SYMsymmetryGetName(void)
 /** return description of external program used to compute generators */
 const char* SYMsymmetryGetDesc(void)
 {
-   return "bliss: Computing Graph Automorphisms by T. Junttila and P. Kaski (users.aalto.fi/~tjunttil/bliss/); sassy: preprocessor by Markus Anders (github.com/markusa4/sassy)";
+   return "Computing Graph Automorphisms by T. Junttila and P. Kaski (users.aalto.fi/~tjunttil/bliss/)";
 }
+
+/** return name of additional external program used for computing symmetries */
+const char* SYMsymmetryGetAddName(void)
+{
+   return symmetryaddname;
+}
+
+/** return description of additional external program used to compute symmetries */
+const char* SYMsymmetryGetAddDesc(void)
+{
+   return "Symmetry preprocessor by Markus Anders (github.com/markusa4/sassy)";
+}
+
 
 /** compute generators of symmetry group */
 SCIP_RETCODE SYMcomputeSymmetryGenerators(
