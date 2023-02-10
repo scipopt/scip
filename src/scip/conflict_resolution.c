@@ -25,7 +25,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 // #define SCIP_STATISTIC
-#define SCIP_DEBUG
+// #define SCIP_DEBUG
 
 #include "lpi/lpi.h"
 #include "scip/conflict_resolution.h"
@@ -1853,6 +1853,7 @@ SCIP_RETCODE createAndAddResolutionCons(
    SCIP_CALL( SCIPdebugCheckConss(set->scip, &cons, 1) );
 
    /* add conflict to SCIP */
+   /* todo add different conflict types for the different cases */
    SCIP_CALL( SCIPaddConflict(set->scip, tree->path[insertdepth], cons, tree->path[resolutionset->validdepth], SCIP_CONFTYPE_RESOLUTION, conflict->resolutionset->usescutoffbound) );
    *success = TRUE;
    /* free temporary memory */
@@ -1920,14 +1921,17 @@ SCIP_RETCODE SCIPconflictFlushResolutionSets(
       SCIP_CALL( SCIPnodeCutoff(tree->path[resolutionset->validdepth], set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
       return SCIP_OKAY;
    }
-   /* if the conflict has a relaxation only variable it is not generated at the moment */
-   else if( hasRelaxationOnlyVar(set, transprob, resolutionset) )
-   {
-      conflict->ncorrectaborts++;
-      SCIPsetDebugMsg(set, " -> resolution set has relaxation only variable \n");
-      return SCIP_OKAY;
-   }
-   else
+   /* todo in case the conflict set contains only one bound change which is globally valid we apply that bound change
+    * directly (except if we are in strong branching or diving - in this case a bound change would yield an unflushed LP
+    * and is not handled when restoring the information)
+    *
+    * @note A bound change can only be applied if it is are related to the active node or if is a global bound
+    *       change. Bound changes which are related to any other node cannot be handled at point due to the internal
+    *       data structure
+    */
+
+   /* generate the linear constraint */
+   else if( !hasRelaxationOnlyVar(set, transprob, resolutionset) )
    {
       /* @todo use the right insert depth and not valid depth */
       SCIP_CALL( createAndAddResolutionCons(conflict, blkmem, set, stat, transprob, origprob, \
@@ -1937,6 +1941,13 @@ SCIP_RETCODE SCIPconflictFlushResolutionSets(
                      SCIPtreeGetCurrentDepth(tree), SCIPtreeGetFocusDepth(tree),
                      resolutionset->validdepth, resolutionset->validdepth, resolutionset->conflictdepth,
                      resolutionset->repropdepth, resolutionsetGetNNzs(resolutionset));
+   }
+   /* todo can anything be done in case of relaxation only variables? */
+   else
+   {
+      conflict->ncorrectaborts++;
+      SCIPsetDebugMsg(set, " -> resolution set has relaxation only variable \n");
+      return SCIP_OKAY;
    }
 
    return SCIP_OKAY;
@@ -2329,6 +2340,7 @@ SCIP_RETCODE getClauseReasonSet(
    SCIP_CALL( reasonBoundChanges(conflict, set, currbdchginfo, relaxedbd, validdepth, success) );
    if ( SCIPpqueueNElems(conflict->separatebdchgqueue) == 0 )
    {
+      conflict->ncorrectaborts++;
       SCIPsetDebugMsg(set, "Could not obtain a reason set \n");
       *success = FALSE;
       return SCIP_OKAY;
@@ -2464,10 +2476,7 @@ SCIP_RETCODE rescaleAndResolve(
       else
          return SCIP_OKAY;
 
-      /* assert that scale is one */
       scale = computeScaleReason(set, conflictresolutionset, reasonresolutionset, residx);
-      assert(SCIPsetIsEQ(set, scale, 1.0));
-
    }
 
    SCIP_CALL( resolutionsetReplace(resolvedresolutionset, blkmem, conflictresolutionset) );
@@ -2713,7 +2722,6 @@ SCIP_RETCODE DivisionBasedReduction(
       SCIPresolutionsetFree(&reducedreason, blkmem);
       if (!successresolution)
          return SCIP_OKAY;
-
    }
 
    SCIP_UNUSED(previousslack);
@@ -2771,7 +2779,7 @@ SCIP_RETCODE tighteningBasedReduction(
    if (!successresolution)
       return SCIP_OKAY;
 
-   while ( SCIPsetIsGE(set, getSlack(set, prob, conflict->resolvedresolutionset, currbdchgidx, fixbounds, fixinds), 0.0) &&         applytightening )
+   while ( SCIPsetIsGE(set, getSlack(set, prob, conflict->resolvedresolutionset, currbdchgidx, fixbounds, fixinds), 0.0) && applytightening )
    {
       applytightening = FALSE;
       for( i = 0; i < resolutionsetGetNNzs(reasonset); ++i )
@@ -3118,6 +3126,11 @@ void printAllBoundChanges(
    assert(conflict != NULL);
 
    SCIPsetDebugMsg(set, " -> Bound changes in queue: \n");
+   if( SCIPpqueueNElems(conflict->resbdchgqueue) == 0 )
+   {
+      SCIPsetDebugMsgPrint(set, " The bound change queue is empty\n");
+      return;
+   }
    for( i = 0; i < SCIPpqueueNElems(conflict->resbdchgqueue); ++i )
    {
       bdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueElems(conflict->resbdchgqueue)[i]);
@@ -3288,6 +3301,7 @@ SCIP_RETCODE getReasonRow(
    }
    else
    {
+      conflict->ncorrectaborts++;
       SCIPsetDebugMsg(set, "Could not obtain a reason row \n");
       *success = FALSE;
    }
@@ -3350,6 +3364,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
    assert(nconss != NULL);
    assert(nconfvars != NULL);
 
+   /* todo update this for bound exceeding LPs*/
    usescutoffbound = conflict->resolutionset->usescutoffbound;
 
    resolutionSetClear(conflict->resolutionset);
@@ -3446,7 +3461,6 @@ SCIP_RETCODE conflictAnalyzeResolution(
     */
    if ( set->conf_clausegenres || initialconflictrow == NULL || SCIPsetIsGE(set, conflictresolutionset->slack, 0.0) )
    {
-
       SCIP_Bool success;
       SCIP_CONSHDLR* conshdlr;
 
@@ -3539,18 +3553,9 @@ SCIP_RETCODE conflictAnalyzeResolution(
 #ifdef SCIP_DEBUG
       {
          SCIPsetDebugMsgPrint(set, " Number of applied resolution steps %d \n", nressteps);
-         printAllBoundChanges(conflict, set);
          SCIPsetDebugMsgPrint(set, " Current bound change already removed from the queue: \n");
          printSingleBoundChange(set, bdchginfo);
-         if( nextbdchginfo != NULL )
-         {
-            SCIPsetDebugMsgPrint(set, " First element in the bound change queue: \n");
-            printSingleBoundChange(set, nextbdchginfo);
-         }
-         else
-         {
-            SCIPsetDebugMsgPrint(set, " The bound change queue is empty\n");
-         }
+         printAllBoundChanges(conflict, set);
       }
 #endif
       /** check if the bound change is resolvable. If it is not, we can ignore the bound change and continue
@@ -3559,18 +3564,18 @@ SCIP_RETCODE conflictAnalyzeResolution(
       if ( !bdchginfoIsResolvable(bdchginfo) && set->conf_fixandcontinue)
       {
 #ifdef SCIP_DEBUG
-            printNonResolvableReasonType(set, bdchginfo);
+         printNonResolvableReasonType(set, bdchginfo);
 #endif
-            if ( SCIPbdchginfoGetChgtype(bdchginfo) == SCIP_BOUNDCHGTYPE_CONSINFER )
+         if ( SCIPbdchginfoGetChgtype(bdchginfo) == SCIP_BOUNDCHGTYPE_CONSINFER )
+         {
+            reasoncon = SCIPbdchginfoGetInferCons(bdchginfo);
+            /* we resolve only with globally valid constraints */
+            if(!SCIPconsIsGlobal(reasoncon))
             {
-               reasoncon = SCIPbdchginfoGetInferCons(bdchginfo);
-               /* we resolve only with globally valid constraints */
-               if(!SCIPconsIsGlobal(reasoncon))
-               {
-                  conflict->ncorrectaborts++;
-                  goto TERMINATE;
-               }
+               conflict->ncorrectaborts++;
+               goto TERMINATE;
             }
+         }
 
          if( existsResolvablebdchginfo(conflict) )
          {
@@ -3579,7 +3584,10 @@ SCIP_RETCODE conflictAnalyzeResolution(
 
             /* if a bound for the variable has already been ignored then abort */
             if( fixinds[SCIPvarGetProbindex(SCIPbdchginfoGetVar(bdchginfo))] != 0 )
+            {
+               conflict->ncorrectaborts++;
                goto TERMINATE;
+            }
 
             boundtype = SCIPbdchginfoGetBoundtype(bdchginfo);
             bdchgtype = SCIPbdchginfoGetChgtype(bdchginfo);
@@ -3589,11 +3597,9 @@ SCIP_RETCODE conflictAnalyzeResolution(
             SCIPsetDebugMsgPrint(set, "ignoring-fixing variable %s to %f \n", SCIPvarGetName(SCIPbdchginfoGetVar(bdchginfo)),
                   SCIPbdchginfoGetNewbound(bdchginfo));
 
-
             /* extract latest bound change from queue */
             bdchginfo = conflictRemoveCand(conflict);
-            if( bdchginfo == NULL )
-               goto TERMINATE;
+            assert(bdchginfo != NULL);
 
             /* get next bound change from queue */
             nextbdchginfo = conflictFirstCand(conflict);
@@ -3629,7 +3635,10 @@ SCIP_RETCODE conflictAnalyzeResolution(
 
          /* if a bound for the variable has already been ignored then abort */
          if( fixinds[SCIPvarGetProbindex(SCIPbdchginfoGetVar(bdchginfo))] != 0 )
+         {
+            conflict->ncorrectaborts++;
             goto TERMINATE;
+         }
 
          boundtype = SCIPbdchginfoGetBoundtype(bdchginfo);
          bdchgtype = SCIPbdchginfoGetChgtype(bdchginfo);
@@ -3642,8 +3651,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
 
          /* extract latest bound change from queue */
          bdchginfo = conflictRemoveCand(conflict);
-         if( bdchginfo == NULL )
-            goto TERMINATE;
+         assert(bdchginfo != NULL);
 
          /* get next bound change from queue */
          nextbdchginfo = conflictFirstCand(conflict);
@@ -3678,7 +3686,6 @@ SCIP_RETCODE conflictAnalyzeResolution(
          SCIP_CALL( getReasonRow(conflict, blkmem, transprob, set, bdchginfo, residx, validdepth, fixbounds, fixinds, &obtainedreason) );
          if( !obtainedreason )
          {
-            conflict->ncorrectaborts++;
             SCIPsetDebugMsgPrint(set, "Could not obtain reason row for bound change \n");
             goto TERMINATE;
          }
@@ -3782,6 +3789,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
          /* check that we fail for a valid reason */
          if (SCIPsetIsGE(set, conflictslack, 0.0))
          {
+            /* todo here we could use graph conflict analysis as last resort */
             /* todo either remove the member isbinary in the resolution sets or update it */
             if ( set->conf_reductiontechnique == 'o' || !isBinaryResolutionSet(set, transprob, conflictresolutionset))
                conflict->ncorrectaborts++;
@@ -3930,7 +3938,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
        */
       nconstoadd = (set->conf_resolutioncons > 0) ? MIN(set->conf_resolutioncons, conflict->nresolutionsets) : conflict->nresolutionsets;
 
-      for( i = 0; i < nconstoadd; i++ )
+      for( i = 0; i < nfuips; i++ )
       {
          SCIP_RESOLUTIONSET* resolutionset;
          resolutionset = conflict->resolutionsets[i];
