@@ -1728,6 +1728,10 @@ SCIP_DECL_EVENTEXEC(eventExecGlobalBoundChange)
    assert( strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_SYMMETRY_NAME) == 0 );
    assert( event != NULL );
 
+   /* only update the global bounds during presolving or at the root node */
+   if ( SCIPgetStage(scip) != SCIP_STAGE_SOLVING || SCIPgetNNodes(scip) > 1 )
+      return SCIP_OKAY;
+
    ofdata = (OFDATA*) eventdata;
    var = SCIPeventGetVar(event);
    assert( var != NULL );
