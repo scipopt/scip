@@ -16,6 +16,7 @@ Features
 - new diving heuristic indicatordiving that focuses on indicator variables which control semicontinuous variables
 - updated statistics on NLP relaxation; information on convexity of NLP has been added
 - added new bandit method (EXP.3-IX) that is the new default of the ALNS heuristic
+- added dialog to display recognized permutation symmetries ("display symmetry")
 
 Performance improvements
 ------------------------
@@ -44,6 +45,7 @@ Interface changes
   pointer to SCIP_LOCK/SCIP_CONDITION, respectively.
 - Renamed SCIPtpiSumbitJob() to SCIPtpiSubmitJob().
 - Replaced SCIPnlrowSetCurvature() by SCIPsetNlRowCurvature().
+- SCIPsnprintf() now returns the required string length in case reallocation is necessary.
 
 ### New API functions
 
@@ -113,6 +115,8 @@ Build system
 - added flag option "nauty" for SYM variable to specify which graph automorphism package should be used
 - added flag option "sassy" for SYM variable to specify which graph automorphism package should be used
 - New flag LAPACK for linking with Lapack (must be available in the system)
+- A file scip/config.h is created in the build directory ($(OBJDIR)/include) now.
+  Defining NO_CONFIG_HEADER is no longer necessary and has no effect anymore.
 
 Fixed bugs
 ----------
@@ -130,7 +134,7 @@ Known bugs
 
 @page RN80 Release notes for SCIP 8.0
 
-@section RN000 SCIP 8.0.3
+@section RN804 SCIP 8.0.4
 *************************
 
 Features
@@ -141,8 +145,6 @@ Performance improvements
 
 Examples and applications
 -------------------------
-
-- Take out STP and PolySCIP applications
 
 Interface changes
 -----------------
@@ -155,9 +157,9 @@ Interface changes
 
 ### Command line interface
 
-- When running the AMPL interface, the .nl filename extension does not need to be omitted for the input file anymore.
-
 ### Interfaces to external software
+
+- updated XPRESS interface to work with XPRESS 41 as well
 
 ### Changed parameters
 
@@ -171,6 +173,8 @@ Deleted files
 Unit tests
 ----------
 
+- added new checks for objective, bounds and sides inside the scaling tests in lpi/change.c
+
 Testing
 -------
 
@@ -179,23 +183,80 @@ Build system
 
 ### Cmake
 
+### Makefile
+
+Fixed bugs
+----------
+
+- relax condition of assert in lpSolve to hold only if lp/checkstability is true
+- OPB reader: dynamically increase the size of the line buffer for reading in getMaxAndConsDim()
+- Enabled the solution limit checks in SCIPsolveIsStopped in solve.c when in SCIP_STAGE_PRESOLVING
+- fix quad precision comparison for the calculation of knapsackcover constraints.
+- force copying of symmetry constraints for concurrent solve
+- increase the precision of double multiplications in quad precision environments
+- corrected handling of different variable types in symmetry
+- orbitope detection: refine computation of overlap structure and fixed bug in finding orbitope generators
+- ensure that winner is always determined in concurrent mode
+- when a row with invalid index range is added to the global cutpool, update the indices instead of failing with an assert
+- update of watched literals in cons_xor.c and ensure that fixed variables are counted in propacateCons()
+
+Miscellaneous
+-------------
+
+- Extended documentation of the parameter limits/solutions to point out that the limit is first checked in presolving
+- Added more information about using SCIPcache- and SCIPflushRowExtensions() to documentation and comments
+
+Known bugs
+----------
+
+@section RN803 SCIP 8.0.3
+*************************
+
+Examples and applications
+-------------------------
+
+- Externalize STP and PolySCIP applications
+
+Interface changes
+-----------------
+
+### Command line interface
+
+- When running the AMPL interface, the .nl filename extension does not need to be omitted for the input file anymore.
+
+Build system
+------------
+
+### Cmake
+
 - Forbid CMAKE_BUILD_TYPE nonstandard values
+- Move -I/path/to/src/amplmp/include to front of compiler flags for include directories
 
 ### Makefile
+
+- Use SYM=bliss by default, since bliss now is shipped with SCIP.
 
 Fixed bugs
 ----------
 
 - fixed an incorrect handling of xor constraints
 - the feasibility checker for integrality constraints now uses checkintegrality even for implied integers
+- skip integrality check in cons_integral for relaxation-only implicit-integer variables
 - fixed an issue caused by aggregated variables not added to a hashmap in the xor constraint handler
 - changed function solveRowEchelonGF2 in cons_xor.c to avoid errors if rank is 0
 - fixed that the implication presolver tried to aggregate or tighten bounds of multiaggregated variables
+- fixed a sign check in detection of linear constraints that are parallel to the objective
+- fixed bug in Clp and lpi_clp with missing basis information when calling the barrier with crossover; needs new Clp version
+- do not assume aggregation is successful in cons_setppc.c
 
 Miscellaneous
 -------------
 
 - Changed license to Apache 2.0, see https://www.apache.org/licenses/LICENSE-2.0.
+- When an LP could not be solved accurately, scaling is now turned off as a last fall-back method.
+- Methods for using the debug solution mechanism SCIPdebugAddSolVal, SCIPdebugGetSol, SCIPdebugGetSolVal,
+  SCIPdebugSolIsValidInSubtree, SCIPdebugIsMainscip, SCIPdebugSolEnable, SCIPdebugSolDisable, SCIPdebugSolIsEnabled,
+  SCIPwithDebugSol are now exported
 
 Known bugs
 ----------
@@ -1385,7 +1446,6 @@ Fixed bugs
 - Improved separation for SOC constraint with multiaggregated variable on right-hand-side.
 - Fixed bug in presol_boundshift: do not shift non-active variables
 - Fixed bug in domain propagation for SOC constraints with negative coefficient for variable on right-hand-side.
-- Fixed a sign check in detection of linear constraints that are parallel to the objective
 - Fixed bug with multi-aggregated integer variables in cons_xor.
 - Fixed bug with changed number of variables in storing relaxation solution in probing/diving.
 - Fixed issues with scip statistics

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.3)
+cmake_minimum_required(VERSION 3.9)
 
 # option() honors normal variables.
 if(POLICY CMP0077)
@@ -15,8 +15,8 @@ set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_DEBUG} ${CMAKE_CXX_FLAGS_R
 
 set(SCIP_VERSION_MAJOR 8)
 set(SCIP_VERSION_MINOR 0)
-set(SCIP_VERSION_PATCH 2)
-set(SCIP_VERSION_SUB 4)
+set(SCIP_VERSION_PATCH 3)
+set(SCIP_VERSION_SUB 5)
 set(SCIP_VERSION_API 108)
 
 project(SCIP
@@ -273,7 +273,7 @@ if(TPI STREQUAL "none")
     set(THREAD_LIBRARIES "")
     set(TPI_NONE on)
 elseif(TPI STREQUAL "tny")
-    set(TPI_TNYC on)
+    set(TPI_TNY on)
     set(tpisources tpi/tpi_tnycthrd.c tinycthread/tinycthread.c)
     find_package(Threads REQUIRED)
     set(THREAD_LIBRARIES ${CMAKE_THREAD_LIBS_INIT})
@@ -585,7 +585,7 @@ endif()
 
 if(AMPL)
     set(SCIP_WITH_AMPL ON)
-    include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/amplmp/include)
+    include_directories(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/src/amplmp/include)
     set(amplsrc scip/reader_nl.cpp amplmp/src/format.cpp amplmp/src/expr-info.cpp amplmp/src/nl-reader.cpp amplmp/src/os.cpp amplmp/src/posix.cpp)
 else()
     message(STATUS "Support AMPL: OFF")

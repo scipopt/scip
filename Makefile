@@ -3,7 +3,7 @@
 #*                  This file is part of the program and library             *#
 #*         SCIP --- Solving Constraint Integer Programs                      *#
 #*                                                                           *#
-#*  Copyright 2002-2022 Zuse Institute Berlin                                *#
+#*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      *#
 #*                                                                           *#
 #*  Licensed under the Apache License, Version 2.0 (the "License");          *#
 #*  you may not use this file except in compliance with the License.         *#
@@ -75,7 +75,6 @@ VERSION		=	$(SCIP_VERSION)
 SCIPGITHASH	=
 SOFTLINKS	=
 MAKESOFTLINKS	=	true
-TOUCHLINKS	=	false
 
 #-----------------------------------------------------------------------------
 # define build flags
@@ -85,9 +84,7 @@ BUILDFLAGS =	" ARCH=$(ARCH)\\n\
 		DEBUGSOL=$(DEBUGSOL)\\n\
 		EXPRINT=$(EXPRINT)\\n\
 		GMP=$(GMP)\\n\
-		IPOPT=$(IPOPT)\\n\
 		IPOPTOPT=$(IPOPTOPT)\\n\
-		LPS=$(LPS)\\n\
 		LPSCHECK=$(LPSCHECK)\\n\
 		LPSOPT=$(LPSOPT)\\n\
 		NOBLKBUFMEM=$(NOBLKBUFMEM)\\n\
@@ -124,9 +121,6 @@ LPILIBNAME	=	$(LPILIBSHORTNAME)-$(VERSION)
 LPILIBOBJ	=
 LPSOPTIONS	=
 LPIINSTMSG	=
-
-LPSCHECKDEP	:=	$(SRCDIR)/depend.lpscheck
-LPSCHECKSRC	:=	$(shell cat $(LPSCHECKDEP))
 
 LPSOPTIONS	+=	cpx
 ifeq ($(LPS),cpx)
@@ -187,7 +181,7 @@ endif
 LPIINSTMSG	=	"  -> \"spxinc\" is the path to the SoPlex \"src\" directory, e.g., \"<SoPlex-path>/src\".\n"
 LPIINSTMSG	+=	" -> \"libsoplex.*\" is the path to the SoPlex library, e.g., \"<SoPlex-path>/lib/libsoplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT).$(STATICLIBEXT)\""
 ifeq ($(LPSCHECK),true)
-FLAGS		+=	-DSCIP_WITH_LPSCHECK -I$(LIBDIR)/include/cpxinc
+FLAGS		+=	-I$(LIBDIR)/include/cpxinc
 SOFTLINKS	+=	$(LIBDIR)/include/cpxinc
 ifeq ($(SHARED),true)
 SOFTLINKS	+=	$(LIBDIR)/shared/libcplex.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
@@ -215,7 +209,7 @@ endif
 LPIINSTMSG	=	"  -> \"spxinc\" is the path to the SoPlex \"src\" directory, e.g., \"<SoPlex-path>/src\".\n"
 LPIINSTMSG	+=	" -> \"libsoplex.*\" is the path to the SoPlex library, e.g., \"<SoPlex-path>/lib/libsoplex.linux.x86.gnu.opt.a\""
 ifeq ($(LPSCHECK),true)
-FLAGS		+=	-DSCIP_WITH_LPSCHECK -I$(LIBDIR)/include/cpxinc
+FLAGS		+=	-I$(LIBDIR)/include/cpxinc
 SOFTLINKS	+=	$(LIBDIR)/include/cpxinc
 ifeq ($(SHARED),true)
 SOFTLINKS	+=	$(LIBDIR)/shared/libcplex.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
@@ -228,14 +222,10 @@ LPIINSTMSG	+=	" -> \"libcplex.*.so\" is the path to the CPLEX library, e.g., \"<
 endif
 endif
 
-ifeq ($(DEBUGSOL),true)
-FLAGS		+=	-DWITH_DEBUG_SOLUTION
-endif
-
 LPSOPTIONS	+=	clp
 ifeq ($(LPS),clp)
 LINKER		=	CPP
-FLAGS		+=	-I$(LIBDIR)/$(LIBTYPE)/clp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)/include/coin
+FLAGS		+=	-I$(LIBDIR)/$(LIBTYPE)/clp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)/include/coin -I$(LIBDIR)/$(LIBTYPE)/clp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)/include/coin-or
 LPILIBOBJ	=	lpi/lpi_clp.o scip/bitencode.o blockmemshell/memory.o scip/rbtree.o scip/message.o
 LPILIBSRC	=	$(SRCDIR)/lpi/lpi_clp.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/rbtree.c $(SRCDIR)/scip/message.c
 SOFTLINKS	+=	$(LIBDIR)/$(LIBTYPE)/clp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)
@@ -302,24 +292,20 @@ TPILIBOBJ	=
 TPIOPTIONS	+=	none
 ifeq ($(TPI),none)
 TPILIBOBJ	=	tpi/tpi_none.o
-FLAGS		+=	-DTPI_NONE
 endif
 
 TPIOPTIONS	+=	omp
 ifeq ($(TPI),omp)
 TPILIBOBJ	=	tpi/tpi_openmp.o
-FLAGS		+=	-DTPI_OMP
 endif
 
 TPIOPTIONS	+=	tny
 ifeq ($(TPI),tny)
 TPILIBOBJ	=	tpi/tpi_tnycthrd.o \
 			tinycthread/tinycthread.o
-FLAGS		+=	-DTPI_TNYC
 endif
 
 TPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(TPILIBOBJ:.o=.c))
-TPISRC		=	$(TPILIBSRC) $(SRCDIR)/scip/concurrent.c $(SRCDIR)/scip/benders.c    # files to be rebuilt when changing TPI
 TPILIB		=	$(TPILIBNAME).$(BASE)
 TPILIBFILE	=	$(LIBDIR)/$(LIBTYPE)/lib$(TPILIB).$(LIBEXT)
 TPILIBOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(TPILIBOBJ))
@@ -429,7 +415,7 @@ endif
 #-----------------------------------------------------------------------------
 
 ifeq ($(PAPILO),true)
-FLAGS        +=    -DSCIP_WITH_PAPILO -DPAPILO_NO_CMAKE_CONFIG -I$(LIBDIR)/include/tbb/include -I$(LIBDIR)/include/papilo/external -I$(LIBDIR)/include/papilo/src
+FLAGS        +=    -DPAPILO_NO_CMAKE_CONFIG -I$(LIBDIR)/include/tbb/include -I$(LIBDIR)/include/papilo/external -I$(LIBDIR)/include/papilo/src
 SOFTLINKS    +=    $(LIBDIR)/include/papilo
 LPIINSTMSG    +=    "\n  -> \"papilo\" is the path to the PaPILO directory\n"
 SOFTLINKS    +=    $(LIBDIR)/include/boost
@@ -444,31 +430,11 @@ endif
 # External Libraries
 #-----------------------------------------------------------------------------
 
-ZLIBDEP		:=	$(SRCDIR)/depend.zlib
-ZLIBSRC		:=	$(shell cat $(ZLIBDEP))
-
-GMPDEP		:=	$(SRCDIR)/depend.gmp
-GMPSRC		:=	$(shell cat $(GMPDEP))
-
-READLINEDEP	:=	$(SRCDIR)/depend.readline
-READLINESRC	:=	$(shell cat $(READLINEDEP))
-
-ZIMPLDEP	:=	$(SRCDIR)/depend.zimpl
-ZIMPLSRC	:=	$(shell cat $(ZIMPLDEP))
-
-AMPLDEP	:=	$(SRCDIR)/depend.ampl
-AMPLSRC	:=	$(shell cat $(AMPLDEP))
-
-THREADSAFEDEP	:=	$(SRCDIR)/depend.threadsafe
-THREADSAFESRC	:=	$(shell cat $(THREADSAFEDEP))
-
-LAPACKSRC	:=	$(SRCDIR)/scip/lapack_calls.c $(SRCDIR)/scip/scip_general.c
-
 ifeq ($(ZIMPL),true)
 ifeq ($(GMP),false)
 $(error ZIMPL requires the GMP to be linked. Use either ZIMPL=false or GMP=true.)
 endif
-FLAGS		+=	-DSCIP_WITH_ZIMPL -I$(LIBDIR)/include/zimplinc $(ZIMPL_FLAGS)
+FLAGS		+=	-I$(LIBDIR)/include/zimplinc $(ZIMPL_FLAGS)
 DIRECTORIES	+=	$(LIBDIR)/include/zimplinc
 SOFTLINKS	+=	$(LIBDIR)/include/zimplinc/zimpl
 SOFTLINKS	+=	$(LIBDIR)/$(LIBTYPE)/libzimpl.$(OSTYPE).$(ARCH).$(COMP).$(ZIMPLOPT).$(STATICLIBEXT)
@@ -493,6 +459,7 @@ LPIINSTMSG	+=	"\n  -> \"ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)\" is a direc
 endif
 
 ifeq ($(FILTERSQP),true)
+FLAGS		+=	-DFNAME_$(FORTRAN_NAMING_CONVENTION)
 SOFTLINKS	+=	$(LIBDIR)/$(LIBTYPE)/libfiltersqp.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT)
 #SOFTLINKS	+=	$(LIBDIR)/$(LIBTYPE)/libfiltersqp.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
 SOFTLINKS	+=	$(LIBDIR)/$(LIBTYPE)/libbqpd.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT)
@@ -508,7 +475,7 @@ LPIINSTMSG	+=	"\n  -> \"worhp.$(OSTYPE).$(ARCH).$(COMP).$(WORHPOPT)\" is a direc
 endif
 
 ifeq ($(AMPL),true)
-FLAGS		+=	-DSCIP_WITH_AMPL -I$(SRCDIR)/amplmp/include
+FLAGS		+=	-I$(SRCDIR)/amplmp/include
 LINKER		=	CPP
 endif
 
@@ -951,7 +918,9 @@ SCIPLIBSOLVERSHORTLINK = $(LIBDIR)/$(LIBTYPE)/libscipsolver.$(LIBEXT)
 ALLSRC		+=	$(SCIPLIBBASESRC)
 
 SCIPGITHASHFILE	= 	$(SRCDIR)/scip/githash.c
-SCIPBUILDFLAGSFILE = 	$(SRCDIR)/scip/buildflags.c
+SCIPBUILDFLAGSFILE = 	$(OBJDIR)/include/scip/buildflags.h
+SCIPCONFIGHFILE	= 	$(OBJDIR)/include/scip/config.h
+SCIPEXPORTHFILE	= 	$(OBJDIR)/include/scip/scip_export.h
 
 #-----------------------------------------------------------------------------
 # Objective SCIP Library
@@ -1046,9 +1015,10 @@ preprocess:     checkdefines
 				$(MAKE) -j1 $(LINKSMARKERFILE) ; \
 			fi'
 		@$(MAKE) touchexternal
+		@$(MAKE) $(SCIPCONFIGHFILE) $(SCIPEXPORTHFILE)
 
 .PHONY: lint
-lint:		$(SCIPLIBBASESRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(TPILIBSRC) $(MAINSRC) $(SYMSRC) githash
+lint:		$(SCIPLIBBASESRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(TPILIBSRC) $(MAINSRC) $(SYMSRC) $(SCIPCONFIGHFILE) $(SCIPEXPORTHFILE) $(SCIPBUILDFLAGSFILE) githash
 		-rm -f lint.out
 
 		@$(SHELL) -ec 'if test -e lint/co-gcc.mak ; \
@@ -1075,7 +1045,7 @@ else
 endif
 
 .PHONY: pclint
-pclint:		$(SCIPLIBBASESRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(TPILIBSRC) $(MAINSRC) $(SYMSRC)
+pclint:		$(SCIPLIBBASESRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(TPILIBSRC) $(MAINSRC) $(SYMSRC) $(SCIPCONFIGHFILE) $(SCIPEXPORTHFILE) $(SCIPBUILDFLAGSFILE)
 		-rm -f pclint.out
 
 		@$(SHELL) -ec 'if ! test -e pclint/co-gcc.h ; \
@@ -1098,7 +1068,7 @@ else
 endif
 
 .PHONY: splint
-splint:		$(SCIPLIBBASESRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(TPILIBSRC) $(MAINSRC) $(SYMSRC)
+splint:		$(SCIPLIBBASESRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(TPILIBSRC) $(MAINSRC) $(SYMSRC) $(SCIPCONFIGHFILE) $(SCIPEXPORTHFILE) $(SCIPBUILDFLAGSFILE)
 		-rm -f splint.out
 ifeq ($(FILES),)
 		$(SHELL) -c '$(SPLINT) -I$(SRCDIR) -I/usr/include/linux $(FLAGS) $(SPLINTFLAGS) $(filter %.c %.h,$^) >> splint.out;'
@@ -1258,8 +1228,8 @@ ifneq ($(BINOBJDIR),)
 		@-rm -f $(BINOBJDIR)/*.o $(BINOBJDIR)/*.d && rmdir $(BINOBJDIR)
 endif
 ifneq ($(OBJDIR),)
-		@-rm -f $(LASTSETTINGS)
-		@-rmdir $(OBJDIR)
+		@-rm -f $(LASTSETTINGS) $(SCIPCONFIGHFILE) $(SCIPEXPORTHFILE) $(SCIPBUILDFLAGSFILE)
+		@-rmdir $(OBJDIR)/include/scip $(OBJDIR)/include $(OBJDIR)
 endif
 
 .PHONY: cleanlibs
@@ -1280,16 +1250,6 @@ cleanbin:       | $(BINDIR)
 		@echo "-> remove binary $(MAINFILE)"
 		@-rm -f $(MAINFILE) $(MAINLINK) $(MAINSHORTLINK)
 
-depend:
-# We explicitely add all lpi's here, since the content of depend.lpscheck should be independent of the currently selected LPI,
-# but contain all LPI's that use the SCIP_WITH_LPSCHECK define.
-		@echo `grep -l "SCIP_WITH_LPSCHECK" $(SCIPLIBBASESRC) $(OBJSCIPLIBSRC) $(MAINSRC) src/lpi/lpi*.{c,cpp}` >$(LPSCHECKDEP)
-		@echo `grep -l "SCIP_WITH_ZLIB" $(ALLSRC)` >$(ZLIBDEP)
-		@echo `grep -l "SCIP_WITH_GMP" $(ALLSRC)` >$(GMPDEP)
-		@echo `grep -l "SCIP_WITH_READLINE" $(ALLSRC)` >$(READLINEDEP)
-		@echo `grep -l "SCIP_WITH_ZIMPL" $(ALLSRC)` >$(ZIMPLDEP)
-		@echo `grep -l "SCIP_WITH_AMPL" $(ALLSRC)` >$(AMPLDEP)
-		@echo `grep -l "SCIP_THREADSAFE" $(ALLSRC) src/lpi/lpi*.{c,cpp} src/scip/nlpi*.{c,cpp}` >$(THREADSAFEDEP)
 
 # do not attempt to include .d files if there will definitely be any (empty DFLAGS), because it slows down the build on Windows considerably
 ifneq ($(DFLAGS),)
@@ -1424,16 +1384,7 @@ else
 endif
 
 .PHONY: touchexternal
-touchexternal:	$(ZLIBDEP) $(GMPDEP) $(READLINEDEP) $(ZIMPLDEP) $(AMPLDEP) $(LPSCHECKDEP) $(THREADSAFEDEP) | $(LIBOBJDIR)
-ifeq ($(TOUCHLINKS),true)
-		@-touch $(ZLIBSRC)
-		@-touch $(GMPSRC)
-		@-touch $(READLINESRC)
-		@-touch $(ZIMPLSRC)
-		@-touch $(AMPLSRC)
-		@-touch $(LPSCHECKSRC)
-		@-touch $(LPILIBSRC)
-endif
+touchexternal:	| $(LIBOBJDIR)
 ifneq ($(SCIPGITHASH),$(LAST_SCIPGITHASH))
 		@$(MAKE) githash
 endif
@@ -1442,102 +1393,98 @@ endif
 				echo "-> generating $(SCIPGITHASHFILE)" ; \
 				$(MAKE) githash ; \
 			fi'
-ifneq ($(subst \\n,\n,$(BUILDFLAGS)),$(LAST_BUILDFLAGS))
+ifneq ($(subst \\n,\n,$(BUILDFLAGS)$(LPS)$(IPOPT)),$(LAST_BUILDFLAGS)$(LAST_LPS)$(LAST_IPOPT))
+		@mkdir -p $(OBJDIR)/include/scip
 		@echo "#define SCIP_BUILDFLAGS \"$(BUILDFLAGS)\"" > $(SCIPBUILDFLAGSFILE)
+		@echo "#define SCIP_LPS \"$(LPS)\"" >> $(SCIPBUILDFLAGSFILE)
+		@echo "#define SCIP_IPOPT \"$(IPOPT)\"" >> $(SCIPBUILDFLAGSFILE)
 endif
-ifneq ($(ZLIB),$(LAST_ZLIB))
-		@-touch $(ZLIBSRC)
-endif
-ifneq ($(GMP),$(LAST_GMP))
-		@-touch $(GMPSRC)
-endif
-ifneq ($(READLINE),$(LAST_READLINE))
-		@-touch $(READLINESRC)
-endif
-ifneq ($(ZIMPL),$(LAST_ZIMPL))
-		@-touch $(ZIMPLSRC)
-endif
-ifneq ($(AMPL),$(LAST_AMPL))
-		@-touch $(AMPLSRC)
-endif
-ifneq ($(SYM),$(LAST_SYM))
-		@-touch $(SYMSRC)
-endif
-ifneq ($(LPSCHECK),$(LAST_LPSCHECK))
-		@-touch $(LPSCHECKSRC)
-endif
-ifneq ($(THREADSAFE),$(LAST_THREADSAFE))
-		@-touch $(THREADSAFESRC)
-endif
-ifneq ($(USRFLAGS),$(LAST_USRFLAGS))
-		@-touch $(ALLSRC)
-endif
-ifneq ($(USROFLAGS),$(LAST_USROFLAGS))
-		@-touch $(ALLSRC)
-endif
-ifneq ($(USRCFLAGS),$(LAST_USRCFLAGS))
-		@-touch $(ALLSRC)
-endif
-ifneq ($(USRCXXFLAGS),$(LAST_USRCXXFLAGS))
-		@-touch $(ALLSRC)
-endif
-ifneq ($(USRLDFLAGS),$(LAST_USRLDFLAGS))
-		@-touch -c $(SCIPLIBBASEOBJFILES) $(LPILIBOBJFILES) $(TPILIBOBJFILES) $(TPILIBOBJFILES) $(MAINOBJFILES)
-endif
-ifneq ($(USRARFLAGS),$(LAST_USRARFLAGS))
-		@-touch -c $(SCIPLIBBASEOBJFILES) $(OBJSCIPLIBOBJFILES) $(LPILIBOBJFILES) $(TPILIBOBJFILES)
-endif
-ifneq ($(NOBLKMEM),$(LAST_NOBLKMEM))
-		@-touch -c $(ALLSRC)
-endif
-ifneq ($(NOBUFMEM),$(LAST_NOBUFMEM))
-		@-touch -c $(ALLSRC)
-endif
-ifneq ($(NOBLKBUFMEM),$(LAST_NOBLKBUFMEM))
-		@-touch -c $(ALLSRC)
-endif
-ifneq ($(SANITIZE),$(LAST_SANITIZE))
-		@-touch -c $(ALLSRC)
-endif
-ifneq ($(TPI),$(LAST_TPI))
-		@-touch -c $(TPISRC)
-endif
-ifneq ($(DEBUGSOL),$(LAST_DEBUGSOL))
-		@-touch -c $(ALLSRC)
-endif
-ifneq ($(PAPILO),$(LAST_PAPILO))
-		@-touch -c $(ALLSRC)
-endif
-ifneq ($(LAPACK),$(LAST_LAPACK))
-		@-touch -c $(LAPACKSRC)
+ifneq ($(subst \\n,\n,$(BUILDFLAGS)),$(LAST_BUILDFLAGS))
+		@rm -f $(SCIPCONFIGHFILE)
+		@$(MAKE) $(SCIPCONFIGHFILE)
 endif
 		@-rm -f $(LASTSETTINGS)
 		@echo "LAST_BUILDFLAGS=\"$(BUILDFLAGS)\"" >> $(LASTSETTINGS)
+		@echo "LAST_LPS=\"$(LPS)\"" >> $(LASTSETTINGS)
+		@echo "LAST_IPOPT=\"$(IPOPT)\"" >> $(LASTSETTINGS)
 		@echo "LAST_SCIPGITHASH=$(SCIPGITHASH)" >> $(LASTSETTINGS)
-		@echo "LAST_ZLIB=$(ZLIB)" >> $(LASTSETTINGS)
-		@echo "LAST_GMP=$(GMP)" >> $(LASTSETTINGS)
-		@echo "LAST_READLINE=$(READLINE)" >> $(LASTSETTINGS)
-		@echo "LAST_ZIMPL=$(ZIMPL)" >> $(LASTSETTINGS)
-		@echo "LAST_AMPL=$(AMPL)" >> $(LASTSETTINGS)
-		@echo "LAST_IPOPT=$(IPOPT)" >> $(LASTSETTINGS)
-		@echo "LAST_WORHP=$(WORHP)" >> $(LASTSETTINGS)
-		@echo "LAST_SYM=$(SYM)" >> $(LASTSETTINGS)
-		@echo "LAST_THREADSAFE=$(THREADSAFE)" >> $(LASTSETTINGS)
-		@echo "LAST_LPSCHECK=$(LPSCHECK)" >> $(LASTSETTINGS)
-		@echo "LAST_USRFLAGS=$(USRFLAGS)" >> $(LASTSETTINGS)
-		@echo "LAST_USROFLAGS=$(USROFLAGS)" >> $(LASTSETTINGS)
-		@echo "LAST_USRCFLAGS=$(USRCFLAGS)" >> $(LASTSETTINGS)
-		@echo "LAST_USRCXXFLAGS=$(USRCXXFLAGS)" >> $(LASTSETTINGS)
-		@echo "LAST_USRLDFLAGS=$(USRLDFLAGS)" >> $(LASTSETTINGS)
-		@echo "LAST_USRARFLAGS=$(USRARFLAGS)" >> $(LASTSETTINGS)
-		@echo "LAST_NOBLKMEM=$(NOBLKMEM)" >> $(LASTSETTINGS)
-		@echo "LAST_NOBUFMEM=$(NOBUFMEM)" >> $(LASTSETTINGS)
-		@echo "LAST_NOBLKBUFMEM=$(NOBLKBUFMEM)" >> $(LASTSETTINGS)
-		@echo "LAST_SANITIZE=$(SANITIZE)" >> $(LASTSETTINGS)
-		@echo "LAST_TPI=$(TPI)" >> $(LASTSETTINGS)
-		@echo "LAST_DEBUGSOL=$(DEBUGSOL)" >> $(LASTSETTINGS)
-		@echo "LAST_PAPILO=$(PAPILO)" >> $(LASTSETTINGS)
-		@echo "LAST_LAPACK=$(LAPACK)" >> $(LASTSETTINGS)
+
+$(SCIPBUILDFLAGSFILE) :
+		@mkdir -p $(@D)
+		@echo "#define SCIP_BUILDFLAGS \"$(BUILDFLAGS)\"" > $@
+		@echo "#define SCIP_LPS \"$(LPS)\"" >> $(SCIPBUILDFLAGSFILE)
+		@echo "#define SCIP_IPOPT \"$(IPOPT)\"" >> $(SCIPBUILDFLAGSFILE)
+
+$(SCIPCONFIGHFILE) :
+		@echo "-> writing $(SCIPCONFIGHFILE)"
+		@mkdir -p $(@D)
+		@echo "#ifndef SCIP_CONFIG_H" > $@
+		@echo "#define SCIP_CONFIG_H" >> $@
+		@echo >> $@
+		@echo "#define SCIP_VERSION_MAJOR $(SCIP_VERSION_MAJOR)" >> $@
+		@echo "#define SCIP_VERSION_MINOR $(SCIP_VERSION_MINOR)" >> $@
+		@echo "#define SCIP_VERSION_PATCH $(SCIP_VERSION_PATCH)" >> $@
+		@echo "#define SCIP_VERSION_SUB $(SCIP_VERSION_SUB)" >> $@
+		@echo "#define SCIP_VERSION_API $(SCIP_VERSION_API)" >> $@
+ifeq ($(NOBLKBUFMEM),true)
+		@echo "#define BMS_NOBLOCKMEM" >> $@
+		@echo "#define SCIP_NOBUFFERMEM" >> $@
+else
+ifeq ($(NOBLKMEM),true)
+		@echo "#define BMS_NOBLOCKMEM" >> $@
+endif
+ifeq ($(NOBUFMEM),true)
+		@echo "#define SCIP_NOBUFFERMEM" >> $@
+endif
+endif
+ifeq ($(DEBUGSOL),true)
+		@echo "#define WITH_DEBUG_SOLUTION" >> $@
+endif
+ifeq ($(TPI),none)
+		@echo "#define TPI_NONE" >> $@
+endif
+ifeq ($(TPI),tny)
+		@echo "#define TPI_TNY" >> $@
+endif
+ifeq ($(TPI),omp)
+		@echo "#define TPI_OMP" >> $@
+endif
+ifeq ($(THREADSAFE),true)
+		@echo "#define SCIP_THREADSAFE" >> $@
+endif
+		@echo "#define WITH_SCIPDEF" >> $@
+ifeq ($(LAPACK),true)
+		@echo "#define SCIP_WITH_LAPACK" >> $@
+endif
+ifeq ($(PAPILO),true)
+		@echo "#define SCIP_WITH_PAPILO" >> $@
+endif
+ifeq ($(ZLIB),true)
+		@echo "#define SCIP_WITH_ZLIB" >> $@
+endif
+ifeq ($(READLINE),true)
+		@echo "#define SCIP_WITH_READLINE" >> $@
+endif
+ifeq ($(GMP),true)
+		@echo "#define SCIP_WITH_GMP" >> $@
+endif
+ifeq ($(LPSCHECK),true)
+		@echo "#define SCIP_WITH_LPSCHECK" >> $@
+endif
+ifeq ($(ZIMPL),true)
+		@echo "#define SCIP_WITH_ZIMPL" >> $@
+endif
+ifeq ($(AMPL),true)
+		@echo "#define SCIP_WITH_AMPL" >> $@
+endif
+		@echo >> $@
+		@echo "#endif /* SCIP_CONFIG_H */" >> $@
+
+# We only need this file to be present, so it can be included.
+# The cmake system writes into it, but the (fallback) logic in def.h is actually sufficient.
+$(SCIPEXPORTHFILE) :
+		@mkdir -p $(@D)
+		@touch $@
 
 $(LINKSMARKERFILE):
 		@$(MAKE) links
@@ -1756,7 +1703,6 @@ help:
 		@echo "  - splint: Run splint on all C SCIP files. (Needs splint.)"
 		@echo "  - clean: Removes all object files."
 		@echo "  - cleanlibs: Remove all SCIP libraries."
-		@echo "  - depend: Updates dependencies files. This is only needed if you modify SCIP source."
 		@echo "  - tags: Creates TAGS file that can be used in (x)emacs."
 		@echo "  - check or test: Runs the check/test script, see the online documentation."
 

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -226,6 +226,13 @@ SCIP_DECL_CONSCHECK(consCheckIntegral)
    nallinteger = ninteger + nimpl;
    for( v = ninteger; v < nallinteger; ++v )
    {
+      /* if a variable has been added for relaxation purposes, i.e., to formulate an (implicit) extended formulation,
+       * then there is no constraint that ensures that it will take an integer value
+       * since such variables have no counterpart in the original problem, it is ok if they violate an implicit integrality flag
+       */
+      if( SCIPvarIsRelaxationOnly(vars[v]) )
+         continue;
+
       solval = SCIPgetSolVal(scip, sol, vars[v]);
       if( !SCIPisFeasIntegral(scip, solval) )
       {

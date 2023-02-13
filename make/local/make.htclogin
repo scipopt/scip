@@ -1,0 +1,28 @@
+# Call with "make testcluster"
+#
+# Runs distributed tests on the z1 cluster via SLURM.
+#
+# In case of time measuring you should use the flag EXCLUSIVE=true to enforce
+# that only one process is running on any node you use.
+#
+# To cancel all your jobs of a testset MyTestSet you can call
+# "make cancelcluster TEST=MyTestSet".
+#
+# To get the result files call "./evalcheck_cluster.sh
+# results/check.$TSTNAME.$BINNMAE.$SETNAME.eval in directory check/
+# This leads to result files
+#  - results/check.$TSTNAME.$BINNMAE.$SETNAME.out
+#  - results/check.$TSTNAME.$BINNMAE.$SETNAME.res
+#  - results/check.$TSTNAME.$BINNMAE.$SETNAME.err
+#
+
+QUEUETYPE	=	srun
+QUEUE		= small
+PPN 		=	-1
+CLIENTTMPDIR	=	/tmp
+NOWAITCLUSTER   =       1
+EXCLUSIVE	=	false
+
+.PHONY: cancelcluster
+cancelcluster:
+	scancel --user=$(USER)

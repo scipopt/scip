@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -11594,6 +11594,7 @@ SCIP_RETCODE lpSolveStable(
    SCIP_Bool             tightprimfeastol,   /**< should a tighter primal feasibility tolerance be used? */
    SCIP_Bool             tightdualfeastol,   /**< should a tighter dual feasibility tolerance be used? */
    SCIP_Bool             fromscratch,        /**< should the LP be solved from scratch without using current basis? */
+   int                   scaling,            /**< LP scaling (0: none, 1: normal, 2: aggressive) */
    SCIP_Bool             keepsol,            /**< should the old LP solution be kept if no iterations were performed? */
    SCIP_Bool*            timelimit,          /**< pointer to store whether the time limit was hit */
    SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occurred */
@@ -11662,7 +11663,7 @@ SCIP_RETCODE lpSolveStable(
          : SCIPsetBarrierconvtol(set), &success) );
    SCIP_CALL( lpSetFromscratch(lp, fromscratch, &success) );
    SCIP_CALL( lpSetFastmip(lp, fastmip, &success) );
-   SCIP_CALL( lpSetScaling(lp, set->lp_scaling, &success) );
+   SCIP_CALL( lpSetScaling(lp, scaling, &success) );
    SCIP_CALL( lpSetPresolving(lp, set->lp_presolving, &success) );
    SCIP_CALL( lpSetRowrepswitch(lp, set->lp_rowrepswitch, &success) );
    SCIP_CALL( lpSetPricingChar(lp, set->lp_pricing) );
@@ -11728,11 +11729,11 @@ SCIP_RETCODE lpSolveStable(
    if( (*lperror) || !SCIPlpiIsIterlimExc(lp->lpi) )
    {
       /* solve again with opposite scaling setting (starts from the solution of the last LP solving call) */
-      SCIP_CALL( lpSetScaling(lp, (set->lp_scaling > 0) ? 0 : 1, &success) );
+      SCIP_CALL( lpSetScaling(lp, (scaling > 0) ? 0 : 1, &success) );
       if( success )
       {
          lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "solve again with %s %s scaling",
-            lpalgoName(lpalgo), (set->lp_scaling == 0) ? "with" : "without");
+            lpalgoName(lpalgo), (scaling == 0) ? "with" : "without");
          SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, TRUE, timelimit, lperror) );
 
          /* check for stability */
@@ -11748,7 +11749,7 @@ SCIP_RETCODE lpSolveStable(
          }
 
          /* reset scaling */
-         SCIP_CALL( lpSetScaling(lp, set->lp_scaling, &success) );
+         SCIP_CALL( lpSetScaling(lp, scaling, &success) );
          assert(success);
       }
    }
@@ -11889,11 +11890,11 @@ SCIP_RETCODE lpSolveStable(
       }
 
       /* solve again with opposite scaling and other simplex */
-      SCIP_CALL( lpSetScaling(lp, (set->lp_scaling > 0) ? 0 : 1, &success) );
+      SCIP_CALL( lpSetScaling(lp, (scaling > 0) ? 0 : 1, &success) );
       if( success )
       {
          lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "solve again from scratch with %s %s scaling",
-            lpalgoName(lpalgo), (set->lp_scaling == 0) ? "with" : "without");
+            lpalgoName(lpalgo), (scaling == 0) ? "with" : "without");
          SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, TRUE, timelimit, lperror) );
 
          /* check for stability */
@@ -11909,7 +11910,7 @@ SCIP_RETCODE lpSolveStable(
          }
 
          /* reset scaling */
-         SCIP_CALL( lpSetScaling(lp, set->lp_scaling, &success) );
+         SCIP_CALL( lpSetScaling(lp, scaling, &success) );
          assert(success);
       }
 
@@ -12042,6 +12043,7 @@ SCIP_RETCODE lpSolve(
    SCIP_Bool             tightprimfeastol,   /**< should a tighter primal feasibility tolerance be used? */
    SCIP_Bool             tightdualfeastol,   /**< should a tighter dual feasibility tolerance be used? */
    SCIP_Bool             fromscratch,        /**< should the LP be solved from scratch without using current basis? */
+   int                   scaling,            /**< LP scaling (0: none, 1: normal, 2: aggressive) */
    SCIP_Bool             keepsol,            /**< should the old LP solution be kept if no iterations were performed? */
    SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occurred */
    )
@@ -12069,7 +12071,7 @@ SCIP_RETCODE lpSolve(
  SOLVEAGAIN:
    /* call simplex */
    SCIP_CALL( lpSolveStable(lp, set, messagehdlr, stat, prob, lpalgo, itlim, harditlim, resolve, fastmip, tightprimfeastol, tightdualfeastol, fromscratch,
-         keepsol, &timelimit, lperror) );
+         scaling, keepsol, &timelimit, lperror) );
    resolve = FALSE; /* only the first solve should be counted as resolving call */
    solvedprimal = solvedprimal || (lp->lastlpalgo == SCIP_LPALGO_PRIMALSIMPLEX);
    solveddual = solveddual || (lp->lastlpalgo == SCIP_LPALGO_DUALSIMPLEX);
@@ -12228,6 +12230,7 @@ SCIP_RETCODE lpFlushAndSolve(
    SCIP_Bool             tightprimfeastol,   /**< should a tighter primal feasibility tolerance be used? */
    SCIP_Bool             tightdualfeastol,   /**< should a tighter dual feasibility tolerance be used? */
    SCIP_Bool             fromscratch,        /**< should the LP be solved from scratch without using current basis? */
+   int                   scaling,            /**< LP scaling (0: none, 1: normal, 2: aggressive) */
    SCIP_Bool             keepsol,            /**< should the old LP solution be kept if no iterations were performed? */
    SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occurred */
    )
@@ -12255,38 +12258,38 @@ SCIP_RETCODE lpFlushAndSolve(
       {
          SCIPsetDebugMsg(set, "solving dual LP\n");
          SCIP_CALL( lpSolve(lp, set, messagehdlr, stat, prob, SCIP_LPALGO_DUALSIMPLEX, resolveitlim, harditlim, needprimalray,
-               needdualray, resolve, fastmip, tightprimfeastol, tightdualfeastol, fromscratch, keepsol, lperror) );
+               needdualray, resolve, fastmip, tightprimfeastol, tightdualfeastol, fromscratch, scaling, keepsol, lperror) );
       }
       else
       {
          SCIPsetDebugMsg(set, "solving primal LP\n");
          SCIP_CALL( lpSolve(lp, set, messagehdlr, stat, prob, SCIP_LPALGO_PRIMALSIMPLEX, resolveitlim, harditlim, needprimalray,
-               needdualray, resolve, fastmip, tightprimfeastol, tightdualfeastol, fromscratch, keepsol, lperror) );
+               needdualray, resolve, fastmip, tightprimfeastol, tightdualfeastol, fromscratch, scaling, keepsol, lperror) );
       }
       break;
 
    case 'p':
       SCIPsetDebugMsg(set, "solving primal LP\n");
       SCIP_CALL( lpSolve(lp, set, messagehdlr, stat, prob, SCIP_LPALGO_PRIMALSIMPLEX, resolveitlim, harditlim, needprimalray,
-            needdualray, resolve, fastmip, tightprimfeastol, tightdualfeastol, fromscratch, keepsol, lperror) );
+            needdualray, resolve, fastmip, tightprimfeastol, tightdualfeastol, fromscratch, scaling, keepsol, lperror) );
       break;
 
    case 'd':
       SCIPsetDebugMsg(set, "solving dual LP\n");
       SCIP_CALL( lpSolve(lp, set, messagehdlr, stat, prob, SCIP_LPALGO_DUALSIMPLEX, resolveitlim, harditlim, needprimalray,
-            needdualray, resolve, fastmip, tightprimfeastol, tightdualfeastol, fromscratch, keepsol, lperror) );
+            needdualray, resolve, fastmip, tightprimfeastol, tightdualfeastol, fromscratch, scaling, keepsol, lperror) );
       break;
 
    case 'b':
       SCIPsetDebugMsg(set, "solving barrier LP\n");
       SCIP_CALL( lpSolve(lp, set, messagehdlr, stat, prob, SCIP_LPALGO_BARRIER, resolveitlim, harditlim, needprimalray,
-            needdualray, resolve, fastmip, tightprimfeastol, tightdualfeastol, fromscratch, keepsol, lperror) );
+            needdualray, resolve, fastmip, tightprimfeastol, tightdualfeastol, fromscratch, scaling, keepsol, lperror) );
       break;
 
    case 'c':
       SCIPsetDebugMsg(set, "solving barrier LP with crossover\n");
       SCIP_CALL( lpSolve(lp, set, messagehdlr, stat, prob, SCIP_LPALGO_BARRIERCROSSOVER, resolveitlim, harditlim, needprimalray,
-            needdualray, resolve, fastmip, tightprimfeastol, tightdualfeastol, fromscratch, keepsol, lperror) );
+            needdualray, resolve, fastmip, tightprimfeastol, tightdualfeastol, fromscratch, scaling, keepsol, lperror) );
       break;
 
    default:
@@ -12491,6 +12494,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
       SCIP_Bool tightdualfeastol;
       SCIP_Bool fromscratch;
       SCIP_Bool wasfromscratch;
+      int scaling;
       SCIP_Longint oldnlps;
       int fastmip;
 
@@ -12502,12 +12506,13 @@ SCIP_RETCODE SCIPlpSolveAndEval(
       primalfeasible = FALSE;
       dualfeasible = FALSE;
       wasfromscratch = (stat->nlps == 0);
+      scaling = set->lp_scaling;
 
    SOLVEAGAIN:
       /* solve the LP */
       oldnlps = stat->nlps;
       SCIP_CALL( lpFlushAndSolve(lp, blkmem, set, messagehdlr, stat, prob, eventqueue, resolveitlim, harditlim, needprimalray,
-            needdualray, fastmip, tightprimfeastol, tightdualfeastol, fromscratch, keepsol, lperror) );
+            needdualray, fastmip, tightprimfeastol, tightdualfeastol, fromscratch, scaling, keepsol, lperror) );
       SCIPsetDebugMsg(set, "lpFlushAndSolve() returned solstat %d (error=%u)\n", SCIPlpGetSolstat(lp), *lperror);
       assert(!(*lperror) || !lp->solved);
 
@@ -12750,6 +12755,15 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                fromscratch = TRUE;
                goto SOLVEAGAIN;
             }
+            else if( scaling > 0 )
+            {
+               /* unbounded solution is infeasible (this can happen due to numerical problems): solve again without scaling */
+               SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+                  "(node %" SCIP_LONGINT_FORMAT ") solution of unbounded LP %" SCIP_LONGINT_FORMAT " not optimal (pfeas=%u, rfeas=%u) -- solving without scaling\n",
+                  stat->nnodes, stat->nlps, primalfeasible, rayfeasible);
+               scaling = 0;
+               goto SOLVEAGAIN;
+            }
             else
             {
                /* unbounded solution is infeasible (this can happen due to numerical problems) and nothing helped:
@@ -12809,7 +12823,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
 
                /* resolve LP with an iteration limit of 1 */
                SCIP_CALL( lpSolve(lp, set, messagehdlr, stat, prob, SCIP_LPALGO_DUALSIMPLEX, 1, 1,
-                     FALSE, FALSE, TRUE, fastmip, tightprimfeastol, tightdualfeastol, fromscratch, keepsol, lperror) );
+                     FALSE, FALSE, TRUE, fastmip, tightprimfeastol, tightdualfeastol, fromscratch, scaling, keepsol, lperror) );
 
                /* reinstall old cutoff bound and lp pricing strategy */
                lp->cutoffbound = tmpcutoff;
@@ -12835,7 +12849,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                   {
                      fastmip = 0;
                      SCIP_CALL( lpSolve(lp, set, messagehdlr, stat, prob, SCIP_LPALGO_DUALSIMPLEX, -1, -1,
-                           FALSE, FALSE, TRUE, fastmip, tightprimfeastol, tightdualfeastol, fromscratch, keepsol, lperror) );
+                           FALSE, FALSE, TRUE, fastmip, tightprimfeastol, tightdualfeastol, fromscratch, scaling, keepsol, lperror) );
 
                      /* get objective value */
                      SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
@@ -14747,11 +14761,12 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
    /* check feasibility of heuristic primal solution */
    for( r = 0; r < nlpirows; ++r )
    {
-      SCIP_Real act = 0.0;
+      SCIP_Real act;
       SCIP_ROW* row;
 
       row = lpirows[r];
       assert( row != NULL );
+      act = row->constant;
 
       for( c = 0; c < row->nlpcols; ++c )
       {
@@ -14813,12 +14828,14 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
    /* compute activity and check feasibility of primal solution and ray */
    for( r = 0; r < nlpirows; ++r )
    {
-      SCIP_Real primact = 0.0;
+      SCIP_Real primact;
       SCIP_Real rayact = 0.0;
       SCIP_ROW* row;
 
       row = lpirows[r];
       assert( row != NULL );
+
+      primact = row->constant;
 
       for( c = 0; c < row->nlpcols; ++c )
       {
