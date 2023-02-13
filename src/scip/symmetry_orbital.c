@@ -1413,7 +1413,7 @@ SCIP_RETCODE orbitalFixingPropagateComponent(
 
    /* step 2 */
    SCIP_CALL( orbitalFixingDynamicApplyOrbitalFixingPropagations(scip, ofdata, shadowtree, infeasible, nred) );
-   if ( infeasible )
+   if ( *infeasible )
       return SCIP_OKAY;
 
    return SCIP_OKAY;
