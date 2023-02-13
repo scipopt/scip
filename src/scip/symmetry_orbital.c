@@ -66,6 +66,11 @@
 #include <memory.h>
 
 
+/* event handler properties */
+#define EVENTHDLR_SYMMETRY_NAME    "symmetry_orbital"
+#define EVENTHDLR_SYMMETRY_DESC    "filter global variable fixing event handler for orbital fixing"
+
+
 /*
  * Data structures
  */
@@ -90,6 +95,7 @@ typedef struct OrbitalFixingComponentData OFDATA;
 struct SCIP_OrbitalFixingData
 {
    SCIP_EVENTHDLR*       shadowtreeeventhdlr;/**< eventhandler for the shadow tree data structure */
+   SCIP_EVENTHDLR*       globalfixeventhdlr; /**< event handler for handling global variable fixings */
 
    OFDATA**              componentdatas;     /**< array of pointers to individual components for orbital fixing */
    int                   ncomponents;        /**< number of orbital fixing datas in array */
@@ -103,7 +109,9 @@ struct SCIP_OrbitalFixingData
 enum prdjsetwmintransaction_type {
    prdjsetwmintransaction_parent,
    prdjsetwmintransaction_size,
-   prdjsetwmintransaction_value
+   prdjsetwmintransaction_lbvaluemin,
+   prdjsetwmintransaction_lbvaluemax,
+   prdjsetwmintransaction_ubvaluemin,
 };
 
 /** provisional disjoint set with minimum information transaction */
@@ -123,7 +131,9 @@ struct prdjsetwmin
 {
    int*                  parents;            /**< array to store the parent node index for every vertex */
    int*                  sizes;              /**< array to store the size of the subtree rooted at each vertex */
-   SCIP_Real*            values;             /**< array to store the values of the components */
+   SCIP_Real*            lbminvalues;        /**< array to store the minimal values of the components, for var lbs */
+   SCIP_Real*            lbmaxvalues;        /**< array to store the maximal values of the components, for var lbs */
+   SCIP_Real*            ubminvalues;        /**< array to store the minimal values of the components, for var ubs */
    PRDJSETWMINTRANSACTION* transactions;     /**< array to store the transactions */
    int                   size;               /**< the number of vertices in the graph */
    int                   ntransactions;      /**< number of unconfirmed transactions */
@@ -305,7 +315,9 @@ SCIP_Bool GT(SCIP* scip, SCIP_Real val1, SCIP_Real val2)
 static
 void provisionalDisjointSetWithMinimumClear(
    PRDJSETWMIN*          djset,              /**< disjoint set (union find) data structure */
-   SCIP_Real*            values              /**< values to populate with*/
+   SCIP_Real*            lbminvalues,        /**< values to populate with, to take the minimum over */
+   SCIP_Real*            lbmaxvalues,        /**< values to populate with, to take the maximum over */
+   SCIP_Real*            ubminvalues         /**< values to populate with, to take the minimum over */
    )
 {
    int i;
@@ -315,7 +327,9 @@ void provisionalDisjointSetWithMinimumClear(
    {
       djset->parents[i] = i;
       djset->sizes[i] = 1;
-      djset->values[i] = values[i];
+      djset->lbminvalues[i] = lbminvalues[i];
+      djset->lbmaxvalues[i] = lbmaxvalues[i];
+      djset->ubminvalues[i] = ubminvalues[i];
    }
 }
 
@@ -326,7 +340,9 @@ SCIP_RETCODE provisionalDisjointSetWithMinimumFind(
    PRDJSETWMIN*          djset,              /**< disjoint set (union find) data structure */
    int                   element,            /**< element to be found */
    int*                  index,              /**< NULL, or to populate with the index to find */
-   SCIP_Real*            minvalue            /**< NULL, or to populate with the minimal value */
+   SCIP_Real*            lbminvalue,         /**< NULL, or to populate with the minimal value */
+   SCIP_Real*            lbmaxvalue,         /**< NULL, or to populate with the maximal value */
+   SCIP_Real*            ubminvalue          /**< NULL, or to populate with the minimal value */
    )
 {
    int newelement;
@@ -338,7 +354,7 @@ SCIP_RETCODE provisionalDisjointSetWithMinimumFind(
    assert( djset != NULL );
    assert( element >= 0 );
    assert( element < djset->size );
-   assert( index != NULL || minvalue != NULL );
+   assert( index != NULL || lbminvalue != NULL || lbmaxvalue != NULL || ubminvalue != NULL );
 
    /* find root of this element */
    while( root != parents[root] )
@@ -373,8 +389,12 @@ SCIP_RETCODE provisionalDisjointSetWithMinimumFind(
 
    if ( index != NULL )
       *index = root;
-   if ( minvalue != NULL )
-      *minvalue = djset->values[root];
+   if ( lbminvalue != NULL )
+      *lbminvalue = djset->lbminvalues[root];
+   if ( lbmaxvalue != NULL )
+      *lbmaxvalue = djset->lbmaxvalues[root];
+   if ( ubminvalue != NULL )
+      *ubminvalue = djset->ubminvalues[root];
 
    return SCIP_OKAY;
 }
@@ -391,8 +411,12 @@ SCIP_RETCODE provisionalDisjointSetWithMinimumUnion(
    int idp;
    int idq;
    int swap;
-   SCIP_Real valp;
-   SCIP_Real valq;
+   SCIP_Real lbminvalp;
+   SCIP_Real lbminvalq;
+   SCIP_Real lbmaxvalp;
+   SCIP_Real lbmaxvalq;
+   SCIP_Real ubminvalp;
+   SCIP_Real ubminvalq;
    PRDJSETWMINTRANSACTION* tr;
 
    assert(djset != NULL);
@@ -401,8 +425,8 @@ SCIP_RETCODE provisionalDisjointSetWithMinimumUnion(
    assert(djset->size > p);
    assert(djset->size > q);
 
-   SCIP_CALL( provisionalDisjointSetWithMinimumFind(scip, djset, p, &idp, &valp) );
-   SCIP_CALL( provisionalDisjointSetWithMinimumFind(scip, djset, q, &idq, &valq) );
+   SCIP_CALL( provisionalDisjointSetWithMinimumFind(scip, djset, p, &idp, &lbminvalp, &lbmaxvalp, &ubminvalp) );
+   SCIP_CALL( provisionalDisjointSetWithMinimumFind(scip, djset, q, &idq, &lbminvalq, &lbmaxvalq, &ubminvalq) );
 
    /* if p and q lie in the same component, there is nothing to be done */
    if( idp == idq )
@@ -416,16 +440,16 @@ SCIP_RETCODE provisionalDisjointSetWithMinimumUnion(
       idq = swap;
    }
 
-   if ( djset->ntransactions + 3 > djset->maxntransactions )
+   if ( djset->ntransactions + 5 > djset->maxntransactions )
    {
-      int newsize = SCIPcalcMemGrowSize(scip, djset->ntransactions + 3);
+      int newsize = SCIPcalcMemGrowSize(scip, djset->ntransactions + 5);
       assert( newsize > djset->maxntransactions );
 
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &djset->transactions, djset->maxntransactions, newsize) );
       djset->maxntransactions = newsize;
    }
 
-   /* update parents, sizes and values array, and store transaction. */
+   /* update parents, sizes and values arrays, and store transaction. */
    assert( djset->ntransactions < djset->maxntransactions );
    tr = &djset->transactions[djset->ntransactions++];
    tr->type = prdjsetwmintransaction_parent;
@@ -442,10 +466,24 @@ SCIP_RETCODE provisionalDisjointSetWithMinimumUnion(
 
    assert( djset->ntransactions < djset->maxntransactions );
    tr = &djset->transactions[djset->ntransactions++];
-   tr->type = prdjsetwmintransaction_value;
+   tr->type = prdjsetwmintransaction_lbvaluemin;
    tr->index = idq;
-   tr->data.valuereal = djset->values[idq];
-   djset->values[idq] = MIN(valp, valq);
+   tr->data.valuereal = djset->lbminvalues[idq];
+   djset->lbminvalues[idq] = MIN(lbminvalp, lbminvalq);
+
+   assert( djset->ntransactions < djset->maxntransactions );
+   tr = &djset->transactions[djset->ntransactions++];
+   tr->type = prdjsetwmintransaction_lbvaluemax;
+   tr->index = idq;
+   tr->data.valuereal = djset->lbmaxvalues[idq];
+   djset->lbmaxvalues[idq] = MAX(lbmaxvalp, lbmaxvalq);
+
+   assert( djset->ntransactions < djset->maxntransactions );
+   tr = &djset->transactions[djset->ntransactions++];
+   tr->type = prdjsetwmintransaction_ubvaluemin;
+   tr->index = idq;
+   tr->data.valuereal = djset->ubminvalues[idq];
+   djset->ubminvalues[idq] = MIN(ubminvalp, ubminvalq);
 
    return SCIP_OKAY;
 }
@@ -469,8 +507,14 @@ SCIP_RETCODE provisionalDisjointSetWithMinimumUndo(
          case prdjsetwmintransaction_size:
             djset->sizes[tr->index] = tr->data.valueint;
             break;
-         case prdjsetwmintransaction_value:
-            djset->values[tr->index] = tr->data.valuereal;
+         case prdjsetwmintransaction_lbvaluemin:
+            djset->lbminvalues[tr->index] = tr->data.valuereal;
+            break;
+         case prdjsetwmintransaction_lbvaluemax:
+            djset->lbmaxvalues[tr->index] = tr->data.valuereal;
+            break;
+         case prdjsetwmintransaction_ubvaluemin:
+            djset->ubminvalues[tr->index] = tr->data.valuereal;
             break;
          default:
             return SCIP_ERROR;
@@ -493,7 +537,9 @@ static
 SCIP_RETCODE provisionalDisjointSetWithMinimumCreate(
    SCIP*                 scip,               /**< SCIP data structure */
    PRDJSETWMIN**         djset,              /**< disjoint set (union find) data structure */
-   SCIP_Real*            values,             /**< initial component values */
+   SCIP_Real*            lbminvalues,        /**< array to compute minimum over, for var lower bounds */
+   SCIP_Real*            lbmaxvalues,        /**< array to compute maximum over, for var lower bounds */
+   SCIP_Real*            ubminvalues,        /**< array to compute minimum over, for var upper bounds */
    int                   ncomponents,        /**< number of components */
    int                   maxntransactions    /**< maximal number of transactions before confirmation */
 )
@@ -506,14 +552,16 @@ SCIP_RETCODE provisionalDisjointSetWithMinimumCreate(
    SCIP_CALL( SCIPallocBlockMemory(scip, djset) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &((*djset)->parents), ncomponents) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &((*djset)->sizes), ncomponents) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &((*djset)->values), ncomponents) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &((*djset)->lbminvalues), ncomponents) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &((*djset)->lbmaxvalues), ncomponents) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &((*djset)->ubminvalues), ncomponents) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &((*djset)->transactions), maxntransactions) );
    (*djset)->size = ncomponents;
    (*djset)->ntransactions = 0;
    (*djset)->maxntransactions = maxntransactions;
 
    /* clear the data structure */
-   provisionalDisjointSetWithMinimumClear(*djset, values);
+   provisionalDisjointSetWithMinimumClear(*djset, lbminvalues, lbmaxvalues, ubminvalues);
 
    return SCIP_OKAY;
 }
@@ -533,7 +581,9 @@ void provisionalDisjointSetWithMinimumFree(
    dsptr = *djset;
 
    SCIPfreeBlockMemoryArray(scip, &dsptr->transactions, dsptr->maxntransactions);
-   SCIPfreeBlockMemoryArray(scip, &dsptr->values, dsptr->size);
+   SCIPfreeBlockMemoryArray(scip, &dsptr->ubminvalues, dsptr->size);
+   SCIPfreeBlockMemoryArray(scip, &dsptr->lbmaxvalues, dsptr->size);
+   SCIPfreeBlockMemoryArray(scip, &dsptr->lbminvalues, dsptr->size);
    SCIPfreeBlockMemoryArray(scip, &dsptr->sizes, dsptr->size);
    SCIPfreeBlockMemoryArray(scip, &dsptr->parents, dsptr->size);
    SCIPfreeBlockMemory(scip, djset);
@@ -559,9 +609,12 @@ SCIP_RETCODE orbitalFixingDynamicGetSymmetrySubgroup(
    int p;
    int* perm;
    int varid;
-   SCIP_Real orbitmin;
+   SCIP_Real orbitlbmin;
+   SCIP_Real orbitlbmax;
+   SCIP_Real orbitubmin;
    int varidimage;
    PRDJSETWMIN* orbitmindjset;
+   SCIP_Bool arraysgenerated;
 
    assert( scip != NULL );
    assert( ofdata != NULL );
@@ -589,29 +642,41 @@ SCIP_RETCODE orbitalFixingDynamicGetSymmetrySubgroup(
     * We do this based on the (strong) generating set that is provided, and greedily build the symmetry subgroup.
     *
     * Start with S = {} as the empty generating set. Obviously, that is a subset of (**).
-    * For each strong gnerator \gamma, Test if the group generated by the set S with \gamma is a subset of (**).
+    * For each strong generator \gamma, Test if the group generated by the set S with \gamma is a subset of (**).
     * If so, add \gamma to S. Otherwise, or if it cannot be determined easily, continue with the next strong generator.
     *
     * A simple test is the following: Compute the orbits of the group generated by the set S with \gamma,
     * and for every branching variable test if its upper bound is smaller or equal to its minimal orbit lower bound.
     * If that is the case, the test passes.
-    *
+    * 
     * It is easy to verify that this test accepts as least as many permutations as the readily implemented
     * orbital fixing method for binary variables. As such, a larger and still valid symmetry subgroup is detected.
+    * 
+    * The steps above assume that all reductions found so far are compatible with this symmetry reduction method.
+    * In other words, if a constraint/propagator that is not aware of the symmetry handling finds a reduction, then 
+    * this reduction can be applied to the whole orbit. This is only possible if condition (C4) holds, that is:
+    *   (C4): If x is feasible and \sigma(x) = \sigma(\gamma(x)), then \gamma(x) is also feasible.
+    * Note that this condition can be violated. So, we additionally need to check this condition. We do this by making 
+    * sure that the intersection of the variable domains is non-empty.
     */
    *nchosenperms = 0;
 
    /* for creating the provisional disjoint set with minimum, variable lower bounds must be an array. Allocate. */
-   if ( varlbs == NULL )
+   arraysgenerated = varlbs == NULL;
+   if ( arraysgenerated )
    {
       assert( varubs == NULL );
       SCIPallocBufferArray(scip, &varlbs, ofdata->npermvars);
       for (i = 0; i < ofdata->npermvars; ++i)
          varlbs[i] = SCIPvarGetLbLocal(ofdata->permvars[i]);
+      
+      SCIPallocBufferArray(scip, &varubs, ofdata->npermvars);
+      for (i = 0; i < ofdata->npermvars; ++i)
+         varlbs[i] = SCIPvarGetUbLocal(ofdata->permvars[i]);
    }
 
    /* create disjoint set that maintains orbit information of the group generated by chosenperms */
-   SCIP_CALL( provisionalDisjointSetWithMinimumCreate(scip, &orbitmindjset, varlbs,
+   SCIP_CALL( provisionalDisjointSetWithMinimumCreate(scip, &orbitmindjset, varlbs, varlbs, varubs,
       ofdata->npermvars, ofdata->npermvars * 2) );
 
    /* @todo investigate handling permutations in different order (algorithm is greedy) */
@@ -643,39 +708,61 @@ SCIP_RETCODE orbitalFixingDynamicGetSymmetrySubgroup(
           * Observe that the variable is part of its own orbit, so if it is a free variable, then this check always
           * disqualifies this permutation as it should.
           */
-         SCIP_CALL( provisionalDisjointSetWithMinimumFind(scip, orbitmindjset, varid, NULL, &orbitmin) );
-         if ( GT(scip, varubs ? varubs[varid] : SCIPvarGetUbLocal(ofdata->permvars[varid]), orbitmin) )
+         SCIP_CALL( provisionalDisjointSetWithMinimumFind(scip, orbitmindjset, varid, NULL, 
+            &orbitlbmin, NULL, NULL) );
+         if ( GT(scip, varubs[varid], orbitlbmin) )
          {
             /* If the upper bound of the branching variable is larger than the minimal lower bound of variables in the
              * orbit, disqualify this permutation. */
             break;
          }
-
       }
-
       /* if the above loop is broken, this permutation does not qualify for the stabilizer */
       if ( i < nbranchedvarindices )
       {
          /* undo provisional orbit information updates */
          provisionalDisjointSetWithMinimumUndo(orbitmindjset);
+         continue;
       }
-      else
-      {
-         /* permutation qualifies for the stabilizer. Add permutation */
-         chosenperms[(*nchosenperms)++] = perm;
 
-         /* make provisional updates to orbit information permanent */
-         provisionalDisjointSetWithMinimumConfirm(orbitmindjset);
+      /* check condition (C4) */
+      for (i = 0; i < ofdata->npermvars; ++i)
+      {
+         /* @todo better is to iterate over every component in disjoint set, if possible */
+         /* @todo instead of checking perm[i] == i everywhere, can also precompute the support of a permutation */
+         if ( perm[i] == i )
+            continue;
+         
+         SCIP_CALL( provisionalDisjointSetWithMinimumFind(scip, orbitmindjset, i, NULL, 
+            NULL, &orbitlbmax, &orbitubmin) );
+         /* the intersection of the variable domains in the orbit of i is empty */
+         if ( GT(scip, orbitlbmax, orbitubmin) )
+            break;
       }
+      /* if the above loop is broken, this permutation does not qualify for the stabilizer */
+      if ( i < ofdata->npermvars )
+      {
+         /* undo provisional orbit information updates */
+         provisionalDisjointSetWithMinimumUndo(orbitmindjset);
+         continue;
+      }
+
+      /* permutation qualifies for the stabilizer. Add permutation */
+      chosenperms[(*nchosenperms)++] = perm;
+
+      /* make provisional updates to orbit information permanent */
+      provisionalDisjointSetWithMinimumConfirm(orbitmindjset);
    }
 
    /* free djset */
    provisionalDisjointSetWithMinimumFree(scip, &orbitmindjset);
 
-   if ( varubs == NULL )
+   if ( arraysgenerated )
    {
+      SCIPfreeBufferArray(scip, &varubs);
       SCIPfreeBufferArray(scip, &varlbs);
       varlbs = NULL;
+      varubs = NULL;
    }
 
    return SCIP_OKAY;
@@ -1529,6 +1616,13 @@ SCIP_RETCODE addComponent(
       ofdata->globalvarubs[i] = SCIPvarGetUbGlobal(ofdata->permvars[i]);
    }
 
+   /* catch global variable bound change event */
+   for (i = 0; i < ofdata->npermvars; ++i)
+   {
+      SCIP_CALL( SCIPcatchVarEvent(scip, ofdata->permvars[i], SCIP_EVENTTYPE_GLBCHANGED | SCIP_EVENTTYPE_GUBCHANGED,
+         orbifixdata->globalfixeventhdlr, (SCIP_EVENTDATA*) ofdata, NULL) );
+   }
+
    /* resize component array if needed */
    assert( orbifixdata->ncomponents >= 0 );
    assert( (orbifixdata->ncomponents == 0) == (orbifixdata->componentdatas == NULL) );
@@ -1561,7 +1655,7 @@ SCIP_RETCODE addComponent(
 }
 
 
-/** frees componnet */
+/** frees component */
 static
 SCIP_RETCODE freeComponent(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1569,6 +1663,7 @@ SCIP_RETCODE freeComponent(
    OFDATA**              ofdata              /**< pointer to component data */
    )
 {
+   int i;
    int p;
 
    assert( scip != NULL );
@@ -1586,6 +1681,18 @@ SCIP_RETCODE freeComponent(
 
    assert( SCIPisTransformed(scip) );
 
+   /* free global variable bound change event */
+   if ( SCIPgetStage(scip) != SCIP_STAGE_FREE )
+   {
+      /* events at the freeing stage may not be dropped, because they are already getting dropped */
+      for (i = (*ofdata)->npermvars - 1; i >= 0; --i)
+      {
+         SCIP_CALL( SCIPdropVarEvent(scip, (*ofdata)->permvars[i], 
+            SCIP_EVENTTYPE_GLBCHANGED | SCIP_EVENTTYPE_GUBCHANGED,
+            orbifixdata->globalfixeventhdlr, (SCIP_EVENTDATA*) (*ofdata), -1) );
+      }
+   }
+
    SCIPfreeBlockMemoryArray(scip, &(*ofdata)->globalvarubs, (*ofdata)->npermvars);
    SCIPfreeBlockMemoryArray(scip, &(*ofdata)->globalvarlbs, (*ofdata)->npermvars);
 
@@ -1599,6 +1706,50 @@ SCIP_RETCODE freeComponent(
    SCIPfreeBlockMemoryArray(scip, &(*ofdata)->permvars, (*ofdata)->npermvars);
 
    SCIPfreeBlockMemory(scip, ofdata);
+
+   return SCIP_OKAY;
+}
+
+
+/*
+ * Event handler callback methods
+ */
+
+/** maintain global variable fixings for reductions found during presolving or at the root node */
+static
+SCIP_DECL_EVENTEXEC(eventExecGlobalBoundChange)
+{
+   OFDATA* ofdata;
+   SCIP_VAR* var;
+   int varidx;
+
+   assert( eventhdlr != NULL );
+   assert( eventdata != NULL );
+   assert( strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_SYMMETRY_NAME) == 0 );
+   assert( event != NULL );
+
+   ofdata = (OFDATA*) eventdata;
+   var = SCIPeventGetVar(event);
+   assert( var != NULL );
+   assert( SCIPvarIsTransformed(var) );
+
+   assert( ofdata->permvarmap != NULL );
+   varidx = SCIPhashmapGetImageInt(ofdata->permvarmap, (void*) var);
+
+   switch ( SCIPeventGetType(event) )
+   {
+   case SCIP_EVENTTYPE_GUBCHANGED:
+      assert( ofdata->globalvarubs[varidx] == ofdata->globalvarubs[varidx] );
+      ofdata->globalvarubs[varidx] = SCIPeventGetNewbound(event);
+      break;
+   case SCIP_EVENTTYPE_GLBCHANGED:
+      assert( ofdata->globalvarlbs[varidx] == ofdata->globalvarlbs[varidx] );
+      ofdata->globalvarlbs[varidx] = SCIPeventGetNewbound(event);
+      break;
+   default:
+      SCIPABORT();
+      return SCIP_ERROR;
+   }
 
    return SCIP_OKAY;
 }
@@ -1751,6 +1902,10 @@ SCIP_RETCODE SCIPorbitalFixingInclude(
    (*orbifixdata)->ncomponents = 0;
    (*orbifixdata)->maxncomponents = 0;
    (*orbifixdata)->shadowtreeeventhdlr = shadowtreeeventhdlr;
+
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &(*orbifixdata)->globalfixeventhdlr, 
+      EVENTHDLR_SYMMETRY_NAME, EVENTHDLR_SYMMETRY_DESC, eventExecGlobalBoundChange, 
+      (SCIP_EVENTHDLRDATA*) (*orbifixdata)) );
 
    return SCIP_OKAY;
 }
