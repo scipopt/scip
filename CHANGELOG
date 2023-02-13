@@ -26,6 +26,7 @@ Performance improvements
 - Added initialization of LP relaxation for SOC constraints.
 - Avoided some numerical issues when separating SOC constraints.
 - If differentation of convex expression fails in convex nlhdlr, then a perturbed point is tried.
+- Use sassy/bliss as default symmetry computation package.
 
 Examples and applications
 -------------------------
@@ -234,7 +235,7 @@ Build system
 
 ### Makefile
 
-- Use SYM=bliss by default, since bliss now is shipped with SCIP.
+- Use SYM=sassy by default, since sassy and bliss are now shipped with SCIP.
 
 Fixed bugs
 ----------
