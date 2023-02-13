@@ -87,7 +87,7 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPcreateSymOpNodeType(
    SCIP*                 scip,               /**< SCIP pointer */
    const char*           opnodename,         /**< name of new operator node type */
-   SCIP_EXPRHDLR**       nodetype            /**< buffer to hold the new node type */
+   int*                  nodetype            /**< buffer to hold the new node type */
    );
 
 /** returns representation of an operator node type.
@@ -98,7 +98,7 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPgetSymOpNodeType(
    SCIP*                 scip,               /**< SCIP pointer */
    const char*           opnodename,         /**< name of new operator node type */
-   SCIP_EXPRHDLR**       nodetype            /**< buffer to hold the node type */
+   int*                  nodetype            /**< buffer to hold the node type */
    );
 
 #ifdef __cplusplus

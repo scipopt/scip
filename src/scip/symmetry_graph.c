@@ -328,14 +328,13 @@ SCIP_RETCODE ensureNodeArraysSize(
 int SCIPaddSymgraphOpnode(
    SCIP*                 scip,               /**< SCIP data structure */
    SYM_GRAPH*            graph,              /**< symmetry detection graph */
-   SCIP_EXPRHDLR*        op                  /**< expression handler associated with operator of node */
+   int                   op                  /**< int associated with operator of node */
    )
 {
    int nodeidx;
 
    assert(scip != NULL);
    assert(graph != NULL);
-   assert(op != NULL);
 
    /* we can only add nodes if symmetry colors have not been computed yet */
    if( graph->islocked )
@@ -638,7 +637,7 @@ SCIP_DECL_SORTINDCOMP(SYMsortVarnodes)
 
 /** compares two operators
  *
- *  Operators are sorted by their pointer values.
+ *  Operators are sorted by their int values.
  *
  *  result:
  *    < 0: ind1 comes before (is better than) ind2
@@ -647,8 +646,8 @@ SCIP_DECL_SORTINDCOMP(SYMsortVarnodes)
  */
 static
 int compareOps(
-   SCIP_EXPRHDLR*        op1,                /**< first operator in comparison */
-   SCIP_EXPRHDLR*        op2                 /**< second operator in comparison */
+   int                   op1,                /**< first operator in comparison */
+   int                   op2                 /**< second operator in comparison */
    )
 {
    if( op1 < op2 )
@@ -669,9 +668,9 @@ int compareOps(
 static
 SCIP_DECL_SORTINDCOMP(SYMsortOpnodes)
 {
-   SCIP_EXPRHDLR** vals;
+   int* vals;
 
-   vals = (SCIP_EXPRHDLR**) dataptr;
+   vals = (int*) dataptr;
 
    return compareOps(vals[ind1], vals[ind2]);
 }
@@ -880,8 +879,8 @@ SCIP_RETCODE SCIPcomputeSymgraphColors(
    /* find colors of operator nodes */
    if( graph->nopnodes > 0 )
    {
-      SCIP_EXPRHDLR* prevop;
-      SCIP_EXPRHDLR* thisop;
+      int prevop;
+      int thisop;
 
       SCIPsort(perm, SYMsortOpnodes, (void*) graph->ops, graph->nopnodes);
 

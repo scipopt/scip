@@ -3104,7 +3104,6 @@ static
 SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphCardinality)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
-   SCIP_EXPRHDLR* sumexpr;
    SCIP_VAR** vars;
    SCIP_Real* vals;
    SCIP_Real constant;
@@ -3115,8 +3114,6 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphCardinality)
    int nlocvars;
    int nvars;
    int i;
-
-   sumexpr = (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_SUM;
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -3146,7 +3143,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphCardinality)
       if( nlocvars > 1 || !SCIPisEQ(scip, vals[0], 1.0) || !SCIPisZero(scip, constant) )
       {
          /* encode aggregation by a sum-expression */
-         nodeidx = SCIPaddSymgraphOpnode(scip, graph, sumexpr);
+         nodeidx = SCIPaddSymgraphOpnode(scip, graph, SYM_CONSOPTYPE_SUM);
 
          /* we do not need to take weights of variables into account;
           * they are only used to sort variables within the constraint */

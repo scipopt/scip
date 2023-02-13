@@ -2217,8 +2217,6 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsSOS2)
 static
 SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphSOS2)
 {  /*lint --e{715}*/
-   SCIP_EXPRHDLR* sumop;
-   SCIP_EXPRHDLR* pairop;
    SCIP_CONSDATA* consdata;
    SCIP_VAR** consvars;
    SCIP_VAR** locvars;
@@ -2235,10 +2233,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphSOS2)
    int i;
    int j;
 
-   sumop = (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_SUM;
-   pairop = (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_TUPLE;
    consdata = SCIPconsGetData(cons);
-   assert(sumop != NULL);
    assert(consdata != NULL);
 
    /* get active variables of the constraint */
@@ -2256,7 +2251,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphSOS2)
    /* for all pairs of variables, add a node indicating a tuple and add nodes for (aggregated) variables */
    for( i = 0; i < nconsvars - 1; ++i )
    {
-      opnodeidx = SCIPaddSymgraphOpnode(scip, graph, pairop);
+      opnodeidx = SCIPaddSymgraphOpnode(scip, graph, SYM_CONSOPTYPE_TUPLE);
       SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, consnodeidx, opnodeidx, FALSE, 0.0) );
 
       for( j = i; j < i + 2; ++j )
@@ -2279,7 +2274,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphSOS2)
          }
          else
          {
-            nodeidx = SCIPaddSymgraphOpnode(scip, graph, sumop);
+            nodeidx = SCIPaddSymgraphOpnode(scip, graph, SYM_CONSOPTYPE_SUM);
 
             iscolored = consdata->weights != NULL ? TRUE : FALSE;
             color = iscolored ? consdata->weights[i] : 0.0;

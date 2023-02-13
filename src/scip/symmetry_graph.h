@@ -117,7 +117,7 @@ SCIP_EXPORT
 int SCIPaddSymgraphOpnode(
    SCIP*                 scip,               /**< SCIP data structure */
    SYM_GRAPH*            graph,              /**< symmetry detection graph */
-   SCIP_EXPRHDLR*        op                  /**< expression handler associated with operator of node */
+   int                   op                  /**< int associated with operator of node */
    );
 
 /** adds a value node to a symmetry detection graph and returns its node index */

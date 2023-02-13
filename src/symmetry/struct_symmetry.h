@@ -180,7 +180,7 @@ struct SYM_Graph
                                               *   containing its information (operator, variable, or value) */
 
    /* information-based arrays */
-   SCIP_EXPRHDLR**       ops;                /**< operators corresponding to nodes in graph */
+   int*                  ops;                /**< operators corresponding to nodes in graph */
    SCIP_Real*            vals;               /**< values corresponding to nodes in graph */
    SCIP_CONS**           conss;              /**< constraints corresponding to cons nodes */
    SCIP_Real*            lhs;                /**< array of left-hand sides for cons nodes */

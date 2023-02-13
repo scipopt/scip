@@ -73,6 +73,7 @@
 #include "scip/dialog_default.h"
 #include "scip/scip_expr.h"
 #include "scip/symmetry_graph.h"
+#include "scip/prop_symmetry.h"
 #include "symmetry/struct_symmetry.h"
 
 /* fundamental constraint handler properties */
@@ -10669,7 +10670,6 @@ static
 SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphNonlinear)
 {  /*lint --e{715}*/
    SCIP_EXPRITER* it;
-   SCIP_EXPRHDLR* sumexprhdlr;
    SCIP_EXPR* rootexpr;
    SCIP_EXPR* expr;
    SCIP_VAR** consvars;
@@ -10695,8 +10695,6 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphNonlinear)
    assert(scip != NULL);
    assert(cons != NULL);
    assert(graph != NULL);
-
-   sumexprhdlr = (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_SUM;
 
    /* store lhs/rhs */
    consnodeidx = SCIPaddSymgraphConsnode(scip, graph, cons, SCIPgetLhsNonlinear(cons), SCIPgetRhsNonlinear(cons));
@@ -10772,7 +10770,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphNonlinear)
          /* if the parent assigns the variable a coefficient, introduce an intermediate node */
          if( hasparentcoef )
          {
-            nodeidx = SCIPaddSymgraphOpnode(scip, graph, (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_COEF);
+            nodeidx = SCIPaddSymgraphOpnode(scip, graph, SYM_CONSOPTYPE_COEF);
 
             SCIPaddSymgraphEdge(scip, graph, parentidx, nodeidx, TRUE, parentcoef);
             parentidx = nodeidx;
@@ -10817,7 +10815,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphNonlinear)
             int sumidx;
 
             /* add node and edge for sum operator */
-            sumidx = SCIPaddSymgraphOpnode(scip, graph, sumexprhdlr);
+            sumidx = SCIPaddSymgraphOpnode(scip, graph, SYM_CONSOPTYPE_SUM);
 
             /* add nodes and edges for summands */
             if( nlocvals == 1 )
@@ -10861,6 +10859,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphNonlinear)
             /* deal with sum expressions differently, because we can possibly aggregate linear sums */
             SCIP_EXPR** children;
             int sumidx;
+            int optype;
             int childidx = 0;
 
             /* extract all children being variables and compute the sum of
@@ -10885,7 +10884,9 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphNonlinear)
             SCIP_CALL( SCIPgetActiveVariables(scip, &consvars, &consvals, &nlocvars, &constant,
                   SCIPconsIsTransformed(cons)) );
 
-            sumidx = SCIPaddSymgraphOpnode(scip, graph, SCIPexprGetHdlr(expr));
+            SCIP_CALL( SCIPgetSymOpNodeType(scip, SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), &optype) );
+
+            sumidx = SCIPaddSymgraphOpnode(scip, graph, optype);
             SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, parentidx, sumidx, hasparentcoef, parentcoef) );
 
             /* add the linear part of the sum */
@@ -10913,8 +10914,10 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphNonlinear)
          else
          {
             int opidx;
+            int optype;
 
-            opidx = SCIPaddSymgraphOpnode(scip, graph, SCIPexprGetHdlr(expr));
+            SCIP_CALL( SCIPgetSymOpNodeType(scip, SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), &optype) );
+            opidx = SCIPaddSymgraphOpnode(scip, graph, optype);
             SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, parentidx, opidx, hasparentcoef, parentcoef) );
 
             /* possibly add constants of expression */

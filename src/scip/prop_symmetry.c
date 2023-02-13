@@ -11146,7 +11146,7 @@ int SCIPgetSymmetryNGenerators(
 SCIP_RETCODE SCIPcreateSymOpNodeType(
    SCIP*                 scip,               /**< SCIP pointer */
    const char*           opnodename,         /**< name of new operator node type */
-   SCIP_EXPRHDLR**       nodetype            /**< buffer to hold the new node type */
+   int*                  nodetype            /**< buffer to hold the node type */
    )
 {
    SCIP_PROP* prop;
@@ -11173,7 +11173,7 @@ SCIP_RETCODE SCIPcreateSymOpNodeType(
    }
 
    SCIP_CALL( SCIPhashmapInsertInt(propdata->customsymopnodetypes, (void*) opnodename, propdata->nopnodetypes) );
-   *nodetype = (SCIP_EXPRHDLR*) (size_t) propdata->nopnodetypes++;
+   *nodetype = propdata->nopnodetypes++;
 
    return SCIP_OKAY;
 }
@@ -11185,12 +11185,11 @@ SCIP_RETCODE SCIPcreateSymOpNodeType(
 SCIP_RETCODE SCIPgetSymOpNodeType(
    SCIP*                 scip,               /**< SCIP pointer */
    const char*           opnodename,         /**< name of new operator node type */
-   SCIP_EXPRHDLR**       nodetype            /**< buffer to hold the node type */
+   int*                  nodetype            /**< buffer to hold the node type */
    )
 {
    SCIP_PROP* prop;
    SCIP_PROPDATA* propdata;
-   SCIP_EXPRHDLR* newtype;
 
    assert( scip != NULL );
 
@@ -11210,10 +11209,7 @@ SCIP_RETCODE SCIPgetSymOpNodeType(
       SCIP_CALL( SCIPcreateSymOpNodeType(scip, opnodename, nodetype) );
    }
    else
-   {
-      newtype = (SCIP_EXPRHDLR*) (size_t) SCIPhashmapGetImageInt(propdata->customsymopnodetypes, (void*) opnodename);
-      *nodetype = newtype;
-   }
+      *nodetype = SCIPhashmapGetImageInt(propdata->customsymopnodetypes, (void*) opnodename);
 
    return SCIP_OKAY;
 }

@@ -10164,7 +10164,6 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsSOS1)
 static
 SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphSOS1)
 {  /*lint --e{715}*/
-   SCIP_EXPRHDLR* sumop;
    SCIP_CONSDATA* consdata;
    SCIP_VAR** consvars;
    SCIP_VAR** locvars;
@@ -10179,7 +10178,6 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphSOS1)
    int nvars;
    int i;
 
-   sumop = (SCIP_EXPRHDLR*) SYM_CONSOPTYPE_SUM;
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
@@ -10216,7 +10214,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphSOS1)
       }
       else
       {
-         nodeidx = SCIPaddSymgraphOpnode(scip, graph, sumop);
+         nodeidx = SCIPaddSymgraphOpnode(scip, graph, SYM_CONSOPTYPE_SUM);
 
          iscolored = consdata->weights != NULL ? TRUE : FALSE;
          color = iscolored ? consdata->weights[i] : 0.0;
