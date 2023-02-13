@@ -28,7 +28,12 @@
  * @author Liding Xu
  */
 
-#define SCIP_DEBUG_
+#define SCIP_SIG_DEBUG_
+
+#ifdef SCIP_SIG_DEBUG
+#define SCIP_DEBUG
+#endif
+
 #include <string.h>
 
 #include "nlhdlr_signomial.h"
@@ -77,6 +82,8 @@ struct SCIP_NlhdlrExprData
    SCIP_Bool*            signs;              /**< indicators for sign of variables after reformulation, TRUE for positive, FALSE for negative */
    SCIP_Real*            refexponents;       /**< exponents of \f$ (x,t) \f$ after reformulation */
    SCIP_Bool             isgetvars;          /**< are all variables already got */
+
+   /* working parameters will be modified after getting all variables */
    SCIP_VAR**            vars;               /**< variables \f$ (x,y) \f$ */
    SCIP_INTERVAL*        intervals;          /**< intervals storing lower and upper bounds of variables \f$ (x,y) \f$ */
    SCIP_Real*            box;
@@ -118,12 +125,17 @@ void freeExprDataMem(
    SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->exponents, (*nlhdlrexprdata)->nfactors);
    SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->signs, (*nlhdlrexprdata)->nvars);
    SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->refexponents, (*nlhdlrexprdata)->nvars);
-   SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->vars, (*nlhdlrexprdata)->nvars);
+   SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->vars, (*nlhdlrexprdata)->nvars);
    SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->intervals, (*nlhdlrexprdata)->nvars);
+   SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->box, 2 * (*nlhdlrexprdata)->nvars);
+   SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->xstar, (*nlhdlrexprdata)->nvars);
+   SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->facetcoefs, (*nlhdlrexprdata)->nvars);
    SCIPfreeBlockMemory(scip, nlhdlrexprdata);
    *nlhdlrexprdata = NULL;
 }
 
+
+#ifdef SCIP_SIG_DEBUG
 
 /** validate a rowprep probabilistically by sampling */
 static 
@@ -346,6 +358,8 @@ SCIP_RETCODE printSignomial(
    return SCIP_OKAY;
 }
 
+#endif
+
 /** get variables associated with the expression and its subexpressions */
 static
 void getVars(
@@ -447,8 +461,8 @@ SCIP_DECL_VERTEXPOLYFUN(nlhdlrExprEvalPower)
 
 /** determine whether a power function \f$ w^h \f$ is special and add an overunderestimator or underestimator to a given rowprep
  * 
- * \f$ w^h \f$ is special, if all variables are fixed, or it is univariate or a constant. The estimator is multiplied
- * by the multiplier and stored in the rowprep.
+ * \f$ w^h \f$ is special, if all variables are fixed, or it is a constant to estimate, a univariate power to estimate, 
+ * or a bivariate power to underestimate. The estimator is multiplied by the multiplier and stored in the rowprep.
  */
 static 
 SCIP_RETCODE estimateSpecialPower(
@@ -495,8 +509,12 @@ SCIP_RETCODE estimateSpecialPower(
    /* number of variables in the power function */
    int nsignvars = sign ? nlhdlrexprdata->nposvars : nlhdlrexprdata->nnegvars;
 
-   /* if the power function has less than 2 variables, this a special case */
-   *isspecial = nsignvars < 2;
+   /* if the power function has no more than 2 variables, this a special case */
+   *isspecial = ( nsignvars <= 1 ) || ( nsignvars == 2 &&  !overestimate );
+
+   if( !*isspecial )
+      return SCIP_OKAY;
+   
 
    if( nsignvars == 0 )
    {
@@ -549,9 +567,67 @@ SCIP_RETCODE estimateSpecialPower(
       }
       *success = TRUE;
    }
+   else if( nsignvars == 2 && !overestimate ){
+      /* bivariate case, \f$ f(w) = w^h = f_0(w_0) f_1(w_1)  \f$ */
+      SCIP_VAR* vars[2]; 
+      SCIP_Real refexponents[2];
+      SCIP_Real xstar[2];
+      SCIP_Real scale[2]; 
+      SCIP_Real box[4];
+      int j = 0;
+      /* get refexponents, xtar, scale, and box */
+      for( int i = 0; i < nlhdlrexprdata->nvars; ++i )
+      {
+         if( nlhdlrexprdata->signs[i] != sign )
+            continue;
+         box[2 * j] = nlhdlrexprdata->intervals[i].inf;
+         box[2 * j + 1] = nlhdlrexprdata->intervals[i].sup;
+         refexponents[j] = nlhdlrexprdata->refexponents[i];
+         scale[j] = i == (nlhdlrexprdata->nvars - 1) ? nlhdlrexprdata->coef : 1;
+         vars[j] = nlhdlrexprdata->vars[i];
+         xstar[j] = SCIPgetSolVal(scip, sol, nlhdlrexprdata->vars[j]) / scale[j];
+         assert(xstar[j] != SCIP_INVALID);
+         j++;
+      }
+      /* compute the box length*/
+      SCIP_Real dw0 = box[1] - box[0];
+      SCIP_Real dw1 = box[3] - box[2];
+      /* determine the location (upper right or lower left half sapce) of the xtar. 
+       * \f$ (dw1, dw0) \f$ is the direction vector to the upper right half space. */
+      SCIP_Bool isupperright = ( (xstar[0] - box[0]) * dw1 + (xstar[1] - box[3]) * dw0 ) > 0;
+      /* compute function values of \f$ f_0, f_1 \f$ at vetices */
+      SCIP_Real f0w0l = pow(box[0], refexponents[0]);
+      SCIP_Real f0w0u = pow(box[1], refexponents[0]);
+      SCIP_Real f1w1l = pow(box[2], refexponents[1]);
+      SCIP_Real f1w1u = pow(box[3], refexponents[1]);
+      SCIP_Real fw0lw1u = f0w0l * f1w1u;
+      SCIP_Real fw0uw1l = f0w0u * f1w1l;
+      SCIP_Real facetcoefs[2];
+      SCIP_Real facetconstant;
+      if( isupperright )
+      {
+         /* underestimator: \f$ fw0uw1u + (fw0uw1u - fw0lw1u) / (dw0) * (x - w0u) + (fw0uw1u - fw0uw1l) / (dw1) * (x - w1u) \f$ */
+         SCIP_Real fw0uw1u = f0w0u * f1w1u;
+         facetcoefs[0] = (fw0uw1u - fw0lw1u) / dw0;
+         facetcoefs[1] = (fw0uw1u - fw0uw1l) / dw1;
+         facetconstant = fw0uw1u  - facetcoefs[0] * box[1] - facetcoefs[1] * box[3];
+      }
+      else
+      {
+         /* underestimator: \f$ fw0lw1l + (fw0uw1l - fw0lw1l) / (dw0) * (x - w0l) + (fw0lw1u- fw0lw1l) / (dw1) * (x - w1l) \f$ */
+         SCIP_Real fw0lw1l = f0w0l * f1w1l;
+         facetcoefs[0] = (fw0uw1l - fw0lw1l) / dw0;
+         facetcoefs[1] = (fw0lw1u - fw0lw1l) / dw1;
+         facetconstant = fw0lw1l  - facetcoefs[0] * box[0] - facetcoefs[1] * box[2];
+      }
+      SCIProwprepAddConstant(rowprep,  multiplier * facetconstant);
+      SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, vars[0], multiplier * facetcoefs[0] / scale[0]));
+      SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, vars[1], multiplier * facetcoefs[1] / scale[1]));
+      *success = TRUE;
+   }
 
-
-#ifdef SCIP_CUT_DEBUG
+   
+#ifdef SCIP_SIG_DEBUG
    if( *success && *isspecial )
    {
       SCIPdebugMsg(scip, "computed special estimator: ");
@@ -592,7 +668,6 @@ SCIP_RETCODE underEstimatePower(
 
    /* number of variables of sign */
    int nsignvars = sign ? nlhdlrexprdata->nposvars : nlhdlrexprdata->nnegvars;
-   assert(nsignvars > 1);
 
    /* data struture to evaluate the power function */
    VERTEXPOLYFUN_EVALDATA evaldata;
@@ -603,10 +678,6 @@ SCIP_RETCODE underEstimatePower(
 
    SCIP_Real* xstar = nlhdlrexprdata->xstar;
    SCIP_Real* box = nlhdlrexprdata->box;
-   SCIP_Real* facetcoefs = nlhdlrexprdata->facetcoefs;
-   //SCIP_CALL( SCIPallocBufferArray(scip, &xstar, nsignvars));
-   //SCIP_CALL( SCIPallocBufferArray(scip, &box, 2 * (nsignvars)));
-
    /* compute box constraints and reference value of variables*/
    int j = 0;
    for( int i = 0; i < nlhdlrexprdata->nvars; ++i )
@@ -622,9 +693,8 @@ SCIP_RETCODE underEstimatePower(
       j++;
    }
 
+   SCIP_Real* facetcoefs = nlhdlrexprdata->facetcoefs;
    SCIP_Real facetconstant;
-   //SCIP_Real *facetcoefs;
-   //SCIP_CALL( SCIPallocBufferArray(scip, &facetcoefs, nsignvars));
    /* find a facet of the underestimator */
    SCIP_CALL( SCIPcomputeFacetVertexPolyhedralNonlinear(scip, conshdlr, FALSE, nlhdlrExprEvalPower, (void*)&evaldata, xstar, box,
       nsignvars, targetvalue, success, facetcoefs, &facetconstant));
@@ -632,10 +702,8 @@ SCIP_RETCODE underEstimatePower(
    if( !*success )
    {
       SCIPdebugMsg(scip, "failed to compute facet of convex hull\n");
-      goto TERMINATE;
+      return SCIP_OKAY;;
    }
-
-
 
    /* set coefficients in the rowprep */
    SCIProwprepAddConstant(rowprep, multiplier * facetconstant);
@@ -649,15 +717,10 @@ SCIP_RETCODE underEstimatePower(
       j++;
    }
 
-#ifdef SCIP_CUT_DEBUG
+#ifdef SCIP_SIG_DEBUG
    SCIPdebugMsg(scip, "computed underestimator: ");
    SCIPprintRowprep(scip, rowprep, NULL);
 #endif
-
-   TERMINATE: 
-   //SCIPfreeBufferArray(scip, &box);
-   //SCIPfreeBufferArray(scip, &xstar);
-   //SCIPfreeBufferArray(scip, &facetcoefs);
 
    return SCIP_OKAY;
 }
@@ -682,10 +745,6 @@ static SCIP_RETCODE overEstimatePower(
    assert(success != NULL);
 
    *success = FALSE;
-
-   /* number of variables with the same sign */
-   int nsignvars = sign ? nlhdlrexprdata->nposvars : nlhdlrexprdata->nnegvars;
-   assert(nsignvars > 1);
 
    /* compute the value and the sum of reformulated exponents of the power function */
    SCIP_Real sumrefexponents = 0;
@@ -715,7 +774,7 @@ static SCIP_RETCODE overEstimatePower(
       SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, var, multiplier * facetcoef / scale));
    }
 
-#ifdef SCIP_CUT_DEBUG
+#ifdef SCIP_SIG_DEBUG
    SCIPdebugMsg(scip, "computed overestimator: ");
    SCIPprintRowprep(scip, rowprep, NULL);
 #endif
@@ -825,7 +884,7 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateSignomial)
 
    SCIP_Bool isspecial;
    /* only underesimate a concave function, if the number of variables satisfy the criteria */
-   if( nundervars <= 1 || nundervars <= nlhdlrdata->maxnundervars )
+   if( nundervars <= nlhdlrdata->maxnundervars )
    {
       /* compute underestimator */
       isspecial = FALSE;
@@ -833,7 +892,7 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateSignomial)
       SCIP_CALL( estimateSpecialPower(scip, nlhdlrexprdata, undersign, undermultiplier, FALSE, sol, rowprep, &isspecial, success));
       if( !isspecial )
          SCIP_CALL( underEstimatePower(scip, conshdlr, nlhdlr, nlhdlrexprdata, undersign, undermultiplier, sol, targetunder, rowprep, success));
-      #ifdef SCIP_CUT_DEBUG
+      #ifdef SCIP_SIG_DEBUG
          SCIPdebugMsg(scip, "underestimate:");
          SCIP_Bool isvalid;
          int nsample = 10000;
@@ -846,14 +905,14 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateSignomial)
    {
       /* compute overestimator */
       isspecial = FALSE;
-      #ifdef SCIP_CUT_DEBUG
+      #ifdef SCIP_SIG_DEBUG
       SCIP_Real prevconstant =  SCIProwprepGetSide(rowprep);
       #endif
       /* check and compute the special case */
       SCIP_CALL( estimateSpecialPower(scip, nlhdlrexprdata, oversign, overmultiplier, TRUE, sol, rowprep, &isspecial, success));
       if( !isspecial )
          SCIP_CALL( overEstimatePower(scip, nlhdlrexprdata, oversign, overmultiplier, sol, rowprep, success));
-      #ifdef SCIP_CUT_DEBUG
+      #ifdef SCIP_SIG_DEBUG
          SCIPdebugMsg(scip, "overestimate: ");
          SCIP_Bool isvalid;
          int nsample = 10000;
@@ -864,7 +923,7 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateSignomial)
    }
 
 
-   #ifdef SCIP_CUT_DEBUG
+   #ifdef SCIP_SIG_DEBUG
       SCIPdebugMsg(scip, "computed estimator: ");
       SCIPprintRowprep(scip, rowprep, NULL);
       SCIP_Bool isvalid;
@@ -938,6 +997,7 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectSignomial)
    if( SCIPisExprProduct(scip, expr) && SCIPexprGetNChildren(expr) >= 2 )
    {
       int nc = SCIPexprGetNChildren(expr);
+      int nvars = nc + 1;
 
       /* create expression data for the nonlinear handler */
       SCIP_CALL( SCIPallocClearBlockMemory(scip, nlhdlrexprdata));
@@ -946,13 +1006,13 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectSignomial)
       /* allocat memory for expression data */
       SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->factors, nc);
       SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->exponents, nc);
-      SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->signs, nc + 1);
-      SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->refexponents, nc + 1);
-      SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->vars, nc + 1);
-      SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->intervals, nc + 1);
-      SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->xstar, nc + 1);
-      SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->facetcoefs, (nc + 1));
-      SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->box, 2 * (nc + 1));
+      SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->signs, nvars);
+      SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->refexponents, nvars);
+      SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->vars, nvars);
+      SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->intervals, nvars);
+      SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->xstar, nvars);
+      SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->facetcoefs, nvars);
+      SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->box, 2 * nvars);
 
       /* get monomial information */
       SCIP_CALL( SCIPgetExprMonomialData(scip, expr, &((*nlhdlrexprdata)->coef), (*nlhdlrexprdata)->exponents, (*nlhdlrexprdata)->factors));
@@ -1038,7 +1098,7 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectSignomial)
       *participating = SCIP_NLHDLR_METHOD_SEPABOTH;
    }
 
-   #ifdef SCIP_CUT_DEBUG
+   #ifdef SCIP_SIG_DEBUG
    if( *participating )
    {
       SCIPdebugMsg(scip, "scip depth: %d, step: %d, expr pointer: %p, expr data pointer: %p, detected expr: total vars (exps) %d ",
@@ -1112,7 +1172,7 @@ SCIPincludeNlhdlrSignomial(
    /* parameters */
    SCIP_CALL( SCIPaddIntParam(scip, "nlhdlr/" NLHDLR_NAME "/maxnundervars",
          "maximum number of variables when underestimating a concave power function", 
-         &nlhdlrdata->maxnundervars, TRUE, NLHDLR_MAXNUNDERVARS, 0, 14, NULL, NULL));
+         &nlhdlrdata->maxnundervars, TRUE, NLHDLR_MAXNUNDERVARS, 2, 14, NULL, NULL));
 
    return SCIP_OKAY;
 }
