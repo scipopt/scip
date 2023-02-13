@@ -1022,7 +1022,7 @@ SCIP_RETCODE orbitalFixingDynamicApplyOrbitalBranchingPropagations(
                LT(scip, SCIPvarGetLbLocal(ofdata->permvars[varid]), orbitlb) )
             {
                SCIP_Bool tightened;
-               SCIP_CALL( SCIPtightenVarLb(scip, ofdata->permvars[varid], orbitlb, FALSE, infeasible, &tightened) );
+               SCIP_CALL( SCIPtightenVarLb(scip, ofdata->permvars[varid], orbitlb, TRUE, infeasible, &tightened) );
 
                /* propagator detected infeasibility in this node. Jump out of loop towards freeing everything. */
                if ( *infeasible )
@@ -1036,7 +1036,7 @@ SCIP_RETCODE orbitalFixingDynamicApplyOrbitalBranchingPropagations(
             if ( GT(scip, SCIPvarGetUbLocal(ofdata->permvars[varid]), orbitub) )
             {
                SCIP_Bool tightened;
-               SCIP_CALL( SCIPtightenVarUb(scip, ofdata->permvars[varid], orbitub, FALSE, infeasible, &tightened) );
+               SCIP_CALL( SCIPtightenVarUb(scip, ofdata->permvars[varid], orbitub, TRUE, infeasible, &tightened) );
 
                /* propagator detected infeasibility in this node. Jump out of loop towards freeing everything. */
                if ( *infeasible )
@@ -1186,7 +1186,7 @@ SCIP_RETCODE orbitalFixingDynamicApplyOrbitalBranchingPropagations(
          if ( GT(scip, SCIPvarGetUbLocal(ofdata->permvars[varid]), varubs[branchingdecisionvarid]) )
          {
             SCIP_Bool tightened;
-            SCIP_CALL( SCIPtightenVarUb(scip, ofdata->permvars[varid], varubs[branchingdecisionvarid], FALSE,
+            SCIP_CALL( SCIPtightenVarUb(scip, ofdata->permvars[varid], varubs[branchingdecisionvarid], TRUE,
                   infeasible, &tightened) );
 
             /* propagator detected infeasibility in this node. Jump out of loop towards freeing everything. */
