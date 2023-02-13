@@ -25,7 +25,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 // #define SCIP_STATISTIC
-// #define SCIP_DEBUG
+#define SCIP_DEBUG
 
 #include "lpi/lpi.h"
 #include "scip/conflict_resolution.h"
@@ -2591,6 +2591,7 @@ SCIP_RETCODE DivisionBasedReduction(
 {
    SCIP_VAR** vars;
    SCIP_Real previousslack;
+   SCIP_Real resolutionslack;
    SCIP_RESOLUTIONSET* reasonset;
    SCIP_BDCHGIDX* currbdchgidx;
 
@@ -2629,7 +2630,8 @@ SCIP_RETCODE DivisionBasedReduction(
       return SCIP_OKAY;
    }
 
-   while ( SCIPsetIsGE(set, getSlack(set, prob, conflict->resolvedresolutionset, currbdchgidx, fixbounds, fixinds), 0.0) && applydivision )
+   resolutionslack = getSlack(set, prob, conflict->resolvedresolutionset, currbdchgidx, fixbounds, fixinds);
+   while ( SCIPsetIsGE(set, resolutionslack, 0.0) && applydivision )
    {
       applydivision = FALSE;
 
@@ -2688,20 +2690,20 @@ SCIP_RETCODE DivisionBasedReduction(
                SCIPsortIntReal(reducedreason->inds, reducedreason->vals, resolutionsetGetNNzs(reducedreason));
                /* todo the update of the slack should be done in the division/mir algorithm */
                reducedreason->slack = getSlack(set, prob, reducedreason, currbdchgidx, fixbounds, fixinds);
-               SCIPsetDebugMsg(set, "slack before tightening: %g \n",  previousslack);
-               SCIPsetDebugMsg(set, "slack after tightening: %g \n", reducedreason->slack);
+               SCIPsetDebugMsg(set, "slack before division: %g \n",  previousslack);
+               SCIPsetDebugMsg(set, "slack after division: %g \n", reducedreason->slack);
                SCIP_CALL( rescaleAndResolve(set, conflict, reducedreason, currbdchginfo, blkmem, residx, successresolution) );
                SCIPresolutionsetFree(&reducedreason, blkmem);
                if (!successresolution)
                   return SCIP_OKAY;
-
+               resolutionslack = getSlack(set, prob, conflict->resolvedresolutionset, currbdchgidx, fixbounds, fixinds);
                break;
             }
          }
       }
    }
    /* apply a division cut (CG or MIR) after weakening as much as possible */
-   if ( set->conf_weakenreasonall )
+   if ( set->conf_weakenreasonall && SCIPsetIsGE(set, resolutionslack, 0.0) )
    {
       SCIP_RESOLUTIONSET *reducedreason;
       SCIP_CALL( resolutionsetCopy(&reducedreason, blkmem, reasonset) );
@@ -2716,8 +2718,8 @@ SCIP_RETCODE DivisionBasedReduction(
 
       /* todo the update of the slack should be included in the division algorithms */
       reducedreason->slack = getSlack(set, prob, reducedreason, currbdchgidx, fixbounds, fixinds);
-      SCIPsetDebugMsg(set, "slack before tightening: %g \n",  previousslack);
-      SCIPsetDebugMsg(set, "slack after tightening: %g \n", reducedreason->slack);
+      SCIPsetDebugMsg(set, "slack before division: %g \n",  previousslack);
+      SCIPsetDebugMsg(set, "slack after division: %g \n", reducedreason->slack);
       SCIP_CALL( rescaleAndResolve(set, conflict, reducedreason, currbdchginfo, blkmem, residx, successresolution) );
       SCIPresolutionsetFree(&reducedreason, blkmem);
       if (!successresolution)
@@ -2757,6 +2759,7 @@ SCIP_RETCODE tighteningBasedReduction(
 {
    SCIP_VAR** vars;
    SCIP_Real previousslack;
+   SCIP_Real resolutionslack;
    SCIP_RESOLUTIONSET* reasonset;
    SCIP_BDCHGIDX* currbdchgidx;
    int i;
@@ -2779,7 +2782,8 @@ SCIP_RETCODE tighteningBasedReduction(
    if (!successresolution)
       return SCIP_OKAY;
 
-   while ( SCIPsetIsGE(set, getSlack(set, prob, conflict->resolvedresolutionset, currbdchgidx, fixbounds, fixinds), 0.0) && applytightening )
+   resolutionslack = getSlack(set, prob, conflict->resolvedresolutionset, currbdchgidx, fixbounds, fixinds);
+   while ( SCIPsetIsGE(set, resolutionslack, 0.0) && applytightening )
    {
       applytightening = FALSE;
       for( i = 0; i < resolutionsetGetNNzs(reasonset); ++i )
@@ -2839,7 +2843,7 @@ SCIP_RETCODE tighteningBasedReduction(
                                     residx, successresolution) );
                if (!successresolution)
                   return SCIP_OKAY;
-
+               resolutionslack = getSlack(set, prob, conflict->resolvedresolutionset, currbdchgidx, fixbounds, fixinds);
                break;
             }
          }
