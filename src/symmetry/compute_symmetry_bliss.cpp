@@ -580,6 +580,10 @@ SCIP_Bool isEdgeGroupable(
    int first = SCIPgetSymgraphEdgeFirst(graph, edgeidx);
    int second = SCIPgetSymgraphEdgeSecond(graph, edgeidx);
 
+   /* uncolored edges are not grouped */
+   if ( ! SCIPisSymgraphEdgeColored(graph, edgeidx) )
+      return FALSE;
+
    /* two variable nodes are connected */
    if ( first < 0 && second < 0 )
       return FALSE;

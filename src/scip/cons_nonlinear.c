@@ -10729,6 +10729,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphNonlinear)
    SCIP_CALL( SCIPallocBufferArray(scip, &consvals, maxnconsvars) );
 
    /* iterate over expression tree and store nodes/edges */
+   expr = SCIPgetExprNonlinear(cons);
    SCIP_CALL( SCIPexpriterInit(it, expr, SCIP_EXPRITER_DFS, TRUE) );
    SCIPexpriterSetStagesDFS(it, SCIP_EXPRITER_ENTEREXPR | SCIP_EXPRITER_LEAVEEXPR);
 

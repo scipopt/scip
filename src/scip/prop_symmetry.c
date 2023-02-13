@@ -9724,6 +9724,8 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
          propdata->ofenabled = FALSE;
          propdata->sstenabled = FALSE;
 
+         SCIPhashmapCreate(&propdata->customsymopnodetypes, SCIPblkmem(scip), 10);
+
          SCIP_CALL( determineSymmetry(scip, propdata, SYM_SPEC_BINARY | SYM_SPEC_INTEGER | SYM_SPEC_REAL, 0) );
       }
    }
@@ -10719,6 +10721,11 @@ SCIP_DECL_PROPFREE(propFreeSymmetry)
 
    propdata = SCIPpropGetData(prop);
    assert( propdata != NULL );
+
+   if ( propdata->customsymopnodetypes != NULL )
+   {
+      SCIPhashmapFree(&propdata->customsymopnodetypes);
+   }
 
    SCIPfreeBlockMemory(scip, &propdata);
 
