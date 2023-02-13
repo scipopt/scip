@@ -41,8 +41,41 @@ Fixed bugs
 Features
 --------
 
+- added simplification of abs(x)^n to x^n when n is even (simplify rule POW12)
+- in expression simplification, added possibility to expand power of sum with exponents larger than 2 (simplify rule POW7)
+- in expression simplification, added possibility to expand products with sums as factor when there are more than two factors (simplify rule SP12b)
+- in expression simplification, added possibility to allow expanding power of products with fractional exponent (simplify rule POW5a)
+- Can now build with Lapack (used for solving nonlinear problems). If IPOPT is used, then Lapack is accessed through it.
+  There	is an interface to Lapack in lapack_calls.
+- added support for logical constraints in binary variables and basic logical operators (and, or, not, equal) to AMPL .nl reader
+- new diving heuristic indicatordiving that focuses on indicator variables which control semicontinuous variables
+- updated statistics on NLP relaxation; information on convexity of NLP has been added
+- added new bandit method (EXP.3-IX) that is the new default of the ALNS heuristic
+- added dialog to display recognized permutation symmetries ("display symmetry")
 - use quad precision in cutsSubstituteMIR() for substituting slack variables into CMIR cuts
 - use quad precision for activity computations in cons_linear.c
+
+Performance improvements
+------------------------
+
+- Variable conflict-based addition of Schreier-Sims cuts for symmetry handling in prop_symmetry.c does no longer use
+  an expensive explicit conflict graph construction.
+- Added initialization of LP relaxation for SOC constraints.
+- Avoided some numerical issues when separating SOC constraints.
+- If differentation of convex expression fails in convex nlhdlr, then a perturbed point is tried.
+- Use sassy/bliss as default symmetry computation package.
+
+Examples and applications
+-------------------------
+
+Interface changes
+-----------------
+
+### New and changed callbacks
+
+- Added solution linearization callback for nonlinear handlers.
+  The nonlinear handler may use this callback to add tight cuts that use the given solution as reference point to the cutpool.
+  The callback is called if option constraints/nonlinear/linearizeheursol is enabled.
 
 ### Deleted and changed API methods
 
@@ -155,7 +188,7 @@ Build system
 
 ### Makefile
 
-- Use SYM=bliss by default, since bliss now is shipped with SCIP.
+- Use SYM=sassy by default, since sassy and bliss are now shipped with SCIP.
 
 Fixed bugs
 ----------
