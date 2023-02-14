@@ -52,7 +52,7 @@
 
 typedef struct SCIP_ExprData  SCIP_EXPRDATA;     /**< expression data, e.g., coefficients */
 typedef struct SCIP_Expr      SCIP_EXPR;         /**< expression */
-typedef struct SYM_ExprData SYM_EXPRDATA;        /**< (additional) data used to encode an expression,
+typedef struct SYM_ExprData   SYM_EXPRDATA;      /**< (additional) data used to encode an expression,
                                                   *   which is not encoded as another expression */
 
 /** curvature types */
