@@ -1771,7 +1771,7 @@ SCIP_RETCODE SCIPhashExpr(
    return SCIP_OKAY;
 }
 
-/* simplifies an expression (duplication of long doxygen comment omitted here) */
+/** simplifies an expression (duplication of long doxygen comment omitted here) */
 SCIP_RETCODE SCIPsimplifyExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPR*            rootexpr,           /**< expression to be simplified */
@@ -1790,7 +1790,7 @@ SCIP_RETCODE SCIPsimplifyExpr(
    return SCIP_OKAY;
 }
 
-/* retrieves symmetry information from an expression */
+/** retrieves symmetry information from an expression */
 SCIP_RETCODE SCIPgetSymDataExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPR*            expr,               /**< expression from which information needs to be retrieved */
