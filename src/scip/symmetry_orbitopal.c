@@ -1507,7 +1507,9 @@ void assertIsOrbitopeMatrix(
    int*                  colorder,           /**< array with the column order */
    SCIP_Real*            matrix,             /**< a matrix */
    int                   nrows,              /**< number of rows of matrix */
-   int                   ncols               /**< number of cols of matrix */
+   int                   ncols,              /**< number of cols of matrix */
+   int*                  infinitesimal,      /**< array specifying where the infinitesimals are at */
+   SCIP_Bool             addinfinitesimals   /**< whether infinitesimals are added or subtracted */
 )
 {
    int rowid;
@@ -1555,6 +1557,24 @@ void assertIsOrbitopeMatrix(
          {
             /* critical row */
             break;
+         }
+         else
+         {
+            /* check for infinitisimal values
+             * If infinitesimals are added (lexminface case), then if the left column has a +epsilon, 
+             * it does not matter whether the right column has +epsilon or not, then the left column is >, 
+             * due to the axioms x + epsilon > x + epsilon and x + epsilon > x.
+             * Analogously, x > x - epsilon and x - epsilon > x - epsilon. 
+             */
+            assert( EQ(scip, matrix[rowid * ncols + colid], matrix[rowid * ncols + colid + 1]) );
+            if ( addinfinitesimals 
+               ? (infinitesimal[colid] == rowid) /* left has +epsilon term */
+               : (infinitesimal[colid + 1] == rowid) /* right has -epsilon term */
+            )
+            {
+               /* critical row */
+               break;
+            }
          }
       }
    }
@@ -1621,7 +1641,9 @@ SCIP_RETCODE propagateStaticOrbitope(
 {
    /* @todo also make "nselcols" to allow for colorders smaller than consdata->ncols */
    SCIP_Real* lexminface = NULL;
+   int* lexminepsrow = NULL;
    SCIP_Real* lexmaxface = NULL;
+   int* lexmaxepsrow = NULL;
    int nelem;
    int rowid;
    int colid;
@@ -1679,7 +1701,7 @@ SCIP_RETCODE propagateStaticOrbitope(
          for (k = 0; k < ncols; ++k)
          {
             thisvar = sodata->sovars[roworder[r] * ncols + colorder[k]];
-            SCIPdebugPrintf("%4s %+1.0f,%+1.0f ", SCIPvarGetName(thisvar),
+            SCIPdebugPrintf("%4s %+1.2f,%+1.2f ", SCIPvarGetName(thisvar),
                SCIPvarGetLbLocal(thisvar), SCIPvarGetUbLocal(thisvar));
          }
          SCIPdebugPrintf("] (row %d)\n", roworder[r]);
@@ -1691,6 +1713,11 @@ SCIP_RETCODE propagateStaticOrbitope(
 
    /* compute lexmin face */
    SCIP_CALL( SCIPallocBufferArray(scip, &lexminface, nelem) );
+
+   /* array to store for each column at which row we add an infinitesimal value, initially at none (-1) */
+   SCIP_CALL( SCIPallocBufferArray(scip, &lexminepsrow, ncols) );
+   for (colid = 0; colid < ncols; ++colid)
+      lexminepsrow[colid] = -1;
 
    /* last column takes the minimally possible values. */
    colid = ncols - 1;
@@ -1740,7 +1767,8 @@ SCIP_RETCODE propagateStaticOrbitope(
             ub = SCIPvarGetUbLocal(var);
 
             /* compare to the value in the column right of it */
-            if ( LT(scip, ub, lexminface[i + 1]) )
+            if ( LT(scip, ub, lexminface[i + 1]) || 
+               ( lexminepsrow[colid + 1] == rowid && EQ(scip, ub, lexminface[i + 1]) ) )
             {
                /* value of this column can only be strictly smaller than the value in the column to its right
                 * This may not be possible.
@@ -1762,15 +1790,13 @@ SCIP_RETCODE propagateStaticOrbitope(
                      assert( SCIPisIntegral(scip, lexminface[lastunfixed * ncols + colid]) );
                      lexminface[lastunfixed * ncols + colid] += 1.0;
                      assert( SCIPisIntegral(scip, lexminface[lastunfixed * ncols + colid]) );
-                     assert( LE(scip, lexminface[lastunfixed * ncols + colid],
-                        SCIPvarGetUbLocal(othervar)) );
+                     assert( LE(scip, lexminface[lastunfixed * ncols + colid], SCIPvarGetUbLocal(othervar)) );
                      break;
                   case SCIP_VARTYPE_CONTINUOUS:
-                     /* continuous type: Add an infinitisimal value to the bound.
-                        * keep the bound as-is, but play along as if it is actually larger.
-                        */
-                     assert( LE(scip, lexminface[lastunfixed * ncols + colid],
-                        SCIPvarGetUbLocal(othervar)) );
+                     /* continuous type, so add an infinitisimal value to the bound */
+                     assert( LE(scip, lexminface[lastunfixed * ncols + colid], SCIPvarGetUbLocal(othervar)) );
+                     assert( lexminepsrow[colid] == -1 );
+                     lexminepsrow[colid] = lastunfixed;
                      break;
                   default:
                      return SCIP_ERROR;
@@ -1799,6 +1825,20 @@ SCIP_RETCODE propagateStaticOrbitope(
                /* are we still equal? */
                if ( GT(scip, lexminface[i], lexminface[i + 1]) )
                   iseq = FALSE;
+               else if ( lexminepsrow[colid + 1] == rowid )
+               {
+                  assert( EQ(scip, lexminface[i], lexminface[i + 1]) );
+                  assert( SCIPvarGetType(sodata->sovars[roworder[lastunfixed] * ncols + origcolid]) 
+                     == SCIP_VARTYPE_CONTINUOUS );
+                  assert( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS );
+                  /* right column (colid+1) has value x + epsilon, left column (colid) has value x, now
+                   * must also become  x + epsilon in order to be larger or equal
+                   * by axioms, we can squeeze infinitesimals between one other; epsilon > epsilon.
+                   */
+                  iseq = FALSE;
+                  assert( lexminepsrow[colid] == -1 );
+                  lexminepsrow[colid] = rowid;
+               }
 
                /* is there room left to increase this variable further? */
                switch (SCIPvarGetType(var))
@@ -1814,9 +1854,9 @@ SCIP_RETCODE propagateStaticOrbitope(
                      lastunfixed = rowid;
                   break;
                case SCIP_VARTYPE_CONTINUOUS:
-                  /* continuous type: Add an infinitisimal value to the bound.
-                     * keep the bound as-is, but play along as if it is actually larger.
-                     */
+                  /* continuous type: if we can add an infinitesimal value to the current lexminface[i] value, 
+                   * mark row as 'lastunfixed'
+                   */
                   if ( LT(scip, lexminface[i], ub) )
                      lastunfixed = rowid;
                   break;
@@ -1835,11 +1875,16 @@ SCIP_RETCODE propagateStaticOrbitope(
 
 #ifndef NDEBUG
    /* sanity checks */
-   assertIsOrbitopeMatrix(scip, sodata, roworder, colorder, lexminface, nselrows, ncols);
+   assertIsOrbitopeMatrix(scip, sodata, roworder, colorder, lexminface, nselrows, ncols, lexminepsrow, TRUE);
 #endif
 
-   /* compute lexmaxface */
+   /* compute lexmax face */
    SCIP_CALL( SCIPallocBufferArray(scip, &lexmaxface, nelem) );
+
+   /* array to store for each column at which row we subtract an infinitesimal value, initially at none (-1) */
+   SCIP_CALL( SCIPallocBufferArray(scip, &lexmaxepsrow, ncols) );
+   for (colid = 0; colid < ncols; ++colid)
+      lexmaxepsrow[colid] = -1;
 
    /* first column, fill all unfixed entries with maximally possible values */
    colid = 0;
@@ -1883,13 +1928,14 @@ SCIP_RETCODE propagateStaticOrbitope(
              * Compare to the entry value on the column immediately left.
              * The value we choose on the right must be at most this.
              * 2 Options:
-             * Option 1: The lower bound is higher. Then we're in an infeasible situation. Fix as described below.
+             * Option 1: The lower bound is larger. Then we're in an infeasible situation. Fix as described below.
              * Option 2: The lower bound is smaller or equal.
              */
             lb = SCIPvarGetLbLocal(var);
 
             /* compare to the value in the column left of it */
-            if ( GT(scip, lb, lexmaxface[i - 1]) )
+            if ( GT(scip, lb, lexmaxface[i - 1]) ||
+               ( lexmaxepsrow[colid - 1] == rowid && EQ(scip, lb, lexmaxface[i - 1]) ) )
             {
                /* value of this column can only be strictly larger than the value in the column to its left
                 * This may not be possible.
@@ -1911,19 +1957,15 @@ SCIP_RETCODE propagateStaticOrbitope(
                      assert( SCIPisIntegral(scip, lexmaxface[lastunfixed * ncols + colid]) );
                      lexmaxface[lastunfixed * ncols + colid] -= 1.0;
                      assert( SCIPisIntegral(scip, lexmaxface[lastunfixed * ncols + colid]) );
-                     assert( GE(scip, lexmaxface[lastunfixed * ncols + colid],
-                        SCIPvarGetLbLocal(othervar)) );
-                     assert( LE(scip, lexmaxface[lastunfixed * ncols + colid],
-                        SCIPvarGetUbLocal(othervar)) );
+                     assert( GE(scip, lexmaxface[lastunfixed * ncols + colid], SCIPvarGetLbLocal(othervar)) );
+                     assert( LE(scip, lexmaxface[lastunfixed * ncols + colid], SCIPvarGetUbLocal(othervar)) );
                      break;
                   case SCIP_VARTYPE_CONTINUOUS:
-                     /* continuous type: Add an infinitisimal value to the bound.
-                        * keep the bound as-is, but play along as if it is actually larger.
-                        */
-                     assert( GE(scip, lexmaxface[lastunfixed * ncols + colid],
-                        SCIPvarGetLbLocal(othervar)) );
-                     assert( LE(scip, lexmaxface[lastunfixed * ncols + colid],
-                        SCIPvarGetUbLocal(othervar)) );
+                     /* continuous type, so subtract an infinitisimal value to the bound */
+                     assert( GE(scip, lexmaxface[lastunfixed * ncols + colid], SCIPvarGetLbLocal(othervar)) );
+                     assert( LE(scip, lexmaxface[lastunfixed * ncols + colid], SCIPvarGetUbLocal(othervar)) );
+                     assert( lexmaxepsrow[colid] == -1 );
+                     lexmaxepsrow[colid] = lastunfixed;
                      break;
                   default:
                      return SCIP_ERROR;
@@ -1952,6 +1994,20 @@ SCIP_RETCODE propagateStaticOrbitope(
                /* are we still equal? */
                if ( GT(scip, lexmaxface[i - 1], lexmaxface[i]) )
                   iseq = FALSE;
+               else if ( lexmaxepsrow[colid - 1] == rowid )
+               {
+                  assert( EQ(scip, lexmaxface[i - 1], lexmaxface[i]) );
+                  assert( SCIPvarGetType(sodata->sovars[roworder[lastunfixed] * ncols + origcolid]) 
+                     == SCIP_VARTYPE_CONTINUOUS );
+                  assert( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS );
+                  /* left column (colid-1) has value x - epsilon, right column (colid) has value x, now
+                   * must also become  x - epsilon in order to be larger or equal
+                   * by axioms, we can squeeze infinitesimals between one other; epsilon > epsilon.
+                   */
+                  iseq = FALSE;
+                  assert( lexmaxepsrow[colid] == -1 );
+                  lexmaxepsrow[colid] = rowid;
+               }
 
                /* is there room left to decrease this variable further? */
                switch (SCIPvarGetType(var))
@@ -1967,9 +2023,9 @@ SCIP_RETCODE propagateStaticOrbitope(
                      lastunfixed = rowid;
                   break;
                case SCIP_VARTYPE_CONTINUOUS:
-                  /* continuous type: Remove an infinitisimal value from the lexmax-value.
-                     * keep the bound as-is, but play along as if it is actually smaller.
-                     */
+                  /* continuous type: if we can subtract an infinitesimal value to the current lexmaxface[i] value, 
+                   * mark row as 'lastunfixed'
+                   */
                   if ( GT(scip, lexmaxface[i], lb) )
                      lastunfixed = rowid;
                   break;
@@ -1988,7 +2044,7 @@ SCIP_RETCODE propagateStaticOrbitope(
 
 #ifndef NDEBUG
    /* sanity checks */
-   assertIsOrbitopeMatrix(scip, sodata, roworder, colorder, lexmaxface, nselrows, ncols);
+   assertIsOrbitopeMatrix(scip, sodata, roworder, colorder, lexmaxface, nselrows, ncols, lexmaxepsrow, FALSE);
 #endif
 
 #ifdef SCIP_MORE_DEBUG
@@ -2101,7 +2157,9 @@ SCIP_RETCODE propagateStaticOrbitope(
    }
 
    FREE:
+   SCIPfreeBufferArrayNull(scip, &lexmaxepsrow);
    SCIPfreeBufferArrayNull(scip, &lexmaxface);
+   SCIPfreeBufferArrayNull(scip, &lexminepsrow);
    SCIPfreeBufferArrayNull(scip, &lexminface);
 
    return SCIP_OKAY;
