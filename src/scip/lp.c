@@ -12126,7 +12126,8 @@ SCIP_RETCODE lpSolve(
       assert(!lpCutoffDisabled(set, prob));
 
 #ifndef NDEBUG
-      /* the LP solution objective should exceed the limit in this case */
+      /* the LP solution objective should exceed the limit in this case; if this assert is triggered, it typically means
+       * that the LP interface method SCIPlpiIsStable() lacks a check for this event and incorrectly returned TRUE */
       SCIP_CALL( SCIPlpiGetObjval(lp->lpi, &lp->lpobjval) );
       assert(!set->lp_checkstability || SCIPsetIsRelGE(set, lp->lpobjval, lp->lpiobjlim));
 #endif
