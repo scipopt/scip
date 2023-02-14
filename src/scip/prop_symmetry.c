@@ -2712,7 +2712,7 @@ SCIP_RETCODE requireSymmetryPermvarmap(
 )
 {
    int v;
-   
+
    /* symmetries must be determined */
    assert( propdata->nperms >= 0 );
 
@@ -2728,7 +2728,7 @@ SCIP_RETCODE requireSymmetryPermvarmap(
    {
       SCIP_CALL( SCIPhashmapInsertInt(propdata->permvarmap, propdata->permvars[v], v) );
    }
-   
+
    return SCIP_OKAY;
 }
 
@@ -2748,7 +2748,7 @@ SCIP_RETCODE requireSymmetryPermstrans(
    /* stop if already computed */
    if ( propdata->permstrans != NULL )
       return SCIP_OKAY;
-   
+
    /* transpose symmetries matrix here */
    assert( propdata->permstrans == NULL );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->permstrans, propdata->npermvars) );
@@ -2838,7 +2838,7 @@ SCIP_RETCODE determineSymmetry(
    assert( scip != NULL );
    assert( propdata != NULL );
    assert( propdata->usesymmetry >= 0 );
-   
+
    /* do not compute symmetry if reoptimization is enabled */
    if ( SCIPisReoptEnabled(scip) )
       return SCIP_OKAY;
@@ -3845,7 +3845,7 @@ SCIP_RETCODE addOrbitopeSubgroup(
    *success = TRUE;
 
    /* do not release constraint here - will be done later */
-   SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, &propdata->genorbconss, 
+   SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, &propdata->genorbconss,
       &propdata->genorbconsssize, propdata->ngenorbconss + 1) );
    propdata->genorbconss[propdata->ngenorbconss++] = cons;
    ++propdata->norbitopes;
@@ -3938,7 +3938,7 @@ SCIP_RETCODE addStrongSBCsSubgroup(
 #endif
 
       /* check whether we need to resize */
-      SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, &propdata->genlinconss, 
+      SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, &propdata->genlinconss,
          &propdata->genlinconsssize, propdata->ngenlinconss) );
       propdata->genlinconss[propdata->ngenlinconss] = cons;
       ++propdata->ngenlinconss;
@@ -4118,7 +4118,7 @@ SCIP_RETCODE addWeakSBCsSubgroup(
 #endif
 
          /* check whether we need to resize */
-         SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, &propdata->genlinconss, 
+         SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, &propdata->genlinconss,
             &propdata->genlinconsssize, propdata->ngenlinconss) );
          propdata->genlinconss[propdata->ngenlinconss] = cons;
          ++propdata->ngenlinconss;
@@ -4576,7 +4576,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
             SCIP_CALL( SCIPaddCons(scip, cons));
 
             /* do not release constraint here - will be done later */
-            SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, &propdata->genorbconss, 
+            SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, &propdata->genorbconss,
                &propdata->genorbconsssize, propdata->ngenorbconss + 1) );
             propdata->genorbconss[propdata->ngenorbconss++] = cons;
             ++propdata->nsymresacks;
@@ -4824,7 +4824,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
             SCIP_CALL( SCIPaddCons(scip, cons));
 
             /* do not release constraint here - will be done later */
-            SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, &propdata->genorbconss, 
+            SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, &propdata->genorbconss,
                &propdata->genorbconsssize, propdata->ngenorbconss + 1) );
             propdata->genorbconss[propdata->ngenorbconss++] = cons;
             ++propdata->nsymresacks;
@@ -5137,7 +5137,7 @@ SCIP_RETCODE detectOrbitopes(
          SCIP_CALL( SCIPaddCons(scip, cons) );
 
          /* do not release constraint here - will be done later */
-         SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, &propdata->genorbconss, 
+         SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, &propdata->genorbconss,
             &propdata->genorbconsssize, propdata->ngenorbconss + 1) );
          propdata->genorbconss[propdata->ngenorbconss++] = cons;
          ++propdata->norbitopes;
@@ -5557,7 +5557,7 @@ SCIP_RETCODE addSymresackConss(
          SCIP_CALL( SCIPaddCons(scip, cons) );
 
          /* do not release constraint here - will be done later */
-         SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, &propdata->genorbconss, 
+         SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, &propdata->genorbconss,
             &propdata->genorbconsssize, propdata->ngenorbconss + 1) );
          propdata->genorbconss[propdata->ngenorbconss++] = cons;
          ++propdata->nsymresacks;
@@ -5612,7 +5612,7 @@ SCIP_RETCODE addSymresackConss(
             SCIP_CALL( SCIPaddCons(scip, cons) );
 
             /* do not release constraint here - will be done later */
-            SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, &propdata->genorbconss, 
+            SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, &propdata->genorbconss,
                &propdata->genorbconsssize, propdata->ngenorbconss + 1) );
             propdata->genorbconss[propdata->ngenorbconss++] = cons;
             ++propdata->nsymresacks;
@@ -6733,7 +6733,7 @@ SCIP_RETCODE tryAddOrbitopesDynamic(
          SCIP_CALL( SCIPaddCons(scip, cons) );
 
          /* check whether we need to resize */ /* todo4J: Why isn't this stored in genorbconss? */
-         SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, &propdata->genlinconss, 
+         SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, &propdata->genlinconss,
             &propdata->genlinconsssize, propdata->ngenlinconss + 1) );
          propdata->genlinconss[propdata->ngenlinconss++] = cons;
 
@@ -6756,7 +6756,7 @@ SCIP_RETCODE tryAddOrbitopesDynamic(
             orbitopevarmatrix[i] = propdata->permvars[orbitopematrix[i]];
 
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "orbitope_full_comp_%d", c);
-         SCIP_CALL( SCIPorbitopalFixingAddOrbitope(scip, propdata->orbitopalfixingdata, 
+         SCIP_CALL( SCIPorbitopalFixingAddOrbitope(scip, propdata->orbitopalfixingdata,
             orbitopevarmatrix, nrows, ncols) );
 
          /* mark component as blocked */
@@ -6807,11 +6807,11 @@ SCIP_RETCODE tryAddOrbitalFixingLexfix(
 
    assert( scip != NULL );
    assert( propdata != NULL );
-   assert( ISORBITALFIXINGACTIVE(propdata->usesymmetry) 
+   assert( ISORBITALFIXINGACTIVE(propdata->usesymmetry)
       || (
-         ISSYMRETOPESACTIVE(propdata->usesymmetry) 
+         ISSYMRETOPESACTIVE(propdata->usesymmetry)
          && ISSYMDYNAMICACTIVE(propdata->usesymmetry)
-         && propdata->addsymresacks 
+         && propdata->addsymresacks
       ) );
    assert( propdata->nperms > 0 );
 
@@ -6842,7 +6842,7 @@ SCIP_RETCODE tryAddOrbitalFixingLexfix(
       /* handle component permutations with orbital fixing */
       if ( checkof )
       {
-         SCIP_CALL( SCIPorbitalFixingAddComponent(scip, propdata->orbitalfixingdata, 
+         SCIP_CALL( SCIPorbitalFixingAddComponent(scip, propdata->orbitalfixingdata,
             propdata->permvars, propdata->npermvars, componentperms, componentsize) );
          propdata->componentblocked[c] |= SYM_HANDLETYPE_ORBITALFIXING;
       }
@@ -6854,7 +6854,7 @@ SCIP_RETCODE tryAddOrbitalFixingLexfix(
          for (p = 0; p < componentsize; ++p)
          {
             assert( componentperms[p] != NULL );
-            SCIP_CALL( SCIPlexicographicReductionAddPermutation(scip, propdata->lexreddata, 
+            SCIP_CALL( SCIPlexicographicReductionAddPermutation(scip, propdata->lexreddata,
                propdata->permvars, propdata->npermvars, componentperms[p]) );
          }
          propdata->componentblocked[c] |= SYM_HANDLETYPE_SYMBREAK | SYM_HANDLETYPE_DYNAMIC;
@@ -6942,7 +6942,7 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
 
 
    /* dynamic orbitopal fixing */
-   if ( ISSYMDYNAMICACTIVE(propdata->usesymmetry) && ISSYMRETOPESACTIVE(propdata->usesymmetry) 
+   if ( ISSYMDYNAMICACTIVE(propdata->usesymmetry) && ISSYMRETOPESACTIVE(propdata->usesymmetry)
       && propdata->detectorbitopes )
    {
       SCIP_CALL( tryAddOrbitopesDynamic(scip, propdata) );
@@ -6952,7 +6952,7 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
 
 
    /* static orbitopal fixing, this only works on binary variables */
-   if ( !ISSYMDYNAMICACTIVE(propdata->usesymmetry) && ISSYMRETOPESACTIVE(propdata->usesymmetry) 
+   if ( !ISSYMDYNAMICACTIVE(propdata->usesymmetry) && ISSYMRETOPESACTIVE(propdata->usesymmetry)
       && propdata->detectorbitopes && propdata->binvaraffected )
    {
       assert( (propdata->genorbconss == NULL) == (propdata->ngenorbconss == 0) );
@@ -6968,7 +6968,7 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
 
 
    /* orbital fixing and (compatable) dynamic lexmax propagation */
-   if ( ISORBITALFIXINGACTIVE(propdata->usesymmetry) 
+   if ( ISORBITALFIXINGACTIVE(propdata->usesymmetry)
          || ( ISSYMRETOPESACTIVE(propdata->usesymmetry) && ISSYMDYNAMICACTIVE(propdata->usesymmetry)
             && propdata->addsymresacks ) )
    {
@@ -6979,7 +6979,7 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
 
 
    /* orbital subgroups */
-   if ( ISSYMRETOPESACTIVE(propdata->usesymmetry) && propdata->detectsubgroups && propdata->binvaraffected 
+   if ( ISSYMRETOPESACTIVE(propdata->usesymmetry) && propdata->detectsubgroups && propdata->binvaraffected
       && propdata->ncompblocked < propdata->ncomponents )
    {
       SCIP_CALL( requireSymmetryComponents(scip, propdata) );

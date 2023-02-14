@@ -1223,7 +1223,7 @@ SCIP_RETCODE SCIPlexicographicReductionPropagate(
    SCIP_Bool*            didrun              /**< whether propagator actually ran */
    )
 {
-   int nlocalred; 
+   int nlocalred;
    int p;
    NODEDEPTHBRANCHINDEX* nodedepthbranchindices;
    SCIP_SHADOWTREE* shadowtree;
@@ -1265,7 +1265,7 @@ SCIP_RETCODE SCIPlexicographicReductionPropagate(
    {
       assert( masterdata->lexdatas[p] != NULL );
 
-      SCIP_CALL( propagateLexicographicReductionPerm(scip, masterdata, masterdata->lexdatas[p], 
+      SCIP_CALL( propagateLexicographicReductionPerm(scip, masterdata, masterdata->lexdatas[p],
          nodedepthbranchindices, masterdata->nsymvars, infeasible, &nlocalred) );
 
       /* keep track of the total number of fixed vars */
@@ -1280,7 +1280,7 @@ SCIP_RETCODE SCIPlexicographicReductionPropagate(
    /* clean the node-depth-branch-indices structure */
    SCIP_CALL( shadowtreeUndoNodeDepthBranchIndices(scip, masterdata, nodedepthbranchindices, shadowtree, focusnode) );
    SCIPfreeCleanBufferArray(scip, &nodedepthbranchindices);
-   
+
    return SCIP_OKAY;
 }
 
@@ -1319,7 +1319,7 @@ SCIP_RETCODE SCIPlexicographicReductionAddPermutation(
       }
       else
       {
-         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &masterdata->lexdatas, 
+         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &masterdata->lexdatas,
             masterdata->maxnlexdatas, newsize) );
       }
 
@@ -1327,7 +1327,7 @@ SCIP_RETCODE SCIPlexicographicReductionAddPermutation(
    }
 
    /* prepare lexdatas */
-   SCIP_CALL( lexdataCreate(scip, masterdata, &masterdata->lexdatas[masterdata->nlexdatas++], 
+   SCIP_CALL( lexdataCreate(scip, masterdata, &masterdata->lexdatas[masterdata->nlexdatas++],
       permvars, npermvars, perm) );
 
    return SCIP_OKAY;
