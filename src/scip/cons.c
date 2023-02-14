@@ -6313,7 +6313,7 @@ SCIP_RETCODE SCIPconsPrint(
  *        set to FALSE.
  */
 SCIP_RETCODE SCIPconsGetVars(
-   SCIP_CONS*            cons,               /**< constraint to print */
+   SCIP_CONS*            cons,               /**< constraint to get variables for */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR**            vars,               /**< array to store the involved variable of the constraint */
    int                   varssize,           /**< available slots in vars array which is needed to check if the array is large enough */
@@ -6349,7 +6349,7 @@ SCIP_RETCODE SCIPconsGetVars(
  *        set to FALSE
  */
 SCIP_RETCODE SCIPconsGetNVars(
-   SCIP_CONS*            cons,               /**< constraint to print */
+   SCIP_CONS*            cons,               /**< constraint to get number of variables for */
    SCIP_SET*             set,                /**< global SCIP settings */
    int*                  nvars,              /**< pointer to store the number of variables */
    SCIP_Bool*            success             /**< pointer to store whether the constraint successfully returned the number of variables */
@@ -6379,16 +6379,15 @@ SCIP_RETCODE SCIPconsGetNVars(
 
 /** method to collect the permutation symmetry detection graph of a constraint
  *
- *  @note The success pointer indicates whether the constraint handler was able to return the graph
+ *  @note The success pointer indicates whether the constraint handler was able to return the graph.
  *
- *  @note It might be that a constraint handler does not support this functionality, in this case the success pointer is
- *        set to FALSE
+ *  @note If a constraint handler does not support this functionality, the success pointer is set to FALSE.
  */
 SCIP_RETCODE SCIPconsGetPermsymGraph(
-   SCIP_CONS*            cons,               /**< constraint to print */
+   SCIP_CONS*            cons,               /**< constraint to get graph for */
    SCIP_SET*             set,                /**< global SCIP settings */
    SYM_GRAPH*            graph,              /**< symmetry detection graph */
-   SCIP_Bool*            success             /**< pointer to store whether the constraint successfully returned graph */
+   SCIP_Bool*            success             /**< pointer to store whether the constraint successfully returned the graph */
    )
 {
    SCIP_CONSHDLR* conshdlr;
@@ -6396,6 +6395,7 @@ SCIP_RETCODE SCIPconsGetPermsymGraph(
    assert(cons != NULL);
    assert(set != NULL);
    assert(cons->scip == set->scip);
+   assert(success != NULL);
 
    conshdlr = cons->conshdlr;
    assert(conshdlr != NULL);

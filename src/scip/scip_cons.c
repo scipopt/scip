@@ -2627,9 +2627,9 @@ SCIP_RETCODE SCIPgetConsNVars(
  */
 SCIP_RETCODE SCIPgetConsPermsymGraph(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< constraint for which the number of variables is wanted */
+   SCIP_CONS*            cons,               /**< constraint for which the symmetry graph is requested */
    SYM_GRAPH*            graph,              /**< symmetry detection graph */
-   SCIP_Bool*            success             /**< pointer to store whether the constraint successfully returned the number of graph */
+   SCIP_Bool*            success             /**< pointer to store whether the constraint successfully returned the graph */
    )
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPgetConsGetPermsymGraph", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
