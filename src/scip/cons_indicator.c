@@ -7178,6 +7178,8 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphIndicator)
    SCIP_CONS* lincons;
    SCIP_VAR** vars;
    SCIP_Real* vals;
+   SCIP_VAR** linvars;
+   SCIP_Real* linvals;
    SCIP_Real constant;
    SCIP_Real lhs;
    SCIP_Real rhs;
@@ -7269,10 +7271,12 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphIndicator)
    }
 
    /* create nodes and edges for linear constraint */
+   linvars = SCIPgetVarsLinear(scip, lincons);
+   linvals = SCIPgetValsLinear(scip, lincons);
    for( i = 0; i < nvarslincons; ++i )
    {
-      vars[i] = SCIPgetVarsLinear(scip, lincons)[i];
-      vals[i] = SCIPgetValsLinear(scip, lincons)[i];
+      vars[i] = linvars[i];
+      vals[i] = linvals[i];
    }
    nlocvars = nvarslincons;
 

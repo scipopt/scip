@@ -10203,21 +10203,26 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphSOS1)
 
       SCIP_CALL( SCIPgetActiveVariables(scip, &locvars, &locvals, &nlocvars, &constant, SCIPisTransformed(scip)) );
 
+      if( consdata->weights != NULL )
+      {
+         iscolored = TRUE;
+         color = consdata->weights[i];
+      }
+      else
+      {
+         iscolored = FALSE;
+         color = 0.0;
+      }
+
       if( nlocvars == 1 && SCIPisZero(scip, constant) && SCIPisEQ(scip, locvals[i], 1.0) )
       {
          nodeidx = SCIPgetSymgraphVarnodeidx(scip, graph, locvars[0]);
-
-         iscolored = consdata->weights != NULL ? TRUE : FALSE;
-         color = iscolored ? consdata->weights[i] : 0.0;
 
          SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, consnodeidx, nodeidx, iscolored, color) );
       }
       else
       {
          nodeidx = SCIPaddSymgraphOpnode(scip, graph, SYM_CONSOPTYPE_SUM);
-
-         iscolored = consdata->weights != NULL ? TRUE : FALSE;
-         color = iscolored ? consdata->weights[i] : 0.0;
 
          SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, consnodeidx, nodeidx, iscolored, color) );
 

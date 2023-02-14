@@ -5734,7 +5734,7 @@ static
 SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphXor)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
-   SCIP_VAR** tmpvars;
+   SCIP_VAR** xorvars;
    SCIP_VAR** vars;
    SCIP_Real* vals;
    SCIP_Real constant = 0.0;
@@ -5753,10 +5753,10 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphXor)
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &vals, nvars) );
 
-   tmpvars = SCIPgetVarsXor(scip, cons);
+   xorvars = SCIPgetVarsXor(scip, cons);
    for( i = 0; i < consdata->nvars; ++i )
    {
-      vars[i] = tmpvars[i];
+      vars[i] = xorvars[i];
       vals[i] = 1.0;
    }
 
