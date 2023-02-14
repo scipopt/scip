@@ -3577,7 +3577,7 @@ SCIP_RETCODE cutsRoundMIR(
       if( QUAD_TO_DBL(aj) * varsign[i] >= 0.0 )
          QUAD_ASSIGN(cutaj, 0.0);
       else
-         SCIPquadprecProdQQ(cutaj, onedivoneminusf0, aj); /* cutaj = varsign[i] * aj * onedivoneminusf0 */
+         SCIPquadprecProdQQ(cutaj, onedivoneminusf0, aj); /* cutaj = aj * onedivoneminusf0 */
 
       /* remove zero cut coefficients from cut; move a continuous var from the beginning
        * to the current position, so that all integral variables stay behind the continuous
