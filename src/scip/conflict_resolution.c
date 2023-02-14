@@ -25,7 +25,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 // #define SCIP_STATISTIC
-#define SCIP_DEBUG
+// #define SCIP_DEBUG
 
 #include "lpi/lpi.h"
 #include "scip/conflict_resolution.h"
@@ -581,6 +581,8 @@ SCIP_RETCODE MirLhs(
    )
 {
    SCIP_Real negcoefsum;
+   SCIP_Real newlhs;
+
    SCIP_Real fraclhs;
    SCIP_Real normalizationtermlhs;
 
@@ -605,15 +607,28 @@ SCIP_RETCODE MirLhs(
       if( SCIPsetIsLT(set, resolutionset->vals[i], 0.0) )
          negcoefsum += resolutionset->vals[i];
    }
-   /* the lhs becomes lhs - negcoefsum divided by the divisor */
-   resolutionset->lhs -= negcoefsum;
-   resolutionset->lhs /= divisor;
+
+   /* compute the new lhs (after normalization) */
+   newlhs = resolutionset->lhs - negcoefsum;
+   newlhs /= divisor;
+   /* compute the fractionality of the lhs */
+   fraclhs = newlhs - SCIPsetFloor(set, newlhs);
+
+   /* since we only consider one divisor, it may happen that the fractionality
+   of the lhs is zero. If that is the case, then apply CG */
+   if( SCIPsetIsZero(set, fraclhs) )
+   {
+      SCIP_CALL( ChvatalGomoryLhs(set, prob, resolutionset, divisor) );
+      return SCIP_OKAY;
+   }
+
+   resolutionset->lhs = newlhs;
 
    /* compute the fractionality of the lhs */
    fraclhs = resolutionset->lhs - SCIPsetFloor(set, resolutionset->lhs);
 
    /* the new lhs cannot be zero (if it were zero the constraint is redundant and wouldn't have propagated) */
-   assert(!SCIPsetIsZero(set, fraclhs));
+   assert(!SCIPsetIsZero(set, resolutionset->lhs));
 
    /*get the ceiling similar to the CG procedure */
    resolutionset->lhs = SCIPsetCeil(set, resolutionset->lhs);
