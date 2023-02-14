@@ -52,6 +52,7 @@
 #include "scip/scip_general.h"
 #include "scip/scip_mem.h"
 #include "scip/set.h"
+#include "scip/stat.h"
 #include "scip/struct_cons.h"
 #include "scip/struct_mem.h"
 #include "scip/struct_scip.h"
@@ -1761,6 +1762,13 @@ SCIP_RETCODE SCIPresetConsAge(
    )
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPresetConsAge", FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   /* increase the number of useful conflict constraint */
+   if( SCIPconsIsConflict(cons) && !SCIPconsIsUseful(cons) )
+   {
+      scip->stat->nusefulpropconflicts++;
+      cons->useful = TRUE;
+   }
 
    SCIP_CALL( SCIPconsResetAge(cons, scip->set) );
 

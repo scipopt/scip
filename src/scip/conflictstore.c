@@ -421,9 +421,6 @@ SCIP_RETCODE delPosConflict(
       SCIP_CALL( SCIPconsDelete(conflictstore->conflicts[pos], blkmem, set, stat, transprob, reopt) );
    }
 
-   if( SCIPconsIsUseful(conflict) )
-      stat->nusefulpropconflicts++;
-
    SCIP_CALL( SCIPconsRelease(&conflictstore->conflicts[pos], blkmem, set) );
 
    /* replace with conflict at the last position */

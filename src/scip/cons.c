@@ -7168,7 +7168,6 @@ SCIP_RETCODE SCIPconsResetAge(
 
    conshdlrUpdateAgeresetavg(cons->conshdlr, cons->age);
    cons->age = 0.0;
-   cons->useful = TRUE;
 
    if( cons->obsolete )
    {

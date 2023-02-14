@@ -2981,7 +2981,7 @@ void SCIPprintConflictStatistics(
       SCIPconflictGetNResCalls(scip->conflict),
       SCIPconflictGetNResSuccess(scip->conflict),
       SCIPconflictGetNResConflictConss(scip->conflict),
-      SCIPconflictGetNResConflictConss(scip->conflict) - scip->stat->nusefulresconflicts,
+      SCIPconflictGetNResConflictConss(scip->conflict) - scip->stat->nusefulpropconflicts,
       SCIPconflictGetNResUnkTerm(scip->conflict)
       );
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  graph prop       : %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
