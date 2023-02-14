@@ -837,7 +837,7 @@ SCIP_RETCODE orbitalFixingDynamicApplyOrbitalBranchingPropagations(
    if ( parentnode == NULL )
       return SCIP_OKAY;
 
-   shadowfocusnode = SCIPshadowtreeGetShadowNode(shadowtree, focusnode);
+   shadowfocusnode = SCIPshadowTreeGetShadowNode(shadowtree, focusnode);
    assert( shadowfocusnode != NULL );
 
    /* get the rooted path */
@@ -1297,7 +1297,7 @@ SCIP_RETCODE orbitalFixingDynamicApplyOrbitalFixingPropagations(
    assert( focusnode == SCIPgetCurrentNode(scip) );
    assert( focusnode != NULL );
 
-   shadowfocusnode = SCIPshadowtreeGetShadowNode(shadowtree, focusnode);
+   shadowfocusnode = SCIPshadowTreeGetShadowNode(shadowtree, focusnode);
    assert( shadowfocusnode != NULL );
 
    /* get the branching variables */

@@ -72,8 +72,8 @@
 
 struct SCIP_EventhdlrData
 {
-   SCIP* scip;
-   SCIP_SHADOWTREE* shadowtree;
+   SCIP*                 scip;               /**< SCIP data structure */
+   SCIP_SHADOWTREE*      shadowtree;         /**< Shadow tree structure*/
 };
 
 
@@ -104,31 +104,32 @@ SCIP_DECL_HASHKEYVAL(hashKeyValShadowNode)
 
 
 /** given a node number, return the node in the shadow tree, or NULL if it doesn't exist */
-SCIP_EXPORT
-SCIP_SHADOWNODE* SCIPshadowtreeGetShadowNodeFromNodeNumber(
+SCIP_SHADOWNODE* SCIPshadowTreeGetShadowNodeFromNodeNumber(
    SCIP_SHADOWTREE*      shadowtree,         /**< pointer to the shadow tree */
-   SCIP_Longint          nodeno              /**< index of the node, equivalent to the standard branch and bound tree */
+   SCIP_Longint          nodeid              /**< index of the node, equivalent to the standard branch and bound tree */
 )
 {
    SCIP_SHADOWNODE tmpnode;
 
    assert( shadowtree != NULL );
-   assert( nodeno >= 0 );
+   assert( nodeid >= 0 );
 
-   tmpnode.nodeid = nodeno;
+   tmpnode.nodeid = nodeid;
+
    /* the following line of code returns NULL if it cannot find the entry in the hashtable */
    return (SCIP_SHADOWNODE*) SCIPhashtableRetrieve(shadowtree->nodemap, (void*) &tmpnode);
 }
 
 /** Given a node, return the node in the shadowtree. NULL if it doesn't exist. */
-SCIP_SHADOWNODE* SCIPshadowtreeGetShadowNode(
+SCIP_SHADOWNODE* SCIPshadowTreeGetShadowNode(
    SCIP_SHADOWTREE*      shadowtree,         /**< pointer to the shadow tree */
    SCIP_NODE*            node                /**< node from the actual branch-and-bound tree */
 )
 {
    assert( shadowtree != NULL );
    assert( node != NULL );
-   return SCIPshadowtreeGetShadowNodeFromNodeNumber(shadowtree, SCIPnodeGetNumber(node));
+
+   return SCIPshadowTreeGetShadowNodeFromNodeNumber(shadowtree, SCIPnodeGetNumber(node));
 }
 
 /*
@@ -174,7 +175,7 @@ SCIP_DECL_EVENTEXEC(eventExecNodeBranched)
    shadowtree = eventhdlrdata->shadowtree;
    assert( shadowtree != NULL );
 
-   eventshadownode = SCIPshadowtreeGetShadowNode(shadowtree, eventnode);
+   eventshadownode = SCIPshadowTreeGetShadowNode(shadowtree, eventnode);
    assert( eventshadownode->nchildren == 0 );
    assert( eventshadownode->children == NULL );
 
@@ -228,6 +229,7 @@ SCIP_DECL_EVENTEXEC(eventExecNodeBranched)
 
       childshadownode->nodeid = SCIPnodeGetNumber(childnode);
       childshadownode->parent = eventshadownode;
+
       /* children are only set after this node is focused and branched on */
       childshadownode->children = NULL;
       childshadownode->nchildren = 0;
@@ -249,8 +251,10 @@ SCIP_DECL_EVENTEXEC(eventExecNodeBranched)
       childshadownode->propagations = NULL;
       childshadownode->npropagations = 0;
 
-      /* add childshadownode to the nodemap as well */
-      /* the hashtable only checks by the 'nodeid' field, so we just check if there's none with this nodeid. */
+      /* add childshadownode to the nodemap as well 
+       * 
+       * The hashtable only checks by the 'nodeid' field, so we just check if there's none with this nodeid. 
+       */
       assert( !SCIPhashtableExists(shadowtree->nodemap, (void*) childshadownode));
       SCIPhashtableInsert(shadowtree->nodemap, childshadownode);
    }
@@ -264,6 +268,7 @@ SCIP_DECL_EVENTEXEC(eventExecNodeBranched)
    if ( nboundchgs <= 0 )
    {
       assert( nboundchgs == 0 );
+
       /* this is set to NULL at initialization of this shadownode, already */
       assert( eventshadownode->npropagations == 0 );
       assert( eventshadownode->branchingdecisions == NULL );
@@ -320,7 +325,7 @@ SCIP_DECL_EVENTEXEC(eventExecNodeDeleted)
    shadowtree = eventhdlrdata->shadowtree;
    assert( shadowtree != NULL );
 
-   deletedshadownode = SCIPshadowtreeGetShadowNode(shadowtree, deletednode);
+   deletedshadownode = SCIPshadowTreeGetShadowNode(shadowtree, deletednode);
 
    /* no need to delete if not included in the shadowtree */
    if ( deletedshadownode == NULL )
@@ -330,7 +335,7 @@ SCIP_DECL_EVENTEXEC(eventExecNodeDeleted)
    /* It is possible that deletedshadownode has a non-deleted sibling.
     * If the branching variable of this sibling differs from deletedshadownode's,
     * then in the variable branching order also the branching variables of deletedshadownode must be included,
-    * e.g. see `shadowtreeFillNodeDepthBranchIndices` in symmetry_lexred.c.
+    * e.g., see `shadowtreeFillNodeDepthBranchIndices` in symmetry_lexred.c.
     * As such, we may not delete deletedshadownode just yet. However, we can delete its children.
     * So, mark deletedshadownode as 'ready to delete' by freeing its children, and setting nchildren to -1.
     * SCIP always deletes leaf nodes only, so if `deletedshadownode` is removed,
@@ -396,7 +401,7 @@ SCIP_DECL_EVENTEXEC(eventExec)
       SCIP_CALL( eventExecNodeDeleted(scip, eventhdlr, event, eventdata) );
       return SCIP_OKAY;
    default:
-      /* unspecified eventtype */
+      SCIPerrorMessage("unrecognized eventtype in shadowtree event handler\n");
       return SCIP_ERROR;
    }
 }
@@ -418,6 +423,7 @@ SCIP_RETCODE freeShadowTree(
    assert( shadowtree->nodemap != NULL );
 
    nentries = SCIPhashtableGetNEntries(shadowtree->nodemap);
+
    /* free all shadow tree nodes */
    for (i = 0; i < nentries; ++i)
    {
@@ -429,24 +435,15 @@ SCIP_RETCODE freeShadowTree(
 
       assert( shadownode->npropagations >= 0 );
       assert( (shadownode->npropagations > 0) != (shadownode->propagations == NULL) );
-      if ( shadownode->npropagations > 0 )
-      {
-         SCIPfreeBlockMemoryArray(scip, &shadownode->propagations, shadownode->npropagations);
-      }
+      SCIPfreeBlockMemoryArrayNull(scip, &shadownode->propagations, shadownode->npropagations);
 
       assert( shadownode->nbranchingdecisions >= 0 );
       assert( (shadownode->nbranchingdecisions > 0) != (shadownode->branchingdecisions == NULL) );
-      if ( shadownode->nbranchingdecisions > 0 )
-      {
-         SCIPfreeBlockMemoryArray(scip, &shadownode->branchingdecisions, shadownode->nbranchingdecisions);
-      }
+      SCIPfreeBlockMemoryArrayNull(scip, &shadownode->branchingdecisions, shadownode->nbranchingdecisions);
 
       assert( shadownode->nchildren >= -1 );
       assert( (shadownode->nchildren > 0) != (shadownode->children == NULL) );
-      if ( shadownode->nchildren > 0 )
-      {
-         SCIPfreeBlockMemoryArray(scip, &shadownode->children, shadownode->nchildren);
-      }
+      SCIPfreeBlockMemoryArrayNull(scip, &shadownode->children, shadownode->nchildren);
 
       SCIPfreeBlockMemory(scip, &shadownode);
    }
@@ -516,6 +513,7 @@ SCIP_DECL_EVENTINITSOL(eventInitsolShadowTree)
    rootnode->nbranchingdecisions = 0;
    rootnode->propagations = NULL;
    rootnode->npropagations = 0;
+
    /* add to the nodemap structure */
    SCIPhashtableInsert(shadowtree->nodemap, rootnode);
 
@@ -563,6 +561,7 @@ SCIP_SHADOWTREE* SCIPgetShadowTree(
    assert( strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0 );
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert( eventhdlrdata != NULL );
+
    return eventhdlrdata->shadowtree;
 }
 
@@ -579,17 +578,15 @@ SCIP_RETCODE SCIPincludeEventHdlrShadowTree(
    /* create event handler data */
    eventhdlrdata = NULL;
    SCIP_CALL( SCIPallocBlockMemory(scip, &eventhdlrdata) );
+
    /* only needed for assertions, to check whether we're working with the correct SCIP. */
    eventhdlrdata->scip = scip;
+
    /* do not start with a shadow tree by default. Initialize at initsol, remove at exitsol. */
    eventhdlrdata->shadowtree = NULL;
    eventhdlr = NULL;
 
    /* include event handler into SCIP */
-
-   /* use SCIPincludeEventhdlrBasic() plus setter functions if you want to set callbacks one-by-one and your code should
-    * compile independent of new callbacks being added in future SCIP versions
-    */
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExec, eventhdlrdata) );
    assert(eventhdlr != NULL);
    *eventhdlrptr = eventhdlr;
@@ -598,8 +595,10 @@ SCIP_RETCODE SCIPincludeEventHdlrShadowTree(
 
    /* frees the event handler */
    SCIP_CALL( SCIPsetEventhdlrFree(scip, eventhdlr, eventFreeShadowTree) );
+
    /* initialize the shadowtree data structure, initialize by setting the root node */
    SCIP_CALL( SCIPsetEventhdlrInitsol(scip, eventhdlr, eventInitsolShadowTree) );
+
    /* free the shadowtree data structure */
    SCIP_CALL( SCIPsetEventhdlrExitsol(scip, eventhdlr, eventExitsolShadowTree) );
 

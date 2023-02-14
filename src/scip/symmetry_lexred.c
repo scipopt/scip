@@ -1081,7 +1081,7 @@ SCIP_RETCODE shadowtreeFillNodeDepthBranchIndices(
    assert( shadowtree != NULL );
    assert( focusnode != NULL );
 
-   shadownode = SCIPshadowtreeGetShadowNode(shadowtree, focusnode);
+   shadownode = SCIPshadowTreeGetShadowNode(shadowtree, focusnode);
    assert( shadownode != NULL );
    shadowdepth = SCIPnodeGetDepth(focusnode);
 
@@ -1164,7 +1164,7 @@ SCIP_RETCODE shadowtreeUndoNodeDepthBranchIndices(
    assert( shadowtree != NULL );
    assert( focusnode != NULL );
 
-   shadownode = SCIPshadowtreeGetShadowNode(shadowtree, focusnode);
+   shadownode = SCIPshadowTreeGetShadowNode(shadowtree, focusnode);
    shadowdepth = SCIPnodeGetDepth(focusnode);
 
    /* we start looking one level lower, because we consider the branching decisions each time. */
