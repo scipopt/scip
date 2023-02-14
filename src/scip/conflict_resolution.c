@@ -580,7 +580,9 @@ SCIP_RETCODE MirLhs(
    SCIP_Real             divisor             /**< the divisor of the row */
    )
 {
+   SCIP_Real negcoefsum;
    SCIP_Real fraclhs;
+   SCIP_Real normalizationtermlhs;
 
    assert(set != NULL);
    assert(prob != NULL);
@@ -591,16 +593,34 @@ SCIP_RETCODE MirLhs(
 
    assert(SCIPsetIsGT(set, divisor, 0.0));
 
-   SCIPsetDebugMsg(set, "MIR on constraint with LHS %f and divisor %f\n" , resolutionset->lhs, divisor);
-
-   /* divide the lhs by the divisor and subtract the sum of fractionalities */
-   resolutionset->lhs = resolutionset->lhs / divisor;
-   fraclhs = resolutionset->lhs - SCIPsetFloor(set, resolutionset->lhs);
-   resolutionset->lhs = SCIPsetCeil(set, resolutionset->lhs);
-   SCIPsetDebugMsg(set, "New lhs %f with fractionality %f\n" , resolutionset->lhs, fraclhs);
-
    /* todo extend MIR for continuous and general integer variables */
    assert(isBinaryResolutionSet(set, prob, resolutionset));
+
+   SCIPsetDebugMsg(set, "MIR on constraint with LHS %f and divisor %f\n" , resolutionset->lhs, divisor);
+
+   /* compute the sum of negative coefficients */
+   negcoefsum = 0.0;
+   for( int i = 0; i < resolutionset->nnz; ++i )
+   {
+      if( SCIPsetIsLT(set, resolutionset->vals[i], 0.0) )
+         negcoefsum += resolutionset->vals[i];
+   }
+   /* the lhs becomes lhs - negcoefsum divided by the divisor */
+   resolutionset->lhs -= negcoefsum;
+   resolutionset->lhs /= divisor;
+
+   /* compute the fractionality of the lhs */
+   fraclhs = resolutionset->lhs - SCIPsetFloor(set, resolutionset->lhs);
+
+   /* the new lhs cannot be zero (if it were zero the constraint is redundant and wouldn't have propagated) */
+   assert(!SCIPsetIsZero(set, fraclhs));
+
+   /*get the ceiling similar to the CG procedure */
+   resolutionset->lhs = SCIPsetCeil(set, resolutionset->lhs);
+
+   SCIPsetDebugMsg(set, "New lhs %f with fractionality %f\n" , resolutionset->lhs, fraclhs);
+
+   normalizationtermlhs = 0.0;
 
    /* loop over all non zeros and divide each row element by the divisor */
    for( int i = 0; i < resolutionset->nnz; ++i )
@@ -611,17 +631,41 @@ SCIP_RETCODE MirLhs(
 
       newcoef = resolutionset->vals[i] / divisor;
       frac = newcoef - SCIPsetFloor(set, newcoef);
-      /* ceil the coefficient if it is positive and floor plus quotient of
-      fractionalities  if it is negative */
       if ( SCIPsetIsGE(set, frac, fraclhs) )
       {
-         resolutionset->vals[i] = SCIPsetCeil(set, newcoef);
+         /* ceil the coefficient if it is positive and floor if it is negative */
+         if ( SCIPsetIsGE(set, newcoef, 0.0) )
+         {
+            resolutionset->vals[i] = SCIPsetCeil(set, newcoef);
+         }
+         else
+         {
+            resolutionset->vals[i] = SCIPsetFloor(set, newcoef);
+            /* update the normalization term */
+            normalizationtermlhs += resolutionset->vals[i];
+
+         }
       }
       else
       {
-         resolutionset->vals[i] = SCIPsetFloor(set, newcoef) + frac / fraclhs;
+         /* floor the coefficient plus the quotient of fractionalities if it is positive */
+         if ( SCIPsetIsGE(set, newcoef, 0.0) )
+         {
+            resolutionset->vals[i] = SCIPsetFloor(set, newcoef) + frac / fraclhs;
+         }
+         /* ceil the coefficient minus the (negative) quotient of fractionalities if it is negative */
+         else
+         {
+            SCIP_Real negcoeffrac;
+            negcoeffrac = -newcoef - SCIPsetFloor(set, -newcoef);
+            resolutionset->vals[i] = SCIPsetCeil(set, newcoef) - negcoeffrac / fraclhs;
+            /* update the normalization term */
+            normalizationtermlhs += resolutionset->vals[i];
+         }
       }
    }
+   /* add the normalization term to the lhs */
+   resolutionset->lhs += normalizationtermlhs;
 
    /* remove variables with zero coefficient. Loop backwards */
    for( int i = resolutionset->nnz - 1; i >= 0; --i )
@@ -2707,6 +2751,7 @@ SCIP_RETCODE DivisionBasedReduction(
    {
       SCIP_RESOLUTIONSET *reducedreason;
       SCIP_CALL( resolutionsetCopy(&reducedreason, blkmem, reasonset) );
+   //   SCIPdebug(resolutionsetPrintRow(reasonset, set, prob, 2));
 
       /* apply the chosen reduction technique */
       if (set->conf_reductiontechnique == 'd')
@@ -2715,6 +2760,7 @@ SCIP_RETCODE DivisionBasedReduction(
          SCIP_CALL( MirLhs(set, prob, reducedreason, coefinreason) );
 
       SCIPsortIntReal(reducedreason->inds, reducedreason->vals, resolutionsetGetNNzs(reducedreason));
+      // SCIPdebug(resolutionsetPrintRow(reducedreason, set, prob, 2));
 
       /* todo the update of the slack should be included in the division algorithms */
       reducedreason->slack = getSlack(set, prob, reducedreason, currbdchgidx, fixbounds, fixinds);
