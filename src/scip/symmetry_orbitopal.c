@@ -1560,7 +1560,7 @@ void assertIsOrbitopeMatrix(
          }
          else
          {
-            /* check for infinitisimal values
+            /* check for infinitesimal values
              * If infinitesimals are added (lexminface case), then if the left column has a +epsilon, 
              * it does not matter whether the right column has +epsilon or not, then the left column is >, 
              * due to the axioms x + epsilon > x + epsilon and x + epsilon > x.
@@ -1793,7 +1793,7 @@ SCIP_RETCODE propagateStaticOrbitope(
                      assert( LE(scip, lexminface[lastunfixed * ncols + colid], SCIPvarGetUbLocal(othervar)) );
                      break;
                   case SCIP_VARTYPE_CONTINUOUS:
-                     /* continuous type, so add an infinitisimal value to the bound */
+                     /* continuous type, so add an infinitesimal value to the bound */
                      assert( LE(scip, lexminface[lastunfixed * ncols + colid], SCIPvarGetUbLocal(othervar)) );
                      assert( lexminepsrow[colid] == -1 );
                      lexminepsrow[colid] = lastunfixed;
@@ -1961,7 +1961,7 @@ SCIP_RETCODE propagateStaticOrbitope(
                      assert( LE(scip, lexmaxface[lastunfixed * ncols + colid], SCIPvarGetUbLocal(othervar)) );
                      break;
                   case SCIP_VARTYPE_CONTINUOUS:
-                     /* continuous type, so subtract an infinitisimal value to the bound */
+                     /* continuous type, so subtract an infinitesimal value to the bound */
                      assert( GE(scip, lexmaxface[lastunfixed * ncols + colid], SCIPvarGetLbLocal(othervar)) );
                      assert( LE(scip, lexmaxface[lastunfixed * ncols + colid], SCIPvarGetUbLocal(othervar)) );
                      assert( lexmaxepsrow[colid] == -1 );
