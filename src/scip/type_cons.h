@@ -922,13 +922,13 @@ typedef enum SCIP_LinConstype SCIP_LINCONSTYPE;
 /** constraint handler method which returns the permutation symmetry detection graph of a constraint (if possible)
  *
  *  The constraint handler can (this callback is optional) provide this callback to return a graph that encodes the
- *  permutation symmetries of a constraint. If this is not possible, the success pointers has to be set to FALSE or the
+ *  permutation symmetries of a constraint. If this is not possible, the success pointer has to be set to FALSE or the
  *  callback should not be implemented.
  *
  *  input:
  *  - scip            : SCIP main data structure
  *  - conshdlr        : the constraint handler itself
- *  - cons            : constraint for which the number of variables is wanted
+ *  - cons            : constraint for which the symmetry detection graph is requested
  *
  *  output:
  *  - graph           : symmetry detection graph
