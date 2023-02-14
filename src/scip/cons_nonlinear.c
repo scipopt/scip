@@ -10753,6 +10753,8 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphNonlinear)
       {
          SCIP_CALL( SCIPgetCoefSymData(scip, expr, SCIPexpriterGetParentDFS(it), &parentcoef, &hasparentcoef) );
       }
+      else
+         hasparentcoef = FALSE;
 
       /* deal with different kinds of expressions and store them in the symmetry data structure */
       if( SCIPisExprVar(scip, expr) )

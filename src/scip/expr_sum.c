@@ -546,7 +546,6 @@ SCIP_DECL_EXPRGETSYMDATA(getSymDataSum)
 
    assert(scip != NULL);
    assert(expr != NULL);
-   assert(exprdata != NULL);
 
    exprdata = SCIPexprGetData(expr);
    assert(exprdata != NULL);

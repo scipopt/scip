@@ -1255,14 +1255,18 @@ SCIP_RETCODE SCIPgetCoefSymData(
    *success = FALSE;
 
    /* parent does not assign coefficients to its children */
-   if( SCIPexprhdlrHasGetSymData(SCIPexprGetHdlr(parentexpr)) )
+   if( ! SCIPexprhdlrHasGetSymData(SCIPexprGetHdlr(parentexpr)) )
       return SCIP_OKAY;
 
    SCIP_CALL( SCIPgetSymDataExpr(scip, parentexpr, &symdata) );
 
    /* parent does not assign coefficients to its children */
    if( symdata->ncoefficients < 1 )
+   {
+      SCIP_CALL( SCIPfreeSymDataExpr(scip, &symdata) );
+
       return SCIP_OKAY;
+   }
 
    /* search for expr in the children of parentexpr */
    for( i = 0; i < symdata->ncoefficients; ++i )
