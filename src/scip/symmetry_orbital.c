@@ -891,6 +891,7 @@ SCIP_RETCODE orbitalFixingDynamicApplyOrbitalBranchingPropagations(
          assert( varid >= 0 );
          if ( varid < ofdata->npermvars )
          {
+            assert( LE(scip, varlbs[varid], varubs[varid]) );
             switch (update->boundchgtype)
             {
                case SCIP_BOUNDTYPE_LOWER:
@@ -904,6 +905,7 @@ SCIP_RETCODE orbitalFixingDynamicApplyOrbitalBranchingPropagations(
                default:
                   assert( FALSE );
             }
+            assert( LE(scip, varlbs[varid], varubs[varid]) );
          }
       }
 
@@ -931,6 +933,10 @@ SCIP_RETCODE orbitalFixingDynamicApplyOrbitalBranchingPropagations(
       branchingdecisionvarid = SCIPhashmapGetImageInt(ofdata->permvarmap, (void*) branchingdecision->var);
       assert( branchingdecisionvarid < ofdata->npermvars || branchingdecisionvarid == INT_MAX );
       assert( branchingdecisionvarid >= 0 );
+      assert( branchingdecision->boundchgtype == SCIP_BOUNDTYPE_LOWER ? 
+         LE(scip, varlbs[branchingdecisionvarid], branchingdecision->newbound) :
+         GE(scip, varubs[branchingdecisionvarid], branchingdecision->newbound) );
+      assert( LE(scip, varlbs[branchingdecisionvarid], varubs[branchingdecisionvarid]) );
 
       /* branching decision will not have an effect on this */
       if ( branchingdecisionvarid >= ofdata->npermvars )
@@ -1050,6 +1056,7 @@ SCIP_RETCODE orbitalFixingDynamicApplyOrbitalBranchingPropagations(
 
       /* 2. apply branching step to varlbs or varubs array.
        * Due to the steps above, it is possible that the branching step is redundant or infeasible. */
+      assert( LE(scip, varlbs[branchingdecisionvarid], varubs[branchingdecisionvarid]) );
       switch (branchingdecision->boundchgtype)
       {
          case SCIP_BOUNDTYPE_LOWER:
@@ -1743,11 +1750,11 @@ SCIP_DECL_EVENTEXEC(eventExecGlobalBoundChange)
    switch ( SCIPeventGetType(event) )
    {
    case SCIP_EVENTTYPE_GUBCHANGED:
-      assert( ofdata->globalvarubs[varidx] == ofdata->globalvarubs[varidx] );
+      assert( ofdata->globalvarubs[varidx] == SCIPeventGetOldbound(event) );
       ofdata->globalvarubs[varidx] = SCIPeventGetNewbound(event);
       break;
    case SCIP_EVENTTYPE_GLBCHANGED:
-      assert( ofdata->globalvarlbs[varidx] == ofdata->globalvarlbs[varidx] );
+      assert( ofdata->globalvarlbs[varidx] == SCIPeventGetOldbound(event) );
       ofdata->globalvarlbs[varidx] = SCIPeventGetNewbound(event);
       break;
    default:
