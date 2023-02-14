@@ -633,8 +633,8 @@ SCIP_RETCODE addGroupedEdges(
    int*                  neighbors,          /**< neighbors of common node */
    int*                  colors,             /**< colors of edges to neighbors */
    int                   nneighbors,         /**< number of neighbors */
-   int*                  naddednodes,        /**< buffer to hold number of nodes added to G */
-   int*                  naddededges         /**< buffer to hold number of edges added to G */
+   int*                  naddednodes,        /**< pointer to store number of nodes added to G */
+   int*                  naddededges         /**< pointer to store number of edges added to G */
    )
 {
    assert( G != NULL );
