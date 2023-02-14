@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -1170,6 +1170,9 @@ SCIP_RETCODE SCIPflushRowExtensions(
  *        creating the column, changes the solution value (variable than has status SCIP_VARSTATUS_COLUMN, and the
  *        initialization sets the lp solution value) to 0.0. (This leads to the conclusion that, if a constraint was
  *        violated, the linear relaxation might not be violated anymore.)
+ *
+ *  @note When several variables are added to a row with the use of this function, performance can be improved by
+ *        calling SCIPcacheRowExtensions() before these additions and SCIPflushRowExtensions() after.
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPaddVarToRow(
