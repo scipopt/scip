@@ -1828,7 +1828,7 @@ SCIP_RETCODE propagateStaticOrbitope(
                else if ( lexminepsrow[colid + 1] == rowid )
                {
                   assert( EQ(scip, lexminface[i], lexminface[i + 1]) );
-                  assert( SCIPvarGetType(sodata->sovars[roworder[lastunfixed] * ncols + origcolid]) 
+                  assert( SCIPvarGetType(sodata->sovars[roworder[rowid] * ncols + origcolid]) 
                      == SCIP_VARTYPE_CONTINUOUS );
                   assert( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS );
                   /* right column (colid+1) has value x + epsilon, left column (colid) has value x, now
@@ -1997,7 +1997,7 @@ SCIP_RETCODE propagateStaticOrbitope(
                else if ( lexmaxepsrow[colid - 1] == rowid )
                {
                   assert( EQ(scip, lexmaxface[i - 1], lexmaxface[i]) );
-                  assert( SCIPvarGetType(sodata->sovars[roworder[lastunfixed] * ncols + origcolid]) 
+                  assert( SCIPvarGetType(sodata->sovars[roworder[rowid] * ncols + origcolid]) 
                      == SCIP_VARTYPE_CONTINUOUS );
                   assert( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS );
                   /* left column (colid-1) has value x - epsilon, right column (colid) has value x, now
