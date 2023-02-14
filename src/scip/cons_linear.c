@@ -9432,8 +9432,8 @@ SCIP_RETCODE consdataTightenCoefs(
     * they can be removed from the constraint.
     * aggrrhs may contain some near-infinity value, but only if rhs is infinity.
     */
-   if( (SCIPisInfinity(scip, -consdata->lhs) || SCIPisLT(scip, maxleftactivity, aggrlhs))
-      && (SCIPisInfinity(scip, consdata->rhs) || SCIPisGT(scip, minleftactivity, aggrrhs)) )
+   if( (SCIPisInfinity(scip, -consdata->lhs) || SCIPisFeasLT(scip, maxleftactivity, aggrlhs))
+      && (SCIPisInfinity(scip, consdata->rhs) || SCIPisFeasGT(scip, minleftactivity, aggrrhs)) )
    {
       SCIP_Real minleftactivitypart;
       SCIP_Real maxleftactivitypart;
@@ -11893,8 +11893,8 @@ SCIP_RETCODE simplifyInequalities(
                siderest = gcd;
          }
 
-         rredundant = hasrhs && maxactsub <= siderest && SCIPisGT(scip, minactsub, siderest - gcd);
-         lredundant = haslhs && SCIPisLT(scip, maxactsub, siderest) && minactsub >= siderest - gcd;
+         rredundant = hasrhs && maxactsub <= siderest && SCIPisFeasGT(scip, minactsub, siderest - gcd);
+         lredundant = haslhs && SCIPisFeasLT(scip, maxactsub, siderest) && minactsub >= siderest - gcd;
 
          /* early termination if the activities deceed the gcd */
          if( offsetv == -1 && (rredundant || lredundant) )
@@ -11931,8 +11931,8 @@ SCIP_RETCODE simplifyInequalities(
       numericsok = REALABS(maxact) < MAXACTVAL && REALABS(maxactsub) < MAXACTVAL && REALABS(minact) < MAXACTVAL &&
             REALABS(minactsub) < MAXACTVAL;
 
-      rredundant = hasrhs && maxactsub <= siderest && SCIPisGT(scip, minactsub, siderest - gcd);
-      lredundant = haslhs && SCIPisLT(scip, maxactsub, siderest) && minactsub >= siderest - gcd;
+      rredundant = hasrhs && maxactsub <= siderest && SCIPisFeasGT(scip, minactsub, siderest - gcd);
+      lredundant = haslhs && SCIPisFeasLT(scip, maxactsub, siderest) && minactsub >= siderest - gcd;
 
       /* check if we can remove redundant variables */
       if( v < nvars && numericsok && (redundant || (offsetv == -1 && (rredundant || lredundant))) )
@@ -11983,8 +11983,8 @@ SCIP_RETCODE simplifyInequalities(
          }
 
          /* is the redundancy really fulfilled */
-         assert((hasrhs && SCIPisLE(scip, tmpmaxactsub, siderest) && tmpminactsub > siderest - gcd) ||
-               (haslhs && tmpmaxactsub < siderest && SCIPisGE(scip, tmpminactsub, siderest - gcd)));
+         assert((hasrhs && SCIPisFeasLE(scip, tmpmaxactsub, siderest) && tmpminactsub > siderest - gcd) ||
+               (haslhs && tmpmaxactsub < siderest && SCIPisFeasGE(scip, tmpminactsub, siderest - gcd)));
 #endif
 
          SCIPdebugMsg(scip, "removing %d last variables from constraint <%s>, because they never change anything on the feasibility of this constraint\n",
