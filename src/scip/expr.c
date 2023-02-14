@@ -3306,7 +3306,7 @@ SCIP_RETCODE SCIPexprGetSymData(
       SCIP_CALL( exprhdlr->getsymdata(set->scip, expr, symdata) );
    }
    else
-      symdata = NULL;
+      *symdata = NULL;
 
    return SCIP_OKAY;
 }

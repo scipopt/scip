@@ -3101,7 +3101,7 @@ SCIP_RETCODE checkReflectionSymmetriesAreSymmetries(
                /* simplify permuted expr in order to guarantee sorted variables */
                permutedexpr = SCIPgetExprNonlinear(permutedcons);
                SCIP_CALL( SCIPsimplifyExpr(scip, permutedexpr, &permutedexpr, &success, &infeasible, NULL, NULL) );
-               assert( !infeasible );
+               assert( ! infeasible );
 
                /* look for a constraint with same lhs, rhs and expression */
                for (j = 0; j < nnonlinconss; ++j)
@@ -3140,7 +3140,7 @@ SCIP_RETCODE checkReflectionSymmetriesAreSymmetries(
                SCIP_CALL( SCIPreleaseCons(scip, &permutedcons) );
 
                assert( found );
-               if( !found ) /*lint !e774*/
+               if( ! found ) /*lint !e774*/
                {
                   SCIPerrorMessage("Found permutation that is not a symmetry.\n");
                   return SCIP_ERROR;
@@ -4446,7 +4446,7 @@ SCIP_RETCODE storeExpressionTree(
    SCIPexpriterSetStagesDFS(it, SCIP_EXPRITER_ENTEREXPR | SCIP_EXPRITER_LEAVEEXPR);
 
    /* @todo find an estimate for the memory that needs to be allocated */
-   for (expr = SCIPexpriterGetCurrent(it); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it))
+   for (expr = SCIPexpriterGetCurrent(it); ! SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it))
    {
       if ( SCIPexpriterGetStageDFS(it) == SCIP_EXPRITER_LEAVEEXPR )
       {
@@ -4456,11 +4456,11 @@ SCIP_RETCODE storeExpressionTree(
       assert( SCIPexpriterGetStageDFS(it) == SCIP_EXPRITER_ENTEREXPR );
 
       /* find parentidx (in negated case and root expression, this has been done before already) */
-      if ( (!negated || negatedrootsum) && expr == rootexpr )
+      if ( (! negated || negatedrootsum) && expr == rootexpr )
          parentidx = -1;
       else if ( nopenidx >= 1 )
          parentidx = openidx[nopenidx - 1];
-      assert( ((!negated || negatedrootsum) && expr == rootexpr) || parentidx != -1 );
+      assert( ((! negated || negatedrootsum) && expr == rootexpr) || parentidx != -1 );
 
       /* deal with different kind of expressions and store them in the symmetry data structure */
       if ( SCIPisExprVar(scip, expr) )
@@ -4851,7 +4851,7 @@ SCIP_RETCODE findColorsReflSym(
          lb = SCIPvarGetLbGlobal(var);
          ub = SCIPvarGetUbGlobal(var);
 
-         if ( !SCIPisInfinity(scip, ub) && !SCIPisInfinity(scip, -lb) )
+         if ( ! SCIPisInfinity(scip, ub) && ! SCIPisInfinity(scip, -lb) )
          {
             SCIP_Real center;
 
@@ -5561,7 +5561,7 @@ SCIP_Bool conshdlrsCanProvidePermsymInformation(
       conshdlr = conshdlrs[c];
       assert( conshdlr != NULL );
 
-      if ( !SCIPconshdlrSupportsPermsymDetection(conshdlr) && SCIPconshdlrGetNConss(conshdlr) > 0 )
+      if ( ! SCIPconshdlrSupportsPermsymDetection(conshdlr) && SCIPconshdlrGetNConss(conshdlr) > 0 )
          return FALSE;
    }
 
@@ -6754,7 +6754,7 @@ SCIP_RETCODE buildSubgroupGraph(
    assert( propdata->ncomponents > 0 );
    assert( propdata->components != NULL );
    assert( propdata->componentbegins != NULL );
-   assert( !propdata->componentblocked[compidx] );
+   assert( ! propdata->componentblocked[compidx] );
 
    perms = propdata->perms;
    npermvars = propdata->npermvars;
@@ -10854,7 +10854,7 @@ SCIP_RETCODE SCIPincludePropSymmetry(
       SCIPerrorMessage("display sub menu not found\n");
       return SCIP_PLUGINNOTFOUND;
    }
-   assert( !SCIPdialogHasEntry(displaymenu, "symmetries") );
+   assert( ! SCIPdialogHasEntry(displaymenu, "symmetries") );
    SCIP_CALL( SCIPincludeDialog(scip, &dialog,
       NULL, dialogExecDisplaySymmetry, NULL, NULL,
       "symmetry", "display generators of symmetry group in cycle notation, if available",

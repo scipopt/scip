@@ -191,7 +191,7 @@ SCIP_RETCODE SCIPcopySymgraph(
          second = -perm[-second - 1] - 1;
 
       SCIP_CALL( SCIPaddSymgraphEdge(scip, *graph, first, second,
-            !SCIPisEQ(scip, SCIPinfinity(scip), origgraph->edgevals[i]), origgraph->edgevals[i]) );
+            ! SCIPisEQ(scip, SCIPinfinity(scip), origgraph->edgevals[i]), origgraph->edgevals[i]) );
    }
 
    SCIP_CALL( SCIPcomputeSymgraphColors(scip, *graph, fixedtype) );
@@ -223,7 +223,7 @@ SCIP_RETCODE SCIPextendPermsymDetectionGraphLinear(
    assert(nvars >= 0);
    assert(cons != NULL);
    assert(success != NULL);
-   assert(!graph->islocked);
+   assert(! graph->islocked);
 
    *success = TRUE;
 
@@ -285,7 +285,7 @@ SCIP_RETCODE SCIPaddSymgraphVarAggegration(
    }
 
    /* possibly add node for constant */
-   if( !SCIPisZero(scip, constant) )
+   if( ! SCIPisZero(scip, constant) )
    {
       nodeidx = SCIPaddSymgraphValnode(scip, graph, constant);
 
@@ -804,7 +804,7 @@ SCIP_Bool isFixedVar(
    SYM_SPEC              fixedtype           /**< variable types that must be fixed by symmetries */
    )
 {
-   assert( var != NULL );
+   assert(var != NULL);
 
    if ( (fixedtype & SYM_SPEC_INTEGER) && SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER )
       return TRUE;
@@ -911,7 +911,7 @@ SCIP_RETCODE SCIPcomputeSymgraphColors(
       {
          thisval = graph->vals[perm[i]];
 
-         if( !SCIPisEQ(scip, prevval, thisval) )
+         if( ! SCIPisEQ(scip, prevval, thisval) )
          {
             ++color;
             prevval = thisval;
@@ -953,7 +953,7 @@ SCIP_RETCODE SCIPcomputeSymgraphColors(
          if( SCIPisInfinity(scip, thisval) )
             break;
 
-         if( !SCIPisEQ(scip, prevval, thisval) )
+         if( ! SCIPisEQ(scip, prevval, thisval) )
          {
             ++color;
             prevval = thisval;
@@ -1100,7 +1100,7 @@ SCIP_Bool SCIPisSymgraphEdgeColored(
    assert(graph != NULL);
    assert(0 <= edgeidx && edgeidx < graph->nedges);
 
-   if( !graph->islocked || graph->edgecolors[edgeidx] == -1 )
+   if( ! graph->islocked || graph->edgecolors[edgeidx] == -1 )
       return FALSE;
 
    return TRUE;
@@ -1178,7 +1178,7 @@ SCIP_RETCODE SCIPgetActiveVariables(
          SCIP_CALL( SCIPreallocBufferArray(scip, scalars, requiredsize) );
 
          SCIP_CALL( SCIPgetProbvarLinearSum(scip, *vars, *scalars, nvars, requiredsize, constant, &requiredsize, TRUE) );
-         assert( requiredsize <= *nvars );
+         assert(requiredsize <= *nvars);
       }
    }
    else
@@ -1219,7 +1219,7 @@ int SCIPgetSymExprdataNConstants(
    SYM_EXPRDATA*         symdata             /**< symmetry information of an expression */
    )
 {
-   assert( symdata != NULL );
+   assert(symdata != NULL);
 
    return symdata->nconstants;
 }
@@ -1229,7 +1229,7 @@ SCIP_Real* SCIPgetSymExprdataConstants(
    SYM_EXPRDATA*         symdata             /**< symmetry information of an expression */
    )
 {
-   assert( symdata != NULL );
+   assert(symdata != NULL);
 
    return symdata->constants;
 }
