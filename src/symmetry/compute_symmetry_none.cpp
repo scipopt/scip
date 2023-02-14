@@ -49,6 +49,18 @@ const char* SYMsymmetryGetDesc(void)
    return "";
 }
 
+/** return name of additional external program used for computing symmetries */
+const char* SYMsymmetryGetAddName(void)
+{
+   return "";
+}
+
+/** return description of additional external program used to compute symmetries */
+const char* SYMsymmetryGetAddDesc(void)
+{
+   return "";
+}
+
 /** compute generators of symmetry group */ /*lint -e{715}*/
 SCIP_RETCODE SYMcomputeSymmetryGenerators(
    SCIP*                 scip,               /**< SCIP pointer */
@@ -58,7 +70,8 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    int*                  nperms,             /**< pointer to store number of permutations */
    int*                  nmaxperms,          /**< pointer to store maximal number of permutations (needed for freeing storage) */
    int***                perms,              /**< pointer to store permutation generators as (nperms x npermvars) matrix */
-   SCIP_Real*            log10groupsize      /**< pointer to store size of group */
+   SCIP_Real*            log10groupsize,     /**< pointer to store size of group */
+   SCIP_Real*            symcodetime         /**< pointer to store the time for symmetry code */
    )
 {  /*lint --e{715}*/
    assert( scip != NULL );
@@ -68,12 +81,14 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    assert( nmaxperms != NULL );
    assert( perms != NULL );
    assert( log10groupsize != NULL );
+   assert( symcodetime != NULL );
 
    /* init */
    *nperms = 0;
    *nmaxperms = 0;
    *perms = NULL;
    *log10groupsize = 0;
+   *symcodetime = 0.0;
 
    return SCIP_OKAY;
 }
