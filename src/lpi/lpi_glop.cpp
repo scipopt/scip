@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -1788,7 +1788,7 @@ SCIP_RETCODE SCIPlpiGetSolFeasibility(
    *primalfeasible = (status == ProblemStatus::OPTIMAL || status == ProblemStatus::PRIMAL_FEASIBLE);
    *dualfeasible = (status == ProblemStatus::OPTIMAL || status == ProblemStatus::DUAL_FEASIBLE);
 
-   SCIPdebugMessage("SCIPlpiGetSolFeasibility primal:%d dual:%d\n", *primalfeasible, *dualfeasible);
+   SCIPdebugMessage("SCIPlpiGetSolFeasibility primal:%u dual:%u\n", *primalfeasible, *dualfeasible);
 
    return SCIP_OKAY;
 }
