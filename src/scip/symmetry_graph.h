@@ -69,7 +69,7 @@ SCIP_RETCODE SCIPcreateSymgraph(
 SCIP_EXPORT
 SCIP_RETCODE SCIPfreeSymgraph(
    SCIP*                 scip,               /**< SCIP data structure */
-   SYM_GRAPH**           graph               /**< pointer to hold symmetry detection graph */
+   SYM_GRAPH**           graph               /**< pointer to symmetry detection graph */
    );
 
 /** copies an existing graph and changes variable nodes according to a permutation */
@@ -82,7 +82,7 @@ SCIP_RETCODE SCIPcopySymgraph(
    SYM_SPEC              fixedtype           /**< variable types that must be fixed by symmetries */
    );
 
-/** adds a symmetry detection graph for linear constraint to existing graph */
+/** adds a symmetry detection graph for a linear constraint to existing graph */
 SCIP_EXPORT
 SCIP_RETCODE SCIPextendPermsymDetectionGraphLinear(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -128,7 +128,7 @@ int SCIPaddSymgraphValnode(
    SCIP_Real             val                 /**< value of node */
    );
 
-/** adds a constraint node to a symmetry detection graph and returns its node indexd */
+/** adds a constraint node to a symmetry detection graph and returns its node index */
 SCIP_EXPORT
 int SCIPaddSymgraphConsnode(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -193,13 +193,13 @@ SCIP_RETCODE SCIPcomputeSymgraphColors(
  * general methods
  */
 
-/** returns the number of variables in a symemtry detection graph */
+/** returns the number of variables in a symmetry detection graph */
 SCIP_EXPORT
 int SCIPgetSymgraphNVars(
    SYM_GRAPH*            graph               /**< symmetry detection graph */
    );
 
-/** returns the number of constraint nodes in a symemtry detection graph */
+/** returns the number of constraint nodes in a symmetry detection graph */
 SCIP_EXPORT
 int SCIPgetSymgraphNConsnodes(
    SYM_GRAPH*            graph               /**< symmetry detection graph */
@@ -242,7 +242,7 @@ int SCIPgetSymgraphVarnodeColor(
 SCIP_EXPORT
 SYM_NODETYPE SCIPgetSymgraphNodeType(
    SYM_GRAPH*            graph,              /**< symmetry detection graph */
-   int                   nodeidx             /**< index of variable node */
+   int                   nodeidx             /**< index of node */
    );
 
 /** returns the color of a non-variable node */
@@ -299,7 +299,7 @@ SCIP_RETCODE SCIPfreeSymDataExpr(
    SYM_EXPRDATA**        symdata             /**< symmetry information of an expression */
    );
 
-/** returns number of coefficients form exprdata */
+/** returns number of coefficients from exprdata */
 SCIP_EXPORT
 int SCIPgetSymExprdataNConstants(
    SYM_EXPRDATA*         symdata             /**< symmetry information of an expression */

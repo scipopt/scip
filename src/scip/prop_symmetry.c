@@ -316,8 +316,7 @@ struct SCIP_PropData
    SCIP_Bool             addweaksbcs;        /**< Should we add weak SBCs for enclosing orbit of symmetric subgroups? */
    SCIP_Bool             addstrongsbcs;      /**< Should we add strong SBCs for enclosing orbit of symmetric subgroups if orbitopes are not used? */
    int                   norbitopes;         /**< number of orbitope constraints */
-   SCIP_Bool*            isnonlinvar
-   ;        /**< array indicating whether variables apper non-linearly */
+   SCIP_Bool*            isnonlinvar;        /**< array indicating whether variables appear non-linearly */
    SCIP_CONSHDLR*        conshdlr_nonlinear; /**< nonlinear constraint handler */
    int                   maxnconsssubgroup;  /**< maximum number of constraints up to which subgroup structures are detected */
    SCIP_Bool             usedynamicprop;     /**< whether dynamic propagation should be used for full orbitopes */
@@ -5620,10 +5619,10 @@ SCIP_Bool conshdlrsCanProvidePermsymInformation(
 static
 SCIP_RETCODE estimateSymgraphSize(
    SCIP*                 scip,               /**< SCIP pointer */
-   int*                  nopnodes,           /**< buffer to hold estimate for operator nodes */
-   int*                  nvalnodes,          /**< buffer to hold estimate for value nodes */
-   int*                  nconsnodes,         /**< buffer to hold estimate for constraint nodes */
-   int*                  nedges              /**< buffer to hold estimate for edges */
+   int*                  nopnodes,           /**< pointer to store estimate for number of operator nodes */
+   int*                  nvalnodes,          /**< pointer to store estimate for number of value nodes */
+   int*                  nconsnodes,         /**< pointer to store estimate for number of constraint nodes */
+   int*                  nedges              /**< pointer to store estimate for number of edges */
    )
 {
    SCIP_CONS** conss;
@@ -5833,8 +5832,7 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
 static
 SCIP_RETCODE computeSymmetryGroup(
    SCIP*                 scip,               /**< SCIP pointer */
-   SCIP_Bool             compresssymmetries, /**< Should non-affected variables be removed
-                                              *   from permutation to save memory? */
+   SCIP_Bool             compresssymmetries, /**< Should non-affected variables be removed from permutation to save memory? */
    SCIP_Real             compressthreshold,  /**< if percentage of moved vars is at most threshold, compression is done */
    int                   maxgenerators,      /**< maximal number of generators constructed (= 0 if unlimited) */
    SYM_SPEC              fixedtype,          /**< variable types that must be fixed by symmetries */
@@ -5998,7 +5996,7 @@ SCIP_RETCODE determineSymmetry(
       return SCIP_OKAY;
    }
 
-   /* do not compute symmetry if Benders decomposition enabled */
+   /* do not compute symmetry if Benders decomposition is enabled */
    if ( SCIPgetNActiveBenders(scip) > 0 )
    {
       propdata->ofenabled = FALSE;
@@ -11189,12 +11187,12 @@ int SCIPgetSymmetryNGenerators(
 
 /** creates new operator node type (used for symmetry detection) and returns its representation
  *
- * If the operator node already exists, the function terminates with SCIP_INVALIDDATA.
+ *  If the operator node already exists, the function terminates with SCIP_INVALIDDATA.
  */
 SCIP_RETCODE SCIPcreateSymOpNodeType(
    SCIP*                 scip,               /**< SCIP pointer */
    const char*           opnodename,         /**< name of new operator node type */
-   int*                  nodetype            /**< buffer to hold the node type */
+   int*                  nodetype            /**< pointer to store the node type */
    )
 {
    SCIP_PROP* prop;
@@ -11228,12 +11226,12 @@ SCIP_RETCODE SCIPcreateSymOpNodeType(
 
 /** returns representation of an operator node type.
  *
- * If the node type does not already exist, a new node type will be created.
+ *  If the node type does not already exist, a new node type will be created.
  */
 SCIP_RETCODE SCIPgetSymOpNodeType(
    SCIP*                 scip,               /**< SCIP pointer */
    const char*           opnodename,         /**< name of new operator node type */
-   int*                  nodetype            /**< buffer to hold the node type */
+   int*                  nodetype            /**< pointer to store the node type */
    )
 {
    SCIP_PROP* prop;
