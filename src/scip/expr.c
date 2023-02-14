@@ -3284,7 +3284,7 @@ SCIP_RETCODE SCIPexprSimplify(
 
 /** method to retrieve symmetry information from an expression
  *
- * @see SCIPgetSymDataExpr
+ *  @see SCIPgetSymDataExpr
  */
 SCIP_RETCODE SCIPexprGetSymData(
    SCIP_SET*             set,                /**< global SCIP settings */

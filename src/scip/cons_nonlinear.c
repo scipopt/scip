@@ -9322,8 +9322,8 @@ SCIP_RETCODE computeVertexPolyhedralFacetBivariate(
 }
 
 /** ensures that we can store information about open expressions (i.e, not fully encoded in the symmetry detection
-    graph yet) in an array
-*/
+ *  graph yet) in an array
+ */
 static
 SCIP_RETCODE ensureOpenArraySize(
    SCIP*                 scip,               /**< SCIP pointer */
@@ -10897,6 +10897,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphNonlinear)
                nodeidx = SCIPaddSymgraphValnode(scip, graph, constant);
                SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, sumidx, nodeidx, FALSE, 0.0) );
             }
+
             for( i = 0; i < nlocvars; ++i )
             {
                nodeidx = SCIPgetSymgraphVarnodeidx(scip, graph, consvars[i]);
