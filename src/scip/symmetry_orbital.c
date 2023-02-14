@@ -115,7 +115,7 @@ enum prdjsetwmintransaction_type {
 };
 
 /** provisional disjoint set with minimum information transaction */
-struct prdjsetwmintransaction
+struct PrDjSetWMinTransaction
 {
    enum prdjsetwmintransaction_type type;    /**< type of data stored */
    int                   index;              /**< array index of transaction */
@@ -124,10 +124,10 @@ struct prdjsetwmintransaction
       int                valueint;           /**< value, if it's an 'int' type */
    }                     data;               /**< data object, either vlauereal or valueint. */
 };
-typedef struct prdjsetwmintransaction PRDJSETWMINTRANSACTION;
+typedef struct PrDjSetWMinTransaction PRDJSETWMINTRANSACTION;
 
 /** provisional disjoint set with minimum information */
-struct prdjsetwmin
+struct PrDjSetWMin
 {
    int*                  parents;            /**< array to store the parent node index for every vertex */
    int*                  sizes;              /**< array to store the size of the subtree rooted at each vertex */
@@ -139,7 +139,7 @@ struct prdjsetwmin
    int                   ntransactions;      /**< number of unconfirmed transactions */
    int                   maxntransactions;   /**< maximal number of transactions */
 };
-typedef struct prdjsetwmin PRDJSETWMIN;
+typedef struct PrDjSetWMin PRDJSETWMIN;
 
 
 /*

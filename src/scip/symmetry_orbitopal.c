@@ -312,15 +312,15 @@ SCIP_Bool vartypeIsBranchRowType(
 
 
 /** container for column index permutations */
-struct colswap
+struct ColSwap
 {
    int                   from;               /**< from which column ID */
    int                   to;                 /**< to which column ID */
 };
-typedef struct colswap COLSWAP;
+typedef struct ColSwap COLSWAP;
 
 /** information stored for branch-and-bound nodes */
-struct bnbnodeinfo
+struct BnbNodeInfo
 {
    SCIP_Longint          nodenumber;         /**< node number of the branch-and-bound tree node */
    COLSWAP*              colswaps;           /**< list containing column swaps by node branching decisions */
@@ -328,7 +328,7 @@ struct bnbnodeinfo
    int*                  rows;               /**< list of new variable rows by node branching decisions */
    int                   nrows;              /**< number of new variable rows added. nrows == 0 <=> rows == NULL */
 };
-typedef struct bnbnodeinfo BNBNODEINFO;
+typedef struct BnbNodeInfo BNBNODEINFO;
 
 /** hash key for virtual branch and bound nodeinfo struct */
 static
