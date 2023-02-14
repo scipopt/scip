@@ -876,7 +876,7 @@ int compareSymgraphs(
    SYM_GRAPH*            G2                  /**< second graph in comparison */
    )
 {
-  if ( G1->nconsnodes < G2->nconsnodes )
+   if ( G1->nconsnodes < G2->nconsnodes )
       return -1;
    if ( G1->nconsnodes > G2->nconsnodes )
       return 1;
@@ -5780,7 +5780,6 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
    for (p = 0; p < nperms; ++p)
    {
       SYM_GRAPH* graph;
-      SCIP_Bool found = TRUE;
       int d;
 
       /* for every constraint, create permuted graph by copying nodes and edges */
@@ -5788,30 +5787,26 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
       {
          for (c = groupbegins[g]; c < groupbegins[g+1] && found; ++c)
          {
-            found = FALSE;
-
             SCIP_CALL( SCIPcopySymgraph(scip, &graph, graphs[graphperm[c]], perms[p], fixedtype) );
 
             /* if adapted graph is equivalent to original graph, we don't need to check further graphs */
             if ( SYMcheckGraphsAreIdentical(scip, graph, graphs[graphperm[c]]) )
             {
                SCIP_CALL( SCIPfreeSymgraph(scip, &graph) );
-               found = TRUE;
-
                continue;
             }
 
             /* check whether graph has an isomorphic counterpart */
-            for (d = groupbegins[g]; d < groupbegins[g+1] && ! found; ++d)
-               found = SYMcheckGraphsAreIdentical(scip, graph, graphs[graphperm[d]]);
-
-            SCIP_CALL( SCIPfreeSymgraph(scip, &graph) );
-
-            if ( ! found )
+            for (d = groupbegins[g]; d < groupbegins[g+1]; ++d)
             {
-               SCIPerrorMessage("permutation %d is not a symmetry\n", p);
-               return SCIP_ERROR;
+               if ( ! SYMcheckGraphsAreIdentical(scip, graph, graphs[graphperm[d]]) )
+               {
+                  SCIPerrorMessage("Permutation %d is not a symmetry.\n", p);
+                  SCIP_CALL( SCIPfreeSymgraph(scip, &graph) );
+                  return SCIP_ERROR;
+               }
             }
+            SCIP_CALL( SCIPfreeSymgraph(scip, &graph) );
          }
       }
    }
