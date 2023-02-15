@@ -156,171 +156,6 @@ typedef struct PrDjSetWMin PRDJSETWMIN;
  * Local methods
  */
 
-/** helper functions for LT, GE, LE, GE, EQ, that do take infinity-values into account */
-#if SCIP_DISABLED_CODE
-static
-SCIP_Bool EQ(SCIP* scip, SCIP_Real val1, SCIP_Real val2)
-{
-   SCIP_Bool inf1;
-   SCIP_Bool inf2;
-   SCIP_Bool minf1;
-   SCIP_Bool minf2;
-
-   inf1 = SCIPisInfinity(scip, val1);
-   inf2 = SCIPisInfinity(scip, val2);
-   if ( inf1 && inf2 )
-      return TRUE;
-   if ( inf1 != inf2 )
-      return FALSE;
-   assert( !inf1 );
-   assert( !inf2 );
-
-   minf1 = SCIPisInfinity(scip, -val1);
-   minf2 = SCIPisInfinity(scip, -val2);
-   if ( minf1 && minf2 )
-      return TRUE;
-   if ( minf1 != minf2 )
-      return FALSE;
-   assert( !minf1 );
-   assert( !minf2 );
-
-   return SCIPisEQ(scip, val1, val2);
-}
-#endif
-
-static
-SCIP_Bool LE(SCIP* scip, SCIP_Real val1, SCIP_Real val2)
-{
-   SCIP_Bool inf1;
-   SCIP_Bool inf2;
-   SCIP_Bool minf1;
-   SCIP_Bool minf2;
-
-   inf1 = SCIPisInfinity(scip, val1);
-   inf2 = SCIPisInfinity(scip, val2);
-   if ( inf1 && inf2 )
-      return TRUE;
-   if ( !inf1 && inf2 )
-      return TRUE;
-   if ( inf1 && !inf2 )
-      return FALSE;
-   assert( !inf1 );
-   assert( !inf2 );
-
-   minf1 = SCIPisInfinity(scip, -val1);
-   minf2 = SCIPisInfinity(scip, -val2);
-   if ( minf1 && minf2 )
-      return TRUE;
-   if ( !minf1 && minf2 )
-      return FALSE;
-   if ( minf1 && !minf2 )
-      return TRUE;
-   assert( !minf1 );
-   assert( !minf2 );
-
-   return SCIPisLE(scip, val1, val2);
-}
-
-static
-SCIP_Bool GE(SCIP* scip, SCIP_Real val1, SCIP_Real val2)
-{
-   SCIP_Bool inf1;
-   SCIP_Bool inf2;
-   SCIP_Bool minf1;
-   SCIP_Bool minf2;
-
-   inf1 = SCIPisInfinity(scip, val1);
-   inf2 = SCIPisInfinity(scip, val2);
-   if ( inf1 && inf2 )
-      return TRUE;
-   if ( !inf1 && inf2 )
-      return FALSE;
-   if ( inf1 && !inf2 )
-      return TRUE;
-   assert( !inf1 );
-   assert( !inf2 );
-
-   minf1 = SCIPisInfinity(scip, -val1);
-   minf2 = SCIPisInfinity(scip, -val2);
-   if ( minf1 && minf2 )
-      return TRUE;
-   if ( !minf1 && minf2 )
-      return TRUE;
-   if ( minf1 && !minf2 )
-      return FALSE;
-   assert( !minf1 );
-   assert( !minf2 );
-
-   return SCIPisGE(scip, val1, val2);
-}
-
-static
-SCIP_Bool LT(SCIP* scip, SCIP_Real val1, SCIP_Real val2)
-{
-   SCIP_Bool inf1;
-   SCIP_Bool inf2;
-   SCIP_Bool minf1;
-   SCIP_Bool minf2;
-
-   inf1 = SCIPisInfinity(scip, val1);
-   inf2 = SCIPisInfinity(scip, val2);
-   if ( inf1 && inf2 )
-      return FALSE;
-   if ( !inf1 && inf2 )
-      return TRUE;
-   if ( inf1 && !inf2 )
-      return FALSE;
-   assert( !inf1 );
-   assert( !inf2 );
-
-   minf1 = SCIPisInfinity(scip, -val1);
-   minf2 = SCIPisInfinity(scip, -val2);
-   if ( minf1 && minf2 )
-      return FALSE;
-   if ( !minf1 && minf2 )
-      return FALSE;
-   if ( minf1 && !minf2 )
-      return TRUE;
-   assert( !minf1 );
-   assert( !minf2 );
-
-   return SCIPisLT(scip, val1, val2);
-}
-
-static
-SCIP_Bool GT(SCIP* scip, SCIP_Real val1, SCIP_Real val2)
-{
-   SCIP_Bool inf1;
-   SCIP_Bool inf2;
-   SCIP_Bool minf1;
-   SCIP_Bool minf2;
-
-   inf1 = SCIPisInfinity(scip, val1);
-   inf2 = SCIPisInfinity(scip, val2);
-   if ( inf1 && inf2 )
-      return FALSE;
-   if ( !inf1 && inf2 )
-      return FALSE;
-   if ( inf1 && !inf2 )
-      return TRUE;
-   assert( !inf1 );
-   assert( !inf2 );
-
-   minf1 = SCIPisInfinity(scip, -val1);
-   minf2 = SCIPisInfinity(scip, -val2);
-   if ( minf1 && minf2 )
-      return FALSE;
-   if ( !minf1 && minf2 )
-      return TRUE;
-   if ( minf1 && !minf2 )
-      return FALSE;
-   assert( !minf1 );
-   assert( !minf2 );
-
-   return SCIPisGT(scip, val1, val2);
-}
-
-
 /** clears the provisional disjoint set (union find) with minimum structure \p djset */
 static
 void provisionalDisjointSetWithMinimumClear(
@@ -780,7 +615,7 @@ SCIP_RETCODE orbitalFixingDynamicGetSymmetryStabilizerSubgroup(
 
 /** using bisection, finds the minimal entry of firstleq such that ids[idssort[*firstleq]] >= findid */
 static
-int bisectSortedArrayFindFirstLEQ(
+int bisectSortedArrayFindFirstGEQ(
    int*               ids,                /**< int array with entries */
    int*               idssort,            /**< array of indices of ids that sort ids */
    int                frameleft,          /**< search in idssort for index range [frameleft, frameright) */
@@ -1169,13 +1004,13 @@ SCIP_RETCODE orbitalFixingDynamicApplyOrbitalBranchingPropagations(
       orbitsetcomponentid = SCIPdisjointsetFind(orbitset, branchingdecisionvarid);
 
       /* find the orbit in the sorted array of orbits. npermvars can be huge, so use bisection. */
-      orbitbegin = bisectSortedArrayFindFirstLEQ(varorbitids, varorbitidssort, 0, ofdata->npermvars, 
+      orbitbegin = bisectSortedArrayFindFirstGEQ(varorbitids, varorbitidssort, 0, ofdata->npermvars, 
          orbitsetcomponentid);
       assert( orbitbegin >= 0 && orbitbegin < ofdata->npermvars );
       assert( varorbitids[varorbitidssort[orbitbegin]] == orbitsetcomponentid );
       assert( orbitbegin == 0 || varorbitids[varorbitidssort[orbitbegin - 1]] < orbitsetcomponentid );
 
-      orbitend = bisectSortedArrayFindFirstLEQ(varorbitids, varorbitidssort, orbitbegin + 1, ofdata->npermvars, 
+      orbitend = bisectSortedArrayFindFirstGEQ(varorbitids, varorbitidssort, orbitbegin + 1, ofdata->npermvars, 
          orbitsetcomponentid + 1);
       assert( orbitend > 0 && orbitend <= ofdata->npermvars && orbitend > orbitbegin );
       assert( orbitend == ofdata->npermvars || varorbitids[varorbitidssort[orbitend]] > orbitsetcomponentid );
