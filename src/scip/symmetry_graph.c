@@ -854,7 +854,16 @@ SCIP_RETCODE SCIPcomputeSymgraphColors(
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &graph->edgecolors, graph->nedges) );
 
    /* allocate permutation of arrays, will be initialized by SCIPsort() */
-   len = MAX(MAX3(graph->nsymvars, graph->nopnodes, graph->nvalnodes), MAX(graph->nconsnodes, graph->nedges));
+   len = graph->nedges;
+   if ( graph->nopnodes > len )
+      len = graph->nopnodes;
+   if ( graph->nvalnodes > len )
+      len = graph->nvalnodes;
+   if ( graph->nconsnodes > len )
+      len = graph->nconsnodes;
+   if ( graph->nsymvars > len )
+      len = graph->nsymvars;
+
    SCIP_CALL( SCIPallocBufferArray(scip, &perm, len) );
 
    /* find colors of variable nodes */
