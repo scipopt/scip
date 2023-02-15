@@ -54,6 +54,7 @@
 #include "scip/scip_probing.h"
 #include "scip/scip_sol.h"
 #include "scip/scip_var.h"
+#include "scip/debug.h"
 #include "scip/struct_scip.h"
 #include "scip/struct_mem.h"
 #include "scip/struct_tree.h"
@@ -1149,12 +1150,12 @@ static
 SCIP_RETCODE shadowtreeUndoNodeDepthBranchIndices(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_LEXICOGRAPHICREDUCTIONDATA* masterdata,/**< pointer to global data for lexicographic order propagator */
-   NODEDEPTHBRANCHINDEX* nodedepthbranchindices, /**< array to populate */
+   NODEDEPTHBRANCHINDEX* nodedepthbranchindices, /**< array populated by nodedepthbranchindices to clean */
    SCIP_SHADOWTREE*      shadowtree,         /**< pointer to shadow tree structure */
    SCIP_NODE*            focusnode           /**< focusnode to which the rooted path is evaluated */
 )
 {
-   /* Do the same as above, but each time we see a variable we NULL all the fields, cleaning the object */
+   /* undo the operations from shadowtreeFillNodeDepthBranchIndices, which makes nodedepthbranchindices clean */
    SCIP_SHADOWNODE* shadownode;
    SCIP_SHADOWNODE* shadowchild;
    int shadowdepth;
@@ -1174,13 +1175,14 @@ SCIP_RETCODE shadowtreeUndoNodeDepthBranchIndices(
    shadownode = SCIPshadowTreeGetShadowNode(shadowtree, focusnode);
    shadowdepth = SCIPnodeGetDepth(focusnode);
 
-   /* we start looking one level lower, because we consider the branching decisions each time. */
+   /* we start looking one level lower, because we consider the branching decisions each time */
    shadownode = shadownode->parent;
 
    /* now, walk from the leaf to the root. Each time look at all the children of the node considered,
     * and save the variable depth and index in the branching array. It is important to consider all children each time,
     * because we need to comply with the instance where in different branches it is branched on different variables.
-    * This has to be consistent. */
+    * This has to be consistent. 
+    */
    while (shadownode != NULL)
    {
       assert( shadowdepth > 0 );
@@ -1243,6 +1245,7 @@ SCIP_RETCODE SCIPlexicographicReductionPropagate(
    assert( masterdata->nlexdatas <= masterdata->maxnlexdatas );
    assert( infeasible != NULL );
    assert( nred != NULL );
+   assert( didrun != NULL );
 
    *infeasible = FALSE;
    *nred = 0;
@@ -1257,6 +1260,7 @@ SCIP_RETCODE SCIPlexicographicReductionPropagate(
    focusnode = SCIPgetFocusNode(scip);
 
    /* fill the node-depth-branch-indices structure
+    *
     * this is an array that maps every variable index to (depth, index) = (0, 0) if the variable is not branched on,
     * or (depth, index) is the depth (branching at root node: depth 1) and variable index when it was branched thereon.
     * For individual dynamic lexicographic reductions, we use this ordering the following way:
@@ -1397,6 +1401,7 @@ SCIP_RETCODE SCIPlexicographicReductionFree(
 
 
 /** initializes structures needed for lexicographic reduction propagation
+ *
  * This is only done exactly once.
  */
 SCIP_RETCODE SCIPlexicographicReductionInclude(
@@ -1409,7 +1414,8 @@ SCIP_RETCODE SCIPlexicographicReductionInclude(
    assert( masterdata != NULL );
    assert( shadowtreeeventhdlr != NULL );
 
-   assert( SCIPgetStage(scip) == SCIP_STAGE_INIT );
+   assert( SCIPcheckStage(scip, "SCIPlexicographicReductionInclude", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, 
+      FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPallocBlockMemory(scip, masterdata) );
 
