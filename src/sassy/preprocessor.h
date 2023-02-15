@@ -4170,7 +4170,7 @@ namespace sassy {
 
                                     bool should_add_ind = false;
                                     do {
-                                        hint = -1;
+                                        // hint = -1;
                                         while (repeat_num_inds < num_inds) {
                                             // stay within component!
                                             /*auto ret = select_color_component(g, &c2, quotient_component_start_pos,
