@@ -5586,19 +5586,19 @@ SCIP_Bool conshdlrsCanProvidePermsymInformation(
             continue;
 
          /* check whether exprhdlr is known by SCIP (and handles symmetries correctly) */
-         if ( strcmp(SCIPexprhdlrGetName(exprhdlr), "abs") == 0
-            || strcmp(SCIPexprhdlrGetName(exprhdlr), "entropy") == 0
-            || strcmp(SCIPexprhdlrGetName(exprhdlr), "erf") == 0
-            || strcmp(SCIPexprhdlrGetName(exprhdlr), "exp") == 0
-            || strcmp(SCIPexprhdlrGetName(exprhdlr), "log") == 0
+         if ( strcmp(SCIPexprhdlrGetName(exprhdlr), "var") == 0
+            || strcmp(SCIPexprhdlrGetName(exprhdlr), "sum") == 0
+            || strcmp(SCIPexprhdlrGetName(exprhdlr), "product") == 0
+            || strcmp(SCIPexprhdlrGetName(exprhdlr), "val") == 0
             || strcmp(SCIPexprhdlrGetName(exprhdlr), "pow") == 0
             || strcmp(SCIPexprhdlrGetName(exprhdlr), "signpow") == 0
-            || strcmp(SCIPexprhdlrGetName(exprhdlr), "product") == 0
-            || strcmp(SCIPexprhdlrGetName(exprhdlr), "sum") == 0
+            || strcmp(SCIPexprhdlrGetName(exprhdlr), "exp") == 0
+            || strcmp(SCIPexprhdlrGetName(exprhdlr), "log") == 0
+            || strcmp(SCIPexprhdlrGetName(exprhdlr), "abs") == 0
             || strcmp(SCIPexprhdlrGetName(exprhdlr), "sin") == 0
             || strcmp(SCIPexprhdlrGetName(exprhdlr), "cos") == 0
-            || strcmp(SCIPexprhdlrGetName(exprhdlr), "val") == 0
-            || strcmp(SCIPexprhdlrGetName(exprhdlr), "var") == 0
+            || strcmp(SCIPexprhdlrGetName(exprhdlr), "entropy") == 0
+            || strcmp(SCIPexprhdlrGetName(exprhdlr), "erf") == 0
             || strcmp(SCIPexprhdlrGetName(exprhdlr), "varidx") == 0 )
             found = TRUE;
 
