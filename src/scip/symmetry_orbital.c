@@ -54,6 +54,7 @@
 #include "scip/scip_probing.h"
 #include "scip/scip_sol.h"
 #include "scip/scip_var.h"
+#include "scip/debug.h"
 #include "scip/struct_scip.h"
 #include "scip/struct_mem.h"
 #include "scip/struct_tree.h"
@@ -88,7 +89,7 @@ struct OrbitalFixingComponentData
    int                   npermvars;          /**< number of vars in this component */
    SCIP_HASHMAP*         permvarmap;         /**< map of variables to indices in permvars array */
 };
-typedef struct OrbitalFixingComponentData OFDATA;
+typedef struct OrbitalFixingComponentData OFCDATA;
 
 
 /** data for dynamic orbital fixing propagator */
@@ -97,7 +98,7 @@ struct SCIP_OrbitalFixingData
    SCIP_EVENTHDLR*       shadowtreeeventhdlr;/**< eventhandler for the shadow tree data structure */
    SCIP_EVENTHDLR*       globalfixeventhdlr; /**< event handler for handling global variable fixings */
 
-   OFDATA**              componentdatas;     /**< array of pointers to individual components for orbital fixing */
+   OFCDATA**             componentdatas;     /**< array of pointers to individual components for orbital fixing */
    int                   ncomponents;        /**< number of orbital fixing datas in array */
    int                   maxncomponents;     /**< allocated orbital fixing datas array size */
 };
@@ -105,28 +106,37 @@ struct SCIP_OrbitalFixingData
 
 /** data structures for provisional disjoint set data structures */
 
-/** provisional disjoint set with minimum information transaction types */
-enum prdjsetwmintransaction_type {
-   prdjsetwmintransaction_parent,
-   prdjsetwmintransaction_size,
-   prdjsetwmintransaction_lbvaluemin,
-   prdjsetwmintransaction_lbvaluemax,
-   prdjsetwmintransaction_ubvaluemin,
+/** provisional disjoint set with minimum/maximum information transaction types */
+enum PrDjSetWMinTransaction_Type {
+   PRDJSETWMINTRANSACTION_TYPE_PARENT     = 0,
+   PRDJSETWMINTRANSACTION_TYPE_SIZE       = 1,
+   PRDJSETWMINTRANSACTION_TYPE_LBVALUEMIN = 2,
+   PRDJSETWMINTRANSACTION_TYPE_LBVALUEMAX = 3,
+   PRDJSETWMINTRANSACTION_TYPE_UBVALUEMIN = 4
 };
+typedef enum PrDjSetWMinTransaction_Type PRDJSETWMINTRANSACTION_TYPE;
 
-/** provisional disjoint set with minimum information transaction */
+/** provisional disjoint set with minimum/maximum information transaction
+ * 
+ * The transaction allows for resetting the disjoint set data structure to a former state, before applying unions.
+ */
 struct PrDjSetWMinTransaction
 {
-   enum prdjsetwmintransaction_type type;    /**< type of data stored */
+   PRDJSETWMINTRANSACTION_TYPE type;         /**< type of data stored */
    int                   index;              /**< array index of transaction */
-   union {
+   union 
+   {
       SCIP_Real          valuereal;          /**< value, if it's a 'real' type */
       int                valueint;           /**< value, if it's an 'int' type */
    }                     data;               /**< data object, either vlauereal or valueint. */
 };
 typedef struct PrDjSetWMinTransaction PRDJSETWMINTRANSACTION;
 
-/** provisional disjoint set with minimum information */
+/** provisional disjoint set with minimum/maximum information
+ * 
+ * This is a standard disjoint set data structure, but it also stores certain minima and maxima over arrays in each
+ * component. Besides, it is 'provisional' in the sense that performed steps can be undone.
+ */
 struct PrDjSetWMin
 {
    int*                  parents;            /**< array to store the parent node index for every vertex */
@@ -147,7 +157,7 @@ typedef struct PrDjSetWMin PRDJSETWMIN;
  */
 
 /** helper functions for LT, GE, LE, GE, EQ, that do take infinity-values into account */
-#if 0
+#if SCIP_DISABLED_CODE
 static
 SCIP_Bool EQ(SCIP* scip, SCIP_Real val1, SCIP_Real val2)
 {
@@ -315,9 +325,9 @@ SCIP_Bool GT(SCIP* scip, SCIP_Real val1, SCIP_Real val2)
 static
 void provisionalDisjointSetWithMinimumClear(
    PRDJSETWMIN*          djset,              /**< disjoint set (union find) data structure */
-   SCIP_Real*            lbminvalues,        /**< values to populate with, to take the minimum over */
-   SCIP_Real*            lbmaxvalues,        /**< values to populate with, to take the maximum over */
-   SCIP_Real*            ubminvalues         /**< values to populate with, to take the minimum over */
+   SCIP_Real*            lbminvalues,        /**< values to maintain component minimum of, for lb minima */
+   SCIP_Real*            lbmaxvalues,        /**< values to maintain component minimum of, for lb maxima */
+   SCIP_Real*            ubminvalues         /**< values to maintain component minimum of, for ub minima */
    )
 {
    int i;
@@ -340,14 +350,14 @@ SCIP_RETCODE provisionalDisjointSetWithMinimumFind(
    PRDJSETWMIN*          djset,              /**< disjoint set (union find) data structure */
    int                   element,            /**< element to be found */
    int*                  index,              /**< NULL, or to populate with the index to find */
-   SCIP_Real*            lbminvalue,         /**< NULL, or to populate with the minimal value */
-   SCIP_Real*            lbmaxvalue,         /**< NULL, or to populate with the maximal value */
-   SCIP_Real*            ubminvalue          /**< NULL, or to populate with the minimal value */
+   SCIP_Real*            lbminvalue,         /**< NULL, or to populate with the minimal value in component */
+   SCIP_Real*            lbmaxvalue,         /**< NULL, or to populate with the maximal value in component */
+   SCIP_Real*            ubminvalue          /**< NULL, or to populate with the minimal value in component */
    )
 {
    int newelement;
    int root = element;
-   int* parents = djset->parents;
+   int* parents;
    PRDJSETWMINTRANSACTION* tr;
 
    assert( scip != NULL );
@@ -356,11 +366,11 @@ SCIP_RETCODE provisionalDisjointSetWithMinimumFind(
    assert( element < djset->size );
    assert( index != NULL || lbminvalue != NULL || lbmaxvalue != NULL || ubminvalue != NULL );
 
+   parents = djset->parents;
+
    /* find root of this element */
    while( root != parents[root] )
-   {
       root = parents[root];
-   }
 
    /* compress the path to make future queries faster */
    while( element != root )
@@ -379,7 +389,7 @@ SCIP_RETCODE provisionalDisjointSetWithMinimumFind(
       /* store parent old data transaction */
       assert( djset->ntransactions < djset->maxntransactions );
       tr = &djset->transactions[djset->ntransactions++];
-      tr->type = prdjsetwmintransaction_parent;
+      tr->type = PRDJSETWMINTRANSACTION_TYPE_PARENT;
       tr->index = element;
       tr->data.valueint = parents[element];
 
@@ -452,35 +462,35 @@ SCIP_RETCODE provisionalDisjointSetWithMinimumUnion(
    /* update parents, sizes and values arrays, and store transaction. */
    assert( djset->ntransactions < djset->maxntransactions );
    tr = &djset->transactions[djset->ntransactions++];
-   tr->type = prdjsetwmintransaction_parent;
+   tr->type = PRDJSETWMINTRANSACTION_TYPE_PARENT;
    tr->index = idp;
    tr->data.valueint = djset->parents[idp];
    djset->parents[idp] = idq;
 
    assert( djset->ntransactions < djset->maxntransactions );
    tr = &djset->transactions[djset->ntransactions++];
-   tr->type = prdjsetwmintransaction_size;
+   tr->type = PRDJSETWMINTRANSACTION_TYPE_SIZE;
    tr->index = idq;
    tr->data.valueint = djset->sizes[idq];
    djset->sizes[idq] += djset->sizes[idp];
 
    assert( djset->ntransactions < djset->maxntransactions );
    tr = &djset->transactions[djset->ntransactions++];
-   tr->type = prdjsetwmintransaction_lbvaluemin;
+   tr->type = PRDJSETWMINTRANSACTION_TYPE_LBVALUEMIN;
    tr->index = idq;
    tr->data.valuereal = djset->lbminvalues[idq];
    djset->lbminvalues[idq] = MIN(lbminvalp, lbminvalq);
 
    assert( djset->ntransactions < djset->maxntransactions );
    tr = &djset->transactions[djset->ntransactions++];
-   tr->type = prdjsetwmintransaction_lbvaluemax;
+   tr->type = PRDJSETWMINTRANSACTION_TYPE_LBVALUEMAX;
    tr->index = idq;
    tr->data.valuereal = djset->lbmaxvalues[idq];
    djset->lbmaxvalues[idq] = MAX(lbmaxvalp, lbmaxvalq);
 
    assert( djset->ntransactions < djset->maxntransactions );
    tr = &djset->transactions[djset->ntransactions++];
-   tr->type = prdjsetwmintransaction_ubvaluemin;
+   tr->type = PRDJSETWMINTRANSACTION_TYPE_UBVALUEMIN;
    tr->index = idq;
    tr->data.valuereal = djset->ubminvalues[idq];
    djset->ubminvalues[idq] = MIN(ubminvalp, ubminvalq);
@@ -501,19 +511,19 @@ SCIP_RETCODE provisionalDisjointSetWithMinimumUndo(
       tr = &djset->transactions[--djset->ntransactions];
       switch (tr->type)
       {
-         case prdjsetwmintransaction_parent:
+         case PRDJSETWMINTRANSACTION_TYPE_PARENT:
             djset->parents[tr->index] = tr->data.valueint;
             break;
-         case prdjsetwmintransaction_size:
+         case PRDJSETWMINTRANSACTION_TYPE_SIZE:
             djset->sizes[tr->index] = tr->data.valueint;
             break;
-         case prdjsetwmintransaction_lbvaluemin:
+         case PRDJSETWMINTRANSACTION_TYPE_LBVALUEMIN:
             djset->lbminvalues[tr->index] = tr->data.valuereal;
             break;
-         case prdjsetwmintransaction_lbvaluemax:
+         case PRDJSETWMINTRANSACTION_TYPE_LBVALUEMAX:
             djset->lbmaxvalues[tr->index] = tr->data.valuereal;
             break;
-         case prdjsetwmintransaction_ubvaluemin:
+         case PRDJSETWMINTRANSACTION_TYPE_UBVALUEMIN:
             djset->ubminvalues[tr->index] = tr->data.valuereal;
             break;
          default:
@@ -523,7 +533,7 @@ SCIP_RETCODE provisionalDisjointSetWithMinimumUndo(
    return SCIP_OKAY;
 }
 
-/* confirm all unconfirmed changes */
+/** confirm all unconfirmed changes */
 static
 void provisionalDisjointSetWithMinimumConfirm(
    PRDJSETWMIN*          djset               /**< disjoint set (union find) data structure */
@@ -590,19 +600,19 @@ void provisionalDisjointSetWithMinimumFree(
 }
 
 
-/** populates chosenperms with a generating set of the symmetry group stabilizing the branching decisions. */
+/** populates chosenperms with a generating set of the symmetry group stabilizing the branching decisions */
 static
-SCIP_RETCODE orbitalFixingDynamicGetSymmetrySubgroup(
-   SCIP* scip,                            /**< pointer to SCIP data structure */
-   OFDATA* ofdata,                        /**< pointer to data for orbital fixing data */
-   int** chosenperms,                     /**< pointer to permutations that are chosen */
-   int* nchosenperms,                     /**< pointer to store the number of chosen permutations */
-   SCIP_Real* varlbs,                     /**< array of ofdata->permvars variable LBs. If NULL, use SCIPvarGetLbLocal */
-   SCIP_Real* varubs,                     /**< array of ofdata->permvars variable UBs. If NULL, use SCIPvarGetUbLocal */
-   int* branchedvarindices,               /**< array of given branching decisions, in branching order */
-   SCIP_Bool* inbranchedvarindices,       /**< array stating whether variable with index in ofdata->permvars is
-                                            *  contained in the branching decisions. */
-   int nbranchedvarindices                /**< number of branching decisions */
+SCIP_RETCODE orbitalFixingDynamicGetSymmetryStabilizerSubgroup(
+   SCIP*              scip,               /**< pointer to SCIP data structure */
+   OFCDATA*           ofdata,             /**< pointer to data for orbital fixing data */
+   int**              chosenperms,        /**< pointer to permutations that are chosen */
+   int*               nchosenperms,       /**< pointer to store the number of chosen permutations */
+   SCIP_Real*         varlbs,             /**< array of ofdata->permvars variable LBs. If NULL, use SCIPvarGetLbLocal */
+   SCIP_Real*         varubs,             /**< array of ofdata->permvars variable UBs. If NULL, use SCIPvarGetUbLocal */
+   int*               branchedvarindices, /**< array of given branching decisions, in branching order */
+   SCIP_Bool*         inbranchedvarindices, /**< array stating whether variable with index in ofdata->permvars is
+                                              *  contained in the branching decisions. */
+   int                nbranchedvarindices /**< number of branching decisions */
 )
 {
    int i;
@@ -625,27 +635,27 @@ SCIP_RETCODE orbitalFixingDynamicGetSymmetrySubgroup(
    assert( inbranchedvarindices != NULL );
    assert( nbranchedvarindices >= 0 );
 
-   /* compute the orbit of the branching variable of the stabilized symmetry subgroup at this point.
+   /* compute the orbit of the branching variable of a stabilizing symmetry subgroup at this point.
     *
-    * We are interested in propagating the symretope constraint
-    * \sigma(x) \succeq \sigma(\gamma(x)) for all \gamma in the symmetry group.
-    * Here, \sigma restricts the solution vector x only to the branching variables, in the branching variable order.
+    * We are interested in propagating the lexicographic order constraint
+    * \f$\sigma(x) \succeq \sigma(\gamma(x))$ for all \f$\gamma$ in the symmetry group.
+    * Here, \f$\sigma$ restricts the solution vector x only to the branching variables, in the branching variable order.
     *
     * We thus want to consider the set (**) of permutations \gamma from the symmetry group
-    * with \sigma(x) = \sigma(\gamma(x)) for all feasible solution vectors x satisfying the symretope constraint above.
+    * with \f$\sigma(x) = \sigma(\gamma(x))$ for all feasible solution vectors \f$x$ satisfying the constraint above.
     *
     * A subset of this set of permutations is the following set:
-    * All permutations \gamma in the symmetry group with \sigma(x) <= \sigma(\gamma(x)), where <= is LEQ, elementwise.
+    * All permutations \f$\gamma$ in the symmetry group with \f$\sigma(x) \leq \sigma(\gamma(x))$ (elementwise).
     *
     * Note that these sets do not define a group per se.
     * We show a construction creating a subgroup of the symmetry group, which is a subset of the set (**).
     * We do this based on the (strong) generating set that is provided, and greedily build the symmetry subgroup.
     *
     * Start with S = {} as the empty generating set. Obviously, that is a subset of (**).
-    * For each strong generator \gamma, Test if the group generated by the set S with \gamma is a subset of (**).
-    * If so, add \gamma to S. Otherwise, or if it cannot be determined easily, continue with the next strong generator.
+    * For each strong generator \f$\gamma$, Test if the group generated by the set S with \f$\gamma$ is a subset of **.
+    * If so, add \f$\gamma$ to S. Otherwise, or if it cannot be determined easily, continue with the next generator.
     *
-    * A simple test is the following: Compute the orbits of the group generated by the set S with \gamma,
+    * A simple test is the following: Compute the orbits of the group generated by the set S with \f$\gamma$,
     * and for every branching variable test if its upper bound is smaller or equal to its minimal orbit lower bound.
     * If that is the case, the test passes.
     *
@@ -655,7 +665,7 @@ SCIP_RETCODE orbitalFixingDynamicGetSymmetrySubgroup(
     * The steps above assume that all reductions found so far are compatible with this symmetry reduction method.
     * In other words, if a constraint/propagator that is not aware of the symmetry handling finds a reduction, then
     * this reduction can be applied to the whole orbit. This is only possible if condition (C4) holds, that is:
-    *   (C4): If x is feasible and \sigma(x) = \sigma(\gamma(x)), then \gamma(x) is also feasible.
+    *   (C4): If x is feasible and \f$\sigma(x) = \sigma(\gamma(x))$, then \f$\gamma(x)$ is also feasible.
     * Note that this condition can be violated. So, we additionally need to check this condition. We do this by making
     * sure that the intersection of the variable domains is non-empty.
     */
@@ -768,14 +778,70 @@ SCIP_RETCODE orbitalFixingDynamicGetSymmetrySubgroup(
    return SCIP_OKAY;
 }
 
+/** using bisection, finds the minimal entry of firstleq such that ids[idssort[*firstleq]] >= findid */
+static
+int bisectSortedArrayFindFirstLEQ(
+   int*               ids,                /**< int array with entries */
+   int*               idssort,            /**< array of indices of ids that sort ids */
+   int                frameleft,          /**< search in idssort for index range [frameleft, frameright) */
+   int                frameright,         /**< search in idssort for index range [frameleft, frameright) */
+   int                findid              /**< entry value to find */
+)
+{
+   int center;
+   int id;
+
+#ifndef NDEBUG
+   int origframeleft;
+   int origframeright;
+   origframeleft = frameleft;
+   origframeright = frameright;
+#endif
+
+   assert( ids != NULL );
+   assert( idssort != NULL );
+   assert( frameleft >= 0 );
+   assert( frameright > frameleft );
+
+   while (frameright - frameleft >= 2)
+   {
+      /* split [frameleft, frameright) in [frameleft, center) and [center, frameright) */
+      center = frameleft + ((frameright - frameleft) / 2);
+      assert( center > frameleft );
+      assert( center < frameright );
+      id = idssort[center];
+      if ( ids[id] < findid )
+      {
+         /* first instance of orbitsetcomponentid is in [center, frameright) */
+         frameleft = center;
+      }
+      else
+      {
+         /* first instance of orbitsetcomponentid is in [frameleft, center) */
+         frameright = center;
+      }
+   }
+
+   assert( frameright - frameleft == 1 );
+   id = idssort[frameleft];
+   if ( ids[id] < findid )
+      ++frameleft;
+
+   assert( frameleft >= origframeleft );
+   assert( frameright <= origframeright );
+   assert( frameleft >= origframeright || ids[idssort[frameleft]] >= findid );
+   assert( frameleft - 1 < origframeleft || ids[idssort[frameleft - 1]] < findid );
+   return frameleft;
+}
+
 /** dynamic orbital fixing, the orbital branching part */
 static
 SCIP_RETCODE orbitalFixingDynamicApplyOrbitalBranchingPropagations(
-   SCIP* scip,                            /**< pointer to SCIP data structure */
-   OFDATA* ofdata,                        /**< pointer to data for orbital fixing data */
-   SCIP_SHADOWTREE* shadowtree,           /**< pointer to shadow tree */
-   SCIP_Bool* infeasible,                 /**< pointer to store whether infeasibility is detected */
-   int* ngen                              /**< pointer to store the number of determined variable domain reductions */
+   SCIP*              scip,               /**< pointer to SCIP data structure */
+   OFCDATA*           ofdata,             /**< pointer to data for orbital fixing data */
+   SCIP_SHADOWTREE*   shadowtree,         /**< pointer to shadow tree */
+   SCIP_Bool*         infeasible,         /**< pointer to store whether infeasibility is detected */
+   int*               ngen                /**< pointer to store the number of determined variable domain reductions */
 )
 {
    SCIP_NODE* focusnode;
@@ -812,9 +878,6 @@ SCIP_RETCODE orbitalFixingDynamicApplyOrbitalBranchingPropagations(
    SCIP_Real ub;
    SCIP_DISJOINTSET* orbitset;
    int orbitsetcomponentid;
-   int framesize;
-   int center;
-   int max;
 
    assert( scip != NULL );
    assert( ofdata != NULL );
@@ -841,7 +904,7 @@ SCIP_RETCODE orbitalFixingDynamicApplyOrbitalBranchingPropagations(
    assert( shadowfocusnode != NULL );
 
    /* get the rooted path */
-   /* todo4J: can't we improve this by calling SCIPnodeGetDepth()? */
+   /* @todo add depth field to shadow tree node to improve efficiency */
    pathlength = 0;
    tmpshadownode = shadowfocusnode;
    do
@@ -926,6 +989,12 @@ SCIP_RETCODE orbitalFixingDynamicApplyOrbitalBranchingPropagations(
       }
    }
 
+   /* determine symmetry group at this point, apply branched variable, apply orbital branching for this
+    * 
+    * The branching variables are applied one-after-the-other.
+    * So, the group before branching is determined, orbital branching to the branching variable, then the branching 
+    * variable is applied, and possibly repeated for other branching variables.
+    */
    SCIP_CALL( SCIPallocBufferArray(scip, &chosenperms, ofdata->nperms) );
    for (branchstep = 0; branchstep < shadowfocusnode->nbranchingdecisions; ++branchstep)
    {
@@ -943,10 +1012,11 @@ SCIP_RETCODE orbitalFixingDynamicApplyOrbitalBranchingPropagations(
          continue;
       assert( branchingdecisionvarid >= 0 && branchingdecisionvarid < ofdata->npermvars );
 
-      /* get the generating set of permutations of a subgroup of the stabilized symmetry subgroup.
+      /* get the generating set of permutations of a subgroup of a stabilizing symmetry subgroup.
+       *
        * Note: All information about branching decisions is kept in varlbs, varubs, and the branchedvarindices.
        */
-      SCIP_CALL( orbitalFixingDynamicGetSymmetrySubgroup(scip, ofdata, chosenperms, &nchosenperms,
+      SCIP_CALL( orbitalFixingDynamicGetSymmetryStabilizerSubgroup(scip, ofdata, chosenperms, &nchosenperms,
          varlbs, varubs, branchedvarindices, inbranchedvarindices, nbranchedvarindices) );
 
       /* compute orbit containing branching var */
@@ -964,10 +1034,13 @@ SCIP_RETCODE orbitalFixingDynamicApplyOrbitalBranchingPropagations(
          }
       }
 
-      /* if complete propagation was applied in the previous node,
+      /* 1. ensure that the bounds are tightest possible just before the branching step (orbital fixing step) 
+       *
+       * If complete propagation was applied in the previous node,
        * then all variables in the same orbit have the same bounds just before branching,
        * so the bounds of the branching variable should be the tightest in its orbit by now.
-       * It is possible that that is not the case. In that case, we do it here. */
+       * It is possible that that is not the case. In that case, we do it here. 
+       */
       SCIP_CALL( SCIPallocBufferArray(scip, &varorbitids, ofdata->npermvars) );
       SCIP_CALL( SCIPallocBufferArray(scip, &varorbitidssort, ofdata->npermvars) );
       for (i = 0; i < ofdata->npermvars; ++i)
@@ -1039,7 +1112,8 @@ SCIP_RETCODE orbitalFixingDynamicApplyOrbitalBranchingPropagations(
 
             assert( GE(scip, varubs[varid], orbitub) );
             varubs[varid] = orbitub;
-            if ( GT(scip, SCIPvarGetUbLocal(ofdata->permvars[varid]), orbitub) )
+            if ( !SCIPisInfinity(scip, orbitub) &&
+               GT(scip, SCIPvarGetUbLocal(ofdata->permvars[varid]), orbitub) )
             {
                SCIP_Bool tightened;
                SCIP_CALL( SCIPtightenVarUb(scip, ofdata->permvars[varid], orbitub, TRUE, infeasible, &tightened) );
@@ -1054,7 +1128,8 @@ SCIP_RETCODE orbitalFixingDynamicApplyOrbitalBranchingPropagations(
       }
       assert( !*infeasible );
 
-      /* 2. apply branching step to varlbs or varubs array.
+      /* 2. apply branching step to varlbs or varubs array
+       *
        * Due to the steps above, it is possible that the branching step is redundant or infeasible. */
       assert( LE(scip, varlbs[branchingdecisionvarid], varubs[branchingdecisionvarid]) );
       switch (branchingdecision->boundchgtype)
@@ -1085,82 +1160,28 @@ SCIP_RETCODE orbitalFixingDynamicApplyOrbitalBranchingPropagations(
             assert( FALSE );
       }
 
-      /* 3. propagate that branching variable is >= the variables in its orbit.
-       * Also apply the updates to the variable arrays */
+      /* 3. propagate that branching variable is >= the variables in its orbit
+       *
+       * Also apply the updates to the variable arrays 
+       */
 
       /* get the orbit of the branching variable */
       orbitsetcomponentid = SCIPdisjointsetFind(orbitset, branchingdecisionvarid);
 
       /* find the orbit in the sorted array of orbits. npermvars can be huge, so use bisection. */
-
-      /* find first instance of orbitsetcomponentid */
-      orbitbegin = 0;
-      framesize = ofdata->npermvars;
-      while (framesize > 0)
-      {
-         if ( framesize <= 1 )
-         {
-            assert( orbitbegin >= 0 && orbitbegin < ofdata->npermvars );
-            varid = varorbitidssort[orbitbegin];
-            if ( varorbitids[varid] < orbitsetcomponentid )
-               ++orbitbegin;
-            break;
-         }
-         /* split [orbitbegin, max := orbitbegin + framesize) in [orbitbegin, center) and [center, max) */
-         max = orbitbegin + framesize;
-         center = orbitbegin + (framesize / 2);
-         assert( center < ofdata->npermvars );
-         varid = varorbitidssort[center];
-         if ( varorbitids[varid] < orbitsetcomponentid )
-         {
-            /* first instance of orbitsetcomponentid is in [center, max := orbitbegin + framesize) */
-            orbitbegin = center;
-            framesize = max - center;
-         }
-         else
-         {
-            /* first instance of orbitsetcomponentid is in [orbitbegin, center) */
-            framesize = center - orbitbegin;
-         }
-      }
+      orbitbegin = bisectSortedArrayFindFirstLEQ(varorbitids, varorbitidssort, 0, ofdata->npermvars, 
+         orbitsetcomponentid);
       assert( orbitbegin >= 0 && orbitbegin < ofdata->npermvars );
       assert( varorbitids[varorbitidssort[orbitbegin]] == orbitsetcomponentid );
       assert( orbitbegin == 0 || varorbitids[varorbitidssort[orbitbegin - 1]] < orbitsetcomponentid );
 
-      /* find entry after the last instance of orbitsetcomponentid */
-      orbitend = orbitbegin + 1; /* we can bisect the interval [orbitbegin + 1, npermvars]. */
-      framesize = ofdata->npermvars - orbitend;
-      while (framesize > 0)
-      {
-         if ( framesize <= 1 )
-         {
-            assert( orbitend >= 0 && orbitend < ofdata->npermvars );
-            varid = varorbitidssort[orbitend];
-            if ( varorbitids[varid] <= orbitsetcomponentid )
-               ++orbitend;
-            break;
-         }
-         /* split [orbitend, max := orbitend + framesize) in [orbitend, center) and [center, max) */
-         max = orbitend + framesize;
-         center = orbitend + (framesize / 2);
-         assert( center < ofdata->npermvars );
-         varid = varorbitidssort[center];
-         if ( varorbitids[varid] <= orbitsetcomponentid )
-         {
-            /* first instance > orbitsetcomponentid is in [center, max := orbitend + framesize) */
-            orbitend = center;
-            framesize = max - center;
-         }
-         else
-         {
-            /* first instance > orbitsetcomponentid is in [orbitend, center) */
-            framesize = center - orbitend;
-         }
-      }
+      orbitend = bisectSortedArrayFindFirstLEQ(varorbitids, varorbitidssort, orbitbegin + 1, ofdata->npermvars, 
+         orbitsetcomponentid + 1);
       assert( orbitend > 0 && orbitend <= ofdata->npermvars && orbitend > orbitbegin );
       assert( orbitend == ofdata->npermvars || varorbitids[varorbitidssort[orbitend]] > orbitsetcomponentid );
       assert( varorbitids[varorbitidssort[orbitend - 1]] == orbitsetcomponentid );
 
+      /* propagate that branching variable is >= the variables in its orbit */
       for (idx = orbitbegin; idx < orbitend; ++idx)
       {
          varid = varorbitidssort[idx];
@@ -1226,7 +1247,6 @@ SCIP_RETCODE orbitalFixingDynamicApplyOrbitalBranchingPropagations(
    }
    SCIPfreeBufferArray(scip, &chosenperms);
 
-   /* free everything */
    /* clean inbranchedvarindices array */
    for (i = 0; i < nbranchedvarindices; ++i)
    {
@@ -1242,7 +1262,8 @@ SCIP_RETCODE orbitalFixingDynamicApplyOrbitalBranchingPropagations(
       assert( inbranchedvarindices[i] == FALSE );
    }
 #endif
-
+   
+   /* free everything */
    SCIPfreeCleanBufferArray(scip, &inbranchedvarindices);
    SCIPfreeBufferArray(scip, &branchedvarindices);
    SCIPfreeBufferArray(scip, &varubs);
@@ -1255,11 +1276,11 @@ SCIP_RETCODE orbitalFixingDynamicApplyOrbitalBranchingPropagations(
 /** dynamic orbital fixing, the orbital fixing part */
 static
 SCIP_RETCODE orbitalFixingDynamicApplyOrbitalFixingPropagations(
-   SCIP* scip,                            /**< pointer to SCIP data structure */
-   OFDATA* ofdata,                        /**< pointer to data for orbital fixing data */
-   SCIP_SHADOWTREE* shadowtree,           /**< pointer to shadow tree */
-   SCIP_Bool* infeasible,                 /**< pointer to store whether infeasibility is detected */
-   int* ngen                              /**< pointer to store the number of determined variable domain reductions */
+   SCIP*              scip,               /**< pointer to SCIP data structure */
+   OFCDATA*           ofdata,             /**< pointer to data for orbital fixing data */
+   SCIP_SHADOWTREE*   shadowtree,         /**< pointer to shadow tree */
+   SCIP_Bool*         infeasible,         /**< pointer to store whether infeasibility is detected */
+   int*               ngen                /**< pointer to store the number of determined variable domain reductions */
 )
 {
    SCIP_NODE* focusnode;
@@ -1300,9 +1321,8 @@ SCIP_RETCODE orbitalFixingDynamicApplyOrbitalFixingPropagations(
    shadowfocusnode = SCIPshadowTreeGetShadowNode(shadowtree, focusnode);
    assert( shadowfocusnode != NULL );
 
-   /* get the branching variables */
-   /* replay fixings and propagations made until just before the focusnode */
-   assert( ofdata->npermvars > 0 );  /* if it's 0, then we do not have to do anything at all. */
+   /* get the branching variables until present, so including the branchings of the focusnode */
+   assert( ofdata->npermvars > 0 );  /* if it's 0, then we do not have to do anything at all */
 
    SCIP_CALL( SCIPallocBufferArray(scip, &branchedvarindices, ofdata->npermvars) );
    SCIP_CALL( SCIPallocCleanBufferArray(scip, &inbranchedvarindices, ofdata->npermvars) );
@@ -1332,7 +1352,7 @@ SCIP_RETCODE orbitalFixingDynamicApplyOrbitalFixingPropagations(
    /* 1. compute the orbit of the branching variable of the stabilized symmetry subgroup at this point. */
    /* 1.1. identify the permutations of the symmetry group that are permitted */
    SCIP_CALL( SCIPallocBufferArray(scip, &chosenperms, ofdata->nperms) );
-   SCIP_CALL( orbitalFixingDynamicGetSymmetrySubgroup(scip, ofdata, chosenperms, &nchosenperms,
+   SCIP_CALL( orbitalFixingDynamicGetSymmetryStabilizerSubgroup(scip, ofdata, chosenperms, &nchosenperms,
       NULL, NULL, branchedvarindices, inbranchedvarindices, nbranchedvarindices) );
 
    /* 1.2. compute orbits of this subgroup */
@@ -1482,7 +1502,7 @@ SCIP_RETCODE orbitalFixingDynamicApplyOrbitalFixingPropagations(
  *
  * 2. At the focus node itself, compute the symmetry group.
  *    The symmetry group in this branch-and-bound tree node is a subgroup of the problem symmetry group
- *    as described in the function orbitalFixingDynamicGetSymmetrySubgroup.
+ *    as described in the function orbitalFixingDynamicGetSymmetryStabilizerSubgroup.
  *    For this symmetry subgroup, in each orbit, update the variable domains with the intersection of all variable
  *    domains in the orbit.
  *
@@ -1493,8 +1513,8 @@ SCIP_RETCODE orbitalFixingDynamicApplyOrbitalFixingPropagations(
 static
 SCIP_RETCODE orbitalFixingPropagateComponent(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ORBITALFIXINGDATA* orbifixdata,      /**< orbital fixing data structure */
-   OFDATA*               ofdata,             /**< orbital fixing component data */
+   SCIP_OFDATA*          orbifixdata,        /**< orbital fixing data structure */
+   OFCDATA*              ofdata,             /**< orbital fixing component data */
    SCIP_SHADOWTREE*      shadowtree,         /**< pointer to shadow tree */
    SCIP_Bool*            infeasible,         /**< whether infeasibility is found */
    int*                  nred                /**< number of domain reductions */
@@ -1518,14 +1538,14 @@ SCIP_RETCODE orbitalFixingPropagateComponent(
 static
 SCIP_RETCODE addComponent(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ORBITALFIXINGDATA* orbifixdata,      /**< pointer to the dynamic orbital fixing data */
+   SCIP_OFDATA*          orbifixdata,        /**< pointer to the dynamic orbital fixing data */
    SCIP_VAR**            permvars,           /**< variable array of the permutation */
    int                   npermvars,          /**< number of variables in that array */
    int**                 perms,              /**< permutations in the component */
    int                   nperms              /**< number of permutations in the component */
    )
 {
-   OFDATA* ofdata;
+   OFCDATA* ofdata;
    int i;
    int j;
    int p;
@@ -1666,8 +1686,8 @@ SCIP_RETCODE addComponent(
 static
 SCIP_RETCODE freeComponent(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ORBITALFIXINGDATA* orbifixdata,      /**< pointer to the dynamic orbital fixing data */
-   OFDATA**              ofdata              /**< pointer to component data */
+   SCIP_OFDATA*          orbifixdata,        /**< pointer to the dynamic orbital fixing data */
+   OFCDATA**             ofdata              /**< pointer to component data */
    )
 {
    int i;
@@ -1726,7 +1746,7 @@ SCIP_RETCODE freeComponent(
 static
 SCIP_DECL_EVENTEXEC(eventExecGlobalBoundChange)
 {
-   OFDATA* ofdata;
+   OFCDATA* ofdata;
    SCIP_VAR* var;
    int varidx;
 
@@ -1739,7 +1759,7 @@ SCIP_DECL_EVENTEXEC(eventExecGlobalBoundChange)
    if ( SCIPgetStage(scip) != SCIP_STAGE_SOLVING || SCIPgetNNodes(scip) > 1 )
       return SCIP_OKAY;
 
-   ofdata = (OFDATA*) eventdata;
+   ofdata = (OFCDATA*) eventdata;
    var = SCIPeventGetVar(event);
    assert( var != NULL );
    assert( SCIPvarIsTransformed(var) );
@@ -1773,18 +1793,21 @@ SCIP_DECL_EVENTEXEC(eventExecGlobalBoundChange)
 /** propagate orbital fixing */
 SCIP_RETCODE SCIPorbitalFixingPropagate(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ORBITALFIXINGDATA* orbifixdata,      /**< orbital fixing data structure */
+   SCIP_OFDATA*          orbifixdata,        /**< orbital fixing data structure */
    SCIP_Bool*            infeasible,         /**< whether infeasibility is found */
    int*                  nred,               /**< number of domain reductions */
-   SCIP_Bool*            didrun              /**< whether propagator actually ran */
+   SCIP_Bool*            didrun              /**< whether any propagator actually ran */
    )
 {
-   OFDATA* ofdata;
+   OFCDATA* ofdata;
    SCIP_SHADOWTREE* shadowtree;
    int c;
 
    assert( scip != NULL );
    assert( orbifixdata != NULL );
+   assert( infeasible != NULL );
+   assert( nred != NULL );
+   assert( didrun != NULL );
 
    *infeasible = FALSE;
    *nred = 0;
@@ -1825,7 +1848,7 @@ SCIP_RETCODE SCIPorbitalFixingPropagate(
 /** adds component for orbital fixing */
 SCIP_RETCODE SCIPorbitalFixingAddComponent(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ORBITALFIXINGDATA* orbifixdata,      /**< orbital fixing data structure */
+   SCIP_OFDATA*          orbifixdata,        /**< orbital fixing data structure */
    SCIP_VAR**            permvars,           /**< variable array of the permutation */
    int                   npermvars,          /**< number of variables in that array */
    int**                 perms,              /**< permutations in the component */
@@ -1851,7 +1874,7 @@ SCIP_RETCODE SCIPorbitalFixingAddComponent(
 /** resets orbital fixing data structure (clears all components) */
 SCIP_RETCODE SCIPorbitalFixingReset(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ORBITALFIXINGDATA* orbifixdata       /**< orbital fixing data structure */
+   SCIP_OFDATA*          orbifixdata         /**< orbital fixing data structure */
    )
 {
    assert( scip != NULL );
@@ -1878,7 +1901,7 @@ SCIP_RETCODE SCIPorbitalFixingReset(
 /** free orbital fixing data */
 SCIP_RETCODE SCIPorbitalFixingFree(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ORBITALFIXINGDATA** orbifixdata      /**< orbital fixing data structure */
+   SCIP_OFDATA**         orbifixdata         /**< orbital fixing data structure */
    )
 {
    assert( scip != NULL );
@@ -1893,11 +1916,12 @@ SCIP_RETCODE SCIPorbitalFixingFree(
 
 
 /** initializes structures needed for orbital fixing
+ * 
  * This is only done exactly once.
  */
 SCIP_RETCODE SCIPorbitalFixingInclude(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ORBITALFIXINGDATA** orbifixdata,     /**< pointer to orbital fixing data structure to populate */
+   SCIP_OFDATA**         orbifixdata,        /**< pointer to orbital fixing data structure to populate */
    SCIP_EVENTHDLR*       shadowtreeeventhdlr /**< pointer to the shadow tree eventhdlr */
    )
 {
@@ -1905,7 +1929,8 @@ SCIP_RETCODE SCIPorbitalFixingInclude(
    assert( orbifixdata != NULL );
    assert( shadowtreeeventhdlr != NULL );
 
-   assert( SCIPgetStage(scip) == SCIP_STAGE_INIT );
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPorbitalFixingInclude", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, 
+      FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPallocBlockMemory(scip, orbifixdata) );
 

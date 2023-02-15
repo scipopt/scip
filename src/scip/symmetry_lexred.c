@@ -1414,7 +1414,7 @@ SCIP_RETCODE SCIPlexicographicReductionInclude(
    assert( masterdata != NULL );
    assert( shadowtreeeventhdlr != NULL );
 
-   assert( SCIPcheckStage(scip, "SCIPlexicographicReductionInclude", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, 
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPlexicographicReductionInclude", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, 
       FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPallocBlockMemory(scip, masterdata) );
