@@ -62,6 +62,7 @@ typedef struct SCIP_OrbitopalFixingData SCIP_ORBITOPALFIXINGDATA;
 
 
 /** propagates orbitopal fixing */
+SCIP_EXPORT
 SCIP_RETCODE SCIPorbitopalFixingPropagate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ORBITOPALFIXINGDATA*  orbifixdata,        /**< orbitopal fixing data structure */
@@ -72,6 +73,7 @@ SCIP_RETCODE SCIPorbitopalFixingPropagate(
 
 
 /** marks presence of orbitopal symmetries component for orbitopal fixing */
+SCIP_EXPORT
 SCIP_RETCODE SCIPorbitopalFixingAddOrbitope(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ORBITOPALFIXINGDATA*  orbifixdata,        /**< orbitopal fixing data structure */
@@ -82,6 +84,7 @@ SCIP_RETCODE SCIPorbitopalFixingAddOrbitope(
 
 
 /** resets orbitopal fixing data structure (clears all orbitopes) */
+SCIP_EXPORT
 SCIP_RETCODE SCIPorbitopalFixingReset(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ORBITOPALFIXINGDATA*  orbifixdata         /**< pointer to orbitopal fixing structure to populate */
@@ -89,6 +92,7 @@ SCIP_RETCODE SCIPorbitopalFixingReset(
 
 
 /** free orbitopal fixing data */
+SCIP_EXPORT
 SCIP_RETCODE SCIPorbitopalFixingFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ORBITOPALFIXINGDATA** orbifixdata    /**< pointer to orbitopal fixing structure to populate */
@@ -98,6 +102,7 @@ SCIP_RETCODE SCIPorbitopalFixingFree(
 /** initializes structures needed for orbitopal fixing
  * This is only done exactly once.
  */
+SCIP_EXPORT
 SCIP_RETCODE SCIPorbitopalFixingInclude(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ORBITOPALFIXINGDATA** orbifixdata         /**< pointer to orbitopal fixing structure to populate */

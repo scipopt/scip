@@ -341,7 +341,7 @@ struct SCIP_PropData
    SCIP_EVENTHDLR*       shadowtreeeventhdlr;/**< pointer to event handler for shadow tree */
    SCIP_ORBITOPALFIXINGDATA* orbitopalfixingdata; /**< container for the orbitopal fixing data */
    SCIP_ORBITALFIXINGDATA* orbitalfixingdata;/**< container for orbital fixing data */
-   SCIP_LEXICOGRAPHICREDUCTIONDATA* lexreddata;/**< container for lexicographic reduction propagation */
+   SCIP_LEXREDDATA*      lexreddata;         /**< container for lexicographic reduction propagation */
 };
 
 /** conflict data structure for SST cuts */

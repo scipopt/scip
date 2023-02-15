@@ -73,18 +73,18 @@
 
 
 /** data per permutation for lexicographic reduction propagator */
-struct LexicographicReductionPermutationData
+struct LexRedPermutationData
 {
    SCIP_VAR**            vars;               /**< variables */
    int                   nvars;              /**< number of variables */
    int*                  perm;               /**< permutation for lexicographic reduction */
    int*                  invperm;            /**< inverse permutation */
 };
-typedef struct LexicographicReductionPermutationData LEXDATA;
+typedef struct LexRedPermutationData LEXDATA;
 
 
 /** data for dynamic lexicographic reduction propagator */
-struct SCIP_LexicographicReductionData
+struct SCIP_LexRedData
 {
    SCIP_EVENTHDLR*       shadowtreeeventhdlr;/**< eventhandler for the shadow tree data structure */
    SCIP_HASHMAP*         symvarmap;          /**< map of variables to indices in permvars array */
@@ -108,7 +108,7 @@ typedef struct NodeDepthBranchIndex NODEDEPTHBRANCHINDEX;
 struct VarArrayNodeDepthBranchIndex
 {
    NODEDEPTHBRANCHINDEX* nodedepthbranchindices; /**< pointer to branch-and-bound tree information */
-   SCIP_LEXICOGRAPHICREDUCTIONDATA* masterdata;  /**< pointer to global data for lexicographic order propagator */
+   SCIP_LEXREDDATA*      masterdata;             /**< pointer to global data for lexicographic order propagator */
    SCIP_VAR**            vars;                   /**< pointer to variable array */
 };
 typedef struct VarArrayNodeDepthBranchIndex VARARRAYNODEDEPTHBRANCHINDEX;
@@ -324,7 +324,7 @@ SCIP_RETCODE lexdataFree(
 static
 SCIP_RETCODE lexdataCreate(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_LEXICOGRAPHICREDUCTIONDATA* masterdata,/**< pointer to global data for lexicographic order propagator */
+   SCIP_LEXREDDATA*      masterdata,         /**< pointer to global data for lexicographic order propagator */
    LEXDATA**             lexdata,            /**< pointer to store the data for this permutation */
    SCIP_VAR*const*       vars,               /**< input variables of the lexicographic reduction propagator */
    int                   nvars,              /**< input number of variables of the lexicographic reduction propagator */
@@ -438,7 +438,7 @@ SCIP_DECL_SORTINDCOMP(sortbynodedepthbranchindices)
    /* unpack the dataptr */
    VARARRAYNODEDEPTHBRANCHINDEX* vararraynodedepthbranchindices;
    NODEDEPTHBRANCHINDEX* nodedepthbranchindices;
-   SCIP_LEXICOGRAPHICREDUCTIONDATA* masterdata;
+   SCIP_LEXREDDATA* masterdata;
    SCIP_VAR** vars;
    NODEDEPTHBRANCHINDEX* index1;
    NODEDEPTHBRANCHINDEX* index2;
@@ -480,7 +480,7 @@ SCIP_DECL_SORTINDCOMP(sortbynodedepthbranchindices)
 static
 SCIP_RETCODE getVarOrder(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_LEXICOGRAPHICREDUCTIONDATA* masterdata,/**< pointer to global data for lexicograpahic order propagator */
+   SCIP_LEXREDDATA*      masterdata,         /**< pointer to global data for lexicograpahic order propagator */
    LEXDATA*              lexdata,            /**< pointer to data for this permutation */
    NODEDEPTHBRANCHINDEX* nodedepthbranchindices, /**< array with (depth, index)-information per variable in
                                                    * rooted path to focus node */
@@ -988,7 +988,7 @@ SCIP_RETCODE propagateStaticLexred(
 static
 SCIP_RETCODE propagateLexredDynamic(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_LEXICOGRAPHICREDUCTIONDATA* masterdata,/**< pointer to global data for lexicographic order propagator */
+   SCIP_LEXREDDATA*      masterdata,         /**< pointer to global data for lexicographic order propagator */
    LEXDATA*              lexdata,            /**< pointer to data for this permutation */
    NODEDEPTHBRANCHINDEX* nodedepthbranchindices, /**< array with (depth, index)-information per variable in
                                                    * rooted path to focus node */
@@ -1033,7 +1033,7 @@ SCIP_RETCODE propagateLexredDynamic(
 static
 SCIP_RETCODE propagateLexicographicReductionPerm(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_LEXICOGRAPHICREDUCTIONDATA* masterdata,/**< pointer to global data for lexicographic order propagator */
+   SCIP_LEXREDDATA*      masterdata,         /**< pointer to global data for lexicographic order propagator */
    LEXDATA*              lexdata,            /**< pointer to data for this permutation */
    NODEDEPTHBRANCHINDEX* nodedepthbranchindices, /**< array with (depth, index)-information per variable in
                                                    * rooted path to focus node */
@@ -1063,7 +1063,7 @@ SCIP_RETCODE propagateLexicographicReductionPerm(
 static
 SCIP_RETCODE shadowtreeFillNodeDepthBranchIndices(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_LEXICOGRAPHICREDUCTIONDATA* masterdata,/**< pointer to global data for lexicographic order propagator */
+   SCIP_LEXREDDATA*      masterdata,         /**< pointer to global data for lexicographic order propagator */
    NODEDEPTHBRANCHINDEX* nodedepthbranchindices, /**< array to populate */
    SCIP_SHADOWTREE*      shadowtree,         /**< pointer to shadow tree structure */
    SCIP_NODE*            focusnode           /**< focusnode to which the rooted path is evaluated */
@@ -1149,7 +1149,7 @@ SCIP_RETCODE shadowtreeFillNodeDepthBranchIndices(
 static
 SCIP_RETCODE shadowtreeUndoNodeDepthBranchIndices(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_LEXICOGRAPHICREDUCTIONDATA* masterdata,/**< pointer to global data for lexicographic order propagator */
+   SCIP_LEXREDDATA*      masterdata,         /**< pointer to global data for lexicographic order propagator */
    NODEDEPTHBRANCHINDEX* nodedepthbranchindices, /**< array populated by nodedepthbranchindices to clean */
    SCIP_SHADOWTREE*      shadowtree,         /**< pointer to shadow tree structure */
    SCIP_NODE*            focusnode           /**< focusnode to which the rooted path is evaluated */
@@ -1226,7 +1226,7 @@ SCIP_RETCODE shadowtreeUndoNodeDepthBranchIndices(
 /** apply lexicographic reduction propagation */
 SCIP_RETCODE SCIPlexicographicReductionPropagate(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_LEXICOGRAPHICREDUCTIONDATA* masterdata,/**< pointer to global data for lexicographic order propagator */
+   SCIP_LEXREDDATA*      masterdata,         /**< pointer to global data for lexicographic order propagator */
    SCIP_Bool*            infeasible,         /**< whether infeasibility is found */
    int*                  nred,               /**< number of domain reductions */
    SCIP_Bool*            didrun              /**< whether propagator actually ran */
@@ -1299,7 +1299,7 @@ SCIP_RETCODE SCIPlexicographicReductionPropagate(
 /** adds permutation for lexicographic reduction propagation */
 SCIP_RETCODE SCIPlexicographicReductionAddPermutation(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_LEXICOGRAPHICREDUCTIONDATA* masterdata,/**< pointer to global data for lexicographic order propagator */
+   SCIP_LEXREDDATA*      masterdata,         /**< pointer to global data for lexicographic order propagator */
    SCIP_VAR**            permvars,           /**< variable array of the permutation */
    int                   npermvars,          /**< number of variables in that array */
    int*                  perm                /**< permutation */
@@ -1348,7 +1348,7 @@ SCIP_RETCODE SCIPlexicographicReductionAddPermutation(
 /** resets lexicographic reduction propagation (removes all permutations) */
 SCIP_RETCODE SCIPlexicographicReductionReset(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_LEXICOGRAPHICREDUCTIONDATA* masterdata/**< pointer to global data for lexicographic order propagator */
+   SCIP_LEXREDDATA*      masterdata          /**< pointer to global data for lexicographic order propagator */
    )
 {
    assert( scip != NULL );
@@ -1384,7 +1384,7 @@ SCIP_RETCODE SCIPlexicographicReductionReset(
 /** free lexicographic reduction data */
 SCIP_RETCODE SCIPlexicographicReductionFree(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_LEXICOGRAPHICREDUCTIONDATA** masterdata/**< pointer to global data for lexicographic order propagator */
+   SCIP_LEXREDDATA**     masterdata          /**< pointer to global data for lexicographic order propagator */
    )
 {
    assert( scip != NULL );
@@ -1406,7 +1406,7 @@ SCIP_RETCODE SCIPlexicographicReductionFree(
  */
 SCIP_RETCODE SCIPlexicographicReductionInclude(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_LEXICOGRAPHICREDUCTIONDATA** masterdata,/**< pointer to global data for lexicographic order propagator */
+   SCIP_LEXREDDATA**     masterdata,         /**< pointer to global data for lexicographic order propagator */
    SCIP_EVENTHDLR*       shadowtreeeventhdlr /**< pointer to the shadow tree eventhdlr */
    )
 {

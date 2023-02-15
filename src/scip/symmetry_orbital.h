@@ -57,6 +57,7 @@ typedef struct SCIP_OrbitalFixingData SCIP_ORBITALFIXINGDATA;
  */
 
 /** propagate orbital fixing */
+SCIP_EXPORT
 SCIP_RETCODE SCIPorbitalFixingPropagate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ORBITALFIXINGDATA* orbifixdata,      /**< orbitopal fixing data structure */
@@ -67,6 +68,7 @@ SCIP_RETCODE SCIPorbitalFixingPropagate(
 
 
 /** adds component for orbital fixing */
+SCIP_EXPORT
 SCIP_RETCODE SCIPorbitalFixingAddComponent(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ORBITALFIXINGDATA* orbifixdata,      /**< orbital fixing data structure */
@@ -78,6 +80,7 @@ SCIP_RETCODE SCIPorbitalFixingAddComponent(
 
 
 /** resets orbital fixing data structure (clears all components) */
+SCIP_EXPORT
 SCIP_RETCODE SCIPorbitalFixingReset(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ORBITALFIXINGDATA* orbifixdata       /**< orbital fixing data structure */
@@ -85,6 +88,7 @@ SCIP_RETCODE SCIPorbitalFixingReset(
 
 
 /** free orbital fixing data */
+SCIP_EXPORT
 SCIP_RETCODE SCIPorbitalFixingFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ORBITALFIXINGDATA** orbifixdata      /**< orbital fixing data structure */
@@ -94,6 +98,7 @@ SCIP_RETCODE SCIPorbitalFixingFree(
 /** initializes structures needed for orbital fixing
  * This is only done exactly once.
  */
+SCIP_EXPORT
 SCIP_RETCODE SCIPorbitalFixingInclude(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ORBITALFIXINGDATA** orbifixdata,     /**< pointer to orbital fixing data structure to populate */
