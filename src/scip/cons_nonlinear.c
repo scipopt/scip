@@ -9336,12 +9336,12 @@ SCIP_RETCODE ensureOpenArraySize(
    assert(openidx != NULL);
    assert(maxnelems != NULL);
 
-   if( nelems >= *maxnelems )
+   if( nelems > *maxnelems )
    {
       int newsize;
 
-      newsize = SCIPcalcMemGrowSize(scip, *maxnelems + 1);
-      assert(newsize > *maxnelems);
+      newsize = SCIPcalcMemGrowSize(scip, nelems);
+      assert(newsize >= nelems);
 
       SCIP_CALL( SCIPreallocBufferArray(scip, openidx, newsize) );
 
@@ -9366,12 +9366,12 @@ SCIP_RETCODE ensureLocVarsArraySize(
    assert(vals != NULL);
    assert(maxnelems != NULL);
 
-   if( nelems >= *maxnelems )
+   if( nelems > *maxnelems )
    {
       int newsize;
 
-      newsize = SCIPcalcMemGrowSize(scip, *maxnelems + 1);
-      assert(newsize > *maxnelems);
+      newsize = SCIPcalcMemGrowSize(scip, nelems);
+      assert(newsize > nelems);
 
       SCIP_CALL( SCIPreallocBufferArray(scip, vars, newsize) );
       SCIP_CALL( SCIPreallocBufferArray(scip, vals, newsize) );
@@ -10760,7 +10760,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphNonlinear)
       if( SCIPisExprVar(scip, expr) )
       {
          /* needed to correctly reset value when leaving expression */
-         SCIP_CALL( ensureOpenArraySize(scip, &openidx, nopenidx, &maxnopenidx) );
+         SCIP_CALL( ensureOpenArraySize(scip, &openidx, nopenidx + 1, &maxnopenidx) );
 
          openidx[nopenidx++] = -1;
 
@@ -10826,7 +10826,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphNonlinear)
                SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, sumidx, nodeidx, FALSE, 0.0) );
             }
 
-            SCIP_CALL( ensureLocVarsArraySize(scip, &consvars, &consvals, nlocvals, &maxnconsvars) );
+            SCIP_CALL( ensureLocVarsArraySize(scip, &consvars, &consvals, nlocvars, &maxnconsvars) );
 
             for( i = 0; i < nlocvars; ++i )
             {
@@ -10849,7 +10849,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphNonlinear)
          SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, parentidx, nodeidx, hasparentcoef, parentcoef) );
 
          /* needed to correctly reset value when leaving expression */
-         SCIP_CALL( ensureOpenArraySize(scip, &openidx, nopenidx, &maxnopenidx) );
+         SCIP_CALL( ensureOpenArraySize(scip, &openidx, nopenidx + 1, &maxnopenidx) );
 
          openidx[nopenidx++] = -1;
       }
@@ -10910,7 +10910,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphNonlinear)
                SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, sumidx, nodeidx, iscolored, consvals[i]) );
             }
 
-            SCIP_CALL( ensureOpenArraySize(scip, &openidx, nopenidx, &maxnopenidx) );
+            SCIP_CALL( ensureOpenArraySize(scip, &openidx, nopenidx + 1, &maxnopenidx) );
 
             openidx[nopenidx++] = sumidx;
          }
@@ -10942,7 +10942,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphNonlinear)
                SCIP_CALL( SCIPfreeSymDataExpr(scip, &symdata) );
             }
 
-            SCIP_CALL( ensureOpenArraySize(scip, &openidx, nopenidx, &maxnopenidx) );
+            SCIP_CALL( ensureOpenArraySize(scip, &openidx, nopenidx + 1, &maxnopenidx) );
 
             openidx[nopenidx++] = opidx;
          }

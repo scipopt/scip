@@ -315,7 +315,7 @@ SCIP_RETCODE ensureNodeArraysSize(
    {
       int newsize;
 
-      newsize = SCIPcalcMemGrowSize(scip, graph->nnodes + 1);
+      newsize = SCIPcalcMemGrowSize(scip, graph->nnodes + addsize);
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &graph->nodetypes, graph->maxnnodes, newsize) );
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &graph->nodeinfopos, graph->maxnnodes, newsize) );
       graph->maxnnodes = newsize;
@@ -525,7 +525,7 @@ SCIP_RETCODE ensureEdgeArraysSize(
    {
       int newsize;
 
-      newsize = SCIPcalcMemGrowSize(scip, graph->nedges + 1);
+      newsize = SCIPcalcMemGrowSize(scip, graph->nedges + addsize);
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &graph->edgefirst, graph->maxnedges, newsize) );
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &graph->edgesecond, graph->maxnedges, newsize) );
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &graph->edgevals, graph->maxnedges, newsize) );
