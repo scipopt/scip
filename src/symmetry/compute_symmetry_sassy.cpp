@@ -471,8 +471,8 @@ SCIP_RETCODE determineGraphSize(
       SCIP_EXPRITER* it;
       SCIP_VAR** vars = NULL;
       SCIP_Real* vals = NULL;
-      int* visitednodes;
-      int* ischildofsum;
+      int* visitednodes = NULL;
+      int* ischildofsum = NULL;
       int maxvisitednodes;
       int maxischildofsum;
       int numvisitednodes = 0;
@@ -815,12 +815,12 @@ SCIP_RETCODE fillGraphByConss(
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONS** conss;
    SCIP_EXPRITER* it;
-   SCIP_Bool* ischildofsum;
+   SCIP_Bool* ischildofsum = NULL;
    SCIP_VAR** vars = NULL;
    SCIP_Real* vals = NULL;
    SCIP_Bool groupByConstraints;
    int* internodes = NULL;
-   int* visitednodes;
+   int* visitednodes = NULL;
    int maxischildofsum;
    int maxvisitednodes;
    int numvisitednodes = 0;
@@ -859,7 +859,7 @@ SCIP_RETCODE fillGraphByConss(
    for (j = 0; j < matrixdata->npermvars; ++j)
    {
       assert( 0 <= matrixdata->permvarcolors[j] && matrixdata->permvarcolors[j] < matrixdata->nuniquevars );
-      G->add_vertex(matrixdata->permvarcolors[j], degrees[n]);
+      (void) G->add_vertex(matrixdata->permvarcolors[j], degrees[n]);
       ++n;
    }
    *nusedcolors = matrixdata->nuniquevars;
@@ -868,7 +868,7 @@ SCIP_RETCODE fillGraphByConss(
    for (i = 0; i < matrixdata->nrhscoef; ++i)
    {
       assert( 0 <= matrixdata->rhscoefcolors[i] && matrixdata->rhscoefcolors[i] < matrixdata->nuniquerhs );
-      G->add_vertex(*nusedcolors + matrixdata->rhscoefcolors[i], degrees[n]);
+      (void) G->add_vertex(*nusedcolors + matrixdata->rhscoefcolors[i], degrees[n]);
       ++n;
    }
    *nusedcolors += matrixdata->nuniquerhs;
@@ -924,9 +924,9 @@ SCIP_RETCODE fillGraphByConss(
       if ( matrixdata->nuniquemat == 1 )
       {
          if ( rhsnode < varnode )
-            G->add_edge(rhsnode, varnode);
+            G->add_edge((unsigned) rhsnode, (unsigned) varnode);
          else
-            G->add_edge(varnode, rhsnode);
+            G->add_edge((unsigned) varnode, (unsigned) rhsnode);
          ++m;
       }
       else
@@ -955,7 +955,7 @@ SCIP_RETCODE fillGraphByConss(
 
          if ( internodes[varrhsidx] < firstcolornodenumber )
          {
-            G->add_vertex(*nusedcolors + color, degrees[n]);
+            (void) G->add_vertex(*nusedcolors + color, degrees[n]);
             internodes[varrhsidx] = n++;
             newinternode = TRUE;
          }
@@ -968,20 +968,20 @@ SCIP_RETCODE fillGraphByConss(
          {
             if ( newinternode )
             {
-               G->add_edge(rhsnode, internode);
+               G->add_edge((unsigned) rhsnode, (unsigned) internode);
                ++m;
             }
-            G->add_edge(varnode, internode);
+            G->add_edge((unsigned) varnode, (unsigned) internode);
             ++m;
          }
          else
          {
             if ( newinternode )
             {
-               G->add_edge(varnode, internode);
+               G->add_edge((unsigned) varnode, (unsigned) internode);
                ++m;
             }
-            G->add_edge(rhsnode, internode);
+            G->add_edge((unsigned) rhsnode, (unsigned) internode);
             ++m;
          }
       }
@@ -1129,12 +1129,12 @@ SCIP_RETCODE fillGraphByConss(
                            color = ((SYM_CONSTTYPE*) SCIPhashtableRetrieve(sumcoefmap, (void *) ct))->color;
 
                         /* add the intermediate node with the corresponding color */
-                        G->add_vertex(color, degrees[n]);
+                        (void) G->add_vertex(color, degrees[n]);
                         internode = n++;
 
                         assert( internode < nnodes );
 
-                        G->add_edge(internode, parentnode);
+                        G->add_edge((unsigned) internode, (unsigned) parentnode);
                         ++m;
                         assert( m <= nedges );
 
@@ -1142,7 +1142,7 @@ SCIP_RETCODE fillGraphByConss(
                         node = SCIPvarGetProbindex(vars[k]);
                         assert( node < nnodes );
 
-                        G->add_edge(internode, node);
+                        G->add_edge((unsigned) internode, (unsigned) node);
                         ++m;
                         assert( m <= nedges );
                      }
@@ -1170,12 +1170,12 @@ SCIP_RETCODE fillGraphByConss(
                            color = ((SYM_CONSTTYPE*) SCIPhashtableRetrieve(consttypemap, (void *) ct))->color;
 
                         /* add the node with a new color */
-                        G->add_vertex(color, degrees[n]);
+                        (void) G->add_vertex(color, degrees[n]);
                         node = n++;
 
                         assert( node < nnodes );
 
-                        G->add_edge(parentnode, node);
+                        G->add_edge((unsigned) parentnode, (unsigned) node);
                         ++m;
                         assert( m <= nedges );
                      }
@@ -1260,7 +1260,7 @@ SCIP_RETCODE fillGraphByConss(
                      parentcolor = ((SYM_RHSTYPE*) SCIPhashtableRetrieve(rhstypemap, (void *) rt))->color;
 
                   /* add the constraint side node with the corresponding color */
-                  G->add_vertex(parentcolor, degrees[n]);
+                  (void) G->add_vertex(parentcolor, degrees[n]);
                   parentnode = n++;
                   assert( parentnode < nnodes );
                }
@@ -1274,7 +1274,7 @@ SCIP_RETCODE fillGraphByConss(
                /* in all cases apart from variable expressions, the new node is added with the corresponding color */
                if ( color != -1 )
                {
-                  G->add_vertex(color, degrees[n]);
+                  (void) G->add_vertex(color, degrees[n]);
                   node = n++;
                   assert( node < nnodes );
                   assert( n <= nnodes );
@@ -1292,9 +1292,9 @@ SCIP_RETCODE fillGraphByConss(
                assert( parentnode != -1 );
 
                if ( parentnode < node )
-                  G->add_edge(parentnode, node);
+                  G->add_edge((unsigned) parentnode, (unsigned) node);
                else
-                  G->add_edge(node, parentnode);
+                  G->add_edge((unsigned) node, (unsigned) parentnode);
                ++m;
                assert( m <= nedges );
 
@@ -1328,7 +1328,7 @@ SCIP_RETCODE fillGraphByConss(
                         color = ((SYM_CONSTTYPE*) SCIPhashtableRetrieve(sumcoefmap, (void *) ct))->color;
 
                      /* add the intermediate node with the corresponding color */
-                     G->add_vertex(color, degrees[n]);
+                     (void) G->add_vertex(color, degrees[n]);
                      internode = n++;
 
                      SCIP_CALL( SCIPensureBlockMemoryArray(scip, &visitednodes, &maxvisitednodes, numvisitednodes+1) );
@@ -1339,7 +1339,7 @@ SCIP_RETCODE fillGraphByConss(
 
                      assert( internode < nnodes );
 
-                     G->add_edge(node, internode);
+                     G->add_edge((unsigned) node, (unsigned) internode);
                      ++m;
                      assert( m <= nedges );
                   }
@@ -1368,12 +1368,12 @@ SCIP_RETCODE fillGraphByConss(
                         color = ((SYM_CONSTTYPE*) SCIPhashtableRetrieve(consttypemap, (void *) ct))->color;
 
                      /* add the node with a new color */
-                     G->add_vertex(color, degrees[n]);
+                     (void) G->add_vertex(color, degrees[n]);
                      internode = n++;
 
                      assert( node < nnodes );
 
-                     G->add_edge(node, internode);
+                     G->add_edge((unsigned) node, (unsigned) internode);
                      ++m;
                      assert( m <= nedges );
                   }
@@ -1463,8 +1463,8 @@ initStaticSymmetryAddName( )
    return sassyname;
 }
 
-static char* symmetryname = initStaticSymmetryName();
-static char* symmetryaddname = initStaticSymmetryAddName();
+static const char* symmetryname = initStaticSymmetryName();
+static const char* symmetryaddname = initStaticSymmetryAddName();
 
 /** return name of external program used to compute generators */
 const char* SYMsymmetryGetName(void)
@@ -1548,7 +1548,7 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    sassy::static_graph sassygraph;
 
    /* init graph */
-   sassygraph.initialize_graph(nnodes, nedges);
+   sassygraph.initialize_graph((unsigned) nnodes, (unsigned) nedges);
 
    /* add the nodes for linear and nonlinear constraints to the graph */
    SCIP_CALL( fillGraphByConss(scip, &sassygraph, matrixdata, exprdata,
@@ -1596,7 +1596,7 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    blissgraph.write_dot("debug.dot");
 #endif
 
-#if SCIP_DISABLED_CODE
+#ifdef SCIP_DISABLED_CODE
    char filename[SCIP_MAXSTRLEN];
    (void) SCIPsnprintf(filename, SCIP_MAXSTRLEN, "%s.dimacs", SCIPgetProbName(scip));
    FILE* fp = fopen(filename, "w");
@@ -1626,7 +1626,7 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
 #if BLISS_VERSION_MAJOR >= 1 || BLISS_VERSION_MINOR >= 76
    /* lambda function to have access to stats and terminate the search if maxgenerators are reached */
    auto term = [&]() {
-      return (stats.get_nof_generators() >= (long unsigned int) maxgenerators);
+      return (stats.get_nof_generators() >= (unsigned) maxgenerators);
    };
 
    auto hook = [&](unsigned int n, const unsigned int* aut) {
