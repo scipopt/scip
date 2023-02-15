@@ -32,7 +32,7 @@ namespace sassy {
 
         configstruct* config = nullptr;
     private:
-        std::clock_t start_time;
+        // std::clock_t start_time;
 
         //inline static preprocessor* save_preprocessor;
         sassy_hook*                 saved_hook;
