@@ -2274,7 +2274,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphSOS2)
             color = 0.0;
          }
 
-         if( nlocvars == 1 && SCIPisZero(scip, constant) && SCIPisEQ(scip, locvals[j], 1.0) )
+         if( nlocvars == 1 && SCIPisZero(scip, constant) && SCIPisEQ(scip, locvals[0], 1.0) )
          {
             nodeidx = SCIPgetSymgraphVarnodeidx(scip, graph, locvars[0]);
 

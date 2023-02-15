@@ -2934,7 +2934,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphBounddisjunction)
    {
       /* add node and edge for bound expression of literal */
       opnodeidx = SCIPaddSymgraphOpnode(scip, graph,  SYM_CONSOPTYPE_BDDISJ);
-      SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, consnodeidx, nodeidx, FALSE, 0.0) );
+      SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, consnodeidx, opnodeidx, FALSE, 0.0) );
 
       /* add node and edge for bound on literal */
       bound = consdata->boundtypes[i] == SCIP_BOUNDTYPE_UPPER ? consdata->bounds[i] : -consdata->bounds[i];
