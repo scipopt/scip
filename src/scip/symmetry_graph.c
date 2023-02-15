@@ -75,6 +75,7 @@ SCIP_RETCODE SCIPcreateSymgraph(
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*graph)->edgefirst, nedges) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*graph)->edgesecond, nedges) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*graph)->edgevals, nedges) );
+   SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &(*graph)->isfixedvar, nsymvars) );
 
    (*graph)->nnodes = 0;
    (*graph)->maxnnodes = nnodes;
@@ -117,6 +118,7 @@ SCIP_RETCODE SCIPfreeSymgraph(
    SCIPfreeBlockMemoryArrayNull(scip, &(*graph)->opcolors, (*graph)->nopnodes);
    SCIPfreeBlockMemoryArrayNull(scip, &(*graph)->varcolors, (*graph)->nsymvars);
 
+   SCIPfreeBlockMemoryArray(scip, &(*graph)->isfixedvar, (*graph)->nsymvars);
    SCIPfreeBlockMemoryArray(scip, &(*graph)->edgevals, (*graph)->maxnedges);
    SCIPfreeBlockMemoryArray(scip, &(*graph)->edgesecond, (*graph)->maxnedges);
    SCIPfreeBlockMemoryArray(scip, &(*graph)->edgefirst, (*graph)->maxnedges);
@@ -615,10 +617,46 @@ int compareVars(
    return 0;
 }
 
+/** compares two variables for symmetry detection
+ *
+ *  Variables are sorted first by their type, then by their objective coefficient,
+ *  then by their lower bound, then by their upper bound, and then whether they are fixed.
+ *
+ *  result:
+ *    < 0: ind1 comes before (is better than) ind2
+ *    = 0: both indices have the same value
+ *    > 0: ind2 comes after (is worse than) ind2
+ */
+static
+int compareVarsFixed(
+   SCIP_VAR*             var1,               /**< first variable for comparison */
+   SCIP_VAR*             var2,               /**< second variable for comparison */
+   SCIP_Bool             isfixed1,           /**< whether var1 needs to be fixed */
+   SCIP_Bool             isfixed2            /**< whether var2 needs to be fixed */
+   )
+{
+   int result;
+
+   assert(var1 != NULL);
+   assert(var2 != NULL);
+
+   result = compareVars(var1, var2);
+
+   if( result != 0 )
+      return result;
+
+   if( (! isfixed1) && isfixed2 )
+      return -1;
+   if( isfixed1 && (! isfixed2) )
+      return 1;
+
+   return 0;
+}
+
 /** sorts nodes of a symmetry detection graph
  *
- *  Nodes are sorted first by their nodetype, then by the value of the corresponding
- *  type information, and then by their consinfo (first lhs, then rhs, then conshdlr).
+ *  Variables are sorted first by their type, then by their objective coefficient,
+ *  then by their lower bound, then by their upper bound, and then whether they are fixed.
  *
  *  result:
  *    < 0: ind1 comes before (is better than) ind2
@@ -628,11 +666,20 @@ int compareVars(
 static
 SCIP_DECL_SORTINDCOMP(SYMsortVarnodes)
 {
+   SYM_GRAPH* graph;
    SCIP_VAR** vars;
+   SCIP_Bool* isfixedvar;
 
-   vars = (SCIP_VAR**) dataptr;
+   graph = (SYM_GRAPH*) dataptr;
+   assert(graph != NULL);
 
-   return compareVars(vars[ind1], vars[ind2]);
+   vars = graph->symvars;
+   assert(vars != NULL);
+
+   isfixedvar = graph->isfixedvar;
+   assert(isfixedvar != NULL);
+
+   return compareVarsFixed(vars[ind1], vars[ind2], isfixedvar[ind1], isfixedvar[ind2]);
 }
 
 /** compares two operators
@@ -846,6 +893,13 @@ SCIP_RETCODE SCIPcomputeSymgraphColors(
    /* lock graph to be extended */
    graph->islocked = TRUE;
 
+   /* possibly fix variables */
+   for( i = 0; i < graph->nsymvars; ++i )
+   {
+      if( isFixedVar(graph->symvars[i], fixedtype) )
+         graph->isfixedvar[i] = TRUE;
+   }
+
    /* allocate memory for colors */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &graph->varcolors, graph->nsymvars) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &graph->opcolors, graph->nopnodes) );
@@ -868,7 +922,7 @@ SCIP_RETCODE SCIPcomputeSymgraphColors(
 
    /* find colors of variable nodes */
    assert(graph->nsymvars > 0);
-   SCIPsort(perm, SYMsortVarnodes, (void*) graph->symvars, graph->nsymvars);
+   SCIPsort(perm, SYMsortVarnodes, (void*) graph, graph->nsymvars);
 
    graph->varcolors[perm[0]] = color;
    prevvar = graph->symvars[perm[0]];
@@ -877,7 +931,7 @@ SCIP_RETCODE SCIPcomputeSymgraphColors(
    {
       thisvar = graph->symvars[perm[i]];
 
-      if( compareVars(prevvar, thisvar) != 0 || isFixedVar(prevvar, fixedtype) )
+      if( graph->isfixedvar[i] || compareVars(prevvar, thisvar) != 0 )
          ++color;
 
       graph->varcolors[perm[i]] = color;

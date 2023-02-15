@@ -198,6 +198,7 @@ struct SYM_Graph
    /* information about variables */
    SCIP_VAR**            symvars;            /**< variables on which symmetries act */
    int                   nsymvars;           /**< number of variables in symvars */
+   SCIP_Bool*            isfixedvar;         /**< whether a variable needs to be fixed */
 
    /* arrays of colors used for symmetry detection */
    int*                  varcolors;          /**< variable colors for symmetry detection */
