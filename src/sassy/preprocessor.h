@@ -772,7 +772,7 @@ namespace sassy {
                     assert(sanity_check == num_paths);
 
                     for(int k = 0; k < num_paths; ++k) {
-                        reduced_verts = 0;
+                        // reduced_verts = 0;
                         const int path_start_vertex = path_list[k];
                         assert(g->d[path_start_vertex] == 2);
                         if(path_done.get(path_start_vertex)) {
@@ -2254,12 +2254,12 @@ namespace sassy {
                     if (c1->vertex_to_col[c1->lab[i]] != i)
                         continue; // not a color
                     if (c1->ptn[i] > 0 && only_discrete_prev) {
-                        hint = _i;
+                        // hint = _i;
                         only_discrete_prev = false;
                     }
                     if (c1->ptn[i] >= 1 && c1->ptn[i] > largest_cell_sz) {
                         cell = i;
-                        largest_cell_sz = c1->ptn[i];
+                        // largest_cell_sz = c1->ptn[i];
                     }
                 }
                 if (cell != -1) {
@@ -2319,7 +2319,7 @@ namespace sassy {
                     if (c1->ptn[i] >= 1 && (c1->ptn[i] > largest_cell_sz ||
                                             (touched_set->get(i) && (cell == -1 || !touched_set->get(cell))))) {
                         cell = i;
-                        largest_cell_sz = c1->ptn[i];
+                        // largest_cell_sz = c1->ptn[i];
                     }
                     i += c1->ptn[i] + 1;
                 }
@@ -3058,14 +3058,14 @@ namespace sassy {
 
             int penalty = 0;
 
-            int touched_support = g->v_size;
+            // int touched_support = g->v_size;
             for (int x = 0; x < num_paths - penalty; ++x) {
                 if (x > 0 && quotient_component_touched.empty()) {
                     break;
                 }
 
                 compute_quotient_graph_components_update(g, &c1, consume);
-                touched_support = 0;
+                // touched_support = 0;
 
                 int automorphisms_found = 0;
 
@@ -3433,7 +3433,7 @@ namespace sassy {
                                 assert(R1->certify_automorphism(g, _automorphism.get_array()));
                                 assert(_automorphism.get_array()[ind_v1] == ind_v2);
                                 touched_current_component = true;
-                                touched_support += _automorphism_supp.cur_pos;
+                                // touched_support += _automorphism_supp.cur_pos;
                                 ++automorphisms_found;
                                 pre_hook(g->v_size, _automorphism.get_array(), _automorphism_supp.cur_pos,
                                          _automorphism_supp.get_array(),
@@ -4243,7 +4243,7 @@ namespace sassy {
                                                                               quotient_component_end_pos, -1);
                                             col = ret.first;
                                             if (col == -1) {
-                                                should_add_ind = false;
+                                                // should_add_ind = false;
                                                 break;
                                             }
                                             const int rpos = col + (0 % (c1.ptn[col] + 1));
@@ -4649,12 +4649,12 @@ namespace sassy {
                 schedule = &default_schedule;
             }
 
-            std::chrono::high_resolution_clock::time_point timer = std::chrono::high_resolution_clock::now();
+            // std::chrono::high_resolution_clock::time_point timer = std::chrono::high_resolution_clock::now();
 
             PRINT("____________________________________________________");
             PRINT(std::setw(16) << std::left <<"T (ms)"                                  << std::setw(16) << "after_proc"  << std::setw(10) << "#N"        << std::setw(10)        << "#M");
             PRINT("____________________________________________________");
-            PRINT(std::setw(16) << std::left << (std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() - timer).count()) / 1000000.0  << std::setw(16) << "start" << std::setw(10) << g->v_size << std::setw(10) << g->e_size );
+            PRINT(std::setw(16) << std::left << (std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() - std::chrono::high_resolution_clock::now()).count()) / 1000000.0  << std::setw(16) << "start" << std::setw(10) << g->v_size << std::setw(10) << g->e_size );
 
             if(config->CONFIG_TRANSLATE_ONLY) {
                 translate_layer_fwd.reserve(g->v_size);
@@ -4836,7 +4836,7 @@ namespace sassy {
                             break;
                         }
                         case preop::redloop: {
-                            int prev_size = g->v_size;
+                            int prev_size; // = g->v_size;
                             if (g->v_size > 1) {
                                 count_graph_deg(g, &deg0, &deg1, &deg2);
 
