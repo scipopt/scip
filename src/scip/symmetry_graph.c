@@ -880,7 +880,7 @@ SCIP_RETCODE SCIPcomputeSymgraphColors(
       if( compareVars(prevvar, thisvar) != 0 || isFixedVar(prevvar, fixedtype) )
          ++color;
 
-      graph->varcolors[perm[i]] = color + 1;
+      graph->varcolors[perm[i]] = color;
       prevvar = thisvar;
    }
    graph->nvarcolors = color;
