@@ -507,7 +507,7 @@ SCIP_RETCODE SCIPupdateSymgraphRhs(
    return SCIP_OKAY;
 }
 
-/** registers a variable node (correspondig to active variable) to be fixed by symmetry */
+/** registers a variable node (corresponding to active variable) to be fixed by symmetry */
 SCIP_RETCODE SCIPfixSymgraphVarnode(
    SYM_GRAPH*            graph,              /**< symmetry detection graph */
    SCIP_VAR*             var                 /**< active variable that needs to be fixed */

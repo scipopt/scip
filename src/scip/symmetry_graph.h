@@ -162,7 +162,7 @@ SCIP_RETCODE SCIPupdateSymgraphRhs(
    SCIP_Real             newrhs              /**< new reft-hand side of node */
    );
 
-/** registers a variable node (correspondig to active variable) to be fixed by symmetry */
+/** registers a variable node (corresponding to active variable) to be fixed by symmetry */
 SCIP_EXPORT
 SCIP_RETCODE SCIPfixSymgraphVarnode(
    SYM_GRAPH*            graph,              /**< symmetry detection graph */
