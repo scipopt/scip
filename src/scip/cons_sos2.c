@@ -2221,9 +2221,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphSOS2)
    SCIP_VAR** consvars;
    SCIP_VAR** locvars;
    SCIP_Real* locvals;
-   SCIP_Real color;
    SCIP_Real constant = 0.0;
-   SCIP_Bool iscolored;
    int consnodeidx;
    int opnodeidx;
    int nodeidx;
@@ -2261,30 +2259,20 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphSOS2)
          constant = 0.0;
          nlocvars = 1;
 
+         /* ignore weights of SOS2 constraint (variables are sorted according to these weights) */
          SCIP_CALL( SCIPgetActiveVariables(scip, &locvars, &locvals, &nlocvars, &constant, SCIPisTransformed(scip)) );
-
-         if( consdata->weights != NULL )
-         {
-            iscolored = TRUE;
-            color = consdata->weights[j];
-         }
-         else
-         {
-            iscolored = FALSE;
-            color = 0.0;
-         }
 
          if( nlocvars == 1 && SCIPisZero(scip, constant) && SCIPisEQ(scip, locvals[0], 1.0) )
          {
             nodeidx = SCIPgetSymgraphVarnodeidx(scip, graph, locvars[0]);
 
-            SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, opnodeidx, nodeidx, iscolored, color) );
+            SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, opnodeidx, nodeidx, FALSE, 0.0) );
          }
          else
          {
             nodeidx = SCIPaddSymgraphOpnode(scip, graph, SYM_CONSOPTYPE_SUM);
 
-            SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, opnodeidx, nodeidx, iscolored, color) );
+            SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, opnodeidx, nodeidx, FALSE, 0.0) );
 
             SCIP_CALL( SCIPaddSymgraphVarAggegration(scip, graph, nodeidx, locvars, locvals, nlocvars, constant) );
          }
