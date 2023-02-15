@@ -2245,7 +2245,7 @@ SCIP_RETCODE SCIPorbitopalFixingReset(
       SCIP_CALL( freeOrbitope(scip, orbifixdata, &(orbifixdata->orbitopes[--orbifixdata->norbitopes])) );
    }
    assert( orbifixdata->norbitopes == 0 );
-   SCIPfreeBlockMemoryArray(scip, &orbifixdata->orbitopes, orbifixdata->maxnorbitopes);
+   SCIPfreeBlockMemoryArrayNull(scip, &orbifixdata->orbitopes, orbifixdata->maxnorbitopes);
    orbifixdata->orbitopes = NULL;
    orbifixdata->maxnorbitopes = 0;
 

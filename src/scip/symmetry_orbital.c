@@ -1724,7 +1724,7 @@ SCIP_RETCODE SCIPorbitalFixingReset(
    }
 
    assert( orbifixdata->ncomponents == 0 );
-   SCIPfreeBlockMemoryArray(scip, &orbifixdata->componentdatas, orbifixdata->maxncomponents);
+   SCIPfreeBlockMemoryArrayNull(scip, &orbifixdata->componentdatas, orbifixdata->maxncomponents);
    orbifixdata->componentdatas = NULL;
    orbifixdata->maxncomponents = 0;
 

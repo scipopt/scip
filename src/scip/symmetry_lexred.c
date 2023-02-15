@@ -1201,7 +1201,7 @@ SCIP_RETCODE SCIPlexicographicReductionReset(
    }
    assert( masterdata->nlexdatas == 0 );
 
-   SCIPfreeBlockMemoryArray(scip, &masterdata->lexdatas, masterdata->maxnlexdatas);
+   SCIPfreeBlockMemoryArrayNull(scip, &masterdata->lexdatas, masterdata->maxnlexdatas);
    masterdata->lexdatas = NULL;
    masterdata->maxnlexdatas = 0;
 
