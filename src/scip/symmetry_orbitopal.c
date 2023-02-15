@@ -253,19 +253,22 @@ SCIP_RETCODE updateColumnOrderWhenBranchingOnColumn(
    COLSWAP*              thiscolswap         /**< the colswap to populate */
 )
 {
-   SCIP_VAR* var1;
-   SCIP_VAR* var2;
    int origcolid;
    int swaporigcolid;
    int c;
-   int i;
-   int nrows;
    int ncols;
    int* origequalcolids;
    int norigequalcolids;
    int middlecolumn;
    int positionorigcolidincolorder;
    int positionswaporigcolidincolorder;
+
+#ifndef NDEBUG
+   SCIP_VAR* var1;
+   SCIP_VAR* var2;
+   int i;
+   int nrows;
+#endif
 
    assert( scip != NULL );
    assert( sodata != NULL );
@@ -277,8 +280,10 @@ SCIP_RETCODE updateColumnOrderWhenBranchingOnColumn(
 
    ncols = sodata->ncols;
    assert( ncols > 0 );
-   nrows = sodata->masterorbitopedata->nrows;
+#ifndef NDEBUG
+   nrows = sodata->masterorbitopedata->nrows > 0;
    assert( nrows > 0 );
+#endif
 
    if ( sodata->columnordering == SCIP_COLUMNORDERING_NONE )
    {
