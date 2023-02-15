@@ -876,7 +876,7 @@ int compareSymgraphs(
    SYM_GRAPH*            G2                  /**< second graph in comparison */
    )
 {
-  if ( G1->nconsnodes < G2->nconsnodes )
+   if ( G1->nconsnodes < G2->nconsnodes )
       return -1;
    if ( G1->nconsnodes > G2->nconsnodes )
       return 1;
