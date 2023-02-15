@@ -507,6 +507,25 @@ SCIP_RETCODE SCIPupdateSymgraphRhs(
    return SCIP_OKAY;
 }
 
+/** registers a variable node (correspondig to active variable) to be fixed by symmetry */
+SCIP_RETCODE SCIPfixSymgraphVarnode(
+   SYM_GRAPH*            graph,              /**< symmetry detection graph */
+   SCIP_VAR*             var                 /**< active variable that needs to be fixed */
+   )
+{
+   int varidx;
+
+   assert(graph != NULL);
+   assert(var != NULL);
+
+   varidx = SCIPvarGetProbindex(var);
+   assert(0 <= varidx && varidx < graph->nsymvars);
+
+   graph->isfixedvar[varidx] = TRUE;
+
+   return SCIP_OKAY;
+}
+
 /*
  * methods for adding edges
  */
