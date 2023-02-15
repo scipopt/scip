@@ -2113,7 +2113,7 @@ namespace sassy {
 
 // ring queue for pairs of integers
     class ring_pair {
-        std::pair<int, int> *arr;
+        std::pair<int, int> *arr = 0;
         bool init = false;
         int arr_sz = -1;
         int front_pos = -1;
