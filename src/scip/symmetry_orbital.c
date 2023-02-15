@@ -63,7 +63,6 @@
 #include <ctype.h>
 #include <string.h>
 #include <symmetry/type_symmetry.h>
-
 #include <memory.h>
 
 
