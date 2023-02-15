@@ -176,7 +176,7 @@ struct SYM_Graph
 
    /* node-based arrays */
    SYM_NODETYPE*         nodetypes;          /**< array storing each node's type */
-   int*                  nodeinfopos;        /**< array assigning each node the position in the corresponding
+   int*                  nodeinfopos;        /**< array assigning each node the position in the corresponding array
                                               *   containing its information (operator, variable, or value) */
 
    /* information-based arrays */

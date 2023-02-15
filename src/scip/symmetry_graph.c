@@ -359,8 +359,8 @@ int SCIPaddSymgraphOpnode(
    graph->ops[graph->nopnodes] = op;
 
    nodeidx = graph->nnodes;
-   graph->nnodes += 1;
-   graph->nopnodes += 1;
+   ++graph->nnodes;
+   ++graph->nopnodes;
 
    return nodeidx;
 }
@@ -400,8 +400,8 @@ int SCIPaddSymgraphValnode(
    graph->vals[graph->nvalnodes] = val;
 
    nodeidx = graph->nnodes;
-   graph->nnodes += 1;
-   graph->nvalnodes += 1;
+   ++graph->nnodes;
+   ++graph->nvalnodes;
 
    return nodeidx;
 }
@@ -448,8 +448,8 @@ int SCIPaddSymgraphConsnode(
    graph->rhs[graph->nconsnodes] = rhs;
 
    nodeidx = graph->nnodes;
-   graph->nnodes += 1;
-   graph->nconsnodes += 1;
+   ++graph->nnodes;
+   ++graph->nconsnodes;
 
    return nodeidx;
 }
