@@ -5786,22 +5786,19 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
       /* for every constraint, create permuted graph by copying nodes and edges */
       for (g = 0; g < ngroups; ++g)
       {
-         for (c = groupbegins[g]; c < groupbegins[g+1] && found; ++c)
+         for (c = groupbegins[g]; c < groupbegins[g+1]; ++c)
          {
-            found = FALSE;
-
             SCIP_CALL( SCIPcopySymgraph(scip, &graph, graphs[graphperm[c]], perms[p], fixedtype) );
 
             /* if adapted graph is equivalent to original graph, we don't need to check further graphs */
             if ( SYMcheckGraphsAreIdentical(scip, graph, graphs[graphperm[c]]) )
             {
                SCIP_CALL( SCIPfreeSymgraph(scip, &graph) );
-               found = TRUE;
-
                continue;
             }
 
             /* check whether graph has an isomorphic counterpart */
+            found = FALSE;
             for (d = groupbegins[g]; d < groupbegins[g+1] && ! found; ++d)
                found = SYMcheckGraphsAreIdentical(scip, graph, graphs[graphperm[d]]);
 
