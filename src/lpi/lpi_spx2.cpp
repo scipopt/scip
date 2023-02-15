@@ -91,7 +91,9 @@
 #endif
 
 /* compile the SoPlex header with visibility=default because the SoPlex lib has been compiled that way */
+#ifdef __GNUC__
 #pragma GCC visibility push(default)
+#endif
 
 /* include SoPlex solver */
 #include "soplex.h"
