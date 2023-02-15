@@ -551,7 +551,7 @@ SCIP_RETCODE determineGraphSize(
                      vars[0] = var;
                      vals[0] = 1.0;
 
-                     SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, vals, &varsize, varsize, &constant, &requiredsize, TRUE) );
+                     SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, vals, &varsize, nvars, &constant, &requiredsize, TRUE) );
                      assert( requiredsize <= nvars );
 
                      assert( numvisitednodes > 0 );
@@ -1098,7 +1098,7 @@ SCIP_RETCODE fillGraphByConss(
                      vars[0] = var;
                      vals[0] = 1.0;
 
-                     SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, vals, &varsize, varsize, &constant, &requiredsize, TRUE) );
+                     SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, vals, &varsize, nvars, &constant, &requiredsize, TRUE) );
                      assert( requiredsize <= nvars );
 
                      assert( numvisitednodes > 0 );
@@ -1489,7 +1489,6 @@ const char* SYMsymmetryGetAddDesc(void)
 {
    return "Symmetry preprocessor by Markus Anders (github.com/markusa4/sassy)";
 }
-
 
 /** compute generators of symmetry group */
 SCIP_RETCODE SYMcomputeSymmetryGenerators(
