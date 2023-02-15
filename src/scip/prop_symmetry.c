@@ -5785,7 +5785,7 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
       /* for every constraint, create permuted graph by copying nodes and edges */
       for (g = 0; g < ngroups; ++g)
       {
-         for (c = groupbegins[g]; c < groupbegins[g+1] && found; ++c)
+         for (c = groupbegins[g]; c < groupbegins[g+1]; ++c)
          {
             SCIP_CALL( SCIPcopySymgraph(scip, &graph, graphs[graphperm[c]], perms[p], fixedtype) );
 
