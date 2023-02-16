@@ -650,12 +650,12 @@ int bisectSortedArrayFindFirstGEQ(
       id = idssort[center];
       if ( ids[id] < findid )
       {
-         /* first instance of orbitsetcomponentid is in [center, frameright) */
+         /* first instance greater or equal to findid is in [center, frameright) */
          frameleft = center;
       }
       else
       {
-         /* first instance of orbitsetcomponentid is in [frameleft, center) */
+         /* first instance greater or equal to findid is in [frameleft, center) */
          frameright = center;
       }
    }
