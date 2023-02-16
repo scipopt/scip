@@ -13,3 +13,4 @@ READLINE_LDFLAGS=	-lreadline
 ZIMPL_FLAGS	=
 ZIMPL_LDFLAGS	=	-static -lpcreposix -lpcre
 EXEEXTENSION	=	.exe
+LINK_shared		=	-shared

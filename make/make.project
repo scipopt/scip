@@ -680,25 +680,17 @@ endif
 
 # (re)define some variables
 ifeq ($(SHARED),true)
-ifneq ($(COMP),msvc)
-FLAGS		+=	-fPIC
-endif
 LIBEXT		=	$(SHAREDLIBEXT)
 ifeq ($(LINKER),CPP)
 LIBBUILD	=	$(LINKCXX)
 LIBBUILD_L	=	$(LINKCXX_L)
+LIBBUILD_o	=	$(LINKCXX_o)
 else
 LIBBUILD	=	$(LINKCC)
 LIBBUILD_L	=	$(LINKCC_L)
+LIBBUILD_o	=	$(LINKCC_o)
 endif
-
-ifeq ($(COMP),msvc)
-LIBBUILDFLAGS	+=      -dll
-LIBBUILD_o	= 	-out:
-else
-LIBBUILDFLAGS	+=      -shared
-LIBBUILD_o	= 	-o # the trailing space is important
-endif
+LIBBUILDFLAGS	+=	$(LINK_shared)
 ARFLAGS		=
 RANLIB		=
 endif

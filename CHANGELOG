@@ -200,6 +200,8 @@ Fixed bugs
 - ensure that winner is always determined in concurrent mode
 - when a row with invalid index range is added to the global cutpool, update the indices instead of failing with an assert
 - update of watched literals in cons_xor.c and ensure that fixed variables are counted in propacateCons()
+- avoid some numerical issue in check for redundant variables in linear constraints (introduced with version 8.0.2)
+- avoid aggregation into a single linear constraint if they should not be upgraded (needed for indicator constraints)
 
 Miscellaneous
 -------------

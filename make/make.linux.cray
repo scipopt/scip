@@ -16,3 +16,7 @@ CFLAGS          =       -h std=c99
 CXX11FLAG       =       -h std=c++11
 CXX14FLAG       =       -h std=c++14
 CXX17FLAG       =       -h std=c++17
+ifeq ($(SHARED),true)
+FLAGS		+=	-fPIC
+endif
+LINK_shared		=	-shared
