@@ -639,13 +639,16 @@ SCIP_DECL_TABLEFREE(tableFreeOrbitalfixing)
  * local data structures
  */
 
+#if SCIP_DISABLED_CODE
 /** gets the key of the given element */
 static
 SCIP_DECL_HASHGETKEY(SYMhashGetKeyVartype)
 {  /*lint --e{715}*/
    return elem;
 }
+#endif
 
+#if SCIP_DISABLED_CODE
 /** returns TRUE iff both keys are equal
  *
  *  Compare the types of two variables according to objective, lower and upper bound, variable type, and column sparsity.
@@ -683,7 +686,9 @@ SCIP_DECL_HASHKEYEQ(SYMhashKeyEQVartype)
 
    return TRUE;
 }
+#endif
 
+#if SCIP_DISABLED_CODE
 /** returns the hash value of the key */
 static
 SCIP_DECL_HASHKEYVAL(SYMhashKeyValVartype)
@@ -694,6 +699,7 @@ SCIP_DECL_HASHKEYVAL(SYMhashKeyValVartype)
 
    return SCIPhashFour(SCIPrealHashCode(k->obj), SCIPrealHashCode(k->lb), SCIPrealHashCode((double) k->nconss), SCIPrealHashCode(k->ub));
 }
+#endif
 
 /** data structure to store arrays used for sorting rhs types */
 struct SYM_Sortrhstype
@@ -723,6 +729,7 @@ struct SYM_Sortconsreflsymtype
 typedef struct SYM_Sortconsreflsymtype SYM_SORTCONSREFLSYMTYPE;
 
 
+#if SCIP_DISABLED_CODE
 /** sorts matrix coefficients
  *
  *  result:
@@ -746,7 +753,9 @@ SCIP_DECL_SORTINDCOMP(SYMsortMatCoef)
 
    return 0;
 }
+#endif
 
+#if SCIP_DISABLED_CODE
 /** compares two operators
  *
  *  Operators are sorted by their pointer values.
@@ -769,7 +778,9 @@ int compareOps(
 
    return 0;
 }
+#endif
 
+#if SCIP_DISABLED_CODE
 /** sorts operators corresponding to SCIP_EXPRHDLR*
  *
  *  result:
@@ -786,7 +797,7 @@ SCIP_DECL_SORTINDCOMP(SYMsortOperators)
 
    return compareOps(vals[ind1], vals[ind2]);
 }
-
+#endif
 
 /** sorts variable indices according to their corresponding component in the graph
  *
@@ -817,6 +828,7 @@ SCIP_DECL_SORTINDCOMP(SYMsortGraphCompVars)
    return 0;
 }
 
+#if SCIP_DISABLED_CODE
 /** sorts constraints in reflection symmetry data by their type
  *
  *  Variables are sorted first by their type, then their first operator's type, then their
@@ -858,6 +870,7 @@ SCIP_DECL_SORTINDCOMP(SYMsortConsReflSym)
 
    return 0;
 }
+#endif
 
 /** compares two symmetry detection graphs
  *
@@ -1404,6 +1417,7 @@ SCIP_RETCODE delSymConss(
 }
 
 
+#if SCIP_DISABLED_CODE
 /** determines whether variable should be fixed by permutations */
 static
 SCIP_Bool SymmetryFixVar(
@@ -1420,8 +1434,9 @@ SCIP_Bool SymmetryFixVar(
       return TRUE;
    return FALSE;
 }
+#endif
 
-
+#if SCIP_DISABLED_CODE
 /** Transforms given variables, scalars, and constant to the corresponding active variables, scalars, and constant.
  *
  *  @note @p constant needs to be initialized!
@@ -1469,7 +1484,9 @@ SCIP_RETCODE getActiveVariables(
    }
    return SCIP_OKAY;
 }
+#endif
 
+#if SCIP_DISABLED_CODE
 /** Transforms given variables, scalars, and constant to the corresponding active variables, scalars, and constant,
  *  and translates each variable such that its range is centered around 0 (if the range is finite).
  *
@@ -1533,7 +1550,9 @@ SCIP_RETCODE getActiveVariablesReflSym(
 
    return SCIP_OKAY;
 }
+#endif
 
+#if SCIP_DISABLED_CODE
 /** returns whether a simple constraint is represented linearly */
 static
 SCIP_Bool isSimpleConsLinear(
@@ -1560,7 +1579,9 @@ SCIP_Bool isSimpleConsLinear(
 
    return FALSE;
 }
+#endif
 
+#if SCIP_DISABLED_CODE
 /** checks whether a linearly represented constraints is identical to a constraint
  *  in reflection symmetry data
  */
@@ -1654,7 +1675,9 @@ SCIP_RETCODE checkLinConssAreIdentical(
 
    return SCIP_OKAY;
 }
+#endif
 
+#if SCIP_DISABLED_CODE
 /** collects information about permuted linearly represented constraints */
 static
 SCIP_RETCODE collectInformationPermLinearCons(
@@ -1712,7 +1735,9 @@ SCIP_RETCODE collectInformationPermLinearCons(
 
    return SCIP_OKAY;
 }
+#endif
 
+#if SCIP_DISABLED_CODE
 /** collects information about permuted bounddisjunction constraints */
 static
 SCIP_RETCODE collectInformationPermBounddisjunctionCons(
@@ -1804,7 +1829,9 @@ SCIP_RETCODE collectInformationPermBounddisjunctionCons(
 
    return SCIP_OKAY;
 }
+#endif
 
+#if SCIP_DISABLED_CODE
 /** collects information about permuted SOS1/SOS2 constraints
  *
  * We store each variable in an SOS constraint as a separate term, i.e., each pair in an SOS2
@@ -1926,7 +1953,9 @@ SCIP_RETCODE collectInformationPermSOSCons(
 
    return SCIP_OKAY;
 }
+#endif
 
+#if SCIP_DISABLED_CODE
 /** collects information about permuted indicator constraints */
 static
 SCIP_RETCODE collectInformationPermIndicatorCons(
@@ -2063,8 +2092,9 @@ SCIP_RETCODE collectInformationPermIndicatorCons(
 
    return SCIP_OKAY;
 }
+#endif
 
-
+#if SCIP_DISABLED_CODE
  /** checks whether a bounddisjunction constraint is identical to a constraint
  *  in reflection symmetry data
  */
@@ -2218,7 +2248,9 @@ SCIP_RETCODE checkBounddisjunctionConssAreIdentical(
 
    return SCIP_OKAY;
 }
+#endif
 
+#if SCIP_DISABLED_CODE
 /** checks whether an SOS constraint is identical to a constraint in reflection symmetry data */
 static
 SCIP_RETCODE checkSOSConssAreIdentical(
@@ -2396,7 +2428,9 @@ SCIP_RETCODE checkSOSConssAreIdentical(
 
    return SCIP_OKAY;
 }
+#endif
 
+#if SCIP_DISABLED_CODE
 /** collects information about permuted indicator constraints */
 static
 SCIP_RETCODE checkIndicatorConssAreIdentical(
@@ -2561,7 +2595,9 @@ SCIP_RETCODE checkIndicatorConssAreIdentical(
 
    return SCIP_OKAY;
 }
+#endif
 
+#if SCIP_DISABLED_CODE
 /** prints information of an expression tree used for computing reflection symmetries to screen */
 static
 SCIP_RETCODE printReflectionSymmetryDataTree(
@@ -2689,7 +2725,7 @@ SCIP_RETCODE printReflectionSymmetryDataTree(
 
    return SCIP_OKAY;
 }
-
+#endif
 
 #ifdef SCIP_MORE_DEBUG
 /** prints the expression tree information used for computing reflection symmetries to screen */
@@ -2721,6 +2757,7 @@ SCIP_RETCODE printReflectionSymmetryData(
 }
 #endif
 
+#if SCIP_DISABLED_CODE
 /** checks whether given signed permutations form a reflection symmetry of a MIP */
 static
 SCIP_RETCODE checkReflectionSymmetriesAreSymmetries(
@@ -3163,6 +3200,7 @@ SCIP_RETCODE checkReflectionSymmetriesAreSymmetries(
 
    return SCIP_OKAY;
 }
+#endif
 
 /** returns the number of active constraints that can be handled by symmetry */
 static
@@ -3202,6 +3240,7 @@ int getNSymhandableConss(
    return nhandleconss;
 }
 
+#if SCIP_DISABLED_CODE
 /** returns the number of active constraints that can be handled by reflection symmetry computation */
 static
 int getNReflsymhandableConss(
@@ -3244,7 +3283,9 @@ int getNReflsymhandableConss(
 
    return nhandleconss;
 }
+#endif
 
+#if SCIP_DISABLED_CODE
 /** returns whether there exists an expression handler that cannot be handled by symmetry detection */
 static
 SCIP_Bool hasNonhandableExprhdlr(
@@ -3280,6 +3321,7 @@ SCIP_Bool hasNonhandableExprhdlr(
 
    return FALSE;
 }
+#endif
 
 /** returns whether there are any active nonlinear constraints */
 static
@@ -3422,6 +3464,7 @@ SCIP_RETCODE setSymmetryData(
    return SCIP_OKAY;
 }
 
+#if SCIP_DISABLED_CODE
 /** reallocate dynamically allocated memory for reflection symmetry detection */
 static
 SCIP_RETCODE ensureReflSymDataMemorySuffices(
@@ -3478,7 +3521,9 @@ SCIP_RETCODE ensureReflSymDataMemorySuffices(
 
    return SCIP_OKAY;
 }
+#endif
 
+#if SCIP_DISABLED_CODE
 /** adds an operator to the reflection symmetry data structure */
 static
 SCIP_RETCODE addOperatorReflSym(
@@ -3504,7 +3549,9 @@ SCIP_RETCODE addOperatorReflSym(
 
    return SCIP_OKAY;
 }
+#endif
 
+#if SCIP_DISABLED_CODE
 /** adds a coefficient to the reflection symmetry data structure */
 static
 SCIP_RETCODE addCoefReflSym(
@@ -3529,7 +3576,9 @@ SCIP_RETCODE addCoefReflSym(
 
    return SCIP_OKAY;
 }
+#endif
 
+#if SCIP_DISABLED_CODE
 /** adds a variable to the reflection symmetry data structure */
 static
 SCIP_RETCODE addVarReflSym(
@@ -3554,7 +3603,9 @@ SCIP_RETCODE addVarReflSym(
 
    return SCIP_OKAY;
 }
+#endif
 
+#if SCIP_DISABLED_CODE
 /** adds a numerical value to the reflection symmetry data structure */
 static
 SCIP_RETCODE addValReflSym(
@@ -3579,7 +3630,9 @@ SCIP_RETCODE addValReflSym(
 
    return SCIP_OKAY;
 }
+#endif
 
+#if SCIP_DISABLED_CODE
 /** stores information about a linear constraint in reflection symmetry data structure */
 static
 SCIP_RETCODE storeLinearConstraint(
@@ -3709,7 +3762,9 @@ SCIP_RETCODE storeLinearConstraint(
 
    return SCIP_OKAY;
 }
+#endif
 
+#if SCIP_DISABLED_CODE
 /** stores and indicator constraint in the reflection symmetry data  */
 static
 SCIP_RETCODE storeIndicatorCons(
@@ -3849,7 +3904,9 @@ SCIP_RETCODE storeIndicatorCons(
 
    return SCIP_OKAY;
 }
+#endif
 
+#if SCIP_DISABLED_CODE
 /** stores information about a simple (non-) linear constraint in reflection symmetry data structure */
 static
 SCIP_RETCODE storeSimpleConstraint(
@@ -4348,7 +4405,9 @@ SCIP_RETCODE storeSimpleConstraint(
 
    return SCIP_OKAY;
 }
+#endif
 
+#if SCIP_DISABLED_CODE
 /** ensures that we can store information about open parent nodes */
 static
 SCIP_RETCODE ensureOpenidxSize(
@@ -4376,7 +4435,9 @@ SCIP_RETCODE ensureOpenidxSize(
 
    return SCIP_OKAY;
 }
+#endif
 
+#if SCIP_DISABLED_CODE
 /** stores expression tree for rhs-bounded constraint in reflection symmetry data structure */
 static
 SCIP_RETCODE storeExpressionTree(
@@ -4721,7 +4782,9 @@ SCIP_RETCODE storeExpressionTree(
 
    return SCIP_OKAY;
 }
+#endif
 
+#if SCIP_DISABLED_CODE
 /** stores information about a nonlinear constraint in reflection symmetry data structure */
 static
 SCIP_RETCODE storeNonlinearConstraint(
@@ -4771,7 +4834,9 @@ SCIP_RETCODE storeNonlinearConstraint(
 
    return SCIP_OKAY;
 }
+#endif
 
+#if SCIP_DISABLED_CODE
 /** determines colors of variables, rhs, coefficients, values, and operators for reflection symmetry detection */
 static
 SCIP_RETCODE findColorsReflSym(
@@ -5118,7 +5183,9 @@ SCIP_RETCODE findColorsReflSym(
 
    return SCIP_OKAY;
 }
+#endif
 
+#if SCIP_DISABLED_CODE
 /** stores the objective in data for reflection symmetry detection */
 static
 SCIP_RETCODE storeObjective(
@@ -5167,7 +5234,9 @@ SCIP_RETCODE storeObjective(
 
    return SCIP_OKAY;
 }
+#endif
 
+#if SCIP_DISABLED_CODE
 /** computes reflection symmetry group of a CIP */
 static
 SCIP_RETCODE computeReflectionSymmetryGroup(
@@ -5539,6 +5608,7 @@ SCIP_RETCODE computeReflectionSymmetryGroup(
 
    return SCIP_OKAY;
 }
+#endif
 
 /** returns whether all constraint handlers with constraints can provide permutation symmetry information */
 static
