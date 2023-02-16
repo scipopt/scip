@@ -16,6 +16,7 @@ OFLAGS	+=
 CFLAGS	+=	-O2 -fp:extended
 CXX11FLAG	=	-Qstd=c++0x
 CXX14FLAG	=	-Qstd=c++14
+CXX17FLAG	=	-Qstd=c++17
 CXXFLAGS	+=	-O2 -fp:extended -EHsc -GR
 DFLAGS =
 LDFLAGS		+=
