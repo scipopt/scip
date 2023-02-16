@@ -16,6 +16,7 @@ CFLAGS	+=	-Zi -Od -fp:precise
 CXXFLAGS	+=	-Zi -Od -fp:precise -EHsc -GR
 CXX11FLAG	=
 CXX14FLAG	=	-std:c++14
+CXX17FLAG	=	-std:c++17
 DFLAGS =
 LINKRPATH =
 ZIMPL_FLAGS	=  -I$(LIBDIR)/include/zimplinc/zimpl/WIN
