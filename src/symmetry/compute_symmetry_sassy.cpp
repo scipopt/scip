@@ -1447,9 +1447,9 @@ initStaticSymmetryName( )
 {
    char* blissname = new char[100];
 #ifdef BLISS_PATCH_PRESENT
-   (void) snprintf(blissname, 100, "bliss %sp", bliss::version);
+   (void) SCIPsnprintf(blissname, 100, "bliss %sp", bliss::version);
 #else
-   (void) snprintf(blissname, 100, "bliss %s", bliss::version);
+   (void) SCIPsnprintf(blissname, 100, "bliss %s", bliss::version);
 #endif
    return blissname;
 }
@@ -1459,7 +1459,7 @@ char*
 initStaticSymmetryAddName( )
 {
    char* sassyname = new char[100];
-   (void) snprintf(sassyname, 100, "sassy %d.%d", SASSY_VERSION_MAJOR, SASSY_VERSION_MINOR);
+   (void) SCIPsnprintf(sassyname, 100, "sassy %d.%d", SASSY_VERSION_MAJOR, SASSY_VERSION_MINOR);
    return sassyname;
 }
 
