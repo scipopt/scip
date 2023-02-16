@@ -10210,7 +10210,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphSOS1)
       }
       else
       {
-         nodeidx = SCIPaddSymgraphOpnode(scip, graph, SYM_CONSOPTYPE_SUM);
+         nodeidx = SCIPaddSymgraphOpnode(scip, graph, (int) SYM_CONSOPTYPE_SUM); /*lint !e641*/
 
          SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, consnodeidx, nodeidx, FALSE, 0.0) );
 

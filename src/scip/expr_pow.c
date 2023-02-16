@@ -1854,7 +1854,6 @@ SCIP_DECL_EXPRGETSYMDATA(getSymDataPow)
 
    assert(scip != NULL);
    assert(expr != NULL);
-   assert(exprdata != NULL);
 
    exprdata = SCIPexprGetData(expr);
    assert(exprdata != NULL);

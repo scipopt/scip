@@ -10727,7 +10727,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphNonlinear)
    SCIP_CALL( SCIPallocBufferArray(scip, &consvals, maxnconsvars) );
 
    /* iterate over expression tree and store nodes/edges */
-   expr = SCIPgetExprNonlinear(cons);
+   expr = SCIPgetExprNonlinear(cons); /*lint !e838*/
    SCIP_CALL( SCIPexpriterInit(it, expr, SCIP_EXPRITER_DFS, TRUE) );
    SCIPexpriterSetStagesDFS(it, SCIP_EXPRITER_ENTEREXPR | SCIP_EXPRITER_LEAVEEXPR);
 
@@ -10744,8 +10744,11 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphNonlinear)
       /* find parentidx */
       if( expr == rootexpr )
          parentidx = consnodeidx;
-      else if( nopenidx >= 1 )
+      else
+      {
+         assert(nopenidx >= 1);
          parentidx = openidx[nopenidx - 1];
+      }
       assert( expr == rootexpr || parentidx > 0 );
 
       /* possibly find a coefficient assigned to the expression by the parent */
@@ -10772,9 +10775,9 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphNonlinear)
          /* if the parent assigns the variable a coefficient, introduce an intermediate node */
          if( hasparentcoef )
          {
-            nodeidx = SCIPaddSymgraphOpnode(scip, graph, SYM_CONSOPTYPE_COEF);
+            nodeidx = SCIPaddSymgraphOpnode(scip, graph, (int) SYM_CONSOPTYPE_COEF); /*lint !e641*/
 
-            SCIPaddSymgraphEdge(scip, graph, parentidx, nodeidx, TRUE, parentcoef);
+            SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, parentidx, nodeidx, TRUE, parentcoef) );
             parentidx = nodeidx;
          }
 
@@ -10817,7 +10820,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphNonlinear)
             int sumidx;
 
             /* add node and edge for sum operator */
-            sumidx = SCIPaddSymgraphOpnode(scip, graph, SYM_CONSOPTYPE_SUM);
+            sumidx = SCIPaddSymgraphOpnode(scip, graph, (int) SYM_CONSOPTYPE_SUM); /*lint !e641*/
 
             /* add nodes and edges for summands */
             if( nlocvals == 1 )

@@ -639,7 +639,7 @@ SCIP_DECL_TABLEFREE(tableFreeOrbitalfixing)
  * local data structures
  */
 
-#if SCIP_DISABLED_CODE
+#ifdef SCIP_DISABLED_CODE
 /** gets the key of the given element */
 static
 SCIP_DECL_HASHGETKEY(SYMhashGetKeyVartype)
@@ -648,7 +648,7 @@ SCIP_DECL_HASHGETKEY(SYMhashGetKeyVartype)
 }
 #endif
 
-#if SCIP_DISABLED_CODE
+#ifdef SCIP_DISABLED_CODE
 /** returns TRUE iff both keys are equal
  *
  *  Compare the types of two variables according to objective, lower and upper bound, variable type, and column sparsity.
@@ -688,7 +688,7 @@ SCIP_DECL_HASHKEYEQ(SYMhashKeyEQVartype)
 }
 #endif
 
-#if SCIP_DISABLED_CODE
+#ifdef SCIP_DISABLED_CODE
 /** returns the hash value of the key */
 static
 SCIP_DECL_HASHKEYVAL(SYMhashKeyValVartype)
@@ -701,6 +701,7 @@ SCIP_DECL_HASHKEYVAL(SYMhashKeyValVartype)
 }
 #endif
 
+#ifdef SCIP_DISABLED_CODE
 /** data structure to store arrays used for sorting rhs types */
 struct SYM_Sortrhstype
 {
@@ -709,6 +710,7 @@ struct SYM_Sortrhstype
    int                   nrhscoef;           /**< size of arrays (for debugging) */
 };
 typedef struct SYM_Sortrhstype SYM_SORTRHSTYPE;
+#endif
 
 /** data structure to store arrays used for sorting colored component types */
 struct SYM_Sortgraphcompvars
@@ -718,6 +720,7 @@ struct SYM_Sortgraphcompvars
 };
 typedef struct SYM_Sortgraphcompvars SYM_SORTGRAPHCOMPVARS;
 
+#ifdef SCIP_DISABLED_CODE
 /** data structure to store information used for sorting reflection symmetry data */
 struct SYM_Sortconsreflsymtype
 {
@@ -727,9 +730,9 @@ struct SYM_Sortconsreflsymtype
    SCIP_Real*            rhs;                /**< rhs of constraints */
 };
 typedef struct SYM_Sortconsreflsymtype SYM_SORTCONSREFLSYMTYPE;
+#endif
 
-
-#if SCIP_DISABLED_CODE
+#ifdef SCIP_DISABLED_CODE
 /** sorts matrix coefficients
  *
  *  result:
@@ -755,7 +758,7 @@ SCIP_DECL_SORTINDCOMP(SYMsortMatCoef)
 }
 #endif
 
-#if SCIP_DISABLED_CODE
+#ifdef SCIP_DISABLED_CODE
 /** compares two operators
  *
  *  Operators are sorted by their pointer values.
@@ -780,7 +783,7 @@ int compareOps(
 }
 #endif
 
-#if SCIP_DISABLED_CODE
+#ifdef SCIP_DISABLED_CODE
 /** sorts operators corresponding to SCIP_EXPRHDLR*
  *
  *  result:
@@ -828,7 +831,7 @@ SCIP_DECL_SORTINDCOMP(SYMsortGraphCompVars)
    return 0;
 }
 
-#if SCIP_DISABLED_CODE
+#ifdef SCIP_DISABLED_CODE
 /** sorts constraints in reflection symmetry data by their type
  *
  *  Variables are sorted first by their type, then their first operator's type, then their
@@ -1417,7 +1420,7 @@ SCIP_RETCODE delSymConss(
 }
 
 
-#if SCIP_DISABLED_CODE
+#ifdef SCIP_DISABLED_CODE
 /** determines whether variable should be fixed by permutations */
 static
 SCIP_Bool SymmetryFixVar(
@@ -1436,7 +1439,7 @@ SCIP_Bool SymmetryFixVar(
 }
 #endif
 
-#if SCIP_DISABLED_CODE
+#ifdef SCIP_DISABLED_CODE
 /** Transforms given variables, scalars, and constant to the corresponding active variables, scalars, and constant.
  *
  *  @note @p constant needs to be initialized!
@@ -1486,7 +1489,7 @@ SCIP_RETCODE getActiveVariables(
 }
 #endif
 
-#if SCIP_DISABLED_CODE
+#ifdef SCIP_DISABLED_CODE
 /** Transforms given variables, scalars, and constant to the corresponding active variables, scalars, and constant,
  *  and translates each variable such that its range is centered around 0 (if the range is finite).
  *
@@ -1552,7 +1555,7 @@ SCIP_RETCODE getActiveVariablesReflSym(
 }
 #endif
 
-#if SCIP_DISABLED_CODE
+#ifdef SCIP_DISABLED_CODE
 /** returns whether a simple constraint is represented linearly */
 static
 SCIP_Bool isSimpleConsLinear(
@@ -1581,7 +1584,7 @@ SCIP_Bool isSimpleConsLinear(
 }
 #endif
 
-#if SCIP_DISABLED_CODE
+#ifdef SCIP_DISABLED_CODE
 /** checks whether a linearly represented constraints is identical to a constraint
  *  in reflection symmetry data
  */
@@ -1677,7 +1680,7 @@ SCIP_RETCODE checkLinConssAreIdentical(
 }
 #endif
 
-#if SCIP_DISABLED_CODE
+#ifdef SCIP_DISABLED_CODE
 /** collects information about permuted linearly represented constraints */
 static
 SCIP_RETCODE collectInformationPermLinearCons(
@@ -1737,7 +1740,7 @@ SCIP_RETCODE collectInformationPermLinearCons(
 }
 #endif
 
-#if SCIP_DISABLED_CODE
+#ifdef SCIP_DISABLED_CODE
 /** collects information about permuted bounddisjunction constraints */
 static
 SCIP_RETCODE collectInformationPermBounddisjunctionCons(
@@ -1831,7 +1834,7 @@ SCIP_RETCODE collectInformationPermBounddisjunctionCons(
 }
 #endif
 
-#if SCIP_DISABLED_CODE
+#ifdef SCIP_DISABLED_CODE
 /** collects information about permuted SOS1/SOS2 constraints
  *
  * We store each variable in an SOS constraint as a separate term, i.e., each pair in an SOS2
@@ -1955,7 +1958,7 @@ SCIP_RETCODE collectInformationPermSOSCons(
 }
 #endif
 
-#if SCIP_DISABLED_CODE
+#ifdef SCIP_DISABLED_CODE
 /** collects information about permuted indicator constraints */
 static
 SCIP_RETCODE collectInformationPermIndicatorCons(
@@ -2094,7 +2097,7 @@ SCIP_RETCODE collectInformationPermIndicatorCons(
 }
 #endif
 
-#if SCIP_DISABLED_CODE
+#ifdef SCIP_DISABLED_CODE
  /** checks whether a bounddisjunction constraint is identical to a constraint
  *  in reflection symmetry data
  */
@@ -2250,7 +2253,7 @@ SCIP_RETCODE checkBounddisjunctionConssAreIdentical(
 }
 #endif
 
-#if SCIP_DISABLED_CODE
+#ifdef SCIP_DISABLED_CODE
 /** checks whether an SOS constraint is identical to a constraint in reflection symmetry data */
 static
 SCIP_RETCODE checkSOSConssAreIdentical(
@@ -2430,7 +2433,7 @@ SCIP_RETCODE checkSOSConssAreIdentical(
 }
 #endif
 
-#if SCIP_DISABLED_CODE
+#ifdef SCIP_DISABLED_CODE
 /** collects information about permuted indicator constraints */
 static
 SCIP_RETCODE checkIndicatorConssAreIdentical(
@@ -2597,7 +2600,7 @@ SCIP_RETCODE checkIndicatorConssAreIdentical(
 }
 #endif
 
-#if SCIP_DISABLED_CODE
+#ifdef SCIP_DISABLED_CODE
 /** prints information of an expression tree used for computing reflection symmetries to screen */
 static
 SCIP_RETCODE printReflectionSymmetryDataTree(
@@ -2757,7 +2760,7 @@ SCIP_RETCODE printReflectionSymmetryData(
 }
 #endif
 
-#if SCIP_DISABLED_CODE
+#ifdef SCIP_DISABLED_CODE
 /** checks whether given signed permutations form a reflection symmetry of a MIP */
 static
 SCIP_RETCODE checkReflectionSymmetriesAreSymmetries(
@@ -3240,7 +3243,7 @@ int getNSymhandableConss(
    return nhandleconss;
 }
 
-#if SCIP_DISABLED_CODE
+#ifdef SCIP_DISABLED_CODE
 /** returns the number of active constraints that can be handled by reflection symmetry computation */
 static
 int getNReflsymhandableConss(
@@ -3285,7 +3288,7 @@ int getNReflsymhandableConss(
 }
 #endif
 
-#if SCIP_DISABLED_CODE
+#ifdef SCIP_DISABLED_CODE
 /** returns whether there exists an expression handler that cannot be handled by symmetry detection */
 static
 SCIP_Bool hasNonhandableExprhdlr(
@@ -3464,7 +3467,7 @@ SCIP_RETCODE setSymmetryData(
    return SCIP_OKAY;
 }
 
-#if SCIP_DISABLED_CODE
+#ifdef SCIP_DISABLED_CODE
 /** reallocate dynamically allocated memory for reflection symmetry detection */
 static
 SCIP_RETCODE ensureReflSymDataMemorySuffices(
@@ -3523,7 +3526,7 @@ SCIP_RETCODE ensureReflSymDataMemorySuffices(
 }
 #endif
 
-#if SCIP_DISABLED_CODE
+#ifdef SCIP_DISABLED_CODE
 /** adds an operator to the reflection symmetry data structure */
 static
 SCIP_RETCODE addOperatorReflSym(
@@ -3551,7 +3554,7 @@ SCIP_RETCODE addOperatorReflSym(
 }
 #endif
 
-#if SCIP_DISABLED_CODE
+#ifdef SCIP_DISABLED_CODE
 /** adds a coefficient to the reflection symmetry data structure */
 static
 SCIP_RETCODE addCoefReflSym(
@@ -3578,7 +3581,7 @@ SCIP_RETCODE addCoefReflSym(
 }
 #endif
 
-#if SCIP_DISABLED_CODE
+#ifdef SCIP_DISABLED_CODE
 /** adds a variable to the reflection symmetry data structure */
 static
 SCIP_RETCODE addVarReflSym(
@@ -3605,7 +3608,7 @@ SCIP_RETCODE addVarReflSym(
 }
 #endif
 
-#if SCIP_DISABLED_CODE
+#ifdef SCIP_DISABLED_CODE
 /** adds a numerical value to the reflection symmetry data structure */
 static
 SCIP_RETCODE addValReflSym(
@@ -3632,7 +3635,7 @@ SCIP_RETCODE addValReflSym(
 }
 #endif
 
-#if SCIP_DISABLED_CODE
+#ifdef SCIP_DISABLED_CODE
 /** stores information about a linear constraint in reflection symmetry data structure */
 static
 SCIP_RETCODE storeLinearConstraint(
@@ -3764,7 +3767,7 @@ SCIP_RETCODE storeLinearConstraint(
 }
 #endif
 
-#if SCIP_DISABLED_CODE
+#ifdef SCIP_DISABLED_CODE
 /** stores and indicator constraint in the reflection symmetry data  */
 static
 SCIP_RETCODE storeIndicatorCons(
@@ -3906,7 +3909,7 @@ SCIP_RETCODE storeIndicatorCons(
 }
 #endif
 
-#if SCIP_DISABLED_CODE
+#ifdef SCIP_DISABLED_CODE
 /** stores information about a simple (non-) linear constraint in reflection symmetry data structure */
 static
 SCIP_RETCODE storeSimpleConstraint(
@@ -4407,7 +4410,7 @@ SCIP_RETCODE storeSimpleConstraint(
 }
 #endif
 
-#if SCIP_DISABLED_CODE
+#ifdef SCIP_DISABLED_CODE
 /** ensures that we can store information about open parent nodes */
 static
 SCIP_RETCODE ensureOpenidxSize(
@@ -4437,7 +4440,7 @@ SCIP_RETCODE ensureOpenidxSize(
 }
 #endif
 
-#if SCIP_DISABLED_CODE
+#ifdef SCIP_DISABLED_CODE
 /** stores expression tree for rhs-bounded constraint in reflection symmetry data structure */
 static
 SCIP_RETCODE storeExpressionTree(
@@ -4784,7 +4787,7 @@ SCIP_RETCODE storeExpressionTree(
 }
 #endif
 
-#if SCIP_DISABLED_CODE
+#ifdef SCIP_DISABLED_CODE
 /** stores information about a nonlinear constraint in reflection symmetry data structure */
 static
 SCIP_RETCODE storeNonlinearConstraint(
@@ -4836,7 +4839,7 @@ SCIP_RETCODE storeNonlinearConstraint(
 }
 #endif
 
-#if SCIP_DISABLED_CODE
+#ifdef SCIP_DISABLED_CODE
 /** determines colors of variables, rhs, coefficients, values, and operators for reflection symmetry detection */
 static
 SCIP_RETCODE findColorsReflSym(
@@ -4987,7 +4990,7 @@ SCIP_RETCODE findColorsReflSym(
    /* @todo check whether we want to use this, also if all variables have a different color,
     * there might be reflection symmetries of individual variables with themselves
     */
-#if SCIP_DISABLED_CODE
+#ifdef SCIP_DISABLED_CODE
    /* terminate early if all variables receive a different color */
    if ( reflection->nuniquevars == nvars )
    {
@@ -5185,7 +5188,7 @@ SCIP_RETCODE findColorsReflSym(
 }
 #endif
 
-#if SCIP_DISABLED_CODE
+#ifdef SCIP_DISABLED_CODE
 /** stores the objective in data for reflection symmetry detection */
 static
 SCIP_RETCODE storeObjective(
@@ -5236,7 +5239,7 @@ SCIP_RETCODE storeObjective(
 }
 #endif
 
-#if SCIP_DISABLED_CODE
+#ifdef SCIP_DISABLED_CODE
 /** computes reflection symmetry group of a CIP */
 static
 SCIP_RETCODE computeReflectionSymmetryGroup(
@@ -5746,7 +5749,7 @@ SCIP_RETCODE estimateSymgraphSize(
             int numnodes;
 
             depth = (int) log2((double) num);
-            numnodes = MIN((int) exp2(depth + 1), 100);
+            numnodes = MIN((int) exp2((double) (depth + 1)), 100);
 
             *nopnodes += numnodes;
             *nvalnodes += MAX((int) 0.1 * numnodes, 1);
@@ -6178,7 +6181,7 @@ SCIP_RETCODE determineSymmetry(
 
    /* skip symmetry computation if there are constraints that cannot be handled by symmetry */
    /* @todo rework this part; disabled for testing reflection symmetries */
-#if SCIP_DISABLED_CODE
+#ifdef SCIP_DISABLED_CODE
    nconss = SCIPgetNActiveConss(scip);
    nhandleconss = getNSymhandableConss(scip, propdata->conshdlr_nonlinear);
    if ( nhandleconss < nconss )

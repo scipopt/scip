@@ -8903,13 +8903,13 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphSetppc)
 
    lhs = -SCIPinfinity(scip);
    rhs = SCIPinfinity(scip);
-   if ( consdata->setppctype == SCIP_SETPPCTYPE_PACKING )
+   if ( consdata->setppctype == (unsigned) SCIP_SETPPCTYPE_PACKING ) /*lint !e641*/
       rhs = 1.0 - constant;
-   else if ( consdata->setppctype == SCIP_SETPPCTYPE_COVERING )
+   else if ( consdata->setppctype == (unsigned) SCIP_SETPPCTYPE_COVERING ) /*lint !e641*/
       lhs = 1.0 - constant;
    else
    {
-      assert(consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING);
+      assert(consdata->setppctype == (unsigned) SCIP_SETPPCTYPE_PARTITIONING); /*lint !e641*/
 
       rhs = 1.0 - constant;
       lhs = 1.0 - constant;

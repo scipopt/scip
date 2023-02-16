@@ -2933,7 +2933,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphBounddisjunction)
    for( i = 0; i < nconsvars; ++i )
    {
       /* add node and edge for bound expression of literal */
-      opnodeidx = SCIPaddSymgraphOpnode(scip, graph,  SYM_CONSOPTYPE_BDDISJ);
+      opnodeidx = SCIPaddSymgraphOpnode(scip, graph, (int) SYM_CONSOPTYPE_BDDISJ); /*lint !e641*/
       SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, consnodeidx, opnodeidx, FALSE, 0.0) );
 
       /* add node and edge for bound on literal */
@@ -2953,7 +2953,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphBounddisjunction)
       if( nlocvars > 1 || !SCIPisEQ(scip, vals[0], 1.0) || !SCIPisZero(scip, constant) )
       {
          /* encode aggregation by a sum-expression and connect it to bdexpr node */
-         nodeidx = SCIPaddSymgraphOpnode(scip, graph, SYM_CONSOPTYPE_SUM);
+         nodeidx = SCIPaddSymgraphOpnode(scip, graph, (int) SYM_CONSOPTYPE_SUM); /*lint !e641*/
          SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, opnodeidx, nodeidx, FALSE, 0.0) );
 
          /* add nodes and edges for variables in aggregation */
