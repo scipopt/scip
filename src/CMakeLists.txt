@@ -367,6 +367,7 @@ set(scipsources
     scip/solve.c
     scip/stat.c
     scip/symmetry.c
+    scip/symmetry_graph.c
     scip/syncstore.c
     scip/table.c
     scip/tree.c
@@ -898,6 +899,7 @@ set(scipheaders
     scip/struct_var.h
     scip/struct_visual.h
     scip/symmetry.h
+    scip/symmetry_graph.h
     scip/syncstore.h
     scip/table_default.h
     scip/table.h
