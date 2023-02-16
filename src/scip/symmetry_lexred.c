@@ -253,7 +253,7 @@ SCIP_RETCODE lexdataCreate(
    assert( masterdata->symvarmap != NULL );
    for (i = 0; i < (*lexdata)->nvars; ++i)
    {
-      var = vars[i];
+      var = (*lexdata)->vars[i];
       assert( var != NULL );
       assert( SCIPvarIsTransformed(var) );
 
