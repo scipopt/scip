@@ -635,7 +635,11 @@ int bisectSortedArrayFindFirstGEQ(
    assert( ids != NULL );
    assert( idssort != NULL );
    assert( frameleft >= 0 );
-   assert( frameright > frameleft );
+   assert( frameright >= frameleft );
+
+   /* empty frame case */
+   if ( frameright == frameleft )
+      return frameright;
 
    while (frameright - frameleft >= 2)
    {
