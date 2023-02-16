@@ -9371,7 +9371,7 @@ SCIP_RETCODE ensureLocVarsArraySize(
       int newsize;
 
       newsize = SCIPcalcMemGrowSize(scip, nelems);
-      assert(newsize > nelems);
+      assert(newsize > *maxnelems);
 
       SCIP_CALL( SCIPreallocBufferArray(scip, vars, newsize) );
       SCIP_CALL( SCIPreallocBufferArray(scip, vals, newsize) );
@@ -10828,8 +10828,6 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphNonlinear)
                nodeidx = SCIPaddSymgraphValnode(scip, graph, constant);
                SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, sumidx, nodeidx, FALSE, 0.0) );
             }
-
-            SCIP_CALL( ensureLocVarsArraySize(scip, &consvars, &consvals, nlocvars, &maxnconsvars) );
 
             for( i = 0; i < nlocvars; ++i )
             {
