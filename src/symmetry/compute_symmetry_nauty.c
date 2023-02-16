@@ -1558,18 +1558,16 @@ SCIP_Bool SYMcanComputeSymmetry(void)
 }
 
 /** static variable for holding the name of name */
-static char nautyname[100];
+#ifdef NAUTY
+static const char nautyname[] = "Nauty "NAUTYVERSION;
+#else
+static const char nautyname[] = "Traces "NAUTYVERSION;
+#endif
 
 /** return name of external program used to compute generators */
 const char* SYMsymmetryGetName(void)
 {
-#ifdef NAUTY
-   (void) snprintf(nautyname, 100, "nauty %s", NAUTYVERSION);
    return nautyname;
-#else
-   (void) snprintf(nautyname, 100, "traces %s", NAUTYVERSION);
-   return nautyname;
-#endif
 }
 
 /** return description of external program used to compute generators */
