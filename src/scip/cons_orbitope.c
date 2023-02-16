@@ -844,7 +844,9 @@ SCIP_RETCODE separateSCIs(
          /* check whether weights[i-1][j-1] < bar  (<=> bar - weights[i-1][j-1] > 0), i.e. cut is violated) */
          if ( SCIPisEfficacious(scip, bar - weights[i-1][j-1]) )
          {
-            SCIP_Real weight;
+#ifndef NDEBUG
+            SCIP_Real weight = 0.0;
+#endif
             SCIP_ROW* row;
 #ifdef SCIP_DEBUG
             char name[SCIP_MAXSTRLEN];
@@ -856,7 +858,6 @@ SCIP_RETCODE separateSCIs(
             nvars = 0;
             p1 = i-1;
             p2 = j-1;
-            weight = 0.0;
 
             /* first add bar */
             for (l = j; l <= lastcolumn; ++l)
@@ -883,7 +884,9 @@ SCIP_RETCODE separateSCIs(
                   tmpvars[nvars] = vars[p1][p2];
                   tmpvals[nvars] = -1.0;
                   nvars++;
+#ifndef NDEBUG
                   weight += vals[p1][p2];
+#endif
                   if ( cases[p1][p2] == 3 )
                      break;
                }
