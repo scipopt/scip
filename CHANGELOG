@@ -70,6 +70,7 @@ Fixed bugs
 - avoid some numerical issue in check for redundant variables in linear constraints (introduced with version 8.0.2)
 - more rows are treated as being integral in cutsSubstituteMIR() for CMIR cuts
 - fixed several relaxations of the rhs of cuts to 0 in cuts.c
+- avoid aggregation into a single linear constraint if they should not be upgraded (needed for indicator constraints)
 
 Miscellaneous
 -------------
