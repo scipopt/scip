@@ -840,15 +840,15 @@ SCIP_RETCODE orbitalFixingDynamicApplyOrbitalBranchingPropagations(
       branchingdecisionvarid = SCIPhashmapGetImageInt(ofdata->permvarmap, (void*) branchingdecision->var);
       assert( branchingdecisionvarid < ofdata->npermvars || branchingdecisionvarid == INT_MAX );
       assert( branchingdecisionvarid >= 0 );
-      assert( branchingdecision->boundchgtype == SCIP_BOUNDTYPE_LOWER ?
-         LE(scip, varlbs[branchingdecisionvarid], branchingdecision->newbound) :
-         GE(scip, varubs[branchingdecisionvarid], branchingdecision->newbound) );
-      assert( LE(scip, varlbs[branchingdecisionvarid], varubs[branchingdecisionvarid]) );
 
       /* branching decision will not have an effect on this */
       if ( branchingdecisionvarid >= ofdata->npermvars )
          continue;
       assert( branchingdecisionvarid >= 0 && branchingdecisionvarid < ofdata->npermvars );
+      assert( branchingdecision->boundchgtype == SCIP_BOUNDTYPE_LOWER ?
+         LE(scip, varlbs[branchingdecisionvarid], branchingdecision->newbound) :
+         GE(scip, varubs[branchingdecisionvarid], branchingdecision->newbound) );
+      assert( LE(scip, varlbs[branchingdecisionvarid], varubs[branchingdecisionvarid]) );
 
       /* get the generating set of permutations of a subgroup of a stabilizing symmetry subgroup.
        *
