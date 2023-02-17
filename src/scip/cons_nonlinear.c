@@ -10690,14 +10690,15 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphNonlinear)
    int nodeidx;
    int i;
    SCIP_Bool iscolored;
-   SCIP_Bool hasparentcoef;
+   SCIP_Bool hasparentcoef = FALSE;
 
    assert(scip != NULL);
    assert(cons != NULL);
    assert(graph != NULL);
 
    /* store lhs/rhs */
-   consnodeidx = SCIPaddSymgraphConsnode(scip, graph, cons, SCIPgetLhsNonlinear(cons), SCIPgetRhsNonlinear(cons));
+   SCIP_CALL( SCIPaddSymgraphConsnode(scip, graph, cons,
+         SCIPgetLhsNonlinear(cons), SCIPgetRhsNonlinear(cons), &consnodeidx) );
 
    rootexpr = SCIPgetExprNonlinear(cons);
    assert(rootexpr != NULL);
@@ -10775,7 +10776,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphNonlinear)
          /* if the parent assigns the variable a coefficient, introduce an intermediate node */
          if( hasparentcoef )
          {
-            nodeidx = SCIPaddSymgraphOpnode(scip, graph, (int) SYM_CONSOPTYPE_COEF); /*lint !e641*/
+            SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, (int) SYM_CONSOPTYPE_COEF, &nodeidx) ); /*lint !e641*/
 
             SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, parentidx, nodeidx, TRUE, parentcoef) );
             parentidx = nodeidx;
@@ -10820,12 +10821,12 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphNonlinear)
             int sumidx;
 
             /* add node and edge for sum operator */
-            sumidx = SCIPaddSymgraphOpnode(scip, graph, (int) SYM_CONSOPTYPE_SUM); /*lint !e641*/
+            SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, (int) SYM_CONSOPTYPE_SUM, &sumidx) ); /*lint !e641*/
 
             /* add nodes and edges for summands */
             if( nlocvals == 1 )
             {
-               nodeidx = SCIPaddSymgraphValnode(scip, graph, constant);
+               SCIP_CALL( SCIPaddSymgraphValnode(scip, graph, constant, &nodeidx) );
                SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, sumidx, nodeidx, FALSE, 0.0) );
             }
 
@@ -10845,7 +10846,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphNonlinear)
       }
       else if( SCIPisExprValue(scip, expr) )
       {
-         nodeidx = SCIPaddSymgraphValnode(scip, graph, SCIPgetValueExprValue(expr));
+         SCIP_CALL( SCIPaddSymgraphValnode(scip, graph, SCIPgetValueExprValue(expr), &nodeidx) );
 
          SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, parentidx, nodeidx, hasparentcoef, parentcoef) );
 
@@ -10889,13 +10890,13 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphNonlinear)
 
             SCIP_CALL( SCIPgetSymOpNodeType(scip, SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), &optype) );
 
-            sumidx = SCIPaddSymgraphOpnode(scip, graph, optype);
+            SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, optype, &sumidx) );
             SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, parentidx, sumidx, hasparentcoef, parentcoef) );
 
             /* add the linear part of the sum */
             if( !SCIPisZero(scip, constant) )
             {
-               nodeidx = SCIPaddSymgraphValnode(scip, graph, constant);
+               SCIP_CALL( SCIPaddSymgraphValnode(scip, graph, constant, &nodeidx) );
                SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, sumidx, nodeidx, FALSE, 0.0) );
             }
 
@@ -10921,7 +10922,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphNonlinear)
             int optype;
 
             SCIP_CALL( SCIPgetSymOpNodeType(scip, SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), &optype) );
-            opidx = SCIPaddSymgraphOpnode(scip, graph, optype);
+            SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, optype, &opidx) );
             SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, parentidx, opidx, hasparentcoef, parentcoef) );
 
             /* possibly add constants of expression */
@@ -10936,7 +10937,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphNonlinear)
                iscolored = SCIPgetSymExprdataNConstants(symdata) > 1 ? TRUE : FALSE;
                for( i = 0; i < SCIPgetSymExprdataNConstants(symdata); ++i )
                {
-                  nodeidx = SCIPaddSymgraphValnode(scip, graph, SCIPgetSymExprdataConstants(symdata)[i]);
+                  SCIP_CALL( SCIPaddSymgraphValnode(scip, graph, SCIPgetSymExprdataConstants(symdata)[i], &nodeidx) );
                   SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, opidx, nodeidx, iscolored, (SCIP_Real) i+1) );
                }
 

@@ -114,28 +114,31 @@ SCIP_RETCODE SCIPaddSymgraphVarAggegration(
 
 /** adds an operator node to a symmetry detection graph and returns its node index */
 SCIP_EXPORT
-int SCIPaddSymgraphOpnode(
+SCIP_RETCODE SCIPaddSymgraphOpnode(
    SCIP*                 scip,               /**< SCIP data structure */
    SYM_GRAPH*            graph,              /**< symmetry detection graph */
-   int                   op                  /**< int associated with operator of node */
+   int                   op,                 /**< int associated with operator of node */
+   int*                  nodeidx             /**< pointer to hold index of created node */
    );
 
 /** adds a value node to a symmetry detection graph and returns its node index */
 SCIP_EXPORT
-int SCIPaddSymgraphValnode(
+SCIP_RETCODE SCIPaddSymgraphValnode(
    SCIP*                 scip,               /**< SCIP data structure */
    SYM_GRAPH*            graph,              /**< symmetry detection graph */
-   SCIP_Real             val                 /**< value of node */
+   SCIP_Real             val,                /**< value of node */
+   int*                  nodeidx             /**< pointer to hold index of created node */
    );
 
 /** adds a constraint node to a symmetry detection graph and returns its node index */
 SCIP_EXPORT
-int SCIPaddSymgraphConsnode(
+SCIP_RETCODE SCIPaddSymgraphConsnode(
    SCIP*                 scip,               /**< SCIP data structure */
    SYM_GRAPH*            graph,              /**< symmetry detection graph */
    SCIP_CONS*            cons,               /**< constraint of node */
    SCIP_Real             lhs,                /**< left-hand side of node */
-   SCIP_Real             rhs                 /**< right-hand side of node */
+   SCIP_Real             rhs,                /**< right-hand side of node */
+   int*                  nodeidx             /**< pointer to hold index of created node */
    );
 
 /** returns the (hypothetical) node index of a variable */
@@ -268,7 +271,7 @@ SCIP_Bool SCIPisSymgraphEdgeColored(
 
 /** returns color of an edge */
 SCIP_EXPORT
-SCIP_Bool SCIPgetSymgraphEdgeColor(
+int SCIPgetSymgraphEdgeColor(
    SYM_GRAPH*            graph,              /**< symmetry detection graph */
    int                   edgeidx             /**< index of edge */
    );

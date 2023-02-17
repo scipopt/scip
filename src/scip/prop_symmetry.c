@@ -229,7 +229,6 @@
 
 /* other defines */
 #define MAXGENNUMERATOR          64000000    /**< determine maximal number of generators by dividing this number by the number of variables */
-#define SCIP_SPECIALVAL 1.12345678912345e+19 /**< special floating point value for handling zeros in bound disjunctions */
 #define COMPRESSNVARSLB             25000    /**< lower bound on the number of variables above which compression could be performed */
 
 /* macros for getting activeness of symmetry handling methods */
@@ -5747,9 +5746,11 @@ SCIP_RETCODE estimateSymgraphSize(
          {
             int depth;
             int numnodes;
+            int expval;
 
             depth = (int) log2((double) num);
-            numnodes = MIN((int) exp2((double) (depth + 1)), 100);
+            expval = (int) exp2((double) (depth + 1));
+            numnodes = MIN(expval, 100);
 
             *nopnodes += numnodes;
             *nvalnodes += MAX((int) 0.1 * numnodes, 1);
@@ -9840,7 +9841,7 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
          propdata->ofenabled = FALSE;
          propdata->sstenabled = FALSE;
 
-         SCIPhashmapCreate(&propdata->customsymopnodetypes, SCIPblkmem(scip), 10);
+         SCIP_CALL( SCIPhashmapCreate(&propdata->customsymopnodetypes, SCIPblkmem(scip), 10) );
 
          SCIP_CALL( determineSymmetry(scip, propdata, SYM_SPEC_BINARY | SYM_SPEC_INTEGER | SYM_SPEC_REAL, 0) );
       }

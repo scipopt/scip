@@ -3123,7 +3123,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphCardinality)
    rhs = (SCIP_Real) consdata->cardval;
 
    /* add node for constraint */
-   consnodeidx = SCIPaddSymgraphConsnode(scip, graph, cons, -SCIPinfinity(scip), rhs);
+   SCIP_CALL( SCIPaddSymgraphConsnode(scip, graph, cons, -SCIPinfinity(scip), rhs, &consnodeidx) );
 
    /* create nodes and edges for each variable */
    nvars = SCIPgetNVars(scip);
@@ -3143,7 +3143,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphCardinality)
       if( nlocvars > 1 || !SCIPisEQ(scip, vals[0], 1.0) || !SCIPisZero(scip, constant) )
       {
          /* encode aggregation by a sum-expression */
-         nodeidx = SCIPaddSymgraphOpnode(scip, graph, (int) SYM_CONSOPTYPE_SUM); /*lint !e641*/
+         SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, (int) SYM_CONSOPTYPE_SUM, &nodeidx) ); /*lint !e641*/
 
          /* we do not need to take weights of variables into account;
           * they are only used to sort variables within the constraint */

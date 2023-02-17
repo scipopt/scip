@@ -7207,13 +7207,13 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphIndicator)
    lhs = SCIPgetLhsLinear(scip, lincons);
    rhs = SCIPgetRhsLinear(scip, lincons);
 
-   consnodeidx = SCIPaddSymgraphConsnode(scip, graph, cons, lhs, rhs);
+   SCIP_CALL( SCIPaddSymgraphConsnode(scip, graph, cons, lhs, rhs, &consnodeidx) );
 
    /* create nodes and edges for activation of constraint */
-   eqnodeidx = SCIPaddSymgraphOpnode(scip, graph, (int) SYM_CONSOPTYPE_EQ); /*lint !e641*/
+   SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, (int) SYM_CONSOPTYPE_EQ, &eqnodeidx) ); /*lint !e641*/
    SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, consnodeidx, eqnodeidx, FALSE, 0.0) );
 
-   nodeidx = SCIPaddSymgraphValnode(scip, graph, (SCIP_Real) consdata->activeone);
+   SCIP_CALL( SCIPaddSymgraphValnode(scip, graph, (SCIP_Real) consdata->activeone, &nodeidx) );
    SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, eqnodeidx, nodeidx, FALSE, 0.0) );
 
    /* create nodes and edges for (possibly aggregated) activation variable */
@@ -7232,7 +7232,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphIndicator)
    if( nlocvars > 1 || !SCIPisEQ(scip, vals[0], 1.0) || !SCIPisZero(scip, constant) )
    {
       /* encode aggregation by a sum-expression and connect it to bdexpr node */
-      opnodeidx = SCIPaddSymgraphOpnode(scip, graph, (int) SYM_CONSOPTYPE_SUM); /*lint !e641*/
+      SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, (int) SYM_CONSOPTYPE_SUM, &opnodeidx) ); /*lint !e641*/
       SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, eqnodeidx, opnodeidx, FALSE, 0.0) );
 
       /* add nodes and edges for variables in aggregation */
@@ -7244,7 +7244,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphIndicator)
       SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, eqnodeidx, nodeidx, FALSE, 0.0) );
    }
 
-   slacknodeidx = SCIPaddSymgraphOpnode(scip, graph, (int) SYM_CONSOPTYPE_SLACK); /*lint !e641*/
+   SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, (int) SYM_CONSOPTYPE_SLACK, &slacknodeidx) ); /*lint !e641*/
    SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, consnodeidx, slacknodeidx, FALSE, 0.0) );
 
    /* create nodes and edges for (possibly aggregated) slack variable */
@@ -7258,7 +7258,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphIndicator)
    if( nlocvars > 1 || !SCIPisEQ(scip, vals[0], 1.0) || !SCIPisZero(scip, constant) )
    {
       /* encode aggregation by a sum-expression and connect it to root node */
-      opnodeidx = SCIPaddSymgraphOpnode(scip, graph, (int) SYM_CONSOPTYPE_SUM); /*lint !e641*/
+      SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, (int) SYM_CONSOPTYPE_SUM, &opnodeidx) ); /*lint !e641*/
       SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, slacknodeidx, opnodeidx, FALSE, 0.0) );
 
       /* add nodes and edges for variables in aggregation */
@@ -7280,7 +7280,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphIndicator)
    }
    nlocvars = nvarslincons;
 
-   opnodeidx = SCIPaddSymgraphOpnode(scip, graph, (int) SYM_CONSOPTYPE_SUM); /*lint !e641*/
+   SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, (int) SYM_CONSOPTYPE_SUM, &opnodeidx) ); /*lint !e641*/
    SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, consnodeidx, opnodeidx, FALSE, 0.0) );
 
    SCIP_CALL( SCIPgetActiveVariables(scip, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );

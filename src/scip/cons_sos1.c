@@ -10189,7 +10189,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphSOS1)
    SCIP_CALL( SCIPallocBufferArray(scip, &locvals, nvars) );
 
    /* add node initializing constraint (with artificial rhs) */
-   consnodeidx = SCIPaddSymgraphConsnode(scip, graph, cons, 0.0, 0.0);
+   SCIP_CALL( SCIPaddSymgraphConsnode(scip, graph, cons, 0.0, 0.0, &consnodeidx) );
 
    /* for all (aggregation of) variables, add a node to graph and connect it with the root */
    for( i = 0; i < nconsvars; ++i )
@@ -10210,7 +10210,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphSOS1)
       }
       else
       {
-         nodeidx = SCIPaddSymgraphOpnode(scip, graph, (int) SYM_CONSOPTYPE_SUM); /*lint !e641*/
+         SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, (int) SYM_CONSOPTYPE_SUM, &nodeidx) ); /*lint !e641*/
 
          SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, consnodeidx, nodeidx, FALSE, 0.0) );
 

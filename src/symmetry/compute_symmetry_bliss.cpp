@@ -380,7 +380,6 @@ SCIP_RETCODE SCIPcreateReflectionSymmetryDetectionGraph(
 #endif
    }
    assert( (int) G->get_nof_vertices() == 2 * reflsymdata->ntreevars + reflsymdata->nuniquerhs );
-   nusedcolors += reflsymdata->nuniquerhs;
 
    /* starting positions of different types of nodes */
    int rhsstart = 2 * reflsymdata->ntreevars;
