@@ -845,9 +845,9 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
     */
    const bool groupByConstraints = SCIPgetSymgraphNConsnodes(graph) < SCIPgetSymgraphNVars(graph);
    int nsymedges = SCIPgetSymgraphNEdges(graph);
-   int* groupfirsts;
-   int* groupseconds;
-   int* groupcolors;
+   int* groupfirsts = NULL;
+   int* groupseconds = NULL;
+   int* groupcolors = NULL;
    int ngroupedges = 0;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &groupfirsts, nsymedges) );
@@ -951,6 +951,7 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    SCIPfreeBufferArray(scip, &groupfirsts);
 
    assert( (int) G.get_nof_vertices() == nnodes );
+   assert( nedges >= SCIPgetSymgraphNEdges(graph) );
    SCIPdebugMsg(scip, "Symmetry detection graph has %d nodes and %d edges.\n", nnodes, nedges);
 
    /* compute automorphisms */
@@ -966,9 +967,9 @@ SCIP_Bool SYMcheckGraphsAreIdentical(
    SYM_GRAPH*            G2                  /**< second graph */
    )
 {
-   int* nvarused1;
-   int* nvarused2;
-   int* varlabel;
+   int* nvarused1 = NULL;
+   int* nvarused2 = NULL;
+   int* varlabel = NULL;
    int nusedvars = 0;
    int nvars;
    int i;
