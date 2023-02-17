@@ -1219,6 +1219,10 @@ SCIP_RETCODE SYMcomputeReflectionSymmetryGenerators(
    {
       assert( data.perms == NULL );
       assert( data.nmaxperms == 0 );
+
+      *perms = NULL;
+      *nperms = 0;
+      *nmaxperms = 0;
    }
 
    /* determine log10 of symmetry group size */
