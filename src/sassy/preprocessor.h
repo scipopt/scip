@@ -12,10 +12,15 @@
 #include <iomanip>
 #include <stdlib.h>
 #include <ctime>
+#include "tinycthread/tinycthread.h"
 
 namespace sassy {
     class preprocessor;
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201102L
     thread_local preprocessor* save_preprocessor;
+#else
+    _Thread_local preprocessor* save_preprocessor;
+#endif
 
     enum preop {
         deg01, deg2ue, deg2ma, qcedgeflip, probeqc, probe2qc, probeflat, redloop
