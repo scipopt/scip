@@ -1242,7 +1242,7 @@ SCIP_RETCODE SYMcomputeReflectionSymmetryGenerators(
       if ( hasreflection )
       {
          // print permutation in cycle representation
-         SCIP_Bool* covered;
+         SCIP_Bool* covered = NULL;
 
          SCIP_CALL( SCIPallocClearBufferArray(scip, &covered, data.npermvars) );
 
