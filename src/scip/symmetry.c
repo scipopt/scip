@@ -35,6 +35,7 @@
 #include "scip/scip.h"
 #include "scip/misc.h"
 #include "scip/cons_setppc.h"
+#include <symmetry/struct_symmetry.h>
 #include <symmetry/type_symmetry.h>
 
 

@@ -651,6 +651,18 @@ SCIP_RETCODE SCIPexprSimplify(
    void*                 ownercreatedata     /**< data to pass to ownercreate */
    );
 
+
+/** retrieves symmetry information from an expression
+ *
+ * @see SCIPgetSymDataExpr
+ */
+SCIP_EXPORT  /* need SCIP_EXPORT here, because func is exposed in API via SCIPgetSymdataExpr() macro */
+SCIP_RETCODE SCIPexprGetSymData(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EXPR*            expr,               /**< expression from which information is retrieved */
+   SYM_EXPRDATA**        symdata             /**< buffer to store symmetry information */
+   );
+
 #ifdef NDEBUG
 #define SCIPexprCapture(expr) ++(expr)->nuses
 #define SCIPexprIsVar(set, expr)     ((expr)->exprhdlr == (set)->exprhdlrvar)

@@ -75,6 +75,8 @@
 #include "scip/scip_sol.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
+#include "scip/symmetry_graph.h"
+#include "symmetry/struct_symmetry.h"
 #include <ctype.h>
 #include <string.h>
 
@@ -3365,6 +3367,50 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsLinking)
    return SCIP_OKAY;
 }
 
+/** constraint handler method which returns the permutation symmetry detection graph of a constraint */
+static
+SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphLinking)
+{  /*lint --e{715}*/
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR** vars;
+   SCIP_Real* vals;
+   SCIP_Real constant = 0.0;
+   int nlocvars;
+   int nvars;
+   int i;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* get active variables of the constraint */
+   nvars = SCIPgetNVars(scip);
+   nlocvars = consdata->nbinvars + 1;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vals, nvars) );
+
+   /* get binary variables */
+   for( i = 0; i < consdata->nbinvars; ++i )
+   {
+      vars[i] = consdata->binvars[i];
+      vals[i] = consdata->vals[i];
+   }
+
+   /* get linking variable */
+   vars[consdata->nbinvars] = consdata->linkvar;
+   vals[consdata->nbinvars] = -1.0;
+
+   SCIP_CALL( SCIPgetActiveVariables(scip, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
+
+   SCIP_CALL( SCIPextendPermsymDetectionGraphLinear(scip, graph, vars, vals, nlocvars,
+         cons, -constant, -constant, success) );
+
+   SCIPfreeBufferArray(scip, &vals);
+   SCIPfreeBufferArray(scip, &vars);
+
+   return SCIP_OKAY;
+}
+
 /*
  * Callback methods of event handler
  */
@@ -3467,6 +3513,7 @@ SCIP_RETCODE SCIPincludeConshdlrLinking(
          CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransLinking) );
    SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxLinking) );
+   SCIP_CALL( SCIPsetConshdlrGetPermsymGraph(scip, conshdlr, consGetPermsymGraphLinking) );
 
    /* include the linear constraint to linking constraint upgrade in the linear constraint handler */
    /* SCIP_CALL( SCIPincludeLinconsUpgrade(scip, linconsUpgdLinking, LINCONSUPGD_PRIORITY, CONSHDLR_NAME) ); */

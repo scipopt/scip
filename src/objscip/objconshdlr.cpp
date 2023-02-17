@@ -619,6 +619,22 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsObj)
 
    return SCIP_OKAY;
 }
+
+/** constraint handler method which returns the permutation symmetry detection graph of a constraint (if possible) */
+static
+SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraph)
+{  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+   assert(conshdlrdata->objconshdlr != NULL);
+
+   /* call virtual method of conshdlr object */
+   SCIP_CALL( conshdlrdata->objconshdlr->scip_getpermsymgraph(scip, conshdlr, cons, graph, success) );
+
+   return SCIP_OKAY;
+}
 }
 
 
@@ -660,7 +676,7 @@ SCIP_RETCODE SCIPincludeObjConshdlr(
          consActiveObj, consDeactiveObj,
          consEnableObj, consDisableObj, consDelVarsObj,
          consPrintObj, consCopyObj, consParseObj,
-         consGetVarsObj, consGetNVarsObj, consGetDiveBdChgsObj, conshdlrdata) ); /*lint !e429*/
+         consGetVarsObj, consGetNVarsObj, consGetDiveBdChgsObj, consGetPermsymGraph, conshdlrdata) ); /*lint !e429*/
 
    return SCIP_OKAY; /*lint !e429*/
 }

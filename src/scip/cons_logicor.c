@@ -62,6 +62,8 @@
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
+#include "scip/symmetry_graph.h"
+#include "symmetry/struct_symmetry.h"
 #include <string.h>
 
 
@@ -5070,6 +5072,47 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsLogicor)
    return SCIP_OKAY;
 }
 
+/** constraint handler method which returns the permutation symmetry detection graph of a constraint */
+static
+SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphLogicor)
+{  /*lint --e{715}*/
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR** logicorvars;
+   SCIP_VAR** vars;
+   SCIP_Real* vals;
+   SCIP_Real constant = 0.0;
+   int nlocvars;
+   int nvars;
+   int i;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* get active variables of the constraint */
+   nvars = SCIPgetNVars(scip);
+   nlocvars = SCIPgetNVarsLogicor(scip, cons);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vals, nvars) );
+
+   logicorvars = SCIPgetVarsLogicor(scip, cons);
+   for( i = 0; i < consdata->nvars; ++i )
+   {
+      vars[i] = logicorvars[i];
+      vals[i] = 1.0;
+   }
+
+   SCIP_CALL( SCIPgetActiveVariables(scip, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
+
+   SCIP_CALL( SCIPextendPermsymDetectionGraphLinear(scip, graph, vars, vals, nlocvars,
+         cons, 1.0 - constant, SCIPinfinity(scip), success) );
+
+   SCIPfreeBufferArray(scip, &vals);
+   SCIPfreeBufferArray(scip, &vars);
+
+   return SCIP_OKAY;
+}
+
 /*
  * Callback methods of event handler
  */
@@ -5258,6 +5301,7 @@ SCIP_RETCODE SCIPincludeConshdlrLogicor(
          CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransLogicor) );
    SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxLogicor) );
+   SCIP_CALL( SCIPsetConshdlrGetPermsymGraph(scip, conshdlr, consGetPermsymGraphLogicor) );
 
    conshdlrdata->conshdlrlinear = SCIPfindConshdlr(scip, "linear");
    conshdlrdata->conshdlrsetppc = SCIPfindConshdlr(scip, "setppc");

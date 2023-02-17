@@ -53,17 +53,15 @@ const char* SYMsymmetryGetDesc(void)
 SCIP_RETCODE SYMcomputeSymmetryGenerators(
    SCIP*                 scip,               /**< SCIP pointer */
    int                   maxgenerators,      /**< maximal number of generators constructed (= 0 if unlimited) */
-   SYM_MATRIXDATA*       matrixdata,         /**< data for MIP matrix */
-   SYM_EXPRDATA*         exprdata,           /**< data for nonlinear constraints */
+   SYM_GRAPH*            graph,              /**< symmetry detection graph */
    int*                  nperms,             /**< pointer to store number of permutations */
    int*                  nmaxperms,          /**< pointer to store maximal number of permutations (needed for freeing storage) */
    int***                perms,              /**< pointer to store permutation generators as (nperms x npermvars) matrix */
-   SCIP_Real*            log10groupsize      /**< pointer to store size of group */
+   SCIP_Real*            log10groupsize      /**< pointer to store log10 of size of group */
    )
 {  /*lint --e{715}*/
    assert( scip != NULL );
-   assert( matrixdata != NULL );
-   assert( exprdata != NULL );
+   assert( graph != NULL );
    assert( nperms != NULL );
    assert( nmaxperms != NULL );
    assert( perms != NULL );
@@ -76,6 +74,16 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    *log10groupsize = 0;
 
    return SCIP_OKAY;
+}
+
+/** returns whether two given graphs are identical */
+SCIP_Bool SYMcheckGraphsAreIdentical(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SYM_GRAPH*            G1,                 /**< first graph */
+   SYM_GRAPH*            G2                  /**< second graph */
+   )
+{
+   return FALSE;
 }
 
 /** compute generators of reflection symmetry group */

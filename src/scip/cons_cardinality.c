@@ -70,6 +70,8 @@
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
+#include "scip/symmetry_graph.h"
+#include "symmetry/struct_symmetry.h"
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
@@ -3097,6 +3099,73 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsCardinality)
    return SCIP_OKAY;
 }
 
+/** constraint handler method which returns the permutation symmetry detection graph of a constraint */
+static
+SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphCardinality)
+{  /*lint --e{715}*/
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR** vars;
+   SCIP_Real* vals;
+   SCIP_Real constant;
+   SCIP_Real rhs;
+   int consnodeidx;
+   int nodeidx;
+   int nconsvars;
+   int nlocvars;
+   int nvars;
+   int i;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(graph != NULL);
+
+   nconsvars = consdata->nvars;
+   rhs = (SCIP_Real) consdata->cardval;
+
+   /* add node for constraint */
+   SCIP_CALL( SCIPaddSymgraphConsnode(scip, graph, cons, -SCIPinfinity(scip), rhs, &consnodeidx) );
+
+   /* create nodes and edges for each variable */
+   nvars = SCIPgetNVars(scip);
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vals, nvars) );
+
+   for( i = 0; i < nconsvars; ++i )
+   {
+      vars[0] = consdata->vars[i];
+      vals[0] = 1.0;
+      nlocvars = 1;
+      constant = 0.0;
+
+      SCIP_CALL( SCIPgetActiveVariables(scip, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
+
+      /* check whether variable is (multi-) aggregated or negated */
+      if( nlocvars > 1 || !SCIPisEQ(scip, vals[0], 1.0) || !SCIPisZero(scip, constant) )
+      {
+         /* encode aggregation by a sum-expression */
+         SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, (int) SYM_CONSOPTYPE_SUM, &nodeidx) ); /*lint !e641*/
+
+         /* we do not need to take weights of variables into account;
+          * they are only used to sort variables within the constraint */
+         SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, consnodeidx, nodeidx, FALSE, 0.0) );
+
+         /* add nodes and edges for variables in aggregation */
+         SCIP_CALL( SCIPaddSymgraphVarAggegration(scip, graph, nodeidx, vars, vals, nlocvars, constant) );
+      }
+      else
+      {
+         nodeidx = SCIPgetSymgraphVarnodeidx(scip, graph, vars[0]);
+
+         SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, consnodeidx, nodeidx, FALSE, 0.0) );
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &vals);
+   SCIPfreeBufferArray(scip, &vars);
+
+   return SCIP_OKAY;
+}
+
 /* ---------------- Callback methods of event handler ---------------- */
 
 /* exec the event handler
@@ -3287,6 +3356,7 @@ SCIP_RETCODE SCIPincludeConshdlrCardinality(
         CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransCardinality) );
    SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxCardinality) );
+   SCIP_CALL( SCIPsetConshdlrGetPermsymGraph(scip, conshdlr, consGetPermsymGraphCardinality) );
 
    /* add cardinality constraint handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/branchbalanced",

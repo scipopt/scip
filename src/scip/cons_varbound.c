@@ -72,6 +72,8 @@
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
 #include "scip/dbldblarith.h"
+#include "scip/symmetry_graph.h"
+#include "symmetry/struct_symmetry.h"
 #include <ctype.h>
 #include <string.h>
 
@@ -5161,6 +5163,43 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsVarbound)
    return SCIP_OKAY;
 }
 
+/** constraint handler method which returns the permutation symmetry detection graph of a constraint */
+static
+SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphVarbound)
+{  /*lint --e{715}*/
+   SCIP_VAR** vars;
+   SCIP_Real* vals;
+   SCIP_Real constant = 0.0;
+   SCIP_Real lhs;
+   SCIP_Real rhs;
+   int nlocvars;
+   int nvars;
+
+   /* get active variables of the constraint */
+   nvars = SCIPgetNVars(scip);
+   nlocvars = 2;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vals, nvars) );
+
+   vars[0] = SCIPgetVarVarbound(scip, cons);
+   vars[1] = SCIPgetVbdvarVarbound(scip, cons);
+   vals[0] = 1.0;
+   vals[1] = SCIPgetVbdcoefVarbound(scip, cons);
+
+   SCIP_CALL( SCIPgetActiveVariables(scip, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
+   lhs = SCIPgetLhsVarbound(scip, cons) - constant;
+   rhs = SCIPgetRhsVarbound(scip, cons) - constant;
+
+   SCIP_CALL( SCIPextendPermsymDetectionGraphLinear(scip, graph, vars, vals, nlocvars,
+         cons, lhs, rhs, success) );
+
+   SCIPfreeBufferArray(scip, &vals);
+   SCIPfreeBufferArray(scip, &vars);
+
+   return SCIP_OKAY;
+}
+
 /*
  * Event Handler
  */
@@ -5242,6 +5281,7 @@ SCIP_RETCODE SCIPincludeConshdlrVarbound(
          CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransVarbound) );
    SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxVarbound) );
+   SCIP_CALL( SCIPsetConshdlrGetPermsymGraph(scip, conshdlr, consGetPermsymGraphVarbound) );
 
    if( SCIPfindConshdlr(scip,"linear") != NULL )
    {

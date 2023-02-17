@@ -25,6 +25,7 @@
 /**@file   type_symmetry.h
  * @brief  type definitions for symmetry computations
  * @author Marc Pfetsch
+ * @author Christopher Hojny
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -68,9 +69,10 @@ typedef enum SYM_Rhssense SYM_RHSSENSE;
 enum SYM_Nodetype
 {
    SYM_NODETYPE_OPERATOR = 0,                /**< operator node */
-   SYM_NODETYPE_VAR      = 1,                /**< variable node */
-   SYM_NODETYPE_COEF     = 2,                /**< coefficient node */
-   SYM_NODETYPE_VAL      = 3                 /**< numerical value node */
+   SYM_NODETYPE_COEF     = 1,                /**< coefficient node */
+   SYM_NODETYPE_VAL      = 2,                /**< numerical value node */
+   SYM_NODETYPE_CONS     = 3,                /**< constraint node */
+   SYM_NODETYPE_VAR      = 4                 /**< variable node */
 };
 typedef enum SYM_Nodetype SYM_NODETYPE;
 
@@ -87,24 +89,30 @@ typedef enum SYM_Constype SYM_CONSTYPE;
 /** define type of simple constraints/operators in symmetry detection */
 enum SYM_Consoptype
 {
-   SYM_CONSOPTYPE_UNKNOWN  = 0,              /**< unkown constraint type */
-   SYM_CONSOPTYPE_AND      = 1,              /**< constraint of type and */
-   SYM_CONSOPTYPE_BDDISJ   = 2,              /**< constraint of type bounddisjunction */
-   SYM_CONSOPTYPE_CARD     = 3,              /**< constraint of type cardinality */
-   SYM_CONSOPTYPE_INDICATOR = 4,             /**< constraint of type indicator */
-   SYM_CONSOPTYPE_OR       = 5,              /**< constraint of type or */
-   SYM_CONSOPTYPE_PSEUDOBOOL = 6,            /**< constraint of type pseudoboolean */
-   SYM_CONSOPTYPE_SOS1     = 7,              /**< constraint of type SOS1 */
-   SYM_CONSOPTYPE_SOS2     = 8,              /**< constraint of type SOS2 */
-   SYM_CONSOPTYPE_XOR      = 9,              /**< constraint of type xor */
-   SYM_CONSOPTYPE_GEQ      = 10,             /**< needed to encode >= in bounddisjunctions */
-   SYM_CONSOPTYPE_EQ       = 11,             /**< needed to encode == in indicator constraints */
-   SYM_CONSOPTYPE_TUPLE    = 12,             /**< needed to encode pairs in SOS2 constraints */
-   SYM_CONSOPTYPE_OBJ      = 13,             /**< needed to model the objective */
-   SYM_CONSOPTYPE_NONLINEAR = 14,            /**< constraint of type nonlinear */
-   SYM_CONSOPTYPE_POWER    = 15,             /**< needed to distinguish power and signpower */
-   SYM_CONSOPTYPE_SIGNPOWER = 16,            /**< needed to distinguish power and signpower */
-   SYM_CONSOPTYPE_BIPROD   = 17              /**< needed to indicate product of two variables */
+   SYM_CONSOPTYPE_UNKNOWN     = 0,           /**< unkown constraint type */
+   SYM_CONSOPTYPE_AND         = 1,           /**< constraint of type and */
+   SYM_CONSOPTYPE_BDDISJ      = 2,           /**< constraint of type bounddisjunction */
+   SYM_CONSOPTYPE_CARD        = 3,           /**< constraint of type cardinality */
+   SYM_CONSOPTYPE_INDICATOR   = 4,           /**< constraint of type indicator */
+   SYM_CONSOPTYPE_OR          = 5,           /**< constraint of type or */
+   SYM_CONSOPTYPE_PSEUDOBOOL  = 6,           /**< constraint of type pseudoboolean */
+   SYM_CONSOPTYPE_SOS1        = 7,           /**< constraint of type SOS1 */
+   SYM_CONSOPTYPE_SOS2        = 8,           /**< constraint of type SOS2 */
+   SYM_CONSOPTYPE_XOR         = 9,           /**< constraint of type xor */
+   SYM_CONSOPTYPE_GEQ         = 10,          /**< encodes >= in bounddisjunctions */
+   SYM_CONSOPTYPE_EQ          = 11,          /**< encodes == in indicator constraints */
+   SYM_CONSOPTYPE_TUPLE       = 12,          /**< encodes pairs in SOS2 constraints */
+   SYM_CONSOPTYPE_OBJ         = 13,          /**< models the objective */
+   SYM_CONSOPTYPE_NONLINEAR   = 14,          /**< constraint of type nonlinear */
+   SYM_CONSOPTYPE_POWER       = 15,          /**< encodes power */
+   SYM_CONSOPTYPE_SIGNPOWER   = 16,          /**< encodes signpower */
+   SYM_CONSOPTYPE_BIPROD      = 17,          /**< indicates product of two variables */
+   SYM_CONSOPTYPE_SUM         = 18,          /**< indicates sums if sum-expr undefined */
+   SYM_CONSOPTYPE_SLACK       = 19,          /**< indicates slack vars in indicator constraints */
+   SYM_CONSOPTYPE_COEF        = 20,          /**< indicates coefficients from parent expressions */
+   SYM_CONSOPTYPE_RHS         = 21,          /**< indicates rhs/lhs of constraints */
+   SYM_CONSOPTYPE_LAST        = 22           /**< number of predefined enum types, needs to always
+                                              *   hold the biggest value */
 };
 typedef enum SYM_Consoptype SYM_CONSOPTYPE;
 
@@ -134,7 +142,6 @@ typedef struct SYM_Consttype SYM_CONSTTYPE;  /**< data of constants that are con
 typedef struct SYM_Rhstype SYM_RHSTYPE;      /**< data of constraint sides that are considered to be equivalent */
 typedef struct SYM_Matrixdata SYM_MATRIXDATA;/**< data for symmetry group computation on linear constraints */
 typedef struct SYM_Reflsymdata SYM_REFLSYMDATA ;/**< data for reflection symmetry group computation */
-typedef struct SYM_Exprdata SYM_EXPRDATA;    /**< data for symmetry group computation on nonlinear constraints */
 
 /** selection rules for leaders in SST cuts */
 enum SCIP_LeaderRule
@@ -181,7 +188,6 @@ enum SCIP_RecomputesymType
    SCIP_RECOMPUTESYM_OFFOUNDRED    = 2        /**< only if orbital fixing found a reduction in previous run */
 };
 typedef enum SCIP_RecomputesymType SCIP_RECOMPUTESYMTYPE;
-
 
 #ifdef __cplusplus
 }

@@ -111,6 +111,8 @@
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
+#include "scip/symmetry_graph.h"
+#include "symmetry/struct_symmetry.h"
 #include "tclique/tclique.h"
 #include <ctype.h>
 #include <stdlib.h>
@@ -10158,6 +10160,71 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsSOS1)
 }
 
 
+/** constraint handler method which returns the permutation symmetry detection graph of a constraint */
+static
+SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphSOS1)
+{  /*lint --e{715}*/
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR** consvars;
+   SCIP_VAR** locvars;
+   SCIP_Real* locvals;
+   SCIP_Real constant = 0.0;
+   int consnodeidx;
+   int nodeidx;
+   int nconsvars;
+   int nlocvars;
+   int nvars;
+   int i;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* get active variables of the constraint */
+   nvars = SCIPgetNVars(scip);
+   nconsvars = consdata->nvars;
+   consvars = SCIPgetVarsSOS1(scip, cons);
+   assert(consvars != NULL);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &locvars, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &locvals, nvars) );
+
+   /* add node initializing constraint (with artificial rhs) */
+   SCIP_CALL( SCIPaddSymgraphConsnode(scip, graph, cons, 0.0, 0.0, &consnodeidx) );
+
+   /* for all (aggregation of) variables, add a node to graph and connect it with the root */
+   for( i = 0; i < nconsvars; ++i )
+   {
+      locvars[0] = consvars[i];
+      locvals[0] = 1.0;
+      constant = 0.0;
+      nlocvars = 1;
+
+      /* ignore weights of SOS1 constraint (variables are sorted according to these weights) */
+      SCIP_CALL( SCIPgetActiveVariables(scip, &locvars, &locvals, &nlocvars, &constant, SCIPisTransformed(scip)) );
+
+      if( nlocvars == 1 && SCIPisZero(scip, constant) && SCIPisEQ(scip, locvals[0], 1.0) )
+      {
+         nodeidx = SCIPgetSymgraphVarnodeidx(scip, graph, locvars[0]);
+
+         SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, consnodeidx, nodeidx, FALSE, 0.0) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, (int) SYM_CONSOPTYPE_SUM, &nodeidx) ); /*lint !e641*/
+
+         SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, consnodeidx, nodeidx, FALSE, 0.0) );
+
+         SCIP_CALL( SCIPaddSymgraphVarAggegration(scip, graph, nodeidx, locvars, locvals, nlocvars, constant) );
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &locvals);
+   SCIPfreeBufferArray(scip, &locvars);
+
+   return SCIP_OKAY;
+}
+
+
 /* ---------------- Constraint specific interface methods ---------------- */
 
 /** creates the handler for SOS1 constraints and includes it in SCIP */
@@ -10220,6 +10287,7 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
    SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpSOS1, consSepasolSOS1, CONSHDLR_SEPAFREQ, CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransSOS1) );
    SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxSOS1) );
+   SCIP_CALL( SCIPsetConshdlrGetPermsymGraph(scip, conshdlr, consGetPermsymGraphSOS1) );
 
    /* add SOS1 constraint handler parameters */
 

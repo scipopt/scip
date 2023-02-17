@@ -17,6 +17,10 @@ Features
 - updated statistics on NLP relaxation; information on convexity of NLP has been added
 - added new bandit method (EXP.3-IX) that is the new default of the ALNS heuristic
 - added dialog to display recognized permutation symmetries ("display symmetry")
+- The symmetry detection code has been completely restructured. Instead of completely encoding symmetry information in
+  prop_symmetry.c, there is a new callback for constraint handlers, which returns symmetry relevant information by
+  encoding a constraint as a node and edge colored graph. This way, also custom constraint handlers can provide
+  symmetry information.
 
 Performance improvements
 ------------------------
@@ -38,6 +42,7 @@ Interface changes
 - Added solution linearization callback for nonlinear handlers.
   The nonlinear handler may use this callback to add tight cuts that use the given solution as reference point to the cutpool.
   The callback is called if option constraints/nonlinear/linearizeheursol is enabled.
+- Added CONSGETPERMSYMGRAPH callback for constraint handlers, which provides symmetry information about constraints to SCIP.
 
 ### Deleted and changed API methods
 
@@ -87,6 +92,9 @@ Interface changes
 - nlhdlr/convex/maxperturb to specify maximal perturbation of non-differential reference points
 
 ### Data structures
+
+- new data structure SYM_GRAPH to encode symmetry information from a constraint
+- new data structure SYM_EXPRDATA to encode symmetry information from expressions
 
 Deleted files
 -------------

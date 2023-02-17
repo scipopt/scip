@@ -268,6 +268,7 @@ SCIP_RETCODE evalAndDiff(
 #undef SCIPexprhdlrSetSimplify
 #undef SCIPexprhdlrSetReverseProp
 #undef SCIPexprhdlrSetEstimate
+#undef SCIPexprhdlrSetGetSymdata
 #undef SCIPexprhdlrGetName
 #undef SCIPexprhdlrGetDescription
 #undef SCIPexprhdlrGetPrecedence
@@ -517,6 +518,17 @@ void SCIPexprhdlrSetReverseProp(
    exprhdlr->reverseprop = reverseprop;
 }
 
+/** set the symmetry information callback of an expression handler */
+void SCIPexprhdlrSetGetSymdata(
+   SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
+   SCIP_DECL_EXPRGETSYMDATA((*getsymdata))   /**< symmetry information callback (can be NULL) */
+   )
+{
+   assert(exprhdlr != NULL);
+
+   exprhdlr->getsymdata = getsymdata;
+}
+
 /** set the estimation callbacks of an expression handler */
 void SCIPexprhdlrSetEstimate(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
@@ -668,6 +680,16 @@ SCIP_Bool SCIPexprhdlrHasReverseProp(
    assert(exprhdlr != NULL);
 
    return exprhdlr->reverseprop != NULL;
+}
+
+/** returns whether expression handler implements the symmetry information callback */
+SCIP_Bool SCIPexprhdlrHasGetSymData(
+   SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
+   )
+{
+   assert(exprhdlr != NULL);
+
+   return exprhdlr->getsymdata != NULL;
 }
 
 /** compares two expression handler w.r.t. their name */
@@ -3256,6 +3278,35 @@ SCIP_RETCODE SCIPexprSimplify(
    assert(*simplified != NULL);
 
    SCIPexpriterFree(&it);
+
+   return SCIP_OKAY;
+}
+
+/** method to retrieve symmetry information from an expression
+ *
+ *  @see SCIPgetSymDataExpr
+ */
+SCIP_RETCODE SCIPexprGetSymData(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EXPR*            expr,               /**< expression from which information is retrieved */
+   SYM_EXPRDATA**        symdata             /**< buffer to store symmetry information */
+   )
+{
+   SCIP_EXPRHDLR* exprhdlr;
+
+   assert(set != NULL);
+   assert(expr != NULL);
+   assert(symdata != NULL);
+
+   exprhdlr = SCIPexprGetHdlr(expr);
+   assert(exprhdlr != NULL);
+
+   if( exprhdlr->getsymdata != NULL )
+   {
+      SCIP_CALL( exprhdlr->getsymdata(set->scip, expr, symdata) );
+   }
+   else
+      *symdata = NULL;
 
    return SCIP_OKAY;
 }
