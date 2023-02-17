@@ -10676,7 +10676,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphNonlinear)
    SCIP_Real* consvals;
    SCIP_Real constant;
    SCIP_Real color;
-   SCIP_Real parentcoef;
+   SCIP_Real parentcoef = 0.0;
    int* openidx;
    int maxnopenidx;
    int parentidx;
@@ -10713,7 +10713,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphNonlinear)
 
    /* find potential number of nodes in graph */
    maxnopenidx = 0;
-   for( expr = SCIPexpriterGetCurrent(it); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )
+   for( (void) SCIPexpriterGetCurrent(it); !SCIPexpriterIsEnd(it); (void) SCIPexpriterGetNext(it) )
    {
       if( SCIPexpriterGetStageDFS(it) == SCIP_EXPRITER_LEAVEEXPR )
          continue;
