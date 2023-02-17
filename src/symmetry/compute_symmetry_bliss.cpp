@@ -763,6 +763,7 @@ SCIP_RETCODE computeAutomorphisms(
 
       *perms = NULL;
       *nperms = 0;
+      *nmaxperms = 0;
    }
 
    /* determine log10 of symmetry group size */
