@@ -985,7 +985,6 @@ SCIP_Bool checkSymmetryDataFree(
    assert( propdata->genlinconss == NULL );
    assert( propdata->sstconss == NULL );
    assert( propdata->leaders == NULL );
-   assert( propdata->customsymopnodetypes == NULL );
 
    assert( propdata->permvars == NULL );
    assert( propdata->permvarsobj == NULL );
@@ -1117,10 +1116,6 @@ SCIP_RETCODE freeSymmetryData(
    if ( propdata->permvarmap != NULL )
    {
       SCIPhashmapFree(&propdata->permvarmap);
-   }
-   if ( propdata->customsymopnodetypes != NULL )
-   {
-      SCIPhashmapFree(&propdata->customsymopnodetypes);
    }
 
    /* drop events */
@@ -6243,10 +6238,6 @@ SCIP_RETCODE determineSymmetry(
    /* return if not successful */
    if ( ! successful )
    {
-      if ( propdata->customsymopnodetypes != NULL )
-      {
-         SCIPhashmapFree(&propdata->customsymopnodetypes);
-      }
       assert( checkSymmetryDataFree(propdata) );
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) could not compute symmetry\n", SCIPgetSolvingTime(scip));
 
@@ -6260,10 +6251,6 @@ SCIP_RETCODE determineSymmetry(
    /* return if no symmetries found */
    if ( propdata->nperms == 0 )
    {
-      if ( propdata->customsymopnodetypes != NULL )
-      {
-         SCIPhashmapFree(&propdata->customsymopnodetypes);
-      }
       assert( checkSymmetryDataFree(propdata) );
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) no symmetry present\n", SCIPgetSolvingTime(scip));
 
@@ -9840,8 +9827,7 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
          propdata->symconsenabled = oldsymconsenabled;
          propdata->ofenabled = FALSE;
          propdata->sstenabled = FALSE;
-
-         SCIP_CALL( SCIPhashmapCreate(&propdata->customsymopnodetypes, SCIPblkmem(scip), 10) );
+         assert( propdata->customsymopnodetypes != NULL );
 
          SCIP_CALL( determineSymmetry(scip, propdata, SYM_SPEC_BINARY | SYM_SPEC_INTEGER | SYM_SPEC_REAL, 0) );
       }
@@ -10838,11 +10824,9 @@ SCIP_DECL_PROPFREE(propFreeSymmetry)
 
    propdata = SCIPpropGetData(prop);
    assert( propdata != NULL );
+   assert( propdata->customsymopnodetypes != NULL );
 
-   if ( propdata->customsymopnodetypes != NULL )
-   {
-      SCIPhashmapFree(&propdata->customsymopnodetypes);
-   }
+   SCIPhashmapFree(&propdata->customsymopnodetypes);
 
    SCIPfreeBlockMemory(scip, &propdata);
 
