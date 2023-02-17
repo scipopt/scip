@@ -17,6 +17,7 @@ CFLAGS		+=	/Zi
 CXXFLAGS		+=	/Zi /EHsc /GR
 CXX11FLAG	=	/Qstd=c++0x
 CXX14FLAG	=	/Qstd=c++14
+CXX17FLAG	=	/Qstd=c++17
 DFLAGS =
 LDFLAGS		+=	libirc.lib /debug /subsystem:console /incremental:no /fixed:no
 LINKRPATH =
