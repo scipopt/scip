@@ -10690,7 +10690,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphNonlinear)
    int nodeidx;
    int i;
    SCIP_Bool iscolored;
-   SCIP_Bool hasparentcoef = FALSE;
+   SCIP_Bool hasparentcoef;
 
    assert(scip != NULL);
    assert(cons != NULL);
@@ -10753,12 +10753,11 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphNonlinear)
       assert( expr == rootexpr || parentidx > 0 );
 
       /* possibly find a coefficient assigned to the expression by the parent */
+      hasparentcoef = FALSE;
       if ( expr != rootexpr )
       {
          SCIP_CALL( SCIPgetCoefSymData(scip, expr, SCIPexpriterGetParentDFS(it), &parentcoef, &hasparentcoef) );
       }
-      else
-         hasparentcoef = FALSE;
 
       /* deal with different kinds of expressions and store them in the symmetry data structure */
       if( SCIPisExprVar(scip, expr) )
@@ -10778,7 +10777,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphNonlinear)
          {
             SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, (int) SYM_CONSOPTYPE_COEF, &nodeidx) ); /*lint !e641*/
 
-            SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, parentidx, nodeidx, TRUE, parentcoef) );
+            SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, parentidx, nodeidx, TRUE, parentcoef) ); /*lint !e644*/
             parentidx = nodeidx;
          }
 
