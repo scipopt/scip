@@ -5607,10 +5607,30 @@ SCIP_RETCODE computeReflectionSymmetryGroup(
 }
 #endif
 
-/** returns whether all constraint handlers with constraints can provide permutation symmetry information */
+/** returns whether a constraint handler can provide required symmetry information */
 static
-SCIP_Bool conshdlrsCanProvidePermsymInformation(
-   SCIP*                 scip                /**< SCIP pointer */
+SCIP_Bool conshdlrCanProvideSymInformation(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SYM_SYMTYPE           symtype             /**< type of symmetries for which information are needed */
+   )
+{
+   assert( conshdlr != NULL );
+
+   switch ( symtype )
+   {
+   case SYM_SYMTYPE_PERM:
+      return SCIPconshdlrSupportsPermsymDetection(conshdlr);
+   default:
+      assert( symtype == SYM_SYMTYPE_SIGNPERM );
+      return SCIPconshdlrSupportsSignedPermsymDetection(conshdlr);
+   }
+}
+
+/** returns whether all constraint handlers with constraints can provide symmetry information */
+static
+SCIP_Bool conshdlrsCanProvideSymInformation(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SYM_SYMTYPE           symtype             /**< type of symmetries for which information are needed */
    )
 {
    SCIP_CONSHDLR** conshdlrs;
@@ -5627,12 +5647,24 @@ SCIP_Bool conshdlrsCanProvidePermsymInformation(
       conshdlr = conshdlrs[c];
       assert( conshdlr != NULL );
 
-      if ( ! SCIPconshdlrSupportsPermsymDetection(conshdlr) && SCIPconshdlrGetNConss(conshdlr) > 0 )
+      if ( ! conshdlrCanProvideSymInformation(conshdlr, symtype) && SCIPconshdlrGetNConss(conshdlr) > 0 )
       {
+         char name[SCIP_MAXSTRLEN];
+
+         switch ( symtype )
+         {
+         case SYM_SYMTYPE_PERM:
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "CONSGETPERMSYMGRAPH");
+            break;
+         default:
+            assert( symtype == SYM_SYMTYPE_SIGNPERM );
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "CONSGETSIGNEDPERMSYMGRAPH");
+
+         }
          SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
             "   Symmetry detection interrupted: constraints of type %s do not provide symmetry information.\n"
-            "   If symmetries shall be detected, implement the CONSGETPERMSYMGRAPH callback.\n",
-            SCIPconshdlrGetName(conshdlr));
+            "   If symmetries shall be detected, implement the %s callback.\n",
+            SCIPconshdlrGetName(conshdlr), name);
 
          return FALSE;
       }
@@ -5825,7 +5857,7 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
 
    for (c = 0; c < nconss; ++c)
    {
-      SCIP_CALL( SCIPcreateSymgraph(scip, &graphs[c], symvars, nsymvars, 10, 10, 1, 100) );
+      SCIP_CALL( SCIPcreateSymgraph(scip, SYM_SYMTYPE_PERM, &graphs[c], symvars, nsymvars, 10, 10, 1, 100) );
       SCIP_CALL( SCIPgetConsPermsymGraph(scip, conss[c], graphs[c], &success) );
       SCIP_CALL( SCIPcomputeSymgraphColors(scip, graphs[c], fixedtype) );
 
@@ -5954,7 +5986,7 @@ SCIP_RETCODE computeSymmetryGroup(
    *success = FALSE;
 
    /* check whether all constraints can provide symmetry information */
-   if ( ! conshdlrsCanProvidePermsymInformation(scip) )
+   if ( ! conshdlrsCanProvideSymInformation(scip, SYM_SYMTYPE_PERM) )
       return SCIP_OKAY;
 
    /* get symmetry detection graphs from constraints */
@@ -5974,7 +6006,7 @@ SCIP_RETCODE computeSymmetryGroup(
    SCIP_CALL( estimateSymgraphSize(scip, &nopnodes, &nvalnodes, &nconsnodes, &nedges) );
 
    /* create graph */
-   SCIP_CALL( SCIPcreateSymgraph(scip, &graph, SCIPgetVars(scip), SCIPgetNVars(scip),
+   SCIP_CALL( SCIPcreateSymgraph(scip, SYM_SYMTYPE_PERM, &graph, SCIPgetVars(scip), SCIPgetNVars(scip),
          nopnodes, nvalnodes, nconsnodes, nedges) );
 
    *success = TRUE;
@@ -6023,6 +6055,111 @@ SCIP_RETCODE computeSymmetryGroup(
       SCIP_CALL( setSymmetryData(scip, vars, nvars, SCIPgetNBinVars(scip), permvars, npermvars, nbinpermvars,
             *perms, *nperms, nmovedvars, binvaraffected, compresssymmetries, compressthreshold, compressed) );
    }
+
+   /* free symmetry graph */
+   SCIP_CALL( SCIPfreeSymgraph(scip, &graph) );
+
+   return SCIP_OKAY;
+}
+
+/** computes signed symmetry group of a CIP */
+static
+SCIP_RETCODE computeSignedSymmetryGroup(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SYM_SPEC              fixedtype,          /**< variable types that must be fixed by symmetries */
+   int*                  nsignedperms,       /**< pointer to store number of found signed permutations */
+   SCIP_Bool*            success             /**< pointer to store wehther symmetry computation was successful */
+   )
+{
+   SCIP_CONS** conss;
+   SYM_GRAPH* graph;
+   int nconsnodes = 0;
+   int nvalnodes = 0;
+   int nopnodes = 0;
+   int nedges = 0;
+   int nconss;
+   int c;
+
+   assert( scip != NULL );
+   assert( nsignedperms != NULL );
+   assert( success != NULL );
+
+   /* init pointers */
+   *nsignedperms = 0;
+   *success = FALSE;
+
+   /* check whether all constraints can provide symmetry information */
+   if ( ! conshdlrsCanProvideSymInformation(scip, SYM_SYMTYPE_SIGNPERM) )
+      return SCIP_OKAY;
+
+   /* get symmetry detection graphs from constraints */
+   conss = SCIPgetConss(scip);
+   assert( conss != NULL );
+
+   nconss = SCIPgetNConss(scip);
+
+   /* exit if no constraints or no variables are available */
+   if ( nconss == 0 || SCIPgetNVars(scip) == 0 )
+   {
+      *success = TRUE;
+      return SCIP_OKAY;
+   }
+
+   /* get an estimate for the number of nodes and edges */
+   SCIP_CALL( estimateSymgraphSize(scip, &nopnodes, &nvalnodes, &nconsnodes, &nedges) );
+
+   /* create graph */
+   SCIP_CALL( SCIPcreateSymgraph(scip, SYM_SYMTYPE_SIGNPERM, &graph, SCIPgetVars(scip), SCIPgetNVars(scip),
+         nopnodes, nvalnodes, nconsnodes, nedges) );
+
+   *success = TRUE;
+   for (c = 0; c < nconss && *success; ++c)
+   {
+      SCIP_CALL( SCIPgetConsSignedPermsymGraph(scip, conss[c], graph, success) );
+
+      /* terminate early if graph could not be returned */
+      if ( ! *success )
+      {
+         SCIP_CALL( SCIPfreeSymgraph(scip, &graph) );
+
+         return SCIP_OKAY;
+      }
+   }
+
+   SCIP_CALL( SCIPcomputeSymgraphColors(scip, graph, fixedtype) );
+
+#ifdef SCIP_DISABLED_CODE
+   /* terminate early in case all variables are different */
+   if ( SCIPgetSymgraphNVarcolors(graph) == SCIPgetNVars(scip) )
+   {
+      SCIP_CALL( SCIPfreeSymgraph(scip, &graph) );
+      return SCIP_OKAY;
+   }
+
+   /*
+    * actually compute symmetries
+    */
+   SCIP_CALL( SYMcomputeSymmetryGenerators(scip, maxgenerators, graph, nperms, nmaxperms,
+         perms, log10groupsize) );
+
+   if ( checksymmetries && *nperms > 0 )
+   {
+      SCIP_CALL( checkSymmetriesAreSymmetries(scip, *perms, *nperms, SCIPgetNVars(scip), fixedtype) );
+   }
+
+   /* potentially store symmetries */
+   if ( *nperms > 0 )
+   {
+      SCIP_VAR** vars;
+      int nvars;
+
+      nvars = SCIPgetNVars(scip);
+      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &vars, SCIPgetVars(scip), nvars) ); /*lint !e666*/
+
+      SCIP_CALL( setSymmetryData(scip, vars, nvars, SCIPgetNBinVars(scip), permvars, npermvars, nbinpermvars,
+            *perms, *nperms, nmovedvars, binvaraffected, compresssymmetries, compressthreshold, compressed) );
+   }
+#endif
 
    /* free symmetry graph */
    SCIP_CALL( SCIPfreeSymgraph(scip, &graph) );
@@ -6228,6 +6365,20 @@ SCIP_RETCODE determineSymmetry(
          &propdata->npermvars, &propdata->nbinpermvars, &propdata->perms, &propdata->nperms,
          &propdata->nmaxperms, &propdata->nmovedvars, &propdata->binvaraffected,
          &propdata->compressed, &propdata->log10groupsize, &successful) );
+
+   /* @todo move this part to a better place, here it is just used for testing */
+   {
+      int nsperms = 0;
+      SCIP_Bool spermsuccess = FALSE;
+
+      SCIP_CALL( computeSignedSymmetryGroup(scip, symspecrequirefixed, &nsperms, &spermsuccess) );
+
+      printf("Computing signed permutation group was%s successful.\n", spermsuccess ? "" : " not");
+      if ( spermsuccess )
+      {
+         printf("Found %d (signed) permutations.\n", nsperms);
+      }
+   }
 
    /* mark that we have computed the symmetry group */
    propdata->computedsymmetry = TRUE;

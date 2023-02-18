@@ -3137,7 +3137,8 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphCardinality)
       nlocvars = 1;
       constant = 0.0;
 
-      SCIP_CALL( SCIPgetActiveVariables(scip, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
+      SCIP_CALL( SCIPgetActiveVariables(scip, SYM_SYMTYPE_PERM, &vars, &vals,
+            &nlocvars, &constant, SCIPisTransformed(scip)) );
 
       /* check whether variable is (multi-) aggregated or negated */
       if( nlocvars > 1 || !SCIPisEQ(scip, vals[0], 1.0) || !SCIPisZero(scip, constant) )

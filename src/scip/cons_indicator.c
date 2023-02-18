@@ -7227,7 +7227,8 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphIndicator)
    constant = 0.0;
    nlocvars = 1;
 
-   SCIP_CALL( SCIPgetActiveVariables(scip, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
+   SCIP_CALL( SCIPgetActiveVariables(scip, SYM_SYMTYPE_PERM, &vars, &vals,
+         &nlocvars, &constant, SCIPisTransformed(scip)) );
 
    if( nlocvars > 1 || !SCIPisEQ(scip, vals[0], 1.0) || !SCIPisZero(scip, constant) )
    {
@@ -7253,7 +7254,8 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphIndicator)
    constant = 0.0;
    nlocvars = 1;
 
-   SCIP_CALL( SCIPgetActiveVariables(scip, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
+   SCIP_CALL( SCIPgetActiveVariables(scip, SYM_SYMTYPE_PERM, &vars, &vals,
+         &nlocvars, &constant, SCIPisTransformed(scip)) );
 
    if( nlocvars > 1 || !SCIPisEQ(scip, vals[0], 1.0) || !SCIPisZero(scip, constant) )
    {
@@ -7283,7 +7285,8 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphIndicator)
    SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, (int) SYM_CONSOPTYPE_SUM, &opnodeidx) ); /*lint !e641*/
    SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, consnodeidx, opnodeidx, FALSE, 0.0) );
 
-   SCIP_CALL( SCIPgetActiveVariables(scip, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
+   SCIP_CALL( SCIPgetActiveVariables(scip, SYM_SYMTYPE_PERM, &vars, &vals,
+         &nlocvars, &constant, SCIPisTransformed(scip)) );
 
    /* handle constant separately */
    SCIP_CALL( SCIPaddSymgraphVarAggegration(scip, graph, opnodeidx, vars, vals, nlocvars, 0.0) );

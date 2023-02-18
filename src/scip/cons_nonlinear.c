@@ -10787,8 +10787,8 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphNonlinear)
          consvals[0] = 1.0;
          constant = 0.0;
 
-         SCIP_CALL( SCIPgetActiveVariables(scip, &consvars, &consvals, &nconsvars, &constant,
-               SCIPconsIsTransformed(cons)) );
+         SCIP_CALL( SCIPgetActiveVariables(scip, SYM_SYMTYPE_PERM, &consvars, &consvals,
+               &nconsvars, &constant, SCIPconsIsTransformed(cons)) );
 
          nlocvars = nconsvars;
          nlocops = 1;
@@ -10884,8 +10884,8 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphNonlinear)
 
             constant = SCIPgetConstantExprSum(expr);
 
-            SCIP_CALL( SCIPgetActiveVariables(scip, &consvars, &consvals, &nlocvars, &constant,
-                  SCIPconsIsTransformed(cons)) );
+            SCIP_CALL( SCIPgetActiveVariables(scip, SYM_SYMTYPE_PERM, &consvars, &consvals,
+                  &nlocvars, &constant, SCIPconsIsTransformed(cons)) );
 
             SCIP_CALL( SCIPgetSymOpNodeType(scip, SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), &optype) );
 
@@ -11090,7 +11090,8 @@ SCIP_RETCODE SCIPincludeConshdlrNonlinear(
          consActiveNonlinear, consDeactiveNonlinear,
          consEnableNonlinear, consDisableNonlinear, consDelvarsNonlinear,
          consPrintNonlinear, consCopyNonlinear, consParseNonlinear,
-         consGetVarsNonlinear, consGetNVarsNonlinear, consGetDiveBdChgsNonlinear, consGetPermsymGraphNonlinear, conshdlrdata) );
+         consGetVarsNonlinear, consGetNVarsNonlinear, consGetDiveBdChgsNonlinear, consGetPermsymGraphNonlinear,
+         NULL, conshdlrdata) );
 
    /* add nonlinear constraint handler parameters */
    /* TODO organize into more subcategories */

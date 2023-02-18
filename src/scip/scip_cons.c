@@ -131,6 +131,8 @@ SCIP_RETCODE SCIPincludeConshdlr(
    SCIP_DECL_CONSGETDIVEBDCHGS((*consgetdivebdchgs)), /**< constraint handler diving solution enforcement method */
    SCIP_DECL_CONSGETPERMSYMGRAPH((*consgetpermsymgraph)), /**< constraint permutation symmetry detection graph
                                                            *   getter method */
+   SCIP_DECL_CONSGETSIGNEDPERMSYMGRAPH((*consgetsignedpermsymgraph)), /**< constraint signed permutation symmetry
+                                                                       *   detection graph getter method */
    SCIP_CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */
    )
 {
@@ -151,7 +153,8 @@ SCIP_RETCODE SCIPincludeConshdlr(
          consfree, consinit, consexit, consinitpre, consexitpre, consinitsol, consexitsol,
          consdelete, constrans, consinitlp, conssepalp, conssepasol, consenfolp, consenforelax, consenfops, conscheck, consprop,
          conspresol, consresprop, conslock, consactive, consdeactive, consenable, consdisable, consdelvars, consprint,
-         conscopy, consparse, consgetvars, consgetnvars, consgetdivebdchgs, consgetpermsymgraph, conshdlrdata) );
+         conscopy, consparse, consgetvars, consgetnvars, consgetdivebdchgs, consgetpermsymgraph,
+         consgetsignedpermsymgraph, conshdlrdata) );
    SCIP_CALL( SCIPsetIncludeConshdlr(scip->set, conshdlr) );
 
    return SCIP_OKAY;
@@ -211,7 +214,7 @@ SCIP_RETCODE SCIPincludeConshdlrBasic(
          NULL, NULL, NULL, NULL, NULL, NULL, NULL,
          NULL, NULL, NULL, NULL, NULL, consenfolp, NULL, consenfops, conscheck, NULL,
          NULL, NULL, conslock, NULL, NULL, NULL, NULL, NULL, NULL,
-         NULL, NULL, NULL, NULL, NULL, NULL, conshdlrdata) );
+         NULL, NULL, NULL, NULL, NULL, NULL, NULL, conshdlrdata) );
    SCIP_CALL( SCIPsetIncludeConshdlr(scip->set, conshdlr) );
 
    if( conshdlrptr != NULL )
@@ -905,6 +908,30 @@ SCIP_RETCODE SCIPsetConshdlrGetPermsymGraph(
    SCIP_CALL( SCIPcheckStage(scip, "SCIPsetConshdlrGetPermsymGraph", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIPconshdlrSetGetPermsymGraph(conshdlr, consgetpermsymgraph);
+
+   return SCIP_OKAY;
+}
+
+/** sets signed permutation symmetry detection graph getter method of constraint handler
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
+SCIP_RETCODE SCIPsetConshdlrGetSignedPermsymGraph(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSGETSIGNEDPERMSYMGRAPH((*consgetsignedpermsymgraph)) /**< constraint signed permutation symmetry
+                                                                      *   detection graph getter method */
+   )
+{
+   assert(scip != NULL);
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPsetConshdlrGetSignedPermsymGraph", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPconshdlrSetGetSignedPermsymGraph(conshdlr, consgetsignedpermsymgraph);
 
    return SCIP_OKAY;
 }
@@ -2640,6 +2667,39 @@ SCIP_RETCODE SCIPgetConsPermsymGraph(
    assert(success != NULL);
 
    SCIP_CALL( SCIPconsGetPermsymGraph(cons, scip->set, graph, success) );
+
+   return SCIP_OKAY;
+}
+
+/** method to get the signed permutation symmetry detection graph of a constraint
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_RETCODE SCIPgetConsSignedPermsymGraph(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint for which the symmetry graph is requested */
+   SYM_GRAPH*            graph,              /**< symmetry detection graph */
+   SCIP_Bool*            success             /**< pointer to store whether the constraint successfully returned the graph */
+   )
+{
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPgetConsGetSignedPermsymGraph", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(graph != NULL);
+   assert(success != NULL);
+
+   SCIP_CALL( SCIPconsGetSignedPermsymGraph(cons, scip->set, graph, success) );
 
    return SCIP_OKAY;
 }

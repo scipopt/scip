@@ -51,6 +51,14 @@ typedef uint32_t SYM_SPEC;              /**< types of variables handled by symme
 #define SYM_COMPUTETIMING_DURINGPRESOL    1  /**< compute symmetries during presolving */
 #define SYM_COMPUTETIMING_AFTERPRESOL     2  /**< compute symmetries after presolving */
 
+/** define symmetry types detectable by SCIP */
+enum SYM_Symtype
+{
+   SYM_SYMTYPE_PERM      = 0,                /**< permutation symmetries */
+   SYM_SYMTYPE_SIGNPERM  = 1                 /**< signed permutation symmetries */
+};
+typedef enum SYM_Symtype SYM_SYMTYPE;
+
 /** define sense of rhs */
 enum SYM_Rhssense
 {

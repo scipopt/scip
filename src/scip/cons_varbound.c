@@ -5187,7 +5187,8 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphVarbound)
    vals[0] = 1.0;
    vals[1] = SCIPgetVbdcoefVarbound(scip, cons);
 
-   SCIP_CALL( SCIPgetActiveVariables(scip, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
+   SCIP_CALL( SCIPgetActiveVariables(scip, SYM_SYMTYPE_PERM, &vars, &vals,
+         &nlocvars, &constant, SCIPisTransformed(scip)) );
    lhs = SCIPgetLhsVarbound(scip, cons) - constant;
    rhs = SCIPgetRhsVarbound(scip, cons) - constant;
 

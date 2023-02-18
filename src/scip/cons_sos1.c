@@ -10200,7 +10200,8 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphSOS1)
       nlocvars = 1;
 
       /* ignore weights of SOS1 constraint (variables are sorted according to these weights) */
-      SCIP_CALL( SCIPgetActiveVariables(scip, &locvars, &locvals, &nlocvars, &constant, SCIPisTransformed(scip)) );
+      SCIP_CALL( SCIPgetActiveVariables(scip, SYM_SYMTYPE_PERM, &locvars, &locvals,
+            &nlocvars, &constant, SCIPisTransformed(scip)) );
 
       if( nlocvars == 1 && SCIPisZero(scip, constant) && SCIPisEQ(scip, locvals[0], 1.0) )
       {

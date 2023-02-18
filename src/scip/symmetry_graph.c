@@ -43,6 +43,7 @@
  */
 SCIP_RETCODE SCIPcreateSymgraph(
    SCIP*                 scip,               /**< SCIP data structure */
+   SYM_SYMTYPE           symtype,            /**< type of symmetries encoded in graph */
    SYM_GRAPH**           graph,              /**< pointer to hold symmetry detection graph */
    SCIP_VAR**            symvars,            /**< variables used in symmetry detection */
    int                   nsymvars,           /**< number of variables used in symmetry detection */
@@ -92,6 +93,7 @@ SCIP_RETCODE SCIPcreateSymgraph(
    (*graph)->nsymvars = nsymvars;
    (*graph)->nvarcolors = -1;
    (*graph)->uniqueedgetype = FALSE;
+   (*graph)->symtype = symtype;
 
    /* to avoid reallocation, allocate memory for colors later */
    (*graph)->varcolors = NULL;
@@ -156,7 +158,7 @@ SCIP_RETCODE SCIPcopySymgraph(
    assert(origgraph != NULL);
    assert(perm != NULL);
 
-   SCIP_CALL( SCIPcreateSymgraph(scip, graph, origgraph->symvars, origgraph->nsymvars,
+   SCIP_CALL( SCIPcreateSymgraph(scip, origgraph->symtype, graph, origgraph->symvars, origgraph->nsymvars,
          origgraph->nopnodes, origgraph->nvalnodes, origgraph->nconsnodes, origgraph->nedges) );
 
    /* copy nodes */
@@ -203,7 +205,13 @@ SCIP_RETCODE SCIPcopySymgraph(
    return SCIP_OKAY;
 }
 
-/** adds a symmetry detection graph for a linear constraint to existing graph */
+/** adds a symmetry detection graph for a linear constraint to existing graph
+ *
+ *  For permutation symmetries, a constraint node is added that is connected to all
+ *  variable nodes in the constraint. Edges are colored according to the variable coefficients.
+ *  For signed permutation symmetries, also edges connecting the constraint node and
+ *  the negated variable nodes are added, these edges are colored by the negative coefficients.
+ */
 SCIP_RETCODE SCIPextendPermsymDetectionGraphLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SYM_GRAPH*            graph,              /**< symmetry detection graph */
@@ -245,14 +253,31 @@ SCIP_RETCODE SCIPextendPermsymDetectionGraphLinear(
    /* create edges */
    for( i = 0; i < nvars; ++i )
    {
-      varnodeidx = SCIPgetSymgraphVarnodeidx(scip, graph, vars[i]);
-      SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, rhsnodeidx, varnodeidx, TRUE, vals[i]) );
+      switch( SCIPgetSymgraphSymtype(graph) )
+      {
+      case SYM_SYMTYPE_SIGNPERM:
+         varnodeidx = SCIPgetSymgraphNegatedVarnodeidx(scip, graph, vars[i]);
+         SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, rhsnodeidx, varnodeidx, TRUE, -vals[i]) );
+         /* do not break to also add edge to non-negated variable */
+         /*lint -fallthrough*/
+      default:
+         assert(SCIPgetSymgraphSymtype(graph) == SYM_SYMTYPE_SIGNPERM
+            || SCIPgetSymgraphSymtype(graph) == SYM_SYMTYPE_PERM);
+         varnodeidx = SCIPgetSymgraphVarnodeidx(scip, graph, vars[i]);
+         SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, rhsnodeidx, varnodeidx, TRUE, vals[i]) );
+      }
    }
 
    return SCIP_OKAY;
 }
 
-/** adds nodes and edges corresponding to the aggregation of a variable to a symmetry detection graph */
+/** adds nodes and edges corresponding to the aggregation of a variable to a symmetry detection graph
+ *
+ *  For permutation symmetries, the root node is connected with all variable nodes in the aggregation.
+ *  Edges are colored according to the variable coefficients.
+ *  For signed permutation symmetries, also edges connecting the root node and the negated variable
+ *  nodes are added, these edges are colored by the negative coefficients.
+ */
 SCIP_RETCODE SCIPaddSymgraphVarAggegration(
    SCIP*                 scip,               /**< SCIP data structure */
    SYM_GRAPH*            graph,              /**< symmetry detection graph */
@@ -284,8 +309,19 @@ SCIP_RETCODE SCIPaddSymgraphVarAggegration(
    /* add edges incident to variables in aggregation */
    for( j = 0; j < nvars; ++j )
    {
-      nodeidx = SCIPgetSymgraphVarnodeidx(scip, graph, vars[j]);
-      SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, rootidx, nodeidx, TRUE, vals[j]) );
+      switch( SCIPgetSymgraphSymtype(graph) )
+      {
+      case SYM_SYMTYPE_SIGNPERM:
+         nodeidx = SCIPgetSymgraphNegatedVarnodeidx(scip, graph, vars[j]);
+         SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, rootidx, nodeidx, TRUE, -vals[j]) );
+         /* do not break to also add edge to non-negated variable */
+         /*lint -fallthrough*/
+      default:
+         assert(SCIPgetSymgraphSymtype(graph) == SYM_SYMTYPE_SIGNPERM
+            || SCIPgetSymgraphSymtype(graph) == SYM_SYMTYPE_PERM);
+         nodeidx = SCIPgetSymgraphVarnodeidx(scip, graph, vars[j]);
+         SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, rootidx, nodeidx, TRUE, vals[j]) );
+      }
    }
 
    /* possibly add node for constant */
@@ -470,8 +506,30 @@ int SCIPgetSymgraphVarnodeidx(
    assert(scip != NULL);
    assert(graph != NULL);
    assert(var != NULL);
+   assert(graph->symtype == SYM_SYMTYPE_PERM || graph->symtype == SYM_SYMTYPE_SIGNPERM);
 
    nodeidx = -SCIPvarGetProbindex(var) - 1;
+   assert(nodeidx != INT_MAX);
+
+   return nodeidx;
+}
+
+/** returns the (hypothetical) node index of a negated variable */
+int SCIPgetSymgraphNegatedVarnodeidx(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SYM_GRAPH*            graph,              /**< symmetry detection graph */
+   SCIP_VAR*             var                 /**< variable */
+   )
+{
+   int nodeidx;
+
+   assert(scip != NULL);
+   assert(graph != NULL);
+   assert(var != NULL);
+   assert(graph->symtype == SYM_SYMTYPE_SIGNPERM);
+   assert(SCIPgetSymgraphVarnodeidx(scip, graph, var) < 0 );
+
+   nodeidx = SCIPgetSymgraphVarnodeidx(scip, graph, var) - graph->nsymvars;
    assert(nodeidx != INT_MAX);
 
    return nodeidx;
@@ -1063,6 +1121,16 @@ SCIP_RETCODE SCIPcomputeSymgraphColors(
 
 /* general methods */
 
+/** returns the type of symmetries encoded in graph */
+SYM_SYMTYPE SCIPgetSymgraphSymtype(
+   SYM_GRAPH*            graph               /**< symmetry detection graph */
+   )
+{
+   assert(graph != NULL);
+
+   return graph->symtype;
+}
+
 /** returns the number of variables in a symmetry detection graph */
 int SCIPgetSymgraphNVars(
    SYM_GRAPH*            graph               /**< symmetry detection graph */
@@ -1230,10 +1298,15 @@ SCIP_Bool SCIPhasGraphUniqueEdgetype(
 
 /** Transforms given variables, scalars, and constant to the corresponding active variables, scalars, and constant.
  *
+ *  For permutation symmetries, active variables as encoded in SCIP are used. For signed permutation symmetries,
+ *  active variables are shifted such that their domain is centered at 0 (if both their upper and lower bounds
+ *  are finite).
+ *
  *  @note @p constant needs to be initialized!
  */
 SCIP_RETCODE SCIPgetActiveVariables(
    SCIP*                 scip,               /**< SCIP data structure */
+   SYM_SYMTYPE           symtype,            /**< type of symmetries for which variables are required */
    SCIP_VAR***           vars,               /**< pointer to vars array to get active variables for */
    SCIP_Real**           scalars,            /**< pointer to scalars a_1, ..., a_n in linear sum a_1*x_1 + ... + a_n*x_n + c */
    int*                  nvars,              /**< pointer to number of variables and values in vars and vals array */
@@ -1241,6 +1314,8 @@ SCIP_RETCODE SCIPgetActiveVariables(
    SCIP_Bool             transformed         /**< transformed constraint? */
    )
 {
+   SCIP_Real ub;
+   SCIP_Real lb;
    int requiredsize;
    int v;
 
@@ -1272,6 +1347,28 @@ SCIP_RETCODE SCIPgetActiveVariables(
          SCIP_CALL( SCIPvarGetOrigvarSum(&(*vars)[v], &(*scalars)[v], constant) );
       }
    }
+
+   /* possibly post-process active variables */
+   switch ( symtype )
+   {
+   case SYM_SYMTYPE_SIGNPERM:
+      /* center variables at origin if their domain is finite */
+      for (v = 0; v < *nvars; ++v)
+      {
+         ub = SCIPvarGetUbGlobal((*vars)[v]);
+         lb = SCIPvarGetLbGlobal((*vars)[v]);
+
+         if ( SCIPisInfinity(scip, ub) || SCIPisInfinity(scip, -lb) )
+            continue;
+
+         *constant += (*scalars)[v] * (ub + lb) / 2;
+      }
+
+      break;
+   default:
+      assert( symtype == SYM_SYMTYPE_PERM );
+   }
+
    return SCIP_OKAY;
 }
 

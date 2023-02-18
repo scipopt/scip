@@ -542,6 +542,12 @@ SCIP_Bool SCIPconshdlrSupportsPermsymDetection(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
+/** returns whether conshdlr supports signed permutation symmetry detection */
+SCIP_EXPORT
+SCIP_Bool SCIPconshdlrSupportsSignedPermsymDetection(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
 /** @} */
 
 /*

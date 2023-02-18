@@ -128,6 +128,8 @@ SCIP_RETCODE SCIPconshdlrCreate(
    SCIP_DECL_CONSGETDIVEBDCHGS((*consgetdivebdchgs)), /**< constraint handler diving solution enforcement method */
    SCIP_DECL_CONSGETPERMSYMGRAPH((*consgetpermsymgraph)), /**< constraint permutation symmetry detection graph
                                                            *   getter method */
+   SCIP_DECL_CONSGETSIGNEDPERMSYMGRAPH((*consgetsignedpermsymgraph)), /**< constraint signed permutation symmetry
+                                                                       *   detection graph getter method */
    SCIP_CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */
    );
 
@@ -505,6 +507,13 @@ void SCIPconshdlrSetGetPermsymGraph(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_DECL_CONSGETPERMSYMGRAPH((*consgetpermsymgraph)) /**< constraint permutation symmetry detection graph
                                                           *   getter method */
+   );
+
+/** sets signed permutation symmetry detection graph getter method of constraint handler */
+void SCIPconshdlrSetGetSignedPermsymGraph(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSGETSIGNEDPERMSYMGRAPH((*consgetsignedpermsymgraph)) /**< constraint permutation symmetry detection
+                                                                      *   graph getter method */
    );
 
 /*
@@ -900,6 +909,18 @@ SCIP_RETCODE SCIPconsGetPermsymGraph(
    SCIP_Bool*            success             /**< pointer to store whether the constraint successfully returned the graph */
    );
 
+/** method to collect the signed permutation symmetry detection graph of a constraint
+ *
+ *  @note The success pointer indicates whether the constraint handler was able to return the graph.
+ *
+ *  @note If a constraint handler does not support this functionality, the success pointer is set to FALSE.
+ */
+SCIP_RETCODE SCIPconsGetSignedPermsymGraph(
+   SCIP_CONS*            cons,               /**< constraint to get graph for */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SYM_GRAPH*            graph,              /**< symmetry detection graph */
+   SCIP_Bool*            success             /**< pointer to store whether the constraint successfully returned the graph */
+   );
 
 /** globally removes constraint from all subproblems; removes constraint from the constraint set change data of the
  *  node, where it was created, or from the problem, if it was a problem constraint

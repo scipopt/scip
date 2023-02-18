@@ -5102,7 +5102,8 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphLogicor)
       vals[i] = 1.0;
    }
 
-   SCIP_CALL( SCIPgetActiveVariables(scip, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
+   SCIP_CALL( SCIPgetActiveVariables(scip, SYM_SYMTYPE_PERM, &vars, &vals,
+         &nlocvars, &constant, SCIPisTransformed(scip)) );
 
    SCIP_CALL( SCIPextendPermsymDetectionGraphLinear(scip, graph, vars, vals, nlocvars,
          cons, 1.0 - constant, SCIPinfinity(scip), success) );

@@ -185,6 +185,7 @@ struct SCIP_Conshdlr
    SCIP_DECL_CONSGETNVARS((*consgetnvars));  /**< constraint get number of variable method */
    SCIP_DECL_CONSGETDIVEBDCHGS((*consgetdivebdchgs)); /**< constraint handler diving solution enforcement method */
    SCIP_DECL_CONSGETPERMSYMGRAPH((*consgetpermsymgraph)); /**< constraint get permutation symmetry detection graph method */
+   SCIP_DECL_CONSGETSIGNEDPERMSYMGRAPH((*consgetsignedpermsymgraph)); /**< constraint get signed permutation symmetry detection graph method */
    SCIP_CONSHDLRDATA*    conshdlrdata;       /**< constraint handler data */
    SCIP_CONS**           conss;              /**< array with all transformed constraints, active ones preceed inactive
                                               *   ones; a constraint is active if it is global and was not removed

@@ -8899,7 +8899,8 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphSetppc)
       vals[i] = 1.0;
    }
 
-   SCIP_CALL( SCIPgetActiveVariables(scip, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
+   SCIP_CALL( SCIPgetActiveVariables(scip, SYM_SYMTYPE_PERM, &vars, &vals,
+         &nlocvars, &constant, SCIPisTransformed(scip)) );
 
    lhs = -SCIPinfinity(scip);
    rhs = SCIPinfinity(scip);

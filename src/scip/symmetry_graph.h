@@ -56,6 +56,7 @@ extern "C" {
 SCIP_EXPORT
 SCIP_RETCODE SCIPcreateSymgraph(
    SCIP*                 scip,               /**< SCIP data structure */
+   SYM_SYMTYPE           symtype,            /**< type of symmetries encoded in graph */
    SYM_GRAPH**           graph,              /**< pointer to hold symmetry detection graph */
    SCIP_VAR**            symvars,            /**< variables used in symmetry detection */
    int                   nsymvars,           /**< number of variables used in symmetry detection */
@@ -82,7 +83,13 @@ SCIP_RETCODE SCIPcopySymgraph(
    SYM_SPEC              fixedtype           /**< variable types that must be fixed by symmetries */
    );
 
-/** adds a symmetry detection graph for a linear constraint to existing graph */
+/** adds a symmetry detection graph for a linear constraint to existing graph
+ *
+ *  For permutation symmetries, a constraint node is added that is connected to all
+ *  variable nodes in the constraint. Edges are colored according to the variable coefficients.
+ *  For signed permutation symmetries, also edges connecting the constraint node and
+ *  the negated variable nodes are added, these edges are colored by the negative coefficients.
+ */
 SCIP_EXPORT
 SCIP_RETCODE SCIPextendPermsymDetectionGraphLinear(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -96,7 +103,13 @@ SCIP_RETCODE SCIPextendPermsymDetectionGraphLinear(
    SCIP_Bool*            success             /**< pointer to store whether graph could be built */
    );
 
-/** adds nodes and edges corresponding to the aggregation of a variable to a symmetry detection graph */
+/** adds nodes and edges corresponding to the aggregation of a variable to a symmetry detection graph
+ *
+ *  For permutation symmetries, the root node is connected with all variable nodes in the aggregation.
+ *  Edges are colored according to the variable coefficients.
+ *  For signed permutation symmetries, also edges connecting the root node and the negated variable
+ *  nodes are added, these edges are colored by the negative coefficients.
+ */
 SCIP_EXPORT
 SCIP_RETCODE SCIPaddSymgraphVarAggegration(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -144,6 +157,14 @@ SCIP_RETCODE SCIPaddSymgraphConsnode(
 /** returns the (hypothetical) node index of a variable */
 SCIP_EXPORT
 int SCIPgetSymgraphVarnodeidx(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SYM_GRAPH*            graph,              /**< symmetry detection graph */
+   SCIP_VAR*             var                 /**< variable */
+   );
+
+/** returns the (hypothetical) node index of a negated variable */
+SCIP_EXPORT
+int SCIPgetSymgraphNegatedVarnodeidx(
    SCIP*                 scip,               /**< SCIP data structure */
    SYM_GRAPH*            graph,              /**< symmetry detection graph */
    SCIP_VAR*             var                 /**< variable */
@@ -202,6 +223,12 @@ SCIP_RETCODE SCIPcomputeSymgraphColors(
 /*
  * general methods
  */
+
+/** returns the type of symmetries encoded in graph */
+SCIP_EXPORT
+SYM_SYMTYPE SCIPgetSymgraphSymtype(
+   SYM_GRAPH*            graph               /**< symmetry detection graph */
+   );
 
 /** returns the number of variables in a symmetry detection graph */
 SCIP_EXPORT
@@ -290,11 +317,16 @@ SCIP_Bool SCIPhasGraphUniqueEdgetype(
 
 /** Transforms given variables, scalars, and constant to the corresponding active variables, scalars, and constant.
  *
+ *  For permutation symmetries, active variables as encoded in SCIP are used. For signed permutation symmetries,
+ *  active variables are shifted such that their domain is centered at 0 (if both their upper and lower bounds
+ *  are finite).
+ *
  *  @note @p constant needs to be initialized!
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPgetActiveVariables(
    SCIP*                 scip,               /**< SCIP data structure */
+   SYM_SYMTYPE           symtype,            /**< type of symmetries for which variables are required */
    SCIP_VAR***           vars,               /**< pointer to vars array to get active variables for */
    SCIP_Real**           scalars,            /**< pointer to scalars a_1, ..., a_n in linear sum a_1*x_1 + ... + a_n*x_n + c */
    int*                  nvars,              /**< pointer to number of variables and values in vars and vals array */

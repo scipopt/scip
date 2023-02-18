@@ -13358,7 +13358,8 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphKnapsack)
       vals[i] = (SCIP_Real) consdata->weights[i];
    }
 
-   SCIP_CALL( SCIPgetActiveVariables(scip, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
+   SCIP_CALL( SCIPgetActiveVariables(scip, SYM_SYMTYPE_PERM, &vars, &vals,
+         &nlocvars, &constant, SCIPisTransformed(scip)) );
    rhs = (SCIP_Real) SCIPgetCapacityKnapsack(scip, cons) - constant;
 
    SCIP_CALL( SCIPextendPermsymDetectionGraphLinear(scip, graph, vars, vals, nlocvars,

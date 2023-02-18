@@ -141,6 +141,8 @@ SCIP_RETCODE SCIPincludeConshdlr(
    SCIP_DECL_CONSGETDIVEBDCHGS((*consgetdivebdchgs)), /**< constraint handler diving solution enforcement method */
    SCIP_DECL_CONSGETPERMSYMGRAPH((*consgetpermsymgraph)), /**< constraint permutation symmetry detection graph
                                                            *   getter method */
+   SCIP_DECL_CONSGETSIGNEDPERMSYMGRAPH((*consgetsignedpermsymgraph)), /**< constraint signed permutation symmetry
+                                                                       *   detection graph getter method */
    SCIP_CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */
    );
 
@@ -626,6 +628,28 @@ SCIP_RETCODE SCIPsetConshdlrGetPermsymGraph(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_DECL_CONSGETPERMSYMGRAPH((*consgetpermsymgraph)) /**< constraint permutation symmetry detection graph
                                                           *   getter method */
+   );
+
+/** sets signed permutation symmetry detection graph getter method of constraint handler
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPsetConshdlrGetSignedPermsymGraph(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSGETSIGNEDPERMSYMGRAPH((*consgetsignedpermsymgraph)) /**< constraint signed permutation symmetry
+                                                                      *   detection graph getter method */
    );
 
 /** returns the constraint handler of the given name, or NULL if not existing */
@@ -1809,6 +1833,28 @@ SCIP_RETCODE SCIPgetConsNVars(
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPgetConsPermsymGraph(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint for which the symmetry graph is requested */
+   SYM_GRAPH*            graph,              /**< symmetry detection graph */
+   SCIP_Bool*            success             /**< pointer to store whether the constraint successfully returned the graph */
+   );
+
+/** method to get the signed permutation symmetry detection graph of a constraint
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPgetConsSignedPermsymGraph(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint for which the symmetry graph is requested */
    SYM_GRAPH*            graph,              /**< symmetry detection graph */

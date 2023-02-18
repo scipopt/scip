@@ -161,6 +161,11 @@ struct SYM_Reflsymdata
 /** data to encode a symmetry detection graph */
 struct SYM_Graph
 {
+   /* general information about graph */
+   SYM_SYMTYPE           symtype;            /**< type of symmetries encoded in graph */
+   SCIP_Bool             islocked;           /**< whether graph is locked, i.e., cannot be modified anymore
+                                              *   (computing colors will lock the graph to avoid incosistencies) */
+
    /* information about nodes and node arrays */
    int                   nnodes;             /**< number of nodes in graph */
    int                   maxnnodes;          /**< maximum number of entries in node-based arrays */
@@ -171,8 +176,6 @@ struct SYM_Graph
    int                   nconsnodes;         /**< number of constraint nodes */
    int                   maxnconsnodes;      /**< maximum number of constraint-based arrays */
    int                   nvarcolors;         /**< number of variable colors */
-   SCIP_Bool             islocked;           /**< whether graph is locked, i.e., cannot be modified anymore
-                                              *   (computing colors will lock the graph to avoid incosistencies) */
 
    /* node-based arrays */
    SYM_NODETYPE*         nodetypes;          /**< array storing each node's type */

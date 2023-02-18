@@ -937,6 +937,24 @@ typedef enum SCIP_LinConstype SCIP_LINCONSTYPE;
 #define SCIP_DECL_CONSGETPERMSYMGRAPH(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS* cons, \
       SYM_GRAPH* graph, SCIP_Bool* success)
 
+/** constraint handler method providing the signed permutation symmetry detection graph of a constraint (if possible)
+ *
+ *  The constraint handler can (this callback is optional) provide this callback to return a graph that encodes the
+ *  signed permutation symmetries of a constraint. If this is not possible, the success pointer has to be set to FALSE
+ *  or the callback should not be implemented.
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - conshdlr        : the constraint handler itself
+ *  - cons            : constraint for which the symmetry detection graph is requested
+ *
+ *  output:
+ *  - graph           : symmetry detection graph
+ *  - success         : pointer to store whether the constraint successfully returned the symmetry detection graph
+ */
+#define SCIP_DECL_CONSGETSIGNEDPERMSYMGRAPH(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS* cons, \
+      SYM_GRAPH* graph, SCIP_Bool* success)
+
 #ifdef __cplusplus
 }
 #endif
