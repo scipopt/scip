@@ -6,7 +6,7 @@
 Features
 --------
 
-- use quad precision in cutsSubstituteMIR() for subsitution slack variables into CMIR cuts
+- use quad precision in cutsSubstituteMIR() for substituting slack variables into CMIR cuts
 
 Performance improvements
 ------------------------
