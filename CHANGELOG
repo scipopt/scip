@@ -115,6 +115,7 @@ Build system
 
 - added flag option "nauty" for SYM variable to specify which graph automorphism package should be used
 - added flag option "sassy" for SYM variable to specify which graph automorphism package should be used
+- Use SYM=sassy by default, since sassy and bliss are now shipped with SCIP.
 - New flag LAPACK for linking with Lapack (must be available in the system)
 - A file scip/config.h is created in the build directory ($(OBJDIR)/include) now.
   Defining NO_CONFIG_HEADER is no longer necessary and has no effect anymore.
@@ -240,8 +241,6 @@ Build system
 - Move -I/path/to/src/amplmp/include to front of compiler flags for include directories
 
 ### Makefile
-
-- Use SYM=sassy by default, since sassy and bliss are now shipped with SCIP.
 
 Fixed bugs
 ----------
