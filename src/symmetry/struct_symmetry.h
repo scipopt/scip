@@ -165,6 +165,7 @@ struct SYM_Graph
    SYM_SYMTYPE           symtype;            /**< type of symmetries encoded in graph */
    SCIP_Bool             islocked;           /**< whether graph is locked, i.e., cannot be modified anymore
                                               *   (computing colors will lock the graph to avoid incosistencies) */
+   SCIP_Real             infinity;           /**< values as least as large as this are regarded as infinite */
 
    /* information about nodes and node arrays */
    int                   nnodes;             /**< number of nodes in graph */

@@ -94,6 +94,7 @@ SCIP_RETCODE SCIPcreateSymgraph(
    (*graph)->nvarcolors = -1;
    (*graph)->uniqueedgetype = FALSE;
    (*graph)->symtype = symtype;
+   (*graph)->infinity = SCIPinfinity(scip);
 
    /* to avoid reallocation, allocate memory for colors later */
    (*graph)->varcolors = NULL;
@@ -118,7 +119,15 @@ SCIP_RETCODE SCIPfreeSymgraph(
    SCIPfreeBlockMemoryArrayNull(scip, &(*graph)->conscolors, (*graph)->nconsnodes);
    SCIPfreeBlockMemoryArrayNull(scip, &(*graph)->valcolors, (*graph)->nvalnodes);
    SCIPfreeBlockMemoryArrayNull(scip, &(*graph)->opcolors, (*graph)->nopnodes);
-   SCIPfreeBlockMemoryArrayNull(scip, &(*graph)->varcolors, (*graph)->nsymvars);
+   switch( (*graph)->symtype )
+   {
+   case SYM_SYMTYPE_PERM:
+      SCIPfreeBlockMemoryArrayNull(scip, &(*graph)->varcolors, (*graph)->nsymvars);
+      break;
+   default:
+      assert((*graph)->symtype == SYM_SYMTYPE_SIGNPERM);
+      SCIPfreeBlockMemoryArrayNull(scip, &(*graph)->varcolors, 2 * (*graph)->nsymvars);
+   }
 
    SCIPfreeBlockMemoryArray(scip, &(*graph)->isfixedvar, (*graph)->nsymvars);
    SCIPfreeBlockMemoryArray(scip, &(*graph)->edgevals, (*graph)->maxnedges);
@@ -654,7 +663,7 @@ SCIP_RETCODE SCIPaddSymgraphEdge(
  * methods to compute colors
  */
 
-/** compares two variables for symmetry detection
+/** compares two variables for permutation symmetry detection
  *
  *  Variables are sorted first by their type, then by their objective coefficient,
  *  then by their lower bound, and then by their upper bound.
@@ -696,7 +705,7 @@ int compareVars(
    return 0;
 }
 
-/** compares two variables for symmetry detection
+/** compares two variables for permutation symmetry detection
  *
  *  Variables are sorted first by their type, then by their objective coefficient,
  *  then by their lower bound, then by their upper bound, and then whether they are fixed.
@@ -732,7 +741,7 @@ int compareVarsFixed(
    return 0;
 }
 
-/** sorts nodes of a symmetry detection graph
+/** sorts nodes of a permutation symmetry detection graph
  *
  *  Variables are sorted first by their type, then by their objective coefficient,
  *  then by their lower bound, then by their upper bound, and then whether they are fixed.
@@ -743,7 +752,7 @@ int compareVarsFixed(
  *    > 0: ind2 comes after (is worse than) ind2
  */
 static
-SCIP_DECL_SORTINDCOMP(SYMsortVarnodes)
+SCIP_DECL_SORTINDCOMP(SYMsortVarnodesPermsym)
 {
    SYM_GRAPH* graph;
    SCIP_VAR** vars;
@@ -759,6 +768,189 @@ SCIP_DECL_SORTINDCOMP(SYMsortVarnodes)
    assert(isfixedvar != NULL);
 
    return compareVarsFixed(vars[ind1], vars[ind2], isfixedvar[ind1], isfixedvar[ind2]);
+}
+
+/** compares two variables for signed permutation symmetry detection
+ *
+ *  Variables are sorted first by their type, then by their objective coefficient,
+ *  then by their lower bound, and then by their upper bound.
+ *  To take signed permutations into account, variable domains are centered at origin
+ *  if the domain is finite.
+ *
+ *  result:
+ *    < 0: ind1 comes before (is better than) ind2
+ *    = 0: both indices have the same value
+ *    > 0: ind2 comes after (is worse than) ind2
+ */
+static
+int compareVarsSignedPerm(
+   SCIP_VAR*             var1,               /**< first variable for comparison */
+   SCIP_VAR*             var2,               /**< second variable for comparison */
+   SCIP_Bool             isneg1,             /**< whether var1 needs to be negated */
+   SCIP_Bool             isneg2,             /**< whether var2 needs to be negated */
+   SCIP_Real             infinity            /**< values as least as large as this are regarded as infinite */
+   )
+{
+   SCIP_Real ub1;
+   SCIP_Real ub2;
+   SCIP_Real lb1;
+   SCIP_Real lb2;
+   SCIP_Real obj1;
+   SCIP_Real obj2;
+   SCIP_Real mid;
+
+   assert(var1 != NULL);
+   assert(var2 != NULL);
+
+   if( SCIPvarGetType(var1) < SCIPvarGetType(var2) )
+      return -1;
+   if( SCIPvarGetType(var1) > SCIPvarGetType(var2) )
+      return 1;
+
+   obj1 = isneg1 ? -SCIPvarGetObj(var1) : SCIPvarGetObj(var1);
+   obj2 = isneg2 ? -SCIPvarGetObj(var2) : SCIPvarGetObj(var2);
+
+   if( obj1 < obj2 )
+      return -1;
+   if( obj1 > obj2 )
+      return 1;
+
+   /* adapt lower and upper bounds if domain is finite */
+   lb1 = SCIPvarGetLbGlobal(var1);
+   lb2 = SCIPvarGetLbGlobal(var2);
+   ub1 = SCIPvarGetUbGlobal(var1);
+   ub2 = SCIPvarGetUbGlobal(var2);
+   if( ub1 < infinity && -lb1 < infinity )
+   {
+      mid = (lb1 + ub1) / 2;
+      lb1 -= mid;
+      ub1 -= mid;
+   }
+   if( ub2 < infinity && -lb2 < infinity )
+   {
+      mid = (lb2 + ub2) / 2;
+      lb2 -= mid;
+      ub2 -= mid;
+   }
+
+   /* for negated variables, flip upper and lower bounds */
+   if( isneg1 )
+   {
+      mid = lb1;
+      lb1 = -ub1;
+      ub1 = -mid;
+   }
+   if( isneg2 )
+   {
+      mid = lb2;
+      lb2 = -ub2;
+      ub2 = -mid;
+   }
+
+   if( lb1 < lb2 )
+      return -1;
+   if( lb1 > lb2 )
+      return 1;
+
+   if( ub1 < ub2 )
+      return -1;
+   if( ub1 > ub2 )
+      return 1;
+
+   return 0;
+}
+
+/** compares two variables for signed permutation symmetry detection
+ *
+ *  Variables are sorted first by their type, then by their objective coefficient,
+ *  then by their lower bound, then by their upper bound, and then whether they are fixed.
+ *  To take signed permutations into account, variable domains are centered at origin
+ *  if the domain is finite.
+ *
+ *  result:
+ *    < 0: ind1 comes before (is better than) ind2
+ *    = 0: both indices have the same value
+ *    > 0: ind2 comes after (is worse than) ind2
+ */
+static
+int compareVarsFixedSignedPerm(
+   SCIP_VAR*             var1,               /**< first variable for comparison */
+   SCIP_VAR*             var2,               /**< second variable for comparison */
+   SCIP_Bool             isfixed1,           /**< whether var1 needs to be fixed */
+   SCIP_Bool             isfixed2,           /**< whether var2 needs to be fixed */
+   SCIP_Bool             isneg1,             /**< whether var1 needs to be negated */
+   SCIP_Bool             isneg2,             /**< whether var2 needs to be negated */
+   SCIP_Real             infinity            /**< values as least as large as this are regarded as infinite */
+   )
+{
+   int result;
+
+   assert(var1 != NULL);
+   assert(var2 != NULL);
+
+   result = compareVarsSignedPerm(var1, var2, isneg1, isneg2, infinity);
+
+   if( result != 0 )
+      return result;
+
+   if( (! isfixed1) && isfixed2 )
+      return -1;
+   if( isfixed1 && (! isfixed2) )
+      return 1;
+
+   return 0;
+}
+
+/** sorts nodes of a signed permutation symmetry detection graph
+ *
+ *  Variables are sorted first by their type, then by their objective coefficient,
+ *  then by their lower bound, then by their upper bound, and then whether they are fixed.
+ *  To take signed permutations into account, variable domains are centered at origin
+ *  if the domain is finite.
+ *
+ *  result:
+ *    < 0: ind1 comes before (is better than) ind2
+ *    = 0: both indices have the same value
+ *    > 0: ind2 comes after (is worse than) ind2
+ */
+static
+SCIP_DECL_SORTINDCOMP(SYMsortVarnodesSignedPermsym)
+{
+   SYM_GRAPH* graph;
+   SCIP_VAR** vars;
+   SCIP_Bool* isfixedvar;
+   int nsymvars;
+   int locind1;
+   int locind2;
+   SCIP_Bool isneg1 = FALSE;
+   SCIP_Bool isneg2 = FALSE;
+
+   graph = (SYM_GRAPH*) dataptr;
+   assert(graph != NULL);
+
+   nsymvars = graph->nsymvars;
+   vars = graph->symvars;
+   assert(nsymvars > 0);
+   assert(vars != NULL);
+
+   isfixedvar = graph->isfixedvar;
+   assert(isfixedvar != NULL);
+
+   locind1 = ind1;
+   if( locind1 >= nsymvars )
+   {
+      isneg1 = TRUE;
+      locind1 -= nsymvars;
+   }
+   locind2 = ind2;
+   if( locind2 >= nsymvars )
+   {
+      isneg2 = TRUE;
+      locind2 -= nsymvars;
+   }
+
+   return compareVarsFixedSignedPerm(vars[locind1], vars[locind2], isfixedvar[locind1], isfixedvar[locind2],
+      isneg1, isneg2, graph->infinity);
 }
 
 /** compares two operators
@@ -957,7 +1149,10 @@ SCIP_RETCODE SCIPcomputeSymgraphColors(
    SCIP_VAR* thisvar;
    SCIP_Real prevval;
    SCIP_Real thisval;
+   SCIP_Bool previsneg;
+   SCIP_Bool thisisneg;
    int* perm;
+   int nusedvars;
    int len;
    int i;
    int color = 0;
@@ -979,8 +1174,19 @@ SCIP_RETCODE SCIPcomputeSymgraphColors(
          graph->isfixedvar[i] = TRUE;
    }
 
+   /* get number of variables used in symmetry detection graph */
+   switch( graph->symtype )
+   {
+   case SYM_SYMTYPE_PERM:
+      nusedvars = graph->nsymvars;
+      break;
+   default:
+      assert(graph->symtype = SYM_SYMTYPE_SIGNPERM);
+      nusedvars = 2 * graph->nsymvars;
+   }
+
    /* allocate memory for colors */
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &graph->varcolors, graph->nsymvars) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &graph->varcolors, nusedvars) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &graph->opcolors, graph->nopnodes) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &graph->valcolors, graph->nvalnodes) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &graph->conscolors, graph->nconsnodes) );
@@ -994,29 +1200,76 @@ SCIP_RETCODE SCIPcomputeSymgraphColors(
       len = graph->nvalnodes;
    if ( graph->nconsnodes > len )
       len = graph->nconsnodes;
-   if ( graph->nsymvars > len )
-      len = graph->nsymvars;
+   if ( nusedvars > len )
+      len = nusedvars;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &perm, len) );
 
    /* find colors of variable nodes */
    assert(graph->nsymvars > 0);
-   SCIPsort(perm, SYMsortVarnodes, (void*) graph, graph->nsymvars);
-
-   graph->varcolors[perm[0]] = color;
-   prevvar = graph->symvars[perm[0]];
-
-   for( i = 1; i < graph->nsymvars; ++i )
+   switch( graph->symtype )
    {
-      thisvar = graph->symvars[perm[i]];
+   case SYM_SYMTYPE_PERM:
+      SCIPsort(perm, SYMsortVarnodesPermsym, (void*) graph, nusedvars);
 
-      if( graph->isfixedvar[i] || compareVars(prevvar, thisvar) != 0 )
-         ++color;
+      graph->varcolors[perm[0]] = color;
+      prevvar = graph->symvars[perm[0]];
 
-      graph->varcolors[perm[i]] = color;
-      prevvar = thisvar;
+      for( i = 1; i < nusedvars; ++i )
+      {
+         thisvar = graph->symvars[perm[i]];
+
+         if( graph->isfixedvar[i] || compareVars(prevvar, thisvar) != 0 )
+            ++color;
+
+         graph->varcolors[perm[i]] = color;
+         prevvar = thisvar;
+      }
+      graph->nvarcolors = color;
+      break;
+   default:
+      assert(graph->symtype == SYM_SYMTYPE_SIGNPERM);
+
+      SCIPsort(perm, SYMsortVarnodesSignedPermsym, (void*) graph, nusedvars);
+
+      graph->varcolors[perm[0]] = color;
+
+      /* store information about first variable */
+      if( perm[0] < graph->nsymvars )
+      {
+         previsneg = FALSE;
+         prevvar = graph->symvars[perm[0]];
+      }
+      else
+      {
+         previsneg = TRUE;
+         prevvar = graph->symvars[perm[0] - graph->nsymvars];
+      }
+
+      /* compute colors of remaining variables */
+      for( i = 1; i < nusedvars; ++i )
+      {
+         if( perm[i] < graph->nsymvars )
+         {
+            thisisneg = FALSE;
+            thisvar = graph->symvars[perm[i]];
+         }
+         else
+         {
+            thisisneg = TRUE;
+            thisvar = graph->symvars[perm[i] - graph->nsymvars];
+         }
+
+         if( graph->isfixedvar[i % graph->nsymvars]
+            || compareVarsSignedPerm(prevvar, thisvar, previsneg, thisisneg, graph->infinity) != 0 )
+            ++color;
+
+         graph->varcolors[perm[i]] = color;
+         prevvar = thisvar;
+         previsneg = thisisneg;
+      }
+      graph->nvarcolors = color;
    }
-   graph->nvarcolors = color;
 
    /* find colors of operator nodes */
    if( graph->nopnodes > 0 )
