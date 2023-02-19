@@ -7338,6 +7338,72 @@ SCIP_DECL_NONLINCONSUPGD(nonlinUpgdSetppc)
    return SCIP_OKAY;
 } /*lint !e715*/
 
+/** adds symmetry information of constraint to a symmetry detection graph */
+static
+SCIP_RETCODE addSymmetryInformation(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SYM_SYMTYPE           symtype,            /**< type of symmetries that need to be added */
+   SCIP_CONS*            cons,               /**< constraint */
+   SYM_GRAPH*            graph,              /**< symmetry detection graph */
+   SCIP_Bool*            success             /**< pointer to store whether symmetry information could be added */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR** vars;
+   SCIP_Real* vals;
+   SCIP_Real constant = 0.0;
+   SCIP_Real lhs;
+   SCIP_Real rhs;
+   int nlocvars;
+   int nvars;
+   int i;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(graph != NULL);
+   assert(success != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* get active variables of the constraint */
+   nvars = SCIPgetNVars(scip);
+   nlocvars = consdata->nvars;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vals, nvars) );
+
+   for( i = 0; i < consdata->nvars; ++i )
+   {
+      vars[i] = consdata->vars[i];
+      vals[i] = 1.0;
+   }
+
+   SCIP_CALL( SCIPgetActiveVariables(scip, symtype, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
+
+   lhs = -SCIPinfinity(scip);
+   rhs = SCIPinfinity(scip);
+   if ( consdata->setppctype == (unsigned) SCIP_SETPPCTYPE_PACKING ) /*lint !e641*/
+      rhs = 1.0 - constant;
+   else if ( consdata->setppctype == (unsigned) SCIP_SETPPCTYPE_COVERING ) /*lint !e641*/
+      lhs = 1.0 - constant;
+   else
+   {
+      assert(consdata->setppctype == (unsigned) SCIP_SETPPCTYPE_PARTITIONING); /*lint !e641*/
+
+      rhs = 1.0 - constant;
+      lhs = 1.0 - constant;
+   }
+
+   SCIP_CALL( SCIPextendPermsymDetectionGraphLinear(scip, graph, vars, vals, nlocvars,
+         cons, lhs, rhs, success) );
+
+   SCIPfreeBufferArray(scip, &vals);
+   SCIPfreeBufferArray(scip, &vars);
+
+   return SCIP_OKAY;
+}
+
 /*
  * Callback methods of constraint handler
  */
@@ -8873,54 +8939,16 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsSetppc)
 static
 SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphSetppc)
 {  /*lint --e{715}*/
-   SCIP_CONSDATA* consdata;
-   SCIP_VAR** vars;
-   SCIP_Real* vals;
-   SCIP_Real constant = 0.0;
-   SCIP_Real lhs;
-   SCIP_Real rhs;
-   int nlocvars;
-   int nvars;
-   int i;
+   SCIP_CALL( addSymmetryInformation(scip, SYM_SYMTYPE_PERM, cons, graph, success) );
 
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
+   return SCIP_OKAY;
+}
 
-   /* get active variables of the constraint */
-   nvars = SCIPgetNVars(scip);
-   nlocvars = consdata->nvars;
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &vals, nvars) );
-
-   for( i = 0; i < consdata->nvars; ++i )
-   {
-      vars[i] = consdata->vars[i];
-      vals[i] = 1.0;
-   }
-
-   SCIP_CALL( SCIPgetActiveVariables(scip, SYM_SYMTYPE_PERM, &vars, &vals,
-         &nlocvars, &constant, SCIPisTransformed(scip)) );
-
-   lhs = -SCIPinfinity(scip);
-   rhs = SCIPinfinity(scip);
-   if ( consdata->setppctype == (unsigned) SCIP_SETPPCTYPE_PACKING ) /*lint !e641*/
-      rhs = 1.0 - constant;
-   else if ( consdata->setppctype == (unsigned) SCIP_SETPPCTYPE_COVERING ) /*lint !e641*/
-      lhs = 1.0 - constant;
-   else
-   {
-      assert(consdata->setppctype == (unsigned) SCIP_SETPPCTYPE_PARTITIONING); /*lint !e641*/
-
-      rhs = 1.0 - constant;
-      lhs = 1.0 - constant;
-   }
-
-   SCIP_CALL( SCIPextendPermsymDetectionGraphLinear(scip, graph, vars, vals, nlocvars,
-         cons, lhs, rhs, success) );
-
-   SCIPfreeBufferArray(scip, &vals);
-   SCIPfreeBufferArray(scip, &vars);
+/** constraint handler method which returns the signed permutation symmetry detection graph of a constraint */
+static
+SCIP_DECL_CONSGETSIGNEDPERMSYMGRAPH(consGetSignedPermsymGraphSetppc)
+{  /*lint --e{715}*/
+   SCIP_CALL( addSymmetryInformation(scip, SYM_SYMTYPE_SIGNPERM, cons, graph, success) );
 
    return SCIP_OKAY;
 }
@@ -9206,6 +9234,7 @@ SCIP_RETCODE SCIPincludeConshdlrSetppc(
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransSetppc) );
    SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxSetppc) );
    SCIP_CALL( SCIPsetConshdlrGetPermsymGraph(scip, conshdlr, consGetPermsymGraphSetppc) );
+   SCIP_CALL( SCIPsetConshdlrGetSignedPermsymGraph(scip, conshdlr, consGetSignedPermsymGraphSetppc) );
 
    conshdlrdata->conshdlrlinear = SCIPfindConshdlr(scip,"linear");
 

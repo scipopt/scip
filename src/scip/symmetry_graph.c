@@ -1131,6 +1131,16 @@ SYM_SYMTYPE SCIPgetSymgraphSymtype(
    return graph->symtype;
 }
 
+/** returns the variables in a symmetry detection graph */
+SCIP_VAR** SCIPgetSymgraphVars(
+   SYM_GRAPH*            graph               /**< symmetry detection graph */
+   )
+{
+   assert(graph != NULL);
+
+   return graph->symvars;
+}
+
 /** returns the number of variables in a symmetry detection graph */
 int SCIPgetSymgraphNVars(
    SYM_GRAPH*            graph               /**< symmetry detection graph */

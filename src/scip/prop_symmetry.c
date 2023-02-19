@@ -6062,6 +6062,36 @@ SCIP_RETCODE computeSymmetryGroup(
    return SCIP_OKAY;
 }
 
+/** adds pseudo constraint to find signed permutations preserving the objective */
+static
+SCIP_RETCODE addSignedPermsymObjective(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SYM_GRAPH*            graph               /**< symmetry detection graph */
+   )
+{
+   SCIP_VAR** vars;
+   int objnodeidx;
+   int v;
+
+   assert( scip != NULL );
+   assert( graph != NULL );
+   assert( graph->symtype == SYM_SYMTYPE_SIGNPERM );
+
+   SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, (int) SYM_CONSOPTYPE_OBJ, &objnodeidx) );
+
+   /* for each variable, connect the objective node with the variable and negated variable node */
+   vars = SCIPgetSymgraphVars(graph);
+   for (v = 0; v < SCIPgetSymgraphNVars(graph); ++v)
+   {
+      SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, objnodeidx, SCIPgetSymgraphVarnodeidx(scip, graph, vars[v]),
+            TRUE, SCIPvarGetObj(vars[v])) );
+      SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, objnodeidx, SCIPgetSymgraphNegatedVarnodeidx(scip, graph, vars[v]),
+            TRUE, -SCIPvarGetObj(vars[v])) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** computes signed symmetry group of a CIP */
 static
 SCIP_RETCODE computeSignedSymmetryGroup(
@@ -6111,6 +6141,9 @@ SCIP_RETCODE computeSignedSymmetryGroup(
    /* create graph */
    SCIP_CALL( SCIPcreateSymgraph(scip, SYM_SYMTYPE_SIGNPERM, &graph, SCIPgetVars(scip), SCIPgetNVars(scip),
          nopnodes, nvalnodes, nconsnodes, nedges) );
+
+   /* add pseudo constraint modeling the objective */
+   SCIP_CALL( addSignedPermsymObjective(scip, graph) );
 
    *success = TRUE;
    for (c = 0; c < nconss && *success; ++c)

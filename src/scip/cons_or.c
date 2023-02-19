@@ -1381,6 +1381,62 @@ SCIP_RETCODE upgradeCons(
    return SCIP_OKAY;
 }
 
+/** adds symmetry information of constraint to a symmetry detection graph */
+static
+SCIP_RETCODE addSymmetryInformation(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SYM_SYMTYPE           symtype,            /**< type of symmetries that need to be added */
+   SCIP_CONS*            cons,               /**< constraint */
+   SYM_GRAPH*            graph,              /**< symmetry detection graph */
+   SCIP_Bool*            success             /**< pointer to store whether symmetry information could be added */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR** orvars;
+   SCIP_VAR** vars;
+   SCIP_Real* vals;
+   SCIP_Real constant = 0.0;
+   int nlocvars;
+   int nvars;
+   int i;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(graph != NULL);
+   assert(success != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* get active variables of the constraint */
+   nvars = SCIPgetNVars(scip);
+   nlocvars = SCIPgetNVarsOr(scip, cons);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vals, nvars) );
+
+   orvars = SCIPgetVarsOr(scip, cons);
+   for( i = 0; i < consdata->nvars; ++i )
+   {
+      vars[i] = orvars[i];
+      vals[i] = 1.0;
+   }
+
+   assert(SCIPgetResultantOr(scip, cons) != NULL);
+   vars[nlocvars] = SCIPgetResultantOr(scip, cons);
+   vals[nlocvars++] = 2.0;
+   assert(nlocvars <= nvars);
+
+   SCIP_CALL( SCIPgetActiveVariables(scip, symtype, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
+
+   SCIP_CALL( SCIPextendPermsymDetectionGraphLinear(scip, graph, vars, vals, nlocvars,
+         cons, -constant, -constant, success) );
+
+   SCIPfreeBufferArray(scip, &vals);
+   SCIPfreeBufferArray(scip, &vars);
+
+   return SCIP_OKAY;
+}
 
 /*
  * Callback methods of constraint handler
@@ -2022,45 +2078,16 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsOr)
 static
 SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphOr)
 {  /*lint --e{715}*/
-   SCIP_CONSDATA* consdata;
-   SCIP_VAR** orvars;
-   SCIP_VAR** vars;
-   SCIP_Real* vals;
-   SCIP_Real constant = 0.0;
-   int nlocvars;
-   int nvars;
-   int i;
+   SCIP_CALL( addSymmetryInformation(scip, SYM_SYMTYPE_PERM, cons, graph, success) );
 
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
+   return SCIP_OKAY;
+}
 
-   /* get active variables of the constraint */
-   nvars = SCIPgetNVars(scip);
-   nlocvars = SCIPgetNVarsOr(scip, cons);
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &vals, nvars) );
-
-   orvars = SCIPgetVarsOr(scip, cons);
-   for( i = 0; i < consdata->nvars; ++i )
-   {
-      vars[i] = orvars[i];
-      vals[i] = 1.0;
-   }
-
-   assert(SCIPgetResultantOr(scip, cons) != NULL);
-   vars[nlocvars] = SCIPgetResultantOr(scip, cons);
-   vals[nlocvars++] = 2.0;
-   assert(nlocvars <= nvars);
-
-   SCIP_CALL( SCIPgetActiveVariables(scip, SYM_SYMTYPE_PERM, &vars, &vals,
-         &nlocvars, &constant, SCIPisTransformed(scip)) );
-
-   SCIP_CALL( SCIPextendPermsymDetectionGraphLinear(scip, graph, vars, vals, nlocvars,
-         cons, -constant, -constant, success) );
-
-   SCIPfreeBufferArray(scip, &vals);
-   SCIPfreeBufferArray(scip, &vars);
+/** constraint handler method which returns the signed permutation symmetry detection graph of a constraint */
+static
+SCIP_DECL_CONSGETSIGNEDPERMSYMGRAPH(consGetSignedPermsymGraphOr)
+{  /*lint --e{715}*/
+   SCIP_CALL( addSymmetryInformation(scip, SYM_SYMTYPE_SIGNPERM, cons, graph, success) );
 
    return SCIP_OKAY;
 }
@@ -2137,6 +2164,7 @@ SCIP_RETCODE SCIPincludeConshdlrOr(
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransOr) );
    SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxOr) );
    SCIP_CALL( SCIPsetConshdlrGetPermsymGraph(scip, conshdlr, consGetPermsymGraphOr) );
+   SCIP_CALL( SCIPsetConshdlrGetSignedPermsymGraph(scip, conshdlr, consGetSignedPermsymGraphOr) );
 
    return SCIP_OKAY;
 }
