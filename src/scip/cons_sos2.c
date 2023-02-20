@@ -2287,6 +2287,110 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphSOS2)
 }
 
 
+/** constraint handler method which returns the signed permutation symmetry detection graph of a constraint */
+static
+SCIP_DECL_CONSGETSIGNEDPERMSYMGRAPH(consGetSignedPermsymGraphSOS2)
+{  /*lint --e{715}*/
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR** consvars;
+   SCIP_VAR** locvars;
+   SCIP_Real* locvals;
+   SCIP_Real constant = 0.0;
+   int consnodeidx;
+   int opnodeidx;
+   int nodeidx;
+   int nconsvars;
+   int nlocvars;
+   int nvars;
+   int i;
+   int j;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* get active variables of the constraint */
+   nvars = SCIPgetNVars(scip);
+   nconsvars = consdata->nvars;
+   consvars = SCIPgetVarsSOS2(scip, cons);
+   assert(consvars != NULL);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &locvars, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &locvals, nvars) );
+
+   /* add node initializing constraint (with artificial rhs) */
+   SCIP_CALL( SCIPaddSymgraphConsnode(scip, graph, cons, 0.0, 0.0, &consnodeidx) );
+
+   /* for all pairs of variables, add a node indicating a tuple and add nodes for (aggregated) variables */
+   for( i = 0; i < nconsvars - 1; ++i )
+   {
+      SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, (int) SYM_CONSOPTYPE_TUPLE, &opnodeidx) ); /*lint !e641*/
+      SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, consnodeidx, opnodeidx, FALSE, 0.0) );
+
+      for( j = i; j < i + 2; ++j )
+      {
+         locvars[0] = consvars[j];
+         locvals[0] = 1.0;
+         constant = 0.0;
+         nlocvars = 1;
+
+         /* ignore weights of SOS2 constraint (variables are sorted according to these weights) */
+
+         /* use SYM_SYMTYPE_PERM here to NOT center variable domains at 0, as the latter might not preserve
+          * SOS1 constraints */
+         SCIP_CALL( SCIPgetActiveVariables(scip, SYM_SYMTYPE_PERM, &locvars, &locvals,
+               &nlocvars, &constant, SCIPisTransformed(scip)) );
+
+         if( nlocvars == 1 && SCIPisZero(scip, constant) && SCIPisEQ(scip, locvals[0], 1.0) )
+         {
+            nodeidx = SCIPgetSymgraphVarnodeidx(scip, graph, locvars[0]);
+
+            SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, opnodeidx, nodeidx, FALSE, 0.0) );
+
+            /* in case of non-aggregated variables, a sign change is allowed if the variable is centered at 0
+             * (otherwise, a reflection at the center might violate the SOS1 constraint, e.g., for domain [0,2]) */
+            if ( !SCIPisInfinity(scip, -SCIPvarGetLbGlobal(locvars[0]))
+               && !SCIPisInfinity(scip, SCIPvarGetUbGlobal(locvars[0]))
+               && SCIPisZero(scip, (SCIPvarGetLbGlobal(locvars[0]) + SCIPvarGetUbGlobal(locvars[0]))/2) )
+            {
+               nodeidx = SCIPgetSymgraphNegatedVarnodeidx(scip, graph, locvars[0]);
+               SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, consnodeidx, nodeidx, FALSE, 0.0) );
+            }
+         }
+         else
+         {
+            int sumnodeidx;
+            int k;
+
+            SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, (int) SYM_CONSOPTYPE_SUM, &sumnodeidx) ); /*lint !e641*/
+            SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, consnodeidx, sumnodeidx, FALSE, 0.0) );
+
+            /* add nodes and edges for variables in aggregation, do not add edges to negated variables
+             * since this might not necessarily be a symmetry of the SOS1 constraint; therefore,
+             * do not use SCIPaddSymgraphVarAggegration() */
+            for( k = 0; k < nlocvars; ++k )
+            {
+               nodeidx = SCIPgetSymgraphVarnodeidx(scip, graph, locvars[k]);
+               SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, sumnodeidx, nodeidx, TRUE, locvals[k]) );
+            }
+
+            /* possibly add node for constant */
+            if( ! SCIPisZero(scip, constant) )
+            {
+               SCIP_CALL( SCIPaddSymgraphValnode(scip, graph, constant, &nodeidx) );
+
+               SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, sumnodeidx, nodeidx, FALSE, 0.0) );
+            }
+         }
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &locvals);
+   SCIPfreeBufferArray(scip, &locvars);
+
+   return SCIP_OKAY;
+}
+
+
 /* ---------------- Callback methods of event handler ---------------- */
 
 /* exec the event handler
@@ -2420,6 +2524,7 @@ SCIP_RETCODE SCIPincludeConshdlrSOS2(
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransSOS2) );
    SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxSOS2) );
    SCIP_CALL( SCIPsetConshdlrGetPermsymGraph(scip, conshdlr, consGetPermsymGraphSOS2) );
+   SCIP_CALL( SCIPsetConshdlrGetSignedPermsymGraph(scip, conshdlr, consGetSignedPermsymGraphSOS2) );
 
    return SCIP_OKAY;
 }

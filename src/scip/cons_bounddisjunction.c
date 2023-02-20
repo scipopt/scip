@@ -1957,6 +1957,87 @@ SCIP_RETCODE enforceConstraint(
    return SCIP_OKAY;
 }
 
+/** adds symmetry information of constraint to a symmetry detection graph */
+static
+SCIP_RETCODE addSymmetryInformation(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SYM_SYMTYPE           symtype,            /**< type of symmetries that need to be added */
+   SCIP_CONS*            cons,               /**< constraint */
+   SYM_GRAPH*            graph,              /**< symmetry detection graph */
+   SCIP_Bool*            success             /**< pointer to store whether symmetry information could be added */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR** vars;
+   SCIP_Real* vals;
+   SCIP_Real constant;
+   SCIP_Real bound = 0.0;
+   int consnodeidx;
+   int opnodeidx;
+   int nodeidx;
+   int nconsvars;
+   int nlocvars;
+   int nvars;
+   int i;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(graph != NULL);
+   assert(success != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* add node initializing constraint (with artificial rhs) */
+   SCIP_CALL( SCIPaddSymgraphConsnode(scip, graph, cons, 0.0, 0.0, &consnodeidx) );
+
+   /* create nodes and edges for each literal in the bounddisjunction */
+   nvars = SCIPgetNVars(scip);
+   nconsvars = consdata->nvars;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vals, nvars) );
+
+   for( i = 0; i < nconsvars; ++i )
+   {
+      /* add node and edge for bound expression of literal */
+      SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, (int) SYM_CONSOPTYPE_BDDISJ, &opnodeidx) ); /*lint !e641*/
+      SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, consnodeidx, opnodeidx, FALSE, 0.0) );
+
+      /* get active variables */
+      vars[0] = consdata->vars[i];
+      vals[0] = consdata->boundtypes[i] == SCIP_BOUNDTYPE_UPPER ? 1.0 : -1.0;
+      nlocvars = 1;
+      constant = 0.0;
+
+      SCIP_CALL( SCIPgetActiveVariables(scip, symtype, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
+
+      /* add node and edge for bound on literal (bound adapted by constant) */
+      bound = consdata->boundtypes[i] == SCIP_BOUNDTYPE_UPPER ? consdata->bounds[i] : -consdata->bounds[i];
+      bound -= constant;
+
+      SCIP_CALL( SCIPaddSymgraphValnode(scip, graph, bound, &nodeidx) );
+      SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, opnodeidx, nodeidx, FALSE, 0.0) );
+
+      /* check whether variable is (multi-) aggregated */
+      nodeidx = opnodeidx;
+      if( nlocvars > 1 )
+      {
+         /* encode aggregation by a sum-expression and connect it to bdexpr node */
+         SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, (int) SYM_CONSOPTYPE_SUM, &nodeidx) ); /*lint !e641*/
+         SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, opnodeidx, nodeidx, FALSE, 0.0) );
+      }
+
+      /* add nodes and edges for variables in aggregation (ignore constant, has been treated above) */
+      SCIP_CALL( SCIPaddSymgraphVarAggegration(scip, graph, nodeidx, vars, vals, nlocvars, 0.0) );
+   }
+
+   SCIPfreeBufferArray(scip, &vals);
+   SCIPfreeBufferArray(scip, &vars);
+
+   return SCIP_OKAY;
+}
+
 /**@} */
 
 /**@name Callback methods of constraint handler
@@ -2903,72 +2984,16 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsBounddisjunction)
 static
 SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphBounddisjunction)
 {  /*lint --e{715}*/
-   SCIP_CONSDATA* consdata;
-   SCIP_VAR** vars;
-   SCIP_Real* vals;
-   SCIP_Real constant;
-   SCIP_Real bound;
-   int consnodeidx;
-   int opnodeidx;
-   int nodeidx;
-   int nconsvars;
-   int nlocvars;
-   int nvars;
-   int i;
+   SCIP_CALL( addSymmetryInformation(scip, SYM_SYMTYPE_PERM, cons, graph, success) );
 
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-   assert(graph != NULL);
+   return SCIP_OKAY;
+}
 
-   /* add node initializing constraint (with artificial rhs) */
-   SCIP_CALL( SCIPaddSymgraphConsnode(scip, graph, cons, 0.0, 0.0, &consnodeidx) );
-
-   /* create nodes and edges for each literal in the bounddisjunction */
-   nvars = SCIPgetNVars(scip);
-   nconsvars = consdata->nvars;
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &vals, nvars) );
-
-   for( i = 0; i < nconsvars; ++i )
-   {
-      /* add node and edge for bound expression of literal */
-      SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, (int) SYM_CONSOPTYPE_BDDISJ, &opnodeidx) ); /*lint !e641*/
-      SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, consnodeidx, opnodeidx, FALSE, 0.0) );
-
-      /* add node and edge for bound on literal */
-      bound = consdata->boundtypes[i] == SCIP_BOUNDTYPE_UPPER ? consdata->bounds[i] : -consdata->bounds[i];
-      SCIP_CALL( SCIPaddSymgraphValnode(scip, graph, bound, &nodeidx) );
-      SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, opnodeidx, nodeidx, FALSE, 0.0) );
-
-      /* get active variables */
-      vars[0] = consdata->vars[i];
-      vals[0] = consdata->boundtypes[i] == SCIP_BOUNDTYPE_UPPER ? 1.0 : -1.0;
-      nlocvars = 1;
-      constant = 0.0;
-
-      SCIP_CALL( SCIPgetActiveVariables(scip, SYM_SYMTYPE_PERM, &vars, &vals,
-            &nlocvars, &constant, SCIPisTransformed(scip)) );
-
-      /* check whether variable is (multi-) aggregated or negated (or if boundtype lower) */
-      if( nlocvars > 1 || !SCIPisEQ(scip, vals[0], 1.0) || !SCIPisZero(scip, constant) )
-      {
-         /* encode aggregation by a sum-expression and connect it to bdexpr node */
-         SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, (int) SYM_CONSOPTYPE_SUM, &nodeidx) ); /*lint !e641*/
-         SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, opnodeidx, nodeidx, FALSE, 0.0) );
-
-         /* add nodes and edges for variables in aggregation */
-         SCIP_CALL( SCIPaddSymgraphVarAggegration(scip, graph, nodeidx, vars, vals, nlocvars, constant) );
-      }
-      else
-      {
-         nodeidx = SCIPgetSymgraphVarnodeidx(scip, graph, vars[0]);
-         SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, opnodeidx, nodeidx, FALSE, 0.0) );
-      }
-   }
-
-   SCIPfreeBufferArray(scip, &vals);
-   SCIPfreeBufferArray(scip, &vars);
+/** constraint handler method which returns the signed permutation symmetry detection graph of a constraint */
+static
+SCIP_DECL_CONSGETSIGNEDPERMSYMGRAPH(consGetSignedPermsymGraphBounddisjunction)
+{  /*lint --e{715}*/
+   SCIP_CALL( addSymmetryInformation(scip, SYM_SYMTYPE_SIGNPERM, cons, graph, success) );
 
    return SCIP_OKAY;
 }
@@ -3240,6 +3265,7 @@ SCIP_RETCODE SCIPincludeConshdlrBounddisjunction(
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransBounddisjunction) );
    SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxBounddisjunction) );
    SCIP_CALL( SCIPsetConshdlrGetPermsymGraph(scip, conshdlr, consGetPermsymGraphBounddisjunction) );
+   SCIP_CALL( SCIPsetConshdlrGetSignedPermsymGraph(scip, conshdlr, consGetSignedPermsymGraphBounddisjunction) );
 
    return SCIP_OKAY;
 }

@@ -10226,6 +10226,101 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphSOS1)
 }
 
 
+/** constraint handler method which returns the signed permutation symmetry detection graph of a constraint */
+static
+SCIP_DECL_CONSGETSIGNEDPERMSYMGRAPH(consGetSignedPermsymGraphSOS1)
+{  /*lint --e{715}*/
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR** consvars;
+   SCIP_VAR** locvars;
+   SCIP_Real* locvals;
+   SCIP_Real constant = 0.0;
+   int consnodeidx;
+   int nodeidx;
+   int nconsvars;
+   int nlocvars;
+   int nvars;
+   int i;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* get active variables of the constraint */
+   nvars = SCIPgetNVars(scip);
+   nconsvars = consdata->nvars;
+   consvars = SCIPgetVarsSOS1(scip, cons);
+   assert(consvars != NULL);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &locvars, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &locvals, nvars) );
+
+   /* add node initializing constraint (with artificial rhs) */
+   SCIP_CALL( SCIPaddSymgraphConsnode(scip, graph, cons, 0.0, 0.0, &consnodeidx) );
+
+   /* for all (aggregation of) variables, add a node to graph and connect it with the root */
+   for( i = 0; i < nconsvars; ++i )
+   {
+      locvars[0] = consvars[i];
+      locvals[0] = 1.0;
+      constant = 0.0;
+      nlocvars = 1;
+
+      /* ignore weights of SOS1 constraint (variables are sorted according to these weights) */
+
+      /* use SYM_SYMTYPE_PERM here to NOT center variable domains at 0, as the latter might not preserve
+       * SOS1 constraints */
+      SCIP_CALL( SCIPgetActiveVariables(scip, SYM_SYMTYPE_PERM, &locvars, &locvals,
+            &nlocvars, &constant, SCIPisTransformed(scip)) );
+
+      if( nlocvars == 1 && SCIPisZero(scip, constant) && SCIPisEQ(scip, locvals[0], 1.0) )
+      {
+         nodeidx = SCIPgetSymgraphVarnodeidx(scip, graph, locvars[0]);
+         SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, consnodeidx, nodeidx, FALSE, 0.0) );
+
+         /* in case of non-aggregated variables, a sign change is allowed if the variable is centered at 0
+          * (otherwise, a reflection at the center might violate the SOS1 constraint, e.g., for domain [0,2]) */
+         if ( !SCIPisInfinity(scip, -SCIPvarGetLbGlobal(locvars[0]))
+            && !SCIPisInfinity(scip, SCIPvarGetUbGlobal(locvars[0]))
+            && SCIPisZero(scip, (SCIPvarGetLbGlobal(locvars[0]) + SCIPvarGetUbGlobal(locvars[0]))/2) )
+         {
+            nodeidx = SCIPgetSymgraphNegatedVarnodeidx(scip, graph, locvars[0]);
+            SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, consnodeidx, nodeidx, FALSE, 0.0) );
+         }
+      }
+      else
+      {
+         int sumnodeidx;
+         int j;
+
+         SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, (int) SYM_CONSOPTYPE_SUM, &sumnodeidx) ); /*lint !e641*/
+         SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, consnodeidx, sumnodeidx, FALSE, 0.0) );
+
+         /* add nodes and edges for variables in aggregation, do not add edges to negated variables
+          * since this might not necessarily be a symmetry of the SOS1 constraint; therefore,
+          * do not use SCIPaddSymgraphVarAggegration() */
+         for( j = 0; j < nlocvars; ++j )
+         {
+            nodeidx = SCIPgetSymgraphVarnodeidx(scip, graph, locvars[j]);
+            SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, sumnodeidx, nodeidx, TRUE, locvals[j]) );
+         }
+
+         /* possibly add node for constant */
+         if( ! SCIPisZero(scip, constant) )
+         {
+            SCIP_CALL( SCIPaddSymgraphValnode(scip, graph, constant, &nodeidx) );
+
+            SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, sumnodeidx, nodeidx, FALSE, 0.0) );
+         }
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &locvals);
+   SCIPfreeBufferArray(scip, &locvars);
+
+   return SCIP_OKAY;
+}
+
+
 /* ---------------- Constraint specific interface methods ---------------- */
 
 /** creates the handler for SOS1 constraints and includes it in SCIP */
@@ -10289,6 +10384,7 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransSOS1) );
    SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxSOS1) );
    SCIP_CALL( SCIPsetConshdlrGetPermsymGraph(scip, conshdlr, consGetPermsymGraphSOS1) );
+   SCIP_CALL( SCIPsetConshdlrGetSignedPermsymGraph(scip, conshdlr, consGetSignedPermsymGraphSOS1) );
 
    /* add SOS1 constraint handler parameters */
 
