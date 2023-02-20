@@ -1072,8 +1072,8 @@ SCIP_Bool SYMcheckGraphsAreIdentical(
          return FALSE;
       }
 
-      /* relabel variables by restricting to variables used in constraint */
-      if ( nvarused1[i] > 0 )
+      /* relabel variables by restricting to variables used in constraint (or their negation) */
+      if ( nvarused1[i] > 0 || nvarused1[i % G1->nsymvars] > 0 )
          varlabel[i] = nusedvars++;
       else
          varlabel[i] = -1;
@@ -1114,7 +1114,6 @@ SCIP_Bool SYMcheckGraphsAreIdentical(
       }
       else
          G.add_edge(first, second);
-
    }
 
    /* in case of signed permutations, also connect variables with their negation */
@@ -1123,16 +1122,8 @@ SCIP_Bool SYMcheckGraphsAreIdentical(
    case SYM_SYMTYPE_SIGNPERM:
       for (i = 0; i < G1->nsymvars; ++i)
       {
-         if ( nvarused1[i] > 0 )
-         {
-            assert( nvarused1[i + G1->nsymvars] > 0 );
-
+         if ( nvarused1[i] > 0 || nvarused1[i + G1->nsymvars])
             G.add_edge(varlabel[i], varlabel[i + G1->nsymvars]);
-         }
-#ifndef NDEBUG
-         else
-            assert( nvarused1[i + G1->nsymvars] == 0 );
-#endif
       }
       break;
    default:
@@ -1180,16 +1171,8 @@ SCIP_Bool SYMcheckGraphsAreIdentical(
    case SYM_SYMTYPE_SIGNPERM:
       for (i = 0; i < G2->nsymvars; ++i)
       {
-         if ( nvarused2[i] > 0 )
-         {
-            assert( nvarused2[i + G2->nsymvars] > 0 );
-
+         if ( nvarused2[i] > 0 || nvarused2[i + G2->nsymvars])
             G.add_edge(nodeshift + varlabel[i], nodeshift + varlabel[i + G2->nsymvars]);
-         }
-#ifndef NDEBUG
-         else
-            assert( nvarused2[i + G1->nsymvars] == 0 );
-#endif
       }
       break;
    default:

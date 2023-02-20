@@ -1337,33 +1337,44 @@ SCIP_RETCODE SCIPcomputeSymgraphColors(
    {
       SCIPsort(perm, SYMsortEdges, (void*) graph, graph->nedges);
 
-      graph->edgecolors[perm[0]] = ++color;
-      prevval = graph->edgevals[perm[0]];
-
-      for( i = 1; i < graph->nedges; ++i )
+      /* check whether edges are colored; due to sorting, only check first edge */
+      if( SCIPisInfinity(scip, graph->edgevals[perm[0]]) )
       {
-         thisval = graph->edgevals[perm[i]];
+         /* all edges are uncolored */
+         for( i = 0; i < graph->nedges; ++i )
+            graph->edgecolors[perm[i]] = -1;
+      }
+      else
+      {
+         /* first edge is colored */
+         graph->edgecolors[perm[0]] = ++color;
+         prevval = graph->edgevals[perm[0]];
 
-         /* terminate if edges are not colored anymore */
-         if( SCIPisInfinity(scip, thisval) )
-            break;
-
-         if( ! SCIPisEQ(scip, prevval, thisval) )
+         for( i = 1; i < graph->nedges; ++i )
          {
-            ++color;
-            prevval = thisval;
+            thisval = graph->edgevals[perm[i]];
+
+            /* terminate if edges are not colored anymore */
+            if( SCIPisInfinity(scip, thisval) )
+               break;
+
+            if( ! SCIPisEQ(scip, prevval, thisval) )
+            {
+               ++color;
+               prevval = thisval;
+            }
+
+            graph->edgecolors[perm[i]] = color;
          }
 
-         graph->edgecolors[perm[i]] = color;
+         /* check whether all edges are equivalent */
+         if( i == graph->nedges && graph->edgecolors[perm[0]] == graph->edgecolors[perm[i-1]] )
+            graph->uniqueedgetype = TRUE;
+
+         /* assign uncolored edges color -1 */
+         for( ; i < graph->nedges; ++i )
+            graph->edgecolors[perm[i]] = -1;
       }
-
-      /* check whether all edges are equivalent */
-      if( i == graph->nedges && graph->edgecolors[perm[0]] == graph->edgecolors[perm[i-1]] )
-         graph->uniqueedgetype = TRUE;
-
-      /* assign uncolored edges color -1 */
-      for( ; i < graph->nedges; ++i )
-         graph->edgecolors[perm[i]] = -1;
    }
 
    SCIPfreeBufferArray(scip, &perm);
