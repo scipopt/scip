@@ -1465,8 +1465,17 @@ int SCIPgetSymgraphVarnodeColor(
    )
 {
    assert(graph != NULL);
-   assert(0 <= nodeidx && nodeidx < graph->nsymvars);
    assert(graph->islocked);
+
+   switch( graph->symtype )
+   {
+   case SYM_SYMTYPE_PERM:
+      assert(0 <= nodeidx && nodeidx < graph->nsymvars);
+      break;
+   default:
+      assert(graph->symtype == SYM_SYMTYPE_SIGNPERM);
+      assert(0 <= nodeidx && nodeidx < 2 * graph->nsymvars);
+   }
 
    return graph->varcolors[nodeidx];
 }
@@ -1478,7 +1487,10 @@ SYM_NODETYPE SCIPgetSymgraphNodeType(
    )
 {
    assert(graph != NULL);
-   assert(0 <= nodeidx && nodeidx < graph->nnodes);
+   assert(nodeidx < graph->nnodes);
+
+   if( nodeidx < 0 )
+      return SYM_NODETYPE_VAR;
 
    return graph->nodetypes[nodeidx];
 }
