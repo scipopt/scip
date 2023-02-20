@@ -39,6 +39,7 @@ extern "C" {
 #endif
 
 #include "symmetry/struct_symmetry.h"
+#include "symmetry/type_symmetry.h"
 
 /** return whether symmetry can be computed */
 SCIP_EXPORT
@@ -68,6 +69,7 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
 SCIP_EXPORT
 SCIP_Bool SYMcheckGraphsAreIdentical(
    SCIP*                 scip,               /**< SCIP pointer */
+   SYM_SYMTYPE           symtype,            /**< type of symmetries to be checked */
    SYM_GRAPH*            G1,                 /**< first graph */
    SYM_GRAPH*            G2                  /**< second graph */
    );

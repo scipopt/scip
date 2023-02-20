@@ -58,11 +58,13 @@ using std::vector;
 struct BLISS_Data
 {
    SCIP*                 scip;               /**< SCIP pointer */
+   SYM_SYMTYPE           symtype;            /**< type of symmetries that need to be computed */
    int                   npermvars;          /**< number of variables for permutations */
    int                   nperms;             /**< number of permutations */
    int**                 perms;              /**< permutation generators as (nperms x npermvars) matrix */
    int                   nmaxperms;          /**< maximal number of permutations */
    int                   maxgenerators;      /**< maximal number of generators constructed (= 0 if unlimited) */
+   SCIP_Bool             restricttovars;     /**< whether permutations shall be restricted to variables */
 };
 
 /** callback function for bliss */
@@ -87,10 +89,26 @@ void blisshook(
    /* copy first part of automorphism */
    bool isIdentity = true;
    int* p = 0;
-   if ( SCIPallocBlockMemoryArray(data->scip, &p, data->npermvars) != SCIP_OKAY )
+   int permlen;
+   if ( data->restricttovars )
+   {
+      switch ( data->symtype )
+      {
+      case SYM_SYMTYPE_PERM:
+         permlen = data->npermvars;
+         break;
+      default:
+         assert( data->symtype == SYM_SYMTYPE_SIGNPERM );
+         permlen = 2 * data->npermvars;
+      }
+   }
+   else
+      permlen = n;
+
+   if ( SCIPallocBlockMemoryArray(data->scip, &p, permlen) != SCIP_OKAY )
       return;
 
-   for (int j = 0; j < data->npermvars; ++j)
+   for (int j = 0; j < permlen; ++j)
    {
       /* convert index of variable-level 0-nodes to variable indices */
       p[j] = (int) aut[j];
@@ -101,7 +119,7 @@ void blisshook(
    /* ignore trivial generators, i.e. generators that only permute the constraints */
    if ( isIdentity )
    {
-      SCIPfreeBlockMemoryArray(data->scip, &p, data->npermvars);
+      SCIPfreeBlockMemoryArray(data->scip, &p, permlen);
       return;
    }
 
@@ -685,6 +703,7 @@ SCIP_RETCODE addGroupedEdges(
 static
 SCIP_RETCODE computeAutomorphisms(
    SCIP*                 scip,               /**< SCIP pointer */
+   SYM_SYMTYPE           symtype,            /**< type of symmetries that need to be computed */
    bliss::Graph*         G,                  /**< pointer to graph for that automorphisms are computed */
    int                   nsymvars,           /**< number of variables encoded in graph */
    int                   maxgenerators,      /**< maximum number of generators to be constructed (=0 if unlimited) */
@@ -692,7 +711,8 @@ SCIP_RETCODE computeAutomorphisms(
    int*                  nperms,             /**< pointer to store number of permutations */
    int*                  nmaxperms,          /**< pointer to store maximal number of permutations
                                               *   (needed for freeing storage) */
-   SCIP_Real*            log10groupsize      /**< pointer to store log10 of size of group */
+   SCIP_Real*            log10groupsize,     /**< pointer to store log10 of size of group */
+   SCIP_Bool             restricttovars      /**< whether permutations shall be restricted to variables */
    )
 {
    assert( scip != NULL );
@@ -705,11 +725,13 @@ SCIP_RETCODE computeAutomorphisms(
    bliss::Stats stats;
    BLISS_Data data;
    data.scip = scip;
+   data.symtype = symtype;
    data.npermvars = nsymvars;
    data.nperms = 0;
    data.nmaxperms = 0;
    data.maxgenerators = maxgenerators;
    data.perms = NULL;
+   data.restricttovars = restricttovars;
 
    /* Prefer splitting partition cells corresponding to variables over those corresponding
     * to inequalities. This is because we are only interested in the action
@@ -784,6 +806,7 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    SCIP_Real*            log10groupsize      /**< pointer to store log10 of size of group */
    )
 {
+   int nvarnodestoadd;
    int first;
    int second;
    int nnodes = 0;
@@ -807,9 +830,23 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
 
    /* add nodes for variables
     *
-    * variable nodes come first to easily extract the variable permutation */
+    * Variable nodes come first to easily extract the variable permutation.
+    * For signed permutations, the first nsymvars nodes correspond to original
+    * variables, and the second nsymvars nodes to their negations.
+    */
    int nsymvars = SCIPgetSymgraphNVars(graph);
-   for (int v = 0; v < nsymvars; ++v)
+   SYM_SYMTYPE symtype = SCIPgetSymgraphSymtype(graph);
+   switch ( symtype )
+   {
+   case SYM_SYMTYPE_PERM:
+      nvarnodestoadd = nsymvars;
+      break;
+   default:
+      assert( symtype == SYM_SYMTYPE_SIGNPERM );
+      nvarnodestoadd = 2 * nsymvars;
+   }
+
+   for (int v = 0; v < nvarnodestoadd; ++v)
    {
       const int color = SCIPgetSymgraphVarnodeColor(graph, v);
 
@@ -831,7 +868,7 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
 
 #ifndef NDEBUG
       int node = (int) G.add_vertex((unsigned) color);
-      assert( node == nsymvars + v );
+      assert( node == nvarnodestoadd + v );
 #else
       (void) G.add_vertex((unsigned) color);
 #endif
@@ -863,11 +900,11 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
       if ( first < 0 )
          first = -first - 1;
       else
-         first += nsymvars;
+         first += nvarnodestoadd;
       if ( second < 0 )
          second = -second - 1;
       else
-         second += nsymvars;
+         second += nvarnodestoadd;
 
       /* check whether edge is used for grouping */
       if ( ! SCIPhasGraphUniqueEdgetype(graph) && isEdgeGroupable(graph, e, groupByConstraints) )
@@ -951,12 +988,25 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    SCIPfreeBufferArray(scip, &groupseconds);
    SCIPfreeBufferArray(scip, &groupfirsts);
 
+   /* for signed permutation, also add edges connecting a variable and its negation */
+   switch ( SCIPgetSymgraphSymtype(graph) )
+   {
+   case SYM_SYMTYPE_SIGNPERM:
+      for (int v = 0; v < nsymvars; ++v)
+         G.add_edge(v, v + nsymvars);
+      nedges += nsymvars;
+      break;
+   default:
+      assert( SCIPgetSymgraphSymtype(graph) == SYM_SYMTYPE_PERM );
+   }
+
    assert( (int) G.get_nof_vertices() == nnodes );
    assert( nedges >= SCIPgetSymgraphNEdges(graph) );
    SCIPdebugMsg(scip, "Symmetry detection graph has %d nodes and %d edges.\n", nnodes, nedges);
 
    /* compute automorphisms */
-   SCIP_CALL( computeAutomorphisms(scip, &G, nsymvars, maxgenerators, perms, nperms, nmaxperms, log10groupsize) );
+   SCIP_CALL( computeAutomorphisms(scip, symtype, &G, nsymvars, maxgenerators,
+         perms, nperms, nmaxperms, log10groupsize, TRUE) );
 
    return SCIP_OKAY;
 }
@@ -964,6 +1014,7 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
 /** returns whether two given graphs are identical */
 SCIP_Bool SYMcheckGraphsAreIdentical(
    SCIP*                 scip,               /**< SCIP pointer */
+   SYM_SYMTYPE           symtype,            /**< type of symmetries to be checked */
    SYM_GRAPH*            G1,                 /**< first graph */
    SYM_GRAPH*            G2                  /**< second graph */
    )
@@ -985,7 +1036,15 @@ SCIP_Bool SYMcheckGraphsAreIdentical(
       return FALSE;
 
    /* check whether the variables used in G1 are the same as in G2 */
-   nvars = G1->nsymvars;
+   switch ( symtype )
+   {
+   case SYM_SYMTYPE_PERM:
+      nvars = G1->nsymvars;
+      break;
+   default:
+      assert( symtype == SYM_SYMTYPE_SIGNPERM );
+      nvars = 2 * G1->nsymvars;
+   }
    SCIP_CALL( SCIPallocClearBufferArray(scip, &nvarused1, nvars) );
    SCIP_CALL( SCIPallocClearBufferArray(scip, &nvarused2, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &varlabel, nvars) );
@@ -1015,7 +1074,7 @@ SCIP_Bool SYMcheckGraphsAreIdentical(
 
       /* relabel variables by restricting to variables used in constraint */
       if ( nvarused1[i] > 0 )
-         varlabel[i] = nusedvars;
+         varlabel[i] = nusedvars++;
       else
          varlabel[i] = -1;
    }
@@ -1049,13 +1108,35 @@ SCIP_Bool SYMcheckGraphsAreIdentical(
 
       if ( SCIPisSymgraphEdgeColored(G1, i) )
       {
-         int inter = G.add_vertex(SCIPgetSymgraphEdgeColor(G1, i));
+         int inter = G.add_vertex(nusedvars + SCIPgetSymgraphEdgeColor(G1, i));
          G.add_edge(first, inter);
          G.add_edge(second, inter);
       }
       else
          G.add_edge(first, second);
 
+   }
+
+   /* in case of signed permutations, also connect variables with their negation */
+   switch ( symtype )
+   {
+   case SYM_SYMTYPE_SIGNPERM:
+      for (i = 0; i < G1->nsymvars; ++i)
+      {
+         if ( nvarused1[i] > 0 )
+         {
+            assert( nvarused1[i + G1->nsymvars] > 0 );
+
+            G.add_edge(varlabel[i], varlabel[i + G1->nsymvars]);
+         }
+#ifndef NDEBUG
+         else
+            assert( nvarused1[i + G1->nsymvars] == 0 );
+#endif
+      }
+      break;
+   default:
+      assert( symtype == SYM_SYMTYPE_PERM );
    }
 
    /* copy of G2 */
@@ -1085,12 +1166,34 @@ SCIP_Bool SYMcheckGraphsAreIdentical(
 
       if ( SCIPisSymgraphEdgeColored(G2, i) )
       {
-         int inter = G.add_vertex(SCIPgetSymgraphEdgeColor(G2, i));
+         int inter = G.add_vertex(nusedvars + SCIPgetSymgraphEdgeColor(G2, i));
          G.add_edge(first, inter);
          G.add_edge(second, inter);
       }
       else
          G.add_edge(first, second);
+   }
+
+   /* in case of signed permutations, also connect variables with their negation */
+   switch ( symtype )
+   {
+   case SYM_SYMTYPE_SIGNPERM:
+      for (i = 0; i < G2->nsymvars; ++i)
+      {
+         if ( nvarused2[i] > 0 )
+         {
+            assert( nvarused2[i + G2->nsymvars] > 0 );
+
+            G.add_edge(nodeshift + varlabel[i], nodeshift + varlabel[i + G2->nsymvars]);
+         }
+#ifndef NDEBUG
+         else
+            assert( nvarused2[i + G1->nsymvars] == 0 );
+#endif
+      }
+      break;
+   default:
+      assert( symtype == SYM_SYMTYPE_PERM );
    }
 
    /* compute automorphisms */
@@ -1101,8 +1204,8 @@ SCIP_Bool SYMcheckGraphsAreIdentical(
    int n = G.get_nof_vertices();
    int nnodesfromG1 = nusedvars + G1->nnodes;
 
-   SCIP_CALL( computeAutomorphisms(scip, &G, n, 0,
-         &perms, &nperms, &nmaxperms, &log10groupsize) );
+   SCIP_CALL( computeAutomorphisms(scip, symtype, &G, n, 0,
+         &perms, &nperms, &nmaxperms, &log10groupsize, FALSE) );
 
    /* since G1 and G2 are connected and disjoint, they are isomorphic iff there is a permutation
     * mapping a node from G1 to a node of G2
@@ -1113,7 +1216,10 @@ SCIP_Bool SYMcheckGraphsAreIdentical(
       for (i = 0; i < nnodesfromG1; ++i)
       {
          if ( perms[p][i] >= nnodesfromG1 )
+         {
             success = TRUE;
+            break;
+         }
       }
    }
 

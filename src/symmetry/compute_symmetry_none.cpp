@@ -79,6 +79,7 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
 /** returns whether two given graphs are identical */
 SCIP_Bool SYMcheckGraphsAreIdentical(
    SCIP*                 scip,               /**< SCIP pointer */
+   SYM_SYMTYPE           symtype,            /**< type of symmetries to be checked */
    SYM_GRAPH*            G1,                 /**< first graph */
    SYM_GRAPH*            G2                  /**< second graph */
    )

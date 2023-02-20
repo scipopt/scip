@@ -5820,6 +5820,7 @@ SCIP_RETCODE estimateSymgraphSize(
 static
 SCIP_RETCODE checkSymmetriesAreSymmetries(
    SCIP*                 scip,               /**< SCIP pointer */
+   SYM_SYMTYPE           symtype,            /**< type of symmetries to be checked */
    int**                 perms,              /**< array of permutations */
    int                   nperms,             /**< number of permutations */
    int                   npermvars,          /**< number of variables permutations act on */
@@ -5857,8 +5858,18 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
 
    for (c = 0; c < nconss; ++c)
    {
-      SCIP_CALL( SCIPcreateSymgraph(scip, SYM_SYMTYPE_PERM, &graphs[c], symvars, nsymvars, 10, 10, 1, 100) );
-      SCIP_CALL( SCIPgetConsPermsymGraph(scip, conss[c], graphs[c], &success) );
+      SCIP_CALL( SCIPcreateSymgraph(scip, symtype, &graphs[c], symvars, nsymvars, 10, 10, 1, 100) );
+
+      switch ( symtype )
+      {
+      case SYM_SYMTYPE_PERM:
+         SCIP_CALL( SCIPgetConsPermsymGraph(scip, conss[c], graphs[c], &success) );
+         break;
+      default:
+         assert( symtype == SYM_SYMTYPE_SIGNPERM );
+         SCIP_CALL( SCIPgetConsSignedPermsymGraph(scip, conss[c], graphs[c], &success) );
+      }
+
       SCIP_CALL( SCIPcomputeSymgraphColors(scip, graphs[c], fixedtype) );
 
       assert( success );
@@ -5892,7 +5903,7 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
             SCIP_CALL( SCIPcopySymgraph(scip, &graph, graphs[graphperm[c]], perms[p], fixedtype) );
 
             /* if adapted graph is equivalent to original graph, we don't need to check further graphs */
-            if ( SYMcheckGraphsAreIdentical(scip, graph, graphs[graphperm[c]]) )
+            if ( SYMcheckGraphsAreIdentical(scip, symtype, graph, graphs[graphperm[c]]) )
             {
                SCIP_CALL( SCIPfreeSymgraph(scip, &graph) );
                continue;
@@ -5901,7 +5912,7 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
             /* check whether graph has an isomorphic counterpart */
             found = FALSE;
             for (d = groupbegins[g]; d < groupbegins[g+1] && ! found; ++d)
-               found = SYMcheckGraphsAreIdentical(scip, graph, graphs[graphperm[d]]);
+               found = SYMcheckGraphsAreIdentical(scip, symtype, graph, graphs[graphperm[d]]);
 
             SCIP_CALL( SCIPfreeSymgraph(scip, &graph) );
 
@@ -6040,7 +6051,7 @@ SCIP_RETCODE computeSymmetryGroup(
 
    if ( checksymmetries && *nperms > 0 )
    {
-      SCIP_CALL( checkSymmetriesAreSymmetries(scip, *perms, *nperms, SCIPgetNVars(scip), fixedtype) );
+      SCIP_CALL( checkSymmetriesAreSymmetries(scip, SYM_SYMTYPE_PERM, *perms, *nperms, SCIPgetNVars(scip), fixedtype) );
    }
 
    /* potentially store symmetries */
@@ -6161,7 +6172,6 @@ SCIP_RETCODE computeSignedSymmetryGroup(
 
    SCIP_CALL( SCIPcomputeSymgraphColors(scip, graph, fixedtype) );
 
-#ifdef SCIP_DISABLED_CODE
    /* terminate early in case all variables are different */
    if ( SCIPgetSymgraphNVarcolors(graph) == SCIPgetNVars(scip) )
    {
@@ -6172,14 +6182,58 @@ SCIP_RETCODE computeSignedSymmetryGroup(
    /*
     * actually compute symmetries
     */
-   SCIP_CALL( SYMcomputeSymmetryGenerators(scip, maxgenerators, graph, nperms, nmaxperms,
-         perms, log10groupsize) );
-
-   if ( checksymmetries && *nperms > 0 )
    {
-      SCIP_CALL( checkSymmetriesAreSymmetries(scip, *perms, *nperms, SCIPgetNVars(scip), fixedtype) );
+      int nperms;
+      int nmaxperms;
+      int** perms;
+      SCIP_Real log10groupsize;
+      SCIP_Bool checksymmetries = FALSE;
+      int p;
+
+      SCIP_CALL( SYMcomputeSymmetryGenerators(scip, 1500, graph, &nperms, &nmaxperms,
+            &perms, &log10groupsize) );
+
+#ifdef SCIP_SHOW_PERMS
+      printf("Found %d (signed) permutations.\n", nperms);
+      for (p = 0; p < nperms; ++p)
+      {
+         printf("perm %d:\n", p);
+         for (c = 0; c < 2 * SCIPgetNVars(scip); ++c)
+         {
+            if ( perms[p][c] != c )
+            {
+               char name1[SCIP_MAXSTRLEN];
+               char name2[SCIP_MAXSTRLEN];
+
+               if ( c < SCIPgetNVars(scip) )
+                  (void) SCIPsnprintf(name1, SCIP_MAXSTRLEN, SCIPvarGetName(SCIPgetVars(scip)[c]));
+               else
+                  (void) SCIPsnprintf(name1, SCIP_MAXSTRLEN, "neg_%s", SCIPvarGetName(SCIPgetVars(scip)[c - SCIPgetNVars(scip)]));
+               if ( perms[p][c] < SCIPgetNVars(scip) )
+                  (void) SCIPsnprintf(name2, SCIP_MAXSTRLEN, SCIPvarGetName(SCIPgetVars(scip)[perms[p][c]]));
+               else
+                  (void) SCIPsnprintf(name2, SCIP_MAXSTRLEN, "neg_%s", SCIPvarGetName(SCIPgetVars(scip)[perms[p][c] - SCIPgetNVars(scip)]));
+
+               printf("%s -> %s\n", name1, name2);
+            }
+         }
+      }
+#endif
+
+      if ( TRUE || (checksymmetries && nperms > 0) )
+      {
+         SCIP_CALL( checkSymmetriesAreSymmetries(scip, SYM_SYMTYPE_SIGNPERM,
+               perms, nperms, SCIPgetNVars(scip), fixedtype) );
+      }
+
+      for (p = 0; p < nperms; ++p)
+      {
+         SCIPfreeBlockMemoryArray(scip, &perms[p], 2 * SCIPgetNVars(scip));
+      }
+      SCIPfreeBlockMemoryArrayNull(scip, &perms, nmaxperms);
    }
 
+#ifdef SCIP_DISABLED_CODE
    /* potentially store symmetries */
    if ( *nperms > 0 )
    {
