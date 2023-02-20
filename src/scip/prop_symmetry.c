@@ -21,7 +21,7 @@
 /*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
+//#define SCIP_SHOW_PERMS
 /**@file   prop_symmetry.c
  * @ingroup DEFPLUGINS_PROP
  * @brief  propagator for handling symmetries
@@ -6164,6 +6164,17 @@ SCIP_RETCODE computeSignedSymmetryGroup(
       printf("Found %d (signed) permutations.\n", nperms);
       for (p = 0; p < nperms; ++p)
       {
+         SCIP_Bool issignedperm = FALSE;
+
+         for (c = 0; c < SCIPgetNVars(scip) && !issignedperm; ++c)
+         {
+            if ( perms[p][c] >= SCIPgetNVars(scip) )
+               issignedperm = TRUE;
+         }
+
+         if ( !issignedperm )
+            continue;
+
          printf("perm %d:\n", p);
          for (c = 0; c < 2 * SCIPgetNVars(scip); ++c)
          {
@@ -6187,7 +6198,7 @@ SCIP_RETCODE computeSignedSymmetryGroup(
       }
 #endif
 
-      if ( TRUE || (checksymmetries && nperms > 0) )
+      if ( checksymmetries && nperms > 0 )
       {
          SCIP_CALL( checkSymmetriesAreSymmetries(scip, SYM_SYMTYPE_SIGNPERM,
                perms, nperms, SCIPgetNVars(scip), fixedtype) );
