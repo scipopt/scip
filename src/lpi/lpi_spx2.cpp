@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -89,7 +89,9 @@
 #endif
 
 /* compile the SoPlex header with visibility=default because the SoPlex lib has been compiled that way */
+#ifdef __GNUC__
 #pragma GCC visibility push(default)
+#endif
 
 /* include SoPlex solver */
 #include "soplex.h"

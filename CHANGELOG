@@ -26,6 +26,7 @@ Performance improvements
 - Added initialization of LP relaxation for SOC constraints.
 - Avoided some numerical issues when separating SOC constraints.
 - If differentation of convex expression fails in convex nlhdlr, then a perturbed point is tried.
+- Use sassy/bliss as default symmetry computation package.
 
 Examples and applications
 -------------------------
@@ -45,6 +46,7 @@ Interface changes
   pointer to SCIP_LOCK/SCIP_CONDITION, respectively.
 - Renamed SCIPtpiSumbitJob() to SCIPtpiSubmitJob().
 - Replaced SCIPnlrowSetCurvature() by SCIPsetNlRowCurvature().
+- SCIPsnprintf() now returns the required string length in case reallocation is necessary.
 
 ### New API functions
 
@@ -68,6 +70,9 @@ Interface changes
 
 ### Interfaces to external software
 
+- added interface to nauty/traces for symmetry computation
+- added interface to sassy, a preprocessor for symmetry computation
+- The directory src/sassy contains the source code of sassy.
 - Added interface to Lapack (used for solving nonlinear problems).
 - The AMPL interface now supports parameters specified in AMPL command scripts via option scip_options.
   The value of scip_options is expected to be a sequence of parameter names and values, separated by a space, e.g.,
@@ -105,9 +110,14 @@ Build system
 ### Cmake
 
 - New flag -DLAPACK=on for linking with Lapack (must be available in the system)
+- added flag option "SYM=sassy" for using sassy/bliss as a graph automorphism package
+- use SYM=sassy by default, since sassy and bliss are now shipped with SCIP.
 
 ### Makefile
 
+- added flag option "nauty" for SYM variable to specify which graph automorphism package should be used
+- added flag option "sassy" for SYM variable to specify which graph automorphism package should be used
+- use SYM=sassy by default, since sassy and bliss are now shipped with SCIP
 - New flag LAPACK for linking with Lapack (must be available in the system)
 - A file scip/config.h is created in the build directory ($(OBJDIR)/include) now.
   Defining NO_CONFIG_HEADER is no longer necessary and has no effect anymore.
@@ -133,6 +143,8 @@ Known bugs
 
 Features
 --------
+
+- use quad precision in cutsSubstituteMIR() for substituting slack variables into CMIR cuts
 
 Performance improvements
 ------------------------
@@ -187,11 +199,22 @@ Fixed bugs
 - Enabled the solution limit checks in SCIPsolveIsStopped in solve.c when in SCIP_STAGE_PRESOLVING
 - fix quad precision comparison for the calculation of knapsackcover constraints.
 - force copying of symmetry constraints for concurrent solve
+- increase the precision of double multiplications in quad precision environments
+- corrected handling of different variable types in symmetry
+- orbitope detection: refine computation of overlap structure and fixed bug in finding orbitope generators
+- ensure that winner is always determined in concurrent mode
+- when a row with invalid index range is added to the global cutpool, update the indices instead of failing with an assert
+- update of watched literals in cons_xor.c and ensure that fixed variables are counted in propacateCons()
+- avoid some numerical issue in check for redundant variables in linear constraints (introduced with version 8.0.2)
+- more rows are treated as being integral in cutsSubstituteMIR() for CMIR cuts
+- fixed several relaxations of the rhs of cuts to 0 in cuts.c
+- avoid aggregation into a single linear constraint if they should not be upgraded (needed for indicator constraints)
 
 Miscellaneous
 -------------
 
 - Extended documentation of the parameter limits/solutions to point out that the limit is first checked in presolving
+- Added more information about using SCIPcache- and SCIPflushRowExtensions() to documentation and comments
 
 Known bugs
 ----------
@@ -221,8 +244,6 @@ Build system
 
 ### Makefile
 
-- Use SYM=bliss by default, since bliss now is shipped with SCIP.
-
 Fixed bugs
 ----------
 
@@ -235,7 +256,6 @@ Fixed bugs
 - fixed a sign check in detection of linear constraints that are parallel to the objective
 - fixed bug in Clp and lpi_clp with missing basis information when calling the barrier with crossover; needs new Clp version
 - do not assume aggregation is successful in cons_setppc.c
-- increase the precision of double multiplications in quad precision environments
 
 Miscellaneous
 -------------

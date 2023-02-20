@@ -14,3 +14,7 @@ GMP_LDFLAGS 	=	-lgmp
 READLINE_FLAGS	=
 READLINE_LDFLAGS=	-lreadline -lncurses
 FORTRAN_NAMING_CONVENTION = LCASE_NODECOR
+ifeq ($(SHARED),true)
+FLAGS		+=	-fPIC
+endif
+LINK_shared		=	-shared
