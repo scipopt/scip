@@ -46,7 +46,7 @@ extern "C" {
  *
  * @name Power and signed power expression
  *
- * These expression handler provide the power function, that is,
+ * This expression handler provides the power function, that is,
  * \f[
  *   x \mapsto \begin{cases}
  *     x^e & \textrm{if}\; x \geq 0\; \textrm{or}\; e\in\mathbb{Z}, \\
@@ -55,7 +55,7 @@ extern "C" {
  * \f]
  * and the signed power function, that is,
  * \f[
- *   x \mapsto \textrm{sign}(e) |x|^e
+ *   x \mapsto \textrm{sign}(x) |x|^e
  * \f]
  * for some exponent \f$e\f$.
  *
