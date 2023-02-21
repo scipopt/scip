@@ -9602,7 +9602,10 @@ SCIP_RETCODE addSymmetryInformation(
             SCIP_EXPR** children;
             SCIP_VAR* var1;
             SCIP_VAR* var2;
+            SCIP_Real val1;
+            SCIP_Real val2;
             SCIP_Real coef;
+            SCIP_Real prodval;
             int optype;
             int nchildren;
             int prodidx;
@@ -9619,7 +9622,7 @@ SCIP_RETCODE addSymmetryInformation(
             if( !SCIPisExprVar(scip, children[0]) || !SCIPisExprVar(scip, children[1]) )
                goto DEFAULTOPERATOR;
 
-            /* check whether each child is non-aggregated */
+            /* check whether each child is not multi-aggregated and is not shifted */
             SCIP_CALL( ensureLocVarsArraySize(scip, &consvars, &consvals, SCIPexprGetNChildren(expr), &maxnconsvars) );
 
             for( childidx = 0; childidx < 2; ++childidx )
@@ -9632,13 +9635,21 @@ SCIP_RETCODE addSymmetryInformation(
                SCIP_CALL( SCIPgetActiveVariables(scip, SYM_SYMTYPE_SIGNPERM, &consvars, &consvals, &nlocvars,
                      &constant, SCIPconsIsTransformed(cons)) );
 
-               if( nlocvars != 1 || !SCIPisZero(scip, constant) || !SCIPisEQ(scip, consvals[0], 1.0) )
+               if( nlocvars != 1 || !SCIPisZero(scip, constant) )
                   goto DEFAULTOPERATOR;
-            }
 
-            /* get information about product */
-            var1 = SCIPgetVarExprVar(children[0]);
-            var2 = SCIPgetVarExprVar(children[1]);
+               /* store information about variables */
+               if( childidx == 0 )
+               {
+                  var1 = consvars[0];
+                  val1 = consvals[0];
+               }
+               else
+               {
+                  var2 = consvars[0];
+                  val2 = consvals[0];
+               }
+            }
 
             SCIP_CALL( SCIPgetSymDataExpr(scip, expr, &symdata) );
             assert(symdata != NULL);
@@ -9648,26 +9659,37 @@ SCIP_RETCODE addSymmetryInformation(
 
             SCIP_CALL( SCIPfreeSymDataExpr(scip, &symdata) );
 
-            /* add edges for operator and child gadget */
+            /* add gadget modeling the product
+             *
+             * Since the constants are 0, each variable is centered at the origin, which leads to
+             * a product of the form \f$(\alpha x)\cdot(\gamma y)\f$. Manipulating the formula leads
+             * to \f$\alpha \gamma (x \cdot y)\f$, which is modeled in a gadget that allows to
+             * negate both variables simulataneously.
+             */
             SCIP_CALL( SCIPgetSymOpNodeType(scip, SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), &optype) );
-
             SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, optype, &prodidx) );
-            SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, parentidx, prodidx, hasparentcoef, parentcoef) );
+            SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, parentidx, prodidx, FALSE, 0.0) );
 
-            SCIP_CALL( SCIPaddSymgraphValnode(scip, graph, coef, &coefidx1) );
-            SCIP_CALL( SCIPaddSymgraphValnode(scip, graph, -coef, &coefidx2) );
+            prodval = coef * val1 * val2;
+
+            /* introduce nodes for the product value and its negation; since flipping both variables
+             * simultaneously is a signed symmetry, assign both nodes the same value
+             */
+            SCIP_CALL( SCIPaddSymgraphValnode(scip, graph, prodval, &coefidx1) );
+            SCIP_CALL( SCIPaddSymgraphValnode(scip, graph, prodval, &coefidx2) );
+
             SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, prodidx, coefidx1, FALSE, 0.0) );
             SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, prodidx, coefidx2, FALSE, 0.0) );
             SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, coefidx1, coefidx2, FALSE, 0.0) );
 
-            SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, coefidx1, SCIPgetSymgraphVarnodeidx(scip, graph, var1),
-                  FALSE, 0.0) );
-            SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, coefidx1, SCIPgetSymgraphVarnodeidx(scip, graph, var2),
-                  FALSE, 0.0) );
-            SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, coefidx1, SCIPgetSymgraphNegatedVarnodeidx(scip, graph, var1),
-                  FALSE, 0.0) );
-            SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, coefidx1, SCIPgetSymgraphNegatedVarnodeidx(scip, graph, var2),
-                  FALSE, 0.0) );
+            SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, coefidx1,
+                  SCIPgetSymgraphVarnodeidx(scip, graph, var1), FALSE, 0.0) );
+            SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, coefidx1,
+                  SCIPgetSymgraphVarnodeidx(scip, graph, var2), FALSE, 0.0) );
+            SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, coefidx2,
+                  SCIPgetSymgraphNegatedVarnodeidx(scip, graph, var1), FALSE, 0.0) );
+            SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, coefidx2,
+                  SCIPgetSymgraphNegatedVarnodeidx(scip, graph, var2), FALSE, 0.0) );
 
             SCIP_CALL( ensureOpenArraySize(scip, &openidx, nopenidx + 1, &maxnopenidx) );
 
@@ -9678,12 +9700,12 @@ SCIP_RETCODE addSymmetryInformation(
          {
             /* deal with power expressions differently, because we can possibly find more signed symmetries
              *
-             * More precisely, if a power has an even exponent and the child is a variable, negating the
-             * variable is a signed symmetry.
+             * If a power has an even exponent and the child is a variable, negating the variable is a signed symmetry.
              */
             SYM_EXPRDATA* symdata;
             SCIP_VAR* var;
             SCIP_Real exponent;
+            SCIP_Real val;
             int safeexponent;
             int optype;
             int powidx;
@@ -9720,12 +9742,14 @@ SCIP_RETCODE addSymmetryInformation(
             SCIP_CALL( SCIPgetActiveVariables(scip, SYM_SYMTYPE_SIGNPERM, &consvars, &consvals, &nlocvars,
                   &constant, SCIPconsIsTransformed(cons)) );
 
-            if( nlocvars != 1 || !SCIPisZero(scip, constant) || !SCIPisEQ(scip, consvals[0], 1.0) )
+            /* we can only deal with linear aggregations (not affine aggregations) */
+            if( nlocvars != 1 || !SCIPisZero(scip, constant) )
                goto DEFAULTOPERATOR;
 
             var = consvars[0];
+            val = consvals[0];
 
-            /* add edges for operator and child gadget */
+            /* negating a variable is a signed symmetry because the power is even */
             SCIP_CALL( SCIPgetSymOpNodeType(scip, SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), &optype) );
 
             SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, optype, &powidx) );
@@ -9735,6 +9759,9 @@ SCIP_RETCODE addSymmetryInformation(
                   TRUE, exponent) );
             SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, powidx, SCIPgetSymgraphNegatedVarnodeidx(scip, graph, var),
                   TRUE, exponent) );
+
+            SCIP_CALL( SCIPaddSymgraphValnode(scip, graph, val * val, &nodeidx) );
+            SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, powidx, nodeidx, FALSE, 0.0) );
 
             SCIP_CALL( ensureOpenArraySize(scip, &openidx, nopenidx + 1, &maxnopenidx) );
 
