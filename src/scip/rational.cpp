@@ -551,6 +551,22 @@ std::string::const_iterator findSubStringIC(const std::string & substr, const st
    return it;
 }
 
+/** checks if a string describes a rational number */
+bool SCIPisRationalString(
+   const char*           desc                /**< string to check */
+   )
+{
+   if( 0 == strcmp(desc, "inf") )
+      return TRUE;
+   else if ( 0 == strcmp(desc, "-inf") )
+      return TRUE;
+   else
+   {
+      std::string s(desc);
+      return s.find_first_not_of("0123456789/") == std::string::npos;
+   }
+}
+
 /** set a rational to the value described by a string */
 void RatSetString(
    SCIP_Rational*        res,                /**< the result */

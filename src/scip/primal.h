@@ -148,6 +148,13 @@ void SCIPprimalAddOrigObjoffset(
    SCIP_Real             addval              /**< additional objective offset in original space */
    );
 
+/** adds additional objective offset in original space to all existing solution (in original space) */
+void SCIPprimalAddOrigObjoffsetExact(
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Rational*        addval              /**< additional objective offset in original space */
+   );
+
 /** returns whether the current primal bound is justified with a feasible primal solution; if not, the primal bound
  *  was set from the user as objective limit
  */

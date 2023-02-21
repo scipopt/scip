@@ -255,6 +255,12 @@ void RatSetInt(
    SCIP_Longint          denom               /**< the denominator */
    );
 
+/** checks if a string describes a rational number */
+SCIP_EXPORT
+bool SCIPisRationalString(
+   const char*           desc                /**< string to check */
+   );
+
 /** sets a rational to the value described by a string */
 SCIP_EXPORT
 void RatSetString(

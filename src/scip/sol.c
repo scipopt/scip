@@ -3869,6 +3869,20 @@ void SCIPsolOrigAddObjval(
    sol->obj += addval;
 }
 
+/** adds value to the objective value of a given original primal CIP solution */
+void SCIPsolOrigAddObjvalExact(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Rational*        addval              /**< offset value to add */
+   )
+{
+   assert(sol != NULL);
+   assert(sol->solorigin == SCIP_SOLORIGIN_ORIGINAL);
+   assert(SCIPsolIsExact(sol));
+
+   RatAdd(sol->valsexact->obj, sol->valsexact->obj, addval);
+   sol->obj = RatApproxReal(sol->valsexact->obj);
+}
+
 /** gets clock time, when this solution was found */
 SCIP_Real SCIPsolGetTime(
    SCIP_SOL*             sol                 /**< primal CIP solution */
