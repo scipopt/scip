@@ -574,13 +574,10 @@ SCIP_RETCODE estimateSpecialPower(
    int nsignvars = sign ? nlhdlrexprdata->nposvars : nlhdlrexprdata->nnegvars;
 
    /* if the power function has no more than 2 variables, this a special case */
-   SCIP_Bool usecase2 = FALSE;
-   *isspecial = ( nsignvars <= 1 && usecase2 ) || ( nsignvars == 2 && !overestimate && usecase2);
-
+   *isspecial = ( nsignvars <= 1 ) || ( nsignvars == 2 && !overestimate );
    if( !*isspecial )
       return SCIP_OKAY;
    
-
    if( nsignvars == 0 )
    {
       /* constant case */
@@ -632,7 +629,7 @@ SCIP_RETCODE estimateSpecialPower(
       }
       *success = TRUE;
    }
-   else if( nsignvars == 2 && !overestimate && usecase2){
+   else if( nsignvars == 2 && !overestimate ){
       /* bivariate case, \f$ f(w) = w^h = f_0(w_0) f_1(w_1)  \f$ */
       SCIP_VAR* vars[2]; 
       SCIP_Real refexponents[2];
