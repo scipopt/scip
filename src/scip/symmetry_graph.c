@@ -493,8 +493,8 @@ SCIP_RETCODE SCIPaddSymgraphConsnode(
    graph->nodetypes[graph->nnodes] = SYM_NODETYPE_CONS;
    graph->nodeinfopos[graph->nnodes] = graph->nconsnodes;
    graph->conss[graph->nconsnodes] = cons;
-   graph->lhs[graph->nconsnodes] = lhs;
-   graph->rhs[graph->nconsnodes] = rhs;
+   graph->lhs[graph->nconsnodes] = MAX(lhs, -graph->infinity);
+   graph->rhs[graph->nconsnodes] = MIN(rhs, graph->infinity);
 
    *nodeidx = graph->nnodes;
    ++graph->nnodes;
