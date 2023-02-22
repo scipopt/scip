@@ -13332,6 +13332,10 @@ SCIP_RETCODE detectRedundantConstraints(
       if( !SCIPconsIsActive(cons0) || SCIPconsIsModifiable(cons0) )
          continue;
 
+      /* do not check for parallel constraints if they should not be upgraded */
+      if ( SCIPconsGetNUpgradeLocks(cons0) > 0 )
+         continue;
+
       /* check for interuption */
       if( c % 1000 == 0 && SCIPisStopped(scip) )
          break;
@@ -13370,6 +13374,10 @@ SCIP_RETCODE detectRedundantConstraints(
 
             consdel = parallelconss[i];
             consdatadel = SCIPconsGetData(consdel);
+
+            /* do not delete constraint if it should not be upgraded */
+            if ( SCIPconsGetNUpgradeLocks(consdel) > 0 )
+               continue;
 
             assert(SCIPconsIsActive(consdel));
             assert(!SCIPconsIsModifiable(consdel));
