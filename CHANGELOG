@@ -145,6 +145,7 @@ Features
 --------
 
 - use quad precision in cutsSubstituteMIR() for substituting slack variables into CMIR cuts
+- use quad precision for activity computations in cons_linear.c
 
 Performance improvements
 ------------------------
