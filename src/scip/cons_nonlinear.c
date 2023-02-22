@@ -77,6 +77,7 @@
 #include "scip/symmetry_graph.h"
 #include "scip/prop_symmetry.h"
 #include "symmetry/struct_symmetry.h"
+#include "scip/pub_misc_sort.h"
 
 /* fundamental constraint handler properties */
 #define CONSHDLR_NAME          "nonlinear"
@@ -9468,9 +9469,7 @@ SCIP_RETCODE tryAddGadgetBilinearProductSignedPerm(
          return SCIP_OKAY;
 
       if( (SCIPisInfinity(scip, SCIPvarGetUbGlobal((*consvars)[0]))
-            && !SCIPisInfinity(scip, SCIPvarGetLbGlobal((*consvars)[0])))
-         || (!SCIPisInfinity(scip, SCIPvarGetUbGlobal((*consvars)[0]))
-            && SCIPisInfinity(scip, SCIPvarGetLbGlobal((*consvars)[0]))) )
+            != SCIPisInfinity(scip, -SCIPvarGetLbGlobal((*consvars)[0]))) )
          return SCIP_OKAY;
 
       /* store information about variables */
@@ -9614,10 +9613,7 @@ SCIP_RETCODE tryAddGadgetEvenOperator(
    if( nlocvars != 1 || !SCIPisZero(scip, constant) )
       return SCIP_OKAY;
 
-   if( (SCIPisInfinity(scip, SCIPvarGetUbGlobal(var))
-         && !SCIPisInfinity(scip, SCIPvarGetLbGlobal(var)))
-      || (!SCIPisInfinity(scip, SCIPvarGetUbGlobal(var))
-         && SCIPisInfinity(scip, SCIPvarGetLbGlobal(var))) )
+   if( (SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) != SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var))) )
       return SCIP_OKAY;
 
    /* store partial information for gadget */
@@ -9703,8 +9699,305 @@ SCIP_RETCODE tryAddGadgetEvenOperator(
    (*nopenidx)++;
 
    return SCIP_OKAY;
+}
 
+/** compares two variable pointers */
+static
+SCIP_DECL_SORTINDCOMP(SCIPsortVarPtr)
+{  /*lint --e{715}*/
+   SCIP_VAR** vars;
+   SCIP_VAR* var1;
+   SCIP_VAR* var2;
 
+   vars = (SCIP_VAR**) dataptr;
+
+   var1 = vars[ind1];
+   var2 = vars[ind2];
+   assert(var1 != NULL);
+   assert(var2 != NULL);
+
+   /* sort variables by their unique index */
+   if( SCIPvarGetIndex(var1) < SCIPvarGetIndex(var2) )
+      return -1;
+   if( SCIPvarGetIndex(var1) > SCIPvarGetIndex(var2) )
+      return 1;
+
+   return 0;
+}
+
+/** tries to add gadget for finding signed permutations for squared differences in a sum expression */
+static
+SCIP_RETCODE tryAddGadgetSquaredDifference(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_EXPR*            sumexpr,            /**< sum expression */
+   SCIP_CONS*            cons,               /**< constraint containing the sum expression */
+   SYM_GRAPH*            graph,              /**< symmetry detection graph to be extended by gadget */
+   int                   sumnodeidx,         /**< index of sum node in symmetry detection graph for gadget */
+   SCIP_VAR***           consvars,           /**< pointer to allocated array to store temporary variables */
+   SCIP_Real**           consvals,           /**< pointer to allocated arrat to store temporary values */
+   int*                  maxnconsvars,       /**< pointer to maximum number consvars/consvals can hold */
+   SCIP_HASHSET*         handledexprs        /**< hashset to store handled expressions */
+   )
+{
+   SYM_EXPRDATA* symdata;
+   SCIP_EXPR** children;
+   SCIP_EXPR** powexprs;
+   SCIP_EXPR** prodexprs;
+   SCIP_EXPR* child;
+   SCIP_VAR**  powvars;
+   SCIP_VAR** prodvars;
+   SCIP_VAR* actvar;
+   SCIP_VAR* actvar2;
+   SCIP_VAR* var;
+   SCIP_VAR* var2;
+   SCIP_Real* sumcoefs;
+   SCIP_Real constant;
+   SCIP_Real constant2;
+   SCIP_Real val;
+   SCIP_Real val2;
+   SCIP_Bool* powexprused = NULL;
+   int* powperm = NULL;
+   int* prodperm = NULL;
+   int* pospowexprs;
+   int* posprodexprs;
+   int nchildren;
+   int nlocvars;
+   int nodeidx;
+   int coefnodeidx1;
+   int coefnodeidx2;
+   int cnt;
+   int i;
+   int j;
+   int nterms;
+   int npowexprs = 0;
+   int nprodexprs = 0;
+   int powcoef = 0;
+
+   assert(scip != NULL);
+   assert(sumexpr != NULL);
+   assert(cons != NULL);
+   assert(SCIPisExprSum(scip, sumexpr));
+   assert(consvars != NULL);
+   assert(consvals != NULL);
+   assert(maxnconsvars != NULL);
+   assert(*maxnconsvars > 0);
+   assert(handledexprs != NULL);
+
+   /* iterate over sum expression and extract all power and product expressions */
+   sumcoefs = SCIPgetCoefsExprSum(sumexpr);
+   children = SCIPexprGetChildren(sumexpr);
+   nchildren = SCIPexprGetNChildren(sumexpr);
+   SCIP_CALL( SCIPallocBufferArray(scip, &powexprs, nchildren) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &prodexprs, nchildren) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &pospowexprs, nchildren) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &posprodexprs,2 *  nchildren) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &powvars, 2 * nchildren) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &prodvars, 2 * nchildren) );
+
+   /* we scan for norm constraints, i.e., the number of powexpres needs to be twice the prodexpr
+    *
+    * @todo make this work in a more general case
+    */
+   for( i = 0; i < nchildren; ++i )
+   {
+      if( SCIPisExprPower(scip, children[i]) )
+      {
+         SCIP_Real exponent;
+
+         /* we require a coefficient of +/- 1 from the sum and all power expressions have the same coefficient */
+         if( powcoef == 0 )
+         {
+            if( SCIPisEQ(scip, sumcoefs[i], 1.0) || SCIPisEQ(scip, sumcoefs[i], -1.0) )
+               powcoef = SCIPround(scip, sumcoefs[i]);
+         }
+         else if( !SCIPisEQ(scip, (SCIP_Real) powcoef, sumcoefs[i]) )
+            continue;
+
+         /* we only store power expressions if their child is a variable */
+         assert(SCIPexprGetNChildren(children[i]) == 1);
+         child = SCIPexprGetChildren(children[i])[0];
+         if( !SCIPisExprVar(scip, child) )
+            continue;
+
+         /* the power is requires to be a 2 */
+         SCIP_CALL( SCIPgetSymDataExpr(scip, children[i], &symdata) );
+         assert(symdata != NULL);
+         assert(SCIPgetSymExprdataNConstants(symdata) == 1);
+
+         exponent = SCIPgetSymExprdataConstants(symdata)[0];
+         SCIP_CALL( SCIPfreeSymDataExpr(scip, &symdata) );
+
+         if( !SCIPisEQ(scip, exponent, 2.0) )
+            continue;
+
+         /* we only store power expressions if the child is not multi-aggregated */
+         var = SCIPgetVarExprVar(child);
+         if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR )
+         {
+            powexprs[npowexprs] = children[i];
+            powvars[npowexprs] = var;
+            pospowexprs[npowexprs++] = i;
+         }
+      }
+      else if( SCIPisExprProduct(scip, children[i]) )
+      {
+         /* we require a coefficient of +/- 2 from the sum and all product expressions have the same coefficient */
+         if( powcoef == 0 )
+         {
+            if( SCIPisEQ(scip, sumcoefs[i], 2.0) || SCIPisEQ(scip, sumcoefs[i], -2.0) )
+               powcoef = -SCIPround(scip, sumcoefs[i]);
+         }
+         else if( !SCIPisEQ(scip, (SCIP_Real) 2 * powcoef, -sumcoefs[i]) )
+            continue;
+
+         /* we only store power expressions if they have exactly two children being variables */
+         if( SCIPexprGetNChildren(children[i]) != 2 )
+            continue;
+         if( !SCIPisExprVar(scip, SCIPexprGetChildren(children[i])[0])
+            || !SCIPisExprVar(scip, SCIPexprGetChildren(children[i])[1]) )
+            continue;
+
+         var = SCIPgetVarExprVar(SCIPexprGetChildren(children[i])[0]);
+         var2 = SCIPgetVarExprVar(SCIPexprGetChildren(children[i])[1]);
+
+         /* we only store product expressions if the children are not multi-aggregated */
+         if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR
+            && SCIPvarGetStatus(var2) != SCIP_VARSTATUS_MULTAGGR )
+         {
+            prodexprs[nprodexprs] = children[i];
+            prodvars[nprodexprs] = var;
+            posprodexprs[nprodexprs++] = i;
+            prodexprs[nprodexprs] = children[i];
+            prodvars[nprodexprs] = var2;
+            posprodexprs[nprodexprs++] = i;
+         }
+      }
+   }
+
+   if( npowexprs == 0 || nprodexprs != npowexprs )
+      goto FREEMEMORY;
+
+   /* check whether the power variables and product variables match */
+   SCIP_CALL( SCIPallocBufferArray(scip, &powperm, nprodexprs) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &prodperm, nprodexprs) );
+
+   SCIPsort(powperm, SCIPsortVarPtr, (void*) powvars, npowexprs);
+   SCIPsort(prodperm, SCIPsortVarPtr, (void*) prodvars, npowexprs);
+   /* SCIPsortPtr((void**) copyprodvars, SCIPsortVarPtr, npowexprs); */
+   /* SCIPsortPtr((void**) copypowvars, SCIPsortVarPtr, npowexprs); */
+
+   /* SCIPsortPtrPtrInt((void**) prodvars, (void**) prodexprs, posprodexprs, SCIPsortVarPtr, npowexprs); */
+   /* SCIPsortPtrPtrInt((void**) powvars, (void**) powexprs, pospowexprs, SCIPsortVarPtr, npowexprs); */
+
+   for( i = 0; i < npowexprs; ++i )
+   {
+      if( SCIPvarGetIndex(prodvars[prodperm[i]]) != SCIPvarGetIndex(powvars[powperm[i]]) )
+         goto FREEMEMORY;
+   }
+
+   /* if we reach this line, the variables match: we have found a potential norm constraint */
+   assert(npowexprs % 2 == 0);
+   nterms = npowexprs / 2;
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &powexprused, npowexprs) );
+
+   /* add gadget of each squared difference term */
+   cnt = 0;
+   for( i = 0; i < nterms; ++i )
+   {
+      SCIP_Bool var1found = FALSE;
+      SCIP_Bool var2found = FALSE;
+
+      (*consvals)[0] = 1.0;
+      (*consvars)[0] = prodvars[cnt++];
+      constant = 0.0;
+      nlocvars = 1;
+
+      SCIP_CALL( SCIPgetActiveVariables(scip, SYM_SYMTYPE_SIGNPERM, consvars, consvals,
+            &nlocvars, &constant, SCIPconsIsTransformed(cons)) );
+
+      if( nlocvars != 1 )
+      {
+         ++cnt;
+         continue;
+      }
+      actvar = (*consvars)[0];
+      val = (*consvals)[0];
+
+      (*consvals)[0] = 1.0;
+      (*consvars)[0] = prodvars[cnt++];
+      constant2 = 0.0;
+      nlocvars = 1;
+
+      SCIP_CALL( SCIPgetActiveVariables(scip, SYM_SYMTYPE_SIGNPERM, consvars, consvals,
+            &nlocvars, &constant2, SCIPconsIsTransformed(cons)) );
+
+      if( nlocvars != 1 )
+         continue;
+      actvar2 = (*consvars)[0];
+      val2 = (*consvals)[0];
+
+      /* we cannot handle the pair of variables if their constant/scalar differs or one variable
+       * cannot be centered at the origin or they have a different domain
+       */
+      if( !SCIPisEQ(scip, constant, constant2) || !SCIPisEQ(scip, val, val2)
+         || (SCIPisInfinity(scip, SCIPvarGetUbGlobal(actvar)) != SCIPisInfinity(scip, -SCIPvarGetLbGlobal(actvar)))
+         || (SCIPisInfinity(scip, SCIPvarGetUbGlobal(actvar2)) != SCIPisInfinity(scip, -SCIPvarGetLbGlobal(actvar2)))
+         || (SCIPisInfinity(scip, SCIPvarGetUbGlobal(actvar)) != SCIPisInfinity(scip, SCIPvarGetLbGlobal(actvar2)))
+         || !SCIPisEQ(scip, SCIPvarGetUbGlobal(actvar), SCIPvarGetUbGlobal(actvar2))
+         || !SCIPisEQ(scip, SCIPvarGetLbGlobal(actvar), SCIPvarGetLbGlobal(actvar2)) )
+         continue;
+
+      /* add gadget */
+      SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, (int) SYM_CONSOPTYPE_SQDIFF, &nodeidx) );
+      SCIP_CALL( SCIPaddSymgraphValnode(scip, graph, val, &coefnodeidx1) );
+      SCIP_CALL( SCIPaddSymgraphValnode(scip, graph, val, &coefnodeidx2) );
+
+      SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, sumnodeidx, nodeidx, TRUE, (SCIP_Real) powcoef) );
+      SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, nodeidx, coefnodeidx1, TRUE, (SCIP_Real) powcoef) );
+      SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, nodeidx, coefnodeidx2, TRUE, (SCIP_Real) powcoef) );
+      SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, coefnodeidx1,
+            SCIPgetSymgraphVarnodeidx(scip, graph, actvar), FALSE, 0.0) );
+      SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, coefnodeidx1,
+            SCIPgetSymgraphVarnodeidx(scip, graph, actvar2), FALSE, 0.0) );
+      SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, coefnodeidx2,
+            SCIPgetSymgraphNegatedVarnodeidx(scip, graph, actvar), FALSE, 0.0) );
+      SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, coefnodeidx2,
+            SCIPgetSymgraphNegatedVarnodeidx(scip, graph, actvar2), FALSE, 0.0) );
+
+      /* mark product expression as handled */
+      SCIP_CALL( SCIPhashsetInsert(handledexprs, SCIPblkmem(scip), (void*) prodexprs[2*i]) );
+
+      /* find corresponding unused power expressions and mark them as handled */
+      for( j = 0; j < npowexprs && !(var1found && var2found); ++j )
+      {
+         if( powexprused[j] )
+            continue;
+
+         if( !var1found && powvars[j] == prodvars[cnt - 2] )
+         {
+            SCIP_CALL( SCIPhashsetInsert(handledexprs, SCIPblkmem(scip), (void*) powexprs[j]) );
+            powexprused[j] = TRUE;
+         }
+         else if( !var2found && powvars[j] == prodvars[cnt - 1] )
+         {
+            SCIP_CALL( SCIPhashsetInsert(handledexprs, SCIPblkmem(scip), (void*) powexprs[j]) );
+            powexprused[j] = TRUE;
+         }
+      }
+   }
+
+ FREEMEMORY:
+   SCIPfreeBufferArrayNull(scip, &powexprused);
+   SCIPfreeBufferArrayNull(scip, &prodperm);
+   SCIPfreeBufferArrayNull(scip, &powperm);
+   SCIPfreeBufferArray(scip, &prodvars);
+   SCIPfreeBufferArray(scip, &powvars);
+   SCIPfreeBufferArray(scip, &posprodexprs);
+   SCIPfreeBufferArray(scip, &pospowexprs);
+   SCIPfreeBufferArray(scip, &prodexprs);
+   SCIPfreeBufferArray(scip, &powexprs);
+
+   return SCIP_OKAY;
 }
 
 /** adds symmetry information of constraint to a symmetry detection graph */
@@ -9718,6 +10011,7 @@ SCIP_RETCODE addSymmetryInformation(
    )
 {
    SCIP_EXPRITER* it;
+   SCIP_HASHSET* handledexprs;
    SCIP_EXPR* rootexpr;
    SCIP_EXPR* expr;
    SCIP_VAR** consvars;
@@ -9773,6 +10067,9 @@ SCIP_RETCODE addSymmetryInformation(
    SCIP_CALL( SCIPallocBufferArray(scip, &consvars, maxnconsvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &consvals, maxnconsvars) );
 
+   /* for finding special subexpressions, use hashset to store which expressions have been handled completely */
+   SCIP_CALL( SCIPhashsetCreate(&handledexprs, SCIPblkmem(scip), maxnopenidx) );
+
    /* iterate over expression tree and store nodes/edges */
    expr = SCIPgetExprNonlinear(cons); /*lint !e838*/
    SCIP_CALL( SCIPexpriterInit(it, expr, SCIP_EXPRITER_DFS, TRUE) );
@@ -9820,7 +10117,10 @@ SCIP_RETCODE addSymmetryInformation(
          if( parentidx == -1 )
          {
             assert(SCIPisExprProduct(scip, SCIPexpriterGetParentDFS(it))
-               || SCIPisExprPower(scip, SCIPexpriterGetParentDFS(it)));
+               || SCIPisExprPower(scip, SCIPexpriterGetParentDFS(it))
+               || SCIPisExprSignpower(scip, SCIPexpriterGetParentDFS(it))
+               || SCIPisExprCos(scip, SCIPexpriterGetParentDFS(it))
+               );
             continue;
          }
          assert(maxnconsvars > 0);
@@ -9874,8 +10174,14 @@ SCIP_RETCODE addSymmetryInformation(
       {
          assert(expr == rootexpr || parentidx > 0);
 
-         /* add nodes for operators (and possibly for constants) */
-         if( SCIPisExprSum(scip, expr) )
+         /* do not treat expressions that have been handled already */
+         if( !SCIPhashsetIsEmpty(handledexprs) && SCIPhashsetExists(handledexprs, expr) )
+         {
+            SCIP_CALL( ensureOpenArraySize(scip, &openidx, nopenidx + 1, &maxnopenidx) );
+
+            openidx[nopenidx++] = -1;
+         }
+         else if( SCIPisExprSum(scip, expr) )
          {
             /* deal with sum expressions differently, because we can possibly aggregate linear sums */
             SCIP_EXPR** children;
@@ -9912,6 +10218,13 @@ SCIP_RETCODE addSymmetryInformation(
             SCIP_CALL( SCIPaddSymgraphVarAggegration(scip, graph, sumidx, consvars, consvals, nlocvars, constant) );
 
             SCIP_CALL( ensureOpenArraySize(scip, &openidx, nopenidx + 1, &maxnopenidx) );
+
+            /* check whether the sum encodes expressions of type \f$(x - y)^2\f$ */
+            if( symtype == SYM_SYMTYPE_SIGNPERM )
+            {
+               SCIP_CALL( tryAddGadgetSquaredDifference(scip, expr, cons, graph, sumidx,
+                     &consvars, &consvals, &maxnconsvars, handledexprs) );
+            }
 
             /* indicate that variables have been treated already */
             openidx[nopenidx++] = sumidx;
@@ -9973,6 +10286,7 @@ SCIP_RETCODE addSymmetryInformation(
       }
    }
 
+   SCIPhashsetFree(&handledexprs, SCIPblkmem(scip));
    SCIPfreeBufferArray(scip, &consvals);
    SCIPfreeBufferArray(scip, &consvars);
    SCIPfreeBufferArray(scip, &openidx);

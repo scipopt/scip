@@ -119,7 +119,8 @@ enum SYM_Consoptype
    SYM_CONSOPTYPE_SLACK       = 19,          /**< indicates slack vars in indicator constraints */
    SYM_CONSOPTYPE_COEF        = 20,          /**< indicates coefficients from parent expressions */
    SYM_CONSOPTYPE_RHS         = 21,          /**< indicates rhs/lhs of constraints */
-   SYM_CONSOPTYPE_LAST        = 22           /**< number of predefined enum types, needs to always
+   SYM_CONSOPTYPE_SQDIFF      = 22,          /**< indicates a squared difference */
+   SYM_CONSOPTYPE_LAST        = 23           /**< number of predefined enum types, needs to always
                                               *   hold the biggest value */
 };
 typedef enum SYM_Consoptype SYM_CONSOPTYPE;
