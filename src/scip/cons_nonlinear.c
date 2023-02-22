@@ -58,9 +58,11 @@
 #include "scip/cons_nonlinear.h"
 #include "scip/nlhdlr.h"
 #include "scip/expr_var.h"
+#include "scip/expr_varidx.h"
 #include "scip/expr_sum.h"
 #include "scip/expr_value.h"
 #include "scip/expr_pow.h"
+#include "scip/expr_trig.h"
 #include "scip/nlhdlr_convex.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_varbound.h"
@@ -9382,6 +9384,329 @@ SCIP_RETCODE ensureLocVarsArraySize(
    return SCIP_OKAY;
 }
 
+/** tries to add gadget for finding signed permutations of bilinear products
+ *
+ *  If a product has exactly two children being variables, negating both simultanteoulsy
+ *  is a signed permutation.
+ */
+static
+SCIP_RETCODE tryAddGadgetBilinearProductSignedPerm(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_EXPR*            expr,               /**< product expression for which gadget is tried to be added */
+   SCIP_CONS*            cons,               /**< constraint containing product expression */
+   SYM_GRAPH*            graph,              /**< symmetry detection graph to be extended by gadget */
+   int                   parentidx,          /**< index of parent node in symmetry detection graph for gadget */
+   SCIP_Bool             hasparentcoef,      /**< whether the parent gives a coefficient to the expression */
+   SCIP_Real             parentcoef,         /**< the parent coefficient (if it exists) */
+   SCIP_VAR***           consvars,           /**< pointer to allocated array to store temporary variables */
+   SCIP_Real**           consvals,           /**< pointer to allocated arrat to store temporary values */
+   int*                  maxnconsvars,       /**< pointer to maximum number consvars/consvals can hold */
+   int**                 openidx,            /**< pointer to array of open expressions */
+   int*                  nopenidx,           /**< pointer to number of open expressions in openidx */
+   int*                  maxnopenidx,        /**< pointer to maximum number of entries openidx can hold */
+   SCIP_Bool*            success             /**< pointer to store whether gadget could be added successfully */
+   )
+{
+   SYM_EXPRDATA* symdata;
+   SCIP_EXPR** children;
+   SCIP_VAR* var1;
+   SCIP_VAR* var2;
+   SCIP_Real val1;
+   SCIP_Real val2;
+   SCIP_Real coef;
+   SCIP_Real prodval;
+   SCIP_Real constant;
+   int nlocvars;
+   int optype;
+   int nchildren;
+   int prodidx;
+   int coefidx1;
+   int coefidx2;
+   int childidx = 0;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(SCIPisExprProduct(scip, expr));
+   assert(graph != NULL);
+   assert(0 <= parentidx && parentidx < SCIPgetSymgraphNNodes(graph));
+   assert(consvars != NULL);
+   assert(consvals != NULL);
+   assert(maxnconsvars != NULL);
+   assert(*maxnconsvars > 0);
+   assert(openidx != NULL);
+   assert(nopenidx != NULL);
+   assert(*nopenidx >= 0);
+   assert(maxnopenidx != NULL);
+   assert(*maxnopenidx > 0);
+   assert(success != NULL);
+
+   *success = FALSE;
+
+   /* we require exactly two children being variables */
+   nchildren = SCIPexprGetNChildren(expr);
+   if( nchildren != 2 )
+      return SCIP_OKAY;
+
+   children = SCIPexprGetChildren(expr);
+   if( !SCIPisExprVar(scip, children[0]) || !SCIPisExprVar(scip, children[1]) )
+      return SCIP_OKAY;
+
+   /* check whether each child is not multi-aggregated and is not shifted */
+   SCIP_CALL( ensureLocVarsArraySize(scip, consvars, consvals, SCIPexprGetNChildren(expr), maxnconsvars) );
+
+   for( childidx = 0; childidx < 2; ++childidx )
+   {
+      (*consvars)[0] = SCIPgetVarExprVar(children[childidx]);
+      (*consvals)[0] = 1.0;
+      nlocvars = 1;
+      constant = 0.0;
+
+      SCIP_CALL( SCIPgetActiveVariables(scip, SYM_SYMTYPE_SIGNPERM, consvars, consvals, &nlocvars,
+            &constant, SCIPconsIsTransformed(cons)) );
+
+      if( nlocvars != 1 || !SCIPisZero(scip, constant) )
+         return SCIP_OKAY;
+
+      if( (SCIPisInfinity(scip, SCIPvarGetUbGlobal((*consvars)[0]))
+            && !SCIPisInfinity(scip, SCIPvarGetLbGlobal((*consvars)[0])))
+         || (!SCIPisInfinity(scip, SCIPvarGetUbGlobal((*consvars)[0]))
+            && SCIPisInfinity(scip, SCIPvarGetLbGlobal((*consvars)[0]))) )
+         return SCIP_OKAY;
+
+      /* store information about variables */
+      if( childidx == 0 )
+      {
+         var1 = (*consvars)[0];
+         val1 = (*consvals)[0];
+      }
+      else
+      {
+         var2 = (*consvars)[0];
+         val2 = (*consvals)[0];
+      }
+   }
+
+   SCIP_CALL( SCIPgetSymDataExpr(scip, expr, &symdata) );
+   assert(symdata != NULL);
+   assert(SCIPgetSymExprdataNConstants(symdata) == 1);
+
+   coef = SCIPgetSymExprdataConstants(symdata)[0];
+
+   SCIP_CALL( SCIPfreeSymDataExpr(scip, &symdata) );
+
+   /* add gadget modeling the product
+    *
+    * Since the constants are 0, each variable is centered at the origin, which leads to
+    * a product of the form \f$(\alpha x)\cdot(\gamma y)\f$. Manipulating the formula leads
+    * to \f$\alpha \gamma (x \cdot y)\f$, which is modeled in a gadget that allows to
+    * negate both variables simulataneously.
+    */
+   SCIP_CALL( SCIPgetSymOpNodeType(scip, SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), &optype) );
+   SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, optype, &prodidx) );
+   SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, parentidx, prodidx, hasparentcoef, parentcoef) );
+
+   prodval = coef * val1 * val2;
+
+   /* introduce nodes for the product value and its negation; since flipping both variables
+    * simultaneously is a signed symmetry, assign both nodes the same value
+    */
+   SCIP_CALL( SCIPaddSymgraphValnode(scip, graph, prodval, &coefidx1) );
+   SCIP_CALL( SCIPaddSymgraphValnode(scip, graph, prodval, &coefidx2) );
+
+   SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, prodidx, coefidx1, FALSE, 0.0) );
+   SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, prodidx, coefidx2, FALSE, 0.0) );
+   SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, coefidx1, coefidx2, FALSE, 0.0) );
+
+   SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, coefidx1,
+         SCIPgetSymgraphVarnodeidx(scip, graph, var1), FALSE, 0.0) );
+   SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, coefidx1,
+         SCIPgetSymgraphVarnodeidx(scip, graph, var2), FALSE, 0.0) );
+   SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, coefidx2,
+         SCIPgetSymgraphNegatedVarnodeidx(scip, graph, var1), FALSE, 0.0) );
+   SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, coefidx2,
+         SCIPgetSymgraphNegatedVarnodeidx(scip, graph, var2), FALSE, 0.0) );
+
+   SCIP_CALL( ensureOpenArraySize(scip, openidx, *nopenidx + 1, maxnopenidx) );
+
+   /* indicate that variables have been treated already */
+   (*openidx)[*nopenidx] = -1;
+   (*nopenidx)++;
+
+   *success = TRUE;
+
+   return SCIP_OKAY;
+}
+
+/** tries to add gadget for finding signed permutations of even univariate operators
+ *
+ *  If a univariate operator is even and has a variable as child, negating the child is a
+ *  signed permutation.
+ */
+static
+SCIP_RETCODE tryAddGadgetEvenOperator(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_EXPR*            expr,               /**< expression for which gadget is tried to be added */
+   SCIP_CONS*            cons,               /**< constraint containing expression */
+   SYM_GRAPH*            graph,              /**< symmetry detection graph to be extended by gadget */
+   int                   parentidx,          /**< index of parent node in symmetry detection graph for gadget */
+   SCIP_Bool             hasparentcoef,      /**< whether the parent gives a coefficient to the expression */
+   SCIP_Real             parentcoef,         /**< the parent coefficient (if it exists) */
+   SCIP_VAR***           consvars,           /**< pointer to allocated array to store temporary variables */
+   SCIP_Real**           consvals,           /**< pointer to allocated arrat to store temporary values */
+   int*                  maxnconsvars,       /**< pointer to maximum number consvars/consvals can hold */
+   int**                 openidx,            /**< pointer to array of open expressions */
+   int*                  nopenidx,           /**< pointer to number of open expressions in openidx */
+   int*                  maxnopenidx,        /**< pointer to maximum number of entries openidx can hold */
+   SCIP_Bool*            success             /**< pointer to store whether gadget could be added successfully */
+   )
+{
+   SYM_EXPRDATA* symdata;
+   SCIP_EXPR* child;
+   SCIP_VAR* var;
+   SCIP_Real constant;
+   SCIP_Real edgeweight;
+   SCIP_Real val;
+   SCIP_Bool hasval = FALSE;
+   int nlocvars;
+   int nodeidx;
+   int optype;
+   int thisopidx;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(graph != NULL);
+   assert(0 <= parentidx && parentidx < SCIPgetSymgraphNNodes(graph));
+   assert(consvars != NULL);
+   assert(consvals != NULL);
+   assert(maxnconsvars != NULL);
+   assert(*maxnconsvars > 0);
+   assert(openidx != NULL);
+   assert(nopenidx != NULL);
+   assert(*nopenidx >= 0);
+   assert(maxnopenidx != NULL);
+   assert(*maxnopenidx > 0);
+   assert(success != NULL);
+
+   *success = FALSE;
+
+   /* ignore variable or value expressions */
+   if( SCIPisExprVar(scip, expr) || SCIPisExprValue(scip, expr) || SCIPisExprVaridx(scip, expr) )
+      return SCIP_OKAY;
+
+   /* ignore multi-variate expressions or if child is not a variable */
+   assert(SCIPexprGetNChildren(expr) > 0);
+   child = SCIPexprGetChildren(expr)[0];
+   if( SCIPexprGetNChildren(expr) != 1 || !SCIPisExprVar(scip, child) )
+      return SCIP_OKAY;
+
+   /* check whether child variable is (multi-) aggregated */
+   var = SCIPgetVarExprVar(child);
+   (*consvars)[0] = var;
+   (*consvals)[0] = 1.0;
+   constant = 0.0;
+   nlocvars = 1;
+
+   SCIP_CALL( ensureLocVarsArraySize(scip, consvars, consvals, nlocvars, maxnconsvars) );
+   SCIP_CALL( SCIPgetActiveVariables(scip, SYM_SYMTYPE_SIGNPERM, consvars, consvals, &nlocvars, &constant,
+         SCIPconsIsTransformed(cons)) );
+
+   /* skip multi-aggregated variables or variables with domain not centered at 0 */
+   if( nlocvars != 1 || !SCIPisZero(scip, constant) )
+      return SCIP_OKAY;
+
+   if( (SCIPisInfinity(scip, SCIPvarGetUbGlobal(var))
+         && !SCIPisInfinity(scip, SCIPvarGetLbGlobal(var)))
+      || (!SCIPisInfinity(scip, SCIPvarGetUbGlobal(var))
+         && SCIPisInfinity(scip, SCIPvarGetLbGlobal(var))) )
+      return SCIP_OKAY;
+
+   /* store partial information for gadget */
+   var = (*consvars)[0];
+   edgeweight = (*consvals)[0];
+
+   /* cosine and sign-powers are even operators */
+   if( SCIPisExprSignpower(scip, expr) || SCIPisExprCos(scip, expr) )
+   {
+      /* get remaining information for gadget */
+      if( SCIPisExprSignpower(scip, expr) )
+      {
+         SCIP_CALL( SCIPgetSymDataExpr(scip, expr, &symdata) );
+         assert(symdata != NULL);
+         assert(SCIPgetSymExprdataNConstants(symdata) == 1);
+
+         val = SCIPgetSymExprdataConstants(symdata)[0];
+         hasval = !SCIPisEQ(scip, val, 1.0);
+
+         SCIP_CALL( SCIPfreeSymDataExpr(scip, &symdata) );
+      }
+      else
+      {
+         assert(SCIPisExprCos(scip, expr));
+         hasval = FALSE;
+      }
+   }
+   else if ( SCIPisExprPower(scip, expr) )
+   {
+      SCIP_Real exponent;
+      int safeexponent;
+
+      /* only consider expressions corresponding to an even power */
+      SCIP_CALL( SCIPgetSymDataExpr(scip, expr, &symdata) );
+      assert(symdata != NULL);
+      assert(SCIPgetSymExprdataNConstants(symdata) == 1);
+
+      exponent = SCIPgetSymExprdataConstants(symdata)[0];
+      SCIP_CALL( SCIPfreeSymDataExpr(scip, &symdata) );
+
+      /* check whether the exponent is an even integer */
+      if( !SCIPisIntegral(scip, exponent) || SCIPisLE(scip, exponent, 0.0) )
+         return SCIP_OKAY;
+
+      /* deal with numerics */
+      safeexponent = (int) exponent + 0.5;
+      if( safeexponent % 2 != 0 )
+         return SCIP_OKAY;
+
+      /* store remaining information needed for gadget */
+      hasval = TRUE;
+      val = exponent;
+   }
+   else
+   {
+      /* remaining expressions are not handled */
+      return SCIP_OKAY;
+   }
+
+   /* add gadget to graph for even univariate expression */
+   *success = TRUE;
+
+   SCIP_CALL( SCIPgetSymOpNodeType(scip, SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), &optype) );
+
+   SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, optype, &thisopidx) );
+   SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, parentidx, thisopidx, hasparentcoef, parentcoef) );
+
+   SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, thisopidx, SCIPgetSymgraphVarnodeidx(scip, graph, var),
+         TRUE, edgeweight) );
+   SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, thisopidx, SCIPgetSymgraphNegatedVarnodeidx(scip, graph, var),
+         TRUE, edgeweight) );
+
+   if( hasval )
+   {
+      SCIP_CALL( SCIPaddSymgraphValnode(scip, graph, val, &nodeidx) );
+      SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, thisopidx, nodeidx, FALSE, 0.0) );
+   }
+
+   SCIP_CALL( ensureOpenArraySize(scip, openidx, *nopenidx + 1, maxnopenidx) );
+
+   /* indicate that variables have been treated already */
+   (*openidx)[*nopenidx] = -1;
+   (*nopenidx)++;
+
+   return SCIP_OKAY;
+
+
+}
+
 /** adds symmetry information of constraint to a symmetry detection graph */
 static
 SCIP_RETCODE addSymmetryInformation(
@@ -9593,180 +9918,24 @@ SCIP_RETCODE addSymmetryInformation(
          }
          else if( symtype == SYM_SYMTYPE_SIGNPERM && SCIPisExprProduct(scip, expr) )
          {
-            /* deal with product expressions differently, because we can possibly find more signed symmetries
-             *
-             * More precisely, if a product has exactly two children being variables, negating both simultanteoulsy
-             * is a signed permutation.
-             */
-            SYM_EXPRDATA* symdata;
-            SCIP_EXPR** children;
-            SCIP_VAR* var1;
-            SCIP_VAR* var2;
-            SCIP_Real val1;
-            SCIP_Real val2;
-            SCIP_Real coef;
-            SCIP_Real prodval;
-            int optype;
-            int nchildren;
-            int prodidx;
-            int coefidx1;
-            int coefidx2;
-            int childidx = 0;
+            SCIP_Bool succ;
 
-            /* we require exactly two children being variables */
-            nchildren = SCIPexprGetNChildren(expr);
-            if( nchildren != 2 )
+            SCIP_CALL( tryAddGadgetBilinearProductSignedPerm(scip, expr, cons, graph, parentidx, hasparentcoef,
+                  parentcoef, &consvars, &consvals, &maxnconsvars, &openidx, &nopenidx, &maxnopenidx, &succ) );
+
+            if( !succ )
                goto DEFAULTOPERATOR;
-
-            children = SCIPexprGetChildren(expr);
-            if( !SCIPisExprVar(scip, children[0]) || !SCIPisExprVar(scip, children[1]) )
-               goto DEFAULTOPERATOR;
-
-            /* check whether each child is not multi-aggregated and is not shifted */
-            SCIP_CALL( ensureLocVarsArraySize(scip, &consvars, &consvals, SCIPexprGetNChildren(expr), &maxnconsvars) );
-
-            for( childidx = 0; childidx < 2; ++childidx )
-            {
-               consvars[0] = SCIPgetVarExprVar(children[childidx]);
-               consvals[0] = 1.0;
-               nlocvars = 1;
-               constant = 0.0;
-
-               SCIP_CALL( SCIPgetActiveVariables(scip, SYM_SYMTYPE_SIGNPERM, &consvars, &consvals, &nlocvars,
-                     &constant, SCIPconsIsTransformed(cons)) );
-
-               if( nlocvars != 1 || !SCIPisZero(scip, constant) )
-                  goto DEFAULTOPERATOR;
-
-               /* store information about variables */
-               if( childidx == 0 )
-               {
-                  var1 = consvars[0];
-                  val1 = consvals[0];
-               }
-               else
-               {
-                  var2 = consvars[0];
-                  val2 = consvals[0];
-               }
-            }
-
-            SCIP_CALL( SCIPgetSymDataExpr(scip, expr, &symdata) );
-            assert(symdata != NULL);
-            assert(SCIPgetSymExprdataNConstants(symdata) == 1);
-
-            coef = SCIPgetSymExprdataConstants(symdata)[0];
-
-            SCIP_CALL( SCIPfreeSymDataExpr(scip, &symdata) );
-
-            /* add gadget modeling the product
-             *
-             * Since the constants are 0, each variable is centered at the origin, which leads to
-             * a product of the form \f$(\alpha x)\cdot(\gamma y)\f$. Manipulating the formula leads
-             * to \f$\alpha \gamma (x \cdot y)\f$, which is modeled in a gadget that allows to
-             * negate both variables simulataneously.
-             */
-            SCIP_CALL( SCIPgetSymOpNodeType(scip, SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), &optype) );
-            SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, optype, &prodidx) );
-            SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, parentidx, prodidx, FALSE, 0.0) );
-
-            prodval = coef * val1 * val2;
-
-            /* introduce nodes for the product value and its negation; since flipping both variables
-             * simultaneously is a signed symmetry, assign both nodes the same value
-             */
-            SCIP_CALL( SCIPaddSymgraphValnode(scip, graph, prodval, &coefidx1) );
-            SCIP_CALL( SCIPaddSymgraphValnode(scip, graph, prodval, &coefidx2) );
-
-            SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, prodidx, coefidx1, FALSE, 0.0) );
-            SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, prodidx, coefidx2, FALSE, 0.0) );
-            SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, coefidx1, coefidx2, FALSE, 0.0) );
-
-            SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, coefidx1,
-                  SCIPgetSymgraphVarnodeidx(scip, graph, var1), FALSE, 0.0) );
-            SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, coefidx1,
-                  SCIPgetSymgraphVarnodeidx(scip, graph, var2), FALSE, 0.0) );
-            SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, coefidx2,
-                  SCIPgetSymgraphNegatedVarnodeidx(scip, graph, var1), FALSE, 0.0) );
-            SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, coefidx2,
-                  SCIPgetSymgraphNegatedVarnodeidx(scip, graph, var2), FALSE, 0.0) );
-
-            SCIP_CALL( ensureOpenArraySize(scip, &openidx, nopenidx + 1, &maxnopenidx) );
-
-            /* indicate that variables have been treated already */
-            openidx[nopenidx++] = -1;
          }
-         else if( symtype == SYM_SYMTYPE_SIGNPERM && SCIPisExprPower(scip, expr) )
+         else if( symtype == SYM_SYMTYPE_SIGNPERM )
          {
-            /* deal with power expressions differently, because we can possibly find more signed symmetries
-             *
-             * If a power has an even exponent and the child is a variable, negating the variable is a signed symmetry.
-             */
-            SYM_EXPRDATA* symdata;
-            SCIP_VAR* var;
-            SCIP_Real exponent;
-            SCIP_Real val;
-            int safeexponent;
-            int optype;
-            int powidx;
+            SCIP_Bool succ;
 
-            assert(SCIPexprGetNChildren(expr) == 1);
+            /* we can find more signed permutations for even univariate operators */
+            SCIP_CALL( tryAddGadgetEvenOperator(scip, expr, cons, graph, parentidx, hasparentcoef, parentcoef,
+                  &consvars, &consvals, &maxnconsvars, &openidx, &nopenidx, &maxnopenidx, &succ) );
 
-            /* check whether the child is a variable */
-            if( !SCIPisExprVar(scip, SCIPexprGetChildren(expr)[0]) )
+            if( !succ )
                goto DEFAULTOPERATOR;
-
-            /* check whether the exponent is an even integer */
-            SCIP_CALL( SCIPgetSymDataExpr(scip, expr, &symdata) );
-            assert(symdata != NULL);
-            assert(SCIPgetSymExprdataNConstants(symdata) == 1);
-
-            exponent = SCIPgetSymExprdataConstants(symdata)[0];
-            SCIP_CALL( SCIPfreeSymDataExpr(scip, &symdata) );
-
-            if( !SCIPisIntegral(scip, exponent) || SCIPisLE(scip, exponent, 0.0) )
-               goto DEFAULTOPERATOR;
-
-            /* deal with numerics */
-            safeexponent = (int) exponent + 0.5;
-            if( safeexponent % 2 != 0 )
-               goto DEFAULTOPERATOR;
-
-            /* check whether variable is aggregated */
-            SCIP_CALL( ensureLocVarsArraySize(scip, &consvars, &consvals, SCIPexprGetNChildren(expr), &maxnconsvars) );
-            consvars[0] = SCIPgetVarExprVar(SCIPexprGetChildren(expr)[0]);
-            consvals[0] = 1.0;
-            nlocvars = 1;
-            constant = 0.0;
-
-            SCIP_CALL( SCIPgetActiveVariables(scip, SYM_SYMTYPE_SIGNPERM, &consvars, &consvals, &nlocvars,
-                  &constant, SCIPconsIsTransformed(cons)) );
-
-            /* we can only deal with linear aggregations (not affine aggregations) */
-            if( nlocvars != 1 || !SCIPisZero(scip, constant) )
-               goto DEFAULTOPERATOR;
-
-            var = consvars[0];
-            val = consvals[0];
-
-            /* negating a variable is a signed symmetry because the power is even */
-            SCIP_CALL( SCIPgetSymOpNodeType(scip, SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), &optype) );
-
-            SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, optype, &powidx) );
-            SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, parentidx, powidx, hasparentcoef, parentcoef) );
-
-            SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, powidx, SCIPgetSymgraphVarnodeidx(scip, graph, var),
-                  TRUE, exponent) );
-            SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, powidx, SCIPgetSymgraphNegatedVarnodeidx(scip, graph, var),
-                  TRUE, exponent) );
-
-            SCIP_CALL( SCIPaddSymgraphValnode(scip, graph, val * val, &nodeidx) );
-            SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, powidx, nodeidx, FALSE, 0.0) );
-
-            SCIP_CALL( ensureOpenArraySize(scip, &openidx, nopenidx + 1, &maxnopenidx) );
-
-            /* indicate that variables have been treated already */
-            openidx[nopenidx++] = -1;
          }
          else
          {
