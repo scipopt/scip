@@ -6333,6 +6333,7 @@ SCIP_RETCODE tryDetectOrbitope(
    int stacksize;
    int** permstack;
    int* origstack;
+   SCIP_Bool* entryinstack;
    SCIP_Bool* entryhandled;
 
    /* store rows */
@@ -6440,6 +6441,7 @@ SCIP_RETCODE tryDetectOrbitope(
 
    SCIP_CALL( SCIPallocBufferArray(scip, &permstack, npermvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &origstack, npermvars) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &entryinstack, npermvars) );
    SCIP_CALL( SCIPallocClearBufferArray(scip, &entryhandled, npermvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &orbitopematrix, npermvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &prevcolid, npermvars) );
@@ -6458,6 +6460,7 @@ SCIP_RETCODE tryDetectOrbitope(
       permstack[stacksize++] = entryperms[i][p];
    }
    entryhandled[i] = TRUE;
+   entryinstack[i] = TRUE;
 
    while ( stacksize > 0 )
    {
@@ -6489,12 +6492,13 @@ SCIP_RETCODE tryDetectOrbitope(
       {
          assert( entryperms[j] != NULL );
          perm = entryperms[j][p];
-         /* if that entry is already handled, ignore */
-         if ( entryhandled[perm[j]] )
+         /* if that entry is already handled, or entry will be handled by another entry present in stack, ignore */
+         if ( entryhandled[perm[j]] || entryinstack[perm[j]] )
             continue;
          assert( stacksize < npermvars );
          origstack[stacksize] = jcolid;
          permstack[stacksize++] = perm;
+         entryinstack[perm[j]] = TRUE;
       }
    }
 
@@ -6622,6 +6626,7 @@ SCIP_RETCODE tryDetectOrbitope(
    SCIPfreeBufferArray(scip, &prevcolid);
    SCIPfreeBufferArray(scip, &orbitopematrix);
    SCIPfreeBufferArray(scip, &entryhandled);
+   SCIPfreeBufferArray(scip, &entryinstack);
    SCIPfreeBufferArray(scip, &origstack);
    SCIPfreeBufferArray(scip, &permstack);
 
