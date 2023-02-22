@@ -86,16 +86,3 @@ SCIP_Bool SYMcheckGraphsAreIdentical(
 {
    return FALSE;
 }
-
-/** compute generators of reflection symmetry group */
-SCIP_RETCODE SYMcomputeReflectionSymmetryGenerators(
-   SCIP*                 scip,               /**< SCIP pointer */
-   SYM_REFLSYMDATA*      reflsymdata,        /**< data for computing reflection symmetries */
-   int                   maxgenerators       /**< maximum number of generators to be computed */
-   )
-{
-   assert( scip != NULL );
-   assert( reflsymdata != NULL );
-
-   return SCIP_OKAY;
-}
