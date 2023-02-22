@@ -9788,10 +9788,10 @@ SCIP_RETCODE tryAddGadgetSquaredDifference(
    children = SCIPexprGetChildren(sumexpr);
    nchildren = SCIPexprGetNChildren(sumexpr);
    SCIP_CALL( SCIPallocBufferArray(scip, &powexprs, nchildren) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &prodexprs, nchildren) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &prodexprs, 2 * nchildren) );
    SCIP_CALL( SCIPallocBufferArray(scip, &pospowexprs, nchildren) );
    SCIP_CALL( SCIPallocBufferArray(scip, &posprodexprs,2 *  nchildren) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &powvars, 2 * nchildren) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &powvars, nchildren) );
    SCIP_CALL( SCIPallocBufferArray(scip, &prodvars, 2 * nchildren) );
 
    /* we scan for norm constraints, i.e., the number of powexpres needs to be twice the prodexpr
