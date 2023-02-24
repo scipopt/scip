@@ -1015,6 +1015,25 @@ SCIP_RETCODE freeSymmetryData(
 }
 
 
+/** resets symmetry handling propagators that depend on the branch-and-bound tree structure */
+static
+SCIP_RETCODE resetDynamicSymmetryHandling(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_PROPDATA*        propdata            /**< propagator data */
+)
+{
+   assert( scip != NULL );
+   assert( propdata != NULL );
+
+   /* propagators managed by a different file */
+   SCIP_CALL( SCIPorbitalFixingReset(scip, propdata->orbitalfixingdata) );
+   SCIP_CALL( SCIPorbitopalFixingReset(scip, propdata->orbitopalfixingdata) );
+   SCIP_CALL( SCIPlexicographicReductionReset(scip, propdata->lexreddata) );
+
+   return SCIP_OKAY;
+}
+
+
 /** deletes symmetry handling constraints */
 static
 SCIP_RETCODE delSymConss(
@@ -1076,10 +1095,7 @@ SCIP_RETCODE delSymConss(
    propdata->genlinconsssize = 0;
    propdata->genlinconss = NULL;
 
-   /* propagators managed by a different file */
-   SCIP_CALL( SCIPorbitalFixingReset(scip, propdata->orbitalfixingdata) );
-   SCIP_CALL( SCIPorbitopalFixingReset(scip, propdata->orbitopalfixingdata) );
-   SCIP_CALL( SCIPlexicographicReductionReset(scip, propdata->lexreddata) );
+   SCIP_CALL( resetDynamicSymmetryHandling(scip, propdata) );
 
    propdata->triedaddconss = FALSE;
 
@@ -7145,6 +7161,29 @@ SCIP_DECL_PROPEXITPRE(propExitpreSymmetry)
 }
 
 
+/** solving process deinitialization method of propagator (called before branch and bound process data is freed) */
+static
+SCIP_DECL_PROPEXITSOL(propExitsolSymmetry)
+{
+   SCIP_PROPDATA* propdata;
+
+   assert( scip != NULL );
+   assert( prop != NULL );
+   assert( strcmp(SCIPpropGetName(prop), PROP_NAME) == 0 );
+
+   SCIPdebugMsg(scip, "Exitpre method of propagator <%s> ...\n", PROP_NAME);
+
+   propdata = SCIPpropGetData(prop);
+   assert( propdata != NULL );
+   assert( propdata->usesymmetry >= 0 );
+
+   /* reset symmetry handling propagators that depend on the branch-and-bound tree structure */
+   SCIP_CALL( resetDynamicSymmetryHandling(scip, propdata) );
+
+   return SCIP_OKAY;
+}
+
+
 /** presolving method of propagator */
 static
 SCIP_DECL_PROPPRESOL(propPresolSymmetry)
@@ -7510,6 +7549,7 @@ SCIP_RETCODE SCIPincludePropSymmetry(
    SCIP_CALL( SCIPsetPropExit(scip, prop, propExitSymmetry) );
    SCIP_CALL( SCIPsetPropInitpre(scip, prop, propInitpreSymmetry) );
    SCIP_CALL( SCIPsetPropExitpre(scip, prop, propExitpreSymmetry) );
+   SCIP_CALL( SCIPsetPropExitsol(scip, prop, propExitsolSymmetry) );
    SCIP_CALL( SCIPsetPropResprop(scip, prop, propRespropSymmetry) );
    SCIP_CALL( SCIPsetPropPresol(scip, prop, propPresolSymmetry, PROP_PRESOL_PRIORITY, PROP_PRESOL_MAXROUNDS, PROP_PRESOLTIMING) );
 
