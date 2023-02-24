@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -49,6 +49,18 @@ const char* SYMsymmetryGetDesc(void)
    return "";
 }
 
+/** return name of additional external program used for computing symmetries */
+const char* SYMsymmetryGetAddName(void)
+{
+   return "";
+}
+
+/** return description of additional external program used to compute symmetries */
+const char* SYMsymmetryGetAddDesc(void)
+{
+   return "";
+}
+
 /** compute generators of symmetry group */ /*lint -e{715}*/
 SCIP_RETCODE SYMcomputeSymmetryGenerators(
    SCIP*                 scip,               /**< SCIP pointer */
@@ -57,7 +69,8 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    int*                  nperms,             /**< pointer to store number of permutations */
    int*                  nmaxperms,          /**< pointer to store maximal number of permutations (needed for freeing storage) */
    int***                perms,              /**< pointer to store permutation generators as (nperms x npermvars) matrix */
-   SCIP_Real*            log10groupsize      /**< pointer to store log10 of size of group */
+   SCIP_Real*            log10groupsize,     /**< pointer to store size of group */
+   SCIP_Real*            symcodetime         /**< pointer to store the time for symmetry code */
    )
 {  /*lint --e{715}*/
    assert( scip != NULL );
@@ -66,12 +79,14 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    assert( nmaxperms != NULL );
    assert( perms != NULL );
    assert( log10groupsize != NULL );
+   assert( symcodetime != NULL );
 
    /* init */
    *nperms = 0;
    *nmaxperms = 0;
    *perms = NULL;
    *log10groupsize = 0;
+   *symcodetime = 0.0;
 
    return SCIP_OKAY;
 }

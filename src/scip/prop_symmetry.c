@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -1706,6 +1706,7 @@ SCIP_RETCODE computeSymmetryGroup(
    SCIP_Bool*            binvaraffected,     /**< pointer to store whether a binary variable is affected by symmetry */
    SCIP_Bool*            compressed,         /**< pointer to store whether compression has been performed */
    SCIP_Real*            log10groupsize,     /**< pointer to store log10 of size of group */
+   SCIP_Real*            symcodetime,        /**< pointer to store the time for symmetry code */
    SCIP_Bool*            success             /**< pointer to store whether symmetry computation was successful */
    )
 {
@@ -1729,6 +1730,7 @@ SCIP_RETCODE computeSymmetryGroup(
    assert( binvaraffected != NULL );
    assert( compressed != NULL );
    assert( log10groupsize != NULL );
+   assert( symcodetime != NULL );
    assert( success != NULL );
 
    /* init pointers */
@@ -1743,6 +1745,7 @@ SCIP_RETCODE computeSymmetryGroup(
    *compressed = FALSE;
    *log10groupsize = 0;
    *success = FALSE;
+   *symcodetime = 0.0;
 
    /* check whether all constraints can provide symmetry information */
    if ( ! conshdlrsCanProvideSymInformation(scip, SYM_SYMTYPE_PERM) )
@@ -1795,7 +1798,7 @@ SCIP_RETCODE computeSymmetryGroup(
     * actually compute symmetries
     */
    SCIP_CALL( SYMcomputeSymmetryGenerators(scip, maxgenerators, graph, nperms, nmaxperms,
-         perms, log10groupsize) );
+         perms, log10groupsize, symcodetime) );
 
    if ( checksymmetries && *nperms > 0 )
    {
@@ -1827,6 +1830,7 @@ SCIP_RETCODE computeSignedSymmetryGroup(
    SCIP*                 scip,               /**< SCIP pointer */
    SYM_SPEC              fixedtype,          /**< variable types that must be fixed by symmetries */
    int*                  nsignedperms,       /**< pointer to store number of found signed permutations */
+   SCIP_Real*            symcodetime,        /**< pointer to store the time for symmetry code */
    SCIP_Bool*            success             /**< pointer to store wehther symmetry computation was successful */
    )
 {
@@ -1841,11 +1845,13 @@ SCIP_RETCODE computeSignedSymmetryGroup(
 
    assert( scip != NULL );
    assert( nsignedperms != NULL );
+   assert( symcodetime != NULL );
    assert( success != NULL );
 
    /* init pointers */
    *nsignedperms = 0;
    *success = FALSE;
+   *symcodetime = 0.0;
 
    /* check whether all constraints can provide symmetry information */
    if ( ! conshdlrsCanProvideSymInformation(scip, SYM_SYMTYPE_SIGNPERM) )
@@ -1906,7 +1912,7 @@ SCIP_RETCODE computeSignedSymmetryGroup(
       int p;
 
       SCIP_CALL( SYMcomputeSymmetryGenerators(scip, 1500, graph, &nperms, &nmaxperms,
-            &perms, &log10groupsize) );
+            &perms, &log10groupsize, symcodetime) );
 
 #ifdef SCIP_SHOW_PERMS
       printf("Found %d (signed) permutations.\n", nperms);
@@ -1990,6 +1996,7 @@ SCIP_RETCODE determineSymmetry(
    )
 { /*lint --e{641}*/
    SCIP_Bool successful;
+   SCIP_Real symcodetime = 0.0;
    int maxgenerators;
    int nhandleconss;
    int nconss;
@@ -2151,14 +2158,14 @@ SCIP_RETCODE determineSymmetry(
          maxgenerators, symspecrequirefixed, propdata->checksymmetries, &propdata->permvars,
          &propdata->npermvars, &propdata->nbinpermvars, &propdata->perms, &propdata->nperms,
          &propdata->nmaxperms, &propdata->nmovedvars, &propdata->binvaraffected,
-         &propdata->compressed, &propdata->log10groupsize, &successful) );
+         &propdata->compressed, &propdata->log10groupsize, &symcodetime, &successful) );
 
    /* @todo move this part to a better place, here it is just used for testing */
    {
       int nsperms = 0;
       SCIP_Bool spermsuccess = FALSE;
 
-      SCIP_CALL( computeSignedSymmetryGroup(scip, symspecrequirefixed, &nsperms, &spermsuccess) );
+      SCIP_CALL( computeSignedSymmetryGroup(scip, symspecrequirefixed, &nsperms, &symcodetime, &spermsuccess) );
 
       printf("Computing signed permutation group was%s successful.\n", spermsuccess ? "" : " not");
       if ( spermsuccess )
@@ -2190,7 +2197,7 @@ SCIP_RETCODE determineSymmetry(
    if ( propdata->nperms == 0 )
    {
       assert( checkSymmetryDataFree(propdata) );
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) no symmetry present\n", SCIPgetSolvingTime(scip));
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) no symmetry present (symcode time: %.2f)\n", SCIPgetSolvingTime(scip), symcodetime);
 
       propdata->ofenabled = FALSE;
       propdata->symconsenabled = FALSE;
@@ -2221,7 +2228,7 @@ SCIP_RETCODE determineSymmetry(
       }
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, ", number of affected variables: %d)\n", propdata->nmovedvars);
    }
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, ")\n");
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, ") (symcode time: %.2f)\n", symcodetime);
 
    /* exit if no binary variables are affected by symmetry and we cannot handle non-binary symmetries */
    if ( ! propdata->binvaraffected )
@@ -2568,7 +2575,7 @@ SCIP_RETCODE checkTwoCyclePermsAreOrbitope(
    }
 
    /* in the subgroup case it might happen that a generator has less than ntwocycles many 2-cyles */
-   if ( row < ntwocycles )
+   if ( row != ntwocycles )
    {
       *isorbitope = FALSE;
       SCIPfreeBufferArray(scip, &usedperm);
@@ -3122,6 +3129,10 @@ SCIP_RETCODE addOrbitopeSubgroup(
    {
       SCIPfreeBufferArray(scip, &nusedelems);
       SCIPfreeBufferArray(scip, &columnorder);
+      for (k = nrows - 1; k >= 0; --k)
+      {
+         SCIPfreeBufferArray(scip, &orbitopevaridx[k]);
+      }
       SCIPfreeBufferArray(scip, &orbitopevaridx);
       SCIPfreeBufferArray(scip, &activevars);
 
@@ -4401,7 +4412,7 @@ SCIP_RETCODE detectOrbitopes(
          SCIP_CALL( SCIPisInvolutionPerm(perms[components[j]], permvars, npermvars,
                &ntwocyclesperm, &nbincyclesperm, FALSE) );
 
-         if ( ntwocyclescomp == 0 )
+         if ( ntwocyclesperm == 0 )
          {
             isorbitope = FALSE;
             break;
@@ -7049,6 +7060,10 @@ SCIP_RETCODE SCIPincludePropSymmetry(
    if ( SYMcanComputeSymmetry() )
    {
       SCIP_CALL( SCIPincludeExternalCodeInformation(scip, SYMsymmetryGetName(), SYMsymmetryGetDesc()) );
+      if ( SYMsymmetryGetAddName() != NULL )
+      {
+         SCIP_CALL( SCIPincludeExternalCodeInformation(scip, SYMsymmetryGetAddName(), SYMsymmetryGetAddDesc()) );
+      }
    }
 
    return SCIP_OKAY;

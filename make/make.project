@@ -3,7 +3,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*  Copyright 2002-2022 Zuse Institute Berlin                                *
+#*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      *
 #*                                                                           *
 #*  Licensed under the Apache License, Version 2.0 (the "License");          *
 #*  you may not use this file except in compliance with the License.         *
@@ -92,8 +92,12 @@ PYTHON  =   none
 EMPHBENCHMARK  =   true
 
 # set SCIP version here for external projects
-# use underscore to make it compatible with def.h
-SCIP_VERSION	=	8.0.2.4
+SCIP_VERSION_MAJOR = 8
+SCIP_VERSION_MINOR = 0
+SCIP_VERSION_PATCH = 3
+SCIP_VERSION_SUB = 5
+SCIP_VERSION_API = 108
+SCIP_VERSION = $(SCIP_VERSION_MAJOR).$(SCIP_VERSION_MINOR).$(SCIP_VERSION_PATCH).$(SCIP_VERSION_SUB)
 
 # compiling and linking parameters
 VERBOSE		=	false
@@ -101,7 +105,7 @@ OPT		=	opt
 COMP		=	gnu
 LPS		=	spx2
 TPI		=	none
-SYM		=	none
+SYM		=	sassy
 PAPILO		=	false
 LAPACK		=	false
 STATICLIBEXT	=	a
@@ -212,12 +216,13 @@ LN_s		= 	ln -s
 LN_sf		=	ln -sf
 
 # initial compiler and linker flags
-FLAGS		=	-I$(SRCDIR) -DWITH_SCIPDEF -DFNAME_$(FORTRAN_NAMING_CONVENTION) -I$(SCIPDIR)/src
+FLAGS		=	-I$(SRCDIR) -I$(SCIPDIR)/src
 OFLAGS		=
 CFLAGS		=
 CXXFLAGS	=
-CXX14FLAG	=	-std=c++14
 CXX11FLAG	=	-std=c++0x
+CXX14FLAG	=	-std=c++14
+CXX17FLAG	=	-std=c++17
 
 ifeq ($(COMP),msvc)
 LDFLAGS		=
@@ -282,6 +287,8 @@ INCLUDEDIR	=	include
 EXEEXTENSION	=
 ALLSRC		=
 
+# find scip/config.h in build dir
+FLAGS += -I$(SCIPDIR)/$(OBJDIR)/include
 
 #-----------------------------------------------------------------------------
 # include additional make files
@@ -329,24 +336,6 @@ CXXFLAGS	+=	$(USRCXXFLAGS)
 LDFLAGS		+=	$(USRLDFLAGS)
 ARFLAGS		+=	$(USRARFLAGS)
 
-# skip config header
-FLAGS		+=  -DNO_CONFIG_HEADER
-
-#-----------------------------------------------------------------------------
-# Memory Management
-#-----------------------------------------------------------------------------
-
-ifeq ($(NOBLKBUFMEM),true)
-	FLAGS		+=	-DBMS_NOBLOCKMEM -DSCIP_NOBUFFERMEM
-else
-  ifeq ($(NOBLKMEM),true)
-	FLAGS		+=	-DBMS_NOBLOCKMEM
-  endif
-  ifeq ($(NOBUFMEM),true)
-	FLAGS		+=	-DSCIP_NOBUFFERMEM
-  endif
-endif
-
 #-----------------------------------------------------------------------------
 # THREADSAFE
 #-----------------------------------------------------------------------------
@@ -356,7 +345,6 @@ ifeq ($(PARASCIP),true)
 endif
 
 ifeq ($(THREADSAFE),true)
-   FLAGS	+=	-DSCIP_THREADSAFE
    ifeq ($(FILTERSQP),true)
       LDFLAGS 	+=	$(LINKCC_l)pthread$(LINKLIBSUFFIX)
    endif
@@ -549,6 +537,20 @@ LIBOBJSUBDIRS	+=      $(LIBOBJDIR)/bliss
 endif
 endif
 
+ifeq ($(SYM),sassy)
+ifeq ($(BLISSEXTERNAL),true)
+LDFLAGS		+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCC_l)bliss.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
+else
+LIBOBJSUBDIRS	+=      $(LIBOBJDIR)/bliss/src
+LIBOBJSUBDIRS	+=      $(LIBOBJDIR)/bliss
+endif
+CXXFLAGS	+=	$(CXX17FLAG)
+endif
+
+ifeq ($(SYM),nauty)
+LDFLAGS		+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCC_l)nauty.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
+endif
+
 #-----------------------------------------------------------------------------
 # PaPILO Library
 #-----------------------------------------------------------------------------
@@ -566,7 +568,7 @@ ZLIB		=	false
 endif
 
 ifeq ($(ZLIB),true)
-FLAGS		+=	-DSCIP_WITH_ZLIB $(ZLIB_FLAGS)
+FLAGS		+=	$(ZLIB_FLAGS)
 LDFLAGS		+=	$(ZLIB_LDFLAGS)
 endif
 
@@ -593,7 +595,7 @@ LPSLIBFILES	+=      $(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE)/libzimpl.$(OSTYPE).$
 endif
 
 ifeq ($(GMP),true)
-FLAGS		+=	-DSCIP_WITH_GMP $(GMP_FLAGS)
+FLAGS		+=	$(GMP_FLAGS)
 LDFLAGS		+=	$(GMP_LDFLAGS)
 endif
 
@@ -602,7 +604,7 @@ READLINE	=	false
 endif
 
 ifeq ($(READLINE),true)
-FLAGS		+=	-DSCIP_WITH_READLINE $(READLINE_FLAGS)
+FLAGS		+=	$(READLINE_FLAGS)
 LDFLAGS		+=	$(READLINE_LDFLAGS)
 endif
 
@@ -612,7 +614,6 @@ LAPACK		=	false
 endif
 
 ifeq ($(LAPACK),true)
-FLAGS		+=	-DSCIP_WITH_LAPACK
 LDFLAGS		+= 	$(LINKCXX_l)lapack$(LINKLIBSUFFIX)
 endif
 
@@ -679,25 +680,17 @@ endif
 
 # (re)define some variables
 ifeq ($(SHARED),true)
-ifneq ($(COMP),msvc)
-FLAGS		+=	-fPIC
-endif
 LIBEXT		=	$(SHAREDLIBEXT)
 ifeq ($(LINKER),CPP)
 LIBBUILD	=	$(LINKCXX)
 LIBBUILD_L	=	$(LINKCXX_L)
+LIBBUILD_o	=	$(LINKCXX_o)
 else
 LIBBUILD	=	$(LINKCC)
 LIBBUILD_L	=	$(LINKCC_L)
+LIBBUILD_o	=	$(LINKCC_o)
 endif
-
-ifeq ($(COMP),msvc)
-LIBBUILDFLAGS	+=      -dll
-LIBBUILD_o	= 	-out:
-else
-LIBBUILDFLAGS	+=      -shared
-LIBBUILD_o	= 	-o # the trailing space is important
-endif
+LIBBUILDFLAGS	+=	$(LINK_shared)
 ARFLAGS		=
 RANLIB		=
 endif

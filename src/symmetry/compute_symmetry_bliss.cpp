@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -155,15 +155,11 @@ SCIP_Bool SYMcanComputeSymmetry(void)
    return TRUE;
 }
 
-char*
-initStaticBlissName( );
-
-static char* blissname = initStaticBlissName();
-
+/** return name of external program used to compute generators */
 char*
 initStaticBlissName( )
 {
-   blissname = new char[100];
+   char* blissname = new char[100];
 #ifdef BLISS_PATCH_PRESENT
    (void) snprintf(blissname, 100, "bliss %sp", bliss::version);
 #else
@@ -171,6 +167,9 @@ initStaticBlissName( )
 #endif
    return blissname;
 }
+
+/* static name for bliss */
+static char* blissname = initStaticBlissName();
 
 /** return name of external program used to compute generators */
 const char* SYMsymmetryGetName(void)
@@ -182,6 +181,18 @@ const char* SYMsymmetryGetName(void)
 const char* SYMsymmetryGetDesc(void)
 {
    return "Computing Graph Automorphism Groups by T. Junttila and P. Kaski (www.tcs.hut.fi/Software/bliss/)";
+}
+
+/** return name of additional external program used for computing symmetries */
+const char* SYMsymmetryGetAddName(void)
+{
+   return NULL;
+}
+
+/** return description of additional external program used to compute symmetries */
+const char* SYMsymmetryGetAddDesc(void)
+{
+   return NULL;
 }
 
 /** returns whether an edge is considered in grouping process */
@@ -311,15 +322,27 @@ SCIP_RETCODE computeAutomorphisms(
    int*                  nmaxperms,          /**< pointer to store maximal number of permutations
                                               *   (needed for freeing storage) */
    SCIP_Real*            log10groupsize,     /**< pointer to store log10 of size of group */
-   SCIP_Bool             restricttovars      /**< whether permutations shall be restricted to variables */
+   SCIP_Bool             restricttovars,     /**< whether permutations shall be restricted to variables */
+   SCIP_Real*            symcodetime         /**< pointer to store the time for symmetry code */
    )
 {
+   SCIP_Real oldtime;
+
    assert( scip != NULL );
    assert( G != NULL );
    assert( perms != NULL );
    assert( nperms != NULL );
    assert( nmaxperms != NULL );
    assert( log10groupsize != NULL );
+   assert( maxgenerators >= 0 );
+   assert( symcodetime != NULL );
+
+   /* init */
+   *nperms = 0;
+   *nmaxperms = 0;
+   *perms = NULL;
+   *log10groupsize = 0;
+   *symcodetime = 0.0;
 
    bliss::Stats stats;
    BLISS_Data data;
@@ -344,6 +367,7 @@ SCIP_RETCODE computeAutomorphisms(
    G->set_search_limits(0, (unsigned) maxgenerators);
 #endif
 
+   oldtime = SCIPgetSolvingTime(scip);
 #if BLISS_VERSION_MAJOR >= 1 || BLISS_VERSION_MINOR >= 76
    /* lambda function to have access to data and pass it to the blisshook above */
    auto reportglue = [&](unsigned int n, const unsigned int* aut) {
@@ -364,7 +388,7 @@ SCIP_RETCODE computeAutomorphisms(
    /* start search */
    G->find_automorphisms(stats, blisshook, (void*) &data);
 #endif
-
+   *symcodetime = SCIPgetSolvingTime(scip) - oldtime;
 
 #ifdef SCIP_OUTPUT
    (void) stats.print(stdout);
@@ -402,7 +426,8 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    int*                  nmaxperms,          /**< pointer to store maximal number of permutations
                                               *   (needed for freeing storage) */
    int***                perms,              /**< pointer to store generators as (nperms x npermvars) matrix */
-   SCIP_Real*            log10groupsize      /**< pointer to store log10 of size of group */
+   SCIP_Real*            log10groupsize,     /**< pointer to store log10 of size of group */
+   SCIP_Real*            symcodetime         /**< pointer to store the time for symmetry code */
    )
 {
    int nvarnodestoadd;
@@ -417,12 +442,14 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    assert( nmaxperms != NULL );
    assert( perms != NULL );
    assert( log10groupsize != NULL );
+   assert( symcodetime != NULL );
 
    /* init */
    *nperms = 0;
    *nmaxperms = 0;
    *perms = NULL;
    *log10groupsize = 0;
+   *symcodetime = 0.0;
 
    /* create bliss graph */
    bliss::Graph G(0);
@@ -605,7 +632,7 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
 
    /* compute automorphisms */
    SCIP_CALL( computeAutomorphisms(scip, symtype, &G, nsymvars, maxgenerators,
-         perms, nperms, nmaxperms, log10groupsize, TRUE) );
+         perms, nperms, nmaxperms, log10groupsize, TRUE, symcodetime) );
 
    return SCIP_OKAY;
 }
@@ -785,9 +812,10 @@ SCIP_Bool SYMcheckGraphsAreIdentical(
    SCIP_Real log10groupsize;
    int n = G.get_nof_vertices();
    int nnodesfromG1 = nusedvars + G1->nnodes;
+   SCIP_Real symcodetime = 0.0;
 
    SCIP_CALL( computeAutomorphisms(scip, symtype, &G, n, 0,
-         &perms, &nperms, &nmaxperms, &log10groupsize, FALSE) );
+         &perms, &nperms, &nmaxperms, &log10groupsize, FALSE, &symcodetime) );
 
    /* since G1 and G2 are connected and disjoint, they are isomorphic iff there is a permutation
     * mapping a node from G1 to a node of G2

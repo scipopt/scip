@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -5521,11 +5521,11 @@ SCIP_RETCODE multiAggregateBinvar(
    {
       SCIP_Bool redundant;
 
-      SCIPdebugMsg(scip, "aggregating %s = 1 - %s\n", SCIPvarGetName(vars[pos]), SCIPvarGetName(vars[nvars - pos - 1]));
-
       /* perform aggregation on variables resulting from a set-packing constraint */
       SCIP_CALL( SCIPaggregateVars(scip, vars[pos], vars[nvars - pos - 1], 1.0, 1.0, 1.0, infeasible, &redundant, aggregated) );
-      assert(*infeasible || *aggregated);
+
+      if( *aggregated )
+         SCIPdebugMsg(scip, "aggregated %s = 1 - %s\n", SCIPvarGetName(vars[pos]), SCIPvarGetName(vars[nvars - pos - 1]));
 
       return SCIP_OKAY;
    }
@@ -5834,8 +5834,6 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
 
          if( nuplocks == 1 && objval <= 0 )
          {
-            SCIPdebugMsg(scip, "dualpresolve, aggregating %s + %s = 1, in set-packing constraint %s\n", SCIPvarGetName(var), SCIPvarGetName(consdata->vars[1]), SCIPconsGetName(cons));
-
             /* perform aggregation on variables resulting from a set-packing constraint */
             SCIP_CALL( SCIPaggregateVars(scip, var, consdata->vars[1], 1.0, 1.0, 1.0, &infeasible, &redundant, &aggregated) );
 
@@ -5845,11 +5843,14 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
                break;
             }
 
-            assert(aggregated);
-            ++(*naggrvars);
+            if( aggregated )
+            {
+               SCIPdebugMsg(scip, "dualpresolve, aggregated %s + %s = 1, in set-packing constraint %s\n", SCIPvarGetName(var), SCIPvarGetName(consdata->vars[1]), SCIPconsGetName(cons));
+               ++(*naggrvars);
 
-            SCIP_CALL( SCIPdelCons(scip, cons) );
-            ++(*ndelconss);
+               SCIP_CALL( SCIPdelCons(scip, cons) );
+               ++(*ndelconss);
+            }
 
             continue;
          }
@@ -5865,8 +5866,6 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
 
             if( nuplocks == 1 && objval <= 0 )
             {
-               SCIPdebugMsg(scip, "dualpresolve, aggregating %s + %s = 1, in set-packing constraint %s\n", SCIPvarGetName(var), SCIPvarGetName(consdata->vars[0]), SCIPconsGetName(cons));
-
                /* perform aggregation on variables resulting from a set-packing constraint */
                SCIP_CALL( SCIPaggregateVars(scip, var, consdata->vars[0], 1.0, 1.0, 1.0, &infeasible, &redundant, &aggregated) );
 
@@ -5875,11 +5874,15 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
                   *cutoff = TRUE;
                   break;
                }
-               assert(aggregated);
-               ++(*naggrvars);
 
-               SCIP_CALL( SCIPdelCons(scip, cons) );
-               ++(*ndelconss);
+               if( aggregated )
+               {
+                  SCIPdebugMsg(scip, "dualpresolve, aggregated %s + %s = 1, in set-packing constraint %s\n", SCIPvarGetName(var), SCIPvarGetName(consdata->vars[0]), SCIPconsGetName(cons));
+                  ++(*naggrvars);
+
+                  SCIP_CALL( SCIPdelCons(scip, cons) );
+                  ++(*ndelconss);
+               }
 
                continue;
             }
@@ -5888,8 +5891,6 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
       else if( !donotaggr && consdata->nvars == 2 && (SCIP_SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING )
       {
          SCIP_Bool redundant;
-
-         SCIPdebugMsg(scip, "aggregating %s + %s = 1, in set-partition constraint %s\n", SCIPvarGetName(consdata->vars[0]), SCIPvarGetName(consdata->vars[1]), SCIPconsGetName(cons));
 
          /* perform aggregation on variables resulting from a set-partitioning constraint */
          SCIP_CALL( SCIPaggregateVars(scip, consdata->vars[0], consdata->vars[1], 1.0, 1.0, 1.0, &infeasible, &redundant, &aggregated) );
@@ -5900,11 +5901,14 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
             break;
          }
 
-         assert(aggregated);
-         ++(*naggrvars);
+         if( aggregated )
+         {
+            SCIPdebugMsg(scip, "aggregated %s + %s = 1, in set-partition constraint %s\n", SCIPvarGetName(consdata->vars[0]), SCIPvarGetName(consdata->vars[1]), SCIPconsGetName(cons));
+            ++(*naggrvars);
 
-         SCIP_CALL( SCIPdelCons(scip, cons) );
-         ++(*ndelconss);
+            SCIP_CALL( SCIPdelCons(scip, cons) );
+            ++(*ndelconss);
+         }
 
          continue;
       }

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -2883,8 +2883,8 @@ SCIP_RETCODE SCIPlpiStrongbranchesFrac(
    for( j = 0; j < ncols; ++j )
    {
       /* results of CPLEX are valid in any case */
-      *downvalid = TRUE;
-      *upvalid = TRUE;
+      downvalid[j] = TRUE;
+      upvalid[j] = TRUE;
 
       assert( !EPSISINT(psols[j], lpi->feastol) );
    }

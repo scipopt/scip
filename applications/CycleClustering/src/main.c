@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -28,6 +28,7 @@
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
 #include "scip/scip.h"
 #include "scip/scipdefplugins.h"
 #include "scip/scipshell.h"
@@ -43,7 +44,6 @@
 #include "cycplugins.h"
 #include "probdata_cyc.h"
 #include "reader_cyc.h"
-#include "scip/debug.h"
 
 #define COL_MAX_LINELEN 1024
 
@@ -375,9 +375,6 @@ SCIP_RETCODE SCIPrunCyc(
    /* initialize SCIP */
    SCIP_CALL( SCIPcreate(&scip) );
 
-#ifdef WITH_DEBUG_SOLUTION
-   SCIPdebugSolEnable(scip);
-#endif
    /* include reader, problemdata*/
    SCIP_CALL( SCIPincludeCycPlugins(scip) );
 

@@ -3,7 +3,7 @@
 /*                  This file is part of the library                         */
 /*          BMS --- Block Memory Shell                                       */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -41,10 +41,8 @@
 /*
  * include build configuration flags
  */
-#ifndef NO_CONFIG_HEADER
 #include "scip/config.h"
 #include "scip/scip_export.h"
-#endif
 
 #ifdef __cplusplus
 
