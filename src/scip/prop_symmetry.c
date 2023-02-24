@@ -202,7 +202,7 @@
 /* default parameters for orbital fixing */
 #define DEFAULT_SYMCOMPTIMING           2    /**< timing of symmetry computation for orbital fixing (0 = before presolving, 1 = during presolving, 2 = at first call) */
 #define DEFAULT_PERFORMPRESOLVING   FALSE    /**< Run orbital fixing during presolving? */
-#define DEFAULT_RECOMPUTERESTART        0    /**< Recompute symmetries after a restart has occurred? (0 = never, 1 = always, 2 = if OF found reduction) */
+#define DEFAULT_RECOMPUTERESTART        0    /**< Recompute symmetries after a restart has occurred? (0 = never, 1 = always, 2 = if symmetry reduction found) */
 
 /* default parameters for Schreier Sims constraints */
 #define DEFAULT_SSTTIEBREAKRULE   1          /**< index of tie break rule for selecting orbit for Schreier Sims constraints? */
@@ -287,7 +287,6 @@ struct SCIP_PropData
    int                   usesymmetry;        /**< encoding of active symmetry handling methods (for debugging) */
    SCIP_Bool             usecolumnsparsity;  /**< Should the number of conss a variable is contained in be exploited in symmetry detection? */
    SCIP_Bool             doubleequations;    /**< Double equations to positive/negative version? */
-   SCIP_Bool             symfixnonbinaryvars; /**< Whether all non-binary variables shall be not affected by symmetries if OF is active? */
    SCIP_Bool             onlybinarysymmetry; /**< Whether only symmetry on binary variables is used */
 
    /* for symmetry constraints */
@@ -315,7 +314,7 @@ struct SCIP_PropData
 
    /* data necessary for orbital fixing */
    SCIP_Bool             performpresolving;  /**< Run orbital fixing during presolving? */
-   int                   recomputerestart;   /**< Recompute symmetries after a restart has occured? (0 = never, 1 = always, 2 = if OF found reduction) */
+   int                   recomputerestart;   /**< Recompute symmetries after a restart has occured? (0 = never, 1 = always, 2 = if symmetry reduction found) */
    int                   symcomptiming;      /**< timing of orbital fixing (0 = before presolving, 1 = during presolving, 2 = at first call) */
    int                   lastrestart;        /**< last restart for which symmetries have been computed */
    int                   nfixedzero;         /**< number of variables fixed to 0 */
@@ -814,7 +813,7 @@ SCIP_Bool isSymmetryRecomputationRequired(
    if ( propdata->recomputerestart == SCIP_RECOMPUTESYM_ALWAYS )
       return TRUE;
 
-   /* recompute symmetries if OF found a reduction */
+   /* recompute symmetries if a symmetry reduction is found */
    assert( propdata->recomputerestart == SCIP_RECOMPUTESYM_OFFOUNDRED );
    if ( propdata->symfoundreduction )
       return TRUE;
@@ -7292,7 +7291,7 @@ SCIP_DECL_PROPPRESOL(propPresolSymmetry)
       }
    }
 
-   /* run OF presolving */
+   /* run dynamic symmetry handling presolving */
    if ( ISORBITALFIXINGACTIVE(propdata->usesymmetry) )
    {
       assert( 0 <= propdata->symcomptiming && propdata->symcomptiming <= SYM_COMPUTETIMING_AFTERPRESOL );
@@ -7641,7 +7640,7 @@ SCIP_RETCODE SCIPincludePropSymmetry(
 
    SCIP_CALL( SCIPaddIntParam(scip,
          "propagating/" PROP_NAME "/recomputerestart",
-         "recompute symmetries after a restart has occured? (0 = never, 1 = always, 2 = if OF found reduction)",
+         "recompute symmetries after a restart has occured? (0 = never, 1 = always, 2 = if symmetry reduction found)",
          &propdata->recomputerestart, TRUE, DEFAULT_RECOMPUTERESTART, 0, 2, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
@@ -7704,11 +7703,6 @@ SCIP_RETCODE SCIPincludePropSymmetry(
          "propagating/" PROP_NAME "/sstmixedcomponents",
          "Should Schreier Sims constraints be added if a symmetry component contains variables of different types?",
          &propdata->sstmixedcomponents, TRUE, DEFAULT_SSTMIXEDCOMPONENTS, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "propagating/" PROP_NAME "/symfixnonbinaryvars",
-         "Whether all non-binary variables shall be not affected by symmetries if OF is active?",
-         &propdata->symfixnonbinaryvars, TRUE, DEFAULT_SYMFIXNONBINARYVARS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "propagating/" PROP_NAME "/onlybinarysymmetry",
