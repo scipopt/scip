@@ -6402,9 +6402,9 @@ SCIP_RETCODE tryDetectOrbitope(
          }
       }
    }
-   /* all permutations in perms are transpositions */
+   /* all permutations in perms are involutions */
 
-   /* get the number of rows by counting the number of moved elements by the first permutation. */
+   /* count number of 2-cycles in first permutation, which is the number of rows if the component is an orbitope */
    perm = perms[0];
    nrows = 0;
    for (i = 0; i < npermvars; ++i)
@@ -6413,7 +6413,7 @@ SCIP_RETCODE tryDetectOrbitope(
          ++nrows;
    }
 
-   /* for orbitope detection, all transpositions need the same number of cycles (rows) */
+   /* for orbitope detection, all involutions need the same number of cycles (rows) */
    for (p = 1; p < nperms; ++p)
    {
       perm = perms[p];
@@ -6496,8 +6496,8 @@ SCIP_RETCODE tryDetectOrbitope(
       origstack[stacksize] = 0;
       permstack[stacksize++] = entryperms[i][p];
    }
-   entryhandled[i] = TRUE;
-   entryinstack[i] = TRUE;
+   entryhandled[orbitopematrix[0]] = TRUE;
+   entryinstack[orbitopematrix[0]] = TRUE;
 
    while ( stacksize > 0 )
    {
@@ -6576,7 +6576,10 @@ SCIP_RETCODE tryDetectOrbitope(
       /* either firstunhandledentry or perm[firstunhandledentry] is the entry in column 0. */
       assert( firstunhandledentry != perm[firstunhandledentry] );
 
-      /* try both options; break the loop if it's successful */
+      /* try both the option where column 0 is firstunhandledentry, or perm[firstunhandledentry]
+       * 
+       * Break the loop if it's successful.
+       */
       row = &(orbitopematrix[rowid * ncols]);
       for (d = 0; d < 2; ++d)
       {
@@ -6891,7 +6894,7 @@ SCIP_RETCODE tryAddOrbitalFixingLexfix(
          propdata->componentblocked[c] |= SYM_HANDLETYPE_ORBITALFIXING;
       }
 
-      /* handle component permutations with the dynamic symresack propagator */
+      /* handle component permutations with the dynamic lexicographic reduction propagator */
       if ( checklexred )
       {
          /* handle every permutation in the component with the dynamic lexicographic order propagator */
@@ -7003,7 +7006,8 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
       assert( propdata->ngenorbconss >= 0 );
       assert( propdata->ngenorbconss <= propdata->genorbconsssize );
       SCIP_CALL( ensureSymmetryComponentsComputed(scip, propdata) );
-      SCIP_CALL( detectOrbitopes(scip, propdata, propdata->components, propdata->componentbegins, propdata->ncomponents) );
+      SCIP_CALL( detectOrbitopes(scip, propdata, propdata->components, propdata->componentbegins,
+         propdata->ncomponents) );
 
       /* possibly stop */
       if ( SCIPisStopped(scip) )
@@ -7047,7 +7051,8 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
    /* symresacks */
    if ( ISSYMRETOPESACTIVE(propdata->usesymmetry) && propdata->addsymresacks && propdata->binvaraffected )
    {
-      SCIP_CALL( addSymresackConss(scip, prop, propdata->components, propdata->componentbegins, propdata->ncomponents) );
+      SCIP_CALL( addSymresackConss(scip, prop, propdata->components, propdata->componentbegins,
+         propdata->ncomponents) );
 
       if ( SCIPisStopped(scip) )
          return SCIP_OKAY;
@@ -7057,6 +7062,7 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
 }
 
 
+/** apply propagation methods for various symmetry handling constraints */
 static
 SCIP_RETCODE propagateSymmetry(
    SCIP*                 scip,               /**< SCIP pointer */
