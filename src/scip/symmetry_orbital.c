@@ -995,9 +995,11 @@ SCIP_RETCODE addComponent(
       {
          if ( perms[p][i] != i )
          {
+            /* var is moved by component; add, disable multiaggregation and capture */
             SCIP_CALL( SCIPcaptureVar(scip, permvars[i]) );
             ofdata->permvars[j] = permvars[i];
             SCIP_CALL( SCIPhashmapInsertInt(ofdata->permvarmap, (void*) permvars[i], j) );
+            SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, permvars[i]) );
             ++j;
             break;
          }
