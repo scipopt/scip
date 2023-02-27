@@ -244,9 +244,6 @@ struct SCIP_PropData
    int                   npermvars;          /**< number of variables for permutations */
    int                   nbinpermvars;       /**< number of binary variables for permuations */
    SCIP_VAR**            permvars;           /**< variables on which permutations act */
-#ifndef NDEBUG
-   SCIP_Real*            permvarsobj;        /**< objective values of permuted variables (for debugging) */
-#endif
    int                   nperms;             /**< number of permutations */
    int                   nmaxperms;          /**< maximal number of permutations (needed for freeing storage) */
    int**                 perms;              /**< pointer to store permutation generators as (nperms x npermvars) matrix */
@@ -736,7 +733,6 @@ SCIP_Bool checkSymmetryDataFree(
    assert( propdata->leaders == NULL );
 
    assert( propdata->permvars == NULL );
-   assert( propdata->permvarsobj == NULL );
    assert( propdata->perms == NULL );
    assert( propdata->permstrans == NULL );
    assert( propdata->nonbinpermvarcaptured == NULL );
@@ -982,10 +978,6 @@ SCIP_RETCODE freeSymmetryData(
          }
          SCIPfreeBlockMemoryArray(scip, &propdata->perms, propdata->nmaxperms);
       }
-
-#ifndef NDEBUG
-      SCIPfreeBlockMemoryArrayNull(scip, &propdata->permvarsobj, propdata->npermvars);
-#endif
 
       SCIPfreeBlockMemoryArrayNull(scip, &propdata->isnonlinvar, propdata->npermvars);
 
@@ -2975,9 +2967,6 @@ SCIP_RETCODE determineSymmetry(
 
    assert( propdata->npermvars == 0 );
    assert( propdata->permvars == NULL );
-#ifndef NDEBUG
-   assert( propdata->permvarsobj == NULL );
-#endif
    assert( propdata->nperms < 0 );
    assert( propdata->nmaxperms == 0 );
    assert( propdata->perms == NULL );
@@ -3057,14 +3046,6 @@ SCIP_RETCODE determineSymmetry(
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, ", number of affected variables: %d)\n", propdata->nmovedvars);
    }
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, ")\n");
-
-   /* handle several general aspects */
-#ifndef NDEBUG
-   /* store objective coefficients for debug purposes */
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->permvarsobj, propdata->npermvars) );
-   for (j = 0; j < propdata->npermvars; ++j)
-      propdata->permvarsobj[j] = SCIPvarGetObj(propdata->permvars[j]);
-#endif
 
    /* capture symmetric variables and forbid multi aggregation */
 
@@ -7516,9 +7497,6 @@ SCIP_RETCODE SCIPincludePropSymmetry(
    propdata->npermvars = 0;
    propdata->nbinpermvars = 0;
    propdata->permvars = NULL;
-#ifndef NDEBUG
-   propdata->permvarsobj = NULL;
-#endif
    propdata->nperms = -1;
    propdata->nmaxperms = 0;
    propdata->perms = NULL;
