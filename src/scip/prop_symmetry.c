@@ -6644,9 +6644,12 @@ SCIP_RETCODE tryAddOrbitopesDynamic(
 
          SCIP_CALL( SCIPaddCons(scip, cons) );
 
-         /* check whether we need to resize */ /* todo4J: Why isn't this stored in genorbconss? */
+         /* check whether we need to resize */
          SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, &propdata->genlinconss,
             &propdata->genlinconsssize, propdata->ngenlinconss + 1) );
+         /* @todo we add orbitopes to the dynamically sized array `genlinconss` instead of `genorbconss` to ensure
+          * compatability with the static orbitope function, which allocates this array statically
+          */
          propdata->genlinconss[propdata->ngenlinconss++] = cons;
 
          /* mark component as blocked */
