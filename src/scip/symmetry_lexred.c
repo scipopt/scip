@@ -250,7 +250,7 @@ SCIP_RETCODE lexdataCreate(
    {
       assert( SCIPvarIsTransformed((*lexdata)->vars[i]) );
       SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, (*lexdata)->vars[i]) );
-      SCIP_CALL( SCIPvarCapture(scip, (*lexdata)->vars[i]) );
+      SCIP_CALL( SCIPcaptureVar(scip, (*lexdata)->vars[i]) );
    }
 
    /* create hashmap for all variables */

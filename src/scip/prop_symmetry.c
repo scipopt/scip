@@ -757,35 +757,6 @@ SCIP_Bool checkSymmetryDataFree(
 #endif
 
 
-/** checks whether a variable has a type compatible with the leader vartype */
-static
-SCIP_Bool isLeadervartypeCompatible(
-   SCIP_VAR*             var,                /**< variable to check */
-   int                   leadervartype       /**< bit set encoding possible leader variable types */
-   )
-{
-   SCIP_VARTYPE vartype;
-   unsigned int vartypeencoding;
-
-   assert( var != NULL );
-   assert( leadervartype >= 0 );
-   assert( leadervartype <= 15 );
-
-   vartype = SCIPvarGetType(var);
-
-   if ( vartype == SCIP_VARTYPE_BINARY )
-      vartypeencoding = 1;
-   else if ( vartype == SCIP_VARTYPE_INTEGER )
-      vartypeencoding = 2;
-   else if ( vartype == SCIP_VARTYPE_IMPLINT )
-      vartypeencoding = 4;
-   else
-      vartypeencoding = 8;
-
-   return (SCIP_Bool) (vartypeencoding & (unsigned) leadervartype);
-}
-
-
 /** returns whether a recomputation of symmetries is required */
 static
 SCIP_Bool isSymmetryRecomputationRequired(
@@ -2832,7 +2803,6 @@ SCIP_RETCODE determineSymmetry(
    unsigned int type = 0;
    int nvars;
    int i;
-   int p;
 
    assert( scip != NULL );
    assert( propdata != NULL );

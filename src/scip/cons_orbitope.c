@@ -219,7 +219,7 @@ SCIP_RETCODE consdataFree(
       for (j = 0; j < q; ++j)
       {
          assert( (*consdata)->vars[i] != NULL );
-         SCIP_CALL( SCIPreleaseVar(scip, &(*consdata)->vars[i]) );
+         SCIP_CALL( SCIPreleaseVar(scip, &(*consdata)->vars[i][j]) );
       }
 
       SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->cases[i]), q);    /*lint !e866*/
