@@ -6894,7 +6894,7 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
    }
 
 
-   /* orbital subgroups */
+   /* orbitopal subgroups */
    if ( ISSYMRETOPESACTIVE(propdata->usesymmetry) && propdata->detectsubgroups && propdata->binvaraffected
       && propdata->ncompblocked < propdata->ncomponents )
    {
