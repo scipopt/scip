@@ -138,7 +138,7 @@ SCIP_Bool vartypeIsBranchRowType(
    case SCIP_VARTYPE_IMPLINT:
       /* potential branching variables if nonlinear constraints exist */
       assert( orbifixdata->conshdlr_nonlinear_checked );
-      return orbifixdata->conshdlr_nonlinear == NULL ? FALSE : 
+      return orbifixdata->conshdlr_nonlinear == NULL ? FALSE :
          SCIPconshdlrGetNActiveConss(orbifixdata->conshdlr_nonlinear) > 0;
    default:
       assert( FALSE );
@@ -1259,7 +1259,7 @@ SCIP_RETCODE addOrbitope(
    assert( SCIPgetStage(scip) == SCIP_STAGE_SOLVING ? SCIPgetNNodes(scip) == 0 : TRUE );
 
    /* add the event to store the row and column updates of nodes in the branch-and-bound tree */
-   SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_NODEBRANCHED, orbifixdata->eventhdlr, 
+   SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_NODEBRANCHED, orbifixdata->eventhdlr,
       (SCIP_EVENTDATA*) orbidata, NULL) );
 
    /* construct all suborbitope stuff */
@@ -1412,13 +1412,13 @@ void assertIsOrbitopeMatrix(
          else
          {
             /* check for infinitesimal values
-             * If infinitesimals are added (lexminface case), then if the left column has a +epsilon, 
-             * it does not matter whether the right column has +epsilon or not, then the left column is >, 
+             * If infinitesimals are added (lexminface case), then if the left column has a +epsilon,
+             * it does not matter whether the right column has +epsilon or not, then the left column is >,
              * due to the axioms x + epsilon > x + epsilon and x + epsilon > x.
-             * Analogously, x > x - epsilon and x - epsilon > x - epsilon. 
+             * Analogously, x > x - epsilon and x - epsilon > x - epsilon.
              */
             assert( EQ(scip, matrix[rowid * ncols + colid], matrix[rowid * ncols + colid + 1]) );
-            if ( addinfinitesimals 
+            if ( addinfinitesimals
                ? (infinitesimal[colid] == rowid) /* left has +epsilon term */
                : (infinitesimal[colid + 1] == rowid) /* right has -epsilon term */
             )
@@ -1618,7 +1618,7 @@ SCIP_RETCODE propagateStaticOrbitope(
             ub = SCIPvarGetUbLocal(var);
 
             /* compare to the value in the column right of it */
-            if ( LT(scip, ub, lexminface[i + 1]) || 
+            if ( LT(scip, ub, lexminface[i + 1]) ||
                ( lexminepsrow[colid + 1] == rowid && EQ(scip, ub, lexminface[i + 1]) ) )
             {
                /* value of this column can only be strictly smaller than the value in the column to its right
@@ -1679,7 +1679,7 @@ SCIP_RETCODE propagateStaticOrbitope(
                else if ( lexminepsrow[colid + 1] == rowid )
                {
                   assert( EQ(scip, lexminface[i], lexminface[i + 1]) );
-                  assert( SCIPvarGetType(sodata->sovars[roworder[rowid] * ncols + origcolid]) 
+                  assert( SCIPvarGetType(sodata->sovars[roworder[rowid] * ncols + origcolid])
                      == SCIP_VARTYPE_CONTINUOUS );
                   assert( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS );
                   /* right column (colid+1) has value x + epsilon, left column (colid) has value x, now
@@ -1705,7 +1705,7 @@ SCIP_RETCODE propagateStaticOrbitope(
                      lastunfixed = rowid;
                   break;
                case SCIP_VARTYPE_CONTINUOUS:
-                  /* continuous type: if we can add an infinitesimal value to the current lexminface[i] value, 
+                  /* continuous type: if we can add an infinitesimal value to the current lexminface[i] value,
                    * mark row as 'lastunfixed'
                    */
                   if ( LT(scip, lexminface[i], ub) )
@@ -1848,7 +1848,7 @@ SCIP_RETCODE propagateStaticOrbitope(
                else if ( lexmaxepsrow[colid - 1] == rowid )
                {
                   assert( EQ(scip, lexmaxface[i - 1], lexmaxface[i]) );
-                  assert( SCIPvarGetType(sodata->sovars[roworder[rowid] * ncols + origcolid]) 
+                  assert( SCIPvarGetType(sodata->sovars[roworder[rowid] * ncols + origcolid])
                      == SCIP_VARTYPE_CONTINUOUS );
                   assert( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS );
                   /* left column (colid-1) has value x - epsilon, right column (colid) has value x, now
@@ -1874,7 +1874,7 @@ SCIP_RETCODE propagateStaticOrbitope(
                      lastunfixed = rowid;
                   break;
                case SCIP_VARTYPE_CONTINUOUS:
-                  /* continuous type: if we can subtract an infinitesimal value to the current lexmaxface[i] value, 
+                  /* continuous type: if we can subtract an infinitesimal value to the current lexmaxface[i] value,
                    * mark row as 'lastunfixed'
                    */
                   if ( GT(scip, lexmaxface[i], lb) )

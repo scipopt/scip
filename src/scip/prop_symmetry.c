@@ -6428,9 +6428,9 @@ SCIP_RETCODE tryDetectOrbitope(
       }
       /* permutation 'perm' is the permutation of the first two columns, and this consists of nrows transpositions.
        * If the permutations describe an orbitope, the entries of each transposition will occur in different rows.
-       * However, if firstunhandledentry == npermvars, then the loop above terminates early, 
-       * which means that an entry from a transposition is handled before we handled the row of that transposition, 
-       * i.e., the entry occurs elsewhere in the orbitope matrix we're building. Hence, this is no orbitope. 
+       * However, if firstunhandledentry == npermvars, then the loop above terminates early,
+       * which means that an entry from a transposition is handled before we handled the row of that transposition,
+       * i.e., the entry occurs elsewhere in the orbitope matrix we're building. Hence, this is no orbitope.
        */
       if ( firstunhandledentry == npermvars )
       {
@@ -6442,7 +6442,7 @@ SCIP_RETCODE tryDetectOrbitope(
       assert( firstunhandledentry != perm[firstunhandledentry] );
 
       /* try both the option where column 0 is firstunhandledentry, or perm[firstunhandledentry]
-       * 
+       *
        * Break the loop if it's successful.
        */
       row = &(orbitopematrix[rowid * ncols]);

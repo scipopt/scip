@@ -395,7 +395,7 @@ SCIP_RETCODE getVarOrder(
 
 
 /** check if the static lexred with a certain variable ordering is feasible in the hypothetical scenario where
- * variables with indices i and j are fixed to fixvalue (i.e., peeking) 
+ * variables with indices i and j are fixed to fixvalue (i.e., peeking)
  */
 static
 SCIP_RETCODE peekStaticLexredIsFeasible(
@@ -622,9 +622,9 @@ SCIP_RETCODE propagateStaticLexred(
       return SCIP_OKAY;
 
    /* iterate over the variable array entrywise
-    * 
-    * We see this as two columns, with the left vector being the variable ordering, 
-    * and the right column the permuted variables of this var ordering. 
+    *
+    * We see this as two columns, with the left vector being the variable ordering,
+    * and the right column the permuted variables of this var ordering.
     */
    for (row = 0; row < nselvars; ++row)
    {
@@ -729,11 +729,11 @@ SCIP_RETCODE propagateStaticLexred(
       /* The previous loop is broken at row "row", which allows for choosing vari > varj.
        *
        * Now check if vari == varj is permitted, and if not, tighten the domain further.
-       * 
+       *
        * @todo we peek twice if vari and varj are unfixed
-       * But, if the subcycle only contains var1 and var2 a single peek suffices. 
+       * But, if the subcycle only contains var1 and var2 a single peek suffices.
        * This is similar to orbisack and symresack propagation.
-       * 
+       *
        * Case 1: vari is minimal (lbi).
        * Then, propagation of lbi = vari >= varj can yield two situations:
        *   Option 1: varj can take a value < lbi. Then no further fixings can be detected.
@@ -766,7 +766,7 @@ SCIP_RETCODE propagateStaticLexred(
                   break;
                case SCIP_VARTYPE_CONTINUOUS:
                   /* continuous variable type: act as if we increase the variable by a very little bit.
-                   * That is only possible if we're able to increase the variable bound by a bit. 
+                   * That is only possible if we're able to increase the variable bound by a bit.
                    */
                   if ( EQ(scip, lbi, ubi) )
                   {
@@ -903,7 +903,7 @@ SCIP_RETCODE propagateLexicographicReductionPerm(
 }
 
 
-/** populate array with information of first variable change 
+/** populate array with information of first variable change
  * @pre assuming nodedepthbranchindices is initially clean
  */
 static
@@ -942,7 +942,7 @@ SCIP_RETCODE shadowtreeFillNodeDepthBranchIndices(
    /* Now, walk from the leaf to the root. Each time look at all the children of the node considered,
     * and save the variable depth and index in the branching array. It is important to consider all children each time,
     * because we need to comply with the instance where in different branches it is branched on different variables.
-    * This has to be consistent. 
+    * This has to be consistent.
     */
    while (shadownode != NULL)
    {
@@ -956,7 +956,7 @@ SCIP_RETCODE shadowtreeFillNodeDepthBranchIndices(
          for (i = 0; i < shadowchild->nbranchingdecisions; ++i)
          {
             var = shadowchild->branchingdecisions[i].var;
-            
+
             /* ignore variables that are irrelevant for lexicographic reduction */
             if ( !SCIPhashmapExists(masterdata->symvarmap, (void*) var) )
                continue;
@@ -1027,7 +1027,7 @@ SCIP_RETCODE shadowtreeUndoNodeDepthBranchIndices(
    /* now, walk from the leaf to the root. Each time look at all the children of the node considered,
     * and save the variable depth and index in the branching array. It is important to consider all children each time,
     * because we need to comply with the instance where in different branches it is branched on different variables.
-    * This has to be consistent. 
+    * This has to be consistent.
     */
    while (shadownode != NULL)
    {
@@ -1260,7 +1260,7 @@ SCIP_RETCODE SCIPlexicographicReductionInclude(
    assert( masterdata != NULL );
    assert( shadowtreeeventhdlr != NULL );
 
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPlexicographicReductionInclude", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, 
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPlexicographicReductionInclude", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE,
       FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPallocBlockMemory(scip, masterdata) );

@@ -153,7 +153,7 @@ SCIP_RETCODE orbitalFixingDynamicGetSymmetryStabilizerSubgroup(
          if ( varidimage == varid )
             continue;
 
-         if ( GT(scip, 
+         if ( GT(scip,
             varubs ? varubs[varid] : SCIPvarGetUbLocal(ofdata->permvars[varid]),
             varlbs ? varlbs[varidimage] : SCIPvarGetLbLocal(ofdata->permvars[varidimage]) )
          )
@@ -386,9 +386,9 @@ SCIP_RETCODE orbitalFixingDynamicApplyOrbitalBranchingPropagations(
    }
 
    /* determine symmetry group at this point, apply branched variable, apply orbital branching for this
-    * 
+    *
     * The branching variables are applied one-after-the-other.
-    * So, the group before branching is determined, orbital branching to the branching variable, then the branching 
+    * So, the group before branching is determined, orbital branching to the branching variable, then the branching
     * variable is applied, and possibly repeated for other branching variables.
     */
    SCIP_CALL( SCIPallocBufferArray(scip, &chosenperms, ofdata->nperms) );
@@ -430,12 +430,12 @@ SCIP_RETCODE orbitalFixingDynamicApplyOrbitalBranchingPropagations(
          }
       }
 
-      /* 1. ensure that the bounds are tightest possible just before the branching step (orbital fixing step) 
+      /* 1. ensure that the bounds are tightest possible just before the branching step (orbital fixing step)
        *
        * If complete propagation was applied in the previous node,
        * then all variables in the same orbit have the same bounds just before branching,
        * so the bounds of the branching variable should be the tightest in its orbit by now.
-       * It is possible that that is not the case. In that case, we do it here. 
+       * It is possible that that is not the case. In that case, we do it here.
        */
       SCIP_CALL( SCIPallocBufferArray(scip, &varorbitids, ofdata->npermvars) );
       SCIP_CALL( SCIPallocBufferArray(scip, &varorbitidssort, ofdata->npermvars) );
@@ -558,20 +558,20 @@ SCIP_RETCODE orbitalFixingDynamicApplyOrbitalBranchingPropagations(
 
       /* 3. propagate that branching variable is >= the variables in its orbit
        *
-       * Also apply the updates to the variable arrays 
+       * Also apply the updates to the variable arrays
        */
 
       /* get the orbit of the branching variable */
       orbitsetcomponentid = SCIPdisjointsetFind(orbitset, branchingdecisionvarid);
 
       /* find the orbit in the sorted array of orbits. npermvars can be huge, so use bisection. */
-      orbitbegin = bisectSortedArrayFindFirstGEQ(varorbitids, varorbitidssort, 0, ofdata->npermvars, 
+      orbitbegin = bisectSortedArrayFindFirstGEQ(varorbitids, varorbitidssort, 0, ofdata->npermvars,
          orbitsetcomponentid);
       assert( orbitbegin >= 0 && orbitbegin < ofdata->npermvars );
       assert( varorbitids[varorbitidssort[orbitbegin]] == orbitsetcomponentid );
       assert( orbitbegin == 0 || varorbitids[varorbitidssort[orbitbegin - 1]] < orbitsetcomponentid );
 
-      orbitend = bisectSortedArrayFindFirstGEQ(varorbitids, varorbitidssort, orbitbegin + 1, ofdata->npermvars, 
+      orbitend = bisectSortedArrayFindFirstGEQ(varorbitids, varorbitidssort, orbitbegin + 1, ofdata->npermvars,
          orbitsetcomponentid + 1);
       assert( orbitend > 0 && orbitend <= ofdata->npermvars && orbitend > orbitbegin );
       assert( orbitend == ofdata->npermvars || varorbitids[varorbitidssort[orbitend]] > orbitsetcomponentid );
@@ -658,7 +658,7 @@ SCIP_RETCODE orbitalFixingDynamicApplyOrbitalBranchingPropagations(
       assert( inbranchedvarindices[i] == FALSE );
    }
 #endif
-   
+
    /* free everything */
    SCIPfreeCleanBufferArray(scip, &inbranchedvarindices);
    SCIPfreeBufferArray(scip, &branchedvarindices);
@@ -1322,7 +1322,7 @@ SCIP_RETCODE SCIPorbitalFixingFree(
 
 
 /** initializes structures needed for orbital fixing
- * 
+ *
  * This is only done exactly once.
  */
 SCIP_RETCODE SCIPorbitalFixingInclude(
@@ -1335,7 +1335,7 @@ SCIP_RETCODE SCIPorbitalFixingInclude(
    assert( orbifixdata != NULL );
    assert( shadowtreeeventhdlr != NULL );
 
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPorbitalFixingInclude", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, 
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPorbitalFixingInclude", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE,
       FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPallocBlockMemory(scip, orbifixdata) );
