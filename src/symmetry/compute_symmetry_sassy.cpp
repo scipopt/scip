@@ -590,6 +590,363 @@ SCIP_RETCODE createOrDetermineSizeGraph(
    return SCIP_OKAY;
 }
 
+/** either creates a graph for checking symmetries or determines its size
+ *
+ *  The input are two graphs and the graph to be constructed consists of copies
+ *  of the two input graphs, in which non-variable nodes are colored according
+ *  to the colors used in symmetry detection. Each variable gets a unique color.
+ */
+static
+SCIP_RETCODE createOrDetermineSizeGraphCheck(
+   SCIP*                 scip,               /**< SCIP instance */
+   SYM_GRAPH*            graph1,             /**< first symmetry detection graph */
+   SYM_GRAPH*            graph2,             /**< second symmetry detection graph */
+   SCIP_Bool             determinesize,      /**< whether only the size of the graph shall be determined */
+   sassy::static_graph*  G,                  /**< graph to be constructed */
+   int*                  nnodes,             /**< pointer to store the total number of nodes in graph */
+   int*                  nedges,             /**< pointer to store the total number of edges in graph */
+   int**                 degrees,            /**< pointer to store the degrees of the nodes */
+   int*                  maxdegrees,         /**< pointer to store the maximal size of the degree array */
+   SCIP_Bool*            success             /**< pointer to store whether the graph could be built */
+   )
+{
+   SYM_SYMTYPE symtype;
+   SYM_NODETYPE comparetype;
+   SCIP_Bool groupByConstraints;
+   SYM_GRAPH* graph;
+   int* nvarused1 = NULL;
+   int* nvarused2 = NULL;
+   int* varlabel = NULL;
+   int* groupfirsts = NULL;
+   int* groupseconds = NULL;
+   int* groupcolors = NULL;
+   int ngroupedges = 0;
+   int nusedvars = 0;
+   int nodeshift;
+   int curnnodes;
+   int nvarnodestoadd;
+   int internodeid;
+   int nsymvars;
+   int nsymedges;
+   int first;
+   int second;
+   int color;
+   int e;
+   int i;
+   int j;
+
+   assert( scip != NULL );
+   assert( graph1 != NULL );
+   assert( graph2 != NULL );
+   assert( G != NULL || determinesize );
+   assert( nnodes != NULL );
+   assert( nedges != NULL );
+   assert( degrees != NULL );
+   assert( maxdegrees != NULL );
+   assert( success != NULL );
+
+   *success = FALSE;
+
+   /* graphs cannot be symmetric */
+   if ( SCIPgetSymgraphNEdges(graph1) != SCIPgetSymgraphNEdges(graph2)
+      || SCIPgetSymgraphNVars(graph1) != SCIPgetSymgraphNVars(graph2) )
+      return SCIP_OKAY;
+
+   /* collect basic information from symmetry detection graph */
+   nsymvars = SCIPgetSymgraphNVars(graph1);
+   nsymedges = SCIPgetSymgraphNEdges(graph1);
+   symtype = SCIPgetSymgraphSymtype(graph1);
+   switch ( symtype )
+   {
+   case SYM_SYMTYPE_PERM:
+      nvarnodestoadd = nsymvars;
+      break;
+   default:
+      assert( symtype == SYM_SYMTYPE_SIGNPERM );
+      nvarnodestoadd = 2 * nsymvars;
+   }
+
+   /* find the variables that are contained in an edge */
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &nvarused1, nvarnodestoadd) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &nvarused2, nvarnodestoadd) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &varlabel, nvarnodestoadd) );
+
+   for (e = 0; e < nsymedges; ++e)
+   {
+      first = SCIPgetSymgraphEdgeFirst(graph1, e);
+      second = SCIPgetSymgraphEdgeSecond(graph1, e);
+      if ( first < 0 )
+         nvarused1[-first - 1] += 1;
+      if ( second < 0 )
+         nvarused1[-second - 1] += 1;
+
+      first = SCIPgetSymgraphEdgeFirst(graph2, e);
+      second = SCIPgetSymgraphEdgeSecond(graph2, e);
+      if ( first < 0 )
+         nvarused2[-first - 1] += 1;
+      if ( second < 0 )
+         nvarused2[-second - 1] += 1;
+   }
+
+   for (j = 0; j < nvarnodestoadd; ++j)
+   {
+      /* graphs cannot be identical */
+      if ( nvarused1[j] != nvarused2[j] )
+      {
+         SCIPfreeBufferArray(scip, &varlabel);
+         SCIPfreeBufferArray(scip, &nvarused2);
+         SCIPfreeBufferArray(scip, &nvarused1);
+
+         return SCIP_OKAY;
+      }
+
+      /* relabel variables by restricting to variables used in constraint (or their negation) */
+      if ( nvarused1[j] > 0 || nvarused1[j % SCIPgetSymgraphNVars(graph1)] > 0 )
+         varlabel[j] = nusedvars++;
+      else
+         varlabel[j] = -1;
+   }
+
+   /* possibly find number of nodes in sassy graph and allocate memory for dynamic array */
+   if ( determinesize )
+   {
+      *degrees = NULL;
+      *maxdegrees = 0;
+      SCIP_CALL( SCIPensureBlockMemoryArray(scip, degrees, maxdegrees,
+            SCIPgetSymgraphNNodes(graph1) + SCIPgetSymgraphNNodes(graph2) + 2 * nusedvars + 100) );
+
+      *nnodes = 0;
+      *nedges = 0;
+   }
+
+   /* determine grouping depending on the number of rhs vs. variables */
+   groupByConstraints = SCIPgetSymgraphNConsnodes(graph1) < SCIPgetSymgraphNVars(graph1);
+
+   /* allocate arrays to collect edges to be grouped */
+   SCIP_CALL( SCIPallocBufferArray(scip, &groupfirsts, nsymedges) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &groupseconds, nsymedges) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &groupcolors, nsymedges) );
+
+   /* collect information or generate graphs, we shift the node indices of the second graph when adding them to G */
+   nodeshift = 0;
+   curnnodes = 0;
+   for (i = 0; i < 2; ++i)
+   {
+      graph = i == 0 ? graph1 : graph2;
+      ngroupedges = 0;
+
+      /* possibly add nodes for variables and remaining nodes, each variable gets a unique color */
+      if ( determinesize )
+      {
+         /* add nodes for variables */
+         for (j = 0; j < nvarnodestoadd; ++j)
+         {
+            if ( varlabel[j] >= 0 )
+            {
+               SCIP_CALL( SCIPensureBlockMemoryArray(scip, degrees, maxdegrees, *nnodes + 1) );
+               (*degrees)[nodeshift + varlabel[j]] = 0;
+               ++(*nnodes);
+               ++curnnodes;
+            }
+         }
+
+         /* add nodes for remaining nodes of graph */
+         for (j = 0; j < SCIPgetSymgraphNNodes(graph); ++j)
+         {
+            SCIP_CALL( SCIPensureBlockMemoryArray(scip, degrees, maxdegrees, *nnodes + 1) );
+            (*degrees)[nodeshift + nusedvars + j] = 0;
+            ++(*nnodes);
+            ++curnnodes;
+         }
+      }
+      else
+      {
+         /* add nodes for variables, each variable gets a unique color */
+         for (j = 0; j < nvarnodestoadd; ++j)
+         {
+            if ( varlabel[j] >= 0 )
+            {
+               G->add_vertex((unsigned) j, (*degrees)[nodeshift + varlabel[j]]);
+               ++curnnodes;
+            }
+         }
+
+         /* add nodes for remaining nodes of graph, ensure that colors do not conflict with variable colors */
+         for (j = 0; j < SCIPgetSymgraphNNodes(graph); ++j)
+         {
+            G->add_vertex((unsigned) nusedvars + SCIPgetSymgraphNodeColor(graph, j),
+               (*degrees)[nodeshift + nusedvars + j]);
+            ++curnnodes;
+         }
+      }
+
+      /* loop through all edges of the symmetry detection graph and either get degrees of nodes or add edges */
+      internodeid = curnnodes;
+      for (e = 0; e < nsymedges; ++e)
+      {
+         first = SCIPgetSymgraphEdgeFirst(graph, e);
+         second = SCIPgetSymgraphEdgeSecond(graph, e);
+
+         /* get the first and second node in edge (corrected by variable shift) */
+         if ( first < 0 )
+            first = varlabel[-first - 1];
+         else
+            first = nusedvars + first;
+         if ( second < 0 )
+            second = varlabel[-second - 1];
+         else
+            second = nusedvars + second;
+
+         /* check whether edge is used for grouping */
+         if ( FALSE && ! SCIPhasGraphUniqueEdgetype(graph) && isEdgeGroupable(graph, e, groupByConstraints) )
+         {
+            /* store edge, first becomes the cons or var node */
+            comparetype = groupByConstraints ? SYM_NODETYPE_CONS : SYM_NODETYPE_VAR;
+
+            if ( SCIPgetSymgraphNodeType(graph, SCIPgetSymgraphEdgeFirst(graph, e)) == comparetype )
+            {
+               groupfirsts[ngroupedges] = nodeshift + first;
+               groupseconds[ngroupedges] = nodeshift + second;
+            }
+            else
+            {
+               groupfirsts[ngroupedges] = nodeshift + second;
+               groupseconds[ngroupedges] = nodeshift + first;
+            }
+            groupcolors[ngroupedges++] = nusedvars + SCIPgetSymgraphEdgeColor(graph, e);
+         }
+         else
+         {
+            /* immediately add edge or increase degrees */
+            assert(0 <= first && first < *nnodes);
+            assert(0 <= second && second < *nnodes);
+
+            /* possibly split edge if it is colored */
+            if ( ! SCIPhasGraphUniqueEdgetype(graph) && SCIPisSymgraphEdgeColored(graph, e) )
+            {
+               if ( determinesize )
+               {
+                  SCIP_CALL( SCIPensureBlockMemoryArray(scip, degrees, maxdegrees, internodeid + 1) );
+
+                  ++(*degrees)[nodeshift + first];
+                  ++(*degrees)[nodeshift + second];
+                  (*degrees)[internodeid] = 2;
+                  ++(*nnodes);
+                  *nedges += 2;
+               }
+               else
+               {
+                  assert( internodeid < *nnodes );
+
+                  color = SCIPgetSymgraphEdgeColor(graph, e);
+                  G->add_vertex((unsigned) nusedvars + color, (unsigned) (*degrees)[internodeid]);
+                  G->add_edge((unsigned) nodeshift + first, (unsigned) internodeid);
+                  G->add_edge((unsigned) nodeshift + second, (unsigned) internodeid);
+               }
+               ++internodeid;
+               ++curnnodes;
+            }
+            else
+            {
+               if ( determinesize )
+               {
+                  ++(*degrees)[nodeshift + first];
+                  ++(*degrees)[nodeshift + second];
+                  ++(*nedges);
+               }
+               else
+               {
+                  if ( first < second )
+                     G->add_edge((unsigned) nodeshift + first, (unsigned) nodeshift + second);
+                  else
+                     G->add_edge((unsigned) nodeshift + second, (unsigned) nodeshift + first);
+               }
+            }
+         }
+      }
+
+      /* possibly add groupable edges */
+      if ( ngroupedges > 0 )
+      {
+         int firstidx = 0;
+         int firstnodeidx;
+         int naddednodes;
+         int naddededges;
+
+         /* sort edges according to their first nodes */
+         SCIPsortIntIntInt(groupfirsts, groupseconds, groupcolors, ngroupedges);
+         firstnodeidx = groupfirsts[0];
+
+         for (j = 1; j < ngroupedges; ++j)
+         {
+            /* if a new first node has been found, group the edges of the previous first node; ignoring the last group */
+            if ( groupfirsts[j] != firstnodeidx )
+            {
+               SCIP_CALL( addOrDetermineEffectOfGroupedEdges(scip, G, determinesize, &internodeid, degrees, maxdegrees,
+                     nnodes, nedges, firstnodeidx, &groupseconds[firstidx], &groupcolors[firstidx], j - firstidx,
+                     &naddednodes, &naddededges) );
+
+               firstidx = j;
+               firstnodeidx = groupfirsts[j];
+
+               if ( determinesize )
+               {
+                  *nnodes += naddednodes;
+                  *nedges += naddededges;
+               }
+               curnnodes += naddednodes;
+            }
+         }
+
+         /* process the last group */
+         SCIP_CALL( addOrDetermineEffectOfGroupedEdges(scip, G, determinesize, &internodeid, degrees, maxdegrees,
+               nnodes, nedges, firstnodeidx, &groupseconds[firstidx], &groupcolors[firstidx], ngroupedges - firstidx,
+               &naddednodes, &naddededges) );
+
+         if ( determinesize )
+         {
+            *nnodes += naddednodes;
+            *nedges += naddededges;
+         }
+         curnnodes += naddednodes;
+      }
+
+      /* for signed permutation, also add edges connecting a variable and its negation */
+      switch ( SCIPgetSymgraphSymtype(graph1) )
+      {
+      case SYM_SYMTYPE_SIGNPERM:
+         if ( determinesize )
+         {
+            for (j = 0; j < nusedvars; ++j)
+               ++(*degrees)[nodeshift + j];
+            (*nedges) += nsymvars;
+         }
+         else
+         {
+            for (j = 0; j < nusedvars; ++j)
+               G->add_edge((unsigned) nodeshift + j, (unsigned) nodeshift + j + nusedvars);
+         }
+         break;
+      default:
+         assert( SCIPgetSymgraphSymtype(graph) == SYM_SYMTYPE_PERM );
+      }
+
+      nodeshift = curnnodes;
+   }
+
+   SCIPfreeBufferArray(scip, &groupcolors);
+   SCIPfreeBufferArray(scip, &groupseconds);
+   SCIPfreeBufferArray(scip, &groupfirsts);
+
+   SCIPfreeBufferArray(scip, &varlabel);
+   SCIPfreeBufferArray(scip, &nvarused2);
+   SCIPfreeBufferArray(scip, &nvarused1);
+
+   *success = TRUE;
+
+   return SCIP_OKAY;
+}
+
 /** return whether symmetry can be computed */
 SCIP_Bool SYMcanComputeSymmetry(void)
 {
@@ -867,5 +1224,81 @@ SCIP_Bool SYMcheckGraphsAreIdentical(
    SYM_GRAPH*            G2                  /**< second graph */
    )
 {
-   return TRUE;
+   int** perms;
+   int* degrees = NULL;
+   int maxdegrees = 0;
+   int nnodes;
+   int nedges;
+   int nperms;
+   int nmaxperms;
+   int nnodesfromG1;
+   SCIP_Real symcodetime = 0.0;
+   SCIP_Real log10groupsize;
+   SCIP_Bool success;
+
+   /* some simple checks */
+   if ( G1->nnodes != G2->nnodes ||  G1->nopnodes != G2->nopnodes || G1->nvalnodes != G2->nvalnodes
+      || G1->nconsnodes != G2->nconsnodes || G1->nedges != G2->nedges )
+      return FALSE;
+
+   /* determine number of nodes and edges */
+   SCIP_CALL( createOrDetermineSizeGraphCheck(scip, G1, G2, TRUE, NULL,
+         &nnodes, &nedges, &degrees, &maxdegrees, &success) );
+
+   if ( ! success )
+   {
+      assert( degrees == NULL );
+      assert( maxdegrees == 0 );
+      return FALSE;
+   }
+   if ( nnodes % 2 != 0 )
+   {
+      assert( degrees != NULL );
+      assert( maxdegrees > 0 );
+
+      SCIPfreeBlockMemoryArray(scip, &degrees, maxdegrees);
+      return FALSE;
+   }
+
+   /* create sassy graph */
+   sassy::static_graph sassygraph;
+
+   /* init graph */
+   sassygraph.initialize_graph((unsigned) nnodes, (unsigned) nedges);
+
+   /* add the nodes for linear and nonlinear constraints to the graph */
+   SCIP_CALL( createOrDetermineSizeGraphCheck(scip, G1, G2, FALSE, &sassygraph,
+         &nnodes, &nedges, &degrees, &maxdegrees, &success) );
+   assert( success );
+
+   SCIPfreeBlockMemoryArray(scip, &degrees, maxdegrees);
+
+   /* compute symmetries */
+   SCIP_CALL( computeAutomorphisms(scip, SCIPgetSymgraphSymtype(G1), &sassygraph, nnodes, 0,
+         &perms, &nperms, &nmaxperms, &log10groupsize, FALSE, &symcodetime) );
+
+   /* since G1 and G2 are connected and disjoint, they are isomorphic iff there is a permutation
+    * mapping a node from G1 to a node of G2
+    */
+   success = FALSE;
+   nnodesfromG1 = nnodes / 2;
+   for (int p = 0; p < nperms && ! success; ++p)
+   {
+      for (int i = 0; i < nnodesfromG1; ++i)
+      {
+         if ( perms[p][i] >= nnodesfromG1 )
+         {
+            success = TRUE;
+            break;
+         }
+      }
+   }
+
+   for (int p = 0; p < nperms; ++p)
+   {
+      SCIPfreeBlockMemoryArray(scip, &perms[p], nnodes);
+   }
+   SCIPfreeBlockMemoryArrayNull(scip, &perms, nmaxperms);
+
+   return success;
 }
