@@ -748,8 +748,11 @@ SCIP_RETCODE computeAutomorphisms(
 
 #if BLISS_VERSION_MAJOR >= 1 || BLISS_VERSION_MINOR >= 76
    /* lambda function to have access to stats and terminate the search if maxgenerators are reached */
+   long unsigned int terminatesearch = INT_MAX;
+   if ( maxgenerators != 0 )
+      terminatesearch = (long unsigned int) maxgenerators;
    auto term = [&]() {
-      return (stats.get_nof_generators() >= (unsigned) maxgenerators);
+      return (stats.get_nof_generators() >= terminatesearch);
    };
 
    auto hook = [&](unsigned int n, const unsigned int* aut) {
