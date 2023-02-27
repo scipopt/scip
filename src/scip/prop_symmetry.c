@@ -254,8 +254,6 @@ struct SCIP_PropData
    int                   nmovedintpermvars;  /**< number of integer variables moved by any permutation */
    int                   nmovedimplintpermvars; /**< number of implicitly integer variables moved by any permutation */
    int                   nmovedcontpermvars; /**< number of continuous variables moved by any permutation */
-   SCIP_Shortbool*       nonbinpermvarcaptured; /**< array to store which non-binary variables have been captured
-                                                 *   (only necessary for SST cuts) */
 
    /* components of symmetry group */
    int                   ncomponents;        /**< number of components of symmetry group */
@@ -735,7 +733,6 @@ SCIP_Bool checkSymmetryDataFree(
    assert( propdata->permvars == NULL );
    assert( propdata->perms == NULL );
    assert( propdata->permstrans == NULL );
-   assert( propdata->nonbinpermvarcaptured == NULL );
    assert( propdata->npermvars == 0 );
    assert( propdata->nbinpermvars == 0 );
    assert( propdata->nperms == -1 || propdata->nperms == 0 );
@@ -838,34 +835,11 @@ SCIP_RETCODE freeSymmetryData(
       SCIPhashmapFree(&propdata->permvarmap);
    }
 
-   /* release variables */
-   if ( propdata->nonbinpermvarcaptured != NULL )
+   /* release all variables contained in permvars array */
+   for (i = 0; i < propdata->npermvars; ++i)
    {
-      int cnt;
-
-      /* memory should have been allocated only if the leader type is not binary */
-      assert( ISSSTACTIVE(propdata->usesymmetry) && propdata->sstleadervartype != (int) SCIP_SSTTYPE_BINARY );
-
-      for (i = propdata->nbinpermvars, cnt = 0; i < propdata->npermvars; ++i, ++cnt)
-      {
-         /* release captured non-binary variables
-          * (cannot use isLeadervartypeCompatible(), because vartype may have changed in between)
-          */
-         if ( propdata->nonbinpermvarcaptured[cnt] )
-         {
-            SCIP_CALL( SCIPreleaseVar(scip, &propdata->permvars[i]) );
-         }
-      }
-      SCIPfreeBlockMemoryArray(scip, &propdata->nonbinpermvarcaptured, propdata->npermvars - propdata->nbinpermvars);
-      propdata->nonbinpermvarcaptured = NULL;
-   }
-
-   if ( propdata->binvaraffected )
-   {
-      for (i = 0; i < propdata->nbinpermvars; ++i)
-      {
-         SCIP_CALL( SCIPreleaseVar(scip, &propdata->permvars[i]) );
-      }
+      assert( propdata->permvars[i] != NULL );
+      SCIPreleaseVar(scip, &propdata->permvars[i]);
    }
 
    /* free permstrans matrix*/
@@ -2857,7 +2831,7 @@ SCIP_RETCODE determineSymmetry(
    int nconss;
    unsigned int type = 0;
    int nvars;
-   int j;
+   int i;
    int p;
 
    assert( scip != NULL );
@@ -3047,70 +3021,10 @@ SCIP_RETCODE determineSymmetry(
    }
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, ")\n");
 
-   /* capture symmetric variables and forbid multi aggregation */
-
-   /* binary symmetries are always handled
-    *
-    * note: binary variables are in the beginning of permvars
-    */
-   if ( propdata->binvaraffected )
+   /* capture all variables while they are in the permvars array */
+   for (i = 0; i < propdata->npermvars; ++i)
    {
-      for (j = 0; j < propdata->nbinpermvars; ++j)
-      {
-         SCIP_CALL( SCIPcaptureVar(scip, propdata->permvars[j]) );
-
-         if ( propdata->compressed )
-         {
-            SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, propdata->permvars[j]) );
-         }
-         else
-         {
-            for (p = 0; p < propdata->nperms; ++p)
-            {
-               if ( propdata->perms[p][j] != j )
-               {
-                  SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, propdata->permvars[j]) );
-                  break;
-               }
-            }
-         }
-      }
-   }
-
-   /* if Schreier-Sims constraints are enabled, also capture symmetric variables and forbid multi aggregation of handable vars */
-   if ( ISSSTACTIVE(propdata->usesymmetry) && propdata->sstleadervartype != (int) SCIP_SSTTYPE_BINARY )
-   {
-      int cnt;
-
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->nonbinpermvarcaptured,
-            propdata->npermvars - propdata->nbinpermvars) );
-      for (j = propdata->nbinpermvars, cnt = 0; j < propdata->npermvars; ++j, ++cnt)
-      {
-         if ( ! isLeadervartypeCompatible(propdata->permvars[j], propdata->sstleadervartype) )
-         {
-            propdata->nonbinpermvarcaptured[cnt] = FALSE;
-            continue;
-         }
-
-         SCIP_CALL( SCIPcaptureVar(scip, propdata->permvars[j]) );
-         propdata->nonbinpermvarcaptured[cnt] = TRUE;
-
-         if ( propdata->compressed )
-         {
-            SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, propdata->permvars[j]) );
-         }
-         else
-         {
-            for (p = 0; p < propdata->nperms; ++p)
-            {
-               if ( propdata->perms[p][j] != j )
-               {
-                  SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, propdata->permvars[j]) );
-                  break;
-               }
-            }
-         }
-      }
+      SCIPcaptureVar(scip, propdata->permvars[i]);
    }
 
    return SCIP_OKAY;
@@ -7502,7 +7416,6 @@ SCIP_RETCODE SCIPincludePropSymmetry(
    propdata->perms = NULL;
    propdata->permstrans = NULL;
    propdata->permvarmap = NULL;
-   propdata->nonbinpermvarcaptured = NULL;
 
    propdata->ncomponents = -1;
    propdata->ncompblocked = 0;

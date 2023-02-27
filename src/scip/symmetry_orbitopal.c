@@ -973,7 +973,9 @@ SCIP_RETCODE freeOrbitope(
    )
 {
    SUBORBITOPEDATA* sodata;
+   int i;
    int s;
+   int nelem;
 
    assert( scip != NULL );
    assert( orbifixdata != NULL );
@@ -1005,7 +1007,13 @@ SCIP_RETCODE freeOrbitope(
       SCIPfreeBlockMemoryArray(scip, &((*orbidata)->suborbitopes), (*orbidata)->nsuborbitopes);
    }
 
-   SCIPfreeBlockMemoryArrayNull(scip, &((*orbidata)->vars), (*orbidata)->nrows * (*orbidata)->ncols);
+   nelem = (*orbidata)->nrows * (*orbidata)->ncols;
+   assert( nelem > 0 );
+   for (i = 0; i < nelem; ++i)
+   {
+      SCIPreleaseVar(scip, &(*orbidata)->vars[i]);
+   }
+   SCIPfreeBlockMemoryArray(scip, &((*orbidata)->vars), (*orbidata)->nrows * (*orbidata)->ncols);
 
    SCIPfreeBlockMemory(scip, orbidata);
 
@@ -1230,6 +1238,7 @@ SCIP_RETCODE addOrbitope(
 
       SCIP_CALL( SCIPgetTransformedVar(scip, var, &var ) );
       SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, var) );
+      SCIP_CALL( SCIPcaptureVar(scip, var) );
 
       orbidata->vars[i] = var;
 

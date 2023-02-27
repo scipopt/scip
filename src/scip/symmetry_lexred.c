@@ -125,6 +125,8 @@ SCIP_RETCODE lexdataFree(
    LEXDATA**             lexdata             /**< pointer to individual lexicographic reduction propagator datas */
    )
 {
+   int i;
+
    assert( scip != NULL );
    assert( lexdata != NULL );
    assert( (*lexdata) != NULL );
@@ -134,6 +136,12 @@ SCIP_RETCODE lexdataFree(
       assert( (*lexdata)->invperm != NULL );
       assert( (*lexdata)->perm != NULL );
       assert( (*lexdata)->vars != NULL );
+
+      /* release variables */
+      for (i = 0; i < (*lexdata)->nvars; ++i)
+      {
+         SCIP_CALL( SCIPreleaseVar(scip, &(*lexdata)->vars[i]) );
+      }
 
       SCIPfreeBlockMemoryArray(scip, &(*lexdata)->invperm, (*lexdata)->nvars);
       SCIPfreeBlockMemoryArray(scip, &(*lexdata)->perm, (*lexdata)->nvars);
@@ -237,11 +245,12 @@ SCIP_RETCODE lexdataCreate(
       (*lexdata)->invperm[(*lexdata)->perm[i]] = i;
    SCIPfreeBufferArray(scip, &indexcorrection);
 
-   /* make sure that we deal with transformed variables and that variables cannot be multi-aggregated */
+   /* make sure that we deal with transformed variables and that variables cannot be multi-aggregated, and capture */
    for (i = 0; i < (*lexdata)->nvars; ++i)
    {
       assert( SCIPvarIsTransformed((*lexdata)->vars[i]) );
       SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, (*lexdata)->vars[i]) );
+      SCIP_CALL( SCIPvarCapture(scip, (*lexdata)->vars[i]) );
    }
 
    /* create hashmap for all variables */

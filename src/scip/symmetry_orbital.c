@@ -995,6 +995,7 @@ SCIP_RETCODE addComponent(
       {
          if ( perms[p][i] != i )
          {
+            SCIP_CALL( SCIPcaptureVar(scip, permvars[i]) );
             ofdata->permvars[j] = permvars[i];
             SCIP_CALL( SCIPhashmapInsertInt(ofdata->permvarmap, (void*) permvars[i], j) );
             ++j;
@@ -1124,6 +1125,13 @@ SCIP_RETCODE freeComponent(
       SCIPfreeBlockMemoryArray(scip, &(*ofdata)->perms[p], (*ofdata)->npermvars);
    }
    SCIPfreeBlockMemoryArray(scip, &(*ofdata)->perms, (*ofdata)->nperms);
+
+   /* release variables */
+   for (i = 0; i < (*ofdata)->npermvars; ++i)
+   {
+      assert( (*ofdata)->permvars[i] != NULL );
+      SCIP_CALL( SCIPreleaseVar(scip, &(*ofdata)->permvars[i]) );
+   }
 
    SCIPhashmapFree(&(*ofdata)->permvarmap);
    SCIPfreeBlockMemoryArray(scip, &(*ofdata)->permvars, (*ofdata)->npermvars);
