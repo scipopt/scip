@@ -1053,6 +1053,17 @@ SCIP_Longint SCIPconflictGetNResSuccess(
    return conflict->nressuccess;
 }
 
+
+/** gets number of calls to resolution conflict analysis terminating because of large coefficients */
+SCIP_Longint SCIPconflictGetNResLargeCoefs(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   )
+{
+   assert(conflict != NULL);
+
+   return conflict->nreslargecoefs;
+}
+
 /** gets number of calls to resolution conflict analysis */
 SCIP_Longint SCIPconflictGetNResCalls(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
@@ -2516,6 +2527,11 @@ SCIP_RETCODE rescaleAndResolve(
    /* if the scale becomes too large we can apply a clause resolution step as last resort */
    if ( SCIPsetIsGE(set, scale,  set->conf_generalresminmaxquot) )
    {
+      if( !conflict->haslargecoef )
+      {
+         conflict->haslargecoef = TRUE;
+         conflict->nreslargecoefs++;
+      }
       SCIP_Bool success;
       SCIP_CALL( getClauseConflictSet(conflict, blkmem, set, currbdchginfo, &success) );
       conflict->resolutionset->slack = -1.0;
@@ -2607,6 +2623,11 @@ SCIP_RETCODE rescaleAndResolve(
    resolvedresolutionset->coefquotient = (resolvedresolutionset->nnz > 0) ? fabs(largestcoef / smallestcoef) : 0.0;
    if ( SCIPsetIsGT(set, resolvedresolutionset->coefquotient, set->conf_generalresminmaxquot) )
    {
+      if( !conflict->haslargecoef )
+      {
+         conflict->haslargecoef = TRUE;
+         conflict->nreslargecoefs++;
+      }
       SCIPsetDebugMsg(set, "Quotient %f exceeds max allowed quotient", (resolvedresolutionset->nnz > 0) ? fabs(largestcoef / smallestcoef) : 0.0);
       return SCIP_OKAY;
    }
@@ -3461,6 +3482,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
       return SCIP_OKAY;
    }
 
+   conflict->haslargecoef = FALSE;
    /* calculate the maximal size of each accepted conflict set */
    maxsize = (int) (set->conf_maxvarsfracres * transprob->nvars);
 
@@ -4013,6 +4035,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
 
          if ( SCIPsetIsLT(set, conflict->resolutionsets[i]->coefquotient, set->conf_generalresminmaxquot) )
          {
+
             SCIP_Bool success;
             SCIP_CALL( SCIPconflictFlushResolutionSets(conflict, blkmem, set, stat, transprob, origprob, tree, reopt,
                                             lp, cliquetable, resolutionset, &success) );
@@ -4161,6 +4184,7 @@ SCIP_RETCODE SCIPconflictAnalyzeResolution(
    conflict->nresolutionsets = 0;
    conflict->resolutionminslack = 0.0;
    conflict->bdchgonlyresqueue = FALSE;
+   conflict->haslargecoef = FALSE;
 
    /* clear the bound change queues */
    SCIPpqueueClear(conflict->resbdchgqueue);

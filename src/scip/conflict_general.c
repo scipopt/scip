@@ -370,6 +370,7 @@ SCIP_RETCODE SCIPconflictCreate(
    (*conflict)->dualproofsbndnnonzeros = 0;
    (*conflict)->nrescalls = 0;
    (*conflict)->nressuccess = 0;
+   (*conflict)->nreslargecoefs = 0;
    (*conflict)->nresmircalls = 0;
    (*conflict)->nresflowcovercalls = 0;
    (*conflict)->nresmir = 0;
@@ -381,6 +382,7 @@ SCIP_RETCODE SCIPconflictCreate(
    (*conflict)->resolutionminslack = 0.0;
    (*conflict)->bdchgonlyresqueue = FALSE;
    (*conflict)->bdchgonlyconfqueue = FALSE;
+   (*conflict)->haslargecoef = FALSE;
 
    SCIP_CALL( SCIPconflictInitResolutionset((*conflict), blkmem) );
 

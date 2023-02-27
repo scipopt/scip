@@ -2975,6 +2975,15 @@ void SCIPprintConflictStatistics(
       / (SCIP_Real)SCIPconflictGetNAppliedLocalConss(scip->conflict) : 0,
       SCIPconflictGetNDualproofsInfLocal(scip->conflict) + SCIPconflictGetNDualproofsBndLocal(scip->conflict));
 
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Further Statistics :       Calls     Success  Useful   Useless    LargeCoef \n");
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  generalized res  : %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
+      SCIPconflictGetNResCalls(scip->conflict),
+      SCIPconflictGetNResConflictConss(scip->conflict),
+      scip->stat->nusefulpropconflicts,
+      SCIPconflictGetNResConflictConss(scip->conflict) - scip->stat->nusefulpropconflicts,
+      SCIPconflictGetNResLargeCoefs(scip->conflict)
+      );
+
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "Resolution CA      :       Time      Calls    Success  Conflicts    Reconvs    Useless      Fails  (pool size: [%s,%s])\n", initstoresize, maxstoresize);
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  resolution prop  : %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "          - %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
       SCIPconflictGetResTime(scip->conflict),
@@ -2984,6 +2993,7 @@ void SCIPprintConflictStatistics(
       SCIPconflictGetNResConflictConss(scip->conflict) - scip->stat->nusefulpropconflicts,
       SCIPconflictGetNResUnkTerm(scip->conflict)
       );
+
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  graph prop       : %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
       SCIPconflictGetPropTime(scip->conflict),
       SCIPconflictGetNPropCalls(scip->conflict),

@@ -149,6 +149,7 @@ struct SCIP_Conflict
    SCIP_Longint          npropreconvliterals;/**< total number of literals in valid propagation reconvergence constraints */
    SCIP_Longint          nrescalls;          /**< number of calls to resolution conflict analysis */
    SCIP_Longint          nressuccess;        /**< number of calls yielding at least one conflict constraint */
+   SCIP_Longint          nreslargecoefs;     /**< number of calls terminating because of large coefficients */
    SCIP_Longint          ncorrectaborts;     /**< count the number of calls that we terminate unsucessfully for a known reason */
    SCIP_Longint          nresmircalls;       /**< number of calls of c-MIR in resolution conflict analysis */
    SCIP_Longint          nresflowcovercalls; /**< number of calls of flow cover in resolution conflict analysis */
@@ -244,6 +245,7 @@ struct SCIP_Conflict
    SCIP_Real             resolutionminslack; /**< smallest slack among all resolution sets */
    SCIP_Bool             bdchgonlyconfqueue; /**< if true we add bound changes only in graph conflict queues */
    SCIP_Bool             bdchgonlyresqueue;  /**< if true we add bound changes only in generalized resolution queues */
+   SCIP_Bool             haslargecoef;       /**< if true we have a large coefficient in the conflict constraint */
 
 };
 
