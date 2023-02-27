@@ -79,6 +79,7 @@
  */
 
 
+/** wrapper for shadow tree eventhandler data */
 struct SCIP_EventhdlrData
 {
    SCIP*                 scip;               /**< SCIP data structure */
