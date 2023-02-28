@@ -6602,6 +6602,7 @@ SCIP_RETCODE tryAddOrbitopesDynamic(
    int i;
    int j;
    int p;
+   SCIP_Bool success;
 
    assert( scip != NULL );
    assert( propdata != NULL );
@@ -6722,11 +6723,14 @@ SCIP_RETCODE tryAddOrbitopesDynamic(
 
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "orbitope_full_comp_%d", c);
          SCIP_CALL( SCIPorbitopalFixingAddOrbitope(scip, propdata->orbitopalfixingdata,
-            orbitopevarmatrix, nrows, ncols) );
+            orbitopevarmatrix, nrows, ncols, &success) );
 
-         /* mark component as blocked */
-         propdata->componentblocked[c] |= SYM_HANDLETYPE_SYMBREAK | SYM_HANDLETYPE_DYNAMIC;
-         ++propdata->ncompblocked;
+         if ( success )
+         {
+            /* mark component as blocked */
+            propdata->componentblocked[c] |= SYM_HANDLETYPE_SYMBREAK | SYM_HANDLETYPE_DYNAMIC;
+            ++propdata->ncompblocked;
+         }
 
          SCIPfreeBufferArray(scip, &orbitopevarmatrix);
       }

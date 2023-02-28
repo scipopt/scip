@@ -80,7 +80,8 @@ SCIP_RETCODE SCIPorbitopalFixingAddOrbitope(
    SCIP_ORBITOPALFIXINGDATA*  orbifixdata,        /**< orbitopal fixing data structure */
    SCIP_VAR**            vars,               /**< matrix of variables on which the symmetry acts */
    int                   nrows,              /**< number of rows */
-   int                   ncols               /**< number of columns */
+   int                   ncols,              /**< number of columns */
+   SCIP_Bool*            success             /**< to store whether the component is successfully added */
    );
 
 

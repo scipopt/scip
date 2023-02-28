@@ -1227,7 +1227,8 @@ SCIP_RETCODE addOrbitope(
    SCIP_ORBITOPALFIXINGDATA* orbifixdata,    /**< pointer to the dynamic orbitopal fixing data */
    SCIP_VAR**            vars,               /**< variables array, must have size nrows * ncols */
    int                   nrows,              /**< number of rows in orbitope */
-   int                   ncols               /**< number of columns in orbitope */
+   int                   ncols,              /**< number of columns in orbitope */
+   SCIP_Bool*            success             /**< to store whether the component is successfully added */
    )
 {
    ORBITOPEDATA* orbidata;
@@ -1249,7 +1250,12 @@ SCIP_RETCODE addOrbitope(
 
    /* prevent trivial case with empty orbitope */
    if ( nelem == 0 )
+   {
+      *success = FALSE;
       return SCIP_OKAY;
+   }
+
+   *success = TRUE;
 
    SCIP_CALL( SCIPallocBlockMemory(scip, &orbidata) );
 
@@ -2267,7 +2273,8 @@ SCIP_RETCODE SCIPorbitopalFixingAddOrbitope(
    SCIP_ORBITOPALFIXINGDATA* orbifixdata,    /**< orbitopal fixing data structure */
    SCIP_VAR**            vars,               /**< matrix of variables on which the symmetry acts */
    int                   nrows,              /**< number of rows */
-   int                   ncols               /**< number of columns */
+   int                   ncols,              /**< number of columns */
+   SCIP_Bool*            success             /**< to store whether the component is successfully added */
    )
 {
    assert( scip != NULL );
@@ -2287,7 +2294,7 @@ SCIP_RETCODE SCIPorbitopalFixingAddOrbitope(
    }
 
    /* create orbitope data */
-   SCIP_CALL( addOrbitope(scip, orbifixdata, vars, nrows, ncols) );
+   SCIP_CALL( addOrbitope(scip, orbifixdata, vars, nrows, ncols, success) );
 
    return SCIP_OKAY;
 }
