@@ -64,7 +64,7 @@
 
 #include <memory.h>
 
-/* constraint handler properties */
+/* orbitopal symmetry handler properties */
 #define EVENTHDLR_NAME         "symmetry_orbitopal_eventhdlr"
 #define EVENTHDLR_DESC         "event handler for maintaining the branch-and-bound tree"
 #define DEFAULT_COLUMNORDERING SCIP_COLUMNORDERING_MEDIAN /**< the column ordering variant */
@@ -79,11 +79,11 @@ typedef struct SuborbitopeData SUBORBITOPEDATA;
 struct OrbitopeData;
 typedef struct OrbitopeData ORBITOPEDATA;
 
-/** data for the sub-orbitopes */
+/** data for the suborbitopes */
 struct SuborbitopeData
 {
    ORBITOPEDATA*         masterorbitopedata; /**< the master orbitope */
-   SCIP_VAR**            sovars;             /**< matrix of this suborbitope */
+   SCIP_VAR**            sovars;             /**< suborbitope variable array representing suborbitope matrix row-wise */
    SCIP_HASHMAP*         rowindexmap;        /**< map of variables to row index in suborbitope matrix */
    SCIP_HASHMAP*         colindexmap;        /**< map of variables to column index in suborbitope matrix */
    int                   ncols;              /**< number of columns */
@@ -91,14 +91,14 @@ struct SuborbitopeData
    int                   lastnodenumber;     /**< the last node number where the row and column order is computed */
    int                   dbghash;            /**< a hash for the column order in the last iteration */
 #endif
-   SCIP_HASHTABLE*       nodeinfos;          /**< constraint information per branch-and-bound tree node */
+   SCIP_HASHTABLE*       nodeinfos;          /**< symmetry handling information per branch-and-bound tree node */
    SCIP_ORBITOPECOLUMNORDERING columnordering; /**< policy for the column ordering */
 };
 
-/** constraint data for orbitope constraints */
+/** orbitopal symmetry handling data for a single orbitope */
 struct OrbitopeData
 {
-   SCIP_VAR**            vars;               /**< matrix of variables on which the symmetry acts */
+   SCIP_VAR**            vars;               /**< orbitope variable array representing suborbitope matrix row-wise */
    int                   nrows;              /**< number of rows */
    int                   ncols;              /**< number of columns */
    int                   nbranchrows;        /**< number of rows containing variables potentially used for branching */
@@ -106,15 +106,16 @@ struct OrbitopeData
    int                   nsuborbitopes;      /**< number of elements in suborbitope array */
 };
 
-/** constraint handler data */
+/** wrapper for all orbitopes in orbitopal symmetry handling data */
 struct SCIP_OrbitopalFixingData
 {
    SCIP_ORBITOPECOLUMNORDERING defaultcolumnordering; /**< default policy for the column ordering */
    SCIP_EVENTHDLR*       eventhdlr;          /**< pointer to the event handler for managing the branching tree */
-   ORBITOPEDATA**        orbitopes;          /**< array of pointers to orbitope datas */
-   int                   norbitopes;         /**< number of orbitope datas in array */
+   ORBITOPEDATA**        orbitopes;          /**< array of pointers to orbitope data structs */
+   int                   norbitopes;         /**< number of orbitope data structs in array */
    int                   maxnorbitopes;      /**< allocated orbitopes array size */
-   SCIP_CONSHDLR*        conshdlr_nonlinear; /**< nonlinear constraint handler, used for determining if branchingvar */
+   SCIP_CONSHDLR*        conshdlr_nonlinear; /**< nonlinear constraint handler,
+                                              * is used to determine if a variable is a branching variable */
    SCIP_Bool             conshdlr_nonlinear_checked; /**< nonlinear constraint handler is already added? */
 };
 
@@ -122,13 +123,18 @@ struct SCIP_OrbitopalFixingData
  * Local methods
  */
 
-/** get whether a variable type is a branchrow-type */
+/** gets whether a variable type is a branchrow-type */
 static
 SCIP_Bool vartypeIsBranchRowType(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ORBITOPALFIXINGDATA* orbifixdata,    /**< pointer to the dynamic orbitopal fixing data */
    SCIP_VARTYPE          vartype             /**< var type */
 )
 {
+   assert( scip != NULL );
+   assert( orbifixdata != NULL );
+   assert( orbifixdata->conshdlr_nonlinear_checked );
+
    switch (vartype)
    {
    case SCIP_VARTYPE_BINARY:
@@ -141,7 +147,8 @@ SCIP_Bool vartypeIsBranchRowType(
       return orbifixdata->conshdlr_nonlinear == NULL ? FALSE :
          SCIPconshdlrGetNActiveConss(orbifixdata->conshdlr_nonlinear) > 0;
    default:
-      assert( FALSE );
+      SCIPerrorMessage("unknown vartype\n");
+      SCIPABORT();
       /* resolve compiler warning: no asserts in optimized mode */
       return FALSE;
    }
@@ -192,9 +199,15 @@ SCIP_DECL_HASHKEYVAL(hashKeyValBnbnodeinfo)
 }
 
 
-/** test if two columns are symmetrically equivalent */
+/** tests if two columns are symmetrically equivalent
+ *
+ * We test if the columns with index col1 and col2 have elementwise the same bounds.
+ * If all symmetry-compatible fixings are applied, then it suffices to check only as many rows as are selected
+ * for orbitopal fixing. However, to be resilient to reductions that are not symmetry-compatible,
+ * we test all variables in the columns.
+ */
 static
-SCIP_Bool testColumnsAreSymmetricalyEquivalent(
+SCIP_Bool testColumnsAreSymmetricallyEquivalent(
    SCIP*                 scip,               /**< SCIP data structure */
    SUBORBITOPEDATA*      sodata,             /**< suborbitope information */
    int                   col1,               /**< first column to compare */
@@ -205,28 +218,19 @@ SCIP_Bool testColumnsAreSymmetricalyEquivalent(
    SCIP_VAR* var1;
    SCIP_VAR* var2;
 
-   /* test: are col1 and col2 the same columns w.r.t. the variable domain restrictions?
-    * Performance: only need to check the columns in roworder.
-    * Note: if no branching has happened on a row, then the complete symmetry handling assumption
-    * yields that then the columns are identical only if the columns restricted to
-    * the branched rows are identical.
-    * In particular, this could mean that these row variables are domain-reduced or not.
-    */
-   /* the performance improvement assumes the symmetry assumption.
-    * This assumption is not guaranteed, so a different result could be found.
-    *
-    * It could go wrong in the following way: Suppose branch-and-bound path root->b1->b2->b3, branching on a
-    * variable from row r1, r2, r3 respectively, in column c1, c2, c3. Suppose that entry (r3,c2) has a
-    * different value. Then, on the branch b1->b2, nselrows does not contain row r3, so c2 and c3 are
-    * identical. But, on branch b2->b3, when "replaying" the branching steps, it will regard c2 and c3 as
-    * different on the branch b1->b2. A different choice could be made.
-    *
-    * For now: Check all rows.
-    */
+   assert( scip != NULL );
+   assert( sodata != NULL );
+   assert( col1 >= 0 );
+   assert( col1 < sodata->ncols );
+   assert( col2 >= 0 );
+   assert( col2 < sodata->ncols );
+
+   /* @todo test only for the selected rows (see function description) */
    for (i = 0; i < sodata->masterorbitopedata->nrows; ++i)
    {
       var1 = sodata->sovars[i * sodata->ncols + col1];
       var2 = sodata->sovars[i * sodata->ncols + col2];
+
       /* if variable bounds differ: columns c and origcolid are not the same */
       if (
          (! EQ(scip, SCIPvarGetLbLocal(var1), SCIPvarGetLbLocal(var2)))
@@ -240,7 +244,18 @@ SCIP_Bool testColumnsAreSymmetricalyEquivalent(
    return TRUE;
 }
 
-/** update the column order with a bound change */
+/** updates the column order with a bound change
+ *
+ * When it is branched on a variable in a column, update the column order for the children of the focusnode.
+ * Symmetrically equivalent columns, that is the columns where the variables have elementwise the same domain,
+ * at the focusnode at the moment of branching can be permuted.
+ * In this function, we select such a permutation, based on the column containing the branching variable(s).
+ * In all cases, we swap the column containing the branching variable with a symmetrically equivalent column,
+ * and the @param columnordering specifies if we prefer it to be the leftmost, rightmost, centermost symmetrically
+ * equivalent column, or the median column among the symmetrically equivalent columns.
+ *
+ * The column ordering is determined and stored at the moment of branching.
+ */
 static
 SCIP_RETCODE updateColumnOrderWhenBranchingOnColumn(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -275,6 +290,9 @@ SCIP_RETCODE updateColumnOrderWhenBranchingOnColumn(
    assert( roworder != NULL );
    assert( nselrows > 0 );
    assert( colorder != NULL );
+   assert( colorderinv != NULL );
+   assert( var != NULL );
+   assert( thiscolswap != NULL );
    assert( sodata->ncols > 0 );
    assert( sodata->masterorbitopedata != NULL );
 
@@ -285,6 +303,7 @@ SCIP_RETCODE updateColumnOrderWhenBranchingOnColumn(
    assert( nrows > 0 );
 #endif
 
+   /* do not apply a column swap if no column permutations are applied */
    if ( sodata->columnordering == SCIP_COLUMNORDERING_NONE )
    {
       thiscolswap->from = 0;
@@ -324,8 +343,8 @@ SCIP_RETCODE updateColumnOrderWhenBranchingOnColumn(
             continue;
 
          /* test if c is a better choice than swaporigcolid,
-            * otherwise continue to next iteration through CONDITIONFAIL
-            */
+          * otherwise continue to next iteration through CONDITIONFAIL
+          */
          switch (sodata->columnordering)
          {
             case SCIP_COLUMNORDERING_FIRST:
@@ -349,7 +368,7 @@ SCIP_RETCODE updateColumnOrderWhenBranchingOnColumn(
          }
 
          /* test: are c and origcolid the same columns w.r.t. the variable domain restrictions? */
-         if ( !testColumnsAreSymmetricalyEquivalent(scip, sodata, c, origcolid) )
+         if ( !testColumnsAreSymmetricallyEquivalent(scip, sodata, c, origcolid) )
             continue;
 
          /* the variable domain reductions in c and origcolid are the same */
@@ -385,7 +404,7 @@ SCIP_RETCODE updateColumnOrderWhenBranchingOnColumn(
          }
 
          /* test: are c and origcolid the same columns w.r.t. the variable domain restrictions? */
-         if ( !testColumnsAreSymmetricalyEquivalent(scip, sodata, c, origcolid) )
+         if ( !testColumnsAreSymmetricallyEquivalent(scip, sodata, c, origcolid) )
             continue;
 
          /* the variable domain reductions in c and origcolid are the same */
@@ -453,8 +472,8 @@ SCIP_RETCODE updateColumnOrderWhenBranchingOnColumn(
    assert( positionswaporigcolidincolorder < ncols );
    assert( colorder[positionswaporigcolidincolorder] == swaporigcolid );
 
-   SCIPdebugMessage("Swapping %d (at %d) with %d (at %d)\n", origcolid, positionorigcolidincolorder,
-      swaporigcolid, positionswaporigcolidincolorder);
+   SCIPdebugMessage("Suborbitope %p: Swapping column %d (at position %d) with column %d (at position %d)\n",
+      (void*) sodata, origcolid, positionorigcolidincolorder, swaporigcolid, positionswaporigcolidincolorder);
 
    /* swap them, also keep track of the inverses */
    colorder[positionswaporigcolidincolorder] = origcolid;
@@ -466,18 +485,17 @@ SCIP_RETCODE updateColumnOrderWhenBranchingOnColumn(
 }
 
 
-/** get the row order at the node
+/** gets the row order at the node
  *
  * The row order is given in the order of the variables that is branched on.
  * @todo combine with variant of cons_orbitope.c
  */
 static
 SCIP_RETCODE getRowOrder(
-   SCIP*                 scip,               /**< SCIP data structure */
    SUBORBITOPEDATA*      sodata,             /**< data for suborbitope */
-   SCIP_NODE*            node,               /**< node to which the row order should be detected */
+   SCIP_NODE*            node,               /**< node for which the row order should be detected */
    int*                  roworder,           /**< array to populate with row order */
-   int*                  nselrows            /**< pointer to number of rows part of the row order */
+   int*                  nselrows            /**< pointer to populate with the number of rows part of the row order */
 )
 {
    int i;
@@ -487,14 +505,15 @@ SCIP_RETCODE getRowOrder(
 
    assert( sodata != NULL );
    assert( sodata->masterorbitopedata != NULL );
-
    assert( sodata->masterorbitopedata->nrows > 0 );
    assert( sodata->ncols > 0 );
+   assert( node != NULL );
+   assert( roworder != NULL );
+   assert( nselrows != NULL );
 
    *nselrows = 0;
 
    /* get the present row order up to this node (excluding the node itself) */
-   assert( node != NULL );
    node = SCIPnodeGetParent(node);
    while (node != NULL)
    {
@@ -552,11 +571,15 @@ SCIP_RETCODE populateRootedPathColumnOrder(
    BNBNODEINFO tmpnodeinfo;
    COLSWAP* thiscolswap;
 
+   assert( sodata != NULL );
    assert( node != NULL );
+   assert( rootedpath != NULL );
+   assert( colorder != NULL );
+   assert( colorderinv != NULL );
 
    depth = SCIPnodeGetDepth(node);
    i = depth;
-   while ( node )
+   while ( node != NULL )
    {
       assert( SCIPnodeGetDepth(node) == i );
       rootedpath[i--] = node;
@@ -573,6 +596,7 @@ SCIP_RETCODE populateRootedPathColumnOrder(
       /* get the node info of that node */
       tmpnodeinfo.nodenumber = SCIPnodeGetNumber(node);
       ancestornodeinfo = (BNBNODEINFO*) SCIPhashtableRetrieve(sodata->nodeinfos, (void*) &tmpnodeinfo);
+
       /* skip nodes that do not imply any row or column swaps */
       if ( ancestornodeinfo == NULL )
          continue;
@@ -613,11 +637,11 @@ SCIP_RETCODE populateRootedPathColumnOrder(
    return SCIP_OKAY;
 }
 
-/** at branching decisions, maintain the column swap and potential new rows in the orbitope */
+/** at branching decisions, maintains the column swap and potential new rows in the orbitope */
 static
 SCIP_DECL_EVENTEXEC(eventExecNodeBranched)
 {
-   ORBITOPEDATA* consdata;
+   ORBITOPEDATA* orbidata;
    SUBORBITOPEDATA* sodata;
    SCIP_NODE* node;
    SCIP_NODE* eventnode;
@@ -654,8 +678,8 @@ SCIP_DECL_EVENTEXEC(eventExecNodeBranched)
    eventnode = SCIPeventGetNode(event);
    assert( SCIPgetFocusNode(scip) == eventnode );
 
-   consdata = (ORBITOPEDATA*) eventdata;
-   assert( consdata != NULL );
+   orbidata = (ORBITOPEDATA*) eventdata;
+   assert( orbidata != NULL );
 
    SCIP_CALL( SCIPgetChildren(scip, &children, &nchildren) );
 
@@ -664,16 +688,16 @@ SCIP_DECL_EVENTEXEC(eventExecNodeBranched)
    SCIP_CALL( SCIPallocBufferArray(scip, &branchvars, maxnbranchvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &rootedpath, SCIPnodeGetDepth(eventnode)) );
 
-   /* an orbitope could be split in multiple sub-orbitopes; handle each suborbitope separately */
-   for (s = 0; s < consdata->nsuborbitopes; ++s)
+   /* an orbitope could be split in multiple suborbitopes; handle each suborbitope separately */
+   for (s = 0; s < orbidata->nsuborbitopes; ++s)
    {
-      sodata = &(consdata->suborbitopes[s]);
+      sodata = &(orbidata->suborbitopes[s]);
       assert( sodata != NULL);
       assert( sodata->masterorbitopedata != NULL );
-      assert( sodata->masterorbitopedata == consdata );
-      nrows = consdata->nrows;
+      assert( sodata->masterorbitopedata == orbidata );
+      nrows = orbidata->nrows;
 
-      /* get all variables branched upon (check both branches) */
+      /* get all variables branched upon (check all branches) */
       nbranchvars = 0;
       for (c = 0; c < nchildren; ++c)
       {
@@ -708,13 +732,13 @@ SCIP_DECL_EVENTEXEC(eventExecNodeBranched)
                      break;
                }
                /* if the loop above is stopped with `break`, `j < nbranchvars` is not satisfied.
-               * then, go to the next iteration
-               */
+                * then, go to the next iteration
+                */
                if ( j < nbranchvars )
                   continue;
             }
-            /* the variable is not already in the array, so store it */
 
+            /* the variable is not already in the array, so store it */
             if ( nbranchvars >= maxnbranchvars )
             {
                assert( nbranchvars == maxnbranchvars );
@@ -727,7 +751,7 @@ SCIP_DECL_EVENTEXEC(eventExecNodeBranched)
          }
       }
 
-      /* skip suborbitopes whose variable matrix do not contain any branching variable */
+      /* skip suborbitopes whose variable matrices do not contain any branching variable */
       if ( nbranchvars <= 0 )
          continue;
 
@@ -744,7 +768,7 @@ SCIP_DECL_EVENTEXEC(eventExecNodeBranched)
       nselrows = 0;
 
       /* get the present row order up to this node */
-      SCIP_CALL( getRowOrder(scip, sodata, eventnode, roworder, &nselrows) );
+      SCIP_CALL( getRowOrder(sodata, eventnode, roworder, &nselrows) );
 
       /* extend the row fixings with the steps from this node */
       for (i = 0; i < nbranchvars; ++i)
@@ -781,29 +805,29 @@ SCIP_DECL_EVENTEXEC(eventExecNodeBranched)
          }
          else
          {
-            /* reallocate with linear increments, because we expect we expect 1 branching variable most of the time */
+            /* reallocate with linear increments, because we expect 1 branching variable most of the time */
             SCIPreallocBlockMemoryArray(scip, &newnodeinfo->rows, newnodeinfo->nrows, newnodeinfo->nrows + 1);
          }
          newnodeinfo->rows[newnodeinfo->nrows++] = rowid;
       }
 
       /* store data about column ordering */
-      assert( consdata->ncols > 0 );
-      SCIP_CALL( SCIPallocBufferArray(scip, &colorder, consdata->ncols) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &colorderinv, consdata->ncols) );
+      assert( orbidata->ncols > 0 );
+      SCIP_CALL( SCIPallocBufferArray(scip, &colorder, orbidata->ncols) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &colorderinv, orbidata->ncols) );
 
       /* populate colorder with standard ordering */
-      for (i = 0; i < consdata->ncols; ++i)
+      for (i = 0; i < orbidata->ncols; ++i)
          colorder[i] = i;
 
       /* introduce inverse column ordering */
-      for (i = 0; i < consdata->ncols; ++i)
+      for (i = 0; i < orbidata->ncols; ++i)
          colorderinv[i] = i;
 
       /* get the rooted path
-      *
-      * We want to iterate through the bound changes in the order of the rooted path to this node.
-      */
+       *
+       * We want to iterate through the bound changes in the order of the rooted path to this node.
+       */
       node = SCIPnodeGetParent(eventnode);
       if ( node != NULL )
       {
@@ -815,6 +839,7 @@ SCIP_DECL_EVENTEXEC(eventExecNodeBranched)
       {
          SCIP_CALL( updateColumnOrderWhenBranchingOnColumn(scip, sodata, roworder, nselrows, colorder,
             colorderinv, branchvars[i], &tmpcolswap) );
+
          /* skip trivial swaps of columns */
          if ( tmpcolswap.from == tmpcolswap.to )
             continue;
@@ -827,8 +852,9 @@ SCIP_DECL_EVENTEXEC(eventExecNodeBranched)
          }
          else
          {
-            /* reallocate with linear increments, because we expect we expect 1 branching variable most of the time */
-            SCIPreallocBlockMemoryArray(scip, &newnodeinfo->colswaps, newnodeinfo->ncolswaps, newnodeinfo->ncolswaps + 1);
+            /* reallocate with linear increments, because we expect 1 branching variable most of the time */
+            SCIPreallocBlockMemoryArray(scip, &newnodeinfo->colswaps, newnodeinfo->ncolswaps,
+               newnodeinfo->ncolswaps + 1);
          }
          thiscolswap = &(newnodeinfo->colswaps[newnodeinfo->ncolswaps++]);
          thiscolswap->from = tmpcolswap.from;
@@ -858,7 +884,7 @@ SCIP_DECL_EVENTEXEC(eventExecNodeBranched)
 }
 
 
-/** at branching decisions, maintain the column swap and potential new rows in the orbitope */
+/** at branching decisions, maintains the column swap and potential new rows in the orbitope */
 static
 SCIP_DECL_EVENTEXEC(eventExec)
 {
@@ -867,6 +893,7 @@ SCIP_DECL_EVENTEXEC(eventExec)
    case SCIP_EVENTTYPE_NODEBRANCHED:
       return eventExecNodeBranched(scip, eventhdlr, event, eventdata);
    default:
+      SCIPerrorMessage("Eventhandler " EVENTHDLR_NAME " is called with an unsupported eventtype.\n");
       return SCIP_ERROR;
    }
 }
@@ -875,8 +902,9 @@ SCIP_DECL_EVENTEXEC(eventExec)
 /** returns whether a row contains potential branching variables */
 static
 SCIP_Bool rowIsBranchRow(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ORBITOPALFIXINGDATA* orbifixdata,    /**< pointer to the dynamic orbitopal fixing data */
-   ORBITOPEDATA*         orbidata,           /**< dynamic orbitope constraint data */
+   ORBITOPEDATA*         orbidata,           /**< dynamic orbitope symmetry handling data */
    int                   rowid               /**< row id for which to check */
 )
 {
@@ -885,6 +913,8 @@ SCIP_Bool rowIsBranchRow(
    int c;
 #endif
 
+   assert( scip != NULL );
+   assert( orbifixdata != NULL );
    assert( orbidata != NULL );
    assert( orbidata->nrows > 0 );
    assert( orbidata->ncols > 0 );
@@ -903,16 +933,16 @@ SCIP_Bool rowIsBranchRow(
       /* the actual vartypes can be different,
        * for example when an INTEGER vartype turns into BINARY due to bound changes
        */
-      assert( vartypeIsBranchRowType(orbifixdata, SCIPvarGetType(var)) ==
-         vartypeIsBranchRowType(orbifixdata, SCIPvarGetType(orbidata->vars[rowid * orbidata->ncols + c])) );
+      assert( vartypeIsBranchRowType(scip, orbifixdata, SCIPvarGetType(var)) ==
+         vartypeIsBranchRowType(scip, orbifixdata, SCIPvarGetType(orbidata->vars[rowid * orbidata->ncols + c])) );
    }
 #endif
 
-   return vartypeIsBranchRowType(orbifixdata, SCIPvarGetType(var));
+   return vartypeIsBranchRowType(scip, orbifixdata, SCIPvarGetType(var));
 }
 
 
-/** clear suborbitope data */
+/** clears suborbitope data */
 static
 SCIP_RETCODE clearSuborbitope(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -923,6 +953,7 @@ SCIP_RETCODE clearSuborbitope(
    int nentries;
    int i;
 
+   assert( scip != NULL );
    assert( sodata != NULL );
    assert( sodata->masterorbitopedata != NULL );
 
@@ -930,8 +961,8 @@ SCIP_RETCODE clearSuborbitope(
    for (i = 0; i < nentries; ++i)
    {
       /* @todo in principle, can deal with memory sparsity by first getting all nodeinfos,
-      * then sorting by address and free them in descending order
-      */
+       * then sorting by address and free them in descending order
+       */
       nodeinfo = (BNBNODEINFO*) (SCIPhashtableGetEntry(sodata->nodeinfos, i));
       if ( nodeinfo == NULL )
          continue;
@@ -964,12 +995,12 @@ SCIP_RETCODE clearSuborbitope(
 }
 
 
-/** frees orbitope constraint data */
+/** frees orbitope data */
 static
 SCIP_RETCODE freeOrbitope(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ORBITOPALFIXINGDATA* orbifixdata,    /**< pointer to the dynamic orbitopal fixing data */
-   ORBITOPEDATA**        orbidata            /**< pointer to orbitope constraint data */
+   ORBITOPEDATA**        orbidata            /**< pointer to orbitope data */
    )
 {
    SUBORBITOPEDATA* sodata;
@@ -1021,12 +1052,12 @@ SCIP_RETCODE freeOrbitope(
 }
 
 
-/** initialize suborbitope data */
+/** initializes suborbitope data */
 static
 SCIP_RETCODE computeSuborbitopesAndInitialize(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ORBITOPALFIXINGDATA*  orbifixdata,        /**< pointer to the dynamic orbitopal fixing data */
-   ORBITOPEDATA*         orbidata            /**< pointer to constraint data */
+   SCIP_ORBITOPALFIXINGDATA* orbifixdata,    /**< pointer to the dynamic orbitopal fixing data */
+   ORBITOPEDATA*         orbidata            /**< pointer to orbitope data */
 )
 {
    SUBORBITOPEDATA* sodata;
@@ -1047,20 +1078,21 @@ SCIP_RETCODE computeSuborbitopesAndInitialize(
    int colid;
 
    assert( scip != NULL );
+   assert( orbifixdata != NULL );
    assert( orbidata != NULL );
    assert( orbidata->suborbitopes == NULL );
    assert( orbidata->nsuborbitopes == 0 );
    assert( orbidata->nrows > 0 );
    assert( orbidata->ncols > 0 );
 
-   /* for each column, an index that indicates which class of columns it is part of. */
+   /* for each column, an index that indicates which class of columns it is part of */
    SCIPallocBufferArray(scip, &columnsubset, orbidata->ncols);
 
    /* initialize all columns to be in their own class */
    for (c = 0; c < orbidata->ncols; ++c)
       columnsubset[c] = -1;
 
-   /* determine which columns are equal and which are not */
+   /* determine which columns are equivalent and which are not */
    ncolumnsubset = 0;
 
    for (c = 0; c < orbidata->ncols; ++c)
@@ -1069,7 +1101,7 @@ SCIP_RETCODE computeSuborbitopesAndInitialize(
       if ( columnsubset[c] >= 0 )
          continue;
 
-      /* to which columns is c equal? */
+      /* to which columns is c equivalent? */
       columnsubset[c] = ncolumnsubset;
       nidenticalcolumns = 0;
       for (c_ = c + 1; c_ < orbidata->ncols; ++c_)
@@ -1116,7 +1148,7 @@ SCIP_RETCODE computeSuborbitopesAndInitialize(
 
    for (i = 0; i < orbidata->nsuborbitopes; ++i)
    {
-      /* determine all columns that are labeled with i  */
+      /* determine all columns that are labeled with i */
       nthissubset = 0;
       for (c = 0; c < orbidata->ncols; ++c)
       {
@@ -1153,7 +1185,7 @@ SCIP_RETCODE computeSuborbitopesAndInitialize(
       SCIP_CALL( SCIPhashtableCreate(&sodata->nodeinfos, scip->mem->probmem, 1,
          hashGetKeyBnbnodeinfo, hashKeyEqBnbnodeinfo, hashKeyValBnbnodeinfo, NULL) );
 
-      SCIPdebugMessage("Orbitope variables for (%dx%d) suborbitope for consdata %p and subortibtope %d\n",
+      SCIPdebugMessage("Orbitope variables for (%dx%d) suborbitope for orbidata %p and suborbitope %d\n",
          nrows, ncols, (void*) orbidata, i);
       for (j = 0, rowid = 0, colid = 0; j < nelem; ++j, ++colid)
       {
@@ -1188,7 +1220,7 @@ SCIP_RETCODE computeSuborbitopesAndInitialize(
 }
 
 
-/** adds an orbitope to the orbital fixing data */
+/** adds an orbitope to the orbitopal fixing data */
 static
 SCIP_RETCODE addOrbitope(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1208,11 +1240,16 @@ SCIP_RETCODE addOrbitope(
    assert( scip != NULL );
    assert( orbifixdata != NULL );
    assert( orbifixdata->eventhdlr != NULL );
-   assert( nrows > 0 );
-   assert( ncols > 0 );
+   assert( vars != NULL );
+   assert( nrows >= 0 );
+   assert( ncols >= 0 );
 
    nelem = nrows * ncols;
-   assert( nelem > 0 );
+   assert( nelem >= 0 );
+
+   /* prevent trivial case with empty orbitope */
+   if ( nelem == 0 )
+      return SCIP_OKAY;
 
    SCIP_CALL( SCIPallocBlockMemory(scip, &orbidata) );
 
@@ -1222,7 +1259,9 @@ SCIP_RETCODE addOrbitope(
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &orbidata->vars, nelem) );
 
-   SCIPdebugMessage("Orbitope variables for (%dx%d) orbitope with consdata %p\n", nrows, ncols, (void*) orbidata);
+   SCIPdebugMessage("Orbitope variables for (%dx%d) orbitope with orbidata %p\n", nrows, ncols, (void*) orbidata);
+
+   /* populate variable array defining orbitope matrix for orbitope data */
    for (i = 0, rowid = 0, colid = 0; i < nelem; ++i, ++colid)
    {
       if ( colid == ncols )
@@ -1235,8 +1274,8 @@ SCIP_RETCODE addOrbitope(
 
       var = vars[i];
       assert( var != NULL );
+      assert( SCIPvarIsTransformed(var) );
 
-      SCIP_CALL( SCIPgetTransformedVar(scip, var, &var ) );
       SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, var) );
       SCIP_CALL( SCIPcaptureVar(scip, var) );
 
@@ -1251,11 +1290,11 @@ SCIP_RETCODE addOrbitope(
    /* @todo at getRowData: If nselrows == nbranchrows, append the non-branch rows (like before) */
    for (i = 0; i < nrows; ++i)
    {
-      if ( rowIsBranchRow(orbifixdata, orbidata, i) )
+      if ( rowIsBranchRow(scip, orbifixdata, orbidata, i) )
          ++orbidata->nbranchrows;
    }
 
-   /* constraint handler data */
+   /* cannot add orbitope when already branching */
    assert( SCIPgetStage(scip) == SCIP_STAGE_SOLVING ? SCIPgetNNodes(scip) == 0 : TRUE );
 
    /* add the event to store the row and column updates of nodes in the branch-and-bound tree */
@@ -1297,9 +1336,9 @@ SCIP_RETCODE addOrbitope(
    return SCIP_OKAY;
 }
 
-/** get the column order at the node
+/** gets the column order at the node
  *
- * The column order is (deterministically) dynamically decided based on the policy for column ordering
+ * The column order is (deterministically) dynamically decided based on the policy for column ordering.
  */
 static
 SCIP_RETCODE getColumnOrder(
@@ -1320,8 +1359,14 @@ SCIP_RETCODE getColumnOrder(
 
    assert( scip != NULL );
    assert( sodata != NULL );
+   assert( eventnode != NULL );
+   assert( roworder != NULL );
    assert( nselrows > 0 );
+   assert( colorder != NULL );
+   assert( colorderinv != NULL );
+
    ncols = sodata->ncols;
+   assert( ncols > 0 );
 
    /* populate colorder with standard ordering */
    for (i = 0; i < ncols; ++i)
@@ -1353,7 +1398,7 @@ SCIP_RETCODE getColumnOrder(
 static
 void assertIsOrbitopeMatrix(
    SCIP*                 scip,               /**< SCIP data structure */
-   SUBORBITOPEDATA*      sodata,             /**< constraint data */
+   SUBORBITOPEDATA*      sodata,             /**< suborbitope data */
    int*                  roworder,           /**< array with the row order */
    int*                  colorder,           /**< array with the column order */
    SCIP_Real*            matrix,             /**< a matrix */
@@ -1379,6 +1424,8 @@ void assertIsOrbitopeMatrix(
    assert( sodata->masterorbitopedata != NULL );
    assert( sodata->sovars != NULL );
    assert( sodata->ncols > 0 );
+   assert( infinitesimal != NULL );
+   assert( addinfinitesimals == TRUE || addinfinitesimals == FALSE );
 
    /* respect variable bounds */
    for (rowid = 0; rowid < nrows; ++rowid)
@@ -1433,7 +1480,7 @@ void assertIsOrbitopeMatrix(
 #endif
 
 #ifndef NDEBUG
-/** to test if arrays are the same, generate some hash for an array of integers */
+/** to test if arrays are the same, generates some hash for an array of integers */
 static
 int debugGetArrayHash(
    int*                  array,              /** array */
@@ -1442,6 +1489,9 @@ int debugGetArrayHash(
 {
    int i;
    unsigned int hash = 0;
+
+   assert( array != NULL );
+   assert( len >= 0 );
 
    for (i = 0; i < len; i++)
    {
@@ -1457,13 +1507,17 @@ int debugGetArrayHash(
 /** prints nrows × ncols matrix of floats with 2 decimals */
 static
 void debugPrintMatrix(
-   SCIP_Real*            matrix,             /** Matrix */
-   int                   nrows,              /** Number of rows */
-   int                   ncols               /** Number of rows */
+   SCIP_Real*            matrix,             /** matrix, encoded as array enumerating the elements row-wise */
+   int                   nrows,              /** number of rows */
+   int                   ncols               /** number of rows */
 )
 {
    int row;
    int col;
+
+   assert( matrix != NULL );
+   assert( nrows >= 0 );
+   assert( ncols >= 0 );
 
    for (row = 0; row < nrows; ++row)
    {
@@ -1478,7 +1532,7 @@ void debugPrintMatrix(
 #endif
 
 
-/** get the column order at the node */
+/** gets the column order at the node */
 static
 SCIP_RETCODE propagateStaticOrbitope(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1490,7 +1544,7 @@ SCIP_RETCODE propagateStaticOrbitope(
    int*                  nfixedvars          /**< pointer to counter of number of variable domain reductions */
 )
 {
-   /* @todo also make "nselcols" to allow for colorders smaller than consdata->ncols */
+   /* @todo also make "nselcols" to allow for colorders smaller than orbidata->ncols */
    SCIP_Real* lexminface = NULL;
    int* lexminepsrow = NULL;
    SCIP_Real* lexmaxface = NULL;
@@ -1573,13 +1627,13 @@ SCIP_RETCODE propagateStaticOrbitope(
    /* last column takes the minimally possible values. */
    colid = ncols - 1;
    origcolid = colorder[colid];
-   for (rowid = 0; rowid < nselrows; ++rowid)
+   for (rowid = 0, i = colid; rowid < nselrows; ++rowid, i += ncols)
    {
       origrowid = roworder[rowid];
       origidx = origrowid * ncols + origcolid;
       var = sodata->sovars[origidx];
-      i = rowid * ncols + colid;
 
+      assert( i == rowid * ncols + colid );
       assert( var != NULL );
 
       lexminface[i] = SCIPvarGetLbLocal(var);
@@ -1594,11 +1648,11 @@ SCIP_RETCODE propagateStaticOrbitope(
       iseq = TRUE;
 
       origcolid = colorder[colid];
-      for (rowid = 0; rowid < nselrows; ++rowid)
+      for (rowid = 0, i = colid; rowid < nselrows; ++rowid, i += ncols)
       {
          origrowid = roworder[rowid];
          origidx = origrowid * ncols + origcolid;
-         i = rowid * ncols + colid;
+         assert( i == rowid * ncols + colid );
 
          /* the entry one to the right is not the first column */
          assert( (i + 1) % ncols > 0 );
@@ -1740,13 +1794,13 @@ SCIP_RETCODE propagateStaticOrbitope(
    /* first column, fill all unfixed entries with maximally possible values */
    colid = 0;
    origcolid = colorder[colid];
-   for (rowid = 0; rowid < nselrows; ++rowid)
+   for (rowid = 0, i = colid; rowid < nselrows; ++rowid, i += ncols)
    {
       origrowid = roworder[rowid];
       origidx = origrowid * ncols + origcolid;
       var = sodata->sovars[origidx];
-      i = rowid * ncols + colid;
 
+      assert( i == rowid * ncols + colid );
       assert( var != NULL );
 
       lexmaxface[i] = SCIPvarGetUbLocal(var);
@@ -1761,13 +1815,13 @@ SCIP_RETCODE propagateStaticOrbitope(
       iseq = TRUE;
 
       origcolid = colorder[colid];
-      for (rowid = 0; rowid < nselrows; ++rowid)
+      for (rowid = 0, i = colid; rowid < nselrows; ++rowid, i += ncols)
       {
          origrowid = roworder[rowid];
          origidx = origrowid * ncols + origcolid;
-         i = rowid * ncols + colid;
+         assert( i == rowid * ncols + colid );
 
-         /* the entry one to the left is not the last column */
+         /* the entry one to the left is not the last column, i.e., this column cannot be the first column */
          assert( i % ncols > 0 );
 
          var = sodata->sovars[origidx];
@@ -1794,7 +1848,7 @@ SCIP_RETCODE propagateStaticOrbitope(
                 */
                if ( lastunfixed >= 0 )
                {
-                  /* repair: return to the last row with "room", and increase the lexmax-value at that row. */
+                  /* repair: return to the last row with "room", and decrease the lexmax-value at that row. */
                   assert( EQ(scip, lexmaxface[lastunfixed * ncols + colid],
                      lexmaxface[lastunfixed * ncols + colid - 1]) );
                   othervar = sodata->sovars[roworder[lastunfixed] * ncols + origcolid];
@@ -1909,9 +1963,9 @@ SCIP_RETCODE propagateStaticOrbitope(
    /* compare the two column-wise and apply domain reductions */
    for (colid = 0; colid < ncols; ++colid)
    {
-      for (rowid = 0; rowid < nselrows; ++rowid)
+      for (rowid = 0, i = colid; rowid < nselrows; ++rowid, i += ncols)
       {
-         i = rowid * ncols + colid;
+         assert( i == rowid * ncols + colid );
 
          /* get var */
          origrowid = roworder[rowid];
@@ -2052,7 +2106,7 @@ SCIP_RETCODE propagateSuborbitope(
    focusnode = SCIPgetFocusNode(scip);
    assert( focusnode != NULL );
 
-   SCIP_CALL( getRowOrder(scip, sodata, focusnode, roworder, &nselrows) );
+   SCIP_CALL( getRowOrder(sodata, focusnode, roworder, &nselrows) );
    assert( nselrows >= 0 );
    assert( nselrows <= nrows );
    if ( nselrows == 0 )
@@ -2062,7 +2116,7 @@ SCIP_RETCODE propagateSuborbitope(
 
 #ifndef NDEBUG
    /* DEBUG: if propagation is repeated in the same node, the same column order and row order is needed */
-   /* @todo: performance: move roworder and colorder to consdata, then re-use */
+   /* @todo: performance: move roworder and colorder to orbidata, then re-use */
    {
       int colhash = debugGetArrayHash(colorder, ncols);
       int rowhash = debugGetArrayHash(roworder, nselrows);
@@ -2109,11 +2163,11 @@ SCIP_RETCODE propagateSuborbitope(
 }
 
 
-/** propagation method for a single orbitope constraint */
+/** propagation method for a single orbitope matrix */
 static
 SCIP_RETCODE propagateOrbitope(
    SCIP*                 scip,               /**< SCIP data structure */
-   ORBITOPEDATA*         orbidata,           /**< orbitope data*/
+   ORBITOPEDATA*         orbidata,           /**< orbitope data */
    SCIP_Bool*            infeasible,         /**< pointer to store whether the problem is infeasible */
    int*                  nfixedvars          /**< pointer to store the number of found domain reductions */
    )
@@ -2125,6 +2179,7 @@ SCIP_RETCODE propagateOrbitope(
    assert( orbidata != NULL );
    assert( infeasible != NULL );
    assert( nfixedvars != NULL );
+   /* suborbitopes partition the column set of an orbitope, and orbitopes are not created if they have 0 columns */
    assert( orbidata->nsuborbitopes > 0 );
 
    *nfixedvars = 0;
@@ -2151,7 +2206,7 @@ SCIP_RETCODE propagateOrbitope(
 /** propagates orbitopal fixing */
 SCIP_RETCODE SCIPorbitopalFixingPropagate(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ORBITOPALFIXINGDATA*  orbifixdata,        /**< orbitopal fixing data structure */
+   SCIP_ORBITOPALFIXINGDATA* orbifixdata,    /**< orbitopal fixing data structure */
    SCIP_Bool*            infeasible,         /**< whether infeasibility is found */
    int*                  nred,               /**< number of domain reductions */
    SCIP_Bool*            didrun              /**< a global pointer maintaining if any symmetry propagator has run
@@ -2182,7 +2237,7 @@ SCIP_RETCODE SCIPorbitopalFixingPropagate(
    if ( SCIPinProbing(scip) )
       return SCIP_OKAY;
 
-   /* propagate all useful constraints */
+   /* propagate all orbitopes */
    for (c = 0; c < orbifixdata->norbitopes; ++c)
    {
       orbidata = orbifixdata->orbitopes[c];
@@ -2195,7 +2250,7 @@ SCIP_RETCODE SCIPorbitopalFixingPropagate(
       /* a symmetry propagator has ran, so set didrun to TRUE */
       *didrun = TRUE;
 
-      /* stop if we find infeasibility in one of the constraints */
+      /* stop if we find infeasibility in one of the methods */
       if ( *infeasible )
       {
          SCIPdebugMessage("Detected infeasibility during orbitopal fixing for orbitope %d\n", c);
@@ -2209,7 +2264,7 @@ SCIP_RETCODE SCIPorbitopalFixingPropagate(
 /** marks presence of orbitopal symmetries component for orbitopal fixing */
 SCIP_RETCODE SCIPorbitopalFixingAddOrbitope(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ORBITOPALFIXINGDATA*  orbifixdata,        /**< orbitopal fixing data structure */
+   SCIP_ORBITOPALFIXINGDATA* orbifixdata,    /**< orbitopal fixing data structure */
    SCIP_VAR**            vars,               /**< matrix of variables on which the symmetry acts */
    int                   nrows,              /**< number of rows */
    int                   ncols               /**< number of columns */
@@ -2231,7 +2286,7 @@ SCIP_RETCODE SCIPorbitopalFixingAddOrbitope(
       orbifixdata->conshdlr_nonlinear_checked = TRUE;
    }
 
-   /* create constraint data */
+   /* create orbitope data */
    SCIP_CALL( addOrbitope(scip, orbifixdata, vars, nrows, ncols) );
 
    return SCIP_OKAY;
@@ -2241,7 +2296,7 @@ SCIP_RETCODE SCIPorbitopalFixingAddOrbitope(
 /** resets orbitopal fixing data structure (clears all orbitopes) */
 SCIP_RETCODE SCIPorbitopalFixingReset(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ORBITOPALFIXINGDATA*  orbifixdata         /**< pointer to orbitopal fixing structure to populate */
+   SCIP_ORBITOPALFIXINGDATA* orbifixdata     /**< pointer to orbitopal fixing structure to populate */
    )
 {
    assert( scip != NULL );
@@ -2265,7 +2320,7 @@ SCIP_RETCODE SCIPorbitopalFixingReset(
 }
 
 
-/** free orbitopal fixing data */
+/** frees orbitopal fixing data */
 SCIP_RETCODE SCIPorbitopalFixingFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ORBITOPALFIXINGDATA** orbifixdata    /**< pointer to orbitopal fixing structure to populate */
@@ -2283,6 +2338,7 @@ SCIP_RETCODE SCIPorbitopalFixingFree(
 
 
 /** initializes structures needed for orbitopal fixing
+ *
  * This is only done exactly once.
  */
 SCIP_RETCODE SCIPorbitopalFixingInclude(
@@ -2297,7 +2353,7 @@ SCIP_RETCODE SCIPorbitopalFixingInclude(
 
    assert( SCIPgetStage(scip) == SCIP_STAGE_INIT );
 
-   /* create orbitope constraint handler data */
+   /* create orbitope handler data */
    SCIP_CALL( SCIPallocBlockMemory(scip, orbifixdata) );
 
    /* default column ordering param */
