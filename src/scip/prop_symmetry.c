@@ -184,7 +184,7 @@
 #define DEFAULT_DOUBLEEQUATIONS     FALSE    /**< Double equations to positive/negative version? */
 #define DEFAULT_COMPRESSSYMMETRIES   TRUE    /**< Should non-affected variables be removed from permutation to save memory? */
 #define DEFAULT_COMPRESSTHRESHOLD     0.5    /**< Compression is used if percentage of moved vars is at most the threshold. */
-#define DEFAULT_ONLYBINARYSYMMETRY   TRUE    /**< Is only symmetry on binary variables used? */
+#define DEFAULT_ENFORCECOMPUTESYMMETRY FALSE /**< always compute symmetries, even if they cannot be handled */
 
 /* default parameters for linear symmetry constraints */
 #define DEFAULT_CONSSADDLP           TRUE    /**< Should the symmetry breaking constraints be added to the LP? */
@@ -281,7 +281,7 @@ struct SCIP_PropData
    int                   usesymmetry;        /**< encoding of active symmetry handling methods (for debugging) */
    SCIP_Bool             usecolumnsparsity;  /**< Should the number of conss a variable is contained in be exploited in symmetry detection? */
    SCIP_Bool             doubleequations;    /**< Double equations to positive/negative version? */
-   SCIP_Bool             onlybinarysymmetry; /**< Whether only symmetry on binary variables is used */
+   SCIP_Bool             enforcecomputesymmetry; /**< always compute symmetries, even if they cannot be handled */
 
    /* for symmetry constraints */
    SCIP_Bool             triedaddconss;      /**< whether we already tried to add symmetry breaking constraints */
@@ -2786,6 +2786,55 @@ SCIP_RETCODE ensureSymmetryMovedpermvarscountsComputed(
 }
 
 
+/** returns whether any allowed symmetry handling method is effective for the problem instance */
+static
+SCIP_Bool testSymmetryComputationRequired(
+   SCIP*                 scip,               /**< SCIP instance */
+   SCIP_PROPDATA*        propdata            /**< propagator data */
+)
+{
+   /* must always compute symmetry if it is enforced */
+   if ( propdata->enforcecomputesymmetry )
+      return TRUE;
+
+   /* for dynamic symmetry handling or orbital fixing, branching must be possible */
+   if ( ISSYMDYNAMICACTIVE(propdata->usesymmetry) || ISORBITALFIXINGACTIVE(propdata->usesymmetry) )
+   {
+      /* @todo a proper test whether variables can be branched on or not */
+      if ( SCIPgetNBinVars(scip) > 0 )
+         return TRUE;
+      if ( SCIPgetNIntVars(scip) > 0 )
+         return TRUE;
+      /* continuous variables can be branched on if nonlinear constraints exist */
+      if ( ( SCIPgetNContVars(scip) > 0 || SCIPgetNImplVars(scip) > 0 )
+         && SCIPconshdlrGetNActiveConss(propdata->conshdlr_nonlinear) > 0 )
+         return TRUE;
+   }
+
+   /* for SST, matching leadervartypes */
+   if ( ISSSTACTIVE(propdata->usesymmetry) )
+   {
+      if ( ISSSTBINACTIVE(propdata->sstleadervartype) && SCIPgetNBinVars(scip) > 0 )
+         return TRUE;
+      if ( ISSSTINTACTIVE(propdata->sstleadervartype) && SCIPgetNIntVars(scip) > 0 )
+         return TRUE;
+      if ( ISSSTIMPLINTACTIVE(propdata->sstleadervartype) && SCIPgetNImplVars(scip) > 0 )
+         return TRUE;
+      if ( ISSSTCONTACTIVE(propdata->sstleadervartype) && SCIPgetNContVars(scip) > 0 )
+         return TRUE;
+   }
+
+   /* for static symmetry handling constraints, binary variables must be present */
+   if ( ISSYMRETOPESACTIVE(propdata->usesymmetry) )
+   {
+      if ( SCIPgetNBinVars(scip) > 0 )
+         return TRUE;
+   }
+
+   /* if all tests above fail, then the symmetry handling methods cannot achieve anything */
+   return FALSE;
+}
+
 /** determines symmetry */
 static
 SCIP_RETCODE determineSymmetry(
@@ -2841,20 +2890,9 @@ SCIP_RETCODE determineSymmetry(
    if ( nvars <= 0 )
       return SCIP_OKAY;
 
-   /* do not compute symmetry if there are no binary variables and non-binary variables cannot be handled, but only binary variables would be used */
-   if ( propdata->onlybinarysymmetry && SCIPgetNBinVars(scip) == 0 )
-   {
-      /* terminate if only Schreier Sims for binary variables is selected */
-      if ( ISSSTACTIVE(propdata->usesymmetry) )
-      {
-         if ( ! ((ISSSTINTACTIVE(propdata->sstleadervartype) && SCIPgetNIntVars(scip) > 0)
-               || (ISSSTIMPLINTACTIVE(propdata->sstleadervartype) && SCIPgetNImplVars(scip) > 0)
-               || (ISSSTCONTACTIVE(propdata->sstleadervartype) && SCIPgetNContVars(scip) > 0)) )
-            return SCIP_OKAY;
-      }
-      else
-         return SCIP_OKAY;
-   }
+   /* do not compute symmetry if we cannot handle it */
+   if ( !testSymmetryComputationRequired(scip, propdata) )
+      return SCIP_OKAY;
 
    /* determine symmetry specification */
    if ( SCIPgetNBinVars(scip) > 0 )
@@ -7616,9 +7654,9 @@ SCIP_RETCODE SCIPincludePropSymmetry(
          &propdata->sstmixedcomponents, TRUE, DEFAULT_SSTMIXEDCOMPONENTS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "propagating/" PROP_NAME "/onlybinarysymmetry",
+         "propagating/" PROP_NAME "/enforcecomputesymmetry",
          "Is only symmetry on binary variables used?",
-         &propdata->onlybinarysymmetry, TRUE, DEFAULT_ONLYBINARYSYMMETRY, NULL, NULL) );
+         &propdata->enforcecomputesymmetry, TRUE, DEFAULT_ENFORCECOMPUTESYMMETRY, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "propagating/" PROP_NAME "/preferlessrows",
