@@ -33,8 +33,8 @@
 
 #include "scip/symmetry.h"
 #include "scip/scip.h"
-#include "scip/misc.h"
 #include "scip/cons_setppc.h"
+#include <scip/misc.h>
 #include <symmetry/struct_symmetry.h>
 #include <symmetry/type_symmetry.h>
 
@@ -1364,6 +1364,466 @@ SCIP_RETCODE SCIPisPackingPartitioningOrbitope(
    SCIPfreeCleanBufferArray(scip, &rowcoveragesetppc);
    SCIPfreeBufferArray(scip, &rowidxvar);
    SCIPfreeBufferArray(scip, &covered);
+
+   return SCIP_OKAY;
+}
+
+/** checks whether a (signed) permutation is an involution */
+static
+SCIP_RETCODE isPermIvolution(
+   int*                  perm,               /**< permutation */
+   int                   permlen,            /**< number of original (non-negated) variables in a permutation */
+   SCIP_Bool             issignedperm,       /**< whether permutation is encoded as signed */
+   SCIP_Bool*            permissigned,       /**< pointer to store whether perm is a signed permutation */
+   SCIP_Bool*            isinvolution,       /**< pointer to store whether perm is an involution */
+   int*                  ntwocycles          /**< pointer to store number of 2-cycles in an involution */
+   )
+{
+   int v;
+
+   assert( perm != NULL );
+   assert( permlen > 0 );
+   assert( permissigned != NULL );
+   assert( isinvolution != NULL );
+   assert( ntwocycles != NULL );
+
+   *ntwocycles = 0;
+   *permissigned = FALSE;
+   *isinvolution = TRUE;
+   for (v = 0; v < permlen && *isinvolution; ++v)
+   {
+      /* do not handle variables twice */
+      if ( perm[v] <= v )
+         continue;
+
+      /* detect signed permutation */
+      if ( perm[v] >= permlen )
+         *permissigned = TRUE;
+
+      /* detect two cycles */
+      if ( perm[perm[v]] == v )
+         ++(*ntwocycles);
+      else
+         *isinvolution = FALSE;
+   }
+
+   return SCIP_OKAY;
+}
+
+/* checks whether selected permutations define orbitopal symmetrie */
+static
+SCIP_RETCODE detectOrbitopalSymmetries(
+   SCIP*                 scip,               /**< SCIP pointer */
+   int**                 perms,              /**< array of permutations */
+   int*                  selectedperms,      /**< indices of permutations in perm that shall be considered */
+   int                   nselectedperms,     /**< number of permutations in selectedperms */
+   int                   permlen,            /**< number of variables in a permutation */
+   int                   nrows,              /**< number of rows of potential orbitopal symmetries */
+   SCIP_Bool*            success             /**< pointer to store if orbitopal symmetries could be found */
+   )
+{
+   SCIP_DISJOINTSET* conncomps;
+   SCIP_DISJOINTSET* compcolors;
+   int* permstoconsider;
+   int* colorbegins;
+   int* compidx;
+   int* colidx;
+   int* varidx;
+   int* degrees;
+   int* perm;
+   int nposdegree = 0;
+   int npermstoconsider;
+   int colorrepresentative1;
+   int colorrepresentative2;
+   int curdeg1;
+   int curdeg2;
+   int curcolor1;
+   int curcolor2;
+   int ncolors;
+   int c;
+   int p;
+   int v;
+   int w;
+
+   assert( scip != NULL );
+   assert( perms != NULL );
+   assert( selectedperms != NULL );
+   assert( nselectedperms >= 0 );
+   assert( permlen > 0 );
+   assert( nrows > 0 );
+   assert( success != NULL );
+
+   *success = TRUE;
+
+   /* we have found the empty set of orbitopal symmetries */
+   if ( nselectedperms == 0 )
+      return SCIP_OKAY;
+
+   /* build a graph to encode potential orbitopes
+    *
+    * The 2-cycles of a permutation define a set of edges that need to be added simultaneously. We encode
+    * this as a disjoint set data structure to only encode the connected components of the graph. To ensure
+    * correctness, we keep track of the degrees of each node and extend a component by a permutaiton only if
+    * all nodes to be extended have the same degree. We also keep track of which variables are affected by
+    * the same permutations by coloring the connected components.
+    */
+   SCIP_CALL( SCIPcreateDisjointset(scip, &conncomps, permlen) );
+   SCIP_CALL( SCIPcreateDisjointset(scip, &compcolors, permlen) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &degrees, permlen) );
+
+   /* try to add edges of permutations to graph */
+   for (p = 0; p < nselectedperms; ++p)
+   {
+      perm = perms[selectedperms[p]];
+      curdeg1 = -1;
+      curdeg2 = -1;
+
+      for (v = 0; v < permlen; ++v)
+      {
+         /* treat each cycle exactly once */
+         if ( perm[v] <= v )
+            continue;
+         w = perm[v];
+
+         /* get colors of nodes */
+         curcolor1 = SCIPdisjointsetFind(compcolors, v);
+         curcolor2 = SCIPdisjointsetFind(compcolors, w);
+
+         /* an edge is not allowed to connect nodes with the same color */
+         if ( curcolor1 == curcolor2 )
+         {
+            *success = FALSE;
+            goto FREEMEMORY;
+         }
+
+         /* the first edge determines the degrees of the two sets of orbitopal symmetries */
+         if ( curdeg1 == -1 )
+         {
+            assert( curdeg2 == -1 );
+
+            curdeg1 = degrees[v];
+            curdeg2 = degrees[w];
+            colorrepresentative1 = v;
+            colorrepresentative2 = w;
+
+            /* stop, we will generate a vertex with degree 3 */
+            if ( curdeg1 == 2 || curdeg2 == 2 )
+            {
+               *success = FALSE;
+               goto FREEMEMORY;
+            }
+         }
+
+         /* try to add edges and join color classes */
+         if ( (curdeg1 == degrees[v] && curdeg2 == degrees[w]) || (curdeg1 == degrees[w] && curdeg2 == degrees[v]) )
+         {
+            /* check whether colors of different connected components are compatible */
+            if ( (curdeg1 > 0 && (curcolor1 != colorrepresentative1 && curcolor1 != colorrepresentative2))
+               || (curdeg2 > 0 && (curcolor2 != colorrepresentative1 && curcolor2 != colorrepresentative2)) )
+            {
+               /* the colors of the connected components to be joinded do not match */
+               *success = FALSE;
+               goto FREEMEMORY;
+            }
+
+            /* add edge for v and w */
+            SCIPdisjointsetUnion(conncomps, v, w, FALSE);
+            SCIPdisjointsetUnion(compcolors, colorrepresentative1, v, TRUE);
+            SCIPdisjointsetUnion(compcolors, colorrepresentative1, w, TRUE);
+            ++degrees[v];
+            ++degrees[w];
+         }
+         else
+         {
+            /* the degrees of the nodes to be connected do not match among the different connected components */
+            *success = FALSE;
+            goto FREEMEMORY;
+         }
+      }
+   }
+
+   /* find non-trivial components */
+   for (v = 0; v < permlen; ++v)
+   {
+      if ( degrees[v] > 0 )
+         ++nposdegree;
+   }
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &compidx, nposdegree) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &colidx, nposdegree) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &varidx, nposdegree) );
+
+   for (v = 0, w = 0; v < permlen; ++v)
+   {
+      if ( degrees[v] > 0 )
+      {
+         compidx[w] = SCIPdisjointsetFind(conncomps, v);
+         colidx[w] = SCIPdisjointsetFind(compcolors, v);
+#ifndef NDEBUG
+         if ( w > 0 && compidx[w] == compidx[w-1] )
+            assert( colidx[w] == colidx[w-1]);
+#endif
+         varidx[w++] = v;
+      }
+   }
+   assert( w == nposdegree );
+
+   /* sort variable indices: first by colors, then by components */
+   SCIP_CALL( SCIPallocBufferArray(scip, &colorbegins, permlen + 1) );
+
+   SCIPsortIntIntInt(colidx, compidx, varidx, nposdegree);
+   w = 0;
+   ncolors = 0;
+   colorbegins[0] = 0;
+   for (v = 1; v < nposdegree; ++v)
+   {
+      if ( colidx[v] != colidx[w] )
+      {
+         SCIPsortIntInt(&compidx[w], &varidx[w], v - w);
+         colorbegins[++ncolors] = v;
+         w = v;
+      }
+   }
+   SCIPsortIntInt(&compidx[w], &varidx[w], nposdegree - w);
+   colorbegins[++ncolors] = nposdegree;
+
+   printf("orbitope:\n");
+   for (v = 0; v < nposdegree; ++v)
+   {
+      printf(" %4d", varidx[v]);
+      if ( v < nposdegree - 1 && compidx[v] != compidx[v + 1] )
+         printf("\n");
+      if ( v < nposdegree - 1 && colidx[v] != colidx[v + 1] )
+         printf("orbitope:\n");
+   }
+   printf("\n");
+
+   /* find the correct order of variable indices per color class */
+   SCIP_CALL( SCIPallocBufferArray(scip, &permstoconsider, nselectedperms) );
+   for (c = 0; c < ncolors; ++c)
+   {
+      int** tempmatrix;
+      int deg1elem;
+
+      /* find an element in the first connected component with degree 1 */
+      for (v = colorbegins[c]; compidx[v] == compidx[colorbegins[c]]; ++v)
+      {
+         if ( degrees[varidx[v]] == 1 )
+            break;
+      }
+      assert( compidx[v] == compidx[colorbegins[c]] );
+      deg1elem = varidx[v];
+
+      /* find the permutations affecting the variables in the first connected component */
+      npermstoconsider = 0;
+      for (p = 0; p < nselectedperms; ++p)
+      {
+         perm = perms[selectedperms[p]];
+         for (v = colorbegins[c]; compidx[v] == compidx[colorbegins[c]]; ++v)
+         {
+            if ( perm[varidx[v]] != varidx[v] )
+            {
+               permstoconsider[npermstoconsider++] = selectedperms[p];
+               break;
+            }
+         }
+      }
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &tempmatrix, nrows) );
+      for (p = 0; p < nrows; ++p)
+      {
+         SCIP_CALL( SCIPallocBufferArray(scip, &tempmatrix[p], npermstoconsider + 1) );
+      }
+
+      /* find a permutation that moves the degree-1 element and iteratively extend this to a matrix */
+      if ( nselectedperms == 1 )
+         printf("2-column matrix, order does not matter\n");
+      else
+      {
+         int elemtomove;
+         int ncols;
+         int ncurcols;
+         int cnt = 0;
+         int swap;
+
+         ncols = nselectedperms + 1;
+         elemtomove = deg1elem;
+         assert( degrees[elemtomove] == 1 );
+
+         /* find the first and second column */
+         for (p = 0; p < npermstoconsider; ++p)
+         {
+            perm = perms[permstoconsider[p]];
+            if ( perm[elemtomove] != elemtomove )
+               break;
+         }
+         assert( p < npermstoconsider );
+
+         /* elements moved by perm that have degree 1 are in the first column */
+         for (v = 0; v < permlen; ++v)
+         {
+            if ( perm[v] > v )
+            {
+               if ( degrees[v] == 1 )
+               {
+                  tempmatrix[cnt][0] = v;
+                  tempmatrix[cnt++][1] = perm[v];
+               }
+               else
+               {
+                  tempmatrix[cnt][0] = perm[v];
+                  tempmatrix[cnt++][1] = v;
+               }
+            }
+         }
+         assert( cnt == nrows );
+
+         /* remove p from the list of permutations to be considered */
+         permstoconsider[p] = permstoconsider[--npermstoconsider];
+
+         ncurcols = 1;
+         while ( npermstoconsider > 0 )
+         {
+            elemtomove = tempmatrix[0][ncurcols];
+
+            /* find permutation moving the elemtomove */
+            for (p = 0; p < npermstoconsider; ++p)
+            {
+               perm = perms[permstoconsider[p]];
+               if ( perm[elemtomove] != elemtomove )
+                  break;
+            }
+            assert( p < npermstoconsider );
+
+            /* extend matrix */
+            for (v = 0; v < nrows; ++v)
+            {
+               assert( perm[tempmatrix[v][ncurcols]] != tempmatrix[v][ncurcols] );
+               tempmatrix[v][ncurcols + 1] = perm[tempmatrix[v][ncurcols]];
+            }
+            ++ncurcols;
+            permstoconsider[p] = permstoconsider[--npermstoconsider];
+         }
+      }
+
+      for (v = 0; v < nrows; ++v)
+      {
+         for (w = 0; w < nselectedperms + 1; ++w)
+            printf(" %4d", tempmatrix[v][w]);
+         printf("\n");
+      }
+      printf("\n");
+
+      for (p = nrows - 1; p >= 0; --p)
+      {
+         SCIPfreeBufferArray(scip, &tempmatrix[p]);
+      }
+      SCIPfreeBufferArray(scip, &tempmatrix);
+   }
+
+   SCIPfreeBufferArray(scip, &permstoconsider);
+   SCIPfreeBufferArray(scip, &colorbegins);
+   SCIPfreeBufferArray(scip, &varidx);
+   SCIPfreeBufferArray(scip, &colidx);
+   SCIPfreeBufferArray(scip, &compidx);
+
+ FREEMEMORY:
+   SCIPfreeBufferArray(scip, &degrees);
+   SCIPfreeDisjointset(scip, &compcolors);
+   SCIPfreeDisjointset(scip, &conncomps);
+
+   return SCIP_OKAY;
+}
+
+/** tries to handle variable matrices with lex ordered rows and columns */
+SCIP_RETCODE tryHandleLexSortRowColumnMatrix(
+   SCIP*                 scip,               /**< SCIP pointer */
+   int**                 perms,              /**< array of permutations */
+   int                   nperms,             /**< number of permutations in perms */
+   int                   permlen,            /**< number of original (non-negated) variables in a permutation */
+   SCIP_Bool             issignedperm        /**< whether permutations are encoded as signed */
+   )
+{
+   SCIP_Bool success = TRUE;
+   SCIP_Bool isinvolution;
+   SCIP_Bool permissigned;
+   int* permstype1;
+   int* permstype2;
+   int* signedperms;
+   int npermstype1 = 0;
+   int npermstype2 = 0;
+   int nsignedperms = 0;
+   int ncycs1 = -1;
+   int ncycs2 = -1;
+   int tmpncycs;
+   int p;
+
+   assert( scip != NULL );
+   assert( perms != NULL );
+   assert( nperms > 0 );
+   assert( permlen > 0 );
+
+   /* arrays to store the different types of involutions */
+   SCIP_CALL( SCIPallocBufferArray(scip, &permstype1, nperms)  );
+   SCIP_CALL( SCIPallocBufferArray(scip, &permstype2, nperms)  );
+   SCIP_CALL( SCIPallocBufferArray(scip, &signedperms, nperms)  );
+
+   /* check whether we can expect lexicographically sorted rows and columns */
+   for (p = 0; p < nperms; ++p)
+   {
+      SCIP_CALL( isPermIvolution(perms[p], permlen, issignedperm, &permissigned, &isinvolution, &tmpncycs) );
+
+      /* ignore signed permutation for the time being */
+      if ( permissigned )
+      {
+         signedperms[nsignedperms++] = p;
+         continue;
+      }
+
+      /* terminate if not all permutations are involutions */
+      if ( ! isinvolution )
+      {
+         success = FALSE;
+         break;
+      }
+
+      /* store number of cycles or termintate if too many different types of involutions */
+      if ( ncycs1 == -1 || ncycs1 == tmpncycs )
+      {
+         ncycs1 = tmpncycs;
+         permstype1[npermstype1++] = p;
+      }
+      else if ( ncycs2 == -1 || ncycs2 == tmpncycs )
+      {
+         ncycs2 = tmpncycs;
+         permstype2[npermstype2++] = p;
+      }
+      else
+      {
+         success = FALSE;
+         goto FREEMEMORY;
+      }
+   }
+
+   /* for each type, check whether permutations define (disjoint) orbitopal symmetries; ignore signed part */
+   SCIP_CALL( detectOrbitopalSymmetries(scip, perms, permstype1, npermstype1, permlen, ncycs1, &success) );
+   if ( ! success )
+      goto FREEMEMORY;
+
+   SCIP_CALL( detectOrbitopalSymmetries(scip, perms, permstype2, npermstype2, permlen, ncycs2, &success) );
+   if ( ! success )
+      goto FREEMEMORY;
+
+   /* check whether symmetries of type 2 permute two rows of matrix of type 1 */
+
+   /* check whether proper signed permutations flip rows or columns */
+
+ FREEMEMORY:
+   SCIPfreeBufferArray(scip, &signedperms);
+   SCIPfreeBufferArray(scip, &permstype2);
+   SCIPfreeBufferArray(scip, &permstype1);
+
+   printf("lex sort detection success: %d\n", success);
 
    return SCIP_OKAY;
 }

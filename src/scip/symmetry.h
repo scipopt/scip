@@ -256,6 +256,16 @@ SCIP_RETCODE SCIPisPackingPartitioningOrbitope(
    SCIP_ORBITOPETYPE*    type                /**< pointer to store type of orbitope constraint after strengthening */
    );
 
+/** tries to handle variable matrices with lex ordered rows and columns */
+SCIP_EXPORT
+SCIP_RETCODE tryHandleLexSortRowColumnMatrix(
+   SCIP*                 scip,               /**< SCIP pointer */
+   int**                 perms,              /**< array of permutations */
+   int                   nperms,             /**< number of permutations in perms */
+   int                   permlen,            /**< length of permutations in perms */
+   SCIP_Bool             issignedperm        /**< whether permutations are signed */
+   );
+
 /** @} */
 
 #ifdef __cplusplus
