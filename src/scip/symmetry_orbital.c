@@ -575,7 +575,7 @@ SCIP_RETCODE applyOrbitalBranchingPropagations(
 
       /* 2. apply branching step to varlbs or varubs array
        *
-       * Due to the steps above, it is possible that the branching step is redundant or infeasible. 
+       * Due to the steps above, it is possible that the branching step is redundant or infeasible.
        */
       assert( LE(scip, varlbs[branchingdecisionvarid], varubs[branchingdecisionvarid]) );
       switch (branchingdecision->boundchgtype)
