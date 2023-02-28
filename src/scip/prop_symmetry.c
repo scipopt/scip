@@ -1998,8 +1998,6 @@ SCIP_RETCODE determineSymmetry(
    SCIP_Bool successful;
    SCIP_Real symcodetime = 0.0;
    int maxgenerators;
-   int nhandleconss;
-   int nconss;
    unsigned int type = 0;
    int nvars;
    int j;
@@ -2035,7 +2033,6 @@ SCIP_RETCODE determineSymmetry(
       propdata->symconsenabled = FALSE;
       propdata->sstenabled = FALSE;
 
-      nconss = SCIPgetNActiveConss(scip);
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
          "   Deactivated symmetry handling methods, since SCIP was built without symmetry detector (SYM=none).\n");
 
