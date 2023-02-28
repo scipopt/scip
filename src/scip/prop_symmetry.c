@@ -6263,8 +6263,6 @@ SCIP_RETCODE tryDetectOrbitope(
    int*** entryperms;
    int* entrynperms;
    int* entrypermsidx;
-   int* perm;
-   int thisentrynperms;
 
    /* stack data structure to scan over all reachable entries in a BFS-manner */
    int stacksize;
