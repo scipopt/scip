@@ -92,7 +92,7 @@ struct SuborbitopeData
    int                   dbghash;            /**< a hash for the column order in the last iteration */
 #endif
    SCIP_HASHTABLE*       nodeinfos;          /**< symmetry handling information per branch-and-bound tree node */
-   SCIP_ORBITOPECOLUMNORDERING columnordering; /**< policy for the column ordering */
+   SCIP_COLUMNORDERING columnordering; /**< policy for the column ordering */
 };
 
 /** orbitopal symmetry handling data for a single orbitope */
@@ -109,7 +109,7 @@ struct OrbitopeData
 /** wrapper for all orbitopes in orbitopal symmetry handling data */
 struct SCIP_OrbitopalFixingData
 {
-   SCIP_ORBITOPECOLUMNORDERING defaultcolumnordering; /**< default policy for the column ordering */
+   SCIP_COLUMNORDERING defaultcolumnordering; /**< default policy for the column ordering */
    SCIP_EVENTHDLR*       eventhdlr;          /**< pointer to the event handler for managing the branching tree */
    ORBITOPEDATA**        orbitopes;          /**< array of pointers to orbitope data structs */
    int                   norbitopes;         /**< number of orbitope data structs in array */
@@ -2261,7 +2261,7 @@ SCIP_RETCODE SCIPorbitopalFixingPropagate(
    return SCIP_OKAY;
 }
 
-/** marks presence of orbitopal symmetries component for orbitopal fixing */
+/** adds orbitopal component to orbitopal symmetry handler */
 SCIP_RETCODE SCIPorbitopalFixingAddOrbitope(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ORBITOPALFIXINGDATA* orbifixdata,    /**< orbitopal fixing data structure */
@@ -2358,7 +2358,7 @@ SCIP_RETCODE SCIPorbitopalFixingInclude(
 
    /* default column ordering param */
    SCIP_CALL( SCIPaddIntParam(scip, "propagating/symmetry/orbitopalfixing/columnordering",
-         "The column ordering variant, respects enum SCIP_OrbitopeColumnOrdering.",
+         "The column ordering variant, respects enum SCIP_ColumnOrdering.",
          (int*) &(*orbifixdata)->defaultcolumnordering, TRUE, DEFAULT_COLUMNORDERING, 0, 4, NULL, NULL) );
 
    /* initialize event handler. */

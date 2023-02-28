@@ -46,7 +46,7 @@ extern "C" {
 
 
 /** variants for orbitope column ordering */
-enum SCIP_OrbitopeColumnOrdering
+enum SCIP_ColumnOrdering
 {
    SCIP_COLUMNORDERING_NONE        = 0,      /**< do not order the columns */
    SCIP_COLUMNORDERING_FIRST       = 1,      /**< choose first possible column */
@@ -54,7 +54,7 @@ enum SCIP_OrbitopeColumnOrdering
    SCIP_COLUMNORDERING_CENTRE      = 3,      /**< choose centremost possible column */
    SCIP_COLUMNORDERING_MEDIAN      = 4       /**< choose median column */
 };
-typedef enum SCIP_OrbitopeColumnOrdering SCIP_ORBITOPECOLUMNORDERING;
+typedef enum SCIP_ColumnOrdering SCIP_COLUMNORDERING;
 
 
 struct SCIP_OrbitopalFixingData;
@@ -65,7 +65,7 @@ typedef struct SCIP_OrbitopalFixingData SCIP_ORBITOPALFIXINGDATA;
 SCIP_EXPORT
 SCIP_RETCODE SCIPorbitopalFixingPropagate(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ORBITOPALFIXINGDATA*  orbifixdata,        /**< orbitopal fixing data structure */
+   SCIP_ORBITOPALFIXINGDATA* orbifixdata,    /**< orbitopal fixing data structure */
    SCIP_Bool*            infeasible,         /**< whether infeasibility is found */
    int*                  nred,               /**< number of domain reductions */
    SCIP_Bool*            didrun              /**< a global pointer maintaining if any symmetry propagator has run
@@ -73,7 +73,7 @@ SCIP_RETCODE SCIPorbitopalFixingPropagate(
    );
 
 
-/** marks presence of orbitopal symmetries component for orbitopal fixing */
+/** adds orbitopal component to orbitopal symmetry handler */
 SCIP_EXPORT
 SCIP_RETCODE SCIPorbitopalFixingAddOrbitope(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -88,11 +88,11 @@ SCIP_RETCODE SCIPorbitopalFixingAddOrbitope(
 SCIP_EXPORT
 SCIP_RETCODE SCIPorbitopalFixingReset(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ORBITOPALFIXINGDATA*  orbifixdata         /**< pointer to orbitopal fixing structure to populate */
+   SCIP_ORBITOPALFIXINGDATA* orbifixdata     /**< pointer to orbitopal fixing structure to populate */
    );
 
 
-/** free orbitopal fixing data */
+/** frees orbitopal fixing data */
 SCIP_EXPORT
 SCIP_RETCODE SCIPorbitopalFixingFree(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -101,12 +101,13 @@ SCIP_RETCODE SCIPorbitopalFixingFree(
 
 
 /** initializes structures needed for orbitopal fixing
+ *
  * This is only done exactly once.
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPorbitopalFixingInclude(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ORBITOPALFIXINGDATA** orbifixdata         /**< pointer to orbitopal fixing structure to populate */
+   SCIP_ORBITOPALFIXINGDATA** orbifixdata    /**< pointer to orbitopal fixing structure to populate */
    );
 
 
