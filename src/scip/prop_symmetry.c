@@ -6225,6 +6225,8 @@ SCIP_RETCODE tryDetectOrbitope(
 
    int*** entryperms;
    int* entrynperms;
+   int* entrypermsidx;
+   int* perm;
    int thisentrynperms;
 
    /* stack data structure to scan over all reachable entries in a BFS-manner */
@@ -6301,30 +6303,43 @@ SCIP_RETCODE tryDetectOrbitope(
 
    /* for each entry, store which permutation in perms affects it */
    SCIP_CALL( SCIPallocBufferArray(scip, &entryperms, npermvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &entrynperms, npermvars) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &entrynperms, npermvars) );
 
-   for (i = 0; i < npermvars; ++i)
+   for (p = 0; p < nperms; ++p)
    {
-      thisentrynperms = 0;
-      for (p = 0; p < nperms; ++p)
+      perm = perms[p];
+      for (i = 0; i < npermvars; ++i)
       {
-         if ( perms[p][i] != i )
-            ++thisentrynperms;
-      }
-      entrynperms[i] = thisentrynperms;
-      if ( thisentrynperms == 0 )
-      {
-         entryperms[i] = NULL;
-         continue;
-      }
-      SCIP_CALL( SCIPallocBufferArray(scip, &(entryperms[i]), thisentrynperms) );
-      j = 0;
-      for (p = 0; p < nperms; ++p)
-      {
-         if ( perms[p][i] != i )
-            entryperms[i][j++] = perms[p];
+         if ( perm[i] != i )
+            ++entrynperms[i];
       }
    }
+   for (i = 0; i < npermvars; ++i)
+   {
+      if ( entrynperms[i] == 0 )
+         entryperms[i] = NULL;
+      else
+      {
+         SCIP_CALL( SCIPallocBufferArray(scip, &(entryperms[i]), entrynperms[i]) );
+      }
+   }
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &entrypermsidx, npermvars) );
+   for (p = 0; p < nperms; ++p)
+   {
+      perm = perms[p];
+      for (i = 0; i < npermvars; ++i)
+      {
+         if ( perm[i] != i )
+            entryperms[i][entrypermsidx[i]++] = perm;
+      }
+   }
+#ifndef NDEBUG
+   for (i = 0; i < npermvars; ++i)
+   {
+      assert( entrynperms[i] == entrypermsidx[i] );
+   }
+#endif
+   SCIPfreeBufferArray(scip, &entrypermsidx);
 
    /* first fix the top row.
     * Get the first entry that is moved by any permutation.
@@ -6719,6 +6734,7 @@ SCIP_RETCODE tryAddOrbitalFixingLexfix(
 
    SCIP_Bool checkof;
    SCIP_Bool checklexred;
+   SCIP_Bool success;
 
    assert( scip != NULL );
    assert( propdata != NULL );
@@ -6758,8 +6774,9 @@ SCIP_RETCODE tryAddOrbitalFixingLexfix(
       if ( checkof )
       {
          SCIP_CALL( SCIPorbitalFixingAddComponent(scip, propdata->orbitalfixingdata,
-            propdata->permvars, propdata->npermvars, componentperms, componentsize) );
-         propdata->componentblocked[c] |= SYM_HANDLETYPE_ORBITALFIXING;
+            propdata->permvars, propdata->npermvars, componentperms, componentsize, &success) );
+         if ( success )
+            propdata->componentblocked[c] |= SYM_HANDLETYPE_ORBITALFIXING;
       }
 
       /* handle component permutations with the dynamic lexicographic reduction propagator */
@@ -6770,9 +6787,10 @@ SCIP_RETCODE tryAddOrbitalFixingLexfix(
          {
             assert( componentperms[p] != NULL );
             SCIP_CALL( SCIPlexicographicReductionAddPermutation(scip, propdata->lexreddata,
-               propdata->permvars, propdata->npermvars, componentperms[p]) );
+               propdata->permvars, propdata->npermvars, componentperms[p], &success) );
+            if ( success )
+               propdata->componentblocked[c] |= SYM_HANDLETYPE_SYMBREAK | SYM_HANDLETYPE_DYNAMIC;
          }
-         propdata->componentblocked[c] |= SYM_HANDLETYPE_SYMBREAK | SYM_HANDLETYPE_DYNAMIC;
       }
 
       /* if it got blocked here */

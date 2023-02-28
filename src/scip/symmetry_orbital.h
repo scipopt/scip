@@ -63,7 +63,8 @@ SCIP_RETCODE SCIPorbitalFixingPropagate(
    SCIP_OFDATA*          orbifixdata,        /**< orbitopal fixing data structure */
    SCIP_Bool*            infeasible,         /**< whether infeasibility is found */
    int*                  nred,               /**< number of domain reductions */
-   SCIP_Bool*            didrun              /**< whether propagator actually ran */
+   SCIP_Bool*            didrun              /**< a global pointer maintaining if any symmetry propagator has run
+                                              *   only set this to TRUE when a reduction is found, never set to FALSE */
    );
 
 
@@ -75,7 +76,8 @@ SCIP_RETCODE SCIPorbitalFixingAddComponent(
    SCIP_VAR**            permvars,           /**< variable array of the permutation */
    int                   npermvars,          /**< number of variables in that array */
    int**                 perms,              /**< permutations in the component */
-   int                   nperms              /**< number of permutations in the component */
+   int                   nperms,             /**< number of permutations in the component */
+   SCIP_Bool*            success             /**< to store whether the component is successfully added */
    );
 
 

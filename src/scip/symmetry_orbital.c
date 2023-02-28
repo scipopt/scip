@@ -232,7 +232,7 @@ int bisectSortedArrayFindFirstGEQ(
 
 /** dynamic orbital fixing, the orbital branching part */
 static
-SCIP_RETCODE orbitalFixingDynamicApplyOrbitalBranchingPropagations(
+SCIP_RETCODE applyOrbitalBranchingPropagations(
    SCIP*              scip,               /**< pointer to SCIP data structure */
    OFCDATA*           ofdata,             /**< pointer to data for orbital fixing data */
    SCIP_SHADOWTREE*   shadowtree,         /**< pointer to shadow tree */
@@ -671,7 +671,7 @@ SCIP_RETCODE orbitalFixingDynamicApplyOrbitalBranchingPropagations(
 
 /** dynamic orbital fixing, the orbital fixing part */
 static
-SCIP_RETCODE orbitalFixingDynamicApplyOrbitalFixingPropagations(
+SCIP_RETCODE applyOrbitalFixingPropagations(
    SCIP*              scip,               /**< pointer to SCIP data structure */
    OFCDATA*           ofdata,             /**< pointer to data for orbital fixing data */
    SCIP_SHADOWTREE*   shadowtree,         /**< pointer to shadow tree */
@@ -917,12 +917,12 @@ SCIP_RETCODE orbitalFixingPropagateComponent(
    )
 {
    /* step 1 */
-   SCIP_CALL( orbitalFixingDynamicApplyOrbitalBranchingPropagations(scip, ofdata, shadowtree, infeasible, nred) );
+   SCIP_CALL( applyOrbitalBranchingPropagations(scip, ofdata, shadowtree, infeasible, nred) );
    if ( *infeasible )
       return SCIP_OKAY;
 
    /* step 2 */
-   SCIP_CALL( orbitalFixingDynamicApplyOrbitalFixingPropagations(scip, ofdata, shadowtree, infeasible, nred) );
+   SCIP_CALL( applyOrbitalFixingPropagations(scip, ofdata, shadowtree, infeasible, nred) );
    if ( *infeasible )
       return SCIP_OKAY;
 
@@ -938,7 +938,8 @@ SCIP_RETCODE addComponent(
    SCIP_VAR**            permvars,           /**< variable array of the permutation */
    int                   npermvars,          /**< number of variables in that array */
    int**                 perms,              /**< permutations in the component */
-   int                   nperms              /**< number of permutations in the component */
+   int                   nperms,             /**< number of permutations in the component */
+   SCIP_Bool*            success             /**< to store whether the component is successfully added */
    )
 {
    OFCDATA* ofdata;
@@ -956,7 +957,9 @@ SCIP_RETCODE addComponent(
    assert( npermvars > 0 );
    assert( perms != NULL );
    assert( nperms > 0 );
+   assert( success != NULL );
 
+   *success = TRUE;
    SCIP_CALL( SCIPallocBlockMemory(scip, &ofdata) );
 
    /* correct indices by removing fixed points */
@@ -978,7 +981,11 @@ SCIP_RETCODE addComponent(
 
    /* do not support the setting where the component is empty */
    if ( ofdata->npermvars <= 0 )
-      return SCIP_ERROR;
+   {
+      SCIPfreeBlockMemory(scip, &ofdata);
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
 
    /* create index-corrected permvars array and the inverse */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &ofdata->permvars, ofdata->npermvars) );
@@ -1202,7 +1209,8 @@ SCIP_RETCODE SCIPorbitalFixingPropagate(
    SCIP_OFDATA*          orbifixdata,        /**< orbital fixing data structure */
    SCIP_Bool*            infeasible,         /**< whether infeasibility is found */
    int*                  nred,               /**< number of domain reductions */
-   SCIP_Bool*            didrun              /**< whether any propagator actually ran */
+   SCIP_Bool*            didrun              /**< a global pointer maintaining if any symmetry propagator has run
+                                              *   only set this to TRUE when a reduction is found, never set to FALSE */
    )
 {
    OFCDATA* ofdata;
@@ -1241,6 +1249,8 @@ SCIP_RETCODE SCIPorbitalFixingPropagate(
       assert( ofdata != NULL );
       assert( ofdata->nperms > 0 );
       SCIP_CALL( orbitalFixingPropagateComponent(scip, orbifixdata, ofdata, shadowtree, infeasible, nred) );
+
+      /* a symmetry propagator has ran, so set didrun to TRUE */
       *didrun = TRUE;
 
       if ( *infeasible )
@@ -1258,7 +1268,8 @@ SCIP_RETCODE SCIPorbitalFixingAddComponent(
    SCIP_VAR**            permvars,           /**< variable array of the permutation */
    int                   npermvars,          /**< number of variables in that array */
    int**                 perms,              /**< permutations in the component */
-   int                   nperms              /**< number of permutations in the component */
+   int                   nperms,             /**< number of permutations in the component */
+   SCIP_Bool*            success             /**< to store whether the component is successfully added */
    )
 {
    assert( scip != NULL );
@@ -1267,11 +1278,12 @@ SCIP_RETCODE SCIPorbitalFixingAddComponent(
    assert( npermvars > 0 );
    assert( perms != NULL );
    assert( nperms > 0 );
+   assert( success != NULL );
 
    /* dynamic symmetry reductions cannot be performed on original problem */
    assert( SCIPisTransformed(scip) );
 
-   SCIP_CALL( addComponent(scip, orbifixdata, permvars, npermvars, perms, nperms) );
+   SCIP_CALL( addComponent(scip, orbifixdata, permvars, npermvars, perms, nperms, success) );
 
    return SCIP_OKAY;
 }

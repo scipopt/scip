@@ -68,7 +68,8 @@ SCIP_RETCODE SCIPorbitopalFixingPropagate(
    SCIP_ORBITOPALFIXINGDATA*  orbifixdata,        /**< orbitopal fixing data structure */
    SCIP_Bool*            infeasible,         /**< whether infeasibility is found */
    int*                  nred,               /**< number of domain reductions */
-   SCIP_Bool*            didrun              /**< whether propagator actually ran */
+   SCIP_Bool*            didrun              /**< a global pointer maintaining if any symmetry propagator has run
+                                              *   only set this to TRUE when a reduction is found, never set to FALSE */
    );
 
 

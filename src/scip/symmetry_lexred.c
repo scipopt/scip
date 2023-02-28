@@ -170,10 +170,11 @@ static
 SCIP_RETCODE lexdataCreate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_LEXREDDATA*      masterdata,         /**< pointer to global data for lexicographic order propagator */
-   LEXDATA**             lexdata,            /**< pointer to store the data for this permutation */
+   LEXDATA**             lexdata,            /**< pointer to store data for permutation to be added */
    SCIP_VAR*const*       vars,               /**< input variables of the lexicographic reduction propagator */
    int                   nvars,              /**< input number of variables of the lexicographic reduction propagator */
-   int*                  perm                /**< input permutation of the lexicographic reduction propagator */
+   int*                  perm,               /**< input permutation of the lexicographic reduction propagator */
+   SCIP_Bool*            success             /**< to store whether the component is successfully added */
    )
 {
    SCIP_VAR* var;
@@ -190,6 +191,8 @@ SCIP_RETCODE lexdataCreate(
    assert( perm != NULL );
    assert( SCIPisTransformed(scip) );
    assert( masterdata->shadowtreeeventhdlr != NULL );
+
+   *success = TRUE;
 
    /* initialize the data structures */
    SCIP_CALL( SCIPallocBlockMemory(scip, lexdata) );
@@ -211,10 +214,8 @@ SCIP_RETCODE lexdataCreate(
       assert( naffectedvariables == 0 );
       SCIPfreeBufferArray(scip, &indexcorrection);
 
-      (*lexdata)->nvars = 0;
-      (*lexdata)->vars = NULL;
-      (*lexdata)->perm = NULL;
-      (*lexdata)->invperm = NULL;
+      *success = FALSE;
+      SCIPfreeBlockMemory(scip, lexdata);
       return SCIP_OKAY;
    }
 
@@ -277,7 +278,19 @@ SCIP_RETCODE lexdataCreate(
 }
 
 
-/** comparator for sorting array of NODEDEPTHBRANCHINDEX by depth, and then by index */
+/** comparator used in the getVarOrder() function, for sorting an array of NODEDEPTHBRANCHINDEX by depth, then by index
+ *
+ * @warning this function is only meant to be used in the getVarOrder() function
+ *
+ * @pre datapointer is populated with a VARARRAYNODEDEPTHBRANCHINDEX pointer
+ * @pre the comparator is only called on entries with set (depth, index)-information
+ * @pre the (depth, index)-informations are all different
+ *
+ * result:
+ *   0: the same index is compared, so the (depth, index)-informations are the same
+ *  -1: the depth of ind1 is smaller than the depth of ind2, or it's equal and the index is smaller
+ *   1: the depth of ind2 is smaller than the depth of ind1, or it's equal and the index is smaller
+ */
 static
 SCIP_DECL_SORTINDCOMP(sortbynodedepthbranchindices)
 {
@@ -494,8 +507,10 @@ SCIP_RETCODE peekStaticLexredIsFeasible(
       }
       else
       {
-         lbi = peeklbs[i] = SCIPvarGetLbLocal(vari);
-         ubi = peekubs[i] = SCIPvarGetUbLocal(vari);
+         lbi = SCIPvarGetLbLocal(vari);
+         ubi = SCIPvarGetUbLocal(vari);
+         peeklbs[i] = lbi;
+         peekubs[i] = ubi;
          peekboundspopulated[i] = TRUE;
       }
       assert( LE(scip, lbi, ubi) );
@@ -507,8 +522,10 @@ SCIP_RETCODE peekStaticLexredIsFeasible(
       }
       else
       {
-         lbj = peeklbs[j] = SCIPvarGetLbLocal(varj);
-         ubj = peekubs[j] = SCIPvarGetUbLocal(varj);
+         lbj = SCIPvarGetLbLocal(varj);
+         ubj = SCIPvarGetUbLocal(varj);
+         peeklbs[j] = lbj;
+         peekubs[j] = ubj;
          peekboundspopulated[j] = TRUE;
       }
       assert( LE(scip, lbj, ubj) );
@@ -528,14 +545,16 @@ SCIP_RETCODE peekStaticLexredIsFeasible(
       /* propagate lower bound for vari */
       if ( LT(scip, lbi, lbj) )
       {
-         lbi = peeklbs[i] = lbj;
+         lbi = lbj;
+         peeklbs[i] = lbj;
          assert( LE(scip, lbi, ubi) );  /* otherwise we returned in the `if ( LT(scip, ubi, lbj) )` block */
       }
 
       /* propagate upper bound for varj */
       if ( LT(scip, ubi, ubj) )
       {
-         ubj = peekubs[j] = ubi;
+         ubj = ubi;
+         peekubs[j] = ubi;
          assert( LE(scip, lbj, ubj) );  /* otherwise we returned in the `if ( LT(scip, ubi, lbj) )` block */
       }
 
@@ -1075,7 +1094,8 @@ SCIP_RETCODE SCIPlexicographicReductionPropagate(
    SCIP_LEXREDDATA*      masterdata,         /**< pointer to global data for lexicographic order propagator */
    SCIP_Bool*            infeasible,         /**< whether infeasibility is found */
    int*                  nred,               /**< number of domain reductions */
-   SCIP_Bool*            didrun              /**< whether propagator actually ran */
+   SCIP_Bool*            didrun              /**< a global pointer maintaining if any symmetry propagator has run
+                                              *   only set this to TRUE when a reduction is found, never set to FALSE */
    )
 {
    int nlocalred;
@@ -1127,6 +1147,8 @@ SCIP_RETCODE SCIPlexicographicReductionPropagate(
 
       /* keep track of the total number of fixed vars */
       *nred += nlocalred;
+
+      /* a symmetry propagator has ran, so set didrun to TRUE */
       *didrun = TRUE;
 
       /* stop if we find infeasibility */
@@ -1148,7 +1170,8 @@ SCIP_RETCODE SCIPlexicographicReductionAddPermutation(
    SCIP_LEXREDDATA*      masterdata,         /**< pointer to global data for lexicographic order propagator */
    SCIP_VAR**            permvars,           /**< variable array of the permutation */
    int                   npermvars,          /**< number of variables in that array */
-   int*                  perm                /**< permutation */
+   int*                  perm,               /**< permutation */
+   SCIP_Bool*            success             /**< to store whether the component is successfully added */
    )
 {
    assert( scip != NULL );
@@ -1184,8 +1207,12 @@ SCIP_RETCODE SCIPlexicographicReductionAddPermutation(
    }
 
    /* prepare lexdatas */
-   SCIP_CALL( lexdataCreate(scip, masterdata, &masterdata->lexdatas[masterdata->nlexdatas++],
-      permvars, npermvars, perm) );
+   SCIP_CALL( lexdataCreate(scip, masterdata, &masterdata->lexdatas[masterdata->nlexdatas],
+      permvars, npermvars, perm, success) );
+
+   /* if not successfully added, undo increasing the counter */
+   if ( *success )
+      ++masterdata->nlexdatas;
 
    return SCIP_OKAY;
 }

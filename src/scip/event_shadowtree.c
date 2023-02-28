@@ -72,6 +72,7 @@
 
 #define EVENTHDLR_NAME         "event_shadowtree"
 #define EVENTHDLR_DESC         "event handler for maintaining the unmodified branch-and-bound tree"
+#define NODEMAP_MAX_INITIAL_SIZE 10000
 
 
 /*
@@ -262,9 +263,9 @@ SCIP_DECL_EVENTEXEC(eventExecNodeBranched)
       childshadownode->propagations = NULL;
       childshadownode->npropagations = 0;
 
-      /* add childshadownode to the nodemap as well 
-       * 
-       * The hashtable only checks by the 'nodeid' field, so we just check if there's none with this nodeid. 
+      /* add childshadownode to the nodemap as well
+       *
+       * The hashtable only checks by the 'nodeid' field, so we just check if there's none with this nodeid.
        */
       assert( !SCIPhashtableExists(shadowtree->nodemap, (void*) childshadownode));
       SCIPhashtableInsert(shadowtree->nodemap, childshadownode);
@@ -494,6 +495,8 @@ SCIP_DECL_EVENTFREE(eventFreeShadowTree)
 static
 SCIP_DECL_EVENTINITSOL(eventInitsolShadowTree)
 {
+   int initialnodemapsize;
+
    SCIP_EVENTHDLRDATA* eventhdlrdata;
    SCIP_SHADOWTREE* shadowtree;
    SCIP_SHADOWNODE* rootnode;
@@ -511,7 +514,9 @@ SCIP_DECL_EVENTINITSOL(eventInitsolShadowTree)
    SCIP_CALL( SCIPallocBlockMemory(scip, &eventhdlrdata->shadowtree) );
    shadowtree = eventhdlrdata->shadowtree;
 
-   SCIP_CALL( SCIPhashtableCreate(&shadowtree->nodemap, scip->mem->probmem, 1,
+   initialnodemapsize = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) < LOG2(NODEMAP_MAX_INITIAL_SIZE) ?
+      NODEMAP_MAX_INITIAL_SIZE : MIN(NODEMAP_MAX_INITIAL_SIZE, 1 << (SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip)));
+   SCIP_CALL( SCIPhashtableCreate(&shadowtree->nodemap, scip->mem->probmem, initialnodemapsize,
       hashGetKeyShadowNode, hashKeyEqShadowNode, hashKeyValShadowNode, NULL) );
 
    /* the root node is the only branch-and-bound tree node not created by branching, so add. */

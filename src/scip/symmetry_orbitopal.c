@@ -2154,7 +2154,8 @@ SCIP_RETCODE SCIPorbitopalFixingPropagate(
    SCIP_ORBITOPALFIXINGDATA*  orbifixdata,        /**< orbitopal fixing data structure */
    SCIP_Bool*            infeasible,         /**< whether infeasibility is found */
    int*                  nred,               /**< number of domain reductions */
-   SCIP_Bool*            didrun              /**< whether propagator actually ran */
+   SCIP_Bool*            didrun              /**< a global pointer maintaining if any symmetry propagator has run
+                                              *   only set this to TRUE when a reduction is found, never set to FALSE */
    )
 {
    ORBITOPEDATA* orbidata;
@@ -2190,6 +2191,8 @@ SCIP_RETCODE SCIPorbitopalFixingPropagate(
       SCIP_CALL( propagateOrbitope(scip, orbidata, infeasible, &thisfixedvars) );
       SCIPdebugMessage("Found %d reductions during orbitopal fixing for orbitope %d\n", thisfixedvars, c);
       *nred += thisfixedvars;
+
+      /* a symmetry propagator has ran, so set didrun to TRUE */
       *didrun = TRUE;
 
       /* stop if we find infeasibility in one of the constraints */

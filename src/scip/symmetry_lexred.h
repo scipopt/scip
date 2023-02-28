@@ -64,7 +64,8 @@ SCIP_RETCODE SCIPlexicographicReductionPropagate(
    SCIP_LEXREDDATA*      masterdata,         /**< pointer to global data for lexicogrpahic order propagator */
    SCIP_Bool*            infeasible,         /**< whether infeasibility is found */
    int*                  nred,               /**< number of domain reductions */
-   SCIP_Bool*            didrun              /**< whether propagator actually ran */
+   SCIP_Bool*            didrun              /**< a global pointer maintaining if any symmetry propagator has run
+                                              *   only set this to TRUE when a reduction is found, never set to FALSE */
    );
 
 
@@ -75,7 +76,8 @@ SCIP_RETCODE SCIPlexicographicReductionAddPermutation(
    SCIP_LEXREDDATA*      masterdata,/**< pointer to global data for lexicogrpahic order propagator */
    SCIP_VAR**            permvars,           /**< variable array of the permutation */
    int                   npermvars,          /**< number of variables in that array */
-   int*                  perm                /**< permutation */
+   int*                  perm,               /**< permutation */
+   SCIP_Bool*            success             /**< to store whether the component is successfully added */
    );
 
 
