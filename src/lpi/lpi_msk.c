@@ -93,6 +93,7 @@ typedef enum MSKoptimizertype_enum MSKoptimizertype;
 
 #define IS_POSINF(x) ((x) >= MSK_INFINITY)
 #define IS_NEGINF(x) ((x) <= -MSK_INFINITY)
+#define MOSEK_relDiff(val1, val2)         ( ((val1)-(val2))/(MAX3(1.0,REALABS(val1),REALABS(val2))) )
 
 #ifdef SCIP_THREADSAFE
    #if defined(_Thread_local)
@@ -3519,6 +3520,44 @@ SCIP_Bool SCIPlpiIsStable(
    assert(lpi != NULL);
    assert(lpi->mosekenv != NULL);
    assert(lpi->task != NULL);
+
+   /* if an objective limit is set and Mosek claims that it is exceeded, we should check that this is indeed the case;
+    * if not this points at numerical instability; note that this aligns with an assert in lp.c */
+   if( SCIPlpiIsObjlimExc(lpi) )
+   {
+      MSKobjsensee objsen;
+      SCIP_Real objlimit;
+      SCIP_Real objvalue;
+      SCIP_Real reldiff;
+
+      MOSEK_CALL( MSK_getobjsense(lpi->task, &objsen) );
+      if (objsen == MSK_OBJECTIVE_SENSE_MINIMIZE)
+      {
+         MOSEK_CALL( MSK_getdouparam(lpi->task, MSK_DPAR_UPPER_OBJ_CUT, &objlimit) );
+      }
+      else /* objsen == MSK_OBJECTIVE_SENSE_MAX */
+      {
+         MOSEK_CALL( MSK_getdouparam(lpi->task, MSK_DPAR_LOWER_OBJ_CUT, &objlimit) );
+      }
+      if ( lpi->termcode == MSK_RES_TRM_OBJECTIVE_RANGE )
+      {
+         /* if we reached the objective limit, return this value */
+         MOSEK_CALL( MSK_getdouparam(lpi->task, MSK_DPAR_UPPER_OBJ_CUT, &objvalue) );
+      }
+      else
+      {
+         /* otherwise get the value from Mosek */
+         MOSEK_CALL( MSK_getprimalobj(lpi->task, lpi->lastsolvetype, &objvalue) );
+      }
+
+      if( objsen == MSK_OBJECTIVE_SENSE_MAXIMIZE )
+      {
+         objlimit *= -1.0;
+         objvalue *= -1.0;
+      }
+      if( !SCIPlpiIsInfinity(lpi, objlimit) && MOSEK_relDiff(objvalue, objlimit) < -1e-9 )
+         return FALSE;
+   }
 
    return ( lpi->termcode == MSK_RES_OK
       || lpi->termcode == MSK_RES_TRM_MAX_ITERATIONS
