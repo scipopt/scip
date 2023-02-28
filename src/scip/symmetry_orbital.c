@@ -236,6 +236,129 @@ int bisectSortedArrayFindFirstGEQ(
    return frameleft;
 }
 
+
+/** applies the orbital fixing steps for precomputed orbits
+ *
+ * Either use the local variable bounds, or variable bounds determined by the @param varlbs and @param varubs arrays.
+ * @pre @param varubs is NULL if and only if @param varlbs is NULL.
+ */
+static
+SCIP_RETCODE applyOrbitalFixingPart(
+   SCIP*              scip,               /**< pointer to SCIP data structure */
+   OFCDATA*           ofdata,             /**< pointer to data for orbital fixing data */
+   SCIP_Bool*         infeasible,         /**< pointer to store whether infeasibility is detected */
+   int*               ngen,               /**< pointer to store the number of determined variable domain reductions */
+   int*               varorbitids,        /**< array specifying the orbit IDs for variables in array ofdata->vars */
+   int*               varorbitidssort,    /**< an index array that sorts the varorbitids array */
+   SCIP_Real*         varlbs,             /**< array of lower bounds for variable array ofdata->vars to compute with
+                                           * or NULL, if local bounds are used */
+   SCIP_Real*         varubs              /**< array of upper bounds for variable array ofdata->vars to compute with
+                                           * or NULL, if local bounds are used. */
+)
+{
+   int i;
+   int varid;
+   int orbitid;
+   int orbitbegin;
+   int orbitend;
+   SCIP_Real orbitlb;
+   SCIP_Real orbitub;
+   SCIP_Real lb;
+   SCIP_Real ub;
+
+   assert( scip != NULL );
+   assert( ofdata != NULL );
+   assert( infeasible != NULL );
+   assert( ngen != NULL );
+   assert( varorbitids != NULL );
+   assert( varorbitidssort != NULL );
+   assert( ( varlbs == NULL ) == ( varubs == NULL ) );
+
+   orbitid = -1;
+   orbitbegin = 0;
+   for (orbitbegin = 0; orbitbegin < ofdata->npermvars; orbitbegin = orbitend)
+   {
+      /* get id of the orbit, and scan how large the orbit is */
+      orbitid = varorbitids[varorbitidssort[orbitbegin]];
+      for (orbitend = orbitbegin + 1; orbitend < ofdata->npermvars; ++orbitend)
+      {
+         if ( varorbitids[varorbitidssort[orbitend]] != orbitid )
+            break;
+      }
+
+      /* orbits consisting of only one element cannot yield reductions */
+      if ( orbitend - orbitbegin <= 1 )
+         continue;
+
+      /* get upper and lower bounds in orbit */
+      orbitlb = -INFINITY;
+      orbitub = INFINITY;
+      for (i = orbitbegin; i < orbitend; ++i)
+      {
+         varid = varorbitidssort[i];
+         assert( varid >= 0 );
+         assert( varid < ofdata->npermvars );
+         assert( ofdata->permvars[varid] != NULL );
+
+         lb = varlbs ? varlbs[varid] : SCIPvarGetLbLocal(ofdata->permvars[varid]);
+         if ( GT(scip, lb, orbitlb) )
+            orbitlb = lb;
+         ub = varubs ? varubs[varid] : SCIPvarGetUbLocal(ofdata->permvars[varid]);
+         if ( LT(scip, ub, orbitub) )
+            orbitub = ub;
+      }
+
+      /* if bounds are incompatible, infeasibility is detected */
+      if ( GT(scip, orbitlb, orbitub) )
+      {
+         *infeasible = TRUE;
+         return SCIP_OKAY;
+      }
+      assert( LE(scip, orbitlb, orbitub) );
+
+      /* update variable bounds to be in this range */
+      for (i = orbitbegin; i < orbitend; ++i)
+      {
+         varid = varorbitidssort[i];
+         assert( varid >= 0 );
+         assert( varid < ofdata->npermvars );
+
+         assert( LE(scip, varlbs[varid], orbitlb) );
+         varlbs[varid] = orbitlb;
+         if ( !SCIPisInfinity(scip, -orbitlb) &&
+            LT(scip, SCIPvarGetLbLocal(ofdata->permvars[varid]), orbitlb) )
+         {
+            SCIP_Bool tightened;
+            SCIP_CALL( SCIPtightenVarLb(scip, ofdata->permvars[varid], orbitlb, TRUE, infeasible, &tightened) );
+
+            /* propagator detected infeasibility in this node. Jump out of loop towards freeing everything. */
+            if ( *infeasible )
+               return SCIP_OKAY;
+            assert( tightened );
+            *ngen += 1;
+         }
+
+         assert( GE(scip, varubs[varid], orbitub) );
+         varubs[varid] = orbitub;
+         if ( !SCIPisInfinity(scip, orbitub) &&
+            GT(scip, SCIPvarGetUbLocal(ofdata->permvars[varid]), orbitub) )
+         {
+            SCIP_Bool tightened;
+            SCIP_CALL( SCIPtightenVarUb(scip, ofdata->permvars[varid], orbitub, TRUE, infeasible, &tightened) );
+
+            /* propagator detected infeasibility in this node. Jump out of loop towards freeing everything. */
+            if ( *infeasible )
+               return SCIP_OKAY;
+            assert( tightened );
+            *ngen += 1;
+         }
+      }
+   }
+   assert( !*infeasible );
+   return SCIP_OKAY;
+}
+
+
 /** dynamic orbital fixing, the orbital branching part */
 static
 SCIP_RETCODE applyOrbitalBranchingPropagations(
@@ -270,14 +393,9 @@ SCIP_RETCODE applyOrbitalBranchingPropagations(
    int p;
    int* varorbitids;
    int* varorbitidssort;
-   int orbitid;
+   int idx;
    int orbitbegin;
    int orbitend;
-   int idx;
-   SCIP_Real orbitlb;
-   SCIP_Real orbitub;
-   SCIP_Real lb;
-   SCIP_Real ub;
    SCIP_DISJOINTSET* orbitset;
    int orbitsetcomponentid;
 
@@ -449,90 +567,16 @@ SCIP_RETCODE applyOrbitalBranchingPropagations(
          varorbitids[i] = SCIPdisjointsetFind(orbitset, i);
       SCIPsort(varorbitidssort, SCIPsortArgsortInt, varorbitids, ofdata->npermvars);
 
-      orbitid = -1;
-      orbitbegin = 0;
-      for (orbitbegin = 0; orbitbegin < ofdata->npermvars; orbitbegin = orbitend)
-      {
-         /* get id of the orbit, and scan how large the orbit is */
-         orbitid = varorbitids[varorbitidssort[orbitbegin]];
-         for (orbitend = orbitbegin + 1; orbitend < ofdata->npermvars; ++orbitend)
-         {
-            if ( varorbitids[varorbitidssort[orbitend]] != orbitid )
-               break;
-         }
-
-         /* orbits consisting of only one element cannot yield reductions */
-         if ( orbitend - orbitbegin <= 1 )
-            continue;
-
-         /* get upper and lower bounds in orbit */
-         orbitlb = -INFINITY;
-         orbitub = INFINITY;
-         for (i = orbitbegin; i < orbitend; ++i)
-         {
-            varid = varorbitidssort[i];
-            assert( varid >= 0 );
-            assert( varid < ofdata->npermvars );
-
-            lb = varlbs[varid];
-            if ( SCIPisInfinity(scip, -orbitlb) || GT(scip, lb, orbitlb) )
-               orbitlb = lb;
-            ub = varubs[varid];
-            if ( SCIPisInfinity(scip, orbitub) || LT(scip, ub, orbitub) )
-               orbitub = ub;
-         }
-
-         /* if bounds are incompatible, infeasibility is detected */
-         if ( GT(scip, orbitlb, orbitub) )
-         {
-            *infeasible = TRUE;
-            goto FREE;
-         }
-         assert( LE(scip, orbitlb, orbitub) );
-
-         /* update variable bounds to be in this range */
-         for (i = orbitbegin; i < orbitend; ++i)
-         {
-            varid = varorbitidssort[i];
-            assert( varid >= 0 );
-            assert( varid < ofdata->npermvars );
-
-            assert( LE(scip, varlbs[varid], orbitlb) );
-            varlbs[varid] = orbitlb;
-            if ( !SCIPisInfinity(scip, -orbitlb) &&
-               LT(scip, SCIPvarGetLbLocal(ofdata->permvars[varid]), orbitlb) )
-            {
-               SCIP_Bool tightened;
-               SCIP_CALL( SCIPtightenVarLb(scip, ofdata->permvars[varid], orbitlb, TRUE, infeasible, &tightened) );
-
-               /* propagator detected infeasibility in this node. Jump out of loop towards freeing everything. */
-               if ( *infeasible )
-                  goto FREE;
-               assert( tightened );
-               *ngen += 1;
-            }
-
-            assert( GE(scip, varubs[varid], orbitub) );
-            varubs[varid] = orbitub;
-            if ( !SCIPisInfinity(scip, orbitub) &&
-               GT(scip, SCIPvarGetUbLocal(ofdata->permvars[varid]), orbitub) )
-            {
-               SCIP_Bool tightened;
-               SCIP_CALL( SCIPtightenVarUb(scip, ofdata->permvars[varid], orbitub, TRUE, infeasible, &tightened) );
-
-               /* propagator detected infeasibility in this node. Jump out of loop towards freeing everything. */
-               if ( *infeasible )
-                  goto FREE;
-               assert( tightened );
-               *ngen += 1;
-            }
-         }
-      }
+      /* apply orbital fixing to these orbits */
+      SCIP_CALL( applyOrbitalFixingPart(scip, ofdata, infeasible, ngen, varorbitids, varorbitidssort, varlbs, varubs) );
+      if ( *infeasible )
+         goto FREE;
       assert( !*infeasible );
 
       /* 2. apply branching step to varlbs or varubs array
        *
-       * Due to the steps above, it is possible that the branching step is redundant or infeasible. */
+       * Due to the steps above, it is possible that the branching step is redundant or infeasible. 
+       */
       assert( LE(scip, varlbs[branchingdecisionvarid], varubs[branchingdecisionvarid]) );
       switch (branchingdecision->boundchgtype)
       {
@@ -698,17 +742,9 @@ SCIP_RETCODE applyOrbitalFixingPropagations(
    int* perm;
    int nchosenperms;
    int p;
-   SCIP_VAR* var;
    SCIP_DISJOINTSET* orbitset;
    int* varorbitids;
    int* varorbitidssort;
-   int orbitid;
-   int orbitbegin;
-   int orbitend;
-   SCIP_Real orbitlb;
-   SCIP_Real orbitub;
-   SCIP_Real lb;
-   SCIP_Real ub;
 
    assert( scip != NULL );
    assert( ofdata != NULL );
@@ -780,85 +816,11 @@ SCIP_RETCODE applyOrbitalFixingPropagations(
       varorbitids[i] = SCIPdisjointsetFind(orbitset, i);
    SCIPsort(varorbitidssort, SCIPsortArgsortInt, varorbitids, ofdata->npermvars);
 
-   orbitid = -1;
-   orbitbegin = 0;
-   for (orbitbegin = 0; orbitbegin < ofdata->npermvars; orbitbegin = orbitend)
-   {
-      /* get id of the orbit, and scan how large the orbit is */
-      orbitid = varorbitids[varorbitidssort[orbitbegin]];
-      for (orbitend = orbitbegin + 1; orbitend < ofdata->npermvars; ++orbitend)
-      {
-         if ( varorbitids[varorbitidssort[orbitend]] != orbitid )
-            break;
-      }
-
-      /* orbits consisting of only one element cannot yield reductions */
-      if ( orbitend - orbitbegin <= 1 )
-         continue;
-
-      /* get upper and lower bounds in orbit */
-      orbitlb = -INFINITY;
-      orbitub = INFINITY;
-      for (i = orbitbegin; i < orbitend; ++i)
-      {
-         varid = varorbitidssort[i];
-         assert( varid >= 0 );
-         assert( varid < ofdata->npermvars );
-
-         var = ofdata->permvars[varid];
-         assert( var != NULL );
-
-         lb = SCIPvarGetLbLocal(var);
-         if ( GT(scip, lb, orbitlb) )
-            orbitlb = lb;
-         ub = SCIPvarGetUbLocal(var);
-         if ( LT(scip, ub, orbitub) )
-            orbitub = ub;
-      }
-
-      /* if bounds are incompatible, infeasibility is detected */
-      if ( GT(scip, orbitlb, orbitub) )
-      {
-         *infeasible = TRUE;
-         goto FREE;
-      }
-      assert( LE(scip, orbitlb, orbitub) );
-
-      /* update variable bounds to be in this range */
-      for (i = orbitbegin; i < orbitend; ++i)
-      {
-         varid = varorbitidssort[i];
-         assert( varid >= 0 );
-         assert( varid < ofdata->npermvars );
-
-         var = ofdata->permvars[varid];
-         assert( var != NULL );
-
-         if ( LT(scip, SCIPvarGetLbLocal(var), orbitlb) )
-         {
-            SCIP_Bool tightened;
-            SCIP_CALL( SCIPtightenVarLb(scip, var, orbitlb, TRUE, infeasible, &tightened) );
-
-            /* propagator detected infeasibility in this node. Jump out of loop towards freeing everything. */
-            if ( *infeasible )
-               goto FREE;
-            assert( tightened );
-            *ngen += 1;
-         }
-
-         if ( GT(scip, SCIPvarGetUbLocal(var), orbitub) )
-         {
-            SCIP_Bool tightened;
-            SCIP_CALL( SCIPtightenVarUb(scip, var, orbitub, TRUE, infeasible, &tightened) );
-
-            /* propagator detected infeasibility in this node. Jump out of loop towards freeing everything. */
-            if ( *infeasible )
-               goto FREE;
-            assert( tightened );
-            *ngen += 1;
-         }
-      }
-   }
+   /* apply orbital fixing to these orbits */
+   SCIP_CALL( applyOrbitalFixingPart(scip, ofdata, infeasible, ngen, varorbitids, varorbitidssort, NULL, NULL) );
+   if ( *infeasible )
+      goto FREE;
+   assert( !*infeasible );
 
    FREE:
    SCIPfreeBufferArray(scip, &varorbitidssort);
