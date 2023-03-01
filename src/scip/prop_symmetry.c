@@ -6851,8 +6851,6 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
    SCIP_Bool*            earlyterm           /**< pointer to store whether we terminated early (or NULL) */
    )
 {
-   /* @todo CHECK THE FREE AND ALLOC SITUATIONS WITH orbconss and linconss */
-   /* preferably, just allocate and resize them when they are first asked for */
    SCIP_PROPDATA* propdata;
 
    assert( prop != NULL );
