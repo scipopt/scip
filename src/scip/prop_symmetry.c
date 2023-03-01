@@ -226,7 +226,7 @@
 
 /* macros for getting activeness of symmetry handling methods */
 #define ISSYMRETOPESACTIVE(x)      (((unsigned) x & SYM_HANDLETYPE_SYMBREAK) != 0)
-#define ISORBITALFIXINGACTIVE(x)   (((unsigned) x & SYM_HANDLETYPE_ORBITALFIXING) != 0)
+#define ISORBITALREDUCIONACTIVE(x) (((unsigned) x & SYM_HANDLETYPE_ORBITALREDUCTION) != 0)
 #define ISSSTACTIVE(x)             (((unsigned) x & SYM_HANDLETYPE_SST) != 0)
 #define ISSYMDYNAMICACTIVE(x)      (((unsigned) x & SYM_HANDLETYPE_DYNAMIC) != 0)
 
@@ -332,8 +332,8 @@ struct SCIP_PropData
    SCIP_Bool             sstmixedcomponents; /**< Should Schreier Sims constraints be added if a symmetry component contains variables of different types? */
 
    SCIP_EVENTHDLR*       shadowtreeeventhdlr;/**< pointer to event handler for shadow tree */
-   SCIP_ORBITOPALFIXINGDATA* orbitopalfixingdata; /**< container for the orbitopal fixing data */
-   SCIP_OFDATA*          orbitalfixingdata;  /**< container for orbital fixing data */
+   SCIP_ORBITOPALREDDATA* orbitopalreddata;  /**< container for the orbitopal reduction data */
+   SCIP_ORBITALREDDATA*  orbitalreddata;     /**< container for orbital reduction data */
    SCIP_LEXREDDATA*      lexreddata;         /**< container for lexicographic reduction propagation */
 };
 
@@ -797,8 +797,8 @@ SCIP_RETCODE freeSymmetryData(
    assert( scip != NULL );
    assert( propdata != NULL );
 
-   assert( propdata->orbitopalfixingdata != NULL );
-   SCIP_CALL( SCIPorbitopalFixingReset(scip, propdata->orbitopalfixingdata) );
+   assert( propdata->orbitopalreddata != NULL );
+   SCIP_CALL( SCIPorbitopalReductionReset(scip, propdata->orbitopalreddata) );
 
    if ( propdata->permvarmap != NULL )
    {
@@ -913,7 +913,6 @@ SCIP_RETCODE freeSymmetryData(
 
       SCIPfreeBlockMemoryArray(scip, &propdata->permvars, propdata->npermvars);
 
-      /* if orbital fixing runs exclusively, propdata->perms was already freed in determineSymmetry() */
       if ( propdata->perms != NULL )
       {
          for (i = 0; i < propdata->nperms; ++i)
@@ -961,8 +960,8 @@ SCIP_RETCODE resetDynamicSymmetryHandling(
    assert( propdata != NULL );
 
    /* propagators managed by a different file */
-   SCIP_CALL( SCIPorbitalFixingReset(scip, propdata->orbitalfixingdata) );
-   SCIP_CALL( SCIPorbitopalFixingReset(scip, propdata->orbitopalfixingdata) );
+   SCIP_CALL( SCIPorbitalReductionReset(scip, propdata->orbitalreddata) );
+   SCIP_CALL( SCIPorbitopalReductionReset(scip, propdata->orbitopalreddata) );
    SCIP_CALL( SCIPlexicographicReductionReset(scip, propdata->lexreddata) );
 
    return SCIP_OKAY;
@@ -2797,8 +2796,8 @@ SCIP_Bool testSymmetryComputationRequired(
    if ( propdata->enforcecomputesymmetry )
       return TRUE;
 
-   /* for dynamic symmetry handling or orbital fixing, branching must be possible */
-   if ( ISSYMDYNAMICACTIVE(propdata->usesymmetry) || ISORBITALFIXINGACTIVE(propdata->usesymmetry) )
+   /* for dynamic symmetry handling or orbital reduction, branching must be possible */
+   if ( ISSYMDYNAMICACTIVE(propdata->usesymmetry) || ISORBITALREDUCTIONACTIVE(propdata->usesymmetry) )
    {
       /* @todo a proper test whether variables can be branched on or not */
       if ( SCIPgetNBinVars(scip) > 0 )
@@ -5587,7 +5586,7 @@ SCIP_RETCODE addSSTConssOrbitAndUpdateSST(
    int                   orbitidx,           /**< index of orbit for Schreier Sims constraints */
    int                   orbitleaderidx,     /**< index of leader variable for Schreier Sims constraints */
    SCIP_Shortbool*       orbitvarinconflict, /**< indicator whether orbitvar is in conflict with orbit leader */
-   int                   norbitvarinconflict, /**< number of variables in conflict with orbit leader */
+   int                   norbitvarinconflict,/**< number of variables in conflict with orbit leader */
    int*                  nchgbds             /**< pointer to store number of bound changes (or NULL) */
    )
 { /*lint --e{613,641}*/
@@ -5743,7 +5742,7 @@ SCIP_RETCODE selectOrbitLeaderSSTConss(
    int*                  orbitidx,           /**< pointer to index of selected orbit */
    int*                  leaderidx,          /**< pointer to leader in orbit */
    SCIP_Shortbool*       orbitvarinconflict, /**< array to store whether a var in the orbit is conflicting with leader */
-   int*                  norbitvarinconflict, /**< pointer to store number of vars in the orbit in conflict with leader */
+   int*                  norbitvarinconflict,/**< pointer to store number of vars in the orbit in conflict with leader */
    SCIP_Bool*            success             /**< pointer to store whether orbit cut be selected successfully */
    )
 {
@@ -6590,7 +6589,7 @@ SCIP_RETCODE tryDetectOrbitope(
 }
 
 
-/** dynamic orbitopal fixing */
+/** orbitopal reduction */
 static
 SCIP_RETCODE tryAddOrbitopesDynamic(
    SCIP*                 scip,               /**< SCIP instance */
@@ -6711,7 +6710,7 @@ SCIP_RETCODE tryAddOrbitopesDynamic(
       }
       else
       {
-         /* create full dynamic orbitope */
+         /* use orbitopal reduction for component */
          SCIP_VAR** orbitopevarmatrix;
          int nelem;
 
@@ -6722,7 +6721,7 @@ SCIP_RETCODE tryAddOrbitopesDynamic(
             orbitopevarmatrix[i] = propdata->permvars[orbitopematrix[i]];
 
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "orbitope_full_comp_%d", c);
-         SCIP_CALL( SCIPorbitopalFixingAddOrbitope(scip, propdata->orbitopalfixingdata,
+         SCIP_CALL( SCIPorbitopalReductionAddOrbitope(scip, propdata->orbitopalreddata,
             orbitopevarmatrix, nrows, ncols, &success) );
 
          if ( success )
@@ -6763,7 +6762,7 @@ SCIP_RETCODE tryAddOrbitopesDynamic(
 
 /** dynamic permutation lexicographic reduction */
 static
-SCIP_RETCODE tryAddOrbitalFixingLexfix(
+SCIP_RETCODE tryAddOrbitalRedLexRed(
    SCIP*                 scip,               /**< SCIP instance */
    SCIP_PROPDATA*        propdata            /**< propdata */
    )
@@ -6771,13 +6770,13 @@ SCIP_RETCODE tryAddOrbitalFixingLexfix(
    int c;
    int p;
 
-   SCIP_Bool checkof;
+   SCIP_Bool checkorbired;
    SCIP_Bool checklexred;
    SCIP_Bool success;
 
    assert( scip != NULL );
    assert( propdata != NULL );
-   assert( ISORBITALFIXINGACTIVE(propdata->usesymmetry)
+   assert( ISORBITALREDUCTIONACTIVE(propdata->usesymmetry)
       || (
          ISSYMRETOPESACTIVE(propdata->usesymmetry)
          && ISSYMDYNAMICACTIVE(propdata->usesymmetry)
@@ -6785,11 +6784,11 @@ SCIP_RETCODE tryAddOrbitalFixingLexfix(
       ) );
    assert( propdata->nperms > 0 );
 
-   /* in this function orbital fixing or dynamic symresack propagation must be enabled */
-   checkof = ISORBITALFIXINGACTIVE(propdata->usesymmetry);
+   /* in this function orbital reduction or dynamic lexicographic reduction propagation must be enabled */
+   checkorbired = ISORBITALREDUCTIONACTIVE(propdata->usesymmetry);
    checklexred = ISSYMRETOPESACTIVE(propdata->usesymmetry) && ISSYMDYNAMICACTIVE(propdata->usesymmetry)
       && propdata->addsymresacks;
-   assert( checkof || checklexred );
+   assert( checkorbired || checklexred );
 
    SCIP_CALL( ensureSymmetryComponentsComputed(scip, propdata) );
    assert( propdata->ncomponents > 0 );
@@ -6809,19 +6808,19 @@ SCIP_RETCODE tryAddOrbitalFixingLexfix(
       for (p = 0; p < componentsize; ++p)
          componentperms[p] = propdata->perms[propdata->components[propdata->componentbegins[c] + p]];
 
-      /* handle component permutations with orbital fixing */
-      if ( checkof )
+      /* handle component permutations with orbital reduction */
+      if ( checkorbired )
       {
-         SCIP_CALL( SCIPorbitalFixingAddComponent(scip, propdata->orbitalfixingdata,
+         SCIP_CALL( SCIPorbitalReductionAddComponent(scip, propdata->orbitalreddata,
             propdata->permvars, propdata->npermvars, componentperms, componentsize, &success) );
          if ( success )
-            propdata->componentblocked[c] |= SYM_HANDLETYPE_ORBITALFIXING;
+            propdata->componentblocked[c] |= SYM_HANDLETYPE_ORBITALREDUCTION;
       }
 
       /* handle component permutations with the dynamic lexicographic reduction propagator */
       if ( checklexred )
       {
-         /* handle every permutation in the component with the dynamic lexicographic order propagator */
+         /* handle every permutation in the component with the dynamic lexicographic reduction propagator */
          for (p = 0; p < componentsize; ++p)
          {
             assert( componentperms[p] != NULL );
@@ -6913,7 +6912,7 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
       return SCIP_OKAY;
 
 
-   /* dynamic orbitopal fixing */
+   /* dynamic orbitopal reduction */
    if ( ISSYMDYNAMICACTIVE(propdata->usesymmetry) && ISSYMRETOPESACTIVE(propdata->usesymmetry)
       && propdata->detectorbitopes )
    {
@@ -6940,12 +6939,12 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
    }
 
 
-   /* orbital fixing and (compatable) dynamic lexmax propagation */
-   if ( ISORBITALFIXINGACTIVE(propdata->usesymmetry)
+   /* orbital reduction and (compatable) dynamic lexicographic reduction propagation */
+   if ( ISORBITALREDUCTIONACTIVE(propdata->usesymmetry)
          || ( ISSYMRETOPESACTIVE(propdata->usesymmetry) && ISSYMDYNAMICACTIVE(propdata->usesymmetry)
             && propdata->addsymresacks ) )
    {
-      SCIP_CALL( tryAddOrbitalFixingLexfix(scip, propdata) );
+      SCIP_CALL( tryAddOrbitalRedLexRed(scip, propdata) );
       if ( SCIPisStopped(scip) )
          return SCIP_OKAY;
    }
@@ -7009,14 +7008,14 @@ SCIP_RETCODE propagateSymmetry(
    *infeasible = FALSE;
    *didrun = FALSE;
 
-   /* apply orbitopal fixing */
-   SCIP_CALL( SCIPorbitopalFixingPropagate(scip, propdata->orbitopalfixingdata, infeasible, &nredlocal, didrun) );
+   /* apply orbitopal reduction */
+   SCIP_CALL( SCIPorbitopalReductionPropagate(scip, propdata->orbitopalreddata, infeasible, &nredlocal, didrun) );
    *nred += nredlocal;
    if ( *infeasible )
       return SCIP_OKAY;
 
-   /* apply orbital fixing */
-   SCIP_CALL( SCIPorbitalFixingPropagate(scip, propdata->orbitalfixingdata, infeasible, &nredlocal, didrun) );
+   /* apply orbital reduction */
+   SCIP_CALL( SCIPorbitalReductionPropagate(scip, propdata->orbitalreddata, infeasible, &nredlocal, didrun) );
    *nred += nredlocal;
    if ( *infeasible )
       return SCIP_OKAY;
@@ -7247,7 +7246,7 @@ SCIP_DECL_PROPPRESOL(propPresolSymmetry)
    }
 
    /* run dynamic symmetry handling presolving */
-   if ( ISORBITALFIXINGACTIVE(propdata->usesymmetry) )
+   if ( ISORBITALREDUCTIONACTIVE(propdata->usesymmetry) )
    {
       assert( 0 <= propdata->symcomptiming && propdata->symcomptiming <= SYM_COMPUTETIMING_AFTERPRESOL );
       if ( propdata->performpresolving && propdata->symcomptiming <= SYM_COMPUTETIMING_DURINGPRESOL )
@@ -7407,11 +7406,11 @@ SCIP_DECL_PROPFREE(propFreeSymmetry)
    assert( propdata->lexreddata != NULL );
    SCIP_CALL( SCIPlexicographicReductionFree(scip, &propdata->lexreddata) );
 
-   assert( propdata->orbitalfixingdata != NULL );
-   SCIP_CALL( SCIPorbitalFixingFree(scip, &propdata->orbitalfixingdata) );
+   assert( propdata->orbitalreddata != NULL );
+   SCIP_CALL( SCIPorbitalReductionFree(scip, &propdata->orbitalreddata) );
 
-   assert( propdata->orbitopalfixingdata != NULL );
-   SCIP_CALL( SCIPorbitopalFixingFree(scip, &propdata->orbitopalfixingdata) );
+   assert( propdata->orbitopalreddata != NULL );
+   SCIP_CALL( SCIPorbitopalReductionFree(scip, &propdata->orbitopalreddata) );
 
    SCIPfreeBlockMemory(scip, &propdata);
 
@@ -7616,7 +7615,7 @@ SCIP_RETCODE SCIPincludePropSymmetry(
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "propagating/" PROP_NAME "/usedynamicprop",
-         "whether dynamic propagation should be used for full orbitopes",
+         "whether dynamic propagation should be used for full orbitope constraint handler",
          &propdata->usedynamicprop, TRUE, DEFAULT_USEDYNAMICPROP, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
@@ -7675,11 +7674,11 @@ SCIP_RETCODE SCIPincludePropSymmetry(
    SCIP_CALL( SCIPincludeEventHdlrShadowTree(scip, &propdata->shadowtreeeventhdlr) );
    assert( propdata->shadowtreeeventhdlr != NULL );
 
-   SCIP_CALL( SCIPorbitopalFixingInclude(scip, &propdata->orbitopalfixingdata) );
-   assert( propdata->orbitopalfixingdata != NULL );
+   SCIP_CALL( SCIPorbitopalReductionInclude(scip, &propdata->orbitopalreddata) );
+   assert( propdata->orbitopalreddata != NULL );
 
-   SCIP_CALL( SCIPorbitalFixingInclude(scip, &propdata->orbitalfixingdata, propdata->shadowtreeeventhdlr) );
-   assert( propdata->orbitalfixingdata != NULL );
+   SCIP_CALL( SCIPorbitalReductionInclude(scip, &propdata->orbitalreddata, propdata->shadowtreeeventhdlr) );
+   assert( propdata->orbitalreddata != NULL );
 
    SCIP_CALL( SCIPlexicographicReductionInclude(scip, &propdata->lexreddata, propdata->shadowtreeeventhdlr) );
    assert( propdata->lexreddata != NULL );
