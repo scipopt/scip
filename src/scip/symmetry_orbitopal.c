@@ -64,6 +64,9 @@
 
 #include <memory.h>
 
+/* symmetry handler properties */
+#define SYMHDLR_NAME           "orbitopalreduction"
+
 /* orbitopal symmetry handler properties */
 #define EVENTHDLR_NAME         "symmetry_orbitopal_eventhdlr"
 #define EVENTHDLR_DESC         "event handler for maintaining the branch-and-bound tree"
@@ -96,7 +99,7 @@ struct OrbitopeData
 };
 
 /** wrapper for all orbitopes in orbitopal symmetry handling data */
-struct SCIP_OrbitopalFixingData
+struct SCIP_OrbitopalReductionData
 {
    SCIP_COLUMNORDERING   defaultcolumnordering; /**< default policy for the column ordering */
    SCIP_EVENTHDLR*       eventhdlr;          /**< pointer to the event handler for managing the branching tree */
@@ -116,13 +119,13 @@ struct SCIP_OrbitopalFixingData
 static
 SCIP_Bool vartypeIsBranchRowType(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ORBITOPALFIXINGDATA* orbifixdata,    /**< pointer to the dynamic orbitopal fixing data */
+   SCIP_ORBITOPALREDDATA* orbireddata,       /**< pointer to the dynamic orbitopal reduction data */
    SCIP_VARTYPE          vartype             /**< var type */
 )
 {
    assert( scip != NULL );
-   assert( orbifixdata != NULL );
-   assert( orbifixdata->conshdlr_nonlinear_checked );
+   assert( orbireddata != NULL );
+   assert( orbireddata->conshdlr_nonlinear_checked );
 
    switch (vartype)
    {
@@ -132,9 +135,9 @@ SCIP_Bool vartypeIsBranchRowType(
    case SCIP_VARTYPE_CONTINUOUS:
    case SCIP_VARTYPE_IMPLINT:
       /* potential branching variables if nonlinear constraints exist */
-      assert( orbifixdata->conshdlr_nonlinear_checked );
-      return orbifixdata->conshdlr_nonlinear == NULL ? FALSE :
-         SCIPconshdlrGetNActiveConss(orbifixdata->conshdlr_nonlinear) > 0;
+      assert( orbireddata->conshdlr_nonlinear_checked );
+      return orbireddata->conshdlr_nonlinear == NULL ? FALSE :
+         SCIPconshdlrGetNActiveConss(orbireddata->conshdlr_nonlinear) > 0;
    default:
       SCIPerrorMessage("unknown vartype\n");
       SCIPABORT();
@@ -191,8 +194,8 @@ SCIP_DECL_HASHKEYVAL(hashKeyValBnbnodeinfo)
 /** tests if two columns are symmetrically equivalent
  *
  * We test if the columns with index col1 and col2 have elementwise the same bounds.
- * If all symmetry-compatible fixings are applied, then it suffices to check only as many rows as are selected
- * for orbitopal fixing. However, to be resilient to reductions that are not symmetry-compatible,
+ * If all symmetry-compatible reductions are applied, then it suffices to check only as many rows as are selected
+ * for orbitopal reduction. However, to be resilient to reductions that are not symmetry-compatible,
  * we test all variables in the columns.
  */
 static
@@ -887,8 +890,8 @@ SCIP_DECL_EVENTEXEC(eventExec)
 static
 SCIP_Bool rowIsBranchRow(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ORBITOPALFIXINGDATA* orbifixdata,    /**< pointer to the dynamic orbitopal fixing data */
-   ORBITOPEDATA*         orbidata,           /**< dynamic orbitope symmetry handling data */
+   SCIP_ORBITOPALREDDATA* orbireddata,       /**< pointer to the dynamic orbitopal reduction data */
+   ORBITOPEDATA*         orbidata,           /**< symmetry handling data for orbitopal structure */
    int                   rowid               /**< row id for which to check */
 )
 {
@@ -898,7 +901,7 @@ SCIP_Bool rowIsBranchRow(
 #endif
 
    assert( scip != NULL );
-   assert( orbifixdata != NULL );
+   assert( orbireddata != NULL );
    assert( orbidata != NULL );
    assert( orbidata->nrows > 0 );
    assert( orbidata->ncols > 0 );
@@ -917,12 +920,12 @@ SCIP_Bool rowIsBranchRow(
       /* the actual vartypes can be different,
        * for example when an INTEGER vartype turns into BINARY due to bound changes
        */
-      assert( vartypeIsBranchRowType(scip, orbifixdata, SCIPvarGetType(var)) ==
-         vartypeIsBranchRowType(scip, orbifixdata, SCIPvarGetType(orbidata->vars[rowid * orbidata->ncols + c])) );
+      assert( vartypeIsBranchRowType(scip, orbireddata, SCIPvarGetType(var)) ==
+         vartypeIsBranchRowType(scip, orbireddata, SCIPvarGetType(orbidata->vars[rowid * orbidata->ncols + c])) );
    }
 #endif
 
-   return vartypeIsBranchRowType(scip, orbifixdata, SCIPvarGetType(var));
+   return vartypeIsBranchRowType(scip, orbireddata, SCIPvarGetType(var));
 }
 
 
@@ -930,7 +933,7 @@ SCIP_Bool rowIsBranchRow(
 static
 SCIP_RETCODE freeOrbitope(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ORBITOPALFIXINGDATA* orbifixdata,    /**< pointer to the dynamic orbitopal fixing data */
+   SCIP_ORBITOPALREDDATA* orbireddata,       /**< pointer to the dynamic orbitopal reduction data */
    ORBITOPEDATA**        orbidata            /**< pointer to orbitope data */
    )
 {
@@ -940,7 +943,7 @@ SCIP_RETCODE freeOrbitope(
    int nelem;
 
    assert( scip != NULL );
-   assert( orbifixdata != NULL );
+   assert( orbireddata != NULL );
    assert( orbidata != NULL );
    assert( *orbidata != NULL );
    assert( (*orbidata)->vars != NULL );
@@ -950,7 +953,7 @@ SCIP_RETCODE freeOrbitope(
    assert( SCIPisTransformed(scip) );
 
    /* drop event */
-   SCIP_CALL( SCIPdropEvent(scip, SCIP_EVENTTYPE_NODEBRANCHED, orbifixdata->eventhdlr,
+   SCIP_CALL( SCIPdropEvent(scip, SCIP_EVENTTYPE_NODEBRANCHED, orbireddata->eventhdlr,
       (SCIP_EVENTDATA*) *orbidata, -1 ) );
 
    /* free nodeinfos */
@@ -1002,11 +1005,11 @@ SCIP_RETCODE freeOrbitope(
 }
 
 
-/** adds an orbitope to the orbitopal fixing data */
+/** adds an orbitope to the orbitopal reduction data */
 static
 SCIP_RETCODE addOrbitope(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ORBITOPALFIXINGDATA* orbifixdata,    /**< pointer to the dynamic orbitopal fixing data */
+   SCIP_ORBITOPALREDDATA* orbireddata,       /**< pointer to the dynamic orbitopal reduction data */
    SCIP_VAR**            vars,               /**< variables array, must have size nrows * ncols */
    int                   nrows,              /**< number of rows in orbitope */
    int                   ncols,              /**< number of columns in orbitope */
@@ -1021,8 +1024,8 @@ SCIP_RETCODE addOrbitope(
    int nelem;
 
    assert( scip != NULL );
-   assert( orbifixdata != NULL );
-   assert( orbifixdata->eventhdlr != NULL );
+   assert( orbireddata != NULL );
+   assert( orbireddata->eventhdlr != NULL );
    assert( vars != NULL );
    assert( nrows >= 0 );
    assert( ncols >= 0 );
@@ -1045,7 +1048,7 @@ SCIP_RETCODE addOrbitope(
    orbidata->ncols = ncols;
 
    /* @todo allow more dynamic changes */
-   orbidata->columnordering = orbifixdata->defaultcolumnordering;
+   orbidata->columnordering = orbireddata->defaultcolumnordering;
 
    /* variable array enumerates the orbitope matrix row-wise */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &orbidata->vars, nelem) );
@@ -1091,7 +1094,7 @@ SCIP_RETCODE addOrbitope(
    /* @todo at getRowData: If nselrows == nbranchrows, append the non-branch rows (like before) */
    for (i = 0; i < nrows; ++i)
    {
-      if ( rowIsBranchRow(scip, orbifixdata, orbidata, i) )
+      if ( rowIsBranchRow(scip, orbireddata, orbidata, i) )
          ++orbidata->nbranchrows;
    }
 
@@ -1099,7 +1102,7 @@ SCIP_RETCODE addOrbitope(
    assert( SCIPgetStage(scip) == SCIP_STAGE_SOLVING ? SCIPgetNNodes(scip) == 0 : TRUE );
 
    /* add the event to store the row and column updates of nodes in the branch-and-bound tree */
-   SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_NODEBRANCHED, orbifixdata->eventhdlr,
+   SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_NODEBRANCHED, orbireddata->eventhdlr,
       (SCIP_EVENTDATA*) orbidata, NULL) );
 
    /* nodeinfos: every node that implies a column swap is represented
@@ -1111,33 +1114,33 @@ SCIP_RETCODE addOrbitope(
       hashGetKeyBnbnodeinfo, hashKeyEqBnbnodeinfo, hashKeyValBnbnodeinfo, NULL) );
 
    /* resize orbitope array if needed */
-   assert( orbifixdata->norbitopes >= 0 );
-   assert( (orbifixdata->norbitopes == 0) == (orbifixdata->orbitopes == NULL) );
-   assert( orbifixdata->norbitopes <= orbifixdata->maxnorbitopes );
-   if ( orbifixdata->norbitopes == orbifixdata->maxnorbitopes )
+   assert( orbireddata->norbitopes >= 0 );
+   assert( (orbireddata->norbitopes == 0) == (orbireddata->orbitopes == NULL) );
+   assert( orbireddata->norbitopes <= orbireddata->maxnorbitopes );
+   if ( orbireddata->norbitopes == orbireddata->maxnorbitopes )
    {
       int newsize;
 
-      newsize = SCIPcalcMemGrowSize(scip, orbifixdata->norbitopes + 1);
+      newsize = SCIPcalcMemGrowSize(scip, orbireddata->norbitopes + 1);
       assert( newsize >= 0 );
 
-      if ( orbifixdata->norbitopes == 0 )
+      if ( orbireddata->norbitopes == 0 )
       {
-         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &orbifixdata->orbitopes, newsize) );
+         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &orbireddata->orbitopes, newsize) );
       }
       else
       {
-         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &orbifixdata->orbitopes, orbifixdata->norbitopes, newsize) );
+         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &orbireddata->orbitopes, orbireddata->norbitopes, newsize) );
       }
 
-      orbifixdata->maxnorbitopes = newsize;
+      orbireddata->maxnorbitopes = newsize;
    }
 
-   /* add orbitope to orbitopal fixing data */
-   assert( orbifixdata->norbitopes < orbifixdata->maxnorbitopes );
-   orbifixdata->orbitopes[orbifixdata->norbitopes++] = orbidata;
+   /* add orbitope to orbitopal reduction data */
+   assert( orbireddata->norbitopes < orbireddata->maxnorbitopes );
+   orbireddata->orbitopes[orbireddata->norbitopes++] = orbidata;
 
-   SCIPdebugMsg(scip, "Added orbitope for orbitopal fixing of size %d by %d\n", nrows, ncols);
+   SCIPdebugMsg(scip, "Added orbitope for orbitopal reduction of size %d by %d\n", nrows, ncols);
 
    return SCIP_OKAY;
 }
@@ -1473,7 +1476,7 @@ SCIP_RETCODE propagateStaticOrbitope(
              * Compare to the entry value on the column immediately right.
              * The value we choose on the left must be at least this.
              * 2 Options:
-             * Option 1: The upper bound is smaller. Then we're in an infeasible situation. Fix as described below.
+             * Option 1: The upper bound is smaller. Then we're in an infeasible situation. Resolve as described below.
              * Option 2: The upper bound is greater or equal.
              */
             ub = SCIPvarGetUbLocal(var);
@@ -1640,7 +1643,7 @@ SCIP_RETCODE propagateStaticOrbitope(
              * Compare to the entry value on the column immediately left.
              * The value we choose on the right must be at most this.
              * 2 Options:
-             * Option 1: The lower bound is larger. Then we're in an infeasible situation. Fix as described below.
+             * Option 1: The lower bound is larger. Then we're in an infeasible situation. Resolve as described below.
              * Option 2: The lower bound is smaller or equal.
              */
             lb = SCIPvarGetLbLocal(var);
@@ -1976,10 +1979,10 @@ SCIP_RETCODE propagateOrbitope(
  * Interface methods
  */
 
-/** propagates orbitopal fixing */
-SCIP_RETCODE SCIPorbitopalFixingPropagate(
+/** propagates orbitopal reduction */
+SCIP_RETCODE SCIPorbitopalReductionPropagate(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ORBITOPALFIXINGDATA* orbifixdata,    /**< orbitopal fixing data structure */
+   SCIP_ORBITOPALREDDATA* orbireddata,       /**< orbitopal reduction data structure */
    SCIP_Bool*            infeasible,         /**< whether infeasibility is found */
    int*                  nred,               /**< number of domain reductions */
    SCIP_Bool*            didrun              /**< a global pointer maintaining if any symmetry propagator has run
@@ -1991,8 +1994,8 @@ SCIP_RETCODE SCIPorbitopalFixingPropagate(
    int thisfixedvars;
 
    assert( scip != NULL );
-   assert( orbifixdata != NULL );
-   assert( (orbifixdata->norbitopes == 0) == (orbifixdata->orbitopes == NULL) );
+   assert( orbireddata != NULL );
+   assert( (orbireddata->norbitopes == 0) == (orbireddata->orbitopes == NULL) );
    assert( infeasible != NULL );
    assert( nred != NULL );
 
@@ -2011,13 +2014,13 @@ SCIP_RETCODE SCIPorbitopalFixingPropagate(
       return SCIP_OKAY;
 
    /* propagate all orbitopes */
-   for (c = 0; c < orbifixdata->norbitopes; ++c)
+   for (c = 0; c < orbireddata->norbitopes; ++c)
    {
-      orbidata = orbifixdata->orbitopes[c];
+      orbidata = orbireddata->orbitopes[c];
       assert( orbidata != NULL );
 
       SCIP_CALL( propagateOrbitope(scip, orbidata, infeasible, &thisfixedvars) );
-      SCIPdebugMessage("Found %d reductions during orbitopal fixing for orbitope %d\n", thisfixedvars, c);
+      SCIPdebugMessage("Found %d reductions during orbitopal reduction for orbitope %d\n", thisfixedvars, c);
       *nred += thisfixedvars;
 
       /* a symmetry propagator has ran, so set didrun to TRUE */
@@ -2026,7 +2029,7 @@ SCIP_RETCODE SCIPorbitopalFixingPropagate(
       /* stop if we find infeasibility in one of the methods */
       if ( *infeasible )
       {
-         SCIPdebugMessage("Detected infeasibility during orbitopal fixing for orbitope %d\n", c);
+         SCIPdebugMessage("Detected infeasibility during orbitopal reduction for orbitope %d\n", c);
          break;
       }
    }
@@ -2035,9 +2038,9 @@ SCIP_RETCODE SCIPorbitopalFixingPropagate(
 }
 
 /** adds orbitopal component to orbitopal symmetry handler */
-SCIP_RETCODE SCIPorbitopalFixingAddOrbitope(
+SCIP_RETCODE SCIPorbitopalReductionAddOrbitope(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ORBITOPALFIXINGDATA* orbifixdata,    /**< orbitopal fixing data structure */
+   SCIP_ORBITOPALREDDATA* orbireddata,       /**< orbitopal reduction data structure */
    SCIP_VAR**            vars,               /**< matrix of variables on which the symmetry acts */
    int                   nrows,              /**< number of rows */
    int                   ncols,              /**< number of columns */
@@ -2045,7 +2048,7 @@ SCIP_RETCODE SCIPorbitopalFixingAddOrbitope(
    )
 {
    assert( scip != NULL );
-   assert( orbifixdata != NULL );
+   assert( orbireddata != NULL );
    assert( vars != NULL );
    assert( nrows > 0 );
    assert( ncols > 0 );
@@ -2054,101 +2057,101 @@ SCIP_RETCODE SCIPorbitopalFixingAddOrbitope(
    assert( SCIPisTransformed(scip) );
 
    /* if this is the first time adding an orbitope, check if the nonlinear conshlr exists */
-   if ( !orbifixdata->conshdlr_nonlinear_checked )
+   if ( !orbireddata->conshdlr_nonlinear_checked )
    {
-      orbifixdata->conshdlr_nonlinear = SCIPfindConshdlr(scip, "nonlinear");
-      orbifixdata->conshdlr_nonlinear_checked = TRUE;
+      orbireddata->conshdlr_nonlinear = SCIPfindConshdlr(scip, "nonlinear");
+      orbireddata->conshdlr_nonlinear_checked = TRUE;
    }
 
    /* create orbitope data */
-   SCIP_CALL( addOrbitope(scip, orbifixdata, vars, nrows, ncols, success) );
+   SCIP_CALL( addOrbitope(scip, orbireddata, vars, nrows, ncols, success) );
 
    return SCIP_OKAY;
 }
 
 
-/** resets orbitopal fixing data structure (clears all orbitopes) */
-SCIP_RETCODE SCIPorbitopalFixingReset(
+/** resets orbitopal reduction data structure (clears all orbitopes) */
+SCIP_RETCODE SCIPorbitopalReductionReset(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ORBITOPALFIXINGDATA* orbifixdata     /**< pointer to orbitopal fixing structure to populate */
+   SCIP_ORBITOPALREDDATA* orbireddata     /**< pointer to orbitopal reduction structure to populate */
    )
 {
    assert( scip != NULL );
-   assert( orbifixdata != NULL );
-   assert( orbifixdata->norbitopes >= 0 );
-   assert( (orbifixdata->norbitopes == 0) == (orbifixdata->orbitopes == NULL) );
-   assert( orbifixdata->norbitopes <= orbifixdata->maxnorbitopes );
-   assert( orbifixdata->eventhdlr != NULL );
+   assert( orbireddata != NULL );
+   assert( orbireddata->norbitopes >= 0 );
+   assert( (orbireddata->norbitopes == 0) == (orbireddata->orbitopes == NULL) );
+   assert( orbireddata->norbitopes <= orbireddata->maxnorbitopes );
+   assert( orbireddata->eventhdlr != NULL );
 
    /* free orbitopes that are added */
-   while (orbifixdata->norbitopes > 0)
+   while (orbireddata->norbitopes > 0)
    {
-      SCIP_CALL( freeOrbitope(scip, orbifixdata, &(orbifixdata->orbitopes[--orbifixdata->norbitopes])) );
+      SCIP_CALL( freeOrbitope(scip, orbireddata, &(orbireddata->orbitopes[--orbireddata->norbitopes])) );
    }
-   assert( orbifixdata->norbitopes == 0 );
-   SCIPfreeBlockMemoryArrayNull(scip, &orbifixdata->orbitopes, orbifixdata->maxnorbitopes);
-   orbifixdata->orbitopes = NULL;
-   orbifixdata->maxnorbitopes = 0;
+   assert( orbireddata->norbitopes == 0 );
+   SCIPfreeBlockMemoryArrayNull(scip, &orbireddata->orbitopes, orbireddata->maxnorbitopes);
+   orbireddata->orbitopes = NULL;
+   orbireddata->maxnorbitopes = 0;
 
    return SCIP_OKAY;
 }
 
 
-/** frees orbitopal fixing data */
-SCIP_RETCODE SCIPorbitopalFixingFree(
+/** frees orbitopal reduction data */
+SCIP_RETCODE SCIPorbitopalReductionFree(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ORBITOPALFIXINGDATA** orbifixdata    /**< pointer to orbitopal fixing structure to populate */
+   SCIP_ORBITOPALREDDATA** orbireddata       /**< pointer to orbitopal reduction structure to populate */
    )
 {
    assert( scip != NULL );
-   assert( orbifixdata != NULL );
-   assert( *orbifixdata != NULL );
+   assert( orbireddata != NULL );
+   assert( *orbireddata != NULL );
 
-   SCIP_CALL( SCIPorbitopalFixingReset(scip, *orbifixdata) );
+   SCIP_CALL( SCIPorbitopalReductionReset(scip, *orbireddata) );
 
-   SCIPfreeBlockMemory(scip, orbifixdata);
+   SCIPfreeBlockMemory(scip, orbireddata);
    return SCIP_OKAY;
 }
 
 
-/** initializes structures needed for orbitopal fixing
+/** initializes structures needed for orbitopal reduction
  *
  * This is only done exactly once.
  */
-SCIP_RETCODE SCIPorbitopalFixingInclude(
+SCIP_RETCODE SCIPorbitopalReductionInclude(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ORBITOPALFIXINGDATA** orbifixdata    /**< pointer to orbitopal fixing structure to populate */
+   SCIP_ORBITOPALREDDATA** orbireddata       /**< pointer to orbitopal reduction structure to populate */
    )
 {
    SCIP_EVENTHDLR* eventhdlr;
 
    assert( scip != NULL );
-   assert( orbifixdata != NULL );
+   assert( orbireddata != NULL );
 
    assert( SCIPgetStage(scip) == SCIP_STAGE_INIT );
 
    /* create orbitope handler data */
-   SCIP_CALL( SCIPallocBlockMemory(scip, orbifixdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, orbireddata) );
 
    /* default column ordering param */
-   SCIP_CALL( SCIPaddIntParam(scip, "propagating/symmetry/orbitopalfixing/columnordering",
+   SCIP_CALL( SCIPaddIntParam(scip, "propagating/symmetry/" SYMHDLR_NAME "/columnordering",
          "The column ordering variant, respects enum SCIP_ColumnOrdering.",
-         (int*) &(*orbifixdata)->defaultcolumnordering, TRUE, DEFAULT_COLUMNORDERING, 0, 4, NULL, NULL) );
+         (int*) &(*orbireddata)->defaultcolumnordering, TRUE, DEFAULT_COLUMNORDERING, 0, 4, NULL, NULL) );
 
    /* initialize event handler. */
    assert( SCIPfindEventhdlr(scip, EVENTHDLR_NAME) == NULL );
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExec, NULL) );
    assert( eventhdlr != NULL );
-   (*orbifixdata)->eventhdlr = eventhdlr;
+   (*orbireddata)->eventhdlr = eventhdlr;
 
    /* orbitopes array */
-   (*orbifixdata)->orbitopes = NULL;
-   (*orbifixdata)->norbitopes = 0;
-   (*orbifixdata)->maxnorbitopes = 0;
+   (*orbireddata)->orbitopes = NULL;
+   (*orbireddata)->norbitopes = 0;
+   (*orbireddata)->maxnorbitopes = 0;
 
    /* conshdlr nonlinear */
-   (*orbifixdata)->conshdlr_nonlinear = NULL;
-   (*orbifixdata)->conshdlr_nonlinear_checked = FALSE;
+   (*orbireddata)->conshdlr_nonlinear = NULL;
+   (*orbireddata)->conshdlr_nonlinear_checked = FALSE;
 
    return SCIP_OKAY;
 }

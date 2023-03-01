@@ -67,7 +67,7 @@ typedef enum SYM_Rhssense SYM_RHSSENSE;
 /* type of symmetry handling codes */
 #define SYM_HANDLETYPE_NONE             UINT32_C(0x00000000)  /**< no symmetry handling */
 #define SYM_HANDLETYPE_SYMBREAK         UINT32_C(0x00000001)  /**< symmetry breaking inequalities */
-#define SYM_HANDLETYPE_ORBITALFIXING    UINT32_C(0x00000002)  /**< orbital fixing */
+#define SYM_HANDLETYPE_ORBITALREDUCTION UINT32_C(0x00000002)  /**< orbital reduction */
 #define SYM_HANDLETYPE_SST              UINT32_C(0x00000004)  /**< Schreier Sims cuts */
 #define SYM_HANDLETYPE_DYNAMIC          UINT32_C(0x00000008)  /**< dynamic symmetry handling */
 #define SYM_HANDLETYPE_SYMCONS (SYM_HANDLETYPE_SYMBREAK | SYM_HANDLETYPE_SST)

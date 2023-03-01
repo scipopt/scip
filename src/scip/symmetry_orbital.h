@@ -48,19 +48,19 @@ extern "C" {
  * Data structures
  */
 
-/** data for dynamic orbital fixing propagator */
-struct SCIP_OrbitalFixingData;
-typedef struct SCIP_OrbitalFixingData SCIP_OFDATA;
+/** data for orbital reduction propagator */
+struct SCIP_OrbitalReductionData;
+typedef struct SCIP_OrbitalReductionData SCIP_ORBITALREDDATA;
 
 /*
  * Interface methods
  */
 
-/** propagate orbital fixing */
+/** propagate orbital reduction */
 SCIP_EXPORT
-SCIP_RETCODE SCIPorbitalFixingPropagate(
+SCIP_RETCODE SCIPorbitalReductionPropagate(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_OFDATA*          orbifixdata,        /**< orbitopal fixing data structure */
+   SCIP_ORBITALREDDATA*  orbireddata,        /**< orbital reduction data structure */
    SCIP_Bool*            infeasible,         /**< whether infeasibility is found */
    int*                  nred,               /**< number of domain reductions */
    SCIP_Bool*            didrun              /**< a global pointer maintaining if any symmetry propagator has run
@@ -68,11 +68,11 @@ SCIP_RETCODE SCIPorbitalFixingPropagate(
    );
 
 
-/** adds component for orbital fixing */
+/** adds component for orbital reduction */
 SCIP_EXPORT
-SCIP_RETCODE SCIPorbitalFixingAddComponent(
+SCIP_RETCODE SCIPorbitalReductionAddComponent(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_OFDATA* orbifixdata,      /**< orbital fixing data structure */
+   SCIP_ORBITALREDDATA*  orbireddata,        /**< orbital reduction data structure */
    SCIP_VAR**            permvars,           /**< variable array of the permutation */
    int                   npermvars,          /**< number of variables in that array */
    int**                 perms,              /**< permutations in the component */
@@ -81,30 +81,30 @@ SCIP_RETCODE SCIPorbitalFixingAddComponent(
    );
 
 
-/** resets orbital fixing data structure (clears all components) */
+/** resets orbital reduction data structure (clears all components) */
 SCIP_EXPORT
-SCIP_RETCODE SCIPorbitalFixingReset(
+SCIP_RETCODE SCIPorbitalReductionReset(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_OFDATA* orbifixdata       /**< orbital fixing data structure */
+   SCIP_ORBITALREDDATA*  orbireddata         /**< orbital reduction data structure */
    );
 
 
-/** free orbital fixing data */
+/** free orbital reduction data */
 SCIP_EXPORT
-SCIP_RETCODE SCIPorbitalFixingFree(
+SCIP_RETCODE SCIPorbitalReductionFree(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_OFDATA** orbifixdata      /**< orbital fixing data structure */
+   SCIP_ORBITALREDDATA** orbireddata         /**< orbital reduction data structure */
    );
 
 
-/** initializes structures needed for orbital fixing
+/** initializes structures needed for orbital reduction
  *
  * This is only done exactly once.
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPorbitalFixingInclude(
+SCIP_RETCODE SCIPorbitalReductionInclude(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_OFDATA** orbifixdata,     /**< pointer to orbital fixing data structure to populate */
+   SCIP_ORBITALREDDATA** orbireddata,        /**< pointer to orbital reduction data structure to populate */
    SCIP_EVENTHDLR*       shadowtreeeventhdlr /**< pointer to the shadow tree eventhdlr */
    );
 

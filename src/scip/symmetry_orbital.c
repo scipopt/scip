@@ -24,7 +24,7 @@
 
 /**@file   symmetry_orbital.c
  * @ingroup OTHER_CFILES
- * @brief  methods for handling symmetries by orbital fixing
+ * @brief  methods for handling symmetries by orbital reduction
  * @author Jasper van Doornmalen
  * @author Christopher Hojny
  */
@@ -68,7 +68,7 @@
 
 /* event handler properties */
 #define EVENTHDLR_SYMMETRY_NAME    "symmetry_orbital"
-#define EVENTHDLR_SYMMETRY_DESC    "filter global variable fixing event handler for orbital fixing"
+#define EVENTHDLR_SYMMETRY_DESC    "filter global variable bound reduction event handler for orbital reduction"
 
 
 /*
@@ -76,30 +76,30 @@
  */
 
 
-/** data for dynamic orbital fixing component propagator */
-struct OrbitalFixingComponentData
+/** data for orbital reduction component propagator */
+struct OrbitalReductionComponentData
 {
-   SCIP_NODE*            lastnode;           /**< last node processed by dynamic orbital fixing component */
+   SCIP_NODE*            lastnode;           /**< last node processed by orbital reduction component */
    SCIP_Real*            globalvarlbs;       /**< global variable lower bounds, determined when adding symmetry cons */
    SCIP_Real*            globalvarubs;       /**< global variable upper bounds, determined when adding symmetry cons */
-   int**                 perms;              /**< the permutations for orbital fixing */
+   int**                 perms;              /**< the permutations for orbital reduction */
    int                   nperms;             /**< the number of permutations in perms */
    SCIP_VAR**            permvars;           /**< array consisting of the variables of this component */
    int                   npermvars;          /**< number of vars in this component */
    SCIP_HASHMAP*         permvarmap;         /**< map of variables to indices in permvars array */
 };
-typedef struct OrbitalFixingComponentData OFCDATA;
+typedef struct OrbitalReductionComponentData ORCDATA;
 
 
-/** data for dynamic orbital fixing propagator */
-struct SCIP_OrbitalFixingData
+/** data for orbital reduction propagator */
+struct SCIP_OrbitalReductionData
 {
    SCIP_EVENTHDLR*       shadowtreeeventhdlr;/**< eventhandler for the shadow tree data structure */
-   SCIP_EVENTHDLR*       globalfixeventhdlr; /**< event handler for handling global variable fixings */
+   SCIP_EVENTHDLR*       globalfixeventhdlr; /**< event handler for handling global variable bound reductions */
 
-   OFCDATA**             componentdatas;     /**< array of pointers to individual components for orbital fixing */
-   int                   ncomponents;        /**< number of orbital fixing datas in array */
-   int                   maxncomponents;     /**< allocated orbital fixing datas array size */
+   ORCDATA**             componentdatas;     /**< array of pointers to individual components for orbital reduction */
+   int                   ncomponents;        /**< number of orbital reduction datas in array */
+   int                   maxncomponents;     /**< allocated orbital reduction datas array size */
 };
 
 
@@ -115,17 +115,17 @@ struct SCIP_OrbitalFixingData
  * We restrict ourselves to testing this only for the group generators.
  */
 static
-SCIP_RETCODE orbitalFixingDynamicGetSymmetryStabilizerSubgroup(
-   SCIP*              scip,               /**< pointer to SCIP data structure */
-   OFCDATA*           ofdata,             /**< pointer to data for orbital fixing data */
-   int**              chosenperms,        /**< pointer to permutations that are chosen */
-   int*               nchosenperms,       /**< pointer to store the number of chosen permutations */
-   SCIP_Real*         varlbs,             /**< array of ofdata->permvars variable LBs. If NULL, use SCIPvarGetLbLocal */
-   SCIP_Real*         varubs,             /**< array of ofdata->permvars variable UBs. If NULL, use SCIPvarGetUbLocal */
-   int*               branchedvarindices, /**< array of given branching decisions, in branching order */
-   SCIP_Bool*         inbranchedvarindices, /**< array stating whether variable with index in ofdata->permvars is
+SCIP_RETCODE orbitalReductionGetSymmetryStabilizerSubgroup(
+   SCIP*                 scip,               /**< pointer to SCIP data structure */
+   ORCDATA*              orcdata,             /**< pointer to data for orbital reduction data */
+   int**                 chosenperms,        /**< pointer to permutations that are chosen */
+   int*                  nchosenperms,       /**< pointer to store the number of chosen permutations */
+   SCIP_Real*            varlbs,             /**< array of orcdata->permvars variable LBs. If NULL, use local bounds */
+   SCIP_Real*            varubs,             /**< array of orcdata->permvars variable UBs. If NULL, use local bounds */
+   int*                  branchedvarindices, /**< array of given branching decisions, in branching order */
+   SCIP_Bool*            inbranchedvarindices, /**< array stating whether variable with index in orcdata->permvars is
                                               *  contained in the branching decisions. */
-   int                nbranchedvarindices /**< number of branching decisions */
+   int                   nbranchedvarindices /**< number of branching decisions */
 )
 {
    int i;
@@ -135,7 +135,7 @@ SCIP_RETCODE orbitalFixingDynamicGetSymmetryStabilizerSubgroup(
    int varidimage;
 
    assert( scip != NULL );
-   assert( ofdata != NULL );
+   assert( orcdata != NULL );
    assert( chosenperms != NULL );
    assert( nchosenperms != NULL );
    assert( (varlbs == NULL) == (varubs == NULL) );
@@ -145,9 +145,9 @@ SCIP_RETCODE orbitalFixingDynamicGetSymmetryStabilizerSubgroup(
 
    *nchosenperms = 0;
 
-   for (p = 0; p < ofdata->nperms; ++p)
+   for (p = 0; p < orcdata->nperms; ++p)
    {
-      perm = ofdata->perms[p];
+      perm = orcdata->perms[p];
 
       /* iterate over each branched variable and check */
       for (i = 0; i < nbranchedvarindices; ++i)
@@ -160,8 +160,8 @@ SCIP_RETCODE orbitalFixingDynamicGetSymmetryStabilizerSubgroup(
             continue;
 
          if ( GT(scip,
-            varubs ? varubs[varid] : SCIPvarGetUbLocal(ofdata->permvars[varid]),
-            varlbs ? varlbs[varidimage] : SCIPvarGetLbLocal(ofdata->permvars[varidimage]) )
+            varubs ? varubs[varid] : SCIPvarGetUbLocal(orcdata->permvars[varid]),
+            varlbs ? varlbs[varidimage] : SCIPvarGetLbLocal(orcdata->permvars[varidimage]) )
          )
             break;
       }
@@ -237,22 +237,22 @@ int bisectSortedArrayFindFirstGEQ(
 }
 
 
-/** applies the orbital fixing steps for precomputed orbits
+/** applies the orbital reduction steps for precomputed orbits
  *
  * Either use the local variable bounds, or variable bounds determined by the @param varlbs and @param varubs arrays.
  * @pre @param varubs is NULL if and only if @param varlbs is NULL.
  */
 static
-SCIP_RETCODE applyOrbitalFixingPart(
-   SCIP*              scip,               /**< pointer to SCIP data structure */
-   OFCDATA*           ofdata,             /**< pointer to data for orbital fixing data */
-   SCIP_Bool*         infeasible,         /**< pointer to store whether infeasibility is detected */
-   int*               ngen,               /**< pointer to store the number of determined variable domain reductions */
-   int*               varorbitids,        /**< array specifying the orbit IDs for variables in array ofdata->vars */
-   int*               varorbitidssort,    /**< an index array that sorts the varorbitids array */
-   SCIP_Real*         varlbs,             /**< array of lower bounds for variable array ofdata->vars to compute with
+SCIP_RETCODE applyOrbitalReductionPart(
+   SCIP*                 scip,               /**< pointer to SCIP data structure */
+   ORCDATA*              orcdata,            /**< pointer to data for orbital reduction data */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether infeasibility is detected */
+   int*                  ngen,               /**< pointer to store the number of determined domain reductions */
+   int*                  varorbitids,        /**< array specifying the orbit IDs for variables in array orcdata->vars */
+   int*                  varorbitidssort,    /**< an index array that sorts the varorbitids array */
+   SCIP_Real*            varlbs,             /**< array of lower bounds for variable array orcdata->vars to compute with
                                            * or NULL, if local bounds are used */
-   SCIP_Real*         varubs              /**< array of upper bounds for variable array ofdata->vars to compute with
+   SCIP_Real*            varubs              /**< array of upper bounds for variable array orcdata->vars to compute with
                                            * or NULL, if local bounds are used. */
 )
 {
@@ -267,7 +267,7 @@ SCIP_RETCODE applyOrbitalFixingPart(
    SCIP_Real ub;
 
    assert( scip != NULL );
-   assert( ofdata != NULL );
+   assert( orcdata != NULL );
    assert( infeasible != NULL );
    assert( ngen != NULL );
    assert( varorbitids != NULL );
@@ -276,11 +276,11 @@ SCIP_RETCODE applyOrbitalFixingPart(
 
    orbitid = -1;
    orbitbegin = 0;
-   for (orbitbegin = 0; orbitbegin < ofdata->npermvars; orbitbegin = orbitend)
+   for (orbitbegin = 0; orbitbegin < orcdata->npermvars; orbitbegin = orbitend)
    {
       /* get id of the orbit, and scan how large the orbit is */
       orbitid = varorbitids[varorbitidssort[orbitbegin]];
-      for (orbitend = orbitbegin + 1; orbitend < ofdata->npermvars; ++orbitend)
+      for (orbitend = orbitbegin + 1; orbitend < orcdata->npermvars; ++orbitend)
       {
          if ( varorbitids[varorbitidssort[orbitend]] != orbitid )
             break;
@@ -297,13 +297,13 @@ SCIP_RETCODE applyOrbitalFixingPart(
       {
          varid = varorbitidssort[i];
          assert( varid >= 0 );
-         assert( varid < ofdata->npermvars );
-         assert( ofdata->permvars[varid] != NULL );
+         assert( varid < orcdata->npermvars );
+         assert( orcdata->permvars[varid] != NULL );
 
-         lb = varlbs ? varlbs[varid] : SCIPvarGetLbLocal(ofdata->permvars[varid]);
+         lb = varlbs ? varlbs[varid] : SCIPvarGetLbLocal(orcdata->permvars[varid]);
          if ( GT(scip, lb, orbitlb) )
             orbitlb = lb;
-         ub = varubs ? varubs[varid] : SCIPvarGetUbLocal(ofdata->permvars[varid]);
+         ub = varubs ? varubs[varid] : SCIPvarGetUbLocal(orcdata->permvars[varid]);
          if ( LT(scip, ub, orbitub) )
             orbitub = ub;
       }
@@ -321,15 +321,15 @@ SCIP_RETCODE applyOrbitalFixingPart(
       {
          varid = varorbitidssort[i];
          assert( varid >= 0 );
-         assert( varid < ofdata->npermvars );
+         assert( varid < orcdata->npermvars );
 
          assert( LE(scip, varlbs[varid], orbitlb) );
          varlbs[varid] = orbitlb;
          if ( !SCIPisInfinity(scip, -orbitlb) &&
-            LT(scip, SCIPvarGetLbLocal(ofdata->permvars[varid]), orbitlb) )
+            LT(scip, SCIPvarGetLbLocal(orcdata->permvars[varid]), orbitlb) )
          {
             SCIP_Bool tightened;
-            SCIP_CALL( SCIPtightenVarLb(scip, ofdata->permvars[varid], orbitlb, TRUE, infeasible, &tightened) );
+            SCIP_CALL( SCIPtightenVarLb(scip, orcdata->permvars[varid], orbitlb, TRUE, infeasible, &tightened) );
 
             /* propagator detected infeasibility in this node. Jump out of loop towards freeing everything. */
             if ( *infeasible )
@@ -341,10 +341,10 @@ SCIP_RETCODE applyOrbitalFixingPart(
          assert( GE(scip, varubs[varid], orbitub) );
          varubs[varid] = orbitub;
          if ( !SCIPisInfinity(scip, orbitub) &&
-            GT(scip, SCIPvarGetUbLocal(ofdata->permvars[varid]), orbitub) )
+            GT(scip, SCIPvarGetUbLocal(orcdata->permvars[varid]), orbitub) )
          {
             SCIP_Bool tightened;
-            SCIP_CALL( SCIPtightenVarUb(scip, ofdata->permvars[varid], orbitub, TRUE, infeasible, &tightened) );
+            SCIP_CALL( SCIPtightenVarUb(scip, orcdata->permvars[varid], orbitub, TRUE, infeasible, &tightened) );
 
             /* propagator detected infeasibility in this node. Jump out of loop towards freeing everything. */
             if ( *infeasible )
@@ -359,14 +359,14 @@ SCIP_RETCODE applyOrbitalFixingPart(
 }
 
 
-/** dynamic orbital fixing, the orbital branching part */
+/** orbital reduction, the orbital branching part */
 static
 SCIP_RETCODE applyOrbitalBranchingPropagations(
-   SCIP*              scip,               /**< pointer to SCIP data structure */
-   OFCDATA*           ofdata,             /**< pointer to data for orbital fixing data */
-   SCIP_SHADOWTREE*   shadowtree,         /**< pointer to shadow tree */
-   SCIP_Bool*         infeasible,         /**< pointer to store whether infeasibility is detected */
-   int*               ngen                /**< pointer to store the number of determined variable domain reductions */
+   SCIP*                 scip,               /**< pointer to SCIP data structure */
+   ORCDATA*              orcdata,            /**< pointer to data for orbital reduction data */
+   SCIP_SHADOWTREE*      shadowtree,         /**< pointer to shadow tree */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether infeasibility is detected */
+   int*                  ngen                /**< pointer to store the number of determined domain reductions */
 )
 {
    SCIP_NODE* focusnode;
@@ -400,7 +400,7 @@ SCIP_RETCODE applyOrbitalBranchingPropagations(
    int orbitsetcomponentid;
 
    assert( scip != NULL );
-   assert( ofdata != NULL );
+   assert( orcdata != NULL );
    assert( shadowtree != NULL );
    assert( infeasible != NULL );
    assert( ngen != NULL );
@@ -410,10 +410,10 @@ SCIP_RETCODE applyOrbitalBranchingPropagations(
    assert( focusnode != NULL );
 
    /* do nothing if this method has already been called for this node */
-   if ( ofdata->lastnode == focusnode )
+   if ( orcdata->lastnode == focusnode )
       return SCIP_OKAY;
 
-   ofdata->lastnode = focusnode;
+   orcdata->lastnode = focusnode;
    parentnode = SCIPnodeGetParent(focusnode);
 
    /* the root node has not been generated by branching decisions */
@@ -446,19 +446,19 @@ SCIP_RETCODE applyOrbitalBranchingPropagations(
    assert( tmpshadownode == NULL );
    assert( i == 0 );
 
-   /* replay fixings and propagations made until just before the focusnode */
-   assert( ofdata->npermvars > 0 );  /* if it's 0, then we do not have to do anything at all */
+   /* replay bound reductions and propagations made until just before the focusnode */
+   assert( orcdata->npermvars > 0 );  /* if it's 0, then we do not have to do anything at all */
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &varlbs, ofdata->npermvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &varubs, ofdata->npermvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &branchedvarindices, ofdata->npermvars) );
-   SCIP_CALL( SCIPallocCleanBufferArray(scip, &inbranchedvarindices, ofdata->npermvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &varlbs, orcdata->npermvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &varubs, orcdata->npermvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &branchedvarindices, orcdata->npermvars) );
+   SCIP_CALL( SCIPallocCleanBufferArray(scip, &inbranchedvarindices, orcdata->npermvars) );
 
    /* start with the bounds found after computing the symmetry group */
-   for (i = 0; i < ofdata->npermvars; ++i)
-      varlbs[i] = ofdata->globalvarlbs[i];
-   for (i = 0; i < ofdata->npermvars; ++i)
-      varubs[i] = ofdata->globalvarubs[i];
+   for (i = 0; i < orcdata->npermvars; ++i)
+      varlbs[i] = orcdata->globalvarlbs[i];
+   for (i = 0; i < orcdata->npermvars; ++i)
+      varubs[i] = orcdata->globalvarubs[i];
 
    nbranchedvarindices = 0;
    for (depth = 0; depth < pathlength - 1; ++depth)
@@ -469,10 +469,10 @@ SCIP_RETCODE applyOrbitalBranchingPropagations(
       for (i = 0; i < tmpshadownode->npropagations; ++i)
       {
          update = &(tmpshadownode->propagations[i]);
-         varid = SCIPhashmapGetImageInt(ofdata->permvarmap, (void*) update->var);
-         assert( varid < ofdata->npermvars || varid == INT_MAX );
+         varid = SCIPhashmapGetImageInt(orcdata->permvarmap, (void*) update->var);
+         assert( varid < orcdata->npermvars || varid == INT_MAX );
          assert( varid >= 0 );
-         if ( varid < ofdata->npermvars )
+         if ( varid < orcdata->npermvars )
          {
             assert( LE(scip, varlbs[varid], varubs[varid]) );
             switch (update->boundchgtype)
@@ -496,10 +496,10 @@ SCIP_RETCODE applyOrbitalBranchingPropagations(
       for (i = 0; i < tmpshadownode->nbranchingdecisions; ++i)
       {
          update = &(tmpshadownode->branchingdecisions[i]);
-         varid = SCIPhashmapGetImageInt(ofdata->permvarmap, (void*) update->var);
-         assert( varid < ofdata->npermvars || varid == INT_MAX );
+         varid = SCIPhashmapGetImageInt(orcdata->permvarmap, (void*) update->var);
+         assert( varid < orcdata->npermvars || varid == INT_MAX );
          assert( varid >= 0 );
-         if ( varid < ofdata->npermvars )
+         if ( varid < orcdata->npermvars )
          {
             if ( inbranchedvarindices[varid] )
                continue;
@@ -515,18 +515,18 @@ SCIP_RETCODE applyOrbitalBranchingPropagations(
     * So, the group before branching is determined, orbital branching to the branching variable, then the branching
     * variable is applied, and possibly repeated for other branching variables.
     */
-   SCIP_CALL( SCIPallocBufferArray(scip, &chosenperms, ofdata->nperms) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &chosenperms, orcdata->nperms) );
    for (branchstep = 0; branchstep < shadowfocusnode->nbranchingdecisions; ++branchstep)
    {
       branchingdecision = &(shadowfocusnode->branchingdecisions[branchstep]);
-      branchingdecisionvarid = SCIPhashmapGetImageInt(ofdata->permvarmap, (void*) branchingdecision->var);
-      assert( branchingdecisionvarid < ofdata->npermvars || branchingdecisionvarid == INT_MAX );
+      branchingdecisionvarid = SCIPhashmapGetImageInt(orcdata->permvarmap, (void*) branchingdecision->var);
+      assert( branchingdecisionvarid < orcdata->npermvars || branchingdecisionvarid == INT_MAX );
       assert( branchingdecisionvarid >= 0 );
 
       /* branching decision will not have an effect on this */
-      if ( branchingdecisionvarid >= ofdata->npermvars )
+      if ( branchingdecisionvarid >= orcdata->npermvars )
          continue;
-      assert( branchingdecisionvarid >= 0 && branchingdecisionvarid < ofdata->npermvars );
+      assert( branchingdecisionvarid >= 0 && branchingdecisionvarid < orcdata->npermvars );
       assert( branchingdecision->boundchgtype == SCIP_BOUNDTYPE_LOWER ?
          LE(scip, varlbs[branchingdecisionvarid], branchingdecision->newbound) :
          GE(scip, varubs[branchingdecisionvarid], branchingdecision->newbound) );
@@ -536,39 +536,39 @@ SCIP_RETCODE applyOrbitalBranchingPropagations(
        *
        * Note: All information about branching decisions is kept in varlbs, varubs, and the branchedvarindices.
        */
-      SCIP_CALL( orbitalFixingDynamicGetSymmetryStabilizerSubgroup(scip, ofdata, chosenperms, &nchosenperms,
+      SCIP_CALL( orbitalReductionGetSymmetryStabilizerSubgroup(scip, orcdata, chosenperms, &nchosenperms,
          varlbs, varubs, branchedvarindices, inbranchedvarindices, nbranchedvarindices) );
 
       /* compute orbit containing branching var */
-      SCIP_CALL( SCIPcreateDisjointset(scip, &orbitset, ofdata->npermvars) );
+      SCIP_CALL( SCIPcreateDisjointset(scip, &orbitset, orcdata->npermvars) );
 
       /* put elements mapping to each other in same orbit */
       /* @todo a potential performance hazard; quadratic time */
       for (p = 0; p < nchosenperms; ++p)
       {
          perm = chosenperms[p];
-         for (i = 0; i < ofdata->npermvars; ++i)
+         for (i = 0; i < orcdata->npermvars; ++i)
          {
             if ( i != perm[i] )
                SCIPdisjointsetUnion(orbitset, i, perm[i], FALSE);
          }
       }
 
-      /* 1. ensure that the bounds are tightest possible just before the branching step (orbital fixing step)
+      /* 1. ensure that the bounds are tightest possible just before the branching step (orbital reduction step)
        *
        * If complete propagation was applied in the previous node,
        * then all variables in the same orbit have the same bounds just before branching,
        * so the bounds of the branching variable should be the tightest in its orbit by now.
        * It is possible that that is not the case. In that case, we do it here.
        */
-      SCIP_CALL( SCIPallocBufferArray(scip, &varorbitids, ofdata->npermvars) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &varorbitidssort, ofdata->npermvars) );
-      for (i = 0; i < ofdata->npermvars; ++i)
+      SCIP_CALL( SCIPallocBufferArray(scip, &varorbitids, orcdata->npermvars) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &varorbitidssort, orcdata->npermvars) );
+      for (i = 0; i < orcdata->npermvars; ++i)
          varorbitids[i] = SCIPdisjointsetFind(orbitset, i);
-      SCIPsort(varorbitidssort, SCIPsortArgsortInt, varorbitids, ofdata->npermvars);
+      SCIPsort(varorbitidssort, SCIPsortArgsortInt, varorbitids, orcdata->npermvars);
 
-      /* apply orbital fixing to these orbits */
-      SCIP_CALL( applyOrbitalFixingPart(scip, ofdata, infeasible, ngen, varorbitids, varorbitidssort, varlbs, varubs) );
+      /* apply orbital reduction to these orbits */
+      SCIP_CALL( applyOrbitalReductionPart(scip, orcdata, infeasible, ngen, varorbitids, varorbitidssort, varlbs, varubs) );
       if ( *infeasible )
          goto FREE;
       assert( !*infeasible );
@@ -615,16 +615,16 @@ SCIP_RETCODE applyOrbitalBranchingPropagations(
       orbitsetcomponentid = SCIPdisjointsetFind(orbitset, branchingdecisionvarid);
 
       /* find the orbit in the sorted array of orbits. npermvars can be huge, so use bisection. */
-      orbitbegin = bisectSortedArrayFindFirstGEQ(varorbitids, varorbitidssort, 0, ofdata->npermvars,
+      orbitbegin = bisectSortedArrayFindFirstGEQ(varorbitids, varorbitidssort, 0, orcdata->npermvars,
          orbitsetcomponentid);
-      assert( orbitbegin >= 0 && orbitbegin < ofdata->npermvars );
+      assert( orbitbegin >= 0 && orbitbegin < orcdata->npermvars );
       assert( varorbitids[varorbitidssort[orbitbegin]] == orbitsetcomponentid );
       assert( orbitbegin == 0 || varorbitids[varorbitidssort[orbitbegin - 1]] < orbitsetcomponentid );
 
-      orbitend = bisectSortedArrayFindFirstGEQ(varorbitids, varorbitidssort, orbitbegin + 1, ofdata->npermvars,
+      orbitend = bisectSortedArrayFindFirstGEQ(varorbitids, varorbitidssort, orbitbegin + 1, orcdata->npermvars,
          orbitsetcomponentid + 1);
-      assert( orbitend > 0 && orbitend <= ofdata->npermvars && orbitend > orbitbegin );
-      assert( orbitend == ofdata->npermvars || varorbitids[varorbitidssort[orbitend]] > orbitsetcomponentid );
+      assert( orbitend > 0 && orbitend <= orcdata->npermvars && orbitend > orbitbegin );
+      assert( orbitend == orcdata->npermvars || varorbitids[varorbitidssort[orbitend]] > orbitsetcomponentid );
       assert( varorbitids[varorbitidssort[orbitend - 1]] == orbitsetcomponentid );
 
       /* propagate that branching variable is >= the variables in its orbit */
@@ -642,7 +642,7 @@ SCIP_RETCODE applyOrbitalBranchingPropagations(
             continue;
 
          /* all variables in the same orbit have the same bounds just before branching,
-          * due to generalized orbital fixing. If that was not the case, these steps are applied just before applying
+          * due to orbital reduction. If that was not the case, these steps are applied just before applying
           * the branching step above. After the branching step, the branching variable bounds are most restricted.
           */
          assert( SCIPisInfinity(scip, -varlbs[branchingdecisionvarid])
@@ -650,17 +650,17 @@ SCIP_RETCODE applyOrbitalBranchingPropagations(
          assert( SCIPisInfinity(scip, varubs[branchingdecisionvarid])
             || LE(scip, varubs[branchingdecisionvarid], varubs[varid]) );
          /* bound changes already made could only have tightened the variable domains we are thinking about */
-         assert( GE(scip, SCIPvarGetLbLocal(ofdata->permvars[varid]), varlbs[varid]) );
-         assert( LE(scip, SCIPvarGetUbLocal(ofdata->permvars[varid]), varubs[varid]) );
+         assert( GE(scip, SCIPvarGetLbLocal(orcdata->permvars[varid]), varlbs[varid]) );
+         assert( LE(scip, SCIPvarGetUbLocal(orcdata->permvars[varid]), varubs[varid]) );
 
          /* for branching variable x and variable y in its orbit, propagate x >= y. */
          /* modify UB of y-variables */
          assert( GE(scip, varubs[varid], varubs[branchingdecisionvarid]) );
          varubs[varid] = varubs[branchingdecisionvarid];
-         if ( GT(scip, SCIPvarGetUbLocal(ofdata->permvars[varid]), varubs[branchingdecisionvarid]) )
+         if ( GT(scip, SCIPvarGetUbLocal(orcdata->permvars[varid]), varubs[branchingdecisionvarid]) )
          {
             SCIP_Bool tightened;
-            SCIP_CALL( SCIPtightenVarUb(scip, ofdata->permvars[varid], varubs[branchingdecisionvarid], TRUE,
+            SCIP_CALL( SCIPtightenVarUb(scip, orcdata->permvars[varid], varubs[branchingdecisionvarid], TRUE,
                   infeasible, &tightened) );
 
             /* propagator detected infeasibility in this node. Jump out of loop towards freeing everything. */
@@ -686,7 +686,7 @@ SCIP_RETCODE applyOrbitalBranchingPropagations(
        * mark the branching variable of this iteration as a branching variable. */
       if ( !inbranchedvarindices[branchingdecisionvarid] )
       {
-         assert( nbranchedvarindices < ofdata->npermvars );
+         assert( nbranchedvarindices < orcdata->npermvars );
          branchedvarindices[nbranchedvarindices++] = branchingdecisionvarid;
          inbranchedvarindices[branchingdecisionvarid] = TRUE;
       }
@@ -698,12 +698,12 @@ SCIP_RETCODE applyOrbitalBranchingPropagations(
    {
       varid = branchedvarindices[i];
       assert( varid >= 0 );
-      assert( varid < ofdata->npermvars );
+      assert( varid < orcdata->npermvars );
       assert( inbranchedvarindices[varid] );
       inbranchedvarindices[varid] = FALSE;
    }
 #ifndef NDEBUG
-   for (i = 0; i < ofdata->npermvars; ++i)
+   for (i = 0; i < orcdata->npermvars; ++i)
    {
       assert( inbranchedvarindices[i] == FALSE );
    }
@@ -719,14 +719,14 @@ SCIP_RETCODE applyOrbitalBranchingPropagations(
    return SCIP_OKAY;
 }
 
-/** dynamic orbital fixing, the orbital fixing part */
+/** orbital reduction, the orbital reduction part */
 static
-SCIP_RETCODE applyOrbitalFixingPropagations(
-   SCIP*              scip,               /**< pointer to SCIP data structure */
-   OFCDATA*           ofdata,             /**< pointer to data for orbital fixing data */
-   SCIP_SHADOWTREE*   shadowtree,         /**< pointer to shadow tree */
-   SCIP_Bool*         infeasible,         /**< pointer to store whether infeasibility is detected */
-   int*               ngen                /**< pointer to store the number of determined variable domain reductions */
+SCIP_RETCODE applyOrbitalReductionPropagations(
+   SCIP*                 scip,               /**< pointer to SCIP data structure */
+   ORCDATA*              orcdata,            /**< pointer to data for orbital reduction data */
+   SCIP_SHADOWTREE*      shadowtree,         /**< pointer to shadow tree */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether infeasibility is detected */
+   int*                  ngen                /**< pointer to store the number of determined domain reductions */
 )
 {
    SCIP_NODE* focusnode;
@@ -747,7 +747,7 @@ SCIP_RETCODE applyOrbitalFixingPropagations(
    int* varorbitidssort;
 
    assert( scip != NULL );
-   assert( ofdata != NULL );
+   assert( orcdata != NULL );
    assert( shadowtree != NULL );
    assert( infeasible != NULL );
    assert( ngen != NULL );
@@ -760,10 +760,10 @@ SCIP_RETCODE applyOrbitalFixingPropagations(
    assert( shadowfocusnode != NULL );
 
    /* get the branching variables until present, so including the branchings of the focusnode */
-   assert( ofdata->npermvars > 0 );  /* if it's 0, then we do not have to do anything at all */
+   assert( orcdata->npermvars > 0 );  /* if it's 0, then we do not have to do anything at all */
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &branchedvarindices, ofdata->npermvars) );
-   SCIP_CALL( SCIPallocCleanBufferArray(scip, &inbranchedvarindices, ofdata->npermvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &branchedvarindices, orcdata->npermvars) );
+   SCIP_CALL( SCIPallocCleanBufferArray(scip, &inbranchedvarindices, orcdata->npermvars) );
 
    nbranchedvarindices = 0;
    tmpshadownode = shadowfocusnode;
@@ -773,10 +773,10 @@ SCIP_RETCODE applyOrbitalFixingPropagations(
       for (i = 0; i < tmpshadownode->nbranchingdecisions; ++i)
       {
          update = &(tmpshadownode->branchingdecisions[i]);
-         varid = SCIPhashmapGetImageInt(ofdata->permvarmap, (void*) update->var);
-         assert( varid < ofdata->npermvars || varid == INT_MAX );
+         varid = SCIPhashmapGetImageInt(orcdata->permvarmap, (void*) update->var);
+         assert( varid < orcdata->npermvars || varid == INT_MAX );
          assert( varid >= 0 );
-         if ( varid < ofdata->npermvars )
+         if ( varid < orcdata->npermvars )
          {
             if ( inbranchedvarindices[varid] )
                continue;
@@ -789,12 +789,12 @@ SCIP_RETCODE applyOrbitalFixingPropagations(
 
    /* 1. compute the orbit of the branching variable of the stabilized symmetry subgroup at this point. */
    /* 1.1. identify the permutations of the symmetry group that are permitted */
-   SCIP_CALL( SCIPallocBufferArray(scip, &chosenperms, ofdata->nperms) );
-   SCIP_CALL( orbitalFixingDynamicGetSymmetryStabilizerSubgroup(scip, ofdata, chosenperms, &nchosenperms,
+   SCIP_CALL( SCIPallocBufferArray(scip, &chosenperms, orcdata->nperms) );
+   SCIP_CALL( orbitalReductionGetSymmetryStabilizerSubgroup(scip, orcdata, chosenperms, &nchosenperms,
       NULL, NULL, branchedvarindices, inbranchedvarindices, nbranchedvarindices) );
 
    /* 1.2. compute orbits of this subgroup */
-   SCIP_CALL( SCIPcreateDisjointset(scip, &orbitset, ofdata->npermvars) );
+   SCIP_CALL( SCIPcreateDisjointset(scip, &orbitset, orcdata->npermvars) );
 
    /* put elements mapping to each other in same orbit */
    /* @todo this is O(nchosenperms * npermvars), which is a potential performance bottleneck.
@@ -802,7 +802,7 @@ SCIP_RETCODE applyOrbitalFixingPropagations(
    for (p = 0; p < nchosenperms; ++p)
    {
       perm = chosenperms[p];
-      for (i = 0; i < ofdata->npermvars; ++i)
+      for (i = 0; i < orcdata->npermvars; ++i)
       {
          if ( i != perm[i] )
             SCIPdisjointsetUnion(orbitset, i, perm[i], FALSE);
@@ -810,14 +810,14 @@ SCIP_RETCODE applyOrbitalFixingPropagations(
    }
 
    /* 2. for each orbit, take the intersection of the domains */
-   SCIP_CALL( SCIPallocBufferArray(scip, &varorbitids, ofdata->npermvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &varorbitidssort, ofdata->npermvars) );
-   for (i = 0; i < ofdata->npermvars; ++i)
+   SCIP_CALL( SCIPallocBufferArray(scip, &varorbitids, orcdata->npermvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &varorbitidssort, orcdata->npermvars) );
+   for (i = 0; i < orcdata->npermvars; ++i)
       varorbitids[i] = SCIPdisjointsetFind(orbitset, i);
-   SCIPsort(varorbitidssort, SCIPsortArgsortInt, varorbitids, ofdata->npermvars);
+   SCIPsort(varorbitidssort, SCIPsortArgsortInt, varorbitids, orcdata->npermvars);
 
-   /* apply orbital fixing to these orbits */
-   SCIP_CALL( applyOrbitalFixingPart(scip, ofdata, infeasible, ngen, varorbitids, varorbitidssort, NULL, NULL) );
+   /* apply orbital reduction to these orbits */
+   SCIP_CALL( applyOrbitalReductionPart(scip, orcdata, infeasible, ngen, varorbitids, varorbitidssort, NULL, NULL) );
    if ( *infeasible )
       goto FREE;
    assert( !*infeasible );
@@ -833,12 +833,12 @@ SCIP_RETCODE applyOrbitalFixingPropagations(
    {
       varid = branchedvarindices[i];
       assert( varid >= 0 );
-      assert( varid < ofdata->npermvars );
+      assert( varid < orcdata->npermvars );
       assert( inbranchedvarindices[varid] );
       inbranchedvarindices[varid] = FALSE;
    }
 #ifndef NDEBUG
-   for (i = 0; i < ofdata->npermvars; ++i)
+   for (i = 0; i < orcdata->npermvars; ++i)
    {
       assert( inbranchedvarindices[i] == FALSE );
    }
@@ -851,7 +851,7 @@ SCIP_RETCODE applyOrbitalFixingPropagations(
 }
 
 
-/** apply generalized orbital fixing on a symmetry group component using a two step mechanism
+/** apply orbital reduction on a symmetry group component using a two step mechanism
  *
  * 1. At the parent of our focus node (which is the current node, because we're not probing),
  *    compute the symmetry group just before branching. Then, for our branching variable x with variable y in its
@@ -866,7 +866,7 @@ SCIP_RETCODE applyOrbitalFixingPropagations(
  *
  * 2. At the focus node itself, compute the symmetry group.
  *    The symmetry group in this branch-and-bound tree node is a subgroup of the problem symmetry group
- *    as described in the function orbitalFixingDynamicGetSymmetryStabilizerSubgroup.
+ *    as described in the function orbitalReductionGetSymmetryStabilizerSubgroup.
  *    For this symmetry subgroup, in each orbit, update the variable domains with the intersection of all variable
  *    domains in the orbit.
  *
@@ -875,22 +875,22 @@ SCIP_RETCODE applyOrbitalFixingPropagations(
  *
  */
 static
-SCIP_RETCODE orbitalFixingPropagateComponent(
+SCIP_RETCODE orbitalReductionPropagateComponent(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_OFDATA*          orbifixdata,        /**< orbital fixing data structure */
-   OFCDATA*              ofdata,             /**< orbital fixing component data */
+   SCIP_ORBITALREDDATA*  orbireddata,        /**< orbital reduction data structure */
+   ORCDATA*              orcdata,            /**< orbital reduction component data */
    SCIP_SHADOWTREE*      shadowtree,         /**< pointer to shadow tree */
    SCIP_Bool*            infeasible,         /**< whether infeasibility is found */
    int*                  nred                /**< number of domain reductions */
    )
 {
    /* step 1 */
-   SCIP_CALL( applyOrbitalBranchingPropagations(scip, ofdata, shadowtree, infeasible, nred) );
+   SCIP_CALL( applyOrbitalBranchingPropagations(scip, orcdata, shadowtree, infeasible, nred) );
    if ( *infeasible )
       return SCIP_OKAY;
 
    /* step 2 */
-   SCIP_CALL( applyOrbitalFixingPropagations(scip, ofdata, shadowtree, infeasible, nred) );
+   SCIP_CALL( applyOrbitalReductionPropagations(scip, orcdata, shadowtree, infeasible, nred) );
    if ( *infeasible )
       return SCIP_OKAY;
 
@@ -902,7 +902,7 @@ SCIP_RETCODE orbitalFixingPropagateComponent(
 static
 SCIP_RETCODE addComponent(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_OFDATA*          orbifixdata,        /**< pointer to the dynamic orbital fixing data */
+   SCIP_ORBITALREDDATA*  orbireddata,        /**< pointer to the orbital reduction data */
    SCIP_VAR**            permvars,           /**< variable array of the permutation */
    int                   npermvars,          /**< number of variables in that array */
    int**                 perms,              /**< permutations in the component */
@@ -910,7 +910,7 @@ SCIP_RETCODE addComponent(
    SCIP_Bool*            success             /**< to store whether the component is successfully added */
    )
 {
-   OFCDATA* ofdata;
+   ORCDATA* orcdata;
    int i;
    int j;
    int p;
@@ -920,7 +920,7 @@ SCIP_RETCODE addComponent(
    int newpermidx;
 
    assert( scip != NULL );
-   assert( orbifixdata != NULL );
+   assert( orbireddata != NULL );
    assert( permvars != NULL );
    assert( npermvars > 0 );
    assert( perms != NULL );
@@ -928,12 +928,12 @@ SCIP_RETCODE addComponent(
    assert( success != NULL );
 
    *success = TRUE;
-   SCIP_CALL( SCIPallocBlockMemory(scip, &ofdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &orcdata) );
 
    /* correct indices by removing fixed points */
 
-   /* determine the number of vars that are moved by the component, assign to ofdata->npermvars */
-   ofdata->npermvars = 0;
+   /* determine the number of vars that are moved by the component, assign to orcdata->npermvars */
+   orcdata->npermvars = 0;
    for (i = 0; i < npermvars; ++i)
    {
       /* is index i moved by any of the permutations in the component? */
@@ -941,29 +941,29 @@ SCIP_RETCODE addComponent(
       {
          if ( perms[p][i] != i )
          {
-            ++ofdata->npermvars;
+            ++orcdata->npermvars;
             break;
          }
       }
    }
 
    /* do not support the setting where the component is empty */
-   if ( ofdata->npermvars <= 0 )
+   if ( orcdata->npermvars <= 0 )
    {
-      SCIPfreeBlockMemory(scip, &ofdata);
+      SCIPfreeBlockMemory(scip, &orcdata);
       *success = FALSE;
       return SCIP_OKAY;
    }
 
    /* create index-corrected permvars array and the inverse */
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &ofdata->permvars, ofdata->npermvars) );
-   SCIP_CALL( SCIPhashmapCreate(&ofdata->permvarmap, SCIPblkmem(scip), ofdata->npermvars) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &orcdata->permvars, orcdata->npermvars) );
+   SCIP_CALL( SCIPhashmapCreate(&orcdata->permvarmap, SCIPblkmem(scip), orcdata->npermvars) );
 
    j = 0;
    for (i = 0; i < npermvars; ++i)
    {
       /* permvars array must be unique */
-      assert( SCIPhashmapGetImageInt(ofdata->permvarmap, (void*) permvars[i]) == INT_MAX );
+      assert( SCIPhashmapGetImageInt(orcdata->permvarmap, (void*) permvars[i]) == INT_MAX );
 
       /* is index i moved by any of the permutations in the component? */
       for (p = 0; p < nperms; ++p)
@@ -972,85 +972,85 @@ SCIP_RETCODE addComponent(
          {
             /* var is moved by component; add, disable multiaggregation and capture */
             SCIP_CALL( SCIPcaptureVar(scip, permvars[i]) );
-            ofdata->permvars[j] = permvars[i];
-            SCIP_CALL( SCIPhashmapInsertInt(ofdata->permvarmap, (void*) permvars[i], j) );
+            orcdata->permvars[j] = permvars[i];
+            SCIP_CALL( SCIPhashmapInsertInt(orcdata->permvarmap, (void*) permvars[i], j) );
             SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, permvars[i]) );
             ++j;
             break;
          }
       }
    }
-   assert( j == ofdata->npermvars );
+   assert( j == orcdata->npermvars );
 
    /* allocate permutations */
-   ofdata->nperms = nperms;
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &ofdata->perms, nperms) );
+   orcdata->nperms = nperms;
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &orcdata->perms, nperms) );
    for (p = 0; p < nperms; ++p)
    {
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &ofdata->perms[p], ofdata->npermvars) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &orcdata->perms[p], orcdata->npermvars) );
       origperm = perms[p];
-      newperm = ofdata->perms[p];
+      newperm = orcdata->perms[p];
 
       for (i = 0; i < npermvars; ++i)
       {
-         newidx = SCIPhashmapGetImageInt(ofdata->permvarmap, (void*) permvars[i]);
-         if ( newidx >= ofdata->npermvars )
+         newidx = SCIPhashmapGetImageInt(orcdata->permvarmap, (void*) permvars[i]);
+         if ( newidx >= orcdata->npermvars )
             continue;
          assert( newidx >= 0 );
-         assert( newidx < ofdata->npermvars );
-         assert( ofdata->permvars[newidx] == permvars[i] );
-         newpermidx = SCIPhashmapGetImageInt(ofdata->permvarmap, (void*) permvars[origperm[i]]);
+         assert( newidx < orcdata->npermvars );
+         assert( orcdata->permvars[newidx] == permvars[i] );
+         newpermidx = SCIPhashmapGetImageInt(orcdata->permvarmap, (void*) permvars[origperm[i]]);
          assert( newpermidx >= 0 );
-         assert( newidx < ofdata->npermvars ); /* this is in the orbit of any permutation, so cannot be INT_MAX */
-         assert( ofdata->permvars[newpermidx] == permvars[origperm[i]] );
+         assert( newidx < orcdata->npermvars ); /* this is in the orbit of any permutation, so cannot be INT_MAX */
+         assert( orcdata->permvars[newpermidx] == permvars[origperm[i]] );
 
          newperm[newidx] = newpermidx;
       }
    }
 
    /* global variable bounds */
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &ofdata->globalvarlbs, ofdata->npermvars) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &ofdata->globalvarubs, ofdata->npermvars) );
-   for (i = 0; i < ofdata->npermvars; ++i)
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &orcdata->globalvarlbs, orcdata->npermvars) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &orcdata->globalvarubs, orcdata->npermvars) );
+   for (i = 0; i < orcdata->npermvars; ++i)
    {
-      ofdata->globalvarlbs[i] = SCIPvarGetLbGlobal(ofdata->permvars[i]);
-      ofdata->globalvarubs[i] = SCIPvarGetUbGlobal(ofdata->permvars[i]);
+      orcdata->globalvarlbs[i] = SCIPvarGetLbGlobal(orcdata->permvars[i]);
+      orcdata->globalvarubs[i] = SCIPvarGetUbGlobal(orcdata->permvars[i]);
    }
 
    /* catch global variable bound change event */
-   for (i = 0; i < ofdata->npermvars; ++i)
+   for (i = 0; i < orcdata->npermvars; ++i)
    {
-      SCIP_CALL( SCIPcatchVarEvent(scip, ofdata->permvars[i], SCIP_EVENTTYPE_GLBCHANGED | SCIP_EVENTTYPE_GUBCHANGED,
-         orbifixdata->globalfixeventhdlr, (SCIP_EVENTDATA*) ofdata, NULL) );
+      SCIP_CALL( SCIPcatchVarEvent(scip, orcdata->permvars[i], SCIP_EVENTTYPE_GLBCHANGED | SCIP_EVENTTYPE_GUBCHANGED,
+         orbireddata->globalfixeventhdlr, (SCIP_EVENTDATA*) orcdata, NULL) );
    }
 
    /* resize component array if needed */
-   assert( orbifixdata->ncomponents >= 0 );
-   assert( (orbifixdata->ncomponents == 0) == (orbifixdata->componentdatas == NULL) );
-   assert( orbifixdata->ncomponents <= orbifixdata->maxncomponents );
-   if ( orbifixdata->ncomponents == orbifixdata->maxncomponents )
+   assert( orbireddata->ncomponents >= 0 );
+   assert( (orbireddata->ncomponents == 0) == (orbireddata->componentdatas == NULL) );
+   assert( orbireddata->ncomponents <= orbireddata->maxncomponents );
+   if ( orbireddata->ncomponents == orbireddata->maxncomponents )
    {
       int newsize;
 
-      newsize = SCIPcalcMemGrowSize(scip, orbifixdata->ncomponents + 1);
+      newsize = SCIPcalcMemGrowSize(scip, orbireddata->ncomponents + 1);
       assert( newsize >= 0 );
 
-      if ( orbifixdata->ncomponents == 0 )
+      if ( orbireddata->ncomponents == 0 )
       {
-         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &orbifixdata->componentdatas, newsize) );
+         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &orbireddata->componentdatas, newsize) );
       }
       else
       {
-         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &orbifixdata->componentdatas,
-            orbifixdata->ncomponents, newsize) );
+         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &orbireddata->componentdatas,
+            orbireddata->ncomponents, newsize) );
       }
 
-      orbifixdata->maxncomponents = newsize;
+      orbireddata->maxncomponents = newsize;
    }
 
    /* add component */
-   assert( orbifixdata->ncomponents < orbifixdata->maxncomponents );
-   orbifixdata->componentdatas[orbifixdata->ncomponents++] = ofdata;
+   assert( orbireddata->ncomponents < orbireddata->maxncomponents );
+   orbireddata->componentdatas[orbireddata->ncomponents++] = orcdata;
 
    return SCIP_OKAY;
 }
@@ -1060,25 +1060,25 @@ SCIP_RETCODE addComponent(
 static
 SCIP_RETCODE freeComponent(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_OFDATA*          orbifixdata,        /**< pointer to the dynamic orbital fixing data */
-   OFCDATA**             ofdata              /**< pointer to component data */
+   SCIP_ORBITALREDDATA*  orbireddata,        /**< pointer to the orbital reduction data */
+   ORCDATA**             orcdata             /**< pointer to component data */
    )
 {
    int i;
    int p;
 
    assert( scip != NULL );
-   assert( orbifixdata != NULL );
-   assert( ofdata != NULL );
-   assert( *ofdata != NULL );
-   assert( (*ofdata)->globalvarlbs != NULL );
-   assert( (*ofdata)->globalvarubs != NULL );
-   assert( (*ofdata)->nperms > 0 );
-   assert( (*ofdata)->npermvars > 0 );
-   assert( (*ofdata)->perms != NULL );
-   assert( (*ofdata)->permvarmap != NULL );
-   assert( (*ofdata)->permvars != NULL );
-   assert( (*ofdata)->npermvars > 0 );
+   assert( orbireddata != NULL );
+   assert( orcdata != NULL );
+   assert( *orcdata != NULL );
+   assert( (*orcdata)->globalvarlbs != NULL );
+   assert( (*orcdata)->globalvarubs != NULL );
+   assert( (*orcdata)->nperms > 0 );
+   assert( (*orcdata)->npermvars > 0 );
+   assert( (*orcdata)->perms != NULL );
+   assert( (*orcdata)->permvarmap != NULL );
+   assert( (*orcdata)->permvars != NULL );
+   assert( (*orcdata)->npermvars > 0 );
 
    assert( SCIPisTransformed(scip) );
 
@@ -1086,34 +1086,34 @@ SCIP_RETCODE freeComponent(
    if ( SCIPgetStage(scip) != SCIP_STAGE_FREE )
    {
       /* events at the freeing stage may not be dropped, because they are already getting dropped */
-      for (i = (*ofdata)->npermvars - 1; i >= 0; --i)
+      for (i = (*orcdata)->npermvars - 1; i >= 0; --i)
       {
-         SCIP_CALL( SCIPdropVarEvent(scip, (*ofdata)->permvars[i],
+         SCIP_CALL( SCIPdropVarEvent(scip, (*orcdata)->permvars[i],
             SCIP_EVENTTYPE_GLBCHANGED | SCIP_EVENTTYPE_GUBCHANGED,
-            orbifixdata->globalfixeventhdlr, (SCIP_EVENTDATA*) (*ofdata), -1) );
+            orbireddata->globalfixeventhdlr, (SCIP_EVENTDATA*) (*orcdata), -1) );
       }
    }
 
-   SCIPfreeBlockMemoryArray(scip, &(*ofdata)->globalvarubs, (*ofdata)->npermvars);
-   SCIPfreeBlockMemoryArray(scip, &(*ofdata)->globalvarlbs, (*ofdata)->npermvars);
+   SCIPfreeBlockMemoryArray(scip, &(*orcdata)->globalvarubs, (*orcdata)->npermvars);
+   SCIPfreeBlockMemoryArray(scip, &(*orcdata)->globalvarlbs, (*orcdata)->npermvars);
 
-   for (p = (*ofdata)->nperms -1; p >= 0; --p)
+   for (p = (*orcdata)->nperms -1; p >= 0; --p)
    {
-      SCIPfreeBlockMemoryArray(scip, &(*ofdata)->perms[p], (*ofdata)->npermvars);
+      SCIPfreeBlockMemoryArray(scip, &(*orcdata)->perms[p], (*orcdata)->npermvars);
    }
-   SCIPfreeBlockMemoryArray(scip, &(*ofdata)->perms, (*ofdata)->nperms);
+   SCIPfreeBlockMemoryArray(scip, &(*orcdata)->perms, (*orcdata)->nperms);
 
    /* release variables */
-   for (i = 0; i < (*ofdata)->npermvars; ++i)
+   for (i = 0; i < (*orcdata)->npermvars; ++i)
    {
-      assert( (*ofdata)->permvars[i] != NULL );
-      SCIP_CALL( SCIPreleaseVar(scip, &(*ofdata)->permvars[i]) );
+      assert( (*orcdata)->permvars[i] != NULL );
+      SCIP_CALL( SCIPreleaseVar(scip, &(*orcdata)->permvars[i]) );
    }
 
-   SCIPhashmapFree(&(*ofdata)->permvarmap);
-   SCIPfreeBlockMemoryArray(scip, &(*ofdata)->permvars, (*ofdata)->npermvars);
+   SCIPhashmapFree(&(*orcdata)->permvarmap);
+   SCIPfreeBlockMemoryArray(scip, &(*orcdata)->permvars, (*orcdata)->npermvars);
 
-   SCIPfreeBlockMemory(scip, ofdata);
+   SCIPfreeBlockMemory(scip, orcdata);
 
    return SCIP_OKAY;
 }
@@ -1123,11 +1123,11 @@ SCIP_RETCODE freeComponent(
  * Event handler callback methods
  */
 
-/** maintain global variable fixings for reductions found during presolving or at the root node */
+/** maintain global variable bound reductions found during presolving or at the root node */
 static
 SCIP_DECL_EVENTEXEC(eventExecGlobalBoundChange)
 {
-   OFCDATA* ofdata;
+   ORCDATA* orcdata;
    SCIP_VAR* var;
    int varidx;
 
@@ -1140,23 +1140,23 @@ SCIP_DECL_EVENTEXEC(eventExecGlobalBoundChange)
    if ( SCIPgetStage(scip) != SCIP_STAGE_SOLVING || SCIPgetNNodes(scip) > 1 )
       return SCIP_OKAY;
 
-   ofdata = (OFCDATA*) eventdata;
+   orcdata = (ORCDATA*) eventdata;
    var = SCIPeventGetVar(event);
    assert( var != NULL );
    assert( SCIPvarIsTransformed(var) );
 
-   assert( ofdata->permvarmap != NULL );
-   varidx = SCIPhashmapGetImageInt(ofdata->permvarmap, (void*) var);
+   assert( orcdata->permvarmap != NULL );
+   varidx = SCIPhashmapGetImageInt(orcdata->permvarmap, (void*) var);
 
    switch ( SCIPeventGetType(event) )
    {
    case SCIP_EVENTTYPE_GUBCHANGED:
-      assert( ofdata->globalvarubs[varidx] == SCIPeventGetOldbound(event) );
-      ofdata->globalvarubs[varidx] = SCIPeventGetNewbound(event);
+      assert( orcdata->globalvarubs[varidx] == SCIPeventGetOldbound(event) );
+      orcdata->globalvarubs[varidx] = SCIPeventGetNewbound(event);
       break;
    case SCIP_EVENTTYPE_GLBCHANGED:
-      assert( ofdata->globalvarlbs[varidx] == SCIPeventGetOldbound(event) );
-      ofdata->globalvarlbs[varidx] = SCIPeventGetNewbound(event);
+      assert( orcdata->globalvarlbs[varidx] == SCIPeventGetOldbound(event) );
+      orcdata->globalvarlbs[varidx] = SCIPeventGetNewbound(event);
       break;
    default:
       SCIPABORT();
@@ -1171,22 +1171,22 @@ SCIP_DECL_EVENTEXEC(eventExecGlobalBoundChange)
  * Interface methods
  */
 
-/** propagate orbital fixing */
-SCIP_RETCODE SCIPorbitalFixingPropagate(
+/** propagate orbital reduction */
+SCIP_RETCODE SCIPorbitalReductionPropagate(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_OFDATA*          orbifixdata,        /**< orbital fixing data structure */
+   SCIP_ORBITALREDDATA*  orbireddata,        /**< orbital reduction data structure */
    SCIP_Bool*            infeasible,         /**< whether infeasibility is found */
    int*                  nred,               /**< number of domain reductions */
    SCIP_Bool*            didrun              /**< a global pointer maintaining if any symmetry propagator has run
                                               *   only set this to TRUE when a reduction is found, never set to FALSE */
    )
 {
-   OFCDATA* ofdata;
+   ORCDATA* orcdata;
    SCIP_SHADOWTREE* shadowtree;
    int c;
 
    assert( scip != NULL );
-   assert( orbifixdata != NULL );
+   assert( orbireddata != NULL );
    assert( infeasible != NULL );
    assert( nred != NULL );
    assert( didrun != NULL );
@@ -1194,9 +1194,9 @@ SCIP_RETCODE SCIPorbitalFixingPropagate(
    *infeasible = FALSE;
    *nred = 0;
 
-   /* no components, no orbital fixing */
-   assert( orbifixdata->ncomponents >= 0 );
-   if ( orbifixdata->ncomponents == 0 )
+   /* no components, no orbital reduction */
+   assert( orbireddata->ncomponents >= 0 );
+   if ( orbireddata->ncomponents == 0 )
       return SCIP_OKAY;
 
    /* do nothing if we are in a probing node */
@@ -1207,16 +1207,16 @@ SCIP_RETCODE SCIPorbitalFixingPropagate(
    if ( SCIPinRepropagation(scip) )
       return SCIP_OKAY;
 
-   assert( orbifixdata->shadowtreeeventhdlr != NULL );
-   shadowtree = SCIPgetShadowTree(orbifixdata->shadowtreeeventhdlr);
+   assert( orbireddata->shadowtreeeventhdlr != NULL );
+   shadowtree = SCIPgetShadowTree(orbireddata->shadowtreeeventhdlr);
    assert( shadowtree != NULL );
 
-   for (c = 0; c < orbifixdata->ncomponents; ++c)
+   for (c = 0; c < orbireddata->ncomponents; ++c)
    {
-      ofdata = orbifixdata->componentdatas[c];
-      assert( ofdata != NULL );
-      assert( ofdata->nperms > 0 );
-      SCIP_CALL( orbitalFixingPropagateComponent(scip, orbifixdata, ofdata, shadowtree, infeasible, nred) );
+      orcdata = orbireddata->componentdatas[c];
+      assert( orcdata != NULL );
+      assert( orcdata->nperms > 0 );
+      SCIP_CALL( orbitalReductionPropagateComponent(scip, orbireddata, orcdata, shadowtree, infeasible, nred) );
 
       /* a symmetry propagator has ran, so set didrun to TRUE */
       *didrun = TRUE;
@@ -1229,10 +1229,10 @@ SCIP_RETCODE SCIPorbitalFixingPropagate(
 }
 
 
-/** adds component for orbital fixing */
-SCIP_RETCODE SCIPorbitalFixingAddComponent(
+/** adds component for orbital reduction */
+SCIP_RETCODE SCIPorbitalReductionAddComponent(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_OFDATA*          orbifixdata,        /**< orbital fixing data structure */
+   SCIP_ORBITALREDDATA*  orbireddata,        /**< orbital reduction data structure */
    SCIP_VAR**            permvars,           /**< variable array of the permutation */
    int                   npermvars,          /**< number of variables in that array */
    int**                 perms,              /**< permutations in the component */
@@ -1241,7 +1241,7 @@ SCIP_RETCODE SCIPorbitalFixingAddComponent(
    )
 {
    assert( scip != NULL );
-   assert( orbifixdata != NULL );
+   assert( orbireddata != NULL );
    assert( permvars != NULL );
    assert( npermvars > 0 );
    assert( perms != NULL );
@@ -1251,83 +1251,83 @@ SCIP_RETCODE SCIPorbitalFixingAddComponent(
    /* dynamic symmetry reductions cannot be performed on original problem */
    assert( SCIPisTransformed(scip) );
 
-   SCIP_CALL( addComponent(scip, orbifixdata, permvars, npermvars, perms, nperms, success) );
+   SCIP_CALL( addComponent(scip, orbireddata, permvars, npermvars, perms, nperms, success) );
 
    return SCIP_OKAY;
 }
 
 
-/** resets orbital fixing data structure (clears all components) */
-SCIP_RETCODE SCIPorbitalFixingReset(
+/** resets orbital reduction data structure (clears all components) */
+SCIP_RETCODE SCIPorbitalReductionReset(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_OFDATA*          orbifixdata         /**< orbital fixing data structure */
+   SCIP_ORBITALREDDATA*  orbireddata         /**< orbital reduction data structure */
    )
 {
    assert( scip != NULL );
-   assert( orbifixdata != NULL );
-   assert( orbifixdata->ncomponents >= 0 );
-   assert( (orbifixdata->ncomponents == 0) == (orbifixdata->componentdatas == NULL) );
-   assert( orbifixdata->ncomponents <= orbifixdata->maxncomponents );
-   assert( orbifixdata->shadowtreeeventhdlr != NULL );
+   assert( orbireddata != NULL );
+   assert( orbireddata->ncomponents >= 0 );
+   assert( (orbireddata->ncomponents == 0) == (orbireddata->componentdatas == NULL) );
+   assert( orbireddata->ncomponents <= orbireddata->maxncomponents );
+   assert( orbireddata->shadowtreeeventhdlr != NULL );
 
-   while ( orbifixdata->ncomponents > 0 )
+   while ( orbireddata->ncomponents > 0 )
    {
-      SCIP_CALL( freeComponent(scip, orbifixdata, &(orbifixdata->componentdatas[--orbifixdata->ncomponents])) );
+      SCIP_CALL( freeComponent(scip, orbireddata, &(orbireddata->componentdatas[--orbireddata->ncomponents])) );
    }
 
-   assert( orbifixdata->ncomponents == 0 );
-   SCIPfreeBlockMemoryArrayNull(scip, &orbifixdata->componentdatas, orbifixdata->maxncomponents);
-   orbifixdata->componentdatas = NULL;
-   orbifixdata->maxncomponents = 0;
+   assert( orbireddata->ncomponents == 0 );
+   SCIPfreeBlockMemoryArrayNull(scip, &orbireddata->componentdatas, orbireddata->maxncomponents);
+   orbireddata->componentdatas = NULL;
+   orbireddata->maxncomponents = 0;
 
    return SCIP_OKAY;
 }
 
 
-/** free orbital fixing data */
-SCIP_RETCODE SCIPorbitalFixingFree(
+/** free orbital reduction data */
+SCIP_RETCODE SCIPorbitalReductionFree(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_OFDATA**         orbifixdata         /**< orbital fixing data structure */
+   SCIP_ORBITALREDDATA** orbireddata         /**< orbital reduction data structure */
    )
 {
    assert( scip != NULL );
-   assert( orbifixdata != NULL );
-   assert( *orbifixdata != NULL );
+   assert( orbireddata != NULL );
+   assert( *orbireddata != NULL );
 
-   SCIP_CALL( SCIPorbitalFixingReset(scip, *orbifixdata) );
+   SCIP_CALL( SCIPorbitalReductionReset(scip, *orbireddata) );
 
-   SCIPfreeBlockMemory(scip, orbifixdata);
+   SCIPfreeBlockMemory(scip, orbireddata);
    return SCIP_OKAY;
 }
 
 
-/** initializes structures needed for orbital fixing
+/** initializes structures needed for orbital reduction
  *
  * This is only done exactly once.
  */
-SCIP_RETCODE SCIPorbitalFixingInclude(
+SCIP_RETCODE SCIPorbitalReductionInclude(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_OFDATA**         orbifixdata,        /**< pointer to orbital fixing data structure to populate */
+   SCIP_ORBITALREDDATA** orbireddata,        /**< pointer to orbital reduction data structure to populate */
    SCIP_EVENTHDLR*       shadowtreeeventhdlr /**< pointer to the shadow tree eventhdlr */
    )
 {
    assert( scip != NULL );
-   assert( orbifixdata != NULL );
+   assert( orbireddata != NULL );
    assert( shadowtreeeventhdlr != NULL );
 
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPorbitalFixingInclude", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE,
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPorbitalReductionInclude", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE,
       FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPallocBlockMemory(scip, orbifixdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, orbireddata) );
 
-   (*orbifixdata)->componentdatas = NULL;
-   (*orbifixdata)->ncomponents = 0;
-   (*orbifixdata)->maxncomponents = 0;
-   (*orbifixdata)->shadowtreeeventhdlr = shadowtreeeventhdlr;
+   (*orbireddata)->componentdatas = NULL;
+   (*orbireddata)->ncomponents = 0;
+   (*orbireddata)->maxncomponents = 0;
+   (*orbireddata)->shadowtreeeventhdlr = shadowtreeeventhdlr;
 
-   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &(*orbifixdata)->globalfixeventhdlr,
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &(*orbireddata)->globalfixeventhdlr,
       EVENTHDLR_SYMMETRY_NAME, EVENTHDLR_SYMMETRY_DESC, eventExecGlobalBoundChange,
-      (SCIP_EVENTHDLRDATA*) (*orbifixdata)) );
+      (SCIP_EVENTHDLRDATA*) (*orbireddata)) );
 
    return SCIP_OKAY;
 }

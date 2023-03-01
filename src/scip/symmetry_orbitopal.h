@@ -57,15 +57,15 @@ enum SCIP_ColumnOrdering
 typedef enum SCIP_ColumnOrdering SCIP_COLUMNORDERING;
 
 
-struct SCIP_OrbitopalFixingData;
-typedef struct SCIP_OrbitopalFixingData SCIP_ORBITOPALFIXINGDATA;
+struct SCIP_OrbitopalReductionData;
+typedef struct SCIP_OrbitopalReductionData SCIP_ORBITOPALREDDATA;
 
 
-/** propagates orbitopal fixing */
+/** propagates orbitopal reduction */
 SCIP_EXPORT
-SCIP_RETCODE SCIPorbitopalFixingPropagate(
+SCIP_RETCODE SCIPorbitopalReductionPropagate(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ORBITOPALFIXINGDATA* orbifixdata,    /**< orbitopal fixing data structure */
+   SCIP_ORBITOPALREDDATA* orbireddata,       /**< orbitopal reduction data structure */
    SCIP_Bool*            infeasible,         /**< whether infeasibility is found */
    int*                  nred,               /**< number of domain reductions */
    SCIP_Bool*            didrun              /**< a global pointer maintaining if any symmetry propagator has run
@@ -75,9 +75,9 @@ SCIP_RETCODE SCIPorbitopalFixingPropagate(
 
 /** adds orbitopal component to orbitopal symmetry handler */
 SCIP_EXPORT
-SCIP_RETCODE SCIPorbitopalFixingAddOrbitope(
+SCIP_RETCODE SCIPorbitopalReductionAddOrbitope(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ORBITOPALFIXINGDATA*  orbifixdata,        /**< orbitopal fixing data structure */
+   SCIP_ORBITOPALREDDATA* orbireddata,       /**< orbitopal reduction data structure */
    SCIP_VAR**            vars,               /**< matrix of variables on which the symmetry acts */
    int                   nrows,              /**< number of rows */
    int                   ncols,              /**< number of columns */
@@ -85,30 +85,30 @@ SCIP_RETCODE SCIPorbitopalFixingAddOrbitope(
    );
 
 
-/** resets orbitopal fixing data structure (clears all orbitopes) */
+/** resets orbitopal reduction data structure (clears all orbitopes) */
 SCIP_EXPORT
-SCIP_RETCODE SCIPorbitopalFixingReset(
+SCIP_RETCODE SCIPorbitopalReductionReset(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ORBITOPALFIXINGDATA* orbifixdata     /**< pointer to orbitopal fixing structure to populate */
+   SCIP_ORBITOPALREDDATA* orbireddata        /**< pointer to orbitopal reduction structure to populate */
    );
 
 
-/** frees orbitopal fixing data */
+/** frees orbitopal reduction data */
 SCIP_EXPORT
-SCIP_RETCODE SCIPorbitopalFixingFree(
+SCIP_RETCODE SCIPorbitopalReductionFree(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ORBITOPALFIXINGDATA** orbifixdata    /**< pointer to orbitopal fixing structure to populate */
+   SCIP_ORBITOPALREDDATA** orbireddata       /**< pointer to orbitopal reduction structure to populate */
    );
 
 
-/** initializes structures needed for orbitopal fixing
+/** initializes structures needed for orbitopal reduction
  *
  * This is only done exactly once.
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPorbitopalFixingInclude(
+SCIP_RETCODE SCIPorbitopalReductionInclude(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ORBITOPALFIXINGDATA** orbifixdata    /**< pointer to orbitopal fixing structure to populate */
+   SCIP_ORBITOPALREDDATA** orbireddata       /**< pointer to orbitopal reduction structure to populate */
    );
 
 
