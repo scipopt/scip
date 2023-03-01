@@ -323,8 +323,11 @@ SCIP_RETCODE applyOrbitalReductionPart(
          assert( varid >= 0 );
          assert( varid < orcdata->npermvars );
 
-         assert( LE(scip, varlbs[varid], orbitlb) );
-         varlbs[varid] = orbitlb;
+         if ( varlbs != NULL )
+         {
+            assert( LE(scip, varlbs[varid], orbitlb) );
+            varlbs[varid] = orbitlb;
+         }
          if ( !SCIPisInfinity(scip, -orbitlb) &&
             LT(scip, SCIPvarGetLbLocal(orcdata->permvars[varid]), orbitlb) )
          {
@@ -338,8 +341,11 @@ SCIP_RETCODE applyOrbitalReductionPart(
             *ngen += 1;
          }
 
-         assert( GE(scip, varubs[varid], orbitub) );
-         varubs[varid] = orbitub;
+         if ( varubs != NULL )
+         {
+            assert( GE(scip, varubs[varid], orbitub) );
+            varubs[varid] = orbitub;
+         }
          if ( !SCIPisInfinity(scip, orbitub) &&
             GT(scip, SCIPvarGetUbLocal(orcdata->permvars[varid]), orbitub) )
          {
