@@ -1064,6 +1064,16 @@ SCIP_Longint SCIPconflictGetNResLargeCoefs(
    return conflict->nreslargecoefs;
 }
 
+/** gets number of calls to resolution conflict analysis terminating because of long conflicts */
+SCIP_Longint SCIPconflictGetNResLongConflicts(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   )
+{
+   assert(conflict != NULL);
+
+   return conflict->nreslongconfs;
+}
+
 /** gets number of calls to resolution conflict analysis */
 SCIP_Longint SCIPconflictGetNResCalls(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
@@ -2032,6 +2042,7 @@ SCIP_RETCODE SCIPconflictFlushResolutionSets(
    if( resolutionsetGetNNzs(resolutionset) > maxsize )
    {
       conflict->ncorrectaborts++;
+      conflict->nreslongconfs++;
       SCIPsetDebugMsg(set, " -> resolution set is too long: %d > %d nnzs\n", resolutionsetGetNNzs(resolutionset), maxsize);
       return SCIP_OKAY;
    }
@@ -3584,9 +3595,11 @@ SCIP_RETCODE conflictAnalyzeResolution(
       {
          SCIPsetDebugMsg(set, "Number of nonzeros in conflict is larger than maxsize %d > %d\n",
                         SCIProwGetNNonz(initialconflictrow), maxsize);
+         conflict->nreslongconfs++;
          conflict->ncorrectaborts++;
          return SCIP_OKAY;
       }
+
       SCIPsetDebugMsg(set, "Initial conflict Row: %s \n", SCIProwGetName(initialconflictrow));
       /* get the resolution set of the conflict row */
       SCIP_CALL( conflictResolutionsetFromRow(set, blkmem, initialconflictrow, conflictresolutionset, bdchginfo) );
@@ -3911,6 +3924,14 @@ SCIP_RETCODE conflictAnalyzeResolution(
             goto TERMINATE;
          }
 
+         if( resolutionsetGetNNzs(resolvedresolutionset) > maxsize )
+         {
+            SCIPsetDebugMsg(set, "Number of nonzeros in conflict is larger than maxsize %d > %d\n",
+                           resolutionsetGetNNzs(resolvedresolutionset), maxsize);
+            conflict->nreslongconfs++;
+            conflict->ncorrectaborts++;
+            goto TERMINATE;
+         }
 
          SCIP_CALL( resolutionsetReplace(conflictresolutionset, blkmem, resolvedresolutionset) );
 

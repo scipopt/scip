@@ -371,6 +371,7 @@ SCIP_RETCODE SCIPconflictCreate(
    (*conflict)->nrescalls = 0;
    (*conflict)->nressuccess = 0;
    (*conflict)->nreslargecoefs = 0;
+   (*conflict)->nreslongconfs = 0;
    (*conflict)->nresmircalls = 0;
    (*conflict)->nresflowcovercalls = 0;
    (*conflict)->nresmir = 0;

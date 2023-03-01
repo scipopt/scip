@@ -80,6 +80,11 @@ SCIP_Longint SCIPconflictGetNResLargeCoefs(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
+/** gets number of calls to resolution conflict analysis terminating because of long conflicts */
+SCIP_Longint SCIPconflictGetNResLongConflicts(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
 /** gets number of calls to resolution conflict analysis */
 SCIP_Longint SCIPconflictGetNResCalls(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
