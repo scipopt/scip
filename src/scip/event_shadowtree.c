@@ -514,7 +514,7 @@ SCIP_DECL_EVENTINITSOL(eventInitsolShadowTree)
    SCIP_CALL( SCIPallocBlockMemory(scip, &eventhdlrdata->shadowtree) );
    shadowtree = eventhdlrdata->shadowtree;
 
-   initialnodemapsize = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) < LOG2(NODEMAP_MAX_INITIAL_SIZE) ?
+   initialnodemapsize = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) > LOG2(NODEMAP_MAX_INITIAL_SIZE) ?
       NODEMAP_MAX_INITIAL_SIZE : MIN(NODEMAP_MAX_INITIAL_SIZE, 1 << (SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip)));
    SCIP_CALL( SCIPhashtableCreate(&shadowtree->nodemap, scip->mem->probmem, initialnodemapsize,
       hashGetKeyShadowNode, hashKeyEqShadowNode, hashKeyValShadowNode, NULL) );
