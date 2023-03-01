@@ -1519,6 +1519,7 @@ SCIP_RETCODE propagateStaticOrbitope(
                   /* now row "lastunfixed" is greater. Restart from here. */
                   iseq = FALSE;
                   rowid = lastunfixed; /* the next iteration considers "lastunfixed + 1" */
+                  i = rowid * ncols + colid;
                   continue;
                }
                else
@@ -1688,6 +1689,7 @@ SCIP_RETCODE propagateStaticOrbitope(
                   /* now row "lastunfixed" is greater. Restart from here. */
                   iseq = FALSE;
                   rowid = lastunfixed; /* the next iteration considers "lastunfixed + 1" */
+                  i = rowid * ncols + colid;
                   continue;
                }
                else
