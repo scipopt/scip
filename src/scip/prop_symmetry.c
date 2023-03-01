@@ -235,6 +235,8 @@
 #define ISSSTIMPLINTACTIVE(x)      (((unsigned) x & SCIP_SSTTYPE_IMPLINT) != 0)
 #define ISSSTCONTACTIVE(x)         (((unsigned) x & SCIP_SSTTYPE_CONTINUOUS) != 0)
 
+/* enable symmetry statistics */
+#define SYMMETRY_STATISTICS 1
 
 /** propagator data */
 struct SCIP_PropData
@@ -6979,6 +6981,22 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
       if ( SCIPisStopped(scip) )
          return SCIP_OKAY;
    }
+
+#ifdef SYMMETRY_STATISTICS
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "dynamic symmetry handling statistics:\n");
+   if ( propdata->orbitopalreddata )
+   {
+      SCIP_CALL( SCIPorbitopalReductionPrintStatistics(scip, propdata->orbitopalreddata) );
+   }
+   if ( propdata->orbitalreddata )
+   {
+      SCIP_CALL( SCIPorbitalReductionPrintStatistics(scip, propdata->orbitalreddata) );
+   }
+   if ( propdata->lexreddata )
+   {
+      SCIP_CALL( SCIPlexicographicReductionPrintStatistics(scip, propdata->lexreddata) );
+   }
+#endif
 
    return SCIP_OKAY;
 }

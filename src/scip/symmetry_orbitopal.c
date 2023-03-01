@@ -1986,6 +1986,36 @@ SCIP_RETCODE propagateOrbitope(
  * Interface methods
  */
 
+
+/** print orbitopal reduction data */
+SCIP_RETCODE SCIPorbitopalReductionPrintStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ORBITOPALREDDATA* orbireddata        /**< orbitopal reduction data structure */
+)
+{
+   int i;
+
+   if ( orbireddata->norbitopes == 0 )
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   orbitopal reduction:       no components\n");
+      return SCIP_OKAY;
+   }
+
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+      "   orbitopal reduction:     %4d components: ", orbireddata->norbitopes);
+   for (i = 0; i < orbireddata->norbitopes; ++i)
+   {
+      if ( i > 0 )
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, ", ");
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+         "%dx%d", orbireddata->orbitopes[i]->nrows, orbireddata->orbitopes[i]->ncols);
+   }
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "\n");
+
+   return SCIP_OKAY;
+}
+
+
 /** propagates orbitopal reduction */
 SCIP_RETCODE SCIPorbitopalReductionPropagate(
    SCIP*                 scip,               /**< SCIP data structure */

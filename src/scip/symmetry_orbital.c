@@ -1177,6 +1177,34 @@ SCIP_DECL_EVENTEXEC(eventExecGlobalBoundChange)
  * Interface methods
  */
 
+/** print orbital reduction data */
+SCIP_RETCODE SCIPorbitalReductionPrintStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ORBITALREDDATA*  orbireddata         /**< orbital reduction data structure */
+   )
+{
+   int i;
+
+   if ( orbireddata->ncomponents == 0 )
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   orbital reduction:         no components\n");
+      return SCIP_OKAY;
+   }
+
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+      "   orbital reduction:       %4d components of sizes ", orbireddata->ncomponents);
+   for (i = 0; i < orbireddata->ncomponents; ++i)
+   {
+      if ( i > 0 )
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, ", ");
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "%d", orbireddata->componentdatas[i]->nperms);
+   }
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "\n");
+
+   return SCIP_OKAY;
+}
+
+
 /** propagate orbital reduction */
 SCIP_RETCODE SCIPorbitalReductionPropagate(
    SCIP*                 scip,               /**< SCIP data structure */

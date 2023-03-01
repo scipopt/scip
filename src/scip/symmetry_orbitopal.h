@@ -61,6 +61,13 @@ struct SCIP_OrbitopalReductionData;
 typedef struct SCIP_OrbitopalReductionData SCIP_ORBITOPALREDDATA;
 
 
+/** print orbitopal reduction data */
+SCIP_EXPORT
+SCIP_RETCODE SCIPorbitopalReductionPrintStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ORBITOPALREDDATA* orbireddata        /**< orbitopal reduction data structure */
+   );
+
 /** propagates orbitopal reduction */
 SCIP_EXPORT
 SCIP_RETCODE SCIPorbitopalReductionPropagate(

@@ -57,6 +57,14 @@ typedef struct SCIP_LexRedData SCIP_LEXREDDATA;
  * Interface methods
  */
 
+/** print lexicographic reduction propagation data */
+SCIP_EXPORT
+SCIP_RETCODE SCIPlexicographicReductionPrintStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_LEXREDDATA*      masterdata          /**< pointer to global data for lexicographic reduction propagator */
+   );
+
+
 /** apply lexicographic reduction propagation */
 SCIP_EXPORT
 SCIP_RETCODE SCIPlexicographicReductionPropagate(

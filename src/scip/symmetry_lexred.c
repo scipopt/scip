@@ -1088,6 +1088,36 @@ SCIP_RETCODE shadowtreeUndoNodeDepthBranchIndices(
  * Interface methods
  */
 
+
+/** print lexicographic reduction propagation data */
+SCIP_RETCODE SCIPlexicographicReductionPrintStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_LEXREDDATA*      masterdata          /**< pointer to global data for lexicographic reduction propagator */
+   )
+{
+   int i;
+   if ( masterdata->nlexdatas == 0 )
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   lexicographic reduction:   no permutations\n");
+      return SCIP_OKAY;
+   }
+
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   lexicographic reduction: %4d permutations with support sizes ",
+      masterdata->nlexdatas);
+
+   for (i = 0; i < masterdata->nlexdatas; ++i)
+   {
+      if ( i > 0 )
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, ", ");
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "%d", masterdata->lexdatas[i]->nvars);
+   }
+
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "\n");
+
+   return SCIP_OKAY;
+}
+
+
 /** apply lexicographic reduction propagation */
 SCIP_RETCODE SCIPlexicographicReductionPropagate(
    SCIP*                 scip,               /**< SCIP data structure */
