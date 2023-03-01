@@ -226,7 +226,7 @@
 
 /* macros for getting activeness of symmetry handling methods */
 #define ISSYMRETOPESACTIVE(x)      (((unsigned) x & SYM_HANDLETYPE_SYMBREAK) != 0)
-#define ISORBITALREDUCIONACTIVE(x) (((unsigned) x & SYM_HANDLETYPE_ORBITALREDUCTION) != 0)
+#define ISORBITALREDUCTIONACTIVE(x) (((unsigned) x & SYM_HANDLETYPE_ORBITALREDUCTION) != 0)
 #define ISSSTACTIVE(x)             (((unsigned) x & SYM_HANDLETYPE_SST) != 0)
 #define ISSYMDYNAMICACTIVE(x)      (((unsigned) x & SYM_HANDLETYPE_DYNAMIC) != 0)
 
