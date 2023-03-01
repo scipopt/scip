@@ -91,7 +91,7 @@ struct OrbitopeData
    SCIP_HASHMAP*         rowindexmap;        /**< map of variables to row index in orbitope matrix */
    SCIP_HASHMAP*         colindexmap;        /**< map of variables to column index in orbitope matrix */
 #ifndef NDEBUG
-   int                   lastnodenumber;     /**< the last node number where the row and column order is computed */
+   SCIP_Longint          lastnodenumber;     /**< the last node number where the row and column order is computed */
    int                   dbghash;            /**< a hash for the column order in the last iteration */
 #endif
    SCIP_HASHTABLE*       nodeinfos;          /**< symmetry handling information per branch-and-bound tree node */
@@ -1049,6 +1049,11 @@ SCIP_RETCODE addOrbitope(
 
    /* @todo allow more dynamic changes */
    orbidata->columnordering = orbireddata->defaultcolumnordering;
+
+#ifndef NDEBUG
+   orbidata->lastnodenumber = -1;
+   orbidata->dbghash = 0;
+#endif
 
    /* variable array enumerates the orbitope matrix row-wise */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &orbidata->vars, nelem) );
