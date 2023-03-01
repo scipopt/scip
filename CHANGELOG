@@ -26,6 +26,7 @@ Performance improvements
 - Added initialization of LP relaxation for SOC constraints.
 - Avoided some numerical issues when separating SOC constraints.
 - If differentation of convex expression fails in convex nlhdlr, then a perturbed point is tried.
+- Use sassy/bliss as default symmetry computation package.
 
 Examples and applications
 -------------------------
@@ -69,6 +70,9 @@ Interface changes
 
 ### Interfaces to external software
 
+- added interface to nauty/traces for symmetry computation
+- added interface to sassy, a preprocessor for symmetry computation
+- The directory src/sassy contains the source code of sassy.
 - Added interface to Lapack (used for solving nonlinear problems).
 - The AMPL interface now supports parameters specified in AMPL command scripts via option scip_options.
   The value of scip_options is expected to be a sequence of parameter names and values, separated by a space, e.g.,
@@ -106,9 +110,14 @@ Build system
 ### Cmake
 
 - New flag -DLAPACK=on for linking with Lapack (must be available in the system)
+- added flag option "SYM=sassy" for using sassy/bliss as a graph automorphism package
+- use SYM=sassy by default, since sassy and bliss are now shipped with SCIP.
 
 ### Makefile
 
+- added flag option "nauty" for SYM variable to specify which graph automorphism package should be used
+- added flag option "sassy" for SYM variable to specify which graph automorphism package should be used
+- use SYM=sassy by default, since sassy and bliss are now shipped with SCIP
 - New flag LAPACK for linking with Lapack (must be available in the system)
 - A file scip/config.h is created in the build directory ($(OBJDIR)/include) now.
   Defining NO_CONFIG_HEADER is no longer necessary and has no effect anymore.
@@ -134,6 +143,9 @@ Known bugs
 
 Features
 --------
+
+- use quad precision in cutsSubstituteMIR() for substituting slack variables into CMIR cuts
+- use quad precision for activity computations in cons_linear.c
 
 Performance improvements
 ------------------------
@@ -194,6 +206,10 @@ Fixed bugs
 - ensure that winner is always determined in concurrent mode
 - when a row with invalid index range is added to the global cutpool, update the indices instead of failing with an assert
 - update of watched literals in cons_xor.c and ensure that fixed variables are counted in propacateCons()
+- avoid some numerical issue in check for redundant variables in linear constraints (introduced with version 8.0.2)
+- more rows are treated as being integral in cutsSubstituteMIR() for CMIR cuts
+- fixed several relaxations of the rhs of cuts to 0 in cuts.c
+- avoid aggregation into a single linear constraint if they should not be upgraded (needed for indicator constraints)
 
 Miscellaneous
 -------------
@@ -228,8 +244,6 @@ Build system
 - Move -I/path/to/src/amplmp/include to front of compiler flags for include directories
 
 ### Makefile
-
-- Use SYM=bliss by default, since bliss now is shipped with SCIP.
 
 Fixed bugs
 ----------

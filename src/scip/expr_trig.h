@@ -64,7 +64,7 @@ SCIP_RETCODE SCIPincludeExprhdlrCos(
  *
  * @name Sine and Cosine expression
  *
- * These expression handler provide the sine and cosine functions, that is,
+ * These expression handlers provide the sine and cosine functions, that is,
  * \f[
  *   x \mapsto \sin(x)
  * \f]
