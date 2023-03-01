@@ -258,7 +258,7 @@ SCIP_RETCODE SCIPisPackingPartitioningOrbitope(
 
 /** tries to handle variable matrices with lex ordered rows and columns */
 SCIP_EXPORT
-SCIP_RETCODE tryHandleLexSortRowColumnMatrix(
+SCIP_RETCODE tryHandleDoubleLexMatrices(
    SCIP*                 scip,               /**< SCIP pointer */
    int**                 perms,              /**< array of permutations */
    int                   nperms,             /**< number of permutations in perms */

@@ -1914,6 +1914,10 @@ SCIP_RETCODE computeSignedSymmetryGroup(
       SCIP_CALL( SYMcomputeSymmetryGenerators(scip, 1500, graph, &nperms, &nmaxperms,
             &perms, &log10groupsize, symcodetime) );
 
+      {
+         SCIP_CALL( tryHandleDoubleLexMatrices(scip, perms, nperms, SCIPgetNVars(scip), TRUE) );
+      }
+
 #ifdef SCIP_SHOW_PERMS
       printf("Found %d (signed) permutations.\n", nperms);
       for (p = 0; p < nperms; ++p)

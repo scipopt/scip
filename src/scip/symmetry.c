@@ -1419,7 +1419,10 @@ SCIP_RETCODE detectOrbitopalSymmetries(
    int                   nselectedperms,     /**< number of permutations in selectedperms */
    int                   permlen,            /**< number of variables in a permutation */
    int                   nrows,              /**< number of rows of potential orbitopal symmetries */
-   SCIP_Bool*            success             /**< pointer to store if orbitopal symmetries could be found */
+   SCIP_Bool*            success,            /**< pointer to store if orbitopal symmetries could be found */
+   int****               matrices,           /**< pointer to store matrices of orbitopal symmetries */
+   int**                 ncols,              /**< pointer to store number of columns of matrices in matrices */
+   int*                  nmatrices           /**< pointer to store the number of matrices in matrices */
    )
 {
    SCIP_DISJOINTSET* conncomps;
@@ -1435,11 +1438,14 @@ SCIP_RETCODE detectOrbitopalSymmetries(
    int npermstoconsider;
    int colorrepresentative1;
    int colorrepresentative2;
+   int elemtomove;
+   int ncurcols;
    int curdeg1;
    int curdeg2;
    int curcolor1;
    int curcolor2;
    int ncolors;
+   int cnt;
    int c;
    int p;
    int v;
@@ -1452,20 +1458,29 @@ SCIP_RETCODE detectOrbitopalSymmetries(
    assert( permlen > 0 );
    assert( nrows > 0 );
    assert( success != NULL );
+   assert( matrices != NULL );
+   assert( ncols != NULL );
+   assert( nmatrices != NULL );
 
+   /* initialize data */
    *success = TRUE;
+   *matrices = NULL;
+   *ncols = NULL;
+   *nmatrices = 0;
 
    /* we have found the empty set of orbitopal symmetries */
    if ( nselectedperms == 0 )
       return SCIP_OKAY;
 
-   /* build a graph to encode potential orbitopes
+   /* build a graph to encode potential orbitopal symmetries
     *
     * The 2-cycles of a permutation define a set of edges that need to be added simultaneously. We encode
     * this as a disjoint set data structure to only encode the connected components of the graph. To ensure
-    * correctness, we keep track of the degrees of each node and extend a component by a permutaiton only if
-    * all nodes to be extended have the same degree. We also keep track of which variables are affected by
-    * the same permutations by coloring the connected components.
+    * correctness, we keep track of the degrees of each node and extend a component by a permutation only if
+    * all nodes to be extended have the same degree. We also make sure that each connected component is a
+    * path. Although this might not detect all orbitopal symmetries, it seems to cover most of the cases when
+    * computing symmetries using bliss. We also keep track of which variables are affected by the same
+    * permutations by coloring the connected components.
     */
    SCIP_CALL( SCIPcreateDisjointset(scip, &conncomps, permlen) );
    SCIP_CALL( SCIPcreateDisjointset(scip, &compcolors, permlen) );
@@ -1587,24 +1602,15 @@ SCIP_RETCODE detectOrbitopalSymmetries(
    SCIPsortIntInt(&compidx[w], &varidx[w], nposdegree - w);
    colorbegins[++ncolors] = nposdegree;
 
-   printf("orbitope:\n");
-   for (v = 0; v < nposdegree; ++v)
-   {
-      printf(" %4d", varidx[v]);
-      if ( v < nposdegree - 1 && compidx[v] != compidx[v + 1] )
-         printf("\n");
-      if ( v < nposdegree - 1 && colidx[v] != colidx[v + 1] )
-         printf("orbitope:\n");
-   }
-   printf("\n");
-
    /* find the correct order of variable indices per color class */
    SCIP_CALL( SCIPallocBufferArray(scip, &permstoconsider, nselectedperms) );
+
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, matrices, ncolors) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, ncols, ncolors) );
+   *nmatrices = ncolors;
+
    for (c = 0; c < ncolors; ++c)
    {
-      int** tempmatrix;
-      int deg1elem;
-
       /* find an element in the first connected component with degree 1 */
       for (v = colorbegins[c]; compidx[v] == compidx[colorbegins[c]]; ++v)
       {
@@ -1612,7 +1618,7 @@ SCIP_RETCODE detectOrbitopalSymmetries(
             break;
       }
       assert( compidx[v] == compidx[colorbegins[c]] );
-      deg1elem = varidx[v];
+      elemtomove = varidx[v];
 
       /* find the permutations affecting the variables in the first connected component */
       npermstoconsider = 0;
@@ -1629,28 +1635,54 @@ SCIP_RETCODE detectOrbitopalSymmetries(
          }
       }
 
-      SCIP_CALL( SCIPallocBufferArray(scip, &tempmatrix, nrows) );
+      /* allocate memory for matrix */
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*matrices)[c], nrows) );
+      (*ncols)[c] = npermstoconsider + 1;
       for (p = 0; p < nrows; ++p)
       {
-         SCIP_CALL( SCIPallocBufferArray(scip, &tempmatrix[p], npermstoconsider + 1) );
+         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*matrices)[c][p], (*ncols)[c]) );
       }
 
       /* find a permutation that moves the degree-1 element and iteratively extend this to a matrix */
-      if ( nselectedperms == 1 )
-         printf("2-column matrix, order does not matter\n");
-      else
+      assert( degrees[elemtomove] == 1 );
+
+      /* find the first and second column */
+      for (p = 0; p < npermstoconsider; ++p)
       {
-         int elemtomove;
-         int ncols;
-         int ncurcols;
-         int cnt = 0;
-         int swap;
+         perm = perms[permstoconsider[p]];
+         if ( perm[elemtomove] != elemtomove )
+            break;
+      }
+      assert( p < npermstoconsider );
 
-         ncols = nselectedperms + 1;
-         elemtomove = deg1elem;
-         assert( degrees[elemtomove] == 1 );
+      /* elements moved by perm that have degree 1 are in the first column */
+      for (v = 0, cnt = 0; v < permlen; ++v)
+      {
+         if ( perm[v] > v )
+         {
+            if ( degrees[v] == 1 )
+            {
+               (*matrices)[c][cnt][0] = v;
+               (*matrices)[c][cnt++][1] = perm[v];
+            }
+            else
+            {
+               (*matrices)[c][cnt][0] = perm[v];
+               (*matrices)[c][cnt++][1] = v;
+            }
+         }
+      }
+      assert( cnt == nrows );
 
-         /* find the first and second column */
+      /* remove p from the list of permutations to be considered */
+      permstoconsider[p] = permstoconsider[--npermstoconsider];
+
+      ncurcols = 1;
+      while ( npermstoconsider > 0 )
+      {
+         elemtomove = (*matrices)[c][0][ncurcols];
+
+         /* find permutation moving the elemtomove */
          for (p = 0; p < npermstoconsider; ++p)
          {
             perm = perms[permstoconsider[p]];
@@ -1659,66 +1691,26 @@ SCIP_RETCODE detectOrbitopalSymmetries(
          }
          assert( p < npermstoconsider );
 
-         /* elements moved by perm that have degree 1 are in the first column */
-         for (v = 0; v < permlen; ++v)
+         /* extend matrix */
+         for (v = 0; v < nrows; ++v)
          {
-            if ( perm[v] > v )
-            {
-               if ( degrees[v] == 1 )
-               {
-                  tempmatrix[cnt][0] = v;
-                  tempmatrix[cnt++][1] = perm[v];
-               }
-               else
-               {
-                  tempmatrix[cnt][0] = perm[v];
-                  tempmatrix[cnt++][1] = v;
-               }
-            }
+            assert( perm[(*matrices)[c][v][ncurcols]] != (*matrices)[c][v][ncurcols] );
+            (*matrices)[c][v][ncurcols + 1] = perm[(*matrices)[c][v][ncurcols]];
          }
-         assert( cnt == nrows );
-
-         /* remove p from the list of permutations to be considered */
+         ++ncurcols;
          permstoconsider[p] = permstoconsider[--npermstoconsider];
-
-         ncurcols = 1;
-         while ( npermstoconsider > 0 )
-         {
-            elemtomove = tempmatrix[0][ncurcols];
-
-            /* find permutation moving the elemtomove */
-            for (p = 0; p < npermstoconsider; ++p)
-            {
-               perm = perms[permstoconsider[p]];
-               if ( perm[elemtomove] != elemtomove )
-                  break;
-            }
-            assert( p < npermstoconsider );
-
-            /* extend matrix */
-            for (v = 0; v < nrows; ++v)
-            {
-               assert( perm[tempmatrix[v][ncurcols]] != tempmatrix[v][ncurcols] );
-               tempmatrix[v][ncurcols + 1] = perm[tempmatrix[v][ncurcols]];
-            }
-            ++ncurcols;
-            permstoconsider[p] = permstoconsider[--npermstoconsider];
-         }
       }
+   }
 
+   for (c = 0; c < ncolors; ++c)
+   {
       for (v = 0; v < nrows; ++v)
       {
          for (w = 0; w < nselectedperms + 1; ++w)
-            printf(" %4d", tempmatrix[v][w]);
+            printf(" %4d", (*matrices)[c][v][w]);
          printf("\n");
       }
       printf("\n");
-
-      for (p = nrows - 1; p >= 0; --p)
-      {
-         SCIPfreeBufferArray(scip, &tempmatrix[p]);
-      }
-      SCIPfreeBufferArray(scip, &tempmatrix);
    }
 
    SCIPfreeBufferArray(scip, &permstoconsider);
@@ -1735,8 +1727,55 @@ SCIP_RETCODE detectOrbitopalSymmetries(
    return SCIP_OKAY;
 }
 
+/** checks whether to families of orbitopal symmetries defines double lex matrix, in case of success, generate matrix */
+static
+SCIP_RETCODE isDoublelLexSym(
+   SCIP*                 scip,               /**< SCIP pointer */
+   int***                matrices1,          /**< first list of matrices associated with orbitopal symmetries */
+   int                   nrows1,             /**< number of rows of first family of matrices */
+   int*                  ncols1,             /**< for each matrix in the first family, its number of columns */
+   int                   nmatrices1,         /**< number of matrices in the first family */
+   int***                matrices2,          /**< second list of matrices associated with orbitopal symmetries */
+   int                   nrows2,             /**< number of rows of second family of matrices */
+   int*                  ncols2,             /**< for each matrix in the second family, its number of columns */
+   int                   nmatrices2,         /**< number of matrices in the second family */
+   int****               doublelexmatrix,    /**< pointer to store combined matrix */
+   int*                  nrows,              /**< pointer to store number of rows in combined matrix */
+   int*                  ncols,              /**< pointer to store number of columns in combined matrix */
+   int**                 rowsbegin,          /**< pointer to store the begin positions of a new lex subset of rows */
+   int**                 colsbegin,          /**< pointer to store the begin positions of a new lex subset of columns */
+   SCIP_Bool*            success             /**< pointer to store whether combined matrix could be generated */
+   )
+{
+   assert( scip != NULL );
+   assert( matrices1 != NULL );
+   assert( nrows1 > 0 );
+   assert( ncols1 != NULL );
+   assert( nmatrices1 > 0 );
+   assert( matrices2 != NULL );
+   assert( nrows2 > 0 || nmatrices2 == 0 );
+   assert( ncols2 != NULL );
+   assert( nmatrices2 >= 0 );
+   assert( doublelexmatrix != NULL );
+   assert( nrows != NULL );
+   assert( ncols != NULL );
+   assert( rowsbegin != NULL );
+   assert( colsbegin != NULL );
+   assert (success != NULL );
+
+   /* initialize data */
+   doublelexmatrix = NULL;
+   *nrows = 0;
+   *ncols = 0;
+   rowsbegin = 0;
+   colsbegin = 0;
+   *success = TRUE;
+
+   return SCIP_OKAY;
+}
+
 /** tries to handle variable matrices with lex ordered rows and columns */
-SCIP_RETCODE tryHandleLexSortRowColumnMatrix(
+SCIP_RETCODE tryHandleDoubleLexMatrices(
    SCIP*                 scip,               /**< SCIP pointer */
    int**                 perms,              /**< array of permutations */
    int                   nperms,             /**< number of permutations in perms */
@@ -1747,6 +1786,17 @@ SCIP_RETCODE tryHandleLexSortRowColumnMatrix(
    SCIP_Bool success = TRUE;
    SCIP_Bool isinvolution;
    SCIP_Bool permissigned;
+   int*** doublelexmatrix;
+   int* rowsbegin;
+   int* colsbegin;
+   int nrows;
+   int ncols;
+   int*** matricestype1;
+   int* ncolstype1;
+   int nmatricestype1;
+   int*** matricestype2;
+   int* ncolstype2;
+   int nmatricestype2;
    int* permstype1;
    int* permstype2;
    int* signedperms;
@@ -1757,6 +1807,7 @@ SCIP_RETCODE tryHandleLexSortRowColumnMatrix(
    int ncycs2 = -1;
    int tmpncycs;
    int p;
+   int i;
 
    assert( scip != NULL );
    assert( perms != NULL );
@@ -1806,19 +1857,45 @@ SCIP_RETCODE tryHandleLexSortRowColumnMatrix(
    }
 
    /* for each type, check whether permutations define (disjoint) orbitopal symmetries; ignore signed part */
-   SCIP_CALL( detectOrbitopalSymmetries(scip, perms, permstype1, npermstype1, permlen, ncycs1, &success) );
+   SCIP_CALL( detectOrbitopalSymmetries(scip, perms, permstype1, npermstype1, permlen, ncycs1, &success,
+         &matricestype1, &ncolstype1, &nmatricestype1) );
    if ( ! success )
       goto FREEMEMORY;
 
-   SCIP_CALL( detectOrbitopalSymmetries(scip, perms, permstype2, npermstype2, permlen, ncycs2, &success) );
+   SCIP_CALL( detectOrbitopalSymmetries(scip, perms, permstype2, npermstype2, permlen, ncycs2, &success,
+         &matricestype2, &ncolstype2, &nmatricestype2) );
    if ( ! success )
       goto FREEMEMORY;
 
    /* check whether symmetries of type 2 permute two rows of matrix of type 1 */
+   SCIP_CALL( isDoublelLexSym(scip, matricestype1, ncycs1, ncolstype1, nmatricestype1,
+         matricestype2, ncycs2, ncolstype2, nmatricestype2,
+         &doublelexmatrix, &nrows, &ncols, &rowsbegin, &colsbegin, &success) );
 
    /* check whether proper signed permutations flip rows or columns */
 
  FREEMEMORY:
+   for (p = nmatricestype2 - 1; p >= 0; --p)
+   {
+      for (i = ncycs2 - 1; i >= 0; --i)
+      {
+         SCIPfreeBlockMemoryArray(scip, &matricestype2[p][i], ncolstype2[p]);
+      }
+      SCIPfreeBlockMemoryArray(scip, &matricestype2[p], ncycs2);
+   }
+   SCIPfreeBlockMemoryArrayNull(scip, &matricestype2, nmatricestype2);
+   SCIPfreeBlockMemoryArrayNull(scip, &ncolstype2, nmatricestype2);
+   for (p = nmatricestype1 - 1; p >= 0; --p)
+   {
+      for (i = ncycs1 - 1; i >= 0; --i)
+      {
+         SCIPfreeBlockMemoryArray(scip, &matricestype1[p][i], ncolstype1[p]);
+      }
+      SCIPfreeBlockMemoryArray(scip, &matricestype1[p], ncycs1);
+   }
+   SCIPfreeBlockMemoryArrayNull(scip, &matricestype1, nmatricestype1);
+   SCIPfreeBlockMemoryArrayNull(scip, &ncolstype1, nmatricestype1);
+
    SCIPfreeBufferArray(scip, &signedperms);
    SCIPfreeBufferArray(scip, &permstype2);
    SCIPfreeBufferArray(scip, &permstype1);
