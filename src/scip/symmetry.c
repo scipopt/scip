@@ -1727,7 +1727,11 @@ SCIP_RETCODE detectOrbitopalSymmetries(
    return SCIP_OKAY;
 }
 
-/** checks whether to families of orbitopal symmetries defines double lex matrix, in case of success, generate matrix */
+/** checks whether to families of orbitopal symmetries defines double lex matrix, in case of success, generate matrix
+ *
+ *  The columns of matrix1 will serve as the columns of the matrix to be generated, the columns of matrix2 will
+ *  serve as rows.
+ */
 static
 SCIP_RETCODE isDoublelLexSym(
    SCIP*                 scip,               /**< SCIP pointer */
@@ -1739,7 +1743,7 @@ SCIP_RETCODE isDoublelLexSym(
    int                   nrows2,             /**< number of rows of second family of matrices */
    int*                  ncols2,             /**< for each matrix in the second family, its number of columns */
    int                   nmatrices2,         /**< number of matrices in the second family */
-   int****               doublelexmatrix,    /**< pointer to store combined matrix */
+   int***                doublelexmatrix,    /**< pointer to store combined matrix */
    int*                  nrows,              /**< pointer to store number of rows in combined matrix */
    int*                  ncols,              /**< pointer to store number of columns in combined matrix */
    int**                 rowsbegin,          /**< pointer to store the begin positions of a new lex subset of rows */
@@ -1747,6 +1751,25 @@ SCIP_RETCODE isDoublelLexSym(
    SCIP_Bool*            success             /**< pointer to store whether combined matrix could be generated */
    )
 {
+   SCIP_HASHMAP* idxtomatrix1;
+   SCIP_HASHMAP* idxtomatrix2;
+   SCIP_HASHMAP* idxtorow1;
+   SCIP_HASHMAP* idxtorow2;
+   SCIP_HASHMAP* idxtocol1;
+   SCIP_HASHMAP* idxtocol2;
+   int* sortvals;
+   int elem;
+   int mat;
+   int col;
+   int col2;
+   int mat2;
+   int nidx;
+   int cnt;
+   int c;
+   int d;
+   int i;
+   int j;
+
    assert( scip != NULL );
    assert( matrices1 != NULL );
    assert( nrows1 > 0 );
@@ -1764,12 +1787,156 @@ SCIP_RETCODE isDoublelLexSym(
    assert (success != NULL );
 
    /* initialize data */
-   doublelexmatrix = NULL;
-   *nrows = 0;
-   *ncols = 0;
+   *nrows = nrows1;
+   *ncols = nrows2;
    rowsbegin = 0;
    colsbegin = 0;
    *success = TRUE;
+
+   /* collect information about entries in matrices */
+   nidx = nrows1 * nrows2;
+   SCIP_CALL( SCIPhashmapCreate(&idxtomatrix1, SCIPblkmem(scip), nidx) );
+   SCIP_CALL( SCIPhashmapCreate(&idxtomatrix2, SCIPblkmem(scip), nidx) );
+   SCIP_CALL( SCIPhashmapCreate(&idxtorow1, SCIPblkmem(scip), nidx) );
+   SCIP_CALL( SCIPhashmapCreate(&idxtorow2, SCIPblkmem(scip), nidx) );
+   SCIP_CALL( SCIPhashmapCreate(&idxtocol1, SCIPblkmem(scip), nidx) );
+   SCIP_CALL( SCIPhashmapCreate(&idxtocol2, SCIPblkmem(scip), nidx) );
+
+   for (c = 0; c < nmatrices1; ++c)
+   {
+      for (i = 0; i < nrows1; ++i)
+      {
+         for (j = 0; j < ncols1[c]; ++j)
+         {
+            SCIP_CALL( SCIPhashmapInsertInt(idxtomatrix1, (void*) (size_t) matrices1[c][i][j], c) );
+            SCIP_CALL( SCIPhashmapInsertInt(idxtorow1, (void*) (size_t) matrices1[c][i][j], i) );
+            SCIP_CALL( SCIPhashmapInsertInt(idxtocol1, (void*) (size_t) matrices1[c][i][j], j) );
+         }
+      }
+   }
+   for (c = 0; c < nmatrices2; ++c)
+   {
+      for (i = 0; i < nrows2; ++i)
+      {
+         for (j = 0; j < ncols2[c]; ++j)
+         {
+            SCIP_CALL( SCIPhashmapInsertInt(idxtomatrix2, (void*) (size_t) matrices2[c][i][j], c) );
+            SCIP_CALL( SCIPhashmapInsertInt(idxtorow2, (void*) (size_t) matrices2[c][i][j], i) );
+            SCIP_CALL( SCIPhashmapInsertInt(idxtocol2, (void*) (size_t) matrices2[c][i][j], j) );
+         }
+      }
+   }
+
+#ifndef NDEBUG
+   /* check whether expecteded sizes of matrix match */
+   for (j = 0, cnt = 0; j < nmatrices1; ++j)
+      cnt += ncols1[j];
+   assert( cnt == *ncols );
+
+   for (i = 0, cnt = 0; i < nmatrices2; ++i)
+      cnt += ncols2[i];
+   assert( cnt == *nrows );
+#endif
+
+   /* Find a big matrix such that the columns of this matrix correspond to the columns of matrices in matrices1
+    * and the rows of this matrix correspond to the columns of matrices in matrices2. In total, this leads to
+    * a matrix of block shape
+    *
+    *                     A | B | ... | C
+    *                     D | E | ... | F
+    *                     . | . |     | .
+    *                     G | H | ... | I
+    *
+    * We start by filling the first column of the big matrix by the first column in matrices1. Sort the column
+    * according to the matrices in matrices2.
+    */
+   SCIP_CALL( SCIPallocBufferArray(scip, &sortvals, MAX(*nrows, *ncols)) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, doublelexmatrix, *nrows) );
+   for (i = 0; i < *nrows; ++i)
+   {
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*doublelexmatrix)[i], *ncols) );
+      (*doublelexmatrix)[i][0] = matrices1[0][i][0];
+      sortvals[i] = SCIPhashmapGetImageInt(idxtomatrix2, (void*) (size_t) matrices1[0][i][0]);
+   }
+   SCIPsortIntPtr(sortvals, (void*) (*doublelexmatrix), *nrows);
+
+   /* fill first row of big matrix */
+   mat = SCIPhashmapGetImageInt(idxtomatrix2, (void*) (size_t) (*doublelexmatrix)[0][0]);
+   col = SCIPhashmapGetImageInt(idxtocol2, (void*) (size_t) (*doublelexmatrix)[0][0]);
+   cnt = 0;
+   for (j = 0; j < *ncols; ++j)
+   {
+      /* skip the entry that is already contained in the first column */
+      if ( matrices2[mat][j][col] == (*doublelexmatrix)[0][0] )
+         continue;
+
+      sortvals[cnt++] = SCIPhashmapGetImageInt(idxtomatrix1, (void*) (size_t) matrices2[mat][j][col]);
+      (*doublelexmatrix)[0][cnt] = matrices2[mat][j][col];
+   }
+   assert( cnt == nrows2 - 1);
+   SCIPsortIntInt(sortvals, &((*doublelexmatrix)[0][1]), cnt);
+
+   /* fill the remaining entries of the big matrix */
+   for (i = 1; i < *nrows; ++i)
+   {
+      for (j = 1; j < *ncols; ++j)
+      {
+         /* get the matrices and column/row of the entry */
+         mat = SCIPhashmapGetImageInt(idxtomatrix1, (void*) (size_t) (*doublelexmatrix)[0][j]);
+         mat2 = SCIPhashmapGetImageInt(idxtomatrix2, (void*) (size_t) (*doublelexmatrix)[i][0]);
+         col = SCIPhashmapGetImageInt(idxtocol1, (void*) (size_t) (*doublelexmatrix)[0][j]);
+         col2 = SCIPhashmapGetImageInt(idxtocol2, (void*) (size_t) (*doublelexmatrix)[i][0]);
+
+         /* find the unique element in the col column of matrix mat and the row column of matrix mat2 */
+         /* @todo improve this by first sorting the columns */
+         cnt = 0;
+         elem = -1;
+         for (c = 0; c < *nrows; ++c)
+         {
+            for (d = 0; d < *ncols; ++d)
+            {
+               if ( matrices1[mat][c][col] == matrices2[mat2][d][col2] )
+               {
+                  ++cnt;
+                  elem = matrices1[mat][c][col];
+                  break;
+               }
+            }
+         }
+
+         /* stop: the columns do not overlap properly */
+         if ( cnt != 1 )
+         {
+            *success = FALSE;
+            goto FREEMEMORY;
+         }
+         (*doublelexmatrix)[i][j] = elem;
+      }
+   }
+
+   printf("Fill success %d\n", *success);
+   for (i = 0; i < *nrows; ++i)
+   {
+      for (j = 0; j < *ncols; ++j)
+         printf(" %4d", (*doublelexmatrix)[i][j]);
+      printf("\n");
+   }
+   printf("\n");
+
+ FREEMEMORY:
+   SCIPfreeBufferArray(scip, &sortvals);
+   SCIPhashmapFree(&idxtocol2);
+   SCIPhashmapFree(&idxtocol1);
+   SCIPhashmapFree(&idxtorow2);
+   SCIPhashmapFree(&idxtorow1);
+   SCIPhashmapFree(&idxtomatrix2);
+   SCIPhashmapFree(&idxtomatrix1);
+
+   for (i = *nrows - 1; i >= 0; --i)
+   {
+      SCIPfreeBlockMemoryArray(scip, &(*doublelexmatrix)[i], *ncols);
+   }
+   SCIPfreeBlockMemoryArray(scip, doublelexmatrix, *nrows);
 
    return SCIP_OKAY;
 }
@@ -1786,7 +1953,7 @@ SCIP_RETCODE tryHandleDoubleLexMatrices(
    SCIP_Bool success = TRUE;
    SCIP_Bool isinvolution;
    SCIP_Bool permissigned;
-   int*** doublelexmatrix;
+   int** doublelexmatrix;
    int* rowsbegin;
    int* colsbegin;
    int nrows;
