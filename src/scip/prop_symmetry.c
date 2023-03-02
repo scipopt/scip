@@ -504,6 +504,7 @@ static
 SCIP_DECL_TABLEOUTPUT(tableOutputSymmetry)
 {
    SCIP_TABLEDATA* tabledata;
+   int nred;
 
    assert( scip != NULL );
    assert( table != NULL );
@@ -512,7 +513,26 @@ SCIP_DECL_TABLEOUTPUT(tableOutputSymmetry)
    assert( tabledata != NULL );
    assert( tabledata->propdata != NULL );
 
-   /* @todo report symmetry information when printing symmetries */
+   if ( tabledata->propdata->orbitopalreddata || tabledata->propdata->orbitalreddata 
+      || tabledata->propdata->lexreddata )
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, file, "Symmetry           :\n");
+      if ( tabledata->propdata->orbitopalreddata )
+      {
+         SCIP_CALL( SCIPorbitopalReductionGetStatistics(scip, tabledata->propdata->orbitopalreddata, &nred) );
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, file, "  orbitopal reducti: %10d reductions applied\n", nred);
+      }
+      if ( tabledata->propdata->orbitalreddata )
+      {
+         SCIP_CALL( SCIPorbitalReductionGetStatistics(scip, tabledata->propdata->orbitalreddata, &nred) );
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, file, "  orbital reduction: %10d reductions applied\n", nred);
+      }
+      if ( tabledata->propdata->lexreddata )
+      {
+         SCIP_CALL( SCIPlexicographicReductionGetStatistics(scip, tabledata->propdata->lexreddata, &nred) );
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, file, "  lexicographic red: %10d reductions applied\n", nred);
+      }
+   }
 
    return SCIP_OKAY;
 }

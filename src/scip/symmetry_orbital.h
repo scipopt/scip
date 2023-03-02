@@ -58,6 +58,15 @@ typedef struct SCIP_OrbitalReductionData SCIP_ORBITALREDDATA;
 
 /** print orbital reduction data */
 SCIP_EXPORT
+SCIP_RETCODE SCIPorbitalReductionGetStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ORBITALREDDATA*  orbireddata,        /**< orbital reduction data structure */
+   int*                  nred                /**< total number of reductions applied */
+   );
+
+
+/** print orbital reduction data */
+SCIP_EXPORT
 SCIP_RETCODE SCIPorbitalReductionPrintStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ORBITALREDDATA*  orbireddata         /**< orbital reduction data structure */

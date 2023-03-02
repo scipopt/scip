@@ -109,6 +109,7 @@ struct SCIP_OrbitopalReductionData
    SCIP_CONSHDLR*        conshdlr_nonlinear; /**< nonlinear constraint handler,
                                               * is used to determine if a variable is a branching variable */
    SCIP_Bool             conshdlr_nonlinear_checked; /**< nonlinear constraint handler is already added? */
+   int                   nred;               /**< total number of reductions */
 };
 
 /*
@@ -1987,6 +1988,23 @@ SCIP_RETCODE propagateOrbitope(
  */
 
 
+/** get the number of reductions */
+SCIP_RETCODE SCIPorbitopalReductionGetStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ORBITOPALREDDATA* orbireddata,       /**< orbitopal reduction data structure */
+   int*                  nred                /**< total number of reductions applied */
+)
+{
+   assert( scip != NULL );
+   assert( orbireddata != NULL );
+   assert( nred != NULL );
+
+   *nred = orbireddata->nred;
+
+   return SCIP_OKAY;
+}
+
+
 /** print orbitopal reduction data */
 SCIP_RETCODE SCIPorbitopalReductionPrintStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1994,6 +2012,9 @@ SCIP_RETCODE SCIPorbitopalReductionPrintStatistics(
 )
 {
    int i;
+
+   assert( scip != NULL );
+   assert( orbireddata != NULL );
 
    if ( orbireddata->norbitopes == 0 )
    {
@@ -2071,6 +2092,7 @@ SCIP_RETCODE SCIPorbitopalReductionPropagate(
       }
    }
 
+   orbireddata->nred += *nred;
    return SCIP_OKAY;
 }
 
@@ -2189,6 +2211,9 @@ SCIP_RETCODE SCIPorbitopalReductionInclude(
    /* conshdlr nonlinear */
    (*orbireddata)->conshdlr_nonlinear = NULL;
    (*orbireddata)->conshdlr_nonlinear_checked = FALSE;
+
+   /* counter of total number of reductions */
+   (*orbireddata)->nred = 0;
 
    return SCIP_OKAY;
 }

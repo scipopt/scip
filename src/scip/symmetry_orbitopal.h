@@ -61,6 +61,15 @@ struct SCIP_OrbitopalReductionData;
 typedef struct SCIP_OrbitopalReductionData SCIP_ORBITOPALREDDATA;
 
 
+/** get the number of reductions */
+SCIP_EXPORT
+SCIP_RETCODE SCIPorbitopalReductionGetStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ORBITOPALREDDATA* orbireddata,       /**< orbitopal reduction data structure */
+   int*                  nred                /**< total number of reductions applied */
+   );
+
+
 /** print orbitopal reduction data */
 SCIP_EXPORT
 SCIP_RETCODE SCIPorbitopalReductionPrintStatistics(

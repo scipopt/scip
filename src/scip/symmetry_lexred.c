@@ -92,6 +92,7 @@ struct SCIP_LexRedData
    LEXDATA**             lexdatas;           /**< array of pointers to individual LEXDATA's */
    int                   nlexdatas;          /**< number of datas in array */
    int                   maxnlexdatas;       /**< allocated datas array size */
+   int                   nred;               /**< total number of reductions */
 };
 
 
@@ -1090,12 +1091,32 @@ SCIP_RETCODE shadowtreeUndoNodeDepthBranchIndices(
 
 
 /** print lexicographic reduction propagation data */
+SCIP_RETCODE SCIPlexicographicReductionGetStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_LEXREDDATA*      masterdata,         /**< pointer to global data for lexicographic reduction propagator */
+   int*                  nred                /**< total number of reductions applied */
+   )
+{
+   assert( scip != NULL );
+   assert( masterdata != NULL );
+   assert( nred != NULL );
+
+   *nred = masterdata->nred;
+
+   return SCIP_OKAY;
+}
+
+/** print lexicographic reduction propagation data */
 SCIP_RETCODE SCIPlexicographicReductionPrintStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_LEXREDDATA*      masterdata          /**< pointer to global data for lexicographic reduction propagator */
    )
 {
    int i;
+
+   assert( scip != NULL );
+   assert( masterdata != NULL );
+
    if ( masterdata->nlexdatas == 0 )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   lexicographic reduction:   no permutations\n");
@@ -1328,6 +1349,7 @@ SCIP_RETCODE SCIPlexicographicReductionInclude(
    (*masterdata)->lexdatas = NULL;
    (*masterdata)->nlexdatas = 0;
    (*masterdata)->maxnlexdatas = 0;
+   (*masterdata)->nred = 0;
 
    return SCIP_OKAY;
 }

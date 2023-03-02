@@ -100,6 +100,7 @@ struct SCIP_OrbitalReductionData
    ORCDATA**             componentdatas;     /**< array of pointers to individual components for orbital reduction */
    int                   ncomponents;        /**< number of orbital reduction datas in array */
    int                   maxncomponents;     /**< allocated orbital reduction datas array size */
+   int                   nred;               /**< total number of reductions */
 };
 
 
@@ -1177,6 +1178,22 @@ SCIP_DECL_EVENTEXEC(eventExecGlobalBoundChange)
  * Interface methods
  */
 
+
+/** print orbital reduction data */
+SCIP_RETCODE SCIPorbitalReductionGetStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ORBITALREDDATA*  orbireddata,        /**< orbital reduction data structure */
+   int*                  nred                /**< total number of reductions applied */
+   )
+{
+   assert( scip != NULL );
+   assert( orbireddata != NULL );
+
+   *nred = orbireddata->nred;
+
+   return SCIP_OKAY;
+}
+
 /** print orbital reduction data */
 SCIP_RETCODE SCIPorbitalReductionPrintStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1184,6 +1201,9 @@ SCIP_RETCODE SCIPorbitalReductionPrintStatistics(
    )
 {
    int i;
+
+   assert( scip != NULL );
+   assert( orbireddata != NULL );
 
    if ( orbireddata->ncomponents == 0 )
    {
@@ -1256,8 +1276,10 @@ SCIP_RETCODE SCIPorbitalReductionPropagate(
       *didrun = TRUE;
 
       if ( *infeasible )
-         return SCIP_OKAY;
+         break;
    }
+
+   orbireddata->nred += *nred;
 
    return SCIP_OKAY;
 }
@@ -1358,6 +1380,7 @@ SCIP_RETCODE SCIPorbitalReductionInclude(
    (*orbireddata)->ncomponents = 0;
    (*orbireddata)->maxncomponents = 0;
    (*orbireddata)->shadowtreeeventhdlr = shadowtreeeventhdlr;
+   (*orbireddata)->nred = 0;
 
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &(*orbireddata)->globalfixeventhdlr,
       EVENTHDLR_SYMMETRY_NAME, EVENTHDLR_SYMMETRY_DESC, eventExecGlobalBoundChange,

@@ -59,6 +59,15 @@ typedef struct SCIP_LexRedData SCIP_LEXREDDATA;
 
 /** print lexicographic reduction propagation data */
 SCIP_EXPORT
+SCIP_RETCODE SCIPlexicographicReductionGetStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_LEXREDDATA*      masterdata,         /**< pointer to global data for lexicographic reduction propagator */
+   int*                  nred                /**< total number of reductions applied */
+   );
+
+
+/** print lexicographic reduction propagation data */
+SCIP_EXPORT
 SCIP_RETCODE SCIPlexicographicReductionPrintStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_LEXREDDATA*      masterdata          /**< pointer to global data for lexicographic reduction propagator */
