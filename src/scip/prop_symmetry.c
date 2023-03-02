@@ -7164,7 +7164,6 @@ SCIP_DECL_PROPEXITSOL(propExitsolSymmetry)
 
    propdata = SCIPpropGetData(prop);
    assert( propdata != NULL );
-   assert( propdata->usesymmetry >= 0 );
 
    /* reset symmetry handling propagators that depend on the branch-and-bound tree structure */
    SCIP_CALL( resetDynamicSymmetryHandling(scip, propdata) );
