@@ -1102,6 +1102,9 @@ SCIP_Real SCIPconflictGetLengthGrowthPerc(
    )
 {
    assert(conflict != NULL);
+   if ( SCIPconflictGetNResConflictConss(conflict) == 0 )
+      return 0.0;
+   else
    return 100.0 * conflict->lengthsumperc / SCIPconflictGetNResConflictConss(conflict);
 }
 
@@ -1199,6 +1202,46 @@ void resolutionSetClear(
    resolutionset->isbinary = FALSE;
 }
 
+/* returns the index of a variable in the conflict resolution set */
+static
+int getVarIdxInResolutionset(
+   SCIP_RESOLUTIONSET*   resolutionset,      /**< conflict resolution set */
+   int                   varidx              /**< variable index to check */
+   )
+{
+   int i;
+
+   assert(resolutionset != NULL);
+   assert(varidx >= 0);
+
+   for( i = 0; i < resolutionset->nnz; ++i )
+   {
+      if( resolutionset->inds[i] == varidx )
+         return i;
+   }
+   return -1;
+}
+/* returns if the variable index is in the indices array */
+static
+SCIP_Bool varIdxInArray(
+   int*                  inds,               /**< array of variable indices */
+   int                   ninds,              /**< number of variable indices in array */
+   int                   varidx              /**< variable index to check */
+   )
+{
+   int i;
+
+   assert(inds != NULL);
+   assert(varidx >= 0);
+
+   for( i = 0; i < ninds; ++i )
+   {
+      if( inds[i] == varidx )
+         return TRUE;
+   }
+   return FALSE;
+}
+
 /** Sort the resolution set so that indices with variable at global bounds are in the end of the array */
 static
 SCIP_RETCODE resolutionSetSortFromBounds(
@@ -1207,13 +1250,14 @@ SCIP_RETCODE resolutionSetSortFromBounds(
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_BDCHGIDX*        currbdchgidx,       /**< current bound change index */
    int                   residx,             /**< index of the variable to resolve */
-   int*                  nweakencands        /**< pointer to store the number of candidates for weakening */
+   int*                  nweakencands,       /**< pointer to store the number of candidates for weakening */
+   SCIP_Bool             divisiblecondition  /**< whether the condition for divisible coefficients applies */
    )
 {
    SCIP_VAR** vars;
    int* typebounds;
    int i;
-
+   SCIP_Real divisor;
    assert(resolutionset != NULL);
    assert(set != NULL);
    assert(prob != NULL);
@@ -1221,6 +1265,7 @@ SCIP_RETCODE resolutionSetSortFromBounds(
    vars = prob->vars;
    assert(vars != NULL);
 
+   divisor = resolutionset->vals[getVarIdxInResolutionset(resolutionset, residx)];
    /* define buffer array with nnz elements. 0: at wrong bound, 1: at right bound, 2: free */
    SCIP_CALL( SCIPsetAllocBufferArray(set, &typebounds, resolutionset->nnz) );
 
@@ -1234,7 +1279,11 @@ SCIP_RETCODE resolutionSetSortFromBounds(
 
       ub = SCIPgetVarUbAtIndex(set->scip, vartoweaken, currbdchgidx, TRUE);
       lb = SCIPgetVarLbAtIndex(set->scip, vartoweaken, currbdchgidx, TRUE);
-      if ( SCIPvarGetProbindex(vartoweaken) == residx )
+      if ( divisiblecondition && SCIPsetIsZero(set, fmod(resolutionset->vals[i], divisor)) )
+      {
+         typebounds[i] = 0;
+      }
+      else if ( SCIPvarGetProbindex(vartoweaken) == residx )
       {
          typebounds[i] = 0;
       }
@@ -1344,46 +1393,6 @@ int resolutionsetGetNNzs(
    assert(resolutionset != NULL);
 
    return resolutionset->nnz;
-}
-
-/* returns the index of a variable in the conflict resolution set */
-static
-int getVarIdxInResolutionset(
-   SCIP_RESOLUTIONSET*   resolutionset,      /**< conflict resolution set */
-   int                   varidx              /**< variable index to check */
-   )
-{
-   int i;
-
-   assert(resolutionset != NULL);
-   assert(varidx >= 0);
-
-   for( i = 0; i < resolutionsetGetNNzs(resolutionset); ++i )
-   {
-      if( resolutionset->inds[i] == varidx )
-         return i;
-   }
-   return -1;
-}
-/* returns if the variable index is in the indices array */
-static
-SCIP_Bool varIdxInArray(
-   int*                  inds,               /**< array of variable indices */
-   int                   ninds,              /**< number of variable indices in array */
-   int                   varidx              /**< variable index to check */
-   )
-{
-   int i;
-
-   assert(inds != NULL);
-   assert(varidx >= 0);
-
-   for( i = 0; i < ninds; ++i )
-   {
-      if( inds[i] == varidx )
-         return TRUE;
-   }
-   return FALSE;
 }
 
 /** returns the quotient of the largest and smallest value in an array */
@@ -2813,13 +2822,15 @@ SCIP_RETCODE DivisionBasedReduction(
 
    if( SCIPsetIsGE(set, resolutionslack, 0.0) )
    {
-      SCIP_CALL( resolutionSetSortFromBounds(reasonset, set, prob, currbdchgidx, residx, &totaltoweaken) );
+      SCIP_CALL( resolutionSetSortFromBounds(reasonset, set, prob, currbdchgidx, residx, &totaltoweaken, TRUE) );
    }
    while ( SCIPsetIsGE(set, resolutionslack, 0.0) && applydivision )
    {
       int lefttoweaken;
       applydivision = FALSE;
-      SCIP_CALL( resolutionSetSortFromBounds(reasonset, set, prob, currbdchgidx, residx, &lefttoweaken) );
+      SCIP_CALL( resolutionSetSortFromBounds(reasonset, set, prob, currbdchgidx, residx, &lefttoweaken, TRUE) );
+      if ( lefttoweaken == 0 )
+         break;
       /* loop over all variables and weaken one by one */
       for( i = resolutionsetGetNNzs(reasonset) - 1; i > 0; --i )
       {
@@ -2836,20 +2847,12 @@ SCIP_RETCODE DivisionBasedReduction(
                SCIP_Real ub;
                ub = SCIPgetVarUbAtIndex(set->scip, vartoweaken, currbdchgidx, TRUE);
 
-               if( SCIPsetIsEQ(set, ub, SCIPvarGetUbGlobal(vartoweaken)) )
+               if( SCIPsetIsEQ(set, ub, SCIPvarGetUbGlobal(vartoweaken)) && !SCIPsetIsZero(set, fmod(reasonset->vals[i], coefinreason)) )
                {
-                  if ( SCIPsetIsZero(set, fmod(reasonset->vals[i], coefinreason)) )
-                  {
-                     totaltoweaken--;
-                     assert(totaltoweaken >= 0);
-                  }
-                  else
-                  {
                      weakenVarReason(reasonset, set, vartoweaken, i);
                      varwasweakened = TRUE;
                      applydivision = TRUE;
                      ++(*nvarsweakened);
-                  }
                }
             }
             else if( reasonset->vals[i] < 0.0 )
@@ -2857,20 +2860,12 @@ SCIP_RETCODE DivisionBasedReduction(
                SCIP_Real lb;
                lb = SCIPgetVarLbAtIndex(set->scip, vartoweaken, currbdchgidx, TRUE);
 
-               if( SCIPsetIsEQ(set, lb, SCIPvarGetLbGlobal(vartoweaken)) )
+               if( SCIPsetIsEQ(set, lb, SCIPvarGetLbGlobal(vartoweaken))  && !SCIPsetIsZero(set, fmod(reasonset->vals[i], coefinreason)) )
                {
-                  if ( SCIPsetIsZero(set, fmod(reasonset->vals[i], coefinreason)) )
-                  {
-                     totaltoweaken--;
-                     assert(totaltoweaken >= 0);
-                  }
-                  else
-                  {
                      weakenVarReason(reasonset, set, vartoweaken, i);
                      varwasweakened = TRUE;
                      applydivision = TRUE;
                      ++(*nvarsweakened);
-                  }
                }
             }
          }
@@ -2998,13 +2993,15 @@ SCIP_RETCODE tighteningBasedReduction(
    resolutionslack = getSlack(set, prob, conflict->resolvedresolutionset, currbdchgidx, fixbounds, fixinds);
    if( SCIPsetIsGE(set, resolutionslack, 0.0) )
    {
-      SCIP_CALL( resolutionSetSortFromBounds(reasonset, set, prob, currbdchgidx, residx, &totaltoweaken) );
+      SCIP_CALL( resolutionSetSortFromBounds(reasonset, set, prob, currbdchgidx, residx, &totaltoweaken, FALSE) );
    }
    while ( SCIPsetIsGE(set, resolutionslack, 0.0) && applytightening )
    {
       int lefttoweaken;
-      SCIP_CALL( resolutionSetSortFromBounds(reasonset, set, prob, currbdchgidx, residx, &lefttoweaken) );
+      SCIP_CALL( resolutionSetSortFromBounds(reasonset, set, prob, currbdchgidx, residx, &lefttoweaken, FALSE) );
       applytightening = FALSE;
+      if ( lefttoweaken == 0 )
+         break;
       for( i = resolutionsetGetNNzs(reasonset) - 1; i > 0; --i )
       {
          SCIP_Bool varwasweakened;
