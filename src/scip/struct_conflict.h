@@ -148,6 +148,7 @@ struct SCIP_Conflict
    SCIP_Longint          npropreconvconss;   /**< number of reconvergence constraints detected in propagation conflict analysis */
    SCIP_Longint          npropreconvliterals;/**< total number of literals in valid propagation reconvergence constraints */
    SCIP_Longint          nrescalls;          /**< number of calls to resolution conflict analysis */
+   SCIP_Longint          nreductioncalls;    /**< number of calls to reduction in resolution conflict analysis */
    SCIP_Longint          nressuccess;        /**< number of calls yielding at least one conflict constraint */
    SCIP_Longint          nreslargecoefs;     /**< number of calls terminating because of large coefficients */
    SCIP_Longint          nreslongconfs;      /**< number of calls terminating because of long resolution sets */
@@ -244,6 +245,8 @@ struct SCIP_Conflict
    int                   nresolutionsets;    /**< number of available resolution sets */
    int                   resolutionsetssize; /**< size of resolutionset array */
    SCIP_Real             resolutionminslack; /**< smallest slack among all resolution sets */
+   SCIP_Real             weakeningsumperc;   /**< sum of percentages of variables weakened in resolution sets */
+   SCIP_Real             lengthsumperc;      /**< sum of percentages of nonzeros compared to initial conflict */
    SCIP_Bool             bdchgonlyconfqueue; /**< if true we add bound changes only in graph conflict queues */
    SCIP_Bool             bdchgonlyresqueue;  /**< if true we add bound changes only in generalized resolution queues */
    SCIP_Bool             haslargecoef;       /**< if true we have a large coefficient in the conflict constraint */

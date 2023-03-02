@@ -90,6 +90,16 @@ SCIP_Longint SCIPconflictGetNResCalls(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
+/** gets the percentage of weeakening candidates that was actually weakened */
+SCIP_Real SCIPconflictGetWeakeningPercentage(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
+/** gets the percentage of of length growth compared to the initial conflict */
+SCIP_Real SCIPconflictGetLengthGrowthPerc(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
 /** gets number of calls that resolution conflict analysis stopped for an unknown reason*/
 SCIP_Longint SCIPconflictGetNResUnkTerm(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */

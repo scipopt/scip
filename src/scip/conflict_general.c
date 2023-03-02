@@ -369,6 +369,7 @@ SCIP_RETCODE SCIPconflictCreate(
    (*conflict)->ndualproofsbndsuccess = 0;
    (*conflict)->dualproofsbndnnonzeros = 0;
    (*conflict)->nrescalls = 0;
+   (*conflict)->nreductioncalls = 0;
    (*conflict)->nressuccess = 0;
    (*conflict)->nreslargecoefs = 0;
    (*conflict)->nreslongconfs = 0;
@@ -381,6 +382,8 @@ SCIP_RETCODE SCIPconflictCreate(
    (*conflict)->resolutionsetssize = 0;
    (*conflict)->ncorrectaborts = 0;
    (*conflict)->resolutionminslack = 0.0;
+   (*conflict)->weakeningsumperc = 0.0;
+   (*conflict)->lengthsumperc = 0.0;
    (*conflict)->bdchgonlyresqueue = FALSE;
    (*conflict)->bdchgonlyconfqueue = FALSE;
    (*conflict)->haslargecoef = FALSE;

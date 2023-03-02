@@ -1084,6 +1084,27 @@ SCIP_Longint SCIPconflictGetNResCalls(
    return conflict->nrescalls;
 }
 
+/** gets the percentage of weeakening candidates that was actually weakened */
+SCIP_Real SCIPconflictGetWeakeningPercentage(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   )
+{
+   assert(conflict != NULL);
+   if ( conflict->nreductioncalls == 0 )
+      return 0.0;
+   else
+      return 100.0 * conflict->weakeningsumperc / conflict->nreductioncalls;
+}
+
+/** gets the percentage of of length growth compared to the initial conflict */
+SCIP_Real SCIPconflictGetLengthGrowthPerc(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   )
+{
+   assert(conflict != NULL);
+   return 100.0 * conflict->lengthsumperc / SCIPconflictGetNResConflictConss(conflict);
+}
+
 /** gets number of calls that resolution conflict analysis stopped for an unknown reason*/
 SCIP_Longint SCIPconflictGetNResUnkTerm(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
@@ -1185,7 +1206,8 @@ SCIP_RETCODE resolutionSetSortFromBounds(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_BDCHGIDX*        currbdchgidx,       /**< current bound change index */
-   int                   residx              /**< index of the variable to resolve */
+   int                   residx,             /**< index of the variable to resolve */
+   int*                  nweakencands        /**< pointer to store the number of candidates for weakening */
    )
 {
    SCIP_VAR** vars;
@@ -1217,11 +1239,20 @@ SCIP_RETCODE resolutionSetSortFromBounds(
          typebounds[i] = 0;
       }
       else if( SCIPsetIsEQ(set, ub, SCIPvarGetUbGlobal(vartoweaken)) && SCIPsetIsEQ(set, lb, SCIPvarGetLbGlobal(vartoweaken)) )
+      {
+         (*nweakencands)++;
          typebounds[i] = 2;
+      }
       else if( SCIPsetIsGT(set, resolutionset->vals[i], 0.0) && SCIPsetIsEQ(set, ub, SCIPvarGetUbGlobal(vartoweaken)) )
+      {
+         (*nweakencands)++;
          typebounds[i] = 1;
+      }
       else if ( SCIPsetIsLT(set, resolutionset->vals[i], 0.0) && SCIPsetIsEQ(set, lb, SCIPvarGetLbGlobal(vartoweaken)) )
+      {
+         (*nweakencands)++;
          typebounds[i] = 1;
+      }
       else
          typebounds[i] = 0;
 
@@ -2598,15 +2629,15 @@ SCIP_RETCODE rescaleAndResolve(
          conflict->haslargecoef = TRUE;
          conflict->nreslargecoefs++;
       }
-      SCIP_Bool success;
-      SCIP_CALL( getClauseConflictSet(conflict, blkmem, set, currbdchginfo, &success) );
+      SCIP_Bool successcluse;
+      SCIP_CALL( getClauseConflictSet(conflict, blkmem, set, currbdchginfo, &successcluse) );
       conflict->resolutionset->slack = -1.0;
-      if( success)
+      if( successcluse)
       {
          SCIPsortIntReal(conflictresolutionset->inds, conflictresolutionset->vals, resolutionsetGetNNzs(conflictresolutionset));
          /* todo add correct validdepth for local conflicts */
-         SCIP_CALL( getClauseReasonSet(conflict, blkmem,  set, currbdchginfo, SCIPbdchginfoGetRelaxedBound(currbdchginfo), 0, &success) );
-         if (success)
+         SCIP_CALL( getClauseReasonSet(conflict, blkmem,  set, currbdchginfo, SCIPbdchginfoGetRelaxedBound(currbdchginfo), 0, &successcluse) );
+         if (successcluse)
          {
             SCIPsortIntReal(reasonresolutionset->inds, reasonresolutionset->vals, resolutionsetGetNNzs(reasonresolutionset));
             conflict->reasonset->slack = 0.0;
@@ -2741,6 +2772,7 @@ SCIP_RETCODE DivisionBasedReduction(
    SCIP_RESOLUTIONSET* reasonset;
    SCIP_BDCHGIDX* currbdchgidx;
 
+   int totaltoweaken;
    int i;
    SCIP_Bool applydivision;
    int idxinreason;
@@ -2754,6 +2786,7 @@ SCIP_RETCODE DivisionBasedReduction(
    vars = SCIPprobGetVars(prob);
    i = 0;
    *nvarsweakened = 0;
+   totaltoweaken = 0;
    applydivision = TRUE;
    previousslack = reasonset->slack;
    *successresolution = FALSE;
@@ -2777,10 +2810,16 @@ SCIP_RETCODE DivisionBasedReduction(
    }
 
    resolutionslack = getSlack(set, prob, conflict->resolvedresolutionset, currbdchgidx, fixbounds, fixinds);
+
+   if( SCIPsetIsGE(set, resolutionslack, 0.0) )
+   {
+      SCIP_CALL( resolutionSetSortFromBounds(reasonset, set, prob, currbdchgidx, residx, &totaltoweaken) );
+   }
    while ( SCIPsetIsGE(set, resolutionslack, 0.0) && applydivision )
    {
+      int lefttoweaken;
       applydivision = FALSE;
-      SCIP_CALL( resolutionSetSortFromBounds(reasonset, set, prob, currbdchgidx, residx) );
+      SCIP_CALL( resolutionSetSortFromBounds(reasonset, set, prob, currbdchgidx, residx, &lefttoweaken) );
       /* loop over all variables and weaken one by one */
       for( i = resolutionsetGetNNzs(reasonset) - 1; i > 0; --i )
       {
@@ -2792,29 +2831,46 @@ SCIP_RETCODE DivisionBasedReduction(
 
          if ( reasonset->inds[i] != residx )
          {
-            if( reasonset->vals[i] > 0.0 && !SCIPsetIsZero(set, fmod(reasonset->vals[i], coefinreason)) )
+            if( reasonset->vals[i] > 0.0 )
             {
                SCIP_Real ub;
                ub = SCIPgetVarUbAtIndex(set->scip, vartoweaken, currbdchgidx, TRUE);
 
                if( SCIPsetIsEQ(set, ub, SCIPvarGetUbGlobal(vartoweaken)) )
                {
-                  weakenVarReason(reasonset, set, vartoweaken, i);
-                  varwasweakened = TRUE;
-                  applydivision = TRUE;
-                  ++(*nvarsweakened);
+                  if ( SCIPsetIsZero(set, fmod(reasonset->vals[i], coefinreason)) )
+                  {
+                     totaltoweaken--;
+                     assert(totaltoweaken >= 0);
+                  }
+                  else
+                  {
+                     weakenVarReason(reasonset, set, vartoweaken, i);
+                     varwasweakened = TRUE;
+                     applydivision = TRUE;
+                     ++(*nvarsweakened);
+                  }
                }
             }
-            else if( reasonset->vals[i] < 0.0 && !SCIPsetIsZero(set, fmod(reasonset->vals[i], coefinreason)) )
+            else if( reasonset->vals[i] < 0.0 )
             {
                SCIP_Real lb;
                lb = SCIPgetVarLbAtIndex(set->scip, vartoweaken, currbdchgidx, TRUE);
+
                if( SCIPsetIsEQ(set, lb, SCIPvarGetLbGlobal(vartoweaken)) )
                {
-                  weakenVarReason(reasonset, set, vartoweaken, i);
-                  varwasweakened = TRUE;
-                  applydivision = TRUE;
-                  ++(*nvarsweakened);
+                  if ( SCIPsetIsZero(set, fmod(reasonset->vals[i], coefinreason)) )
+                  {
+                     totaltoweaken--;
+                     assert(totaltoweaken >= 0);
+                  }
+                  else
+                  {
+                     weakenVarReason(reasonset, set, vartoweaken, i);
+                     varwasweakened = TRUE;
+                     applydivision = TRUE;
+                     ++(*nvarsweakened);
+                  }
                }
             }
          }
@@ -2848,6 +2904,13 @@ SCIP_RETCODE DivisionBasedReduction(
          }
       }
    }
+   if( totaltoweaken > 0)
+   {
+      SCIPstatisticPrintf("percentage of weakened variables: %f\n", (SCIP_Real) *nvarsweakened / totaltoweaken);
+      conflict->nreductioncalls++;
+      conflict->weakeningsumperc += (SCIP_Real) *nvarsweakened / totaltoweaken;
+   }
+
    /* apply a division cut (CG or MIR) after weakening as much as possible */
    if ( set->conf_weakenreasonall && SCIPsetIsGE(set, resolutionslack, 0.0) )
    {
@@ -2913,6 +2976,7 @@ SCIP_RETCODE tighteningBasedReduction(
    int i;
    SCIP_Bool applytightening;
    int nchgcoefs;
+   int totaltoweaken;
 
    assert(conflict != NULL);
 
@@ -2921,6 +2985,7 @@ SCIP_RETCODE tighteningBasedReduction(
    vars = SCIPprobGetVars(prob);
    i = 0;
    *nvarsweakened = 0;
+   totaltoweaken = 0;
    applytightening = TRUE;
    previousslack = reasonset->slack;
    *successresolution = FALSE;
@@ -2931,9 +2996,14 @@ SCIP_RETCODE tighteningBasedReduction(
       return SCIP_OKAY;
 
    resolutionslack = getSlack(set, prob, conflict->resolvedresolutionset, currbdchgidx, fixbounds, fixinds);
+   if( SCIPsetIsGE(set, resolutionslack, 0.0) )
+   {
+      SCIP_CALL( resolutionSetSortFromBounds(reasonset, set, prob, currbdchgidx, residx, &totaltoweaken) );
+   }
    while ( SCIPsetIsGE(set, resolutionslack, 0.0) && applytightening )
    {
-      SCIP_CALL( resolutionSetSortFromBounds(reasonset, set, prob, currbdchgidx, residx) );
+      int lefttoweaken;
+      SCIP_CALL( resolutionSetSortFromBounds(reasonset, set, prob, currbdchgidx, residx, &lefttoweaken) );
       applytightening = FALSE;
       for( i = resolutionsetGetNNzs(reasonset) - 1; i > 0; --i )
       {
@@ -2997,6 +3067,13 @@ SCIP_RETCODE tighteningBasedReduction(
             }
          }
       }
+   }
+
+   if( totaltoweaken > 0)
+   {
+      SCIPstatisticPrintf("percentage of weakened variables: %f\n", (SCIP_Real) *nvarsweakened / totaltoweaken);
+      conflict->nreductioncalls++;
+      conflict->weakeningsumperc += (SCIP_Real) *nvarsweakened / totaltoweaken;
    }
    /* apply tightening once after weakening as much as possible */
    if ( set->conf_weakenreasonall )
@@ -3507,6 +3584,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
    SCIP_Bool successresolution;
    SCIP_Bool usescutoffbound;
    int i;
+   int initialnnzs;
 
    SCIP_VAR* vartoresolve;
    int residx;
@@ -3687,7 +3765,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
    SCIPstatisticPrintf("ConflictSTAT: %d %d %f %f\n", nressteps, resolutionsetGetNNzs(conflictresolutionset),
                                                       conflictresolutionset->coefquotient, conflictresolutionset->slack);
 
-
+   initialnnzs = resolutionsetGetNNzs(conflictresolutionset);
    /** main loop: All-FUIP RESOLUTION
     * --------------------------------
     * - (we already have the initial conflict row and the first bound change to
@@ -4119,6 +4197,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
             if( success )
             {
                (*nconss)++;
+               conflict->lengthsumperc += (resolutionset->nnz - initialnnzs) / (SCIP_Real) initialnnzs;
                (*nconfvars) = resolutionsetGetNNzs(resolutionset);
             }
          }
