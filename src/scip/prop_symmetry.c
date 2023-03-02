@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -1751,7 +1751,7 @@ SCIP_RETCODE setSymmetryData(
                labeltopermvaridx[*nmovedvars] = i;
                labelmovedvars[i] = (*nmovedvars)++;
 
-               if ( SCIPvarIsBinary(vars[i]) )
+               if ( SCIPvarGetType(vars[i]) == SCIP_VARTYPE_BINARY )
                   ++nbinvarsaffected;
                break;
             }
@@ -1802,7 +1802,7 @@ SCIP_RETCODE setSymmetryData(
          {
             if ( perms[p][i] != i )
             {
-               if ( SCIPvarIsBinary(vars[i]) )
+               if ( SCIPvarGetType(vars[i]) == SCIP_VARTYPE_BINARY )
                   *binvaraffected = TRUE;
                break;
             }
@@ -1838,6 +1838,7 @@ SCIP_RETCODE computeSymmetryGroup(
    SCIP_Bool**           isnonlinvar,        /**< pointer to store which variables appear nonlinearly */
    SCIP_Bool*            binvaraffected,     /**< pointer to store wether a binary variable is affected by symmetry */
    SCIP_Bool*            compressed,         /**< pointer to store whether compression has been performed */
+   SCIP_Real*            symcodetime,        /**< pointer to store the time for symmetry code */
    SCIP_Bool*            success             /**< pointer to store whether symmetry computation was successful */
    )
 {
@@ -1879,6 +1880,7 @@ SCIP_RETCODE computeSymmetryGroup(
    assert( log10groupsize != NULL );
    assert( binvaraffected != NULL );
    assert( compressed != NULL );
+   assert( symcodetime != NULL );
    assert( success != NULL );
    assert( isnonlinvar != NULL );
    assert( SYMcanComputeSymmetry() );
@@ -1895,6 +1897,7 @@ SCIP_RETCODE computeSymmetryGroup(
    *binvaraffected = FALSE;
    *compressed = FALSE;
    *success = FALSE;
+   *symcodetime = 0.0;
 
    nconss = SCIPgetNConss(scip);
    nvars = SCIPgetNVars(scip);
@@ -2569,7 +2572,7 @@ SCIP_RETCODE computeSymmetryGroup(
    {
       /* determine generators */
       SCIP_CALL( SYMcomputeSymmetryGenerators(scip, maxgenerators, &matrixdata, &exprdata, nperms, nmaxperms,
-            perms, log10groupsize) );
+            perms, log10groupsize, symcodetime) );
       assert( *nperms <= *nmaxperms );
 
       /* SCIPisStopped() might call SCIPgetGap() which is only available after initpresolve */
@@ -2858,6 +2861,7 @@ SCIP_RETCODE determineSymmetry(
    )
 { /*lint --e{641}*/
    SCIP_Bool successful;
+   SCIP_Real symcodetime = 0.0;
    int maxgenerators;
    int nhandleconss;
    int nconss;
@@ -2989,7 +2993,7 @@ SCIP_RETCODE determineSymmetry(
 	 maxgenerators, symspecrequirefixed, FALSE, propdata->checksymmetries, propdata->usecolumnsparsity, propdata->conshdlr_nonlinear,
          &propdata->npermvars, &propdata->nbinpermvars, &propdata->permvars, &propdata->nperms, &propdata->nmaxperms,
          &propdata->perms, &propdata->log10groupsize, &propdata->nmovedvars, &propdata->isnonlinvar,
-         &propdata->binvaraffected, &propdata->compressed, &successful) );
+         &propdata->binvaraffected, &propdata->compressed, &symcodetime, &successful) );
 
    /* mark that we have computed the symmetry group */
    propdata->computedsymmetry = TRUE;
@@ -3010,7 +3014,7 @@ SCIP_RETCODE determineSymmetry(
    if ( propdata->nperms == 0 )
    {
       assert( checkSymmetryDataFree(propdata) );
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) no symmetry present\n", SCIPgetSolvingTime(scip));
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) no symmetry present (symcode time: %.2f)\n", SCIPgetSolvingTime(scip), symcodetime);
 
       return SCIP_OKAY;
    }
@@ -3039,7 +3043,7 @@ SCIP_RETCODE determineSymmetry(
       }
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, ", number of affected variables: %d)\n", propdata->nmovedvars);
    }
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, ")\n");
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, ") (symcode time: %.2f)\n", symcodetime);
 
    /* capture all variables while they are in the permvars array */
    for (i = 0; i < propdata->npermvars; ++i)
@@ -3158,7 +3162,7 @@ SCIP_RETCODE checkTwoCyclePermsAreOrbitope(
    }
 
    /* in the subgroup case it might happen that a generator has less than ntwocycles many 2-cyles */
-   if ( row < ntwocycles )
+   if ( row != ntwocycles )
    {
       *isorbitope = FALSE;
       SCIPfreeBufferArray(scip, &usedperm);
@@ -3712,6 +3716,10 @@ SCIP_RETCODE addOrbitopeSubgroup(
    {
       SCIPfreeBufferArray(scip, &nusedelems);
       SCIPfreeBufferArray(scip, &columnorder);
+      for (k = nrows - 1; k >= 0; --k)
+      {
+         SCIPfreeBufferArray(scip, &orbitopevaridx[k]);
+      }
       SCIPfreeBufferArray(scip, &orbitopevaridx);
       SCIPfreeBufferArray(scip, &activevars);
 
@@ -4984,7 +4992,7 @@ SCIP_RETCODE detectOrbitopes(
          SCIP_CALL( SCIPisInvolutionPerm(perms[components[j]], permvars, npermvars,
                &ntwocyclesperm, &nbincyclesperm, FALSE) );
 
-         if ( ntwocyclescomp == 0 )
+         if ( ntwocyclesperm == 0 )
          {
             isorbitope = FALSE;
             break;
@@ -7690,6 +7698,10 @@ SCIP_RETCODE SCIPincludePropSymmetry(
    if ( SYMcanComputeSymmetry() )
    {
       SCIP_CALL( SCIPincludeExternalCodeInformation(scip, SYMsymmetryGetName(), SYMsymmetryGetDesc()) );
+      if ( SYMsymmetryGetAddName() != NULL )
+      {
+         SCIP_CALL( SCIPincludeExternalCodeInformation(scip, SYMsymmetryGetAddName(), SYMsymmetryGetAddDesc()) );
+      }
    }
 
    /* depending functionality */
