@@ -198,9 +198,9 @@
 #define DEFAULT_USEDYNAMICPROP       TRUE    /**< whether dynamic propagation should be used for full orbitopes */
 #define DEFAULT_PREFERLESSROWS       TRUE    /**< Shall orbitopes with less rows be preferred in detection? */
 
-/* default parameters for orbital fixing */
-#define DEFAULT_SYMCOMPTIMING           2    /**< timing of symmetry computation for orbital fixing (0 = before presolving, 1 = during presolving, 2 = at first call) */
-#define DEFAULT_PERFORMPRESOLVING   FALSE    /**< Run orbital fixing during presolving? */
+/* default parameters for symmetry computation */
+#define DEFAULT_SYMCOMPTIMING           2    /**< timing of symmetry computation (0 = before presolving, 1 = during presolving, 2 = at first call) */
+#define DEFAULT_PERFORMPRESOLVING   FALSE    /**< Run symmetry propagation during presolving? */
 #define DEFAULT_RECOMPUTERESTART        0    /**< Recompute symmetries after a restart has occurred? (0 = never, 1 = always, 2 = if symmetry reduction found) */
 
 /* default parameters for Schreier Sims constraints */
@@ -213,10 +213,10 @@
 #define DEFAULT_SSTMIXEDCOMPONENTS    TRUE   /**< Should Schreier Sims constraints be added if a symmetry component contains variables of different types? */
 
 /* output table properties */
-#define TABLE_NAME_ORBITALFIXING        "orbitalfixing"
-#define TABLE_DESC_ORBITALFIXING        "orbital fixing statistics"
-#define TABLE_POSITION_ORBITALFIXING    7001                    /**< the position of the statistics table */
-#define TABLE_EARLIEST_ORBITALFIXING    SCIP_STAGE_SOLVING      /**< output of the statistics table is only printed from this stage onwards */
+#define TABLE_NAME_SYMMETRY     "symmetry"
+#define TABLE_DESC_SYMMETRY     "symmetry handling statistics"
+#define TABLE_POSITION_SYMMETRY 7001                    /**< the position of the statistics table */
+#define TABLE_EARLIEST_SYMMETRY SCIP_STAGE_SOLVING      /**< output of the statistics table is only printed from this stage onwards */
 
 
 /* other defines */
@@ -308,14 +308,11 @@ struct SCIP_PropData
    SCIP_Bool             usedynamicprop;     /**< whether dynamic propagation should be used for full orbitopes */
    SCIP_Bool             preferlessrows;     /**< Shall orbitopes with less rows be preferred in detection? */
 
-   /* data necessary for orbital fixing */
-   SCIP_Bool             performpresolving;  /**< Run orbital fixing during presolving? */
+   /* data necessary for symmetry computation order */
+   SCIP_Bool             performpresolving;  /**< Run symmetry propagation during presolving? */
    int                   recomputerestart;   /**< Recompute symmetries after a restart has occured? (0 = never, 1 = always, 2 = if symmetry reduction found) */
-   int                   symcomptiming;      /**< timing of orbital fixing (0 = before presolving, 1 = during presolving, 2 = at first call) */
+   int                   symcomptiming;      /**< timing for computation symmetries (0 = before presolving, 1 = during presolving, 2 = at first call) */
    int                   lastrestart;        /**< last restart for which symmetries have been computed */
-   int                   nfixedzero;         /**< number of variables fixed to 0 */
-   int                   nfixedone;          /**< number of variables fixed to 1 */
-   SCIP_Longint          nodenumber;         /**< number of node where propagation has been last applied */
    SCIP_Bool             symfoundreduction;  /**< whether symmetry handling propagation has found a reduction since the last time computing symmetries */
 
    /* data necessary for Schreier Sims constraints */
@@ -502,9 +499,9 @@ struct SCIP_TableData
 };
 
 
-/** output method of orbital fixing propagator statistics table to output file stream 'file' */
+/** output method of symmetry propagator statistics table to output file stream 'file' */
 static
-SCIP_DECL_TABLEOUTPUT(tableOutputOrbitalfixing)
+SCIP_DECL_TABLEOUTPUT(tableOutputSymmetry)
 {
    SCIP_TABLEDATA* tabledata;
 
@@ -515,12 +512,7 @@ SCIP_DECL_TABLEOUTPUT(tableOutputOrbitalfixing)
    assert( tabledata != NULL );
    assert( tabledata->propdata != NULL );
 
-   if ( tabledata->propdata->nperms > 0 )
-   {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, file, "Orbital fixing     :\n");
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, file, "  vars fixed to 0  :%11d\n", tabledata->propdata->nfixedzero);
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, file, "  vars fixed to 1  :%11d\n", tabledata->propdata->nfixedone);
-   }
+   /* @todo report symmetry information when printing symmetries */
 
    return SCIP_OKAY;
 }
@@ -528,7 +520,7 @@ SCIP_DECL_TABLEOUTPUT(tableOutputOrbitalfixing)
 
 /** destructor of statistics table to free user data (called when SCIP is exiting) */
 static
-SCIP_DECL_TABLEFREE(tableFreeOrbitalfixing)
+SCIP_DECL_TABLEFREE(tableFreeSymmetry)
 {
    SCIP_TABLEDATA* tabledata;
    tabledata = SCIPtableGetData(table);
@@ -7376,9 +7368,6 @@ SCIP_DECL_PROPEXIT(propExitSymmetry)
    propdata->nsymresacks = 0;
    propdata->norbitopes = 0;
    propdata->lastrestart = 0;
-   propdata->nfixedzero = 0;
-   propdata->nfixedone = 0;
-   propdata->nodenumber = -1;
    propdata->symfoundreduction = FALSE;
 
    return SCIP_OKAY;
@@ -7493,9 +7482,6 @@ SCIP_RETCODE SCIPincludePropSymmetry(
    propdata->nmovedimplintpermvars = 0;
    propdata->nmovedcontpermvars = 0;
    propdata->lastrestart = 0;
-   propdata->nfixedzero = 0;
-   propdata->nfixedone = 0;
-   propdata->nodenumber = -1;
    propdata->symfoundreduction = FALSE;
 
    propdata->sstconss = NULL;
@@ -7521,9 +7507,9 @@ SCIP_RETCODE SCIPincludePropSymmetry(
    /* include table */
    SCIP_CALL( SCIPallocBlockMemory(scip, &tabledata) );
    tabledata->propdata = propdata;
-   SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_ORBITALFIXING, TABLE_DESC_ORBITALFIXING, TRUE,
-         NULL, tableFreeOrbitalfixing, NULL, NULL, NULL, NULL, tableOutputOrbitalfixing,
-         tabledata, TABLE_POSITION_ORBITALFIXING, TABLE_EARLIEST_ORBITALFIXING) );
+   SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_SYMMETRY, TABLE_DESC_SYMMETRY, TRUE,
+         NULL, tableFreeSymmetry, NULL, NULL, NULL, NULL, tableOutputSymmetry,
+         tabledata, TABLE_POSITION_SYMMETRY, TABLE_EARLIEST_SYMMETRY) );
 
    /* include display dialog */
    rootdialog = SCIPgetRootDialog(scip);
@@ -7593,15 +7579,15 @@ SCIP_RETCODE SCIPincludePropSymmetry(
          "timing of adding constraints (0 = before presolving, 1 = during presolving, 2 = after presolving)",
          &propdata->addconsstiming, TRUE, DEFAULT_ADDCONSSTIMING, 0, 2, NULL, NULL) );
 
-   /* add parameters for orbital fixing */
+   /* add parameters for orbital reduction */
    SCIP_CALL( SCIPaddIntParam(scip,
          "propagating/" PROP_NAME "/ofsymcomptiming",
-         "timing of symmetry computation for orbital fixing (0 = before presolving, 1 = during presolving, 2 = at first call)",
+         "timing of symmetry computation (0 = before presolving, 1 = during presolving, 2 = at first call)",
          &propdata->symcomptiming, TRUE, DEFAULT_SYMCOMPTIMING, 0, 2, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "propagating/" PROP_NAME "/performpresolving",
-         "run orbital fixing during presolving?",
+         "run orbital reduction during presolving?",
          &propdata->performpresolving, TRUE, DEFAULT_PERFORMPRESOLVING, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
