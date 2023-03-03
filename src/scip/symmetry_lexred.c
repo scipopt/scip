@@ -328,7 +328,7 @@ SCIP_DECL_SORTINDCOMP(sortbynodedepthbranchindices)
 
    /* this may not happen, since all elements must be different */
    assert( index1->index == index2->index );
-   assert( FALSE );
+
    return 0;
 }
 
@@ -388,6 +388,7 @@ SCIP_RETCODE getVarOrder(
       /* add index i of branching variable */
       assert( i >= 0 );
       assert( i < nvars );
+      assert( (*nselvars) < maxnselvars );
       varorder[(*nselvars)++] = i;
    }
 
@@ -613,15 +614,15 @@ SCIP_RETCODE propagateStaticLexred(
 )
 {
    int row;
-   int i;
-   int j;
-   SCIP_VAR* vari;
-   SCIP_VAR* varj;
+   int i = -1;
+   int j = -1;
+   SCIP_VAR* vari = NULL;
+   SCIP_VAR* varj = NULL;
 
-   SCIP_Real lbi;
-   SCIP_Real ubi;
-   SCIP_Real lbj;
-   SCIP_Real ubj;
+   SCIP_Real lbi = 0.0;
+   SCIP_Real ubi = 0.0;
+   SCIP_Real lbj = 0.0;
+   SCIP_Real ubj = 0.0;
    SCIP_Bool success;
    SCIP_Bool peekfeasible;
 
@@ -740,6 +741,10 @@ SCIP_RETCODE propagateStaticLexred(
       if ( GT(scip, ubi, lbj) )
          break;
    }
+   assert( i >= 0 );
+   assert( j >= 0 );
+   assert( vari != NULL );
+   assert( varj != NULL );
 
    if ( row < nselvars )
    {
@@ -763,11 +768,11 @@ SCIP_RETCODE propagateStaticLexred(
       {
          /* this is Option 2: varj gets fixed to lbi by propagation. */
          SCIP_CALL( peekStaticLexredIsFeasible(scip, lexdata, varorder, nselvars, i, j,
-            row, lbi, &peekfeasible) ); /*lint !e771*/
+            row, lbi, &peekfeasible) );
          if ( !peekfeasible )
          {
             /* vari cannot take value lbi, so we increase the lower bound. */
-            switch ( SCIPvarGetType(vari) )  /*lint !e771*/
+            switch ( SCIPvarGetType(vari) )
             {
                case SCIP_VARTYPE_BINARY:
                case SCIP_VARTYPE_IMPLINT:
@@ -780,7 +785,7 @@ SCIP_RETCODE propagateStaticLexred(
                   if ( *infeasible )
                      return SCIP_OKAY;
                   lbi = lbi + 1.0;
-                  assert( LE(scip, lbi, ubi) );  /*lint !e771*/
+                  assert( LE(scip, lbi, ubi) );
                   break;
                case SCIP_VARTYPE_CONTINUOUS:
                   /* continuous variable type: act as if we increase the variable by a very little bit.
@@ -805,7 +810,7 @@ SCIP_RETCODE propagateStaticLexred(
        *   Option 2: vari gets fixed to ubj. Then, we must check if feasibility is found, still.
        *     If it turns out infeasible, then we know varj cannot take value ubj, so we can decrease the upper bound.
        */
-      assert( GE(scip, ubi, ubj) );  /*lint !e771*/ /* this must be the case after reductions in the for-loop */
+      assert( GE(scip, ubi, ubj) );  /* this must be the case after reductions in the for-loop */
       if ( EQ(scip, ubi, ubj) )
       {
          /* this is Option 2: vari gets fixed to ubj by propagation. */

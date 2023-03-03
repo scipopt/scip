@@ -57,11 +57,9 @@
 #include "scip/struct_mem.h"
 #include "scip/struct_tree.h"
 #include "scip/symmetry.h"
-#include <ctype.h>
 #include <string.h>
 #include <symmetry/type_symmetry.h>
 
-#include <memory.h>
 
 /* symmetry handler properties */
 #define SYMHDLR_NAME           "orbitopalreduction"

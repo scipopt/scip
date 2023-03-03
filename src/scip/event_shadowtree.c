@@ -66,7 +66,6 @@
 #include "scip/symmetry.h"
 #include <ctype.h>
 #include <string.h>
-#include <symmetry/type_symmetry.h>
 #include <memory.h>
 #include "scip/event_shadowtree.h"
 
@@ -148,7 +147,7 @@ SCIP_SHADOWNODE* SCIPshadowTreeGetShadowNode(
  */
 static
 SCIP_DECL_EVENTEXEC(eventExecNodeBranched)
-{
+{ /*lint !e715*/
    SCIP_EVENTHDLRDATA* eventhdlrdata;
    SCIP_SHADOWTREE* shadowtree;
    SCIP_SHADOWNODE* eventshadownode;
@@ -268,7 +267,7 @@ SCIP_DECL_EVENTEXEC(eventExecNodeBranched)
        * The hashtable only checks by the 'nodeid' field, so we just check if there's none with this nodeid.
        */
       assert( !SCIPhashtableExists(shadowtree->nodemap, (void*) childshadownode));
-      SCIPhashtableInsert(shadowtree->nodemap, childshadownode);
+      SCIP_CALL( SCIPhashtableInsert(shadowtree->nodemap, childshadownode) );
    }
    SCIPfreeBufferArray(scip, &branchingdecisions);
 
@@ -310,7 +309,7 @@ SCIP_DECL_EVENTEXEC(eventExecNodeBranched)
  */
 static
 SCIP_DECL_EVENTEXEC(eventExecNodeDeleted)
-{
+{ /*lint !e396*/
    SCIP_EVENTHDLRDATA* eventhdlrdata;
    SCIP_SHADOWTREE* shadowtree;
    SCIP_NODE* deletednode;
@@ -359,7 +358,7 @@ SCIP_DECL_EVENTEXEC(eventExecNodeDeleted)
       childshadownode = deletedshadownode->children[c];
 
       /* remove from hashtable */
-      SCIPhashtableRemove(shadowtree->nodemap, (void*) childshadownode);
+      SCIP_CALL( SCIPhashtableRemove(shadowtree->nodemap, (void*) childshadownode) );
 
       /* clean childshadownode */
       assert( childshadownode->npropagations >= 0 );
@@ -515,13 +514,14 @@ SCIP_DECL_EVENTINITSOL(eventInitsolShadowTree)
    shadowtree = eventhdlrdata->shadowtree;
 
    initialnodemapsize = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) > LOG2(NODEMAP_MAX_INITIAL_SIZE) ?
-      NODEMAP_MAX_INITIAL_SIZE : MIN(NODEMAP_MAX_INITIAL_SIZE, 1 << (SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip)));
+      NODEMAP_MAX_INITIAL_SIZE :
+      MIN(NODEMAP_MAX_INITIAL_SIZE, 1 << (SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip)));  /*lint !e666 !e701 !e747*/
    SCIP_CALL( SCIPhashtableCreate(&shadowtree->nodemap, scip->mem->probmem, initialnodemapsize,
       hashGetKeyShadowNode, hashKeyEqShadowNode, hashKeyValShadowNode, NULL) );
 
    /* the root node is the only branch-and-bound tree node not created by branching, so add. */
    SCIP_CALL( SCIPallocBlockMemory(scip, &rootnode) );
-   rootnode->nodeid = 1ll; /* root node has number 1 */
+   rootnode->nodeid = 1ll;  /*!lint e620*/  /* root node has number 1 */
    rootnode->parent = NULL;
    rootnode->children = NULL;
    rootnode->nchildren = 0;

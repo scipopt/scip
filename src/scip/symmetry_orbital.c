@@ -1155,11 +1155,11 @@ SCIP_DECL_EVENTEXEC(eventExecGlobalBoundChange)
    {
    case SCIP_EVENTTYPE_GUBCHANGED:
       /* can assert with equality, because no arithmetic must be applied after inheriting the value of oldbound */
-      assert( orcdata->globalvarubs[varidx] == SCIPeventGetOldbound(event) ); /* lint !e777 */
+      assert( orcdata->globalvarubs[varidx] == SCIPeventGetOldbound(event) ); /*lint !e777 */
       orcdata->globalvarubs[varidx] = SCIPeventGetNewbound(event);
       break;
    case SCIP_EVENTTYPE_GLBCHANGED:
-      assert( orcdata->globalvarlbs[varidx] == SCIPeventGetOldbound(event) ); /* lint !e777 */
+      assert( orcdata->globalvarlbs[varidx] == SCIPeventGetOldbound(event) ); /*lint !e777 */
       orcdata->globalvarlbs[varidx] = SCIPeventGetNewbound(event);
       break;
    default:

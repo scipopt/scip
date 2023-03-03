@@ -149,6 +149,8 @@ SCIP_RETCODE consdataFree(
    assert( consdata != NULL );
    assert( *consdata != NULL );
 
+   nrows = (*consdata)->nrows;
+
    /* release variables in vars1 and vars2 array */
    for (i = 0; i < nrows; ++i)
    {
@@ -159,7 +161,6 @@ SCIP_RETCODE consdataFree(
       SCIP_CALL( SCIPreleaseVar(scip, &(*consdata)->vars2[i] ) );
    }
 
-   nrows = (*consdata)->nrows;
    SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->vars2), nrows);
    SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->vars1), nrows);
 
