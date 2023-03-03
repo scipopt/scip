@@ -1727,7 +1727,94 @@ SCIP_RETCODE detectOrbitopalSymmetries(
    return SCIP_OKAY;
 }
 
-/** checks whether to families of orbitopal symmetries defines double lex matrix, in case of success, generate matrix
+/** checks whether all columns of family of matrices can be sign-flipped */
+static
+SCIP_RETCODE checkMatricesAllColumnsFlippable(
+   int***                matrices,           /**< list of matrices to be checked */
+   int                   nmatrices,          /**< number of matrices in matrices */
+   int                   nrows,              /**< number of rows of all matrices */
+   int*                  ncols,              /**< for each matrix in matrices its number of columns */
+   int**                 perms,              /**< permutations */
+   int*                  selectedsignedperms,/**< list of selected signed permutations in perms */
+   int                   nsignedperms,       /**< number of selected signed permutations */
+   int                   permlen,            /**< length of unsigned permutations */
+   SCIP_Bool*            allflippable        /**< pointer to store whether all columns can be flipped */
+   )
+{
+   SCIP_Bool colfound;
+   int* perm;
+   int cnt;
+   int c;
+   int i;
+   int j;
+   int p;
+
+   assert( matrices != NULL );
+   assert( nrows > 0 );
+   assert( ncols != NULL );
+   assert( perms != NULL );
+   assert( selectedsignedperms != NULL );
+   assert( nsignedperms >= 0 );
+   assert( permlen >= 0 );
+   assert( allflippable != NULL );
+
+   if ( nsignedperms == 0 )
+   {
+      *allflippable = FALSE;
+      return SCIP_OKAY;
+   }
+   *allflippable = TRUE;
+
+   /* Since we are dealing with (signed) permutation groups, it is sufficient to check whether
+    * each matrix in matrices has at least one column that is sign-flippable.
+    */
+   for (c = 0; c < nmatrices && *allflippable; ++c)
+   {
+      colfound = FALSE;
+
+      for (p = 0; p < nsignedperms && !colfound; ++p)
+      {
+         perm = perms[selectedsignedperms[p]];
+
+         for (j = 0; j < ncols[c] && !colfound; ++j)
+         {
+            colfound = TRUE;
+
+            /* check whether the signed permutation flips all elements in the column */
+            for (i = 0; i < nrows && colfound; ++i)
+            {
+               if ( perm[matrices[c][i][j]] != permlen + matrices[c][i][j] )
+                  colfound = FALSE;
+            }
+
+            if ( ! colfound )
+               continue;
+
+            /* check whether the permutation only affects elements from this column */
+            cnt = 0;
+            for (i = 0; i < permlen && colfound; ++i)
+            {
+               if ( perm[i] != i && perm[i] != permlen + i )
+                  colfound = FALSE;
+               else if ( perm[i] != i )
+                  ++cnt;
+            }
+            assert( !colfound || cnt >= nrows );
+
+            /* too many variables get flippled */
+            if ( cnt > nrows )
+               colfound = FALSE;
+         }
+      }
+
+      if ( ! colfound )
+         *allflippable = FALSE;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** checks whether two families of orbitopal symmetries defines double lex matrix, in case of success, generate matrix
  *
  *  The columns of matrix1 will serve as the columns of the matrix to be generated, the columns of matrix2 will
  *  serve as rows.
@@ -1743,11 +1830,17 @@ SCIP_RETCODE isDoublelLexSym(
    int                   nrows2,             /**< number of rows of second family of matrices */
    int*                  ncols2,             /**< for each matrix in the second family, its number of columns */
    int                   nmatrices2,         /**< number of matrices in the second family */
+   int**                 perms,              /**< (signed) permutations */
+   int*                  selectedsignedperms,/**< selected signed permutations from perms */
+   int                   nsignedperms,       /**< number of selected signed permutations */
+   int                   permlen,            /**< unsigned permutation length */
    int***                doublelexmatrix,    /**< pointer to store combined matrix */
    int*                  nrows,              /**< pointer to store number of rows in combined matrix */
    int*                  ncols,              /**< pointer to store number of columns in combined matrix */
    int**                 rowsbegin,          /**< pointer to store the begin positions of a new lex subset of rows */
    int**                 colsbegin,          /**< pointer to store the begin positions of a new lex subset of columns */
+   SCIP_Bool*            allrowssigned,      /**< pointer to store whether all rows can be sign-flipped */
+   SCIP_Bool*            allcolssigned,      /**< pointer to store whether all columns can be sign-flipped */
    SCIP_Bool*            success             /**< pointer to store whether combined matrix could be generated */
    )
 {
@@ -1923,6 +2016,17 @@ SCIP_RETCODE isDoublelLexSym(
    }
    printf("\n");
 
+   /* check whether each row/column of doublelexmatrix can be sign-flipped
+    *
+    * It is sufficient to check this for one column per submatrix of matrices1, because
+    * we are dealing with groups of symmetries.
+    */
+   SCIP_CALL( checkMatricesAllColumnsFlippable(matrices1, nmatrices1, nrows1, ncols1,
+         perms, selectedsignedperms, nsignedperms, permlen, allcolssigned) );
+   SCIP_CALL( checkMatricesAllColumnsFlippable(matrices2, nmatrices2, nrows2, ncols2,
+         perms, selectedsignedperms, nsignedperms, permlen, allrowssigned) );
+   printf("flips for columns: %d; rows: %d\n", *allcolssigned, *allrowssigned);
+
  FREEMEMORY:
    SCIPfreeBufferArray(scip, &sortvals);
    SCIPhashmapFree(&idxtocol2);
@@ -1953,20 +2057,22 @@ SCIP_RETCODE tryHandleDoubleLexMatrices(
    SCIP_Bool success = TRUE;
    SCIP_Bool isinvolution;
    SCIP_Bool permissigned;
+   SCIP_Bool allrowssigned;
+   SCIP_Bool allcolssigned;
    int** doublelexmatrix;
    int* rowsbegin;
    int* colsbegin;
    int nrows;
    int ncols;
-   int*** matricestype1;
-   int* ncolstype1;
-   int nmatricestype1;
-   int*** matricestype2;
-   int* ncolstype2;
-   int nmatricestype2;
    int* permstype1;
    int* permstype2;
    int* signedperms;
+   int*** matricestype1 = NULL;
+   int*** matricestype2 = NULL;
+   int* ncolstype1 = NULL;
+   int* ncolstype2 = NULL;
+   int nmatricestype1 = 0;
+   int nmatricestype2 = 0;
    int npermstype1 = 0;
    int npermstype2 = 0;
    int nsignedperms = 0;
@@ -2035,11 +2141,12 @@ SCIP_RETCODE tryHandleDoubleLexMatrices(
       goto FREEMEMORY;
 
    /* check whether symmetries of type 2 permute two rows of matrix of type 1 */
-   SCIP_CALL( isDoublelLexSym(scip, matricestype1, ncycs1, ncolstype1, nmatricestype1,
-         matricestype2, ncycs2, ncolstype2, nmatricestype2,
-         &doublelexmatrix, &nrows, &ncols, &rowsbegin, &colsbegin, &success) );
-
-   /* check whether proper signed permutations flip rows or columns */
+   if ( ncycs1 != -1 && ncycs2 != -1 )
+   {
+      SCIP_CALL( isDoublelLexSym(scip, matricestype1, ncycs1, ncolstype1, nmatricestype1,
+            matricestype2, ncycs2, ncolstype2, nmatricestype2, perms, signedperms, nsignedperms, permlen,
+            &doublelexmatrix, &nrows, &ncols, &rowsbegin, &colsbegin, &allrowssigned, &allcolssigned, &success) );
+   }
 
  FREEMEMORY:
    for (p = nmatricestype2 - 1; p >= 0; --p)
