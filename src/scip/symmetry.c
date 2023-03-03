@@ -1882,8 +1882,6 @@ SCIP_RETCODE isDoublelLexSym(
    /* initialize data */
    *nrows = nrows1;
    *ncols = nrows2;
-   rowsbegin = 0;
-   colsbegin = 0;
    *success = TRUE;
 
    /* collect information about entries in matrices */
@@ -2007,6 +2005,16 @@ SCIP_RETCODE isDoublelLexSym(
       }
    }
 
+   /* store begin positions of row and column blocks */
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, rowsbegin, nmatrices2 + 1) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, colsbegin, nmatrices1 + 1) );
+   (*rowsbegin)[0] = 0;
+   (*colsbegin)[0] = 0;
+   for (j = 0; j < nmatrices2; ++j)
+      (*rowsbegin)[j + 1] = (*rowsbegin)[j] + ncols2[j];
+   for (j = 0; j < nmatrices1; ++j)
+      (*colsbegin)[j + 1] = (*colsbegin)[j] + ncols1[j];
+
    printf("Fill success %d\n", *success);
    for (i = 0; i < *nrows; ++i)
    {
@@ -2026,6 +2034,9 @@ SCIP_RETCODE isDoublelLexSym(
    SCIP_CALL( checkMatricesAllColumnsFlippable(matrices2, nmatrices2, nrows2, ncols2,
          perms, selectedsignedperms, nsignedperms, permlen, allrowssigned) );
    printf("flips for columns: %d; rows: %d\n", *allcolssigned, *allrowssigned);
+
+   SCIPfreeBlockMemoryArray(scip, colsbegin, nmatrices1 + 1);
+   SCIPfreeBlockMemoryArray(scip, rowsbegin, nmatrices2 + 1);
 
  FREEMEMORY:
    SCIPfreeBufferArray(scip, &sortvals);
