@@ -7797,7 +7797,10 @@ SCIP_RETCODE SCIPgetSymmetry(
 
    if ( components != NULL || componentbegins != NULL || vartocomponent != NULL || ncomponents != NULL )
    {
-      SCIP_CALL( ensureSymmetryComponentsComputed(scip, propdata) );
+      if ( propdata->nperms > 0 )
+      {
+         SCIP_CALL( ensureSymmetryComponentsComputed(scip, propdata) );
+      }
    }
 
    if ( components != NULL )
