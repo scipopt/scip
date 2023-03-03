@@ -823,7 +823,7 @@ SCIP_RETCODE freeSymmetryData(
    for (i = 0; i < propdata->npermvars; ++i)
    {
       assert( propdata->permvars[i] != NULL );
-      SCIPreleaseVar(scip, &propdata->permvars[i]);
+      SCIP_CALL( SCIPreleaseVar(scip, &propdata->permvars[i]) );
    }
 
    /* free permstrans matrix*/

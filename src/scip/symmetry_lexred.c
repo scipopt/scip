@@ -61,8 +61,6 @@
 #include "scip/event_shadowtree.h"
 #include <ctype.h>
 #include <string.h>
-#include <symmetry/type_symmetry.h>
-
 #include <memory.h>
 
 
@@ -764,11 +762,12 @@ SCIP_RETCODE propagateStaticLexred(
       if ( EQ(scip, lbj, lbi) )
       {
          /* this is Option 2: varj gets fixed to lbi by propagation. */
-         SCIP_CALL( peekStaticLexredIsFeasible(scip, lexdata, varorder, nselvars, i, j, row, lbi, &peekfeasible) );
+         SCIP_CALL( peekStaticLexredIsFeasible(scip, lexdata, varorder, nselvars, i, j,
+            row, lbi, &peekfeasible) ); /*lint !e771*/
          if ( !peekfeasible )
          {
             /* vari cannot take value lbi, so we increase the lower bound. */
-            switch ( SCIPvarGetType(vari) )
+            switch ( SCIPvarGetType(vari) )  /*lint !e771*/
             {
                case SCIP_VARTYPE_BINARY:
                case SCIP_VARTYPE_IMPLINT:
@@ -781,7 +780,7 @@ SCIP_RETCODE propagateStaticLexred(
                   if ( *infeasible )
                      return SCIP_OKAY;
                   lbi = lbi + 1.0;
-                  assert( LE(scip, lbi, ubi) );
+                  assert( LE(scip, lbi, ubi) );  /*lint !e771*/
                   break;
                case SCIP_VARTYPE_CONTINUOUS:
                   /* continuous variable type: act as if we increase the variable by a very little bit.
@@ -806,7 +805,7 @@ SCIP_RETCODE propagateStaticLexred(
        *   Option 2: vari gets fixed to ubj. Then, we must check if feasibility is found, still.
        *     If it turns out infeasible, then we know varj cannot take value ubj, so we can decrease the upper bound.
        */
-      assert( GE(scip, ubi, ubj) );  /* this must be the case after reductions in the for-loop */
+      assert( GE(scip, ubi, ubj) );  /*lint !e771*/ /* this must be the case after reductions in the for-loop */
       if ( EQ(scip, ubi, ubj) )
       {
          /* this is Option 2: vari gets fixed to ubj by propagation. */
@@ -1183,7 +1182,7 @@ SCIP_RETCODE SCIPlexicographicReductionPropagate(
     *  1. Choose those variables that have (depth, index) with depth > 0 (these)
     *  2. Sort by depth, then by index, in increasing order.
     */
-   SCIPallocCleanBufferArray(scip, &nodedepthbranchindices, masterdata->nsymvars);
+   SCIP_CALL( SCIPallocCleanBufferArray(scip, &nodedepthbranchindices, masterdata->nsymvars) );
    SCIP_CALL( shadowtreeFillNodeDepthBranchIndices(scip, masterdata, nodedepthbranchindices, shadowtree, focusnode) );
    /* ... Do everything using this nodedepthbranchindices structure */
 

@@ -376,7 +376,7 @@ SCIP_RETCODE updateColumnOrderWhenBranchingOnColumn(
    case SCIP_COLUMNORDERING_MEDIAN:
       /* collect columns identical to the var-column, then select column satisfying ordering condition */
       norigequalcolids = 0;
-      SCIPallocBufferArray(scip, &origequalcolids, ncols);
+      SCIP_CALL( SCIPallocBufferArray(scip, &origequalcolids, ncols) );
 
       /* collect equal columns */
 #ifdef SCIP_MORE_DEBUG
@@ -427,6 +427,8 @@ SCIP_RETCODE updateColumnOrderWhenBranchingOnColumn(
       /* end switch */
       break;
 
+   case SCIP_COLUMNORDERING_NONE:
+      /* already handled earlier in this function */
    default:
       /* unknown column ordering variant */
       return SCIP_ERROR;
@@ -788,12 +790,12 @@ SCIP_DECL_EVENTEXEC(eventExecNodeBranched)
       if ( newnodeinfo->rows == NULL )
       {
          assert( newnodeinfo->nrows == 0 );
-         SCIPallocBlockMemoryArray(scip, &newnodeinfo->rows, newnodeinfo->nrows + 1);
+         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &newnodeinfo->rows, newnodeinfo->nrows + 1) );
       }
       else
       {
          /* reallocate with linear increments, because we expect 1 branching variable most of the time */
-         SCIPreallocBlockMemoryArray(scip, &newnodeinfo->rows, newnodeinfo->nrows, newnodeinfo->nrows + 1);
+         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &newnodeinfo->rows, newnodeinfo->nrows, newnodeinfo->nrows + 1) );
       }
       newnodeinfo->rows[newnodeinfo->nrows++] = rowid;
    }
@@ -835,13 +837,13 @@ SCIP_DECL_EVENTEXEC(eventExecNodeBranched)
       if ( newnodeinfo->rows == NULL )
       {
          assert( newnodeinfo->nrows == 0 );
-         SCIPallocBlockMemoryArray(scip, &newnodeinfo->colswaps, newnodeinfo->ncolswaps + 1);
+         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &newnodeinfo->colswaps, newnodeinfo->ncolswaps + 1) );
       }
       else
       {
          /* reallocate with linear increments, because we expect 1 branching variable most of the time */
-         SCIPreallocBlockMemoryArray(scip, &newnodeinfo->colswaps, newnodeinfo->ncolswaps,
-            newnodeinfo->ncolswaps + 1);
+         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &newnodeinfo->colswaps, newnodeinfo->ncolswaps,
+            newnodeinfo->ncolswaps + 1) );
       }
       thiscolswap = &(newnodeinfo->colswaps[newnodeinfo->ncolswaps++]);
       thiscolswap->from = tmpcolswap.from;
@@ -868,7 +870,7 @@ SCIP_DECL_EVENTEXEC(eventExecNodeBranched)
    SCIPfreeBufferArray(scip, &branchvars);
 
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 
 /** at branching decisions, maintains the column swap and potential new rows in the orbitope */
@@ -908,7 +910,7 @@ SCIP_Bool rowIsBranchRow(
    assert( rowid >= 0 );
    assert( rowid < orbidata->nrows );
    assert( orbidata->vars != NULL );
-   assert( orbidata->vars[rowid * orbidata->ncols + 0] );
+   assert( orbidata->vars[rowid * orbidata->ncols] );  /* variable in first column must be set */
 
    /* get the first variable from the row */
    var = orbidata->vars[rowid * orbidata->ncols];
@@ -995,9 +997,9 @@ SCIP_RETCODE freeOrbitope(
    assert( nelem > 0 );
    for (i = 0; i < nelem; ++i)
    {
-      SCIPreleaseVar(scip, &(*orbidata)->vars[i]);
+      SCIP_CALL( SCIPreleaseVar(scip, &(*orbidata)->vars[i]) );
    }
-   SCIPfreeBlockMemoryArray(scip, &((*orbidata)->vars), (*orbidata)->nrows * (*orbidata)->ncols);
+   SCIPfreeBlockMemoryArray(scip, &((*orbidata)->vars), (*orbidata)->nrows * (*orbidata)->ncols); /*lint !e647*/
 
    SCIPfreeBlockMemory(scip, orbidata);
 
@@ -1072,6 +1074,8 @@ SCIP_RETCODE addOrbitope(
          colid = 0;
          ++rowid;
       }
+      assert( nrows > 0 );
+      assert( ncols > 0 );
       assert( rowid == i / ncols );
       assert( colid == i % ncols );
 
@@ -2194,7 +2198,8 @@ SCIP_RETCODE SCIPorbitopalReductionInclude(
    /* default column ordering param */
    SCIP_CALL( SCIPaddIntParam(scip, "propagating/symmetry/" SYMHDLR_NAME "/columnordering",
          "The column ordering variant, respects enum SCIP_ColumnOrdering.",
-         (int*) &(*orbireddata)->defaultcolumnordering, TRUE, DEFAULT_COLUMNORDERING, 0, 4, NULL, NULL) );
+         (int*) &(*orbireddata)->defaultcolumnordering, TRUE, DEFAULT_COLUMNORDERING, 0, 4, 
+         NULL, NULL) ); /*lint !e641*/
 
    /* initialize event handler. */
    assert( SCIPfindEventhdlr(scip, EVENTHDLR_NAME) == NULL );

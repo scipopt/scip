@@ -61,7 +61,6 @@
 #include "scip/event_shadowtree.h"
 #include <ctype.h>
 #include <string.h>
-#include <symmetry/type_symmetry.h>
 #include <memory.h>
 
 
@@ -275,7 +274,6 @@ SCIP_RETCODE applyOrbitalReductionPart(
    assert( ( varlbs == NULL ) == ( varubs == NULL ) );
 
    orbitid = -1;
-   orbitbegin = 0;
    for (orbitbegin = 0; orbitbegin < orcdata->npermvars; orbitbegin = orbitend)
    {
       /* get id of the orbit, and scan how large the orbit is */
@@ -883,7 +881,6 @@ SCIP_RETCODE applyOrbitalReductionPropagations(
 static
 SCIP_RETCODE orbitalReductionPropagateComponent(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ORBITALREDDATA*  orbireddata,        /**< orbital reduction data structure */
    ORCDATA*              orcdata,            /**< orbital reduction component data */
    SCIP_SHADOWTREE*      shadowtree,         /**< pointer to shadow tree */
    SCIP_Bool*            infeasible,         /**< whether infeasibility is found */
@@ -1157,11 +1154,12 @@ SCIP_DECL_EVENTEXEC(eventExecGlobalBoundChange)
    switch ( SCIPeventGetType(event) )
    {
    case SCIP_EVENTTYPE_GUBCHANGED:
-      assert( orcdata->globalvarubs[varidx] == SCIPeventGetOldbound(event) );
+      /* can assert with equality, because no arithmetic must be applied after inheriting the value of oldbound */
+      assert( orcdata->globalvarubs[varidx] == SCIPeventGetOldbound(event) ); /* lint !e777 */
       orcdata->globalvarubs[varidx] = SCIPeventGetNewbound(event);
       break;
    case SCIP_EVENTTYPE_GLBCHANGED:
-      assert( orcdata->globalvarlbs[varidx] == SCIPeventGetOldbound(event) );
+      assert( orcdata->globalvarlbs[varidx] == SCIPeventGetOldbound(event) ); /* lint !e777 */
       orcdata->globalvarlbs[varidx] = SCIPeventGetNewbound(event);
       break;
    default:
@@ -1269,7 +1267,7 @@ SCIP_RETCODE SCIPorbitalReductionPropagate(
       orcdata = orbireddata->componentdatas[c];
       assert( orcdata != NULL );
       assert( orcdata->nperms > 0 );
-      SCIP_CALL( orbitalReductionPropagateComponent(scip, orbireddata, orcdata, shadowtree, infeasible, nred) );
+      SCIP_CALL( orbitalReductionPropagateComponent(scip, orcdata, shadowtree, infeasible, nred) );
 
       /* a symmetry propagator has ran, so set didrun to TRUE */
       *didrun = TRUE;
