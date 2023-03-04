@@ -4200,7 +4200,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
             if( success )
             {
                (*nconss)++;
-               conflict->lengthsumperc += (resolutionset->nnz - initialnnzs) / (SCIP_Real) initialnnzs;
+               conflict->lengthsumperc += resolutionset->nnz / (SCIP_Real) initialnnzs;
                (*nconfvars) = resolutionsetGetNNzs(resolutionset);
             }
          }
