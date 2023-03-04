@@ -2247,7 +2247,8 @@ SCIP_RETCODE getClauseConflictSet(
 {
 
    *success = FALSE;
-   if (!SCIPvarIsBinary(SCIPbdchginfoGetVar(currbdchginfo)))
+   /* todo can we apply also conflict analysis in other stages? */
+   if (!SCIPvarIsBinary(SCIPbdchginfoGetVar(currbdchginfo)) || SCIPsetGetStage(set) != SCIP_STAGE_SOLVING)
    {
       conflict->ncorrectaborts++;
       SCIPsetDebugMsg(set, "Could not obtain an initial conflict set \n");
@@ -2901,9 +2902,11 @@ SCIP_RETCODE DivisionBasedReduction(
    }
    if( totaltoweaken > 0)
    {
-      SCIPstatisticPrintf("percentage of weakened variables: %f\n", (SCIP_Real) *nvarsweakened / totaltoweaken);
       conflict->nreductioncalls++;
-      conflict->weakeningsumperc += (SCIP_Real) *nvarsweakened / totaltoweaken;
+      if (set->conf_weakenreasonall)
+         conflict->weakeningsumperc++;
+      else
+         conflict->weakeningsumperc += (SCIP_Real) *nvarsweakened / totaltoweaken;
    }
 
    /* apply a division cut (CG or MIR) after weakening as much as possible */
@@ -3068,10 +3071,13 @@ SCIP_RETCODE tighteningBasedReduction(
 
    if( totaltoweaken > 0)
    {
-      SCIPstatisticPrintf("percentage of weakened variables: %f\n", (SCIP_Real) *nvarsweakened / totaltoweaken);
       conflict->nreductioncalls++;
-      conflict->weakeningsumperc += (SCIP_Real) *nvarsweakened / totaltoweaken;
+      if (set->conf_weakenreasonall)
+         conflict->weakeningsumperc++;
+      else
+         conflict->weakeningsumperc += (SCIP_Real) *nvarsweakened / totaltoweaken;
    }
+
    /* apply tightening once after weakening as much as possible */
    if ( set->conf_weakenreasonall )
    {
