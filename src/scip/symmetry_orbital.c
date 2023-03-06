@@ -273,7 +273,6 @@ SCIP_RETCODE applyOrbitalReductionPart(
    assert( varorbitidssort != NULL );
    assert( ( varlbs == NULL ) == ( varubs == NULL ) );
 
-   orbitid = -1;
    for (orbitbegin = 0; orbitbegin < orcdata->npermvars; orbitbegin = orbitend)
    {
       /* get id of the orbit, and scan how large the orbit is */

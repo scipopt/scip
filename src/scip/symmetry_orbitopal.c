@@ -1142,6 +1142,8 @@ SCIP_RETCODE addOrbitope(
 
       orbireddata->maxnorbitopes = newsize;
    }
+   assert( orbireddata->orbitopes != NULL );
+   assert( orbireddata->norbitopes < orbireddata->maxnorbitopes );
 
    /* add orbitope to orbitopal reduction data */
    assert( orbireddata->norbitopes < orbireddata->maxnorbitopes );
