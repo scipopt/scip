@@ -245,6 +245,7 @@ SCIP_RETCODE SCIPgenerateOrbitopeVarsMatrix(
    );
 
 /** checks whether an orbitope is a packing or partitioning orbitope */
+SCIP_EXPORT
 SCIP_RETCODE SCIPisPackingPartitioningOrbitope(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR***           vars,               /**< variable matrix of orbitope constraint */
