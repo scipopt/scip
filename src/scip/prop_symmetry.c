@@ -2632,7 +2632,7 @@ SCIP_RETCODE computeSymmetryGroup(
 }
 
 
-/** requires that the symmetry components are already computed */
+/** ensures that the symmetry components are already computed */
 static
 SCIP_RETCODE ensureSymmetryComponentsComputed(
    SCIP*                 scip,               /**< SCIP instance */
@@ -2675,7 +2675,7 @@ SCIP_RETCODE ensureSymmetryComponentsComputed(
 }
 
 
-/** requires that permvarmap is initialized */
+/** ensures that permvarmap is initialized */
 static
 SCIP_RETCODE ensureSymmetryPermvarmapComputed(
    SCIP*                 scip,               /**< SCIP instance */
@@ -2707,7 +2707,7 @@ SCIP_RETCODE ensureSymmetryPermvarmapComputed(
 }
 
 
-/** requires that permstrans is initialized */
+/** ensures that permstrans is initialized */
 static
 SCIP_RETCODE ensureSymmetryPermstransComputed(
    SCIP*                 scip,               /**< SCIP instance */
@@ -2741,7 +2741,7 @@ SCIP_RETCODE ensureSymmetryPermstransComputed(
 }
 
 
-/** requires that movedpermvarscounts is initialized */
+/** ensures that movedpermvarscounts is initialized */
 static
 SCIP_RETCODE ensureSymmetryMovedpermvarscountsComputed(
    SCIP*                 scip,               /**< SCIP instance */
@@ -6588,7 +6588,7 @@ SCIP_RETCODE tryDetectOrbitope(
       *writeorbitopematrix = NULL;
 
    /* free memory */
-   FREE:
+FREE:
    for (i = npermvars - 1; i >= 0; --i)
    {
       if ( entryperms[i] != NULL )
@@ -6772,7 +6772,7 @@ SCIP_RETCODE tryAddOrbitopesDynamic(
       assert( orbitopematrix != NULL );
       SCIPfreeBlockMemoryArray(scip, &orbitopematrix, nrows * ncols); /*lint !e647*/
 
-      CLEARITERATION:
+   CLEARITERATION:
       SCIPfreeBufferArray(scip, &componentperms);
    }
 
@@ -6864,7 +6864,7 @@ SCIP_RETCODE tryAddOrbitalRedLexRed(
 
 /** finds problem symmetries */
 static
-SCIP_RETCODE tryAddSymmetryHandlingConss(
+SCIP_RETCODE tryAddSymmetryHandlingMethods(
    SCIP*                 scip,               /**< SCIP instance */
    SCIP_PROP*            prop,               /**< symmetry breaking propagator */
    int*                  nchgbds,            /**< pointer to store number of bound changes (or NULL)*/
@@ -7100,7 +7100,7 @@ SCIP_DECL_PROPINITPRE(propInitpreSymmetry)
    {
       SCIPdebugMsg(scip, "Try to add symmetry handling constraints before presolving.\n");
 
-      SCIP_CALL( tryAddSymmetryHandlingConss(scip, prop, NULL, NULL) );
+      SCIP_CALL( tryAddSymmetryHandlingMethods(scip, prop, NULL, NULL) );
    }
    else if ( propdata->symcomptiming == 0 )
    {
@@ -7133,7 +7133,7 @@ SCIP_DECL_PROPEXITPRE(propExitpreSymmetry)
     * and even if presolving has been disabled */
    if ( SCIPgetStatus(scip) == SCIP_STATUS_UNKNOWN )
    {
-      SCIP_CALL( tryAddSymmetryHandlingConss(scip, prop, NULL, NULL) );
+      SCIP_CALL( tryAddSymmetryHandlingMethods(scip, prop, NULL, NULL) );
    }
 
    /* if timing requests it, guarantee that symmetries are computed even if presolving is disabled */
@@ -7204,7 +7204,7 @@ SCIP_DECL_PROPPRESOL(propPresolSymmetry)
 
    noldngenconns = propdata->ngenorbconss + propdata->nsstconss + propdata->ngenlinconss;
 
-   SCIP_CALL( tryAddSymmetryHandlingConss(scip, prop, &nchanges, &earlyterm) );
+   SCIP_CALL( tryAddSymmetryHandlingMethods(scip, prop, &nchanges, &earlyterm) );
 
    /* if we actually tried to add symmetry handling constraints */
    if ( ! earlyterm ) /*lint !e774*/
@@ -7705,13 +7705,13 @@ SCIP_RETCODE SCIPincludePropSymmetry(
    SCIP_CALL( SCIPincludeEventHdlrShadowTree(scip, &propdata->shadowtreeeventhdlr) );
    assert( propdata->shadowtreeeventhdlr != NULL );
 
-   SCIP_CALL( SCIPorbitopalReductionInclude(scip, &propdata->orbitopalreddata) );
+   SCIP_CALL( SCIPincludeOrbitopalReduction(scip, &propdata->orbitopalreddata) );
    assert( propdata->orbitopalreddata != NULL );
 
-   SCIP_CALL( SCIPorbitalReductionInclude(scip, &propdata->orbitalreddata, propdata->shadowtreeeventhdlr) );
+   SCIP_CALL( SCIPincludeOrbitalReduction(scip, &propdata->orbitalreddata, propdata->shadowtreeeventhdlr) );
    assert( propdata->orbitalreddata != NULL );
 
-   SCIP_CALL( SCIPlexicographicReductionInclude(scip, &propdata->lexreddata, propdata->shadowtreeeventhdlr) );
+   SCIP_CALL( SCIPincludeLexicographicReduction(scip, &propdata->lexreddata, propdata->shadowtreeeventhdlr) );
    assert( propdata->lexreddata != NULL );
 
    return SCIP_OKAY;

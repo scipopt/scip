@@ -53,14 +53,15 @@ enum SCIP_ColumnOrdering
    SCIP_COLUMNORDERING_CENTRE      = 3,      /**< choose centremost possible column */
    SCIP_COLUMNORDERING_MEDIAN      = 4       /**< choose median column */
 };
-typedef enum SCIP_ColumnOrdering SCIP_COLUMNORDERING;
+typedef enum SCIP_ColumnOrdering SCIP_COLUMNORDERING; /**< variants for orbitope column ordering*/
 
 
+/** data for orbitopal reduction */
 struct SCIP_OrbitopalReductionData;
-typedef struct SCIP_OrbitopalReductionData SCIP_ORBITOPALREDDATA;
+typedef struct SCIP_OrbitopalReductionData SCIP_ORBITOPALREDDATA; /**< data for orbitopal reduction */
 
 
-/** get the number of reductions */
+/** gets the number of reductions */
 SCIP_EXPORT
 SCIP_RETCODE SCIPorbitopalReductionGetStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -69,7 +70,7 @@ SCIP_RETCODE SCIPorbitopalReductionGetStatistics(
    );
 
 
-/** print orbitopal reduction data */
+/** prints orbitopal reduction data */
 SCIP_EXPORT
 SCIP_RETCODE SCIPorbitopalReductionPrintStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -121,7 +122,7 @@ SCIP_RETCODE SCIPorbitopalReductionFree(
  *  This is only done exactly once.
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPorbitopalReductionInclude(
+SCIP_RETCODE SCIPincludeOrbitopalReduction(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ORBITOPALREDDATA** orbireddata       /**< pointer to orbitopal reduction structure to populate */
    );

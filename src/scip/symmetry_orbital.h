@@ -49,22 +49,22 @@ extern "C" {
 
 /** data for orbital reduction propagator */
 struct SCIP_OrbitalReductionData;
-typedef struct SCIP_OrbitalReductionData SCIP_ORBITALREDDATA;
+typedef struct SCIP_OrbitalReductionData SCIP_ORBITALREDDATA; /**< data for orbital reduction propagator */
 
 /*
  * Interface methods
  */
 
-/** print orbital reduction data */
+/** prints orbital reduction data */
 SCIP_EXPORT
 SCIP_RETCODE SCIPorbitalReductionGetStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ORBITALREDDATA*  orbireddata,        /**< orbital reduction data structure */
-   int*                  nred                /**< total number of reductions applied */
+   int*                  nred                /**< pointer to store the total number of reductions applied */
    );
 
 
-/** print orbital reduction data */
+/** prints orbital reduction data */
 SCIP_EXPORT
 SCIP_RETCODE SCIPorbitalReductionPrintStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -72,7 +72,7 @@ SCIP_RETCODE SCIPorbitalReductionPrintStatistics(
    );
 
 
-/** propagate orbital reduction */
+/** propagates orbital reduction */
 SCIP_EXPORT
 SCIP_RETCODE SCIPorbitalReductionPropagate(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -105,7 +105,7 @@ SCIP_RETCODE SCIPorbitalReductionReset(
    );
 
 
-/** free orbital reduction data */
+/** frees orbital reduction data */
 SCIP_EXPORT
 SCIP_RETCODE SCIPorbitalReductionFree(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -118,7 +118,7 @@ SCIP_RETCODE SCIPorbitalReductionFree(
  *  This is only done exactly once.
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPorbitalReductionInclude(
+SCIP_RETCODE SCIPincludeOrbitalReduction(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ORBITALREDDATA** orbireddata,        /**< pointer to orbital reduction data structure to populate */
    SCIP_EVENTHDLR*       shadowtreeeventhdlr /**< pointer to the shadow tree eventhdlr */

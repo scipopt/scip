@@ -50,7 +50,7 @@ extern "C" {
 
 /** data for dynamic lexicographic reduction propagator */
 struct SCIP_LexRedData;
-typedef struct SCIP_LexRedData SCIP_LEXREDDATA; /** data for dynamic lexicographic reduction propagator */
+typedef struct SCIP_LexRedData SCIP_LEXREDDATA; /**< data for dynamic lexicographic reduction propagator */
 
 /*
  * Interface methods
@@ -118,7 +118,7 @@ SCIP_RETCODE SCIPlexicographicReductionFree(
  *  This is only done exactly once.
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPlexicographicReductionInclude(
+SCIP_RETCODE SCIPincludeLexicographicReduction(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_LEXREDDATA**     masterdata,         /**< pointer to global data for lexicographic reduction propagator */
    SCIP_EVENTHDLR*       shadowtreeeventhdlr /**< pointer to the shadow tree eventhdlr */

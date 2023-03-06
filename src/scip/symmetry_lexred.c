@@ -1325,7 +1325,7 @@ SCIP_RETCODE SCIPlexicographicReductionFree(
  *
  *  This is only done exactly once.
  */
-SCIP_RETCODE SCIPlexicographicReductionInclude(
+SCIP_RETCODE SCIPincludeLexicographicReduction(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_LEXREDDATA**     masterdata,         /**< pointer to global data for lexicographic reduction propagator */
    SCIP_EVENTHDLR*       shadowtreeeventhdlr /**< pointer to the shadow tree eventhdlr */
@@ -1335,7 +1335,7 @@ SCIP_RETCODE SCIPlexicographicReductionInclude(
    assert( masterdata != NULL );
    assert( shadowtreeeventhdlr != NULL );
 
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPlexicographicReductionInclude", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE,
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPincludeLexicographicReduction", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE,
       FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPallocBlockMemory(scip, masterdata) );
