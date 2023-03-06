@@ -393,7 +393,7 @@ SCIP_DECL_EVENTEXEC(eventExecNodeDeleted)
    deletedshadownode->nchildren = -1;
 
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 
 /*

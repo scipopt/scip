@@ -7151,7 +7151,7 @@ SCIP_DECL_PROPEXITPRE(propExitpreSymmetry)
 /** solving process deinitialization method of propagator (called before branch and bound process data is freed) */
 static
 SCIP_DECL_PROPEXITSOL(propExitsolSymmetry)
-{/*lint !e715*/
+{
    SCIP_PROPDATA* propdata;
 
    assert( scip != NULL );
@@ -7167,7 +7167,7 @@ SCIP_DECL_PROPEXITSOL(propExitsolSymmetry)
    SCIP_CALL( resetDynamicSymmetryHandling(scip, propdata) );
 
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 
 /** presolving method of propagator */
