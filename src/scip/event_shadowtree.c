@@ -114,7 +114,7 @@ SCIP_DECL_HASHKEYVAL(hashKeyValShadowNode)
 }
 
 
-/** given a node number, return the node in the shadow tree, or NULL if it doesn't exist */
+/** given a node number, returns the node in the shadow tree, or NULL if it doesn't exist */
 SCIP_SHADOWNODE* SCIPshadowTreeGetShadowNodeFromNodeNumber(
    SCIP_SHADOWTREE*      shadowtree,         /**< pointer to the shadow tree */
    SCIP_Longint          nodeid              /**< index of the node, equivalent to the standard branch and bound tree */
@@ -131,7 +131,7 @@ SCIP_SHADOWNODE* SCIPshadowTreeGetShadowNodeFromNodeNumber(
    return (SCIP_SHADOWNODE*) SCIPhashtableRetrieve(shadowtree->nodemap, (void*) &tmpnode);
 }
 
-/** given a node, return the node in the shadowtree, or NULL if it doesn't exist */
+/** given a node, returns the node in the shadowtree, or NULL if it doesn't exist */
 SCIP_SHADOWNODE* SCIPshadowTreeGetShadowNode(
    SCIP_SHADOWTREE*      shadowtree,         /**< pointer to the shadow tree */
    SCIP_NODE*            node                /**< node from the actual branch-and-bound tree */
@@ -390,9 +390,7 @@ SCIP_DECL_EVENTEXEC(eventExecNodeDeleted)
 } /*lint !e715*/
 
 
-/*
- * Callback methods of event handler for node deleted event
- */
+/** execution method for all events handled by this eventhandler */
 static
 SCIP_DECL_EVENTEXEC(eventExec)
 {
@@ -568,7 +566,7 @@ SCIP_DECL_EVENTEXITSOL(eventExitsolShadowTree)
 }
 
 
-/** get the shadow tree */
+/** gets the shadow tree */
 SCIP_SHADOWTREE* SCIPgetShadowTree(
    SCIP_EVENTHDLR*       eventhdlr           /**< event handler */
 )

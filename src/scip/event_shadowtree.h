@@ -87,21 +87,21 @@ struct SCIP_ShadowTree
 };
 typedef struct SCIP_ShadowTree SCIP_SHADOWTREE;
 
-/** given a node number, return the node in the shadow tree, or NULL if it doesn't exist */
+/** given a node number, returns the node in the shadow tree, or NULL if it doesn't exist */
 SCIP_EXPORT
 SCIP_SHADOWNODE* SCIPshadowTreeGetShadowNodeFromNodeNumber(
    SCIP_SHADOWTREE*      shadowtree,         /**< pointer to the shadow tree */
    SCIP_Longint          nodeno              /**< index of the node, equivalent to the standard branch-and-bound tree */
 );
 
-/** given a node, return the node in the shadowtree, or NULL if it doesn't exist */
+/** given a node, returns the node in the shadowtree, or NULL if it doesn't exist */
 SCIP_EXPORT
 SCIP_SHADOWNODE* SCIPshadowTreeGetShadowNode(
    SCIP_SHADOWTREE*      shadowtree,         /**< pointer to the shadow tree */
    SCIP_NODE*            node                /**< node from the actual branch-and-bound tree */
 );
 
-/** get the shadow tree */
+/** gets the shadow tree */
 SCIP_EXPORT
 SCIP_SHADOWTREE* SCIPgetShadowTree(
    SCIP_EVENTHDLR*       eventhdlr           /**< event handler */
