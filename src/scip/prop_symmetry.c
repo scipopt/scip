@@ -6876,13 +6876,21 @@ SCIP_RETCODE tryAddSymmetryHandlingMethods(
    assert( prop != NULL );
    assert( scip != NULL );
 
-   propdata = SCIPpropGetData(prop);
-   assert( propdata != NULL );
-
    if ( nchgbds != NULL )
       *nchgbds = 0;
    if ( earlyterm != NULL )
       *earlyterm = FALSE;
+
+   /* only allow symmetry handling methods if strong and weak dual reductions are permitted */
+   if ( !SCIPallowStrongDualReds(scip) || !SCIPallowWeakDualReds(scip) )
+   {
+      if ( earlyterm != NULL )
+         *earlyterm = TRUE;
+      return SCIP_OKAY;
+   }
+
+   propdata = SCIPpropGetData(prop);
+   assert( propdata != NULL );
 
    /* if constraints have already been added */
    if ( propdata->triedaddconss )
