@@ -1027,6 +1027,9 @@ SCIP_RETCODE addComponent(
          orbireddata->globalfixeventhdlr, (SCIP_EVENTDATA*) orcdata, NULL) );
    }
 
+   /* lastnode field */
+   orcdata->lastnode = NULL;
+
    /* resize component array if needed */
    assert( orbireddata->ncomponents >= 0 );
    assert( (orbireddata->ncomponents == 0) == (orbireddata->componentdatas == NULL) );
