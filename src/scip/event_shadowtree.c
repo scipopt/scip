@@ -72,6 +72,7 @@
 #define EVENTHDLR_NAME         "event_shadowtree"
 #define EVENTHDLR_DESC         "event handler for maintaining the unmodified branch-and-bound tree"
 #define NODEMAP_MAX_INITIAL_SIZE 10000
+#define NODEMAP_MAX_INITIAL_SIZE_2LOG 14
 
 
 /*
@@ -147,7 +148,7 @@ SCIP_SHADOWNODE* SCIPshadowTreeGetShadowNode(
  */
 static
 SCIP_DECL_EVENTEXEC(eventExecNodeBranched)
-{ /*lint !e715*/
+{
    SCIP_EVENTHDLRDATA* eventhdlrdata;
    SCIP_SHADOWTREE* shadowtree;
    SCIP_SHADOWNODE* eventshadownode;
@@ -301,7 +302,7 @@ SCIP_DECL_EVENTEXEC(eventExecNodeBranched)
    }
 
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 
 /*
@@ -513,7 +514,7 @@ SCIP_DECL_EVENTINITSOL(eventInitsolShadowTree)
    SCIP_CALL( SCIPallocBlockMemory(scip, &eventhdlrdata->shadowtree) );
    shadowtree = eventhdlrdata->shadowtree;
 
-   initialnodemapsize = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) > LOG2(NODEMAP_MAX_INITIAL_SIZE) ?
+   initialnodemapsize = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) >= NODEMAP_MAX_INITIAL_SIZE_2LOG ?
       NODEMAP_MAX_INITIAL_SIZE :
       MIN(NODEMAP_MAX_INITIAL_SIZE, 1 << (SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip)));  /*lint !e666 !e701 !e747*/
    SCIP_CALL( SCIPhashtableCreate(&shadowtree->nodemap, scip->mem->probmem, initialnodemapsize,
@@ -521,7 +522,7 @@ SCIP_DECL_EVENTINITSOL(eventInitsolShadowTree)
 
    /* the root node is the only branch-and-bound tree node not created by branching, so add. */
    SCIP_CALL( SCIPallocBlockMemory(scip, &rootnode) );
-   rootnode->nodeid = 1ll;  /*!lint e620*/  /* root node has number 1 */
+   rootnode->nodeid = 1ll;  /*lint !e620*/  /* root node has number 1 */
    rootnode->parent = NULL;
    rootnode->children = NULL;
    rootnode->nchildren = 0;
@@ -531,7 +532,7 @@ SCIP_DECL_EVENTINITSOL(eventInitsolShadowTree)
    rootnode->npropagations = 0;
 
    /* add to the nodemap structure */
-   SCIPhashtableInsert(shadowtree->nodemap, rootnode);
+   SCIP_CALL( SCIPhashtableInsert(shadowtree->nodemap, rootnode) );
 
    /* listen for NODEBRANCHED and NODEDELETE events */
    SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_NODEBRANCHED | SCIP_EVENTTYPE_NODEDELETE, eventhdlr, NULL, NULL) );

@@ -2830,13 +2830,13 @@ SCIP_Bool testSymmetryComputationRequired(
    /* for SST, matching leadervartypes */
    if ( ISSSTACTIVE(propdata->usesymmetry) )
    {
-      if ( ISSSTBINACTIVE(propdata->sstleadervartype) && SCIPgetNBinVars(scip) > 0 ) /*!lint e641*/
+      if ( ISSSTBINACTIVE(propdata->sstleadervartype) && SCIPgetNBinVars(scip) > 0 ) /*lint !e641*/
          return TRUE;
-      if ( ISSSTINTACTIVE(propdata->sstleadervartype) && SCIPgetNIntVars(scip) > 0 ) /*!lint e641*/
+      if ( ISSSTINTACTIVE(propdata->sstleadervartype) && SCIPgetNIntVars(scip) > 0 ) /*lint !e641*/
          return TRUE;
-      if ( ISSSTIMPLINTACTIVE(propdata->sstleadervartype) && SCIPgetNImplVars(scip) > 0 ) /*!lint e641*/
+      if ( ISSSTIMPLINTACTIVE(propdata->sstleadervartype) && SCIPgetNImplVars(scip) > 0 ) /*lint !e641*/
          return TRUE;
-      if ( ISSSTCONTACTIVE(propdata->sstleadervartype) && SCIPgetNContVars(scip) > 0 ) /*!lint e641*/
+      if ( ISSSTCONTACTIVE(propdata->sstleadervartype) && SCIPgetNContVars(scip) > 0 ) /*lint !e641*/
          return TRUE;
    }
 
@@ -6770,7 +6770,7 @@ SCIP_RETCODE tryAddOrbitopesDynamic(
 
       assert( isorbitope );
       assert( orbitopematrix != NULL );
-      SCIPfreeBlockMemoryArray(scip, &orbitopematrix, nrows * ncols); /*!lint e647*/
+      SCIPfreeBlockMemoryArray(scip, &orbitopematrix, nrows * ncols); /*lint !e647*/
 
       CLEARITERATION:
       SCIPfreeBufferArray(scip, &componentperms);
@@ -7151,7 +7151,7 @@ SCIP_DECL_PROPEXITPRE(propExitpreSymmetry)
 /** solving process deinitialization method of propagator (called before branch and bound process data is freed) */
 static
 SCIP_DECL_PROPEXITSOL(propExitsolSymmetry)
-{/*lint !715*/
+{/*lint !e715*/
    SCIP_PROPDATA* propdata;
 
    assert( scip != NULL );
