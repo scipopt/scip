@@ -73,10 +73,6 @@
  * Data structures
  */
 
-/* local declarations for structs used in this file */
-struct OrbitopeData;
-
-
 /** orbitopal symmetry handling data for a single orbitope */
 struct OrbitopeData
 {
