@@ -61,20 +61,21 @@ struct SCIP_ShadowBoundUpdate
 };
 typedef struct SCIP_ShadowBoundUpdate SCIP_SHADOWBOUNDUPDATE;
 
-/** branch and bound tree node for the shadowtree */
+/** branch-and-bound tree node for the shadowtree */
 struct SCIP_ShadowNode
 {
    SCIP_Longint          nodeid;             /**< ID of corresponding branch-and-bound tree node */
    struct SCIP_ShadowNode* parent;           /**< parent of this shadowtree node. NULL iff it is the root node */
    struct SCIP_ShadowNode** children;        /**< list of children of this shadowtree node. NULL iff it is a leaf */
-   int                   nchildren;          /**< 0 iff it is a leaf, -1 iff original node is DELETED */
-   SCIP_SHADOWBOUNDUPDATE* branchingdecisions;/**< the variables branched on in this node. 
-                                               * NULL iff nbranchingdecisions == 0 */
+   int                   nchildren;          /**< number of elements in children
+                                              *   0 iff it is a leaf, -1 iff original node is DELETED */
+   SCIP_SHADOWBOUNDUPDATE* branchingdecisions;/**< the variables branched on in this node.
+                                               *  NULL iff nbranchingdecisions == 0 */
    int                   nbranchingdecisions;/**< the number of variables branched on in this node
-                                              * 0 iff branchingdecisions == NULL */
+                                              *   0 iff branchingdecisions == NULL */
    SCIP_SHADOWBOUNDUPDATE* propagations;     /**< the propagation (and branching decisions) updates in the node
-                                              * This is populated after branching with the propagations in that node.
-                                              * NULL iff npropagations == 0 */
+                                              *   This is populated after branching with the propagations in that node.
+                                              *   NULL iff npropagations == 0 */
    int                   npropagations;      /**< the number of propagations. 0 iff propagations == NULL */
 };
 typedef struct SCIP_ShadowNode SCIP_SHADOWNODE;
@@ -90,7 +91,7 @@ typedef struct SCIP_ShadowTree SCIP_SHADOWTREE;
 SCIP_EXPORT
 SCIP_SHADOWNODE* SCIPshadowTreeGetShadowNodeFromNodeNumber(
    SCIP_SHADOWTREE*      shadowtree,         /**< pointer to the shadow tree */
-   SCIP_Longint          nodeno              /**< index of the node, equivalent to the standard branch and bound tree */
+   SCIP_Longint          nodeno              /**< index of the node, equivalent to the standard branch-and-bound tree */
 );
 
 /** given a node, return the node in the shadowtree, or NULL if it doesn't exist */

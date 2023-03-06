@@ -131,7 +131,7 @@ SCIP_SHADOWNODE* SCIPshadowTreeGetShadowNodeFromNodeNumber(
    return (SCIP_SHADOWNODE*) SCIPhashtableRetrieve(shadowtree->nodemap, (void*) &tmpnode);
 }
 
-/** Given a node, return the node in the shadowtree. NULL if it doesn't exist. */
+/** given a node, return the node in the shadowtree, or NULL if it doesn't exist */
 SCIP_SHADOWNODE* SCIPshadowTreeGetShadowNode(
    SCIP_SHADOWTREE*      shadowtree,         /**< pointer to the shadow tree */
    SCIP_NODE*            node                /**< node from the actual branch-and-bound tree */
@@ -144,8 +144,10 @@ SCIP_SHADOWNODE* SCIPshadowTreeGetShadowNode(
 }
 
 /*
- * Callback methods of event handler for branched event
+ * Callback methods of event handler
  */
+
+/** event handler for branching event */
 static
 SCIP_DECL_EVENTEXEC(eventExecNodeBranched)
 {
@@ -196,7 +198,7 @@ SCIP_DECL_EVENTEXEC(eventExecNodeBranched)
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &eventshadownode->children, nchildren) );
    eventshadownode->nchildren = nchildren;
 
-   maxnbranchingdecisions = 1;  /* good guess that there's one branching variable, because that's likely the number*/
+   maxnbranchingdecisions = 1;  /* good guess that there's one branching variable, because that's likely the number */
    SCIP_CALL( SCIPallocBufferArray(scip, &branchingdecisions, maxnbranchingdecisions) );
 
    /* get all variables branched upon and check all branches */
@@ -305,9 +307,7 @@ SCIP_DECL_EVENTEXEC(eventExecNodeBranched)
 } /*lint !e715*/
 
 
-/*
- * Callback methods of event handler for node deleted event
- */
+/** event handler for node deletion event */
 static
 SCIP_DECL_EVENTEXEC(eventExecNodeDeleted)
 { /*lint !e396*/
@@ -364,17 +364,11 @@ SCIP_DECL_EVENTEXEC(eventExecNodeDeleted)
       /* clean childshadownode */
       assert( childshadownode->npropagations >= 0 );
       assert( (childshadownode->npropagations > 0) != (childshadownode->propagations == NULL) );
-      if ( childshadownode->npropagations > 0 )
-      {
-         SCIPfreeBlockMemoryArray(scip, &childshadownode->propagations, childshadownode->npropagations);
-      }
+      SCIPfreeBlockMemoryArrayNull(scip, &childshadownode->propagations, childshadownode->npropagations);
 
       assert( childshadownode->nbranchingdecisions >= 0 );
       assert( (childshadownode->nbranchingdecisions > 0) != (childshadownode->branchingdecisions == NULL) );
-      if ( childshadownode->nbranchingdecisions > 0 )
-      {
-         SCIPfreeBlockMemoryArray(scip, &childshadownode->branchingdecisions, childshadownode->nbranchingdecisions);
-      }
+      SCIPfreeBlockMemoryArrayNull(scip, &childshadownode->branchingdecisions, childshadownode->nbranchingdecisions);
 
       /* childshadownode must be in the 'ready to delete'-state */
       assert( childshadownode->nchildren < 0 );
@@ -439,7 +433,7 @@ SCIP_RETCODE freeShadowTree(
    /* free all shadow tree nodes */
    for (i = 0; i < nentries; ++i)
    {
-      shadownode = (SCIP_SHADOWNODE*) (SCIPhashtableGetEntry(shadowtree->nodemap, i));
+      shadownode = (SCIP_SHADOWNODE*) SCIPhashtableGetEntry(shadowtree->nodemap, i);
       if ( shadownode == NULL )
          continue;
 
@@ -514,6 +508,12 @@ SCIP_DECL_EVENTINITSOL(eventInitsolShadowTree)
    SCIP_CALL( SCIPallocBlockMemory(scip, &eventhdlrdata->shadowtree) );
    shadowtree = eventhdlrdata->shadowtree;
 
+   /* prevent unnecessary reallocations by having a good initial guess for the tree size
+    *
+    * By default, we initialize NODEMAP_MAX_INITIAL_SIZE slots, unless reasonably fewer nodes suffice.
+    * Knowing that a full enumeration tree on n binary variables has size 2^n, we base our guess on this number,
+    * counting with the number of binary and integer variables in the problem.
+    */
    initialnodemapsize = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) >= NODEMAP_MAX_INITIAL_SIZE_2LOG ?
       NODEMAP_MAX_INITIAL_SIZE :
       MIN(NODEMAP_MAX_INITIAL_SIZE, 1 << (SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip)));  /*lint !e666 !e701 !e747*/
@@ -534,7 +534,7 @@ SCIP_DECL_EVENTINITSOL(eventInitsolShadowTree)
    /* add to the nodemap structure */
    SCIP_CALL( SCIPhashtableInsert(shadowtree->nodemap, rootnode) );
 
-   /* listen for NODEBRANCHED and NODEDELETE events */
+   /* catch NODEBRANCHED and NODEDELETE events */
    SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_NODEBRANCHED | SCIP_EVENTTYPE_NODEDELETE, eventhdlr, NULL, NULL) );
 
    return SCIP_OKAY;
