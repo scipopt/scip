@@ -883,8 +883,8 @@ SCIP_RETCODE orbitalReductionPropagateComponent(
    SCIP*                 scip,               /**< SCIP data structure */
    ORCDATA*              orcdata,            /**< orbital reduction component data */
    SCIP_SHADOWTREE*      shadowtree,         /**< pointer to shadow tree */
-   SCIP_Bool*            infeasible,         /**< whether infeasibility is found */
-   int*                  nred                /**< number of domain reductions */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether infeasibility is found */
+   int*                  nred                /**< pointer to store the number of domain reductions */
    )
 {
    /* step 1 */
@@ -1229,8 +1229,8 @@ SCIP_RETCODE SCIPorbitalReductionPrintStatistics(
 SCIP_RETCODE SCIPorbitalReductionPropagate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ORBITALREDDATA*  orbireddata,        /**< orbital reduction data structure */
-   SCIP_Bool*            infeasible,         /**< whether infeasibility is found */
-   int*                  nred,               /**< number of domain reductions */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether infeasibility is found */
+   int*                  nred,               /**< pointer to store the number of domain reductions */
    SCIP_Bool*            didrun              /**< a global pointer maintaining if any symmetry propagator has run
                                               *   only set this to TRUE when a reduction is found, never set to FALSE */
    )
@@ -1359,7 +1359,7 @@ SCIP_RETCODE SCIPorbitalReductionFree(
 
 /** initializes structures needed for orbital reduction
  *
- * This is only done exactly once.
+ *  This is only done exactly once.
  */
 SCIP_RETCODE SCIPorbitalReductionInclude(
    SCIP*                 scip,               /**< SCIP data structure */

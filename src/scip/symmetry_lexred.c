@@ -70,14 +70,14 @@
 
 
 /** data per permutation for lexicographic reduction propagator */
-struct LexRedPermutationData
+struct LexRedPermData
 {
-   SCIP_VAR**            vars;               /**< variables */
+   SCIP_VAR**            vars;               /**< variables affected by permutation */
    int                   nvars;              /**< number of variables */
    int*                  perm;               /**< permutation for lexicographic reduction */
    int*                  invperm;            /**< inverse permutation */
 };
-typedef struct LexRedPermutationData LEXDATA;
+typedef struct LexRedPermData LEXDATA;
 
 
 /** data for dynamic lexicographic reduction propagator */
@@ -162,7 +162,7 @@ SCIP_RETCODE lexdataFree(
 
 /** creates dynamic lexicographic reduction propagator data
  *
- * Fixed points are removed.
+ *  Fixed points are removed.
  */
 static
 SCIP_RETCODE lexdataCreate(
@@ -187,6 +187,7 @@ SCIP_RETCODE lexdataCreate(
    assert( vars != NULL );
    assert( nvars >= 0 );
    assert( perm != NULL );
+   assert( success != NULL );
    assert( SCIPisTransformed(scip) );
    assert( masterdata->shadowtreeeventhdlr != NULL );
 
@@ -278,16 +279,16 @@ SCIP_RETCODE lexdataCreate(
 
 /** comparator used in the getVarOrder() function, for sorting an array of NODEDEPTHBRANCHINDEX by depth, then by index
  *
- * @warning this function is only meant to be used in the getVarOrder() function
+ *  @warning this function is only meant to be used in the getVarOrder() function
  *
- * @pre datapointer is populated with a VARARRAYNODEDEPTHBRANCHINDEX pointer
- * @pre the comparator is only called on entries with set (depth, index)-information
- * @pre the (depth, index)-informations are all different
+ *  @pre datapointer is populated with a VARARRAYNODEDEPTHBRANCHINDEX pointer
+ *  @pre the comparator is only called on entries with set (depth, index)-information
+ *  @pre the (depth, index)-informations are all different
  *
- * result:
- *   0: the same index is compared, so the (depth, index)-informations are the same
- *  -1: the depth of ind1 is smaller than the depth of ind2, or it's equal and the index is smaller
- *   1: the depth of ind2 is smaller than the depth of ind1, or it's equal and the index is smaller
+ *  result:
+ *    0: the same index is compared, so the (depth, index)-informations are the same
+ *   -1: the depth of ind1 is smaller than the depth of ind2, or it's equal and the index is smaller
+ *    1: the depth of ind2 is smaller than the depth of ind1, or it's equal and the index is smaller
  */
 static
 SCIP_DECL_SORTINDCOMP(sortbynodedepthbranchindices)
@@ -308,7 +309,6 @@ SCIP_DECL_SORTINDCOMP(sortbynodedepthbranchindices)
    /* comparing the same element is an identity operation */
    if ( ind1 == ind2 )
       return 0;
-   assert( ind1 != ind2 );
 
    /* sort by depth, then by index, in increasing order */
    index1 = &(nodedepthbranchindices[SCIPhashmapGetImageInt(masterdata->symvarmap, vars[ind1])]);
@@ -333,14 +333,14 @@ SCIP_DECL_SORTINDCOMP(sortbynodedepthbranchindices)
 }
 
 
-/** get the variable ordering based on the branching decisions at the node */
+/** gets the variable ordering based on the branching decisions at the node */
 static
 SCIP_RETCODE getVarOrder(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_LEXREDDATA*      masterdata,         /**< pointer to global data for lexicographic reduction propagator */
    LEXDATA*              lexdata,            /**< pointer to data for this permutation */
    NODEDEPTHBRANCHINDEX* nodedepthbranchindices, /**< array with (depth, index)-information per variable in
-                                                   * rooted path to focus node */
+                                                  *   rooted path to focus node */
    int                   nvarstotal,         /**< length of that array */
    int*                  varorder,           /**< array to populate with variable order */
    int*                  nselvars,           /**< pointer to number of variables in the ordering */
@@ -406,8 +406,8 @@ SCIP_RETCODE getVarOrder(
 }
 
 
-/** check if the static lexred with a certain variable ordering is feasible in the hypothetical scenario where
- * variables with indices i and j are fixed to fixvalue (i.e., peeking)
+/** checks if the static lexred with a certain variable ordering is feasible in the hypothetical scenario where
+ *  variables with indices i and j are fixed to fixvalue (i.e., peeking)
  */
 static
 SCIP_RETCODE peekStaticLexredIsFeasible(
@@ -419,7 +419,7 @@ SCIP_RETCODE peekStaticLexredIsFeasible(
    int                   fixj,               /**< variable index of right fixed column */
    int                   fixrow,             /**< row index in var ordering, from which to start peeking */
    SCIP_Real             fixvalue,           /**< value on which variables i and j are fixed */
-   SCIP_Bool*            peekfeasible        /**< whether this is feasible or not */
+   SCIP_Bool*            peekfeasible        /**< pointer to store whether this is feasible or not */
 )
 {
    SCIP_Real* peeklbs;
@@ -460,13 +460,6 @@ SCIP_RETCODE peekStaticLexredIsFeasible(
    SCIP_CALL( SCIPallocBufferArray(scip, &peeklbs, lexdata->nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &peekubs, lexdata->nvars) );
    SCIP_CALL( SCIPallocCleanBufferArray(scip, &peekboundspopulated, lexdata->nvars) );
-#ifndef NDEBUG
-   /* it must be clean */
-   for (i = 0; i < lexdata->nvars; ++i)
-   {
-      assert( peekboundspopulated[i] == FALSE );
-   }
-#endif
 
    peeklbs[fixi] = fixvalue;
    peeklbs[fixj] = fixvalue;
@@ -602,7 +595,7 @@ SCIP_RETCODE peekStaticLexredIsFeasible(
 }
 
 
-/** propagate static lexicographic reduction with specified variable ordering */
+/** propagates static lexicographic reduction with specified variable ordering */
 static
 SCIP_RETCODE propagateStaticLexred(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -753,7 +746,7 @@ SCIP_RETCODE propagateStaticLexred(
        * Now check if vari == varj is permitted, and if not, tighten the domain further.
        *
        * @todo we peek twice if vari and varj are unfixed
-       * But, if the subcycle only contains var1 and var2 a single peek suffices.
+       * But, if the subcycle only contains var1 and var2, a single peek suffices.
        * This is similar to orbisack and symresack propagation.
        *
        * Case 1: vari is minimal (lbi).
@@ -860,7 +853,7 @@ SCIP_RETCODE propagateLexredDynamic(
    SCIP_LEXREDDATA*      masterdata,         /**< pointer to global data for lexicographic reduction propagator */
    LEXDATA*              lexdata,            /**< pointer to data for this permutation */
    NODEDEPTHBRANCHINDEX* nodedepthbranchindices, /**< array with (depth, index)-information per variable in
-                                                   * rooted path to focus node */
+                                                  *   rooted path to focus node */
    int                   nvarstotal,         /**< length of nodedepthbranchindices array */
    SCIP_Bool*            infeasible,         /**< pointer to store whether the problem is infeasible */
    int*                  nreductions         /**< pointer to store the number of found domain reductions */
@@ -905,7 +898,7 @@ SCIP_RETCODE propagateLexicographicReductionPerm(
    SCIP_LEXREDDATA*      masterdata,         /**< pointer to global data for lexicographic reduction propagator */
    LEXDATA*              lexdata,            /**< pointer to data for this permutation */
    NODEDEPTHBRANCHINDEX* nodedepthbranchindices, /**< array with (depth, index)-information per variable in
-                                                   * rooted path to focus node */
+                                                  *   rooted path to focus node */
    int                   nvarstotal,         /**< length of that array */
    SCIP_Bool*            infeasible,         /**< pointer to store whether the problem is infeasible */
    int*                  nreductions         /**< pointer to store the number of found domain reductions */
@@ -926,8 +919,8 @@ SCIP_RETCODE propagateLexicographicReductionPerm(
 }
 
 
-/** populate array with information of first variable change
- * @pre assuming nodedepthbranchindices is initially clean
+/** populates array with information of first variable change
+ *  @pre assuming nodedepthbranchindices is initially clean
  */
 static
 SCIP_RETCODE shadowtreeFillNodeDepthBranchIndices(
@@ -1093,7 +1086,7 @@ SCIP_RETCODE shadowtreeUndoNodeDepthBranchIndices(
  */
 
 
-/** print lexicographic reduction propagation data */
+/** prints lexicographic reduction propagation data */
 SCIP_RETCODE SCIPlexicographicReductionGetStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_LEXREDDATA*      masterdata,         /**< pointer to global data for lexicographic reduction propagator */
@@ -1109,7 +1102,7 @@ SCIP_RETCODE SCIPlexicographicReductionGetStatistics(
    return SCIP_OKAY;
 }
 
-/** print lexicographic reduction propagation data */
+/** prints lexicographic reduction propagation data */
 SCIP_RETCODE SCIPlexicographicReductionPrintStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_LEXREDDATA*      masterdata          /**< pointer to global data for lexicographic reduction propagator */
@@ -1142,12 +1135,12 @@ SCIP_RETCODE SCIPlexicographicReductionPrintStatistics(
 }
 
 
-/** apply lexicographic reduction propagation */
+/** applies lexicographic reduction propagation */
 SCIP_RETCODE SCIPlexicographicReductionPropagate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_LEXREDDATA*      masterdata,         /**< pointer to global data for lexicographic reduction propagator */
-   SCIP_Bool*            infeasible,         /**< whether infeasibility is found */
-   int*                  nred,               /**< number of domain reductions */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether infeasibility is found */
+   int*                  nred,               /**< pointer to store the number of domain reductions */
    SCIP_Bool*            didrun              /**< a global pointer maintaining if any symmetry propagator has run
                                               *   only set this to TRUE when a reduction is found, never set to FALSE */
    )
@@ -1308,7 +1301,7 @@ SCIP_RETCODE SCIPlexicographicReductionReset(
 }
 
 
-/** free lexicographic reduction data */
+/** frees lexicographic reduction data */
 SCIP_RETCODE SCIPlexicographicReductionFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_LEXREDDATA**     masterdata          /**< pointer to global data for lexicographic reduction propagator */
@@ -1329,7 +1322,8 @@ SCIP_RETCODE SCIPlexicographicReductionFree(
 
 /** initializes structures needed for lexicographic reduction propagation
  *
- * This is only done exactly once.
+ *
+ *  This is only done exactly once.
  */
 SCIP_RETCODE SCIPlexicographicReductionInclude(
    SCIP*                 scip,               /**< SCIP data structure */

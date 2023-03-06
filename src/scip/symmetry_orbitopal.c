@@ -2042,8 +2042,8 @@ SCIP_RETCODE SCIPorbitopalReductionPrintStatistics(
 SCIP_RETCODE SCIPorbitopalReductionPropagate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ORBITOPALREDDATA* orbireddata,       /**< orbitopal reduction data structure */
-   SCIP_Bool*            infeasible,         /**< whether infeasibility is found */
-   int*                  nred,               /**< number of domain reductions */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether infeasibility is found */
+   int*                  nred,               /**< pointer to store the number of domain reductions */
    SCIP_Bool*            didrun              /**< a global pointer maintaining if any symmetry propagator has run
                                               *   only set this to TRUE when a reduction is found, never set to FALSE */
    )
@@ -2176,7 +2176,7 @@ SCIP_RETCODE SCIPorbitopalReductionFree(
 
 /** initializes structures needed for orbitopal reduction
  *
- * This is only done exactly once.
+ *  This is only done exactly once.
  */
 SCIP_RETCODE SCIPorbitopalReductionInclude(
    SCIP*                 scip,               /**< SCIP data structure */

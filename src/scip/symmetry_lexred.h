@@ -50,13 +50,13 @@ extern "C" {
 
 /** data for dynamic lexicographic reduction propagator */
 struct SCIP_LexRedData;
-typedef struct SCIP_LexRedData SCIP_LEXREDDATA;
+typedef struct SCIP_LexRedData SCIP_LEXREDDATA; /** data for dynamic lexicographic reduction propagator */
 
 /*
  * Interface methods
  */
 
-/** print lexicographic reduction propagation data */
+/** prints lexicographic reduction propagation data */
 SCIP_EXPORT
 SCIP_RETCODE SCIPlexicographicReductionGetStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -65,7 +65,7 @@ SCIP_RETCODE SCIPlexicographicReductionGetStatistics(
    );
 
 
-/** print lexicographic reduction propagation data */
+/** prints lexicographic reduction propagation data */
 SCIP_EXPORT
 SCIP_RETCODE SCIPlexicographicReductionPrintStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -73,13 +73,13 @@ SCIP_RETCODE SCIPlexicographicReductionPrintStatistics(
    );
 
 
-/** apply lexicographic reduction propagation */
+/** applies lexicographic reduction propagation */
 SCIP_EXPORT
 SCIP_RETCODE SCIPlexicographicReductionPropagate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_LEXREDDATA*      masterdata,         /**< pointer to global data for lexicographic reduction propagator */
-   SCIP_Bool*            infeasible,         /**< whether infeasibility is found */
-   int*                  nred,               /**< number of domain reductions */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether infeasibility is found */
+   int*                  nred,               /**< pointer to store the number of domain reductions */
    SCIP_Bool*            didrun              /**< a global pointer maintaining if any symmetry propagator has run
                                               *   only set this to TRUE when a reduction is found, never set to FALSE */
    );
@@ -105,7 +105,7 @@ SCIP_RETCODE SCIPlexicographicReductionReset(
    );
 
 
-/** free lexicographic reduction data */
+/** frees lexicographic reduction data */
 SCIP_EXPORT
 SCIP_RETCODE SCIPlexicographicReductionFree(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -114,7 +114,8 @@ SCIP_RETCODE SCIPlexicographicReductionFree(
 
 
 /** initializes structures needed for lexicographic reduction propagation
- * This is only done exactly once.
+ *
+ *  This is only done exactly once.
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPlexicographicReductionInclude(
