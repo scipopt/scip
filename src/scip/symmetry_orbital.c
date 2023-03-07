@@ -85,6 +85,10 @@ struct OrbitalReductionComponentData
    SCIP_VAR**            permvars;           /**< array consisting of the variables of this component */
    int                   npermvars;          /**< number of vars in this component */
    SCIP_HASHMAP*         permvarmap;         /**< map of variables to indices in permvars array */
+
+   SCIP_Bool             symmetrybrokencomputed; /**< whether the symmetry broken information is computed already */
+   int*                  symbrokenvarids;    /**< variables to be stabilized because the symmetry is globally broken */
+   int                   nsymbrokenvarids;   /**< symbrokenvarids array length, is 0 iff symbrokenvarids is NULL */
 };
 typedef struct OrbitalReductionComponentData ORCDATA;
 
@@ -105,6 +109,140 @@ struct SCIP_OrbitalReductionData
 /*
  * Local methods
  */
+
+
+/** identifies the orbits at which symmetry is broken according to the global bounds
+ *
+ * An example of a symmetry-breaking constraint is cons_components.
+ */
+static
+SCIP_RETCODE identifyOrbitalSymmetriesBroken(
+   SCIP*                 scip,               /**< pointer to SCIP data structure */
+   ORCDATA*              orcdata             /**< pointer to data for orbital reduction data */
+)
+{
+   SCIP_DISJOINTSET* orbitset;
+   int i;
+   int j;
+   int p;
+   int* perm;
+   int* varorbitids;
+   int* varorbitidssort;
+   int orbitbegin;
+   int orbitend;
+   int orbitid;
+   int maxnsymbrokenvarids;
+   SCIP_Real orbitglb;
+   SCIP_Real orbitgub;
+
+   assert( scip != NULL );
+   assert( orcdata != NULL );
+   assert( !orcdata->symmetrybrokencomputed );
+   orcdata->symbrokenvarids = NULL;
+   orcdata->nsymbrokenvarids = 0;
+   maxnsymbrokenvarids = 0;
+
+   /* determine all orbits */
+   SCIP_CALL( SCIPcreateDisjointset(scip, &orbitset, orcdata->npermvars) );
+   for (p = 0; p < orcdata->nperms; ++p)
+   {
+      perm = orcdata->perms[p];
+      assert( perm != NULL );
+
+      for (i = 0; i < orcdata->npermvars; ++i)
+      {
+         j = perm[i];
+         if ( i != j )
+            SCIPdisjointsetUnion(orbitset, i, j, FALSE);
+      }
+   }
+
+   /* sort all orbits */
+   SCIP_CALL( SCIPallocBufferArray(scip, &varorbitids, orcdata->npermvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &varorbitidssort, orcdata->npermvars) );
+   for (i = 0; i < orcdata->npermvars; ++i)
+      varorbitids[i] = SCIPdisjointsetFind(orbitset, i);
+   SCIPsort(varorbitidssort, SCIPsortArgsortInt, varorbitids, orcdata->npermvars);
+
+   /* iterate over all orbits and get the maximal orbit lower bound and minimal orbit upper bound */
+   for (orbitbegin = 0; orbitbegin < orcdata->npermvars; orbitbegin = orbitend)
+   {
+      /* get id of the orbit */
+      orbitid = varorbitids[varorbitidssort[orbitbegin]];
+
+      /* determine the maximal lower bound and minimal upper bound in the orbit */
+      orbitglb = -INFINITY;
+      orbitgub = INFINITY;
+      for (i = orbitbegin; i < orcdata->npermvars; ++i)
+      {
+         j = varorbitidssort[i];
+
+         /* stop if j is not the element in the orbit, then it is part of the next orbit */
+         if ( varorbitids[j] != orbitid )
+            break;
+
+         orbitglb = MAX(orbitglb, orcdata->globalvarlbs[j]);
+         orbitgub = MIN(orbitgub, orcdata->globalvarubs[j]);
+      }
+      /* the loop above has terminated, so i is either orcdata->npermvars or varorbitidssort[i] is in the next orbit,
+       * and orbitglb and orbitgub are the maximal global lower bound and minimal global upper bound in orbit orbitid */
+      orbitend = i;
+
+      /* symmetry is broken within this orbit if the intersection of the global variable domains are empty */
+      if ( LT(scip, orbitglb, orbitgub) )
+      {
+         /* add all variable ids in the orbit to the symbrokenvarids array: resize if needed */
+         if ( orcdata->nsymbrokenvarids + orbitend - orbitbegin > maxnsymbrokenvarids )
+         {
+            int newsize;
+
+            newsize = SCIPcalcMemGrowSize(scip, orcdata->nsymbrokenvarids + orbitend - orbitbegin);
+            assert( newsize >= 0 );
+
+            if ( orcdata->nsymbrokenvarids == 0 )
+            {
+               assert( orcdata->symbrokenvarids == NULL );
+               SCIP_CALL( SCIPallocBlockMemoryArray(scip, &orcdata->symbrokenvarids, newsize) );
+            }
+            else
+            {
+               assert( orcdata->symbrokenvarids != NULL );
+               SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &orcdata->symbrokenvarids,
+                  maxnsymbrokenvarids, newsize) );
+            }
+
+            maxnsymbrokenvarids = newsize;
+         }
+
+         /* add all variable ids in the orbit to the symbrokenvarids array: add */
+         for (i = orbitbegin; i < orbitend; ++i)
+         {
+            j = varorbitidssort[i];
+            assert( varorbitids[j] == orbitid );
+            assert( orcdata->nsymbrokenvarids < maxnsymbrokenvarids );
+            orcdata->symbrokenvarids[orcdata->nsymbrokenvarids++] = j;
+         }
+      }
+   }
+
+   /* shrink the allocated array size to the actually needed size */
+   assert( orcdata->nsymbrokenvarids <= maxnsymbrokenvarids );
+   if ( orcdata->nsymbrokenvarids > 0 && orcdata->nsymbrokenvarids < maxnsymbrokenvarids )
+   {
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &orcdata->symbrokenvarids,
+         maxnsymbrokenvarids, orcdata->nsymbrokenvarids) );
+   }
+   assert( (orcdata->nsymbrokenvarids == 0) == (orcdata->symbrokenvarids == NULL) );
+
+   /* mark that this method is executed for the component */
+   orcdata->symmetrybrokencomputed = TRUE;
+
+   SCIPfreeBufferArray(scip, &varorbitidssort);
+   SCIPfreeBufferArray(scip, &varorbitids);
+   SCIPfreeDisjointset(scip, &orbitset);
+
+   return SCIP_OKAY;
+}
 
 
 /** populates chosenperms with a generating set of the symmetry group stabilizing the branching decisions
@@ -141,6 +279,8 @@ SCIP_RETCODE orbitalReductionGetSymmetryStabilizerSubgroup(
    assert( branchedvarindices != NULL );
    assert( inbranchedvarindices != NULL );
    assert( nbranchedvarindices >= 0 );
+   assert( orcdata->symmetrybrokencomputed );
+   assert( (orcdata->nsymbrokenvarids == 0) == (orcdata->symbrokenvarids == NULL) );
 
    *nchosenperms = 0;
 
@@ -148,11 +288,46 @@ SCIP_RETCODE orbitalReductionGetSymmetryStabilizerSubgroup(
    {
       perm = orcdata->perms[p];
 
+      /* make sure that the symmetry broken orbit variable indices are met with equality */
+      for (i = 0; i < orcdata->nsymbrokenvarids; ++i)
+      {
+         varid = orcdata->symbrokenvarids[i];
+         assert( varid >= 0 );
+         assert( varid < orcdata->npermvars );
+         varidimage = perm[varid];
+         assert( varidimage >= 0 );
+         assert( varidimage < orcdata->npermvars );
+
+         /* branching variable is not affected by this permutation */
+         if ( varidimage == varid )
+            continue;
+
+         /* the variables on which symmetry is broken must be permuted to entries with the same fixed value
+          *
+          * Because we check a whole orbit of the group and perm is part of it, it suffices to compare the upper bound
+          * of varid with the lower bound of varidimage. Namely, for all indices i, \f$lb_i \leq ub_i\f$, so we get
+          * a series of equalities yielding that all expressions must be the same:
+          * \f$ub_i = lb_j <= ub_j = lb_{\cdots} <= \cdots = lb_j < ub_j \f$
+          */
+         if ( EQ(scip,
+            varubs ? varubs[varid] : SCIPvarGetUbLocal(orcdata->permvars[varid]),
+            varlbs ? varlbs[varidimage] : SCIPvarGetLbLocal(orcdata->permvars[varidimage]) )
+         )
+            break;
+      }
+      /* if the above loop is broken, this permutation does not qualify for the stabilizer */
+      if ( i < orcdata->nsymbrokenvarids )
+         continue;
+
       /* iterate over each branched variable and check */
       for (i = 0; i < nbranchedvarindices; ++i)
       {
          varid = branchedvarindices[i];
+         assert( varid >= 0 );
+         assert( varid < orcdata->npermvars );
          varidimage = perm[varid];
+         assert( varidimage >= 0 );
+         assert( varidimage < orcdata->npermvars );
 
          /* branching variable is not affected by this permutation */
          if ( varidimage == varid )
@@ -817,6 +992,11 @@ SCIP_RETCODE applyOrbitalReductionPropagations(
    SCIP_CALL( SCIPallocBufferArray(scip, &chosenperms, orcdata->nperms) );
    SCIP_CALL( orbitalReductionGetSymmetryStabilizerSubgroup(scip, orcdata, chosenperms, &nchosenperms,
       NULL, NULL, branchedvarindices, inbranchedvarindices, nbranchedvarindices) );
+   assert( nchosenperms >= 0 );
+
+   /* no reductions can be yielded by orbital reduction if the group is trivial */
+   if ( nchosenperms == 0 )
+      goto FREE;
 
    /* 1.2. compute orbits of this subgroup */
    SCIP_CALL( SCIPcreateDisjointset(scip, &orbitset, orcdata->npermvars) );
@@ -843,14 +1023,11 @@ SCIP_RETCODE applyOrbitalReductionPropagations(
 
    /* apply orbital reduction to these orbits */
    SCIP_CALL( applyOrbitalReductionPart(scip, orcdata, infeasible, nred, varorbitids, varorbitidssort, NULL, NULL) );
-   if ( *infeasible )
-      goto FREE;
-   assert( !*infeasible );
 
-   FREE:
    SCIPfreeBufferArray(scip, &varorbitidssort);
    SCIPfreeBufferArray(scip, &varorbitids);
    SCIPfreeDisjointset(scip, &orbitset);
+FREE:
    SCIPfreeBufferArray(scip, &chosenperms);
 
    /* clean inbranchedvarindices array */
@@ -918,6 +1095,15 @@ SCIP_RETCODE orbitalReductionPropagateComponent(
     */
    assert( !*infeasible );
    assert( *nred >= 0 );
+
+   /* orbital reduction is only propagated when branching has started */
+   assert( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPgetNNodes(scip) > 1 );
+
+   /* if this is the first call, identify the orbits for which symmetry is broken */
+   if ( !orcdata->symmetrybrokencomputed )
+   {
+      SCIP_CALL( identifyOrbitalSymmetriesBroken(scip, orcdata) );
+   }
 
    /* step 1 */
    SCIP_CALL( applyOrbitalBranchingPropagations(scip, orcdata, shadowtree, infeasible, nred) );
@@ -1120,6 +1306,13 @@ SCIP_RETCODE freeComponent(
 
    assert( SCIPisTransformed(scip) );
 
+   /* free symmetry broken information if it has been computed */
+   if ( (*orcdata)->symmetrybrokencomputed )
+   {
+      assert( ((*orcdata)->nsymbrokenvarids == 0) == ((*orcdata)->symbrokenvarids == NULL) );
+      SCIPfreeBlockMemoryArrayNull(scip, &(*orcdata)->symbrokenvarids, (*orcdata)->nsymbrokenvarids);
+   }
+
    /* free global variable bound change event */
    if ( SCIPgetStage(scip) != SCIP_STAGE_FREE )
    {
@@ -1182,6 +1375,7 @@ SCIP_DECL_EVENTEXEC(eventExecGlobalBoundChange)
    var = SCIPeventGetVar(event);
    assert( var != NULL );
    assert( SCIPvarIsTransformed(var) );
+   assert( !orcdata->symmetrybrokencomputed );
 
    assert( orcdata->permvarmap != NULL );
    varidx = SCIPhashmapGetImageInt(orcdata->permvarmap, (void*) var);
