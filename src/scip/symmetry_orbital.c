@@ -1251,7 +1251,7 @@ SCIP_RETCODE addComponent(
    /* symmetry computed field */
    orcdata->symmetrybrokencomputed = FALSE;
    orcdata->symbrokenvarids = NULL;
-   orcdata->symbrokenvarids = -1;
+   orcdata->nsymbrokenvarids = -1;
 
    /* resize component array if needed */
    assert( orbireddata->ncomponents >= 0 );
