@@ -799,6 +799,34 @@ SCIP_Bool isSymmetryRecomputationRequired(
 }
 
 
+/** resets symmetry handling propagators that depend on the branch-and-bound tree structure */
+static
+SCIP_RETCODE resetDynamicSymmetryHandling(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_PROPDATA*        propdata            /**< propagator data */
+)
+{
+   assert( scip != NULL );
+   assert( propdata != NULL );
+
+   /* propagators managed by a different file */
+   if ( propdata->orbitalreddata != NULL )
+   {
+      SCIP_CALL( SCIPorbitalReductionReset(scip, propdata->orbitalreddata) );
+   }
+   if ( propdata->orbitopalreddata != NULL )
+   {
+      SCIP_CALL( SCIPorbitopalReductionReset(scip, propdata->orbitopalreddata) );
+   }
+   if ( propdata->lexreddata != NULL )
+   {
+      SCIP_CALL( SCIPlexicographicReductionReset(scip, propdata->lexreddata) );
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /** frees symmetry data */
 static
 SCIP_RETCODE freeSymmetryData(
@@ -811,8 +839,7 @@ SCIP_RETCODE freeSymmetryData(
    assert( scip != NULL );
    assert( propdata != NULL );
 
-   assert( propdata->orbitopalreddata != NULL );
-   SCIP_CALL( SCIPorbitopalReductionReset(scip, propdata->orbitopalreddata) );
+   SCIP_CALL( resetDynamicSymmetryHandling(scip, propdata) );
 
    if ( propdata->permvarmap != NULL )
    {
@@ -958,25 +985,6 @@ SCIP_RETCODE freeSymmetryData(
 
    propdata->computedsymmetry = FALSE;
    propdata->compressed = FALSE;
-
-   return SCIP_OKAY;
-}
-
-
-/** resets symmetry handling propagators that depend on the branch-and-bound tree structure */
-static
-SCIP_RETCODE resetDynamicSymmetryHandling(
-   SCIP*                 scip,               /**< SCIP pointer */
-   SCIP_PROPDATA*        propdata            /**< propagator data */
-)
-{
-   assert( scip != NULL );
-   assert( propdata != NULL );
-
-   /* propagators managed by a different file */
-   SCIP_CALL( SCIPorbitalReductionReset(scip, propdata->orbitalreddata) );
-   SCIP_CALL( SCIPorbitopalReductionReset(scip, propdata->orbitopalreddata) );
-   SCIP_CALL( SCIPlexicographicReductionReset(scip, propdata->lexreddata) );
 
    return SCIP_OKAY;
 }
