@@ -1031,7 +1031,14 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectSignomial)
 
    assert(nlhdlrdata != NULL);
    assert(expr != NULL);
+   assert(enforcing != NULL);
    assert(participating != NULL);
+
+   /* for now, we do not care about separation if it is not required */
+   if( (*enforcing & SCIP_NLHDLR_METHOD_SEPABOTH) == SCIP_NLHDLR_METHOD_SEPABOTH )
+   {
+      return SCIP_OKAY;
+   }
 
    /* check for product expressions with more than one children */
    if( SCIPisExprProduct(scip, expr) && SCIPexprGetNChildren(expr) >= 2 )
@@ -1041,7 +1048,6 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectSignomial)
 
       /* create expression data for the nonlinear handler */
       SCIP_CALL( SCIPallocClearBlockMemory(scip, nlhdlrexprdata));
-
 
       /* allocat memory for expression data */
       SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->factors, nc);
@@ -1137,7 +1143,6 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectSignomial)
       /* we want to join separation, if not disabled by parameter */
       *participating = SCIP_NLHDLR_METHOD_SEPABOTH;
    }
-
 
    #ifdef SCIP_SIGCUT_DEBUG
    if( *participating )
