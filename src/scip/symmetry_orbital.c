@@ -113,7 +113,7 @@ struct SCIP_OrbitalReductionData
 
 /** identifies the orbits at which symmetry is broken according to the global bounds
  *
- * An example of a symmetry-breaking constraint is cons_components.
+ *  An example of a symmetry-breaking constraint is cons_components.
  */
 static
 SCIP_RETCODE identifyOrbitalSymmetriesBroken(
