@@ -2059,7 +2059,7 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
       /* update the child's lower bound */
       newpseudoobjval = SCIPlpGetModifiedPseudoObjval(lp, set, transprob, var, oldbound, newbound, boundtype);
       if( !SCIPtreeProbing(tree) && newpseudoobjval > SCIPnodeGetLowerbound(node)
-        && SCIPcertificateIsActive(set, stat->certificate) )
+        && SCIPsetCertificateEnabled(set) )
       {
          /* exip: we change the bound here temporarily so the correct pseudo solution gets printed to the certificate
          * @todo exip could this be done differently somewhere else? */
@@ -2369,7 +2369,7 @@ SCIP_RETCODE SCIPnodeAddBoundinferExact(
 
       /* update the child's lower bound (pseudoobjval is safe, so can use the fp version) */
       newpseudoobjval = SCIPlpGetModifiedPseudoObjval(lpexact->fplp, set, transprob, var, oldboundreal, newboundreal, boundtype);
-      if( newpseudoobjval > SCIPnodeGetLowerbound(node) && SCIPcertificateIsActive(set, stat->certificate) )
+      if( newpseudoobjval > SCIPnodeGetLowerbound(node) && SCIPsetCertificateEnabled(set) )
       {
          /* exip: we change the bound here temporarily so the correct pseudo solution gets printed to the certificate */
          /** @todo exip could this be done differently somewhere else? */

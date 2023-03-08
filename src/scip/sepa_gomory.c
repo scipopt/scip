@@ -45,6 +45,7 @@
  *  y
  *  END
  */
+#include "struct_scip.h"
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
@@ -281,16 +282,6 @@ SCIP_RETCODE addCut(
       /* set cut rank */
       SCIProwChgRank(cut, cutrank); /*lint !e644*/
 
-      if( SCIPisExactSolve(scip) )
-      {
-         /* add aggregation information to certificate for later use */
-         if( SCIPisCertificateActive(scip) )
-         {
-            SCIPstoreCertificateActiveAggregationInfo(scip, cut);
-            SCIPstoreCertificateActiveMirInfo(scip, cut);
-         }
-      }
-
       /* cache the row extension and only flush them if the cut gets added */
       SCIP_CALL( SCIPcacheRowExtensions(scip, cut) );
 
@@ -302,18 +293,6 @@ SCIP_RETCODE addCut(
 
       /* flush all changes before adding the cut */
       SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
-
-      if( SCIPisExactSolve(scip) )
-      {
-         SCIP_ROWEXACT* rowexact;
-
-         SCIP_CALL( SCIPcreateRowExactFromRow(scip, cut) );
-
-         rowexact = SCIProwGetRowExact(cut);
-
-         SCIP_CALL( SCIPaddRowExact(scip, rowexact) );
-         SCIP_CALL( SCIPreleaseRowExact(scip, &(rowexact)) );
-      }
 
       if( SCIProwGetNNonz(cut) == 0 && !SCIPisExactSolve(scip) )
       {
@@ -328,6 +307,11 @@ SCIP_RETCODE addCut(
           * and the method SCIPgetLPBInvRow() fails; SCIP internally will apply this bound change automatically. */
          SCIP_CALL( SCIPaddRow(scip, cut, TRUE, cutoff) );
          ++(*naddedcuts);
+         if( SCIPisCertificateActive(scip) )
+         {
+            SCIP_CALL( SCIPstoreCertificateActiveAggregationInfo(scip, cut) );
+            SCIP_CALL( SCIPstoreCertificateActiveMirInfo(scip, cut) );
+         }
       }
       else
       {
@@ -369,6 +353,11 @@ SCIP_RETCODE addCut(
                }
 
                ++(*naddedcuts);
+               if( SCIPisCertificateActive(scip) )
+               {
+                  SCIP_CALL( SCIPstoreCertificateActiveAggregationInfo(scip, cut) );
+                  SCIP_CALL( SCIPstoreCertificateActiveMirInfo(scip, cut) );
+               }
             }
          }
       }

@@ -754,6 +754,38 @@ void SCIPprimalAddOrigObjoffset(
    }
 }
 
+/** adds additional objective offset in original space to all existing solution (in original space) */
+void SCIPprimalAddOrigObjoffsetExact(
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Rational*        addval              /**< additional objective offset in original space */
+   )
+{
+   int i;
+
+   assert(primal != NULL);
+   assert(set != NULL);
+   assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM);
+
+#ifndef NDEBUG
+   assert(primal->nsols == 0 || SCIPsolGetOrigin(primal->sols[0]) == SCIP_SOLORIGIN_ORIGINAL);
+
+   /* check current order of primal solutions */
+   for( i = 1; i < primal->nsols; ++i )
+   {
+      assert(SCIPsolGetOrigin(primal->sols[i]) == SCIP_SOLORIGIN_ORIGINAL);
+      assert(SCIPsetIsLE(set, SCIPsolGetOrigObj(primal->sols[i-1]), SCIPsolGetOrigObj(primal->sols[i])));
+   }
+#endif
+
+   /* check current order of primal solutions */
+   for( i = 0; i < primal->nexistingsols; ++i )
+   {
+      assert(primal->existingsols[i] != NULL);
+      SCIPsolOrigAddObjvalExact(primal->existingsols[i], addval);
+   }
+}
+
 /** returns whether the current primal bound is justified with a feasible primal solution; if not, the primal bound
  *  was set from the user as objective limit
  */

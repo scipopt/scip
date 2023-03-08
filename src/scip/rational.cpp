@@ -551,6 +551,22 @@ std::string::const_iterator findSubStringIC(const std::string & substr, const st
    return it;
 }
 
+/** checks if a string describes a rational number */
+bool SCIPisRationalString(
+   const char*           desc                /**< string to check */
+   )
+{
+   if( 0 == strcmp(desc, "inf") )
+      return TRUE;
+   else if ( 0 == strcmp(desc, "-inf") )
+      return TRUE;
+   else
+   {
+      std::string s(desc);
+      return s.find_first_not_of("0123456789/") == std::string::npos;
+   }
+}
+
 /** set a rational to the value described by a string */
 void RatSetString(
    SCIP_Rational*        res,                /**< the result */
@@ -1969,6 +1985,7 @@ void chooseSemiconv(
    Integer&              resden,             /**< the resulting denominator */
    Integer*              p,                  /**< the last 3 numerators of convergents */
    Integer*              q,                  /**< the last 3 denominators of convergents */
+   Integer               ai,                 /**< the coefficient in the continuous fraction */
    long                  maxdenom            /**< the maximal denominator */
    )
 {
@@ -1976,8 +1993,16 @@ void chooseSemiconv(
 
    j = (Integer(maxdenom) - q[0]) / q[1];
 
-   resnum = j * p[1] + p[0];
-   resden = j * q[1] + q[0];
+   if( j >= ai / 2 )
+   {
+      resnum = j * p[1] + p[0];
+      resden = j * q[1] + q[0];
+   }
+   else
+   {
+      resnum = p[1];
+      resden = q[1];
+   }
 }
 
 /* choose the best semiconvergent with demnominator <= maxdenom between p1/q1 and p2/q2 */
@@ -1987,6 +2012,7 @@ void chooseSemiconvLong(
    SCIP_Longint&         resden,             /**< the resulting denominator */
    SCIP_Longint*         p,                  /**< the last 3 numerators of convergents */
    SCIP_Longint*         q,                  /**< the last 3 denominators of convergents */
+   long                  ai,                 /**< the coefficient in the continuous fraction */
    long                  maxdenom            /**< the maximal denominator */
    )
 {
@@ -1994,8 +2020,16 @@ void chooseSemiconvLong(
 
    j = (maxdenom - q[0]) / q[1];
 
-   resnum = j * p[1] + p[0];
-   resden = j * q[1] + q[0];
+   if( j >= ai / 2 )
+   {
+      resnum = j * p[1] + p[0];
+      resden = j * q[1] + q[0];
+   }
+   else
+   {
+      resnum = p[1];
+      resden = q[1];
+   }
 }
 
 void RatComputeApproximationLong(
@@ -2124,7 +2158,7 @@ void RatComputeApproximationLong(
             else
             {
                SCIPdebug(std::cout << " picking semiconvergent " << std::endl);
-               chooseSemiconvLong(resnum, resden, p, q, maxdenom);
+               chooseSemiconvLong(resnum, resden, p, q, 1, maxdenom);
                SCIPdebug(std::cout << " use " << resnum << "/" << resden << std::endl);
                res->val = Rational(resnum,resden) * sign;
             }
@@ -2132,8 +2166,11 @@ void RatComputeApproximationLong(
          /* normal case -> pick semiconvergent for best approximation */
          else
          {
+            if( forcegreater != 0 )
+               chooseSemiconvLong(resnum, resden, p, q, 1, maxdenom);
+            else
+               chooseSemiconvLong(resnum, resden, p, q, ai, maxdenom);
             SCIPdebug(std::cout << " picking semiconvergent " << std::endl);
-            chooseSemiconvLong(resnum, resden, p, q, maxdenom);
             SCIPdebug(std::cout << " use " << resnum << "/" << resden << std::endl);
             res->val = Rational(resnum,resden) * sign;
          }
@@ -2314,7 +2351,7 @@ void RatComputeApproximation(
             else
             {
                SCIPdebug(std::cout << " picking semiconvergent " << std::endl);
-               chooseSemiconv(resnum, resden, p, q, maxdenom);
+               chooseSemiconv(resnum, resden, p, q, 1, maxdenom);
                SCIPdebug(std::cout << " use " << resnum << "/" << resden << std::endl);
                res->val = Rational(resnum,resden) * sign;
             }
@@ -2322,8 +2359,11 @@ void RatComputeApproximation(
          /* normal case -> pick semiconvergent for best approximation */
          else
          {
+            if( forcegreater != 0 )
+               chooseSemiconv(resnum, resden, p, q, 1, maxdenom);
+            else
+               chooseSemiconv(resnum, resden, p, q, ai, maxdenom);
             SCIPdebug(std::cout << " picking semiconvergent " << std::endl);
-            chooseSemiconv(resnum, resden, p, q, maxdenom);
             SCIPdebug(std::cout << " use " << resnum << "/" << resden << std::endl);
             res->val = Rational(resnum,resden) * sign;
          }

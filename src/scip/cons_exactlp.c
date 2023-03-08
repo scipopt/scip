@@ -1800,7 +1800,7 @@ void consdataRecomputeGlbMaxactivity(
    consdata->lastglbmaxactivity = consdata->glbmaxactivity;
    SCIPintervalSetRoundingMode(prevmode);
 }
-
+#ifdef SCIP_DISABLED_CODE
 /** recompute the global minactivity of a constraint */
 static
 void consdataRecomputeGlbMinactivityEx(
@@ -1872,7 +1872,7 @@ void consdataRecomputeGlbMaxactivityEx(
    consdata->lastglbmaxactivityEx = consdata->glbmaxactivityEx;
    SCIPintervalSetRoundingMode(prevmode);
 }
-
+#endif
 /** calculates maximum absolute value of coefficients */
 static
 void consdataCalcMaxAbsvalEx(
@@ -1893,6 +1893,7 @@ void consdataCalcMaxAbsvalEx(
          RatAbs(consdata->maxabsvalEx, ccons.vals[i]);
    }
 }
+
 
 /** calculates minimum absolute value of coefficients */
 static
@@ -3358,6 +3359,7 @@ SCIP_Rational* consdataGetMinAbsvalEx(
    return consdata->minabsvalEx;
 }
 
+
 /** updates minimum and maximum activity for coefficient change, invalidates maximum absolute value if necessary */
 static
 void consdataUpdateChgCoef(
@@ -3830,7 +3832,7 @@ SCIP_Bool consdataComputeSolActivityWithErrorbound(
    return TRUE;
 }
 
-
+#ifdef SCIP_DSIABLED_CODE
 /** gets minimal activity for constraint and given values of counters for infinite and huge contributions
  *  and (if needed) delta to subtract from stored finite part of activity in case of a residual activity
  */
@@ -3902,6 +3904,7 @@ void getMinActivityEx(
       *isrelax = FALSE;
    }
 }
+#endif
 
 /** gets minimal activity for constraint and given values of counters for infinite and huge contributions
  *  and (if needed) delta to subtract from stored finite part of activity in case of a residual activity
@@ -4004,7 +4007,7 @@ void getMinActivity(
    }
 }
 
-
+#ifdef SCIP_DSIABLED_CODE
 /** gets maximal activity for constraint and given values of counters for infinite and huge contributions
  *  and (if needed) delta to subtract from stored finite part of activity in case of a residual activity
  */
@@ -4074,6 +4077,8 @@ void getMaxActivityEx(
       *isrelax = FALSE;
    }
 }
+#endif
+
 /** gets maximal activity for constraint and given values of counters for infinite and huge contributions
  *  and (if needed) delta to subtract from stored finite part of activity in case of a residual activity
  */
@@ -4174,6 +4179,8 @@ void getMaxActivity(
       }
    }
 }
+
+#ifdef SCIP_DIABLED_CODE
 /** gets activity bounds for constraint */
 static
 void consdataGetActivityBoundsEx(
@@ -4222,6 +4229,8 @@ void consdataGetActivityBoundsEx(
 
    RatFreeBuffer(SCIPbuffer(scip), &tmpdelta);
 }
+#endif
+
 /** gets activity bounds for constraint */
 static
 void consdataGetActivityBounds(
@@ -4353,7 +4362,7 @@ void consdataGetReliableResidualActivity(
 
    assert(!RatIsAbsInfinity(resactivity));
 }
-#endif
+
 
 /** gets activity bounds for constraint after setting variable to zero */
 static
@@ -4489,7 +4498,7 @@ void consdataGetActivityResidualsEx(
    RatFreeBuffer(SCIPbuffer(scip), &maxactbound);
    RatFreeBuffer(SCIPbuffer(scip), &minactbound);
 }
-
+#endif
 #ifdef SCIP_DISABLED_CODE
 /** gets global activity bounds for constraint */
 static
@@ -5311,7 +5320,7 @@ SCIP_RETCODE SCIPconsPrintCertificateExactLinear(
    assert(cons != NULL);
 
    /* print constraint into certificate output */
-   if( !SCIPcertificateIsActive(scip->set, SCIPgetCertificate(scip)) )
+   if( SCIPisCertificateActive(scip) )
       return SCIP_OKAY;
    certificate = SCIPgetCertificate(scip);
    consdata = SCIPconsGetData(cons);
@@ -5377,6 +5386,7 @@ SCIP_RETCODE SCIPconsPrintCertificateExactLinear(
 static char getInequalitySense(SCIP_Bool isgreaterthan) {
    return isgreaterthan ? 'G' : 'L';
 }
+
 
 /** prints activity bound to proof section */
 SCIP_Longint SCIPcertificatePrintActivityVarBoundEx(
@@ -5594,7 +5604,7 @@ SCIP_RETCODE SCIPconsPrintCertificateOrigExactLinear(
    assert(cons != NULL);
 
    /* print constraint into certificate output */
-   if( SCIPcertificateIsActive(scip->set, SCIPgetCertificate(scip)) )
+   if( SCIPisCertificateActive(scip) )
    {
       certificate = SCIPgetCertificate(scip);
       consdata = SCIPconsGetData(cons);
@@ -10257,6 +10267,8 @@ SCIP_RETCODE createRows(
    /** create exact row */
    SCIP_CALL( SCIPcreateEmptyRowConsExact(scip, &consdata->rowexact, consdata->rowlhs, consdata->rowrhs,
       consdata->lhs, consdata->rhs, consdata->hasfprelax) );
+
+   SCIP_CALL( SCIPcaptureRowExact(scip, consdata->rowexact) );
 
    SCIP_CALL( SCIPaddVarsToRowExact(scip, consdata->rowexact, consdata->nvars, consdata->vars, consdata->vals) );
 

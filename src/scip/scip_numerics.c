@@ -641,6 +641,18 @@ SCIP_Bool SCIPisIntegral(
    return SCIPsetIsIntegral(scip->set, val);
 }
 
+/** checks, if value is integral without any tolerances */
+SCIP_Bool SCIPisExactlyIntegral(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             val                 /**< value to process */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   return floor(val) == val;
+}
+
 /** checks whether the product val * scalar is integral in epsilon scaled by scalar */
 SCIP_Bool SCIPisScalingIntegral(
    SCIP*                 scip,               /**< SCIP data structure */

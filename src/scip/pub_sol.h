@@ -69,6 +69,13 @@ SCIP_Real SCIPsolGetOrigObj(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
+/** adds value to the objective value of a given original primal CIP solution */
+SCIP_EXPORT
+void SCIPsolOrigAddObjvalExact(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Rational*        addval              /**< offset value to add */
+   );
+
 /** gets clock time, when this solution was found */
 SCIP_EXPORT
 SCIP_Real SCIPsolGetTime(
