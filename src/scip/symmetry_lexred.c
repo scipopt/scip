@@ -1203,6 +1203,9 @@ SCIP_RETCODE SCIPlexicographicReductionPropagate(
          break;
    }
 
+   /* maintain total number of reductions made */
+   masterdata->nred += *nred;
+
    /* clean the node-depth-branch-indices structure */
    SCIP_CALL( shadowtreeUndoNodeDepthBranchIndices(scip, masterdata, nodedepthbranchindices, shadowtree, focusnode) );
    SCIPfreeCleanBufferArray(scip, &nodedepthbranchindices);
