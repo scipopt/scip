@@ -4000,7 +4000,6 @@ SCIP_RETCODE propIndicator(
       SCIP_Real rhs;
       SCIP_Real coeffslack;
       int nlinconsvars;
-      SCIP_Bool success;
       int j;
 
       maxactivity = 0.0;
@@ -4048,8 +4047,7 @@ SCIP_RETCODE propIndicator(
       if( !SCIPisInfinity(scip, maxactivity) )
       {
          /* substract rhs */
-         rhs = SCIPconsGetRhs(scip, consdata->lincons, &success);
-         assert(success);
+         rhs = SCIPgetRhsLinear(scip, consdata->lincons);
 
          /* continue if rhs is not finite; happens, e.g., if variables are multiaggregated; we would need the minimal activity in this case */
          if( !SCIPisInfinity(scip, rhs) )
