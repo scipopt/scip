@@ -294,9 +294,11 @@ SCIP_RETCODE orbitalReductionGetSymmetryStabilizerSubgroup(
          varid = orcdata->symbrokenvarids[i];
          assert( varid >= 0 );
          assert( varid < orcdata->npermvars );
+         assert( orcdata->permvars[varid] != NULL );
          varidimage = perm[varid];
          assert( varidimage >= 0 );
          assert( varidimage < orcdata->npermvars );
+         assert( orcdata->permvars[varidimage] != NULL );
 
          /* branching variable is not affected by this permutation */
          if ( varidimage == varid )
@@ -309,7 +311,7 @@ SCIP_RETCODE orbitalReductionGetSymmetryStabilizerSubgroup(
           * a series of equalities yielding that all expressions must be the same:
           * \f$ub_i = lb_j <= ub_j = lb_{\cdots} <= \cdots = lb_j < ub_j \f$
           */
-         if ( EQ(scip,
+         if ( ! EQ(scip,
             varubs ? varubs[varid] : SCIPvarGetUbLocal(orcdata->permvars[varid]),
             varlbs ? varlbs[varidimage] : SCIPvarGetLbLocal(orcdata->permvars[varidimage]) )
          )
@@ -325,9 +327,11 @@ SCIP_RETCODE orbitalReductionGetSymmetryStabilizerSubgroup(
          varid = branchedvarindices[i];
          assert( varid >= 0 );
          assert( varid < orcdata->npermvars );
+         assert( orcdata->permvars[varid] != NULL );
          varidimage = perm[varid];
          assert( varidimage >= 0 );
          assert( varidimage < orcdata->npermvars );
+         assert( orcdata->permvars[varidimage] != NULL );
 
          /* branching variable is not affected by this permutation */
          if ( varidimage == varid )
