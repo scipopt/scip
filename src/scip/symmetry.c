@@ -1456,7 +1456,7 @@ SCIP_RETCODE detectOrbitopalSymmetries(
    assert( selectedperms != NULL );
    assert( nselectedperms >= 0 );
    assert( permlen > 0 );
-   assert( nrows > 0 );
+   assert( nrows > 0 || nselectedperms == 0 );
    assert( success != NULL );
    assert( matrices != NULL );
    assert( ncols != NULL );
@@ -1706,7 +1706,7 @@ SCIP_RETCODE detectOrbitopalSymmetries(
    {
       for (v = 0; v < nrows; ++v)
       {
-         for (w = 0; w < nselectedperms + 1; ++w)
+         for (w = 0; w < (*ncols)[c]; ++w)
             printf(" %4d", (*matrices)[c][v][w]);
          printf("\n");
       }
@@ -1884,6 +1884,23 @@ SCIP_RETCODE isDoublelLexSym(
    *ncols = nrows2;
    *success = TRUE;
 
+   /* check whether expecteded sizes of matrix match */
+   for (j = 0, cnt = 0; j < nmatrices1; ++j)
+      cnt += ncols1[j];
+   if ( cnt != *ncols )
+   {
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+
+   for (i = 0, cnt = 0; i < nmatrices2; ++i)
+      cnt += ncols2[i];
+   if ( cnt != *nrows )
+   {
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+
    /* collect information about entries in matrices */
    nidx = nrows1 * nrows2;
    SCIP_CALL( SCIPhashmapCreate(&idxtomatrix1, SCIPblkmem(scip), nidx) );
@@ -1917,17 +1934,6 @@ SCIP_RETCODE isDoublelLexSym(
          }
       }
    }
-
-#ifndef NDEBUG
-   /* check whether expecteded sizes of matrix match */
-   for (j = 0, cnt = 0; j < nmatrices1; ++j)
-      cnt += ncols1[j];
-   assert( cnt == *ncols );
-
-   for (i = 0, cnt = 0; i < nmatrices2; ++i)
-      cnt += ncols2[i];
-   assert( cnt == *nrows );
-#endif
 
    /* Find a big matrix such that the columns of this matrix correspond to the columns of matrices in matrices1
     * and the rows of this matrix correspond to the columns of matrices in matrices2. In total, this leads to
@@ -2185,7 +2191,12 @@ SCIP_RETCODE tryHandleDoubleLexMatrices(
    SCIPfreeBufferArray(scip, &permstype2);
    SCIPfreeBufferArray(scip, &permstype1);
 
-   printf("lex sort detection success: %d\n", success);
+   if ( ncycs1 == -1 )
+      success = FALSE;
+   printf("lex sort detection success: %d", success);
+   if ( success )
+      printf(" %d x %d (%d, %d)", ncycs1, ncycs2, nmatricestype1, nmatricestype2);
+   printf("\n");
 
    return SCIP_OKAY;
 }
