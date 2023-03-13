@@ -6293,6 +6293,10 @@ SCIP_RETCODE tryDetectOrbitope(
    int* entrynperms;
    int* entrypermsidx;
 
+   SCIP_DISJOINTSET* entriesinrow;
+   int* componentsizes;
+   int size;
+
    /* stack data structure to scan over all reachable entries in a BFS-manner */
    int stacksize;
    int** permstack;
@@ -6364,6 +6368,46 @@ SCIP_RETCODE tryDetectOrbitope(
          return SCIP_OKAY;
       }
    }
+
+   /* determine number of columns by counting the row orbit sizes */
+   SCIP_CALL( SCIPdisjointsetCreate(&entriesinrow, SCIPblkmem(scip), npermvars) );
+   for (p = 0; p < nperms; ++p)
+   {
+      perm = perms[p];
+      for (i = 0; i < npermvars; ++i)
+      {
+         j = perm[i];
+         if ( i != j )
+            SCIPdisjointsetUnion(entriesinrow, i, j, FALSE);
+      }
+   }
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &componentsizes, npermvars) );
+   for (i = 0; i < npermvars; ++i)
+   {
+      ++componentsizes[SCIPdisjointsetFind(entriesinrow, i)];
+   }
+   ncols = -1;
+   for (i = 0; i < npermvars; ++i)
+   {
+      /* singleton, or not the representative of the component */
+      size = componentsizes[i];
+      if ( size <= 1 )
+         continue;
+      /* first component of which the size is known */
+      if ( ncols < 0 )
+         ncols = size;
+      /* other components must have the same number of elements in a row, otherwise it's no orbitope */
+      else if ( size != ncols )
+      {
+         *isorbitope = FALSE;
+         break;
+      }
+   }
+   SCIPfreeBufferArray(scip, &componentsizes);
+   SCIPfreeDisjointset(scip, &entriesinrow);
+
+   if ( !*isorbitope )
+      return SCIP_OKAY;
 
    /* for each entry, store which permutation in perms affects it */
    SCIP_CALL( SCIPallocBufferArray(scip, &entryperms, npermvars) );
