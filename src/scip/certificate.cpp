@@ -820,12 +820,12 @@ SCIP_Bool SCIPcertificateEnsureLastBoundInfoConsistent(
    if( boundtype == SCIP_BOUNDTYPE_LOWER )
    {
       consistent = consistent && certificate->lastinfo->boundtype == SCIP_BOUNDTYPE_LOWER;
-      consistent = consistent && RatRoundReal(certificate->lastinfo->boundval, SCIP_R_ROUND_DOWNWARDS) == newbound;
+      consistent = consistent && RatRoundReal(certificate->lastinfo->boundval, SCIP_R_ROUND_DOWNWARDS) >= newbound;
    }
    else
    {
       consistent = consistent && certificate->lastinfo->boundtype == SCIP_BOUNDTYPE_UPPER;
-      consistent = consistent && RatRoundReal(certificate->lastinfo->boundval, SCIP_R_ROUND_UPWARDS) == newbound;
+      consistent = consistent && RatRoundReal(certificate->lastinfo->boundval, SCIP_R_ROUND_UPWARDS) <= newbound;
    }
    consistent = consistent && (!needsglobal || certificate->lastinfo->isglobal);
    consistent = consistent && certificate->lastinfo->certificateindex == certificate->indexcounter - 1;
