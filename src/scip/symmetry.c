@@ -1427,6 +1427,7 @@ SCIP_RETCODE detectOrbitopalSymmetries(
 {
    SCIP_DISJOINTSET* conncomps;
    SCIP_DISJOINTSET* compcolors;
+   int* complastperm;
    int* permstoconsider;
    int* colorbegins;
    int* compidx;
@@ -1440,6 +1441,8 @@ SCIP_RETCODE detectOrbitopalSymmetries(
    int colorrepresentative2;
    int elemtomove;
    int ncurcols;
+   int curcomp1;
+   int curcomp2;
    int curdeg1;
    int curdeg2;
    int curcolor1;
@@ -1485,6 +1488,9 @@ SCIP_RETCODE detectOrbitopalSymmetries(
    SCIP_CALL( SCIPcreateDisjointset(scip, &conncomps, permlen) );
    SCIP_CALL( SCIPcreateDisjointset(scip, &compcolors, permlen) );
    SCIP_CALL( SCIPallocClearBufferArray(scip, &degrees, permlen) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &complastperm, permlen) );
+   for (v = 0; v < permlen; ++v)
+      complastperm[v] = -1;
 
    /* try to add edges of permutations to graph */
    for (p = 0; p < nselectedperms; ++p)
@@ -1493,6 +1499,7 @@ SCIP_RETCODE detectOrbitopalSymmetries(
       curdeg1 = -1;
       curdeg2 = -1;
 
+      /* check whether all potential edges can be added */
       for (v = 0; v < permlen; ++v)
       {
          /* treat each cycle exactly once */
@@ -1500,59 +1507,90 @@ SCIP_RETCODE detectOrbitopalSymmetries(
             continue;
          w = perm[v];
 
+         curcomp1 = SCIPdisjointsetFind(conncomps, v);
+         curcomp2 = SCIPdisjointsetFind(conncomps, w);
+
+         /* an edge is not allowed to connect nodes from the same conncected component */
+         if ( curcomp1 == curcomp2 )
+            break;
+
+         /* permutation p is not allowed to add two edges to the same connected component */
+         if ( complastperm[curcomp1] == p || complastperm[curcomp2] == p )
+            break;
+
          /* get colors of nodes */
          curcolor1 = SCIPdisjointsetFind(compcolors, v);
          curcolor2 = SCIPdisjointsetFind(compcolors, w);
 
-         /* an edge is not allowed to connect nodes with the same color */
+         /* an edge is not allowed to connect two nodes with the same color */
          if ( curcolor1 == curcolor2 )
-         {
-            *success = FALSE;
-            goto FREEMEMORY;
-         }
+            break;
 
-         /* the first edge determines the degrees of the two sets of orbitopal symmetries */
          if ( curdeg1 == -1 )
          {
             assert( curdeg2 == -1 );
 
             curdeg1 = degrees[v];
             curdeg2 = degrees[w];
-            colorrepresentative1 = v;
-            colorrepresentative2 = w;
+            colorrepresentative1 = curcolor1;
+            colorrepresentative2 = curcolor2;
 
             /* stop, we will generate a vertex with degree 3 */
             if ( curdeg1 == 2 || curdeg2 == 2 )
-            {
-               *success = FALSE;
-               goto FREEMEMORY;
-            }
-         }
-
-         /* try to add edges and join color classes */
-         if ( (curdeg1 == degrees[v] && curdeg2 == degrees[w]) || (curdeg1 == degrees[w] && curdeg2 == degrees[v]) )
-         {
-            /* check whether colors of different connected components are compatible */
-            if ( (curdeg1 > 0 && (curcolor1 != colorrepresentative1 && curcolor1 != colorrepresentative2))
-               || (curdeg2 > 0 && (curcolor2 != colorrepresentative1 && curcolor2 != colorrepresentative2)) )
-            {
-               /* the colors of the connected components to be joinded do not match */
-               *success = FALSE;
-               goto FREEMEMORY;
-            }
-
-            /* add edge for v and w */
-            SCIPdisjointsetUnion(conncomps, v, w, FALSE);
-            SCIPdisjointsetUnion(compcolors, colorrepresentative1, v, TRUE);
-            SCIPdisjointsetUnion(compcolors, colorrepresentative1, w, TRUE);
-            ++degrees[v];
-            ++degrees[w];
+               break;
          }
          else
          {
-            /* the degrees of the nodes to be connected do not match among the different connected components */
-            *success = FALSE;
-            goto FREEMEMORY;
+            /* check whether nodes have compatible degrees */
+            if ( ! ((curdeg1 == degrees[v] && curdeg2 == degrees[w])
+                  || (curdeg1 == degrees[w] && curdeg2 == degrees[v])) )
+               break;
+
+            /* check whether all components have compatible colors */
+            if ( curdeg1 > 0 && curcolor1 != colorrepresentative1 && curcolor2 != colorrepresentative1 )
+               break;
+            if ( curdeg2 > 0 && curcolor1 != colorrepresentative2 && curcolor2 != colorrepresentative2 )
+               break;
+         }
+
+         /* store that permutation p extends the connected components */
+         complastperm[curcomp1] = p;
+         complastperm[curcomp2] = p;
+      }
+
+      /* terminate if not all edges can be added */
+      if ( v < permlen )
+      {
+         *success = FALSE;
+         goto FREEMEMORY;
+      }
+      assert( curdeg1 >= 0 && curdeg2 >= 0 );
+
+      /* add edges to graph */
+      for (v = 0; v < permlen; ++v)
+      {
+         /* treat each cycle exactly once */
+         if ( perm[v] <= v )
+            continue;
+         w = perm[v];
+
+         curcomp1 = SCIPdisjointsetFind(conncomps, v);
+         curcomp2 = SCIPdisjointsetFind(conncomps, w);
+         assert( curcomp1 != curcomp2 );
+
+         /* add edge */
+         SCIPdisjointsetUnion(conncomps, v, w, FALSE);
+         ++degrees[v];
+         ++degrees[w];
+
+         /* possibly update colors */
+         curcolor1 = SCIPdisjointsetFind(compcolors, v);
+         curcolor2 = SCIPdisjointsetFind(compcolors, w);
+
+         if ( curcolor1 != curcolor2 )
+         {
+            SCIPdisjointsetUnion(compcolors, colorrepresentative1, v, TRUE);
+            SCIPdisjointsetUnion(compcolors, colorrepresentative1, w, TRUE);
          }
       }
    }
@@ -1720,6 +1758,7 @@ SCIP_RETCODE detectOrbitopalSymmetries(
    SCIPfreeBufferArray(scip, &compidx);
 
  FREEMEMORY:
+   SCIPfreeBufferArray(scip, &complastperm);
    SCIPfreeBufferArray(scip, &degrees);
    SCIPfreeDisjointset(scip, &compcolors);
    SCIPfreeDisjointset(scip, &conncomps);
