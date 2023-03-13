@@ -76,6 +76,7 @@ struct LexRedPermData
    int                   nvars;              /**< number of variables */
    int*                  perm;               /**< permutation for lexicographic reduction */
    int*                  invperm;            /**< inverse permutation */
+   SCIP_HASHMAP*         varmap;             /**< map of variables to indices in vars array */
 };
 typedef struct LexRedPermData LEXDATA;
 
@@ -84,7 +85,7 @@ typedef struct LexRedPermData LEXDATA;
 struct SCIP_LexRedData
 {
    SCIP_EVENTHDLR*       shadowtreeeventhdlr;/**< eventhandler for the shadow tree data structure */
-   SCIP_HASHMAP*         symvarmap;          /**< map of variables to indices in permvars array */
+   SCIP_HASHMAP*         symvarmap;          /**< map of variables affected by some permutation handled by a LEXDATA */
    int                   nsymvars;           /**< number of variables in symvarmap */
    LEXDATA**             lexdatas;           /**< array of pointers to individual LEXDATA's */
    int                   nlexdatas;          /**< number of datas in array */
@@ -135,6 +136,9 @@ SCIP_RETCODE lexdataFree(
       assert( (*lexdata)->perm != NULL );
       assert( (*lexdata)->vars != NULL );
 
+      /* free hashmap */
+      SCIPhashmapFree(&((*lexdata)->varmap));
+
       /* release variables */
       for (i = 0; i < (*lexdata)->nvars; ++i)
       {
@@ -152,6 +156,7 @@ SCIP_RETCODE lexdataFree(
       assert( (*lexdata)->invperm == NULL );
       assert( (*lexdata)->perm == NULL );
       assert( (*lexdata)->vars == NULL );
+      assert( (*lexdata)->varmap == NULL );
    }
 #endif
    SCIPfreeBlockMemory(scip, lexdata);
@@ -253,23 +258,31 @@ SCIP_RETCODE lexdataCreate(
       SCIP_CALL( SCIPcaptureVar(scip, (*lexdata)->vars[i]) );
    }
 
-   /* create hashmap for all variables */
+   /* create hashmap for all variables, both globally and just for this lexdata */
    assert( (masterdata->symvarmap == NULL) == (masterdata->nsymvars == 0) );
    if ( masterdata->symvarmap == NULL )
    {
       SCIP_CALL( SCIPhashmapCreate(&masterdata->symvarmap, SCIPblkmem(scip), (*lexdata)->nvars) );
    }
    assert( masterdata->symvarmap != NULL );
+
+   SCIP_CALL( SCIPhashmapCreate(&(*lexdata)->varmap, SCIPblkmem(scip), (*lexdata)->nvars) );
+   assert( (*lexdata)->varmap != NULL );
+
    for (i = 0; i < (*lexdata)->nvars; ++i)
    {
       var = (*lexdata)->vars[i];
       assert( var != NULL );
       assert( SCIPvarIsTransformed(var) );
 
+      /* the hashmap in lexdata maps to the index in the vars array */
+      SCIP_CALL( SCIPhashmapInsertInt((*lexdata)->varmap, (void*) var, i) );
+
       /* var already added to hashmap */
       if ( SCIPhashmapExists(masterdata->symvarmap, (void*) var) )
          continue;
 
+      /* the hashmap in symvarmap maps to a unique index */
       SCIP_CALL( SCIPhashmapInsertInt(masterdata->symvarmap, (void*) var, masterdata->nsymvars++) );
    }
 
@@ -342,6 +355,8 @@ SCIP_RETCODE getVarOrder(
    NODEDEPTHBRANCHINDEX* nodedepthbranchindices, /**< array with (depth, index)-information per variable in
                                                   *   rooted path to focus node */
    int                   nvarstotal,         /**< length of that array */
+   SCIP_VAR**            branchvars,         /**< array populated with variables branched on in the symvarmap hashset */
+   int                   nbranchvars,        /**< number of elements in branchvars array */
    int*                  varorder,           /**< array to populate with variable order */
    int*                  nselvars,           /**< pointer to number of variables in the ordering */
    int                   maxnselvars         /**< maximal size of the number of selected variables */
@@ -369,27 +384,60 @@ SCIP_RETCODE getVarOrder(
    /* first collect every variable that was branched on */
    *nselvars = 0;
 
-   for (i = 0; i < nvars; ++i)
+   if ( nvars < nbranchvars )
    {
-      var = vars[i];
-      assert( var != NULL );
+      /* for permutations with small support, just check all support entries */
+      for (i = 0; i < nvars; ++i)
+      {
+         var = vars[i];
+         assert( var != NULL );
 
-      assert( SCIPhashmapExists(masterdata->symvarmap, (void*) var) );
-      varindex = SCIPhashmapGetImageInt(masterdata->symvarmap, var);
-      assert( varindex >= 0 );
-      assert( varindex < masterdata->nsymvars );
+         assert( SCIPhashmapExists(masterdata->symvarmap, (void*) var) );
+         varindex = SCIPhashmapGetImageInt(masterdata->symvarmap, var);
+         assert( varindex >= 0 );
+         assert( varindex < masterdata->nsymvars );
 
-      assert( nodedepthbranchindices[varindex].nodedepth >= 0 );
+         assert( nodedepthbranchindices[varindex].nodedepth >= 0 );
 
-      /* skip variables that have not been used for branching */
-      if ( nodedepthbranchindices[varindex].nodedepth <= 0 )
-         continue;
+         /* skip variables that have not been used for branching */
+         if ( nodedepthbranchindices[varindex].nodedepth <= 0 )
+            continue;
 
-      /* add index i of branching variable */
-      assert( i >= 0 );
-      assert( i < nvars );
-      assert( (*nselvars) < maxnselvars );
-      varorder[(*nselvars)++] = i;
+         /* add index i of branching variable */
+         assert( i >= 0 );
+         assert( i < nvars );
+         assert( (*nselvars) < maxnselvars );
+         varorder[(*nselvars)++] = i;
+      }
+   }
+   else
+   {
+      /* for permutations where the support is larger than the number of branched vars, check for the branched vars */
+      for (i = 0; i < nbranchvars; ++i)
+      {
+         var = branchvars[i];
+         assert( var != NULL );
+
+#ifndef NDEBUG
+         /* debugging: test if it is indeed a branched variable! */
+         varindex = SCIPhashmapGetImageInt(masterdata->symvarmap, var);
+         assert( varindex >= 0 );
+         assert( varindex < masterdata->nsymvars );
+         assert( nodedepthbranchindices[varindex].nodedepth > 0 );
+#endif
+
+         /* get the variable index in the lexdata->vars array */
+         varindex = SCIPhashmapGetImageInt(lexdata->varmap, (void*) var);
+         assert( varindex == INT_MAX || (varindex >= 0 && varindex < lexdata->nvars) );
+
+         /* skip variables that are not permuted by the permutation */
+         if ( varindex == INT_MAX )
+            continue;
+         assert( lexdata->vars[varindex] == var );
+
+         /* add index varindex of the branching variable */
+         varorder[(*nselvars)++] = varindex;
+      }
    }
 
    if ( *nselvars > 1 )
@@ -855,6 +903,8 @@ SCIP_RETCODE propagateLexredDynamic(
    NODEDEPTHBRANCHINDEX* nodedepthbranchindices, /**< array with (depth, index)-information per variable in
                                                   *   rooted path to focus node */
    int                   nvarstotal,         /**< length of nodedepthbranchindices array */
+   SCIP_VAR**            branchvars,         /**< array populated with variables branched on */
+   int                   nbranchvars,        /**< number of elements in branchvars array */
    SCIP_Bool*            infeasible,         /**< pointer to store whether the problem is infeasible */
    int*                  nreductions         /**< pointer to store the number of found domain reductions */
    )
@@ -875,7 +925,7 @@ SCIP_RETCODE propagateLexredDynamic(
 
    SCIP_CALL( SCIPallocBufferArray(scip, &varorder, nvars) );
 
-   SCIP_CALL( getVarOrder(scip, masterdata, lexdata, nodedepthbranchindices, nvarstotal,
+   SCIP_CALL( getVarOrder(scip, masterdata, lexdata, nodedepthbranchindices, nvarstotal, branchvars, nbranchvars,
       varorder, &nvarorder, nvars) );
    assert( nvarorder >= 0 );
    assert( nvarorder <= nvars );
@@ -900,6 +950,8 @@ SCIP_RETCODE propagateLexicographicReductionPerm(
    NODEDEPTHBRANCHINDEX* nodedepthbranchindices, /**< array with (depth, index)-information per variable in
                                                   *   rooted path to focus node */
    int                   nvarstotal,         /**< length of that array */
+   SCIP_VAR**            branchvars,         /**< array populated with variables branched on */
+   int                   nbranchvars,        /**< number of elements in branchvars array */
    SCIP_Bool*            infeasible,         /**< pointer to store whether the problem is infeasible */
    int*                  nreductions         /**< pointer to store the number of found domain reductions */
    )
@@ -913,7 +965,7 @@ SCIP_RETCODE propagateLexicographicReductionPerm(
    *infeasible = FALSE;
 
    SCIP_CALL( propagateLexredDynamic(scip, masterdata, lexdata,
-      nodedepthbranchindices, nvarstotal, infeasible, nreductions) );
+      nodedepthbranchindices, nvarstotal, branchvars, nbranchvars, infeasible, nreductions) );
 
    return SCIP_OKAY;
 }
@@ -927,6 +979,8 @@ SCIP_RETCODE shadowtreeFillNodeDepthBranchIndices(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_LEXREDDATA*      masterdata,         /**< pointer to global data for lexicographic reduction propagator */
    NODEDEPTHBRANCHINDEX* nodedepthbranchindices, /**< array to populate */
+   SCIP_VAR**            branchvars,         /**< array to populate with variables branched on */
+   int*                  nbranchvars,        /**< number of elements in branchvars array */
    SCIP_SHADOWTREE*      shadowtree,         /**< pointer to shadow tree structure */
    SCIP_NODE*            focusnode           /**< focusnode to which the rooted path is evaluated */
 )
@@ -945,12 +999,17 @@ SCIP_RETCODE shadowtreeFillNodeDepthBranchIndices(
    assert( masterdata->symvarmap != NULL );
    assert( masterdata->nsymvars >= 0 );
    assert( nodedepthbranchindices != NULL );
+   assert( branchvars != NULL );
+   assert( nbranchvars != NULL );
    assert( shadowtree != NULL );
    assert( focusnode != NULL );
 
    shadownode = SCIPshadowTreeGetShadowNode(shadowtree, focusnode);
    assert( shadownode != NULL );
    shadowdepth = SCIPnodeGetDepth(focusnode);
+
+   /* branchvars array is initially empty */
+   *nbranchvars = 0;
 
    /* We start looking one level lower, because we consider the branching decisions each time. */
    shadownode = shadownode->parent;
@@ -972,11 +1031,11 @@ SCIP_RETCODE shadowtreeFillNodeDepthBranchIndices(
          for (i = 0; i < shadowchild->nbranchingdecisions; ++i)
          {
             var = shadowchild->branchingdecisions[i].var;
+            assert( SCIPvarIsTransformed(var) );
 
             /* ignore variables that are irrelevant for lexicographic reduction */
             if ( !SCIPhashmapExists(masterdata->symvarmap, (void*) var) )
                continue;
-            assert( SCIPhashmapExists(masterdata->symvarmap, (void*) var) );
 
             varindex = SCIPhashmapGetImageInt(masterdata->symvarmap, var);
             assert( varindex >= 0 );
@@ -989,6 +1048,10 @@ SCIP_RETCODE shadowtreeFillNodeDepthBranchIndices(
             /* the variable is either not seen (nodedepth == 0), or it is at a higher level (nodedepth > shadowdepth) */
             assert( nodedepthbranchindices[varindex].nodedepth == 0 ||
                nodedepthbranchindices[varindex].nodedepth > shadowdepth);
+
+            /* variable is not featured in branchvars, yet */
+            assert( *nbranchvars < masterdata->nsymvars );
+            branchvars[(*nbranchvars)++] = var;
 
             /* var is not seen on this level yet. Update */
             nodedepthbranchindices[varindex].nodedepth = shadowdepth;
@@ -1013,6 +1076,8 @@ SCIP_RETCODE shadowtreeUndoNodeDepthBranchIndices(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_LEXREDDATA*      masterdata,         /**< pointer to global data for lexicographic reduction propagator */
    NODEDEPTHBRANCHINDEX* nodedepthbranchindices, /**< array populated by nodedepthbranchindices to clean */
+   SCIP_VAR**            branchvars,         /**< array populated with variables branched on */
+   int*                  nbranchvars,        /**< number of elements in branchvars array */
    SCIP_SHADOWTREE*      shadowtree,         /**< pointer to shadow tree structure */
    SCIP_NODE*            focusnode           /**< focusnode to which the rooted path is evaluated */
 )
@@ -1031,11 +1096,20 @@ SCIP_RETCODE shadowtreeUndoNodeDepthBranchIndices(
    assert( masterdata->symvarmap != NULL );
    assert( masterdata->nsymvars >= 0 );
    assert( nodedepthbranchindices != NULL );
+   assert( branchvars != NULL );
+   assert( nbranchvars != NULL );
+   assert( *nbranchvars >= 0 );
+   assert( *nbranchvars <= masterdata->nsymvars );
    assert( shadowtree != NULL );
    assert( focusnode != NULL );
 
    shadownode = SCIPshadowTreeGetShadowNode(shadowtree, focusnode);
    shadowdepth = SCIPnodeGetDepth(focusnode);
+
+   /* clean nbranchvars array */
+   while ( *nbranchvars > 0 )
+      branchvars[--(*nbranchvars)] = NULL;
+   assert( *nbranchvars == 0 );
 
    /* we start looking one level lower, because we consider the branching decisions each time */
    shadownode = shadownode->parent;
@@ -1148,6 +1222,8 @@ SCIP_RETCODE SCIPlexicographicReductionPropagate(
    int nlocalred;
    int p;
    NODEDEPTHBRANCHINDEX* nodedepthbranchindices;
+   SCIP_VAR** branchvars;
+   int nbranchvars;
    SCIP_SHADOWTREE* shadowtree;
    SCIP_NODE* focusnode;
 
@@ -1181,33 +1257,41 @@ SCIP_RETCODE SCIPlexicographicReductionPropagate(
     *  2. Sort by depth, then by index, in increasing order.
     */
    SCIP_CALL( SCIPallocCleanBufferArray(scip, &nodedepthbranchindices, masterdata->nsymvars) );
-   SCIP_CALL( shadowtreeFillNodeDepthBranchIndices(scip, masterdata, nodedepthbranchindices, shadowtree, focusnode) );
+   SCIP_CALL( SCIPallocCleanBufferArray(scip, &branchvars, masterdata->nsymvars) );
+   SCIP_CALL( shadowtreeFillNodeDepthBranchIndices(scip, masterdata, nodedepthbranchindices,
+      branchvars, &nbranchvars, shadowtree, focusnode) );
    /* ... Do everything using this nodedepthbranchindices structure */
 
-   /* apply lexicographic reduction propagator to all lexdata objects */
-   for (p = 0; p < masterdata->nlexdatas; ++p)
+   if ( nbranchvars > 0 )
    {
-      assert( masterdata->lexdatas[p] != NULL );
+      /* apply lexicographic reduction propagator to all lexdata objects */
+      for (p = 0; p < masterdata->nlexdatas; ++p)
+      {
+         assert( masterdata->lexdatas[p] != NULL );
 
-      SCIP_CALL( propagateLexicographicReductionPerm(scip, masterdata, masterdata->lexdatas[p],
-         nodedepthbranchindices, masterdata->nsymvars, infeasible, &nlocalred) );
+         SCIP_CALL( propagateLexicographicReductionPerm(scip, masterdata, masterdata->lexdatas[p],
+            nodedepthbranchindices, masterdata->nsymvars, branchvars, nbranchvars, infeasible, &nlocalred) );
 
-      /* keep track of the total number of fixed vars */
-      *nred += nlocalred;
+         /* keep track of the total number of fixed vars */
+         *nred += nlocalred;
 
-      /* a symmetry propagator has ran, so set didrun to TRUE */
-      *didrun = TRUE;
+         /* a symmetry propagator has ran, so set didrun to TRUE */
+         *didrun = TRUE;
 
-      /* stop if we find infeasibility */
-      if ( *infeasible )
-         break;
+         /* stop if we find infeasibility */
+         if ( *infeasible )
+            break;
+      }
+
+      /* maintain total number of reductions made */
+      masterdata->nred += *nred;
    }
 
-   /* maintain total number of reductions made */
-   masterdata->nred += *nred;
-
    /* clean the node-depth-branch-indices structure */
-   SCIP_CALL( shadowtreeUndoNodeDepthBranchIndices(scip, masterdata, nodedepthbranchindices, shadowtree, focusnode) );
+   SCIP_CALL( shadowtreeUndoNodeDepthBranchIndices(scip, masterdata, nodedepthbranchindices,
+      branchvars, &nbranchvars, shadowtree, focusnode) );
+   assert( nbranchvars == 0 );
+   SCIPfreeCleanBufferArray(scip, &branchvars);
    SCIPfreeCleanBufferArray(scip, &nodedepthbranchindices);
 
    return SCIP_OKAY;
