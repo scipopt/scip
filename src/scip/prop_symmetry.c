@@ -6676,6 +6676,51 @@ SCIP_RETCODE tryAddOrbitopesDynamic(
       if ( !isorbitope )
          goto CLEARITERATION;
 
+      /* add linear constraints x_1 >= x_2 >= ... >= x_ncols for single-row orbitopes */
+      if ( nrows == 1 )
+      {
+         /* restrict to the packing and partitioning rows */
+         SCIP_CONS* cons;
+         SCIP_VAR* consvars[2];
+         SCIP_Real conscoefs[2] = { -1.0, 1.0 };
+
+         /* for all adjacent column pairs, add linear constraint */
+         SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, &propdata->genlinconss,
+            &propdata->genlinconsssize, propdata->ngenlinconss + ncols - 1) );
+         for (i = 0; i < ncols - 1; ++i)
+         {
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "orbitope_1row_comp_%d_col%d", c, i);
+
+            consvars[0] = propdata->permvars[orbitopematrix[i]];
+            consvars[1] = propdata->permvars[orbitopematrix[i + 1]];
+            SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, 2, consvars, conscoefs, -SCIPinfinity(scip), 0.0,
+               TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE ) );
+
+            SCIP_CALL( SCIPaddCons(scip, cons) );
+            propdata->genlinconss[propdata->ngenlinconss++] = cons;
+         }
+
+         propdata->componentblocked[c] |= SYM_HANDLETYPE_SYMBREAK;
+         ++propdata->ncompblocked;
+         goto CLEARITERATION;
+      }
+
+      /* for only 2 columns, then the component can be completely handled by lexicographic reduction */
+      if ( ncols == 2 && propdata->lexreddata != NULL )
+      {
+         /* If the component is an orbitope with 2 columns, then there is 1 generator of order 2. */
+         assert( componentsize == 1 );
+
+         SCIP_CALL( SCIPlexicographicReductionAddPermutation(scip, propdata->lexreddata,
+            propdata->permvars, propdata->npermvars, componentperms[0], &success) );
+         if ( success )
+         {
+            propdata->componentblocked[c] |= SYM_HANDLETYPE_SYMBREAK | SYM_HANDLETYPE_DYNAMIC;
+            ++propdata->ncompblocked;
+            goto CLEARITERATION;
+         }
+      }
+
       /* transform orbitope variable matrix to desired input format for `SCIPisPackingPartitioningOrbitope` */
       SCIP_CALL( SCIPallocBufferArray(scip, &ppvarmatrix, nrows) );
       for (i = 0; i < nrows; ++i)
@@ -6693,7 +6738,7 @@ SCIP_RETCODE tryAddOrbitopesDynamic(
       SCIP_CALL( SCIPisPackingPartitioningOrbitope(scip, ppvarmatrix, nrows, ncols, &pprows, &npprows, &type) );
 
       /* does it have at least 3 packing-partitioning rows? */
-      ispporbitope = npprows >= 3;  /* (use same magic number as cons_orbitope.c)*/
+      ispporbitope = npprows >= 3;  /* (use same magic number as cons_orbitope.c) */
 
       if ( ispporbitope ) /* @todo if it's a pporbitope, we do it statically right now. */
       {
