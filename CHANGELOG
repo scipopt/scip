@@ -217,6 +217,7 @@ Miscellaneous
 
 - Extended documentation of the parameter limits/solutions to point out that the limit is first checked in presolving
 - Added more information about using SCIPcache- and SCIPflushRowExtensions() to documentation and comments
+- Extended the `how to add' sections of the documentation by adding information on how to include default plugins into SCIP
 
 Known bugs
 ----------
