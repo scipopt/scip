@@ -288,7 +288,7 @@ SCIP_RETCODE proofsetAddAggrrow(
 
    SCIPsetFreeBufferArray(set, &vals);
 
-   if ( set->exact_enabled && SCIPcertificateIsActive(set, SCIPgetCertificate(set->scip)))
+   if ( set->exact_enabled && SCIPisCertificateActive(set->scip))
    {
       assert(aggrrow->certificateline != LONG_MAX);
       assert(proofset->certificateline == LONG_MAX); //@todo

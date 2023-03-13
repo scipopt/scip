@@ -1349,7 +1349,7 @@ SCIP_RETCODE SCIPgetFarkasProof(
       }
    }
 
-   if ( set->exact_enabled && SCIPcertificateIsActive(set, SCIPgetCertificate(set->scip)))
+   if ( set->exact_enabled && SCIPisCertificateActive(set->scip))
    {
       //certificatePrintAggrrow(set->scip, SCIPgetCertificate(set->scip), farkasrow, &farkasrow->certificateline);
       SCIP_ROW** usedrows;
@@ -1689,7 +1689,7 @@ SCIP_RETCODE SCIPgetDualProof(
       }
    }
 
-   if ( set->exact_enabled && SCIPcertificateIsActive(set, SCIPgetCertificate(set->scip)))
+   if ( set->exact_enabled && SCIPisCertificateActive(set->scip))
    {
       //certificatePrintAggrrow(set->scip, SCIPgetCertificate(set->scip), farkasrow, &farkasrow->certificateline);
       unsigned long certificateline;

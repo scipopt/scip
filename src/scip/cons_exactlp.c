@@ -4486,7 +4486,7 @@ SCIP_RETCODE SCIPconsPrintCertificateExactLinear(
    assert(cons != NULL);
 
    /* print constraint into certificate output */
-   if( SCIPisCertificateActive(scip) )
+   if( !SCIPisCertificateActive(scip) )
       return SCIP_OKAY;
    certificate = SCIPgetCertificate(scip);
    consdata = SCIPconsGetData(cons);

@@ -766,15 +766,6 @@ void SCIPcertificateExit(
 }
 
 /** returns whether the certificate output is activated? */
-SCIP_Bool SCIPcertificateIsActive(
-   SCIP_SET*             set,                /**< SCIP settings */
-   SCIP_CERTIFICATE*     certificate         /**< certificate information */
-   )
-{
-   return (set->exact_enabled && certificate != NULL && (certificate->transfile != NULL || strcmp(set->certificate_filename, "-")) );
-}
-
-/** returns whether the certificate output is activated? */
 SCIP_Bool SCIPsetCertificateEnabled(
    SCIP_SET*             set                 /**< SCIP settings */
    )
