@@ -1229,9 +1229,11 @@
  * -# Copy the template files src/scip/cons_xyz.c and src/scip/cons_xyz.h into files "cons_subtour.c"
  *    and "cons_subtour.h".
  *     \n
- *    Make sure to <b>adjust your Makefile</b> such that these files are compiled and linked to your project.
- * -# Use SCIPincludeConsSubtour() in order to include the constraint handler into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/cppmain.cpp in the TSP example).
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
+ * -# Use `SCIPincludeConshdlrSubtour()` in order to include the constraint handler into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/cppmain.cpp in the TSP example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "subtour".
  * -# Adjust the \ref CONS_PROPERTIES "properties of the constraint handler".
  * -# Define the \ref CONS_DATA "constraint data and the constraint handler data". This is optional.
@@ -2067,9 +2069,11 @@
  * -# Copy the template files src/scip/pricer_xyz.c and src/scip/pricer_xyz.h into files "pricer_mypricer.c"
  *    and "pricer_mypricer.h".
  *    \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Use SCIPincludePricerMypricer() in order to include the pricer into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
+ * -# Use `SCIPincludePricerMypricer()` in order to include the pricer into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mypricer".
  * -# Adjust the properties of the pricer (see \ref PRICER_PROPERTIES).
  * -# Define the pricer data (see \ref PRICER_DATA). This is optional.
@@ -2335,9 +2339,11 @@
  * -# Copy the template files src/scip/presol_xyz.c and src/scip/presol_xyz.h into files named "presol_mypresolver.c"
  *    and "presol_mypresolver.h".
  *    \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Use SCIPincludePresolMypresolver() in order to include the presolver into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
+ * -# Use `SCIPincludePresolMypresolver()` in order to include the presolver into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mypresolver".
  * -# Adjust the properties of the presolver (see \ref PRESOL_PROPERTIES).
  * -# Define the presolver data (see \ref PRESOL_DATA). This is optional.
@@ -2536,9 +2542,11 @@
  * -# Copy the template files src/scip/sepa_xyz.c and src/scip/sepa_xyz.h into files "sepa_myseparator.c"
  *    and "sepa_myseparator.h".
       \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Use SCIPincludeSepaMyseparator() in order to include the separator into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
+ * -# Use `SCIPincludeSepaMyseparator()` in order to include the separator into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "myseparator".
  * -# Adjust the properties of the separator (see \ref SEPA_PROPERTIES).
  * -# Define the separator data (see \ref SEPA_DATA). This is optional.
@@ -2796,9 +2804,11 @@
  * -# Copy the template files src/scip/prop_xyz.c and src/scip/prop_xyz.h into files named "prop_mypropagator.c"
  *    and "prop_mypropagator.h".
  *    \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Use SCIPincludePropMypropagator() in order to include the propagator into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
+ * -# Use `SCIPincludePropMypropagator()` in order to include the propagator into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mypropagator".
  * -# Adjust the properties of the propagator (see \ref PROP_PROPERTIES).
  * -# Define the propagator data (see \ref PROP_DATA). This is optional.
@@ -3095,9 +3105,11 @@
  * -# Copy the template files src/scip/branch_xyz.c and src/scip/branch_xyz.h into files named
  *    "branch_mybranchingrule.c" and "branch_mybranchingrule.h".
  *    \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Use SCIPincludeBranchruleMybranchingrule() in order to include the branching rule into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
+ * -# Use `SCIPincludeBranchruleMybranchingrule()` in order to include the branching rule into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mybranchingrule".
  * -# Adjust the properties of the branching rule (see \ref BRANCHRULE_PROPERTIES).
  * -# Define the branching rule data (see \ref BRANCHRULE_DATA). This is optional.
@@ -3385,9 +3397,11 @@
  * -# Copy the template files src/scip/cutsel_xyz.c and src/scip/cutsel_xyz.h into files named "cutsel_mycutselector.c"
  *    and "cutsel_mycutselector.h".
  *    \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Use SCIPincludeCutselMycutselector() in oder to include the cut selector into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
+ * -# Use SCIPincludeCutselMycutselector() in order to include the cut selector into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mycutselector".
  * -# Adjust the properties of the cut selector (see \ref CUTSEL_PROPERTIES).
  * -# Define the cut selector data (see \ref CUTSEL_DATA). This is optional.
@@ -3551,9 +3565,11 @@
  * -# Copy the template files src/scip/nodesel_xyz.c and src/scip/nodesel_xyz.h into files named "nodesel_mynodeselector.c"
  *    and "nodesel_mynodeselector.h".
  *    \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Use SCIPincludeNodeselMynodeselector() in oder to include the node selector into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
+ * -# Use SCIPincludeNodeselMynodeselector() in order to include the node selector into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mynodeselector".
  * -# Adjust the properties of the node selector (see \ref NODESEL_PROPERTIES).
  * -# Define the node selector data (see \ref NODESEL_DATA). This is optional.
@@ -3786,9 +3802,11 @@
  * -# Copy the template files src/scip/heur_xyz.c and src/scip/heur_xyz.h into files named "heur_myheuristic.c"
  *    and "heur_myheuristic.h".
  *    \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Use SCIPincludeHeurMyheuristic() in order to include the heuristic into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
+ * -# Use `SCIPincludeHeurMyheuristic()` in order to include the heuristic into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "myheuristic".
  * -# Adjust the properties of the primal heuristic (see \ref HEUR_PROPERTIES).
  * -# Define the primal heuristic data (see \ref HEUR_DATA). This is optional.
@@ -4046,9 +4064,11 @@
  *
  * Here is what you have to do to implement an own expression handler:
  * -# Copy the template files `src/scip/expr_xyz.c` and `src/scip/expr_xyz.h` into files `expr_myfunc.c` and `expr_myfunc.h`, respectively. \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
  * -# Use `SCIPincludeExprhdlrMyfunc()` in order to include the expression handler into your SCIP instance,
- *    e.g., in the main file of your project.
+ *    e.g., in the main file of your project. \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "myfunc".
  * -# Adjust the properties of the expression handler (see \ref EXPRHDLR_PROPERTIES).
  * -# Define the expression handler data and expression data (see \ref EXPRHDLR_DATA). This is optional.
@@ -4496,8 +4516,10 @@
  *
  * Here is what you have to do to implement a nonlinear handler:
  * -# Copy the template files `src/scip/nlhdlr_xyz.c` and `src/scip/nlhdlr_xyz.h` into files `nlhdlr_mystruct.c` and `nlhdlr_mystruct.h`, respectively. \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Use `SCIPincludeNlhdlrMystruct()` in order to include the nonlinear handler into your SCIP instance, e.g., in the main file of your project.
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
+ * -# Use `SCIPincludeNlhdlrMystruct()` in order to include the nonlinear handler into your SCIP instance, e.g., in the main file of your project. \n
+      If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mystruct".
  * -# Adjust the properties of the nonlinear handler (see \ref NLHDLR_PROPERTIES).
  * -# Define the nonlinear handler data and nonlinear handler expression data (see \ref NLHDLR_DATA). This is optional.
@@ -4899,9 +4921,11 @@
  * -# Copy the template files src/scip/relax_xyz.c and src/scip/relax_xyz.h into files named "relax_myrelaxator.c"
  *    and "relax_myrelaxator.h".
  *    \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Use SCIPincludeRelaxMyrelaxator() in order to include the relaxation handler into your SCIP instance,
- *    e.g, in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
+ * -# Use `SCIPincludeRelaxMyrelaxator()` in order to include the relaxation handler into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "myrelaxator".
  * -# Adjust the properties of the relaxation handler (see \ref RELAX_PROPERTIES).
  * -# Define the relaxation handler data (see \ref RELAX_DATA). This is optional.
@@ -5138,9 +5162,11 @@
  * -# Copy the template files src/scip/reader_xyz.c and src/scip/reader_xyz.h into files named
  *    "reader_myreader.c" and "reader_myreader.h".
  *    \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Use SCIPincludeReaderMyreader() in order to include the file reader into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
+ * -# Use `SCIPincludeReaderMyreader()` in order to include the reader into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "myreader".
  * -# Adjust the \ref READER_PROPERTIES "properties of the file reader".
  * -# Define the \ref READER_DATA "file reader data". This is optional.
@@ -5332,9 +5358,11 @@
  * -# Copy the template files src/scip/dialog_xyz.c and src/scip/dialog_xyz.h into files named "dialog_mydialog.c"
  *    and "dialog_mydialog.h".
  *    \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Use SCIPincludeDialogMydialog() in order to include the dialog handler into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
+ * -# Use `SCIPincludeDialogMydialog()` in order to include the dialog handler into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mydialog".
  * -# Adjust the \ref DIALOG_PROPERTIES "properties of the dialog".
  * -# Define the \ref DIALOG_DATA "dialog data". This is optional.
@@ -5501,9 +5529,11 @@
  * -# Copy the template files src/scip/disp_xyz.c and src/scip/disp_xyz.h into files named "disp_mydisplaycolumn.c"
  *    and "disp_mydisplaycolumn.h".
       \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Use SCIPincludeDispMydisplaycolumn() in order to include the display column into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
+ * -# Use `SCIPincludeDispMydisplaycolumn()` in order to include the display column into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mydisplaycolumn".
  * -# Adjust the \ref DISP_PROPERTIES "properties of the display column".
  * -# Define the  \ref DISP_DATA "display column data". This is optional.
@@ -5677,9 +5707,11 @@
  * -# Copy the template files src/scip/event_xyz.c and src/scip/event_xyz.h into files named "event_bestsol.c"
  *    and "event_bestsol.h".
       \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Use SCIPincludeEventBestsol() in order to include the event handler into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Eventhdlr example).
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
+ * -# Use `SCIPincludeEventBestsol()` in order to include the event handler into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "bestsol".
  * -# Adjust the \ref EVENTHDLR_PROPERTIES "properties of the event handler".
  * -# Implement the \ref EVENT_INTERFACE "interface methods".
@@ -5896,9 +5928,11 @@
  *
  * Here is what you have to do to implement an NLPI:
  * -# Copy the template files src/scip/nlpi_xyz.c and src/scip/nlpi_xyz.h into files named "nlpi_mysolver.c" and "nlpi_mysolver.h".
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
  * -# Use `SCIPincludeNlpSolverMysolver()` in order to include the NLPI into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mysolver".
  * -# Adjust the properties of the nlpi (see \ref NLPI_PROPERTIES).
  * -# Define the NLPI and NLPIPROBLEM data (see \ref NLPI_DATA).
@@ -6105,7 +6139,8 @@
  *
  * Here is what you have to do to implement an expression interpreter:
  * -# Copy the file \ref exprinterpret_none.c into a file named "exprinterpret_myad.c".
- *    Make sure to adjust your Makefile such that this file is compiled and linked to your project instead of exprinterpret implementations.
+ *    Make sure to adjust your build system such that this file is compiled and linked to your project instead of exprinterpret implementations. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
  * -# Open the new file with a text editor.
  * -# Define the expression interpreter data (see \ref EXPRINT_DATA).
  * -# Implement the interface methods (see \ref EXPRINT_INTERFACE).
@@ -6207,9 +6242,11 @@
  * -# Copy the template files src/scip/table_xyz.c and src/scip/table_xyz.h into files named "table_mystatisticstable.c"
  *    and "table_mystatisticstable.h".
  *    \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
  * -# Use SCIPincludeTableMystatisticstable() in order to include the statistics table into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mystatisticstable".
  * -# Adjust the \ref TABLE_PROPERTIES "properties of the statistics table".
  * -# Define the  \ref TABLE_DATA "statistics table data". This is optional.
@@ -6441,9 +6478,11 @@
  * -# Copy the template files src/scip/benders_xyz.c and src/scip/benders_xyz.h into files "benders_mybenders.c" and
  *  "benders_mybenders.h".
       \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
  * -# Use SCIPincludeBendersMybenders() in order to include the Benders' decomposition into your SCIP instance, e.g., in
- *  the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ *    the main file of your project (see, e.g., src/cmain.c in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mybenders".
  * -# Adjust the properties of the Benders' decomposition (see \ref BENDERS_PROPERTIES).
  * -# Define the Benders' decomposition data (see \ref BENDERS_DATA). This is optional.
@@ -6762,9 +6801,11 @@
  * -# Copy the template files src/scip/benderscut_xyz.c and src/scip/benderscut_xyz.h into files "benderscut_mybenderscut.c" and
  *  "benderscut_mybenderscut.h".
       \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
  * -# Use SCIPincludeBenderscutMybenderscut() in order to include the Benders' decomposition cut method into your SCIP
- *  instance, e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ *    instance, e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mybenderscut".
  * -# Adjust the properties of the Benders' decomposition (see \ref BENDERSCUT_PROPERTIES).
  * -# Define the Benders' decomposition data (see \ref BENDERSCUT_DATA). This is optional.
