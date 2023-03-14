@@ -44,7 +44,6 @@
 #include "scip/scip_lp.h"
 #include "scip_param.h"
 #include "scip/type_cuts.h"
-#include "scip/cuts.h"
 #include "scip/branch_relpscost.h"
 #include <string.h>
 #include <assert.h>
@@ -360,7 +359,6 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpGomory)
    int nrows;
    SCIP_COL* col;
    int lppos;
-   SCIP_AGGRROW* aggrrow;
    SCIP_Real* binvrow;
    SCIP_Real* binvarow;
    int* inds;
@@ -438,7 +436,6 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpGomory)
    SCIP_CALL( SCIPallocBufferArray(scip, &binvrow, nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &binvarow, ncols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &inds, nrows) );
-   SCIP_CALL( SCIPaggrRowCreate(scip, &aggrrow) );
 
    /* Create basis indices mapping (from the column position to LP tableau rox index) */
    for( i = 0; i < ncols; ++i )
@@ -506,7 +503,6 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpGomory)
    SCIPfreeBufferArray(scip, &basicvarpos2tableaurow);
    SCIPfreeBufferArray(scip, &basisind);
    SCIPfreeBufferArray(scip, &cutcoefs);
-   SCIPaggrRowFree(scip, &aggrrow);
 
    SCIPdebugMsg(scip, " -> %d candidates, selected candidate %d: variable <%s> (frac=%g, factor=%g, score=%g)\n",
                 nlpcands, bestcand, SCIPvarGetName(lpcands[bestcand]), lpcandsfrac[bestcand],
