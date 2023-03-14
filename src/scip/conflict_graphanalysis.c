@@ -2616,11 +2616,13 @@ SCIP_RETCODE SCIPconflictAnalyzeRemainingBdchgs(
    {
       /* setting this to true adds bound changes only to the conflict graph bdchg queue */
       conflict->bdchgonlyconfqueue = TRUE;
-
-      /* analyze the conflict set, and create conflict constraints on success */
-      SCIP_CALL( conflictAnalyze(conflict, blkmem, set, stat, prob, tree, diving, 0, FALSE, nconss, nliterals, \
+      /* check if the conflict analysis is applicable */
+      if( SCIPconflictGraphApplicable(set) )
+      {
+         /* analyze the conflict set, and create conflict constraints on success */
+         SCIP_CALL( conflictAnalyze(conflict, blkmem, set, stat, prob, tree, diving, 0, FALSE, nconss, nliterals, \
             nreconvconss, nreconvliterals) );
-
+      }
       conflict->bdchgonlyconfqueue = FALSE;
    }
 
