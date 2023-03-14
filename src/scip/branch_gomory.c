@@ -398,7 +398,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpGomory)
    /* If the user has set maximum candidates to 0 or there are no candidates then return DIDNOTFIND  */
    if( branchruledata->maxncands == 0 || nlpcands == 0)
    {
-      return *result;
+      return SCIP_ERROR;
    }
 
    /* Compute the reliability pseudo-cost branching scores for the candidates */
