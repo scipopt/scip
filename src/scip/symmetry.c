@@ -1640,7 +1640,7 @@ SCIP_RETCODE detectOrbitopalSymmetries(
    SCIPsortIntInt(&compidx[w], &varidx[w], nposdegree - w);
    colorbegins[++ncolors] = nposdegree;
 
-   /* find the correct order of variable indices per color class */
+   /* try to find the correct order of variable indices per color class */
    SCIP_CALL( SCIPallocBufferArray(scip, &permstoconsider, nselectedperms) );
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, matrices, ncolors) );
@@ -1710,6 +1710,22 @@ SCIP_RETCODE detectOrbitopalSymmetries(
             }
          }
       }
+
+      /* if the selected permutation do not form orbitopal symmetries*/
+      if ( cnt < nrows )
+      {
+         *success = FALSE;
+         for (p = nrows - 1; p >= 0; --p)
+         {
+            SCIPfreeBufferArray(scip, &(*matrices)[c][p], (*ncols)[c]);
+         }
+         SCIPfreeBlockMemoryArray(scip, &(*matrices)[c], nrows);
+         SCIPfreeBlockMemoryArray(scip, matrices, ncolors);
+         SCIPfreeBlockMemoryArray(scip, ncols, ncolors);
+         *matrices = NULL;
+         *ncols = NULL;
+         goto FREEMOREMEMORY;
+      }
       assert( cnt == nrows );
 
       /* remove p from the list of permutations to be considered */
@@ -1751,6 +1767,7 @@ SCIP_RETCODE detectOrbitopalSymmetries(
       printf("\n");
    }
 
+ FREEMOREMEMORY:
    SCIPfreeBufferArray(scip, &permstoconsider);
    SCIPfreeBufferArray(scip, &colorbegins);
    SCIPfreeBufferArray(scip, &varidx);
