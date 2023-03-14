@@ -57,12 +57,12 @@
 #define BRANCHRULE_MAXDEPTH        -1
 #define BRANCHRULE_MAXBOUNDDIST    1.0
 
-#define DEFAULT_MAXNCANDS          -1   /**< maximum number of branching candidates to produce a cut for */
-#define DEFAULT_MINFRAC            0    /**< minimum fractionality of a variable in the LP for which we produce a cut */
-#define DEFAULT_EFFICACYWEIGHT     0.5  /**< weight of efficacy in the cut scoring rule */
-#define DEFAULT_OBJPARALLELWEIGHT  0.5  /**< weight of objective parallelism in the cut scoring rule */
+#define DEFAULT_MAXNCANDS          -1    /**< maximum number of branching candidates to produce a cut for */
+#define DEFAULT_MINFRAC            0     /**< minimum fractionality of a variable in the LP that we branch on */
+#define DEFAULT_EFFICACYWEIGHT     0.5   /**< weight of efficacy in the cut scoring rule */
+#define DEFAULT_OBJPARALLELWEIGHT  0.5   /**< weight of objective parallelism in the cut scoring rule */
 #define DEFAULT_PERFORMRELPSCOST   FALSE /**< if default branching rule without execution should be called */
-#define DEFAULT_CALCUNSTRENGTHENED FALSE /**< use weakened GMI cuts derived from the exact branching split */
+#define DEFAULT_USEWEAKERCUTS      TRUE  /**< use weakener cuts derived from the exact branching split */
 
 
 /*
@@ -77,8 +77,7 @@ struct SCIP_BranchruleData
    SCIP_Real             efficacyweight;        /**< the weight of efficacy in weighted sum scoring rule */
    SCIP_Real             objparallelweight;     /**< the weight of objective parallelism in weighted sum scoring rule */
    SCIP_Bool             performrelpscost;      /**< if default branching rule without execution should be called */
-   SCIP_Bool             unstrengthenedcuts;    /**< use weakened GMI cuts derived from the exact branching split */
-   SCIP_Bool             scipdefault;           /**< get GMI cuts using SCIPs default method */
+   SCIP_Bool             useweakercuts;         /**< use weakener cuts derived from the exact branching split */
 };
 
 
@@ -100,7 +99,7 @@ SCIP_Bool getGMIFromRow(
    const SCIP_Real* lpval,
    SCIP_Real* cutcoefs,
    SCIP_Real* cutrhs,
-   SCIP_Bool unstrengthenedcuts
+   SCIP_Bool useweakerscuts
    )
 {
    SCIP_COL* col;
@@ -153,7 +152,7 @@ SCIP_Bool getGMIFromRow(
       }
 
       /* Integer variables */
-      if ( SCIPcolIsIntegral(col) && !unstrengthenedcuts )
+      if ( SCIPcolIsIntegral(col) && !useweakerscuts )
       {
          /* Warning: Because of numerics we can have cutelem < 0
           * In such a case it is very close to 0, so isZero will catch and we can ignore the coefficient */
@@ -231,7 +230,7 @@ SCIP_Bool getGMIFromRow(
       }
 
       /* Integer rows */
-      if ( SCIProwIsIntegral(row) && !SCIProwIsModifiable(row) && !unstrengthenedcuts )
+      if ( SCIProwIsIntegral(row) && !SCIProwIsModifiable(row) && !useweakerscuts )
       {
          /* Warning: Because of numerics we can have cutelem < 0
          * In such a case it is very close to 0, so isZero will catch and we can ignore the coefficient */
@@ -477,7 +476,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpGomory)
    
       /* Compute the GMI cut */
       success = getGMIFromRow(scip, ncols, nrows, cols, rows, binvrow, binvarow, &lpcandssol[i], cutcoefs,
-         &cutrhs, branchruledata->unstrengthenedcuts);
+         &cutrhs, branchruledata->useweakercuts);
       
       /* Calculate the weighted sum score of measures */
       if ( success == SCIP_OKAY )
@@ -563,9 +562,9 @@ SCIP_RETCODE SCIPincludeBranchruleGomory(
    SCIP_CALL( SCIPaddBoolParam(scip,"branching/gomory/performrlpscost",
          "whether default SCIP branching should be called without branching (used for bound inferences and conflicts)",
          &branchruledata->performrelpscost, FALSE, DEFAULT_PERFORMRELPSCOST, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip,"branching/gomory/calcunstrengthenedcuts",
-         "should weakened GMI cuts be used that are derived from exactly the branching split",
-         &branchruledata->unstrengthenedcuts, FALSE, DEFAULT_CALCUNSTRENGTHENED, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,"branching/gomory/useweakercuts",
+         "use weaker cuts that are exactly derived from the branching split disjunction",
+         &branchruledata->useweakercuts, FALSE, DEFAULT_USEWEAKERCUTS, NULL, NULL) );
 
    return SCIP_OKAY;
 }
