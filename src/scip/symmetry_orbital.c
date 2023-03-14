@@ -134,6 +134,7 @@ SCIP_RETCODE identifyOrbitalSymmetriesBroken(
    int maxnsymbrokenvarids;
    SCIP_Real orbitglb;
    SCIP_Real orbitgub;
+   SCIP_Bool orbitsymbroken;
 
    assert( scip != NULL );
    assert( orcdata != NULL );
@@ -170,10 +171,12 @@ SCIP_RETCODE identifyOrbitalSymmetriesBroken(
       /* get id of the orbit */
       orbitid = varorbitids[varorbitidssort[orbitbegin]];
 
-      /* determine the maximal lower bound and minimal upper bound in the orbit */
-      orbitglb = -INFINITY;
-      orbitgub = INFINITY;
-      for (i = orbitbegin; i < orcdata->npermvars; ++i)
+      /* the orbit must have the same bounds */
+      orbitsymbroken = FALSE;
+      j = varorbitids[orbitbegin];
+      orbitglb = orcdata->globalvarlbs[j];
+      orbitgub = orcdata->globalvarubs[j];
+      for (i = orbitbegin + 1; i < orcdata->npermvars; ++i)
       {
          j = varorbitidssort[i];
 
@@ -181,15 +184,18 @@ SCIP_RETCODE identifyOrbitalSymmetriesBroken(
          if ( varorbitids[j] != orbitid )
             break;
 
-         orbitglb = MAX(orbitglb, orcdata->globalvarlbs[j]);
-         orbitgub = MIN(orbitgub, orcdata->globalvarubs[j]);
+         if ( !orbitsymbroken )
+         {
+            if ( !EQ(scip, orbitglb, orcdata->globalvarlbs[j]) || !EQ(scip, orbitgub, orcdata->globalvarubs[j]) )
+               orbitsymbroken = TRUE;
+         }
       }
       /* the loop above has terminated, so i is either orcdata->npermvars or varorbitidssort[i] is in the next orbit,
        * and orbitglb and orbitgub are the maximal global lower bound and minimal global upper bound in orbit orbitid */
       orbitend = i;
 
       /* symmetry is broken within this orbit if the intersection of the global variable domains are empty */
-      if ( LT(scip, orbitglb, orbitgub) )
+      if ( orbitsymbroken )
       {
          /* add all variable ids in the orbit to the symbrokenvarids array: resize if needed */
          if ( orcdata->nsymbrokenvarids + orbitend - orbitbegin > maxnsymbrokenvarids )
@@ -1108,6 +1114,12 @@ SCIP_RETCODE orbitalReductionPropagateComponent(
    {
       SCIP_CALL( identifyOrbitalSymmetriesBroken(scip, orcdata) );
    }
+   assert( orcdata->symmetrybrokencomputed );
+   assert( orcdata->nsymbrokenvarids <= orcdata->npermvars );
+
+   /* If symmetry is broken for all orbits, stop! */
+   if ( orcdata->nsymbrokenvarids == orcdata->npermvars )
+      return SCIP_OKAY;
 
    /* step 1 */
    SCIP_CALL( applyOrbitalBranchingPropagations(scip, orcdata, shadowtree, infeasible, nred) );
