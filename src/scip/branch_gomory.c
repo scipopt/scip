@@ -26,6 +26,7 @@
  * @ingroup DEFPLUGINS_BRANCH
  * @brief  gomory cut branching rule
  * @author Mark Turner
+ * @author Marc Pfetsch
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -35,6 +36,7 @@
 #include "scip/pub_var.h"
 #include "scip/pub_lp.h"
 #include "scip/scip_branch.h"
+#include "scip/scip_cut.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
 #include "scip/scip_numerics.h"
@@ -43,6 +45,7 @@
 #include "scip_param.h"
 #include "scip/type_cuts.h"
 #include "scip/cuts.h"
+#include "scip/branch_relpscost.h"
 #include <string.h>
 #include <assert.h>
 
@@ -58,6 +61,8 @@
 #define DEFAULT_MINFRAC            0    /**< minimum fractionality of a variable in the LP for which we produce a cut */
 #define DEFAULT_EFFICACYWEIGHT     0.5  /**< weight of efficacy in the cut scoring rule */
 #define DEFAULT_OBJPARALLELWEIGHT  0.5  /**< weight of objective parallelism in the cut scoring rule */
+#define DEFAULT_PERFORMRELPSCOST   FALSE /**< if default branching rule without execution should be called */
+#define DEFAULT_CALCUNSTRENGTHENED FALSE /**< use weakened GMI cuts derived from the exact branching split */
 
 
 /*
@@ -71,6 +76,9 @@ struct SCIP_BranchruleData
    SCIP_Real             minfrac;               /**< minimum fractionality for which we will generate a GMI cut */
    SCIP_Real             efficacyweight;        /**< the weight of efficacy in weighted sum scoring rule */
    SCIP_Real             objparallelweight;     /**< the weight of objective parallelism in weighted sum scoring rule */
+   SCIP_Bool             performrelpscost;      /**< if default branching rule without execution should be called */
+   SCIP_Bool             unstrengthenedcuts;    /**< use weakened GMI cuts derived from the exact branching split */
+   SCIP_Bool             scipdefault;           /**< get GMI cuts using SCIPs default method */
 };
 
 
@@ -79,6 +87,228 @@ struct SCIP_BranchruleData
  */
 
 /* put your local methods here, and declare them static */
+
+static
+SCIP_Bool getGMIFromRow(
+   SCIP* scip,
+   int ncols,
+   int nrows,
+   SCIP_COL** cols,
+   SCIP_ROW** rows,
+   const SCIP_Real* binvrow,
+   const SCIP_Real* binvarow,
+   const SCIP_Real* lpval,
+   SCIP_Real* cutcoefs,
+   int* cutinds,
+   int* cutnnz,
+   SCIP_Real* cutrhs,
+   SCIP_Bool unstrengthenedcuts
+   )
+{
+   SCIP_COL* col;
+   SCIP_ROW* row;
+   SCIP_Real rowelem;
+   SCIP_Real cutelem;
+   SCIP_Real f0;
+   SCIP_Real f0complementratio;
+   SCIP_BASESTAT basestat;
+   int i;
+   int c;
+   SCIP_COL** rowcols;
+   SCIP_Real* rowvals;
+   SCIP_Real rowrhs;
+   SCIP_Real rowlhs;
+   SCIP_Real rowact;
+   SCIP_Real rowrhsslack;
+
+   /* Clear the memory array of cut coefficients. It may store that of the last computed cut */
+   BMSclearMemoryArray(cutcoefs, ncols);
+
+   /* compute fractionality f0 and f0/(1-f0) */
+   f0 = SCIPfeasFrac(scip, *lpval);
+   f0complementratio = f0 / (1.0 - f0);
+
+   /* The rhs of the cut is the fractional part of the LP solution of the basic variable */
+   *cutrhs = -f0;
+
+   /* Generate cut coefficient for the original variables */
+   for ( c = 0; c < ncols; c++ )
+   {
+      col = cols[c];
+
+      basestat = SCIPcolGetBasisStatus(col);
+      /* Get simplex tableau coefficient */
+      if ( basestat == SCIP_BASESTAT_LOWER )
+      {
+         /* Take coefficient if nonbasic at lower bound */
+         rowelem = binvarow[c];
+      }
+      else if ( basestat == SCIP_BASESTAT_UPPER )
+      {
+         /* Flip coefficient if nonbasic at upper bound: x --> u - x */
+         rowelem = -binvarow[c];
+      }
+      else
+      {
+         /* Nonbasic free variable at zero or basic variable. Just skip it. */
+         continue;
+      }
+
+      /* Integer variables */
+      if ( SCIPcolIsIntegral(col) && !unstrengthenedcuts )
+      {
+         /* Warning: Because of numerics we can have cutelem < 0
+          * In such a case it is very close to 0, so isZero will catch and we can ignore the coefficient */
+         cutelem = SCIPfrac(scip, rowelem);
+         if ( cutelem > f0 )
+         {
+            /* sum((1 - f_j) * f_0/(1 - f_0) x_j, j in J_I s.t. f_j > f_0 */
+            cutelem = -((1.0 - cutelem) * f0complementratio);
+         }
+         else
+         {
+            /* sum(f_j * x_j, j in J_I s.t. f_j <= 0 */
+            cutelem = -cutelem;
+         }
+      }
+      /* Then continuous variables */
+      else
+      {
+         if ( rowelem < 0 )
+         {
+            /* sum(a_j* f_0/(1 - f_0) x_j, j in J_C s.t. a_j < 0 */
+            cutelem = rowelem * f0complementratio;
+         }
+         else
+         {
+            /* sum(a_j * x_j, j in J_C s.t. a_j >= 0 */
+            cutelem = -rowelem;
+         }
+      }
+
+      /* Cut is defined when variables are in [0, infinity). Translate to general bounds. */
+      if ( !SCIPisZero(scip, cutelem) )
+      {
+         if ( basestat == SCIP_BASESTAT_UPPER )
+         {
+            cutelem = -cutelem;
+            *cutrhs += cutelem * SCIPcolGetUb(col);
+         }
+         else
+         {
+            *cutrhs += cutelem * SCIPcolGetLb(col);
+         }
+         /* Add coefficient to cut */
+         cutcoefs[SCIPcolGetLPPos(col)] = cutelem;
+      }
+   }
+
+   /* generate cut coefficient for the slack variables. Skip the basic ones */
+   for ( c = 0; c < nrows; c++ )
+   {
+      row = rows[c];
+      assert( row != NULL );
+      basestat = SCIProwGetBasisStatus(row);
+
+      /* Get the simplex tableau coefficient */
+      if ( basestat == SCIP_BASESTAT_LOWER )
+      {
+         /* Take coefficient if nonbasic at lower bound */
+         rowelem = binvrow[SCIProwGetLPPos(row)];
+         /* If there is a >= constraint or ranged constraint at the lower bound, we have to flip the row element */
+         if ( !SCIPisInfinity(scip, -SCIProwGetLhs(row)) )
+            rowelem = -rowelem;
+      }
+      else if ( basestat == SCIP_BASESTAT_UPPER )
+      {
+         /* Take element if nonbasic at upper bound. Only non-positive slack variables can be nonbasic at upper,
+          * therefore they should be flipped twice, meaning we can take the element directly */
+         rowelem = binvrow[SCIProwGetLPPos(row)];
+      }
+      else
+      {
+      /* Nonbasic free variable at zero or basic variable. Just skip it. Free variable should not happen here*/
+      assert( basestat == SCIP_BASESTAT_BASIC );
+      continue;
+      }
+
+      /* Integer rows */
+      if ( SCIProwIsIntegral(row) && !SCIProwIsModifiable(row) && !unstrengthenedcuts )
+      {
+         /* Warning: Because of numerics we can have cutelem < 0
+         * In such a case it is very close to 0, so isZero will catch and we can ignore the coefficient */
+         cutelem = SCIPfrac(scip, rowelem);
+         if ( cutelem > f0 )
+         {
+            /* sum((1 - f_j) * f_0/(1 - f_0) x_j, j in J_I s.t. f_j > f_0 */
+            cutelem = -((1.0 - cutelem) * f0complementratio);
+         }
+         else
+         {
+            /* sum(f_j * x_j, j in J_I s.t. f_j <= 0 */
+            cutelem = -cutelem;
+         }
+      }
+      /* Then continuous variables */
+      else
+      {
+         if ( rowelem < 0 )
+         {
+            /* sum(a_j* f_0/(1 - f_0) x_j, j in J_C s.t. a_j < 0 */
+            cutelem = rowelem * f0complementratio;
+         }
+         else
+         {
+            /* sum(a_j * x_j, j in J_C s.t. a_j >= 0 */
+            cutelem = -rowelem;
+         }
+      }
+      /* Cut is defined in original variables, so we replace slack variables by their original definition */
+      if ( !SCIPisZero(scip, cutelem) )
+      {
+         /* Coefficient is large enough so we keep it */
+         rowlhs = SCIProwGetLhs(row);
+         rowrhs = SCIProwGetRhs(row);
+         assert( SCIPisLE(scip, rowlhs, rowrhs) );
+         assert( !SCIPisInfinity(scip, rowlhs) && !SCIPisInfinity(scip, rowrhs) );
+
+         /* If the slack variable is fixed we can ignore this cut coefficient */
+         if ( SCIPisFeasZero(scip, rowrhs - rowlhs) )
+            continue;
+
+         /* Un-flip sack variable and adjust rhs if necessary.
+          * Row at lower basis means the slack variable is at its upper bound.
+          * Since SCIP adds +1 slacks, this can only happen when constraints have finite lhs */
+         if ( SCIProwGetBasisStatus(row) == SCIP_BASESTAT_LOWER )
+         {
+            assert( !SCIPisInfinity(scip, -rowlhs) );
+            cutelem = -cutelem;
+         }
+
+         rowcols = SCIProwGetCols(row);
+         rowvals = SCIProwGetVals(row);
+
+         /* Eliminate slack variables. rowcols is sorted [columns in LP, columns not in LP] */
+         for ( i = 0; i < SCIProwGetNLPNonz(row); i++ )
+            cutcoefs[SCIPcolGetLPPos(rowcols[i])] -= cutelem * rowvals[i];
+   
+         /* Modify the rhs */
+         rowact = SCIPgetRowActivity(scip, row);
+         rowrhsslack = rowrhs - rowact;
+
+         if ( SCIPisFeasZero(scip, rowrhsslack) )
+            *cutrhs -= cutelem * (rowrhs - SCIProwGetConstant(row));
+         else
+         {
+            assert( SCIPisFeasZero(scip, rowact - rowlhs) );
+            *cutrhs -= cutelem * (rowlhs - SCIProwGetConstant(row));
+         }
+
+      }
+   }
+
+   return SCIP_OKAY;
+}
 
 
 /*
@@ -127,13 +357,16 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpGomory)
    SCIP_Real* lpcandsfrac;
    int nlpcands;
    int maxncands;
+   SCIP_COL** cols;
+   SCIP_ROW** rows;
+   int ncols;
    int nrows;
    int nvars;
-   int ncols;
    SCIP_COL* col;
    int lppos;
    SCIP_AGGRROW* aggrrow;
    SCIP_Real* binvrow;
+   SCIP_Real* binvarow;
    int* inds;
    int ninds;
    SCIP_Real cutrhs;
@@ -149,9 +382,14 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpGomory)
    SCIP_Real bestscore;
    int bestcand;
    int i;
+   int c;
+   SCIP_Real cutsqrnorm;
    SCIP_Real feastol;
    SCIP_Bool success;
+   SCIP_ROW* cut;
+   const char* name;
 
+   name = (char *) "test";
 
    assert(branchrule != NULL);
    assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
@@ -176,6 +414,19 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpGomory)
       return *result;
    }
 
+   /* compute the relpcost for the candidates */
+   if ( branchruledata->performrelpscost )
+   {
+      SCIP_CALL( SCIPexecRelpscostBranching(scip, lpcands, lpcandssol, lpcandsfrac, nlpcands, FALSE,  result) );
+      assert(*result == SCIP_DIDNOTRUN || *result == SCIP_CUTOFF || *result == SCIP_REDUCEDDOM);
+   }
+
+   /* return SCIP_OKAY if relpscost has shown that this node can be cutoff or some variable domains have changed */
+   if( *result == SCIP_CUTOFF || *result == SCIP_REDUCEDDOM )
+   {
+      return SCIP_OKAY;
+   }
+
    /* Get the maximum number of LP branching candidates that we generate cuts for and score */
    if( branchruledata->maxncands >= 0 )
    {
@@ -187,15 +438,19 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpGomory)
    }
 
    nvars = SCIPgetNVars(scip);
-   nrows = SCIPgetNLPRows(scip);
-   ncols = SCIPgetNLPCols(scip);
+   SCIP_CALL(SCIPgetLPColsData(scip, &cols, &ncols));
+   SCIP_CALL(SCIPgetLPRowsData(scip, &rows, &nrows));
 
    /* allocate temporary memory */
-   SCIP_CALL( SCIPallocBufferArray(scip, &cutcoefs, nvars) );
+   if ( branchruledata->scipdefault )
+      SCIP_CALL( SCIPallocBufferArray(scip, &cutcoefs, nvars) );
+   else
+      SCIP_CALL( SCIPallocBufferArray(scip, &cutcoefs, ncols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &cutinds, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &basisind, nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &basicvarpos2tableaurow, ncols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &binvrow, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &binvarow, ncols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &inds, nrows) );
    SCIP_CALL( SCIPaggrRowCreate(scip, &aggrrow) );
 
@@ -211,9 +466,12 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpGomory)
          basicvarpos2tableaurow[basisind[i]] = i;
    }
 
+
    /* Initialise the best candidate */
    bestcand = 0;
    bestscore = -SCIPinfinity(scip);
+   score = 0;
+   cutsqrnorm = 0;
    cutefficacy = 0;
    ninds = -1;
    feastol = SCIPgetLPFeastol(scip);
@@ -229,18 +487,51 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpGomory)
       /* get the row of B^-1 for this basic integer variable with fractional solution value */
       SCIP_CALL(SCIPgetLPBInvRow(scip, basicvarpos2tableaurow[lppos], binvrow, inds, &ninds));
 
-      /* Calculate the GMI cut */
-      SCIP_CALL(SCIPaggrRowSumRows(scip, aggrrow, binvrow, inds, ninds, TRUE, TRUE, 2, nvars, &success));
-      if (!success)
-         continue;
-      SCIP_CALL(SCIPcalcMIR(scip, NULL, TRUE, 0.9999, TRUE, TRUE, FALSE, NULL, NULL, feastol, 1 - feastol, 1.0,
-         aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &success));
-      if (!success)
-         continue;
+      /* either calculate cuts directly or use default implementation from numerically safe MIR procedure */
+      /* GMI cuts represent the split disjunction x. Using weaker logic they represent y. */
+      if ( branchruledata->scipdefault )
+      {
+         SCIP_CALL(SCIPgetLPBInvARow(scip, basicvarpos2tableaurow[lppos], binvrow, binvarow, inds, &ninds));
 
+         success = getGMIFromRow(scip, ncols, nrows, cols, rows, binvrow, binvarow, &lpcandssol[i], cutcoefs, cutinds,
+            &cutnnz, &cutrhs, branchruledata->unstrengthenedcuts);
+      }
+      else
+      {
+         /* Calculate the GMI cut */
+         SCIP_CALL(SCIPaggrRowSumRows(scip, aggrrow, binvrow, inds, ninds, TRUE, TRUE, 2, nvars, &success));
+         if (!success)
+            continue;
+         SCIP_CALL(SCIPcalcMIR(scip, NULL, TRUE, 0.9999, TRUE, TRUE, FALSE, NULL, NULL, feastol, 1 - feastol, 1.0,
+                               aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal,
+                               &success));
+         if ( !success )
+            continue;
+      }
+      
       /* Calculate the weighted sum score of measures */
-      score += branchruledata->efficacyweight * cutefficacy;
+      if ( branchruledata->scipdefault )
+      {
+         score = branchruledata->efficacyweight * cutefficacy;
+      }
+      else
+      {
+         assert ( success == SCIP_OKAY );
+         cut = NULL;
+         SCIP_CALL( SCIPcreateRowUnspec(scip, &cut, name, ncols, cols, cutcoefs, -SCIPinfinity(scip), cutrhs, TRUE,
+                   FALSE, TRUE) );
+         score = SCIPgetCutEfficacy(scip, NULL, cut);
+         /*for ( c = 0; c < ncols; c++ )
+         {
+            score += cutcoefs[c] * SCIPcolGetPrimsol(cols[c]);
+            cutsqrnorm += SQR(cutcoefs[c]);
+         }
+         score -= cutrhs;
+         score /= SQRT(cutsqrnorm);*/
+         SCIP_CALL( SCIPreleaseRow(scip, &cut) );
+      }
       /* Replace the best cut if score is higher */
+      assert( score >= 0.0 );
       if (score > bestscore) {
          bestscore = score;
          bestcand = i;
@@ -250,6 +541,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpGomory)
    /* free temporary memory */
    SCIPfreeBufferArray(scip, &inds);
    SCIPfreeBufferArray(scip, &binvrow);
+   SCIPfreeBufferArray(scip, &binvarow);
    SCIPfreeBufferArray(scip, &basicvarpos2tableaurow);
    SCIPfreeBufferArray(scip, &basisind);
    SCIPfreeBufferArray(scip, &cutinds);
@@ -297,7 +589,7 @@ SCIP_RETCODE SCIPincludeBranchruleGomory(
 
    /* gomory cut branching rule parameters */
    SCIP_CALL( SCIPaddIntParam(scip,"branching/gomory/maxncands",
-         "maximum amount of branching candidates to generate gomory cut for",
+         "maximum amount of branching candidates to generate gomory cut for (-1: all candidates)",
          &branchruledata->maxncands, FALSE, DEFAULT_MAXNCANDS, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,"branching/gomory/minfrac",
          "minimum fractionality of a variable in the LP for which we produce a cut",
@@ -308,6 +600,15 @@ SCIP_RETCODE SCIPincludeBranchruleGomory(
    SCIP_CALL( SCIPaddRealParam(scip,"branching/gomory/objparallelweight",
          "weight of objective parallelism in the cut scoring rule",
          &branchruledata->objparallelweight, FALSE, DEFAULT_OBJPARALLELWEIGHT, -1, 1, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,"branching/gomory/performrlpscost",
+         "whether default SCIP branching should be called without branching (used for bound inferences and conflicts)",
+         &branchruledata->performrelpscost, FALSE, DEFAULT_PERFORMRELPSCOST, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,"branching/gomory/calcunstrengthenedcuts",
+         "should weakened GMI cuts be used that are derived from exactly the branching split",
+         &branchruledata->unstrengthenedcuts, FALSE, DEFAULT_CALCUNSTRENGTHENED, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,"branching/gomory/scipdefault",
+         "get GMI cuts using SCIPs default method",
+         &branchruledata->scipdefault, FALSE, FALSE, NULL, NULL) );
 
    return SCIP_OKAY;
 }
