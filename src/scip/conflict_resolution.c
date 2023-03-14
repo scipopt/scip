@@ -2640,27 +2640,34 @@ SCIP_RETCODE rescaleAndResolve(
          conflict->nreslargecoefs++;
       }
       SCIPsetDebugMsg(set, "Could not resolve because of large scale %f \n", scale);
-      // SCIP_Bool successclause;
-      // SCIP_CALL( getClauseConflictSet(conflict, blkmem, set, currbdchginfo, &successclause) );
-      // conflict->resolutionset->slack = -1.0;
-      // if( successclause)
-      // {
-      //    SCIPsortIntReal(conflictresolutionset->inds, conflictresolutionset->vals, resolutionsetGetNNzs(conflictresolutionset));
-      //    /* todo add correct validdepth for local conflicts */
-      //    SCIP_CALL( getClauseReasonSet(conflict, blkmem,  set, currbdchginfo, SCIPbdchginfoGetRelaxedBound(currbdchginfo), 0, &successclause) );
-      //    if (successclause)
-      //    {
-      //       SCIPsortIntReal(reasonresolutionset->inds, reasonresolutionset->vals, resolutionsetGetNNzs(reasonresolutionset));
-      //       conflict->reasonset->slack = 0.0;
-      //    }
-      //    else
-      //       return SCIP_OKAY;
-      // }
-      // else
-      //    return SCIP_OKAY;
+      if (set->conf_absoluteweakening)
+      {
+         SCIPsetDebugMsg(set, "-> Apply clause weakening for both conflict and reason");
 
-      // scale = computeScaleReason(set, conflictresolutionset, reasonresolutionset, residx);
-      return SCIP_OKAY;
+         SCIP_Bool successclause;
+         SCIP_CALL( getClauseConflictSet(conflict, blkmem, set, currbdchginfo, &successclause) );
+         conflict->resolutionset->slack = -1.0;
+         if( successclause)
+         {
+            SCIPsortIntReal(conflictresolutionset->inds, conflictresolutionset->vals, resolutionsetGetNNzs(conflictresolutionset));
+            /* todo add correct validdepth for local conflicts */
+            SCIP_CALL( getClauseReasonSet(conflict, blkmem,  set, currbdchginfo, SCIPbdchginfoGetRelaxedBound(currbdchginfo), 0, &successclause) );
+            if (successclause)
+            {
+               SCIPsortIntReal(reasonresolutionset->inds, reasonresolutionset->vals, resolutionsetGetNNzs(reasonresolutionset));
+               conflict->reasonset->slack = 0.0;
+            }
+            else
+               return SCIP_OKAY;
+         }
+         else
+            return SCIP_OKAY;
+
+         assert(SCIPsetIsEQ(set, computeScaleReason(set, conflictresolutionset, reasonresolutionset, residx), 1.0));
+         scale = 1.0;
+      }
+      else
+         return SCIP_OKAY;
    }
 
    SCIP_CALL( resolutionsetReplace(resolvedresolutionset, blkmem, conflictresolutionset) );
@@ -3632,6 +3639,16 @@ SCIP_RETCODE conflictAnalyzeResolution(
       return SCIP_OKAY;
    }
 
+   if( infeasibleLP || pseudoobj )
+   {
+      /* clear the bound change queues */
+      SCIPpqueueClear(conflict->resbdchgqueue);
+      SCIPpqueueClear(conflict->resforcedbdchgqueue);
+      /* todo this should be done in conflictAnalyzeRemaining... */
+      /* get the new ones */
+      SCIP_CALL( updateBdchgQueue(set, transprob, conflictresolutionset, NULL) );
+   }
+
    conflict->haslargecoef = FALSE;
    /* calculate the maximal size of each accepted conflict set */
    maxsize = (int) (set->conf_maxvarsfracres * transprob->nvars);
@@ -3888,6 +3905,8 @@ SCIP_RETCODE conflictAnalyzeResolution(
          SCIPsetDebugMsgPrint(set, "ignoring-fixing variable %s to %f \n", SCIPvarGetName(SCIPbdchginfoGetVar(bdchginfo)),
                SCIPbdchginfoGetNewbound(bdchginfo));
 
+         if (nressteps == 0)
+            SCIP_CALL( updateBdchgQueue(set, transprob, conflictresolutionset, bdchgidx) );
 
          /* extract latest bound change from queue */
          bdchginfo = conflictRemoveCand(conflict);
@@ -4166,13 +4185,14 @@ SCIP_RETCODE conflictAnalyzeResolution(
 
    /* if resolution fails at some point we can still return add the latest valid
    conflict in the list of resolution set */
-   // if ( nressteps >= 1 && nresstepslast != nressteps )
-   // {
-   //    conflict->ncorrectaborts--;
-   //    SCIP_RESOLUTIONSET* tmpconflictresolutionset;
-   //    SCIP_CALL( resolutionsetCopy(&tmpconflictresolutionset, blkmem, prevconflictresolutionset) );
-   //    SCIP_CALL( conflictInsertResolutionset(conflict, set, &tmpconflictresolutionset) );
-   // }
+
+   if ( set->conf_addnonfuip && nressteps >= 1 && nresstepslast != nressteps )
+   {
+      conflict->ncorrectaborts--;
+      SCIP_RESOLUTIONSET* tmpconflictresolutionset;
+      SCIP_CALL( resolutionsetCopy(&tmpconflictresolutionset, blkmem, prevconflictresolutionset) );
+      SCIP_CALL( conflictInsertResolutionset(conflict, set, &tmpconflictresolutionset) );
+   }
 
    SCIPstatisticPrintf("End Statistics \n");
    SCIPsetDebugMsg(set, "Total number of resolution sets found %d\n", conflict->nresolutionsets);
