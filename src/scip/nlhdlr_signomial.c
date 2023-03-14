@@ -378,7 +378,8 @@ static
 SCIP_Real reformRowprep(
    SCIP*                  scip, 
    SCIP_NLHDLREXPRDATA*   nlhdlrexprdata,
-   SCIP_ROWPREP*          rowprep
+   SCIP_ROWPREP*          rowprep,
+   SCIP_Bool*             success                          
 )
 {
    assert(rowprep != NULL);
@@ -399,7 +400,11 @@ SCIP_Real reformRowprep(
       coefs[i] = 0;
    }
 
-   assert(!SCIPisZero(scip, coefauxvar));
+   if( SCIPisZero(scip, coefauxvar) )
+   {
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
 
    /* the reformation scales the cut, such that coefficients and constant are dividing by the absolute value of coefauxvar */
    coefauxvar = 1 / fabs(coefauxvar);
@@ -1008,10 +1013,8 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateSignomial)
 
    if( *success )
    {
-      int scale = reformRowprep(scip, nlhdlrexprdata, rowprep);
-      if( scale < nlhdlrdata->mincutscale )
-         *success = FALSE;
-      else
+      int scale = reformRowprep(scip, nlhdlrexprdata, rowprep, success);
+      if( SCIPisGT(scip, scale, nlhdlrdata->mincutscale) && *success )
          SCIP_CALL( SCIPsetPtrarrayVal(scip, rowpreps, 0, rowprep));
    }
    
