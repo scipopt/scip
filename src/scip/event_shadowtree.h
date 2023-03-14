@@ -87,6 +87,13 @@ struct SCIP_ShadowTree
 };
 typedef struct SCIP_ShadowTree SCIP_SHADOWTREE;
 
+/** get the time spent in the shadow tree eventhdlr */
+SCIP_EXPORT
+SCIP_Real SCIPgetShadowTreeEventHandlerExecutionTime(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EVENTHDLR*       eventhdlr           /**< event handler */
+);
+
 /** given a node number, returns the node in the shadow tree, or NULL if it doesn't exist */
 SCIP_EXPORT
 SCIP_SHADOWNODE* SCIPshadowTreeGetShadowNodeFromNodeNumber(

@@ -84,7 +84,8 @@
 struct SCIP_EventhdlrData
 {
    SCIP*                 scip;               /**< SCIP data structure */
-   SCIP_SHADOWTREE*      shadowtree;         /**< Shadow tree structure*/
+   SCIP_SHADOWTREE*      shadowtree;         /**< Shadow tree structure */
+   SCIP_CLOCK*           clock;              /**< clock for measuring time in shadow tree events */
 };
 
 
@@ -111,6 +112,24 @@ static
 SCIP_DECL_HASHKEYVAL(hashKeyValShadowNode)
 {  /*lint --e{715}*/
    return (unsigned int) ((SCIP_SHADOWNODE*) key)->nodeid;
+}
+
+
+/** get the time spent in the shadow tree eventhdlr */
+SCIP_Real SCIPgetShadowTreeEventHandlerExecutionTime(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EVENTHDLR*       eventhdlr           /**< event handler */
+)
+{
+   SCIP_EVENTHDLRDATA* eventhdlrdata;
+
+   eventhdlrdata = (SCIP_EVENTHDLRDATA*) SCIPeventhdlrGetData(eventhdlr);
+   assert( eventhdlrdata != NULL );
+   assert( eventhdlrdata->scip != NULL );
+   assert( eventhdlrdata->scip == scip );
+   assert( eventhdlrdata->clock != NULL );
+
+   return SCIPgetClockTime(scip, eventhdlrdata->clock);
 }
 
 
@@ -394,20 +413,33 @@ SCIP_DECL_EVENTEXEC(eventExecNodeDeleted)
 static
 SCIP_DECL_EVENTEXEC(eventExec)
 {
+   SCIP_EVENTHDLRDATA* eventhdlrdata;
+
    assert( strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0 );
+
+   eventhdlrdata = (SCIP_EVENTHDLRDATA*) SCIPeventhdlrGetData(eventhdlr);
+   assert( eventhdlrdata != NULL );
+   assert( scip == eventhdlrdata->scip );
+   assert( eventhdlrdata->clock != NULL );
+
+   SCIP_CALL( SCIPstartClock(scip, eventhdlrdata->clock) );
 
    switch (SCIPeventGetType(event))
    {
    case SCIP_EVENTTYPE_NODEBRANCHED:
       SCIP_CALL( eventExecNodeBranched(scip, eventhdlr, event, eventdata) );
-      return SCIP_OKAY;
+      break;
    case SCIP_EVENTTYPE_NODEDELETE:
       SCIP_CALL( eventExecNodeDeleted(scip, eventhdlr, event, eventdata) );
-      return SCIP_OKAY;
+      break;
    default:
       SCIPerrorMessage("unrecognized eventtype in shadowtree event handler\n");
       return SCIP_ERROR;
    }
+
+   SCIP_CALL( SCIPstopClock(scip, eventhdlrdata->clock) );
+
+   return SCIP_OKAY;
 }
 
 
@@ -470,6 +502,9 @@ SCIP_DECL_EVENTFREE(eventFreeShadowTree)
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert( eventhdlrdata != NULL );
    assert( eventhdlrdata->scip == scip );
+   assert( eventhdlrdata->clock != NULL );
+
+   SCIP_CALL( SCIPfreeClock(scip, &eventhdlrdata->clock) );
 
    if ( eventhdlrdata->shadowtree != NULL )
    {
@@ -605,6 +640,9 @@ SCIP_RETCODE SCIPincludeEventHdlrShadowTree(
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExec, eventhdlrdata) );
    assert(eventhdlr != NULL);
    *eventhdlrptr = eventhdlr;
+
+   /* clock */
+   SCIP_CALL( SCIPcreateClock(scip, &eventhdlrdata->clock) );
 
    /* set non fundamental callbacks via setter functions */
 

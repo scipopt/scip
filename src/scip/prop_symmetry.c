@@ -505,6 +505,7 @@ SCIP_DECL_TABLEOUTPUT(tableOutputSymmetry)
 {
    SCIP_TABLEDATA* tabledata;
    int nred;
+   SCIP_Real time;
 
    assert( scip != NULL );
    assert( table != NULL );
@@ -513,7 +514,7 @@ SCIP_DECL_TABLEOUTPUT(tableOutputSymmetry)
    assert( tabledata != NULL );
    assert( tabledata->propdata != NULL );
 
-   if ( tabledata->propdata->orbitopalreddata || tabledata->propdata->orbitalreddata 
+   if ( tabledata->propdata->orbitopalreddata || tabledata->propdata->orbitalreddata
       || tabledata->propdata->lexreddata )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, file, "Symmetry           :\n");
@@ -531,6 +532,11 @@ SCIP_DECL_TABLEOUTPUT(tableOutputSymmetry)
       {
          SCIP_CALL( SCIPlexicographicReductionGetStatistics(scip, tabledata->propdata->lexreddata, &nred) );
          SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, file, "  lexicographic red: %10d reductions applied\n", nred);
+      }
+      if ( tabledata->propdata->shadowtreeeventhdlr )
+      {
+         time = SCIPgetShadowTreeEventHandlerExecutionTime(scip, tabledata->propdata->shadowtreeeventhdlr);
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, file, "  shadow tree time : %10.2f s\n", time);
       }
    }
 
