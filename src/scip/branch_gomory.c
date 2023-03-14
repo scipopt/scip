@@ -99,8 +99,6 @@ SCIP_Bool getGMIFromRow(
    const SCIP_Real* binvarow,
    const SCIP_Real* lpval,
    SCIP_Real* cutcoefs,
-   int* cutinds,
-   int* cutnnz,
    SCIP_Real* cutrhs,
    SCIP_Bool unstrengthenedcuts
    )
@@ -361,7 +359,6 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpGomory)
    SCIP_ROW** rows;
    int ncols;
    int nrows;
-   int nvars;
    SCIP_COL* col;
    int lppos;
    SCIP_AGGRROW* aggrrow;
@@ -373,18 +370,10 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpGomory)
    SCIP_Real* cutcoefs;
    int* basisind;
    int* basicvarpos2tableaurow;
-   int* cutinds;
-   int cutnnz;
-   SCIP_Bool cutislocal;
-   int cutrank;
-   SCIP_Real cutefficacy;
    SCIP_Real score;
    SCIP_Real bestscore;
    int bestcand;
    int i;
-   int c;
-   SCIP_Real cutsqrnorm;
-   SCIP_Real feastol;
    SCIP_Bool success;
    SCIP_ROW* cut;
    const char* name;
@@ -398,13 +387,14 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpGomory)
 
    SCIPdebugMsg(scip, "Execlp method of gomory branching\n");
 
-   /* get branching candidates */
+   /* Get branching candidates */
    SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, NULL, &nlpcands, NULL) );
    assert(nlpcands > 0);
 
+   /* Initialise a DIDNOTRUN result */
    *result = SCIP_DIDNOTRUN;
 
-   /* get branching rule data */
+   /* Get branching rule data */
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
 
@@ -414,14 +404,15 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpGomory)
       return *result;
    }
 
-   /* compute the relpcost for the candidates */
+   /* Compute the reliability pseudo-cost branching scores for the candidates */
    if ( branchruledata->performrelpscost )
    {
+      /* We do not branch using this rule, but if enabled do take all the bound and conflict inferences made */
       SCIP_CALL( SCIPexecRelpscostBranching(scip, lpcands, lpcandssol, lpcandsfrac, nlpcands, FALSE,  result) );
       assert(*result == SCIP_DIDNOTRUN || *result == SCIP_CUTOFF || *result == SCIP_REDUCEDDOM);
    }
 
-   /* return SCIP_OKAY if relpscost has shown that this node can be cutoff or some variable domains have changed */
+   /* Return SCIP_OKAY if relpscost has shown that this node can be cutoff or some variable domains have changed */
    if( *result == SCIP_CUTOFF || *result == SCIP_REDUCEDDOM )
    {
       return SCIP_OKAY;
@@ -437,16 +428,12 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpGomory)
       maxncands = nlpcands;
    }
 
-   nvars = SCIPgetNVars(scip);
+   /* Get the Column and Row data */
    SCIP_CALL(SCIPgetLPColsData(scip, &cols, &ncols));
    SCIP_CALL(SCIPgetLPRowsData(scip, &rows, &nrows));
 
-   /* allocate temporary memory */
-   if ( branchruledata->scipdefault )
-      SCIP_CALL( SCIPallocBufferArray(scip, &cutcoefs, nvars) );
-   else
-      SCIP_CALL( SCIPallocBufferArray(scip, &cutcoefs, ncols) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &cutinds, nvars) );
+   /* Allocate temporary memory */
+   SCIP_CALL( SCIPallocBufferArray(scip, &cutcoefs, ncols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &basisind, nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &basicvarpos2tableaurow, ncols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &binvrow, nrows) );
@@ -466,19 +453,17 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpGomory)
          basicvarpos2tableaurow[basisind[i]] = i;
    }
 
-
    /* Initialise the best candidate */
    bestcand = 0;
    bestscore = -SCIPinfinity(scip);
-   score = 0;
-   cutsqrnorm = 0;
-   cutefficacy = 0;
    ninds = -1;
-   feastol = SCIPgetLPFeastol(scip);
+   
    /* Iterate over candidates and get best cut score */
    for( i = 0; i < maxncands; i++ ) {
+      
+      /* Initialise the score of the cut */
       score = 0;
-      /* Generate the GMI cut. We do not this using the textbook approach, but through the equivalent MIR cut */
+      
       /* Get the LP position of the branching candidate */
       col = SCIPvarGetCol(lpcands[i]);
       lppos = SCIPcolGetLPPos(col);
@@ -486,65 +471,41 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpGomory)
 
       /* get the row of B^-1 for this basic integer variable with fractional solution value */
       SCIP_CALL(SCIPgetLPBInvRow(scip, basicvarpos2tableaurow[lppos], binvrow, inds, &ninds));
-
-      /* either calculate cuts directly or use default implementation from numerically safe MIR procedure */
-      /* GMI cuts represent the split disjunction x. Using weaker logic they represent y. */
-      if ( branchruledata->scipdefault )
-      {
-         SCIP_CALL(SCIPgetLPBInvARow(scip, basicvarpos2tableaurow[lppos], binvrow, binvarow, inds, &ninds));
-
-         success = getGMIFromRow(scip, ncols, nrows, cols, rows, binvrow, binvarow, &lpcandssol[i], cutcoefs, cutinds,
-            &cutnnz, &cutrhs, branchruledata->unstrengthenedcuts);
-      }
-      else
-      {
-         /* Calculate the GMI cut */
-         SCIP_CALL(SCIPaggrRowSumRows(scip, aggrrow, binvrow, inds, ninds, TRUE, TRUE, 2, nvars, &success));
-         if (!success)
-            continue;
-         SCIP_CALL(SCIPcalcMIR(scip, NULL, TRUE, 0.9999, TRUE, TRUE, FALSE, NULL, NULL, feastol, 1 - feastol, 1.0,
-                               aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal,
-                               &success));
-         if ( !success )
-            continue;
-      }
+   
+      /* Get the Tableau row for this basic integer variable with fractional solution value */
+      SCIP_CALL(SCIPgetLPBInvARow(scip, basicvarpos2tableaurow[lppos], binvrow, binvarow, inds, &ninds));
+   
+      /* Compute the GMI cut */
+      success = getGMIFromRow(scip, ncols, nrows, cols, rows, binvrow, binvarow, &lpcandssol[i], cutcoefs,
+         &cutrhs, branchruledata->unstrengthenedcuts);
       
       /* Calculate the weighted sum score of measures */
-      if ( branchruledata->scipdefault )
+      if ( success == SCIP_OKAY )
       {
-         score = branchruledata->efficacyweight * cutefficacy;
-      }
-      else
-      {
-         assert ( success == SCIP_OKAY );
+         assert( SCIP_CALL( SCIPisCutEfficacious(scip, NULL, cut) ) );
          cut = NULL;
          SCIP_CALL( SCIPcreateRowUnspec(scip, &cut, name, ncols, cols, cutcoefs, -SCIPinfinity(scip), cutrhs, TRUE,
                    FALSE, TRUE) );
-         score = SCIPgetCutEfficacy(scip, NULL, cut);
-         /*for ( c = 0; c < ncols; c++ )
-         {
-            score += cutcoefs[c] * SCIPcolGetPrimsol(cols[c]);
-            cutsqrnorm += SQR(cutcoefs[c]);
-         }
-         score -= cutrhs;
-         score /= SQRT(cutsqrnorm);*/
+         if ( branchruledata-> efficacyweight != 0 )
+            score += branchruledata->efficacyweight * SCIPgetCutEfficacy(scip, NULL, cut);
+         if ( branchruledata->objparallelweight != 0 )
+            score += branchruledata->objparallelweight * SCIPgetRowObjParallelism(scip, cut);
          SCIP_CALL( SCIPreleaseRow(scip, &cut) );
-      }
-      /* Replace the best cut if score is higher */
-      assert( score >= 0.0 );
-      if (score > bestscore) {
-         bestscore = score;
-         bestcand = i;
+   
+         /* Replace the best cut if score is higher */
+         if (score > bestscore) {
+            bestscore = score;
+            bestcand = i;
+         }
       }
    }
 
-   /* free temporary memory */
+   /* Free temporary memory */
    SCIPfreeBufferArray(scip, &inds);
    SCIPfreeBufferArray(scip, &binvrow);
    SCIPfreeBufferArray(scip, &binvarow);
    SCIPfreeBufferArray(scip, &basicvarpos2tableaurow);
    SCIPfreeBufferArray(scip, &basisind);
-   SCIPfreeBufferArray(scip, &cutinds);
    SCIPfreeBufferArray(scip, &cutcoefs);
    SCIPaggrRowFree(scip, &aggrrow);
 
@@ -552,10 +513,9 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpGomory)
                 nlpcands, bestcand, SCIPvarGetName(lpcands[bestcand]), lpcandsfrac[bestcand],
                 SCIPvarGetBranchFactor(lpcands[bestcand]), bestscore);
 
-   /* perform the branching */
+   /* Perform the branching */
    SCIP_CALL( SCIPbranchVar(scip, lpcands[bestcand], NULL, NULL, NULL) );
    *result = SCIP_BRANCHED;
-
 
    return SCIP_OKAY;
 }
@@ -606,9 +566,6 @@ SCIP_RETCODE SCIPincludeBranchruleGomory(
    SCIP_CALL( SCIPaddBoolParam(scip,"branching/gomory/calcunstrengthenedcuts",
          "should weakened GMI cuts be used that are derived from exactly the branching split",
          &branchruledata->unstrengthenedcuts, FALSE, DEFAULT_CALCUNSTRENGTHENED, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip,"branching/gomory/scipdefault",
-         "get GMI cuts using SCIPs default method",
-         &branchruledata->scipdefault, FALSE, FALSE, NULL, NULL) );
 
    return SCIP_OKAY;
 }
