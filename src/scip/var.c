@@ -1640,6 +1640,20 @@ SCIP_Real adjustedLb(
 
 /** returns adjusted lower bound value, which is rounded for integral variable types */
 static
+SCIP_Real adjustedLbExactFloat(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VARTYPE          vartype,            /**< type of variable */
+   SCIP_Real             lb                  /**< lower bound to adjust */
+   )
+{
+   if( vartype != SCIP_VARTYPE_CONTINUOUS )
+      return ceil(lb);
+   else
+      return lb;
+}
+
+/** returns adjusted lower bound value, which is rounded for integral variable types */
+static
 void adjustedLbExact(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VARTYPE          vartype,            /**< type of variable */
@@ -1672,6 +1686,20 @@ SCIP_Real adjustedUb(
       return 0.0;
    else
       return ub;
+}
+
+/** returns adjusted upperbound value, which is rounded for integral variable types */
+static
+SCIP_Real adjustedUbExactFloat(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VARTYPE          vartype,            /**< type of variable */
+   SCIP_Real             lb                  /**< lower bound to adjust */
+   )
+{
+   if( vartype != SCIP_VARTYPE_CONTINUOUS )
+      return floor(lb);
+   else
+      return lb;
 }
 
 /** returns adjusted lower bound value, which is rounded for integral variable types */
@@ -9228,6 +9256,23 @@ void SCIPvarAdjustLbExact(
    adjustedLbExact(set, SCIPvarGetType(var), lb);
 }
 
+/** adjust lower bound to integral value, if variable is integral */
+void SCIPvarAdjustLbExactFloat(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real*            lb                  /**< pointer to lower bound to adjust */
+   )
+{
+   assert(var != NULL);
+   assert(set != NULL);
+   assert(var->scip == set->scip);
+   assert(lb != NULL);
+
+   SCIPsetDebugMsg(set, "adjust lower bound %g of <%s>\n", *lb, var->name);
+
+   *lb = adjustedLbExactFloat(set, SCIPvarGetType(var), *lb);
+}
+
 /** adjust upper bound to integral value, if variable is integral */
 void SCIPvarAdjustUb(
    SCIP_VAR*             var,                /**< problem variable */
@@ -9260,6 +9305,23 @@ void SCIPvarAdjustUbExact(
    RatDebugMessage("adjust upper bound %q of <%s>\n", ub, var->name);
 
    adjustedUbExact(set, SCIPvarGetType(var), ub);
+}
+
+/** adjust lower bound to integral value, if variable is integral */
+void SCIPvarAdjustUbExactFloat(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real*            ub                  /**< pointer to lower bound to adjust */
+   )
+{
+   assert(var != NULL);
+   assert(set != NULL);
+   assert(var->scip == set->scip);
+   assert(ub != NULL);
+
+   RatDebugMessage("adjust upper bound %q of <%s>\n", ub, var->name);
+
+   *ub = adjustedUbExactFloat(set, SCIPvarGetType(var), *ub);
 }
 
 /** adjust lower or upper bound to integral value, if variable is integral */
