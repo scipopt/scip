@@ -157,7 +157,7 @@ elseif(SYM STREQUAL "sassy")
     set(CMAKE_C_FLAGS -w)
     set(CMAKE_CXX_FLAGS -w)
 
-    add_subdirectory(src/bliss)
+    add_subdirectory(src/bliss EXCLUDE_FROM_ALL)
 
     # undo modification
     set(CMAKE_C_FLAGS ${TMPFLAGS})
