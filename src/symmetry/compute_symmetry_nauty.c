@@ -1680,7 +1680,7 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    /* init graph */
    SG_INIT(SG);
 
-   SG_ALLOC(SG, (unsigned) nnodes, (unsigned) 2 * nedges, "malloc");
+   SG_ALLOC(SG, (unsigned) nnodes, (unsigned) 2 * nedges, "malloc"); /*lint !e647*/
 
    SG.nv = nnodes;                   /* number of nodes */
    SG.nde = (size_t) (unsigned) (2 * nedges);   /* number of directed edges */
