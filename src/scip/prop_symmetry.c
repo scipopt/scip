@@ -6329,7 +6329,7 @@ SCIP_RETCODE tryDetectOrbitope(
    *isorbitope = TRUE;
    *writeorbitopematrix = NULL;
 
-   /* stop if there are permutations that are not transpositions */
+   /* stop if there are permutations that are not involutions */
    for (p = 0; p < nperms; ++p)
    {
       perm = perms[p];
@@ -6755,7 +6755,7 @@ SCIP_RETCODE tryAddOrbitopesDynamic(
          goto CLEARITERATIONORBITOPEDETECTED;
       }
 
-      /* for only 2 columns, then the component can be completely handled by lexicographic reduction */
+      /* for only 2 columns, the the component can be completely handled by lexicographic reduction */
       if ( ncols == 2 && propdata->lexreddata != NULL )
       {
          /* If the component is an orbitope with 2 columns, then there is 1 generator of order 2. */

@@ -373,6 +373,8 @@ SCIP_RETCODE getVarOrder(
    assert( lexdata != NULL );
    assert( nodedepthbranchindices != NULL );
    assert( nvarstotal >= 0 );
+   assert( branchvars != NULL );
+   assert( nbranchvars >= 0 );
    assert( varorder != NULL );
    assert( nselvars != NULL );
 
@@ -918,6 +920,8 @@ SCIP_RETCODE propagateLexredDynamic(
    assert( lexdata != NULL );
    assert( nodedepthbranchindices != NULL );
    assert( nvarstotal >= 0 );
+   assert( branchvars != NULL );
+   assert( nbranchvars >= 0 );
    assert( infeasible != NULL );
    assert( nreductions != NULL );
 
@@ -958,6 +962,11 @@ SCIP_RETCODE propagateLexicographicReductionPerm(
 {
    assert( scip != NULL );
    assert( masterdata != NULL );
+   assert( lexdata != NULL );
+   assert( nodedepthbranchindices != NULL );
+   assert( nvarstotal >= 0 );
+   assert( branchvars != NULL );
+   assert( nbranchvars >= 0 );
    assert( infeasible != NULL );
    assert( nreductions != NULL );
 

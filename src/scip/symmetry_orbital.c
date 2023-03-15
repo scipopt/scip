@@ -187,7 +187,10 @@ SCIP_RETCODE identifyOrbitalSymmetriesBroken(
          if ( !orbitsymbroken )
          {
             if ( !EQ(scip, orbitglb, orcdata->globalvarlbs[j]) || !EQ(scip, orbitgub, orcdata->globalvarubs[j]) )
+            {
                orbitsymbroken = TRUE;
+               break;
+            }
          }
       }
       /* the loop above has terminated, so i is either orcdata->npermvars or varorbitidssort[i] is in the next orbit,
