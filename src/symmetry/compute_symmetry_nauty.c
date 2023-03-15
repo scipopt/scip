@@ -128,7 +128,7 @@ SCIP_DECL_HASHKEYVAL(SYMhashKeyValOptype)
    else
       exponent = 1.0;
 
-   result = SCIPhashTwo(SCIPrealHashCode(exponent), k->level), (uint64_t) SCIPexprhdlrGetName(SCIPexprGetHdlr(k->expr));
+   result = SCIPhashThree(SCIPrealHashCode(exponent), k->level, SCIPhashKeyValString(NULL, (char*) SCIPexprhdlrGetName(SCIPexprGetHdlr(k->expr))));
 
    return result;
 }
@@ -148,7 +148,7 @@ SCIP_DECL_HASHGETKEY(SYMhashGetKeyConsttype)
  */
 static
 SCIP_DECL_HASHKEYEQ(SYMhashKeyEQConsttype)
-{
+{  /*lint --e{715}*/
    SYM_CONSTTYPE* k1;
    SYM_CONSTTYPE* k2;
 
@@ -184,7 +184,7 @@ SCIP_DECL_HASHGETKEY(SYMhashGetKeyRhstype)
  */
 static
 SCIP_DECL_HASHKEYEQ(SYMhashKeyEQRhstype)
-{
+{  /*lint --e{715}*/
    SYM_RHSTYPE* k1;
    SYM_RHSTYPE* k2;
 
@@ -955,7 +955,7 @@ SCIP_RETCODE fillGraphByConss(
    for (i = 0; i < nnodes; ++i)
    {
       SG->d[i] = degrees[i];   /* degree of node i */
-      SG->v[i] = (size_t) cnt; /* position of edges for node i */
+      SG->v[i] = (size_t) (unsigned) cnt; /* position of edges for node i */
       pos[i] = cnt;            /* also store position */
       cnt += degrees[i];
    }
@@ -1680,10 +1680,10 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    /* init graph */
    SG_INIT(SG);
 
-   SG_ALLOC(SG, nnodes, 2 * nedges, "malloc");
+   SG_ALLOC(SG, (unsigned) nnodes, (unsigned) 2 * nedges, "malloc"); /*lint !e647*/
 
    SG.nv = nnodes;                   /* number of nodes */
-   SG.nde = (size_t) (2 * nedges);   /* number of directed edges */
+   SG.nde = (size_t) (unsigned) (2 * nedges);   /* number of directed edges */
 
    /* add the nodes for linear and nonlinear constraints to the graph */
    SCIP_CALL( fillGraphByConss(scip, &SG, matrixdata, exprdata,
