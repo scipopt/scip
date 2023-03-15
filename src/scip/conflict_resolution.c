@@ -1314,9 +1314,9 @@ SCIP_RETCODE resolutionSetSortFromBounds(
    return SCIP_OKAY;
 }
 
-/** weaken variables in the reason */
+/** weaken variable in a resolution set */
 static
-void weakenVarReason(
+void weakenVar(
    SCIP_RESOLUTIONSET*   resolutionset,      /**< resolution set */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var,                /**< variable to weaken */
@@ -1327,7 +1327,7 @@ void weakenVarReason(
    assert(var != NULL);
    assert(pos >= 0 && pos < resolutionset->nnz);
 
-   SCIPdebugMessage("weaken variable <%s> in reason \n", SCIPvarGetName(var));
+   SCIPdebugMessage("weaken variable <%s> in the resolution set \n", SCIPvarGetName(var));
    /* weaken with global upper bound */
    if( SCIPsetIsGT(set, resolutionset->vals[pos], 0.0) )
    {
@@ -1343,6 +1343,65 @@ void weakenVarReason(
    --resolutionset->nnz;
    resolutionset->vals[pos] = resolutionset->vals[resolutionset->nnz];
    resolutionset->inds[pos] = resolutionset->inds[resolutionset->nnz];
+}
+
+/* weaken all variables in the conflict resolution set */
+static
+SCIP_RETCODE weakenConflict(
+   SCIP_RESOLUTIONSET*   resolutionset,      /**< resolution set */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_BDCHGIDX*        currbdchgidx        /**< current bound change index */
+   )
+{
+   SCIP_VAR** vars;
+   int i;
+   int nvarsweakened;
+
+   assert(resolutionset != NULL);
+   assert(set != NULL);
+   assert(prob != NULL);
+
+   vars = prob->vars;
+   assert(vars != NULL);
+
+   nvarsweakened = 0;
+
+   for( i = resolutionset->nnz - 1; i >= 0; --i )
+   {
+      SCIP_VAR* vartoweaken;
+
+      vartoweaken = vars[resolutionset->inds[i]];
+
+      if( resolutionset->vals[i] > 0.0 )
+      {
+         SCIP_Real ub;
+
+         ub = SCIPgetVarUbAtIndex(set->scip, vartoweaken, currbdchgidx, TRUE);
+
+         if( SCIPsetIsEQ(set, ub, SCIPvarGetUbGlobal(vartoweaken)) )
+         {
+            weakenVar(resolutionset, set, vartoweaken, i);
+            ++nvarsweakened;
+
+         }
+      }
+         else
+         {
+            SCIP_Real lb;
+
+            lb = SCIPgetVarLbAtIndex(set->scip, vartoweaken, currbdchgidx, TRUE);
+
+            if( SCIPsetIsEQ(set, lb, SCIPvarGetLbGlobal(vartoweaken)) )
+            {
+               weakenVar(resolutionset, set, vartoweaken, i);
+               ++nvarsweakened;
+            }
+         }
+   }
+   SCIPdebugMessage("weakened %d variables in the conflict resolution set \n", nvarsweakened);
+
+   return SCIP_OKAY;
 }
 
 /* Removes a variable with zero coefficient in the resolutionset */
@@ -2859,7 +2918,7 @@ SCIP_RETCODE DivisionBasedReduction(
 
                if( SCIPsetIsEQ(set, ub, SCIPvarGetUbGlobal(vartoweaken)) && !SCIPsetIsZero(set, fmod(reasonset->vals[i], coefinreason)) )
                {
-                     weakenVarReason(reasonset, set, vartoweaken, i);
+                     weakenVar(reasonset, set, vartoweaken, i);
                      varwasweakened = TRUE;
                      applydivision = TRUE;
                      ++(*nvarsweakened);
@@ -2872,7 +2931,7 @@ SCIP_RETCODE DivisionBasedReduction(
 
                if( SCIPsetIsEQ(set, lb, SCIPvarGetLbGlobal(vartoweaken))  && !SCIPsetIsZero(set, fmod(reasonset->vals[i], coefinreason)) )
                {
-                     weakenVarReason(reasonset, set, vartoweaken, i);
+                     weakenVar(reasonset, set, vartoweaken, i);
                      varwasweakened = TRUE;
                      applydivision = TRUE;
                      ++(*nvarsweakened);
@@ -3032,7 +3091,7 @@ SCIP_RETCODE tighteningBasedReduction(
 
                if( SCIPsetIsEQ(set, ub, SCIPvarGetUbGlobal(vartoweaken)) )
                {
-                  weakenVarReason(reasonset, set, vartoweaken, i);
+                  weakenVar(reasonset, set, vartoweaken, i);
                   varwasweakened = TRUE;
                   applytightening = TRUE;
                   ++(*nvarsweakened);
@@ -3046,7 +3105,7 @@ SCIP_RETCODE tighteningBasedReduction(
 
                if( SCIPsetIsEQ(set, lb, SCIPvarGetLbGlobal(vartoweaken)) )
                {
-                  weakenVarReason(reasonset, set, vartoweaken, i);
+                  weakenVar(reasonset, set, vartoweaken, i);
                   varwasweakened = TRUE;
                   applytightening = TRUE;
                   ++(*nvarsweakened);
@@ -3691,18 +3750,23 @@ SCIP_RETCODE conflictAnalyzeResolution(
 
    if (initialconflictrow != NULL && !set->conf_clausegenres)
    {
-      if( SCIProwGetNNonz(initialconflictrow) > maxsize )
-      {
-         SCIPsetDebugMsg(set, "Number of nonzeros in conflict is larger than maxsize %d > %d\n",
-                        SCIProwGetNNonz(initialconflictrow), maxsize);
-         conflict->nreslongconfs++;
-         conflict->ncorrectaborts++;
-         return SCIP_OKAY;
-      }
-
       SCIPsetDebugMsg(set, "Initial conflict Row: %s \n", SCIProwGetName(initialconflictrow));
       /* get the resolution set of the conflict row */
       SCIP_CALL( conflictResolutionsetFromRow(set, blkmem, initialconflictrow, conflictresolutionset, bdchginfo) );
+
+      if( resolutionsetGetNNzs(conflictresolutionset) > maxsize )
+      {
+         SCIPsetDebugMsg(set, "Number of nonzeros in conflict is larger than maxsize %d > %d\n",
+                        SCIProwGetNNonz(initialconflictrow), maxsize);
+         weakenConflict(conflictresolutionset, set, transprob, bdchgidx);
+
+         if(resolutionsetGetNNzs(conflictresolutionset) > maxsize)
+         {
+            conflict->nreslongconfs++;
+            conflict->ncorrectaborts++;
+            return SCIP_OKAY;
+         }
+      }
 
       /* compute the slack */
       conflictresolutionset->slack = getSlack(set, transprob, conflictresolutionset, bdchgidx, NULL, NULL);
@@ -3905,8 +3969,6 @@ SCIP_RETCODE conflictAnalyzeResolution(
          SCIPsetDebugMsgPrint(set, "ignoring-fixing variable %s to %f \n", SCIPvarGetName(SCIPbdchginfoGetVar(bdchginfo)),
                SCIPbdchginfoGetNewbound(bdchginfo));
 
-         if (nressteps == 0)
-            SCIP_CALL( updateBdchgQueue(set, transprob, conflictresolutionset, bdchgidx) );
 
          /* extract latest bound change from queue */
          bdchginfo = conflictRemoveCand(conflict);
@@ -4030,9 +4092,13 @@ SCIP_RETCODE conflictAnalyzeResolution(
          {
             SCIPsetDebugMsg(set, "Number of nonzeros in conflict is larger than maxsize %d > %d\n",
                            resolutionsetGetNNzs(resolvedresolutionset), maxsize);
-            conflict->nreslongconfs++;
-            conflict->ncorrectaborts++;
-            goto TERMINATE;
+            weakenConflict(resolvedresolutionset, set, transprob, bdchgidx);
+            if(resolutionsetGetNNzs(resolvedresolutionset) > maxsize)
+            {
+               conflict->nreslongconfs++;
+               conflict->ncorrectaborts++;
+               goto TERMINATE;
+            }
          }
 
          SCIP_CALL( resolutionsetReplace(conflictresolutionset, blkmem, resolvedresolutionset) );
