@@ -6724,7 +6724,7 @@ SCIP_RETCODE tryAddOrbitopesDynamic(
          &orbitopematrix, &nrows, &ncols) );
 
       if ( !isorbitope )
-         goto CLEARITERATION;
+         goto CLEARITERATIONNOORBITOPE;
 
       /* add linear constraints x_1 >= x_2 >= ... >= x_ncols for single-row orbitopes */
       if ( nrows == 1 )
@@ -6752,7 +6752,7 @@ SCIP_RETCODE tryAddOrbitopesDynamic(
 
          propdata->componentblocked[c] |= SYM_HANDLETYPE_SYMBREAK;
          ++propdata->ncompblocked;
-         goto CLEARITERATION;
+         goto CLEARITERATIONORBITOPEDETECTED;
       }
 
       /* for only 2 columns, then the component can be completely handled by lexicographic reduction */
@@ -6767,7 +6767,7 @@ SCIP_RETCODE tryAddOrbitopesDynamic(
          {
             propdata->componentblocked[c] |= SYM_HANDLETYPE_SYMBREAK | SYM_HANDLETYPE_DYNAMIC;
             ++propdata->ncompblocked;
-            goto CLEARITERATION;
+            goto CLEARITERATIONORBITOPEDETECTED;
          }
       }
 
@@ -6871,11 +6871,12 @@ SCIP_RETCODE tryAddOrbitopesDynamic(
       }
       SCIPfreeBufferArray(scip, &ppvarmatrix);
 
+   CLEARITERATIONORBITOPEDETECTED:
       assert( isorbitope );
       assert( orbitopematrix != NULL );
       SCIPfreeBlockMemoryArray(scip, &orbitopematrix, nrows * ncols); /*lint !e647*/
 
-   CLEARITERATION:
+   CLEARITERATIONNOORBITOPE:
       SCIPfreeBufferArray(scip, &componentperms);
    }
 
