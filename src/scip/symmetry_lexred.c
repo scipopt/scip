@@ -1042,11 +1042,12 @@ SCIP_RETCODE shadowtreeFillNodeDepthBranchIndices(
             var = shadowchild->branchingdecisions[i].var;
             assert( SCIPvarIsTransformed(var) );
 
+            varindex = SCIPhashmapGetImageInt(masterdata->symvarmap, var);
+
             /* ignore variables that are irrelevant for lexicographic reduction */
-            if ( !SCIPhashmapExists(masterdata->symvarmap, (void*) var) )
+            if ( varindex == INT_MAX )
                continue;
 
-            varindex = SCIPhashmapGetImageInt(masterdata->symvarmap, var);
             assert( varindex >= 0 );
             assert( varindex < masterdata->nsymvars );
 
@@ -1058,9 +1059,12 @@ SCIP_RETCODE shadowtreeFillNodeDepthBranchIndices(
             assert( nodedepthbranchindices[varindex].nodedepth == 0 ||
                nodedepthbranchindices[varindex].nodedepth > shadowdepth);
 
-            /* variable is not featured in branchvars, yet */
-            assert( *nbranchvars < masterdata->nsymvars );
-            branchvars[(*nbranchvars)++] = var;
+            if ( nodedepthbranchindices[varindex].nodedepth == 0 )
+            {
+               /* variable is not featured in branchvars, yet */
+               assert( *nbranchvars < masterdata->nsymvars );
+               branchvars[(*nbranchvars)++] = var;
+            }
 
             /* var is not seen on this level yet. Update */
             nodedepthbranchindices[varindex].nodedepth = shadowdepth;
