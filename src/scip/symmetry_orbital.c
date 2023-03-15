@@ -246,6 +246,14 @@ SCIP_RETCODE identifyOrbitalSymmetriesBroken(
    /* mark that this method is executed for the component */
    orcdata->symmetrybrokencomputed = TRUE;
 
+   /* output information */
+   if ( orcdata->nsymbrokenvarids > 0 )
+   {
+      SCIPwarningMessage(scip,
+         "Orbital fixing symmetry for %p broken before symmetry. Requires fixing %d/%d affected variables.\n",
+         (void*) orcdata, orcdata->nsymbrokenvarids, orcdata->npermvars);
+   }
+
    SCIPfreeBufferArray(scip, &varorbitidssort);
    SCIPfreeBufferArray(scip, &varorbitids);
    SCIPfreeDisjointset(scip, &orbitset);
