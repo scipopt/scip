@@ -57,7 +57,6 @@
 #define BRANCHRULE_MAXBOUNDDIST    1.0
 
 #define DEFAULT_MAXNCANDS          -1    /**< maximum number of branching candidates to produce a cut for */
-#define DEFAULT_MINFRAC            0     /**< minimum fractionality of a variable in the LP that we branch on */
 #define DEFAULT_EFFICACYWEIGHT     0.5   /**< weight of efficacy in the cut scoring rule */
 #define DEFAULT_OBJPARALLELWEIGHT  0.5   /**< weight of objective parallelism in the cut scoring rule */
 #define DEFAULT_PERFORMRELPSCOST   FALSE /**< if default branching rule without execution should be called */
@@ -72,7 +71,6 @@
 struct SCIP_BranchruleData
 {
    int                   maxncands;             /**< maximum number of variable candidates to produce cut for */
-   SCIP_Real             minfrac;               /**< minimum fractionality for which we will generate a GMI cut */
    SCIP_Real             efficacyweight;        /**< the weight of efficacy in weighted sum scoring rule */
    SCIP_Real             objparallelweight;     /**< the weight of objective parallelism in weighted sum scoring rule */
    SCIP_Bool             performrelpscost;      /**< if default branching rule without execution should be called */
@@ -546,16 +544,13 @@ SCIP_RETCODE SCIPincludeBranchruleGomory(
    SCIP_CALL( SCIPaddIntParam(scip,"branching/gomory/maxncands",
          "maximum amount of branching candidates to generate gomory cut for (-1: all candidates)",
          &branchruledata->maxncands, FALSE, DEFAULT_MAXNCANDS, -1, INT_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddRealParam(scip,"branching/gomory/minfrac",
-         "minimum fractionality of a variable in the LP for which we produce a cut",
-         &branchruledata->minfrac, FALSE, DEFAULT_MINFRAC, 0, 0.5, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,"branching/gomory/efficacyweight",
          "weight of efficacy in the cut scoring rule",
          &branchruledata->efficacyweight, FALSE, DEFAULT_EFFICACYWEIGHT, -1, 1, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,"branching/gomory/objparallelweight",
          "weight of objective parallelism in the cut scoring rule",
          &branchruledata->objparallelweight, FALSE, DEFAULT_OBJPARALLELWEIGHT, -1, 1, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip,"branching/gomory/performrlpscost",
+   SCIP_CALL( SCIPaddBoolParam(scip,"branching/gomory/performrelpscost",
          "whether default SCIP branching should be called without branching (used for bound inferences and conflicts)",
          &branchruledata->performrelpscost, FALSE, DEFAULT_PERFORMRELPSCOST, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,"branching/gomory/useweakercuts",
