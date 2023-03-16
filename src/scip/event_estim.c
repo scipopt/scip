@@ -1240,11 +1240,10 @@ SCIP_RETCODE subtreeSumGapInsertChildren(
     * of its parent node
     */
    if( !SCIPhashmapExists(ssg->nodes2info, (void*)focusnode) )
-   {  SCIP_NODE* prev;
+   {
       parentnode = focusnode;
       do
       {
-         prev= parentnode;
          parentnode = SCIPnodeGetParent(parentnode);
       } while( parentnode != NULL && !SCIPhashmapExists(ssg->nodes2info, (void *)parentnode));
 

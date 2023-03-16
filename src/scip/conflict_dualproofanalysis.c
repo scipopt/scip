@@ -930,15 +930,17 @@ SCIP_RETCODE createAndAddProofcons(
    SCIPdebugMessage("Create constraint from dual ray analysis\n");
    if (set->exact_enabled)
    {
-     /* don't store global dual proofs that are too long / have too many non-zeros */
-      if( toolong  )
-      {
-         return SCIP_OKAY;
-      }
       SCIP_Rational* lhs_exact;
       SCIP_Rational* rhs_exact;
       SCIP_Rational** coefs_exact;
       SCIP_VAR** consvars;
+
+      /* don't store global dual proofs that are too long / have too many non-zeros */
+      if( toolong  )
+      {
+         return SCIP_OKAY;
+      }
+
       SCIP_CALL(RatCreateBuffer(SCIPbuffer(set->scip), &lhs_exact));
       SCIP_CALL(RatCreateBuffer(SCIPbuffer(set->scip), &rhs_exact));
       RatSetString(lhs_exact, "-inf");
