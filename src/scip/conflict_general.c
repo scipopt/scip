@@ -1695,7 +1695,7 @@ SCIP_RETCODE SCIPgetDualProof(
       unsigned long certificateline;
       SCIP_ROW** usedrows;
       SCIP_CALL(SCIPcertificatePrintCutoffBound(set->scip, SCIPgetCertificate(set->scip), SCIPgetCutoffboundExact(set->scip), &certificateline));
-      SCIPhashmapInsertLong(SCIPgetCertificate(set->scip)->rowdatahash, objectiverow->rowexact, certificateline);
+      SCIP_CALL(SCIPhashmapInsertLong(SCIPgetCertificate(set->scip)->rowdatahash, objectiverow->rowexact, certificateline));
       SCIP_CALL(SCIPallocBufferArray(set->scip, &usedrows, farkasrow->nrows + 1));
       usedrows[0] = objectiverow;
       for (int i = 1; i < farkasrow->nrows; i++)
@@ -1703,7 +1703,7 @@ SCIP_RETCODE SCIPgetDualProof(
          usedrows[i] = SCIPgetLPRows(set->scip)[farkasrow->rowsinds[i]];
       }
       SCIPcertificatePrintAggrrow(set, lp, transprob, SCIPgetCertificate(set->scip), farkasrow, usedrows, farkasrow->rowweights, farkasrow->nrows, false, &farkasrow->certificateline);
-      SCIPhashmapRemove(SCIPgetCertificate(set->scip)->rowdatahash, objectiverow->rowexact);
+      SCIP_CALL(SCIPhashmapRemove(SCIPgetCertificate(set->scip)->rowdatahash, objectiverow->rowexact));
       SCIPfreeBufferArray(set->scip, &usedrows);
    }
 
