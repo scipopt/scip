@@ -1262,7 +1262,8 @@ SCIP_RETCODE SCIPgetFarkasProof(
             continue;
 
          if ( set->exact_enabled )
-         {
+         {  long certificateIndex;
+
             for (int i = 0; i < row->len; i++)
             {
                if ( SCIPsetIsInfinity(set, -SCIPvarGetLbGlobal(row->cols[i]->var)) && SCIPsetIsInfinity(set, SCIPvarGetUbGlobal(row->cols[i]->var)) )
@@ -1271,6 +1272,16 @@ SCIP_RETCODE SCIPgetFarkasProof(
                   goto TERMINATE; // Adding unbounded variables safely to an aggregation row is not yet supported
                }
             }
+            if (SCIPsetCertificateEnabled(set)) {
+               certificateIndex = SCIPhashmapGetImageLong(SCIPgetCertificate(set->scip)->rowdatahash, row->rowexact);
+               if(certificateIndex  == LONG_MAX && SCIProwGetOrigintype(row) == SCIP_ROWORIGINTYPE_SEPA )
+               {
+                  SCIP_CALL( SCIPcertificatePrintMirCut(set, lp, SCIPgetCertificate(set->scip), prob, row, 'L') );
+                  certificateIndex = SCIPcertificateGetRowIndex(SCIPgetCertificate(set->scip), row->rowexact, dualfarkas[r]>0);
+               }
+               assert(certificateIndex != LONG_MAX);
+            }
+
          }
          if( !row->local )
          {
@@ -1701,6 +1712,19 @@ SCIP_RETCODE SCIPgetDualProof(
       for (int i = 1; i < farkasrow->nrows; i++)
       {
          usedrows[i] = SCIPgetLPRows(set->scip)[farkasrow->rowsinds[i]];
+         if (SCIPsetCertificateEnabled(set))
+         {
+            long certificateIndex;
+            certificateIndex = SCIPhashmapGetImageLong(SCIPgetCertificate(set->scip)->rowdatahash, row->rowexact);
+            if(certificateIndex  == LONG_MAX && SCIProwGetOrigintype(row) == SCIP_ROWORIGINTYPE_SEPA )
+            {
+               SCIP_CALL( SCIPcertificatePrintMirCut(set, lp, SCIPgetCertificate(set->scip), transprob, row, 'L') );
+            }
+            else
+            {
+               assert(certificateIndex != LONG_MAX);
+            }
+         }
       }
       SCIPcertificatePrintAggrrow(set, lp, transprob, SCIPgetCertificate(set->scip), farkasrow, usedrows, farkasrow->rowweights, farkasrow->nrows, false, &farkasrow->certificateline);
       SCIP_CALL(SCIPhashmapRemove(SCIPgetCertificate(set->scip)->rowdatahash, objectiverow->rowexact));
