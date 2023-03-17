@@ -25,7 +25,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 // #define SCIP_STATISTIC
-#define SCIP_DEBUG
+// #define SCIP_DEBUG
 
 #include "lpi/lpi.h"
 #include "scip/conflict_resolution.h"
@@ -645,39 +645,31 @@ SCIP_RETCODE MirLhs(
    /* loop over all non zeros and divide each row element by the divisor */
    for( int i = 0; i < resolutionset->nnz; ++i )
    {
-
       SCIP_Real newcoef;
       SCIP_Real frac;
 
       newcoef = resolutionset->vals[i] / divisor;
       frac = newcoef - SCIPsetFloor(set, newcoef);
-      if ( SCIPsetIsGE(set, frac, fraclhs) )
+
+      if( SCIPsetIsGE(set, newcoef, 0.0) )
       {
-         /* ceil the coefficient if it is positive and floor if it is negative */
-         if ( SCIPsetIsGE(set, newcoef, 0.0) )
-         {
+         if ( SCIPsetIsGE(set, frac, fraclhs) )
             resolutionset->vals[i] = SCIPsetCeil(set, newcoef);
-         }
          else
+            resolutionset->vals[i] = SCIPsetFloor(set, newcoef) + frac / fraclhs;
+      }
+      else
+      {
+         if ( SCIPsetIsGE(set, 1 - frac, fraclhs) )
          {
             resolutionset->vals[i] = SCIPsetFloor(set, newcoef);
             /* update the normalization term */
             normalizationtermlhs += resolutionset->vals[i];
-
          }
-      }
-      else
-      {
-         /* floor the coefficient plus the quotient of fractionalities if it is positive */
-         if ( SCIPsetIsGE(set, newcoef, 0.0) )
-         {
-            resolutionset->vals[i] = SCIPsetFloor(set, newcoef) + frac / fraclhs;
-         }
-         /* ceil the coefficient minus the (negative) quotient of fractionalities if it is negative */
          else
          {
             SCIP_Real negcoeffrac;
-            negcoeffrac = -newcoef - SCIPsetFloor(set, -newcoef);
+            negcoeffrac = 1 - frac;
             resolutionset->vals[i] = SCIPsetCeil(set, newcoef) - negcoeffrac / fraclhs;
             /* update the normalization term */
             normalizationtermlhs += resolutionset->vals[i];
