@@ -6884,6 +6884,160 @@ SCIP_RETCODE tryAddOrbitopesDynamic(
 }
 
 
+/** if the generating set of a component has too many packing partitioning orbisacks (>50%), upgrade */
+static
+SCIP_RETCODE componentPackingPartitioningOrbisackUpgrade(
+   SCIP*                 scip,               /**< SCIP instance */
+   SCIP_PROPDATA*        propdata,           /**< propdata */
+   int**                 componentperms,     /**< permutations in the component */
+   int                   componentsize,      /**< number of permutations in the component */
+   SCIP_Bool*            success             /**< whether the packing partitioning upgrade */
+)
+{
+   int c;
+   int i;
+   int j;
+   int p;
+   int* perm;
+   SCIP_CONSHDLR* setppcconshdlr;
+   SCIP_CONS** setppcconss;
+   SCIP_CONS* cons;
+   int* setppcconsssort;
+   int nsetppcvars;
+   SCIP_VAR** setppcvars;
+   int nsetppcconss;
+   int** pporbisackperms;
+   int npporbisackperms;
+   SCIP_VAR* var;
+   int varid;
+   SCIP_CONS*** permvarssetppcconss;
+   int* npermvarssetppcconss;
+   int* maxnpermvarssetppcconss;
+
+   assert( scip != NULL );
+   assert( propdata != NULL );
+   assert( componentperms != NULL );
+   assert( componentsize > 0 );
+   assert( success != NULL );
+
+   /* we did not upgrade yet */
+   *success = FALSE;
+
+   setppcconshdlr = SCIPfindConshdlr(scip, "setppc");
+   if ( setppcconshdlr == NULL )
+      return SCIP_OKAY;
+
+   nsetppcconss = SCIPconshdlrGetNConss(setppcconshdlr);
+   if ( nsetppcconss == 0 )
+      return SCIP_OKAY;
+
+   setppcconss = SCIPconshdlrGetConss(setppcconshdlr);
+   assert( setppcconss != NULL );
+
+   SCIP_CALL( ensureSymmetryPermvarmapComputed(scip, propdata) );
+
+   /* sort setppc constraints by pointer */
+   SCIP_CALL( SCIPallocBufferArray(scip, &setppcconsssort, nsetppcconss) );
+   SCIPsort(setppcconsssort, SCIPsortArgsortPtr, (void*) setppcconss, nsetppcconss);
+
+   /* For each permvar, introduce an array of setppc constraints (initially NULL) for each variable,
+    * and populate it with the setppc constraints that it contains. This array follows the ordering by cons ptr address.
+    */
+   SCIP_CALL( SCIPallocCleanBufferArray(scip, &permvarssetppcconss, propdata->npermvars) );
+   SCIP_CALL( SCIPallocCleanBufferArray(scip, &npermvarssetppcconss, propdata->npermvars) );
+   SCIP_CALL( SCIPallocCleanBufferArray(scip, &maxnpermvarssetppcconss, propdata->npermvars) );
+   for (c = 0; c < nsetppcconss; ++c)
+   {
+      assert( setppcconsssort[c] >= 0 );
+      assert( setppcconsssort[c] < nsetppcconss );
+      cons = setppcconss[setppcconsssort[c]];
+      assert( cons != NULL );
+
+      /* only packing or partitioning constraints, no covering types */
+      if ( SCIPgetTypeSetppc(scip, cons) == SCIP_SETPPCTYPE_COVERING )
+         continue;
+
+      setppcvars = SCIPgetVarsSetppc(scip, cons);
+      nsetppcvars = SCIPgetNVarsSetppc(scip, cons);
+
+      for (i = 0; i < nsetppcvars; ++i)
+      {
+         var = setppcvars[i];
+         assert( var != NULL );
+         varid = SCIPhashmapGetImageInt(propdata->permvarmap, (void*) var);
+         assert( varid == INT_MAX || varid < propdata->npermvars );
+         assert( varid >= 0 );
+         if ( varid < propdata->npermvars )
+         {
+            SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip,
+               &(permvarssetppcconss[varid]), &maxnpermvarssetppcconss[varid], npermvarssetppcconss[varid] + 1) );
+            assert( npermvarssetppcconss[varid] < maxnpermvarssetppcconss[varid] );
+            permvarssetppcconss[varid][npermvarssetppcconss[varid]++] = cons;
+         }
+      }
+   }
+
+   /* for all permutations, test involutions on binary variables and test if they are captured by setppc conss */
+   SCIP_CALL( SCIPallocBufferArray(scip, &pporbisackperms, componentsize) );
+   npporbisackperms = 0;
+   for (p = 0; p < componentsize; ++p)
+   {
+      perm = componentperms[p];
+
+      /* check if the binary orbits are involutions */
+      for (i = 0; i < propdata->npermvars; ++i)
+      {
+         j = perm[i];
+         if ( i == j || perm[j] == i )
+            continue;
+         if ( SCIPvarGetType(propdata->permvars[i]) != SCIP_VARTYPE_BINARY )
+            continue;
+         /* it's no involution on binary variables */
+         goto NEXTPERMITER;
+      }
+
+      /* for each binary variable, make a list of setppc constraints that it contains (dynamically allocated) */
+      pporbisackperms[npporbisackperms++] = perm;
+
+   NEXTPERMITER:
+      ;
+   }
+
+   /* if at least 50% of such permutations are packing-partitioning type, apply packing upgrade */
+   if ( npporbisackperms * 2 >= componentsize )
+   {
+      /* for each of these perms, create the packing orbitope matrix and add constraint*/
+      /* @todo */
+
+      *success = TRUE;
+   }
+
+   /* free pp orbisack array */
+   SCIPfreeBufferArray(scip, &pporbisackperms);
+
+   /* clean the non-clean arrays */
+   for (varid = 0; varid < propdata->npermvars; ++varid)
+   {
+      assert( (permvarssetppcconss[varid] == NULL) == (maxnpermvarssetppcconss[varid] == 0) );
+      assert( npermvarssetppcconss[varid] >= 0 );
+      assert( maxnpermvarssetppcconss[varid] >= 0 );
+      assert( npermvarssetppcconss[varid] <= maxnpermvarssetppcconss[varid] );
+      if ( npermvarssetppcconss[varid] == 0 )
+         continue;
+      SCIPfreeBlockMemoryArray(scip, &permvarssetppcconss[varid], maxnpermvarssetppcconss[varid]);
+      permvarssetppcconss[varid] = NULL;
+      npermvarssetppcconss[varid] = 0;
+      maxnpermvarssetppcconss[varid] = 0;
+   }
+   SCIPfreeCleanBufferArray(scip, &maxnpermvarssetppcconss);
+   SCIPfreeCleanBufferArray(scip, &npermvarssetppcconss);
+   SCIPfreeCleanBufferArray(scip, &permvarssetppcconss);
+   SCIPfreeBufferArray(scip, &setppcconsssort);
+
+   return SCIP_OKAY;
+}
+
+
 /** dynamic permutation lexicographic reduction */
 static
 SCIP_RETCODE tryAddOrbitalRedLexRed(
@@ -6897,6 +7051,7 @@ SCIP_RETCODE tryAddOrbitalRedLexRed(
    SCIP_Bool checkorbired;
    SCIP_Bool checklexred;
    SCIP_Bool success;
+   SCIP_PARAM* checkpporbisack;
 
    assert( scip != NULL );
    assert( propdata != NULL );
@@ -6917,6 +7072,9 @@ SCIP_RETCODE tryAddOrbitalRedLexRed(
    SCIP_CALL( ensureSymmetryComponentsComputed(scip, propdata) );
    assert( propdata->ncomponents > 0 );
 
+   SCIP_CALL( ensureSymmetryMovedpermvarscountsComputed(scip, propdata) );
+   assert( propdata->nmovedpermvars );
+
    for (c = 0; c < propdata->ncomponents; ++c)
    {
       int componentsize;
@@ -6931,6 +7089,20 @@ SCIP_RETCODE tryAddOrbitalRedLexRed(
       SCIP_CALL( SCIPallocBufferArray(scip, &componentperms, componentsize) );
       for (p = 0; p < componentsize; ++p)
          componentperms[p] = propdata->perms[propdata->components[propdata->componentbegins[c] + p]];
+
+      /* check if many component permutations contains many packing partitioning orbisacks */
+      checkpporbisack = SCIPgetParam(scip, "constraints/orbisack/checkpporbisack");
+      if ( ( checkpporbisack == NULL || SCIPparamGetBool(checkpporbisack) == TRUE ) && propdata->nmovedbinpermvars > 0 )
+      {
+         SCIP_CALL( componentPackingPartitioningOrbisackUpgrade(scip, propdata, 
+            componentperms, componentsize, &success) );
+
+         if ( success )
+         {
+            propdata->componentblocked[c] |= SYM_HANDLETYPE_SYMBREAK;
+            goto FINISHCOMPONENT;
+         }
+      }
 
       /* handle component permutations with orbital reduction */
       if ( checkorbired )
@@ -6955,6 +7127,7 @@ SCIP_RETCODE tryAddOrbitalRedLexRed(
          }
       }
 
+   FINISHCOMPONENT:
       /* if it got blocked here */
       if ( propdata->componentblocked[c] )
          ++propdata->ncompblocked;

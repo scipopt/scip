@@ -62,10 +62,17 @@ SCIP_DECL_SORTPTRCOMP(SCIPsortCompInt);
 
 /** implements argsort
  *
- * The data pointer is a lookup array.
+ * The data pointer is a lookup array of integers.
  */
 SCIP_EXPORT
 SCIP_DECL_SORTINDCOMP(SCIPsortArgsortInt);
+
+/** implements argsort
+ *
+ * The data pointer is a lookup array, which are pointer arrays.
+ */
+SCIP_EXPORT
+SCIP_DECL_SORTINDCOMP(SCIPsortArgsortPtr);
 
 /* first all upwards-sorting methods */
 
