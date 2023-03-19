@@ -2232,6 +2232,7 @@ void SCIPmultihashPrintStatistics(
       }
    }
    assert(sumslotsize == multihash->nelements);
+   SCIP_UNUSED(sumslotsize);
 
    SCIPmessagePrintInfo(messagehdlr, "%" SCIP_LONGINT_FORMAT " multihash entries, used %d/%d slots (%.1f%%)",
       multihash->nelements, usedslots, multihash->nlists, 100.0*(SCIP_Real)usedslots/(SCIP_Real)(multihash->nlists));
