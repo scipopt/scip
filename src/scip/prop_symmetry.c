@@ -6885,14 +6885,14 @@ SCIP_RETCODE tryAddOrbitopesDynamic(
 }
 
 
-/** if the generating set of a component has too many packing partitioning orbisacks (>50%), upgrade */
+/** applies pp-orbitope upgrade if at least 50% of the permutations in a component correspond to pp-orbisacks */
 static
 SCIP_RETCODE componentPackingPartitioningOrbisackUpgrade(
    SCIP*                 scip,               /**< SCIP instance */
    SCIP_PROPDATA*        propdata,           /**< propdata */
    int**                 componentperms,     /**< permutations in the component */
    int                   componentsize,      /**< number of permutations in the component */
-   SCIP_Bool*            success             /**< whether the packing partitioning upgrade */
+   SCIP_Bool*            success             /**< whether the packing partitioning upgrade succeeded */
 )
 {
    int c;
@@ -6915,8 +6915,8 @@ SCIP_RETCODE componentPackingPartitioningOrbisackUpgrade(
    SCIP_CONS*** permvarssetppcconss;
    int* npermvarssetppcconss;
    int* maxnpermvarssetppcconss;
-   int maxnbinaryinvolutions;
-   int nbinaryinvolutions;
+   int maxntwocycles;
+   int ntwocycles;
 
    assert( scip != NULL );
    assert( propdata != NULL );
@@ -6990,12 +6990,12 @@ SCIP_RETCODE componentPackingPartitioningOrbisackUpgrade(
 
    /* for all permutations, test involutions on binary variables and test if they are captured by setppc conss */
    SCIP_CALL( SCIPallocBufferArray(scip, &pporbisackperms, componentsize) );
-   maxnbinaryinvolutions = 0;
+   maxntwocycles = 0;
    npporbisackperms = 0;
    for (p = 0; p < componentsize; ++p)
    {
       perm = componentperms[p];
-      nbinaryinvolutions = 0;
+      ntwocycles = 0;
 
       /* check if the binary orbits are involutions */
       for (i = 0; i < propdata->npermvars; ++i)
@@ -7012,24 +7012,25 @@ SCIP_RETCODE componentPackingPartitioningOrbisackUpgrade(
          /* the permutation must be an involution on binary variables */
          if ( perm[j] != i )
             goto NEXTPERMITER;
-         /* i and j are an involution, so we find this once for i and once for j. Only handle this once for i < j. */
+         /* i and j are a two-cycle, so we find this once for i and once for j. Only handle this once for i < j. */
          if ( i > j )
             continue;
          /* disqualify permutation if i and j are not in a common set packing constraint */
          if ( !checkSortedArraysHaveOverlappingEntry((void**) permvarssetppcconss[i], npermvarssetppcconss[i],
             (void**) permvarssetppcconss[j], npermvarssetppcconss[j], sortByPointerValue) )
             goto NEXTPERMITER;
-         ++nbinaryinvolutions;
+         ++ntwocycles;
       }
 
-      /* permutation qualifies if there's at least one involution on binary variables
-       * (otherwise perm is the identity or on nonbinary variables) 
+      /* The permutation qualifies if all binary variables are either a reflection or in a 2-cycle. There must be at
+       * least one binary 2-cycle, because otherwise the permutation is the identity, or it permutes
+       * nonbinary variables.
        */
-      if ( nbinaryinvolutions > 0 )
+      if ( ntwocycles > 0 )
       {
          pporbisackperms[npporbisackperms++] = perm;
-         if ( nbinaryinvolutions > maxnbinaryinvolutions )
-            maxnbinaryinvolutions = nbinaryinvolutions;
+         if ( ntwocycles > maxntwocycles )
+            maxntwocycles = ntwocycles;
       }
 
    NEXTPERMITER:
@@ -7046,12 +7047,12 @@ SCIP_RETCODE componentPackingPartitioningOrbisackUpgrade(
       int nrows;
 
       assert( npporbisackperms > 0 );
-      assert( maxnbinaryinvolutions > 0 );
+      assert( maxntwocycles > 0 );
 
       /* instead of allocating and re-allocating multiple times, recycle the ppvars array */
-      SCIP_CALL( SCIPallocBufferArray(scip, &ppvarsblock, 2 * maxnbinaryinvolutions) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &ppvarsmatrix, maxnbinaryinvolutions) );
-      for (i = 0; i < maxnbinaryinvolutions; ++i)
+      SCIP_CALL( SCIPallocBufferArray(scip, &ppvarsblock, 2 * maxntwocycles) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &ppvarsmatrix, maxntwocycles) );
+      for (i = 0; i < maxntwocycles; ++i)
          ppvarsmatrix[i] = &(ppvarsblock[2 * i]);
 
       /* for each of these perms, create the packing orbitope matrix and add constraint*/
@@ -7076,7 +7077,7 @@ SCIP_RETCODE componentPackingPartitioningOrbisackUpgrade(
             assert( checkSortedArraysHaveOverlappingEntry((void**) permvarssetppcconss[i], npermvarssetppcconss[i],
                (void**) permvarssetppcconss[j], npermvarssetppcconss[j], sortByPointerValue) );
 
-            assert( nrows < maxnbinaryinvolutions );
+            assert( nrows < maxntwocycles );
             row = ppvarsmatrix[nrows++];
             row[0] = propdata->permvars[i];
             row[1] = propdata->permvars[j];
@@ -7183,11 +7184,17 @@ SCIP_RETCODE tryAddOrbitalRedLexRed(
       for (p = 0; p < componentsize; ++p)
          componentperms[p] = propdata->perms[propdata->components[propdata->componentbegins[c] + p]];
 
-      /* check if many component permutations contains many packing partitioning orbisacks */
+      /* check if many component permutations contain many packing partitioning orbisacks
+       *
+       * 1. Get the checkpporbisack param from the parameter hashset. This returns NULL if it is not initialized,
+       *    likely because the orbisack constraint handler is not loaded.
+       * 2. If the param is not NULL, then we only do the packing-partitioning upgrade step if its value is TRUE.
+       * Packing-partitioning orbitopes are only implemented for binary orbitopes, so binary variables must be moved.
+       */
       checkpporbisack = SCIPgetParam(scip, "constraints/orbisack/checkpporbisack");
       if ( ( checkpporbisack == NULL || SCIPparamGetBool(checkpporbisack) == TRUE ) && propdata->nmovedbinpermvars > 0 )
       {
-         SCIP_CALL( componentPackingPartitioningOrbisackUpgrade(scip, propdata, 
+         SCIP_CALL( componentPackingPartitioningOrbisackUpgrade(scip, propdata,
             componentperms, componentsize, &success) );
 
          if ( success )
