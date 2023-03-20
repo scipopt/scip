@@ -6902,7 +6902,8 @@ SCIP_RETCODE componentPackingPartitioningOrbisackUpgrade(
    SCIP_CONSHDLR* setppcconshdlr;
    SCIP_CONS** setppcconss;
    SCIP_CONS* cons;
-   int* setppcconsssort;
+   SCIP_CONS** setppconsssort;
+   int nsetppconss;
    int nsetppcvars;
    SCIP_VAR** setppcvars;
    int nsetppcconss;
@@ -6913,6 +6914,8 @@ SCIP_RETCODE componentPackingPartitioningOrbisackUpgrade(
    SCIP_CONS*** permvarssetppcconss;
    int* npermvarssetppcconss;
    int* maxnpermvarssetppcconss;
+   int maxnbinaryinvolutions;
+   int nbinaryinvolutions;
 
    assert( scip != NULL );
    assert( propdata != NULL );
@@ -6936,9 +6939,20 @@ SCIP_RETCODE componentPackingPartitioningOrbisackUpgrade(
 
    SCIP_CALL( ensureSymmetryPermvarmapComputed(scip, propdata) );
 
-   /* sort setppc constraints by pointer */
-   SCIP_CALL( SCIPallocBufferArray(scip, &setppcconsssort, nsetppcconss) );
-   SCIPsort(setppcconsssort, SCIPsortArgsortPtr, (void*) setppcconss, nsetppcconss);
+   /* collect non-covering constraints and sort by pointer for easy intersection finding */
+   SCIP_CALL( SCIPallocBufferArray(scip, &setppconsssort, nsetppcconss) );
+   nsetppconss = 0;
+   for (c = 0; c < nsetppcconss; ++c)
+   {
+      cons = setppcconss[c];
+
+      /* only packing or partitioning constraints, no covering types */
+      if ( SCIPgetTypeSetppc(scip, cons) == SCIP_SETPPCTYPE_COVERING )
+         continue;
+
+      setppconsssort[nsetppconss++] = cons;
+   }
+   SCIPsortPtr((void**) setppconsssort, sortByPointerValue, nsetppcconss);
 
    /* For each permvar, introduce an array of setppc constraints (initially NULL) for each variable,
     * and populate it with the setppc constraints that it contains. This array follows the ordering by cons ptr address.
@@ -6946,16 +6960,12 @@ SCIP_RETCODE componentPackingPartitioningOrbisackUpgrade(
    SCIP_CALL( SCIPallocCleanBufferArray(scip, &permvarssetppcconss, propdata->npermvars) );
    SCIP_CALL( SCIPallocCleanBufferArray(scip, &npermvarssetppcconss, propdata->npermvars) );
    SCIP_CALL( SCIPallocCleanBufferArray(scip, &maxnpermvarssetppcconss, propdata->npermvars) );
-   for (c = 0; c < nsetppcconss; ++c)
+   for (c = 0; c < nsetppconss; ++c)
    {
-      assert( setppcconsssort[c] >= 0 );
-      assert( setppcconsssort[c] < nsetppcconss );
-      cons = setppcconss[setppcconsssort[c]];
+      assert( c >= 0 );
+      assert( c < nsetppconss );
+      cons = setppconsssort[c];
       assert( cons != NULL );
-
-      /* only packing or partitioning constraints, no covering types */
-      if ( SCIPgetTypeSetppc(scip, cons) == SCIP_SETPPCTYPE_COVERING )
-         continue;
 
       setppcvars = SCIPgetVarsSetppc(scip, cons);
       nsetppcvars = SCIPgetNVarsSetppc(scip, cons);
@@ -6979,25 +6989,47 @@ SCIP_RETCODE componentPackingPartitioningOrbisackUpgrade(
 
    /* for all permutations, test involutions on binary variables and test if they are captured by setppc conss */
    SCIP_CALL( SCIPallocBufferArray(scip, &pporbisackperms, componentsize) );
+   maxnbinaryinvolutions = 0;
    npporbisackperms = 0;
    for (p = 0; p < componentsize; ++p)
    {
       perm = componentperms[p];
+      nbinaryinvolutions = 0;
 
       /* check if the binary orbits are involutions */
       for (i = 0; i < propdata->npermvars; ++i)
       {
          j = perm[i];
-         if ( i == j || perm[j] == i )
+
+         /* ignore fixed points in permutation */
+         if ( i == j )
             continue;
+         /* only check for situations where i and j are binary variables */
+         assert( SCIPvarGetType(propdata->permvars[i]) == SCIPvarGetType(propdata->permvars[j]) );
          if ( SCIPvarGetType(propdata->permvars[i]) != SCIP_VARTYPE_BINARY )
             continue;
-         /* it's no involution on binary variables */
-         goto NEXTPERMITER;
+         /* the permutation must be an involution on binary variables */
+         if ( perm[j] != i )
+            goto NEXTPERMITER;
+         /* i and j are an involution, so we find this once for i and once for j. Only handle this once for i < j. */
+         if ( i > j )
+            continue;
+         /* disqualify permutation if i and j are not in a common set packing constraint */
+         if ( !checkSortedArraysHaveOverlappingEntry((void**) permvarssetppcconss[i], npermvarssetppcconss[i],
+            (void**) permvarssetppcconss[j], npermvarssetppcconss[j], sortByPointerValue) )
+            goto NEXTPERMITER;
+         ++nbinaryinvolutions;
       }
 
-      /* for each binary variable, make a list of setppc constraints that it contains (dynamically allocated) */
-      pporbisackperms[npporbisackperms++] = perm;
+      /* permutation qualifies if there's at least one involution on binary variables
+       * (otherwise perm is the identity or on nonbinary variables) 
+       */
+      if ( nbinaryinvolutions > 0 )
+      {
+         pporbisackperms[npporbisackperms++] = perm;
+         if ( nbinaryinvolutions > maxnbinaryinvolutions )
+            maxnbinaryinvolutions = nbinaryinvolutions;
+      }
 
    NEXTPERMITER:
       ;
@@ -7006,8 +7038,68 @@ SCIP_RETCODE componentPackingPartitioningOrbisackUpgrade(
    /* if at least 50% of such permutations are packing-partitioning type, apply packing upgrade */
    if ( npporbisackperms * 2 >= componentsize )
    {
+      char name[SCIP_MAXSTRLEN];
+      SCIP_VAR** ppvarsblock;
+      SCIP_VAR*** ppvarsmatrix;
+      SCIP_VAR** row;
+      int nrows;
+
+      assert( npporbisackperms > 0 );
+      assert( maxnbinaryinvolutions > 0 );
+
+      /* instead of allocating and re-allocating multiple times, recycle the ppvars array */
+      SCIP_CALL( SCIPallocBufferArray(scip, &ppvarsblock, 2 * maxnbinaryinvolutions) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &ppvarsmatrix, maxnbinaryinvolutions) );
+      for (i = 0; i < maxnbinaryinvolutions; ++i)
+         ppvarsmatrix[i] = &(ppvarsblock[2 * i]);
+
       /* for each of these perms, create the packing orbitope matrix and add constraint*/
-      /* @todo */
+      for (p = 0; p < npporbisackperms; ++p)
+      {
+         perm = pporbisackperms[p];
+
+         /* populate ppvarsmatrix */
+         nrows = 0;
+         for (i = 0; i < propdata->npermvars; ++i)
+         {
+            j = perm[i];
+
+            /* ignore fixed points in permutation, and only consider rows with i < j */
+            if ( i >= j )
+               continue;
+            /* only for situations where i and j are binary variables */
+            assert( SCIPvarGetType(propdata->permvars[i]) == SCIPvarGetType(propdata->permvars[j]) );
+            if ( SCIPvarGetType(propdata->permvars[i]) != SCIP_VARTYPE_BINARY )
+               continue;
+            assert( perm[j] == i );
+            assert( checkSortedArraysHaveOverlappingEntry((void**) permvarssetppcconss[i], npermvarssetppcconss[i],
+               (void**) permvarssetppcconss[j], npermvarssetppcconss[j], sortByPointerValue) );
+
+            assert( nrows < maxnbinaryinvolutions );
+            row = ppvarsmatrix[nrows++];
+            row[0] = propdata->permvars[i];
+            row[1] = propdata->permvars[j];
+            assert( row[0] != row[1] );
+         }
+         assert( nrows > 0 );
+
+         /* create constraint, use same parameterization as in orbitope packing partitioning checker */
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "orbitope_pp_upgrade_lexred%d", p);
+         SCIP_CALL( SCIPcreateConsOrbitope(scip, &cons, name, ppvarsmatrix, SCIP_ORBITOPETYPE_PACKING, nrows, 2,
+            FALSE, FALSE, FALSE, FALSE,
+            propdata->conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+         SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, &propdata->genlinconss,
+            &propdata->genlinconsssize, propdata->ngenlinconss + 1) );
+         /* @todo we add orbitopes to the dynamically sized array `genlinconss` instead of `genorbconss` to ensure
+          * compatability with the static orbitope function, which allocates this array statically
+          */
+         propdata->genlinconss[propdata->ngenlinconss++] = cons;
+         SCIP_CALL( SCIPaddCons(scip, cons) );
+      }
+
+      SCIPfreeBufferArray(scip, &ppvarsmatrix);
+      SCIPfreeBufferArray(scip, &ppvarsblock);
 
       *success = TRUE;
    }
@@ -7032,7 +7124,7 @@ SCIP_RETCODE componentPackingPartitioningOrbisackUpgrade(
    SCIPfreeCleanBufferArray(scip, &maxnpermvarssetppcconss);
    SCIPfreeCleanBufferArray(scip, &npermvarssetppcconss);
    SCIPfreeCleanBufferArray(scip, &permvarssetppcconss);
-   SCIPfreeBufferArray(scip, &setppcconsssort);
+   SCIPfreeBufferArray(scip, &setppconsssort);
 
    return SCIP_OKAY;
 }
