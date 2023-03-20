@@ -6726,40 +6726,33 @@ SCIP_RETCODE tryAddOrbitopesDynamic(
       if ( !isorbitope )
          goto CLEARITERATIONNOORBITOPE;
 
-      /* add static orbitope for single-row orbitopes */
+      /* add linear constraints x_1 >= x_2 >= ... >= x_ncols for single-row orbitopes */
       if ( nrows == 1 )
       {
          /* restrict to the packing and partitioning rows */
          SCIP_CONS* cons;
-         SCIP_VAR** staticorbitoperow;
-         SCIP_VAR*** staticorbitopematrix;
-
-         /* create orbitope row */
-         SCIP_CALL( SCIPallocBufferArray(scip, &staticorbitoperow, ncols) );
-         for (i = 0; i < ncols; ++i)
-            staticorbitoperow[i] = propdata->permvars[orbitopematrix[i]];
-         /* we do not need to allocate the matrix, as the 0'th array entry points to the same address, 
-          * which is the first row
-          */
-         staticorbitopematrix = &staticorbitoperow;
-         assert( staticorbitopematrix[0] == staticorbitoperow );
+         SCIP_VAR* consvars[2];
+         SCIP_Real conscoefs[2] = { -1.0, 1.0 };
 
          /* for all adjacent column pairs, add linear constraint */
          SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, &propdata->genlinconss,
-            &propdata->genlinconsssize, propdata->ngenlinconss + 1) );
+            &propdata->genlinconsssize, propdata->ngenlinconss + ncols - 1) );
+         for (i = 0; i < ncols - 1; ++i)
+         {
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "orbitope_1row_comp_%d_col%d", c, i);
 
-         /* create constraint, use same parameterization as in orbitope function */
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "orbitope_1row_comp_%d", c);
-         SCIP_CALL( SCIPcreateConsOrbitope(scip, &cons, name, staticorbitopematrix, SCIP_ORBITOPETYPE_FULL,
-            1, ncols, propdata->usedynamicprop, FALSE, FALSE, FALSE,
-            propdata->conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-         SCIP_CALL( SCIPaddCons(scip, cons) );
-         propdata->genlinconss[propdata->ngenlinconss++] = cons;
+            consvars[0] = propdata->permvars[orbitopematrix[i]];
+            consvars[1] = propdata->permvars[orbitopematrix[i + 1]];
+            /* enforce, but do not check */
+            SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, 2, consvars, conscoefs, -SCIPinfinity(scip), 0.0,
+               propdata->conssaddlp, propdata->conssaddlp, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE ) );
+
+            SCIP_CALL( SCIPaddCons(scip, cons) );
+            propdata->genlinconss[propdata->ngenlinconss++] = cons;
+         }
 
          propdata->componentblocked[c] |= SYM_HANDLETYPE_SYMBREAK;
          ++propdata->ncompblocked;
-
-         SCIPfreeBufferArray(scip, &staticorbitoperow);
          goto CLEARITERATIONORBITOPEDETECTED;
       }
 
