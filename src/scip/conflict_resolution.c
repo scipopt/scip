@@ -3790,6 +3790,14 @@ SCIP_RETCODE conflictAnalyzeResolution(
       conflictresolutionset->slack = -1.0;
    }
 
+   /* check once more if the initial conflict is too long */
+   if(resolutionsetGetNNzs(conflictresolutionset) > maxsize)
+   {
+      conflict->nreslongconfs++;
+      conflict->ncorrectaborts++;
+      return SCIP_OKAY;
+   }
+
    SCIP_CALL( resolutionsetReplace(prevconflictresolutionset, blkmem, conflictresolutionset) );
    SCIP_CALL( resolutionsetReplace(resolvedresolutionset, blkmem, conflictresolutionset) );
 
