@@ -6376,7 +6376,7 @@ SCIP_RETCODE tryDetectOrbitope(
    }
 
    /* determine number of columns by counting the row orbit sizes */
-   SCIP_CALL( SCIPdisjointsetCreate(&entriesinrow, SCIPblkmem(scip), npermvars) );
+   SCIP_CALL( SCIPcreateDisjointset(scip, &entriesinrow, npermvars) );
    for (p = 0; p < nperms; ++p)
    {
       perm = perms[p];
