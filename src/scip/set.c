@@ -127,7 +127,7 @@
 #define SCIP_DEFAULT_CONF_SEPARATE         TRUE /**< should the conflict constraints be separated? */
 #define SCIP_DEFAULT_CONF_SEPARESOLUTION  FALSE /**< should the resolution conflict constraints be separated? */
 #define SCIP_DEFAULT_CONF_DYNAMIC          TRUE /**< should the conflict constraints be subject to aging? */
-
+#define SCIP_DEFAULT_CONF_UPGRADECONS     FALSE /**< should we try upgrading the conflict constraints? */
 
 /* Conflict Analysis (conflict graph) */
 
@@ -1540,6 +1540,11 @@ SCIP_RETCODE SCIPsetCreate(
          "conflict/dynamic",
          "should the conflict constraints be subject to aging?",
          &(*set)->conf_dynamic, TRUE, SCIP_DEFAULT_CONF_DYNAMIC,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "conflict/upgrade",
+         "should we try upgrading the conflict constraints?",
+         &(*set)->conf_upgrade, TRUE, SCIP_DEFAULT_CONF_UPGRADECONS,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "conflict/removable",

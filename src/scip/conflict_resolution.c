@@ -2072,11 +2072,14 @@ SCIP_RETCODE createAndAddResolutionCons(
               FALSE, set->conf_dynamic, set->conf_removable, FALSE) );
 
    /* try to automatically convert a linear constraint into a more specific and more specialized constraint */
-   SCIP_CALL( SCIPupgradeConsLinear(set->scip, cons, &upgdcons) );
-   if( upgdcons != NULL )
+   if (set->conf_upgrade)
    {
-      SCIP_CALL( SCIPreleaseCons(set->scip, &cons) );
-      cons = upgdcons;
+      SCIP_CALL( SCIPupgradeConsLinear(set->scip, cons, &upgdcons) );
+      if( upgdcons != NULL )
+      {
+         SCIP_CALL( SCIPreleaseCons(set->scip, &cons) );
+         cons = upgdcons;
+      }
    }
    /* chck if the constraint is valid for the dubug solution */
    SCIP_CALL( SCIPdebugCheckConss(set->scip, &cons, 1) );
