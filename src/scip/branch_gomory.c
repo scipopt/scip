@@ -40,10 +40,8 @@
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
 #include "scip/scip_numerics.h"
-#include "scip/scip_prob.h"
 #include "scip/scip_lp.h"
 #include "scip_param.h"
-#include "scip/type_cuts.h"
 #include "scip/branch_relpscost.h"
 #include <string.h>
 #include <assert.h>
@@ -52,13 +50,14 @@
 
 #define BRANCHRULE_NAME            "gomory"
 #define BRANCHRULE_DESC            "gomory cut score branching"
-#define BRANCHRULE_PRIORITY        10000000
+#define BRANCHRULE_PRIORITY        100000
 #define BRANCHRULE_MAXDEPTH        -1
 #define BRANCHRULE_MAXBOUNDDIST    1.0
 
 #define DEFAULT_MAXNCANDS          -1    /**< maximum number of branching candidates to produce a cut for */
-#define DEFAULT_EFFICACYWEIGHT     0.5   /**< weight of efficacy in the cut scoring rule */
-#define DEFAULT_OBJPARALLELWEIGHT  0.5   /**< weight of objective parallelism in the cut scoring rule */
+#define DEFAULT_EFFICACYWEIGHT     1.0   /**< weight of efficacy in the cut scoring rule */
+#define DEFAULT_OBJPARALLELWEIGHT  0.0   /**< weight of objective parallelism in the cut scoring rule */
+#define DEFAULT_INTSUPPORTWEIGHT   0.0   /**< weight of objective parallelism in the cut scoring rule */
 #define DEFAULT_PERFORMRELPSCOST   FALSE /**< if default branching rule without execution should be called */
 #define DEFAULT_USEWEAKERCUTS      TRUE  /**< use weakener cuts derived from the exact branching split */
 
@@ -73,6 +72,7 @@ struct SCIP_BranchruleData
    int                   maxncands;             /**< maximum number of variable candidates to produce cut for */
    SCIP_Real             efficacyweight;        /**< the weight of efficacy in weighted sum scoring rule */
    SCIP_Real             objparallelweight;     /**< the weight of objective parallelism in weighted sum scoring rule */
+   SCIP_Real             intsupportweight;      /**< the weight of integer support in weighted sum scoring rule */
    SCIP_Bool             performrelpscost;      /**< if default branching rule without execution should be called */
    SCIP_Bool             useweakercuts;         /**< use weakener cuts derived from the exact branching split */
 };
@@ -484,6 +484,8 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpGomory)
             score += branchruledata->efficacyweight * SCIPgetCutEfficacy(scip, NULL, cut);
          if ( branchruledata->objparallelweight != 0 )
             score += branchruledata->objparallelweight * SCIPgetRowObjParallelism(scip, cut);
+         if ( branchruledata->intsupportweight != 0 )
+            score += branchruledata->intsupportweight * SCIPgetRowNumIntCols(scip, cut) / (SCIP_Real) SCIProwGetNNonz(cut);
          SCIP_CALL( SCIPreleaseRow(scip, &cut) );
    
          /* Replace the best cut if score is higher */
@@ -550,6 +552,9 @@ SCIP_RETCODE SCIPincludeBranchruleGomory(
    SCIP_CALL( SCIPaddRealParam(scip,"branching/gomory/objparallelweight",
          "weight of objective parallelism in the cut scoring rule",
          &branchruledata->objparallelweight, FALSE, DEFAULT_OBJPARALLELWEIGHT, -1, 1, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,"branching/gomory/intsupportweight",
+         "weight of integer support in the cut scoring rule",
+         &branchruledata->intsupportweight, FALSE, DEFAULT_INTSUPPORTWEIGHT, -1, 1, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,"branching/gomory/performrelpscost",
          "whether default SCIP branching should be called without branching (used for bound inferences and conflicts)",
          &branchruledata->performrelpscost, FALSE, DEFAULT_PERFORMRELPSCOST, NULL, NULL) );
