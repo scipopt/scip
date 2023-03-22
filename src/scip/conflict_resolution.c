@@ -692,6 +692,95 @@ SCIP_RETCODE MirLhs(
    return SCIP_OKAY;
 }
 
+
+/** increases the conflict score of the variable in the given direction */
+static
+SCIP_RETCODE incVSIDS(
+   SCIP_VAR*             var,                /**< problem variable */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_BOUNDTYPE        boundtype,          /**< type of bound for which the score should be increased */
+   SCIP_Real             value,              /**< value of the bound */
+   SCIP_Real             weight              /**< weight of this VSIDS updates */
+   )
+{
+   SCIP_BRANCHDIR branchdir;
+
+   assert(var != NULL);
+   assert(stat != NULL);
+
+   /* weight the VSIDS by the given weight */
+   weight *= stat->vsidsweight;
+
+   if( SCIPsetIsZero(set, weight) )
+      return SCIP_OKAY;
+
+   branchdir = (boundtype == SCIP_BOUNDTYPE_LOWER ? SCIP_BRANCHDIR_UPWARDS : SCIP_BRANCHDIR_DOWNWARDS); /*lint !e641*/
+   SCIP_CALL( SCIPvarIncVSIDS(var, blkmem, set, stat, branchdir, value, weight) );
+   SCIPhistoryIncVSIDS(stat->glbhistory, branchdir,  weight);
+   SCIPhistoryIncVSIDS(stat->glbhistorycrun, branchdir,  weight);
+
+   return SCIP_OKAY;
+}
+
+/** update conflict statistics */
+static
+SCIP_RETCODE updateStatistics(
+   SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
+   SCIP_PROB*            prob,               /**< problem data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_RESOLUTIONSET*   resolutionset,      /**< resolution set to add to the tree */
+   int                   insertdepth         /**< depth level at which the conflict set should be added */
+   )
+{
+   if( insertdepth > 0 )
+   {
+      conflict->nappliedlocconss++;
+      conflict->nappliedlocliterals += resolutionset->nnz;
+   }
+   else
+   {
+      SCIP_VAR** vars;
+      int i;
+      int conflictlength;
+      conflictlength = resolutionset->nnz;
+
+      vars = SCIPprobGetVars(prob);
+
+      for( i = 0; i < conflictlength; i++ )
+      {
+         SCIP_VAR* var;
+         SCIP_BRANCHDIR branchdir;
+         SCIP_BOUNDTYPE boundtype;
+         SCIP_Real bound;
+
+         assert(stat != NULL);
+
+
+         var = vars[resolutionset->inds[i]];
+         /* todo atm this does not work for general MIP */
+         boundtype = resolutionset->vals[i] > 0 ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER;
+         bound = resolutionset->vals[i] > 0 ? 0 : 1;
+
+         branchdir = (boundtype == SCIP_BOUNDTYPE_LOWER ? SCIP_BRANCHDIR_UPWARDS : SCIP_BRANCHDIR_DOWNWARDS); /*lint !e641*/
+
+         SCIP_CALL( SCIPvarIncNActiveConflicts(var, blkmem, set, stat,  branchdir, bound, (SCIP_Real)conflictlength) );
+         SCIPhistoryIncNActiveConflicts(stat->glbhistory, branchdir, (SCIP_Real)conflictlength);
+         SCIPhistoryIncNActiveConflicts(stat->glbhistorycrun, branchdir, (SCIP_Real)conflictlength);
+
+         /* each variable which is part of the conflict gets an increase in the VSIDS */
+         SCIP_CALL( incVSIDS(var, blkmem, set, stat, boundtype, bound, set->conf_conflictweight) );
+      }
+      conflict->nappliedglbconss++;
+      conflict->nappliedglbliterals += resolutionset->nnz;
+   }
+
+   return SCIP_OKAY;
+}
+
 /* returns whether a bound change is resolvable or not */
 static
 SCIP_Bool bdchginfoIsResolvable(
@@ -1347,7 +1436,9 @@ SCIP_RETCODE weakenConflict(
    SCIP_RESOLUTIONSET*   resolutionset,      /**< resolution set */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            prob,               /**< problem data */
-   SCIP_BDCHGIDX*        currbdchgidx        /**< current bound change index */
+   SCIP_BDCHGIDX*        currbdchgidx,       /**< current bound change index */
+   SCIP_Real*            fixbounds,          /**< array of fixed bounds */
+   int*                  fixinds             /**< array of indices of fixed variables */
    )
 {
    SCIP_VAR** vars;
@@ -1366,8 +1457,10 @@ SCIP_RETCODE weakenConflict(
    for( i = resolutionset->nnz - 1; i >= 0; --i )
    {
       SCIP_VAR* vartoweaken;
+      int index;
 
-      vartoweaken = vars[resolutionset->inds[i]];
+      index = resolutionset->inds[i];
+      vartoweaken = vars[index];
 
       if( resolutionset->vals[i] > 0.0 )
       {
@@ -1375,7 +1468,7 @@ SCIP_RETCODE weakenConflict(
 
          ub = SCIPgetVarUbAtIndex(set->scip, vartoweaken, currbdchgidx, TRUE);
 
-         if( SCIPsetIsEQ(set, ub, SCIPvarGetUbGlobal(vartoweaken)) )
+         if( SCIPsetIsEQ(set, ub, SCIPvarGetUbGlobal(vartoweaken)) && fixinds[index] == 0 )
          {
             weakenVar(resolutionset, set, vartoweaken, i);
             ++nvarsweakened;
@@ -1388,7 +1481,7 @@ SCIP_RETCODE weakenConflict(
 
             lb = SCIPgetVarLbAtIndex(set->scip, vartoweaken, currbdchgidx, TRUE);
 
-            if( SCIPsetIsEQ(set, lb, SCIPvarGetLbGlobal(vartoweaken)) )
+            if( SCIPsetIsEQ(set, lb, SCIPvarGetLbGlobal(vartoweaken)) && fixinds[index] == 0 )
             {
                weakenVar(resolutionset, set, vartoweaken, i);
                ++nvarsweakened;
@@ -1536,6 +1629,7 @@ SCIP_Real getSlack(
          }
          SCIPquadprecProdDD(delta, coef, bound);
       }
+      // SCIPsetDebugMsg(set, "var: %s, coef: %f, bound: %f \n", SCIPvarGetName(vars[v]), coef, bound);
       SCIPquadprecSumQQ(slack, slack, delta);
    }
    SCIPquadprecSumQD(slack, slack, -resolutionset->lhs);
@@ -2083,6 +2177,12 @@ SCIP_RETCODE createAndAddResolutionCons(
    }
    /* chck if the constraint is valid for the dubug solution */
    SCIP_CALL( SCIPdebugCheckConss(set->scip, &cons, 1) );
+
+
+   /* update statistics */
+   /* todo this does not work for the general case atm */
+   if( isBinaryResolutionSet(set, transprob, resolutionset) )
+      SCIP_CALL( updateStatistics(conflict, transprob, blkmem, set, stat, resolutionset, resolutionset->validdepth) );
 
    /* add conflict to SCIP */
    /* todo add different conflict types for the different cases */
@@ -3733,6 +3833,17 @@ SCIP_RETCODE conflictAnalyzeResolution(
    /* the valid depth is always 0 (global case) */
    conflictresolutionset->validdepth = validdepth;
 
+   /* initialize indices and bounds for the unresolvable bound changes */
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &fixinds, SCIPprobGetNVars(transprob)) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &fixbounds, SCIPprobGetNVars(transprob)) );
+
+   /** set value in fixed indices to 0 to indicate that they are not set
+    * if a variable is set at an upper bound, then the value is 1
+    * if a variable is set at a lower bound, then the value is -1
+    */
+   for( i = 0; i < SCIPprobGetNVars(transprob); ++i )
+      fixinds[i] = 0;
+
    if (initialconflictrow != NULL && !set->conf_clausegenres)
    {
       SCIPsetDebugMsg(set, "Initial conflict Row: %s \n", SCIProwGetName(initialconflictrow));
@@ -3741,21 +3852,22 @@ SCIP_RETCODE conflictAnalyzeResolution(
 
       if( resolutionsetGetNNzs(conflictresolutionset) > maxsize )
       {
-         SCIPsetDebugMsg(set, "Number of nonzeros in conflict is larger than maxsize %d > %d\n",
-                        SCIProwGetNNonz(initialconflictrow), maxsize);
-         weakenConflict(conflictresolutionset, set, transprob, bdchgidx);
+         SCIPsetDebugMsg(set, "Number of nonzeros in conflict is larger than maxsize %d > %d\n", SCIProwGetNNonz(initialconflictrow), maxsize);
+
+         weakenConflict(conflictresolutionset, set, transprob, bdchgidx, fixbounds, fixinds);
 
          if(resolutionsetGetNNzs(conflictresolutionset) > maxsize)
          {
             conflict->nreslongconfs++;
             conflict->ncorrectaborts++;
+            SCIPsetFreeBufferArray(set, &fixinds);
+            SCIPsetFreeBufferArray(set, &fixbounds);
             return SCIP_OKAY;
          }
       }
 
       /* compute the slack */
       conflictresolutionset->slack = getSlack(set, transprob, conflictresolutionset, bdchgidx, NULL, NULL);
-
    }
 
    /** if no row exists create the resolution set (if possible) from the bound changes that lead to infeasibility
@@ -3784,6 +3896,8 @@ SCIP_RETCODE conflictAnalyzeResolution(
       if (!success)
       {
          SCIPsetDebugMsg(set, "Initial conflict could not be retrieved \n");
+         SCIPsetFreeBufferArray(set, &fixinds);
+         SCIPsetFreeBufferArray(set, &fixbounds);
          return SCIP_OKAY;
       }
       assert( getSlack(set, transprob, conflictresolutionset, bdchgidx, NULL, NULL) == -1.0);
@@ -3795,6 +3909,8 @@ SCIP_RETCODE conflictAnalyzeResolution(
    {
       conflict->nreslongconfs++;
       conflict->ncorrectaborts++;
+      SCIPsetFreeBufferArray(set, &fixinds);
+      SCIPsetFreeBufferArray(set, &fixbounds);
       return SCIP_OKAY;
    }
 
@@ -3815,17 +3931,6 @@ SCIP_RETCODE conflictAnalyzeResolution(
    conflictresolutionset->slack = conflictslack;
 
    conflictresolutionset->coefquotient = getQuotLargestSmallestCoef(set, conflictresolutionset->vals, conflictresolutionset->nnz);
-
-   /* initialize indices and bounds for the unresolvable bound changes */
-   SCIP_CALL( SCIPsetAllocBufferArray(set, &fixinds, SCIPprobGetNVars(transprob)) );
-   SCIP_CALL( SCIPsetAllocBufferArray(set, &fixbounds, SCIPprobGetNVars(transprob)) );
-
-   /** set value in fixed indices to 0 to indicate that they are not set
-    * if a variable is set at an upper bound, then the value is 1
-    * if a variable is set at a lower bound, then the value is -1
-    */
-   for( i = 0; i < SCIPprobGetNVars(transprob); ++i )
-      fixinds[i] = 0;
 
    nressteps = 0;
    nresstepslast = 0;
@@ -4083,7 +4188,8 @@ SCIP_RETCODE conflictAnalyzeResolution(
          {
             SCIPsetDebugMsg(set, "Number of nonzeros in conflict is larger than maxsize %d > %d\n",
                            resolutionsetGetNNzs(resolvedresolutionset), maxsize);
-            weakenConflict(resolvedresolutionset, set, transprob, bdchgidx);
+            SCIPsetDebugMsg(set, "Slack of resolved row before weakening: %f \n", getSlack(set, transprob, resolvedresolutionset, bdchgidx, fixbounds, fixinds));
+            weakenConflict(resolvedresolutionset, set, transprob, bdchgidx, fixbounds, fixinds);
             if(resolutionsetGetNNzs(resolvedresolutionset) > maxsize)
             {
                conflict->nreslongconfs++;
@@ -4099,7 +4205,6 @@ SCIP_RETCODE conflictAnalyzeResolution(
 
 
          conflictslack = getSlack(set, transprob, conflictresolutionset, bdchgidx, fixbounds, fixinds);
-         SCIPdebug(resolutionsetPrintRow(conflictresolutionset, set, transprob, 3));
          conflictresolutionset->slack = conflictslack;
 
          SCIPsetDebugMsg(set, "Slack of resolved row: %f \n", conflictslack);
@@ -4122,6 +4227,9 @@ SCIP_RETCODE conflictAnalyzeResolution(
 
          nressteps++;
 
+         if( set->conf_weakenconflict)
+            weakenConflict(conflictresolutionset, set, transprob, bdchgidx, fixbounds, fixinds);
+
          /* apply coefficient tightening to the resolved constraint should never hurt */
          SCIP_CALL( tightenCoefLhs(set, transprob, FALSE, conflictresolutionset, &nchgcoefs, NULL) );
          if (nchgcoefs > 0)
@@ -4132,8 +4240,8 @@ SCIP_RETCODE conflictAnalyzeResolution(
             SCIPsetDebugMsg(set, "Tightened %d coefficients in the resolved constraint, old slack %f, new slack %f \n", nchgcoefs, previousslack,conflictresolutionset->slack);
             assert(SCIPsetIsLE(set, conflictresolutionset->slack, previousslack + EPS));
          }
-         /* sort for linear time resolution */
-         /* todo this can be removed if we do not apply coefficient tightening */
+         SCIPdebug(resolutionsetPrintRow(conflictresolutionset, set, transprob, 3));
+
          if (SCIPsetIsLT(set, conflictresolutionset->slack, 0.0))
          {
             /* Apply cmir after each iteration to strengthen the conflict constraint */
