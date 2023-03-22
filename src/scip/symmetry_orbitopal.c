@@ -312,14 +312,14 @@ SCIP_RETCODE updateColumnOrderWhenBranchingOnColumn(
    /* @todo other policies: If the variable is in a ppc-row, then select the minimal/second to minimal to branch on */
    swaporigcolid = origcolid;
 
-   /* we often use ncols / 2 */
-   middlecolumn = ncols / 2;
-
    switch (orbidata->columnordering)
    {
+   case SCIP_COLUMNORDERING_CENTRE:
+      /* CENTRE uses the same code as FIRST and LAST, but requires that middlecolumn = ncols / 2 is set */
+      middlecolumn = ncols / 2;
+      /*lint -fallthrough*/
    case SCIP_COLUMNORDERING_FIRST:
    case SCIP_COLUMNORDERING_LAST:
-   case SCIP_COLUMNORDERING_CENTRE:
       /* for each column, test column ordering condition, then if the column is identical to the var-column */
       for (c = 0; c < ncols; ++c)
       {
