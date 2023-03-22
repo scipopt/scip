@@ -2,5 +2,5 @@ misc/usesymmetry = 1
 propagating/symmetry/addsymresacks = TRUE
 propagating/symmetry/detectorbitopes = TRUE
 propagating/symmetry/detectsubgroups = FALSE
-propagating/symmetry/onlybinarysymmetry = FALSE
+propagating/symmetry/enforcecomputesymmetry = TRUE
 limits/restarts = 0
