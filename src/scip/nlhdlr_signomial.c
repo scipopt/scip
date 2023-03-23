@@ -1066,24 +1066,24 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectSignomial)
       /* get monomial information */
       SCIP_CALL( SCIPgetExprMonomialData(scip, expr, &((*nlhdlrexprdata)->coef), (*nlhdlrexprdata)->exponents, (*nlhdlrexprdata)->factors));
 
-      /* skip bilinear terms */
-      SCIP_Bool isbilinear = FALSE;
-      if( nc == 2)
+      /* skip multilinear terms */
+      SCIP_Bool ismultilinear = FALSE;
+      if( nc >= 2)
       {
-         isbilinear = TRUE;
-         for ( int c = 0; c < 2; c++ )
+         ismultilinear = TRUE;
+         for ( int c = 0; c < nc; c++ )
          {
             if( !SCIPisEQ(scip, (*nlhdlrexprdata)->exponents[c], 1) )
             {
-               isbilinear = FALSE;
+               ismultilinear = FALSE;
                break;
             }
          }
       }
 
-      if (isbilinear)
+      if( ismultilinear )
       {
-         /* if bilinear, we free memory of the expression data and do nothing */
+         /* if multilinear, we free memory of the expression data and do nothing */
          freeExprDataMem(scip, nlhdlrexprdata);
       }
       else
