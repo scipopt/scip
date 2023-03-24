@@ -1079,7 +1079,6 @@ target_link_libraries(scip
    ${THREAD_LIBRARIES}
    ${NLPI_LIBRARIES}
    ${PAPILO_IMPORTED_TARGETS}
-   ${NAUTY_TARGET}
    )
 
 add_dependencies(libscip scip_update_githash)
