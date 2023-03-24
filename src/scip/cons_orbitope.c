@@ -910,6 +910,7 @@ SCIP_RETCODE separateSCIs(
 #endif
 
             assert( SCIPisSumEQ(scip, weights[i-1][j-1], weight) );
+            SCIP_UNUSED(weight);
          }
       }
    }
