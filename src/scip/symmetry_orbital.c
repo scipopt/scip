@@ -158,6 +158,14 @@ SCIP_RETCODE identifyOrbitalSymmetriesBroken(
       }
    }
 
+#ifndef NDEBUG
+   for (i = 0; i < orcdata->npermvars; ++i)
+   {
+      assert( SCIPvarGetLbGlobal(orcdata->permvars[i]) == orcdata->globalvarlbs[i] );
+      assert( SCIPvarGetUbGlobal(orcdata->permvars[i]) == orcdata->globalvarubs[i] );
+   }
+#endif
+
    /* sort all orbits */
    SCIP_CALL( SCIPallocBufferArray(scip, &varorbitids, orcdata->npermvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &varorbitidssort, orcdata->npermvars) );
@@ -1399,8 +1407,8 @@ SCIP_DECL_EVENTEXEC(eventExecGlobalBoundChange)
    assert( strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_SYMMETRY_NAME) == 0 );
    assert( event != NULL );
 
-   /* only update the global bounds during presolving or at the root node */
-   if ( SCIPgetStage(scip) != SCIP_STAGE_SOLVING || SCIPgetNNodes(scip) > 1 )
+   /* only update the global bounds if branching has not started */
+   if ( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPgetNNodes(scip) > 1 )
       return SCIP_OKAY;
 
    orcdata = (ORCDATA*) eventdata;
