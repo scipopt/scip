@@ -30,7 +30,7 @@
 
 
 #define SCIP_SIGCUT_DEBUG_
-#define SCIP_SIG_DEBUG
+#define SCIP_SIG_DEBUG_
 
 #ifdef SCIP_SIGCUT_DEBUG
 #ifndef SCIP_SIG_DEBUG
@@ -418,9 +418,6 @@ SCIP_Real reformRowprep(
 
    rowprep->side *= coefauxvar;
 
-   #ifdef SCIP_SIGCUT_DEBUG
-      SCIPdebugMsg(NULL, "%f", coefauxvar);
-   #endif
 
    return coefauxvar;
 
@@ -700,15 +697,6 @@ SCIP_RETCODE estimateSpecialPower(
       *success = TRUE;
    }
 
-   
-#ifdef SCIP_SIGCUT_DEBUG
-   if( *success && *isspecial )
-   {
-      SCIPdebugMsg(scip, "computed special estimator: ");
-      SCIPprintRowprep(scip, rowprep, NULL);
-   }
-#endif
-
    return SCIP_OKAY;
 }
 
@@ -791,11 +779,6 @@ SCIP_RETCODE underEstimatePower(
       j++;
    }
 
-#ifdef SCIP_SIGCUT_DEBUG
-   SCIPdebugMsg(scip, "computed underestimator: ");
-   SCIPprintRowprep(scip, rowprep, NULL);
-#endif
-
    return SCIP_OKAY;
 }
 
@@ -847,11 +830,6 @@ static SCIP_RETCODE overEstimatePower(
       SCIP_Real facetcoef = nlhdlrexprdata->refexponents[i] * funcval / val;
       SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, var, multiplier * facetcoef / scale));
    }
-
-#ifdef SCIP_SIGCUT_DEBUG
-   SCIPdebugMsg(scip, "computed overestimator: ");
-   SCIPprintRowprep(scip, rowprep, NULL);
-#endif
 
    *success = TRUE;
 
@@ -963,7 +941,7 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateSignomial)
          if( *success )
          {
             SCIPdebugMsg(scip, "underestimate:");
-            SCIP_Bool isvalid;
+            SCIP_Bool isvalid = TRUE;
             int nsample = 10000;
             validEstimateProb(scip, nlhdlrexprdata, undersign, undermultiplier, FALSE, 0, rowprep, nsample, &isvalid);
             SCIPinfoMessage(scip, NULL, "\n");
@@ -986,7 +964,7 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateSignomial)
          if( *success )
          {
             SCIPdebugMsg(scip, "overestimate: ");
-            SCIP_Bool isvalid;
+            SCIP_Bool isvalid = TRUE;
             int nsample = 10000;
             validEstimateProb(scip, nlhdlrexprdata, oversign, overmultiplier, TRUE, prevconstant, rowprep, nsample, &isvalid);
             SCIPinfoMessage(scip, NULL, "\n");
@@ -1001,22 +979,24 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateSignomial)
    {
       SCIP_Bool reliable;
       SCIP_Real violation = SCIPgetRowprepViolation(scip, rowprep, sol, &reliable);
-      SCIPdebugMsg(scip, "cut number: %d, node depth:%d, viol: %f, computed estimator", numcut, SCIPgetDepth(scip), violation);
-      SCIP_Bool isvalid;
+      SCIP_Bool isvalid = TRUE;
       int nsample = 10000;
       validCutProb(scip, nlhdlrexprdata, rowprep, sol, nsample, &isvalid);
       SCIPprintRowprep(scip, rowprep, NULL);
-      *success = FALSE;
       assert(isvalid);
+      SCIPdebugMsg(scip, "node depth:%d, viol: %f, computed estimator", SCIPgetDepth(scip), violation);
    }
    #endif
+
 
    if( *success )
    {
       int scale = reformRowprep(scip, nlhdlrexprdata, rowprep, success);
-      if( SCIPisGT(scip, scale, nlhdlrdata->mincutscale) && *success )
+      *success = SCIPisGT(scip, scale, nlhdlrdata->mincutscale) && *success;
+      if( *success )
          SCIP_CALL( SCIPsetPtrarrayVal(scip, rowpreps, 0, rowprep));
    }
+
    
    if( !*success )
       SCIPfreeRowprep(scip, &rowprep);
