@@ -476,7 +476,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpGomory)
       /* Calculate the weighted sum score of measures */
       if ( success == SCIP_OKAY )
       {
-         assert( SCIP_CALL( SCIPisCutEfficacious(scip, NULL, cut) ) );
+         assert( SCIPisCutEfficacious(scip, NULL, cut) );
          cut = NULL;
          SCIP_CALL( SCIPcreateRowUnspec(scip, &cut, name, ncols, cols, cutcoefs, -SCIPinfinity(scip), cutrhs, TRUE,
                    FALSE, TRUE) );
