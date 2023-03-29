@@ -3,6 +3,7 @@ import pathlib
 from typing import List
 from multiprocessing import Pool
 import subprocess
+import socket
 
 
 class Configuration:
@@ -28,18 +29,18 @@ def run(conf : Configuration):
     with open(outfile, "w") as outf, open(errfile, "w") as errf:
         status = subprocess.run(
             args=(
-                # slurm settings
-                "srun", "--cpu-bind=cores",
-                "--ntasks=1",
-                "--gres=cpu:1",
-                "--cpu-freq=highm1",
-                "--exclusive",
+                # # slurm settings
+                # "srun", "--cpu-bind=cores",
+                # "--ntasks=1",
+                # "--gres=cpu:1",
+                # "--cpu-freq=highm1",
+                # "--exclusive",
                 # run binary
                 conf.binary,
                 "-c", f"set load {conf.settings}",
                 "-c", "set limits time 7200",
                 "-c", "set limits nodes 2100000000",
-                "-c", "set limits memory 6144",
+                "-c", "set limits memory 4096",
                 "-c", "set timing clocktype 1",
                 "-c", "set display freq 10000",
                 "-c", f"set save {setfile}",
@@ -54,32 +55,7 @@ def run(conf : Configuration):
     print(f"Finished {conf} with status {status.returncode}")
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(prog="Run testset")
-    parser.add_argument("-ncores", type=int, default=4)
-    parser.add_argument("-binary", type=pathlib.Path, default="bin/scip")
-    args = parser.parse_args()
-
-    bin_path : pathlib.Path
-    bin_path = args.binary
-    assert bin_path.exists(), "binary does not exist"
-
-    check_folder = pathlib.Path("check/")
-    assert check_folder.exists(), "check folder does not exist"
-
-    results_folder = check_folder / pathlib.Path("results")
-    results_folder.mkdir(exist_ok=True)
-
-    testsets = [
-        check_folder / pathlib.Path("testset/short.test")
-    ]
-
-    settings = [
-        pathlib.Path("settings/perf_dynofos.set"),
-    ]
-
-    # fill configuration list
-    configurations : List[Configuration] = []
+def extend_configurations(configurations, bin_path, settings, testsets, seed):
     testset : pathlib.Path
     instance : pathlib.Path
     setting : pathlib.Path
@@ -98,9 +74,68 @@ if __name__ == "__main__":
                     configurations.append(
                         Configuration(
                             binary=bin_path, result=results_folder,
-                            testset=testset, settings=setting, instance=instance, seed=0
+                            testset=testset, settings=setting, instance=instance, seed=seed
                         )
                     )
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(prog="Run testset")
+    parser.add_argument("-ncores", type=int, default=4)
+    parser.add_argument("-variant", type=str, default="noise_dosage")
+    args = parser.parse_args()
+
+    check_folder = pathlib.Path("check/")
+    assert check_folder.exists(), "check folder does not exist"
+
+    results_folder = check_folder / pathlib.Path("results")
+    results_folder.mkdir(exist_ok=True)
+
+    # Determine configurations
+    configurations : List[Configuration] = []
+
+    base_path_unified : pathlib.Path
+    base_path_master : pathlib.Path
+    if socket.gethostname() == "TUE020355":
+        base_path_master = base_path_unified = pathlib.Path(".")
+    else:
+        base_path_unified = pathlib.Path("/home/mjohannesva/scip-unified")
+        base_path_master = pathlib.Path("/home/mjohannesva/scip-8443db21")
+
+    if args.variant == "noise_dosage":
+        for seed in range(3):
+            testsets = [
+                base_path_unified / check_folder / pathlib.Path("testset/short.test")
+            ]
+
+            # Master runs
+            bin_path = base_path_master / pathlib.Path("bin/scip")
+            settings = [
+                base_path_master / pathlib.Path("settings/perf_nosym.set"),
+                base_path_master / pathlib.Path("settings/perf_us1.set")
+                # Noise dosage only has orbitopes -> polyhedral; us2,3 are not needed.
+            ]
+            extend_configurations(configurations, bin_path, settings, testsets, seed)
+
+            # Unified runs
+            bin_path = base_path_unified / pathlib.Path("bin/scip")
+            settings = [
+                base_path_master / pathlib.Path("settings/perf_dyno.set")
+                # Noise dosage only has orbitopes -> only 'dyno' is considered.
+            ]
+            extend_configurations(configurations, bin_path, settings, testsets, seed)
+
+            # Sherali SHCs
+            testsets = [
+                base_path_unified / check_folder / pathlib.Path("testset/noise_dosage_sherali.test")
+            ]
+            bin_path = base_path_master / pathlib.Path("bin/scip")
+            settings = [
+                base_path_master / pathlib.Path("settings/perf_nosym.set")
+                # Completely remove all symmetries from the problem. So, just run nosym.
+            ]
+            extend_configurations(configurations, bin_path, settings, testsets, seed)
+
 
     # print configuration list
     print("# Configurations")

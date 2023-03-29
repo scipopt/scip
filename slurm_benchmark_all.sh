@@ -11,5 +11,5 @@ source ${HOME}/load_modules.sh
 source ${HOME}/python-venv/bin/activate
 
 echo "Starting runs"
-python check/check_all.py
+python check/check_all.py -ncores=128 -variant=noise_dosage
 echo "Finished"
