@@ -29,12 +29,12 @@ def run(conf : Configuration):
     with open(outfile, "w") as outf, open(errfile, "w") as errf:
         status = subprocess.run(
             args=(
-                # # slurm settings
-                # "srun", "--cpu-bind=cores",
-                # "--ntasks=1",
-                # "--gres=cpu:1",
-                # "--cpu-freq=highm1",
-                # "--exclusive",
+                # slurm settings
+                "srun", "--cpu-bind=cores",
+                "--ntasks=1",
+                "--gres=cpu:1",
+                "--cpu-freq=highm1",
+                "--exclusive",
                 # run binary
                 conf.binary,
                 "-c", f"set load {conf.settings}",
