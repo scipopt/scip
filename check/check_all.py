@@ -105,7 +105,7 @@ if __name__ == "__main__":
     if args.variant == "noise_dosage":
         for seed in range(3):
             testsets = [
-                base_path_unified / check_folder / pathlib.Path("testset/short.test")
+                base_path_unified / check_folder / pathlib.Path("testset/noise_dosage.test")
             ]
 
             # Master runs
