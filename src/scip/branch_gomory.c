@@ -264,7 +264,7 @@ SCIP_Bool getGMIFromRow(
          rowlhs = SCIProwGetLhs(row);
          rowrhs = SCIProwGetRhs(row);
          assert( SCIPisLE(scip, rowlhs, rowrhs) );
-         assert( !SCIPisInfinity(scip, rowlhs) && !SCIPisInfinity(scip, rowrhs) );
+         assert( !SCIPisInfinity(scip, rowlhs) || !SCIPisInfinity(scip, rowrhs) );
 
          /* If the slack variable is fixed we can ignore this cut coefficient */
          if ( SCIPisFeasZero(scip, rowrhs - rowlhs) )
@@ -369,6 +369,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpGomory)
    SCIP_Real bestscore;
    int bestcand;
    int i;
+   int j;
    SCIP_Bool success;
    SCIP_ROW* cut;
    const char* name;
@@ -476,10 +477,18 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpGomory)
       /* Calculate the weighted sum score of measures */
       if ( success == SCIP_OKAY )
       {
-         assert( SCIPisCutEfficacious(scip, NULL, cut) );
          cut = NULL;
-         SCIP_CALL( SCIPcreateRowUnspec(scip, &cut, name, ncols, cols, cutcoefs, -SCIPinfinity(scip), cutrhs, TRUE,
+         SCIP_CALL( SCIPcreateEmptyRowUnspec(scip, &cut, name, -SCIPinfinity(scip), cutrhs, TRUE,
                    FALSE, TRUE) );
+         for( j = 0; j < ncols; ++j )
+         {
+            if( !SCIPisZero(scip, cutcoefs[j]) )
+            {
+               SCIP_CALL( SCIPaddVarToRow(scip, cut, SCIPcolGetVar(cols[j]),
+                                          cutcoefs[SCIPcolGetLPPos(cols[j])]) );
+            }
+         }
+         assert( SCIPgetCutEfficacy(scip, NULL, cut) >= -SCIPfeastol(scip) );
          if ( branchruledata-> efficacyweight != 0 )
             score += branchruledata->efficacyweight * SCIPgetCutEfficacy(scip, NULL, cut);
          if ( branchruledata->objparallelweight != 0 )
