@@ -56,7 +56,7 @@ def run(conf : Configuration):
                 "-c", f"set load {conf.settings}",
                 "-c", "set limits time 3600",
                 "-c", "set limits nodes 2100000000",
-                "-c", "set limits memory 8192",
+                "-c", "set limits memory 7360",  # 8GB = hardmemlimit = 1.1 * memlimit + 100, use 7360MB as soft limit.
                 "-c", "set timing clocktype 1",
                 "-c", "set display freq 10000",
                 "-c", f"set save {setfile}",
