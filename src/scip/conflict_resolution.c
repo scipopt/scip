@@ -3258,15 +3258,15 @@ SCIP_RETCODE StrongerDivisionBasedReduction(
       // todo apply Chvatal-Gomory
       SCIPsetDebugMsg(set, "Apply Stronger Normalized Chvatal-Gomory \n");
       SCIP_CALL( StrongerChvatalGomoryLhs(set, prob, reasonset, currbdchgidx, idxinreason, coefinreason) );
+      SCIPsortIntReal(reasonset->inds, reasonset->vals, resolutionsetGetNNzs(reasonset));
       assert(SCIPsetIsZero(set, getSlack(set, prob, reasonset, SCIPbdchginfoGetIdx(currbdchginfo), fixbounds, fixinds)));
+      idxinreason = getVarIdxInResolutionset(reasonset, residx);
+      assert(idxinreason >= 0);
+
+      coefinreason = fabs(reasonset->vals[idxinreason]);
+      SCIP_CALL( rescaleAndResolve(set, conflict, reasonset, currbdchginfo, blkmem,
+                           residx, successresolution) );
    }
-
-   idxinreason = getVarIdxInResolutionset(reasonset, residx);
-   assert(idxinreason >= 0);
-
-   coefinreason = fabs(reasonset->vals[idxinreason]);
-   SCIP_CALL( rescaleAndResolve(set, conflict, reasonset, currbdchginfo, blkmem,
-                        residx, successresolution) );
 
    return SCIP_OKAY;
 }
