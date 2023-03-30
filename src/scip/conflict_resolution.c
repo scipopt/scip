@@ -620,7 +620,7 @@ SCIP_RETCODE StrongerChvatalGomoryLhs(
    /* first handle x_k and initialize lhs deltas */
    if( resolutionset->vals[idxreason] < 0.0 )
    {
-     deltaoldlhs = -resolutionset->vals[i];
+     deltaoldlhs = -resolutionset->vals[idxreason];
      deltanewlhs = -1.0;
      resolutionset->vals[idxreason] = -1.0;
    }
@@ -646,24 +646,24 @@ SCIP_RETCODE StrongerChvatalGomoryLhs(
 
       assert(SCIPvarIsBinary(currentvar));
 
-      if ( (coef > 0.0 && SCIPgetVarUbAtIndex(set->scip, currentvar, currbdchgidx, TRUE) < 0.5) ||
+      if ( (coef > 0.0 && SCIPgetVarUbAtIndex(set->scip, currentvar, currbdchgidx, TRUE) > 0.5) ||
           (coef < 0.0 && SCIPgetVarLbAtIndex(set->scip, currentvar, currbdchgidx, TRUE) > 0.5))
       {
-        SCIP_Real newcoef = -SCIPsetCeil(set, -coef / divisor);
+        newcoef = -SCIPsetCeil(set, -coef / divisor);
 
-        deltaoldlhs += -coef;
+        deltaoldlhs += - coef;
         resolutionset->vals[i] = newcoef;
         deltanewlhs += newcoef;
       }
       else
       {
-        SCIP_Real newcoef = SCIPsetCeil(set, coef / divisor);
+        newcoef = SCIPsetCeil(set, coef / divisor);
         resolutionset->vals[i] = newcoef;
       }
    }
 
    oldlhs = resolutionset->lhs;
-   newlhs = SCIPsetCeil(set, oldlhs + deltaoldlhs) + deltanewlhs;
+   newlhs = SCIPsetCeil(set, (oldlhs + deltaoldlhs) / divisor) + deltanewlhs;
    resolutionset->lhs = newlhs;
 
    /* remove variables with zero coefficient. Loop backwards */
