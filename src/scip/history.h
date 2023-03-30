@@ -301,6 +301,7 @@ void SCIPhistorySetRatioHistory(
     (history)->ratio = newratio, (history)->balance = newbalance
 #define SCIPhistoryGetLastBalance(history) ((history)->balance)
 #define SCIPhistoryGetLastGMIeff(history) ((history)->gmieff)
+#define SCIPhistorySetLastGMIeff(history,newgmieff) (history)->gmieff = newgmieff
 
 #endif
 

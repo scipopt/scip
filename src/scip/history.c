@@ -758,7 +758,6 @@ void SCIPhistorySetLastGMIeff(
    assert(history != NULL);
    
    history->gmieff = gmieff;
-   return;
 }
 
 /** sets the ratio history for a particular variable */
