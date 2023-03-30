@@ -50,7 +50,7 @@
 
 #define BRANCHRULE_NAME            "gomory"
 #define BRANCHRULE_DESC            "gomory cut score branching"
-#define BRANCHRULE_PRIORITY        100000
+#define BRANCHRULE_PRIORITY        100
 #define BRANCHRULE_MAXDEPTH        -1
 #define BRANCHRULE_MAXBOUNDDIST    1.0
 
@@ -129,6 +129,7 @@ SCIP_Bool getGMIFromRow(
    for ( c = 0; c < ncols; c++ )
    {
       col = cols[c];
+      assert( col != NULL );
 
       basestat = SCIPcolGetBasisStatus(col);
       /* Get simplex tableau coefficient */
@@ -221,9 +222,9 @@ SCIP_Bool getGMIFromRow(
       }
       else
       {
-      /* Nonbasic free variable at zero or basic variable. Just skip it. Free variable should not happen here*/
-      assert( basestat == SCIP_BASESTAT_BASIC );
-      continue;
+         /* Nonbasic free variable at zero or basic variable. Free variable should not happen here. Just skip if free */
+         assert( basestat == SCIP_BASESTAT_BASIC );
+         continue;
       }
 
       /* Integer rows */
@@ -257,6 +258,7 @@ SCIP_Bool getGMIFromRow(
             cutelem = -rowelem;
          }
       }
+      
       /* Cut is defined in original variables, so we replace slack variables by their original definition */
       if ( !SCIPisZero(scip, cutelem) )
       {

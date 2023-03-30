@@ -98,6 +98,7 @@ void SCIPhistoryReset(
    history->ratio = 0.0;
    history->ratiovalid = FALSE;
    history->balance = 0.0;
+   history->gmieff = 0.0;
    history->nactiveconflicts[0] = 0;
    history->nactiveconflicts[1] = 0;
    history->nbranchings[0] = 0;
@@ -736,6 +737,28 @@ SCIP_Real SCIPhistoryGetLastBalance(
    assert(history->ratiovalid);
 
    return history->balance;
+}
+
+/** returns the most recent eff value for the GMI cut produced by this variable */
+SCIP_Real SCIPhistoryGetLastGMIeff(
+   SCIP_HISTORY*         history             /**< branching and inference history */
+)
+{
+   assert(history != NULL);
+   
+   return history->gmieff;
+}
+
+/** sets the new most recent eff value for the GMI cut produced by this variable */
+void SCIPhistorySetLastGMIeff(
+   SCIP_HISTORY*         history,            /**< branching and inference history */
+   SCIP_Real             gmieff              /**< Efficacy of GMI cut produced from simplex tableau row of this var */
+)
+{
+   assert(history != NULL);
+   
+   history->gmieff = gmieff;
+   return;
 }
 
 /** sets the ratio history for a particular variable */

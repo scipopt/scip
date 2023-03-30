@@ -9867,6 +9867,59 @@ SCIP_Real SCIPgetVarAvgInferenceCutoffScoreCurrentRun(
       inferdown + cutoffweight * avginfer * cutoffdown, inferup + cutoffweight * avginfer * cutoffup);
 }
 
+/** returns the variable's last GMI efficacy score value
+ *
+ *  @return the variable's last GMI efficacy score value
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_Real SCIPgetVarLastGMIScore(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< problem variable */
+)
+{
+   
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetVarLastGMIScore", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   
+   assert( var->scip == scip );
+   
+   return SCIPvarGetLastGMIScore(var, scip->stat);
+}
+
+/** sets the variable's last GMI efficacy score value
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+void SCIPsetVarLastGMIScore(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Real             gmieff              /**< efficacy of GMI cut from tableau row when variable is basic / frac */
+)
+{
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetVarLastGMIScore", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   
+   assert( var->scip == scip );
+   
+   SCIPvarSetLastGMIScore(var, scip->stat, gmieff);
+}
+
 /** outputs variable information to file stream via the message system
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
