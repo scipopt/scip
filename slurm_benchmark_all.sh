@@ -11,5 +11,5 @@ source ${HOME}/load_modules.sh
 source ${HOME}/python-venv/bin/activate
 
 echo "$(date) | Starting runs"
-python check/check_all.py -ncores=128 -variant=noise_dosage
+python -u check/check_all.py -ncores=128 -variant=noise_dosage
 echo "$(date) | Finished"
