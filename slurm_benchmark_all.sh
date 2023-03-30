@@ -2,7 +2,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=128
 #SBATCH --partition=thin
-#SBATCH --cpus-per-task=1
+#SBATCH --cpus-per-task=4
 #SBATCH --cpu-freq=highm1
 #SBATCH --partition=thin
 #SBATCH --time=12:00:00
@@ -10,6 +10,6 @@
 source ${HOME}/load_modules.sh
 source ${HOME}/python-venv/bin/activate
 
-echo "Starting runs"
+echo "$(date) | Starting runs"
 python check/check_all.py -ncores=128 -variant=noise_dosage
-echo "Finished"
+echo "$(date) | Finished"

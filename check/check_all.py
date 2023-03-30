@@ -4,6 +4,9 @@ from typing import List
 from multiprocessing import Pool
 import subprocess
 import socket
+import datetime
+import os
+import io
 
 
 class Configuration:
@@ -19,28 +22,41 @@ class Configuration:
     def __repr__(self) -> str:
         return f"Configuration[{self.testset.stem},{self.settings.stem},{self.instance.stem},s{self.seed}]"
 
+    def get_info(self):
+        return [self.binary, self.result, self.testset, self.settings, self.instance, self.seed]
+
 def run(conf : Configuration):
-    print(f"Running {conf}")
+    print(f"{datetime.datetime.now()} | {os.getpid():5d} | Running {conf}")
     basename = f"result_{conf.testset.stem}_{conf.settings.stem}.{conf.instance.stem}.s{conf.seed}"
     outfile = conf.result / f"{basename}.out"
     errfile = conf.result / f"{basename}.err"
     setfile = conf.result / f"{basename}.set"
 
-    with open(outfile, "w") as outf, open(errfile, "w") as errf:
+    with open(outfile, "w", buffering=io.DEFAULT_BUFFER_SIZE) as outf, \
+            open(errfile, "w", buffering=io.DEFAULT_BUFFER_SIZE) as errf:
+        # write configuration information
+        outf.write(f"@-1 {datetime.datetime.now()}" + os.linesep)
+        for idx, val in enumerate(conf.get_info()):
+            outf.write(f"@{idx:2d} {val}" + os.linesep)
+            errf.write(f"@{idx:2d} {val}" + os.linesep)
+        outf.flush()
+        errf.flush()
+
+        # run the process, write stdout and stderr to the out and err-files
         status = subprocess.run(
             args=(
                 # slurm settings
                 "srun", "--cpu-bind=cores",
                 "--ntasks=1",
-                "--gres=cpu:1",
+                "--gres=cpu:4",
                 "--cpu-freq=highm1",
                 "--exclusive",
                 # run binary
                 conf.binary,
                 "-c", f"set load {conf.settings}",
-                "-c", "set limits time 7200",
+                "-c", "set limits time 3600",
                 "-c", "set limits nodes 2100000000",
-                "-c", "set limits memory 4096",
+                "-c", "set limits memory 8192",
                 "-c", "set timing clocktype 1",
                 "-c", "set display freq 10000",
                 "-c", f"set save {setfile}",
@@ -49,10 +65,26 @@ def run(conf : Configuration):
                 "-c", "display statistics",
                 "-c", "q"
             ),
-            stdout=outf, stderr=errf
+            stdout=outf, stderr=errf, bufsize=io.DEFAULT_BUFFER_SIZE
         )
+        outf.flush()
+        errf.flush()
 
-    print(f"Finished {conf} with status {status.returncode}")
+        # write finished information
+        outf.write(os.linesep)
+        errf.write(os.linesep)
+        outf.write(f"@{idx+1:2d} {datetime.datetime.now()}" + os.linesep)
+        errf.write(f"@{idx+1:2d} {datetime.datetime.now()}" + os.linesep)
+        outf.flush()
+        errf.flush()
+
+    print(f"{datetime.datetime.now()} | {os.getpid():5d} | Finished {conf} with status {status.returncode}")
+    try:
+        status.check_returncode()
+    except subprocess.CalledProcessError as e:
+        print(f"{datetime.datetime.now()} | {os.getpid():5d} | BEGIN error output")
+        print(e.output)
+        print(f"{datetime.datetime.now()} | {os.getpid():5d} | END error output")
 
 
 def extend_configurations(configurations, bin_path, settings, testsets, seed):
@@ -111,9 +143,8 @@ if __name__ == "__main__":
             # Master runs
             bin_path = base_path_master / pathlib.Path("bin/scip")
             settings = [
-                base_path_master / pathlib.Path("settings/perf_nosym.set"),
-                base_path_master / pathlib.Path("settings/perf_us1.set")
-                # Noise dosage only has orbitopes -> polyhedral; us2,3 are not needed.
+                base_path_master / pathlib.Path("settings/perf_nosym.set")
+                # Noise dosage instances are nonbinary, so the standard settings cannot hold.
             ]
             extend_configurations(configurations, bin_path, settings, testsets, seed)
 
@@ -144,5 +175,5 @@ if __name__ == "__main__":
     print()
 
     # start processes
-    with Pool(processes=args.ncores) as pool:
+    with Pool(processes=args.ncores // 4) as pool:
         pool.map(run, configurations)
