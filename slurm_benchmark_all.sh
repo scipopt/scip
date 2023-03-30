@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --nodes=1
-#SBATCH --ntasks=128
+#SBATCH --ntasks=32
 #SBATCH --partition=thin
 #SBATCH --cpus-per-task=4
 #SBATCH --cpu-freq=highm1

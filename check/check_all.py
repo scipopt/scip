@@ -37,8 +37,8 @@ def run(conf : Configuration):
         # write configuration information
         outf.write(f"@-1 {datetime.datetime.now()}" + os.linesep)
         for idx, val in enumerate(conf.get_info()):
-            outf.write(f"@{idx:2d} {val}" + os.linesep)
-            errf.write(f"@{idx:2d} {val}" + os.linesep)
+            outf.write(f"@{idx:02d} {val}" + os.linesep)
+            errf.write(f"@{idx:02d} {val}" + os.linesep)
         outf.flush()
         errf.flush()
 
@@ -73,8 +73,8 @@ def run(conf : Configuration):
         # write finished information
         outf.write(os.linesep)
         errf.write(os.linesep)
-        outf.write(f"@{idx+1:2d} {datetime.datetime.now()}" + os.linesep)
-        errf.write(f"@{idx+1:2d} {datetime.datetime.now()}" + os.linesep)
+        outf.write(f"@{idx+1:02d} {datetime.datetime.now()}" + os.linesep)
+        errf.write(f"@{idx+1:02d} {datetime.datetime.now()}" + os.linesep)
         outf.flush()
         errf.flush()
 
