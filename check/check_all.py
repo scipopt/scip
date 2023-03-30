@@ -46,12 +46,15 @@ def run(conf : Configuration):
         status = subprocess.run(
             args=(
                 # slurm settings
-                "srun", "--cpu-bind=cores",
+                "srun",
+                "--cpu-bind=cores",
                 "--ntasks=1",
                 "--gres=cpu:4",
                 "--cpu-freq=highm1",
                 "--exclusive",
+                "--cpus-per-task=4",
                 "--mem-per-cpu=2000M",  # Not 2G (2048M) but 2000M to have some slack.
+                "--time=01:30:00",  # Reserve half an hour of slack, in case shutting down takes more time.
                 # run binary
                 conf.binary,
                 "-c", f"set load {conf.settings}",
