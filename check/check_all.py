@@ -51,6 +51,7 @@ def run(conf : Configuration):
                 "--gres=cpu:4",
                 "--cpu-freq=highm1",
                 "--exclusive",
+                "--mem-per-cpu=2000M",  # Not 2G (2048M) but 2000M to have some slack.
                 # run binary
                 conf.binary,
                 "-c", f"set load {conf.settings}",
