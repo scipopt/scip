@@ -260,7 +260,7 @@ SCIP_RETCODE updateColumnOrderWhenBranchingOnColumn(
    int ncols;
    int* origequalcolids;
    int norigequalcolids;
-   int middlecolumn;
+   int middlecolumn = 0;
    int positionorigcolidincolorder;
    int positionswaporigcolidincolorder;
 
