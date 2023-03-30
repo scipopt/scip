@@ -598,7 +598,7 @@ SCIP_RETCODE StrongerChvatalGomoryLhs(
 
    SCIPsetDebugMsg(set, "Stronger Normalized Chvatal-Gomory on constraint with LHS %f and divisor %f\n" , resolutionset->lhs, divisor);
 
-   newlhs = divisor > 0 ? 1.0 : 0.0;
+   newlhs = 0.0;
 
    for( int i = 0; i < resolutionset->nnz; ++i )
    {
@@ -611,7 +611,11 @@ SCIP_RETCODE StrongerChvatalGomoryLhs(
       if ( SCIPsetIsGE(set, newcoef, 0.0) )
       {
          if (i == idxreason)
+         {
+            assert(SCIPsetIsEQ(set, newcoef, 1.0));
             resolutionset->vals[i] = newcoef;
+            newlhs += resolutionset->vals[i];
+         }
          else
          {
             SCIP_Real ub;
@@ -632,7 +636,10 @@ SCIP_RETCODE StrongerChvatalGomoryLhs(
       else
       {
          if (i == idxreason)
+         {
+            assert(SCIPsetIsEQ(set, newcoef, -1.0));
             resolutionset->vals[i] = newcoef;
+         }
          else
          {
             SCIP_Real lb;
