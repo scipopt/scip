@@ -570,6 +570,156 @@ SCIP_RETCODE ChvatalGomoryLhs(
 }
 
 static
+SCIP_RETCODE StrongerMirLhs(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_RESOLUTIONSET*   resolutionset,      /**< resolution set */
+   SCIP_BDCHGIDX*        currbdchgidx,       /**< current bound change index */
+   int                   idxreason,          /**< index in the reason */
+   SCIP_Real             divisor             /**< the divisor of the row */
+   )
+{
+   SCIP_VAR** vars;
+   SCIP_Real deltaoldlhs;
+   SCIP_Real deltanewlhs;
+   SCIP_Real oldlhs;
+   SCIP_Real newlhs;
+   SCIP_Real fraclhs;
+
+   assert(set != NULL);
+   assert(prob != NULL);
+   assert(resolutionset != NULL);
+   assert(resolutionset->inds != NULL);
+   assert(resolutionset->vals != NULL);
+   assert(resolutionset->nnz > 0);
+
+   assert(SCIPsetIsGT(set, divisor, 0.0));
+
+   /* todo extend Chvatal-Gomory for constraints with general integer variables */
+   assert(isBinaryResolutionSet(set, prob, resolutionset));
+
+   vars = SCIPprobGetVars(prob);
+
+   SCIPsetDebugMsg(set, "Stronger MIR on constraint with LHS %f and divisor %f\n" , resolutionset->lhs, divisor);
+
+   /* complement and apply MIR to the reason constraint lhs <= a^T x
+    * say the idxreason is k, and a_k > 0 (so this reason constraint fixes x_k to 1).
+    * Then we complement as follows:
+    *   - if a_i > 0 and x_i is not fixed to 0, we complement it
+    *   - if a_i < 0 and x_i is fixed to 1, we complement it
+    * whenever we complement a variable x_i, we need to modify the lhs with -a_i
+    * Then we compute the fractionality of the lhs f(lhs) and do the following:
+    * The coefficient of ~x_i is going to be -a_i, which after division is going to be -a_i/divisor; and after MIR,
+    * it becomes CEIL(-a_i / divisor) if f(-a_i/divisor) >= f(lhs) or FLOOR(-a_i / divisor)+f(-a_i/divisor)/f(lhs) otherwise.
+    * Complementing this again (to go back to x_i) the new coefficient of x_i is going to be -CEIL(-a_i / divisor)
+    * or FLOOR(-a_i / divisor)+f(-a_i/divisor)/f(lhs) otherwise. It is its going to
+    * contribute the same amount to the lhs of the resulting constraint.
+    * So we keep to lhs deltas, one for complementing in the original space, and another for complementing after we do C-G
+    *
+    * On the other hand, if a_k < 0 (so this reason constraint fixes x_k to 0), then we complement x_k (so modify the lhs by -a_k)
+    * and then we are in the previous case. However, at the end, we need to complement back, which means that we modify the lhs by -1
+    */
+
+   /* first handle x_k and initialize lhs deltas */
+   if( resolutionset->vals[idxreason] < 0.0 )
+   {
+     deltaoldlhs = -resolutionset->vals[idxreason];
+     deltanewlhs = -1.0;
+     resolutionset->vals[idxreason] = -1.0;
+   }
+   else
+   {
+     deltaoldlhs = 0.0;
+     deltanewlhs = 0.0;
+     resolutionset->vals[idxreason] = 1.0;
+   }
+
+   /* compute the delta for the left hand side after complementation if order to apply MIR
+    * In a second loop set the new coefficients for the other variables and compute the lhs delta after complementation */
+   for( int i = 0; i < resolutionset->nnz; ++i )
+   {
+      SCIP_VAR* currentvar;
+      SCIP_Real coef;
+
+      if( i == idxreason )
+        continue;
+
+      coef = resolutionset->vals[i];
+      currentvar = vars[resolutionset->inds[i]];
+
+      assert(SCIPvarIsBinary(currentvar));
+
+      if ( (coef > 0.0 && SCIPgetVarUbAtIndex(set->scip, currentvar, currbdchgidx, TRUE) > 0.5) ||
+          (coef < 0.0 && SCIPgetVarLbAtIndex(set->scip, currentvar, currbdchgidx, TRUE) > 0.5))
+      {
+        deltaoldlhs += -coef;
+      }
+   }
+   oldlhs = resolutionset->lhs;
+   newlhs = (oldlhs + deltaoldlhs) / divisor;
+   fraclhs = newlhs - SCIPsetFloor(set, newlhs);
+
+   /* set the new coefficients for the other variables and compute the lhs deltas */
+   for( int i = 0; i < resolutionset->nnz; ++i )
+   {
+      SCIP_VAR* currentvar;
+      SCIP_Real newcoef;
+      SCIP_Real coef;
+      SCIP_Real fraccoef;
+
+      if( i == idxreason )
+        continue;
+
+      coef = resolutionset->vals[i] / divisor;
+      fraccoef = coef - SCIPsetFloor(set, coef);
+      currentvar = vars[resolutionset->inds[i]];
+
+      if ( (coef > 0.0 && SCIPgetVarUbAtIndex(set->scip, currentvar, currbdchgidx, TRUE) > 0.5) ||
+          (coef < 0.0 && SCIPgetVarLbAtIndex(set->scip, currentvar, currbdchgidx, TRUE) > 0.5))
+      {
+        if ((1.0 - fraccoef) >= fraclhs)
+        {
+           newcoef = -SCIPsetCeil(set, -coef);
+
+           resolutionset->vals[i] = newcoef;
+           deltanewlhs += newcoef;
+        }
+        else
+        {
+           newcoef = -SCIPsetFloor(set, -coef) + (1 - fraccoef) / fraclhs;
+
+           resolutionset->vals[i] = newcoef;
+           deltanewlhs += newcoef;
+        }
+      }
+      else
+      {
+         if( fraccoef >= fraclhs )
+           resolutionset->vals[i] = SCIPsetCeil(set, coef);
+         else
+           resolutionset->vals[i] = SCIPsetFloor(set, coef) + fraccoef / fraclhs;
+      }
+   }
+
+   newlhs = SCIPsetCeil(set, newlhs) + deltanewlhs;
+   resolutionset->lhs = newlhs;
+
+
+   /* remove variables with zero coefficient. Loop backwards */
+   for( int i = resolutionset->nnz - 1; i >= 0; --i )
+   {
+      if( SCIPsetIsZero(set, resolutionset->vals[i]) )
+      {
+         --resolutionset->nnz;
+         resolutionset->inds[i] = resolutionset->inds[resolutionset->nnz];
+         resolutionset->vals[i] = resolutionset->vals[resolutionset->nnz];
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+static
 SCIP_RETCODE StrongerChvatalGomoryLhs(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            prob,               /**< problem data */
@@ -651,7 +801,7 @@ SCIP_RETCODE StrongerChvatalGomoryLhs(
       {
         newcoef = -SCIPsetCeil(set, -coef / divisor);
 
-        deltaoldlhs += - coef;
+        deltaoldlhs += -coef;
         resolutionset->vals[i] = newcoef;
         deltanewlhs += newcoef;
       }
@@ -3264,7 +3414,10 @@ SCIP_RETCODE StrongerDivisionBasedReduction(
       // todo apply complementation for reasonset
       // todo apply Chvatal-Gomory
       SCIPsetDebugMsg(set, "Apply Stronger Normalized Chvatal-Gomory \n");
-      SCIP_CALL( StrongerChvatalGomoryLhs(set, prob, reasonset, currbdchgidx, idxinreason, coefinreason) );
+      if (set->conf_reductiontechnique == 's')
+         SCIP_CALL( StrongerChvatalGomoryLhs(set, prob, reasonset, currbdchgidx, idxinreason, coefinreason) );
+      else if(set->conf_reductiontechnique == 'x')
+         SCIP_CALL( StrongerMirLhs(set, prob, reasonset, currbdchgidx, idxinreason, coefinreason) );
       SCIPsortIntReal(reasonset->inds, reasonset->vals, resolutionsetGetNNzs(reasonset));
       assert(SCIPsetIsZero(set, getSlack(set, prob, reasonset, SCIPbdchginfoGetIdx(currbdchginfo), fixbounds, fixinds)));
       idxinreason = getVarIdxInResolutionset(reasonset, residx);
@@ -4350,7 +4503,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
                SCIPsetDebugMsg(set, " Applying tightening based reduction with resolving variable <%s>\n", SCIPvarGetName(vartoresolve));
                SCIP_CALL( tighteningBasedReduction(conflict, set, transprob, blkmem, bdchginfo, residx, &nvarsweakened, fixbounds, fixinds, &successresolution ) );
             }
-            else if ( set->conf_reductiontechnique == 's' )
+            else if ( set->conf_reductiontechnique == 's' || set->conf_reductiontechnique == 'x')
             {
                SCIPsetDebugMsg(set, " Applying stronger division based reduction with resolving variable <%s>\n", SCIPvarGetName(vartoresolve));
                SCIP_CALL( StrongerDivisionBasedReduction(conflict, set, transprob, blkmem, bdchginfo, residx, &nvarsweakened, fixbounds, fixinds, &successresolution ) );

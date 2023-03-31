@@ -1399,7 +1399,7 @@ SCIP_RETCODE SCIPsetCreate(
       SCIP_CALL( SCIPsetAddCharParam(*set, messagehdlr, blkmem,
          "conflict/reductiontechnique",
          "which tightening reduction should be used? ('o'ff, 'm'ir, 'd'ivision, 'c'oefficient tightening, 'stronger division')",
-         &(*set)->conf_reductiontechnique, FALSE, SCIP_DEFAULT_CONF_REDUCTION, "omdcs",
+         &(*set)->conf_reductiontechnique, FALSE, SCIP_DEFAULT_CONF_REDUCTION, "omdcsx",
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "conflict/usesb",
