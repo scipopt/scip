@@ -37,7 +37,7 @@ QUEUETYPE="${4}" # either 'srun' or 'qsub'
 NICE=""
 if [[ "$(uname -n)" =~ htc ]]; then
   # z1 cluster
-  ACCOUNT="optimi"
+  ACCOUNT="optimi_integer"
 else
   # opt machines
   ACCOUNT="mip"
