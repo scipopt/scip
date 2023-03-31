@@ -10,6 +10,8 @@
 #include <string.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <time.h>
+#include <algorithm>
 
 char Rational::buffer[] = {'\0'};
 
@@ -167,12 +169,25 @@ bool Rational::isZero() const
    return (mpq_sgn(number) == 0);
 }
 
+/* find substring, ignore case */
+static
+std::string::const_iterator findSubStringIC(const std::string & substr, const std::string & str)
+{
+   auto it = std::search(
+      str.begin(), str.end(),
+      substr.begin(),   substr.end(),
+      [](char ch1, char ch2) { return std::toupper(ch1) == std::toupper(ch2); }
+   );
+   return it;
+}
+
 void Rational::fromString(const char* num)
 {
    char* tmp = &buffer[0];
    int   k = 0;
    int   exponent = 0;
    int   fraction = 0;
+   std::string s = std::string(num);
 
    assert(num != NULL);
    assert(strlen(num) <  32);
@@ -180,6 +195,14 @@ void Rational::fromString(const char* num)
    // Skip initial whitespace
    while(isspace(*num))
       num++;
+
+   /* case 1: string is given in nom/den format */
+   if( s.find('.') == std::string::npos && findSubStringIC("e",s) == s.end() )
+   {
+      mpq_set_str(number, num, 10);
+      mpq_canonicalize(number);
+      return;
+   }
 
    // Skip initial +/-
    if (*num == '+')
