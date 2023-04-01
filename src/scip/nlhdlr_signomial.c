@@ -33,7 +33,7 @@
 #define SCIP_SIG_DEBUG_
 
 #ifdef SCIP_SIGCUT_DEBUG
-#ifndef SCIP_SIG_DEBUG
+#ifndef SCIP_SIG_DEBUG_
 #define SCIP_SIG_DEBUG
 #endif
 #endif
@@ -41,6 +41,7 @@
 #ifdef SCIP_SIG_DEBUG
 #define SCIP_DEBUG
 #endif
+
 
 #include <string.h>
 
@@ -356,18 +357,22 @@ SCIP_RETCODE printSignomial(
 static 
 void freeExprDataMem(
    SCIP*                 scip,
-   SCIP_NLHDLREXPRDATA** nlhdlrexprdata
+   SCIP_NLHDLREXPRDATA** nlhdlrexprdata,
+   SCIP_Bool             ispartial
    )
 {
    SCIPfreeBlockMemoryArrayNull(scip, &(*nlhdlrexprdata)->factors, (*nlhdlrexprdata)->nfactors);
    SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->exponents, (*nlhdlrexprdata)->nfactors);
-   SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->signs, (*nlhdlrexprdata)->nvars);
-   SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->refexponents, (*nlhdlrexprdata)->nvars);
-   SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->vars, (*nlhdlrexprdata)->nvars);
-   SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->intervals, (*nlhdlrexprdata)->nvars);
-   SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->box, 2 * (*nlhdlrexprdata)->nvars);
-   SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->xstar, (*nlhdlrexprdata)->nvars);
-   SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->facetcoefs, (*nlhdlrexprdata)->nvars);
+   if( !ispartial )
+   {
+      SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->signs, (*nlhdlrexprdata)->nvars);
+      SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->refexponents, (*nlhdlrexprdata)->nvars);
+      SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->vars, (*nlhdlrexprdata)->nvars);
+      SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->intervals, (*nlhdlrexprdata)->nvars);
+      SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->box, 2 * (*nlhdlrexprdata)->nvars);
+      SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->xstar, (*nlhdlrexprdata)->nvars);
+      SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->facetcoefs, (*nlhdlrexprdata)->nvars);
+   }
    SCIPfreeBlockMemory(scip, nlhdlrexprdata);
    *nlhdlrexprdata = NULL;
 }
@@ -488,7 +493,7 @@ void getCheckBds(
    nlhdlrexprdata->intervals[c].sup = productsup;
 
 
-   #ifdef SCIP_SIG_DEBUG_
+   #ifdef SCIP_SIG_DEBUG
       if( !SCIPisEQ(scip, productinf, SCIPvarGetLbLocal(nlhdlrexprdata->vars[c])) ){
          SCIPdebugMsg(scip, "%f %f \n", productinf, SCIPvarGetLbLocal(nlhdlrexprdata->vars[c]));
       }
@@ -852,6 +857,7 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateSignomial)
    assert(rowpreps != NULL);
    assert(expr == nlhdlrexprdata->expr);
 
+
    *success = FALSE;
    *addedbranchscores = FALSE;
 
@@ -903,7 +909,6 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateSignomial)
          targetunder *= pow(SCIPgetSolVal(scip, sol, nlhdlrexprdata->vars[i]) / scale, nlhdlrexprdata->refexponents[i]);
       }
    }
-
 #ifdef SCIP_SIGCUT_DEBUG
    /* print information on estimators */
    SCIP_CALL( printSignomial(scip, nlhdlrexprdata));
@@ -973,7 +978,6 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateSignomial)
       #endif
    }
 
-
    #ifdef SCIP_SIGCUT_DEBUG
    if( *success )
    {
@@ -996,7 +1000,6 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateSignomial)
       if( *success )
          SCIP_CALL( SCIPsetPtrarrayVal(scip, rowpreps, 0, rowprep));
    }
-
    
    if( !*success )
       SCIPfreeRowprep(scip, &rowprep);
@@ -1035,13 +1038,6 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectSignomial)
       /* allocat memory for expression data */
       SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->factors, nc);
       SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->exponents, nc);
-      SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->signs, nvars);
-      SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->refexponents, nvars);
-      SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->vars, nvars);
-      SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->intervals, nvars);
-      SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->xstar, nvars);
-      SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->facetcoefs, nvars);
-      SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->box, 2 * nvars);
 
       /* get monomial information */
       SCIP_CALL( SCIPgetExprMonomialData(scip, expr, &((*nlhdlrexprdata)->coef), (*nlhdlrexprdata)->exponents, (*nlhdlrexprdata)->factors));
@@ -1064,10 +1060,19 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectSignomial)
       if( ismultilinear )
       {
          /* if multilinear, we free memory of the expression data and do nothing */
-         freeExprDataMem(scip, nlhdlrexprdata);
+         freeExprDataMem(scip, nlhdlrexprdata, TRUE);
       }
       else
       {
+         /* allocate more memory for expression data */
+         SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->signs, nvars);
+         SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->refexponents, nvars);
+         SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->vars, nvars);
+         SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->intervals, nvars);
+         SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->xstar, nvars);
+         SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->facetcoefs, nvars);
+         SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->box, 2 * nvars);
+
          (*nlhdlrexprdata)->expr = expr;
          SCIPcaptureExpr(expr);
          (*nlhdlrexprdata)->nfactors = nc;
@@ -1176,6 +1181,7 @@ SCIP_DECL_NLHDLRFREEHDLRDATA(nlhdlrFreehdlrDataSignomial)
 { /*lint --e{715}*/
    assert(nlhdlrdata != NULL);
    assert((*nlhdlrdata)->nexprs == 0);
+
    SCIPfreeBlockMemory(scip, nlhdlrdata);
 
    return SCIP_OKAY;
@@ -1190,6 +1196,7 @@ SCIP_DECL_NLHDLRFREEEXPRDATA(nlhdlrFreeExprDataSignomial)
 
    assert(expr != NULL);
 
+
    /* release variables */
    SCIPreleaseExpr(scip, &(*nlhdlrexprdata)->expr);
    for( int c = 0; c < (*nlhdlrexprdata)->nfactors; c++ )
@@ -1203,7 +1210,7 @@ SCIP_DECL_NLHDLRFREEEXPRDATA(nlhdlrFreeExprDataSignomial)
    }
 
    /* free memory */
-   freeExprDataMem(scip, nlhdlrexprdata);
+   freeExprDataMem(scip, nlhdlrexprdata, FALSE);
 
    nlhdlrdata->nexprs--;
 
