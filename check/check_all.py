@@ -155,7 +155,8 @@ if __name__ == "__main__":
             # Unified runs
             bin_path = base_path_unified / pathlib.Path("bin/scip")
             settings = [
-                base_path_master / pathlib.Path("settings/perf_dyno.set")
+                base_path_master / pathlib.Path("settings/perf_dyno.set"),
+                base_path_master / pathlib.Path("settings/perf_dyno_first.set")
                 # Noise dosage only has orbitopes -> only 'dyno' is considered.
             ]
             extend_configurations(configurations, bin_path, settings, testsets, seed)

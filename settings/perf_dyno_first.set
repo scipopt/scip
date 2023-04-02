@@ -1,0 +1,7 @@
+misc/usesymmetry = 9
+propagating/symmetry/addsymresacks = FALSE
+propagating/symmetry/detectorbitopes = TRUE
+propagating/symmetry/detectsubgroups = FALSE
+propagating/symmetry/enforcecomputesymmetry = TRUE
+propagating/symmetry/orbitopalreduction/columnordering = 1
+limits/restarts = 0
