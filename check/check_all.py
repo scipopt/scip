@@ -8,6 +8,8 @@ import datetime
 import os
 import io
 
+__is_local = socket.gethostname() == "TUE020355"
+
 
 class Configuration:
     def __init__(self, binary : pathlib.Path, result : pathlib.Path,
@@ -42,10 +44,13 @@ def run(conf : Configuration):
         outf.flush()
         errf.flush()
 
-        # run the process, write stdout and stderr to the out and err-files
-        status = subprocess.run(
-            args=(
-                # slurm settings
+        args = []
+        # slurm settings
+        if __is_local:
+            outf.write("@   Running without slurm (local tests)")
+        else:
+            outf.write("@   Running slurm")
+            args.extend([
                 "srun",
                 "--cpu-bind=cores",
                 "--ntasks=1",
@@ -54,21 +59,28 @@ def run(conf : Configuration):
                 "--exclusive",
                 "--cpus-per-task=4",
                 "--mem-per-cpu=2000M",  # Not 2G (2048M) but 2000M to have some slack.
-                "--time=01:30:00",  # Reserve half an hour of slack, in case shutting down takes more time.
-                # run binary
-                conf.binary,
-                "-c", f"set load {conf.settings}",
-                "-c", "set limits time 3600",
-                "-c", "set limits nodes 2100000000",
-                "-c", "set limits memory 7360",  # 8GB = hardmemlimit = 1.1 * memlimit + 100, use 7360MB as soft limit.
-                "-c", "set timing clocktype 1",
-                "-c", "set display freq 10000",
-                "-c", f"set save {setfile}",
-                "-c", f"read {conf.instance}",
-                "-c", "optimize",
-                "-c", "display statistics",
-                "-c", "q"
-            ),
+                "--time=01:30:00"  # Reserve half an hour of slack, in case shutting down takes more time.
+            ])
+
+        # run binary
+        args.extend([
+            conf.binary,
+            "-c", f"set load {conf.settings}",
+            "-c", "set limits time 3600",
+            "-c", "set limits nodes 2100000000",
+            "-c", "set limits memory 7360",  # 8GB = hardmemlimit = 1.1 * memlimit + 100, use 7360MB as soft limit.
+            "-c", "set timing clocktype 1",
+            "-c", "set display freq 10000",
+            "-c", f"set save {setfile}",
+            "-c", f"read {conf.instance}",
+            "-c", "optimize",
+            "-c", "display statistics",
+            "-c", "q"
+        ])
+
+        # run the process, write stdout and stderr to the out and err-files
+        status = subprocess.run(
+            args=tuple(args),
             stdout=outf, stderr=errf, bufsize=io.DEFAULT_BUFFER_SIZE
         )
         outf.flush()
@@ -117,8 +129,11 @@ def extend_configurations(configurations, bin_path, settings, testsets, seed):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(prog="Run testset")
-    parser.add_argument("-ncores", type=int, default=4)
-    parser.add_argument("-variant", type=str, default="noise_dosage")
+    parser.add_argument("--ncores", type=int, default=4)
+    parser.add_argument("--noise_dosage", type=bool, action=argparse.BooleanOptionalAction)
+    parser.add_argument("--covering_designs", type=bool, action=argparse.BooleanOptionalAction)
+    parser.add_argument("--miplib", type=bool, action=argparse.BooleanOptionalAction)
+    parser.add_argument("--minlplib", type=bool, action=argparse.BooleanOptionalAction)
     args = parser.parse_args()
 
     check_folder = pathlib.Path("check/")
@@ -138,7 +153,7 @@ if __name__ == "__main__":
         base_path_unified = pathlib.Path("/home/mjohannesva/scip-unified")
         base_path_master = pathlib.Path("/home/mjohannesva/scip-8443db21")
 
-    if args.variant == "noise_dosage":
+    if args.noise_dosage:
         for seed in range(3):
             testsets = [
                 base_path_unified / check_folder / pathlib.Path("testset/noise_dosage.test")
@@ -173,12 +188,49 @@ if __name__ == "__main__":
             extend_configurations(configurations, bin_path, settings, testsets, seed)
 
 
+    if args.covering_designs:
+        for seed in range(3):
+            testsets = [
+                base_path_unified / check_folder / pathlib.Path("testset/covering_designs_benchmark.test")
+            ]
+
+            # Master runs
+            bin_path = base_path_master / pathlib.Path("bin/scip")
+            settings = [
+                base_path_master / pathlib.Path("settings/perf_nosym.set")
+                # Covering design instances are nonbinary, so the standard settings cannot yield reductions
+            ]
+            extend_configurations(configurations, bin_path, settings, testsets, seed)
+
+            # Unified runs
+            bin_path = base_path_unified / pathlib.Path("bin/scip")
+            settings = [
+                base_path_master / pathlib.Path("settings/perf_dynof.set"),
+                base_path_master / pathlib.Path("settings/perf_dynofs.set"),
+                base_path_master / pathlib.Path("settings/perf_dyns.set")
+                # Covering designs are not orbitopal.
+            ]
+            extend_configurations(configurations, bin_path, settings, testsets, seed)
+
+
+    if args.miplib:
+        raise NotImplementedError()
+
+    if args.minlplib:
+        raise NotImplementedError()
+
     # print configuration list
     print("# Configurations")
     for conf in configurations:
         print(conf)
     print()
 
+    if __is_local:
+        print("# Detected local environment, run without slurm")
+    else:
+        print("# Using slurm commands")
+    print()
+
     # start processes
-    with Pool(processes=args.ncores // 4) as pool:
+    with Pool(processes=(args.ncores // 4) - 1) as pool:  # The hypervising process blocks other runs, so maximally 31.
         pool.map(run, configurations)
