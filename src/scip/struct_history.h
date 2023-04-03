@@ -54,6 +54,8 @@ struct SCIP_History
    SCIP_Real             ratio;              /**< Most recently computed value of the unpowered ratio (phi^l) in the Treemodel rules */
    SCIP_Real             balance;            /**< Most recent value of r/l used to compute a ratio in the Treemodel rules */
    SCIP_Real             gmieff;             /**< Most recent efficacy value of a GMI cut for the var row when basic / frac */
+   SCIP_Real             gmieffsum;          /**< Sum efficacy values of GMI cut for the var row when basic / frac */
+   SCIP_Real             ngmi;               /**< Number of GMI cuts generated from rows of this var when basic / frac */
    SCIP_Bool             ratiovalid;         /**< Whether the ratio value is valid for the Treemodel rules */
    SCIP_Longint          nactiveconflicts[2];/**< number of active conflicts for which the variable gave reason */
    SCIP_Longint          nbranchings[2];     /**< nr of times, the variable changed its bounds due to branching */

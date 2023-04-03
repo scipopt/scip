@@ -691,10 +691,11 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
    }
    for( i = 0; i < nrows; ++i )
    {
-      if( colindsproducedcut[i] >= 0 )
+      if( colindsproducedcut[i] >= 0 && SCIPisEfficacious(scip, cutefficacies[i])  )
       {
          var = SCIPcolGetVar(cols[colindsproducedcut[i]]);
-         SCIPsetVarLastGMIScore(scip, var, cutefficacies[i] / maxcutefficacy);
+         SCIP_CALL( SCIPsetVarLastGMIScore(scip, var, cutefficacies[i] / maxcutefficacy) );
+         SCIP_CALL( SCIPsetVarAvgGMIScore(scip, var, cutefficacies[i] / maxcutefficacy) );
       }
    }
 

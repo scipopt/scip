@@ -1506,18 +1506,31 @@ SCIP_Real SCIPvarGetAvgCutoffsCurrentRun(
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
-/** returns the variable's last GMI efficacy score value generated from a simplex tableau row of this variable */
-SCIP_Real SCIPvarGetLastGMIScore(
+/** returns the variable's avg GMI efficacy score value generated from simplex tableau rows of this variable */
+SCIP_Real SCIPvarGetAvgGMIScore(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_STAT*            stat                /**< problem statistics */
-);
+   );
 
-/** sets the variable's last GMI efficacy score value generated from a simplex tableau row of this variable */
-void SCIPvarSetLastGMIScore(
+/** increase the variable's GMI efficacy scores generated from simplex tableau rows of this variable */
+SCIP_RETCODE SCIPvarIncGMIeffSum(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_Real             gmieff              /**< efficacy of last GMI cut produced when variable was frac and basic */
 );
+
+/** returns the variable's last GMI efficacy score value generated from a simplex tableau row of this variable */
+SCIP_Real SCIPvarGetLastGMIScore(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_STAT*            stat                /**< problem statistics */
+   );
+
+/** sets the variable's last GMI efficacy score value generated from a simplex tableau row of this variable */
+SCIP_RETCODE SCIPvarSetLastGMIScore(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_Real             gmieff              /**< efficacy of last GMI cut produced when variable was frac and basic */
+   );
 
 /** outputs variable information into file stream */
 SCIP_RETCODE SCIPvarPrint(

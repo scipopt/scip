@@ -426,6 +426,10 @@ SCIP_Real* SCIPvaluehistoryGetValues(
 #undef SCIPhistoryGetLastRatio
 #undef SCIPhistorySetRatioHistory
 #undef SCIPhistoryGetLastBalance
+#undef SCIPhistorySetLastGMIeff
+#undef SCIPhistoryGetLastGMIeff
+#undef SCIPhistoryIncGMIeffSum
+#undef SCIPhistoryGetAvgGMIeff
 
 /** returns the opposite direction of the given branching direction */
 SCIP_BRANCHDIR SCIPbranchdirOpposite(
@@ -737,6 +741,29 @@ SCIP_Real SCIPhistoryGetLastBalance(
    assert(history->ratiovalid);
 
    return history->balance;
+}
+
+/** returns the average eff value for the GMI cut produced by this variable */
+SCIP_Real SCIPhistoryGetAvgGMIeff(
+   SCIP_HISTORY*         history             /**< branching and inference history */
+)
+{
+   assert(history != NULL);
+   
+   return history->ngmi > 0 ? history->gmieffsum / history->ngmi : 0.0;
+}
+
+/** increases the average eff value for the GMI cut produced by this variable */
+void SCIPhistoryIncGMIeffSum(
+   SCIP_HISTORY*         history,            /**< branching and inference history */
+   SCIP_Real             gmieff              /**< normalised efficacy value of a cut which will increase gmieff */
+)
+{
+   assert(history != NULL);
+   assert(gmieff >= 0.0);
+   
+   history->gmieffsum += gmieff;
+   history->ngmi += 1;
 }
 
 /** returns the most recent eff value for the GMI cut produced by this variable */
