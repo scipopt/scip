@@ -16375,7 +16375,7 @@ SCIP_Real SCIPvarGetAvgGMIScore(
    {
       case SCIP_VARSTATUS_ORIGINAL:
          if( var->data.original.transvar == NULL )
-            return SCIPhistoryGetLastGMIeff(stat->glbhistory);
+            return 0.0;
          else
             return SCIPvarGetAvgGMIScore(var->data.original.transvar, stat);
       
@@ -16416,11 +16416,10 @@ SCIP_RETCODE SCIPvarIncGMIeffSum(
    switch( SCIPvarGetStatus(var) )
    {
       case SCIP_VARSTATUS_ORIGINAL:
-         if( var->data.original.transvar == NULL )
-            SCIPhistoryIncGMIeffSum(stat->glbhistory, gmieff);
-         else
+         if( var->data.original.transvar != NULL )
             SCIPvarIncGMIeffSum(var->data.original.transvar, stat, gmieff);
          return SCIP_OKAY;
+         
       
       case SCIP_VARSTATUS_LOOSE:
       case SCIP_VARSTATUS_COLUMN:
@@ -16446,6 +16445,7 @@ SCIP_RETCODE SCIPvarIncGMIeffSum(
          SCIPABORT();
          return SCIP_INVALIDDATA; /*lint !e527*/
    }
+   return SCIP_OKAY;
 }
 
 /** returns the variable's last GMI efficacy score value generated from a simplex tableau row of this variable */
@@ -16460,10 +16460,9 @@ SCIP_Real SCIPvarGetLastGMIScore(
    switch( SCIPvarGetStatus(var) )
    {
       case SCIP_VARSTATUS_ORIGINAL:
-         if( var->data.original.transvar == NULL )
-            return SCIPhistoryGetLastGMIeff(stat->glbhistory);
-         else
+         if( var->data.original.transvar != NULL )
             return SCIPvarGetLastGMIScore(var->data.original.transvar, stat);
+         return 0.0;
       
       case SCIP_VARSTATUS_LOOSE:
       case SCIP_VARSTATUS_COLUMN:
@@ -16503,9 +16502,7 @@ SCIP_RETCODE SCIPvarSetLastGMIScore(
    switch( SCIPvarGetStatus(var) )
    {
       case SCIP_VARSTATUS_ORIGINAL:
-         if( var->data.original.transvar == NULL )
-            SCIPhistorySetLastGMIeff(stat->glbhistory, gmieff);
-         else
+         if( var->data.original.transvar != NULL )
             SCIPvarSetLastGMIScore(var->data.original.transvar, stat, gmieff);
          return SCIP_OKAY;
       

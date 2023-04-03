@@ -1517,7 +1517,7 @@ SCIP_RETCODE SCIPvarIncGMIeffSum(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_Real             gmieff              /**< efficacy of last GMI cut produced when variable was frac and basic */
-);
+   );
 
 /** returns the variable's last GMI efficacy score value generated from a simplex tableau row of this variable */
 SCIP_Real SCIPvarGetLastGMIScore(
