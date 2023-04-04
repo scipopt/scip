@@ -216,7 +216,7 @@ if __name__ == "__main__":
 
 
     if args.miplib:
-        for seed in range(3):
+        for seed in range(1):  # only 1 seed!!
             testsets = [
                 base_path_unified / check_folder / pathlib.Path("testset/miplib_benchmark_symmetries.test")
             ]
