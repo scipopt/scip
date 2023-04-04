@@ -234,13 +234,13 @@ if __name__ == "__main__":
             # Unified runs
             bin_path = base_path_unified / pathlib.Path("bin/scip")
             settings = [
-                base_path_master / pathlib.Path("settings/perf_dyno.set"),
-                base_path_master / pathlib.Path("settings/perf_dynof.set"),
-                base_path_master / pathlib.Path("settings/perf_dyns.set"),
-                base_path_master / pathlib.Path("settings/perf_dynofo.set"),
-                base_path_master / pathlib.Path("settings/perf_dynos.set"),
-                base_path_master / pathlib.Path("settings/perf_dynofs.set"),
-                base_path_master / pathlib.Path("settings/perf_dynofos.set")
+                base_path_unified / pathlib.Path("settings/perf_dyno.set"),
+                base_path_unified / pathlib.Path("settings/perf_dynof.set"),
+                base_path_unified / pathlib.Path("settings/perf_dyns.set"),
+                base_path_unified / pathlib.Path("settings/perf_dynofo.set"),
+                base_path_unified / pathlib.Path("settings/perf_dynos.set"),
+                base_path_unified / pathlib.Path("settings/perf_dynofs.set"),
+                base_path_unified / pathlib.Path("settings/perf_dynofos.set")
             ]
             extend_configurations(configurations, bin_path, settings, testsets, seed)
 
