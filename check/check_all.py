@@ -134,6 +134,8 @@ if __name__ == "__main__":
     parser.add_argument("--covering_designs", type=bool, action=argparse.BooleanOptionalAction)
     parser.add_argument("--miplib", type=bool, action=argparse.BooleanOptionalAction)
     parser.add_argument("--minlplib", type=bool, action=argparse.BooleanOptionalAction)
+    parser.add_argument("--split_num", type=int, default=1, help="split the configurations over multiple runs")
+    parser.add_argument("--split_id", type=int, default=0, help="split ids are from 0 to split_num")
     args = parser.parse_args()
 
     check_folder = pathlib.Path("check/")
@@ -214,15 +216,50 @@ if __name__ == "__main__":
 
 
     if args.miplib:
-        raise NotImplementedError()
+        for seed in range(3):
+            testsets = [
+                base_path_unified / check_folder / pathlib.Path("testset/miplib_benchmark_symmetries.test")
+            ]
+
+            # Master runs
+            bin_path = base_path_master / pathlib.Path("bin/scip")
+            settings = [
+                base_path_master / pathlib.Path("settings/perf_nosym.set"),
+                base_path_master / pathlib.Path("settings/perf_us1.set"),
+                base_path_master / pathlib.Path("settings/perf_us2.set"),
+                base_path_master / pathlib.Path("settings/perf_us3.set")
+            ]
+            extend_configurations(configurations, bin_path, settings, testsets, seed)
+
+            # Unified runs
+            bin_path = base_path_unified / pathlib.Path("bin/scip")
+            settings = [
+                base_path_master / pathlib.Path("settings/perf_dyno.set"),
+                base_path_master / pathlib.Path("settings/perf_dynof.set"),
+                base_path_master / pathlib.Path("settings/perf_dyns.set"),
+                base_path_master / pathlib.Path("settings/perf_dynofo.set"),
+                base_path_master / pathlib.Path("settings/perf_dynos.set"),
+                base_path_master / pathlib.Path("settings/perf_dynofs.set"),
+                base_path_master / pathlib.Path("settings/perf_dynofos.set")
+            ]
+            extend_configurations(configurations, bin_path, settings, testsets, seed)
+
 
     if args.minlplib:
         raise NotImplementedError()
+
+    # Split-run configuration. We run only for configurations[k::nruns] for k in range(nruns).
+    if args.split_num != 1:
+        assert args.split_num > 1, "Can only split in positive numbers"
+        assert 0 <= args.split_id < args.split_num, "Split ID not in range"
+        print(f"# Splitting configurations. ID {args.split_id}/{args.split_num}")
+        configurations = list(configurations[args.split_id::args.split_num])
 
     # print configuration list
     print("# Configurations")
     for conf in configurations:
         print(conf)
+    print(f"Number: {len(configurations)}")
     print()
 
     if __is_local:
