@@ -5,7 +5,7 @@
 #SBATCH --cpus-per-task=4
 #SBATCH --cpu-freq=highm1
 #SBATCH --partition=thin
-#SBATCH --time=7-00:00:00
+#SBATCH --time=5-00:00:00
 
 source ${HOME}/load_modules.sh
 source ${HOME}/python-venv/bin/activate
