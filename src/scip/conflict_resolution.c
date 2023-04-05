@@ -2425,7 +2425,7 @@ SCIP_RETCODE createAndAddResolutionCons(
          cons = upgdcons;
       }
    }
-   /* chck if the constraint is valid for the dubug solution */
+   /* chck if the constraint is valid for the debug solution */
    SCIP_CALL( SCIPdebugCheckConss(set->scip, &cons, 1) );
 
 
@@ -2435,6 +2435,7 @@ SCIP_RETCODE createAndAddResolutionCons(
       SCIP_CALL( updateStatistics(conflict, transprob, blkmem, set, stat, resolutionset, resolutionset->validdepth) );
 
    /* add conflict to SCIP */
+   cons->resconflict = TRUE;
    /* todo add different conflict types for the different cases */
    SCIP_CALL( SCIPaddConflict(set->scip, tree->path[insertdepth], cons, tree->path[resolutionset->validdepth], SCIP_CONFTYPE_RESOLUTION, conflict->resolutionset->usescutoffbound) );
    *success = TRUE;
