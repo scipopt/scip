@@ -240,7 +240,8 @@ struct SCIP_Set
    SCIP_Bool             conf_usegeneralres; /**< should generalized resolution conflict analysis be used? */
    SCIP_Bool             conf_clausegenres;  /**< should the clause version of generalized resolution conflict analysis be used? */
    char                  conf_useinflp;      /**< should infeasible LP conflict analysis be used?
-                                              *   ('o'ff, 'c'onflict graph, 'd'ual ray, 'b'oth conflict graph and dual ray)
+                                              *   ('o'ff, 'c'onflict graph, 'd'ual ray, 'b'oth conflict graph and dual ray, 'g'eneralized resolution
+                                              and dual ray)
                                               */
    char                  conf_useboundlp;    /**< should bound exceeding LP conflict analysis be used?
                                               *   ('o'ff, 'c'onflict graph, 'd'ual ray, 'b'oth conflict graph and dual ray)

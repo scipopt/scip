@@ -456,7 +456,6 @@ SCIP_Bool hasRelaxationOnlyVar(
    assert(resolutionset != NULL);
 
    vars = SCIPprobGetVars(prob);
-   /* loop over resolution set */
    for( i = 0; i < resolutionset->nnz; ++i )
    {
       SCIP_VAR* var;
@@ -486,7 +485,6 @@ SCIP_Bool isBinaryResolutionSet(
    assert(resolutionset != NULL);
 
    vars = SCIPprobGetVars(prob);
-   /* loop over resolution set */
    for( i = 0; i < resolutionset->nnz; ++i )
    {
       SCIP_VAR* var;
@@ -500,12 +498,7 @@ SCIP_Bool isBinaryResolutionSet(
    return TRUE;
 }
 
-/** perform Normalized Chvatal-Gomory with a divisor d on a constraint: \sum_i \alpha_i x_i \geq b, \] where $\alpha_i , b \in R$
- *   where $x_k$ is a binary variable with positive coefficient $d = \alpha_k > 0$
- *   The CG Cut for $C$ with divisor $d$ is given by
- *   \[\sum_{i \in a_i \ge 0} ceil(\frac{\alpha_i}{d}} x_i + \sum_{j \in a_j < 0} floor(\frac{\alpha_j}{d}) x_j
- *     \geq ceil(\frac{b}{d} - \sum_{j \in a_j < 0}\frac{\alpha_j}{d}) +   \sum_{j \in a_j < 0} floor(\frac{\alpha_j}{d}) ,\]
- */
+/** perform Normalized Chvatal-Gomory with a divisor d > 0 on a constraint */
 static
 SCIP_RETCODE ChvatalGomoryLhs(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -551,9 +544,6 @@ SCIP_RETCODE ChvatalGomoryLhs(
          resolutionset->vals[i] = SCIPsetFloor(set, newcoef);
       }
    }
-   /** new lhs: $ceil(\frac{b}{d} - \sum_{j \in a_j < 0}\frac{\alpha_j}{d}) +
-    *  \sum_{j \in a_j < 0} floor(\frac{\alpha_j}{d}) $
-    */
    resolutionset->lhs = SCIPsetCeil(set, resolutionset->lhs / divisor - negcoefsum) + negcoeffloorsum;
 
    /* remove variables with zero coefficient. Loop backwards */
@@ -686,7 +676,7 @@ SCIP_RETCODE StrongerMirLhs(
         }
         else
         {
-           newcoef = -SCIPsetFloor(set, -coef) + (1 - fraccoef) / fraclhs;
+           newcoef = -SCIPsetFloor(set, -coef) - (1 - fraccoef) / fraclhs;
 
            resolutionset->vals[i] = newcoef;
            deltanewlhs += newcoef;
@@ -1019,7 +1009,6 @@ SCIP_RETCODE updateStatistics(
          SCIP_Real bound;
 
          assert(stat != NULL);
-
 
          var = vars[resolutionset->inds[i]];
          /* todo atm this does not work for general MIP */
@@ -3112,7 +3101,6 @@ SCIP_RETCODE rescaleAndResolve(
       }
       else if (reasonresolutionset->inds[i] == resolvedresolutionset->inds[cidx])
       {
-         /* @todo quadprecision when adding coefficients? */
          resolvedresolutionset->vals[cidx] = resolvedresolutionset->vals[cidx] + scale * reasonresolutionset->vals[i];
          cidx++;
          i++;
@@ -3411,12 +3399,10 @@ SCIP_RETCODE StrongerDivisionBasedReduction(
 
    if( SCIPsetIsGE(set, resolutionslack, 0.0) )
    {
-      // todo apply complementation for reasonset
-      // todo apply Chvatal-Gomory
       SCIPsetDebugMsg(set, "Apply Stronger Normalized Chvatal-Gomory \n");
       if (set->conf_reductiontechnique == 's')
          SCIP_CALL( StrongerChvatalGomoryLhs(set, prob, reasonset, currbdchgidx, idxinreason, coefinreason) );
-      else if(set->conf_reductiontechnique == 'x')
+      else if(set->conf_reductiontechnique == 'r')
          SCIP_CALL( StrongerMirLhs(set, prob, reasonset, currbdchgidx, idxinreason, coefinreason) );
       SCIPsortIntReal(reasonset->inds, reasonset->vals, resolutionsetGetNNzs(reasonset));
       assert(SCIPsetIsZero(set, getSlack(set, prob, reasonset, SCIPbdchginfoGetIdx(currbdchginfo), fixbounds, fixinds)));
@@ -4503,9 +4489,9 @@ SCIP_RETCODE conflictAnalyzeResolution(
                SCIPsetDebugMsg(set, " Applying tightening based reduction with resolving variable <%s>\n", SCIPvarGetName(vartoresolve));
                SCIP_CALL( tighteningBasedReduction(conflict, set, transprob, blkmem, bdchginfo, residx, &nvarsweakened, fixbounds, fixinds, &successresolution ) );
             }
-            else if ( set->conf_reductiontechnique == 's' || set->conf_reductiontechnique == 'x')
+            else if ( set->conf_reductiontechnique == 's' || set->conf_reductiontechnique == 'r')
             {
-               SCIPsetDebugMsg(set, " Applying stronger division based reduction with resolving variable <%s>\n", SCIPvarGetName(vartoresolve));
+               SCIPsetDebugMsg(set, " Applying complementing division based reduction with resolving variable <%s>\n", SCIPvarGetName(vartoresolve));
                SCIP_CALL( StrongerDivisionBasedReduction(conflict, set, transprob, blkmem, bdchginfo, residx, &nvarsweakened, fixbounds, fixinds, &successresolution ) );
             }
             else if ( set->conf_reductiontechnique == 'd' || set->conf_reductiontechnique == 'm' )
