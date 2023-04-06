@@ -4748,6 +4748,13 @@ int SCIPintervalPropagateWeightedSum(
 
       SCIPdebugMessage("child %d: %.20g*x in [%.20g,%.20g]", c, weights[c], childbounds.inf, childbounds.sup);
 
+      if( SCIPintervalIsEmpty(infinity, childbounds) )
+      {
+         *infeasible = TRUE;
+         c = noperands;   /*lint !e850*/
+         goto TERMINATE;
+      }
+
       /* divide by the child coefficient */
       SCIPintervalDivScalar(infinity, &childbounds, childbounds, weights[c]);
 
