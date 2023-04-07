@@ -2642,6 +2642,132 @@ SCIP_Real computeScaleReason(
 
 }
 
+/* get a clause out of the current bound changes */
+static
+SCIP_RETCODE getFinalClause(
+   SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_BDCHGINFO*       currbdchginfo,      /**< bound change to resolve */
+   SCIP_Bool*            success,            /**< pointer to store whether we could find an  initial conflict */
+   SCIP_Real*            fixbounds,          /**< array of fixed bounds */
+   int*                  fixinds             /**< array of indices of fixed variables */
+)
+{
+
+   *success = FALSE;
+   if (!SCIPvarIsBinary(SCIPbdchginfoGetVar(currbdchginfo)) || SCIPsetGetStage(set) != SCIP_STAGE_SOLVING)
+      return SCIP_OKAY;
+   else
+   {
+      SCIP_Bool isbinary;
+      SCIP_Real lhs;
+      int nfixinds;
+      int pos;
+      isbinary = TRUE;
+      lhs = 1.0;
+      nfixinds = 0;
+
+      /** given the set of bound changes that renders infeasibility create a non-good cut
+       *  as initial conflict. E.g. if x = 1, y = 1, and z = 0 leads to infeasibility,
+       *  then the initial conflict constraint is (1 - x) + (1 - y) + z >= 1
+       */
+      for(int i = 0; i < SCIPpqueueNElems(conflict->resbdchgqueue); i++)
+      {
+         SCIP_BDCHGINFO* bdchginfo;
+         bdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueElems(conflict->resbdchgqueue)[i]);
+
+         if( !SCIPvarIsBinary(SCIPbdchginfoGetVar(bdchginfo)) )
+         {
+            isbinary = FALSE;
+            break;
+         }
+         if (SCIPbdchginfoGetNewbound(bdchginfo) >= 0.5)
+            lhs--;
+      }
+      for(int i = 0; i < prob->nvars; i++)
+      {
+         if( fixinds[i] != 0 )
+         {
+            if (fixbounds[i] >= 0.5)
+               lhs--;
+            nfixinds++;
+         }
+      }
+
+      for(int i = 0; i < SCIPpqueueNElems(conflict->resbdchgqueue); i++)
+      {
+         SCIP_BDCHGINFO* bdchginfo;
+         bdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueElems(conflict->resbdchgqueue)[i]);
+
+         if( !SCIPvarIsBinary(SCIPbdchginfoGetVar(bdchginfo)) )
+         {
+            isbinary = FALSE;
+            break;
+         }
+         if (SCIPbdchginfoGetNewbound(bdchginfo) >= 0.5)
+            lhs--;
+      }
+      if( isbinary )
+      {
+         conflict->resolutionset->nnz = SCIPpqueueNElems(conflict->resbdchgqueue) + 1 + nfixinds;
+         conflict->resolutionset->lhs = lhs;
+         conflict->resolutionset->origlhs = lhs;
+         conflict->resolutionset->origrhs = SCIPsetInfinity(set);
+
+         if( conflict->resolutionset->size == 0 )
+         {
+            assert(conflict->resolutionset->vals == NULL);
+            assert(conflict->resolutionset->inds == NULL);
+
+            SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &conflict->resolutionset->vals, conflict->resolutionset->nnz) );
+            SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &conflict->resolutionset->inds, conflict->resolutionset->nnz) );
+            conflict->resolutionset->size = conflict->resolutionset->nnz;
+         }
+
+         else if( conflict->resolutionset->size < conflict->resolutionset->nnz )
+         {
+            SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &conflict->resolutionset->vals, conflict->resolutionset->size, conflict->resolutionset->nnz) );
+            SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &conflict->resolutionset->inds, conflict->resolutionset->size, conflict->resolutionset->nnz) );
+            conflict->resolutionset->size = conflict->resolutionset->nnz;
+         }
+
+         /* for the current bound change */
+         if (SCIPbdchginfoGetNewbound(currbdchginfo) > 0.5)
+         {
+            conflict->resolutionset->vals[0] = -1.0;
+            conflict->resolutionset->lhs -= 1.0;
+         }
+         else
+            conflict->resolutionset->vals[0] = 1.0;
+         conflict->resolutionset->inds[0] = SCIPvarGetProbindex(SCIPbdchginfoGetVar(currbdchginfo));
+         pos = 1;
+
+         for(int i = 0; i < prob->nvars; i++)
+         {
+            if( fixinds[i] != 0 )
+            {
+               conflict->resolutionset->vals[pos] = fixbounds[i] > 0.5 ? -1.0 : 1.0;
+               conflict->resolutionset->inds[pos] = i;
+               pos++;
+            }
+         }
+
+         for( int i = 0; i < SCIPpqueueNElems(conflict->resbdchgqueue); i++ )
+         {
+            SCIP_BDCHGINFO* bdchginfo;
+            bdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueElems(conflict->resbdchgqueue)[i]);
+            conflict->resolutionset->vals[pos] = SCIPbdchginfoGetNewbound(bdchginfo) > 0.5 ? -1.0 : 1.0;
+            conflict->resolutionset->inds[pos] = SCIPvarGetProbindex(SCIPbdchginfoGetVar(bdchginfo));
+            pos++;
+         }
+         *success = TRUE;
+      }
+   }
+   return SCIP_OKAY;
+}
+
 /* get a conflict resolution set from bound changes */
 static
 SCIP_RETCODE getClauseConflictSet(
@@ -4696,7 +4822,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
       if (set->conf_addclausealways && !set->conf_addnonfuip && bdchginfo != NULL)
       {
          SCIP_Bool success;
-         getClauseConflictSet(conflict, blkmem, set, bdchginfo, &success);
+         getFinalClause(conflict, blkmem, transprob, set, bdchginfo, &success, fixbounds, fixinds);
          if ( success &&  conflict->resolutionsets[0]->nnz > conflict->resolutionset->nnz )
             SCIP_CALL( SCIPconflictFlushResolutionSets(conflict, blkmem, set, stat, transprob, origprob, tree, reopt,
                                           lp, cliquetable, conflict->resolutionset, &success) );
