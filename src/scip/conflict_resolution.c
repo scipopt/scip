@@ -4693,6 +4693,20 @@ SCIP_RETCODE conflictAnalyzeResolution(
        */
       nconstoadd = (set->conf_resolutioncons > 0) ? MIN(set->conf_resolutioncons, conflict->nresolutionsets) : conflict->nresolutionsets;
 
+      if (set->conf_addclausealways && !set->conf_addnonfuip && bdchginfo != NULL)
+      {
+         SCIP_Bool success;
+         getClauseConflictSet(conflict, blkmem, set, bdchginfo, &success);
+         if ( success &&  conflict->resolutionsets[0]->nnz > conflict->resolutionset->nnz )
+            SCIP_CALL( SCIPconflictFlushResolutionSets(conflict, blkmem, set, stat, transprob, origprob, tree, reopt,
+                                          lp, cliquetable, conflict->resolutionset, &success) );
+         if( success )
+         {
+            (*nconss)++;
+            conflict->lengthsumperc += conflict->resolutionset->nnz / (SCIP_Real) initialnnzs;
+            (*nconfvars) = resolutionsetGetNNzs(conflict->resolutionset);
+         }
+      }
       for( i = 0; i < nconstoadd; i++ )
       {
          SCIP_RESOLUTIONSET* resolutionset;
