@@ -114,6 +114,20 @@ SCIP_Bool getGMIFromRow(
    SCIP_Real rowlhs;
    SCIP_Real rowact;
    SCIP_Real rowrhsslack;
+   
+   /* The GMI is given by
+    * sum(f_j x_j                  , j in J_I s.t. f_j <= f_0) +
+    * sum((1-f_j)*f_0/(1 - f_0) x_j, j in J_I s.t. f_j  > f_0) +
+    * sum(a_j x_j,                 , j in J_C s.t. a_j >=   0) -
+    * sum(a_j*f_0/(1-f_0) x_j      , j in J_C s.t. a_j  <   0) >= f_0.
+    * where J_I are the integer non-basic variables and J_C are the continuous.
+    * f_0 is the fractional part of lpval
+    * a_j is the j-th coefficient of the tableau row and f_j its fractional part
+    * Note: we create -% <= -f_0 !!
+    * Note: this formula is valid for a problem of the form Ax = b, x>= 0. Since we do not have
+    * such problem structure in general, we have to (implicitly) transform whatever we are given
+    * to that form. Specifically, non-basic variables at their lower bound are shifted so that the lower
+    * bound is 0 and non-basic at their upper bound are complemented. */
 
    /* Clear the memory array of cut coefficients. It may store that of the last computed cut */
    BMSclearMemoryArray(cutcoefs, ncols);
