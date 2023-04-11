@@ -364,9 +364,9 @@ LPIINSTMSG	+=	" -> \"libbliss.*.a\" is the path to the BLISS library, e.g., \"<B
 LPIINSTMSG	+=	" -> \"libbliss.*.so\" is the path to the BLISS library, e.g., \"<BLISS-path>/libbliss.so\""
 endif
 
-SYMOPTIONS	+=	sassy
-ifeq ($(SYM),sassy)
-SYMOBJ		=	symmetry/compute_symmetry_sassy.o
+SYMOPTIONS	+=	sbliss
+ifeq ($(SYM),sbliss)
+SYMOBJ		=	symmetry/compute_symmetry_sassy_bliss.o
 SYMOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(SYMOBJ))
 SYMSRC  	=	$(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.cpp))
 ifeq ($(BLISSEXTERNAL),false)
@@ -413,6 +413,18 @@ LPIINSTMSG	+=	"\n  -> \"nautyinc\" is the path to the Nauty directory, e.g., \"<
 LPIINSTMSG	+=	" -> \"libnauty.*.a\" is the path to the Nauty library, e.g., \"<Nauty-path>/nauty.a\"\n"
 endif
 
+SYMOPTIONS	+=	snauty
+ifeq ($(SYM),snauty)
+FLAGS		+=	-I$(LIBDIR)/include/
+SYMOBJ		=	symmetry/compute_symmetry_sassy_nauty.o
+SYMOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(SYMOBJ))
+SYMSRC  	=	$(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.c))
+ALLSRC		+=	$(SYMSRC)
+SOFTLINKS	+=	$(LIBDIR)/include/nauty
+SOFTLINKS	+=	$(LIBDIR)/static/libnauty.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT)
+LPIINSTMSG	+=	"\n  -> \"nautyinc\" is the path to the Nauty directory, e.g., \"<Nauty-path>\".\n"
+LPIINSTMSG	+=	" -> \"libnauty.*.a\" is the path to the Nauty library, e.g., \"<Nauty-path>/nauty.a\"\n"
+endif
 #-----------------------------------------------------------------------------
 # PaPILO Library
 #-----------------------------------------------------------------------------
@@ -1628,8 +1640,9 @@ ifeq ($(COMP),msvc)
 endif
 endif
 ifneq ($(SYM),bliss)
-ifneq ($(SYM),sassy)
+ifneq ($(SYM),sbliss)
 ifneq ($(SYM),nauty)
+ifneq ($(SYM),snauty)
 ifneq ($(SYM),none)
 		$(error invalid SYM flag selected: SYM=$(SYM). Possible options are: $(SYMOPTIONS))
 endif

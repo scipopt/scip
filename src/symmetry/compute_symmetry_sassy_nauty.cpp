@@ -22,18 +22,18 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   compute_symmetry_sassy.c
- * @brief  interface for symmetry computations to sassy as a preprocessor to bliss
+/**@file   compute_symmetry_sassy_nauty.c
+ * @brief  interface for symmetry computations to sassy as a preprocessor to nauty/traces
  * @author Marc Pfetsch
+ * @author Gioni Mexi
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "compute_symmetry.h"
 
-/* include bliss */
-#include <bliss/defs.hh>
-#include <bliss/graph.hh>
+/* the following determines whether nauty or traces is used: */
+#define NAUTY
 
 /* include sassy */
 #pragma GCC diagnostic ignored "-Wshadow"
@@ -45,7 +45,16 @@
 #pragma GCC diagnostic warning "-Wsign-compare"
 #pragma GCC diagnostic warning "-Wunused-variable"
 #pragma GCC diagnostic warning "-Wshadow"
-#include <sassy/tools/bliss_converter.h>
+
+#ifdef NAUTY
+#include "nauty/nauty.h"
+#include "nauty/naugroup.h"
+#include "nauty/nausparse.h"
+#else
+#include "nauty/traces.h"
+#endif
+
+#include "sassy/tools/nauty_converter.h"
 
 #include "scip/expr_var.h"
 #include "scip/expr_sum.h"
@@ -66,7 +75,6 @@ struct SYMMETRY_Data
    int                   nmaxperms;          /**< maximal number of permutations */
    int                   maxgenerators;      /**< maximal number of generators to be constructed (= 0 if unlimited) */
 };
-
 
 /* ------------------- map for operator types ------------------- */
 
@@ -437,7 +445,14 @@ SCIP_RETCODE determineGraphSize(
          if ( groupByConstraints )
          {
             if ( newinternode )
-            {
+            {   SCIPdebugMsg(scip, "#nodes for variables: %d\n", matrixdata->npermvars);
+   SCIPdebugMsg(scip, "#nodes for rhs: %d\n", matrixdata->nrhscoef);
+   SCIPdebugMsg(scip, "#intermediate nodes for linear constraints: %d\n", *nlinearnodes);
+   SCIPdebugMsg(scip, "#intermediate nodes for nonlinear constraints: %d\n", *nnonlinearnodes);
+   SCIPdebugMsg(scip, "#edges for linear constraints: %d\n", *nlinearedges);
+   SCIPdebugMsg(scip, "#edges for nonlinear constraints: %d\n", *nnonlinearedges);
+
+
                ++(*degrees)[rhsnode];
                ++(*degrees)[internode];
                ++(*nlinearedges);
@@ -1445,13 +1460,13 @@ SCIP_Bool SYMcanComputeSymmetry(void)
 char*
 initStaticSymmetryName( )
 {
-   char* blissname = new char[100];
-#ifdef BLISS_PATCH_PRESENT
-   (void) SCIPsnprintf(blissname, 100, "bliss %sp", bliss::version);
+   char* name = new char[100];
+#ifdef NAUTY
+   (void) SCIPsnprintf(name, 100, "Nauty %s"NAUTYVERSION);
 #else
-   (void) SCIPsnprintf(blissname, 100, "bliss %s", bliss::version);
+   (void) SCIPsnprintf(name, 100, "Traces...");
 #endif
-   return blissname;
+   return name;
 }
 
 /** return name of external program used to compute generators */
@@ -1475,7 +1490,11 @@ const char* SYMsymmetryGetName(void)
 /** return description of external program used to compute generators */
 const char* SYMsymmetryGetDesc(void)
 {
-   return "Computing Graph Automorphisms by T. Junttila and P. Kaski (users.aalto.fi/~tjunttil/bliss/)";
+#ifdef NAUTY
+   return "Computing Graph Automorphism Groups by Brendan D. McKay (https://users.cecs.anu.edu.au/~bdm/nauty/)";
+#else
+   return "Computing Graph Automorphism Groups by Adolfo Piperno (https://pallini.di.uniroma1.it/)";
+#endif
 }
 
 /** return name of additional external program used for computing symmetries */
@@ -1585,64 +1604,36 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    /* call sassy to reduce graph */
    sassy.reduce(&sassygraph, &sassyglue);
 
-   /* create bliss graph */
-   bliss::Graph blissgraph(0);
+   /* first, convert the graph */
+   sparsegraph nauty_graph;
+   DYNALLSTAT(int, lab, lab_sz);
+   DYNALLSTAT(int, ptn, ptn_sz);
+   convert_sassy_to_nauty(&sassygraph, &nauty_graph, &lab, &lab_sz, &ptn, &ptn_sz);
 
-   /* convert sassy to bliss graph */
-   convert_sassy_to_bliss(&sassygraph, &blissgraph);
+   oldtime = SCIPgetSolvingTime(scip);
 
-#ifdef SCIP_OUTPUT
-   blissgraph.write_dot("debug.dot");
-#endif
+   /* call nauty/traces */
+#ifdef NAUTY
+   statsblk stats;
+   DYNALLSTAT(int, orbits, orbits_sz);
+   DYNALLOC1(int,  orbits, orbits_sz, nauty_graph.nv, "malloc");
+   static DEFAULTOPTIONS_SPARSEGRAPH(options);
+   options.schreier = true;
+   options.defaultptn = false;
+   options.userautomproc = sassy::preprocessor::nauty_hook;
 
-#ifdef SCIP_DISABLED_CODE
-   char filename[SCIP_MAXSTRLEN];
-   (void) SCIPsnprintf(filename, SCIP_MAXSTRLEN, "%s.dimacs", SCIPgetProbName(scip));
-   FILE* fp = fopen(filename, "w");
-   if ( fp )
-   {
-      blissgraph.write_dimacs(fp);
-      fclose(fp);
+   if(nauty_graph.nv > 0) {
+      sparsenauty(&nauty_graph, lab, ptn, orbits, &options, &stats, NULL);
    }
+   /* TODO: call traces instead of nauty */
 #endif
 
+   /* clean up */
+   DYNFREE(lab, lab_sz);
+   DYNFREE(ptn, ptn_sz);
+   SG_FREE(nauty_graph);
 
-   /* compute automorphisms */
-   bliss::Stats stats;
-
-   /* Prefer splitting partition cells corresponding to variables over those corresponding
-    * to inequalities. This is because we are only interested in the action
-    * of the automorphism group on the variables, and we need a base for this action */
-   blissgraph.set_splitting_heuristic(bliss::Graph::shs_f);
-   /* disable component recursion as advised by Tommi Junttila from bliss */
-   blissgraph.set_component_recursion(false);
-
-   /* do not use a node limit, but set generator limit */
-#ifdef BLISS_PATCH_PRESENT
-   blissgraph.set_search_limits(0, (unsigned) maxgenerators);
-#endif
-
-#if BLISS_VERSION_MAJOR >= 1 || BLISS_VERSION_MINOR >= 76
-   /* lambda function to have access to stats and terminate the search if maxgenerators are reached */
-   auto term = [&]() {
-      return (stats.get_nof_generators() >= (unsigned) maxgenerators);
-   };
-
-   auto hook = [&](unsigned int n, const unsigned int* aut) {
-      sassy.bliss_hook(n, aut);
-   };
-
-   /* start search */
-   blissgraph.find_automorphisms(stats, hook, term);
-#else
-   /* start search */
-   blissgraph.find_automorphisms(stats, sassy::preprocessor::bliss_hook, (void*) &sassy);
-#endif
    *symcodetime = SCIPgetSolvingTime(scip) - oldtime;
-
-#ifdef SCIP_OUTPUT
-   (void) stats.print(stdout);
-#endif
 
    /* prepare return values */
    if ( data.nperms > 0 )
@@ -1656,9 +1647,9 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
       assert( data.perms == NULL );
       assert( data.nmaxperms == 0 );
    }
-
+   
    /* determine log10 of symmetry group size */
-   *log10groupsize = (SCIP_Real) log10l(stats.get_group_size_approx());
+   *log10groupsize = (SCIP_Real) stats.grpsize2;
 
    return SCIP_OKAY;
 }
