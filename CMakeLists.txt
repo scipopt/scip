@@ -181,6 +181,13 @@ elseif(SYM STREQUAL "nauty")
     message(STATUS "Support SYM: nauty")
     set(sym symmetry/compute_symmetry_nauty.c)
 
+    if(SHARED)
+        set(PIC_FLAG "CFLAGS='-fPIC'")
+    else()
+        set(PIC_FLAG "")
+    endif()
+    file(GLOB files ${CMAKE_CURRENT_SOURCE_DIR}/src/nauty/*)
+
     # add custom command to build the library using configure and make
     add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/lib/libnauty.a
         COMMAND
@@ -188,7 +195,7 @@ elseif(SYM STREQUAL "nauty")
         cd ${CMAKE_CURRENT_BINARY_DIR}/src/nauty &&
         cp ${CMAKE_CURRENT_SOURCE_DIR}/src/nauty/* . &&
         ./configure &&
-        make nauty.a &&
+        make ${PIC_FLAG} nauty.a &&
         cp nauty.a ${CMAKE_CURRENT_BINARY_DIR}/lib/libnauty.a
         DEPENDS ${files})
 
@@ -200,9 +207,18 @@ elseif(SYM STREQUAL "nauty")
         IMPORTED_LOCATION ${CMAKE_CURRENT_BINARY_DIR}/lib/libnauty.a)
 
     set(NAUTY_TARGET libnauty)
-elseif(SYM STREQUAL "snauty")
+    set(SYM_LIBRARIES libnauty)
+    set(SYM_PIC_LIBRARIES libnauty)
+ elseif(SYM STREQUAL "snauty")
     message(STATUS "Support SYM: sassy+nauty")
     set(sym symmetry/compute_symmetry_sassy_nauty.cpp)
+
+    if(SHARED)
+        set(PIC_FLAG "CFLAGS='-fPIC'")
+    else()
+        set(PIC_FLAG "")
+    endif()
+    file(GLOB files ${CMAKE_CURRENT_SOURCE_DIR}/src/nauty/*)
 
     # sassy needs C++-17
     set(CMAKE_CXX_STANDARD 17)
@@ -226,6 +242,8 @@ elseif(SYM STREQUAL "snauty")
         IMPORTED_LOCATION ${CMAKE_CURRENT_BINARY_DIR}/lib/libnauty.a)
 
     set(NAUTY_TARGET libnauty)
+    set(SYM_LIBRARIES libnauty)
+    set(SYM_PIC_LIBRARIES libnauty)
 elseif(SYM STREQUAL "none")
     message(STATUS "Support SYM: OFF")
     set(sym symmetry/compute_symmetry_none.cpp)
