@@ -498,6 +498,38 @@ SCIP_Bool isBinaryResolutionSet(
    return TRUE;
 }
 
+/* Removes a variable with zero coefficient in the resolutionset */
+static
+void resolutionsetRemoveZeroVar(
+   SCIP_RESOLUTIONSET*   resolutionset,      /**< resolution set */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   pos                 /**< position of coefficient in resolutionset */
+   )
+{
+   assert(resolutionset != NULL);
+   assert(pos >= 0 && pos < resolutionset->nnz);
+   assert(SCIPsetIsZero(set, resolutionset->vals[pos]));
+
+   --resolutionset->nnz;
+   resolutionset->vals[pos] = resolutionset->vals[resolutionset->nnz];
+   resolutionset->inds[pos] = resolutionset->inds[resolutionset->nnz];
+}
+
+/* Removes all variables with zero coefficient in the resolutionset */
+static
+void resolutionsetRemoveZeroVars(
+   SCIP_RESOLUTIONSET*   resolutionset,      /**< resolution set */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(resolutionset != NULL);
+   for( int i = resolutionset->nnz - 1; i >= 0; --i )
+   {
+      if( SCIPsetIsZero(set, resolutionset->vals[i]) )
+         resolutionsetRemoveZeroVar(resolutionset, set, i);
+   }
+}
+
 /** perform Normalized Chvatal-Gomory with a divisor d > 0 on a constraint */
 static
 SCIP_RETCODE ChvatalGomoryLhs(
@@ -547,15 +579,91 @@ SCIP_RETCODE ChvatalGomoryLhs(
    resolutionset->lhs = SCIPsetCeil(set, resolutionset->lhs / divisor - negcoefsum) + negcoeffloorsum;
 
    /* remove variables with zero coefficient. Loop backwards */
-   for( int i = resolutionset->nnz - 1; i >= 0; --i )
+   resolutionsetRemoveZeroVars(resolutionset, set);
+   return SCIP_OKAY;
+}
+
+
+/** return the values of variable coefficients in the resolutionset */
+static
+SCIP_Real* resolutionsetGetVals(
+   SCIP_RESOLUTIONSET*   resolutionset       /**< resolution set */
+   )
+{
+   assert(resolutionset != NULL);
+
+   return resolutionset->vals;
+}
+
+/** return the left-hand side of the resolutionset */
+static
+SCIP_Real resolutionsetGetLhs(
+   SCIP_RESOLUTIONSET*   resolutionset       /**< resolution set */
+   )
+{
+   assert(resolutionset != NULL);
+
+   return resolutionset->lhs;
+}
+
+/** returns the number of non zeros in the resolutionset */
+static
+int resolutionsetGetNNzs(
+   SCIP_RESOLUTIONSET*   resolutionset       /**< resolution set */
+   )
+{
+   assert(resolutionset != NULL);
+
+   return resolutionset->nnz;
+}
+
+/* linear combination resolvedresolutionset = resolvedresolutionset + scale * reasonresolutionset */
+static
+SCIP_RETCODE linearCombResolutionSets(
+   SCIP_RESOLUTIONSET*   resolvedresolutionset, /*< resolution set */
+   SCIP_RESOLUTIONSET*   reasonresolutionset,   /*< resolution set */
+   SCIP_Real             scale                  /*< scale factor */
+   )
+{
+   int i;
+   int cidx;
+   int previousnnz;
+
+   i = 0;
+   cidx = 0;
+   previousnnz = resolutionsetGetNNzs(resolvedresolutionset);
+
+   /* add conflict and reason resolution sets */
+   while ( i < resolutionsetGetNNzs(reasonresolutionset) )
    {
-      if( SCIPsetIsZero(set, resolutionset->vals[i]) )
+      if (cidx >= previousnnz)
       {
-         --resolutionset->nnz;
-         resolutionset->inds[i] = resolutionset->inds[resolutionset->nnz];
-         resolutionset->vals[i] = resolutionset->vals[resolutionset->nnz];
+         resolvedresolutionset->inds[resolvedresolutionset->nnz] = reasonresolutionset->inds[i];
+         resolvedresolutionset->vals[resolvedresolutionset->nnz] = scale * reasonresolutionset->vals[i];
+         resolvedresolutionset->nnz++;
+         i++;
+      }
+      else if (reasonresolutionset->inds[i] == resolvedresolutionset->inds[cidx])
+      {
+         resolvedresolutionset->vals[cidx] = resolvedresolutionset->vals[cidx] + scale * reasonresolutionset->vals[i];
+         cidx++;
+         i++;
+      }
+      else if (reasonresolutionset->inds[i] > resolvedresolutionset->inds[cidx])
+      {
+         resolvedresolutionset->vals[cidx] = resolvedresolutionset->vals[cidx];
+         cidx++;
+      }
+      else if (reasonresolutionset->inds[i] < resolvedresolutionset->inds[cidx])
+      {
+         resolvedresolutionset->inds[resolvedresolutionset->nnz] = reasonresolutionset->inds[i];
+         resolvedresolutionset->vals[resolvedresolutionset->nnz] = scale * reasonresolutionset->vals[i];
+         resolvedresolutionset->nnz++;
+         i++;
       }
    }
+   resolvedresolutionset->lhs = resolvedresolutionset->lhs + scale * reasonresolutionset->lhs;
+
    return SCIP_OKAY;
 }
 
@@ -694,17 +802,8 @@ SCIP_RETCODE StrongerMirLhs(
    newlhs = SCIPsetCeil(set, newlhs) + deltanewlhs;
    resolutionset->lhs = newlhs;
 
-
    /* remove variables with zero coefficient. Loop backwards */
-   for( int i = resolutionset->nnz - 1; i >= 0; --i )
-   {
-      if( SCIPsetIsZero(set, resolutionset->vals[i]) )
-      {
-         --resolutionset->nnz;
-         resolutionset->inds[i] = resolutionset->inds[resolutionset->nnz];
-         resolutionset->vals[i] = resolutionset->vals[resolutionset->nnz];
-      }
-   }
+   resolutionsetRemoveZeroVars(resolutionset, set);
 
    return SCIP_OKAY;
 }
@@ -807,15 +906,7 @@ SCIP_RETCODE StrongerChvatalGomoryLhs(
    resolutionset->lhs = newlhs;
 
    /* remove variables with zero coefficient. Loop backwards */
-   for( int i = resolutionset->nnz - 1; i >= 0; --i )
-   {
-      if( SCIPsetIsZero(set, resolutionset->vals[i]) )
-      {
-         --resolutionset->nnz;
-         resolutionset->inds[i] = resolutionset->inds[resolutionset->nnz];
-         resolutionset->vals[i] = resolutionset->vals[resolutionset->nnz];
-      }
-   }
+   resolutionsetRemoveZeroVars(resolutionset, set);
 
    return SCIP_OKAY;
 }
@@ -931,15 +1022,8 @@ SCIP_RETCODE MirLhs(
    resolutionset->lhs += normalizationtermlhs;
 
    /* remove variables with zero coefficient. Loop backwards */
-   for( int i = resolutionset->nnz - 1; i >= 0; --i )
-   {
-      if( SCIPsetIsZero(set, resolutionset->vals[i]) )
-      {
-         --resolutionset->nnz;
-         resolutionset->inds[i] = resolutionset->inds[resolutionset->nnz];
-         resolutionset->vals[i] = resolutionset->vals[resolutionset->nnz];
-      }
-   }
+   resolutionsetRemoveZeroVars(resolutionset, set);
+
    return SCIP_OKAY;
 }
 
@@ -1741,56 +1825,6 @@ SCIP_RETCODE weakenConflict(
    SCIPdebugMessage("weakened %d variables in the conflict resolution set \n", nvarsweakened);
 
    return SCIP_OKAY;
-}
-
-/* Removes a variable with zero coefficient in the resolutionset */
-static
-void resolutionsetRemoveZeroVar(
-   SCIP_RESOLUTIONSET*   resolutionset,      /**< resolution set */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   int                   pos                 /**< position of coefficient in resolutionset */
-   )
-{
-   assert(resolutionset != NULL);
-   assert(pos >= 0 && pos < resolutionset->nnz);
-   assert(SCIPsetIsZero(set, resolutionset->vals[pos]));
-
-   --resolutionset->nnz;
-   resolutionset->vals[pos] = resolutionset->vals[resolutionset->nnz];
-   resolutionset->inds[pos] = resolutionset->inds[resolutionset->nnz];
-}
-
-/** return the values of variable coefficients in the resolutionset */
-static
-SCIP_Real* resolutionsetGetVals(
-   SCIP_RESOLUTIONSET*   resolutionset       /**< resolution set */
-   )
-{
-   assert(resolutionset != NULL);
-
-   return resolutionset->vals;
-}
-
-/** return the left-hand side of the resolutionset */
-static
-SCIP_Real resolutionsetGetLhs(
-   SCIP_RESOLUTIONSET*   resolutionset       /**< resolution set */
-   )
-{
-   assert(resolutionset != NULL);
-
-   return resolutionset->lhs;
-}
-
-/** returns the number of non zeros in the resolutionset */
-static
-int resolutionsetGetNNzs(
-   SCIP_RESOLUTIONSET*   resolutionset       /**< resolution set */
-   )
-{
-   assert(resolutionset != NULL);
-
-   return resolutionset->nnz;
 }
 
 /** returns the quotient of the largest and smallest value in an array */
@@ -2644,7 +2678,7 @@ SCIP_Real computeScaleReason(
 
 /* get a clause out of the current bound changes */
 static
-SCIP_RETCODE getFinalClause(
+SCIP_RETCODE getConflictClause(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_PROB*            prob,               /**< problem data */
@@ -2657,7 +2691,9 @@ SCIP_RETCODE getFinalClause(
 {
 
    *success = FALSE;
-   if (!SCIPvarIsBinary(SCIPbdchginfoGetVar(currbdchginfo)) || SCIPsetGetStage(set) != SCIP_STAGE_SOLVING)
+   if (!SCIPvarIsBinary(SCIPbdchginfoGetVar(currbdchginfo)) ||
+         (SCIPsetGetStage(set) != SCIP_STAGE_SOLVING && SCIPsetGetStage(set) !=
+         SCIP_STAGE_PRESOLVING) )
       return SCIP_OKAY;
    else
    {
@@ -2696,19 +2732,6 @@ SCIP_RETCODE getFinalClause(
          }
       }
 
-      for(int i = 0; i < SCIPpqueueNElems(conflict->resbdchgqueue); i++)
-      {
-         SCIP_BDCHGINFO* bdchginfo;
-         bdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueElems(conflict->resbdchgqueue)[i]);
-
-         if( !SCIPvarIsBinary(SCIPbdchginfoGetVar(bdchginfo)) )
-         {
-            isbinary = FALSE;
-            break;
-         }
-         if (SCIPbdchginfoGetNewbound(bdchginfo) >= 0.5)
-            lhs--;
-      }
       if( isbinary )
       {
          conflict->resolutionset->nnz = SCIPpqueueNElems(conflict->resbdchgqueue) + 1 + nfixinds;
@@ -2780,8 +2803,9 @@ SCIP_RETCODE getClauseConflictSet(
 {
 
    *success = FALSE;
-   /* todo can we apply also conflict analysis in other stages? */
-   if (!SCIPvarIsBinary(SCIPbdchginfoGetVar(currbdchginfo)) || SCIPsetGetStage(set) != SCIP_STAGE_SOLVING)
+   if (!SCIPvarIsBinary(SCIPbdchginfoGetVar(currbdchginfo)) ||
+         (SCIPsetGetStage(set) != SCIP_STAGE_SOLVING && SCIPsetGetStage(set) !=
+         SCIP_STAGE_PRESOLVING) )
    {
       conflict->ncorrectaborts++;
       SCIPsetDebugMsg(set, "Could not obtain an initial conflict set \n");
@@ -3134,13 +3158,13 @@ SCIP_RETCODE getClauseReasonSet(
 /** compute the resolved resolution set conflict + scale * reason */
 static
 SCIP_RETCODE rescaleAndResolve(
-   SCIP_SET*             set,                   /**< global SCIP settings */
-   SCIP_CONFLICT*        conflict,              /**< conflict analysis data */
-   SCIP_RESOLUTIONSET*   reasonresolutionset,   /**< reason resolution set */
-   SCIP_BDCHGINFO*       currbdchginfo,         /**< bound change to resolve */
-   BMS_BLKMEM*           blkmem,                /**< block memory */
-   int                   residx,                /**< index of variable to resolve */
-   SCIP_Bool*            success                /**< apply resolution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
+   SCIP_RESOLUTIONSET*   reasonresolutionset,/**< reason resolution set */
+   SCIP_BDCHGINFO*       currbdchginfo,      /**< bound change to resolve */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   int                   residx,             /**< index of variable to resolve */
+   SCIP_Bool*            success             /**< apply resolution */
    )
 {
    SCIP_RESOLUTIONSET* conflictresolutionset; /**< conflict resolution set */
@@ -3152,8 +3176,6 @@ SCIP_RETCODE rescaleAndResolve(
    SCIP_Real smallestcoef;
 
    int newsize;
-   int cidx;
-   int previousnnz;
    int newnnz;
 
    conflictresolutionset = conflict->resolutionset;
@@ -3164,42 +3186,14 @@ SCIP_RETCODE rescaleAndResolve(
    scale = computeScaleReason(set, conflictresolutionset, reasonresolutionset, residx);
 
    /* if the scale becomes too large we can apply a clause resolution step as last resort */
-   if ( SCIPsetIsGE(set, scale,  set->conf_generalresminmaxquot) )
+   if ( SCIPsetIsGE(set, scale, set->conf_generalresminmaxquot) )
    {
       if( !conflict->haslargecoef )
       {
          conflict->haslargecoef = TRUE;
          conflict->nreslargecoefs++;
       }
-      SCIPsetDebugMsg(set, "Could not resolve because of large scale %f \n", scale);
-      if (set->conf_absoluteweakening)
-      {
-         SCIPsetDebugMsg(set, "-> Apply clause weakening for both conflict and reason");
-
-         SCIP_Bool successclause;
-         SCIP_CALL( getClauseConflictSet(conflict, blkmem, set, currbdchginfo, &successclause) );
-         conflict->resolutionset->slack = -1.0;
-         if( successclause)
-         {
-            SCIPsortIntReal(conflictresolutionset->inds, conflictresolutionset->vals, resolutionsetGetNNzs(conflictresolutionset));
-            /* todo add correct validdepth for local conflicts */
-            SCIP_CALL( getClauseReasonSet(conflict, blkmem,  set, currbdchginfo, SCIPbdchginfoGetRelaxedBound(currbdchginfo), 0, &successclause) );
-            if (successclause)
-            {
-               SCIPsortIntReal(reasonresolutionset->inds, reasonresolutionset->vals, resolutionsetGetNNzs(reasonresolutionset));
-               conflict->reasonset->slack = 0.0;
-            }
-            else
-               return SCIP_OKAY;
-         }
-         else
-            return SCIP_OKAY;
-
-         assert(SCIPsetIsEQ(set, computeScaleReason(set, conflictresolutionset, reasonresolutionset, residx), 1.0));
-         scale = 1.0;
-      }
-      else
-         return SCIP_OKAY;
+      return SCIP_OKAY;
    }
 
    SCIP_CALL( resolutionsetReplace(resolvedresolutionset, blkmem, conflictresolutionset) );
@@ -3212,40 +3206,8 @@ SCIP_RETCODE rescaleAndResolve(
       resolvedresolutionset->size = newsize;
    }
 
-   cidx = 0;
-   previousnnz = resolutionsetGetNNzs(resolvedresolutionset);
-
-   i = 0;
-   /* add conflict and reason resolution sets */
-   while ( i < resolutionsetGetNNzs(reasonresolutionset) )
-   {
-      if (cidx >= previousnnz)
-      {
-         resolvedresolutionset->inds[resolvedresolutionset->nnz] = reasonresolutionset->inds[i];
-         resolvedresolutionset->vals[resolvedresolutionset->nnz] = scale * reasonresolutionset->vals[i];
-         resolvedresolutionset->nnz++;
-         i++;
-      }
-      else if (reasonresolutionset->inds[i] == resolvedresolutionset->inds[cidx])
-      {
-         resolvedresolutionset->vals[cidx] = resolvedresolutionset->vals[cidx] + scale * reasonresolutionset->vals[i];
-         cidx++;
-         i++;
-      }
-      else if (reasonresolutionset->inds[i] > resolvedresolutionset->inds[cidx])
-      {
-         resolvedresolutionset->vals[cidx] = resolvedresolutionset->vals[cidx];
-         cidx++;
-      }
-      else if (reasonresolutionset->inds[i] < resolvedresolutionset->inds[cidx])
-      {
-         resolvedresolutionset->inds[resolvedresolutionset->nnz] = reasonresolutionset->inds[i];
-         resolvedresolutionset->vals[resolvedresolutionset->nnz] = scale * reasonresolutionset->vals[i];
-         resolvedresolutionset->nnz++;
-         i++;
-      }
-   }
-   resolvedresolutionset->lhs = resolvedresolutionset->lhs + scale * reasonresolutionset->lhs;
+   /* add the reason resolution set to the resolved resolution set */
+   linearCombResolutionSets(resolvedresolutionset, reasonresolutionset, scale);
 
    newnnz = resolutionsetGetNNzs(resolvedresolutionset);
 
@@ -3284,7 +3246,56 @@ SCIP_RETCODE rescaleAndResolve(
    return SCIP_OKAY;
 }
 
+/** clause based resolution */
+static
+SCIP_RETCODE resolveClauses(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_BDCHGINFO*       currbdchginfo,      /**< bound change to resolve */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   int                   residx,             /**< index of variable to resolve */
+   SCIP_Real*            fixbounds,          /**< array of fixed bounds */
+   int*                  fixinds,            /**< array of indices of fixed variables */
+   SCIP_Bool*            success             /**< apply resolution */
+   )
+{
+   SCIP_Bool successclause;
 
+   SCIPsetDebugMsg(set, "-> Apply clause weakening for both conflict and reason");
+
+   *success = FALSE;
+
+   /* first construct a conflict clause out of fixed bounds, current bound to
+    * resolve, and bounds in the queue */
+   SCIP_CALL( getConflictClause(conflict, blkmem, prob, set, currbdchginfo, &successclause, fixbounds, fixinds) );
+   if( successclause)
+   {
+      assert(SCIPsetIsRelEQ(set, getSlack(set, prob, conflict->resolutionset, SCIPbdchginfoGetIdx(currbdchginfo), fixbounds, fixinds), -1.0));
+      conflict->resolutionset->slack = -1.0;
+      SCIPsortIntReal(conflict->resolutionset->inds, conflict->resolutionset->vals, resolutionsetGetNNzs(conflict->resolutionset));
+      /* get reason clause by applying reverse propagation */
+      SCIP_CALL( getClauseReasonSet(conflict, blkmem,  set, currbdchginfo, SCIPbdchginfoGetRelaxedBound(currbdchginfo), 0, &successclause) );
+      if (successclause)
+      {
+         assert(SCIPsetIsRelEQ(set, getSlack(set, prob, conflict->reasonset, SCIPbdchginfoGetIdx(currbdchginfo), fixbounds, fixinds), 0.0));
+         SCIPsortIntReal(conflict->reasonset->inds, conflict->reasonset->vals, resolutionsetGetNNzs(conflict->reasonset));
+         conflict->reasonset->slack = 0.0;
+      }
+      else
+         return SCIP_OKAY;
+   }
+   else
+      return SCIP_OKAY;
+
+   SCIP_CALL( linearCombResolutionSets(conflict->resolutionset, conflict->reasonset, 1.0) );
+   resolutionsetRemoveZeroVars(conflict->resolutionset, set);
+   assert(getVarIdxInResolutionset( conflict->resolutionset, residx) < 0);
+
+   *success = TRUE;
+
+   return SCIP_OKAY;
+}
 /** Apply Division based reduction:
  * - Iteratively weaken variables from the resolution set that do not affect the
  *   slack and are not divisible by the .
@@ -3346,7 +3357,7 @@ SCIP_RETCODE DivisionBasedReduction(
    SCIP_CALL( rescaleAndResolve(set, conflict, reasonset, currbdchginfo, blkmem,
                         residx, successresolution) );
 
-   if (!successresolution)
+   if (!(*successresolution))
       return SCIP_OKAY;
 
    /* todo extend Chvatal-Gomory and MIR for constraints with general integer variables */
@@ -3430,7 +3441,7 @@ SCIP_RETCODE DivisionBasedReduction(
                SCIPsetDebugMsg(set, "slack after division: %g \n", reducedreason->slack);
                SCIP_CALL( rescaleAndResolve(set, conflict, reducedreason, currbdchginfo, blkmem, residx, successresolution) );
                SCIPresolutionsetFree(&reducedreason, blkmem);
-               if (!successresolution)
+               if (!(*successresolution))
                   return SCIP_OKAY;
                resolutionslack = getSlack(set, prob, conflict->resolvedresolutionset, currbdchgidx, fixbounds, fixinds);
                break;
@@ -3467,7 +3478,7 @@ SCIP_RETCODE DivisionBasedReduction(
       SCIPsetDebugMsg(set, "slack after division: %g \n", reducedreason->slack);
       SCIP_CALL( rescaleAndResolve(set, conflict, reducedreason, currbdchginfo, blkmem, residx, successresolution) );
       SCIPresolutionsetFree(&reducedreason, blkmem);
-      if (!successresolution)
+      if (!(*successresolution))
          return SCIP_OKAY;
    }
 
@@ -3511,7 +3522,7 @@ SCIP_RETCODE StrongerDivisionBasedReduction(
    SCIP_CALL( rescaleAndResolve(set, conflict, reasonset, currbdchginfo, blkmem,
                         residx, successresolution) );
 
-   if (!successresolution)
+   if (!(*successresolution))
       return SCIP_OKAY;
 
    /* todo extend Chvatal-Gomory and MIR for constraints with general integer variables */
@@ -3594,7 +3605,7 @@ SCIP_RETCODE tighteningBasedReduction(
 
    SCIP_CALL( rescaleAndResolve(set, conflict, reasonset, currbdchginfo, blkmem,
                         residx, successresolution) );
-   if (!successresolution)
+   if (!(*successresolution))
       return SCIP_OKAY;
 
    resolutionslack = getSlack(set, prob, conflict->resolvedresolutionset, currbdchgidx, fixbounds, fixinds);
@@ -3663,7 +3674,7 @@ SCIP_RETCODE tighteningBasedReduction(
                assert(SCIPsetIsLE(set, reasonset->slack, previousslack + EPS));
                SCIP_CALL( rescaleAndResolve(set, conflict, reasonset, currbdchginfo, blkmem,
                                     residx, successresolution) );
-               if (!successresolution)
+               if (!(*successresolution))
                   return SCIP_OKAY;
                resolutionslack = getSlack(set, prob, conflict->resolvedresolutionset, currbdchgidx, fixbounds, fixinds);
                break;
@@ -3694,7 +3705,7 @@ SCIP_RETCODE tighteningBasedReduction(
       assert(SCIPsetIsLE(set, reasonset->slack, previousslack + EPS));
       SCIP_CALL( rescaleAndResolve(set, conflict, reasonset, currbdchginfo, blkmem,
                            residx, successresolution) );
-      if (!successresolution)
+      if (!(*successresolution))
          return SCIP_OKAY;
 
    }
@@ -4629,25 +4640,30 @@ SCIP_RETCODE conflictAnalyzeResolution(
          }
          if (!successresolution)
          {
-            conflict->ncorrectaborts++;
-            goto TERMINATE;
+            resolveClauses(set, conflict, transprob, bdchginfo, blkmem, residx, fixbounds, fixinds, &successresolution);
+            if (!successresolution)
+            {
+               conflict->ncorrectaborts++;
+               goto TERMINATE;
+            }
          }
+         else
+            SCIP_CALL( resolutionsetReplace(conflictresolutionset, blkmem, resolvedresolutionset) );
 
-         if( resolutionsetGetNNzs(resolvedresolutionset) > maxsize )
+
+         if( resolutionsetGetNNzs(conflictresolutionset) > maxsize )
          {
             SCIPsetDebugMsg(set, "Number of nonzeros in conflict is larger than maxsize %d > %d\n",
-                           resolutionsetGetNNzs(resolvedresolutionset), maxsize);
-            SCIPsetDebugMsg(set, "Slack of resolved row before weakening: %f \n", getSlack(set, transprob, resolvedresolutionset, bdchgidx, fixbounds, fixinds));
-            weakenConflict(resolvedresolutionset, set, transprob, bdchgidx, fixbounds, fixinds);
-            if(resolutionsetGetNNzs(resolvedresolutionset) > maxsize)
+                           resolutionsetGetNNzs(conflictresolutionset), maxsize);
+            SCIPsetDebugMsg(set, "Slack of resolved row before weakening: %f \n", getSlack(set, transprob, conflictresolutionset, bdchgidx, fixbounds, fixinds));
+            weakenConflict(conflictresolutionset, set, transprob, bdchgidx, fixbounds, fixinds);
+            if(resolutionsetGetNNzs(conflictresolutionset) > maxsize)
             {
                conflict->nreslongconfs++;
                conflict->ncorrectaborts++;
                goto TERMINATE;
             }
          }
-
-         SCIP_CALL( resolutionsetReplace(conflictresolutionset, blkmem, resolvedresolutionset) );
 
          SCIPstatisticPrintf("ConflictSTAT: %d %d %f %f\n", nressteps, resolutionsetGetNNzs(conflictresolutionset),
                              conflictresolutionset->coefquotient, conflictresolutionset->slack);
@@ -4667,11 +4683,11 @@ SCIP_RETCODE conflictAnalyzeResolution(
          /* check that we fail for a valid reason */
          if (SCIPsetIsGE(set, conflictslack, 0.0))
          {
-            /* todo here we could use graph conflict analysis as last resort */
-            /* todo either remove the member isbinary in the resolution sets or update it */
             if ( set->conf_reductiontechnique == 'o' || !isBinaryResolutionSet(set, transprob, conflictresolutionset))
                conflict->ncorrectaborts++;
-            goto TERMINATE;
+            resolveClauses(set, conflict, transprob, bdchginfo, blkmem, residx, fixbounds, fixinds, &successresolution);
+            if (!successresolution)
+               goto TERMINATE;
          }
 
          nressteps++;
@@ -4822,7 +4838,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
       if (set->conf_addclausealways && !set->conf_addnonfuip && bdchginfo != NULL)
       {
          SCIP_Bool success;
-         getFinalClause(conflict, blkmem, transprob, set, bdchginfo, &success, fixbounds, fixinds);
+         getConflictClause(conflict, blkmem, transprob, set, bdchginfo, &success, fixbounds, fixinds);
          if ( success &&  conflict->resolutionsets[0]->nnz > conflict->resolutionset->nnz )
             SCIP_CALL( SCIPconflictFlushResolutionSets(conflict, blkmem, set, stat, transprob, origprob, tree, reopt,
                                           lp, cliquetable, conflict->resolutionset, &success) );
