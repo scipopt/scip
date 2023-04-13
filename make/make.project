@@ -551,6 +551,11 @@ ifeq ($(SYM),nauty)
 LDFLAGS		+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCC_l)nauty.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
 endif
 
+ifeq ($(SYM),snauty)
+LDFLAGS		+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCC_l)nauty.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
+CXXFLAGS	+=	$(CXX17FLAG)
+endif
+
 #-----------------------------------------------------------------------------
 # PaPILO Library
 #-----------------------------------------------------------------------------

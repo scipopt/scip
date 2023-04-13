@@ -364,8 +364,8 @@ LPIINSTMSG	+=	" -> \"libbliss.*.a\" is the path to the BLISS library, e.g., \"<B
 LPIINSTMSG	+=	" -> \"libbliss.*.so\" is the path to the BLISS library, e.g., \"<BLISS-path>/libbliss.so\""
 endif
 
-SYMOPTIONS	+=	sbliss
-ifeq ($(SYM),sbliss)
+SYMOPTIONS	+=	sassy
+ifeq ($(SYM),sassy)
 SYMOBJ		=	symmetry/compute_symmetry_sassy_bliss.o
 SYMOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(SYMOBJ))
 SYMSRC  	=	$(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.cpp))
@@ -1640,7 +1640,7 @@ ifeq ($(COMP),msvc)
 endif
 endif
 ifneq ($(SYM),bliss)
-ifneq ($(SYM),sbliss)
+ifneq ($(SYM),sassy)
 ifneq ($(SYM),nauty)
 ifneq ($(SYM),snauty)
 ifneq ($(SYM),none)
@@ -1707,7 +1707,7 @@ help:
 		@echo "  - IPOPT=<true|false>: Turns support of IPOPT on or off (default)."
 		@echo "  - LAPACK=<true|false>: Link with Lapack (must be installed on the system)."
 		@echo "  - EXPRINT=<cppad|none>: Use CppAD as expressions interpreter (default) or no expressions interpreter."
-		@echo "  - SYM=<none|bliss|nauty|sassy>: To choose type of symmetry handling."
+		@echo "  - SYM=<none|bliss|nauty|sassy|snauty>: To choose type of symmetry handling."
 		@echo "  - PARASCIP=<true|false>: Build for ParaSCIP (deprecated, use THREADSAFE)."
 		@echo "  - THREADSAFE=<true|false>: Build thread safe."
 		@echo "  - NOBLKMEM=<true|false>: Turn off block memory or on (default)."

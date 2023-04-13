@@ -105,8 +105,8 @@ set_property(CACHE EXPRINT PROPERTY STRINGS none cppad )  #define list of values
 set(LPS spx CACHE STRING "options for LP solver")  #create the variable
 set_property(CACHE LPS PROPERTY STRINGS spx cpx grb xprs clp glop msk qso none )  #define list of values GUI will offer for the variable
 
-set(SYM sbliss CACHE STRING "options for symmetry computation")  #create the variable
-set_property(CACHE SYM PROPERTY STRINGS bliss sbliss nauty snauty none )  #define list of values GUI will offer for the variable
+set(SYM sassy CACHE STRING "options for symmetry computation")  #create the variable
+set_property(CACHE SYM PROPERTY STRINGS bliss sassy nauty snauty none )  #define list of values GUI will offer for the variable
 
 if(NOT (CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo" OR CMAKE_BUILD_TYPE STREQUAL "MinSizeRel"))
     message(FATAL_ERROR "You have not selected a valid CMAKE_BUILD_TYPE. Please select 'Release' or 'Debug'.")
@@ -147,7 +147,7 @@ if(SYM STREQUAL "bliss")
     set(BLISS_TARGET libbliss)
     set(SYM_LIBRARIES libbliss)
     set(SYM_PIC_LIBRARIES libbliss)
-elseif(SYM STREQUAL "sbliss")
+elseif(SYM STREQUAL "sassy")
     message(STATUS "Support SYM: sassy+bliss")
     set(sym symmetry/compute_symmetry_sassy_bliss.cpp)
 
@@ -180,10 +180,10 @@ elseif(SYM STREQUAL "sbliss")
 elseif(SYM STREQUAL "nauty")
     message(STATUS "Support SYM: nauty")
     set(sym symmetry/compute_symmetry_nauty.c)
-    
+
     # add custom command to build the library using configure and make
     add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/lib/libnauty.a
-        COMMAND 
+        COMMAND
         mkdir -p ${CMAKE_CURRENT_BINARY_DIR}/src/nauty &&
         cd ${CMAKE_CURRENT_BINARY_DIR}/src/nauty &&
         cp ${CMAKE_CURRENT_SOURCE_DIR}/src/nauty/* . &&
@@ -191,22 +191,25 @@ elseif(SYM STREQUAL "nauty")
         make nauty.a &&
         cp nauty.a ${CMAKE_CURRENT_BINARY_DIR}/lib/libnauty.a
         DEPENDS ${files})
-    
+
     # add custom target and library target
     add_custom_target(libnauty_target DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/lib/libnauty.a)
     add_library(libnauty STATIC IMPORTED GLOBAL)
     add_dependencies(libnauty libnauty_target)
-    set_target_properties(libnauty PROPERTIES 
+    set_target_properties(libnauty PROPERTIES
         IMPORTED_LOCATION ${CMAKE_CURRENT_BINARY_DIR}/lib/libnauty.a)
 
     set(NAUTY_TARGET libnauty)
 elseif(SYM STREQUAL "snauty")
     message(STATUS "Support SYM: sassy+nauty")
     set(sym symmetry/compute_symmetry_sassy_nauty.cpp)
-    
+
+    # sassy needs C++-17
+    set(CMAKE_CXX_STANDARD 17)
+
     # add custom command to build the library using configure and make
     add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/lib/libnauty.a
-        COMMAND 
+        COMMAND
         mkdir -p ${CMAKE_CURRENT_BINARY_DIR}/src/nauty &&
         cd ${CMAKE_CURRENT_BINARY_DIR}/src/nauty &&
         cp ${CMAKE_CURRENT_SOURCE_DIR}/src/nauty/* . &&
@@ -214,12 +217,12 @@ elseif(SYM STREQUAL "snauty")
         make nauty.a &&
         cp nauty.a ${CMAKE_CURRENT_BINARY_DIR}/lib/libnauty.a
         DEPENDS ${files})
-    
+
     # add custom target and library target
     add_custom_target(libnauty_target DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/lib/libnauty.a)
     add_library(libnauty STATIC IMPORTED GLOBAL)
     add_dependencies(libnauty libnauty_target)
-    set_target_properties(libnauty PROPERTIES 
+    set_target_properties(libnauty PROPERTIES
         IMPORTED_LOCATION ${CMAKE_CURRENT_BINARY_DIR}/lib/libnauty.a)
 
     set(NAUTY_TARGET libnauty)
