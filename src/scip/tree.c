@@ -1865,6 +1865,7 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
       SCIP_CALL(RatCreateBuffer(SCIPbuffer(set->scip), &newboundex));
       RatSetReal(newboundex, newbound);
       SCIPcertificatePrintGlobalBound(set->scip, SCIPgetCertificate(set->scip), var, boundtype, newboundex, SCIPcertificateGetCurrentIndex(SCIPgetCertificate(set->scip)) - 1);
+      SCIPvarChgBdGlobalExact(var, blkmem, set, stat, lp->lpexact, branchcand, eventqueue, cliquetable, newboundex, boundtype);
       RatFreeBuffer(SCIPbuffer(set->scip), &newboundex);
    }
 

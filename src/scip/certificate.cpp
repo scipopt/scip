@@ -18,7 +18,6 @@
  * @author Ambros Gleixner
  * @author Daniel Steffy
  */
-
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 #include <stdio.h>
 #include <assert.h>
@@ -2009,6 +2008,8 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
 
    if( certificate->transfile == NULL )
       return SCIP_OKAY;
+
+   SCIPdebugMessage("Printing dual bound from exact LP. Certificate index %lld \n", certificate->indexcounter);
 
    SCIP_CALL( RatCreateBuffer(set->buffer, &tmp) );
    SCIPlpExactGetObjval(lpexact, set, prob, tmp);

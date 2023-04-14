@@ -6928,6 +6928,7 @@ SCIP_RETCODE SCIPlpExactGetSol(
    int nlpirows;
    int c;
    int r;
+   int j;
 
    assert(lp != NULL);
    //assert(lp->flushed); /* TODO: does that work? The exact LP shouldn't need to be flushed when we're storing for diving */
@@ -7022,14 +7023,6 @@ SCIP_RETCODE SCIPlpExactGetSol(
             (RatIsNegInfinity(lpicols[c]->lb) || !RatIsLT(lpicols[c]->primsol, lpicols[c]->lb))
             && (RatIsInfinity(lpicols[c]->ub) || !RatIsGT(lpicols[c]->primsol, lpicols[c]->ub));
          RatAddProd(primalbound, lpicols[c]->primsol, lpicols[c]->obj);
-      }
-
-      /* if dual feasibility check is disabled, set reduced costs of basic variables to 0 */
-      if( dualfeasible == NULL && lpicols[c]->basisstatus == (unsigned int) SCIP_BASESTAT_BASIC )
-      {
-         RatSetReal(lpicols[c]->redcost, 0.0);
-         if( overwritefplp )
-            lp->fplp->lpicols[c]->redcost = 0;
       }
 
       /* complementary slackness means that if a variable is not at its lower or upper bound, its reduced costs

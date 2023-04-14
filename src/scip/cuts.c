@@ -2760,6 +2760,8 @@ SCIP_RETCODE SCIPaggrRowAddRowSafely(
    SCIP_Real sidevalchg;
    int i;
 
+   *success = TRUE;
+
    /* update local flag */
    aggrrow->local = aggrrow->local || row->local;
 

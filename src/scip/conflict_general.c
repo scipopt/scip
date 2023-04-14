@@ -805,6 +805,7 @@ SCIP_RETCODE addRowToAggrRow(
 
    /* add minimal value to dual row's left hand side: y_i < 0 -> lhs, y_i > 0 -> rhs */
    negated = weight < 0.0;
+   success = TRUE;
    assert( !negated || !SCIPsetIsInfinity(set, -row->lhs) );
    assert( negated || !SCIPsetIsInfinity(set, row->rhs) );
 
