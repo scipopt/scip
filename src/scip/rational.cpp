@@ -734,9 +734,9 @@ void RatDiff(
    if( op1->isinf || op2->isinf )
    {
       op1->isinf ? RatSet(res, op1) : RatNegate(res, op2);
-      if( op1->val.sign() != op2->val.sign() && op1->isinf && op2->isinf )
+      if( op1->val.sign() == op2->val.sign() && op1->isinf && op2->isinf )
       {
-         SCIPerrorMessage("addition of pos and neg infinity not supported \n");
+         SCIPerrorMessage("subtraction of two infinities with same sign not supported \n");
          SCIPABORT();
       }
    }
