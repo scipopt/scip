@@ -700,6 +700,7 @@ SCIP_RETCODE SCIPboundchgApply(
             }
             if( SCIPcertificateShouldTrackBounds(set->scip) )
             {
+               assert( var->exactdata->locdom.lbcertificateidx != -1 || SCIPsetIsInfinity(set, -var->locdom.lb) );
                var->lbchginfos[var->nlbchginfos - 1].oldcertindex = var->exactdata->locdom.lbcertificateidx;
                SCIPcertificateSetLastBoundIndex(set->scip, SCIPgetCertificate(set->scip), boundchg->certificateindex);
             }
@@ -773,6 +774,7 @@ SCIP_RETCODE SCIPboundchgApply(
 
             if( SCIPcertificateShouldTrackBounds(set->scip) )
             {
+               assert( var->exactdata->locdom.ubcertificateidx != -1 || SCIPsetIsInfinity(set, var->locdom.ub) );
                var->ubchginfos[var->nubchginfos - 1].oldcertindex = var->exactdata->locdom.ubcertificateidx;
                SCIPcertificateSetLastBoundIndex(set->scip, SCIPgetCertificate(set->scip), boundchg->certificateindex);
             }
@@ -867,7 +869,8 @@ SCIP_RETCODE SCIPboundchgUndo(
       /* in case certificate is used, set back the certificate line index */
       if ( SCIPcertificateShouldTrackBounds(set->scip) )
       {
-         SCIPcertificateSetLastBoundIndex(set->scip, SCIPgetCertificate(set->scip), var->lbchginfos[var->nlbchginfos].oldcertindex);
+         if (!SCIPsetIsInfinity(set, -var->lbchginfos[var->nlbchginfos].oldbound))
+            SCIPcertificateSetLastBoundIndex(set->scip, SCIPgetCertificate(set->scip), var->lbchginfos[var->nlbchginfos].oldcertindex);
       }
       /* reinstall the previous local bound */
       SCIP_CALL( SCIPvarChgLbLocal(boundchg->var, blkmem, set, stat, lp, branchcand, eventqueue,
@@ -893,7 +896,8 @@ SCIP_RETCODE SCIPboundchgUndo(
 
       if ( SCIPcertificateShouldTrackBounds(set->scip) )
       {
-         SCIPcertificateSetLastBoundIndex(set->scip, SCIPgetCertificate(set->scip), var->ubchginfos[var->nubchginfos].oldcertindex);
+         if (!SCIPsetIsInfinity(set, var->ubchginfos[var->nubchginfos].oldbound))
+            SCIPcertificateSetLastBoundIndex(set->scip, SCIPgetCertificate(set->scip), var->ubchginfos[var->nubchginfos].oldcertindex);
       }
 
       /* reinstall the previous local bound */
