@@ -191,6 +191,8 @@
 #define SCIP_DEFAULT_CONF_FIXANDCONTINUE  FALSE /**< should we fix unresolvable bound changes and continue? */
 #define SCIP_DEFAULT_CONF_ADDNONFUIP      FALSE /**< should we add a conflict even if we stopped before the first UIP? */
 #define SCIP_DEFAULT_CONF_ADDCLAUSEALWAYS FALSE /**< should we add always also the clause? */
+#define SCIP_DEFAULT_CONF_ADDCLAUSEONLY   FALSE /**< should we add only the clause? */
+
 #define SCIP_DEFAULT_CONF_ABSOLUTEWEAKEN  FALSE /**< should we apply absolute weakening if generalized resolution fails? */
 #define SCIP_DEFAULT_CONF_RESPSEUDOOBJ    FALSE /**< should we apply resolution initiated with the violated pseudo-objective? */
 #define SCIP_DEFAULT_CONF_FAVORRESOLUTION  TRUE /**< should we apply graph conflict analysis only when resolution is unsuccessful? */
@@ -1616,6 +1618,11 @@ SCIP_RETCODE SCIPsetCreate(
          "conflict/addclausealways",
          "should we add always also the clause?",
          &(*set)->conf_addclausealways, TRUE, SCIP_DEFAULT_CONF_ADDCLAUSEALWAYS,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "conflict/addclauseonly",
+         "should we add only the clause?",
+         &(*set)->conf_addclauseonly, TRUE, SCIP_DEFAULT_CONF_ADDCLAUSEONLY,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "conflict/absoluteweakening",

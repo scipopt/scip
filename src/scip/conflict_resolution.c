@@ -2692,8 +2692,7 @@ SCIP_RETCODE getConflictClause(
 
    *success = FALSE;
    if (!SCIPvarIsBinary(SCIPbdchginfoGetVar(currbdchginfo)) ||
-         (SCIPsetGetStage(set) != SCIP_STAGE_SOLVING && SCIPsetGetStage(set) !=
-         SCIP_STAGE_PRESOLVING) )
+         SCIPsetGetStage(set) != SCIP_STAGE_SOLVING )
       return SCIP_OKAY;
    else
    {
@@ -2804,8 +2803,7 @@ SCIP_RETCODE getClauseConflictSet(
 
    *success = FALSE;
    if (!SCIPvarIsBinary(SCIPbdchginfoGetVar(currbdchginfo)) ||
-         (SCIPsetGetStage(set) != SCIP_STAGE_SOLVING && SCIPsetGetStage(set) !=
-         SCIP_STAGE_PRESOLVING) )
+         SCIPsetGetStage(set) != SCIP_STAGE_SOLVING )
    {
       conflict->ncorrectaborts++;
       SCIPsetDebugMsg(set, "Could not obtain an initial conflict set \n");
@@ -4829,7 +4827,6 @@ SCIP_RETCODE conflictAnalyzeResolution(
    if ( conflict->nresolutionsets > 0 )
    {
       int nconstoadd;
-
       /** add the conflict constraints to the current node
        * (all operations are done only on global constraints -> add conflict constraints to the root node)
        */
@@ -4840,6 +4837,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
          SCIP_Bool success;
          getConflictClause(conflict, blkmem, transprob, set, bdchginfo, &success, fixbounds, fixinds);
          if ( success &&  conflict->resolutionsets[0]->nnz > conflict->resolutionset->nnz )
+         assert(SCIPsetIsRelEQ(set, getSlack(set, transprob, conflict->resolutionset, SCIPbdchginfoGetIdx(bdchginfo), fixbounds, fixinds), -1.0));
             SCIP_CALL( SCIPconflictFlushResolutionSets(conflict, blkmem, set, stat, transprob, origprob, tree, reopt,
                                           lp, cliquetable, conflict->resolutionset, &success) );
          if( success )
@@ -4847,6 +4845,8 @@ SCIP_RETCODE conflictAnalyzeResolution(
             (*nconss)++;
             conflict->lengthsumperc += conflict->resolutionset->nnz / (SCIP_Real) initialnnzs;
             (*nconfvars) = resolutionsetGetNNzs(conflict->resolutionset);
+            if(set->conf_addclauseonly)
+               nconstoadd = 0;
          }
       }
       for( i = 0; i < nconstoadd; i++ )

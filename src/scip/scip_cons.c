@@ -1764,9 +1764,9 @@ SCIP_RETCODE SCIPresetConsAge(
    SCIP_CALL( SCIPcheckStage(scip, "SCIPresetConsAge", FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    /* increase the number of useful conflict constraint */
-   if( SCIPconsIsConflict(cons) && !SCIPconsIsUseful(cons) )
+   if( SCIPconsIsConflict(cons) && !SCIPconsIsUseful(cons) && cons->resconflict)
    {
-      scip->stat->nusefulpropconflicts++;
+      scip->stat->nusefulresconflicts++;
       cons->useful = TRUE;
    }
 

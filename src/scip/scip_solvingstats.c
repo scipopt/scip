@@ -2979,8 +2979,8 @@ void SCIPprintConflictStatistics(
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  generalized res  : %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "%10.1f" "%10.1f""\n",
       SCIPconflictGetNResCalls(scip->conflict),
       SCIPconflictGetNResConflictConss(scip->conflict),
-      scip->stat->nusefulpropconflicts,
-      SCIPconflictGetNResConflictConss(scip->conflict) - scip->stat->nusefulpropconflicts,
+      scip->stat->nusefulresconflicts,
+      SCIPconflictGetNResConflictConss(scip->conflict) - scip->stat->nusefulresconflicts,
       SCIPconflictGetNResLargeCoefs(scip->conflict),
       SCIPconflictGetNResLongConflicts(scip->conflict),
       SCIPconflictGetWeakeningPercentage(scip->conflict),
@@ -2993,7 +2993,7 @@ void SCIPprintConflictStatistics(
       SCIPconflictGetNResCalls(scip->conflict),
       SCIPconflictGetNResSuccess(scip->conflict),
       SCIPconflictGetNResConflictConss(scip->conflict),
-      SCIPconflictGetNResConflictConss(scip->conflict) - scip->stat->nusefulpropconflicts,
+      SCIPconflictGetNResConflictConss(scip->conflict) - scip->stat->nusefulresconflicts,
       SCIPconflictGetNResUnkTerm(scip->conflict)
       );
 

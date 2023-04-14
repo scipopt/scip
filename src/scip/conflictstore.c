@@ -480,13 +480,6 @@ SCIP_RETCODE delPosResConflict(
       assert(transprob != NULL);
       SCIP_CALL( SCIPconsDelete(conflictstore->resconflicts[pos], blkmem, set, stat, transprob, reopt) );
    }
-   if( SCIPconsIsUseful(conflict))
-   {
-      if (conflict->resconflict)
-        stat->nusefulresconflicts++;
-      else if (conflict->conflict)
-        stat->nusefulpropconflicts++;
-   }
 
    SCIP_CALL( SCIPconsRelease(&conflictstore->resconflicts[pos], blkmem, set) );
 
