@@ -423,6 +423,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
    SCIP_Real minfrac;
    SCIP_Real maxfrac;
    SCIP_Real maxcutefficacy;
+   SCIP_Real avgefficacy;
    SCIP_Longint maxdnom;
    SCIP_Bool cutoff;
    SCIP_Bool separatescg;
@@ -437,6 +438,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
    int freq;
    int c;
    int i;
+   int j;
 
    assert(sepa != NULL);
    assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
@@ -612,7 +614,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
       int ninds = -1;
       int cutnnz;
       int cutrank;
-      int j;
 
       if( basisfrac[i] == 0.0 )
          break;
@@ -684,11 +685,19 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
    
    /* Add normalised efficacy GMI statistics to history */
    maxcutefficacy = 0.0;
+   avgefficacy = 0.0;
+   j = 0;
    for( i = 0; i < nrows; ++i )
    {
       if( cutefficacies[i] > maxcutefficacy && colindsproducedcut[i] >= 0 )
+      {
          maxcutefficacy = cutefficacies[i];
+         avgefficacy += cutefficacies[i];
+         j += 1;
+      }
    }
+   if( j >= 1 )
+      SCIPincAvgGMIeff(scip, avgefficacy / (j * maxcutefficacy));
    for( i = 0; i < nrows; ++i )
    {
       if( colindsproducedcut[i] >= 0 && SCIPisEfficacious(scip, cutefficacies[i])  )
