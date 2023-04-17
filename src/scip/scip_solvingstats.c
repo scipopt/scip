@@ -2986,6 +2986,13 @@ void SCIPprintConflictStatistics(
       SCIPconflictGetWeakeningPercentage(scip->conflict),
       SCIPconflictGetLengthGrowthPerc(scip->conflict)
       );
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  clause res       : %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "%10.1f" "%10.1f""\n",
+      SCIPconflictGetNPropCalls(scip->conflict),
+      SCIPconflictGetNPropConflictConss(scip->conflict),
+      scip->stat->nusefulpropconflicts,
+      SCIPconflictGetNPropConflictConss(scip->conflict) - scip->stat->nusefulpropconflicts,
+      (long long) 0,(long long) 0, 100.0, 100.0
+      );
 
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "Resolution CA      :       Time      Calls    Success  Conflicts    Reconvs    Useless      Fails  (pool size: [%s,%s])\n", initstoresize, maxstoresize);
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  resolution prop  : %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "          - %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",

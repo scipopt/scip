@@ -3271,6 +3271,7 @@ SCIP_RETCODE SCIPaddConflict(
    {
       if( conftype != SCIP_CONFTYPE_RESOLUTION )
       {
+         cons->propconflict = TRUE;
          /* add the conflict to the conflict store */
          SCIP_CALL( SCIPconflictstoreAddConflict(scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->tree,
                scip->transprob, scip->reopt, cons, conftype, iscutoffinvolved, primalbound) );

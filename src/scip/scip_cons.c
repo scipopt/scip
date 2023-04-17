@@ -1769,7 +1769,11 @@ SCIP_RETCODE SCIPresetConsAge(
       scip->stat->nusefulresconflicts++;
       cons->useful = TRUE;
    }
-
+   else if( SCIPconsIsConflict(cons) && !SCIPconsIsUseful(cons) && cons->propconflict)
+   {
+      scip->stat->nusefulpropconflicts++;
+      cons->useful = TRUE;
+   }
    SCIP_CALL( SCIPconsResetAge(cons, scip->set) );
 
    return SCIP_OKAY;
