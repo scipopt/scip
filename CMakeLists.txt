@@ -230,7 +230,7 @@ elseif(SYM STREQUAL "nauty")
         cd ${CMAKE_CURRENT_BINARY_DIR}/src/nauty &&
         cp ${CMAKE_CURRENT_SOURCE_DIR}/src/nauty/* . &&
         ./configure &&
-        make nauty.a &&
+        make ${PIC_FLAG} nauty.a &&
         cp nauty.a ${CMAKE_CURRENT_BINARY_DIR}/lib/libnauty.a
         DEPENDS ${files})
 
