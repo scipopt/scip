@@ -95,8 +95,13 @@ SCIP_Real SCIPconflictGetWeakeningPercentage(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
-/** gets the percentage of of length growth compared to the initial conflict */
-SCIP_Real SCIPconflictGetLengthGrowthPerc(
+/** gets the percentage of length growth compared to the initial conflict */
+SCIP_Real SCIPconflictGraphGetLengthGrowthPerc(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
+/** gets the percentage of length growth compared to the initial conflict */
+SCIP_Real SCIPconflictResGetLengthGrowthPerc(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 

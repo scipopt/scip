@@ -3683,6 +3683,7 @@ SCIP_RETCODE conflictAnalyze(
    int nresolutions;
    int lastconsnresolutions;
    int lastconsresoldepth;
+   int initialsize;
 
    assert(conflict != NULL);
    assert(conflict->conflictset != NULL);
@@ -3742,6 +3743,8 @@ SCIP_RETCODE conflictAnalyze(
       lastconsresoldepth = SCIPbdchginfoGetDepth(bdchginfo);
       resolvedepth = SCIPbdchginfoGetDepth(bdchginfo);
    }
+
+   initialsize = SCIPpqueueNElems(conflict->forcedbdchgqueue) + SCIPpqueueNElems(conflict->bdchgqueue) + conflict->conflictset->nbdchginfos;
 
    /* check if the initial reason on debugging solution */
    SCIP_CALL( SCIPdebugCheckConflictFrontier(blkmem, set, tree->path[validdepth], \
@@ -3803,6 +3806,7 @@ SCIP_RETCODE conflictAnalyze(
             lastconsresoldepth = bdchgdepth;
             if( success )
             {
+               conflict->lengthsumperc += (SCIP_Real)nlits / (SCIP_Real) initialsize;
                (*nconss)++;
                (*nliterals) += nlits;
             }
@@ -3912,6 +3916,7 @@ SCIP_RETCODE conflictAnalyze(
       SCIP_CALL( conflictAddConflictset(conflict, blkmem, set, stat, tree, validdepth, diving, TRUE, &success, &nlits) );
       if( success )
       {
+         conflict->lengthsumperc += (SCIP_Real)nlits / (SCIP_Real) initialsize;
          (*nconss)++;
          (*nliterals) += nlits;
       }

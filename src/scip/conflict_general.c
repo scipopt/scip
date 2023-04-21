@@ -570,6 +570,19 @@ SCIP_Longint SCIPconflictGetNPropConflictConss(
    return conflict->npropconfconss;
 }
 
+/** gets the percentage of length growth compared to the initial conflict */
+SCIP_Real SCIPconflictGraphGetLengthGrowthPerc(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   )
+{
+   assert(conflict != NULL);
+   if ( SCIPconflictGetNPropConflictConss(conflict) == 0 )
+      return 0.0;
+   else
+   return 100.0 * conflict->lengthsumperc / SCIPconflictGetNPropConflictConss(conflict);
+}
+
+
 /** gets total number of literals in conflict constraints created in propagation conflict analysis */
 SCIP_Longint SCIPconflictGetNPropConflictLiterals(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
