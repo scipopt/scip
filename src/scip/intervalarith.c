@@ -4748,12 +4748,18 @@ int SCIPintervalPropagateWeightedSum(
 
       SCIPdebugMessage("child %d: %.20g*x in [%.20g,%.20g]", c, weights[c], childbounds.inf, childbounds.sup);
 
+      /* if interval arithmetics works correctly, then childbounds cannot be empty, which is also asserted in SCIPintervalDivScalar below
+       * however, if running under valgrind, then interval arithmetics does not work correctly and thus one may run into an assert in SCIPintervalDivScalar
+       * so this check avoids this by declaring the propagation to result in an empty interval (thus only do if asserts are on)
+       */
+#ifndef NDEBUG
       if( SCIPintervalIsEmpty(infinity, childbounds) )
       {
          *infeasible = TRUE;
          c = noperands;   /*lint !e850*/
          goto TERMINATE;
       }
+#endif
 
       /* divide by the child coefficient */
       SCIPintervalDivScalar(infinity, &childbounds, childbounds, weights[c]);
