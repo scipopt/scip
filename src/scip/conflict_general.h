@@ -257,6 +257,11 @@ SCIP_Longint SCIPconflictGetNPropConflictLiterals(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
+/** gets total number of variables in resolution conflict constraints created in propagation conflict analysis */
+SCIP_Longint SCIPconflictGetNResConflictVars(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
 /** gets number of reconvergence constraints detected in propagation conflict analysis */
 SCIP_Longint SCIPconflictGetNPropReconvergenceConss(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
