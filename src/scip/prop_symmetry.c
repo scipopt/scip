@@ -228,7 +228,6 @@
 #define ISSYMRETOPESACTIVE(x)      (((unsigned) x & SYM_HANDLETYPE_SYMBREAK) != 0)
 #define ISORBITALREDUCTIONACTIVE(x) (((unsigned) x & SYM_HANDLETYPE_ORBITALREDUCTION) != 0)
 #define ISSSTACTIVE(x)             (((unsigned) x & SYM_HANDLETYPE_SST) != 0)
-#define ISSYMDYNAMICACTIVE(x)      (((unsigned) x & SYM_HANDLETYPE_DYNAMIC) != 0)
 
 #define ISSSTBINACTIVE(x)          (((unsigned) x & SCIP_SSTTYPE_BINARY) != 0)
 #define ISSSTINTACTIVE(x)          (((unsigned) x & SCIP_SSTTYPE_INTEGER) != 0)
@@ -2828,7 +2827,7 @@ SCIP_Bool testSymmetryComputationRequired(
       return TRUE;
 
    /* for dynamic symmetry handling or orbital reduction, branching must be possible */
-   if ( ISSYMDYNAMICACTIVE(propdata->usesymmetry) || ISORBITALREDUCTIONACTIVE(propdata->usesymmetry) )
+   if ( propdata->usedynamicprop || ISORBITALREDUCTIONACTIVE(propdata->usesymmetry) )
    {
       /* @todo a proper test whether variables can be branched on or not */
       if ( SCIPgetNBinVars(scip) > 0 )
@@ -5101,7 +5100,7 @@ SCIP_RETCODE detectOrbitopes(
          SCIP_CALL( SCIPsortOrbitope(scip, orbitopevaridx, vars, nbincyclescomp, npermsincomponent + 1) );
 
          SCIP_CALL( SCIPcreateConsOrbitope(scip, &cons, name, vars, SCIP_ORBITOPETYPE_FULL,
-               nbincyclescomp, npermsincomponent + 1, propdata->usedynamicprop, FALSE, FALSE, FALSE,
+               nbincyclescomp, npermsincomponent + 1, propdata->usedynamicprop /* @todo disable */, FALSE, FALSE, FALSE,
                propdata->conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
          SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -6685,7 +6684,7 @@ SCIP_RETCODE tryAddOrbitopesDynamic(
 
    assert( scip != NULL );
    assert( propdata != NULL );
-   assert( ISSYMDYNAMICACTIVE(propdata->usesymmetry) );
+   assert( propdata->usedynamicprop );
    assert( ISSYMRETOPESACTIVE(propdata->usesymmetry) );
    assert( propdata->detectorbitopes );
    assert( propdata->nperms > 0 );
@@ -6766,7 +6765,7 @@ SCIP_RETCODE tryAddOrbitopesDynamic(
             propdata->permvars, propdata->npermvars, componentperms[0], &success) );
          if ( success )
          {
-            propdata->componentblocked[c] |= SYM_HANDLETYPE_SYMBREAK | SYM_HANDLETYPE_DYNAMIC;
+            propdata->componentblocked[c] |= SYM_HANDLETYPE_SYMBREAK;
             ++propdata->ncompblocked;
             goto CLEARITERATIONORBITOPEDETECTED;
          }
@@ -6853,7 +6852,7 @@ SCIP_RETCODE tryAddOrbitopesDynamic(
          if ( success )
          {
             /* mark component as blocked */
-            propdata->componentblocked[c] |= SYM_HANDLETYPE_SYMBREAK | SYM_HANDLETYPE_DYNAMIC;
+            propdata->componentblocked[c] |= SYM_HANDLETYPE_SYMBREAK;
             ++propdata->ncompblocked;
          }
 
@@ -7152,15 +7151,14 @@ SCIP_RETCODE tryAddOrbitalRedLexRed(
    assert( ISORBITALREDUCTIONACTIVE(propdata->usesymmetry)
       || (
          ISSYMRETOPESACTIVE(propdata->usesymmetry)
-         && ISSYMDYNAMICACTIVE(propdata->usesymmetry)
+         && propdata->usedynamicprop
          && propdata->addsymresacks
       ) );
    assert( propdata->nperms > 0 );
 
    /* in this function orbital reduction or dynamic lexicographic reduction propagation must be enabled */
    checkorbired = ISORBITALREDUCTIONACTIVE(propdata->usesymmetry);
-   checklexred = ISSYMRETOPESACTIVE(propdata->usesymmetry) && ISSYMDYNAMICACTIVE(propdata->usesymmetry)
-      && propdata->addsymresacks;
+   checklexred = ISSYMRETOPESACTIVE(propdata->usesymmetry) && propdata->usedynamicprop && propdata->addsymresacks;
    assert( checkorbired || checklexred );
 
    SCIP_CALL( ensureSymmetryComponentsComputed(scip, propdata) );
@@ -7223,7 +7221,7 @@ SCIP_RETCODE tryAddOrbitalRedLexRed(
             SCIP_CALL( SCIPlexicographicReductionAddPermutation(scip, propdata->lexreddata,
                propdata->permvars, propdata->npermvars, componentperms[p], &success) );
             if ( success )
-               propdata->componentblocked[c] |= SYM_HANDLETYPE_SYMBREAK | SYM_HANDLETYPE_DYNAMIC;
+               propdata->componentblocked[c] |= SYM_HANDLETYPE_SYMBREAK;
          }
       }
 
@@ -7239,7 +7237,29 @@ SCIP_RETCODE tryAddOrbitalRedLexRed(
 }
 
 
-/** finds problem symmetries */
+/** determines problem symmetries and activates symmetry handling methods
+  *
+  * The symmetry group is partitioned in independent components whose product is the full problem symmetry group.
+  * For each component, we handle the symmetries as follows:
+  * 1. If orbitope detection is enabled and the component is an orbitope: Apply one of the following:
+  *   1.1. If dynamic symmetry handling methods are used:
+  *     1.1.1. If the orbitope has a single row, add linear constraints x_1 >= x_2 ... >= x_n.
+  *     1.1.2. If it has only two columns only, use lexicographic reduction; cf. symmetry_lexred.c
+  *     1.1.3. If there are at least 3 binary rows with packing-partitioning constraints,
+  *       use a static packing-partitioning orbitopal fixing; cf. cons_orbitope.c
+  *       @todo make a dynamic adaptation for packing-partitioning orbitopes.
+  *     1.1.4. If none of these standard cases apply, use dynamic orbitopal reduction; cf. symmetry_orbitopal.c
+  *   1.2. If static symmetry handling methods are used: Use static orbitopal fixing (binary variables only);
+  *     cf. cons_orbitope.c
+  * 2. Otherwise, if orbital reduction is enabled, or if dynamic methods are enabled and lexicographic reduction
+  *     propagations can be applied:
+  *   2.1. If orbital reduction is enabled: Use orbital reduction.
+  *   2.2. And, if dynamic methods and lexicographic for single permutations reduction are enabled, use that.
+  * 3. Otherwise, use static symmetry handling methods as follows:
+  *   3.1. If (orbitopal) subgroup detection is enabled, detect those and add orbitopes if necessary.
+  *   3.2. If possible, use SST cuts.
+  *   3.3. If possible, add symresacks (lexicographic reduction on binary variables using a static ordering).
+  */
 static
 SCIP_RETCODE tryAddSymmetryHandlingMethods(
    SCIP*                 scip,               /**< SCIP instance */
@@ -7315,37 +7335,36 @@ SCIP_RETCODE tryAddSymmetryHandlingMethods(
       return SCIP_OKAY;
 
 
-   /* dynamic orbitopal reduction */
-   if ( ISSYMDYNAMICACTIVE(propdata->usesymmetry) && ISSYMRETOPESACTIVE(propdata->usesymmetry)
-      && propdata->detectorbitopes )
+   /* orbitopal reduction */
+   if ( ISSYMRETOPESACTIVE(propdata->usesymmetry) && propdata->detectorbitopes )
    {
-      SCIP_CALL( tryAddOrbitopesDynamic(scip, propdata) );
-      if ( SCIPisStopped(scip) )
-         return SCIP_OKAY;
-   }
+      /* dynamic propagation */
+      if ( propdata->usedynamicprop )
+      {
+         SCIP_CALL( tryAddOrbitopesDynamic(scip, propdata) );
+         if ( SCIPisStopped(scip) )
+            return SCIP_OKAY;
+      }
+      /* static variant only for binary variables */
+      else if ( propdata->binvaraffected )
+      {
+         assert( (propdata->genorbconss == NULL) == (propdata->ngenorbconss == 0) );
+         assert( propdata->ngenorbconss >= 0 );
+         assert( propdata->ngenorbconss <= propdata->genorbconsssize );
+         SCIP_CALL( ensureSymmetryComponentsComputed(scip, propdata) );
+         SCIP_CALL( detectOrbitopes(scip, propdata, propdata->components, propdata->componentbegins,
+            propdata->ncomponents) );
 
-
-   /* static orbitopal fixing, this only works on binary variables */
-   if ( !ISSYMDYNAMICACTIVE(propdata->usesymmetry) && ISSYMRETOPESACTIVE(propdata->usesymmetry)
-      && propdata->detectorbitopes && propdata->binvaraffected )
-   {
-      assert( (propdata->genorbconss == NULL) == (propdata->ngenorbconss == 0) );
-      assert( propdata->ngenorbconss >= 0 );
-      assert( propdata->ngenorbconss <= propdata->genorbconsssize );
-      SCIP_CALL( ensureSymmetryComponentsComputed(scip, propdata) );
-      SCIP_CALL( detectOrbitopes(scip, propdata, propdata->components, propdata->componentbegins,
-         propdata->ncomponents) );
-
-      /* possibly stop */
-      if ( SCIPisStopped(scip) )
-         return SCIP_OKAY;
+         /* possibly stop */
+         if ( SCIPisStopped(scip) )
+            return SCIP_OKAY;
+      }
    }
 
 
    /* orbital reduction and (compatable) dynamic lexicographic reduction propagation */
    if ( ISORBITALREDUCTIONACTIVE(propdata->usesymmetry)
-         || ( ISSYMRETOPESACTIVE(propdata->usesymmetry) && ISSYMDYNAMICACTIVE(propdata->usesymmetry)
-            && propdata->addsymresacks ) )
+         || ( ISSYMRETOPESACTIVE(propdata->usesymmetry) && propdata->usedynamicprop && propdata->addsymresacks ) )
    {
       SCIP_CALL( tryAddOrbitalRedLexRed(scip, propdata) );
       if ( SCIPisStopped(scip) )
@@ -7561,6 +7580,9 @@ SCIP_DECL_PROPPRESOL(propPresolSymmetry)
 {  /*lint --e{715}*/
    SCIP_PROPDATA* propdata;
    int i;
+   int noldngenconns;
+   int nchanges;
+   SCIP_Bool earlyterm;
 
    assert( scip != NULL );
    assert( prop != NULL );
@@ -7574,9 +7596,6 @@ SCIP_DECL_PROPPRESOL(propPresolSymmetry)
    assert( propdata->usesymmetry >= 0 );
 
    /* possibly create symmetry handling constraints */
-   int noldngenconns;
-   int nchanges;
-   SCIP_Bool earlyterm;
 
    /* skip presolving if we are not at the end if addconsstiming == 2 */
    assert( 0 <= propdata->addconsstiming && propdata->addconsstiming <= SYM_COMPUTETIMING_AFTERPRESOL );
@@ -8027,7 +8046,7 @@ SCIP_RETCODE SCIPincludePropSymmetry(
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "propagating/" PROP_NAME "/usedynamicprop",
-         "whether dynamic propagation should be used for full orbitope constraint handler",
+         "whether dynamified symmetry handling constraint methods should be used",
          &propdata->usedynamicprop, TRUE, DEFAULT_USEDYNAMICPROP, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,

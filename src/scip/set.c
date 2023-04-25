@@ -2044,11 +2044,17 @@ SCIP_RETCODE SCIPsetCreate(
 
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "misc/usesymmetry",
-         "bitset describing used symmetry handling technique (0: off; 1: polyhedral (orbitopes and/or symresacks);" \
-         " 2: orbital fixing; 3: orbitopes and orbital fixing; 4: Schreier Sims cuts; 5: Schreier Sims cuts and " \
-         "orbitopes); 6: Schreier Sims cuts and orbital fixing; 7: Schreier Sims cuts, orbitopes, and orbital " \
-         "fixing, see type_symmetry.h.",
-         &(*set)->misc_usesymmetry, FALSE, SCIP_DEFAULT_MISC_USESYMMETRY, 0, 15,
+         "bitset describing used symmetry handling technique: " \
+         "(0: off; " \
+         "1: constraint-based (orbitopes and/or symresacks); " \
+         "2: orbital fixing; " \
+         "3: orbitopes and orbital fixing; " \
+         "4: Schreier Sims cuts; " \
+         "5: Schreier Sims cuts and orbitopes; " \
+         "6: Schreier Sims cuts and orbital fixing; " \
+         "7: Schreier Sims cuts, orbitopes, and orbital fixing) " \
+         "See type_symmetry.h.",
+         &(*set)->misc_usesymmetry, FALSE, SCIP_DEFAULT_MISC_USESYMMETRY, 0, 7,
          paramChgdUsesymmetry, NULL) );
 
    /* randomization parameters */
