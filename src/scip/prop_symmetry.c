@@ -200,7 +200,6 @@
 
 /* default parameters for symmetry computation */
 #define DEFAULT_SYMCOMPTIMING           2    /**< timing of symmetry computation (0 = before presolving, 1 = during presolving, 2 = at first call) */
-#define DEFAULT_PERFORMPRESOLVING   FALSE    /**< Run symmetry propagation during presolving? */
 #define DEFAULT_RECOMPUTERESTART        0    /**< Recompute symmetries after a restart has occurred? (0 = never, 1 = always, 2 = if symmetry reduction found) */
 
 /* default parameters for Schreier Sims constraints */
@@ -308,7 +307,6 @@ struct SCIP_PropData
    SCIP_Bool             preferlessrows;     /**< Shall orbitopes with less rows be preferred in detection? */
 
    /* data necessary for symmetry computation order */
-   SCIP_Bool             performpresolving;  /**< Run symmetry propagation during presolving? */
    int                   recomputerestart;   /**< Recompute symmetries after a restart has occured? (0 = never, 1 = always, 2 = if symmetry reduction found) */
    int                   symcomptiming;      /**< timing for computation symmetries (0 = before presolving, 1 = during presolving, 2 = at first call) */
    int                   lastrestart;        /**< last restart for which symmetries have been computed */
@@ -7682,47 +7680,6 @@ SCIP_DECL_PROPPRESOL(propPresolSymmetry)
       }
    }
 
-   /* run dynamic symmetry handling presolving */
-   if ( ISORBITALREDUCTIONACTIVE(propdata->usesymmetry) )
-   {
-      assert( 0 <= propdata->symcomptiming && propdata->symcomptiming <= SYM_COMPUTETIMING_AFTERPRESOL );
-      if ( propdata->performpresolving && propdata->symcomptiming <= SYM_COMPUTETIMING_DURINGPRESOL )
-      {
-         SCIP_Bool infeasible;
-         int nprop;
-         SCIP_Bool didrun;
-
-         /* if we have not tried to add symmetry handling constraints */
-         if ( *result == SCIP_DIDNOTRUN )
-            *result = SCIP_DIDNOTFIND;
-
-         SCIPdebugMsg(scip, "Presolving <%s>.\n", PROP_NAME);
-
-         SCIP_CALL( propagateSymmetry(scip, propdata, &infeasible, &nprop, &didrun) );
-
-         if ( infeasible )
-         {
-            *result = SCIP_CUTOFF;
-            propdata->symfoundreduction = TRUE;
-         }
-         else if ( nprop > 0 )
-         {
-            *result = SCIP_SUCCESS;
-            *nfixedvars += nprop;
-            propdata->symfoundreduction = TRUE;
-         }
-         else if ( didrun && *result == SCIP_DIDNOTRUN )
-         {
-            *result = SCIP_DIDNOTFIND;
-         }
-      }
-      else if ( propdata->symcomptiming == SYM_COMPUTETIMING_DURINGPRESOL )
-      {
-         /* otherwise compute symmetry early if timing requests it; fix non-binary potential branching variables */
-         SCIP_CALL( determineSymmetry(scip, propdata, SYM_SPEC_BINARY | SYM_SPEC_INTEGER | SYM_SPEC_REAL, 0) );
-      }
-   }
-
    return SCIP_OKAY;
 }
 
@@ -8013,11 +7970,6 @@ SCIP_RETCODE SCIPincludePropSymmetry(
          "propagating/" PROP_NAME "/ofsymcomptiming",
          "timing of symmetry computation (0 = before presolving, 1 = during presolving, 2 = at first call)",
          &propdata->symcomptiming, TRUE, DEFAULT_SYMCOMPTIMING, 0, 2, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "propagating/" PROP_NAME "/performpresolving",
-         "run orbital reduction during presolving?",
-         &propdata->performpresolving, TRUE, DEFAULT_PERFORMPRESOLVING, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
          "propagating/" PROP_NAME "/recomputerestart",
