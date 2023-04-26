@@ -3115,7 +3115,7 @@ SCIP_RETCODE treeSwitchPath(
    assert(forkdepth <= focusnodedepth);
    assert(forkdepth < tree->pathlen);
 
-   /* delay events in path switching */
+   /* delay events in node deactivations */
    SCIP_CALL( SCIPeventqueueDelay(eventqueue) );
 
    /* undo the domain and constraint set changes of the old active path by deactivating the path's nodes */
@@ -3127,6 +3127,9 @@ SCIP_RETCODE treeSwitchPath(
 
    /* apply the pending bound changes */
    SCIP_CALL( treeApplyPendingBdchgs(tree, reopt, blkmem, set, stat, transprob, origprob, lp, branchcand, eventqueue, cliquetable) );
+
+   /* process the delayed events */
+   SCIP_CALL( SCIPeventqueueProcess(eventqueue, blkmem, set, primal, lp, branchcand, eventfilter) );
 
    /* create the new active path */
    SCIP_CALL( treeEnsurePathMem(tree, set, focusnodedepth+1) );
@@ -3164,6 +3167,9 @@ SCIP_RETCODE treeSwitchPath(
       SCIP_CALL( SCIPdomchgApplyGlobal(tree->path[tree->appliedeffectiverootdepth]->domchg, blkmem, set, stat, lp,
             branchcand, eventqueue, cliquetable, cutoff) );
    }
+
+   /* delay events in node activations */
+   SCIP_CALL( SCIPeventqueueDelay(eventqueue) );
 
    /* fork might be cut off when applying the pending bound changes */
    if( fork != NULL && fork->cutoff )
