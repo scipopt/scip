@@ -1816,14 +1816,14 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoPerspective)
             SCIP_CALL( SCIPnlhdlrEstimate(scip, conshdlr, nlhdlr2, expr,
                   nlhdlr2exprdata, soladj,
                   nlhdlr2auxvalue, overestimate, SCIPgetSolVal(scip, solcopy, auxvar),
-                  addbranchscores, rowpreps2, &success2, &addedbranchscores2j) );
+                  FALSE, rowpreps2, &success2, &addedbranchscores2j) );
          }
          else
          {
             SCIP_CALL( SCIPnlhdlrEstimate(scip, conshdlr, nlhdlr2, expr,
                   nlhdlr2exprdata, solcopy,
                   nlhdlr2auxvalue, overestimate, SCIPgetSolVal(scip, solcopy, auxvar),
-                  addbranchscores, rowpreps2, &success2, &addedbranchscores2j) );
+                  FALSE, rowpreps2, &success2, &addedbranchscores2j) );
          }
 
          minidx = SCIPgetPtrarrayMinIdx(scip, rowpreps2);
@@ -1932,7 +1932,7 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoPerspective)
          (void) strcat(SCIProwprepGetName(rowprep), SCIPvarGetName(indicator));
 
          SCIP_CALL( SCIPprocessRowprepNonlinear(scip, nlhdlr, cons, expr, rowprep, overestimate, auxvar, auxvalue,
-               allowweakcuts, SCIPgetBoolarrayVal(scip, addedbranchscores2, r), addbranchscores, solcopy, &resultr) );
+               allowweakcuts, SCIPgetBoolarrayVal(scip, addedbranchscores2, r), FALSE, solcopy, &resultr) );
 
          if( resultr == SCIP_SEPARATED )
             *result = SCIP_SEPARATED;
