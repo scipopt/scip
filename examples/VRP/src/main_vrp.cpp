@@ -28,8 +28,8 @@
  * @author Marc Pfetsch
  *
  * We want to solve the vehicle routing problem on a graph \f$G = (V,E)\f$ with
- * \f$V = J \cup {d}\f$, where d is the depot and the distances are given by the
- * length function \f$l_e: E -> R_{\geq 0}\f$.
+ * \f$V = J \cup \{d\}\f$, where d is the depot and the distances are given by the
+ * length function \f$l_e: E \rightarrow R_{\geq 0}\f$.
  *
  * Consider the MIP formulation
  *
@@ -46,7 +46,7 @@
  * \f]
  *
  * where \f$T_k\f$ is the set of tours visiting at most k customers
- * with repetitions of customers allowed and \f$a^{t_e}\f$ (\f$a^{t_j}\f$) counts how often
+ * with repetitions of customers allowed and \f$a^t_e\f$ (\f$a^t_j\f$) counts how often
  * edge e (node j) is traversed in \f$t \in T_k\f$.
  *
  * Examples and the file format are given at https://neo.lcc.uma.es/vrp/vrp-instances/capacitated-vrp-instances/.
