@@ -5133,6 +5133,7 @@ SCIP_RETCODE SCIPlpiGetState(
    assert(lpi->grbmodel != NULL);
    assert(lpistate != NULL);
 
+   // so no basis information for barrier methods
    /* if there is no basis information available, no state can be saved */
    if( !lpi->solisbasic )
    {
@@ -5388,6 +5389,7 @@ SCIP_RETCODE SCIPlpiGetNorms(
 
    *lpinorms = NULL;
 
+   // this is very helpful to know
    /* if there is no basis information available (e.g. after barrier without crossover), norms cannot be saved */
    if( !lpi->solisbasic )
       return SCIP_OKAY;

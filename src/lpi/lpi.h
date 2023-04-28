@@ -810,6 +810,7 @@ SCIP_RETCODE SCIPlpiGetRealSolQuality(
 /**@name LP Basis Methods */
 /**@{ */
 
+// Need to figure out how this interacts with a barrier method.
 /** gets current basis status for columns and rows; arrays must be large enough to store the basis status */
 SCIP_EXPORT
 SCIP_RETCODE SCIPlpiGetBase(

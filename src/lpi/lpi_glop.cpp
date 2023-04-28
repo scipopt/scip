@@ -2086,6 +2086,7 @@ SCIP_RETCODE SCIPlpiGetSol(
       if ( primsol != NULL )
          primsol[i] = lpi->scaler->UnscaleVariableValue(col, lpi->solver->GetVariableValue(col));
 
+      // I think SCIPlpiGetSol is important to implement
       if ( redcost != NULL )
          redcost[i] = lpi->scaler->UnscaleReducedCost(col, lpi->solver->GetReducedCost(col));
    }

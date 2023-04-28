@@ -40,6 +40,7 @@ set(CPACK_PACKAGE_VERSION_PATCH "${SCIP_VERSION_PATCH}")
 set(CPACK_PACKAGE_VENDOR "Zuse Institute Berlin")
 set(CPACK_PACKAGE_CONTACT "http://scipopt.org")
 include(CPack)
+include(FetchContent)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/lib)
@@ -464,6 +465,26 @@ elseif(LPS STREQUAL "xprs")
     find_package(XPRESS REQUIRED)
 elseif(LPS STREQUAL "msk")
     find_package(MOSEK REQUIRED)
+elseif(LPS STREQUAL "pdlp")
+    set(BUILD_absl ON CACHE STRING "")
+    set(BUILD_Protobuf ON CACHE STRING "")
+    set(BUILD_re2 ON CACHE STRING "")
+    set(BUILD_Eigen3 ON CACHE STRING "")
+    set(USE_COINOR OFF CACHE STRING "")
+    set(USE_SCIP OFF CACHE STRING "")
+    set(BUILD_CXX_DOC OFF CACHE STRING "")
+    FetchContent_Declare(
+      or-tools
+      GIT_REPOSITORY https://github.com/galv/or-tools.git
+      GIT_TAG        43f4a85eacf638866211d01b4db2bff81ccc79d0
+    )
+    FetchContent_MakeAvailable(or-tools)
+
+    # For my personal development:
+    # Do this if we need to modify or-tools for whatever reason.
+    # add_subdirectory("/Users/danielgalvez/Desktop/School/Spring2023/CVXOPT/project/or-tools/" "_deps/or-tools-local")
+    # TODO
+    # find_package( REQUIRED)
 elseif(LPS STREQUAL "none")
     set(lpi lpi/lpi_none.c)
 else()
