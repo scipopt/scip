@@ -26,6 +26,54 @@
  * @ingroup OTHER_CFILES
  * @brief  methods for handling orbitopal symmetries
  * @author Jasper van Doornmalen
+ *
+ * This implements orbitopal reducion, which generalizes full orbitope propagation to work for non-binary variable
+ * domains, and is dynamified. See cons_orbitope.c for the variant for binary variables, both the static and partially
+ * dynamic variant.
+ * Just as in orbital reduction (cf. symmetry_orbital.c), the variable order is chosen as the variables
+ * branched on from the root node to the focus node.
+ *
+ * See Section 4.2, Example 12 and Section 5.1 in [vD,H]:@n
+ * J. van Doornmalen, C. Hojny, "A Unified Framework for Symmetry Handling", preprint, 2023,
+ * https://doi.org/10.48550/arXiv.2211.01295.
+ *
+ * Orbitopal reduction can be used to handle symmetries of the following type.
+ * If the variables can be arranged in a matrix and the symmetries correspond to all column permutations of this matrix,
+ * then these symmetries are called orbitopal.
+ * Symmetry is completely handled by enforcing that the columns are lexicographically decreasing.
+ * If a reduction on a variable is applied, and if this variable is high up in the variable matrix, then this has a
+ * relatively large impact on the lexicographic ordering. Moreover, the ordering of the columns also matter.
+ * Dynamification allows for choosing a custom ordering of a subset of rows and a permutation of the columns.
+ * For every node, we maintain the ordered subset of rows and the column order.
+ * The root node assumes no rows and an arbitrary column order (we choose the identity).
+ * If towards a new node it is branched on a variable, that appears in a row which is not included in the subset of
+ * rows for the current node, then the row set of the new children is the ordered row set of the current node, appended
+ * by this new row.
+ * For the column order, if at the current node columns are symmetrically equivalent, then these can be permuted for
+ * the sake of symmetry handling. In the implementation, we only swap the column containing the branching variable
+ * with a symmetrically equivalent column elsewhere. We use one of the following heuristics:
+ *
+ * - None: Keep the column-order as-is.
+ * - First: Permute such that the column containing the branching variable is in the symmetrically equivalent column
+ *   with minimal index.
+ * - Last: The same, but to the symmetrically equivalent column with maximal index.
+ * - Centre: The same, but to the symmetrically equivalent column closest to to the middlemost column among all columns.
+ * - Median: The same, but to the median of all symmetrically equivalent columns. (This is the default)
+ *
+ * Since the dynamic row and column ordering rule for a branch-and-bound tree node depends on the decisions made up to
+ * that branch-and-bound tree node, we compute and store the row and column order for the branch-and-bound tree children
+ * at the moment of branching. This is done by the eventhandler in this file.
+ * Instead of storing those, we could have chosen to reconstruct this row and column ordering to save memory.
+ * However, we cannot reliably reconstruct this order from the branch-and-bound tree itself,
+ * because the row and column ordering depends on symmetrical equivalence of columns in the orbitope matrix,
+ * and because SCIP can change the tree structure during solving that may re-write historic variable bound changes
+ * (for instance when global variable bound changes are found, or when the root node is moved down the tree to become
+ * the new effective root node).
+ * We are not concerned about storing the row and column ordering, since we only store the mutations with its parent.
+ * These are usually at most one column swap and usually at most one additional row.
+ *
+ * @todo Exploiting packing-partitioning structures
+ * @todo for packing-partitioning rows, use the FIRST column swap heuristic.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

@@ -34,77 +34,41 @@
  * This propagator combines the following symmetry handling functionalities:
  * - It allows to compute symmetries of the problem and to store this information in adequate form. The symmetry
  *   information can be accessed through external functions.
- * - It allows to add the following symmetry breaking constraints:
- *    - symresack constraints, which separate minimal cover inequalities
- *    - orbitope constraints, if special symmetry group structures are detected
- * - It allows to apply orbital fixing.
+ * - It implements various methods to handle the symmetries:
+ *    - orbital reduction, which generalizes orbital fixing. See symmetry_orbital.c
+ *    - (dynamic) orbitopal reduction, which generalizes (dynamic) orbital fixing. See symmetry_orbitopal.c
+ *    - static orbitopal fixing (for binary variable domains) for full orbitopes. See cons_orbitope.c
+ *    - static orbitopal fixing (for binary variable domains) for packing-partitioning orbitopes. See cons_orbitope.c
+ *    - (dynamic) lexicographic reduction. See symmetry_lexred.c
+ *    - static lexicographic fixing for binary variable domains (i.e., symresack propagation). See cons_symresack.c
+ *    - static lexicographic fixing for binary variable domains on involutions (i.e., orbisacks). See cons_orbisack.c
+ *    - Symmetry breaking inequalities based on the Schreier-Sims Table (i.e., SST cuts).
+ *    - Strong and weak symmetry breaking inequalities.
  *
  *
  * @section SYMCOMP Symmetry Computation
  *
- * The following comments apply to symmetry computation.
- *
- * - The generic functionality of the compute_symmetry.h interface is used.
- * - We treat implicit integer variables as if they were continuous/real variables. The reason is that there is currently
- *   no distinction between implicit integer and implicit binary. Moreover, currently implicit integer variables hurt
- *   our code more than continuous/real variables (we basically do not handle integral variables at all).
- * - We do not copy symmetry information, since it is not clear how this information transfers. Moreover, copying
- *   symmetry might inhibit heuristics. But note that solving a sub-SCIP might then happen without symmetry information!
+ * The generic functionality of the compute_symmetry.h interface is used.
+ * We do not copy symmetry information, since it is not clear how this information transfers. Moreover, copying
+ * symmetry might inhibit heuristics. But note that solving a sub-SCIP might then happen without symmetry information!
  *
  *
- * @section SYMBREAK Symmetry Handling Constraints
+ * @section SYMBREAK Symmetry handling by the (unified) symmetry handling constraints
  *
- * The following comments apply to adding symmetry handling constraints.
+ * Many common methods are captured by a framework that dynamifies symmetry handling constraints. The ideas are
+ * described in@n
+ * J. van Doornmalen, C. Hojny, "A Unified Framework for Symmetry Handling", preprint, 2023,
+ * https://doi.org/10.48550/arXiv.2211.01295.
  *
- * - The code automatically detects whether symmetry substructures like symresacks or orbitopes are present and possibly
- *   adds the corresponding constraints.
- * - If orbital fixing is active, only orbitopes are added (if present) and no symresacks.
- * - We try to compute symmetry as late as possible and then add constraints based on this information.
- * - Currently, we only allocate memory for pointers to symresack constraints for group generators. If further
- *   constraints are considered, we have to reallocate memory.
- *
- *
- * @section OF Orbital Fixing
- *
- * Orbital fixing is implemented as introduced by@n
- * F. Margot: Exploiting orbits in symmetric ILP. Math. Program., 98(1-3):3–21, 2003.
- *
- * The method computes orbits of variables with respect to the subgroup of the symmetry group that stabilizes the
- * variables globally fixed or branched to 1. Then one can fix all variables in an orbit to 0 or 1 if one of the other
- * variables in the orbit is fixed to 0 or 1, respectively. Different from Margot, the subgroup is obtained by filtering
- * out generators that do not individually stabilize the variables branched to 1.
- *
- * @pre All variable fixings applied by other components are required to be strict, i.e., if one variable is fixed to
- *      a certain value v, all other variables in the same variable orbit can be fixed to v as well, c.f.@n
- *      F. Margot: Symmetry in integer linear programming. 50 Years of Integer Programming, 647-686, Springer 2010.
- *
- * To illustrate this, consider the example \f$\max\{x_1 + x_2 : x_1 + x_2 \leq 1, Ay \leq b,
- * (x,y) \in \{0,1\}^{2 + n}\} \f$. Since \f$x_1\f$ and \f$x_2\f$ are independent from the remaining problem, the
- * setppc constraint handler may fix \f$(x_1,x_2) = (1,0)\f$. However, since both variables are symmetric, this setting
- * is not strict (if it was strict, both variables would have been set to the same value) and orbital fixing would
- * declare this subsolution as infeasible (there exists an orbit of non-branching variables that are fixed to different
- * values). To avoid this situation, we have to assume that all non-strict settings fix variables globally, i.e., we
- * can take care of it by taking variables into account that have been globally fixed to 1. In fact, it suffices to
- * consider one kind of global fixings since stabilizing one kind prevents an orbit to contain variables that have
- * been fixed globally to different values.
- *
- * @pre All non-strict settings are global settings, since otherwise, we cannot (efficiently) take care of them.
- *
- * @pre No non-strict setting algorithm is interrupted early (e.g., by a time or iteration limit), since this may lead to
- * wrong decisions by orbital fixing as well. For example, if cons_setppc in the above toy example starts by fixing
- * \f$x_2 = 0\f$ and is interrupted afterwards, orbital fixing detects that the orbit \f$\{x_1, x_2\}\f$ contains
- * one variable that is fixed to 0, and thus, it fixes \f$x_1\f$ to 0 as well. Thus, after these reductions, every
- * feasible solution has objective 0 which is not optimal. This situation would not occur if the non-strict setting is
- * complete, because then \f$x_1\f$ is globally fixed to 1, and thus, is stabilized in orbital fixing.
- *
- * Note that orbital fixing might lead to wrong results if it is called in repropagation of a node, because the path
- * from the node to the root might have been changed. Thus, the stabilizers of global 1-fixing and 1-branchings of the
- * initial propagation and repropagation might differ, which may cause conflicts. For this reason, orbital fixing cannot
- * be called in repropagation.
- *
- * @note If, besides orbital fixing, also symmetry handling constraints shall be added, orbital fixing is only applied
- *       to symmetry components that are not handled by orbitope constraints.
- *
+ * This paper shows that various symmetry handling methods are compatible under certain conditions, and provides
+ * generalizations to common symmetry handling constraints from binary variable domains to arbitrary variable domains.
+ * This includes symresack propagation, orbitopal fixing, and orbital fixing, that are generalized to
+ * lexicographic reduction, orbitopal reduction and orbital reduction, respectively. For a description and
+ * implementation, see symmetry_lexred.c, symmetry_orbitopal.c and symmetry_orbital.c, respectively.
+ * The static counterparts on binary variable domains are cons_symresack.c and cons_orbisack.c for lexicographic
+ * reduction (cf. symresack propagation), and cons_orbitope.c and cons_orbisack.c for orbitopal reduction
+ * (cf. orbitopal fixing). We refer to the description of tryAddSymmetryHandlingMethods for the order in which these
+ * methods are applied.
  *
  * @section SST Cuts derived from the Schreier Sims table
  *
@@ -130,6 +94,7 @@
  * @todo Separate permuted cuts (first experiments not successful)
  * @todo Allow the computation of local symmetries
  * @todo Order rows of orbitopes (in particular packing/partitioning) w.r.t. cliques in conflict graph.
+ * @todo A dynamic variant for packing-partitioning orbitopal structures
  */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_OUTPUT_COMPONENT */

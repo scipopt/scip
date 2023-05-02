@@ -26,6 +26,24 @@
  * @ingroup OTHER_CFILES
  * @brief  methods for handling symmetries by dynamic lexicographic ordering reduction
  * @author Jasper van Doornmalen
+ *
+ * This implements lexicographic reduction, which generalizes symresack propagation to work for non-binary variable
+ * domains, and is dynamified. Whereas static lexicographic reduction propagates that a vector \f$x\f$ is
+ * lexicographically larger than its permuted counterpart (i.e., \f$x \succeq \gamma(x)\f$ with \f$\succeq\f$ being
+ * standard elementwise lexicographic comparison), the dynamic variant determines the variable vector ordering
+ * dynamically. Just as in orbital reduction (cf. symmetry_orbital.c), the variable order is chosen as the variables
+ * branched on from the root node to the focus node.
+ * Thus, in node \f$\beta\f$, we propagate \f$\sigma_\beta(x) \succeq \sigma_\beta(\gamma(x))\f$,
+ * where \f$\sigma_\beta(\cdot)\f$ permutes and restricts the variable vector such that it corresponds to the branched
+ * variables in the order from the rooted path to \f$\beta\f$.
+ *
+ * See Section 4.1 and Example 11 in [vD,H]:@n
+ * J. van Doornmalen, C. Hojny, "A Unified Framework for Symmetry Handling", preprint, 2023,
+ * https://doi.org/10.48550/arXiv.2211.01295.
+ *
+ * For dynamic lexicographic reduction, it is crucial that the vectors \f$\sigma_\beta(x)\f$ are the branching
+ * variables up to node \f$\beta\f$ in the given order. Since SCIP can change the tree structure during solving
+ * (re-writing history), we store the original branching decisions at the moment they are made. See event_shadowtree.c .
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
