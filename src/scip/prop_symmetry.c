@@ -5110,6 +5110,7 @@ SCIP_RETCODE detectOrbitopes(
          ++propdata->norbitopes;
 
          propdata->componentblocked[i] |= SYM_HANDLETYPE_SYMBREAK;
+         ++propdata->ncompblocked;
       }
 
       /* free data structures */
@@ -7340,8 +7341,6 @@ SCIP_RETCODE tryAddSymmetryHandlingMethods(
       if ( propdata->usedynamicprop )
       {
          SCIP_CALL( tryAddOrbitopesDynamic(scip, propdata) );
-         if ( SCIPisStopped(scip) )
-            return SCIP_OKAY;
       }
       /* static variant only for binary variables */
       else if ( propdata->binvaraffected )
@@ -7352,11 +7351,11 @@ SCIP_RETCODE tryAddSymmetryHandlingMethods(
          SCIP_CALL( ensureSymmetryComponentsComputed(scip, propdata) );
          SCIP_CALL( detectOrbitopes(scip, propdata, propdata->components, propdata->componentbegins,
             propdata->ncomponents) );
-
-         /* possibly stop */
-         if ( SCIPisStopped(scip) )
-            return SCIP_OKAY;
       }
+
+      /* possibly terminate early */
+      if ( SCIPisStopped(scip) || (propdata->ncomponents >= 0 && propdata->ncompblocked < propdata->ncomponents) )
+         goto STATISTICS;
    }
 
 
@@ -7365,8 +7364,10 @@ SCIP_RETCODE tryAddSymmetryHandlingMethods(
          || ( ISSYMRETOPESACTIVE(propdata->usesymmetry) && propdata->usedynamicprop && propdata->addsymresacks ) )
    {
       SCIP_CALL( tryAddOrbitalRedLexRed(scip, propdata) );
-      if ( SCIPisStopped(scip) )
-         return SCIP_OKAY;
+
+      /* possibly terminate early */
+      if ( SCIPisStopped(scip) || (propdata->ncomponents >= 0 && propdata->ncompblocked < propdata->ncomponents) )
+         goto STATISTICS;
    }
 
 
@@ -7377,8 +7378,9 @@ SCIP_RETCODE tryAddSymmetryHandlingMethods(
       SCIP_CALL( ensureSymmetryComponentsComputed(scip, propdata) );
       SCIP_CALL( detectAndHandleSubgroups(scip, propdata) );
 
-      if ( SCIPisStopped(scip) )
-         return SCIP_OKAY;
+      /* possibly terminate early */
+      if ( SCIPisStopped(scip) || (propdata->ncomponents >= 0 && propdata->ncompblocked < propdata->ncomponents) )
+         goto STATISTICS;
    }
 
 
@@ -7386,9 +7388,13 @@ SCIP_RETCODE tryAddSymmetryHandlingMethods(
    if ( ISSSTACTIVE(propdata->usesymmetry) )
    {
       SCIP_CALL( addSSTConss(scip, propdata, nchgbds) );
-      /* possibly stop */
-      if ( SCIPisStopped(scip) )
-         return SCIP_OKAY;
+
+      /* possibly terminate early */
+      if ( SCIPisStopped(scip) || (propdata->ncomponents >= 0 && propdata->ncompblocked < propdata->ncomponents) )
+         goto STATISTICS;
+      /* @todo if propdata->addsymresacks, then symresacks can be compatible with SST.
+       * Instead of doing it in the next block, add symresacks for that case within addSSTConss.
+       */
    }
 
 
@@ -7398,10 +7404,12 @@ SCIP_RETCODE tryAddSymmetryHandlingMethods(
       SCIP_CALL( addSymresackConss(scip, prop, propdata->components, propdata->componentbegins,
          propdata->ncomponents) );
 
-      if ( SCIPisStopped(scip) )
-         return SCIP_OKAY;
+      /* possibly terminate early */
+      if ( SCIPisStopped(scip) || (propdata->ncomponents >= 0 && propdata->ncompblocked < propdata->ncomponents) )
+         goto STATISTICS;
    }
 
+STATISTICS:
 #ifdef SYMMETRY_STATISTICS
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "dynamic symmetry handling statistics:\n");
    if ( propdata->orbitopalreddata )
@@ -7415,6 +7423,12 @@ SCIP_RETCODE tryAddSymmetryHandlingMethods(
    if ( propdata->lexreddata )
    {
       SCIP_CALL( SCIPlexicographicReductionPrintStatistics(scip, propdata->lexreddata) );
+   }
+   if ( propdata->ncomponents >= 0 )
+   {
+      assert( propdata->ncompblocked <= propdata->ncomponents );
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Handled %d out of %d symmetry components\n",
+         propdata->ncompblocked, propdata->ncomponents);
    }
 #endif
 
