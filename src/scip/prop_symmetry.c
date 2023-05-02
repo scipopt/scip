@@ -7427,7 +7427,7 @@ STATISTICS:
    if ( propdata->ncomponents >= 0 )
    {
       assert( propdata->ncompblocked <= propdata->ncomponents );
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Handled %d out of %d symmetry components\n",
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "handled %d out of %d symmetry components\n",
          propdata->ncompblocked, propdata->ncomponents);
    }
 #endif
