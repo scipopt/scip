@@ -223,6 +223,9 @@ SCIP_RETCODE lexdataCreate(
       return SCIP_OKAY;
    }
 
+   /* require that the shadowtree is active */
+   SCIP_CALL( SCIPactivateShadowTree(scip, masterdata->shadowtreeeventhdlr) );
+
    /* initialize variable arrays */
    (*lexdata)->nvars = naffectedvariables;
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*lexdata)->vars, (*lexdata)->nvars) );

@@ -39,6 +39,7 @@
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "blockmemshell/memory.h"
+#include "scip/debug.h"
 #include "scip/pub_cons.h"
 #include "scip/pub_message.h"
 #include "scip/pub_var.h"
@@ -83,9 +84,12 @@
 /** wrapper for shadow tree eventhandler data */
 struct SCIP_EventhdlrData
 {
+#ifndef NDEBUG
    SCIP*                 scip;               /**< SCIP data structure */
+#endif
    SCIP_SHADOWTREE*      shadowtree;         /**< Shadow tree structure */
    SCIP_CLOCK*           clock;              /**< clock for measuring time in shadow tree events */
+   SCIP_Bool             active;             /**< whether a shadow tree should be maintained */
 };
 
 
@@ -538,6 +542,10 @@ SCIP_DECL_EVENTINITSOL(eventInitsolShadowTree)
    assert( eventhdlrdata->shadowtree == NULL );
    assert( SCIPisTransformed(scip) );
 
+   /* early termination */
+   if ( !eventhdlrdata->active )
+      return SCIP_OKAY;
+
    SCIP_CALL( SCIPallocBlockMemory(scip, &eventhdlrdata->shadowtree) );
    shadowtree = eventhdlrdata->shadowtree;
 
@@ -586,9 +594,16 @@ SCIP_DECL_EVENTEXITSOL(eventExitsolShadowTree)
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert( eventhdlrdata != NULL );
    assert( eventhdlrdata->scip == scip );
+   assert( SCIPisTransformed(scip) );
+
+   /* early termination */
+   if ( !eventhdlrdata->active )
+   {
+      assert( eventhdlrdata->shadowtree == NULL );
+      return SCIP_OKAY;
+   }
 
    assert( eventhdlrdata->shadowtree != NULL );
-   assert( SCIPisTransformed(scip) );
 
    SCIP_CALL( freeShadowTree(scip, eventhdlrdata->shadowtree) );
    SCIPfreeBlockMemory(scip, &eventhdlrdata->shadowtree);
@@ -616,6 +631,30 @@ SCIP_SHADOWTREE* SCIPgetShadowTree(
 }
 
 
+/** activates shadow tree eventhandler if it is not already activated (which keeps a copy of the tree) */
+SCIP_RETCODE SCIPactivateShadowTree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EVENTHDLR*       eventhdlr           /**< event handler */
+)
+{
+   SCIP_EVENTHDLRDATA* eventhdlrdata;
+   assert( eventhdlr != NULL );
+   assert( strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0 );
+   eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
+   assert( eventhdlrdata != NULL );
+   assert( eventhdlrdata->scip == scip );
+   assert( eventhdlrdata->shadowtree == NULL );
+
+   /* active param may not be changed between (and including) the initsol and exitsol stages */
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPactivateShadowTree", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE,
+      FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   eventhdlrdata->active = TRUE;
+
+   return SCIP_OKAY;
+}
+
+
 /** creates event handler for event */
 SCIP_RETCODE SCIPincludeEventHdlrShadowTree(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -629,8 +668,13 @@ SCIP_RETCODE SCIPincludeEventHdlrShadowTree(
    eventhdlrdata = NULL;
    SCIP_CALL( SCIPallocBlockMemory(scip, &eventhdlrdata) );
 
+#ifndef NDEBUG
    /* only needed for assertions, to check whether we're working with the correct SCIP. */
    eventhdlrdata->scip = scip;
+#endif
+
+   /* shadow tree must be activated */
+   eventhdlrdata->active = FALSE;
 
    /* do not start with a shadow tree by default. Initialize at initsol, remove at exitsol. */
    eventhdlrdata->shadowtree = NULL;

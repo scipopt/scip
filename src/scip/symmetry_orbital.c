@@ -1211,6 +1211,9 @@ SCIP_RETCODE addComponent(
       return SCIP_OKAY;
    }
 
+   /* require that the shadowtree is active */
+   SCIP_CALL( SCIPactivateShadowTree(scip, orbireddata->shadowtreeeventhdlr) );
+
    /* create index-corrected permvars array and the inverse */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &orcdata->permvars, orcdata->npermvars) );
    SCIP_CALL( SCIPhashmapCreate(&orcdata->permvarmap, SCIPblkmem(scip), orcdata->npermvars) );

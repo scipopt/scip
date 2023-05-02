@@ -114,6 +114,13 @@ SCIP_SHADOWTREE* SCIPgetShadowTree(
    SCIP_EVENTHDLR*       eventhdlr           /**< event handler */
 );
 
+/** activates shadow tree eventhandler if it is not already activated (which keeps a copy of the tree) */
+SCIP_EXPORT
+SCIP_RETCODE SCIPactivateShadowTree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EVENTHDLR*       eventhdlr           /**< event handler */
+);
+
 /** creates event handler for event */
 SCIP_EXPORT
 SCIP_RETCODE SCIPincludeEventHdlrShadowTree(
