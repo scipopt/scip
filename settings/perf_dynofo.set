@@ -1,6 +1,7 @@
-misc/usesymmetry = 11
+misc/usesymmetry = 3
 propagating/symmetry/addsymresacks = FALSE
 propagating/symmetry/detectorbitopes = TRUE
 propagating/symmetry/detectsubgroups = FALSE
 propagating/symmetry/enforcecomputesymmetry = TRUE
+propagating/symmetry/usedynamicprop = TRUE
 limits/restarts = 0
