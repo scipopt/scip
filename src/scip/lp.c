@@ -3654,7 +3654,7 @@ SCIP_Bool isNewValueUnreliable(
    SCIP_Real quotient;
 
    assert(set != NULL);
-   assert(oldvalue < SCIP_INVALID);
+   assert(oldvalue != SCIP_INVALID);
 
    quotient = (REALABS(newvalue)+1.0) / (REALABS(oldvalue) + 1.0);
 
@@ -3917,7 +3917,7 @@ SCIP_Real colCalcInternalRedcost(
    {
       row = col->rows[i];
       assert(row != NULL);
-      assert(row->dualsol < SCIP_INVALID);
+      assert(row->dualsol != SCIP_INVALID);
       assert(row->lppos >= 0);
       assert(col->linkpos[i] >= 0);
       redcost -= col->vals[i] * row->dualsol;
@@ -3971,7 +3971,7 @@ SCIP_Real SCIPcolGetRedcost(
       col->validredcostlp = stat->lpcount;
    }
    assert(col->validredcostlp == stat->lpcount);
-   assert(col->redcost < SCIP_INVALID);
+   assert(col->redcost != SCIP_INVALID);
 
    return col->redcost;
 }
@@ -4100,7 +4100,7 @@ SCIP_Real colCalcInternalFarkasCoef(
    {
       row = col->rows[i];
       assert(row != NULL);
-      assert(row->dualfarkas < SCIP_INVALID);
+      assert(row->dualfarkas != SCIP_INVALID);
       assert(row->lppos >= 0);
       assert(col->linkpos[i] >= 0);
       farkas += col->vals[i] * row->dualfarkas;
@@ -4154,7 +4154,7 @@ SCIP_Real SCIPcolGetFarkasCoef(
       col->validfarkaslp = stat->lpcount;
    }
    assert(col->validfarkaslp == stat->lpcount);
-   assert(col->farkascoef < SCIP_INVALID);
+   assert(col->farkascoef != SCIP_INVALID);
 
    return col->farkascoef;
 }
@@ -4336,7 +4336,7 @@ SCIP_RETCODE SCIPcolGetStrongbranch(
    assert(SCIPvarIsIntegral(col->var));
    assert(SCIPvarGetStatus(col->var) == SCIP_VARSTATUS_COLUMN);
    assert(SCIPvarGetCol(col->var) == col);
-   assert(col->primsol < SCIP_INVALID);
+   assert(col->primsol != SCIP_INVALID);
    assert(col->lpipos >= 0);
    assert(col->lppos >= 0);
    assert(set != NULL);
@@ -4455,8 +4455,8 @@ SCIP_RETCODE SCIPcolGetStrongbranch(
       /* stop timing */
       SCIPclockStop(stat->strongbranchtime, set);
    }
-   assert(*lperror || sbdown < SCIP_INVALID);
-   assert(*lperror || sbup < SCIP_INVALID);
+   assert(*lperror || sbdown != SCIP_INVALID);
+   assert(*lperror || sbup != SCIP_INVALID);
 
    if( down != NULL)
       *down = sbdown;
@@ -4559,7 +4559,7 @@ SCIP_RETCODE SCIPcolGetStrongbranches(
       assert(SCIPvarIsIntegral(col->var));
       assert(SCIPvarGetStatus(col->var) == SCIP_VARSTATUS_COLUMN);
       assert(SCIPvarGetCol(col->var) == col);
-      assert(col->primsol < SCIP_INVALID);
+      assert(col->primsol != SCIP_INVALID);
       assert(col->lpipos >= 0);
       assert(col->lppos >= 0);
 
@@ -4652,8 +4652,8 @@ SCIP_RETCODE SCIPcolGetStrongbranches(
          col = subcols[j];
          idx = subidx[j];
 
-         assert( col->sbdown < SCIP_INVALID);
-         assert( col->sbup < SCIP_INVALID);
+         assert( col->sbdown != SCIP_INVALID);
+         assert( col->sbup != SCIP_INVALID);
 
          col->sbdown = MIN(sbdown[j] + looseobjval, lp->cutoffbound);
          col->sbup = MIN(sbup[j] + looseobjval, lp->cutoffbound);
@@ -5609,13 +5609,13 @@ SCIP_RETCODE SCIProwChgConstant(
 
       if( row->validpsactivitydomchg == stat->domchgcount )
       {
-         assert(row->pseudoactivity < SCIP_INVALID);
+         assert(row->pseudoactivity != SCIP_INVALID);
          row->pseudoactivity += constant - row->constant;
       }
       if( row->validactivitybdsdomchg == stat->domchgcount )
       {
-         assert(row->minactivity < SCIP_INVALID);
-         assert(row->maxactivity < SCIP_INVALID);
+         assert(row->minactivity != SCIP_INVALID);
+         assert(row->maxactivity != SCIP_INVALID);
          row->minactivity += constant - row->constant;
          row->maxactivity += constant - row->constant;
       }
@@ -6189,7 +6189,7 @@ void SCIProwRecalcLPActivity(
    {
       col = row->cols[c];
       assert(col != NULL);
-      assert(col->primsol < SCIP_INVALID);
+      assert(col->primsol != SCIP_INVALID);
       assert(col->lppos >= 0);
       assert(row->linkpos[c] >= 0);
       row->activity += row->vals[c] * col->primsol;
@@ -6244,7 +6244,7 @@ SCIP_Real SCIProwGetLPActivity(
    if( row->validactivitylp != stat->lpcount )
       SCIProwRecalcLPActivity(row, stat);
    assert(row->validactivitylp == stat->lpcount);
-   assert(row->activity < SCIP_INVALID);
+   assert(row->activity != SCIP_INVALID);
 
    activity = row->activity;
    inf = SCIPsetInfinity(set);
@@ -6440,7 +6440,7 @@ SCIP_Real SCIProwGetPseudoActivity(
    if( row->validpsactivitydomchg != stat->domchgcount )
       SCIProwRecalcPseudoActivity(row, stat);
    assert(row->validpsactivitydomchg == stat->domchgcount);
-   assert(row->pseudoactivity < SCIP_INVALID);
+   assert(row->pseudoactivity != SCIP_INVALID);
 
    activity = row->pseudoactivity;
    inf = SCIPsetInfinity(set);
@@ -6613,8 +6613,8 @@ SCIP_Real SCIProwGetMinActivity(
    if( row->validactivitybdsdomchg != stat->domchgcount )
       rowCalcActivityBounds(row, set, stat);
    assert(row->validactivitybdsdomchg == stat->domchgcount);
-   assert(row->minactivity < SCIP_INVALID);
-   assert(row->maxactivity < SCIP_INVALID);
+   assert(row->minactivity != SCIP_INVALID);
+   assert(row->maxactivity != SCIP_INVALID);
 
    return row->minactivity;
 }
@@ -6634,8 +6634,8 @@ SCIP_Real SCIProwGetMaxActivity(
    if( row->validactivitybdsdomchg != stat->domchgcount )
       rowCalcActivityBounds(row, set, stat);
    assert(row->validactivitybdsdomchg == stat->domchgcount);
-   assert(row->minactivity < SCIP_INVALID);
-   assert(row->maxactivity < SCIP_INVALID);
+   assert(row->minactivity != SCIP_INVALID);
+   assert(row->maxactivity != SCIP_INVALID);
 
    return row->maxactivity;
 }
@@ -14786,7 +14786,7 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
          assert( col != NULL );
          assert( col->lppos >= 0 );
          assert( row->linkpos[c] >= 0 );
-         assert( primsol[col->lppos] < SCIP_INVALID );
+         assert( primsol[col->lppos] != SCIP_INVALID );
 
          act += row->vals[c] * primsol[col->lppos];
       }
@@ -14855,7 +14855,7 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
          assert( col != NULL );
          assert( col->lppos >= 0 );
          assert( row->linkpos[c] >= 0 );
-         assert( primsol[col->lppos] < SCIP_INVALID );
+         assert( primsol[col->lppos] != SCIP_INVALID );
 
          primact += row->vals[c] * primsol[col->lppos];
          rayact += row->vals[c] * ray[col->lppos];
