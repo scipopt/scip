@@ -14444,6 +14444,17 @@ SCIP_RETCODE SCIPlpGetSol(
    {
       assert( 0 <= cstat[c] && cstat[c] < 4 );
       lpicols[c]->primsol = primsol[c];
+      if( !SCIPisFinite(lpicols[c]->primsol) )
+      {
+         /* calculating with nan or +/-inf can have many unexpected effects
+          * thus change the solution here to a reasonable value (0.0) and declare it as neither primal nor dual feasible
+          * this should trigger a resolve of the LP, or a stop with an LP error
+          */
+         stillprimalfeasible = FALSE;
+         stilldualfeasible = FALSE;
+         lpicols[c]->primsol = 0.0;
+         SCIPsetDebugMsg(set, " col <%s>: primsol=%.9f is not finite\n", SCIPvarGetName(lpicols[c]->var), primsol[c]);
+      }
       lpicols[c]->minprimsol = MIN(lpicols[c]->minprimsol, primsol[c]);
       lpicols[c]->maxprimsol = MAX(lpicols[c]->maxprimsol, primsol[c]);
       lpicols[c]->redcost = redcost[c];
