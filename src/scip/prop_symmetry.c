@@ -7323,8 +7323,11 @@ SCIP_RETCODE tryAddSymmetryHandlingMethods(
       }
 
       /* possibly terminate early */
-      if ( SCIPisStopped(scip) || (propdata->ncomponents >= 0 && propdata->ncompblocked < propdata->ncomponents) )
+      if ( SCIPisStopped(scip) || (propdata->ncomponents >= 0 && propdata->ncompblocked >= propdata->ncomponents) )
+      {
+         assert( propdata->ncomponents >= 0 && propdata->ncompblocked <= propdata->ncomponents );
          goto STATISTICS;
+      }
    }
 
 
@@ -7335,8 +7338,11 @@ SCIP_RETCODE tryAddSymmetryHandlingMethods(
       SCIP_CALL( tryAddOrbitalRedLexRed(scip, propdata) );
 
       /* possibly terminate early */
-      if ( SCIPisStopped(scip) || (propdata->ncomponents >= 0 && propdata->ncompblocked < propdata->ncomponents) )
+      if ( SCIPisStopped(scip) || (propdata->ncomponents >= 0 && propdata->ncompblocked >= propdata->ncomponents) )
+      {
+         assert( propdata->ncomponents >= 0 && propdata->ncompblocked <= propdata->ncomponents );
          goto STATISTICS;
+      }
    }
 
 
@@ -7348,8 +7354,11 @@ SCIP_RETCODE tryAddSymmetryHandlingMethods(
       SCIP_CALL( detectAndHandleSubgroups(scip, propdata) );
 
       /* possibly terminate early */
-      if ( SCIPisStopped(scip) || (propdata->ncomponents >= 0 && propdata->ncompblocked < propdata->ncomponents) )
+      if ( SCIPisStopped(scip) || (propdata->ncomponents >= 0 && propdata->ncompblocked >= propdata->ncomponents) )
+      {
+         assert( propdata->ncomponents >= 0 && propdata->ncompblocked <= propdata->ncomponents );
          goto STATISTICS;
+      }
    }
 
 
@@ -7359,8 +7368,11 @@ SCIP_RETCODE tryAddSymmetryHandlingMethods(
       SCIP_CALL( addSSTConss(scip, propdata, nchgbds) );
 
       /* possibly terminate early */
-      if ( SCIPisStopped(scip) || (propdata->ncomponents >= 0 && propdata->ncompblocked < propdata->ncomponents) )
+      if ( SCIPisStopped(scip) || (propdata->ncomponents >= 0 && propdata->ncompblocked >= propdata->ncomponents) )
+      {
+         assert( propdata->ncomponents >= 0 && propdata->ncompblocked <= propdata->ncomponents );
          goto STATISTICS;
+      }
       /* @todo if propdata->addsymresacks, then symresacks can be compatible with SST.
        * Instead of doing it in the next block, add symresacks for that case within addSSTConss.
        */
@@ -7374,8 +7386,11 @@ SCIP_RETCODE tryAddSymmetryHandlingMethods(
          propdata->ncomponents) );
 
       /* possibly terminate early */
-      if ( SCIPisStopped(scip) || (propdata->ncomponents >= 0 && propdata->ncompblocked < propdata->ncomponents) )
+      if ( SCIPisStopped(scip) || (propdata->ncomponents >= 0 && propdata->ncompblocked >= propdata->ncomponents) )
+      {
+         assert( propdata->ncomponents >= 0 && propdata->ncompblocked <= propdata->ncomponents );
          goto STATISTICS;
+      }
    }
 
 STATISTICS:
