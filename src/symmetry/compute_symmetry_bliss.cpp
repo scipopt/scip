@@ -522,7 +522,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
    SCIP_CONS** conss;
    SCIP_VAR** vars = NULL;
    SCIP_Real* vals = NULL;
-   int nvars;
+   int varssize;
    int nconss;
    int nuniqueops = 0;
    int nuniqueconsts = 0;
@@ -573,7 +573,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &uniquerhsarray, rhsarraysize) );
 
    /* get number of variables */
-   nvars = SCIPgetNVars(scip);
+   varssize = SCIPgetNVars(scip);
 
    SCIP_EXPRITER* it;
    SCIP_CALL( SCIPcreateExpriter(scip, &it) );
@@ -619,28 +619,29 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                   else
                   {
                      SCIP_Real constant = 0.0;
-                     int varssize;
+                     int nvars;
                      int requiredsize;
                      int k;
 
                      if ( vars == NULL )
                      {
-                        SCIP_CALL( SCIPallocBlockMemoryArray(scip, &vars, nvars) );
-                        SCIP_CALL( SCIPallocBlockMemoryArray(scip, &vals, nvars) );
+                        SCIP_CALL( SCIPallocBlockMemoryArray(scip, &vars, varssize) );
+                        SCIP_CALL( SCIPallocBlockMemoryArray(scip, &vals, varssize) );
                      }
                      assert( vars != NULL && vals != NULL );
 
                      vars[0] = var;
                      vals[0] = 1.0;
+                     nvars = 1;
 
-                     SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, vals, &varssize, nvars, &constant, &requiredsize, TRUE) );
-                     assert( requiredsize <= nvars );
+                     SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, vals, &nvars, varssize, &constant, &requiredsize, TRUE) );
+                     assert( requiredsize <= varssize );
 
                      parentnode = visitednodes[visitednodes.size() - 1];
                      assert( parentnode < (int) G->get_nof_vertices() );
 
                      /* create nodes for all aggregation variables and coefficients and connect them to the parent node */
-                     for ( k = 0; k < requiredsize; ++k )
+                     for ( k = 0; k < nvars; ++k )
                      {
                         SYM_CONSTTYPE* ct;
                         int internode;
@@ -959,8 +960,8 @@ SCIP_RETCODE fillGraphByNonlinearConss(
    }
 
    /* free everything */
-   SCIPfreeBlockMemoryArrayNull(scip, &vals, nvars);
-   SCIPfreeBlockMemoryArrayNull(scip, &vars, nvars);
+   SCIPfreeBlockMemoryArrayNull(scip, &vals, varssize);
+   SCIPfreeBlockMemoryArrayNull(scip, &vars, varssize);
 
    SCIPfreeExpriter(&it);
    SCIPfreeBlockMemoryArrayNull(scip, &uniquerhsarray, rhsarraysize);
