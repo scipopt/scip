@@ -8070,7 +8070,7 @@ SCIP_RETCODE extractCliques(
    if( consdata->nvars < 2 )
       return SCIP_OKAY;
 
-   /* add implications if posibble
+   /* add implications if possible
     *
     * for now we only add binary to non-binary implications, and this is only done for the binary variable with the
     * maximal absolute contribution and also only if this variable would force all other variables to their bound
@@ -8084,15 +8084,16 @@ SCIP_RETCODE extractCliques(
       /* @todo we might extract implications/cliques if SCIPvarIsBinary() variables exist and we have integer variables
        *       up front, might change sorting correspondingly
        */
-      /* fast abort if no binaries exist */
+      /* fast abort if no binaries seem to exist
+       * "seem to", because there are rare situations in which variables may actually not be sorted by type, even though consdataSort has been called
+       * this situation can occur if, e.g., the type of consdata->vars[1] has been changed to binary, but the corresponding variable event has
+       * not been executed yet, because it is the eventExecLinear() which marks the variables array as unsorted (set consdata->indexsorted to FALSE),
+       * which is the requirement for consdataSort() to actually resort the variables
+       * we assume that in this situation the below code may be executed in a future presolve round, after the variable events have been executed
+       */
       if( !SCIPvarIsBinary(consdata->vars[0]) )
-      {
-#ifndef NDEBUG
-         for( i = 1; i < consdata->nvars; i++ )
-            assert(!SCIPvarIsBinary(consdata->vars[i]));
-#endif
          return SCIP_OKAY;
-      }
+
       nvars = consdata->nvars;
       vars = consdata->vars;
       vals = consdata->vals;
