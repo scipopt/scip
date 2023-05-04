@@ -60,7 +60,8 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPorbitalReductionGetStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ORBITALREDDATA*  orbireddata,        /**< orbital reduction data structure */
-   int*                  nred                /**< pointer to store the total number of reductions applied */
+   int*                  nred,               /**< pointer to store the total number of reductions applied */
+   int*                  ncutoff             /**< pointer to store the total number of cutoffs applied */
    );
 
 

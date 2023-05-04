@@ -109,6 +109,7 @@ struct SCIP_LexRedData
    int                   nlexdatas;          /**< number of datas in array */
    int                   maxnlexdatas;       /**< allocated datas array size */
    int                   nred;               /**< total number of reductions */
+   int                   ncutoff;            /**< total number of cutoffs */
 };
 
 
@@ -1198,7 +1199,8 @@ SCIP_RETCODE shadowtreeUndoNodeDepthBranchIndices(
 SCIP_RETCODE SCIPlexicographicReductionGetStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_LEXREDDATA*      masterdata,         /**< pointer to global data for lexicographic reduction propagator */
-   int*                  nred                /**< total number of reductions applied */
+   int*                  nred,               /**< total number of reductions applied */
+   int*                  ncutoff             /**< total number of cutoffs applied */
    )
 {
    assert( scip != NULL );
@@ -1206,6 +1208,7 @@ SCIP_RETCODE SCIPlexicographicReductionGetStatistics(
    assert( nred != NULL );
 
    *nred = masterdata->nred;
+   *ncutoff = masterdata->ncutoff;
 
    return SCIP_OKAY;
 }
@@ -1319,6 +1322,8 @@ SCIP_RETCODE SCIPlexicographicReductionPropagate(
 
       /* maintain total number of reductions made */
       masterdata->nred += *nred;
+      if ( *infeasible )
+         ++masterdata->ncutoff;
    }
 
    /* clean the node-depth-branch-indices structure */
@@ -1468,6 +1473,7 @@ SCIP_RETCODE SCIPincludeLexicographicReduction(
    (*masterdata)->nlexdatas = 0;
    (*masterdata)->maxnlexdatas = 0;
    (*masterdata)->nred = 0;
+   (*masterdata)->ncutoff = 0;
 
    return SCIP_OKAY;
 }

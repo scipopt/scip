@@ -151,6 +151,7 @@ struct SCIP_OrbitopalReductionData
                                               * is used to determine if a variable is a branching variable */
    SCIP_Bool             conshdlr_nonlinear_checked; /**< nonlinear constraint handler is already added? */
    int                   nred;               /**< total number of reductions */
+   int                   ncutoff;            /**< total number of cutoffs */
 };
 
 /*
@@ -2034,7 +2035,8 @@ FREE:
 SCIP_RETCODE SCIPorbitopalReductionGetStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ORBITOPALREDDATA* orbireddata,       /**< orbitopal reduction data structure */
-   int*                  nred                /**< total number of reductions applied */
+   int*                  nred,               /**< total number of reductions applied */
+   int*                  ncutoff             /**< total number of cutoffs applied */
 )
 {
    assert( scip != NULL );
@@ -2042,6 +2044,7 @@ SCIP_RETCODE SCIPorbitopalReductionGetStatistics(
    assert( nred != NULL );
 
    *nred = orbireddata->nred;
+   *ncutoff = orbireddata->ncutoff;
 
    return SCIP_OKAY;
 }
@@ -2135,6 +2138,9 @@ SCIP_RETCODE SCIPorbitopalReductionPropagate(
    }
 
    orbireddata->nred += *nred;
+   if ( *infeasible )
+      ++orbireddata->ncutoff;
+
    return SCIP_OKAY;
 }
 
@@ -2255,8 +2261,9 @@ SCIP_RETCODE SCIPincludeOrbitopalReduction(
    (*orbireddata)->conshdlr_nonlinear = NULL;
    (*orbireddata)->conshdlr_nonlinear_checked = FALSE;
 
-   /* counter of total number of reductions */
+   /* counter of total number of reductions and cutoffs */
    (*orbireddata)->nred = 0;
+   (*orbireddata)->ncutoff = 0;
 
    return SCIP_OKAY;
 }

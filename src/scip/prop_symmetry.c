@@ -467,6 +467,7 @@ SCIP_DECL_TABLEOUTPUT(tableOutputSymmetry)
 {
    SCIP_TABLEDATA* tabledata;
    int nred;
+   int ncutoff;
    SCIP_Real time;
 
    assert( scip != NULL );
@@ -482,18 +483,21 @@ SCIP_DECL_TABLEOUTPUT(tableOutputSymmetry)
       SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, file, "Symmetry           :\n");
       if ( tabledata->propdata->orbitopalreddata )
       {
-         SCIP_CALL( SCIPorbitopalReductionGetStatistics(scip, tabledata->propdata->orbitopalreddata, &nred) );
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, file, "  orbitopal reducti: %10d reductions applied\n", nred);
+         SCIP_CALL( SCIPorbitopalReductionGetStatistics(scip, tabledata->propdata->orbitopalreddata, &nred, &ncutoff) );
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, file, "  orbitopal reducti: %10d reductions applied,"
+            " %10d cutoffs\n", nred, ncutoff);
       }
       if ( tabledata->propdata->orbitalreddata )
       {
-         SCIP_CALL( SCIPorbitalReductionGetStatistics(scip, tabledata->propdata->orbitalreddata, &nred) );
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, file, "  orbital reduction: %10d reductions applied\n", nred);
+         SCIP_CALL( SCIPorbitalReductionGetStatistics(scip, tabledata->propdata->orbitalreddata, &nred, &ncutoff) );
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, file, "  orbital reduction: %10d reductions applied,"
+            " %10d cutoffs\n", nred, ncutoff);
       }
       if ( tabledata->propdata->lexreddata )
       {
-         SCIP_CALL( SCIPlexicographicReductionGetStatistics(scip, tabledata->propdata->lexreddata, &nred) );
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, file, "  lexicographic red: %10d reductions applied\n", nred);
+         SCIP_CALL( SCIPlexicographicReductionGetStatistics(scip, tabledata->propdata->lexreddata, &nred, &ncutoff) );
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, file, "  lexicographic red: %10d reductions applied,"
+            " %10d cutoffs\n", nred, ncutoff);
       }
       if ( tabledata->propdata->shadowtreeeventhdlr )
       {

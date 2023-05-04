@@ -66,7 +66,8 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPorbitopalReductionGetStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ORBITOPALREDDATA* orbireddata,       /**< orbitopal reduction data structure */
-   int*                  nred                /**< total number of reductions applied */
+   int*                  nred,               /**< total number of reductions applied */
+   int*                  ncutoff             /**< total number of cutoffs applied */
    );
 
 
