@@ -1,1 +1,2 @@
 propagating/symmetry/addsymresacks = TRUE
+propagating/symmetry/recomputerestart = 0
