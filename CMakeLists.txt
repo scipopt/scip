@@ -465,26 +465,21 @@ elseif(LPS STREQUAL "xprs")
     find_package(XPRESS REQUIRED)
 elseif(LPS STREQUAL "msk")
     find_package(MOSEK REQUIRED)
-elseif(LPS STREQUAL "pdlp")
-    set(BUILD_absl ON CACHE STRING "")
-    set(BUILD_Protobuf ON CACHE STRING "")
-    set(BUILD_re2 ON CACHE STRING "")
-    set(BUILD_Eigen3 ON CACHE STRING "")
-    set(USE_COINOR OFF CACHE STRING "")
-    set(USE_SCIP OFF CACHE STRING "")
-    set(BUILD_CXX_DOC OFF CACHE STRING "")
-    FetchContent_Declare(
-      or-tools
-      GIT_REPOSITORY https://github.com/galv/or-tools.git
-      GIT_TAG        43f4a85eacf638866211d01b4db2bff81ccc79d0
-    )
-    FetchContent_MakeAvailable(or-tools)
+  elseif(LPS STREQUAL "pdlp")
+    # Build like this:
 
-    # For my personal development:
-    # Do this if we need to modify or-tools for whatever reason.
-    # add_subdirectory("/Users/danielgalvez/Desktop/School/Spring2023/CVXOPT/project/or-tools/" "_deps/or-tools-local")
-    # TODO
-    # find_package( REQUIRED)
+    # git clone https://github.com/galv/or-tools.git
+    # cd or-tools
+    # git checkout 43f4a85eacf638866211d01b4db2bff81ccc79d0
+    # mkdir build && cd build
+    # cmake -DCMAKE_INSTALL_PREFIX=pdlp_install/ -DBUILD_absl=ON -DBUILD_Protobuf=ON -DBUILD_re2=ON -DBUILD_Eigen3=ON -DUSE_COINOR=OFF -DUSE_SCIP=OFF ..
+    # make -j 8
+    # make install
+
+    # Then set PDLP_DIR appropriately:
+    set(PDLP_DIR "/Users/danielgalvez/Desktop/School/Spring2023/CVXOPT/project/or-tools/build/pdlp_install/")
+    find_package(PDLP REQUIRED)
+    set(CMAKE_CXX_STANDARD 17)
 elseif(LPS STREQUAL "none")
     set(lpi lpi/lpi_none.c)
 else()
@@ -583,6 +578,17 @@ if(QSO_FOUND)
     set(LPS_PIC_LIBRARIES ${LPS_LIBRARIES})
 else()
     message(STATUS "Support QSO: OFF")
+  endif()
+
+if(LPS STREQUAL "pdlp")
+  message(STATUS "Finding PDLP - found")
+  include_directories(${PDLP_INCLUDE_DIRS})
+  set(lpi lpi/lpi_pdlp.cpp)
+  set(LPS_LIBRARIES ${PDLP_LIBRARIES})
+  set(LPS_PIC_LIBRARIES ${LPS_LIBRARIES})
+  set(CMAKE_CXX_STANDARD 17)
+else()
+  message(STATUS "Support PDLP: OFF")
 endif()
 
 #
