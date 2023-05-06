@@ -1,0 +1,70 @@
+Solution Checker
+----------------
+
+This code implements a solution checker for MIP models.
+It reads a MIP model from a (gzipped) MPS file and a
+solution from a SOL file and checks the feasibility of this
+solution. All input is internally stored as arbitrary precision
+numbers (thanks to GNU GMP) and all calculations are done
+in arbitrary precision. The code checks the integrality, the
+linear constraints, the variable bounds and, if available, the
+objective value computed by the solver with an absolute tolerance
+of 1e-4 (the value can be changed from the command line).
+
+Install
+-------
+
+This code depends on the following:
+- a recent C++ compiler (g++ 4.x)
+- the GNU GMP library
+- the GNU zlib library
+Please note that the code has been tested with the currently (mid
+2010) available versions of the above libraries, and no test has
+been done with older versions. The code has been tested on Linux
+and Mac OS. The Windows platform is untested.
+
+To compile and install the software, just check that the
+appropriate paths to the GMP and ZLIB libraries are used in the
+Makefile, then type make.
+
+You can use make doc to generate the associated Doxygen documentation.
+
+Usage
+-----
+
+./solchecker modelfile solutionfile [lin_tol int_tol]
+
+where:
+- modelfile is a, possibly gzipped, MIP model in MPS format (note
+  that we do not support BZIP2 compression or the LP format).
+- solutionfile is a solution of the above model, in SOL format.
+The SOL format is a very simple format where in each line we have
+a <variable, value> pair, separated by spaces. A variable name
+of =obj= is used to store the objective value of the solution, as
+computed by the solver. For infeasible instances or when no solution 
+was found, the solution file should contain a single line =infeas=. 
+Note that a Python script (cpx2sol.py) is provided to translate 
+from the recent IBM ILOG Cplex XML solution format to this 
+simple format. 
+- lin_tol is the absolute tolerance used for checking linear
+constraints and the objective function value.
+- int_tol is the absolute tolerance used for checking the
+integrality constraint.
+
+If no tolerance is specified, than both lin_tol and int_tol are
+given a default value of 1e-4. If only one value is specified, than
+both tolerances are assigned to such value. If two values are
+specified, the first one is given to lin_tol, while the second to
+int_tol.
+
+Examples
+--------
+
+./solchecker fixnet6.mps.gz fixnet6.sol
+Checks the solution with lin_tol = int_tol = 1e-4
+
+./solchecker fixnet6.mps.gz fixnet6.sol 1e-6
+Checks the solution with lin_tol = int_tol = 1e-6
+
+./solchecker fixnet6.mps.gz fixnet6.sol 1e-5 1e-6
+Checks the solution with lin_tol = 1e-5 and int_tol = 1e-6

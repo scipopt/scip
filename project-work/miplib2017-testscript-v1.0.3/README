@@ -1,0 +1,102 @@
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+*                                                                           *
+*            This file is part of the test engine for MIPLIB2017            *
+*                                                                           *
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+
+Here is what you have to do to get MIPLIB2017 running:
+
+1. compile the solution checker using the command "make checker"
+
+2. Create a soft-link bin/SOLVER to the solver "SOLVER" you want to run, e.g:
+   - bin/cbc -> ...        for CBC
+   - bin/cplex -> ...      for CPLEX
+   - bin/glpki -> ...      for GLPK
+   - bin/gurobi -> ...     for Gurobi
+   - bin/lpsolve -> ...    for lp_solve
+   - bin/mosek -> ...      for MOSEK
+   - bin/scip -> ...       for SCIP
+   - bin/xpress -> ...     for Xpress
+
+   It is also possible to compare different versions of a SOLVER. For this
+   purpose, you need to create soft-links bin/SOLVER.IDENTIFIER. Please,
+   stick to the notation SOLVER.IDENTIFIER where IDENTIFIER should be a
+   unique identifier, like the LP solver or the version number. Note, that
+   the identifier will also be used to distinguish the corresponding output
+   and result files.
+
+   Example 1: To compare SCIP with different LP solvers create for each
+   SCIP version a soft-link of the form
+   - bin/scip.spx -> ...   for SCIP with SoPlex as LP solver
+   - bin/scip.cpx -> ...   for SCIP with CPLEX as LP solver.
+
+   Example 2: To compare GUROBI version 7 and 8 create for each Gurobi
+   version a soft-link of the form
+   - bin/gurobi.7 -> ...   for GUROBI version 7
+   - bin/gurobi.8 -> ...   for GUROBI version 8.
+
+   If you want to run permutations of the models, you need a soft-link
+   bin/permute pointing to a binary of SCIP, version 4.0 (or higher),
+   which is used for creating the permuted instances.
+
+3. Get the instances. You can use the script
+
+  ./get_instances.sh
+
+  which downloads and unpacks the archive of all 240 MIPLIB2017 benchmark instances
+  into instances/miplib2017/. You can also create a symbolic link
+  'instances/miplib2017/' that points to a different directory in your file system
+  where the instances are stored.
+
+4. Run the MIPLIB2017 test engine with a MIP solver: In your MIPLIB2017
+   main directory, enter "make [options] test" with the following options:
+   - "TIME=XYZ"              to set a wall-clock time limit (default:3600)
+
+   - "TEST=XYZ"              to set the file "testsets/XYZ.test" containing all
+                             instances to be tested. (default:benchmark)
+                             Example line: "instances/miplib2017/30n20b8.mps.gz"
+			     for the MPS file 30n20b8.mps.gz located in
+			     instances/miplib2017/
+
+   - "SOLVER=cbc"            to use CBC as MIP solver
+   - "SOLVER=cplex"          to use CPLEX as MIP solver
+   - "SOLVER=glpk"           to use GLPK as MIP solver
+   - "SOLVER=gurobi"         to use GUROBI as MIP solver
+   - "SOLVER=lpsolve"        to use lp_solve as MIP solver
+   - "SOLVER=mosek"          to use MOSEK as MIP solver
+   - "SOLVER=scip"           to use SCIP as MIP solver (default)
+   - "SOLVER=xpress"         to use XPRESS as MIP solver
+
+   - "HARDMEM=XYZ"           to set a hard memory limit in mega bytes (default:8192)
+
+   - "THREADS=X"             to set the number of threads to use, 0 (default) means as many as available
+
+   - "PERMUTE=X"             to run permutations of the models, 0 (default) solves the original models,
+                             every X>0 leads to a different permutation being solved
+
+-----------------------------------------------------------------------------
+Here is a short explanation of the involved scripts:
+
+- scripts/run.sh: The main script which
+   - calls "scripts/run_SOLVER.sh" on each problem instance in testsets/TEST.test
+   - calls the exact solution checker to test the solution found by SOLVER
+   - calls "scripts/parse.awk" and "scripts/parse_$SOLVER.awk" to evaluate the
+     log information of "OUTFILE"
+
+- scripts/run_SOLVER.sh: The driver for a specific SOLVER.
+
+- scripts/parse.awk: The evaluation script which
+   - parses the information that doesn't depend on the solver used
+     (like, wall-clock time which is measured externally and the
+     primal-dual-gap computation)
+   - prints the result table "RESFILE" in a certain format
+
+- scripts/parse_SOLVER.awk: The SOLVER specific evaluation script which parses the
+  remaining information (like, number of branch-and-bound nodes, primal bound,
+  and dual bound).
+
+- scripts/evalrun.sh: A script to trigger the evaluation of a test run a second time.
+
+- scripts/average.sh: The main script to merge the result tables of several permutations.
+  It calls "scripts/average.awk" to parse the result tables and write a new table stating averages.

@@ -1,0 +1,16 @@
+CHANGELOG
+=========
+
+Version 1.0.2
+-------------
+
+- new get_instances.sh script to faciliate instances download
+- new testsets/ subdirectory that already contains benchmark.test
+- solu file that contains best known objectives for all instances included. You may periodically check the availability of a newer version from the website.
+- solution checker supports new fixFile parameter for writing a bounds section in MPS format for fixing all integer variables
+
+Version 1.0.1
+-------------
+
+- new Python script cpx2solchecker.py to convert from CPLEX SOL FORMAT to Solchecker format.
+this fixes problems of the previous conversion that could not properly translate certain XML specific character encodings.
