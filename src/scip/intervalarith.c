@@ -49,7 +49,7 @@
  */
 #if defined(__INTEL_COMPILER) || defined(_MSC_VER)
 #pragma fenv_access (on)
-#elif defined __GNUC__
+#elif defined(__GNUC__) && !defined(__clang__)
 #pragma STDC FENV_ACCESS ON
 #endif
 
@@ -60,9 +60,12 @@
  * A more drastic but safer way seems to be to just disable all compiler optimizations for this file.
  * The Intel compiler seems to implement FENV_ACCESS correctly, but also defines __GNUC__.
  */
-#if defined(__GNUC__) && !defined( __INTEL_COMPILER)
-#pragma GCC push_options
+#if defined(__GNUC__) && !defined(__INTEL_COMPILER)
+#if defined(__clang__)
+#pragma clang optimize off
+#else
 #pragma GCC optimize ("O0")
+#endif
 #endif
 
 /*lint -e644*/
@@ -4788,8 +4791,3 @@ TERMINATE:
 
    return nreductions;
 }
-
-/* pop -O0 from beginning, though it probably doesn't matter here at the end of the compilation unit */
-#if defined(__GNUC__) && !defined( __INTEL_COMPILER)
-#pragma GCC pop_options
-#endif
