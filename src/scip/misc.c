@@ -9671,10 +9671,12 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
  */
 #if defined(__INTEL_COMPILER) || defined(_MSC_VER)
 #pragma fenv_access (on)
-#elif defined __GNUC__
+#elif defined(__GNUC__) && !defined(__clang__)
 #pragma STDC FENV_ACCESS ON
 #endif
-
+#if defined(__GNUC__) && !defined(__INTEL_COMPILER)
+__attribute__((optnone))
+#endif
 /** given a (usually very small) interval, tries to find a rational number with simple denominator (i.e. a small
  *  number, probably multiplied with powers of 10) out of this interval; returns TRUE iff a valid rational
  *  number inside the interval was found
@@ -9718,7 +9720,7 @@ SCIP_Bool SCIPfindSimpleRational(
 
 #if defined(__INTEL_COMPILER) || defined(_MSC_VER)
 #pragma fenv_access (off)
-#elif defined __GNUC__
+#elif defined(__GNUC__) && !defined(__clang__)
 #pragma STDC FENV_ACCESS OFF
 #endif
 
