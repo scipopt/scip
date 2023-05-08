@@ -8447,7 +8447,7 @@
  * In all cases, the dynamic variable ordering is derived from the branching decisions.
  * In particular, at different branch-and-bound tree nodes, a different variable ordering can be active.
  * Since the symmetries are handled for independent factors of the symmetry group, a different variable ordering method
- * can be used for handling symmetries in different factors. In SCIP, the same method is used for orbital fixing and
+ * can be used for handling symmetries in different factors. In SCIP, the same method is used for orbital reduction and
  * for lexicographic reduction, which means that these two methods are compatible and can be used simultanuously in the
  * same factor. Orbitopal reduction uses a different method.
  *
@@ -8494,11 +8494,11 @@
  * <code>misc/usesymmetry</code>, which encodes the enabled methods via a bitset that ranges between 0
  * and 7: the 1-bit encodes symmetry handling constraints, the 2-bit encodes orbital reduction, and the
  * 4-bit encodes SST cuts. For example, <code>misc/usesymmetry = 3</code> enables symmetry handling
- * constraints and orbital fixing, whereas <code>misc/usesymmetry = 0</code> disables symmetry handling.
+ * constraints and orbital reduction, whereas <code>misc/usesymmetry = 0</code> disables symmetry handling.
  * In the following, we explain how the combination of different symmetry handling methods works.
  *
  * The default strategy of SCIP is to handle symmetries via the bitset value 7, i.e., symmetry handling
- * constraints, orbital fixing, and SST cuts are enabled. To make sure that the different methods are
+ * constraints, orbital reduction, and SST cuts are enabled. To make sure that the different methods are
  * compatible, the following steps are carried out:
  *
  * -# SCIP determines independent subgroups \f$\Gamma_1,\dots,\Gamma_k\f$ as described in \ref SYMPROCESS.
@@ -8513,34 +8513,38 @@
  *    be handled by orbitopes, orbitopes are applied and, if parameter <code>propagating/symmetry/addweaksbcs</code>
  *    is TRUE, some compatible SST cuts are added, too. Besides this, no further symmetry handling methods
  *    are applied for \f$\Gamma_i\f$.
+ * -# Otherwise, orbital reduction is used. If <code>propagating/symmetry/usedynamicprop</code> and
+ *    <code>propagating/symmetry/addsymresacks> are <code>TRUE</code>, then also the dynamic lexicographic reduction
+ *    method is used.
  * -# Otherwise, if the majority of variables affected by \f$\Gamma_i\f$ are non-binary, SST cuts are applied
  *    to handle \f$\Gamma_i\f$. No further symmetry handling methods are applied for \f$\Gamma_i\f$.
- * -# Finally, if none of the previous methods has been used to handle \f$\Gamma_i\f$, orbital fixing is
- *    used.
  *
- * @note If one of the previous methods is disabled via <code>misc/usesymmetry</code>, it might be possible
- *       that not all symmetries are handled. For instance, if orbital fixing is disabled and neither SST cuts
- *       nor orbitopes are applied to handle \f$\Gamma_i\f$, the parameter <code>propagating/symmetry/addsymresacks</code>
- *       needs to be set to <code>TRUE</code> to handle the symmetries of \f$\Gamma_i\f$. If this parameter is
- *       <code>TRUE</code>, then orbisack/symresack constraints are also applied to subgroups that are handled
- *       via hidden orbitopes or SST cuts (if these cuts are applied for binary variables).
+ * @note If orbital reduction is enabled, a factor \f$\Gamma_i\f$ can always be handled by this method.
+ *       As such, by default, no SST cuts will be added.
+ *
+ * @note Depending on the setting of <code>misc/usesymmetry</code>, it might be possible that a symmetry component is
+ *       not handled. For instance, if only orbitopal reduction is used
+ *       (i.e., <code>propagating/symmetry/detectorbitopes</code> is set to 1),
+ *       and if a symmetry component is no orbitope, no symmetry is handled for that component at all.
  *
  *
  * @subsection SYMTIMING Controlling the timing of symmetry computation
  *
  * Since presolving might both remove and introduce formulation symmetries, the timing of computing symmetries
  * can be changed via the parameters <code>propagating/symmetry/addconsstiming</code> and
- * <code>propagating/symmetry/ofsymcomptiming</code> depending on whether symmetry handling constraints/SST cuts
- * and orbital fixing are applied, respectively. If both are applied, <code>propagating/symmetry/addconsstiming</code>
- * is dominant. Both parameters take values 0, 1, or 2, corresponding to computing symmetries before presolving,
- * during presolving, or when the symmetry handling methods are applied first, respectively. For the constraint-based
- * approach, the latter means at the end of presolving; for orbital fixing, after the first branching decision.
+ * <code>propagating/symmetry/ofsymcomptiming</code>.
+ * The first specifies the moment at which symmetries handling methods must be determined.
+ * The second specifies the moment at which the symmetries must be computed.
+ * If the second is triggered at a later moment than the first, the symmetries are computed just before determining
+ * the symmetry handling methods, so the first parameter is the dominant parameter.
+ * Both parameters take values 0, 1, or 2, corresponding to computing symmetries before presolving,
+ * during presolving, or when the symmetry handling methods are applied first, respectively.
  *
  * If a restart occurs, symmetry handling constraints and SST cuts can be inherited to the new run. Since orbital
  * fixing depends on the branching history, which is not available after a restart anymore, symmetries might needed
  * to be recomputed. This is controlled via the parameter <code>propagating/symmetry/recomputerestart</code>, which
- * takes values 0, 1, or 2, corresponding to never recomputing symmetries (i.e., disabling orbital fixing after a
- * restart), always recompute symmetries, or only recomputing symmetries if orbital fixing found a reduction in
+ * takes values 0, 1, or 2, corresponding to never recomputing symmetries (i.e., disabling dynamic symmetry handling
+ * after a restart), always recompute symmetries, or only recomputing symmetries if dynamic methods found a reduction in
  * the previous run, respectively.
  */
 
