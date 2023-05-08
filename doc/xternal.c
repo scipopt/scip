@@ -8383,7 +8383,7 @@
  *
  * To handle symmetries, SCIP uses three different classes of methods, which we detail below.
  *
- * @subsection SYMCONSS Symmetry handling constraints
+ * @subsection SYMCONSS Static symmetry handling constraints for binary variable domains
  *
  * SCIP contains three constraint handlers for handling symmetries of binary variables: the symresack,
  * orbisack, and orbitope constraint handler. Given a symmetry \f$\gamma\f$,
@@ -8412,19 +8412,53 @@
  * the variables of each row of the matrix \f$X\f$ are contained in a set packing or partitioning constraint,
  * specialized propagation and separation routines are used.
  *
- * @subsection SYMOF Orbital fixing
+ * @subsection SYMPROP Dynamic symmetry handling by propagation
  *
- * Orbital fixing is a propagation algorithm that derives fixings of binary variables based on
- * already fixed variables. These fixings remove feasible solutions of the problem, while it is guaranteed
- * that at least one symmetric solution remains feasible. The reductions found by orbital fixing
- * are derived from the branching decisions. Thus, as SCIP might restart the branch-and-bound process,
- * which removes previously made branching decisions, we need to make sure that correct reductions are
- * found after a restart. This can be guaranteed by either disabling orbital fixing after a restart
- * or recomputing symmetries. In SCIP, this is controlled via the parameter
+ * Static symmetry handling enforces a lexicographic ordering on the variable solution vectors.
+ * The pro of that approach, is that throughout the solving process, the same lexicographic ordering constraint
+ * is used. This means that already during presolving certain symmetry reductions can be made.
+ * The con of this approach is that an ordering of the variables for lexicographic comparisons have to be made
+ * before solving. Consequently, if reductions of certain variable domains are found, but these variables are compared
+ * late by the lexicographic comparison order, the effect for symmetry handling is very slim.
+ *
+ * Dynamic symmetry handling addresses this issue by propagating symmetry handling constraints, where the variable
+ * comparison ordering are determined while solving, attempting to make strong symmetry handling reductions early on.
+ * Dynamic symmetry handling removes feasible solutions of the problem, while it is guaranteed that at least one
+ * symmetric solution remains feasible.
+ *
+ * Whether dynamic or static symmetry handling methods are used, is determined by the boolean parameter
+ * <code>propagating/symmetry/usedynamicprop</code>.
+ * SCIP features three dynamic symmetry handling methods.
+ * SCIP only provides propagation methods for handling these symmetries,
+ * and the methods work on variables with arbitrary (so also non-binary) variable domains.
+ *
+ * -# Orbitopal reduction is the dynamic counterpart of orbitopal fixing. This method can be used if the variables
+ *    can be arranged without duplicates in a matrix, and symmetries permute the columns of this matrix. This method
+ *    propagates the variable domains such that solutions in matrix-form have lexicographically decreasing columns,
+ *    with respect to the dynamically chosen row and column order.
+ *    Orbitopal reduction respects the parameter <code>propagating/symmetry/detectorbitopes</code>.
+ * -# Lexicographic reduction is the dynamic counterpart of symresack and orbisack propagation.
+ *    Lexicographic reduction respects the parameter <code>propagating/symmetry/addsymresacks</code>.
+ * -# Orbital reduction is a generalization of orbital fixing that also works for non-binary variable domains.
+ *    Orbital reduction respects the 2-bit of the bitset <code>misc/usesymmetry</code>.
+ *    See \ref SYMMETHODSELECT <method selection>. Since there is no static counterpart, this method ignores
+ *    <code>propagating/symmetry/usedynamicprop</code>.
+ *
+ * In all cases, the dynamic variable ordering is derived from the branching decisions.
+ * In particular, at different branch-and-bound tree nodes, a different variable ordering can be active.
+ * Since the symmetries are handled for independent factors of the symmetry group, a different variable ordering method
+ * can be used for handling symmetries in different factors. In SCIP, the same method is used for orbital fixing and
+ * for lexicographic reduction, which means that these two methods are compatible and can be used simultanuously in the
+ * same factor. Orbitopal reduction uses a different method.
+ *
+ * As SCIP might restart the branch-and-bound process, which removes information regarding the branching decisions,
+ * we need to make sure that correct reductions are found after a restart.
+ * This can be guaranteed by either disabling dynamic symmetry handling methods after a restart, or by recomputing
+ * symmetries. In SCIP, this is controlled via the parameter
  * <code>propagating/symmetry/recomputerestart</code>. If it takes value 0, symmetries are not
- * recomputed and orbital fixing is disabled; a value of 1 means that symmetries are always
- * recomputed; if it has value 2, symmetries are only recomputed if orbital fixing has found a
- * reduction before the restart.
+ * recomputed and dynamic symmetry handling methods are disabled; a value of 1 means that symmetries are always
+ * recomputed; if it has value 2, symmetries are only recomputed if (at least) one of the dynamic symmetry handling
+ * methods has afound a reduction before a restart.
  *
  * @subsection SYMSST SST cuts
  *
@@ -8456,9 +8490,9 @@
  *
  * @subsection SYMMETHODSELECT Selecting symmetry handling methods
  *
- * The three symmetry handling methods explained above can be enabled and disabled via the parameter
+ * The symmetry handling methods explained above can be enabled and disabled via the parameter
  * <code>misc/usesymmetry</code>, which encodes the enabled methods via a bitset that ranges between 0
- * and 7: the 1-bit encodes symmetry handling constraints, the 2-bit encodes orbital fixing, and the
+ * and 7: the 1-bit encodes symmetry handling constraints, the 2-bit encodes orbital reduction, and the
  * 4-bit encodes SST cuts. For example, <code>misc/usesymmetry = 3</code> enables symmetry handling
  * constraints and orbital fixing, whereas <code>misc/usesymmetry = 0</code> disables symmetry handling.
  * In the following, we explain how the combination of different symmetry handling methods works.
@@ -8472,7 +8506,8 @@
  * -# For each subgroup \f$\Gamma_i\f$, a heuristic is called that checks whether orbitopes are applicable
  *    to handle the entire subgroup. If yes, this subgroup is handled by orbitopes and no other
  *    symmetry handling methods.
- * -# Otherwise, if parameter <code>propagating/symmetry/detectsubgroups</code> is <code>TRUE</code>, a
+ * -# Otherwise, if parameter <code>propagating/symmetry/detectsubgroups</code> is <code>TRUE</code>
+ *    and <code>propagating/symmetry/usedynamicprop</code> is <code>FALSE</code>, a
  *    heuristic is called to detect whether "hidden" orbitopes are present. That is, whether some but not
  *    all symmetries of \f$\Gamma_i\f$ can be handled by orbitopes. If sufficiently many symmetries can
  *    be handled by orbitopes, orbitopes are applied and, if parameter <code>propagating/symmetry/addweaksbcs</code>
