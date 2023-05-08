@@ -120,8 +120,6 @@ extern void
    adjacencies_sg(graph*,int*,int*,int,int,int,int*,int,boolean,int,int);
 extern void
    distances_sg(graph*,int*,int*,int,int,int,int*,int,boolean,int,int);
-extern void
-   distances_sg(graph*,int*,int*,int,int,int,int*,int,boolean,int,int);
 
 #ifdef __cplusplus
 }
