@@ -61,7 +61,11 @@
  * The Intel compiler seems to implement FENV_ACCESS correctly, but also defines __GNUC__.
  */
 #if defined(__GNUC__) && !defined(__INTEL_COMPILER)
-#pragma OPTIMIZE OFF
+#if defined(__clang__)
+#pragma clang optimize off
+#else
+#pragma GCC optimize ("O0")
+#endif
 #endif
 
 /*lint -e644*/
