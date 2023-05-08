@@ -44,6 +44,32 @@ SCIP_RETCODE TESTscipSetStage(SCIP* scip, SCIP_STAGE stage, SCIP_Bool enableNLP)
                        }                                                                                      \
                        while( FALSE )
 
+/** sets filename to full path of testfile, assuming that testfile is in same directory as this source file */
+static
+void setfilename(
+   char*                 filename,
+   const char*           testfile
+)
+{
+   char* pathsep;
+
+   assert(filename != NULL);
+   assert(testfile != NULL);
+
+   /* get file to read: testfile that lives in the same directory as this file */
+   (void)SCIPsnprintf(filename, SCIP_MAXSTRLEN, "%s", __FILE__);
+   /* find last path separator */
+#ifdef _WIN32
+   pathsep = strrchr(filename, '\\');
+#else
+   pathsep = strrchr(filename, '/');
+#endif
+   /* overwrite filename from __FILE__ with test.pip */
+   if( pathsep != NULL )
+      (void)SCIPsnprintf(pathsep+1, SCIP_MAXSTRLEN - (pathsep+1 - filename), testfile);
+   else
+      (void)SCIPsnprintf(filename, SCIP_MAXSTRLEN, testfile);
+}
 
 CR_API int main(int argc, char *argv[]) {
     struct criterion_test_set *tests = criterion_initialize();
