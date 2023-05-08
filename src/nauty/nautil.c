@@ -565,12 +565,12 @@ void
 maketargetcell(graph *g, int *lab, int *ptn, int level,
        set *tcell, int *tcellsize, int *cellpos, int tc_level,
        boolean digraph, int hint,
-       int (*targetcell)(graph*,int*,int*,int,int,boolean,int,int,int),
+       int (*targetcellfun)(graph*,int*,int*,int,int,boolean,int,int,int),
        int m, int n)
 {
     int i,j,k;
 
-    i = (*targetcell)(g,lab,ptn,level,tc_level,digraph,hint,m,n);
+    i = (*targetcellfun)(g,lab,ptn,level,tc_level,digraph,hint,m,n);
     for (j = i + 1; ptn[j] > level; ++j) {}
 
     *tcellsize = j - i + 1;

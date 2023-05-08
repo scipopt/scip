@@ -1148,7 +1148,7 @@ writemarker(int level, int tv, int index, int tcellsize,
 *****************************************************************************/
 
 void
-nauty_check(int wordsize, int m, int n, int version)
+nauty_check(int wordsize, int mm, int nn, int version)
 {
     if (wordsize != WORDSIZE)
     {
@@ -1157,13 +1157,13 @@ nauty_check(int wordsize, int m, int n, int version)
     }
 
 #if MAXN
-    if (m > MAXM)
+    if (mm > MAXM)
     {
         fprintf(ERRFILE,"Error: MAXM inadequate in nauty.c\n");
         exit(1);
     }
 
-    if (n > MAXN)
+    if (nn > MAXN)
     {
         fprintf(ERRFILE,"Error: MAXN inadequate in nauty.c\n");
         exit(1);
@@ -1192,14 +1192,14 @@ nauty_check(int wordsize, int m, int n, int version)
 *****************************************************************************/
 
 void
-extra_autom(int *p, int n)
+extra_autom(int *p, int nn)
 {
     if (writeautoms)
-        writeperm(outfile,p,cartesian,linelength,n);
-    stats->numorbits = orbjoin(orbits,p,n);
+        writeperm(outfile,p,cartesian,linelength,nn);
+    stats->numorbits = orbjoin(orbits,p,nn);
     ++stats->numgenerators;
     OPTCALL(userautomproc)(stats->numgenerators,p,orbits,
-                                    stats->numorbits,stabvertex,n);
+                                    stats->numorbits,stabvertex,nn);
 }
 
 /*****************************************************************************
@@ -1211,13 +1211,13 @@ extra_autom(int *p, int n)
 
 void
 extra_level(int level, int *lab, int *ptn, int numcells, int tv1, int index,
-        int tcellsize, int childcount, int n)
+        int tcellsize, int childcount, int nn)
 {
     MULTIPLY(stats->grpsize1,stats->grpsize2,index);
     if (domarkers)
         writemarker(level,tv1,index,tcellsize,stats->numorbits,numcells);
     OPTCALL(userlevelproc)(lab,ptn,level,orbits,stats,tv1,index,tcellsize,
-                                                    numcells,childcount,n);
+                                                    numcells,childcount,nn);
 }
 
 /*****************************************************************************
