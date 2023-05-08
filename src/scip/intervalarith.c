@@ -4787,8 +4787,3 @@ TERMINATE:
 
    return nreductions;
 }
-
-/* pop -O0 from beginning, though it probably doesn't matter here at the end of the compilation unit */
-#if defined(__GNUC__) && !defined( __INTEL_COMPILER)
-#pragma GCC pop_options
-#endif
