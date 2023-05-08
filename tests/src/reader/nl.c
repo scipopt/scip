@@ -71,7 +71,7 @@ void compareNlToCip(
       return;
 
    /* get file to read: <filestub>.nl that lives in the same directory as this file */
-   strcpy(filename, dirname(__FILE__));
+   strcpy(filename, dirname((char*)__FILE__));
    strcat(filename, "/");
    strcat(filename, filestub);
    strcat(filename, ".nl");
@@ -85,7 +85,7 @@ void compareNlToCip(
    fflush(stdout);
 
    /* open reference file with cip */
-   strcpy(filename, dirname(__FILE__));
+   strcpy(filename, dirname((char*)__FILE__));
    strcat(filename, "/");
    strcat(filename, filestub);
    strcat(filename, ".cip");
@@ -128,7 +128,7 @@ Test(readernl, read3, .description = "check reading .nl file with suffixes")
       return;
 
    /* get file to read: suffix1.nl that lives in the same directory as this file */
-   strcpy(filename, dirname(__FILE__));
+   strcpy(filename, dirname((char*)__FILE__));
    strcat(filename, "/suffix1.nl");
 
    /* read nl file */
@@ -194,13 +194,13 @@ Test(readernl, run, .description = "check running SCIP with -AMPL")
 
    /* get file to read: suffix1.nl that lives in the same directory as this file */
    args[1] = (const char*)malloc(SCIP_MAXSTRLEN);
-   strcpy((char*)args[1], dirname(__FILE__));
+   strcpy((char*)args[1], dirname((char*)__FILE__));
    strcat((char*)args[1], "/suffix1");
 
    args[2] = "-AMPL";
 
    /* get name of file where sol will be written: .nl-file with .nl replaced by .sol */
-   strcpy(solfile, dirname(__FILE__));
+   strcpy(solfile, dirname((char*)__FILE__));
    strcat(solfile, "/suffix1.sol");
 
    /* make sure no solfile is there at the moment */
@@ -238,13 +238,13 @@ Test(readernl, dualsol, .description = "check whether solving a LP without preso
 
    /* get file to read: lp1.nl that lives in the same directory as this file */
    args[1] = (char*)malloc(SCIP_MAXSTRLEN);
-   strcpy(args[1], dirname(__FILE__));
+   strcpy(args[1], dirname((char*)__FILE__));
    strcat(args[1], "/lp1");
 
    args[2] = (char*)"-AMPL";
 
    /* get name of file where sol will be written: .nl-file with .nl replaced by .sol */
-   strcpy(solfilename, dirname(__FILE__));
+   strcpy(solfilename, dirname((char*)__FILE__));
    strcat(solfilename, "/lp1.sol");
 
    /* make sure no solfile is there at the moment */
@@ -266,7 +266,7 @@ Test(readernl, dualsol, .description = "check whether solving a LP without preso
    if( strncmp(SCIPlpiGetSolverName(), "CPLEX", 5) == 0 || strncmp(SCIPlpiGetSolverName(), "SoPlex", 6) == 0 )
    {
       /* get name of reference solution file to compare solfile with */
-      strcpy(refsolfilename, dirname(__FILE__));
+      strcpy(refsolfilename, dirname((char*)__FILE__));
       strcat(refsolfilename, "/lp1.refsol");
 
       /* open reference solfile */
