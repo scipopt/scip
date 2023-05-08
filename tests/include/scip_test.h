@@ -44,10 +44,11 @@ SCIP_RETCODE TESTscipSetStage(SCIP* scip, SCIP_STAGE stage, SCIP_Bool enableNLP)
                        }                                                                                      \
                        while( FALSE )
 
-/** sets filename to full path of testfile, assuming that testfile is in same directory as this source file */
+/** sets filename to full path of testfile, assuming that testfile is in same directory as file */
 static
 void setfilename(
    char*                 filename,
+   const char*           file,
    const char*           testfile
 )
 {
@@ -57,14 +58,14 @@ void setfilename(
    assert(testfile != NULL);
 
    /* get file to read: testfile that lives in the same directory as this file */
-   (void)SCIPsnprintf(filename, SCIP_MAXSTRLEN, "%s", __FILE__);
+   (void)SCIPsnprintf(filename, SCIP_MAXSTRLEN, "%s", file);
    /* find last path separator */
 #ifdef _WIN32
    pathsep = strrchr(filename, '\\');
 #else
    pathsep = strrchr(filename, '/');
 #endif
-   /* overwrite filename from __FILE__ with test.pip */
+   /* overwrite filename */
    if( pathsep != NULL )
       (void)SCIPsnprintf(pathsep+1, SCIP_MAXSTRLEN - (pathsep+1 - filename), testfile);
    else
