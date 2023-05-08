@@ -9675,7 +9675,11 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
 #pragma STDC FENV_ACCESS ON
 #endif
 #if defined(__GNUC__) && !defined(__INTEL_COMPILER)
+#if defined(__clang__)
 __attribute__((optnone))
+#else
+__attribute__((optimize(0)))
+#endif
 #endif
 /** given a (usually very small) interval, tries to find a rational number with simple denominator (i.e. a small
  *  number, probably multiplied with powers of 10) out of this interval; returns TRUE iff a valid rational
