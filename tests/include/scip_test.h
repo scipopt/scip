@@ -11,6 +11,13 @@
  */
 SCIP_RETCODE TESTscipSetStage(SCIP* scip, SCIP_STAGE stage, SCIP_Bool enableNLP);
 
+/** assembles path of testfile using another files directory as directory name */
+void TESTsetTestfilename(
+   char*                 filename,           /**< buffer to write to, assumed to have length at least SCIP_MAXSTRLEN */
+   const char*           file,               /**< name of file, usually including full path, from which to take directory name */
+   const char*           testfile            /**< name of file to append, assumed to be in same directory as file */
+);
+
 /* Include the .c file here because the plugins implemented in scip_test.c should
  * be available every test.
  * */
@@ -43,33 +50,6 @@ SCIP_RETCODE TESTscipSetStage(SCIP* scip, SCIP_STAGE stage, SCIP_Bool enableNLP)
                           }                                                                                   \
                        }                                                                                      \
                        while( FALSE )
-
-/** sets filename to full path of testfile, assuming that testfile is in same directory as file */
-void setfilename(
-   char*                 filename,
-   const char*           file,
-   const char*           testfile
-)
-{
-   char* pathsep;
-
-   assert(filename != NULL);
-   assert(testfile != NULL);
-
-   /* get file to read: testfile that lives in the same directory as this file */
-   (void)SCIPsnprintf(filename, SCIP_MAXSTRLEN, "%s", file);
-   /* find last path separator */
-#ifdef _WIN32
-   pathsep = strrchr(filename, '\\');
-#else
-   pathsep = strrchr(filename, '/');
-#endif
-   /* overwrite filename */
-   if( pathsep != NULL )
-      (void)SCIPsnprintf(pathsep+1, SCIP_MAXSTRLEN - (pathsep+1 - filename), testfile);
-   else
-      (void)SCIPsnprintf(filename, SCIP_MAXSTRLEN, testfile);
-}
 
 CR_API int main(int argc, char *argv[]) {
     struct criterion_test_set *tests = criterion_initialize();
