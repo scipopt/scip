@@ -46,8 +46,7 @@ Test(readers, pip)
    char filename[SCIP_MAXSTRLEN];
 
    /* get file to read: test.mps that lives in the same directory as this file */
-   (void)SCIPsnprintf(filename, SCIP_MAXSTRLEN, "%s", __FILE__);
-   dirname(filename);
+   (void)SCIPsnprintf(filename, SCIP_MAXSTRLEN, "%s", dirname(__FILE__));
    strcat(filename, "/test.pip");
    printf("Reading %s\n", filename);
 
@@ -171,8 +170,7 @@ Test(readers, mps1)
    char filename[SCIP_MAXSTRLEN];
 
    /* get file to read: test.mps that lives in the same directory as this file */
-   (void)SCIPsnprintf(filename, SCIP_MAXSTRLEN, "%s", __FILE__);
-   dirname(filename);
+   (void)SCIPsnprintf(filename, SCIP_MAXSTRLEN, "%s", dirname(__FILE__));
    strcat(filename, "/test.mps");
    printf("Reading %s\n", filename);
 
@@ -248,8 +246,7 @@ Test(readers, zimpl)
    char filename[SCIP_MAXSTRLEN];
 
    /* get file to read: test.zpl that lives in the same directory as this file */
-   (void)SCIPsnprintf(filename, SCIP_MAXSTRLEN, "%s", __FILE__);
-   dirname(filename);
+   (void)SCIPsnprintf(filename, SCIP_MAXSTRLEN, "%s", dirname(__FILE__));
    strcat(filename, "/test.zpl");
    printf("Reading %s\n", filename);
 
