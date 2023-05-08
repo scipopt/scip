@@ -36,6 +36,34 @@
 #include "scip/scipdefplugins.h"
 #include "include/scip_test.h"
 
+/** sets filename to full path of testfile, assuming that testfile is in same directory as this source file */
+static
+void testfilename(
+   char*                 filename,
+   const char*           testfile
+)
+{
+   char* pathsep;
+
+   assert(filename != NULL);
+   assert(testfile != NULL);
+
+   /* get file to read: testfile that lives in the same directory as this file */
+   (void)SCIPsnprintf(filename, SCIP_MAXSTRLEN, "%s", __FILE__);
+   /* find last path separator */
+#ifdef _WIN32
+   pathsep = strrchr(filename, '\\');
+#else
+   pathsep = strrchr(filename, '/');
+#endif
+   /* overwrite filename from __FILE__ with test.pip */
+   if( pathsep != NULL )
+      (void)SCIPsnprintf(pathsep+1, SCIP_MAXSTRLEN - (pathsep+1 - filename), testfile);
+   else
+      (void)SCIPsnprintf(filename, SCIP_MAXSTRLEN, testfile);
+}
+
+
 Test(readers, pip)
 {
    SCIP* scip;
@@ -45,18 +73,9 @@ Test(readers, pip)
    SCIP_EXPR** children;
    SCIP_EXPR** grandchildren;
    char filename[SCIP_MAXSTRLEN];
-   char* pathsep;
 
    /* get file to read: test.mps that lives in the same directory as this file */
-   (void)SCIPsnprintf(filename, SCIP_MAXSTRLEN, "%s", __FILE__);
-   /* find last path separator */
-#ifdef _WIN32
-   pathsep = strrchr(filename, '\\');
-#else
-   pathsep = strrchr(filename, '/');
-#endif
-   /* overwrite filename from __FILE__ with test.pip */
-   sprintf(pathsep != NULL ? pathsep+1 : filename, "test.pip");
+   testfilename(filename, "test.pip");
    printf("Reading %s\n", filename);
 
    SCIP_CALL( SCIPcreate(&scip) );
@@ -179,8 +198,7 @@ Test(readers, mps1)
    char filename[SCIP_MAXSTRLEN];
 
    /* get file to read: test.mps that lives in the same directory as this file */
-   (void)SCIPsnprintf(filename, SCIP_MAXSTRLEN, "%s", dirname((char*)__FILE__));
-   strcat(filename, "/test.mps");
+   testfilename(filename, "test.mps");
    printf("Reading %s\n", filename);
 
    SCIP_CALL( SCIPcreate(&scip) );
@@ -255,8 +273,7 @@ Test(readers, zimpl)
    char filename[SCIP_MAXSTRLEN];
 
    /* get file to read: test.zpl that lives in the same directory as this file */
-   (void)SCIPsnprintf(filename, SCIP_MAXSTRLEN, "%s", dirname((char*)__FILE__));
-   strcat(filename, "/test.zpl");
+   testfilename(filename, "test.zpl");
    printf("Reading %s\n", filename);
 
    SCIP_CALL( SCIPcreate(&scip) );
