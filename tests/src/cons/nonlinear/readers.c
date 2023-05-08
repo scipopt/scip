@@ -31,6 +31,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <libgen.h>
+#include <string.h>
 
 #include "scip/scipdefplugins.h"
 #include "include/scip_test.h"
@@ -44,10 +45,18 @@ Test(readers, pip)
    SCIP_EXPR** children;
    SCIP_EXPR** grandchildren;
    char filename[SCIP_MAXSTRLEN];
+   char* pathsep;
 
    /* get file to read: test.mps that lives in the same directory as this file */
-   (void)SCIPsnprintf(filename, SCIP_MAXSTRLEN, "%s", dirname((char*)__FILE__));
-   strcat(filename, "/test.pip");
+   (void)SCIPsnprintf(filename, SCIP_MAXSTRLEN, "%s", __FILE__);
+   /* find last path separator */
+#ifdef _WIN32
+   pathsep = strrchr(filename, '\\');
+#else
+   pathsep = strrchr(filename, '/');
+#endif
+   /* overwrite filename from __FILE__ with test.pip */
+   sprintf(pathsep != NULL ? pathsep+1 : filename, "test.pip");
    printf("Reading %s\n", filename);
 
    SCIP_CALL( SCIPcreate(&scip) );
