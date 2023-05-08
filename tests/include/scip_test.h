@@ -45,7 +45,6 @@ SCIP_RETCODE TESTscipSetStage(SCIP* scip, SCIP_STAGE stage, SCIP_Bool enableNLP)
                        while( FALSE )
 
 /** sets filename to full path of testfile, assuming that testfile is in same directory as file */
-static
 void setfilename(
    char*                 filename,
    const char*           file,
