@@ -95,6 +95,7 @@
  * @todo Allow the computation of local symmetries
  * @todo Order rows of orbitopes (in particular packing/partitioning) w.r.t. cliques in conflict graph.
  * @todo A dynamic variant for packing-partitioning orbitopal structures
+ * @todo A dynamic variant for suborbitopes
  */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_OUTPUT_COMPONENT */
@@ -7219,14 +7220,14 @@ SCIP_RETCODE tryAddOrbitalRedLexRed(
   *     1.1.4. If none of these standard cases apply, use dynamic orbitopal reduction; cf. symmetry_orbitopal.c
   *   1.2. If static symmetry handling methods are used: Use static orbitopal fixing (binary variables only);
   *     cf. cons_orbitope.c
-  * 2. Otherwise, if orbital reduction is enabled, or if dynamic methods are enabled and lexicographic reduction
+  * 2. If no dynamic symmetry handling methods are used, and if (orbitopal) subgroup detection is enabled,
+  *      detect those and add static orbitopes if necessary.
+  * 3. Otherwise, if orbital reduction is enabled, or if dynamic methods are enabled and lexicographic reduction
   *     propagations can be applied:
-  *   2.1. If orbital reduction is enabled: Use orbital reduction.
-  *   2.2. And, if dynamic methods and lexicographic for single permutations reduction are enabled, use that.
-  * 3. Otherwise, use static symmetry handling methods as follows:
-  *   3.1. If (orbitopal) subgroup detection is enabled, detect those and add orbitopes if necessary.
-  *   3.2. If possible, use SST cuts.
-  *   3.3. If possible, add symresacks (lexicographic reduction on binary variables using a static ordering).
+  *   3.1. If orbital reduction is enabled: Use orbital reduction.
+  *   3.2. And, if dynamic methods and lexicographic for single permutations reduction are enabled, use that.
+  * 4. Otherwise, if possible, use SST cuts.
+  * 5. Otherwise, if possible, add symresacks (lexicographic reduction on binary variables using a static ordering).
   */
 static
 SCIP_RETCODE tryAddSymmetryHandlingMethods(
@@ -7331,11 +7332,13 @@ SCIP_RETCODE tryAddSymmetryHandlingMethods(
    }
 
 
-   /* orbital reduction and (compatable) dynamic lexicographic reduction propagation */
-   if ( ISORBITALREDUCTIONACTIVE(propdata->usesymmetry)
-         || ( ISSYMRETOPESACTIVE(propdata->usesymmetry) && propdata->usedynamicprop && propdata->addsymresacks ) )
+   /* orbitopal subgroups */
+   if ( !propdata->usedynamicprop && ISSYMRETOPESACTIVE(propdata->usesymmetry) && propdata->detectsubgroups
+      && propdata->binvaraffected && propdata->ncompblocked < propdata->ncomponents )
    {
-      SCIP_CALL( tryAddOrbitalRedLexRed(scip, propdata) );
+      /* @todo also implement a dynamic variant */
+      SCIP_CALL( ensureSymmetryComponentsComputed(scip, propdata) );
+      SCIP_CALL( detectAndHandleSubgroups(scip, propdata) );
 
       /* possibly terminate early */
       if ( SCIPisStopped(scip) || (propdata->ncomponents >= 0 && propdata->ncompblocked >= propdata->ncomponents) )
@@ -7346,12 +7349,11 @@ SCIP_RETCODE tryAddSymmetryHandlingMethods(
    }
 
 
-   /* orbitopal subgroups */
-   if ( ISSYMRETOPESACTIVE(propdata->usesymmetry) && propdata->detectsubgroups && propdata->binvaraffected
-      && propdata->ncompblocked < propdata->ncomponents )
+   /* orbital reduction and (compatable) dynamic lexicographic reduction propagation */
+   if ( ISORBITALREDUCTIONACTIVE(propdata->usesymmetry)
+         || ( ISSYMRETOPESACTIVE(propdata->usesymmetry) && propdata->usedynamicprop && propdata->addsymresacks ) )
    {
-      SCIP_CALL( ensureSymmetryComponentsComputed(scip, propdata) );
-      SCIP_CALL( detectAndHandleSubgroups(scip, propdata) );
+      SCIP_CALL( tryAddOrbitalRedLexRed(scip, propdata) );
 
       /* possibly terminate early */
       if ( SCIPisStopped(scip) || (propdata->ncomponents >= 0 && propdata->ncompblocked >= propdata->ncomponents) )
