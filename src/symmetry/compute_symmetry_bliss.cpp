@@ -653,7 +653,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                         ct = &sumcoefarray[nuniquecoefs];
                         ct->value = vals[k];
 
-                        if ( !SCIPhashtableExists(sumcoefmap, (void *) ct) )
+                        if ( ! SCIPhashtableExists(sumcoefmap, (void *) ct) )
                         {
                            SCIP_CALL( SCIPhashtableInsert(sumcoefmap, (void *) ct) );
                            ct->color = nusedcolors++;
@@ -671,7 +671,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
 
                         assert( internode < (int) G->get_nof_vertices() );
 
-                        G->add_edge((unsigned) internode, (unsigned) parentnode);
+                        G->add_edge((unsigned) parentnode, (unsigned) internode);
                         ++nedges;
 
                         /* connect the intermediate node to its corresponding variable node */
@@ -688,20 +688,13 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                         SYM_CONSTTYPE* ct;
 
                         /* check whether we have to resize */
-                        if ( nuniqueconsts >= constarraysize )
-                        {
-                           int newsize = SCIPcalcMemGrowSize(scip, nuniqueconsts+1);
-                           assert( newsize >= 0 );
-                           SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &uniqueconstarray, constarraysize, newsize) );
-                           constarraysize = newsize;
-                        }
-
+                        SCIP_CALL( SCIPensureBlockMemoryArray(scip, &uniqueconstarray, &constarraysize, nuniqueconsts+1) );
                         assert( nuniqueconsts < constarraysize );
 
                         ct = &uniqueconstarray[nuniqueconsts];
                         ct->value = constant;
 
-                        if ( !SCIPhashtableExists(consttypemap, (void *) ct) )
+                        if ( ! SCIPhashtableExists(consttypemap, (void *) ct) )
                         {
                            SCIP_CALL( SCIPhashtableInsert(consttypemap, (void *) ct) );
                            ct->color = nusedcolors++;
@@ -719,7 +712,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
 
                         assert( node < (int) G->get_nof_vertices() );
 
-                        G->add_edge((unsigned) node, (unsigned) parentnode);
+                        G->add_edge((unsigned) parentnode, (unsigned) node);
                         ++nedges;
                      }
 
@@ -741,7 +734,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                   ct = &uniqueconstarray[nuniqueconsts];
                   ct->value = SCIPgetValueExprValue(expr);
 
-                  if ( !SCIPhashtableExists(consttypemap, (void *) ct) )
+                  if ( ! SCIPhashtableExists(consttypemap, (void *) ct) )
                   {
                      SCIP_CALL( SCIPhashtableInsert(consttypemap, (void *) ct) );
                      ct->color = nusedcolors++;
@@ -765,7 +758,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                   ot->expr = expr;
                   ot->level = currentlevel;
 
-                  if ( !SCIPhashtableExists(optypemap, (void *) ot) )
+                  if ( ! SCIPhashtableExists(optypemap, (void *) ot) )
                   {
                      SCIP_CALL( SCIPhashtableInsert(optypemap, (void *) ot) );
                      ot->color = nusedcolors++;
@@ -791,7 +784,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                   rt->lhs = SCIPgetLhsNonlinear(conss[i]);
                   rt->rhs = SCIPgetRhsNonlinear(conss[i]);
 
-                  if ( !SCIPhashtableExists(rhstypemap, (void *) rt) )
+                  if ( ! SCIPhashtableExists(rhstypemap, (void *) rt) )
                   {
                      SCIP_CALL( SCIPhashtableInsert(rhstypemap, (void *) rt) );
                      rt->color = nusedcolors++;
@@ -851,7 +844,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                      ct = &sumcoefarray[nuniquecoefs];
                      ct->value = coefs[j];
 
-                     if ( !SCIPhashtableExists(sumcoefmap, (void *) ct) )
+                     if ( ! SCIPhashtableExists(sumcoefmap, (void *) ct) )
                      {
                         SCIP_CALL( SCIPhashtableInsert(sumcoefmap, (void *) ct) );
                         ct->color = nusedcolors++;
@@ -871,7 +864,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
 
                      assert( internode < (int) G->get_nof_vertices() );
 
-                     G->add_edge((unsigned) internode, (unsigned) node);
+                     G->add_edge((unsigned) node, (unsigned) internode);
                      ++nedges;
                   }
 
@@ -882,20 +875,13 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                      SYM_CONSTTYPE* ct;
 
                      /* check whether we have to resize */
-                     if ( nuniqueconsts >= constarraysize )
-                     {
-                        int newsize = SCIPcalcMemGrowSize(scip, nuniqueconsts+1);
-                        assert( newsize >= 0 );
-                        SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &uniqueconstarray, constarraysize, newsize) );
-                        constarraysize = newsize;
-                     }
-
+                     SCIP_CALL( SCIPensureBlockMemoryArray(scip, &uniqueconstarray, &constarraysize, nuniqueconsts + 1) );
                      assert( nuniqueconsts < constarraysize );
 
                      ct = &uniqueconstarray[nuniqueconsts];
                      ct->value = constval;
 
-                     if ( !SCIPhashtableExists(consttypemap, (void *) ct) )
+                     if ( ! SCIPhashtableExists(consttypemap, (void *) ct) )
                      {
                         SCIP_CALL( SCIPhashtableInsert(consttypemap, (void *) ct) );
                         ct->color = nusedcolors++;
@@ -913,7 +899,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
 
                      assert( node < (int) G->get_nof_vertices() );
 
-                     G->add_edge((unsigned) internode, (unsigned) node);
+                     G->add_edge((unsigned) node, (unsigned) internode);
                      ++nedges;
                   }
                }
