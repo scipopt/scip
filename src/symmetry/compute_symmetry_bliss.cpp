@@ -671,7 +671,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
 
                         assert( internode < (int) G->get_nof_vertices() );
 
-                        G->add_edge((unsigned) internode, (unsigned) parentnode);
+                        G->add_edge((unsigned) parentnode, (unsigned) internode);
                         ++nedges;
 
                         /* connect the intermediate node to its corresponding variable node */
@@ -712,7 +712,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
 
                         assert( node < (int) G->get_nof_vertices() );
 
-                        G->add_edge((unsigned) node, (unsigned) parentnode);
+                        G->add_edge((unsigned) parentnode, (unsigned) node);
                         ++nedges;
                      }
 
@@ -864,7 +864,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
 
                      assert( internode < (int) G->get_nof_vertices() );
 
-                     G->add_edge((unsigned) internode, (unsigned) node);
+                     G->add_edge((unsigned) node, (unsigned) internode);
                      ++nedges;
                   }
 
@@ -899,7 +899,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
 
                      assert( node < (int) G->get_nof_vertices() );
 
-                     G->add_edge((unsigned) internode, (unsigned) node);
+                     G->add_edge((unsigned) node, (unsigned) internode);
                      ++nedges;
                   }
                }
