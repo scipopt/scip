@@ -1104,6 +1104,7 @@ SCIP_RETCODE fillGraphByConss(
                      assert( requiredsize <= varssize );
 
                      assert( numvisitednodes > 0 );
+
                      parentnode = visitednodes[numvisitednodes-1];
                      assert( parentnode < nnodes );
 
@@ -1155,7 +1156,7 @@ SCIP_RETCODE fillGraphByConss(
                         SYM_CONSTTYPE* ct;
 
                         /* check whether we have to resize */
-                        SCIP_CALL( SCIPensureBlockMemoryArray(scip, &uniquerhsarray, &constarraysize, nuniqueconsts+1) );
+                        SCIP_CALL( SCIPensureBlockMemoryArray(scip, &uniqueconstarray, &constarraysize, nuniqueconsts+1) );
                         assert( nuniqueconsts < constarraysize );
 
                         ct = &uniqueconstarray[nuniqueconsts];
