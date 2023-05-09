@@ -653,7 +653,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                         ct = &sumcoefarray[nuniquecoefs];
                         ct->value = vals[k];
 
-                        if ( !SCIPhashtableExists(sumcoefmap, (void *) ct) )
+                        if ( ! SCIPhashtableExists(sumcoefmap, (void *) ct) )
                         {
                            SCIP_CALL( SCIPhashtableInsert(sumcoefmap, (void *) ct) );
                            ct->color = nusedcolors++;
@@ -694,7 +694,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                         ct = &uniqueconstarray[nuniqueconsts];
                         ct->value = constant;
 
-                        if ( !SCIPhashtableExists(consttypemap, (void *) ct) )
+                        if ( ! SCIPhashtableExists(consttypemap, (void *) ct) )
                         {
                            SCIP_CALL( SCIPhashtableInsert(consttypemap, (void *) ct) );
                            ct->color = nusedcolors++;
@@ -734,7 +734,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                   ct = &uniqueconstarray[nuniqueconsts];
                   ct->value = SCIPgetValueExprValue(expr);
 
-                  if ( !SCIPhashtableExists(consttypemap, (void *) ct) )
+                  if ( ! SCIPhashtableExists(consttypemap, (void *) ct) )
                   {
                      SCIP_CALL( SCIPhashtableInsert(consttypemap, (void *) ct) );
                      ct->color = nusedcolors++;
@@ -758,7 +758,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                   ot->expr = expr;
                   ot->level = currentlevel;
 
-                  if ( !SCIPhashtableExists(optypemap, (void *) ot) )
+                  if ( ! SCIPhashtableExists(optypemap, (void *) ot) )
                   {
                      SCIP_CALL( SCIPhashtableInsert(optypemap, (void *) ot) );
                      ot->color = nusedcolors++;
@@ -784,7 +784,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                   rt->lhs = SCIPgetLhsNonlinear(conss[i]);
                   rt->rhs = SCIPgetRhsNonlinear(conss[i]);
 
-                  if ( !SCIPhashtableExists(rhstypemap, (void *) rt) )
+                  if ( ! SCIPhashtableExists(rhstypemap, (void *) rt) )
                   {
                      SCIP_CALL( SCIPhashtableInsert(rhstypemap, (void *) rt) );
                      rt->color = nusedcolors++;
@@ -844,7 +844,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                      ct = &sumcoefarray[nuniquecoefs];
                      ct->value = coefs[j];
 
-                     if ( !SCIPhashtableExists(sumcoefmap, (void *) ct) )
+                     if ( ! SCIPhashtableExists(sumcoefmap, (void *) ct) )
                      {
                         SCIP_CALL( SCIPhashtableInsert(sumcoefmap, (void *) ct) );
                         ct->color = nusedcolors++;
@@ -881,7 +881,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                      ct = &uniqueconstarray[nuniqueconsts];
                      ct->value = constval;
 
-                     if ( !SCIPhashtableExists(consttypemap, (void *) ct) )
+                     if ( ! SCIPhashtableExists(consttypemap, (void *) ct) )
                      {
                         SCIP_CALL( SCIPhashtableInsert(consttypemap, (void *) ct) );
                         ct->color = nusedcolors++;
