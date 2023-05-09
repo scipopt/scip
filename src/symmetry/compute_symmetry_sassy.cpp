@@ -1156,7 +1156,7 @@ SCIP_RETCODE fillGraphByConss(
 
                         assert( internode < nnodes );
 
-                        G->add_edge((unsigned) internode, (unsigned) parentnode);
+                        G->add_edge((unsigned) parentnode, (unsigned) internode);
                         ++m;
                         assert( m <= nedges );
 
@@ -1164,7 +1164,7 @@ SCIP_RETCODE fillGraphByConss(
                         node = SCIPvarGetProbindex(vars[k]);
                         assert( node < nnodes );
 
-                        G->add_edge((unsigned) internode, (unsigned) node);
+                        G->add_edge((unsigned) node, (unsigned) internode);
                         ++m;
                         assert( m <= nedges );
                      }
