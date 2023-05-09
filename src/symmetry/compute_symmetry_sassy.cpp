@@ -589,7 +589,7 @@ SCIP_RETCODE determineGraphSize(
 
                         /* add node */
                         internode = (*nnodes)++;
-                        ++(nnonlinearnodes);
+                        ++(*nnonlinearnodes);
 
                         /* ensure size of degrees */
                         SCIP_CALL( SCIPensureBlockMemoryArray(scip, degrees, maxdegrees, *nnodes) );
