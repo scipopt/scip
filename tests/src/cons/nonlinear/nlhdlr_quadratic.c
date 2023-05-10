@@ -2029,7 +2029,7 @@ Test(interCuts, testRaysAuxvar2)
    SCIP_CALL( SCIPchgVarObjProbing(scip, auxvar,  1.0/4) );
 
 
-   SCIP_CALL( SCIPwriteLP(scip, "probing.lp") );
+   /* SCIP_CALL( SCIPwriteLP(scip, "probing.lp") ); */
 
    SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror, &cutoff) );
 
@@ -2576,7 +2576,7 @@ Test(interCuts, strength4ab, .description = "more complicated test strengthening
       SCIP_CALL( SCIPchgVarObjProbing(scip, z, 1.0) );
 
 
-      SCIP_CALL( SCIPwriteLP(scip, "probing.lp") );
+      /* SCIP_CALL( SCIPwriteLP(scip, "probing.lp") ); */
 
       SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror, &cutoff) );
       cr_assert_not(lperror);
