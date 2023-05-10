@@ -1196,16 +1196,15 @@ SCIP_DECL_NLHDLRFREEEXPRDATA(nlhdlrFreeExprDataSignomial)
 
    assert(expr != NULL);
 
-
-   /* release variables */
+   /* release expressions */
    SCIPreleaseExpr(scip, &(*nlhdlrexprdata)->expr);
    for( int c = 0; c < (*nlhdlrexprdata)->nfactors; c++ )
       SCIPreleaseExpr(scip, &(*nlhdlrexprdata)->factors[c]);
 
-   /* release expressions */
-   if( (*nlhdlrexprdata)->isgetvars)
+   /* release variables */
+   if( (*nlhdlrexprdata)->isgetvars )
    {
-      for( int c = 0; c < (*nlhdlrexprdata)->nvars; c++ ) 
+      for( int c = 0; c <= (*nlhdlrexprdata)->nvars; c++ ) 
          SCIPreleaseVar(scip, &(*nlhdlrexprdata)->vars[c]);
    }
 
