@@ -31,6 +31,7 @@
 
 #include <string.h>
 
+#include "include/scip_test.h"
 #include "scip/scipdefplugins.h"
 #include "scip/nlhdlr.c"
 #include "scip/cons_nonlinear.c"
@@ -40,8 +41,6 @@
 /*
  * TEST
  */
-
-#include "include/scip_test.h"
 
 static SCIP* scip;
 static SCIP_VAR* x;

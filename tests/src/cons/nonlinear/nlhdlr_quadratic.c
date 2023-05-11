@@ -31,6 +31,7 @@
 
 #include <string.h>
 
+#include "include/scip_test.h"
 /* XXX: need the consdata struct because we don't have getNlhdlrs or findNlhdlrs; I don't add those function because I'm unsure
  * we actually need them
  */
@@ -53,8 +54,6 @@
 /*
  * TEST
  */
-
-#include "include/scip_test.h"
 
 static SCIP* scip;
 static SCIP_VAR* x;
