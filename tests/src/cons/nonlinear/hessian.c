@@ -31,10 +31,10 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+#include "include/scip_test.h"
 #include "scip/scipdefplugins.h"
 #include "scip/nlhdlr.c"
 #include "scip/cons_nonlinear.c"
-#include "include/scip_test.h"
 
 #define EXPECTFEQ(a,b) cr_expect_float_eq(a, b, 1e-6, "%s = %g != %g (dif %g)", #a, a, b, ABS(a-b))
 

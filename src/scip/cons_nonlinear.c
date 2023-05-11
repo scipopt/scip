@@ -1141,7 +1141,9 @@ SCIP_RETCODE catchVarEvents(
 
    conshdlrdata = SCIPconshdlrGetData(SCIPconsGetHdlr(cons));
    assert(conshdlrdata != NULL);
+#ifndef CR_API  /* this assert may not work in unittests due to having this code compiled twice, #3543 */
    assert(conshdlrdata->intevalvar == intEvalVarBoundTightening);
+#endif
 
    SCIPdebugMsg(scip, "catchVarEvents for %s\n", SCIPconsGetName(cons));
 
@@ -2680,7 +2682,9 @@ SCIP_RETCODE propConss(
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
+#ifndef CR_API  /* this assert may not work in unittests due to having this code compiled twice, #3543 */
    assert(conshdlrdata->intevalvar == intEvalVarBoundTightening);
+#endif
    assert(!conshdlrdata->globalbounds);
 
    *result = SCIP_DIDNOTFIND;
@@ -2871,7 +2875,9 @@ SCIP_RETCODE propExprDomains(
    assert(nchgbds != NULL);
    assert(*nchgbds >= 0);
 
+#ifndef CR_API  /* this assert may not work in unittests due to having this code compiled twice, #3543 */
    assert(SCIPconshdlrGetData(conshdlr)->intevalvar == intEvalVarBoundTightening);
+#endif
    assert(!SCIPconshdlrGetData(conshdlr)->globalbounds);
    assert(SCIPqueueIsEmpty(SCIPconshdlrGetData(conshdlr)->reversepropqueue));
 

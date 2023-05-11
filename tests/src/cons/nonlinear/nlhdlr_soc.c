@@ -34,6 +34,7 @@
 
 #include <string.h>
 
+#include "include/scip_test.h"
 #include "scip/nlhdlr_default.h"
 #include "scip/expr_exp.h"
 #include "scip/expr_pow.h"
@@ -48,8 +49,6 @@
 /*
  * TEST
  */
-
-#include "include/scip_test.h"
 
 static SCIP* scip;
 static SCIP_VAR* x;
