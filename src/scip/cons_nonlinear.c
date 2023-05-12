@@ -9870,6 +9870,9 @@ SCIP_DECL_CONSCHECK(consCheckNonlinear)
    maypropfeasible = conshdlrdata->trysolheur != NULL && SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED
       && SCIPgetStage(scip) <= SCIP_STAGE_SOLVING;
 
+   if( maypropfeasible && (sol == NULL || SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_LPSOL) && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
+      maypropfeasible = FALSE;
+
    /* check nonlinear constraints for feasibility */
    for( c = 0; c < nconss; ++c )
    {
