@@ -1698,6 +1698,8 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoPerspective)
          * therefore we are now happy
          */
          assert(!doprobingind);
+         SCIPfreeBufferArrayNull(scip, &probingvars);
+         SCIPfreeBufferArrayNull(scip, &probingdoms);
          goto TERMINATE;
       }
 
@@ -1730,14 +1732,15 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoPerspective)
          SCIPfreeBufferArray(scip, &solvals);
 #endif
 
+         SCIPfreeBufferArrayNull(scip, &probingvars);
+         SCIPfreeBufferArrayNull(scip, &probingdoms);
+
          if( propagate )
          { /* we are in the root node and startProbing did propagation */
             /* probing propagation might have detected infeasibility */
             if( cutoff_probing )
             {
                /* indicator == 1 is infeasible -> set indicator to 0 */
-               SCIPfreeBufferArrayNull(scip, &probingvars);
-               SCIPfreeBufferArrayNull(scip, &probingdoms);
 
                SCIP_CALL( SCIPendProbing(scip) );
 
@@ -1960,8 +1963,6 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoPerspective)
          SCIPfreeRowprep(scip, &rowprep);
       }
 
-      SCIPfreeBufferArrayNull(scip, &probingvars);
-      SCIPfreeBufferArrayNull(scip, &probingdoms);
       SCIP_CALL( SCIPclearPtrarray(scip, rowpreps) );
    }
 
