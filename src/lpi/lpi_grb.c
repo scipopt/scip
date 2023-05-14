@@ -1246,9 +1246,9 @@ static const char grbname[] = {'G', 'u', 'r', 'o', 'b', 'i', ' ',
 #if GRB_VERSION_MAJOR < 10
    GRB_VERSION_MAJOR + '0',
 #else
-   (GRB_VERSION_MAJOR/10) + '0', (GRB_VERSION_MAJOR%10) + '0',
+   (GRB_VERSION_MAJOR/10) + '0', (GRB_VERSION_MAJOR%10) + '0',       /*lint !e778*/
 #endif
-   '.', GRB_VERSION_MINOR + '0', '.', GRB_VERSION_TECHNICAL + '0'};
+   '.', GRB_VERSION_MINOR + '0', '.', GRB_VERSION_TECHNICAL + '0'};  /*lint !e835*/
 
 /**@name Miscellaneous Methods */
 /**@{ */
