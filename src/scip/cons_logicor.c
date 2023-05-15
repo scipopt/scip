@@ -4764,7 +4764,7 @@ SCIP_DECL_CONSRESPROP(consRespropLogicor)
       {
          /* the reason variable must have been assigned to zero */
          assert(SCIPgetVarUbAtIndex(scip, consdata->vars[v], bdchgidx, FALSE) < 0.5);
-         SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[v], separatequeue) );
+         SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[v], resolutionqueue) );
       }
 #ifndef NDEBUG
       else

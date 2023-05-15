@@ -1249,7 +1249,7 @@ SCIP_RETCODE resolvePropagation(
    PROPRULE              proprule,           /**< propagation rule that deduced the value */
    SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index (time stamp of bound change), or NULL for current time */
    SCIP_RESULT*          result,             /**< pointer to store the result of the propagation conflict resolving call */
-   SCIP_Bool             separatequeue       /**< should the bound change be added to the separate conflict queue? */
+   SCIP_Bool             resolutionqueue       /**< should the explanation bound changes be added to the resolution conflict queue? */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -1274,7 +1274,7 @@ SCIP_RETCODE resolvePropagation(
       {
          if( SCIPgetVarLbAtIndex(scip, vars[i], bdchgidx, FALSE) > 0.5 )
          {
-            SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i], separatequeue) );
+            SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i], resolutionqueue) );
             break;
          }
       }
@@ -1286,7 +1286,7 @@ SCIP_RETCODE resolvePropagation(
       /* the operand variable was infered to FALSE, because the resultant was FALSE */
       assert(SCIPgetVarUbAtIndex(scip, infervar, bdchgidx, TRUE) < 0.5);
       assert(SCIPgetVarUbAtIndex(scip, consdata->resvar, bdchgidx, FALSE) < 0.5);
-      SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->resvar, separatequeue) );
+      SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->resvar, resolutionqueue) );
       *result = SCIP_SUCCESS;
       break;
 
@@ -1297,7 +1297,7 @@ SCIP_RETCODE resolvePropagation(
       for( i = 0; i < nvars; ++i )
       {
          assert(SCIPgetVarUbAtIndex(scip, vars[i], bdchgidx, FALSE) < 0.5);
-         SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i], separatequeue) );
+         SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i], resolutionqueue) );
       }
       *result = SCIP_SUCCESS;
       break;
@@ -1306,13 +1306,13 @@ SCIP_RETCODE resolvePropagation(
       /* the operand variable was infered to TRUE, because the resultant was TRUE and all other operands were FALSE */
       assert(SCIPgetVarLbAtIndex(scip, infervar, bdchgidx, TRUE) > 0.5);
       assert(SCIPgetVarLbAtIndex(scip, consdata->resvar, bdchgidx, FALSE) > 0.5);
-      SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->resvar, separatequeue) );
+      SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->resvar, resolutionqueue) );
       for( i = 0; i < nvars; ++i )
       {
          if( vars[i] != infervar )
          {
             assert(SCIPgetVarUbAtIndex(scip, vars[i], bdchgidx, FALSE) < 0.5);
-            SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i], separatequeue) );
+            SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i], resolutionqueue) );
          }
       }
       *result = SCIP_SUCCESS;
@@ -1804,7 +1804,7 @@ SCIP_DECL_CONSPRESOL(consPresolOr)
 static
 SCIP_DECL_CONSRESPROP(consRespropOr)
 {  /*lint --e{715}*/
-   SCIP_CALL( resolvePropagation(scip, cons, infervar, (PROPRULE)inferinfo, bdchgidx, result, separatequeue) );
+   SCIP_CALL( resolvePropagation(scip, cons, infervar, (PROPRULE)inferinfo, bdchgidx, result, resolutionqueue) );
 
    return SCIP_OKAY;
 }

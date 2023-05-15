@@ -7204,7 +7204,7 @@ SCIP_RETCODE SCIPconsResolvePropagation(
    SCIP_BOUNDTYPE        inferboundtype,     /**< bound that was deduced (lower or upper bound) */
    SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index, representing the point of time where change took place */
    SCIP_Real             relaxedbd,          /**< the relaxed bound */
-   SCIP_Bool             separatequeue,      /**< should the reason bound changes be added to the separate conflict queue? */
+   SCIP_Bool             resolutionqueue,      /**< should the explanation bound changes be added to the resolution conflict queue? */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
@@ -7224,7 +7224,7 @@ SCIP_RETCODE SCIPconsResolvePropagation(
    conshdlr = cons->conshdlr;
    assert(conshdlr != NULL);
 
-   if (separatequeue)
+   if (resolutionqueue)
    {
       SCIP_CALL( conshdlr->consresprop(set->scip, conshdlr, cons, infervar, inferinfo, inferboundtype, bdchgidx,
       relaxedbd, TRUE, result) );

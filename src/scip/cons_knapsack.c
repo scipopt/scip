@@ -12993,7 +12993,7 @@ SCIP_DECL_CONSRESPROP(consRespropKnapsack)
          if( SCIPvarGetIndex(consdata->vars[i]) == inferinfo )
          {
             assert( SCIPgetVarUbAtIndex(scip, consdata->vars[i], bdchgidx, FALSE) < 0.5 );
-            SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[i], separatequeue) );
+            SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[i], resolutionqueue) );
             break;
          }
       }
@@ -13032,7 +13032,7 @@ SCIP_DECL_CONSRESPROP(consRespropKnapsack)
          {
             if( SCIPgetVarLbAtIndex(scip, consdata->vars[i], bdchgidx, FALSE) > 0.5 )
             {
-               SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[i], separatequeue) );
+               SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[i], resolutionqueue) );
                capsum += consdata->weights[i];
                if( capsum > consdata->capacity )
                   break;

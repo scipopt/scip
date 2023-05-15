@@ -357,7 +357,7 @@ SCIP_RETCODE SCIPconflictAddBound(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_BOUNDTYPE        boundtype,          /**< type of bound that was changed: lower or upper bound */
    SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index (time stamp of bound change), or NULL for current time */
-   SCIP_Bool             separatequeue       /**< should the variable be added to the separate conflict queue? */
+   SCIP_Bool             resolutionqueue       /**< should the explanation bound changes be added to the resolution conflict queue? */
    );
 
 /** adds variable's bound to conflict candidate queue with the additional information of a relaxed bound */

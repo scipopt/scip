@@ -1669,10 +1669,10 @@ SCIP_DECL_CONSRESPROP(consRespropOrbisack)
    for (i = 0; i < varrow; ++i)
    {
       /* Conflict caused by bounds of previous variables */
-      SCIP_CALL( SCIPaddConflictUb(scip, vars1[i], bdchgidx, separatequeue) );
-      SCIP_CALL( SCIPaddConflictLb(scip, vars1[i], bdchgidx, separatequeue) );
-      SCIP_CALL( SCIPaddConflictUb(scip, vars2[i], bdchgidx, separatequeue) );
-      SCIP_CALL( SCIPaddConflictLb(scip, vars2[i], bdchgidx, separatequeue) );
+      SCIP_CALL( SCIPaddConflictUb(scip, vars1[i], bdchgidx, resolutionqueue) );
+      SCIP_CALL( SCIPaddConflictLb(scip, vars1[i], bdchgidx, resolutionqueue) );
+      SCIP_CALL( SCIPaddConflictUb(scip, vars2[i], bdchgidx, resolutionqueue) );
+      SCIP_CALL( SCIPaddConflictLb(scip, vars2[i], bdchgidx, resolutionqueue) );
    }
 
    if ( infrow > 0 )
@@ -1684,10 +1684,10 @@ SCIP_DECL_CONSRESPROP(consRespropOrbisack)
       for (i = varrow + 1; i < infrow; ++i)
       {
          /* These rows are one of (0, 0), (1, 1), (0, _), (_, 1), making them constants. */
-         SCIP_CALL( SCIPaddConflictUb(scip, vars1[i], bdchgidx, separatequeue) );
-         SCIP_CALL( SCIPaddConflictLb(scip, vars1[i], bdchgidx, separatequeue) );
-         SCIP_CALL( SCIPaddConflictUb(scip, vars2[i], bdchgidx, separatequeue) );
-         SCIP_CALL( SCIPaddConflictLb(scip, vars2[i], bdchgidx, separatequeue) );
+         SCIP_CALL( SCIPaddConflictUb(scip, vars1[i], bdchgidx, resolutionqueue) );
+         SCIP_CALL( SCIPaddConflictLb(scip, vars1[i], bdchgidx, resolutionqueue) );
+         SCIP_CALL( SCIPaddConflictUb(scip, vars2[i], bdchgidx, resolutionqueue) );
+         SCIP_CALL( SCIPaddConflictLb(scip, vars2[i], bdchgidx, resolutionqueue) );
       }
 
       /* And infrow itself is (0, 1). */
@@ -1696,8 +1696,8 @@ SCIP_DECL_CONSRESPROP(consRespropOrbisack)
       assert( SCIPvarGetLbAtIndex(vars2[infrow], bdchgidx, TRUE) > 0.5 );
       assert( SCIPvarGetLbAtIndex(vars2[infrow], bdchgidx, FALSE) > 0.5 );
 
-      SCIP_CALL( SCIPaddConflictUb(scip, vars1[infrow], bdchgidx, separatequeue) );
-      SCIP_CALL( SCIPaddConflictLb(scip, vars2[infrow], bdchgidx, separatequeue) );
+      SCIP_CALL( SCIPaddConflictUb(scip, vars1[infrow], bdchgidx, resolutionqueue) );
+      SCIP_CALL( SCIPaddConflictLb(scip, vars2[infrow], bdchgidx, resolutionqueue) );
    }
    else
    {
@@ -1713,8 +1713,8 @@ SCIP_DECL_CONSRESPROP(consRespropOrbisack)
          assert( SCIPvarGetLbAtIndex(vars2[varrow], bdchgidx, FALSE ) > 0.5);
          assert( SCIPvarGetUbAtIndex(vars2[varrow], bdchgidx, FALSE ) > 0.5);
 
-         SCIP_CALL( SCIPaddConflictUb(scip, vars2[varrow], bdchgidx, separatequeue) );
-         SCIP_CALL( SCIPaddConflictLb(scip, vars2[varrow], bdchgidx, separatequeue) );
+         SCIP_CALL( SCIPaddConflictUb(scip, vars2[varrow], bdchgidx, resolutionqueue) );
+         SCIP_CALL( SCIPaddConflictLb(scip, vars2[varrow], bdchgidx, resolutionqueue) );
       }
       else
       {
@@ -1725,8 +1725,8 @@ SCIP_DECL_CONSRESPROP(consRespropOrbisack)
          assert( SCIPvarGetUbAtIndex(vars2[varrow], bdchgidx, FALSE) > 0.5 );
          assert( SCIPvarGetUbAtIndex(vars2[varrow], bdchgidx, TRUE) < 0.5 );
 
-         SCIP_CALL( SCIPaddConflictUb(scip, vars1[varrow], bdchgidx, separatequeue) );
-         SCIP_CALL( SCIPaddConflictLb(scip, vars1[varrow], bdchgidx, separatequeue) );
+         SCIP_CALL( SCIPaddConflictUb(scip, vars1[varrow], bdchgidx, resolutionqueue) );
+         SCIP_CALL( SCIPaddConflictLb(scip, vars1[varrow], bdchgidx, resolutionqueue) );
       }
    }
 

@@ -1790,7 +1790,7 @@ SCIP_RETCODE resolvePropagationFullOrbitope(
    SCIP_CONS*            cons,               /**< constraint that inferred the bound change */
    int                   inferinfo,          /**< inference information */
    SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index (time stamp of bound change), or NULL for current time */
-   SCIP_Bool             separatequeue,      /**< should the bound change be added to the separate queue? */
+   SCIP_Bool             resolutionqueue,      /**< should the explanation bound changes be added to the resolution conflict queue? */
    SCIP_RESULT*          result              /**< pointer to store the result of the propagation conflict resolving call */
    )
 {  /*lint --e{715}*/
@@ -1976,7 +1976,7 @@ SCIP_RETCODE resolvePropagation(
    SCIP_CONS*            cons,               /**< constraint that inferred the bound change */
    int                   inferinfo,          /**< inference information */
    SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index (time stamp of bound change), or NULL for current time */
-   SCIP_Bool             separatequeue,      /**< should the bound change be added to the separate queue? */
+   SCIP_Bool             resolutionqueue,      /**< should the explanation bound changes be added to the resolution conflict queue? */
    SCIP_RESULT*          result              /**< pointer to store the result of the propagation conflict resolving call */
    )
 {  /*lint --e{715}*/
@@ -2094,7 +2094,7 @@ SCIP_RETCODE resolvePropagation(
             /* case 2 or 3: */
             assert( cases[p1][p2] == 2 || cases[p1][p2] == 3 );
             assert( SCIPgetVarUbAtIndex(scip, vars[p1][p2], bdchgidx, FALSE) < 0.5 );
-            SCIP_CALL( SCIPaddConflictUb(scip, vars[p1][p2], bdchgidx, separatequeue) );
+            SCIP_CALL( SCIPaddConflictUb(scip, vars[p1][p2], bdchgidx, resolutionqueue) );
             *result = SCIP_SUCCESS;
 
 #ifdef SCIP_DEBUG
@@ -2166,7 +2166,7 @@ SCIP_RETCODE resolvePropagation(
                assert( cases[p1][p2] == 2 || cases[p1][p2] == 3 );
                if ( SCIPgetVarUbAtIndex(scip, vars[p1][p2], bdchgidx, FALSE) < 0.5 )
                {
-                  SCIP_CALL( SCIPaddConflictUb(scip, vars[p1][p2], bdchgidx, separatequeue) );
+                  SCIP_CALL( SCIPaddConflictUb(scip, vars[p1][p2], bdchgidx, resolutionqueue) );
                   *result = SCIP_SUCCESS;
 
 #ifdef SCIP_DEBUG
@@ -2204,7 +2204,7 @@ SCIP_RETCODE resolvePropagation(
             for (k = 0; k < j; ++k)
             {
                assert( SCIPgetVarUbAtIndex(scip, vars[i][k], bdchgidx, FALSE) < 0.5 );
-               SCIP_CALL( SCIPaddConflictUb(scip, vars[i][k], bdchgidx, separatequeue) );
+               SCIP_CALL( SCIPaddConflictUb(scip, vars[i][k], bdchgidx, resolutionqueue) );
                *result = SCIP_SUCCESS;
 #ifdef SCIP_DEBUG
                (void) SCIPsnprintf(tmpstr, SCIP_MAXSTRLEN, " (%d,%d)", i, k);
@@ -2231,7 +2231,7 @@ SCIP_RETCODE resolvePropagation(
             {
                if ( SCIPgetVarLbAtIndex(scip, vars[i][k], bdchgidx, FALSE) > 0.5 )
                {
-                  SCIP_CALL( SCIPaddConflictLb(scip, vars[i][k], bdchgidx, separatequeue) );
+                  SCIP_CALL( SCIPaddConflictLb(scip, vars[i][k], bdchgidx, resolutionqueue) );
                   *result = SCIP_SUCCESS;
                   SCIPdebugMsg(scip, "   and variable x[%d][%d] fixed to 1.\n", i, k);
                   break;
@@ -3225,11 +3225,11 @@ SCIP_DECL_CONSRESPROP(consRespropOrbitope)
    /* resolution for full orbitopes not availabe yet */
    if ( orbitopetype == SCIP_ORBITOPETYPE_PACKING || orbitopetype == SCIP_ORBITOPETYPE_PARTITIONING )
    {
-      SCIP_CALL( resolvePropagation(scip, cons, inferinfo, bdchgidx, separatequeue, result) );
+      SCIP_CALL( resolvePropagation(scip, cons, inferinfo, bdchgidx, resolutionqueue, result) );
    }
    else
    {
-      SCIP_CALL( resolvePropagationFullOrbitope(scip, conshdlr, cons, inferinfo, bdchgidx, separatequeue, result) );
+      SCIP_CALL( resolvePropagationFullOrbitope(scip, conshdlr, cons, inferinfo, bdchgidx, resolutionqueue, result) );
    }
 
    return SCIP_OKAY;

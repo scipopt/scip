@@ -25,7 +25,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 // #define SCIP_STATISTIC
-// #define SCIP_DEBUG
+#define SCIP_DEBUG
 
 #include "lpi/lpi.h"
 #include "scip/conflict_resolution.h"
@@ -1273,7 +1273,13 @@ SCIP_Bool existsResolvablebdchginfo(
 {
    SCIP_BDCHGINFO* bdchginfo;
    int i;
-
+   /* loop through bound change and check if there exists a resolvable bound change */
+   for( i = 0; i < SCIPpqueueNElems(conflict->resforcedbdchgqueue); ++i )
+   {
+      bdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueElems(conflict->resforcedbdchgqueue)[i]);
+      if (bdchginfoIsResolvable(bdchginfo))
+         return TRUE;
+   }
    /* loop through bound change and check if there exists a resolvable bound change */
    for( i = 0; i < SCIPpqueueNElems(conflict->resbdchgqueue); ++i )
    {
@@ -4429,7 +4435,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
          printAllBoundChanges(conflict, set);
       }
 #endif
-      /** check if the bound change is resolvable. If it is not, we can ignore the bound change and continue
+      /** check if the bound change is resolvable. If it is not, we ignore the bound change and continue
        * with the next one
        */
       if ( !bdchginfoIsResolvable(bdchginfo) && set->conf_fixandcontinue)

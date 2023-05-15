@@ -1841,7 +1841,7 @@ SCIP_RETCODE addConflictBounds(
    SCIP_VAR*             var,                /**< variable to check for objective contribution */
    SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index (time stamp of bound change), or NULL for current time */
    SCIP_Real*            reqpseudoobjval,    /**< pointer to store the remaining minimum activity which has to be proven */
-   SCIP_Bool             separatequeue       /**< should the reason bound changes be added to the separate conflict queue? */
+   SCIP_Bool             resolutionqueue       /**< should the explanation bound changes be added to the resolution conflict queue? */
    )
 {
    SCIP_Real objval;
@@ -1862,7 +1862,7 @@ SCIP_RETCODE addConflictBounds(
       if( SCIPisGT(scip, loclb, glblb) )
       {
          SCIPdebugMsg(scip, "  add bound change <%s>[%g] >= <%g>\n", SCIPvarGetName(var), objval, loclb);
-         SCIP_CALL( SCIPaddConflictLb(scip, var, bdchgidx, separatequeue) );
+         SCIP_CALL( SCIPaddConflictLb(scip, var, bdchgidx, resolutionqueue) );
 
          /* hard comparison  is enough to make requiredpseudoobjval nonincreasing */
          assert((loclb - glblb) * objval > 0.0);
@@ -1883,7 +1883,7 @@ SCIP_RETCODE addConflictBounds(
       if( SCIPisLT(scip, locub, glbub) )
       {
          SCIPdebugMsg(scip, "  add bound change <%s>[%g] <= <%g>\n", SCIPvarGetName(var), objval, locub);
-         SCIP_CALL( SCIPaddConflictUb(scip, var, bdchgidx, separatequeue) );
+         SCIP_CALL( SCIPaddConflictUb(scip, var, bdchgidx, resolutionqueue) );
 
          /* hard comparison  is enough to make requiredpseudoobjval nonincreasing */
          assert((locub - glbub) * objval > 0.0);
@@ -1952,7 +1952,7 @@ SCIP_RETCODE addConflictBinvar(
    SCIP_HASHTABLE*       addedvars,          /**< hash table containing variables which are already add directly or implicitly due to implications */
    SCIP_Bool             respropuseimplics,  /**< should implications be used */
    SCIP_Real*            reqpseudoobjval,    /**< pointer to store the remaining minimum activity which has to be proven */
-   SCIP_Bool             separatequeue       /**< should the reason bound changes be added to the separate conflict queue? */
+   SCIP_Bool             resolutionqueue       /**< should the explanation bound changes be added to the resolution conflict queue? */
    )
 {
    SCIP_Real objval;
@@ -1987,7 +1987,7 @@ SCIP_RETCODE addConflictBinvar(
       if( foundimplics || SCIPisPositive(scip, objval) )
       {
          SCIPdebugMsg(scip, "  add bound change <%s>[%g] >= <%g> bdchgidx [%g,%g]\n", SCIPvarGetName(var), objval, lb, lb, ub);
-         SCIP_CALL( SCIPaddConflictLb(scip, var, NULL, separatequeue) );
+         SCIP_CALL( SCIPaddConflictLb(scip, var, NULL, resolutionqueue) );
 
          (*reqpseudoobjval) -= MAX(0.0, objval);
 
@@ -2013,7 +2013,7 @@ SCIP_RETCODE addConflictBinvar(
       if( foundimplics || SCIPisNegative(scip, objval) )
       {
          SCIPdebugMsg(scip, "  add bound change <%s>[%g] <= <%g> bdchgidx=[%g,%g]\n", SCIPvarGetName(var), objval, ub, lb, ub);
-         SCIP_CALL( SCIPaddConflictUb(scip, var, NULL, separatequeue) );
+         SCIP_CALL( SCIPaddConflictUb(scip, var, NULL, resolutionqueue) );
 
          (*reqpseudoobjval) +=  MIN(0.0, objval);
 
@@ -2137,7 +2137,7 @@ SCIP_RETCODE resolvePropagation(
    int                   inferinfo,          /**< inference information */
    SCIP_BOUNDTYPE        boundtype,          /**< the type of the changed bound (lower or upper bound) */
    SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index (time stamp of bound change), or NULL for current time */
-   SCIP_Bool             separatequeue       /**< should the reason bound changes be added to the separate conflict queue? */
+   SCIP_Bool             resolutionqueue       /**< should the explanation bound changes be added to the resolution conflict queue? */
    )
 {
    SCIP_HASHTABLE* addedvars;
@@ -2229,7 +2229,7 @@ SCIP_RETCODE resolvePropagation(
             if( var == infervar )
                continue;
 
-            SCIP_CALL( addConflictBinvar(scip, var, bdchgidx, NULL, NULL, FALSE, &reqpseudoobjval, separatequeue) );
+            SCIP_CALL( addConflictBinvar(scip, var, bdchgidx, NULL, NULL, FALSE, &reqpseudoobjval, resolutionqueue) );
          }
       }
       else
@@ -2249,7 +2249,7 @@ SCIP_RETCODE resolvePropagation(
             if( SCIPhashtableExists(addedvars, (void*)var) )
                continue;
 
-            SCIP_CALL( addConflictBinvar(scip, var, bdchgidx, minactimpls[v], addedvars, propdata->respropuseimplics, &reqpseudoobjval, separatequeue) );
+            SCIP_CALL( addConflictBinvar(scip, var, bdchgidx, minactimpls[v], addedvars, propdata->respropuseimplics, &reqpseudoobjval, resolutionqueue) );
          }
       }
    }
@@ -2268,7 +2268,7 @@ SCIP_RETCODE resolvePropagation(
       if( var == infervar )
          continue;
 
-      SCIP_CALL( addConflictBounds(scip, var, bdchgidx, &reqpseudoobjval, separatequeue) );
+      SCIP_CALL( addConflictBounds(scip, var, bdchgidx, &reqpseudoobjval, resolutionqueue) );
    }
 
    return SCIP_OKAY;
@@ -3664,7 +3664,7 @@ SCIP_DECL_PROPRESPROP(propRespropPseudoobj)
       SCIPgetVarLbAtIndex(scip, infervar, bdchgidx, FALSE), cutoffbound);
 
    /* resolve the propagation of the inference variable w.r.t. required minactivity */
-   SCIP_CALL( resolvePropagation(scip, propdata, cutoffbound, infervar, inferinfo, boundtype, bdchgidx, separatequeue) );
+   SCIP_CALL( resolvePropagation(scip, propdata, cutoffbound, infervar, inferinfo, boundtype, bdchgidx, resolutionqueue) );
 
    (*result) = SCIP_SUCCESS;
 

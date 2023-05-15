@@ -2811,7 +2811,7 @@ SCIP_RETCODE addConflictBounds(
    SCIP_VAR*             infervar,           /**< variable that was deduced, or NULL (not equal to integral variable) */
    SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index (time stamp of bound change), or NULL for current time */
    PROPRULE              proprule,           /**< propagation rule */
-   SCIP_Bool             separatequeue       /**< should the bound change be added to the separate queue? */
+   SCIP_Bool             resolutionqueue       /**< should the explanation bound changes be added to the resolution conflict queue? */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -2835,7 +2835,7 @@ SCIP_RETCODE addConflictBounds(
       for (i = 0; i < nvars; ++i)
       {
          assert( SCIPisEQ(scip, SCIPgetVarLbAtIndex(scip, vars[i], bdchgidx, FALSE), SCIPgetVarUbAtIndex(scip, vars[i], bdchgidx, FALSE)) );
-         SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i], separatequeue) );
+         SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i], resolutionqueue) );
       }
       break;
 
@@ -2847,13 +2847,13 @@ SCIP_RETCODE addConflictBounds(
          if ( SCIPgetVarLbAtIndex(scip, vars[i], bdchgidx, FALSE) > 0.5 )
          {
             assert( SCIPgetVarLbAtIndex(scip, vars[i], bdchgidx, TRUE) > 0.5 );
-            SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i], separatequeue) );
+            SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i], resolutionqueue) );
          }
          /* add variables that were fixed to 0 */
          else if ( SCIPgetVarUbAtIndex(scip, vars[i], bdchgidx, FALSE) < 0.5 )
          {
             assert( SCIPgetVarUbAtIndex(scip, vars[i], bdchgidx, TRUE) < 0.5 );
-            SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i], separatequeue) );
+            SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i], resolutionqueue) );
          }
          else
          {
@@ -2869,7 +2869,7 @@ SCIP_RETCODE addConflictBounds(
       if( infervar != consdata->intvar )
       {
          /* the variable was fixed, because of the lower bound of the integral variable */
-         SCIP_CALL( SCIPaddConflictLb(scip, consdata->intvar, NULL, separatequeue) );
+         SCIP_CALL( SCIPaddConflictLb(scip, consdata->intvar, NULL, resolutionqueue) );
       }
       /* to many and the other fixed variables */
       for (i = 0; i < nvars; ++i)
@@ -2878,7 +2878,7 @@ SCIP_RETCODE addConflictBounds(
          if ( SCIPgetVarUbAtIndex(scip, vars[i], bdchgidx, FALSE) < 0.5 )
          {
             assert( SCIPgetVarUbAtIndex(scip, vars[i], bdchgidx, TRUE) < 0.5 );
-            SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i], separatequeue) );
+            SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i], resolutionqueue) );
          }
       }
       break;
@@ -2889,7 +2889,7 @@ SCIP_RETCODE addConflictBounds(
       if( infervar != consdata->intvar )
       {
          /* the variable was fixed, because of upper bound of the integral variable and the other fixed variables */
-         SCIP_CALL( SCIPaddConflictUb(scip, consdata->intvar, NULL, separatequeue) );
+         SCIP_CALL( SCIPaddConflictUb(scip, consdata->intvar, NULL, resolutionqueue) );
       }
       for (i = 0; i < nvars; ++i)
       {
@@ -2897,7 +2897,7 @@ SCIP_RETCODE addConflictBounds(
          if ( SCIPgetVarLbAtIndex(scip, vars[i], bdchgidx, FALSE) > 0.5 )
          {
             assert( SCIPgetVarLbAtIndex(scip, vars[i], bdchgidx, TRUE) > 0.5 );
-            SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i], separatequeue) );
+            SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i], resolutionqueue) );
          }
       }
       break;
@@ -3372,7 +3372,7 @@ SCIP_RETCODE resolvePropagation(
    SCIP_VAR*             infervar,           /**< variable that was deduced */
    PROPRULE              proprule,           /**< propagation rule that deduced the value */
    SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index (time stamp of bound change), or NULL for current time */
-   SCIP_Bool             separatequeue,      /**< should the bound change be added to the separate queue? */
+   SCIP_Bool             resolutionqueue,      /**< should the explanation bound changes be added to the resolution conflict queue? */
    SCIP_RESULT*          result              /**< pointer to store the result of the propagation conflict resolving call */
 
    )
@@ -3381,7 +3381,7 @@ SCIP_RETCODE resolvePropagation(
 
    SCIPdebugMsg(scip, "resolving fixations according to rule %d\n", (int) proprule);
 
-   SCIP_CALL( addConflictBounds(scip, cons, infervar, bdchgidx, proprule, separatequeue) );
+   SCIP_CALL( addConflictBounds(scip, cons, infervar, bdchgidx, proprule, resolutionqueue) );
    *result = SCIP_SUCCESS;
 
    return SCIP_OKAY;
@@ -5414,7 +5414,7 @@ SCIP_DECL_CONSPRESOL(consPresolXor)
 static
 SCIP_DECL_CONSRESPROP(consRespropXor)
 {  /*lint --e{715}*/
-   SCIP_CALL( resolvePropagation(scip, cons, infervar, (PROPRULE)inferinfo, bdchgidx, separatequeue, result) );
+   SCIP_CALL( resolvePropagation(scip, cons, infervar, (PROPRULE)inferinfo, bdchgidx, resolutionqueue, result) );
 
    return SCIP_OKAY;
 }

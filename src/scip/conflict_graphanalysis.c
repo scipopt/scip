@@ -2372,7 +2372,7 @@ SCIP_RETCODE conflictQueueBound(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_BDCHGINFO*       bdchginfo,          /**< bound change information */
    SCIP_Real             relaxedbd,          /**< relaxed bound */
-   SCIP_Bool             separatequeue       /**< should the bound be added to the separate queue? */
+   SCIP_Bool             resolutionqueue       /**< should the explanation bound changes be added to the resolution conflict queue? */
    )
 {
    assert(conflict != NULL);
@@ -2384,7 +2384,7 @@ SCIP_RETCODE conflictQueueBound(
    assert(SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER || SCIPsetIsGE(set, relaxedbd, SCIPbdchginfoGetNewbound(bdchginfo)));
    assert(SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_UPPER || SCIPsetIsLE(set, relaxedbd, SCIPbdchginfoGetNewbound(bdchginfo)));
 
-   if (separatequeue)
+   if (resolutionqueue)
    {
       /* insert the bound change into the separate queue */
       assert(conflict->bdchgonlyresqueue);
@@ -4075,7 +4075,7 @@ SCIP_RETCODE SCIPconflictAddBound(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_BOUNDTYPE        boundtype,          /**< type of bound that was changed: lower or upper bound */
    SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index (time stamp of bound change), or NULL for current time */
-   SCIP_Bool             separatequeue       /**< should the variable be added to the separate conflict queue? */
+   SCIP_Bool             resolutionqueue       /**< should the explanation bound changes be added to the resolution conflict queue? */
    )
 {
    SCIP_BDCHGINFO* bdchginfo;
@@ -4105,7 +4105,7 @@ SCIP_RETCODE SCIPconflictAddBound(
       for( i = 0; i < nvars; ++i )
       {
          SCIP_CALL( SCIPconflictAddBound(conflict, blkmem, set, stat, vars[i],
-               (scalars[i] < 0.0 ? SCIPboundtypeOpposite(boundtype) : boundtype), bdchgidx, separatequeue) );
+               (scalars[i] < 0.0 ? SCIPboundtypeOpposite(boundtype) : boundtype), bdchgidx, resolutionqueue) );
       }
 
       return SCIP_OKAY;
@@ -4123,7 +4123,7 @@ SCIP_RETCODE SCIPconflictAddBound(
 
    assert(SCIPbdchgidxIsEarlier(SCIPbdchginfoGetIdx(bdchginfo), bdchgidx));
 
-   SCIP_CALL( conflictAddBound(conflict, blkmem, set, stat, var, boundtype, bdchginfo, SCIPbdchginfoGetNewbound(bdchginfo), separatequeue) );
+   SCIP_CALL( conflictAddBound(conflict, blkmem, set, stat, var, boundtype, bdchginfo, SCIPbdchginfoGetNewbound(bdchginfo), resolutionqueue) );
 
    return SCIP_OKAY;
 }
