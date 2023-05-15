@@ -32,6 +32,8 @@ Interface changes
 
 ### Changed parameters
 
+- changed integer parameter "propagating/symmetry/recomputrestart" from range {0, 1, 2} to being fixed at value 0
+
 ### New parameters
 
 ### Data structures
@@ -74,6 +76,7 @@ Fixed bugs
 - avoid aggregation into a single linear constraint if they should not be upgraded (needed for indicator constraints)
 - apply effective root changes before fork is repropagated during treeSwitchPath() in tree.c
 - avoid invalid objective value for solutions generated from an unbounded LP relaxation in case of a nonlinear objective function
+- disable recomputing symmetries after a restart (constraint removal is not permitted)
 
 Miscellaneous
 -------------
