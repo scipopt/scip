@@ -30,6 +30,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <string.h>
+#include "include/scip_test.h"
 #include "scip/scipdefplugins.h"
 #include "scip/nlhdlr.c"
 #include "scip/cons_nonlinear.c"
@@ -39,8 +40,6 @@
 /*
  * TEST
  */
-
-#include "include/scip_test.h"
 
 static SCIP* scip;
 static SCIP_VAR* x_1;

@@ -262,7 +262,7 @@ SCIP_RETCODE branchcandCalcLPCands(
          assert(col->lpipos >= 0);
 
          primsol = SCIPcolGetPrimsol(col);
-         assert(primsol < SCIP_INVALID);
+         assert(primsol != SCIP_INVALID);  /*lint !e777*/
          assert(SCIPsetIsInfinity(set, -col->lb) || SCIPsetIsFeasGE(set, primsol, col->lb));
          assert(SCIPsetIsInfinity(set, col->ub) || SCIPsetIsFeasLE(set, primsol, col->ub));
 
