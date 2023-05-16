@@ -694,7 +694,8 @@ SCIP_RETCODE SCIPanalyzeConflict(
    if(validdepth == 0 && SCIPsetGetStage(scip->set) == SCIP_STAGE_SOLVING)
    {
          SCIP_CALL( SCIPconflictAnalyzeResolution(scip->conflict, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
-                  scip->origprob, scip->tree, scip->reopt, scip->lp, scip->cliquetable, NULL, 0, FALSE, FALSE, &conflictlearned) );
+                  scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable, NULL,
+                  0, FALSE, FALSE, &conflictlearned) );
    }
    if( !(scip->set->conf_favorresolution) || !(conflictlearned) )
    {
@@ -739,7 +740,8 @@ SCIP_RETCODE SCIPanalyzeConflictCons(
       conflictlearned = FALSE;
 
       SCIP_CALL( SCIPconflictAnalyzeResolution(scip->conflict, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
-                  scip->origprob, scip->tree, scip->reopt, scip->lp, scip->cliquetable, conflictrow, 0, FALSE, FALSE, &conflictlearned) );
+                  scip->origprob, scip->tree, scip->reopt, scip->lp,  scip->branchcand, scip->eventqueue, scip->cliquetable,
+                  conflictrow, 0, FALSE, FALSE, &conflictlearned) );
 
       if( !(scip->set->conf_favorresolution) || !(conflictlearned) )
       {
