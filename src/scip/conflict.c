@@ -7236,12 +7236,12 @@ SCIP_RETCODE getDualProof(
     * where lhs, rhs, lb, and ub are selected in order to maximize the feasibility of the row.
     */
 
-   /* add the objective function to the aggregation row with current cutoff bound as right-hand side
-    *
-    * use a slightly tighter cutoff bound, because solutions with equal objective value should also be declared
-    * infeasible
+   /* add the objective function to the aggregation row with respect to the current cutoff bound
+    * 
+    * for an integral objective the right-hand side is reduced by the cutoff bound delta to cut off up to the next
+    * possible objective value below the cutoff bound
     */
-   SCIP_CALL( SCIPaggrRowAddObjectiveFunction(set->scip, farkasrow, lp->cutoffbound - SCIPsetSumepsilon(set), 1.0) );
+   SCIP_CALL( SCIPaggrRowAddObjectiveFunction(set->scip, farkasrow, lp->cutoffbound - (SCIPprobIsObjIntegral(transprob) ? SCIPsetCutoffbounddelta(set) : 0.0), 1.0) );
 
    /* dual row: z^T{lhs,rhs} - c* <= (-r^T - (y-z)^TA){lb,ub}
     * process rows: add z^T{lhs,rhs} to the dual row's left hand side, and -(y-z)^TA to the dual row's coefficients
@@ -9477,10 +9477,10 @@ SCIP_RETCODE SCIPconflictAnalyzePseudo(
    /* get temporary memory for infeasibility proof coefficients */
    SCIP_CALL( SCIPsetAllocBufferArray(set, &pseudocoefs, nvars) );
 
-   /* use a slightly tighter cutoff bound, because solutions with equal objective value should also be declared
-    * infeasible
+   /* for an integral objective use the cutoff bound reduced by the cutoff bound delta to cut off up to the next better
+    * objective value
     */
-   pseudolhs = -(lp->cutoffbound - SCIPsetSumepsilon(set));
+   pseudolhs = -(lp->cutoffbound - (SCIPprobIsObjIntegral(transprob) ? SCIPsetCutoffbounddelta(set) : 0.0));
 
    /* store the objective values as infeasibility proof coefficients, and recalculate the pseudo activity */
    pseudoact = 0.0;
