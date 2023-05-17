@@ -7152,26 +7152,12 @@ SCIP_RETCODE tryAddSymmetryHandlingMethods(
    /* if constraints have already been added */
    if ( propdata->triedaddconss )
    {
-      if ( isSymmetryRecomputationRequired(scip, propdata) )
-      {
-         /* remove symmetry handling constraints to be prepared for a recomputation */
-         SCIP_CALL( delSymConss(scip, propdata) );
-         assert( !propdata->triedaddconss );
-         SCIP_CALL( freeSymmetryData(scip, propdata) );
-         assert( !propdata->computedsymmetry );
+      assert( propdata->nperms >= 0 );
 
-         propdata->lastrestart = SCIPgetNRuns(scip);
-         propdata->symfoundreduction = FALSE;
-      }
-      else
-      {
-         assert( propdata->nperms >= 0 );
+      if ( earlyterm != NULL )
+         *earlyterm = TRUE;
 
-         if ( earlyterm != NULL )
-            *earlyterm = TRUE;
-
-         return SCIP_OKAY;
-      }
+      return SCIP_OKAY;
    }
 
    /* double-check that no symmetry handling is present */
