@@ -166,7 +166,7 @@
 
 /* default parameters for symmetry computation */
 #define DEFAULT_SYMCOMPTIMING           2    /**< timing of symmetry computation (0 = before presolving, 1 = during presolving, 2 = at first call) */
-#define DEFAULT_RECOMPUTERESTART        0    /**< Recompute symmetries after a restart has occurred? (0 = never, 1 = always, 2 = if symmetry reduction found) */
+#define DEFAULT_RECOMPUTERESTART        0    /**< Recompute symmetries after a restart has occurred? (0 = never) */
 
 /* default parameters for Schreier Sims constraints */
 #define DEFAULT_SSTTIEBREAKRULE   1          /**< index of tie break rule for selecting orbit for Schreier Sims constraints? */
@@ -743,35 +743,6 @@ SCIP_Bool checkSymmetryDataFree(
 #endif
 
 
-/** returns whether a recomputation of symmetries is required */
-static
-SCIP_Bool isSymmetryRecomputationRequired(
-   SCIP*                 scip,               /**< SCIP pointer */
-   SCIP_PROPDATA*        propdata            /**< propagator data */
-   )
-{ /*lint --e{641}*/
-   assert( scip != NULL );
-   assert( propdata != NULL );
-
-   if ( propdata->recomputerestart == SCIP_RECOMPUTESYM_NEVER )
-      return FALSE;
-
-   /* we do not need to recompute symmetries if no restart has occured */
-   if ( SCIPgetNRuns(scip) == propdata->lastrestart || propdata->lastrestart == 0 || SCIPgetNRuns(scip) == 1 )
-      return FALSE;
-
-   if ( propdata->recomputerestart == SCIP_RECOMPUTESYM_ALWAYS )
-      return TRUE;
-
-   /* recompute symmetries if a symmetry reduction is found */
-   assert( propdata->recomputerestart == SCIP_RECOMPUTESYM_OFFOUNDRED );
-   if ( propdata->symfoundreduction )
-      return TRUE;
-
-   return FALSE;
-}
-
-
 /** resets symmetry handling propagators that depend on the branch-and-bound tree structure */
 static
 SCIP_RETCODE resetDynamicSymmetryHandling(
@@ -958,75 +929,6 @@ SCIP_RETCODE freeSymmetryData(
 
    propdata->computedsymmetry = FALSE;
    propdata->compressed = FALSE;
-
-   return SCIP_OKAY;
-}
-
-
-/** deletes symmetry handling constraints */
-static
-SCIP_RETCODE delSymConss(
-   SCIP*                 scip,               /**< SCIP pointer */
-   SCIP_PROPDATA*        propdata            /**< propagator data */
-   )
-{
-   int i;
-
-   assert( scip != NULL );
-   assert( propdata != NULL );
-
-   assert( (propdata->genorbconss == NULL) == (propdata->ngenorbconss == 0) );
-   assert( (propdata->genorbconss == NULL) == (propdata->genorbconsssize == 0) );
-
-   for (i = 0; i < propdata->ngenorbconss; ++i)
-   {
-      assert( propdata->genorbconss[i] != NULL );
-
-      SCIP_CALL( SCIPdelCons(scip, propdata->genorbconss[i]) );
-      SCIP_CALL( SCIPreleaseCons(scip, &propdata->genorbconss[i]) );
-   }
-
-   SCIPfreeBlockMemoryArrayNull(scip, &propdata->genorbconss, propdata->genorbconsssize);
-   propdata->ngenorbconss = 0;
-   propdata->genorbconsssize = 0;
-   propdata->genorbconss = NULL;
-
-   /* free Schreier Sims data */
-   if ( propdata->nsstconss > 0 )
-   {
-      for (i = 0; i < propdata->nsstconss; ++i)
-      {
-         assert( propdata->sstconss[i] != NULL );
-
-         SCIP_CALL( SCIPdelCons(scip, propdata->sstconss[i]) );
-         SCIP_CALL( SCIPreleaseCons(scip, &propdata->sstconss[i]) );
-      }
-
-      SCIPfreeBlockMemoryArray(scip, &propdata->sstconss, propdata->maxnsstconss);
-      propdata->nsstconss = 0;
-      propdata->maxnsstconss = 0;
-   }
-
-   /* linear constraints*/
-   assert( (propdata->genlinconss == NULL) == (propdata->ngenlinconss == 0) );
-   assert( (propdata->genlinconss == NULL) == (propdata->genlinconsssize == 0) );
-
-   for (i = 0; i < propdata->ngenlinconss; ++i)
-   {
-      assert( propdata->genlinconss[i] != NULL );
-
-      SCIP_CALL( SCIPdelCons(scip, propdata->genlinconss[i]) );
-      SCIP_CALL( SCIPreleaseCons(scip, &propdata->genlinconss[i]) );
-   }
-
-   SCIPfreeBlockMemoryArrayNull(scip, &propdata->genlinconss, propdata->genlinconsssize);
-   propdata->ngenlinconss = 0;
-   propdata->genlinconsssize = 0;
-   propdata->genlinconss = NULL;
-
-   SCIP_CALL( resetDynamicSymmetryHandling(scip, propdata) );
-
-   propdata->triedaddconss = FALSE;
 
    return SCIP_OKAY;
 }
@@ -2915,17 +2817,6 @@ SCIP_RETCODE determineSymmetry(
          (symspecrequire & (int) SYM_SPEC_REAL) != 0 ? '+' : '-');
 
       return SCIP_OKAY;
-   }
-
-   /* if a restart occured, possibly prepare symmetry data to be recomputed */
-   if ( isSymmetryRecomputationRequired(scip, propdata) )
-   {
-      /* reset symmetry information */
-      SCIP_CALL( delSymConss(scip, propdata) );
-      SCIP_CALL( freeSymmetryData(scip, propdata) );
-
-      propdata->lastrestart = SCIPgetNRuns(scip);
-      propdata->symfoundreduction = FALSE;
    }
 
    /* skip computation if symmetry has already been computed */
@@ -7490,12 +7381,6 @@ SCIP_DECL_PROPINITPRE(propInitpreSymmetry)
    {
       SCIP_CALL( SCIPgetIntParam(scip, "misc/usesymmetry", &propdata->usesymmetry) );
    }
-#ifndef NDEBUG
-   else if ( SCIPgetNRuns(scip) > propdata->lastrestart && isSymmetryRecomputationRequired(scip, propdata) )
-   {
-      assert( SCIPgetNRuns(scip) > 1 );
-   }
-#endif
 
    /* add symmetry handling constraints if required  */
    if ( propdata->addconsstiming == 0 )
@@ -7973,8 +7858,8 @@ SCIP_RETCODE SCIPincludePropSymmetry(
 
    SCIP_CALL( SCIPaddIntParam(scip,
          "propagating/" PROP_NAME "/recomputerestart",
-         "recompute symmetries after a restart has occured? (0 = never, 1 = always, 2 = if symmetry reduction found)",
-         &propdata->recomputerestart, TRUE, DEFAULT_RECOMPUTERESTART, 0, 2, NULL, NULL) );
+         "recompute symmetries after a restart has occured? (0 = never)",
+         &propdata->recomputerestart, TRUE, DEFAULT_RECOMPUTERESTART, 0, 0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "propagating/" PROP_NAME "/compresssymmetries",
