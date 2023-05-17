@@ -216,6 +216,7 @@ Fixed bugs
 - apply effective root changes before fork is repropagated during treeSwitchPath() in tree.c
 - avoid invalid objective value for solutions generated from an unbounded LP relaxation in case of a nonlinear objective function
 - disable recomputing symmetries after a restart (constraint removal is not permitted)
+- avoid cutting off optimal solutions for small feasibility tolerances in conflict analysis
 
 Miscellaneous
 -------------
