@@ -66,7 +66,7 @@ Test(Demo8, repropagation, .description = "test checking that no infeasible solu
    SCIP_VAR** vars = SCIPgetOrigVars(scip);
    SCIP_SOL* sol = SCIPgetSols(scip)[0];
    int i;
-   for(i = 0; i < 4    ; ++i) cr_assert_float_eq(SCIPgetSolVal(scip, sol, vars[i]), 1.0, 1e-5);
-   for(i = 4; i < nvars; ++i) cr_assert_float_eq(SCIPgetSolVal(scip, sol, vars[i]), 0.0, 1e-5);
+   for( i = 0; i < 4; ++i ) cr_assert_float_eq(SCIPgetSolVal(scip, sol, vars[i]), 1.0, 1e-5);
+   for( i = 4; i < nvars; ++i ) cr_assert_float_eq(SCIPgetSolVal(scip, sol, vars[i]), 0.0, 1e-5);
    cr_assert_float_eq(SCIPgetSolOrigObj(scip, sol), 3.0, 1e-5);
 }
