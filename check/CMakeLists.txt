@@ -90,7 +90,6 @@ set(settings_MIP
 #    "cloud"
     "uct_breadth_dualval"
     "conflictdiving"
-    "repropagation"
 )
 #
 # settings for the componentshandler test
@@ -217,6 +216,7 @@ set(settings_Cardinality
 set(settings_Or
     "default"
     "presolving_separating_heuristics_off_randombranching"
+    "repropagation"
     "tolerance"
 )
 
@@ -271,7 +271,6 @@ set(instances_MIP
     "instances/MIP/stein27.fzn\;18"
     "instances/MIP/stein27_inf.lp\;+infinity"
     "instances/MIP/vpm2.fzn\;13.75"
-    "instances/MIP/Demo8.cip\;3"
     )
 #
 # Instances for component handler test
@@ -454,6 +453,7 @@ set(instances_Decomp
 
 set(instances_Or
     "instances/Or/or_constraint.cip\;18"
+    "instances/Or/Demo8.cip\;3"
     "instances/Or/problem.cip\;0"
     )
 
