@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -2087,7 +2087,7 @@ bool ScipNLP::get_var_con_metadata(
          else
          {
             char buffer[20];
-            (void) sprintf(buffer, "nlpivar%8d", i);
+            (void) SCIPsnprintf(buffer, 20, "nlpivar%8d", i);
             varnamesvec.push_back(buffer);
          }
       }
@@ -2104,7 +2104,7 @@ bool ScipNLP::get_var_con_metadata(
       else
       {
          char buffer[20];
-         (void) sprintf(buffer, "nlpicons%8d", i);
+         (void) SCIPsnprintf(buffer, 20, "nlpicons%8d", i);
          consnamesvec.push_back(buffer);  /*lint !e3701*/
       }
    }
@@ -2603,6 +2603,16 @@ void ScipNLP::finalize_solution(
    catch( const IpoptNLP::Eval_Error& exc )
    {
       SCIPdebugMsg(scip, "Eval error when checking constraint viol: %s\n", exc.Message().c_str());
+      assert(status == INVALID_NUMBER_DETECTED);
+      nlpiproblem->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
+      nlpiproblem->solconsviol = SCIP_INVALID;
+   }
+   catch(...)
+   {
+      /* with clang++, an IpoptNLP::Eval_Error wasn't catched by the catch-block above
+       * I don't know why, but this should work around it
+       */
+      SCIPdebugMsg(scip, "Unknown exception when checking constraint viol\n");
       assert(status == INVALID_NUMBER_DETECTED);
       nlpiproblem->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
       nlpiproblem->solconsviol = SCIP_INVALID;

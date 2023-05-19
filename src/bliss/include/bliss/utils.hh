@@ -27,6 +27,9 @@
 #include <vector>
 #include <cstdio>
 
+//SV https://en.cppreference.com/w/cpp/language/operator_alternative
+#include <ciso646>
+
 namespace bliss {
 
 /**

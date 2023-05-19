@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -2733,7 +2733,11 @@ SCIP_RETCODE SCIPlpiGetSol(
 
    SCIPdebugMessage("getting solution\n");
 
+#if XPVERSION <= 40
    CHECK_ZERO( lpi->messagehdlr, XPRSgetsol(lpi->xprslp, primsol, activity, dualsol, redcost) );
+#else
+   CHECK_ZERO( lpi->messagehdlr, XPRSgetlpsol(lpi->xprslp, primsol, activity, dualsol, redcost) );
+#endif
 
    if( objval != NULL )
    {
@@ -3623,7 +3627,9 @@ SCIP_RETCODE SCIPlpiGetRealpar(
    SCIP_Real*            dval                /**< buffer to store the parameter value */
    )
 {
+#if XPVERSION <= 40
    int ictrlval;
+#endif
    double dctrlval;
 
    assert(lpi != NULL);
@@ -3647,9 +3653,14 @@ SCIP_RETCODE SCIPlpiGetRealpar(
       *dval = dctrlval;
       break;
    case SCIP_LPPAR_LPTILIM:
+#if XPVERSION <= 40
       CHECK_ZERO( lpi->messagehdlr, XPRSgetintcontrol(lpi->xprslp, XPRS_MAXTIME, &ictrlval) );
       /* ictrlval is the negative of the timelimit (see SCIPlpiSetRealpar) */
       *dval = (double) -ictrlval;
+#else
+      CHECK_ZERO( lpi->messagehdlr, XPRSgetdblcontrol(lpi->xprslp, XPRS_TIMELIMIT, &dctrlval) );
+      *dval = dctrlval;
+#endif
       break;
    case SCIP_LPPAR_MARKOWITZ:
       CHECK_ZERO( lpi->messagehdlr, XPRSgetdblcontrol(lpi->xprslp, XPRS_MARKOWITZTOL, &dctrlval) );
@@ -3703,6 +3714,7 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       break;
    case SCIP_LPPAR_LPTILIM:
    {
+#if XPVERSION <= 40
      int ival;
 
      /* From the Xpress documentation:
@@ -3718,6 +3730,9 @@ SCIP_RETCODE SCIPlpiSetRealpar(
          ival = (int) -floor(dval);
 
       CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_MAXTIME, ival) );
+#else
+      CHECK_ZERO( lpi->messagehdlr, XPRSsetdblcontrol(lpi->xprslp, XPRS_TIMELIMIT, dval) );
+#endif
       break;
    }
    case SCIP_LPPAR_MARKOWITZ:

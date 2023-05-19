@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -208,8 +208,9 @@ SCIP_RETCODE readSolfile(
       /* there are some lines which may preceed the solution information */
       if( strncasecmp(buf, "solution status:", 16) == 0 || strncasecmp(buf, "objective value:", 16) == 0 ||
          strncasecmp(buf, "Log started", 11) == 0 || strncasecmp(buf, "Variable Name", 13) == 0 ||
-         strncasecmp(buf, "All other variables", 19) == 0 || strncasecmp(buf, "\n", 1) == 0 ||
-         strncasecmp(buf, "NAME", 4) == 0 || strncasecmp(buf, "ENDATA", 6) == 0 )    /* allow parsing of SOL-format on the MIPLIB 2003 pages */
+         strncasecmp(buf, "All other variables", 19) == 0 || strspn(buf, " \n\r\t\f") == strlen(buf) ||
+         strncasecmp(buf, "NAME", 4) == 0 || strncasecmp(buf, "ENDATA", 6) == 0 ||    /* allow parsing of SOL-format on the MIPLIB 2003 pages */
+         strncasecmp(buf, "=obj=", 5) == 0 )    /* avoid "unknown variable" warning when reading MIPLIB SOL files */
       {
          ++nonvalues;
          continue;

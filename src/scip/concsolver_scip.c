@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -260,6 +260,15 @@ SCIP_RETCODE initConcsolver(
 
    data->nvars = SCIPgetNVars(scip);
    vars = SCIPgetVars(scip);
+
+   /* we force the copying of symmetry constraints that may have been detected during a central presolving step;
+    * otherwise, the copy may become invalid */
+   if( SCIPsetBoolParam(scip, "constraints/orbitope/forceconscopy", TRUE) != SCIP_OKAY
+      || SCIPsetBoolParam(scip, "constraints/orbisack/forceconscopy", TRUE) != SCIP_OKAY
+      || SCIPsetBoolParam(scip, "constraints/symresack/forceconscopy", TRUE) != SCIP_OKAY )
+   {
+      SCIPdebugMessage("Could not force copying of symmetry constraints\n");
+   }
 
    /* create the concurrent solver's SCIP instance and set up the problem */
    SCIP_CALL( SCIPcreate(&data->solverscip) );
