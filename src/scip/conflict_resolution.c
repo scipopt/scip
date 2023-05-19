@@ -23,8 +23,6 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-
-// #define SCIP_STATISTIC
 #define SCIP_DEBUG
 
 #include "lpi/lpi.h"
@@ -1739,6 +1737,7 @@ SCIP_Bool varIdxInArray(
    return FALSE;
 }
 
+/** refactortodo this should not be called after each weakening */
 /** Sort the resolution set so that indices with variable at global bounds are in the end of the array */
 static
 SCIP_RETCODE resolutionSetSortFromBounds(
@@ -2728,7 +2727,7 @@ SCIP_Real computeScaleReason(
 
 }
 
-/* get a clause out of the current bound changes */
+/* get a clause out of the current bound changes and the fixed bounds */
 static
 SCIP_RETCODE getConflictClause(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
@@ -2757,7 +2756,7 @@ SCIP_RETCODE getConflictClause(
       nfixinds = 0;
 
       /** given the set of bound changes that renders infeasibility we can create a no-good cut
-       *  as initial conflict. E.g. if x = 1, y = 1, and z = 0 leads to infeasibility,
+       *  as initial conflict. E.g. if x = 1, y = 1, z = 0 leads to infeasibility,
        *  then the initial conflict constraint is (1 - x) + (1 - y) + z >= 1
        */
       for(int i = 0; i < SCIPpqueueNElems(conflict->resbdchgqueue); i++)
@@ -3137,7 +3136,7 @@ SCIP_RETCODE rescaleAndResolve(
 
    scale = computeScaleReason(set, conflictresolutionset, reasonresolutionset, residx);
 
-   /* if the scale becomes too large we can apply a clause resolution step as last resort */
+   /* refactortodo if the scale becomes too large we can apply a clause resolution step as last resort */
    if ( SCIPsetIsGE(set, scale, set->conf_generalresminmaxquot) )
    {
       if( !conflict->haslargecoef )
@@ -3165,7 +3164,7 @@ SCIP_RETCODE rescaleAndResolve(
 
    largestcoef = -SCIPsetInfinity(set);
    smallestcoef = SCIPsetInfinity(set);
-   /* remove coefficients that are almost zero (10^-9 tolerance), loop backwards */
+   /* remove coefficients that are almost zero (1e-09 tolerance), loop backwards */
    for( i = newnnz - 1; i >= 0 ; i-- )
    {
       if (SCIPsetIsZero(set, resolvedresolutionset->vals[i] ))
@@ -3226,7 +3225,7 @@ SCIP_RETCODE resolveClauses(
       assert(SCIPsetIsRelEQ(set, getSlack(set, prob, conflict->resolutionset, SCIPbdchginfoGetIdx(currbdchginfo), fixbounds, fixinds), -1.0));
       conflict->resolutionset->slack = -1.0;
       SCIPsortIntReal(conflict->resolutionset->inds, conflict->resolutionset->vals, resolutionsetGetNNzs(conflict->resolutionset));
-      /* get reason clause by applying reverse propagation */
+      /* get reason clause by resolving propagation */
       SCIP_CALL( getClauseReasonSet(conflict, blkmem,  set, currbdchginfo, SCIPbdchginfoGetRelaxedBound(currbdchginfo), 0, &successclause) );
       if (successclause)
       {
@@ -3312,14 +3311,6 @@ SCIP_RETCODE DivisionBasedReduction(
    if (!(*successresolution))
       return SCIP_OKAY;
 
-   /* todo extend Chvatal-Gomory and MIR for constraints with general integer variables */
-   /* MIR can also be used in the presence of continuous variables */
-   if (!isBinaryResolutionSet(set, prob, reasonset))
-   {
-      SCIPsetDebugMsg(set, "Normalized Chvatal-Gomory and MIR are only implemented for binary constraints\n");
-      return SCIP_OKAY;
-   }
-
    resolutionslack = getSlack(set, prob, conflict->resolvedresolutionset, currbdchgidx, fixbounds, fixinds);
 
    if( SCIPsetIsGE(set, resolutionslack, 0.0) )
@@ -3376,8 +3367,16 @@ SCIP_RETCODE DivisionBasedReduction(
             if ( !set->conf_weakenreasonall && (set->conf_batchcoeftight > 0) &&
                (*nvarsweakened % set->conf_batchcoeftight == 0) )
             {
-               /* todo this should be implemented efficiently */
                SCIP_RESOLUTIONSET *reducedreason;
+
+               /* todo extend Chvatal-Gomory and MIR for constraints with general integer variables */
+               if (!isBinaryResolutionSet(set, prob, reasonset))
+               {
+                  SCIPsetDebugMsg(set, "Normalized Chvatal-Gomory and MIR are only implemented for binary constraints\n");
+                  return SCIP_OKAY;
+               }
+
+               /* todo this should be implemented efficiently */
                SCIP_CALL( resolutionsetCopy(&reducedreason, blkmem, reasonset) );
 
                /* apply the chosen reduction technique */
@@ -3414,6 +3413,13 @@ SCIP_RETCODE DivisionBasedReduction(
    if ( set->conf_weakenreasonall && SCIPsetIsGE(set, resolutionslack, 0.0) )
    {
       SCIP_RESOLUTIONSET *reducedreason;
+
+      /* todo extend Chvatal-Gomory and MIR for constraints with general integer variables */
+      if (!isBinaryResolutionSet(set, prob, reasonset))
+      {
+         SCIPsetDebugMsg(set, "Normalized Chvatal-Gomory and MIR are only implemented for binary constraints\n");
+         return SCIP_OKAY;
+      }
       SCIP_CALL( resolutionsetCopy(&reducedreason, blkmem, reasonset) );
 
       /* apply the chosen reduction technique */
@@ -3620,7 +3626,7 @@ SCIP_RETCODE tighteningBasedReduction(
                previousslack = reasonset->slack;
                SCIPsortIntReal(reasonset->inds, reasonset->vals, resolutionsetGetNNzs(reasonset));
 
-               /* todo the update of the slack should be included in tightenCoefLhs */
+               /* todo an update of the slack should be included in the coefficient tightening algorithm */
                reasonset->slack = getSlack(set, prob, reasonset, currbdchgidx, fixbounds, fixinds);
                SCIPsetDebugMsg(set, "slack after tightening: %g \n", reasonset->slack);
                assert(SCIPsetIsLE(set, reasonset->slack, previousslack + EPS));
@@ -3651,7 +3657,7 @@ SCIP_RETCODE tighteningBasedReduction(
       previousslack = reasonset->slack;
       SCIPsortIntReal(reasonset->inds, reasonset->vals, resolutionsetGetNNzs(reasonset));
 
-      /* todo the update of the slack should be included in tightenCoefLhs */
+      /* todo an update of the slack should be included in coeficient tightening */
       reasonset->slack = getSlack(set, prob, reasonset, currbdchgidx, fixbounds, fixinds);
       SCIPsetDebugMsg(set, "slack after tightening: %g \n", reasonset->slack);
       assert(SCIPsetIsLE(set, reasonset->slack, previousslack + EPS));
@@ -3980,7 +3986,8 @@ void printNonResolvableReasonType(
 
 #endif
 
-
+/** 
+ */
 static
 SCIP_RETCODE getReasonRow(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
@@ -4353,10 +4360,6 @@ SCIP_RETCODE conflictAnalyzeResolution(
       SCIP_CALL( SCIPsetAllocBufferArray(set, &cutinds, SCIPprobGetNVars(transprob)) );
    }
 
-   SCIPstatisticPrintf("Start Statistics \n");
-   SCIPstatisticPrintf("ConflictSTAT: %d %d %f %f\n", nressteps, resolutionsetGetNNzs(conflictresolutionset),
-                                                      conflictresolutionset->coefquotient, conflictresolutionset->slack);
-
    initialnnzs = resolutionsetGetNNzs(conflictresolutionset);
    /** main loop: All-FUIP RESOLUTION
     * --------------------------------
@@ -4619,10 +4622,6 @@ SCIP_RETCODE conflictAnalyzeResolution(
             }
          }
 
-         SCIPstatisticPrintf("ConflictSTAT: %d %d %f %f\n", nressteps, resolutionsetGetNNzs(conflictresolutionset),
-                             conflictresolutionset->coefquotient, conflictresolutionset->slack);
-
-
          conflictslack = getSlack(set, transprob, conflictresolutionset, bdchgidx, fixbounds, fixinds);
          conflictresolutionset->slack = conflictslack;
 
@@ -4783,7 +4782,6 @@ SCIP_RETCODE conflictAnalyzeResolution(
       SCIP_CALL( conflictInsertResolutionset(conflict, set, &tmpconflictresolutionset) );
    }
 
-   SCIPstatisticPrintf("End Statistics \n");
    SCIPsetDebugMsg(set, "Total number of resolution sets found %d\n", conflict->nresolutionsets);
    SCIPsetDebugMsg(set, "Total number of FUIPS found %d\n", nfuips);
 
