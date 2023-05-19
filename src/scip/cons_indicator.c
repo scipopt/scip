@@ -268,6 +268,9 @@
 #define EVENTHDLR_BOUND_NAME       "indicatorbound"
 #define EVENTHDLR_BOUND_DESC       "bound change event handler for indicator constraints"
 
+#define EVENTHDLR_LINCONSBOUND_NAME "indicatorlinconsbound"
+#define EVENTHDLR_LINCONSBOUND_DESC "bound change event handler for lincons of indicator constraints"
+
 #define EVENTHDLR_RESTART_NAME     "indicatorrestart"
 #define EVENTHDLR_RESTART_DESC     "force restart if absolute gap is 1 or enough binary variables have been fixed"
 
@@ -326,6 +329,9 @@ struct SCIP_ConsData
    SCIP_VAR*             binvar;             /**< binary variable for indicator constraint */
    SCIP_VAR*             slackvar;           /**< slack variable of inequality of indicator constraint */
    SCIP_CONS*            lincons;            /**< linear constraint corresponding to indicator constraint */
+   SCIP_VAR**            varswithevents;     /**< linear constraint variables with bound change events */
+   SCIP_EVENTTYPE*       eventtypes;         /**< eventtypes of linear constraint variables with bound change events */
+   int                   nevents;            /**< number of bound change events of linear constraint variables */
    SCIP_Bool             activeone;          /**< whether the constraint is active on 1 or 0 */
    SCIP_Bool             lessthanineq;       /**< whether the original linear constraint is less-than-rhs or greater-than-rhs */
    int                   nfixednonzero;      /**< number of variables among binvar and slackvar fixed to be nonzero */
@@ -340,8 +346,11 @@ struct SCIP_ConsData
 struct SCIP_ConshdlrData
 {
    SCIP_EVENTHDLR*       eventhdlrbound;     /**< event handler for bound change events */
+   SCIP_EVENTHDLR*       eventhdlrlinconsbound; /**< event handler for bound change events on linear constraint */
    SCIP_EVENTHDLR*       eventhdlrrestart;   /**< event handler for performing restarts */
    SCIP_Bool             boundhaschanged;    /**< whether a bound of a binvar/slackvar of some indicator constraint has changed */
+   SCIP_Bool             linconsevents;      /**< whether bound change events are added to variables of linear constraints */
+   SCIP_Bool             linconsboundschanged; /**< whether bounds of variables of linear constraints changed */
    SCIP_Bool             removable;          /**< whether the separated cuts should be removable */
    SCIP_Bool             scaled;             /**< if first row of alt. LP has been scaled */
    SCIP_Bool             objindicatoronly;   /**< whether the objective is nonzero only for indicator variables */
@@ -550,6 +559,33 @@ SCIP_DECL_EVENTEXEC(eventExecIndicatorBound)
    return SCIP_OKAY;
 }
 
+/** execute the event handler for getting variable bound changes on variables of linear constraint
+ *
+ * used for propagation of max activity of lincons to upper bound of slackvar; only important bounds for this purpose are catched
+ */
+static
+SCIP_DECL_EVENTEXEC(eventExecIndicatorLinconsBound)
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert( eventhdlr != NULL );
+   assert( eventdata != NULL );
+   assert( strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_LINCONSBOUND_NAME) == 0 );
+   assert( event != NULL );
+   assert( SCIPeventGetType(event) == SCIP_EVENTTYPE_UBTIGHTENED || SCIPeventGetType(event) == SCIP_EVENTTYPE_LBTIGHTENED );
+
+#ifdef SCIP_MORE_DEBUG
+   SCIPdebugMsg(scip, "Changed upper bound of variable <%s> from %g to %g.\n",
+            SCIPvarGetName(SCIPeventGetVar(event)), SCIPeventGetOldbound(event), SCIPeventGetNewbound(event));
+#endif
+
+   /* mark that some variable has changed */
+   conshdlrdata = (SCIP_CONSHDLRDATA*)eventdata;
+   assert( conshdlrdata != NULL );
+   conshdlrdata->linconsboundschanged = TRUE;
+
+   return SCIP_OKAY;
+}
 
 /** exec the event handler for forcing a restart
  *
@@ -3207,6 +3243,9 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->lincons = lincons;
    (*consdata)->implicationadded = FALSE;
    (*consdata)->slacktypechecked = FALSE;
+   (*consdata)->varswithevents = NULL;
+   (*consdata)->eventtypes = NULL;
+   (*consdata)->nevents = 0;
 
    /* if we are transformed, obtain transformed variables and catch events */
    if ( SCIPisTransformed(scip) )
@@ -3666,6 +3705,7 @@ SCIP_RETCODE propIndicator(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_CONSDATA*        consdata,           /**< constraint data */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
    SCIP_Bool             dualreductions,     /**< should dual reductions be performed? */
    SCIP_Bool             addopposite,        /**< add opposite inequalities if binary var = 0? */
    SCIP_Bool*            cutoff,             /**< whether a cutoff happened */
@@ -3940,6 +3980,104 @@ SCIP_RETCODE propIndicator(
        * consumption, because the linear constraints have to be stored in each node. */
    }
 
+   /* propagate maximal activity of linear constraint to upper bound of slack variable
+    *
+    * It is especially worth to tighten the upper bound if it is greater than maxcouplingvalue or sepacouplingvalue.
+    * But do not tighten it if slackvar is locked down by other constraints,
+    * or if it has a nonzero coefficient in the objective function (not implemented).
+    * 
+    * ax - s <= rhs  ->  s <= maxActivity(ax) - rhs
+    */
+   if ( (SCIPvarGetUbLocal(consdata->slackvar) > conshdlrdata->maxcouplingvalue
+         || SCIPvarGetUbLocal(consdata->slackvar) > conshdlrdata->sepacouplingvalue)
+         && SCIPvarGetNLocksDownType(consdata->slackvar, SCIP_LOCKTYPE_MODEL) <= 1
+         && SCIPvarGetObj(consdata->slackvar) == 0.0 )
+   {
+      SCIP_VAR** consvars;
+      SCIP_Real* consvals;
+      SCIP_Real maxactivity;
+      SCIP_Real newub;
+      SCIP_Real rhs;
+      SCIP_Real coeffslack;
+      int nlinconsvars;
+      int j;
+
+      maxactivity = 0.0;
+      coeffslack = -1.0;
+
+      nlinconsvars = SCIPgetNVarsLinear(scip, consdata->lincons);
+      consvars = SCIPgetVarsLinear(scip, consdata->lincons);
+      consvals = SCIPgetValsLinear(scip, consdata->lincons);
+
+      /* calculate maximal activity of linear constraint without slackvar */
+      for (j = 0; j < nlinconsvars; ++j)
+      {
+         SCIP_VAR* var;
+         SCIP_Real val;
+         SCIP_Real ub;
+
+         val = consvals[j];
+         assert( ! SCIPisZero(scip, val) );
+
+         var = consvars[j];
+         assert( var != NULL );
+
+         /* skip slackvar */
+         if ( var == consdata->slackvar )
+         {
+            coeffslack = val;
+            continue;
+         }
+
+         if ( val > 0.0 )
+            ub = SCIPvarGetUbLocal(var);
+         else
+            ub = SCIPvarGetLbLocal(var);
+
+         if ( SCIPisInfinity(scip, ub) )
+         {
+            maxactivity = SCIPinfinity(scip);
+            break;
+         }
+         else
+            maxactivity += val * ub;
+      }
+
+      /* continue only if maxactivity is not infinity */
+      if ( !SCIPisInfinity(scip, maxactivity) )
+      {
+         /* substract rhs */
+         rhs = SCIPgetRhsLinear(scip, consdata->lincons);
+
+         /* continue if rhs is not finite; happens, e.g., if variables are multiaggregated; we would need the minimal activity in this case */
+         if ( !SCIPisInfinity(scip, rhs) )
+         {
+            newub = maxactivity - rhs;
+            assert( !SCIPisInfinity(scip, newub) );
+
+            /* divide by coeff of slackvar */
+            newub = newub / (-1.0 * coeffslack);
+
+            /* round if slackvar is (implicit) integer */
+            if ( SCIPvarGetType(consdata->slackvar) <= SCIP_VARTYPE_IMPLINT )
+            {
+               if ( !SCIPisIntegral(scip, newub) )
+                  newub = SCIPceil(scip, newub);
+            }
+
+            if ( SCIPisFeasLT(scip, newub, SCIPvarGetUbLocal(consdata->slackvar))
+                  && newub > SCIPvarGetLbLocal(consdata->slackvar) )
+            {
+               /* propagate bound */
+               SCIP_CALL( SCIPinferVarUbCons(scip, consdata->slackvar, newub, cons, 3, FALSE, &infeasible, &tightened) );
+               assert( !infeasible );
+               if ( tightened )
+                  ++(*nGen);
+            }
+         }
+      }
+   }
+
    /* reset constraint age counter */
    if ( *nGen > 0 )
    {
@@ -4125,7 +4263,7 @@ SCIP_RETCODE enforceIndicators(
       }
 
       /* first perform propagation (it might happen that standard propagation is turned off) */
-      SCIP_CALL( propIndicator(scip, conss[c], consdata, dualreductions, conshdlrdata->addopposite, &cutoff, &cnt) );
+      SCIP_CALL( propIndicator(scip, conss[c], consdata, conshdlrdata, dualreductions, conshdlrdata->addopposite, &cutoff, &cnt) );
       if ( cutoff )
       {
          SCIPdebugMsg(scip, "Propagation in enforcing <%s> detected cutoff.\n", SCIPconsGetName(conss[c]));
@@ -4844,6 +4982,8 @@ void initConshdlrData(
 {
    assert( conshdlrdata != NULL );
 
+   conshdlrdata->linconsevents = FALSE;
+   conshdlrdata->linconsboundschanged = TRUE;
    conshdlrdata->boundhaschanged = TRUE;
    conshdlrdata->removable = TRUE;
    conshdlrdata->scaled = FALSE;
@@ -5164,6 +5304,9 @@ static
 SCIP_DECL_CONSEXIT(consExitIndicator)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSDATA* consdata;
+   int i;
+   int j;
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
@@ -5176,6 +5319,30 @@ SCIP_DECL_CONSEXIT(consExitIndicator)
 
    if ( conshdlrdata->binslackvarhash != NULL )
       SCIPhashmapFree(&conshdlrdata->binslackvarhash);
+
+   /* drop bound change events on variables of linear constraints */
+   for (i = 0; i < nconss; i++)
+   {
+      consdata = SCIPconsGetData(conss[i]);
+      assert( consdata != NULL );
+
+      if ( consdata->varswithevents != NULL )
+      {
+         assert( consdata->eventtypes != NULL );
+         assert( consdata->lincons != NULL );
+
+         for (j = 0; j < consdata->nevents; ++j)
+         {
+            SCIP_CALL( SCIPdropVarEvent(scip, consdata->varswithevents[j], consdata->eventtypes[j], conshdlrdata->eventhdlrlinconsbound, (SCIP_EVENTDATA*) conshdlrdata, -1) );
+         }
+         SCIPfreeBlockMemoryArray(scip, &consdata->varswithevents, consdata->nevents);
+         SCIPfreeBlockMemoryArray(scip, &consdata->eventtypes, consdata->nevents);
+
+         consdata->nevents = 0;
+         assert( consdata->varswithevents == NULL );
+         assert( consdata->eventtypes == NULL );
+      }
+   }
 
    SCIPfreeBlockMemoryArrayNull(scip, &conshdlrdata->addlincons, conshdlrdata->maxaddlincons);
    conshdlrdata->maxaddlincons = 0;
@@ -5671,6 +5838,27 @@ SCIP_DECL_CONSDELETE(consDeleteIndicator)
             assert( conshdlrdata->eventhdlrrestart != NULL );
             SCIP_CALL( SCIPdropVarEvent(scip, (*consdata)->binvar, SCIP_EVENTTYPE_GBDCHANGED, conshdlrdata->eventhdlrrestart,
                   (SCIP_EVENTDATA*) conshdlrdata, -1) );
+         }
+
+         /* drop bound change events on variables of linear constraints */
+         if ( conshdlrdata->linconsevents && (*consdata)->linconsactive && (*consdata)->varswithevents != NULL )
+         {
+            int j;
+            assert( cons != NULL );
+            assert( (*consdata)->eventtypes != NULL );
+            assert( (*consdata)->lincons != NULL );
+
+            for (j = 0; j < (*consdata)->nevents; ++j)
+            {
+               assert( !SCIPvarIsDeleted((*consdata)->varswithevents[j]) );
+               SCIP_CALL( SCIPdropVarEvent(scip, (*consdata)->varswithevents[j], (*consdata)->eventtypes[j], conshdlrdata->eventhdlrlinconsbound, (SCIP_EVENTDATA*) conshdlrdata, -1) );
+            }
+            SCIPfreeBlockMemoryArray(scip, &(*consdata)->varswithevents, (*consdata)->nevents);
+            SCIPfreeBlockMemoryArray(scip, &(*consdata)->eventtypes, (*consdata)->nevents);
+
+            (*consdata)->nevents = 0;
+            assert( (*consdata)->varswithevents == NULL );
+            assert( (*consdata)->eventtypes == NULL );
          }
       }
    }
@@ -6475,14 +6663,79 @@ SCIP_DECL_CONSPROP(consPropIndicator)
    assert( conshdlrdata != NULL );
 
    /* avoid propagation if no bound has changed */
-   if ( ! conshdlrdata->boundhaschanged && ! SCIPinRepropagation(scip) )
+   if ( ! conshdlrdata->boundhaschanged && ! SCIPinRepropagation(scip) && ! conshdlrdata->linconsboundschanged )
    {
       *result = SCIP_DIDNOTFIND;
       return SCIP_OKAY;
    }
 
+   /* if first time called, add events on variables of linear constraint */
+   if ( !conshdlrdata->linconsevents )
+   {
+      for (c = 0; c < nconss; ++c)
+      {
+         SCIP_CONSDATA* consdata;
+         SCIP_VAR** vars;
+         SCIP_Real* vals;
+         int nvars;
+         int j;
+         assert( conss[c] != NULL );
+
+         consdata = SCIPconsGetData(conss[c]);
+         assert( consdata != NULL );
+
+         /* if the linear constraint is not present, we continue */
+         if ( ! consdata->linconsactive )
+            continue;
+
+         /* do not add events if upper bound of slackvar is already small */
+         if ( SCIPvarGetUbLocal(consdata->slackvar) <= conshdlrdata->maxcouplingvalue )
+            continue;
+
+         /* do not add events if it is not a <= inequality; we do not propagate in this case */
+         if ( SCIPisInfinity(scip, SCIPgetRhsLinear(scip, consdata->lincons) ) )
+            continue;
+
+         assert( consdata->lincons != NULL );
+         vars = SCIPgetVarsLinear(scip, consdata->lincons);
+         vals = SCIPgetValsLinear(scip, consdata->lincons);
+         nvars = SCIPgetNVarsLinear(scip, consdata->lincons);
+         assert( consdata->slackvar != NULL );
+         assert( nvars != 0 );
+
+         /* alloc memory to store events on variables of linear constraint; otherwise we can not drop the events when the cons is deleted */
+         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->varswithevents, nvars - 1) );
+         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->eventtypes, nvars - 1) );
+
+         for (j = 0; j < nvars; ++j)
+         {
+            if ( vars[j] == consdata->slackvar )
+               continue;
+
+            /* catch only bound changes which are important for propagation of max activity to upper bound of slackvar */
+            if ( vals[j] > 0.0 )
+            {
+               SCIP_CALL( SCIPcatchVarEvent(scip, vars[j], SCIP_EVENTTYPE_UBTIGHTENED, conshdlrdata->eventhdlrlinconsbound, (SCIP_EVENTDATA*) conshdlrdata, NULL) );
+               consdata->varswithevents[consdata->nevents] = vars[j];
+               consdata->eventtypes[consdata->nevents] = SCIP_EVENTTYPE_UBTIGHTENED;
+               consdata->nevents++;
+            }
+            else
+            {
+               SCIP_CALL( SCIPcatchVarEvent(scip, vars[j], SCIP_EVENTTYPE_LBTIGHTENED, conshdlrdata->eventhdlrlinconsbound, (SCIP_EVENTDATA*) conshdlrdata, NULL) );
+               consdata->varswithevents[consdata->nevents] = vars[j];
+               consdata->eventtypes[consdata->nevents] = SCIP_EVENTTYPE_LBTIGHTENED;
+               consdata->nevents++;
+            }
+         }
+         assert( consdata->nevents == nvars - 1 );
+      }
+      conshdlrdata->linconsevents = TRUE;
+   }
+
    /* already mark that no bound has changed */
    conshdlrdata->boundhaschanged = FALSE;
+   conshdlrdata->linconsboundschanged = FALSE;
 
    dualreductions = conshdlrdata->dualreductions && SCIPallowStrongDualReds(scip);
 
@@ -6505,7 +6758,7 @@ SCIP_DECL_CONSPROP(consPropIndicator)
       SCIPdebugMsg(scip, "Propagating indicator constraint <%s>.\n", SCIPconsGetName(cons) );
 #endif
 
-      SCIP_CALL( propIndicator(scip, cons, consdata, dualreductions, conshdlrdata->addopposite, &cutoff, &cnt) );
+      SCIP_CALL( propIndicator(scip, cons, consdata, conshdlrdata, dualreductions, conshdlrdata->addopposite, &cutoff, &cnt) );
 
       if ( cutoff )
       {
@@ -6546,7 +6799,7 @@ SCIP_DECL_CONSRESPROP(consRespropIndicator)
 
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
-   assert( inferinfo == 0 || inferinfo == 1 || inferinfo == 2 );
+   assert( inferinfo == 0 || inferinfo == 1 || inferinfo == 2 || inferinfo == 3 );
    assert( consdata->linconsactive );
 
    /* if the binary variable was the reason */
@@ -6566,13 +6819,18 @@ SCIP_DECL_CONSRESPROP(consRespropIndicator)
       assert( SCIPisPositive(scip, SCIPgetVarLbAtIndex(scip, consdata->slackvar, bdchgidx, FALSE)) );
       SCIP_CALL( SCIPaddConflictLb(scip, consdata->slackvar, bdchgidx) );
    }
-   else
+   else if ( inferinfo == 2 )
    {
-      assert( inferinfo == 2 );
       assert( SCIPisFeasZero(scip, SCIPgetVarUbAtIndex(scip, consdata->slackvar, bdchgidx, FALSE)) );
       assert( SCIPconshdlrGetData(conshdlr)->dualreductions && SCIPallowStrongDualReds(scip) && SCIPallowWeakDualReds(scip) );
       SCIP_CALL( SCIPaddConflictUb(scip, consdata->slackvar, bdchgidx) );
    }
+   else
+   {
+      assert( inferinfo == 3 );
+      SCIP_CALL( SCIPaddConflictUb(scip, consdata->slackvar, bdchgidx) );
+   }
+
    *result = SCIP_SUCCESS;
 
    return SCIP_OKAY;
@@ -7206,6 +7464,12 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &(conshdlrdata->eventhdlrbound),  EVENTHDLR_BOUND_NAME, EVENTHDLR_BOUND_DESC,
          eventExecIndicatorBound, NULL) );
    assert(conshdlrdata->eventhdlrbound != NULL);
+
+   /* create event handler for bound change events on linear constraint */
+   conshdlrdata->eventhdlrlinconsbound = NULL;
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &(conshdlrdata->eventhdlrlinconsbound),  EVENTHDLR_LINCONSBOUND_NAME, EVENTHDLR_LINCONSBOUND_DESC,
+         eventExecIndicatorLinconsBound, NULL) );
+   assert(conshdlrdata->eventhdlrlinconsbound != NULL);
 
    /* create event handler for restart events */
    conshdlrdata->eventhdlrrestart = NULL;
