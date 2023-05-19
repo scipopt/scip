@@ -13,7 +13,7 @@
 #cmakedefine SCIP_NO_SIGACTION
 #cmakedefine SCIP_NO_STRTOK_R
 #cmakedefine TPI_NONE
-#cmakedefine TPI_TNYC
+#cmakedefine TPI_TNY
 #cmakedefine TPI_OMP
 #cmakedefine SCIP_THREADSAFE
 #cmakedefine WITH_SCIPDEF

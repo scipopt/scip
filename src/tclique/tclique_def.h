@@ -3,7 +3,7 @@
 /*                  This file is part of the program                         */
 /*              TCLIQUE --- Algorithm for Maximum Cliques                    */
 /*                                                                           */
-/*  Copyright 1996-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 1996-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -35,10 +35,8 @@
 /*
  * include build configuration flags
  */
-#ifndef NO_CONFIG_HEADER
 #include "scip/config.h"
 #include "scip/scip_export.h"
-#endif
 
 #ifdef WITH_SCIPDEF
 #include "scip/def.h"

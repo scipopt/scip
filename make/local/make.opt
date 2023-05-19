@@ -24,7 +24,7 @@
 #
 
 QUEUETYPE	=	srun
-QUEUE		= opt
+QUEUE		= mip-dbg
 PPN 		=	-1
 CLIENTTMPDIR	=	/local/tmp
 NOWAITCLUSTER   =       1

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -43,7 +43,7 @@ enum BENDERS_Status
 {
    BENDERS_STATUS_UNKNOWN          =  0,     /**< the solving status is not yet known */
    BENDERS_STATUS_ADDEDCUT         =  1,     /**< a Benders cut has been added */
-   BENDERS_STATUS_SUCESS           =  2,     /**< the solution is optimal, no further Benders cut has to be generated */
+   BENDERS_STATUS_SUCCESS          =  2,     /**< the solution is optimal, no further Benders cut has to be generated */
    BENDERS_STATUS_TIMELIMIT        =  3,     /**< the time limit has been reached */
    BENDERS_STATUS_USERINTERRUPT    =  4,     /**< the user has interrupted the solution of the subproblem */
    BENDERS_STATUS_ERROR            =  5      /**< an error occured during the solution of the subproblem */

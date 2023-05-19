@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -104,7 +104,7 @@
  *
  * \verbinclude output.log
  *
- * @version  8.0.2.4
+ * @version  8.0.3.5
  *
  * \image html scippy.png
  */
@@ -382,6 +382,7 @@
  * - @subpage DECOMP "How to provide a problem decomposition"
  * - @subpage BENDDECF "How to use the Benders' decomposition framework"
  * - @subpage TRAINESTIMATION "How to train custom tree size estimation for SCIP"
+ * - @subpage SYMMETRY "How to use symmetry handling in SCIP"
  */
 
 /**@page AUTHORS SCIP Authors
@@ -1230,9 +1231,11 @@
  * -# Copy the template files src/scip/cons_xyz.c and src/scip/cons_xyz.h into files "cons_subtour.c"
  *    and "cons_subtour.h".
  *     \n
- *    Make sure to <b>adjust your Makefile</b> such that these files are compiled and linked to your project.
- * -# Use SCIPincludeConsSubtour() in order to include the constraint handler into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/cppmain.cpp in the TSP example).
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
+ * -# Use `SCIPincludeConshdlrSubtour()` in order to include the constraint handler into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/cppmain.cpp in the TSP example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "subtour".
  * -# Adjust the \ref CONS_PROPERTIES "properties of the constraint handler".
  * -# Define the \ref CONS_DATA "constraint data and the constraint handler data". This is optional.
@@ -1792,6 +1795,8 @@
  *
  * Usually, a separation callback searches and produces cuts, that are added with a call to SCIPaddCut().
  * If the cut should be remembered in the global cut pool, it may also call SCIPaddPoolCut().
+ * If the cut is constructed via multiple calls to SCIPaddVarToRow(), then performance can be improved by calling
+ * SCIPcacheRowExtensions() before these additions and SCIPflushRowExtensions() after.
  * However, the callback may also produce domain reductions or add other constraints.
  *
  * The CONSSEPALP callback has the following options:
@@ -1818,6 +1823,8 @@
  *
  * Usually, a separation callback searches and produces cuts, that are added with a call to SCIPaddCut().
  * If the cut should be remembered in the global cut pool, it may also call SCIPaddPoolCut().
+ * If the cut is constructed via multiple calls to SCIPaddVarToRow(), then performance can be improved by calling
+ * SCIPcacheRowExtensions() before these additions and SCIPflushRowExtensions() after.
  * However, the callback may also produce domain reductions or add other constraints.
  *
  * The CONSSEPASOL callback has the following options:
@@ -2064,9 +2071,11 @@
  * -# Copy the template files src/scip/pricer_xyz.c and src/scip/pricer_xyz.h into files "pricer_mypricer.c"
  *    and "pricer_mypricer.h".
  *    \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Use SCIPincludePricerMypricer() in order to include the pricer into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
+ * -# Use `SCIPincludePricerMypricer()` in order to include the pricer into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mypricer".
  * -# Adjust the properties of the pricer (see \ref PRICER_PROPERTIES).
  * -# Define the pricer data (see \ref PRICER_DATA). This is optional.
@@ -2332,9 +2341,11 @@
  * -# Copy the template files src/scip/presol_xyz.c and src/scip/presol_xyz.h into files named "presol_mypresolver.c"
  *    and "presol_mypresolver.h".
  *    \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Use SCIPincludePresolMypresolver() in order to include the presolver into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
+ * -# Use `SCIPincludePresolMypresolver()` in order to include the presolver into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mypresolver".
  * -# Adjust the properties of the presolver (see \ref PRESOL_PROPERTIES).
  * -# Define the presolver data (see \ref PRESOL_DATA). This is optional.
@@ -2533,9 +2544,11 @@
  * -# Copy the template files src/scip/sepa_xyz.c and src/scip/sepa_xyz.h into files "sepa_myseparator.c"
  *    and "sepa_myseparator.h".
       \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Use SCIPincludeSepaMyseparator() in order to include the separator into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
+ * -# Use `SCIPincludeSepaMyseparator()` in order to include the separator into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "myseparator".
  * -# Adjust the properties of the separator (see \ref SEPA_PROPERTIES).
  * -# Define the separator data (see \ref SEPA_DATA). This is optional.
@@ -2673,6 +2686,8 @@
  *
  * Usually, the callback searches and produces cuts, that are added with a call to SCIPaddCut().
  * If the cut should be added to the global cut pool, it calls SCIPaddPoolCut().
+ * If the cut is constructed via multiple calls to SCIPaddVarToRow(), then performance can be improved by calling
+ * SCIPcacheRowExtensions() before these additions and SCIPflushRowExtensions() after.
  * In addition to LP rows, the callback may also produce domain reductions or add additional constraints.
  *
  * Overall, the SEPAEXECLP callback has the following options, which is indicated by the possible return values of
@@ -2700,6 +2715,8 @@
  *
  * Usually, the callback searches and produces cuts, that are added with a call to SCIPaddCut().
  * If the cut should be added to the global cut pool, it calls SCIPaddPoolCut().
+ * If the cut is constructed via multiple calls to SCIPaddVarToRow(), then performance can be improved by calling
+ * SCIPcacheRowExtensions() before these additions and SCIPflushRowExtensions() after.
  * In addition to LP rows, the callback may also produce domain reductions or add other constraints.
  *
  * Overall, the SEPAEXECSOL callback has the following options, which is indicated by the possible return values of
@@ -2789,9 +2806,11 @@
  * -# Copy the template files src/scip/prop_xyz.c and src/scip/prop_xyz.h into files named "prop_mypropagator.c"
  *    and "prop_mypropagator.h".
  *    \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Use SCIPincludePropMypropagator() in order to include the propagator into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
+ * -# Use `SCIPincludePropMypropagator()` in order to include the propagator into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mypropagator".
  * -# Adjust the properties of the propagator (see \ref PROP_PROPERTIES).
  * -# Define the propagator data (see \ref PROP_DATA). This is optional.
@@ -3088,9 +3107,11 @@
  * -# Copy the template files src/scip/branch_xyz.c and src/scip/branch_xyz.h into files named
  *    "branch_mybranchingrule.c" and "branch_mybranchingrule.h".
  *    \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Use SCIPincludeBranchruleMybranchingrule() in order to include the branching rule into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
+ * -# Use `SCIPincludeBranchruleMybranchingrule()` in order to include the branching rule into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mybranchingrule".
  * -# Adjust the properties of the branching rule (see \ref BRANCHRULE_PROPERTIES).
  * -# Define the branching rule data (see \ref BRANCHRULE_DATA). This is optional.
@@ -3378,9 +3399,11 @@
  * -# Copy the template files src/scip/cutsel_xyz.c and src/scip/cutsel_xyz.h into files named "cutsel_mycutselector.c"
  *    and "cutsel_mycutselector.h".
  *    \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Use SCIPincludeCutselMycutselector() in oder to include the cut selector into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
+ * -# Use SCIPincludeCutselMycutselector() in order to include the cut selector into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mycutselector".
  * -# Adjust the properties of the cut selector (see \ref CUTSEL_PROPERTIES).
  * -# Define the cut selector data (see \ref CUTSEL_DATA). This is optional.
@@ -3544,9 +3567,11 @@
  * -# Copy the template files src/scip/nodesel_xyz.c and src/scip/nodesel_xyz.h into files named "nodesel_mynodeselector.c"
  *    and "nodesel_mynodeselector.h".
  *    \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Use SCIPincludeNodeselMynodeselector() in oder to include the node selector into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
+ * -# Use SCIPincludeNodeselMynodeselector() in order to include the node selector into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mynodeselector".
  * -# Adjust the properties of the node selector (see \ref NODESEL_PROPERTIES).
  * -# Define the node selector data (see \ref NODESEL_DATA). This is optional.
@@ -3779,9 +3804,11 @@
  * -# Copy the template files src/scip/heur_xyz.c and src/scip/heur_xyz.h into files named "heur_myheuristic.c"
  *    and "heur_myheuristic.h".
  *    \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Use SCIPincludeHeurMyheuristic() in order to include the heuristic into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
+ * -# Use `SCIPincludeHeurMyheuristic()` in order to include the heuristic into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "myheuristic".
  * -# Adjust the properties of the primal heuristic (see \ref HEUR_PROPERTIES).
  * -# Define the primal heuristic data (see \ref HEUR_DATA). This is optional.
@@ -4039,9 +4066,11 @@
  *
  * Here is what you have to do to implement an own expression handler:
  * -# Copy the template files `src/scip/expr_xyz.c` and `src/scip/expr_xyz.h` into files `expr_myfunc.c` and `expr_myfunc.h`, respectively. \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
  * -# Use `SCIPincludeExprhdlrMyfunc()` in order to include the expression handler into your SCIP instance,
- *    e.g., in the main file of your project.
+ *    e.g., in the main file of your project. \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "myfunc".
  * -# Adjust the properties of the expression handler (see \ref EXPRHDLR_PROPERTIES).
  * -# Define the expression handler data and expression data (see \ref EXPRHDLR_DATA). This is optional.
@@ -4489,8 +4518,10 @@
  *
  * Here is what you have to do to implement a nonlinear handler:
  * -# Copy the template files `src/scip/nlhdlr_xyz.c` and `src/scip/nlhdlr_xyz.h` into files `nlhdlr_mystruct.c` and `nlhdlr_mystruct.h`, respectively. \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Use `SCIPincludeNlhdlrMystruct()` in order to include the nonlinear handler into your SCIP instance, e.g., in the main file of your project.
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
+ * -# Use `SCIPincludeNlhdlrMystruct()` in order to include the nonlinear handler into your SCIP instance, e.g., in the main file of your project. \n
+      If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mystruct".
  * -# Adjust the properties of the nonlinear handler (see \ref NLHDLR_PROPERTIES).
  * -# Define the nonlinear handler data and nonlinear handler expression data (see \ref NLHDLR_DATA). This is optional.
@@ -4899,9 +4930,11 @@
  * -# Copy the template files src/scip/relax_xyz.c and src/scip/relax_xyz.h into files named "relax_myrelaxator.c"
  *    and "relax_myrelaxator.h".
  *    \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Use SCIPincludeRelaxMyrelaxator() in order to include the relaxation handler into your SCIP instance,
- *    e.g, in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
+ * -# Use `SCIPincludeRelaxMyrelaxator()` in order to include the relaxation handler into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "myrelaxator".
  * -# Adjust the properties of the relaxation handler (see \ref RELAX_PROPERTIES).
  * -# Define the relaxation handler data (see \ref RELAX_DATA). This is optional.
@@ -5138,9 +5171,11 @@
  * -# Copy the template files src/scip/reader_xyz.c and src/scip/reader_xyz.h into files named
  *    "reader_myreader.c" and "reader_myreader.h".
  *    \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Use SCIPincludeReaderMyreader() in order to include the file reader into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
+ * -# Use `SCIPincludeReaderMyreader()` in order to include the reader into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "myreader".
  * -# Adjust the \ref READER_PROPERTIES "properties of the file reader".
  * -# Define the \ref READER_DATA "file reader data". This is optional.
@@ -5332,9 +5367,11 @@
  * -# Copy the template files src/scip/dialog_xyz.c and src/scip/dialog_xyz.h into files named "dialog_mydialog.c"
  *    and "dialog_mydialog.h".
  *    \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Use SCIPincludeDialogMydialog() in order to include the dialog handler into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
+ * -# Use `SCIPincludeDialogMydialog()` in order to include the dialog handler into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mydialog".
  * -# Adjust the \ref DIALOG_PROPERTIES "properties of the dialog".
  * -# Define the \ref DIALOG_DATA "dialog data". This is optional.
@@ -5501,9 +5538,11 @@
  * -# Copy the template files src/scip/disp_xyz.c and src/scip/disp_xyz.h into files named "disp_mydisplaycolumn.c"
  *    and "disp_mydisplaycolumn.h".
       \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Use SCIPincludeDispMydisplaycolumn() in order to include the display column into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
+ * -# Use `SCIPincludeDispMydisplaycolumn()` in order to include the display column into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mydisplaycolumn".
  * -# Adjust the \ref DISP_PROPERTIES "properties of the display column".
  * -# Define the  \ref DISP_DATA "display column data". This is optional.
@@ -5677,9 +5716,11 @@
  * -# Copy the template files src/scip/event_xyz.c and src/scip/event_xyz.h into files named "event_bestsol.c"
  *    and "event_bestsol.h".
       \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Use SCIPincludeEventBestsol() in order to include the event handler into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Eventhdlr example).
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
+ * -# Use `SCIPincludeEventBestsol()` in order to include the event handler into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "bestsol".
  * -# Adjust the \ref EVENTHDLR_PROPERTIES "properties of the event handler".
  * -# Implement the \ref EVENT_INTERFACE "interface methods".
@@ -5896,9 +5937,11 @@
  *
  * Here is what you have to do to implement an NLPI:
  * -# Copy the template files src/scip/nlpi_xyz.c and src/scip/nlpi_xyz.h into files named "nlpi_mysolver.c" and "nlpi_mysolver.h".
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
  * -# Use `SCIPincludeNlpSolverMysolver()` in order to include the NLPI into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mysolver".
  * -# Adjust the properties of the nlpi (see \ref NLPI_PROPERTIES).
  * -# Define the NLPI and NLPIPROBLEM data (see \ref NLPI_DATA).
@@ -6105,7 +6148,8 @@
  *
  * Here is what you have to do to implement an expression interpreter:
  * -# Copy the file \ref exprinterpret_none.c into a file named "exprinterpret_myad.c".
- *    Make sure to adjust your Makefile such that this file is compiled and linked to your project instead of exprinterpret implementations.
+ *    Make sure to adjust your build system such that this file is compiled and linked to your project instead of exprinterpret implementations. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
  * -# Open the new file with a text editor.
  * -# Define the expression interpreter data (see \ref EXPRINT_DATA).
  * -# Implement the interface methods (see \ref EXPRINT_INTERFACE).
@@ -6207,9 +6251,11 @@
  * -# Copy the template files src/scip/table_xyz.c and src/scip/table_xyz.h into files named "table_mystatisticstable.c"
  *    and "table_mystatisticstable.h".
  *    \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
  * -# Use SCIPincludeTableMystatisticstable() in order to include the statistics table into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mystatisticstable".
  * -# Adjust the \ref TABLE_PROPERTIES "properties of the statistics table".
  * -# Define the  \ref TABLE_DATA "statistics table data". This is optional.
@@ -6441,9 +6487,11 @@
  * -# Copy the template files src/scip/benders_xyz.c and src/scip/benders_xyz.h into files "benders_mybenders.c" and
  *  "benders_mybenders.h".
       \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
  * -# Use SCIPincludeBendersMybenders() in order to include the Benders' decomposition into your SCIP instance, e.g., in
- *  the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ *    the main file of your project (see, e.g., src/cmain.c in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mybenders".
  * -# Adjust the properties of the Benders' decomposition (see \ref BENDERS_PROPERTIES).
  * -# Define the Benders' decomposition data (see \ref BENDERS_DATA). This is optional.
@@ -6762,9 +6810,11 @@
  * -# Copy the template files src/scip/benderscut_xyz.c and src/scip/benderscut_xyz.h into files "benderscut_mybenderscut.c" and
  *  "benderscut_mybenderscut.h".
       \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
  * -# Use SCIPincludeBenderscutMybenderscut() in order to include the Benders' decomposition cut method into your SCIP
- *  instance, e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ *    instance, e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mybenderscut".
  * -# Adjust the properties of the Benders' decomposition (see \ref BENDERSCUT_PROPERTIES).
  * -# Define the Benders' decomposition data (see \ref BENDERSCUT_DATA). This is optional.
@@ -8276,6 +8326,187 @@
  *
  * If you do this, SCIP will collect all optimal solutions of the original problem.
  *
+ */
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+/** @page SYMMETRY How to use symmetry handling in SCIP
+ *
+ * Symmetry handling is an important feature of SCIP that allows to discard symmetric subproblems from the
+ * branch-and-bound tree, and thus, can substantially reduce the running time. To handle symmetries, SCIP
+ * automatically detects symmetries and then applies (combinations of) symmetry handling methods.
+ *
+ * @section SYMDETECT Symmetry detection
+ *
+ * In a purely integer linear setting
+ * \f[
+ *  \max \{ c^{\top} x : Ax \leq b,\; x \in \mathbb{Z}^n \},
+ * \f]
+ * a symmetry is a permutation \f$\gamma\f$ of \f$\{1,\dots,n\}\f$ that acts on vector \f$x\f$ by
+ * permuting its coordinates via \f$\gamma(x) = (x_{\gamma^{-1}(1)}, \dots, x_{\gamma^{-1}(n)})\f$
+ * such that
+ *
+ * -# \f$\gamma\f$ leaves the objective invariant, i.e., \f$c^{\top}x = c^{\top}\gamma(x)\f$, and
+ * -# \f$\gamma\f$ maps feasible solutions onto feasible solutions, i.e., \f$Ax \leq b\f$ if and only
+ *    if \f$A\gamma(x) \leq b\f$.
+ *
+ * Since this definition depends on the feasible region of the integer program, which is unknown
+ * in general, SCIP only computes symmetries that leave the formulation of the optimization problem
+ * invariant. To detect such formulation symmetries, SCIP builds an auxiliary colored graph whose
+ * color-preserving automorphisms correspond to symmetries of the integer program. The symmetries of
+ * the graph, and thus of the integer program, are then computed by an external graph automorphism
+ * library that needs to be linked to SCIP. Currently, SCIP ships with two such libraries: The graph
+ * automorphism library bliss is the basic workhorse to detect symmetries. Moreover, one can use
+ * sassy, a graph symmetry preprocessor which passes the preprocessed graphs to bliss and is the
+ * current default.
+ *
+ * @note To detect symmetries, SCIP needs to be built with sassy/bliss, which can be achieved
+ * by using the options <code>SYM=sassy</code> and <code>-DSYM=sassy</code> in the Makefile and CMake
+ * system, respectively.
+ *
+ * Besides purely integer linear problems, SCIP also supports symmetry detection for general
+ * constraint mixed-integer programs containing most of the constraint types that can be handled
+ * by SCIP. In particular, symmetries of mixed-integer nonlinear problems can be detected.
+ *
+ * @subsection SYMPROCESS Processing symmetry information
+ *
+ * After symmetries have been computed, SCIP has access to a list \f$\gamma_1,\dots,\gamma_m\f$ of
+ * permutations that generate a group \f$\Gamma\f$ of symmetries of the optimization problem. That
+ * is, SCIP has not access to all permutations in \f$\Gamma\f$, but only a set of generators. Based
+ * on these generators, SCIP analyzes the group \f$\Gamma\f$ and checks whether it can be split into
+ * independent factors. That is, whether there exist subgroups \f$\Gamma_1,\dots,\Gamma_k\f$ of
+ * \f$\Gamma\f$ that act on pairwise independent sets of variables such that \f$\bigcup_{i=1}^k \Gamma_i = \Gamma\f$.
+ * In this case, SCIP can handle the symmetries of the different subgroups independently. In particular,
+ * different subgroups can be treated by different symmetry handling methods.
+ *
+ * @section SYMMETHODS Symmetry handling methods
+ *
+ * To handle symmetries, SCIP uses three different classes of methods, which we detail below.
+ *
+ * @subsection SYMCONSS Symmetry handling constraints
+ *
+ * SCIP contains three constraint handlers for handling symmetries of binary variables: the symresack,
+ * orbisack, and orbitope constraint handler. Given a symmetry \f$\gamma\f$,
+ * the symresack constraint handler enforces that a solution vector \f$x\f$ is not lexicographically
+ * smaller than its image \f$\gamma(x)\f$. This constraint is enforced by a propagation algorithm
+ * and separating inequalities. Moreover, given the disjoint cycle decomposition of \f$\gamma\f$,
+ * SCIP checks, for each cycle of \f$\gamma\f$, whether all variables in the cycle are contained
+ * in set packing or partitioning constraints. If this is the case, specialized inequalities can
+ * be separated.
+ *
+ * In case the permutation \f$\gamma\f$ is an involution, i.e., \f$\gamma(\gamma(x)) = x\f$,
+ * specialized separation and propagation algorithms can be used, which are implemented in the
+ * orbisack constraint handler. For orbisack constraints, also facet-defining inequalities of the
+ * convex hull of all binary points \f$x\f$ being not lexicographically smaller than \f$\gamma(x)\f$
+ * can be separated. Since the coefficients in these inequalities grow exponentially large which might
+ * cause numerical instabilities, the separation of these inequalities is disabled by default, but can be
+ * enabled via the parameter <code>constraints/orbisack/orbiSeparation</code>. Furthermore, to avoid
+ * numerical instabilities, the parameter <code>constraints/orbisack/coeffbound</code> controls the
+ * maximum absolute value of a coefficient in separated facet-defining inequalities.
+ *
+ * Finally, the orbitope constraint handler is able to handle symmetries of special symmetric groups \f$\Gamma\f$.
+ * For orbitopes to be applicable, the affected variables need to be arranged in a matrix \f$X\f$ such that
+ * the symmetries in \f$\Gamma\f$ permute the columns of \f$X\f$. Symmetries are then handled by orbitope
+ * constraints by enforcing to only compute solution matrices \f$X\f$ whose columns are sorted lexicographically
+ * non-increasingly. To this end, a propagation algorithm is used and inequalities are separated. In case
+ * the variables of each row of the matrix \f$X\f$ are contained in a set packing or partitioning constraint,
+ * specialized propagation and separation routines are used.
+ *
+ * @subsection SYMOF Orbital fixing
+ *
+ * Orbital fixing is a propagation algorithm that derives fixings of binary variables based on
+ * already fixed variables. These fixings remove feasible solutions of the problem, while it is guaranteed
+ * that at least one symmetric solution remains feasible. The reductions found by orbital fixing
+ * are derived from the branching decisions. Thus, as SCIP might restart the branch-and-bound process,
+ * which removes previously made branching decisions, we need to make sure that correct reductions are
+ * found after a restart. This can be guaranteed by either disabling orbital fixing after a restart
+ * or recomputing symmetries. In SCIP, this is controlled via the parameter
+ * <code>propagating/symmetry/recomputerestart</code>. If it takes value 0, symmetries are not
+ * recomputed and orbital fixing is disabled; a value of 1 means that symmetries are always
+ * recomputed; if it has value 2, symmetries are only recomputed if orbital fixing has found a
+ * reduction before the restart.
+ *
+ * @subsection SYMSST SST cuts
+ *
+ * The Schreier-Sims table (SST) is a table that contains certain information about symmetry groups
+ * and can be used, among others, to derive symmetry handling inequalities. The corresponding SST cuts
+ * are symmetry handling inequalities that are defined iteratively in rounds \f$r = 1,\dots,R\f$.
+ * In each round \f$r\f$, a leader variable \f$\ell_r\f$ is selected and the group
+ * \f$\Gamma_r = \{ \gamma \in \Gamma : \gamma(\ell_i) = \ell_i \text{ for all } i = 1,\dots,r-1\}\f$
+ * is considered. Then, the symmetry handling inequalities of round \f$r\f$ are defined as
+ * \f$x_{\ell_r} \geq x_j\f$ for all \f$j \in \{\gamma(i) : i \in \{1,\dots,n\}\}\f$.
+ * The latter set is called the orbit of leader \f$\ell_r\f$.
+ *
+ * SST cuts admit many degrees of freedom. In particular, they are not limited to binary variables
+ * but can be used for arbitrary variable types. A user can gain control over the selection process of
+ * SST cuts via several parameters. For instance,
+ *
+ * - <code>sstleadervartype</code> is a bitset encoding the variable types of leaders: the 1-bit models binary,
+ *   the 2-bit integer, the 4-bit implicit integer, and the 8-bit continuous variables. That is, a value
+ *   of 9 models that the leader can be a binary or continuous variable.
+ * - <code>sstleaderrule</code> ranges from 0 to 2 and models whether a leader is the first variable in
+ *   its orbit, the last variable in its orbit, or a variable with most conflicts with other variables in
+ *   the orbit, respectively.
+ * - <code>ssttiebreakrule</code> ranges from 0 to 2 and models whether an orbit of minimum size, maximum
+ *   size or with most variables being in conflict to the leader is selected, respectively.
+ * - <code>sstmixedcomponents</code> whether SST cuts are also applied if a symmetries do not only affect
+ *   variables of a single type.
+ * - <code>sstaddcuts</code> whether SST cuts are added to the problem. If no cuts are added, only
+ *   binary variables might be fixed to 0 if they are in conflict with the leader.
+ *
+ * @subsection SYMMETHODSELECT Selecting symmetry handling methods
+ *
+ * The three symmetry handling methods explained above can be enabled and disabled via the parameter
+ * <code>misc/usesymmetry</code>, which encodes the enabled methods via a bitset that ranges between 0
+ * and 7: the 1-bit encodes symmetry handling constraints, the 2-bit encodes orbital fixing, and the
+ * 4-bit encodes SST cuts. For example, <code>misc/usesymmetry = 3</code> enables symmetry handling
+ * constraints and orbital fixing, whereas <code>misc/usesymmetry = 0</code> disables symmetry handling.
+ * In the following, we explain how the combination of different symmetry handling methods works.
+ *
+ * The default strategy of SCIP is to handle symmetries via the bitset value 7, i.e., symmetry handling
+ * constraints, orbital fixing, and SST cuts are enabled. To make sure that the different methods are
+ * compatible, the following steps are carried out:
+ *
+ * -# SCIP determines independent subgroups \f$\Gamma_1,\dots,\Gamma_k\f$ as described in \ref SYMPROCESS.
+ *    Then, for each subgroup \f$\Gamma_i\f$, different symmetry handling methods can be applied.
+ * -# For each subgroup \f$\Gamma_i\f$, a heuristic is called that checks whether orbitopes are applicable
+ *    to handle the entire subgroup. If yes, this subgroup is handled by orbitopes and no other
+ *    symmetry handling methods.
+ * -# Otherwise, if parameter <code>propagating/symmetry/detectsubgroups</code> is <code>TRUE</code>, a
+ *    heuristic is called to detect whether "hidden" orbitopes are present. That is, whether some but not
+ *    all symmetries of \f$\Gamma_i\f$ can be handled by orbitopes. If sufficiently many symmetries can
+ *    be handled by orbitopes, orbitopes are applied and, if parameter <code>propagating/symmetry/addweaksbcs</code>
+ *    is TRUE, some compatible SST cuts are added, too. Besides this, no further symmetry handling methods
+ *    are applied for \f$\Gamma_i\f$.
+ * -# Otherwise, if the majority of variables affected by \f$\Gamma_i\f$ are non-binary, SST cuts are applied
+ *    to handle \f$\Gamma_i\f$. No further symmetry handling methods are applied for \f$\Gamma_i\f$.
+ * -# Finally, if none of the previous methods has been used to handle \f$\Gamma_i\f$, orbital fixing is
+ *    used.
+ *
+ * @note If one of the previous methods is disabled via <code>misc/usesymmetry</code>, it might be possible
+ *       that not all symmetries are handled. For instance, if orbital fixing is disabled and neither SST cuts
+ *       nor orbitopes are applied to handle \f$\Gamma_i\f$, the parameter <code>propagating/symmetry/addsymresacks</code>
+ *       needs to be set to <code>TRUE</code> to handle the symmetries of \f$\Gamma_i\f$. If this parameter is
+ *       <code>TRUE</code>, then orbisack/symresack constraints are also applied to subgroups that are handled
+ *       via hidden orbitopes or SST cuts (if these cuts are applied for binary variables).
+ *
+ *
+ * @subsection SYMTIMING Controlling the timing of symmetry computation
+ *
+ * Since presolving might both remove and introduce formulation symmetries, the timing of computing symmetries
+ * can be changed via the parameters <code>propagating/symmetry/addconsstiming</code> and
+ * <code>propagating/symmetry/ofsymcomptiming</code> depending on whether symmetry handling constraints/SST cuts
+ * and orbital fixing are applied, respectively. If both are applied, <code>propagating/symmetry/addconsstiming</code>
+ * is dominant. Both parameters take values 0, 1, or 2, corresponding to computing symmetries before presolving,
+ * during presolving, or when the symmetry handling methods are applied first, respectively. For the constraint-based
+ * approach, the latter means at the end of presolving; for orbital fixing, after the first branching decision.
+ *
+ * If a restart occurs, symmetry handling constraints and SST cuts can be inherited to the new run. Since orbital
+ * fixing depends on the branching history, which is not available after a restart anymore, symmetries might needed
+ * to be recomputed. This is controlled via the parameter <code>propagating/symmetry/recomputerestart</code>, which
+ * takes values 0, 1, or 2, corresponding to never recomputing symmetries (i.e., disabling orbital fixing after a
+ * restart), always recompute symmetries, or only recomputing symmetries if orbital fixing found a reduction in
+ * the previous run, respectively.
  */
 
 /**@page LICENSE License

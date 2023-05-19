@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -2748,10 +2748,10 @@ SCIP_RETCODE SCIPparamsetWrite(
       /* display the SCIP version as comment in the first line */
 #if( SCIP_SUBVERSION == 0 )
          SCIPmessageFPrintInfo(messagehdlr, file, "# SCIP version %d.%d.%d\n", 
-            SCIP_VERSION/100, (SCIP_VERSION/10) % 10, SCIP_VERSION % 10); /*lint !e778*/
+            SCIP_VERSION_MAJOR, SCIP_VERSION_MINOR, SCIP_VERSION_PATCH);
 #else
          SCIPmessageFPrintInfo(messagehdlr, file, "# SCIP version %d.%d.%d.%d\n", 
-            SCIP_VERSION/100, (SCIP_VERSION/10) % 10, SCIP_VERSION % 10, SCIP_SUBVERSION); /*lint !e778*/
+            SCIP_VERSION_MAJOR, SCIP_VERSION_MINOR, SCIP_VERSION_PATCH, SCIP_SUBVERSION);
 #endif
 
       SCIPmessageFPrintInfo(messagehdlr, file, "\n");

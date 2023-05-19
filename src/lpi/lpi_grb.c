@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -1246,9 +1246,9 @@ static const char grbname[] = {'G', 'u', 'r', 'o', 'b', 'i', ' ',
 #if GRB_VERSION_MAJOR < 10
    GRB_VERSION_MAJOR + '0',
 #else
-   (GRB_VERSION_MAJOR/10) + '0', (GRB_VERSION_MAJOR%10) + '0',
+   (GRB_VERSION_MAJOR/10) + '0', (GRB_VERSION_MAJOR%10) + '0',       /*lint !e778*/
 #endif
-   '.', GRB_VERSION_MINOR + '0', '.', GRB_VERSION_TECHNICAL + '0'};
+   '.', GRB_VERSION_MINOR + '0', '.', GRB_VERSION_TECHNICAL + '0'};  /*lint !e835*/
 
 /**@name Miscellaneous Methods */
 /**@{ */

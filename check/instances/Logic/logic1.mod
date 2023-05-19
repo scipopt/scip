@@ -1,4 +1,4 @@
-# ampl -oglogic1 -P logic1.mod 
+# ampl -oglogic1 -P logic1.mod
 
 var x binary;
 var y binary;

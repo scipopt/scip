@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -1141,7 +1141,9 @@ SCIP_RETCODE catchVarEvents(
 
    conshdlrdata = SCIPconshdlrGetData(SCIPconsGetHdlr(cons));
    assert(conshdlrdata != NULL);
+#ifndef CR_API  /* this assert may not work in unittests due to having this code compiled twice, #3543 */
    assert(conshdlrdata->intevalvar == intEvalVarBoundTightening);
+#endif
 
    SCIPdebugMsg(scip, "catchVarEvents for %s\n", SCIPconsGetName(cons));
 
@@ -2680,7 +2682,9 @@ SCIP_RETCODE propConss(
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
+#ifndef CR_API  /* this assert may not work in unittests due to having this code compiled twice, #3543 */
    assert(conshdlrdata->intevalvar == intEvalVarBoundTightening);
+#endif
    assert(!conshdlrdata->globalbounds);
 
    *result = SCIP_DIDNOTFIND;
@@ -2871,7 +2875,9 @@ SCIP_RETCODE propExprDomains(
    assert(nchgbds != NULL);
    assert(*nchgbds >= 0);
 
+#ifndef CR_API  /* this assert may not work in unittests due to having this code compiled twice, #3543 */
    assert(SCIPconshdlrGetData(conshdlr)->intevalvar == intEvalVarBoundTightening);
+#endif
    assert(!SCIPconshdlrGetData(conshdlr)->globalbounds);
    assert(SCIPqueueIsEmpty(SCIPconshdlrGetData(conshdlr)->reversepropqueue));
 
@@ -9863,6 +9869,9 @@ SCIP_DECL_CONSCHECK(consCheckNonlinear)
    maxviol = 0.0;
    maypropfeasible = conshdlrdata->trysolheur != NULL && SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED
       && SCIPgetStage(scip) <= SCIP_STAGE_SOLVING;
+
+   if( maypropfeasible && (sol == NULL || SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_LPSOL) && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
+      maypropfeasible = FALSE;
 
    /* check nonlinear constraints for feasibility */
    for( c = 0; c < nconss; ++c )

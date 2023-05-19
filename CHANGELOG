@@ -30,6 +30,7 @@ Performance improvements
 - Added initialization of LP relaxation for SOC constraints.
 - Avoided some numerical issues when separating SOC constraints.
 - If differentation of convex expression fails in convex nlhdlr, then a perturbed point is tried.
+- Use sassy/bliss as default symmetry computation package.
 
 Examples and applications
 -------------------------
@@ -50,6 +51,7 @@ Interface changes
 - Renamed SCIPtpiSumbitJob() to SCIPtpiSubmitJob().
 - SCIPcreateConsIndicatorLinCons(), SCIPcreateConsIndicatorGenericLinCons() do not allow binvar to be NULL anymore
 - Replaced SCIPnlrowSetCurvature() by SCIPsetNlRowCurvature().
+- SCIPsnprintf() now returns the required string length in case reallocation is necessary.
 
 ### New API functions
 
@@ -75,6 +77,9 @@ Interface changes
 
 ### Interfaces to external software
 
+- added interface to nauty/traces for symmetry computation
+- added interface to sassy, a preprocessor for symmetry computation
+- The directory src/sassy contains the source code of sassy.
 - Added interface to Lapack (used for solving nonlinear problems).
 - The AMPL interface now supports parameters specified in AMPL command scripts via option scip_options.
   The value of scip_options is expected to be a sequence of parameter names and values, separated by a space, e.g.,
@@ -83,6 +88,7 @@ Interface changes
 
 ### Changed parameters
 
+- change default value of parameter separating/filtercutpoolrel to FALSE
 - Shrunk range of parameter "propagating/symmetry/sstleaderrule" from [0,3] to [0,2], removed "MAXCONFLICTS"-option.
 - Removed reading/gmsreader/freeints. A default upper bound of +inf is now assumed for integer variables in GAMS (which is the case since GAMS 23.1).
 
@@ -112,10 +118,17 @@ Build system
 ### Cmake
 
 - New flag -DLAPACK=on for linking with Lapack (must be available in the system)
+- added flag option "SYM=sassy" for using sassy/bliss as a graph automorphism package
+- use SYM=sassy by default, since sassy and bliss are now shipped with SCIP.
 
 ### Makefile
 
+- added flag option "nauty" for SYM variable to specify which graph automorphism package should be used
+- added flag option "sassy" for SYM variable to specify which graph automorphism package should be used
+- use SYM=sassy by default, since sassy and bliss are now shipped with SCIP
 - New flag LAPACK for linking with Lapack (must be available in the system)
+- A file scip/config.h is created in the build directory ($(OBJDIR)/include) now.
+  Defining NO_CONFIG_HEADER is no longer necessary and has no effect anymore.
 
 Fixed bugs
 ----------
@@ -133,13 +146,102 @@ Known bugs
 
 @page RN80 Release notes for SCIP 8.0
 
-@section RN000 SCIP 8.0.3
+@section RN804 SCIP 8.0.4
+*************************
+
+Features
+--------
+
+- use quad precision in cutsSubstituteMIR() for substituting slack variables into CMIR cuts
+- use quad precision for activity computations in cons_linear.c
+
+Performance improvements
+------------------------
+
+Examples and applications
+-------------------------
+
+Interface changes
+-----------------
+
+### New and changed callbacks
+
+### Deleted and changed API methods
+
+### New API functions
+
+### Command line interface
+
+### Interfaces to external software
+
+- updated XPRESS interface to work with XPRESS 41 as well
+
+### Changed parameters
+
+- changed integer parameter "propagating/symmetry/recomputrestart" from range {0, 1, 2} to being fixed at value 0
+
+### New parameters
+
+### Data structures
+
+Deleted files
+-------------
+
+Unit tests
+----------
+
+- added new checks for objective, bounds and sides inside the scaling tests in lpi/change.c
+
+Testing
+-------
+
+Build system
+------------
+
+### Cmake
+
+### Makefile
+
+Fixed bugs
+----------
+
+- relax condition of assert in lpSolve to hold only if lp/checkstability is true
+- OPB reader: dynamically increase the size of the line buffer for reading in getMaxAndConsDim()
+- Enabled the solution limit checks in SCIPsolveIsStopped in solve.c when in SCIP_STAGE_PRESOLVING
+- fix quad precision comparison for the calculation of knapsackcover constraints.
+- force copying of symmetry constraints for concurrent solve
+- increase the precision of double multiplications in quad precision environments
+- corrected handling of different variable types in symmetry
+- orbitope detection: refine computation of overlap structure and fixed bug in finding orbitope generators
+- ensure that winner is always determined in concurrent mode
+- when a row with invalid index range is added to the global cutpool, update the indices instead of failing with an assert
+- update of watched literals in cons_xor.c and ensure that fixed variables are counted in propacateCons()
+- avoid some numerical issue in check for redundant variables in linear constraints (introduced with version 8.0.2)
+- more rows are treated as being integral in cutsSubstituteMIR() for CMIR cuts
+- fixed several relaxations of the rhs of cuts to 0 in cuts.c
+- avoid aggregation into a single linear constraint if they should not be upgraded (needed for indicator constraints)
+- apply effective root changes before fork is repropagated during treeSwitchPath() in tree.c
+- avoid invalid objective value for solutions generated from an unbounded LP relaxation in case of a nonlinear objective function
+- disable recomputing symmetries after a restart (constraint removal is not permitted)
+- avoid cutting off optimal solutions for small feasibility tolerances in conflict analysis
+
+Miscellaneous
+-------------
+
+- Extended documentation of the parameter limits/solutions to point out that the limit is first checked in presolving
+- Added more information about using SCIPcache- and SCIPflushRowExtensions() to documentation and comments
+- Extended the `how to add' sections of the documentation by adding information on how to include default plugins into SCIP
+
+Known bugs
+----------
+
+@section RN803 SCIP 8.0.3
 *************************
 
 Examples and applications
 -------------------------
 
-- Take out STP and PolySCIP applications
+- Externalize STP and PolySCIP applications
 
 Interface changes
 -----------------
@@ -167,11 +269,18 @@ Fixed bugs
 - fixed an issue caused by aggregated variables not added to a hashmap in the xor constraint handler
 - changed function solveRowEchelonGF2 in cons_xor.c to avoid errors if rank is 0
 - fixed that the implication presolver tried to aggregate or tighten bounds of multiaggregated variables
+- fixed a sign check in detection of linear constraints that are parallel to the objective
+- fixed bug in Clp and lpi_clp with missing basis information when calling the barrier with crossover; needs new Clp version
+- do not assume aggregation is successful in cons_setppc.c
 
 Miscellaneous
 -------------
 
 - Changed license to Apache 2.0, see https://www.apache.org/licenses/LICENSE-2.0.
+- When an LP could not be solved accurately, scaling is now turned off as a last fall-back method.
+- Methods for using the debug solution mechanism SCIPdebugAddSolVal, SCIPdebugGetSol, SCIPdebugGetSolVal,
+  SCIPdebugSolIsValidInSubtree, SCIPdebugIsMainscip, SCIPdebugSolEnable, SCIPdebugSolDisable, SCIPdebugSolIsEnabled,
+  SCIPwithDebugSol are now exported
 
 Known bugs
 ----------
@@ -253,7 +362,6 @@ Miscellaneous
   diving heuristics, ALNS neighborhood information and tree size estimation statistics;
   they can be turned on using the following new parameters:
   misc/showdivingstats (diving heuristics), heuristics/alns/shownbstats (ALNS), estimation/showstats (tree size estimation)
-- When an LP could not be solved accurately, scaling is now turned off as a last fall-back method.
 
 @section RN801 SCIP 8.0.1
 *************************
@@ -1362,7 +1470,6 @@ Fixed bugs
 - Improved separation for SOC constraint with multiaggregated variable on right-hand-side.
 - Fixed bug in presol_boundshift: do not shift non-active variables
 - Fixed bug in domain propagation for SOC constraints with negative coefficient for variable on right-hand-side.
-- Fixed a sign check in detection of linear constraints that are parallel to the objective
 - Fixed bug with multi-aggregated integer variables in cons_xor.
 - Fixed bug with changed number of variables in storing relaxation solution in probing/diving.
 - Fixed issues with scip statistics

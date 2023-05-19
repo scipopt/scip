@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -2232,6 +2232,7 @@ void SCIPmultihashPrintStatistics(
       }
    }
    assert(sumslotsize == multihash->nelements);
+   SCIP_UNUSED(sumslotsize);
 
    SCIPmessagePrintInfo(messagehdlr, "%" SCIP_LONGINT_FORMAT " multihash entries, used %d/%d slots (%.1f%%)",
       multihash->nelements, usedslots, multihash->nlists, 100.0*(SCIP_Real)usedslots/(SCIP_Real)(multihash->nlists));
@@ -9670,10 +9671,16 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
  */
 #if defined(__INTEL_COMPILER) || defined(_MSC_VER)
 #pragma fenv_access (on)
-#elif defined __GNUC__
+#elif defined(__GNUC__) && !defined(__clang__)
 #pragma STDC FENV_ACCESS ON
 #endif
-
+#if defined(__GNUC__) && !defined(__INTEL_COMPILER)
+#if defined(__clang__)
+__attribute__((optnone))
+#else
+__attribute__((optimize(0)))
+#endif
+#endif
 /** given a (usually very small) interval, tries to find a rational number with simple denominator (i.e. a small
  *  number, probably multiplied with powers of 10) out of this interval; returns TRUE iff a valid rational
  *  number inside the interval was found
@@ -9717,7 +9724,7 @@ SCIP_Bool SCIPfindSimpleRational(
 
 #if defined(__INTEL_COMPILER) || defined(_MSC_VER)
 #pragma fenv_access (off)
-#elif defined __GNUC__
+#elif defined(__GNUC__) && !defined(__clang__)
 #pragma STDC FENV_ACCESS OFF
 #endif
 
@@ -10792,7 +10799,6 @@ int SCIPsnprintf(
       }
 #endif
       t[len-1] = '\0';
-      n = len-1;
    }
    return n;
 }

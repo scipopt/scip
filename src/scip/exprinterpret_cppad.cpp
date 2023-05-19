@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -908,6 +908,7 @@ private:
     *   ty[1] = y^1 = f'(x^0) * tx[{1..n}*(p+1)+1] = sum(i=1..n, grad[i] * tx[i*(p+1)+1]),  where grad = f'(x^0)
     *   ty[2] = 1/2 sum(i,j=1..n, x[i*(p+1)+1] * x[j*(p+1)+q] * hessian[i,j]) + sum(i=1..n, grad[i] * x[i*(p+1)+2])
     */
+   /* cppcheck-suppress unusedPrivateFunction */
    bool forward(
       size_t                      q,            /**< lowest order Taylor coefficient that we are evaluating */
       size_t                      p,            /**< highest order Taylor coefficient that we are evaluating */
@@ -991,6 +992,7 @@ private:
       return false;
 
 #if SCIP_DISABLED_CODE
+      /* cppcheck-suppress unreachableCode */
       SCIP_Real* gradient = NULL;
       SCIP_Real* hessian = NULL;
 
@@ -1096,6 +1098,7 @@ private:
     *   px[i*2+0] = (px^0)_i = py[0] * grad[i] + py[1] * sum(j, hessian[j,i] * tx[j*2+1])
     *   px[i*2+1] = (px^1)_i = py[1] * grad[i]
     */
+   /* cppcheck-suppress unusedPrivateFunction */
    bool reverse(
       size_t             p,                  /**< highest order Taylor coefficient that we are evaluating */
       const CppAD::vector<SCIP_Real>& tx,    /**< values for taylor coefficients of x */
@@ -1113,6 +1116,7 @@ private:
       return false;
 
 #ifdef SCIP_DISABLED_CODE
+      /* cppcheck-suppress unreachableCode */
       size_t n = tx.size() / (p+1);
       assert(n == (size_t)SCIPexprGetNChildren(expr)); /*lint !e571*/
       assert(n >= 1);
@@ -1172,6 +1176,7 @@ private:
     * For a 1 x q matrix R, we have to return the sparsity pattern of the 1 x q matrix S(x) = f'(x) * R.
     * Since we assume f'(x) to be dense, the sparsity of S will be the sparsity of R.
     */
+   /* cppcheck-suppress unusedPrivateFunction */
    bool for_sparse_jac(
       size_t                     q,  /**< number of columns in R */
       const CppAD::vector<bool>& r,  /**< sparsity of R, columnwise */
@@ -1201,6 +1206,7 @@ private:
     * For a q x 1 matrix S, we have to return the sparsity pattern of the q x 1 matrix R(x) = S * f'(x).
     * Since we assume f'(x) to be dense, the sparsity of R will be the sparsity of S.
     */
+   /* cppcheck-suppress unusedPrivateFunction */
    bool rev_sparse_jac(
       size_t                     q,  /**< number of rows in R */
       const CppAD::vector<bool>&       rt, /**< sparsity of R, rowwise */
@@ -1227,6 +1233,7 @@ private:
     * Assume V(x) = (g(f(x)))'' R  for a function g:R->R and a matrix R.
     * we have to specify the sparsity pattern of V(x) and T(x) = (g(f(x)))'.
     */
+   /* cppcheck-suppress unusedPrivateFunction */
    bool rev_sparse_hes(
       const CppAD::vector<bool>&              vx, /**< indicates whether argument is a variable, or empty vector */
       const CppAD::vector<bool>&              s,  /**< sparsity pattern of S = g'(y) */

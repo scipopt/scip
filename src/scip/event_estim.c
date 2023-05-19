@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -1703,7 +1703,7 @@ void doubleExpSmoothUpdate(
       SCIP_Real newlevel;
       SCIP_Real newtrend;
 
-      newlevel = des->alpha * xnew + (1.0 - des->alpha) * (des->level + des->usetrendinlevel ? des->trend : 0.0);
+      newlevel = des->alpha * xnew + (1.0 - des->alpha) * (des->level + (des->usetrendinlevel ? des->trend : 0.0));
       newtrend = des->beta * (newlevel - des->level) + (1.0 - des->beta) * des->trend;
 
       des->level = newlevel;
@@ -3003,7 +3003,6 @@ SCIP_RETCODE SCIPincludeEventHdlrEstim(
          NULL, NULL, NULL, NULL, NULL, NULL, dispOutputCompleted,
          NULL, DISP_WIDTH, DISP_PRIORITY, DISP_POSITION, DISP_STRIPLINE) );
 
-/* cppcheck-suppress unusedLabel */
 TERMINATE:
    if( retcode != SCIP_OKAY )
    {
