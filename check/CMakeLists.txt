@@ -36,6 +36,7 @@ set(instances_CP
     "instances/CP/j301_2.cip\;47"
     "instances/CP/disj_conj_rail.cip\;1324.43557422969"
     "instances/CP/stein27_super.cip\;1"
+    "instances/CP/Demo5.cip\;2"
     )
 
 set(settings_default
@@ -215,6 +216,8 @@ set(settings_Cardinality
 set(settings_Or
     "default"
     "presolving_separating_heuristics_off_randombranching"
+    "repropagation"
+    "tolerance"
 )
 
 #
@@ -450,6 +453,8 @@ set(instances_Decomp
 
 set(instances_Or
     "instances/Or/or_constraint.cip\;18"
+    "instances/Or/Demo8.cip\;3"
+    "instances/Or/problem.cip\;0"
     )
 
 #
