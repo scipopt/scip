@@ -1705,7 +1705,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
 
       if( numcancel > 0 )
       {
-	 SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+	     SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
 			 "   (%.1fs) dualsparsify: %d nonzeros canceled\n", SCIPgetSolvingTime(scip), numcancel);
          *result = SCIP_SUCCESS;
       }
