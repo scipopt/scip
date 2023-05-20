@@ -90,6 +90,7 @@ set(settings_MIP
 #    "cloud"
     "uct_breadth_dualval"
     "conflictdiving"
+    "tolerance"
 )
 #
 # settings for the componentshandler test
@@ -267,7 +268,7 @@ set(instances_MIP
     "instances/MIP/misc03.mps\;3360"
     "instances/MIP/p0033.osil\;3089"
     "instances/MIP/p0548.mps\;8691"
-    "instances/MIP/rgn.mps\;82.1999974"
+    "instances/MIP/rgn.mps\;82.19999924"
     "instances/MIP/stein27.fzn\;18"
     "instances/MIP/stein27_inf.lp\;+infinity"
     "instances/MIP/vpm2.fzn\;13.75"
@@ -404,7 +405,7 @@ set(instances_SymmetryConss
 #
 set(instances_Symmetry_A
     "instances/MIP/MANN_a9.clq.lp\;16"
-    "instances/MIP/rgn.mps\;82.1999974"
+    "instances/MIP/rgn.mps\;82.19999924"
     "instances/MIP/stein27.fzn\;18"
     )
 
