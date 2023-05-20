@@ -13,6 +13,8 @@ Features
 - Can now build with Lapack (used for solving nonlinear problems). If IPOPT is used, then Lapack is accessed through it.
   There	is an interface to Lapack in lapack_calls.
 - added support for logical constraints in binary variables and basic logical operators (and, or, not, equal) to AMPL .nl reader
+- indicator constraints now use the same slack variable for the linear constraints if binary variables are used multiple times
+  for indicator constraints
 - new diving heuristic indicatordiving that focuses on indicator variables which control semicontinuous variables
 - updated statistics on NLP relaxation; information on convexity of NLP has been added
 - added new bandit method (EXP.3-IX) that is the new default of the ALNS heuristic
@@ -23,6 +25,8 @@ Performance improvements
 
 - Variable conflict-based addition of Schreier-Sims cuts for symmetry handling in prop_symmetry.c does no longer use
   an expensive explicit conflict graph construction.
+- Only run propagation of indicator constraints if relevant variables have changed.
+- Propagation of indicator constraints propagates maximal activity of linear constraint to upper bound of slack variable.
 - Added initialization of LP relaxation for SOC constraints.
 - Avoided some numerical issues when separating SOC constraints.
 - If differentation of convex expression fails in convex nlhdlr, then a perturbed point is tried.
@@ -45,6 +49,7 @@ Interface changes
 - SCIPtpiInitLock(), SCIPtpiDestroyLock(), SCIPtpiInitCondition(), SCIPtpiDestroyCondition() now take a double
   pointer to SCIP_LOCK/SCIP_CONDITION, respectively.
 - Renamed SCIPtpiSumbitJob() to SCIPtpiSubmitJob().
+- SCIPcreateConsIndicatorLinCons(), SCIPcreateConsIndicatorGenericLinCons() do not allow binvar to be NULL anymore
 - Replaced SCIPnlrowSetCurvature() by SCIPsetNlRowCurvature().
 - SCIPsnprintf() now returns the required string length in case reallocation is necessary.
 
@@ -60,6 +65,8 @@ Interface changes
 - SCIPmultiplyBySumExprSum(), SCIPpowerExprSum()
 - SCIPsetParam()
 - SCIPgetPrimalDualIntegral() returns the primal dual integral stored in the statistics
+- new functions SCIPcreateConsIndicatorLinConsPure() and SCIPcreateConsIndicatorGenericLinConsPure() that
+  create indicator constraints from a linear constraint without a slack variable
 - SCIPgetNLPNlRowsStat() to retrieve counts on linear, convex, and nonconvex rows in NLP
 - SCIPnlhdlrSetSollinearize(), SCIPnlhdlrHasSollinearize()
 
