@@ -39,6 +39,7 @@
  */
 #include "scip/bandit_epsgreedy.h"
 #include "scip/bandit_exp3.h"
+#include "scip/bandit_exp3ix.h"
 #include "scip/bandit_ucb.h"
 
 #ifdef __cplusplus

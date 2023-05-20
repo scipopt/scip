@@ -8396,7 +8396,6 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
 
       /* remember the number of fixings */
       conshdlrdata->noldfixedvars = *nfixedvars + *naggrvars;
-
       conshdlrdata->enablecliquelifting = FALSE;
    }
 

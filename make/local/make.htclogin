@@ -26,4 +26,3 @@ EXCLUSIVE	=	false
 .PHONY: cancelcluster
 cancelcluster:
 	scancel --user=$(USER)
-

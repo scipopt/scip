@@ -27,7 +27,6 @@ void TESTsetTestfilename(
 #ifdef __GNUC__
 #pragma GCC diagnostic ignored "-Wredundant-decls"
 #pragma GCC diagnostic ignored "-Wstrict-prototypes"
-#pragma GCC diagnostic ignored "-Wdeclaration-after-statement"
 #endif
 
 #include <criterion/criterion.h>

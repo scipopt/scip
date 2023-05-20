@@ -2757,6 +2757,9 @@ SCIP_RETCODE doCopy(
    {
       SCIP_CALL( SCIPenableConsCompression(targetscip) );
 
+      SCIPdebugMsg(sourcescip, "SCIPenableConsCompression() with nxfixedvars=%d and global=%u invalidates copy.\n",
+         nfixedvars, global);
+
       /* domain reductions yield a copy that is no longer guaranteed to be valid */
       localvalid = FALSE;
    }
@@ -2771,7 +2774,8 @@ SCIP_RETCODE doCopy(
       SCIP_CALL( SCIPcopyConss(sourcescip, targetscip, localvarmap, localconsmap, global, enablepricing, &consscopyvalid) );
    }
 
-   SCIPdebugMsg(sourcescip, "Copying constraints was%s valid.\n", consscopyvalid ? "" : " not");
+   SCIPdebugMsg(sourcescip, "Copying%s constraints was%s valid.\n",
+      original ? " (original)" : "", consscopyvalid ? "" : " not");
 
    localvalid = localvalid && consscopyvalid;
 

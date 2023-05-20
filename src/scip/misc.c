@@ -10799,7 +10799,6 @@ int SCIPsnprintf(
       }
 #endif
       t[len-1] = '\0';
-      n = len-1;
    }
    return n;
 }

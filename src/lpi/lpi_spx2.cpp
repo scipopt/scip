@@ -44,9 +44,7 @@
 /*
  * include build configuration flags
  */
-#ifndef NO_CONFIG_HEADER
 #include "scip/config.h"
-#endif
 
 /* in this case the SoPlex results are double checked using CPLEX */
 #ifdef SCIP_WITH_LPSCHECK

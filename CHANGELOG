@@ -1,3 +1,149 @@
+@page RN Release notes for SCIP NEXT
+
+@section RNNEXT SCIP NEXT
+*************************
+
+Features
+--------
+
+- added simplification of abs(x)^n to x^n when n is even (simplify rule POW12)
+- in expression simplification, added possibility to expand power of sum with exponents larger than 2 (simplify rule POW7)
+- in expression simplification, added possibility to expand products with sums as factor when there are more than two factors (simplify rule SP12b)
+- in expression simplification, added possibility to allow expanding power of products with fractional exponent (simplify rule POW5a)
+- Can now build with Lapack (used for solving nonlinear problems). If IPOPT is used, then Lapack is accessed through it.
+  There	is an interface to Lapack in lapack_calls.
+- added support for logical constraints in binary variables and basic logical operators (and, or, not, equal) to AMPL .nl reader
+- indicator constraints now use the same slack variable for the linear constraints if binary variables are used multiple times
+  for indicator constraints
+- new diving heuristic indicatordiving that focuses on indicator variables which control semicontinuous variables
+- updated statistics on NLP relaxation; information on convexity of NLP has been added
+- added new bandit method (EXP.3-IX) that is the new default of the ALNS heuristic
+- added dialog to display recognized permutation symmetries ("display symmetry")
+
+Performance improvements
+------------------------
+
+- Variable conflict-based addition of Schreier-Sims cuts for symmetry handling in prop_symmetry.c does no longer use
+  an expensive explicit conflict graph construction.
+- Only run propagation of indicator constraints if relevant variables have changed.
+- Propagation of indicator constraints propagates maximal activity of linear constraint to upper bound of slack variable.
+- Added initialization of LP relaxation for SOC constraints.
+- Avoided some numerical issues when separating SOC constraints.
+- If differentation of convex expression fails in convex nlhdlr, then a perturbed point is tried.
+- Use sassy/bliss as default symmetry computation package.
+
+Examples and applications
+-------------------------
+
+Interface changes
+-----------------
+
+### New and changed callbacks
+
+- Added solution linearization callback for nonlinear handlers.
+  The nonlinear handler may use this callback to add tight cuts that use the given solution as reference point to the cutpool.
+  The callback is called if option constraints/nonlinear/linearizeheursol is enabled.
+
+### Deleted and changed API methods
+
+- SCIPtpiInitLock(), SCIPtpiDestroyLock(), SCIPtpiInitCondition(), SCIPtpiDestroyCondition() now take a double
+  pointer to SCIP_LOCK/SCIP_CONDITION, respectively.
+- Renamed SCIPtpiSumbitJob() to SCIPtpiSubmitJob().
+- SCIPcreateConsIndicatorLinCons(), SCIPcreateConsIndicatorGenericLinCons() do not allow binvar to be NULL anymore
+- Replaced SCIPnlrowSetCurvature() by SCIPsetNlRowCurvature().
+- SCIPsnprintf() now returns the required string length in case reallocation is necessary.
+
+### New API functions
+
+- new functions for interfacing with Lapack:
+  SCIPlapackIsAvailable(), SCIPlapackIsAvailable(),
+  SCIPlapackComputeEigenvalues(), and SCIPlapackSolveLinearEquations
+
+  These functions should be used instead of SCIPisIpoptAvailableIpopt(), SCIPcallLapackDsyevIpopt(), and
+  SCIPsolveLinearEquationsIpopt() in the context of computing eigenvalues or solving linear equations. If IPOPT is available,
+  the calls will be passed on.
+- SCIPmultiplyBySumExprSum(), SCIPpowerExprSum()
+- SCIPsetParam()
+- SCIPgetPrimalDualIntegral() returns the primal dual integral stored in the statistics
+- new functions SCIPcreateConsIndicatorLinConsPure() and SCIPcreateConsIndicatorGenericLinConsPure() that
+  create indicator constraints from a linear constraint without a slack variable
+- SCIPgetNLPNlRowsStat() to retrieve counts on linear, convex, and nonconvex rows in NLP
+- SCIPnlhdlrSetSollinearize(), SCIPnlhdlrHasSollinearize()
+
+### Command line interface
+
+- Added optional parameter -i when calling SCIP in AMPL-mode (-AMPL parameter).
+  If -i is specified, a SCIP shell is started where normally SCIPsolve() would be called.
+
+### Interfaces to external software
+
+- added interface to nauty/traces for symmetry computation
+- added interface to sassy, a preprocessor for symmetry computation
+- The directory src/sassy contains the source code of sassy.
+- Added interface to Lapack (used for solving nonlinear problems).
+- The AMPL interface now supports parameters specified in AMPL command scripts via option scip_options.
+  The value of scip_options is expected to be a sequence of parameter names and values, separated by a space, e.g.,
+    `option scip_options 'limits/time 10 display/verblevel 1';`.
+  String values should not be quoted and spaces in string values are not supported.
+
+### Changed parameters
+
+- change default value of parameter separating/filtercutpoolrel to FALSE
+- Shrunk range of parameter "propagating/symmetry/sstleaderrule" from [0,3] to [0,2], removed "MAXCONFLICTS"-option.
+- Removed reading/gmsreader/freeints. A default upper bound of +inf is now assumed for integer variables in GAMS (which is the case since GAMS 23.1).
+
+### New parameters
+
+- expr/pow/expandmaxexponent to specify limit on exponent when to expand power of sum
+- expr/pow/distribfracexponent to enable expanding power of products with fractional exponents
+- expr/product/expandalways to enable expanding any product with sums as factor (that is, also when more than two factors)
+- nlhdlr/convex/maxperturb to specify maximal perturbation of non-differential reference points
+
+### Data structures
+
+Deleted files
+-------------
+
+- deleted the now unused files: tpi_none.h, tpi_openmp.h, tpi_tnycthrd.h, type_tpi_none.h, type_tpi_openmp.h, type_tpi_tnycthrd.h
+
+Unit tests
+----------
+
+Testing
+-------
+
+Build system
+------------
+
+### Cmake
+
+- New flag -DLAPACK=on for linking with Lapack (must be available in the system)
+- added flag option "SYM=sassy" for using sassy/bliss as a graph automorphism package
+- use SYM=sassy by default, since sassy and bliss are now shipped with SCIP.
+
+### Makefile
+
+- added flag option "nauty" for SYM variable to specify which graph automorphism package should be used
+- added flag option "sassy" for SYM variable to specify which graph automorphism package should be used
+- use SYM=sassy by default, since sassy and bliss are now shipped with SCIP
+- New flag LAPACK for linking with Lapack (must be available in the system)
+- A file scip/config.h is created in the build directory ($(OBJDIR)/include) now.
+  Defining NO_CONFIG_HEADER is no longer necessary and has no effect anymore.
+
+Fixed bugs
+----------
+
+- add safeguard for number of selected cuts
+
+Miscellaneous
+-------------
+
+- The TPI has been changed to become mostly independent from the actual parallel interface during compile time.
+  For this, the locks and conditions are now pointers to abstract structs.
+
+Known bugs
+----------
+
 @page RN80 Release notes for SCIP 8.0
 
 @section RN804 SCIP 8.0.4
@@ -113,8 +259,6 @@ Build system
 - Move -I/path/to/src/amplmp/include to front of compiler flags for include directories
 
 ### Makefile
-
-- Use SYM=bliss by default, since bliss now is shipped with SCIP.
 
 Fixed bugs
 ----------

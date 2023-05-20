@@ -52,7 +52,7 @@ make install                                                                  # 
 Note: For a full ctest run `ctest` instead of `make check` after compilation.
 
 CMake checks for available third-party libraries like GMP or ZLIB and sets up the configuration accordingly.
-Note that the symmetry code [Bliss](https://users.aalto.fi/~tjunttil/bliss/) is shipped with SCIP.
+Note that the symmetry codes [Bliss](https://users.aalto.fi/~tjunttil/bliss/) and [Sassy](https://github.com/markusa4/sassy) are shipped with SCIP.
 
 Note: Here is a list of apt package requirements for ubuntu or debian users that want to build the entire SCIP Optimization Suite from source tarball:
 ```
@@ -64,6 +64,7 @@ Additionally the following dependencies need to be downloaded, compiled and inst
  - [Ipopt](https://github.com/coin-or/Ipopt/releases) with [Mumps](https://github.com/coin-or-tools/ThirdParty-Mumps/releases)
  - [Gmp](https://gmplib.org/#DOWNLOAD)
 During the CMake configuration of the SCIP Optimization Suite the can be specified, see [CMake](https://scipopt.org/doc/html/md_INSTALL.php#CMAKE) [(local link)](@ref CMAKE) .
+
 
 Troubleshooting
 ---------------
@@ -182,8 +183,9 @@ e.g., `cmake </path/to/SCIP> -DSOPLEX_DIR=<path/to/SoPlex/build/or/install>`.
 | `CMAKE_BUILD_TYPE`     | `Release`, `Debug`, ...            | `OPT=[opt, dbg]`           |                                                                    |
 | `GMP`                  | `on`, `off`                        | `GMP=[true, false]`        | specify `GMP_DIR` if not found automatically                       |
 | `IPOPT`                | `on`, `off`                        | `IPOPT=[true,false]`       | requires IPOPT version >= 3.12.0; specify `IPOPT_DIR` if not found automatically |
+| `LAPACK`               | `on`, `off`                        | `LAPACK=[true,false]`      | requires Lapack to be installed on the system                      |
 | `LPS`                  | `spx`, `cpx`, `grb`, `xprs`, ...   | `LPS=...`                  | specify `SOPLEX_DIR`, `CPLEX_DIR`, `MOSEK_DIR`, ... if LP solver is not found automatically |
-| `SYM`                  | `bliss`, `none`                    | `SYM=[bliss, none]`        |                                                                    |
+| `SYM`                  | `bliss`, `sassy`, `none`           | `SYM=[bliss, sassy, none]` | choose symmetry handling                                           |
 | `WORHP`                | `on`, `off`                        | `WORHP=[true,false]`       | should worhp be linked; specify `WORHP_DIR` if not found automatically |
 | `ZIMPL`                | `on`, `off`                        | `ZIMPL=[true, false]`      | specify `ZIMPL_DIR` if not found automatically                     |
 | `AMPL`                 | `on`, `off`                        | `AMPL=[true, false]`       |                                                                    |
@@ -333,6 +335,7 @@ In your SCIP main directory, enter `make [options]` with the following options:
 | `FILTERSQP=false`     | `[false, true]`      | to enable or disable FilterSQP interface                                                         |
 | `GMP=true`            | `[true, false]`      | to enable or disable GMP library for exact counting and Zimpl support                            |
 | `IPOPT=false`         | `[false, true]`      | to disable or enable IPOPT interface (needs IPOPT >= 3.12.0)                                     |
+| `LAPACK=false`        | `[false, true]`      | link with Lapack; requires Lapack to be installed on the system                                  |
 | `LPS=spx`             | `[spx1, cpx, grb, xprs, msk, clp, glop, qso, none]` | determines the LP-Solver, should be installed seperately. Options to use SoPlex (> version 2.0), SoPlex (>= version 1.4), CPLEX, Gurobi, XPRESS, MOSEK, CLP, Glop, QSopt as LP solver, no LP solver  |
 | `LPSOPT=opt`          | `[opt, dbg, opt-gccold]` | Choose the debug or optimized version (or old GCC optimized) version of the LP-solver (currently only available for SoPlex and CLP). |
 | `NOBLKMEM=false`      | `[false, true]`      | Turns the internal SCIP block memory off or on.                                                  |
@@ -343,7 +346,7 @@ In your SCIP main directory, enter `make [options]` with the following options:
 | `PAPILO=false`        | `[false, true]`      | to disable or disable the MILP presolver based on the presolving library PaPILO                  |
 | `READLINE=true`       | `[true, false]`      | to enable or disable readline library for interactive shell                                      |
 | `SHARED=false`        | `[false, true]`      | to suppress or create shared libraries (only Gnu compiler)                                       |
-| `SYM=none`            | `[none, bliss]`      | to choose method for computing symmetries in mixed nonlinear integer programs                  |
+| `SYM=none`            | `[none, bliss, sassy]` | to choose method for computing symmetries in mixed nonlinear integer programs                  |
 | `TPI=none`            | `[none, omp, tny]`   | to disable the task processing interface or use it with the openmp or tinycthreads interface for concurrent solves |
 | `VERBOSE=false`       | `[false, true]`      | to suppress or display of compiler and linker invocations                                        |
 | `WORHP=false`         | `[false, true]`      | to disable or enable WORHP interface (needs WORHP >= 2.00)                                       |

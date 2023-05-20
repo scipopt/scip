@@ -439,7 +439,7 @@
                                                  *   's'um, 'd'iscrete) */
 #define SCIP_DEFAULT_SEPA_CUTSELRESTART     'a' /**< cut selection during restart ('a'ge, activity 'q'uotient) */
 #define SCIP_DEFAULT_SEPA_CUTSELSUBSCIP     'a' /**< cut selection for sub SCIPs  ('a'ge, activity 'q'uotient) */
-#define SCIP_DEFAULT_SEPA_FILTERCUTPOOLREL TRUE /**< should cutpool separate only cuts with high relative efficacy? */
+#define SCIP_DEFAULT_SEPA_FILTERCUTPOOLREL FALSE /**< should cutpool separate only cuts with high relative efficacy? */
 #define SCIP_DEFAULT_SEPA_MAXRUNS            -1 /**< maximal number of runs for which separation is enabled (-1: unlimited) */
 #define SCIP_DEFAULT_SEPA_MAXROUNDS          -1 /**< maximal number of separation rounds per node (-1: unlimited) */
 #define SCIP_DEFAULT_SEPA_MAXROUNDSROOT      -1 /**< maximal number of separation rounds in the root node (-1: unlimited) */
@@ -3435,6 +3435,21 @@ SCIP_RETCODE SCIPsetSetStringParam(
    assert(set != NULL);
 
    SCIP_CALL( SCIPparamsetSetString(set->paramset, set, messagehdlr, name, value) );
+
+   return SCIP_OKAY;
+}
+
+/** changes the value of an existing parameter */
+SCIP_RETCODE SCIPsetSetParam(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   const char*           name,               /**< name of the parameter */
+   const char*           value               /**< new value of the parameter as string */
+   )
+{
+   assert(set != NULL);
+
+   SCIP_CALL( SCIPparamsetSet(set->paramset, set, messagehdlr, name, value, FALSE) );
 
    return SCIP_OKAY;
 }

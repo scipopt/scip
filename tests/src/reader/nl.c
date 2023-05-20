@@ -179,6 +179,8 @@ Test(readernl, run, .description = "check running SCIP with -AMPL")
 {
    const char* args[3];
    char solfile[SCIP_MAXSTRLEN];
+   FILE* sol;
+   char scipstatus[100];
 
    /* skip test if nl reader not available (SCIP compiled with AMPL=false) */
    if( SCIPfindReader(scip, "nlreader") == NULL )
@@ -198,15 +200,24 @@ Test(readernl, run, .description = "check running SCIP with -AMPL")
    /* make sure no solfile is there at the moment */
    remove(solfile);
 
+   /* specify some SCIP options via scip_options environment variable (like AMPL scripts would do) */
+   setenv("scip_options", "limits/time 0", 1);
+
    /* run SCIP as if called by AMPL
     * this should writes a sol file (into tests/src/reader, unfortunately)
     */
    SCIP_CALL( SCIPrunShell(3, (char**)args, NULL) );
 
    /* check that a solfile that can be opened exists now */
-   cr_expect_not_null(fopen(solfile, "r"));
+   sol = fopen(solfile, "r");
+   cr_expect_not_null(sol);
+
+   /* check that first line of solfile is the SCIP status, which should be that the timelimit has been reached */
+   cr_expect_not_null(fgets(scipstatus, sizeof(scipstatus), sol));
+   cr_expect_str_eq(scipstatus, "time limit reached\n");
 
    /* cleanup */
+   fclose(sol);
    remove(solfile);
 
    free((char*)args[1]);

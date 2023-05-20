@@ -15,9 +15,9 @@ set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_DEBUG} ${CMAKE_CXX_FLAGS_R
 
 set(SCIP_VERSION_MAJOR 8)
 set(SCIP_VERSION_MINOR 0)
-set(SCIP_VERSION_PATCH 4)
-set(SCIP_VERSION_SUB 0)
-set(SCIP_VERSION_API 104)
+set(SCIP_VERSION_PATCH 3)
+set(SCIP_VERSION_SUB 5)
+set(SCIP_VERSION_API 108)
 
 project(SCIP
     VERSION ${SCIP_VERSION_MAJOR}.${SCIP_VERSION_MINOR}.${SCIP_VERSION_PATCH}.${SCIP_VERSION_SUB}
@@ -76,6 +76,7 @@ option(PAPILO "should papilo library be linked" ON)
 option(ZIMPL "should zimpl be linked" ON)
 option(AMPL "should ampl interface be compiled" ON)
 option(IPOPT "should ipopt be linked" ON)
+option(LAPACK "should lapack be linked" OFF)
 option(WORHP "should worhp be linked" OFF)
 # for backward compability
 option(PARASCIP "should scip be compiled thread safe (deprecated, use THREADSAFE)" OFF)
@@ -104,8 +105,8 @@ set_property(CACHE EXPRINT PROPERTY STRINGS none cppad )  #define list of values
 set(LPS spx CACHE STRING "options for LP solver")  #create the variable
 set_property(CACHE LPS PROPERTY STRINGS spx cpx grb xprs clp glop msk qso none )  #define list of values GUI will offer for the variable
 
-set(SYM bliss CACHE STRING "options for symmetry computation")  #create the variable
-set_property(CACHE SYM PROPERTY STRINGS bliss none )  #define list of values GUI will offer for the variable
+set(SYM sassy CACHE STRING "options for symmetry computation")  #create the variable
+set_property(CACHE SYM PROPERTY STRINGS bliss sassy nauty none )  #define list of values GUI will offer for the variable
 
 if(NOT (CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo" OR CMAKE_BUILD_TYPE STREQUAL "MinSizeRel"))
     message(FATAL_ERROR "You have not selected a valid CMAKE_BUILD_TYPE. Please select 'Release' or 'Debug'.")
@@ -117,10 +118,14 @@ else()
     message(WARNING "You are not using the automatic build option. ${AUTOBUILD_MSG}")
 endif() # AUTOBUILD
 
+# use C++14 standard
+set(CMAKE_CXX_STANDARD 14)
+
 #search the selected symmetry computation program
 message(STATUS "Finding symmetry computation program \"${SYM}\"")
 
 unset(BLISS_TARGET)
+unset(NAUTY_TARGET)
 if(SYM STREQUAL "bliss")
     message(STATUS "Support SYM: bliss")
     set(sym symmetry/compute_symmetry_bliss.cpp)
@@ -142,6 +147,68 @@ if(SYM STREQUAL "bliss")
     set(BLISS_TARGET libbliss)
     set(SYM_LIBRARIES libbliss)
     set(SYM_PIC_LIBRARIES libbliss)
+elseif(SYM STREQUAL "sassy")
+    message(STATUS "Support SYM: sassy")
+    set(sym symmetry/compute_symmetry_sassy.cpp)
+
+    # sassy is currently based on bliss, so configure bliss
+    set(BUILD_SHARED_LIBS OFF)
+    set(TMPFLAGS ${CMAKE_C_FLAGS})
+    set(TMXFLAGS ${CMAKE_CXX_FLAGS})
+    set(CMAKE_C_FLAGS -w)
+    set(CMAKE_CXX_FLAGS -w)
+
+    add_subdirectory(src/bliss EXCLUDE_FROM_ALL)
+
+    # undo modification
+    set(CMAKE_C_FLAGS ${TMPFLAGS})
+    set(CMAKE_CXX_FLAGS ${TMXFLAGS})
+    set(BUILD_SHARED_LIBS ${SHARED})
+
+    set(BLISS_TARGET libbliss)
+    set(SYM_LIBRARIES libbliss)
+    set(SYM_PIC_LIBRARIES libbliss)
+
+    # sassy needs C++-17
+    set(CMAKE_CXX_STANDARD 17)
+
+    if(NOT BLISS_INCLUDE_DIR OR NOT BLISS_LIBRARY)
+      find_path(BLISS_INCLUDE_DIR
+	NAMES bliss/graph.hh
+	PATH_SUFFIXES include src)
+    endif()
+elseif(SYM STREQUAL "nauty")
+    message(STATUS "Support SYM: nauty")
+    set(sym symmetry/compute_symmetry_nauty.c)
+
+    if(SHARED)
+        set(PIC_FLAG "CFLAGS='-fPIC'")
+    else()
+        set(PIC_FLAG "")
+    endif()
+    file(GLOB files ${CMAKE_CURRENT_SOURCE_DIR}/src/nauty/*)
+    # add custom command to build the library using configure and make
+    add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/lib/libnauty.a
+        COMMAND 
+        mkdir -p ${CMAKE_CURRENT_BINARY_DIR}/src/nauty &&
+        cd ${CMAKE_CURRENT_BINARY_DIR}/src/nauty &&
+        cp ${CMAKE_CURRENT_SOURCE_DIR}/src/nauty/* . &&
+        ./configure &&
+        make ${PIC_FLAG} nauty.a &&
+        cp nauty.a ${CMAKE_CURRENT_BINARY_DIR}/lib/libnauty.a
+        DEPENDS ${files})
+    
+    # add custom target and library target
+    add_custom_target(libnauty_target DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/lib/libnauty.a)
+    add_library(libnauty STATIC IMPORTED GLOBAL)
+    add_dependencies(libnauty libnauty_target)
+    set_target_properties(libnauty PROPERTIES 
+        IMPORTED_LOCATION ${CMAKE_CURRENT_BINARY_DIR}/lib/libnauty.a)
+
+    set(NAUTY_TARGET libnauty)
+    set(SYM_LIBRARIES libnauty)
+    set(SYM_PIC_LIBRARIES libnauty)
+
 elseif(SYM STREQUAL "none")
     message(STATUS "Support SYM: OFF")
     set(sym symmetry/compute_symmetry_none.cpp)
@@ -151,7 +218,7 @@ endif()
 
 # if changing these flags, also update GCCWARN/GXXWARN in make/make.project
 set(ADD_C_AND_CXX_FLAGS -pedantic -Wall -W -Wpointer-arith -Wcast-align -Wwrite-strings -Wshadow  -Wredundant-decls -Wdisabled-optimization -Wno-long-long -Wno-unknown-pragmas -Wno-unused-parameter)
-set(ADD_C_FLAGS -Wsign-compare -Wstrict-prototypes -Wmissing-declarations -Wmissing-prototypes -Wdeclaration-after-statement -Wno-override-init -Wno-uninitialized -Wno-maybe-uninitialized)
+set(ADD_C_FLAGS -Wsign-compare -Wstrict-prototypes -Wmissing-declarations -Wmissing-prototypes -Wno-override-init -Wno-uninitialized -Wno-maybe-uninitialized)
 set(ADD_CXX_FLAGS -Wctor-dtor-privacy -Wnon-virtual-dtor -Wreorder -Woverloaded-virtual -Wsign-promo -Wsynth -Wcast-qual -Wno-strict-overflow -Wno-psabi)
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -297,9 +364,6 @@ add_custom_target(scip_update_githash
       -P ${PROJECT_BINARY_DIR}/scip_update_githash.cmake)
 
 set(WITH_SCIPDEF on)
-
-# use C++14 standard
-set(CMAKE_CXX_STANDARD 14)
 
 # ZLIB
 if(ZLIB OR AUTOBUILD)
@@ -575,9 +639,22 @@ if(IPOPT_FOUND)
     set(HAVE_CSTDDEF on)
     set(NLPI_LIBRARIES ${IPOPT_LIBRARIES})
     set(nlpi scip/nlpi_ipopt.cpp)
+    set(LAPACK off)
 else()
     message(STATUS "Support IPOPT: OFF")
     set(nlpi scip/nlpi_ipopt_dummy.c)
+endif()
+
+# LAPACK
+if(LAPACK)
+    message(STATUS "Finding LAPACK")
+    find_package(LAPACK REQUIRED)
+    message(STATUS "Finding LAPACK - found")
+    set(SCIP_WITH_LAPACK on)
+else()
+    message(STATUS "Support LAPACK: OFF")
+    set(LAPACK_LIBRARIES "")
+    set(SCIP_WITH_LAPACK off)
 endif()
 
 # WORHP

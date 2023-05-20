@@ -27,6 +27,7 @@ set(scipsources
     scip/bandit.c
     scip/bandit_epsgreedy.c
     scip/bandit_exp3.c
+    scip/bandit_exp3ix.c
     scip/bandit_ucb.c
     scip/branch_allfullstrong.c
     scip/branch_cloud.c
@@ -116,6 +117,7 @@ set(scipsources
     scip/heur_gins.c
     scip/heur_guideddiving.c
     scip/heur_indicator.c
+    scip/heur_indicatordiving.c
     scip/heur_intdiving.c
     scip/heur_intshifting.c
     scip/heur_linesearchdiving.c
@@ -262,7 +264,9 @@ set(scipsources
     scip/clock.c
     scip/concsolver.c
     scip/concurrent.c
-    scip/conflict.c
+    scip/conflict_general.c
+    scip/conflict_graphanalysis.c
+    scip/conflict_dualproofanalysis.c
     scip/conflictstore.c
     scip/cons.c
     scip/cutpool.c
@@ -283,6 +287,7 @@ set(scipsources
     scip/implics.c
     scip/interrupt.c
     scip/intervalarith.c
+    scip/lapack_calls.c
     scip/lp.c
     scip/matrix.c
     scip/mem.c
@@ -453,6 +458,7 @@ set(scipheaders
     scip/bandit.h
     scip/bandit_epsgreedy.h
     scip/bandit_exp3.h
+    scip/bandit_exp3ix.h
     scip/bandit_ucb.h
     scip/benders.h
     scip/benders_default.h
@@ -488,6 +494,9 @@ set(scipheaders
     scip/concsolver_scip.h
     scip/concurrent.h
     scip/conflict.h
+    scip/conflict_graphanalysis.h
+    scip/conflict_dualproofanalysis.h
+    scip/conflict_general.h
     scip/conflictstore.h
     scip/cons_abspower.h
     scip/cons_and.h
@@ -572,6 +581,7 @@ set(scipheaders
     scip/heur_guideddiving.h
     scip/heur.h
     scip/heur_indicator.h
+    scip/heur_indicatordiving.h
     scip/heur_intdiving.h
     scip/heur_intshifting.h
     scip/heuristics.h
@@ -617,6 +627,7 @@ set(scipheaders
     scip/implics.h
     scip/interrupt.h
     scip/intervalarith.h
+    scip/lapack_calls.h
     scip/lp.h
     scip/mem.h
     scip/message_default.h
@@ -685,6 +696,7 @@ set(scipheaders
     scip/pub_bandit.h
     scip/pub_bandit_epsgreedy.h
     scip/pub_bandit_exp3.h
+    scip/pub_bandit_exp3ix.h
     scip/pub_bandit_ucb.h
     scip/pub_benders.h
     scip/pub_benderscut.h
@@ -970,13 +982,7 @@ set(tinycthreadheader
 set(tpiheaders
     tpi/def_openmp.h
     tpi/tpi.h
-    tpi/tpi_none.h
-    tpi/tpi_openmp.h
-    tpi/tpi_tnycthrd.h
     tpi/type_tpi.h
-    tpi/type_tpi_none.h
-    tpi/type_tpi_openmp.h
-    tpi/type_tpi_tnycthrd.h
 )
 
 set(xmlheaders
@@ -1026,6 +1032,7 @@ target_link_libraries(libscip
     ${GMP_LIBRARIES}
     ${THREAD_LIBRARIES}
     ${NLPI_LIBRARIES}
+    ${LAPACK_LIBRARIES}
     ${PAPILO_IMPORTED_TARGETS})
 
 if(SHARED)
@@ -1076,7 +1083,9 @@ target_link_libraries(scip
    ${LPS_LIBRARIES}
    ${THREAD_LIBRARIES}
    ${NLPI_LIBRARIES}
-   ${PAPILO_IMPORTED_TARGETS})
+   ${LAPACK_LIBRARIES}
+   ${PAPILO_IMPORTED_TARGETS}
+   )
 
 add_dependencies(libscip scip_update_githash)
 add_dependencies(scip scip_update_githash)
