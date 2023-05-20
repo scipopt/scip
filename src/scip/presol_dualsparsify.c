@@ -1315,9 +1315,9 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
          SCIPmatrixFree(scip, &matrix);
 
       if( infeasible )
-	return SCIP_CUTOFF;
-      else
-	return SCIP_OKAY;
+	  *result = SCIP_CUTOFF;
+
+      return SCIP_OKAY;
    }
 
    if( !initialized )
