@@ -1306,13 +1306,18 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
    SCIP_CALL( SCIPmatrixCreate(scip, &matrix, TRUE, &initialized, &complete, &infeasible,
          naddconss, ndelconss, nchgcoefs, nchgbds, nfixedvars) );
 
-   /* if infeasibility was detected during matrix creation, return here */
+   /* if infeasibility was detected during matrix creation or
+    * matrix creation is incomplete, return here.
+    */
    if( infeasible || !complete )
    {
       if( initialized )
          SCIPmatrixFree(scip, &matrix);
 
-      return SCIP_OKAY;
+      if( infeasible )
+	return SCIP_CUTOFF;
+      else
+	return SCIP_OKAY;
    }
 
    if( !initialized )
