@@ -90,6 +90,7 @@ set(settings_MIP
 #    "cloud"
     "uct_breadth_dualval"
     "conflictdiving"
+    "tolerance"
 )
 #
 # settings for the componentshandler test
@@ -267,7 +268,7 @@ set(instances_MIP
     "instances/MIP/misc03.mps\;3360"
     "instances/MIP/p0033.osil\;3089"
     "instances/MIP/p0548.mps\;8691"
-    "instances/MIP/rgn.mps\;82.1999974"
+    "instances/MIP/rgn.mps\;82.19999924"
     "instances/MIP/stein27.fzn\;18"
     "instances/MIP/stein27_inf.lp\;+infinity"
     "instances/MIP/vpm2.fzn\;13.75"
@@ -404,7 +405,7 @@ set(instances_SymmetryConss
 #
 set(instances_Symmetry_A
     "instances/MIP/MANN_a9.clq.lp\;16"
-    "instances/MIP/rgn.mps\;82.1999974"
+    "instances/MIP/rgn.mps\;82.19999924"
     "instances/MIP/stein27.fzn\;18"
     )
 
@@ -532,6 +533,7 @@ macro(add_instancetests instances settings prefix)
             set_tests_properties(${prefix}-${setting}-${basename}
                                 PROPERTIES
                                     PASS_REGULAR_EXPRESSION "Validation         : Success"
+                                    FAIL_REGULAR_EXPRESSION ERROR
                                     FAIL_REGULAR_EXPRESSION "WARNING: unknown parameter;user parameter file <${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set> not found"
                                     DEPENDS scip-build
                                 )
@@ -564,6 +566,7 @@ if((${TEST_BENDERSQP} AND (NOT ${LPS} STREQUAL "msk" )) OR (NOT ${prefix} STREQU
             set_tests_properties(${prefix}-${setting}-${basename}
                                 PROPERTIES
                                     PASS_REGULAR_EXPRESSION "Validation         : Success"
+                                    FAIL_REGULAR_EXPRESSION ERROR
                                     FAIL_REGULAR_EXPRESSION "WARNING: unknown parameter"
                                     FAIL_REGULAR_EXPRESSION "user parameter file <${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set> not found"
                                     DEPENDS scip-build
@@ -613,6 +616,7 @@ foreach(instance ${instances_MINLP})
         set_tests_properties(MINLP-solutiontest-${basename}
                             PROPERTIES
                                 PASS_REGULAR_EXPRESSION "Validation         : Success"
+                                FAIL_REGULAR_EXPRESSION ERROR
                                 DEPENDS scip-build
                             )
 endforeach(instance)
@@ -632,6 +636,7 @@ foreach(instance ${instances_Indicator})
     set_tests_properties(Indicator-solvecip-${basename}
         PROPERTIES
             PASS_REGULAR_EXPRESSION "Validation         : Success"
+            FAIL_REGULAR_EXPRESSION ERROR
             DEPENDS scip-build
         )
 endforeach(instance)
@@ -678,6 +683,7 @@ foreach(instance ${instances_MIP_write})
     set_tests_properties(MIP-writeronlytest-${extension}-${basename}
       PROPERTIES
         PASS_REGULAR_EXPRESSION ${regex}
+        FAIL_REGULAR_EXPRESSION ERROR
         DEPENDS scip-build
     )
   endforeach(extension)
@@ -717,7 +723,7 @@ foreach(instance ${instances_MIP})
         set_tests_properties(MIP-readertest-${extension}-${basename}
                             PROPERTIES
                                 PASS_REGULAR_EXPRESSION ${regex}
-#                                     FAIL_REGULAR_EXPRESSION ERROR
+                                FAIL_REGULAR_EXPRESSION ERROR
                                 DEPENDS scip-build
                             )
     endforeach(extension)
@@ -739,6 +745,7 @@ if(NOT ${TPI} STREQUAL "none")
         set_tests_properties(MIP-concurrentsolve-${basename}
                             PROPERTIES
                                 PASS_REGULAR_EXPRESSION "Validation         : Success"
+                                FAIL_REGULAR_EXPRESSION ERROR
                                 DEPENDS scip-build
                             )
     endforeach(instance)
@@ -767,6 +774,7 @@ foreach(instance ${instances_MIP})
         set_tests_properties(MIP-mipstart-${basename}
                             PROPERTIES
                                 PASS_REGULAR_EXPRESSION "Validation         : Success"
+                                FAIL_REGULAR_EXPRESSION ERROR
                                 # the MIP start instances are validated twice.
                                 FAIL_REGULAR_EXPRESSION "Validation         : Fail"
                                 DEPENDS scip-build
@@ -790,6 +798,7 @@ add_test(NAME interactiveshell
 set_tests_properties(interactiveshell
                     PROPERTIES
                         PASS_REGULAR_EXPRESSION "increased branching priority of new binary variables"
+                        FAIL_REGULAR_EXPRESSION ERROR
                         DEPENDS scip-build
                     )
 
@@ -798,7 +807,7 @@ add_test(NAME write_and_read_settings
         )
 set_tests_properties(write_and_read_settings
                     PROPERTIES
-                        FAIL_REGULAR_EXPRESSION "ERROR"
+                        FAIL_REGULAR_EXPRESSION ERROR
                         DEPENDS scip-build
                     )
 
@@ -819,6 +828,7 @@ foreach(testname reopt-chg-obj-stein27 reopt-chg-obj-flugpl reopt-chg-obj-1-Full
                 )
         set_tests_properties(${testname}-${setting} PROPERTIES
                                             PASS_REGULAR_EXPRESSION "Validation         : Success"
+#                                            FAIL_REGULAR_EXPRESSION ERROR
                                             DEPENDS scip-build)
         endforeach()
 
@@ -944,6 +954,7 @@ foreach(instance ${instances_MIP})
         set_tests_properties(MIP-linclass-${basename}
                             PROPERTIES
                                 PASS_REGULAR_EXPRESSION "${pass_regex}"
+                                FAIL_REGULAR_EXPRESSION ERROR
                             )
     endif()
 
@@ -1012,10 +1023,9 @@ if (UNIX)
     set_tests_properties(signal-handling-sigterm
                         PROPERTIES
                             DEPENDS scip-build
-                            PASS_REGULAR_EXPRESSION "termination signal received"
-                            #
                             # I assume that this test takes longer than 2 seconds
-                            #
+                            PASS_REGULAR_EXPRESSION "termination signal received"
+                            FAIL_REGULAR_EXPRESSION ERROR
                             )
 
 endif (UNIX)
