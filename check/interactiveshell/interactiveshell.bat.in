@@ -95,7 +95,7 @@ read ${PROJECT_SOURCE_DIR}/check/instances/MIP/bell5.mps
 change bounds c1
 1
 1
-change add [linear]\ <new>:\ <c1>\ >=\ 1;
+change add [linear]<new>:<c1>>=1;
 change objsense
 max
 change objsense
