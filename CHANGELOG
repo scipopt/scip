@@ -87,6 +87,9 @@ Miscellaneous
 - Added more information about using SCIPcache- and SCIPflushRowExtensions() to documentation and comments
 - Extended the `how to add' sections of the documentation by adding information on how to include default plugins into SCIP
 
+Known bugs
+----------
+
 @section RN803 SCIP 8.0.3
 *************************
 
@@ -135,6 +138,9 @@ Miscellaneous
 - Methods for using the debug solution mechanism SCIPdebugAddSolVal, SCIPdebugGetSol, SCIPdebugGetSolVal,
   SCIPdebugSolIsValidInSubtree, SCIPdebugIsMainscip, SCIPdebugSolEnable, SCIPdebugSolDisable, SCIPdebugSolIsEnabled,
   SCIPwithDebugSol are now exported
+
+Known bugs
+----------
 
 @section RN802 SCIP 8.0.2
 *************************
@@ -1173,6 +1179,9 @@ Miscellaneous
 - Parameters are not reset to their default values before activating an emphasis setting; this now allows to combine
   different emphasis settings.
 - If a lazy bound is set to a value that is tighter than the current global bound, then the global bound is now tightened accordingly.
+
+Known bugs
+----------
 
 @page RN70 Release notes for SCIP 7.0
 
