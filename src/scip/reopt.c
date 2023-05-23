@@ -5217,7 +5217,7 @@ SCIP_RETCODE SCIPreoptFree(
    /* free reopttree */
    SCIP_CALL( freeReoptTree((*reopt)->reopttree, set, blkmem) );
 
-   /* free solutions */
+   /* free solutions and variable histories */
    if( set->stage >= SCIP_STAGE_PROBLEM )
    {
       int p;
@@ -5227,6 +5227,17 @@ SCIP_RETCODE SCIPreoptFree(
          {
             BMSfreeBlockMemoryArray(blkmem, &(*reopt)->soltree->sols[p], (*reopt)->soltree->solssize[p]); /*lint !e866*/
             (*reopt)->soltree->sols[p] = NULL;
+         }
+
+         if( set->reopt_storevarhistory && (*reopt)->varhistory[p] != NULL )
+         {
+            for( v = SCIPgetNOrigVars(set->scip)-1; v >= 0; --v )
+            {
+               SCIPhistoryFree(&(*reopt)->varhistory[p][v], blkmem);
+            }
+            
+            BMSfreeBlockMemoryArray(blkmem, &(*reopt)->varhistory[p], SCIPgetNOrigVars(set->scip));
+            (*reopt)->varhistory[p] = NULL;
          }
 
          /* we have to free all optimal solution separatly, because those solutions are not stored in the
