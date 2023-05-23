@@ -13224,7 +13224,7 @@ SCIP_DECL_CONSPARSE(consParseKnapsack)
       str += nread;
 
       /* skip whitespace */
-      while( isspace((int)*str) || *str == '\\' && *(str+1) != '\0' && strchr(SCIP_SPACECONTROL, *(str+1)) )
+      while( isspace((int)*str) || (*str == '\\' && *(str+1) != '\0' && strchr(SCIP_SPACECONTROL, *(str+1))) )
          str += *str == '\\' ? 2 : 1;
 
       /* parse variable name */
@@ -13251,7 +13251,7 @@ SCIP_DECL_CONSPARSE(consParseKnapsack)
       ++nvars;
 
       /* skip whitespace */
-      while( isspace((int)*str) || *str == '\\' && *(str+1) != '\0' && strchr(SCIP_SPACECONTROL, *(str+1)) )
+      while( isspace((int)*str) || (*str == '\\' && *(str+1) != '\0' && strchr(SCIP_SPACECONTROL, *(str+1))) )
          str += *str == '\\' ? 2 : 1;
    }
 

@@ -6078,7 +6078,7 @@ SCIP_RETCODE SCIPconsParse(
    str = endptr;
 
    /* skip white space */
-   while ( isspace((unsigned char)* str) || *str == '\\' && *(str+1) != '\0' && strchr(SCIP_SPACECONTROL, *(str+1)) )
+   while ( isspace((unsigned char)* str) || (*str == '\\' && *(str+1) != '\0' && strchr(SCIP_SPACECONTROL, *(str+1))) )
       str += *str == '\\' ? 2 : 1;
 
    /* check for colon */
@@ -6092,7 +6092,7 @@ SCIP_RETCODE SCIPconsParse(
    ++str;
 
    /* skip white space */
-   while ( isspace((unsigned char)* str) || *str == '\\' && *(str+1) != '\0' && strchr(SCIP_SPACECONTROL, *(str+1)) )
+   while ( isspace((unsigned char)* str) || (*str == '\\' && *(str+1) != '\0' && strchr(SCIP_SPACECONTROL, *(str+1))) )
       str += *str == '\\' ? 2 : 1;
 
    /* check if a constraint handler with parsed name exists */

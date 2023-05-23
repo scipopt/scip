@@ -1891,7 +1891,7 @@ SCIP_DECL_CONSPARSE(consParseOrbisack)
    s = str;
 
    /* skip white space */
-   while ( isspace((unsigned char)*s) || *s == '\\' && *(s+1) != '\0' && strchr(SCIP_SPACECONTROL, *(s+1)) )
+   while ( isspace((unsigned char)*s) || (*s == '\\' && *(s+1) != '\0' && strchr(SCIP_SPACECONTROL, *(s+1))) )
       s += *s == '\\' ? 2 : 1;
 
    if ( strncmp(s, "partOrbisack(", 13) == 0 )
@@ -1919,7 +1919,7 @@ SCIP_DECL_CONSPARSE(consParseOrbisack)
    do
    {
       /* skip whitespace */
-      while ( isspace((unsigned char)*s) || *s == '\\' && *(s+1) != '\0' && strchr(SCIP_SPACECONTROL, *(s+1)) )
+      while ( isspace((unsigned char)*s) || (*s == '\\' && *(s+1) != '\0' && strchr(SCIP_SPACECONTROL, *(s+1))) )
          s += *s == '\\' ? 2 : 1;
 
       /* parse variable name */
@@ -1946,7 +1946,7 @@ SCIP_DECL_CONSPARSE(consParseOrbisack)
 
       /* skip white space and ',' */
       while ( isspace((unsigned char)*s) || *s == ','
-              || *s == '\\' && *(s+1) != '\0' && strchr(SCIP_SPACECONTROL, *(s+1)) )
+              || (*s == '\\' && *(s+1) != '\0' && strchr(SCIP_SPACECONTROL, *(s+1))) )
          s += *s == '\\' ? 2 : 1;
 
       /* begin new row if required */

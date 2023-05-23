@@ -2740,7 +2740,7 @@ SCIP_DECL_CONSPARSE(consParseBounddisjunction)
    SCIPdebugMsg(scip, "parse <%s> as bounddisjunction constraint\n", str);
 
    /* skip white space */
-   while( isspace((unsigned char)*str) || *str == '\\' && *(str+1) != '\0' && strchr(SCIP_SPACECONTROL, *(str+1)) )
+   while( isspace((unsigned char)*str) || (*str == '\\' && *(str+1) != '\0' && strchr(SCIP_SPACECONTROL, *(str+1))) )
       str += *str == '\\' ? 2 : 1;
 
    /* check for string "bounddisjunction" */
@@ -2779,7 +2779,7 @@ SCIP_DECL_CONSPARSE(consParseBounddisjunction)
       }
 
       /* skip white space */
-      while( isspace((unsigned char)*str) || *str == '\\' && *(str+1) != '\0' && strchr(SCIP_SPACECONTROL, *(str+1)) )
+      while( isspace((unsigned char)*str) || (*str == '\\' && *(str+1) != '\0' && strchr(SCIP_SPACECONTROL, *(str+1))) )
          str += *str == '\\' ? 2 : 1;
 
       /* parse bound type */
@@ -2809,7 +2809,7 @@ SCIP_DECL_CONSPARSE(consParseBounddisjunction)
       ++str;
 
       /* skip white space */
-      while( isspace((unsigned char)*str) || *str == '\\' && *(str+1) != '\0' && strchr(SCIP_SPACECONTROL, *(str+1)) )
+      while( isspace((unsigned char)*str) || (*str == '\\' && *(str+1) != '\0' && strchr(SCIP_SPACECONTROL, *(str+1))) )
          str += *str == '\\' ? 2 : 1;
 
       /* parse bound value */
@@ -2822,8 +2822,8 @@ SCIP_DECL_CONSPARSE(consParseBounddisjunction)
 
       /* skip white space */
       str = endptr;
-      while( isspace((unsigned char)*str)) || *str == ','
-             || *str == '\\' && *(str+1) != '\0' && strchr(SCIP_SPACECONTROL, *(str+1)) )
+      while( isspace((unsigned char)*str) || *str == ','
+             || (*str == '\\' && *(str+1) != '\0' && strchr(SCIP_SPACECONTROL, *(str+1))) )
          str += *str == '\\' ? 2 : 1;
 
       /* set variable */
