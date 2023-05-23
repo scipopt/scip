@@ -828,7 +828,7 @@ foreach(testname reopt-chg-obj-stein27 reopt-chg-obj-flugpl reopt-chg-obj-1-Full
                 )
         set_tests_properties(${testname}-${setting} PROPERTIES
                                             PASS_REGULAR_EXPRESSION "Validation         : Success"
-#                                            FAIL_REGULAR_EXPRESSION ERROR
+                                            FAIL_REGULAR_EXPRESSION ERROR
                                             DEPENDS scip-build)
         endforeach()
 
