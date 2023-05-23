@@ -439,7 +439,7 @@ SCIP_Bool SCIPparseReal(
    else
    {
       /* parse a finite value */
-      return SCIPstrToRealValue(str, value, endptr);
+      return SCIPstrToRealValue(localstr, value, endptr);
    }
 }
 
