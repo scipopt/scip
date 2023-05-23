@@ -7129,6 +7129,8 @@ SCIP_RETCODE tryAddSymmetryHandlingMethods(
    )
 {
    SCIP_PROPDATA* propdata;
+   int ncomponentshandled;
+   int i;
 
    assert( prop != NULL );
    assert( scip != NULL );
@@ -7289,9 +7291,21 @@ STATISTICS:
    }
    if ( propdata->ncomponents >= 0 )
    {
-      assert( propdata->ncompblocked <= propdata->ncomponents );
+      /* report the number of handled components
+       *
+       * Since SST is compatible with static symresacks, the propdata->ncompblocked counter is not the number of
+       * handled components. Compute this statistic based on the componentblocked array.
+       */
+      ncomponentshandled = 0;
+      for (i = 0; i < propdata->ncomponents; ++i)
+      {
+         if ( propdata->componentblocked[i] )
+            ++ncomponentshandled;
+      }
+      assert( propdata->ncompblocked <= ncomponentshandled );
+      assert( ncomponentshandled <= propdata->ncomponents );
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "handled %d out of %d symmetry components\n",
-         propdata->ncompblocked, propdata->ncomponents);
+         ncomponentshandled, propdata->ncomponents);
    }
 #endif
 
