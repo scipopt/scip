@@ -12,6 +12,8 @@
 */
 
 #ifndef NAURNG_H
+#define NAURNG_H
+
 #include "naututil.h"
 
 #ifdef __cplusplus
@@ -37,5 +39,4 @@ extern long ran_nextran(void);
     var = __getkran % (k);}
 #define INITRANBYTIME ran_init_time(0)
 
-#define NAURNG_H
 #endif
