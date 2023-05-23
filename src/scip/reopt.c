@@ -5220,7 +5220,7 @@ SCIP_RETCODE SCIPreoptFree(
    /* free solutions and variable histories */
    if( set->stage >= SCIP_STAGE_PROBLEM )
    {
-      int p;
+      int p, v;
       for( p = (*reopt)->run-1; p >= 0; p-- )
       {
          if( (*reopt)->soltree->sols[p] != NULL )
