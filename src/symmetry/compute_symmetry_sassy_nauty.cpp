@@ -48,13 +48,13 @@
 
 #ifdef NAUTY
 #include "nauty/nauty.h"
-#include "nauty/naugroup.h"
 #include "nauty/nausparse.h"
+#include "sassy/tools/nauty_converter.h"
 #else
 #include "nauty/traces.h"
+#include "sassy/tools/traces_converter.h"
 #endif
 
-#include "sassy/tools/nauty_converter.h"
 
 #include "scip/expr_var.h"
 #include "scip/expr_sum.h"
@@ -1461,19 +1461,6 @@ SCIP_Bool SYMcanComputeSymmetry(void)
 
 /** return name of external program used to compute generators */
 char*
-initStaticSymmetryName( )
-{
-   char* name = new char[100];
-#ifdef NAUTY
-   (void) SCIPsnprintf(name, 100, "Nauty %s"NAUTYVERSION);
-#else
-   (void) SCIPsnprintf(name, 100, "Traces...");
-#endif
-   return name;
-}
-
-/** return name of external program used to compute generators */
-char*
 initStaticSymmetryAddName( )
 {
    char* sassyname = new char[100];
@@ -1481,7 +1468,13 @@ initStaticSymmetryAddName( )
    return sassyname;
 }
 
-static const char* symmetryname = initStaticSymmetryName();
+
+#ifdef NAUTY
+static const char symmetryname[] = "Nauty "NAUTYVERSION;
+#else
+static const char symmetryname[] = "Traces "NAUTYVERSION;
+#endif
+
 static const char* symmetryaddname = initStaticSymmetryAddName();
 
 /** return name of external program used to compute generators */
@@ -1494,9 +1487,9 @@ const char* SYMsymmetryGetName(void)
 const char* SYMsymmetryGetDesc(void)
 {
 #ifdef NAUTY
-   return "Computing Graph Automorphism Groups by Adolfo Piperno (https://pallini.di.uniroma1.it/)";
+   return "Computing Graph Automorphism Groups by Brendan D. McKay (https://users.cecs.anu.edu.au/~bdm/nauty/)";
 #else
-   return " ";
+   return "Computing Graph Automorphism Groups by Adolfo Piperno (https://pallini.di.uniroma1.it/)";
 #endif
 }
 
@@ -1608,33 +1601,44 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    sassy.reduce(&sassygraph, &sassyglue);
 
    /* first, convert the graph */
-   sparsegraph nauty_graph;
+   sparsegraph sg;
    DYNALLSTAT(int, lab, lab_sz);
    DYNALLSTAT(int, ptn, ptn_sz);
-   convert_sassy_to_nauty(&sassygraph, &nauty_graph, &lab, &lab_sz, &ptn, &ptn_sz);
 
-   oldtime = SCIPgetSolvingTime(scip);
-
-   /* call nauty/traces */
 #ifdef NAUTY
+   convert_sassy_to_nauty(&sassygraph, &sg, &lab, &lab_sz, &ptn, &ptn_sz);
+   oldtime = SCIPgetSolvingTime(scip);
    statsblk stats;
    DYNALLSTAT(int, orbits, orbits_sz);
-   DYNALLOC1(int,  orbits, orbits_sz, nauty_graph.nv, "malloc");
+   DYNALLOC1(int,  orbits, orbits_sz, sg.nv, "malloc");
    static DEFAULTOPTIONS_SPARSEGRAPH(options);
-   options.schreier = true;
-   options.defaultptn = false;
+   /* init callback functions for nauty (accumulate the group generators found by nauty) */
+   options.writeautoms = FALSE;
    options.userautomproc = sassy::preprocessor::nauty_hook;
-
-   if(nauty_graph.nv > 0) {
-      sparsenauty(&nauty_graph, lab, ptn, orbits, &options, &stats, NULL);
+   options.defaultptn = FALSE; /* use color classes */
+   if(sg.nv > 0) {
+      sparsenauty(&sg, lab, ptn, orbits, &options, &stats, NULL);
    }
-   /* TODO: call traces instead of nauty */
+#else
+   convert_sassy_to_traces(&sassygraph, &sg, &lab, &lab_sz, &ptn, &ptn_sz);
+   oldtime = SCIPgetSolvingTime(scip);
+   TracesStats stats;
+	DYNALLSTAT(int, orbits, orbits_sz);
+	DYNALLOC1(int,  orbits, orbits_sz, sg.nv, "malloc");
+	static DEFAULTOPTIONS_TRACES(options);
+   /* init callback functions for traces (accumulate the group generators found by traces) */
+   options.writeautoms = FALSE;
+   options.userautomproc = sassy::preprocessor::traces_hook;
+   options.defaultptn = FALSE; /* use color classes */
+	if(sg.nv > 0) {
+		Traces(&sg, lab, ptn, orbits, &options, &stats, NULL);
+	}
 #endif
 
    /* clean up */
    DYNFREE(lab, lab_sz);
    DYNFREE(ptn, ptn_sz);
-   SG_FREE(nauty_graph);
+   SG_FREE(sg);
 
    *symcodetime = SCIPgetSolvingTime(scip) - oldtime;
 
