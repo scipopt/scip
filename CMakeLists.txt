@@ -105,8 +105,8 @@ set_property(CACHE EXPRINT PROPERTY STRINGS none cppad )  #define list of values
 set(LPS spx CACHE STRING "options for LP solver")  #create the variable
 set_property(CACHE LPS PROPERTY STRINGS spx cpx grb xprs clp glop msk qso none )  #define list of values GUI will offer for the variable
 
-set(SYM sassy CACHE STRING "options for symmetry computation")  #create the variable
-set_property(CACHE SYM PROPERTY STRINGS bliss sassy nauty snauty none )  #define list of values GUI will offer for the variable
+set(SYM blissS CACHE STRING "options for symmetry computation")  #create the variable
+set_property(CACHE SYM PROPERTY STRINGS bliss blissS nauty nautyS none )  #define list of values GUI will offer for the variable
 
 if(NOT (CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo" OR CMAKE_BUILD_TYPE STREQUAL "MinSizeRel"))
     message(FATAL_ERROR "You have not selected a valid CMAKE_BUILD_TYPE. Please select 'Release' or 'Debug'.")
@@ -147,11 +147,11 @@ if(SYM STREQUAL "bliss")
     set(BLISS_TARGET libbliss)
     set(SYM_LIBRARIES libbliss)
     set(SYM_PIC_LIBRARIES libbliss)
-elseif(SYM STREQUAL "sassy")
+elseif(SYM STREQUAL "blissS")
     message(STATUS "Support SYM: sassy+bliss")
     set(sym symmetry/compute_symmetry_sassy_bliss.cpp)
 
-    # sassy is currently based on bliss, so configure bliss
+    # configure bliss
     set(BUILD_SHARED_LIBS OFF)
     set(TMPFLAGS ${CMAKE_C_FLAGS})
     set(TMXFLAGS ${CMAKE_CXX_FLAGS})
@@ -209,7 +209,7 @@ elseif(SYM STREQUAL "nauty")
     set(NAUTY_TARGET libnauty)
     set(SYM_LIBRARIES libnauty)
     set(SYM_PIC_LIBRARIES libnauty)
- elseif(SYM STREQUAL "snauty")
+ elseif(SYM STREQUAL "nautyS")
     message(STATUS "Support SYM: sassy+nauty")
     set(sym symmetry/compute_symmetry_sassy_nauty.cpp)
 
