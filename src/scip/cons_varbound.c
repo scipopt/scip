@@ -5032,8 +5032,8 @@ SCIP_DECL_CONSPARSE(consParseVarbound)
       return SCIP_OKAY;
 
    /* ignore whitespace */
-   while( isspace(*str) )
-      ++str;
+   while( isspace(*str) || *str == '\\' && *(str+1) != '\0' && strchr(SCIP_SPACECONTROL, *(str+1)) )
+      str += *str == '\\' ? 2 : 1;
 
    if( isdigit(str[0]) || ((str[0] == '-' || str[0] == '+') && isdigit(str[1])) )
    {
@@ -5044,8 +5044,8 @@ SCIP_DECL_CONSPARSE(consParseVarbound)
       }
 
       /* ignore whitespace */
-      while( isspace(*endstr) )
-         ++endstr;
+      while( isspace(*endstr) || *endstr == '\\' && *(endstr+1) != '\0' && strchr(SCIP_SPACECONTROL, *(endstr+1)) )
+         endstr += *endstr == '\\' ? 2 : 1;
 
       if( endstr[0] != '<' || endstr[1] != '=' )
       {
@@ -5077,8 +5077,8 @@ SCIP_DECL_CONSPARSE(consParseVarbound)
       SCIPdebugMsg(scip, "found linear sum <%s> + %g <%s>\n", SCIPvarGetName(vars[0]), coefs[1], SCIPvarGetName(vars[1]));
 
       /* ignore whitespace */
-      while( isspace(*endstr) )
-         ++endstr;
+      while( isspace(*endstr) || *endstr == '\\' && *(endstr+1) != '\0' && strchr(SCIP_SPACECONTROL, *(endstr+1)) )
+         endstr += *endstr == '\\' ? 2 : 1;
 
       str = endstr;
 

@@ -2823,8 +2823,8 @@ SCIP_DECL_CONSPARSE(consParseSymresack)
    s = str;
 
    /* skip white space */
-   while ( *s != '\0' && isspace((unsigned char)*s) )
-      ++s;
+   while ( isspace((unsigned char)*s) || *s == '\\' && *(s+1) != '\0' && strchr(SCIP_SPACECONTROL, *(s+1)) )
+      s += *s == '\\' ? 2 : 1;
 
    if ( strncmp(s, "symresack(", 10) != 0 )
    {
@@ -2850,8 +2850,9 @@ SCIP_DECL_CONSPARSE(consParseSymresack)
       }
 
       /* skip whitespace and ',' */
-      while ( *s != '\0' && ( isspace((unsigned char)*s) ||  *s == ',' ) )
-         ++s;
+      while ( isspace((unsigned char)*s) || *s == ','
+              || *s == '\\' && *(s+1) != '\0' && strchr(SCIP_SPACECONTROL, *(s+1)) )
+         s += *s == '\\' ? 2 : 1;
 
       /* if we could not find starting indicator of array */
       if ( *s != '[' )
@@ -2870,8 +2871,9 @@ SCIP_DECL_CONSPARSE(consParseSymresack)
          do
          {
             /* skip whitespace and ',' */
-            while ( *s != '\0' && ( isspace((unsigned char)*s) ||  *s == ',' ) )
-               ++s;
+            while ( isspace((unsigned char)*s) || *s == ','
+                    || *s == '\\' && *(s+1) != '\0' && strchr(SCIP_SPACECONTROL, *(s+1)) )
+               s += *s == '\\' ? 2 : 1;
 
             /* parse variable name */
             SCIP_CALL( SCIPparseVarName(scip, s, &var, &endptr) );
@@ -2904,8 +2906,9 @@ SCIP_DECL_CONSPARSE(consParseSymresack)
          do
          {
             /* skip whitespace and ',' */
-            while ( *s != '\0' && ( isspace((unsigned char)*s) ||  *s == ',' ) )
-               ++s;
+            while ( isspace((unsigned char)*s) || *s == ','
+                    || *s == '\\' && *(s+1) != '\0' && strchr(SCIP_SPACECONTROL, *(s+1)) )
+               s += *s == '\\' ? 2 : 1;
 
             /* parse integer value */
             if ( ! SCIPstrToIntValue(s, &val, &endptr) )

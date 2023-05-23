@@ -9940,8 +9940,9 @@ SCIP_DECL_CONSPARSE(consParseSOS1)
       s = t;
 
       /* skip white space, ',', and ')' */
-      while ( *s != '\0' && ( isspace((unsigned char)*s) ||  *s == ',' || *s == ')' ) )
-         ++s;
+      while ( isspace((unsigned char)*s) || *s == ',' || *s == ')'
+              || *s == '\\' && *(s+1) != '\0' && strchr(SCIP_SPACECONTROL, *(s+1)) )
+         s += *s == '\\' ? 2 : 1;
 
       /* add variable */
       SCIP_CALL( SCIPaddVarSOS1(scip, *cons, var, weight) );

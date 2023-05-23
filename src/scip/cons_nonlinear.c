@@ -10595,8 +10595,8 @@ SCIP_DECL_CONSPARSE(consParseNonlinear)
       }
 
       /* ignore whitespace */
-      while( isspace((unsigned char)*endptr) )
-         ++endptr;
+      while( isspace((unsigned char)*endptr) || *endptr == '\\' && *(endptr+1) != '\0' && strchr(SCIP_SPACECONTROL, *(endptr+1)) )
+         endptr += *endptr == '\\' ? 2 : 1;
 
       if( endptr[0] != '<' || endptr[1] != '=' )
       {
@@ -10609,8 +10609,8 @@ SCIP_DECL_CONSPARSE(consParseNonlinear)
          str = endptr + 2;
 
          /* ignore whitespace */
-         while( isspace((unsigned char)*str) )
-            ++str;
+         while( isspace((unsigned char)*str) || *str == '\\' && *(str+1) != '\0' && strchr(SCIP_SPACECONTROL, *(str+1)) )
+            str += *str == '\\' ? 2 : 1;
       }
    }
 
@@ -10620,8 +10620,8 @@ SCIP_DECL_CONSPARSE(consParseNonlinear)
    SCIP_CALL( SCIPparseExpr(scip, &consexprtree, str, &str, exprownerCreate, (void*)conshdlr) );
 
    /* check for left or right hand side */
-   while( isspace((unsigned char)*str) )
-      ++str;
+   while( isspace((unsigned char)*str) || *str == '\\' && *(str+1) != '\0' && strchr(SCIP_SPACECONTROL, *(str+1)) )
+      str += *str == '\\' ? 2 : 1;
 
    /* check for free constraint */
    if( strncmp(str, "[free]", 6) == 0 )

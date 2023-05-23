@@ -260,8 +260,8 @@ SCIP_RETCODE getStatistics(
          *s = '\0';
 
       /* remove white space (tabs, ' ') in front of the name */
-      while( isspace((unsigned char)* name) )
-         ++name;
+      while( isspace((unsigned char)* name) || *name == '\\' && *(name+1) != '\0' && strchr(SCIP_SPACECONTROL, *(name+1)) )
+         name += *name == '\\' ? 2 : 1;
 
       /* set problem name */
       SCIP_CALL( SCIPsetProbName(scip, name) );
@@ -304,8 +304,8 @@ SCIP_RETCODE getObjective(
    SCIPdebugMsg(scip, "parse objective information\n");
 
    /* remove white space */
-   while ( isspace((unsigned char)* buf) )
-      ++buf;
+   while ( isspace((unsigned char)* buf) || *buf == '\\' && *(buf+1) != '\0' && strchr(SCIP_SPACECONTROL, *(buf+1)) )
+      buf += *buf == '\\' ? 2 : 1;
 
    if( strncasecmp(buf, "Sense", 5) == 0 )
    {
@@ -323,8 +323,8 @@ SCIP_RETCODE getObjective(
       ++name;
 
       /* remove white space in front of the name */
-      while( isspace((unsigned char)* name) )
-         ++name;
+      while( isspace((unsigned char)* name) || *name == '\\' && *(name+1) != '\0' && strchr(SCIP_SPACECONTROL, *(name+1)) )
+         name += *name == '\\' ? 2 : 1;
 
       if( strncasecmp(name, "minimize", 3) == 0 )
          objsense = SCIP_OBJSENSE_MINIMIZE;
@@ -357,8 +357,8 @@ SCIP_RETCODE getObjective(
       ++name;
 
       /* remove white space in front of the name */
-      while(isspace((unsigned char)*name))
-         ++name;
+      while( isspace((unsigned char)* name) || *name == '\\' && *(name+1) != '\0' && strchr(SCIP_SPACECONTROL, *(name+1)) )
+         name += *name == '\\' ? 2 : 1;
 
       if ( SCIPstrToRealValue(name, &off, &endptr) )
       {
@@ -388,8 +388,8 @@ SCIP_RETCODE getObjective(
       ++name;
 
       /* remove white space in front of the name */
-      while(isspace((unsigned char)*name))
-         ++name;
+      while( isspace((unsigned char)* name) || *name == '\\' && *(name+1) != '\0' && strchr(SCIP_SPACECONTROL, *(name+1)) )
+         name += *name == '\\' ? 2 : 1;
 
       if ( SCIPstrToRealValue(name, &scale, &endptr) )
       {
@@ -570,8 +570,8 @@ SCIP_RETCODE getFixedVariable(
 
       /* check whether constant is 0.0 */
       str = endptr;
-      while ( *str != '\0' && isspace(*str) )
-         ++str;
+      while ( isspace(*str) || *str == '\\' && *(str+1) != '\0' && strchr(SCIP_SPACECONTROL, *(str+1)) )
+         str += *str == '\\' ? 2 : 1;
       /* if next char is '<' we found a variable -> constant is 0 */
       if ( *str != '<' )
       {

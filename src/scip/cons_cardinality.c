@@ -3028,8 +3028,9 @@ SCIP_DECL_CONSPARSE(consParseCardinality)
       s = t;
 
       /* skip white space, ',', and ')' */
-      while ( *s != '\0' && ( isspace((unsigned char)*s) ||  *s == ',' || *s == ')' ) )
-         ++s;
+      while ( isspace((unsigned char)*s) || *s == ',' || *s == ')'
+              || *s == '\\' && *(s+1) != '\0' && strchr(SCIP_SPACECONTROL, *(s+1)) )
+         s += *s == '\\' ? 2 : 1;
 
       /* add variable */
       SCIP_CALL( SCIPaddVarCardinality(scip, *cons, var, NULL, weight) );
@@ -3040,8 +3041,8 @@ SCIP_DECL_CONSPARSE(consParseCardinality)
          s = s + 2;
 
          /* skip white space */
-         while ( isspace((unsigned char)*s) )
-            ++s;
+         while ( isspace((unsigned char)*s) || *s == '\\' && *(s+1) != '\0' && strchr(SCIP_SPACECONTROL, *(s+1)) )
+            s += *s == '\\' ? 2 : 1;
 
          cardval = (int)strtod(s, &t);
          if ( t == NULL )
