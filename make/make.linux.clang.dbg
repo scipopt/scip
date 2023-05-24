@@ -1,7 +1,7 @@
 FLAGS		+=	-DSCIP_ROUNDING_FE
 OFLAGS		+=	-O0 -g
-CFLAGS		+=	$(GCCWARN) -funit-at-a-time
-CXXFLAGS	+=	$(GXXWARN) -funit-at-a-time
+CFLAGS		+=	$(GCCWARN)
+CXXFLAGS	+=	$(GXXWARN)
 
 # Enable sanitizers (http://clang.llvm.org/docs/UsersManual.html#controlling-code-generation).
 #

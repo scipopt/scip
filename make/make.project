@@ -3,13 +3,22 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            *
-#*                            fuer Informationstechnik Berlin                *
+#*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      *
 #*                                                                           *
-#*  SCIP is distributed under the terms of the ZIB Academic License.         *
+#*  Licensed under the Apache License, Version 2.0 (the "License");          *
+#*  you may not use this file except in compliance with the License.         *
+#*  You may obtain a copy of the License at                                  *
 #*                                                                           *
-#*  You should have received a copy of the ZIB Academic License              *
-#*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
+#*      http://www.apache.org/licenses/LICENSE-2.0                           *
+#*                                                                           *
+#*  Unless required by applicable law or agreed to in writing, software      *
+#*  distributed under the License is distributed on an "AS IS" BASIS,        *
+#*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. *
+#*  See the License for the specific language governing permissions and      *
+#*  limitations under the License.                                           *
+#*                                                                           *
+#*  You should have received a copy of the Apache-2.0 license                *
+#*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
@@ -84,7 +93,7 @@ EMPHBENCHMARK  =   true
 
 # set SCIP version here for external projects
 # use underscore to make it compatible with def.h
-SCIP_VERSION	=	8.0.1
+SCIP_VERSION	=	8.0.4
 
 # compiling and linking parameters
 VERBOSE		=	false
@@ -92,7 +101,7 @@ OPT		=	opt
 COMP		=	gnu
 LPS		=	spx2
 TPI		=	none
-SYM		=	none
+SYM		=	bliss
 PAPILO		=	false
 STATICLIBEXT	=	a
 SHAREDLIBEXT	=	so
@@ -102,6 +111,7 @@ SHARED		=	false
 NOBLKMEM	=	false
 NOBUFMEM	=	false
 NOBLKBUFMEM	=	false
+BLISSEXTERNAL	=	false
 
 # if SHARED = true, nevertheless link to static version of external libraries (usefull for mingw)
 LIBEXTFORCESTATIC =	false
@@ -201,10 +211,12 @@ LN_s		= 	ln -s
 LN_sf		=	ln -sf
 
 # initial compiler and linker flags
-FLAGS		=	-I$(SRCDIR) -DWITH_SCIPDEF -DFNAME_$(FORTRAN_NAMING_CONVENTION) -I$(SCIPDIR)/src
+FLAGS		=	-I$(SRCDIR) -DWITH_SCIPDEF -I$(SCIPDIR)/src
 OFLAGS		=
 CFLAGS		=
 CXXFLAGS	=
+CXX14FLAG	=	-std=c++14
+CXX11FLAG	=	-std=c++0x
 
 ifeq ($(COMP),msvc)
 LDFLAGS		=
@@ -221,10 +233,6 @@ DFLAGS		=	-MMD
 GCCWARN = -pedantic -Wall -W
 GXXWARN = -pedantic -Wall -W
 
-# GCC and CLANG warning flags are not all equal; so disable warnings about unknown warnings
-GCCWARN += -Wno-unknown-warning-option -Wno-unknown-warning
-GXXWARN += -Wno-unknown-warning-option -Wno-unknown-warning
-
 # enable more warnings that are not in -Wall -W (probably in -Wextra, but we don't seem to use that)
 GCCWARN += -Wpointer-arith -Wcast-align -Wwrite-strings -Wshadow -Wredundant-decls -Wdisabled-optimization \
            -Wsign-compare -Wstrict-prototypes -Wmissing-declarations -Wmissing-prototypes -Wdeclaration-after-statement
@@ -234,9 +242,6 @@ GXXWARN += -Wpointer-arith -Wcast-align -Wwrite-strings -Wshadow -Wredundant-dec
 # disable some warning that would be too much effort to fix, disfigure the code, or produce too many false positive
 GCCWARN += -Wno-long-long -Wno-unknown-pragmas -Wno-unused-parameter -Wno-override-init -Wno-uninitialized -Wno-maybe-uninitialized
 GXXWARN += -Wno-long-long -Wno-unknown-pragmas -Wno-unused-parameter -Wno-strict-overflow
-
-# there are macros where we override initializers on purpose
-GCCWARN += -Wno-initializer-overrides
 
 ifeq ($(SHARED),true)
 LIBTYPE		=	shared
@@ -286,6 +291,15 @@ ALLSRC		=
 -include $(SCIPREALPATH)/make/local/make.$(HOSTNAME).$(COMP).$(OPT)
 -include $(SCIPREALPATH)/make/local/make.local
 
+#-----------------------------------------------------------------------------
+# define C++ standard
+#-----------------------------------------------------------------------------
+
+ifeq ($(PAPILO),true)
+CXXFLAGS += $(CXX14FLAG)
+else
+CXXFLAGS += $(CXX11FLAG)
+endif
 
 #-----------------------------------------------------------------------------
 # define path to find SCIP upon execution
@@ -394,11 +408,13 @@ endif
 #-------------------------------------------------------
 # define flags for Mosek
 ifeq ($(LPS),msk)
-LPSLDFLAGS	=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/shared $(LINKCC_l)mosek.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) \
-                        $(LINKCC_l)cilkrts.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
+LPSLDFLAGS	=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/shared $(LINKCC_l)mosek.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
+LPSLIBFILES	=	$(SCIPREALPATH)/$(LIBDIR)/shared/libmosek.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
 
-LPSLIBFILES	=	$(SCIPREALPATH)/$(LIBDIR)/shared/libmosek.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT) \
-                        $(SCIPREALPATH)/$(LIBDIR)/shared/libcilkrts.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
+ifneq ("$(wildcard $(SCIPREALPATH)/$(LIBDIR)/shared/libcilkrts.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT))", "")
+LPSLDFLAGS	+=	$(LINKCC_l)cilkrts.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
+LPSLIBFILES	+=	$(SCIPREALPATH)/$(LIBDIR)/shared/libcilkrts.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
+endif
 
 ifneq ("$(wildcard $(SCIPREALPATH)/$(LIBDIR)/shared/libiomp5.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT))", "")
 LPSLDFLAGS	+=	$(LINKCC_l)iomp5.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX)
@@ -524,7 +540,12 @@ TPILIBSHORTLINK	=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(TPILIBNAME).$(LIBEXT)
 #-----------------------------------------------------------------------------
 
 ifeq ($(SYM),bliss)
+ifeq ($(BLISSEXTERNAL),true)
 LDFLAGS		+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCC_l)bliss.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
+else
+LIBOBJSUBDIRS	+=      $(LIBOBJDIR)/bliss/src
+LIBOBJSUBDIRS	+=      $(LIBOBJDIR)/bliss
+endif
 endif
 
 #-----------------------------------------------------------------------------
@@ -533,7 +554,6 @@ endif
 
 ifeq ($(PAPILO),true)
 LDFLAGS		+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/shared $(LINKCC_l)tbb.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
-CXXFLAGS	+=	-std=c++14
 endif
 
 #-----------------------------------------------------------------------------
@@ -648,25 +668,17 @@ endif
 
 # (re)define some variables
 ifeq ($(SHARED),true)
-ifneq ($(COMP),msvc)
-FLAGS		+=	-fPIC
-endif
 LIBEXT		=	$(SHAREDLIBEXT)
 ifeq ($(LINKER),CPP)
 LIBBUILD	=	$(LINKCXX)
 LIBBUILD_L	=	$(LINKCXX_L)
+LIBBUILD_o	=	$(LINKCXX_o)
 else
 LIBBUILD	=	$(LINKCC)
 LIBBUILD_L	=	$(LINKCC_L)
+LIBBUILD_o	=	$(LINKCC_o)
 endif
-
-ifeq ($(COMP),msvc)
-LIBBUILDFLAGS	+=      -dll
-LIBBUILD_o	= 	-out:
-else
-LIBBUILDFLAGS	+=      -shared
-LIBBUILD_o	= 	-o # the trailing space is important
-endif
+LIBBUILDFLAGS	+=	$(LINK_shared)
 ARFLAGS		=
 RANLIB		=
 endif

@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -443,8 +452,15 @@ DECL_CURVCHECK(curvCheckQuadratic)
       }
       else
       {
-         /* linear term (or term to be considered as linear) */
-         SCIPexprSetCurvature(child, SCIP_EXPRCURV_LINEAR);
+         /* linear term (or term to be considered as linear) or lonely square term
+          * if we want extended formulations, then require linearity, so an auxvar will be introduced if it is nonlinear
+          * if we do not want extended formulations, then the term needs to have curvature "wantedcurv"
+          *   thus, if the coef is negative, then the child needs to have the curvature opposite to "wantedcurv"
+          */
+         if( nlhdlrdata->extendedform )
+            SCIPexprSetCurvature(child, SCIP_EXPRCURV_LINEAR);
+         else
+            SCIPexprSetCurvature(child, SCIPexprcurvMultiply(SCIPgetCoefsExprSum(nlexpr)[i], wantedcurv));
          SCIP_CALL( exprstackPush(scip, stack, 1, &child) );
       }
    }
@@ -1908,8 +1924,7 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaConvex)
       if( !success )
       {
          SCIPdebugMsg(scip, "failed to linearize for k = %d\n", k);
-         if( rowprep != NULL )
-            SCIPfreeRowprep(scip, &rowprep);
+         SCIPfreeRowprep(scip, &rowprep);
          continue;
       }
 
@@ -1921,8 +1936,7 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaConvex)
       if( !success )
       {
          SCIPdebugMsg(scip, "failed to cleanup rowprep numerics for k = %d\n", k);
-         if( rowprep != NULL )
-            SCIPfreeRowprep(scip, &rowprep);
+         SCIPfreeRowprep(scip, &rowprep);
          continue;
       }
 
@@ -1983,11 +1997,11 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateConvex)
    {
       SCIP_CALL( estimateConvexSecant(scip, nlhdlr, nlhdlrexprdata, sol, rowprep, success) );
 
-      (void) SCIPsnprintf(SCIProwprepGetName(rowprep), SCIP_MAXSTRLEN, "%sestimate_convexsecant%p_%s%d",
+      (void) SCIPsnprintf(SCIProwprepGetName(rowprep), SCIP_MAXSTRLEN, "%sestimate_convexsecant%p_%s%" SCIP_LONGINT_FORMAT,
          overestimate ? "over" : "under",
          (void*)expr,
          sol != NULL ? "sol" : "lp",
-         sol != NULL ? SCIPsolGetIndex(sol) : SCIPgetNLPs(scip));
+         sol != NULL ? (SCIP_Longint) SCIPsolGetIndex(sol) : SCIPgetNLPs(scip));
    }
 
    /* if secant method was not used or failed, then try with gradient */
@@ -1995,11 +2009,11 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateConvex)
    {
       SCIP_CALL( estimateGradient(scip, nlhdlrexprdata, sol, auxvalue, rowprep, success) );
 
-      (void) SCIPsnprintf(SCIProwprepGetName(rowprep), SCIP_MAXSTRLEN, "%sestimate_convexgradient%p_%s%d",
+      (void) SCIPsnprintf(SCIProwprepGetName(rowprep), SCIP_MAXSTRLEN, "%sestimate_convexgradient%p_%s%" SCIP_LONGINT_FORMAT,
          overestimate ? "over" : "under",
          (void*)expr,
          sol != NULL ? "sol" : "lp",
-         sol != NULL ? SCIPsolGetIndex(sol) : SCIPgetNLPs(scip));
+         sol != NULL ? (SCIP_Longint) SCIPsolGetIndex(sol) : SCIPgetNLPs(scip));
    }
 
    if( *success )
@@ -2302,11 +2316,11 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateConcave)
    {
       SCIP_CALL( SCIPsetPtrarrayVal(scip, rowpreps, 0, rowprep) );
 
-      (void) SCIPsnprintf(SCIProwprepGetName(rowprep), SCIP_MAXSTRLEN, "%sestimate_concave%p_%s%d",
+      (void) SCIPsnprintf(SCIProwprepGetName(rowprep), SCIP_MAXSTRLEN, "%sestimate_concave%p_%s%" SCIP_LONGINT_FORMAT,
          overestimate ? "over" : "under",
          (void*)expr,
          sol != NULL ? "sol" : "lp",
-         sol != NULL ? SCIPsolGetIndex(sol) : SCIPgetNLPs(scip));
+         sol != NULL ? (SCIP_Longint) SCIPsolGetIndex(sol) : SCIPgetNLPs(scip));
    }
    else
    {

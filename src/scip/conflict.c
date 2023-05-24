@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file   conflict.c
@@ -2706,11 +2715,21 @@ SCIP_Real aggrRowGetMinActivity(
       if( val > 0.0 )
       {
          SCIP_Real bnd = (curvarlbs == NULL ? SCIPvarGetLbGlobal(vars[v]) : curvarlbs[v]);
+         if( infdelta != NULL && SCIPsetIsInfinity(set, -bnd) )
+         {
+            *infdelta = TRUE;
+            goto TERMINATE;
+         }
          SCIPquadprecProdDD(delta, val, bnd);
       }
       else
       {
          SCIP_Real bnd = (curvarubs == NULL ? SCIPvarGetUbGlobal(vars[v]) : curvarubs[v]);
+         if( infdelta != NULL && SCIPsetIsInfinity(set, bnd) )
+         {
+            *infdelta = TRUE;
+            goto TERMINATE;
+         }
          SCIPquadprecProdDD(delta, val, bnd);
       }
 
@@ -7217,12 +7236,12 @@ SCIP_RETCODE getDualProof(
     * where lhs, rhs, lb, and ub are selected in order to maximize the feasibility of the row.
     */
 
-   /* add the objective function to the aggregation row with current cutoff bound as right-hand side
-    *
-    * use a slightly tighter cutoff bound, because solutions with equal objective value should also be declared
-    * infeasible
+   /* add the objective function to the aggregation row with respect to the current cutoff bound
+    * 
+    * for an integral objective the right-hand side is reduced by the cutoff bound delta to cut off up to the next
+    * possible objective value below the cutoff bound
     */
-   SCIP_CALL( SCIPaggrRowAddObjectiveFunction(set->scip, farkasrow, lp->cutoffbound - SCIPsetSumepsilon(set), 1.0) );
+   SCIP_CALL( SCIPaggrRowAddObjectiveFunction(set->scip, farkasrow, lp->cutoffbound - (SCIPprobIsObjIntegral(transprob) ? SCIPsetCutoffbounddelta(set) : 0.0), 1.0) );
 
    /* dual row: z^T{lhs,rhs} - c* <= (-r^T - (y-z)^TA){lb,ub}
     * process rows: add z^T{lhs,rhs} to the dual row's left hand side, and -(y-z)^TA to the dual row's coefficients
@@ -9458,10 +9477,10 @@ SCIP_RETCODE SCIPconflictAnalyzePseudo(
    /* get temporary memory for infeasibility proof coefficients */
    SCIP_CALL( SCIPsetAllocBufferArray(set, &pseudocoefs, nvars) );
 
-   /* use a slightly tighter cutoff bound, because solutions with equal objective value should also be declared
-    * infeasible
+   /* for an integral objective use the cutoff bound reduced by the cutoff bound delta to cut off up to the next better
+    * objective value
     */
-   pseudolhs = -(lp->cutoffbound - SCIPsetSumepsilon(set));
+   pseudolhs = -(lp->cutoffbound - (SCIPprobIsObjIntegral(transprob) ? SCIPsetCutoffbounddelta(set) : 0.0));
 
    /* store the objective values as infeasibility proof coefficients, and recalculate the pseudo activity */
    pseudoact = 0.0;

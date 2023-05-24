@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -1132,7 +1141,9 @@ SCIP_RETCODE catchVarEvents(
 
    conshdlrdata = SCIPconshdlrGetData(SCIPconsGetHdlr(cons));
    assert(conshdlrdata != NULL);
+#ifndef CR_API  /* this assert may not work in unittests due to having this code compiled twice, #3543 */
    assert(conshdlrdata->intevalvar == intEvalVarBoundTightening);
+#endif
 
    SCIPdebugMsg(scip, "catchVarEvents for %s\n", SCIPconsGetName(cons));
 
@@ -1930,7 +1941,7 @@ SCIP_RETCODE addTightEstimatorCut(
       overestimate ? "over" : "under", SCIPnlhdlrGetName(exprenfo->nlhdlr), (void*)expr, SCIPexprhdlrGetName(SCIPexprGetHdlr(expr))); )
 
    SCIP_CALL( SCIPnlhdlrEstimate(scip, conshdlr, exprenfo->nlhdlr, expr, exprenfo->nlhdlrexprdata, sol,
-      exprenfo->auxvalue, overestimate, SCIPinfinity(scip), FALSE, rowpreps, &estimatesuccess, &branchscoresuccess) );
+      exprenfo->auxvalue, overestimate, overestimate ? SCIPinfinity(scip) : -SCIPinfinity(scip), FALSE, rowpreps, &estimatesuccess, &branchscoresuccess) );
 
    minidx = SCIPgetPtrarrayMinIdx(scip, rowpreps);
    maxidx = SCIPgetPtrarrayMaxIdx(scip, rowpreps);
@@ -2819,7 +2830,9 @@ SCIP_RETCODE propConss(
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
+#ifndef CR_API  /* this assert may not work in unittests due to having this code compiled twice, #3543 */
    assert(conshdlrdata->intevalvar == intEvalVarBoundTightening);
+#endif
    assert(!conshdlrdata->globalbounds);
 
    *result = SCIP_DIDNOTFIND;
@@ -3010,7 +3023,9 @@ SCIP_RETCODE propExprDomains(
    assert(nchgbds != NULL);
    assert(*nchgbds >= 0);
 
+#ifndef CR_API  /* this assert may not work in unittests due to having this code compiled twice, #3543 */
    assert(SCIPconshdlrGetData(conshdlr)->intevalvar == intEvalVarBoundTightening);
+#endif
    assert(!SCIPconshdlrGetData(conshdlr)->globalbounds);
    assert(SCIPqueueIsEmpty(SCIPconshdlrGetData(conshdlr)->reversepropqueue));
 
@@ -3479,6 +3494,7 @@ SCIP_RETCODE detectNlhdlr(
       nlhdlrparticipating = SCIP_NLHDLR_METHOD_NONE;
       conshdlrdata->registerusesactivitysepabelow = FALSE;  /* SCIPregisterExprUsageNonlinear() as called by detect may set this to TRUE */
       conshdlrdata->registerusesactivitysepaabove = FALSE;  /* SCIPregisterExprUsageNonlinear() as called by detect may set this to TRUE */
+      /* coverity[forward_null] */
       SCIP_CALL( SCIPnlhdlrDetect(scip, ownerdata->conshdlr, nlhdlr, expr, cons, &enforcemethodsnew, &nlhdlrparticipating, &nlhdlrexprdata) );
 
       /* nlhdlr might have claimed more than needed: clean up sepa flags */
@@ -4286,7 +4302,7 @@ SCIP_RETCODE getBinaryProductExprDo(
    SCIP_CONS* cons;
    SCIP_Real* coefs;
    SCIP_VAR* w;
-   char name[SCIP_MAXSTRLEN];
+   char* name;
    int nchildren;
    int i;
 
@@ -4298,12 +4314,13 @@ SCIP_RETCODE getBinaryProductExprDo(
    nchildren = SCIPexprGetNChildren(prodexpr);
    assert(nchildren >= 2);
 
-   /* memory to store the variables of the variable expressions (+1 for w) */
+   /* memory to store the variables of the variable expressions (+1 for w) and their name */
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, nchildren + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &coefs, nchildren + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &name, nchildren * (SCIP_MAXSTRLEN + 1) + 20) );
 
    /* prepare the names of the variable and the constraints */
-   (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "binreform");
+   strcpy(name, "binreform");
    for( i = 0; i < nchildren; ++i )
    {
       vars[i] = SCIPgetVarExprVar(SCIPexprGetChildren(prodexpr)[i]);
@@ -4372,6 +4389,7 @@ SCIP_RETCODE getBinaryProductExprDo(
    SCIP_CALL( SCIPreleaseVar(scip, &w) );
 
    /* free memory */
+   SCIPfreeBufferArray(scip, &name);
    SCIPfreeBufferArray(scip, &coefs);
    SCIPfreeBufferArray(scip, &vars);
 
@@ -4962,9 +4980,9 @@ SCIP_RETCODE canonicalizeConstraints(
 
       /* update counters */
       if( naddconss != NULL )
-         *naddconss = tmpnaddconss;
+         *naddconss += tmpnaddconss;
       if( nchgcoefs != NULL )
-         *nchgcoefs = tmpnchgcoefs;
+         *nchgcoefs += tmpnchgcoefs;
 
       /* check whether at least one expression has changed */
       if( tmpnaddconss + tmpnchgcoefs > 0 )
@@ -5632,6 +5650,7 @@ SCIP_RETCODE removeSingleLockedVars(
  *  @todo extend this to cases where a variable can appear in a monomial with an exponent, essentially relax
  *    g(x) to \f$\sum_i [a_i,b_i] x^{p_i}\f$ for a single variable \f$x\f$ and try to conclude montonicity or convexity/concavity
  *    on this (probably have one or two flags per variable and update this whenever another \f$x^{p_i}\f$ is found)
+ *  @todo reduction should also be applicable if variable appears in the objective with the right sign (sign such that opt is at boundary)
  */
 static
 SCIP_RETCODE presolveSingleLockedVars(
@@ -9539,7 +9558,7 @@ SCIP_DECL_CONSFREE(consFreeNonlinear)
    assert(SCIPhashmapGetNElements(conshdlrdata->var2expr) == 0);
    SCIPhashmapFree(&conshdlrdata->var2expr);
 
-   SCIPfreeMemory(scip, &conshdlrdata);
+   SCIPfreeBlockMemory(scip, &conshdlrdata);
    SCIPconshdlrSetData(conshdlr, NULL);
 
    return SCIP_OKAY;
@@ -9994,6 +10013,9 @@ SCIP_DECL_CONSCHECK(consCheckNonlinear)
    maxviol = 0.0;
    maypropfeasible = conshdlrdata->trysolheur != NULL && SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED
       && SCIPgetStage(scip) <= SCIP_STAGE_SOLVING;
+
+   if( maypropfeasible && (sol == NULL || SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_LPSOL) && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
+      maypropfeasible = FALSE;
 
    /* check nonlinear constraints for feasibility */
    for( c = 0; c < nconss; ++c )
@@ -10838,7 +10860,7 @@ SCIP_RETCODE SCIPincludeConshdlrNonlinear(
    SCIP_DIALOG* parentdialog;
 
    /* create nonlinear constraint handler data */
-   SCIP_CALL( SCIPallocClearMemory(scip, &conshdlrdata) );
+   SCIP_CALL( SCIPallocClearBlockMemory(scip, &conshdlrdata) );
    conshdlrdata->intevalvar = intEvalVarBoundTightening;
    conshdlrdata->curboundstag = 1;
    conshdlrdata->lastboundrelax = 1;
@@ -11684,7 +11706,7 @@ SCIP_RETCODE SCIPprocessRowprepNonlinear(
          else if( !SCIPisEQ(scip, auxvalue, estimateval) )
          {
             char gap[40];
-            (void) sprintf(gap, "_estimategap=%g", REALABS(auxvalue - estimateval));
+            (void) SCIPsnprintf(gap, 40, "_estimategap=%g", REALABS(auxvalue - estimateval));
             strcat(SCIProwprepGetName(rowprep), gap);
          }
       }

@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -41,6 +50,7 @@
 #include "scip/cons_linear.h"
 
 using std::vector;
+
 
 /** struct for bliss callback */
 struct BLISS_Data
@@ -105,8 +115,8 @@ SCIP_DECL_HASHKEYVAL(SYMhashKeyValOptype)
    else
       exponent = 1.0;
 
-   return SCIPhashTwo(SCIPrealHashCode(exponent), k->level),
-      (uint64_t) SCIPexprhdlrGetName(SCIPexprGetHdlr(k->expr));
+   return SCIPhashThree(SCIPrealHashCode(exponent), k->level,
+      SCIPhashKeyValString(NULL, static_cast<void*>(const_cast<char*>(SCIPexprhdlrGetName(SCIPexprGetHdlr(k->expr))))));
 }
 
 /* ------------------- map for constant types ------------------- */
@@ -335,7 +345,7 @@ SCIP_RETCODE fillGraphByLinearConss(
       int node = (int) G->add_vertex((unsigned) (nusedcolors + color));
       assert( node == matrixdata->npermvars + c );
 #else
-      (void) G->add_vertex((unsigned) (matrixdata->nuniquevars + color));
+      (void) G->add_vertex((unsigned) (nusedcolors + color));
 #endif
 
       ++nnodes;
@@ -951,17 +961,27 @@ SCIP_Bool SYMcanComputeSymmetry(void)
    return TRUE;
 }
 
-/** static variable for holding the name of bliss */
-static char blissname[100];
+char*
+initStaticBlissName( );
+
+static char* blissname = initStaticBlissName();
+
+char*
+initStaticBlissName( )
+{
+   blissname = new char[100];
+#ifdef BLISS_PATCH_PRESENT
+   (void) SCIPsnprintf(blissname, 100, "bliss %sp", bliss::version);
+#else
+   (void) SCIPsnprintf(blissname, 100, "bliss %s", bliss::version);
+#endif
+   return blissname;
+}
+
 
 /** return name of external program used to compute generators */
 const char* SYMsymmetryGetName(void)
 {
-#ifdef BLISS_PATCH_PRESENT
-   (void) snprintf(blissname, 100, "bliss %sp", bliss::version);
-#else
-   (void) snprintf(blissname, 100, "bliss %s", bliss::version);
-#endif
    return blissname;
 }
 

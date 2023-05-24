@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -43,22 +52,40 @@
  *
  * See the web site of <a href="http://scipopt.org">\SCIP</a> for more information about licensing and to download \SCIP.
  *
+ *  <b style="color: blue">If you are new to SCIP and don't know where to start you should have a look at the
+ *  @ref GETTINGSTARTED "first steps walkthrough"
+ *  .</b>
  *
  * @section TABLEOFCONTENTS Structure of this manual
  *
  * This manual gives an accessible introduction to the functionality of the SCIP code in the following chapters
  *
- *  - @subpage GETTINGSTARTED      Installation and license information and an interactive shell tutorial
- *  - @subpage EXAMPLES            Coding examples in C and C++ in the source code distribution
- *  - @subpage APPLICATIONS        Extensions of SCIP for specific applications
- *  - @subpage PARAMETERS          List of all SCIP parameters
- *  - @subpage PROGRAMMING         Important programming concepts for working with(in) SCIP.
- *  - @subpage HOWTOADD            Detailed guides for adding user plugins
- *  - @subpage HOWTOUSESECTION     Detailed guides for advanced SCIP topics
- *  - @subpage FAQ                 Frequently asked questions (FAQ)
- *  - @subpage CHG                 Release notes and changelog
- *  - @subpage AUTHORS             SCIP Authors
- *  - @subpage EXTERNALDOC         Links to external documentation
+ * Setup and news
+ *  - @subpage INSTALL
+ *  - @subpage FAQ
+ *  - @subpage CHG
+ *
+ * Tutorials and guides
+ *  - @subpage GETTINGSTARTED
+ *  - @subpage SHELL
+ *  - @subpage PROGRAMMING "Important programming concepts for working with(in) SCIP"
+ *  - @subpage START
+ *  - @subpage DOC
+ *  - @subpage HOWTOADD "Detailed guides for adding user plugins"
+ *  - @subpage HOWTOUSESECTION "Detailed guides for advanced SCIP topics"
+ *
+ * Examples and applications
+ *  - @subpage EXAMPLES "Coding examples in C and C++ in the source code distribution"
+ *  - @subpage APPLICATIONS "Extensions of SCIP for specific applications"
+ *
+ * References
+ *  - @subpage WHATPROBLEMS "Supported types of optimization problems"
+ *  - @subpage FILEREADERS "Readable file formats"
+ *  - @subpage INTERFACES
+ *  - @subpage PARAMETERS
+ *  - @subpage AUTHORS "SCIP Authors"
+ *  - @subpage LICENSE
+ *  - @subpage EXTERNALDOC "Links to external documentation"
  *
  *
  * @section QUICKSTART Quickstart
@@ -68,16 +95,16 @@
  *
  *  \verbinclude simple.lp
  *
- *  Saving this file as "simple.lp" allows to read it into SCIP and solve it.
+ *  Saving this file as "simple.lp" allows to read it into SCIP and solve it by calling the scip binary with the `-f` flag to solve the problem from the provided file and exit.
  *
  * ```
- * scip -c "read simple.lp optimize quit"
+ * scip -f simple.lp
  * ```
  * reads and optimizes this model in no time:
  *
  * \verbinclude output.log
  *
- * @version  8.0.1
+ * @version  8.0.4
  *
  * \image html scippy.png
  */
@@ -114,8 +141,8 @@
 
 /** @page NLPISOLVERS Available implementations of the NLP solver interface
  *
- * SCIP implements the NLP solver interface for the solvers <a href="https://projects.coin-or.org/Ipopt">IPOPT</a>, <a
- * href="https://worhp.de/">WORHP</a>, and <a href=" http://www.mcs.anl.gov/~leyffer/solvers.html">FilterSQP</a>. In
+ * SCIP implements the NLP solver interface for the solvers <a href="https://github.com/coin-or/Ipopt">IPOPT</a>, <a
+ * href="https://worhp.de/">WORHP</a>, and <a href="http://www.mcs.anl.gov/~leyffer/solvers.html">FilterSQP</a>. In
  * contrast to the implementations of the LP solver interface, SCIP can be compiled with multiple NLP solvers and selects
  * the solver with the highest priority at the beginning of the solving process.
  * Currently, the priorities are, in descending order: Ipopt, WORHP/IP, FilterSQP, WORHP/SQP.
@@ -140,7 +167,7 @@
  * @section NLPISOLVERS_WORHP WORHP
  *
  * <b>WORHP</b> implements a sequential quadratic programming method and a penalty-interior point algorithm.  It is
- * developed at the <a href="http://www.uni-bremen.de/en.html">University of Bremen</a> and is free for academic
+ * developed at the <a href="https://www.uni-bremen.de/en/">University of Bremen</a> and is free for academic
  * purposes.
  *
  * @section NLPISOLVERS_FILTERSQP FilterSQP
@@ -151,39 +178,157 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-/**@page GETTINGSTARTED Getting started
+/**@page GETTINGSTARTED First Steps Walkthrough
  *
- * - @subpage WHATPROBLEMS "What types of optimization problems does SCIP solve?"
+ * @section GETTINGSTARTED_BLACKBOX Use SCIP to solve a problem
  *
- * - @subpage LICENSE     "License"
- * - @subpage INSTALL     "Installation"
- * - @subpage SHELL       "Tutorial: the interactive shell"
- * - @subpage FILEREADERS "Readable file formats"
- * - @subpage INTERFACES  "Interfaces"
- * - @subpage START       "How to start a new project"
- * - @subpage DOC         "How to search the documentation for interface methods"
+ * @subsection GETTINGSTARTED_BLACKBOX_WHY Why SCIP?
+ *
+ * Charlotte lectures at a university and she wants her students to get in touch with solving constraint integer programs (CIPs).
+ * She would like to use SCIP for this purpose because it allows the students to look at the full source code
+ * and SCIP comes with a permissive open source \ref LICENSE "license".
+ * Also, her advisor told her that there are various \ref INTERFACES "interfaces" to SCIP.
+ *
+ * @subsection GETTINGSTARTED_BLACKBOX_PROBLEMS What Kinds Of Problems?
+ *
+ * As a first step she checks \ref WHATPROBLEMS "what types of problems" \SCIP can solve and
+ * \ref FILEREADERS "what are readable formats", and is happy to find MIPs to be among them.
+ *
+ * @subsection GETTINGSTARTED_BLACKBOX_INSTALL Setup
+ *
+ * Charlotte now needs to \ref INSTALL "install SCIP".
+ * She works on a recent computer with a windows system and already has the <a href="https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads">Visual C++ Redistributable Packages</a> and <a href="https://github.com/oneapi-src/oneTBB">TBB</a> installed.
+ *
+ * Having these prerequisites in place, Charlotte downloads the 64-bit windows exectuable from the <a href="https://scipopt.org/index.php#download">download page</a> and installs it without a problem.
+ * They also read about the <a href="http://www.pokutta.com/blog/pages/scip/scip-teaching.html"> dockerized SCIP container</a> which she wants
+ * to recommend to her students, in case they are unable to install SCIP on their own machines.
+ *
+ * @subsection GETTINGSTARTED_BLACKBOX_SOLVE Solve A First Problem
+ *
+ * To test her installation and get a first feeling for SCIP, Charlotte follows the steps described in the \ref QUICKSTART "quickstart" section to solve a first simple lp problem.
+ *
+ * She has just solved a problem, using SCIP in the command-based mode, by passing a command to the scip call via the `-c` flag.
+ * These commands can also be typed into the interactive shell, that one uses by just calling the binary `scip`.
+ *
+ * After the first solution process worked like a charm, Charlotte downloads a more complicated problem file from the <a href="https://miplib.zib.de/instance_details_enlight_hard.html">MIPLIB 2017</a> page
+ * and follows the \ref SHELL_AFTERINSTALL "interactive shell tutorial".
+ * There, she already learns quite a lot about the solving process and how to work with the interactive shell.
+ *
+ * @subsection GETTINGSTARTED_BLACKBOX_HELP Getting Help
+ *
+ * Feeling happy about having already solved some instances and having worked in interactive mode, Charlotte is curious on what more options SCIP has.
+ * She types `scip -h` to find out.
+ *
+ * She feels confident to being able to understand and use some of the other options, like `-l` to write the output to a logfile, or `-b` to pass a file containing the commands to be executed by scip.
+ * There are some commands that do not yet make a lot of sense to her, but she doesn't worry about it for now.
+ * She will familiarize herself with it over time and with experience.
+ *
+ * @section GETTINGSTARTED_DEVELOP Develop A Custom Plugin
+ *
+ * Alex is a researcher in Charlotte's group and is working on problems that have a very special structure that he hopes to be able to exploit in the solving process.
+ *
+ * Alex heard Charlotte talk about SCIP.
+ * She explained that SCIP is plugin-based, that is, different components (plugins) are implemented using a generic interface and that it is very easy to write your own plugins, like constraint handlers, heuristics etc.
+ * So Alex decides to give it a go and dive into SCIP.
+ *
+ * @subsection GETTINGSTARTED_DEVELOP_PREREQUISITES Prerequisites And Setup
+ *
+ * After some time of using SCIP, he feels confident enough to dig into the source code and decides to write his own plugin.
+ * Alex likes to use his linux machine for developing code, because in his experience compilation is easiest there.
+ *
+ * He starts by downloading the latest <a href="http://scipopt.org/#download">source code tarball</a>,
+ * unpacking it and compiling via \ref CMAKE "cmake", typing `mkdir build; cd build; cmake ..; make`.
+ *
+ * @subsection GETTINGSTARTED_DEVELOP_HELP Getting help
+ *
+ * Before writing any code, he quickly scans over the contents of the \ref PROGRAMMING "Programming with SCIP" page,
+ * so that he knows about some of the pitfalls, best practices and mechanisms.
+ * If a problem comes up later or he gets stuck, he knows what to look out for and where to find help.
+ *
+ * Whenever Alex gets stuck inside the code, he makes use of the extensive documentation to \ref DOC "search for interface methods".
+ *
+ * @subsection GETTINGSTARTED_DEVELOP_EXAMPLE Writing An Example
+ *
+ * Alex is now ready to write his very first example, he creates a new folder `MinEx` under `examples` and puts two files in there:
+ * `CMakeLists.txt`:
+ * ```
+ * cmake_minimum_required(VERSION 3.3)
+ *
+ * project(minex)
+ * find_package(SCIP REQUIRED)
+ * include_directories(${SCIP_INCLUDE_DIRS})
+ *
+ * add_executable(minex
+ *   src/cmain.c)
+ *
+ * target_link_libraries(minex ${SCIP_LIBRARIES})
+ *
+ * if( TARGET examples )
+ *     add_dependencies( examples minex )
+ * endif()
+ * ```
+ *
+ * and `cmain.c` in a subfolder `src`:
+ * ```
+ * #include <string.h>
+ * #include <scip/scip.h>
+ *
+ * int main( int argc, char** argv )
+ * {
+ *    SCIP* scip = NULL;
+ *    SCIP_CALL( SCIPcreate(&scip) ); // initialize SCIP
+ *    SCIPinfoMessage(scip, NULL, "Hello world.\n"); // output greeting
+ *    SCIP_CALL( SCIPfree(&scip) ); // free SCIP
+ *    BMScheckEmptyMemory();
+ *    return 0;
+ * }
+ * ```
+ *
+ * This is a minimal example that just prints "Hello world." and exits.
+ * Alex compiles and runs it via cmake with the following command:
+ * ```
+ * mkdir build; cd build; cmake .. -DSCIP_DIR=../../build/; make; ./minex
+ * ```
+ *
+ * After having successfully written this minimal example, Alex follows the instructions to \ref START "start a new project" to start his actual project and extend this most basic code.
+ *
+ * @subsection GETTINGSTARTED_DEVELOP_CONSTRAINTHANDLER Writing A Plugin
+ *
+ * Alex now needs a custom constraint handler in his project, for that he will write a custom plugin.
+ * He looks up the instructions in the \ref HOWTOADD "How to add..." page and is
+ * very happy to find \ref CONS "a page with a detailed description" what he has to do.
+ *
+ * Furthermore he found exercises for implementing plugins for the example of the
+ * linear ordering problem. The corresponding code framework
+ * (<a href="https://scipopt.org/workshop2018/pyscipopt-exercises.tgz">Python</a> or
+ * <a href="https://scipopt.org/workshop2018/exercise.pdf">C/C++</a>)
+ * could form a good starting point for a new project as well.
+ *
+ * @subsection GETTINGSTARTED_DEVELOP_REOPTMIZATION Using Functionality In A Plugin
+ *
+ * After implementing his own constraint handler Alex realizes that he needs to use repotimization in his project.
+ * He looks up the \ref HOWTOUSESECTION "How to use..." section and finds some more information about \ref REOPT "how to use reoptimization".
+ *
  */
 
 /**@page INSTALL Installing SCIP
  *
- * This chapter is a detailed guide to the installation procedure of SCIP.
+ * There are two options to get a running SCIP on your system.
+ * You can either use one of the installers or you can compile it yourself.
  *
- * SCIP lets you freely choose between its own, manually maintained Makefile system
- * or the CMake cross platform build system generator.
- *
- * <b>For new users and on for installation of the scipoptsuite on windows, we strongly recommend to use CMake, if available on their targeted platform.</b>
- *
- * Which one you choose depends on you use case and your level of expertise.
+ * Which one you choose depends on your use case and your level of expertise.
  * If you just want to use SCIP as a black box solver you should use an installer with a precompiled binary from the <a href="http://scipopt.org/#download">download section</a>.
- * <b>This is highly recommended for new users.</b>
- * If you are just curious about SCIP and want to try it out you can use the <a href="http://www.pokutta.com/blog/pages/scip/scip-teaching.html"> dockerized SCIP container</a>.
+ * This is highly recommended for new users.
+ * If you are just curious and want to try it out you can use the <a href="http://www.pokutta.com/blog/pages/scip/scip-teaching.html"> dockerized SCIP container</a>.
  *
- * However if you want to develop your own plugin for scip you have to compile the SCIPOptSuite from the source code, which is available as a tarball from the <a href="http://scipopt.org/#download">website</a>.
+ * However, if you want to develop your own plugin for SCIP, you have to compile SCIP or the SCIPOptSuite from source code, which are available as a tarball from the <a href="http://scipopt.org/#download">download page</a>.
  * Note that you might need some level of experience to be able to do this, this is described in the following.
  *
- * Please note that there are differences between both systems, most notably, the generated
- * library libscip will not be compatible between the versions. For more information, we
- * refer to the INSTALL.md file of the SCIP source code distribution.
+ * SCIP lets you choose freely between its own, manually maintained Makefile system
+ * or the CMake cross platform build system generator. For new users, we strongly
+ * recommend to use CMake, if available on their targeted platform.
+ *
+ * Be aware that generated libraries and binaries of both systems might be different and incompatible.
  *
  * - @subpage md_INSTALL  "Installation instructions"
  * - @subpage LPI         "Available implementations of the LP solver interface"
@@ -481,7 +626,7 @@
  *          \f}
  *          where \f$\mathbb{K}\f$ is either \f$\mathbb{Z}\f$ or \f$\mathbb{R}\f$.
  *    </td>
- *    <td colspan="3"> see the <a href="http://polyscipopt.org/">PolySCIP web page</a></td>
+ *    <td colspan="3"> see the <a href="http://polyscip.zib.de/">PolySCIP web page</a></td>
  * </tr>
  * <tr>
  *    <td>Mixed-integer semidefinite program (MISDP)</td>
@@ -856,14 +1001,6 @@
  *  A solver for scheduling problems.
  *  </td>
  *  </tr>
- *  <tr>
- *  <td>
- *  @subpage STP_MAIN
- *  </td>
- *  <td>
- *  A solver for Steiner Tree Problems in graphs, based on a branch-and-cut approach.
- *  </td>
- *  </tr>
  *  </table>
  *
  */
@@ -875,22 +1012,29 @@
  *
  * @section TUTORIAL_OPTIMIZE Read and optimize a problem instance
  *
- * First of all, we need a \SCIP binary and an example problem file to work with. Therefore, you can either download the
- * \SCIP standard distribution (which includes problem files) and compile it on your own or you can download a
+ * @subsection SHELL_PREREQUISITES "Prerequisites"
+ *
+ * First of all, we need a \SCIP binary and an example problem file to work with.
+ * For installation we refer you to the \ref INSTALL section.
+ *
+ * Therefore, you can either download the \SCIP standard distribution (which includes problem files) and compile it on your own or you can download a
  * precompiled binary and an example problem separately. \SCIP can read files in LP, MPS, ZPL, WBO, FZN, PIP, OSiL, and
  * other formats (see \ref FILEREADERS).
  *
  * If you want to download the source code of the \SCIP standard distribution, we recommend to go to the <a
- * href="http://scipopt.org/#download">SCIP download section</a>, download the latest release (version 4.0.0 as
- * of this writing), inflate the tarball (e.g., with "tar xzf scipoptsuite-[version].tgz"), and follow the instructions
- * in the INSTALL.md file. The instance stein27, which will serve as an example in this tutorial, can be found under
+ * href="https://scipopt.org/#download">SCIP download section</a>, download the latest release,
+ * inflate the tarball (e.g., with "tar xzf scipoptsuite-[version].tgz"), and follow the instructions
+ * in the INSTALL file. The instance stein27, which will serve as an example in this tutorial, can be found under
  * scipoptsuite-[version]/scip-[version]/check/instances/MIP/stein27.fzn.
+ * Alternatively you can download an instance file from the <a href="https://miplib.zib.de/tag_benchmark.html">MIPLIB 2017 page</a>.
  *
  * If you want to download a precompiled binary, go to the <a href="http://scipopt.org/#download">SCIP download
  * section</a> and download an appropriate binary for your operating system. The \SCIP source code distribution already comes with
  * the example instance used throughout this tutorial. To follow this tutorial with a precompiled binary, we recommend downloading the instance
  * <a href="http://miplib2010.zib.de/miplib3/miplib3/stein27.mps.gz">stein27</a> from
  * the <a href="http://miplib2010.zib.de/miplib3/miplib.html">MIPLIB 3.0</a> homepage.
+ *
+ * @subsection SHELL_AFTERINSTALL "After installation"
  *
  * Now start your binary, without any arguments. This opens the interactive shell, which should look somehow like this:
  *
@@ -900,7 +1044,7 @@
  *
  * @snippet shelltutorial/shelltutorialannotated.tmp SnippetHelp
  *
- * Okay, let's solve the example instance... use "read check/instances/MIP/stein27.fzn" to parse the instance file, "optimize" to solve it and "display
+ * Okay, let's solve the example instance... use "read check/instances/MIP/stein27.fzn" (or the problem file of your choice) to parse the instance file, "optimize" to solve it and "display
  * solution" to show the nonzero variables of the best found solution.
  *
  * @snippet shelltutorial/shelltutorialannotated.tmp SnippetOpt1
@@ -1085,9 +1229,11 @@
  * -# Copy the template files src/scip/cons_xyz.c and src/scip/cons_xyz.h into files "cons_subtour.c"
  *    and "cons_subtour.h".
  *     \n
- *    Make sure to <b>adjust your Makefile</b> such that these files are compiled and linked to your project.
- * -# Use SCIPincludeConsSubtour() in order to include the constraint handler into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/cppmain.cpp in the TSP example).
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
+ * -# Use `SCIPincludeConshdlrSubtour()` in order to include the constraint handler into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/cppmain.cpp in the TSP example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "subtour".
  * -# Adjust the \ref CONS_PROPERTIES "properties of the constraint handler".
  * -# Define the \ref CONS_DATA "constraint data and the constraint handler data". This is optional.
@@ -1647,6 +1793,8 @@
  *
  * Usually, a separation callback searches and produces cuts, that are added with a call to SCIPaddCut().
  * If the cut should be remembered in the global cut pool, it may also call SCIPaddPoolCut().
+ * If the cut is constructed via multiple calls to SCIPaddVarToRow(), then performance can be improved by calling
+ * SCIPcacheRowExtensions() before these additions and SCIPflushRowExtensions() after.
  * However, the callback may also produce domain reductions or add other constraints.
  *
  * The CONSSEPALP callback has the following options:
@@ -1673,6 +1821,8 @@
  *
  * Usually, a separation callback searches and produces cuts, that are added with a call to SCIPaddCut().
  * If the cut should be remembered in the global cut pool, it may also call SCIPaddPoolCut().
+ * If the cut is constructed via multiple calls to SCIPaddVarToRow(), then performance can be improved by calling
+ * SCIPcacheRowExtensions() before these additions and SCIPflushRowExtensions() after.
  * However, the callback may also produce domain reductions or add other constraints.
  *
  * The CONSSEPASOL callback has the following options:
@@ -1919,9 +2069,11 @@
  * -# Copy the template files src/scip/pricer_xyz.c and src/scip/pricer_xyz.h into files "pricer_mypricer.c"
  *    and "pricer_mypricer.h".
  *    \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Use SCIPincludePricerMypricer() in order to include the pricer into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
+ * -# Use `SCIPincludePricerMypricer()` in order to include the pricer into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mypricer".
  * -# Adjust the properties of the pricer (see \ref PRICER_PROPERTIES).
  * -# Define the pricer data (see \ref PRICER_DATA). This is optional.
@@ -2098,9 +2250,8 @@
  * @subsection PRICERFREE
  *
  * If you are using pricer data, you have to implement this method in order to free the pricer data.
- * This can be done by the following procedure:
- *
- * @refsnippet{applications/STP/src/pricer_stp.c,SnippetPricerFreeSTP}
+ * This can be done by the procedure described in stp/src/pricer_stp.c,
+ * see https://scipjack.zib.de/.
  *
  * If you have allocated memory for fields in your pricer data, remember to free this memory
  * before freeing the pricer data itself.
@@ -2188,9 +2339,11 @@
  * -# Copy the template files src/scip/presol_xyz.c and src/scip/presol_xyz.h into files named "presol_mypresolver.c"
  *    and "presol_mypresolver.h".
  *    \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Use SCIPincludePresolMypresolver() in order to include the presolver into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
+ * -# Use `SCIPincludePresolMypresolver()` in order to include the presolver into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mypresolver".
  * -# Adjust the properties of the presolver (see \ref PRESOL_PROPERTIES).
  * -# Define the presolver data (see \ref PRESOL_DATA). This is optional.
@@ -2389,9 +2542,11 @@
  * -# Copy the template files src/scip/sepa_xyz.c and src/scip/sepa_xyz.h into files "sepa_myseparator.c"
  *    and "sepa_myseparator.h".
       \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Use SCIPincludeSepaMyseparator() in order to include the separator into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
+ * -# Use `SCIPincludeSepaMyseparator()` in order to include the separator into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "myseparator".
  * -# Adjust the properties of the separator (see \ref SEPA_PROPERTIES).
  * -# Define the separator data (see \ref SEPA_DATA). This is optional.
@@ -2529,6 +2684,8 @@
  *
  * Usually, the callback searches and produces cuts, that are added with a call to SCIPaddCut().
  * If the cut should be added to the global cut pool, it calls SCIPaddPoolCut().
+ * If the cut is constructed via multiple calls to SCIPaddVarToRow(), then performance can be improved by calling
+ * SCIPcacheRowExtensions() before these additions and SCIPflushRowExtensions() after.
  * In addition to LP rows, the callback may also produce domain reductions or add additional constraints.
  *
  * Overall, the SEPAEXECLP callback has the following options, which is indicated by the possible return values of
@@ -2556,6 +2713,8 @@
  *
  * Usually, the callback searches and produces cuts, that are added with a call to SCIPaddCut().
  * If the cut should be added to the global cut pool, it calls SCIPaddPoolCut().
+ * If the cut is constructed via multiple calls to SCIPaddVarToRow(), then performance can be improved by calling
+ * SCIPcacheRowExtensions() before these additions and SCIPflushRowExtensions() after.
  * In addition to LP rows, the callback may also produce domain reductions or add other constraints.
  *
  * Overall, the SEPAEXECSOL callback has the following options, which is indicated by the possible return values of
@@ -2645,9 +2804,11 @@
  * -# Copy the template files src/scip/prop_xyz.c and src/scip/prop_xyz.h into files named "prop_mypropagator.c"
  *    and "prop_mypropagator.h".
  *    \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Use SCIPincludePropMypropagator() in order to include the propagator into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
+ * -# Use `SCIPincludePropMypropagator()` in order to include the propagator into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mypropagator".
  * -# Adjust the properties of the propagator (see \ref PROP_PROPERTIES).
  * -# Define the propagator data (see \ref PROP_DATA). This is optional.
@@ -2944,9 +3105,11 @@
  * -# Copy the template files src/scip/branch_xyz.c and src/scip/branch_xyz.h into files named
  *    "branch_mybranchingrule.c" and "branch_mybranchingrule.h".
  *    \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Use SCIPincludeBranchruleMybranchingrule() in order to include the branching rule into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
+ * -# Use `SCIPincludeBranchruleMybranchingrule()` in order to include the branching rule into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mybranchingrule".
  * -# Adjust the properties of the branching rule (see \ref BRANCHRULE_PROPERTIES).
  * -# Define the branching rule data (see \ref BRANCHRULE_DATA). This is optional.
@@ -3234,9 +3397,11 @@
  * -# Copy the template files src/scip/cutsel_xyz.c and src/scip/cutsel_xyz.h into files named "cutsel_mycutselector.c"
  *    and "cutsel_mycutselector.h".
  *    \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Use SCIPincludeCutselMycutselector() in oder to include the cut selector into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
+ * -# Use SCIPincludeCutselMycutselector() in order to include the cut selector into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mycutselector".
  * -# Adjust the properties of the cut selector (see \ref CUTSEL_PROPERTIES).
  * -# Define the cut selector data (see \ref CUTSEL_DATA). This is optional.
@@ -3400,9 +3565,11 @@
  * -# Copy the template files src/scip/nodesel_xyz.c and src/scip/nodesel_xyz.h into files named "nodesel_mynodeselector.c"
  *    and "nodesel_mynodeselector.h".
  *    \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Use SCIPincludeNodeselMynodeselector() in oder to include the node selector into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
+ * -# Use SCIPincludeNodeselMynodeselector() in order to include the node selector into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mynodeselector".
  * -# Adjust the properties of the node selector (see \ref NODESEL_PROPERTIES).
  * -# Define the node selector data (see \ref NODESEL_DATA). This is optional.
@@ -3635,9 +3802,11 @@
  * -# Copy the template files src/scip/heur_xyz.c and src/scip/heur_xyz.h into files named "heur_myheuristic.c"
  *    and "heur_myheuristic.h".
  *    \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Use SCIPincludeHeurMyheuristic() in order to include the heuristic into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
+ * -# Use `SCIPincludeHeurMyheuristic()` in order to include the heuristic into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "myheuristic".
  * -# Adjust the properties of the primal heuristic (see \ref HEUR_PROPERTIES).
  * -# Define the primal heuristic data (see \ref HEUR_DATA). This is optional.
@@ -3895,9 +4064,11 @@
  *
  * Here is what you have to do to implement an own expression handler:
  * -# Copy the template files `src/scip/expr_xyz.c` and `src/scip/expr_xyz.h` into files `expr_myfunc.c` and `expr_myfunc.h`, respectively. \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
  * -# Use `SCIPincludeExprhdlrMyfunc()` in order to include the expression handler into your SCIP instance,
- *    e.g., in the main file of your project.
+ *    e.g., in the main file of your project. \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "myfunc".
  * -# Adjust the properties of the expression handler (see \ref EXPRHDLR_PROPERTIES).
  * -# Define the expression handler data and expression data (see \ref EXPRHDLR_DATA). This is optional.
@@ -4345,8 +4516,10 @@
  *
  * Here is what you have to do to implement a nonlinear handler:
  * -# Copy the template files `src/scip/nlhdlr_xyz.c` and `src/scip/nlhdlr_xyz.h` into files `nlhdlr_mystruct.c` and `nlhdlr_mystruct.h`, respectively. \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Use `SCIPincludeNlhdlrMystruct()` in order to include the nonlinear handler into your SCIP instance, e.g., in the main file of your project.
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
+ * -# Use `SCIPincludeNlhdlrMystruct()` in order to include the nonlinear handler into your SCIP instance, e.g., in the main file of your project. \n
+      If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mystruct".
  * -# Adjust the properties of the nonlinear handler (see \ref NLHDLR_PROPERTIES).
  * -# Define the nonlinear handler data and nonlinear handler expression data (see \ref NLHDLR_DATA). This is optional.
@@ -4748,9 +4921,11 @@
  * -# Copy the template files src/scip/relax_xyz.c and src/scip/relax_xyz.h into files named "relax_myrelaxator.c"
  *    and "relax_myrelaxator.h".
  *    \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Use SCIPincludeRelaxMyrelaxator() in order to include the relaxation handler into your SCIP instance,
- *    e.g, in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
+ * -# Use `SCIPincludeRelaxMyrelaxator()` in order to include the relaxation handler into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "myrelaxator".
  * -# Adjust the properties of the relaxation handler (see \ref RELAX_PROPERTIES).
  * -# Define the relaxation handler data (see \ref RELAX_DATA). This is optional.
@@ -4987,9 +5162,11 @@
  * -# Copy the template files src/scip/reader_xyz.c and src/scip/reader_xyz.h into files named
  *    "reader_myreader.c" and "reader_myreader.h".
  *    \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Use SCIPincludeReaderMyreader() in order to include the file reader into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
+ * -# Use `SCIPincludeReaderMyreader()` in order to include the reader into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "myreader".
  * -# Adjust the \ref READER_PROPERTIES "properties of the file reader".
  * -# Define the \ref READER_DATA "file reader data". This is optional.
@@ -5181,9 +5358,11 @@
  * -# Copy the template files src/scip/dialog_xyz.c and src/scip/dialog_xyz.h into files named "dialog_mydialog.c"
  *    and "dialog_mydialog.h".
  *    \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Use SCIPincludeDialogMydialog() in order to include the dialog handler into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
+ * -# Use `SCIPincludeDialogMydialog()` in order to include the dialog handler into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mydialog".
  * -# Adjust the \ref DIALOG_PROPERTIES "properties of the dialog".
  * -# Define the \ref DIALOG_DATA "dialog data". This is optional.
@@ -5350,9 +5529,11 @@
  * -# Copy the template files src/scip/disp_xyz.c and src/scip/disp_xyz.h into files named "disp_mydisplaycolumn.c"
  *    and "disp_mydisplaycolumn.h".
       \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Use SCIPincludeDispMydisplaycolumn() in order to include the display column into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
+ * -# Use `SCIPincludeDispMydisplaycolumn()` in order to include the display column into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mydisplaycolumn".
  * -# Adjust the \ref DISP_PROPERTIES "properties of the display column".
  * -# Define the  \ref DISP_DATA "display column data". This is optional.
@@ -5526,9 +5707,11 @@
  * -# Copy the template files src/scip/event_xyz.c and src/scip/event_xyz.h into files named "event_bestsol.c"
  *    and "event_bestsol.h".
       \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Use SCIPincludeEventBestsol() in order to include the event handler into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Eventhdlr example).
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
+ * -# Use `SCIPincludeEventBestsol()` in order to include the event handler into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "bestsol".
  * -# Adjust the \ref EVENTHDLR_PROPERTIES "properties of the event handler".
  * -# Implement the \ref EVENT_INTERFACE "interface methods".
@@ -5745,9 +5928,11 @@
  *
  * Here is what you have to do to implement an NLPI:
  * -# Copy the template files src/scip/nlpi_xyz.c and src/scip/nlpi_xyz.h into files named "nlpi_mysolver.c" and "nlpi_mysolver.h".
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
  * -# Use `SCIPincludeNlpSolverMysolver()` in order to include the NLPI into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mysolver".
  * -# Adjust the properties of the nlpi (see \ref NLPI_PROPERTIES).
  * -# Define the NLPI and NLPIPROBLEM data (see \ref NLPI_DATA).
@@ -5954,7 +6139,8 @@
  *
  * Here is what you have to do to implement an expression interpreter:
  * -# Copy the file \ref exprinterpret_none.c into a file named "exprinterpret_myad.c".
- *    Make sure to adjust your Makefile such that this file is compiled and linked to your project instead of exprinterpret implementations.
+ *    Make sure to adjust your build system such that this file is compiled and linked to your project instead of exprinterpret implementations. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
  * -# Open the new file with a text editor.
  * -# Define the expression interpreter data (see \ref EXPRINT_DATA).
  * -# Implement the interface methods (see \ref EXPRINT_INTERFACE).
@@ -6056,9 +6242,11 @@
  * -# Copy the template files src/scip/table_xyz.c and src/scip/table_xyz.h into files named "table_mystatisticstable.c"
  *    and "table_mystatisticstable.h".
  *    \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
  * -# Use SCIPincludeTableMystatisticstable() in order to include the statistics table into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mystatisticstable".
  * -# Adjust the \ref TABLE_PROPERTIES "properties of the statistics table".
  * -# Define the  \ref TABLE_DATA "statistics table data". This is optional.
@@ -6290,9 +6478,11 @@
  * -# Copy the template files src/scip/benders_xyz.c and src/scip/benders_xyz.h into files "benders_mybenders.c" and
  *  "benders_mybenders.h".
       \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
  * -# Use SCIPincludeBendersMybenders() in order to include the Benders' decomposition into your SCIP instance, e.g., in
- *  the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ *    the main file of your project (see, e.g., src/cmain.c in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mybenders".
  * -# Adjust the properties of the Benders' decomposition (see \ref BENDERS_PROPERTIES).
  * -# Define the Benders' decomposition data (see \ref BENDERS_DATA). This is optional.
@@ -6611,9 +6801,11 @@
  * -# Copy the template files src/scip/benderscut_xyz.c and src/scip/benderscut_xyz.h into files "benderscut_mybenderscut.c" and
  *  "benderscut_mybenderscut.h".
       \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
  * -# Use SCIPincludeBenderscutMybenderscut() in order to include the Benders' decomposition cut method into your SCIP
- *  instance, e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ *    instance, e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mybenderscut".
  * -# Adjust the properties of the Benders' decomposition (see \ref BENDERSCUT_PROPERTIES).
  * -# Define the Benders' decomposition data (see \ref BENDERSCUT_DATA). This is optional.
@@ -8103,7 +8295,7 @@
 
 /**@page LICENSE License
  *
- * \verbinclude COPYING
+ * \verbinclude LICENSE
  */
 
 /**@page FAQ Frequently Asked Questions (FAQ)
@@ -8136,12 +8328,12 @@
   * The easiest way to load a problem into SCIP is via an input file, given in a format that SCIP can parse directly,
   * see \ref SHELL "the tutorial on how to use the interactive shell".
   * \SCIP is capable of reading more than ten different file formats, including formats for nonlinear
-  * problems and constraint programs. This gives researchers from different communities an easy, first access to the
+  * problems and constraint programs. This gives researchers from different communities an easy access to the
   * \SCIP Optimization Suite. See also the \ref AVAILABLEFORMATS "list of readable file formats".
   *
-  * @section C_API C and C++ API
+  * @section C_API C API
   *
-  * For \SCIP there exists an API to C and C++. Please refer to the \ref PUBLICAPI documentation
+  * The main access point for \SCIP is its API to C. Please refer to the \ref PUBLICAPI documentation
   * for further details.
   *
   * @section CPLUSPLUS C++ wrapper classes
@@ -8149,7 +8341,7 @@
   * Since \SCIP is written in C, its callable library can be directly accessed from C++. If a user wants to program own
   * plugins in C++, there are wrapper classes for all different types of plugins available in the <code>src/objscip</code>
   * directory of the \SCIP standard distribution. SCIP provides several examples that were written in C++, see
-  * \ref EXAMPLES "Examples" and select an example written in C++.
+  * \ref EXAMPLES "Examples".
   *
   * @section SCIPINTERFACES Interfaces for other programming languages
   *
@@ -8157,54 +8349,50 @@
   * on <a href="https://github.com/scipopt">GitHub</a> in order to provide extensions and patches faster
   * and to collaborate on them more easily.
   *
-  * - <a href="https://github.com/scipopt/PySCIPOpt">PySCIPOpt</a> for Python
+  * - <a href="https://github.com/scipopt/PySCIPOpt">PySCIPOpt</a> provides an extensive open-source interface for Python.
   *   PySCIPOpt can be installed via <a href="https://anaconda.org/conda-forge/pyscipopt">conda-forge</a>,
   *   which automatically includes \SCIP.
-  *   PySCIPOpt is our open-source python API for \SCIP, using wrappers to allow users to build
+  *   PySCIPOpt uses wrappers to allow users to build
   *   their own plugins without accessing the C code of \SCIP itself.
   *   Since Python is one of the most commonly used programming languages, especially in the field of
   *   machine learning, the API gives easy access to the solvers functionality to incorporate \SCIP
-  *   into any python project pipeline, extract data for further analysis and computation and allow
-  *   customizing the solving process from the outside.
-  * - <a href="https://github.com/scipopt/SCIP.jl">SCIP.jl</a> for Julia
-  *   The Julia interface exposes an API identical to the SCIP-C_API and implements the
+  *   into any python project pipeline, extract data for further analysis and computation as well as allow
+  *   customizing the solving process.
+  * - <a href="https://github.com/scipopt/SCIP.jl">SCIP.jl</a> is a
+  *   Julia interface that exposes an API identical to the SCIP-C_API and implements the
   *   MathOptInterface used by most constrained solvers in Julia.
   *   It can be accessed through the Julia package manager and will install a pre-built version of
   *   \SCIP if none is provided by the user.
-  * - There is a <a href="https://github.com/scipopt/MatlabSCIPInterface">separate interface</a>
-  *   available from Matlab to SCIP and SCIP-SDP.
-  * - <a href="https://github.com/scipopt/JSCIPOpt">JSCIPOpt</a> for Java
+  * - There is a <a href="https://github.com/scipopt/MatlabSCIPInterface">Matlab interface</a>
+  *   to use SCIP and SCIP-SDP from Matlab and Octave.
+  * - <a href="https://github.com/scipopt/JSCIPOpt">JSCIPOpt</a> is an interface for Java.
   *
   * Contributions to these projects are very welcome.
   *
-  * There are also several third-party python interfaces to the \SCIP Optimization Suite, e.g.,
-  * NUMBERJACK and python-zibopt.
-  * <a href="http://numberjack.ucc.ie/">NUMBERJACK</a> is a constraint programming platform implemented in python.
-  * It supports a variety of different solvers, one of them being the \SCIP Optimization Suite.
-  * <a href="http://code.google.com/p/python-zibopt/">python-zibopt</a> was developed
-  * by Ryan J. O'Neil and is a python extension of the \SCIP Optimization Suite.
-  * <a href="http://picos.zib.de/">PICOS</a> is a python interface for conic optimization,
-  * provided by Guillaume Sagnol.
+  * There are also several third-party python interfaces to the \SCIP Optimization Suite:
+  * - <a href="https://github.com/eomahony/Numberjack">NUMBERJACK</a> is a constraint programming platform implemented in python.
+  *   It supports a variety of different solvers, one of them being the \SCIP Optimization Suite .
+  * - <a href="http://code.google.com/p/python-zibopt/">python-zibopt</a> was developed
+  *   by Ryan J. O'Neil and is a python extension of the \SCIP Optimization Suite (not maintained anymore).
+  * - <a href="http://picos.zib.de/">PICOS</a> is a python interface for conic optimization,
+  *   provided by Guillaume Sagnol.
   *
   * @section MODELLING Modeling languages
   *
   * A natural way of formulating an optimization problem is to use a modeling language.
-  * Besides ZIMPL, that is a part of the \SCIP Optimization Suite,
-  * there are several other modeling tools with a direct interface to \SCIP.
+  * Besides ZIMPL, which is part of the \SCIP Optimization Suite,
+  * there are several other modeling tools with a direct interface to \SCIP:
   *
   * - <a href="https://zimpl.zib.de">ZIMPL</a>, a modeling language for constraint programming,
   * - both <a href="http://www.ampl.com/">AMPL</a> and <a href="http://www.gams.com">GAMS</a>,
   *   are well-suited for modeling mixed-integer linear and nonlinear optimization problems,
   * - and <a href="https://projects.coin-or.org/Cmpl">CMPL</a> for mixed-integer linear problems.
   * - <a href="https://jump.dev/JuMP.jl/stable/">JuMP</a> accesses SCIP through the Julia interface.
+  * - <a href="http://users.isy.liu.se/johanl/yalmip/pmwiki.php?n=Main.HomePage">YALMIP</a> by Johan L&ouml;fberg provides a
+  *   free modeling language.
   *
   * The AMPL and ZIMPL interfaces are included in the \SCIP distribution,
   * the GAMS interface is available <a href="https://github.com/coin-or/GAMSlinks">here</a>.
-  *
-  * The <a href="http://www.i2c2.aut.ac.nz/Wiki/OPTI/index.php">OPTI project</a> by Jonathan Currie provides an external
-  * MATLAB interface for the \SCIP Optimization Suite. Furthermore,
-  * <a href="http://users.isy.liu.se/johanl/yalmip/pmwiki.php?n=Main.HomePage">YALMIP</a> by Johan L&ouml;fberg provides a
-  * free modeling language.
   *
   */
 

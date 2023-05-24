@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -156,17 +165,15 @@ typedef enum OpbSense OPBSENSE;
 struct OpbInput
 {
    SCIP_FILE*            file;
-   char                  linebuf[OPB_MAX_LINELEN+1];
+   char*                 linebuf;
    char*                 token;
    char*                 tokenbuf;
    char*                 pushedtokens[OPB_MAX_PUSHEDTOKENS];
    int                   npushedtokens;
    int                   linenumber;
    int                   linepos;
-   int                   bufpos;
+   int                   linebufsize;
    SCIP_OBJSENSE         objsense;
-   SCIP_Bool             comment;
-   SCIP_Bool             endline;
    SCIP_Bool             eof;
    SCIP_Bool             haserror;
    int                   nproblemcoeffs;
@@ -197,7 +204,7 @@ void syntaxError(
    assert(opbinput != NULL);
 
    SCIPerrorMessage("Syntax error in line %d: %s found <%s>\n", opbinput->linenumber, msg, opbinput->token);
-   if( opbinput->linebuf[strlen(opbinput->linebuf)-1] == '\n' )
+   if( opbinput->linebuf[opbinput->linebufsize - 1] == '\n' )
    {
       SCIPerrorMessage("  input: %s", opbinput->linebuf);
    }
@@ -319,70 +326,30 @@ SCIP_Bool getNextLine(
 
    assert(opbinput != NULL);
 
-   /* if we previously detected a comment we have to parse the remaining line away if there is something left */
-   if( !opbinput->endline && opbinput->comment )
-   {
-      SCIPdebugMsg(scip, "Throwing rest of comment away.\n");
+   /* read next line */
+   opbinput->linepos = 0;
+   opbinput->linebuf[opbinput->linebufsize - 2] = '\0';
 
-      do
-      {
-         opbinput->linebuf[OPB_MAX_LINELEN-2] = '\0';
-         (void)SCIPfgets(opbinput->linebuf, (int) sizeof(opbinput->linebuf), opbinput->file);
-      }
-      while( opbinput->linebuf[OPB_MAX_LINELEN-2] != '\0' );
-
-      opbinput->comment = FALSE;
-      opbinput->endline = TRUE;
-   }
-
-   /* clear the line */
-   opbinput->linebuf[OPB_MAX_LINELEN-2] = '\0';
-
-   /* set line position */
-   if( opbinput->endline )
-   {
-      opbinput->linepos = 0;
-      opbinput->linenumber++;
-   }
-   else
-      opbinput->linepos += OPB_MAX_LINELEN - 2;
-
-   if( SCIPfgets(opbinput->linebuf, (int) sizeof(opbinput->linebuf), opbinput->file) == NULL )
+   if( SCIPfgets(opbinput->linebuf, opbinput->linebufsize, opbinput->file) == NULL )
       return FALSE;
 
-   opbinput->bufpos = 0;
+   opbinput->linenumber++;
 
-   if( opbinput->linebuf[OPB_MAX_LINELEN-2] != '\0' )
+   /* if line is too long for our buffer reallocate buffer */
+   while( opbinput->linebuf[opbinput->linebufsize - 2] != '\0' )
    {
-      char* last;
+      int newsize;
 
-      /* buffer is full; erase last token since it might be incomplete */
-      opbinput->endline = FALSE;
-      last = strrchr(opbinput->linebuf, ' ');
+      newsize = SCIPcalcMemGrowSize(scip, opbinput->linebufsize + 1);
+      SCIP_CALL_ABORT( SCIPreallocBlockMemoryArray(scip, &opbinput->linebuf, opbinput->linebufsize, newsize) );
 
-      if( last == NULL )
-      {
-         SCIPwarningMessage(scip, "we read %d character from the file; these might indicates a corrupted input file!",
-            OPB_MAX_LINELEN - 2);
-         opbinput->linebuf[OPB_MAX_LINELEN-2] = '\0';
-         SCIPdebugMsg(scip, "the buffer might be corrupted\n");
-      }
-      else
-      {
-         SCIPfseek(opbinput->file, -(long) strlen(last), SEEK_CUR);
-         SCIPdebugMsg(scip, "correct buffer, reread the last %ld characters\n", (long) strlen(last));
-         *last = '\0';
-      }
-   }
-   else
-   {
-      /* found end of line */
-      opbinput->endline = TRUE;
+      opbinput->linebuf[newsize-2] = '\0';
+      if ( SCIPfgets(opbinput->linebuf + opbinput->linebufsize - 1, newsize - opbinput->linebufsize + 1, opbinput->file) == NULL )
+         return FALSE;
+      opbinput->linebufsize = newsize;
    }
 
-   opbinput->linebuf[OPB_MAX_LINELEN-1] = '\0'; /* we want to use lookahead of one char -> we need two \0 at the end */
-
-   opbinput->comment = FALSE;
+   opbinput->linebuf[opbinput->linebufsize - 1] = '\0'; /* we want to use lookahead of one char -> we need two \0 at the end */
 
    /* skip characters after comment symbol */
    for( i = 0; commentchars[i] != '\0'; ++i )
@@ -394,7 +361,6 @@ SCIP_Bool getNextLine(
       {
          *commentstart = '\0';
          *(commentstart+1) = '\0'; /* we want to use lookahead of one char -> we need two \0 at the end */
-         opbinput->comment = TRUE;
          break;
       }
    }
@@ -431,7 +397,7 @@ SCIP_Bool getNextToken(
    int tokenlen;
 
    assert(opbinput != NULL);
-   assert(opbinput->bufpos < OPB_MAX_LINELEN);
+   assert(opbinput->linepos < opbinput->linebufsize);
 
    /* check the token stack */
    if( opbinput->npushedtokens > 0 )
@@ -444,43 +410,41 @@ SCIP_Bool getNextToken(
 
    /* skip delimiters */
    buf = opbinput->linebuf;
-   while( isDelimChar(buf[opbinput->bufpos]) )
+   while( isDelimChar(buf[opbinput->linepos]) )
    {
-      if( buf[opbinput->bufpos] == '\0' )
+      if( buf[opbinput->linepos] == '\0' )
       {
          if( !getNextLine(scip, opbinput) )
          {
             SCIPdebugMsg(scip, "(line %d) end of file\n", opbinput->linenumber);
             return FALSE;
          }
-         assert(opbinput->bufpos == 0);
+         assert(opbinput->linepos == 0);
+         /* update buf, because the linebuffer may have been reallocated */
+         buf = opbinput->linebuf;
       }
       else
-      {
-         opbinput->bufpos++;
          opbinput->linepos++;
-      }
    }
-   assert(opbinput->bufpos < OPB_MAX_LINELEN);
-   assert(!isDelimChar(buf[opbinput->bufpos]));
+   assert(opbinput->linepos < opbinput->linebufsize);
+   assert(!isDelimChar(buf[opbinput->linepos]));
 
    /* check if the token is a value */
    hasdot = FALSE;
    exptype = OPB_EXP_NONE;
-   if( isValueChar(buf[opbinput->bufpos], buf[opbinput->bufpos+1], TRUE, &hasdot, &exptype) )
+   if( isValueChar(buf[opbinput->linepos], buf[opbinput->linepos+1], TRUE, &hasdot, &exptype) )
    {
       /* read value token */
       tokenlen = 0;
       do
       {
          assert(tokenlen < OPB_MAX_LINELEN);
-         assert(!isDelimChar(buf[opbinput->bufpos]));
-         opbinput->token[tokenlen] = buf[opbinput->bufpos];
+         assert(!isDelimChar(buf[opbinput->linepos]));
+         opbinput->token[tokenlen] = buf[opbinput->linepos];
          tokenlen++;
-         opbinput->bufpos++;
          opbinput->linepos++;
       }
-      while( isValueChar(buf[opbinput->bufpos], buf[opbinput->bufpos+1], FALSE, &hasdot, &exptype) );
+      while( isValueChar(buf[opbinput->linepos], buf[opbinput->linepos+1], FALSE, &hasdot, &exptype) );
    }
    else
    {
@@ -489,14 +453,13 @@ SCIP_Bool getNextToken(
       do
       {
          assert(tokenlen < OPB_MAX_LINELEN);
-         opbinput->token[tokenlen] = buf[opbinput->bufpos];
+         opbinput->token[tokenlen] = buf[opbinput->linepos];
          tokenlen++;
-         opbinput->bufpos++;
          opbinput->linepos++;
          if( tokenlen == 1 && isTokenChar(opbinput->token[0]) )
             break;
       }
-      while( !isDelimChar(buf[opbinput->bufpos]) && !isTokenChar(buf[opbinput->bufpos]) );
+      while( !isDelimChar(buf[opbinput->linepos]) && !isTokenChar(buf[opbinput->linepos]) );
 
       /* if the token is an equation sense '<', '>', or '=', skip a following '='
        * if the token is an equality token '=' and the next character is a '<' or '>',
@@ -504,15 +467,13 @@ SCIP_Bool getNextToken(
        */
       if( tokenlen >= 1
          && (opbinput->token[tokenlen-1] == '<' || opbinput->token[tokenlen-1] == '>' || opbinput->token[tokenlen-1] == '=')
-         && buf[opbinput->bufpos] == '=' )
+         && buf[opbinput->linepos] == '=' )
       {
-         opbinput->bufpos++;
          opbinput->linepos++;
       }
-      else if( opbinput->token[tokenlen-1] == '=' && (buf[opbinput->bufpos] == '<' || buf[opbinput->bufpos] == '>') )
+      else if( opbinput->token[tokenlen-1] == '=' && (buf[opbinput->linepos] == '<' || buf[opbinput->linepos] == '>') )
       {
-         opbinput->token[tokenlen-1] = buf[opbinput->bufpos];
-         opbinput->bufpos++;
+         opbinput->token[tokenlen-1] = buf[opbinput->linepos];
          opbinput->linepos++;
       }
    }
@@ -932,6 +893,7 @@ SCIP_RETCODE readCoefficients(
    haveweightend = FALSE;
    ntmpcoefs = 0;
    ntmpvars = 0;
+
    while( getNextToken(scip, opbinput) && !hasError(opbinput) )
    {
       if( isEndLine(opbinput) )
@@ -1606,7 +1568,6 @@ static
 SCIP_RETCODE getMaxAndConsDim(
    SCIP*                 scip,               /**< SCIP data structure */
    OPBINPUT*             opbinput,           /**< OPB reading data */
-   const char*           filename,           /**< name of the input file */
    SCIP_Real*            objoffset           /**< pointer to store objective offset */
    )
 {
@@ -1625,14 +1586,31 @@ SCIP_RETCODE getMaxAndConsDim(
    nproducts = NULL;
 
    *objoffset = 0.0;
+   opbinput->linebuf[opbinput->linebufsize - 2] = '\0';
 
    do
    {
-      if( SCIPfgets(opbinput->linebuf, (int) sizeof(opbinput->linebuf), opbinput->file) == NULL )
+      if( SCIPfgets(opbinput->linebuf, opbinput->linebufsize, opbinput->file) == NULL )
       {
-         assert(SCIPfeof( opbinput->file ) );
+         assert( SCIPfeof(opbinput->file) );
          break;
       }
+
+      /* if line is too long for our buffer reallocate buffer */
+      while( opbinput->linebuf[opbinput->linebufsize - 2] != '\0' )
+      {
+         int newsize;
+
+         newsize = SCIPcalcMemGrowSize(scip, opbinput->linebufsize + 1);
+         SCIP_CALL_ABORT( SCIPreallocBlockMemoryArray(scip, &opbinput->linebuf, opbinput->linebufsize, newsize) );
+
+         opbinput->linebuf[newsize-2] = '\0';
+         if ( SCIPfgets(opbinput->linebuf + opbinput->linebufsize - 1, newsize - opbinput->linebufsize + 1, opbinput->file) == NULL )
+            return SCIP_READERROR;
+         opbinput->linebufsize = newsize;
+      }
+      opbinput->linebuf[opbinput->linebufsize - 1] = '\0'; /* we want to use lookahead of one char -> we need two \0 at the end */
+
 
       /* read characters after comment symbol */
       for( i = 0; commentchars[i] != '\0'; ++i )
@@ -1681,21 +1659,14 @@ SCIP_RETCODE getMaxAndConsDim(
                break;
             }
 
+            /* make sure that comment vanishes */
+            *commentstart = '\0';
+
             break;
          }
       }
    }
    while(commentstart != NULL && !stop);
-
-   opbinput->linebuf[0] = '\0';
-
-#if 0 /* following lines should be correct, but it seems that gzseek does not reset the position if standing at the end of a file */
-   /* reset filereader pointer to the beginning */
-   (void) SCIPfseek(opbinput->file, 0, SEEK_SET);
-#else
-   SCIPfclose(opbinput->file);
-   opbinput->file = SCIPfopen(filename, "r");
-#endif
 
    return SCIP_OKAY;
 }
@@ -1729,9 +1700,7 @@ SCIP_RETCODE readOPBFile(
     */
 
    /* tries to read the first comment line which usually contains information about the max size of "and" products */
-   SCIP_CALL( getMaxAndConsDim(scip, opbinput, filename, &objoffset) );
-
-   BMSclearMemoryArray(opbinput->linebuf, OPB_MAX_LINELEN);
+   SCIP_CALL( getMaxAndConsDim(scip, opbinput, &objoffset) );
 
    /* create problem */
    SCIP_CALL( SCIPcreateProb(scip, filename, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
@@ -2255,7 +2224,7 @@ SCIP_RETCODE writeOpbObjective(
             if( strcmp(SCIPconshdlrGetName(conshdlr), "linear") == 0 )
                (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "soft: %g;\n", SCIPgetRhsLinear(scip, topcostcons));
             else if( strcmp(SCIPconshdlrGetName(conshdlr), "knapsack") == 0 )
-               (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "soft: %SCIP_LONGINT_FORMAT;\n",
+               (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "soft: %" SCIP_LONGINT_FORMAT ";\n",
                   SCIPgetCapacityKnapsack(scip, topcostcons));
             else if( strcmp(SCIPconshdlrGetName(conshdlr), "setppc") == 0 )
                (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "soft: 1;\n");
@@ -2370,7 +2339,7 @@ SCIP_RETCODE writeOpbObjective(
 
                      if( topcostfound )
                      {
-                        (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "soft: %SCIP_LONGINT_FORMAT;\n",
+                        (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "soft: %" SCIP_LONGINT_FORMAT ";\n",
                            SCIPgetCapacityKnapsack(scip, cons));
                         appendBuffer(scip, file, linebuffer, &linecnt, buffer);
                         writeBuffer(scip, file, linebuffer, &linecnt);
@@ -4302,7 +4271,9 @@ SCIP_RETCODE SCIPreadOpb(
 
    /* initialize OPB input data */
    opbinput.file = NULL;
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &opbinput.linebuf, OPB_MAX_LINELEN) );
    opbinput.linebuf[0] = '\0';
+   opbinput.linebufsize = OPB_MAX_LINELEN;
    SCIP_CALL( SCIPallocBufferArray(scip, &opbinput.token, OPB_MAX_LINELEN) );
    opbinput.token[0] = '\0';
    SCIP_CALL( SCIPallocBufferArray(scip, &opbinput.tokenbuf, OPB_MAX_LINELEN) );
@@ -4314,11 +4285,8 @@ SCIP_RETCODE SCIPreadOpb(
 
    opbinput.npushedtokens = 0;
    opbinput.linenumber = 1;
-   opbinput.bufpos = 0;
    opbinput.linepos = 0;
    opbinput.objsense = SCIP_OBJSENSE_MINIMIZE;
-   opbinput.comment = FALSE;
-   opbinput.endline = FALSE;
    opbinput.eof = FALSE;
    opbinput.haserror = FALSE;
    opbinput.nproblemcoeffs = 0;
@@ -4339,6 +4307,7 @@ SCIP_RETCODE SCIPreadOpb(
    }
    SCIPfreeBufferArrayNull(scip, &opbinput.tokenbuf);
    SCIPfreeBufferArrayNull(scip, &opbinput.token);
+   SCIPfreeBlockMemoryArray(scip, &opbinput.linebuf, opbinput.linebufsize);
 
    if( retcode == SCIP_PLUGINNOTFOUND )
       retcode = SCIP_READERROR;

@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -2223,6 +2232,7 @@ void SCIPmultihashPrintStatistics(
       }
    }
    assert(sumslotsize == multihash->nelements);
+   SCIP_UNUSED(sumslotsize);
 
    SCIPmessagePrintInfo(messagehdlr, "%" SCIP_LONGINT_FORMAT " multihash entries, used %d/%d slots (%.1f%%)",
       multihash->nelements, usedslots, multihash->nlists, 100.0*(SCIP_Real)usedslots/(SCIP_Real)(multihash->nlists));
@@ -8339,12 +8349,12 @@ SCIP_RETCODE SCIPdigraphComputeDirectedComponents(
                                               *   components */
    )
 {
-   int* lowlink;
-   int* dfsidx;
-   int* stack;
+   int* lowlink = NULL;
+   int* dfsidx = NULL;
+   int* stack = NULL;
    int stacksize;
-   SCIP_Bool* unprocessed;
-   SCIP_Bool* nodeinstack;
+   SCIP_Bool* unprocessed = NULL;
+   SCIP_Bool* nodeinstack = NULL;
    int maxdfs;
    int nstorednodes;
    int i;
@@ -9661,10 +9671,16 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
  */
 #if defined(__INTEL_COMPILER) || defined(_MSC_VER)
 #pragma fenv_access (on)
-#elif defined __GNUC__
+#elif defined(__GNUC__) && !defined(__clang__)
 #pragma STDC FENV_ACCESS ON
 #endif
-
+#if defined(__GNUC__) && !defined(__INTEL_COMPILER)
+#if defined(__clang__)
+__attribute__((optnone))
+#else
+__attribute__((optimize(0)))
+#endif
+#endif
 /** given a (usually very small) interval, tries to find a rational number with simple denominator (i.e. a small
  *  number, probably multiplied with powers of 10) out of this interval; returns TRUE iff a valid rational
  *  number inside the interval was found
@@ -9708,7 +9724,7 @@ SCIP_Bool SCIPfindSimpleRational(
 
 #if defined(__INTEL_COMPILER) || defined(_MSC_VER)
 #pragma fenv_access (off)
-#elif defined __GNUC__
+#elif defined(__GNUC__) && !defined(__clang__)
 #pragma STDC FENV_ACCESS OFF
 #endif
 

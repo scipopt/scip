@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -142,7 +151,7 @@ SCIP_RETCODE SCIPflushLP(
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPflushLP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPlpFlush(scip->lp, scip->mem->probmem, scip->set, scip->eventqueue) );
+   SCIP_CALL( SCIPlpFlush(scip->lp, scip->mem->probmem, scip->set, scip->transprob, scip->eventqueue) );
 
    return SCIP_OKAY;
 }
@@ -906,7 +915,7 @@ SCIP_RETCODE SCIPwriteLP(
    }
 
    /* we need a flushed lp to write the current lp */
-   SCIP_CALL( SCIPlpFlush(scip->lp, scip->mem->probmem, scip->set, scip->eventqueue) );
+   SCIP_CALL( SCIPlpFlush(scip->lp, scip->mem->probmem, scip->set, scip->transprob, scip->eventqueue) );
 
    SCIP_CALL( SCIPlpWrite(scip->lp, filename) );
 
@@ -935,7 +944,7 @@ SCIP_RETCODE SCIPwriteMIP(
    SCIP_CALL( SCIPcheckStage(scip, "SCIPwriteMIP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    /* we need a flushed lp to write the current mip */
-   SCIP_CALL( SCIPlpFlush(scip->lp, scip->mem->probmem, scip->set, scip->eventqueue) );
+   SCIP_CALL( SCIPlpFlush(scip->lp, scip->mem->probmem, scip->set, scip->transprob, scip->eventqueue) );
 
    SCIP_CALL( SCIPlpWriteMip(scip->lp, scip->set, scip->messagehdlr, filename, genericnames,
          origobj, scip->origprob->objsense, scip->transprob->objscale, scip->transprob->objoffset, lazyconss) );
@@ -1682,6 +1691,9 @@ SCIP_RETCODE SCIPflushRowExtensions(
  *        added to the row, but the corresponding constant is added. Similarly, if the input variable is aggregated (as
  *        given by the status SCIP_VARSTATUS_AGGREGATED), then the input variable is substituted with its aggregation.
  *        For other cases, and to better understand the function behavior, please check the code of SCIPvarAddToRow.
+ *
+ *  @note When several variables are added to a row with the use of this function, performance can be improved by
+ *        calling SCIPcacheRowExtensions() before these additions and SCIPflushRowExtensions() after.
  */
 SCIP_RETCODE SCIPaddVarToRow(
    SCIP*                 scip,               /**< SCIP data structure */

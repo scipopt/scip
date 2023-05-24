@@ -1,17 +1,26 @@
-#* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-#*                                                                           *
-#*                  This file is part of the program and library             *
-#*         SCIP --- Solving Constraint Integer Programs                      *
-#*                                                                           *
-#*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            *
-#*                            fuer Informationstechnik Berlin                *
-#*                                                                           *
-#*  SCIP is distributed under the terms of the ZIB Academic License.         *
-#*                                                                           *
-#*  You should have received a copy of the ZIB Academic License              *
-#*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
-#*                                                                           *
-#* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *#
+#*                                                                           *#
+#*                  This file is part of the program and library             *#
+#*         SCIP --- Solving Constraint Integer Programs                      *#
+#*                                                                           *#
+#*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      *#
+#*                                                                           *#
+#*  Licensed under the Apache License, Version 2.0 (the "License");          *#
+#*  you may not use this file except in compliance with the License.         *#
+#*  You may obtain a copy of the License at                                  *#
+#*                                                                           *#
+#*      http://www.apache.org/licenses/LICENSE-2.0                           *#
+#*                                                                           *#
+#*  Unless required by applicable law or agreed to in writing, software      *#
+#*  distributed under the License is distributed on an "AS IS" BASIS,        *#
+#*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. *#
+#*  See the License for the specific language governing permissions and      *#
+#*  limitations under the License.                                           *#
+#*                                                                           *#
+#*  You should have received a copy of the Apache-2.0 license                *#
+#*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         *#
+#*                                                                           *#
+#* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *#
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -156,11 +165,11 @@ LPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(LPILIBOBJ:.o=.c))
 SOFTLINKS	+=	$(LIBDIR)/include/mskinc
 SOFTLINKS	+=	$(LIBDIR)/shared/libmosek.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
 SOFTLINKS	+=	$(LIBDIR)/shared/libiomp5.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)    # for Mosek < 9
-SOFTLINKS	+=	$(LIBDIR)/shared/libcilkrts.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
+SOFTLINKS	+=	$(LIBDIR)/shared/libcilkrts.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)  # for Mosek < 10
 LPIINSTMSG	=	"  -> \"mskinc\" is the path to the Mosek \"include\" directory, e.g., \"<Mosek-path>/tools/platform/linux64x86/h\".\n"
 LPIINSTMSG	+=	" -> \"libmosek.*\" is the path to the Mosek library, e.g., \"<Mosek-path>/tools/platform/linux64x86/bin/libmosek64.so\".\n"
 LPIINSTMSG	+=	" -> \"libiomp5.*\" is the path to the Intel OpenMP library, e.g., \"<Mosek-path>/tools/platform/linux64x86/bin/libiomp5.so\" (required for Mosek < 9.0 only).\n"
-LPIINSTMSG	+=	" -> \"libcilkrts.*\" is the path to the cilk library, e.g., \"<Mosek-path>/tools/platform/linux64x86/bin/libcilkrts.so.5\".\n"
+LPIINSTMSG	+=	" -> \"libcilkrts.*\" is the path to the cilk library, e.g., \"<Mosek-path>/tools/platform/linux64x86/bin/libcilkrts.so.5\" (required for Mosek < 10.0 only).\n"
 endif
 
 LPSOPTIONS	+=	spx1
@@ -226,7 +235,7 @@ endif
 LPSOPTIONS	+=	clp
 ifeq ($(LPS),clp)
 LINKER		=	CPP
-FLAGS		+=	-I$(LIBDIR)/$(LIBTYPE)/clp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)/include/coin
+FLAGS		+=	-I$(LIBDIR)/$(LIBTYPE)/clp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)/include/coin -I$(LIBDIR)/$(LIBTYPE)/clp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)/include/coin-or
 LPILIBOBJ	=	lpi/lpi_clp.o scip/bitencode.o blockmemshell/memory.o scip/rbtree.o scip/message.o
 LPILIBSRC	=	$(SRCDIR)/lpi/lpi_clp.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/rbtree.c $(SRCDIR)/scip/message.c
 SOFTLINKS	+=	$(LIBDIR)/$(LIBTYPE)/clp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)
@@ -279,7 +288,10 @@ LPILIBSHORTLINK = 	$(LIBDIR)/$(LIBTYPE)/lib$(LPILIBSHORTNAME).$(LIBEXT)
 ALLSRC		+=	$(LPILIBSRC)
 
 ifeq ($(SHARED),true)
-LPILIBEXTLIBS	=	$(LIBBUILD_L)$(LIBDIR)/$(LIBTYPE) $(LPSLDFLAGS) $(LINKRPATH)$(realpath $(LIBDIR)/$(LIBTYPE))
+LPILIBEXTLIBS	=	$(LIBBUILD_L)$(LIBDIR)/$(LIBTYPE) $(LPSLDFLAGS)
+ifneq ($(LINKRPATH),)
+LPILIBEXTLIBS	+=	$(LINKRPATH)$(realpath $(LIBDIR)/$(LIBTYPE))
+endif
 endif
 
 #-----------------------------------------------------------------------------
@@ -306,7 +318,7 @@ TPIOPTIONS	+=	tny
 ifeq ($(TPI),tny)
 TPILIBOBJ	=	tpi/tpi_tnycthrd.o \
 			tinycthread/tinycthread.o
-FLAGS		+=	-DTPI_TNYC
+FLAGS		+=	-DTPI_TNY
 endif
 
 TPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(TPILIBOBJ:.o=.c))
@@ -331,16 +343,34 @@ endif
 
 SYMOPTIONS	+=	bliss
 ifeq ($(SYM),bliss)
-FLAGS		+=	-I$(LIBDIR)/include/
 SYMOBJ		=	symmetry/compute_symmetry_bliss.o
 SYMOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(SYMOBJ))
-SYMSRC  	=	$(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.cpp))
+SYMSRC		=       $(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.cpp))
+ifeq ($(BLISSEXTERNAL),false)
+FLAGS		+=	-I$(SRCDIR)/bliss/src -I$(SRCDIR)/bliss/include
+BLISSOBJ	=	bliss/src/abstractgraph.o
+BLISSOBJ	+=	bliss/src/bliss.o
+BLISSOBJ	+=	bliss/src/bliss_C.o
+BLISSOBJ	+=	bliss/src/defs.o
+BLISSOBJ	+=	bliss/src/digraph.o
+BLISSOBJ	+=	bliss/src/graph.o
+BLISSOBJ	+=	bliss/src/orbit.o
+BLISSOBJ	+=	bliss/src/partition.o
+BLISSOBJ	+=	bliss/src/uintseqhash.o
+BLISSOBJ	+=	bliss/src/utils.o
+SYMOBJFILES	+=	$(addprefix $(LIBOBJDIR)/,$(BLISSOBJ))
+SYMSRC  	+=	$(addprefix $(SRCDIR)/,$(BLISSOBJ:.o=.cc))
+else
+FLAGS		+=	-I$(LIBDIR)/include/
+endif
 ALLSRC		+=	$(SYMSRC)
+ifeq ($(BLISSEXTERNAL),true)
 SOFTLINKS	+=	$(LIBDIR)/include/bliss
 ifeq ($(SHARED),true)
 SOFTLINKS	+=	$(LIBDIR)/shared/libbliss.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
 else
 SOFTLINKS	+=	$(LIBDIR)/static/libbliss.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT)
+endif
 endif
 LPIINSTMSG	+=	"\n  -> \"blissinc\" is the path to the BLISS directory, e.g., \"<BLISS-path>\".\n"
 LPIINSTMSG	+=	" -> \"libbliss.*.a\" is the path to the BLISS library, e.g., \"<BLISS-path>/libbliss.a\"\n"
@@ -352,7 +382,7 @@ endif
 #-----------------------------------------------------------------------------
 
 ifeq ($(PAPILO),true)
-FLAGS        +=    -DSCIP_WITH_PAPILO -DPAPILO_NO_CMAKE_CONFIG -isystem $(LIBDIR)/include/tbb/include -isystem $(LIBDIR)/include/papilo/external -isystem $(LIBDIR)/include/papilo/src
+FLAGS        +=    -DSCIP_WITH_PAPILO -DPAPILO_NO_CMAKE_CONFIG -I$(LIBDIR)/include/tbb/include -I$(LIBDIR)/include/papilo/external -I$(LIBDIR)/include/papilo/src
 SOFTLINKS    +=    $(LIBDIR)/include/papilo
 LPIINSTMSG    +=    "\n  -> \"papilo\" is the path to the PaPILO directory\n"
 SOFTLINKS    +=    $(LIBDIR)/include/boost
@@ -414,6 +444,7 @@ LPIINSTMSG	+=	"\n  -> \"ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)\" is a direc
 endif
 
 ifeq ($(FILTERSQP),true)
+FLAGS		+=	-DFNAME_$(FORTRAN_NAMING_CONVENTION)
 SOFTLINKS	+=	$(LIBDIR)/$(LIBTYPE)/libfiltersqp.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT)
 #SOFTLINKS	+=	$(LIBDIR)/$(LIBTYPE)/libfiltersqp.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
 SOFTLINKS	+=	$(LIBDIR)/$(LIBTYPE)/libbqpd.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT)
@@ -436,10 +467,14 @@ endif
 ifeq ($(SHARED),true)
 SCIPLIBEXTLIBS	=	$(LIBBUILD_L)$(LIBDIR)/$(LIBTYPE) $(IPOPTLIBS) $(FILTERSQPLIBS)
 ifeq ($(IPOPT),true)
+ifneq ($(LINKRPATH),)
 SCIPLIBEXTLIBS	+=	 $(LINKRPATH)$(realpath $(LIBDIR)/$(LIBTYPE)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib)
 endif
+endif
 ifeq ($(WORHP),true)
+ifneq ($(LINKRPATH),)
 SCIPLIBEXTLIBS	+=	$(LINKRPATH)$(realpath $(LIBDIR)/$(LIBTYPE)/worhp.$(OSTYPE).$(ARCH).$(COMP).$(WORHPOPT)/lib)
+endif
 endif
 ifeq ($(ZLIB),true)
 SCIPLIBEXTLIBS	+=	$(ZLIB_LDFLAGS)
@@ -450,7 +485,10 @@ endif
 ifeq ($(READLINE_LDFLAGS),true)
 SCIPLIBEXTLIBS	+=	$(READLINE_LDFLAGS)
 endif
-SCIPLIBEXTLIBS	+=	$(ZIMPLLIB) $(LINKRPATH)$(realpath $(LIBDIR)/$(LIBTYPE))
+SCIPLIBEXTLIBS	+=	$(ZIMPLLIB)
+ifneq ($(LINKRPATH),)
+SCIPLIBEXTLIBS	+=	$(LINKRPATH)$(realpath $(LIBDIR)/$(LIBTYPE))
+endif
 endif
 
 
@@ -1280,6 +1318,10 @@ ifneq ($(RANLIB),)
 		$(RANLIB) $@
 endif
 
+ifneq ($(LINKRPATH),)
+LIBSCIPRPATHARG = $(LINKRPATH)$(SCIPREALPATH)/$(LIBDIR)/shared
+endif
+
 .PHONY: libscip
 libscip:	preprocess
 		@$(MAKE) $(SCIPLIBFILE) $(SCIPLIBLINK) $(SCIPLIBSHORTLINK)
@@ -1294,7 +1336,7 @@ ifneq ($(RANLIB),)
 endif
 else
 		$(LIBBUILD) $(LIBBUILDFLAGS) $(LIBBUILD_o)$@ $(SCIPLIBBASEOBJFILES) $(LPILIBOBJFILES) $(LPILIBEXTLIBS) $(TPILIBOBJFILES) $(SYMOBJFILES) $(OBJSCIPLIBOBJFILES) $(SCIPLIBEXTLIBS) \
-		$(LPSLDFLAGS) $(LDFLAGS) $(LINKRPATH)$(SCIPREALPATH)/$(LIBDIR)/shared
+		$(LPSLDFLAGS) $(LDFLAGS) $(LIBSCIPRPATHARG)
 endif
 
 $(BINOBJDIR)/%.o:	$(SRCDIR)/%.c | $(BINOBJDIR)
@@ -1320,18 +1362,22 @@ $(LIBOBJDIR)/%.o:	$(SRCDIR)/%.cpp | $(LIBOBJDIR) $(LIBOBJSUBDIRS)
 		@echo "-> compiling $@"
 		$(CXX) $(FLAGS) $(OFLAGS) $(LIBOFLAGS) $(CXXFLAGS) $(DFLAGS) $(TPICFLAGS) $(CXX_c)$< $(CXX_o)$@
 
+$(LIBOBJDIR)/%.o:	$(SRCDIR)/%.cc | $(LIBOBJDIR) $(LIBOBJSUBDIRS)
+		@echo "-> compiling $@"
+		$(CXX) $(FLAGS) $(OFLAGS) $(LIBOFLAGS) $(CXXFLAGS) $(DFLAGS) $(TPICFLAGS) $(CXX_c)$< $(CXX_o)$@
+
 -include $(LASTSETTINGS)
 
 .PHONY: windowslib
-windowslib: $(SCIPLIBBASEOBJFILES) $(MAINOBJFILES) $(LPILIBOBJFILES) $(OBJSCIPLIBOBJFILES) $(TPILIBOBJFILES) | $(LIBOBJSUBDIRS) $(LIBDIR)/$(LIBTYPE)
+windowslib: $(SCIPLIBBASEOBJFILES) $(MAINOBJFILES) $(LPILIBOBJFILES) $(OBJSCIPLIBOBJFILES) $(TPILIBOBJFILES) $(SYMOBJFILES) | $(LIBOBJSUBDIRS) $(LIBDIR)/$(LIBTYPE)
 		@echo "-> generating Windows library $@"
 ifeq ($(SHARED),true)
 		$(LINKCC) $(LIBBUILDFLAGS) $(LINKCC_L)$(LIBDIR)/$(LIBTYPE) $(LIBBUILD_o)$(LIBDIR)/$(LIBTYPE)/$(WINLIBFILENAME) \
-			$(SCIPLIBBASEOBJFILES) $(OBJSCIPLIBOBJFILES) $(LPILIBOBJFILES) $(TPILIBOBJFILES) \
+			$(SCIPLIBBASEOBJFILES) $(OBJSCIPLIBOBJFILES) $(LPILIBOBJFILES) $(TPILIBOBJFILES) $(SYMOBJFILES) \
 			$(LPSLDFLAGS) $(LDFLAGS)
 else
 		$(LIBBUILD) $(LIBBUILDFLAGS) $(LINKCC_L)$(LIBDIR)/$(LIBTYPE) $(LIBBUILD_o)$(LIBDIR)/$(LIBTYPE)/$(WINLIBFILENAME) \
-			$(SCIPLIBBASEOBJFILES) $(OBJSCIPLIBOBJFILES) $(LPILIBOBJFILES) $(TPILIBOBJFILES) \
+			$(SCIPLIBBASEOBJFILES) $(OBJSCIPLIBOBJFILES) $(LPILIBOBJFILES) $(TPILIBOBJFILES) $(SYMOBJFILES) \
 			$(LPSLDFLAGS) $(LDFLAGS)
 endif
 
