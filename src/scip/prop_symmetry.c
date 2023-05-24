@@ -5867,6 +5867,7 @@ static
 SCIP_RETCODE addSSTConss(
    SCIP*                 scip,               /**< SCIP instance */
    SCIP_PROPDATA*        propdata,           /**< datas of symmetry propagator */
+   SCIP_Bool             onlywithcontvars,   /**< only handle components that contain continuous variables with SST */
    int*                  nchgbds             /**< pointer to store number of bound changes (or NULL) */
    )
 { /*lint --e{641}*/
@@ -5906,7 +5907,10 @@ SCIP_RETCODE addSSTConss(
    SCIP_Bool conflictgraphcreated = FALSE;
    SCIP_Bool mixedcomponents;
    int* norbitleadercomponent;
+   int* perm;
+   SCIP_VARTYPE vartype;
 
+   int i;
    int c;
    int p;
 
@@ -6023,6 +6027,28 @@ SCIP_RETCODE addSSTConss(
 
       if ( componentblocked[c] )
          continue;
+
+      if ( onlywithcontvars )
+      {
+         /* ignore this component if no continuous variables are contained */
+         for (p = componentbegins[c]; p < componentbegins[c + 1]; ++p)
+         {
+            perm = propdata->perms[p];
+            for (i = 0; i < propdata->npermvars; ++i)
+            {
+               if ( perm[i] == i )
+                  continue;
+               vartype = SCIPvarGetType(propdata->permvars[i]);
+               if ( vartype == SCIP_VARTYPE_CONTINUOUS || vartype == SCIP_VARTYPE_IMPLINT )
+                  goto COMPONENTOK;
+            }
+         }
+         /* loop terminated naturally, so component does not have continuous or implicitly integer variables. */
+         continue;
+
+         COMPONENTOK:
+         ;
+      }
 
       for (p = componentbegins[c]; p < componentbegins[c + 1]; ++p)
          inactiveperms[components[p]] = FALSE;
@@ -7132,6 +7158,9 @@ SCIP_RETCODE tryAddSymmetryHandlingMethods(
    int ncomponentshandled;
    int i;
 
+   /* whether orbital reduction or lexicographic reduction is used, used for prioritizing handling SST cuts */
+   SCIP_Bool useorbitalredorlexred;
+
    assert( prop != NULL );
    assert( scip != NULL );
 
@@ -7228,25 +7257,13 @@ SCIP_RETCODE tryAddSymmetryHandlingMethods(
    }
 
 
-   /* orbital reduction and (compatable) dynamic lexicographic reduction propagation */
-   if ( ISORBITALREDUCTIONACTIVE(propdata->usesymmetry)
-         || ( ISSYMRETOPESACTIVE(propdata->usesymmetry) && propdata->usedynamicprop && propdata->addsymresacks ) )
-   {
-      SCIP_CALL( tryAddOrbitalRedLexRed(scip, propdata) );
-
-      /* possibly terminate early */
-      if ( SCIPisStopped(scip) || (propdata->ncomponents >= 0 && propdata->ncompblocked >= propdata->ncomponents) )
-      {
-         assert( propdata->ncomponents >= 0 && propdata->ncompblocked <= propdata->ncomponents );
-         goto STATISTICS;
-      }
-   }
-
-
    /* SST cuts */
+   useorbitalredorlexred = ISORBITALREDUCTIONACTIVE(propdata->usesymmetry)
+      || ( ISSYMRETOPESACTIVE(propdata->usesymmetry) && propdata->usedynamicprop && propdata->addsymresacks );
    if ( ISSSTACTIVE(propdata->usesymmetry) )
    {
-      SCIP_CALL( addSSTConss(scip, propdata, nchgbds) );
+      /* if orbital red or lexred is used, only handle components that contain continuous variables with SST */
+      SCIP_CALL( addSSTConss(scip, propdata, useorbitalredorlexred, nchgbds) );
 
       /* possibly terminate early */
       if ( SCIPisStopped(scip) || (propdata->ncomponents >= 0 && propdata->ncompblocked >= propdata->ncomponents) )
@@ -7257,6 +7274,20 @@ SCIP_RETCODE tryAddSymmetryHandlingMethods(
       /* @todo if propdata->addsymresacks, then symresacks can be compatible with SST.
        * Instead of doing it in the next block, add symresacks for that case within addSSTConss.
        */
+   }
+
+
+   /* orbital reduction and (compatable) dynamic lexicographic reduction propagation */
+   if ( useorbitalredorlexred )
+   {
+      SCIP_CALL( tryAddOrbitalRedLexRed(scip, propdata) );
+
+      /* possibly terminate early */
+      if ( SCIPisStopped(scip) || (propdata->ncomponents >= 0 && propdata->ncompblocked >= propdata->ncomponents) )
+      {
+         assert( propdata->ncomponents >= 0 && propdata->ncompblocked <= propdata->ncomponents );
+         goto STATISTICS;
+      }
    }
 
 
