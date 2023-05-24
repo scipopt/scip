@@ -215,8 +215,8 @@ SCIP_RETCODE identifyOrbitalSymmetriesBroken(
 #ifndef NDEBUG
    for (i = 0; i < orcdata->npermvars; ++i)
    {
-      assert( SCIPvarGetLbGlobal(orcdata->permvars[i]) == orcdata->globalvarlbs[i] );
-      assert( SCIPvarGetUbGlobal(orcdata->permvars[i]) == orcdata->globalvarubs[i] );
+      assert( SCIPisEQ(scip, SCIPvarGetLbGlobal(orcdata->permvars[i]), orcdata->globalvarlbs[i]) );
+      assert( SCIPisEQ(scip, SCIPvarGetUbGlobal(orcdata->permvars[i]), orcdata->globalvarubs[i]) );
    }
 #endif
 
