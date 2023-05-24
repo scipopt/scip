@@ -2167,7 +2167,7 @@ SCIP_DECL_CONSPARSE(consParseSOS2)
       /* add variable */
       SCIP_CALL( SCIPaddVarSOS2(scip, *cons, var, weight) );
    }
-   while ( *s != '\0' );
+   while ( *s != '\0' && *s != ';' );
 
    return SCIP_OKAY;
 }

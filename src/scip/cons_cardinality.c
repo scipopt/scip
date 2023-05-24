@@ -2993,17 +2993,18 @@ SCIP_DECL_CONSPARSE(consParseCardinality)
 
    *success = TRUE;
    s = str;
-
+printf("%s\n", str);
    /* create empty cardinality constraint */
    SCIP_CALL( SCIPcreateConsCardinality(scip, cons, name, 0, NULL, 0, NULL, NULL, initial, separate, enforce, check, propagate, local, dynamic, removable, stickingatnode) );
 
    /* loop through string */
    do
    {
+printf("%s\n", s);
       /* parse variable name */
       SCIP_CALL( SCIPparseVarName(scip, s, &var, &t) );
       s = t;
-
+printf("%s\n", t);
       /* skip until beginning of weight */
       while ( *s != '\0' && *s != '(' )
          ++s;
@@ -3053,10 +3054,14 @@ SCIP_DECL_CONSPARSE(consParseCardinality)
          }
          s = t;
 
+         /* skip white space */
+         while ( isspace((unsigned char)*s) || (*s == '\\' && *(s+1) != '\0' && strchr(SCIP_SPACECONTROL, *(s+1))) )
+            s += *s == '\\' ? 2 : 1;
+
          SCIP_CALL( SCIPchgCardvalCardinality(scip, *cons, cardval));
       }
    }
-   while ( *s != '\0' );
+   while ( *s != '\0' && *s != ';' );
 
    return SCIP_OKAY;
 }
