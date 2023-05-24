@@ -6906,6 +6906,7 @@ SCIP_RETCODE SCIPreoptSplitRoot(
    int nbndchgs;
    int nchilds;
    int nvars = 0;
+   int v;
 
    assert(reopt != NULL);
    assert(set != NULL);
@@ -6963,7 +6964,7 @@ SCIP_RETCODE SCIPreoptSplitRoot(
    }
 
    /* copy bounds */
-   for( int v = 0; v < nbndchgs; ++v )
+   for( v = 0; v < nbndchgs; ++v )
    {
       reoptnodes[id]->vars[v] = reoptnodes[0]->dualredscur->vars[v];
       reoptnodes[id]->varbounds[v] = reoptnodes[0]->dualredscur->vals[v];
@@ -7015,7 +7016,7 @@ SCIP_RETCODE SCIPreoptSplitRoot(
       consdata = reoptnodes[id]->conss[0];
 
       /* count number of binary, integer, and continuous varibales */
-      for( int v = 0; v < nbndchgs; ++v )
+      for( v = 0; v < nbndchgs; ++v )
       {
          switch( SCIPvarGetType(reoptnodes[0]->dualredscur->vars[v]) ) {
          case SCIP_VARTYPE_BINARY:
@@ -7115,7 +7116,7 @@ SCIP_RETCODE SCIPreoptSplitRoot(
          if( set->reopt_varorderinterdiction == 'd' )
          {
             /* copy first c bound changes */
-            for( int v = 0; v < c; ++v )
+            for( v = 0; v < c; ++v )
             {
                reoptnodes[id]->vars[v] = vars[v];
                reoptnodes[id]->varbounds[v] = bounds[v];
@@ -7125,7 +7126,7 @@ SCIP_RETCODE SCIPreoptSplitRoot(
          else
          {
             /* copy first c bound changes */
-            for( int v = 0; v < c; ++v )
+            for( v = 0; v < c; ++v )
             {
                reoptnodes[id]->vars[v] = vars[perm[v]];
                reoptnodes[id]->varbounds[v] = bounds[perm[v]];
