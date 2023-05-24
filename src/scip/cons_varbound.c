@@ -43,6 +43,7 @@
  *       variable, e.g. due to aggregations or bound changes in presolving.
  */
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+#define SCIP_DEBUG
 
 #include "blockmemshell/memory.h"
 #include "scip/cons_linear.h"
@@ -1812,8 +1813,8 @@ SCIP_RETCODE propagateCons(
    {
       /* check left hand side for redundancy */
       if( !SCIPisInfinity(scip, -consdata->lhs) &&
-         ((consdata->vbdcoef > 0.0 && SCIPisFeasGE(scip, xlb + consdata->vbdcoef * ylb, consdata->lhs))
-            || (consdata->vbdcoef < 0.0 && SCIPisFeasGE(scip, xlb + consdata->vbdcoef * yub, consdata->lhs))) )
+         ((consdata->vbdcoef > 0.0 && SCIPisGE(scip, xlb + consdata->vbdcoef * ylb, consdata->lhs))
+            || (consdata->vbdcoef < 0.0 && SCIPisGE(scip, xlb + consdata->vbdcoef * yub, consdata->lhs))) )
       {
          SCIPdebugMsg(scip, "left hand side of variable bound constraint <%s> is redundant\n", SCIPconsGetName(cons));
 
@@ -1823,8 +1824,8 @@ SCIP_RETCODE propagateCons(
 
       /* check right hand side for redundancy */
       if( !SCIPisInfinity(scip, consdata->rhs) &&
-         ((consdata->vbdcoef > 0.0 && SCIPisFeasLE(scip, xub + consdata->vbdcoef * yub, consdata->rhs))
-            || (consdata->vbdcoef < 0.0 && SCIPisFeasLE(scip, xub + consdata->vbdcoef * ylb, consdata->rhs))) )
+         ((consdata->vbdcoef > 0.0 && SCIPisLE(scip, xub + consdata->vbdcoef * yub, consdata->rhs))
+            || (consdata->vbdcoef < 0.0 && SCIPisLE(scip, xub + consdata->vbdcoef * ylb, consdata->rhs))) )
       {
          SCIPdebugMsg(scip, "right hand side of variable bound constraint <%s> is redundant\n", SCIPconsGetName(cons));
 
@@ -1834,11 +1835,11 @@ SCIP_RETCODE propagateCons(
    }
    /* check varbound constraint for redundancy */
    if( !(*cutoff) && (SCIPisInfinity(scip, -consdata->lhs)
-         || (consdata->vbdcoef > 0.0 && SCIPisFeasGE(scip, xlb + consdata->vbdcoef * ylb, consdata->lhs))
-         || (consdata->vbdcoef < 0.0 && SCIPisFeasGE(scip, xlb + consdata->vbdcoef * yub, consdata->lhs)))
+         || (consdata->vbdcoef > 0.0 && SCIPisGE(scip, xlb + consdata->vbdcoef * ylb, consdata->lhs))
+         || (consdata->vbdcoef < 0.0 && SCIPisGE(scip, xlb + consdata->vbdcoef * yub, consdata->lhs)))
       && (SCIPisInfinity(scip, consdata->rhs)
-         || (consdata->vbdcoef > 0.0 && SCIPisFeasLE(scip, xub + consdata->vbdcoef * yub, consdata->rhs))
-         || (consdata->vbdcoef < 0.0 && SCIPisFeasLE(scip, xub + consdata->vbdcoef * ylb, consdata->rhs))) )
+         || (consdata->vbdcoef > 0.0 && SCIPisLE(scip, xub + consdata->vbdcoef * yub, consdata->rhs))
+         || (consdata->vbdcoef < 0.0 && SCIPisLE(scip, xub + consdata->vbdcoef * ylb, consdata->rhs))) )
    {
       SCIPdebugMsg(scip, "variable bound constraint <%s> is redundant: <%s>[%.15g,%.15g], <%s>[%.15g,%.15g]\n",
          SCIPconsGetName(cons),
