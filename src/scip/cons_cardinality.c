@@ -2993,18 +2993,17 @@ SCIP_DECL_CONSPARSE(consParseCardinality)
 
    *success = TRUE;
    s = str;
-printf("%s\n", str);
+
    /* create empty cardinality constraint */
    SCIP_CALL( SCIPcreateConsCardinality(scip, cons, name, 0, NULL, 0, NULL, NULL, initial, separate, enforce, check, propagate, local, dynamic, removable, stickingatnode) );
 
    /* loop through string */
    do
    {
-printf("%s\n", s);
       /* parse variable name */
       SCIP_CALL( SCIPparseVarName(scip, s, &var, &t) );
       s = t;
-printf("%s\n", t);
+
       /* skip until beginning of weight */
       while ( *s != '\0' && *s != '(' )
          ++s;
