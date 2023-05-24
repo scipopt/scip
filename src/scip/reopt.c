@@ -5179,8 +5179,7 @@ SCIP_RETCODE SCIPreoptReleaseData(
    /* release all added constraints and free the data */
    if( reopt->addedconss != NULL )
    {
-      int c;
-      for( c = 0; c < reopt->naddedconss; ++c )
+      for( int c = 0; c < reopt->naddedconss; ++c )
       {
          assert(reopt->addedconss[c] != NULL);
 
