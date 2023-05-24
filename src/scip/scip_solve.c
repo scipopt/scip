@@ -1447,7 +1447,16 @@ SCIP_RETCODE presolve(
       SCIP_Bool stored;
 
       SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
-      SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, FALSE, FALSE, FALSE, FALSE, &stored) );
+
+      if( !SCIPisExactSolve(scip) )
+      {
+         SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, FALSE, FALSE, FALSE, FALSE, &stored) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPmakeSolExact(scip, sol) );
+         SCIP_CALL( SCIPtrySolFreeExact(scip, &sol, FALSE, FALSE, FALSE, FALSE, FALSE, &stored) );
+      }
 
       if( scip->set->nactivepricers == 0 )
       {

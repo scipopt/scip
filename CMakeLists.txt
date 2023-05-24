@@ -95,7 +95,7 @@ option(STATIC_GMP "prefer static gmp library" OFF)
 option(PAPILO "should papilo library be linked" ON)
 option(ZIMPL "should zimpl be linked" ON)
 option(AMPL "should ampl interface be compiled" ON)
-option(IPOPT "should ipopt be linked" ON)
+option(IPOPT "should ipopt be linked" OFF)
 option(WORHP "should worhp be linked" OFF)
 # for backward compability
 option(PARASCIP "should scip be compiled thread safe (deprecated, use THREADSAFE)" OFF)
@@ -126,7 +126,7 @@ set(LPS spx CACHE STRING "options for LP solver")  #create the variable
 set(LPSEXACT spxexact CACHE STRING "options for LP solver")  #create the variable
 set_property(CACHE LPS PROPERTY STRINGS spx cpx grb xprs clp glop msk qso none )  #define list of values GUI will offer for the variable
 
-set(SYM bliss CACHE STRING "options for symmetry computation")  #create the variable
+set(SYM none CACHE STRING "options for symmetry computation")  #create the variable
 set_property(CACHE SYM PROPERTY STRINGS bliss none )  #define list of values GUI will offer for the variable
 
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -ggdb3 -ltcmalloc")
@@ -254,8 +254,8 @@ set(WITH_SCIPDEF on)
 if(EXACTSOLVE)
     message(STATUS "Building SCIP with support for exact solving mode.")
     # soplex and Boost is required
-    find_package(SOPLEX CONFIG)
-    find_package(Boost 1.65.0)
+    find_package(SOPLEX CONFIG REQUIRED)
+    find_package(Boost 1.65.0 REQUIRED)
 
     if(Boost_FOUND)
         include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
@@ -343,7 +343,7 @@ else()
 endif()
 
 # MPFR
-find_package(MPFR)
+find_package(MPFR REQUIRED)
 if(MPFR_FOUND)
     add_definitions(-DSCIP_WITH_MPFR)
     include_directories(${MPFR_INCLUDE_DIRS})
@@ -549,7 +549,7 @@ endif()
 # ZIMPL headers need to be copied to have the "zimpl/*.h" prefix
 if(ZIMPL)
     message(STATUS "Finding ZIMPL")
-    find_package(ZIMPL EXACT 3.5.0 CONFIG REQUIRED)
+    find_package(ZIMPL 3.5.0 CONFIG REQUIRED)
     message(STATUS "Finding ZIMPL - found")
     set(SCIP_WITH_ZIMPL ON)
     include_directories(${ZIMPL_INCLUDE_DIRS})
