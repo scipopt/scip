@@ -2411,26 +2411,13 @@ SCIP_RETCODE SCIPprimalAddSolFreeExact(
 
    if( solOfInterest(primal, set, stat, origprob, transprob, *sol, &insertpos, &replace) )
    {
-      SCIP_SOL* solcopy;
-#ifdef SCIP_MORE_DEBUG
-      int i;
-#endif
-
       assert(insertpos >= 0 && insertpos < set->limit_maxsol);
-
-      /* create a copy of the solution */
-      SCIP_CALL( SCIPsolCopy(&solcopy, blkmem, set, stat, primal, *sol) );
 
       /* insert copied solution into solution storage */
       SCIP_CALL( primalAddSolExact(primal, blkmem, set, messagehdlr, stat, origprob, transprob,
-            tree, reopt, lp, eventqueue, eventfilter, &solcopy, insertpos, replace) );
-//#ifdef SCIP_MORE_DEBUG
-//      for( i = 0; i < primal->nsols - 1; ++i )
-//      {
-//         assert(SCIPsetIsLE(set, SCIPsolGetObj(primal->sols[i], set, transprob, origprob), SCIPsolGetObj(primal->sols[i+1], set, transprob, origprob)));
-//      }
-//#endif
+            tree, reopt, lp, eventqueue, eventfilter, sol, insertpos, replace) );
       *stored = TRUE;
+      *sol = NULL;
    }
    else
    {
