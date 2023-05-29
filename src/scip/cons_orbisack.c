@@ -1926,7 +1926,10 @@ SCIP_DECL_CONSPARSE(consParseOrbisack)
          s = strchr(s, ')');
 
          if( s == NULL || !firstcolumn )
+         {
+            SCIPerrorMessage("variable is missing.\n");
             *success = FALSE;
+         }
 
          break;
       }
@@ -1940,6 +1943,7 @@ SCIP_DECL_CONSPARSE(consParseOrbisack)
 
       if( firstcolumn == ( *s == '.' || *s == ')' ) )
       {
+         SCIPerrorMessage("there are not two variables per row.\n");
          *success = FALSE;
          break;
       }
@@ -1972,8 +1976,6 @@ SCIP_DECL_CONSPARSE(consParseOrbisack)
 
    if( *success )
       SCIP_CALL( SCIPcreateConsBasicOrbisack(scip, cons, name, vars1, vars2, nrows, ispporbisack, isparttype, TRUE) );
-   else
-      SCIPerrorMessage("there are not two variables per row.\n");
 
    SCIPfreeBufferArray(scip, &vars2);
    SCIPfreeBufferArray(scip, &vars1);

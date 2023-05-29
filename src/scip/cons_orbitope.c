@@ -3481,7 +3481,10 @@ SCIP_DECL_CONSPARSE(consParseOrbitope)
          s = strchr(s, ')');
 
          if( s == NULL || j > 0 )
+         {
+            SCIPerrorMessage("not enough variables.\n");
             *success = FALSE;
+         }
 
          break;
       }
@@ -3524,6 +3527,7 @@ SCIP_DECL_CONSPARSE(consParseOrbitope)
       }
       else if( ( j < nblocks-1 ) == ( *s == '.' || *s == ')' ) )
       {
+         SCIPerrorMessage("variables per row do not match.\n");
          *success = FALSE;
          break;
       }
@@ -3547,8 +3551,6 @@ SCIP_DECL_CONSPARSE(consParseOrbitope)
    if( *success )
       SCIP_CALL( SCIPcreateConsOrbitope(scip, cons, name, vars, orbitopetype, nspcons, nblocks, FALSE, TRUE, TRUE, TRUE,
             initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
-   else
-      SCIPerrorMessage("variables per row do not match.\n");
 
    for( k = nspcons - 1; k >= 0; --k )
       SCIPfreeBufferArray(scip, &vars[k]);
