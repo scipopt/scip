@@ -2959,10 +2959,20 @@ SCIP_DECL_CONSPARSE(consParseSymresack)
             break;
          }
       }
+
+      if( !*success )
+         break;
+
       ++s;
       ++cnt;
    }
-   while( *s != ')' || !*success );
+   while( *s != ')' );
+
+   if( *success && cnt < 2 )
+   {
+      SCIPerrorMessage("permutation is missing.\n");
+      *success = FALSE;
+   }
 
    if( *success )
       SCIP_CALL( SCIPcreateConsBasicSymresack(scip, cons, name, perm, vars, nvars, TRUE) );

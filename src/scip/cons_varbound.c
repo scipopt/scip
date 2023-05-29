@@ -5068,7 +5068,6 @@ SCIP_DECL_CONSPARSE(consParseVarbound)
 
    if( requiredsize == 2 && *success )
    {
-      SCIP_Bool foundvalue;
       SCIP_Real value;
 
       assert(nvars == 2);
@@ -5082,9 +5081,7 @@ SCIP_DECL_CONSPARSE(consParseVarbound)
 
       str = endstr;
 
-      foundvalue = *str != '\0' && *(str+1) != '\0' ? SCIPparseReal(scip, str+2, &value, &endstr) : FALSE;
-
-      if( foundvalue )
+      if( *str != '\0' && *(str+1) != '\0' && SCIPparseReal(scip, str+2, &value, &endstr) )
       {
          /* search for end of linear sum: either '<=', '>=', '==', or '[free]' */
          switch( *str )

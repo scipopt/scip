@@ -2184,7 +2184,7 @@ SCIP_DECL_CONSPARSE(consParseSOS2)
    while( *s != ';' );
 
    if( !*success )
-      SCIPreleaseCons(scip, cons);
+      SCIP_CALL( SCIPreleaseCons(scip, cons) );
 
    return SCIP_OKAY;
 }

@@ -3082,7 +3082,7 @@ SCIP_DECL_CONSPARSE(consParseCardinality)
    }
 
    if( !*success )
-      SCIPreleaseCons(scip, cons);
+      SCIP_CALL( SCIPreleaseCons(scip, cons) );
 
    return SCIP_OKAY;
 }
