@@ -8803,7 +8803,7 @@ SCIP_DECL_CONSPARSE(consParseSetppc)
    }
 
    /* remove white spaces */
-   while( isspace((unsigned char)*str) || (*str == '\\' && *(str+1) != '\0' && strchr(SCIP_SPACECONTROL, *(str+1))) )
+   while( isspace((unsigned char)*str) || ( *str == '\\' && *(str+1) != '\0' && strchr(SCIP_SPACECONTROL, *(str+1)) ) )
       str += *str == '\\' ? 2 : 1;
 
    if( *success )

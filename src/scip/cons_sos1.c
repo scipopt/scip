@@ -9914,40 +9914,57 @@ SCIP_DECL_CONSPARSE(consParseSOS1)
    {
       /* parse variable name */
       SCIP_CALL( SCIPparseVarName(scip, s, &var, &t) );
+
+      if( var == NULL )
+      {
+         s = strchr(s, ';');
+
+         if( s == NULL )
+         {
+            SCIPerrorMessage("Syntax error: expected terminating ';'\n");
+            *success = FALSE;
+         }
+
+         break;
+      }
+
       s = t;
 
       /* skip until beginning of weight */
-      while ( *s != '\0' && *s != '(' )
-         ++s;
+      s = strchr(s, '(');
 
-      if ( *s == '\0' )
+      if( s == NULL )
       {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error: expected weight at input: %s\n", s);
+         SCIPerrorMessage("Syntax error: expected weight at input: %s\n", s);
          *success = FALSE;
-         return SCIP_OKAY;
+         break;
       }
+
       /* skip '(' */
       ++s;
 
       /* find weight */
       weight = strtod(s, &t);
-      if ( t == NULL )
+      if( t == NULL )
       {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error during parsing of the weight: %s\n", s);
+         SCIPerrorMessage("Syntax error during parsing of the weight: %s\n", s);
          *success = FALSE;
-         return SCIP_OKAY;
+         break;
       }
       s = t;
 
       /* skip white space, ',', and ')' */
-      while ( isspace((unsigned char)*s) || *s == ',' || *s == ')'
-              || (*s == '\\' && *(s+1) != '\0' && strchr(SCIP_SPACECONTROL, *(s+1))) )
+      while( isspace((unsigned char)*s) || *s == ',' || *s == ')'
+              || ( *s == '\\' && *(s+1) != '\0' && strchr(SCIP_SPACECONTROL, *(s+1)) ) )
          s += *s == '\\' ? 2 : 1;
 
       /* add variable */
       SCIP_CALL( SCIPaddVarSOS1(scip, *cons, var, weight) );
    }
-   while ( *s != '\0' && *s != ';' );
+   while( *s != ';' );
+
+   if( !*success )
+      SCIPreleaseCons(scip, cons);
 
    return SCIP_OKAY;
 }

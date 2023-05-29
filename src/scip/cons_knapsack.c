@@ -13215,24 +13215,31 @@ SCIP_DECL_CONSPARSE(consParseKnapsack)
    SCIP_CALL( SCIPallocBufferArray(scip, &vars,    varssize) );
    SCIP_CALL( SCIPallocBufferArray(scip, &weights, varssize) );
 
-   while( *str != '\0' )
+   while( *str != ';' )
    {
-      /* try to parse coefficient, and stop if not successful (probably reached <=) */
-      if( sscanf(str, "%" SCIP_LONGINT_FORMAT "%n", &weight, &nread) < 1 )
-         break;
-
+      /* try to parse coefficient, and use 1 if not successful */
+      weight = 1;
+      nread = 0;
+      sscanf(str, "%" SCIP_LONGINT_FORMAT "%n", &weight, &nread);
       str += nread;
 
       /* skip whitespace */
-      while( isspace((int)*str) || (*str == '\\' && *(str+1) != '\0' && strchr(SCIP_SPACECONTROL, *(str+1))) )
+      while( isspace((int)*str) || ( *str == '\\' && *(str+1) != '\0' && strchr(SCIP_SPACECONTROL, *(str+1)) ) )
          str += *str == '\\' ? 2 : 1;
 
       /* parse variable name */
       SCIP_CALL( SCIPparseVarName(scip, str, &var, &endptr) );
+
       if( var == NULL )
       {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "unknown variable name at '%s'\n", str);
-         *success = FALSE;
+         str = strchr(str, '<');
+
+         if( str == NULL )
+         {
+            SCIPerrorMessage("no capacity found\n");
+            *success = FALSE;
+         }
+
          break;
       }
 
@@ -13251,29 +13258,33 @@ SCIP_DECL_CONSPARSE(consParseKnapsack)
       ++nvars;
 
       /* skip whitespace */
-      while( isspace((int)*str) || (*str == '\\' && *(str+1) != '\0' && strchr(SCIP_SPACECONTROL, *(str+1))) )
+      while( isspace((int)*str) || ( *str == '\\' && *(str+1) != '\0' && strchr(SCIP_SPACECONTROL, *(str+1)) ) )
          str += *str == '\\' ? 2 : 1;
    }
 
    if( *success )
    {
-      if( strncmp(str, "<= ", 3) != 0 )
+      if( strncmp(str, "<=", 2) != 0 )
       {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "expected '<= ' at begin of '%s'\n", str);
+         SCIPerrorMessage("expected '<=' at begin of '%s'\n", str);
          *success = FALSE;
       }
       else
       {
-         str += 3;
+         str += 2;
       }
    }
 
    if( *success )
    {
+      /* skip whitespace */
+      while( isspace((int)*str) || ( *str == '\\' && *(str+1) != '\0' && strchr(SCIP_SPACECONTROL, *(str+1)) ) )
+         str += *str == '\\' ? 2 : 1;
+
       /* coverity[secure_coding] */
       if( sscanf(str, "%" SCIP_LONGINT_FORMAT, &capacity) != 1 )
       {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "error parsing capacity from '%s'\n", str);
+         SCIPerrorMessage("error parsing capacity from '%s'\n", str);
          *success = FALSE;
       }
       else

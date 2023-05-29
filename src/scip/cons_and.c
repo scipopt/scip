@@ -4777,16 +4777,17 @@ SCIP_DECL_CONSPARSE(consParseAnd)
 
    /* parse variable name of resultant */
    SCIP_CALL( SCIPparseVarName(scip, str, &resvar, &endptr) );
-   str = endptr;
 
    if( resvar == NULL )
    {
-      SCIPdebugMsg(scip, "resultant variable does not exist \n");
+      SCIPerrorMessage("resultant variable does not exist\n");
    }
    else
    {
       char* strcopy = NULL;
       char* startptr;
+
+      str = endptr;
 
       /* cutoff "== and(" form the constraint string */
       startptr = strchr((char*)str, '(');

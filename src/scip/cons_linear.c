@@ -17089,7 +17089,7 @@ SCIP_DECL_CONSPARSE(consParseLinear)
       return SCIP_OKAY;
 
    /* ignore whitespace */
-   while( isspace((unsigned char)*str) || (*str == '\\' && *(str+1) != '\0' && strchr(SCIP_SPACECONTROL, *(str+1))) )
+   while( isspace((unsigned char)*str) || ( *str == '\\' && *(str+1) != '\0' && strchr(SCIP_SPACECONTROL, *(str+1)) ) )
       str += *str == '\\' ? 2 : 1;
 
    /* find operators in the line first, all other remaining parsing depends on occurence of the operators '<=', '>=', '==',

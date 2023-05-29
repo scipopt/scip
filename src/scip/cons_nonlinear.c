@@ -10588,14 +10588,14 @@ SCIP_DECL_CONSPARSE(consParseNonlinear)
    if( isdigit((unsigned char)str[0]) || ((str[0] == '-' || str[0] == '+') && isdigit((unsigned char)str[1])) )
    {
       /* there is a number coming, maybe it is a left-hand-side */
-      if( !SCIPstrToRealValue(str, &lhs, (char**)&endptr) )
+      if( !SCIPparseReal(scip, str, &lhs, (char**)&endptr) )
       {
          SCIPerrorMessage("error parsing number from <%s>\n", str);
          return SCIP_READERROR;
       }
 
       /* ignore whitespace */
-      while( isspace((unsigned char)*endptr) || (*endptr == '\\' && *(endptr+1) != '\0' && strchr(SCIP_SPACECONTROL, *(endptr+1))) )
+      while( isspace((unsigned char)*endptr) || ( *endptr == '\\' && *(endptr+1) != '\0' && strchr(SCIP_SPACECONTROL, *(endptr+1)) ) )
          endptr += *endptr == '\\' ? 2 : 1;
 
       if( endptr[0] != '<' || endptr[1] != '=' )
@@ -10609,7 +10609,7 @@ SCIP_DECL_CONSPARSE(consParseNonlinear)
          str = endptr + 2;
 
          /* ignore whitespace */
-         while( isspace((unsigned char)*str) || (*str == '\\' && *(str+1) != '\0' && strchr(SCIP_SPACECONTROL, *(str+1))) )
+         while( isspace((unsigned char)*str) || ( *str == '\\' && *(str+1) != '\0' && strchr(SCIP_SPACECONTROL, *(str+1)) ) )
             str += *str == '\\' ? 2 : 1;
       }
    }
@@ -10620,7 +10620,7 @@ SCIP_DECL_CONSPARSE(consParseNonlinear)
    SCIP_CALL( SCIPparseExpr(scip, &consexprtree, str, &str, exprownerCreate, (void*)conshdlr) );
 
    /* check for left or right hand side */
-   while( isspace((unsigned char)*str) || (*str == '\\' && *(str+1) != '\0' && strchr(SCIP_SPACECONTROL, *(str+1))) )
+   while( isspace((unsigned char)*str) || ( *str == '\\' && *(str+1) != '\0' && strchr(SCIP_SPACECONTROL, *(str+1)) ) )
       str += *str == '\\' ? 2 : 1;
 
    /* check for free constraint */
@@ -10639,7 +10639,7 @@ SCIP_DECL_CONSPARSE(consParseNonlinear)
       switch( *str )
       {
          case '<':
-            *success = SCIPstrToRealValue(str+2, &rhs, (char**)&endptr);
+            *success = *(str+1) == '=' ? SCIPparseReal(scip, str+2, &rhs, (char**)&endptr) : FALSE;
             break;
          case '=':
             if( !SCIPisInfinity(scip, -lhs) )
@@ -10650,7 +10650,7 @@ SCIP_DECL_CONSPARSE(consParseNonlinear)
             }
             else
             {
-               *success = SCIPstrToRealValue(str+2, &rhs, (char**)&endptr);
+               *success = *(str+1) == '=' ? SCIPparseReal(scip, str+2, &rhs, (char**)&endptr) : FALSE;
                lhs = rhs;
             }
             break;
@@ -10663,7 +10663,7 @@ SCIP_DECL_CONSPARSE(consParseNonlinear)
             }
             else
             {
-               *success = SCIPstrToRealValue(str+2, &lhs, (char**)&endptr);
+               *success = *(str+1) == '=' ? SCIPparseReal(scip, str+2, &lhs, (char**)&endptr) : FALSE;
                break;
             }
          case '\0':

@@ -2740,7 +2740,7 @@ SCIP_DECL_CONSPARSE(consParseBounddisjunction)
    SCIPdebugMsg(scip, "parse <%s> as bounddisjunction constraint\n", str);
 
    /* skip white space */
-   while( isspace((unsigned char)*str) || (*str == '\\' && *(str+1) != '\0' && strchr(SCIP_SPACECONTROL, *(str+1))) )
+   while( isspace((unsigned char)*str) || ( *str == '\\' && *(str+1) != '\0' && strchr(SCIP_SPACECONTROL, *(str+1)) ) )
       str += *str == '\\' ? 2 : 1;
 
    /* check for string "bounddisjunction" */
@@ -2763,23 +2763,30 @@ SCIP_DECL_CONSPARSE(consParseBounddisjunction)
    SCIP_CALL( SCIPallocBufferArray(scip, &bounds, varssize) );
 
    /* parse string until ")" */
-   while( *str != '\0' && *str != ')' )
+   while( *str != ')' )
    {
       SCIP_VAR* var;
 
       /* parse variable name */ 
       SCIP_CALL( SCIPparseVarName(scip, str, &var, &endptr) );
-      str = endptr;
 
       if( var == NULL )
       {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Error while parsing variable.\n");
-         *success = FALSE;
-         goto TERMINATE;
+         str = strchr(str, ')');
+
+         if( str == NULL )
+         {
+            *success = FALSE;
+            goto TERMINATE;
+         }
+
+         break;
       }
 
+      str = endptr;
+
       /* skip white space */
-      while( isspace((unsigned char)*str) || (*str == '\\' && *(str+1) != '\0' && strchr(SCIP_SPACECONTROL, *(str+1))) )
+      while( isspace((unsigned char)*str) || ( *str == '\\' && *(str+1) != '\0' && strchr(SCIP_SPACECONTROL, *(str+1)) ) )
          str += *str == '\\' ? 2 : 1;
 
       /* parse bound type */
@@ -2809,11 +2816,11 @@ SCIP_DECL_CONSPARSE(consParseBounddisjunction)
       ++str;
 
       /* skip white space */
-      while( isspace((unsigned char)*str) || (*str == '\\' && *(str+1) != '\0' && strchr(SCIP_SPACECONTROL, *(str+1))) )
+      while( isspace((unsigned char)*str) || ( *str == '\\' && *(str+1) != '\0' && strchr(SCIP_SPACECONTROL, *(str+1)) ) )
          str += *str == '\\' ? 2 : 1;
 
       /* parse bound value */
-      if( !SCIPstrToRealValue(str, &bounds[nvars], &endptr) )
+      if( !SCIPparseReal(scip, str, &bounds[nvars], &endptr) )
       {
          SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error during parsing of the weight: %s\n", str);
          *success = FALSE;
@@ -2823,7 +2830,7 @@ SCIP_DECL_CONSPARSE(consParseBounddisjunction)
       /* skip white space */
       str = endptr;
       while( isspace((unsigned char)*str) || *str == ','
-             || (*str == '\\' && *(str+1) != '\0' && strchr(SCIP_SPACECONTROL, *(str+1))) )
+             || ( *str == '\\' && *(str+1) != '\0' && strchr(SCIP_SPACECONTROL, *(str+1)) ) )
          str += *str == '\\' ? 2 : 1;
 
       /* set variable */
@@ -2839,7 +2846,6 @@ SCIP_DECL_CONSPARSE(consParseBounddisjunction)
          SCIP_CALL( SCIPreallocBufferArray(scip, &bounds, varssize) );
       }
    }
-   /* ignore if the string ended without ")" */
 
    /* add bounddisjunction */
    if( *success && nvars > 0 )

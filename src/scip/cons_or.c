@@ -1916,6 +1916,8 @@ SCIP_DECL_CONSPARSE(consParseOr)
 
    SCIPdebugMsg(scip, "parse <%s> as or constraint\n", str);
 
+   *success = FALSE;
+
    /* copy string for truncating it */
    SCIP_CALL( SCIPduplicateBufferArray(scip, &strcopy, str, (int)(strlen(str)+1)));
 
@@ -1927,8 +1929,7 @@ SCIP_DECL_CONSPARSE(consParseOr)
 
    if( resvar == NULL )
    {
-      SCIPdebugMsg(scip, "resultant variable %s does not exist \n", token);
-      *success = FALSE;
+      SCIPerrorMessage("resultant variable does not exist\n");
    }
    else
    {
