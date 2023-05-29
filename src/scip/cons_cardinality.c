@@ -3017,17 +3017,17 @@ SCIP_DECL_CONSPARSE(consParseCardinality)
          break;
       }
 
-      s = t;
-
       /* skip until beginning of weight */
-      s = strchr(s, '(');
+      t = strchr(t, '(');
 
-      if( s == NULL )
+      if( t == NULL )
       {
          SCIPerrorMessage("Syntax error: expected weight at input: %s\n", s);
          *success = FALSE;
          break;
       }
+
+      s = t;
 
       /* skip '(' */
       ++s;
@@ -3071,13 +3071,15 @@ SCIP_DECL_CONSPARSE(consParseCardinality)
       else
       {
          SCIP_CALL( SCIPchgCardvalCardinality(scip, *cons, cardval) );
-         s = strchr(t, ';');
+         t = strchr(t, ';');
 
-         if( s == NULL )
+         if( t == NULL )
          {
             SCIPerrorMessage("Syntax error: expected terminating ';'\n");
             *success = FALSE;
          }
+         else
+            s = t;
       }
    }
 

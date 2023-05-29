@@ -2772,14 +2772,15 @@ SCIP_DECL_CONSPARSE(consParseBounddisjunction)
 
       if( var == NULL )
       {
-         str = strchr(str, ')');
+         endptr = strchr(endptr, ')');
 
-         if( str == NULL )
+         if( endptr == NULL )
          {
             *success = FALSE;
             goto TERMINATE;
          }
 
+         str = endptr;
          break;
       }
 

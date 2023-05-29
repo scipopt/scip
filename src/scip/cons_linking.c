@@ -3267,15 +3267,17 @@ SCIP_DECL_CONSPARSE(consParseLinking)
    }
 
    /* find "==" */
-   str = strchr(endptr, '=');
+   endptr = strchr(endptr, '=');
 
    /* if the string end has been reached without finding the "==" */
-   if( str == NULL )
+   if( endptr == NULL )
    {
       SCIPerrorMessage("Could not find initializing '='.\n");
       *success = FALSE;
       return SCIP_OKAY;
    }
+
+   str = endptr;
 
    /* skip "==" */
    str += *(str+1) == '=' ? 2 : 1;

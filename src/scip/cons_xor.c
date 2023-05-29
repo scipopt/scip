@@ -5595,15 +5595,17 @@ SCIP_DECL_CONSPARSE(consParseXor)
       SCIPdebugMsg(scip, "successfully parsed %d variables\n", nvars);
 
       /* find "==" */
-      str = strchr(endptr, '=');
+      endptr = strchr(endptr, '=');
 
       /* if the string end has been reached without finding the "==" */
-      if( str == NULL )
+      if( endptr == NULL )
       {
          SCIPerrorMessage("Could not find terminating '='.\n");
          *success = FALSE;
          goto TERMINATE;
       }
+
+      str = endptr;
 
       /* skip "==" */
       str += *(str+1) == '=' ? 2 : 1;
@@ -5623,15 +5625,16 @@ SCIP_DECL_CONSPARSE(consParseXor)
          /* check for integer variable, should look like (intvar = var) */
          if( *str == '(' )
          {
-            str = strchr(str+1, '=');
+            endptr = strchr(str+1, '=');
 
-            if( str == NULL )
+            if( endptr == NULL )
             {
                SCIPerrorMessage("Parsing integer variable of XOR constraint\n");
                *success = FALSE;
                goto TERMINATE;
             }
 
+            str = endptr;
             ++str;
 
             /* skip white spaces */
@@ -5648,17 +5651,17 @@ SCIP_DECL_CONSPARSE(consParseXor)
                goto TERMINATE;
             }
 
-            str = endptr;
-
             /* skip last ')' */
-            str = strchr(str, ')');
+            endptr = strchr(endptr, ')');
 
-            if( str == NULL )
+            if( endptr == NULL )
             {
                SCIPerrorMessage("Closing ')' missing\n");
                *success = FALSE;
                goto TERMINATE;
             }
+
+            str = endptr;
          }
 
          if( intvar != NULL )

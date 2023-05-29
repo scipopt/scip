@@ -3478,13 +3478,15 @@ SCIP_DECL_CONSPARSE(consParseOrbitope)
 
       if( var == NULL )
       {
-         s = strchr(s, ')');
+         endptr = strchr(endptr, ')');
 
-         if( s == NULL || j > 0 )
+         if( endptr == NULL || j > 0 )
          {
             SCIPerrorMessage("not enough variables.\n");
             *success = FALSE;
          }
+         else
+            s = endptr;
 
          break;
       }

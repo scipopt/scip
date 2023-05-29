@@ -13232,13 +13232,15 @@ SCIP_DECL_CONSPARSE(consParseKnapsack)
 
       if( var == NULL )
       {
-         str = strchr(str, '<');
+         endptr = strchr(endptr, '<');
 
-         if( str == NULL )
+         if( endptr == NULL )
          {
             SCIPerrorMessage("no capacity found\n");
             *success = FALSE;
          }
+         else
+            str = endptr;
 
          break;
       }

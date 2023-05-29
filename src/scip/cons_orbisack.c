@@ -1923,13 +1923,15 @@ SCIP_DECL_CONSPARSE(consParseOrbisack)
 
       if( var == NULL )
       {
-         s = strchr(s, ')');
+         endptr = strchr(endptr, ')');
 
-         if( s == NULL || !firstcolumn )
+         if( endptr == NULL || !firstcolumn )
          {
             SCIPerrorMessage("variable is missing.\n");
             *success = FALSE;
          }
+         else
+            s = endptr;
 
          break;
       }

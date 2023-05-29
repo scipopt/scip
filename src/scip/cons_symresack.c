@@ -2878,13 +2878,15 @@ SCIP_DECL_CONSPARSE(consParseSymresack)
 
             if( var == NULL )
             {
-               s = strchr(s, ']');
+               endptr = strchr(endptr, ']');
 
-               if( s == NULL )
+               if( endptr == NULL )
                {
                   SCIPerrorMessage("closing ']' missing\n");
                   *success = FALSE;
                }
+               else
+                  s = endptr;
 
                break;
             }

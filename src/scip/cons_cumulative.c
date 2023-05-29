@@ -13478,10 +13478,12 @@ SCIP_DECL_CONSPARSE(consParseCumulative)
 
       if( var == NULL )
       {
-         str = strchr(str, ')');
+         endptr = strchr(endptr, ')');
 
-         if( str == NULL )
+         if( endptr == NULL )
             *success = FALSE;
+         else
+            str = endptr;
 
          break;
       }
