@@ -1930,8 +1930,6 @@ SCIP_DECL_CONSPARSE(consParseOrbisack)
             SCIPerrorMessage("variable is missing.\n");
             *success = FALSE;
          }
-         else
-            s = endptr;
 
          break;
       }

@@ -3078,8 +3078,6 @@ SCIP_DECL_CONSPARSE(consParseCardinality)
             SCIPerrorMessage("Syntax error: expected terminating ';'\n");
             *success = FALSE;
          }
-         else
-            s = t;
       }
    }
 

@@ -2144,8 +2144,6 @@ SCIP_DECL_CONSPARSE(consParseSOS2)
             SCIPerrorMessage("Syntax error: expected terminating ';'\n");
             *success = FALSE;
          }
-         else
-            s = t;
 
          break;
       }

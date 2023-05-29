@@ -2780,7 +2780,6 @@ SCIP_DECL_CONSPARSE(consParseBounddisjunction)
             goto TERMINATE;
          }
 
-         str = endptr;
          break;
       }
 

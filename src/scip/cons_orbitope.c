@@ -3485,8 +3485,6 @@ SCIP_DECL_CONSPARSE(consParseOrbitope)
             SCIPerrorMessage("not enough variables.\n");
             *success = FALSE;
          }
-         else
-            s = endptr;
 
          break;
       }

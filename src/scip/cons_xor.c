@@ -5625,16 +5625,15 @@ SCIP_DECL_CONSPARSE(consParseXor)
          /* check for integer variable, should look like (intvar = var) */
          if( *str == '(' )
          {
-            endptr = strchr(str+1, '=');
+            str = strchr(str+1, '=');
 
-            if( endptr == NULL )
+            if( str == NULL )
             {
                SCIPerrorMessage("Parsing integer variable of XOR constraint\n");
                *success = FALSE;
                goto TERMINATE;
             }
 
-            str = endptr;
             ++str;
 
             /* skip white spaces */
@@ -5660,8 +5659,6 @@ SCIP_DECL_CONSPARSE(consParseXor)
                *success = FALSE;
                goto TERMINATE;
             }
-
-            str = endptr;
          }
 
          if( intvar != NULL )
