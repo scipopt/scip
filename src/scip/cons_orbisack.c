@@ -1891,19 +1891,19 @@ SCIP_DECL_CONSPARSE(consParseOrbisack)
    s = str;
 
    /* skip white space */
-   while ( isspace((unsigned char)*s) || (*s == '\\' && *(s+1) != '\0' && strchr(SCIP_SPACECONTROL, *(s+1))) )
+   while( isspace((unsigned char)*s) || ( *s == '\\' && *(s+1) != '\0' && strchr(SCIP_SPACECONTROL, *(s+1)) ) )
       s += *s == '\\' ? 2 : 1;
 
-   if ( strncmp(s, "partOrbisack(", 13) == 0 )
+   if( strncmp(s, "partOrbisack(", 13) == 0 )
    {
       ispporbisack = TRUE;
       isparttype = TRUE;
    }
-   else if ( strncmp(s, "packOrbisack(", 13) == 0 )
+   else if( strncmp(s, "packOrbisack(", 13) == 0 )
       ispporbisack = TRUE;
    else
    {
-      if ( strncmp(s, "fullOrbisack(", 13) != 0 )
+      if( strncmp(s, "fullOrbisack(", 13) != 0 )
       {
          SCIPerrorMessage("Syntax error - expected \"fullOrbisack(\", \"partOrbisack\" or \"packOrbisacj\": %s\n", s);
          *success = FALSE;
@@ -1918,59 +1918,62 @@ SCIP_DECL_CONSPARSE(consParseOrbisack)
 
    do
    {
-      /* skip whitespace */
-      while ( isspace((unsigned char)*s) || (*s == '\\' && *(s+1) != '\0' && strchr(SCIP_SPACECONTROL, *(s+1))) )
-         s += *s == '\\' ? 2 : 1;
-
       /* parse variable name */
       SCIP_CALL( SCIPparseVarName(scip, s, &var, &endptr) );
-      if ( var == NULL )
+
+      if( var == NULL )
       {
-         SCIPerrorMessage("unknown variable name at '%s'\n", str);
-         *success = FALSE;
+         s = strchr(s, ')');
 
-         SCIPfreeBufferArray(scip, &vars2);
-         SCIPfreeBufferArray(scip, &vars1);
+         if( s == NULL || !firstcolumn )
+            *success = FALSE;
 
-         return SCIP_OKAY;
+         break;
       }
 
-      if ( firstcolumn )
-         vars1[nrows] = var;
-      else
-         vars2[nrows] = var;
       s = endptr;
       assert( s != NULL );
 
-      firstcolumn = !firstcolumn;
-
-      /* skip white space and ',' */
-      while ( isspace((unsigned char)*s) || *s == ','
-              || (*s == '\\' && *(s+1) != '\0' && strchr(SCIP_SPACECONTROL, *(s+1))) )
+      /* skip white space */
+      while( isspace((unsigned char)*s) || ( *s == '\\' && *(s+1) != '\0' && strchr(SCIP_SPACECONTROL, *(s+1)) ) )
          s += *s == '\\' ? 2 : 1;
 
+      if( firstcolumn == ( *s == '.' || *s == ')' ) )
+      {
+         *success = FALSE;
+         break;
+      }
+
       /* begin new row if required */
-      if ( *s == '.' )
+      if( firstcolumn )
       {
          ++nrows;
-         ++s;
 
-         if ( nrows >= maxnrows )
+         if( nrows > maxnrows )
          {
-            int newsize;
-
-            newsize = SCIPcalcMemGrowSize(scip, nrows + 1);
-            SCIP_CALL( SCIPreallocBufferArray(scip, &vars1, newsize) );
-            SCIP_CALL( SCIPreallocBufferArray(scip, &vars2, newsize) );
-            maxnrows = newsize;
+            maxnrows = SCIPcalcMemGrowSize(scip, nrows);
+            SCIP_CALL( SCIPreallocBufferArray(scip, &vars1, maxnrows) );
+            SCIP_CALL( SCIPreallocBufferArray(scip, &vars2, maxnrows) );
+            assert( nrows <= maxnrows );
          }
-         assert( nrows < maxnrows );
-      }
-   }
-   while ( *s != ')' );
-   ++nrows;
 
-   SCIP_CALL( SCIPcreateConsBasicOrbisack(scip, cons, name, vars1, vars2, nrows, ispporbisack, isparttype, TRUE) );
+         vars1[nrows-1] = var;
+      }
+      else
+         vars2[nrows-1] = var;
+
+      firstcolumn = !firstcolumn;
+
+      /* skip ',' or '.' */
+      if( *s == ',' || *s == '.' )
+         ++s;
+   }
+   while( *s != ')' );
+
+   if( *success )
+      SCIP_CALL( SCIPcreateConsBasicOrbisack(scip, cons, name, vars1, vars2, nrows, ispporbisack, isparttype, TRUE) );
+   else
+      SCIPerrorMessage("there are not two variables per row.\n");
 
    SCIPfreeBufferArray(scip, &vars2);
    SCIPfreeBufferArray(scip, &vars1);
