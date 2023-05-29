@@ -142,8 +142,9 @@ SCIP_RETCODE readBounds(
       (void) SCIPsnprintf(format, SCIP_MAXSTRLEN, "%%%ds %%%ds %%%ds\n", SCIP_MAXSTRLEN, SCIP_MAXSTRLEN, SCIP_MAXSTRLEN);
       (void) sscanf(buffer, format, varname, lbstring, ubstring);
 
-      retcode = SCIPparseVarName(scip, buffer, &var, &endptr);
-      if( retcode != SCIP_OKAY )
+      SCIP_CALL( SCIPparseVarName(scip, buffer, &var, &endptr) );
+
+      if( var == NULL )
       {
          SCIPerrorMessage("Error parsing variable name in line %d of bounds file <%s>\n", lineno, fname);
          error = TRUE;

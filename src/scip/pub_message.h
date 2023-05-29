@@ -61,7 +61,7 @@ extern "C" {
 #endif
 
 /** prints an error message */
-#define SCIPerrorMessage                SCIPmessagePrintErrorHeader(__FILENAME__, __LINE__); \
+#define SCIPerrorMessage                SCIPmessagePrintErrorHeader(__FILENAME__, __LINE__), \
                                         SCIPmessagePrintError
 
 /** define used in blockmemshell/memory.c */

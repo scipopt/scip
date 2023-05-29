@@ -420,7 +420,7 @@ SCIP_Bool SCIPparseReal(
    localstr = (char*)str;
 
    /* ignore white space */
-   while( isspace((unsigned char)*localstr) || (*localstr == '\\' && *(localstr+1) != '\0' && strchr(SCIP_SPACECONTROL, *(localstr+1))) )
+   while( isspace((unsigned char)*localstr) || ( *localstr == '\\' && *(localstr+1) != '\0' && strchr(SCIP_SPACECONTROL, *(localstr+1)) ) )
       localstr += *localstr == '\\' ? 2 : 1;
 
    /* test for a special infinity first */

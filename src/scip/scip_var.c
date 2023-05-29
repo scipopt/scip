@@ -548,10 +548,10 @@ SCIP_RETCODE SCIPparseVarName(
    SCIPstrCopySection(str, '<', '>', varname, SCIP_MAXSTRLEN, endptr);
    assert(*endptr != NULL);
 
-   if( *varname == '\0' )
+   if( *endptr == str )
    {
-      SCIPerrorMessage("invalid variable name string given: could not find '<'\n");
-      return SCIP_INVALIDDATA;
+      *var = NULL;
+      return SCIP_OKAY;
    }
 
    /* check if we have a negated variable */
@@ -562,7 +562,7 @@ SCIP_RETCODE SCIPparseVarName(
       /* search for the variable and ignore '~' */
       (*var) = SCIPfindVar(scip, &varname[1]);
 
-      if( *var  != NULL )
+      if( *var != NULL )
       {
          SCIP_CALL( SCIPgetNegatedVar(scip, *var, var) );
       }
@@ -634,7 +634,7 @@ SCIP_RETCODE SCIPparseVarsList(
    /* allocate buffer memory for temporary storing the parsed variables */
    SCIP_CALL( SCIPallocBufferArray(scip, &tmpvars, varssize) );
 
-   (*success) = TRUE;
+   *success = TRUE;
 
    do
    {
@@ -644,11 +644,9 @@ SCIP_RETCODE SCIPparseVarsList(
       SCIP_CALL( SCIPparseVarName(scip, str, &var, endptr) );
 
       if( var == NULL )
-      {
-         SCIPdebugMsg(scip, "variable with name <%s> does not exist\n", SCIPvarGetName(var));
-         (*success) = FALSE;
          break;
-      }
+
+      str = *endptr;
 
       /* store the variable in the tmp array */
       if( ntmpvars < varssize )
@@ -656,9 +654,7 @@ SCIP_RETCODE SCIPparseVarsList(
 
       ntmpvars++;
 
-      str = *endptr;
-
-      while( isspace((unsigned char)*str) || (*str == '\\' && *(str+1) != '\0' && strchr(SCIP_SPACECONTROL, *(str+1))) )
+      while( isspace((unsigned char)*str) || ( *str == '\\' && *(str+1) != '\0' && strchr(SCIP_SPACECONTROL, *(str+1)) ) )
          str += *str == '\\' ? 2 : 1;
    }
    while( *str == delimiter );
@@ -881,7 +877,7 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
    while( *str && state != SCIPPARSEPOLYNOMIAL_STATE_END && state != SCIPPARSEPOLYNOMIAL_STATE_ERROR )
    {
       /* skip white space */
-      while( isspace((unsigned char)*str) || (*str == '\\' && *(str+1) != '\0' && strchr(SCIP_SPACECONTROL, *(str+1))) )
+      while( isspace((unsigned char)*str) || ( *str == '\\' && *(str+1) != '\0' && strchr(SCIP_SPACECONTROL, *(str+1)) ) )
          str += *str == '\\' ? 2 : 1;
 
       assert(state != SCIPPARSEPOLYNOMIAL_STATE_END);
