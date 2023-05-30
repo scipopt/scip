@@ -418,7 +418,8 @@ SCIP_Bool SCIPparseReal(
    localstr = (char*)str;
 
    /* ignore white space */
-   SCIP_CALL( SCIPskipSpace(&localstr) );
+   if( SCIPskipSpace(&localstr) )
+      return FALSE;
 
    /* test for a special infinity first */
    if( strncmp(localstr, "+infinity", 9) == 0 )
