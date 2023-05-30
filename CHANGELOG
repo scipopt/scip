@@ -24,6 +24,8 @@ Interface changes
 
 ### New API functions
 
+- added SCIPskipSpace
+
 ### Command line interface
 
 ### Interfaces to external software
