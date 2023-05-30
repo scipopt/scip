@@ -79,6 +79,8 @@ Fixed bugs
 - disable recomputing symmetries after a restart (constraint removal is not permitted)
 - avoid cutting off optimal solutions for small feasibility tolerances in conflict analysis
 - initialize variable in presol_dualsparsify.c
+- fix in presolving of variable bound constraints to use absolute instead of relative difference 
+- free variable histories in reoptimization mode
 - handle whitespaces in interactive shell history consistently
 
 Miscellaneous

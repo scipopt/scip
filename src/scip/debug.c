@@ -1407,7 +1407,7 @@ SCIP_RETCODE SCIPdebugCheckAggregation(
    assert(var != NULL);
    assert(aggrvars != NULL);
    assert(scalars != NULL);
-   assert(naggrvars >= 1);
+   assert(naggrvars >= 0);
 
    /* when debugging was disabled the solution is not defined to be not valid in the current subtree */
    if( !SCIPdebugSolIsEnabled(set->scip) )
