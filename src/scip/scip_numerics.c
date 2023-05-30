@@ -418,7 +418,7 @@ SCIP_Bool SCIPparseReal(
    localstr = (char*)str;
 
    /* ignore white space */
-   if( SCIPskipSpace(&localstr) )
+   if( SCIPskipSpace(&localstr) != SCIP_OKAY )
       return FALSE;
 
    /* test for a special infinity first */
