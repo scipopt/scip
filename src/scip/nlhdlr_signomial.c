@@ -22,7 +22,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   nlhdlr_signomial.h
+/**@file   nlhdlr_signomial.c
  * @ingroup DEFPLUGINS_NLHDLR
  * @brief  signomial nonlinear handler
  * @author Liding Xu
@@ -30,7 +30,7 @@
 
 
 #define SCIP_SIGCUT_DEBUG_
-#define SCIP_SIG_DEBUG_
+#define SCIP_SIG_DEBUG
 
 #ifdef SCIP_SIGCUT_DEBUG
 #ifndef SCIP_SIG_DEBUG_
@@ -55,18 +55,14 @@
 
 
 /* fundamental nonlinear handler properties */
-#define NLHDLR_NAME                    "signomial"
-#define NLHDLR_DESC                    "signomial handler for expressions"
+#define NLHDLR_NAME               "signomial"
+#define NLHDLR_DESC               "signomial handler for expressions"
 #define NLHDLR_DETECTPRIORITY          30     
 #define NLHDLR_ENFOPRIORITY            30
 
 /* handler specific parameters */
 #define NLHDLR_MAXNUNDERVARS           14    /**< maximum number of variables when underestimating a concave power function (maximum: 14) */
 #define NLHDLR_MINCUTSCALE             1e-5  /**< minimum scale factor when scaling a cut (minimum: 1e-6) */
-
-/*
- * Data structures
- */
 
 
 /**
@@ -120,6 +116,7 @@ typedef struct
    int                  nsignvars;
    SCIP*                scip;
 } VERTEXPOLYFUN_EVALDATA;
+
 
 /*
  * Local methods
@@ -431,7 +428,7 @@ SCIP_Real reformRowprep(
 
 /** get variables associated with the expression and its subexpressions */
 static
-void getVars(
+SCIP_RETCODE getVars(
    SCIP*                  scip, 
    SCIP_NLHDLREXPRDATA*   nlhdlrexprdata
    )
@@ -445,29 +442,31 @@ void getVars(
       nlhdlrexprdata->vars[c] = NULL;
       nlhdlrexprdata->vars[c] = SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->factors[c]);
       assert(nlhdlrexprdata->vars[c] != NULL);
-      SCIPcaptureVar(scip, nlhdlrexprdata->vars[c]);
+      SCIP_CALL(SCIPcaptureVar(scip, nlhdlrexprdata->vars[c]));
    }
+
 
    /* get and capture variable \f$ y \f$ */
    nlhdlrexprdata->vars[c] = NULL;
    nlhdlrexprdata->vars[c] = SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->expr);
    assert(nlhdlrexprdata->vars[c] != NULL);
-   SCIPcaptureVar(scip, nlhdlrexprdata->vars[c]);
+   SCIP_CALL(SCIPcaptureVar(scip, nlhdlrexprdata->vars[c]));
 
    nlhdlrexprdata->isgetvars = TRUE;
+   return SCIP_OKAY;
 }
 
-/** get bounds of variables $x,t$ and check whether they are signomial variables */
+/** get bounds of variables $x,t$ and check whether they are box constrained signomial variables */
 static
 void getCheckBds(
    SCIP*                 scip,
    SCIP_NLHDLREXPRDATA*  nlhdlrexprdata,
-   SCIP_Bool*            issignomial         /**< buffer to store whether variables are signomial variables */ 
+   SCIP_Bool*            isboxsignomial         /**< buffer to store whether variables are box constrained signomial variables */ 
    )
 {
    assert(nlhdlrexprdata->isgetvars);
 
-   *issignomial = FALSE;
+   *isboxsignomial = FALSE;
 
    /* get bounds of \f$ x \f$ */
    SCIP_Real productinf = 1;
@@ -493,7 +492,7 @@ void getCheckBds(
    nlhdlrexprdata->intervals[c].sup = productsup;
 
 
-   #ifdef SCIP_SIG_DEBUG
+   #ifdef SCIP_SIG_DEBUG_
       if( !SCIPisEQ(scip, productinf, SCIPvarGetLbLocal(nlhdlrexprdata->vars[c])) ){
          SCIPdebugMsg(scip, "%f %f \n", productinf, SCIPvarGetLbLocal(nlhdlrexprdata->vars[c]));
       }
@@ -502,7 +501,7 @@ void getCheckBds(
       }
    #endif
 
-   *issignomial = TRUE;
+   *isboxsignomial = TRUE;
 
 }
 
@@ -588,7 +587,7 @@ SCIP_RETCODE estimateSpecialPower(
    int nsignvars = sign ? nlhdlrexprdata->nposvars : nlhdlrexprdata->nnegvars;
 
    /* if the power function has no more than 2 variables, this a special case */
-   *isspecial = ( nsignvars <= 1 ) || ( nsignvars == 2 && !overestimate );
+   *isspecial = ( nsignvars <= 1 ) || ( nsignvars == 2  && !overestimate );
    if( !*isspecial )
       return SCIP_OKAY;
    
@@ -611,7 +610,7 @@ SCIP_RETCODE estimateSpecialPower(
             SCIP_Real refexponent = nlhdlrexprdata->refexponents[i];
             if( SCIPisEQ(scip, refexponent, 1) )
             {
-               /* \f$ h =1 \f$, a univariate linear function. Only rescale, no need for linearization */
+               /* \f$ h = 1 \f$, a univariate linear function. Only rescale, no need for linearization */
                SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, var, multiplier / scale));
             }
             else
@@ -662,7 +661,6 @@ SCIP_RETCODE estimateSpecialPower(
          scale[j] = i == (nlhdlrexprdata->nvars - 1) ? nlhdlrexprdata->coef : 1;
          vars[j] = nlhdlrexprdata->vars[i];
          xstar[j] = SCIPgetSolVal(scip, sol, nlhdlrexprdata->vars[j]) / scale[j];
-         assert(xstar[j] != SCIP_INVALID);
          j++;
       }
       /* compute the box length*/
@@ -682,7 +680,7 @@ SCIP_RETCODE estimateSpecialPower(
       SCIP_Real facetconstant;
       if( isupperright )
       {
-         /* underestimator: \f$ fw0uw1u + (fw0uw1u - fw0lw1u) / (dw0) * (x - w0u) + (fw0uw1u - fw0uw1l) / (dw1) * (x - w1u) \f$ */
+         /* underestimator: \f$ fw0uw1u + (fw0uw1u - fw0lw1u) / (dw0) * (x0 - w0u) + (fw0uw1u - fw0uw1l) / (dw1) * (x1 - w1u) \f$ */
          SCIP_Real fw0uw1u = f0w0u * f1w1u;
          facetcoefs[0] = (fw0uw1u - fw0lw1u) / dw0;
          facetcoefs[1] = (fw0uw1u - fw0uw1l) / dw1;
@@ -690,7 +688,7 @@ SCIP_RETCODE estimateSpecialPower(
       }
       else
       {
-         /* underestimator: \f$ fw0lw1l + (fw0uw1l - fw0lw1l) / (dw0) * (x - w0l) + (fw0lw1u- fw0lw1l) / (dw1) * (x - w1l) \f$ */
+         /* underestimator: \f$ fw0lw1l + (fw0uw1l - fw0lw1l) / (dw0) * (x0 - w0l) + (fw0lw1u- fw0lw1l) / (dw1) * (x1 - w1l) \f$ */
          SCIP_Real fw0lw1l = f0w0l * f1w1l;
          facetcoefs[0] = (fw0uw1l - fw0lw1l) / dw0;
          facetcoefs[1] = (fw0lw1u - fw0lw1l) / dw1;
@@ -845,6 +843,8 @@ static SCIP_RETCODE overEstimatePower(
  * Callback methods of nonlinear handler
  */
 
+
+
 /** nonlinear handler estimation callback */
 static 
 SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateSignomial)
@@ -857,19 +857,18 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateSignomial)
    assert(rowpreps != NULL);
    assert(expr == nlhdlrexprdata->expr);
 
-
    *success = FALSE;
    *addedbranchscores = FALSE;
-
+	
    /* get variables*/
    if( !nlhdlrexprdata->isgetvars )
-      getVars(scip, nlhdlrexprdata);
+      SCIP_CALL(getVars(scip, nlhdlrexprdata));
 
    /* check whether the expression is a signomial term */
-   SCIP_Bool issignomial = FALSE;
-   getCheckBds(scip, nlhdlrexprdata, &issignomial);
+   SCIP_Bool isboxsignomial = FALSE;
+   getCheckBds(scip, nlhdlrexprdata, &isboxsignomial);
 
-   if( !issignomial )
+   if( !isboxsignomial )
       return SCIP_OKAY;
 
    SCIP_NLHDLRDATA *nlhdlrdata = SCIPnlhdlrGetData(nlhdlr);
@@ -954,6 +953,8 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateSignomial)
          }
       #endif
    }
+
+
    if( *success )
    {
       /* compute overestimator */
@@ -978,6 +979,7 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateSignomial)
       #endif
    }
 
+
    #ifdef SCIP_SIGCUT_DEBUG
    if( *success )
    {
@@ -992,7 +994,6 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateSignomial)
    }
    #endif
 
-
    if( *success )
    {
       int scale = reformRowprep(scip, nlhdlrexprdata, rowprep, success);
@@ -1000,8 +1001,7 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateSignomial)
       if( *success )
          SCIP_CALL( SCIPsetPtrarrayVal(scip, rowpreps, 0, rowprep));
    }
-   
-   if( !*success )
+   if(!*success)
       SCIPfreeRowprep(scip, &rowprep);
 
    return SCIP_OKAY;
@@ -1029,25 +1029,27 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectSignomial)
    /* check for product expressions with more than one children */
    if( SCIPisExprProduct(scip, expr) && SCIPexprGetNChildren(expr) >= 2 )
    {
-      int nc = SCIPexprGetNChildren(expr);
-      int nvars = nc + 1;
+      int nf = SCIPexprGetNChildren(expr);
+      int nvars = nf + 1;
 
       /* create expression data for the nonlinear handler */
       SCIP_CALL( SCIPallocClearBlockMemory(scip, nlhdlrexprdata));
+      (*nlhdlrexprdata)->nfactors = nf;
+      (*nlhdlrexprdata)->nvars = nvars;
 
       /* allocat memory for expression data */
-      SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->factors, nc);
-      SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->exponents, nc);
+      SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->factors, nf);
+      SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->exponents, nf);
 
       /* get monomial information */
-      SCIP_CALL( SCIPgetExprMonomialData(scip, expr, &((*nlhdlrexprdata)->coef), (*nlhdlrexprdata)->exponents, (*nlhdlrexprdata)->factors));
+      SCIP_CALL( SCIPgetExprMonomialData(scip, expr, &((*nlhdlrexprdata)->coef), (*nlhdlrexprdata)->exponents, (*nlhdlrexprdata)->factors) );
 
       /* skip multilinear terms */
       SCIP_Bool ismultilinear = FALSE;
-      if( nc >= 2)
+      if( nf >= 2)
       {
          ismultilinear = TRUE;
-         for ( int c = 0; c < nc; c++ )
+         for ( int c = 0; c < nf; c++ )
          {
             if( !SCIPisEQ(scip, (*nlhdlrexprdata)->exponents[c], 1) )
             {
@@ -1059,8 +1061,9 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectSignomial)
 
       if( ismultilinear )
       {
-         /* if multilinear, we free memory of the expression data and do nothing */
+         /* if multilinear, we free memory of the expression data and do nothing */          
          freeExprDataMem(scip, nlhdlrexprdata, TRUE);
+         return SCIP_OKAY;
       }
       else
       {
@@ -1073,10 +1076,9 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectSignomial)
          SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->facetcoefs, nvars);
          SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->box, 2 * nvars);
 
+         (*nlhdlrexprdata)->isgetvars = FALSE;
          (*nlhdlrexprdata)->expr = expr;
          SCIPcaptureExpr(expr);
-         (*nlhdlrexprdata)->nfactors = nc;
-         (*nlhdlrexprdata)->nvars = nc + 1;
 
          /* detect more information in reformulation,  and we first 
           * compute the sum of positive and negative exponents and determine the sign indicators 
@@ -1084,7 +1086,7 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectSignomial)
          SCIP_Real sumlexponents = 0;
          SCIP_Real sumrexponents = 1;
          int nposvars = 0;
-         for (int c = 0; c < nc; c++)
+         for (int c = 0; c < nf; c++)
          {
             /* capture sub expressions */
             SCIPcaptureExpr((*nlhdlrexprdata)->factors[c]);
@@ -1102,24 +1104,24 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectSignomial)
                (*nlhdlrexprdata)->signs[c] = FALSE;
             }
          }
-         (*nlhdlrexprdata)->signs[nc] = FALSE;
+         (*nlhdlrexprdata)->signs[nf] = FALSE;
          (*nlhdlrexprdata)->nposvars = nposvars;
-         (*nlhdlrexprdata)->nnegvars = nc - nposvars + 1;
+         (*nlhdlrexprdata)->nnegvars = nf - nposvars + 1;
 
          /* compute the normalization constant */
          SCIP_Real normalize = fmax(sumlexponents, sumrexponents);
          /* normalize positive and negative exponents */
-         for (int c = 0; c < nc; c++)
+         for (int c = 0; c < nf; c++)
          {
             if( (*nlhdlrexprdata)->signs[c] )
                (*nlhdlrexprdata)->refexponents[c] = (*nlhdlrexprdata)->exponents[c] / normalize;
             else
                (*nlhdlrexprdata)->refexponents[c] = -(*nlhdlrexprdata)->exponents[c] / normalize;
          }
-         (*nlhdlrexprdata)->refexponents[nc] = 1 / normalize;
+         (*nlhdlrexprdata)->refexponents[nf] = 1 / normalize;
 
          /* tell children that we will use their auxvar and use its activity for both estimate and domain propagation */
-         for( int c = 0; c < nc; c++ )
+         for( int c = 0; c < nf; c++ )
             SCIP_CALL( SCIPregisterExprUsageNonlinear(scip, (*nlhdlrexprdata)->factors[c], TRUE, FALSE, TRUE, TRUE));
 
          nlhdlrdata->nexprs++;
@@ -1204,7 +1206,7 @@ SCIP_DECL_NLHDLRFREEEXPRDATA(nlhdlrFreeExprDataSignomial)
    /* release variables */
    if( (*nlhdlrexprdata)->isgetvars )
    {
-      for( int c = 0; c <= (*nlhdlrexprdata)->nvars; c++ ) 
+      for( int c = 0; c < (*nlhdlrexprdata)->nvars; c++ ) 
          SCIPreleaseVar(scip, &(*nlhdlrexprdata)->vars[c]);
    }
 
