@@ -10773,6 +10773,17 @@ void SCIPescapeString(
    t[bufsize-1] = '\0';
 }
 
+/** increases string pointer as long as it refers to a space character or an explicit space control sequence */
+SCIP_RETCODE SCIPskipSpace(
+   char**                s                   /**< pointer to string pointer */
+   )
+{
+   while( isspace(**s) || ( **s == '\\' && *(*s+1) != '\0' && strchr(SCIP_SPACECONTROL, *(*s+1)) ) )
+      *s += **s == '\\' ? 2 : 1;
+
+   return SCIP_OKAY;
+}
+
 /* safe version of snprintf */
 int SCIPsnprintf(
    char*                 t,                  /**< target string */

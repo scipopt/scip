@@ -70,9 +70,7 @@
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
-#include <ctype.h>
-#include <stdlib.h>
-#include <string.h>
+
 
 /* constraint handler properties */
 #define CONSHDLR_NAME          "cardinality"
@@ -3018,7 +3016,7 @@ SCIP_DECL_CONSPARSE(consParseCardinality)
 
       if( t == NULL )
       {
-         SCIPerrorMessage("Syntax error: expected weight at input: %s\n", s);
+         SCIPerrorMessage("Syntax error: expected opening '(' at input: %s\n", s);
          *success = FALSE;
          break;
       }
@@ -3030,18 +3028,37 @@ SCIP_DECL_CONSPARSE(consParseCardinality)
 
       /* find weight */
       weight = strtod(s, &t);
+
       if( t == NULL )
       {
          SCIPerrorMessage("Syntax error during parsing of the weight: %s\n", s);
          *success = FALSE;
          break;
       }
+
       s = t;
 
-      /* skip white space, ',', and ')' */
-      while( isspace((unsigned char)*s) || *s == ',' || *s == ')'
-             || ( *s == '\\' && *(s+1) != '\0' && strchr(SCIP_SPACECONTROL, *(s+1)) ) )
-         s += *s == '\\' ? 2 : 1;
+      /* skip until ending of weight */
+      t = strchr(t, ')');
+
+      if( t == NULL )
+      {
+         SCIPerrorMessage("Syntax error: expected closing ')' at input %s\n", s);
+         *success = FALSE;
+         break;
+      }
+
+      s = t;
+
+      /* skip ')' */
+      ++s;
+
+      /* skip white space */
+      SCIP_CALL( SCIPskipSpace((char**)&s) );
+
+      /* skip ',' */
+      if( *s == ',' )
+         ++s;
 
       /* add variable */
       SCIP_CALL( SCIPaddVarCardinality(scip, *cons, var, NULL, weight) );
@@ -3053,8 +3070,7 @@ SCIP_DECL_CONSPARSE(consParseCardinality)
       s = s + 2;
 
       /* skip white space */
-      while( isspace((unsigned char)*s) || ( *s == '\\' && *(s+1) != '\0' && strchr(SCIP_SPACECONTROL, *(s+1)) ) )
-         s += *s == '\\' ? 2 : 1;
+      SCIP_CALL( SCIPskipSpace((char**)&s) );
 
       cardval = (int)strtod(s, &t);
 

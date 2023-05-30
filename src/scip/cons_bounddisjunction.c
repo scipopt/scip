@@ -63,14 +63,12 @@
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
-#include <ctype.h>
-#include <string.h>
+
 
 /**@name Constraint handler properties
  *
  * @{
  */
-
 #define CONSHDLR_NAME          "bounddisjunction"
 #define CONSHDLR_DESC          "bound disjunction constraints"
 #define CONSHDLR_ENFOPRIORITY  -3000000 /**< priority of the constraint handler for constraint enforcing */
@@ -2740,8 +2738,7 @@ SCIP_DECL_CONSPARSE(consParseBounddisjunction)
    SCIPdebugMsg(scip, "parse <%s> as bounddisjunction constraint\n", str);
 
    /* skip white space */
-   while( isspace((unsigned char)*str) || ( *str == '\\' && *(str+1) != '\0' && strchr(SCIP_SPACECONTROL, *(str+1)) ) )
-      str += *str == '\\' ? 2 : 1;
+   SCIP_CALL( SCIPskipSpace((char**)&str) );
 
    /* check for string "bounddisjunction" */
    if( strncmp(str, "bounddisjunction(", 16) != 0 )
@@ -2786,8 +2783,7 @@ SCIP_DECL_CONSPARSE(consParseBounddisjunction)
       str = endptr;
 
       /* skip white space */
-      while( isspace((unsigned char)*str) || ( *str == '\\' && *(str+1) != '\0' && strchr(SCIP_SPACECONTROL, *(str+1)) ) )
-         str += *str == '\\' ? 2 : 1;
+      SCIP_CALL( SCIPskipSpace((char**)&str) );
 
       /* parse bound type */
       switch( *str )
@@ -2815,10 +2811,6 @@ SCIP_DECL_CONSPARSE(consParseBounddisjunction)
       /* skip '=' */
       ++str;
 
-      /* skip white space */
-      while( isspace((unsigned char)*str) || ( *str == '\\' && *(str+1) != '\0' && strchr(SCIP_SPACECONTROL, *(str+1)) ) )
-         str += *str == '\\' ? 2 : 1;
-
       /* parse bound value */
       if( !SCIPparseReal(scip, str, &bounds[nvars], &endptr) )
       {
@@ -2827,11 +2819,7 @@ SCIP_DECL_CONSPARSE(consParseBounddisjunction)
          goto TERMINATE;
       }
 
-      /* skip white space */
       str = endptr;
-      while( isspace((unsigned char)*str) || *str == ','
-             || ( *str == '\\' && *(str+1) != '\0' && strchr(SCIP_SPACECONTROL, *(str+1)) ) )
-         str += *str == '\\' ? 2 : 1;
 
       /* set variable */
       vars[nvars++] = var;
@@ -2845,6 +2833,13 @@ SCIP_DECL_CONSPARSE(consParseBounddisjunction)
          SCIP_CALL( SCIPreallocBufferArray(scip, &boundtypes, varssize) );
          SCIP_CALL( SCIPreallocBufferArray(scip, &bounds, varssize) );
       }
+
+      /* skip white space */
+      SCIP_CALL( SCIPskipSpace((char**)&str) );
+
+      /* skip ',' */
+      if( *str == ',' )
+         ++str;
    }
 
    /* add bounddisjunction */

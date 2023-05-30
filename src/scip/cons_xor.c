@@ -81,8 +81,7 @@
 #include "scip/scip_sol.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
-#include <ctype.h>
-#include <string.h>
+
 
 /* constraint handler properties */
 #define CONSHDLR_NAME          "xor"
@@ -5619,8 +5618,7 @@ SCIP_DECL_CONSPARSE(consParseXor)
          str = endptr;
 
          /* skip white spaces */
-         while( isspace(*str) || ( *str == '\\' && *(str+1) != '\0' && strchr(SCIP_SPACECONTROL, *(str+1)) ) )
-            str += *str == '\\' ? 2 : 1;
+         SCIP_CALL( SCIPskipSpace((char**)&str) );
 
          /* check for integer variable, should look like (intvar = var) */
          if( *str == '(' )
@@ -5635,10 +5633,6 @@ SCIP_DECL_CONSPARSE(consParseXor)
             }
 
             ++str;
-
-            /* skip white spaces */
-            while( isspace(*str) || ( *str == '\\' && *(str+1) != '\0' && strchr(SCIP_SPACECONTROL, *(str+1)) ) )
-               str += *str == '\\' ? 2 : 1;
 
             /* parse variable name */
             SCIP_CALL( SCIPparseVarName(scip, str, &intvar, &endptr) );

@@ -71,8 +71,7 @@
 #include "scip/scip_sol.h"
 #include "scip/scip_var.h"
 #include "scip/symmetry.h"
-#include <ctype.h>
-#include <string.h>
+
 
 /* constraint handler properties */
 #define CONSHDLR_NAME          "orbisack"
@@ -1891,8 +1890,7 @@ SCIP_DECL_CONSPARSE(consParseOrbisack)
    s = str;
 
    /* skip white space */
-   while( isspace((unsigned char)*s) || ( *s == '\\' && *(s+1) != '\0' && strchr(SCIP_SPACECONTROL, *(s+1)) ) )
-      s += *s == '\\' ? 2 : 1;
+   SCIP_CALL( SCIPskipSpace((char**)&s) );
 
    if( strncmp(s, "partOrbisack(", 13) == 0 )
    {
@@ -1938,8 +1936,7 @@ SCIP_DECL_CONSPARSE(consParseOrbisack)
       assert( s != NULL );
 
       /* skip white space */
-      while( isspace((unsigned char)*s) || ( *s == '\\' && *(s+1) != '\0' && strchr(SCIP_SPACECONTROL, *(s+1)) ) )
-         s += *s == '\\' ? 2 : 1;
+      SCIP_CALL( SCIPskipSpace((char**)&s) );
 
       if( firstcolumn == ( *s == '.' || *s == ')' ) )
       {

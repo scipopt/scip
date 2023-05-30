@@ -68,9 +68,6 @@
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
-#include <ctype.h>
-#include <string.h>
-
 #ifdef WITH_CARDINALITY_UPGRADE
 #include "scip/cons_cardinality.h"
 #endif
@@ -13223,10 +13220,6 @@ SCIP_DECL_CONSPARSE(consParseKnapsack)
       sscanf(str, "%" SCIP_LONGINT_FORMAT "%n", &weight, &nread);
       str += nread;
 
-      /* skip whitespace */
-      while( isspace((int)*str) || ( *str == '\\' && *(str+1) != '\0' && strchr(SCIP_SPACECONTROL, *(str+1)) ) )
-         str += *str == '\\' ? 2 : 1;
-
       /* parse variable name */
       SCIP_CALL( SCIPparseVarName(scip, str, &var, &endptr) );
 
@@ -13260,8 +13253,7 @@ SCIP_DECL_CONSPARSE(consParseKnapsack)
       ++nvars;
 
       /* skip whitespace */
-      while( isspace((int)*str) || ( *str == '\\' && *(str+1) != '\0' && strchr(SCIP_SPACECONTROL, *(str+1)) ) )
-         str += *str == '\\' ? 2 : 1;
+      SCIP_CALL( SCIPskipSpace((char**)&str) );
    }
 
    if( *success )
@@ -13280,8 +13272,7 @@ SCIP_DECL_CONSPARSE(consParseKnapsack)
    if( *success )
    {
       /* skip whitespace */
-      while( isspace((int)*str) || ( *str == '\\' && *(str+1) != '\0' && strchr(SCIP_SPACECONTROL, *(str+1)) ) )
-         str += *str == '\\' ? 2 : 1;
+      SCIP_CALL( SCIPskipSpace((char**)&str) );
 
       /* coverity[secure_coding] */
       if( sscanf(str, "%" SCIP_LONGINT_FORMAT, &capacity) != 1 )

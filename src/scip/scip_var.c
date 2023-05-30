@@ -42,6 +42,7 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+#include <ctype.h>
 #include "blockmemshell/memory.h"
 #include "lpi/lpi.h"
 #include "scip/branch.h"
@@ -86,7 +87,6 @@
 #include "scip/struct_var.h"
 #include "scip/tree.h"
 #include "scip/var.h"
-#include <ctype.h>
 
 
 /** creates and captures problem variable; if variable is of integral type, fractional bounds are automatically rounded;
@@ -654,8 +654,7 @@ SCIP_RETCODE SCIPparseVarsList(
 
       ntmpvars++;
 
-      while( isspace((unsigned char)*str) || ( *str == '\\' && *(str+1) != '\0' && strchr(SCIP_SPACECONTROL, *(str+1)) ) )
-         str += *str == '\\' ? 2 : 1;
+      SCIP_CALL( SCIPskipSpace((char**)&str) );
    }
    while( *str == delimiter );
 
@@ -877,8 +876,7 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
    while( *str && state != SCIPPARSEPOLYNOMIAL_STATE_END && state != SCIPPARSEPOLYNOMIAL_STATE_ERROR )
    {
       /* skip white space */
-      while( isspace((unsigned char)*str) || ( *str == '\\' && *(str+1) != '\0' && strchr(SCIP_SPACECONTROL, *(str+1)) ) )
-         str += *str == '\\' ? 2 : 1;
+      SCIP_CALL( SCIPskipSpace((char**)&str) );
 
       assert(state != SCIPPARSEPOLYNOMIAL_STATE_END);
 

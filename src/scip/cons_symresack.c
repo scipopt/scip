@@ -80,8 +80,7 @@
 #include "scip/scip_prob.h"
 #include "scip/scip_sol.h"
 #include "scip/scip_var.h"
-#include <ctype.h>
-#include <string.h>
+
 
 /* constraint handler properties */
 #define CONSHDLR_NAME          "symresack"
@@ -2823,8 +2822,7 @@ SCIP_DECL_CONSPARSE(consParseSymresack)
    s = str;
 
    /* skip white space */
-   while( isspace((unsigned char)*s) || ( *s == '\\' && *(s+1) != '\0' && strchr(SCIP_SPACECONTROL, *(s+1)) ) )
-      s += *s == '\\' ? 2 : 1;
+   SCIP_CALL( SCIPskipSpace((char**)&s) );
 
    if( strncmp(s, "symresack(", 10) != 0 )
    {
@@ -2848,16 +2846,14 @@ SCIP_DECL_CONSPARSE(consParseSymresack)
       }
 
       /* skip whitespace */
-      while( isspace((unsigned char)*s) || ( *s == '\\' && *(s+1) != '\0' && strchr(SCIP_SPACECONTROL, *(s+1)) ) )
-         s += *s == '\\' ? 2 : 1;
+      SCIP_CALL( SCIPskipSpace((char**)&s) );
 
       /* skip ',' */
       if( *s == ',' )
          ++s;
 
       /* skip whitespace */
-      while( isspace((unsigned char)*s) || ( *s == '\\' && *(s+1) != '\0' && strchr(SCIP_SPACECONTROL, *(s+1)) ) )
-         s += *s == '\\' ? 2 : 1;
+      SCIP_CALL( SCIPskipSpace((char**)&s) );
 
       /* if we could not find starting indicator of array */
       if( *s != '[' )
@@ -2906,8 +2902,7 @@ SCIP_DECL_CONSPARSE(consParseSymresack)
             vars[nvars-1] = var;
 
             /* skip white space */
-            while( isspace((unsigned char)*s) || ( *s == '\\' && *(s+1) != '\0' && strchr(SCIP_SPACECONTROL, *(s+1)) ) )
-               s += *s == '\\' ? 2 : 1;
+            SCIP_CALL( SCIPskipSpace((char**)&s) );
 
             /* skip ',' */
             if( *s == ',' )
@@ -2920,8 +2915,7 @@ SCIP_DECL_CONSPARSE(consParseSymresack)
          do
          {
             /* skip whitespace */
-            while( isspace((unsigned char)*s) || ( *s == '\\' && *(s+1) != '\0' && strchr(SCIP_SPACECONTROL, *(s+1)) ) )
-               s += *s == '\\' ? 2 : 1;
+            SCIP_CALL( SCIPskipSpace((char**)&s) );
 
             /* parse integer value */
             if( !SCIPstrToIntValue(s, &val, &endptr) )
@@ -2945,8 +2939,7 @@ SCIP_DECL_CONSPARSE(consParseSymresack)
             perm[nfoundpermidx-1] = val;
 
             /* skip whitespace */
-            while( isspace((unsigned char)*s) || ( *s == '\\' && *(s+1) != '\0' && strchr(SCIP_SPACECONTROL, *(s+1)) ) )
-               s += *s == '\\' ? 2 : 1;
+            SCIP_CALL( SCIPskipSpace((char**)&s) );
 
             /* skip ',' */
             if( *s == ',' )

@@ -65,7 +65,6 @@
 #include "scip/scip_sol.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
-#include <string.h>
 
 
 /* constraint handler properties */

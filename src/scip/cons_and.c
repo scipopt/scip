@@ -76,7 +76,6 @@
 #include "scip/scip_sol.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
-#include <string.h>
 
 
 /* constraint handler properties */
@@ -4813,7 +4812,7 @@ SCIP_DECL_CONSPARSE(consParseAnd)
 
       if( endptr > startptr )
       {
-         /* copy string for parsing; note that isspace() in SCIPparseVarsList() requires that strcopy ends with '\0' */
+         /* copy string for parsing; note that SCIPskipSpace() in SCIPparseVarsList() requires that strcopy ends with '\0' */
          SCIP_CALL( SCIPduplicateBufferArray(scip, &strcopy, startptr, (int)(endptr-startptr+1)) );
          strcopy[endptr-startptr] = '\0';
          varssize = 100;

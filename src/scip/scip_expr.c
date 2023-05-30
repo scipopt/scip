@@ -175,8 +175,7 @@ SCIP_RETCODE parseBase(
    debugParse("parsing base from %s\n", expr);
 
    /* ignore whitespace */
-   while( isspace((unsigned char)*expr) || ( *expr == '\\' && *(expr+1) != '\0' && strchr(SCIP_SPACECONTROL, *(expr+1)) ) )
-      expr += *expr == '\\' ? 2 : 1;
+   SCIP_CALL( SCIPskipSpace((char**)&expr) );
 
    if( *expr == '\0' )
    {
@@ -254,7 +253,7 @@ SCIP_RETCODE parseBase(
 
       /* get name */
       i = 0;
-      while( *expr != '(' && *expr != '\0' && !isspace((unsigned char)*expr)
+      while( *expr != '(' && *expr != '\0' && !isspace(*expr)
              && !( *expr == '\\' && *(expr+1) != '\0' && strchr(SCIP_SPACECONTROL, *(expr+1)) ) )
       {
          operatorname[i] = *expr;
@@ -339,21 +338,19 @@ SCIP_RETCODE parseFactor(
 
    /* parse Base */
    /* ignore whitespace */
-   while( isspace((unsigned char)*expr) || ( *expr == '\\' && *(expr+1) != '\0' && strchr(SCIP_SPACECONTROL, *(expr+1)) ) )
-      expr += *expr == '\\' ? 2 : 1;
+   SCIP_CALL( SCIPskipSpace((char**)&expr) );
 
    SCIP_CALL( parseBase(scip, vartoexprvarmap, expr, newpos, &basetree, ownercreate, ownercreatedata) );
    expr = *newpos;
 
    /* check if there is an exponent */
    /* ignore whitespace */
-   while( isspace((unsigned char)*expr) || ( *expr == '\\' && *(expr+1) != '\0' && strchr(SCIP_SPACECONTROL, *(expr+1)) ) )
-      expr += *expr == '\\' ? 2 : 1;
+   SCIP_CALL( SCIPskipSpace((char**)&expr) );
+
    if( *expr == '^' )
    {
       ++expr;
-      while( isspace((unsigned char)*expr) || ( *expr == '\\' && *(expr+1) != '\0' && strchr(SCIP_SPACECONTROL, *(expr+1)) ) )
-         expr += *expr == '\\' ? 2 : 1;
+      SCIP_CALL( SCIPskipSpace((char**)&expr) );
 
       if( *expr == '\0' )
       {
@@ -375,8 +372,7 @@ SCIP_RETCODE parseFactor(
          }
 
          /* expect the ')' */
-         while( isspace((unsigned char)*expr) || ( *expr == '\\' && *(expr+1) != '\0' && strchr(SCIP_SPACECONTROL, *(expr+1)) ) )
-            expr += *expr == '\\' ? 2 : 1;
+         SCIP_CALL( SCIPskipSpace((char**)&expr) );
          if( *expr != ')' )
          {
             SCIPerrorMessage("error in parsing exponent: expected ')', received <%c> from <%s>\n", *expr,  expr);
@@ -455,8 +451,7 @@ SCIP_RETCODE parseTerm(
 
    /* parse Factor */
    /* ignore whitespace */
-   while( isspace((unsigned char)*expr) || ( *expr == '\\' && *(expr+1) != '\0' && strchr(SCIP_SPACECONTROL, *(expr+1)) ) )
-      expr += *expr == '\\' ? 2 : 1;
+   SCIP_CALL( SCIPskipSpace((char**)&expr) );
 
    SCIP_CALL( parseFactor(scip, FALSE, vartoexprvarmap, expr, newpos, &factortree, ownercreate, ownercreatedata) );
    expr = *newpos;
@@ -464,8 +459,7 @@ SCIP_RETCODE parseTerm(
    debugParse("back to parsing Term, continue parsing from %s\n", expr);
 
    /* check if Terms has another Factor incoming */
-   while( isspace((unsigned char)*expr) || ( *expr == '\\' && *(expr+1) != '\0' && strchr(SCIP_SPACECONTROL, *(expr+1)) ) )
-      expr += *expr == '\\' ? 2 : 1;
+   SCIP_CALL( SCIPskipSpace((char**)&expr) );
    if( *expr == '*' || *expr == '/' )
    {
       /* initialize termtree as a product expression with a single term, so we can append the extra Factors */
@@ -498,8 +492,7 @@ SCIP_RETCODE parseTerm(
 
          /* find next symbol */
          expr = *newpos;
-         while( isspace((unsigned char)*expr) || ( *expr == '\\' && *(expr+1) != '\0' && strchr(SCIP_SPACECONTROL, *(expr+1)) ) )
-            expr += *expr == '\\' ? 2 : 1;
+         SCIP_CALL( SCIPskipSpace((char**)&expr) );
       }
       while( *expr == '*' || *expr == '/' );
    }
@@ -537,8 +530,7 @@ SCIP_RETCODE parseExpr(
    debugParse("parsing expression %s\n", expr); /*lint !e506 !e681*/
 
    /* ignore whitespace */
-   while( isspace((unsigned char)*expr) || ( *expr == '\\' && *(expr+1) != '\0' && strchr(SCIP_SPACECONTROL, *(expr+1)) ) )
-      expr += *expr == '\\' ? 2 : 1;
+   SCIP_CALL( SCIPskipSpace((char**)&expr) );
 
    /* if '+' or '-', store it */
    sign = 1.0;
@@ -555,8 +547,7 @@ SCIP_RETCODE parseExpr(
    debugParse("back to parsing expression (we have the following term), continue parsing from %s\n", expr); /*lint !e506 !e681*/
 
    /* check if Expr has another Term incoming */
-   while( isspace((unsigned char)*expr) || ( *expr == '\\' && *(expr+1) != '\0' && strchr(SCIP_SPACECONTROL, *(expr+1)) ) )
-      expr += *expr == '\\' ? 2 : 1;
+   SCIP_CALL( SCIPskipSpace((char**)&expr) );
    if( *expr == '+' || *expr == '-' )
    {
       if( SCIPexprIsValue(scip->set, termtree) )
@@ -581,8 +572,7 @@ SCIP_RETCODE parseExpr(
          /* check if we have a "coef * <term>" */
          if( SCIPstrToRealValue(expr, &coef, (char**)newpos) )
          {
-            while( isspace((unsigned char)**newpos) || ( **newpos == '\\' && *(*newpos+1) != '\0' && strchr(SCIP_SPACECONTROL, *(*newpos+1)) ) )
-               *newpos += **newpos == '\\' ? 2 : 1;
+            SCIP_CALL( SCIPskipSpace((char**)newpos) );
 
             if( **newpos != '*' )
             {
@@ -595,8 +585,7 @@ SCIP_RETCODE parseExpr(
                /* keep coefficient in coef and continue parsing term after coefficient */
                expr = (*newpos)+1;
 
-               while( isspace((unsigned char)*expr) || ( *expr == '\\' && *(expr+1) != '\0' && strchr(SCIP_SPACECONTROL, *(expr+1)) ) )
-                  expr += *expr == '\\' ? 2 : 1;
+               SCIP_CALL( SCIPskipSpace((char**)&expr) );
             }
          }
          else
@@ -622,8 +611,7 @@ SCIP_RETCODE parseExpr(
 
          /* find next symbol */
          expr = *newpos;
-         while( isspace((unsigned char)*expr) || ( *expr == '\\' && *(expr+1) != '\0' && strchr(SCIP_SPACECONTROL, *(expr+1)) ) )
-            expr += *expr == '\\' ? 2 : 1;
+         SCIP_CALL( SCIPskipSpace((char**)&expr) );
       } while( *expr == '+' || *expr == '-' );
    }
    else

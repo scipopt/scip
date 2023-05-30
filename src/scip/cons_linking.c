@@ -75,8 +75,7 @@
 #include "scip/scip_sol.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
-#include <ctype.h>
-#include <string.h>
+
 
 /* constraint handler properties */
 #define CONSHDLR_NAME          "linking"
@@ -3283,8 +3282,7 @@ SCIP_DECL_CONSPARSE(consParseLinking)
    str += *(str+1) == '=' ? 2 : 1;
 
    /* skip whitespace */
-   while( isspace((int)*str) || ( *str == '\\' && *(str+1) != '\0' && strchr(SCIP_SPACECONTROL, *(str+1)) ) )
-      str += *str == '\\' ? 2 : 1;
+   SCIP_CALL( SCIPskipSpace((char**)&str) );
 
    nbinvars = 0;
    varssize = 16;

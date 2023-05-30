@@ -99,9 +99,6 @@
 #include "scip/scip_prob.h"
 #include "scip/scip_sol.h"
 #include "scip/scip_var.h"
-#include <ctype.h>
-#include <stdlib.h>
-#include <string.h>
 
 
 /* constraint handler properties */
@@ -2143,7 +2140,7 @@ SCIP_DECL_CONSPARSE(consParseSOS2)
 
       if( t == NULL )
       {
-         SCIPerrorMessage("Syntax error: expected weight at input: %s\n", s);
+         SCIPerrorMessage("Syntax error: expected opening '(' at input: %s\n", s);
          *success = FALSE;
          break;
       }
@@ -2155,18 +2152,37 @@ SCIP_DECL_CONSPARSE(consParseSOS2)
 
       /* find weight */
       weight = strtod(s, &t);
+
       if( t == NULL )
       {
          SCIPerrorMessage("Syntax error during parsing of the weight: %s\n", s);
          *success = FALSE;
          break;
       }
+
       s = t;
 
-      /* skip white space, ',', and ')' */
-      while( isspace((unsigned char)*s) || *s == ',' || *s == ')'
-              || ( *s == '\\' && *(s+1) != '\0' && strchr(SCIP_SPACECONTROL, *(s+1)) ) )
-         s += *s == '\\' ? 2 : 1;
+      /* skip until ending of weight */
+      t = strchr(t, ')');
+
+      if( t == NULL )
+      {
+         SCIPerrorMessage("Syntax error: expected closing ')' at input %s\n", s);
+         *success = FALSE;
+         break;
+      }
+
+      s = t;
+
+      /* skip ')' */
+      ++s;
+
+      /* skip white space */
+      SCIP_CALL( SCIPskipSpace((char**)&s) );
+
+      /* skip ',' */
+      if( *s == ',' )
+         ++s;
 
       /* add variable */
       SCIP_CALL( SCIPaddVarSOS2(scip, *cons, var, weight) );
