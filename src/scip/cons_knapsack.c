@@ -13215,7 +13215,7 @@ SCIP_DECL_CONSPARSE(consParseKnapsack)
    SCIP_CALL( SCIPallocBufferArray(scip, &vars,    varssize) );
    SCIP_CALL( SCIPallocBufferArray(scip, &weights, varssize) );
 
-   while( *str != ';' )
+   while( *str != '\0' )
    {
       /* try to parse coefficient, and use 1 if not successful */
       weight = 1;

@@ -2998,21 +2998,17 @@ SCIP_DECL_CONSPARSE(consParseCardinality)
    SCIP_CALL( SCIPcreateConsCardinality(scip, cons, name, 0, NULL, 0, NULL, NULL, initial, separate, enforce, check, propagate, local, dynamic, removable, stickingatnode) );
 
    /* loop through string */
-   do
+   while( *s != '\0' )
    {
       /* parse variable name */
       SCIP_CALL( SCIPparseVarName(scip, s, &var, &t) );
 
       if( var == NULL )
       {
-         while( *s != '\0' && *s != '<' && *s != ';' )
-            ++s;
+         t = strchr(t, '<');
 
-         if( *s == '\0' )
-         {
-            SCIPerrorMessage("Syntax error: expected terminating ';'\n");
-            *success = FALSE;
-         }
+         if( t != NULL )
+            s = t;
 
          break;
       }
@@ -3044,13 +3040,12 @@ SCIP_DECL_CONSPARSE(consParseCardinality)
 
       /* skip white space, ',', and ')' */
       while( isspace((unsigned char)*s) || *s == ',' || *s == ')'
-              || ( *s == '\\' && *(s+1) != '\0' && strchr(SCIP_SPACECONTROL, *(s+1)) ) )
+             || ( *s == '\\' && *(s+1) != '\0' && strchr(SCIP_SPACECONTROL, *(s+1)) ) )
          s += *s == '\\' ? 2 : 1;
 
       /* add variable */
       SCIP_CALL( SCIPaddVarCardinality(scip, *cons, var, NULL, weight) );
    }
-   while( *s != ';' );
 
    /* check if there is a '<=' */
    if( *success && *s == '<' && *(s+1) == '=' )
@@ -3069,16 +3064,7 @@ SCIP_DECL_CONSPARSE(consParseCardinality)
          *success = FALSE;
       }
       else
-      {
          SCIP_CALL( SCIPchgCardvalCardinality(scip, *cons, cardval) );
-         t = strchr(t, ';');
-
-         if( t == NULL )
-         {
-            SCIPerrorMessage("Syntax error: expected terminating ';'\n");
-            *success = FALSE;
-         }
-      }
    }
 
    if( !*success )

@@ -9910,23 +9910,13 @@ SCIP_DECL_CONSPARSE(consParseSOS1)
    SCIP_CALL( SCIPcreateConsSOS1(scip, cons, name, 0, NULL, NULL, initial, separate, enforce, check, propagate, local, dynamic, removable, stickingatnode) );
 
    /* loop through string */
-   do
+   while( *s != '\0' )
    {
       /* parse variable name */
       SCIP_CALL( SCIPparseVarName(scip, s, &var, &t) );
 
       if( var == NULL )
-      {
-         t = strchr(t, ';');
-
-         if( t == NULL )
-         {
-            SCIPerrorMessage("Syntax error: expected terminating ';'\n");
-            *success = FALSE;
-         }
-
          break;
-      }
 
       /* skip until beginning of weight */
       t = strchr(t, '(');
@@ -9961,7 +9951,6 @@ SCIP_DECL_CONSPARSE(consParseSOS1)
       /* add variable */
       SCIP_CALL( SCIPaddVarSOS1(scip, *cons, var, weight) );
    }
-   while( *s != ';' );
 
    if( !*success )
       SCIP_CALL( SCIPreleaseCons(scip, cons) );
