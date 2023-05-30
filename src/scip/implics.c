@@ -2670,7 +2670,7 @@ SCIP_RETCODE cliqueCleanup(
    if( !SCIPcliqueIsCleanedUp(clique) )
    {
       SCIP_VAR* onefixedvar = NULL;
-      SCIP_Bool onefixedvalue;
+      SCIP_Bool onefixedvalue = FALSE;
       SCIP_Bool needsorting = FALSE;
       int v;
       int w;
