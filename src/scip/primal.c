@@ -800,6 +800,21 @@ SCIP_RETCODE primalAddSol(
       SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_BESTSOLFOUND) );
       primal->nbestsolsfound++;
       stat->bestsolnode = stat->nnodes;
+
+      if( set->limit_objstop != SCIP_INVALID ) /*lint !e777*/
+      {
+         SCIP_Real origobj;
+         SCIP_Bool hasinfval;
+
+         SCIP_CALL( SCIPsolRetransform(sol, set, stat, origprob, transprob, hasinfval) );
+         origobj = SCIPsolGetOrigObj(sol);
+
+         if( origobj * origprob->objsense <= set->limit_objstop )
+         {
+            SCIPmessagePrintInfo(messagehdlr, "intterrupting solve because objective stop was reached. \n");
+            stat->userinterrupt = TRUE;
+         }
+      }
    }
    else
    {
