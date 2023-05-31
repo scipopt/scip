@@ -1654,7 +1654,7 @@ SCIP_RETCODE SCIPsetCreate(
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "limits/objectivestop",
          "solving stops, if given objective value is reached",
-         &(*set)->limit_objstop, FALSE, SCIP_DEFAULT_LIMIT_OBJSTOP, 0.0, SCIP_REAL_MAX,
+         &(*set)->limit_objstop, FALSE, SCIP_DEFAULT_LIMIT_OBJSTOP, SCIP_REAL_MIN, SCIP_REAL_MAX,
          SCIPparamChgdLimit, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "limits/solutions",

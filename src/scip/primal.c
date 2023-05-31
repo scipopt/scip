@@ -806,10 +806,13 @@ SCIP_RETCODE primalAddSol(
          SCIP_Real origobj;
          SCIP_Bool hasinfval;
 
-         SCIP_CALL( SCIPsolRetransform(sol, set, stat, origprob, transprob, hasinfval) );
+         if( !SCIPsolIsOriginal(sol) )
+         {
+            SCIP_CALL( SCIPsolRetransform(sol, set, stat, origprob, transprob, &hasinfval) );
+         }
          origobj = SCIPsolGetOrigObj(sol);
 
-         if( origobj * origprob->objsense <= set->limit_objstop )
+         if( SCIPsetIsLE(set, origobj * origprob->objsense, set->limit_objstop * origprob->objsense) )
          {
             SCIPmessagePrintInfo(messagehdlr, "intterrupting solve because objective stop was reached. \n");
             stat->userinterrupt = TRUE;
