@@ -814,7 +814,7 @@ SCIP_RETCODE primalAddSol(
 
          if( SCIPsetIsLE(set, origobj * origprob->objsense, set->limit_objstop * origprob->objsense) )
          {
-            SCIPmessagePrintInfo(messagehdlr, "intterrupting solve because objective stop was reached. \n");
+            SCIPmessagePrintInfo(messagehdlr, "interrupting solve because objective stop was reached. \n");
             stat->userinterrupt = TRUE;
          }
       }
