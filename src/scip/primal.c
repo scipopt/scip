@@ -804,10 +804,10 @@ SCIP_RETCODE primalAddSol(
       if( set->limit_objstop != SCIP_INVALID ) /*lint !e777*/
       {
          SCIP_Real origobj;
-         SCIP_Bool hasinfval;
 
          if( !SCIPsolIsOriginal(sol) )
          {
+            SCIP_Bool hasinfval;
             SCIP_CALL( SCIPsolRetransform(sol, set, stat, origprob, transprob, &hasinfval) );
          }
          origobj = SCIPsolGetOrigObj(sol);
