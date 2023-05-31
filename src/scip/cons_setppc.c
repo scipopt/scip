@@ -60,8 +60,6 @@
 #include "scip/scip_sol.h"
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_var.h"
-#include <ctype.h>
-#include <string.h>
 
 
 #define CONSHDLR_NAME          "setppc"
@@ -8803,8 +8801,7 @@ SCIP_DECL_CONSPARSE(consParseSetppc)
    }
 
    /* remove white spaces */
-   while( isspace((unsigned char)*str) )
-      str++;
+   SCIP_CALL( SCIPskipSpace((char**)&str) );
 
    if( *success )
    {

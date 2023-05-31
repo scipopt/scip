@@ -2320,9 +2320,10 @@ SCIP_RETCODE parseBounds(
 
    /* get bound type */
    SCIPstrCopySection(str, ' ', ' ', type, SCIP_MAXSTRLEN, endptr);
-   if ( strncmp(type, "original", 8) != 0 && strncmp(type, "global", 6) != 0 && strncmp(type, "local", 5) != 0 && strncmp(type, "lazy", 4) != 0 )
+   if ( *endptr == str
+        || ( strncmp(type, "original", 8) != 0 && strncmp(type, "global", 6) != 0 && strncmp(type, "local", 5) != 0 && strncmp(type, "lazy", 4) != 0 ) )
    {
-      SCIPsetDebugMsg(set, "unkown bound type <%s>\n", type);
+      SCIPsetDebugMsg(set, "unkown bound type\n");
       *endptr = NULL;
       return SCIP_OKAY;
    }
@@ -2382,7 +2383,7 @@ SCIP_RETCODE varParse(
 
    /* copy variable type */
    SCIPstrCopySection(str, '[', ']', token, SCIP_MAXSTRLEN, endptr);
-   assert(str != *endptr);
+   assert(*endptr != str);
    SCIPsetDebugMsg(set, "parsed variable type <%s>\n", token);
 
    /* get variable type */
@@ -2406,7 +2407,7 @@ SCIP_RETCODE varParse(
 
    /* get variable name */
    SCIPstrCopySection(str, '<', '>', name, SCIP_MAXSTRLEN, endptr);
-   assert(endptr != NULL);
+   assert(*endptr != str);
    SCIPsetDebugMsg(set, "parsed variable name <%s>\n", name);
 
    /* move string pointer behind variable name */

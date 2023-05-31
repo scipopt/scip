@@ -68,9 +68,6 @@
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
-#include <ctype.h>
-#include <string.h>
-
 #ifdef WITH_CARDINALITY_UPGRADE
 #include "scip/cons_cardinality.h"
 #endif
@@ -13217,22 +13214,27 @@ SCIP_DECL_CONSPARSE(consParseKnapsack)
 
    while( *str != '\0' )
    {
-      /* try to parse coefficient, and stop if not successful (probably reached <=) */
-      if( sscanf(str, "%" SCIP_LONGINT_FORMAT "%n", &weight, &nread) < 1 )
-         break;
-
+      /* try to parse coefficient, and use 1 if not successful */
+      weight = 1;
+      nread = 0;
+      sscanf(str, "%" SCIP_LONGINT_FORMAT "%n", &weight, &nread);
       str += nread;
-
-      /* skip whitespace */
-      while( isspace((int)*str) )
-         ++str;
 
       /* parse variable name */
       SCIP_CALL( SCIPparseVarName(scip, str, &var, &endptr) );
+
       if( var == NULL )
       {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "unknown variable name at '%s'\n", str);
-         *success = FALSE;
+         endptr = strchr(endptr, '<');
+
+         if( endptr == NULL )
+         {
+            SCIPerrorMessage("no capacity found\n");
+            *success = FALSE;
+         }
+         else
+            str = endptr;
+
          break;
       }
 
@@ -13251,29 +13253,31 @@ SCIP_DECL_CONSPARSE(consParseKnapsack)
       ++nvars;
 
       /* skip whitespace */
-      while( isspace((int)*str) )
-         ++str;
+      SCIP_CALL( SCIPskipSpace((char**)&str) );
    }
 
    if( *success )
    {
-      if( strncmp(str, "<= ", 3) != 0 )
+      if( strncmp(str, "<=", 2) != 0 )
       {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "expected '<= ' at begin of '%s'\n", str);
+         SCIPerrorMessage("expected '<=' at begin of '%s'\n", str);
          *success = FALSE;
       }
       else
       {
-         str += 3;
+         str += 2;
       }
    }
 
    if( *success )
    {
+      /* skip whitespace */
+      SCIP_CALL( SCIPskipSpace((char**)&str) );
+
       /* coverity[secure_coding] */
       if( sscanf(str, "%" SCIP_LONGINT_FORMAT, &capacity) != 1 )
       {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "error parsing capacity from '%s'\n", str);
+         SCIPerrorMessage("error parsing capacity from '%s'\n", str);
          *success = FALSE;
       }
       else

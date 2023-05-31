@@ -24,6 +24,8 @@ Interface changes
 
 ### New API functions
 
+- added SCIPskipSpace
+
 ### Command line interface
 
 ### Interfaces to external software
@@ -81,6 +83,7 @@ Fixed bugs
 - initialize variable in presol_dualsparsify.c
 - fix in presolving of variable bound constraints to use absolute instead of relative difference 
 - free variable histories in reoptimization mode
+- handle whitespaces in interactive shell history consistently
 
 Miscellaneous
 -------------
