@@ -44,6 +44,7 @@
  */
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+#include <ctype.h>
 #include "blockmemshell/memory.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_setppc.h"
@@ -72,8 +73,6 @@
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
 #include "scip/dbldblarith.h"
-#include <ctype.h>
-#include <string.h>
 
 
 /**@name Constraint handler properties
@@ -5032,20 +5031,18 @@ SCIP_DECL_CONSPARSE(consParseVarbound)
       return SCIP_OKAY;
 
    /* ignore whitespace */
-   while( isspace(*str) )
-      ++str;
+   SCIP_CALL( SCIPskipSpace((char**)&str) );
 
    if( isdigit(str[0]) || ((str[0] == '-' || str[0] == '+') && isdigit(str[1])) )
    {
-      if( !SCIPstrToRealValue(str, &lhs, &endstr) )
+      if( !SCIPparseReal(scip, str, &lhs, &endstr) )
       {
          SCIPerrorMessage("error parsing left hand side\n");
          return SCIP_OKAY;
       }
 
       /* ignore whitespace */
-      while( isspace(*endstr) )
-         ++endstr;
+      SCIP_CALL( SCIPskipSpace(&endstr) );
 
       if( endstr[0] != '<' || endstr[1] != '=' )
       {
@@ -5068,7 +5065,6 @@ SCIP_DECL_CONSPARSE(consParseVarbound)
 
    if( requiredsize == 2 && *success )
    {
-      SCIP_Bool foundvalue;
       SCIP_Real value;
 
       assert(nvars == 2);
@@ -5077,14 +5073,11 @@ SCIP_DECL_CONSPARSE(consParseVarbound)
       SCIPdebugMsg(scip, "found linear sum <%s> + %g <%s>\n", SCIPvarGetName(vars[0]), coefs[1], SCIPvarGetName(vars[1]));
 
       /* ignore whitespace */
-      while( isspace(*endstr) )
-         ++endstr;
+      SCIP_CALL( SCIPskipSpace(&endstr) );
 
       str = endstr;
 
-      foundvalue = SCIPstrToRealValue(str+2, &value, &endstr);
-
-      if( foundvalue )
+      if( *str != '\0' && *(str+1) != '\0' && SCIPparseReal(scip, str+2, &value, &endstr) )
       {
          /* search for end of linear sum: either '<=', '>=', '==', or '[free]' */
          switch( *str )

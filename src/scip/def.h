@@ -298,6 +298,7 @@ extern "C" {
  */
 
 #define SCIP_MAXSTRLEN             1024 /**< maximum string length in SCIP */
+#define SCIP_SPACECONTROL      " tnvfr" /**< control specifier for escaped spaces */
 
 /*
  * Memory settings
