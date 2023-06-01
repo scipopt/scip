@@ -213,10 +213,11 @@ SCIP_RETCODE identifyOrbitalSymmetriesBroken(
    }
 
 #ifndef NDEBUG
+   /* no arithmetic is performed on these bounds, so we can compare floats by their value exactly */
    for (i = 0; i < orcdata->npermvars; ++i)
    {
-      assert( SCIPisEQ(scip, SCIPvarGetLbGlobal(orcdata->permvars[i]), orcdata->globalvarlbs[i]) );
-      assert( SCIPisEQ(scip, SCIPvarGetUbGlobal(orcdata->permvars[i]), orcdata->globalvarubs[i]) );
+      assert( SCIPvarGetLbGlobal(orcdata->permvars[i]) == orcdata->globalvarlbs[i] ); /*lint !e777*/
+      assert( SCIPvarGetUbGlobal(orcdata->permvars[i]) == orcdata->globalvarubs[i] ); /*lint !e777*/
    }
 #endif
 
