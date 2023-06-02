@@ -8453,12 +8453,9 @@
  *
  * As SCIP might restart the branch-and-bound process, which removes information regarding the branching decisions,
  * we need to make sure that correct reductions are found after a restart.
- * This can be guaranteed by either disabling dynamic symmetry handling methods after a restart, or by recomputing
- * symmetries. In SCIP, this is controlled via the parameter
- * <code>propagating/symmetry/recomputerestart</code>. If it takes value 0, symmetries are not
- * recomputed and dynamic symmetry handling methods are disabled; a value of 1 means that symmetries are always
- * recomputed; if it has value 2, symmetries are only recomputed if (at least) one of the dynamic symmetry handling
- * methods has afound a reduction before a restart.
+ * If a restart occurs, static symmetry handling methods are preserved. Since dynamic symmetry handling methods
+ * depend on the branch-and-bound tree structure, and because the prior branch-and-bound tree is removed,
+ * the dynamic symmetry handling methods are disabled after a restart.
  *
  * @subsection SYMSST SST cuts
  *
@@ -8539,13 +8536,6 @@
  * the symmetry handling methods, so the first parameter is the dominant parameter.
  * Both parameters take values 0, 1, or 2, corresponding to computing symmetries before presolving,
  * during presolving, or when the symmetry handling methods are applied first, respectively.
- *
- * If a restart occurs, symmetry handling constraints and SST cuts can be inherited to the new run. Since orbital
- * fixing depends on the branching history, which is not available after a restart anymore, symmetries might needed
- * to be recomputed. This is controlled via the parameter <code>propagating/symmetry/recomputerestart</code>, which
- * takes values 0, 1, or 2, corresponding to never recomputing symmetries (i.e., disabling dynamic symmetry handling
- * after a restart), always recompute symmetries, or only recomputing symmetries if dynamic methods found a reduction in
- * the previous run, respectively.
  */
 
 /**@page LICENSE License
