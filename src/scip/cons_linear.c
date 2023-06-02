@@ -10383,6 +10383,10 @@ SCIP_RETCODE checkPartialObjective(
       SCIPdebugMsg(scip, "linear equality constraint <%s> == %g (offset %g) is a subset of the objective function\n",
          SCIPconsGetName(cons), consdata->rhs, offset);
 
+      /* make equality a model constraint to ensure optimality in this direction */
+      SCIP_CALL( SCIPsetConsChecked(scip, cons, TRUE) );
+      SCIP_CALL( SCIPsetConsEnforced(scip, cons, TRUE) );
+
       /* set all objective coefficient to zero */
       for( v = 0; v < nvars; ++v )
       {
