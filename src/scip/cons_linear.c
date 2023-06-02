@@ -10464,8 +10464,8 @@ SCIP_RETCODE checkParallelObjective(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   /* ignore enforced equalities since these are covered by the method checkPartialObjective() */
-   if( SCIPconsIsEnforced(cons) && SCIPisEQ(scip, consdata->lhs, consdata->rhs) )
+   /* ignore equalities since these are covered by the method checkPartialObjective() */
+   if( SCIPisEQ(scip, consdata->lhs, consdata->rhs) )
       return SCIP_OKAY;
 
    nvars = consdata->nvars;
