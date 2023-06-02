@@ -17,6 +17,7 @@ Features
 - updated statistics on NLP relaxation; information on convexity of NLP has been added
 - added new bandit method (EXP.3-IX) that is the new default of the ALNS heuristic
 - added dialog to display recognized permutation symmetries ("display symmetry")
+- added new setting `limits/objectivestop` that tells SCIP to interrupt the solve as soon as a certain objective threshold is reached
 
 Performance improvements
 ------------------------
