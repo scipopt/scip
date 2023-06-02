@@ -76,7 +76,6 @@
 #include "scip/scip_sol.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
-#include <string.h>
 
 
 /* constraint handler properties */
@@ -4777,16 +4776,17 @@ SCIP_DECL_CONSPARSE(consParseAnd)
 
    /* parse variable name of resultant */
    SCIP_CALL( SCIPparseVarName(scip, str, &resvar, &endptr) );
-   str = endptr;
 
    if( resvar == NULL )
    {
-      SCIPdebugMsg(scip, "resultant variable does not exist \n");
+      SCIPerrorMessage("resultant variable does not exist\n");
    }
    else
    {
       char* strcopy = NULL;
       char* startptr;
+
+      str = endptr;
 
       /* cutoff "== and(" form the constraint string */
       startptr = strchr((char*)str, '(');
@@ -4812,7 +4812,7 @@ SCIP_DECL_CONSPARSE(consParseAnd)
 
       if( endptr > startptr )
       {
-         /* copy string for parsing; note that isspace() in SCIPparseVarsList() requires that strcopy ends with '\0' */
+         /* copy string for parsing; note that SCIPskipSpace() in SCIPparseVarsList() requires that strcopy ends with '\0' */
          SCIP_CALL( SCIPduplicateBufferArray(scip, &strcopy, startptr, (int)(endptr-startptr+1)) );
          strcopy[endptr-startptr] = '\0';
          varssize = 100;

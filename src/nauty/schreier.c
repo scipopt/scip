@@ -49,6 +49,7 @@ static boolean filterschreier(schreier*,int*,permnode**,boolean,int,int);
 
 /************************************************************************/
 
+#if 0
 static void
 testispermutation(int id, int *p, int n)
 /* For debugging purposes, crash with a message if p[0..n-1] is
@@ -83,7 +84,8 @@ testispermutation(int id, int *p, int n)
         ADDELEMENT(seen,p[i]);
     }
 }
-    
+#endif
+
 /************************************************************************/
 
 int

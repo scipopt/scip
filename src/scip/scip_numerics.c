@@ -42,7 +42,6 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <ctype.h>
 #include "scip/debug.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
@@ -52,7 +51,6 @@
 #include "scip/struct_scip.h"
 #include "scip/scip_lp.h"
 #include "scip/scip_message.h"
-#include <string.h>
 
 
 /* In debug mode, the following methods are implemented as function calls to ensure
@@ -420,8 +418,8 @@ SCIP_Bool SCIPparseReal(
    localstr = (char*)str;
 
    /* ignore white space */
-   while(isspace((unsigned char)*localstr))
-      ++localstr;
+   if( SCIPskipSpace(&localstr) != SCIP_OKAY )
+      return FALSE;
 
    /* test for a special infinity first */
    if( strncmp(localstr, "+infinity", 9) == 0 )
@@ -439,7 +437,7 @@ SCIP_Bool SCIPparseReal(
    else
    {
       /* parse a finite value */
-      return SCIPstrToRealValue(str, value, endptr);
+      return SCIPstrToRealValue(localstr, value, endptr);
    }
 }
 
