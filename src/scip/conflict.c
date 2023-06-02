@@ -109,7 +109,7 @@
  *    SCIPaddConflictBound() on the conflict queue (algorithm step 3.(a)).
  *  - If the current bounds lead to a deduction of a bound change (e.g. in domain
  *    propagation), a constraint handler should call SCIPinferVarLbCons() or
- *    SCIPinferVarUbCons(), thus providing the constraint that infered the bound change.
+ *    SCIPinferVarUbCons(), thus providing the constraint that inferred the bound change.
  *    A propagator should call SCIPinferVarLbProp() or SCIPinferVarUbProp() instead,
  *    thus providing a pointer to itself.
  *  - If (in the current bounds) an infeasibility is detected, the constraint handler or
@@ -3863,8 +3863,8 @@ SCIP_Bool bdchginfoIsResolvable(
          && SCIPbdchginfoGetInferProp(bdchginfo) != NULL));
 }
 
-/** compares two conflict set entries, such that bound changes infered later are
- *  ordered prior to ones that were infered earlier
+/** compares two conflict set entries, such that bound changes inferred later are
+ *  ordered prior to ones that were inferred earlier
  */
 static
 SCIP_DECL_SORTPTRCOMP(conflictBdchginfoComp)
@@ -5019,7 +5019,7 @@ SCIP_RETCODE conflictResolveBound(
          SCIP_BOUNDTYPE inferboundtype;
          SCIP_BDCHGIDX* bdchgidx;
 
-         /* resolve bound change by asking the constraint that infered the bound to put all bounds that were
+         /* resolve bound change by asking the constraint that inferred the bound to put all bounds that were
           * the reasons for the conflicting bound change on the priority queue
           */
          infervar = SCIPbdchginfoGetInferVar(bdchginfo);
@@ -5079,7 +5079,7 @@ SCIP_RETCODE conflictResolveBound(
          SCIP_BOUNDTYPE inferboundtype;
          SCIP_BDCHGIDX* bdchgidx;
 
-         /* resolve bound change by asking the propagator that infered the bound to put all bounds that were
+         /* resolve bound change by asking the propagator that inferred the bound to put all bounds that were
           * the reasons for the conflicting bound change on the priority queue
           */
          infervar = SCIPbdchginfoGetInferVar(bdchginfo);

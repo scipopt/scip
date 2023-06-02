@@ -5034,7 +5034,7 @@ SCIP_RETCODE addConflictBounds(
             {
                assert( vars != NULL && vals != NULL ); /* for lint */
 
-               /* zero coefficients and the infered variable can be ignored */
+               /* zero coefficients and the inferred variable can be ignored */
                if( vars[i] == infervar || SCIPisZero(scip, vals[i]) )
                   continue;
 
@@ -5068,7 +5068,7 @@ SCIP_RETCODE addConflictBounds(
       assert(vars != NULL); /* for flexelint */
       assert(vals != NULL); /* for flexelint */
 
-      /* zero coefficients and the infered variable can be ignored */
+      /* zero coefficients and the inferred variable can be ignored */
       if( vars[i] == infervar || SCIPisZero(scip, vals[i]) )
          continue;
 

@@ -485,11 +485,11 @@ SCIP_RETCODE varAddLbchginfo(
    int                   depth,              /**< depth in the tree, where the bound change takes place */
    int                   pos,                /**< position of the bound change in its bound change array */
    SCIP_VAR*             infervar,           /**< variable that was changed (parent of var, or var itself) */
-   SCIP_CONS*            infercons,          /**< constraint that infered this bound change, or NULL */
+   SCIP_CONS*            infercons,          /**< constraint that inferred this bound change, or NULL */
    SCIP_PROP*            inferprop,          /**< propagator that deduced the bound change, or NULL */
    int                   inferinfo,          /**< user information for inference to help resolving the conflict */
    SCIP_BOUNDTYPE        inferboundtype,     /**< type of bound for inference var: lower or upper bound */
-   SCIP_BOUNDCHGTYPE     boundchgtype        /**< bound change type: branching decision or infered bound change */
+   SCIP_BOUNDCHGTYPE     boundchgtype        /**< bound change type: branching decision or inferred bound change */
    )
 {
    assert(var != NULL);
@@ -560,11 +560,11 @@ SCIP_RETCODE varAddUbchginfo(
    int                   depth,              /**< depth in the tree, where the bound change takes place */
    int                   pos,                /**< position of the bound change in its bound change array */
    SCIP_VAR*             infervar,           /**< variable that was changed (parent of var, or var itself) */
-   SCIP_CONS*            infercons,          /**< constraint that infered this bound change, or NULL */
+   SCIP_CONS*            infercons,          /**< constraint that inferred this bound change, or NULL */
    SCIP_PROP*            inferprop,          /**< propagator that deduced the bound change, or NULL */
    int                   inferinfo,          /**< user information for inference to help resolving the conflict */
    SCIP_BOUNDTYPE        inferboundtype,     /**< type of bound for inference var: lower or upper bound */
-   SCIP_BOUNDCHGTYPE     boundchgtype        /**< bound change type: branching decision or infered bound change */
+   SCIP_BOUNDCHGTYPE     boundchgtype        /**< bound change type: branching decision or inferred bound change */
    )
 {
    assert(var != NULL);

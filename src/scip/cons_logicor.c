@@ -4749,7 +4749,7 @@ SCIP_DECL_CONSRESPROP(consRespropLogicor)
 
    SCIPdebugMsg(scip, "conflict resolving method of logic or constraint handler\n");
 
-   /* the only deductions are variables infered to 1.0 on logic or constraints where all other variables
+   /* the only deductions are variables inferred to 1.0 on logic or constraints where all other variables
     * are assigned to zero
     */
    assert(SCIPgetVarLbAtIndex(scip, infervar, bdchgidx, TRUE) > 0.5); /* the inference variable must be assigned to one */
