@@ -10357,7 +10357,7 @@ SCIP_RETCODE checkPartialObjective(
    nobjvars = SCIPgetNObjVars(scip);
 
    /* check if the linear equality constraints does not have more variables than the objective function */
-   if( !SCIPconsIsEnforced(cons) || nvars > nobjvars || nvars == 0 )
+   if( nvars > nobjvars || nvars == 0 )
       return SCIP_OKAY;
 
    /* check for allowance of algorithm */
