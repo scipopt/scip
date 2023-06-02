@@ -1,6 +1,0 @@
-misc/usesymmetry = 0
-propagating/symmetry/addsymresacks = TRUE
-propagating/symmetry/detectorbitopes = TRUE
-propagating/symmetry/detectsubgroups = FALSE
-propagating/symmetry/enforcecomputesymmetry = TRUE
-limits/restarts = 0
