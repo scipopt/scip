@@ -797,10 +797,10 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
       {
          SCIP_Bool success;
 
-         /* since we ignore local rows, we cannot guarantee their feasibility and have to set the checklprows flag to
-          * TRUE if local rows are present
+         /* since activities are maintained iteratively, we cannot guarantee the feasibility of the shiftings and have
+          * to set the checklprows flag to TRUE
           */
-         SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, FALSE, FALSE, FALSE, localrows, &success) );
+         SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, FALSE, FALSE, FALSE, TRUE, &success) );
 
          if( success )
          {
