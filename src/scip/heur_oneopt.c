@@ -485,7 +485,6 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
 
    SCIP_Real lb;
    SCIP_Real ub;
-   SCIP_Bool localrows;
    SCIP_Bool valid;
    int nchgbound;
    int nbinvars;
@@ -632,7 +631,6 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
    SCIP_CALL( SCIPgetLPRowsData(scip, &lprows, &nlprows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &activities, nlprows) );
 
-   localrows = FALSE;
    valid = TRUE;
 
    /* initialize LP row activities */
@@ -655,8 +653,6 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
             break;
          }
       }
-      else
-         localrows = TRUE;
    }
 
    if( !valid )
