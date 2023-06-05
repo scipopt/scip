@@ -150,6 +150,7 @@
 #define DEFAULT_DOUBLEEQUATIONS     FALSE    /**< Double equations to positive/negative version? */
 #define DEFAULT_COMPRESSSYMMETRIES   TRUE    /**< Should non-affected variables be removed from permutation to save memory? */
 #define DEFAULT_COMPRESSTHRESHOLD     0.5    /**< Compression is used if percentage of moved vars is at most the threshold. */
+#define DEFAULT_SYMFIXNONBINARYVARS FALSE    /**< Disabled parameter */
 #define DEFAULT_ENFORCECOMPUTESYMMETRY FALSE /**< always compute symmetries, even if they cannot be handled */
 
 /* default parameters for linear symmetry constraints */
@@ -166,6 +167,7 @@
 
 /* default parameters for symmetry computation */
 #define DEFAULT_SYMCOMPTIMING           2    /**< timing of symmetry computation (0 = before presolving, 1 = during presolving, 2 = at first call) */
+#define DEFAULT_PERFORMPRESOLVING       0    /**< Run orbital fixing during presolving? (disabled parameter) */
 #define DEFAULT_RECOMPUTERESTART        0    /**< Recompute symmetries after a restart has occurred? (0 = never) */
 
 /* default parameters for Schreier Sims constraints */
@@ -7888,6 +7890,11 @@ SCIP_RETCODE SCIPincludePropSymmetry(
          "timing of symmetry computation (0 = before presolving, 1 = during presolving, 2 = at first call)",
          &propdata->symcomptiming, TRUE, DEFAULT_SYMCOMPTIMING, 0, 2, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "propagating/" PROP_NAME "/performpresolving",
+         "run orbital fixing during presolving? (disabled)",
+         NULL, TRUE, DEFAULT_PERFORMPRESOLVING, NULL, NULL) );
+
    SCIP_CALL( SCIPaddIntParam(scip,
          "propagating/" PROP_NAME "/recomputerestart",
          "recompute symmetries after a restart has occured? (0 = never)",
@@ -7953,6 +7960,11 @@ SCIP_RETCODE SCIPincludePropSymmetry(
          "propagating/" PROP_NAME "/sstmixedcomponents",
          "Should Schreier Sims constraints be added if a symmetry component contains variables of different types?",
          &propdata->sstmixedcomponents, TRUE, DEFAULT_SSTMIXEDCOMPONENTS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "propagating/" PROP_NAME "/symfixnonbinaryvars",
+         "Whether all non-binary variables shall be not affected by symmetries if OF is active? (disabled)",
+         NULL, TRUE, DEFAULT_SYMFIXNONBINARYVARS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "propagating/" PROP_NAME "/enforcecomputesymmetry",
