@@ -168,7 +168,7 @@ SCIP_Real calcShiftVal(
       left = shiftdown == ( colvals[i] > 0 );
       assert( -1 <= rowpos && rowpos < SCIPgetNLPRows(scip) );
 
-      /* only a global row whith a finite bound needs to be valid */
+      /* only global rows with a finite bound need to be valid */
       if( rowpos >= 0 && !SCIProwIsLocal(row) && !SCIPisInfinity(scip, left ? -SCIProwGetLhs(row) : SCIProwGetRhs(row)) )
       {
          SCIP_Real shiftvalrow;
