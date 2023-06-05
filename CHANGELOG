@@ -91,6 +91,11 @@ Interface changes
 - change default value of parameter separating/filtercutpoolrel to FALSE
 - Shrunk range of parameter "propagating/symmetry/sstleaderrule" from [0,3] to [0,2], removed "MAXCONFLICTS"-option.
 - Removed reading/gmsreader/freeints. A default upper bound of +inf is now assumed for integer variables in GAMS (which is the case since GAMS 23.1).
+- Disabled "propagating/symmetry/symfixnonbinaryvars" since it is not used in the new symmetry code.
+- Replaced "propagating/symmetry/onlybinarysymmetry" with "propagating/symmetry/enforcecomputesymmetry" and set to FALSE by default.
+- Disabled "propagating/symmetry/performpresolving" since running orbital reduction during presolving is not effective.
+- Repurposed "propagating/symmetry/usedynamicprop" since it now also applies to lexicographic reduction.
+- Changed default value of parameter "propagating/symmetry/addsymresacks" from FALSE to TRUE.
 
 ### New parameters
 

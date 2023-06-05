@@ -143,11 +143,23 @@ SCIP_RETCODE consdataFree(
    )
 {
    int nrows;
+   int i;
 
    assert( consdata != NULL );
    assert( *consdata != NULL );
 
    nrows = (*consdata)->nrows;
+
+   /* release variables in vars1 and vars2 array */
+   for (i = 0; i < nrows; ++i)
+   {
+      assert( (*consdata)->vars1[i] != NULL );
+      SCIP_CALL( SCIPreleaseVar(scip, &(*consdata)->vars1[i] ) );
+
+      assert( (*consdata)->vars2[i] != NULL );
+      SCIP_CALL( SCIPreleaseVar(scip, &(*consdata)->vars2[i] ) );
+   }
+
    SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->vars2), nrows);
    SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->vars1), nrows);
 
@@ -203,6 +215,13 @@ SCIP_RETCODE consdataCreate(
          SCIP_CALL( SCIPgetTransformedVar(scip, (*consdata)->vars2[i], &(*consdata)->vars2[i]) );
          SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, (*consdata)->vars2[i]) );
       }
+   }
+
+   /* capture vars in vars1 and vars2 array */
+   for (i = 0; i < nrows; ++i)
+   {
+      SCIP_CALL( SCIPcaptureVar(scip, (*consdata)->vars1[i] ) );
+      SCIP_CALL( SCIPcaptureVar(scip, (*consdata)->vars2[i] ) );
    }
 
    return SCIP_OKAY;

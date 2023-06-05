@@ -592,6 +592,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/prop_sync.o \
 			scip/event_globalbnd.o \
 			scip/event_estim.o \
+			scip/event_shadowtree.o \
 			scip/expr_abs.o \
 			scip/expr_entropy.o \
 			scip/expr_erf.o \
@@ -903,6 +904,9 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/solve.o \
 			scip/stat.o \
 			scip/symmetry.o \
+			scip/symmetry_orbitopal.o \
+			scip/symmetry_orbital.o \
+			scip/symmetry_lexred.o \
 			scip/syncstore.o \
 			scip/table.o \
 			scip/tree.o \

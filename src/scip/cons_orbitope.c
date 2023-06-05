@@ -196,6 +196,8 @@ SCIP_RETCODE consdataFree(
    SCIP_CONSDATA**       consdata            /**< pointer to orbitope constraint data */
    )
 {
+   int i;
+   int j;
    int p;
    int q;
 
@@ -209,8 +211,15 @@ SCIP_RETCODE consdataFree(
 
    p = (*consdata)->nspcons;
    q = (*consdata)->nblocks;
-   for (int i = 0; i < p; ++i)
+   for (i = 0; i < p; ++i)
    {
+      /* release variables in vars array */
+      for (j = 0; j < q; ++j)
+      {
+         assert( (*consdata)->vars[i] != NULL );
+         SCIP_CALL( SCIPreleaseVar(scip, &(*consdata)->vars[i][j]) );
+      }
+
       SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->cases[i]), q);    /*lint !e866*/
       SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->vars[i]), q);     /*lint !e866*/
       SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->weights[i]), q);  /*lint !e866*/
@@ -324,6 +333,16 @@ SCIP_RETCODE consdataCreate(
                SCIP_CALL( SCIPhashmapInsert((*consdata)->rowindexmap, (*consdata)->vars[i][j], (void*) (size_t) i) );
             }
          }
+      }
+   }
+
+   /* capture vars contained in vars array */
+   for (i = 0; i < nspcons; ++i)
+   {
+      for (j = 0; j < nblocks; ++j)
+      {
+         assert( (*consdata)->vars[i][j] != NULL );
+         SCIP_CALL( SCIPcaptureVar(scip, (*consdata)->vars[i][j]) );
       }
    }
 
