@@ -7190,14 +7190,15 @@ SCIP_RETCODE tryAddSymmetryHandlingMethods(
 
       return SCIP_OKAY;
    }
-
-   /* double-check that no symmetry handling is present */
-   assert( checkSymmetryDataFree(propdata) );
    assert( !propdata->triedaddconss );
-   assert( !propdata->computedsymmetry );
 
-   /* compute symmetries */
-   SCIP_CALL( determineSymmetry(scip, propdata, SYM_SPEC_BINARY | SYM_SPEC_INTEGER | SYM_SPEC_REAL, 0) );
+   /* compute symmetries, if it is not computed before */
+   if ( !propdata->computedsymmetry )
+   {
+      /* verify that no symmetry information is present */
+      assert( checkSymmetryDataFree(propdata) );
+      SCIP_CALL( determineSymmetry(scip, propdata, SYM_SPEC_BINARY | SYM_SPEC_INTEGER | SYM_SPEC_REAL, 0) );
+   }
 
    /* stop if symmetry computation failed, the reason should be given inside determineSymmetry */
    if ( !propdata->computedsymmetry )
