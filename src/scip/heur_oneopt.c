@@ -221,7 +221,6 @@ SCIP_RETCODE updateRowActivities(
    SCIP_COL* col;
 
    int ncolrows;
-   int i;
 
    assert(activities != NULL);
 
@@ -233,7 +232,7 @@ SCIP_RETCODE updateRowActivities(
    assert(ncolrows == 0 || (colrows != NULL && colvals != NULL));
 
    /* enumerate all rows with nonzero entry in this column */
-   for( i = 0; i < ncolrows; ++i )
+   for( int i = 0; i < ncolrows; ++i )
    {
       SCIP_ROW* row;
       int rowpos;
@@ -273,7 +272,6 @@ SCIP_RETCODE setupAndSolveSubscipOneopt(
    SCIP_HASHMAP* varmapfw;                   /* mapping of SCIP variables to sub-SCIP variables */
    SCIP_SOL* startsol;
    int nvars;                                /* number of original problem's variables          */
-   int i;
 
    assert(scip != NULL);
    assert(subscip != NULL);
@@ -291,7 +289,7 @@ SCIP_RETCODE setupAndSolveSubscipOneopt(
 
    /* get variable image and create start solution for the subproblem  */
    SCIP_CALL( SCIPcreateOrigSol(subscip, &startsol, NULL) );
-   for( i = 0; i < nvars; i++ )
+   for( int i = 0; i < nvars; ++i )
    {
       subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
       if( subvars[i] != NULL )
@@ -492,7 +490,6 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
    int nintvars;
    int nvars;
    int nlprows;
-   int i;
    int nshiftcands;
    int shiftcandssize;
    int nsuccessfulshifts;
@@ -599,7 +596,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
 
    nchgbound = 0;
    /* change solution values due to possible global bound changes first */
-   for( i = nvars - 1; i >= 0; --i )
+   for( int i = nvars - 1; i >= 0; --i )
    {
       SCIP_VAR* var;
       SCIP_Real solval;
@@ -635,7 +632,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
    valid = TRUE;
 
    /* initialize LP row activities */
-   for( i = 0; i < nlprows; ++i )
+   for( int i = 0; i < nlprows; ++i )
    {
       SCIP_ROW* row;
 
@@ -685,7 +682,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
       /* @todo if useloop=TRUE store for each variable which constraint blocked it and only iterate over those variables
        *       in the following rounds for which the constraint slack was increased by previous shifts
        */
-      for( i = 0; i < nintvars; i++ )
+      for( int i = 0; i < nintvars; ++i )
       {
          if( SCIPvarGetStatus(vars[i]) == SCIP_VARSTATUS_COLUMN )
          {
@@ -746,12 +743,12 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
             /* sort the variables by their objective, optionally weighted with the shiftval */
             if( heurdata->weightedobj )
             {
-               for( i = 0; i < nshiftcands; ++i )
+               for( int i = 0; i < nshiftcands; ++i )
                   objcoeffs[i] = SCIPvarGetObj(shiftcands[i])*shiftvals[i];
             }
             else
             {
-               for( i = 0; i < nshiftcands; ++i )
+               for( int i = 0; i < nshiftcands; ++i )
                   objcoeffs[i] = SCIPvarGetObj(shiftcands[i]);
             }
 
@@ -759,7 +756,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
             SCIPsortRealPtr(objcoeffs, (void**)shiftcands, nshiftcands);
 
             /* try to shift each variable -> Activities have to be updated */
-            for( i = 0; i < nshiftcands; ++i )
+            for( int i = 0; i < nshiftcands; ++i )
             {
                var = shiftcands[i];
                assert(var != NULL);
@@ -819,7 +816,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
          SCIP_CALL( SCIPstartDive(scip) );
 
          /* set the bounds of the variables: fixed for integers, global bounds for continuous */
-         for( i = 0; i < nvars; ++i )
+         for( int i = 0; i < nvars; ++i )
          {
             if( SCIPvarGetStatus(vars[i]) == SCIP_VARSTATUS_COLUMN )
             {
@@ -828,7 +825,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
             }
          }
          /* apply this after global bounds to not cause an error with intermediate empty domains */
-         for( i = 0; i < nintvars; ++i )
+         for( int i = 0; i < nintvars; ++i )
          {
             if( SCIPvarGetStatus(vars[i]) == SCIP_VARSTATUS_COLUMN )
             {

@@ -171,8 +171,6 @@ SCIP_RETCODE shiftValues(
    SCIP_Real* slavecolvals;
    int ncolmasterrows;
    int ncolslaverows;
-   int i;
-   int j;
 
    assert(scip != NULL);
    assert(master != NULL);
@@ -200,7 +198,7 @@ SCIP_RETCODE shiftValues(
    assert(ncolslaverows == 0 || slaverows != NULL);
 
    /* update the activities of the LP rows of the master variable */
-   for( i = 0; i < ncolmasterrows && SCIProwGetLPPos(masterrows[i]) >= 0; ++i )
+   for( int i = 0; i < ncolmasterrows && SCIProwGetLPPos(masterrows[i]) >= 0; ++i )
    {
       int rowpos;
 
@@ -213,7 +211,7 @@ SCIP_RETCODE shiftValues(
    }
 
    /* update the activities of the LP rows of the slave variable */
-   for( j = 0; j < ncolslaverows && SCIProwGetLPPos(slaverows[j]) >= 0; ++j )
+   for( int j = 0; j < ncolslaverows && SCIProwGetLPPos(slaverows[j]) >= 0; ++j )
    {
       int rowpos;
 
@@ -232,7 +230,7 @@ SCIP_RETCODE shiftValues(
    /* in debug mode, the master rows are checked for feasibility which should be granted by the
     * decision for a shift value */
 #ifndef NDEBUG
-   for( i = 0; i < ncolmasterrows && SCIProwGetLPPos(masterrows[i]) >= 0; ++i )
+   for( int i = 0; i < ncolmasterrows && SCIProwGetLPPos(masterrows[i]) >= 0; ++i )
    {
       /* local rows can be skipped */
       if( SCIProwIsLocal(masterrows[i]) )
@@ -266,7 +264,6 @@ int varColCompare(
    SCIP_ROW** rows2;
    int nnonzeros1;
    int nnonzeros2;
-   int i;
 
    assert(var1 != NULL);
    assert(var2 != NULL);
@@ -284,7 +281,7 @@ int varColCompare(
 
    /* loop over the rows, stopped as soon as they differ in one index,
     * or if counter reaches the end of a variables row set */
-   for( i = 0; i < nnonzeros1 && i < nnonzeros2; ++i )
+   for( int i = 0; i < nnonzeros1 && i < nnonzeros2; ++i )
    {
       if( SCIProwGetIndex(rows1[i]) != SCIProwGetIndex(rows2[i]) )
          return SCIProwGetIndex(rows1[i]) - SCIProwGetIndex(rows2[i]);
@@ -670,7 +667,6 @@ SCIP_RETCODE innerPresolve(
    SCIP_HEURDATA*        heurdata            /**< the heuristic data */
    )
 {
-   int v;
    int startindex;
 
    assert(scip != NULL);
@@ -700,7 +696,7 @@ SCIP_RETCODE innerPresolve(
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, blockend, nvars/2) );
 
    /* loop over variables and compare neighbors */
-   for( v = 1; v < nvars; ++v )
+   for( int v = 1; v < nvars; ++v )
    {
       if( !checkConstraintMatching(scip, (*varspointer)[startindex], (*varspointer)[v], heurdata->matchingrate) )
       {
@@ -945,7 +941,6 @@ SCIP_RETCODE optimize(
    SCIP_HEURDATA*        heurdata            /**< the heuristic data */
    )
 {  /*lint --e{715}*/
-   int b;
    SCIP_Real* objchanges;
    SCIP_VAR** bestmasters;
    SCIP_VAR** bestslaves;
@@ -970,15 +965,14 @@ SCIP_RETCODE optimize(
    arraysize = DEFAULT_ARRAYSIZE;
 
    /* iterate over blocks */
-   for( b = 0; b < nblocks; ++b )
+   for( int b = 0; b < nblocks; ++b )
    {
-      int m;
       int blocklen;
 
       blocklen = blockend[b] - blockstart[b] + 1;
 
       /* iterate over variables in current block */
-      for( m = 0; m < blocklen; ++m )
+      for( int m = 0; m < blocklen; ++m )
       {
          /* determine the new master variable for heuristic's optimization method */
          SCIP_VAR* master;
@@ -987,7 +981,6 @@ SCIP_RETCODE optimize(
          SCIP_Real bestimprovement;
          SCIP_Real bestbound;
          int bestslavepos;
-         int s;
          int firstslave;
          int nslaves;
          int bestdirection;
@@ -1041,7 +1034,7 @@ SCIP_RETCODE optimize(
          /* Loop over block and determine a slave shift candidate for master variable.
           * If more than one candidate is available, choose the shift which improves objective function
           * the most. */
-         for( s = 0; s < nslaves; ++s )
+         for( int s = 0; s < nslaves; ++s )
          {
             SCIP_VAR* slave;
             SCIP_Real slaveobj;
@@ -1200,7 +1193,7 @@ SCIP_RETCODE optimize(
 
    SCIPsortRealPtrPtrInt(objchanges, (void**)bestmasters, (void**)bestslaves, bestdirections, npairs);
 
-   for( b = 0; b < npairs; ++b )
+   for( int b = 0; b < npairs; ++b )
    {
       SCIP_VAR* master;
       SCIP_VAR* slave;
@@ -1498,7 +1491,6 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
    int nintvars;
    int ndiscvars;
    int nlprows;
-   int i;
    int ncolsforsorting;
    SCIP_Bool improvement;
    SCIP_Bool presolthiscall;
@@ -1548,7 +1540,7 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
    {
       SCIP_CALL( SCIPgetLPColsData(scip,&cols, &ncols) );
 
-      for( i = 0; i < ncolsforsorting; ++i )
+      for( int i = 0; i < ncolsforsorting; ++i )
          SCIPcolSort(cols[i]);
 
       SCIP_CALL( presolveTwoOpt(scip, heur, heurdata) );
@@ -1585,7 +1577,7 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
    SCIP_CALL( SCIPgetLPRowsData(scip, &lprows, &nlprows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &activities, nlprows) );
 
-   for( i = 0; i < nlprows; i++ )
+   for( int i = 0; i < nlprows; ++i )
    {
       SCIP_ROW* row;
 
@@ -1606,7 +1598,7 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
 
    if( !presolthiscall )
    {
-      for( i = 0; i < ncolsforsorting; ++i )
+      for( int i = 0; i < ncolsforsorting; ++i )
          SCIPcolSort(cols[i]);
    }
    SCIPdebugMsg(scip, "  Twoopt heuristic has initialized activities and sorted rows! \n");
@@ -1679,7 +1671,7 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
       allvars = SCIPgetVars(scip);
 
 #ifdef SCIP_DEBUG
-      for( i = ndiscvars; i < SCIPgetNVars(scip); ++i )
+      for( int i = ndiscvars; i < SCIPgetNVars(scip); ++i )
       {
          SCIPdebugMsg(scip, "  Cont. variable <%s>, status %d with bounds [%g <= %g <= x <= %g <= %g]\n",
             SCIPvarGetName(allvars[i]), SCIPvarGetStatus(allvars[i]), SCIPvarGetLbGlobal(allvars[i]), SCIPvarGetLbLocal(allvars[i]), SCIPvarGetUbLocal(allvars[i]),
@@ -1691,7 +1683,7 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
       SCIP_CALL( SCIPstartDive(scip) );
 
       /* set the bounds of the variables: fixed for integers, global bounds for continuous */
-      for( i = 0; i < SCIPgetNVars(scip); ++i )
+      for( int i = 0; i < SCIPgetNVars(scip); ++i )
       {
          if( SCIPvarGetStatus(allvars[i]) == SCIP_VARSTATUS_COLUMN )
          {
@@ -1701,7 +1693,7 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
       }
 
       /* apply this after global bounds to not cause an error with intermediate empty domains */
-      for( i = 0; i < ndiscvars; ++i )
+      for( int i = 0; i < ndiscvars; ++i )
       {
          if( SCIPvarGetStatus(allvars[i]) == SCIP_VARSTATUS_COLUMN )
          {
@@ -1715,7 +1707,7 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
             SCIP_CALL( SCIPchgVarUbDive(scip, allvars[i], solval) );
          }
       }
-      for( i = 0; i < ndiscvars; ++i )
+      for( int i = 0; i < ndiscvars; ++i )
       {
          assert( SCIPisFeasEQ(scip, SCIPgetVarLbDive(scip, allvars[i]), SCIPgetVarUbDive(scip, allvars[i])) );
       }
