@@ -230,6 +230,7 @@ Fixed bugs
 - fix in presolving of variable bound constraints to use absolute instead of relative difference 
 - free variable histories in reoptimization mode
 - handle whitespaces in interactive shell history consistently
+- check and enforce equalities on which the objective is projected in cons_linear.c
 
 Miscellaneous
 -------------
