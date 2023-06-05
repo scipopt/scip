@@ -579,6 +579,7 @@ SCIP_Real determineBound(
              */
             assert( rowpos < nrows );
             assert( SCIPisFeasGE(scip, activities[rowpos], SCIProwGetLhs(row)) && SCIPisFeasLE(scip, activities[rowpos], SCIProwGetRhs(row)) );
+            assert( effect );
 
             SCIPdebugMsg(scip, "   %g <= %g <= %g, bound = %g, effect = %g (%g * %d + %g * %d) (i=%d,j=%d)\n",
                SCIProwGetLhs(row), activities[rowpos], SCIProwGetRhs(row), bound, effect,
@@ -629,7 +630,7 @@ SCIP_Real determineBound(
    }
 
    /* we must not shift variables to infinity */
-   return SCIPisInfinity(scip, bound + MAX(masterdirection * mastersolval, slavedirection * slavesolval)) ? 0.0 : bound;
+   return SCIPisInfinity(scip, bound + MAX((int)masterdirection * mastersolval, (int)slavedirection * slavesolval)) ? 0.0 : bound;
 }
 
 
@@ -1240,7 +1241,7 @@ SCIP_RETCODE optimize(
 #ifndef NDEBUG
          /* the improvement of objective function is calculated */
          changedobj = ((int)slavedir * slaveobj  + (int)masterdir *  masterobj) * bound;
-         assert( SCIPisPositive(-changedobj) );
+         assert( SCIPisPositive(scip, -changedobj) );
 #endif
 
          assert(SCIPvarGetStatus(master) == SCIP_VARSTATUS_COLUMN && SCIPvarGetStatus(slave) == SCIP_VARSTATUS_COLUMN);
