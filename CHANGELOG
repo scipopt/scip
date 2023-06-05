@@ -95,7 +95,7 @@ Interface changes
 - Replaced "propagating/symmetry/onlybinarysymmetry" with "propagating/symmetry/enforcecomputesymmetry" and set to FALSE by default.
 - Disabled "propagating/symmetry/performpresolving" since running orbital reduction during presolving is not effective.
 - Repurposed "propagating/symmetry/usedynamicprop" since it now also applies to lexicographic reduction.
-- Changed default value of parameter "propagatin/symmetry/addsymresacks" from FALSE to TRUE.
+- Changed default value of parameter "propagating/symmetry/addsymresacks" from FALSE to TRUE.
 
 ### New parameters
 
