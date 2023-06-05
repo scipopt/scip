@@ -1461,7 +1461,7 @@ SCIP_RETCODE SCIPincludeLexicographicReduction(
    assert( masterdata != NULL );
    assert( shadowtreeeventhdlr != NULL );
 
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPincludeLexicographicReduction", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE,
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPincludeLexicographicReduction", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE,
       FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPallocBlockMemory(scip, masterdata) );

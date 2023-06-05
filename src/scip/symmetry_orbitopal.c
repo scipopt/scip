@@ -105,6 +105,7 @@
 #include "scip/struct_mem.h"
 #include "scip/struct_tree.h"
 #include "scip/symmetry.h"
+#include "scip/debug.h"
 #include <string.h>
 #include <symmetry/type_symmetry.h>
 
@@ -2235,7 +2236,8 @@ SCIP_RETCODE SCIPincludeOrbitopalReduction(
    assert( scip != NULL );
    assert( orbireddata != NULL );
 
-   assert( SCIPgetStage(scip) == SCIP_STAGE_INIT );
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPincludeOrbitopalReduction", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE,
+      FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    /* create orbitope handler data */
    SCIP_CALL( SCIPallocBlockMemory(scip, orbireddata) );

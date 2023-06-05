@@ -1699,7 +1699,7 @@ SCIP_RETCODE SCIPincludeOrbitalReduction(
    assert( orbireddata != NULL );
    assert( shadowtreeeventhdlr != NULL );
 
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPincludeOrbitalReduction", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE,
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPincludeOrbitalReduction", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE,
       FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPallocBlockMemory(scip, orbireddata) );
