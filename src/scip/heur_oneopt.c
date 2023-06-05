@@ -122,19 +122,10 @@ SCIP_Real calcShiftVal(
 
    /* determine shifting direction and maximal possible shifting w.r.t. corresponding bound */
    if( obj > 0.0 )
-   {
-      shiftval = floor(lb);
-
-      if( SCIPisFeasLT(scip, shiftval, lb) )
-         shiftval = ceil(lb);
-   }
+      shiftval = SCIPfeasCeil(scip, lb);
    else if( obj < 0.0 )
    {
-      shiftval = ceil(ub);
-
-      if( SCIPisFeasGT(scip, shiftval, ub) )
-         shiftval = floor(ub);
-
+      shiftval = SCIPfeasFloor(scip, ub);
       shiftdown = FALSE;
    }
    else
@@ -156,47 +147,57 @@ SCIP_Real calcShiftVal(
 
    assert(ncolrows == 0 || (colrows != NULL && colvals != NULL));
 
-   /* find minimal shift value, st. all rows stay valid */
+   /* find maximal shift value, st. all rows stay valid */
    for( int i = 0; i < ncolrows; ++i )
    {
-      SCIP_Bool left;
       SCIP_ROW* row;
       int rowpos;
 
       row = colrows[i];
       rowpos = SCIProwGetLPPos(row);
-      left = shiftdown == ( colvals[i] > 0 );
       assert( -1 <= rowpos && rowpos < SCIPgetNLPRows(scip) );
 
-      /* only global rows with a finite bound need to be valid */
-      if( rowpos >= 0 && !SCIProwIsLocal(row) && !SCIPisInfinity(scip, left ? -SCIProwGetLhs(row) : SCIProwGetRhs(row)) )
+      /* only global rows need to be valid */
+      if( rowpos >= 0 && !SCIProwIsLocal(row) )
       {
-         SCIP_Real shiftvalrow;
-         SCIP_Real activity;
+         SCIP_Real side;
+         SCIP_Bool left;
 
-         assert(SCIProwIsInLP(row));
-         shiftvalrow = solval + ((left ? SCIProwGetLhs(row) : SCIProwGetRhs(row)) - activities[rowpos]) / colvals[i];
-         activity = activities[rowpos] + colvals[i] * ((shiftdown ? floor(shiftvalrow) : ceil(shiftvalrow)) - solval);
+         left = shiftdown == ( colvals[i] > 0 );
+         side = left ? SCIProwGetLhs(row) : SCIProwGetRhs(row);
 
-         /* round shifting so that row is satisfied */
-         if( shiftdown == ( ( left && SCIPisFeasLT(scip, activity, SCIProwGetLhs(row)) )
-                           || ( !left && SCIPisFeasGT(scip, activity, SCIProwGetRhs(row)) ) ) )
-            shiftvalrow = ceil(shiftvalrow);
-         else
-            shiftvalrow = floor(shiftvalrow);
-
-         if( ( shiftdown && shiftvalrow > shiftval ) || ( !shiftdown && shiftvalrow < shiftval ) )
+         /* only finite bounds need to be considered */
+         if( !SCIPisInfinity(scip, left ? -side : side) )
          {
-            shiftval = shiftvalrow;
-            SCIPdebugMsg(scip, " -> The shift value had to be reduced to <%g>, because of row <%s>.\n",
-               shiftval - solval, SCIProwGetName(row));
-            SCIPdebugMsg(scip, "    lhs:<%g> <= act:<%g> <= rhs:<%g>, colval:<%g>\n",
-               SCIProwGetLhs(row), activities[rowpos], SCIProwGetRhs(row), colvals[i]);
+            SCIP_Real shiftvalrow;
 
-            /* shiftvalrow might have reached solval -> avoid numerical shifting */
-            if( ( shiftdown && SCIPisFeasGE(scip, shiftval, solval) )
-               || ( !shiftdown && SCIPisFeasLE(scip, shiftval, solval) ) )
-               return 0.0;
+            assert( SCIProwIsInLP(row) );
+            shiftvalrow = solval + (side - activities[rowpos]) / colvals[i];
+
+            /* update shifting value */
+            if( ( shiftdown && shiftvalrow > shiftval ) || ( !shiftdown && shiftvalrow < shiftval ) )
+            {
+               SCIP_Real activity;
+
+               activity = activities[rowpos] + colvals[i] * ((shiftdown ? floor(shiftvalrow) : ceil(shiftvalrow)) - solval);
+
+               /* ensure that shifting preserves feasibility */
+               if( shiftdown == ( ( left && SCIPisFeasGE(scip, activity, side) )
+                                 || ( !left && SCIPisFeasLE(scip, activity, side) ) ) )
+                  shiftval = floor(shiftvalrow);
+               else
+                  shiftval = ceil(shiftvalrow);
+
+               SCIPdebugMsg(scip, " -> The shift value has to be set to <%g>, because of row <%s>.\n",
+                  shiftval - solval, SCIProwGetName(row));
+               SCIPdebugMsg(scip, "    lhs:<%g> <= act:<%g> <= rhs:<%g>, colval:<%g>\n",
+                  SCIProwGetLhs(row), activities[rowpos], SCIProwGetRhs(row), colvals[i]);
+
+               /* shiftvalrow might have reached solval -> avoid numerical shifting */
+               if( ( shiftdown && SCIPisFeasGE(scip, shiftval, solval) )
+                  || ( !shiftdown && SCIPisFeasLE(scip, shiftval, solval) ) )
+                  return 0.0;
+            }
          }
       }
    }

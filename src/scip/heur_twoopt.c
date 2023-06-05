@@ -501,12 +501,9 @@ SCIP_Real determineBound(
    while( i < nslaverows || j < nmasterrows )
    {
       SCIP_ROW* row;
-      SCIP_Real effect;
-      SCIP_Real side;
       int rowpos;
       int masterindex;
       int slaveindex;
-      SCIP_Bool left;
       SCIP_Bool slaveincrement;
       SCIP_Bool masterincrement;
 
@@ -559,9 +556,13 @@ SCIP_Real determineBound(
       }
       assert(row != NULL);
 
-      /* local rows can be skipped */
+      /* only global rows need to be valid */
       if( rowpos >= 0 && !SCIProwIsLocal(row) )
       {
+         SCIP_Real effect;
+         SCIP_Real side;
+         SCIP_Bool left;
+
          /* effect is the effect on the row activity by shifting the variables by 1 in the respective directions */
          effect = 0.0;
          if( slaveindex <= masterindex )
@@ -571,7 +572,7 @@ SCIP_Real determineBound(
          left = effect < 0.0;
          side = left ? SCIProwGetLhs(row) : SCIProwGetRhs(row);
 
-         /* get information about the current row */
+         /* only non-zero effects and finite bounds need to be considered */
          if( !SCIPisZero(scip, effect) && !SCIPisInfinity(scip, left ? -side : side) )
          {
             SCIP_Real newval;
@@ -589,7 +590,7 @@ SCIP_Real determineBound(
 
             newval = (side - activities[rowpos]) / effect;
 
-            /* update shifting bound */
+            /* update shifting distance */
             if( newval < bound )
             {
                SCIP_Real activity;
