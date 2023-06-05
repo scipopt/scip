@@ -5034,7 +5034,7 @@ SCIP_RETCODE addConflictBounds(
             {
                assert( vars != NULL && vals != NULL ); /* for lint */
 
-               /* zero coefficients and the infered variable can be ignored */
+               /* zero coefficients and the inferred variable can be ignored */
                if( vars[i] == infervar || SCIPisZero(scip, vals[i]) )
                   continue;
 
@@ -5068,7 +5068,7 @@ SCIP_RETCODE addConflictBounds(
       assert(vars != NULL); /* for flexelint */
       assert(vals != NULL); /* for flexelint */
 
-      /* zero coefficients and the infered variable can be ignored */
+      /* zero coefficients and the inferred variable can be ignored */
       if( vars[i] == infervar || SCIPisZero(scip, vals[i]) )
          continue;
 
@@ -10383,6 +10383,10 @@ SCIP_RETCODE checkPartialObjective(
 
       SCIPdebugMsg(scip, "linear equality constraint <%s> == %g (offset %g) is a subset of the objective function\n",
          SCIPconsGetName(cons), consdata->rhs, offset);
+
+      /* make equality a model constraint to ensure optimality in this direction */
+      SCIP_CALL( SCIPsetConsChecked(scip, cons, TRUE) );
+      SCIP_CALL( SCIPsetConsEnforced(scip, cons, TRUE) );
 
       /* set all objective coefficient to zero */
       for( v = 0; v < nvars; ++v )
