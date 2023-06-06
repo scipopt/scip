@@ -70,6 +70,7 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    int*                  nperms,             /**< pointer to store number of permutations */
    int*                  nmaxperms,          /**< pointer to store maximal number of permutations (needed for freeing storage) */
    int***                perms,              /**< pointer to store permutation generators as (nperms x npermvars) matrix */
+   SYM_SYMTYPE**         symtypes,           /**< pointer to store type of symmetries in perms */
    SCIP_Real*            log10groupsize,     /**< pointer to store log10 of size of group */
    SCIP_Real*            symcodetime         /**< pointer to store the time for symmetry code */
    );
