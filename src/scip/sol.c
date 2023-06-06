@@ -2772,6 +2772,7 @@ SCIP_RETCODE SCIPsolRetransform(
    if( SCIPsolIsExact(sol) )
    {
       SCIP_CALL( SCIPsolRetransformExact(sol, set, stat, origprob, transprob, hasinfval) );
+      return SCIP_OKAY;
    }
 
    /* This method was a performance bottleneck when retransforming a solution during presolving, before flattening the

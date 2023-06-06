@@ -2039,7 +2039,7 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
 
    SCIP_CALL( RatCreateBuffer(set->buffer, &farkasrhs) );
 
-   SCIP_CALL(SCIPsetAllocBufferArray(set, &ind, (lpexact->nrows + lpexact->ncols)));
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &ind, (lpexact->nrows + lpexact->ncols)) );
 
    len = 0;
    for( i = 0; i < lpexact->ncols; ++i )
@@ -2960,7 +2960,8 @@ SCIP_RETCODE SCIPstoreCertificateActiveMirInfo(
    csplit = 0;
 
    /* make the mirinfo sparse again */
-   SCIP_CALL(SCIPallocBlockMemoryArray(scip, &(mirinfo->varinds), mirinfo->nsplitvars));
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(mirinfo->varinds), mirinfo->nsplitvars) );
+
    for( i = 0; i < mirinfo->nsplitvars; i++ )
    {
       if( mirinfo->splitcoefficients[i] != 0.0 || mirinfo->upperused[i] || mirinfo->localbdused[i] )

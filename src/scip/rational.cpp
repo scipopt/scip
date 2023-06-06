@@ -1802,7 +1802,7 @@ SCIP_Real RatRoundReal(
    if( rational->isfprepresentable == SCIP_ISFPREPRESENTABLE_TRUE || roundmode == SCIP_R_ROUND_NEAREST )
       return RatApproxReal(rational);
 
-#if 1
+#if SCIP_WITH_MPFR
    {
       mpfr_t valmpfr;
       mpq_t* val;
@@ -2041,8 +2041,8 @@ void RatComputeApproximationLong(
 {
    SCIP_Longint tn, td, temp, a0, ai, resnum, resden;
    /* here we use p[2]=pk, p[1]=pk-1,p[0]=pk-2 and same for q */
-   SCIP_Longint p[3];
-   SCIP_Longint q[3];
+   SCIP_Longint p[3] = {0};
+   SCIP_Longint q[3] = {0};
    int sign;
    int done = 0;
 
