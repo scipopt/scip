@@ -1718,7 +1718,7 @@ SCIP_RETCODE detectOrbitopalSymmetries(
          *success = FALSE;
          for (p = nrows - 1; p >= 0; --p)
          {
-            SCIPfreeBufferArray(scip, &(*matrices)[c][p], (*ncols)[c]);
+            SCIPfreeBufferArray(scip, &(*matrices)[c][p]);
          }
          SCIPfreeBlockMemoryArray(scip, &(*matrices)[c], nrows);
          SCIPfreeBlockMemoryArray(scip, matrices, ncolors);
@@ -2256,6 +2256,7 @@ SCIP_RETCODE tryHandleDoubleLexMatrices(
    printf("\n");
 
    return SCIP_OKAY;
+}
 
 /** helper function to test if val1 = val2 while permitting infinity-values */
 SCIP_Bool EQ(

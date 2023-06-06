@@ -266,6 +266,7 @@ SCIP_RETCODE tryHandleDoubleLexMatrices(
    int                   nperms,             /**< number of permutations in perms */
    int                   permlen,            /**< length of permutations in perms */
    SCIP_Bool             issignedperm        /**< whether permutations are signed */
+   );
 
 /** helper function to test if val1 = val2 while permitting infinity-values */
 SCIP_Bool EQ(
