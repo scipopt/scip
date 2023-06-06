@@ -25,6 +25,7 @@
 /**@file   symmetry.h
  * @ingroup PUBLICCOREAPI
  * @brief  methods for handling symmetries
+ * @author Jasper van Doornmalen
  * @author Christopher Hojny
  * @author Marc Pfetsch
  */
@@ -244,6 +245,7 @@ SCIP_RETCODE SCIPgenerateOrbitopeVarsMatrix(
    );
 
 /** checks whether an orbitope is a packing or partitioning orbitope */
+SCIP_EXPORT
 SCIP_RETCODE SCIPisPackingPartitioningOrbitope(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR***           vars,               /**< variable matrix of orbitope constraint */
@@ -264,6 +266,44 @@ SCIP_RETCODE tryHandleDoubleLexMatrices(
    int                   nperms,             /**< number of permutations in perms */
    int                   permlen,            /**< length of permutations in perms */
    SCIP_Bool             issignedperm        /**< whether permutations are signed */
+
+/** helper function to test if val1 = val2 while permitting infinity-values */
+SCIP_Bool EQ(
+   SCIP*              scip,               /**< SCIP data structure */
+   SCIP_Real          val1,               /**< left-hand side value */
+   SCIP_Real          val2                /**< right-hand side value */
+   );
+
+
+/** helper function to test if val1 <= val2 while permitting infinity-values */
+SCIP_Bool LE(
+   SCIP*              scip,               /**< SCIP data structure */
+   SCIP_Real          val1,               /**< left-hand side value */
+   SCIP_Real          val2                /**< right-hand side value */
+   );
+
+
+/** helper function to test if val1 >= val2 while permitting infinity-values */
+SCIP_Bool GE(
+   SCIP*              scip,               /**< SCIP data structure */
+   SCIP_Real          val1,               /**< left-hand side value */
+   SCIP_Real          val2                /**< right-hand side value */
+   );
+
+
+/** helper function to test if val1 < val2 while permitting infinity-values */
+SCIP_Bool LT(
+   SCIP*              scip,               /**< SCIP data structure */
+   SCIP_Real          val1,               /**< left-hand side value */
+   SCIP_Real          val2                /**< right-hand side value */
+   );
+
+
+/** helper function to test if val1 > val2 while permitting infinity-values */
+SCIP_Bool GT(
+   SCIP*              scip,               /**< SCIP data structure */
+   SCIP_Real          val1,               /**< left-hand side value */
+   SCIP_Real          val2                /**< right-hand side value */
    );
 
 /** @} */

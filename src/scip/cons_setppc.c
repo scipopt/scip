@@ -8870,8 +8870,7 @@ SCIP_DECL_CONSPARSE(consParseSetppc)
    }
 
    /* remove white spaces */
-   while( isspace((unsigned char)*str) )
-      str++;
+   SCIP_CALL( SCIPskipSpace((char**)&str) );
 
    if( *success )
    {

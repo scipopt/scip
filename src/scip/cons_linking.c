@@ -3318,27 +3318,34 @@ SCIP_DECL_CONSPARSE(consParseLinking)
 
    if( linkvar == NULL )
    {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "unknown variable name at '%s'\n", str);
+      SCIPerrorMessage("unknown variable name at '%s'\n", str);
       *success = FALSE;
       return SCIP_OKAY;
    }
+
+   /* find "==" */
+   endptr = strchr(endptr, '=');
+
+   /* if the string end has been reached without finding the "==" */
+   if( endptr == NULL )
+   {
+      SCIPerrorMessage("Could not find initializing '='.\n");
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+
    str = endptr;
+
+   /* skip "==" */
+   str += *(str+1) == '=' ? 2 : 1;
+
+   /* skip whitespace */
+   SCIP_CALL( SCIPskipSpace((char**)&str) );
 
    nbinvars = 0;
    varssize = 16;
-
    SCIP_CALL( SCIPallocBufferArray(scip, &binvars, varssize) );
    SCIP_CALL( SCIPallocBufferArray(scip, &vals, varssize) );
-
-   while( *str != '=' )
-      ++str;
-
-   /* skip '=' */
-   ++str;
-
-   /* skip whitespace */
-   while( isspace((int)*str) )
-      ++str;
 
    /* check for the string "no binary variables yet" */
    if( strncmp(str, "no binary variables yet", 24) != 0 )

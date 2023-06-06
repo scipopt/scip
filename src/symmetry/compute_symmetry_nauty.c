@@ -128,7 +128,7 @@ SCIP_DECL_HASHKEYVAL(SYMhashKeyValOptype)
    else
       exponent = 1.0;
 
-   result = SCIPhashTwo(SCIPrealHashCode(exponent), k->level), (uint64_t) SCIPexprhdlrGetName(SCIPexprGetHdlr(k->expr));
+   result = SCIPhashThree(SCIPrealHashCode(exponent), k->level, SCIPhashKeyValString(NULL, (char*) SCIPexprhdlrGetName(SCIPexprGetHdlr(k->expr))));
 
    return result;
 }
@@ -148,7 +148,7 @@ SCIP_DECL_HASHGETKEY(SYMhashGetKeyConsttype)
  */
 static
 SCIP_DECL_HASHKEYEQ(SYMhashKeyEQConsttype)
-{
+{  /*lint --e{715}*/
    SYM_CONSTTYPE* k1;
    SYM_CONSTTYPE* k2;
 
@@ -184,7 +184,7 @@ SCIP_DECL_HASHGETKEY(SYMhashGetKeyRhstype)
  */
 static
 SCIP_DECL_HASHKEYEQ(SYMhashKeyEQRhstype)
-{
+{  /*lint --e{715}*/
    SYM_RHSTYPE* k1;
    SYM_RHSTYPE* k2;
 
@@ -550,7 +550,7 @@ SCIP_RETCODE determineGraphSize(
       int maxischildofsum;
       int numvisitednodes = 0;
       int numischildofsum = 0;
-      int nvars;
+      int varssize;
       int i;
 
       conss = SCIPconshdlrGetConss(conshdlr);
@@ -565,7 +565,7 @@ SCIP_RETCODE determineGraphSize(
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &ischildofsum, maxischildofsum) );
 
       /* get number of variables */
-      nvars = SCIPgetNVars(scip);
+      varssize = SCIPgetNVars(scip);
 
       /* iterate over all expressions and add the corresponding nodes to the graph */
       for (i = 0; i < nconss; ++i)
@@ -610,29 +610,30 @@ SCIP_RETCODE determineGraphSize(
                   else
                   {
                      SCIP_Real constant = 0.0;
-                     int varsize;
+                     int nvars;
                      int requiredsize;
                      int k;
 
                      if ( vars == NULL )
                      {
-                        SCIP_CALL( SCIPallocBlockMemoryArray(scip, &vars, nvars) );
-                        SCIP_CALL( SCIPallocBlockMemoryArray(scip, &vals, nvars) );
+                        SCIP_CALL( SCIPallocBlockMemoryArray(scip, &vars, varssize) );
+                        SCIP_CALL( SCIPallocBlockMemoryArray(scip, &vals, varssize) );
                      }
                      assert( vars != NULL && vals != NULL );
 
                      vars[0] = var;
                      vals[0] = 1.0;
+                     nvars = 1;
 
-                     SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, vals, &varsize, varsize, &constant, &requiredsize, TRUE) );
-                     assert( requiredsize <= nvars );
+                     SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, vals, &nvars, varssize, &constant, &requiredsize, TRUE) );
+                     assert( requiredsize <= varssize );
 
                      assert( numvisitednodes > 0 );
                      parentnode = visitednodes[numvisitednodes-1];
                      assert( parentnode < *nnodes );
 
                      /* create nodes for all aggregation variables and coefficients and connect them to the parent node */
-                     for (k = 0; k < requiredsize; ++k)
+                     for (k = 0; k < nvars; ++k)
                      {
                         int internode;
 
@@ -814,8 +815,8 @@ SCIP_RETCODE determineGraphSize(
          assert( numvisitednodes == 0 );
          assert( numischildofsum == 0 );
       }
-      SCIPfreeBlockMemoryArrayNull(scip, &vals, nvars);
-      SCIPfreeBlockMemoryArrayNull(scip, &vars, nvars);
+      SCIPfreeBlockMemoryArrayNull(scip, &vals, varssize);
+      SCIPfreeBlockMemoryArrayNull(scip, &vars, varssize);
 
       SCIPfreeBlockMemoryArray(scip, &visitednodes, maxvisitednodes);
       SCIPfreeBlockMemoryArray(scip, &ischildofsum, maxischildofsum);
@@ -912,7 +913,7 @@ SCIP_RETCODE fillGraphByConss(
    int nmaxinternodes;
    int oldcolor = -1;
    int cnt;
-   int nvars;
+   int varssize;
 #ifndef NDEBUG
    SCIP_Real oldcoef = SCIP_INVALID;
 #endif
@@ -955,7 +956,7 @@ SCIP_RETCODE fillGraphByConss(
    for (i = 0; i < nnodes; ++i)
    {
       SG->d[i] = degrees[i];   /* degree of node i */
-      SG->v[i] = (size_t) cnt; /* position of edges for node i */
+      SG->v[i] = (size_t) (unsigned) cnt; /* position of edges for node i */
       pos[i] = cnt;            /* also store position */
       cnt += degrees[i];
    }
@@ -1135,7 +1136,7 @@ SCIP_RETCODE fillGraphByConss(
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &ischildofsum, maxischildofsum) );
 
    /* get number of variables */
-   nvars = SCIPgetNVars(scip);
+   varssize = SCIPgetNVars(scip);
 
    /* iterate over all expressions and add the corresponding nodes to the graph */
    for (i = 0; i < nconss; ++i)
@@ -1179,21 +1180,22 @@ SCIP_RETCODE fillGraphByConss(
                   else
                   {
                      SCIP_Real constant = 0.0;
-                     int varsize;
+                     int nvars;
                      int requiredsize;
                      int k;
 
                      if ( vars == NULL )
                      {
-                        SCIP_CALL( SCIPallocBlockMemoryArray(scip, &vars, nvars) );
-                        SCIP_CALL( SCIPallocBlockMemoryArray(scip, &vals, nvars) );
+                        SCIP_CALL( SCIPallocBlockMemoryArray(scip, &vars, varssize) );
+                        SCIP_CALL( SCIPallocBlockMemoryArray(scip, &vals, varssize) );
                      }
                      assert( vars != NULL && vals != NULL );
 
                      vars[0] = var;
                      vals[0] = 1.0;
+                     nvars = 1;
 
-                     SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, vals, &varsize, varsize, &constant, &requiredsize, TRUE) );
+                     SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, vals, &nvars, varssize, &constant, &requiredsize, TRUE) );
                      assert( requiredsize <= nvars );
 
                      assert( numvisitednodes > 0 );
@@ -1201,7 +1203,7 @@ SCIP_RETCODE fillGraphByConss(
                      assert( parentnode < nnodes );
 
                      /* create nodes for all aggregation variables and coefficients and connect them to the parent node */
-                     for (k = 0; k < requiredsize; ++k)
+                     for (k = 0; k < nvars; ++k)
                      {
                         SYM_CONSTTYPE* ct;
                         int internode;
@@ -1532,8 +1534,8 @@ SCIP_RETCODE fillGraphByConss(
 #endif
 
    /* free everything */
-   SCIPfreeBlockMemoryArrayNull(scip, &vals, nvars);
-   SCIPfreeBlockMemoryArrayNull(scip, &vars, nvars);
+   SCIPfreeBlockMemoryArrayNull(scip, &vals, varssize);
+   SCIPfreeBlockMemoryArrayNull(scip, &vars, varssize);
 
    SCIPfreeBlockMemoryArray(scip, &pos, nnodes);
    SCIPfreeBlockMemoryArray(scip, &visitednodes, maxvisitednodes);
@@ -1680,10 +1682,10 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    /* init graph */
    SG_INIT(SG);
 
-   SG_ALLOC(SG, nnodes, 2 * nedges, "malloc");
+   SG_ALLOC(SG, (size_t) nnodes, 2 * (size_t)(unsigned) nedges, "malloc"); /*lint !e647*//*lint !e774*//*lint !e571*/
 
    SG.nv = nnodes;                   /* number of nodes */
-   SG.nde = (size_t) (2 * nedges);   /* number of directed edges */
+   SG.nde = (size_t) (unsigned) (2 * nedges);   /* number of directed edges */
 
    /* add the nodes for linear and nonlinear constraints to the graph */
    SCIP_CALL( fillGraphByConss(scip, &SG, matrixdata, exprdata,
@@ -1737,7 +1739,7 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
 
    SCIPfreeBufferArray(scip, &colors);
 
-   SG_FREE(SG);
+   SG_FREE(SG); /*lint !e774*/
 
    /* prepare return values */
    if ( data_.nperms > 0 )

@@ -114,9 +114,6 @@
 #include "scip/symmetry_graph.h"
 #include "symmetry/struct_symmetry.h"
 #include "tclique/tclique.h"
-#include <ctype.h>
-#include <stdlib.h>
-#include <string.h>
 
 
 /* constraint handler properties */
@@ -9912,43 +9909,69 @@ SCIP_DECL_CONSPARSE(consParseSOS1)
    SCIP_CALL( SCIPcreateConsSOS1(scip, cons, name, 0, NULL, NULL, initial, separate, enforce, check, propagate, local, dynamic, removable, stickingatnode) );
 
    /* loop through string */
-   do
+   while( *s != '\0' )
    {
       /* parse variable name */
       SCIP_CALL( SCIPparseVarName(scip, s, &var, &t) );
-      s = t;
+
+      if( var == NULL )
+         break;
 
       /* skip until beginning of weight */
-      while ( *s != '\0' && *s != '(' )
-         ++s;
+      t = strchr(t, '(');
 
-      if ( *s == '\0' )
+      if( t == NULL )
       {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error: expected weight at input: %s\n", s);
+         SCIPerrorMessage("Syntax error: expected opening '(' at input: %s\n", s);
          *success = FALSE;
-         return SCIP_OKAY;
+         break;
       }
+
+      s = t;
+
       /* skip '(' */
       ++s;
 
       /* find weight */
       weight = strtod(s, &t);
-      if ( t == NULL )
+
+      if( t == NULL )
       {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error during parsing of the weight: %s\n", s);
+         SCIPerrorMessage("Syntax error during parsing of the weight: %s\n", s);
          *success = FALSE;
-         return SCIP_OKAY;
+         break;
       }
+
       s = t;
 
-      /* skip white space, ',', and ')' */
-      while ( *s != '\0' && ( isspace((unsigned char)*s) ||  *s == ',' || *s == ')' ) )
+      /* skip until ending of weight */
+      t = strchr(t, ')');
+
+      if( t == NULL )
+      {
+         SCIPerrorMessage("Syntax error: expected closing ')' at input %s\n", s);
+         *success = FALSE;
+         break;
+      }
+
+      s = t;
+
+      /* skip ')' */
+      ++s;
+
+      /* skip white space */
+      SCIP_CALL( SCIPskipSpace((char**)&s) );
+
+      /* skip ',' */
+      if( *s == ',' )
          ++s;
 
       /* add variable */
       SCIP_CALL( SCIPaddVarSOS1(scip, *cons, var, weight) );
    }
-   while ( *s != '\0' );
+
+   if( !*success )
+      SCIP_CALL( SCIPreleaseCons(scip, cons) );
 
    return SCIP_OKAY;
 }

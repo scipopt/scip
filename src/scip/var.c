@@ -485,11 +485,11 @@ SCIP_RETCODE varAddLbchginfo(
    int                   depth,              /**< depth in the tree, where the bound change takes place */
    int                   pos,                /**< position of the bound change in its bound change array */
    SCIP_VAR*             infervar,           /**< variable that was changed (parent of var, or var itself) */
-   SCIP_CONS*            infercons,          /**< constraint that infered this bound change, or NULL */
+   SCIP_CONS*            infercons,          /**< constraint that inferred this bound change, or NULL */
    SCIP_PROP*            inferprop,          /**< propagator that deduced the bound change, or NULL */
    int                   inferinfo,          /**< user information for inference to help resolving the conflict */
    SCIP_BOUNDTYPE        inferboundtype,     /**< type of bound for inference var: lower or upper bound */
-   SCIP_BOUNDCHGTYPE     boundchgtype        /**< bound change type: branching decision or infered bound change */
+   SCIP_BOUNDCHGTYPE     boundchgtype        /**< bound change type: branching decision or inferred bound change */
    )
 {
    assert(var != NULL);
@@ -560,11 +560,11 @@ SCIP_RETCODE varAddUbchginfo(
    int                   depth,              /**< depth in the tree, where the bound change takes place */
    int                   pos,                /**< position of the bound change in its bound change array */
    SCIP_VAR*             infervar,           /**< variable that was changed (parent of var, or var itself) */
-   SCIP_CONS*            infercons,          /**< constraint that infered this bound change, or NULL */
+   SCIP_CONS*            infercons,          /**< constraint that inferred this bound change, or NULL */
    SCIP_PROP*            inferprop,          /**< propagator that deduced the bound change, or NULL */
    int                   inferinfo,          /**< user information for inference to help resolving the conflict */
    SCIP_BOUNDTYPE        inferboundtype,     /**< type of bound for inference var: lower or upper bound */
-   SCIP_BOUNDCHGTYPE     boundchgtype        /**< bound change type: branching decision or infered bound change */
+   SCIP_BOUNDCHGTYPE     boundchgtype        /**< bound change type: branching decision or inferred bound change */
    )
 {
    assert(var != NULL);
@@ -2320,9 +2320,10 @@ SCIP_RETCODE parseBounds(
 
    /* get bound type */
    SCIPstrCopySection(str, ' ', ' ', type, SCIP_MAXSTRLEN, endptr);
-   if ( strncmp(type, "original", 8) != 0 && strncmp(type, "global", 6) != 0 && strncmp(type, "local", 5) != 0 && strncmp(type, "lazy", 4) != 0 )
+   if ( *endptr == str
+        || ( strncmp(type, "original", 8) != 0 && strncmp(type, "global", 6) != 0 && strncmp(type, "local", 5) != 0 && strncmp(type, "lazy", 4) != 0 ) )
    {
-      SCIPsetDebugMsg(set, "unkown bound type <%s>\n", type);
+      SCIPsetDebugMsg(set, "unkown bound type\n");
       *endptr = NULL;
       return SCIP_OKAY;
    }
@@ -2382,7 +2383,7 @@ SCIP_RETCODE varParse(
 
    /* copy variable type */
    SCIPstrCopySection(str, '[', ']', token, SCIP_MAXSTRLEN, endptr);
-   assert(str != *endptr);
+   assert(*endptr != str);
    SCIPsetDebugMsg(set, "parsed variable type <%s>\n", token);
 
    /* get variable type */
@@ -2406,7 +2407,7 @@ SCIP_RETCODE varParse(
 
    /* get variable name */
    SCIPstrCopySection(str, '<', '>', name, SCIP_MAXSTRLEN, endptr);
-   assert(endptr != NULL);
+   assert(*endptr != str);
    SCIPsetDebugMsg(set, "parsed variable name <%s>\n", name);
 
    /* move string pointer behind variable name */

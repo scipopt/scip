@@ -1120,7 +1120,7 @@ SCIP_RETCODE SCIPconflictstoreAddDualsolcons(
    /* add the new constraint based on a dual solution at the last position */
    SCIPconsCapture(dualproof);
    conflictstore->dualsolconfs[conflictstore->ndualsolconfs] = dualproof;
-   conflictstore->dualprimalbnds[conflictstore->ndualsolconfs] = SCIPgetCutoffbound(set->scip) - SCIPsetSumepsilon(set);
+   conflictstore->dualprimalbnds[conflictstore->ndualsolconfs] = SCIPgetCutoffbound(set->scip) - (SCIPprobIsObjIntegral(transprob) ? SCIPsetCutoffbounddelta(set) : 0.0);
    conflictstore->scalefactors[conflictstore->ndualsolconfs] = scale;
    conflictstore->updateside[conflictstore->ndualsolconfs] = updateside;
    conflictstore->dsolrelaxonly[conflictstore->ndualsolconfs] = hasrelaxvar;
@@ -1352,7 +1352,7 @@ SCIP_RETCODE SCIPconflictstoreCleanNewIncumbent(
             /* get unscaled rhs */
             newside = rhs * conflictstore->scalefactors[i];
             newside -= conflictstore->dualprimalbnds[i];
-            newside += cutoffbound - SCIPsetSumepsilon(set);
+            newside += cutoffbound - (SCIPprobIsObjIntegral(transprob) ? SCIPsetCutoffbounddelta(set) : 0.0);
 
             /* scale rhs */
             newside /= conflictstore->scalefactors[i];
@@ -1370,7 +1370,7 @@ SCIP_RETCODE SCIPconflictstoreCleanNewIncumbent(
             /* get unscaled lhs */
             newside = lhs * conflictstore->scalefactors[i];
             newside += conflictstore->dualprimalbnds[i];
-            newside -= (cutoffbound - SCIPsetSumepsilon(set));
+            newside -= (cutoffbound - (SCIPprobIsObjIntegral(transprob) ? SCIPsetCutoffbounddelta(set) : 0.0));
 
             /* scale lhs */
             newside /= conflictstore->scalefactors[i];
@@ -1380,7 +1380,7 @@ SCIP_RETCODE SCIPconflictstoreCleanNewIncumbent(
 
          ++nchgsides;
 
-         conflictstore->dualprimalbnds[i] = cutoffbound - SCIPsetSumepsilon(set);
+         conflictstore->dualprimalbnds[i] = cutoffbound - (SCIPprobIsObjIntegral(transprob) ? SCIPsetCutoffbounddelta(set) : 0.0);
 
          ++i;
       }

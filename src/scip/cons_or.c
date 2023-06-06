@@ -1268,7 +1268,7 @@ SCIP_RETCODE resolvePropagation(
    switch( proprule )
    {
    case PROPRULE_1:
-      /* the resultant was infered to TRUE, because one operand variable was TRUE */
+      /* the resultant was inferred to TRUE, because one operand variable was TRUE */
       assert(SCIPgetVarLbAtIndex(scip, infervar, bdchgidx, TRUE) > 0.5);
       assert(infervar == consdata->resvar);
       for( i = 0; i < nvars; ++i )
@@ -1284,7 +1284,7 @@ SCIP_RETCODE resolvePropagation(
       break;
 
    case PROPRULE_2:
-      /* the operand variable was infered to FALSE, because the resultant was FALSE */
+      /* the operand variable was inferred to FALSE, because the resultant was FALSE */
       assert(SCIPgetVarUbAtIndex(scip, infervar, bdchgidx, TRUE) < 0.5);
       assert(SCIPgetVarUbAtIndex(scip, consdata->resvar, bdchgidx, FALSE) < 0.5);
       SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->resvar) );
@@ -1292,7 +1292,7 @@ SCIP_RETCODE resolvePropagation(
       break;
 
    case PROPRULE_3:
-      /* the resultant was infered to FALSE, because all operand variables were FALSE */
+      /* the resultant was inferred to FALSE, because all operand variables were FALSE */
       assert(SCIPgetVarUbAtIndex(scip, infervar, bdchgidx, TRUE) < 0.5);
       assert(infervar == consdata->resvar);
       for( i = 0; i < nvars; ++i )
@@ -1304,7 +1304,7 @@ SCIP_RETCODE resolvePropagation(
       break;
 
    case PROPRULE_4:
-      /* the operand variable was infered to TRUE, because the resultant was TRUE and all other operands were FALSE */
+      /* the operand variable was inferred to TRUE, because the resultant was TRUE and all other operands were FALSE */
       assert(SCIPgetVarLbAtIndex(scip, infervar, bdchgidx, TRUE) > 0.5);
       assert(SCIPgetVarLbAtIndex(scip, consdata->resvar, bdchgidx, FALSE) > 0.5);
       SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->resvar) );
@@ -1974,6 +1974,8 @@ SCIP_DECL_CONSPARSE(consParseOr)
 
    SCIPdebugMsg(scip, "parse <%s> as or constraint\n", str);
 
+   *success = FALSE;
+
    /* copy string for truncating it */
    SCIP_CALL( SCIPduplicateBufferArray(scip, &strcopy, str, (int)(strlen(str)+1)));
 
@@ -1985,8 +1987,7 @@ SCIP_DECL_CONSPARSE(consParseOr)
 
    if( resvar == NULL )
    {
-      SCIPdebugMsg(scip, "resultant variable %s does not exist \n", token);
-      *success = FALSE;
+      SCIPerrorMessage("resultant variable does not exist\n");
    }
    else
    {

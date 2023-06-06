@@ -52,7 +52,7 @@ make install                                                                  # 
 Note: For a full ctest run `ctest` instead of `make check` after compilation.
 
 CMake checks for available third-party libraries like GMP or ZLIB and sets up the configuration accordingly.
-Note that the symmetry codes [Bliss](https://users.aalto.fi/~tjunttil/bliss/) and Sassy (github.com/markusa4/sassy) are shipped with SCIP.
+Note that the symmetry codes [Bliss](https://users.aalto.fi/~tjunttil/bliss/) and [Sassy](https://github.com/markusa4/sassy) are shipped with SCIP.
 
 Note: Here is a list of apt package requirements for ubuntu or debian users that want to build the entire SCIP Optimization Suite from source tarball:
 ```

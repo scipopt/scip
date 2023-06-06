@@ -88,7 +88,7 @@ typedef enum SYM_Consoptype SYM_CONSOPTYPE;
 /* type of symmetry handling codes */
 #define SYM_HANDLETYPE_NONE             UINT32_C(0x00000000)  /**< no symmetry handling */
 #define SYM_HANDLETYPE_SYMBREAK         UINT32_C(0x00000001)  /**< symmetry breaking inequalities */
-#define SYM_HANDLETYPE_ORBITALFIXING    UINT32_C(0x00000002)  /**< orbital fixing */
+#define SYM_HANDLETYPE_ORBITALREDUCTION UINT32_C(0x00000002)  /**< orbital reduction */
 #define SYM_HANDLETYPE_SST              UINT32_C(0x00000004)  /**< Schreier Sims cuts */
 #define SYM_HANDLETYPE_SYMCONS (SYM_HANDLETYPE_SYMBREAK | SYM_HANDLETYPE_SST)
 
@@ -130,15 +130,6 @@ enum SCIP_OrbitopeType
    SCIP_ORBITOPETYPE_PACKING      = 2        /**< constraint is a packing orbitope constraint:      rowsum(x) <= 1 */
 };
 typedef enum SCIP_OrbitopeType SCIP_ORBITOPETYPE;
-
-/** conditions to recompute symmetries after a restart */
-enum SCIP_RecomputesymType
-{
-   SCIP_RECOMPUTESYM_NEVER         = 0,       /**< never recompute symmetries */
-   SCIP_RECOMPUTESYM_ALWAYS        = 1,       /**< always recompute symmetries */
-   SCIP_RECOMPUTESYM_OFFOUNDRED    = 2        /**< only if orbital fixing found a reduction in previous run */
-};
-typedef enum SCIP_RecomputesymType SCIP_RECOMPUTESYMTYPE;
 
 #ifdef __cplusplus
 }

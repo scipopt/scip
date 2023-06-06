@@ -2044,7 +2044,7 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
    }
    else
    {
-      /* check the infered bound change on the debugging solution */
+      /* check the inferred bound change on the debugging solution */
       SCIP_CALL( SCIPdebugCheckInference(blkmem, set, node, var, newbound, boundtype) ); /*lint !e506 !e774*/
 
       /* remember the bound change as inference (lpsolval is not important: use 0.0) */
@@ -3067,7 +3067,7 @@ void treeFindSwitchForks(
    tree->repropdepth = INT_MAX;
 }
 
-/** switches the active path to the new focus node, applies domain and constraint set changes */
+/** switches the active path to the new focus node, frees dead end, applies domain and constraint set changes */
 static
 SCIP_RETCODE treeSwitchPath(
    SCIP_TREE*            tree,               /**< branch and bound tree */
@@ -3092,6 +3092,7 @@ SCIP_RETCODE treeSwitchPath(
    int focusnodedepth;  /* depth of the new focus node, or -1 if focusnode == NULL */
    int forkdepth;       /* depth of the common subroot/fork/pseudofork/junction node, or -1 if no common fork exists */
    int i;
+   SCIP_NODE* oldfocusnode;
 
    assert(tree != NULL);
    assert(fork == NULL || (fork->active && !fork->cutoff));
@@ -3099,6 +3100,10 @@ SCIP_RETCODE treeSwitchPath(
    assert(focusnode == NULL || (!focusnode->active && !focusnode->cutoff));
    assert(focusnode == NULL || SCIPnodeGetType(focusnode) == SCIP_NODETYPE_FOCUSNODE);
    assert(cutoff != NULL);
+
+   /* set new focus node */
+   oldfocusnode = tree->focusnode;
+   tree->focusnode = focusnode;
 
    *cutoff = FALSE;
 
@@ -3110,7 +3115,7 @@ SCIP_RETCODE treeSwitchPath(
    assert(forkdepth <= focusnodedepth);
    assert(forkdepth < tree->pathlen);
 
-   /* delay events in path switching */
+   /* delay events in node deactivations */
    SCIP_CALL( SCIPeventqueueDelay(eventqueue) );
 
    /* undo the domain and constraint set changes of the old active path by deactivating the path's nodes */
@@ -3122,6 +3127,9 @@ SCIP_RETCODE treeSwitchPath(
 
    /* apply the pending bound changes */
    SCIP_CALL( treeApplyPendingBdchgs(tree, reopt, blkmem, set, stat, transprob, origprob, lp, branchcand, eventqueue, cliquetable) );
+
+   /* process the delayed events */
+   SCIP_CALL( SCIPeventqueueProcess(eventqueue, blkmem, set, primal, lp, branchcand, eventfilter) );
 
    /* create the new active path */
    SCIP_CALL( treeEnsurePathMem(tree, set, focusnodedepth+1) );
@@ -3136,10 +3144,37 @@ SCIP_RETCODE treeSwitchPath(
       focusnode = focusnode->parent;
    }
 
+   /* if the old focus node is a dead end (has no children), delete it */
+   if( oldfocusnode != NULL && SCIPnodeGetType(oldfocusnode) == SCIP_NODETYPE_DEADEND )
+   {
+      assert(tree->appliedeffectiverootdepth <= tree->effectiverootdepth);
+      SCIP_CALL( SCIPnodeFree(&oldfocusnode, blkmem, set, stat, eventfilter, eventqueue, tree, lp) );
+      assert(tree->effectiverootdepth <= focusnodedepth || tree->focusnode == NULL || *cutoff);
+   }
+
+   /* promote the constraint set and bound changes up to the new effective root to be global changes */
+   while( tree->appliedeffectiverootdepth < tree->effectiverootdepth && tree->appliedeffectiverootdepth < focusnodedepth
+      && !(*cutoff) )
+   {
+      SCIPsetDebugMsg(set,
+         "effective root is now at depth %d: applying constraint set and bound changes to global problem\n",
+         tree->effectiverootdepth);
+      ++tree->appliedeffectiverootdepth;
+      SCIPsetDebugMsg(set, " -> applying constraint set changes of depth %d\n", tree->appliedeffectiverootdepth);
+      SCIP_CALL( SCIPconssetchgMakeGlobal(&tree->path[tree->appliedeffectiverootdepth]->conssetchg, blkmem, set, stat,
+            transprob, reopt) );
+      SCIPsetDebugMsg(set, " -> applying bound changes of depth %d\n", tree->appliedeffectiverootdepth);
+      SCIP_CALL( SCIPdomchgApplyGlobal(tree->path[tree->appliedeffectiverootdepth]->domchg, blkmem, set, stat, lp,
+            branchcand, eventqueue, cliquetable, cutoff) );
+   }
+
+   /* delay events in node activations */
+   SCIP_CALL( SCIPeventqueueDelay(eventqueue) );
+
    /* fork might be cut off when applying the pending bound changes */
    if( fork != NULL && fork->cutoff )
       *cutoff = TRUE;
-   else if( fork != NULL && fork->reprop )
+   else if( fork != NULL && fork->reprop && !(*cutoff) )
    {
      /* propagate common fork again, if the reprop flag is set */
       assert(tree->path[forkdepth] == fork);
@@ -4330,7 +4365,6 @@ SCIP_RETCODE SCIPnodeFocus(
    SCIP_Bool             exitsolve           /**< are we in exitsolve stage, so we only need to loose the children */
    )
 {  /*lint --e{715}*/
-   SCIP_NODE* oldfocusnode;
    SCIP_NODE* fork;
    SCIP_NODE* lpfork;
    SCIP_NODE* lpstatefork;
@@ -4606,7 +4640,6 @@ SCIP_RETCODE SCIPnodeFocus(
    SCIPsetDebugMsg(set, "focus node: new correctlpdepth=%d\n", tree->correctlpdepth);
 
    /* set up the new lists of siblings and children */
-   oldfocusnode = tree->focusnode;
    if( *node == NULL )
    {
       /* move siblings to the queue, make them LEAFs */
@@ -4703,63 +4736,23 @@ SCIP_RETCODE SCIPnodeFocus(
    }
    assert(tree->nchildren == 0);
 
-   /* set new focus node, LP fork, LP state fork, and subroot */
+   /* set LP fork, LP state fork, and subroot */
    assert(subroot == NULL || (lpstatefork != NULL && subroot->depth <= lpstatefork->depth));
    assert(lpstatefork == NULL || (lpfork != NULL && lpstatefork->depth <= lpfork->depth));
    assert(lpfork == NULL || (*node != NULL && lpfork->depth < (*node)->depth));
-   tree->focusnode = *node;
    tree->focuslpfork = lpfork;
    tree->focuslpstatefork = lpstatefork;
    tree->focussubroot = subroot;
    tree->focuslpconstructed = FALSE;
    lp->resolvelperror = FALSE;
 
-   /* track the path from the old focus node to the new node, and perform domain and constraint set changes */
+   /* track the path from the old focus node to the new node, free dead end, set new focus node, and perform domain and constraint set changes */
    SCIP_CALL( treeSwitchPath(tree, reopt, blkmem, set, stat, transprob, origprob, primal, lp, branchcand, conflict,
          eventfilter, eventqueue, cliquetable, fork, *node, cutoff) );
+   assert(tree->focusnode == *node);
    assert(tree->pathlen >= 0);
    assert(*node != NULL || tree->pathlen == 0);
    assert(*node == NULL || tree->pathlen-1 <= (int)(*node)->depth);
-
-   /* if the old focus node is a dead end (has no children), delete it */
-   if( oldfocusnode != NULL && SCIPnodeGetType(oldfocusnode) == SCIP_NODETYPE_DEADEND )
-   {
-      int appliedeffectiverootdepth;
-
-      appliedeffectiverootdepth = tree->appliedeffectiverootdepth;
-      assert(appliedeffectiverootdepth <= tree->effectiverootdepth);
-
-      SCIP_CALL( SCIPnodeFree(&oldfocusnode, blkmem, set, stat, eventfilter, eventqueue, tree, lp) );
-      assert(tree->effectiverootdepth < tree->pathlen || *node == NULL || *cutoff);
-
-      if( tree->effectiverootdepth > appliedeffectiverootdepth && *node != NULL && !(*cutoff) )
-      {
-         int d;
-
-         /* promote the constraint set and bound changes up to the new effective root to be global changes */
-         SCIPsetDebugMsg(set, "effective root is now at depth %d: applying constraint set and bound changes to global problem\n",
-            tree->effectiverootdepth);
-
-         for( d = appliedeffectiverootdepth + 1; d <= tree->effectiverootdepth; ++d )
-         {
-            SCIP_Bool nodecutoff;
-
-            SCIPsetDebugMsg(set, " -> applying constraint set changes of depth %d\n", d);
-            SCIP_CALL( SCIPconssetchgMakeGlobal(&tree->path[d]->conssetchg, blkmem, set, stat, transprob, reopt) );
-            SCIPsetDebugMsg(set, " -> applying bound changes of depth %d\n", d);
-            SCIP_CALL( SCIPdomchgApplyGlobal(tree->path[d]->domchg, blkmem, set, stat, lp, branchcand, eventqueue, cliquetable,
-                  &nodecutoff) );
-
-            if( nodecutoff )
-            {
-               SCIP_CALL( SCIPnodeCutoff(tree->path[d], set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
-               *cutoff = TRUE;
-            }
-         }
-
-         tree->appliedeffectiverootdepth = tree->effectiverootdepth;
-      }
-   }
    assert(*cutoff || SCIPtreeIsPathComplete(tree));
 
    return SCIP_OKAY;

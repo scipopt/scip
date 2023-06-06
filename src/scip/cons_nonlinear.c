@@ -52,9 +52,7 @@
 /*lint -e777*/
 /*lint -e866*/
 
-#include <assert.h>
 #include <ctype.h>
-
 #include "scip/cons_nonlinear.h"
 #include "scip/nlhdlr.h"
 #include "scip/expr_var.h"
@@ -78,6 +76,7 @@
 #include "scip/prop_symmetry.h"
 #include "symmetry/struct_symmetry.h"
 #include "scip/pub_misc_sort.h"
+
 
 /* fundamental constraint handler properties */
 #define CONSHDLR_NAME          "nonlinear"
@@ -1148,7 +1147,9 @@ SCIP_RETCODE catchVarEvents(
 
    conshdlrdata = SCIPconshdlrGetData(SCIPconsGetHdlr(cons));
    assert(conshdlrdata != NULL);
+#ifndef CR_API  /* this assert may not work in unittests due to having this code compiled twice, #3543 */
    assert(conshdlrdata->intevalvar == intEvalVarBoundTightening);
+#endif
 
    SCIPdebugMsg(scip, "catchVarEvents for %s\n", SCIPconsGetName(cons));
 
@@ -2687,7 +2688,9 @@ SCIP_RETCODE propConss(
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
+#ifndef CR_API  /* this assert may not work in unittests due to having this code compiled twice, #3543 */
    assert(conshdlrdata->intevalvar == intEvalVarBoundTightening);
+#endif
    assert(!conshdlrdata->globalbounds);
 
    *result = SCIP_DIDNOTFIND;
@@ -2878,7 +2881,9 @@ SCIP_RETCODE propExprDomains(
    assert(nchgbds != NULL);
    assert(*nchgbds >= 0);
 
+#ifndef CR_API  /* this assert may not work in unittests due to having this code compiled twice, #3543 */
    assert(SCIPconshdlrGetData(conshdlr)->intevalvar == intEvalVarBoundTightening);
+#endif
    assert(!SCIPconshdlrGetData(conshdlr)->globalbounds);
    assert(SCIPqueueIsEmpty(SCIPconshdlrGetData(conshdlr)->reversepropqueue));
 
@@ -10842,6 +10847,9 @@ SCIP_DECL_CONSCHECK(consCheckNonlinear)
    maypropfeasible = conshdlrdata->trysolheur != NULL && SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED
       && SCIPgetStage(scip) <= SCIP_STAGE_SOLVING;
 
+   if( maypropfeasible && (sol == NULL || SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_LPSOL) && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
+      maypropfeasible = FALSE;
+
    /* check nonlinear constraints for feasibility */
    for( c = 0; c < nconss; ++c )
    {
@@ -11384,7 +11392,7 @@ SCIP_DECL_CONSPARSE(consParseNonlinear)
 {  /*lint --e{715}*/
    SCIP_Real  lhs;
    SCIP_Real  rhs;
-   const char* endptr;
+   char*      endptr;
    SCIP_EXPR* consexprtree;
 
    SCIPdebugMsg(scip, "cons_nonlinear::consparse parsing %s\n", str);
@@ -11401,7 +11409,7 @@ SCIP_DECL_CONSPARSE(consParseNonlinear)
    if( !*str )
       return SCIP_OKAY;
 
-   endptr = str;
+   endptr = (char*)str;
 
    /* set left and right hand side to their default values */
    lhs = -SCIPinfinity(scip);
@@ -11413,15 +11421,14 @@ SCIP_DECL_CONSPARSE(consParseNonlinear)
    if( isdigit((unsigned char)str[0]) || ((str[0] == '-' || str[0] == '+') && isdigit((unsigned char)str[1])) )
    {
       /* there is a number coming, maybe it is a left-hand-side */
-      if( !SCIPstrToRealValue(str, &lhs, (char**)&endptr) )
+      if( !SCIPparseReal(scip, str, &lhs, &endptr) )
       {
          SCIPerrorMessage("error parsing number from <%s>\n", str);
          return SCIP_READERROR;
       }
 
       /* ignore whitespace */
-      while( isspace((unsigned char)*endptr) )
-         ++endptr;
+      SCIP_CALL( SCIPskipSpace(&endptr) );
 
       if( endptr[0] != '<' || endptr[1] != '=' )
       {
@@ -11434,8 +11441,7 @@ SCIP_DECL_CONSPARSE(consParseNonlinear)
          str = endptr + 2;
 
          /* ignore whitespace */
-         while( isspace((unsigned char)*str) )
-            ++str;
+         SCIP_CALL( SCIPskipSpace((char**)&str) );
       }
    }
 
@@ -11445,8 +11451,7 @@ SCIP_DECL_CONSPARSE(consParseNonlinear)
    SCIP_CALL( SCIPparseExpr(scip, &consexprtree, str, &str, exprownerCreate, (void*)conshdlr) );
 
    /* check for left or right hand side */
-   while( isspace((unsigned char)*str) )
-      ++str;
+   SCIP_CALL( SCIPskipSpace((char**)&str) );
 
    /* check for free constraint */
    if( strncmp(str, "[free]", 6) == 0 )
@@ -11464,7 +11469,7 @@ SCIP_DECL_CONSPARSE(consParseNonlinear)
       switch( *str )
       {
          case '<':
-            *success = SCIPstrToRealValue(str+2, &rhs, (char**)&endptr);
+            *success = *(str+1) == '=' ? SCIPparseReal(scip, str+2, &rhs, &endptr) : FALSE;
             break;
          case '=':
             if( !SCIPisInfinity(scip, -lhs) )
@@ -11475,7 +11480,7 @@ SCIP_DECL_CONSPARSE(consParseNonlinear)
             }
             else
             {
-               *success = SCIPstrToRealValue(str+2, &rhs, (char**)&endptr);
+               *success = *(str+1) == '=' ? SCIPparseReal(scip, str+2, &rhs, &endptr) : FALSE;
                lhs = rhs;
             }
             break;
@@ -11488,7 +11493,7 @@ SCIP_DECL_CONSPARSE(consParseNonlinear)
             }
             else
             {
-               *success = SCIPstrToRealValue(str+2, &lhs, (char**)&endptr);
+               *success = *(str+1) == '=' ? SCIPparseReal(scip, str+2, &lhs, &endptr) : FALSE;
                break;
             }
          case '\0':

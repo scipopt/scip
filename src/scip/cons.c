@@ -32,8 +32,6 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
-#include <string.h>
-#include <ctype.h>
 
 #include "scip/def.h"
 #include "scip/set.h"
@@ -6131,8 +6129,7 @@ SCIP_RETCODE SCIPconsParse(
    str = endptr;
 
    /* skip white space */
-   while ( isspace((unsigned char)* str) )
-      ++str;
+   SCIP_CALL( SCIPskipSpace((char**)&str) );
 
    /* check for colon */
    if( *str != ':' )
@@ -6145,8 +6142,7 @@ SCIP_RETCODE SCIPconsParse(
    ++str;
 
    /* skip white space */
-   while ( isspace((unsigned char)* str) )
-      ++str;
+   SCIP_CALL( SCIPskipSpace((char**)&str) );
 
    /* check if a constraint handler with parsed name exists */
    conshdlr = SCIPsetFindConshdlr(set, conshdlrname);
