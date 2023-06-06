@@ -7643,12 +7643,14 @@ SCIP_RETCODE SCIPlpExactGetDualfarkas(
       RatSetString(lpicols[c]->redcost, "inf");
       lpicols[c]->validredcostlp = -1L;
       lpicols[c]->validfarkaslp = -1L;
+      RatSet(lpicols[c]->farkascoef, farkascoefs[c]);
+
       if( overwritefplp )
       {
          lp->fplp->lpicols[c]->primsol =  SCIPsetInfinity(set);
          lp->fplp->lpicols[c]->redcost =  SCIPsetInfinity(set);
          lp->fplp->lpicols[c]->validredcostlp = -1L;
-         lpicols[c]->validfarkaslp = -1L;
+         lp->fplp->lpicols[c]->validfarkaslp = -1L;
       }
 
       if( checkfarkas )

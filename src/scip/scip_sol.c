@@ -2873,7 +2873,7 @@ SCIP_RETCODE SCIPmakeSolExact(
    )
 {
    assert(!SCIPsolIsExact(sol));
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPmakeSolExact", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPmakeSolExact", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    SCIP_CALL( SCIPsolMakeExact(sol, scip->mem->probmem, scip->set, scip->stat, scip->transprob) );
 
