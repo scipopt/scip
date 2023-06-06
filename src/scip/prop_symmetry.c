@@ -21,7 +21,7 @@
 /*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/* #define SCIP_SHOW_PERMS */
+#define SCIP_SHOW_PERMS
 /**@file   prop_symmetry.c
  * @ingroup DEFPLUGINS_PROP
  * @brief  propagator for handling symmetries
@@ -1904,6 +1904,7 @@ SCIP_RETCODE computeSignedSymmetryGroup(
     * actually compute symmetries
     */
    {
+      int signcnt = 0;
       int nperms;
       int nmaxperms;
       int** perms;
@@ -1923,6 +1924,7 @@ SCIP_RETCODE computeSignedSymmetryGroup(
       for (p = 0; p < nperms; ++p)
       {
          SCIP_Bool issignedperm = FALSE;
+         SCIP_Bool* found;
 
          for (c = 0; c < SCIPgetNVars(scip) && !issignedperm; ++c)
          {
@@ -1932,28 +1934,55 @@ SCIP_RETCODE computeSignedSymmetryGroup(
 
          if ( !issignedperm )
             continue;
+         ++signcnt;
 
-         printf("perm %d:\n", p);
-         for (c = 0; c < 2 * SCIPgetNVars(scip); ++c)
-         {
-            if ( perms[p][c] != c )
-            {
-               char name1[SCIP_MAXSTRLEN];
-               char name2[SCIP_MAXSTRLEN];
+         /* SCIP_CALL( SCIPallocClearBufferArray(scip, &found, 2 * SCIPgetNVars(scip)) ); */
+         /* printf("perm %d:\n", p); */
+         /* for (c = 0; c < 2 * SCIPgetNVars(scip); ++c) */
+         /* { */
+         /*    int d; */
 
-               if ( c < SCIPgetNVars(scip) )
-                  (void) SCIPsnprintf(name1, SCIP_MAXSTRLEN, SCIPvarGetName(SCIPgetVars(scip)[c]));
-               else
-                  (void) SCIPsnprintf(name1, SCIP_MAXSTRLEN, "neg_%s", SCIPvarGetName(SCIPgetVars(scip)[c - SCIPgetNVars(scip)]));
-               if ( perms[p][c] < SCIPgetNVars(scip) )
-                  (void) SCIPsnprintf(name2, SCIP_MAXSTRLEN, SCIPvarGetName(SCIPgetVars(scip)[perms[p][c]]));
-               else
-                  (void) SCIPsnprintf(name2, SCIP_MAXSTRLEN, "neg_%s", SCIPvarGetName(SCIPgetVars(scip)[perms[p][c] - SCIPgetNVars(scip)]));
+         /*    if ( found[c] || perms[p][c] == c ) */
+         /*       continue; */
 
-               printf("%s -> %s\n", name1, name2);
-            }
-         }
+         /*    printf("(%s%d", c >= SCIPgetNVars(scip) ? "neg_" : "", c % SCIPgetNVars(scip)); */
+         /*    found[c] = TRUE; */
+         /*    d = perms[p][c]; */
+         /*    while ( d != c ) */
+         /*    { */
+         /*       printf(",%s%d", d >= SCIPgetNVars(scip) ? "neg_" : "", d % SCIPgetNVars(scip)); */
+         /*       found[d] = TRUE; */
+         /*       d = perms[p][d]; */
+         /*    } */
+         /*    printf(")"); */
+         /* } */
+         /* printf("\n"); */
+
+         /* SCIPfreeBufferArray(scip, &found); */
+
+         /* printf("perm %d:\n", p); */
+         /* for (c = 0; c < 2 * SCIPgetNVars(scip); ++c) */
+         /* { */
+         /*    if ( perms[p][c] != c ) */
+         /*    { */
+         /*       char name1[SCIP_MAXSTRLEN]; */
+         /*       char name2[SCIP_MAXSTRLEN]; */
+
+         /*       if ( c < SCIPgetNVars(scip) ) */
+         /*          (void) SCIPsnprintf(name1, SCIP_MAXSTRLEN, SCIPvarGetName(SCIPgetVars(scip)[c])); */
+         /*       else */
+         /*          (void) SCIPsnprintf(name1, SCIP_MAXSTRLEN, "neg_%s", SCIPvarGetName(SCIPgetVars(scip)[c - SCIPgetNVars(scip)])); */
+         /*       if ( perms[p][c] < SCIPgetNVars(scip) ) */
+         /*          (void) SCIPsnprintf(name2, SCIP_MAXSTRLEN, SCIPvarGetName(SCIPgetVars(scip)[perms[p][c]])); */
+         /*       else */
+         /*          (void) SCIPsnprintf(name2, SCIP_MAXSTRLEN, "neg_%s", SCIPvarGetName(SCIPgetVars(scip)[perms[p][c] - SCIPgetNVars(scip)])); */
+
+         /*       printf("%s -> %s\n", name1, name2); */
+         /*    } */
+         /* } */
       }
+
+      printf("Number of signed permutations: %d\n", signcnt);
 #endif
 
       if ( checksymmetries && nperms > 0 )
