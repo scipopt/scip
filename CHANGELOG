@@ -85,6 +85,7 @@ Fixed bugs
 - free variable histories in reoptimization mode
 - handle whitespaces in interactive shell history consistently
 - check and enforce equalities on which the objective is projected in cons_linear.c
+- ensure row feasibilities of solution shiftings in heur_oneopt.c and heur_twoopt.c
 
 Miscellaneous
 -------------
