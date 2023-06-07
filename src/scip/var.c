@@ -5497,9 +5497,6 @@ SCIP_RETCODE SCIPvarMultiaggregate(
 
    SCIPsetDebugMsg(set, "trying multi-aggregating variable <%s> == ...%d vars... %+g\n", var->name, naggvars, constant);
 
-   /* check multi-aggregation on debugging solution */
-   SCIP_CALL( SCIPdebugCheckAggregation(set, var, aggvars, scalars, constant, naggvars) ); /*lint !e506 !e774*/
-
    *infeasible = FALSE;
    *aggregated = FALSE;
 
@@ -5792,6 +5789,10 @@ SCIP_RETCODE SCIPvarMultiaggregate(
       SCIPerrorMessage("unknown variable status\n");
       return SCIP_INVALIDDATA;
    }
+
+   /* check multi-aggregation on debugging solution */
+   if( *infeasible || *aggregated )
+      SCIP_CALL( SCIPdebugCheckAggregation(set, var, aggvars, scalars, constant, naggvars) ); /*lint !e506 !e774*/
 
    return SCIP_OKAY;
 }
