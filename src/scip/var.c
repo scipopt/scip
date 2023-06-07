@@ -4776,9 +4776,6 @@ SCIP_RETCODE SCIPvarAggregate(
    assert(infeasible != NULL);
    assert(aggregated != NULL);
 
-   /* check aggregation on debugging solution */
-   SCIP_CALL( SCIPdebugCheckAggregation(set, var, &aggvar, &scalar, constant, 1) ); /*lint !e506 !e774*/
-
    *infeasible = FALSE;
    *aggregated = FALSE;
 
@@ -4790,7 +4787,7 @@ SCIP_RETCODE SCIPvarAggregate(
    {
       SCIP_CALL( SCIPvarFix(var, blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, branchcand, eventfilter,
             eventqueue, cliquetable, constant, infeasible, aggregated) );
-      return SCIP_OKAY;
+      goto TERMINATE;
    }
 
    /* don't perform the aggregation if the aggregation variable is multi-aggregated itself */
@@ -4827,7 +4824,7 @@ SCIP_RETCODE SCIPvarAggregate(
          SCIP_CALL( SCIPvarFix(var, blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, branchcand,
                eventfilter, eventqueue, cliquetable, constant/(1.0-scalar), infeasible, aggregated) );
       }
-      return SCIP_OKAY;
+      goto TERMINATE;
    }
 
    /* tighten the bounds of aggregated and aggregation variable */
@@ -4836,7 +4833,7 @@ SCIP_RETCODE SCIPvarAggregate(
    if( *infeasible || fixed )
    {
       *aggregated = fixed;
-      return SCIP_OKAY;
+      goto TERMINATE;
    }
 
    /* delete implications and variable bounds of the aggregated variable from other variables, but keep them in the
@@ -5032,6 +5029,11 @@ SCIP_RETCODE SCIPvarAggregate(
    SCIP_CALL( varEventVarFixed(var, blkmem, set, eventqueue, 1) );
 
    *aggregated = TRUE;
+
+TERMINATE:
+   /* check aggregation on debugging solution */
+   if( *infeasible || *aggregated )
+      SCIP_CALL( SCIPdebugCheckAggregation(set, var, &aggvar, &scalar, constant, 1) ); /*lint !e506 !e774*/
 
    return SCIP_OKAY;
 }
