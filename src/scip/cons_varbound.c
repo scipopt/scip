@@ -526,9 +526,6 @@ SCIP_Bool checkCons(
 
    solval = SCIPgetSolVal(scip, sol, consdata->var);
 
-   if( SCIPisFeasZero(scip, SCIPgetSolVal(scip, sol, consdata->vbdvar)) && (!SCIPisFeasLE(scip, solval, consdata->rhs) || !SCIPisFeasGE(scip, solval, consdata->lhs)) )
-      return FALSE;
-
    if( checklprows || consdata->row == NULL || !SCIProwIsInLP(consdata->row) )
    {
       SCIP_Real sum;
