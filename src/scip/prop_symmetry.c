@@ -4603,7 +4603,7 @@ SCIP_RETCODE addSymresackConss(
    /* exit if component is already blocked by incompatible methods */
    if ( propdata->componentblocked[cidx] & (~SYM_HANDLETYPE_SST) )
       return SCIP_OKAY;
-   if ( (propdata->componentblocked[i] & SYM_HANDLETYPE_SST) )
+   if ( (propdata->componentblocked[cidx] & SYM_HANDLETYPE_SST) )
    {
       /* the leader must be binary for compatability */
       if ( (ISSSTINTACTIVE(propdata->sstleadervartype)
