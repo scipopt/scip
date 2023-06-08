@@ -189,6 +189,7 @@ SCIP_RETCODE SCIPcomputeComponentsSym(
    int**                 perms,              /**< permutation generators as
                                               *   (either nperms x npermvars or npermvars x nperms) matrix */
    int                   nperms,             /**< number of permutations */
+   SYM_SYMTYPE*          symtypes,           /**< type of symmetries in perms */
    SCIP_VAR**            permvars,           /**< variables on which permutations act */
    int                   npermvars,          /**< number of variables for permutations */
    SCIP_Bool             transposed,         /**< transposed permutation generators as (npermvars x nperms) matrix */
@@ -199,6 +200,7 @@ SCIP_RETCODE SCIPcomputeComponentsSym(
                                               *   contained in (-1 if not affected) */
    unsigned**            componentblocked,   /**< array to store which symmetry methods have been used on a component
                                               *   using the same bitset information as for misc/usesymmetry */
+   SCIP_Bool**           componenthassignedperm, /**< array to store whether component contains signed permutation */
    int*                  ncomponents         /**< pointer to store number of components of symmetry group */
    );
 

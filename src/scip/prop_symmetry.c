@@ -246,6 +246,7 @@ struct SCIP_PropData
                                               *   contained in (-1 if not affected) */
    unsigned*             componentblocked;   /**< array to store which symmetry methods have been applied to a component using
                                               *   the same bitset as for misc/usesymmetry */
+   SCIP_Bool*            componenthassignedperm; /**< array to indicate whether a component has a signed permutation */
 
    /* further symmetry information */
    int                   nmovedvars;         /**< number of variables moved by some permutation */
@@ -709,6 +710,7 @@ SCIP_Bool checkSymmetryDataFree(
    assert( propdata->binvaraffected == FALSE );
    assert( propdata->isnonlinvar == NULL );
 
+   assert( propdata->componenthassignedperm == NULL );
    assert( propdata->componentblocked == NULL );
    assert( propdata->componentbegins == NULL );
    assert( propdata->components == NULL );
@@ -859,6 +861,7 @@ SCIP_RETCODE freeSymmetryData(
       assert( propdata->componentbegins != NULL );
       assert( propdata->components != NULL );
 
+      SCIPfreeBlockMemoryArray(scip, &propdata->componenthassignedperm, propdata->ncomponents);
       SCIPfreeBlockMemoryArray(scip, &propdata->componentblocked, propdata->ncomponents);
       SCIPfreeBlockMemoryArray(scip, &propdata->vartocomponent, propdata->npermvars);
       SCIPfreeBlockMemoryArray(scip, &propdata->componentbegins, propdata->ncomponents + 1);
@@ -1821,9 +1824,10 @@ SCIP_RETCODE ensureSymmetryComponentsComputed(
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) component computation started\n", SCIPgetSolvingTime(scip));
 #endif
 
-   SCIP_CALL( SCIPcomputeComponentsSym(scip, propdata->perms, propdata->nperms, propdata->permvars,
+   SCIP_CALL( SCIPcomputeComponentsSym(scip, propdata->perms, propdata->nperms, propdata->symtypes, propdata->permvars,
          propdata->npermvars, FALSE, &propdata->components, &propdata->componentbegins,
-         &propdata->vartocomponent, &propdata->componentblocked, &propdata->ncomponents) );
+         &propdata->vartocomponent, &propdata->componentblocked, &propdata->componenthassignedperm,
+         &propdata->ncomponents) );
 
 #ifdef SCIP_OUTPUT_COMPONENT
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) component computation finished\n", SCIPgetSolvingTime(scip));
@@ -1831,6 +1835,7 @@ SCIP_RETCODE ensureSymmetryComponentsComputed(
 
    assert( propdata->components != NULL );
    assert( propdata->componentbegins != NULL );
+   assert( propdata->componenthassignedperm != NULL );
    assert( propdata->ncomponents > 0 );
 
    return SCIP_OKAY;
@@ -4612,6 +4617,10 @@ SCIP_RETCODE addSymresackConss(
          return SCIP_OKAY;
    }
 
+   /* skip component if it has signed permutations */
+   if ( propdata->componenthassignedperm[cidx] )
+      return SCIP_OKAY;
+
    /* adapt natural variable order to a variable order that is compatible with Schreier Sims constraints */
    if ( propdata->nleaders > 0 && ISSSTBINACTIVE(propdata->sstleadervartype) )
    {
@@ -5168,6 +5177,10 @@ SCIP_RETCODE addSSTConss(
 
    /* exit if component is blocked */
    if ( componentblocked[cidx] )
+      return SCIP_OKAY;
+
+   /* skip component if it has signed permutations */
+   if ( propdata->componenthassignedperm[cidx] )
       return SCIP_OKAY;
 
    leaderrule = propdata->sstleaderrule;
@@ -6260,6 +6273,10 @@ SCIP_RETCODE tryAddOrbitalRedLexRed(
    if ( propdata->componentblocked[cidx] )
       return SCIP_OKAY;
 
+   /* skip component if it has signed permutations */
+   if ( propdata->componenthassignedperm[cidx] )
+      return SCIP_OKAY;
+
    /* in this function orbital reduction or dynamic lexicographic reduction propagation must be enabled */
    checkorbired = ISORBITALREDUCTIONACTIVE(propdata->usesymmetry);
    checklexred = ISSYMRETOPESACTIVE(propdata->usesymmetry) && propdata->usedynamicprop && propdata->addsymresacks;
@@ -6391,6 +6408,14 @@ SCIP_RETCODE tryAddOrbitopes(
    assert( 0 <= cidx && cidx < propdata->ncomponents );
    assert( terminate != NULL );
 
+   /* exit if component is already blocked */
+   if ( propdata->componentblocked[cidx] )
+      return SCIP_OKAY;
+
+   /* skip component if it has signed permutations */
+   if ( propdata->componenthassignedperm[cidx] )
+      return SCIP_OKAY;
+
    if ( ISSYMRETOPESACTIVE(propdata->usesymmetry) && propdata->detectorbitopes )
    {
       /* dynamic propagation */
@@ -6433,6 +6458,14 @@ SCIP_RETCODE tryHandleSubgroups(
    assert( propdata != NULL );
    assert( 0 <= cidx && cidx < propdata->ncomponents );
    assert( terminate != NULL );
+
+   /* exit if component is already blocked */
+   if ( propdata->componentblocked[cidx] )
+      return SCIP_OKAY;
+
+   /* skip component if it has signed permutations */
+   if ( propdata->componenthassignedperm[cidx] )
+      return SCIP_OKAY;
 
    /* @todo also implement a dynamic variant */
    SCIP_CALL( detectAndHandleSubgroups(scip, propdata, cidx) );
@@ -6516,77 +6549,6 @@ SCIP_RETCODE tryAddSymmetryHandlingMethodsComponent(
 
    if ( earlyterm != NULL )
       *earlyterm = terminate;
-
-
-   /*----------------------------------------*/
-#ifdef SCIP_DISABLED_CODE
-   /* orbitopal subgroups */
-   if ( !propdata->usedynamicprop && ISSYMRETOPESACTIVE(propdata->usesymmetry)
-      && propdata->detectsubgroups && propdata->binvaraffected )
-   {
-      /* @todo also implement a dynamic variant */
-      SCIP_CALL( detectAndHandleSubgroups(scip, propdata) );
-
-      /* possibly terminate early */
-      if ( SCIPisStopped(scip) || propdata->ncompblocked >= propdata->ncomponents )
-      {
-         assert( propdata->ncompblocked <= propdata->ncomponents );
-         if ( earlyterm != NULL )
-            *earlyterm = TRUE;
-         return SCIP_OKAY;
-      }
-   }
-
-   /* SST cuts */
-   if ( ISSSTACTIVE(propdata->usesymmetry) )
-   {
-      /* if orbital red or lexred is used, only handle components that contain continuous variables with SST */
-      SCIP_CALL( addSSTConss(scip, propdata, useorbitalredorlexred, nchgbds) );
-
-      /* possibly terminate early */
-      if ( SCIPisStopped(scip) || propdata->ncompblocked >= propdata->ncomponents )
-      {
-         assert( propdata->ncompblocked <= propdata->ncomponents );
-         if ( earlyterm != NULL )
-            *earlyterm = TRUE;
-         return SCIP_OKAY;
-      }
-      /* @todo if propdata->addsymresacks, then symresacks can be compatible with SST.
-       * Instead of doing it in the next block, add symresacks for that case within addSSTConss.
-       */
-   }
-
-   /* orbital reduction and (compatable) dynamic lexicographic reduction propagation */
-   if ( useorbitalredorlexred )
-   {
-      SCIP_CALL( tryAddOrbitalRedLexRed(scip, propdata) );
-
-      /* possibly terminate early */
-      if ( SCIPisStopped(scip) || propdata->ncompblocked >= propdata->ncomponents )
-      {
-         assert( propdata->ncompblocked <= propdata->ncomponents );
-          if ( earlyterm != NULL )
-            *earlyterm = TRUE;
-        return SCIP_OKAY;
-      }
-   }
-
-   /* symresacks */
-   if ( ISSYMRETOPESACTIVE(propdata->usesymmetry) && propdata->addsymresacks && propdata->binvaraffected )
-   {
-      SCIP_CALL( addSymresackConss(scip, propdata, propdata->components, propdata->componentbegins,
-         propdata->ncomponents) );
-
-      /* possibly terminate early */
-      if ( SCIPisStopped(scip) || propdata->ncompblocked >= propdata->ncomponents )
-      {
-         assert( propdata->ncompblocked <= propdata->ncomponents );
-         if ( earlyterm != NULL )
-            *earlyterm = TRUE;
-         return SCIP_OKAY;
-      }
-   }
-#endif
 
    return SCIP_OKAY;
 }
@@ -7095,6 +7057,7 @@ SCIP_RETCODE SCIPincludePropSymmetry(
    propdata->componentbegins = NULL;
    propdata->vartocomponent = NULL;
    propdata->componentblocked = NULL;
+   propdata->componenthassignedperm = NULL;
 
    propdata->log10groupsize = -1.0;
    propdata->nmovedvars = -1;
