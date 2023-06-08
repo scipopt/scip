@@ -3025,7 +3025,7 @@ SCIP_RETCODE addStrongSBCsSubgroup(
 
       /* check whether we need to resize */
       SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, &propdata->genlinconss,
-         &propdata->genlinconsssize, propdata->ngenlinconss) );
+         &propdata->genlinconsssize, propdata->ngenlinconss + 1) );
       propdata->genlinconss[propdata->ngenlinconss] = cons;
       ++propdata->ngenlinconss;
    }
@@ -3205,7 +3205,7 @@ SCIP_RETCODE addWeakSBCsSubgroup(
 
          /* check whether we need to resize */
          SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, &propdata->genlinconss,
-            &propdata->genlinconsssize, propdata->ngenlinconss) );
+            &propdata->genlinconsssize, propdata->ngenlinconss + 1) );
          propdata->genlinconss[propdata->ngenlinconss] = cons;
          ++propdata->ngenlinconss;
       }
