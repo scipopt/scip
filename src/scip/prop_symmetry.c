@@ -159,7 +159,7 @@
 #define DEFAULT_COMPRESSTHRESHOLD     0.5    /**< Compression is used if percentage of moved vars is at most the threshold. */
 #define DEFAULT_SYMFIXNONBINARYVARS FALSE    /**< Disabled parameter */
 #define DEFAULT_ENFORCECOMPUTESYMMETRY FALSE /**< always compute symmetries, even if they cannot be handled */
-#define DEFAULT_FINDSIGNEDPERMS      TRUE    /**< whether signed permutations shall be computed */
+#define DEFAULT_COMPUTESIGNEDPERMS  FALSE    /**< whether signed permutations shall be computed */
 
 /* default parameters for linear symmetry constraints */
 #define DEFAULT_CONSSADDLP           TRUE    /**< Should the symmetry breaking constraints be added to the LP? */
@@ -234,6 +234,7 @@ struct SCIP_PropData
    SCIP_HASHMAP*         customsymopnodetypes; /**< types of operator nodes introduced
                                                 *   by a user for symmetry detection */
    int                   nopnodetypes;       /**< current number of operator node types used for symmetry detection */
+   SCIP_Bool             computesignedperms; /**< whether signed permutations shall be computed */
 
    /* components of symmetry group */
    int                   ncomponents;        /**< number of components of symmetry group */
@@ -2021,7 +2022,6 @@ SCIP_RETCODE determineSymmetry(
    SYM_SPEC              symspecrequirefixed /**< symmetry specification of variables which must be fixed by symmetries */
    )
 { /*lint --e{641}*/
-   SCIP_Bool findsignedperms;
    SCIP_Bool successful;
    SCIP_Real symcodetime = 0.0;
    int maxgenerators;
@@ -2118,8 +2118,8 @@ SCIP_RETCODE determineSymmetry(
    maxgenerators = MIN(maxgenerators, MAXGENNUMERATOR / nvars);
 
    /* actually compute (global) symmetry */
-   findsignedperms = DEFAULT_FINDSIGNEDPERMS;
-   SCIP_CALL( computeSymmetryGroup(scip, findsignedperms, propdata->compresssymmetries, propdata->compressthreshold,
+   SCIP_CALL( computeSymmetryGroup(scip, propdata->computesignedperms,
+         propdata->compresssymmetries, propdata->compressthreshold,
          maxgenerators, symspecrequirefixed, propdata->checksymmetries, &propdata->permvars,
          &propdata->npermvars, &propdata->nbinpermvars, &propdata->perms, &propdata->nperms,
          &propdata->nmaxperms, &propdata->symtypes, &propdata->nmovedvars, &propdata->binvaraffected,
@@ -7238,6 +7238,11 @@ SCIP_RETCODE SCIPincludePropSymmetry(
          "propagating/" PROP_NAME "/preferlessrows",
          "Shall orbitopes with less rows be preferred in detection?",
          &propdata->preferlessrows, TRUE, DEFAULT_PREFERLESSROWS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "propagating/" PROP_NAME "/computesignedperms",
+         "Shall signed permutations be computed?",
+         &propdata->computesignedperms, TRUE, DEFAULT_COMPUTESIGNEDPERMS, NULL, NULL) );
 
    /* possibly add description */
    if ( SYMcanComputeSymmetry() )
