@@ -514,7 +514,6 @@ SCIP_Bool checkCons(
    )
 {
    SCIP_CONSDATA* consdata;
-   SCIP_Real solval;
    SCIP_Real absviol;
    SCIP_Real relviol;
 
@@ -524,15 +523,13 @@ SCIP_Bool checkCons(
    SCIPdebugMsg(scip, "checking variable bound constraint <%s> for feasibility of solution %p (lprows=%u)\n",
       SCIPconsGetName(cons), (void*)sol, checklprows);
 
-   solval = SCIPgetSolVal(scip, sol, consdata->var);
-
    if( checklprows || consdata->row == NULL || !SCIProwIsInLP(consdata->row) )
    {
       SCIP_Real sum;
       SCIP_Real lhsrelviol;
       SCIP_Real rhsrelviol;
 
-      sum = solval + consdata->vbdcoef * SCIPgetSolVal(scip, sol, consdata->vbdvar);
+      sum = SCIPgetSolVal(scip, sol, consdata->var) + consdata->vbdcoef * SCIPgetSolVal(scip, sol, consdata->vbdvar);
 
       /* calculate constraint violation and update it in solution */
       absviol = MAX(consdata->lhs - sum, sum - consdata->rhs);
