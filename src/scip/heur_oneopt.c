@@ -193,7 +193,7 @@ SCIP_Real calcShiftVal(
                SCIPdebugMsg(scip, "    lhs:<%g> <= act:<%g> <= rhs:<%g>, colval:<%g>\n",
                   SCIProwGetLhs(row), activities[rowpos], SCIProwGetRhs(row), colvals[i]);
 
-               /* newsolvalrow might have reached solval -> avoid numerical shifting */
+               /* newsolval might have reached solval -> avoid numerical shifting */
                if( ( shiftdown && SCIPisFeasGE(scip, newsolval, solval) )
                   || ( !shiftdown && SCIPisFeasLE(scip, newsolval, solval) ) )
                   return 0.0;
