@@ -94,6 +94,8 @@ SCIP_RETCODE SCIPlexicographicReductionAddPermutation(
    SCIP_VAR**            permvars,           /**< variable array of the permutation */
    int                   npermvars,          /**< number of variables in that array */
    int*                  perm,               /**< permutation */
+   SCIP_Bool             issignedperm,       /**< whether the permutation is signed */
+   SCIP_Real*            permvardomaincenter, /**< array containing center point for each variable domain */
    SCIP_Bool*            success             /**< to store whether the component is successfully added */
    );
 
