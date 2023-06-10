@@ -65,7 +65,6 @@ struct SYMMETRY_Data
    int                   npermvars;          /**< number of variables for permutations */
    int                   nperms;             /**< number of permutations */
    int**                 perms;              /**< permutation generators as (nperms x npermvars) matrix */
-   SYM_SYMTYPE*          symtypes;           /**< types of symmetries in perms */
    int                   nmaxperms;          /**< maximal number of permutations */
    int                   maxgenerators;      /**< maximal number of generators constructed (= 0 if unlimited) */
    SCIP_Bool             restricttovars;     /**< whether permutations shall be restricted to variables */
@@ -97,7 +96,6 @@ void sassyhook(
 
    /* copy first part of automorphism */
    bool isIdentity = true;
-   bool isSigned = false;
    int* p = 0;
    int permlen;
    if ( data->restricttovars )
@@ -126,16 +124,6 @@ void sassyhook(
    if ( isIdentity )
       return;
 
-   /* check whether permutation is signed */
-   for (int j = 0; j < data->npermvars; ++j)
-   {
-      if ( (int) aut[j] >= data->npermvars )
-         isSigned = true;
-   }
-
-   if ( data->restricttovars && !isSigned )
-      permlen = data->npermvars;
-
    if ( SCIPallocBlockMemoryArray(data->scip, &p, permlen) != SCIP_OKAY )
       return;
 
@@ -153,11 +141,6 @@ void sassyhook(
 
       if ( SCIPallocBlockMemoryArray(data->scip, &data->perms, data->nmaxperms) != SCIP_OKAY )
          return;
-      if ( SCIPallocBlockMemoryArray(data->scip, &data->symtypes, data->nmaxperms) != SCIP_OKAY )
-      {
-         SCIPfreeBlockMemoryArray(data->scip, &data->perms, data->nmaxperms);
-         return;
-      }
    }
    else if ( data->nperms >= data->nmaxperms )    /* check whether we need to resize */
    {
@@ -167,16 +150,10 @@ void sassyhook(
 
       if ( SCIPreallocBlockMemoryArray(data->scip, &data->perms, data->nmaxperms, newsize) != SCIP_OKAY )
          return;
-      if ( SCIPreallocBlockMemoryArray(data->scip, &data->symtypes, data->nmaxperms, newsize) != SCIP_OKAY )
-      {
-         (void) SCIPreallocBlockMemoryArray(data->scip, &data->perms, newsize, data->nmaxperms);
-         return;
-      }
 
       data->nmaxperms = newsize;
    }
 
-   data->symtypes[data->nperms] = isSigned ? SYM_SYMTYPE_SIGNPERM : SYM_SYMTYPE_PERM;
    data->perms[data->nperms++] = p;
 }
 
@@ -1037,7 +1014,6 @@ SCIP_RETCODE computeAutomorphisms(
    int*                  nperms,             /**< pointer to store number of permutations */
    int*                  nmaxperms,          /**< pointer to store maximal number of permutations
                                               *   (needed for freeing storage) */
-   SYM_SYMTYPE**         symtypes,           /**< pointer to store type of symmetries in perms */
    SCIP_Real*            log10groupsize,     /**< pointer to store log10 of size of group */
    SCIP_Bool             restricttovars,     /**< whether permutations shall be restricted to variables */
    SCIP_Real*            symcodetime         /**< pointer to store the time for symmetry code */
@@ -1051,7 +1027,6 @@ SCIP_RETCODE computeAutomorphisms(
    assert( perms != NULL );
    assert( nperms != NULL );
    assert( nmaxperms != NULL );
-   assert( symtypes != NULL );
    assert( log10groupsize != NULL );
    assert( symcodetime != NULL );
 
@@ -1059,7 +1034,6 @@ SCIP_RETCODE computeAutomorphisms(
    *nperms = 0;
    *nmaxperms = 0;
    *perms = NULL;
-   *symtypes = NULL;
    *log10groupsize = 0;
    *symcodetime = 0.0;
 
@@ -1072,7 +1046,6 @@ SCIP_RETCODE computeAutomorphisms(
    data.nmaxperms = 0;
    data.maxgenerators = maxgenerators;
    data.perms = NULL;
-   data.symtypes = NULL;
    data.restricttovars = restricttovars;
 
    oldtime = SCIPgetSolvingTime(scip);
@@ -1161,7 +1134,6 @@ SCIP_RETCODE computeAutomorphisms(
       *perms = data.perms;
       *nperms = data.nperms;
       *nmaxperms = data.nmaxperms;
-      *symtypes = data.symtypes;
    }
    else
    {
@@ -1169,7 +1141,6 @@ SCIP_RETCODE computeAutomorphisms(
       assert( data.nmaxperms == 0 );
 
       *perms = NULL;
-      *symtypes = NULL;
       *nperms = 0;
       *nmaxperms = 0;
    }
@@ -1188,7 +1159,6 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    int*                  nperms,             /**< pointer to store number of permutations */
    int*                  nmaxperms,          /**< pointer to store maximal number of permutations (needed for freeing storage) */
    int***                perms,              /**< pointer to store permutation generators as (nperms x npermvars) matrix */
-   SYM_SYMTYPE**         symtypes,           /**< pointer to store type of symmetries in perms */
    SCIP_Real*            log10groupsize,     /**< pointer to store log10 of size of group */
    SCIP_Real*            symcodetime         /**< pointer to store the time for symmetry code */
    )
@@ -1241,7 +1211,7 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
 
    /* compute symmetries */
    SCIP_CALL( computeAutomorphisms(scip, SCIPgetSymgraphSymtype(graph), &sassygraph, SCIPgetSymgraphNVars(graph),
-         maxgenerators, perms, nperms, nmaxperms, symtypes, log10groupsize, TRUE, symcodetime) );
+         maxgenerators, perms, nperms, nmaxperms, log10groupsize, TRUE, symcodetime) );
 
    return SCIP_OKAY;
 }
@@ -1255,7 +1225,6 @@ SCIP_Bool SYMcheckGraphsAreIdentical(
    )
 {
    int** perms;
-   SYM_SYMTYPE* symtypes;
    int* degrees = NULL;
    int maxdegrees = 0;
    int nnodes;
@@ -1306,7 +1275,7 @@ SCIP_Bool SYMcheckGraphsAreIdentical(
 
    /* compute symmetries */
    SCIP_CALL( computeAutomorphisms(scip, SCIPgetSymgraphSymtype(G1), &sassygraph, nnodes, 0,
-         &perms, &nperms, &nmaxperms, &symtypes, &log10groupsize, FALSE, &symcodetime) );
+         &perms, &nperms, &nmaxperms, &log10groupsize, FALSE, &symcodetime) );
 
    /* since G1 and G2 are connected and disjoint, they are isomorphic iff there is a permutation
     * mapping a node from G1 to a node of G2
@@ -1330,7 +1299,6 @@ SCIP_Bool SYMcheckGraphsAreIdentical(
       SCIPfreeBlockMemoryArray(scip, &perms[p], nnodes);
    }
    SCIPfreeBlockMemoryArrayNull(scip, &perms, nmaxperms);
-   SCIPfreeBlockMemoryArrayNull(scip, &symtypes, nmaxperms);
 
    return success;
 }

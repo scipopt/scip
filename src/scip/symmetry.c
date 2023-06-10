@@ -767,10 +767,10 @@ SCIP_RETCODE SCIPextendSubOrbitope(
 /** compute components of symmetry group */
 SCIP_RETCODE SCIPcomputeComponentsSym(
    SCIP*                 scip,               /**< SCIP instance */
+   SYM_SYMTYPE           symtype,            /**< type of symmetries in perms */
    int**                 perms,              /**< permutation generators as
                                               *   (either nperms x npermvars or npermvars x nperms) matrix */
    int                   nperms,             /**< number of permutations */
-   SYM_SYMTYPE*          symtypes,           /**< type of symmetries in perms */
    SCIP_VAR**            permvars,           /**< variables on which permutations act */
    int                   npermvars,          /**< number of variables for permutations */
    SCIP_Bool             transposed,         /**< transposed permutation generators as (npermvars x nperms) matrix */
@@ -793,7 +793,6 @@ SCIP_RETCODE SCIPcomputeComponentsSym(
    int idx;
 
    assert( scip != NULL );
-   assert( symtypes != NULL );
    assert( permvars != NULL );
    assert( npermvars > 0 );
    assert( perms != NULL );
@@ -836,7 +835,7 @@ SCIP_RETCODE SCIPcomputeComponentsSym(
 
             if ( img >= npermvars )
             {
-               assert( symtypes[p] == SYM_SYMTYPE_SIGNPERM );
+               assert( symtype == SYM_SYMTYPE_SIGNPERM );
                img -= npermvars;
                assert( 0 <= img && img < npermvars );
             }
@@ -961,7 +960,7 @@ SCIP_RETCODE SCIPcomputeComponentsSym(
    {
       for (p = (*componentbegins)[i]; p < (*componentbegins)[i + 1]; ++p)
       {
-         if ( symtypes[p] == SYM_SYMTYPE_SIGNPERM )
+         if ( symtype == SYM_SYMTYPE_SIGNPERM )
          {
             (*componenthassignedperm)[i] = TRUE;
             break;

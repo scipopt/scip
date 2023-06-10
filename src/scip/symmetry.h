@@ -186,10 +186,10 @@ SCIP_RETCODE SCIPdetermineNVarsAffectedSym(
 SCIP_EXPORT
 SCIP_RETCODE SCIPcomputeComponentsSym(
    SCIP*                 scip,               /**< SCIP instance */
+   SYM_SYMTYPE           symtype,            /**< type of symmetries in perms */
    int**                 perms,              /**< permutation generators as
                                               *   (either nperms x npermvars or npermvars x nperms) matrix */
    int                   nperms,             /**< number of permutations */
-   SYM_SYMTYPE*          symtypes,           /**< type of symmetries in perms */
    SCIP_VAR**            permvars,           /**< variables on which permutations act */
    int                   npermvars,          /**< number of variables for permutations */
    SCIP_Bool             transposed,         /**< transposed permutation generators as (npermvars x nperms) matrix */

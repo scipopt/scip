@@ -159,7 +159,7 @@
 #define DEFAULT_COMPRESSTHRESHOLD     0.5    /**< Compression is used if percentage of moved vars is at most the threshold. */
 #define DEFAULT_SYMFIXNONBINARYVARS FALSE    /**< Disabled parameter */
 #define DEFAULT_ENFORCECOMPUTESYMMETRY FALSE /**< always compute symmetries, even if they cannot be handled */
-#define DEFAULT_COMPUTESIGNEDPERMS  FALSE    /**< whether signed permutations shall be computed */
+#define DEFAULT_SYMTYPE SYM_SYMTYPE_SIGNPERM /**< type of symmetries to be computed */
 
 /* default parameters for linear symmetry constraints */
 #define DEFAULT_CONSSADDLP           TRUE    /**< Should the symmetry breaking constraints be added to the LP? */
@@ -220,7 +220,6 @@ struct SCIP_PropData
    SCIP_VAR**            permvars;           /**< variables on which permutations act */
    int                   nperms;             /**< number of permutations */
    int                   nmaxperms;          /**< maximal number of permutations (needed for freeing storage) */
-   SYM_SYMTYPE*          symtypes;           /**< array containing types of symmetries for each element of perms */
    int**                 perms;              /**< pointer to store permutation generators as (nperms x npermvars) matrix */
    int**                 permstrans;         /**< pointer to store transposed permutation generators as (npermvars x nperms) matrix */
    SCIP_HASHMAP*         permvarmap;         /**< map of variables to indices in permvars array */
@@ -234,7 +233,8 @@ struct SCIP_PropData
    SCIP_HASHMAP*         customsymopnodetypes; /**< types of operator nodes introduced
                                                 *   by a user for symmetry detection */
    int                   nopnodetypes;       /**< current number of operator node types used for symmetry detection */
-   SCIP_Bool             computesignedperms; /**< whether signed permutations shall be computed */
+   SCIP_Real*            permvardomaincenter; /**< center of variable domains (needed for signed permuations) */
+   SYM_SYMTYPE           symtype;             /**< type of symmetries to be computed */
 
    /* components of symmetry group */
    int                   ncomponents;        /**< number of components of symmetry group */
@@ -693,7 +693,7 @@ SCIP_Bool checkSymmetryDataFree(
    assert( propdata->sstconss == NULL );
    assert( propdata->leaders == NULL );
 
-   assert( propdata->symtypes == NULL );
+   assert( propdata->permvardomaincenter == NULL );
    assert( propdata->permvars == NULL );
    assert( propdata->perms == NULL );
    assert( propdata->permstrans == NULL );
@@ -874,27 +874,26 @@ SCIP_RETCODE freeSymmetryData(
    /* free main symmetry data */
    if ( propdata->nperms > 0 )
    {
+      int permlen;
+
       assert( propdata->permvars != NULL );
-      assert( propdata->symtypes != NULL );
+
+      if ( propdata->symtype == SYM_SYMTYPE_SIGNPERM )
+         permlen = 2 * propdata->npermvars;
+      else
+         permlen = propdata->npermvars;
 
       SCIPfreeBlockMemoryArray(scip, &propdata->permvars, propdata->npermvars);
+      SCIPfreeBlockMemoryArray(scip, &propdata->permvardomaincenter, propdata->npermvars);
 
       if ( propdata->perms != NULL )
       {
          for (i = 0; i < propdata->nperms; ++i)
          {
-            int permlen;
-
-            if ( propdata->symtypes[i] == SYM_SYMTYPE_SIGNPERM )
-               permlen = 2 * propdata->npermvars;
-            else
-               permlen = propdata->npermvars;
-
             SCIPfreeBlockMemoryArray(scip, &propdata->perms[i], permlen);
          }
          SCIPfreeBlockMemoryArray(scip, &propdata->perms, propdata->nmaxperms);
       }
-      SCIPfreeBlockMemoryArray(scip, &propdata->symtypes, propdata->nmaxperms);
 
       SCIPfreeBlockMemoryArrayNull(scip, &propdata->isnonlinvar, propdata->npermvars);
 
@@ -968,13 +967,14 @@ SCIP_RETCODE ensureDynamicConsArrayAllocatedAndSufficientlyLarge(
 static
 SCIP_RETCODE setSymmetryData(
    SCIP*                 scip,               /**< SCIP pointer */
+   SYM_SYMTYPE           symtype,            /**< type of symmetries in perms */
    SCIP_VAR**            vars,               /**< vars present at time of symmetry computation */
    int                   nvars,              /**< number of vars present at time of symmetry computation */
    int                   nbinvars,           /**< number of binary vars present at time of symmetry computation */
    SCIP_VAR***           permvars,           /**< pointer to permvars array */
    int*                  npermvars,          /**< pointer to store number of permvars */
    int*                  nbinpermvars,       /**< pointer to store number of binary permvars */
-   SYM_SYMTYPE*          symtypes,           /**< type of symmetries in perms */
+   SCIP_Real**           permvardomaincenter, /**< pointer to store center points of variable domains */
    int**                 perms,              /**< permutations matrix (nperms x nvars) */
    int                   nperms,             /**< number of permutations */
    int*                  nmovedvars,         /**< pointer to store number of vars affected by symmetry (if usecompression) or NULL */
@@ -984,6 +984,8 @@ SCIP_RETCODE setSymmetryData(
    SCIP_Bool*            compressed          /**< pointer to store whether compression has been performed */
    )
 {
+   SCIP_Real ub;
+   SCIP_Real lb;
    int i;
    int p;
 
@@ -993,7 +995,6 @@ SCIP_RETCODE setSymmetryData(
    assert( permvars != NULL );
    assert( npermvars != NULL );
    assert( nbinpermvars != NULL );
-   assert( symtypes != NULL );
    assert( perms != NULL );
    assert( nperms > 0 );
    assert( binvaraffected != NULL );
@@ -1059,7 +1060,7 @@ SCIP_RETCODE setSymmetryData(
                {
                   int imgvaridx;
 
-                  assert( symtypes[p] == SYM_SYMTYPE_SIGNPERM );
+                  assert( symtype == SYM_SYMTYPE_SIGNPERM );
 
                   imgvaridx = perms[p][labeltopermvaridx[i]] - nvars;
                   perms[p][i] = labelmovedvars[imgvaridx] + *nmovedvars;
@@ -1070,7 +1071,7 @@ SCIP_RETCODE setSymmetryData(
                   perms[p][i] = labelmovedvars[perms[p][labeltopermvaridx[i]]];
             }
 
-            if ( symtypes[p] == SYM_SYMTYPE_SIGNPERM )
+            if ( symtype == SYM_SYMTYPE_SIGNPERM )
             {
                SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &perms[p], 2 * nvars, 2 * (*nmovedvars)) );
             }
@@ -1110,6 +1111,16 @@ SCIP_RETCODE setSymmetryData(
             }
          }
       }
+   }
+
+   /* store center points of variable domains */
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, permvardomaincenter, *npermvars) );
+   for (i = 0; i < *npermvars; ++i)
+   {
+      ub = SCIPvarGetUbGlobal((*permvars)[i]);
+      lb = SCIPvarGetLbGlobal((*permvars)[i]);
+
+      (*permvardomaincenter)[i] = 0.5 * (ub + lb);
    }
 
    return SCIP_OKAY;
@@ -1449,7 +1460,7 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
 static
 SCIP_RETCODE computeSymmetryGroup(
    SCIP*                 scip,               /**< SCIP pointer */
-   SCIP_Bool             findsignedperms,    /**< whether signed permutations shall be computed */
+   SYM_SYMTYPE           symtype,            /**< type of symmetries to be computed */
    SCIP_Bool             compresssymmetries, /**< Should non-affected variables be removed from permutation to save memory? */
    SCIP_Real             compressthreshold,  /**< if percentage of moved vars is at most threshold, compression is done */
    int                   maxgenerators,      /**< maximal number of generators constructed (= 0 if unlimited) */
@@ -1458,11 +1469,11 @@ SCIP_RETCODE computeSymmetryGroup(
    SCIP_VAR***           permvars,           /**< pointer to permvars array */
    int*                  npermvars,          /**< pointer to store number of permvars */
    int*                  nbinpermvars,       /**< pointer to store number of binary permvars */
+   SCIP_Real**           permvardomaincenter, /**< pointer to store center points of variable domains */
    int***                perms,              /**< pointer to store permutation matrix (nperms x nvars) */
    int*                  nperms,             /**< pointer to store number of permutations */
    int*                  nmaxperms,          /**< pointer to store maximal number of permutations
                                               *   (needed for freeing storage) */
-   SYM_SYMTYPE**         symtypes,           /**< pointer to store types of symmetries in perms */
    int*                  nmovedvars,         /**< pointer to store number of vars affected
                                               *   by symmetry (if usecompression) or NULL */
    SCIP_Bool*            binvaraffected,     /**< pointer to store whether a binary variable is affected by symmetry */
@@ -1474,7 +1485,6 @@ SCIP_RETCODE computeSymmetryGroup(
 {
    SCIP_CONS** conss;
    SYM_GRAPH* graph;
-   SYM_SYMTYPE symtype;
    int nconsnodes = 0;
    int nvalnodes = 0;
    int nopnodes = 0;
@@ -1489,7 +1499,6 @@ SCIP_RETCODE computeSymmetryGroup(
    assert( perms != NULL );
    assert( nperms != NULL );
    assert( nmaxperms != NULL );
-   assert( symtypes != NULL );
    assert( nmovedvars != NULL );
    assert( binvaraffected != NULL );
    assert( compressed != NULL );
@@ -1504,15 +1513,12 @@ SCIP_RETCODE computeSymmetryGroup(
    *perms = NULL;
    *nperms = 0;
    *nmaxperms = 0;
-   *symtypes = NULL;
    *nmovedvars = -1;
    *binvaraffected = FALSE;
    *compressed = FALSE;
    *log10groupsize = 0;
    *success = FALSE;
    *symcodetime = 0.0;
-
-   symtype = findsignedperms ? SYM_SYMTYPE_SIGNPERM : SYM_SYMTYPE_PERM;
 
    /* check whether all constraints can provide symmetry information */
    if ( ! conshdlrsCanProvideSymInformation(scip, symtype) )
@@ -1573,7 +1579,7 @@ SCIP_RETCODE computeSymmetryGroup(
     * actually compute symmetries
     */
    SCIP_CALL( SYMcomputeSymmetryGenerators(scip, maxgenerators, graph, nperms, nmaxperms,
-         perms, symtypes, log10groupsize, symcodetime) );
+         perms, log10groupsize, symcodetime) );
 
    if ( checksymmetries && *nperms > 0 )
    {
@@ -1589,8 +1595,8 @@ SCIP_RETCODE computeSymmetryGroup(
       nvars = SCIPgetNVars(scip);
       SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &vars, SCIPgetVars(scip), nvars) ); /*lint !e666*/
 
-      SCIP_CALL( setSymmetryData(scip, vars, nvars, SCIPgetNBinVars(scip), permvars, npermvars, nbinpermvars,
-            *symtypes, *perms, *nperms, nmovedvars, binvaraffected,
+      SCIP_CALL( setSymmetryData(scip, symtype, vars, nvars, SCIPgetNBinVars(scip), permvars, npermvars, nbinpermvars,
+            permvardomaincenter, *perms, *nperms, nmovedvars, binvaraffected,
             compresssymmetries, compressthreshold, compressed) );
    }
 
@@ -1824,7 +1830,7 @@ SCIP_RETCODE ensureSymmetryComponentsComputed(
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) component computation started\n", SCIPgetSolvingTime(scip));
 #endif
 
-   SCIP_CALL( SCIPcomputeComponentsSym(scip, propdata->perms, propdata->nperms, propdata->symtypes, propdata->permvars,
+   SCIP_CALL( SCIPcomputeComponentsSym(scip, propdata->symtype, propdata->perms, propdata->nperms, propdata->permvars,
          propdata->npermvars, FALSE, &propdata->components, &propdata->componentbegins,
          &propdata->vartocomponent, &propdata->componentblocked, &propdata->componenthassignedperm,
          &propdata->ncomponents) );
@@ -2123,12 +2129,13 @@ SCIP_RETCODE determineSymmetry(
    maxgenerators = MIN(maxgenerators, MAXGENNUMERATOR / nvars);
 
    /* actually compute (global) symmetry */
-   SCIP_CALL( computeSymmetryGroup(scip, propdata->computesignedperms,
+   SCIP_CALL( computeSymmetryGroup(scip, propdata->symtype,
          propdata->compresssymmetries, propdata->compressthreshold,
          maxgenerators, symspecrequirefixed, propdata->checksymmetries, &propdata->permvars,
-         &propdata->npermvars, &propdata->nbinpermvars, &propdata->perms, &propdata->nperms,
-         &propdata->nmaxperms, &propdata->symtypes, &propdata->nmovedvars, &propdata->binvaraffected,
-         &propdata->compressed, &propdata->log10groupsize, &symcodetime, &successful) );
+         &propdata->npermvars, &propdata->nbinpermvars, &propdata->permvardomaincenter,
+         &propdata->perms, &propdata->nperms, &propdata->nmaxperms,
+         &propdata->nmovedvars, &propdata->binvaraffected, &propdata->compressed,
+         &propdata->log10groupsize, &symcodetime, &successful) );
 
    /* mark that we have computed the symmetry group */
    propdata->computedsymmetry = TRUE;
@@ -5871,7 +5878,8 @@ SCIP_RETCODE tryAddOrbitopesDynamic(
       assert( componentsize == 1 );
 
       SCIP_CALL( SCIPlexicographicReductionAddPermutation(scip, propdata->lexreddata,
-            propdata->permvars, propdata->npermvars, componentperms[0], &success) );
+            propdata->permvars, propdata->npermvars, componentperms[0], propdata->symtype,
+            propdata->permvardomaincenter, &success) );
       if ( success )
       {
          propdata->componentblocked[cidx] |= SYM_HANDLETYPE_SYMBREAK;
@@ -6273,10 +6281,6 @@ SCIP_RETCODE tryAddOrbitalRedLexRed(
    if ( propdata->componentblocked[cidx] )
       return SCIP_OKAY;
 
-   /* skip component if it has signed permutations */
-   if ( propdata->componenthassignedperm[cidx] )
-      return SCIP_OKAY;
-
    /* in this function orbital reduction or dynamic lexicographic reduction propagation must be enabled */
    checkorbired = ISORBITALREDUCTIONACTIVE(propdata->usesymmetry);
    checklexred = ISSYMRETOPESACTIVE(propdata->usesymmetry) && propdata->usedynamicprop && propdata->addsymresacks;
@@ -6312,7 +6316,7 @@ SCIP_RETCODE tryAddOrbitalRedLexRed(
    }
 
    /* handle component permutations with orbital reduction */
-   if ( checkorbired )
+   if ( checkorbired && propdata->symtype == SYM_SYMTYPE_PERM )
    {
       SCIP_CALL( SCIPorbitalReductionAddComponent(scip, propdata->orbitalreddata,
             propdata->permvars, propdata->npermvars, componentperms, componentsize, &success) );
@@ -6328,7 +6332,8 @@ SCIP_RETCODE tryAddOrbitalRedLexRed(
       {
          assert( componentperms[p] != NULL );
          SCIP_CALL( SCIPlexicographicReductionAddPermutation(scip, propdata->lexreddata,
-               propdata->permvars, propdata->npermvars, componentperms[p], &success) );
+               propdata->permvars, propdata->npermvars, componentperms[p],
+               propdata->symtype, propdata->permvardomaincenter, &success) );
          if ( success )
             propdata->componentblocked[cidx] |= SYM_HANDLETYPE_SYMBREAK;
       }
@@ -7037,6 +7042,7 @@ SCIP_RETCODE SCIPincludePropSymmetry(
    SCIP_DIALOG* rootdialog;
    SCIP_DIALOG* displaymenu;
    SCIP_DIALOG* dialog;
+   int tmpval;
 
    SCIP_CALL( SCIPallocBlockMemory(scip, &propdata) );
    assert( propdata != NULL );
@@ -7046,10 +7052,10 @@ SCIP_RETCODE SCIPincludePropSymmetry(
    propdata->permvars = NULL;
    propdata->nperms = -1;
    propdata->nmaxperms = 0;
-   propdata->symtypes = NULL;
    propdata->perms = NULL;
    propdata->permstrans = NULL;
    propdata->permvarmap = NULL;
+   propdata->permvardomaincenter = NULL;
 
    propdata->ncomponents = -1;
    propdata->ncompblocked = 0;
@@ -7275,10 +7281,11 @@ SCIP_RETCODE SCIPincludePropSymmetry(
          "Shall orbitopes with less rows be preferred in detection?",
          &propdata->preferlessrows, TRUE, DEFAULT_PREFERLESSROWS, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "propagating/" PROP_NAME "/computesignedperms",
-         "Shall signed permutations be computed?",
-         &propdata->computesignedperms, TRUE, DEFAULT_COMPUTESIGNEDPERMS, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "propagating/" PROP_NAME "/symtype",
+         "Type of symmetries that shall be computed?",
+         &tmpval, TRUE, DEFAULT_SYMTYPE, 0, 1, NULL, NULL) );
+   propdata->symtype = (SYM_SYMTYPE) tmpval;
 
    /* possibly add description */
    if ( SYMcanComputeSymmetry() )
