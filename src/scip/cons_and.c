@@ -1118,9 +1118,10 @@ SCIP_RETCODE checkCons(
    if( mustcheck )
    {
       SCIP_Real solval;
+      SCIP_Real minsolval;
+      SCIP_Real sumsolval;
       SCIP_Real viol;
-      SCIP_Real absviol;
-      SCIP_Real relviol;
+      int minsolind;
       int i;
 
       /* increase age of constraint; age is reset to zero, if a violation was found only in case we are in
@@ -1131,46 +1132,34 @@ SCIP_RETCODE checkCons(
          SCIP_CALL( SCIPincConsAge(scip, cons) );
       }
 
-      absviol = 0.0;
-      relviol = 0.0;
+      minsolind = 0;
+      minsolval = 1.0;
+      sumsolval = 0.0;
 
-      /* check, if all operator variables are TRUE */
+      /* evaluate operator variables */
       for( i = 0; i < consdata->nvars; ++i )
       {
          solval = SCIPgetSolVal(scip, sol, consdata->vars[i]);
 
-         viol = REALABS(1 - solval);
-         if( absviol < viol )
+         if( solval < minsolval )
          {
-            absviol = viol;
-            relviol = SCIPrelDiff(solval, 1.0);
+            minsolind = i;
+            minsolval = solval;
          }
 
-        /* @todo If "upgraded resultants to varstatus implicit" is fully allowed, than the following assert does not hold
-         *       anymore, therefor we need to stop the check and return with the status not violated, because the
-         *       integrality condition of this violated operand needs to be enforced by another constraint.
-         *
-         *       The above should be asserted by marking the constraint handler, for which the result needs to be
-         *       SCIP_SEPARATED if the origin was the CONSENFOPS or the CONSENFOLP callback or SCIP_INFEASIBLE if the
-         *       origin was CONSCHECK callback.
-         *
-         */
-         assert(SCIPisFeasIntegral(scip, solval));
-         if( solval < 0.5 )
-            break;
+         sumsolval += solval;
       }
 
-      /* if all operator variables are TRUE, the resultant has to be TRUE, otherwise, the resultant has to be FALSE;
-       * in case of an implicit integer resultant variable, we need to ensure the integrality of the solution value
+      /* the resultant must be at most as large as every operator
+       * and at least as large as one minus the sum of negated operators
        */
       solval = SCIPgetSolVal(scip, sol, consdata->resvar);
       assert(SCIPvarGetType(consdata->resvar) == SCIP_VARTYPE_IMPLINT || SCIPisFeasIntegral(scip, solval));
+      viol = MAX(solval - minsolval, sumsolval - (consdata->nvars - 1 + solval));
 
-      if( !SCIPisFeasIntegral(scip, solval) || (i == consdata->nvars) != (solval > 0.5) )
+      if( SCIPisFeasPositive(scip, viol) )
       {
          *violated = TRUE;
-         absviol = 1.0;
-         relviol = 1.0;
 
          /* only reset constraint age if we are in enforcement */
          if( sol == NULL )
@@ -1183,25 +1172,20 @@ SCIP_RETCODE checkCons(
             SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
             SCIPinfoMessage(scip, NULL, ";\n");
             SCIPinfoMessage(scip, NULL, "violation:");
-            if( !SCIPisFeasIntegral(scip, solval) )
+            if( SCIPisFeasPositive(scip, solval - minsolval) )
             {
-               SCIPinfoMessage(scip, NULL, " resultant variable <%s> has fractional solution value %" SCIP_REAL_FORMAT "\n",
-                     SCIPvarGetName(consdata->resvar), solval);
+               SCIPinfoMessage(scip, NULL, " operand <%s> = FALSE and resultant <%s> = TRUE\n",
+                  SCIPvarGetName(consdata->vars[minsolind]), SCIPvarGetName(consdata->resvar));
             }
-            else if( i == consdata->nvars )
+            else
             {
                SCIPinfoMessage(scip, NULL, " all operands are TRUE and resultant <%s> = FALSE\n",
                   SCIPvarGetName(consdata->resvar));
             }
-            else
-            {
-               SCIPinfoMessage(scip, NULL, " operand <%s> = FALSE and resultant <%s> = TRUE\n",
-                  SCIPvarGetName(consdata->vars[i]), SCIPvarGetName(consdata->resvar));
-            }
          }
       }
       if( sol != NULL )
-         SCIPupdateSolConsViolation(scip, sol, absviol, relviol);
+         SCIPupdateSolConsViolation(scip, sol, viol, viol);
    }
 
    return SCIP_OKAY;
