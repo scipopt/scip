@@ -1154,8 +1154,7 @@ SCIP_RETCODE checkCons(
        * and at least as large as one minus the sum of negated operators
        */
       solval = SCIPgetSolVal(scip, sol, consdata->resvar);
-      assert(SCIPvarGetType(consdata->resvar) == SCIP_VARTYPE_IMPLINT || SCIPisFeasIntegral(scip, solval));
-      viol = MAX(solval - minsolval, sumsolval - (consdata->nvars - 1 + solval));
+      viol = MAX(0.0, MAX(solval - minsolval, sumsolval - (consdata->nvars - 1 + solval)));
 
       if( SCIPisFeasPositive(scip, viol) )
       {
@@ -1172,6 +1171,7 @@ SCIP_RETCODE checkCons(
             SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
             SCIPinfoMessage(scip, NULL, ";\n");
             SCIPinfoMessage(scip, NULL, "violation:");
+
             if( SCIPisFeasPositive(scip, solval - minsolval) )
             {
                SCIPinfoMessage(scip, NULL, " operand <%s> = FALSE and resultant <%s> = TRUE\n",
@@ -1184,6 +1184,7 @@ SCIP_RETCODE checkCons(
             }
          }
       }
+
       if( sol != NULL )
          SCIPupdateSolConsViolation(scip, sol, viol, viol);
    }
