@@ -600,8 +600,8 @@ SCIP_DECL_EVENTEXEC(eventExecBoundwriting)
       {
          int len;
 
-         if( (pch-(eventhdlrdata->filename)) > (SCIP_MAXSTRLEN - n) ) /*lint !e776*/
-            len = SCIP_MAXSTRLEN - n;
+         if( (pch-(eventhdlrdata->filename)) >= (SCIP_MAXSTRLEN - n) ) /*lint !e776*/
+            len = SCIP_MAXSTRLEN - n - 1;
          else
             len = (int) (pch-(eventhdlrdata->filename));
 
