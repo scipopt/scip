@@ -856,7 +856,7 @@ SCIP_RETCODE checkCons(
        * and at most as large as the sum of operators
        */
       solval = SCIPgetSolVal(scip, sol, consdata->resvar);
-      viol = MAX(0.0, MAX(maxsolval - solval, solval - sumsolval));
+      viol = MAX3(0.0, maxsolval - solval, solval - sumsolval);
 
       if( SCIPisFeasPositive(scip, viol) )
       {

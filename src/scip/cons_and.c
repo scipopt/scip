@@ -1154,7 +1154,7 @@ SCIP_RETCODE checkCons(
        * and at least as large as one minus the sum of negated operators
        */
       solval = SCIPgetSolVal(scip, sol, consdata->resvar);
-      viol = MAX(0.0, MAX(solval - minsolval, sumsolval - (consdata->nvars - 1 + solval)));
+      viol = MAX3(0.0, solval - minsolval, sumsolval - (consdata->nvars - 1.0 + solval));
 
       if( SCIPisFeasPositive(scip, viol) )
       {
