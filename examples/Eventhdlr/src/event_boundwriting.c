@@ -546,7 +546,7 @@ SCIP_DECL_EVENTEXEC(eventExecBoundwriting)
       assert(eventhdlrdata->oldfilename[0] == '\0');
 
       eventhdlrdata->file = fopen(eventhdlrdata->filename, "w");
-      (void)strncpy(eventhdlrdata->oldfilename, eventhdlrdata->filename, SCIP_MAXSTRLEN);
+      (void)SCIPstrncpy(eventhdlrdata->oldfilename, eventhdlrdata->filename, SCIP_MAXSTRLEN);
 
       if( eventhdlrdata->file == NULL )
       {
@@ -580,7 +580,7 @@ SCIP_DECL_EVENTEXEC(eventExecBoundwriting)
       assert(!eventhdlrdata->isopen);
 
       if( eventhdlrdata->oldfilename[0] == '\0' )
-         (void)strncpy(eventhdlrdata->oldfilename, eventhdlrdata->filename, SCIP_MAXSTRLEN);
+         (void)SCIPstrncpy(eventhdlrdata->oldfilename, eventhdlrdata->filename, SCIP_MAXSTRLEN);
 
       /* find last '.' to append filenumber */
       pch=strrchr(eventhdlrdata->filename,'.');
@@ -593,7 +593,7 @@ SCIP_DECL_EVENTEXEC(eventExecBoundwriting)
       /* if no point is found, extend directly */
       if( pch == NULL )
       {
-         (void)strncpy(name, eventhdlrdata->filename, (unsigned int)(SCIP_MAXSTRLEN - n));
+         (void)SCIPstrncpy(name, eventhdlrdata->filename, (unsigned int)(SCIP_MAXSTRLEN - n));
          strncat(name, number, (unsigned int)n);
       }
       else
@@ -605,8 +605,7 @@ SCIP_DECL_EVENTEXEC(eventExecBoundwriting)
          else
             len = (int) (pch-(eventhdlrdata->filename));
 
-         (void)strncpy(name, eventhdlrdata->filename, (unsigned int)len);
-         name[len] = '\0';
+         (void)SCIPstrncpy(name, eventhdlrdata->filename, (unsigned int)len);
          strncat(name, number, (unsigned int)n);
 	 assert(len+n < SCIP_MAXSTRLEN);
          name[len+n] = '\0';
@@ -642,7 +641,7 @@ SCIP_DECL_EVENTEXEC(eventExecBoundwriting)
    {
       char tmp[SCIP_MAXSTRLEN];
 
-      (void)strncpy(tmp, eventhdlrdata->filename, SCIP_MAXSTRLEN);
+      (void)SCIPstrncpy(tmp, eventhdlrdata->filename, SCIP_MAXSTRLEN);
 
       /* the name should stay the same */
       assert(strcmp(tmp, eventhdlrdata->oldfilename) == 0);
