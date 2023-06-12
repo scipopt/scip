@@ -607,14 +607,11 @@ SCIP_DECL_EVENTEXEC(eventExecBoundwriting)
 
          (void)SCIPstrncpy(name, eventhdlrdata->filename, (unsigned int)len);
          strncat(name, number, (unsigned int)n);
-	 assert(len+n < SCIP_MAXSTRLEN);
+         assert(len+n < SCIP_MAXSTRLEN);
          name[len+n] = '\0';
 
          if( len + n + strlen(&(eventhdlrdata->filename[len])) < SCIP_MAXSTRLEN ) /*lint !e776*/
-         {
-            strncat(name, &(eventhdlrdata->filename[len]), strlen(&(eventhdlrdata->filename[len])));
-            name[strlen(eventhdlrdata->filename)+n] = '\0';
-         }
+            strcat(name, &(eventhdlrdata->filename[len]));
       }
 
       eventhdlrdata->file = fopen(name, "w");
