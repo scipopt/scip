@@ -26,7 +26,6 @@
  * @ingroup DEFPLUGINS_BRANCH
  * @brief  gomory cut branching rule
  * @author Mark Turner
- * @author Marc Pfetsch
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -84,38 +83,7 @@ struct SCIP_BranchruleData
 
 /* put your local methods here, and declare them static */
 
-static
-SCIP_Bool getGMIFromRow(
-   SCIP* scip,
-   int ncols,
-   int nrows,
-   SCIP_COL** cols,
-   SCIP_ROW** rows,
-   const SCIP_Real* binvrow,
-   const SCIP_Real* binvarow,
-   const SCIP_Real* lpval,
-   SCIP_Real* cutcoefs,
-   SCIP_Real* cutrhs,
-   SCIP_Bool useweakerscuts
-   )
-{
-   SCIP_COL* col;
-   SCIP_ROW* row;
-   SCIP_Real rowelem;
-   SCIP_Real cutelem;
-   SCIP_Real f0;
-   SCIP_Real f0complementratio;
-   SCIP_BASESTAT basestat;
-   int i;
-   int c;
-   SCIP_COL** rowcols;
-   SCIP_Real* rowvals;
-   SCIP_Real rowrhs;
-   SCIP_Real rowlhs;
-   SCIP_Real rowact;
-   SCIP_Real rowrhsslack;
-   
-   /* The GMI is given by
+/** Generate GMI cut: The GMI is given by
     * sum(f_j x_j                  , j in J_I s.t. f_j <= f_0) +
     * sum((1-f_j)*f_0/(1 - f_0) x_j, j in J_I s.t. f_j  > f_0) +
     * sum(a_j x_j,                 , j in J_C s.t. a_j >=   0) -
@@ -128,6 +96,36 @@ SCIP_Bool getGMIFromRow(
     * such problem structure in general, we have to (implicitly) transform whatever we are given
     * to that form. Specifically, non-basic variables at their lower bound are shifted so that the lower
     * bound is 0 and non-basic at their upper bound are complemented. */
+static
+SCIP_Bool getGMIFromRow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   ncols,              /**< Number of columns (original variables) in the LP */
+   int                   nrows,              /**< Number of rows (slack variables) in the LP */
+   SCIP_COL**            cols,               /**< Column data of the LP */
+   SCIP_ROW**            rows,               /**< Row data of the LP */
+   const SCIP_Real*      binvrow,            /**< row of B^-1 for current basic variable */
+   const SCIP_Real*      binvarow,           /**< row of B^-1A for current basic variable */
+   const SCIP_Real*      lpval,              /**< value of variable at current LP solution */
+   SCIP_Real*            cutcoefs,           /**< array to store cut coefficients */
+   SCIP_Real*            cutrhs,             /**< pointer to store rhs of cut */
+   SCIP_Bool             useweakerscuts      /**< use weakener cuts derived from the exact branching split */
+   )
+{
+   SCIP_COL** rowcols;
+   SCIP_COL* col;
+   SCIP_ROW* row;
+   SCIP_Real* rowvals;
+   SCIP_BASESTAT basestat;
+   SCIP_Real rowelem;
+   SCIP_Real cutelem;
+   SCIP_Real f0;
+   SCIP_Real f0complementratio;
+   SCIP_Real rowrhs;
+   SCIP_Real rowlhs;
+   SCIP_Real rowact;
+   SCIP_Real rowrhsslack;
+   int i;
+   int c;
 
    /* Clear the memory array of cut coefficients. It may store that of the last computed cut */
    BMSclearMemoryArray(cutcoefs, ncols);
@@ -363,32 +361,32 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpGomory)
 {  /*lint --e{715}*/
    SCIP_BRANCHRULEDATA* branchruledata;
    SCIP_VAR** lpcands;
-   SCIP_Real* lpcandssol;
-   SCIP_Real* lpcandsfrac;
-   int nlpcands;
-   int maxncands;
    SCIP_COL** cols;
    SCIP_ROW** rows;
-   int ncols;
-   int nrows;
-   SCIP_COL* col;
-   int lppos;
+   SCIP_Real* lpcandssol;
+   SCIP_Real* lpcandsfrac;
    SCIP_Real* binvrow;
    SCIP_Real* binvarow;
-   int* inds;
-   int ninds;
-   SCIP_Real cutrhs;
    SCIP_Real* cutcoefs;
+   SCIP_ROW* cut;
+   SCIP_COL* col;
    int* basisind;
    int* basicvarpos2tableaurow;
+   int* inds;
+   const char* name;
+   SCIP_Real cutrhs;
    SCIP_Real score;
    SCIP_Real bestscore;
+   SCIP_Bool success;
+   int nlpcands;
+   int maxncands;
+   int ncols;
+   int nrows;
+   int lppos;
+   int ninds;
    int bestcand;
    int i;
    int j;
-   SCIP_Bool success;
-   SCIP_ROW* cut;
-   const char* name;
 
    name = (char *) "test";
 
