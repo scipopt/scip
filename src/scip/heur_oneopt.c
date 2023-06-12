@@ -105,7 +105,7 @@ SCIP_Real calcShiftVal(
    SCIP_Real lb;
    SCIP_Real ub;
    SCIP_Real obj;
-   SCIP_Real shiftval;
+   SCIP_Real newsolval;
 
    SCIP_COL* col;
    SCIP_ROW** colrows;
@@ -122,22 +122,22 @@ SCIP_Real calcShiftVal(
 
    /* determine shifting direction and maximal possible shifting w.r.t. corresponding bound */
    if( obj > 0.0 )
-      shiftval = SCIPfeasCeil(scip, lb);
+      newsolval = SCIPfeasCeil(scip, lb);
    else if( obj < 0.0 )
    {
-      shiftval = SCIPfeasFloor(scip, ub);
+      newsolval = SCIPfeasFloor(scip, ub);
       shiftdown = FALSE;
    }
    else
-      shiftval = solval;
+      newsolval = solval;
 
-   /* shiftval might be bounding solval -> avoid numerical shifting */
-   if( ( shiftdown && SCIPisFeasGE(scip, shiftval, solval) )
-      || ( !shiftdown && SCIPisFeasLE(scip, shiftval, solval) ) )
+   /* newsolval might be bounding solval -> avoid numerical shifting */
+   if( ( shiftdown && SCIPisFeasGE(scip, newsolval, solval) )
+      || ( !shiftdown && SCIPisFeasLE(scip, newsolval, solval) ) )
       return 0.0;
 
    SCIPdebugMsg(scip, "Try to shift %s variable <%s> with\n", shiftdown ? "down" : "up", SCIPvarGetName(var) );
-   SCIPdebugMsg(scip, "    lb:<%g> <= val:<%g> <= ub:<%g> and obj:<%g> by at most: <%g>\n", lb, solval, ub, obj, shiftval - solval );
+   SCIPdebugMsg(scip, "    lb:<%g> <= val:<%g> <= ub:<%g> and obj:<%g> by at most: <%g>\n", lb, solval, ub, obj, newsolval - solval );
 
    /* get data of LP column */
    col = SCIPvarGetCol(var);
@@ -169,33 +169,33 @@ SCIP_Real calcShiftVal(
          /* only finite bounds need to be considered */
          if( !SCIPisInfinity(scip, left ? -side : side) )
          {
-            SCIP_Real shiftvalrow;
+            SCIP_Real newsolvalrow;
 
             assert( SCIProwIsInLP(row) );
-            shiftvalrow = solval + (side - activities[rowpos]) / colvals[i];
+            newsolvalrow = solval + (side - activities[rowpos]) / colvals[i];
 
             /* update shifting value */
-            if( ( shiftdown && shiftvalrow > shiftval ) || ( !shiftdown && shiftvalrow < shiftval ) )
+            if( ( shiftdown && newsolvalrow > newsolval ) || ( !shiftdown && newsolvalrow < newsolval ) )
             {
                SCIP_Real activity;
 
-               activity = activities[rowpos] + colvals[i] * ((shiftdown ? floor(shiftvalrow) : ceil(shiftvalrow)) - solval);
+               activity = activities[rowpos] + colvals[i] * ((shiftdown ? floor(newsolvalrow) : ceil(newsolvalrow)) - solval);
 
                /* ensure that shifting preserves feasibility */
                if( shiftdown == ( ( left && SCIPisFeasGE(scip, activity, side) )
                                  || ( !left && SCIPisFeasLE(scip, activity, side) ) ) )
-                  shiftval = floor(shiftvalrow);
+                  newsolval = floor(newsolvalrow);
                else
-                  shiftval = ceil(shiftvalrow);
+                  newsolval = ceil(newsolvalrow);
 
                SCIPdebugMsg(scip, " -> The shift value has to be set to <%g>, because of row <%s>.\n",
-                  shiftval - solval, SCIProwGetName(row));
+                  newsolval - solval, SCIProwGetName(row));
                SCIPdebugMsg(scip, "    lhs:<%g> <= act:<%g> <= rhs:<%g>, colval:<%g>\n",
                   SCIProwGetLhs(row), activities[rowpos], SCIProwGetRhs(row), colvals[i]);
 
-               /* shiftvalrow might have reached solval -> avoid numerical shifting */
-               if( ( shiftdown && SCIPisFeasGE(scip, shiftval, solval) )
-                  || ( !shiftdown && SCIPisFeasLE(scip, shiftval, solval) ) )
+               /* newsolval might have reached solval -> avoid numerical shifting */
+               if( ( shiftdown && SCIPisFeasGE(scip, newsolval, solval) )
+                  || ( !shiftdown && SCIPisFeasLE(scip, newsolval, solval) ) )
                   return 0.0;
             }
          }
@@ -203,7 +203,7 @@ SCIP_Real calcShiftVal(
    }
 
    /* we must not shift variables to infinity */
-   return SCIPisInfinity(scip, shiftdown ? -shiftval : shiftval) ? 0.0 : shiftval - solval;
+   return SCIPisInfinity(scip, shiftdown ? -newsolval : newsolval) ? 0.0 : newsolval - solval;
 }
 
 
