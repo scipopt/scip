@@ -242,6 +242,7 @@ Fixed bugs
 - ensure row feasibilities of solution shiftings in heur_oneopt.c and heur_twoopt.c
 - remove rounded row check blocking tolerable primal solutions in cons_varbound.c
 - fixed that presolve of logicor-constraints may have attempted to cutoff a root of the not yet existing branch-and-bound tree
+- only consider positive slack variables as active in benders.c
 
 Miscellaneous
 -------------
