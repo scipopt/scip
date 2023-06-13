@@ -92,6 +92,7 @@ Fixed bugs
 - remove rounded row check blocking tolerable primal solutions in cons_varbound.c
 - fixed that presolve of logicor-constraints may have attempted to cutoff a root of the not yet existing branch-and-bound tree
 - only consider positive slack variables as active in benders.c
+- in the feasibility check of and/or constraints, allow for fractional values in operands
 
 Miscellaneous
 -------------
