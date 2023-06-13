@@ -1616,8 +1616,10 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    options.writeautoms = FALSE;
    options.userautomproc = sassy::preprocessor::nauty_hook;
    options.defaultptn = FALSE; /* use color classes */
+   *log10groupsize = 0.0;
    if(sg.nv > 0) {
       sparsenauty(&sg, lab, ptn, orbits, &options, &stats, NULL);
+      *log10groupsize = (SCIP_Real) stats.grpsize2;
    }
 #else
    convert_sassy_to_traces(&sassygraph, &sg, &lab, &lab_sz, &ptn, &ptn_sz);
@@ -1654,9 +1656,6 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
       assert( data.perms == NULL );
       assert( data.nmaxperms == 0 );
    }
-   
-   /* determine log10 of symmetry group size */
-   *log10groupsize = (SCIP_Real) stats.grpsize2;
 
    return SCIP_OKAY;
 }
