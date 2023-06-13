@@ -36,15 +36,34 @@
 #include <bliss/graph.hh>
 
 /* include sassy */
+#ifdef __GNUC__
 #pragma GCC diagnostic ignored "-Wshadow"
 #pragma GCC diagnostic ignored "-Wunused-variable"
 #pragma GCC diagnostic ignored "-Wsign-compare"
 #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+#endif
+
+#ifdef _MSC_VER
+# pragma warning(push)
+# pragma warning(disable: 4189)  // local variable is initialized but not referenced
+# pragma warning(disable: 4388)  // compare signed and unsigned expression
+# pragma warning(disable: 4456)  // shadowed variable
+#endif
+
+/* the actual include */
 #include <sassy/preprocessor.h>
+
+#ifdef __GNUC__
 #pragma GCC diagnostic warning "-Wunused-but-set-variable"
 #pragma GCC diagnostic warning "-Wsign-compare"
 #pragma GCC diagnostic warning "-Wunused-variable"
 #pragma GCC diagnostic warning "-Wshadow"
+#endif
+
+#ifdef _MSC_VER
+# pragma warning(pop)
+#endif
+
 #include <sassy/tools/bliss_converter.h>
 
 #include "scip/expr_var.h"
