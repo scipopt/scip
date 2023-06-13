@@ -27,8 +27,8 @@ namespace sassy {
 #define MASH4(i) (((unsigned long) i + 1) * (23524361 - (unsigned long) i * 3))
 #define MASH5(i) (((unsigned long) i + 1) * (23524361 - (unsigned long) i * 3))
 
-//#define PRINT(str) {if(config->CONFIG_PRINT) {std::cout << str << std::endl;}}
-#define PRINT(str) {}
+#define PRINT(str) {if(config->CONFIG_PRINT) {std::cout << str << std::endl;}}
+// #define PRINT(str) {}
 
 // metrics used to compare strategies
     struct strategy_metrics {
