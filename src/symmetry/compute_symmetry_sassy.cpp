@@ -48,6 +48,7 @@
 # pragma warning(disable: 4189)  // local variable is initialized but not referenced
 # pragma warning(disable: 4388)  // compare signed and unsigned expression
 # pragma warning(disable: 4456)  // shadowed variable
+# pragma warning(disable: 4430)  // missing type specifier
 #endif
 
 /* the actual include */
