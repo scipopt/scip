@@ -3233,7 +3233,6 @@ SCIP_RETCODE shortenConss(
    for( c = nconss - 1; c >= 0; --c )
    {
       SCIP_Bool redundant = FALSE;
-      SCIP_Bool glbinfeas = FALSE;
       SCIP_CONS* cons = conss[c];
       SCIP_CONSDATA* consdata;
 
@@ -3293,9 +3292,9 @@ SCIP_RETCODE shortenConss(
 
       /* use implications and cliques to derive global fixings and to shrink the number of variables in this constraints */
       SCIP_CALL( SCIPshrinkDisjunctiveVarSet(scip, probvars, bounds, boundtypes, redundants, consdata->nvars, &nredvars,
-            nfixedvars, &redundant, &glbinfeas, TRUE) );
+            nfixedvars, &redundant, cutoff, TRUE) );
 
-      if( glbinfeas )
+      if( *cutoff )
       {
          /* reset redundants array to FALSE */
          BMSclearMemoryArray(redundants, nbinprobvars);
