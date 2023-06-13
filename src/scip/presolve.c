@@ -1318,7 +1318,6 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
                {
                   SCIPdebugMsg(scip, "-> global infeasibility proven.\n");
 
-                  SCIP_CALL( SCIPcutoffNode(scip, SCIPgetRootNode(scip)) );
                   *glbinfeas = TRUE;
                   break;
                }
@@ -1369,7 +1368,6 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
                {
                   SCIPdebugMsg(scip, "-> global infeasibility proven.\n");
 
-                  SCIP_CALL( SCIPcutoffNode(scip, SCIPgetRootNode(scip)) );
                   *glbinfeas = TRUE;
                   break;
                }
