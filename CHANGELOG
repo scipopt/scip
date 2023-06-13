@@ -86,6 +86,7 @@ Fixed bugs
 - handle whitespaces in interactive shell history consistently
 - check and enforce equalities on which the objective is projected in cons_linear.c
 - ensure row feasibilities of solution shiftings in heur_oneopt.c and heur_twoopt.c
+- remove rounded row check blocking tolerable primal solutions in cons_varbound.c
 
 Miscellaneous
 -------------
