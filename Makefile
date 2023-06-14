@@ -432,7 +432,7 @@ ifeq ($(SYM),snauty)
 FLAGS		+=	-I$(LIBDIR)/include/
 SYMOBJ		=	symmetry/compute_symmetry_sassy_nauty.o
 SYMOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(SYMOBJ))
-SYMSRC  	=	$(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.c))
+SYMSRC  	=	$(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.cpp))
 ALLSRC		+=	$(SYMSRC)
 SOFTLINKS	+=	$(LIBDIR)/include/nauty
 SOFTLINKS	+=	$(LIBDIR)/static/libnauty.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT)
