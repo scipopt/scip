@@ -1623,16 +1623,16 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
 #else
    convert_sassy_to_traces(&sassygraph, &sg, &lab, &lab_sz, &ptn, &ptn_sz);
    TracesStats stats;
-	DYNALLSTAT(int, orbits, orbits_sz);
-	DYNALLOC1(int,  orbits, orbits_sz, sg.nv, "malloc");
-	DEFAULTOPTIONS_TRACES(options);
+   DYNALLSTAT(int, orbits, orbits_sz);
+   DYNALLOC1(int,  orbits, orbits_sz, sg.nv, "malloc");
+   DEFAULTOPTIONS_TRACES(options);
    /* init callback functions for traces (accumulate the group generators found by traces) */
    options.writeautoms = FALSE;
    options.userautomproc = sassy::preprocessor::traces_hook;
    options.defaultptn = FALSE; /* use color classes */
-	if(sg.nv > 0) {
-		Traces(&sg, lab, ptn, orbits, &options, &stats, NULL);
-	}
+   if(sg.nv > 0) {
+      Traces(&sg, lab, ptn, orbits, &options, &stats, NULL);
+   }
 #endif
 
    /* clean up */
