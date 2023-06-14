@@ -35,26 +35,28 @@
 /* the following determines whether nauty or traces is used: */
 #define NAUTY
 
+#ifdef NAUTY
+#include "nauty/nauty.h"
+#include "nauty/nausparse.h"
+#else
+#include "nauty/traces.h"
+#endif
+
 /* include sassy */
 #pragma GCC diagnostic ignored "-Wshadow"
 #pragma GCC diagnostic ignored "-Wunused-variable"
 #pragma GCC diagnostic ignored "-Wsign-compare"
 #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
 #include <sassy/preprocessor.h>
+#ifdef NAUTY
+#include "sassy/tools/nauty_converter.h"
+#else
+#include "sassy/tools/traces_converter.h"
+#endif
 #pragma GCC diagnostic warning "-Wunused-but-set-variable"
 #pragma GCC diagnostic warning "-Wsign-compare"
 #pragma GCC diagnostic warning "-Wunused-variable"
 #pragma GCC diagnostic warning "-Wshadow"
-
-#ifdef NAUTY
-#include "nauty/nauty.h"
-#include "nauty/nausparse.h"
-#include "sassy/tools/nauty_converter.h"
-#else
-#include "nauty/traces.h"
-#include "sassy/tools/traces_converter.h"
-#endif
-
 
 #include "scip/expr_var.h"
 #include "scip/expr_sum.h"
@@ -1470,9 +1472,9 @@ initStaticSymmetryAddName( )
 
 
 #ifdef NAUTY
-static const char symmetryname[] = "Nauty "NAUTYVERSION;
+static const char symmetryname[] = "Nauty " NAUTYVERSION;
 #else
-static const char symmetryname[] = "Traces "NAUTYVERSION;
+static const char symmetryname[] = "Traces " NAUTYVERSION;
 #endif
 
 static const char* symmetryaddname = initStaticSymmetryAddName();
