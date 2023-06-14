@@ -1607,11 +1607,10 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
 
 #ifdef NAUTY
    convert_sassy_to_nauty(&sassygraph, &sg, &lab, &lab_sz, &ptn, &ptn_sz);
-   oldtime = SCIPgetSolvingTime(scip);
    statsblk stats;
    DYNALLSTAT(int, orbits, orbits_sz);
    DYNALLOC1(int,  orbits, orbits_sz, sg.nv, "malloc");
-   static DEFAULTOPTIONS_SPARSEGRAPH(options);
+   DEFAULTOPTIONS_SPARSEGRAPH(options);
    /* init callback functions for nauty (accumulate the group generators found by nauty) */
    options.writeautoms = FALSE;
    options.userautomproc = sassy::preprocessor::nauty_hook;
@@ -1623,11 +1622,10 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    }
 #else
    convert_sassy_to_traces(&sassygraph, &sg, &lab, &lab_sz, &ptn, &ptn_sz);
-   oldtime = SCIPgetSolvingTime(scip);
    TracesStats stats;
 	DYNALLSTAT(int, orbits, orbits_sz);
 	DYNALLOC1(int,  orbits, orbits_sz, sg.nv, "malloc");
-	static DEFAULTOPTIONS_TRACES(options);
+	DEFAULTOPTIONS_TRACES(options);
    /* init callback functions for traces (accumulate the group generators found by traces) */
    options.writeautoms = FALSE;
    options.userautomproc = sassy::preprocessor::traces_hook;

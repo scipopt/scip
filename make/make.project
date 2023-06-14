@@ -105,7 +105,7 @@ OPT		=	opt
 COMP		=	gnu
 LPS		=	spx2
 TPI		=	none
-SYM		=	sassy
+SYM		=	sbliss
 PAPILO		=	false
 LAPACK		=	false
 STATICLIBEXT	=	a
@@ -538,7 +538,7 @@ LIBOBJSUBDIRS	+=      $(LIBOBJDIR)/bliss
 endif
 endif
 
-ifeq ($(SYM),sassy)
+ifeq ($(SYM),sbliss)
 ifeq ($(BLISSEXTERNAL),true)
 LDFLAGS		+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCC_l)bliss.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
 else

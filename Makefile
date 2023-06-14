@@ -364,8 +364,8 @@ LPIINSTMSG	+=	" -> \"libbliss.*.a\" is the path to the BLISS library, e.g., \"<B
 LPIINSTMSG	+=	" -> \"libbliss.*.so\" is the path to the BLISS library, e.g., \"<BLISS-path>/libbliss.so\""
 endif
 
-SYMOPTIONS	+=	blissS
-ifeq ($(SYM),blissS)
+SYMOPTIONS	+=	sbliss
+ifeq ($(SYM),sbliss)
 SYMOBJ		=	symmetry/compute_symmetry_sassy_bliss.o
 SYMOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(SYMOBJ))
 SYMSRC  	=	$(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.cpp))
@@ -427,8 +427,8 @@ LPIINSTMSG	+=	" -> \"libnauty.*.a\" is the path to the Nauty library, e.g., \"<N
 endif
 endif
 
-SYMOPTIONS	+=	nautyS
-ifeq ($(SYM),nautyS)
+SYMOPTIONS	+=	snauty
+ifeq ($(SYM),snauty)
 FLAGS		+=	-I$(LIBDIR)/include/
 SYMOBJ		=	symmetry/compute_symmetry_sassy_nauty.o
 SYMOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(SYMOBJ))
@@ -1654,9 +1654,9 @@ ifeq ($(COMP),msvc)
 endif
 endif
 ifneq ($(SYM),bliss)
-ifneq ($(SYM),blissS)
+ifneq ($(SYM),sbliss)
 ifneq ($(SYM),nauty)
-ifneq ($(SYM),nautyS)
+ifneq ($(SYM),snauty)
 ifneq ($(SYM),none)
 		$(error invalid SYM flag selected: SYM=$(SYM). Possible options are: $(SYMOPTIONS))
 endif
@@ -1722,7 +1722,7 @@ help:
 		@echo "  - IPOPT=<true|false>: Turns support of IPOPT on or off (default)."
 		@echo "  - LAPACK=<true|false>: Link with Lapack (must be installed on the system)."
 		@echo "  - EXPRINT=<cppad|none>: Use CppAD as expressions interpreter (default) or no expressions interpreter."
-		@echo "  - SYM=<none|bliss|nauty|blissS|nautyS>: To choose type of symmetry handling."
+		@echo "  - SYM=<none|bliss|nauty|sbliss|snauty>: To choose type of symmetry handling."
 		@echo "  - PARASCIP=<true|false>: Build for ParaSCIP (deprecated, use THREADSAFE)."
 		@echo "  - THREADSAFE=<true|false>: Build thread safe."
 		@echo "  - NOBLKMEM=<true|false>: Turn off block memory or on (default)."
