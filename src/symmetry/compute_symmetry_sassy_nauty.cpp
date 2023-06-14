@@ -1611,7 +1611,7 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    convert_sassy_to_nauty(&sassygraph, &sg, &lab, &lab_sz, &ptn, &ptn_sz);
    statsblk stats;
    DYNALLSTAT(int, orbits, orbits_sz);
-   DYNALLOC1(int,  orbits, orbits_sz, sg.nv, "malloc");
+   DYNALLOC1(int, orbits, orbits_sz, sg.nv, "malloc");
    DEFAULTOPTIONS_SPARSEGRAPH(options);
    /* init callback functions for nauty (accumulate the group generators found by nauty) */
    options.writeautoms = FALSE;
@@ -1626,7 +1626,7 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    convert_sassy_to_traces(&sassygraph, &sg, &lab, &lab_sz, &ptn, &ptn_sz);
    TracesStats stats;
    DYNALLSTAT(int, orbits, orbits_sz);
-   DYNALLOC1(int,  orbits, orbits_sz, sg.nv, "malloc");
+   DYNALLOC1(int, orbits, orbits_sz, sg.nv, "malloc");
    DEFAULTOPTIONS_TRACES(options);
    /* init callback functions for traces (accumulate the group generators found by traces) */
    options.writeautoms = FALSE;
