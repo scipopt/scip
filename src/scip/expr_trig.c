@@ -1086,7 +1086,7 @@ SCIP_DECL_EXPRMONOTONICITY(monotonicitySin)
    assert(SCIPisGE(scip, M_PI * (2.0*k + 3.0) / 2.0, inf));
 
    /* check whether [inf,sup] are contained in an interval for which the sine function is monotone */
-   if( M_PI * (2.0*k + 3.0) / 2.0 <= sup )
+   if( SCIPisLE(scip, sup, M_PI * (2.0*k + 3.0) / 2.0) )
       *result = ((k % 2 + 2) % 2) == 1 ? SCIP_MONOTONE_INC : SCIP_MONOTONE_DEC;
 
    return SCIP_OKAY;
