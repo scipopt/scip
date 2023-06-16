@@ -549,12 +549,12 @@ SCIP_RETCODE SCIPincludeCutselEnsemble(
    /* add ensemble cut selector parameters */
    SCIP_CALL( SCIPaddRealParam(scip,
                                "cutselection/" CUTSEL_NAME "/efficacyweight",
-      "weight of efficacy in cut score calculation",
+      "weight of normed-efficacy in cut score calculation",
       &cutseldata->efficacyweight, FALSE, DEFAULT_EFFICACYWEIGHT, 0.0, SCIP_INVALID/10.0, NULL, NULL) );
    
    SCIP_CALL( SCIPaddRealParam(scip,
                                "cutselection/" CUTSEL_NAME "/dircutoffdistweight",
-      "weight of directed cutoff distance in cut score calculation",
+      "weight of normed-directed cutoff distance in cut score calculation",
       &cutseldata->dircutoffdistweight, FALSE, DEFAULT_DIRCUTOFFDISTWEIGHT, 0.0, SCIP_INVALID/10.0, NULL, NULL) );
    
    SCIP_CALL( SCIPaddRealParam(scip,
