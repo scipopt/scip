@@ -1077,7 +1077,7 @@ SCIP_DECL_EXPRMONOTONICITY(monotonicitySin)
    sup = SCIPintervalGetSup(interval);
 
    /* expression is not monotone because the interval is too large */
-   if( sup - inf > M_PI )
+   if( SCIPisGT(scip, sup - inf, M_PI) )
       return SCIP_OKAY;
 
    /* compute k s.t. PI * (2k+1) / 2 <= interval.inf <= PI * (2k+3) / 2 */
@@ -1361,16 +1361,16 @@ SCIP_DECL_EXPRMONOTONICITY(monotonicityCos)
    sup = SCIPintervalGetSup(interval);
 
    /* expression is not monotone because the interval is too large */
-   if( sup - inf > M_PI )
+   if( SCIPisGT(scip, sup - inf, M_PI) )
       return SCIP_OKAY;
 
    /* compute k s.t. PI * k <= interval.inf <= PI * (k+1) */
    k = (int)floor(inf/M_PI);
-   assert(M_PI * k <= inf);
-   assert(M_PI * (k+1) >= inf);
+   assert(SCIPisLE(scip, M_PI * k, inf));
+   assert(SCIPisGE(scip, M_PI * (k+1), inf));
 
    /* check whether [inf,sup] are contained in an interval for which the cosine function is monotone */
-   if( sup <= M_PI * (k+1) )
+   if( SCIPisLE(scip, sup, M_PI * (k+1)) )
       *result = ((k % 2 + 2) % 2) == 0 ? SCIP_MONOTONE_DEC : SCIP_MONOTONE_INC;
 
    return SCIP_OKAY;
