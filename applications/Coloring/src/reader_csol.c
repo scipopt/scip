@@ -146,7 +146,7 @@ SCIP_DECL_READERREAD(readerReadCsol)
       i++;
    }
    SCIP_CALL( SCIPallocBufferArray(scip, &solprobname, i+2) );
-   SCIPstrncpy(solprobname, buf, (unsigned int) i);
+   SCIPstrncpy(solprobname, buf, i);
 
    printf("Reading solution for %s...\n", solprobname);
 
