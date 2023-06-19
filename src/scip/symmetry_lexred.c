@@ -95,7 +95,7 @@ struct LexRedPermData
    int*                  perm;               /**< permutation for lexicographic reduction */
    int*                  invperm;            /**< inverse permutation */
    SCIP_HASHMAP*         varmap;             /**< map of variables to indices in vars array */
-   SCIP_Bool             issignedperm;       /**< whether the permutation is signed */
+   SYM_SYMTYPE           symtype;            /**< type of symmetries in perm */
    SCIP_Real*            vardomaincenter;    /**< array of centers of variable domains */
 };
 typedef struct LexRedPermData LEXDATA;
@@ -145,6 +145,7 @@ SCIP_RETCODE lexdataFree(
    LEXDATA**             lexdata             /**< pointer to individual lexicographic reduction propagator datas */
    )
 {
+   SCIP_Bool issigned;
    int permlen;
    int i;
 
@@ -152,7 +153,9 @@ SCIP_RETCODE lexdataFree(
    assert( lexdata != NULL );
    assert( (*lexdata) != NULL );
 
-   permlen = (*lexdata)->issignedperm ? 2 * (*lexdata)->nvars : (*lexdata)->nvars;
+   issigned = (*lexdata)->symtype == SYM_SYMTYPE_SIGNPERM ? TRUE : FALSE;
+
+   permlen =  issigned ? 2 * (*lexdata)->nvars : (*lexdata)->nvars;
 
    if ( (*lexdata)->nvars > 0 )
    {
@@ -173,7 +176,7 @@ SCIP_RETCODE lexdataFree(
       SCIPfreeBlockMemoryArray(scip, &(*lexdata)->perm, permlen);
       SCIPfreeBlockMemoryArray(scip, &(*lexdata)->vars, (*lexdata)->nvars);
 
-      if ( (*lexdata)->issignedperm )
+      if ( issigned )
       {
          SCIPfreeBlockMemoryArray(scip, &(*lexdata)->vardomaincenter, (*lexdata)->nvars);
       }
@@ -212,12 +215,13 @@ SCIP_RETCODE lexdataCreate(
    SCIP_VAR*const*       vars,               /**< input variables of the lexicographic reduction propagator */
    int                   nvars,              /**< input number of variables of the lexicographic reduction propagator */
    int*                  perm,               /**< input permutation of the lexicographic reduction propagator */
-   SCIP_Bool             issignedperm,       /**< whether the permutation is signed */
+   SYM_SYMTYPE           symtype,            /**< type of symmetries in perm */
    SCIP_Real*            permvardomaincenter, /**< array containing center point for each variable domain */
    SCIP_Bool*            success             /**< to store whether the component is successfully added */
    )
 {
    SCIP_VAR* var;
+   SCIP_Bool issignedperm;
    int* indexcorrection;
    int naffectedvariables;
    int permlen;
@@ -230,15 +234,17 @@ SCIP_RETCODE lexdataCreate(
    assert( vars != NULL );
    assert( nvars >= 0 );
    assert( perm != NULL );
-   assert( (!issignedperm) || permvardomaincenter != NULL );
+   assert( symtype == SYM_SYMTYPE_PERM || permvardomaincenter != NULL );
    assert( success != NULL );
    assert( SCIPisTransformed(scip) );
    assert( masterdata->shadowtreeeventhdlr != NULL );
 
    *success = TRUE;
+   issignedperm = symtype == SYM_SYMTYPE_PERM ? FALSE : TRUE;
 
    /* initialize the data structures */
    SCIP_CALL( SCIPallocBlockMemory(scip, lexdata) );
+   (*lexdata)->symtype = symtype;
 
    /* remove fixed points */
    naffectedvariables = 0;
@@ -874,6 +880,77 @@ SCIP_RETCODE propagateUpperBoundSymVar(
 }
 
 
+/** propagates x - c >=  c - x */
+static
+SCIP_RETCODE propagateSelfReflectionVar(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable */
+   SCIP_Real             center,             /**< center of var (original var domain) */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether infeasibility is found */
+   int*                  nreductions,        /**< pointer to store number of reductions */
+   SCIP_Bool             peekmode,           /**< whether function is called in peek mode */
+   int                   varidx,             /**< index of var (or NULL) */
+   SCIP_Real*            peeklbs,            /**< lower bounds of variables in peek mode (or NULL) */
+   SCIP_Real*            peekubs,            /**< upper bounds of variables in peek mode (or NULL) */
+   SCIP_Bool*            peekbdset           /**< whether peek bounds have been set (or NULL) */
+   )
+{
+   SCIP_Real ub1;
+   SCIP_Real ub2;
+   SCIP_Real lb1;
+   SCIP_Real lb2;
+   SCIP_Bool tighten = FALSE;
+
+   assert( scip != NULL );
+   assert( var != NULL );
+   assert( infeasible != NULL );
+   assert( nreductions != NULL );
+   assert( (!peekmode) || peeklbs != NULL );
+   assert( (!peekmode) || peekubs != NULL );
+   assert( (!peekmode) || peekbdset != NULL );
+
+   SCIP_CALL( getVarBounds(var, var, peekmode, varidx, varidx, peeklbs, peekubs, peekbdset,
+         &lb1, &ub1, &lb2, &ub2) );
+
+   if ( SCIPisLT(scip, ub1, center) )
+   {
+      *infeasible = TRUE;
+      return SCIP_OKAY;
+   }
+   else if ( SCIPisLT(scip, lb1, center) )
+   {
+      if ( peekmode )
+      {
+         peeklbs[varidx] = center;
+         peekubs[varidx] = ub1;
+         peekbdset[varidx] = TRUE;
+      }
+      else
+      {
+         SCIP_CALL( SCIPtightenVarLb(scip, var, center, FALSE, infeasible, &tighten) );
+         if ( tighten )
+         {
+            SCIPdebugMessage("Restricting variable LB %12s to %5.2f\n", SCIPvarGetName(var), center);
+            *nreductions += 1;
+         }
+         else
+         {
+            SCIPdebugMessage("Restricting variable LB %12s to %5.2f (no success)\n",
+               SCIPvarGetName(var), center);
+         }
+         if ( *infeasible )
+         {
+            SCIPdebugMessage("Detected infeasibility restricting variable LB %12s to %5.2f\n",
+               SCIPvarGetName(var), center);
+            return SCIP_OKAY;
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /** propagates lexicographic order for one pair of symmetric variables */
 static
 SCIP_RETCODE propagateVariablePair(
@@ -922,13 +999,22 @@ SCIP_RETCODE propagateVariablePair(
       return SCIP_OKAY;
    }
 
-   SCIP_CALL( propagateLowerBoundVar(scip, var1, var2, center1, center2, isnegated, infeasible, nreductions, peekmode,
-         varidx1, varidx2, peeklbs, peekubs, peekbdset) );
-   if ( *infeasible )
-      return SCIP_OKAY;
+   /* for signed permutations, a variable might be map to itself */
+   if ( var1 == var2 )
+   {
+      SCIP_CALL( propagateSelfReflectionVar(scip, var1, center1, infeasible, nreductions, peekmode, varidx1,
+            peeklbs, peekubs, peekbdset) );
+   }
+   else
+   {
+      SCIP_CALL( propagateLowerBoundVar(scip, var1, var2, center1, center2, isnegated, infeasible, nreductions, peekmode,
+            varidx1, varidx2, peeklbs, peekubs, peekbdset) );
+      if ( *infeasible )
+         return SCIP_OKAY;
 
-   SCIP_CALL( propagateUpperBoundSymVar(scip, var1, var2, center1, center2, isnegated, infeasible, nreductions, peekmode,
-         varidx1, varidx2, peeklbs, peekubs, peekbdset) );
+      SCIP_CALL( propagateUpperBoundSymVar(scip, var1, var2, center1, center2, isnegated, infeasible, nreductions, peekmode,
+            varidx1, varidx2, peeklbs, peekubs, peekbdset) );
+   }
 
    return SCIP_OKAY;
 }
@@ -951,7 +1037,7 @@ SCIP_RETCODE peekStaticLexredIsFeasible(
    SCIP_Real*            peeklbs,            /**< lower bounds of variables in peek mode (or NULL) */
    SCIP_Real*            peekubs,            /**< upper bounds of variables in peek mode (or NULL) */
    SCIP_Bool*            peekbdset           /**< whether peek bounds have been set (or NULL) */
-)
+   )
 {
    int row;
    int i;
@@ -962,7 +1048,7 @@ SCIP_RETCODE peekStaticLexredIsFeasible(
    SCIP_Real centerj;
    SCIP_Bool issigned;
    SCIP_Bool isnegated;
-   SCIP_Bool infeasible;
+   SCIP_Bool infeasible = FALSE;
    int nreductions;
 
    assert( scip != NULL );
@@ -975,7 +1061,8 @@ SCIP_RETCODE peekStaticLexredIsFeasible(
    assert( fixi >= 0 );
    assert( fixi < lexdata->nvars );
    assert( fixj < lexdata->nvars );
-   assert( fixi != fixj );
+   assert( fixi != fixj || lexdata->symtype == SYM_SYMTYPE_SIGNPERM );
+   assert( fixi != fixj || fixvaluei == fixvaluej );
    assert( fixrow >= 0 );
    assert( fixrow < nselvars );
    assert( peekfeasible != NULL );
@@ -989,7 +1076,7 @@ SCIP_RETCODE peekStaticLexredIsFeasible(
    assert( peekbdset != NULL );
 
    *peekfeasible = TRUE;
-   issigned = lexdata->issignedperm;
+   issigned = lexdata->symtype == SYM_SYMTYPE_SIGNPERM ? TRUE : FALSE;
    assert( (!issigned) || lexdata->vardomaincenter != NULL );
 
    /* intialize peekbdset */
@@ -1020,6 +1107,7 @@ SCIP_RETCODE peekStaticLexredIsFeasible(
       vari = lexdata->vars[i];
       if ( j >= lexdata->nvars )
       {
+         assert( lexdata->symtype == SYM_SYMTYPE_SIGNPERM );
          j = j - lexdata->nvars;
          varj = lexdata->vars[j];
          isnegated = TRUE;
@@ -1079,7 +1167,7 @@ SCIP_RETCODE propagateStaticLexred(
    int                   nselvars,           /**< number of variables in the ordering */
    SCIP_Bool*            infeasible,         /**< pointer to store whether the problem is infeasible */
    int*                  nreductions         /**< pointer to store the number of found domain reductions */
-)
+   )
 {
    int row;
    int i = -1;
@@ -1105,7 +1193,7 @@ SCIP_RETCODE propagateStaticLexred(
    if ( nselvars <= 0 )
       return SCIP_OKAY;
 
-   issigned = lexdata->issignedperm;
+   issigned = lexdata->symtype == SYM_SYMTYPE_SIGNPERM ? TRUE : FALSE;
    assert( (!issigned) || lexdata->vardomaincenter != NULL );
 
    /* iterate over the variable array entrywise
@@ -1130,6 +1218,7 @@ SCIP_RETCODE propagateStaticLexred(
       vari = lexdata->vars[i];
       if ( j >= lexdata->nvars )
       {
+         assert( issigned );
          j = j - lexdata->nvars;
          varj = lexdata->vars[j];
          isnegated = TRUE;
@@ -1155,6 +1244,9 @@ SCIP_RETCODE propagateStaticLexred(
       SCIP_CALL( propagateVariablePair(scip, vari, varj, centeri, centerj, isnegated, infeasible, nreductions, FALSE,
          0, 0, NULL, NULL, NULL) );
 
+      if ( *infeasible )
+         return SCIP_OKAY;
+
       /* terminate if there exists a solution being lexicographically strictly larger than its image */
       if ( canGTshiftedVars(scip, vari, varj, centeri, centerj, isnegated, FALSE,
             0, 0, NULL, NULL, NULL) )
@@ -1165,22 +1257,9 @@ SCIP_RETCODE propagateStaticLexred(
    assert( 0 <= i && i < lexdata->nvars );
    assert( 0 <= j && j < lexdata->nvars );
 
+   /* if the variables in "row" are fixed to the same value, we might find further propagations */
    if ( row < nselvars )
    {
-      /* The previous loop is broken at row "row", which allows for choosing vari > varj.
-       *
-       * Now check if vari == varj is permitted, and if not, tighten the domain further.
-       *
-       * @todo we peek twice if vari and varj are unfixed
-       * But, if the subcycle only contains var1 and var2, a single peek suffices.
-       * This is similar to orbisack and symresack propagation.
-       *
-       * Case 1: vari is minimal (lbi).
-       * Then, propagation of lbi = vari >= varj can yield two situations:
-       *   Option 1: varj can take a value < lbi. Then no further reductions can be detected.
-       *   Option 2: varj gets fixed to lbi. Then, we must check if feasibility is found, still.
-       *     If it turns out infeasible, then we know vari cannot take value lbi, so we can increase the lower bound.
-       */
       SCIP_Real* peeklbs;
       SCIP_Real* peekubs;
       SCIP_Bool* peekbdset;
@@ -1196,45 +1275,113 @@ SCIP_RETCODE propagateStaticLexred(
 
       SCIP_CALL( getVarBounds(vari, varj, FALSE, 0, 0, NULL, NULL, NULL, &lb1, &ub1, &lb2, &ub2) );
 
-      /* translate variable bounds to shifted variable domain and take negation into account */
-      lbi = lb1 - lexdata->vardomaincenter[i];
-      ubi = ub1 - lexdata->vardomaincenter[i];
-      if ( isnegated )
+      /* special treatment if i-th and j-th variable are the same in a signed permutation */
+      if ( vari == varj )
       {
-         lbj = lexdata->vardomaincenter[j] - ub2;
-         ubj = lexdata->vardomaincenter[j] - lb2;
+         assert( lexdata->symtype == SYM_SYMTYPE_SIGNPERM );
+         assert( GE(scip, lb1, lexdata->vardomaincenter[i]) ); /* propagation enforces xi - center >= center - xi */
+
+         /* both variables can only be the same if they are fixed to the domain center */
+         if ( GT(scip, lb1, lexdata->vardomaincenter[i]) )
+            return SCIP_OKAY;
+
+         SCIP_CALL( SCIPallocBufferArray(scip, &peeklbs, lexdata->nvars) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &peekubs, lexdata->nvars) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &peekbdset, lexdata->nvars) );
+
+         SCIP_CALL( peekStaticLexredIsFeasible(scip, lexdata, varorder, nselvars, i, j,
+               row, lexdata->vardomaincenter[i], lexdata->vardomaincenter[i],
+               &peekfeasible, peeklbs, peekubs, peekbdset) );
+         if ( !peekfeasible )
+         {
+            /* both variables cannot be the same, so the non-negated variable must be greater than the domain center */
+            switch ( SCIPvarGetType(vari) )
+            {
+            case SCIP_VARTYPE_BINARY:
+            case SCIP_VARTYPE_IMPLINT:
+            case SCIP_VARTYPE_INTEGER:
+               assert( SCIPisIntegral(scip, lb1) );
+               SCIP_CALL( SCIPtightenVarLb(scip, vari, lexdata->vardomaincenter[i] + 1.0, FALSE, infeasible, &success) );
+               if ( success )
+                  *nreductions += 1;
+               if ( *infeasible )
+                  return SCIP_OKAY;
+               lb1 = lexdata->vardomaincenter[i] + 1.0;
+               assert( LE(scip, lb1, ub1) );
+               break;
+            case SCIP_VARTYPE_CONTINUOUS:
+               /* continuous variable type: act as if we increase the variable by a very little bit.
+                * That is only possible if we're able to increase the variable bound by a bit.
+                */
+               if ( EQ(scip, lbi, ubi) )
+               {
+                  *infeasible = TRUE;
+                  return SCIP_OKAY;
+               }
+               break;
+            default:
+               SCIPerrorMessage("unsupported variable type encountered at the lexicographic reduction propagator\n");
+               return SCIP_ERROR;
+            }
+         }
       }
       else
       {
-         lbj = lb2 - lexdata->vardomaincenter[j];
-         ubj = ub2 - lexdata->vardomaincenter[j];
-      }
+         /* The previous loop is broken at row "row", which allows for choosing vari > varj.
+          *
+          * Now check if vari == varj is permitted, and if not, tighten the domain further.
+          *
+          * @todo we peek twice if vari and varj are unfixed
+          * But, if the subcycle only contains var1 and var2, a single peek suffices.
+          * This is similar to orbisack and symresack propagation.
+          *
+          * Case 1: vari is minimal (lbi).
+          * Then, propagation of lbi = vari >= varj can yield two situations:
+          *   Option 1: varj can take a value < lbi. Then no further reductions can be detected.
+          *   Option 2: varj gets fixed to lbi. Then, we must check if feasibility is found, still.
+          *     If it turns out infeasible, then we know vari cannot take value lbi, so we can increase the lower bound.
+          */
 
-      /* check whether peek is called */
-      if ( (!EQ(scip, lbi, lbj)) && (!EQ(scip, ubi, ubj)) )
-         return SCIP_OKAY;
-
-      SCIP_CALL( SCIPallocBufferArray(scip, &peeklbs, lexdata->nvars) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &peekubs, lexdata->nvars) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &peekbdset, lexdata->nvars) );
-
-      if ( EQ(scip, lbj, lbi) )
-      {
-         SCIP_Real fixvalj;
-
+         /* translate variable bounds to shifted variable domain and take negation into account */
+         lbi = lb1 - lexdata->vardomaincenter[i];
+         ubi = ub1 - lexdata->vardomaincenter[i];
          if ( isnegated )
-            fixvalj = lexdata->vardomaincenter[j] - lbj;
-         else
-            fixvalj = lbj + lexdata->vardomaincenter[j];
-
-         /* this is Option 2: varj gets fixed to lbi by propagation. */
-         SCIP_CALL( peekStaticLexredIsFeasible(scip, lexdata, varorder, nselvars, i, j,
-               row, lbi + lexdata->vardomaincenter[i], fixvalj, &peekfeasible, peeklbs, peekubs, peekbdset) );
-         if ( !peekfeasible )
          {
-            /* vari cannot take value lb1, so we increase the lower bound. (do not use lbi as this is a shifted domain bound) */
-            switch ( SCIPvarGetType(vari) )
+            lbj = lexdata->vardomaincenter[j] - ub2;
+            ubj = lexdata->vardomaincenter[j] - lb2;
+         }
+         else
+         {
+            lbj = lb2 - lexdata->vardomaincenter[j];
+            ubj = ub2 - lexdata->vardomaincenter[j];
+         }
+
+         /* check whether peek is called */
+         if ( (!EQ(scip, lbi, lbj)) && (!EQ(scip, ubi, ubj)) )
+            return SCIP_OKAY;
+
+         SCIP_CALL( SCIPallocBufferArray(scip, &peeklbs, lexdata->nvars) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &peekubs, lexdata->nvars) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &peekbdset, lexdata->nvars) );
+
+         if ( EQ(scip, lbj, lbi) )
+         {
+            SCIP_Real fixvalj;
+
+            /* translate lbj back to original variable domain of variable j */
+            if ( isnegated )
+               fixvalj = lexdata->vardomaincenter[j] - lbj;
+            else
+               fixvalj = lbj + lexdata->vardomaincenter[j];
+
+            /* this is Option 2: varj gets fixed to lbi by propagation. */
+            SCIP_CALL( peekStaticLexredIsFeasible(scip, lexdata, varorder, nselvars, i, j,
+                  row, lbi + lexdata->vardomaincenter[i], fixvalj, &peekfeasible, peeklbs, peekubs, peekbdset) );
+            if ( !peekfeasible )
             {
+               /* vari cannot take value lb1, so we increase the lower bound. (do not use lbi as this is a shifted domain bound) */
+               switch ( SCIPvarGetType(vari) )
+               {
                case SCIP_VARTYPE_BINARY:
                case SCIP_VARTYPE_IMPLINT:
                case SCIP_VARTYPE_INTEGER:
@@ -1261,34 +1408,35 @@ SCIP_RETCODE propagateStaticLexred(
                default:
                   SCIPerrorMessage("unsupported variable type encountered at the lexicographic reduction propagator\n");
                   return SCIP_ERROR;
+               }
             }
          }
-      }
 
-      /* Case 2: varj is maximal (ubj).
-       * Then, propagation of vari >= varj = ubj can yield two situatiosn:
-       *   Option 1: vari can take a value > ubj. Then, no further reductions can be detected.
-       *   Option 2: vari gets fixed to ubj. Then, we must check if feasibility is found, still.
-       *     If it turns out infeasible, then we know varj cannot take value ubj, so we can decrease the upper bound.
-       */
-      assert( GE(scip, ubi, ubj) );  /* this must be the case after reductions in the for-loop */
-      if ( EQ(scip, ubi, ubj) )
-      {
-         SCIP_Real fixvalj;
-
-         if ( isnegated )
-            fixvalj = lexdata->vardomaincenter[j] - ubj;
-         else
-            fixvalj = ubj + lexdata->vardomaincenter[j];
-
-         /* this is Option 2: vari gets fixed to ubj by propagation. */
-         SCIP_CALL( peekStaticLexredIsFeasible(scip, lexdata, varorder, nselvars, i, j,
-               row, ubi + lexdata->vardomaincenter[i], fixvalj, &peekfeasible, peeklbs, peekubs, peekbdset) );
-         if ( !peekfeasible )
+         /* Case 2: varj is maximal (ubj).
+          * Then, propagation of vari >= varj = ubj can yield two situatiosn:
+          *   Option 1: vari can take a value > ubj. Then, no further reductions can be detected.
+          *   Option 2: vari gets fixed to ubj. Then, we must check if feasibility is found, still.
+          *     If it turns out infeasible, then we know varj cannot take value ubj, so we can decrease the upper bound.
+          */
+         assert( GE(scip, ubi, ubj) );  /* this must be the case after reductions in the for-loop */
+         if ( EQ(scip, ubi, ubj) )
          {
-            /* varj cannot take value ub2, so we decrease the upper or lower bound. (do not use ubj as this is a shifted domain bound)*/
-            switch ( SCIPvarGetType(varj) )
+            SCIP_Real fixvalj;
+
+            /* translate ubj back to original variable domain of variable j */
+            if ( isnegated )
+               fixvalj = lexdata->vardomaincenter[j] - ubj;
+            else
+               fixvalj = ubj + lexdata->vardomaincenter[j];
+
+            /* this is Option 2: vari gets fixed to ubj by propagation. */
+            SCIP_CALL( peekStaticLexredIsFeasible(scip, lexdata, varorder, nselvars, i, j,
+                  row, ubi + lexdata->vardomaincenter[i], fixvalj, &peekfeasible, peeklbs, peekubs, peekbdset) );
+            if ( !peekfeasible )
             {
+               /* varj cannot take value ub2, so we decrease the upper or lower bound. (do not use ubj as this is a shifted domain bound)*/
+               switch ( SCIPvarGetType(varj) )
+               {
                case SCIP_VARTYPE_BINARY:
                case SCIP_VARTYPE_IMPLINT:
                case SCIP_VARTYPE_INTEGER:
@@ -1321,6 +1469,7 @@ SCIP_RETCODE propagateStaticLexred(
                   break;
                default:
                   return SCIP_ERROR;
+               }
             }
          }
       }
@@ -1760,7 +1909,7 @@ SCIP_RETCODE SCIPlexicographicReductionAddPermutation(
    SCIP_VAR**            permvars,           /**< variable array of the permutation */
    int                   npermvars,          /**< number of variables in that array */
    int*                  perm,               /**< permutation */
-   SCIP_Bool             issignedperm,       /**< whether the permutation is signed */
+   SYM_SYMTYPE           symtype,            /**< type of symmetries in perm */
    SCIP_Real*            permvardomaincenter, /**< array containing center point for each variable domain */
    SCIP_Bool*            success             /**< to store whether the component is successfully added */
    )
@@ -1774,7 +1923,13 @@ SCIP_RETCODE SCIPlexicographicReductionAddPermutation(
    assert( permvars != NULL );
    assert( npermvars > 0 );
    assert( perm != NULL );
-   assert( (!issignedperm) || permvardomaincenter != NULL );
+
+   if ( symtype != SYM_SYMTYPE_PERM && symtype != SYM_SYMTYPE_SIGNPERM )
+   {
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+   assert( symtype == SYM_SYMTYPE_PERM || permvardomaincenter != NULL );
    assert( SCIPisTransformed(scip) );
 
    /* resize component array if needed */
@@ -1800,7 +1955,7 @@ SCIP_RETCODE SCIPlexicographicReductionAddPermutation(
 
    /* prepare lexdatas */
    SCIP_CALL( lexdataCreate(scip, masterdata, &masterdata->lexdatas[masterdata->nlexdatas],
-         permvars, npermvars, perm, issignedperm, permvardomaincenter, success) );
+         permvars, npermvars, perm, symtype, permvardomaincenter, success) );
 
    /* if not successfully added, undo increasing the counter */
    if ( *success )
