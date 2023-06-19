@@ -1350,19 +1350,27 @@ SCIP_RETCODE propagateStaticLexred(
           *   Option 2: varj gets fixed to lbi. Then, we must check if feasibility is found, still.
           *     If it turns out infeasible, then we know vari cannot take value lbi, so we can increase the lower bound.
           */
+         centeri = 0.0;
+         centerj = 0.0;
+
+         if ( lexdata->vardomaincenter != NULL )
+         {
+            centeri = lexdata->vardomaincenter[i];
+            centerj = lexdata->vardomaincenter[j];
+         }
 
          /* translate variable bounds to shifted variable domain and take negation into account */
-         lbi = lb1 - lexdata->vardomaincenter[i];
-         ubi = ub1 - lexdata->vardomaincenter[i];
+         lbi = lb1 - centeri;
+         ubi = ub1 - centeri;
          if ( isnegated )
          {
-            lbj = lexdata->vardomaincenter[j] - ub2;
-            ubj = lexdata->vardomaincenter[j] - lb2;
+            lbj = centerj - ub2;
+            ubj = centerj - lb2;
          }
          else
          {
-            lbj = lb2 - lexdata->vardomaincenter[j];
-            ubj = ub2 - lexdata->vardomaincenter[j];
+            lbj = lb2 - centerj;
+            ubj = ub2 - centerj;
          }
 
          /* check whether peek is called */
@@ -1379,13 +1387,13 @@ SCIP_RETCODE propagateStaticLexred(
 
             /* translate lbj back to original variable domain of variable j */
             if ( isnegated )
-               fixvalj = lexdata->vardomaincenter[j] - lbj;
+               fixvalj = centerj - lbj;
             else
-               fixvalj = lbj + lexdata->vardomaincenter[j];
+               fixvalj = lbj + centerj;
 
             /* this is Option 2: varj gets fixed to lbi by propagation. */
             SCIP_CALL( peekStaticLexredIsFeasible(scip, lexdata, varorder, nselvars, i, j,
-                  row, lbi + lexdata->vardomaincenter[i], fixvalj, &peekfeasible, peeklbs, peekubs, peekbdset) );
+                  row, lbi + centeri, fixvalj, &peekfeasible, peeklbs, peekubs, peekbdset) );
             if ( !peekfeasible )
             {
                /* vari cannot take value lb1, so we increase the lower bound. (do not use lbi as this is a shifted domain bound) */
@@ -1434,13 +1442,13 @@ SCIP_RETCODE propagateStaticLexred(
 
             /* translate ubj back to original variable domain of variable j */
             if ( isnegated )
-               fixvalj = lexdata->vardomaincenter[j] - ubj;
+               fixvalj = centerj - ubj;
             else
-               fixvalj = ubj + lexdata->vardomaincenter[j];
+               fixvalj = ubj + centerj;
 
             /* this is Option 2: vari gets fixed to ubj by propagation. */
             SCIP_CALL( peekStaticLexredIsFeasible(scip, lexdata, varorder, nselvars, i, j,
-                  row, ubi + lexdata->vardomaincenter[i], fixvalj, &peekfeasible, peeklbs, peekubs, peekbdset) );
+                  row, ubi + centeri, fixvalj, &peekfeasible, peeklbs, peekubs, peekbdset) );
             if ( !peekfeasible )
             {
                /* varj cannot take value ub2, so we decrease the upper or lower bound. (do not use ubj as this is a shifted domain bound)*/
