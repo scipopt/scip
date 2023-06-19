@@ -806,6 +806,15 @@ SCIP_RETCODE propagateUpperBoundSymVar(
    SCIP_Bool tighten = FALSE;
    SCIP_Real newbd;
 
+   assert( scip != NULL );
+   assert( var1 != NULL );
+   assert( var2 != NULL );
+   assert( infeasible != NULL );
+   assert( nreductions != NULL );
+   assert( (!peekmode) || peeklbs != NULL );
+   assert( (!peekmode) || peekubs != NULL );
+   assert( (!peekmode) || peekbdset != NULL );
+
    SCIP_CALL( getVarBounds(var1, var2, peekmode, varidx1, varidx2, peeklbs, peekubs, peekbdset,
          &lb1, &ub1, &lb2, &ub2) );
 
