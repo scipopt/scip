@@ -4061,7 +4061,6 @@ SCIP_RETCODE detectOrbitopes(
    int** perms;
    int* components;
    int* componentbegins;
-   int ncomponents;
    int npermvars;
 
    SCIP_VAR*** vars;
@@ -4084,11 +4083,10 @@ SCIP_RETCODE detectOrbitopes(
 
    components = propdata->components;
    componentbegins = propdata->componentbegins;
-   ncomponents = propdata->ncomponents;
 
    assert( components != NULL );
    assert( componentbegins != NULL );
-   assert( ncomponents > 0 );
+   assert( propdata->ncomponents > 0 );
    assert( propdata->nperms >= 0 );
    assert( 0 <= cidx && cidx < propdata->ncomponents );
 
@@ -6041,6 +6039,10 @@ SCIP_RETCODE componentPackingPartitioningOrbisackUpgrade(
 
    /* we did not upgrade yet */
    *success = FALSE;
+
+   /* currently, we cannot handle signed permutations */
+   if ( propdata->symtype != SYM_SYMTYPE_PERM )
+      return SCIP_OKAY;
 
    setppcconshdlr = SCIPfindConshdlr(scip, "setppc");
    if ( setppcconshdlr == NULL )
