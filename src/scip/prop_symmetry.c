@@ -164,6 +164,7 @@
 /* default parameters for linear symmetry constraints */
 #define DEFAULT_CONSSADDLP           TRUE    /**< Should the symmetry breaking constraints be added to the LP? */
 #define DEFAULT_ADDSYMRESACKS        TRUE    /**< Add inequalities for symresacks for each generator? */
+#define DEFAULT_DETECTDOUBLELEX      TRUE    /**< Should we check whether the components of the symmetry group can be handled by double lex matrices? */
 #define DEFAULT_DETECTORBITOPES      TRUE    /**< Should we check whether the components of the symmetry group can be handled by orbitopes? */
 #define DEFAULT_DETECTSUBGROUPS      TRUE    /**< Should we try to detect orbitopes in subgroups of the symmetry group? */
 #define DEFAULT_ADDWEAKSBCS          TRUE    /**< Should we add weak SBCs for enclosing orbit of symmetric subgroups? */
@@ -278,6 +279,7 @@ struct SCIP_PropData
    int                   ngenlinconss;       /**< number of generated linear constraints */
    int                   genlinconsssize;    /**< size of linear constraints array */
    int                   nsymresacks;        /**< number of symresack constraints */
+   SCIP_Bool             detectdoublelex;    /**< Should we check whether the components of the symmetry group can be handled by double lex matrices? */
    SCIP_Bool             detectorbitopes;    /**< Should we check whether the components of the symmetry group can be handled by orbitopes? */
    SCIP_Bool             detectsubgroups;    /**< Should we try to detect orbitopes in subgroups of the symmetry group? */
    SCIP_Bool             addweaksbcs;        /**< Should we add weak SBCs for enclosing orbit of symmetric subgroups? */
@@ -6401,6 +6403,68 @@ SCIP_RETCODE SCIPdisplaySymmetryStatistics(
 }
 
 
+/** tries to handle symmetries of double-lex matrices */
+static
+SCIP_RETCODE tryHandleDoubleLexMatricesComponent(
+   SCIP*                 scip,               /**< SCIP instance */
+   SCIP_PROPDATA*        propdata,           /**< data of symmetry propagator */
+   int                   cidx,               /**< index of componet */
+   SCIP_Bool*            terminate           /**< pointer to store if adding symmetry methods shall be terminated */
+   )
+{
+   assert( scip != NULL );
+   assert( propdata != NULL );
+   assert( 0 <= cidx && cidx < propdata->ncomponents );
+   assert( terminate != NULL );
+
+   /* exit if component is already blocked */
+   if ( propdata->componentblocked[cidx] )
+      return SCIP_OKAY;
+
+   if ( ISSYMRETOPESACTIVE(propdata->usesymmetry) && propdata->detectdoublelex )
+   {
+      /* @todo dynamic propagation */
+      int** perms;
+      int compsize;
+      int i;
+      int p;
+      int permlen;
+      SCIP_Bool issigned;
+      SCIP_Bool success = FALSE;
+
+      compsize = propdata->componentbegins[cidx + 1] - propdata->componentbegins[cidx];
+      SCIP_CALL( SCIPallocBufferArray(scip, &perms, compsize) );
+
+      for (p = 0, i = propdata->componentbegins[cidx]; i < propdata->componentbegins[cidx + 1]; ++i)
+         perms[p++] = propdata->perms[propdata->components[i]];
+
+      issigned = propdata->symtype == SYM_SYMTYPE_SIGNPERM ? TRUE : FALSE;
+      permlen = issigned ? 2 * propdata->npermvars : propdata->npermvars;
+
+      SCIP_CALL( tryHandleDoubleLexMatrices(scip, propdata->permvars, perms, compsize, permlen, issigned, &success,
+            cidx, &propdata->genorbconss, &propdata->ngenorbconss, &propdata->genorbconsssize) );
+
+      SCIPfreeBufferArray(scip, &perms);
+
+      if ( success )
+      {
+         propdata->componentblocked[cidx] |= SYM_HANDLETYPE_SYMBREAK;
+         ++(propdata->ncompblocked);
+      }
+
+      /* possibly terminate early */
+      if ( SCIPisStopped(scip) || propdata->ncompblocked >= propdata->ncomponents )
+      {
+         assert( propdata->ncompblocked <= propdata->ncomponents );
+         *terminate = TRUE;
+         return SCIP_OKAY;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /** tries to use orbitopal methods to handle symmetry group component */
 static
 SCIP_RETCODE tryAddOrbitopes(
@@ -6535,7 +6599,11 @@ SCIP_RETCODE tryAddSymmetryHandlingMethodsComponent(
    useorbitalredorlexred = ISORBITALREDUCTIONACTIVE(propdata->usesymmetry)
       || ( ISSYMRETOPESACTIVE(propdata->usesymmetry) && propdata->usedynamicprop && propdata->addsymresacks );
 
-   SCIP_CALL( tryAddOrbitopes(scip, propdata, cidx, &terminate) );
+   SCIP_CALL( tryHandleDoubleLexMatricesComponent(scip, propdata, cidx, &terminate) );
+   if ( !terminate )
+   {
+      SCIP_CALL( tryAddOrbitopes(scip, propdata, cidx, &terminate) );
+   }
    if ( !terminate )
    {
       SCIP_CALL( tryHandleSubgroups(scip, propdata, cidx, &terminate) );
@@ -7170,6 +7238,11 @@ SCIP_RETCODE SCIPincludePropSymmetry(
          "propagating/" PROP_NAME "/addsymresacks",
          "Add inequalities for symresacks for each generator?",
          &propdata->addsymresacks, TRUE, DEFAULT_ADDSYMRESACKS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "propagating/" PROP_NAME "/detectdoublelex",
+         "Should we check whether the components of the symmetry group can be handled by double lex matrices?",
+         &propdata->detectdoublelex, TRUE, DEFAULT_DETECTDOUBLELEX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "propagating/" PROP_NAME "/detectorbitopes",

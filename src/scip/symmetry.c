@@ -35,6 +35,7 @@
 #include "scip/symmetry.h"
 #include "scip/scip.h"
 #include "scip/cons_setppc.h"
+#include "scip/cons_orbitope.h"
 #include <scip/misc.h>
 #include <symmetry/struct_symmetry.h>
 #include <symmetry/type_symmetry.h>
@@ -1395,7 +1396,7 @@ SCIP_RETCODE SCIPisPackingPartitioningOrbitope(
 
 /** checks whether a (signed) permutation is an involution */
 static
-SCIP_RETCODE isPermIvolution(
+SCIP_RETCODE isPermInvolution(
    int*                  perm,               /**< permutation */
    int                   permlen,            /**< number of original (non-negated) variables in a permutation */
    SCIP_Bool             issignedperm,       /**< whether permutation is encoded as signed */
@@ -1895,7 +1896,7 @@ SCIP_RETCODE checkMatricesAllColumnsFlippable(
    return SCIP_OKAY;
 }
 
-/** checks whether two families of orbitopal symmetries defines double lex matrix, in case of success, generate matrix
+/** checks whether two families of orbitopal symmetries define double lex matrix, in case of success, generate matrix
  *
  *  The columns of matrix1 will serve as the columns of the matrix to be generated, the columns of matrix2 will
  *  serve as rows.
@@ -2146,13 +2147,18 @@ SCIP_RETCODE isDoublelLexSym(
 /** tries to handle variable matrices with lex ordered rows and columns */
 SCIP_RETCODE tryHandleDoubleLexMatrices(
    SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_VAR**            vars,               /**< variables on which permutations act */
    int**                 perms,              /**< array of permutations */
    int                   nperms,             /**< number of permutations in perms */
    int                   permlen,            /**< number of original (non-negated) variables in a permutation */
-   SCIP_Bool             issignedperm        /**< whether permutations are encoded as signed */
+   SCIP_Bool             issignedperm,       /**< whether permutations are encoded as signed */
+   SCIP_Bool*            success,            /**< pointer to store whether symmetries are handled */
+   int                   cidx,               /**< identifier of component to be handled by double lex matrices */
+   SCIP_CONS***          genorbconss,        /**< pointer to store generated orbitope constraints */
+   int*                  ngenorbconss,       /**< pointer to store number of generated orbitope constraints */
+   int*                  genorbconsssize     /**< pointer to store size genorbconss */
    )
 {
-   SCIP_Bool success = TRUE;
    SCIP_Bool isinvolution;
    SCIP_Bool permissigned;
    SCIP_Bool allrowssigned;
@@ -2185,6 +2191,8 @@ SCIP_RETCODE tryHandleDoubleLexMatrices(
    assert( nperms > 0 );
    assert( permlen > 0 );
 
+   *success = TRUE;
+
    /* arrays to store the different types of involutions */
    SCIP_CALL( SCIPallocBufferArray(scip, &permstype1, nperms)  );
    SCIP_CALL( SCIPallocBufferArray(scip, &permstype2, nperms)  );
@@ -2193,8 +2201,9 @@ SCIP_RETCODE tryHandleDoubleLexMatrices(
    /* check whether we can expect lexicographically sorted rows and columns */
    for (p = 0; p < nperms; ++p)
    {
-      SCIP_CALL( isPermIvolution(perms[p], permlen, issignedperm, &permissigned, &isinvolution, &tmpncycs) );
+      SCIP_CALL( isPermInvolution(perms[p], permlen, issignedperm, &permissigned, &isinvolution, &tmpncycs) );
 
+      /* @todo take care of signed permutations */
       /* ignore signed permutation for the time being */
       if ( permissigned )
       {
@@ -2205,8 +2214,8 @@ SCIP_RETCODE tryHandleDoubleLexMatrices(
       /* terminate if not all permutations are involutions */
       if ( ! isinvolution )
       {
-         success = FALSE;
-         break;
+         *success = FALSE;
+         goto FREEMEMORY;
       }
 
       /* store number of cycles or termintate if too many different types of involutions */
@@ -2222,20 +2231,20 @@ SCIP_RETCODE tryHandleDoubleLexMatrices(
       }
       else
       {
-         success = FALSE;
+         *success = FALSE;
          goto FREEMEMORY;
       }
    }
 
    /* for each type, check whether permutations define (disjoint) orbitopal symmetries; ignore signed part */
-   SCIP_CALL( detectOrbitopalSymmetries(scip, perms, permstype1, npermstype1, permlen, ncycs1, &success,
+   SCIP_CALL( detectOrbitopalSymmetries(scip, perms, permstype1, npermstype1, permlen, ncycs1, success,
          &matricestype1, &ncolstype1, &nmatricestype1) );
-   if ( ! success )
+   if ( ! *success )
       goto FREEMEMORY;
 
-   SCIP_CALL( detectOrbitopalSymmetries(scip, perms, permstype2, npermstype2, permlen, ncycs2, &success,
+   SCIP_CALL( detectOrbitopalSymmetries(scip, perms, permstype2, npermstype2, permlen, ncycs2, success,
          &matricestype2, &ncolstype2, &nmatricestype2) );
-   if ( ! success )
+   if ( ! *success )
       goto FREEMEMORY;
 
    /* check whether symmetries of type 2 permute two rows of matrix of type 1 */
@@ -2243,7 +2252,92 @@ SCIP_RETCODE tryHandleDoubleLexMatrices(
    {
       SCIP_CALL( isDoublelLexSym(scip, matricestype1, ncycs1, ncolstype1, nmatricestype1,
             matricestype2, ncycs2, ncolstype2, nmatricestype2, perms, signedperms, nsignedperms, permlen,
-            &doublelexmatrix, &nrows, &ncols, &rowsbegin, &colsbegin, &allrowssigned, &allcolssigned, &success) );
+            &doublelexmatrix, &nrows, &ncols, &rowsbegin, &colsbegin, &allrowssigned, &allcolssigned, success) );
+   }
+   else
+      *success = FALSE;
+
+   /* handle double lex matrix by handling the corresponding orbitopal symmetries */
+   if ( *success )
+   {
+      char name[SCIP_MAXSTRLEN];
+      SCIP_VAR*** orbitopematrix;
+      SCIP_CONS* cons;
+      int maxdim;
+      int j;
+      int col;
+
+      assert( genorbconss != NULL );
+      assert( ngenorbconss != NULL );
+      assert( genorbconsssize != NULL );
+      assert( *genorbconsssize >= 0 );
+      assert( 0 <= *ngenorbconss && *ngenorbconss <= *genorbconsssize );
+
+      /* ensure that we can store all constraints */
+      if ( *ngenorbconss + nmatricestype1 + nmatricestype2 >= *genorbconsssize )
+      {
+         int newsize;
+
+         newsize = SCIPcalcMemGrowSize(scip, *ngenorbconss + nmatricestype1 + nmatricestype2);
+         if ( *genorbconss == NULL )
+         {
+            SCIP_CALL( SCIPallocBlockMemoryArray(scip, genorbconss, newsize) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, genorbconss, *genorbconsssize, newsize) );
+         }
+         *genorbconsssize = newsize;
+      }
+
+      maxdim = MAX(ncycs1, ncycs2);
+      SCIP_CALL( SCIPallocBufferArray(scip, &orbitopematrix, maxdim) );
+      for (i = 0; i < maxdim; ++i)
+      {
+         SCIP_CALL( SCIPallocBufferArray(scip, &orbitopematrix[i], maxdim) );
+      }
+
+      /* add orbitopes corresponding to column blocks of doublelexmatrix */
+      for (p = 0; p < nmatricestype1; ++p)
+      {
+         for (i = 0; i < ncycs1; ++i)
+         {
+            for (col = 0, j = colsbegin[p]; j < colsbegin[p + 1]; ++j, ++col)
+               orbitopematrix[i][col] = vars[doublelexmatrix[i][j]];
+         }
+
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "doublelex_cols_%d", p);
+         SCIP_CALL( SCIPcreateConsOrbitope(scip, &cons, name, orbitopematrix, SCIP_ORBITOPETYPE_FULL,
+               ncycs1, colsbegin[p + 1] - colsbegin[p], FALSE, FALSE, TRUE, FALSE,
+               TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+         SCIP_CALL( SCIPaddCons(scip, cons) );
+         (*genorbconss)[(*ngenorbconss)++] = cons;
+         /* do not release constraint here - will be done later */
+      }
+
+      /* add orbitopes corresponding to row blocks of doublelexmatrix */
+      for (p = 0; p < nmatricestype2; ++p)
+      {
+         for (i = 0; i < ncycs2; ++i)
+         {
+            for (col = 0, j = rowsbegin[p]; j < rowsbegin[p + 1]; ++j, ++col)
+               orbitopematrix[i][col] = vars[doublelexmatrix[j][i]];
+         }
+
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "doublelex_rows_%d", p);
+         SCIP_CALL( SCIPcreateConsOrbitope(scip, &cons, name, orbitopematrix, SCIP_ORBITOPETYPE_FULL,
+               ncycs2, rowsbegin[p + 1] - rowsbegin[p], FALSE, FALSE, TRUE, FALSE,
+               TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+         SCIP_CALL( SCIPaddCons(scip, cons) );
+         (*genorbconss)[(*ngenorbconss)++] = cons;
+         /* do not release constraint here - will be done later */
+      }
+
+      for (i = maxdim - 1; i >= 0; --i)
+      {
+         SCIPfreeBufferArray(scip, &orbitopematrix[i]);
+      }
+      SCIPfreeBufferArray(scip, &orbitopematrix);
    }
 
  FREEMEMORY:
@@ -2273,9 +2367,9 @@ SCIP_RETCODE tryHandleDoubleLexMatrices(
    SCIPfreeBufferArray(scip, &permstype1);
 
    if ( ncycs1 == -1 )
-      success = FALSE;
-   printf("lex sort detection success: %d", success);
-   if ( success )
+      *success = FALSE;
+   printf("lex sort detection success: %d (%d/%d perms used)\n", *success, npermstype1 + npermstype2, nperms);
+   if ( *success )
       printf(" %d x %d (%d, %d)", ncycs1, ncycs2, nmatricestype1, nmatricestype2);
    printf("\n");
 

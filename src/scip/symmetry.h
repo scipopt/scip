@@ -264,10 +264,16 @@ SCIP_RETCODE SCIPisPackingPartitioningOrbitope(
 SCIP_EXPORT
 SCIP_RETCODE tryHandleDoubleLexMatrices(
    SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_VAR**            vars,               /**< variables on which permutations act */
    int**                 perms,              /**< array of permutations */
    int                   nperms,             /**< number of permutations in perms */
-   int                   permlen,            /**< length of permutations in perms */
-   SCIP_Bool             issignedperm        /**< whether permutations are signed */
+   int                   permlen,            /**< number of original (non-negated) variables in a permutation */
+   SCIP_Bool             issignedperm,       /**< whether permutations are encoded as signed */
+   SCIP_Bool*            success,            /**< pointer to store whether symmetries are handled */
+   int                   cidx,               /**< identifier of component to be handled by double lex matrices */
+   SCIP_CONS***          genorbconss,        /**< pointer to store generated orbitope constraints */
+   int*                  ngenorbconss,       /**< pointer to store number of generated orbitope constraints */
+   int*                  genorbconsssize     /**< pointer to store size genorbconss */
    );
 
 /** helper function to test if val1 = val2 while permitting infinity-values */
