@@ -171,8 +171,6 @@ SCIP_RETCODE shiftValues(
    SCIP_Real* slavecolvals;
    int ncolmasterrows;
    int ncolslaverows;
-   int i;
-   int j;
 
    assert(scip != NULL);
    assert(master != NULL);
@@ -200,7 +198,7 @@ SCIP_RETCODE shiftValues(
    assert(ncolslaverows == 0 || slaverows != NULL);
 
    /* update the activities of the LP rows of the master variable */
-   for( i = 0; i < ncolmasterrows && SCIProwGetLPPos(masterrows[i]) >= 0; ++i )
+   for( int i = 0; i < ncolmasterrows && SCIProwGetLPPos(masterrows[i]) >= 0; ++i )
    {
       int rowpos;
 
@@ -213,7 +211,7 @@ SCIP_RETCODE shiftValues(
    }
 
    /* update the activities of the LP rows of the slave variable */
-   for( j = 0; j < ncolslaverows && SCIProwGetLPPos(slaverows[j]) >= 0; ++j )
+   for( int j = 0; j < ncolslaverows && SCIProwGetLPPos(slaverows[j]) >= 0; ++j )
    {
       int rowpos;
 
@@ -232,7 +230,7 @@ SCIP_RETCODE shiftValues(
    /* in debug mode, the master rows are checked for feasibility which should be granted by the
     * decision for a shift value */
 #ifndef NDEBUG
-   for( i = 0; i < ncolmasterrows && SCIProwGetLPPos(masterrows[i]) >= 0; ++i )
+   for( int i = 0; i < ncolmasterrows && SCIProwGetLPPos(masterrows[i]) >= 0; ++i )
    {
       /* local rows can be skipped */
       if( SCIProwIsLocal(masterrows[i]) )
@@ -266,7 +264,6 @@ int varColCompare(
    SCIP_ROW** rows2;
    int nnonzeros1;
    int nnonzeros2;
-   int i;
 
    assert(var1 != NULL);
    assert(var2 != NULL);
@@ -284,7 +281,7 @@ int varColCompare(
 
    /* loop over the rows, stopped as soon as they differ in one index,
     * or if counter reaches the end of a variables row set */
-   for( i = 0; i < nnonzeros1 && i < nnonzeros2; ++i )
+   for( int i = 0; i < nnonzeros1 && i < nnonzeros2; ++i )
    {
       if( SCIProwGetIndex(rows1[i]) != SCIProwGetIndex(rows2[i]) )
          return SCIProwGetIndex(rows1[i]) - SCIProwGetIndex(rows2[i]);
@@ -419,6 +416,8 @@ SCIP_Real determineBound(
    SCIP_Real masterbound;
    SCIP_Real slavebound;
    SCIP_Real bound;
+   SCIP_Real mastersolval;
+   SCIP_Real slavesolval;
 
    SCIP_COL* col;
    SCIP_ROW** slaverows;
@@ -438,21 +437,40 @@ SCIP_Real determineBound(
    assert(masterdirection == DIRECTION_UP || masterdirection == DIRECTION_DOWN);
    assert(slavedirection == DIRECTION_UP || slavedirection == DIRECTION_DOWN);
 
+   mastersolval = SCIPgetSolVal(scip, sol, master);
+   slavesolval = SCIPgetSolVal(scip, sol, slave);
+
    /* determine the trivial variable bounds for shift */
    if( masterdirection == DIRECTION_UP )
-      masterbound = SCIPvarGetUbGlobal(master) - SCIPgetSolVal(scip, sol, master);
+   {
+      bound = SCIPvarGetUbGlobal(master);
+      masterbound = bound - mastersolval;
+      masterbound = SCIPisFeasLE(scip, mastersolval + ceil(masterbound), bound) ? ceil(masterbound) : floor(masterbound);
+   }
    else
-      masterbound = SCIPgetSolVal(scip, sol, master) - SCIPvarGetLbGlobal(master);
+   {
+      bound = SCIPvarGetLbGlobal(master);
+      masterbound = mastersolval - bound;
+      masterbound = SCIPisFeasGE(scip, mastersolval - ceil(masterbound), bound) ? ceil(masterbound) : floor(masterbound);
+   }
 
    if( slavedirection == DIRECTION_UP )
-      slavebound = SCIPvarGetUbGlobal(slave) - SCIPgetSolVal(scip, sol, slave);
+   {
+      bound = SCIPvarGetUbGlobal(slave);
+      slavebound = bound - slavesolval;
+      slavebound = SCIPisFeasLE(scip, slavesolval + ceil(slavebound), bound) ? ceil(slavebound) : floor(slavebound);
+   }
    else
-      slavebound = SCIPgetSolVal(scip, sol, slave) - SCIPvarGetLbGlobal(slave);
+   {
+      bound = SCIPvarGetLbGlobal(slave);
+      slavebound = slavesolval - bound;
+      slavebound = SCIPisFeasGE(scip, slavesolval - ceil(slavebound), bound) ? ceil(slavebound) : floor(slavebound);
+   }
 
-   bound = MIN(slavebound, masterbound);
-   assert(!SCIPisInfinity(scip,bound));
+   bound = MIN(masterbound, slavebound);
 
-   if( bound < 0.5 )
+   /* due to numerical reasons, bound can be negative -> Return value zero */
+   if( bound <= 0.0 )
       return 0.0;
 
    /* get the necessary row and and column data for each variable */
@@ -477,13 +495,9 @@ SCIP_Real determineBound(
     */
    i = 0;
    j = 0;
-   while( (i < nslaverows || j < nmasterrows) && SCIPisPositive(scip, bound) )
+   while( i < nslaverows || j < nmasterrows )
    {
       SCIP_ROW* row;
-      SCIP_Real effect;
-      SCIP_Real rhs;
-      SCIP_Real lhs;
-      SCIP_Real activity;
       int rowpos;
       int masterindex;
       int slaveindex;
@@ -539,68 +553,66 @@ SCIP_Real determineBound(
       }
       assert(row != NULL);
 
-      /* local rows can be skipped */
-      if( !SCIProwIsLocal(row) )
+      /* only global rows need to be valid */
+      if( rowpos >= 0 && !SCIProwIsLocal(row) )
       {
+         SCIP_Real effect;
+         SCIP_Real side;
+         SCIP_Bool left;
+
          /* effect is the effect on the row activity by shifting the variables by 1 in the respective directions */
          effect = 0.0;
          if( slaveindex <= masterindex )
             effect += (slavecolvals[i] * (int)slavedirection);
          if( masterindex <= slaveindex )
             effect += (mastercolvals[j] * (int)masterdirection);
+         left = effect < 0.0;
+         side = left ? SCIProwGetLhs(row) : SCIProwGetRhs(row);
 
-         /* get information about the current row */
-         if( rowpos >= 0 && !SCIPisFeasZero(scip, effect) )
+         /* only non-zero effects and finite bounds need to be considered */
+         if( !SCIPisZero(scip, effect) && !SCIPisInfinity(scip, left ? -side : side) )
          {
-            /* effect does not equal zero, the bound is determined as minimum positive integer such that
-             * feasibility of this constraint is maintained.
-             * if constraint is an equality constraint, activity and lhs/rhs should be feasibly equal, which
-             * will cause the method to return zero.
+            SCIP_Real newval;
+
+            /* effect does not equal zero, the bound is determined as maximum positive integer such that
+             * feasibility of this constraint is maintained
              */
-            assert(rowpos < nrows);
+            assert( rowpos < nrows );
+            assert( SCIPisFeasGE(scip, activities[rowpos], SCIProwGetLhs(row)) && SCIPisFeasLE(scip, activities[rowpos], SCIProwGetRhs(row)) );
+            assert( effect );
 
-            activity = activities[rowpos];
-            rhs = SCIProwGetRhs(row);
-            lhs = SCIProwGetLhs(row);
+            SCIPdebugMsg(scip, "   %g <= %g <= %g, bound = %g, effect = %g (%g * %d + %g * %d) (i=%d,j=%d)\n",
+               SCIProwGetLhs(row), activities[rowpos], SCIProwGetRhs(row), bound, effect,
+               slaveindex <= masterindex ? slavecolvals[i] : 0.0, (int)slavedirection,
+               masterindex <= slaveindex ? mastercolvals[j] : 0.0, (int)masterdirection, i, j);
 
-            /* if the row is an equation, abort because of effect being nonzero */
-            if( SCIPisFeasEQ(scip, lhs, rhs) )
-               return 0.0;
+            newval = (side - activities[rowpos]) / effect;
 
-            assert(SCIPisFeasLE(scip, lhs, activity) && SCIPisFeasLE(scip, activity, rhs));
-
-            SCIPdebugMsg(scip, "   %g <= %g <= %g, bound = %g, effect = %g (%g * %d + %g * %d) (i=%d,j=%d)\n", lhs, activity, rhs, bound, effect,
-               slaveindex <= masterindex ? slavecolvals[i] : 0.0, (int)slavedirection, masterindex <= slaveindex ? mastercolvals[j] : 0.0,
-               (int)masterdirection, i, j);
-
-            /* if the row has a left hand side, ensure that shifting preserves feasibility of this ">="-constraint */
-            if( !SCIPisInfinity(scip, -lhs) && SCIPisFeasLT(scip, activity + (effect * bound), lhs) )
+            /* update shifting distance */
+            if( newval < bound )
             {
-               SCIP_Real newval;
+               SCIP_Real activity;
 
-               assert(SCIPisNegative(scip, effect));
+               activity = activities[rowpos] + effect * ceil(newval);
 
-               newval = SCIPfeasFloor(scip, (lhs - activity)/effect); /*lint !e414*/
-               bound = MIN(bound - 1.0, newval);
+               /* ensure that shifting preserves feasibility */
+               if( ( left && SCIPisFeasGE(scip, activity, side) ) || ( !left && SCIPisFeasLE(scip, activity, side) ) )
+                  bound = ceil(newval);
+               else
+                  bound = floor(newval);
+
+               /* due to numerical reasons, bound can be negative. A variable shift by a negative bound is not desired by
+                * the heuristic -> Return value zero */
+               if( bound <= 0.0 )
+                  return 0.0;
             }
 
-            /* if the row has an upper bound, ensure that shifting preserves feasibility of this "<="-constraint */
-            if( !SCIPisInfinity(scip, rhs) && SCIPisFeasGT(scip, activity + (effect * bound), rhs) )
-            {
-               SCIP_Real newval;
-
-               assert(SCIPisPositive(scip, effect));
-
-               newval = SCIPfeasFloor(scip, (rhs - activity)/effect); /*lint !e414*/
-               bound = MIN(bound - 1.0, newval);
-            }
-
-            assert(SCIPisFeasLE(scip, lhs, activity + effect * bound) && SCIPisFeasGE(scip, rhs, activity + effect * bound));
-            assert(SCIPisFeasIntegral(scip, bound));
+            assert( SCIPisFeasGE(scip, activities[rowpos] + effect * bound, SCIProwGetLhs(row)) && SCIPisFeasLE(scip, activities[rowpos] + effect * bound, SCIProwGetRhs(row)) );
+            assert( SCIPisFeasIntegral(scip, bound) );
          }
          else
          {
-            SCIPdebugMsg(scip, "  Zero effect on row %s, effect %g, master coeff: %g slave coeff: %g (i=%d, j=%d)\n",
+            SCIPdebugMsg(scip, "  No influence of row %s, effect %g, master coeff: %g slave coeff: %g (i=%d, j=%d)\n",
                SCIProwGetName(row), effect, mastercolvals[j], slavecolvals[i], i, j);
          }
       }
@@ -617,13 +629,10 @@ SCIP_Real determineBound(
          ++j;
    }
 
-   /* due to numerical reasons, bound can be negative. A variable shift by a negative bound is not desired by
-    * by the heuristic -> Change the return value to zero */
-   if( !SCIPisPositive(scip, bound) )
-      bound = 0.0;
-
-   return bound;
+   /* we must not shift variables to infinity */
+   return SCIPisInfinity(scip, bound + MAX((int)masterdirection * mastersolval, (int)slavedirection * slavesolval)) ? 0.0 : bound;
 }
+
 
 /** Disposes variable with no heuristic relevancy, e.g., due to a fixed solution value, from its neighborhood block.
  *
@@ -659,7 +668,6 @@ SCIP_RETCODE innerPresolve(
    SCIP_HEURDATA*        heurdata            /**< the heuristic data */
    )
 {
-   int v;
    int startindex;
 
    assert(scip != NULL);
@@ -689,7 +697,7 @@ SCIP_RETCODE innerPresolve(
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, blockend, nvars/2) );
 
    /* loop over variables and compare neighbors */
-   for( v = 1; v < nvars; ++v )
+   for( int v = 1; v < nvars; ++v )
    {
       if( !checkConstraintMatching(scip, (*varspointer)[startindex], (*varspointer)[v], heurdata->matchingrate) )
       {
@@ -934,7 +942,6 @@ SCIP_RETCODE optimize(
    SCIP_HEURDATA*        heurdata            /**< the heuristic data */
    )
 {  /*lint --e{715}*/
-   int b;
    SCIP_Real* objchanges;
    SCIP_VAR** bestmasters;
    SCIP_VAR** bestslaves;
@@ -959,15 +966,14 @@ SCIP_RETCODE optimize(
    arraysize = DEFAULT_ARRAYSIZE;
 
    /* iterate over blocks */
-   for( b = 0; b < nblocks; ++b )
+   for( int b = 0; b < nblocks; ++b )
    {
-      int m;
       int blocklen;
 
       blocklen = blockend[b] - blockstart[b] + 1;
 
       /* iterate over variables in current block */
-      for( m = 0; m < blocklen; ++m )
+      for( int m = 0; m < blocklen; ++m )
       {
          /* determine the new master variable for heuristic's optimization method */
          SCIP_VAR* master;
@@ -976,7 +982,6 @@ SCIP_RETCODE optimize(
          SCIP_Real bestimprovement;
          SCIP_Real bestbound;
          int bestslavepos;
-         int s;
          int firstslave;
          int nslaves;
          int bestdirection;
@@ -1030,7 +1035,7 @@ SCIP_RETCODE optimize(
          /* Loop over block and determine a slave shift candidate for master variable.
           * If more than one candidate is available, choose the shift which improves objective function
           * the most. */
-         for( s = 0; s < nslaves; ++s )
+         for( int s = 0; s < nslaves; ++s )
          {
             SCIP_VAR* slave;
             SCIP_Real slaveobj;
@@ -1081,8 +1086,6 @@ SCIP_RETCODE optimize(
                continue;
 
             /* determine the shifting direction to improve the objective function */
-            /* assert(SCIPisFeasGT(scip, masterobj, slaveobj)); */
-
             /* The heuristic chooses the shifting direction and the corresponding maximum nonnegative
              * integer shift value for the two variables which preserves feasibility and improves
              * the objective function value. */
@@ -1090,35 +1093,35 @@ SCIP_RETCODE optimize(
             diffdirbound = 0.0;
             equaldirbound = 0.0;
 
-            if( SCIPisFeasLT(scip, masterobj - slaveobj, 0.0) )
+            if( SCIPisPositive(scip, slaveobj - masterobj) )
             {
                diffdirbound = determineBound(scip, worksol, master, DIRECTION_UP,  slave, DIRECTION_DOWN, activities, nrows);
                directions = 2;
                /* the improvement of objective function is calculated */
                changedobj = (masterobj - slaveobj) * diffdirbound;
             }
-            else if( SCIPisFeasGT(scip, masterobj - slaveobj, 0.0) )
+            else if( SCIPisPositive(scip, masterobj - slaveobj) )
             {
                diffdirbound = determineBound(scip, worksol, master, DIRECTION_DOWN,  slave, DIRECTION_UP, activities, nrows);
                directions = 1;
                changedobj = (slaveobj - masterobj) * diffdirbound;
             }
 
-            if( SCIPisFeasLT(scip, masterobj + slaveobj, 0.0) )
+            if( SCIPisPositive(scip, -(masterobj + slaveobj)) )
             {
                equaldirbound = determineBound(scip, worksol, master, DIRECTION_UP,  slave, DIRECTION_UP, activities, nrows);
-               if( SCIPisFeasLT(scip, (slaveobj + masterobj) * equaldirbound, changedobj) )
+               if( (masterobj + slaveobj) * equaldirbound < changedobj )
                {
-                  changedobj = (slaveobj + masterobj) * equaldirbound;
+                  changedobj = (masterobj + slaveobj) * equaldirbound;
                   directions = 3;
                }
             }
-            else if( SCIPisFeasGT(scip, masterobj + slaveobj, 0.0) )
+            else if( SCIPisPositive(scip, masterobj + slaveobj) )
             {
                equaldirbound = determineBound(scip, worksol, master, DIRECTION_DOWN,  slave, DIRECTION_DOWN, activities, nrows);
-               if( SCIPisFeasLT(scip, -(slaveobj + masterobj) * equaldirbound, changedobj) )
+               if( -(masterobj + slaveobj) * equaldirbound < changedobj )
                {
-                  changedobj = -(slaveobj + masterobj) * equaldirbound;
+                  changedobj = -(masterobj + slaveobj) * equaldirbound;
                   directions = 0;
                }
             }
@@ -1129,7 +1132,7 @@ SCIP_RETCODE optimize(
 
             /* choose the candidate which improves the objective function the most */
             if( (SCIPisFeasGT(scip, equaldirbound, 0.0) || SCIPisFeasGT(scip, diffdirbound, 0.0))
-               && SCIPisFeasLT(scip, changedobj, bestimprovement) )
+               && changedobj < bestimprovement )
             {
                bestimprovement = changedobj;
                bestslavepos = slaveindex;
@@ -1191,7 +1194,7 @@ SCIP_RETCODE optimize(
 
    SCIPsortRealPtrPtrInt(objchanges, (void**)bestmasters, (void**)bestslaves, bestdirections, npairs);
 
-   for( b = 0; b < npairs; ++b )
+   for( int b = 0; b < npairs; ++b )
    {
       SCIP_VAR* master;
       SCIP_VAR* slave;
@@ -1238,7 +1241,7 @@ SCIP_RETCODE optimize(
 #ifndef NDEBUG
          /* the improvement of objective function is calculated */
          changedobj = ((int)slavedir * slaveobj  + (int)masterdir *  masterobj) * bound;
-         assert(SCIPisFeasLT(scip, changedobj, 0.0));
+         assert( SCIPisPositive(scip, -changedobj) );
 #endif
 
          assert(SCIPvarGetStatus(master) == SCIP_VARSTATUS_COLUMN && SCIPvarGetStatus(slave) == SCIP_VARSTATUS_COLUMN);
@@ -1489,7 +1492,6 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
    int nintvars;
    int ndiscvars;
    int nlprows;
-   int i;
    int ncolsforsorting;
    SCIP_Bool improvement;
    SCIP_Bool presolthiscall;
@@ -1539,7 +1541,7 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
    {
       SCIP_CALL( SCIPgetLPColsData(scip,&cols, &ncols) );
 
-      for( i = 0; i < ncolsforsorting; ++i )
+      for( int i = 0; i < ncolsforsorting; ++i )
          SCIPcolSort(cols[i]);
 
       SCIP_CALL( presolveTwoOpt(scip, heur, heurdata) );
@@ -1576,7 +1578,7 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
    SCIP_CALL( SCIPgetLPRowsData(scip, &lprows, &nlprows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &activities, nlprows) );
 
-   for( i = 0; i < nlprows; i++ )
+   for( int i = 0; i < nlprows; ++i )
    {
       SCIP_ROW* row;
 
@@ -1597,7 +1599,7 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
 
    if( !presolthiscall )
    {
-      for( i = 0; i < ncolsforsorting; ++i )
+      for( int i = 0; i < ncolsforsorting; ++i )
          SCIPcolSort(cols[i]);
    }
    SCIPdebugMsg(scip, "  Twoopt heuristic has initialized activities and sorted rows! \n");
@@ -1670,7 +1672,7 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
       allvars = SCIPgetVars(scip);
 
 #ifdef SCIP_DEBUG
-      for( i = ndiscvars; i < SCIPgetNVars(scip); ++i )
+      for( int i = ndiscvars; i < SCIPgetNVars(scip); ++i )
       {
          SCIPdebugMsg(scip, "  Cont. variable <%s>, status %d with bounds [%g <= %g <= x <= %g <= %g]\n",
             SCIPvarGetName(allvars[i]), SCIPvarGetStatus(allvars[i]), SCIPvarGetLbGlobal(allvars[i]), SCIPvarGetLbLocal(allvars[i]), SCIPvarGetUbLocal(allvars[i]),
@@ -1682,7 +1684,7 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
       SCIP_CALL( SCIPstartDive(scip) );
 
       /* set the bounds of the variables: fixed for integers, global bounds for continuous */
-      for( i = 0; i < SCIPgetNVars(scip); ++i )
+      for( int i = 0; i < SCIPgetNVars(scip); ++i )
       {
          if( SCIPvarGetStatus(allvars[i]) == SCIP_VARSTATUS_COLUMN )
          {
@@ -1692,7 +1694,7 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
       }
 
       /* apply this after global bounds to not cause an error with intermediate empty domains */
-      for( i = 0; i < ndiscvars; ++i )
+      for( int i = 0; i < ndiscvars; ++i )
       {
          if( SCIPvarGetStatus(allvars[i]) == SCIP_VARSTATUS_COLUMN )
          {
@@ -1706,7 +1708,7 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
             SCIP_CALL( SCIPchgVarUbDive(scip, allvars[i], solval) );
          }
       }
-      for( i = 0; i < ndiscvars; ++i )
+      for( int i = 0; i < ndiscvars; ++i )
       {
          assert( SCIPisFeasEQ(scip, SCIPgetVarLbDive(scip, allvars[i]), SCIPgetVarUbDive(scip, allvars[i])) );
       }

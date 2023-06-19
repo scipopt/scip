@@ -101,7 +101,7 @@
  *    SCIPaddConflictBound() on the conflict queue (algorithm step 3.(a)).
  *  - If the current bounds lead to a deduction of a bound change (e.g. in domain
  *    propagation), a constraint handler should call SCIPinferVarLbCons() or
- *    SCIPinferVarUbCons(), thus providing the constraint that infered the bound change.
+ *    SCIPinferVarUbCons(), thus providing the constraint that inferred the bound change.
  *    A propagator should call SCIPinferVarLbProp() or SCIPinferVarUbProp() instead,
  *    thus providing a pointer to itself.
  *  - If (in the current bounds) an infeasibility is detected, the constraint handler or

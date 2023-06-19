@@ -22,15 +22,13 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   bugfix-fixing.c
- * @brief  unit test for bugfix on XOR constraint and bounds
- * @author Mathieu Besançon
+/**@file   problem.c
+ * @brief  unit test for conflict analysis with small feasibility tolerance
+ * @author Dominik Kamp
  */
 
-#include "scip/scip.h"
-#include "include/scip_test.h"
-#include "scip/cons_xor.h"
 #include "scip/scipdefplugins.h"
+#include "include/scip_test.h"
 
 /** GLOBAL VARIABLES **/
 static SCIP* scip = NULL;
@@ -43,7 +41,7 @@ void setup(void)
 {
    SCIP_CALL( SCIPcreate(&scip) );
    SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
-   SCIP_CALL( SCIPcreateProbBasic(scip, "xor-bugcheck") );
+   SCIP_CALL( SCIPcreateProbBasic(scip, "problem") );
 }
 
 /** free SCIP instance */
@@ -53,15 +51,20 @@ void teardown(void)
    SCIPfree(&scip);
 }
 
-TestSuite(bugfixxor, .init = setup, .fini = teardown);
+TestSuite(problem, .init = setup, .fini = teardown);
 
 /* TESTS  */
-Test(bugfixxor, demofix, .description = "test checking that the optimal solution of a problem with XOR constraints is not cut off")
+Test(problem, tolerance, .description = "test checking that the optimal solutions of a problem are not cut off during conflict analysis")
 {
-   SCIP_CALL( SCIPreadProb(scip, "src/cons/xor/Demo5.cip", NULL) );
+   SCIP_CALL( SCIPreadParams(scip, "src/conflict/problem.set") );
+   SCIP_CALL( SCIPreadProb(scip, "src/conflict/problem.cip", NULL) );
    SCIP_CALL( SCIPsolve(scip) );
+   int nvars = SCIPgetNOrigVars(scip);
    int nsols = SCIPgetNSols(scip);
-   SCIP_SOL** sols = SCIPgetSols(scip);
+   cr_assert_eq(nvars, 5);
    cr_assert_geq(nsols, 1);
-   cr_assert_float_eq(SCIPgetSolOrigObj(scip, sols[0]), 2.0, 1e-5);
+   SCIP_VAR* var = SCIPgetOrigVars(scip)[1];
+   SCIP_SOL* sol = SCIPgetSols(scip)[0];
+   cr_assert_float_eq(SCIPgetSolVal(scip, sol, var), 1.0, 1e-5);
+   cr_assert_float_eq(SCIPgetSolOrigObj(scip, sol), 0.0, 1e-5);
 }

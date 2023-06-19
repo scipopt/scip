@@ -17,7 +17,7 @@ set(SCIP_VERSION_MAJOR 8)
 set(SCIP_VERSION_MINOR 0)
 set(SCIP_VERSION_PATCH 3)
 set(SCIP_VERSION_SUB 5)
-set(SCIP_VERSION_API 108)
+set(SCIP_VERSION_API 109)
 
 project(SCIP
     VERSION ${SCIP_VERSION_MAJOR}.${SCIP_VERSION_MINOR}.${SCIP_VERSION_PATCH}.${SCIP_VERSION_SUB}
@@ -106,7 +106,7 @@ set(LPS spx CACHE STRING "options for LP solver")  #create the variable
 set_property(CACHE LPS PROPERTY STRINGS spx cpx grb xprs clp glop msk qso none )  #define list of values GUI will offer for the variable
 
 set(SYM sassy CACHE STRING "options for symmetry computation")  #create the variable
-set_property(CACHE SYM PROPERTY STRINGS bliss sassy none )  #define list of values GUI will offer for the variable
+set_property(CACHE SYM PROPERTY STRINGS bliss sassy nauty none )  #define list of values GUI will offer for the variable
 
 if(NOT (CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo" OR CMAKE_BUILD_TYPE STREQUAL "MinSizeRel"))
     message(FATAL_ERROR "You have not selected a valid CMAKE_BUILD_TYPE. Please select 'Release' or 'Debug'.")
@@ -125,6 +125,7 @@ set(CMAKE_CXX_STANDARD 14)
 message(STATUS "Finding symmetry computation program \"${SYM}\"")
 
 unset(BLISS_TARGET)
+unset(NAUTY_TARGET)
 if(SYM STREQUAL "bliss")
     message(STATUS "Support SYM: bliss")
     set(sym symmetry/compute_symmetry_bliss.cpp)
@@ -136,7 +137,7 @@ if(SYM STREQUAL "bliss")
     set(CMAKE_C_FLAGS -w)
     set(CMAKE_CXX_FLAGS -w)
 
-    add_subdirectory(src/bliss)
+    add_subdirectory(src/bliss EXCLUDE_FROM_ALL)
 
     # undo modification
     set(CMAKE_C_FLAGS ${TMPFLAGS})
@@ -157,7 +158,7 @@ elseif(SYM STREQUAL "sassy")
     set(CMAKE_C_FLAGS -w)
     set(CMAKE_CXX_FLAGS -w)
 
-    add_subdirectory(src/bliss)
+    add_subdirectory(src/bliss EXCLUDE_FROM_ALL)
 
     # undo modification
     set(CMAKE_C_FLAGS ${TMPFLAGS})
@@ -176,6 +177,37 @@ elseif(SYM STREQUAL "sassy")
 	NAMES bliss/graph.hh
 	PATH_SUFFIXES include src)
     endif()
+elseif(SYM STREQUAL "nauty")
+    message(STATUS "Support SYM: nauty")
+    set(sym symmetry/compute_symmetry_nauty.c)
+
+    if(SHARED)
+        set(PIC_FLAG "CFLAGS='-fPIC'")
+    else()
+        set(PIC_FLAG "")
+    endif()
+    file(GLOB files ${CMAKE_CURRENT_SOURCE_DIR}/src/nauty/*)
+    # add custom command to build the library using configure and make
+    add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/lib/libnauty.a
+        COMMAND 
+        mkdir -p ${CMAKE_CURRENT_BINARY_DIR}/src/nauty &&
+        cd ${CMAKE_CURRENT_BINARY_DIR}/src/nauty &&
+        cp ${CMAKE_CURRENT_SOURCE_DIR}/src/nauty/* . &&
+        ./configure &&
+        make ${PIC_FLAG} nauty.a &&
+        cp nauty.a ${CMAKE_CURRENT_BINARY_DIR}/lib/libnauty.a
+        DEPENDS ${files})
+    
+    # add custom target and library target
+    add_custom_target(libnauty_target DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/lib/libnauty.a)
+    add_library(libnauty STATIC IMPORTED GLOBAL)
+    add_dependencies(libnauty libnauty_target)
+    set_target_properties(libnauty PROPERTIES 
+        IMPORTED_LOCATION ${CMAKE_CURRENT_BINARY_DIR}/lib/libnauty.a)
+
+    set(NAUTY_TARGET libnauty)
+    set(SYM_LIBRARIES libnauty)
+    set(SYM_PIC_LIBRARIES libnauty)
 
 elseif(SYM STREQUAL "none")
     message(STATUS "Support SYM: OFF")

@@ -1848,7 +1848,7 @@ SCIP_RETCODE createSubproblems(
                SCIP_CALL( SCIPbendersGetVar(benders, set, vars[j], &mastervar, -1) );
 
                /* if mastervar is not NULL, then the subproblem variable has a corresponding master problem variable */
-               if( mastervar != NULL && !SCIPisZero(subproblem, SCIPvarGetObj(vars[j])) )
+               if( mastervar != NULL && SCIPvarGetObj(vars[j]) != 0.0 )
                {
                   SCIPverbMessage(subproblem, SCIP_VERBLEVEL_FULL, NULL, "Benders' decomposition: Changing the objective "
                      "coefficient of copy of master problem variable <%s> in subproblem %d to zero.\n",
@@ -6247,7 +6247,7 @@ SCIP_RETCODE SCIPbendersSolSlackVarsActive(
       {
          if( strstr(SCIPvarGetName(vars[j]), SLACKVAR_NAME) != NULL )
          {
-            if( !SCIPisZero(subproblem, SCIPgetSolVal(subproblem, sol, vars[j])) )
+            if( SCIPisPositive(subproblem, SCIPgetSolVal(subproblem, sol, vars[j])) )
             {
                (*activeslack) = TRUE;
                break;

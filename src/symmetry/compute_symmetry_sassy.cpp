@@ -477,7 +477,7 @@ SCIP_RETCODE determineGraphSize(
       int maxischildofsum;
       int numvisitednodes = 0;
       int numischildofsum = 0;
-      int nvars;
+      int varssize;
       int i;
 
       conss = SCIPconshdlrGetConss(conshdlr);
@@ -492,7 +492,7 @@ SCIP_RETCODE determineGraphSize(
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &ischildofsum, maxischildofsum) );
 
       /* get number of variables */
-      nvars = SCIPgetNVars(scip);
+      varssize = SCIPgetNVars(scip);
 
       /* iterate over all expressions and add the corresponding nodes to the graph */
       for (i = 0; i < nconss; ++i)
@@ -537,29 +537,30 @@ SCIP_RETCODE determineGraphSize(
                   else
                   {
                      SCIP_Real constant = 0.0;
-                     int varsize;
+                     int nvars;
                      int requiredsize;
                      int k;
 
                      if ( vars == NULL )
                      {
-                        SCIP_CALL( SCIPallocBlockMemoryArray(scip, &vars, nvars) );
-                        SCIP_CALL( SCIPallocBlockMemoryArray(scip, &vals, nvars) );
+                        SCIP_CALL( SCIPallocBlockMemoryArray(scip, &vars, varssize) );
+                        SCIP_CALL( SCIPallocBlockMemoryArray(scip, &vals, varssize) );
                      }
                      assert( vars != NULL && vals != NULL );
 
                      vars[0] = var;
                      vals[0] = 1.0;
+                     nvars = 1;
 
-                     SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, vals, &varsize, nvars, &constant, &requiredsize, TRUE) );
-                     assert( requiredsize <= nvars );
+                     SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, vals, &nvars, varssize, &constant, &requiredsize, TRUE) );
+                     assert( requiredsize <= varssize );
 
                      assert( numvisitednodes > 0 );
                      parentnode = visitednodes[numvisitednodes-1];
                      assert( parentnode < *nnodes );
 
                      /* create nodes for all aggregation variables and coefficients and connect them to the parent node */
-                     for (k = 0; k < requiredsize; ++k)
+                     for (k = 0; k < nvars; ++k)
                      {
                         int internode;
 
@@ -568,7 +569,7 @@ SCIP_RETCODE determineGraphSize(
 
                         /* add node */
                         internode = (*nnodes)++;
-                        ++(nnonlinearnodes);
+                        ++(*nnonlinearnodes);
 
                         /* ensure size of degrees */
                         SCIP_CALL( SCIPensureBlockMemoryArray(scip, degrees, maxdegrees, *nnodes) );
@@ -741,8 +742,8 @@ SCIP_RETCODE determineGraphSize(
          assert( numvisitednodes == 0 );
          assert( numischildofsum == 0 );
       }
-      SCIPfreeBlockMemoryArrayNull(scip, &vals, nvars);
-      SCIPfreeBlockMemoryArrayNull(scip, &vars, nvars);
+      SCIPfreeBlockMemoryArrayNull(scip, &vals, varssize);
+      SCIPfreeBlockMemoryArrayNull(scip, &vars, varssize);
 
       SCIPfreeBlockMemoryArray(scip, &visitednodes, maxvisitednodes);
       SCIPfreeBlockMemoryArray(scip, &ischildofsum, maxischildofsum);
@@ -836,7 +837,7 @@ SCIP_RETCODE fillGraphByConss(
    int rhsarraysize;
    int nmaxinternodes;
    int oldcolor = -1;
-   int nvars;
+   int varssize;
 #ifndef NDEBUG
    SCIP_Real oldcoef = SCIP_INVALID;
 #endif
@@ -1040,7 +1041,7 @@ SCIP_RETCODE fillGraphByConss(
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &ischildofsum, maxischildofsum) );
 
    /* get number of variables */
-   nvars = SCIPgetNVars(scip);
+   varssize = SCIPgetNVars(scip);
 
    /* iterate over all expressions and add the corresponding nodes to the graph */
    for (i = 0; i < nconss; ++i)
@@ -1084,29 +1085,31 @@ SCIP_RETCODE fillGraphByConss(
                   else
                   {
                      SCIP_Real constant = 0.0;
-                     int varsize;
+                     int nvars;
                      int requiredsize;
                      int k;
 
                      if ( vars == NULL )
                      {
-                        SCIP_CALL( SCIPallocBlockMemoryArray(scip, &vars, nvars) );
-                        SCIP_CALL( SCIPallocBlockMemoryArray(scip, &vals, nvars) );
+                        SCIP_CALL( SCIPallocBlockMemoryArray(scip, &vars, varssize) );
+                        SCIP_CALL( SCIPallocBlockMemoryArray(scip, &vals, varssize) );
                      }
                      assert( vars != NULL && vals != NULL );
 
                      vars[0] = var;
                      vals[0] = 1.0;
+                     nvars = 1;
 
-                     SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, vals, &varsize, nvars, &constant, &requiredsize, TRUE) );
-                     assert( requiredsize <= nvars );
+                     SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, vals, &nvars, varssize, &constant, &requiredsize, TRUE) );
+                     assert( requiredsize <= varssize );
 
                      assert( numvisitednodes > 0 );
+
                      parentnode = visitednodes[numvisitednodes-1];
                      assert( parentnode < nnodes );
 
                      /* create nodes for all aggregation variables and coefficients and connect them to the parent node */
-                     for (k = 0; k < requiredsize; ++k)
+                     for (k = 0; k < nvars; ++k)
                      {
                         SYM_CONSTTYPE* ct;
                         int internode;
@@ -1134,7 +1137,7 @@ SCIP_RETCODE fillGraphByConss(
 
                         assert( internode < nnodes );
 
-                        G->add_edge((unsigned) internode, (unsigned) parentnode);
+                        G->add_edge((unsigned) parentnode, (unsigned) internode);
                         ++m;
                         assert( m <= nedges );
 
@@ -1142,7 +1145,7 @@ SCIP_RETCODE fillGraphByConss(
                         node = SCIPvarGetProbindex(vars[k]);
                         assert( node < nnodes );
 
-                        G->add_edge((unsigned) internode, (unsigned) node);
+                        G->add_edge((unsigned) node, (unsigned) internode);
                         ++m;
                         assert( m <= nedges );
                      }
@@ -1153,7 +1156,7 @@ SCIP_RETCODE fillGraphByConss(
                         SYM_CONSTTYPE* ct;
 
                         /* check whether we have to resize */
-                        SCIP_CALL( SCIPensureBlockMemoryArray(scip, &uniquerhsarray, &constarraysize, nuniqueconsts+1) );
+                        SCIP_CALL( SCIPensureBlockMemoryArray(scip, &uniqueconstarray, &constarraysize, nuniqueconsts+1) );
                         assert( nuniqueconsts < constarraysize );
 
                         ct = &uniqueconstarray[nuniqueconsts];
@@ -1417,8 +1420,8 @@ SCIP_RETCODE fillGraphByConss(
    assert( m == nlinearedges + nnonlinearedges );
 
    /* free everything */
-   SCIPfreeBlockMemoryArrayNull(scip, &vals, nvars);
-   SCIPfreeBlockMemoryArrayNull(scip, &vars, nvars);
+   SCIPfreeBlockMemoryArrayNull(scip, &vals, varssize);
+   SCIPfreeBlockMemoryArrayNull(scip, &vars, varssize);
 
    SCIPfreeBlockMemoryArray(scip, &visitednodes, maxvisitednodes);
    SCIPfreeBlockMemoryArray(scip, &ischildofsum, maxischildofsum);

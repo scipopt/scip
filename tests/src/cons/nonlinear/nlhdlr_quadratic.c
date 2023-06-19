@@ -31,6 +31,7 @@
 
 #include <string.h>
 
+#include "include/scip_test.h"
 /* XXX: need the consdata struct because we don't have getNlhdlrs or findNlhdlrs; I don't add those function because I'm unsure
  * we actually need them
  */
@@ -53,8 +54,6 @@
 /*
  * TEST
  */
-
-#include "include/scip_test.h"
 
 static SCIP* scip;
 static SCIP_VAR* x;
@@ -2029,7 +2028,7 @@ Test(interCuts, testRaysAuxvar2)
    SCIP_CALL( SCIPchgVarObjProbing(scip, auxvar,  1.0/4) );
 
 
-   SCIP_CALL( SCIPwriteLP(scip, "probing.lp") );
+   /* SCIP_CALL( SCIPwriteLP(scip, "probing.lp") ); */
 
    SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror, &cutoff) );
 
@@ -2576,7 +2575,7 @@ Test(interCuts, strength4ab, .description = "more complicated test strengthening
       SCIP_CALL( SCIPchgVarObjProbing(scip, z, 1.0) );
 
 
-      SCIP_CALL( SCIPwriteLP(scip, "probing.lp") );
+      /* SCIP_CALL( SCIPwriteLP(scip, "probing.lp") ); */
 
       SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror, &cutoff) );
       cr_assert_not(lperror);

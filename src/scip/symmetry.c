@@ -25,6 +25,7 @@
 /**@file   symmetry.c
  * @ingroup OTHER_CFILES
  * @brief  methods for handling symmetries
+ * @author Jasper van Doornmalen
  * @author Christopher Hojny
  * @author Marc Pfetsch
  */
@@ -1365,4 +1366,190 @@ SCIP_RETCODE SCIPisPackingPartitioningOrbitope(
    SCIPfreeBufferArray(scip, &covered);
 
    return SCIP_OKAY;
+}
+
+
+/** helper function to test if val1 = val2 while permitting infinity-values */
+SCIP_Bool EQ(
+   SCIP*              scip,               /**< SCIP data structure */
+   SCIP_Real          val1,               /**< left-hand side value */
+   SCIP_Real          val2                /**< right-hand side value */
+   )
+{
+   SCIP_Bool inf1;
+   SCIP_Bool inf2;
+   SCIP_Bool minf1;
+   SCIP_Bool minf2;
+
+   inf1 = SCIPisInfinity(scip, val1);
+   inf2 = SCIPisInfinity(scip, val2);
+   if ( inf1 && inf2 )
+      return TRUE;
+   if ( inf1 != inf2 )
+      return FALSE;
+   assert( !inf1 );
+   assert( !inf2 );
+
+   minf1 = SCIPisInfinity(scip, -val1);
+   minf2 = SCIPisInfinity(scip, -val2);
+   if ( minf1 && minf2 )
+      return TRUE;
+   if ( minf1 != minf2 )
+      return FALSE;
+   assert( !minf1 );
+   assert( !minf2 );
+
+   return SCIPisEQ(scip, val1, val2);
+}
+
+
+/** helper function to test if val1 <= val2 while permitting infinity-values */
+SCIP_Bool LE(
+   SCIP*              scip,               /**< SCIP data structure */
+   SCIP_Real          val1,               /**< left-hand side value */
+   SCIP_Real          val2                /**< right-hand side value */
+   )
+{
+   SCIP_Bool inf1;
+   SCIP_Bool inf2;
+   SCIP_Bool minf1;
+   SCIP_Bool minf2;
+
+   inf1 = SCIPisInfinity(scip, val1);
+   inf2 = SCIPisInfinity(scip, val2);
+   if ( inf1 && inf2 )
+      return TRUE;
+   if ( !inf1 && inf2 )
+      return TRUE;
+   if ( inf1 && !inf2 )
+      return FALSE;
+   assert( !inf1 );
+   assert( !inf2 );
+
+   minf1 = SCIPisInfinity(scip, -val1);
+   minf2 = SCIPisInfinity(scip, -val2);
+   if ( minf1 && minf2 )
+      return TRUE;
+   if ( !minf1 && minf2 )
+      return FALSE;
+   if ( minf1 && !minf2 )
+      return TRUE;
+   assert( !minf1 );
+   assert( !minf2 );
+
+   return SCIPisLE(scip, val1, val2);
+}
+
+
+/** helper function to test if val1 >= val2 while permitting infinity-values */
+SCIP_Bool GE(
+   SCIP*              scip,               /**< SCIP data structure */
+   SCIP_Real          val1,               /**< left-hand side value */
+   SCIP_Real          val2                /**< right-hand side value */
+   )
+{
+   SCIP_Bool inf1;
+   SCIP_Bool inf2;
+   SCIP_Bool minf1;
+   SCIP_Bool minf2;
+
+   inf1 = SCIPisInfinity(scip, val1);
+   inf2 = SCIPisInfinity(scip, val2);
+   if ( inf1 && inf2 )
+      return TRUE;
+   if ( !inf1 && inf2 )
+      return FALSE;
+   if ( inf1 && !inf2 )
+      return TRUE;
+   assert( !inf1 );
+   assert( !inf2 );
+
+   minf1 = SCIPisInfinity(scip, -val1);
+   minf2 = SCIPisInfinity(scip, -val2);
+   if ( minf1 && minf2 )
+      return TRUE;
+   if ( !minf1 && minf2 )
+      return TRUE;
+   if ( minf1 && !minf2 )
+      return FALSE;
+   assert( !minf1 );
+   assert( !minf2 );
+
+   return SCIPisGE(scip, val1, val2);
+}
+
+
+/** helper function to test if val1 < val2 while permitting infinity-values */
+SCIP_Bool LT(
+   SCIP*              scip,               /**< SCIP data structure */
+   SCIP_Real          val1,               /**< left-hand side value */
+   SCIP_Real          val2                /**< right-hand side value */
+   )
+{
+   SCIP_Bool inf1;
+   SCIP_Bool inf2;
+   SCIP_Bool minf1;
+   SCIP_Bool minf2;
+
+   inf1 = SCIPisInfinity(scip, val1);
+   inf2 = SCIPisInfinity(scip, val2);
+   if ( inf1 && inf2 )
+      return FALSE;
+   if ( !inf1 && inf2 )
+      return TRUE;
+   if ( inf1 && !inf2 )
+      return FALSE;
+   assert( !inf1 );
+   assert( !inf2 );
+
+   minf1 = SCIPisInfinity(scip, -val1);
+   minf2 = SCIPisInfinity(scip, -val2);
+   if ( minf1 && minf2 )
+      return FALSE;
+   if ( !minf1 && minf2 )
+      return FALSE;
+   if ( minf1 && !minf2 )
+      return TRUE;
+   assert( !minf1 );
+   assert( !minf2 );
+
+   return SCIPisLT(scip, val1, val2);
+}
+
+
+/** helper function to test if val1 > val2 while permitting infinity-values */
+SCIP_Bool GT(
+   SCIP*              scip,               /**< SCIP data structure */
+   SCIP_Real          val1,               /**< left-hand side value */
+   SCIP_Real          val2                /**< right-hand side value */
+   )
+{
+   SCIP_Bool inf1;
+   SCIP_Bool inf2;
+   SCIP_Bool minf1;
+   SCIP_Bool minf2;
+
+   inf1 = SCIPisInfinity(scip, val1);
+   inf2 = SCIPisInfinity(scip, val2);
+   if ( inf1 && inf2 )
+      return FALSE;
+   if ( !inf1 && inf2 )
+      return FALSE;
+   if ( inf1 && !inf2 )
+      return TRUE;
+   assert( !inf1 );
+   assert( !inf2 );
+
+   minf1 = SCIPisInfinity(scip, -val1);
+   minf2 = SCIPisInfinity(scip, -val2);
+   if ( minf1 && minf2 )
+      return FALSE;
+   if ( !minf1 && minf2 )
+      return TRUE;
+   if ( minf1 && !minf2 )
+      return FALSE;
+   assert( !minf1 );
+   assert( !minf2 );
+
+   return SCIPisGT(scip, val1, val2);
 }

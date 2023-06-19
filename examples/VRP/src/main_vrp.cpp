@@ -27,22 +27,27 @@
  * @author Andreas Bley
  * @author Marc Pfetsch
  *
- * We want to solve the vehicle routing problem on a graph G = (V,E) with
- * V = J cup {d}, where d is the depot and the distances are given by the
- * length function l_e: E -> R_{>= 0}.
+ * We want to solve the vehicle routing problem on a graph \f$G = (V,E)\f$ with
+ * \f$V = J \cup \{d\}\f$, where d is the depot and the distances are given by the
+ * length function \f$l_e: E \rightarrow R_{\geq 0}\f$.
  *
  * Consider the MIP formulation
  *
- *   min  sum_{e in E} l_e y_e
- *   s.t. -y_e + sum_{t in T_k} a^t_e x_t <= 0,   for all e in E
- *               sum_{t in T_k} a^t_j x_t == 1,   for all j in J
- *         y(delta(j))                     == 2,   for all j in J
- *         y_e                       in {0,1,2},   for all e in E
- *                              x_t  in [0,1],     for all t in T_k
+ * \f[
+ *  \begin{array}[t]{rll}
+ *    \min &  \displaystyle \sum_{e \in E} l_e y_e \\
+ *         & & \\
+ *   s.t.  & -y_e + \sum_{t \in T_k} a^t_e x_t  \leq 0, &  \forall e \in E\\
+ *         &  \displaystyle \sum_{t \in T_k} a^t_j x_t = 1, &  \forall j \in J \\
+ *         &  y(\delta(j)) = 2, &  \forall j \in J \\
+ *         &  y_e \in \{0,1,2\},  & \forall e \in E \\
+ *         &  x_t  \in [0,1], & \forall t \in T_k
+ *  \end{array}
+ * \f]
  *
- * where T_k is the set of tours visiting at most k customers
- * with repetitions of customers allowed and a^t_e (a^t_j) counts how often
- * edge e (node j) is traversed in t in T_k.
+ * where \f$T_k\f$ is the set of tours visiting at most k customers
+ * with repetitions of customers allowed and \f$a^t_e\f$ (\f$a^t_j\f$) counts how often
+ * edge e (node j) is traversed in \f$t \in T_k\f$.
  *
  * Examples and the file format are given at https://neo.lcc.uma.es/vrp/vrp-instances/capacitated-vrp-instances/.
  */

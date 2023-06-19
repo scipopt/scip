@@ -81,7 +81,7 @@
 #include "scip/scip_sol.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
-#include <string.h>
+
 
 /* constraint handler properties */
 #define CONSHDLR_NAME          "xor"
@@ -5596,88 +5596,85 @@ SCIP_DECL_CONSPARSE(consParseXor)
 
       SCIPdebugMsg(scip, "successfully parsed %d variables\n", nvars);
 
-      str = endptr;
+      /* find "==" */
+      endptr = strchr(endptr, '=');
 
-      /* search for the equal symbol */
-      while( *str != '=' && *str != '\0' )
-         str++;
-
-      /* if the string end has been reached without finding the '=' */
-      if ( *str == '\0' )
+      /* if the string end has been reached without finding the "==" */
+      if( endptr == NULL )
       {
          SCIPerrorMessage("Could not find terminating '='.\n");
          *success = FALSE;
+         goto TERMINATE;
       }
-      else
+
+      str = endptr;
+
+      /* skip "==" */
+      str += *(str+1) == '=' ? 2 : 1;
+
+      if( SCIPparseReal(scip, str, &rhs, &endptr) )
       {
-         /* skip '=' character */
-         ++str;
+         SCIP_VAR* intvar = NULL;
 
-         if( SCIPstrToRealValue(str, &rhs, &endptr) )
+         assert(SCIPisZero(scip, rhs) || SCIPisEQ(scip, rhs, 1.0));
+
+         str = endptr;
+
+         /* skip white spaces */
+         SCIP_CALL( SCIPskipSpace((char**)&str) );
+
+         /* check for integer variable, should look like (intvar = var) */
+         if( *str == '(' )
          {
-            SCIP_VAR* intvar = NULL;
+            str = strchr(str+1, '=');
 
-            assert(SCIPisZero(scip, rhs) || SCIPisEQ(scip, rhs, 1.0));
-
-            str = endptr;
-
-            /* skip white spaces */
-            while( *str == ' ' || *str == '\t' )
-               str++;
-
-            /* check for integer variable, should look like (intvar = var) */
-            if( *str == '(' )
+            if( str == NULL )
             {
-               str++;
-               while( *str != '=' && *str != '\0' )
-                  str++;
-
-               if( *str != '=' )
-               {
-                  SCIPerrorMessage("Parsing integer variable of XOR constraint\n");
-                  *success = FALSE;
-                  goto TERMINATE;
-               }
-
-               str++;
-               /* skip white spaces */
-               while( *str == ' ' || *str == '\t' )
-                  str++;
-
-               /* parse variable name */
-               SCIP_CALL( SCIPparseVarName(scip, str, &intvar, &endptr) );
-
-               if( intvar == NULL )
-               {
-                  SCIPdebugMsg(scip, "variable with name <%s> does not exist\n", SCIPvarGetName(intvar));
-                  (*success) = FALSE;
-                  goto TERMINATE;
-               }
-               str = endptr;
-
-               /* skip last ')' */
-               while( *str != ')' && *str != '\0' )
-                  str++;
+               SCIPerrorMessage("Parsing integer variable of XOR constraint\n");
+               *success = FALSE;
+               goto TERMINATE;
             }
 
-            if( intvar != NULL )
+            ++str;
+
+            /* parse variable name */
+            SCIP_CALL( SCIPparseVarName(scip, str, &intvar, &endptr) );
+
+            if( intvar == NULL )
             {
-               /* create or constraint */
-               SCIP_CALL( createConsXorIntvar(scip, cons, name, (rhs > 0.5 ? TRUE : FALSE), nvars, vars, intvar,
-                     initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
-            }
-            else
-            {
-               /* create or constraint */
-               SCIP_CALL( SCIPcreateConsXor(scip, cons, name, (rhs > 0.5 ? TRUE : FALSE), nvars, vars,
-                     initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+               SCIPerrorMessage("Integer variable of XOR not found\n");
+               *success = FALSE;
+               goto TERMINATE;
             }
 
-            SCIPdebugPrintCons(scip, *cons, NULL);
+            /* skip last ')' */
+            endptr = strchr(endptr, ')');
+
+            if( endptr == NULL )
+            {
+               SCIPerrorMessage("Closing ')' missing\n");
+               *success = FALSE;
+               goto TERMINATE;
+            }
+         }
+
+         if( intvar != NULL )
+         {
+            /* create or constraint */
+            SCIP_CALL( createConsXorIntvar(scip, cons, name, (rhs > 0.5 ? TRUE : FALSE), nvars, vars, intvar,
+                  initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
          }
          else
-            *success = FALSE;
+         {
+            /* create or constraint */
+            SCIP_CALL( SCIPcreateConsXor(scip, cons, name, (rhs > 0.5 ? TRUE : FALSE), nvars, vars,
+                  initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+         }
+
+         SCIPdebugPrintCons(scip, *cons, NULL);
       }
+      else
+         *success = FALSE;
    }
 
  TERMINATE:

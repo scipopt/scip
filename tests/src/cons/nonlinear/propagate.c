@@ -32,10 +32,10 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+#include "include/scip_test.h"
 #include "scip/scipdefplugins.h"
 #include "scip/nlhdlr.c"
 #include "scip/cons_nonlinear.c"
-#include "include/scip_test.h"
 
 #define CHECK_EXPRINTERVAL(scip,expr,a,b) (SCIPisFeasEQ(scip, SCIPexprGetActivity(expr).inf, (a)) && SCIPisFeasEQ(scip, SCIPexprGetActivity(expr).sup, (b)))
 #define EXPECTING_EXPRINTERVAL(expr,a,b) (a), (b), SCIPexprGetActivity(expr).inf, SCIPexprGetActivity(expr).sup

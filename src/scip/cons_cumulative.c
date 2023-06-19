@@ -13458,6 +13458,8 @@ SCIP_DECL_CONSPARSE(consParseCumulative)
 
    SCIPdebugMsg(scip, "parse <%s> as cumulative constraint\n", str);
 
+   *success = TRUE;
+
    /* cutoff "cumulative" form the constraint string */
    SCIPstrCopySection(str, 'c', '(', strvalue, SCIP_MAXSTRLEN, &endptr);
    str = endptr;
@@ -13474,53 +13476,62 @@ SCIP_DECL_CONSPARSE(consParseCumulative)
    {
       SCIP_CALL( SCIPparseVarName(scip, str, &var, &endptr) );
 
-      if( var != NULL )
+      if( var == NULL )
       {
-         str = endptr;
+         endptr = strchr(endptr, ')');
 
-         SCIPstrCopySection(str, '(', ')', strvalue, SCIP_MAXSTRLEN, &endptr);
-         duration = atoi(strvalue);
-         str = endptr;
+         if( endptr == NULL )
+            *success = FALSE;
+         else
+            str = endptr;
 
-         SCIPstrCopySection(str, '[', ']', strvalue, SCIP_MAXSTRLEN, &endptr);
-         demand = atoi(strvalue);
-         str = endptr;
-
-         SCIPdebugMsg(scip, "parse job <%s>, duration %d, demand %d\n", SCIPvarGetName(var), duration, demand);
-
-         vars[nvars] = var;
-         demands[nvars] = demand;
-         durations[nvars] = duration;
-         nvars++;
+         break;
       }
+
+      str = endptr;
+      SCIPstrCopySection(str, '(', ')', strvalue, SCIP_MAXSTRLEN, &endptr);
+      duration = atoi(strvalue);
+      str = endptr;
+
+      SCIPstrCopySection(str, '[', ']', strvalue, SCIP_MAXSTRLEN, &endptr);
+      demand = atoi(strvalue);
+      str = endptr;
+
+      SCIPdebugMsg(scip, "parse job <%s>, duration %d, demand %d\n", SCIPvarGetName(var), duration, demand);
+
+      vars[nvars] = var;
+      demands[nvars] = demand;
+      durations[nvars] = duration;
+      nvars++;
    }
-   while( var != NULL );
+   while( *str != ')' );
 
-   /* parse effective time window */
-   SCIPstrCopySection(str, '[', ',', strvalue, SCIP_MAXSTRLEN, &endptr);
-   hmin = atoi(strvalue);
-   str = endptr;
-
-   if( SCIPstrToRealValue(str, &value, &endptr) )
+   if( *success )
    {
-      hmax = (int)(value);
+      /* parse effective time window */
+      SCIPstrCopySection(str, '[', ',', strvalue, SCIP_MAXSTRLEN, &endptr);
+      hmin = atoi(strvalue);
       str = endptr;
 
-      /* parse capacity */
-      SCIPstrCopySection(str, ')', '=', strvalue, SCIP_MAXSTRLEN, &endptr);
-      str = endptr;
-      if( SCIPstrToRealValue(str, &value, &endptr) )
+      if( SCIPparseReal(scip, str, &value, &endptr) )
       {
-         capacity = (int)value;
+         hmax = (int)(value);
+         str = endptr;
 
-         /* create cumulative constraint */
-         SCIP_CALL( SCIPcreateConsCumulative(scip, cons, name, nvars, vars, durations, demands, capacity,
-               initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+         /* parse capacity */
+         SCIPstrCopySection(str, ')', '=', strvalue, SCIP_MAXSTRLEN, &endptr);
+         str = endptr;
+         if( SCIPparseReal(scip, str, &value, &endptr) )
+         {
+            capacity = (int)value;
 
-         SCIP_CALL( SCIPsetHminCumulative(scip, *cons, hmin) );
-         SCIP_CALL( SCIPsetHmaxCumulative(scip, *cons, hmax) );
+            /* create cumulative constraint */
+            SCIP_CALL( SCIPcreateConsCumulative(scip, cons, name, nvars, vars, durations, demands, capacity,
+                  initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
 
-         (*success) = TRUE;
+            SCIP_CALL( SCIPsetHminCumulative(scip, *cons, hmin) );
+            SCIP_CALL( SCIPsetHmaxCumulative(scip, *cons, hmax) );
+         }
       }
    }
 
@@ -13531,6 +13542,7 @@ SCIP_DECL_CONSPARSE(consParseCumulative)
 
    return SCIP_OKAY;
 }
+
 
 /** constraint method of constraint handler which returns the variables (if possible) */
 static

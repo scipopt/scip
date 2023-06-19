@@ -30,7 +30,6 @@
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
-#include <libgen.h>
 
 #include "scip/scipdefplugins.h"
 #include "scip/reader_nl.h"
@@ -71,10 +70,7 @@ void compareNlToCip(
       return;
 
    /* get file to read: <filestub>.nl that lives in the same directory as this file */
-   strcpy(filename, __FILE__);
-   dirname(filename);
-   strcat(filename, "/");
-   strcat(filename, filestub);
+   TESTsetTestfilename(filename, __FILE__, filestub);
    strcat(filename, ".nl");
 
    /* read nl file */
@@ -86,10 +82,7 @@ void compareNlToCip(
    fflush(stdout);
 
    /* open reference file with cip */
-   strcpy(filename, __FILE__);
-   dirname(filename);
-   strcat(filename, "/");
-   strcat(filename, filestub);
+   TESTsetTestfilename(filename, __FILE__, filestub);
    strcat(filename, ".cip");
    reffile = fopen(filename, "r");
    cr_assert_not_null(reffile);
@@ -130,9 +123,7 @@ Test(readernl, read3, .description = "check reading .nl file with suffixes")
       return;
 
    /* get file to read: suffix1.nl that lives in the same directory as this file */
-   strcpy(filename, __FILE__);
-   dirname(filename);
-   strcat(filename, "/suffix1.nl");
+   TESTsetTestfilename(filename, __FILE__, "suffix1.nl");
 
    /* read nl file */
    SCIP_CALL( SCIPreadProb(scip, filename, NULL) );
@@ -199,16 +190,12 @@ Test(readernl, run, .description = "check running SCIP with -AMPL")
 
    /* get file to read: suffix1.nl that lives in the same directory as this file */
    args[1] = (const char*)malloc(SCIP_MAXSTRLEN);
-   strcpy((char*)args[1], __FILE__);
-   dirname((char*)args[1]);
-   strcat((char*)args[1], "/suffix1");
+   TESTsetTestfilename((char*)args[1], __FILE__, "suffix1");
 
    args[2] = "-AMPL";
 
    /* get name of file where sol will be written: .nl-file with .nl replaced by .sol */
-   strcpy(solfile, __FILE__);
-   dirname(solfile);
-   strcat(solfile, "/suffix1.sol");
+   TESTsetTestfilename(solfile, __FILE__, "suffix1.sol");
 
    /* make sure no solfile is there at the moment */
    remove(solfile);
@@ -254,16 +241,12 @@ Test(readernl, dualsol, .description = "check whether solving a LP without preso
 
    /* get file to read: lp1.nl that lives in the same directory as this file */
    args[1] = (char*)malloc(SCIP_MAXSTRLEN);
-   strcpy(args[1], __FILE__);
-   dirname(args[1]);
-   strcat(args[1], "/lp1");
+   TESTsetTestfilename(args[1], __FILE__, "lp1");
 
    args[2] = (char*)"-AMPL";
 
    /* get name of file where sol will be written: .nl-file with .nl replaced by .sol */
-   strcpy(solfilename, __FILE__);
-   dirname(solfilename);
-   strcat(solfilename, "/lp1.sol");
+   TESTsetTestfilename(solfilename, __FILE__, "lp1.sol");
 
    /* make sure no solfile is there at the moment */
    remove(solfilename);
@@ -284,9 +267,7 @@ Test(readernl, dualsol, .description = "check whether solving a LP without preso
    if( strncmp(SCIPlpiGetSolverName(), "CPLEX", 5) == 0 || strncmp(SCIPlpiGetSolverName(), "SoPlex", 6) == 0 )
    {
       /* get name of reference solution file to compare solfile with */
-      strcpy(refsolfilename, __FILE__);
-      dirname(refsolfilename);
-      strcat(refsolfilename, "/lp1.refsol");
+      TESTsetTestfilename(refsolfilename, __FILE__, "lp1.refsol");
 
       /* open reference solfile */
       refsolfile = fopen(refsolfilename, "r");

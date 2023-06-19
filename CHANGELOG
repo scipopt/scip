@@ -13,6 +13,8 @@ Features
 - Can now build with Lapack (used for solving nonlinear problems). If IPOPT is used, then Lapack is accessed through it.
   There	is an interface to Lapack in lapack_calls.
 - added support for logical constraints in binary variables and basic logical operators (and, or, not, equal) to AMPL .nl reader
+- indicator constraints now use the same slack variable for the linear constraints if binary variables are used multiple times
+  for indicator constraints
 - new diving heuristic indicatordiving that focuses on indicator variables which control semicontinuous variables
 - updated statistics on NLP relaxation; information on convexity of NLP has been added
 - added new bandit method (EXP.3-IX) that is the new default of the ALNS heuristic
@@ -23,6 +25,8 @@ Performance improvements
 
 - Variable conflict-based addition of Schreier-Sims cuts for symmetry handling in prop_symmetry.c does no longer use
   an expensive explicit conflict graph construction.
+- Only run propagation of indicator constraints if relevant variables have changed.
+- Propagation of indicator constraints propagates maximal activity of linear constraint to upper bound of slack variable.
 - Added initialization of LP relaxation for SOC constraints.
 - Avoided some numerical issues when separating SOC constraints.
 - If differentation of convex expression fails in convex nlhdlr, then a perturbed point is tried.
@@ -45,6 +49,7 @@ Interface changes
 - SCIPtpiInitLock(), SCIPtpiDestroyLock(), SCIPtpiInitCondition(), SCIPtpiDestroyCondition() now take a double
   pointer to SCIP_LOCK/SCIP_CONDITION, respectively.
 - Renamed SCIPtpiSumbitJob() to SCIPtpiSubmitJob().
+- SCIPcreateConsIndicatorLinCons(), SCIPcreateConsIndicatorGenericLinCons() do not allow binvar to be NULL anymore
 - Replaced SCIPnlrowSetCurvature() by SCIPsetNlRowCurvature().
 - SCIPsnprintf() now returns the required string length in case reallocation is necessary.
 
@@ -60,6 +65,8 @@ Interface changes
 - SCIPmultiplyBySumExprSum(), SCIPpowerExprSum()
 - SCIPsetParam()
 - SCIPgetPrimalDualIntegral() returns the primal dual integral stored in the statistics
+- new functions SCIPcreateConsIndicatorLinConsPure() and SCIPcreateConsIndicatorGenericLinConsPure() that
+  create indicator constraints from a linear constraint without a slack variable
 - SCIPgetNLPNlRowsStat() to retrieve counts on linear, convex, and nonconvex rows in NLP
 - SCIPnlhdlrSetSollinearize(), SCIPnlhdlrHasSollinearize()
 
@@ -81,8 +88,14 @@ Interface changes
 
 ### Changed parameters
 
+- change default value of parameter separating/filtercutpoolrel to FALSE
 - Shrunk range of parameter "propagating/symmetry/sstleaderrule" from [0,3] to [0,2], removed "MAXCONFLICTS"-option.
 - Removed reading/gmsreader/freeints. A default upper bound of +inf is now assumed for integer variables in GAMS (which is the case since GAMS 23.1).
+- Disabled "propagating/symmetry/symfixnonbinaryvars" since it is not used in the new symmetry code.
+- Replaced "propagating/symmetry/onlybinarysymmetry" with "propagating/symmetry/enforcecomputesymmetry" and set to FALSE by default.
+- Disabled "propagating/symmetry/performpresolving" since running orbital reduction during presolving is not effective.
+- Repurposed "propagating/symmetry/usedynamicprop" since it now also applies to lexicographic reduction.
+- Changed default value of parameter "propagating/symmetry/addsymresacks" from FALSE to TRUE.
 
 ### New parameters
 
@@ -160,7 +173,12 @@ Interface changes
 
 ### Deleted and changed API methods
 
+- SCIPshrinkDisjunctiveVarSet() no longer attempts to cutoff the current node if it finds the
+  given disjunction to be infeasible; it is now in the responsibility of the caller to act accordingly
+
 ### New API functions
+
+- added SCIPskipSpace
 
 ### Command line interface
 
@@ -169,6 +187,8 @@ Interface changes
 - updated XPRESS interface to work with XPRESS 41 as well
 
 ### Changed parameters
+
+- changed integer parameter "propagating/symmetry/recomputrestart" from range {0, 1, 2} to being fixed at value 0
 
 ### New parameters
 
@@ -210,12 +230,27 @@ Fixed bugs
 - more rows are treated as being integral in cutsSubstituteMIR() for CMIR cuts
 - fixed several relaxations of the rhs of cuts to 0 in cuts.c
 - avoid aggregation into a single linear constraint if they should not be upgraded (needed for indicator constraints)
+- apply effective root changes before fork is repropagated during treeSwitchPath() in tree.c
+- avoid invalid objective value for solutions generated from an unbounded LP relaxation in case of a nonlinear objective function
+- disable recomputing symmetries after a restart (constraint removal is not permitted)
+- avoid cutting off optimal solutions for small feasibility tolerances in conflict analysis
+- initialize variable in presol_dualsparsify.c
+- fix in presolving of variable bound constraints to use absolute instead of relative difference 
+- free variable histories in reoptimization mode
+- handle whitespaces in interactive shell history consistently
+- check and enforce equalities on which the objective is projected in cons_linear.c
+- ensure row feasibilities of solution shiftings in heur_oneopt.c and heur_twoopt.c
+- remove rounded row check blocking tolerable primal solutions in cons_varbound.c
+- fixed that presolve of logicor-constraints may have attempted to cutoff a root of the not yet existing branch-and-bound tree
+- only consider positive slack variables as active in benders.c
+- in the feasibility check of and/or constraints, allow for fractional values in operands
 
 Miscellaneous
 -------------
 
 - Extended documentation of the parameter limits/solutions to point out that the limit is first checked in presolving
 - Added more information about using SCIPcache- and SCIPflushRowExtensions() to documentation and comments
+- Extended the `how to add' sections of the documentation by adding information on how to include default plugins into SCIP
 
 Known bugs
 ----------
