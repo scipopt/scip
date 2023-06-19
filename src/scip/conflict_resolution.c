@@ -3986,7 +3986,8 @@ void printNonResolvableReasonType(
 
 #endif
 
-/** 
+/**
+ * get the reason for the given bound change
  */
 static
 SCIP_RETCODE getReasonRow(
@@ -4637,12 +4638,13 @@ SCIP_RETCODE conflictAnalyzeResolution(
          if (SCIPsetIsGE(set, conflictslack, 0.0))
          {
             if ( set->conf_reductiontechnique == 'o' || !isBinaryResolutionSet(set, transprob, conflictresolutionset))
-
-            resolveClauses(set, conflict, transprob, bdchginfo, blkmem, residx, fixbounds, fixinds, &successresolution);
-            if (!successresolution)
             {
-               conflict->ncorrectaborts++;
-               goto TERMINATE_RESOLUTION_LOOP;
+               resolveClauses(set, conflict, transprob, bdchginfo, blkmem, residx, fixbounds, fixinds, &successresolution);
+               if (!successresolution)
+               {
+                  conflict->ncorrectaborts++;
+                  goto TERMINATE_RESOLUTION_LOOP;
+               }
             }
          }
 
