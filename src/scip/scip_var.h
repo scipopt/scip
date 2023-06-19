@@ -3867,7 +3867,7 @@ SCIP_Real SCIPgetVarAvgGMIScore(
  *       - \ref SCIP_STAGE_SOLVED
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPsetVarAvgGMIScore(
+SCIP_RETCODE SCIPincVarGMISumScore(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_Real             gmieff              /**< Efficacy of last GMI cut generated from when var was basic /frac */

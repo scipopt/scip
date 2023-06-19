@@ -423,7 +423,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
    SCIP_Real minfrac;
    SCIP_Real maxfrac;
    SCIP_Real maxcutefficacy;
-   SCIP_Real avgefficacy;
    SCIP_Longint maxdnom;
    SCIP_Bool cutoff;
    SCIP_Bool separatescg;
@@ -685,26 +684,21 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
    
    /* Add normalised efficacy GMI statistics to history */
    maxcutefficacy = 0.0;
-   avgefficacy = 0.0;
-   j = 0;
    for( i = 0; i < nrows; ++i )
    {
       if( cutefficacies[i] > maxcutefficacy && colindsproducedcut[i] >= 0 )
       {
          maxcutefficacy = cutefficacies[i];
-         avgefficacy += cutefficacies[i];
-         j += 1;
       }
    }
-   if( j >= 1 )
-      SCIPincAvgGMIeff(scip, avgefficacy / (j * maxcutefficacy));
+   
    for( i = 0; i < nrows; ++i )
    {
-      if( colindsproducedcut[i] >= 0 && SCIPisEfficacious(scip, cutefficacies[i])  )
+      if( colindsproducedcut[i] >= 0 && maxcutefficacy > 0.0  )
       {
          var = SCIPcolGetVar(cols[colindsproducedcut[i]]);
          SCIP_CALL( SCIPsetVarLastGMIScore(scip, var, cutefficacies[i] / maxcutefficacy) );
-         SCIP_CALL( SCIPsetVarAvgGMIScore(scip, var, cutefficacies[i] / maxcutefficacy) );
+         SCIP_CALL( SCIPincVarGMISumScore(scip, var, cutefficacies[i] / maxcutefficacy) );
       }
    }
 

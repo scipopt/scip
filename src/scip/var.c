@@ -16381,7 +16381,7 @@ SCIP_Real SCIPvarGetAvgGMIScore(
       
       case SCIP_VARSTATUS_LOOSE:
       case SCIP_VARSTATUS_COLUMN:
-         return SCIPhistoryGetLastGMIeff(var->history);
+         return SCIPhistoryGetAvgGMIeff(var->history);
       
       case SCIP_VARSTATUS_FIXED:
          return 0.0;
@@ -16420,7 +16420,6 @@ SCIP_RETCODE SCIPvarIncGMIeffSum(
             SCIPvarIncGMIeffSum(var->data.original.transvar, stat, gmieff);
          return SCIP_OKAY;
          
-      
       case SCIP_VARSTATUS_LOOSE:
       case SCIP_VARSTATUS_COLUMN:
          SCIPhistoryIncGMIeffSum(var->history, gmieff);
