@@ -2372,7 +2372,7 @@ SCIP_RETCODE conflictQueueBound(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_BDCHGINFO*       bdchginfo,          /**< bound change information */
    SCIP_Real             relaxedbd,          /**< relaxed bound */
-   SCIP_Bool             resolutionqueue       /**< should the explanation bound changes be added to the resolution conflict queue? */
+   SCIP_Bool             resolutionqueue     /**< should the explanation bound changes be added to the resolution conflict queue? */
    )
 {
    assert(conflict != NULL);
@@ -3292,6 +3292,20 @@ void conflictClear(
    conflictsetClear(conflict->conflictset);
 }
 
+
+/** clears the conflict resolution queue and the current conflict set */
+static
+void conflictClearResolution(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   )
+{
+   assert(conflict != NULL);
+
+   SCIPpqueueClear(conflict->resbdchgqueue);
+   SCIPpqueueClear(conflict->resforcedbdchgqueue);
+   SCIPpqueueClear(conflict->separatebdchgqueue);
+}
+
 /** initializes the propagation conflict analysis by clearing the conflict candidate queue */
 SCIP_RETCODE SCIPconflictInit(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
@@ -3313,11 +3327,7 @@ SCIP_RETCODE SCIPconflictInit(
    conflictClear(conflict);
 
    if ( set->conf_usegeneralres )
-   {
-      SCIPpqueueClear(conflict->resbdchgqueue);
-      SCIPpqueueClear(conflict->resforcedbdchgqueue);
-      SCIPpqueueClear(conflict->separatebdchgqueue);
-   }
+      conflictClearResolution(conflict);
 
    /* set conflict type */
    assert(conftype == SCIP_CONFTYPE_BNDEXCEEDING || conftype == SCIP_CONFTYPE_INFEASLP

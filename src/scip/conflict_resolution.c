@@ -4312,6 +4312,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
       SCIP_CALL( getConflictClause(conflict, blkmem, transprob, set, bdchginfo, &success, fixbounds, fixinds) );
       if (!success)
       {
+         conflict->ncorrectaborts++;
          SCIPsetDebugMsg(set, "Initial conflict could not be retrieved \n");
          SCIPsetFreeBufferArray(set, &fixinds);
          SCIPsetFreeBufferArray(set, &fixbounds);
