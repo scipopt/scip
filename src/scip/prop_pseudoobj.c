@@ -1841,7 +1841,7 @@ SCIP_RETCODE addConflictBounds(
    SCIP_VAR*             var,                /**< variable to check for objective contribution */
    SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index (time stamp of bound change), or NULL for current time */
    SCIP_Real*            reqpseudoobjval,    /**< pointer to store the remaining minimum activity which has to be proven */
-   SCIP_Bool             resolutionqueue       /**< should the explanation bound changes be added to the resolution conflict queue? */
+   SCIP_Bool             resolutionqueue     /**< should the explanation bound changes be added to the resolution conflict queue? */
    )
 {
    SCIP_Real objval;
@@ -1952,7 +1952,7 @@ SCIP_RETCODE addConflictBinvar(
    SCIP_HASHTABLE*       addedvars,          /**< hash table containing variables which are already add directly or implicitly due to implications */
    SCIP_Bool             respropuseimplics,  /**< should implications be used */
    SCIP_Real*            reqpseudoobjval,    /**< pointer to store the remaining minimum activity which has to be proven */
-   SCIP_Bool             resolutionqueue       /**< should the explanation bound changes be added to the resolution conflict queue? */
+   SCIP_Bool             resolutionqueue     /**< should the explanation bound changes be added to the resolution conflict queue? */
    )
 {
    SCIP_Real objval;
@@ -2137,7 +2137,7 @@ SCIP_RETCODE resolvePropagation(
    int                   inferinfo,          /**< inference information */
    SCIP_BOUNDTYPE        boundtype,          /**< the type of the changed bound (lower or upper bound) */
    SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index (time stamp of bound change), or NULL for current time */
-   SCIP_Bool             resolutionqueue       /**< should the explanation bound changes be added to the resolution conflict queue? */
+   SCIP_Bool             resolutionqueue     /**< should the explanation bound changes be added to the resolution conflict queue? */
    )
 {
    SCIP_HASHTABLE* addedvars;

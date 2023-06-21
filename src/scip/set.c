@@ -1536,7 +1536,7 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "conflict/separesolution",
-         "should the resolutionconflict constraints be separated?",
+         "should the resolution conflict constraints be separated?",
          &(*set)->conf_separesolution, TRUE, SCIP_DEFAULT_CONF_SEPARESOLUTION,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,

@@ -249,7 +249,8 @@ struct SCIP_Set
    SCIP_Bool             conf_usesb;         /**< should infeasible/bound exceeding strong branching conflict analysis be
                                               *   used? */
    char                  conf_reductiontechnique;/**< which reduction should be used?
-                                                  * ('o'ff, 'm'ir, 'd'ivision, 'c'oefficient tightening)",
+                                                  * ('o'ff, 'm'ir, 'd'ivision, 'c'oefficient tightening, complemented mi'r',
+                                                  * complemented divi's'ion)
                                                   */
    SCIP_Bool             conf_usepseudo;     /**< should pseudo solution conflict analysis be used? */
    SCIP_Bool             conf_prefinfproof;  /**< prefer infeasibility proof to boundexceeding proof */

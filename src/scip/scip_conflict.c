@@ -359,7 +359,7 @@ SCIP_RETCODE SCIPaddConflictLb(
    SCIP_VAR*             var,                /**< variable whose lower bound should be added to conflict candidate queue */
    SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node, when the
                                               *   conflicting bound was valid, NULL for current local bound */
-   SCIP_Bool             resolutionqueue       /**< should the explanation bound changes be added to the resolution conflict queue? */
+   SCIP_Bool             resolutionqueue     /**< should the explanation bound changes be added to the resolution conflict queue? */
 
    )
 {
@@ -428,7 +428,7 @@ SCIP_RETCODE SCIPaddConflictUb(
    SCIP_VAR*             var,                /**< variable whose upper bound should be added to conflict candidate queue */
    SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node, when the
                                               *   conflicting bound was valid, NULL for current local bound */
-   SCIP_Bool             resolutionqueue       /**< should the explanation bound changes be added to the resolution conflict queue? */
+   SCIP_Bool             resolutionqueue     /**< should the explanation bound changes be added to the resolution conflict queue? */
    )
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPaddConflictUb", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
@@ -498,7 +498,7 @@ SCIP_RETCODE SCIPaddConflictBd(
    SCIP_BOUNDTYPE        boundtype,          /**< the type of the conflicting bound (lower or upper bound) */
    SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node, when the
                                               *   conflicting bound was valid, NULL for current local bound */
-   SCIP_Bool             resolutionqueue       /**< should the explanation bound changes be added to the resolution conflict queue? */
+   SCIP_Bool             resolutionqueue     /**< should the explanation bound changes be added to the resolution conflict queue? */
    )
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPaddConflictBd", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
@@ -565,7 +565,7 @@ SCIP_RETCODE SCIPaddConflictRelaxedBd(
 SCIP_RETCODE SCIPaddConflictBinvar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< binary variable whose changed bound should be added to conflict queue */
-   SCIP_Bool             resolutionqueue       /**< should the explanation bound changes be added to the resolution conflict queue? */
+   SCIP_Bool             resolutionqueue     /**< should the explanation bound changes be added to the resolution conflict queue? */
    )
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPaddConflictBinvar", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );

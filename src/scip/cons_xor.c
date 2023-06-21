@@ -2811,7 +2811,7 @@ SCIP_RETCODE addConflictBounds(
    SCIP_VAR*             infervar,           /**< variable that was deduced, or NULL (not equal to integral variable) */
    SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index (time stamp of bound change), or NULL for current time */
    PROPRULE              proprule,           /**< propagation rule */
-   SCIP_Bool             resolutionqueue       /**< should the explanation bound changes be added to the resolution conflict queue? */
+   SCIP_Bool             resolutionqueue     /**< should the explanation bound changes be added to the resolution conflict queue? */
    )
 {
    SCIP_CONSDATA* consdata;

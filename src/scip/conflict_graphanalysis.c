@@ -122,7 +122,6 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-// #define SCIP_STATISTIC
 // #define SCIP_DEBUG
 
 
@@ -3768,9 +3767,6 @@ SCIP_RETCODE conflictAnalyze(
       SCIP_Bool forceresolve;
       int bdchgdepth;
 
-      SCIPstatisticPrintf("ConflictSTAT: %d %d %f %f\n", nresolutions, SCIPpqueueNElems(conflict->forcedbdchgqueue) + SCIPpqueueNElems(conflict->bdchgqueue) + conflict->conflictset->nbdchginfos,
-                                                      1.0, -1.0);
-
 
       assert(!SCIPbdchginfoIsRedundant(bdchginfo));
 
@@ -4085,7 +4081,7 @@ SCIP_RETCODE SCIPconflictAddBound(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_BOUNDTYPE        boundtype,          /**< type of bound that was changed: lower or upper bound */
    SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index (time stamp of bound change), or NULL for current time */
-   SCIP_Bool             resolutionqueue       /**< should the explanation bound changes be added to the resolution conflict queue? */
+   SCIP_Bool             resolutionqueue     /**< should the explanation bound changes be added to the resolution conflict queue? */
    )
 {
    SCIP_BDCHGINFO* bdchginfo;
