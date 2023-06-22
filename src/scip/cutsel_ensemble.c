@@ -47,26 +47,26 @@
 
 #define DEFAULT_MINSCORE                0.0  /**< minimum score s.t. a cut can be selected */
 #define DEFAULT_EFFICACYWEIGHT          1.0  /**< weight of normed-efficacy in score calculation */
-#define DEFAULT_DIRCUTOFFDISTWEIGHT     0.1  /**< weight of normed-directed cutoff distance in score calculation */
+#define DEFAULT_DIRCUTOFFDISTWEIGHT     0.0  /**< weight of normed-directed cutoff distance in score calculation */
 #define DEFAULT_OBJPARALWEIGHT          0.2  /**< weight of objective parallelism in score calculation */
-#define DEFAULT_OBJORTHOGWEIGHT         0.1  /**< weight of objective orthogonality in score calculation */
 #define DEFAULT_INTSUPPORTWEIGHT        0.1  /**< weight of integral support in cut score calculation */
 #define DEFAULT_EXPIMPROVWEIGHT         0.1  /**< weight of normed-expected improvement in cut score calculation */
 #define DEFAULT_PSCOSTWEIGHT            0.2  /**< weight of normalised pseudo-costs in cut score calculation */
 #define DEFAULT_NLOCKSWEIGHT            0.1  /**< weight of normalised number of locks in cut score calculation */
 #define DEFAULT_MAXSPARSITYBONUS        0.6  /**< score given to a cut with complete sparsity */
 #define DEFAULT_SPARSITYENDBONUS        0.4  /**< the density at which a cut no longer receives additional score */
-#define DEFAULT_GOODNUMERICBONUS        0.1  /**< bonus provided for good numerics */
+#define DEFAULT_GOODNUMERICBONUS        0.0  /**< bonus provided for good numerics */
 #define DEFAULT_MAXCOEFRATIOBONUS       10000 /**< maximum coefficient ratio of cut for which numeric bonus is given */
 #define DEFAULT_PENALISELOCKS           FALSE /**< whether having less locks should be rewarded instead of more */
+#define DEFAULT_PENALISEOBJPARAL        FALSE /**< whether objective parallelism should be penalised not rewarded */
 #define DEFAULT_FILTERPARALCUTS         TRUE /**< should cuts be filtered so no two parallel cuts are added */
 #define DEFAULT_MAXPARAL                0.9  /**< threshold for when two cuts are considered parallel to each other */
 #define DEFAULT_PENALISEPARALCUTS       FALSE /**< should two parallel cuts be penalised instead of outright filtered */
 #define DEFAULT_PARALPENALTY            0.5  /**< penalty for weaker of two parallel cuts if penalising parallel cuts */
 #define DEFAULT_FILTERDENSECUTS         FALSE /**< should cuts over a given density threshold be filtered */
 #define DEFAULT_MAXCUTDENSITY           0.4  /**< max allowed cut density if filtering dense cuts */
-#define DEFAULT_MAXNONZEROROOTROUND     5    /**< max non-zeros per round applied cuts (root). multiple num LP cols */
-#define DEFAULT_MAXNONZEROTREEROUND     3    /**< max non-zeros per round applied cuts (tree). multiple num LP cols */
+#define DEFAULT_MAXNONZEROROOTROUND     5    /**< max nonzeros per round (root). Gets multiplied by num LP cols */
+#define DEFAULT_MAXNONZEROTREEROUND     3    /**< max nonzeros per round (tree). Gets multiplied by num LP cols */
 
 /*
  * Data structures
@@ -78,7 +78,6 @@ struct SCIP_CutselData
    SCIP_RANDNUMGEN*      randnumgen;         /**< random generator for tie-breaking */
    SCIP_Real             minscore;           /**< minimum score for a cut to be added to the LP */
    SCIP_Real             objparalweight;     /**< weight of objective parallelism in cut score calculation */
-   SCIP_Real             objorthogweight;    /**< weight of objective orthogonality in cut score calculation */
    SCIP_Real             efficacyweight;     /**< weight of normed-efficacy in cut score calculation */
    SCIP_Real             dircutoffdistweight;/**< weight of normed-directed cutoff distance in cut score calculation */
    SCIP_Real             expimprovweight;    /**< weight of normed-expected improvement in cut score calculation */
@@ -91,12 +90,13 @@ struct SCIP_CutselData
    SCIP_Real             maxparal;           /**< threshold for when two cuts are considered parallel to each other */
    SCIP_Real             paralpenalty;       /**< penalty for weaker of two parallel cuts if penalising parallel cuts */
    SCIP_Real             maxcutdensity;      /**< max allowed cut density if filtering dense cuts */
-   SCIP_Real             maxnonzerorootround;/**< max non-zeros per round applied cuts (root). multiple num LP cols */
-   SCIP_Real             maxnonzerotreeround;/**< max non-zeros per round applied cuts (tree). multiple num LP cols */
+   SCIP_Real             maxnonzerorootround;/**< max nonzeros per round (root). Gets multiplied by num LP cols */
+   SCIP_Real             maxnonzerotreeround;/**< max nonzeros per round (tree). Gets multiplied by num LP cols */
    SCIP_Bool             filterparalcuts;   /**< should cuts be filtered so no two parallel cuts are added */
    SCIP_Bool             penaliseparalcuts;  /**< should two parallel cuts be penalised instead of outright filtered */
    SCIP_Bool             filterdensecuts;    /**< should cuts over a given density threshold be filtered */
    SCIP_Bool             penaliselocks;      /**< whether the number of locks should be penalised instead of rewarded */
+   SCIP_Bool             penaliseobjparal;   /**< whether objective parallelism should be penalised */
    int                   maxcoefratiobonus;  /**< maximum coefficient ratio for which numeric bonus is applied */
 };
 
@@ -127,9 +127,8 @@ SCIP_RETCODE scoring(
    SCIP_Real maxeff = 0.0;
    SCIP_Real maxexp = 0.0;
    SCIP_Real maxpscost = 0.0;
-   int i;
-   int maxlocks = 0;
-   int ncols;
+   SCIP_Real maxlocks = 0.0;
+   SCIP_Real ncols;
    
    /* Get the solution that we use for directed cutoff distance calculations. Get the number of columns too */
    sol = SCIPgetBestSol(scip);
@@ -144,39 +143,48 @@ SCIP_RETCODE scoring(
    SCIP_CALL(SCIPallocBufferArray(scip, &pscosts, ncuts));
    
    
-   /* Populate the number of cut locks and the cut densities */
-   for ( i = 0; i < ncuts; i++ )
+   /* Populate the number of cut locks, the pseudo-cost scores, and the cut densities */
+   for (int i = 0; i < ncuts; i++ )
    {
       SCIP_COL** cols;
       SCIP_Real* cutvals;
-      SCIP_Real cutnorm;
-      int ncutcols;
-      int j;
+      SCIP_Real sqrcutnorm;
+      SCIP_Real ncutcols;
+      SCIP_Real cutalpha;
       
       cols = SCIProwGetCols(cuts[i]);
       cutvals = SCIProwGetVals(cuts[i]);
-      cutnorm = SCIProwGetNorm(cuts[i]);
+      sqrcutnorm = MAX(SCIPsumepsilon(scip), SQR(SCIProwGetNorm(cuts[i])));
+      cutalpha = -SCIPgetRowFeasibility(scip, cuts[i]) / sqrcutnorm;
       ncutcols = SCIProwGetNNonz(cuts[i]);
       cutdensities[i] = ncutcols / ncols;
       cutlocks[i] = 0;
       pscosts[i] = 0;
       
-      for ( j = 0; j < ncutcols; j++ )
+      
+      
+      for ( int j = 0; j < ncutcols; j++ )
       {
          SCIP_VAR* colvar;
+         SCIP_Real colval;
+         SCIP_Real l1dist;
+         
+         colval = SCIPcolGetPrimsol(cols[j]);
          colvar = SCIPcolGetVar(cols[j]);
+         /* Get the number of active locks feature in the cut */
          if( ! SCIPisInfinity(scip, SCIProwGetRhs(cuts[i])) && cutvals[j] > 0.0 )
             cutlocks[i] += SCIPvarGetNLocksUp(colvar);
-         if( ! SCIPisInfinity(scip, SCIProwGetLhs(cuts[i])) && cutvals[j] < 0.0 )
+         if( ! SCIPisInfinity(scip, -SCIProwGetLhs(cuts[i])) && cutvals[j] < 0.0 )
             cutlocks[i] += SCIPvarGetNLocksUp(colvar);
          if( ! SCIPisInfinity(scip, SCIProwGetRhs(cuts[i])) && cutvals[j] < 0.0 )
             cutlocks[i] += SCIPvarGetNLocksDown(colvar);
-         if( ! SCIPisInfinity(scip, SCIProwGetLhs(cuts[i])) && cutvals[j] > 0.0 )
+         if( ! SCIPisInfinity(scip, -SCIProwGetLhs(cuts[i])) && cutvals[j] > 0.0 )
             cutlocks[i] += SCIPvarGetNLocksDown(colvar);
          
-         pscosts[i] += ABS(cutvals[j] / cutnorm) * SCIPgetVarPseudocostScore(scip, colvar, SCIPvarGetLPSol(colvar));
+         /* Get the L1 distance from the projection onto the cut and the LP solution in the variable direction */
+         l1dist = ABS(colval - (cutalpha * cutvals[j]));
+         pscosts[i] += SCIPgetVarPseudocostScore(scip, colvar, colval) * l1dist;
       }
-      
       cutlocks[i] = cutlocks[i] / ncutcols;
       
       if( cutlocks[i] > maxlocks )
@@ -186,7 +194,7 @@ SCIP_RETCODE scoring(
          maxpscost = pscosts[i];
    }
    
-   for ( i = 0; i < ncuts; i++ )
+   for ( int i = 0; i < ncuts; i++ )
    {
       if( cutseldata->penaliselocks )
          cutlocks[i] = 1 - (cutlocks[i] / maxlocks);
@@ -199,14 +207,14 @@ SCIP_RETCODE scoring(
    /* Get the arrays / maximums of directed cutoff distance, efficacy, and expected improvement values. */
    if ( sol != NULL && root )
    {
-      for ( i = 0; i < ncuts; i++ )
+      for ( int i = 0; i < ncuts; i++ )
       {
          dcds[i] = SCIPgetCutLPSolCutoffDistance(scip, sol, cuts[i]);
          maxdcd = MAX(maxdcd, dcds[i]);
       }
    }
    
-   for ( i = 0; i < ncuts; i++ )
+   for ( int i = 0; i < ncuts; i++ )
    {
       effs[i] = SCIPgetCutEfficacy(scip, NULL, cuts[i]);
       exps[i] = effs[i] * SCIPgetRowObjParallelism(scip, cuts[i]);
@@ -215,19 +223,18 @@ SCIP_RETCODE scoring(
    }
    
    /* Now score the cuts */
-   for ( i = 0; i < ncuts; ++i )
+   for ( int i = 0; i < ncuts; ++i )
    {
       SCIP_Real score;
       SCIP_Real scaleddcd;
       SCIP_Real scaledeff;
       SCIP_Real scaledexp;
       SCIP_Real objparallelism;
-      SCIP_Real objorthogonality;
       SCIP_Real intsupport;
       SCIP_Real density;
       SCIP_Real dynamism;
-      SCIP_Real mincutval = SCIPinfinity(scip);
-      SCIP_Real maxcutval = 0.0;
+      SCIP_Real mincutval;
+      SCIP_Real maxcutval;
       SCIP_Real pscost;
       SCIP_Real cutlock;
       
@@ -236,9 +243,10 @@ SCIP_RETCODE scoring(
       intsupport *= cutseldata->intsupportweight;
       
       /* Get the objective parallelism and orthogonality */
-      objparallelism = SCIPgetRowObjParallelism(scip, cuts[i]);
-      objorthogonality = cutseldata->objorthogweight * (1 - objparallelism);
-      objparallelism *= cutseldata->objparalweight;
+      if( ! cutseldata->penaliseobjparal )
+         objparallelism = cutseldata->objparalweight * SCIPgetRowObjParallelism(scip, cuts[i]);
+      else
+         objparallelism = cutseldata->objparalweight * (1 - SCIPgetRowObjParallelism(scip, cuts[i]));
       
       /* Get the density score */
       density = (cutseldata->maxsparsitybonus / cutseldata->endsparsitybonus) * -1 * cutdensities[i];
@@ -246,7 +254,10 @@ SCIP_RETCODE scoring(
       density = MAX(density, 0.0);
       
       /* Get the normalised pseudo-cost and number of locks score */
-      pscost = cutseldata->pscostweight * pscosts[i];
+      if( root )
+         pscost = 0.0;
+      else
+         pscost = cutseldata->pscostweight * pscosts[i];
       cutlock = cutseldata->locksweight * cutlocks[i];
       
       /* Get the dynamism (good numerics) score */
@@ -263,6 +274,10 @@ SCIP_RETCODE scoring(
          else
             scaleddcd = cutseldata->dircutoffdistweight * SQR(LOG1P(dcds[i]) / LOG1P(maxdcd));
       }
+      else
+      {
+         scaleddcd = 0.0;
+      }
       
       if ( SCIPisSumLE(scip, exps[i], 0.0))
          scaledexp = 0.0;
@@ -278,12 +293,11 @@ SCIP_RETCODE scoring(
          if ( sol != NULL && root )
             scaledeff = cutseldata->efficacyweight * SQR(LOG1P(effs[i]) / LOG1P(maxeff));
          else
-            scaledeff =
-               (cutseldata->efficacyweight + cutseldata->dircutoffdistweight) * SQR(LOG1P(effs[i]) / LOG1P(maxeff));
+            scaledeff = (cutseldata->efficacyweight + cutseldata->dircutoffdistweight) * SQR(LOG1P(effs[i]) / LOG1P(maxeff));
       }
       
       /* Combine all scores and introduce some minor randomness */
-      score = scaledeff + scaleddcd + scaledexp + objparallelism + objorthogonality + intsupport + density + dynamism + pscost + cutlock;
+      score = scaledeff + scaleddcd + scaledexp + objparallelism + intsupport + density + dynamism + pscost + cutlock;
       
       score += SCIPrandomGetReal(cutseldata->randnumgen, 0.0, 1e-6);
       
@@ -310,7 +324,6 @@ void selectBestCut(
    int                   ncuts               /**< number of cuts in given array */
 )
 {
-   int i;
    int bestpos;
    SCIP_Real bestscore;
    
@@ -321,7 +334,7 @@ void selectBestCut(
    bestscore = scores[0];
    bestpos = 0;
    
-   for( i = 1; i < ncuts; ++i )
+   for( int i = 1; i < ncuts; ++i )
    {
       if( scores[i] > bestscore )
       {
@@ -345,13 +358,12 @@ int filterWithParallelism(
    SCIP_Real             maxparallel         /**< maximal parallelism for all cuts that are not good */
 )
 {
-   int i;
    
    assert( cut != NULL );
    assert( ncuts == 0 || cuts != NULL );
    assert( ncuts == 0 || scores != NULL );
    
-   for( i = ncuts - 1; i >= 0; --i )
+   for( int i = ncuts - 1; i >= 0; --i )
    {
       SCIP_Real thisparallel;
       
@@ -379,13 +391,12 @@ void penaliseWithParallelism(
    SCIP_Real             paralpenalty        /**< penalty for weaker of two parallel cuts if penalising parallel cuts */
 )
 {
-   int i;
    
    assert( cut != NULL );
    assert( ncuts == 0 || cuts != NULL );
    assert( ncuts == 0 || scores != NULL );
    
-   for( i = ncuts - 1; i >= 0; --i )
+   for( int i = ncuts - 1; i >= 0; --i )
    {
       SCIP_Real thisparallel;
       
@@ -408,16 +419,15 @@ int filterWithDensity(
    int                   ncuts               /**< number of cuts in given array */
 )
 {
-   int i;
-   int ncols;
+   SCIP_Real ncols;
    
    assert( ncuts == 0 || cuts != NULL );
    
    ncols = SCIPgetNLPCols(scip);
    
-   for( i = ncuts - 1; i >= 0; --i )
+   for( int i = ncuts - 1; i >= 0; --i )
    {
-      int nvals;
+      SCIP_Real nvals;
    
       nvals = SCIProwGetNNonz(cuts[i]);
       
@@ -573,11 +583,6 @@ SCIP_RETCODE SCIPincludeCutselEnsemble(
       &cutseldata->expimprovweight, FALSE, DEFAULT_EXPIMPROVWEIGHT, 0.0, SCIP_INVALID/10.0, NULL, NULL) );
    
    SCIP_CALL( SCIPaddRealParam(scip,
-                               "cutselection/" CUTSEL_NAME "/objorthogweight",
-      "weight of objective orthogonality in cut score calculation",
-      &cutseldata->objorthogweight, TRUE, DEFAULT_OBJORTHOGWEIGHT, 0.0, SCIP_INVALID/10.0, NULL, NULL) );
-   
-   SCIP_CALL( SCIPaddRealParam(scip,
                                "cutselection/" CUTSEL_NAME "/minscore",
       "minimum score s.t. a cut can be added",
       &cutseldata->minscore, FALSE, DEFAULT_MINSCORE, -SCIP_INVALID/10.0, SCIP_INVALID/10.0, NULL, NULL) );
@@ -652,6 +657,11 @@ SCIP_RETCODE SCIPincludeCutselEnsemble(
       "should the number of locks be penalised instead of rewarded",
       &cutseldata->penaliselocks, TRUE, DEFAULT_PENALISELOCKS, NULL, NULL) );
    
+   SCIP_CALL( SCIPaddBoolParam(scip,
+                               "cutselection/" CUTSEL_NAME "/penaliseobjparal",
+      "should objective paralleism be penalised instead of rewarded",
+      &cutseldata->penaliseobjparal, TRUE, DEFAULT_PENALISEOBJPARAL, NULL, NULL) );
+   
    SCIP_CALL( SCIPaddIntParam(scip,
                                "cutselection/" CUTSEL_NAME "/maxcoefratiobonus",
       "max coefficient ratio for which numeric bonus is applied.",
@@ -687,8 +697,7 @@ SCIP_RETCODE SCIPselectCutsEnsemble(
    SCIP_Real* origscoresptr;
    SCIP_Real nonzerobudget;
    SCIP_Real budgettaken = 0.0;
-   int ncols;
-   int i;
+   SCIP_Real ncols;
    
    assert(cuts != NULL && ncuts > 0);
    assert(forcedcuts != NULL || nforcedcuts == 0);
@@ -713,7 +722,7 @@ SCIP_RETCODE SCIPselectCutsEnsemble(
    /* perform cut selection algorithm for the cuts */
    
    /* forced cuts are going to be selected so use them to filter cuts */
-   for( i = 0; i < nforcedcuts && ncuts > 0; ++i )
+   for( int i = 0; i < nforcedcuts && ncuts > 0; ++i )
    {
       if( cutseldata->filterparalcuts )
          ncuts = filterWithParallelism(forcedcuts[i], cuts, scores, ncuts, cutseldata->maxparal);
@@ -734,18 +743,18 @@ SCIP_RETCODE SCIPselectCutsEnsemble(
       
       /* if the best cut of the remaining cuts is considered bad, we discard it and all remaining cuts */
       if( scores[0] < cutseldata->minscore )
-         goto TERMINATE;
+         break;
       
       ++(*nselectedcuts);
       
       /* if the maximal number of cuts was selected, we can stop here */
       if( *nselectedcuts == maxselectedcuts )
-         goto TERMINATE;
+         break;
       
       /* if the maximum (non-zero) budget threshold was hit then we can stop */
       budgettaken += SCIProwGetNNonz(cuts[0]) / ncols;
       if( budgettaken > nonzerobudget )
-         goto TERMINATE;
+         break;
       
       /* move the pointers to the next position and filter the remaining cuts to enforce the maximum parallelism constraint */
       ++cuts;
@@ -759,7 +768,6 @@ SCIP_RETCODE SCIPselectCutsEnsemble(
       
    }
    
-   TERMINATE:
    SCIPfreeBufferArray(scip, &origscoresptr);
    
    return SCIP_OKAY;
