@@ -185,7 +185,7 @@ e.g., `cmake </path/to/SCIP> -DSOPLEX_DIR=<path/to/SoPlex/build/or/install>`.
 | `IPOPT`                | `on`, `off`                        | `IPOPT=[true,false]`       | requires IPOPT version >= 3.12.0; specify `IPOPT_DIR` if not found automatically |
 | `LAPACK`               | `on`, `off`                        | `LAPACK=[true,false]`      | requires Lapack to be installed on the system                      |
 | `LPS`                  | `spx`, `cpx`, `grb`, `xprs`, ...   | `LPS=...`                  | specify `SOPLEX_DIR`, `CPLEX_DIR`, `MOSEK_DIR`, ... if LP solver is not found automatically |
-| `SYM`                  | `bliss`, `sassy`, `none`           | `SYM=[bliss, sassy, none]` | choose symmetry handling                                           |
+| `SYM`                  | `bliss`, `sbliss`, `none`, ...     | `SYM=[bliss, sbliss, none]`| choose symmetry handling                                           |
 | `WORHP`                | `on`, `off`                        | `WORHP=[true,false]`       | should worhp be linked; specify `WORHP_DIR` if not found automatically |
 | `ZIMPL`                | `on`, `off`                        | `ZIMPL=[true, false]`      | specify `ZIMPL_DIR` if not found automatically                     |
 | `AMPL`                 | `on`, `off`                        | `AMPL=[true, false]`       |                                                                    |
@@ -346,7 +346,7 @@ In your SCIP main directory, enter `make [options]` with the following options:
 | `PAPILO=false`        | `[false, true]`      | to disable or disable the MILP presolver based on the presolving library PaPILO                  |
 | `READLINE=true`       | `[true, false]`      | to enable or disable readline library for interactive shell                                      |
 | `SHARED=false`        | `[false, true]`      | to suppress or create shared libraries (only Gnu compiler)                                       |
-| `SYM=none`            | `[none, bliss, sassy]` | to choose method for computing symmetries in mixed nonlinear integer programs                  |
+| `SYM=none`            | `[none, bliss, sbliss, nauty, snauty]` | to choose method for computing symmetries in mixed nonlinear integer programs                  |
 | `TPI=none`            | `[none, omp, tny]`   | to disable the task processing interface or use it with the openmp or tinycthreads interface for concurrent solves |
 | `VERBOSE=false`       | `[false, true]`      | to suppress or display of compiler and linker invocations                                        |
 | `WORHP=false`         | `[false, true]`      | to disable or enable WORHP interface (needs WORHP >= 2.00)                                       |
