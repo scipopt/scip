@@ -26,6 +26,6 @@ jobs:
         make -j
         cd ../..
         mkdir build && cd build
-        cmake .. -DSOPLEX_DIR=../soplex/build -DPAPILO=Off -DIPOPT=Off -DZIMPL=Off 
+        cmake .. -DSOPLEX_DIR=soplex/build -DPAPILO=Off -DIPOPT=Off -DZIMPL=Off 
         make -j
         ctest
