@@ -28,6 +28,6 @@ jobs:
     - name: Build and run tests
       run: |
         mkdir build && cd build
-        cmake .. -DSOPLEX_DIR=../soplex/build
+        cmake .. -DSOPLEX_DIR=../soplex/build -DPAPILO=Off -DIPOPT=Off -DZIMPL=Off 
         make -j
         ctest
