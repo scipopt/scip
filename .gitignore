@@ -143,4 +143,4 @@ examples/*/!doc/userguide.tex
 examples/*/lint
 
 
-!.github
+!.github/workflows/*
