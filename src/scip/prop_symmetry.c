@@ -1805,6 +1805,88 @@ SCIP_RETCODE computeSignedSymmetryGroup(
 }
 #endif
 
+/** returns whether a symmetry is a non-standard permutation */
+static
+SCIP_Bool isNonstandardPerm(
+   SCIP*                 scip,               /**< SCIP instance */
+   int*                  symmetry,           /**< a symmetry encoded as a signed permutation */
+   SCIP_VAR**            vars,               /**< array of variables the symmetry acts on */
+   int                   nvars               /**< number of variables in vars */
+   )
+{
+   int v;
+
+   assert( symmetry != NULL );
+   assert( vars != NULL );
+   assert( nvars > 0 );
+
+   for (v = 0; v < nvars; ++v)
+   {
+      /* the symmetry is signed */
+      if ( symmetry[v] >= nvars )
+         return TRUE;
+
+      /* the domain of symmetric variables is different */
+      if ( !SCIPisEQ(scip, SCIPvarGetLbLocal(vars[v]), SCIPvarGetLbLocal(vars[symmetry[v]]))
+         || !SCIPisEQ(scip, SCIPvarGetUbLocal(vars[v]), SCIPvarGetUbLocal(vars[symmetry[v]])) )
+      {
+         assert( SCIPisEQ(scip, SCIPvarGetUbLocal(vars[v]) - SCIPvarGetLbLocal(vars[v]),
+               SCIPvarGetUbLocal(vars[symmetry[v]]) - SCIPvarGetLbLocal(vars[symmetry[v]])) );
+         return TRUE;
+      }
+   }
+
+   return FALSE;
+}
+
+/** checks whether component contains non-standard permutations
+ *
+ *  If all symmetries are standard permutations, stores them as such.
+ */
+static
+SCIP_RETCODE checkComponentsForNonstandardPerms(
+   SCIP*                 scip,               /**< SCIP instance */
+   SCIP_PROPDATA*        propdata            /**< propagator data */
+   )
+{
+   int* components;
+   int* componentbegins;
+   int ncomponents;
+   int i;
+   int c;
+
+   assert( scip != NULL );
+   assert( propdata != NULL );
+   assert( propdata->ncomponents > 0 );
+   assert( propdata->components != NULL );
+   assert( propdata->componentbegins != NULL );
+
+   components = propdata->components;
+   componentbegins = propdata->componentbegins;
+   ncomponents = propdata->ncomponents;
+
+   SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &(propdata->componenthassignedperm), ncomponents) );
+
+   /* stop if no non-standard permutations can exist */
+   if ( propdata->symtype == SYM_SYMTYPE_PERM )
+      return SCIP_OKAY;
+
+   /* for each component, check whether it has a non-standard permutation  */
+   for (c = 0; c < ncomponents; ++c)
+   {
+      for (i = componentbegins[c]; i < componentbegins[c + 1]; ++i)
+      {
+         if ( isNonstandardPerm(scip, propdata->perms[components[i]], propdata->permvars, propdata->npermvars) )
+         {
+            propdata->componenthassignedperm[c] = TRUE;
+            break;
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /** ensures that the symmetry components are already computed */
 static
 SCIP_RETCODE ensureSymmetryComponentsComputed(
@@ -1834,8 +1916,7 @@ SCIP_RETCODE ensureSymmetryComponentsComputed(
 
    SCIP_CALL( SCIPcomputeComponentsSym(scip, propdata->symtype, propdata->perms, propdata->nperms, propdata->permvars,
          propdata->npermvars, FALSE, &propdata->components, &propdata->componentbegins,
-         &propdata->vartocomponent, &propdata->componentblocked, &propdata->componenthassignedperm,
-         &propdata->ncomponents) );
+         &propdata->vartocomponent, &propdata->componentblocked, &propdata->ncomponents) );
 
 #ifdef SCIP_OUTPUT_COMPONENT
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) component computation finished\n", SCIPgetSolvingTime(scip));
@@ -1843,8 +1924,11 @@ SCIP_RETCODE ensureSymmetryComponentsComputed(
 
    assert( propdata->components != NULL );
    assert( propdata->componentbegins != NULL );
-   assert( propdata->componenthassignedperm != NULL );
    assert( propdata->ncomponents > 0 );
+
+   /* structure of symmetries can be simplified if they are standard permutations */
+   SCIP_CALL( checkComponentsForNonstandardPerms(scip, propdata) );
+   assert( propdata->componenthassignedperm != NULL );
 
    return SCIP_OKAY;
 }

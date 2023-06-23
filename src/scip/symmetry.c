@@ -782,7 +782,6 @@ SCIP_RETCODE SCIPcomputeComponentsSym(
                                               *   contained in (-1 if not affected) */
    unsigned**            componentblocked,   /**< array to store which symmetry methods have been used on a component
                                               *   using the same bitset information as for misc/usesymmetry */
-   SCIP_Bool**           componenthassignedperm, /**< array to store whether component contains signed permutation */
    int*                  ncomponents         /**< pointer to store number of components of symmetry group */
    )
 {
@@ -801,7 +800,6 @@ SCIP_RETCODE SCIPcomputeComponentsSym(
    assert( componentbegins != NULL );
    assert( vartocomponent != NULL );
    assert( componentblocked != NULL );
-   assert( componenthassignedperm != NULL );
    assert( ncomponents != NULL );
 
    if ( nperms <= 0 )
@@ -954,20 +952,6 @@ SCIP_RETCODE SCIPcomputeComponentsSym(
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, componentblocked, *ncomponents) );
    for (i = 0; i < *ncomponents; ++i)
       (*componentblocked)[i] = 0;
-
-   /* create componenthassignedperm */
-   SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, componenthassignedperm, *ncomponents) );
-   for (i = 0; i < *ncomponents; ++i)
-   {
-      for (p = (*componentbegins)[i]; p < (*componentbegins)[i + 1]; ++p)
-      {
-         if ( symtype == SYM_SYMTYPE_SIGNPERM )
-         {
-            (*componenthassignedperm)[i] = TRUE;
-            break;
-         }
-      }
-   }
 
    SCIPfreeBufferArray(scip, &permtocomponent);
    SCIPfreeBufferArray(scip, &permtovarcomp);

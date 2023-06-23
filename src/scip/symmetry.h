@@ -200,7 +200,6 @@ SCIP_RETCODE SCIPcomputeComponentsSym(
                                               *   contained in (-1 if not affected) */
    unsigned**            componentblocked,   /**< array to store which symmetry methods have been used on a component
                                               *   using the same bitset information as for misc/usesymmetry */
-   SCIP_Bool**           componenthassignedperm, /**< array to store whether component contains signed permutation */
    int*                  ncomponents         /**< pointer to store number of components of symmetry group */
    );
 
