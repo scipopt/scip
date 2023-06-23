@@ -107,6 +107,7 @@ struct SCIP_Benders
    SCIP_Real             slackvarcoef;       /**< the initial objective coefficient of the slack variables in the subproblem */
    SCIP_Real             maxslackvarcoef;    /**< the maximal objective coefficient of the slack variables in the subproblem */
    SCIP_Bool             checkconsconvexity; /**< should the constraints of the subproblems be checked for convexity? */
+   SCIP_NLPPARAM         nlpparam;           /**< parameters for NLP solves */
 
    /* information for heuristics */
    SCIP*                 sourcescip;         /**< the source scip from when the Benders' was copied */

@@ -1068,6 +1068,7 @@ SCIP_RETCODE doBendersCreate(
    (*benders)->bendersdata = bendersdata;
    SCIP_CALL( SCIPclockCreate(&(*benders)->setuptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*benders)->bendersclock, SCIP_CLOCKTYPE_DEFAULT) );
+   (*benders)->nlpparam = SCIP_NLPPARAM_DEFAULT(set->scip);  /*lint !e446*/
 
    /* add parameters */
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/priority", name);
@@ -4746,6 +4747,16 @@ SCIP_RETCODE resetOrigSubproblemParams(
    return SCIP_OKAY;
 }
 
+/** returns NLP solver parameters used for solving NLP subproblems */
+SCIP_NLPPARAM SCIPbendersGetNLPParam(
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
+)
+{
+   assert(benders != NULL);
+
+   return benders->nlpparam;
+}
+
 /** solves the LP of the Benders' decomposition subproblem
  *
  *  This requires that the subproblem is in probing mode.
@@ -4802,7 +4813,7 @@ SCIP_RETCODE SCIPbendersSolveSubproblemLP(
       SCIP_SOL* nlpsol;
 #endif
 
-      SCIP_CALL( SCIPsolveNLP(subproblem) );  /*lint !e666*/
+      SCIP_CALL( SCIPsolveNLPParam(subproblem, benders->nlpparam) );
 
       nlpsolstat = SCIPgetNLPSolstat(subproblem);
       nlptermstat = SCIPgetNLPTermstat(subproblem);
@@ -5191,7 +5202,7 @@ SCIP_RETCODE SCIPbendersComputeSubproblemLowerbound(
          SCIP_NLPSOLSTAT nlpsolstat;
          SCIP_NLPTERMSTAT nlptermstat;
 
-         SCIP_CALL( SCIPsolveNLP(subproblem) );  /*lint !e666*/
+         SCIP_CALL( SCIPsolveNLPParam(subproblem, benders->nlpparam) );
 
          nlpsolstat = SCIPgetNLPSolstat(subproblem);
          nlptermstat = SCIPgetNLPTermstat(subproblem);

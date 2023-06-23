@@ -69,6 +69,7 @@ Interface changes
   create indicator constraints from a linear constraint without a slack variable
 - SCIPgetNLPNlRowsStat() to retrieve counts on linear, convex, and nonconvex rows in NLP
 - SCIPnlhdlrSetSollinearize(), SCIPnlhdlrHasSollinearize()
+- SCIPbendersGetNLPParam()
 
 ### Command line interface
 
