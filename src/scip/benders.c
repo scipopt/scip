@@ -5225,8 +5225,7 @@ SCIP_RETCODE SCIPbendersComputeSubproblemLowerbound(
             /* trust infeasible only if terminated "okay" */
             (*infeasible) = TRUE;
          }
-         else if( nlpsolstat == SCIP_NLPSOLSTAT_LOCOPT || nlpsolstat == SCIP_NLPSOLSTAT_GLOBOPT
-            || nlpsolstat == SCIP_NLPSOLSTAT_FEASIBLE )
+         else if( nlpsolstat == SCIP_NLPSOLSTAT_LOCOPT || nlpsolstat == SCIP_NLPSOLSTAT_GLOBOPT )
          {
             dualbound = SCIPretransformObj(subproblem, SCIPgetNLPObjval(subproblem));
          }
