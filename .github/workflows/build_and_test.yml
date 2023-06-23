@@ -18,15 +18,13 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y git g++ make cmake libgmp-dev libreadline-dev libncurses-dev libboost-all-dev zlib1g-dev libzstd-dev
 
-    - name: Build and install SoPlex
+    - name: Build and run tests
       run: |
         git clone https://github.com/scipopt/soplex.git
         mkdir soplex/build && cd soplex/build
         cmake ..
         make -j
-
-    - name: Build and run tests
-      run: |
+        cd ../..
         mkdir build && cd build
         cmake .. -DSOPLEX_DIR=../soplex/build -DPAPILO=Off -DIPOPT=Off -DZIMPL=Off 
         make -j
