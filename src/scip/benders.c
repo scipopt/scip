@@ -75,6 +75,7 @@
 #define SCIP_DEFAULT_SLACKVARCOEF          1e+6  /** the initial objective coefficient of the slack variables in the subproblem */
 #define SCIP_DEFAULT_MAXSLACKVARCOEF       1e+9  /** the maximal objective coefficient of the slack variables in the subproblem */
 #define SCIP_DEFAULT_CHECKCONSCONVEXITY    TRUE  /** should the constraints of the subproblem be checked for convexity? */
+#define SCIP_DEFAULT_NLPITERLIMIT         10000  /** iteration limit for NLP solver */
 
 #define BENDERS_MAXPSEUDOSOLS                 5  /** the maximum number of pseudo solutions checked before suggesting
                                                   *  merge candidates */
@@ -1191,6 +1192,11 @@ SCIP_RETCODE doBendersCreate(
    SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem, paramname,
          "should the constraints of the subproblems be checked for convexity?", &(*benders)->checkconsconvexity, FALSE,
          SCIP_DEFAULT_CHECKCONSCONVEXITY, NULL, NULL) ); /*lint !e740*/
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/nlpiterlimit", name);
+   SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname,
+         "iteration limit for NLP solver", &(*benders)->nlpparam.iterlimit, FALSE,
+         SCIP_DEFAULT_NLPITERLIMIT, 0, INT_MAX, NULL, NULL) ); /*lint !e740*/
 
    return SCIP_OKAY;
 }
@@ -4845,6 +4851,12 @@ SCIP_RETCODE SCIPbendersSolveSubproblemLP(
       }
       else if( nlptermstat == SCIP_NLPTERMSTAT_TIMELIMIT )
       {
+         (*solvestatus) = SCIP_STATUS_TIMELIMIT;
+      }
+      else if( nlptermstat == SCIP_NLPTERMSTAT_ITERLIMIT)
+      {
+         /* this is an approximation in lack of a better fitting SCIP_STATUS */
+         SCIPwarningMessage(scip, "The NLP solver stopped due to an iteration limit for Benders' decomposition subproblem %d. Consider increasing benders/%s/nlpiterlimit.\n", probnumber, SCIPbendersGetName(benders));
          (*solvestatus) = SCIP_STATUS_TIMELIMIT;
       }
       else if( nlptermstat == SCIP_NLPTERMSTAT_INTERRUPT )
