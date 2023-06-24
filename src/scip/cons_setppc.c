@@ -1272,6 +1272,8 @@ SCIP_RETCODE delCoefPos(
  * Note: all dual reduction (ii) could also be performed by the "domcol" presolver, but cause the pairwise comparison of
  *       columns is only done heuristically (and here it should be even cheaper) we perform them here (too)
  *
+ *  Moreover, if there exists a variable that is only locked by a covering or packing constraint with two variables, one
+ *  can aggregate variables.
  */
 static
 SCIP_RETCODE dualPresolving(
@@ -1279,6 +1281,7 @@ SCIP_RETCODE dualPresolving(
    SCIP_CONS*            cons,               /**< setppc constraint */
    int*                  nfixedvars,         /**< pointer to count number of fixings */
    int*                  ndelconss,          /**< pointer to count number of deleted constraints  */
+   int*                  naggrvars,          /**< pointer to count number of variables aggregated */
    SCIP_RESULT*          result              /**< pointer to store the result SCIP_SUCCESS, if presolving was performed */
    )
 {
@@ -1289,6 +1292,7 @@ SCIP_RETCODE dualPresolving(
    SCIP_VAR* var;
    SCIP_Real bestobjval;
    SCIP_Real objval;
+   SCIP_Real objsign;
    SCIP_Real fixval;
    SCIP_Bool infeasible;
    SCIP_Bool fixed;
@@ -1298,6 +1302,7 @@ SCIP_RETCODE dualPresolving(
    int nlockdowns;
    int nlockups;
    int nvars;
+   int indepidx = -1;
    int idx;
    int v;
 
@@ -1348,14 +1353,17 @@ SCIP_RETCODE dualPresolving(
    case SCIP_SETPPCTYPE_PARTITIONING:
       nlockdowns = 1;
       nlockups = 1;
+      objsign = 0.0;
       break;
    case SCIP_SETPPCTYPE_PACKING:
       nlockdowns = 0;
       nlockups = 1;
+      objsign = -1.0;
       break;
    case SCIP_SETPPCTYPE_COVERING:
       nlockdowns = 1;
       nlockups = 0;
+      objsign = 1.0;
       break;
    default:
       SCIPerrorMessage("unknown setppc type\n");
@@ -1405,6 +1413,15 @@ SCIP_RETCODE dualPresolving(
       if( SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == nlockdowns
          && SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) >= nlockups )
          ++nposfixings;
+
+      /* determine independent variable, i.e., only locked by the current constraint */
+      if( SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == nlockdowns
+         && SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == nlockups )
+      {
+         /* store variables that have the right objective sign */
+         if ( objval * objsign > 0.0 )
+            indepidx = v;
+      }
    }
 
    if( idx == -1 || nposfixings == 0 )
@@ -1418,6 +1435,36 @@ SCIP_RETCODE dualPresolving(
    assert(bestobjval < SCIPinfinity(scip));
 
    noldfixed = *nfixedvars;
+
+   /* In the special case of two variables, where one variable is independent and will be minimized for covering or
+    * maximized for packing, we can aggregate variables:
+    *  - Covering: var1 + var2 >= 1 and the objective of var1 is positive.
+    *  - Packing:  var1 + var2 <= 1 and the objective of var1 is negativ.
+    * In both cases, var1 + var2 = 1 holds in every optimal solution.
+    */
+   if( setppctype != SCIP_SETPPCTYPE_PARTITIONING && nvars == 2 && indepidx >= 0 )
+   {
+      SCIP_Bool redundant;
+      SCIP_Bool aggregated;
+      int idx2;
+
+      idx2 = 1 - indepidx;
+      assert( 0 <= idx2 && idx2 < 2 );
+
+      SCIP_CALL( SCIPaggregateVars(scip, vars[indepidx], vars[idx2], 1.0, 1.0, 1.0, &infeasible, &redundant, &aggregated) );
+      assert(!infeasible);
+      assert(redundant);
+      assert(aggregated);
+      ++(*naggrvars);
+
+      /* remove constraint since it is redundant */
+      SCIP_CALL( SCIPdelCons(scip, cons) );
+      ++(*ndelconss);
+
+      *result = SCIP_SUCCESS;
+
+      return SCIP_OKAY;
+   }
 
    /* in case of set packing and set partitioning we fix the dominated variables to zero */
    if( setppctype != SCIP_SETPPCTYPE_COVERING )
@@ -8311,7 +8358,7 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
       /* perform dual reductions */
       if( conshdlrdata->dualpresolving && SCIPallowStrongDualReds(scip) )
       {
-         SCIP_CALL( dualPresolving(scip, cons, nfixedvars, ndelconss, result) );
+         SCIP_CALL( dualPresolving(scip, cons, nfixedvars, ndelconss, naggrvars, result) );
 
          /* if dual reduction deleted the constraint we take the next */
          if( !SCIPconsIsActive(cons) )
