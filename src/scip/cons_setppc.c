@@ -1218,8 +1218,10 @@ SCIP_RETCODE delCoefPos(
    return SCIP_OKAY;
 }
 
-/** in case a part (more than one variable) in the setppc constraint is independent of every else (is locked only by
- *  this constraint), we can perform dual reductions;
+/** preform dual presolving
+ *
+ *  In case a part (more than one variable) in the setppc constraint is independent of everything else (is locked only by
+ *  this constraint), we can perform dual reductions:
  *
  *  (1) set covering
  *
@@ -1260,7 +1262,7 @@ SCIP_RETCODE delCoefPos(
  *          - fix y to 0, because it is dominated by x
  *
  *
- * Note: the following dual reduction for set covering and set packing constraints is already performed by the presolver
+ *  Note: the following dual reduction for set covering and set packing constraints is already performed by the presolver
  *       "dualfix"
  *       (1) in case of a set covering constraint the following dual reduction can be performed:
  *           - if a variable in a set covering constraint is only locked by that constraint and has negative or zero
@@ -1269,8 +1271,8 @@ SCIP_RETCODE delCoefPos(
  *           - if a variable in a set packing constraint is only locked by that constraint and has positive or zero
  *             objective coefficient than it can be fixed to zero
  *
- * Note: all dual reduction (ii) could also be performed by the "domcol" presolver, but cause the pairwise comparison of
- *       columns is only done heuristically (and here it should be even cheaper) we perform them here (too)
+ *  Note: all dual reduction (ii) could also be performed by the "domcol" presolver, but because the pairwise comparison of
+ *       columns is only done heuristically (and here it should be even cheaper) we perform them here (too).
  *
  *  Moreover, if there exists a variable that is only locked by a covering or packing constraint with two variables, one
  *  can aggregate variables.
