@@ -1407,6 +1407,16 @@ SCIP_RETCODE dualPresolving(
             idx = v;
             bestobjval = objval;
          }
+
+         /* determine independent variable, i.e., only locked by the current constraint */
+         if( SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == nlockdowns )
+         {
+            assert(SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == nlockups);
+
+            /* store variables that have the right objective sign */
+            if ( objval * objsign > 0.0 )
+               indepidx = v;
+         }
       }
 
       /* in case another constraint has also downlocks on that variable we cannot perform a dual reduction on these
@@ -1415,15 +1425,6 @@ SCIP_RETCODE dualPresolving(
       if( SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == nlockdowns
          && SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) >= nlockups )
          ++nposfixings;
-
-      /* determine independent variable, i.e., only locked by the current constraint */
-      if( SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == nlockdowns
-         && SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == nlockups )
-      {
-         /* store variables that have the right objective sign */
-         if ( SCIPvarGetObj(var) * objsign > 0.0 )
-            indepidx = v;
-      }
    }
 
    if( idx == -1 || nposfixings == 0 )
