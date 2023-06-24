@@ -641,6 +641,7 @@ SCIP_RETCODE dualPresolving(
    int nfixables;
    int nvars;
    int idx;
+   int indepidx = -1;
    int idxnouplocks;
    int v;
 
@@ -757,22 +758,25 @@ SCIP_RETCODE dualPresolving(
          idx = v;
          bestobjval = objval;
       }
+
+      if ( objval > 0.0 )
+         indepidx = v;
    }
 
    nvars = consdata->nvars;
 
    /* In the special case of two variables, where one variable is independent and is minimized, we can aggregate variables:
     *  We have var1 + var2 >= 1 and var1 is independent with positive objective. Then var1 + var2 == 1 holds. */
-   if( nvars == 2 && nfixables == 1 && objval > 0.0 ) /*lint !e777*/
+   if( nvars == 2 && indepidx >= 0 )
    {
       SCIP_Bool redundant;
       SCIP_Bool aggregated;
       int idx2;
 
-      idx2 = 1 - idx;
+      idx2 = 1 - indepidx;
       assert(0 <= idx2 && idx2 < 2);
 
-      SCIP_CALL( SCIPaggregateVars(scip, vars[idx], vars[idx2], 1.0, 1.0, 1.0, &infeasible, &redundant, &aggregated) );
+      SCIP_CALL( SCIPaggregateVars(scip, vars[indepidx], vars[idx2], 1.0, 1.0, 1.0, &infeasible, &redundant, &aggregated) );
       assert(!infeasible);
       assert(redundant);
       assert(aggregated);
