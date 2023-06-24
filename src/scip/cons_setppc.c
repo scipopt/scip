@@ -1421,7 +1421,7 @@ SCIP_RETCODE dualPresolving(
          && SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == nlockups )
       {
          /* store variables that have the right objective sign */
-         if ( objval * objsign > 0.0 )
+         if ( objval * objsign > 0.0 ) /*lint !e644*/
             indepidx = v;
       }
    }
