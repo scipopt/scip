@@ -3854,295 +3854,6 @@ SCIP_RETCODE detectAndHandleSubgroups(
  */
 
 
-/** sorts orbitope vars matrix such that rows are sorted increasingly w.r.t. minimum variable index in row;
- *  columns are sorted such that first row is sorted increasingly w.r.t. variable indices
- */
-static
-SCIP_RETCODE SCIPsortOrbitope(
-   SCIP*                 scip,               /**< SCIP instance */
-   int**                 orbitopevaridx,     /**< variable index matrix of orbitope */
-   SCIP_VAR***           vars,               /**< variable matrix of orbitope */
-   int                   nrows,              /**< number of binary rows of orbitope */
-   int                   ncols               /**< number of columns of orbitope */
-   )
-{
-   SCIP_VAR** sortedrow;
-   int* colorder;
-   int* idcs;
-   int arrlen;
-   int minrowidx = INT_MAX;
-   int minrow = INT_MAX;
-   int i;
-   int j;
-
-   assert( scip != NULL );
-   assert( orbitopevaridx != NULL );
-   assert( vars != NULL );
-   assert( nrows > 0 );
-   assert( ncols > 0 );
-
-   arrlen = MAX(nrows, ncols);
-   SCIP_CALL( SCIPallocBufferArray(scip, &idcs, arrlen) );
-
-   /* detect minimum index per row */
-   for (i = 0; i < nrows; ++i)
-   {
-      int idx;
-
-      idcs[i] = INT_MAX;
-
-      for (j = 0; j < ncols; ++j)
-      {
-         idx = orbitopevaridx[i][j];
-
-         if ( idx < idcs[i] )
-            idcs[i] = idx;
-
-         if ( idx < minrowidx )
-         {
-            minrowidx = idx;
-            minrow = i;
-         }
-      }
-   }
-
-   /* sort rows increasingly w.r.t. minimum variable indices */
-   SCIPsortIntPtr(idcs, (void**) vars, nrows);
-
-   /* sort columns increasingly w.r.t. variable indices of first row */
-   SCIP_CALL( SCIPallocBufferArray(scip, &colorder, ncols) );
-   for (j = 0; j < ncols; ++j)
-   {
-      idcs[j] = orbitopevaridx[minrow][j];
-      colorder[j] = j;
-   }
-
-   /* sort columns of first row and store new column order */
-   SCIPsortIntIntPtr(idcs, colorder, (void**) vars[0], ncols);
-
-   /* adapt rows 1, ..., nrows - 1 to new column order*/
-   SCIP_CALL( SCIPallocBufferArray(scip, &sortedrow, ncols) );
-   for (i = 1; i < nrows; ++i)
-   {
-      for (j = 0; j < ncols; ++j)
-         sortedrow[j] = vars[i][colorder[j]];
-      for (j = 0; j < ncols; ++j)
-         vars[i][j] = sortedrow[j];
-   }
-
-   SCIPfreeBufferArray(scip, &sortedrow);
-   SCIPfreeBufferArray(scip, &colorder);
-   SCIPfreeBufferArray(scip, &idcs);
-
-   return SCIP_OKAY;
-}
-
-
-/** checks whether components of the symmetry group can be completely handled by orbitopes */
-static
-SCIP_RETCODE detectOrbitopes(
-   SCIP*                 scip,               /**< SCIP instance */
-   SCIP_PROPDATA*        propdata,           /**< pointer to data of symmetry propagator */
-   int                   cidx                /**< index of component that shall be handled */
-   )
-{
-   SCIP_VAR** permvars;
-   int** perms;
-   int* components;
-   int* componentbegins;
-   int npermvars;
-
-   SCIP_VAR*** vars;
-   SCIP_VAR*** varsallocorder;
-   SCIP_CONS* cons;
-   SCIP_Shortbool* rowisbinary;
-   SCIP_Bool isorbitope = TRUE;
-   SCIP_Bool infeasibleorbitope;
-   int** orbitopevaridx;
-   int* columnorder;
-   int npermsincomponent;
-   int ntwocyclescomp = INT_MAX;
-   int nbincyclescomp = INT_MAX;
-   int* nusedelems;
-   int j;
-   int cnt;
-
-   assert( scip != NULL );
-   assert( propdata != NULL );
-
-   components = propdata->components;
-   componentbegins = propdata->componentbegins;
-
-   assert( components != NULL );
-   assert( componentbegins != NULL );
-   assert( propdata->ncomponents > 0 );
-   assert( propdata->nperms >= 0 );
-   assert( 0 <= cidx && cidx < propdata->ncomponents );
-
-   /* exit if no symmetry is present or component is blocked */
-   if ( propdata->nperms == 0 || propdata->componentblocked[cidx] )
-      return SCIP_OKAY;
-
-   assert( propdata->nperms > 0 );
-   assert( propdata->perms != NULL );
-   assert( propdata->nbinpermvars >= 0 );
-   assert( propdata->npermvars >= 0 );
-   assert( propdata->permvars != NULL );
-
-   /* exit if no symmetry on binary variables is present */
-   if ( propdata->nbinpermvars == 0 )
-   {
-      assert( ! propdata->binvaraffected );
-      return SCIP_OKAY;
-   }
-
-   perms = propdata->perms;
-   npermvars = propdata->npermvars;
-   permvars = propdata->permvars;
-
-   /* get properties of permutations */
-   npermsincomponent = componentbegins[cidx + 1] - componentbegins[cidx];
-   assert( npermsincomponent > 0 );
-   for (j = componentbegins[cidx]; j < componentbegins[cidx + 1]; ++j)
-   {
-      int ntwocyclesperm = 0;
-      int nbincyclesperm = 0;
-
-      SCIP_CALL( SCIPisInvolutionPerm(perms[components[j]], permvars, npermvars,
-            &ntwocyclesperm, &nbincyclesperm, FALSE) );
-
-      if ( ntwocyclesperm == 0 )
-      {
-         isorbitope = FALSE;
-         break;
-      }
-
-      /* if we are checking the first permutation */
-      if ( ntwocyclescomp == INT_MAX )
-      {
-         ntwocyclescomp = ntwocyclesperm;
-         nbincyclescomp = nbincyclesperm;
-
-         /* if there are no binary rows */
-         if ( nbincyclescomp == 0 )
-         {
-            isorbitope = FALSE;
-            break;
-         }
-      }
-
-      /* no or different number of 2-cycles or not all vars binary: permutations cannot generate orbitope */
-      if ( ntwocyclescomp != ntwocyclesperm || nbincyclesperm != nbincyclescomp )
-      {
-         isorbitope = FALSE;
-         break;
-      }
-   }
-
-   /* if no orbitope was detected */
-   if ( ! isorbitope )
-      return SCIP_OKAY;
-   assert( ntwocyclescomp > 0 );
-   assert( ntwocyclescomp < INT_MAX );
-
-   /* iterate over permutations and check whether for each permutation there exists
-    * another permutation whose 2-cycles intersect pairwise in exactly one element */
-
-   /* orbitope matrix for indices of variables in permvars array */
-   SCIP_CALL( SCIPallocBufferArray(scip, &orbitopevaridx, ntwocyclescomp) );
-   for (j = 0; j < ntwocyclescomp; ++j)
-   {
-      SCIP_CALL( SCIPallocBufferArray(scip, &orbitopevaridx[j], npermsincomponent + 1) ); /*lint !e866*/
-   }
-
-   /* order of columns of orbitopevaridx */
-   SCIP_CALL( SCIPallocBufferArray(scip, &columnorder, npermsincomponent + 1) );
-   for (j = 0; j < npermsincomponent + 1; ++j)
-      columnorder[j] = npermsincomponent + 2;
-
-   /* count how often an element was used in the potential orbitope */
-   SCIP_CALL( SCIPallocClearBufferArray(scip, &nusedelems, npermvars) );
-
-   /* store whether a row of the potential orbitope contains only binary variables */
-   SCIP_CALL( SCIPallocClearBufferArray(scip, &rowisbinary, ntwocyclescomp) );
-
-   /* check if the permutations fulfill properties of an orbitope */
-   SCIP_CALL( checkTwoCyclePermsAreOrbitope(scip, permvars, npermvars, perms,
-         &(components[componentbegins[cidx]]), ntwocyclescomp, npermsincomponent,
-         orbitopevaridx, columnorder, nusedelems, NULL, rowisbinary, &isorbitope, NULL) );
-
-   if ( ! isorbitope )
-      goto FREEDATASTRUCTURES;
-
-   /* we have found a potential orbitope, prepare data for orbitope conshdlr */
-   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nbincyclescomp) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &varsallocorder, nbincyclescomp) );
-   cnt = 0;
-   for (j = 0; j < ntwocyclescomp; ++j)
-   {
-      if ( ! rowisbinary[j] )
-         continue;
-
-      SCIP_CALL( SCIPallocBufferArray(scip, &vars[cnt], npermsincomponent + 1) ); /*lint !e866*/
-      varsallocorder[cnt] = vars[cnt]; /* to ensure that we can free the buffer in reverse order */
-      ++cnt;
-   }
-   assert( cnt == nbincyclescomp );
-
-   /* prepare variable matrix (reorder columns of orbitopevaridx) */
-   infeasibleorbitope = FALSE;
-   SCIP_CALL( SCIPgenerateOrbitopeVarsMatrix(scip, &vars, ntwocyclescomp, npermsincomponent + 1, permvars,
-         npermvars, orbitopevaridx, columnorder, nusedelems, rowisbinary, &infeasibleorbitope, FALSE, NULL, NULL, NULL) );
-
-   if ( ! infeasibleorbitope )
-   {
-      char name[SCIP_MAXSTRLEN];
-
-      SCIPdebugMsg(scip, "found an orbitope of size %d x %d in component %d\n", ntwocyclescomp, npermsincomponent + 1, cidx);
-
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "orbitope_component%d", cidx);
-
-      /* to ensure same orbitope is added if different sets of generators are found */
-      SCIP_CALL( SCIPsortOrbitope(scip, orbitopevaridx, vars, nbincyclescomp, npermsincomponent + 1) );
-
-      SCIP_CALL( SCIPcreateConsOrbitope(scip, &cons, name, vars, SCIP_ORBITOPETYPE_FULL,
-            nbincyclescomp, npermsincomponent + 1, propdata->usedynamicprop /* @todo disable */, FALSE, FALSE, FALSE,
-            propdata->conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-
-      SCIP_CALL( SCIPaddCons(scip, cons) );
-
-      /* do not release constraint here - will be done later */
-      SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, &propdata->genorbconss,
-            &propdata->genorbconsssize, propdata->ngenorbconss + 1) );
-      propdata->genorbconss[propdata->ngenorbconss++] = cons;
-      ++propdata->norbitopes;
-
-      propdata->componentblocked[cidx] |= SYM_HANDLETYPE_SYMBREAK;
-      ++propdata->ncompblocked;
-   }
-
-   /* free data structures */
-   for (j = nbincyclescomp - 1; j >= 0; --j)
-   {
-      SCIPfreeBufferArray(scip, &varsallocorder[j]);
-   }
-   SCIPfreeBufferArray(scip, &varsallocorder);
-   SCIPfreeBufferArray(scip, &vars);
-
- FREEDATASTRUCTURES:
-   SCIPfreeBufferArray(scip, &rowisbinary);
-   SCIPfreeBufferArray(scip, &nusedelems);
-   SCIPfreeBufferArray(scip, &columnorder);
-   for (j = ntwocyclescomp - 1; j >= 0; --j)
-   {
-      SCIPfreeBufferArray(scip, &orbitopevaridx[j]);
-   }
-   SCIPfreeBufferArray(scip, &orbitopevaridx);
-
-   return SCIP_OKAY;
-}
-
-
 /** update symmetry information of conflict graph */
 static
 SCIP_RETCODE updateSymInfoConflictGraphSST(
@@ -5283,421 +4994,24 @@ SCIP_RETCODE addSSTConss(
 }
 
 
-/** orbitope detection */
-static
-SCIP_RETCODE tryDetectOrbitope(
-   SCIP*                 scip,               /**< SCIP instance */
-   int**                 perms,              /**< permutations */
-   int                   nperms,             /**< number of permutations */
-   int                   npermvars,          /**< number of variables moved by permutation */
-   SCIP_Bool*            isorbitope,         /**< pointer to store whether it defines an orbitope */
-   int**                 writeorbitopematrix,/**< pointer to store the orbitope matrix */
-   int*                  writenrows,         /**< pointer to store the number of rows */
-   int*                  writencols          /**< pointer to store the number of columns*/
-)
-{
-   int i;
-   int j;
-   int p;
-
-   int*** entryperms;
-   int* entrynperms;
-   int* entrypermsidx;
-
-   SCIP_DISJOINTSET* entriesinrow;
-   int* componentsizes;
-   int size;
-
-   /* stack data structure to scan over all reachable entries in a BFS-manner */
-   int stacksize;
-   int** permstack;
-   int* origstack;
-   SCIP_Bool* entryinstack;
-   SCIP_Bool* entryhandled;
-
-   /* store rows */
-   int* orbitopematrix;
-   int ncols;
-   int jcolid;
-
-   int* prevcolid; /* pointer to previous column */
-   int** prevcolperm; /* permutation of the previous row */
-
-   int colid;
-   int* perm;
-
-   int nrows;
-   int thispermnrows;
-   int rowid;
-   int firstunhandledentry;
-
-   *isorbitope = TRUE;
-   *writeorbitopematrix = NULL;
-
-   /* stop if there are permutations that are not involutions */
-   for (p = 0; p < nperms; ++p)
-   {
-      perm = perms[p];
-      for (i = 0; i < npermvars; ++i)
-      {
-         if ( perm[perm[i]] != i )
-         {
-            /* permutation perms[p] maps i to j, then j not to i. */
-            *isorbitope = FALSE;
-            return SCIP_OKAY;
-         }
-      }
-   }
-   /* all permutations in perms are involutions */
-
-   /* count number of 2-cycles in first permutation, which is the number of rows if the component is an orbitope */
-   perm = perms[0];
-   nrows = 0;
-   for (i = 0; i < npermvars; ++i)
-   {
-      if ( i < perm[i] )
-         ++nrows;
-   }
-
-   /* for orbitope detection, all involutions need the same number of cycles (rows) */
-   for (p = 1; p < nperms; ++p)
-   {
-      perm = perms[p];
-      thispermnrows = 0;
-      for (i = 0; i < npermvars; ++i)
-      {
-         if ( i < perm[i] )
-         {
-            ++thispermnrows;
-            if ( thispermnrows > nrows )
-               break;
-         }
-      }
-      if ( nrows != thispermnrows )
-      {
-         *isorbitope = FALSE;
-         return SCIP_OKAY;
-      }
-   }
-
-   /* determine number of columns by counting the row orbit sizes */
-   SCIP_CALL( SCIPcreateDisjointset(scip, &entriesinrow, npermvars) );
-   for (p = 0; p < nperms; ++p)
-   {
-      perm = perms[p];
-      for (i = 0; i < npermvars; ++i)
-      {
-         j = perm[i];
-         if ( i != j )
-            SCIPdisjointsetUnion(entriesinrow, i, j, FALSE);
-      }
-   }
-   SCIP_CALL( SCIPallocClearBufferArray(scip, &componentsizes, npermvars) );
-   for (i = 0; i < npermvars; ++i)
-   {
-      ++componentsizes[SCIPdisjointsetFind(entriesinrow, i)];
-   }
-   ncols = -1;
-   for (i = 0; i < npermvars; ++i)
-   {
-      /* singleton, or not the representative of the component */
-      size = componentsizes[i];
-      if ( size <= 1 )
-         continue;
-      /* first component of which the size is known */
-      if ( ncols < 0 )
-         ncols = size;
-      /* other components must have the same number of elements in a row, otherwise it's no orbitope */
-      else if ( size != ncols )
-      {
-         *isorbitope = FALSE;
-         break;
-      }
-   }
-   SCIPfreeBufferArray(scip, &componentsizes);
-   SCIPfreeDisjointset(scip, &entriesinrow);
-
-   if ( !*isorbitope )
-      return SCIP_OKAY;
-
-   /* for each entry, store which permutation in perms affects it */
-   SCIP_CALL( SCIPallocBufferArray(scip, &entryperms, npermvars) );
-   SCIP_CALL( SCIPallocClearBufferArray(scip, &entrynperms, npermvars) );
-
-   for (p = 0; p < nperms; ++p)
-   {
-      perm = perms[p];
-      for (i = 0; i < npermvars; ++i)
-      {
-         if ( perm[i] != i )
-            ++entrynperms[i];
-      }
-   }
-   for (i = 0; i < npermvars; ++i)
-   {
-      if ( entrynperms[i] == 0 )
-         entryperms[i] = NULL;
-      else
-      {
-         SCIP_CALL( SCIPallocBufferArray(scip, &(entryperms[i]), entrynperms[i]) );
-      }
-   }
-   SCIP_CALL( SCIPallocClearBufferArray(scip, &entrypermsidx, npermvars) );
-   for (p = 0; p < nperms; ++p)
-   {
-      perm = perms[p];
-      for (i = 0; i < npermvars; ++i)
-      {
-         if ( perm[i] != i )
-            entryperms[i][entrypermsidx[i]++] = perm;
-      }
-   }
-#ifndef NDEBUG
-   for (i = 0; i < npermvars; ++i)
-   {
-      assert( entrynperms[i] == entrypermsidx[i] );
-   }
-#endif
-   SCIPfreeBufferArray(scip, &entrypermsidx);
-
-   /* first fix the top row.
-    * Get the first entry that is moved by any permutation.
-    * Get the orbit of this entry, which becomes the top row.
-    * For each column index in the top row:
-    *   store the column index of the origin and the permutation that got the entry at this place.
-    */
-
-   /* get the first affected entry */
-   for (i = 0; i < npermvars; ++i)
-   {
-      if ( entrynperms[i] > 0 )
-         break;
-   }
-   assert( i < npermvars );
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &permstack, npermvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &origstack, npermvars) );
-   SCIP_CALL( SCIPallocClearBufferArray(scip, &entryinstack, npermvars) );
-   SCIP_CALL( SCIPallocClearBufferArray(scip, &entryhandled, npermvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &orbitopematrix, npermvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &prevcolid, npermvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &prevcolperm, npermvars) );
-
-   orbitopematrix[0] = i;
-   prevcolid[0] = -1;
-   prevcolperm[0] = NULL;
-   ncols = 1;
-   stacksize = 0;
-
-   for (p = 0; p < entrynperms[i]; ++p)
-   {
-      /* enqueue permutations */
-      origstack[stacksize] = 0;
-      permstack[stacksize++] = entryperms[i][p];
-   }
-   entryhandled[orbitopematrix[0]] = TRUE;
-   entryinstack[orbitopematrix[0]] = TRUE;
-
-   while ( stacksize > 0 )
-   {
-      assert( stacksize <= npermvars );
-      colid = origstack[--stacksize];
-      perm = permstack[stacksize];
-      assert( colid < ncols );
-
-      i = orbitopematrix[colid];
-      assert( i >= 0 );
-      assert( i < npermvars );
-
-      j = perm[i];
-      assert( j != i );
-
-      if ( entryhandled[j] )
-         continue;
-      entryhandled[j] = TRUE;
-
-      /* entry j is the next in the row */
-      jcolid = ncols;
-      orbitopematrix[jcolid] = j;
-      prevcolid[jcolid] = colid;
-      prevcolperm[jcolid] = perm;
-      ++ncols;
-
-      /* add permutations permuting non-handled entries reachable from j to the stack */
-      for (p = 0; p < entrynperms[j]; ++p)
-      {
-         assert( entryperms[j] != NULL );
-         perm = entryperms[j][p];
-         /* if that entry is already handled, or entry will be handled by another entry present in stack, ignore */
-         if ( entryhandled[perm[j]] || entryinstack[perm[j]] )
-            continue;
-         assert( stacksize < npermvars );
-         origstack[stacksize] = jcolid;
-         permstack[stacksize++] = perm;
-         entryinstack[perm[j]] = TRUE;
-      }
-   }
-
-   /* try to create nrows * ncols orbitope matrix with first row being firstrow */
-   firstunhandledentry = 0;
-   for (rowid = 1; rowid < nrows; ++rowid)
-   {
-      int d;
-      int* row;
-
-      /* get the permutation mapping column 0 to 1 */
-      assert( prevcolid[1] == 0 );
-      perm = prevcolperm[1];
-      assert( perm != NULL );
-      assert( perm[orbitopematrix[0]] == orbitopematrix[1] );
-
-      /* get the next unhandled entry moved by perm */
-      for (; firstunhandledentry < npermvars; ++firstunhandledentry)
-      {
-         if ( perm[firstunhandledentry] == firstunhandledentry )
-            continue;
-         if ( entryhandled[firstunhandledentry] )
-            continue;
-         break;
-      }
-      /* permutation 'perm' is the permutation of the first two columns, and this consists of nrows transpositions.
-       * If the permutations describe an orbitope, the entries of each transposition will occur in different rows.
-       * However, if firstunhandledentry == npermvars, then the loop above terminates early,
-       * which means that an entry from a transposition is handled before we handled the row of that transposition,
-       * i.e., the entry occurs elsewhere in the orbitope matrix we're building. Hence, this is no orbitope.
-       */
-      if ( firstunhandledentry == npermvars )
-      {
-         *isorbitope = FALSE;
-         goto FREE;
-      }
-
-      /* either firstunhandledentry or perm[firstunhandledentry] is the entry in column 0. */
-      assert( firstunhandledentry != perm[firstunhandledentry] );
-
-      /* try both the option where column 0 is firstunhandledentry, or perm[firstunhandledentry]
-       *
-       * Break the loop if it's successful.
-       */
-      row = &(orbitopematrix[rowid * ncols]);
-      for (d = 0; d < 2; ++d)
-      {
-         /* try either 'firstunhandledentry' or the permutation hereof */
-         i = (d == 0) ? firstunhandledentry : perm[firstunhandledentry];
-         row[0] = i;
-         entryhandled[i] = TRUE;
-         for (jcolid = 1; jcolid < ncols; ++jcolid)
-         {
-            i = row[prevcolid[jcolid]];
-            assert( entryhandled[i] );
-            perm = prevcolperm[jcolid];
-            j = perm[i];
-
-            /* already handled variables cannot be contained in new row */
-            if ( entryhandled[j] )
-               break;
-            row[jcolid] = j;
-            entryhandled[j] = TRUE;
-         }
-         if ( jcolid < ncols )
-         {
-            /* this attempt failed:  unroll the loop above until (incl) jcolid = 1, then i=0 */
-            while ( jcolid > 1 )
-            {
-               --jcolid;
-               i = row[prevcolid[jcolid]];
-               assert( entryhandled[i] );
-               perm = prevcolperm[jcolid];
-               j = perm[i];
-               assert( entryhandled[j] );
-               row[jcolid] = j;
-               entryhandled[j] = FALSE;
-            }
-            assert( jcolid == 1 );
-
-            i = (d == 0) ? firstunhandledentry : perm[firstunhandledentry];
-            entryhandled[i] = FALSE;
-         }
-         else
-         {
-            /* attempt was successful: row is correclty set */
-            break;
-         }
-      }
-      if ( d == 2 )
-      {
-         /* loop is not broken, so the checks failed. */
-         *isorbitope = FALSE;
-         goto FREE;
-      }
-   }
-
-   /* write the orbitope matrix, if found. */
-   assert( writenrows != NULL );
-   assert( writencols != NULL );
-   if ( *isorbitope )
-   {
-      int nelem;
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, writeorbitopematrix, nrows * ncols) );
-      nelem = nrows * ncols;
-      for (i = 0; i < nelem; ++i)
-      {
-         (*writeorbitopematrix)[i] = orbitopematrix[i];
-         *writenrows = nrows;
-         *writencols = ncols;
-      }
-   }
-   else
-      *writeorbitopematrix = NULL;
-
-   /* free memory */
-FREE:
-   for (i = npermvars - 1; i >= 0; --i)
-   {
-      if ( entryperms[i] != NULL )
-      {
-         assert( entrynperms[i] > 0 );
-         SCIPfreeBufferArray(scip, &(entryperms[i]));
-      }
-   }
-   SCIPfreeBufferArray(scip, &entrynperms);
-   SCIPfreeBufferArray(scip, &entryperms);
-   SCIPfreeBufferArray(scip, &prevcolperm);
-   SCIPfreeBufferArray(scip, &prevcolid);
-   SCIPfreeBufferArray(scip, &orbitopematrix);
-   SCIPfreeBufferArray(scip, &entryhandled);
-   SCIPfreeBufferArray(scip, &entryinstack);
-   SCIPfreeBufferArray(scip, &origstack);
-   SCIPfreeBufferArray(scip, &permstack);
-
-   return SCIP_OKAY;
-}
-
-
 /** orbitopal reduction */
 static
-SCIP_RETCODE tryAddOrbitopesDynamic(
+SCIP_RETCODE addOrbitopesDynamic(
    SCIP*                 scip,               /**< SCIP instance */
    SCIP_PROPDATA*        propdata,           /**< propdata */
-   int                   cidx                /**< index of component that shall be handled */
+   int                   id,                 /**< ID for orbitope constraint (needed for name) */
+   int**                 varidxmatrix,       /**< matrix containing variable indices in orbitope matrix */
+   int                   nrows,              /**< number of rows of orbitope */
+   int                   ncols,              /**< number of columns of orbitope */
+   SCIP_Bool*            success             /**< pointer to store whether orbitope could be added successfully */
    )
 {
    char name[SCIP_MAXSTRLEN];
    int i;
    int j;
-   int p;
-   SCIP_Bool success;
-
-   int componentsize;
-   int** componentperms;
-
-   SCIP_Bool isorbitope;
-   int* orbitopematrix;
-   int nrows;
-   int ncols;
 
    SCIP_Bool ispporbitope;
-   SCIP_VAR*** ppvarmatrix;
+   SCIP_VAR*** varmatrix;
    SCIP_Bool* pprows;
    int npprows;
    SCIP_ORBITOPETYPE type;
@@ -5705,28 +5019,12 @@ SCIP_RETCODE tryAddOrbitopesDynamic(
    assert( scip != NULL );
    assert( propdata != NULL );
    assert( propdata->usedynamicprop );
-   assert( ISSYMRETOPESACTIVE(propdata->usesymmetry) );
-   assert( propdata->detectorbitopes );
-   assert( propdata->nperms > 0 );
-   assert( propdata->ncomponents > 0 );
-   assert( 0 <= cidx && cidx < propdata->ncomponents );
+   assert( varidxmatrix != NULL );
+   assert( nrows > 0 );
+   assert( ncols > 0 );
+   assert( success != NULL );
 
-   /* do not handle blocked components */
-   if ( propdata->componentblocked[cidx] )
-      return SCIP_OKAY;
-
-   /* collect the permutations of this component in a readable format */
-   componentsize = propdata->componentbegins[cidx + 1] - propdata->componentbegins[cidx];
-   SCIP_CALL( SCIPallocBufferArray(scip, &componentperms, componentsize) );
-   for (p = 0; p < componentsize; ++p)
-      componentperms[p] = propdata->perms[propdata->components[propdata->componentbegins[cidx] + p]];
-
-   /* does it describe an orbitope? */
-   SCIP_CALL( tryDetectOrbitope(scip, componentperms, componentsize, propdata->npermvars, &isorbitope,
-         &orbitopematrix, &nrows, &ncols) );
-
-   if ( !isorbitope )
-      goto CLEARITERATIONNOORBITOPE;
+   *success = FALSE;
 
    /* add linear constraints x_1 >= x_2 >= ... >= x_ncols for single-row orbitopes */
    if ( nrows == 1 )
@@ -5741,10 +5039,10 @@ SCIP_RETCODE tryAddOrbitopesDynamic(
             &propdata->genlinconsssize, propdata->ngenlinconss + ncols - 1) );
       for (i = 0; i < ncols - 1; ++i)
       {
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "orbitope_1row_comp_%d_col%d", cidx, i);
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "orbitope_1row_comp_%d_col%d", id, i);
 
-         consvars[0] = propdata->permvars[orbitopematrix[i]];
-         consvars[1] = propdata->permvars[orbitopematrix[i + 1]];
+         consvars[0] = propdata->permvars[varidxmatrix[0][i]];
+         consvars[1] = propdata->permvars[varidxmatrix[0][i + 1]];
          /* enforce, but do not check */
          SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, 2, consvars, conscoefs, -SCIPinfinity(scip), 0.0,
                propdata->conssaddlp, propdata->conssaddlp, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE ) );
@@ -5753,43 +5051,36 @@ SCIP_RETCODE tryAddOrbitopesDynamic(
          propdata->genlinconss[propdata->ngenlinconss++] = cons;
       }
 
-      propdata->componentblocked[cidx] |= SYM_HANDLETYPE_SYMBREAK;
-      ++propdata->ncompblocked;
-      goto CLEARITERATIONORBITOPEDETECTED;
+      *success = TRUE;
+      return SCIP_OKAY;
    }
 
    /* for only 2 columns, the the component can be completely handled by lexicographic reduction */
    if ( ncols == 2 && propdata->lexreddata != NULL )
    {
+      int* orbisackperm;
+
       /* If the component is an orbitope with 2 columns, then there is 1 generator of order 2. */
-      assert( componentsize == 1 );
+      orbisackperm = propdata->perms[propdata->components[propdata->componentbegins[id]]];
 
       SCIP_CALL( SCIPlexicographicReductionAddPermutation(scip, propdata->lexreddata,
-            propdata->permvars, propdata->npermvars, componentperms[0], propdata->symtype,
-            propdata->permvardomaincenter, &success) );
-      if ( success )
-      {
-         propdata->componentblocked[cidx] |= SYM_HANDLETYPE_SYMBREAK;
-         ++propdata->ncompblocked;
-         goto CLEARITERATIONORBITOPEDETECTED;
-      }
+            propdata->permvars, propdata->npermvars, orbisackperm, propdata->symtype,
+            propdata->permvardomaincenter, success) );
+      if ( *success )
+         return SCIP_OKAY;
    }
 
-   /* transform orbitope variable matrix to desired input format for `SCIPisPackingPartitioningOrbitope` */
-   SCIP_CALL( SCIPallocBufferArray(scip, &ppvarmatrix, nrows) );
+   /* create orbitope variable matrix */
+   SCIP_CALL( SCIPallocBufferArray(scip, &varmatrix, nrows) );
    for (i = 0; i < nrows; ++i)
    {
-      SCIP_CALL( SCIPallocBufferArray(scip, &ppvarmatrix[i], ncols) );
-   }
-
-   for (i = 0; i < nrows; ++i)
-   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &varmatrix[i], ncols) );
       for (j = 0; j < ncols; ++j)
-         ppvarmatrix[i][j] = propdata->permvars[orbitopematrix[ncols * i + j]];
+         varmatrix[i][j] = propdata->permvars[varidxmatrix[i][j]];
    }
 
    pprows = NULL;
-   SCIP_CALL( SCIPisPackingPartitioningOrbitope(scip, ppvarmatrix, nrows, ncols, &pprows, &npprows, &type) );
+   SCIP_CALL( SCIPisPackingPartitioningOrbitope(scip, varmatrix, nrows, ncols, &pprows, &npprows, &type) );
 
    /* does it have at least 3 packing-partitioning rows? */
    ispporbitope = npprows >= 3;  /* (use same magic number as cons_orbitope.c) */
@@ -5811,12 +5102,12 @@ SCIP_RETCODE tryAddOrbitopesDynamic(
          if ( pprows[i] )
          {
             assert( r < npprows );
-            ppvarsarrayonlypprows[r++] = ppvarmatrix[i];
+            ppvarsarrayonlypprows[r++] = varmatrix[i];
          }
       }
       assert( r == npprows );
 
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "orbitope_pp_comp_%d", cidx);
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "orbitope_pp_comp_%d", id);
       SCIP_CALL( SCIPcreateConsOrbitope(scip, &cons, name, ppvarsarrayonlypprows, SCIP_ORBITOPETYPE_PACKING,
             npprows, ncols, FALSE, FALSE, FALSE, FALSE, propdata->conssaddlp,
             TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
@@ -5830,10 +5121,7 @@ SCIP_RETCODE tryAddOrbitopesDynamic(
        * compatability with the static orbitope function, which allocates this array statically
        */
       propdata->genlinconss[propdata->ngenlinconss++] = cons;
-
-      /* mark component as blocked */
-      propdata->componentblocked[cidx] |= SYM_HANDLETYPE_SYMBREAK;
-      ++propdata->ncompblocked;
+      *success = TRUE;
 
       SCIPfreeBufferArray(scip, &ppvarsarrayonlypprows);
    }
@@ -5842,46 +5130,31 @@ SCIP_RETCODE tryAddOrbitopesDynamic(
       /* use orbitopal reduction for component */
       SCIP_VAR** orbitopevarmatrix;
       int nelem;
+      int pos = 0;
 
       /* variable array */
       nelem = nrows * ncols;
       SCIP_CALL( SCIPallocBufferArray(scip, &orbitopevarmatrix, nelem) );
-      for (i = 0; i < nelem; ++i)
-         orbitopevarmatrix[i] = propdata->permvars[orbitopematrix[i]];
-
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "orbitope_full_comp_%d", cidx);
-      SCIP_CALL( SCIPorbitopalReductionAddOrbitope(scip, propdata->orbitopalreddata,
-            orbitopevarmatrix, nrows, ncols, &success) );
-
-      if ( success )
+      for (i = 0; i < nrows; ++i)
       {
-         /* mark component as blocked */
-         propdata->componentblocked[cidx] |= SYM_HANDLETYPE_SYMBREAK;
-         ++propdata->ncompblocked;
+         for (j = 0; j < ncols; ++j)
+            orbitopevarmatrix[pos++] = varmatrix[i][j];
       }
+
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "orbitope_full_comp_%d", id);
+      SCIP_CALL( SCIPorbitopalReductionAddOrbitope(scip, propdata->orbitopalreddata,
+            orbitopevarmatrix, nrows, ncols, success) );
 
       SCIPfreeBufferArray(scip, &orbitopevarmatrix);
    }
 
-   /* pprows might not have been initialized if there are no setppc conss */
-   if ( pprows != NULL )
-   {
-      SCIPfreeBlockMemoryArray(scip, &pprows, nrows);
-   }
+   SCIPfreeBlockMemoryArrayNull(scip, &pprows, nrows);
 
    for (i = nrows - 1; i >= 0; --i)
    {
-      SCIPfreeBufferArray(scip, &ppvarmatrix[i]);
+      SCIPfreeBufferArray(scip, &varmatrix[i]);
    }
-   SCIPfreeBufferArray(scip, &ppvarmatrix);
-
- CLEARITERATIONORBITOPEDETECTED:
-   assert( isorbitope );
-   assert( orbitopematrix != NULL );
-   SCIPfreeBlockMemoryArray(scip, &orbitopematrix, nrows * ncols); /*lint !e647*/
-
- CLEARITERATIONNOORBITOPE:
-   SCIPfreeBufferArray(scip, &componentperms);
+   SCIPfreeBufferArray(scip, &varmatrix);
 
    return SCIP_OKAY;
 }
@@ -6289,119 +5562,256 @@ SCIP_RETCODE SCIPdisplaySymmetryStatistics(
    return SCIP_OKAY;
 }
 
-
-/** tries to handle symmetries of double-lex matrices */
+/** handles orbitope action by static or dynamic symmetry handling methods */
 static
-SCIP_RETCODE tryHandleDoubleLexMatricesComponent(
+SCIP_RETCODE handleOrbitope(
    SCIP*                 scip,               /**< SCIP instance */
    SCIP_PROPDATA*        propdata,           /**< data of symmetry propagator */
-   int                   cidx,               /**< index of componet */
-   SCIP_Bool*            terminate           /**< pointer to store if adding symmetry methods shall be terminated */
+   int                   id,                 /**< ID of orbitope (used for constraint name) */
+   int**                 varidxmatrix,       /**< matrix containing variable indices of orbitope */
+   int                   nrows,              /**< number of rows of matrix */
+   int                   ncols,              /**< number of columns of matrix */
+   SCIP_Bool*            success             /**< pointer to store whether orbitope could be added successfully */
    )
 {
    assert( scip != NULL );
    assert( propdata != NULL );
-   assert( 0 <= cidx && cidx < propdata->ncomponents );
-   assert( terminate != NULL );
+   assert( varidxmatrix != NULL );
+   assert( nrows > 0 );
+   assert( ncols > 0 );
+   assert( success != NULL );
 
-   /* exit if component is already blocked */
-   if ( propdata->componentblocked[cidx] )
-      return SCIP_OKAY;
+   *success = FALSE;
 
-   if ( ISSYMRETOPESACTIVE(propdata->usesymmetry) && propdata->detectdoublelex )
+   /* dynamic propagation */
+   if ( propdata->usedynamicprop )
    {
-      /* @todo dynamic propagation */
-      int** perms;
-      int compsize;
+      SCIP_CALL( addOrbitopesDynamic(scip, propdata, id, varidxmatrix, nrows, ncols, success) );
+   }
+   /* static variant only for binary variables */
+   else if ( propdata->binvaraffected )
+   {
+      char name[SCIP_MAXSTRLEN];
+      SCIP_VAR*** orbitopematrix;
+      SCIP_CONS* cons;
       int i;
-      int p;
-      int permlen;
-      SCIP_Bool issigned;
-      SCIP_Bool success = FALSE;
+      int j;
 
-      compsize = propdata->componentbegins[cidx + 1] - propdata->componentbegins[cidx];
-      SCIP_CALL( SCIPallocBufferArray(scip, &perms, compsize) );
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "orbitope_component_%d", id);
 
-      for (p = 0, i = propdata->componentbegins[cidx]; i < propdata->componentbegins[cidx + 1]; ++i)
-         perms[p++] = propdata->perms[propdata->components[i]];
-
-      issigned = propdata->symtype == SYM_SYMTYPE_SIGNPERM ? TRUE : FALSE;
-      permlen = issigned ? 2 * propdata->npermvars : propdata->npermvars;
-
-      SCIP_CALL( tryHandleDoubleLexMatrices(scip, propdata->permvars, perms, compsize, permlen, issigned, &success,
-            cidx, &propdata->genorbconss, &propdata->ngenorbconss, &propdata->genorbconsssize) );
-
-      SCIPfreeBufferArray(scip, &perms);
-
-      if ( success )
+      SCIP_CALL( SCIPallocBufferArray(scip, &orbitopematrix, nrows) );
+      for (i = 0; i < nrows; ++i)
       {
-         propdata->componentblocked[cidx] |= SYM_HANDLETYPE_SYMBREAK;
-         ++(propdata->ncompblocked);
+         SCIP_CALL( SCIPallocBufferArray(scip, &orbitopematrix[i], ncols) );
+         for (j = 0; j < ncols; ++j)
+            orbitopematrix[i][j] = propdata->permvars[varidxmatrix[i][j]];
       }
 
-      /* possibly terminate early */
-      if ( SCIPisStopped(scip) || propdata->ncompblocked >= propdata->ncomponents )
+      SCIP_CALL( SCIPcreateConsOrbitope(scip, &cons, name, orbitopematrix, SCIP_ORBITOPETYPE_FULL,
+            nrows, ncols, propdata->usedynamicprop /* @todo disable */, FALSE, FALSE, FALSE,
+            propdata->conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+      SCIP_CALL( SCIPaddCons(scip, cons) );
+
+      /* do not release constraint here - will be done later */
+      SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, &propdata->genorbconss,
+            &propdata->genorbconsssize, propdata->ngenorbconss + 1) );
+      propdata->genorbconss[propdata->ngenorbconss++] = cons;
+      ++propdata->norbitopes;
+
+      *success = TRUE;
+
+      for (i = nrows - 1; i >= 0; --i)
       {
-         assert( propdata->ncompblocked <= propdata->ncomponents );
-         *terminate = TRUE;
-         return SCIP_OKAY;
+         SCIPfreeBufferArray(scip, &orbitopematrix[i]);
       }
    }
 
    return SCIP_OKAY;
 }
 
-
-/** tries to use orbitopal methods to handle symmetry group component */
+/** handles double lex matrix by adding static orbitope constraints */
 static
-SCIP_RETCODE tryAddOrbitopes(
+SCIP_RETCODE handleDoublelLexMatrix(
    SCIP*                 scip,               /**< SCIP instance */
    SCIP_PROPDATA*        propdata,           /**< data of symmetry propagator */
+   int                   id,                 /**< ID of double lex matrix (used for constraint names) */
+   int**                 varidxmatrix,       /**< matrix containing variable indices of double lex matrix */
+   int                   nrows,              /**< number of rows of matrix */
+   int                   ncols,              /**< number of columns of matrix */
+   int*                  rowsbegin,          /**< array indicating where a new row block begins */
+   int*                  colsbegin,          /**< array indicating where a new column block begins */
+   int                   nrowblocks,         /**< number of row blocks */
+   int                   ncolblocks,         /**< number of column blocks */
+   SCIP_Bool*            success             /**< pointer to store whether orbitope could be added successfully */
+   )
+{
+   char name[SCIP_MAXSTRLEN];
+   SCIP_VAR*** orbitopematrix;
+   SCIP_CONS* cons;
+   int maxdim;
+   int i;
+   int p;
+   int j;
+   int col;
+
+   assert( scip != NULL );
+   assert( propdata != NULL );
+   assert( varidxmatrix != NULL );
+   assert( nrows > 0 );
+   assert( ncols > 0 );
+   assert( rowsbegin != NULL );
+   assert( colsbegin != NULL );
+   assert( nrowblocks > 0 );
+   assert( ncolblocks > 0 );
+   assert( success != NULL );
+
+   /* ensure that we can store orbitope constraints in probdata */
+   SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, &propdata->genorbconss,
+         &propdata->genorbconsssize, propdata->ngenorbconss + nrowblocks + ncolblocks) );
+
+   maxdim = MAX(nrows, ncols);
+   SCIP_CALL( SCIPallocBufferArray(scip, &orbitopematrix, maxdim) );
+   for (i = 0; i < maxdim; ++i)
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &orbitopematrix[i], maxdim) );
+   }
+
+   /* add orbitopes corresponding to column blocks of doublelexmatrix */
+   for (p = 0; p < ncolblocks; ++p)
+   {
+      for (i = 0; i < nrows; ++i)
+      {
+         for (col = 0, j = colsbegin[p]; j < colsbegin[p + 1]; ++j, ++col)
+            orbitopematrix[i][col] = propdata->permvars[varidxmatrix[i][j]];
+      }
+
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "doublelex_cols_%d_%d", id, p);
+      SCIP_CALL( SCIPcreateConsOrbitope(scip, &cons, name, orbitopematrix, SCIP_ORBITOPETYPE_FULL,
+            nrows, colsbegin[p + 1] - colsbegin[p], FALSE, FALSE, TRUE, FALSE,
+            propdata->conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+      SCIP_CALL( SCIPaddCons(scip, cons) );
+      propdata->genorbconss[(propdata->ngenorbconss)++] = cons;
+      /* do not release constraint here - will be done later */
+   }
+
+   /* add orbitopes corresponding to row blocks of doublelexmatrix */
+   for (p = 0; p < nrowblocks; ++p)
+   {
+      for (i = 0; i < ncols; ++i)
+      {
+         for (col = 0, j = rowsbegin[p]; j < rowsbegin[p + 1]; ++j, ++col)
+            orbitopematrix[i][col] = propdata->permvars[varidxmatrix[j][i]];
+      }
+
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "doublelex_rows_%d_%d", id, p);
+      SCIP_CALL( SCIPcreateConsOrbitope(scip, &cons, name, orbitopematrix, SCIP_ORBITOPETYPE_FULL,
+            ncols, rowsbegin[p + 1] - rowsbegin[p], FALSE, FALSE, TRUE, FALSE,
+            propdata->conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+      SCIP_CALL( SCIPaddCons(scip, cons) );
+      propdata->genorbconss[(propdata->ngenorbconss)++] = cons;
+      /* do not release constraint here - will be done later */
+   }
+
+   for (i = maxdim - 1; i >= 0; --i)
+   {
+      SCIPfreeBufferArray(scip, &orbitopematrix[i]);
+   }
+   SCIPfreeBufferArray(scip, &orbitopematrix);
+
+
+   return SCIP_OKAY;
+}
+
+/** tries to handle symmetries of single lex matrices (orbitopes) or double lex matrices */
+static
+SCIP_RETCODE tryHandleSingleOrDoubleLexMatricesComponent(
+   SCIP*                 scip,               /**< SCIP instance */
+   SCIP_PROPDATA*        propdata,           /**< data of symmetry propagator */
+   SCIP_Bool             detectsinglelex,    /**< whether single lex matrices shall be detected */
    int                   cidx,               /**< index of componet */
    SCIP_Bool*            terminate           /**< pointer to store if adding symmetry methods shall be terminated */
    )
 {
+   int** lexmatrix = NULL;
+   int* lexrowsbegin = NULL;
+   int* lexcolsbegin = NULL;
+   int nrows;
+   int ncols;
+   int nrowmatrices;
+   int ncolmatrices;
+   int** perms;
+   int compsize;
+   int i;
+   int p;
+   SCIP_Bool isorbitope;
+   SCIP_Bool success = FALSE;
+
    assert( scip != NULL );
    assert( propdata != NULL );
    assert( 0 <= cidx && cidx < propdata->ncomponents );
    assert( terminate != NULL );
 
+   *terminate = FALSE;
+
    /* exit if component is already blocked */
    if ( propdata->componentblocked[cidx] )
       return SCIP_OKAY;
 
-   /* skip component if it has signed permutations */
+   /* exit if component has non-standard permutations */
    if ( propdata->componenthassignedperm[cidx] )
       return SCIP_OKAY;
 
-   if ( ISSYMRETOPESACTIVE(propdata->usesymmetry) && propdata->detectorbitopes )
+   /* exit if polyhedral methods are disabled when looking for double lex matrices */
+   if ( !ISSYMRETOPESACTIVE(propdata->usesymmetry) && !detectsinglelex )
+      return SCIP_OKAY;
+
+   /* get permutations of component */
+   compsize = propdata->componentbegins[cidx + 1] - propdata->componentbegins[cidx];
+   SCIP_CALL( SCIPallocBufferArray(scip, &perms, compsize) );
+   for (p = 0, i = propdata->componentbegins[cidx]; i < propdata->componentbegins[cidx + 1]; ++i)
+      perms[p++] = propdata->perms[propdata->components[i]];
+
+   SCIP_CALL( SCIPdetectSingleOrDoubleLexMatrices(scip, detectsinglelex, perms, compsize, propdata->npermvars,
+         &success, &isorbitope, &lexmatrix, &nrows, &ncols,
+         &lexrowsbegin, &lexcolsbegin, &nrowmatrices, &ncolmatrices) );
+
+   SCIPfreeBufferArray(scip, &perms);
+
+   /* possibly handle double lex matrix or orbitope */
+   if ( success )
    {
-      /* dynamic propagation */
-      if ( propdata->usedynamicprop )
-      {
-         SCIP_CALL( tryAddOrbitopesDynamic(scip, propdata, cidx) );
-      }
-      /* static variant only for binary variables */
-      else if ( propdata->binvaraffected )
-      {
-         assert( (propdata->genorbconss == NULL) == (propdata->ngenorbconss == 0) );
-         assert( 0 <= propdata->ngenorbconss &&  propdata->ngenorbconss <= propdata->genorbconsssize );
+      assert( lexmatrix != NULL );
+      assert( nrows > 0 );
+      assert( ncols > 0 );
 
-         SCIP_CALL( detectOrbitopes(scip, propdata, cidx) );
-      }
-
-      /* possibly terminate early */
-      if ( SCIPisStopped(scip) || propdata->ncompblocked >= propdata->ncomponents )
+      if ( isorbitope )
       {
-         assert( propdata->ncompblocked <= propdata->ncomponents );
-         *terminate = TRUE;
-         return SCIP_OKAY;
+         SCIP_CALL( handleOrbitope(scip, propdata, cidx, lexmatrix, nrows, ncols, &success) );
       }
+      else
+      {
+         SCIP_CALL( handleDoublelLexMatrix(scip, propdata, cidx, lexmatrix, nrows, ncols,
+               lexrowsbegin, lexcolsbegin, nrowmatrices, ncolmatrices, &success) );
+      }
+   }
+
+   if ( success )
+   {
+      propdata->componentblocked[cidx] |= SYM_HANDLETYPE_SYMBREAK;
+      ++(propdata->ncompblocked);
+   }
+
+   /* possibly terminate early */
+   if ( SCIPisStopped(scip) || propdata->ncompblocked >= propdata->ncomponents )
+   {
+      assert( propdata->ncompblocked <= propdata->ncomponents );
+      *terminate = TRUE;
+      return SCIP_OKAY;
    }
 
    return SCIP_OKAY;
 }
-
 
 /** tries to handle subgroups of component */
 static
@@ -6486,11 +5896,24 @@ SCIP_RETCODE tryAddSymmetryHandlingMethodsComponent(
    useorbitalredorlexred = ISORBITALREDUCTIONACTIVE(propdata->usesymmetry)
       || ( ISSYMRETOPESACTIVE(propdata->usesymmetry) && propdata->usedynamicprop && propdata->addsymresacks );
 
-   SCIP_CALL( tryHandleDoubleLexMatricesComponent(scip, propdata, cidx, &terminate) );
-   if ( !terminate )
+   if ( propdata->detectdoublelex || propdata->detectorbitopes )
    {
-      SCIP_CALL( tryAddOrbitopes(scip, propdata, cidx, &terminate) );
+      SCIP_Bool detectsinglelex;
+
+      detectsinglelex = propdata->detectdoublelex ? FALSE : TRUE;
+
+      SCIP_CALL( tryHandleSingleOrDoubleLexMatricesComponent(scip, propdata, detectsinglelex, cidx, &terminate) );
    }
+
+   /* if ( propdata->detectdoublelex ) */
+   /* { */
+   /*    SCIP_CALL( tryHandleDoubleLexMatricesComponent(scip, propdata, cidx, &terminate) ); */
+   /* } */
+   /* else if ( propdata->detectorbitopes ) */
+   /* { */
+   /*    SCIP_CALL( tryAddOrbitopes(scip, propdata, cidx, &terminate) ); */
+   /* } */
+
    if ( !terminate )
    {
       SCIP_CALL( tryHandleSubgroups(scip, propdata, cidx, &terminate) );
