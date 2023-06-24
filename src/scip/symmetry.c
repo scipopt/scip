@@ -1833,7 +1833,7 @@ SCIP_RETCODE isDoublelLexSym(
    assert( ncols != NULL );
    assert( rowsbegin != NULL );
    assert( colsbegin != NULL );
-   assert (success != NULL );
+   assert( success != NULL );
 
    /* initialize data */
    *nrows = nrows1;
@@ -1993,6 +1993,11 @@ SCIP_RETCODE isDoublelLexSym(
          SCIPfreeBlockMemoryArray(scip, &(*doublelexmatrix)[i], *ncols);
       }
       SCIPfreeBlockMemoryArray(scip, doublelexmatrix, *nrows);
+      SCIPfreeBlockMemoryArray(scip, rowsbegin, nmatrices2 + 1);
+      SCIPfreeBlockMemoryArray(scip, colsbegin, nmatrices1 + 1);
+      *doublelexmatrix = NULL;
+      *rowsbegin = NULL;
+      *colsbegin = NULL;
    }
 
    return SCIP_OKAY;
@@ -2128,9 +2133,9 @@ SCIP_RETCODE SCIPdetectSingleOrDoubleLexMatrices(
 #ifndef NDEBUG
    else
    {
-      assert( lexmatrix == NULL );
-      assert( lexrowsbegin == NULL );
-      assert( lexcolsbegin == NULL );
+      assert( *lexmatrix == NULL );
+      assert( *lexrowsbegin == NULL );
+      assert( *lexcolsbegin == NULL );
    }
 #endif
 
