@@ -763,7 +763,7 @@ SCIP_RETCODE dualPresolving(
 
    /* In the special case of two variables, where one variable is independent and is minimized, we can aggregate variables:
     *  We have var1 + var2 >= 1 and var1 is independent with positive objective. Then var1 + var2 == 1 holds. */
-   if( nvars == 2 && nfixables == 1 && objval > 0.0 ) /*lint !e777*/
+   if( nvars == 2 && nfixables == 1 && SCIPvarGetObj(var) > 0.0 )
    {
       SCIP_Bool redundant;
       SCIP_Bool aggregated;
