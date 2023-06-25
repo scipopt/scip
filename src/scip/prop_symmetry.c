@@ -3788,16 +3788,28 @@ SCIP_RETCODE detectAndHandleSubgroups(
       {
          SCIP_CONS* cons;
          char name[SCIP_MAXSTRLEN];
+         int* symresackperm;
+         SCIP_Bool actsonbinary = FALSE;
 
          /* skip permutations that have been used to build an orbitope */
          if ( permused[k] )
             continue;
 
+         /* skip permutations that do not act on binary variables */
+         symresackperm = modifiedperms[propdata->components[propdata->componentbegins[cidx] + k]];
+         for (j = 0; j < propdata->nperms && !actsonbinary; ++j)
+         {
+            if ( symresackperm[j] != j && SCIPvarIsBinary(modifiedpermvars[j]) )
+               actsonbinary = TRUE;
+         }
+
+         if ( ! actsonbinary )
+            continue;
+
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "symresack_comp%d_perm%d", cidx, k);
 
          SCIP_CALL( SCIPcreateSymbreakCons(scip, &cons, name,
-               modifiedperms[propdata->components[propdata->componentbegins[cidx] + k]],
-               modifiedpermvars, propdata->npermvars, FALSE,
+               symresackperm, modifiedpermvars, propdata->npermvars, FALSE,
                propdata->conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
          SCIP_CALL( SCIPaddCons(scip, cons));
 
