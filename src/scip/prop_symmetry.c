@@ -5806,6 +5806,21 @@ SCIP_RETCODE tryHandleSingleOrDoubleLexMatricesComponent(
          SCIP_CALL( handleDoublelLexMatrix(scip, propdata, cidx, lexmatrix, nrows, ncols,
                lexrowsbegin, lexcolsbegin, nrowmatrices, ncolmatrices, &success) );
       }
+
+      /* free memory not needed anymore */
+      for (i = nrows - 1; i >= 0; --i)
+      {
+         SCIPfreeBlockMemoryArray(scip, &lexmatrix[i], ncols);
+      }
+      SCIPfreeBlockMemoryArray(scip, &lexmatrix, nrows);
+      if ( ncolmatrices > 0 )
+      {
+         SCIPfreeBlockMemoryArray(scip, lexcolsbegin, ncolmatrices);
+      }
+      if ( nrowmatrices > 0 )
+      {
+         SCIPfreeBlockMemoryArray(scip, lexrowsbegin, nrowmatrices);
+      }
    }
 
    if ( success )

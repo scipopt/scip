@@ -2058,6 +2058,8 @@ SCIP_RETCODE SCIPdetectSingleOrDoubleLexMatrices(
 
    *success = TRUE;
    *isorbitope = FALSE;
+   *nrowmatrices = 0;
+   *ncolmatrices = 0;
 
    /* arrays to store the different types of involutions */
    SCIP_CALL( SCIPallocBufferArray(scip, &permstype1, nperms)  );
@@ -2113,6 +2115,12 @@ SCIP_RETCODE SCIPdetectSingleOrDoubleLexMatrices(
       SCIP_CALL( isDoublelLexSym(scip, matricestype1, ncycs1, ncolstype1, nmatricestype1,
             matricestype2, ncycs2, ncolstype2, nmatricestype2, perms, permlen,
             lexmatrix, nrows, ncols, lexrowsbegin, lexcolsbegin, success) );
+
+      if ( *success )
+      {
+         *nrowmatrices = nmatricestype2;
+         *ncolmatrices = nmatricestype1;
+      }
    }
 
    /* if no double lex matrix is detected, possibly return orbitope */
