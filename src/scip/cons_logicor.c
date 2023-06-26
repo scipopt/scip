@@ -759,7 +759,7 @@ SCIP_RETCODE dualPresolving(
          bestobjval = objval;
       }
 
-      if ( objval > 0.0 )
+      if ( objval >= 0.0 )
          indepidx = v;
    }
 

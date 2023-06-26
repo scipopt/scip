@@ -1414,7 +1414,7 @@ SCIP_RETCODE dualPresolving(
             assert(SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == nlockups);
 
             /* store variables that have the right objective sign */
-            if ( objval * objsign > 0.0 )
+            if ( objval * objsign >= 0.0 )
                indepidx = v;
          }
       }
@@ -1440,9 +1440,9 @@ SCIP_RETCODE dualPresolving(
    noldfixed = *nfixedvars;
 
    /* In the special case of two variables, where one variable is independent and will be minimized for covering or
-    * maximized for packing, we can aggregate variables:
-    *  - Covering: var1 + var2 >= 1 and the objective of var1 is positive.
-    *  - Packing:  var1 + var2 <= 1 and the objective of var1 is negativ.
+    * maximized for packing or does not appear in the objective, we can aggregate variables:
+    *  - Covering: var1 + var2 >= 1 and the objective of var1 is non-negative.
+    *  - Packing:  var1 + var2 <= 1 and the objective of var1 is non-positive.
     * In both cases, var1 + var2 = 1 holds in every optimal solution.
     */
    if( setppctype != SCIP_SETPPCTYPE_PARTITIONING && nvars == 2 && indepidx >= 0 )
