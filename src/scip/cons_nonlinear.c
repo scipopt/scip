@@ -9730,6 +9730,27 @@ SCIP_DECL_SORTINDCOMP(SCIPsortVarPtr)
    return 0;
 }
 
+/** gets domain center of a variable which has not semi-infinite domain */
+static
+SCIP_Real getDomainCenter(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_VAR*             var                 /**< variable */
+   )
+{
+   SCIP_Real ub;
+   SCIP_Real lb;
+
+   ub = SCIPvarGetUbGlobal(var);
+   lb = SCIPvarGetLbGlobal(var);
+
+   assert( SCIPisInfinity(scip, ub) == SCIPisInfinity(scip, -lb) );
+
+   if ( SCIPisInfinity(scip, ub) )
+      return 0.0;
+
+   return (ub + lb) / 2;
+}
+
 /** tries to add gadget for finding signed permutations for squared differences in a sum expression */
 static
 SCIP_RETCODE tryAddGadgetSquaredDifference(
@@ -9942,14 +9963,13 @@ SCIP_RETCODE tryAddGadgetSquaredDifference(
       val2 = (*consvals)[0];
 
       /* we cannot handle the pair of variables if their constant/scalar differs or one variable
-       * cannot be centered at the origin or they have a different domain
+       * cannot be centered at the origin or they are not centered around the same point
        */
       if( !SCIPisEQ(scip, constant, constant2) || !SCIPisEQ(scip, val, val2)
          || (SCIPisInfinity(scip, SCIPvarGetUbGlobal(actvar)) != SCIPisInfinity(scip, -SCIPvarGetLbGlobal(actvar)))
          || (SCIPisInfinity(scip, SCIPvarGetUbGlobal(actvar2)) != SCIPisInfinity(scip, -SCIPvarGetLbGlobal(actvar2)))
          || (SCIPisInfinity(scip, SCIPvarGetUbGlobal(actvar)) != SCIPisInfinity(scip, SCIPvarGetLbGlobal(actvar2)))
-         || !SCIPisEQ(scip, SCIPvarGetUbGlobal(actvar), SCIPvarGetUbGlobal(actvar2))
-         || !SCIPisEQ(scip, SCIPvarGetLbGlobal(actvar), SCIPvarGetLbGlobal(actvar2)) )
+         || !SCIPisEQ(scip, getDomainCenter(scip, actvar), getDomainCenter(scip, actvar2)) )
          continue;
 
       /* add gadget */
