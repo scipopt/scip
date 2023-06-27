@@ -19,6 +19,8 @@ Features
 - updated statistics on NLP relaxation; information on convexity of NLP has been added
 - added new bandit method (EXP.3-IX) that is the new default of the ALNS heuristic
 - added dialog to display recognized permutation symmetries ("display symmetry")
+- added new setting `limits/objectivestop` that tells SCIP to interrupt the solve as soon as a primal solution is found
+  that is at least as good as the given value
 - added special presolving step for logicor and set covering/packing for constraints with two variables and one independent variable
 
 Performance improvements
@@ -238,7 +240,7 @@ Fixed bugs
 - disable recomputing symmetries after a restart (constraint removal is not permitted)
 - avoid cutting off optimal solutions for small feasibility tolerances in conflict analysis
 - initialize variable in presol_dualsparsify.c
-- fix in presolving of variable bound constraints to use absolute instead of relative difference 
+- fix in presolving of variable bound constraints to use absolute instead of relative difference
 - free variable histories in reoptimization mode
 - handle whitespaces in interactive shell history consistently
 - check and enforce equalities on which the objective is projected in cons_linear.c

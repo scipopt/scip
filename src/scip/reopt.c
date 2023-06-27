@@ -5178,7 +5178,7 @@ SCIP_RETCODE SCIPreoptFree(
             {
                SCIPhistoryFree(&(*reopt)->varhistory[p][v], blkmem);
             }
-            
+
             BMSfreeBlockMemoryArray(blkmem, &(*reopt)->varhistory[p], SCIPgetNOrigVars(set->scip));
             (*reopt)->varhistory[p] = NULL;
          }
