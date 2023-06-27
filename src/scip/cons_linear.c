@@ -15234,6 +15234,8 @@ SCIP_RETCODE addSymmetryInformation(
    SCIP_VAR** vars;
    SCIP_Real* vals;
    SCIP_Real constant = 0.0;
+   SCIP_Real lhs;
+   SCIP_Real rhs;
    int nlocvars;
    int nvars;
    int i;
@@ -15260,9 +15262,24 @@ SCIP_RETCODE addSymmetryInformation(
    }
 
    SCIP_CALL( SCIPgetActiveVariables(scip, symtype, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
+   lhs = consdata->lhs - constant;
+   rhs = consdata->rhs - constant;
+
+   /* if either rhs or lhs is trivial, normalize rhs to be finite */
+   if ( SCIPisInfinity(scip, rhs) )
+   {
+      SCIP_Real tmp;
+      assert(!SCIPisInfinity(scip, -lhs));
+
+      for( i = 0; i < nlocvars; ++i )
+         vals[i] *= -1;
+      tmp = rhs;
+      rhs = -lhs;
+      lhs = -tmp;
+   }
 
    SCIP_CALL( SCIPextendPermsymDetectionGraphLinear(scip, graph, vars, vals, nlocvars,
-         cons, consdata->lhs - constant, consdata->rhs - constant, success) );
+         cons, lhs, rhs, success) );
 
    SCIPfreeBufferArray(scip, &vals);
    SCIPfreeBufferArray(scip, &vars);
