@@ -1322,7 +1322,7 @@ SCIP_RETCODE propagateStaticLexred(
                /* continuous variable type: act as if we increase the variable by a very little bit.
                 * That is only possible if we're able to increase the variable bound by a bit.
                 */
-               if ( EQ(scip, lbi, ubi) )
+               if ( EQ(scip, lb1, ub1) )
                {
                   *infeasible = TRUE;
                   return SCIP_OKAY;
