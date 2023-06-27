@@ -1260,7 +1260,7 @@ SCIP_RETCODE SCIPexprhdlrBwDiffExpr(
    )
 {
    SCIP_Real* origchildrenvals;
-   SCIP_Real origexprval;
+   SCIP_Real origexprval = SCIP_INVALID;
    int c;
 
    assert(exprhdlr != NULL);
@@ -1311,7 +1311,7 @@ SCIP_RETCODE SCIPexprhdlrBwDiffExpr(
          BMSfreeBufferMemoryArray(bufmem, &origchildrenvals);
       }
 
-      expr->evalvalue = origexprval;   /*lint !e644*/
+      expr->evalvalue = origexprval;
    }
 
    return SCIP_OKAY;

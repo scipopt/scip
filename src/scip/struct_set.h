@@ -308,7 +308,7 @@ struct SCIP_Set
    SCIP_Real             limit_gap;          /**< solving stops, if the given gap is reached */
    SCIP_Real             limit_absgap;       /**< solving stops, if the absolute difference between primal and dual bound
                                               *   reaches this value */
-   SCIP_Real             limit_objstop;      /**< solving stops, if given objective value is reached */
+   SCIP_Real             limit_objstop;      /**< solving stops, if solution is found that is at least as good as given value */
    SCIP_Longint          limit_nodes;        /**< maximal number of nodes to process (-1: no limit) */
    SCIP_Longint          limit_totalnodes;   /**< maximal number of total nodes (incl. restarts) to process (-1: no limit) */
    SCIP_Longint          limit_stallnodes;   /**< solving stops, if the given number of nodes was processed since the

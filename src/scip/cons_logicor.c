@@ -62,7 +62,6 @@
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
-#include <string.h>
 
 
 #define CONSHDLR_NAME          "logicor"
@@ -610,6 +609,8 @@ SCIP_RETCODE delCoefPos(
  *  uplocks has a better objective value than this single variable
  *  - here we fix the variable to 0.0 (if the objective contribution is non-negative)
  *
+ *  Moreover, if there exists a variable that is only locked by a constraint with two variables, one can aggregate variables.
+ *
  * Note: the following dual reduction for logic or constraints is already performed by the presolver "dualfix"
  *       - if a variable in a set covering constraint is only locked by that constraint and has negative or zero
  *         objective coefficient than it can be fixed to one
@@ -622,6 +623,7 @@ SCIP_RETCODE dualPresolving(
    int*                  nfixedvars,         /**< pointer to count number of fixings */
    int*                  ndelconss,          /**< pointer to count number of deleted constraints  */
    int*                  nchgcoefs,          /**< pointer to count number of changed/deleted coefficients */
+   int*                  naggrvars,          /**< pointer to count number of variables aggregated */
    SCIP_RESULT*          result              /**< pointer to store the result SCIP_SUCCESS, if presolving was performed */
    )
 {
@@ -639,6 +641,7 @@ SCIP_RETCODE dualPresolving(
    int nfixables;
    int nvars;
    int idx;
+   int indepidx = -1;
    int idxnouplocks;
    int v;
 
@@ -755,9 +758,38 @@ SCIP_RETCODE dualPresolving(
          idx = v;
          bestobjval = objval;
       }
+
+      if ( objval >= 0.0 )
+         indepidx = v;
    }
 
    nvars = consdata->nvars;
+
+   /* In the special case of two variables, where one variable is independent and is minimized, we can aggregate variables:
+    *  We have var1 + var2 >= 1 and var1 is independent with positive objective. Then var1 + var2 == 1 holds. */
+   if( nvars == 2 && indepidx >= 0 )
+   {
+      SCIP_Bool redundant;
+      SCIP_Bool aggregated;
+      int idx2;
+
+      idx2 = 1 - indepidx;
+      assert(0 <= idx2 && idx2 < 2);
+
+      SCIP_CALL( SCIPaggregateVars(scip, vars[indepidx], vars[idx2], 1.0, 1.0, 1.0, &infeasible, &redundant, &aggregated) );
+      assert(!infeasible);
+      assert(redundant);
+      assert(aggregated);
+      ++(*naggrvars);
+
+      /* remove constraint since it is now redundant */
+      SCIP_CALL( SCIPdelCons(scip, cons) );
+      ++(*ndelconss);
+
+      *result = SCIP_SUCCESS;
+
+      return SCIP_OKAY;
+   }
 
    /* check if we have a single variable dominated by another */
    if( nfixables == 1 && idxnouplocks >= 0 )
@@ -3234,7 +3266,6 @@ SCIP_RETCODE shortenConss(
    for( c = nconss - 1; c >= 0; --c )
    {
       SCIP_Bool redundant = FALSE;
-      SCIP_Bool glbinfeas = FALSE;
       SCIP_CONS* cons = conss[c];
       SCIP_CONSDATA* consdata;
 
@@ -3294,9 +3325,9 @@ SCIP_RETCODE shortenConss(
 
       /* use implications and cliques to derive global fixings and to shrink the number of variables in this constraints */
       SCIP_CALL( SCIPshrinkDisjunctiveVarSet(scip, probvars, bounds, boundtypes, redundants, consdata->nvars, &nredvars,
-            nfixedvars, &redundant, &glbinfeas, TRUE) );
+            nfixedvars, &redundant, cutoff, TRUE) );
 
-      if( glbinfeas )
+      if( *cutoff )
       {
          /* reset redundants array to FALSE */
          BMSclearMemoryArray(redundants, nbinprobvars);
@@ -4625,7 +4656,7 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
       /* perform dual reductions */
       if( conshdlrdata->dualpresolving && SCIPallowStrongDualReds(scip) )
       {
-         SCIP_CALL( dualPresolving(scip, cons, conshdlrdata->eventhdlr, nfixedvars, ndelconss, nchgcoefs, result) );
+         SCIP_CALL( dualPresolving(scip, cons, conshdlrdata->eventhdlr, nfixedvars, ndelconss, nchgcoefs, naggrvars, result) );
 
          /* if dual reduction deleted the constraint we take the next */
          if( !SCIPconsIsActive(cons) )
@@ -4750,7 +4781,7 @@ SCIP_DECL_CONSRESPROP(consRespropLogicor)
 
    SCIPdebugMsg(scip, "conflict resolving method of logic or constraint handler\n");
 
-   /* the only deductions are variables infered to 1.0 on logic or constraints where all other variables
+   /* the only deductions are variables inferred to 1.0 on logic or constraints where all other variables
     * are assigned to zero
     */
    assert(SCIPgetVarLbAtIndex(scip, infervar, bdchgidx, TRUE) > 0.5); /* the inference variable must be assigned to one */
@@ -4978,7 +5009,7 @@ SCIP_DECL_CONSPARSE(consParseLogicor)
 
    if( endptr > startptr )
    {
-      /* copy string for parsing; note that isspace() in SCIPparseVarsList() requires that strcopy ends with '\0' */
+      /* copy string for parsing; note that SCIPskipSpace() in SCIPparseVarsList() requires that strcopy ends with '\0' */
       SCIP_CALL( SCIPduplicateBufferArray(scip, &strcopy, startptr, (int)(endptr-startptr+1)) );
       strcopy[endptr-startptr] = '\0';
       varssize = 100;

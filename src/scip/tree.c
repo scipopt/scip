@@ -2044,7 +2044,7 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
    }
    else
    {
-      /* check the infered bound change on the debugging solution */
+      /* check the inferred bound change on the debugging solution */
       SCIP_CALL( SCIPdebugCheckInference(blkmem, set, node, var, newbound, boundtype) ); /*lint !e506 !e774*/
 
       /* remember the bound change as inference (lpsolval is not important: use 0.0) */

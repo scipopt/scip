@@ -41,6 +41,7 @@
 #include "scip/type_scip.h"
 #include "scip/type_var.h"
 #include "scip/type_stat.h"
+#include "scip/type_nlpi.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -167,6 +168,12 @@ SCIP_Bool SCIPbendersOnlyCheckConvexRelax(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_Bool             subscipsoff         /**< flag indicating whether plugins using sub-SCIPs are deactivated */
    );
+
+/** returns NLP solver parameters used for solving NLP subproblems */
+SCIP_EXPORT
+SCIP_NLPPARAM SCIPbendersGetNLPParam(
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
+);
 
 /** Are Benders' cuts generated from the LP solutions? */
 SCIP_EXPORT

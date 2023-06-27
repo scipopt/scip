@@ -5444,6 +5444,44 @@ SCIP_DECL_SORTPTRCOMP(SCIPsortCompInt)
    return 0;
 }
 
+/** implements argsort
+ *
+ * The data pointer is a lookup array of integers.
+ */
+SCIP_DECL_SORTINDCOMP(SCIPsortArgsortInt)
+{
+   int* args;
+   args = (int*) dataptr;
+
+   if( args[ind1] < args[ind2] )
+      return -1;
+
+   if( args[ind1] > args[ind2] )
+      return 1;
+
+   return 0;
+}
+
+
+/** implements argsort
+ *
+ * The data pointer is a lookup array, which are pointer arrays.
+ */
+SCIP_DECL_SORTINDCOMP(SCIPsortArgsortPtr)
+{
+   void** args;
+   args = (void*) dataptr;
+
+   if( args[ind1] < args[ind2] )
+      return -1;
+
+   if( args[ind1] > args[ind2] )
+      return 1;
+
+   return 0;
+}
+
+
 /* first all upwards-sorting methods */
 
 /** sort an indexed element set in non-decreasing order, resulting in a permutation index array */
@@ -10739,7 +10777,7 @@ char* SCIPstrtok(
 #endif
 }
 
-/** translates the given string into a string where symbols ", ', and spaces are escaped with a \ prefix */
+/** translates the given string into a string where unescaped symbols ", ', and spaces are escaped with a \ prefix */
 void SCIPescapeString(
    char*                 t,                  /**< target buffer to store escaped string */
    int                   bufsize,            /**< size of buffer t */
@@ -10756,15 +10794,32 @@ void SCIPescapeString(
    len = (int)strlen(s);
    for( p = 0, i = 0; i <= len && p < bufsize; ++i, ++p )
    {
-      if( s[i] == ' ' || s[i] == '"' || s[i] == '\'' )
+      if( s[i] == '\\' )
+      {
+         t[p] = s[i];
+         ++p;
+         ++i;
+      }
+      else if( s[i] == ' ' || s[i] == '\"' || s[i] == '\'' )
       {
          t[p] = '\\';
-         p++;
+         ++p;
       }
-      if( p < bufsize )
+      if( i <= len && p < bufsize )
          t[p] = s[i];
    }
    t[bufsize-1] = '\0';
+}
+
+/** increases string pointer as long as it refers to a space character or an explicit space control sequence */
+SCIP_RETCODE SCIPskipSpace(
+   char**                s                   /**< pointer to string pointer */
+   )
+{
+   while( isspace(**s) || ( **s == '\\' && *(*s+1) != '\0' && strchr(SCIP_SPACECONTROL, *(*s+1)) ) )
+      *s += **s == '\\' ? 2 : 1;
+
+   return SCIP_OKAY;
 }
 
 /* safe version of snprintf */

@@ -172,8 +172,8 @@ isautom_sg(graph *g, int *p, boolean digraph, int m, int n)
         vi = v[i];
         vpi = v[pi];
         RESETMARKS1;
-        for (j = 0; j < di; ++j) MARK1(p[e[vi+j]]);
-        for (j = 0; j < di; ++j) if (ISNOTMARKED1(e[vpi+j])) return FALSE;
+        for (j = 0; (int) j < di; ++j) MARK1(p[e[vi+j]]);
+        for (j = 0; (int) j < di; ++j) if (ISNOTMARKED1(e[vpi+j])) return FALSE;
     }
 
     return TRUE;
@@ -208,9 +208,9 @@ aresame_sg(sparsegraph *g1, sparsegraph *g2)
 
         vi = v1[i];
         RESETMARKS1;
-        for (j = 0; j < di; ++j) MARK1(e1[vi+j]);
+        for (j = 0; (int) j < di; ++j) MARK1(e1[vi+j]);
         vi = v2[i];
-        for (j = 0; j < di; ++j) if (ISNOTMARKED1(e2[vi+j])) return FALSE;
+        for (j = 0; (int) j < di; ++j) if (ISNOTMARKED1(e2[vi+j])) return FALSE;
     }
 
     return TRUE;
@@ -263,8 +263,8 @@ testcanlab_sg(graph *g, graph *canong, int *lab, int *samerows, int m, int n)
 
         RESETMARKS1;
         mina = n;
-        for (j = 0; j < di; ++j) MARK1(ce[vi+j]);
-        for (j = 0; j < di; ++j)
+        for (j = 0; (int) j < di; ++j) MARK1(ce[vi+j]);
+        for (j = 0; (int) j < di; ++j)
         {
             k = INVLAB[e[vli+j]];
             if (ISMARKED1(k))  UNMARK1(k);
@@ -273,7 +273,7 @@ testcanlab_sg(graph *g, graph *canong, int *lab, int *samerows, int m, int n)
         if (mina != n)
         {
             *samerows = i;
-            for (j = 0; j < di; ++j)
+            for (j = 0; (int) j < di; ++j)
             {
                 k = ce[vi+j];
                 if (ISMARKED1(k) && k < mina) return -1;
@@ -326,7 +326,7 @@ updatecan_sg(graph *g, graph *canong, int *lab, int samerows, int m, int n)
         vli = v[lab[i]];
         if (wt)
         {
-            for (j = 0; j < dli; ++j)
+            for (j = 0; (int) j < dli; ++j)
             {
                 ce[k] = INVLAB[e[vli+j]];
                 cwt[k] = wt[vli+j];
@@ -334,7 +334,7 @@ updatecan_sg(graph *g, graph *canong, int *lab, int samerows, int m, int n)
             }
         }
         else
-            for (j = 0; j < dli; ++j) ce[k++] = INVLAB[e[vli+j]];
+            for (j = 0; (int) j < dli; ++j) ce[k++] = INVLAB[e[vli+j]];
     }
 }
 
@@ -450,9 +450,9 @@ testcanlab_tr(sparsegraph *g, sparsegraph *canong,
  
         RESETMARKS1;
         mina = n;
-        for (j = 0; j < di; ++j) MARK1(ce[vi+j]);
+        for (j = 0; (int) j < di; ++j) MARK1(ce[vi+j]);
 
-        for (j = 0; j < di; ++j)
+        for (j = 0; (int) j < di; ++j)
         {
              k = invlab[e[vli+j]];
              if (ISMARKED1(k))  UNMARK1(k);
@@ -461,7 +461,7 @@ testcanlab_tr(sparsegraph *g, sparsegraph *canong,
         if (mina != n)
         {
             *samerows = i;
-            for (j = 0; j < di; ++j)
+            for (j = 0; (int) j < di; ++j)
             {
                 k = ce[vi+j];
                 if (ISMARKED1(k) && k < mina) return -1;
@@ -509,7 +509,7 @@ updatecan_tr(sparsegraph *g, sparsegraph *canong,
         cv[i] = k;
         cd[i] = dli = d[lab[i]];
         vli = v[lab[i]];
-        for (j = 0; j < dli; ++j) ce[k++] = invlab[e[vli+j]];
+        for (j = 0; (int) j < dli; ++j) ce[k++] = invlab[e[vli+j]];
     }
 }
 
@@ -616,7 +616,7 @@ distvals(sparsegraph *g, int v0, int *dist, int n)
         i = QUEUE[head++];
         vi = v[i];
         di = d[i];
-        for (j = 0; j < di; ++j)
+        for (j = 0; (int) j < di; ++j)
         {
             k = e[vi+j];
             if (dist[k] == n)
@@ -891,7 +891,7 @@ refine_sg(graph *g, int *lab, int *ptn, int level, int *numcells,
             splitv = lab[isplit];
             vi = v[splitv];
             di = d[splitv];
-            for (ii = 0; ii < di; ++ii)
+            for (ii = 0; (int) ii < di; ++ii)
             {
                 j = e[vi+ii];
                 MARK2(j);
@@ -963,7 +963,7 @@ refine_sg(graph *g, int *lab, int *ptn, int level, int *numcells,
             {
                 vi = v[lab[isplit]];
                 di = d[lab[isplit]];
-                for (ii = 0; ii < di; ++ii)
+                for (ii = 0; (int) ii < di; ++ii)
                 {
                     j = e[vi+ii];
                     k = CELLSTART[j];
@@ -1238,12 +1238,12 @@ bestcell_sg(graph *g, int *lab, int *ptn, int level,
         vi = v[lab[START[i]]];
         di = d[lab[START[i]]];
 
-        for (j = 0; j < di; ++j)
+        for (j = 0; (int) j < di; ++j)
         {
             k = NNTCELL[e[vi+j]];
             if (k != n) ++HITS[k];
         }
-        for (j = 0; j < di; ++j)
+        for (j = 0; (int) j < di; ++j)
         {
             k = NNTCELL[e[vi+j]];
             if (k != n)
@@ -1354,7 +1354,7 @@ put_sg(FILE *f, sparsegraph *sg, boolean digraph, int linelength)
         putstring(f," :");
         curlen = slen + 2;
 
-        for (j = 0; j < di; ++j)
+        for (j = 0; (int) j < di; ++j)
         {
             if (!digraph && e[vi+j] < i) continue;
             slen = itos(e[vi+j]+labelorg,s);
@@ -1415,7 +1415,7 @@ sg_to_nauty(sparsegraph *sg, graph *g, int reqm, int *pm)
         vi = v[i];
         di = d[i];
         EMPTYSET(gi,m);
-        for (j = 0; j < di; ++j) ADDELEMENT(gi,e[vi+j]);
+        for (j = 0; (int) j < di; ++j) ADDELEMENT(gi,e[vi+j]);
     }
 
     return g;
@@ -1597,7 +1597,7 @@ distances_sg(graph *g, int *lab, int *ptn, int level, int numcells, int tvpos,
                 vi = v[i];
                 di = d[i];
 
-                for (j = 0; j < di; ++j)
+                for (j = 0; (int) j < di; ++j)
                 {
                     k = e[vi+j];
                     if (ISNOTMARKED1(k))
@@ -1656,7 +1656,7 @@ adjacencies_sg(graph *g, int *lab, int *ptn, int level, int numcells,
         wwt = 0;
         di = d[i];
         ei = e + v[i];
-        for (j = 0; j < di; ++j)
+        for (j = 0; (int) j < di; ++j)
         {
             ACCUM(wwt,FUZZ2(work2[ei[j]]));
             ACCUM(invar[ei[j]],vwt);

@@ -203,7 +203,7 @@
 #define SCIP_DEFAULT_LIMIT_GAP              0.0 /**< solving stops, if the gap is below the given value */
 #define SCIP_DEFAULT_LIMIT_ABSGAP           0.0 /**< solving stops, if the absolute difference between primal and dual
                                                  *   bound reaches this value */
-#define SCIP_DEFAULT_LIMIT_OBJSTOP SCIP_INVALID /**< solving stops, if objective value reaches this value */
+#define SCIP_DEFAULT_LIMIT_OBJSTOP SCIP_INVALID /**< solving stops, if solution is found that is at least as good as given value */
 #define SCIP_DEFAULT_LIMIT_NODES           -1LL /**< maximal number of nodes to process (-1: no limit) */
 #define SCIP_DEFAULT_LIMIT_STALLNODES      -1LL /**< solving stops, if the given number of nodes was processed since the
                                                  *   last improvement of the primal solution value (-1: no limit) */
@@ -1653,7 +1653,7 @@ SCIP_RETCODE SCIPsetCreate(
          SCIPparamChgdLimit, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "limits/objectivestop",
-         "solving stops, if given objective value is reached",
+         "solving stops, if solution is found that is at least as good as given value",
          &(*set)->limit_objstop, FALSE, SCIP_DEFAULT_LIMIT_OBJSTOP, SCIP_REAL_MIN, SCIP_REAL_MAX,
          SCIPparamChgdLimit, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
@@ -2050,10 +2050,16 @@ SCIP_RETCODE SCIPsetCreate(
 
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "misc/usesymmetry",
-         "bitset describing used symmetry handling technique (0: off; 1: polyhedral (orbitopes and/or symresacks);" \
-         " 2: orbital fixing; 3: orbitopes and orbital fixing; 4: Schreier Sims cuts; 5: Schreier Sims cuts and " \
-         "orbitopes); 6: Schreier Sims cuts and orbital fixing; 7: Schreier Sims cuts, orbitopes, and orbital " \
-         "fixing, see type_symmetry.h.",
+         "bitset describing used symmetry handling technique: " \
+         "(0: off; " \
+         "1: constraint-based (orbitopes and/or symresacks); " \
+         "2: orbital fixing; " \
+         "3: orbitopes and orbital fixing; " \
+         "4: Schreier Sims cuts; " \
+         "5: Schreier Sims cuts and orbitopes; " \
+         "6: Schreier Sims cuts and orbital fixing; " \
+         "7: Schreier Sims cuts, orbitopes, and orbital fixing) " \
+         "See type_symmetry.h.",
          &(*set)->misc_usesymmetry, FALSE, SCIP_DEFAULT_MISC_USESYMMETRY, 0, 7,
          paramChgdUsesymmetry, NULL) );
 

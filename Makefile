@@ -402,15 +402,29 @@ endif
 
 SYMOPTIONS	+=	nauty
 ifeq ($(SYM),nauty)
-FLAGS		+=	-I$(LIBDIR)/include/
 SYMOBJ		=	symmetry/compute_symmetry_nauty.o
 SYMOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(SYMOBJ))
 SYMSRC  	=	$(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.c))
+ifeq ($(NAUTYEXTERNAL),false)
+FLAGS		+=	-I$(SRCDIR)/nauty/src -I$(SRCDIR)/nauty/include
+NAUTYOBJ	=	nauty/nauty.o
+NAUTYOBJ	+=      nauty/nautil.o
+NAUTYOBJ	+=      nauty/nausparse.o
+NAUTYOBJ	+=      nauty/naugraph.o
+NAUTYOBJ	+=      nauty/schreier.o
+NAUTYOBJ	+=      nauty/naurng.o
+SYMOBJFILES	+=	$(addprefix $(LIBOBJDIR)/,$(NAUTYOBJ))
+SYMSRC  	+=	$(addprefix $(SRCDIR)/,$(NAUTYOBJ:.o=.c))
+else
+FLAGS		+=	-I$(LIBDIR)/include/
+endif
 ALLSRC		+=	$(SYMSRC)
+ifeq ($(NAUTYEXTERNAL),true)
 SOFTLINKS	+=	$(LIBDIR)/include/nauty
 SOFTLINKS	+=	$(LIBDIR)/static/libnauty.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT)
 LPIINSTMSG	+=	"\n  -> \"nautyinc\" is the path to the Nauty directory, e.g., \"<Nauty-path>\".\n"
 LPIINSTMSG	+=	" -> \"libnauty.*.a\" is the path to the Nauty library, e.g., \"<Nauty-path>/nauty.a\"\n"
+endif
 endif
 
 #-----------------------------------------------------------------------------
@@ -578,6 +592,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/prop_sync.o \
 			scip/event_globalbnd.o \
 			scip/event_estim.o \
+			scip/event_shadowtree.o \
 			scip/expr_abs.o \
 			scip/expr_entropy.o \
 			scip/expr_erf.o \
@@ -889,6 +904,9 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/solve.o \
 			scip/stat.o \
 			scip/symmetry.o \
+			scip/symmetry_orbitopal.o \
+			scip/symmetry_orbital.o \
+			scip/symmetry_lexred.o \
 			scip/syncstore.o \
 			scip/table.o \
 			scip/tree.o \
