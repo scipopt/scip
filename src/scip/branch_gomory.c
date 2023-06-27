@@ -516,8 +516,6 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpGomory)
             bestscore = score;
             bestcand = i;
          }
-         
-         SCIP_CALL( SCIPreleaseRow(scip, &cut) );
       }
    }
 
