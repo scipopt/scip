@@ -755,7 +755,7 @@ SCIP_RETCODE propagateLowerBoundVar(
       }
       else
       {
-         SCIP_CALL( SCIPtightenVarLb(scip, var1, newbd, FALSE, infeasible, &tighten) );
+         SCIP_CALL( SCIPtightenVarLb(scip, var1, newbd, TRUE, infeasible, &tighten) );
          if ( tighten )
          {
             SCIPdebugMessage("Restricting variable LB %12s to %5.2f\n", SCIPvarGetName(var1), newbd);
@@ -858,11 +858,11 @@ SCIP_RETCODE propagateUpperBoundSymVar(
       {
          if ( isnegated )
          {
-            SCIP_CALL( SCIPtightenVarLb(scip, var2, newbd, FALSE, infeasible, &tighten) );
+            SCIP_CALL( SCIPtightenVarLb(scip, var2, newbd, TRUE, infeasible, &tighten) );
          }
          else
          {
-            SCIP_CALL( SCIPtightenVarUb(scip, var2, newbd, FALSE, infeasible, &tighten) );
+            SCIP_CALL( SCIPtightenVarUb(scip, var2, newbd, TRUE, infeasible, &tighten) );
          }
 
          if ( tighten )
@@ -936,7 +936,7 @@ SCIP_RETCODE propagateSelfReflectionVar(
       }
       else
       {
-         SCIP_CALL( SCIPtightenVarLb(scip, var, center, FALSE, infeasible, &tighten) );
+         SCIP_CALL( SCIPtightenVarLb(scip, var, center, TRUE, infeasible, &tighten) );
          if ( tighten )
          {
             SCIPdebugMessage("Restricting variable LB %12s to %5.2f\n", SCIPvarGetName(var), center);
@@ -1310,7 +1310,7 @@ SCIP_RETCODE propagateStaticLexred(
             case SCIP_VARTYPE_IMPLINT:
             case SCIP_VARTYPE_INTEGER:
                assert( SCIPisIntegral(scip, lb1) );
-               SCIP_CALL( SCIPtightenVarLb(scip, vari, lexdata->vardomaincenter[i] + 1.0, FALSE, infeasible, &success) );
+               SCIP_CALL( SCIPtightenVarLb(scip, vari, lexdata->vardomaincenter[i] + 1.0, TRUE, infeasible, &success) );
                if ( success )
                   *nreductions += 1;
                if ( *infeasible )
@@ -1404,7 +1404,7 @@ SCIP_RETCODE propagateStaticLexred(
                case SCIP_VARTYPE_INTEGER:
                   /* discrete variable type: increase lower bound by 1. */
                   assert( SCIPisIntegral(scip, lb1) );
-                  SCIP_CALL( SCIPtightenVarLb(scip, vari, lb1 + 1.0, FALSE, infeasible, &success) );
+                  SCIP_CALL( SCIPtightenVarLb(scip, vari, lb1 + 1.0, TRUE, infeasible, &success) );
                   if ( success )
                      *nreductions += 1;
                   if ( *infeasible )
@@ -1461,12 +1461,12 @@ SCIP_RETCODE propagateStaticLexred(
                   if ( isnegated )
                   {
                      assert( SCIPisIntegral(scip, lb2) );
-                     SCIP_CALL( SCIPtightenVarUb(scip, varj, lb2 + 1.0, FALSE, infeasible, &success) );
+                     SCIP_CALL( SCIPtightenVarUb(scip, varj, lb2 + 1.0, TRUE, infeasible, &success) );
                   }
                   else
                   {
                      assert( SCIPisIntegral(scip, ub2) );
-                     SCIP_CALL( SCIPtightenVarUb(scip, varj, ub2 - 1.0, FALSE, infeasible, &success) );
+                     SCIP_CALL( SCIPtightenVarUb(scip, varj, ub2 - 1.0, TRUE, infeasible, &success) );
                   }
                   if ( success )
                      *nreductions += 1;
