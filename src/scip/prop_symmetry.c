@@ -5179,6 +5179,7 @@ SCIP_RETCODE componentPackingPartitioningOrbisackUpgrade(
    SCIP_PROPDATA*        propdata,           /**< propdata */
    int**                 componentperms,     /**< permutations in the component */
    int                   componentsize,      /**< number of permutations in the component */
+   SCIP_Bool             hassignedperm,      /**< whether the component has a signed permutation */
    SCIP_Bool*            success             /**< whether the packing partitioning upgrade succeeded */
 )
 {
@@ -5215,7 +5216,7 @@ SCIP_RETCODE componentPackingPartitioningOrbisackUpgrade(
    *success = FALSE;
 
    /* currently, we cannot handle signed permutations */
-   if ( propdata->symtype != SYM_SYMTYPE_PERM )
+   if ( hassignedperm )
       return SCIP_OKAY;
 
    setppcconshdlr = SCIPfindConshdlr(scip, "setppc");
@@ -5482,7 +5483,7 @@ SCIP_RETCODE tryAddOrbitalRedLexRed(
    if ( ( checkpporbisack == NULL || SCIPparamGetBool(checkpporbisack) == TRUE ) && propdata->nmovedbinpermvars > 0 )
    {
       SCIP_CALL( componentPackingPartitioningOrbisackUpgrade(scip, propdata,
-            componentperms, componentsize, &success) );
+            componentperms, componentsize, propdata->componenthassignedperm[cidx], &success) );
 
       if ( success )
       {
@@ -5862,15 +5863,20 @@ SCIP_RETCODE tryHandleSubgroups(
    if ( propdata->componenthassignedperm[cidx] )
       return SCIP_OKAY;
 
-   /* @todo also implement a dynamic variant */
-   SCIP_CALL( detectAndHandleSubgroups(scip, propdata, cidx) );
-
-   /* possibly terminate early */
-   if ( SCIPisStopped(scip) || propdata->ncompblocked >= propdata->ncomponents )
+   /* only run if subgroups shall be detected and we can handle them */
+   if ( !propdata->usedynamicprop && ISSYMRETOPESACTIVE(propdata->usesymmetry) && propdata->detectsubgroups
+      && propdata->binvaraffected && propdata->ncompblocked < propdata->ncomponents )
    {
-      assert( propdata->ncompblocked <= propdata->ncomponents );
-      *terminate = TRUE;
-      return SCIP_OKAY;
+      /* @todo also implement a dynamic variant */
+      SCIP_CALL( detectAndHandleSubgroups(scip, propdata, cidx) );
+
+      /* possibly terminate early */
+      if ( SCIPisStopped(scip) || propdata->ncompblocked >= propdata->ncomponents )
+      {
+         assert( propdata->ncompblocked <= propdata->ncomponents );
+         *terminate = TRUE;
+         return SCIP_OKAY;
+      }
    }
 
    return SCIP_OKAY;
