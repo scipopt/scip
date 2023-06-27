@@ -1325,7 +1325,7 @@ SCIP_RETCODE propagateStaticLexred(
                if ( EQ(scip, lb1, ub1) )
                {
                   *infeasible = TRUE;
-                  return SCIP_OKAY;
+                  goto FREEMEMORY;
                }
                break;
             default:
@@ -1419,7 +1419,7 @@ SCIP_RETCODE propagateStaticLexred(
                   if ( EQ(scip, lbi, ubi) )
                   {
                      *infeasible = TRUE;
-                     return SCIP_OKAY;
+                     goto FREEMEMORY;
                   }
                   break;
                default:
@@ -1481,7 +1481,7 @@ SCIP_RETCODE propagateStaticLexred(
                   if ( EQ(scip, lbj, ubj) )
                   {
                      *infeasible = TRUE;
-                     return SCIP_OKAY;
+                     goto FREEMEMORY;
                   }
                   break;
                default:
@@ -1490,7 +1490,7 @@ SCIP_RETCODE propagateStaticLexred(
             }
          }
       }
-
+   FREEMEMORY:
       SCIPfreeBufferArray(scip, &peekbdset);
       SCIPfreeBufferArray(scip, &peekubs);
       SCIPfreeBufferArray(scip, &peeklbs);
