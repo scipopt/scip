@@ -5493,7 +5493,7 @@ SCIP_RETCODE tryAddOrbitalRedLexRed(
    }
 
    /* handle component permutations with orbital reduction */
-   if ( checkorbired && propdata->symtype == SYM_SYMTYPE_PERM )
+   if ( checkorbired && !propdata->componenthassignedperm[cidx] )
    {
       SCIP_CALL( SCIPorbitalReductionAddComponent(scip, propdata->orbitalreddata,
             propdata->permvars, propdata->npermvars, componentperms, componentsize, &success) );
