@@ -169,15 +169,16 @@
 #include <strings.h> /*lint --e{766}*/
 #endif
 
-/*#define SCIP_CONFGRAPH*/
+/* #define SCIP_CONFGRAPH */
+/* #define SCIP_CONFGRAPH_DOT */
 
-
-#ifdef SCIP_CONFGRAPH
+#if defined(SCIP_CONFGRAPH) || defined(SCIP_CONFGRAPH_DOT)
 /*
  * Output of Conflict Graph
  */
 
 #include <stdio.h>
+#include "scip/scip_message.h"
 
 static FILE*             confgraphfile = NULL;              /**< output file for current conflict graph */
 static SCIP_BDCHGINFO*   confgraphcurrentbdchginfo = NULL;  /**< currently resolved bound change */
@@ -195,7 +196,11 @@ void confgraphWriteNode(
 {
    assert(confgraphfile != NULL);
 
+#ifdef SCIP_CONFGRAPH_DOT
+   SCIPdotWriteNode(confgraphfile, (int)(size_t) idptr, label, fillcolor, bordercolor);
+#else
    SCIPgmlWriteNode(confgraphfile, (unsigned int)(size_t)idptr, label, nodetype, fillcolor, bordercolor);
+#endif
 }
 
 /** writes an edge section to the conflict graph file */
@@ -208,10 +213,14 @@ void confgraphWriteEdge(
 {
    assert(confgraphfile != NULL);
 
+#ifdef SCIP_CONFGRAPH_DOT
+   SCIPdotWriteArc(confgraphfile, (int)(size_t)source, (int)(size_t)target, color);
+#else
 #ifndef SCIP_CONFGRAPH_EDGE
    SCIPgmlWriteArc(confgraphfile, (unsigned int)(size_t)source, (unsigned int)(size_t)target, NULL, color);
 #else
    SCIPgmlWriteEdge(confgraphfile, (unsigned int)(size_t)source, (unsigned int)(size_t)target, NULL, color);
+#endif
 #endif
 }
 
@@ -227,7 +236,11 @@ SCIP_RETCODE confgraphCreate(
    assert(conflict != NULL);
    assert(confgraphfile == NULL);
 
+#ifdef SCIP_CONFGRAPH_DOT
+   (void) SCIPsnprintf(fname, SCIP_MAXSTRLEN, "conf%p%d.dot", conflict, conflict->count);
+#else
    (void) SCIPsnprintf(fname, SCIP_MAXSTRLEN, "conf%p%d.gml", conflict, conflict->count);
+#endif
    SCIPinfoMessage(set->scip, NULL, "storing conflict graph in file <%s>\n", fname);
 
    confgraphfile = fopen(fname, "w");
@@ -239,8 +252,11 @@ SCIP_RETCODE confgraphCreate(
       return SCIP_WRITEERROR;
    }
 
+#ifdef SCIP_CONFGRAPH_DOT
+   SCIPdotWriteOpening(confgraphfile);
+#else
    SCIPgmlWriteOpening(confgraphfile, TRUE);
-
+#endif
    confgraphWriteNode(NULL, "conflict", "ellipse", "#ff0000", "#000000");
 
    confgraphcurrentbdchginfo = NULL;
@@ -256,8 +272,11 @@ void confgraphFree(
 {
    if( confgraphfile != NULL )
    {
+#ifdef SCIP_CONFGRAPH_DOT
+      SCIPdotWriteClosing(confgraphfile);
+#else
       SCIPgmlWriteClosing(confgraphfile);
-
+#endif
       fclose(confgraphfile);
 
       confgraphfile = NULL;
@@ -2199,7 +2218,7 @@ SCIP_RETCODE conflictInsertConflictset(
    assert(j <= conflict->nconflictsets);
    conflict->nconflictsets = j;
 
-#ifdef SCIP_CONFGRAPH
+#if defined(SCIP_CONFGRAPH) || defined(SCIP_CONFGRAPH_DOT)
    confgraphMarkConflictset(*conflictset);
 #endif
 
@@ -2329,12 +2348,12 @@ SCIP_RETCODE conflictAddConflictBound(
       /* add the bound change to the current conflict set */
       SCIP_CALL( conflictsetAddBound(conflict->conflictset, blkmem, set, bdchginfo, relaxedbd) );
 
-#ifdef SCIP_CONFGRAPH
+#if defined(SCIP_CONFGRAPH) || defined(SCIP_CONFGRAPH_DOT)
       if( bdchginfo != confgraphcurrentbdchginfo )
          confgraphAddBdchg(bdchginfo);
 #endif
    }
-#ifdef SCIP_CONFGRAPH
+#if defined(SCIP_CONFGRAPH) || defined(SCIP_CONFGRAPH_DOT)
    else
       confgraphLinkBdchg(bdchginfo);
 #endif
@@ -2396,11 +2415,11 @@ SCIP_RETCODE conflictQueueBound(
          SCIP_CALL( SCIPpqueueInsert(conflict->forcedbdchgqueue, (void*)bdchginfo) );
       }
 
-#ifdef SCIP_CONFGRAPH
+#if defined(SCIP_CONFGRAPH) || defined(SCIP_CONFGRAPH_DOT)
       confgraphAddBdchg(bdchginfo);
 #endif
    }
-#ifdef SCIP_CONFGRAPH
+#if defined(SCIP_CONFGRAPH) || defined(SCIP_CONFGRAPH_DOT)
    else
       confgraphLinkBdchg(bdchginfo);
 #endif
@@ -2886,7 +2905,7 @@ SCIP_BDCHGINFO* conflictRemoveCand(
       var->conflictrelaxedub = SCIP_REAL_MAX;
    }
 
-#ifdef SCIP_CONFGRAPH
+#if defined(SCIP_CONFGRAPH) || defined(SCIP_CONFGRAPH_DOT)
    confgraphSetCurrentBdchg(bdchginfo);
 #endif
 
@@ -3327,7 +3346,7 @@ SCIP_RETCODE SCIPconflictInit(
       stat->lastconflictnode = stat->nnodes;
    }
 
-#ifdef SCIP_CONFGRAPH
+#if defined(SCIP_CONFGRAPH) || defined(SCIP_CONFGRAPH_DOT)
    confgraphFree();
    SCIP_CALL( confgraphCreate(set, conflict) );
 #endif

@@ -704,6 +704,54 @@ void SCIPgmlWriteClosing(
    fprintf(file, "]\n");
 }
 
+/**
+ * writes the opening line to a dot graph file, does not open a file
+ */
+void SCIPdotWriteOpening(
+   FILE* file /**< file to write to */
+)
+{
+   assert(file != NULL);
+
+   fprintf(file, "digraph G {\n");
+}
+
+/** adds a node to the dot graph */
+void SCIPdotWriteNode(
+   FILE* file,               /**< file to write to */
+   int nodeId,               /**< node ID */
+   const char* label,        /**< node label */
+   const char* interiorColor,/**< interior color */
+   const char* borderColor   /**< border color */
+)
+{
+   assert(file != NULL);
+
+   fprintf(file, "\t%d [label=\"%s\", style=\"filled\", fillcolor=\"%s\", color=\"%s\"];\n", nodeId, label, interiorColor, borderColor);
+}
+
+/** adds an arc (edge) between two nodes in the dot graph */
+void SCIPdotWriteArc(
+   FILE* file,               /**< file to write to */
+   int fromNode,             /**< source node ID */
+   int toNode,               /**< target node ID */
+   const char* edgeColor     /**< edge color */
+)
+{
+   assert(file != NULL);
+
+   fprintf(file, "\t%d -> %d [color=\"%s\"];\n", fromNode, toNode, edgeColor);
+}
+
+/** writes the closing line to a dot graph file, does not close a file */
+void SCIPdotWriteClosing(
+   FILE* file /**< file to write to */
+)
+{
+   assert(file != NULL);
+
+   fprintf(file, "}\n");
+}
 
 /*
  * Sparse solution
