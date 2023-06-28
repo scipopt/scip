@@ -153,6 +153,7 @@
 #include "scip/scip_mem.h"
 #include "scip/scip_sol.h"
 #include "scip/scip_var.h"
+#include "scip/scip_message.h"
 #include "scip/set.h"
 #include "scip/sol.h"
 #include "scip/struct_conflict.h"
@@ -171,8 +172,8 @@
 #include <strings.h> /*lint --e{766}*/
 #endif
 
-/*#define SCIP_CONFGRAPH*/
-
+// #define SCIP_CONFGRAPH
+// #define SCIP_CONFGRAPH_DOT
 
 #ifdef SCIP_CONFGRAPH
 /*
@@ -197,7 +198,11 @@ void confgraphWriteNode(
 {
    assert(confgraphfile != NULL);
 
+#ifdef SCIP_CONFGRAPH_DOT
+   SCIPdotWriteNode(confgraphfile, (int)(size_t) idptr, label, fillcolor, bordercolor);
+#else
    SCIPgmlWriteNode(confgraphfile, (unsigned int)(size_t)idptr, label, nodetype, fillcolor, bordercolor);
+#endif
 }
 
 /** writes an edge section to the conflict graph file */
@@ -210,10 +215,14 @@ void confgraphWriteEdge(
 {
    assert(confgraphfile != NULL);
 
+#ifdef SCIP_CONFGRAPH_DOT
+   SCIPdotWriteArc(confgraphfile, (int)(size_t)source, (int)(size_t)target, color);
+#else
 #ifndef SCIP_CONFGRAPH_EDGE
    SCIPgmlWriteArc(confgraphfile, (unsigned int)(size_t)source, (unsigned int)(size_t)target, NULL, color);
 #else
    SCIPgmlWriteEdge(confgraphfile, (unsigned int)(size_t)source, (unsigned int)(size_t)target, NULL, color);
+#endif
 #endif
 }
 
@@ -229,7 +238,11 @@ SCIP_RETCODE confgraphCreate(
    assert(conflict != NULL);
    assert(confgraphfile == NULL);
 
+#ifdef SCIP_CONFGRAPH_DOT
+   (void) SCIPsnprintf(fname, SCIP_MAXSTRLEN, "conf%p%d.dot", conflict, conflict->count);
+#else
    (void) SCIPsnprintf(fname, SCIP_MAXSTRLEN, "conf%p%d.gml", conflict, conflict->count);
+#endif
    SCIPinfoMessage(set->scip, NULL, "storing conflict graph in file <%s>\n", fname);
 
    confgraphfile = fopen(fname, "w");
@@ -241,8 +254,11 @@ SCIP_RETCODE confgraphCreate(
       return SCIP_WRITEERROR;
    }
 
+#ifdef SCIP_CONFGRAPH_DOT
+   SCIPdotWriteOpening(confgraphfile);
+#else
    SCIPgmlWriteOpening(confgraphfile, TRUE);
-
+#endif
    confgraphWriteNode(NULL, "conflict", "ellipse", "#ff0000", "#000000");
 
    confgraphcurrentbdchginfo = NULL;
@@ -258,8 +274,11 @@ void confgraphFree(
 {
    if( confgraphfile != NULL )
    {
+#ifdef SCIP_CONFGRAPH_DOT
+      SCIPdotWriteClosing(confgraphfile);
+#else
       SCIPgmlWriteClosing(confgraphfile);
-
+#endif
       fclose(confgraphfile);
 
       confgraphfile = NULL;

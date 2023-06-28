@@ -76,7 +76,7 @@
 #endif
 
 /* todo think about these parameters when using MIR */
-#define BOUNDSWITCH                0.51 /**< threshold for bound switching - see cuts.c */
+#define BOUNDSWITCH               0.51 /**< threshold for bound switching - see cuts.c */
 #define POSTPROCESS               FALSE /**< apply postprocessing to the cut - see cuts.c */
 #define USEVBDS                   FALSE /**< use variable bounds - see cuts.c */
 #define ALLOWLOCAL                FALSE /**< allow to generate local cuts - see cuts. */
