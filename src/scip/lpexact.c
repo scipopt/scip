@@ -8618,7 +8618,7 @@ SCIP_RETCODE SCIPlpExactStartDive(
    int r;
 
    assert(lpexact != NULL);
-   //assert(lpexact->flushed || !lpexact->solved);
+   assert(lpexact->flushed || !lpexact->solved);
    assert(lpexact->fplp->diving);
    assert(!lpexact->diving);
    assert(lpexact->divelpistate == NULL);

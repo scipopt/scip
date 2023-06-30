@@ -2027,6 +2027,9 @@ SCIP_RETCODE boundShift(
    assert(set != NULL);
    assert(safebound != NULL);
 
+   lpexact->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+   lpexact->solved = 0;
+
    if( !SCIPlpExactBSpossible(lpexact) )
       return SCIP_OKAY;
 
