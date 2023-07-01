@@ -4711,8 +4711,7 @@ SCIP_RETCODE addSSTConss(
    SCIP_PROPDATA*        propdata,           /**< datas of symmetry propagator */
    SCIP_Bool             onlywithcontvars,   /**< only handle components that contain continuous variables with SST */
    int*                  nchgbds,            /**< pointer to store number of bound changes (or NULL) */
-   int                   cidx,               /**< index of component which shall be handled */
-   SCIP_Bool*            terminate           /**< pointer to store if adding symmetry methods shall be terminated */
+   int                   cidx                /**< index of component which shall be handled */
    )
 { /*lint --e{641}*/
    SCIP_CONFLICTDATA* varconflicts = NULL;
@@ -4762,7 +4761,6 @@ SCIP_RETCODE addSSTConss(
    assert( scip != NULL );
    assert( propdata != NULL );
    assert( propdata->computedsymmetry );
-   assert( terminate != NULL );
 
    permvars = propdata->permvars;
    npermvars = propdata->npermvars;
@@ -5429,8 +5427,7 @@ static
 SCIP_RETCODE tryAddOrbitalRedLexRed(
    SCIP*                 scip,               /**< SCIP instance */
    SCIP_PROPDATA*        propdata,           /**< propdata */
-   int                   cidx,               /**< index of componet */
-   SCIP_Bool*            terminate           /**< pointer to store if adding symmetry methods shall be terminated */
+   int                   cidx                /**< index of componet */
    )
 {
    int componentsize;
@@ -5742,8 +5739,7 @@ SCIP_RETCODE tryHandleSingleOrDoubleLexMatricesComponent(
    SCIP*                 scip,               /**< SCIP instance */
    SCIP_PROPDATA*        propdata,           /**< data of symmetry propagator */
    SCIP_Bool             detectsinglelex,    /**< whether single lex matrices shall be detected */
-   int                   cidx,               /**< index of componet */
-   SCIP_Bool*            terminate           /**< pointer to store if adding symmetry methods shall be terminated */
+   int                   cidx                /**< index of componet */
    )
 {
    int** lexmatrix = NULL;
@@ -5763,9 +5759,6 @@ SCIP_RETCODE tryHandleSingleOrDoubleLexMatricesComponent(
    assert( scip != NULL );
    assert( propdata != NULL );
    assert( 0 <= cidx && cidx < propdata->ncomponents );
-   assert( terminate != NULL );
-
-   *terminate = FALSE;
 
    /* exit if component is already blocked */
    if ( propdata->componentblocked[cidx] )
@@ -5830,14 +5823,6 @@ SCIP_RETCODE tryHandleSingleOrDoubleLexMatricesComponent(
       ++(propdata->ncompblocked);
    }
 
-   /* possibly terminate early */
-   if ( SCIPisStopped(scip) || propdata->ncompblocked >= propdata->ncomponents )
-   {
-      assert( propdata->ncompblocked <= propdata->ncomponents );
-      *terminate = TRUE;
-      return SCIP_OKAY;
-   }
-
    return SCIP_OKAY;
 }
 
@@ -5846,14 +5831,12 @@ static
 SCIP_RETCODE tryHandleSubgroups(
    SCIP*                 scip,               /**< SCIP instance */
    SCIP_PROPDATA*        propdata,           /**< data of symmetry propagator */
-   int                   cidx,               /**< index of componet */
-   SCIP_Bool*            terminate           /**< pointer to store if adding symmetry methods shall be terminated */
+   int                   cidx                /**< index of componet */
    )
 {
    assert( scip != NULL );
    assert( propdata != NULL );
    assert( 0 <= cidx && cidx < propdata->ncomponents );
-   assert( terminate != NULL );
 
    /* exit if component is already blocked */
    if ( propdata->componentblocked[cidx] )
@@ -5869,14 +5852,6 @@ SCIP_RETCODE tryHandleSubgroups(
    {
       /* @todo also implement a dynamic variant */
       SCIP_CALL( detectAndHandleSubgroups(scip, propdata, cidx) );
-
-      /* possibly terminate early */
-      if ( SCIPisStopped(scip) || propdata->ncompblocked >= propdata->ncomponents )
-      {
-         assert( propdata->ncompblocked <= propdata->ncomponents );
-         *terminate = TRUE;
-         return SCIP_OKAY;
-      }
    }
 
    return SCIP_OKAY;
@@ -5910,12 +5885,10 @@ SCIP_RETCODE tryAddSymmetryHandlingMethodsComponent(
    SCIP*                 scip,               /**< SCIP instance */
    SCIP_PROPDATA*        propdata,           /**< data of symmetry propagator */
    int                   cidx,               /**< index of componet */
-   int*                  nchgbds,            /**< pointer to store number of bound changes (or NULL)*/
-   SCIP_Bool*            earlyterm           /**< pointer to store whether we terminated early (or NULL) */
+   int*                  nchgbds             /**< pointer to store number of bound changes (or NULL)*/
    )
 {
    SCIP_Bool useorbitalredorlexred;
-   SCIP_Bool terminate = FALSE;
 
    assert( scip != NULL );
    assert( propdata != NULL );
@@ -5926,47 +5899,26 @@ SCIP_RETCODE tryAddSymmetryHandlingMethodsComponent(
    if ( propdata->componentblocked[cidx] )
       return SCIP_OKAY;
 
+   /* detect if orbital reduction or lexicographic reduction shall be applied */
    useorbitalredorlexred = ISORBITALREDUCTIONACTIVE(propdata->usesymmetry)
       || ( ISSYMRETOPESACTIVE(propdata->usesymmetry) && propdata->usedynamicprop && propdata->addsymresacks );
 
+   /* try to apply symmetry handling methods */
    if ( propdata->detectdoublelex || propdata->detectorbitopes )
    {
       SCIP_Bool detectsinglelex;
 
       detectsinglelex = propdata->detectdoublelex ? FALSE : TRUE;
 
-      SCIP_CALL( tryHandleSingleOrDoubleLexMatricesComponent(scip, propdata, detectsinglelex, cidx, &terminate) );
+      SCIP_CALL( tryHandleSingleOrDoubleLexMatricesComponent(scip, propdata, detectsinglelex, cidx) );
    }
-
-   /* if ( propdata->detectdoublelex ) */
-   /* { */
-   /*    SCIP_CALL( tryHandleDoubleLexMatricesComponent(scip, propdata, cidx, &terminate) ); */
-   /* } */
-   /* else if ( propdata->detectorbitopes ) */
-   /* { */
-   /*    SCIP_CALL( tryAddOrbitopes(scip, propdata, cidx, &terminate) ); */
-   /* } */
-
-   if ( !terminate )
+   SCIP_CALL( tryHandleSubgroups(scip, propdata, cidx) );
+   SCIP_CALL( addSSTConss(scip, propdata, useorbitalredorlexred, nchgbds, cidx) );
+   if ( useorbitalredorlexred )
    {
-      SCIP_CALL( tryHandleSubgroups(scip, propdata, cidx, &terminate) );
+      SCIP_CALL( tryAddOrbitalRedLexRed(scip, propdata, cidx) );
    }
-   if ( !terminate )
-   {
-      /* only apply SST cuts to components with continuous variables if lex. red. or orbital red. are active */
-      SCIP_CALL( addSSTConss(scip, propdata, useorbitalredorlexred, nchgbds, cidx, &terminate) );
-   }
-   if ( !terminate && useorbitalredorlexred )
-   {
-      SCIP_CALL( tryAddOrbitalRedLexRed(scip, propdata, cidx, &terminate) );
-   }
-   if ( !terminate )
-   {
-      SCIP_CALL( addSymresackConss(scip, propdata, cidx) );
-   }
-
-   if ( earlyterm != NULL )
-      *earlyterm = terminate;
+   SCIP_CALL( addSymresackConss(scip, propdata, cidx) );
 
    return SCIP_OKAY;
 }
@@ -6042,9 +5994,9 @@ SCIP_RETCODE tryAddSymmetryHandlingMethods(
    /* iterate over components and handle each by suitable symmetry handling methods */
    for (c = 0; c < propdata->ncomponents; ++c)
    {
-      SCIP_CALL( tryAddSymmetryHandlingMethodsComponent(scip, propdata, c, nchgbds, earlyterm) );
+      SCIP_CALL( tryAddSymmetryHandlingMethodsComponent(scip, propdata, c, nchgbds) );
 
-      if ( earlyterm != NULL && *earlyterm )
+      if ( SCIPisStopped(scip) || propdata->ncompblocked >= propdata->ncomponents )
          break;
    }
 
