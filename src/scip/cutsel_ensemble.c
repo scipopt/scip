@@ -751,20 +751,22 @@ SCIP_RETCODE SCIPselectCutsEnsemble(
       if( *nselectedcuts == maxselectedcuts )
          break;
       
-      /* if the maximum (non-zero) budget threshold was hit then we can stop */
+      /* increase the non-zero budget counter of added cuts */
       budgettaken += SCIProwGetNNonz(cuts[0]) / ncols;
-      if( budgettaken > nonzerobudget )
-         break;
       
       /* move the pointers to the next position and filter the remaining cuts to enforce the maximum parallelism constraint */
       ++cuts;
       ++scores;
       --ncuts;
    
-      if( cutseldata->filterparalcuts )
+      if( cutseldata->filterparalcuts && ncuts > 0)
          ncuts = filterWithParallelism(selectedcut, cuts, scores, ncuts, cutseldata->maxparal);
-      else if( cutseldata->penaliseparalcuts )
+      else if( cutseldata->penaliseparalcuts && ncuts > 0 )
          penaliseWithParallelism(selectedcut, cuts, scores, ncuts, cutseldata->maxparal, cutseldata->paralpenalty);
+      
+      /* Filter out all remaining cuts that would go over the non-zero budget threshold */
+      if( nonzerobudget - budgettaken < 1 && ncuts > 0 )
+         ncuts = filterWithDensity(scip, cuts, nonzerobudget - budgettaken, ncuts);
       
    }
    
