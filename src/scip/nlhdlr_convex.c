@@ -671,6 +671,7 @@ DECL_CURVCHECK(curvCheckProductComposite)
    if( fidx == 2 )
       return SCIP_OKAY;
 
+   /* constant of c*h(x)+d */
    d = h != ch ? SCIPgetConstantExprSum(ch) : 0.0;
 
 #ifdef SCIP_MORE_DEBUG
