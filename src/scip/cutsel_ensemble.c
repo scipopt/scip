@@ -382,7 +382,8 @@ int filterWithParallelism(
 
 /** penalises any cut too parallel to cut by reducing the parallel cut's score. */
 static
-void penaliseWithParallelism(
+int penaliseWithParallelism(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             cut,                /**< cut to filter orthogonality with */
    SCIP_ROW**            cuts,               /**< array with cuts to perform selection algorithm */
    SCIP_Real*            scores,             /**< array with scores of cuts to perform selection algorithm */
@@ -401,12 +402,21 @@ void penaliseWithParallelism(
       SCIP_Real thisparallel;
       
       thisparallel = SCIProwGetParallelism(cut, cuts[i], 'e');
-      
-      if( thisparallel > maxparallel )
+   
+      /* Filter cuts that are absolutely parallel still. Otherwise penalise if closely parallel */
+      if( thisparallel > 1 - SCIPsumepsilon(scip) )
+      {
+         --ncuts;
+         SCIPswapPointers((void**) &cuts[i], (void**) &cuts[ncuts]);
+         SCIPswapReals(&scores[i], &scores[ncuts]);
+      }
+      else if( thisparallel > maxparallel )
       {
          scores[i] -= paralpenalty;
       }
    }
+   
+   return ncuts;
 }
 
 /** filters the given array of cuts to enforce a maximum density constraint,
@@ -727,7 +737,7 @@ SCIP_RETCODE SCIPselectCutsEnsemble(
       if( cutseldata->filterparalcuts )
          ncuts = filterWithParallelism(forcedcuts[i], cuts, scores, ncuts, cutseldata->maxparal);
       else if( cutseldata->penaliseparalcuts )
-         penaliseWithParallelism(forcedcuts[i], cuts, scores, ncuts, cutseldata->maxparal, cutseldata->paralpenalty);
+         ncuts = penaliseWithParallelism(scip, forcedcuts[i], cuts, scores, ncuts, cutseldata->maxparal, cutseldata->paralpenalty);
    }
    
    /* Get the budget depending on if we are the root or not */
@@ -762,7 +772,7 @@ SCIP_RETCODE SCIPselectCutsEnsemble(
       if( cutseldata->filterparalcuts && ncuts > 0)
          ncuts = filterWithParallelism(selectedcut, cuts, scores, ncuts, cutseldata->maxparal);
       else if( cutseldata->penaliseparalcuts && ncuts > 0 )
-         penaliseWithParallelism(selectedcut, cuts, scores, ncuts, cutseldata->maxparal, cutseldata->paralpenalty);
+         ncuts = penaliseWithParallelism(scip, selectedcut, cuts, scores, ncuts, cutseldata->maxparal, cutseldata->paralpenalty);
       
       /* Filter out all remaining cuts that would go over the non-zero budget threshold */
       if( nonzerobudget - budgettaken < 1 && ncuts > 0 )
