@@ -19,8 +19,6 @@ Features
 - updated statistics on NLP relaxation; information on convexity of NLP has been added
 - added new bandit method (EXP.3-IX) that is the new default of the ALNS heuristic
 - added dialog to display recognized permutation symmetries ("display symmetry")
-- added new setting `limits/objectivestop` that tells SCIP to interrupt the solve as soon as a primal solution is found
-  that is at least as good as the given value
 - added special presolving step for logicor and set covering/packing for constraints with two variables and one independent variable
 
 Performance improvements
@@ -109,6 +107,8 @@ Interface changes
 - expr/product/expandalways to enable expanding any product with sums as factor (that is, also when more than two factors)
 - nlhdlr/convex/maxperturb to specify maximal perturbation of non-differential reference points
 - benders/default/nlpiterlimit to adjust iteration limit for NLP solver for Benders' decomposition NLP subproblems
+- limits/objectivestop to interrupt the solve as soon as a primal solution is found
+  that is at least as good as the given value
 
 ### Data structures
 
@@ -122,6 +122,7 @@ Unit tests
 
 Testing
 -------
+- changed `set lim obj` to `set lim objective` in ctest since `obj` is no longer unambiguous
 
 Build system
 ------------
