@@ -253,6 +253,7 @@ Fixed bugs
 - fixed that presolve of logicor-constraints may have attempted to cutoff a root of the not yet existing branch-and-bound tree
 - only consider positive slack variables as active in benders.c
 - in the feasibility check of and/or constraints, allow for fractional values in operands
+- fixed linear outer-approximation for some composite absolute-value expressions
 
 Miscellaneous
 -------------

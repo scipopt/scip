@@ -36,6 +36,7 @@
 #include "scip/scip_expr.h"
 #include "scip/cons_nonlinear.h"
 #include "scip/expr_var.h"
+#include "scip/expr_abs.h"
 #include "scip/pub_misc_rowprep.h"
 #include "scip/dbldblarith.h"
 
@@ -612,6 +613,7 @@ DECL_CURVCHECK(curvCheckProductComposite)
    SCIP_EXPR* h = NULL;
    SCIP_Real c = 0.0;
    SCIP_EXPR* ch = NULL; /* c * h */
+   SCIP_Real d;
    SCIP_INTERVAL fbounds;
    SCIP_INTERVAL hbounds;
    SCIP_MONOTONE fmonotonicity;
@@ -671,9 +673,11 @@ DECL_CURVCHECK(curvCheckProductComposite)
    if( fidx == 2 )
       return SCIP_OKAY;
 
+   /* constant of c*h(x)+d */
+   d = h != ch ? SCIPgetConstantExprSum(ch) : 0.0;
+
 #ifdef SCIP_MORE_DEBUG
-   SCIPinfoMessage(scip, NULL, "f(c*h+d)*h with f = %s, c = %g, d = %g, h = ", SCIPexprhdlrGetName(SCIPexprGetHdlr(f)),
-         c, h != ch ? SCIPgetConstantExprSum(ch) : 0.0);
+   SCIPinfoMessage(scip, NULL, "f(c*h+d)*h with f = %s, c = %g, d = %g, h = ", SCIPexprhdlrGetName(SCIPexprGetHdlr(f)), c, d);
    SCIPprintExpr(scip, h, NULL);
    SCIPinfoMessage(scip, NULL, "\n");
 #endif
@@ -687,6 +691,14 @@ DECL_CURVCHECK(curvCheckProductComposite)
 
    /* if h has mixed sign, then cannot conclude anything */
    if( hbounds.inf < 0.0 && hbounds.sup > 0.0 )
+      return SCIP_OKAY;
+
+   /* If we have some convex or concave x*abs(c*x+d), then gradients at x=-d/c may be very wrong due to
+    * rounding errors and non-differentiability of abs() at zero (#3411). Therefore, we skip handling
+    * such expression in this nonlinear handler when one of the bounds of c*x+d is very close to zero.
+    * (If zero is in between the bounds of c*x+d, then the composition wouldn't be regarded as convex/concave anyway.)
+    */
+   if( SCIPisExprAbs(scip, f) && (SCIPisZero(scip, c*hbounds.inf+d) || SCIPisZero(scip, c*hbounds.sup+d)) )
       return SCIP_OKAY;
 
    SCIP_CALL( SCIPcallExprMonotonicity(scip, f, 0, &fmonotonicity) );
