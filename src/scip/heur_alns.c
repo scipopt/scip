@@ -3601,6 +3601,16 @@ DECL_CHANGESUBSCIP(changeSubscipTrustregion)
 {  /*lint --e{715}*/
    DATA_TRUSTREGION* data;
 
+   assert(success != NULL);
+
+   if( !SCIPgetBestSol(sourcescip) )
+   {
+      SCIPdebugMsg(sourcescip, "changeSubscipTrustregion unsuccessful, because it was called without incumbent being present\n");
+      *success = FALSE;
+
+      return SCIP_OKAY;
+   }
+
    data = neighborhood->data.trustregion;
 
    /* adding the neighborhood constraint for the trust region heuristic */
