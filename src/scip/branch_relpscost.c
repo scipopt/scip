@@ -73,8 +73,8 @@
 #define DEFAULT_CONFLENGTHWEIGHT 0.0         /**< weight in score calculations for conflict length score*/
 #define DEFAULT_INFERENCEWEIGHT  0.0001      /**< weight in score calculations for inference score */
 #define DEFAULT_CUTOFFWEIGHT     0.0001      /**< weight in score calculations for cutoff score */
-#define DEFAULT_GMIAVGEFFWEIGHT  0.00001     /**< weight in score calculations of avg GMI cut normed efficacies */
-#define DEFAULT_GMILASTEFFWEIGHT 0.0         /**< weight in score calculations of last GMI cut normed efficacy */
+#define DEFAULT_GMIAVGEFFWEIGHT  0.0         /**< weight in score calculations of avg GMI cut normed efficacies */
+#define DEFAULT_GMILASTEFFWEIGHT 0.00001     /**< weight in score calculations of last GMI cut normed efficacy */
 #define DEFAULT_PSCOSTWEIGHT     1.0         /**< weight in score calculations for pseudo cost score */
 #define DEFAULT_NLSCOREWEIGHT    0.1         /**< weight in score calculations for nlcount score */
 #define DEFAULT_MINRELIABLE      1.0         /**< minimal value for minimum pseudo cost size to regard pseudo cost value as reliable */
