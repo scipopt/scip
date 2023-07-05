@@ -5630,7 +5630,9 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
    int nposbinvars;
    int nuplocks;
    int ndownlocks;
-   int posreplacements;
+#ifndef NDEBUG
+   int posreplacements = 0;
+#endif
    int nhashmapentries;
    int nlocaladdconss;
    int v;
@@ -5686,7 +5688,6 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
    /* sort constraints */
    SCIPsortPtr((void**)usefulconss, setppcConssSort2, nconss);
 
-   posreplacements = 0;
    nhashmapentries = 0;
    ndecs = 0;
    donotaggr = SCIPdoNotAggr(scip);
@@ -6003,7 +6004,9 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
                   considxs[nhashmapentries - 1] = c;
                   posincons[nhashmapentries - 1] = v;
 
+#ifndef NDEBUG
                   ++posreplacements;
+#endif
                   continue;
                }
 
@@ -6018,7 +6021,9 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
                assert(consindex < c);
 
                ++ndecs;
+#ifndef NDEBUG
                --posreplacements;
+#endif
                assert(posreplacements >= 0);
 
                varindex = posincons[image - 1];
@@ -6152,7 +6157,9 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
 
                SCIP_CALL( SCIPhashmapRemove(vartoindex, (void*) var) );
 
+#ifndef NDEBUG
                --posreplacements;
+#endif
                assert(posreplacements >= 0);
 
                continue;
@@ -6170,7 +6177,9 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
                   considxs[nhashmapentries - 1] = c;
                   posincons[nhashmapentries - 1] = v;
 
+#ifndef NDEBUG
                   ++posreplacements;
+#endif
                   continue;
                }
             }
@@ -6197,7 +6206,9 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
             assert(consindex < c);
 
             ++ndecs;
+#ifndef NDEBUG
             --posreplacements;
+#endif
             assert(posreplacements >= 0);
 
             varindex = posincons[image - 1];
