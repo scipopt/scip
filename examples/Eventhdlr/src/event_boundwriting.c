@@ -546,7 +546,7 @@ SCIP_DECL_EVENTEXEC(eventExecBoundwriting)
       assert(eventhdlrdata->oldfilename[0] == '\0');
 
       eventhdlrdata->file = fopen(eventhdlrdata->filename, "w");
-      (void)strncpy(eventhdlrdata->oldfilename, eventhdlrdata->filename, SCIP_MAXSTRLEN);
+      (void)SCIPstrncpy(eventhdlrdata->oldfilename, eventhdlrdata->filename, SCIP_MAXSTRLEN);
 
       if( eventhdlrdata->file == NULL )
       {
@@ -580,7 +580,7 @@ SCIP_DECL_EVENTEXEC(eventExecBoundwriting)
       assert(!eventhdlrdata->isopen);
 
       if( eventhdlrdata->oldfilename[0] == '\0' )
-         (void)strncpy(eventhdlrdata->oldfilename, eventhdlrdata->filename, SCIP_MAXSTRLEN);
+         (void)SCIPstrncpy(eventhdlrdata->oldfilename, eventhdlrdata->filename, SCIP_MAXSTRLEN);
 
       /* find last '.' to append filenumber */
       pch=strrchr(eventhdlrdata->filename,'.');
@@ -593,29 +593,25 @@ SCIP_DECL_EVENTEXEC(eventExecBoundwriting)
       /* if no point is found, extend directly */
       if( pch == NULL )
       {
-         (void)strncpy(name, eventhdlrdata->filename, (unsigned int)(SCIP_MAXSTRLEN - n));
+         (void)SCIPstrncpy(name, eventhdlrdata->filename, SCIP_MAXSTRLEN - n);
          strncat(name, number, (unsigned int)n);
       }
       else
       {
          int len;
 
-         if( (pch-(eventhdlrdata->filename)) > (SCIP_MAXSTRLEN - n) ) /*lint !e776*/
-            len = SCIP_MAXSTRLEN - n;
+         if( (pch-(eventhdlrdata->filename)) >= (SCIP_MAXSTRLEN - n) ) /*lint !e776*/
+            len = SCIP_MAXSTRLEN - n - 1;
          else
             len = (int) (pch-(eventhdlrdata->filename));
 
-         (void)strncpy(name, eventhdlrdata->filename, (unsigned int)len);
-         name[len] = '\0';
+         (void)SCIPstrncpy(name, eventhdlrdata->filename, len);
          strncat(name, number, (unsigned int)n);
-	 assert(len+n < SCIP_MAXSTRLEN);
+         assert(len+n < SCIP_MAXSTRLEN);
          name[len+n] = '\0';
 
          if( len + n + strlen(&(eventhdlrdata->filename[len])) < SCIP_MAXSTRLEN ) /*lint !e776*/
-         {
-            strncat(name, &(eventhdlrdata->filename[len]), strlen(&(eventhdlrdata->filename[len])));
-            name[strlen(eventhdlrdata->filename)+n] = '\0';
-         }
+            strcat(name, &(eventhdlrdata->filename[len]));
       }
 
       eventhdlrdata->file = fopen(name, "w");
@@ -642,7 +638,7 @@ SCIP_DECL_EVENTEXEC(eventExecBoundwriting)
    {
       char tmp[SCIP_MAXSTRLEN];
 
-      (void)strncpy(tmp, eventhdlrdata->filename, SCIP_MAXSTRLEN);
+      (void)SCIPstrncpy(tmp, eventhdlrdata->filename, SCIP_MAXSTRLEN);
 
       /* the name should stay the same */
       assert(strcmp(tmp, eventhdlrdata->oldfilename) == 0);
