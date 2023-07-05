@@ -1064,8 +1064,10 @@ SCIP_RETCODE createSubscip(
    unsigned int ucnt;
    unsigned int nshifted;
    unsigned int ncomplemented;
-   unsigned int ncontconverted;
-   unsigned int nintconverted;
+#ifndef NDEBUG
+   unsigned int ncontconverted = 0;
+   unsigned int nintconverted = 0;
+#endif
    unsigned int nlbounds;
    unsigned int nubounds;
 
@@ -1233,8 +1235,6 @@ SCIP_RETCODE createSubscip(
    /* store lb/ub for complementing and perform preprocessing */
    nshifted = 0;
    ncomplemented = 0;
-   ncontconverted = 0;
-   nintconverted = 0;
    nlbounds = 0;
    nubounds = 0;
    for (j = 0; j < ncols; ++j)
@@ -1293,7 +1293,9 @@ SCIP_RETCODE createSubscip(
                         primsol[j] = ub[j];
                      else
                         primsol[j] = lb[j];
+#ifndef NDEBUG
                      ++nintconverted;
+#endif
                   }
                   else
                   {
@@ -1302,14 +1304,18 @@ SCIP_RETCODE createSubscip(
                      {
                         assert( SCIPisFeasIntegral(origscip, lb[j]) );
                         primsol[j] = lb[j];
+#ifndef NDEBUG
                         ++nintconverted;
+#endif
                      }
                      else
                      {
                         assert( ! SCIPisInfinity(origscip, ub[j]) );
                         assert( SCIPisFeasIntegral(origscip, ub[j]) );
                         primsol[j] = ub[j];
+#ifndef NDEBUG
                         ++nintconverted;
+#endif
                      }
                   }
                }
@@ -1327,7 +1333,9 @@ SCIP_RETCODE createSubscip(
                {
                   /* preprocessing is also performed for converted columns */
                   mipdata->coltype[j] = colConverted;
+#ifndef NDEBUG
                   ++ncontconverted;
+#endif
                }
             }
          }

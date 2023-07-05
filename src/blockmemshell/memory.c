@@ -2444,6 +2444,7 @@ long long BMScheckEmptyBlockMemory_call(
          })
 
          assert(nchunks == chkmem->nchunks);
+         SCIP_UNUSED(nchunks);
          assert(nelems == chkmem->storesize);
          assert(neagerelems == chkmem->eagerfreesize);
 

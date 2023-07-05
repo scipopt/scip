@@ -237,7 +237,7 @@ SCIP_RETCODE readDecomposition(
          case DEC_SECTION_MASTER:
             /* read constraint name in both cases */
             /* coverity[secure_coding] */
-            nread = sscanf(buffer, "%1024s\n", consname);
+            nread = sscanf(buffer, "%1023s\n", consname);
             if( nread < 1 )
                error = TRUE;
 
