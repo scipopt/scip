@@ -169,17 +169,6 @@ Features
 - use quad precision in cutsSubstituteMIR() for substituting slack variables into CMIR cuts
 - use quad precision for activity computations in cons_linear.c
 
-Performance improvements
-------------------------
-
-Examples and applications
--------------------------
-
-Interface changes
------------------
-
-### New and changed callbacks
-
 ### Deleted and changed API methods
 
 - SCIPshrinkDisjunctiveVarSet() no longer attempts to cutoff the current node if it finds the
@@ -189,8 +178,6 @@ Interface changes
 
 - added SCIPskipSpace
 
-### Command line interface
-
 ### Interfaces to external software
 
 - updated XPRESS interface to work with XPRESS 41 as well
@@ -199,27 +186,10 @@ Interface changes
 
 - changed integer parameter "propagating/symmetry/recomputrestart" from range {0, 1, 2} to being fixed at value 0
 
-### New parameters
-
-### Data structures
-
-Deleted files
--------------
-
 Unit tests
 ----------
 
 - added new checks for objective, bounds and sides inside the scaling tests in lpi/change.c
-
-Testing
--------
-
-Build system
-------------
-
-### Cmake
-
-### Makefile
 
 Fixed bugs
 ----------
@@ -261,9 +231,6 @@ Miscellaneous
 - Extended documentation of the parameter limits/solutions to point out that the limit is first checked in presolving
 - Added more information about using SCIPcache- and SCIPflushRowExtensions() to documentation and comments
 - Extended the `how to add' sections of the documentation by adding information on how to include default plugins into SCIP
-
-Known bugs
-----------
 
 @section RN803 SCIP 8.0.3
 *************************
