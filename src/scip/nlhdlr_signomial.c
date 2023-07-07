@@ -68,31 +68,32 @@
 /**
  * nonlinear handler expression data
  * 
- * A signomial expression admits the form \f$ cx^e = y \f$, where \f$ y \f$ is an auxiliary variable representing this expression.  
- * The original fomrulation of the expression is defined as \f$ x^e = t = y/c \f$, where \f$ t \f$ is a non-existant slack variable 
- * denoting \f$ y/c \f$. The variables in $x$ with positive exponents form positive variables \f$ u \f$, and the associated exponents 
- * form positive exponents \f$ f\ f$. The variables in \f$ x \f$ with negative exponents and \f$ t \f$  form negative variables \f$ v \f$, 
- * and the associated  exponents form negative exponents \f$ g \f$. Let \$ s =  \max(|f|,|\abs(g)|) \$ be a normalization constant. Let
- *  \f$ f = f / s f$, and let \f$ g =  \abs(g) / s \f$. Then \f$ x^e = t \f$ has a reformulation
- * \f$ u^f = v^g \f$, where \f$ u^f, v^g \$ are two concave power functions.
+ * A signomial expression admits the form \f$ cx^e = y \f$, where \f$ y \f$ is an auxiliary variable representing this
+ * expression. The original fomrulation of the expression is defined as \f$ x^e = t = y/c \f$, where \f$ t \f$ is a
+ * non-existant slack variable denoting \f$ y/c \f$. The variables in $x$ with positive exponents form positive
+ * variables \f$ u \f$, and the associated exponents form positive exponents \f$ f\ f$. The variables in \f$ x \f$ with
+ * negative exponents and \f$ t \f$  form negative variables \f$ v \f$, and the associated exponents form negative
+ * exponents \f$ g \f$. Let \$ s =  \max(|f|,|\abs(g)|) \$ be a normalization constant. Let \f$ f = f / s f$, and let
+ * \f$ g =  \abs(g) / s \f$. Then \f$ x^e = t \f$ has a reformulation \f$ u^f = v^g \f$, where \f$ u^f, v^g \$ are two
+ * concave power functions.
  */
 struct SCIP_NlhdlrExprData
 {
    SCIP_EXPR*            expr;               /**< expression */
-   SCIP_Real             coef;               /**< coeffcient \f$ c \f$ */
-   SCIP_EXPR**           factors;            /**< expression factors representing \f$ x \f$ */
+   SCIP_Real             coef;               /**< coeffcient \f$c\f$ */
+   SCIP_EXPR**           factors;            /**< expression factors representing \f$x\f$ */
    int                   nfactors;           /**< number of factors */
-   int                   nvars;              /**< number of variables \f$ (x,y) \f$  */
-   SCIP_Real*            exponents;          /**< exponents \f$ e \f$ */
-   int                   nposvars;           /**< number of positive variables \f$ u \f$ */
-   int                   nnegvars;           /**< number of negative variables  \f$ v \f$ */
+   int                   nvars;              /**< number of variables \f$(x,y)\f$ */
+   SCIP_Real*            exponents;          /**< exponents \f$e\f$ */
+   int                   nposvars;           /**< number of positive variables \f$u\f$ */
+   int                   nnegvars;           /**< number of negative variables  \f$v\f$ */
    SCIP_Bool*            signs;              /**< indicators for sign of variables after reformulation, TRUE for positive, FALSE for negative */
-   SCIP_Real*            refexponents;       /**< exponents of \f$ (x,t) \f$ after reformulation */
+   SCIP_Real*            refexponents;       /**< exponents of \f$(x,t)\f$ after reformulation */
    SCIP_Bool             isgetvars;          /**< are all variables already got? */
 
    /* working parameters will be modified after getting all variables */
-   SCIP_VAR**            vars;               /**< variables \f$ (x,y) \f$ */
-   SCIP_INTERVAL*        intervals;          /**< intervals storing lower and upper bounds of variables \f$ (x,y) \f$ */
+   SCIP_VAR**            vars;               /**< variables \f$(x,y)\f$ */
+   SCIP_INTERVAL*        intervals;          /**< intervals storing lower and upper bounds of variables \f$(x,y)\f$ */
    SCIP_Real*            box;
    SCIP_Real*            xstar;
    SCIP_Real*            facetcoefs;
@@ -101,20 +102,20 @@ struct SCIP_NlhdlrExprData
 /** nonlinear handler data */
 struct SCIP_NlhdlrData
 {
-   int nexprs;
+   int                   nexprs;
 
    /* parameters */
-   int maxnundervars;                         /**< maximum numbver of variables in underestimating a concave  power function */
-   SCIP_Real mincutscale;                     /**< minimum scale factor when scaling a cut */
+   int                   maxnundervars;      /**< maximum numbver of variables in underestimating a concave  power function */
+   SCIP_Real             mincutscale;        /**< minimum scale factor when scaling a cut */
 };
 
-/** data struct to be be passed on to vertexpoly-evalfunction (see SCIPcomputeFacetVertexPolyhedralNonlinear) */
+/** data struct to be passed on to vertexpoly-evalfunction (see SCIPcomputeFacetVertexPolyhedralNonlinear) */
 typedef struct
 {
-   SCIP_NLHDLREXPRDATA* nlhdlrexprdata;
-   SCIP_Bool            sign;
-   int                  nsignvars;
-   SCIP*                scip;
+   SCIP_NLHDLREXPRDATA*  nlhdlrexprdata;
+   SCIP_Bool             sign;
+   int                   nsignvars;
+   SCIP*                 scip;
 } VERTEXPOLYFUN_EVALDATA;
 
 
@@ -374,14 +375,15 @@ void freeExprDataMem(
    *nlhdlrexprdata = NULL;
 }
 
-
-/** reform rowprep to a standard form for nonlinear handlers. A rowprep in standard form only contains an estimator of the expression and no auxvar */
+/** reform rowprep to a standard form for nonlinear handlers.
+ * A rowprep in standard form only contains an estimator of the expression and no auxvar.
+ */
 static
 SCIP_Real reformRowprep(
-   SCIP*                  scip, 
-   SCIP_NLHDLREXPRDATA*   nlhdlrexprdata,
-   SCIP_ROWPREP*          rowprep,
-   SCIP_Bool*             success                          
+   SCIP*                 scip,
+   SCIP_NLHDLREXPRDATA*  nlhdlrexprdata,
+   SCIP_ROWPREP*         rowprep,
+   SCIP_Bool*            success
 )
 {
    assert(rowprep != NULL);
@@ -420,37 +422,34 @@ SCIP_Real reformRowprep(
 
    rowprep->side *= coefauxvar;
 
-
    return coefauxvar;
-
-}  
-
+}
 
 /** get variables associated with the expression and its subexpressions */
 static
 SCIP_RETCODE getVars(
-   SCIP*                  scip, 
-   SCIP_NLHDLREXPRDATA*   nlhdlrexprdata
+   SCIP*                 scip,
+   SCIP_NLHDLREXPRDATA*  nlhdlrexprdata
    )
 {
+   int c;
+
    assert(!nlhdlrexprdata->isgetvars);
 
-   int c;
-   /* get and caputre variables \f$ x \f$ */
-   for( c = 0; c < nlhdlrexprdata->nfactors; c++ )
+   /* get and capture variables \f$x\f$ */
+   for( c = 0; c < nlhdlrexprdata->nfactors; ++c )
    {
       nlhdlrexprdata->vars[c] = NULL;
       nlhdlrexprdata->vars[c] = SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->factors[c]);
       assert(nlhdlrexprdata->vars[c] != NULL);
-      SCIP_CALL(SCIPcaptureVar(scip, nlhdlrexprdata->vars[c]));
+      SCIP_CALL( SCIPcaptureVar(scip, nlhdlrexprdata->vars[c]) );
    }
 
-
-   /* get and capture variable \f$ y \f$ */
+   /* get and capture variable \f$y\f$ */
    nlhdlrexprdata->vars[c] = NULL;
    nlhdlrexprdata->vars[c] = SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->expr);
    assert(nlhdlrexprdata->vars[c] != NULL);
-   SCIP_CALL(SCIPcaptureVar(scip, nlhdlrexprdata->vars[c]));
+   SCIP_CALL( SCIPcaptureVar(scip, nlhdlrexprdata->vars[c]) );
 
    nlhdlrexprdata->isgetvars = TRUE;
    return SCIP_OKAY;
@@ -461,21 +460,23 @@ static
 void getCheckBds(
    SCIP*                 scip,
    SCIP_NLHDLREXPRDATA*  nlhdlrexprdata,
-   SCIP_Bool*            isboxsignomial         /**< buffer to store whether variables are box constrained signomial variables */ 
+   SCIP_Bool*            isboxsignomial      /**< buffer to store whether variables are box constrained signomial variables */
    )
 {
+   SCIP_Real productinf = 1;
+   SCIP_Real productsup = 1;
+   int c;
+
    assert(nlhdlrexprdata->isgetvars);
 
    *isboxsignomial = FALSE;
 
-   /* get bounds of \f$ x \f$ */
-   SCIP_Real productinf = 1;
-   SCIP_Real productsup = 1;
-   int c;
+   /* get bounds of \f$x\f$ */
    for( c = 0; c < nlhdlrexprdata->nfactors; c++ )
    {
       SCIP_Real inf = SCIPvarGetLbLocal(nlhdlrexprdata->vars[c]);
       SCIP_Real sup = SCIPvarGetUbLocal(nlhdlrexprdata->vars[c]);
+
       /* if the bounds of the variable are not positive and finite, then the expression is not a signomial */
       if( !SCIPisPositive(scip, inf) || !SCIPisPositive(scip, sup) || SCIPisInfinity(scip, sup) )
          return;
@@ -487,10 +488,9 @@ void getCheckBds(
       productsup *= fmax(powinf, powsup);
    }
 
-   /* compute bounds of \f$ t \f$  by bounds of \f$ x \f$ */
+   /* compute bounds of \f$t\f$  by bounds of \f$x\f$ */
    nlhdlrexprdata->intervals[c].inf = productinf;
    nlhdlrexprdata->intervals[c].sup = productsup;
-
 
    #ifdef SCIP_SIG_DEBUG_
       if( !SCIPisEQ(scip, productinf, SCIPvarGetLbLocal(nlhdlrexprdata->vars[c])) ){
@@ -502,7 +502,6 @@ void getCheckBds(
    #endif
 
    *isboxsignomial = TRUE;
-
 }
 
 /** evaluate expression at solution w.r.t. auxiliary variables */

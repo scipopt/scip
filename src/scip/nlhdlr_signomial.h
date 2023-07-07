@@ -46,8 +46,8 @@ extern "C" {
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPincludeNlhdlrSignomial(
-   SCIP *scip /**< SCIP data structure */
- );
+   SCIP*                  scip               /**< SCIP data structure */
+   );
 
 /**@addtogroup NLHDLRS
  * @{
