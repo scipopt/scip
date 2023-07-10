@@ -17,6 +17,7 @@ Features
 ### New API functions
 
 - added SCIPskipSpace
+- added XML parser routines from src/xml/xml.h
 
 ### Interfaces to external software
 
