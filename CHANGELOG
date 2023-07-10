@@ -28,6 +28,7 @@ Interface changes
 ### New API functions
 
 - added SCIPskipSpace
+- added XML parser routines from src/xml/xml.h
 
 ### Command line interface
 
