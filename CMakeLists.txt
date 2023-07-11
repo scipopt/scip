@@ -479,7 +479,7 @@ if(LPS STREQUAL "spx")
     if (DEFINED SOPLEX_WITH_PAPILO)
         message(STATUS "SOPLEX links PAPILO")
         if((NOT PAPILO)) # TODO not sure how to handle AUTOBUILD
-            message(FATAL_ERROR "Please link a SOPLEX build without PAPILO to build SCIP without PAPILO.")
+            message(FATAL_ERROR "Please link a SOPLEX built without PAPILO to build SCIP without PAPILO.")
         endif ()
     endif ()
     if(LPSCHECK)
