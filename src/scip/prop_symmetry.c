@@ -159,7 +159,7 @@
 #define DEFAULT_COMPRESSTHRESHOLD     0.5    /**< Compression is used if percentage of moved vars is at most the threshold. */
 #define DEFAULT_SYMFIXNONBINARYVARS FALSE    /**< Disabled parameter */
 #define DEFAULT_ENFORCECOMPUTESYMMETRY FALSE /**< always compute symmetries, even if they cannot be handled */
-#define DEFAULT_SYMTYPE SYM_SYMTYPE_SIGNPERM /**< type of symmetries to be computed */
+#define DEFAULT_SYMTYPE (int) SYM_SYMTYPE_SIGNPERM /**< type of symmetries to be computed */
 
 /* default parameters for linear symmetry constraints */
 #define DEFAULT_CONSSADDLP           TRUE    /**< Should the symmetry breaking constraints be added to the LP? */
@@ -235,7 +235,7 @@ struct SCIP_PropData
                                                 *   by a user for symmetry detection */
    int                   nopnodetypes;       /**< current number of operator node types used for symmetry detection */
    SCIP_Real*            permvardomaincenter; /**< center of variable domains (needed for signed permuations) */
-   SYM_SYMTYPE           symtype;             /**< type of symmetries to be computed */
+   int                   symtype;             /**< type of symmetries to be computed */
 
    /* components of symmetry group */
    int                   ncomponents;        /**< number of components of symmetry group */
@@ -880,7 +880,7 @@ SCIP_RETCODE freeSymmetryData(
 
       assert( propdata->permvars != NULL );
 
-      if ( propdata->symtype == SYM_SYMTYPE_SIGNPERM )
+      if ( (SYM_SYMTYPE) propdata->symtype == SYM_SYMTYPE_SIGNPERM )
          permlen = 2 * propdata->npermvars;
       else
          permlen = propdata->npermvars;
@@ -1671,7 +1671,7 @@ SCIP_RETCODE checkComponentsForNonstandardPerms(
    SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &(propdata->componenthassignedperm), ncomponents) );
 
    /* stop if no non-standard permutations can exist */
-   if ( propdata->symtype == SYM_SYMTYPE_PERM )
+   if ( (SYM_SYMTYPE) propdata->symtype == SYM_SYMTYPE_PERM )
       return SCIP_OKAY;
 
    /* for each component, check whether it has a non-standard permutation  */
@@ -1717,8 +1717,8 @@ SCIP_RETCODE ensureSymmetryComponentsComputed(
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) component computation started\n", SCIPgetSolvingTime(scip));
 #endif
 
-   SCIP_CALL( SCIPcomputeComponentsSym(scip, propdata->symtype, propdata->perms, propdata->nperms, propdata->permvars,
-         propdata->npermvars, FALSE, &propdata->components, &propdata->componentbegins,
+   SCIP_CALL( SCIPcomputeComponentsSym(scip, (SYM_SYMTYPE) propdata->symtype, propdata->perms, propdata->nperms,
+         propdata->permvars, propdata->npermvars, FALSE, &propdata->components, &propdata->componentbegins,
          &propdata->vartocomponent, &propdata->componentblocked, &propdata->ncomponents) );
 
 #ifdef SCIP_OUTPUT_COMPONENT
@@ -2018,7 +2018,7 @@ SCIP_RETCODE determineSymmetry(
    maxgenerators = MIN(maxgenerators, MAXGENNUMERATOR / nvars);
 
    /* actually compute (global) symmetry */
-   SCIP_CALL( computeSymmetryGroup(scip, propdata->symtype,
+   SCIP_CALL( computeSymmetryGroup(scip, (SYM_SYMTYPE) propdata->symtype,
          propdata->compresssymmetries, propdata->compressthreshold,
          maxgenerators, symspecrequirefixed, propdata->checksymmetries, &propdata->permvars,
          &propdata->npermvars, &propdata->nbinpermvars, &propdata->permvardomaincenter,
@@ -5074,7 +5074,7 @@ SCIP_RETCODE addOrbitopesDynamic(
       orbisackperm = propdata->perms[propdata->components[propdata->componentbegins[id]]];
 
       SCIP_CALL( SCIPlexicographicReductionAddPermutation(scip, propdata->lexreddata,
-            propdata->permvars, propdata->npermvars, orbisackperm, propdata->symtype,
+            propdata->permvars, propdata->npermvars, orbisackperm, (SYM_SYMTYPE) propdata->symtype,
             propdata->permvardomaincenter, success) );
       if ( *success )
          return SCIP_OKAY;
@@ -5507,7 +5507,7 @@ SCIP_RETCODE tryAddOrbitalRedLexRed(
          assert( componentperms[p] != NULL );
          SCIP_CALL( SCIPlexicographicReductionAddPermutation(scip, propdata->lexreddata,
                propdata->permvars, propdata->npermvars, componentperms[p],
-               propdata->symtype, propdata->permvardomaincenter, &success) );
+               (SYM_SYMTYPE) propdata->symtype, propdata->permvardomaincenter, &success) );
          if ( success )
             propdata->componentblocked[cidx] |= SYM_HANDLETYPE_SYMBREAK;
       }
@@ -6407,7 +6407,6 @@ SCIP_RETCODE SCIPincludePropSymmetry(
    SCIP_DIALOG* rootdialog;
    SCIP_DIALOG* displaymenu;
    SCIP_DIALOG* dialog;
-   int tmpval;
 
    SCIP_CALL( SCIPallocBlockMemory(scip, &propdata) );
    assert( propdata != NULL );
@@ -6654,8 +6653,7 @@ SCIP_RETCODE SCIPincludePropSymmetry(
    SCIP_CALL( SCIPaddIntParam(scip,
          "propagating/" PROP_NAME "/symtype",
          "Type of symmetries that shall be computed?",
-         &tmpval, TRUE, DEFAULT_SYMTYPE, 0, 1, NULL, NULL) );
-   propdata->symtype = (SYM_SYMTYPE) tmpval;
+         &propdata->symtype, TRUE, DEFAULT_SYMTYPE, 0, 1, NULL, NULL) );
 
    /* possibly add description */
    if ( SYMcanComputeSymmetry() )
