@@ -416,16 +416,167 @@ SCIP_Bool checkSortedArraysHaveOverlappingEntry(
  * Display dialog callback methods
  */
 
+/** displays the cycle of a symmetry */
+static
+SCIP_RETCODE displayCycleOfSymmetry(
+   SCIP*                 scip,               /**< SCIP pointer */
+   int*                  perm,               /**< symmetry */
+   SYM_SYMTYPE           symtype,            /**< type of symmetry */
+   int                   baseidx,            /**< variable index for which cycle is computed */
+   SCIP_Bool*            covered,            /**< allocated array to store covered variables */
+   int                   nvars,              /**< number of (non-negated) variables in symmetry */
+   SCIP_VAR**            vars                /**< variables on which symmetry acts */
+   )
+{
+   char* string;
+   int varidx;
+   int j;
+
+   assert( scip != NULL );
+   assert( perm != NULL );
+   assert( 0 <= baseidx );
+   assert( (symtype == SYM_SYMTYPE_PERM && baseidx < nvars) ||
+      (symtype == SYM_SYMTYPE_SIGNPERM && baseidx < 2 * nvars) );
+   assert( covered != NULL );
+
+   /* skip fixed points or elements already covered in previous cycle */
+   if ( perm[baseidx] == baseidx || covered[baseidx] )
+      return SCIP_OKAY;
+
+   varidx = baseidx >= nvars ? baseidx - nvars : baseidx;
+   string = (char*) SCIPvarGetName(vars[varidx]);
+   SCIPinfoMessage(scip, NULL, "  (%s<%s>", baseidx >= nvars ? "negated " : "", string);
+   j = perm[baseidx];
+   covered[baseidx] = TRUE;
+   while ( j != baseidx )
+   {
+      covered[j] = TRUE;
+      varidx = j >= nvars ? j - nvars : j;
+      string = (char*) SCIPvarGetName(vars[varidx]);
+      SCIPinfoMessage(scip, NULL, ",%s<%s>", j >= nvars ? "negated " : "", string);
+      j = perm[j];
+   }
+   SCIPinfoMessage(scip, NULL, ")\n");
+
+   return SCIP_OKAY;
+}
+
+/** displays symmetry information without taking components into account */
+static
+SCIP_RETCODE displaySymmetriesWithoutComponents(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_PROPDATA*        propdata            /**< propagator data */
+   )
+{
+   SCIP_Bool* covered;
+   SYM_SYMTYPE symtype;
+   int* perm;
+   int permlen;
+   int npermvars;
+   int i;
+   int p;
+
+   assert( scip != NULL );
+   assert( propdata != NULL );
+   assert( propdata->nperms > 0 );
+   assert( propdata->permvars != NULL );
+   assert( propdata->npermvars > 0 );
+
+   symtype = (SYM_SYMTYPE) propdata->symtype;
+   npermvars = propdata->npermvars;
+   permlen = symtype == SYM_SYMTYPE_PERM ? npermvars : 2 * npermvars;
+
+   if ( symtype == SYM_SYMTYPE_SIGNPERM )
+      SCIPinfoMessage(scip, NULL, "Display permutations as signed permutations (allowing translations)\n");
+
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &covered, permlen) );
+
+   for (p = 0; p < propdata->nperms; ++p)
+   {
+      SCIPinfoMessage(scip, NULL, "Permutation %d:\n", p);
+      perm = propdata->perms[p];
+
+      for (i = 0; i < permlen; ++i)
+      {
+         SCIP_CALL( displayCycleOfSymmetry(scip, perm, symtype, i, covered, npermvars, propdata->permvars) );
+      }
+
+      for (i = 0; i < permlen; ++i)
+         covered[i] = FALSE;
+   }
+
+   SCIPfreeBufferArray(scip, &covered);
+
+   return SCIP_OKAY;
+}
+
+/** displays symmetry information taking components into account */
+static
+SCIP_RETCODE displaySymmetriesWithComponents(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_PROPDATA*        propdata            /**< propagator data */
+   )
+{
+   SCIP_Bool* covered;
+   SYM_SYMTYPE symtype;
+   int* perm;
+   int comppermlen;
+   int permlen;
+   int npermvars;
+   int i;
+   int p;
+   int c;
+
+   assert( scip != NULL );
+   assert( propdata != NULL );
+   assert( propdata->nperms > 0 );
+   assert( propdata->permvars != NULL );
+   assert( propdata->npermvars > 0 );
+   assert( propdata->ncomponents > 0 );
+
+   symtype = (SYM_SYMTYPE) propdata->symtype;
+   npermvars = propdata->npermvars;
+   permlen = symtype == SYM_SYMTYPE_PERM ? npermvars : 2 * npermvars;
+
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &covered, permlen) );
+
+   for (c = 0; c < propdata->ncomponents; ++c)
+   {
+      int cnt;
+
+      SCIPinfoMessage(scip, NULL, "Display symmetries of component %d.\n", c);
+      if ( propdata->componenthassignedperm[c] )
+         SCIPinfoMessage(scip, NULL, "   Symmetries are displayed as signed permutations (allowing translations).\n");
+      else
+         SCIPinfoMessage(scip, NULL, "   Symmetries are displayed as permutations.\n");
+
+      comppermlen = propdata->componenthassignedperm[c] ? 2 * npermvars : npermvars;
+
+      for (p = propdata->componentbegins[c], cnt = 0; p < propdata->componentbegins[c + 1]; ++p, ++cnt)
+      {
+         SCIPinfoMessage(scip, NULL, "Permutation %d:\n", p);
+         perm = propdata->perms[propdata->components[p]];
+
+         for (i = 0; i < comppermlen; ++i)
+         {
+            SCIP_CALL( displayCycleOfSymmetry(scip, perm, symtype, i, covered, npermvars, propdata->permvars) );
+         }
+
+         for (i = 0; i < comppermlen; ++i)
+            covered[i] = FALSE;
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &covered);
+
+   return SCIP_OKAY;
+}
+
 /** dialog execution method for the display symmetry information command */
 static
 SCIP_DECL_DIALOGEXEC(dialogExecDisplaySymmetry)
 {  /*lint --e{715}*/
-   SCIP_Bool* covered;
    SCIP_PROPDATA* propdata;
-   int* perm;
-   int i;
-   int j;
-   int p;
 
    /* add your dialog to history of dialogs that have been executed */
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
@@ -433,36 +584,28 @@ SCIP_DECL_DIALOGEXEC(dialogExecDisplaySymmetry)
    propdata = (SCIP_PROPDATA*)SCIPdialogGetData(dialog);
    assert( propdata != NULL );
 
-   SCIP_CALL( SCIPallocClearBufferArray(scip, &covered, propdata->npermvars) );
-
-   for (p = 0; p < propdata->nperms; ++p)
+   if ( propdata->nperms == -1 )
    {
-      SCIPinfoMessage(scip, NULL, "Permutation %d:\n", p);
-      perm = propdata->perms[p];
-
-      for (i = 0; i < propdata->npermvars; ++i)
-      {
-         if ( perm[i] == i || covered[i] )
-            continue;
-
-         SCIPinfoMessage(scip, NULL, "  (<%s>", SCIPvarGetName(propdata->permvars[i]));
-         j = perm[i];
-         covered[i] = TRUE;
-         while ( j != i )
-         {
-            covered[j] = TRUE;
-            SCIPinfoMessage(scip, NULL, ",<%s>", SCIPvarGetName(propdata->permvars[j]));
-            j = perm[j];
-         }
-         SCIPinfoMessage(scip, NULL, ")\n");
-      }
-
-      for (i = 0; i < propdata->npermvars; ++i)
-         covered[i] = FALSE;
+      SCIPinfoMessage(scip, NULL, "Cannot display symmetries. Symmetries have not been computed yet.\n");
+      goto EXITDIALOG;
    }
 
-   SCIPfreeBufferArray(scip, &covered);
+   if ( propdata->nperms == 0 )
+   {
+      SCIPinfoMessage(scip, NULL, "Cannot display symmetries. No symmetries detected.\n");
+      goto EXITDIALOG;
+   }
 
+   if ( propdata->ncomponents < 0 )
+   {
+      SCIP_CALL( displaySymmetriesWithoutComponents(scip, propdata) );
+   }
+   else
+   {
+      SCIP_CALL( displaySymmetriesWithComponents(scip, propdata) );
+   }
+
+ EXITDIALOG:
    /* next dialog will be root dialog again */
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
