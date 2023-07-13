@@ -2607,6 +2607,16 @@ void ScipNLP::finalize_solution(
       nlpiproblem->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
       nlpiproblem->solconsviol = SCIP_INVALID;
    }
+   catch(...)
+   {
+      /* with clang++, an IpoptNLP::Eval_Error wasn't catched by the catch-block above
+       * I don't know why, but this should work around it
+       */
+      SCIPdebugMsg(scip, "Unknown exception when checking constraint viol\n");
+      assert(status == INVALID_NUMBER_DETECTED);
+      nlpiproblem->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
+      nlpiproblem->solconsviol = SCIP_INVALID;
+   }
 
    if( nlpiproblem->solstat == SCIP_NLPSOLSTAT_LOCINFEASIBLE )
    {

@@ -11,6 +11,13 @@
  */
 SCIP_RETCODE TESTscipSetStage(SCIP* scip, SCIP_STAGE stage, SCIP_Bool enableNLP);
 
+/** assembles path of testfile using another files directory as directory name */
+void TESTsetTestfilename(
+   char*                 filename,           /**< buffer to write to, assumed to have length at least SCIP_MAXSTRLEN */
+   const char*           file,               /**< name of file, usually including full path, from which to take directory name */
+   const char*           testfile            /**< name of file to append, assumed to be in same directory as file */
+);
+
 /* Include the .c file here because the plugins implemented in scip_test.c should
  * be available every test.
  * */
@@ -43,7 +50,6 @@ SCIP_RETCODE TESTscipSetStage(SCIP* scip, SCIP_STAGE stage, SCIP_Bool enableNLP)
                           }                                                                                   \
                        }                                                                                      \
                        while( FALSE )
-
 
 CR_API int main(int argc, char *argv[]) {
     struct criterion_test_set *tests = criterion_initialize();

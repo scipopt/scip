@@ -1,0 +1,35 @@
+STATISTICS
+  Problem name     : varboundnumerics
+  Variables        : 19 (18 binary, 0 integer, 0 implicit integer, 1 continuous)
+  Constraints      : 0 initial, 7 maximal
+OBJECTIVE
+  Sense            : minimize
+VARIABLES
+  [binary] <y_1>: obj=0.561797752808989, original bounds=[0,1]
+  [binary] <y_2>: obj=0.561797752808989, original bounds=[0,1]
+  [binary] <y_3>: obj=0.561797752808989, original bounds=[0,1]
+  [binary] <y_4>: obj=0.561797752808989, original bounds=[0,1]
+  [binary] <y_5>: obj=0.561797752808989, original bounds=[0,1]
+  [binary] <y_6>: obj=0.561797752808989, original bounds=[0,1]
+  [binary] <y_7>: obj=0.561797752808989, original bounds=[0,1]
+  [binary] <y_8>: obj=0.561797752808989, original bounds=[0,1]
+  [binary] <y_9>: obj=0.561797752808989, original bounds=[0,1]
+  [binary] <y_10>: obj=0.561797752808989, original bounds=[0,1]
+  [binary] <y_11>: obj=0.561797752808989, original bounds=[0,1]
+  [binary] <y_12>: obj=0.561797752808989, original bounds=[0,1]
+  [binary] <y_13>: obj=0.561797752808989, original bounds=[0,1]
+  [binary] <y_14>: obj=0.561797752808989, original bounds=[0,1]
+  [binary] <y_15>: obj=0.561797752808989, original bounds=[0,1]
+  [binary] <y_16>: obj=0.561797752808989, original bounds=[0,1]
+  [binary] <y_17>: obj=0.561797752808989, original bounds=[0,1]
+  [binary] <y_18>: obj=0.561797752808989, original bounds=[0,1]
+  [continuous] <x19>: obj=1, original bounds=[0,+inf]
+CONSTRAINTS
+  [linear] <c1>:  +15.888<y_13>[B] >= 15.888;
+  [linear] <c2>:  +27.354<y_16>[B] +27.354<y_18>[B] >= 12.834;
+  [linear] <c3>:  +13.896<y_4>[B] >= 12.306;
+  [linear] <c4>:  +15.888<y_10>[B] +15.888<y_15>[B] >= 14.31;
+  [linear] <c5>:  +15.888<y_15>[B] +15.888<y_18>[B] >= 15.888;
+  [linear] <c6>:  +65.087160490101<y_2>[B] +27.8788979630806<y_3>[B] +2.58488841984607<y_5>[B] +9.03323850082699<y_7>[B] +3.88008845089283<y_8>[B] +0.512698480191641<y_11>[B] +40.3820716565796<y_18>[B] +<x19>[C] >= 57138109.1557002;
+  [linear] <c7>:  +34.8932696404746<y_15>[B] +40.6605438996702<y_16>[B] +<x19>[C] >= 57138109.1272727;
+END
