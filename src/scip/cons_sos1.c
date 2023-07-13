@@ -5980,9 +5980,9 @@ SCIP_RETCODE enforceConssSOS1(
       SCIP_Real w;
       int j;
       int ind;
-      int cnt;
-
-      cnt = 0;
+#ifndef NDEBUG
+      int cnt = 0;
+#endif
 
       weight1 = 0.0;
       weight2 = 0.0;
@@ -5994,8 +5994,10 @@ SCIP_RETCODE enforceConssSOS1(
          weight1 += val * (SCIP_Real) j;
          weight2 += val;
 
+#ifndef NDEBUG
          if ( ! SCIPisFeasZero(scip, val) )
             ++cnt;
+#endif
       }
 
       assert( cnt >= 2 );

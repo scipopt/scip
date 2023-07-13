@@ -18702,7 +18702,9 @@ SCIP_RETCODE SCIPlpGetDualDegeneracy(
          int nfixedcols = 0;
          int nalreadyfixedcols = 0;
          int nfixedrows = 0;
+#ifndef NDEBUG
          int nimplicitfixedrows = 0;
+#endif
          int nineq = 0;
          int c;
          int r;
@@ -18761,11 +18763,13 @@ SCIP_RETCODE SCIPlpGetDualDegeneracy(
                         ++nfixedrows;
                      }
                   }
+#ifndef NDEBUG
                   else if( SCIPsetIsEQ(set, SCIProwGetLhs(row), SCIProwGetMaxActivity(row, set, stat))
                      || SCIPsetIsEQ(set, SCIProwGetRhs(row), SCIProwGetMinActivity(row, set, stat)) )
                   {
                      ++nimplicitfixedrows;
                   }
+#endif
                }
             }
             else if( SCIProwGetBasisStatus(row) == SCIP_BASESTAT_BASIC )

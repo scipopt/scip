@@ -411,6 +411,7 @@ SCIP_RETCODE SCIPcomputeDecompConsLabels(
 
       assert(nlinkingvars == nconsvars || conslabel != LABEL_UNASSIGNED);
       assert(v == nconsvars || conslabel == SCIP_DECOMP_LINKCONS);
+      SCIP_UNUSED(nlinkingvars);
 
       /* if there are only linking variables, the constraint is unassigned */
       if( conslabel == LABEL_UNASSIGNED )

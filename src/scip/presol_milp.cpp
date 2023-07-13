@@ -58,6 +58,11 @@ SCIP_RETCODE SCIPincludePresolMILP(
 #pragma GCC diagnostic ignored "-Wshadow"
 #pragma GCC diagnostic ignored "-Wctor-dtor-privacy"
 #pragma GCC diagnostic ignored "-Wredundant-decls"
+
+/* disable false warning, !3076, https://gcc.gnu.org/bugzilla/show_bug.cgi?id=106199 */
+#if __GNUC__ == 12 && __GNUC__MINOR__ <= 2
+#pragma GCC diagnostic ignored "-Wstringop-overflow"
+#endif
 #endif
 
 #include <assert.h>

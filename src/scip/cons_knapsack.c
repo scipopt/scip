@@ -2971,7 +2971,9 @@ SCIP_RETCODE getLiftingSequenceGUB(
    int ngubconss;
    int ngubconsGOC1;
    int targetvar;
-   int nvarsprocessed;
+#ifndef NDEBUG
+   int nvarsprocessed = 0;
+#endif
    int i;
    int j;
 
@@ -3004,7 +3006,6 @@ SCIP_RETCODE getLiftingSequenceGUB(
    assert(maxgubvarssize != NULL);
 
    ngubconss = gubset->ngubconss;
-   nvarsprocessed = 0;
    ngubconsGOC1 = 0;
 
    /* GUBs are categorized into different types according to the variables in volved
@@ -3186,7 +3187,9 @@ SCIP_RETCODE getLiftingSequenceGUB(
          if( gubset->gubconss[gubconsidx]->gubvarsstatus[j] == GUBVARSTATUS_BELONGSTOSET_C1 )
          {
             nvarsC1capexceed++;
+#ifndef NDEBUG
             nvarsprocessed++;
+#endif
          }
          /* F-variable: update sort key (number of F variables in GUB) of corresponding GFC1-GUB */
          else if( gubset->gubconss[gubconsidx]->gubvarsstatus[j] == GUBVARSTATUS_BELONGSTOSET_F )
@@ -3300,7 +3303,9 @@ SCIP_RETCODE getLiftingSequenceGUB(
       if( gubset->gubconss[gubconsidx]->gubvarssize > *maxgubvarssize )
 	 *maxgubvarssize = gubset->gubconss[gubconsidx]->gubvarssize;
 
+#ifndef NDEBUG
       nvarsprocessed++;
+#endif
    }
 
    /* stores remaining part of the GUBs of group GFC1 (GF GUBs) and gets GUB sorting keys corresp. to following ordering
@@ -3316,7 +3321,9 @@ SCIP_RETCODE getLiftingSequenceGUB(
       assert(gubconsidx >= 0 && gubconsidx < ngubconss);
       assert(gubset->gubconss[gubconsidx]->gubvarsstatus[varidx] == GUBVARSTATUS_BELONGSTOSET_F);
 
+#ifndef NDEBUG
       nvarsprocessed++;
+#endif
 
       /* the GUB was already handled (status set and stored in its group) by another variable of the GUB */
       if( gubset->gubconsstatus[gubconsidx] != GUBCONSSTATUS_UNINITIAL )
@@ -3366,7 +3373,9 @@ SCIP_RETCODE getLiftingSequenceGUB(
       assert(gubconsidx >= 0 && gubconsidx < ngubconss);
       assert(gubset->gubconss[gubconsidx]->gubvarsstatus[varidx] == GUBVARSTATUS_BELONGSTOSET_R);
 
+#ifndef NDEBUG
       nvarsprocessed++;
+#endif
 
       /* the GUB was already handled (status set and stored in its group) by another variable of the GUB */
       if( gubset->gubconsstatus[gubconsidx] != GUBCONSSTATUS_UNINITIAL )

@@ -23,6 +23,7 @@ Features
   prop_symmetry.c, there is a new callback for constraint handlers, which returns symmetry relevant information by
   encoding a constraint as a node and edge colored graph. This way, also custom constraint handlers can provide
   symmetry information.
+- added special presolving step for logicor and set covering/packing for constraints with two variables and one independent variable
 
 Performance improvements
 ------------------------
@@ -74,6 +75,7 @@ Interface changes
   create indicator constraints from a linear constraint without a slack variable
 - SCIPgetNLPNlRowsStat() to retrieve counts on linear, convex, and nonconvex rows in NLP
 - SCIPnlhdlrSetSollinearize(), SCIPnlhdlrHasSollinearize()
+- SCIPbendersGetNLPParam()
 
 ### Command line interface
 
@@ -90,6 +92,7 @@ Interface changes
   The value of scip_options is expected to be a sequence of parameter names and values, separated by a space, e.g.,
     `option scip_options 'limits/time 10 display/verblevel 1';`.
   String values should not be quoted and spaces in string values are not supported.
+- sassy can be used now as preprocessor for nauty/traces
 
 ### Changed parameters
 
@@ -108,6 +111,9 @@ Interface changes
 - expr/pow/distribfracexponent to enable expanding power of products with fractional exponents
 - expr/product/expandalways to enable expanding any product with sums as factor (that is, also when more than two factors)
 - nlhdlr/convex/maxperturb to specify maximal perturbation of non-differential reference points
+- benders/default/nlpiterlimit to adjust iteration limit for NLP solver for Benders' decomposition NLP subproblems
+- limits/objectivestop to interrupt the solve as soon as a primal solution is found
+  that is at least as good as the given value
 
 ### Data structures
 
@@ -124,6 +130,7 @@ Unit tests
 
 Testing
 -------
+- changed `set lim obj` to `set lim objective` in ctest since `obj` is no longer unambiguous
 
 Build system
 ------------
@@ -131,14 +138,16 @@ Build system
 ### Cmake
 
 - New flag -DLAPACK=on for linking with Lapack (must be available in the system)
-- added flag option "SYM=sassy" for using sassy/bliss as a graph automorphism package
-- use SYM=sassy by default, since sassy and bliss are now shipped with SCIP.
+- added flag option "SYM=sbliss" for using sassy/bliss as a graph automorphism package
+- use SYM=sbliss by default, since sassy and bliss are now shipped with SCIP.
+- added flag option "SYM=snauty" for using sassy/nauty as a graph automorphism package
 
 ### Makefile
 
 - added flag option "nauty" for SYM variable to specify which graph automorphism package should be used
-- added flag option "sassy" for SYM variable to specify which graph automorphism package should be used
-- use SYM=sassy by default, since sassy and bliss are now shipped with SCIP
+- added flag option "sbliss" (sassy/bliss) for SYM variable to specify which graph automorphism package should be used
+- added flag option "snauty" (sassy/nauty) for SYM variable to specify which graph automorphism package should be used
+- use SYM=sbliss by default, since sassy and bliss are now shipped with SCIP
 - New flag LAPACK for linking with Lapack (must be available in the system)
 - A file scip/config.h is created in the build directory ($(OBJDIR)/include) now.
   Defining NO_CONFIG_HEADER is no longer necessary and has no effect anymore.
@@ -168,24 +177,15 @@ Features
 - use quad precision in cutsSubstituteMIR() for substituting slack variables into CMIR cuts
 - use quad precision for activity computations in cons_linear.c
 
-Performance improvements
-------------------------
-
-Examples and applications
--------------------------
-
-Interface changes
------------------
-
-### New and changed callbacks
-
 ### Deleted and changed API methods
+
+- SCIPshrinkDisjunctiveVarSet() no longer attempts to cutoff the current node if it finds the
+  given disjunction to be infeasible; it is now in the responsibility of the caller to act accordingly
 
 ### New API functions
 
 - added SCIPskipSpace
-
-### Command line interface
+- added XML parser routines from src/xml/xml.h
 
 ### Interfaces to external software
 
@@ -195,27 +195,10 @@ Interface changes
 
 - changed integer parameter "propagating/symmetry/recomputrestart" from range {0, 1, 2} to being fixed at value 0
 
-### New parameters
-
-### Data structures
-
-Deleted files
--------------
-
 Unit tests
 ----------
 
 - added new checks for objective, bounds and sides inside the scaling tests in lpi/change.c
-
-Testing
--------
-
-Build system
-------------
-
-### Cmake
-
-### Makefile
 
 Fixed bugs
 ----------
@@ -240,10 +223,16 @@ Fixed bugs
 - disable recomputing symmetries after a restart (constraint removal is not permitted)
 - avoid cutting off optimal solutions for small feasibility tolerances in conflict analysis
 - initialize variable in presol_dualsparsify.c
-- fix in presolving of variable bound constraints to use absolute instead of relative difference 
+- fix in presolving of variable bound constraints to use absolute instead of relative difference
 - free variable histories in reoptimization mode
 - handle whitespaces in interactive shell history consistently
 - check and enforce equalities on which the objective is projected in cons_linear.c
+- ensure row feasibilities of solution shiftings in heur_oneopt.c and heur_twoopt.c
+- remove rounded row check blocking tolerable primal solutions in cons_varbound.c
+- fixed that presolve of logicor-constraints may have attempted to cutoff a root of the not yet existing branch-and-bound tree
+- only consider positive slack variables as active in benders.c
+- in the feasibility check of and/or constraints, allow for fractional values in operands
+- fixed linear outer-approximation for some composite absolute-value expressions
 
 Miscellaneous
 -------------
@@ -251,9 +240,6 @@ Miscellaneous
 - Extended documentation of the parameter limits/solutions to point out that the limit is first checked in presolving
 - Added more information about using SCIPcache- and SCIPflushRowExtensions() to documentation and comments
 - Extended the `how to add' sections of the documentation by adding information on how to include default plugins into SCIP
-
-Known bugs
-----------
 
 @section RN803 SCIP 8.0.3
 *************************

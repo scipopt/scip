@@ -10563,8 +10563,9 @@ SCIP_DECL_CONSEXITPRE(consExitpreNonlinear)
    /* currently SCIP does not offer to communicate this,
     * but at the moment this can only become true if canonicalizeConstraints called detectNlhdlrs (which it doesn't do in EXITPRESOLVE stage)
     * or if a constraint expression became constant
+    * the latter happened on tls4 within fiberscip, so I'm disabling this assert for now
     */
-   assert(!infeasible);
+   /* assert(!infeasible); */
 
    /* tell SCIP that we have something nonlinear */
    SCIPenableNLP(scip);

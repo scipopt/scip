@@ -339,7 +339,9 @@ SCIP_RETCODE consdataCreate(
       {
          int k;
          int v;
-         int nviolations;
+#ifndef NDEBUG
+         int nviolations = 0;
+#endif
          SCIP_Bool redundant;
          SCIP_VAR** varsbuffer;
          SCIP_BOUNDTYPE* boundtypesbuffer;
@@ -349,7 +351,6 @@ SCIP_RETCODE consdataCreate(
          SCIP_CALL( SCIPallocBufferArray(scip, &boundtypesbuffer, nvars) );
          SCIP_CALL( SCIPallocBufferArray(scip, &boundsbuffer, nvars) );
 
-         nviolations = 0;
          k = 0;
          redundant = FALSE;
          /* loop over variables, compare fixed ones against its bound disjunction */
@@ -372,8 +373,10 @@ SCIP_RETCODE consdataCreate(
                   k = 1;
                   redundant = TRUE;
                }
+#ifndef NDEBUG
                else
                   ++nviolations;
+#endif
             }
             else
             {

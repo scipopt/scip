@@ -1161,7 +1161,9 @@ SCIP_RETCODE propCardinality(
       SCIP_Bool tightened;
       SCIP_Bool allvarfixed;
       int nvars;
+#ifndef NDEBUG
       int cnt = 0;
+#endif
       int j;
 
       nvars = consdata->nvars;
@@ -1176,7 +1178,11 @@ SCIP_RETCODE propCardinality(
       {
          /* if variable is implied to be treated as nonzero */
          if( SCIPisFeasEQ(scip, SCIPvarGetLbLocal(indvars[j]), 1.0) )
+#ifndef NDEBUG
             ++cnt;
+#else
+            ;
+#endif
          /* else fix variable to zero if not done already */
          else
          {
@@ -1381,13 +1387,14 @@ SCIP_RETCODE branchUnbalancedCardinality(
    {
       SCIP_Real nodeselest;
       SCIP_Real objest;
-      int cnt;
+#ifndef NDEBUG
+      int cnt = 0;
+#endif
       int j;
 
       /* calculate node selection and objective estimate for node 2 */
       nodeselest = 0.0;
       objest = SCIPgetLocalTransEstimate(scip);
-      cnt = 0;
       for( j = 0; j < nvars; ++j )
       {
          /* we only consider variables in constraint that are not the branching variable and are not fixed to nonzero */
@@ -1397,7 +1404,9 @@ SCIP_RETCODE branchUnbalancedCardinality(
          {
             objest += SCIPcalcChildEstimateIncrease(scip, vars[j], SCIPgetSolVal(scip, sol, vars[j]), 0.0);
             nodeselest += SCIPcalcNodeselPriority(scip, vars[j], SCIP_BRANCHDIR_DOWNWARDS, 0.0);
+#ifndef NDEBUG
             ++cnt;
+#endif
          }
       }
       assert(objest >= SCIPgetLocalTransEstimate(scip));
