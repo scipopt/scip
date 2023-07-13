@@ -1023,7 +1023,7 @@ target_include_directories(libscip PUBLIC
 target_link_libraries(libscip
     PRIVATE
     ${SYM_LIBRARIES}
-    $<$<BOOL:${ZLIB}>:ZLIB::ZLIB>
+    $<$<BOOL:${SCIP_WITH_ZLIB}>:ZLIB::ZLIB>
     ${Readline_LIBRARY}
     ${GMP_LIBRARIES}
     ${THREAD_LIBRARIES}
@@ -1071,7 +1071,7 @@ endif()
 
 target_link_libraries(scip
    ${SYM_LIBRARIES}
-   $<$<BOOL:${ZLIB}>:ZLIB::ZLIB>
+   $<$<BOOL:${SCIP_WITH_ZLIB}>:ZLIB::ZLIB>
    ${Readline_LIBRARY}
    ${GMP_LIBRARIES}
    ${ZIMPL_LIBRARIES}
