@@ -3040,7 +3040,7 @@ void BMSfreeBufferMemory_work(
    if ( bufnum == 0 && buffer->data[bufnum] != *ptr )
    {
       printErrorHeader(filename, line);
-      printError("Tried to free unkown buffer pointer.\n");
+      printError("Tried to free unknown buffer pointer.\n");
       return;
    }
    if ( ! buffer->used[bufnum] )

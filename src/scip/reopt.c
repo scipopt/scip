@@ -7023,7 +7023,7 @@ SCIP_RETCODE SCIPreoptSplitRoot(
       SCIP_ALLOC( BMSallocBlockMemory(blkmem, &reoptnodes[id]->conss[0]) );
       consdata = reoptnodes[id]->conss[0];
 
-      /* count number of binary, integer, and continuous varibales */
+      /* count number of binary, integer, and continuous variables */
       for( v = 0; v < nbndchgs; ++v )
       {
          switch( SCIPvarGetType(reoptnodes[0]->dualredscur->vars[v]) ) {
