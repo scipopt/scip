@@ -1515,13 +1515,13 @@ SCIP_DECL_SOLVECUMULATIVE(solveCumulativeViaScipMip)
       {
          SCIP_VAR* binvar;
 
-         /* construct varibale name */
+         /* construct variable name */
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "job_%d_time_%d", v, t + est);
 
          SCIP_CALL( SCIPcreateVarBasic(subscip, &binvar, name, 0.0, 1.0, objval, SCIP_VARTYPE_BINARY) );
          SCIP_CALL( SCIPaddVar(subscip, binvar) );
 
-         /* add binary varibale to the set partitioning constraint which ensures that the job is started */
+         /* add binary variable to the set partitioning constraint which ensures that the job is started */
          SCIP_CALL( SCIPaddCoefSetppc(subscip, cons, binvar) );
 
          binvars[v][t] = binvar;
@@ -1567,7 +1567,7 @@ SCIP_DECL_SOLVECUMULATIVE(solveCumulativeViaScipMip)
          duration = durations[v];
          assert(duration > 0);
 
-         /* check if the varibale is processed potentially at time point t */
+         /* check if the variable is processed potentially at time point t */
          if( t < est || t >= lst + duration )
             continue;
 
@@ -1642,7 +1642,7 @@ SCIP_DECL_SOLVECUMULATIVE(solveCumulativeViaScipMip)
             /* compute number of possible start points */
             timeinterval = lst - est + 1;
 
-            /* check which binary varibale is set to one */
+            /* check which binary variable is set to one */
             for( t = 0; t < timeinterval; ++t )
             {
                if( SCIPgetSolVal(subscip, sol, binvars[v][t]) > 0.5 )
@@ -1675,7 +1675,7 @@ SCIP_DECL_SOLVECUMULATIVE(solveCumulativeViaScipMip)
             /* compute number of possible start points */
             timeinterval = lst - est + 1;
 
-            /* check which binary varibale is the first binary varibale which is not globally fixed to zero */
+            /* check which binary variable is the first binary variable which is not globally fixed to zero */
             for( t = 0; t < timeinterval; ++t )
             {
                if( SCIPvarGetUbGlobal(binvars[v][t]) > 0.5 )
@@ -1685,7 +1685,7 @@ SCIP_DECL_SOLVECUMULATIVE(solveCumulativeViaScipMip)
                }
             }
 
-            /* check which binary varibale is the last binary varibale which is not globally fixed to zero */
+            /* check which binary variable is the last binary variable which is not globally fixed to zero */
             for( t = timeinterval - 1; t >= 0; --t )
             {
                if( SCIPvarGetUbGlobal(binvars[v][t]) > 0.5 )
