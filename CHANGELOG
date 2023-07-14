@@ -1,43 +1,244 @@
 @page RN80 Release notes for SCIP 8.0
 
-@section RN000 SCIP 8.0.1
+@section RN804 SCIP 8.0.4
+*************************
+
+Features
+--------
+
+- use quad precision in cutsSubstituteMIR() for substituting slack variables into CMIR cuts
+- use quad precision for activity computations in cons_linear.c
+
+### Deleted and changed API methods
+
+- SCIPshrinkDisjunctiveVarSet() no longer attempts to cutoff the current node if it finds the
+  given disjunction to be infeasible; it is now in the responsibility of the caller to act accordingly
+
+### New API functions
+
+- added SCIPskipSpace
+- added XML parser routines from src/xml/xml.h
+
+### Interfaces to external software
+
+- updated XPRESS interface to work with XPRESS 41 as well
+
+### Changed parameters
+
+- changed integer parameter "propagating/symmetry/recomputrestart" from range {0, 1, 2} to being fixed at value 0
+
+Unit tests
+----------
+
+- added new checks for objective, bounds and sides inside the scaling tests in lpi/change.c
+
+Fixed bugs
+----------
+
+- relax condition of assert in lpSolve to hold only if lp/checkstability is true
+- OPB reader: dynamically increase the size of the line buffer for reading in getMaxAndConsDim()
+- Enabled the solution limit checks in SCIPsolveIsStopped in solve.c when in SCIP_STAGE_PRESOLVING
+- fix quad precision comparison for the calculation of knapsackcover constraints.
+- force copying of symmetry constraints for concurrent solve
+- increase the precision of double multiplications in quad precision environments
+- corrected handling of different variable types in symmetry
+- orbitope detection: refine computation of overlap structure and fixed bug in finding orbitope generators
+- ensure that winner is always determined in concurrent mode
+- when a row with invalid index range is added to the global cutpool, update the indices instead of failing with an assert
+- update of watched literals in cons_xor.c and ensure that fixed variables are counted in propacateCons()
+- avoid some numerical issue in check for redundant variables in linear constraints (introduced with version 8.0.2)
+- more rows are treated as being integral in cutsSubstituteMIR() for CMIR cuts
+- fixed several relaxations of the rhs of cuts to 0 in cuts.c
+- avoid aggregation into a single linear constraint if they should not be upgraded (needed for indicator constraints)
+- apply effective root changes before fork is repropagated during treeSwitchPath() in tree.c
+- avoid invalid objective value for solutions generated from an unbounded LP relaxation in case of a nonlinear objective function
+- disable recomputing symmetries after a restart (constraint removal is not permitted)
+- avoid cutting off optimal solutions for small feasibility tolerances in conflict analysis
+- initialize variable in presol_dualsparsify.c
+- fix in presolving of variable bound constraints to use absolute instead of relative difference 
+- free variable histories in reoptimization mode
+- handle whitespaces in interactive shell history consistently
+- check and enforce equalities on which the objective is projected in cons_linear.c
+- ensure row feasibilities of solution shiftings in heur_oneopt.c and heur_twoopt.c
+- remove rounded row check blocking tolerable primal solutions in cons_varbound.c
+- fixed that presolve of logicor-constraints may have attempted to cutoff a root of the not yet existing branch-and-bound tree
+- only consider positive slack variables as active in benders.c
+- in the feasibility check of and/or constraints, allow for fractional values in operands
+- fixed linear outer-approximation for some composite absolute-value expressions
+
+Miscellaneous
+-------------
+
+- Extended documentation of the parameter limits/solutions to point out that the limit is first checked in presolving
+- Added more information about using SCIPcache- and SCIPflushRowExtensions() to documentation and comments
+- Extended the `how to add' sections of the documentation by adding information on how to include default plugins into SCIP
+
+@section RN803 SCIP 8.0.3
+*************************
+
+Examples and applications
+-------------------------
+
+- Externalize STP and PolySCIP applications
+
+Interface changes
+-----------------
+
+### Command line interface
+
+- When running the AMPL interface, the .nl filename extension does not need to be omitted for the input file anymore.
+
+Build system
+------------
+
+### Cmake
+
+- Forbid CMAKE_BUILD_TYPE nonstandard values
+- Move -I/path/to/src/amplmp/include to front of compiler flags for include directories
+
+### Makefile
+
+- Use SYM=bliss by default, since bliss now is shipped with SCIP.
+
+Fixed bugs
+----------
+
+- fixed an incorrect handling of xor constraints
+- the feasibility checker for integrality constraints now uses checkintegrality even for implied integers
+- skip integrality check in cons_integral for relaxation-only implicit-integer variables
+- fixed an issue caused by aggregated variables not added to a hashmap in the xor constraint handler
+- changed function solveRowEchelonGF2 in cons_xor.c to avoid errors if rank is 0
+- fixed that the implication presolver tried to aggregate or tighten bounds of multiaggregated variables
+- fixed a sign check in detection of linear constraints that are parallel to the objective
+- fixed bug in Clp and lpi_clp with missing basis information when calling the barrier with crossover; needs new Clp version
+- do not assume aggregation is successful in cons_setppc.c
+
+Miscellaneous
+-------------
+
+- Changed license to Apache 2.0, see https://www.apache.org/licenses/LICENSE-2.0.
+- When an LP could not be solved accurately, scaling is now turned off as a last fall-back method.
+- Methods for using the debug solution mechanism SCIPdebugAddSolVal, SCIPdebugGetSol, SCIPdebugGetSolVal,
+  SCIPdebugSolIsValidInSubtree, SCIPdebugIsMainscip, SCIPdebugSolEnable, SCIPdebugSolDisable, SCIPdebugSolIsEnabled,
+  SCIPwithDebugSol are now exported
+
+Known bugs
+----------
+
+@section RN802 SCIP 8.0.2
+*************************
+
+Interface changes
+-----------------
+
+### Deleted and changed API methods
+
+- added input parameter SCIP_Bool initiallp to SCIPcutselsSelect
+- changed function type int to SCIP_Longint for SCIPcutpoolGetMaxNCuts
+- replaced SCIPsepastoreGetNCutsFound with SCIPsepastoreGetNCutsAdded following the naming convention for the new statistics
+- replaced SCIPsepaIncNAppliedCuts with SCIPsepaIncNCutsApplied
+
+### New API functions
+
+- added SCIPsepastoreGetNCutsAdded, SCIPsepastoreGetNCutsAddedViaPool, SCIPsepastoreGetNCutsAddedDirect
+- added SCIPsepaIncNCutsAdded, SCIPsepaDecNCutsAdded, SCIPsepaIncNCutsApplied, SCIPsepaGetNRootCalls, SCIPsepaGetNCutsAdded, SCIPsepaGetNCutsAddedViaPool, SCIPsepaGetNCutsAddedDirect, SCIPsepaGetNCutsAppliedViaPool, SCIPsepaGetNCutsAppliedDirect
+- added SCIPcutpoolGetNRootCalls, SCIPcutpoolGetNCutsAdded, SCIPcutpoolAddMaxNCuts, SCIPcutpoolSetTime, SCIPcutpoolAddNCalls, SCIPcutpoolAddNRootCalls, SCIPcutpoolAddNCutsFound, SCIPcutpoolAddNCutsAdded,
+- added SCIPcutselGetNCalls, SCIPcutselGetNRootCalls, SCIPcutselGetNRootCuts, SCIPcutselGetNRootForcedCuts, SCIPcutselGetNRootCutsFiltered, SCIPcutselGetNLocalCuts, SCIPcutselGetNLocalForcedCuts, SCIPcutselGetNLocalCutsFiltered,
+
+### Interfaces to external software
+
+- Added compatibility with Mosek 10.0.18.
+
+### New parameters
+
+- new parameters to turn on more statistics: misc/showdivingstats (diving heuristics), heuristics/alns/shownbstats (ALNS), estimation/showstats (tree size estimation)
+
+### Data structures
+
+- added nrootcalls and ncutsadded to SCIP_Cutpool
+- added fromcutpool flag to SCIP_Row and fixed 33 bit allocation
+- added ncalls, nrootcalls, nrootcutsselected, nrootcutsforced, nrootcutsfiltered, nlocalcutsselected, nlocalcutsforced, nlocalcutsfiltered to SCIP_Cutsel
+- added ncutsadded, ncutsaddedviapool, ncutsaddeddirect, ncutsappliedviapool, ncutsapplieddirect, nrootcalls to SCIP_Sepa
+- added ncutsadded, ncutsaddedviapool, ncutsaddeddirect to SCIP_Sepastore
+- fixed statistics of relaxators w.r.t. number of times conss/cuts were added
+
+Build system
+------------
+
+### Cmake
+
+- new option `-DAUTOBUILD` that configures scip with dependencies on availability.
+  Packages like Ipopt, PaPILO, Readline, Zimpl, ZLIB, GMP, Worhp are automatically found and linked, otherwise ignored.
+  The individual flags for these packages are ignored. This makes a quick build easier. It is by default set to off.
+
+Fixed bugs
+----------
+
+- read objective offset from ZIMPL files
+- Make sure that objective limit is disabled if not all variables are in the LP. If we would run into
+  an objective limit in this case, the results of the LP solver are unclear.
+- fixed bug in reopt.c, which occured for bounds outside of current valid bounds
+- fixed problem with recomputing symmetries after a restart
+- fixed bug in SCIPcalcMIR() with wrong order of arguments for removeZerosQuad()
+- fixed segmentation fault in update of cut statistic
+- fixed bug in presolving of and constraints by merging variables with multiple occurrences before cliquePresolve()
+- fixed bug in dual presolving of linear constraints by setting implicit integers to integers in multi-aggregation
+- fixed update of presolve statistics on added constraints and changed coefficients in constraint handler for nonlinear constraints
+- fixed bug with reading CIP files with large constraints split over several lines
+- fixed bug with infinite bounds in the computation of conflict cuts
+- fixed check for unbounded solution constructed by SCIPlpGetUnboundedSol(): The constructed solution is very likely infeasible
+  since scaling increases small numerical feasibility violations. Therefore, the solution is now always accepted. However, the
+  feasibility of the ray is now checked. This fix now might lead to several rounds of separation in order to resolve unbounded solutions,
+  whereas previously SCIP started to branch immediately.
+- changed to absolute tolerances in all redundancy checks for linear constraints
+
+Miscellaneous
+-------------
+
+- Added extended cutselector statistics splitting between root node specific and general statistics
+- Added extended and refined cutpool statistics showing the number of cuts added from the cutpool to the sepastore
+- Added extended and refined separator statistics to get a better view of the individual generators performance
+- turned off output of statistics for the following information by default:
+  diving heuristics, ALNS neighborhood information and tree size estimation statistics;
+  they can be turned on using the following new parameters:
+  misc/showdivingstats (diving heuristics), heuristics/alns/shownbstats (ALNS), estimation/showstats (tree size estimation)
+
+@section RN801 SCIP 8.0.1
 *************************
 Features
 --------
 
 - clique lifting in cons_setppc (parameter enablecliquelifting) is only disabled if it has been applied
+- avoid warning if Mosek has reached/exceeded the objective limit
 - improved curvature check for quadratic expressions when extended formulations are disabled
 
-Performance improvements
-------------------------
 Examples and applications
 -------------------------
+
+- Fixed handling of enforcing in the TSP example.
+
 Interface changes
 -----------------
-### New and changed callbacks
-### Deleted and changed API methods
-### New API functions
-### Command line interface
+
 ### Interfaces to external software
-### Changed parameters
-### New parameters
-### Data structures
-Deleted files
--------------
-Unit tests
-----------
-Testing
--------
+
+- Added compatibility with Mosek 10.0.13.
+
 Build system
 ------------
+
+- BLISS is now built from the vendored version from https://github.com/ds4dm/Bliss
+
 ### Cmake
 
 - avoid warnings about unrecognized compiler warning silencing options when compilation with GCC fails
 - adjust mosek find module to version 9.3
+- added cmake compatibility for ipopt versions 3.14.x
 
 ### Makefile
 
 - avoid warnings about unrecognized compiler warning silencing options when compilation with GCC fails
+- fixed that compilation with MS/Intel compilers on Windows and Cray compilers was broken when enabling PAPILO
 
 Fixed bugs
 ----------
@@ -48,11 +249,13 @@ Fixed bugs
 - fixed that recursive products in expressions were sometimes not flattened
 - fixed that expressions in original variables could not be simplified
 - fixed handling of objective limit with Mosek
-
-Miscellaneous
--------------
-Known bugs
-----------
+- made SCIPlpiGetSolverName()/SCIPlpiGetSolverDesc() thread-safe for LP Solvers (Cplex,Gurobi,Glop,Mosek,SoPlex,Xpress)
+- made SYMsymmetryGetName() thread-safe for Bliss
+- fixed memory allocation issue in detection of SOC nlhdlr
+- fixed that reaching the walltime limit in Ipopt was not handled properly
+- Deactivated dual fixing of unlocked variables with zero objective in presol_milp that SCIP is unable to postsolve.
+- set the column flag kImplInt for implicit integers in the papilo problem
+- fixed bug in propagation of indicator constraints (one case always reported a change through propagation)
 
 @section RN800 SCIP 8.0.0
 *************************
@@ -2772,6 +2975,7 @@ Features
   - the subnlp heuristic now gives ownership of a found solution to the heuristic that constructed the starting point, if any;
     as a consequence, MIP heuristics may now be shown more frequently for having found a solution when solving MINLPs, even
     though the solutions required an additional NLP solve
+  - new multistart heuristic for NLPs
 
 - Propagator:
   - add prop_nlobbt, a nonlinear optimization-based bound propagator solving two convex NLP relaxations for each variable

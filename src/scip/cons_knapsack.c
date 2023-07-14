@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -59,9 +68,6 @@
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
-#include <ctype.h>
-#include <string.h>
-
 #ifdef WITH_CARDINALITY_UPGRADE
 #include "scip/cons_cardinality.h"
 #endif
@@ -2960,7 +2966,9 @@ SCIP_RETCODE getLiftingSequenceGUB(
    int ngubconss;
    int ngubconsGOC1;
    int targetvar;
-   int nvarsprocessed;
+#ifndef NDEBUG
+   int nvarsprocessed = 0;
+#endif
    int i;
    int j;
 
@@ -2993,7 +3001,6 @@ SCIP_RETCODE getLiftingSequenceGUB(
    assert(maxgubvarssize != NULL);
 
    ngubconss = gubset->ngubconss;
-   nvarsprocessed = 0;
    ngubconsGOC1 = 0;
 
    /* GUBs are categorized into different types according to the variables in volved
@@ -3175,7 +3182,9 @@ SCIP_RETCODE getLiftingSequenceGUB(
          if( gubset->gubconss[gubconsidx]->gubvarsstatus[j] == GUBVARSTATUS_BELONGSTOSET_C1 )
          {
             nvarsC1capexceed++;
+#ifndef NDEBUG
             nvarsprocessed++;
+#endif
          }
          /* F-variable: update sort key (number of F variables in GUB) of corresponding GFC1-GUB */
          else if( gubset->gubconss[gubconsidx]->gubvarsstatus[j] == GUBVARSTATUS_BELONGSTOSET_F )
@@ -3289,7 +3298,9 @@ SCIP_RETCODE getLiftingSequenceGUB(
       if( gubset->gubconss[gubconsidx]->gubvarssize > *maxgubvarssize )
 	 *maxgubvarssize = gubset->gubconss[gubconsidx]->gubvarssize;
 
+#ifndef NDEBUG
       nvarsprocessed++;
+#endif
    }
 
    /* stores remaining part of the GUBs of group GFC1 (GF GUBs) and gets GUB sorting keys corresp. to following ordering
@@ -3305,7 +3316,9 @@ SCIP_RETCODE getLiftingSequenceGUB(
       assert(gubconsidx >= 0 && gubconsidx < ngubconss);
       assert(gubset->gubconss[gubconsidx]->gubvarsstatus[varidx] == GUBVARSTATUS_BELONGSTOSET_F);
 
+#ifndef NDEBUG
       nvarsprocessed++;
+#endif
 
       /* the GUB was already handled (status set and stored in its group) by another variable of the GUB */
       if( gubset->gubconsstatus[gubconsidx] != GUBCONSSTATUS_UNINITIAL )
@@ -3355,7 +3368,9 @@ SCIP_RETCODE getLiftingSequenceGUB(
       assert(gubconsidx >= 0 && gubconsidx < ngubconss);
       assert(gubset->gubconss[gubconsidx]->gubvarsstatus[varidx] == GUBVARSTATUS_BELONGSTOSET_R);
 
+#ifndef NDEBUG
       nvarsprocessed++;
+#endif
 
       /* the GUB was already handled (status set and stored in its group) by another variable of the GUB */
       if( gubset->gubconsstatus[gubconsidx] != GUBCONSSTATUS_UNINITIAL )
@@ -13208,22 +13223,27 @@ SCIP_DECL_CONSPARSE(consParseKnapsack)
 
    while( *str != '\0' )
    {
-      /* try to parse coefficient, and stop if not successful (probably reached <=) */
-      if( sscanf(str, "%" SCIP_LONGINT_FORMAT "%n", &weight, &nread) < 1 )
-         break;
-
+      /* try to parse coefficient, and use 1 if not successful */
+      weight = 1;
+      nread = 0;
+      sscanf(str, "%" SCIP_LONGINT_FORMAT "%n", &weight, &nread);
       str += nread;
-
-      /* skip whitespace */
-      while( isspace((int)*str) )
-         ++str;
 
       /* parse variable name */
       SCIP_CALL( SCIPparseVarName(scip, str, &var, &endptr) );
+
       if( var == NULL )
       {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "unknown variable name at '%s'\n", str);
-         *success = FALSE;
+         endptr = strchr(endptr, '<');
+
+         if( endptr == NULL )
+         {
+            SCIPerrorMessage("no capacity found\n");
+            *success = FALSE;
+         }
+         else
+            str = endptr;
+
          break;
       }
 
@@ -13242,29 +13262,31 @@ SCIP_DECL_CONSPARSE(consParseKnapsack)
       ++nvars;
 
       /* skip whitespace */
-      while( isspace((int)*str) )
-         ++str;
+      SCIP_CALL( SCIPskipSpace((char**)&str) );
    }
 
    if( *success )
    {
-      if( strncmp(str, "<= ", 3) != 0 )
+      if( strncmp(str, "<=", 2) != 0 )
       {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "expected '<= ' at begin of '%s'\n", str);
+         SCIPerrorMessage("expected '<=' at begin of '%s'\n", str);
          *success = FALSE;
       }
       else
       {
-         str += 3;
+         str += 2;
       }
    }
 
    if( *success )
    {
+      /* skip whitespace */
+      SCIP_CALL( SCIPskipSpace((char**)&str) );
+
       /* coverity[secure_coding] */
       if( sscanf(str, "%" SCIP_LONGINT_FORMAT, &capacity) != 1 )
       {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "error parsing capacity from '%s'\n", str);
+         SCIPerrorMessage("error parsing capacity from '%s'\n", str);
          *success = FALSE;
       }
       else

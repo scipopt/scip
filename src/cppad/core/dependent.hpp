@@ -204,7 +204,7 @@ void ADFun<Base>::Dependent(const ADvector &x, const ADvector &y)
 	}
 	for(i = 0; i < size_t(y.size()); i++)
 	{	CPPAD_ASSERT_KNOWN(
-		CppAD::Parameter( y[i] ) | (y[i].tape_id_ == x[0].tape_id_) ,
+		CppAD::Parameter( y[i] ) || (y[i].tape_id_ == x[0].tape_id_) ,  //SV
 		"ADFun<Base>: dependent vector contains a variable for"
 		"\na different tape (thread) than the independent variables."
 		);

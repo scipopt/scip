@@ -24,6 +24,7 @@ Windows and platform independent build instructions
 To build SCIP you may use the CMake GUI to specify the path to SCIP and the desired location for the build.
 Available options are listed and can be modified to fit your needs.
 After the configuration step is done, open the generated Visual Studio solution file and compile it.
+Note that compilation is tested on MSVC version >= 12.
 
 Alternatively, you may use the command line to configure and build SCIP by creating a `build` directory and then building the configuration:
 
@@ -51,18 +52,97 @@ make install                                                                  # 
 Note: For a full ctest run `ctest` instead of `make check` after compilation.
 
 CMake checks for available third-party libraries like GMP or ZLIB and sets up the configuration accordingly.
+Note that the symmetry code [Bliss](https://users.aalto.fi/~tjunttil/bliss/) is shipped with SCIP.
 
 Note: Here is a list of apt package requirements for ubuntu or debian users that want to build the entire SCIP Optimization Suite from source tarball:
 ```
 apt-get install wget cmake g++ m4 xz-utils libgmp-dev unzip zlib1g-dev libboost-program-options-dev libboost-serialization-dev libboost-regex-dev libboost-iostreams-dev libtbb-dev libreadline-dev pkg-config git liblapack-dev libgsl-dev flex bison libcliquer-dev gfortran file dpkg-dev libopenblas-dev rpm
 ```
 Additionally the following dependencies need to be downloaded, compiled and installed:
- - [Bliss](https://github.com/ds4dm/Bliss)
  - [Hmetis](http://glaros.dtc.umn.edu/gkhome/metis/hmetis/download)
  - [Metis](http://glaros.dtc.umn.edu/gkhome/metis/metis/download)
  - [Ipopt](https://github.com/coin-or/Ipopt/releases) with [Mumps](https://github.com/coin-or-tools/ThirdParty-Mumps/releases)
  - [Gmp](https://gmplib.org/#DOWNLOAD)
 During the CMake configuration of the SCIP Optimization Suite the can be specified, see [CMake](https://scipopt.org/doc/html/md_INSTALL.php#CMAKE) [(local link)](@ref CMAKE) .
+
+Troubleshooting
+---------------
+
+If you have a problem with your cmake configuration and just want to build scip with all the available dependencies, the **simplest solution is to activate the `AUTOBUILD` option**:
+```
+cmake .. -DAUTOBUILD=on
+```
+This option activates the automatic search for dependent packages like GMP, IPOPT, PaPILO, Readline, WORHP, ZIMPL, ZLIB, and deactivates the missing ones.
+
+If you need a specific package that is not automatically found, you should try setting a hint to the installation with the specified variable.
+Specific packages can also be disabled individually.
+
+**Examples of errors and possible solutions:**
+
+Problem:
+```
+-- Finding PAPILO
+-- Could NOT find PAPILO (missing: PAPILO_DIR)
+CMake Error at CMakeLists.txt:359 (message):
+  PAPILO not found, try specifying PAPILO_DIR.
+
+  If you have troubles configuring, you can consider setting AUTOBUILD=ON to
+  try and find optional packages as available.
+
+
+-- Configuring incomplete, errors occurred!
+```
+Solution: add `-DPAPILO_DIR=/path/to/papilo/installation` or disable PaPILO by setting `-DPAPILO=off`.
+
+Problem:
+```
+-- Finding ZIMPL
+-- Could NOT find ZIMPL (missing: ZIMPL_DIR)
+CMake Error at CMakeLists.txt:533 (message):
+  ZIMPL not found, try specifying ZIMPL_DIR.
+
+  If you have troubles configuring, you can consider setting AUTOBUILD=ON to
+  try and find optional packages as available.
+
+
+-- Configuring incomplete, errors occurred!
+```
+Solution: add `-DZIMPL_DIR=/path/to/zimpl/installation` or disable ZIMPL by setting `-DZIMPL=off`.
+
+Problem:
+```
+-- Finding IPOPT
+-- Could NOT find IPOPT (missing: IPOPT_LIBRARIES) (Required is at least version "3.12.0")
+CMake Error at CMakeLists.txt:564 (message):
+  IPOPT not found, try specifying IPOPT_DIR.
+
+  If you have troubles configuring, you can consider setting AUTOBUILD=ON to
+  try and find optional packages as available.
+
+-- Configuring incomplete, errors occurred!
+```
+Solution: add `-DIPOPT_DIR=/path/to/ipopt/installation` or disable IPOPT by setting `-DIPOPT=off`.
+
+Problem:
+```
+-- Finding Solver "spx"
+-- Finding Soplex
+CMake Error at CMakeLists.txt:375 (find_package):
+  Could not find a package configuration file provided by "SOPLEX" with any
+  of the following names:
+
+    SOPLEXConfig.cmake
+    soplex-config.cmake
+
+  Add the installation prefix of "SOPLEX" to CMAKE_PREFIX_PATH or set
+  "SOPLEX_DIR" to a directory containing one of the above files.  If "SOPLEX"
+  provides a separate development package or SDK, be sure it has been
+  installed.
+
+
+-- Configuring incomplete, errors occurred!
+```
+Solution: add `-DSOPLEX_DIR=/path/to/soplex/installation` or disable SOPLEX by setting `-DLPS=none` or select a different lp solver you have available by `-DLPS=grb -DGUROBI_DIR=/path/to/gurobi/installation` or `-DLPS=xprs -DXPRESS_DIR=/path/to/xpress/installation` or `-DLPS=msk -DMOSEK_DIR=/path/to/mosek/installation` or `-DLPS=cpx -DCPLEX_DIR=/path/to/cplex/installation` or `-DLPS=glob -DGLOB_DIR=/path/to/glob/installation`
 
 Modifying a CMake configuration
 -------------------------------
@@ -98,11 +178,12 @@ e.g., `cmake </path/to/SCIP> -DSOPLEX_DIR=<path/to/SoPlex/build/or/install>`.
 
 | CMake option           | Available values                   | Makefile equivalent        | Remarks                                                            |
 |------------------------|------------------------------------|----------------------------|--------------------------------------------------------------------|
+| `AUTOBUILD`            | `on`, `off`                        | --                         | automatically find dependencies on availability, ignores individual flags of these packages |
 | `CMAKE_BUILD_TYPE`     | `Release`, `Debug`, ...            | `OPT=[opt, dbg]`           |                                                                    |
 | `GMP`                  | `on`, `off`                        | `GMP=[true, false]`        | specify `GMP_DIR` if not found automatically                       |
 | `IPOPT`                | `on`, `off`                        | `IPOPT=[true,false]`       | requires IPOPT version >= 3.12.0; specify `IPOPT_DIR` if not found automatically |
 | `LPS`                  | `spx`, `cpx`, `grb`, `xprs`, ...   | `LPS=...`                  | specify `SOPLEX_DIR`, `CPLEX_DIR`, `MOSEK_DIR`, ... if LP solver is not found automatically |
-| `SYM`                  | `bliss`, `none`                    | `SYM=[bliss, none]`        | for bliss, specify `BLISS_DIR`                                     |
+| `SYM`                  | `bliss`, `none`                    | `SYM=[bliss, none]`        |                                                                    |
 | `WORHP`                | `on`, `off`                        | `WORHP=[true,false]`       | should worhp be linked; specify `WORHP_DIR` if not found automatically |
 | `ZIMPL`                | `on`, `off`                        | `ZIMPL=[true, false]`      | specify `ZIMPL_DIR` if not found automatically                     |
 | `AMPL`                 | `on`, `off`                        | `AMPL=[true, false]`       |                                                                    |
@@ -262,7 +343,7 @@ In your SCIP main directory, enter `make [options]` with the following options:
 | `PAPILO=false`        | `[false, true]`      | to disable or disable the MILP presolver based on the presolving library PaPILO                  |
 | `READLINE=true`       | `[true, false]`      | to enable or disable readline library for interactive shell                                      |
 | `SHARED=false`        | `[false, true]`      | to suppress or create shared libraries (only Gnu compiler)                                       |
-| `SYM=none`            | `[none, bliss]`      | to disable symmetry handling in mixed integer programs or compute symmetries with bliss          |
+| `SYM=none`            | `[none, bliss]`      | to choose method for computing symmetries in mixed nonlinear integer programs                  |
 | `TPI=none`            | `[none, omp, tny]`   | to disable the task processing interface or use it with the openmp or tinycthreads interface for concurrent solves |
 | `VERBOSE=false`       | `[false, true]`      | to suppress or display of compiler and linker invocations                                        |
 | `WORHP=false`         | `[false, true]`      | to disable or enable WORHP interface (needs WORHP >= 2.00)                                       |
@@ -452,20 +533,6 @@ Make sure to replace the paths with your installation location.
 ln -s <path to GAMS system directory> <path to SCIP>/lib/shared/gams.$(OSTYPE).$(ARCH).$(COMP)
 ```
 Make sure to replace the paths with your installation location.
-
-#### m) to use bliss
-
-For each used operation system and architecture:
-```
-ln -s <path to bliss *.hh files> <path to SCIP>/lib/include/bliss
-ln -s <file libbliss.[...].a> <path to SCIP>/lib/static/libbliss.$(OSTYPE).$(ARCH).$(COMP).a
-```
-For example:
-```
-cd scip
-ln -s /bliss lib/include/bliss
-ln -s /bliss/libbliss.a lib.static/libbliss.linux.x86_64.gnu.a
-```
 
 ### 4. Run SCIP
 
@@ -664,45 +731,6 @@ If you ever need to modify the soft-link targets, delete the soft-links in the `
 
 After the soft-links have been created, the compilation of the source files should start.
 
-###   Example 5 (default: SoPlex, SYM):
-
-Typing `make SYM=bliss` uses SoPlex as LP solver, and activates the symmetry handling routines of SCIP.
-Symmetry is computed by using the graph automorphism code bliss.
-You will be asked the following questions on the first call to `make` (example answers are already given):
-
-```
-- Current settings: 'SYM=bliss'
-
-* SCIP needs some softlinks to external programs, in particular, LP-solvers.
-* Please insert the paths to the corresponding directories/libraries below.
-* The links will be installed in the 'lib/include' and 'lib/static' directories.
-* For more information and if you experience problems see the 'INSTALL.md' file.
-
-  -> 'cpxinc' is the path to the CPLEX 'include' directory, e.g., '<CPLEX-path>/include/ilcplex'.
-  -> 'libcplex.*.a' is the path to the CPLEX library, e.g., '<CPLEX-path>/lib/x86-64_linux/static_pic/libcplex.a'
-  -> 'libcplex.*.so' is the path to the CPLEX library, e.g., '<CPLEX-path>/bin/x86-64_linux/libcplex1263.so'
-  -> 'blissinc' is the path to the BLISS directory, e.g., '<BLISS-path>'.
-  -> 'libbliss.*.a' is the path to the BLISS library, e.g., '<BLISS-path>/libbliss.a'
-  -> 'libbliss.*.so' is the path to the BLISS library, e.g., '<BLISS-path>/libbliss.so'
-
-> Enter soft-link target file or directory for 'lib/include/bliss' (return if not needed):
-> /sw/bliss
--> creating softlink 'lib/include/bliss' -> '/sw/bliss'
-
-> Enter soft-link target file or directory for 'lib/static/libbliss.linux.x86_64.gnu.a' (return if not needed):
-> /sw/bliss/libbliss.a
--> creating softlink 'lib/static/libbliss.linux.x86_64.gnu.a' -> '/sw/bliss/libbliss.a'
-
-make[1]: Leaving directory '/sw/scip'
-```
-
-Note on how to (locally) install bliss:
-- create a target directory for the installation
-- compile the bliss code within this directory
-
-If you ever need to modify the soft-link targets, delete the soft-links in the `lib/` subdirectory and enter `make links` to generate them again.
-
-After the soft-links have been created, the compilation of the source files should start.
 
 Compilation problems
 --------------------

@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -54,69 +63,81 @@ struct XML_NODE_struct
 };
 
 /** Parse file */
+SCIP_EXPORT
 XML_NODE* xmlProcess(
    const char*           filename            /**< XML file name */
    );
 
 /** create new node */
+SCIP_EXPORT
 XML_NODE* xmlNewNode(
    const char*           name,
    int                   lineno
    );
 
 /** create new attribute */
+SCIP_EXPORT
 XML_ATTR* xmlNewAttr(
    const char*           name,
    const char*           value
    );
 
 /** add attribute */
+SCIP_EXPORT
 void xmlAddAttr(
    XML_NODE*             n,
    XML_ATTR*             a
    );
 
 /** append child node */
+SCIP_EXPORT
 void xmlAppendChild(
    XML_NODE*             parent,
    XML_NODE*             child
    );
 
 /** free node */
+SCIP_EXPORT
 void xmlFreeNode(
    XML_NODE*             node
    );
 
 /** output node */
+SCIP_EXPORT
 void xmlShowNode(
    const XML_NODE*       root
    );
 
 /** get attribute value */
+SCIP_EXPORT
 const char* xmlGetAttrval(
    const XML_NODE*       node,
    const char*           name
    );
 
 /** return first node */
+SCIP_EXPORT
 const XML_NODE* xmlFirstNode(
    const XML_NODE*       node,
    const char*           name
    );
 
 /** return next node */
+SCIP_EXPORT
 const XML_NODE* xmlNextNode(
    const XML_NODE*       node,
    const char*           name
    );
 
 /** find node */
+SCIP_EXPORT
 const XML_NODE* xmlFindNode(
    const XML_NODE*       node,
    const char*           name
    );
 
 /** find node with bound on the depth */
+SCIP_EXPORT
 const XML_NODE* xmlFindNodeMaxdepth(
    const XML_NODE*       node,               /**< current node - use start node to begin */
    const char*           name,               /**< name of tag to search for */
@@ -125,41 +146,49 @@ const XML_NODE* xmlFindNodeMaxdepth(
    );
 
 /** return next sibling */
+SCIP_EXPORT
 const XML_NODE* xmlNextSibl(
    const XML_NODE*       node
    );
 
 /** return previous sibling */
+SCIP_EXPORT
 const XML_NODE* xmlPrevSibl(
    const XML_NODE*       node
    );
 
 /** return first child */
+SCIP_EXPORT
 const XML_NODE* xmlFirstChild(
    const XML_NODE*       node
    );
 
 /** return last child */
+SCIP_EXPORT
 const XML_NODE* xmlLastChild(
    const XML_NODE*       node
    );
 
 /** return name of node */
+SCIP_EXPORT
 const char* xmlGetName(
    const XML_NODE*       node
    );
 
 /** get line number */
+SCIP_EXPORT
 int xmlGetLine(
    const XML_NODE*       node
    );
 
 /** get data */
+SCIP_EXPORT
 const char* xmlGetData(
    const XML_NODE*       node
    );
 
 /** find PCDATA */
+SCIP_EXPORT
 const char* xmlFindPcdata(
    const XML_NODE*       node,
    const char*           name

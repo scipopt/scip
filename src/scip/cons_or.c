@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -56,7 +65,6 @@
 #include "scip/scip_sol.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
-#include <string.h>
 
 
 /* constraint handler properties */
@@ -812,6 +820,10 @@ SCIP_RETCODE checkCons(
    if( mustcheck )
    {
       SCIP_Real solval;
+      SCIP_Real maxsolval;
+      SCIP_Real sumsolval;
+      SCIP_Real viol;
+      int maxsolind;
       int i;
 
       /* increase age of constraint; age is reset to zero, if a violation was found only in case we are in
@@ -822,20 +834,31 @@ SCIP_RETCODE checkCons(
          SCIP_CALL( SCIPincConsAge(scip, cons) );
       }
 
-      /* check, if all operator variables are FALSE */
+      maxsolind = 0;
+      maxsolval = 0.0;
+      sumsolval = 0.0;
+
+      /* evaluate operator variables */
       for( i = 0; i < consdata->nvars; ++i )
       {
          solval = SCIPgetSolVal(scip, sol, consdata->vars[i]);
-         assert(SCIPisFeasIntegral(scip, solval));
-         if( solval > 0.5 )
-            break;
+
+         if( solval > maxsolval )
+         {
+            maxsolind = i;
+            maxsolval = solval;
+         }
+
+         sumsolval += solval;
       }
 
-      /* if all operator variables are FALSE, the resultant has to be FALSE, otherwise, the resultant has to be TRUE */
+      /* the resultant must be at least as large as every operator
+       * and at most as large as the sum of operators
+       */
       solval = SCIPgetSolVal(scip, sol, consdata->resvar);
-      assert(SCIPisFeasIntegral(scip, solval));
+      viol = MAX3(0.0, maxsolval - solval, solval - sumsolval);
 
-      if( (i == consdata->nvars) != (solval < 0.5) )
+      if( SCIPisFeasPositive(scip, viol) )
       {
          *violated = TRUE;
 
@@ -844,26 +867,28 @@ SCIP_RETCODE checkCons(
          {
             SCIP_CALL( SCIPresetConsAge(scip, cons) );
          }
-         /* update constraint violation in solution */
-         else
-            SCIPupdateSolConsViolation(scip, sol, 1.0, 1.0);
 
          if( printreason )
          {
             SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
-            SCIPinfoMessage(scip, NULL, ";\nviolation:\n");
-            if( i == consdata->nvars )
+            SCIPinfoMessage(scip, NULL, ";\n");
+            SCIPinfoMessage(scip, NULL, "violation:");
+
+            if( SCIPisFeasPositive(scip, maxsolval - solval) )
             {
-               SCIPinfoMessage(scip, NULL, " all operands are FALSE and resultant <%s> = TRUE\n",
-                  SCIPvarGetName(consdata->resvar)); 
+               SCIPinfoMessage(scip, NULL, " operand <%s> = TRUE and resultant <%s> = FALSE\n",
+                  SCIPvarGetName(consdata->vars[maxsolind]), SCIPvarGetName(consdata->resvar));
             }
             else
             {
-               SCIPinfoMessage(scip, NULL, " operand <%s> = TRUE and resultant <%s> = FALSE\n",
-                  SCIPvarGetName(consdata->vars[i-1]), SCIPvarGetName(consdata->resvar)); 
+               SCIPinfoMessage(scip, NULL, " all operands are FALSE and resultant <%s> = TRUE\n",
+                  SCIPvarGetName(consdata->resvar));
             }
          }
       }
+
+      if( sol != NULL )
+         SCIPupdateSolConsViolation(scip, sol, viol, viol);
    }
 
    return SCIP_OKAY;
@@ -1257,7 +1282,7 @@ SCIP_RETCODE resolvePropagation(
    switch( proprule )
    {
    case PROPRULE_1:
-      /* the resultant was infered to TRUE, because one operand variable was TRUE */
+      /* the resultant was inferred to TRUE, because one operand variable was TRUE */
       assert(SCIPgetVarLbAtIndex(scip, infervar, bdchgidx, TRUE) > 0.5);
       assert(infervar == consdata->resvar);
       for( i = 0; i < nvars; ++i )
@@ -1273,7 +1298,7 @@ SCIP_RETCODE resolvePropagation(
       break;
 
    case PROPRULE_2:
-      /* the operand variable was infered to FALSE, because the resultant was FALSE */
+      /* the operand variable was inferred to FALSE, because the resultant was FALSE */
       assert(SCIPgetVarUbAtIndex(scip, infervar, bdchgidx, TRUE) < 0.5);
       assert(SCIPgetVarUbAtIndex(scip, consdata->resvar, bdchgidx, FALSE) < 0.5);
       SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->resvar) );
@@ -1281,7 +1306,7 @@ SCIP_RETCODE resolvePropagation(
       break;
 
    case PROPRULE_3:
-      /* the resultant was infered to FALSE, because all operand variables were FALSE */
+      /* the resultant was inferred to FALSE, because all operand variables were FALSE */
       assert(SCIPgetVarUbAtIndex(scip, infervar, bdchgidx, TRUE) < 0.5);
       assert(infervar == consdata->resvar);
       for( i = 0; i < nvars; ++i )
@@ -1293,7 +1318,7 @@ SCIP_RETCODE resolvePropagation(
       break;
 
    case PROPRULE_4:
-      /* the operand variable was infered to TRUE, because the resultant was TRUE and all other operands were FALSE */
+      /* the operand variable was inferred to TRUE, because the resultant was TRUE and all other operands were FALSE */
       assert(SCIPgetVarLbAtIndex(scip, infervar, bdchgidx, TRUE) > 0.5);
       assert(SCIPgetVarLbAtIndex(scip, consdata->resvar, bdchgidx, FALSE) > 0.5);
       SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->resvar) );
@@ -1907,6 +1932,8 @@ SCIP_DECL_CONSPARSE(consParseOr)
 
    SCIPdebugMsg(scip, "parse <%s> as or constraint\n", str);
 
+   *success = FALSE;
+
    /* copy string for truncating it */
    SCIP_CALL( SCIPduplicateBufferArray(scip, &strcopy, str, (int)(strlen(str)+1)));
 
@@ -1918,8 +1945,7 @@ SCIP_DECL_CONSPARSE(consParseOr)
 
    if( resvar == NULL )
    {
-      SCIPdebugMsg(scip, "resultant variable %s does not exist \n", token);
-      *success = FALSE;
+      SCIPerrorMessage("resultant variable does not exist\n");
    }
    else
    {

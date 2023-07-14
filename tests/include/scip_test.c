@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -128,4 +137,31 @@ SCIP_RETCODE TESTscipSetStage(SCIP* scip, SCIP_STAGE stage, SCIP_Bool enableNLP)
    }
 
    return SCIP_OKAY;
+}
+
+/** assembles path of testfile using another files directory as directory name */
+void TESTsetTestfilename(
+   char*                 filename,           /**< buffer to write to, assumed to have length at least SCIP_MAXSTRLEN */
+   const char*           file,               /**< name of file, usually including full path, from which to take directory name */
+   const char*           testfile            /**< name of file to append, assumed to be in same directory as file */
+)
+{
+   char* pathsep;
+
+   assert(filename != NULL);
+   assert(testfile != NULL);
+
+   /* get file to read: testfile that lives in the same directory as this file */
+   (void)SCIPsnprintf(filename, SCIP_MAXSTRLEN, "%s", file);
+   /* find last path separator */
+#ifdef _WIN32
+   pathsep = strrchr(filename, '\\');
+#else
+   pathsep = strrchr(filename, '/');
+#endif
+   /* overwrite filename */
+   if( pathsep != NULL )
+      (void)SCIPsnprintf(pathsep+1, SCIP_MAXSTRLEN - (pathsep+1 - filename), testfile);
+   else
+      (void)SCIPsnprintf(filename, SCIP_MAXSTRLEN, testfile);
 }

@@ -1,10 +1,12 @@
 #
 # interface function for setting common library properties
 #
+include(GNUInstallDirs)
+
 function(setLibProperties targetname outputname)
     set_target_properties(${targetname} PROPERTIES
         OUTPUT_NAME ${outputname}
-        MACOSX_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+        MACOSX_RPATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
 endfunction(setLibProperties)
 
 set(CMAKE_C_STANDARD 99)
@@ -12,9 +14,7 @@ set(CMAKE_C_STANDARD_REQUIRED on)
 set(CMAKE_C_EXTENSIONS OFF)
 
 if(NOT WIN32)
-    add_compile_options(
-        "$<$<COMPILE_LANGUAGE:C>:-D_XOPEN_SOURCE=600>"
-    )
+    set(SCIP_COMP_OPTIONS ${SCIP_COMP_OPTIONS} "$<$<COMPILE_LANGUAGE:C>:-D_XOPEN_SOURCE=600>")
 endif()
 
 #configure the scipbuildflags.c source file for the build tree
@@ -992,7 +992,7 @@ if(CXXONLY)
 
     # for the clang compiler this suppresses the warnings about treating 'c' input as 'c++' when CXXONLY is enabled
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-       add_compile_options(-x c++)
+       set(SCIP_COMP_OPTIONS ${SCIP_COMP_OPTIONS} -x c++)
     endif()
 endif()
 
@@ -1020,13 +1020,14 @@ target_include_directories(libscip PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
     $<INSTALL_INTERFACE:include>)
 
-target_link_libraries(libscip PRIVATE
-    $<$<BOOL:${ZLIB}>:ZLIB::ZLIB>
+target_link_libraries(libscip
+    PRIVATE
+    ${SYM_LIBRARIES}
+    $<$<BOOL:${SCIP_WITH_ZLIB}>:ZLIB::ZLIB>
     ${Readline_LIBRARY}
     ${GMP_LIBRARIES}
     ${THREAD_LIBRARIES}
     ${NLPI_LIBRARIES}
-    ${SYM_LIBRARIES}
     ${PAPILO_IMPORTED_TARGETS})
 
 if(SHARED)
@@ -1037,13 +1038,24 @@ if(SHARED)
 else()
     set(SOPLEX_NEEDED ${SOPLEX_FOUND})
     set(ZIMPL_NEEDED ${ZIMPL_FOUND})
-    target_link_libraries(libscip PRIVATE ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES} ${SYM_LIBRARIES})
+    if(DEFINED BLISS_TARGET)
+        target_link_libraries(libscip PRIVATE ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES})
+    else()
+        target_link_libraries(libscip PRIVATE ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES} ${SYM_LIBRARIES})
+    endif()
     add_executable(scip main.c)
-    target_link_libraries(scip libscip)
+    if(DEFINED BLISS_TARGET)
+        target_link_libraries(scip libscip ${BLISS_TARGET})
+    else()
+        target_link_libraries(scip libscip)
+    endif()
 endif()
 
 add_executable(SCIP::SCIP ALIAS scip)
 add_library(SCIP::libscip ALIAS libscip)
+
+target_compile_options(scip PRIVATE ${SCIP_COMP_OPTIONS})
+target_compile_options(libscip PRIVATE ${SCIP_COMP_OPTIONS})
 
 include(GenerateExportHeader)
 generate_export_header(libscip BASE_NAME scip EXPORT_FILE_NAME ${PROJECT_BINARY_DIR}/scip/scip_export.h)
@@ -1058,12 +1070,12 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 endif()
 
 target_link_libraries(scip
-   $<$<BOOL:${ZLIB}>:ZLIB::ZLIB>
+   ${SYM_LIBRARIES}
+   $<$<BOOL:${SCIP_WITH_ZLIB}>:ZLIB::ZLIB>
    ${Readline_LIBRARY}
    ${GMP_LIBRARIES}
    ${ZIMPL_LIBRARIES}
    ${LPS_LIBRARIES}
-   ${SYM_LIBRARIES}
    ${THREAD_LIBRARIES}
    ${NLPI_LIBRARIES}
    ${PAPILO_IMPORTED_TARGETS})
@@ -1074,7 +1086,10 @@ add_dependencies(scip scip_update_githash)
 set_target_properties(libscip PROPERTIES
     VERSION ${SCIP_VERSION_MAJOR}.${SCIP_VERSION_MINOR}.${SCIP_VERSION_PATCH}.${SCIP_VERSION_SUB}
     SOVERSION ${SCIP_VERSION_MAJOR}.${SCIP_VERSION_MINOR}
-    INSTALL_RPATH_USE_LINK_PATH TRUE)
+    INSTALL_RPATH_USE_LINK_PATH TRUE
+    CXX_VISIBILITY_PRESET hidden
+    C_VISIBILITY_PRESET hidden
+    VISIBILITY_INLINES_HIDDEN 1)
 
 target_include_directories(scip PUBLIC
     $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}>
@@ -1083,33 +1098,33 @@ target_include_directories(scip PUBLIC
 
 # set the install rpath to the installed destination
 set_target_properties(scip PROPERTIES
-    INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib"
+    INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}"
     INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 # install the header files of scip
-install(FILES ${lpiheaders} DESTINATION include/lpi)
-install(FILES ${dijkstraheaders} DESTINATION include/dijkstra)
-install(FILES ${objscipheaders} DESTINATION include/objscip)
-install(FILES ${scipheaders} ${PROJECT_BINARY_DIR}/scip/config.h ${PROJECT_BINARY_DIR}/scip/scip_export.h DESTINATION include/scip)
-install(FILES ${tcliqueheaders} DESTINATION include/tclique)
-install(FILES ${tinycthreadheader} DESTINATION include/tinycthread)
-install(FILES ${tpiheaders} DESTINATION include/tpi)
-install(FILES ${xmlheaders} DESTINATION include/xml)
-install(FILES ${symheaders} DESTINATION include/symmetry)
-install(FILES ${blockmemshellheader} DESTINATION include/blockmemshell)
+install(FILES ${lpiheaders} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/lpi)
+install(FILES ${dijkstraheaders} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/dijkstra)
+install(FILES ${objscipheaders} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/objscip)
+install(FILES ${scipheaders} ${PROJECT_BINARY_DIR}/scip/config.h ${PROJECT_BINARY_DIR}/scip/scip_export.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/scip)
+install(FILES ${tcliqueheaders} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/tclique)
+install(FILES ${tinycthreadheader} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/tinycthread)
+install(FILES ${tpiheaders} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/tpi)
+install(FILES ${xmlheaders} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/xml)
+install(FILES ${symheaders} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/symmetry)
+install(FILES ${blockmemshellheader} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/blockmemshell)
 
-# install the binary and the library to appropriate lcoations and add them to an export group
+# install the binary and the library to appropriate locations and add them to an export group
 install(TARGETS scip libscip EXPORT scip-targets
-        LIBRARY DESTINATION lib
-        ARCHIVE DESTINATION lib
-        RUNTIME DESTINATION bin
-        INCLUDES DESTINATION include)
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+        INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
 # Add all targets to the build-tree export set
-export(TARGETS scip libscip
+export(TARGETS scip libscip ${BLISS_TARGET}
   FILE "${PROJECT_BINARY_DIR}/scip-targets.cmake")
 
-#make soplex and zimpl dir absolute for the config file
+# make soplex and zimpl dir absolute for the config file
 if(SOPLEX_NEEDED)
     get_filename_component(CONF_SOPLEX_DIR ${SOPLEX_DIR} REALPATH BASE_DIR ${CMAKE_SOURCE_DIR})
 endif()
@@ -1118,7 +1133,7 @@ if(ZIMPL_NEEDED)
     get_filename_component(CONF_ZIMPL_DIR ${ZIMPL_DIR} REALPATH BASE_DIR ${CMAKE_SOURCE_DIR})
 endif()
 
-#configure the config file for the build tree
+# configure the config file for the build tree
 set(CONF_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/src" "${PROJECT_BINARY_DIR}")
 configure_file(${PROJECT_SOURCE_DIR}/scip-config.cmake.in
   "${PROJECT_BINARY_DIR}/scip-config.cmake" @ONLY)
@@ -1143,7 +1158,7 @@ configure_file(${PROJECT_SOURCE_DIR}/scip-config.cmake.in
 
 # install the targets of the scip export group and the config file so that other projects
 # can link easily against scip
-install(EXPORT scip-targets DESTINATION lib/cmake/scip)
+install(EXPORT scip-targets DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/scip)
 install(FILES "${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/scip-config.cmake"
               ${PROJECT_BINARY_DIR}/scip-config-version.cmake
-        DESTINATION lib/cmake/scip)
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/scip)

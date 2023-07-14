@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -53,7 +62,6 @@
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
-#include <string.h>
 
 
 #define CONSHDLR_NAME          "logicor"
@@ -1872,7 +1880,7 @@ void consdataSort(
 	    found = SCIPsortedvecFindPtr((void**)consdata->vars, SCIPvarComp, (void*)var1, consdata->nvars, &pos);
 	    assert(found);
 #else
-	    SCIPsortedvecFindPtr((void**)consdata->vars, SCIPvarComp, (void*)var1, consdata->nvars, &pos);
+	    (void) SCIPsortedvecFindPtr((void**)consdata->vars, SCIPvarComp, (void*)var1, consdata->nvars, &pos);
 #endif
 	    assert(pos >= 0 && pos < consdata->nvars);
 	    consdata->watchedvar1 = pos;
@@ -1883,7 +1891,7 @@ void consdataSort(
 	       found = SCIPsortedvecFindPtr((void**)consdata->vars, SCIPvarComp, (void*)var2, consdata->nvars, &pos);
 	       assert(found);
 #else
-	       SCIPsortedvecFindPtr((void**)consdata->vars, SCIPvarComp, (void*)var2, consdata->nvars, &pos);
+	       (void) SCIPsortedvecFindPtr((void**)consdata->vars, SCIPvarComp, (void*)var2, consdata->nvars, &pos);
 #endif
 	       assert(pos >= 0 && pos < consdata->nvars);
 	       consdata->watchedvar2 = pos;
@@ -3225,7 +3233,6 @@ SCIP_RETCODE shortenConss(
    for( c = nconss - 1; c >= 0; --c )
    {
       SCIP_Bool redundant = FALSE;
-      SCIP_Bool glbinfeas = FALSE;
       SCIP_CONS* cons = conss[c];
       SCIP_CONSDATA* consdata;
 
@@ -3285,9 +3292,9 @@ SCIP_RETCODE shortenConss(
 
       /* use implications and cliques to derive global fixings and to shrink the number of variables in this constraints */
       SCIP_CALL( SCIPshrinkDisjunctiveVarSet(scip, probvars, bounds, boundtypes, redundants, consdata->nvars, &nredvars,
-            nfixedvars, &redundant, &glbinfeas, TRUE) );
+            nfixedvars, &redundant, cutoff, TRUE) );
 
-      if( glbinfeas )
+      if( *cutoff )
       {
          /* reset redundants array to FALSE */
          BMSclearMemoryArray(redundants, nbinprobvars);
@@ -4741,7 +4748,7 @@ SCIP_DECL_CONSRESPROP(consRespropLogicor)
 
    SCIPdebugMsg(scip, "conflict resolving method of logic or constraint handler\n");
 
-   /* the only deductions are variables infered to 1.0 on logic or constraints where all other variables
+   /* the only deductions are variables inferred to 1.0 on logic or constraints where all other variables
     * are assigned to zero
     */
    assert(SCIPgetVarLbAtIndex(scip, infervar, bdchgidx, TRUE) > 0.5); /* the inference variable must be assigned to one */
@@ -4969,7 +4976,7 @@ SCIP_DECL_CONSPARSE(consParseLogicor)
 
    if( endptr > startptr )
    {
-      /* copy string for parsing; note that isspace() in SCIPparseVarsList() requires that strcopy ends with '\0' */
+      /* copy string for parsing; note that SCIPskipSpace() in SCIPparseVarsList() requires that strcopy ends with '\0' */
       SCIP_CALL( SCIPduplicateBufferArray(scip, &strcopy, startptr, (int)(endptr-startptr+1)) );
       strcopy[endptr-startptr] = '\0';
       varssize = 100;

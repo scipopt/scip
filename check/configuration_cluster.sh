@@ -4,13 +4,22 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            *
-#*                            fuer Informationstechnik Berlin                *
+#*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      *
 #*                                                                           *
-#*  SCIP is distributed under the terms of the ZIB Academic License.         *
+#*  Licensed under the Apache License, Version 2.0 (the "License");          *
+#*  you may not use this file except in compliance with the License.         *
+#*  You may obtain a copy of the License at                                  *
 #*                                                                           *
-#*  You should have received a copy of the ZIB Academic License              *
-#*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
+#*      http://www.apache.org/licenses/LICENSE-2.0                           *
+#*                                                                           *
+#*  Unless required by applicable law or agreed to in writing, software      *
+#*  distributed under the License is distributed on an "AS IS" BASIS,        *
+#*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. *
+#*  See the License for the specific language governing permissions and      *
+#*  limitations under the License.                                           *
+#*                                                                           *
+#*  You should have received a copy of the Apache-2.0 license                *
+#*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
@@ -26,7 +35,13 @@ QUEUETYPE="${4}" # either 'srun' or 'qsub'
 
 # new environment variables defined by this script:
 NICE=""
-ACCOUNT="mip"
+if [[ "$(uname -n)" =~ htc ]]; then
+  # z1 cluster
+  ACCOUNT="optimi_integer"
+else
+  # opt machines
+  ACCOUNT="mip"
+fi
 CLUSTERQUEUE="${QUEUE}"
 
 # check if queue has been defined
@@ -114,6 +129,9 @@ then
 elif test "${CLUSTERQUEUE}" = "moskito"
 then
     ACCOUNT="dopt"
+elif test "${CLUSTERQUEUE}" = "prio"
+then
+    ACCOUNT="dopt"
 fi
 
 # check if the slurm blades should be used exclusively
@@ -126,4 +144,23 @@ then
     fi
 else
     EXCLUSIVE=""
+fi
+
+CONSTRAINT=""
+if test "${CLUSTERQUEUE}" = "Gold6338"
+then
+    CONSTRAINT="Gold6338"
+    CLUSTERQUEUE="big"
+elif test "${CLUSTERQUEUE}" = "Gold6342"
+then
+    CONSTRAINT="Gold6342"
+    CLUSTERQUEUE="big"
+elif test "${CLUSTERQUEUE}" = "M640v2"
+then
+    CONSTRAINT="Gold5222"
+    CLUSTERQUEUE="opt_int"
+elif test "${CLUSTERQUEUE}" = "M640"
+then
+    CONSTRAINT="Gold5122"
+    CLUSTERQUEUE="opt_int"
 fi

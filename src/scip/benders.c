@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -1839,7 +1848,7 @@ SCIP_RETCODE createSubproblems(
                SCIP_CALL( SCIPbendersGetVar(benders, set, vars[j], &mastervar, -1) );
 
                /* if mastervar is not NULL, then the subproblem variable has a corresponding master problem variable */
-               if( mastervar != NULL && !SCIPisZero(subproblem, SCIPvarGetObj(vars[j])) )
+               if( mastervar != NULL && SCIPvarGetObj(vars[j]) != 0.0 )
                {
                   SCIPverbMessage(subproblem, SCIP_VERBLEVEL_FULL, NULL, "Benders' decomposition: Changing the objective "
                      "coefficient of copy of master problem variable <%s> in subproblem %d to zero.\n",
@@ -6238,7 +6247,7 @@ SCIP_RETCODE SCIPbendersSolSlackVarsActive(
       {
          if( strstr(SCIPvarGetName(vars[j]), SLACKVAR_NAME) != NULL )
          {
-            if( !SCIPisZero(subproblem, SCIPgetSolVal(subproblem, sol, vars[j])) )
+            if( SCIPisPositive(subproblem, SCIPgetSolVal(subproblem, sol, vars[j])) )
             {
                (*activeslack) = TRUE;
                break;

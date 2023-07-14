@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -82,7 +91,9 @@
 #endif
 
 /* compile the SoPlex header with visibility=default because the SoPlex lib has been compiled that way */
+#ifdef __GNUC__
 #pragma GCC visibility push(default)
+#endif
 
 /* include SoPlex solver */
 #include "soplex.h"
@@ -963,8 +974,23 @@ void invalidateSolution(SCIP_LPI* lpi)
  * Miscellaneous Methods
  */
 
-static char spxname[100];
-static char spxdesc[200];
+#if (SOPLEX_SUBVERSION > 0)
+   const static char spxname[20] = {'S', 'o', 'p', 'l', 'e', 'x', ' ', SOPLEX_VERSION/100 + '0', '.', (SOPLEX_VERSION % 100)/10 + '0', '.', SOPLEX_VERSION % 10 + '0', '.', SOPLEX_SUBVERSION + '0'};
+#else
+   const static char spxname[20] = {'S', 'o', 'p', 'l', 'e', 'x', ' ', SOPLEX_VERSION/100 + '0', '.', (SOPLEX_VERSION % 100)/10 + '0', '.', SOPLEX_VERSION % 10 + '0'};
+#endif
+const static char spxdesc[200] =  {'L', 'i', 'n', 'e', 'a', 'r', ' ', 'P', 'r', 'o', 'g', 'r', 'a', 'm', 'm', 'i', 'n', 'g',
+                                   ' ', 'S', 'o', 'l', 'v', 'e', 'r', ' ' , 'd', 'e', 'v', 'e', 'l', 'o', 'p', 'e', 'd',
+                                   ' ', 'a', 't', ' ', 'Z', 'u', 's', 'e', ' ', 'I', 'n', 's', 't', 'i', 't', 'u', 't', 'e',
+                                   ' ', 'B', 'e', 'r', 'l', 'i', 'n', ' ', '(', 's', 'o', 'p', 'l', 'e', 'x', '.', 'z', 'i', 'b', '.', 'd', 'e', ')',
+#ifdef SCIP_WITH_LPSCHECK
+                                   ' ', '-', ' ', 'i', 'n', 'c', 'l', 'u', 'd', 'i', 'n', 'g', ' ', 'C','P','L', 'E', 'X',
+                                   ' ', 'd', 'o', 'u', 'b', 'l', 'e', ' ', 'c', 'h', 'e', 'c', 'k',
+#endif
+                                   ' ', '[', 'G', 'i', 't', 'H', 'a', 's', 'h', ':', ' ',
+                                   getGitHash()[0], getGitHash()[1], getGitHash()[2], getGitHash()[3],
+                                   getGitHash()[4], getGitHash()[5], getGitHash()[6], getGitHash()[7],
+                                   ']'};
 
 /**@name Miscellaneous Methods */
 /**@{ */
@@ -975,12 +1001,6 @@ const char* SCIPlpiGetSolverName(
    )
 {
    SCIPdebugMessage("calling SCIPlpiGetSolverName()\n");
-
-#if (SOPLEX_SUBVERSION > 0)
-   (void)snprintf(spxname, 100, "SoPlex %d.%d.%d.%d", SOPLEX_VERSION/100, (SOPLEX_VERSION % 100)/10, SOPLEX_VERSION % 10, SOPLEX_SUBVERSION); /*lint !e778 !e845*/
-#else
-   (void)snprintf(spxname, 100, "SoPlex %d.%d.%d", SOPLEX_VERSION/100, (SOPLEX_VERSION % 100)/10, SOPLEX_VERSION % 10); /*lint !e778 !e845*/
-#endif
    return spxname;
 }
 
@@ -989,12 +1009,6 @@ const char* SCIPlpiGetSolverDesc(
    void
    )
 {
-   (void)snprintf(spxdesc, 200, "%s [GitHash: %s]", "Linear Programming Solver developed at Zuse Institute Berlin (soplex.zib.de)"
-#ifdef SCIP_WITH_LPSCHECK
-     " - including CPLEX double check"
-#endif
-   , getGitHash());
-
    return spxdesc;
 }
 
