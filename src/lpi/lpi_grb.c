@@ -53,9 +53,6 @@
 #error "The Gurobi intreface only works for Gurobi versions at least 7.0.2"
 #endif
 
-/* define infinity value of Gurobi */
-#define GRB_INFBOUND 1e+20
-
 /* macro for checking return codes of Gurobi */
 #define CHECK_ZERO(messagehdlr, x) do { int _restat_;                   \
       if( (_restat_ = (x)) != 0 )                                       \
@@ -2402,14 +2399,14 @@ SCIP_RETCODE SCIPlpiScaleRow(
    }
 
    /* scale row sides */
-   if( lhs > -GRB_INFBOUND )
+   if( lhs > -GRB_INFINITY )
       lhs *= scaleval;
    else if( scaleval < 0.0 )
-      lhs = GRB_INFBOUND;
-   if( rhs < GRB_INFBOUND )
+      lhs = GRB_INFINITY;
+   if( rhs < GRB_INFINITY )
       rhs *= scaleval;
    else if( scaleval < 0.0 )
-      rhs = -GRB_INFBOUND;
+      rhs = -GRB_INFINITY;
    if( scaleval > 0.0 )
    {
       SCIP_CALL( SCIPlpiChgSides(lpi, 1, &row, &lhs, &rhs) );
