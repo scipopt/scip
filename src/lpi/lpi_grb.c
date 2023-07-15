@@ -1364,7 +1364,20 @@ SCIP_RETCODE SCIPlpiCreate(
 
       assert( numlp == 0 );
 
-      /* create evironment */
+      /* create environment */
+#if GRB_VERSION_MAJOR >= 8
+      restat = GRBemptyenv(&reusegrbenv);
+      if ( restat != 0 )
+      {
+         SCIPmessagePrintWarning(messagehdlr, "Gurobi error %d: Something went wrong with creating the environment.\n", restat);
+         return SCIP_LPERROR;
+      }
+
+      /* turn off output for all models */
+      CHECK_ZERO_STAR( messagehdlr, GRBsetintparam(reusegrbenv, GRB_INT_PAR_OUTPUTFLAG, 0) );
+
+      CHECK_ZERO_STAR( messagehdlr, GRBstartenv(reusegrbenv) );
+#else
       restat = GRBloadenv(&reusegrbenv, NULL);
       if ( restat != 0 )
       {
@@ -1374,6 +1387,7 @@ SCIP_RETCODE SCIPlpiCreate(
 
       /* turn off output for all models */
       CHECK_ZERO_STAR( messagehdlr, GRBsetintparam(reusegrbenv, GRB_INT_PAR_OUTPUTFLAG, 0) );
+#endif
 
       /* turn on that basis information for infeasible and unbounded models is available */
       CHECK_ZERO_STAR( messagehdlr, GRBsetintparam(reusegrbenv, GRB_INT_PAR_INFUNBDINFO, 1) );
@@ -1388,12 +1402,21 @@ SCIP_RETCODE SCIPlpiCreate(
 
 #else
 
-   /* Create new environment for each new instaniation; note that this involves additional work and
+   /* Create new environment for each new instantiation; note that this involves additional work and
     * uses a new license for each new instantiation. */
+#if GRB_VERSION_MAJOR >= 8
+   CHECK_ZERO_STAR( messagehdlr, GRBemptyenv(&(*lpi)->grbenv) );
+
+   /* turn off output for all models */
+   CHECK_ZERO_STAR( messagehdlr, GRBsetintparam((*lpi)->grbenv, GRB_INT_PAR_OUTPUTFLAG, 0) );
+
+   CHECK_ZERO_STAR( messagehdlr, GRBstartenv((*lpi)->grbenv) );
+#else
    CHECK_ZERO_STAR( messagehdlr, GRBloadenv(&(*lpi)->grbenv, NULL) );
 
    /* turn off output for all models */
    CHECK_ZERO_STAR( messagehdlr, GRBsetintparam((*lpi)->grbenv, GRB_INT_PAR_OUTPUTFLAG, 0) );
+#endif
 
    /* turn on that basis information for infeasible and unbounded models is available */
    CHECK_ZERO_STAR( messagehdlr, GRBsetintparam((*lpi)->grbenv, GRB_INT_PAR_INFUNBDINFO, 1) );
