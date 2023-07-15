@@ -225,6 +225,7 @@ Fixed bugs
 - only consider positive slack variables as active in benders.c
 - in the feasibility check of and/or constraints, allow for fractional values in operands
 - fixed linear outer-approximation for some composite absolute-value expressions
+- fixed that scaling of rows in Gurobi interface (SCIPlpiScaleRow()) changed infinite sides to large finite ones (1e20) when scale factor is negative
 
 Miscellaneous
 -------------
