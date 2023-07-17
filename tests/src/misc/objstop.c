@@ -70,6 +70,10 @@ Test(objstop, objstop_min, .description = "tests objective stop for minimization
 
    SCIPsetRealParam(scip, "limits/objectivestop", 352);
    SCIPgetRealParam(scip, "limits/objectivestop", &objstop);
+   /* at the moment, the first solution found with objective value at most 352 is an optimal solution
+    * we turn off separation to avoid that the dual bound is already at the optimal value when this happens, since SCIP would then return with status SCIP_STATUS_OPTIMAL
+    */
+   SCIPsetSeparating(scip, SCIP_PARAMSETTING_OFF, TRUE);
    cr_assert_eq(objstop, 352, "Objective stop should be 352.0, but is %f", objstop);
 
    SCIPsolve(scip);
