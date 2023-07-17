@@ -118,6 +118,7 @@ SCIP_RETCODE resolutionsetCopy(
    (*targetresolutionset)->validdepth = sourceresolutionset->validdepth;
    (*targetresolutionset)->conflictdepth = sourceresolutionset->conflictdepth;
    (*targetresolutionset)->repropdepth = sourceresolutionset->repropdepth;
+   (*targetresolutionset)->insertdepth = sourceresolutionset->insertdepth;
    (*targetresolutionset)->conflicttype = sourceresolutionset->conflicttype;
    (*targetresolutionset)->usescutoffbound = sourceresolutionset->usescutoffbound;
    (*targetresolutionset)->isbinary = sourceresolutionset->isbinary;
@@ -163,6 +164,7 @@ SCIP_RETCODE resolutionsetReplace(
    targetresolutionset->validdepth = sourceresolutionset->validdepth;
    targetresolutionset->conflictdepth = sourceresolutionset->conflictdepth;
    targetresolutionset->repropdepth = sourceresolutionset->repropdepth;
+   targetresolutionset->insertdepth = sourceresolutionset->insertdepth;
    targetresolutionset->conflicttype = sourceresolutionset->conflicttype;
    targetresolutionset->usescutoffbound = sourceresolutionset->usescutoffbound;
    targetresolutionset->isbinary = sourceresolutionset->isbinary;
@@ -219,7 +221,6 @@ SCIP_RETCODE conflictInsertResolutionset(
 
    return SCIP_OKAY;
 }
-
 
 /** return the values of variable coefficients in the resolutionset */
 static
@@ -340,6 +341,26 @@ SCIP_Longint SCIPconflictGetNResUnkTerm(
    return conflict->nrescalls - conflict->nressuccess - conflict->ncorrectaborts;
 }
 
+// static
+// SCIP_RETCODE setValue(
+//    SCIP_RESOLUTIONSET*   resolutionset,      /**< resolution set */
+//    int                   pos,                /**< position of the value to set */
+//    SCIP_Real             newval              /**< new value */
+// )
+// {
+//    assert(resolutionset != NULL);
+//    assert(pos >= 0);
+//    assert(pos < resolutionset->nnz);
+
+//    resolutionset->vals[pos] = newval;
+//    /* update the slack:
+//     * For a variable with a positive coefficient
+//    */
+
+//    resolutionset->slack += (newval - resolutionset->vals[pos]) * resolutionset->coefs[pos];
+
+//    return SCIP_OKAY;
+// }
 /** perform activity based coefficient tightening on a row defined with a left hand side;
  * returns if the row is redundant due to activity bounds
  */
@@ -1187,6 +1208,13 @@ SCIP_RETCODE updateStatistics(
 
          var = vars[resolutionset->inds[i]];
          /* todo atm this does not work for general MIP */
+         /* to make this work we need the relaxed bound for the integer and
+          * continuous variables. We can get them by giving to this function the
+          * UIP bdchgidx as parameter and checking if there exist bound changes
+          * for variables before that bound change that lead to the
+          * infeasibility of the conflict constraint. Alternative: Can we get
+          * these values directly these values from the resbdchgqueue and the
+          * current bdchg and all previous ones that have been fixed? */
          boundtype = resolutionset->vals[i] > 0 ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER;
          bound = resolutionset->vals[i] > 0 ? 0 : 1;
 
@@ -1606,6 +1634,7 @@ SCIP_RETCODE resolutionsetCreate(
    (*resolutionset)->validdepth = 0;
    (*resolutionset)->conflictdepth = 0;
    (*resolutionset)->repropdepth = 0;
+   (*resolutionset)->insertdepth = 0;
    (*resolutionset)->conflicttype = SCIP_CONFTYPE_UNKNOWN;
    (*resolutionset)->usescutoffbound = FALSE;
    (*resolutionset)->isbinary = FALSE;
@@ -1663,6 +1692,7 @@ void resolutionSetClear(
    resolutionset->validdepth = 0;
    resolutionset->conflictdepth = 0;
    resolutionset->repropdepth = 0;
+   resolutionset->insertdepth = 0;
    resolutionset->conflicttype = SCIP_CONFTYPE_UNKNOWN;
    resolutionset->usescutoffbound = FALSE;
    resolutionset->isbinary = FALSE;
@@ -2528,8 +2558,8 @@ SCIP_RETCODE createAndAddResolutionCons(
    return SCIP_OKAY;
 }/*lint !e715*/
 
-/** create resolution constraints out of resolution sets */
-SCIP_RETCODE SCIPconflictFlushResolutionSets(
+/** create resolution constraints out of resolution sets and add them to the problem */
+SCIP_RETCODE SCIPconflictAddResolutionSets(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -2551,13 +2581,16 @@ SCIP_RETCODE SCIPconflictFlushResolutionSets(
    int focusdepth;
    int maxsize;
 
+   focusdepth = SCIPtreeGetFocusDepth(tree);
+
    assert(conflict != NULL);
    assert(set != NULL);
    assert(stat != NULL);
    assert(transprob != NULL);
    assert(tree != NULL);
+   assert(resolutionset != NULL);
+   assert(resolutionset->validdepth == 0);
 
-   focusdepth = SCIPtreeGetFocusDepth(tree);
    assert(focusdepth <= SCIPtreeGetCurrentDepth(tree));
    assert(SCIPtreeGetCurrentDepth(tree) == tree->pathlen-1);
 
@@ -2566,9 +2599,6 @@ SCIP_RETCODE SCIPconflictFlushResolutionSets(
 
    SCIPsetDebugMsg(set, "flushing %d resolution sets at focus depth %d (vd: %d, cd: %d, rd: %d, maxsize: %d)\n",
       1, focusdepth, resolutionset->validdepth, resolutionset->conflictdepth, resolutionset->repropdepth, maxsize);
-
-   assert(resolutionset != NULL);
-   assert(resolutionset->validdepth == 0);
 
    *success = FALSE;
    /* do not add long conflicts */
@@ -4175,10 +4205,12 @@ SCIP_RETCODE conflictAnalyzeResolution(
    /* todo update this for bound exceeding LPs*/
    usescutoffbound = conflict->resolutionset->usescutoffbound;
 
+   /* clear the conflict, reason, resolved resolution sets */
    resolutionSetClear(conflict->resolutionset);
    resolutionSetClear(conflict->reasonset);
    resolutionSetClear(conflict->prevresolutionset);
    resolutionSetClear(conflict->resolvedresolutionset);
+
    conflictresolutionset = conflict->resolutionset;
    conflictresolutionset->usescutoffbound = usescutoffbound;
    reasonresolutionset = conflict->reasonset;
@@ -4774,9 +4806,8 @@ SCIP_RETCODE conflictAnalyzeResolution(
 
   TERMINATE_RESOLUTION_LOOP:
 
-   /* if resolution fails at some point we can still return add the latest valid
+   /* if resolution fails at some point we can still add the latest valid
    conflict in the list of resolution set */
-
    if ( set->conf_addnonfuip && nressteps >= 1 && nresstepslast != nressteps )
    {
       conflict->ncorrectaborts--;
@@ -4802,7 +4833,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
          getConflictClause(conflict, blkmem, transprob, set, bdchginfo, &success, fixbounds, fixinds);
          if ( success &&  conflict->resolutionsets[0]->nnz > conflict->resolutionset->nnz )
          assert(SCIPsetIsRelEQ(set, getSlack(set, transprob, conflict->resolutionset, SCIPbdchginfoGetIdx(bdchginfo), fixbounds, fixinds), -1.0));
-            SCIP_CALL( SCIPconflictFlushResolutionSets(conflict, blkmem, set, stat, transprob, origprob, tree, reopt,
+         SCIP_CALL( SCIPconflictAddResolutionSets(conflict, blkmem, set, stat, transprob, origprob, tree, reopt,
                                           lp, branchcand, eventqueue, cliquetable, conflict->resolutionset, &success) );
          if( success )
          {
@@ -4823,7 +4854,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
          {
 
             SCIP_Bool success;
-            SCIP_CALL( SCIPconflictFlushResolutionSets(conflict, blkmem, set, stat, transprob, origprob, tree, reopt,
+            SCIP_CALL( SCIPconflictAddResolutionSets(conflict, blkmem, set, stat, transprob, origprob, tree, reopt,
                   lp, branchcand, eventqueue, cliquetable, resolutionset, &success) );
             if( success )
             {
