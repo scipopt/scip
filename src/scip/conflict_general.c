@@ -1434,7 +1434,7 @@ SCIP_RETCODE SCIPgetDualProof(
     */
 
    /* add the objective function to the aggregation row with respect to the current cutoff bound
-    * 
+    *
     * for an integral objective the right-hand side is reduced by the cutoff bound delta to cut off up to the next
     * possible objective value below the cutoff bound
     */
