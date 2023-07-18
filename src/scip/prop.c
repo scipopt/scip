@@ -708,7 +708,7 @@ SCIP_RETCODE SCIPpropExec(
             && *result != SCIP_DELAYED
             && *result != SCIP_DELAYNODE )
          {
-            SCIPerrorMessage("execution method of propagator <%s> returned invalid result <%d>\n", 
+            SCIPerrorMessage("execution method of propagator <%s> returned invalid result <%d>\n",
                prop->name, *result);
             return SCIP_INVALIDRESULT;
          }
@@ -771,7 +771,7 @@ SCIP_RETCODE SCIPpropResolvePropagation(
       /* check result code */
       if( *result != SCIP_SUCCESS && *result != SCIP_DIDNOTFIND )
       {
-         SCIPerrorMessage("propagation conflict resolving method of propagator <%s> returned invalid result <%d>\n", 
+         SCIPerrorMessage("propagation conflict resolving method of propagator <%s> returned invalid result <%d>\n",
             prop->name, *result);
          return SCIP_INVALIDRESULT;
       }
