@@ -197,7 +197,7 @@ void confgraphWriteNode(
    assert(confgraphfile != NULL);
 
 #ifdef SCIP_CONFGRAPH_DOT
-   SCIPdotWriteNode(confgraphfile, (int)(size_t) idptr, label, fillcolor, bordercolor);
+   SCIPdotWriteNode(confgraphfile, (int)(size_t) idptr, label, nodetype, fillcolor, bordercolor);
 #else
    SCIPgmlWriteNode(confgraphfile, (unsigned int)(size_t)idptr, label, nodetype, fillcolor, bordercolor);
 #endif

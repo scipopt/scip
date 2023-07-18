@@ -276,6 +276,7 @@ void SCIPdotWriteNode(
    FILE* file,               /**< file to write to */
    int nodeId,               /**< node ID */
    const char* label,        /**< node label */
+   const char* nodetype,     /**< type of the node, or NULL */
    const char* interiorColor,/**< interior color */
    const char* borderColor   /**< border color */
 );
