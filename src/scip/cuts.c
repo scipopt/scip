@@ -6661,7 +6661,9 @@ SCIP_RETCODE getFlowCover(
    SCIP_Real n2itemsminweight;
    SCIP_Real transcapacityreal;
    int nitems;
-   int nn1items;
+#ifndef NDEBUG
+   int nn1items = 0;
+#endif
    int nnonsolitems;
    int nsolitems;
    int j;
@@ -6704,7 +6706,6 @@ SCIP_RETCODE getFlowCover(
     */
    SCIPdebugMsg(scip, "0. Fix some variables in advance:\n");
    nitems = 0;
-   nn1items = 0;
    n1itemsweight = 0.0;
    n2itemsminweight = SCIP_REAL_MAX;
    for( j = 0; j < snf->ntransvars; j++ )
@@ -6729,7 +6730,9 @@ SCIP_RETCODE getFlowCover(
          if( snf->transvarcoefs[j] == 1 )
          {
             n1itemsweight += snf->transvarvubcoefs[j];
+#ifndef NDEBUG
             nn1items++;
+#endif
          }
          else
             n2itemsminweight = MIN(n2itemsminweight, snf->transvarvubcoefs[j]);

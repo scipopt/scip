@@ -3841,8 +3841,10 @@ SCIP_RETCODE addSplitcons(
       SCIP_Real consval;
       SCIP_BOUNDTYPE consboundtype;
       int nbinvars = 0;
+#ifndef NDEBUG
       int nintvars = 0;
       int ncontvars = 0;
+#endif
 
       reoptconsdata = reopt->reopttree->reoptnodes[id]->dualredscur;
       assert(!reoptconsdata->linear);
@@ -3866,11 +3868,15 @@ SCIP_RETCODE addSplitcons(
             if( SCIPisEQ(scip, SCIPvarGetLbLocal(reoptconsdata->vars[v]), 0.0)
                && SCIPisEQ(scip, SCIPvarGetUbLocal(reoptconsdata->vars[v]), 1.0) )
                ++nbinvars;
+#ifndef NDEBUG
             else
                ++nintvars;
+#endif
             break;
          case SCIP_VARTYPE_CONTINUOUS:
+#ifndef NDEBUG
             ++ncontvars;
+#endif
             break;
          default:
             SCIPerrorMessage("Variable <%s> has to be either binary, (implied) integer, or continuous.\n",
@@ -5178,7 +5184,7 @@ SCIP_RETCODE SCIPreoptFree(
             {
                SCIPhistoryFree(&(*reopt)->varhistory[p][v], blkmem);
             }
-            
+
             BMSfreeBlockMemoryArray(blkmem, &(*reopt)->varhistory[p], SCIPgetNOrigVars(set->scip));
             (*reopt)->varhistory[p] = NULL;
          }
@@ -6989,8 +6995,10 @@ SCIP_RETCODE SCIPreoptSplitRoot(
    if( set->reopt_usesplitcons )
    {
       int nbinvars = 0;
+#ifndef NDEBUG
       int nintvars = 0;
       int ncontvars = 0;
+#endif
 
       assert(*ncreatedchilds == 1);
 
@@ -7024,10 +7032,14 @@ SCIP_RETCODE SCIPreoptSplitRoot(
             break;
          case SCIP_VARTYPE_INTEGER:
          case SCIP_VARTYPE_IMPLINT:
+#ifndef NDEBUG
             ++nintvars;
+#endif
             break;
          case SCIP_VARTYPE_CONTINUOUS:
+#ifndef NDEBUG
             ++ncontvars;
+#endif
             break;
          default:
             SCIPerrorMessage("Cannot handle vartype %d\n", SCIPvarGetType(reoptnodes[0]->dualredscur->vars[v]));

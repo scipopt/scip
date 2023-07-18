@@ -141,3 +141,6 @@ examples/*/doc/miniscippy.png
 examples/*/doc/userguide.*
 examples/*/!doc/userguide.tex
 examples/*/lint
+
+
+!.github/workflows/*

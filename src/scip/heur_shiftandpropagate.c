@@ -1456,7 +1456,9 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    int ndiscvars;                 /* number of non-continuous variables of the problem */
    int lastindexofsusp;           /* last variable which has been swapped due to a cutoff */
    int nbinvars;                  /* number of binary variables */
-   int nintvars;                  /* number of integer variables */
+#ifndef NDEBUG
+   int nintvars = 0;              /* number of integer variables */
+#endif
    int i;
    int r;
    int v;
@@ -1547,7 +1549,6 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
     */
    ndiscvars = 0;
    nbinvars = 0;
-   nintvars = 0;
    for( c = 0; c < nlpcols; ++c )
    {
       SCIP_COL* col;
@@ -1562,8 +1563,10 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
          ++ndiscvars;
       if( SCIPvarGetType(colvar) == SCIP_VARTYPE_BINARY )
          ++nbinvars;
+#ifndef NDEBUG
       else if( SCIPvarGetType(colvar) == SCIP_VARTYPE_INTEGER )
          ++nintvars;
+#endif
 
       /* save the position of this column in the array such that it can be accessed as the "true" column position */
       assert(SCIPcolGetLPPos(col) >= 0);

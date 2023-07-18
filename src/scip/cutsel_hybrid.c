@@ -501,13 +501,13 @@ SCIP_RETCODE SCIPselectCutsHybrid(
 
       /* if the best cut of the remaining cuts is considered bad, we discard it and all remaining cuts */
       if( scores[0] < badscore )
-         goto TERMINATE;
+         break;
 
       ++(*nselectedcuts);
 
       /* if the maximal number of cuts was selected, we can stop here */
       if( *nselectedcuts == maxselectedcuts )
-         goto TERMINATE;
+         break;
 
       /* move the pointers to the next position and filter the remaining cuts to enforce the maximum parallelism constraint */
       ++cuts;
@@ -517,7 +517,6 @@ SCIP_RETCODE SCIPselectCutsHybrid(
       ncuts = filterWithParallelism(selectedcut, cuts, scores, ncuts, goodscore, goodmaxparall, maxparall);
    }
 
-TERMINATE:
    SCIPfreeBufferArray(scip, &scoresptr);
 
    return SCIP_OKAY;

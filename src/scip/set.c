@@ -239,6 +239,7 @@
 #define SCIP_DEFAULT_LIMIT_GAP              0.0 /**< solving stops, if the gap is below the given value */
 #define SCIP_DEFAULT_LIMIT_ABSGAP           0.0 /**< solving stops, if the absolute difference between primal and dual
                                                  *   bound reaches this value */
+#define SCIP_DEFAULT_LIMIT_OBJSTOP SCIP_INVALID /**< solving stops, if solution is found that is at least as good as given value */
 #define SCIP_DEFAULT_LIMIT_NODES           -1LL /**< maximal number of nodes to process (-1: no limit) */
 #define SCIP_DEFAULT_LIMIT_STALLNODES      -1LL /**< solving stops, if the given number of nodes was processed since the
                                                  *   last improvement of the primal solution value (-1: no limit) */
@@ -1830,6 +1831,11 @@ SCIP_RETCODE SCIPsetCreate(
          "limits/absgap",
          "solving stops, if the absolute gap = |primalbound - dualbound| is below the given value",
          &(*set)->limit_absgap, FALSE, SCIP_DEFAULT_LIMIT_ABSGAP, 0.0, SCIP_REAL_MAX,
+         SCIPparamChgdLimit, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "limits/objectivestop",
+         "solving stops, if solution is found that is at least as good as given value",
+         &(*set)->limit_objstop, FALSE, SCIP_DEFAULT_LIMIT_OBJSTOP, SCIP_REAL_MIN, SCIP_REAL_MAX,
          SCIPparamChgdLimit, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "limits/solutions",
