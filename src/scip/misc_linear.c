@@ -407,7 +407,7 @@ void SCIPconsGetDualsol(
 }
 
 /** returns the row of an arbitrary SCIP constraint that can be represented as a single linear constraint
- *  or NULL of no row is awailable
+ *  or NULL of no row is available
  */
 SCIP_ROW* SCIPconsGetRow(
    SCIP*                 scip,               /**< SCIP data structure */
