@@ -234,7 +234,7 @@ typedef enum SCIP_LinConstype SCIP_LINCONSTYPE;
  *  - conshdlr        : the constraint handler itself
  *  - sourcecons      : source constraint to transform
  *  - targetcons      : pointer to store created target constraint
- */ 
+ */
 #define SCIP_DECL_CONSTRANS(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS* sourcecons, SCIP_CONS** targetcons)
 
 /** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved)
@@ -433,7 +433,7 @@ typedef enum SCIP_LinConstype SCIP_LINCONSTYPE;
 /** feasibility check method of constraint handler for integral solutions
  *
  *  The given solution has to be checked for feasibility.
- *  
+ *
  *  The check methods of the active constraint handlers are called in decreasing order of their check
  *  priorities until the first constraint handler returned with the result SCIP_INFEASIBLE.
  *  The integrality constraint handler has a check priority of zero. A constraint handler which can
@@ -803,7 +803,7 @@ typedef enum SCIP_LinConstype SCIP_LINCONSTYPE;
  *  - global          : should a global or a local copy be created?
  *
  *  output:
- *  - valid           : pointer to store whether the copying was valid or not 
+ *  - valid           : pointer to store whether the copying was valid or not
  */
 #define SCIP_DECL_CONSCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONS** cons, const char* name, \
       SCIP* sourcescip, SCIP_CONSHDLR* sourceconshdlr, SCIP_CONS* sourcecons, SCIP_HASHMAP* varmap, SCIP_HASHMAP* consmap, \
