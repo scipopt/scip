@@ -1949,14 +1949,14 @@ SCIP_DECL_CONSRESPROP(consRespropSOS2)
    /* check if lower bound of var was the reason */
    if ( SCIPisFeasPositive(scip, SCIPgetVarLbAtIndex(scip, var, bdchgidx, FALSE)) )
    {
-      SCIP_CALL( SCIPaddConflictLb(scip, var, bdchgidx, FALSE) );
+      SCIP_CALL( SCIPaddConflictLb(scip, var, bdchgidx) );
       *result = SCIP_SUCCESS;
    }
 
    /* check if upper bound of var was the reason */
    if ( SCIPisFeasNegative(scip, SCIPgetVarUbAtIndex(scip, var, bdchgidx, FALSE)) )
    {
-      SCIP_CALL( SCIPaddConflictUb(scip, var, bdchgidx, FALSE) );
+      SCIP_CALL( SCIPaddConflictUb(scip, var, bdchgidx) );
       *result = SCIP_SUCCESS;
    }
 

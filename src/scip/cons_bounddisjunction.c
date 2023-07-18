@@ -1259,7 +1259,7 @@ SCIP_RETCODE analyzeConflict(
    for( v = 0; v < consdata->nvars; ++v )
    {
       /* the opposite bound is in conflict with this literal */
-      SCIP_CALL( SCIPaddConflictBd(scip, consdata->vars[v], SCIPboundtypeOpposite(consdata->boundtypes[v]), NULL, FALSE) );
+      SCIP_CALL( SCIPaddConflictBd(scip, consdata->vars[v], SCIPboundtypeOpposite(consdata->boundtypes[v]), NULL) );
    }
 
    /* analyze the conflict */
@@ -2553,7 +2553,7 @@ SCIP_DECL_CONSRESPROP(consRespropBounddisjunction)
                && SCIPisLT(scip, SCIPgetVarUbAtIndex(scip, vars[v], bdchgidx, TRUE), bounds[v]))
             || (boundtypes[v] == SCIP_BOUNDTYPE_UPPER
                && SCIPisGT(scip, SCIPgetVarLbAtIndex(scip, vars[v], bdchgidx, TRUE), bounds[v])));
-         SCIP_CALL( SCIPaddConflictBd(scip, vars[v], SCIPboundtypeOpposite(boundtypes[v]), bdchgidx, resolutionqueue) );
+         SCIP_CALL( SCIPaddConflictBd(scip, vars[v], SCIPboundtypeOpposite(boundtypes[v]), bdchgidx) );
       }
    }
 

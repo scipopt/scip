@@ -172,7 +172,6 @@ SCIP_RETCODE SCIPpropResolvePropagation(
    SCIP_BOUNDTYPE        inferboundtype,     /**< bound that was deduced (lower or upper bound) */
    SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index, representing the point of time where change took place */
    SCIP_Real             relaxedbd,          /**< the relaxed bound */
-   SCIP_Bool             resolutionqueue,      /**< should the explanation bound changes be added to the resolution conflict queue? */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 

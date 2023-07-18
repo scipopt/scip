@@ -1364,10 +1364,10 @@ SCIP_RETCODE resolvePropagation(
    switch( boundtype )
    {
    case SCIP_BOUNDTYPE_LOWER:
-      SCIP_CALL( SCIPaddConflictLb(scip, var, bdchgidx, FALSE) );
+      SCIP_CALL( SCIPaddConflictLb(scip, var, bdchgidx) );
       break;
    case SCIP_BOUNDTYPE_UPPER:
-      SCIP_CALL( SCIPaddConflictUb(scip, var, bdchgidx, FALSE) );
+      SCIP_CALL( SCIPaddConflictUb(scip, var, bdchgidx) );
       break;
    default:
       SCIPerrorMessage("invalid bound type <%d>\n", boundtype);
@@ -1507,7 +1507,7 @@ SCIP_RETCODE analyzeConflictLowerbound(
       SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
 
       /* add upper bound of the variable for which we tried to change the lower bound */
-      SCIP_CALL( SCIPaddConflictUb(scip, infervar, NULL, FALSE) );
+      SCIP_CALL( SCIPaddConflictUb(scip, infervar, NULL) );
 
       /* add (correct) bound of the variable which let to the new lower bound */
       SCIP_CALL( resolvePropagation(scip, propdata, vbdvar, boundtype, NULL) );
@@ -1621,7 +1621,7 @@ SCIP_RETCODE analyzeConflictUpperbound(
       SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
 
       /* add lower bound of the variable for which we tried to change the upper bound */
-      SCIP_CALL( SCIPaddConflictLb(scip, infervar, NULL, FALSE) );
+      SCIP_CALL( SCIPaddConflictLb(scip, infervar, NULL) );
 
       /* add (correct) bound of the variable which let to the new upper bound */
       SCIP_CALL( resolvePropagation(scip, propdata, vbdvar, boundtype, NULL) );

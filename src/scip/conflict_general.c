@@ -387,6 +387,7 @@ SCIP_RETCODE SCIPconflictCreate(
    (*conflict)->bdchgonlyresqueue = FALSE;
    (*conflict)->bdchgonlyconfqueue = FALSE;
    (*conflict)->haslargecoef = FALSE;
+   (*conflict)->reasonclauseres = FALSE;
 
    SCIP_CALL( SCIPconflictInitResolutionset((*conflict), blkmem) );
 
@@ -1692,7 +1693,7 @@ SCIP_RETCODE SCIPgetDualProof(
     */
 
    /* add the objective function to the aggregation row with respect to the current cutoff bound
-    * 
+    *
     * for an integral objective the right-hand side is reduced by the cutoff bound delta to cut off up to the next
     * possible objective value below the cutoff bound
     */

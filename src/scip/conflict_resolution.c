@@ -2458,7 +2458,7 @@ SCIP_RETCODE updateBdchgQueue(
             bnd = SCIPgetVarUbAtIndex(set->scip, vars[v], inferbdchgidx, FALSE);
             if ( SCIPsetIsLT(set, bnd, SCIPvarGetUbGlobal(vars[v])) )
             {
-               SCIP_CALL( SCIPaddConflictUb(set->scip, vars[v], inferbdchgidx, FALSE) );
+               SCIP_CALL( SCIPaddConflictUb(set->scip, vars[v], inferbdchgidx) );
             }
          }
       }
@@ -2470,7 +2470,7 @@ SCIP_RETCODE updateBdchgQueue(
             bnd = SCIPgetVarLbAtIndex(set->scip, vars[v], inferbdchgidx, FALSE);
             if ( SCIPsetIsGT(set, bnd, SCIPvarGetLbGlobal(vars[v])) )
             {
-               SCIP_CALL( SCIPaddConflictLb(set->scip, vars[v], inferbdchgidx, FALSE) );
+               SCIP_CALL( SCIPaddConflictLb(set->scip, vars[v], inferbdchgidx) );
             }
          }
       }
@@ -2966,8 +2966,11 @@ SCIP_RETCODE reasonBoundChanges(
             relaxedbd += constant;
          }
 
-         SCIP_CALL( SCIPconsResolvePropagation(infercons, set, infervar, inferinfo, inferboundtype, bdchgidx, relaxedbd, TRUE, &result) );
+         conflict->reasonclauseres = TRUE;
+         SCIP_CALL( SCIPconsResolvePropagation(infercons, set, infervar, inferinfo, inferboundtype, bdchgidx, relaxedbd, &result) );
          *resolved = (result == SCIP_SUCCESS);
+         conflict->reasonclauseres = FALSE;
+
       }
       break;
 
@@ -2999,8 +3002,10 @@ SCIP_RETCODE reasonBoundChanges(
             SCIPgetVarBdAtIndex(set->scip, infervar, inferboundtype, bdchgidx, TRUE),
             SCIPpropGetName(inferprop), inferinfo);
 
-         SCIP_CALL( SCIPpropResolvePropagation(inferprop, set, infervar, inferinfo, inferboundtype, bdchgidx, relaxedbd, TRUE, &result) );
+         conflict->reasonclauseres = TRUE;
+         SCIP_CALL( SCIPpropResolvePropagation(inferprop, set, infervar, inferinfo, inferboundtype, bdchgidx, relaxedbd, &result) );
          *resolved = (result == SCIP_SUCCESS);
+         conflict->reasonclauseres = FALSE;
       }
       break;
 

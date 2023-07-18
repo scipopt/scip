@@ -357,17 +357,15 @@ SCIP_RETCODE SCIPinitConflictAnalysis(
 SCIP_RETCODE SCIPaddConflictLb(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable whose lower bound should be added to conflict candidate queue */
-   SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node, when the
+   SCIP_BDCHGIDX*        bdchgidx            /**< bound change index representing time on path to current node, when the
                                               *   conflicting bound was valid, NULL for current local bound */
-   SCIP_Bool             resolutionqueue     /**< should the explanation bound changes be added to the resolution conflict queue? */
-
    )
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPaddConflictLb", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    assert( var->scip == scip );
 
-   SCIP_CALL( SCIPconflictAddBound(scip->conflict, scip->mem->probmem, scip->set, scip->stat, var, SCIP_BOUNDTYPE_LOWER, bdchgidx, resolutionqueue) );
+   SCIP_CALL( SCIPconflictAddBound(scip->conflict, scip->mem->probmem, scip->set, scip->stat, var, SCIP_BOUNDTYPE_LOWER, bdchgidx) );
 
    return SCIP_OKAY;
 }
@@ -426,16 +424,15 @@ SCIP_RETCODE SCIPaddConflictRelaxedLb(
 SCIP_RETCODE SCIPaddConflictUb(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable whose upper bound should be added to conflict candidate queue */
-   SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node, when the
+   SCIP_BDCHGIDX*        bdchgidx            /**< bound change index representing time on path to current node, when the
                                               *   conflicting bound was valid, NULL for current local bound */
-   SCIP_Bool             resolutionqueue     /**< should the explanation bound changes be added to the resolution conflict queue? */
    )
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPaddConflictUb", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    assert( var->scip == scip );
 
-   SCIP_CALL( SCIPconflictAddBound(scip->conflict, scip->mem->probmem, scip->set, scip->stat, var, SCIP_BOUNDTYPE_UPPER, bdchgidx, resolutionqueue) );
+   SCIP_CALL( SCIPconflictAddBound(scip->conflict, scip->mem->probmem, scip->set, scip->stat, var, SCIP_BOUNDTYPE_UPPER, bdchgidx) );
 
    return SCIP_OKAY;
 }
@@ -496,16 +493,15 @@ SCIP_RETCODE SCIPaddConflictBd(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable whose upper bound should be added to conflict candidate queue */
    SCIP_BOUNDTYPE        boundtype,          /**< the type of the conflicting bound (lower or upper bound) */
-   SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node, when the
+   SCIP_BDCHGIDX*        bdchgidx            /**< bound change index representing time on path to current node, when the
                                               *   conflicting bound was valid, NULL for current local bound */
-   SCIP_Bool             resolutionqueue     /**< should the explanation bound changes be added to the resolution conflict queue? */
    )
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPaddConflictBd", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    assert( var->scip == scip );
 
-   SCIP_CALL( SCIPconflictAddBound(scip->conflict, scip->mem->probmem, scip->set, scip->stat, var, boundtype, bdchgidx, resolutionqueue) );
+   SCIP_CALL( SCIPconflictAddBound(scip->conflict, scip->mem->probmem, scip->set, scip->stat, var, boundtype, bdchgidx) );
 
    return SCIP_OKAY;
 }
@@ -564,8 +560,7 @@ SCIP_RETCODE SCIPaddConflictRelaxedBd(
  */
 SCIP_RETCODE SCIPaddConflictBinvar(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             var,                /**< binary variable whose changed bound should be added to conflict queue */
-   SCIP_Bool             resolutionqueue     /**< should the explanation bound changes be added to the resolution conflict queue? */
+   SCIP_VAR*             var                 /**< binary variable whose changed bound should be added to conflict queue */
    )
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPaddConflictBinvar", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
@@ -575,11 +570,11 @@ SCIP_RETCODE SCIPaddConflictBinvar(
 
    if( SCIPvarGetLbLocal(var) > 0.5 )
    {
-      SCIP_CALL( SCIPconflictAddBound(scip->conflict, scip->mem->probmem, scip->set, scip->stat, var, SCIP_BOUNDTYPE_LOWER, NULL, resolutionqueue) );
+      SCIP_CALL( SCIPconflictAddBound(scip->conflict, scip->mem->probmem, scip->set, scip->stat, var, SCIP_BOUNDTYPE_LOWER, NULL) );
    }
    else if( SCIPvarGetUbLocal(var) < 0.5 )
    {
-      SCIP_CALL( SCIPconflictAddBound(scip->conflict, scip->mem->probmem, scip->set, scip->stat, var, SCIP_BOUNDTYPE_UPPER, NULL,resolutionqueue) );
+      SCIP_CALL( SCIPconflictAddBound(scip->conflict, scip->mem->probmem, scip->set, scip->stat, var, SCIP_BOUNDTYPE_UPPER, NULL) );
    }
 
    return SCIP_OKAY;

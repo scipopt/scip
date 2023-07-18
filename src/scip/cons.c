@@ -7200,7 +7200,6 @@ SCIP_RETCODE SCIPconsResolvePropagation(
    SCIP_BOUNDTYPE        inferboundtype,     /**< bound that was deduced (lower or upper bound) */
    SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index, representing the point of time where change took place */
    SCIP_Real             relaxedbd,          /**< the relaxed bound */
-   SCIP_Bool             resolutionqueue,      /**< should the explanation bound changes be added to the resolution conflict queue? */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
@@ -7220,25 +7219,13 @@ SCIP_RETCODE SCIPconsResolvePropagation(
    conshdlr = cons->conshdlr;
    assert(conshdlr != NULL);
 
-   if (resolutionqueue)
-   {
-      SCIP_CALL( conshdlr->consresprop(set->scip, conshdlr, cons, infervar, inferinfo, inferboundtype, bdchgidx,
-      relaxedbd, TRUE, result) );
-      /* check result code */
-      if( *result != SCIP_SUCCESS && *result != SCIP_DIDNOTFIND )
-      {
-         SCIPerrorMessage("propagation conflict resolving method of constraint handler <%s> returned invalid result <%d>\n",
-            conshdlr->name, *result);
-         return SCIP_INVALIDRESULT;
-      }
-   }
-   else if( conshdlr->consresprop != NULL )
+   if( conshdlr->consresprop != NULL )
    {
       /* start timing */
       SCIPclockStart(conshdlr->resproptime, set);
 
       SCIP_CALL( conshdlr->consresprop(set->scip, conshdlr, cons, infervar, inferinfo, inferboundtype, bdchgidx,
-            relaxedbd, FALSE, result) );
+            relaxedbd, result) );
 
       /* stop timing */
       SCIPclockStop(conshdlr->resproptime, set);
@@ -7655,7 +7642,7 @@ SCIP_RETCODE SCIPconsResprop(
    /* call external method */
    if( conshdlr->consresprop != NULL )
    {
-      SCIP_CALL( conshdlr->consresprop(set->scip, conshdlr, cons, infervar, inferinfo, boundtype, bdchgidx, relaxedbd, FALSE, result) );
+      SCIP_CALL( conshdlr->consresprop(set->scip, conshdlr, cons, infervar, inferinfo, boundtype, bdchgidx, relaxedbd, result) );
       SCIPsetDebugMsg(set, " -> resprop returned result <%d>\n", *result);
 
       if( *result != SCIP_SUCCESS

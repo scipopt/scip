@@ -691,18 +691,18 @@ SCIP_RETCODE analyzeConflict(
    if( lblinkvar )
    {
       assert(linkvar != NULL);
-      SCIP_CALL( SCIPaddConflictLb(scip, linkvar, NULL, FALSE) );
+      SCIP_CALL( SCIPaddConflictLb(scip, linkvar, NULL) );
    }
 
    if( ublinkvar )
    {
       assert(linkvar != NULL);
-      SCIP_CALL( SCIPaddConflictUb(scip, linkvar, NULL, FALSE) );
+      SCIP_CALL( SCIPaddConflictUb(scip, linkvar, NULL) );
    }
 
    if( binvar != NULL )
    {
-      SCIP_CALL( SCIPaddConflictBinvar(scip, binvar, FALSE) );
+      SCIP_CALL( SCIPaddConflictBinvar(scip, binvar) );
    }
 
    /* analyze the conflict */
@@ -1145,11 +1145,11 @@ SCIP_RETCODE tightenedLinkvar(
          /* ??????????? use resolve method and only add binvars which are needed to exceed the upper bound */
 
          /* add conflicting variables */
-         SCIP_CALL( SCIPaddConflictUb(scip, linkvar, NULL, FALSE) );
+         SCIP_CALL( SCIPaddConflictUb(scip, linkvar, NULL) );
 
          for( b = 0;  b < consdata->firstnonfixed; ++b )
          {
-            SCIP_CALL( SCIPaddConflictBinvar(scip, binvars[b], FALSE) );
+            SCIP_CALL( SCIPaddConflictBinvar(scip, binvars[b]) );
          }
 
          /* analyze the conflict */
@@ -1194,11 +1194,11 @@ SCIP_RETCODE tightenedLinkvar(
          /* ??????????? use resolve method and only add binvars which are needed to fall below the lower bound */
 
          /* add conflicting variables */
-         SCIP_CALL( SCIPaddConflictLb(scip, linkvar, NULL, FALSE) );
+         SCIP_CALL( SCIPaddConflictLb(scip, linkvar, NULL) );
 
          for( b = consdata->lastnonfixed + 1; b < nbinvars; ++b )
          {
-            SCIP_CALL( SCIPaddConflictBinvar(scip, binvars[b], FALSE) );
+            SCIP_CALL( SCIPaddConflictBinvar(scip, binvars[b]) );
          }
 
          /* analyze the conflict */
@@ -1360,7 +1360,7 @@ SCIP_RETCODE processBinvarFixings(
          {
             if( SCIPvarGetLbLocal(vars[v]) > 0.5 )
             {
-               SCIP_CALL( SCIPaddConflictBinvar(scip, vars[v], FALSE) );
+               SCIP_CALL( SCIPaddConflictBinvar(scip, vars[v]) );
                n++;
             }
          }
@@ -1405,7 +1405,7 @@ SCIP_RETCODE processBinvarFixings(
             for( v = 0; v < nvars; ++v )
             {
                assert(SCIPvarGetUbLocal(vars[v]) < 0.5);
-               SCIP_CALL( SCIPaddConflictBinvar(scip, vars[v], FALSE) );
+               SCIP_CALL( SCIPaddConflictBinvar(scip, vars[v]) );
             }
 
             /* analyze the conflict */
@@ -2913,7 +2913,7 @@ SCIP_DECL_CONSRESPROP(consRespropLinking)
          {
             if( SCIPgetVarLbAtIndex(scip, consdata->binvars[v], bdchgidx, FALSE) > 0.5 )
             {
-               SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->binvars[v], FALSE) );
+               SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->binvars[v]) );
                break;
             }
          }
@@ -2931,7 +2931,7 @@ SCIP_DECL_CONSRESPROP(consRespropLinking)
             {
                /* the reason variable must be assigned to zero */
                assert(SCIPgetVarUbAtIndex(scip, consdata->binvars[v], bdchgidx, FALSE) < 0.5);
-               SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->binvars[v], FALSE) );
+               SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->binvars[v]) );
             }
          }
       }
@@ -2946,7 +2946,7 @@ SCIP_DECL_CONSRESPROP(consRespropLinking)
       assert( SCIPisFeasEQ(scip, SCIPgetVarUbAtIndex(scip, linkvar, bdchgidx, TRUE), SCIPgetVarUbAtIndex(scip, linkvar, bdchgidx, FALSE)) );
       assert( SCIPisFeasEQ(scip, SCIPgetVarLbAtIndex(scip, linkvar, bdchgidx, TRUE), SCIPgetVarLbAtIndex(scip, linkvar, bdchgidx, FALSE)) );
 
-      SCIP_CALL( SCIPaddConflictLb(scip, linkvar, bdchgidx, FALSE) );
+      SCIP_CALL( SCIPaddConflictLb(scip, linkvar, bdchgidx) );
    }
    else if( inferinfo == -3 )
    {
@@ -2958,7 +2958,7 @@ SCIP_DECL_CONSRESPROP(consRespropLinking)
       assert( SCIPisFeasEQ(scip, SCIPgetVarUbAtIndex(scip, linkvar, bdchgidx, TRUE), SCIPgetVarUbAtIndex(scip, linkvar, bdchgidx, FALSE)) );
       assert( SCIPisFeasEQ(scip, SCIPgetVarLbAtIndex(scip, linkvar, bdchgidx, TRUE), SCIPgetVarLbAtIndex(scip, linkvar, bdchgidx, FALSE)) );
 
-      SCIP_CALL( SCIPaddConflictUb(scip, linkvar, bdchgidx, FALSE) );
+      SCIP_CALL( SCIPaddConflictUb(scip, linkvar, bdchgidx) );
    }
    else if( inferinfo == -4 )
    {
@@ -2985,7 +2985,7 @@ SCIP_DECL_CONSRESPROP(consRespropLinking)
             break;
 
          assert(SCIPvarGetUbLocal(binvars[b]) < 0.5);
-         SCIP_CALL( SCIPaddConflictBinvar(scip, binvars[b], FALSE) );
+         SCIP_CALL( SCIPaddConflictBinvar(scip, binvars[b]) );
       }
    }
    else if( inferinfo == -5 )
@@ -3014,7 +3014,7 @@ SCIP_DECL_CONSRESPROP(consRespropLinking)
          if( vals[b] <= ub )
             break;
 
-         SCIP_CALL( SCIPaddConflictBinvar(scip, binvars[b], FALSE) );
+         SCIP_CALL( SCIPaddConflictBinvar(scip, binvars[b]) );
       }
    }
    else if( inferinfo == -6 )
@@ -3029,8 +3029,8 @@ SCIP_DECL_CONSRESPROP(consRespropLinking)
 
       assert( !SCIPisFeasEQ(scip, SCIPgetVarLbAtIndex(scip, infervar, bdchgidx, TRUE), SCIPgetVarLbAtIndex(scip, infervar, bdchgidx, FALSE))  );
 
-      SCIP_CALL( SCIPaddConflictLb(scip, linkvar, bdchgidx, FALSE) );
-      SCIP_CALL( SCIPaddConflictUb(scip, linkvar, bdchgidx, FALSE) );
+      SCIP_CALL( SCIPaddConflictLb(scip, linkvar, bdchgidx) );
+      SCIP_CALL( SCIPaddConflictUb(scip, linkvar, bdchgidx) );
    }
    else
    {
@@ -3042,7 +3042,7 @@ SCIP_DECL_CONSRESPROP(consRespropLinking)
           || SCIPisEQ(scip, consdata->vals[inferinfo], SCIPgetVarLbAtIndex(scip, consdata->linkvar, bdchgidx, TRUE)));
 
       assert(SCIPgetVarLbAtIndex(scip, consdata->binvars[inferinfo], bdchgidx, FALSE) > 0.5);
-      SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->binvars[inferinfo], FALSE) );
+      SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->binvars[inferinfo]) );
    }
 
    *result = SCIP_SUCCESS;

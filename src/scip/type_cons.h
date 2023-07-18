@@ -609,7 +609,7 @@ typedef enum SCIP_LinConstype SCIP_LINCONSTYPE;
  */
 #define SCIP_DECL_CONSRESPROP(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS* cons, \
       SCIP_VAR* infervar, int inferinfo, SCIP_BOUNDTYPE boundtype, SCIP_BDCHGIDX* bdchgidx, SCIP_Real relaxedbd, \
-      SCIP_Bool resolutionqueue, SCIP_RESULT* result)
+      SCIP_RESULT* result)
 
 /** variable rounding lock method of constraint handler
  *

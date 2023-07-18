@@ -1264,8 +1264,8 @@ SCIP_RETCODE analyzeConflictOne(
    /* initialize conflict analysis, and add resultant and single operand variable to conflict candidate queue */
    SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
 
-   SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->resvar, FALSE) );
-   SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[falsepos], FALSE) );
+   SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->resvar) );
+   SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[falsepos]) );
 
    /* analyze the conflict */
    SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
@@ -1296,11 +1296,11 @@ SCIP_RETCODE analyzeConflictZero(
    /* initialize conflict analysis, and add all variables of infeasible constraint to conflict candidate queue */
    SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
 
-   SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->resvar, FALSE) );
+   SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->resvar) );
    for( v = 0; v < consdata->nvars; ++v )
    {
       assert(SCIPvarGetLbLocal(consdata->vars[v]) > 0.5);
-      SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[v], FALSE) );
+      SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[v]) );
    }
 
    /* analyze the conflict */
@@ -1944,7 +1944,6 @@ SCIP_RETCODE resolvePropagation(
    SCIP_VAR*             infervar,           /**< variable that was deduced */
    PROPRULE              proprule,           /**< propagation rule that deduced the value */
    SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index (time stamp of bound change), or NULL for current time */
-   SCIP_Bool             resolutionqueue,      /**< should the explanation bound changes be added to the resolution conflict queue? */
    SCIP_RESULT*          result              /**< pointer to store the result of the propagation conflict resolving call */
    )
 {
@@ -1970,7 +1969,7 @@ SCIP_RETCODE resolvePropagation(
       {
          if( SCIPgetVarUbAtIndex(scip, vars[i], bdchgidx, FALSE) < 0.5 )
          {
-            SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i], resolutionqueue) );
+            SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i]) );
             break;
          }
       }
@@ -1982,7 +1981,7 @@ SCIP_RETCODE resolvePropagation(
       /* the operand variable was inferred to TRUE, because the resultant was TRUE */
       assert(SCIPgetVarLbAtIndex(scip, infervar, bdchgidx, TRUE) > 0.5);
       assert(SCIPgetVarLbAtIndex(scip, consdata->resvar, bdchgidx, FALSE) > 0.5);
-      SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->resvar, resolutionqueue) );
+      SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->resvar) );
       *result = SCIP_SUCCESS;
       break;
 
@@ -1993,7 +1992,7 @@ SCIP_RETCODE resolvePropagation(
       for( i = 0; i < nvars; ++i )
       {
          assert(SCIPgetVarLbAtIndex(scip, vars[i], bdchgidx, FALSE) > 0.5);
-         SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i], resolutionqueue) );
+         SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i]) );
       }
       *result = SCIP_SUCCESS;
       break;
@@ -2002,13 +2001,13 @@ SCIP_RETCODE resolvePropagation(
       /* the operand variable was inferred to FALSE, because the resultant was FALSE and all other operands were TRUE */
       assert(SCIPgetVarUbAtIndex(scip, infervar, bdchgidx, TRUE) < 0.5);
       assert(SCIPgetVarUbAtIndex(scip, consdata->resvar, bdchgidx, FALSE) < 0.5);
-      SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->resvar, resolutionqueue) );
+      SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->resvar) );
       for( i = 0; i < nvars; ++i )
       {
          if( vars[i] != infervar )
          {
             assert(SCIPgetVarLbAtIndex(scip, vars[i], bdchgidx, FALSE) > 0.5);
-            SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i], resolutionqueue) );
+            SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i]) );
          }
       }
       *result = SCIP_SUCCESS;
@@ -4606,7 +4605,7 @@ SCIP_DECL_CONSPRESOL(consPresolAnd)
 static
 SCIP_DECL_CONSRESPROP(consRespropAnd)
 {  /*lint --e{715}*/
-   SCIP_CALL( resolvePropagation(scip, cons, infervar, (PROPRULE)inferinfo, bdchgidx, resolutionqueue, result) );
+   SCIP_CALL( resolvePropagation(scip, cons, infervar, (PROPRULE)inferinfo, bdchgidx, result) );
 
    return SCIP_OKAY;
 }

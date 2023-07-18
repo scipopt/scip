@@ -1117,7 +1117,7 @@ SCIP_RETCODE propagatePackingPartitioningCons(
                      break;
 
                   assert( SCIPvarGetUbLocal(vars[i][j]) < 0.5 );
-                  SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][j], FALSE) );
+                  SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][j]) );
                }
             }
             else
@@ -1126,12 +1126,12 @@ SCIP_RETCODE propagatePackingPartitioningCons(
                if ( lastones[0] == -1 )
                {
                   assert( SCIPvarGetUbLocal(vars[0][0]) < 0.5 );
-                  SCIP_CALL( SCIPaddConflictBinvar(scip, vars[0][0], FALSE) );
+                  SCIP_CALL( SCIPaddConflictBinvar(scip, vars[0][0]) );
                }
 
                /* mark variable fixed to 1 */
                assert( SCIPvarGetLbLocal(vars[i][firstnonzeroinrow]) > 0.5 );
-               SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][firstnonzeroinrow], FALSE) );
+               SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][firstnonzeroinrow]) );
             }
 
             /* add bounds that result in the last one - pass through rows */
@@ -1144,7 +1144,7 @@ SCIP_RETCODE propagatePackingPartitioningCons(
                if ( l <= nblocks-1 && l <= k && lastones[k-1] == lastones[k] )
                {
                   assert( SCIPvarGetUbLocal(vars[k][l]) < 0.5 );
-                  SCIP_CALL( SCIPaddConflictBinvar(scip, vars[k][l], FALSE) );
+                  SCIP_CALL( SCIPaddConflictBinvar(scip, vars[k][l]) );
                }
             }
             SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
@@ -1190,13 +1190,13 @@ SCIP_RETCODE propagatePackingPartitioningCons(
                   SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
 
                   /* add current bound */
-                  SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][j], FALSE) );
+                  SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][j]) );
 
                   /* add bounds that result in the last one - check top left entry for packing case */
                   if ( orbitopetype == SCIP_ORBITOPETYPE_PACKING && lastones[0] == -1 )
                   {
                      assert( SCIPvarGetUbLocal(vars[0][0]) < 0.5 );
-                     SCIP_CALL( SCIPaddConflictBinvar(scip, vars[0][0], FALSE) );
+                     SCIP_CALL( SCIPaddConflictBinvar(scip, vars[0][0]) );
                   }
 
                   /* add bounds that result in the last one - pass through rows */
@@ -1209,7 +1209,7 @@ SCIP_RETCODE propagatePackingPartitioningCons(
                      if ( l <= nblocks-1 && l <= k && lastones[k-1] == lastones[k] )
                      {
                         assert( SCIPvarGetUbLocal(vars[k][l]) < 0.5 );
-                        SCIP_CALL( SCIPaddConflictBinvar(scip, vars[k][l], FALSE) );
+                        SCIP_CALL( SCIPaddConflictBinvar(scip, vars[k][l]) );
                      }
                   }
                   SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
@@ -1808,7 +1808,6 @@ SCIP_RETCODE resolvePropagationFullOrbitope(
    SCIP_CONS*            cons,               /**< constraint that inferred the bound change */
    int                   inferinfo,          /**< inference information */
    SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index (time stamp of bound change), or NULL for current time */
-   SCIP_Bool             resolutionqueue,      /**< should the explanation bound changes be added to the resolution conflict queue? */
    SCIP_RESULT*          result              /**< pointer to store the result of the propagation conflict resolving call */
    )
 {  /*lint --e{715}*/
@@ -1947,7 +1946,7 @@ SCIP_RETCODE resolvePropagationFullOrbitope(
          if ( SCIPvarGetLbAtIndex(vars[origrow][j], bdchgidx, FALSE) > 0.5 ||
             SCIPvarGetUbAtIndex(vars[origrow][j], bdchgidx, FALSE) < 0.5 )
          {
-            SCIP_CALL( SCIPaddConflictBinvar(scip, vars[origrow][j], FALSE) );
+            SCIP_CALL( SCIPaddConflictBinvar(scip, vars[origrow][j]) );
             *result = SCIP_SUCCESS;
          }
       }
@@ -1994,7 +1993,6 @@ SCIP_RETCODE resolvePropagation(
    SCIP_CONS*            cons,               /**< constraint that inferred the bound change */
    int                   inferinfo,          /**< inference information */
    SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index (time stamp of bound change), or NULL for current time */
-   SCIP_Bool             resolutionqueue,      /**< should the explanation bound changes be added to the resolution conflict queue? */
    SCIP_RESULT*          result              /**< pointer to store the result of the propagation conflict resolving call */
    )
 {  /*lint --e{715}*/
@@ -2112,7 +2110,7 @@ SCIP_RETCODE resolvePropagation(
             /* case 2 or 3: */
             assert( cases[p1][p2] == 2 || cases[p1][p2] == 3 );
             assert( SCIPgetVarUbAtIndex(scip, vars[p1][p2], bdchgidx, FALSE) < 0.5 );
-            SCIP_CALL( SCIPaddConflictUb(scip, vars[p1][p2], bdchgidx, resolutionqueue) );
+            SCIP_CALL( SCIPaddConflictUb(scip, vars[p1][p2], bdchgidx) );
             *result = SCIP_SUCCESS;
 
 #ifdef SCIP_DEBUG
@@ -2184,7 +2182,7 @@ SCIP_RETCODE resolvePropagation(
                assert( cases[p1][p2] == 2 || cases[p1][p2] == 3 );
                if ( SCIPgetVarUbAtIndex(scip, vars[p1][p2], bdchgidx, FALSE) < 0.5 )
                {
-                  SCIP_CALL( SCIPaddConflictUb(scip, vars[p1][p2], bdchgidx, resolutionqueue) );
+                  SCIP_CALL( SCIPaddConflictUb(scip, vars[p1][p2], bdchgidx) );
                   *result = SCIP_SUCCESS;
 
 #ifdef SCIP_DEBUG
@@ -2222,7 +2220,7 @@ SCIP_RETCODE resolvePropagation(
             for (k = 0; k < j; ++k)
             {
                assert( SCIPgetVarUbAtIndex(scip, vars[i][k], bdchgidx, FALSE) < 0.5 );
-               SCIP_CALL( SCIPaddConflictUb(scip, vars[i][k], bdchgidx, resolutionqueue) );
+               SCIP_CALL( SCIPaddConflictUb(scip, vars[i][k], bdchgidx) );
                *result = SCIP_SUCCESS;
 #ifdef SCIP_DEBUG
                (void) SCIPsnprintf(tmpstr, SCIP_MAXSTRLEN, " (%d,%d)", i, k);
@@ -2249,7 +2247,7 @@ SCIP_RETCODE resolvePropagation(
             {
                if ( SCIPgetVarLbAtIndex(scip, vars[i][k], bdchgidx, FALSE) > 0.5 )
                {
-                  SCIP_CALL( SCIPaddConflictLb(scip, vars[i][k], bdchgidx, resolutionqueue) );
+                  SCIP_CALL( SCIPaddConflictLb(scip, vars[i][k], bdchgidx) );
                   *result = SCIP_SUCCESS;
                   SCIPdebugMsg(scip, "   and variable x[%d][%d] fixed to 1.\n", i, k);
                   break;
@@ -3243,11 +3241,11 @@ SCIP_DECL_CONSRESPROP(consRespropOrbitope)
    /* resolution for full orbitopes not availabe yet */
    if ( orbitopetype == SCIP_ORBITOPETYPE_PACKING || orbitopetype == SCIP_ORBITOPETYPE_PARTITIONING )
    {
-      SCIP_CALL( resolvePropagation(scip, cons, inferinfo, bdchgidx, resolutionqueue, result) );
+      SCIP_CALL( resolvePropagation(scip, cons, inferinfo, bdchgidx, result) );
    }
    else
    {
-      SCIP_CALL( resolvePropagationFullOrbitope(scip, conshdlr, cons, inferinfo, bdchgidx, resolutionqueue, result) );
+      SCIP_CALL( resolvePropagationFullOrbitope(scip, conshdlr, cons, inferinfo, bdchgidx, result) );
    }
 
    return SCIP_OKAY;

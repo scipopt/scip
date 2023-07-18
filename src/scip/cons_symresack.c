@@ -1109,8 +1109,8 @@ SCIP_RETCODE propVariables(
                /* there are no fixed points */
                assert( invperm[r] != r );
 
-               SCIP_CALL( SCIPaddConflictBinvar(scip, vars[r], FALSE) );
-               SCIP_CALL( SCIPaddConflictBinvar(scip, vars[invperm[r]], FALSE) );
+               SCIP_CALL( SCIPaddConflictBinvar(scip, vars[r]) );
+               SCIP_CALL( SCIPaddConflictBinvar(scip, vars[invperm[r]]) );
             }
 
             SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
@@ -2587,14 +2587,14 @@ SCIP_DECL_CONSRESPROP(consRespropSymresack)
       if ( i < perm[i] )
       {
          assert( vars[i] != infervar );
-         SCIP_CALL( SCIPaddConflictUb(scip, vars[i], bdchgidx, FALSE) );
-         SCIP_CALL( SCIPaddConflictLb(scip, vars[i], bdchgidx, FALSE) );
+         SCIP_CALL( SCIPaddConflictUb(scip, vars[i], bdchgidx) );
+         SCIP_CALL( SCIPaddConflictLb(scip, vars[i], bdchgidx) );
       }
       if ( invperm[i] > i )
       {
          assert( vars[invperm[i]] != infervar );
-         SCIP_CALL( SCIPaddConflictUb(scip, vars[invperm[i]], bdchgidx, FALSE) );
-         SCIP_CALL( SCIPaddConflictLb(scip, vars[invperm[i]], bdchgidx, FALSE) );
+         SCIP_CALL( SCIPaddConflictUb(scip, vars[invperm[i]], bdchgidx) );
+         SCIP_CALL( SCIPaddConflictLb(scip, vars[invperm[i]], bdchgidx) );
       }
    }
 
@@ -2622,14 +2622,14 @@ SCIP_DECL_CONSRESPROP(consRespropSymresack)
          if ( ( i < perm[i] || i == invperm[varrow] ) && ISFIXED(vars[i], bdchgidx) )
          {
             assert( vars[i] != infervar );
-            SCIP_CALL( SCIPaddConflictUb(scip, vars[i], bdchgidx, FALSE) );
-            SCIP_CALL( SCIPaddConflictLb(scip, vars[i], bdchgidx, FALSE) );
+            SCIP_CALL( SCIPaddConflictUb(scip, vars[i], bdchgidx) );
+            SCIP_CALL( SCIPaddConflictLb(scip, vars[i], bdchgidx) );
          }
          if ( ( invperm[i] > i || invperm[i] == varrow ) && ISFIXED(vars[invperm[i]], bdchgidx) )
          {
             assert( vars[invperm[i]] != infervar );
-            SCIP_CALL( SCIPaddConflictUb(scip, vars[invperm[i]], bdchgidx, FALSE) );
-            SCIP_CALL( SCIPaddConflictLb(scip, vars[invperm[i]], bdchgidx, FALSE) );
+            SCIP_CALL( SCIPaddConflictUb(scip, vars[invperm[i]], bdchgidx) );
+            SCIP_CALL( SCIPaddConflictLb(scip, vars[invperm[i]], bdchgidx) );
          }
       }
    }
@@ -2646,8 +2646,8 @@ SCIP_DECL_CONSRESPROP(consRespropSymresack)
 
          if ( invperm[varrow] > varrow )
          {
-            SCIP_CALL( SCIPaddConflictUb(scip, vars[invperm[varrow]], bdchgidx, FALSE) );
-            SCIP_CALL( SCIPaddConflictLb(scip, vars[invperm[varrow]], bdchgidx, FALSE) );
+            SCIP_CALL( SCIPaddConflictUb(scip, vars[invperm[varrow]], bdchgidx) );
+            SCIP_CALL( SCIPaddConflictLb(scip, vars[invperm[varrow]], bdchgidx) );
          }
       }
       else
@@ -2658,8 +2658,8 @@ SCIP_DECL_CONSRESPROP(consRespropSymresack)
 
          if ( varrow < perm[varrow] )
          {
-            SCIP_CALL( SCIPaddConflictUb(scip, vars[varrow], bdchgidx, FALSE) );
-            SCIP_CALL( SCIPaddConflictLb(scip, vars[varrow], bdchgidx, FALSE) );
+            SCIP_CALL( SCIPaddConflictUb(scip, vars[varrow], bdchgidx) );
+            SCIP_CALL( SCIPaddConflictLb(scip, vars[varrow], bdchgidx) );
          }
       }
    }

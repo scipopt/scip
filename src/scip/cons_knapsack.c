@@ -7567,8 +7567,8 @@ SCIP_RETCODE propagateCons(
                               SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
 
                               /* add the two variables which are fixed to zero within a negated clique */
-                              SCIP_CALL( SCIPaddConflictBinvar(scip, myvars[i], FALSE) );
-                              SCIP_CALL( SCIPaddConflictBinvar(scip, myvars[v], FALSE) );
+                              SCIP_CALL( SCIPaddConflictBinvar(scip, myvars[i]) );
+                              SCIP_CALL( SCIPaddConflictBinvar(scip, myvars[v]) );
 
                               /* start the conflict analysis */
                               SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
@@ -7756,7 +7756,7 @@ SCIP_RETCODE propagateCons(
          {
             if( SCIPvarGetLbLocal(consdata->vars[i]) > 0.5)
             {
-               SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[i], FALSE) );
+               SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[i]) );
                weight += consdata->weights[i];
             }
          }
@@ -12990,7 +12990,7 @@ SCIP_DECL_CONSRESPROP(consRespropKnapsack)
          if( SCIPvarGetIndex(consdata->vars[i]) == inferinfo )
          {
             assert( SCIPgetVarUbAtIndex(scip, consdata->vars[i], bdchgidx, FALSE) < 0.5 );
-            SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[i], resolutionqueue) );
+            SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[i]) );
             break;
          }
       }
@@ -13029,7 +13029,7 @@ SCIP_DECL_CONSRESPROP(consRespropKnapsack)
          {
             if( SCIPgetVarLbAtIndex(scip, consdata->vars[i], bdchgidx, FALSE) > 0.5 )
             {
-               SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[i], resolutionqueue) );
+               SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[i]) );
                capsum += consdata->weights[i];
                if( capsum > consdata->capacity )
                   break;

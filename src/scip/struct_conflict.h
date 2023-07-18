@@ -251,6 +251,7 @@ struct SCIP_Conflict
    SCIP_Bool             bdchgonlyconfqueue; /**< if true we add bound changes only in graph conflict queues */
    SCIP_Bool             bdchgonlyresqueue;  /**< if true we add bound changes only in generalized resolution queues */
    SCIP_Bool             haslargecoef;       /**< if true we have a large coefficient in the conflict constraint */
+   SCIP_Bool             reasonclauseres;    /**< if true we have a reason clause resolution */
 
 };
 

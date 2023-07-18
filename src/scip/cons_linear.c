@@ -4916,7 +4916,6 @@ SCIP_RETCODE addConflictBounds(
    SCIP_VAR*             infervar,           /**< variable that was deduced, or NULL */
    SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index (time stamp of bound change), or NULL for current time */
    int                   inferpos,           /**< position of the inferred variable in the vars array */
-   SCIP_Bool             resolutionqueue,      /**< should the explanation bound changes be added to the resolution conflict queue? */
    SCIP_Bool             reasonisrhs         /**< is the right hand side responsible for the bound change? */
    )
 {
@@ -5048,13 +5047,13 @@ SCIP_RETCODE addConflictBounds(
                if( reasonisrhs == (vals[i] > 0.0) )
                {
                   /* rhs is reason and coeff is positive, or lhs is reason and coeff is negative -> lower bound */
-                  SCIP_CALL( SCIPaddConflictLb(scip, vars[i], bdchgidx, resolutionqueue) );
+                  SCIP_CALL( SCIPaddConflictLb(scip, vars[i], bdchgidx) );
                   rescap -= vals[i] * (SCIPgetVarLbAtIndex(scip, vars[i], bdchgidx, FALSE) - SCIPvarGetLbGlobal(vars[i]));
                }
                else
                {
                   /* lhs is reason and coeff is positive, or rhs is reason and coeff is negative -> upper bound */
-                  SCIP_CALL( SCIPaddConflictUb(scip, vars[i], bdchgidx, resolutionqueue) );
+                  SCIP_CALL( SCIPaddConflictUb(scip, vars[i], bdchgidx) );
                   rescap -= vals[i] * (SCIPgetVarUbAtIndex(scip, vars[i], bdchgidx, FALSE) - SCIPvarGetUbGlobal(vars[i]));
                }
             }
@@ -5076,12 +5075,12 @@ SCIP_RETCODE addConflictBounds(
       if( reasonisrhs == (vals[i] > 0.0) )
       {
          /* rhs is reason and coeff is positive, or lhs is reason and coeff is negative -> lower bound is responsible */
-         SCIP_CALL( SCIPaddConflictLb(scip, vars[i], bdchgidx, resolutionqueue) );
+         SCIP_CALL( SCIPaddConflictLb(scip, vars[i], bdchgidx));
       }
       else
       {
          /* lhs is reason and coeff is positive, or rhs is reason and coeff is negative -> upper bound is responsible */
-         SCIP_CALL( SCIPaddConflictUb(scip, vars[i], bdchgidx, resolutionqueue) );
+         SCIP_CALL( SCIPaddConflictUb(scip, vars[i], bdchgidx));
       }
    }
 
@@ -5098,8 +5097,7 @@ SCIP_RETCODE addConflictFixedVars(
    SCIP_CONS*            cons,               /**< constraint that inferred the bound change */
    SCIP_VAR*             infervar,           /**< variable that was deduced, or NULL */
    SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index (time stamp of bound change), or NULL for current time */
-   int                   inferpos,           /**< position of the inferred variable in the vars array, or -1 */
-   SCIP_Bool             resolutionqueue     /**< should the explanation bound changes be added to the resolution conflict queue? */
+   int                   inferpos            /**< position of the inferred variable in the vars array, or -1 */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -5133,13 +5131,13 @@ SCIP_RETCODE addConflictFixedVars(
 	 if( !SCIPisEQ(scip, SCIPgetVarLbAtIndex(scip, vars[v], bdchgidx, FALSE), SCIPvarGetLbGlobal(vars[v])) )
 	 {
 	    /* @todo get boundchange index before this last boundchange and correct the index */
-	    SCIP_CALL( SCIPaddConflictLb(scip, vars[v], bdchgidx, resolutionqueue) );
+	    SCIP_CALL( SCIPaddConflictLb(scip, vars[v], bdchgidx));
 	 }
 
 	 if( !SCIPisEQ(scip, SCIPgetVarUbAtIndex(scip, vars[v], bdchgidx, FALSE), SCIPvarGetUbGlobal(vars[v])) )
 	 {
 	    /* @todo get boundchange index before this last boundchange and correct the index */
-	    SCIP_CALL( SCIPaddConflictUb(scip, vars[v], bdchgidx, resolutionqueue) );
+	    SCIP_CALL( SCIPaddConflictUb(scip, vars[v], bdchgidx));
 	 }
 
 	 continue;
@@ -5149,8 +5147,8 @@ SCIP_RETCODE addConflictFixedVars(
       if( SCIPisEQ(scip, SCIPgetVarLbAtIndex(scip, vars[v], bdchgidx, FALSE), SCIPgetVarUbAtIndex(scip, vars[v], bdchgidx, FALSE)) )
       {
 	 /* add all bounds of fixed variables which lead to the boundchange of the given inference variable */
-         SCIP_CALL( SCIPaddConflictLb(scip, vars[v], bdchgidx, resolutionqueue) );
-         SCIP_CALL( SCIPaddConflictUb(scip, vars[v], bdchgidx, resolutionqueue) );
+         SCIP_CALL( SCIPaddConflictLb(scip, vars[v], bdchgidx));
+         SCIP_CALL( SCIPaddConflictUb(scip, vars[v], bdchgidx));
       }
    }
 
@@ -5180,12 +5178,12 @@ SCIP_RETCODE addConflictReasonVars(
       if( !SCIPisEQ(scip, SCIPvarGetLbLocal(vars[v]), SCIPvarGetLbGlobal(vars[v])) )
       {
 	 /* add conflict bound */
-         SCIP_CALL( SCIPaddConflictLb(scip, vars[v], 0, FALSE) );
+         SCIP_CALL( SCIPaddConflictLb(scip, vars[v], 0) );
       }
 
       if( !SCIPisEQ(scip, SCIPvarGetUbLocal(vars[v]), SCIPvarGetUbGlobal(vars[v])) )
       {
-         SCIP_CALL( SCIPaddConflictUb(scip, vars[v], 0, FALSE) );
+         SCIP_CALL( SCIPaddConflictUb(scip, vars[v], 0) );
       }
    }
 
@@ -5193,12 +5191,12 @@ SCIP_RETCODE addConflictReasonVars(
    {
       if( bound < SCIPvarGetLbLocal(var) )
       {
-         SCIP_CALL( SCIPaddConflictLb(scip, var, 0, FALSE) );
+         SCIP_CALL( SCIPaddConflictLb(scip, var, 0) );
       }
 
       if( bound > SCIPvarGetUbLocal(var) )
       {
-         SCIP_CALL( SCIPaddConflictUb(scip, var, 0, FALSE) );
+         SCIP_CALL( SCIPaddConflictUb(scip, var, 0) );
       }
    }
 
@@ -5217,7 +5215,6 @@ SCIP_RETCODE resolvePropagation(
    INFERINFO             inferinfo,          /**< inference information */
    SCIP_BOUNDTYPE        boundtype,          /**< the type of the changed bound (lower or upper bound) */
    SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index (time stamp of bound change), or NULL for current time */
-   SCIP_Bool             resolutionqueue,      /**< should the explanation bound changes be added to the resolution conflict queue? */
    SCIP_RESULT*          result              /**< pointer to store the result of the propagation conflict resolving call */
    )
 {
@@ -5264,7 +5261,7 @@ SCIP_RETCODE resolvePropagation(
        * domain in order to not exceed the right hand side of the inequality
        */
       assert((vals[inferpos] > 0.0) == (boundtype == SCIP_BOUNDTYPE_UPPER));
-      SCIP_CALL( addConflictBounds(scip, cons, infervar, bdchgidx, inferpos, resolutionqueue, TRUE) );
+      SCIP_CALL( addConflictBounds(scip, cons, infervar, bdchgidx, inferpos, TRUE) );
       *result = SCIP_SUCCESS;
       break;
 
@@ -5274,7 +5271,7 @@ SCIP_RETCODE resolvePropagation(
        * domain in order to not fall below the left hand side of the inequality
        */
       assert((vals[inferpos] > 0.0) == (boundtype == SCIP_BOUNDTYPE_LOWER));
-      SCIP_CALL( addConflictBounds(scip, cons, infervar, bdchgidx, inferpos, resolutionqueue, FALSE) );
+      SCIP_CALL( addConflictBounds(scip, cons, infervar, bdchgidx, inferpos, FALSE) );
       *result = SCIP_SUCCESS;
       break;
 
@@ -5285,7 +5282,7 @@ SCIP_RETCODE resolvePropagation(
 
       /* check that we really have a ranged row here */
       assert(!SCIPisInfinity(scip, -consdata->lhs) && !SCIPisInfinity(scip, consdata->rhs));
-      SCIP_CALL( addConflictFixedVars(scip, cons, infervar, bdchgidx, inferpos, resolutionqueue) );
+      SCIP_CALL( addConflictFixedVars(scip, cons, infervar, bdchgidx, inferpos));
       *result = SCIP_SUCCESS;
       break;
 
@@ -5318,7 +5315,7 @@ SCIP_RETCODE analyzeConflict(
    SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
 
    /* add the conflicting bound for each variable of infeasible constraint to conflict candidate queue */
-   SCIP_CALL( addConflictBounds(scip, cons, NULL, NULL, -1, FALSE, reasonisrhs) );
+   SCIP_CALL( addConflictBounds(scip, cons, NULL, NULL, -1, reasonisrhs) );
 
    /* analyze the conflict */
    SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
@@ -5801,7 +5798,7 @@ SCIP_RETCODE analyzeConflictRangedRow(
    SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
 
    /* add the conflicting fixed variables of this ranged row constraint to conflict candidate queue */
-   SCIP_CALL( addConflictFixedVars(scip, cons, NULL, NULL, -1, FALSE) );
+   SCIP_CALL( addConflictFixedVars(scip, cons, NULL, NULL, -1) );
 
    /* add reasoning variables to conflict candidate queue which led to the conflict */
    SCIP_CALL( addConflictReasonVars(scip, vars, nvars, var, bound) );
@@ -16837,7 +16834,7 @@ SCIP_DECL_CONSRESPROP(consRespropLinear)
    assert(cons != NULL);
    assert(result != NULL);
 
-   SCIP_CALL( resolvePropagation(scip, cons, infervar, intToInferInfo(inferinfo), boundtype, bdchgidx, resolutionqueue, result) );
+   SCIP_CALL( resolvePropagation(scip, cons, infervar, intToInferInfo(inferinfo), boundtype, bdchgidx, result) );
 
    return SCIP_OKAY;
 }

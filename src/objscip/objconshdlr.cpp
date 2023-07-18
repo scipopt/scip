@@ -416,7 +416,7 @@ SCIP_DECL_CONSRESPROP(consRespropObj)
 
    /* call virtual method of conshdlr object */
    SCIP_CALL( conshdlrdata->objconshdlr->scip_resprop(scip, conshdlr, cons, infervar, inferinfo, boundtype, bdchgidx,
-         relaxedbd, FALSE, result) );
+         relaxedbd, result) );
 
    return SCIP_OKAY;
 }

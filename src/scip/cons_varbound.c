@@ -655,11 +655,11 @@ SCIP_RETCODE resolvePropagation(
       {
          if( vbdcoef > 0.0 )
          {
-            SCIP_CALL( SCIPaddConflictUb(scip, vbdvar, bdchgidx, FALSE) );
+            SCIP_CALL( SCIPaddConflictUb(scip, vbdvar, bdchgidx) );
          }
          else
          {
-            SCIP_CALL( SCIPaddConflictLb(scip, vbdvar, bdchgidx, FALSE) );
+            SCIP_CALL( SCIPaddConflictLb(scip, vbdvar, bdchgidx) );
          }
       }
 
@@ -769,7 +769,7 @@ SCIP_RETCODE resolvePropagation(
       }
       else
       {
-         SCIP_CALL( SCIPaddConflictUb(scip, var, bdchgidx, FALSE) );
+         SCIP_CALL( SCIPaddConflictUb(scip, var, bdchgidx) );
       }
 
       break;
@@ -842,11 +842,11 @@ SCIP_RETCODE resolvePropagation(
       {
          if( vbdcoef > 0.0 )
          {
-            SCIP_CALL( SCIPaddConflictLb(scip, vbdvar, bdchgidx, FALSE) );
+            SCIP_CALL( SCIPaddConflictLb(scip, vbdvar, bdchgidx) );
          }
          else
          {
-            SCIP_CALL( SCIPaddConflictUb(scip, vbdvar, bdchgidx, FALSE) );
+            SCIP_CALL( SCIPaddConflictUb(scip, vbdvar, bdchgidx) );
          }
       }
 
@@ -959,7 +959,7 @@ SCIP_RETCODE resolvePropagation(
       }
       else
       {
-         SCIP_CALL( SCIPaddConflictLb(scip, var, bdchgidx, FALSE) );
+         SCIP_CALL( SCIPaddConflictLb(scip, var, bdchgidx) );
       }
 
       break;
@@ -1057,7 +1057,7 @@ SCIP_RETCODE analyzeConflict(
       }
       else
       {
-         SCIP_CALL( SCIPaddConflictUb(scip, infervar, NULL, FALSE) );
+         SCIP_CALL( SCIPaddConflictUb(scip, infervar, NULL) );
       }
    }
    else
@@ -1127,7 +1127,7 @@ SCIP_RETCODE analyzeConflict(
       }
       else
       {
-         SCIP_CALL( SCIPaddConflictLb(scip, infervar, NULL, FALSE) );
+         SCIP_CALL( SCIPaddConflictLb(scip, infervar, NULL) );
       }
    }
 

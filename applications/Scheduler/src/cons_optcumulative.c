@@ -3718,7 +3718,7 @@ SCIP_DECL_CONSRESPROP(consRespropOptcumulative)
       {
          if( SCIPvarGetLbAtIndex(consdata->binvars[v], bdchgidx, FALSE) > 0.5 )
          {
-            SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->binvars[v], FALSE) );
+            SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->binvars[v]) );
 
             SCIP_CALL( SCIPaddConflictLb(scip, consdata->vars[v], bdchgidx, FALSE) );
             SCIP_CALL( SCIPaddConflictUb(scip, consdata->vars[v], bdchgidx, FALSE) );
