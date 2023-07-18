@@ -197,9 +197,11 @@ void confgraphWriteNode(
    assert(confgraphfile != NULL);
 
 #ifdef SCIP_CONFGRAPH_DOT
-   SCIPdotWriteNode(confgraphfile, (unsigned int)(size_t) idptr, label, nodetype, fillcolor, bordercolor);
+   SCIPdotWriteNode(confgraphfile, (unsigned int)(size_t) idptr, label, nodetype, fillcolor, bordercolor); /*lint !e571*/
+
 #else
-   SCIPgmlWriteNode(confgraphfile, (unsigned int)(size_t)idptr, label, nodetype, fillcolor, bordercolor);
+   SCIPgmlWriteNode(confgraphfile, (unsigned int)(size_t)idptr, label, nodetype, fillcolor, bordercolor); /*lint !e571*/
+
 #endif
 }
 
@@ -214,12 +216,14 @@ void confgraphWriteEdge(
    assert(confgraphfile != NULL);
 
 #ifdef SCIP_CONFGRAPH_DOT
-   SCIPdotWriteArc(confgraphfile, (unsigned int)(size_t)source, (unsigned int)(size_t)target, color);
+   SCIPdotWriteArc(confgraphfile, (unsigned int)(size_t)source, (unsigned int)(size_t)target, color); /*lint !e571*/
+
 #else
 #ifndef SCIP_CONFGRAPH_EDGE
-   SCIPgmlWriteArc(confgraphfile, (unsigned int)(size_t)source, (unsigned int)(size_t)target, NULL, color);
+   SCIPgmlWriteArc(confgraphfile, (unsigned int)(size_t)source, (unsigned int)(size_t)target, NULL, color); /*lint !e571*/
+
 #else
-   SCIPgmlWriteEdge(confgraphfile, (unsigned int)(size_t)source, (unsigned int)(size_t)target, NULL, color);
+   SCIPgmlWriteEdge(confgraphfile, (unsigned int)(size_t)source, (unsigned int)(size_t)target, NULL, color); /*lint !e571*/
 #endif
 #endif
 }
