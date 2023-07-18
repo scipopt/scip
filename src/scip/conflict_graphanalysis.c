@@ -170,7 +170,7 @@
 #endif
 
 /* #define SCIP_CONFGRAPH */
-/* #define SCIP_CONFGRAPH_DOT */
+#define SCIP_CONFGRAPH_DOT
 
 #if defined(SCIP_CONFGRAPH) || defined(SCIP_CONFGRAPH_DOT)
 /*
