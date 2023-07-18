@@ -197,7 +197,7 @@ void confgraphWriteNode(
    assert(confgraphfile != NULL);
 
 #ifdef SCIP_CONFGRAPH_DOT
-   SCIPdotWriteNode(confgraphfile, (unsigned int)(size_t) idptr, label, nodetype, fillcolor, bordercolor); /*lint !e571*/
+   SCIPdotWriteNode(confgraphfile, (int)(size_t) idptr, label, nodetype, fillcolor, bordercolor); /*lint !e571*/
 
 #else
    SCIPgmlWriteNode(confgraphfile, (unsigned int)(size_t)idptr, label, nodetype, fillcolor, bordercolor); /*lint !e571*/
@@ -216,7 +216,7 @@ void confgraphWriteEdge(
    assert(confgraphfile != NULL);
 
 #ifdef SCIP_CONFGRAPH_DOT
-   SCIPdotWriteArc(confgraphfile, (unsigned int)(size_t)source, (unsigned int)(size_t)target, color); /*lint !e571*/
+   SCIPdotWriteArc(confgraphfile, (int)(size_t)source, (int)(size_t)target, color); /*lint !e571*/
 
 #else
 #ifndef SCIP_CONFGRAPH_EDGE
@@ -363,9 +363,9 @@ void confgraphMarkConflictset(
 
    confgraphnconflictsets++;
    (void) SCIPsnprintf(label, SCIP_MAXSTRLEN, "conf %d (%d)", confgraphnconflictsets, conflictset->validdepth);
-   confgraphWriteNode((void*)(size_t)confgraphnconflictsets, label, "rectangle", "#ff00ff", "#000000");
+   confgraphWriteNode((void*)(size_t)confgraphnconflictsets, label, "rectangle", "#ff00ff", "#000000"); /*lint !e571*/
    for( i = 0; i < conflictset->nbdchginfos; ++i )
-      confgraphWriteEdge((void*)(size_t)confgraphnconflictsets, conflictset->bdchginfos[i], "#ff00ff");
+      confgraphWriteEdge((void*)(size_t)confgraphnconflictsets, conflictset->bdchginfos[i], "#ff00ff"); /*lint !e571*/
 }
 
 #endif
