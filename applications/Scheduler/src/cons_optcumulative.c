@@ -1613,11 +1613,11 @@ SCIP_RETCODE solveSubproblem(
 
          for( v = 0; v < nvars; ++v )
          {
-            SCIP_CALL( SCIPaddConflictBinvar(scip, binvars[v], FALSE) );
+            SCIP_CALL( SCIPaddConflictBinvar(scip, binvars[v]) );
 
             /* we have to add the lower and upper bounds of of the start time variable to have a valid reason */
-            SCIP_CALL( SCIPaddConflictLb(scip, vars[v], NULL, FALSE) );
-            SCIP_CALL( SCIPaddConflictUb(scip, vars[v], NULL, FALSE) );
+            SCIP_CALL( SCIPaddConflictLb(scip, vars[v], NULL) );
+            SCIP_CALL( SCIPaddConflictUb(scip, vars[v], NULL) );
          }
 
          /* perform conflict analysis */
@@ -2781,7 +2781,7 @@ SCIP_RETCODE propagateCons(
          {
             if( explanation[v] )
             {
-               SCIP_CALL( SCIPaddConflictBinvar(scip, binvars[v], FALSE) );
+               SCIP_CALL( SCIPaddConflictBinvar(scip, binvars[v]) );
             }
          }
 
@@ -3720,13 +3720,13 @@ SCIP_DECL_CONSRESPROP(consRespropOptcumulative)
          {
             SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->binvars[v]) );
 
-            SCIP_CALL( SCIPaddConflictLb(scip, consdata->vars[v], bdchgidx, FALSE) );
-            SCIP_CALL( SCIPaddConflictUb(scip, consdata->vars[v], bdchgidx, FALSE) );
+            SCIP_CALL( SCIPaddConflictLb(scip, consdata->vars[v], bdchgidx) );
+            SCIP_CALL( SCIPaddConflictUb(scip, consdata->vars[v], bdchgidx) );
          }
          else if( consdata->binvars[v] == infervar )
          {
-            SCIP_CALL( SCIPaddConflictLb(scip, consdata->vars[v], bdchgidx, FALSE) );
-            SCIP_CALL( SCIPaddConflictUb(scip, consdata->vars[v], bdchgidx, FALSE) );
+            SCIP_CALL( SCIPaddConflictLb(scip, consdata->vars[v], bdchgidx) );
+            SCIP_CALL( SCIPaddConflictUb(scip, consdata->vars[v], bdchgidx) );
          }
       }
 
@@ -3753,7 +3753,7 @@ SCIP_DECL_CONSRESPROP(consRespropOptcumulative)
             if( explanation[v] )
             {
                /* add the lower bounds of the choice variables as part of the initial reason */
-               SCIP_CALL( SCIPaddConflictBinvar(scip, binvars[v], FALSE) );
+               SCIP_CALL( SCIPaddConflictBinvar(scip, binvars[v]) );
             }
          }
       }
