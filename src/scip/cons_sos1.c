@@ -1780,7 +1780,7 @@ SCIP_RETCODE presolRoundConsSOS1(
          /* create, add, and release the logicor constraint */
          SCIP_CALL( SCIPcreateConsSetpack(scip, &setpackcons, SCIPconsGetName(cons), consdata->nvars, consdata->vars,
                SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
-               SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), 
+               SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons),
                SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
          SCIP_CALL( SCIPaddCons(scip, setpackcons) );
          SCIP_CALL( SCIPreleaseCons(scip, &setpackcons) );
@@ -6068,7 +6068,7 @@ SCIP_RETCODE enforceSOS1(
    assert( conshdlr != NULL );
    assert( conss != NULL );
    assert( result != NULL );
-   
+
    /* get constraint handler data */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
