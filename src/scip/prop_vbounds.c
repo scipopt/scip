@@ -1352,7 +1352,6 @@ SCIP_RETCODE resolvePropagation(
    SCIP_BOUNDTYPE        boundtype,          /**< bound to be reported */
    SCIP_BDCHGIDX*        bdchgidx            /**< the index of the bound change, representing the point of time where
                                               *   the change took place, or NULL for the current local bounds */
-
    )
 {
    assert(propdata != NULL);
