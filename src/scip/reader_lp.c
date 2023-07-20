@@ -2564,8 +2564,8 @@ SCIP_RETCODE getActiveVariables(
          if( SCIPvarGetStatus((*vars)[v]) == SCIP_VARSTATUS_NEGATED )
          {
             (*vars)[v] = SCIPvarGetNegatedVar((*vars)[v]);
+            *constant += (*scalars)[v];
             (*scalars)[v] *= -1.0;
-            *constant += 1.0;
          }
       }
    }
