@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -308,11 +308,12 @@ struct SCIP_Set
    SCIP_Real             limit_gap;          /**< solving stops, if the given gap is reached */
    SCIP_Real             limit_absgap;       /**< solving stops, if the absolute difference between primal and dual bound
                                               *   reaches this value */
+   SCIP_Real             limit_objstop;      /**< solving stops, if solution is found that is at least as good as given value */
    SCIP_Longint          limit_nodes;        /**< maximal number of nodes to process (-1: no limit) */
    SCIP_Longint          limit_totalnodes;   /**< maximal number of total nodes (incl. restarts) to process (-1: no limit) */
    SCIP_Longint          limit_stallnodes;   /**< solving stops, if the given number of nodes was processed since the
                                               *   last improvement of the primal solution value (-1: no limit) */
-   int                   limit_solutions;    /**< solving stops, if the given number of solutions were found (-1: no limit) */
+   int                   limit_solutions;    /**< solving stops, if the given number of solutions were found; this limit is first checked in presolving (-1: no limit) */
    int                   limit_bestsol;      /**< solving stops, if the given number of solution improvements were found
                                               *   (-1: no limit) */
    int                   limit_maxsol;       /**< maximal number of solutions to store in the solution storage */

@@ -1,10 +1,12 @@
 #
 # interface function for setting common library properties
 #
+include(GNUInstallDirs)
+
 function(setLibProperties targetname outputname)
     set_target_properties(${targetname} PROPERTIES
         OUTPUT_NAME ${outputname}
-        MACOSX_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+        MACOSX_RPATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
 endfunction(setLibProperties)
 
 set(CMAKE_C_STANDARD 99)
@@ -27,6 +29,7 @@ set(scipsources
     scip/bandit.c
     scip/bandit_epsgreedy.c
     scip/bandit_exp3.c
+    scip/bandit_exp3ix.c
     scip/bandit_ucb.c
     scip/branch_allfullstrong.c
     scip/branch_cloud.c
@@ -82,6 +85,7 @@ set(scipsources
     scip/dialog_default.c
     scip/event_globalbnd.c
     scip/event_estim.c
+    scip/event_shadowtree.c
     scip/event_softtimelimit.c
     scip/event_solvingphase.c
     scip/expr_abs.c
@@ -117,6 +121,7 @@ set(scipsources
     scip/heur_gins.c
     scip/heur_guideddiving.c
     scip/heur_indicator.c
+    scip/heur_indicatordiving.c
     scip/heur_intdiving.c
     scip/heur_intshifting.c
     scip/heur_linesearchdiving.c
@@ -263,7 +268,9 @@ set(scipsources
     scip/clock.c
     scip/concsolver.c
     scip/concurrent.c
-    scip/conflict.c
+    scip/conflict_general.c
+    scip/conflict_graphanalysis.c
+    scip/conflict_dualproofanalysis.c
     scip/conflictstore.c
     scip/cons.c
     scip/cutpool.c
@@ -284,6 +291,7 @@ set(scipsources
     scip/implics.c
     scip/interrupt.c
     scip/intervalarith.c
+    scip/lapack_calls.c
     scip/lp.c
     scip/matrix.c
     scip/mem.c
@@ -363,6 +371,9 @@ set(scipsources
     scip/solve.c
     scip/stat.c
     scip/symmetry.c
+    scip/symmetry_orbitopal.c
+    scip/symmetry_orbital.c
+    scip/symmetry_lexred.c
     scip/syncstore.c
     scip/table.c
     scip/tree.c
@@ -454,6 +465,7 @@ set(scipheaders
     scip/bandit.h
     scip/bandit_epsgreedy.h
     scip/bandit_exp3.h
+    scip/bandit_exp3ix.h
     scip/bandit_ucb.h
     scip/benders.h
     scip/benders_default.h
@@ -490,6 +502,9 @@ set(scipheaders
     scip/concsolver_scip.h
     scip/concurrent.h
     scip/conflict.h
+    scip/conflict_graphanalysis.h
+    scip/conflict_dualproofanalysis.h
+    scip/conflict_general.h
     scip/conflictstore.h
     scip/cons_abspower.h
     scip/cons_and.h
@@ -538,6 +553,7 @@ set(scipheaders
     scip/event_globalbnd.h
     scip/event.h
     scip/event_estim.h
+    scip/event_shadowtree.h
     scip/event_softtimelimit.h
     scip/event_solvingphase.h
     scip/expr.h
@@ -574,6 +590,7 @@ set(scipheaders
     scip/heur_guideddiving.h
     scip/heur.h
     scip/heur_indicator.h
+    scip/heur_indicatordiving.h
     scip/heur_intdiving.h
     scip/heur_intshifting.h
     scip/heuristics.h
@@ -619,6 +636,7 @@ set(scipheaders
     scip/implics.h
     scip/interrupt.h
     scip/intervalarith.h
+    scip/lapack_calls.h
     scip/lp.h
     scip/mem.h
     scip/message_default.h
@@ -687,6 +705,7 @@ set(scipheaders
     scip/pub_bandit.h
     scip/pub_bandit_epsgreedy.h
     scip/pub_bandit_exp3.h
+    scip/pub_bandit_exp3ix.h
     scip/pub_bandit_ucb.h
     scip/pub_benders.h
     scip/pub_benderscut.h
@@ -888,6 +907,9 @@ set(scipheaders
     scip/struct_var.h
     scip/struct_visual.h
     scip/symmetry.h
+    scip/symmetry_orbitopal.h
+    scip/symmetry_orbital.h
+    scip/symmetry_lexred.h
     scip/syncstore.h
     scip/table_default.h
     scip/table.h
@@ -972,13 +994,7 @@ set(tinycthreadheader
 set(tpiheaders
     tpi/def_openmp.h
     tpi/tpi.h
-    tpi/tpi_none.h
-    tpi/tpi_openmp.h
-    tpi/tpi_tnycthrd.h
     tpi/type_tpi.h
-    tpi/type_tpi_none.h
-    tpi/type_tpi_openmp.h
-    tpi/type_tpi_tnycthrd.h
 )
 
 set(xmlheaders
@@ -1023,11 +1039,12 @@ target_include_directories(libscip PUBLIC
 target_link_libraries(libscip
     PRIVATE
     ${SYM_LIBRARIES}
-    $<$<BOOL:${ZLIB}>:ZLIB::ZLIB>
+    $<$<BOOL:${SCIP_WITH_ZLIB}>:ZLIB::ZLIB>
     ${Readline_LIBRARY}
     ${GMP_LIBRARIES}
     ${THREAD_LIBRARIES}
     ${NLPI_LIBRARIES}
+    ${LAPACK_LIBRARIES}
     ${PAPILO_IMPORTED_TARGETS})
 
 if(SHARED)
@@ -1071,14 +1088,16 @@ endif()
 
 target_link_libraries(scip
    ${SYM_LIBRARIES}
-   $<$<BOOL:${ZLIB}>:ZLIB::ZLIB>
+   $<$<BOOL:${SCIP_WITH_ZLIB}>:ZLIB::ZLIB>
    ${Readline_LIBRARY}
    ${GMP_LIBRARIES}
    ${ZIMPL_LIBRARIES}
    ${LPS_LIBRARIES}
    ${THREAD_LIBRARIES}
    ${NLPI_LIBRARIES}
-   ${PAPILO_IMPORTED_TARGETS})
+   ${LAPACK_LIBRARIES}
+   ${PAPILO_IMPORTED_TARGETS}
+   )
 
 add_dependencies(libscip scip_update_githash)
 add_dependencies(scip scip_update_githash)
@@ -1098,27 +1117,27 @@ target_include_directories(scip PUBLIC
 
 # set the install rpath to the installed destination
 set_target_properties(scip PROPERTIES
-    INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib"
+    INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}"
     INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 # install the header files of scip
-install(FILES ${lpiheaders} DESTINATION include/lpi)
-install(FILES ${dijkstraheaders} DESTINATION include/dijkstra)
-install(FILES ${objscipheaders} DESTINATION include/objscip)
-install(FILES ${scipheaders} ${PROJECT_BINARY_DIR}/scip/config.h ${PROJECT_BINARY_DIR}/scip/scip_export.h DESTINATION include/scip)
-install(FILES ${tcliqueheaders} DESTINATION include/tclique)
-install(FILES ${tinycthreadheader} DESTINATION include/tinycthread)
-install(FILES ${tpiheaders} DESTINATION include/tpi)
-install(FILES ${xmlheaders} DESTINATION include/xml)
-install(FILES ${symheaders} DESTINATION include/symmetry)
-install(FILES ${blockmemshellheader} DESTINATION include/blockmemshell)
+install(FILES ${lpiheaders} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/lpi)
+install(FILES ${dijkstraheaders} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/dijkstra)
+install(FILES ${objscipheaders} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/objscip)
+install(FILES ${scipheaders} ${PROJECT_BINARY_DIR}/scip/config.h ${PROJECT_BINARY_DIR}/scip/scip_export.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/scip)
+install(FILES ${tcliqueheaders} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/tclique)
+install(FILES ${tinycthreadheader} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/tinycthread)
+install(FILES ${tpiheaders} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/tpi)
+install(FILES ${xmlheaders} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/xml)
+install(FILES ${symheaders} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/symmetry)
+install(FILES ${blockmemshellheader} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/blockmemshell)
 
 # install the binary and the library to appropriate locations and add them to an export group
 install(TARGETS scip libscip EXPORT scip-targets
-        LIBRARY DESTINATION lib
-        ARCHIVE DESTINATION lib
-        RUNTIME DESTINATION bin
-        INCLUDES DESTINATION include)
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+        INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
 # Add all targets to the build-tree export set
 export(TARGETS scip libscip ${BLISS_TARGET}
@@ -1158,7 +1177,7 @@ configure_file(${PROJECT_SOURCE_DIR}/scip-config.cmake.in
 
 # install the targets of the scip export group and the config file so that other projects
 # can link easily against scip
-install(EXPORT scip-targets DESTINATION lib/cmake/scip)
+install(EXPORT scip-targets DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/scip)
 install(FILES "${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/scip-config.cmake"
               ${PROJECT_BINARY_DIR}/scip-config-version.cmake
-        DESTINATION lib/cmake/scip)
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/scip)

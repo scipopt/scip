@@ -33,18 +33,11 @@ if len(sys.argv) == 1 or len(sys.argv) > 4 or vpos == len(sys.argv)-1 or vpos ==
     print("usage: scripts/updateversion.py [-a] [-v <MAJOR>.<MINOR>.<PATCH>[.<SUB>]]")
 else:
     # old version numbers
-    oldversion = commands.getoutput("grep SCIP_VERSION src/scip/def.h").split()[2]
-    oldmajor = newmajor = oldversion[0]
-    oldminor = newminor = oldversion[1]
-    oldpatch = newpatch = oldversion[2]
-    oldsubversion = newsubversion = commands.getoutput("grep SCIP_SUBVERSION src/scip/def.h").split()[2]
-    if commands.getoutput("grep SCIP_APIVERSION src/scip/def.h") != "":
-        oldapiversion = newapiversion = commands.getoutput("grep SCIP_APIVERSION src/scip/def.h").split()[2]
-    else:
-        oldapiversion = newapiversion = None
-        if apos != -1:
-            print("this SCIP version has no API version (yet), API version cannot be updated!")
-            apos = -1
+    oldmajor = newmajor = commands.getoutput("grep 'SCIP_VERSION_MAJOR =' make/make.project").split()[2]
+    oldminor = newminor = commands.getoutput("grep 'SCIP_VERSION_MINOR =' make/make.project").split()[2]
+    oldpatch = newpatch = commands.getoutput("grep 'SCIP_VERSION_PATCH =' make/make.project").split()[2]
+    oldsubversion = newsubversion = commands.getoutput("grep 'SCIP_VERSION_SUB =' make/make.project").split()[2]
+    oldapiversion = newapiversion = commands.getoutput("grep 'SCIP_VERSION_API =' make/make.project").split()[2]
 
     if apos != -1:
         newapiversion = str(int(oldapiversion)+1)
@@ -77,13 +70,12 @@ else:
         print("update SCIP version from %s to %s" %(oldversionstring, newversionstring))
 
     # update version numbers
-    commands.getoutput('sed -i "s/\#define SCIP_VERSION.*%4s/\#define SCIP_VERSION               %4s/" src/scip/def.h' \
-                       %(oldversion, newversion))
-    commands.getoutput('sed -i "s/\#define SCIP_SUBVERSION.*%3s/\#define SCIP_SUBVERSION             %3s/" src/scip/def.h' \
-                       %(oldsubversion, newsubversion))
     commands.getoutput('sed -i "s/\@version.*/\@version  %-s/" doc/xternal.c' %(newversionstring))
-    commands.getoutput('sed -i "s/^SCIP_VERSION.*/SCIP_VERSION	=	%-s/" make/make.project' %(newversionstring))
     commands.getoutput('''sed -i 's/^VERSION=.*/VERSION=\"%s\"/' scripts/makedist.sh''' %(newversionstring))
+    commands.getoutput('sed -i "s/^SCIP_VERSION_MAJOR.*/SCIP_VERSION_MAJOR = %-s/" make/make.project' % newmajor)
+    commands.getoutput('sed -i "s/^SCIP_VERSION_MINOR.*/SCIP_VERSION_MINOR = %-s/" make/make.project' % newminor)
+    commands.getoutput('sed -i "s/^SCIP_VERSION_PATCH.*/SCIP_VERSION_PATCH = %-s/" make/make.project' % newpatch)
+    commands.getoutput('sed -i "s/^SCIP_VERSION_SUB.*/SCIP_VERSION_SUB = %-s/" make/make.project' % newsubversion)
     commands.getoutput('sed -i "s/set(SCIP_VERSION_MAJOR %s)/set(SCIP_VERSION_MAJOR %s)/" CMakeLists.txt' %(oldmajor, newmajor))
     commands.getoutput('sed -i "s/set(SCIP_VERSION_MINOR %s)/set(SCIP_VERSION_MINOR %s)/" CMakeLists.txt' %(oldminor, newminor))
     commands.getoutput('sed -i "s/set(SCIP_VERSION_PATCH %s)/set(SCIP_VERSION_PATCH %s)/" CMakeLists.txt' %(oldpatch, newpatch))
@@ -91,12 +83,11 @@ else:
 
     if newapiversion != oldapiversion:
         print("\nAPI versions before the change:")
-        print(commands.getoutput('grep -e "APIVERSION" -e "VERSION_API" src/scip/def.h  CMakeLists.txt'))
+        print(commands.getoutput('grep -e "APIVERSION" -e "SCIP_VERSION_API" make/make.project CMakeLists.txt'))
         if newsubversion == "0":
-            print("\nWarning: API version increased for what seems to be a bugfix version (%s)" %(newversionstring))
-        commands.getoutput('sed -i "s/\#define SCIP_APIVERSION.*%3s/\#define SCIP_APIVERSION             %3s/" src/scip/def.h' \
-                           %(oldapiversion, newapiversion))
+            print "\nWarning: API version increased for what seems to be a bugfix version (%s)" %(newversionstring)
+        commands.getoutput('sed -i "s/^SCIP_VERSION_API.*/SCIP_VERSION_API = %-s/" make/make.project' % newapiversion)
         commands.getoutput('sed -i "s/set(SCIP_VERSION_API [0-9]*)/set(SCIP_VERSION_API %s)/" CMakeLists.txt' \
                            %(newapiversion))
         print("\nAPI versions after the change:")
-        print(commands.getoutput('grep -e "APIVERSION" -e "VERSION_API" src/scip/def.h  CMakeLists.txt'))
+        print(commands.getoutput('grep -e "APIVERSION" -e "SCIP_VERSION_API" make/make.project CMakeLists.txt'))

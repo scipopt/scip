@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -39,15 +39,6 @@
 #include <sys/time.h>
 #endif
 
-/* fallback to non-thread version for windows, because pthread does not exist */
-#if defined(_MSC_VER) && defined(SCIP_THREADSAFE)
-#undef SCIP_THREADSAFE
-#endif
-
-#ifdef SCIP_THREADSAFE
-#include <pthread.h>
-#endif
-
 #include "scip/nlpi_filtersqp.h"
 #include "scip/nlpioracle.h"
 #include "scip/scip_general.h"
@@ -58,6 +49,15 @@
 #include "scip/scip_randnumgen.h"
 #include "scip/scip_solve.h"
 #include "scip/pub_misc.h"
+
+/* fallback to non-thread version for windows, because pthread does not exist */
+#if defined(_MSC_VER) && defined(SCIP_THREADSAFE)
+#undef SCIP_THREADSAFE
+#endif
+
+#ifdef SCIP_THREADSAFE
+#include <pthread.h>
+#endif
 
 #define NLPI_NAME              "filtersqp"                 /**< short concise name of solver */
 #define NLPI_DESC              "Sequential Quadratic Programming trust region solver by R. Fletcher and S. Leyffer" /**< description of solver */

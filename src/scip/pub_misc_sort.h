@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -58,6 +58,21 @@ extern "C" {
 /** default comparer for integers */
 SCIP_EXPORT
 SCIP_DECL_SORTPTRCOMP(SCIPsortCompInt);
+
+
+/** implements argsort
+ *
+ * The data pointer is a lookup array of integers.
+ */
+SCIP_EXPORT
+SCIP_DECL_SORTINDCOMP(SCIPsortArgsortInt);
+
+/** implements argsort
+ *
+ * The data pointer is a lookup array, which are pointer arrays.
+ */
+SCIP_EXPORT
+SCIP_DECL_SORTINDCOMP(SCIPsortArgsortPtr);
 
 /* first all upwards-sorting methods */
 

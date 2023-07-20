@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -1164,7 +1164,7 @@ Test(test_compute_symmetry, expr1, .description = "compute symmetry for a simple
 
    /* make sure that symmetry is computed for all variable types */
    SCIP_CALL( SCIPsetIntParam(scip, "misc/usesymmetry", 4) );
-   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/onlybinarysymmetry", FALSE) );
+   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/enforcecomputesymmetry", TRUE) );
 
    /* turn off presolving in order to avoid having trivial problem afterwards */
    SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );
@@ -1338,7 +1338,7 @@ Test(test_compute_symmetry, expr2, .description = "compute symmetry for a more c
 
    /* make sure that symmetry is computed for all variable types */
    SCIP_CALL( SCIPsetIntParam(scip, "misc/usesymmetry", 4) );
-   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/onlybinarysymmetry", FALSE) );
+   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/enforcecomputesymmetry", TRUE) );
 
    /* turn off presolving in order to avoid having trivial problem afterwards */
    SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );
@@ -1507,7 +1507,7 @@ Test(test_compute_symmetry, expr3, .description = "compute symmetry for a simple
 
    /* make sure that symmetry is computed for all variable types */
    SCIP_CALL( SCIPsetIntParam(scip, "misc/usesymmetry", 4) );
-   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/onlybinarysymmetry", FALSE) );
+   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/enforcecomputesymmetry", TRUE) );
 
    /* turn off presolving in order to avoid having trivial problem afterwards */
    SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );
@@ -1677,7 +1677,7 @@ Test(test_compute_symmetry, expr4, .description = "compute symmetry for a simple
 
    /* make sure that symmetry is computed for all variable types */
    SCIP_CALL( SCIPsetIntParam(scip, "misc/usesymmetry", 4) );
-   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/onlybinarysymmetry", FALSE) );
+   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/enforcecomputesymmetry", TRUE) );
 
    /* turn off presolving in order to avoid having trivial problem afterwards */
    SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );

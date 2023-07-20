@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -237,7 +237,7 @@ SCIP_RETCODE readDecomposition(
          case DEC_SECTION_MASTER:
             /* read constraint name in both cases */
             /* coverity[secure_coding] */
-            nread = sscanf(buffer, "%1024s\n", consname);
+            nread = sscanf(buffer, "%1023s\n", consname);
             if( nread < 1 )
                error = TRUE;
 

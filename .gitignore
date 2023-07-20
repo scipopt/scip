@@ -84,7 +84,6 @@ localhooks/
 
 # created when packaging, don't version control this
 src/scip/githash.c
-src/scip/buildflags.c
 
 # settings
 settings/
@@ -142,3 +141,6 @@ examples/*/doc/miniscippy.png
 examples/*/doc/userguide.*
 examples/*/!doc/userguide.tex
 examples/*/lint
+
+
+!.github/workflows/*

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -741,6 +741,27 @@ SCIP_Bool SCIPisStringParamValid(
    assert(param != NULL);
 
    return SCIPparamIsValidString(param, value);
+}
+
+/** changes the value of an existing parameter
+ *
+ *  The parameter type is checked and conversion of the given value to this type is attempted.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
+SCIP_RETCODE SCIPsetParam(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name,               /**< name of the parameter */
+   const char*           value               /**< new value of the parameter as string */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   SCIP_CALL( SCIPsetSetParam(scip->set, scip->messagehdlr, name, value) );
+
+   return SCIP_OKAY;
 }
 
 /** reads parameters from a file

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -52,9 +52,6 @@
 #if ( GRB_VERSION_MAJOR < 6 || ( GRB_VERSION_MAJOR == 7 && GRB_VERSION_MINOR == 0 && GRB_VERSION_TECHNICAL < 2 ) )
 #error "The Gurobi intreface only works for Gurobi versions at least 7.0.2"
 #endif
-
-/* define infinity value of Gurobi */
-#define GRB_INFBOUND 1e+20
 
 /* macro for checking return codes of Gurobi */
 #define CHECK_ZERO(messagehdlr, x) do { int _restat_;                   \
@@ -1246,9 +1243,9 @@ static const char grbname[] = {'G', 'u', 'r', 'o', 'b', 'i', ' ',
 #if GRB_VERSION_MAJOR < 10
    GRB_VERSION_MAJOR + '0',
 #else
-   (GRB_VERSION_MAJOR/10) + '0', (GRB_VERSION_MAJOR%10) + '0',
+   (GRB_VERSION_MAJOR/10) + '0', (GRB_VERSION_MAJOR%10) + '0',       /*lint !e778*/
 #endif
-   '.', GRB_VERSION_MINOR + '0', '.', GRB_VERSION_TECHNICAL + '0'};
+   '.', GRB_VERSION_MINOR + '0', '.', GRB_VERSION_TECHNICAL + '0'};  /*lint !e835*/
 
 /**@name Miscellaneous Methods */
 /**@{ */
@@ -1364,7 +1361,20 @@ SCIP_RETCODE SCIPlpiCreate(
 
       assert( numlp == 0 );
 
-      /* create evironment */
+      /* create environment */
+#if GRB_VERSION_MAJOR >= 8
+      restat = GRBemptyenv(&reusegrbenv);
+      if ( restat != 0 )
+      {
+         SCIPmessagePrintWarning(messagehdlr, "Gurobi error %d: Something went wrong with creating the environment.\n", restat);
+         return SCIP_LPERROR;
+      }
+
+      /* turn off output for all models */
+      CHECK_ZERO_STAR( messagehdlr, GRBsetintparam(reusegrbenv, GRB_INT_PAR_OUTPUTFLAG, 0) );
+
+      CHECK_ZERO_STAR( messagehdlr, GRBstartenv(reusegrbenv) );
+#else
       restat = GRBloadenv(&reusegrbenv, NULL);
       if ( restat != 0 )
       {
@@ -1374,6 +1384,7 @@ SCIP_RETCODE SCIPlpiCreate(
 
       /* turn off output for all models */
       CHECK_ZERO_STAR( messagehdlr, GRBsetintparam(reusegrbenv, GRB_INT_PAR_OUTPUTFLAG, 0) );
+#endif
 
       /* turn on that basis information for infeasible and unbounded models is available */
       CHECK_ZERO_STAR( messagehdlr, GRBsetintparam(reusegrbenv, GRB_INT_PAR_INFUNBDINFO, 1) );
@@ -1388,12 +1399,21 @@ SCIP_RETCODE SCIPlpiCreate(
 
 #else
 
-   /* Create new environment for each new instaniation; note that this involves additional work and
+   /* Create new environment for each new instantiation; note that this involves additional work and
     * uses a new license for each new instantiation. */
+#if GRB_VERSION_MAJOR >= 8
+   CHECK_ZERO_STAR( messagehdlr, GRBemptyenv(&(*lpi)->grbenv) );
+
+   /* turn off output for all models */
+   CHECK_ZERO_STAR( messagehdlr, GRBsetintparam((*lpi)->grbenv, GRB_INT_PAR_OUTPUTFLAG, 0) );
+
+   CHECK_ZERO_STAR( messagehdlr, GRBstartenv((*lpi)->grbenv) );
+#else
    CHECK_ZERO_STAR( messagehdlr, GRBloadenv(&(*lpi)->grbenv, NULL) );
 
    /* turn off output for all models */
    CHECK_ZERO_STAR( messagehdlr, GRBsetintparam((*lpi)->grbenv, GRB_INT_PAR_OUTPUTFLAG, 0) );
+#endif
 
    /* turn on that basis information for infeasible and unbounded models is available */
    CHECK_ZERO_STAR( messagehdlr, GRBsetintparam((*lpi)->grbenv, GRB_INT_PAR_INFUNBDINFO, 1) );
@@ -2379,14 +2399,14 @@ SCIP_RETCODE SCIPlpiScaleRow(
    }
 
    /* scale row sides */
-   if( lhs > -GRB_INFBOUND )
+   if( lhs > -GRB_INFINITY )
       lhs *= scaleval;
    else if( scaleval < 0.0 )
-      lhs = GRB_INFBOUND;
-   if( rhs < GRB_INFBOUND )
+      lhs = GRB_INFINITY;
+   if( rhs < GRB_INFINITY )
       rhs *= scaleval;
    else if( scaleval < 0.0 )
-      rhs = -GRB_INFBOUND;
+      rhs = -GRB_INFINITY;
    if( scaleval > 0.0 )
    {
       SCIP_CALL( SCIPlpiChgSides(lpi, 1, &row, &lhs, &rhs) );

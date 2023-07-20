@@ -66,9 +66,9 @@ help
 free
 read ${PROJECT_SOURCE_DIR}/check/instances/MIP/bell5.mps
 set lim no 1
-set lim obj 1e+07
+set lim objective 1e+07
 o
-set lim obj 1e+08
+set lim objective 1e+08
 write lp temp/tmp.lp
 write mip temp/tmp.lp
 write nlp temp/tmp.lp
@@ -77,7 +77,7 @@ write genproblem temp/tmp.lp
 write transproblem temp/tmp.lp
 write gentransproblem temp/tmp.lp
 newstart
-set lim obj 9e+06
+set lim objective 9e+06
 set lp pricing d
 set lp pricing
 d

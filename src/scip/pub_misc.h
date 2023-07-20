@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -2248,6 +2248,12 @@ void SCIPescapeString(
    char*                 t,                  /**< target buffer to store escaped string */
    int                   bufsize,            /**< size of buffer t */
    const char*           s                   /**< string to transform into escaped string */
+   );
+
+/** increases string pointer as long as it refers to a space character or an explicit space control sequence */
+SCIP_EXPORT
+SCIP_RETCODE SCIPskipSpace(
+   char**                s                   /**< pointer to string pointer */
    );
 
 /** safe version of snprintf */

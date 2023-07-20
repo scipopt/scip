@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -108,13 +108,6 @@ SCIP_EXPRCURV SCIPnlrowGetCurvature(
    SCIP_NLROW*           nlrow               /**< NLP row */
    );
 
-/** sets the curvature of a nonlinear row */
-SCIP_EXPORT
-void SCIPnlrowSetCurvature(
-   SCIP_NLROW*           nlrow,              /**< NLP row */
-   SCIP_EXPRCURV         curvature           /**< curvature of NLP row */
-   );
-
 /** returns the name of a nonlinear row */
 SCIP_EXPORT
 const char* SCIPnlrowGetName(
@@ -154,7 +147,6 @@ SCIP_Real SCIPnlrowGetDualsol(
 #define SCIPnlrowGetLhs(nlrow)         (nlrow)->lhs
 #define SCIPnlrowGetRhs(nlrow)         (nlrow)->rhs
 #define SCIPnlrowGetCurvature(nlrow)   (nlrow)->curvature
-#define SCIPnlrowSetCurvature(nlrow, curvature_) (nlrow)->curvature = curvature_
 #define SCIPnlrowGetName(nlrow)        (nlrow)->name
 #define SCIPnlrowGetNLPPos(nlrow)      (nlrow)->nlpindex
 #define SCIPnlrowIsInNLP(nlrow)        ((nlrow)->nlpindex != -1)

@@ -1,6 +1,240 @@
+@page RN Release notes for SCIP NEXT
+
+@section RNNEXT SCIP NEXT
+*************************
+
+Features
+--------
+
+- added simplification of abs(x)^n to x^n when n is even (simplify rule POW12)
+- in expression simplification, added possibility to expand power of sum with exponents larger than 2 (simplify rule POW7)
+- in expression simplification, added possibility to expand products with sums as factor when there are more than two factors (simplify rule SP12b)
+- in expression simplification, added possibility to allow expanding power of products with fractional exponent (simplify rule POW5a)
+- Can now build with Lapack (used for solving nonlinear problems). If IPOPT is used, then Lapack is accessed through it.
+  There	is an interface to Lapack in lapack_calls.
+- added support for logical constraints in binary variables and basic logical operators (and, or, not, equal) to AMPL .nl reader
+- indicator constraints now use the same slack variable for the linear constraints if binary variables are used multiple times
+  for indicator constraints
+- new diving heuristic indicatordiving that focuses on indicator variables which control semicontinuous variables
+- updated statistics on NLP relaxation; information on convexity of NLP has been added
+- added new bandit method (EXP.3-IX) that is the new default of the ALNS heuristic
+- added dialog to display recognized permutation symmetries ("display symmetry")
+- added special presolving step for logicor and set covering/packing for constraints with two variables and one independent variable
+
+Performance improvements
+------------------------
+
+- Variable conflict-based addition of Schreier-Sims cuts for symmetry handling in prop_symmetry.c does no longer use
+  an expensive explicit conflict graph construction.
+- Only run propagation of indicator constraints if relevant variables have changed.
+- Propagation of indicator constraints propagates maximal activity of linear constraint to upper bound of slack variable.
+- Added initialization of LP relaxation for SOC constraints.
+- Avoided some numerical issues when separating SOC constraints.
+- If differentation of convex expression fails in convex nlhdlr, then a perturbed point is tried.
+- Use sassy/bliss as default symmetry computation package.
+
+Examples and applications
+-------------------------
+
+Interface changes
+-----------------
+
+### New and changed callbacks
+
+- Added solution linearization callback for nonlinear handlers.
+  The nonlinear handler may use this callback to add tight cuts that use the given solution as reference point to the cutpool.
+  The callback is called if option constraints/nonlinear/linearizeheursol is enabled.
+
+### Deleted and changed API methods
+
+- SCIPtpiInitLock(), SCIPtpiDestroyLock(), SCIPtpiInitCondition(), SCIPtpiDestroyCondition() now take a double
+  pointer to SCIP_LOCK/SCIP_CONDITION, respectively.
+- Renamed SCIPtpiSumbitJob() to SCIPtpiSubmitJob().
+- SCIPcreateConsIndicatorLinCons(), SCIPcreateConsIndicatorGenericLinCons() do not allow binvar to be NULL anymore
+- Replaced SCIPnlrowSetCurvature() by SCIPsetNlRowCurvature().
+- SCIPsnprintf() now returns the required string length in case reallocation is necessary.
+
+### New API functions
+
+- new functions for interfacing with Lapack:
+  SCIPlapackIsAvailable(), SCIPlapackIsAvailable(),
+  SCIPlapackComputeEigenvalues(), and SCIPlapackSolveLinearEquations
+
+  These functions should be used instead of SCIPisIpoptAvailableIpopt(), SCIPcallLapackDsyevIpopt(), and
+  SCIPsolveLinearEquationsIpopt() in the context of computing eigenvalues or solving linear equations. If IPOPT is available,
+  the calls will be passed on.
+- SCIPmultiplyBySumExprSum(), SCIPpowerExprSum()
+- SCIPsetParam()
+- SCIPgetPrimalDualIntegral() returns the primal dual integral stored in the statistics
+- new functions SCIPcreateConsIndicatorLinConsPure() and SCIPcreateConsIndicatorGenericLinConsPure() that
+  create indicator constraints from a linear constraint without a slack variable
+- SCIPgetNLPNlRowsStat() to retrieve counts on linear, convex, and nonconvex rows in NLP
+- SCIPnlhdlrSetSollinearize(), SCIPnlhdlrHasSollinearize()
+- SCIPbendersGetNLPParam()
+
+### Command line interface
+
+- Added optional parameter -i when calling SCIP in AMPL-mode (-AMPL parameter).
+  If -i is specified, a SCIP shell is started where normally SCIPsolve() would be called.
+
+### Interfaces to external software
+
+- added interface to nauty/traces for symmetry computation
+- added interface to sassy, a preprocessor for symmetry computation
+- The directory src/sassy contains the source code of sassy.
+- Added interface to Lapack (used for solving nonlinear problems).
+- The AMPL interface now supports parameters specified in AMPL command scripts via option scip_options.
+  The value of scip_options is expected to be a sequence of parameter names and values, separated by a space, e.g.,
+    `option scip_options 'limits/time 10 display/verblevel 1';`.
+  String values should not be quoted and spaces in string values are not supported.
+- sassy can be used now as preprocessor for nauty/traces
+
+### Changed parameters
+
+- change default value of parameter separating/filtercutpoolrel to FALSE
+- Shrunk range of parameter "propagating/symmetry/sstleaderrule" from [0,3] to [0,2], removed "MAXCONFLICTS"-option.
+- Removed reading/gmsreader/freeints. A default upper bound of +inf is now assumed for integer variables in GAMS (which is the case since GAMS 23.1).
+- Disabled "propagating/symmetry/symfixnonbinaryvars" since it is not used in the new symmetry code.
+- Replaced "propagating/symmetry/onlybinarysymmetry" with "propagating/symmetry/enforcecomputesymmetry" and set to FALSE by default.
+- Disabled "propagating/symmetry/performpresolving" since running orbital reduction during presolving is not effective.
+- Repurposed "propagating/symmetry/usedynamicprop" since it now also applies to lexicographic reduction.
+- Changed default value of parameter "propagating/symmetry/addsymresacks" from FALSE to TRUE.
+
+### New parameters
+
+- expr/pow/expandmaxexponent to specify limit on exponent when to expand power of sum
+- expr/pow/distribfracexponent to enable expanding power of products with fractional exponents
+- expr/product/expandalways to enable expanding any product with sums as factor (that is, also when more than two factors)
+- nlhdlr/convex/maxperturb to specify maximal perturbation of non-differential reference points
+- benders/default/nlpiterlimit to adjust iteration limit for NLP solver for Benders' decomposition NLP subproblems
+- limits/objectivestop to interrupt the solve as soon as a primal solution is found
+  that is at least as good as the given value
+
+### Data structures
+
+Deleted files
+-------------
+
+- deleted the now unused files: tpi_none.h, tpi_openmp.h, tpi_tnycthrd.h, type_tpi_none.h, type_tpi_openmp.h, type_tpi_tnycthrd.h
+
+Unit tests
+----------
+
+Testing
+-------
+- changed `set lim obj` to `set lim objective` in ctest since `obj` is no longer unambiguous
+
+Build system
+------------
+
+### Cmake
+
+- New flag -DLAPACK=on for linking with Lapack (must be available in the system)
+- added flag option "SYM=sbliss" for using sassy/bliss as a graph automorphism package
+- use SYM=sbliss by default, since sassy and bliss are now shipped with SCIP.
+- added flag option "SYM=snauty" for using sassy/nauty as a graph automorphism package
+
+### Makefile
+
+- added flag option "nauty" for SYM variable to specify which graph automorphism package should be used
+- added flag option "sbliss" (sassy/bliss) for SYM variable to specify which graph automorphism package should be used
+- added flag option "snauty" (sassy/nauty) for SYM variable to specify which graph automorphism package should be used
+- use SYM=sbliss by default, since sassy and bliss are now shipped with SCIP
+- New flag LAPACK for linking with Lapack (must be available in the system)
+- A file scip/config.h is created in the build directory ($(OBJDIR)/include) now.
+  Defining NO_CONFIG_HEADER is no longer necessary and has no effect anymore.
+
+Fixed bugs
+----------
+
+- add safeguard for number of selected cuts
+
+Miscellaneous
+-------------
+
+- The TPI has been changed to become mostly independent from the actual parallel interface during compile time.
+  For this, the locks and conditions are now pointers to abstract structs.
+
+Known bugs
+----------
+
 @page RN80 Release notes for SCIP 8.0
 
-@section RN000 SCIP 8.0.3
+@section RN804 SCIP 8.0.4
+*************************
+
+Features
+--------
+
+- use quad precision in cutsSubstituteMIR() for substituting slack variables into CMIR cuts
+- use quad precision for activity computations in cons_linear.c
+
+### Deleted and changed API methods
+
+- SCIPshrinkDisjunctiveVarSet() no longer attempts to cutoff the current node if it finds the
+  given disjunction to be infeasible; it is now in the responsibility of the caller to act accordingly
+
+### New API functions
+
+- added SCIPskipSpace
+- added XML parser routines from src/xml/xml.h
+
+### Interfaces to external software
+
+- updated XPRESS interface to work with XPRESS 41 as well
+
+### Changed parameters
+
+- changed integer parameter "propagating/symmetry/recomputrestart" from range {0, 1, 2} to being fixed at value 0
+
+Unit tests
+----------
+
+- added new checks for objective, bounds and sides inside the scaling tests in lpi/change.c
+
+Fixed bugs
+----------
+
+- relax condition of assert in lpSolve to hold only if lp/checkstability is true
+- OPB reader: dynamically increase the size of the line buffer for reading in getMaxAndConsDim()
+- Enabled the solution limit checks in SCIPsolveIsStopped in solve.c when in SCIP_STAGE_PRESOLVING
+- fix quad precision comparison for the calculation of knapsackcover constraints.
+- force copying of symmetry constraints for concurrent solve
+- increase the precision of double multiplications in quad precision environments
+- corrected handling of different variable types in symmetry
+- orbitope detection: refine computation of overlap structure and fixed bug in finding orbitope generators
+- ensure that winner is always determined in concurrent mode
+- when a row with invalid index range is added to the global cutpool, update the indices instead of failing with an assert
+- update of watched literals in cons_xor.c and ensure that fixed variables are counted in propacateCons()
+- avoid some numerical issue in check for redundant variables in linear constraints (introduced with version 8.0.2)
+- more rows are treated as being integral in cutsSubstituteMIR() for CMIR cuts
+- fixed several relaxations of the rhs of cuts to 0 in cuts.c
+- avoid aggregation into a single linear constraint if they should not be upgraded (needed for indicator constraints)
+- apply effective root changes before fork is repropagated during treeSwitchPath() in tree.c
+- avoid invalid objective value for solutions generated from an unbounded LP relaxation in case of a nonlinear objective function
+- disable recomputing symmetries after a restart (constraint removal is not permitted)
+- avoid cutting off optimal solutions for small feasibility tolerances in conflict analysis
+- initialize variable in presol_dualsparsify.c
+- fix in presolving of variable bound constraints to use absolute instead of relative difference
+- free variable histories in reoptimization mode
+- handle whitespaces in interactive shell history consistently
+- check and enforce equalities on which the objective is projected in cons_linear.c
+- ensure row feasibilities of solution shiftings in heur_oneopt.c and heur_twoopt.c
+- remove rounded row check blocking tolerable primal solutions in cons_varbound.c
+- fixed that presolve of logicor-constraints may have attempted to cutoff a root of the not yet existing branch-and-bound tree
+- only consider positive slack variables as active in benders.c
+- in the feasibility check of and/or constraints, allow for fractional values in operands
+- fixed linear outer-approximation for some composite absolute-value expressions
+- fixed that scaling of rows in Gurobi interface (SCIPlpiScaleRow()) changed infinite sides to large finite ones (1e20) when scale factor is negative
+
+Miscellaneous
+-------------
+
+- Extended documentation of the parameter limits/solutions to point out that the limit is first checked in presolving
+- Added more information about using SCIPcache- and SCIPflushRowExtensions() to documentation and comments
+- Extended the `how to add' sections of the documentation by adding information on how to include default plugins into SCIP
+
+@section RN803 SCIP 8.0.3
 *************************
 
 Examples and applications
@@ -24,8 +258,6 @@ Build system
 - Move -I/path/to/src/amplmp/include to front of compiler flags for include directories
 
 ### Makefile
-
-- Use SYM=bliss by default, since bliss now is shipped with SCIP.
 
 Fixed bugs
 ----------

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -25,6 +25,7 @@
 /**@file   symmetry.h
  * @ingroup PUBLICCOREAPI
  * @brief  methods for handling symmetries
+ * @author Jasper van Doornmalen
  * @author Christopher Hojny
  * @author Marc Pfetsch
  */
@@ -244,6 +245,7 @@ SCIP_RETCODE SCIPgenerateOrbitopeVarsMatrix(
    );
 
 /** checks whether an orbitope is a packing or partitioning orbitope */
+SCIP_EXPORT
 SCIP_RETCODE SCIPisPackingPartitioningOrbitope(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR***           vars,               /**< variable matrix of orbitope constraint */
@@ -254,6 +256,46 @@ SCIP_RETCODE SCIPisPackingPartitioningOrbitope(
    int*                  npprows,            /**< pointer to store how many rows are contained
                                               *   in packing/partitioning constraints or NULL if not needed */
    SCIP_ORBITOPETYPE*    type                /**< pointer to store type of orbitope constraint after strengthening */
+   );
+
+
+/** helper function to test if val1 = val2 while permitting infinity-values */
+SCIP_Bool EQ(
+   SCIP*              scip,               /**< SCIP data structure */
+   SCIP_Real          val1,               /**< left-hand side value */
+   SCIP_Real          val2                /**< right-hand side value */
+   );
+
+
+/** helper function to test if val1 <= val2 while permitting infinity-values */
+SCIP_Bool LE(
+   SCIP*              scip,               /**< SCIP data structure */
+   SCIP_Real          val1,               /**< left-hand side value */
+   SCIP_Real          val2                /**< right-hand side value */
+   );
+
+
+/** helper function to test if val1 >= val2 while permitting infinity-values */
+SCIP_Bool GE(
+   SCIP*              scip,               /**< SCIP data structure */
+   SCIP_Real          val1,               /**< left-hand side value */
+   SCIP_Real          val2                /**< right-hand side value */
+   );
+
+
+/** helper function to test if val1 < val2 while permitting infinity-values */
+SCIP_Bool LT(
+   SCIP*              scip,               /**< SCIP data structure */
+   SCIP_Real          val1,               /**< left-hand side value */
+   SCIP_Real          val2                /**< right-hand side value */
+   );
+
+
+/** helper function to test if val1 > val2 while permitting infinity-values */
+SCIP_Bool GT(
+   SCIP*              scip,               /**< SCIP data structure */
+   SCIP_Real          val1,               /**< left-hand side value */
+   SCIP_Real          val2                /**< right-hand side value */
    );
 
 /** @} */

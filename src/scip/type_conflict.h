@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -37,9 +37,10 @@
 #define __SCIP_TYPE_CONFLICT_H__
 
 #include "scip/def.h"
+#include "scip/type_scip.h"
 #include "scip/type_retcode.h"
 #include "scip/type_result.h"
-#include "scip/type_var.h"
+#include "scip/type_tree.h"
 
 #ifdef __cplusplus
 extern "C" {

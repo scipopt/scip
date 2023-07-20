@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*  Copyright 2002-2022 Zuse Institute Berlin                                *
+#*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      *
 #*                                                                           *
 #*  Licensed under the Apache License, Version 2.0 (the "License");          *
 #*  you may not use this file except in compliance with the License.         *
@@ -37,7 +37,7 @@ QUEUETYPE="${4}" # either 'srun' or 'qsub'
 NICE=""
 if [[ "$(uname -n)" =~ htc ]]; then
   # z1 cluster
-  ACCOUNT="optimi"
+  ACCOUNT="optimi_integer"
 else
   # opt machines
   ACCOUNT="mip"
@@ -151,4 +151,16 @@ if test "${CLUSTERQUEUE}" = "Gold6338"
 then
     CONSTRAINT="Gold6338"
     CLUSTERQUEUE="big"
+elif test "${CLUSTERQUEUE}" = "Gold6342"
+then
+    CONSTRAINT="Gold6342"
+    CLUSTERQUEUE="big"
+elif test "${CLUSTERQUEUE}" = "M640v2"
+then
+    CONSTRAINT="Gold5222"
+    CLUSTERQUEUE="opt_int"
+elif test "${CLUSTERQUEUE}" = "M640"
+then
+    CONSTRAINT="Gold5122"
+    CLUSTERQUEUE="opt_int"
 fi

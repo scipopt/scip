@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -2371,18 +2371,11 @@ SCIP_RETCODE readIndicators(
    while( mpsinputReadLine(mpsi) )
    {
       SCIP_CONSHDLR* conshdlr;
-      SCIP_VARTYPE slackvartype;
       SCIP_CONS* cons;
       SCIP_CONS* lincons;
       SCIP_VAR* binvar;
-      SCIP_VAR* slackvar;
       SCIP_Real lhs;
       SCIP_Real rhs;
-      SCIP_Real sign;
-      SCIP_VAR** linvars;
-      SCIP_Real* linvals;
-      int nlinvars;
-      int i;
 
       /* check if next section is found */
       if( mpsinputField0(mpsi) != NULL )
@@ -2391,6 +2384,7 @@ SCIP_RETCODE readIndicators(
             mpsinputSetSection(mpsi, MPS_ENDATA);
          break;
       }
+
       if( mpsinputField1(mpsi) == NULL || mpsinputField2(mpsi) == NULL )
       {
          SCIPerrorMessage("empty data in a non-comment line.\n");
@@ -2462,24 +2456,26 @@ SCIP_RETCODE readIndicators(
          }
       }
 
-      /* check lhs/rhs */
+      /* get lhs/rhs */
       lhs = SCIPgetLhsLinear(scip, lincons);
       rhs = SCIPgetRhsLinear(scip, lincons);
-      nlinvars = SCIPgetNVarsLinear(scip, lincons);
-      linvars = SCIPgetVarsLinear(scip, lincons);
-      linvals = SCIPgetValsLinear(scip, lincons);
 
-      sign = -1.0;
       if( !SCIPisInfinity(scip, -lhs) )
       {
-         if( SCIPisInfinity(scip, rhs) )
-            sign = 1.0;
-         else
+         if( ! SCIPisInfinity(scip, rhs) )
          {
             /* create second indicator constraint */
             SCIP_VAR** vars;
             SCIP_Real* vals;
             SCIP_RETCODE retcode;
+            SCIP_VAR** linvars;
+            SCIP_Real* linvals;
+            int nlinvars;
+            int i;
+
+            nlinvars = SCIPgetNVarsLinear(scip, lincons);
+            linvars = SCIPgetVarsLinear(scip, lincons);
+            linvals = SCIPgetValsLinear(scip, lincons);
 
             SCIP_CALL( SCIPallocBufferArray(scip, &vars, nlinvars) );
             SCIP_CALL( SCIPallocBufferArray(scip, &vals, nlinvars) );
@@ -2511,29 +2507,6 @@ SCIP_RETCODE readIndicators(
          }
       }
 
-      /* check if slack variable can be made implicitly integer */
-      slackvartype = SCIP_VARTYPE_IMPLINT;
-      for (i = 0; i < nlinvars; ++i)
-      {
-         if( ! SCIPvarIsIntegral(linvars[i]) || ! SCIPisIntegral(scip, linvals[i]) )
-         {
-            slackvartype = SCIP_VARTYPE_CONTINUOUS;
-            break;
-         }
-      }
-
-      /* create slack variable */
-      if ( ! SCIPisInfinity(scip, -lhs) )
-         (void) SCIPsnprintf(name, MPS_MAX_NAMELEN, "indslack_indrhs_%s", SCIPconsGetName(lincons));
-      else
-         (void) SCIPsnprintf(name, MPS_MAX_NAMELEN, "indslack_%s", SCIPconsGetName(lincons));
-      SCIP_CALL( SCIPcreateVar(scip, &slackvar, name, 0.0, SCIPinfinity(scip), 0.0, slackvartype, TRUE, FALSE,
-            NULL, NULL, NULL, NULL, NULL) );
-
-      /* add slack variable */
-      SCIP_CALL( SCIPaddVar(scip, slackvar) );
-      SCIP_CALL( SCIPaddCoefLinear(scip, lincons, slackvar, sign) );
-
       /* correct linear constraint and create new name */
       if ( ! SCIPisInfinity(scip, -lhs) && ! SCIPisInfinity(scip, rhs) )
       {
@@ -2545,14 +2518,13 @@ SCIP_RETCODE readIndicators(
          (void) SCIPsnprintf(name, MPS_MAX_NAMELEN, "ind_%s", SCIPconsGetName(lincons));
 
       /* create indicator constraint */
-      SCIP_CALL( SCIPcreateConsIndicatorLinCons(scip, &cons, name, binvar, lincons, slackvar,
+      SCIP_CALL( SCIPcreateConsIndicatorLinConsPure(scip, &cons, name, binvar, lincons,
             initial, separate, enforce, check, propagate, local, dynamic, removable, stickingatnode) );
 
       SCIP_CALL( SCIPaddCons(scip, cons) );
       SCIPdebugMsg(scip, "created indicator constraint <%s>", mpsinputField2(mpsi));
       SCIPdebugPrintCons(scip, cons, NULL);
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-      SCIP_CALL( SCIPreleaseVar(scip, &slackvar) );
    }
 
    return SCIP_OKAY;

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -95,7 +95,7 @@ Test(verification, nlp_empty)
    cr_expect(SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_UNKNOWN);
 
    SCIP_CALL( SCIPverifyCircularPatternNLP(scip, probdata, pattern, SCIPinfinity(scip), SCIP_LONGINT_MAX) );
-   cr_expect(SCIP_PACKABLE_YES);
+   cr_expect(SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_YES);
 }
 
 /** verifies circular pattern containing a single element with NLP */
@@ -160,7 +160,7 @@ Test(verification, heur_empty)
    cr_expect(SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_UNKNOWN);
 
    SCIP_CALL( SCIPverifyCircularPatternHeuristic(scip, probdata, pattern, SCIPinfinity(scip), 1) );
-   cr_expect(SCIP_PACKABLE_YES);
+   cr_expect(SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_YES);
 }
 
 /** verifies circular pattern containing a single element with heuristic */

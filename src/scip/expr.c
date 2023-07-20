@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -44,7 +44,7 @@
 #include "scip/tree.h"
 #include "scip/struct_set.h"
 #include "scip/struct_stat.h"
-#include "scip/nlpi_ipopt.h" /* for LAPACK */
+#include "scip/lapack_calls.h"
 
 /*lint -e440*/
 /*lint -e441*/
@@ -1260,7 +1260,7 @@ SCIP_RETCODE SCIPexprhdlrBwDiffExpr(
    )
 {
    SCIP_Real* origchildrenvals;
-   SCIP_Real origexprval;
+   SCIP_Real origexprval = SCIP_INVALID;
    int c;
 
    assert(exprhdlr != NULL);
@@ -1311,7 +1311,7 @@ SCIP_RETCODE SCIPexprhdlrBwDiffExpr(
          BMSfreeBufferMemoryArray(bufmem, &origchildrenvals);
       }
 
-      expr->evalvalue = origexprval;   /*lint !e644*/
+      expr->evalvalue = origexprval;
    }
 
    return SCIP_OKAY;
@@ -3641,7 +3641,7 @@ SCIP_RETCODE SCIPexprComputeQuadraticCurvature(
 
    /* TODO do some simple tests first; like diagonal entries don't change sign, etc */
 
-   if( !SCIPisIpoptAvailableIpopt() )
+   if( ! SCIPlapackIsAvailable() )
       return SCIP_OKAY;
 
    nn = n * n;
@@ -3729,7 +3729,7 @@ SCIP_RETCODE SCIPexprComputeQuadraticCurvature(
    }
 
    /* compute eigenvalues */
-   if( SCIPcallLapackDsyevIpopt(storeeigeninfo, n, matrix, alleigval) != SCIP_OKAY )
+   if( SCIPlapackComputeEigenvalues(bufmem, storeeigeninfo, n, matrix, alleigval) != SCIP_OKAY )
    {
       SCIPmessagePrintWarning(messagehdlr, "Failed to compute eigenvalues of quadratic coefficient "
             "matrix --> don't know curvature\n");

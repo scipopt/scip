@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -72,6 +72,7 @@
 #include "scip/struct_set.h"
 #include "scip/struct_stat.h"
 #include "scip/syncstore.h"
+#include "scip/lapack_calls.h"
 
 #include <string.h>
 #if defined(_WIN32) || defined(_WIN64)
@@ -101,7 +102,7 @@ SCIP_Real SCIPversion(
    void
    )
 {
-   return (SCIP_Real)(SCIP_VERSION)/100.0;
+   return SCIP_VERSION_MAJOR + SCIP_VERSION_MINOR/100.0;  /*lint !e835*/
 }
 
 /** returns SCIP major version
@@ -112,7 +113,7 @@ int SCIPmajorVersion(
    void
    )
 {
-   return SCIP_VERSION/100;
+   return SCIP_VERSION_MAJOR;
 }
 
 /** returns SCIP minor version
@@ -123,7 +124,7 @@ int SCIPminorVersion(
    void
    )
 {
-   return (SCIP_VERSION/10) % 10; /*lint !e778*/
+   return SCIP_VERSION_MINOR;
 }
 
 /** returns SCIP technical version
@@ -134,7 +135,7 @@ int SCIPtechVersion(
    void
    )
 {
-   return SCIP_VERSION % 10; /*lint !e778*/
+   return SCIP_VERSION_PATCH;
 }
 
 /** returns SCIP sub version number
@@ -271,6 +272,20 @@ SCIP_RETCODE doScipCreate(
 
 #ifdef SCIP_WITH_ZLIB
    SCIP_CALL( SCIPsetIncludeExternalCode((*scip)->set, "ZLIB " ZLIB_VERSION, "General purpose compression library by J. Gailly and M. Adler (zlib.net)") );
+#endif
+
+#ifdef SCIP_WITH_LAPACK
+   {
+      char name[SCIP_MAXSTRLEN];
+      int major;
+      int minor;
+      int patch;
+
+      SCIPlapackVersion(&major, &minor, &patch);
+      SCIPsnprintf(name, SCIP_MAXSTRLEN, "LAPACK %d.%d.%d", major, minor, patch);
+
+      SCIP_CALL( SCIPsetIncludeExternalCode((*scip)->set, name, "General Linear Algebra PACKage (http://www.netlib.org/lapack/)") );
+   }
 #endif
 
    return SCIP_OKAY;

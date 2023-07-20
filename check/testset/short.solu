@@ -48,3 +48,6 @@
 =opt= disj_conj_rail     1324.43557422969
 =opt= sos1a                          0.72
 =opt= sos2a                           0.1
+=opt= logic1                            1
+=opt= logic2                            2
+=opt= logic3                         -0.5

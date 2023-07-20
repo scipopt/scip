@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -67,7 +67,7 @@ typedef enum SYM_Rhssense SYM_RHSSENSE;
 /* type of symmetry handling codes */
 #define SYM_HANDLETYPE_NONE             UINT32_C(0x00000000)  /**< no symmetry handling */
 #define SYM_HANDLETYPE_SYMBREAK         UINT32_C(0x00000001)  /**< symmetry breaking inequalities */
-#define SYM_HANDLETYPE_ORBITALFIXING    UINT32_C(0x00000002)  /**< orbital fixing */
+#define SYM_HANDLETYPE_ORBITALREDUCTION UINT32_C(0x00000002)  /**< orbital reduction */
 #define SYM_HANDLETYPE_SST              UINT32_C(0x00000004)  /**< Schreier Sims cuts */
 #define SYM_HANDLETYPE_SYMCONS (SYM_HANDLETYPE_SYMBREAK | SYM_HANDLETYPE_SST)
 
@@ -85,8 +85,7 @@ enum SCIP_LeaderRule
 {
    SCIP_LEADERRULE_FIRSTINORBIT        = 0,       /**< first var in orbit */
    SCIP_LEADERRULE_LASTINORBIT         = 1,       /**< last var in orbit */
-   SCIP_LEADERRULE_MAXCONFLICTSINORBIT = 2,       /**< var with most conflicting vars in its orbit */
-   SCIP_LEADERRULE_MAXCONFLICTS        = 3        /**< var with most conflicting vars in problem */
+   SCIP_LEADERRULE_MAXCONFLICTSINORBIT = 2        /**< var with most conflicting vars in its orbit */
 };
 typedef enum SCIP_LeaderRule SCIP_LEADERRULE;
 
@@ -117,16 +116,6 @@ enum SCIP_OrbitopeType
    SCIP_ORBITOPETYPE_PACKING      = 2        /**< constraint is a packing orbitope constraint:      rowsum(x) <= 1 */
 };
 typedef enum SCIP_OrbitopeType SCIP_ORBITOPETYPE;
-
-/** conditions to recompute symmetries after a restart */
-enum SCIP_RecomputesymType
-{
-   SCIP_RECOMPUTESYM_NEVER         = 0,       /**< never recompute symmetries */
-   SCIP_RECOMPUTESYM_ALWAYS        = 1,       /**< always recompute symmetries */
-   SCIP_RECOMPUTESYM_OFFOUNDRED    = 2        /**< only if orbital fixing found a reduction in previous run */
-};
-typedef enum SCIP_RecomputesymType SCIP_RECOMPUTESYMTYPE;
-
 
 #ifdef __cplusplus
 }

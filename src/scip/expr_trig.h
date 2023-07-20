@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -64,7 +64,7 @@ SCIP_RETCODE SCIPincludeExprhdlrCos(
  *
  * @name Sine and Cosine expression
  *
- * These expression handler provide the sine and cosine functions, that is,
+ * These expression handlers provide the sine and cosine functions, that is,
  * \f[
  *   x \mapsto \sin(x)
  * \f]

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -46,7 +46,7 @@ extern "C" {
  *
  * @name Power and signed power expression
  *
- * These expression handler provide the power function, that is,
+ * These expression handlers provide the power function, that is,
  * \f[
  *   x \mapsto \begin{cases}
  *     x^e & \textrm{if}\; x \geq 0\; \textrm{or}\; e\in\mathbb{Z}, \\
@@ -55,7 +55,7 @@ extern "C" {
  * \f]
  * and the signed power function, that is,
  * \f[
- *   x \mapsto \textrm{sign}(e) |x|^e
+ *   x \mapsto \textrm{sign}(x) |x|^e
  * \f]
  * for some exponent \f$e\f$.
  *

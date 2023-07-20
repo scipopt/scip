@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -41,6 +41,7 @@
 #include "scip/type_scip.h"
 #include "scip/type_var.h"
 #include "scip/type_stat.h"
+#include "scip/type_nlpi.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -167,6 +168,12 @@ SCIP_Bool SCIPbendersOnlyCheckConvexRelax(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_Bool             subscipsoff         /**< flag indicating whether plugins using sub-SCIPs are deactivated */
    );
+
+/** returns NLP solver parameters used for solving NLP subproblems */
+SCIP_EXPORT
+SCIP_NLPPARAM SCIPbendersGetNLPParam(
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
+);
 
 /** Are Benders' cuts generated from the LP solutions? */
 SCIP_EXPORT

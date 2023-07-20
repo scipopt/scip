@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -44,9 +44,7 @@
 /*
  * include build configuration flags
  */
-#ifndef NO_CONFIG_HEADER
 #include "scip/config.h"
-#endif
 
 /* in this case the SoPlex results are double checked using CPLEX */
 #ifdef SCIP_WITH_LPSCHECK
@@ -91,7 +89,9 @@
 #endif
 
 /* compile the SoPlex header with visibility=default because the SoPlex lib has been compiled that way */
+#ifdef __GNUC__
 #pragma GCC visibility push(default)
+#endif
 
 /* include SoPlex solver */
 #include "soplex.h"
@@ -972,25 +972,23 @@ void invalidateSolution(SCIP_LPI* lpi)
  * Miscellaneous Methods
  */
 
-char* initSpxDesc( );
-
 #if (SOPLEX_SUBVERSION > 0)
    const static char spxname[20] = {'S', 'o', 'p', 'l', 'e', 'x', ' ', SOPLEX_VERSION/100 + '0', '.', (SOPLEX_VERSION % 100)/10 + '0', '.', SOPLEX_VERSION % 10 + '0', '.', SOPLEX_SUBVERSION + '0'};
 #else
    const static char spxname[20] = {'S', 'o', 'p', 'l', 'e', 'x', ' ', SOPLEX_VERSION/100 + '0', '.', (SOPLEX_VERSION % 100)/10 + '0', '.', SOPLEX_VERSION % 10 + '0'};
 #endif
-static char* spxdesc = initSpxDesc();
-
-char* initSpxDesc( )
-{
-   spxdesc = new char[200];
-   (void)snprintf(spxdesc, 200, "%s [GitHash: %s]", "Linear Programming Solver developed at Zuse Institute Berlin (soplex.zib.de)"
+const static char spxdesc[200] =  {'L', 'i', 'n', 'e', 'a', 'r', ' ', 'P', 'r', 'o', 'g', 'r', 'a', 'm', 'm', 'i', 'n', 'g',
+                                   ' ', 'S', 'o', 'l', 'v', 'e', 'r', ' ' , 'd', 'e', 'v', 'e', 'l', 'o', 'p', 'e', 'd',
+                                   ' ', 'a', 't', ' ', 'Z', 'u', 's', 'e', ' ', 'I', 'n', 's', 't', 'i', 't', 'u', 't', 'e',
+                                   ' ', 'B', 'e', 'r', 'l', 'i', 'n', ' ', '(', 's', 'o', 'p', 'l', 'e', 'x', '.', 'z', 'i', 'b', '.', 'd', 'e', ')',
 #ifdef SCIP_WITH_LPSCHECK
-         " - including CPLEX double check"
+                                   ' ', '-', ' ', 'i', 'n', 'c', 'l', 'u', 'd', 'i', 'n', 'g', ' ', 'C','P','L', 'E', 'X',
+                                   ' ', 'd', 'o', 'u', 'b', 'l', 'e', ' ', 'c', 'h', 'e', 'c', 'k',
 #endif
-         , getGitHash());
-   return spxdesc;
-}
+                                   ' ', '[', 'G', 'i', 't', 'H', 'a', 's', 'h', ':', ' ',
+                                   getGitHash()[0], getGitHash()[1], getGitHash()[2], getGitHash()[3],
+                                   getGitHash()[4], getGitHash()[5], getGitHash()[6], getGitHash()[7],
+                                   ']'};
 
 /**@name Miscellaneous Methods */
 /**@{ */
