@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright 2002-2023 Zuse Institute Berlin                                */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -24,7 +24,7 @@
 
 /**@file   branch_gomory.c
  * @ingroup DEFPLUGINS_BRANCH
- * @brief  gomory cut branching rule
+ * @brief  Gomory cut branching rule
  * @author Mark Turner
  */
 
@@ -543,7 +543,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpGomory)
  * branching rule specific interface methods
  */
 
-/** creates the gomory cut branching rule and includes it in SCIP */
+/** creates the Gomory cut branching rule and includes it in SCIP */
 SCIP_RETCODE SCIPincludeBranchruleGomory(
    SCIP*                 scip                /**< SCIP data structure */
 )
