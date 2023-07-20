@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -159,6 +159,7 @@ static
 SCIP_RETCODE fromAmpl(
    SCIP*                 scip,               /**< SCIP data structure */
    char*                 nlfilename,         /**< name of .nl file, without the .nl */
+   SCIP_Bool             interactive,        /**< whether to start SCIP shell instead of solve only */
    const char*           defaultsetname      /**< name of default settings file */
    )
 {
@@ -166,6 +167,7 @@ SCIP_RETCODE fromAmpl(
    char fullnlfilename[SCIP_MAXSTRLEN];
    char* logfile;
    SCIP_Bool printstat;
+   char* options;
    size_t nlfilenamelen;
 
    SCIP_CALL( SCIPaddBoolParam(scip, "display/statistics",
@@ -181,6 +183,27 @@ SCIP_RETCODE fromAmpl(
 
    SCIPprintExternalCodes(scip, NULL);
    SCIPinfoMessage(scip, NULL, "\n");
+
+   options = getenv("scip_options");
+   if( options != NULL )
+   {
+      /* parse and apply options from scip_options env variable */
+      char* optname;
+      char* optval;
+
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "applying scip_options:\n");
+
+      optname = strtok(options, " ");
+      optval = strtok(NULL, " ");
+      while( optname != NULL && optval != NULL )
+      {
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "  %s = %s\n", optname, optval);
+         SCIP_CALL( SCIPsetParam(scip, optname, optval) );
+
+         optname = strtok(NULL, " ");
+         optval = strtok(NULL, " ");
+      }
+   }
 
    if( defaultsetname != NULL )
    {
@@ -215,10 +238,17 @@ SCIP_RETCODE fromAmpl(
 
    SCIP_CALL( SCIPreadProb(scip, fullnlfilename, "nl") );
 
-   SCIPinfoMessage(scip, NULL, "\nsolve problem\n");
-   SCIPinfoMessage(scip, NULL, "=============\n\n");
+   if( interactive )
+   {
+      SCIP_CALL( SCIPstartInteraction(scip) );
+   }
+   else
+   {
+      SCIPinfoMessage(scip, NULL, "\nsolve problem\n");
+      SCIPinfoMessage(scip, NULL, "=============\n\n");
 
-   SCIP_CALL( SCIPsolve(scip) );
+      SCIP_CALL( SCIPsolve(scip) );
+   }
 
    SCIP_CALL( SCIPgetBoolParam(scip, "display/statistics", &printstat) );
    if( printstat )
@@ -269,7 +299,10 @@ SCIP_RETCODE SCIPprocessShellArguments(
    /* recognize and handle case where we were called from AMPL first */
    if( argc >= 3 && strcmp(argv[2], "-AMPL") == 0 )
    {
-      SCIP_CALL( fromAmpl(scip, argv[1], defaultsetname) );
+      /* check for optional argument -i after -AMPL */
+      interactive = argc >= 4 && strcmp(argv[3], "-i") == 0;
+
+      SCIP_CALL( fromAmpl(scip, argv[1], interactive, defaultsetname) );
 
       return SCIP_OKAY;
    }
@@ -520,7 +553,9 @@ SCIP_RETCODE SCIPprocessShellArguments(
          "  -c \"command\"  : execute single line of dialog commands (can be used multiple times)\n",
          argv[0]);
 #ifdef SCIP_WITH_AMPL
-      printf("\nas AMPL solver: %s <.nl-file without the .nl> -AMPL\n", argv[0]);
+      printf("\nas AMPL solver: %s <.nl-file without the .nl> -AMPL [-i]\n"
+         "  -i : start interactive SCIP shell after .nl file has been read\n",
+         argv[0]);
 #endif
       printf("\n");
    }

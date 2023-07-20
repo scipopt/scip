@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -125,6 +125,10 @@ struct SCIP_Nlp
    int                   nnlrows;            /**< number of nonlinear rows */
    int                   sizenlrows;         /**< allocated space for nonlinear rows */
    SCIP_NLROW**          nlrows;             /**< nonlinear rows */
+   int                   nnlrowlinear;       /**< number of linear rows in NLP */
+   int                   nnlrowconvexineq;   /**< number of convex one-sided inequalities in NLP */
+   int                   nnlrownonconvexineq;/**< number of nonconvex one-sided inequalities in NLP */
+   int                   nnlrownonlineareq;  /**< number of nonlinear equalities and two-sided inequalities in NLP */
    /* nonlinear rows in NLPI problem */
    int                   nnlrows_solver;     /**< number of nonlinear rows in solver */
    int                   sizenlrows_solver;  /**< allocated space for nonlinear rows in solver */

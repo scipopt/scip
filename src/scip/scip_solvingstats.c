@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -86,6 +86,7 @@
 #include "scip/scip_general.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
+#include "scip/scip_nlp.h"
 #include "scip/scip_numerics.h"
 #include "scip/scip_sol.h"
 #include "scip/scip_solvingstats.h"
@@ -3432,6 +3433,11 @@ void SCIPprintNLPStatistics(
    FILE*                 file                /**< output file */
    )
 {
+   int nnlrowlinear;
+   int nnlrowconvexineq;
+   int nnlrownonconvexineq;
+   int nnlrownonlineareq;
+
    assert(scip != NULL);
    assert(scip->stat != NULL);
 
@@ -3440,11 +3446,16 @@ void SCIPprintNLPStatistics(
    if( scip->nlp == NULL )
       return;
 
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "NLP                :       Time      Calls\n");
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "NLP relaxation     :\n");
 
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  all NLPs         : %10.2f %10" SCIP_LONGINT_FORMAT "\n",
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  solve time       : %10.2f (%" SCIP_LONGINT_FORMAT " calls)\n",
       SCIPclockGetTime(scip->stat->nlpsoltime),
       scip->stat->nnlps);
+
+   SCIP_CALL_ABORT( SCIPgetNLPNlRowsStat(scip, &nnlrowlinear, &nnlrowconvexineq, &nnlrownonconvexineq, &nnlrownonlineareq) );
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  convexity        : %10s (%d linear rows, %d convex ineq., %d nonconvex ineq., %d nonlinear eq. or two-sided ineq.)\n",
+      (nnlrownonconvexineq == 0 && nnlrownonlineareq == 0) ? "convex" : "nonconvex",
+      nnlrowlinear, nnlrowconvexineq, nnlrownonconvexineq, nnlrownonlineareq);
 }
 
 /** outputs relaxator statistics
@@ -4464,4 +4475,13 @@ void SCIPstoreSolutionGap(
    {
       SCIPstatUpdatePrimalDualIntegrals(scip->stat, scip->set, scip->transprob, scip->origprob, SCIPgetUpperbound(scip), SCIPgetLowerbound(scip) );
    }
+}
+
+/** recomputes and returns the primal dual gap stored in the stats */
+SCIP_EXPORT
+SCIP_Real SCIPgetPrimalDualIntegral(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   return SCIPstatGetPrimalDualIntegral(scip->stat, scip->set, scip->transprob, scip->origprob, TRUE);
 }

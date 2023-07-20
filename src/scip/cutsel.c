@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -187,6 +187,7 @@ SCIP_RETCODE SCIPcutselsSelect(
 
    /* Redefine maxnselectedcuts to be w.r.t the optional cuts. */
    maxnselectedcuts -= nforcedcuts;
+   maxnselectedcuts = MIN(maxnselectedcuts, ncuts);
 
    /* try all cut selectors until one succeeds */
    *nselectedcuts = 0;

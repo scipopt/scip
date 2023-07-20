@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -65,12 +65,6 @@ SCIP_RETCODE SCIPgetSymmetry(
    int**                 componentbegins,    /**< pointer to store begin positions of components in components array (or NULL) */
    int**                 vartocomponent,     /**< pointer to store assignment from variable to its component (or NULL) */
    int*                  ncomponents         /**< pointer to store number of components (or NULL) */
-   );
-
-/** return whether orbital fixing is enabled */
-SCIP_EXPORT
-SCIP_Bool SCIPisOrbitalfixingEnabled(
-   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** return number of the symmetry group's generators */

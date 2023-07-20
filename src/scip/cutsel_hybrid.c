@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -348,16 +348,12 @@ SCIP_DECL_CUTSELSELECT(cutselSelectHybrid)
    cutseldata = SCIPcutselGetData(cutsel);
    assert(cutseldata != NULL);
 
+   SCIP_Real minortho = cutseldata->minortho;
    if( root )
-   {
-      maxparall = 1.0 - cutseldata->minorthoroot;
-      goodmaxparall = MAX(0.5, 1.0 - cutseldata->minorthoroot);
-   }
-   else
-   {
-      maxparall = 1.0 - cutseldata->minortho;
-      goodmaxparall = MAX(0.5, 1.0 - cutseldata->minortho);
-   }
+      minortho = cutseldata->minorthoroot;
+
+   maxparall = 1.0 - minortho;
+   goodmaxparall = MAX(0.5, 1.0 - minortho);
 
    SCIP_CALL( SCIPselectCutsHybrid(scip, cuts, forcedcuts, cutseldata->randnumgen, cutseldata->goodscore, cutseldata->badscore,
          goodmaxparall, maxparall, cutseldata->dircutoffdistweight, cutseldata->efficacyweight,
@@ -505,13 +501,13 @@ SCIP_RETCODE SCIPselectCutsHybrid(
 
       /* if the best cut of the remaining cuts is considered bad, we discard it and all remaining cuts */
       if( scores[0] < badscore )
-         goto TERMINATE;
+         break;
 
       ++(*nselectedcuts);
 
       /* if the maximal number of cuts was selected, we can stop here */
       if( *nselectedcuts == maxselectedcuts )
-         goto TERMINATE;
+         break;
 
       /* move the pointers to the next position and filter the remaining cuts to enforce the maximum parallelism constraint */
       ++cuts;
@@ -521,7 +517,6 @@ SCIP_RETCODE SCIPselectCutsHybrid(
       ncuts = filterWithParallelism(selectedcut, cuts, scores, ncuts, goodscore, goodmaxparall, maxparall);
    }
 
-TERMINATE:
    SCIPfreeBufferArray(scip, &scoresptr);
 
    return SCIP_OKAY;

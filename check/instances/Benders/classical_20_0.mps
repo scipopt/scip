@@ -1,49 +1,49 @@
 NAME          CPLEX solver
 ROWS
- N  obj     
- L  id23    
- L  id26    
- L  id29    
- L  id32    
- L  id35    
- L  id38    
- L  id41    
- L  id44    
- L  id47    
- L  id50    
- L  id53    
- L  id56    
- L  id59    
- L  id62    
- L  id65    
- L  id68    
- L  id71    
- L  id74    
- L  id77    
- L  id80    
- E  id81    
- L  id83    
- E  id129   
- E  id130   
- E  id131   
- E  id132   
- E  id133   
- E  id134   
- E  id135   
- E  id136   
- E  id137   
- E  id138   
- E  id139   
- E  id140   
- E  id141   
- E  id142   
- E  id143   
- E  id144   
- E  id145   
- E  id146   
- E  id147   
- E  id148   
- L  q1      
+ N  obj
+ L  id23
+ L  id26
+ L  id29
+ L  id32
+ L  id35
+ L  id38
+ L  id41
+ L  id44
+ L  id47
+ L  id50
+ L  id53
+ L  id56
+ L  id59
+ L  id62
+ L  id65
+ L  id68
+ L  id71
+ L  id74
+ L  id77
+ L  id80
+ E  id81
+ L  id83
+ E  id129
+ E  id130
+ E  id131
+ E  id132
+ E  id133
+ E  id134
+ E  id135
+ E  id136
+ E  id137
+ E  id138
+ E  id139
+ E  id140
+ E  id141
+ E  id142
+ E  id143
+ E  id144
+ E  id145
+ E  id146
+ E  id147
+ E  id148
+ L  q1
 COLUMNS
     id1       obj              -0.0770368317024
     id1       id23                            1
@@ -614,26 +614,26 @@ BOUNDS
  UP bnd       id72                            1
  UP bnd       id75                            1
  UP bnd       id78                            1
- FR bnd       id87    
- FR bnd       id88    
- FR bnd       id89    
- FR bnd       id90    
- FR bnd       id91    
- FR bnd       id92    
- FR bnd       id93    
- FR bnd       id94    
- FR bnd       id95    
- FR bnd       id96    
- FR bnd       id97    
- FR bnd       id98    
- FR bnd       id99    
- FR bnd       id100   
- FR bnd       id101   
- FR bnd       id102   
- FR bnd       id103   
- FR bnd       id104   
- FR bnd       id105   
- FR bnd       id106   
+ FR bnd       id87
+ FR bnd       id88
+ FR bnd       id89
+ FR bnd       id90
+ FR bnd       id91
+ FR bnd       id92
+ FR bnd       id93
+ FR bnd       id94
+ FR bnd       id95
+ FR bnd       id96
+ FR bnd       id97
+ FR bnd       id98
+ FR bnd       id99
+ FR bnd       id100
+ FR bnd       id101
+ FR bnd       id102
+ FR bnd       id103
+ FR bnd       id104
+ FR bnd       id105
+ FR bnd       id106
 QCMATRIX   q1
     id87      id87                            1
     id88      id88                            1

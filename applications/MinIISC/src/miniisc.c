@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -392,7 +392,7 @@ BENDERS_CUTORACLE(cutoracle)
       {
          /* if the problem is infeasible in the first step, we are successful */
          if ( step == 0 )
-            *status = BENDERS_STATUS_SUCESS;
+            *status = BENDERS_STATUS_SUCCESS;
 
          SCIPdebugMessage("   size: %4d  produced possible cover with objective value %f.\n", size, value);
          break;

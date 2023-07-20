@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -42,6 +42,7 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+#include <ctype.h>
 #include "blockmemshell/memory.h"
 #include "lpi/lpi.h"
 #include "scip/branch.h"
@@ -86,7 +87,6 @@
 #include "scip/struct_var.h"
 #include "scip/tree.h"
 #include "scip/var.h"
-#include <ctype.h>
 
 
 /** creates and captures problem variable; if variable is of integral type, fractional bounds are automatically rounded;
@@ -548,10 +548,10 @@ SCIP_RETCODE SCIPparseVarName(
    SCIPstrCopySection(str, '<', '>', varname, SCIP_MAXSTRLEN, endptr);
    assert(*endptr != NULL);
 
-   if( *varname == '\0' )
+   if( *endptr == str )
    {
-      SCIPerrorMessage("invalid variable name string given: could not find '<'\n");
-      return SCIP_INVALIDDATA;
+      *var = NULL;
+      return SCIP_OKAY;
    }
 
    /* check if we have a negated variable */
@@ -562,7 +562,7 @@ SCIP_RETCODE SCIPparseVarName(
       /* search for the variable and ignore '~' */
       (*var) = SCIPfindVar(scip, &varname[1]);
 
-      if( *var  != NULL )
+      if( *var != NULL )
       {
          SCIP_CALL( SCIPgetNegatedVar(scip, *var, var) );
       }
@@ -634,7 +634,7 @@ SCIP_RETCODE SCIPparseVarsList(
    /* allocate buffer memory for temporary storing the parsed variables */
    SCIP_CALL( SCIPallocBufferArray(scip, &tmpvars, varssize) );
 
-   (*success) = TRUE;
+   *success = TRUE;
 
    do
    {
@@ -644,11 +644,9 @@ SCIP_RETCODE SCIPparseVarsList(
       SCIP_CALL( SCIPparseVarName(scip, str, &var, endptr) );
 
       if( var == NULL )
-      {
-         SCIPdebugMsg(scip, "variable with name <%s> does not exist\n", SCIPvarGetName(var));
-         (*success) = FALSE;
          break;
-      }
+
+      str = *endptr;
 
       /* store the variable in the tmp array */
       if( ntmpvars < varssize )
@@ -656,10 +654,7 @@ SCIP_RETCODE SCIPparseVarsList(
 
       ntmpvars++;
 
-      str = *endptr;
-
-      while( isspace((unsigned char)*str) )
-         str++;
+      SCIP_CALL( SCIPskipSpace((char**)&str) );
    }
    while( *str == delimiter );
 
@@ -881,8 +876,7 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
    while( *str && state != SCIPPARSEPOLYNOMIAL_STATE_END && state != SCIPPARSEPOLYNOMIAL_STATE_ERROR )
    {
       /* skip white space */
-      while( isspace((unsigned char)*str) )
-         str++;
+      SCIP_CALL( SCIPskipSpace((char**)&str) );
 
       assert(state != SCIPPARSEPOLYNOMIAL_STATE_END);
 

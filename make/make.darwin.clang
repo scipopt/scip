@@ -17,3 +17,8 @@ GXXWARN += -Wno-unknown-warning-option
 
 # there are macros where we override initializers on purpose
 GCCWARN += -Wno-initializer-overrides
+
+ifeq ($(SHARED),true)
+FLAGS		+=	-fPIC
+endif
+LINK_shared		=	-shared

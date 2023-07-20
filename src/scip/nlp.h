@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -198,6 +198,14 @@ SCIP_RETCODE SCIPnlrowChgRhs(
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_NLP*             nlp,                /**< current NLP data */
    SCIP_Real             rhs                 /**< new right hand side */
+   );
+
+/** sets the curvature of a nonlinear row */
+void SCIPnlrowSetCurvature(
+   SCIP_NLP*             nlp,                /**< NLP */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NLROW*           nlrow,              /**< NLP row */
+   SCIP_EXPRCURV         curvature           /**< curvature of NLP row */
    );
 
 /** removes (or substitutes) all fixed, negated, aggregated, multi-aggregated variables from the linear and nonlinear part of a nonlinear row and simplifies its expression */
@@ -634,6 +642,15 @@ SCIP_NLROW** SCIPnlpGetNlRows(
 /** gets current number of nonlinear rows in NLP */
 int SCIPnlpGetNNlRows(
    SCIP_NLP*             nlp                 /**< current NLP data */
+   );
+
+/** gets statistics on convexity of nonlinear rows in NLP */
+void SCIPnlpGetNlRowsStat(
+   SCIP_NLP*             nlp,                /**< current NLP data */
+   int*                  nlinear,            /**< buffer to store number of linear rows in NLP, or NULL */
+   int*                  nconvexineq,        /**< buffer to store number of convex inequalities in NLP, or NULL */
+   int*                  nnonconvexineq,     /**< buffer to store number of nonconvex inequalities in NLP, or NULL */
+   int*                  nnonlineareq        /**< buffer to store number of nonlinear equalities or ranged rows in NLP, or NULL */
    );
 
 /** gets the NLP solver interface */

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -64,6 +64,7 @@ struct SCIP_Nlhdlr
    SCIP_DECL_NLHDLREXITSEPA((*exitsepa));          /**< separation deinitialization callback (can be NULL) */
    SCIP_DECL_NLHDLRINTEVAL((*inteval));            /**< interval evaluation callback (can be NULL) */
    SCIP_DECL_NLHDLRREVERSEPROP((*reverseprop));    /**< reverse propagation callback (can be NULL) */
+   SCIP_DECL_NLHDLRSOLLINEARIZE((*sollinearize));  /**< solution linearization callback (can be NULL) */
 
    /* statistics */
    SCIP_Longint          nenfocalls;         /**< number of times, the enforcement or estimation callback was called */

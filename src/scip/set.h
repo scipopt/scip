@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -384,6 +384,14 @@ SCIP_RETCODE SCIPsetSetStringParam(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           name,               /**< name of the parameter */
    const char*           value               /**< new value of the parameter */
+   );
+
+/** changes the value of an existing parameter */
+SCIP_RETCODE SCIPsetSetParam(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   const char*           name,               /**< name of the parameter */
+   const char*           value               /**< new value of the parameter as string */
    );
 
 /** reads parameters from a file */

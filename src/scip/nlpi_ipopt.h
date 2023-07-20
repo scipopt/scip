@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -74,7 +74,7 @@ void* SCIPgetNlpiOracleIpopt(
 
 /** Calls Lapacks Dsyev routine to compute eigenvalues and eigenvectors of a dense matrix.
  *
- * It's here, because we use Ipopt's C interface to Lapack.
+ * This uses Ipopt's interface to Lapack.
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPcallLapackDsyevIpopt(
@@ -89,7 +89,7 @@ SCIP_RETCODE SCIPcallLapackDsyevIpopt(
  *  Calls Lapacks DGETRF routine to calculate a LU factorization and uses this factorization to solve
  *  the linear problem Ax = b.
  *
- * It's here, because we use Ipopt's C interface to Lapack.
+ * This uses Ipopt's interface to Lapack.
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPsolveLinearEquationsIpopt(

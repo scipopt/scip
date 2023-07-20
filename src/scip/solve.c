@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -188,10 +188,10 @@ SCIP_Bool SCIPsolveIsStopped(
       && (SCIPsetIsLT(set, SCIPgetGap(set->scip), set->limit_gap)
          || SCIPsetIsLT(set, (SCIPgetUpperbound(set->scip) - SCIPgetLowerbound(set->scip)) * SCIPgetTransObjscale(set->scip), set->limit_absgap )) )
       stat->status = SCIP_STATUS_GAPLIMIT;
-   else if( set->limit_solutions >= 0 && set->stage >= SCIP_STAGE_PRESOLVED
+   else if( set->limit_solutions >= 0 && set->stage >= SCIP_STAGE_PRESOLVING
       && SCIPgetNLimSolsFound(set->scip) >= set->limit_solutions )
       stat->status = SCIP_STATUS_SOLLIMIT;
-   else if( set->limit_bestsol >= 0 && set->stage >= SCIP_STAGE_PRESOLVED
+   else if( set->limit_bestsol >= 0 && set->stage >= SCIP_STAGE_PRESOLVING
       && SCIPgetNBestSolsFound(set->scip) >= set->limit_bestsol )
       stat->status = SCIP_STATUS_BESTSOLLIMIT;
    else if( checknodelimits && set->limit_nodes >= 0 && stat->nnodes >= set->limit_nodes )

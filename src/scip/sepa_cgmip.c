@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -1064,8 +1064,10 @@ SCIP_RETCODE createSubscip(
    unsigned int ucnt;
    unsigned int nshifted;
    unsigned int ncomplemented;
-   unsigned int ncontconverted;
-   unsigned int nintconverted;
+#ifndef NDEBUG
+   unsigned int ncontconverted = 0;
+   unsigned int nintconverted = 0;
+#endif
    unsigned int nlbounds;
    unsigned int nubounds;
 
@@ -1233,8 +1235,6 @@ SCIP_RETCODE createSubscip(
    /* store lb/ub for complementing and perform preprocessing */
    nshifted = 0;
    ncomplemented = 0;
-   ncontconverted = 0;
-   nintconverted = 0;
    nlbounds = 0;
    nubounds = 0;
    for (j = 0; j < ncols; ++j)
@@ -1293,7 +1293,9 @@ SCIP_RETCODE createSubscip(
                         primsol[j] = ub[j];
                      else
                         primsol[j] = lb[j];
+#ifndef NDEBUG
                      ++nintconverted;
+#endif
                   }
                   else
                   {
@@ -1302,14 +1304,18 @@ SCIP_RETCODE createSubscip(
                      {
                         assert( SCIPisFeasIntegral(origscip, lb[j]) );
                         primsol[j] = lb[j];
+#ifndef NDEBUG
                         ++nintconverted;
+#endif
                      }
                      else
                      {
                         assert( ! SCIPisInfinity(origscip, ub[j]) );
                         assert( SCIPisFeasIntegral(origscip, ub[j]) );
                         primsol[j] = ub[j];
+#ifndef NDEBUG
                         ++nintconverted;
+#endif
                      }
                   }
                }
@@ -1327,7 +1333,9 @@ SCIP_RETCODE createSubscip(
                {
                   /* preprocessing is also performed for converted columns */
                   mipdata->coltype[j] = colConverted;
+#ifndef NDEBUG
                   ++ncontconverted;
+#endif
                }
             }
          }
@@ -2026,7 +2034,7 @@ SCIP_RETCODE createSubscip(
          sepadata->addviolationcons ? "_vc" : "",
          sepadata->skipmultbounds ? "_ub" : "",
          sepadata->primalseparation ? "_ps" : "",
-         SCIPgetProbName(scip));
+         SCIPgetProbName(origscip));
       SCIP_CALL( SCIPwriteOrigProblem(subscip, name, "lp", FALSE) );
       SCIPinfoMessage(origscip, NULL, "Wrote subscip to file <%s>.\n", name);
    }
@@ -2158,6 +2166,21 @@ SCIP_RETCODE subscipSetParams(
 
       /* use fast separation */
       SCIP_CALL( SCIPsetSeparating(subscip, SCIP_PARAMSETTING_FAST, TRUE) );
+   }
+#endif
+
+#ifdef SCIP_WRITEPROB
+   {
+      char name[SCIP_MAXSTRLEN];
+
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "cgsepa%s%s%s%s_%s.set",
+         sepadata->objlone ? "_l1" : "",
+         sepadata->addviolationcons ? "_vc" : "",
+         sepadata->skipmultbounds ? "_ub" : "",
+         sepadata->primalseparation ? "_ps" : "",
+         SCIPgetProbName(mipdata->scip));
+      SCIP_CALL( SCIPwriteParams(subscip, name, TRUE, FALSE) );
+      SCIPinfoMessage(mipdata->scip, NULL, "Wrote settings to file <%s>.\n", name);
    }
 #endif
 

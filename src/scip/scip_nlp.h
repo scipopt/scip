@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -217,6 +217,27 @@ SCIP_NLROW** SCIPgetNLPNlRows(
 SCIP_EXPORT
 int SCIPgetNNLPNlRows(
    SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets statistics on convexity of rows in NLP
+ *
+ *  Reports counts on the current number of linear rows, convex inequalities, nonconvex inequalities, and nonlinear equalities or ranged rows.
+ *  - A nonlinear inequality with infinity left-hand-side is accounted as convex if its expression has been marked as convex.
+ *  - A nonlinear inequality with infinity right-hand-side is accounted as convex if its expression has been marked as concave.
+ *  - Other nonlinear rows are accounted as nonconvex. Note that convexity for a nonlinear row may just not have been detected.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPgetNLPNlRowsStat(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int*                  nlinear,            /**< buffer to store number of linear rows in NLP, or NULL */
+   int*                  nconvexineq,        /**< buffer to store number of convex inequalities in NLP, or NULL */
+   int*                  nnonconvexineq,     /**< buffer to store number of nonconvex inequalities in NLP, or NULL */
+   int*                  nnonlineareq        /**< buffer to store number of nonlinear equalities or ranged rows in NLP, or NULL */
    );
 
 /** adds a nonlinear row to the NLP. This row is captured by the NLP.
@@ -709,6 +730,14 @@ SCIP_RETCODE SCIPchgNlRowConstant(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW*           nlrow,              /**< NLP row */
    SCIP_Real             constant            /**< new value for constant */
+   );
+
+/** set curvature of a nonlinear row */
+SCIP_EXPORT
+void SCIPsetNlRowCurvature(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLROW*           nlrow,              /**< NLP row */
+   SCIP_EXPRCURV         curvature           /**< curvature of NLP row */
    );
 
 /** adds variable with a linear coefficient to a nonlinear row

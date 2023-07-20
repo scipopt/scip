@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -2670,7 +2670,7 @@ SCIP_RETCODE cliqueCleanup(
    if( !SCIPcliqueIsCleanedUp(clique) )
    {
       SCIP_VAR* onefixedvar = NULL;
-      SCIP_Bool onefixedvalue;
+      SCIP_Bool onefixedvalue = FALSE;
       SCIP_Bool needsorting = FALSE;
       int v;
       int w;

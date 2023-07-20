@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -107,6 +107,7 @@ struct SCIP_Benders
    SCIP_Real             slackvarcoef;       /**< the initial objective coefficient of the slack variables in the subproblem */
    SCIP_Real             maxslackvarcoef;    /**< the maximal objective coefficient of the slack variables in the subproblem */
    SCIP_Bool             checkconsconvexity; /**< should the constraints of the subproblems be checked for convexity? */
+   SCIP_NLPPARAM         nlpparam;           /**< parameters for NLP solves */
 
    /* information for heuristics */
    SCIP*                 sourcescip;         /**< the source scip from when the Benders' was copied */

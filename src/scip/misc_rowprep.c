@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -440,7 +440,21 @@ SCIP_RETCODE rowprepCleanupIntegralCoefs(
     * If the required bound of x is not finite, then only round coef (introduces an error).
     * @TODO If only the opposite bound is available, then one could move the coefficient
     *   away from the closest integer so that the SCIP_ROW won't try to round it.
+    *
+    * Exception: If the coefficient is almost zero and there is only one variable, then
+    *   we scale up the row instead (if that doesn't make the side too huge).
+    *   Eventually, the row would have been changed to a boundchange anyway and a similar
+    *   operation happens, but we need to ensure that coefficient isn't just rounded to 0 first.
     */
+
+   if( rowprep->nvars == 1 && rowprep->coefs[0] != 0.0 && SCIPisZero(scip, rowprep->coefs[0]) && REALABS(rowprep->side / rowprep->coefs[0]) < ROWPREP_SCALEUP_MAXSIDE )
+   {
+      SCIPdebugMsg(scip, "var with almost zero coef in boundchange-row %.15g*<%s> <=/>= %.15g; scaling up\n",
+         rowprep->coefs[0], SCIPvarGetName(rowprep->vars[0]), rowprep->side);
+      (void) SCIPscaleRowprep(rowprep, REALABS(1.0/rowprep->coefs[0]));
+      return SCIP_OKAY;
+   }
+
    for( i = 0; i < rowprep->nvars; ++i )
    {
       coef = rowprep->coefs[i];

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -146,8 +146,7 @@ SCIP_DECL_READERREAD(readerReadCsol)
       i++;
    }
    SCIP_CALL( SCIPallocBufferArray(scip, &solprobname, i+2) );
-   strncpy(solprobname, &buf[0], (unsigned int) i);
-   solprobname[i]= '\0';
+   SCIPstrncpy(solprobname, buf, i);
 
    printf("Reading solution for %s...\n", solprobname);
 

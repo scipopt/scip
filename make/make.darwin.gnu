@@ -13,7 +13,9 @@ endif
 
 ifeq ($(SHARED),true)
 LIBBUILDFLAGS   =	-dynamiclib -undefined suppress -flat_namespace
+FLAGS		+=	-fPIC
 endif
+LINK_shared		=	-shared
 
 CXXFLAGS	=	-fno-stack-check
 CFLAGS		=	-std=c99 -fno-stack-check -D_XOPEN_SOURCE=600

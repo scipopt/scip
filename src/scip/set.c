@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -203,6 +203,7 @@
 #define SCIP_DEFAULT_LIMIT_GAP              0.0 /**< solving stops, if the gap is below the given value */
 #define SCIP_DEFAULT_LIMIT_ABSGAP           0.0 /**< solving stops, if the absolute difference between primal and dual
                                                  *   bound reaches this value */
+#define SCIP_DEFAULT_LIMIT_OBJSTOP SCIP_INVALID /**< solving stops, if solution is found that is at least as good as given value */
 #define SCIP_DEFAULT_LIMIT_NODES           -1LL /**< maximal number of nodes to process (-1: no limit) */
 #define SCIP_DEFAULT_LIMIT_STALLNODES      -1LL /**< solving stops, if the given number of nodes was processed since the
                                                  *   last improvement of the primal solution value (-1: no limit) */
@@ -439,7 +440,7 @@
                                                  *   's'um, 'd'iscrete) */
 #define SCIP_DEFAULT_SEPA_CUTSELRESTART     'a' /**< cut selection during restart ('a'ge, activity 'q'uotient) */
 #define SCIP_DEFAULT_SEPA_CUTSELSUBSCIP     'a' /**< cut selection for sub SCIPs  ('a'ge, activity 'q'uotient) */
-#define SCIP_DEFAULT_SEPA_FILTERCUTPOOLREL TRUE /**< should cutpool separate only cuts with high relative efficacy? */
+#define SCIP_DEFAULT_SEPA_FILTERCUTPOOLREL FALSE /**< should cutpool separate only cuts with high relative efficacy? */
 #define SCIP_DEFAULT_SEPA_MAXRUNS            -1 /**< maximal number of runs for which separation is enabled (-1: unlimited) */
 #define SCIP_DEFAULT_SEPA_MAXROUNDS          -1 /**< maximal number of separation rounds per node (-1: unlimited) */
 #define SCIP_DEFAULT_SEPA_MAXROUNDSROOT      -1 /**< maximal number of separation rounds in the root node (-1: unlimited) */
@@ -1650,9 +1651,14 @@ SCIP_RETCODE SCIPsetCreate(
          "solving stops, if the absolute gap = |primalbound - dualbound| is below the given value",
          &(*set)->limit_absgap, FALSE, SCIP_DEFAULT_LIMIT_ABSGAP, 0.0, SCIP_REAL_MAX,
          SCIPparamChgdLimit, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "limits/objectivestop",
+         "solving stops, if solution is found that is at least as good as given value",
+         &(*set)->limit_objstop, FALSE, SCIP_DEFAULT_LIMIT_OBJSTOP, SCIP_REAL_MIN, SCIP_REAL_MAX,
+         SCIPparamChgdLimit, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "limits/solutions",
-         "solving stops, if the given number of solutions were found (-1: no limit)",
+         "solving stops, if the given number of solutions were found; this limit is first checked in presolving (-1: no limit)",
          &(*set)->limit_solutions, FALSE, SCIP_DEFAULT_LIMIT_SOLUTIONS, -1, INT_MAX,
          SCIPparamChgdLimit, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
@@ -2044,10 +2050,16 @@ SCIP_RETCODE SCIPsetCreate(
 
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "misc/usesymmetry",
-         "bitset describing used symmetry handling technique (0: off; 1: polyhedral (orbitopes and/or symresacks);" \
-         " 2: orbital fixing; 3: orbitopes and orbital fixing; 4: Schreier Sims cuts; 5: Schreier Sims cuts and " \
-         "orbitopes); 6: Schreier Sims cuts and orbital fixing; 7: Schreier Sims cuts, orbitopes, and orbital " \
-         "fixing, see type_symmetry.h.",
+         "bitset describing used symmetry handling technique: " \
+         "(0: off; " \
+         "1: constraint-based (orbitopes and/or symresacks); " \
+         "2: orbital fixing; " \
+         "3: orbitopes and orbital fixing; " \
+         "4: Schreier Sims cuts; " \
+         "5: Schreier Sims cuts and orbitopes; " \
+         "6: Schreier Sims cuts and orbital fixing; " \
+         "7: Schreier Sims cuts, orbitopes, and orbital fixing) " \
+         "See type_symmetry.h.",
          &(*set)->misc_usesymmetry, FALSE, SCIP_DEFAULT_MISC_USESYMMETRY, 0, 7,
          paramChgdUsesymmetry, NULL) );
 
@@ -3435,6 +3447,21 @@ SCIP_RETCODE SCIPsetSetStringParam(
    assert(set != NULL);
 
    SCIP_CALL( SCIPparamsetSetString(set->paramset, set, messagehdlr, name, value) );
+
+   return SCIP_OKAY;
+}
+
+/** changes the value of an existing parameter */
+SCIP_RETCODE SCIPsetSetParam(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   const char*           name,               /**< name of the parameter */
+   const char*           value               /**< new value of the parameter as string */
+   )
+{
+   assert(set != NULL);
+
+   SCIP_CALL( SCIPparamsetSet(set->paramset, set, messagehdlr, name, value, FALSE) );
 
    return SCIP_OKAY;
 }

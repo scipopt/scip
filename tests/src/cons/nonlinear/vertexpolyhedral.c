@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -99,6 +99,12 @@ SCIP_DECL_VERTEXPOLYFUN(prodfunction)
 
    for( i = 0; i < nargs; ++i )
       ret *= args[i];
+
+   /* these products can get fairly large when nargs is high, which is troublesome for new aspiring LP solvers;
+    * let's take a sqrt() if we have more than 10 args
+    */
+   if( nargs > 10 )
+      ret = sqrt(fabs(ret)) * (ret < 0.0 ? -1.0 : 1.0);
 
    return ret;
 }

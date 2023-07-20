@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -52,6 +52,14 @@ const char* SYMsymmetryGetName(void);
 SCIP_EXPORT
 const char* SYMsymmetryGetDesc(void);
 
+/** return name of additional external program used for computing symmetries */
+SCIP_EXPORT
+const char* SYMsymmetryGetAddName(void);
+
+/** return description of additional external program used to compute symmetries */
+SCIP_EXPORT
+const char* SYMsymmetryGetAddDesc(void);
+
 /** compute generators of symmetry group */
 SCIP_EXPORT
 SCIP_RETCODE SYMcomputeSymmetryGenerators(
@@ -62,7 +70,8 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    int*                  nperms,             /**< pointer to store number of permutations */
    int*                  nmaxperms,          /**< pointer to store maximal number of permutations (needed for freeing storage) */
    int***                perms,              /**< pointer to store permutation generators as (nperms x npermvars) matrix */
-   SCIP_Real*            log10groupsize      /**< pointer to store log10 of size of group */
+   SCIP_Real*            log10groupsize,     /**< pointer to store log10 of size of group */
+   SCIP_Real*            symcodetime         /**< pointer to store the time for symmetry code */
    );
 
 #ifdef __cplusplus

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -878,7 +878,6 @@ void SORTTPL_NAME(SCIPselectWeighted, SORTTPL_NAMEEXT)
    int hi;
    int lo;
    int j;
-   int recursiondepth = 0;
    int localmedianpos = -1;
    SCIP_Real totalweightsum = 0.0;
    SCIP_Real residualcapacity;
@@ -913,8 +912,6 @@ void SORTTPL_NAME(SCIPselectWeighted, SORTTPL_NAMEEXT)
       SCIP_Real betterweightsum;
       SCIP_Real pivotweight;
       SORTTPL_KEYTYPE pivot;
-
-      ++recursiondepth;
 
       /* guess a median as pivot */
       pivotindex = SORTTPL_NAME(sorttpl_selectPivotIndex, SORTTPL_NAMEEXT)

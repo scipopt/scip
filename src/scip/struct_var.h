@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -75,14 +75,14 @@ struct SCIP_BranchingData
    SCIP_Real             lpsolval;           /**< sol val of var in last LP prior to bound change, or SCIP_INVALID if unknown */
 };
 
-/** data for infered bound changes */
+/** data for inferred bound changes */
 struct SCIP_InferenceData
 {
    SCIP_VAR*             var;                /**< variable that was changed (parent of var, or var itself) */
    union
    {
-      SCIP_CONS*         cons;               /**< constraint that infered this bound change, or NULL */
-      SCIP_PROP*         prop;               /**< propagator that infered this bound change, or NULL */
+      SCIP_CONS*         cons;               /**< constraint that inferred this bound change, or NULL */
+      SCIP_PROP*         prop;               /**< propagator that inferred this bound change, or NULL */
    } reason;
    int                   info;               /**< user information for inference to help resolving the conflict */
 };
@@ -94,10 +94,10 @@ struct SCIP_BoundChg
    union
    {
       SCIP_BRANCHINGDATA branchingdata;      /**< data for branching decisions */
-      SCIP_INFERENCEDATA inferencedata;      /**< data for infered bound changes */
+      SCIP_INFERENCEDATA inferencedata;      /**< data for inferred bound changes */
    } data;
    SCIP_VAR*             var;                /**< active variable to change the bounds for */
-   unsigned int          boundchgtype:2;     /**< bound change type: branching decision or infered bound change */
+   unsigned int          boundchgtype:2;     /**< bound change type: branching decision or inferred bound change */
    unsigned int          boundtype:1;        /**< type of bound for var: lower or upper bound */
    unsigned int          inferboundtype:1;   /**< type of bound for inference var (see inference data): lower or upper bound */
    unsigned int          applied:1;          /**< was this bound change applied at least once? */
@@ -117,10 +117,10 @@ struct SCIP_BdChgInfo
    SCIP_Real             oldbound;           /**< old value for bound */
    SCIP_Real             newbound;           /**< new value for bound */
    SCIP_VAR*             var;                /**< active variable that changed the bounds */
-   SCIP_INFERENCEDATA    inferencedata;      /**< data for infered bound changes */
+   SCIP_INFERENCEDATA    inferencedata;      /**< data for inferred bound changes */
    SCIP_BDCHGIDX         bdchgidx;           /**< bound change index in path from root to current node */
    unsigned int          pos:27;             /**< position in the variable domain change array */
-   unsigned int          boundchgtype:2;     /**< bound change type: branching decision or infered bound change */
+   unsigned int          boundchgtype:2;     /**< bound change type: branching decision or inferred bound change */
    unsigned int          boundtype:1;        /**< type of bound for var: lower or upper bound */
    unsigned int          inferboundtype:1;   /**< type of bound for inference var (see inference data): lower or upper bound */
    unsigned int          redundant:1;        /**< does the bound change info belong to a redundant bound change? */
