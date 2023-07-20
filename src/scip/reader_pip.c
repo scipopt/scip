@@ -1754,9 +1754,9 @@ SCIP_RETCODE getActiveVariables(
    assert(scip != NULL);
    assert(vars != NULL);
    assert(scalars != NULL);
-   assert(*vars != NULL);
-   assert(*scalars != NULL);
    assert(nvars != NULL);
+   assert(*vars != NULL || *nvars == 0);
+   assert(*scalars != NULL);
    assert(constant != NULL);
 
    if( transformed )
@@ -1774,6 +1774,13 @@ SCIP_RETCODE getActiveVariables(
    }
    else
    {
+      if( *nvars > 0 && ( *vars == NULL || *scalars == NULL ) ) /*lint !e774 !e845*/
+      {
+         SCIPerrorMessage("Null pointer"); /* should not happen */
+         SCIPABORT();
+         return SCIP_INVALIDDATA;  /*lint !e527*/
+      }
+
       for( v = 0; v < *nvars; ++v )
       {
          SCIP_CALL( SCIPvarGetOrigvarSum(&(*vars)[v], &(*scalars)[v], constant) );
