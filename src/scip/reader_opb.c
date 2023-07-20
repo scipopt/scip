@@ -2864,7 +2864,7 @@ SCIP_RETCODE printLinearCons(
    int v;
 
    assert( scip != NULL );
-   assert( vars != NULL );
+   assert( vars != NULL || nvars == 0 );
 
    if( SCIPisInfinity(scip, -lhs) && SCIPisInfinity(scip, rhs) )
       return SCIP_OKAY;
