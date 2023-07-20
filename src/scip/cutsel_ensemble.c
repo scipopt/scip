@@ -46,27 +46,27 @@
 #define RANDSEED                  0x5EED
 
 #define DEFAULT_MINSCORE                0.0  /**< minimum score s.t. a cut can be selected */
-#define DEFAULT_EFFICACYWEIGHT          1.0  /**< weight of normed-efficacy in score calculation */
+#define DEFAULT_EFFICACYWEIGHT          0.75 /**< weight of normed-efficacy in score calculation */
 #define DEFAULT_DIRCUTOFFDISTWEIGHT     0.0  /**< weight of normed-directed cutoff distance in score calculation */
-#define DEFAULT_OBJPARALWEIGHT          0.2  /**< weight of objective parallelism in score calculation */
-#define DEFAULT_INTSUPPORTWEIGHT        0.1  /**< weight of integral support in cut score calculation */
+#define DEFAULT_OBJPARALWEIGHT          0.25 /**< weight of objective parallelism in score calculation */
+#define DEFAULT_INTSUPPORTWEIGHT        0.45 /**< weight of integral support in cut score calculation */
 #define DEFAULT_EXPIMPROVWEIGHT         0.1  /**< weight of normed-expected improvement in cut score calculation */
-#define DEFAULT_PSCOSTWEIGHT            0.2  /**< weight of normalised pseudo-costs in cut score calculation */
-#define DEFAULT_NLOCKSWEIGHT            0.1  /**< weight of normalised number of locks in cut score calculation */
-#define DEFAULT_MAXSPARSITYBONUS        0.6  /**< score given to a cut with complete sparsity */
-#define DEFAULT_SPARSITYENDBONUS        0.4  /**< the density at which a cut no longer receives additional score */
+#define DEFAULT_PSCOSTWEIGHT            0.75 /**< weight of normalised pseudo-costs in cut score calculation */
+#define DEFAULT_NLOCKSWEIGHT            0.25 /**< weight of normalised number of locks in cut score calculation */
+#define DEFAULT_MAXSPARSITYBONUS        0.5  /**< score given to a cut with complete sparsity */
+#define DEFAULT_SPARSITYENDBONUS        0.2  /**< the density at which a cut no longer receives additional score */
 #define DEFAULT_GOODNUMERICBONUS        0.0  /**< bonus provided for good numerics */
 #define DEFAULT_MAXCOEFRATIOBONUS       10000 /**< maximum coefficient ratio of cut for which numeric bonus is given */
-#define DEFAULT_PENALISELOCKS           FALSE /**< whether having less locks should be rewarded instead of more */
-#define DEFAULT_PENALISEOBJPARAL        FALSE /**< whether objective parallelism should be penalised not rewarded */
-#define DEFAULT_FILTERPARALCUTS         TRUE /**< should cuts be filtered so no two parallel cuts are added */
-#define DEFAULT_MAXPARAL                0.9  /**< threshold for when two cuts are considered parallel to each other */
-#define DEFAULT_PENALISEPARALCUTS       FALSE /**< should two parallel cuts be penalised instead of outright filtered */
-#define DEFAULT_PARALPENALTY            0.5  /**< penalty for weaker of two parallel cuts if penalising parallel cuts */
-#define DEFAULT_FILTERDENSECUTS         FALSE /**< should cuts over a given density threshold be filtered */
-#define DEFAULT_MAXCUTDENSITY           0.4  /**< max allowed cut density if filtering dense cuts */
-#define DEFAULT_MAXNONZEROROOTROUND     5    /**< max nonzeros per round (root). Gets multiplied by num LP cols */
-#define DEFAULT_MAXNONZEROTREEROUND     3    /**< max nonzeros per round (tree). Gets multiplied by num LP cols */
+#define DEFAULT_PENALISELOCKS           TRUE /**< whether having less locks should be rewarded instead of more */
+#define DEFAULT_PENALISEOBJPARAL        TRUE /**< whether objective parallelism should be penalised not rewarded */
+#define DEFAULT_FILTERPARALCUTS         FALSE /**< should cuts be filtered so no two parallel cuts are added */
+#define DEFAULT_MAXPARAL                0.95 /**< threshold for when two cuts are considered parallel to each other */
+#define DEFAULT_PENALISEPARALCUTS       TRUE /**< should two parallel cuts be penalised instead of outright filtered */
+#define DEFAULT_PARALPENALTY            0.25 /**< penalty for weaker of two parallel cuts if penalising parallel cuts */
+#define DEFAULT_FILTERDENSECUTS         TRUE /**< should cuts over a given density threshold be filtered */
+#define DEFAULT_MAXCUTDENSITY           0.425 /**< max allowed cut density if filtering dense cuts */
+#define DEFAULT_MAXNONZEROROOTROUND     4.5  /**< max nonzeros per round (root). Gets multiplied by num LP cols */
+#define DEFAULT_MAXNONZEROTREEROUND     9.5  /**< max nonzeros per round (tree). Gets multiplied by num LP cols */
 
 /*
  * Data structures
