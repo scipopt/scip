@@ -595,7 +595,7 @@ SCIP_Real calcScore(
    SCIP_Real             cutoffscore,        /**< cutoff score of current variable */
    SCIP_Real             avgcutoffscore,     /**< average cutoff score */
    SCIP_Real             gmieffscore,        /**< normalised-eff of avg GMI cuts from row when var was frac and basic */
-   SCIP_Real             lastgmieffscore,     /**< last normalised gmieffscore when var was frac and basic  */
+   SCIP_Real             lastgmieffscore,    /**< last normalised gmieffscore when var was frac and basic  */
    SCIP_Real             pscostscore,        /**< pscost score of current variable */
    SCIP_Real             avgpscostscore,     /**< average pscost score */
    SCIP_Real             nlscore,            /**< nonlinear score of current variable between 0 and 1 */
