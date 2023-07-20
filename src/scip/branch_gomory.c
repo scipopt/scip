@@ -48,7 +48,7 @@
 
 
 #define BRANCHRULE_NAME            "gomory"
-#define BRANCHRULE_DESC            "gomory cut score branching"
+#define BRANCHRULE_DESC            "Gomory cut score branching"
 #define BRANCHRULE_PRIORITY        -1000
 #define BRANCHRULE_MAXDEPTH        -1
 #define BRANCHRULE_MAXBOUNDDIST    1.0
@@ -80,8 +80,6 @@ struct SCIP_BranchruleData
 /*
  * Local methods
  */
-
-/* put your local methods here, and declare them static */
 
 /** Generate GMI cut: The GMI is given by
     * sum(f_j x_j                  , j in J_I s.t. f_j <= f_0) +
@@ -385,8 +383,6 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpGomory)
    int lppos;
    int ninds;
    int bestcand;
-   int i;
-   int j;
 
    name = (char *) "test";
 
@@ -395,7 +391,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpGomory)
    assert(scip != NULL);
    assert(result != NULL);
 
-   SCIPdebugMsg(scip, "Execlp method of gomory branching\n");
+   SCIPdebugMsg(scip, "Execlp method of Gomory branching\n");
 
    /* Get branching candidates */
    SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, NULL, &nlpcands, NULL) );
@@ -451,12 +447,12 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpGomory)
    SCIP_CALL( SCIPallocBufferArray(scip, &inds, nrows) );
 
    /* Create basis indices mapping (from the column position to LP tableau rox index) */
-   for( i = 0; i < ncols; ++i )
+   for( int i = 0; i < ncols; ++i )
    {
       basicvarpos2tableaurow[i] = -1;
    }
    SCIP_CALL( SCIPgetLPBasisInd(scip, basisind) );
-   for( i = 0; i < nrows; ++i )
+   for( int i = 0; i < nrows; ++i )
    {
       if( basisind[i] >= 0 )
          basicvarpos2tableaurow[basisind[i]] = i;
@@ -468,7 +464,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpGomory)
    ninds = -1;
    
    /* Iterate over candidates and get best cut score */
-   for( i = 0; i < maxncands; i++ ) {
+   for( int i = 0; i < maxncands; i++ ) {
       
       /* Initialise the score of the cut */
       score = 0;
@@ -494,7 +490,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpGomory)
          cut = NULL;
          SCIP_CALL( SCIPcreateEmptyRowUnspec(scip, &cut, name, -SCIPinfinity(scip), cutrhs, TRUE,
                    FALSE, TRUE) );
-         for( j = 0; j < ncols; ++j )
+         for( int j = 0; j < ncols; ++j )
          {
             if( !SCIPisZero(scip, cutcoefs[j]) )
             {
@@ -565,9 +561,9 @@ SCIP_RETCODE SCIPincludeBranchruleGomory(
    SCIP_CALL( SCIPsetBranchruleFree(scip, branchrule, branchFreeGomory) );
    SCIP_CALL( SCIPsetBranchruleExecLp(scip, branchrule, branchExeclpGomory) );
 
-   /* gomory cut branching rule parameters */
+   /* Gomory cut branching rule parameters */
    SCIP_CALL( SCIPaddIntParam(scip,"branching/gomory/maxncands",
-         "maximum amount of branching candidates to generate gomory cut for (-1: all candidates)",
+         "maximum amount of branching candidates to generate Gomory cut for (-1: all candidates)",
          &branchruledata->maxncands, FALSE, DEFAULT_MAXNCANDS, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,"branching/gomory/efficacyweight",
          "weight of efficacy in the cut scoring rule",
