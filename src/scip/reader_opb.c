@@ -2679,8 +2679,6 @@ SCIP_RETCODE printNonLinearCons(
 
    assert(scip != NULL);
    assert(vars != NULL);
-   assert(nvars > 0);
-   assert(lhs <= rhs);
    assert(resvars != NULL);
    assert(nresvars > 0);
    assert(andvars != NULL && nandvars != NULL);
@@ -2867,8 +2865,6 @@ SCIP_RETCODE printLinearCons(
 
    assert( scip != NULL );
    assert( vars != NULL );
-   assert( nvars > 0 );
-   assert( lhs <= rhs );
 
    if( SCIPisInfinity(scip, -lhs) && SCIPisInfinity(scip, rhs) )
       return SCIP_OKAY;
@@ -3461,16 +3457,6 @@ SCIP_RETCODE writeOpbConstraints(
       {
 	 if( strcmp(conshdlrname, "linear") == 0 )
 	 {
-	    if( SCIPgetNVarsLinear(scip, cons) == 0 )
-	    {
-	       if( SCIPisGT(scip, SCIPgetLhsLinear(scip, cons), SCIPgetRhsLinear(scip, cons)) )
-	       {
-		  SCIPerrorMessage("Cannot print empty violated constraint %s, %g <= %g is not fulfilled\n",
-		     SCIPconsGetName(cons), SCIPgetLhsLinear(scip, cons), SCIPgetRhsLinear(scip, cons));
-	       }
-	       continue;
-	    }
-
 	    if( existands )
 	    {
 	       retcode = printNonLinearCons(scip, file,
@@ -3489,9 +3475,6 @@ SCIP_RETCODE writeOpbConstraints(
 	 {
 	    consvars = SCIPgetVarsSetppc(scip, cons);
 	    nconsvars = SCIPgetNVarsSetppc(scip, cons);
-
-	    if( nconsvars == 0 )
-	       continue;
 
 	    switch( SCIPgetTypeSetppc(scip, cons) )
 	    {
@@ -3537,9 +3520,6 @@ SCIP_RETCODE writeOpbConstraints(
 	 }
 	 else if( strcmp(conshdlrname, "logicor") == 0 )
 	 {
-	    if( SCIPgetNVarsLogicor(scip, cons) == 0 )
-	       continue;
-
 	    if( existands )
 	    {
 	       retcode = printNonLinearCons(scip, file,
@@ -3559,9 +3539,6 @@ SCIP_RETCODE writeOpbConstraints(
 
 	    consvars = SCIPgetVarsKnapsack(scip, cons);
 	    nconsvars = SCIPgetNVarsKnapsack(scip, cons);
-
-	    if( nconsvars == 0 )
-	       continue;
 
 	    /* copy Longint array to SCIP_Real array */
 	    weights = SCIPgetWeightsKnapsack(scip, cons);
