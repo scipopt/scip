@@ -2674,11 +2674,11 @@ SCIP_RETCODE printNonLinearCons(
    SCIP_Real activeconstant;
    SCIP_Longint mult;
    SCIP_RETCODE retcode;
-   int v;
    int nactivevars;
+   int v;
 
    assert(scip != NULL);
-   assert(vars != NULL);
+   assert(vars != NULL || nvars == 0);
    assert(resvars != NULL);
    assert(nresvars > 0);
    assert(andvars != NULL && nandvars != NULL);
@@ -2686,25 +2686,30 @@ SCIP_RETCODE printNonLinearCons(
    if( SCIPisInfinity(scip, -lhs) && SCIPisInfinity(scip, rhs) )
       return SCIP_OKAY;
 
-   activeconstant = 0.0;
    nactivevars = nvars;
+   activevars = NULL;
+   activevals = NULL;
+   activeconstant = 0.0;
 
    /* duplicate variable and value array */
-   SCIP_CALL( SCIPduplicateBufferArray(scip, &activevars, vars, nactivevars ) );
-   if( vals != NULL )
+   if( vars != NULL )
    {
-      SCIP_CALL( SCIPduplicateBufferArray(scip, &activevals, vals, nactivevars ) );
-   }
-   else
-   {
-      SCIP_CALL( SCIPallocBufferArray(scip, &activevals, nactivevars) );
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &activevars, vars, nactivevars ) );
+      if( vals != NULL )
+      {
+         SCIP_CALL( SCIPduplicateBufferArray(scip, &activevals, vals, nactivevars ) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPallocBufferArray(scip, &activevals, nactivevars) );
 
-      for( v = 0; v < nactivevars; ++v )
-         activevals[v] = 1.0;
-   }
+         for( v = 0; v < nactivevars; ++v )
+            activevals[v] = 1.0;
+      }
 
-   /* retransform given variables to active variables */
-   SCIP_CALL( getActiveVariables(scip, activevars, activevals, &nactivevars, &activeconstant, transformed) );
+      /* retransform given variables to active variables */
+      SCIP_CALL( getActiveVariables(scip, activevars, activevals, &nactivevars, &activeconstant, transformed) );
+   }
 
    mult = 1;
    retcode = SCIP_OKAY;
@@ -2738,8 +2743,11 @@ SCIP_RETCODE printNonLinearCons(
    }
 
    /* free buffer arrays */
-   SCIPfreeBufferArray(scip, &activevars);
-   SCIPfreeBufferArray(scip, &activevals);
+   if( vars != NULL )
+   {
+      SCIPfreeBufferArray(scip, &activevars);
+      SCIPfreeBufferArray(scip, &activevals);
+   }
 
    return retcode;
 }
@@ -2857,10 +2865,10 @@ SCIP_RETCODE printLinearCons(
 {
    SCIP_VAR** activevars;
    SCIP_Real* activevals;
-   int nactivevars;
    SCIP_Real activeconstant;
    SCIP_Longint mult;
    SCIP_RETCODE retcode;
+   int nactivevars;
    int v;
 
    assert( scip != NULL );
@@ -2869,25 +2877,30 @@ SCIP_RETCODE printLinearCons(
    if( SCIPisInfinity(scip, -lhs) && SCIPisInfinity(scip, rhs) )
       return SCIP_OKAY;
 
+   nactivevars = nvars;
+   activevars = NULL;
+   activevals = NULL;
    activeconstant = 0.0;
 
    /* duplicate variable and value array */
-   nactivevars = nvars;
-   SCIP_CALL( SCIPduplicateBufferArray(scip, &activevars, vars, nactivevars ) );
-   if( vals != NULL )
+   if( vars != NULL )
    {
-      SCIP_CALL( SCIPduplicateBufferArray(scip, &activevals, vals, nactivevars ) );
-   }
-   else
-   {
-      SCIP_CALL( SCIPallocBufferArray(scip, &activevals, nactivevars) );
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &activevars, vars, nactivevars ) );
+      if( vals != NULL )
+      {
+         SCIP_CALL( SCIPduplicateBufferArray(scip, &activevals, vals, nactivevars ) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPallocBufferArray(scip, &activevals, nactivevars) );
 
-      for( v = 0; v < nactivevars; ++v )
-         activevals[v] = 1.0;
-   }
+         for( v = 0; v < nactivevars; ++v )
+            activevals[v] = 1.0;
+      }
 
-   /* retransform given variables to active variables */
-   SCIP_CALL( getActiveVariables(scip, activevars, activevals, &nactivevars, &activeconstant, transformed) );
+      /* retransform given variables to active variables */
+      SCIP_CALL( getActiveVariables(scip, activevars, activevals, &nactivevars, &activeconstant, transformed) );
+   }
 
    mult = 1;
    retcode = SCIP_OKAY;
@@ -2921,8 +2934,11 @@ SCIP_RETCODE printLinearCons(
    }
 
    /* free buffer arrays */
-   SCIPfreeBufferArray(scip, &activevars);
-   SCIPfreeBufferArray(scip, &activevals);
+   if( vars != NULL )
+   {
+      SCIPfreeBufferArray(scip, &activevars);
+      SCIPfreeBufferArray(scip, &activevals);
+   }
 
    return retcode;
 }
