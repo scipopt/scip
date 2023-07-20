@@ -3878,7 +3878,7 @@ SCIP_RETCODE getActiveVariables(
    assert(scalars != NULL);
    assert(nvars != NULL);
    assert(*vars != NULL || *nvars == 0);
-   assert(*scalars != NULL);
+   assert(*scalars != NULL || *nvars == 0);
    assert(constant != NULL);
 
    if( transformed )
@@ -3898,7 +3898,7 @@ SCIP_RETCODE getActiveVariables(
    {
       if( *nvars > 0 && ( *vars == NULL || *scalars == NULL ) ) /*lint !e774 !e845*/
       {
-         SCIPerrorMessage("Null pointer"); /* should not happen */
+         SCIPerrorMessage("Null pointer in FZN reader\n"); /* should not happen */
          SCIPABORT();
          return SCIP_INVALIDDATA;  /*lint !e527*/
       }
