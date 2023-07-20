@@ -1741,8 +1741,8 @@ SCIP_DECL_HASHKEYVAL(hashKeyValVar)
 static
 SCIP_RETCODE getActiveVariables(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR**            vars,               /**< vars array to get active variables for */
-   SCIP_Real*            scalars,            /**< scalars a_1, ..., a_n in linear sum a_1*x_1 + ... + a_n*x_n + c */
+   SCIP_VAR***           vars,               /**< pointer to vars array to get active variables for */
+   SCIP_Real**           scalars,            /**< pointer to scalars a_1, ..., a_n in linear sum a_1*x_1 + ... + a_n*x_n + c */
    int*                  nvars,              /**< pointer to number of variables and values in vars and vals array */
    SCIP_Real*            constant,           /**< pointer to constant c in linear sum a_1*x_1 + ... + a_n*x_n + c  */
    SCIP_Bool             transformed         /**< transformed constraint? */
@@ -1751,29 +1751,50 @@ SCIP_RETCODE getActiveVariables(
    int requiredsize;
    int v;
 
-   assert( scip != NULL );
-   assert( vars != NULL );
-   assert( scalars != NULL );
-   assert( nvars != NULL );
-   assert( constant != NULL );
+   assert(scip != NULL);
+   assert(vars != NULL);
+   assert(scalars != NULL);
+   assert(nvars != NULL);
+   assert(*vars != NULL || *nvars == 0);
+   assert(*scalars != NULL || *nvars == 0);
+   assert(constant != NULL);
 
    if( transformed )
    {
-      SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, scalars, nvars, *nvars, constant, &requiredsize, TRUE) );
+      SCIP_CALL( SCIPgetProbvarLinearSum(scip, *vars, *scalars, nvars, *nvars, constant, &requiredsize, TRUE) );
 
       if( requiredsize > *nvars )
       {
-         SCIP_CALL( SCIPreallocBufferArray(scip, &vars, requiredsize) );
-         SCIP_CALL( SCIPreallocBufferArray(scip, &scalars, requiredsize) );
+         SCIP_CALL( SCIPreallocBufferArray(scip, vars, requiredsize) );
+         SCIP_CALL( SCIPreallocBufferArray(scip, scalars, requiredsize) );
 
-         SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, scalars, nvars, requiredsize, constant, &requiredsize, TRUE) );
+         SCIP_CALL( SCIPgetProbvarLinearSum(scip, *vars, *scalars, nvars, requiredsize, constant, &requiredsize, TRUE) );
          assert( requiredsize <= *nvars );
       }
    }
    else
    {
+      if( *nvars > 0 && ( *vars == NULL || *scalars == NULL ) ) /*lint !e774 !e845*/
+      {
+         SCIPerrorMessage("Null pointer in PIP reader\n"); /* should not happen */
+         SCIPABORT();
+         return SCIP_INVALIDDATA;  /*lint !e527*/
+      }
+
       for( v = 0; v < *nvars; ++v )
-         SCIP_CALL( SCIPvarGetOrigvarSum(&vars[v], &scalars[v], constant) );
+      {
+         SCIP_CALL( SCIPvarGetOrigvarSum(&(*vars)[v], &(*scalars)[v], constant) );
+
+         /* negated variables with an original counterpart may also be returned by SCIPvarGetOrigvarSum();
+          * make sure we get the original variable in that case
+          */
+         if( SCIPvarGetStatus((*vars)[v]) == SCIP_VARSTATUS_NEGATED )
+         {
+            (*vars)[v] = SCIPvarGetNegatedVar((*vars)[v]);
+            *constant += (*scalars)[v];
+            (*scalars)[v] *= -1.0;
+         }
+      }
    }
    return SCIP_OKAY;
 }
@@ -2014,7 +2035,7 @@ SCIP_RETCODE printRow(
       }
 
       /* get active variables */
-      SCIP_CALL( getActiveVariables(scip, activevars, activevals, &nactivevars, &activeconstant, transformed) );
+      SCIP_CALL( getActiveVariables(scip, &activevars, &activevals, &nactivevars, &activeconstant, transformed) );
       constant += activeconstant;
 
       /* print linear coefficients of linear variables */
@@ -2406,7 +2427,7 @@ SCIP_RETCODE printQuadraticCons(
       }
 
       /* retransform given variables to active variables */
-      SCIP_CALL( getActiveVariables(scip, activevars, activevals, &nactivevars, &activeconstant, transformed) );
+      SCIP_CALL( getActiveVariables(scip, &activevars, &activevals, &nactivevars, &activeconstant, transformed) );
    }
 
    /* print row(s) in LP format */
@@ -2563,7 +2584,7 @@ SCIP_RETCODE printAggregatedCons(
       activeconstant = 0.0;
 
       /* retransform given variables to active variables */
-      SCIP_CALL( getActiveVariables(scip, activevars, activevals, &nactivevars, &activeconstant, transformed) );
+      SCIP_CALL( getActiveVariables(scip, &activevars, &activevals, &nactivevars, &activeconstant, transformed) );
 
       activevals[nactivevars] = -1.0;
       activevars[nactivevars] = aggregatedVars[j];
