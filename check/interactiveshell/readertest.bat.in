@@ -1,10 +1,12 @@
+set heur emph off
 read "${PROJECT_SOURCE_DIR}"/check/"${path}"
 write problem temp/${basename}.${extension}
 presolve
 write transproblem temp/${basename}_trans.${extension}
+set heur emph def
 read temp/${basename}_trans.${extension}
 optimize
-validatesolve inf "${optval}"
+validatesolve "${optval}" "${optval}"
 read temp/${basename}.${extension}
 optimize
 validatesolve "${optval}" "${optval}"
