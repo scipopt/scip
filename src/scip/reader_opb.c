@@ -2449,7 +2449,7 @@ SCIP_RETCODE writeOpbObjective(
    if( objective )
    {
       /* opb format supports only minimization; therefore, a maximization problem has to be converted */
-      if( ( objsense < 0.0 ) != ( objscale < 0.0 ) )
+      if( ( objsense == SCIP_OBJSENSE_MAXIMIZE ) != ( objscale < 0.0 ) )
          mult *= -1;
 
       /* there exist a objective function*/
