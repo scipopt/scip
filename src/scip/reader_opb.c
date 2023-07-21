@@ -1720,7 +1720,7 @@ SCIP_RETCODE readOPBFile(
 
    /* opb format supports only minimization; therefore, flip objective sense for negative objective scale */
    if( objscale < 0.0 )
-      opbinput->objsense = (SCIP_OBJSENSE)(-1 * opbinput->objsense);
+      opbinput->objsense = (SCIP_OBJSENSE)(-1 * (int)(opbinput->objsense));
 
    if( ! SCIPisZero(scip, objoffset) )
    {
