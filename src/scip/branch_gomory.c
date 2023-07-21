@@ -313,7 +313,7 @@ SCIP_Bool getGMIFromRow(
       }
    }
 
-   return SCIP_OKAY;
+   return TRUE;
 }
 
 
@@ -485,7 +485,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpGomory)
          &cutrhs, branchruledata->useweakercuts);
       
       /* Calculate the weighted sum score of measures */
-      if ( success == SCIP_OKAY )
+      if ( success )
       {
          cut = NULL;
          SCIP_CALL( SCIPcreateEmptyRowUnspec(scip, &cut, name, -SCIPinfinity(scip), cutrhs, TRUE,
@@ -567,13 +567,13 @@ SCIP_RETCODE SCIPincludeBranchruleGomory(
          &branchruledata->maxncands, FALSE, DEFAULT_MAXNCANDS, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,"branching/gomory/efficacyweight",
          "weight of efficacy in the cut scoring rule",
-         &branchruledata->efficacyweight, FALSE, DEFAULT_EFFICACYWEIGHT, -1, 1, NULL, NULL) );
+         &branchruledata->efficacyweight, FALSE, DEFAULT_EFFICACYWEIGHT, -1.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,"branching/gomory/objparallelweight",
          "weight of objective parallelism in the cut scoring rule",
-         &branchruledata->objparallelweight, FALSE, DEFAULT_OBJPARALLELWEIGHT, -1, 1, NULL, NULL) );
+         &branchruledata->objparallelweight, FALSE, DEFAULT_OBJPARALLELWEIGHT, -1.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,"branching/gomory/intsupportweight",
          "weight of integer support in the cut scoring rule",
-         &branchruledata->intsupportweight, FALSE, DEFAULT_INTSUPPORTWEIGHT, -1, 1, NULL, NULL) );
+         &branchruledata->intsupportweight, FALSE, DEFAULT_INTSUPPORTWEIGHT, -1.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,"branching/gomory/performrelpscost",
          "whether default SCIP branching should be called without branching (used for bound inferences and conflicts)",
          &branchruledata->performrelpscost, FALSE, DEFAULT_PERFORMRELPSCOST, NULL, NULL) );

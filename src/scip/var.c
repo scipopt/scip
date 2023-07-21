@@ -16421,7 +16421,7 @@ SCIP_RETCODE SCIPvarIncGMIeffSum(
    {
       case SCIP_VARSTATUS_ORIGINAL:
          if( var->data.original.transvar != NULL )
-            SCIPvarIncGMIeffSum(var->data.original.transvar, stat, gmieff);
+            SCIP_CALL( SCIPvarIncGMIeffSum(var->data.original.transvar, stat, gmieff) );
          return SCIP_OKAY;
          
       case SCIP_VARSTATUS_LOOSE:
@@ -16433,11 +16433,11 @@ SCIP_RETCODE SCIPvarIncGMIeffSum(
          return SCIP_INVALIDDATA;
       
       case SCIP_VARSTATUS_AGGREGATED:
-         SCIPvarIncGMIeffSum(var->data.aggregate.var, stat, gmieff);
+         SCIP_CALL( SCIPvarIncGMIeffSum(var->data.aggregate.var, stat, gmieff) );
          return SCIP_OKAY;
       
       case SCIP_VARSTATUS_NEGATED:
-         SCIPvarIncGMIeffSum(var->negatedvar, stat, gmieff);
+         SCIP_CALL( SCIPvarIncGMIeffSum(var->negatedvar, stat, gmieff) );
          return SCIP_OKAY;
       
       case SCIP_VARSTATUS_MULTAGGR:
