@@ -692,12 +692,12 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
       }
    }
 
-   assert( maxcutefficacy > 0.0 );
 
    for( i = 0; i < nrows; ++i )
    {
       if( colindsproducedcut[i] >= 0 && SCIPisEfficacious(scip, cutefficacies[i])  )
       {
+         assert( maxcutefficacy > 0.0 );
          var = SCIPcolGetVar(cols[colindsproducedcut[i]]);
          SCIP_CALL( SCIPsetVarLastGMIScore(scip, var, cutefficacies[i] / maxcutefficacy) );
          SCIP_CALL( SCIPincVarGMISumScore(scip, var, cutefficacies[i] / maxcutefficacy) );
