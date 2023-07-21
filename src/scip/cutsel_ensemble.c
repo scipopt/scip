@@ -162,7 +162,7 @@ SCIP_RETCODE scoring(
       pscosts[i] = 0;
 
 
-      for ( int j = 0; j < ncutcols; ++j )
+      for ( int j = 0; j < (int) ncutcols; ++j )
       {
          SCIP_VAR* colvar;
          SCIP_Real colval;
