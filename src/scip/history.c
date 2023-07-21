@@ -749,7 +749,7 @@ SCIP_Real SCIPhistoryGetAvgGMIeff(
 )
 {
    assert(history != NULL);
-   
+
    return history->ngmi > 0 ? history->gmieffsum / history->ngmi : 0.0;
 }
 
@@ -761,7 +761,7 @@ void SCIPhistoryIncGMIeffSum(
 {
    assert(history != NULL);
    assert(gmieff >= 0.0);
-   
+
    history->gmieffsum += gmieff;
    history->ngmi += 1;
 }
@@ -772,7 +772,7 @@ SCIP_Real SCIPhistoryGetLastGMIeff(
 )
 {
    assert(history != NULL);
-   
+
    return history->gmieff;
 }
 
@@ -783,7 +783,7 @@ void SCIPhistorySetLastGMIeff(
 )
 {
    assert(history != NULL);
-   
+
    history->gmieff = gmieff;
 }
 

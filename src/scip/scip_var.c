@@ -9879,11 +9879,11 @@ SCIP_Real SCIPgetVarAvgGMIScore(
    SCIP_VAR*             var                 /**< problem variable */
 )
 {
-   
+
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetVarAvgGMIScore", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
-   
+
    assert( var->scip == scip );
-   
+
    return SCIPvarGetAvgGMIScore(var, scip->stat);
 }
 
@@ -9909,11 +9909,11 @@ SCIP_RETCODE SCIPincVarGMISumScore(
 )
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPincVarGMISumScore", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
-   
+
    assert( var->scip == scip );
-   
+
    SCIP_CALL( SCIPvarIncGMIeffSum(var, scip->stat, gmieff) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -9935,11 +9935,11 @@ SCIP_Real SCIPgetVarLastGMIScore(
    SCIP_VAR*             var                 /**< problem variable */
 )
 {
-   
+
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetVarLastGMIScore", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
-   
+
    assert( var->scip == scip );
-   
+
    return SCIPvarGetLastGMIScore(var, scip->stat);
 }
 
@@ -9964,11 +9964,11 @@ SCIP_RETCODE SCIPsetVarLastGMIScore(
 )
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPsetVarLastGMIScore", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
-   
+
    assert( var->scip == scip );
-   
+
    SCIP_CALL( SCIPvarSetLastGMIScore(var, scip->stat, gmieff) );
-   
+
    return SCIP_OKAY;
 }
 

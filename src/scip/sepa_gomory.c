@@ -549,7 +549,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
       c = basisind[i];
 
       basisperm[i] = i;
-      
+
       colindsproducedcut[i] = -1;
 
       if( c >= 0 )
@@ -681,7 +681,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
          }
       }
    }
-   
+
    /* Add normalised efficacy GMI statistics to history */
    maxcutefficacy = 0.0;
    for( i = 0; i < nrows; ++i )
@@ -691,7 +691,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
          maxcutefficacy = cutefficacies[i];
       }
    }
-   
+
    for( i = 0; i < nrows; ++i )
    {
       if( colindsproducedcut[i] >= 0 && SCIPisEfficacious(scip, cutefficacies[i])  )

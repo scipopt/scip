@@ -268,7 +268,7 @@ SCIP_Bool getGMIFromRow(
             cutelem = -rowelem;
          }
       }
-      
+
       /* Cut is defined in original variables, so we replace slack variables by their original definition */
       if ( !SCIPisZero(scip, cutelem) )
       {
@@ -297,7 +297,7 @@ SCIP_Bool getGMIFromRow(
          /* Eliminate slack variables. rowcols is sorted [columns in LP, columns not in LP] */
          for ( i = 0; i < SCIProwGetNLPNonz(row); i++ )
             cutcoefs[SCIPcolGetLPPos(rowcols[i])] -= cutelem * rowvals[i];
-   
+
          /* Modify the rhs */
          rowact = SCIPgetRowActivity(scip, row);
          rowrhsslack = rowrhs - rowact;
@@ -462,13 +462,13 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpGomory)
    bestcand = 0;
    bestscore = -SCIPinfinity(scip);
    ninds = -1;
-   
+
    /* Iterate over candidates and get best cut score */
    for( int i = 0; i < maxncands; i++ ) {
-      
+
       /* Initialise the score of the cut */
       score = 0;
-      
+
       /* Get the LP position of the branching candidate */
       col = SCIPvarGetCol(lpcands[i]);
       lppos = SCIPcolGetLPPos(col);
@@ -476,14 +476,14 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpGomory)
 
       /* get the row of B^-1 for this basic integer variable with fractional solution value */
       SCIP_CALL(SCIPgetLPBInvRow(scip, basicvarpos2tableaurow[lppos], binvrow, inds, &ninds));
-   
+
       /* Get the Tableau row for this basic integer variable with fractional solution value */
       SCIP_CALL(SCIPgetLPBInvARow(scip, basicvarpos2tableaurow[lppos], binvrow, binvarow, inds, &ninds));
-   
+
       /* Compute the GMI cut */
       success = getGMIFromRow(scip, ncols, nrows, cols, rows, binvrow, binvarow, &lpcandssol[i], cutcoefs,
          &cutrhs, branchruledata->useweakercuts);
-      
+
       /* Calculate the weighted sum score of measures */
       if ( success )
       {
@@ -506,7 +506,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpGomory)
          if ( branchruledata->intsupportweight != 0 )
             score += branchruledata->intsupportweight * SCIPgetRowNumIntCols(scip, cut) / (SCIP_Real) SCIProwGetNNonz(cut);
          SCIP_CALL( SCIPreleaseRow(scip, &cut) );
-   
+
          /* Replace the best cut if score is higher */
          if (score > bestscore) {
             bestscore = score;

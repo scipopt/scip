@@ -2258,7 +2258,7 @@ void SCIPincAvgGMIeff(
    )
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPincAvgGMIeff", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
-   
+
    SCIPhistoryIncGMIeffSum(scip->stat->glbhistory, gmieff);
 }
 
@@ -2275,7 +2275,7 @@ SCIP_Real SCIPgetAvgGMIeff(
 )
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetAvgGMIeff", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
-   
+
    return SCIPhistoryGetAvgGMIeff(scip->stat->glbhistory);
 }
 

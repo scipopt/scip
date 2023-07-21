@@ -16374,7 +16374,7 @@ SCIP_Real SCIPvarGetAvgGMIScore(
 {
    assert(var != NULL);
    assert(stat != NULL);
-   
+
    switch( SCIPvarGetStatus(var) )
    {
       case SCIP_VARSTATUS_ORIGINAL:
@@ -16382,23 +16382,23 @@ SCIP_Real SCIPvarGetAvgGMIScore(
             return 0.0;
          else
             return SCIPvarGetAvgGMIScore(var->data.original.transvar, stat);
-      
+
       case SCIP_VARSTATUS_LOOSE:
       case SCIP_VARSTATUS_COLUMN:
          return SCIPhistoryGetAvgGMIeff(var->history);
-      
+
       case SCIP_VARSTATUS_FIXED:
          return 0.0;
-      
+
       case SCIP_VARSTATUS_AGGREGATED:
          return SCIPvarGetAvgGMIScore(var->data.aggregate.var, stat);
-      
+
       case SCIP_VARSTATUS_MULTAGGR:
          return 0.0;
-      
+
       case SCIP_VARSTATUS_NEGATED:
          return SCIPvarGetAvgGMIScore(var->negatedvar, stat);
-      
+
       default:
       SCIPerrorMessage("unknown variable status\n");
          SCIPABORT();
@@ -16416,33 +16416,33 @@ SCIP_RETCODE SCIPvarIncGMIeffSum(
    assert(var != NULL);
    assert(stat != NULL);
    assert(gmieff >= 0);
-   
+
    switch( SCIPvarGetStatus(var) )
    {
       case SCIP_VARSTATUS_ORIGINAL:
          if( var->data.original.transvar != NULL )
             SCIP_CALL( SCIPvarIncGMIeffSum(var->data.original.transvar, stat, gmieff) );
          return SCIP_OKAY;
-         
+
       case SCIP_VARSTATUS_LOOSE:
       case SCIP_VARSTATUS_COLUMN:
          SCIPhistoryIncGMIeffSum(var->history, gmieff);
          return SCIP_OKAY;
-      
+
       case SCIP_VARSTATUS_FIXED:
          return SCIP_INVALIDDATA;
-      
+
       case SCIP_VARSTATUS_AGGREGATED:
          SCIP_CALL( SCIPvarIncGMIeffSum(var->data.aggregate.var, stat, gmieff) );
          return SCIP_OKAY;
-      
+
       case SCIP_VARSTATUS_NEGATED:
          SCIP_CALL( SCIPvarIncGMIeffSum(var->negatedvar, stat, gmieff) );
          return SCIP_OKAY;
-      
+
       case SCIP_VARSTATUS_MULTAGGR:
          return SCIP_INVALIDDATA;
-      
+
       default:
       SCIPerrorMessage("unknown variable status\n");
          SCIPABORT();
@@ -16459,30 +16459,30 @@ SCIP_Real SCIPvarGetLastGMIScore(
 {
    assert(var != NULL);
    assert(stat != NULL);
-   
+
    switch( SCIPvarGetStatus(var) )
    {
       case SCIP_VARSTATUS_ORIGINAL:
          if( var->data.original.transvar != NULL )
             return SCIPvarGetLastGMIScore(var->data.original.transvar, stat);
          return 0.0;
-      
+
       case SCIP_VARSTATUS_LOOSE:
       case SCIP_VARSTATUS_COLUMN:
          return SCIPhistoryGetLastGMIeff(var->history);
-      
+
       case SCIP_VARSTATUS_FIXED:
          return 0.0;
-      
+
       case SCIP_VARSTATUS_AGGREGATED:
          return SCIPvarGetLastGMIScore(var->data.aggregate.var, stat);
-      
+
       case SCIP_VARSTATUS_MULTAGGR:
          return 0.0;
-      
+
       case SCIP_VARSTATUS_NEGATED:
          return SCIPvarGetLastGMIScore(var->negatedvar, stat);
-      
+
       default:
       SCIPerrorMessage("unknown variable status\n");
          SCIPABORT();
@@ -16501,33 +16501,33 @@ SCIP_RETCODE SCIPvarSetLastGMIScore(
    assert(var != NULL);
    assert(stat != NULL);
    assert(gmieff >= 0);
-   
+
    switch( SCIPvarGetStatus(var) )
    {
       case SCIP_VARSTATUS_ORIGINAL:
          if( var->data.original.transvar != NULL )
             SCIPvarSetLastGMIScore(var->data.original.transvar, stat, gmieff);
          return SCIP_OKAY;
-      
+
       case SCIP_VARSTATUS_LOOSE:
       case SCIP_VARSTATUS_COLUMN:
          SCIPhistorySetLastGMIeff(var->history, gmieff);
          return SCIP_OKAY;
-   
+
       case SCIP_VARSTATUS_FIXED:
          return SCIP_INVALIDDATA;
-      
+
       case SCIP_VARSTATUS_AGGREGATED:
          SCIPvarSetLastGMIScore(var->data.aggregate.var, stat, gmieff);
          return SCIP_OKAY;
-      
+
       case SCIP_VARSTATUS_NEGATED:
          SCIPvarSetLastGMIScore(var->negatedvar, stat, gmieff);
          return SCIP_OKAY;
-         
+
       case SCIP_VARSTATUS_MULTAGGR:
          return SCIP_INVALIDDATA;
-      
+
       default:
       SCIPerrorMessage("unknown variable status\n");
          SCIPABORT();
