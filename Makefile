@@ -552,6 +552,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/branch_cloud.o \
 			scip/branch_distribution.o \
 			scip/branch_fullstrong.o \
+			scip/branch_gomory.o \
 			scip/branch_inference.o \
 			scip/branch_leastinf.o \
 			scip/branch_lookahead.o \
