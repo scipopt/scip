@@ -379,7 +379,7 @@ if(LPS STREQUAL "spx")
     find_package(SOPLEX REQUIRED CONFIG HINTS ${SOPLEX_DIR})
     if (DEFINED SOPLEX_WITH_PAPILO)
         message(STATUS "SOPLEX links PAPILO")
-        if((NOT PAPILO)) # TODO not sure how to handle AUTOBUILD
+        if((NOT SCIP_WITH_PAPILO)) # TODO not sure how to handle AUTOBUILD
             message(FATAL_ERROR "Please link a SOPLEX built without PAPILO to build SCIP without PAPILO.")
         endif ()
     endif ()
