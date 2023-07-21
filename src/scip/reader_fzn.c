@@ -4659,7 +4659,7 @@ SCIP_RETCODE writeFzn(
    SCIPinfoMessage(scip, file, "\n%%%%%%%%%%%% Objective function %%%%%%%%%%%%\n");
 
    /* If there is at least one variable in the objective function write down the optimization problem, else declare it to be a satisfiability problem */
-   if( nintobjvars > 0 || nfloatobjvars > 0 )
+   if( nintobjvars > 0 || nfloatobjvars > 0 || !SCIPisZero(scip, objoffset) )
    {
       SCIPinfoMessage(scip, file, "solve %s int_float_lin([", objsense == SCIP_OBJSENSE_MINIMIZE ? "minimize" : "maximize" );
 

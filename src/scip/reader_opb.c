@@ -2181,7 +2181,7 @@ SCIP_RETCODE writeOpbObjective(
    assert(multisymbol != NULL);
 
    mult = 1;
-   objective = FALSE;
+   objective = !SCIPisZero(scip, objoffset);
 
    clearBuffer(linebuffer, &linecnt);
 
@@ -2431,15 +2431,15 @@ SCIP_RETCODE writeOpbObjective(
 
    if( objective )
    {
+      /* opb format supports only minimization; therefore, a maximization problem has to be converted */
+      if( ( objsense < 0.0 ) != ( objscale < 0.0 ) )
+         mult *= -1;
+
       /* there exist a objective function*/
-      SCIPinfoMessage(scip, file, "*   Obj. scale       : %.15g\n", objscale * mult);
-      SCIPinfoMessage(scip, file, "*   Obj. offset      : %.15g\n", objoffset);
+      SCIPinfoMessage(scip, file, "*   Obj. scale       : %.15g\n", objscale / mult);
+      SCIPinfoMessage(scip, file, "*   Obj. offset      : %.15g\n", objoffset * mult);
 
       clearBuffer(linebuffer, &linecnt);
-
-      /* opb format supports only minimization; therefore, a maximization problem has to be converted */
-      if( objsense == SCIP_OBJSENSE_MAXIMIZE )
-         mult *= -1;
 
       SCIPdebugMsg(scip, "print objective function multiplied with %" SCIP_LONGINT_FORMAT "\n", mult);
 
