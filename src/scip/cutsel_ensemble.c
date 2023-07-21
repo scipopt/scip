@@ -154,7 +154,7 @@ SCIP_RETCODE scoring(
 
       cols = SCIProwGetCols(cuts[i]);
       cutvals = SCIProwGetVals(cuts[i]);
-      sqrcutnorm = MAX(SCIPsumepsilon(scip), SQR(SCIProwGetNorm(cuts[i])));
+      sqrcutnorm = MAX(SCIPsumepsilon(scip), SQR(SCIProwGetNorm(cuts[i]))); /*lint !e666*/
       cutalpha = -SCIPgetRowFeasibility(scip, cuts[i]) / sqrcutnorm;
       ncutcols = SCIProwGetNNonz(cuts[i]);
       cutdensities[i] = ncutcols / ncols;
@@ -184,7 +184,7 @@ SCIP_RETCODE scoring(
          l1dist = ABS(colval - (cutalpha * cutvals[j]));
          pscosts[i] += SCIPgetVarPseudocostScore(scip, colvar, colval) * l1dist;
       }
-      cutlocks[i] = cutlocks[i] / ncutcols;/*lint !e414*/
+      cutlocks[i] = cutlocks[i] / ncutcols; /*lint !e414*/
 
       if( cutlocks[i] > maxlocks )
          maxlocks = cutlocks[i];
@@ -198,11 +198,11 @@ SCIP_RETCODE scoring(
 
    for ( int i = 0; i < ncuts; i++ )
    {
-      cutlocks[i] = cutlocks[i] / maxlocks;/*lint !e414*/
+      cutlocks[i] = cutlocks[i] / maxlocks; /*lint !e414*/
       /* if locks are penalized, we complement the corresponding score */
       if( cutseldata->penaliselocks )
          cutlocks[i] = 1 - cutlocks[i];
-      pscosts[i] = pscosts[i] / maxpscost;/*lint !e414*/
+      pscosts[i] = pscosts[i] / maxpscost; /*lint !e414*/
    }
 
 
