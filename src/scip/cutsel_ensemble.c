@@ -193,15 +193,15 @@ SCIP_RETCODE scoring(
          maxpscost = pscosts[i];
    }
 
-   assert( maxlocks > 0 );
-   assert( maxpscost > 0 );
+   assert( ncuts == 0 || maxlocks > 0 );
+   assert( ncuts == 0 || maxpscost > 0 );
 
    for ( int i = 0; i < ncuts; i++ )
    {
+      cutlocks[i] = cutlocks[i] / maxlocks;
+      /* if locks are penalized, we complement the corresponding score */
       if( cutseldata->penaliselocks )
-         cutlocks[i] = 1 - (cutlocks[i] / maxlocks);
-      else
-         cutlocks[i] = cutlocks[i] / maxlocks;
+         cutlocks[i] = 1 - cutlocks[i];
       pscosts[i] = pscosts[i] / maxpscost;
    }
 
