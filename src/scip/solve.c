@@ -1639,7 +1639,10 @@ SCIP_RETCODE separationRoundLP(
 
    root = (actdepth == 0);
    *delayed = FALSE;
-   *enoughcuts = (SCIPsepastoreGetNCuts(sepastore) >= 2 * (SCIP_Longint)SCIPsetGetSepaMaxcuts(set, root));
+   if( SCIPsetGetSepaMaxcuts(set, root) > 0 )
+      *enoughcuts = (SCIPsepastoreGetNCuts(sepastore) >= (SCIP_Longint)SCIPsetGetSepaMaxcutsGen(set, root));
+   else
+      *enoughcuts = (SCIPsepastoreGetNCuts(sepastore) >= 0);
    *lperror = FALSE;
    consadded = FALSE;
 
@@ -1675,7 +1678,16 @@ SCIP_RETCODE separationRoundLP(
 #endif
       *cutoff = *cutoff || (result == SCIP_CUTOFF);
       consadded = consadded || (result == SCIP_CONSADDED);
-      *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= 2 * (SCIP_Longint)SCIPsetGetSepaMaxcuts(set, root)) || (result == SCIP_NEWROUND);
+      if( SCIPsetGetSepaMaxcuts(set, root) > 0 )
+      {
+         *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= (SCIP_Longint)SCIPsetGetSepaMaxcutsGen(set, root))
+            || (result == SCIP_NEWROUND);
+      }
+      else
+      {
+         *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= 0) || (result == SCIP_NEWROUND);
+      }
+
       *delayed = *delayed || (result == SCIP_DELAYED);
 
       if( !(*cutoff) )
@@ -1712,7 +1724,15 @@ SCIP_RETCODE separationRoundLP(
 
       *cutoff = *cutoff || (result == SCIP_CUTOFF);
       consadded = consadded || (result == SCIP_CONSADDED);
-      *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= 2 * (SCIP_Longint)SCIPsetGetSepaMaxcuts(set, root)) || (result == SCIP_NEWROUND);
+      if( SCIPsetGetSepaMaxcuts(set, root) > 0 )
+      {
+         *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= (SCIP_Longint)SCIPsetGetSepaMaxcutsGen(set, root))
+            || (result == SCIP_NEWROUND);
+      }
+      else
+      {
+         *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= 0) || (result == SCIP_NEWROUND);
+      }
       *delayed = *delayed || (result == SCIP_DELAYED);
 
       if( !(*cutoff) )
@@ -1752,7 +1772,15 @@ SCIP_RETCODE separationRoundLP(
 
       *cutoff = *cutoff || (result == SCIP_CUTOFF);
       consadded = consadded || (result == SCIP_CONSADDED);
-      *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= 2 * (SCIP_Longint)SCIPsetGetSepaMaxcuts(set, root)) || (result == SCIP_NEWROUND);
+      if( SCIPsetGetSepaMaxcuts(set, root) > 0 )
+      {
+         *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= (SCIP_Longint)SCIPsetGetSepaMaxcutsGen(set, root))
+            || (result == SCIP_NEWROUND);
+      }
+      else
+      {
+         *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= 0) || (result == SCIP_NEWROUND);
+      }
       *delayed = *delayed || (result == SCIP_DELAYED);
 
       if( !(*cutoff) )
@@ -1791,7 +1819,15 @@ SCIP_RETCODE separationRoundLP(
 
          *cutoff = *cutoff || (result == SCIP_CUTOFF);
          consadded = consadded || (result == SCIP_CONSADDED);
-         *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= 2 * (SCIP_Longint)SCIPsetGetSepaMaxcuts(set, root)) || (result == SCIP_NEWROUND);
+         if( SCIPsetGetSepaMaxcuts(set, root) > 0 )
+         {
+            *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= (SCIP_Longint)SCIPsetGetSepaMaxcutsGen(set, root))
+               || (result == SCIP_NEWROUND);
+         }
+         else
+         {
+            *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= 0) || (result == SCIP_NEWROUND);
+         }
          *delayed = *delayed || (result == SCIP_DELAYED);
 
          if( !(*cutoff) )
@@ -1861,7 +1897,15 @@ SCIP_RETCODE separationRoundSol(
       SCIP_CALL( SCIPsepaExecSol(set->sepas[i], set, stat, sepastore, sol, actdepth, allowlocal, onlydelayed, &result) );
       *cutoff = *cutoff || (result == SCIP_CUTOFF);
       consadded = consadded || (result == SCIP_CONSADDED);
-      *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= 2 * (SCIP_Longint)SCIPsetGetSepaMaxcuts(set, root)) || (result == SCIP_NEWROUND);
+      if( SCIPsetGetSepaMaxcuts(set, root) > 0 )
+      {
+         *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= (SCIP_Longint)SCIPsetGetSepaMaxcutsGen(set, root))
+            || (result == SCIP_NEWROUND);
+      }
+      else
+      {
+         *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= 0) || (result == SCIP_NEWROUND);
+      }
       *delayed = *delayed || (result == SCIP_DELAYED);
       if( *cutoff )
       {
@@ -1886,7 +1930,15 @@ SCIP_RETCODE separationRoundSol(
             &result) );
       *cutoff = *cutoff || (result == SCIP_CUTOFF);
       consadded = consadded || (result == SCIP_CONSADDED);
-      *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= 2 * (SCIP_Longint)SCIPsetGetSepaMaxcuts(set, root)) || (result == SCIP_NEWROUND);
+      if( SCIPsetGetSepaMaxcuts(set, root) > 0 )
+      {
+         *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= (SCIP_Longint)SCIPsetGetSepaMaxcutsGen(set, root))
+            || (result == SCIP_NEWROUND);
+      }
+      else
+      {
+         *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= 0) || (result == SCIP_NEWROUND);
+      }
       *delayed = *delayed || (result == SCIP_DELAYED);
       if( *cutoff )
       {
@@ -1914,7 +1966,15 @@ SCIP_RETCODE separationRoundSol(
       SCIP_CALL( SCIPsepaExecSol(set->sepas[i], set, stat, sepastore, sol, actdepth, allowlocal, onlydelayed, &result) );
       *cutoff = *cutoff || (result == SCIP_CUTOFF);
       consadded = consadded || (result == SCIP_CONSADDED);
-      *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= 2 * (SCIP_Longint)SCIPsetGetSepaMaxcuts(set, root)) || (result == SCIP_NEWROUND);
+      if( SCIPsetGetSepaMaxcuts(set, root) > 0 )
+      {
+         *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= (SCIP_Longint)SCIPsetGetSepaMaxcutsGen(set, root))
+            || (result == SCIP_NEWROUND);
+      }
+      else
+      {
+         *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= 0) || (result == SCIP_NEWROUND);
+      }
       *delayed = *delayed || (result == SCIP_DELAYED);
       if( *cutoff )
       {
@@ -1940,7 +2000,15 @@ SCIP_RETCODE separationRoundSol(
          SCIP_CALL( SCIPconshdlrSeparateSol(set->conshdlrs_sepa[i], blkmem, set, stat, sepastore, sol, actdepth, onlydelayed, &result) );
          *cutoff = *cutoff || (result == SCIP_CUTOFF);
          consadded = consadded || (result == SCIP_CONSADDED);
-         *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= 2 * (SCIP_Longint)SCIPsetGetSepaMaxcuts(set, root)) || (result == SCIP_NEWROUND);
+         if( SCIPsetGetSepaMaxcuts(set, root) > 0 )
+         {
+            *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= (SCIP_Longint)SCIPsetGetSepaMaxcutsGen(set, root))
+               || (result == SCIP_NEWROUND);
+         }
+         else
+         {
+            *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= 0) || (result == SCIP_NEWROUND);
+         }
          *delayed = *delayed || (result == SCIP_DELAYED);
          if( *cutoff )
          {
@@ -2250,7 +2318,15 @@ SCIP_RETCODE cutpoolSeparate(
 
       SCIP_CALL( SCIPcutpoolSeparate(cutpool, blkmem, set, stat, eventqueue, eventfilter, lp, sepastore, NULL, cutpoolisdelayed, root, &result) );
       *cutoff = *cutoff || (result == SCIP_CUTOFF);
-      *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= 2 * (SCIP_Longint)SCIPsetGetSepaMaxcuts(set, root)) || (result == SCIP_NEWROUND);
+      if( SCIPsetGetSepaMaxcuts(set, root) > 0 )
+      {
+         *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= (SCIP_Longint)SCIPsetGetSepaMaxcutsGen(set, root))
+            || (result == SCIP_NEWROUND);
+      }
+      else
+      {
+         *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= 0) || (result == SCIP_NEWROUND);
+      }
    }
 
    return SCIP_OKAY;
