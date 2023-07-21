@@ -692,6 +692,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
       }
    }
 
+   assert( maxcutefficacy > 0.0 );
+
    for( i = 0; i < nrows; ++i )
    {
       if( colindsproducedcut[i] >= 0 && SCIPisEfficacious(scip, cutefficacies[i])  )

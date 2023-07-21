@@ -395,7 +395,6 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpGomory)
 
    /* Get branching candidates */
    SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, NULL, &nlpcands, NULL) );
-   assert(nlpcands > 0);
 
    /* Initialise a DIDNOTRUN result */
    *result = SCIP_DIDNOTRUN;

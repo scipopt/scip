@@ -16448,7 +16448,6 @@ SCIP_RETCODE SCIPvarIncGMIeffSum(
          SCIPABORT();
          return SCIP_INVALIDDATA; /*lint !e527*/
    }
-   return SCIP_OKAY;
 }
 
 /** returns the variable's last GMI efficacy score value generated from a simplex tableau row of this variable */
