@@ -184,7 +184,7 @@ SCIP_RETCODE scoring(
          l1dist = ABS(colval - (cutalpha * cutvals[j]));
          pscosts[i] += SCIPgetVarPseudocostScore(scip, colvar, colval) * l1dist;
       }
-      cutlocks[i] = cutlocks[i] / ncutcols;
+      cutlocks[i] = cutlocks[i] / ncutcols;/*lint !e414*/
 
       if( cutlocks[i] > maxlocks )
          maxlocks = cutlocks[i];
@@ -198,11 +198,11 @@ SCIP_RETCODE scoring(
 
    for ( int i = 0; i < ncuts; i++ )
    {
-      cutlocks[i] = cutlocks[i] / maxlocks;
+      cutlocks[i] = cutlocks[i] / maxlocks;/*lint !e414*/
       /* if locks are penalized, we complement the corresponding score */
       if( cutseldata->penaliselocks )
          cutlocks[i] = 1 - cutlocks[i];
-      pscosts[i] = pscosts[i] / maxpscost;
+      pscosts[i] = pscosts[i] / maxpscost;/*lint !e414*/
    }
 
 
@@ -274,7 +274,7 @@ SCIP_RETCODE scoring(
          if ( SCIPisSumLE(scip, dcds[i], 0.0))
             scaleddcd = 0.0;
          else
-            scaleddcd = cutseldata->dircutoffdistweight * SQR(LOG1P(dcds[i]) / LOG1P(maxdcd));
+            scaleddcd = cutseldata->dircutoffdistweight * SQR(LOG1P(dcds[i]) / LOG1P(maxdcd)); /*lint !e666*/
       }
       else
       {
@@ -284,7 +284,7 @@ SCIP_RETCODE scoring(
       if ( SCIPisSumLE(scip, exps[i], 0.0))
          scaledexp = 0.0;
       else
-         scaledexp = cutseldata->expimprovweight * SQR(LOG1P(exps[i]) / LOG1P(maxexp));
+         scaledexp = cutseldata->expimprovweight * SQR(LOG1P(exps[i]) / LOG1P(maxexp)); /*lint !e666*/
 
       if ( SCIPisSumLE(scip, effs[i], 0.0))
       {
@@ -293,9 +293,9 @@ SCIP_RETCODE scoring(
       else
       {
          if ( sol != NULL && root )
-            scaledeff = cutseldata->efficacyweight * SQR(LOG1P(effs[i]) / LOG1P(maxeff));
+            scaledeff = cutseldata->efficacyweight * SQR(LOG1P(effs[i]) / LOG1P(maxeff)); /*lint !e666*/
          else
-            scaledeff = (cutseldata->efficacyweight + cutseldata->dircutoffdistweight) * SQR(LOG1P(effs[i]) / LOG1P(maxeff));
+            scaledeff = (cutseldata->efficacyweight + cutseldata->dircutoffdistweight) * SQR(LOG1P(effs[i]) / LOG1P(maxeff)); /*lint !e666*/
       }
 
       /* Combine all scores and introduce some minor randomness */
@@ -729,7 +729,7 @@ SCIP_RETCODE SCIPselectCutsEnsemble(
    origscoresptr = scores;
 
    /* compute scores of cuts */
-   scoring(scip, cuts, cutseldata, scores, root, ncuts);
+   SCIP_CALL( scoring(scip, cuts, cutseldata, scores, root, ncuts) );
 
    /* perform cut selection algorithm for the cuts */
 
