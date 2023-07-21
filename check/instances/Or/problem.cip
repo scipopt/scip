@@ -1,0 +1,16 @@
+STATISTICS
+  Problem name     : model
+  Variables        : 5 (5 binary, 0 integer, 0 implicit integer, 0 continuous)
+  Constraints      : 0 initial, 2 maximal
+OBJECTIVE
+  Sense            : minimize
+VARIABLES
+  [binary] <x0>: obj=0, original bounds=[0,1]
+  [binary] <x1>: obj=0, original bounds=[0,1]
+  [binary] <x2>: obj=0, original bounds=[0,1]
+  [binary] <x3>: obj=1, original bounds=[0,1]
+  [binary] <x4>: obj=1, original bounds=[0,1]
+CONSTRAINTS
+  [or] <c0>: <x0>[B] == or(<~x2>[B],<x4>[B]);
+  [or] <c1>: <x1>[B] == or(<x3>[B],<~x4>[B],<x2>[B]);
+END

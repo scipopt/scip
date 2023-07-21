@@ -1082,10 +1082,10 @@ SCIP_DECL_EXPRMONOTONICITY(monotonicitySin)
 
    /* compute k s.t. PI * (2k+1) / 2 <= interval.inf <= PI * (2k+3) / 2 */
    k = (int)floor(inf/M_PI - 0.5);
-   assert(M_PI * (2.0*k + 1.0) / 2.0 <= inf);
-   assert(M_PI * (2.0*k + 3.0) / 2.0 >= inf);
+   assert(SCIPisLE(scip, M_PI * (2.0*k + 1.0) / 2.0, inf));
+   assert(SCIPisGE(scip, M_PI * (2.0*k + 3.0) / 2.0, inf));
 
-   /* check whether [inf,sup] are in containing in an interval for which the sine function is monotone */
+   /* check whether [inf,sup] are contained in an interval for which the sine function is monotone */
    if( M_PI * (2.0*k + 3.0) / 2.0 <= sup )
       *result = ((k % 2 + 2) % 2) == 1 ? SCIP_MONOTONE_INC : SCIP_MONOTONE_DEC;
 

@@ -2446,6 +2446,7 @@ long long BMScheckEmptyBlockMemory_call(
          })
 
          assert(nchunks == chkmem->nchunks);
+         SCIP_UNUSED(nchunks);
          assert(nelems == chkmem->storesize);
          assert(neagerelems == chkmem->eagerfreesize);
 
@@ -3039,7 +3040,7 @@ void BMSfreeBufferMemory_work(
    if ( bufnum == 0 && buffer->data[bufnum] != *ptr )
    {
       printErrorHeader(filename, line);
-      printError("Tried to free unkown buffer pointer.\n");
+      printError("Tried to free unknown buffer pointer.\n");
       return;
    }
    if ( ! buffer->used[bufnum] )

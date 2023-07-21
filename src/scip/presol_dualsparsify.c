@@ -105,8 +105,6 @@
 /** presolver data */
 struct SCIP_PresolData
 {
-   int                   ncancels;           /**< total number of canceled nonzeros (net value, i.e., removed minus added nonzeros) */
-   int                   nfillin;            /**< total number of added nonzeros */
    int                   nfailures;          /**< number of calls to presolver without success */
    int                   nwaitingcalls;      /**< number of presolver calls until next real execution */
    int                   naggregated;        /**< number of aggregated variables */
@@ -1308,13 +1306,17 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
    SCIP_CALL( SCIPmatrixCreate(scip, &matrix, TRUE, &initialized, &complete, &infeasible,
          naddconss, ndelconss, nchgcoefs, nchgbds, nfixedvars) );
 
-   /* if infeasibility was detected during matrix creation, return here */
-   if( infeasible )
+   /* if infeasibility was detected during matrix creation or
+    * matrix creation is incomplete, return here.
+    */
+   if( infeasible || !complete )
    {
       if( initialized )
          SCIPmatrixFree(scip, &matrix);
 
-      *result = SCIP_CUTOFF;
+      if( infeasible )
+	     *result = SCIP_CUTOFF;
+
       return SCIP_OKAY;
    }
 
@@ -1506,6 +1508,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
    maxuseless = (SCIP_Longint)(presoldata->maxretrievefac * (SCIP_Real)ncols);
    nuseless = 0;
    numcancel = 0;
+   nfillin = 0;
    for( c = 0; c < ncols && nuseless <= maxuseless && !SCIPisStopped(scip); c++ )
    {
       int colidx;
@@ -1526,7 +1529,11 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
    }
 
    if( numcancel > 0 )
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+		      "   (%.1fs) dualsparsify: %d nonzeros canceled\n", SCIPgetSolvingTime(scip), numcancel);
       *result = SCIP_SUCCESS;
+   }
    else /* do reductions on variables that contain larger nonzero entries */
    {
       SCIPhashtableRemoveAll(pairtable);
@@ -1703,6 +1710,8 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
 
       if( numcancel > 0 )
       {
+	 SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+			 "   (%.1fs) dualsparsify: %d nonzeros canceled\n", SCIPgetSolvingTime(scip), numcancel);
          *result = SCIP_SUCCESS;
       }
    }
@@ -1754,8 +1763,6 @@ SCIP_DECL_PRESOLINIT(presolInitDualsparsify)
 
    /* set the counters in the init (and not in the initpre) callback such that they persist across restarts */
    presoldata = SCIPpresolGetData(presol);
-   presoldata->ncancels = 0;
-   presoldata->nfillin = 0;
    presoldata->nfailures = 0;
    presoldata->nwaitingcalls = 0;
    presoldata->naggregated = 0;

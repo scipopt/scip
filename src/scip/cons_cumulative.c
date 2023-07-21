@@ -1515,13 +1515,13 @@ SCIP_DECL_SOLVECUMULATIVE(solveCumulativeViaScipMip)
       {
          SCIP_VAR* binvar;
 
-         /* construct varibale name */
+         /* construct variable name */
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "job_%d_time_%d", v, t + est);
 
          SCIP_CALL( SCIPcreateVarBasic(subscip, &binvar, name, 0.0, 1.0, objval, SCIP_VARTYPE_BINARY) );
          SCIP_CALL( SCIPaddVar(subscip, binvar) );
 
-         /* add binary varibale to the set partitioning constraint which ensures that the job is started */
+         /* add binary variable to the set partitioning constraint which ensures that the job is started */
          SCIP_CALL( SCIPaddCoefSetppc(subscip, cons, binvar) );
 
          binvars[v][t] = binvar;
@@ -1567,7 +1567,7 @@ SCIP_DECL_SOLVECUMULATIVE(solveCumulativeViaScipMip)
          duration = durations[v];
          assert(duration > 0);
 
-         /* check if the varibale is processed potentially at time point t */
+         /* check if the variable is processed potentially at time point t */
          if( t < est || t >= lst + duration )
             continue;
 
@@ -1642,7 +1642,7 @@ SCIP_DECL_SOLVECUMULATIVE(solveCumulativeViaScipMip)
             /* compute number of possible start points */
             timeinterval = lst - est + 1;
 
-            /* check which binary varibale is set to one */
+            /* check which binary variable is set to one */
             for( t = 0; t < timeinterval; ++t )
             {
                if( SCIPgetSolVal(subscip, sol, binvars[v][t]) > 0.5 )
@@ -1675,7 +1675,7 @@ SCIP_DECL_SOLVECUMULATIVE(solveCumulativeViaScipMip)
             /* compute number of possible start points */
             timeinterval = lst - est + 1;
 
-            /* check which binary varibale is the first binary varibale which is not globally fixed to zero */
+            /* check which binary variable is the first binary variable which is not globally fixed to zero */
             for( t = 0; t < timeinterval; ++t )
             {
                if( SCIPvarGetUbGlobal(binvars[v][t]) > 0.5 )
@@ -1685,7 +1685,7 @@ SCIP_DECL_SOLVECUMULATIVE(solveCumulativeViaScipMip)
                }
             }
 
-            /* check which binary varibale is the last binary varibale which is not globally fixed to zero */
+            /* check which binary variable is the last binary variable which is not globally fixed to zero */
             for( t = timeinterval - 1; t >= 0; --t )
             {
                if( SCIPvarGetUbGlobal(binvars[v][t]) > 0.5 )
@@ -13458,6 +13458,8 @@ SCIP_DECL_CONSPARSE(consParseCumulative)
 
    SCIPdebugMsg(scip, "parse <%s> as cumulative constraint\n", str);
 
+   *success = TRUE;
+
    /* cutoff "cumulative" form the constraint string */
    SCIPstrCopySection(str, 'c', '(', strvalue, SCIP_MAXSTRLEN, &endptr);
    str = endptr;
@@ -13474,53 +13476,62 @@ SCIP_DECL_CONSPARSE(consParseCumulative)
    {
       SCIP_CALL( SCIPparseVarName(scip, str, &var, &endptr) );
 
-      if( var != NULL )
+      if( var == NULL )
       {
-         str = endptr;
+         endptr = strchr(endptr, ')');
 
-         SCIPstrCopySection(str, '(', ')', strvalue, SCIP_MAXSTRLEN, &endptr);
-         duration = atoi(strvalue);
-         str = endptr;
+         if( endptr == NULL )
+            *success = FALSE;
+         else
+            str = endptr;
 
-         SCIPstrCopySection(str, '[', ']', strvalue, SCIP_MAXSTRLEN, &endptr);
-         demand = atoi(strvalue);
-         str = endptr;
-
-         SCIPdebugMsg(scip, "parse job <%s>, duration %d, demand %d\n", SCIPvarGetName(var), duration, demand);
-
-         vars[nvars] = var;
-         demands[nvars] = demand;
-         durations[nvars] = duration;
-         nvars++;
+         break;
       }
+
+      str = endptr;
+      SCIPstrCopySection(str, '(', ')', strvalue, SCIP_MAXSTRLEN, &endptr);
+      duration = atoi(strvalue);
+      str = endptr;
+
+      SCIPstrCopySection(str, '[', ']', strvalue, SCIP_MAXSTRLEN, &endptr);
+      demand = atoi(strvalue);
+      str = endptr;
+
+      SCIPdebugMsg(scip, "parse job <%s>, duration %d, demand %d\n", SCIPvarGetName(var), duration, demand);
+
+      vars[nvars] = var;
+      demands[nvars] = demand;
+      durations[nvars] = duration;
+      nvars++;
    }
-   while( var != NULL );
+   while( *str != ')' );
 
-   /* parse effective time window */
-   SCIPstrCopySection(str, '[', ',', strvalue, SCIP_MAXSTRLEN, &endptr);
-   hmin = atoi(strvalue);
-   str = endptr;
-
-   if( SCIPstrToRealValue(str, &value, &endptr) )
+   if( *success )
    {
-      hmax = (int)(value);
+      /* parse effective time window */
+      SCIPstrCopySection(str, '[', ',', strvalue, SCIP_MAXSTRLEN, &endptr);
+      hmin = atoi(strvalue);
       str = endptr;
 
-      /* parse capacity */
-      SCIPstrCopySection(str, ')', '=', strvalue, SCIP_MAXSTRLEN, &endptr);
-      str = endptr;
-      if( SCIPstrToRealValue(str, &value, &endptr) )
+      if( SCIPparseReal(scip, str, &value, &endptr) )
       {
-         capacity = (int)value;
+         hmax = (int)(value);
+         str = endptr;
 
-         /* create cumulative constraint */
-         SCIP_CALL( SCIPcreateConsCumulative(scip, cons, name, nvars, vars, durations, demands, capacity,
-               initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+         /* parse capacity */
+         SCIPstrCopySection(str, ')', '=', strvalue, SCIP_MAXSTRLEN, &endptr);
+         str = endptr;
+         if( SCIPparseReal(scip, str, &value, &endptr) )
+         {
+            capacity = (int)value;
 
-         SCIP_CALL( SCIPsetHminCumulative(scip, *cons, hmin) );
-         SCIP_CALL( SCIPsetHmaxCumulative(scip, *cons, hmax) );
+            /* create cumulative constraint */
+            SCIP_CALL( SCIPcreateConsCumulative(scip, cons, name, nvars, vars, durations, demands, capacity,
+                  initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
 
-         (*success) = TRUE;
+            SCIP_CALL( SCIPsetHminCumulative(scip, *cons, hmin) );
+            SCIP_CALL( SCIPsetHmaxCumulative(scip, *cons, hmax) );
+         }
       }
    }
 
@@ -13531,6 +13542,7 @@ SCIP_DECL_CONSPARSE(consParseCumulative)
 
    return SCIP_OKAY;
 }
+
 
 /** constraint method of constraint handler which returns the variables (if possible) */
 static

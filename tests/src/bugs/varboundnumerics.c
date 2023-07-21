@@ -22,15 +22,13 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   bugfix-fixing.c
- * @brief  unit test for bugfix on XOR constraint and bounds
- * @author Mathieu Besançon
+/**@file   varboundnumerics.c
+ * @brief  unit test for problem with difficult numerics
+ * @author Gioni Mexi
  */
 
-#include "scip/scip.h"
-#include "include/scip_test.h"
-#include "scip/cons_xor.h"
 #include "scip/scipdefplugins.h"
+#include "include/scip_test.h"
 
 /** GLOBAL VARIABLES **/
 static SCIP* scip = NULL;
@@ -43,7 +41,7 @@ void setup(void)
 {
    SCIP_CALL( SCIPcreate(&scip) );
    SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
-   SCIP_CALL( SCIPcreateProbBasic(scip, "xor-bugcheck") );
+   SCIP_CALL( SCIPcreateProbBasic(scip, "varboundnumerics") );
 }
 
 /** free SCIP instance */
@@ -53,15 +51,17 @@ void teardown(void)
    SCIPfree(&scip);
 }
 
-TestSuite(bugfixxor, .init = setup, .fini = teardown);
+TestSuite(problem, .init = setup, .fini = teardown);
 
 /* TESTS  */
-Test(bugfixxor, demofix, .description = "test checking that the optimal solution of a problem with XOR constraints is not cut off")
+Test(problem, tolerance, .description = "test whether propagating a var bound constraint does not falsely remove it")
 {
-   SCIP_CALL( SCIPreadProb(scip, "src/cons/xor/Demo5.cip", NULL) );
+   SCIP_CALL( SCIPreadProb(scip, "src/bugs/varboundnumerics.cip", NULL) );
    SCIP_CALL( SCIPsolve(scip) );
-   int nsols = SCIPgetNSols(scip);
-   SCIP_SOL** sols = SCIPgetSols(scip);
-   cr_assert_geq(nsols, 1);
-   cr_assert_float_eq(SCIPgetSolOrigObj(scip, sols[0]), 2.0, 1e-5);
+   int nvars = SCIPgetNOrigVars(scip);
+   int nconss = SCIPgetNOrigConss(scip);
+   cr_assert_eq(nvars, 19);
+   cr_assert_eq(nconss, 7);
+   SCIP_SOL* sol = SCIPgetSols(scip)[0];
+   cr_assert_float_eq(SCIPgetSolOrigObj(scip, sol), 57138036.3824479, 1e-5);
 }

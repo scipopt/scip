@@ -109,7 +109,7 @@
  *    SCIPaddConflictBound() on the conflict queue (algorithm step 3.(a)).
  *  - If the current bounds lead to a deduction of a bound change (e.g. in domain
  *    propagation), a constraint handler should call SCIPinferVarLbCons() or
- *    SCIPinferVarUbCons(), thus providing the constraint that infered the bound change.
+ *    SCIPinferVarUbCons(), thus providing the constraint that inferred the bound change.
  *    A propagator should call SCIPinferVarLbProp() or SCIPinferVarUbProp() instead,
  *    thus providing a pointer to itself.
  *  - If (in the current bounds) an infeasibility is detected, the constraint handler or
@@ -1505,7 +1505,7 @@ SCIP_Bool bdchginfoIsInvalid(
    if( SCIPvarIsBinary(var) )
       return FALSE;
 
-   /* check if the bdchginfo is invaild since a tight/weaker bound change was already explained */
+   /* check if the bdchginfo is invalid since a tight/weaker bound change was already explained */
    if( SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER )
    {
       if( var->conflictlbcount != conflict->count || var->conflictlb != SCIPbdchginfoGetNewbound(bdchginfo) ) /*lint !e777*/
@@ -1646,7 +1646,7 @@ SCIP_RETCODE conflictsetAddBounds(
       }
       else
       {
-         SCIPsetDebugMsg(set, "-> bound change info [%d:<%s> %s %g] is invaild -> ignore it\n", SCIPbdchginfoGetDepth(bdchginfo),
+         SCIPsetDebugMsg(set, "-> bound change info [%d:<%s> %s %g] is invalid -> ignore it\n", SCIPbdchginfoGetDepth(bdchginfo),
             SCIPvarGetName(SCIPbdchginfoGetVar(bdchginfo)),
             SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
             SCIPbdchginfoGetNewbound(bdchginfo));
@@ -1696,7 +1696,7 @@ SCIP_RETCODE conflictsetAddBounds(
       }
       else
       {
-         SCIPsetDebugMsg(set, "-> bound change info [%d:<%s> %s %g] is invaild -> ignore it\n", SCIPbdchginfoGetDepth(bdchginfo),
+         SCIPsetDebugMsg(set, "-> bound change info [%d:<%s> %s %g] is invalid -> ignore it\n", SCIPbdchginfoGetDepth(bdchginfo),
             SCIPvarGetName(SCIPbdchginfoGetVar(bdchginfo)),
             SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
             SCIPbdchginfoGetNewbound(bdchginfo));
@@ -2259,6 +2259,12 @@ static
 SCIP_RETCODE detectImpliedBounds(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            prob,               /**< transformed problem after presolve */
+   SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
+   SCIP_TREE*            tree,               /**< tree data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_PROB*            origprob,           /**< original problem */
+   SCIP_REOPT*           reopt,              /**< reoptimization data */
+   SCIP_LP*              lp,                 /**< LP data */
    SCIP_CONFLICTSET*     conflictset,        /**< conflict set to add to the tree */
    int*                  nbdchgs,            /**< number of global deducted bound changes due to the conflict set */
    int*                  nredvars,           /**< number of redundant and removed variables from conflict set */
@@ -2449,6 +2455,8 @@ SCIP_RETCODE detectImpliedBounds(
       if( glbinfeas )
       {
          SCIPsetDebugMsg(set, "conflict set (%p) led to global infeasibility\n", (void*) conflictset);
+
+         SCIP_CALL( SCIPnodeCutoff(SCIPtreeGetRootNode(tree), set, stat, tree, prob, origprob, reopt, lp, blkmem) );
 
          /* clear the memory array before freeing it */
          BMSclearMemoryArray(redundants, nbdchginfos);
@@ -3437,7 +3445,7 @@ SCIP_RETCODE conflictAddConflictCons(
       SCIPclockStart(conflict->dIBclock, set);
 
       /* find global bound changes which can be derived from the new conflict set */
-      SCIP_CALL( detectImpliedBounds(set, transprob, conflictset, &nbdchgs, &nredvars, &redundant) );
+      SCIP_CALL( detectImpliedBounds(set, transprob, stat, tree, blkmem, origprob, reopt, lp, conflictset, &nbdchgs, &nredvars, &redundant) );
 
       /* all variables where removed, we have an infeasibility proof */
       if( conflictset->nbdchginfos == 0 )
@@ -3863,8 +3871,8 @@ SCIP_Bool bdchginfoIsResolvable(
          && SCIPbdchginfoGetInferProp(bdchginfo) != NULL));
 }
 
-/** compares two conflict set entries, such that bound changes infered later are
- *  ordered prior to ones that were infered earlier
+/** compares two conflict set entries, such that bound changes inferred later are
+ *  ordered prior to ones that were inferred earlier
  */
 static
 SCIP_DECL_SORTPTRCOMP(conflictBdchginfoComp)
@@ -4325,7 +4333,7 @@ SCIP_RETCODE convertToActiveVar(
    scalar = 1.0;
    constant = 0.0;
 
-   /* transform given varibale to active varibale */
+   /* transform given variable to active variable */
    SCIP_CALL( SCIPvarGetProbvarSum(var, set, &scalar, &constant) );
    assert(SCIPvarGetStatus(*var) == SCIP_VARSTATUS_FIXED || scalar != 0.0); /*lint !e777*/
 
@@ -4775,13 +4783,13 @@ SCIP_BDCHGINFO* conflictFirstCand(
 
    if( SCIPpqueueNElems(conflict->forcedbdchgqueue) > 0 )
    {
-      /* get next potetioal candidate */
+      /* get next potential candidate */
       bdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueFirst(conflict->forcedbdchgqueue));
 
       /* check if this candidate is valid */
       if( bdchginfoIsInvalid(conflict, bdchginfo) )
       {
-         SCIPdebugMessage("bound change info [%d:<%s> %s %g] is invaild -> pop it from the force queue\n", SCIPbdchginfoGetDepth(bdchginfo),
+         SCIPdebugMessage("bound change info [%d:<%s> %s %g] is invalid -> pop it from the force queue\n", SCIPbdchginfoGetDepth(bdchginfo),
             SCIPvarGetName(SCIPbdchginfoGetVar(bdchginfo)),
             SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
             SCIPbdchginfoGetNewbound(bdchginfo));
@@ -4800,7 +4808,7 @@ SCIP_BDCHGINFO* conflictFirstCand(
       /* check if this candidate is valid */
       if( bdchginfo != NULL && bdchginfoIsInvalid(conflict, bdchginfo) )
       {
-         SCIPdebugMessage("bound change info [%d:<%s> %s %g] is invaild -> pop it from the queue\n", SCIPbdchginfoGetDepth(bdchginfo),
+         SCIPdebugMessage("bound change info [%d:<%s> %s %g] is invalid -> pop it from the queue\n", SCIPbdchginfoGetDepth(bdchginfo),
             SCIPvarGetName(SCIPbdchginfoGetVar(bdchginfo)),
             SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
             SCIPbdchginfoGetNewbound(bdchginfo));
@@ -5019,7 +5027,7 @@ SCIP_RETCODE conflictResolveBound(
          SCIP_BOUNDTYPE inferboundtype;
          SCIP_BDCHGIDX* bdchgidx;
 
-         /* resolve bound change by asking the constraint that infered the bound to put all bounds that were
+         /* resolve bound change by asking the constraint that inferred the bound to put all bounds that were
           * the reasons for the conflicting bound change on the priority queue
           */
          infervar = SCIPbdchginfoGetInferVar(bdchginfo);
@@ -5057,7 +5065,7 @@ SCIP_RETCODE conflictResolveBound(
 
             var = infervar;
 
-            /* transform given varibale to active varibale */
+            /* transform given variable to active variable */
             SCIP_CALL( SCIPvarGetProbvarSum(&var, set, &scalar, &constant) );
             assert(var == actvar);
 
@@ -5079,7 +5087,7 @@ SCIP_RETCODE conflictResolveBound(
          SCIP_BOUNDTYPE inferboundtype;
          SCIP_BDCHGIDX* bdchgidx;
 
-         /* resolve bound change by asking the propagator that infered the bound to put all bounds that were
+         /* resolve bound change by asking the propagator that inferred the bound to put all bounds that were
           * the reasons for the conflicting bound change on the priority queue
           */
          infervar = SCIPbdchginfoGetInferVar(bdchginfo);
@@ -7236,12 +7244,12 @@ SCIP_RETCODE getDualProof(
     * where lhs, rhs, lb, and ub are selected in order to maximize the feasibility of the row.
     */
 
-   /* add the objective function to the aggregation row with current cutoff bound as right-hand side
-    *
-    * use a slightly tighter cutoff bound, because solutions with equal objective value should also be declared
-    * infeasible
+   /* add the objective function to the aggregation row with respect to the current cutoff bound
+    * 
+    * for an integral objective the right-hand side is reduced by the cutoff bound delta to cut off up to the next
+    * possible objective value below the cutoff bound
     */
-   SCIP_CALL( SCIPaggrRowAddObjectiveFunction(set->scip, farkasrow, lp->cutoffbound - SCIPsetSumepsilon(set), 1.0) );
+   SCIP_CALL( SCIPaggrRowAddObjectiveFunction(set->scip, farkasrow, lp->cutoffbound - (SCIPprobIsObjIntegral(transprob) ? SCIPsetCutoffbounddelta(set) : 0.0), 1.0) );
 
    /* dual row: z^T{lhs,rhs} - c* <= (-r^T - (y-z)^TA){lb,ub}
     * process rows: add z^T{lhs,rhs} to the dual row's left hand side, and -(y-z)^TA to the dual row's coefficients
@@ -7428,8 +7436,8 @@ SCIP_RETCODE separateAlternativeProofs(
    SCIP_Real* cutcoefs;
    SCIP_Real cutefficacy;
    SCIP_Real cutrhs;
-   SCIP_Real proofefficiacy;
-   SCIP_Real efficiacynorm;
+   SCIP_Real proofefficacy;
+   SCIP_Real efficacynorm;
    SCIP_Bool islocal;
    SCIP_Bool cutsuccess;
    SCIP_Bool success;
@@ -7447,15 +7455,15 @@ SCIP_RETCODE separateAlternativeProofs(
    inds = SCIPaggrRowGetInds(proofrow);
    nnz = SCIPaggrRowGetNNz(proofrow);
 
-   proofefficiacy = aggrRowGetMinActivity(set, transprob, proofrow, curvarlbs, curvarubs, &infdelta);
+   proofefficacy = aggrRowGetMinActivity(set, transprob, proofrow, curvarlbs, curvarubs, &infdelta);
 
    if( infdelta )
       return SCIP_OKAY;
 
-   proofefficiacy -= SCIPaggrRowGetRhs(proofrow);
+   proofefficacy -= SCIPaggrRowGetRhs(proofrow);
 
-   efficiacynorm = SCIPaggrRowCalcEfficacyNorm(set->scip, proofrow);
-   proofefficiacy /= MAX(1e-6, efficiacynorm);
+   efficacynorm = SCIPaggrRowCalcEfficacyNorm(set->scip, proofrow);
+   proofefficacy /= MAX(1e-6, efficacynorm);
 
    /* create reference solution */
    SCIP_CALL( SCIPcreateSol(set->scip, &refsol, NULL) );
@@ -7499,7 +7507,7 @@ SCIP_RETCODE separateAlternativeProofs(
    success = (success || cutsuccess);
 
    /* replace the current proof */
-   if( success && !islocal && SCIPsetIsPositive(set, cutefficacy) && cutefficacy * nnz > proofefficiacy * cutnnz )
+   if( success && !islocal && SCIPsetIsPositive(set, cutefficacy) && cutefficacy * nnz > proofefficacy * cutnnz )
    {
       SCIP_PROOFSET* alternativeproofset;
       SCIP_Bool redundant;
@@ -9477,10 +9485,10 @@ SCIP_RETCODE SCIPconflictAnalyzePseudo(
    /* get temporary memory for infeasibility proof coefficients */
    SCIP_CALL( SCIPsetAllocBufferArray(set, &pseudocoefs, nvars) );
 
-   /* use a slightly tighter cutoff bound, because solutions with equal objective value should also be declared
-    * infeasible
+   /* for an integral objective use the cutoff bound reduced by the cutoff bound delta to cut off up to the next better
+    * objective value
     */
-   pseudolhs = -(lp->cutoffbound - SCIPsetSumepsilon(set));
+   pseudolhs = -(lp->cutoffbound - (SCIPprobIsObjIntegral(transprob) ? SCIPsetCutoffbounddelta(set) : 0.0));
 
    /* store the objective values as infeasibility proof coefficients, and recalculate the pseudo activity */
    pseudoact = 0.0;
