@@ -3183,7 +3183,7 @@ SCIP_Bool SCIPlpiIsStable(
          objlimit *= -1.0;
          objvalue *= -1.0;
       }
-      if( !SCIPlpiIsInfinity(lpi, objlimit) && LTrel(objvalue, objlimit) )
+      if( !SCIPlpiIsInfinity(lpi, objlimit) && LTrel(objvalue, objlimit, 2*lpi->spx->opttol()) )
          return FALSE;
    }
    return TRUE;
