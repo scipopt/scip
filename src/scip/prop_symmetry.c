@@ -3507,7 +3507,9 @@ SCIP_RETCODE addOrbitopeSubgroup(
    SCIP_CONS* cons;
    SCIP_Bool isorbitope;
    SCIP_Bool infeasible = FALSE;
+#ifndef NDEBUG
    int nactivevars = 0;
+#endif
    int ngencols = 0;
    int k;
 
@@ -3565,7 +3567,9 @@ SCIP_RETCODE addOrbitopeSubgroup(
          assert( ! activevars[varidx] );
 
          activevars[varidx] = TRUE;
+#ifndef NDEBUG
          ++nactivevars;
+#endif
       }
    }
    assert( nactivevars == nrows * ncols );

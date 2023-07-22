@@ -126,7 +126,7 @@
 
 #define DEFAULT_PRESOLPAIRWISE     TRUE /**< should pairwise constraint comparison be performed in presolving? */
 #define NMINCOMPARISONS          200000 /**< number for minimal pairwise presolving comparisons */
-#define MINGAINPERNMINCOMPARISONS 1e-06 /**< minimal gain per minimal pairwise presolving comparisons to repeat pairwise 
+#define MINGAINPERNMINCOMPARISONS 1e-06 /**< minimal gain per minimal pairwise presolving comparisons to repeat pairwise
                                          *   comparison round */
 #define DEFAULT_DUALPRESOLVING     TRUE /**< should dual presolving steps be performed? */
 #define DEFAULT_DETECTCUTOFFBOUND  TRUE /**< should presolving try to detect constraints parallel to the objective
@@ -328,7 +328,7 @@ SCIP_DECL_SORTPTRCOMP(compSortkeypairs)
       return -1;
    else if( sortkeypair1->key2 > sortkeypair2->key2 )
       return +1;
-   else 
+   else
       return 0;
 }
 
@@ -348,7 +348,7 @@ SCIP_RETCODE eventdataCreate(
    (*eventdata)->weight = weight;
 
    return SCIP_OKAY;
-}  
+}
 
 /** frees event data */
 static
@@ -861,7 +861,7 @@ void consdataChgWeight(
 }
 
 /** creates LP row corresponding to knapsack constraint */
-static 
+static
 SCIP_RETCODE createRelaxation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< knapsack constraint */
@@ -2966,7 +2966,9 @@ SCIP_RETCODE getLiftingSequenceGUB(
    int ngubconss;
    int ngubconsGOC1;
    int targetvar;
-   int nvarsprocessed;
+#ifndef NDEBUG
+   int nvarsprocessed = 0;
+#endif
    int i;
    int j;
 
@@ -2999,7 +3001,6 @@ SCIP_RETCODE getLiftingSequenceGUB(
    assert(maxgubvarssize != NULL);
 
    ngubconss = gubset->ngubconss;
-   nvarsprocessed = 0;
    ngubconsGOC1 = 0;
 
    /* GUBs are categorized into different types according to the variables in volved
@@ -3181,7 +3182,9 @@ SCIP_RETCODE getLiftingSequenceGUB(
          if( gubset->gubconss[gubconsidx]->gubvarsstatus[j] == GUBVARSTATUS_BELONGSTOSET_C1 )
          {
             nvarsC1capexceed++;
+#ifndef NDEBUG
             nvarsprocessed++;
+#endif
          }
          /* F-variable: update sort key (number of F variables in GUB) of corresponding GFC1-GUB */
          else if( gubset->gubconss[gubconsidx]->gubvarsstatus[j] == GUBVARSTATUS_BELONGSTOSET_F )
@@ -3295,7 +3298,9 @@ SCIP_RETCODE getLiftingSequenceGUB(
       if( gubset->gubconss[gubconsidx]->gubvarssize > *maxgubvarssize )
 	 *maxgubvarssize = gubset->gubconss[gubconsidx]->gubvarssize;
 
+#ifndef NDEBUG
       nvarsprocessed++;
+#endif
    }
 
    /* stores remaining part of the GUBs of group GFC1 (GF GUBs) and gets GUB sorting keys corresp. to following ordering
@@ -3311,7 +3316,9 @@ SCIP_RETCODE getLiftingSequenceGUB(
       assert(gubconsidx >= 0 && gubconsidx < ngubconss);
       assert(gubset->gubconss[gubconsidx]->gubvarsstatus[varidx] == GUBVARSTATUS_BELONGSTOSET_F);
 
+#ifndef NDEBUG
       nvarsprocessed++;
+#endif
 
       /* the GUB was already handled (status set and stored in its group) by another variable of the GUB */
       if( gubset->gubconsstatus[gubconsidx] != GUBCONSSTATUS_UNINITIAL )
@@ -3361,7 +3368,9 @@ SCIP_RETCODE getLiftingSequenceGUB(
       assert(gubconsidx >= 0 && gubconsidx < ngubconss);
       assert(gubset->gubconss[gubconsidx]->gubvarsstatus[varidx] == GUBVARSTATUS_BELONGSTOSET_R);
 
+#ifndef NDEBUG
       nvarsprocessed++;
+#endif
 
       /* the GUB was already handled (status set and stored in its group) by another variable of the GUB */
       if( gubset->gubconsstatus[gubconsidx] != GUBCONSSTATUS_UNINITIAL )
@@ -4638,24 +4647,24 @@ SCIP_RETCODE sequentialUpAndDownLiftingGUB(
    return SCIP_OKAY;
 }
 
-/** lifts given minimal cover inequality 
+/** lifts given minimal cover inequality
  *  \f[
- *    \sum_{j \in C} x_j \leq |C| - 1 
+ *    \sum_{j \in C} x_j \leq |C| - 1
  *  \f]
- *  valid for 
+ *  valid for
  *  \f[
  *    S^0 = \{ x \in {0,1}^{|C|} : \sum_{j \in C} a_j x_j \leq a_0 \}
  *  \f]
- *  to a valid inequality 
+ *  to a valid inequality
  *  \f[
  *    \sum_{j \in C} x_j + \sum_{j \in N \setminus C} \alpha_j x_j \leq |C| - 1
  *  \f]
  *  for
- *  \f[ 
- *    S = \{ x \in {0,1}^{|N|} : \sum_{j \in N} a_j x_j \leq a_0 \}; 
+ *  \f[
+ *    S = \{ x \in {0,1}^{|N|} : \sum_{j \in N} a_j x_j \leq a_0 \};
  *  \f]
  *  uses superadditive up-lifting for the variables in \f$N \setminus C\f$.
- */ 
+ */
 static
 SCIP_RETCODE superadditiveUpLifting(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -4706,8 +4715,8 @@ SCIP_RETCODE superadditiveUpLifting(
    BMSclearMemoryArray(liftcoefs, nvars);
    *cutact = 0.0;
 
-   /* sets lifting coefficient of variables in C, sorts variables in C such that a_1 >= a_2 >= ... >= a_|C| 
-    * and calculates activity of current valid inequality 
+   /* sets lifting coefficient of variables in C, sorts variables in C such that a_1 >= a_2 >= ... >= a_|C|
+    * and calculates activity of current valid inequality
     */
    for( j = 0; j < ncovervars; j++ )
    {
@@ -4752,7 +4761,7 @@ SCIP_RETCODE superadditiveUpLifting(
 
       if( h == 0 )
          liftcoef = h;
-      else 
+      else
       {
          if( weight <= intervalends[h-1] + rhos[h] )
          {
@@ -4764,7 +4773,7 @@ SCIP_RETCODE superadditiveUpLifting(
          }
          else
             liftcoef = h;
-      }      
+      }
 
       /* sets lifting coefficient */
       assert(liftcoefs[liftvar] == 0.0);
@@ -4772,7 +4781,7 @@ SCIP_RETCODE superadditiveUpLifting(
 
       /* updates activity of current valid inequality */
       (*cutact) += liftcoef * solvals[liftvar];
-   } 
+   }
 
    /* frees temporary memory */
    SCIPfreeBufferArray(scip, &rhos);
@@ -5299,7 +5308,7 @@ SCIP_RETCODE separateSupLiftedMinimalCoverInequality(
 
 /** converts given cover C to a minimal cover by removing variables in the reverse order in which the variables were chosen
  *  to be in C, i.e. in the order of non-increasing (1 - x*_j)/a_j, if the transformed separation problem was used to find
- *  C and in the order of non-increasing (1 - x*_j), if the modified transformed separation problem was used to find C; 
+ *  C and in the order of non-increasing (1 - x*_j), if the modified transformed separation problem was used to find C;
  *  note that all variables with x*_j = 1 will be removed last
  */
 static
@@ -5313,7 +5322,7 @@ SCIP_RETCODE makeCoverMinimal(
    int*                  ncovervars,         /**< pointer to store number of cover variables */
    int*                  nnoncovervars,      /**< pointer to store number of noncover variables */
    SCIP_Longint*         coverweight,        /**< pointer to store weight of cover */
-   SCIP_Bool             modtransused        /**< TRUE if mod trans sepa prob was used to find cover */    
+   SCIP_Bool             modtransused        /**< TRUE if mod trans sepa prob was used to find cover */
    )
 {
    SORTKEYPAIR** sortkeypairs;
@@ -5341,9 +5350,9 @@ SCIP_RETCODE makeCoverMinimal(
    SCIP_CALL( SCIPallocBufferArray(scip, &sortkeypairs, nsortkeypairs) );
    SCIP_CALL( SCIPallocBufferArray(scip, &sortkeypairssorted, nsortkeypairs) );
 
-   /* sorts C in the reverse order in which the variables were chosen to be in the cover, i.e. 
-    *   such that (1 - x*_1)/a_1 >= ... >= (1 - x*_|C|)/a_|C|,  if          trans separation problem was used to find C 
-    *   such that (1 - x*_1)     >= ... >= (1 - x*_|C|),        if modified trans separation problem was used to find C 
+   /* sorts C in the reverse order in which the variables were chosen to be in the cover, i.e.
+    *   such that (1 - x*_1)/a_1 >= ... >= (1 - x*_|C|)/a_|C|,  if          trans separation problem was used to find C
+    *   such that (1 - x*_1)     >= ... >= (1 - x*_|C|),        if modified trans separation problem was used to find C
     * note that all variables with x*_j = 1 are in the end of the sorted C, so they will be removed last from C
     */
    assert(*ncovervars == nsortkeypairs);
@@ -5354,8 +5363,8 @@ SCIP_RETCODE makeCoverMinimal(
          SCIP_CALL( SCIPallocBuffer(scip, &(sortkeypairs[j])) ); /*lint !e866 */
          sortkeypairssorted[j] = sortkeypairs[j];
 
-         sortkeypairs[j]->key1 = solvals[covervars[j]]; 
-         sortkeypairs[j]->key2 = (SCIP_Real) weights[covervars[j]]; 
+         sortkeypairs[j]->key1 = solvals[covervars[j]];
+         sortkeypairs[j]->key2 = (SCIP_Real) weights[covervars[j]];
       }
    }
    else
@@ -6387,7 +6396,7 @@ SCIP_RETCODE delCoefPos(
    if( consdata->cliquepartitioned )
    {
       assert(consdata->cliquepartition != NULL);
-      /* if the clique number is equal to the number of variables we have only cliques with one element, so we don't 
+      /* if the clique number is equal to the number of variables we have only cliques with one element, so we don't
        * change the clique number */
       if( consdata->cliquepartition[consdata->nvars - 1] != consdata->nvars - 1 )
       {
@@ -6404,7 +6413,7 @@ SCIP_RETCODE delCoefPos(
             int i;
             int cliquenumbefore;
 
-            /* if the old clique number was greater than the new one we have to check that before a bigger clique number 
+            /* if the old clique number was greater than the new one we have to check that before a bigger clique number
              * occurs the same as the old one is still in the cliquepartition */
             if( oldcliqenum > consdata->cliquepartition[pos] )
             {
@@ -6417,12 +6426,12 @@ SCIP_RETCODE delCoefPos(
                      break;
                   }
                /* if we reached the end in the for loop, it means we have deleted the last element of the clique with
-                * the biggest index, so decrease the number of cliques 
+                * the biggest index, so decrease the number of cliques
                 */
                if( i == consdata->nvars )
                   --(consdata->ncliques);
             }
-            /* if the old clique number was smaller than the new one we have to check the front for an element with 
+            /* if the old clique number was smaller than the new one we have to check the front for an element with
              * clique number minus 1 */
             else if( oldcliqenum < consdata->cliquepartition[pos] )
             {
@@ -6451,7 +6460,7 @@ SCIP_RETCODE delCoefPos(
    if( consdata->negcliquepartitioned )
    {
       assert(consdata->negcliquepartition != NULL);
-      /* if the clique number is equal to the number of variables we have only cliques with one element, so we don't 
+      /* if the clique number is equal to the number of variables we have only cliques with one element, so we don't
        * change the clique number */
       if( consdata->negcliquepartition[consdata->nvars-1] != consdata->nvars - 1 )
       {
@@ -6481,12 +6490,12 @@ SCIP_RETCODE delCoefPos(
                      break;
                   }
                /* if we reached the end in the for loop, it means we have deleted the last element of the clique with
-                * the biggest index, so decrease the number of negated cliques 
+                * the biggest index, so decrease the number of negated cliques
                 */
                if( i == consdata->nvars )
                   --(consdata->nnegcliques);
             }
-            /* if the old clique number was smaller than the new one we have to check the front for an element with 
+            /* if the old clique number was smaller than the new one we have to check the front for an element with
              * clique number minus 1 */
             else if( oldcliqenum < consdata->negcliquepartition[pos] )
             {
@@ -6500,7 +6509,7 @@ SCIP_RETCODE delCoefPos(
             else if( pos == consdata->nvars - 1)
             {
                cliquenumbefore = consdata->negcliquepartition[pos];
-               for( i = pos - 1; i >= 0 && i >= cliquenumbefore && consdata->negcliquepartition[i] < cliquenumbefore; --i ); /*lint !e722*/ 
+               for( i = pos - 1; i >= 0 && i >= cliquenumbefore && consdata->negcliquepartition[i] < cliquenumbefore; --i ); /*lint !e722*/
 
                if( i < cliquenumbefore )
                   --(consdata->nnegcliques);
@@ -6604,7 +6613,7 @@ SCIP_RETCODE mergeMultiples(
 
    *cutoff = FALSE;
 
-   if( consdata->merged ) 
+   if( consdata->merged )
       return SCIP_OKAY;
 
    if( consdata->nvars <= 1 )
@@ -6615,11 +6624,11 @@ SCIP_RETCODE mergeMultiples(
 
    assert(consdata->vars != NULL || consdata->nvars == 0);
 
-   /* sorting array after indices of variables, that's only for faster merging */ 
-   SCIPsortPtrPtrLongIntInt((void**)consdata->vars, (void**)consdata->eventdata, consdata->weights, 
+   /* sorting array after indices of variables, that's only for faster merging */
+   SCIPsortPtrPtrLongIntInt((void**)consdata->vars, (void**)consdata->eventdata, consdata->weights,
       consdata->cliquepartition, consdata->negcliquepartition, SCIPvarCompActiveAndNegated, consdata->nvars);
 
-   /* knapsack-sorting (decreasing weights) now lost */ 
+   /* knapsack-sorting (decreasing weights) now lost */
    consdata->sorted = FALSE;
 
    v = consdata->nvars - 1;
@@ -7034,7 +7043,7 @@ SCIP_RETCODE stableSort(
    int*                  cliquestartposs,    /**< starting position array for each clique */
    SCIP_Bool             usenegatedclique    /**< should negated or normal clique partition be used */
    )
-{ 
+{
    SCIP_VAR** origvars;
    int norigvars;
    SCIP_Longint* origweights;
@@ -7110,7 +7119,7 @@ SCIP_RETCODE stableSort(
       /* to reach the goal that all variables of each clique will be standing next to each other we will initialize the
        * starting pointers for each clique by adding the number of each clique to the last clique starting pointer
        * e.g. clique1 has 4 elements and clique2 has 3 elements the the starting pointer for clique1 will be the pointer
-       *      to vars[0], the starting pointer to clique2 will be the pointer to vars[4] and to clique3 it will be 
+       *      to vars[0], the starting pointer to clique2 will be the pointer to vars[4] and to clique3 it will be
        *      vars[7]
        *
        */
@@ -11052,7 +11061,7 @@ SCIP_RETCODE addNegatedCliques(
             {
                /* if we would take the biggest weight instead of another what would we gain, take weight[v] instead of
                 * weight[w] (which are both in a negated clique) */
-               if( consdata->negcliquepartition[v] == consdata->negcliquepartition[w] 
+               if( consdata->negcliquepartition[v] == consdata->negcliquepartition[w]
                   && consdata->weights[v] > consdata->weights[w] )
                {
                   poscliquevars[nposcliquevars] = consdata->vars[w];
@@ -11119,7 +11128,7 @@ SCIP_RETCODE addNegatedCliques(
                }
             }
          }
-      }   
+      }
    }
 
  TERMINATE:
@@ -11400,12 +11409,12 @@ SCIP_RETCODE addCliques(
 static
 SCIP_DECL_HASHGETKEY(hashGetKeyKnapsackcons)
 {  /*lint --e{715}*/
-   /* the key is the element itself */ 
+   /* the key is the element itself */
    return elem;
 }
 
-/** returns TRUE iff both keys are equal; two constraints are equal if they have the same variables and the 
- * same coefficients 
+/** returns TRUE iff both keys are equal; two constraints are equal if they have the same variables and the
+ * same coefficients
  */
 static
 SCIP_DECL_HASHKEYEQ(hashKeyEqKnapsackcons)
@@ -11422,7 +11431,7 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqKnapsackcons)
    assert(consdata1->sorted);
    assert(consdata2->sorted);
 #ifndef NDEBUG
-   scip = (SCIP*)userptr; 
+   scip = (SCIP*)userptr;
    assert(scip != NULL);
 #endif
 
@@ -11435,16 +11444,16 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqKnapsackcons)
       /* tests if variables are equal */
       if( consdata1->vars[i] != consdata2->vars[i] )
       {
-         assert(SCIPvarCompare(consdata1->vars[i], consdata2->vars[i]) == 1 || 
+         assert(SCIPvarCompare(consdata1->vars[i], consdata2->vars[i]) == 1 ||
             SCIPvarCompare(consdata1->vars[i], consdata2->vars[i]) == -1);
          return FALSE;
       }
-      assert(SCIPvarCompare(consdata1->vars[i], consdata2->vars[i]) == 0); 
+      assert(SCIPvarCompare(consdata1->vars[i], consdata2->vars[i]) == 0);
 
-      /* tests if weights are equal too */  
+      /* tests if weights are equal too */
       if( consdata1->weights[i] != consdata2->weights[i] )
          return FALSE;
-   } 
+   }
 
    return TRUE;
 }
@@ -11467,7 +11476,7 @@ SCIP_DECL_HASHKEYVAL(hashKeyValKnapsackcons)
    assert(consdata->nvars > 0);
 
 #ifndef NDEBUG
-   scip = (SCIP*)userptr; 
+   scip = (SCIP*)userptr;
    assert(scip != NULL);
 #endif
 
@@ -11484,8 +11493,8 @@ SCIP_DECL_HASHKEYVAL(hashKeyValKnapsackcons)
    return SCIPhashSix(consdata->nvars, minidx, mididx, maxidx, firstweight>>32, firstweight);
 }
 
-/** compares each constraint with all other constraints for possible redundancy and removes or changes constraint 
- *  accordingly; in contrast to preprocessConstraintPairs(), it uses a hash table 
+/** compares each constraint with all other constraints for possible redundancy and removes or changes constraint
+ *  accordingly; in contrast to preprocessConstraintPairs(), it uses a hash table
  */
 static
 SCIP_RETCODE detectRedundantConstraints(
@@ -11553,7 +11562,7 @@ SCIP_RETCODE detectRedundantConstraints(
          assert(SCIPconsIsActive(cons1));
          assert(!SCIPconsIsModifiable(cons1));
 
-         /* constraint found: create a new constraint with same coefficients and best left and right hand side; 
+         /* constraint found: create a new constraint with same coefficients and best left and right hand side;
           * delete old constraints afterwards
           */
          consdata1 = SCIPconsGetData(cons1);
@@ -11580,8 +11589,8 @@ SCIP_RETCODE detectRedundantConstraints(
          }
          else
          {
-            consstay = cons1; 
-            consdel = cons0; 
+            consstay = cons1;
+            consdel = cons0;
          }
 
          /* update flags of constraint which caused the redundancy s.t. nonredundant information doesn't get lost */
@@ -11595,7 +11604,7 @@ SCIP_RETCODE detectRedundantConstraints(
       }
       else
       {
-         /* no such constraint in current hash table: insert cons0 into hash table */  
+         /* no such constraint in current hash table: insert cons0 into hash table */
          SCIP_CALL( SCIPhashtableInsert(hashtable, (void*) cons0) );
       }
    }
@@ -11887,26 +11896,26 @@ SCIP_RETCODE createNormalizedKnapsack(
    SCIP_Real             rhs,                /**< right hand side of inequality */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
                                               *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
-   SCIP_Bool             separate,           /**< should the constraint be separated during LP processing? 
+   SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
                                               *   Usually set to TRUE. */
-   SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing? 
+   SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing?
                                               *   TRUE for model constraints, FALSE for additional, redundant constraints. */
    SCIP_Bool             check,              /**< should the constraint be checked for feasibility?
                                               *   TRUE for model constraints, FALSE for additional, redundant constraints. */
-   SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing? 
+   SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing?
                                               *   Usually set to TRUE. */
-   SCIP_Bool             local,              /**< is constraint only valid locally? 
+   SCIP_Bool             local,              /**< is constraint only valid locally?
                                               *   Usually set to FALSE. Has to be set to TRUE, e.g., for branching constraints. */
-   SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? 
+   SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)?
                                               *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
                                               *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
-                                              *   if it may be moved to a more global node? 
+                                              *   if it may be moved to a more global node?
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
    )
 {
@@ -12267,13 +12276,13 @@ SCIP_DECL_CONSTRANS(consTransKnapsack)
 
    /* create target constraint data */
    SCIP_CALL( consdataCreate(scip, &targetdata,
-         sourcedata->nvars, sourcedata->vars, sourcedata->weights, sourcedata->capacity) ); 
+         sourcedata->nvars, sourcedata->vars, sourcedata->weights, sourcedata->capacity) );
 
    /* create target constraint */
    SCIP_CALL( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
          SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
          SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
-         SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons), 
+         SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons),
          SCIPconsIsDynamic(sourcecons), SCIPconsIsRemovable(sourcecons), SCIPconsIsStickingAtNode(sourcecons)) );
 
    /* catch events for variables */
@@ -12467,10 +12476,10 @@ SCIP_DECL_CONSENFOPS(consEnfopsKnapsack)
          *result = SCIP_INFEASIBLE;
          return SCIP_OKAY;
       }
-   } 
+   }
    *result = SCIP_FEASIBLE;
 
-   return SCIP_OKAY;  
+   return SCIP_OKAY;
 }
 
 /** feasibility check method of constraint handler for integral solutions */
@@ -12987,7 +12996,7 @@ SCIP_DECL_CONSRESPROP(consRespropKnapsack)
    {
       for( i = 0; i < consdata->nvars; ++i )
       {
-         if( SCIPvarGetIndex(consdata->vars[i]) == inferinfo ) 
+         if( SCIPvarGetIndex(consdata->vars[i]) == inferinfo )
          {
             assert( SCIPgetVarUbAtIndex(scip, consdata->vars[i], bdchgidx, FALSE) < 0.5 );
             SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[i]) );
@@ -12999,7 +13008,7 @@ SCIP_DECL_CONSRESPROP(consRespropKnapsack)
    else
    {
       /* according to negated cliques the minweightsum and all variables which are fixed to one which led to a fixing of
-       * another negated clique variable to one, the inferinfo was chosen to be the negative of the position in the 
+       * another negated clique variable to one, the inferinfo was chosen to be the negative of the position in the
        * knapsack constraint, see one above call of SCIPinferBinvarCons
        */
       if( inferinfo < 0 )
@@ -13176,7 +13185,7 @@ SCIP_DECL_CONSCOPY(consCopyKnapsack)
 
    /* copy the logic using the linear constraint copy method */
    SCIP_CALL( SCIPcopyConsLinear(scip, cons, sourcescip, consname, nvars, sourcevars, coefs,
-         -SCIPinfinity(scip), (SCIP_Real) SCIPgetCapacityKnapsack(sourcescip, sourcecons), varmap, consmap, 
+         -SCIPinfinity(scip), (SCIP_Real) SCIPgetCapacityKnapsack(sourcescip, sourcecons), varmap, consmap,
          initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, global, valid) );
    assert(cons != NULL);
 
@@ -13510,7 +13519,7 @@ SCIP_RETCODE SCIPincludeConshdlrKnapsack(
          &conshdlrdata->presolpairwise, TRUE, DEFAULT_PRESOLPAIRWISE, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/" CONSHDLR_NAME "/presolusehashing",
-         "should hash table be used for detecting redundant constraints in advance", 
+         "should hash table be used for detecting redundant constraints in advance",
          &conshdlrdata->presolusehashing, TRUE, DEFAULT_PRESOLUSEHASHING, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/" CONSHDLR_NAME "/dualpresolving",

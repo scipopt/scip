@@ -49,7 +49,7 @@ static boolean filterschreier(schreier*,int*,permnode**,boolean,int,int);
 
 /************************************************************************/
 
-#if 0
+#ifdef SCIP_DISABLED_CODE
 static void
 testispermutation(int id, int *p, int n)
 /* For debugging purposes, crash with a message if p[0..n-1] is

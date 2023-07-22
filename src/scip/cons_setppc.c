@@ -1218,8 +1218,10 @@ SCIP_RETCODE delCoefPos(
    return SCIP_OKAY;
 }
 
-/** in case a part (more than one variable) in the setppc constraint is independent of every else (is locked only by
- *  this constraint), we can perform dual reductions;
+/** preform dual presolving
+ *
+ *  In case a part (more than one variable) in the setppc constraint is independent of everything else (is locked only by
+ *  this constraint), we can perform dual reductions:
  *
  *  (1) set covering
  *
@@ -1260,7 +1262,7 @@ SCIP_RETCODE delCoefPos(
  *          - fix y to 0, because it is dominated by x
  *
  *
- * Note: the following dual reduction for set covering and set packing constraints is already performed by the presolver
+ *  Note: the following dual reduction for set covering and set packing constraints is already performed by the presolver
  *       "dualfix"
  *       (1) in case of a set covering constraint the following dual reduction can be performed:
  *           - if a variable in a set covering constraint is only locked by that constraint and has negative or zero
@@ -1269,9 +1271,11 @@ SCIP_RETCODE delCoefPos(
  *           - if a variable in a set packing constraint is only locked by that constraint and has positive or zero
  *             objective coefficient than it can be fixed to zero
  *
- * Note: all dual reduction (ii) could also be performed by the "domcol" presolver, but cause the pairwise comparison of
- *       columns is only done heuristically (and here it should be even cheaper) we perform them here (too)
+ *  Note: all dual reduction (ii) could also be performed by the "domcol" presolver, but because the pairwise comparison of
+ *       columns is only done heuristically (and here it should be even cheaper) we perform them here (too).
  *
+ *  Moreover, if there exists a variable that is only locked by a covering or packing constraint with two variables, one
+ *  can aggregate variables.
  */
 static
 SCIP_RETCODE dualPresolving(
@@ -1279,6 +1283,7 @@ SCIP_RETCODE dualPresolving(
    SCIP_CONS*            cons,               /**< setppc constraint */
    int*                  nfixedvars,         /**< pointer to count number of fixings */
    int*                  ndelconss,          /**< pointer to count number of deleted constraints  */
+   int*                  naggrvars,          /**< pointer to count number of variables aggregated */
    SCIP_RESULT*          result              /**< pointer to store the result SCIP_SUCCESS, if presolving was performed */
    )
 {
@@ -1289,6 +1294,7 @@ SCIP_RETCODE dualPresolving(
    SCIP_VAR* var;
    SCIP_Real bestobjval;
    SCIP_Real objval;
+   SCIP_Real objsign;
    SCIP_Real fixval;
    SCIP_Bool infeasible;
    SCIP_Bool fixed;
@@ -1298,6 +1304,7 @@ SCIP_RETCODE dualPresolving(
    int nlockdowns;
    int nlockups;
    int nvars;
+   int indepidx = -1;
    int idx;
    int v;
 
@@ -1348,14 +1355,17 @@ SCIP_RETCODE dualPresolving(
    case SCIP_SETPPCTYPE_PARTITIONING:
       nlockdowns = 1;
       nlockups = 1;
+      objsign = 0.0;
       break;
    case SCIP_SETPPCTYPE_PACKING:
       nlockdowns = 0;
       nlockups = 1;
+      objsign = -1.0;
       break;
    case SCIP_SETPPCTYPE_COVERING:
       nlockdowns = 1;
       nlockups = 0;
+      objsign = 1.0;
       break;
    default:
       SCIPerrorMessage("unknown setppc type\n");
@@ -1397,6 +1407,16 @@ SCIP_RETCODE dualPresolving(
             idx = v;
             bestobjval = objval;
          }
+
+         /* determine independent variable, i.e., only locked by the current constraint */
+         if( SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == nlockdowns )
+         {
+            assert(SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == nlockups);
+
+            /* store variables that have the right objective sign */
+            if ( objval * objsign >= 0.0 )
+               indepidx = v;
+         }
       }
 
       /* in case another constraint has also downlocks on that variable we cannot perform a dual reduction on these
@@ -1418,6 +1438,36 @@ SCIP_RETCODE dualPresolving(
    assert(bestobjval < SCIPinfinity(scip));
 
    noldfixed = *nfixedvars;
+
+   /* In the special case of two variables, where one variable is independent and will be minimized for covering or
+    * maximized for packing or does not appear in the objective, we can aggregate variables:
+    *  - Covering: var1 + var2 >= 1 and the objective of var1 is non-negative.
+    *  - Packing:  var1 + var2 <= 1 and the objective of var1 is non-positive.
+    * In both cases, var1 + var2 = 1 holds in every optimal solution.
+    */
+   if( setppctype != SCIP_SETPPCTYPE_PARTITIONING && nvars == 2 && indepidx >= 0 )
+   {
+      SCIP_Bool redundant;
+      SCIP_Bool aggregated;
+      int idx2;
+
+      idx2 = 1 - indepidx;
+      assert( 0 <= idx2 && idx2 < 2 );
+
+      SCIP_CALL( SCIPaggregateVars(scip, vars[indepidx], vars[idx2], 1.0, 1.0, 1.0, &infeasible, &redundant, &aggregated) );
+      assert(!infeasible);
+      assert(redundant);
+      assert(aggregated);
+      ++(*naggrvars);
+
+      /* remove constraint since it is redundant */
+      SCIP_CALL( SCIPdelCons(scip, cons) );
+      ++(*ndelconss);
+
+      *result = SCIP_SUCCESS;
+
+      return SCIP_OKAY;
+   }
 
    /* in case of set packing and set partitioning we fix the dominated variables to zero */
    if( setppctype != SCIP_SETPPCTYPE_COVERING )
@@ -1608,9 +1658,9 @@ SCIP_RETCODE mergeMultiples(
 
    assert(consdata->vars != NULL || consdata->nvars == 0);
 
-   /* sorting array after indices of variables, that's only for faster merging */ 
+   /* sorting array after indices of variables, that's only for faster merging */
    SCIPsortPtr((void**)consdata->vars, SCIPvarCompActiveAndNegated, consdata->nvars);
-   /* setppc sorting now lost */ 
+   /* setppc sorting now lost */
    consdata->sorted = FALSE;
 
    /* loop backwards through the items: deletion only affects rear items */
@@ -5630,7 +5680,9 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
    int nposbinvars;
    int nuplocks;
    int ndownlocks;
-   int posreplacements;
+#ifndef NDEBUG
+   int posreplacements = 0;
+#endif
    int nhashmapentries;
    int nlocaladdconss;
    int v;
@@ -5686,7 +5738,6 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
    /* sort constraints */
    SCIPsortPtr((void**)usefulconss, setppcConssSort2, nconss);
 
-   posreplacements = 0;
    nhashmapentries = 0;
    ndecs = 0;
    donotaggr = SCIPdoNotAggr(scip);
@@ -6003,7 +6054,9 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
                   considxs[nhashmapentries - 1] = c;
                   posincons[nhashmapentries - 1] = v;
 
+#ifndef NDEBUG
                   ++posreplacements;
+#endif
                   continue;
                }
 
@@ -6018,7 +6071,9 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
                assert(consindex < c);
 
                ++ndecs;
+#ifndef NDEBUG
                --posreplacements;
+#endif
                assert(posreplacements >= 0);
 
                varindex = posincons[image - 1];
@@ -6152,7 +6207,9 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
 
                SCIP_CALL( SCIPhashmapRemove(vartoindex, (void*) var) );
 
+#ifndef NDEBUG
                --posreplacements;
+#endif
                assert(posreplacements >= 0);
 
                continue;
@@ -6170,7 +6227,9 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
                   considxs[nhashmapentries - 1] = c;
                   posincons[nhashmapentries - 1] = v;
 
+#ifndef NDEBUG
                   ++posreplacements;
+#endif
                   continue;
                }
             }
@@ -6197,7 +6256,9 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
             assert(consindex < c);
 
             ++ndecs;
+#ifndef NDEBUG
             --posreplacements;
+#endif
             assert(posreplacements >= 0);
 
             varindex = posincons[image - 1];
@@ -6934,7 +6995,7 @@ SCIP_RETCODE enforceConstraint(
    {
       SCIP_CALL( separateCons(scip, conss[c], sol, TRUE, &cutoff, &separated, &reduceddom) );
    }
-   
+
 #ifdef VARUSES
 #ifdef BRANCHLP
    /* @todo also branch on relaxation solution */
@@ -6973,28 +7034,28 @@ SCIP_RETCODE createConsSetppc(
    int                   nvars,              /**< number of variables in the constraint */
    SCIP_VAR**            vars,               /**< array with variables of constraint entries */
    SCIP_SETPPCTYPE       setppctype,         /**< type of constraint: set partitioning, packing, or covering constraint */
-   SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? 
+   SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
                                               *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
-   SCIP_Bool             separate,           /**< should the constraint be separated during LP processing? 
+   SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
                                               *   Usually set to TRUE. */
-   SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing? 
+   SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing?
                                               *   TRUE for model constraints, FALSE for additional, redundant constraints. */
-   SCIP_Bool             check,              /**< should the constraint be checked for feasibility? 
+   SCIP_Bool             check,              /**< should the constraint be checked for feasibility?
                                               *   TRUE for model constraints, FALSE for additional, redundant constraints. */
-   SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing? 
+   SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing?
                                               *   Usually set to TRUE. */
-   SCIP_Bool             local,              /**< is constraint only valid locally? 
+   SCIP_Bool             local,              /**< is constraint only valid locally?
                                               *   Usually set to FALSE. Has to be set to TRUE, e.g., for branching constraints. */
-   SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? 
+   SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)?
                                               *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
                                               *   adds coefficients to this constraint. */
-   SCIP_Bool             dynamic,            /**< is constraint subject to aging? 
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+   SCIP_Bool             dynamic,            /**< is constraint subject to aging?
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
                                               *   are separated as constraints. */
-   SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup? 
+   SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
-                                              *   if it may be moved to a more global node? 
+                                              *   if it may be moved to a more global node?
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
    )
 {
@@ -7060,28 +7121,28 @@ SCIP_RETCODE createNormalizedSetppc(
    SCIP_Real*            vals,               /**< array with coefficients (+1.0 or -1.0) */
    int                   mult,               /**< multiplier on the coefficients(+1 or -1) */
    SCIP_SETPPCTYPE       setppctype,         /**< type of constraint: set partitioning, packing, or covering constraint */
-   SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? 
+   SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
                                               *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
-   SCIP_Bool             separate,           /**< should the constraint be separated during LP processing? 
+   SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
                                               *   Usually set to TRUE. */
-   SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing? 
+   SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing?
                                               *   TRUE for model constraints, FALSE for additional, redundant constraints. */
-   SCIP_Bool             check,              /**< should the constraint be checked for feasibility? 
+   SCIP_Bool             check,              /**< should the constraint be checked for feasibility?
                                               *   TRUE for model constraints, FALSE for additional, redundant constraints. */
-   SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing? 
+   SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing?
                                               *   Usually set to TRUE. */
-   SCIP_Bool             local,              /**< is constraint only valid locally? 
+   SCIP_Bool             local,              /**< is constraint only valid locally?
                                               *   Usually set to FALSE. Has to be set to TRUE, e.g., for branching constraints. */
-   SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? 
+   SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)?
                                               *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
                                               *   adds coefficients to this constraint. */
-   SCIP_Bool             dynamic,            /**< is constraint subject to aging? 
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+   SCIP_Bool             dynamic,            /**< is constraint subject to aging?
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
                                               *   are separated as constraints. */
-   SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup? 
+   SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
-                                              *   if it may be moved to a more global node? 
+                                              *   if it may be moved to a more global node?
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
    )
 {
@@ -8311,7 +8372,7 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
       /* perform dual reductions */
       if( conshdlrdata->dualpresolving && SCIPallowStrongDualReds(scip) )
       {
-         SCIP_CALL( dualPresolving(scip, cons, nfixedvars, ndelconss, result) );
+         SCIP_CALL( dualPresolving(scip, cons, nfixedvars, ndelconss, naggrvars, result) );
 
          /* if dual reduction deleted the constraint we take the next */
          if( !SCIPconsIsActive(cons) )

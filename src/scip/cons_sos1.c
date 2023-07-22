@@ -1780,7 +1780,7 @@ SCIP_RETCODE presolRoundConsSOS1(
          /* create, add, and release the logicor constraint */
          SCIP_CALL( SCIPcreateConsSetpack(scip, &setpackcons, SCIPconsGetName(cons), consdata->nvars, consdata->vars,
                SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
-               SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), 
+               SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons),
                SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
          SCIP_CALL( SCIPaddCons(scip, setpackcons) );
          SCIP_CALL( SCIPreleaseCons(scip, &setpackcons) );
@@ -5978,9 +5978,9 @@ SCIP_RETCODE enforceConssSOS1(
       SCIP_Real w;
       int j;
       int ind;
-      int cnt;
-
-      cnt = 0;
+#ifndef NDEBUG
+      int cnt = 0;
+#endif
 
       weight1 = 0.0;
       weight2 = 0.0;
@@ -5992,8 +5992,10 @@ SCIP_RETCODE enforceConssSOS1(
          weight1 += val * (SCIP_Real) j;
          weight2 += val;
 
+#ifndef NDEBUG
          if ( ! SCIPisFeasZero(scip, val) )
             ++cnt;
+#endif
       }
 
       assert( cnt >= 2 );
@@ -6066,7 +6068,7 @@ SCIP_RETCODE enforceSOS1(
    assert( conshdlr != NULL );
    assert( conss != NULL );
    assert( result != NULL );
-   
+
    /* get constraint handler data */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );

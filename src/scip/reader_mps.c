@@ -2978,8 +2978,8 @@ SCIP_RETCODE getLinearCoeffs(
          if( SCIPvarGetStatus(activevars[v]) == SCIP_VARSTATUS_NEGATED )
          {
             activevars[v] = SCIPvarGetNegatedVar(activevars[v]);
+            activeconstant += activevals[v];
             activevals[v] *= -1.0;
-            activeconstant += 1.0;
          }
       }
    }

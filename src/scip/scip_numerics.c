@@ -1308,8 +1308,8 @@ SCIP_Longint SCIPconvertRealToLongint(
 {
    assert(SCIPisFeasIntegral(scip, real));
    assert(SCIPisFeasEQ(scip, real, (SCIP_Real)(SCIP_Longint)(real < 0 ? real - 0.5 : real + 0.5)));
-   assert(real < SCIP_LONGINT_MAX);
-   assert(real > SCIP_LONGINT_MIN);
+   assert(real < (SCIP_Real)SCIP_LONGINT_MAX);
+   assert(real > (SCIP_Real)SCIP_LONGINT_MIN);
 
    return (SCIP_Longint)(real < 0 ? (real - 0.5) : (real + 0.5));
 }

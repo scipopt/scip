@@ -274,7 +274,7 @@ SCIP_RETCODE consdataCatchEvents(
    assert(consdata != NULL);
 
    /* catch bound change events for both bounds on resultant variable */
-   SCIP_CALL( SCIPcatchVarEvent(scip, consdata->resvar, SCIP_EVENTTYPE_BOUNDCHANGED, 
+   SCIP_CALL( SCIPcatchVarEvent(scip, consdata->resvar, SCIP_EVENTTYPE_BOUNDCHANGED,
          eventhdlr, (SCIP_EVENTDATA*)consdata, NULL) );
 
    /* catch tightening events for lower bound and relaxed events for upper bounds on operator variables */
@@ -699,7 +699,7 @@ SCIP_RETCODE applyFixings(
  *   - for each operator variable vi:  resvar - vi            >= 0
  *   - one additional row:             resvar - v1 - ... - vn <= 0
  */
-static 
+static
 SCIP_RETCODE createRelaxation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint to check */
@@ -813,13 +813,17 @@ SCIP_RETCODE checkCons(
          mustcheck = !SCIProwIsInLP(consdata->rows[r]);
          if( mustcheck )
             break;
-      }         
+      }
    }
 
    /* check feasibility of constraint if necessary */
    if( mustcheck )
    {
       SCIP_Real solval;
+      SCIP_Real maxsolval;
+      SCIP_Real sumsolval;
+      SCIP_Real viol;
+      int maxsolind;
       int i;
 
       /* increase age of constraint; age is reset to zero, if a violation was found only in case we are in
@@ -830,20 +834,31 @@ SCIP_RETCODE checkCons(
          SCIP_CALL( SCIPincConsAge(scip, cons) );
       }
 
-      /* check, if all operator variables are FALSE */
+      maxsolind = 0;
+      maxsolval = 0.0;
+      sumsolval = 0.0;
+
+      /* evaluate operator variables */
       for( i = 0; i < consdata->nvars; ++i )
       {
          solval = SCIPgetSolVal(scip, sol, consdata->vars[i]);
-         assert(SCIPisFeasIntegral(scip, solval));
-         if( solval > 0.5 )
-            break;
+
+         if( solval > maxsolval )
+         {
+            maxsolind = i;
+            maxsolval = solval;
+         }
+
+         sumsolval += solval;
       }
 
-      /* if all operator variables are FALSE, the resultant has to be FALSE, otherwise, the resultant has to be TRUE */
+      /* the resultant must be at least as large as every operator
+       * and at most as large as the sum of operators
+       */
       solval = SCIPgetSolVal(scip, sol, consdata->resvar);
-      assert(SCIPisFeasIntegral(scip, solval));
+      viol = MAX3(0.0, maxsolval - solval, solval - sumsolval);
 
-      if( (i == consdata->nvars) != (solval < 0.5) )
+      if( SCIPisFeasPositive(scip, viol) )
       {
          *violated = TRUE;
 
@@ -852,26 +867,28 @@ SCIP_RETCODE checkCons(
          {
             SCIP_CALL( SCIPresetConsAge(scip, cons) );
          }
-         /* update constraint violation in solution */
-         else
-            SCIPupdateSolConsViolation(scip, sol, 1.0, 1.0);
 
          if( printreason )
          {
             SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
-            SCIPinfoMessage(scip, NULL, ";\nviolation:\n");
-            if( i == consdata->nvars )
+            SCIPinfoMessage(scip, NULL, ";\n");
+            SCIPinfoMessage(scip, NULL, "violation:");
+
+            if( SCIPisFeasPositive(scip, maxsolval - solval) )
             {
-               SCIPinfoMessage(scip, NULL, " all operands are FALSE and resultant <%s> = TRUE\n",
-                  SCIPvarGetName(consdata->resvar)); 
+               SCIPinfoMessage(scip, NULL, " operand <%s> = TRUE and resultant <%s> = FALSE\n",
+                  SCIPvarGetName(consdata->vars[maxsolind]), SCIPvarGetName(consdata->resvar));
             }
             else
             {
-               SCIPinfoMessage(scip, NULL, " operand <%s> = TRUE and resultant <%s> = FALSE\n",
-                  SCIPvarGetName(consdata->vars[i-1]), SCIPvarGetName(consdata->resvar)); 
+               SCIPinfoMessage(scip, NULL, " all operands are FALSE and resultant <%s> = TRUE\n",
+                  SCIPvarGetName(consdata->resvar));
             }
          }
       }
+
+      if( sol != NULL )
+         SCIPupdateSolConsViolation(scip, sol, viol, viol);
    }
 
    return SCIP_OKAY;
@@ -1450,7 +1467,7 @@ SCIP_DECL_CONSDELETE(consDeleteOr)
 }
 
 
-/** transforms constraint data into data belonging to the transformed problem */ 
+/** transforms constraint data into data belonging to the transformed problem */
 static
 SCIP_DECL_CONSTRANS(consTransOr)
 {  /*lint --e{715}*/
@@ -1472,7 +1489,7 @@ SCIP_DECL_CONSTRANS(consTransOr)
    SCIP_CALL( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
          SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
          SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
-         SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons), 
+         SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons),
          SCIPconsIsDynamic(sourcecons), SCIPconsIsRemovable(sourcecons), SCIPconsIsStickingAtNode(sourcecons)) );
 
    return SCIP_OKAY;
@@ -1862,7 +1879,7 @@ SCIP_DECL_CONSCOPY(consCopyOr)
    resvar = NULL;
 
    /* get variables that need to be copied */
-   sourceresvar = SCIPgetResultantOr(sourcescip, sourcecons); 
+   sourceresvar = SCIPgetResultantOr(sourcescip, sourcecons);
    sourcevars = SCIPgetVarsOr(sourcescip, sourcecons);
    nvars = SCIPgetNVarsOr(sourcescip, sourcecons);
 
@@ -1888,7 +1905,7 @@ SCIP_DECL_CONSCOPY(consCopyOr)
       if( *valid )
       {
          assert(resvar != NULL);
-         SCIP_CALL( SCIPcreateConsOr(scip, cons, SCIPconsGetName(sourcecons), resvar, nvars, vars, 
+         SCIP_CALL( SCIPcreateConsOr(scip, cons, SCIPconsGetName(sourcecons), resvar, nvars, vars,
                initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
       }
    }
@@ -1921,9 +1938,9 @@ SCIP_DECL_CONSPARSE(consParseOr)
    SCIP_CALL( SCIPduplicateBufferArray(scip, &strcopy, str, (int)(strlen(str)+1)));
 
    /* cutoff "or" form the constraint string */
-   token = SCIPstrtok(strcopy, "=", &saveptr ); 
+   token = SCIPstrtok(strcopy, "=", &saveptr );
 
-   /* parse variable name */ 
+   /* parse variable name */
    SCIP_CALL( SCIPparseVarName(scip, token, &resvar, &endptr) );
 
    if( resvar == NULL )
@@ -1933,10 +1950,10 @@ SCIP_DECL_CONSPARSE(consParseOr)
    else
    {
       /* cutoff "or" form the constraint string */
-      (void) SCIPstrtok(NULL, "(", &saveptr ); 
+      (void) SCIPstrtok(NULL, "(", &saveptr );
 
       /* cutoff ")" form the constraint string */
-      token = SCIPstrtok(NULL, ")", &saveptr ); 
+      token = SCIPstrtok(NULL, ")", &saveptr );
 
       varssize = 100;
       nvars = 0;
@@ -1964,7 +1981,7 @@ SCIP_DECL_CONSPARSE(consParseOr)
          assert(varssize >= requiredsize);
 
          /* create and constraint */
-         SCIP_CALL( SCIPcreateConsOr(scip, cons, name, resvar, nvars, vars, 
+         SCIP_CALL( SCIPcreateConsOr(scip, cons, name, resvar, nvars, vars,
                initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
       }
 

@@ -2534,9 +2534,9 @@ SCIP_RETCODE getActiveVariables(
    assert(scip != NULL);
    assert(vars != NULL);
    assert(scalars != NULL);
-   assert(*vars != NULL);
-   assert(*scalars != NULL);
    assert(nvars != NULL);
+   assert(*vars != NULL || *nvars == 0);
+   assert(*scalars != NULL || *nvars == 0);
    assert(constant != NULL);
 
    if( transformed )
@@ -2554,6 +2554,13 @@ SCIP_RETCODE getActiveVariables(
    }
    else
    {
+      if( *nvars > 0 && ( *vars == NULL || *scalars == NULL ) ) /*lint !e774 !e845*/
+      {
+         SCIPerrorMessage("Null pointer in LP reader\n"); /* should not happen */
+         SCIPABORT();
+         return SCIP_INVALIDDATA;  /*lint !e527*/
+      }
+
       for( v = 0; v < *nvars; ++v )
       {
          SCIP_CALL( SCIPvarGetOrigvarSum(&(*vars)[v], &(*scalars)[v], constant) );
@@ -2564,8 +2571,8 @@ SCIP_RETCODE getActiveVariables(
          if( SCIPvarGetStatus((*vars)[v]) == SCIP_VARSTATUS_NEGATED )
          {
             (*vars)[v] = SCIPvarGetNegatedVar((*vars)[v]);
+            *constant += (*scalars)[v];
             (*scalars)[v] *= -1.0;
-            *constant += 1.0;
          }
       }
    }

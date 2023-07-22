@@ -301,7 +301,7 @@ SCIP_RETCODE consdataCatchEvents(
    assert(consdata != NULL);
 
    /* catch bound change events for both bounds on resultant variable */
-   SCIP_CALL( SCIPcatchVarEvent(scip, consdata->resvar, SCIP_EVENTTYPE_BOUNDCHANGED, 
+   SCIP_CALL( SCIPcatchVarEvent(scip, consdata->resvar, SCIP_EVENTTYPE_BOUNDCHANGED,
          eventhdlr, (SCIP_EVENTDATA*)consdata, NULL) );
 
    /* catch tightening events for upper bound and relaxed events for lower bounds on operator variables */
@@ -1118,9 +1118,10 @@ SCIP_RETCODE checkCons(
    if( mustcheck )
    {
       SCIP_Real solval;
+      SCIP_Real minsolval;
+      SCIP_Real sumsolval;
       SCIP_Real viol;
-      SCIP_Real absviol;
-      SCIP_Real relviol;
+      int minsolind;
       int i;
 
       /* increase age of constraint; age is reset to zero, if a violation was found only in case we are in
@@ -1131,46 +1132,33 @@ SCIP_RETCODE checkCons(
          SCIP_CALL( SCIPincConsAge(scip, cons) );
       }
 
-      absviol = 0.0;
-      relviol = 0.0;
+      minsolind = 0;
+      minsolval = 1.0;
+      sumsolval = 0.0;
 
-      /* check, if all operator variables are TRUE */
+      /* evaluate operator variables */
       for( i = 0; i < consdata->nvars; ++i )
       {
          solval = SCIPgetSolVal(scip, sol, consdata->vars[i]);
 
-         viol = REALABS(1 - solval);
-         if( absviol < viol )
+         if( solval < minsolval )
          {
-            absviol = viol;
-            relviol = SCIPrelDiff(solval, 1.0);
+            minsolind = i;
+            minsolval = solval;
          }
 
-        /* @todo If "upgraded resultants to varstatus implicit" is fully allowed, than the following assert does not hold
-         *       anymore, therefor we need to stop the check and return with the status not violated, because the
-         *       integrality condition of this violated operand needs to be enforced by another constraint.
-         *
-         *       The above should be asserted by marking the constraint handler, for which the result needs to be
-         *       SCIP_SEPARATED if the origin was the CONSENFOPS or the CONSENFOLP callback or SCIP_INFEASIBLE if the
-         *       origin was CONSCHECK callback.
-         *
-         */
-         assert(SCIPisFeasIntegral(scip, solval));
-         if( solval < 0.5 )
-            break;
+         sumsolval += solval;
       }
 
-      /* if all operator variables are TRUE, the resultant has to be TRUE, otherwise, the resultant has to be FALSE;
-       * in case of an implicit integer resultant variable, we need to ensure the integrality of the solution value
+      /* the resultant must be at most as large as every operator
+       * and at least as large as one minus the sum of negated operators
        */
       solval = SCIPgetSolVal(scip, sol, consdata->resvar);
-      assert(SCIPvarGetType(consdata->resvar) == SCIP_VARTYPE_IMPLINT || SCIPisFeasIntegral(scip, solval));
+      viol = MAX3(0.0, solval - minsolval, sumsolval - (consdata->nvars - 1.0 + solval));
 
-      if( !SCIPisFeasIntegral(scip, solval) || (i == consdata->nvars) != (solval > 0.5) )
+      if( SCIPisFeasPositive(scip, viol) )
       {
          *violated = TRUE;
-         absviol = 1.0;
-         relviol = 1.0;
 
          /* only reset constraint age if we are in enforcement */
          if( sol == NULL )
@@ -1183,25 +1171,22 @@ SCIP_RETCODE checkCons(
             SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
             SCIPinfoMessage(scip, NULL, ";\n");
             SCIPinfoMessage(scip, NULL, "violation:");
-            if( !SCIPisFeasIntegral(scip, solval) )
+
+            if( SCIPisFeasPositive(scip, solval - minsolval) )
             {
-               SCIPinfoMessage(scip, NULL, " resultant variable <%s> has fractional solution value %" SCIP_REAL_FORMAT "\n",
-                     SCIPvarGetName(consdata->resvar), solval);
+               SCIPinfoMessage(scip, NULL, " operand <%s> = FALSE and resultant <%s> = TRUE\n",
+                  SCIPvarGetName(consdata->vars[minsolind]), SCIPvarGetName(consdata->resvar));
             }
-            else if( i == consdata->nvars )
+            else
             {
                SCIPinfoMessage(scip, NULL, " all operands are TRUE and resultant <%s> = FALSE\n",
                   SCIPvarGetName(consdata->resvar));
             }
-            else
-            {
-               SCIPinfoMessage(scip, NULL, " operand <%s> = FALSE and resultant <%s> = TRUE\n",
-                  SCIPvarGetName(consdata->vars[i]), SCIPvarGetName(consdata->resvar));
-            }
          }
       }
+
       if( sol != NULL )
-         SCIPupdateSolConsViolation(scip, sol, absviol, relviol);
+         SCIPupdateSolConsViolation(scip, sol, viol, viol);
    }
 
    return SCIP_OKAY;
@@ -3341,7 +3326,7 @@ SCIP_RETCODE cliquePresolve(
 static
 SCIP_DECL_HASHGETKEY(hashGetKeyAndcons)
 {  /*lint --e{715}*/
-   /* the key is the element itself */ 
+   /* the key is the element itself */
    return elem;
 }
 
@@ -3413,8 +3398,8 @@ SCIP_DECL_HASHKEYVAL(hashKeyValAndcons)
    return SCIPhashFour(consdata->nvars, minidx, mididx, maxidx);
 }
 
-/** compares each constraint with all other constraints for possible redundancy and removes or changes constraint 
- *  accordingly; in contrast to removeRedundantConstraints(), it uses a hash table 
+/** compares each constraint with all other constraints for possible redundancy and removes or changes constraint
+ *  accordingly; in contrast to removeRedundantConstraints(), it uses a hash table
  */
 static
 SCIP_RETCODE detectRedundantConstraints(
@@ -4560,7 +4545,7 @@ SCIP_DECL_CONSPRESOL(consPresolAnd)
    {
       if( *nfixedvars == oldnfixedvars && *naggrvars == oldnaggrvars )
       {
-         if( firstchange < nconss ) 
+         if( firstchange < nconss )
          {
             /* detect redundant constraints; fast version with hash table instead of pairwise comparison */
             SCIP_CALL( detectRedundantConstraints(scip, SCIPblkmem(scip), conss, nconss, &firstchange, &cutoff, naggrvars, ndelconss) );
@@ -4749,10 +4734,10 @@ SCIP_DECL_CONSCOPY(consCopyAnd)
       consname = SCIPconsGetName(sourcecons);
 
    /* creates and captures a AND-constraint */
-   SCIP_CALL( SCIPcreateConsAnd(scip, cons, consname, resvar, nvars, vars, 
+   SCIP_CALL( SCIPcreateConsAnd(scip, cons, consname, resvar, nvars, vars,
          initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
 
- TERMINATE:   
+ TERMINATE:
    /* free buffer array */
    SCIPfreeBufferArray(scip, &vars);
 

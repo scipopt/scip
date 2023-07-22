@@ -270,6 +270,7 @@ set(instances_MIP
     "instances/MIP/lseu.mps\;1120"
     "instances/MIP/MANN_a9.clq.lp\;16"
     "instances/MIP/misc03.mps\;3360"
+    "instances/MIP/Negated.cip\;1"
     "instances/MIP/p0033.osil\;3089"
     "instances/MIP/p0548.mps\;8691"
     "instances/MIP/rgn.mps\;82.19999924"
@@ -444,7 +445,7 @@ set(instances_BendersLB
 
 set(instances_BendersQP
     "instances/Benders/classical_20_0.mps\;instances/Benders/classical_20.dec\;-8.22960761981176e-02"
-#    "instances/Benders/classical_30_0.mps\;instances/Benders/classical_30.dec\;-7.98150796362468e-02"
+    "instances/Benders/classical_30_0.mps\;instances/Benders/classical_30.dec\;-7.98150796362468e-02"
     "instances/Benders/classical_30_15.mps\;instances/Benders/classical_30.dec\;-7.34740783553289e-02"
    )
 
@@ -526,6 +527,8 @@ macro(add_instancetests instances settings prefix)
             #
             # treat the instance as a tuple (list) of two values
             #
+            if(NOT ((${basename} STREQUAL "blend2.mps") AND (${LPS} STREQUAL "grb")))
+            if(NOT ((${setting} STREQUAL "lns_epsgreedy_vanilla") AND (${basename} STREQUAL "blend2.mps") AND (${LPS} STREQUAL "grb")))
             add_test(NAME ${prefix}-${setting}-${basename}
                     COMMAND $<TARGET_FILE:scip> -f ${PROJECT_SOURCE_DIR}/check/${path} -s ${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set -o ${optval} ${optval}
                     )
@@ -536,6 +539,8 @@ macro(add_instancetests instances settings prefix)
                                     FAIL_REGULAR_EXPRESSION "WARNING: unknown parameter;user parameter file <${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set> not found"
                                     DEPENDS scip-build
                                 )
+            endif()  # Gurobi gets stuck in LP solve, #2833
+            endif()  # Gurobi invalid write with settings oddcycle and heurlprows, #3578; just skip this instance for all settings now
         endforeach(setting)
     endforeach(instance)
 endmacro(add_instancetests)

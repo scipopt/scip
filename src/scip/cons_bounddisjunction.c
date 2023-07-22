@@ -336,7 +336,9 @@ SCIP_RETCODE consdataCreate(
       {
          int k;
          int v;
-         int nviolations;
+#ifndef NDEBUG
+         int nviolations = 0;
+#endif
          SCIP_Bool redundant;
          SCIP_VAR** varsbuffer;
          SCIP_BOUNDTYPE* boundtypesbuffer;
@@ -346,7 +348,6 @@ SCIP_RETCODE consdataCreate(
          SCIP_CALL( SCIPallocBufferArray(scip, &boundtypesbuffer, nvars) );
          SCIP_CALL( SCIPallocBufferArray(scip, &boundsbuffer, nvars) );
 
-         nviolations = 0;
          k = 0;
          redundant = FALSE;
          /* loop over variables, compare fixed ones against its bound disjunction */
@@ -369,8 +370,10 @@ SCIP_RETCODE consdataCreate(
                   k = 1;
                   redundant = TRUE;
                }
+#ifndef NDEBUG
                else
                   ++nviolations;
+#endif
             }
             else
             {
@@ -1423,7 +1426,7 @@ SCIP_RETCODE processWatchedVars(
          }
 
          /* the literal is still undecided and can be used as watched variable */
-         nbranchings = SCIPvarGetNBranchingsCurrentRun(vars[v], 
+         nbranchings = SCIPvarGetNBranchingsCurrentRun(vars[v],
             boundtypes[v] == SCIP_BOUNDTYPE_LOWER ? SCIP_BRANCHDIR_DOWNWARDS : SCIP_BRANCHDIR_UPWARDS);
          if( nbranchings < nbranchings2 )
          {
@@ -1610,9 +1613,9 @@ SCIP_Bool isConsViolated(
    return TRUE;
 }
 
-/* registers variables of a constraint as branching candidates 
- * indicates whether an n-ary branch is necessary to enforce this constraint, 
- * because all active literals are w.r.t. continuous variables which bound (in the literal) is at the variable's bound 
+/* registers variables of a constraint as branching candidates
+ * indicates whether an n-ary branch is necessary to enforce this constraint,
+ * because all active literals are w.r.t. continuous variables which bound (in the literal) is at the variable's bound
  */
 static
 SCIP_RETCODE registerBranchingCandidates(
@@ -2136,7 +2139,7 @@ SCIP_DECL_CONSDELETE(consDeleteBounddisjunction)
 }
 
 
-/** transforms constraint data into data belonging to the transformed problem */ 
+/** transforms constraint data into data belonging to the transformed problem */
 static
 SCIP_DECL_CONSTRANS(consTransBounddisjunction)
 {  /*lint --e{715}*/
@@ -2162,7 +2165,7 @@ SCIP_DECL_CONSTRANS(consTransBounddisjunction)
    SCIP_CALL( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
          SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
          SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
-         SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons), 
+         SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons),
          SCIPconsIsDynamic(sourcecons), SCIPconsIsRemovable(sourcecons), SCIPconsIsStickingAtNode(sourcecons)) );
 
    return SCIP_OKAY;
@@ -2288,7 +2291,7 @@ SCIP_DECL_CONSCHECK(consCheckBounddisjunction)
                assert(consdata->vars[v] != NULL);
                if( v > 0 )
                   SCIPinfoMessage(scip, NULL, ", ");
-               SCIPinfoMessage(scip, NULL, "<%s> = %.15g", 
+               SCIPinfoMessage(scip, NULL, "<%s> = %.15g",
                   SCIPvarGetName(consdata->vars[v]), SCIPgetSolVal(scip, sol, consdata->vars[v]));
             }
             SCIPinfoMessage(scip, NULL, ")\n");
@@ -2764,7 +2767,7 @@ SCIP_DECL_CONSPARSE(consParseBounddisjunction)
    {
       SCIP_VAR* var;
 
-      /* parse variable name */ 
+      /* parse variable name */
       SCIP_CALL( SCIPparseVarName(scip, str, &var, &endptr) );
 
       if( var == NULL )
@@ -2845,7 +2848,7 @@ SCIP_DECL_CONSPARSE(consParseBounddisjunction)
    /* add bounddisjunction */
    if( *success && nvars > 0 )
    {
-      SCIP_CALL( SCIPcreateConsBounddisjunction(scip, cons, name, nvars, vars, boundtypes, bounds, 
+      SCIP_CALL( SCIPcreateConsBounddisjunction(scip, cons, name, nvars, vars, boundtypes, bounds,
             initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
    }
 

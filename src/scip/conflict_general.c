@@ -185,8 +185,8 @@ SCIP_Longint SCIPconflictGetNAppliedLocalLiterals(
    return conflict->nappliedlocliterals;
 }
 
-/** compares two conflict set entries, such that bound changes infered later are
- *  ordered prior to ones that were infered earlier
+/** compares two conflict set entries, such that bound changes inferred later are
+ *  ordered prior to ones that were inferred earlier
  */
 static
 SCIP_DECL_SORTPTRCOMP(conflictBdchginfoComp)
@@ -1434,7 +1434,7 @@ SCIP_RETCODE SCIPgetDualProof(
     */
 
    /* add the objective function to the aggregation row with respect to the current cutoff bound
-    * 
+    *
     * for an integral objective the right-hand side is reduced by the cutoff bound delta to cut off up to the next
     * possible objective value below the cutoff bound
     */
