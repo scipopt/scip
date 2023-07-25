@@ -3824,7 +3824,7 @@ SCIP_RETCODE createCGCutStrongCG(
       /* get weight from solution */
       weights[k] = 0.0;
 
-      /* add negative part corresponding to left-hand side multiplier */
+      /* add negative part corresponding to left hand side multiplier */
       if ( mipdata->ylhs[k] != NULL )
       {
          assert( !SCIProwIsModifiable(rows[k]) && (!SCIProwIsLocal(rows[k]) || sepadata->allowlocal) );
