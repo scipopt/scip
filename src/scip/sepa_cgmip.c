@@ -2911,14 +2911,26 @@ SCIP_RETCODE computeCut(
          weight += SCIPgetSolVal(subscip, sol, mipdata->yrhs[i]);
 
       /* get absolute weight */
-      uselhs = weight < 0.0;
-      absweight = uselhs ? -weight : weight;
+      if ( weight < 0.0 )
+      {
+         uselhs = TRUE;
+         absweight = -weight;
+      }
+      else
+      {
+         uselhs = FALSE;
+         absweight = weight;
+      }
 
       /* take fractional value if required */
       if ( usefrac )
       {
          absweight = SCIPfrac(scip, absweight);
-         weight = uselhs ? -absweight : absweight;
+
+         if ( uselhs )
+            weight = -absweight;
+         else
+            weight = absweight;
       }
 
       /* add row if weight is nonzero and lies within range */
@@ -2991,14 +3003,26 @@ SCIP_RETCODE computeCut(
          weight += SCIPgetSolVal(subscip, sol, mipdata->yrhs[nrows]);
 
       /* get absolute weight */
-      uselhs = weight < 0.0;
-      absweight = uselhs ? -weight : weight;
+      if ( weight < 0.0 )
+      {
+         uselhs = TRUE;
+         absweight = -weight;
+      }
+      else
+      {
+         uselhs = FALSE;
+         absweight = weight;
+      }
 
       /* take fractional value if required */
       if ( usefrac )
       {
          absweight = SCIPfrac(scip, absweight);
-         weight = uselhs ? -absweight : absweight;
+
+         if ( uselhs )
+            weight = -absweight;
+         else
+            weight = absweight;
       }
 
       /* add objective row if weight is nonzero and lies within range */
