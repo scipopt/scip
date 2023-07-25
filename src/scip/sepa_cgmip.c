@@ -1121,7 +1121,6 @@ SCIP_RETCODE createSubscip(
 
    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "sepa_cgmip separating MIP (%s)", SCIPgetProbName(origscip));
    SCIP_CALL( SCIPcreateProb(subscip, name, NULL, NULL , NULL , NULL , NULL , NULL , NULL) );
-   SCIPsetSubscipDepth(subscip, SCIPgetSubscipDepth(origscip) + 1);
    SCIP_CALL( SCIPsetObjsense(subscip, SCIP_OBJSENSE_MAXIMIZE) );
 
    /* alloc memory for subscipdata elements */
@@ -2801,7 +2800,7 @@ SCIP_RETCODE computeCut(
    for (i = 0; i < nrows; ++i)
    {
       SCIP_ROW* row;
-      SCIP_Real absweight;
+      SCIP_Real absweight = 0.0;
 
       row = rows[i];
       assert( row != NULL );
@@ -2813,36 +2812,34 @@ SCIP_RETCODE computeCut(
          continue;
       }
 
-      /* get weight from solution */
-      absweight = 0.0;
-
-      /* add negative part corresponding to left hand side multiplier */
+      /* get weight from solution (take larger of the values of lhs/rhs) */
       if ( mipdata->ylhs[i] != NULL )
       {
-         assert( ! sepadata->onlyrankone || SCIProwGetOriginSepa(row) != sepa );
          val = SCIPgetSolVal(subscip, sol, mipdata->ylhs[i]);
-         assert( ! SCIPisFeasNegative(subscip, val) );
-         assert( sepadata->skipmultbounds || SCIPisFeasLT(subscip, val, 1.0) );
-         absweight -= val;
-      }
 
-      /* add positive part corresponding to right hand side multiplier */
+         assert( sepadata->skipmultbounds || SCIPisFeasLT(subscip, val, 1.0) );
+         if ( usefrac )
+            val = SCIPfrac(scip, val);  /* take fractional value if variable has no upper bounds */
+
+         if ( SCIPisFeasPositive(scip, val) )
+            absweight = val;
+
+         assert( ! sepadata->onlyrankone || SCIProwGetOriginSepa(row) != sepa );
+      }
       if ( mipdata->yrhs[i] != NULL )
       {
-         assert( ! sepadata->onlyrankone || SCIProwGetOriginSepa(row) != sepa );
          val = SCIPgetSolVal(subscip, sol, mipdata->yrhs[i]);
-         assert( ! SCIPisFeasNegative(subscip, val) );
+
          assert( sepadata->skipmultbounds || SCIPisFeasLT(subscip, val, 1.0) );
-         absweight += val;
+         if ( usefrac )
+            val = SCIPfrac(scip, val);  /* take fractional value if variable has no upper bounds */
+
+         /* in a suboptimal solution both values may be positive - take the one with larger absolute value */
+         if ( SCIPisFeasGT(scip, val, absweight) )
+            absweight = val;
+
+         assert( ! sepadata->onlyrankone || SCIProwGetOriginSepa(row) != sepa );
       }
-
-      /* get absolute weight */
-      absweight = ABS(absweight);
-
-      /* take fractional value if required */
-      if ( usefrac )
-         absweight = SCIPfrac(scip, absweight);
-
       assert( ! SCIPisNegative(scip, absweight) );
 
       if ( absweight > maxabsweight )
@@ -2852,39 +2849,29 @@ SCIP_RETCODE computeCut(
    /* get weight from objective cuts */
    if ( sepadata->useobjub || sepadata->useobjlb )
    {
-      SCIP_Real absweight;
+      SCIP_Real absweight = 0.0;
 
       assert( mipdata->ntotalrows == mipdata->nrows + 1 );
 
-      /* get weight from solution */
-      absweight = 0.0;
-
-      /* add negative part corresponding to left hand side multiplier */
-      if ( mipdata->ylhs[nrows] != NULL )
+      if ( mipdata->ylhs[mipdata->nrows] != NULL )
       {
-         val = SCIPgetSolVal(subscip, sol, mipdata->ylhs[nrows]);
-         assert( ! SCIPisFeasNegative(subscip, val) );
-         assert( sepadata->skipmultbounds || SCIPisFeasLT(subscip, val, 1.0) );
-         absweight -= val;
-      }
+         val = SCIPgetSolVal(subscip, sol, mipdata->ylhs[mipdata->nrows]);
+         if ( usefrac )
+            val = SCIPfrac(scip, val);  /* take fractional value if variable has no upper bounds */
 
-      /* add positive part corresponding to right hand side multiplier */
-      if ( mipdata->yrhs[nrows] != NULL )
+         if ( SCIPisFeasPositive(scip, val) )
+            absweight = val;
+      }
+      if ( mipdata->yrhs[mipdata->nrows] != NULL )
       {
-         val = SCIPgetSolVal(subscip, sol, mipdata->yrhs[nrows]);
-         assert( ! SCIPisFeasNegative(subscip, val) );
-         assert( sepadata->skipmultbounds || SCIPisFeasLT(subscip, val, 1.0) );
-         absweight += val;
+         val = SCIPgetSolVal(subscip, sol, mipdata->yrhs[mipdata->nrows]);
+         if ( usefrac )
+            val = SCIPfrac(scip, val);  /* take fractional value if variable has no upper bounds */
+
+         /* in a suboptimal solution both values may be positive - take the one with larger absolute value */
+         if ( SCIPisFeasGT(scip, val, absweight) )
+            absweight = val;
       }
-
-      /* get absolute weight */
-      absweight = ABS(absweight);
-
-      /* take fractional value if required */
-      if ( usefrac )
-         absweight = SCIPfrac(scip, absweight);
-
-      assert( ! SCIPisNegative(scip, absweight) );
 
       if ( absweight > maxabsweight )
          maxabsweight = absweight;
@@ -2910,27 +2897,38 @@ SCIP_RETCODE computeCut(
 
       /* get weight from solution */
       weight = 0.0;
-
-      /* add negative part corresponding to left hand side multiplier */
+      uselhs = FALSE;
       if ( mipdata->ylhs[i] != NULL )
-         weight -= SCIPgetSolVal(subscip, sol, mipdata->ylhs[i]);
-
-      /* add positive part corresponding to right hand side multiplier */
-      if ( mipdata->yrhs[i] != NULL )
-         weight += SCIPgetSolVal(subscip, sol, mipdata->yrhs[i]);
-
-      /* get absolute weight */
-      uselhs = weight < 0.0;
-      absweight = uselhs ? -weight : weight;
-
-      /* take fractional value if required */
-      if ( usefrac )
       {
-         absweight = SCIPfrac(scip, absweight);
-         weight = uselhs ? -absweight : absweight;
+         val = SCIPgetSolVal(subscip, sol, mipdata->ylhs[i]);
+         assert( ! SCIPisFeasNegative(subscip, val) );
+
+         assert( sepadata->skipmultbounds || SCIPisFeasLT(subscip, val, 1.0) );
+         if ( usefrac )
+            val = SCIPfrac(scip, val);  /* take fractional value if variable has no upper bounds */
+
+         if ( SCIPisFeasPositive(scip, val) )
+         {
+            uselhs = TRUE;
+            weight = -val;
+         }
+      }
+      if ( mipdata->yrhs[i] != NULL )
+      {
+         val = SCIPgetSolVal(subscip, sol, mipdata->yrhs[i]);
+         assert( ! SCIPisFeasNegative(subscip, val) );
+
+         assert( sepadata->skipmultbounds || SCIPisFeasLT(subscip, val, 1.0) );
+         if ( usefrac )
+            val = SCIPfrac(scip, val);  /* take fractional value if variable has no upper bounds */
+
+         /* in a suboptimal solution both values may be positive - take the one with larger absolute value */
+         if ( SCIPisFeasGT(scip, val, REALABS(weight)) )
+            weight = val;
       }
 
       /* add row if weight is nonzero and lies within range */
+      absweight = REALABS(weight);
       if ( ! SCIPisSumZero(scip, weight) && absweight * MAXWEIGHTRANGE >= maxabsweight )
       {
          SCIP_COL** rowcols;
@@ -2987,33 +2985,41 @@ SCIP_RETCODE computeCut(
    /* get weight from objective bounds */
    if ( sepadata->useobjub || sepadata->useobjlb )
    {
-      SCIP_Real weight;
+      SCIP_Real weight = 0.0;
+      SCIP_Bool uselhs = FALSE;
       SCIP_Real absweight;
-      SCIP_Bool uselhs;
 
-      /* get weight from solution */
-      weight = 0.0;
+      assert( mipdata->ntotalrows == mipdata->nrows + 1 );
 
-      /* add negative part corresponding to left hand side multiplier */
-      if ( mipdata->ylhs[nrows] != NULL )
-         weight -= SCIPgetSolVal(subscip, sol, mipdata->ylhs[nrows]);
-
-      /* add positive part corresponding to right hand side multiplier */
-      if ( mipdata->yrhs[nrows] != NULL )
-         weight += SCIPgetSolVal(subscip, sol, mipdata->yrhs[nrows]);
-
-      /* get absolute weight */
-      uselhs = weight < 0.0;
-      absweight = uselhs ? -weight : weight;
-
-      /* take fractional value if required */
-      if ( usefrac )
+      if ( mipdata->ylhs[mipdata->nrows] != NULL )
       {
-         absweight = SCIPfrac(scip, absweight);
-         weight = uselhs ? -absweight : absweight;
+         val = SCIPgetSolVal(subscip, sol, mipdata->ylhs[mipdata->nrows]);
+         assert( ! SCIPisFeasNegative(subscip, val) );
+         assert( sepadata->skipmultbounds || SCIPisFeasLT(subscip, val, 1.0) );
+         if ( usefrac )
+            val = SCIPfrac(scip, val);  /* take fractional value if variable has no upper bounds */
+
+         if ( SCIPisFeasPositive(scip, val) )
+         {
+            uselhs = TRUE;
+            weight = -val;
+         }
+      }
+      if ( mipdata->yrhs[mipdata->nrows] != NULL )
+      {
+         val = SCIPgetSolVal(subscip, sol, mipdata->yrhs[mipdata->nrows]);
+         assert( ! SCIPisFeasNegative(subscip, val) );
+         assert( sepadata->skipmultbounds || SCIPisFeasLT(subscip, val, 1.0) );
+         if ( usefrac )
+            val = SCIPfrac(scip, val);  /* take fractional value if variable has no upper bounds */
+
+         /* in a suboptimal solution both values may be positive - take the one with larger absolute value */
+         if ( SCIPisFeasGT(scip, val, REALABS(weight)) )
+            weight = val;
       }
 
       /* add objective row if weight is nonzero and lies within range */
+      absweight = REALABS(weight);
       if ( ! SCIPisSumZero(scip, weight) && absweight * MAXWEIGHTRANGE >= maxabsweight )
       {
          SCIP_Real obj = 0.0;
@@ -3537,31 +3543,35 @@ SCIP_RETCODE createCGCutCMIR(
    {
       SCIP_Real val;
 
-      /* get weight from solution */
-      weights[k] = 0.0;
-
-      /* add negative part corresponding to left hand side multiplier */
+      weights[k] = 0;
       if ( mipdata->ylhs[k] != NULL )
       {
          assert( !SCIProwIsModifiable(rows[k]) && (!SCIProwIsLocal(rows[k]) || sepadata->allowlocal) );
+
          val = SCIPgetSolVal(subscip, sol, mipdata->ylhs[k]);
          assert( ! SCIPisFeasNegative(subscip, val) );
+
          assert( sepadata->skipmultbounds || SCIPisFeasLT(subscip, val, 1.0) );
-         weights[k] -= val;
+         val = SCIPfrac(scip, val);  /* take fractional value if variable has no upper bounds */
+
+         if ( SCIPisFeasPositive(subscip, val) )
+            weights[k] = -val;
       }
 
-      /* add positive part corresponding to right hand side multiplier */
       if ( mipdata->yrhs[k] != NULL )
       {
          assert( !SCIProwIsModifiable(rows[k]) && (!SCIProwIsLocal(rows[k]) || sepadata->allowlocal) );
+
          val = SCIPgetSolVal(subscip, sol, mipdata->yrhs[k]);
          assert( ! SCIPisFeasNegative(subscip, val) );
-         assert( sepadata->skipmultbounds || SCIPisFeasLT(subscip, val, 1.0) );
-         weights[k] += val;
-      }
 
-      /* take fractional value */
-      weights[k] = weights[k] < 0.0 ? -SCIPfrac(scip, -weights[k]) : SCIPfrac(scip, weights[k]);
+         assert( sepadata->skipmultbounds || SCIPisFeasLT(subscip, val, 1.0) );
+         val = SCIPfrac(scip, val);  /* take fractional value if variable has no upper bounds */
+
+         /* in a suboptimal solution both values may be positive - take the one with larger absolute value */
+         if ( SCIPisFeasGT(scip, val, ABS(weights[k])) )
+            weights[k] = val;
+      }
    }
 
    /* set up data for bounds to use */
@@ -3821,31 +3831,35 @@ SCIP_RETCODE createCGCutStrongCG(
    {
       SCIP_Real val;
 
-      /* get weight from solution */
-      weights[k] = 0.0;
-
-      /* add negative part corresponding to left hand side multiplier */
+      weights[k] = 0;
       if ( mipdata->ylhs[k] != NULL )
       {
          assert( !SCIProwIsModifiable(rows[k]) && (!SCIProwIsLocal(rows[k]) || sepadata->allowlocal) );
+
          val = SCIPgetSolVal(subscip, sol, mipdata->ylhs[k]);
          assert( ! SCIPisFeasNegative(subscip, val) );
+
          assert( sepadata->skipmultbounds || SCIPisFeasLT(subscip, val, 1.0) );
-         weights[k] -= val;
+         val = SCIPfrac(scip, val);  /* take fractional value if variable has no upper bounds */
+
+         if ( SCIPisFeasPositive(subscip, val) )
+            weights[k] = -val;
       }
 
-      /* add positive part corresponding to right hand side multiplier */
       if ( mipdata->yrhs[k] != NULL )
       {
          assert( !SCIProwIsModifiable(rows[k]) && (!SCIProwIsLocal(rows[k]) || sepadata->allowlocal) );
+
          val = SCIPgetSolVal(subscip, sol, mipdata->yrhs[k]);
          assert( ! SCIPisFeasNegative(subscip, val) );
-         assert( sepadata->skipmultbounds || SCIPisFeasLT(subscip, val, 1.0) );
-         weights[k] += val;
-      }
 
-      /* take fractional value */
-      weights[k] = weights[k] < 0.0 ? -SCIPfrac(scip, -weights[k]) : SCIPfrac(scip, weights[k]);
+         assert( sepadata->skipmultbounds || SCIPisFeasLT(subscip, val, 1.0) );
+         val = SCIPfrac(scip, val);  /* take fractional value if variable has no upper bounds */
+
+         /* in a suboptimal solution both values may be positive - take the one with larger absolute value */
+         if ( SCIPisFeasGT(scip, val, ABS(weights[k])) )
+            weights[k] = val;
+      }
    }
 
    /* create a strong CG cut out of the weighted LP rows using the B^-1 row as weights */
