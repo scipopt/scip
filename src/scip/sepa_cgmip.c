@@ -2801,7 +2801,7 @@ SCIP_RETCODE computeCut(
    for (i = 0; i < nrows; ++i)
    {
       SCIP_ROW* row;
-      SCIP_Real absweight;
+      SCIP_Real absweight = 0.0;
 
       row = rows[i];
       assert( row != NULL );
@@ -2812,9 +2812,6 @@ SCIP_RETCODE computeCut(
          assert( mipdata->ylhs[i] == NULL && mipdata->yrhs[i] == NULL );
          continue;
       }
-
-      /* get weight from solution */
-      absweight = 0.0;
 
       /* add negative part corresponding to left hand side multiplier */
       if ( mipdata->ylhs[i] != NULL )
@@ -2852,12 +2849,9 @@ SCIP_RETCODE computeCut(
    /* get weight from objective cuts */
    if ( sepadata->useobjub || sepadata->useobjlb )
    {
-      SCIP_Real absweight;
+      SCIP_Real absweight = 0.0;
 
       assert( mipdata->ntotalrows == mipdata->nrows + 1 );
-
-      /* get weight from solution */
-      absweight = 0.0;
 
       /* add negative part corresponding to left hand side multiplier */
       if ( mipdata->ylhs[nrows] != NULL )
@@ -2894,7 +2888,7 @@ SCIP_RETCODE computeCut(
    for (i = 0; i < nrows; ++i)
    {
       SCIP_ROW* row;
-      SCIP_Real weight;
+      SCIP_Real weight = 0.0;
       SCIP_Real absweight;
       SCIP_Bool uselhs;
 
@@ -2907,9 +2901,6 @@ SCIP_RETCODE computeCut(
          assert( mipdata->ylhs[i] == NULL && mipdata->yrhs[i] == NULL );
          continue;
       }
-
-      /* get weight from solution */
-      weight = 0.0;
 
       /* add negative part corresponding to left hand side multiplier */
       if ( mipdata->ylhs[i] != NULL )
@@ -2987,12 +2978,9 @@ SCIP_RETCODE computeCut(
    /* get weight from objective bounds */
    if ( sepadata->useobjub || sepadata->useobjlb )
    {
-      SCIP_Real weight;
+      SCIP_Real weight = 0.0;
       SCIP_Real absweight;
       SCIP_Bool uselhs;
-
-      /* get weight from solution */
-      weight = 0.0;
 
       /* add negative part corresponding to left hand side multiplier */
       if ( mipdata->ylhs[nrows] != NULL )
