@@ -3528,7 +3528,6 @@ SCIP_Bool SCIPlpiIsStable(
       MSKobjsensee objsen;
       SCIP_Real objlimit;
       SCIP_Real objvalue;
-      SCIP_Real reldiff;
 
       MOSEK_CALL( MSK_getobjsense(lpi->task, &objsen) );
       if (objsen == MSK_OBJECTIVE_SENSE_MINIMIZE)
