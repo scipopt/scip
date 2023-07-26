@@ -3171,6 +3171,21 @@ SCIP_Bool SCIPlpiIsStable(
       if( kappa > lpi->conditionlimit )
          return FALSE;
    }
+   /* if an objective limit is set and SoPlex claims that it is exceeded, we should check that this is indeed the case;
+    * if not this points at numerical instability; note that this aligns with an assert in lp.c */
+   if( SCIPlpiIsObjlimExc(lpi) )
+   {
+      SCIP_Real objlimit = lpi->spx->getObjLimit();
+      SCIP_Real objvalue = lpi->spx->objValueReal();
+
+      if( lpi->spx->intParam(SoPlex::OBJSENSE) == SoPlex::OBJSENSE_MAXIMIZE )
+      {
+         objlimit *= -1.0;
+         objvalue *= -1.0;
+      }
+      if( !SCIPlpiIsInfinity(lpi, objlimit) && LTrel(objvalue, objlimit, 2*lpi->spx->opttol()) )
+         return FALSE;
+   }
    return TRUE;
 }
 
