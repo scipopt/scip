@@ -160,6 +160,14 @@ Known bugs
 
 @page RN80 Release notes for SCIP 8.0
 
+@section RN805 SCIP 8.0.5
+*************************
+
+Fixed bugs
+----------
+
+- ensure that delayed cutpool separation does not happen if enough cuts have been found already
+
 @section RN804 SCIP 8.0.4
 *************************
 
