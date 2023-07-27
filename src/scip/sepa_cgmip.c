@@ -1121,6 +1121,7 @@ SCIP_RETCODE createSubscip(
 
    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "sepa_cgmip separating MIP (%s)", SCIPgetProbName(origscip));
    SCIP_CALL( SCIPcreateProb(subscip, name, NULL, NULL , NULL , NULL , NULL , NULL , NULL) );
+   SCIPsetSubscipDepth(subscip, SCIPgetSubscipDepth(origscip) + 1);
    SCIP_CALL( SCIPsetObjsense(subscip, SCIP_OBJSENSE_MAXIMIZE) );
 
    /* alloc memory for subscipdata elements */
