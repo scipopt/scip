@@ -147,6 +147,7 @@ Build system
 Fixed bugs
 ----------
 
+- number of separation rounds will now be correct as per "separating/maxruns" parameter
 - add safeguard for number of selected cuts
 
 Miscellaneous
