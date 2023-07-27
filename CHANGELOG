@@ -147,7 +147,8 @@ Build system
 Fixed bugs
 ----------
 
-- number of separation rounds will now be correct as per "separating/maxruns" parameter
+- Number of runs in which separation is enabled will now be correct as per "separating/maxruns" parameter. Earlier,
+  separation was enabled for "maxruns + 1" number of runs, i.e., separation was enabled even when "maxruns = 0" was set.
 - add safeguard for number of selected cuts
 
 Miscellaneous
