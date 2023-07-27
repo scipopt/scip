@@ -911,7 +911,7 @@ SCIP_RETCODE createMasterVarMapping(
    for( i = 0; i < nvars; i++ )
    {
       /* getting the variable pointer for the target SCIP variables. The variable mapping returns the target SCIP
-       * varibale for a given source SCIP variable. */
+       * variable for a given source SCIP variable. */
       targetvar = (SCIP_VAR*) SCIPhashmapGetImage(varmap, vars[i]);
       if( targetvar != NULL )
       {

@@ -1505,7 +1505,7 @@ SCIP_Bool bdchginfoIsInvalid(
    if( SCIPvarIsBinary(var) )
       return FALSE;
 
-   /* check if the bdchginfo is invaild since a tight/weaker bound change was already explained */
+   /* check if the bdchginfo is invalid since a tight/weaker bound change was already explained */
    if( SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER )
    {
       if( var->conflictlbcount != conflict->count || var->conflictlb != SCIPbdchginfoGetNewbound(bdchginfo) ) /*lint !e777*/
@@ -1646,7 +1646,7 @@ SCIP_RETCODE conflictsetAddBounds(
       }
       else
       {
-         SCIPsetDebugMsg(set, "-> bound change info [%d:<%s> %s %g] is invaild -> ignore it\n", SCIPbdchginfoGetDepth(bdchginfo),
+         SCIPsetDebugMsg(set, "-> bound change info [%d:<%s> %s %g] is invalid -> ignore it\n", SCIPbdchginfoGetDepth(bdchginfo),
             SCIPvarGetName(SCIPbdchginfoGetVar(bdchginfo)),
             SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
             SCIPbdchginfoGetNewbound(bdchginfo));
@@ -1696,7 +1696,7 @@ SCIP_RETCODE conflictsetAddBounds(
       }
       else
       {
-         SCIPsetDebugMsg(set, "-> bound change info [%d:<%s> %s %g] is invaild -> ignore it\n", SCIPbdchginfoGetDepth(bdchginfo),
+         SCIPsetDebugMsg(set, "-> bound change info [%d:<%s> %s %g] is invalid -> ignore it\n", SCIPbdchginfoGetDepth(bdchginfo),
             SCIPvarGetName(SCIPbdchginfoGetVar(bdchginfo)),
             SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
             SCIPbdchginfoGetNewbound(bdchginfo));
@@ -4333,7 +4333,7 @@ SCIP_RETCODE convertToActiveVar(
    scalar = 1.0;
    constant = 0.0;
 
-   /* transform given varibale to active varibale */
+   /* transform given variable to active variable */
    SCIP_CALL( SCIPvarGetProbvarSum(var, set, &scalar, &constant) );
    assert(SCIPvarGetStatus(*var) == SCIP_VARSTATUS_FIXED || scalar != 0.0); /*lint !e777*/
 
@@ -4783,13 +4783,13 @@ SCIP_BDCHGINFO* conflictFirstCand(
 
    if( SCIPpqueueNElems(conflict->forcedbdchgqueue) > 0 )
    {
-      /* get next potetioal candidate */
+      /* get next potential candidate */
       bdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueFirst(conflict->forcedbdchgqueue));
 
       /* check if this candidate is valid */
       if( bdchginfoIsInvalid(conflict, bdchginfo) )
       {
-         SCIPdebugMessage("bound change info [%d:<%s> %s %g] is invaild -> pop it from the force queue\n", SCIPbdchginfoGetDepth(bdchginfo),
+         SCIPdebugMessage("bound change info [%d:<%s> %s %g] is invalid -> pop it from the force queue\n", SCIPbdchginfoGetDepth(bdchginfo),
             SCIPvarGetName(SCIPbdchginfoGetVar(bdchginfo)),
             SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
             SCIPbdchginfoGetNewbound(bdchginfo));
@@ -4808,7 +4808,7 @@ SCIP_BDCHGINFO* conflictFirstCand(
       /* check if this candidate is valid */
       if( bdchginfo != NULL && bdchginfoIsInvalid(conflict, bdchginfo) )
       {
-         SCIPdebugMessage("bound change info [%d:<%s> %s %g] is invaild -> pop it from the queue\n", SCIPbdchginfoGetDepth(bdchginfo),
+         SCIPdebugMessage("bound change info [%d:<%s> %s %g] is invalid -> pop it from the queue\n", SCIPbdchginfoGetDepth(bdchginfo),
             SCIPvarGetName(SCIPbdchginfoGetVar(bdchginfo)),
             SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
             SCIPbdchginfoGetNewbound(bdchginfo));
@@ -5065,7 +5065,7 @@ SCIP_RETCODE conflictResolveBound(
 
             var = infervar;
 
-            /* transform given varibale to active varibale */
+            /* transform given variable to active variable */
             SCIP_CALL( SCIPvarGetProbvarSum(&var, set, &scalar, &constant) );
             assert(var == actvar);
 
@@ -7436,8 +7436,8 @@ SCIP_RETCODE separateAlternativeProofs(
    SCIP_Real* cutcoefs;
    SCIP_Real cutefficacy;
    SCIP_Real cutrhs;
-   SCIP_Real proofefficiacy;
-   SCIP_Real efficiacynorm;
+   SCIP_Real proofefficacy;
+   SCIP_Real efficacynorm;
    SCIP_Bool islocal;
    SCIP_Bool cutsuccess;
    SCIP_Bool success;
@@ -7455,15 +7455,15 @@ SCIP_RETCODE separateAlternativeProofs(
    inds = SCIPaggrRowGetInds(proofrow);
    nnz = SCIPaggrRowGetNNz(proofrow);
 
-   proofefficiacy = aggrRowGetMinActivity(set, transprob, proofrow, curvarlbs, curvarubs, &infdelta);
+   proofefficacy = aggrRowGetMinActivity(set, transprob, proofrow, curvarlbs, curvarubs, &infdelta);
 
    if( infdelta )
       return SCIP_OKAY;
 
-   proofefficiacy -= SCIPaggrRowGetRhs(proofrow);
+   proofefficacy -= SCIPaggrRowGetRhs(proofrow);
 
-   efficiacynorm = SCIPaggrRowCalcEfficacyNorm(set->scip, proofrow);
-   proofefficiacy /= MAX(1e-6, efficiacynorm);
+   efficacynorm = SCIPaggrRowCalcEfficacyNorm(set->scip, proofrow);
+   proofefficacy /= MAX(1e-6, efficacynorm);
 
    /* create reference solution */
    SCIP_CALL( SCIPcreateSol(set->scip, &refsol, NULL) );
@@ -7507,7 +7507,7 @@ SCIP_RETCODE separateAlternativeProofs(
    success = (success || cutsuccess);
 
    /* replace the current proof */
-   if( success && !islocal && SCIPsetIsPositive(set, cutefficacy) && cutefficacy * nnz > proofefficiacy * cutnnz )
+   if( success && !islocal && SCIPsetIsPositive(set, cutefficacy) && cutefficacy * nnz > proofefficacy * cutnnz )
    {
       SCIP_PROOFSET* alternativeproofset;
       SCIP_Bool redundant;

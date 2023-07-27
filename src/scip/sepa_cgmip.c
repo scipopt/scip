@@ -2924,7 +2924,10 @@ SCIP_RETCODE computeCut(
 
          /* in a suboptimal solution both values may be positive - take the one with larger absolute value */
          if ( SCIPisFeasGT(scip, val, REALABS(weight)) )
+         {
+            uselhs = FALSE;
             weight = val;
+         }
       }
 
       /* add row if weight is nonzero and lies within range */
@@ -3015,7 +3018,10 @@ SCIP_RETCODE computeCut(
 
          /* in a suboptimal solution both values may be positive - take the one with larger absolute value */
          if ( SCIPisFeasGT(scip, val, REALABS(weight)) )
+         {
+            uselhs = FALSE;
             weight = val;
+         }
       }
 
       /* add objective row if weight is nonzero and lies within range */

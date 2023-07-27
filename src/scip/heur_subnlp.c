@@ -507,12 +507,12 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
 
    if( SCIPeventGetType(event) & SCIP_EVENTTYPE_GLBCHANGED )
    {
-      SCIP_CALL( SCIPchgVarLbGlobal(heurdata->subscip, subvar, SCIPvarGetLbGlobal(var)) );
+      SCIP_CALL( SCIPchgVarLbGlobal(heurdata->subscip, subvar, SCIPeventGetNewbound(event)) );
    }
 
    if( SCIPeventGetType(event) & SCIP_EVENTTYPE_GUBCHANGED )
    {
-      SCIP_CALL( SCIPchgVarUbGlobal(heurdata->subscip, subvar, SCIPvarGetUbGlobal(var)) );
+      SCIP_CALL( SCIPchgVarUbGlobal(heurdata->subscip, subvar, SCIPeventGetNewbound(event)) );
    }
 
    return SCIP_OKAY;

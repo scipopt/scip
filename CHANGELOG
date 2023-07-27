@@ -55,7 +55,7 @@ Fixed bugs
 - disable recomputing symmetries after a restart (constraint removal is not permitted)
 - avoid cutting off optimal solutions for small feasibility tolerances in conflict analysis
 - initialize variable in presol_dualsparsify.c
-- fix in presolving of variable bound constraints to use absolute instead of relative difference 
+- fix in presolving of variable bound constraints to use absolute instead of relative difference
 - free variable histories in reoptimization mode
 - handle whitespaces in interactive shell history consistently
 - check and enforce equalities on which the objective is projected in cons_linear.c
@@ -65,7 +65,9 @@ Fixed bugs
 - only consider positive slack variables as active in benders.c
 - in the feasibility check of and/or constraints, allow for fractional values in operands
 - fixed linear outer-approximation for some composite absolute-value expressions
-- if an objective limit is set and Mosek claims that it is exceeded, we check that this is indeed the case in SCIPlpiIsStable()
+- fixed that scaling of rows in Gurobi interface (SCIPlpiScaleRow()) changed infinite sides to large finite ones (1e20) when scale factor is negative
+- check whether objective limit is truly reached in SCIPlpiIsStable()
+- if an objective limit is set and Mosek claims that it is exceeded, check that this is indeed the case in SCIPlpiIsStable()
 
 Miscellaneous
 -------------

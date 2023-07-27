@@ -234,8 +234,8 @@ SCIP_RETCODE getScoreLikeCoefdiving(
    downweight = heurdata->lockweight * nconflictlocksdown + (1.0 - heurdata->lockweight) * nlocksdown;
 
    /* check whether there exists a direction w/o any locks */
-   mayrounddown = SCIPisZero(scip, upweight);
-   mayroundup = SCIPisZero(scip, downweight);
+   mayroundup = SCIPisZero(scip, upweight);
+   mayrounddown = SCIPisZero(scip, downweight);
 
    if( mayrounddown || mayroundup )
    {
@@ -254,7 +254,7 @@ SCIP_RETCODE getScoreLikeCoefdiving(
             *roundup = (candsfrac > 0.5);
       }
       else
-         *roundup = mayrounddown;
+         *roundup = mayroundup;
    }
    else
    {
@@ -352,8 +352,8 @@ SCIP_RETCODE getScore(
    downweight = heurdata->lockweight * nconflictlocksdown + (1.0 - heurdata->lockweight) * nlocksdown;
 
    /* check whether there exists a rounding direction w/o any locks */
-   mayrounddown = SCIPisZero(scip, upweight);
-   mayroundup = SCIPisZero(scip, downweight);
+   mayroundup = SCIPisZero(scip, upweight);
+   mayrounddown = SCIPisZero(scip, downweight);
 
    /* variable can be rounded in exactly one direction and we try to go into the feasible direction */
    if( mayrounddown || mayroundup )
@@ -373,11 +373,11 @@ SCIP_RETCODE getScore(
             *roundup = (candsfrac > 0.5);
       }
       else
-         *roundup = mayroundup;
+         *roundup = mayrounddown;
    }
    else
    {
-      assert(!mayrounddown);
+      assert(!mayroundup);
 
       /* both rounding directions have a different amount of locks */
       if( !SCIPisEQ(scip, upweight, downweight) )
