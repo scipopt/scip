@@ -3127,9 +3127,10 @@ SCIP_RETCODE applyFixings(
          if( SCIPvarGetStatus(vbdvar) == SCIP_VARSTATUS_FIXED )
          {
             assert( SCIPisEQ(scip, SCIPvarGetUbGlobal(consdata->vbdvar), SCIPvarGetLbGlobal(consdata->vbdvar)) );
-            assert( SCIPisInfinity(scip, -consdata->lhs) || SCIPisFeasLE(scip, consdata->lhs, varconstant + consdata->vbdcoef * SCIPvarGetUbGlobal(consdata->vbdvar)) );
-            assert( SCIPisInfinity(scip, consdata->rhs) || SCIPisFeasGE(scip, consdata->rhs, varconstant + consdata->vbdcoef * SCIPvarGetUbGlobal(consdata->vbdvar)) );
-            redundant = TRUE;
+            *cutoff = *cutoff || !( SCIPisInfinity(scip, -consdata->lhs) || SCIPisFeasLE(scip, consdata->lhs, varconstant + consdata->vbdcoef * SCIPvarGetUbGlobal(consdata->vbdvar)) );
+            *cutoff = *cutoff || !( SCIPisInfinity(scip, consdata->rhs) || SCIPisFeasGE(scip, consdata->rhs, varconstant + consdata->vbdcoef * SCIPvarGetUbGlobal(consdata->vbdvar)) );
+            if( !*cutoff)
+               redundant = TRUE;
          }
          /* cannot change bounds on multi-aggregated variables */
          else if( SCIPvarGetStatus(vbdvar) != SCIP_VARSTATUS_MULTAGGR )
