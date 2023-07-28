@@ -7,6 +7,7 @@ Fixed bugs
 ----------
 
 - ensure that delayed cutpool separation does not happen if enough cuts have been found already
+- Varbound: If two variables are fixed, check the constraint and do not propagate since this can lead to errors if constraint is statisfied within the feasible tolerance.
 
 @section RN804 SCIP 8.0.4
 *************************

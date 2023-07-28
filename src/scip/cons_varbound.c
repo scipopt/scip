@@ -3124,8 +3124,15 @@ SCIP_RETCODE applyFixings(
          SCIPdebugMsg(scip, "variable bound constraint <%s>: variable <%s> is fixed to %.15g\n",
             SCIPconsGetName(cons), SCIPvarGetName(consdata->var), varconstant);
 
+         if( SCIPvarGetStatus(vbdvar) == SCIP_VARSTATUS_FIXED )
+         {
+            assert( SCIPisEQ(scip, SCIPvarGetUbGlobal(consdata->vbdvar), SCIPvarGetLbGlobal(consdata->vbdvar)) );
+            assert( SCIPisInfinity(scip, -consdata->lhs) || SCIPisFeasLE(scip, consdata->lhs, varconstant + consdata->vbdcoef * SCIPvarGetUbGlobal(consdata->vbdvar)) );
+            assert( SCIPisInfinity(scip, consdata->rhs) || SCIPisFeasGE(scip, consdata->rhs, varconstant + consdata->vbdcoef * SCIPvarGetUbGlobal(consdata->vbdvar)) );
+            redundant = TRUE;
+         }
          /* cannot change bounds on multi-aggregated variables */
-         if( SCIPvarGetStatus(vbdvar) != SCIP_VARSTATUS_MULTAGGR )
+         else if( SCIPvarGetStatus(vbdvar) != SCIP_VARSTATUS_MULTAGGR )
          {
             /* x is fixed to varconstant: update bounds of y and delete the variable bound constraint */
             if( !SCIPisInfinity(scip, -consdata->lhs) && !(*cutoff) )
