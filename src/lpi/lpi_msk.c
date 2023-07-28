@@ -163,6 +163,10 @@ static int numdualobj               =  0;
 struct SCIP_LPi
 {
    MSKenv_t              mosekenv;           /**< Mosek environment */
+#ifdef SCIP_REUSEENV
+   int*                  numlp;              /**< pointer to count on number of tasks in environment */
+   MSKenv_t*             reusemosekenv;      /**< pointer to reused Mosek environment */
+#endif
    MSKtask_t             task;               /**< Mosek task */
    int                   optimizecount;      /**< optimization counter (mainly for debugging) */
    MSKrescodee           termcode;           /**< termination code of last optimization run */
@@ -859,6 +863,10 @@ SCIP_RETCODE SCIPlpiCreate(
    (*lpi)->mosekenv = reusemosekenv;
    (*lpi)->lpid = numlp++;
 
+   /* remember address of numlp and reusemosekenv, in case they are thread-local and SCIPlpiFree is called from different thread */
+   (*lpi)->numlp = &numlp;
+   (*lpi)->reusemosekenv = &reusemosekenv;
+
 #else
 
    MOSEK_CALL( MSK_makeenv(&(*lpi)->mosekenv, NULL) );
@@ -938,12 +946,15 @@ SCIP_RETCODE SCIPlpiFree(
    BMSfreeMemoryArrayNull(&(*lpi)->skc);
 
 #ifdef SCIP_REUSEENV
-   assert(numlp > 0);
-   numlp--;
-   if ( numlp == 0 )
+   /* decrement the numlp that belongs to the thread where SCIPlpiCreate was called */
+   assert(*(*lpi)->numlp > 0);
+   --(*(*lpi)->numlp);
+   /* if numlp reached zero, then also free the Mosek environment (that belongs to the thread where SCIPlpiCreate was called) */
+   if( *(*lpi)->numlp == 0 )
    {
-      MOSEK_CALL( MSK_deleteenv(&reusemosekenv) );
-      reusemosekenv = NULL;
+      /* free reused environment */
+      MOSEK_CALL( MSK_deleteenv((*lpi)->reusemosekenv) );
+      *(*lpi)->reusemosekenv = NULL;
    }
 #else
    MOSEK_CALL( MSK_deleteenv(&(*lpi)->mosekenv) );
