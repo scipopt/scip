@@ -7,6 +7,7 @@ Fixed bugs
 ----------
 
 - ensure that delayed cutpool separation does not happen if enough cuts have been found already
+- fixed that a Gurobi interface (LPI) could not be freed from a thread different than the one it was created in, which lead to problems when, e.g., using the concurrent optimizer
 
 @section RN804 SCIP 8.0.4
 *************************
