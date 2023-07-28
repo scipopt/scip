@@ -3127,8 +3127,8 @@ SCIP_RETCODE applyFixings(
          if( SCIPvarGetStatus(vbdvar) == SCIP_VARSTATUS_FIXED )
          {
             assert( SCIPisEQ(scip, SCIPvarGetUbGlobal(consdata->vbdvar), SCIPvarGetLbGlobal(consdata->vbdvar)) );
-            *cutoff = *cutoff || !( SCIPisInfinity(scip, -consdata->lhs) || SCIPisFeasLE(scip, consdata->lhs, varconstant + consdata->vbdcoef * SCIPvarGetUbGlobal(consdata->vbdvar)) );
-            *cutoff = *cutoff || !( SCIPisInfinity(scip, consdata->rhs) || SCIPisFeasGE(scip, consdata->rhs, varconstant + consdata->vbdcoef * SCIPvarGetUbGlobal(consdata->vbdvar)) );
+            *cutoff = *cutoff || !( SCIPisInfinity(scip, -consdata->lhs) || SCIPisFeasLE(scip, consdata->lhs, varconstant + consdata->vbdcoef * vbdvarconstant) );
+            *cutoff = *cutoff || !( SCIPisInfinity(scip, consdata->rhs) || SCIPisFeasGE(scip, consdata->rhs, varconstant + consdata->vbdcoef * vbdvarconstant) );
             if( !*cutoff)
                redundant = TRUE;
          }
