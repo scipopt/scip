@@ -43,7 +43,6 @@ void setup(void)
 {
    /* create SCIP instance */
    SCIP_CALL( SCIPcreate(&scip) );
-   SCIP_CALL( SCIPcreateProbBasic(scip, "problem") );
 
    /* include reader */
    SCIP_CALL( SCIPincludeReaderMps(scip) );
@@ -62,7 +61,8 @@ TestSuite(readermps, .init = setup, .fini = teardown);
 
 Test(readermps, read, .description = "check the function for reading a *.mps file")
 {
-   const char* filename = "model.mps";
+   /*The file tested below originally failed because 'OBJSENSE MAX' is on one line. */
+   const char* filename = "oc5.mps";
    SCIP_CALL( SCIPreadProb(scip, filename, NULL) );
-   cr_expect( SCIPgetNVars(scip) == 42 );
+   cr_expect( SCIPgetNVars(scip) == 5 );
 }
