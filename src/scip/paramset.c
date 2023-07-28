@@ -3523,6 +3523,7 @@ SCIP_RETCODE paramsetSetSeparatingDefault(
    SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, "cutselection/hybrid/minorthoroot") );
    SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, "separating/maxroundsrootsubrun") );
    SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, "separating/maxaddrounds") );
+   SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, "separating/maxcutsrootgen") );
    SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, "separating/maxcutsroot") );
    SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, "separating/poolfreq") );
    SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, "separating/aggregation/maxfailsroot") );
@@ -3682,6 +3683,7 @@ SCIP_RETCODE paramsetSetSeparatingAggressive(
    SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "cutselection/hybrid/minorthoroot", 0.1, quiet) );
    SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "separating/maxroundsrootsubrun", 5, quiet) );
    SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "separating/maxaddrounds", 5, quiet) );
+   SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "separating/maxcutsroot", 10000, quiet) );
    SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "separating/maxcutsroot", 5000, quiet) );
    SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "separating/poolfreq", 10, quiet) );
 

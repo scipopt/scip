@@ -451,6 +451,8 @@
                                                  *   or integrality improvement in the root node (-1: no additional restriction) */
 #define SCIP_DEFAULT_SEPA_MAXSTALLROUNDS      1 /**< maximal number of consecutive separation rounds without objective
                                                  *   or integrality improvement in local nodes (-1: no additional restriction) */
+#define SCIP_DEFAULT_SEPA_MAXCUTSGEN        200 /**< maximal number of cuts generated per separation round */
+#define SCIP_DEFAULT_SEPA_MAXCUTSROOTGEN   4000 /**< maximal generated cuts at the root node */
 #define SCIP_DEFAULT_SEPA_MAXCUTS           100 /**< maximal number of cuts separated per separation round */
 #define SCIP_DEFAULT_SEPA_MAXCUTSROOT      2000 /**< maximal separated cuts at the root node */
 #define SCIP_DEFAULT_SEPA_CUTAGELIMIT        80 /**< maximum age a cut can reach before it is deleted from global cut pool
@@ -2513,6 +2515,16 @@ SCIP_RETCODE SCIPsetCreate(
          "separating/maxstallroundsroot",
          "maximal number of consecutive separation rounds without objective or integrality improvement in the root node (-1: no additional restriction)",
          &(*set)->sepa_maxstallroundsroot, FALSE, SCIP_DEFAULT_SEPA_MAXSTALLROUNDSROOT, -1, INT_MAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "separating/maxcutsgen",
+         "maximal number of cuts generated per separation round (0: disable local separation)",
+         &(*set)->sepa_maxcutsgen, FALSE, SCIP_DEFAULT_SEPA_MAXCUTSGEN, 0, INT_MAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "separating/maxcutsrootgen",
+         "maximal number of generated cuts at the root node (0: disable root node separation)",
+         &(*set)->sepa_maxcutsrootgen, FALSE, SCIP_DEFAULT_SEPA_MAXCUTSROOTGEN, 0, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "separating/maxcuts",
@@ -5875,6 +5887,20 @@ int SCIPsetGetPriceMaxvars(
       return set->price_maxvarsroot;
    else
       return set->price_maxvars;
+}
+
+/** returns the maximal number of cuts that can be generated per round */
+int SCIPsetGetSepaMaxcutsGen(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             root                /**< are we at the root node? */
+   )
+{
+   assert(set != NULL);
+
+   if( root )
+      return set->sepa_maxcutsrootgen;
+   else
+      return set->sepa_maxcutsgen;
 }
 
 /** returns the maximal number of cuts separated per round */
