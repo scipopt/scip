@@ -62,10 +62,9 @@ TestSuite(readermps, .init = setup, .fini = teardown);
 Test(readermps, read, .description = "check the function for reading a *.mps file")
 {
    /*The file tested below originally failed because 'OBJSENSE MAX' is on one line. */
-   const char* filenamebase = "oc5";
    char filename[SCIP_MAXSTRLEN];
-   TESTsetTestfilename(filename, __FILE__, filestub);
-   strcat(filename, ".mps");
+   TESTsetTestfilename(filename, __FILE__, "oc5.mps");
+
    SCIP_CALL( SCIPreadProb(scip, filename, NULL) );
    cr_expect( SCIPgetNVars(scip) == 5 );
 }
