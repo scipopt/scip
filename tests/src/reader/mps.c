@@ -33,6 +33,7 @@
 
 #include "scip/scip.h"
 #include "scip/reader_mps.h"
+#include "scip/scipdefplugins.h"
 
 #include "include/scip_test.h"
 
@@ -45,7 +46,7 @@ void setup(void)
    SCIP_CALL( SCIPcreate(&scip) );
 
    /* include reader */
-   SCIP_CALL( SCIPincludeReaderMps(scip) );
+    SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
 
 }
 
