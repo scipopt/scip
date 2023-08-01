@@ -77,6 +77,7 @@ Fixed bugs
 - fixed that scaling of rows in Gurobi interface (SCIPlpiScaleRow()) changed infinite sides to large finite ones (1e20) when scale factor is negative
 - check whether objective limit is truly reached in SCIPlpiIsStable()
 - if an objective limit is set and Mosek claims that it is exceeded, check that this is indeed the case in SCIPlpiIsStable()
+- The .mps file reader was extended to additionally accept .mps files with the objective sense section on one line.
 
 Miscellaneous
 -------------
