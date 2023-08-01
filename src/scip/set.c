@@ -2459,12 +2459,12 @@ SCIP_RETCODE SCIPsetCreate(
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
             "separating/maxcutsgenfactor",
             "factor w.r.t. maxcuts for maximal number of cuts generated per separation round (-1.0: no limit, >= 0.0: valid finite limit)",
-            &(*set)->sepa_maxcutsgenfactor, FALSE, SCIP_DEFAULT_SEPA_MAXCUTSGENFACTOR, -1.0, INT_MAX/SCIP_DEFAULT_SEPA_MAXCUTS,
+            &(*set)->sepa_maxcutsgenfactor, FALSE, SCIP_DEFAULT_SEPA_MAXCUTSGENFACTOR, -1.0, (SCIP_Real)INT_MAX/SCIP_DEFAULT_SEPA_MAXCUTS,
             NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "separating/maxcutsrootgenfactor",
          "factor w.r.t. maxcutsroot for maximal number of generated cuts at the root node (-1.0: no limit, >= 0.0: valid finite limit)",
-         &(*set)->sepa_maxcutsrootgenfactor, FALSE, SCIP_DEFAULT_SEPA_MAXCUTSROOTGENFACTOR, -1.0, INT_MAX/SCIP_DEFAULT_SEPA_MAXCUTSROOT,
+         &(*set)->sepa_maxcutsrootgenfactor, FALSE, SCIP_DEFAULT_SEPA_MAXCUTSROOTGENFACTOR, -1.0, (SCIP_Real)INT_MAX/SCIP_DEFAULT_SEPA_MAXCUTSROOT,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddCharParam(*set, messagehdlr, blkmem,
          "separating/orthofunc",
