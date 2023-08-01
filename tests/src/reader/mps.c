@@ -60,7 +60,7 @@ void teardown(void)
 /* TEST SUITE */
 TestSuite(readermps, .init = setup, .fini = teardown);
 
-Test(readermps, read, .description = "check the function for reading a *.mps file")
+Test(readermps, read1, .description = "check the function for reading a *.mps file")
 {
    /*The file tested below originally failed because 'OBJSENSE MAX' is on one line. */
    char filename[SCIP_MAXSTRLEN];
@@ -68,4 +68,14 @@ Test(readermps, read, .description = "check the function for reading a *.mps fil
 
    SCIP_CALL( SCIPreadProb(scip, filename, NULL) );
    cr_expect( SCIPgetNVars(scip) == 5 );
+}
+
+Test(readermps, read2, .description = "check the function for reading a *.mps file")
+{
+    /*A 'normal' mps file with OBJSENSE MAX on two lines */
+    char filename[SCIP_MAXSTRLEN];
+    TESTsetTestfilename(filename, __FILE__, "oc5_1.mps");
+
+    SCIP_CALL( SCIPreadProb(scip, filename, NULL) );
+    cr_expect( SCIPgetNVars(scip) == 5 );
 }
