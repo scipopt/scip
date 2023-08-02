@@ -547,6 +547,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
       SCIP_Real frac = 0.0;
 
       c = basisind[i];
+      cutefficacies[i] = 0.0;
 
       basisperm[i] = i;
 
