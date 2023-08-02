@@ -2254,7 +2254,7 @@ SCIP_Real SCIPgetAvgCutoffScoreCurrentRun(
  */
 void SCIPincAvgGMIeff(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real             gmieff              /**< average normalised GMI eff over all variables */
+   SCIP_Real             gmieff              /**< average normalised GMI cut efficacy over all variables */
    )
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPincAvgGMIeff", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );

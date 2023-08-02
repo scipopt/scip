@@ -1644,7 +1644,7 @@ SCIP_Real SCIPgetAvgGMIeff(
 SCIP_EXPORT
 void SCIPincAvgGMIeff(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real             gmieff              /**< average normalised GMI eff over all variables */
+   SCIP_Real             gmieff              /**< average normalised GMI efficacy over all variables */
    );
 
 /** gets deterministic time number of LPs solved so far
