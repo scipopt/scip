@@ -98,7 +98,9 @@ void SCIPhistoryReset(
    history->ratio = 0.0;
    history->ratiovalid = FALSE;
    history->balance = 0.0;
+   history->ngmi = 0;
    history->gmieff = 0.0;
+   history->gmieffsum = 0.0;
    history->nactiveconflicts[0] = 0;
    history->nactiveconflicts[1] = 0;
    history->nbranchings[0] = 0;
