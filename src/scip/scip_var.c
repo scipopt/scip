@@ -9861,9 +9861,9 @@ SCIP_Real SCIPgetVarAvgInferenceCutoffScoreCurrentRun(
       inferdown + cutoffweight * avginfer * cutoffdown, inferup + cutoffweight * avginfer * cutoffup);
 }
 
-/** returns the variable's avg GMI efficacy score value
+/** returns the variable's average GMI efficacy score value
  *
- *  @return the variable's avg GMI efficacy score value
+ *  @return the variable's average GMI efficacy score value
  *
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_INITPRESOLVE
@@ -9887,7 +9887,7 @@ SCIP_Real SCIPgetVarAvgGMIScore(
    return SCIPvarGetAvgGMIScore(var, scip->stat);
 }
 
-/** sets the variable's avg GMI efficacy score value
+/** sets the variable's average GMI efficacy score value
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.

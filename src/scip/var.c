@@ -16366,7 +16366,7 @@ SCIP_Real SCIPvarGetAvgCutoffsCurrentRun(
    }
 }
 
-/** returns the variable's avg GMI efficacy score value generated from simplex tableau rows of this variable */
+/** returns the variable's average GMI efficacy score value generated from simplex tableau rows of this variable */
 SCIP_Real SCIPvarGetAvgGMIScore(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_STAT*            stat                /**< problem statistics */

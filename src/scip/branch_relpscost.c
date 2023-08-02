@@ -73,7 +73,7 @@
 #define DEFAULT_CONFLENGTHWEIGHT 0.0         /**< weight in score calculations for conflict length score*/
 #define DEFAULT_INFERENCEWEIGHT  0.0001      /**< weight in score calculations for inference score */
 #define DEFAULT_CUTOFFWEIGHT     0.0001      /**< weight in score calculations for cutoff score */
-#define DEFAULT_GMIAVGEFFWEIGHT  0.0         /**< weight in score calculations of avg GMI cut normed efficacies */
+#define DEFAULT_GMIAVGEFFWEIGHT  0.0         /**< weight in score calculations of average GMI cut normed efficacies */
 #define DEFAULT_GMILASTEFFWEIGHT 0.00001     /**< weight in score calculations of last GMI cut normed efficacy */
 #define DEFAULT_PSCOSTWEIGHT     1.0         /**< weight in score calculations for pseudo cost score */
 #define DEFAULT_NLSCOREWEIGHT    0.1         /**< weight in score calculations for nlcount score */
@@ -2115,7 +2115,7 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
          &branchruledata->cutoffweight, TRUE, DEFAULT_CUTOFFWEIGHT, SCIP_REAL_MIN, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
           "branching/relpscost/gmiavgeffweight",
-          "weight in score calculations for avg GMI cuts normalised efficacy",
+          "weight in score calculations for average GMI cuts normalised efficacy",
           &branchruledata->gmiavgeffweight, TRUE, DEFAULT_GMIAVGEFFWEIGHT, SCIP_REAL_MIN, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
           "branching/relpscost/gmilasteffweight",

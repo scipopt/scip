@@ -3833,9 +3833,9 @@ SCIP_Real SCIPgetVarAvgInferenceCutoffScoreCurrentRun(
    SCIP_Real             cutoffweight        /**< factor to weigh average number of cutoffs in branching score */
    );
 
-/** returns the variable's avg GMI efficacy score value
+/** returns the variable's average GMI efficacy score value
  *
- *  @return the variable's last GMI efficacy score value (for when it was fractional and basic in the LP)
+ *  @return the variable's average GMI efficacy score value (for when it was fractional and basic in the LP)
  *
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_INITPRESOLVE
