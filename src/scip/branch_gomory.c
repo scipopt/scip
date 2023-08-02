@@ -34,12 +34,14 @@
 #include "scip/pub_branch.h"
 #include "scip/pub_var.h"
 #include "scip/pub_lp.h"
+#include "scip/pub_tree.h"
 #include "scip/scip_branch.h"
 #include "scip/scip_cut.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
 #include "scip/scip_numerics.h"
 #include "scip/scip_lp.h"
+#include "scip/scip_tree.h"
 #include "scip_param.h"
 #include "scip/branch_relpscost.h"
 #include <string.h>
@@ -391,10 +393,19 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpGomory)
    assert(scip != NULL);
    assert(result != NULL);
 
-   SCIPdebugMsg(scip, "Execlp method of Gomory branching\n");
+   SCIPdebugMsg(scip, "Execlp method of Gomory branching in node %" SCIP_LONGINT_FORMAT "\n", SCIPnodeGetNumber(SCIPgetCurrentNode(scip)));
+   
+   if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
+   {
+      *result = SCIP_DIDNOTRUN;
+      SCIPdebugMsg(scip, "Could not apply Gomory branching, as the current LP was not solved to optimality.\n");
+      
+      return SCIP_OKAY;
+   }
 
    /* Get branching candidates */
    SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, NULL, &nlpcands, NULL) );
+   assert(nlpcands > 0);
 
    /* Initialise a DIDNOTRUN result */
    *result = SCIP_DIDNOTRUN;
@@ -402,12 +413,6 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpGomory)
    /* Get branching rule data */
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
-
-   /* If the user has set maximum candidates to 0 or there are no candidates then return DIDNOTFIND  */
-   if( branchruledata->maxncands == 0 || nlpcands == 0)
-   {
-      return SCIP_ERROR;
-   }
 
    /* Compute the reliability pseudo-cost branching scores for the candidates */
    if ( branchruledata->performrelpscost )
