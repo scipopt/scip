@@ -55,6 +55,7 @@ Interface changes
 - SCIPcreateConsIndicatorLinCons(), SCIPcreateConsIndicatorGenericLinCons() do not allow binvar to be NULL anymore
 - Replaced SCIPnlrowSetCurvature() by SCIPsetNlRowCurvature().
 - SCIPsnprintf() now returns the required string length in case reallocation is necessary.
+- SCIPcomputeCoverUndercover() receives three more arguments which nonlinearities to cover
 
 ### New API functions
 
