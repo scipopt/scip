@@ -1284,7 +1284,7 @@ void SCIPnodeMarkPropagated(
    node->reprop = FALSE;
 
    /* if the node was the highest repropagation node in the path, update the repropdepth in the tree data */
-   if( node->active && node->depth == tree->repropdepth )
+   if( node->active && (long)(node->depth) == tree->repropdepth )
    {
       do
       {
@@ -2949,7 +2949,7 @@ void treeFindSwitchForks(
    /* if not already found, continue searching the LP defining fork; it cannot be deeper than the common fork */
    if( lpfork == NULL )
    {
-      if( tree->focuslpfork != NULL && (int)(tree->focuslpfork->depth) > fork->depth )
+      if( tree->focuslpfork != NULL && tree->focuslpfork->depth > fork->depth )
       {
          /* focuslpfork is not on the same active path as the new node: we have to continue searching */
          lpfork = fork;
@@ -2967,7 +2967,7 @@ void treeFindSwitchForks(
          /* focuslpfork is on the same active path as the new node: old and new node have the same lpfork */
          lpfork = tree->focuslpfork;
       }
-      assert(lpfork == NULL || (int)(lpfork->depth) <= fork->depth);
+      assert(lpfork == NULL || lpfork->depth <= fork->depth);
       assert(lpfork == NULL || lpfork->active);
    }
    assert(lpfork == NULL
@@ -2981,7 +2981,7 @@ void treeFindSwitchForks(
     */
    if( lpstatefork == NULL )
    {
-      if( tree->focuslpstatefork != NULL && (int)(tree->focuslpstatefork->depth) > fork->depth )
+      if( tree->focuslpstatefork != NULL && tree->focuslpstatefork->depth > fork->depth )
       {
          /* focuslpstatefork is not on the same active path as the new node: we have to continue searching */
          if( lpfork != NULL && lpfork->depth < fork->depth )
@@ -3001,7 +3001,7 @@ void treeFindSwitchForks(
          /* focuslpstatefork is on the same active path as the new node: old and new node have the same lpstatefork */
          lpstatefork = tree->focuslpstatefork;
       }
-      assert(lpstatefork == NULL || (int)(lpstatefork->depth) <= fork->depth);
+      assert(lpstatefork == NULL || lpstatefork->depth <= fork->depth);
       assert(lpstatefork == NULL || lpstatefork->active);
    }
    assert(lpstatefork == NULL
@@ -3015,7 +3015,7 @@ void treeFindSwitchForks(
     */
    if( subroot == NULL )
    {
-      if( tree->focussubroot != NULL && (int)(tree->focussubroot->depth) > fork->depth )
+      if( tree->focussubroot != NULL && tree->focussubroot->depth > fork->depth )
       {
          /* focussubroot is not on the same active path as the new node: we have to continue searching */
          if( lpstatefork != NULL && lpstatefork->depth < fork->depth )
@@ -4396,10 +4396,10 @@ SCIP_RETCODE SCIPnodeFocus(
     * thereby checking, if the new node can be cut off
     */
    treeFindSwitchForks(tree, *node, &fork, &lpfork, &lpstatefork, &subroot, cutoff);
-   SCIPsetDebugMsg(set, "focus node: focusnodedepth=%d, forkdepth=%d, lpforkdepth=%d, lpstateforkdepth=%d, subrootdepth=%d, cutoff=%u\n",
-      *node != NULL ? (*node)->depth : -1, fork != NULL ? fork->depth : -1, /*lint !e705 */
-      lpfork != NULL ? lpfork->depth : -1, lpstatefork != NULL ? lpstatefork->depth : -1, /*lint !e705 */
-      subroot != NULL ? subroot->depth : -1, *cutoff); /*lint !e705 */
+   SCIPsetDebugMsg(set, "focus node: focusnodedepth=%ld, forkdepth=%ld, lpforkdepth=%ld, lpstateforkdepth=%ld, subrootdepth=%ld, cutoff=%u\n",
+      *node != NULL ? (long)((*node)->depth) : -1, fork != NULL ? (long)(fork->depth) : -1, /*lint !e705 */
+      lpfork != NULL ? (long)(lpfork->depth) : -1, lpstatefork != NULL ? (long)(lpstatefork->depth) : -1, /*lint !e705 */
+      subroot != NULL ? (long)(subroot->depth) : -1, *cutoff); /*lint !e705 */
 
    /* free the new node, if it is located in a cut off subtree */
    if( *cutoff )
@@ -4442,7 +4442,7 @@ SCIP_RETCODE SCIPnodeFocus(
    {
       /* we are in a different subtree, or no valid LP fork exists: the LP is completely incorrect */
       assert(subroot == NULL || !subroot->active
-         || (tree->focussubroot != NULL && (int)(tree->focussubroot->depth) > subroot->depth));
+         || (tree->focussubroot != NULL && tree->focussubroot->depth > subroot->depth));
       tree->correctlpdepth = -1;
    }
 
@@ -8261,7 +8261,7 @@ SCIP_Bool SCIPtreeIsPathComplete(
    assert(tree->pathlen == 0 || tree->focusnode != NULL);
    assert(tree->pathlen >= 2 || !SCIPtreeProbing(tree));
    assert(tree->pathlen == 0 || tree->path[tree->pathlen-1] != NULL);
-   assert(tree->pathlen == 0 || tree->path[tree->pathlen-1]->depth == tree->pathlen-1);
+   assert(tree->pathlen == 0 || (long)(tree->path[tree->pathlen-1]->depth) == tree->pathlen-1);
    assert(tree->focusnode == NULL || (int)tree->focusnode->depth >= tree->pathlen
       || tree->path[tree->focusnode->depth] == tree->focusnode);
 
@@ -8304,7 +8304,7 @@ SCIP_NODE* SCIPtreeGetFocusNode(
    assert(tree->pathlen == 0 || tree->focusnode != NULL);
    assert(tree->pathlen >= 2 || !SCIPtreeProbing(tree));
    assert(tree->pathlen == 0 || tree->path[tree->pathlen-1] != NULL);
-   assert(tree->pathlen == 0 || tree->path[tree->pathlen-1]->depth == tree->pathlen-1);
+   assert(tree->pathlen == 0 || (long)(tree->path[tree->pathlen-1]->depth) == tree->pathlen-1);
    assert(tree->focusnode == NULL || (int)tree->focusnode->depth >= tree->pathlen
       || tree->path[tree->focusnode->depth] == tree->focusnode);
 
@@ -8321,7 +8321,7 @@ int SCIPtreeGetFocusDepth(
    assert(tree->pathlen == 0 || tree->focusnode != NULL);
    assert(tree->pathlen >= 2 || !SCIPtreeProbing(tree));
    assert(tree->pathlen == 0 || tree->path[tree->pathlen-1] != NULL);
-   assert(tree->pathlen == 0 || tree->path[tree->pathlen-1]->depth == tree->pathlen-1);
+   assert(tree->pathlen == 0 || (long)(tree->path[tree->pathlen-1]->depth) == tree->pathlen-1);
    assert(tree->focusnode == NULL || (int)tree->focusnode->depth >= tree->pathlen
       || tree->path[tree->focusnode->depth] == tree->focusnode);
 
@@ -8379,7 +8379,7 @@ SCIP_NODE* SCIPtreeGetCurrentNode(
    assert(tree->pathlen == 0 || tree->focusnode != NULL);
    assert(tree->pathlen >= 2 || !SCIPtreeProbing(tree));
    assert(tree->pathlen == 0 || tree->path[tree->pathlen-1] != NULL);
-   assert(tree->pathlen == 0 || tree->path[tree->pathlen-1]->depth == tree->pathlen-1);
+   assert(tree->pathlen == 0 || (long)(tree->path[tree->pathlen-1]->depth) == tree->pathlen-1);
    assert(tree->focusnode == NULL || (int)tree->focusnode->depth >= tree->pathlen
       || tree->path[tree->focusnode->depth] == tree->focusnode);
 
@@ -8396,7 +8396,7 @@ int SCIPtreeGetCurrentDepth(
    assert(tree->pathlen == 0 || tree->focusnode != NULL);
    assert(tree->pathlen >= 2 || !SCIPtreeProbing(tree));
    assert(tree->pathlen == 0 || tree->path[tree->pathlen-1] != NULL);
-   assert(tree->pathlen == 0 || tree->path[tree->pathlen-1]->depth == tree->pathlen-1);
+   assert(tree->pathlen == 0 || (long)(tree->path[tree->pathlen-1]->depth) == tree->pathlen-1);
    assert(tree->focusnode == NULL || (int)tree->focusnode->depth >= tree->pathlen
       || tree->path[tree->focusnode->depth] == tree->focusnode);
 
