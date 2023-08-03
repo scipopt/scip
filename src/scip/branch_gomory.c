@@ -60,7 +60,7 @@
 #define DEFAULT_OBJPARALLELWEIGHT  0.0   /**< weight of objective parallelism in the cut scoring rule */
 #define DEFAULT_INTSUPPORTWEIGHT   0.0   /**< weight of objective parallelism in the cut scoring rule */
 #define DEFAULT_PERFORMRELPSCOST   FALSE /**< if default branching rule without execution should be called */
-#define DEFAULT_USEWEAKERCUTS      TRUE  /**< use weakener cuts derived from the exact branching split */
+#define DEFAULT_USEWEAKERCUTS      TRUE  /**< use weaker cuts derived from the exact branching split */
 
 
 /*
