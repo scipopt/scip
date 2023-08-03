@@ -1620,6 +1620,7 @@ void consdataUpdateActivities(
    )
 {
    QUAD_MEMBER(SCIP_Real* activity);
+   QUAD_MEMBER(SCIP_Real delta);
    SCIP_Real* lastactivity;
    int* activityposinf;
    int* activityneginf;
@@ -1627,7 +1628,6 @@ void consdataUpdateActivities(
    int* activityneghuge;
    SCIP_Real oldcontribution;
    SCIP_Real newcontribution;
-   SCIP_Real delta;
    SCIP_Bool validact;
    SCIP_Bool finitenewbound;
    SCIP_Bool hugevalnewcont;
@@ -1661,7 +1661,7 @@ void consdataUpdateActivities(
    assert(consdata->glbmaxactivityneghuge >= 0);
    assert(consdata->glbmaxactivityposhuge >= 0);
 
-   delta = 0.0;
+   QUAD_ASSIGN(delta, 0.0);
 
    /* we are updating global activities */
    if( global )
@@ -1807,7 +1807,7 @@ void consdataUpdateActivities(
             }
             /* "normal case": just add the contribution to the activity */
             else
-               delta = newcontribution;
+               QUAD_ASSIGN(delta, newcontribution);
          }
       }
       /* old bound was -infinity */
@@ -1835,7 +1835,7 @@ void consdataUpdateActivities(
             }
             /* "normal case": just add the contribution to the activity */
             else
-               delta = newcontribution;
+               QUAD_ASSIGN(delta, newcontribution);
          }
       }
    }
@@ -1871,7 +1871,7 @@ void consdataUpdateActivities(
          }
          /* "normal case": just add the contribution to the activity */
          else
-            delta = newcontribution;
+            QUAD_ASSIGN(delta, newcontribution);
       }
       /* old contribution was too large and negative */
       else
@@ -1904,7 +1904,7 @@ void consdataUpdateActivities(
          }
          /* "normal case": just add the contribution to the activity */
          else
-            delta = newcontribution;
+            QUAD_ASSIGN(delta, newcontribution);
       }
    }
    /* old bound was finite and not too large */
@@ -1918,7 +1918,7 @@ void consdataUpdateActivities(
          if( newbound > 0.0 )
          {
             (*activityposinf)++;
-            delta = -oldcontribution;
+            QUAD_ASSIGN(delta, -oldcontribution);
          }
          /* if the new bound is -infinity, the old contribution has to be subtracted
           * and the counter for negative infinite contributions has to be increased
@@ -1928,7 +1928,7 @@ void consdataUpdateActivities(
             assert(newbound < 0.0 );
 
             (*activityneginf)++;
-            delta = -oldcontribution;
+            QUAD_ASSIGN(delta, -oldcontribution);
          }
       }
       /* if the contribution of this variable is too large, increase the counter for huge values */
@@ -1937,28 +1937,31 @@ void consdataUpdateActivities(
          if( newcontribution > 0.0 )
          {
             (*activityposhuge)++;
-            delta = -oldcontribution;
+            QUAD_ASSIGN(delta, -oldcontribution);
          }
          else
          {
             (*activityneghuge)++;
-            delta = -oldcontribution;
+            QUAD_ASSIGN(delta, -oldcontribution);
          }
       }
       /* "normal case": just update the activity */
       else
-         delta = newcontribution - oldcontribution;
+      {
+         QUAD_ASSIGN(delta, newcontribution);
+         SCIPquadprecSumQD(delta, delta, -oldcontribution);
+      }
    }
 
    /* update the activity, if the current value is valid and there was a change in the finite part */
-   if( validact && (delta != 0.0) )
+   if( validact && (QUAD_TO_DBL(delta) != 0.0) )
    {
       SCIP_Real curractivity;
 
       /* if the absolute value of the activity is increased, this is regarded as reliable,
        * otherwise, we check whether we can still trust the updated value
        */
-      SCIPquadprecSumQD(*activity, *activity, delta);
+      SCIPquadprecSumQD(*activity, *activity, QUAD_TO_DBL(delta));
 
       curractivity = QUAD_TO_DBL(*activity);
       assert(!SCIPisInfinity(scip, -curractivity) && !SCIPisInfinity(scip, curractivity));

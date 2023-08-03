@@ -44,7 +44,7 @@
 struct SCIP_EventhdlrData
 {
    scip::ObjEventhdlr*   objeventhdlr;       /**< event handler object */
-   SCIP_Bool             deleteobject;       /**< should the event handler object be deleted when eventhdlristic is freed? */
+   SCIP_Bool             deleteobject;       /**< should the event handler object be deleted when eventhdlr is freed? */
 };
 
 
@@ -221,7 +221,7 @@ SCIP_DECL_EVENTEXEC(eventhdlrExecObj)
 SCIP_RETCODE SCIPincludeObjEventhdlr(
    SCIP*                 scip,               /**< SCIP data structure */
    scip::ObjEventhdlr*   objeventhdlr,       /**< event handler object */
-   SCIP_Bool             deleteobject        /**< should the event handler object be deleted when eventhdlristic is freed? */
+   SCIP_Bool             deleteobject        /**< should the event handler object be deleted when eventhdlr is freed? */
    )
 {
    SCIP_EVENTHDLRDATA* eventhdlrdata;

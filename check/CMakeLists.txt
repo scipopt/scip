@@ -111,6 +111,7 @@ set(settings_fastMIP
     "bakvisualization"
     "fullstrongbfs"
     "cgmip"
+    "cgmipdirect"
     "cgmipstrong"
     "cgmipviol"
     "lookahead-abbrev-bincons"
@@ -270,6 +271,7 @@ set(instances_MIP
     "instances/MIP/lseu.mps\;1120"
     "instances/MIP/MANN_a9.clq.lp\;16"
     "instances/MIP/misc03.mps\;3360"
+    "instances/MIP/Negated.cip\;1"
     "instances/MIP/p0033.osil\;3089"
     "instances/MIP/p0548.mps\;8691"
     "instances/MIP/rgn.mps\;82.19999924"
@@ -295,6 +297,7 @@ set(instances_fastMIP
     "instances/MIP/gt2.mps\;21166"
     "instances/MIP/MANN_a9.clq.lp\;16"
     "instances/MIP/p0033.osil\;3089"
+    "instances/MIP/Side.lp\;2"
     )
 
 #

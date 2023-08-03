@@ -102,6 +102,8 @@ Interface changes
 
 ### New parameters
 
+- separating/maxcutsgen and separating/maxcutsrootgen for limits on the number of cuts generated (which used to be a
+  factor of separating/maxcuts and separating/maxcutsroot)
 - expr/pow/expandmaxexponent to specify limit on exponent when to expand power of sum
 - expr/pow/distribfracexponent to enable expanding power of products with fractional exponents
 - expr/product/expandalways to enable expanding any product with sums as factor (that is, also when more than two factors)
@@ -147,6 +149,8 @@ Build system
 Fixed bugs
 ----------
 
+- Number of runs in which separation is enabled will now be correct as per "separating/maxruns" parameter. Earlier,
+  separation was enabled for "maxruns + 1" number of runs, i.e., separation was enabled even when "maxruns = 0" was set.
 - add safeguard for number of selected cuts
 
 Miscellaneous
@@ -159,6 +163,15 @@ Known bugs
 ----------
 
 @page RN80 Release notes for SCIP 8.0
+
+@section RN805 SCIP 8.0.5
+*************************
+
+Fixed bugs
+----------
+
+- ensure that delayed cutpool separation does not happen if enough cuts have been found already
+- fixed that a Gurobi or Mosek interface (LPI) could not be freed from a thread different than the one it was created in, which lead to problems when, e.g., using the concurrent optimizer
 
 @section RN804 SCIP 8.0.4
 *************************
@@ -226,6 +239,10 @@ Fixed bugs
 - in the feasibility check of and/or constraints, allow for fractional values in operands
 - fixed linear outer-approximation for some composite absolute-value expressions
 - fixed that scaling of rows in Gurobi interface (SCIPlpiScaleRow()) changed infinite sides to large finite ones (1e20) when scale factor is negative
+- check whether objective limit is truly reached in SCIPlpiIsStable()
+- if an objective limit is set and Mosek claims that it is exceeded, check that this is indeed the case in SCIPlpiIsStable()
+- The .mps file reader was extended to additionally accept .mps files with the objective sense section on one line.
+- use double double precision for delta in activity updates of cons_linear.c.
 
 Miscellaneous
 -------------
