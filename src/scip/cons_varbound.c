@@ -3133,10 +3133,10 @@ SCIP_RETCODE applyFixings(
                redundant = TRUE;
          }
          /* cannot change bounds on multi-aggregated variables */
-         else if( SCIPvarGetStatus(vbdvar) != SCIP_VARSTATUS_MULTAGGR )
+         else if( !(*cutoff) && !redundant && SCIPvarGetStatus(vbdvar) != SCIP_VARSTATUS_MULTAGGR )
          {
             /* x is fixed to varconstant: update bounds of y and delete the variable bound constraint */
-            if( !SCIPisInfinity(scip, -consdata->lhs) && !(*cutoff) )
+            if( !SCIPisInfinity(scip, -consdata->lhs) )
             {
                if( consdata->vbdcoef > 0.0 )
                {
@@ -3163,7 +3163,7 @@ SCIP_RETCODE applyFixings(
                   }
                }
             }
-            if( !SCIPisInfinity(scip, consdata->rhs) && !(*cutoff) )
+            if( !SCIPisInfinity(scip, consdata->rhs) )
             {
                if( consdata->vbdcoef > 0.0 )
                {
@@ -3260,10 +3260,10 @@ SCIP_RETCODE applyFixings(
             SCIPconsGetName(cons), SCIPvarGetName(consdata->vbdvar), vbdvarconstant);
 
          /* cannot change bounds on multi-aggregated variables */
-         if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR )
+         if( !(*cutoff) && !redundant && SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR )
          {
             /* y is fixed to vbdvarconstant: update bounds of x and delete the variable bound constraint */
-            if( !SCIPisInfinity(scip, -consdata->lhs) && !(*cutoff) )
+            if( !SCIPisInfinity(scip, -consdata->lhs) )
             {
                SCIP_Bool tightened;
 
@@ -3275,7 +3275,7 @@ SCIP_RETCODE applyFixings(
                   (*nchgbds)++;
                }
             }
-            if( !SCIPisInfinity(scip, consdata->rhs) && !(*cutoff) )
+            if( !SCIPisInfinity(scip, consdata->rhs) )
             {
                SCIP_Bool tightened;
 
