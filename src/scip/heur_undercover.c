@@ -741,7 +741,7 @@ SCIP_RETCODE createCoveringProblem(
             /* create covering constraint */
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_covering", SCIPconsGetName(andcons));
             SCIP_CALL( SCIPcreateConsLinear(coveringscip, &coveringcons, name, ntofix, coveringconsvars, coveringconsvals,
-                  (SCIP_Real)(ntofix - 2), SCIPinfinity(coveringscip),
+                  (SCIP_Real)(ntofix - 1), SCIPinfinity(coveringscip),
                   TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE ) );
 
             if( coveringcons == NULL )
