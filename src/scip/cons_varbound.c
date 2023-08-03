@@ -3133,7 +3133,7 @@ SCIP_RETCODE applyFixings(
                redundant = TRUE;
          }
          /* cannot change bounds on multi-aggregated variables */
-         else if( !(*cutoff) && !redundant && SCIPvarGetStatus(vbdvar) != SCIP_VARSTATUS_MULTAGGR )
+         else if( SCIPvarGetStatus(vbdvar) != SCIP_VARSTATUS_MULTAGGR )
          {
             assert( !SCIPisZero(scip, consdata->vbdcoef) );
             assert( SCIPisEQ(scip, ABS(vbdvarscalar), 1.0) );
