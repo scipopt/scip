@@ -658,6 +658,7 @@ set(basenames_opb_wrongformat
     MANN_a9.clq.lp
     misc03.mps
     rgn.mps
+    scipbug.cip
     vpm2.fzn
     lseu_dcmulti.cip
     lseu_dcmulti_sHB.cip
