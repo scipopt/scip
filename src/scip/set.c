@@ -454,7 +454,7 @@
 #define SCIP_DEFAULT_SEPA_MAXCUTSGENFACTOR  2.0 /**< factor w.r.t. maxcuts for maximal number of cuts generated per separation round */
 #define SCIP_DEFAULT_SEPA_MAXCUTSROOTGENFACTOR 2.0 /**< factor w.r.t. maxcutsroot for maximal generated cuts at the root node */
 #define SCIP_DEFAULT_SEPA_MAXCUTS           100 /**< maximal number of cuts separated per separation round */
-#define SCIP_DEFAULT_SEPA_MAXCUTSROOT      2000 /**< maximal separated cuts at the root node */
+#define SCIP_DEFAULT_SEPA_MAXCUTSROOT      2000 /**< maximal separated cuts per separation round at the root node */
 #define SCIP_DEFAULT_SEPA_CUTAGELIMIT        80 /**< maximum age a cut can reach before it is deleted from global cut pool
                                                  *   (-1: cuts are never deleted from the global cut pool) */
 #define SCIP_DEFAULT_SEPA_POOLFREQ           10 /**< separation frequency for the global cut pool */
@@ -2459,12 +2459,13 @@ SCIP_RETCODE SCIPsetCreate(
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
             "separating/maxcutsgenfactor",
             "factor w.r.t. maxcuts for maximal number of cuts generated per separation round (-1.0: no limit, >= 0.0: valid finite limit)",
-            &(*set)->sepa_maxcutsgenfactor, FALSE, SCIP_DEFAULT_SEPA_MAXCUTSGENFACTOR, -1.0, SCIP_INVALID/10.0,
+            &(*set)->sepa_maxcutsgenfactor, FALSE, SCIP_DEFAULT_SEPA_MAXCUTSGENFACTOR, -1.0, SCIP_REAL_MAX,
             NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "separating/maxcutsrootgenfactor",
-         "factor w.r.t. maxcutsroot for maximal number of generated cuts at the root node (-1.0: no limit, >= 0.0: valid finite limit)",
-         &(*set)->sepa_maxcutsrootgenfactor, FALSE, SCIP_DEFAULT_SEPA_MAXCUTSROOTGENFACTOR, -1.0, SCIP_INVALID/10.0,
+         "factor w.r.t. maxcutsroot for maximal number of generated cuts per separation round at the root node "
+         "(-1.0: no limit, >= 0.0: valid finite limit)",
+         &(*set)->sepa_maxcutsrootgenfactor, FALSE, SCIP_DEFAULT_SEPA_MAXCUTSROOTGENFACTOR, -1.0, SCIP_REAL_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddCharParam(*set, messagehdlr, blkmem,
          "separating/orthofunc",
@@ -2533,7 +2534,7 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "separating/maxcutsroot",
-         "maximal number of separated cuts at the root node (0: disable root node separation)",
+         "maximal number of separated cuts per separation round at the root node (0: disable root node separation)",
          &(*set)->sepa_maxcutsroot, FALSE, SCIP_DEFAULT_SEPA_MAXCUTSROOT, 0, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
