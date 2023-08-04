@@ -275,7 +275,7 @@ set(instances_MIP
     "instances/MIP/p0033.osil\;3089"
     "instances/MIP/p0548.mps\;8691"
     "instances/MIP/rgn.mps\;82.19999924"
-    "instances/MIP/scipbug.cip\;-1"
+    "instances/MIP/issue_3589.cip\;-1"
     "instances/MIP/stein27.fzn\;18"
     "instances/MIP/stein27_inf.lp\;+infinity"
     "instances/MIP/vpm2.fzn\;13.75"
@@ -658,7 +658,7 @@ set(basenames_opb_wrongformat
     MANN_a9.clq.lp
     misc03.mps
     rgn.mps
-    scipbug.cip
+    issue_3589.cip
     vpm2.fzn
     lseu_dcmulti.cip
     lseu_dcmulti_sHB.cip

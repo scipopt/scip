@@ -3133,7 +3133,7 @@ SCIP_RETCODE applyFixings(
                redundant = TRUE;
          }
          /* cannot change bounds on multi-aggregated variables */
-         if( !redundant && SCIPvarGetStatus(vbdvar) != SCIP_VARSTATUS_MULTAGGR )
+         else if( SCIPvarGetStatus(vbdvar) != SCIP_VARSTATUS_MULTAGGR )
          {
             /* x is fixed to varconstant: update bounds of y and delete the variable bound constraint */
             if( !SCIPisInfinity(scip, -consdata->lhs) && !(*cutoff) )
