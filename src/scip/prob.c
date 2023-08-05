@@ -209,6 +209,7 @@ SCIP_RETCODE SCIPprobCopy(
                                               *   target variables */
    SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
                                               *   target constraints */
+   SCIP_Bool             original,           /**< copy original or transformed problem? */
    SCIP_Bool             global              /**< create a global or a local copy? */
    )
 {
@@ -229,7 +230,7 @@ SCIP_RETCODE SCIPprobCopy(
    /* call user copy callback method */
    if( sourceprob->probdata != NULL && sourceprob->probcopy != NULL )
    {
-      SCIP_CALL( sourceprob->probcopy(set->scip, sourcescip, sourceprob->probdata, varmap, consmap, &targetdata, global, &result) );
+      SCIP_CALL( sourceprob->probcopy(set->scip, sourcescip, sourceprob->probdata, varmap, consmap, &targetdata, original, global, &result) );
 
       /* evaluate result */
       if( result != SCIP_DIDNOTRUN && result != SCIP_SUCCESS )
