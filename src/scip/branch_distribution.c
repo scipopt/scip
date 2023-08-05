@@ -824,6 +824,12 @@ void branchruledataFreeArrays(
       SCIPfreeBlockMemoryArray(scip, &branchruledata->rowinfinitiesup, branchruledata->memsize);
       SCIPfreeBlockMemoryArray(scip, &branchruledata->rowinfinitiesdown, branchruledata->memsize);
 
+      SCIPfreeBlockMemoryArray(scip, &branchruledata->varfilterposs, branchruledata->varpossmemsize);
+      SCIPfreeBlockMemoryArray(scip, &branchruledata->varposs, branchruledata->varpossmemsize);
+      SCIPfreeBlockMemoryArray(scip, &branchruledata->updatedvars, branchruledata->varpossmemsize);
+      SCIPfreeBlockMemoryArray(scip, &branchruledata->currentubs, branchruledata->varpossmemsize);
+      SCIPfreeBlockMemoryArray(scip, &branchruledata->currentlbs, branchruledata->varpossmemsize);
+
       branchruledata->memsize = 0;
    }
 }
@@ -1070,9 +1076,6 @@ SCIP_DECL_BRANCHEXITSOL(branchExitsolDistribution)
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
 
-   /* free row arrays when branch-and-bound data is freed */
-   branchruledataFreeArrays(scip, branchruledata);
-
    /* drop variable events at the end of branch and bound process (cannot be used after restarts, anyway) */
    if( branchruledata->varfilterposs != NULL)
    {
@@ -1088,8 +1091,11 @@ SCIP_DECL_BRANCHEXITSOL(branchExitsolDistribution)
       {
          SCIP_CALL( SCIPdropVarEvent(scip, vars[v], EVENT_DISTRIBUTION, branchruledata->eventhdlr, NULL, branchruledata->varfilterposs[v]) );
       }
-      SCIPfreeBlockMemoryArray(scip, &(branchruledata->varfilterposs), nvars);
    }
+
+   /* free row arrays when branch-and-bound data is freed */
+   branchruledataFreeArrays(scip, branchruledata);
+
    return SCIP_OKAY;
 }
 
