@@ -9,6 +9,7 @@ Fixed bugs
 - ensure that delayed cutpool separation does not happen if enough cuts have been found already
 - fixed that a Gurobi or Mosek interface (LPI) could not be freed from a thread different than the one it was created in, which lead to problems when, e.g., using the concurrent optimizer
 - in cons_varbound if both variables are fixed, instead of propagating the constraint check the feasibility of the constraint since propagating can lead to unnecessary numerical troubles
+- fixed memory leak in branching rule "distribution"
 
 @section RN804 SCIP 8.0.4
 *************************
