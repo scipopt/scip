@@ -44,6 +44,8 @@ Interface changes
 - Added solution linearization callback for nonlinear handlers.
   The nonlinear handler may use this callback to add tight cuts that use the given solution as reference point to the cutpool.
   The callback is called if option constraints/nonlinear/linearizeheursol is enabled.
+- The callback for copying problem data SCIP_DECL_PROBCOPY() now has a parameter "original" indicating whether the original
+  or transformed problem should be copied. Similarly, SCIPprobCopy() in prob.h/c has such a parameter.
 
 ### Deleted and changed API methods
 

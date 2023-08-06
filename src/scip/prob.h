@@ -76,6 +76,7 @@ SCIP_RETCODE SCIPprobCopy(
                                               *   target variables, or NULL */
    SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
                                               *   target constraints, or NULL */
+   SCIP_Bool             original,           /**< copy original or transformed problem? */
    SCIP_Bool             global              /**< create a global or a local copy? */
    );
 
