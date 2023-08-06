@@ -357,7 +357,10 @@ SCIP_RETCODE SCIPpricerActivate(
 {
    assert(pricer != NULL);
    assert(set != NULL);
-   assert(set->stage == SCIP_STAGE_PROBLEM);
+   /* Usually, pricers are activated in problem stage.
+    * When copying SCIP, they are already activated in init stage, though.
+    */
+   assert(set->stage == SCIP_STAGE_INIT || set->stage == SCIP_STAGE_PROBLEM);
 
    if( !pricer->active )
    {
