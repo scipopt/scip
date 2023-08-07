@@ -124,7 +124,7 @@
 #define DEFAULT_LOCKSROUNDING   TRUE         /**< shall LP values for integer vars be rounded according to locks? */
 #define DEFAULT_ONLYCONVEXIFY   FALSE        /**< should we only fix/dom.red. variables creating nonconvexity? */
 #define DEFAULT_POSTNLP         TRUE         /**< should the NLP heuristic be called to polish a feasible solution? */
-#define DEFAULT_COVERAND        FALSE        /**< should and constraints be covered (or just copied)? */
+#define DEFAULT_COVERAND        TRUE         /**< should and constraints be covered (or just copied)? */
 #define DEFAULT_COVERBD         FALSE        /**< should bounddisjunction constraints be covered (or just copied)? */
 #define DEFAULT_COVERIND        FALSE        /**< should indicator constraints be covered (or just copied)? */
 #define DEFAULT_COVERNL         TRUE         /**< should nonlinear constraints be covered (or just copied)? */

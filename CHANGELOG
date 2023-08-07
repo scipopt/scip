@@ -33,7 +33,7 @@ Performance improvements
 - If differentation of convex expression fails in convex nlhdlr, then a perturbed point is tried.
 - Use sassy/bliss as default symmetry computation package.
 - Disable undercover heuristic when no nonlinear constraints are present. Generally, do not cover discrete
-  nonlinearities from constraint handlers "and" and "indicator".
+  nonlinearities from "indicator" constraint handler.
 
 Examples and applications
 -------------------------
