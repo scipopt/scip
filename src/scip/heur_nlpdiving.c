@@ -1904,7 +1904,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
       if( memorylimit > 2.0*SCIPgetMemExternEstim(scip)/1048576.0 && timelimit > 0.05 )
       {
          SCIP_CALL( SCIPcomputeCoverUndercover(scip, &ncovervars, covervars, timelimit, memorylimit, SCIPinfinity(scip),
-               FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, 'u', &covercomputed) );
+               FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, 'u', &covercomputed) );
       }
 
       if( covercomputed )
