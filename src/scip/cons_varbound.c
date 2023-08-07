@@ -3169,7 +3169,7 @@ SCIP_RETCODE applyFixings(
             if( !SCIPisInfinity(scip, consdata->rhs) && !(*cutoff) )
             {
                assert( !SCIPisZero(scip, consdata->vbdcoef) );
-               assert( SCIPisEQ(scip, ABS(vbdvarscalar), 1.0) );
+               assert( SCIPisEQ(scip, REALABS(vbdvarscalar), 1.0) );
 
                if( consdata->vbdcoef > 0.0 )
                {
