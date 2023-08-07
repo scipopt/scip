@@ -1897,7 +1897,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
          memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
       }
 
-      /* compute cover; use local bounds; only cover nonlinear constraints (no and, bounddisjunction, or indicator),
+      /* compute cover; use local bounds; only cover "and" and nonlinear constraints (no bounddisjunction or indicator),
        * including convex constraints */
       ncovervars = -1;
       SCIP_CALL( SCIPallocBufferArray(scip, &covervars, SCIPgetNVars(scip)) );

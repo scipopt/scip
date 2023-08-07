@@ -32,8 +32,7 @@ Performance improvements
 - Avoided some numerical issues when separating SOC constraints.
 - If differentation of convex expression fails in convex nlhdlr, then a perturbed point is tried.
 - Use sassy/bliss as default symmetry computation package.
-- Disable undercover heuristic when no nonlinear constraints are present. Generally, do not cover discrete
-  nonlinearities from "indicator" constraint handler.
+- No longer linearize indicator constraints in undercover heuristic by default.
 
 Examples and applications
 -------------------------
@@ -114,7 +113,7 @@ Interface changes
 - benders/default/nlpiterlimit to adjust iteration limit for NLP solver for Benders' decomposition NLP subproblems
 - limits/objectivestop to interrupt the solve as soon as a primal solution is found
   that is at least as good as the given value
-- heuristics/undercover/{coverand,coverind,covernl} to control which nonlinearities to consider (by default only constraints from cons_nonlinear)
+- heuristics/undercover/{coverand,coverind,covernl} to control which nonlinearities to consider (by default only "and" and nonlinear constraints)
 
 ### Data structures
 
