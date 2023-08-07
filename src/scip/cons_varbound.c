@@ -1894,7 +1894,7 @@ SCIP_RETCODE propagateCons(
    return SCIP_OKAY;
 }
 
-/* check whether one constraints side is redundant to another constraints side by calculating extreme values for
+/* check whether one constraint side is redundant to another constraint side by calculating extreme values for
  * variables
  */
 static
@@ -1964,7 +1964,7 @@ void checkRedundancySide(
    lbvbdvar = SCIPvarGetLbGlobal(vbdvar);
    ubvbdvar = SCIPvarGetUbGlobal(vbdvar);
 
-   /* if both constraint have this side */
+   /* if both constraints have this side */
    if( !*redundant0 && !*redundant1 )
    {
       /* calculate extreme values, which are reached by setting the other variable to their lower/upper bound */
@@ -2623,7 +2623,7 @@ SCIP_RETCODE preprocessConstraintPairs(
 		  SCIPdebugPrintCons(scip, cons0, NULL);
 	       }
 
-               /* later on we cannot not want to delete cons1 */
+               /* later on we do not want to delete cons1 */
                deletecons1 = FALSE;
             }
             /* if right hand side of cons0 is redundant set it to infinity */
@@ -2643,7 +2643,7 @@ SCIP_RETCODE preprocessConstraintPairs(
 		  SCIPdebugPrintCons(scip, cons0, NULL);
 	       }
 
-               /* later on we cannot not want to delete cons1 */
+               /* later on we do not want to delete cons1 */
                deletecons1 = FALSE;
             }
             /* if left hand side of cons1 is redundant set it to -infinity */
