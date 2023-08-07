@@ -4781,7 +4781,7 @@ SCIP_DECL_CONSPRESOL(consPresolVarbound)
          localoldnchgbds = *nchgbds;
 
          /* if lhs is finite, we have a variable lower bound: lhs <= x + c*y  =>  x >= -c*y + lhs */
-         if( !SCIPisInfinity(scip, -consdata->lhs) )
+         if( !SCIPisInfinity(scip, -consdata->lhs) && !SCIPisInfinity(scip, REALABS(consdata->vbdcoef)) )
          {
             SCIPdebugMsg(scip, "adding variable lower bound <%s> >= %g<%s> + %g (and potentially also <%s> %s %g<%s> + %g)\n",
                SCIPvarGetName(consdata->var), -consdata->vbdcoef, SCIPvarGetName(consdata->vbdvar), consdata->lhs,
@@ -4796,7 +4796,7 @@ SCIP_DECL_CONSPRESOL(consPresolVarbound)
          }
 
          /* if rhs is finite, we have a variable upper bound: x + c*y <= rhs  =>  x <= -c*y + rhs */
-         if( !SCIPisInfinity(scip, consdata->rhs) )
+         if( !SCIPisInfinity(scip, consdata->rhs) && !SCIPisInfinity(scip, REALABS(consdata->vbdcoef)) )
          {
             SCIPdebugMsg(scip, "adding variable upper bound <%s> <= %g<%s> + %g (and potentially also <%s> %s %g<%s> + %g)\n",
                SCIPvarGetName(consdata->var), -consdata->vbdcoef, SCIPvarGetName(consdata->vbdvar), consdata->rhs,
