@@ -1716,10 +1716,10 @@ SCIP_RETCODE SCIPgetDualProof(
          if (SCIPsetCertificateEnabled(set))
          {
             long certificateIndex;
-            certificateIndex = SCIPhashmapGetImageLong(SCIPgetCertificate(set->scip)->rowdatahash, row->rowexact);
+            certificateIndex = SCIPhashmapGetImageLong(SCIPgetCertificate(set->scip)->rowdatahash, usedrows[i]->rowexact);
             if(certificateIndex  == LONG_MAX && SCIProwGetOrigintype(row) == SCIP_ROWORIGINTYPE_SEPA )
             {
-               SCIP_CALL( SCIPcertificatePrintMirCut(set, lp, SCIPgetCertificate(set->scip), transprob, row, 'L') );
+               SCIP_CALL( SCIPcertificatePrintMirCut(set, lp, SCIPgetCertificate(set->scip), transprob, usedrows[i], 'L') );
             }
             else
             {
