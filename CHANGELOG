@@ -104,8 +104,8 @@ Interface changes
 
 ### New parameters
 
-- separating/maxcutsgen and separating/maxcutsrootgen for limits on the number of cuts generated (which used to be a
-  factor of separating/maxcuts and separating/maxcutsroot)
+- separating/maxcutsgenfactor and separating/maxcutsrootgenfactor as factors (w.r.t. separating/maxcuts and
+  separating/maxcutsroot) for limits on the number of cuts generated (which used to be constants '2')
 - expr/pow/expandmaxexponent to specify limit on exponent when to expand power of sum
 - expr/pow/distribfracexponent to enable expanding power of products with fractional exponents
 - expr/product/expandalways to enable expanding any product with sums as factor (that is, also when more than two factors)
