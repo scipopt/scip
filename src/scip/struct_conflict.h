@@ -98,10 +98,30 @@ struct SCIP_ProofSet
    SCIP_CONFTYPE         conflicttype;       /**< conflict type: unknown, infeasible LP, bound exceeding LP */
 };
 
-/** set of conflicting bound changes
+/** refactortodo: Completely remove this struct and use SCIP_ConflictRow instead
+ * set of conflicting bound changes
  * @todo change the conflictype to infeasible LP, bound exceeding LP, propagation
  */
 struct SCIP_ResolutionSet
+{
+   SCIP_Real*            vals;
+   int*                  inds;
+   SCIP_Real             lhs;
+   SCIP_Real             slack;
+   SCIP_Real             coefquotient;
+   int                   nnz;
+   int                   size;
+   int                   validdepth;
+   int                   conflictdepth;
+   int                   repropdepth;
+   int                   insertdepth;
+   unsigned int          usescutoffbound:1;  /**< is the conflict based on the cutoff bound? */
+   unsigned int          isbinary:1;         /**< is the constraint binary? */
+   SCIP_CONFTYPE         conflicttype;       /**< conflict type: unknown, resolution */
+};
+
+/** conflict row of type lhs <= a^Tx, semi-sparse representation */
+struct SCIP_ConflictRow
 {
    SCIP_Real*            vals;
    int*                  inds;
@@ -120,6 +140,22 @@ struct SCIP_ResolutionSet
    unsigned int          isbinary:1;         /**< is the constraint binary? */
    SCIP_CONFTYPE         conflicttype;       /**< conflict type: unknown, resolution */
 };
+
+/** reason row of type lhs <= a^Tx, sparse representation */
+struct SCIP_ReasonRow
+{
+   SCIP_Real*            vals;
+   int*                  inds;
+   SCIP_Real             lhs;
+   SCIP_Real             origlhs;
+   SCIP_Real             origrhs;
+   SCIP_Real             slack;
+   SCIP_Real             coefquotient;
+   int                   nnz;
+   int                   size;
+   unsigned int          isbinary:1;         /**< is the constraint binary? */
+};
+
 
 /** set of LP bound change */
 struct SCIP_LPBdChgs

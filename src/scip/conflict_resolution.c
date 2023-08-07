@@ -25,7 +25,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 // #define SCIP_DEBUG
 
-#include "lpi/lpi.h"
+#include "blockmemshell/memory.h"
 #include "scip/conflict_resolution.h"
 #include "scip/conflict_graphanalysis.h"
 #include "scip/conflict_dualproofanalysis.h"
@@ -35,19 +35,12 @@
 #include "scip/cons_linear.h"
 #include "scip/cuts.h"
 #include "scip/history.h"
-#include "scip/lp.h"
-#include "scip/presolve.h"
 #include "scip/prob.h"
 #include "scip/prop.h"
 #include "scip/pub_conflict.h"
 #include "scip/pub_cons.h"
 #include "scip/pub_lp.h"
-#include "scip/pub_message.h"
 #include "scip/pub_misc.h"
-#include "scip/pub_misc_sort.h"
-#include "scip/pub_paramset.h"
-#include "scip/pub_prop.h"
-#include "scip/pub_tree.h"
 #include "scip/pub_var.h"
 #include "scip/scip_conflict.h"
 #include "scip/scip_cons.h"
@@ -58,16 +51,10 @@
 #include "scip/set.h"
 #include "scip/sol.h"
 #include "scip/struct_conflict.h"
-#include "scip/struct_lp.h"
-#include "scip/struct_prob.h"
 #include "scip/struct_set.h"
 #include "scip/struct_stat.h"
-#include "scip/struct_tree.h"
-#include "scip/struct_var.h"
 #include "scip/tree.h"
 #include "scip/var.h"
-#include "scip/visual.h"
-#include "scip/scip_numerics.h"
 
 #include <string.h>
 #if defined(_WIN32) || defined(_WIN64)
@@ -110,8 +97,6 @@ SCIP_RETCODE resolutionsetCopy(
    (*targetresolutionset)->nnz = targetsize;
    (*targetresolutionset)->size = targetsize;
    (*targetresolutionset)->lhs = sourceresolutionset->lhs;
-   (*targetresolutionset)->origlhs = sourceresolutionset->origlhs;
-   (*targetresolutionset)->origrhs = sourceresolutionset->origrhs;
    (*targetresolutionset)->slack = sourceresolutionset->slack;
    (*targetresolutionset)->coefquotient = sourceresolutionset->coefquotient;
    (*targetresolutionset)->nnz = sourceresolutionset->nnz;
@@ -156,8 +141,6 @@ SCIP_RETCODE resolutionsetReplace(
 
    targetresolutionset->nnz = sourceresolutionset->nnz;
    targetresolutionset->lhs = sourceresolutionset->lhs;
-   targetresolutionset->origlhs = sourceresolutionset->origlhs;
-   targetresolutionset->origrhs = sourceresolutionset->origrhs;
    targetresolutionset->slack = sourceresolutionset->slack;
    targetresolutionset->coefquotient = sourceresolutionset->coefquotient;
    targetresolutionset->nnz = sourceresolutionset->nnz;
@@ -416,7 +399,7 @@ SCIP_RETCODE tightenCoefLhs(
       {
          SCIP_Real lb = localbounds ? SCIPvarGetLbLocal(vars[rowinds[i]]) : SCIPvarGetLbGlobal(vars[rowinds[i]]);
 
-         if( SCIPisInfinity(set->scip, -lb) )
+         if( SCIPsetIsInfinity(set, -lb) )
             goto TERMINATE_TIGHTENING;
 
          if( rowinds[i] < nintegralvars )
@@ -433,7 +416,7 @@ SCIP_RETCODE tightenCoefLhs(
       {
          SCIP_Real ub = localbounds ? SCIPvarGetUbLocal(vars[rowinds[i]]) : SCIPvarGetUbGlobal(vars[rowinds[i]]);
 
-         if( SCIPisInfinity(set->scip, ub) )
+         if( SCIPsetIsInfinity(set, ub) )
             goto TERMINATE_TIGHTENING;
 
          if( rowinds[i] < nintegralvars )
@@ -451,25 +434,25 @@ SCIP_RETCODE tightenCoefLhs(
    minact = QUAD_TO_DBL(minacttmp);
 
    /* row is redundant if minact is infinity */
-   if (SCIPisInfinity(set->scip, minact) )
+   if (SCIPsetIsInfinity(set, minact) )
    {
       if (redundant != NULL)
          *redundant = TRUE;
       goto TERMINATE_TIGHTENING;
    }
    /* no coefficients can be tightened */
-   if (SCIPisInfinity(set->scip, -minact) )
+   if (SCIPsetIsInfinity(set, -minact) )
    {
       goto TERMINATE_TIGHTENING;
    }
 
    /* propagating constraint cannot be redundant */
-   assert(!SCIPisGE(set->scip, minact, *rowlhs));
+   assert(!SCIPsetIsGE(set, minact, *rowlhs));
 
    /* terminate, because coefficient tightening cannot be performed; also
    excludes the case in which no integral variable is present */
    /* for lhs terminate if minact + maxabsval < rowlhs */
-   if( SCIPisLT(set->scip, minact + maxabsval, *rowlhs) )
+   if( SCIPsetIsLT(set, minact + maxabsval, *rowlhs) )
       goto TERMINATE_TIGHTENING;
 
    SCIPsortDownRealRealInt(absvals, rowcoefs, rowinds, *rownnz);
@@ -484,13 +467,13 @@ SCIP_RETCODE tightenCoefLhs(
 
       assert(SCIPvarIsIntegral(vars[rowinds[i]]));
 
-      if( rowcoefs[i] < 0.0 && SCIPisGE(set->scip, minact - rowcoefs[i], *rowlhs) )
+      if( rowcoefs[i] < 0.0 && SCIPsetIsGE(set, minact - rowcoefs[i], *rowlhs) )
       {
          SCIP_Real newcoef = minact - (*rowlhs);
          SCIP_Real ub = localbounds ? SCIPvarGetUbLocal(vars[rowinds[i]]) : SCIPvarGetUbGlobal(vars[rowinds[i]]);
 
-         assert(SCIPisGE(set->scip, newcoef + EPS, rowcoefs[i]));
-         assert(!SCIPisPositive(set->scip, newcoef));
+         assert(SCIPsetIsGE(set, newcoef + EPS, rowcoefs[i]));
+         assert(!SCIPsetIsPositive(set, newcoef));
 
          if( newcoef > rowcoefs[i] )
          {
@@ -511,7 +494,7 @@ SCIP_RETCODE tightenCoefLhs(
 
             /* todo check if newcoef = 0 is possible */
             /* This should not be possible, because then the constraint would be redundant */
-            if( SCIPisNegative(set->scip, newcoef) )
+            if( SCIPsetIsNegative(set, newcoef) )
             {
                SCIPquadprecSumQQ(minacttmp, minacttmp, delta);
                minact = QUAD_TO_DBL(minacttmp);
@@ -526,13 +509,13 @@ SCIP_RETCODE tightenCoefLhs(
             }
          }
       }
-      else if( rowcoefs[i] > 0.0 && SCIPisGE(set->scip, minact + rowcoefs[i], *rowlhs) )
+      else if( rowcoefs[i] > 0.0 && SCIPsetIsGE(set, minact + rowcoefs[i], *rowlhs) )
       {
          SCIP_Real newcoef = (*rowlhs) - minact;
          SCIP_Real lb = localbounds ? SCIPvarGetLbLocal(vars[rowinds[i]]) : SCIPvarGetLbGlobal(vars[rowinds[i]]);
 
-         assert(SCIPisLE(set->scip, newcoef, rowcoefs[i] + EPS));
-         assert(!SCIPisNegative(set->scip, newcoef));
+         assert(SCIPsetIsLE(set, newcoef, rowcoefs[i] + EPS));
+         assert(!SCIPsetIsNegative(set, newcoef));
 
          if( newcoef < rowcoefs[i] )
          {
@@ -553,7 +536,7 @@ SCIP_RETCODE tightenCoefLhs(
 
             /* todo check if newcoef = 0 is possible */
             /* This should not be possible, because then the constraint would be redundant */
-            if( SCIPisPositive(set->scip, newcoef) )
+            if( SCIPsetIsPositive(set, newcoef) )
             {
                SCIPquadprecSumQQ(minacttmp, minacttmp, delta);
                minact = QUAD_TO_DBL(minacttmp);
@@ -1625,8 +1608,6 @@ SCIP_RETCODE resolutionsetCreate(
    (*resolutionset)->vals = NULL;
    (*resolutionset)->inds = NULL;
    (*resolutionset)->lhs = 0.0;
-   (*resolutionset)->origlhs = 0.0;
-   (*resolutionset)->origrhs = 0.0;
    (*resolutionset)->slack = 0.0;
    (*resolutionset)->coefquotient = 0.0;
    (*resolutionset)->nnz = 0;
@@ -1685,8 +1666,6 @@ void resolutionSetClear(
 
    resolutionset->nnz = 0;
    resolutionset->lhs = 0.0;
-   resolutionset->origlhs = 0.0;
-   resolutionset->origrhs = 0.0;
    resolutionset->slack = 0.0;
    resolutionset->coefquotient = 0.0;
    resolutionset->validdepth = 0;
@@ -2314,7 +2293,7 @@ SCIP_RETCODE computecMIRfromResolutionSet(
    SCIP_CALL( SCIPallocBufferArray(set->scip, &rowvals, resolutionset->nnz) );
    SCIP_CALL( SCIPallocBufferArray(set->scip, &rowinds, resolutionset->nnz) );
 
-   assert(!SCIPisInfinity(set->scip, resolutionset->lhs) && !SCIPisInfinity(set->scip, -resolutionset->lhs));
+   assert(!SCIPsetIsInfinity(set, resolutionset->lhs) && !SCIPsetIsInfinity(set, -resolutionset->lhs));
 
    nnz = 0;
    for( i = 0; i < resolutionset->nnz; i++ )
@@ -2660,8 +2639,6 @@ SCIP_RETCODE resolutionsetAddSparseData(
    int*                  inds,               /**< variable array */
    int                   nnz,                /**< size of variable and coefficient array */
    SCIP_Real             lhs,                /**< left-hand side of resolution set */
-   SCIP_Real             origrhs,            /**< right-hand side of the row */
-   SCIP_Real             origlhs,            /**< left-hand side of the row */
    SCIP_Bool             reverse             /**< reverse coefficients */
 
    )
@@ -2711,8 +2688,6 @@ SCIP_RETCODE resolutionsetAddSparseData(
    }
 
    resolutionset->lhs = lhs;
-   resolutionset->origrhs = origrhs;
-   resolutionset->origlhs = origlhs;
    resolutionset->nnz = nnz;
 
    return SCIP_OKAY;
@@ -2816,8 +2791,6 @@ SCIP_RETCODE getConflictClause(
       {
          conflict->resolutionset->nnz = SCIPpqueueNElems(conflict->resbdchgqueue) + 1 + nfixinds;
          conflict->resolutionset->lhs = lhs;
-         conflict->resolutionset->origlhs = lhs;
-         conflict->resolutionset->origrhs = SCIPsetInfinity(set);
 
          if( conflict->resolutionset->size == 0 )
          {
@@ -3096,8 +3069,6 @@ SCIP_RETCODE getClauseReasonSet(
       {
          conflict->reasonset->nnz = SCIPpqueueNElems(conflict->separatebdchgqueue) + 1;
          conflict->reasonset->lhs = lhs;
-         conflict->reasonset->origlhs = lhs;
-         conflict->reasonset->origrhs = SCIPsetInfinity(set);
 
          if( conflict->reasonset->size == 0 )
          {
@@ -3791,7 +3762,7 @@ SCIP_RETCODE reasonResolutionsetFromRow(
    assert(inds != NULL);
    assert(vals != NULL);
 
-   SCIP_CALL( resolutionsetAddSparseData(resolutionset, blkmem, vals, inds, nnz, lhs, origrhs, origlhs, changesign) );
+   SCIP_CALL( resolutionsetAddSparseData(resolutionset, blkmem, vals, inds, nnz, lhs, changesign) );
 
    SCIPsetFreeBufferArray(set, &inds);
 
@@ -3874,7 +3845,7 @@ SCIP_RETCODE conflictResolutionsetFromRow(
    assert(inds != NULL);
    assert(vals != NULL);
 
-   SCIP_CALL( resolutionsetAddSparseData(resolutionset, blkmem, vals, inds, nnz, lhs, origrhs, origlhs, changesign) );
+   SCIP_CALL( resolutionsetAddSparseData(resolutionset, blkmem, vals, inds, nnz, lhs, changesign) );
 
    SCIPsetFreeBufferArray(set, &inds);
 
@@ -4581,13 +4552,12 @@ SCIP_RETCODE conflictAnalyzeResolution(
             {
                SCIP_RESOLUTIONSET* cutresolutionset;
                SCIP_CALL( resolutionsetCreate(&cutresolutionset, blkmem) );
-               SCIP_CALL( resolutionsetAddSparseData(cutresolutionset, blkmem, cutcoefs, cutinds, cutnnz, -cutrhs,
-                                          reasonresolutionset->origrhs, reasonresolutionset->origlhs, TRUE) );
+               SCIP_CALL( resolutionsetAddSparseData(cutresolutionset, blkmem, cutcoefs, cutinds, cutnnz, -cutrhs, TRUE) );
 
                /* replace the current resolution set by the cut if the slack of the cut is smaller */
                cutresolutionset->slack = getSlack(set, transprob, cutresolutionset, bdchgidx, fixbounds, fixinds);
 
-               if ( SCIPisLT(set->scip, cutresolutionset->slack, reasonslack) )
+               if ( SCIPsetIsLT(set, cutresolutionset->slack, reasonslack) )
                {
                   SCIPdebug(resolutionsetPrintRow(reasonresolutionset, set, transprob, 2));
                   SCIPsetDebugMsg(set, "replacing reason resolution set by cMIR cut resolution set: new slack %f < old slack %f \n",
@@ -4723,11 +4693,10 @@ SCIP_RETCODE conflictAnalyzeResolution(
                {
                   SCIP_RESOLUTIONSET* cutresolutionset;
                   SCIP_CALL( resolutionsetCreate(&cutresolutionset, blkmem) );
-                  SCIP_CALL( resolutionsetAddSparseData(cutresolutionset, blkmem, cutcoefs, cutinds, cutnnz, -cutrhs,
-                                             conflictresolutionset->origrhs, conflictresolutionset->origlhs, TRUE) );
+                  SCIP_CALL( resolutionsetAddSparseData(cutresolutionset, blkmem, cutcoefs, cutinds, cutnnz, -cutrhs, TRUE) );
                   /* replace the current resolution set by the cut if the slack of the cut is negative */
                   cutresolutionset->slack = getSlack(set, transprob, cutresolutionset, bdchgidx, fixbounds, fixinds);
-                  if ( SCIPisLT(set->scip, cutresolutionset->slack, 0.0) )
+                  if ( SCIPsetIsLT(set, cutresolutionset->slack, 0.0) )
                   {
                      SCIP_CALL( resolutionsetReplace(conflictresolutionset, blkmem, cutresolutionset) );
                   }
