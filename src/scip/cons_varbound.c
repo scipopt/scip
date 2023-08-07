@@ -3121,11 +3121,11 @@ SCIP_RETCODE applyFixings(
       /* apply aggregation on x */
       if( SCIPisZero(scip, varscalar) )
       {
-         SCIPdebugMsg(scip, "variable bound constraint <%s>: variable <%s> is fixed to %.15g\n",
-            SCIPconsGetName(cons), SCIPvarGetName(consdata->var), varconstant);
-
          if( SCIPvarGetStatus(vbdvar) == SCIP_VARSTATUS_FIXED )
          {
+            SCIPdebugMsg(scip, "variable bound constraint <%s>: variable <%s> is fixed to %.15g\n",
+               SCIPconsGetName(cons), SCIPvarGetName(consdata->var), varconstant);
+
             assert( SCIPisEQ(scip, SCIPvarGetUbGlobal(consdata->vbdvar), SCIPvarGetLbGlobal(consdata->vbdvar)) );
             *cutoff = *cutoff || !( SCIPisInfinity(scip, -consdata->lhs) || SCIPisFeasLE(scip, consdata->lhs, varconstant + consdata->vbdcoef * vbdvarconstant) );
             *cutoff = *cutoff || !( SCIPisInfinity(scip, consdata->rhs) || SCIPisFeasGE(scip, consdata->rhs, varconstant + consdata->vbdcoef * vbdvarconstant) );
