@@ -3613,7 +3613,6 @@ SCIP_RETCODE tightenCoefs(
       /* case 2 */
       else if( SCIPisIntegral(scip, consdata->rhs) && !SCIPisInfinity(scip, consdata->rhs) &&
          (SCIPisInfinity(scip, -consdata->lhs) || SCIPisFeasGE(scip, consdata->vbdcoef - SCIPfeasFloor(scip, consdata->vbdcoef), consdata->lhs - SCIPfeasFloor(scip, consdata->lhs))) )
-
       {
          consdata->vbdcoef = SCIPfeasCeil(scip, consdata->vbdcoef);
          ++(*nchgcoefs);
