@@ -20,6 +20,7 @@ Features
 - added new bandit method (EXP.3-IX) that is the new default of the ALNS heuristic
 - added dialog to display recognized permutation symmetries ("display symmetry")
 - added special presolving step for logicor and set covering/packing for constraints with two variables and one independent variable
+- increased the depth field of the tree structure from 16 to 30 bits and the max depth of the search tree from 65534 to 1073741822
 
 Performance improvements
 ------------------------
