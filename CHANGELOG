@@ -11,6 +11,7 @@ Fixed bugs
 - in cons_varbound if both variables are fixed, instead of propagating the constraint check the feasibility of the constraint since propagating can lead to unnecessary numerical troubles
 - fixed memory leak in branching rule "distribution"
 - fixed that undercover did not enforce that sufficiently many variables in an and-constraints were fixed to have it linearized in the generated sub-scip
+- fixed two bugs in cons_varbound: avoid adding variable bounds if vbdcoef is infinite and unlock/lock variables if lhs/rhs/vbdcoef are changed
 
 @section RN804 SCIP 8.0.4
 *************************

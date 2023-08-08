@@ -1320,7 +1320,7 @@ SCIP_RETCODE chgLhs(
    {
       SCIP_CALL( SCIPlockVarCons(scip, consdata->var, cons, TRUE, FALSE) );
 
-      if( SCIPisPositive(scip, consdata->vbdcoef) )
+      if( consdata->vbdcoef > 0.0 )
       {
          SCIP_CALL( SCIPlockVarCons(scip, consdata->vbdvar, cons, TRUE, FALSE) );
       }
@@ -1334,7 +1334,7 @@ SCIP_RETCODE chgLhs(
    {
       SCIP_CALL( SCIPunlockVarCons(scip, consdata->var, cons, TRUE, FALSE) );
 
-      if( SCIPisPositive(scip, consdata->vbdcoef) )
+      if( consdata->vbdcoef > 0.0 )
       {
          SCIP_CALL( SCIPunlockVarCons(scip, consdata->vbdvar, cons, TRUE, FALSE) );
       }
@@ -1401,7 +1401,7 @@ SCIP_RETCODE chgRhs(
    {
       SCIP_CALL( SCIPlockVarCons(scip, consdata->var, cons, FALSE, TRUE) );
 
-      if( SCIPisPositive(scip, consdata->vbdcoef) )
+      if( consdata->vbdcoef > 0.0 )
       {
          SCIP_CALL( SCIPlockVarCons(scip, consdata->vbdvar, cons, FALSE, TRUE) );
       }
@@ -1415,7 +1415,7 @@ SCIP_RETCODE chgRhs(
    {
       SCIP_CALL( SCIPunlockVarCons(scip, consdata->var, cons, FALSE, TRUE) );
 
-      if( SCIPisPositive(scip, consdata->vbdcoef) )
+      if( consdata->vbdcoef > 0.0 )
       {
          SCIP_CALL( SCIPunlockVarCons(scip, consdata->vbdvar, cons, FALSE, TRUE) );
       }
@@ -1894,7 +1894,7 @@ SCIP_RETCODE propagateCons(
    return SCIP_OKAY;
 }
 
-/* check whether one constraints side is redundant to another constraints side by calculating extreme values for
+/* check whether one constraint side is redundant to another constraint side by calculating extreme values for
  * variables
  */
 static
@@ -1964,7 +1964,7 @@ void checkRedundancySide(
    lbvbdvar = SCIPvarGetLbGlobal(vbdvar);
    ubvbdvar = SCIPvarGetUbGlobal(vbdvar);
 
-   /* if both constraint have this side */
+   /* if both constraints have this side */
    if( !*redundant0 && !*redundant1 )
    {
       /* calculate extreme values, which are reached by setting the other variable to their lower/upper bound */
@@ -2623,7 +2623,7 @@ SCIP_RETCODE preprocessConstraintPairs(
 		  SCIPdebugPrintCons(scip, cons0, NULL);
 	       }
 
-               /* later on we cannot not want to delete cons1 */
+               /* later on we do not want to delete cons1 */
                deletecons1 = FALSE;
             }
             /* if right hand side of cons0 is redundant set it to infinity */
@@ -2643,7 +2643,7 @@ SCIP_RETCODE preprocessConstraintPairs(
 		  SCIPdebugPrintCons(scip, cons0, NULL);
 	       }
 
-               /* later on we cannot not want to delete cons1 */
+               /* later on we do not want to delete cons1 */
                deletecons1 = FALSE;
             }
             /* if left hand side of cons1 is redundant set it to -infinity */
@@ -2762,7 +2762,7 @@ SCIP_RETCODE preprocessConstraintPairs(
             /* remove locks for variable with old coefficient and install locks for variable with new
              * coefficient
              */
-            if( SCIPisPositive(scip, consdata0->vbdcoef) )
+            if( consdata0->vbdcoef > 0.0 )
             {
                SCIP_CALL( SCIPunlockVarCons(scip, consdata0->vbdvar, cons0, !SCIPisInfinity(scip, -consdata0->lhs),
                      !SCIPisInfinity(scip, consdata0->rhs)) );
@@ -3121,11 +3121,11 @@ SCIP_RETCODE applyFixings(
       /* apply aggregation on x */
       if( SCIPisZero(scip, varscalar) )
       {
-         SCIPdebugMsg(scip, "variable bound constraint <%s>: variable <%s> is fixed to %.15g\n",
-            SCIPconsGetName(cons), SCIPvarGetName(consdata->var), varconstant);
-
          if( SCIPvarGetStatus(vbdvar) == SCIP_VARSTATUS_FIXED )
          {
+            SCIPdebugMsg(scip, "variable bound constraint <%s>: variable <%s> is fixed to %.15g\n",
+               SCIPconsGetName(cons), SCIPvarGetName(consdata->var), varconstant);
+
             assert( SCIPisEQ(scip, SCIPvarGetUbGlobal(consdata->vbdvar), SCIPvarGetLbGlobal(consdata->vbdvar)) );
             *cutoff = *cutoff || !( SCIPisInfinity(scip, -consdata->lhs) || SCIPisFeasLE(scip, consdata->lhs, varconstant + consdata->vbdcoef * vbdvarconstant) );
             *cutoff = *cutoff || !( SCIPisInfinity(scip, consdata->rhs) || SCIPisFeasGE(scip, consdata->rhs, varconstant + consdata->vbdcoef * vbdvarconstant) );
@@ -3169,7 +3169,7 @@ SCIP_RETCODE applyFixings(
             if( !SCIPisInfinity(scip, consdata->rhs) && !(*cutoff) )
             {
                assert( !SCIPisZero(scip, consdata->vbdcoef) );
-               assert( SCIPisEQ(scip, ABS(vbdvarscalar), 1.0) );
+               assert( SCIPisEQ(scip, REALABS(vbdvarscalar), 1.0) );
 
                if( consdata->vbdcoef > 0.0 )
                {
@@ -3205,6 +3205,18 @@ SCIP_RETCODE applyFixings(
          SCIP_CALL( SCIPunlockVarCons(scip, consdata->var, cons, !SCIPisInfinity(scip, -consdata->lhs),
                !SCIPisInfinity(scip, consdata->rhs)) );
          SCIP_CALL( SCIPreleaseVar(scip, &(consdata->var)) );
+
+         /* unlock vbdvar, because we possibly change lhs/rhs/vbdcoef */
+         if( consdata->vbdcoef > 0.0 )
+         {
+            SCIP_CALL( SCIPunlockVarCons(scip, consdata->vbdvar, cons, !SCIPisInfinity(scip, -consdata->lhs),
+                  !SCIPisInfinity(scip, consdata->rhs)) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPunlockVarCons(scip, consdata->vbdvar, cons, !SCIPisInfinity(scip, consdata->rhs),
+                  !SCIPisInfinity(scip, -consdata->lhs)) );
+         }
 
          /* replace aggregated variable x in the constraint by its aggregation */
          if( varscalar > 0.0 )
@@ -3257,6 +3269,18 @@ SCIP_RETCODE applyFixings(
          SCIP_CALL( SCIPcaptureVar(scip, consdata->var) );
          SCIP_CALL( SCIPlockVarCons(scip, consdata->var, cons, !SCIPisInfinity(scip, -consdata->lhs),
                !SCIPisInfinity(scip, consdata->rhs)) );
+
+         /* lock vbdvar */
+         if( consdata->vbdcoef > 0.0 )
+         {
+            SCIP_CALL( SCIPlockVarCons(scip, consdata->vbdvar, cons, !SCIPisInfinity(scip, -consdata->lhs),
+               !SCIPisInfinity(scip, consdata->rhs)) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPlockVarCons(scip, consdata->vbdvar, cons, !SCIPisInfinity(scip, consdata->rhs),
+               !SCIPisInfinity(scip, -consdata->lhs)) );
+         }
       }
 
       /* apply aggregation on y */
@@ -3304,20 +3328,8 @@ SCIP_RETCODE applyFixings(
       }
       else if( vbdvar != consdata->vbdvar )
       {
-         /* replace aggregated variable y in the constraint by its aggregation:
-          * lhs := lhs - c * vbdvarconstant
-          * rhs := rhs - c * vbdvarconstant
-          * c   := c * vbdvarscalar
-          */
-         if( !SCIPisInfinity(scip, -consdata->lhs) )
-            consdata->lhs -= consdata->vbdcoef * vbdvarconstant;
-         if( !SCIPisInfinity(scip, consdata->rhs) )
-            consdata->rhs -= consdata->vbdcoef * vbdvarconstant;
-
-         consdata->tightened = FALSE;
-
          /* release and unlock old variable */
-         if( SCIPisPositive(scip, consdata->vbdcoef) )
+         if( consdata->vbdcoef > 0.0 )
          {
             SCIP_CALL( SCIPunlockVarCons(scip, consdata->vbdvar, cons, !SCIPisInfinity(scip, -consdata->lhs),
                   !SCIPisInfinity(scip, consdata->rhs)) );
@@ -3329,12 +3341,27 @@ SCIP_RETCODE applyFixings(
          }
          SCIP_CALL( SCIPreleaseVar(scip, &(consdata->vbdvar)) );
 
+         /* also unlock var, because we possibly change lhs/rhs/vbdcoef */
+         SCIP_CALL( SCIPunlockVarCons(scip, consdata->var, cons, !SCIPisInfinity(scip, -consdata->lhs),
+               !SCIPisInfinity(scip, consdata->rhs)) );
+
+         /* replace aggregated variable y in the constraint by its aggregation:
+          * lhs := lhs - c * vbdvarconstant
+          * rhs := rhs - c * vbdvarconstant
+          * c   := c * vbdvarscalar
+          */
+         if( !SCIPisInfinity(scip, -consdata->lhs) )
+            consdata->lhs -= consdata->vbdcoef * vbdvarconstant;
+         if( !SCIPisInfinity(scip, consdata->rhs) )
+            consdata->rhs -= consdata->vbdcoef * vbdvarconstant;
+
+         consdata->tightened = FALSE;
          consdata->vbdcoef *= vbdvarscalar;
          consdata->vbdvar = vbdvar;
 
          /* capture and lock new variable */
          SCIP_CALL( SCIPcaptureVar(scip, consdata->vbdvar) );
-         if( SCIPisPositive(scip, consdata->vbdcoef) )
+         if( consdata->vbdcoef > 0.0 )
          {
             SCIP_CALL( SCIPlockVarCons(scip, consdata->vbdvar, cons, !SCIPisInfinity(scip, -consdata->lhs),
                   !SCIPisInfinity(scip, consdata->rhs)) );
@@ -3344,6 +3371,8 @@ SCIP_RETCODE applyFixings(
             SCIP_CALL( SCIPlockVarCons(scip, consdata->vbdvar, cons, !SCIPisInfinity(scip, consdata->rhs),
                   !SCIPisInfinity(scip, -consdata->lhs)) );
          }
+         SCIP_CALL( SCIPlockVarCons(scip, consdata->var, cons, !SCIPisInfinity(scip, -consdata->lhs),
+               !SCIPisInfinity(scip, consdata->rhs)) );
       }
 
       /* catch the events again on the new variables */
@@ -3584,7 +3613,6 @@ SCIP_RETCODE tightenCoefs(
       /* case 2 */
       else if( SCIPisIntegral(scip, consdata->rhs) && !SCIPisInfinity(scip, consdata->rhs) &&
          (SCIPisInfinity(scip, -consdata->lhs) || SCIPisFeasGE(scip, consdata->vbdcoef - SCIPfeasFloor(scip, consdata->vbdcoef), consdata->lhs - SCIPfeasFloor(scip, consdata->lhs))) )
-
       {
          consdata->vbdcoef = SCIPfeasCeil(scip, consdata->vbdcoef);
          ++(*nchgcoefs);
@@ -4781,7 +4809,7 @@ SCIP_DECL_CONSPRESOL(consPresolVarbound)
          localoldnchgbds = *nchgbds;
 
          /* if lhs is finite, we have a variable lower bound: lhs <= x + c*y  =>  x >= -c*y + lhs */
-         if( !SCIPisInfinity(scip, -consdata->lhs) )
+         if( !SCIPisInfinity(scip, -consdata->lhs) && !SCIPisInfinity(scip, REALABS(consdata->vbdcoef)) )
          {
             SCIPdebugMsg(scip, "adding variable lower bound <%s> >= %g<%s> + %g (and potentially also <%s> %s %g<%s> + %g)\n",
                SCIPvarGetName(consdata->var), -consdata->vbdcoef, SCIPvarGetName(consdata->vbdvar), consdata->lhs,
@@ -4796,7 +4824,7 @@ SCIP_DECL_CONSPRESOL(consPresolVarbound)
          }
 
          /* if rhs is finite, we have a variable upper bound: x + c*y <= rhs  =>  x <= -c*y + rhs */
-         if( !SCIPisInfinity(scip, consdata->rhs) )
+         if( !SCIPisInfinity(scip, consdata->rhs) && !SCIPisInfinity(scip, REALABS(consdata->vbdcoef)) )
          {
             SCIPdebugMsg(scip, "adding variable upper bound <%s> <= %g<%s> + %g (and potentially also <%s> %s %g<%s> + %g)\n",
                SCIPvarGetName(consdata->var), -consdata->vbdcoef, SCIPvarGetName(consdata->vbdvar), consdata->rhs,
