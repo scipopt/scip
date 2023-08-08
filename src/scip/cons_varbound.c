@@ -1320,7 +1320,7 @@ SCIP_RETCODE chgLhs(
    {
       SCIP_CALL( SCIPlockVarCons(scip, consdata->var, cons, TRUE, FALSE) );
 
-      if( SCIPisPositive(scip, consdata->vbdcoef) )
+      if( consdata->vbdcoef > 0.0 )
       {
          SCIP_CALL( SCIPlockVarCons(scip, consdata->vbdvar, cons, TRUE, FALSE) );
       }
@@ -1334,7 +1334,7 @@ SCIP_RETCODE chgLhs(
    {
       SCIP_CALL( SCIPunlockVarCons(scip, consdata->var, cons, TRUE, FALSE) );
 
-      if( SCIPisPositive(scip, consdata->vbdcoef) )
+      if( consdata->vbdcoef > 0.0 )
       {
          SCIP_CALL( SCIPunlockVarCons(scip, consdata->vbdvar, cons, TRUE, FALSE) );
       }
@@ -1401,7 +1401,7 @@ SCIP_RETCODE chgRhs(
    {
       SCIP_CALL( SCIPlockVarCons(scip, consdata->var, cons, FALSE, TRUE) );
 
-      if( SCIPisPositive(scip, consdata->vbdcoef) )
+      if( consdata->vbdcoef > 0.0 )
       {
          SCIP_CALL( SCIPlockVarCons(scip, consdata->vbdvar, cons, FALSE, TRUE) );
       }
@@ -1415,7 +1415,7 @@ SCIP_RETCODE chgRhs(
    {
       SCIP_CALL( SCIPunlockVarCons(scip, consdata->var, cons, FALSE, TRUE) );
 
-      if( SCIPisPositive(scip, consdata->vbdcoef) )
+      if( consdata->vbdcoef > 0.0 )
       {
          SCIP_CALL( SCIPunlockVarCons(scip, consdata->vbdvar, cons, FALSE, TRUE) );
       }
@@ -2762,7 +2762,7 @@ SCIP_RETCODE preprocessConstraintPairs(
             /* remove locks for variable with old coefficient and install locks for variable with new
              * coefficient
              */
-            if( SCIPisPositive(scip, consdata0->vbdcoef) )
+            if( consdata0->vbdcoef > 0.0 )
             {
                SCIP_CALL( SCIPunlockVarCons(scip, consdata0->vbdvar, cons0, !SCIPisInfinity(scip, -consdata0->lhs),
                      !SCIPisInfinity(scip, consdata0->rhs)) );
@@ -3329,7 +3329,7 @@ SCIP_RETCODE applyFixings(
       else if( vbdvar != consdata->vbdvar )
       {
          /* release and unlock old variable */
-         if( SCIPisPositive(scip, consdata->vbdcoef) )
+         if( consdata->vbdcoef > 0.0 )
          {
             SCIP_CALL( SCIPunlockVarCons(scip, consdata->vbdvar, cons, !SCIPisInfinity(scip, -consdata->lhs),
                   !SCIPisInfinity(scip, consdata->rhs)) );
@@ -3361,7 +3361,7 @@ SCIP_RETCODE applyFixings(
 
          /* capture and lock new variable */
          SCIP_CALL( SCIPcaptureVar(scip, consdata->vbdvar) );
-         if( SCIPisPositive(scip, consdata->vbdcoef) )
+         if( consdata->vbdcoef > 0.0 )
          {
             SCIP_CALL( SCIPlockVarCons(scip, consdata->vbdvar, cons, !SCIPisInfinity(scip, -consdata->lhs),
                   !SCIPisInfinity(scip, consdata->rhs)) );
