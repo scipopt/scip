@@ -1920,6 +1920,10 @@ SCIP_RETCODE solveSubproblem(
    {
       SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/shiftandpropagate/freq", -1) );
    }
+   if( !SCIPisParamFixed(subscip, "heuristics/zeroobj/freq") )
+   {
+      SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/zeroobj/freq", -1) );
+   }
 
    /* forbid recursive call of undercover heuristic */
    if( SCIPisParamFixed(subscip, "heuristics/" HEUR_NAME "/freq") )

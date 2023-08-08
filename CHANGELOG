@@ -33,6 +33,7 @@ Performance improvements
 - If differentation of convex expression fails in convex nlhdlr, then a perturbed point is tried.
 - Use sassy/bliss as default symmetry computation package.
 - No longer linearize indicator constraints in undercover heuristic by default.
+- Deactivate pre-root heuristic zeroobj in undercover heuristic.
 
 Examples and applications
 -------------------------
