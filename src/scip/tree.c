@@ -1284,7 +1284,7 @@ void SCIPnodeMarkPropagated(
    node->reprop = FALSE;
 
    /* if the node was the highest repropagation node in the path, update the repropdepth in the tree data */
-   if( node->active && (long)(node->depth) == tree->repropdepth )
+   if( node->active && node->depth == tree->repropdepth )
    {
       do
       {
@@ -8261,7 +8261,7 @@ SCIP_Bool SCIPtreeIsPathComplete(
    assert(tree->pathlen == 0 || tree->focusnode != NULL);
    assert(tree->pathlen >= 2 || !SCIPtreeProbing(tree));
    assert(tree->pathlen == 0 || tree->path[tree->pathlen-1] != NULL);
-   assert(tree->pathlen == 0 || (long)(tree->path[tree->pathlen-1]->depth) == tree->pathlen-1);
+   assert(tree->pathlen == 0 || tree->path[tree->pathlen-1]->depth == tree->pathlen-1);
    assert(tree->focusnode == NULL || (int)tree->focusnode->depth >= tree->pathlen
       || tree->path[tree->focusnode->depth] == tree->focusnode);
 
@@ -8304,7 +8304,7 @@ SCIP_NODE* SCIPtreeGetFocusNode(
    assert(tree->pathlen == 0 || tree->focusnode != NULL);
    assert(tree->pathlen >= 2 || !SCIPtreeProbing(tree));
    assert(tree->pathlen == 0 || tree->path[tree->pathlen-1] != NULL);
-   assert(tree->pathlen == 0 || (long)(tree->path[tree->pathlen-1]->depth) == tree->pathlen-1);
+   assert(tree->pathlen == 0 || tree->path[tree->pathlen-1]->depth == tree->pathlen-1);
    assert(tree->focusnode == NULL || (int)tree->focusnode->depth >= tree->pathlen
       || tree->path[tree->focusnode->depth] == tree->focusnode);
 
@@ -8321,7 +8321,7 @@ int SCIPtreeGetFocusDepth(
    assert(tree->pathlen == 0 || tree->focusnode != NULL);
    assert(tree->pathlen >= 2 || !SCIPtreeProbing(tree));
    assert(tree->pathlen == 0 || tree->path[tree->pathlen-1] != NULL);
-   assert(tree->pathlen == 0 || (long)(tree->path[tree->pathlen-1]->depth) == tree->pathlen-1);
+   assert(tree->pathlen == 0 || tree->path[tree->pathlen-1]->depth == tree->pathlen-1);
    assert(tree->focusnode == NULL || (int)tree->focusnode->depth >= tree->pathlen
       || tree->path[tree->focusnode->depth] == tree->focusnode);
 
@@ -8379,7 +8379,7 @@ SCIP_NODE* SCIPtreeGetCurrentNode(
    assert(tree->pathlen == 0 || tree->focusnode != NULL);
    assert(tree->pathlen >= 2 || !SCIPtreeProbing(tree));
    assert(tree->pathlen == 0 || tree->path[tree->pathlen-1] != NULL);
-   assert(tree->pathlen == 0 || (long)(tree->path[tree->pathlen-1]->depth) == tree->pathlen-1);
+   assert(tree->pathlen == 0 || tree->path[tree->pathlen-1]->depth == tree->pathlen-1);
    assert(tree->focusnode == NULL || (int)tree->focusnode->depth >= tree->pathlen
       || tree->path[tree->focusnode->depth] == tree->focusnode);
 
@@ -8396,7 +8396,7 @@ int SCIPtreeGetCurrentDepth(
    assert(tree->pathlen == 0 || tree->focusnode != NULL);
    assert(tree->pathlen >= 2 || !SCIPtreeProbing(tree));
    assert(tree->pathlen == 0 || tree->path[tree->pathlen-1] != NULL);
-   assert(tree->pathlen == 0 || (long)(tree->path[tree->pathlen-1]->depth) == tree->pathlen-1);
+   assert(tree->pathlen == 0 || tree->path[tree->pathlen-1]->depth == tree->pathlen-1);
    assert(tree->focusnode == NULL || (int)tree->focusnode->depth >= tree->pathlen
       || tree->path[tree->focusnode->depth] == tree->focusnode);
 
