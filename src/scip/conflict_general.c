@@ -308,8 +308,8 @@ SCIP_RETCODE SCIPconflictCreate(
    (*conflict)->tmpbdchginfos = NULL;
    (*conflict)->conflictsetssize = 0;
    (*conflict)->nconflictsets = 0;
-   (*conflict)->resolutionsets = NULL;
-   (*conflict)->nresolutionsets = 0;
+   (*conflict)->conflictrows = NULL;
+   (*conflict)->nconflictrows = 0;
    (*conflict)->proofsets = NULL;
    (*conflict)->proofsetssize = 0;
    (*conflict)->nproofsets = 0;
@@ -379,9 +379,8 @@ SCIP_RETCODE SCIPconflictCreate(
    (*conflict)->nresflowcover = 0;
    (*conflict)->nresconfconss = 0;
    (*conflict)->nresconfvariables = 0;
-   (*conflict)->resolutionsetssize = 0;
+   (*conflict)->conflictrowssize = 0;
    (*conflict)->ncorrectaborts = 0;
-   (*conflict)->resolutionminslack = 0.0;
    (*conflict)->weakeningsumperc = 0.0;
    (*conflict)->lengthsumperc = 0.0;
    (*conflict)->bdchgonlyresqueue = FALSE;
@@ -389,7 +388,7 @@ SCIP_RETCODE SCIPconflictCreate(
    (*conflict)->haslargecoef = FALSE;
    (*conflict)->reasonclauseres = FALSE;
 
-   SCIP_CALL( SCIPconflictInitResolutionset((*conflict), blkmem) );
+   SCIP_CALL( SCIPconflictInitRows((*conflict), blkmem) );
 
    SCIP_CALL( SCIPconflictInitProofset((*conflict), blkmem) );
 
@@ -428,16 +427,16 @@ SCIP_RETCODE SCIPconflictFree(
    SCIPpqueueFree(&(*conflict)->resforcedbdchgqueue);
    SCIPpqueueFree(&(*conflict)->separatebdchgqueue);
    SCIPconflictsetFree(&(*conflict)->conflictset, blkmem);
-   SCIPresolutionsetFree(&(*conflict)->resolutionset, blkmem);
-   SCIPresolutionsetFree(&(*conflict)->reasonset, blkmem);
-   SCIPresolutionsetFree(&(*conflict)->prevresolutionset, blkmem);
-   SCIPresolutionsetFree(&(*conflict)->resolvedresolutionset, blkmem);
+   SCIPconflictRowFree(&(*conflict)->conflictrow, blkmem);
+   SCIPconflictRowFree(&(*conflict)->prevconflictrow, blkmem);
+   SCIPconflictRowFree(&(*conflict)->resolvedconflictrow, blkmem);
+   SCIPreasonRowFree(&(*conflict)->reasonrow, blkmem);
    SCIPproofsetFree(&(*conflict)->proofset, blkmem);
 
    BMSfreeMemoryArrayNull(&(*conflict)->conflictsets);
    BMSfreeMemoryArrayNull(&(*conflict)->conflictsetscores);
    BMSfreeMemoryArrayNull(&(*conflict)->proofsets);
-   BMSfreeMemoryArrayNull(&(*conflict)->resolutionsets);
+   BMSfreeMemoryArrayNull(&(*conflict)->conflictrows);
    BMSfreeMemoryArrayNull(&(*conflict)->tmpbdchginfos);
    BMSfreeMemory(conflict);
 
@@ -1818,6 +1817,7 @@ SCIP_RETCODE SCIPgetDualProof(
  *  a conflict constraint out of the resulting conflict set;
  *  updates statistics for pseudo solution conflict analysis
  */
+/* refactortodo update this part since we use semi-sparse data structures for resolution */
 SCIP_RETCODE SCIPconflictAnalyzePseudo(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    BMS_BLKMEM*           blkmem,             /**< block memory of transformed problem */
@@ -1872,7 +1872,7 @@ SCIP_RETCODE SCIPconflictAnalyzePseudo(
 
    conflict->conflictset->conflicttype = SCIP_CONFTYPE_BNDEXCEEDING;
    conflict->conflictset->usescutoffbound = TRUE;
-   conflict->resolutionset->usescutoffbound = TRUE;
+   conflict->conflictrow->usescutoffbound = TRUE;
 
    /* start timing */
    SCIPclockStart(conflict->pseudoanalyzetime, set);
@@ -2733,6 +2733,7 @@ SCIP_RETCODE conflictAnalyzeInfeasibleLP(
  *  a conflict constraint out of the resulting conflict set;
  *  updates statistics for bound exceeding LP conflict analysis
  */
+/* refactortodo update this part since we use semi-sparse data structures for resolution */
 static
 SCIP_RETCODE conflictAnalyzeBoundexceedingLP(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
@@ -2785,7 +2786,7 @@ SCIP_RETCODE conflictAnalyzeBoundexceedingLP(
    /* mark the conflict to depend on the cutoff bound */
    conflict->conflictset->conflicttype = SCIP_CONFTYPE_BNDEXCEEDING;
    conflict->conflictset->usescutoffbound = TRUE;
-   conflict->resolutionset->usescutoffbound = TRUE;
+   conflict->conflictrow->usescutoffbound = TRUE;
 
    oldnsuccess = conflict->ndualproofsbndsuccess + conflict->ndualproofsinfsuccess;
 

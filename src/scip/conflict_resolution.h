@@ -111,7 +111,7 @@ SCIP_Longint SCIPconflictGetNResUnkTerm(
    );
 
 /** create resolution constraints out of resolution sets and add them to the problem */
-SCIP_RETCODE SCIPconflictAddResolutionSets(
+SCIP_RETCODE SCIPconflictAddConflictCons(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -124,20 +124,25 @@ SCIP_RETCODE SCIPconflictAddResolutionSets(
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
-   SCIP_RESOLUTIONSET*   resolutionset,      /**< resolution set to add to the tree */
+   SCIP_CONFLICTROW*     conflictrow,      /**< conflict row to add to the tree */
    SCIP_Bool*            success             /**< true if the conflict is added to the problem */
-
    );
 
 /** creates and clears the resolutionset */
-SCIP_RETCODE SCIPconflictInitResolutionset(
+SCIP_RETCODE SCIPconflictInitRows(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    BMS_BLKMEM*           blkmem              /**< block memory of transformed problem */
    );
 
-/** frees a resolutionset */
-void SCIPresolutionsetFree(
-   SCIP_RESOLUTIONSET**  resolutionset,      /**< resolution set */
+/** frees a conflict row */
+void SCIPconflictRowFree(
+   SCIP_CONFLICTROW**    conflictrow,        /**< conflict row */
+   BMS_BLKMEM*           blkmem              /**< block memory */
+   );
+
+/** frees a reason row */
+void SCIPreasonRowFree(
+   SCIP_REASONROW**      reasonrow,          /**< reason row */
    BMS_BLKMEM*           blkmem              /**< block memory */
    );
 

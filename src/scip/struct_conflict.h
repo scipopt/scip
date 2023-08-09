@@ -126,10 +126,9 @@ struct SCIP_ConflictRow
    SCIP_Real*            vals;
    int*                  inds;
    SCIP_Real             lhs;
-   SCIP_Real             origlhs;
-   SCIP_Real             origrhs;
    SCIP_Real             slack;
    SCIP_Real             coefquotient;
+   int                   nvars;
    int                   nnz;
    int                   size;
    int                   validdepth;
@@ -147,8 +146,6 @@ struct SCIP_ReasonRow
    SCIP_Real*            vals;
    int*                  inds;
    SCIP_Real             lhs;
-   SCIP_Real             origlhs;
-   SCIP_Real             origrhs;
    SCIP_Real             slack;
    SCIP_Real             coefquotient;
    int                   nnz;
@@ -188,7 +185,7 @@ struct SCIP_Conflict
    SCIP_Longint          nreductioncalls;    /**< number of calls to reduction in resolution conflict analysis */
    SCIP_Longint          nressuccess;        /**< number of calls yielding at least one conflict constraint */
    SCIP_Longint          nreslargecoefs;     /**< number of calls terminating because of large coefficients */
-   SCIP_Longint          nreslongconfs;      /**< number of calls terminating because of long resolution sets */
+   SCIP_Longint          nreslongconfs;      /**< number of calls terminating because of long conflict rows */
    SCIP_Longint          ncorrectaborts;     /**< count the number of calls that we terminate unsucessfully for a known reason */
    SCIP_Longint          nresmircalls;       /**< number of calls of c-MIR in resolution conflict analysis */
    SCIP_Longint          nresflowcovercalls; /**< number of calls of flow cover in resolution conflict analysis */
@@ -263,11 +260,11 @@ struct SCIP_Conflict
    SCIP_PQUEUE*          separatebdchgqueue; /**< separate unprocessed conflict bound changes from reason */
    SCIP_PROOFSET*        proofset;           /**< proof sets found at the current node */
    SCIP_PROOFSET**       proofsets;          /**< proof sets found at the current node */
-   SCIP_RESOLUTIONSET*   resolutionset;      /**< resolution set for the current conflict */
-   SCIP_RESOLUTIONSET*   reasonset;          /**< resolution set for the current reason */
-   SCIP_RESOLUTIONSET*   prevresolutionset;  /**< resolution set for the previous conflict */
-   SCIP_RESOLUTIONSET*   resolvedresolutionset;/**< resolution set for the conflict */
-   SCIP_RESOLUTIONSET**  resolutionsets;     /**< resolution sets found at the current node */
+   SCIP_CONFLICTROW*     conflictrow;        /**< conflict row for the current conflict */
+   SCIP_REASONROW*       reasonrow;          /**< reason row for the latest bound change */
+   SCIP_CONFLICTROW*     prevconflictrow;    /**< conflict row for the previous resolution step */
+   SCIP_CONFLICTROW*     resolvedconflictrow;/**< conflict row for for current the conflict */
+   SCIP_CONFLICTROW**    conflictrows;       /**< conflict rows found at the current node */
    SCIP_CONFLICTSET*     conflictset;        /**< bound changes resembling the current conflict set */
    SCIP_CONFLICTSET**    conflictsets;       /**< conflict sets found at the current node */
    SCIP_Real*            conflictsetscores;  /**< score values of the conflict sets found at the current node */
@@ -279,9 +276,8 @@ struct SCIP_Conflict
    int                   tmpbdchginfossize;  /**< size of tmpbdchginfos array */
    int                   ntmpbdchginfos;     /**< number of temporary created bound change information data */
    int                   count;              /**< conflict set counter to label binary conflict variables with */
-   int                   nresolutionsets;    /**< number of available resolution sets */
-   int                   resolutionsetssize; /**< size of resolutionset array */
-   SCIP_Real             resolutionminslack; /**< smallest slack among all resolution sets */
+   int                   nconflictrows;      /**< number of available resolution sets */
+   int                   conflictrowssize; /**< size of conflictrows array */
    SCIP_Real             weakeningsumperc;   /**< sum of percentages of variables weakened in resolution sets */
    SCIP_Real             lengthsumperc;      /**< sum of percentages of nonzeros compared to initial conflict */
    SCIP_Bool             bdchgonlyconfqueue; /**< if true we add bound changes only in graph conflict queues */
