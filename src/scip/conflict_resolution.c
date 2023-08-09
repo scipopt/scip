@@ -1677,16 +1677,21 @@ void SCIPreasonRowFree(
 /** resets the data structure of a conflict row */
 static
 void conflictRowClear(
-   SCIP_CONFLICTROW*     conflictrow         /**< conflict row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_CONFLICTROW*     conflictrow,        /**< conflict row */
+   int                   nvars               /**< number of variables in the problem */
    )
 {
    int i;
    assert(conflictrow != NULL);
-   assert(conflictrow->vals != NULL);
 
-   for(i = 0 ; i < conflictrow->nvars; ++i)
+   if(conflictrow->vals == NULL)
+      BMSallocBlockMemoryArray(blkmem, &conflictrow->vals, nvars );
+
+   for(i = 0 ; i < nvars; ++i)
       conflictrow->vals[i] = 0.0;
 
+   conflictrow->nvars = nvars;
    conflictrow->nnz = 0;
    conflictrow->lhs = 0.0;
    conflictrow->slack = 0.0;
@@ -2441,7 +2446,9 @@ SCIP_RETCODE getConflictClause(
       lhs = 1.0;
       nfixinds = 0;
 
-      conflictRowClear(conflictrow);
+      /* clear the row before creating a new row out of the clause */
+      conflictRowClear(blkmem, conflictrow, prob->nvars);
+
       /** given the set of bound changes that renders infeasibility we can create a no-good cut
        *  as initial conflict. E.g. if x = 1, y = 1, z = 0 leads to infeasibility,
        *  then the initial conflict constraint is (1 - x) + (1 - y) + z >= 1
@@ -3393,19 +3400,11 @@ SCIP_RETCODE conflictAnalyzeResolution(
 
    nvars = transprob->nvars;
 
-   conflictrow->nvars = nvars;
-   prevconflictrow->nvars = nvars;
-   resolvedconflictrow->nvars = nvars;
-
-   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &conflictrow->vals, nvars ) );
-   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &prevconflictrow->vals, nvars ) );
-   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &resolvedconflictrow->vals, nvars ) );
-
    /* clear the conflict, reason, resolved conflict rows */
-   conflictRowClear(conflict->conflictrow);
+   conflictRowClear(blkmem, conflict->conflictrow, nvars);
+   conflictRowClear(blkmem, conflict->prevconflictrow, nvars);
+   conflictRowClear(blkmem, conflict->resolvedconflictrow, nvars);
    reasonRowClear(conflict->reasonrow);
-   conflictRowClear(conflict->prevconflictrow);
-   conflictRowClear(conflict->resolvedconflictrow);
 
    focusdepth = SCIPtreeGetFocusDepth(tree);
    currentdepth = SCIPtreeGetCurrentDepth(tree);
