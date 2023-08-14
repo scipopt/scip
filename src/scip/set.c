@@ -920,7 +920,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
          *allvalid = *allvalid && valid;
          if( SCIPpricerIsActive(sourceset->pricers[p]) )
          {
-            SCIP_CALL( SCIPactivatePricer(targetset->scip, targetset->pricers[p]) );
+            SCIP_CALL( SCIPpricerActivate(targetset->pricers[p], targetset) );
          }
       }
    }
