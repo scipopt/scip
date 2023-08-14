@@ -1146,7 +1146,7 @@ SCIP_RETCODE linearCombConflictReason(
          resolvedrow->nnz++;
       }
       else
-      resolvedrow->vals[idx] = resolvedrow->vals[idx] + scale * reasonrow->vals[i];
+         resolvedrow->vals[idx] = resolvedrow->vals[idx] + scale * reasonrow->vals[i];
    }
    resolvedrow->lhs = resolvedrow->lhs + scale * reasonrow->lhs;
 
@@ -1665,7 +1665,6 @@ SCIP_RETCODE SCIPconflictInitRows(
    assert(blkmem != NULL);
 
    SCIP_CALL( conflictRowCreate(&conflict->conflictrow, blkmem) );
-   SCIP_CALL( conflictRowCreate(&conflict->prevconflictrow, blkmem) );
    SCIP_CALL( conflictRowCreate(&conflict->resolvedconflictrow, blkmem) );
 
    SCIP_CALL( reasonRowCreate(&conflict->reasonrow, blkmem) );
@@ -2289,7 +2288,7 @@ SCIP_RETCODE SCIPconflictAddConflictCons(
       SCIP_CALL( createAndAddConflictCons(conflict, blkmem, set, stat, transprob, origprob, \
                      tree, reopt, lp, cliquetable, conflictrow, conflictrow->validdepth, success) );
       conflict->nappliedglbresconss++;
-      SCIPsetDebugMsg(set, " -> conflict row added (cdpt:%d, fdpt:%d, insert:%d, valid:%d, conf: %d, reprop: %d , len:%d):\n",
+      SCIPsetDebugMsg(set, " -> conflict row added (cdpt:%d, fdpt:%d, insert:%d, valid:%d, conf: %d, reprop: %d, len:%d):\n",
                      SCIPtreeGetCurrentDepth(tree), SCIPtreeGetFocusDepth(tree),
                      conflictrow->validdepth, conflictrow->validdepth, conflictrow->conflictdepth,
                      conflictrow->repropdepth, conflictrow->nnz);
@@ -3598,7 +3597,6 @@ SCIP_RETCODE conflictAnalyzeResolution(
 {
    SCIP_CONFLICTROW *conflictrow;
    SCIP_CONFLICTROW *resolvedconflictrow;
-   SCIP_CONFLICTROW *prevconflictrow;
    SCIP_REASONROW *reasonrow;
    SCIP_BDCHGINFO* bdchginfo;
    SCIP_BDCHGINFO* nextbdchginfo;
@@ -3663,12 +3661,10 @@ SCIP_RETCODE conflictAnalyzeResolution(
    conflictrow = conflict->conflictrow;
    conflictrow->usescutoffbound = usescutoffbound;
    reasonrow = conflict->reasonrow;
-   prevconflictrow = conflict->prevconflictrow;
    resolvedconflictrow = conflict->resolvedconflictrow;
 
    /* clear the conflict, reason, resolved conflict rows */
    conflictRowClear(blkmem, conflict->conflictrow, nvars);
-   conflictRowClear(blkmem, conflict->prevconflictrow, nvars);
    conflictRowClear(blkmem, conflict->resolvedconflictrow, nvars);
    reasonRowClear(conflict->reasonrow);
 
@@ -3726,8 +3722,6 @@ SCIP_RETCODE conflictAnalyzeResolution(
       return SCIP_OKAY;
    }
 
-   /* refactortodo we only need one of these copies */
-   SCIP_CALL( conflictRowReplace(prevconflictrow, blkmem, conflictrow) );
    SCIP_CALL( conflictRowReplace(resolvedconflictrow, blkmem, conflictrow) );
 
    SCIPdebug(printConflictRow(conflictrow, set, transprob, 0));
@@ -3980,10 +3974,10 @@ SCIP_RETCODE conflictAnalyzeResolution(
             and it means that we have already reached a FUIP */
             SCIPsetDebugMsgPrint(set, " reached UIP in depth %d \n", bdchgdepth);
             /* add the previous conflict in the list of conflict rows */
-            prevconflictrow->conflictdepth = bdchgdepth;
-            prevconflictrow->repropdepth = (nextbdchginfo == NULL) ? 0 : SCIPbdchginfoGetDepth(nextbdchginfo);
+            conflictrow->conflictdepth = bdchgdepth;
+            conflictrow->repropdepth = (nextbdchginfo == NULL) ? 0 : SCIPbdchginfoGetDepth(nextbdchginfo);
             SCIP_CONFLICTROW* tmpconflictrow;
-            SCIP_CALL( conflictRowCopy(&tmpconflictrow, blkmem, prevconflictrow) );
+            SCIP_CALL( conflictRowCopy(&tmpconflictrow, blkmem, conflictrow) );
             SCIP_CALL( conflictInsertConflictRow(conflict, set, &tmpconflictrow) );
             goto TERMINATE_RESOLUTION_LOOP;
          }
@@ -4009,10 +4003,10 @@ SCIP_RETCODE conflictAnalyzeResolution(
             assert( nresstepslast != nressteps );
             SCIPsetDebugMsgPrint(set, " reached UIP in depth %d \n", bdchgdepth);
             /* add the previous conflict in the list of conflict rows */
-            prevconflictrow->conflictdepth = bdchgdepth;
-            prevconflictrow->repropdepth = (nextbdchginfo == NULL) ? 0 : SCIPbdchginfoGetDepth(nextbdchginfo);
+            conflictrow->conflictdepth = bdchgdepth;
+            conflictrow->repropdepth = (nextbdchginfo == NULL) ? 0 : SCIPbdchginfoGetDepth(nextbdchginfo);
             SCIP_CONFLICTROW* tmpconflictrow;
-            SCIP_CALL( conflictRowCopy(&tmpconflictrow, blkmem, prevconflictrow) );
+            SCIP_CALL( conflictRowCopy(&tmpconflictrow, blkmem, conflictrow) );
             SCIP_CALL( conflictInsertConflictRow(conflict, set, &tmpconflictrow) );
             nresstepslast = nressteps;
             nfuips ++;
@@ -4032,7 +4026,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
    {
       conflict->ncorrectaborts--;
       SCIP_CONFLICTROW* tmpconflictrow;
-      SCIP_CALL( conflictRowCopy(&tmpconflictrow, blkmem, prevconflictrow) );
+      SCIP_CALL( conflictRowCopy(&tmpconflictrow, blkmem, conflictrow) );
       SCIP_CALL( conflictInsertConflictRow(conflict, set, &tmpconflictrow) );
    }
 

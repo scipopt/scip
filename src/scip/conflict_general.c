@@ -428,7 +428,6 @@ SCIP_RETCODE SCIPconflictFree(
    SCIPpqueueFree(&(*conflict)->separatebdchgqueue);
    SCIPconflictsetFree(&(*conflict)->conflictset, blkmem);
    SCIPconflictRowFree(&(*conflict)->conflictrow, blkmem);
-   SCIPconflictRowFree(&(*conflict)->prevconflictrow, blkmem);
    SCIPconflictRowFree(&(*conflict)->resolvedconflictrow, blkmem);
    SCIPreasonRowFree(&(*conflict)->reasonrow, blkmem);
    SCIPproofsetFree(&(*conflict)->proofset, blkmem);

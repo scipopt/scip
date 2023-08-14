@@ -262,7 +262,6 @@ struct SCIP_Conflict
    SCIP_PROOFSET**       proofsets;          /**< proof sets found at the current node */
    SCIP_CONFLICTROW*     conflictrow;        /**< conflict row for the current conflict */
    SCIP_REASONROW*       reasonrow;          /**< reason row for the latest bound change */
-   SCIP_CONFLICTROW*     prevconflictrow;    /**< conflict row for the previous resolution step */
    SCIP_CONFLICTROW*     resolvedconflictrow;/**< conflict row for for current the conflict */
    SCIP_CONFLICTROW**    conflictrows;       /**< conflict rows found at the current node */
    SCIP_CONFLICTSET*     conflictset;        /**< bound changes resembling the current conflict set */
