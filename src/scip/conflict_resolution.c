@@ -1869,7 +1869,7 @@ SCIP_RETCODE weakenConflictRow(
 
          ub = SCIPgetVarUbAtIndex(set->scip, vartoweaken, currbdchgidx, TRUE);
 
-         if( SCIPsetIsEQ(set, ub, SCIPvarGetUbGlobal(vartoweaken)) && (fixinds != NULL || fixinds[idx] == 0) )
+         if( SCIPsetIsEQ(set, ub, SCIPvarGetUbGlobal(vartoweaken)) && (fixinds == NULL || fixinds[idx] == 0) )
          {
             weakenVarConflictRow(conflictrow, set, vartoweaken, i);
             ++nvarsweakened;
@@ -1882,7 +1882,7 @@ SCIP_RETCODE weakenConflictRow(
 
             lb = SCIPgetVarLbAtIndex(set->scip, vartoweaken, currbdchgidx, TRUE);
 
-            if( SCIPsetIsEQ(set, lb, SCIPvarGetLbGlobal(vartoweaken)) && (fixinds != NULL || fixinds[idx] == 0) )
+            if( SCIPsetIsEQ(set, lb, SCIPvarGetLbGlobal(vartoweaken)) && (fixinds == NULL || fixinds[idx] == 0) )
             {
                weakenVarConflictRow(conflictrow, set, vartoweaken, i);
                ++nvarsweakened;
