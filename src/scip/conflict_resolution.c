@@ -20,6 +20,7 @@
  * @author Gioni Mexi
  *
  * @todo Description of the algorithm
+ * @refactortodo separate data stractures for graph and resolution conflict analysis
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -1482,6 +1483,7 @@ SCIP_BDCHGINFO* conflictFirstCand(
       /* check if this candidate is valid */
       if( bdchginfoIsInvalid(conflict, bdchginfo) || !bdchginfoUsedForConflict(conflict, bdchginfo))
       {
+         SCIP_VAR* var;
          SCIPdebugMessage("bound change info [%d:%d<%s> %s %g] is invalid -> pop it from the queue\n",
             SCIPbdchginfoGetDepth(bdchginfo),
             SCIPbdchginfoGetPos(bdchginfo),
@@ -1491,6 +1493,18 @@ SCIP_BDCHGINFO* conflictFirstCand(
 
          /* pop the invalid bound change info from the queue */
          (void)(SCIPpqueueRemove(conflict->resforcedbdchgqueue));
+         var = SCIPbdchginfoGetVar(bdchginfo);
+         if( SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER )
+         {
+            var->conflictlbcount = 0;
+            var->conflictrelaxedlb = SCIP_REAL_MIN;
+         }
+         else
+         {
+            assert(SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_UPPER);
+            var->conflictubcount = 0;
+            var->conflictrelaxedub = SCIP_REAL_MAX;
+         }
 
          /* call method recursively to get next conflict analysis candidate */
          bdchginfo = conflictFirstCand(conflict);
@@ -1504,6 +1518,7 @@ SCIP_BDCHGINFO* conflictFirstCand(
       /* check if this candidate is valid */
       if( bdchginfo != NULL && (bdchginfoIsInvalid(conflict, bdchginfo) || !bdchginfoUsedForConflict(conflict, bdchginfo)) )
       {
+         SCIP_VAR* var;
          SCIPdebugMessage("bound change info [%d:%d<%s> %s %g] is invalid -> pop it from the queue\n",
             SCIPbdchginfoGetDepth(bdchginfo),
             SCIPbdchginfoGetPos(bdchginfo),
@@ -1513,6 +1528,19 @@ SCIP_BDCHGINFO* conflictFirstCand(
 
          /* pop the invalid bound change info from the queue */
          (void)(SCIPpqueueRemove(conflict->resbdchgqueue));
+
+         var = SCIPbdchginfoGetVar(bdchginfo);
+         if( SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER )
+         {
+            var->conflictlbcount = 0;
+            var->conflictrelaxedlb = SCIP_REAL_MIN;
+         }
+         else
+         {
+            assert(SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_UPPER);
+            var->conflictubcount = 0;
+            var->conflictrelaxedub = SCIP_REAL_MAX;
+         }
 
          /* call method recursively to get next conflict analysis candidate */
          bdchginfo = conflictFirstCand(conflict);
@@ -1903,20 +1931,22 @@ SCIP_Real getSlackConflict(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_CONFLICTROW*     conflictrow,        /**< conflict row */
-   SCIP_BDCHGIDX *       currbdchgidx,       /**< index of current bound change */
+   SCIP_BDCHGINFO*       currbdchginfo,      /**< current bound change */
    SCIP_Real*            fixbounds,          /**< dense array of fixed bounds */
    int*                  fixinds             /**< dense array of indices of fixed variables */
    )
 {
    SCIP_VAR** vars;
+   SCIP_BDCHGIDX * currbdchgidx;
    SCIP_Real QUAD(slack);
    int i;
 
    vars = SCIPprobGetVars(prob);
    assert(vars != NULL);
 
+   SCIPsetDebugMsg(set, "Calculating slack for conflict row at depth %d position %d \n", SCIPbdchginfoGetDepth(currbdchginfo), SCIPbdchginfoGetPos(currbdchginfo));
    QUAD_ASSIGN(slack, 0.0);
-
+   currbdchgidx = SCIPbdchginfoGetIdx(currbdchginfo);
    for( i = 0; i < conflictrow->nnz; i++ )
    {
       SCIP_Real coef;
@@ -1955,12 +1985,16 @@ SCIP_Real getSlackConflict(
          }
          SCIPquadprecProdDD(delta, coef, bound);
       }
-      SCIPsetDebugMsg(set, "var: %s, coef: %f, bound: %f \n", SCIPvarGetName(vars[v]), coef, bound);
       SCIPquadprecSumQQ(slack, slack, delta);
+#ifdef SCIP_MORE_DEBUG
+      SCIPsetDebugMsg(set, "var: %s, coef: %f, bound: %f \n", SCIPvarGetName(vars[v]), coef, bound);
       SCIPsetDebugMsg(set, "slack: %f \n",QUAD_TO_DBL(slack) );
+#endif
    }
    SCIPquadprecSumQD(slack, slack, -conflictrow->lhs);
+#ifdef SCIP_MORE_DEBUG
    SCIPsetDebugMsg(set, "Conflict slack: %f \n",QUAD_TO_DBL(slack) );
+#endif
    return QUAD_TO_DBL(slack);
 }
 
@@ -1970,12 +2004,13 @@ SCIP_Real getSlackReason(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_REASONROW*       reasonrow,          /**< reason row */
-   SCIP_BDCHGIDX *       currbdchgidx,       /**< index of current bound change */
+   SCIP_BDCHGINFO*       currbdchginfo,      /**< current bound change */
    SCIP_Real*            fixbounds,          /**< dense array of fixed bounds */
    int*                  fixinds             /**< dense array of indices of fixed variables */
    )
 {
    SCIP_VAR** vars;
+   SCIP_BDCHGIDX * currbdchgidx;
    SCIP_Real QUAD(slack);
    int i;
 
@@ -1983,6 +2018,8 @@ SCIP_Real getSlackReason(
    assert(vars != NULL);
 
    QUAD_ASSIGN(slack, 0.0);
+   currbdchgidx = SCIPbdchginfoGetIdx(currbdchginfo);
+   SCIPsetDebugMsg(set, "Calculating slack for reason row at depth %d position %d \n", SCIPbdchginfoGetDepth(currbdchginfo), SCIPbdchginfoGetPos(currbdchginfo));
 
    for( i = 0; i < reasonrow->nnz; i++ )
    {
@@ -2023,10 +2060,15 @@ SCIP_Real getSlackReason(
          SCIPquadprecProdDD(delta, coef, bound);
       }
       SCIPquadprecSumQQ(slack, slack, delta);
-      // SCIPsetDebugMsg(set, "var: %s, coef: %f, bound: %f \n", SCIPvarGetName(vars[v]), coef, bound);
+#ifdef SCIP_MORE_DEBUG
+      SCIPsetDebugMsg(set, "var: %s, coef: %f, bound: %f \n", SCIPvarGetName(vars[v]), coef, bound);
+      SCIPsetDebugMsg(set, "slack: %f \n",QUAD_TO_DBL(slack) );
+#endif
    }
    SCIPquadprecSumQD(slack, slack, -reasonrow->lhs);
+#ifdef SCIP_MORE_DEBUG
    SCIPsetDebugMsg(set, "Reason slack: %f \n", QUAD_TO_DBL(slack));
+#endif
    return QUAD_TO_DBL(slack);
 }
 
@@ -2941,13 +2983,13 @@ SCIP_RETCODE resolveClauses(
       conflictrow = conflict->conflictrow;
       reasonrow = conflict->reasonrow;
 
-      assert(SCIPsetIsRelEQ(set, getSlackConflict(set, prob, conflictrow, SCIPbdchginfoGetIdx(currbdchginfo), fixbounds, fixinds), -1.0));
+      assert(SCIPsetIsRelEQ(set, getSlackConflict(set, prob, conflictrow, currbdchginfo, fixbounds, fixinds), -1.0));
       conflictrow->slack = -1.0;
       /* get reason clause by resolving propagation */
       SCIP_CALL( getClauseReasonRow(conflict, blkmem,  set, currbdchginfo, SCIPbdchginfoGetRelaxedBound(currbdchginfo), 0, &successclause) );
       if (successclause)
       {
-         assert(SCIPsetIsRelEQ(set, getSlackReason(set, prob, reasonrow, SCIPbdchginfoGetIdx(currbdchginfo), fixbounds, fixinds), 0.0));
+         assert(SCIPsetIsRelEQ(set, getSlackReason(set, prob, reasonrow, currbdchginfo, fixbounds, fixinds), 0.0));
          reasonrow->slack = 0.0;
          SCIP_CALL( linearCombConflictReason(set, conflictrow, reasonrow, 1.0) );
          conflictRowRemoveZeroVars(conflictrow, set);
@@ -3012,7 +3054,7 @@ SCIP_RETCODE StrongerDivisionBasedReduction(
       return SCIP_OKAY;
    }
 
-   resolutionslack = getSlackConflict(set, prob, conflict->resolvedconflictrow, currbdchgidx, fixbounds, fixinds);
+   resolutionslack = getSlackConflict(set, prob, conflict->resolvedconflictrow, currbdchginfo, fixbounds, fixinds);
 
    if( SCIPsetIsGE(set, resolutionslack, 0.0) )
    {
@@ -3026,7 +3068,7 @@ SCIP_RETCODE StrongerDivisionBasedReduction(
          SCIPsetDebugMsg(set, "Apply Complemented 0-1 MIR since slack of resolved row: %f >= 0 \n",resolutionslack);
          SCIP_CALL( StrongerMirLhs(set, prob, reasonrow, currbdchgidx, idxinreason, coefinreason) );
       }
-      assert(SCIPsetIsZero(set, getSlackReason(set, prob, reasonrow, SCIPbdchginfoGetIdx(currbdchginfo), fixbounds, fixinds)));
+      assert(SCIPsetIsZero(set, getSlackReason(set, prob, reasonrow, currbdchginfo, fixbounds, fixinds)));
       idxinreason = getVarIdxInReasonRow(reasonrow, residx);
       assert(idxinreason >= 0);
 
@@ -3243,6 +3285,7 @@ SCIP_RETCODE getReasonRow(
          if(!SCIPconsIsGlobal(reasoncon))
          {
             SCIPsetDebugMsg(set, "Reason constraint is not global \n");
+            conflict->ncorrectaborts++;
             return SCIP_OKAY;
          }
 
@@ -3255,7 +3298,7 @@ SCIP_RETCODE getReasonRow(
                SCIP_CALL( getClauseReasonRow(conflict, blkmem,  set, currbdchginfo, SCIPbdchginfoGetRelaxedBound(currbdchginfo), validdepth, success) );
                if (*success)
                {
-                  assert(SCIPsetIsZero(set, getSlackReason(set, prob, reasonrow, SCIPbdchginfoGetIdx(currbdchginfo), fixbounds, fixinds)));
+                  assert(SCIPsetIsZero(set, getSlackReason(set, prob, reasonrow, currbdchginfo, fixbounds, fixinds)));
                   reasonrow->slack = 0.0;
                   return SCIP_OKAY;
                }
@@ -3280,13 +3323,13 @@ SCIP_RETCODE getReasonRow(
             SCIP_CALL( getClauseReasonRow(conflict, blkmem, set, currbdchginfo, SCIPbdchginfoGetRelaxedBound(currbdchginfo), validdepth, success) );
             if (*success)
             {
-               assert(SCIPsetIsZero(set, getSlackReason(set, prob, reasonrow, SCIPbdchginfoGetIdx(currbdchginfo), fixbounds, fixinds)));
+               assert(SCIPsetIsZero(set, getSlackReason(set, prob, reasonrow, currbdchginfo, fixbounds, fixinds)));
                reasonrow->slack = 0.0;
             }
             return SCIP_OKAY;
 
          }
-         reasonrow->slack = getSlackReason(set, prob, reasonrow, SCIPbdchginfoGetIdx(currbdchginfo), fixbounds, fixinds);
+         reasonrow->slack = getSlackReason(set, prob, reasonrow, currbdchginfo, fixbounds, fixinds);
 
          /* If the slack is greater than 0, we check that the reason actually
          propagated the variable we resolve. It propagates a variable x_i if
@@ -3313,7 +3356,7 @@ SCIP_RETCODE getReasonRow(
                SCIP_CALL( getClauseReasonRow(conflict, blkmem, set, currbdchginfo, SCIPbdchginfoGetRelaxedBound(currbdchginfo), validdepth, success) );
                if (*success)
                {
-                  assert(SCIPsetIsZero(set, getSlackReason(set, prob, reasonrow, currbdchgidx, fixbounds, fixinds)));
+                  assert(SCIPsetIsZero(set, getSlackReason(set, prob, reasonrow, currbdchginfo, fixbounds, fixinds)));
                   reasonrow->slack = 0.0;
                }
                return SCIP_OKAY;
@@ -3325,7 +3368,7 @@ SCIP_RETCODE getReasonRow(
       SCIP_CALL( getClauseReasonRow(conflict, blkmem,  set, currbdchginfo, SCIPbdchginfoGetRelaxedBound(currbdchginfo), validdepth, success) );
       if (*success)
       {
-         assert(SCIPsetIsZero(set, getSlackReason(set, prob, reasonrow, SCIPbdchginfoGetIdx(currbdchginfo), fixbounds, fixinds)));
+         assert(SCIPsetIsZero(set, getSlackReason(set, prob, reasonrow, currbdchginfo, fixbounds, fixinds)));
          reasonrow->slack = 0.0;
       }
       return SCIP_OKAY;
@@ -3394,7 +3437,7 @@ SCIP_RETCODE getConflictRow(
       }
 
       /* set the slack */
-      conflictrow->slack = getSlackConflict(set, prob, conflictrow, currbdchgidx, NULL, NULL);
+      conflictrow->slack = getSlackConflict(set, prob, conflictrow, currbdchginfo, NULL, NULL);
    }
 
    /** if no row exists create the conflict row (if possible) from the bound changes that lead to infeasibility
@@ -3424,7 +3467,7 @@ SCIP_RETCODE getConflictRow(
          SCIPsetDebugMsg(set, "Initial conflict clause could not be retrieved \n");
          return SCIP_OKAY;
       }
-      conflictrow->slack = getSlackConflict(set, prob, conflictrow, currbdchgidx, NULL, NULL);
+      conflictrow->slack = getSlackConflict(set, prob, conflictrow, currbdchginfo, NULL, NULL);
       assert( conflictrow->slack == -1.0 );
    }
 
@@ -3480,7 +3523,7 @@ SCIP_RETCODE fixBoundChangeWithoutResolving(
          SCIP_BOUNDTYPE boundtype;
          SCIP_BOUNDCHGTYPE bdchgtype;
 
-         assert(SCIPsetIsLT(set, getSlackConflict(set, prob, conflict->conflictrow, SCIPbdchginfoGetIdx(*currbdchginfo), fixbounds, fixinds), 0.0));
+         assert(SCIPsetIsLT(set, getSlackConflict(set, prob, conflict->conflictrow, *currbdchginfo, fixbounds, fixinds), 0.0));
 
          /* if a bound for the variable has already been ignored then abort */
          if( fixinds[SCIPvarGetProbindex(SCIPbdchginfoGetVar(*currbdchginfo))] != 0 )
@@ -3498,7 +3541,7 @@ SCIP_RETCODE fixBoundChangeWithoutResolving(
                SCIPbdchginfoGetNewbound(*currbdchginfo));
 
 
-         if (nressteps == 0 || set->conf_fixandcontinue)
+         if (nressteps == 0)
             SCIP_CALL( updateBdchgQueue(set, prob, conflict->conflictrow, SCIPbdchginfoGetIdx(*currbdchginfo)) );
 
          /* extract latest bound change from queue */
@@ -3518,10 +3561,8 @@ SCIP_RETCODE fixBoundChangeWithoutResolving(
             conflict->ncorrectaborts++;
             return SCIP_OKAY;
          }
-
-         SCIPdebug(printConflictRow(conflict->conflictrow, set, prob, 6));
-
-         assert(SCIPsetIsLT(set, getSlackConflict(set, prob, conflict->conflictrow, SCIPbdchginfoGetIdx(*currbdchginfo), fixbounds, fixinds), 0.0));
+         /* */
+         assert(SCIPsetIsLT(set, getSlackConflict(set, prob, conflict->conflictrow, *currbdchginfo, fixbounds, fixinds), 0.0));
 
       }
       else
@@ -3699,7 +3740,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
    {
       SCIP_Real newslack;
        /* The new slack should always be less or equal to the old slack */
-      newslack = getSlackConflict(set, transprob, conflictrow, bdchgidx, NULL, NULL);
+      newslack = getSlackConflict(set, transprob, conflictrow, bdchginfo, NULL, NULL);
       assert(SCIPsetIsLE(set, newslack, conflictrow->slack + EPS));
       conflictrow->slack = newslack;
    }
@@ -3852,7 +3893,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
          {
             SCIPsetDebugMsg(set, "Number of nonzeros in conflict is larger than maxsize %d > %d\n",
                            conflictrow->nnz, maxsize);
-            SCIPsetDebugMsg(set, "Slack of resolved row before weakening: %f \n", getSlackConflict(set, transprob, conflictrow, bdchgidx, fixbounds, fixinds));
+            SCIPsetDebugMsg(set, "Slack of resolved row before weakening: %f \n", getSlackConflict(set, transprob, conflictrow, bdchginfo, fixbounds, fixinds));
             weakenConflictRow(conflictrow, set, transprob, bdchgidx, fixbounds, fixinds);
             if(conflictrow->nnz > maxsize)
             {
@@ -3862,7 +3903,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
             }
          }
 
-         conflictrow->slack = getSlackConflict(set, transprob, conflictrow, bdchgidx, fixbounds, fixinds);
+         conflictrow->slack = getSlackConflict(set, transprob, conflictrow, bdchginfo, fixbounds, fixinds);
 
          SCIPsetDebugMsg(set, "Slack of resolved row: %f \n", conflictrow->slack);
 
@@ -3903,7 +3944,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
 
             /* The new slack should always be less or equal to the old slack */
             previousslack = conflictrow->slack;
-            newslack = getSlackConflict(set, transprob, conflictrow, bdchgidx, fixbounds, fixinds);
+            newslack = getSlackConflict(set, transprob, conflictrow, bdchginfo, fixbounds, fixinds);
             conflictrow->slack = newslack;
             SCIPsetDebugMsg(set, "Tightened %d coefficients in the resolved constraint, old slack %f, new slack %f \n", nchgcoefs, previousslack, newslack);
             assert(SCIPsetIsLE(set, newslack, previousslack + EPS));
@@ -3925,7 +3966,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
 
 
          /* todo think if we need to clean up the queue */
-
+         SCIPdebug(printConflictRow(conflict->conflictrow, set, transprob, 2));
          SCIP_CALL( updateBdchgQueue(set, transprob, conflictrow, bdchgidx) );
 
          /* get the next bound change */
@@ -4011,7 +4052,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
          SCIP_Bool success;
          getConflictClause(conflict, blkmem, transprob, set, bdchginfo, &success, fixbounds, fixinds);
          if ( success &&  conflict->conflictrows[0]->nnz > conflict->conflictrow->nnz )
-         assert(SCIPsetIsRelEQ(set, getSlackConflict(set, transprob, conflict->conflictrow, SCIPbdchginfoGetIdx(bdchginfo), fixbounds, fixinds), -1.0));
+         assert(SCIPsetIsRelEQ(set, getSlackConflict(set, transprob, conflict->conflictrow, bdchginfo, fixbounds, fixinds), -1.0));
          SCIP_CALL( SCIPconflictAddConflictCons(conflict, blkmem, set, stat, transprob, origprob, tree, reopt,
                                           lp, branchcand, eventqueue, cliquetable, conflict->conflictrow, &success) );
          if( success )
