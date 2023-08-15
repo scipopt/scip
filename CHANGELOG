@@ -8,6 +8,7 @@ Fixed bugs
 
 - ensure that delayed cutpool separation does not happen if enough cuts have been found already
 - fixed that a Gurobi or Mosek interface (LPI) could not be freed from a thread different than the one it was created in, which lead to problems when, e.g., using the concurrent optimizer
+- remove integrality check for implicit integral variables in cons_integral.c
 
 @section RN804 SCIP 8.0.4
 *************************
