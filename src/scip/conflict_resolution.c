@@ -25,6 +25,7 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 // #define SCIP_DEBUG
+// #define SCIP_MORE_DEBUG
 
 #include "blockmemshell/memory.h"
 #include "scip/conflict_resolution.h"
@@ -875,6 +876,8 @@ SCIP_RETCODE StrongerMirLhs(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_REASONROW*       reasonrow,          /**< reason row */
+   SCIP_Real*            fixbounds,          /**< dense array of fixed bounds */
+   int*                  fixinds,             /**< dense array of indices of fixed variables */
    SCIP_BDCHGIDX*        currbdchgidx,       /**< current bound change index */
    int                   idxreason,          /**< index in the reason */
    SCIP_Real             divisor             /**< the divisor of the row */
@@ -935,7 +938,7 @@ SCIP_RETCODE StrongerMirLhs(
      reasonrow->vals[idxreason] = 1.0;
    }
 
-   /* compute the delta for the left hand side after complementation if order to apply MIR
+   /* compute the delta for the left hand side after complementation in order to apply MIR
     * In a second loop set the new coefficients for the other variables and compute the lhs delta after complementation */
    for( int i = 0; i < reasonrow->nnz; ++i )
    {
@@ -950,8 +953,9 @@ SCIP_RETCODE StrongerMirLhs(
 
       assert(SCIPvarIsBinary(currentvar));
 
-      if ( (coef > 0.0 && SCIPgetVarUbAtIndex(set->scip, currentvar, currbdchgidx, TRUE) > 0.5) ||
-          (coef < 0.0 && SCIPgetVarLbAtIndex(set->scip, currentvar, currbdchgidx, TRUE) > 0.5))
+
+      if ( (coef > 0.0 && SCIPgetVarUbAtIndex(set->scip, currentvar, currbdchgidx, TRUE) > 0.5 && fixinds[reasonrow->inds[i]] != 1) ||
+          (coef < 0.0 && SCIPgetVarLbAtIndex(set->scip, currentvar, currbdchgidx, TRUE) < 0.5 && fixinds[reasonrow->inds[i]] != -1) )
       {
         deltaoldlhs += -coef;
       }
@@ -975,8 +979,8 @@ SCIP_RETCODE StrongerMirLhs(
       fraccoef = coef - SCIPsetFloor(set, coef);
       currentvar = vars[reasonrow->inds[i]];
 
-      if ( (coef > 0.0 && SCIPgetVarUbAtIndex(set->scip, currentvar, currbdchgidx, TRUE) > 0.5) ||
-          (coef < 0.0 && SCIPgetVarLbAtIndex(set->scip, currentvar, currbdchgidx, TRUE) > 0.5))
+      if ( (coef > 0.0 && SCIPgetVarUbAtIndex(set->scip, currentvar, currbdchgidx, TRUE) > 0.5 && fixinds[reasonrow->inds[i]] != 1) ||
+          (coef < 0.0 && SCIPgetVarLbAtIndex(set->scip, currentvar, currbdchgidx, TRUE) < 0.5 && fixinds[reasonrow->inds[i]] != -1) )
       {
         if ((1.0 - fraccoef) >= fraclhs)
         {
@@ -1021,6 +1025,8 @@ SCIP_RETCODE StrongerChvatalGomoryLhs(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_REASONROW*       reasonrow,          /**< reason row */
+   SCIP_Real*            fixbounds,          /**< dense array of fixed bounds */
+   int*                  fixinds,             /**< dense array of indices of fixed variables */
    SCIP_BDCHGIDX*        currbdchgidx,       /**< current bound change index */
    int                   idxreason,          /**< index in the reason */
    SCIP_Real             divisor             /**< the divisor of the row */
@@ -1094,8 +1100,8 @@ SCIP_RETCODE StrongerChvatalGomoryLhs(
 
       assert(SCIPvarIsBinary(currentvar));
 
-      if ( (coef > 0.0 && SCIPgetVarUbAtIndex(set->scip, currentvar, currbdchgidx, TRUE) > 0.5) ||
-          (coef < 0.0 && SCIPgetVarLbAtIndex(set->scip, currentvar, currbdchgidx, TRUE) > 0.5))
+      if ( (coef > 0.0 && SCIPgetVarUbAtIndex(set->scip, currentvar, currbdchgidx, TRUE) > 0.5 && fixinds[reasonrow->inds[i]] != 1) ||
+          (coef < 0.0 && SCIPgetVarLbAtIndex(set->scip, currentvar, currbdchgidx, TRUE) < 0.5 && fixinds[reasonrow->inds[i]] != -1) )
       {
         newcoef = -SCIPsetCeil(set, -coef / divisor);
 
@@ -1715,11 +1721,10 @@ void conflictRowClear(
    int i;
    assert(conflictrow != NULL);
 
-   if(conflictrow->vals == NULL || conflictrow->nvars != nvars)
-   {
+   if(conflictrow->vals != NULL && conflictrow->nvars != nvars)
       BMSfreeBlockMemoryArrayNull(blkmem, &conflictrow->vals, conflictrow->nvars);
+   if(conflictrow->vals == NULL)
       BMSallocBlockMemoryArray(blkmem, &conflictrow->vals, nvars );
-   }
 
    for(i = 0 ; i < nvars; ++i)
       conflictrow->vals[i] = 0.0;
@@ -1871,6 +1876,7 @@ SCIP_RETCODE weakenConflictRow(
 
          ub = SCIPgetVarUbAtIndex(set->scip, vartoweaken, currbdchgidx, TRUE);
 
+         /* refactortodo: Since coefficients of variables may change sign we may be able to weaken also if they are fixed */
          if( SCIPsetIsEQ(set, ub, SCIPvarGetUbGlobal(vartoweaken)) && (fixinds == NULL || fixinds[idx] == 0) )
          {
             weakenVarConflictRow(conflictrow, set, vartoweaken, i);
@@ -3063,12 +3069,12 @@ SCIP_RETCODE StrongerDivisionBasedReduction(
       if (set->conf_reductiontechnique == 's')
       {
          SCIPsetDebugMsg(set, "Apply Complemented 0-1 Chvatal-Gomory since slack of resolved row: %f >= 0 \n",resolutionslack);
-         SCIP_CALL( StrongerChvatalGomoryLhs(set, prob, reasonrow, currbdchgidx, idxinreason, coefinreason) );
+         SCIP_CALL( StrongerChvatalGomoryLhs(set, prob, reasonrow, fixbounds, fixinds, currbdchgidx, idxinreason, coefinreason) );
       }
       else if(set->conf_reductiontechnique == 'r')
       {
          SCIPsetDebugMsg(set, "Apply Complemented 0-1 MIR since slack of resolved row: %f >= 0 \n",resolutionslack);
-         SCIP_CALL( StrongerMirLhs(set, prob, reasonrow, currbdchgidx, idxinreason, coefinreason) );
+         SCIP_CALL( StrongerMirLhs(set, prob, reasonrow, fixbounds, fixinds, currbdchgidx, idxinreason, coefinreason) );
       }
       assert(SCIPsetIsZero(set, getSlackReason(set, prob, reasonrow, currbdchginfo, fixbounds, fixinds)));
       idxinreason = getVarIdxInReasonRow(reasonrow, residx);
