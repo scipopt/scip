@@ -953,9 +953,9 @@ SCIP_RETCODE StrongerMirLhs(
 
       assert(SCIPvarIsBinary(currentvar));
 
-
-      if ( (coef > 0.0 && SCIPgetVarUbAtIndex(set->scip, currentvar, currbdchgidx, TRUE) > 0.5 && fixinds[reasonrow->inds[i]] != 1) ||
-          (coef < 0.0 && SCIPgetVarLbAtIndex(set->scip, currentvar, currbdchgidx, TRUE) < 0.5 && fixinds[reasonrow->inds[i]] != -1) )
+      /* refactortodo carefully check this */
+      if ( (coef > 0.0 && (SCIPgetVarUbAtIndex(set->scip, currentvar, currbdchgidx, TRUE) > 0.5 && fixinds[reasonrow->inds[i]] != 1) ) ||
+          (coef < 0.0 && (SCIPgetVarLbAtIndex(set->scip, currentvar, currbdchgidx, TRUE) > 0.5 || fixinds[reasonrow->inds[i]] == -1 )) )
       {
         deltaoldlhs += -coef;
       }
@@ -979,8 +979,8 @@ SCIP_RETCODE StrongerMirLhs(
       fraccoef = coef - SCIPsetFloor(set, coef);
       currentvar = vars[reasonrow->inds[i]];
 
-      if ( (coef > 0.0 && SCIPgetVarUbAtIndex(set->scip, currentvar, currbdchgidx, TRUE) > 0.5 && fixinds[reasonrow->inds[i]] != 1) ||
-          (coef < 0.0 && SCIPgetVarLbAtIndex(set->scip, currentvar, currbdchgidx, TRUE) < 0.5 && fixinds[reasonrow->inds[i]] != -1) )
+      if ( (coef > 0.0 && (SCIPgetVarUbAtIndex(set->scip, currentvar, currbdchgidx, TRUE) > 0.5 && fixinds[reasonrow->inds[i]] != 1) ) ||
+          (coef < 0.0 && (SCIPgetVarLbAtIndex(set->scip, currentvar, currbdchgidx, TRUE) > 0.5 || fixinds[reasonrow->inds[i]] == -1 )) )
       {
         if ((1.0 - fraccoef) >= fraclhs)
         {
@@ -1100,8 +1100,8 @@ SCIP_RETCODE StrongerChvatalGomoryLhs(
 
       assert(SCIPvarIsBinary(currentvar));
 
-      if ( (coef > 0.0 && SCIPgetVarUbAtIndex(set->scip, currentvar, currbdchgidx, TRUE) > 0.5 && fixinds[reasonrow->inds[i]] != 1) ||
-          (coef < 0.0 && SCIPgetVarLbAtIndex(set->scip, currentvar, currbdchgidx, TRUE) < 0.5 && fixinds[reasonrow->inds[i]] != -1) )
+      if ( (coef > 0.0 && (SCIPgetVarUbAtIndex(set->scip, currentvar, currbdchgidx, TRUE) > 0.5 && fixinds[reasonrow->inds[i]] != 1) ) ||
+          (coef < 0.0 && (SCIPgetVarLbAtIndex(set->scip, currentvar, currbdchgidx, TRUE) > 0.5 || fixinds[reasonrow->inds[i]] == -1 )) )
       {
         newcoef = -SCIPsetCeil(set, -coef / divisor);
 
