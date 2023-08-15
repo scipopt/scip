@@ -180,7 +180,6 @@ SCIP_DECL_CONSCHECK(consCheckIntegral)
 {  /*lint --e{715}*/
    SCIP_VAR** vars;
    SCIP_Real solval;
-   int nallinteger;
    int ninteger;
    int nbin;
    int nint;
@@ -216,31 +215,6 @@ SCIP_DECL_CONSCHECK(consCheckIntegral)
          if( printreason )
          {
             SCIPinfoMessage(scip, NULL, "violation: integrality condition of variable <%s> = %.15g\n",
-               SCIPvarGetName(vars[v]), solval);
-         }
-         if( !completely )
-            break;
-      }
-   }
-
-   nallinteger = ninteger + nimpl;
-   for( v = ninteger; v < nallinteger; ++v )
-   {
-      /* if a variable has been added for relaxation purposes, i.e., to formulate an (implicit) extended formulation,
-       * then there is no constraint that ensures that it will take an integer value
-       * since such variables have no counterpart in the original problem, it is ok if they violate an implicit integrality flag
-       */
-      if( SCIPvarIsRelaxationOnly(vars[v]) )
-         continue;
-
-      solval = SCIPgetSolVal(scip, sol, vars[v]);
-      if( !SCIPisFeasIntegral(scip, solval) )
-      {
-         *result = SCIP_INFEASIBLE;
-
-         if( printreason )
-         {
-            SCIPinfoMessage(scip, NULL, "violation: integrality condition of implicit integral variable <%s> = %.15g\n",
                SCIPvarGetName(vars[v]), solval);
          }
          if( !completely )
