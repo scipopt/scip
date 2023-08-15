@@ -504,25 +504,12 @@ set_tests_properties(scip-build
                         RESOURCE_LOCK libscip
                     )
 
-#
-# macro to split an instance into its relevant information
-# - path
-# - optval
-# - basename
-#
 macro(split_instance instance)
     list(GET instance 0 path)
     list(GET instance 1 optval)
     get_filename_component(basename ${path} NAME)
 endmacro(split_instance)
 
-#
-# macro to split a decomposition instance into its relevant information
-# - instpath
-# - decpath
-# - optval
-# - basename
-#
 macro(split_decompinstance instance)
     list(GET instance 0 instpath)
     list(GET instance 1 decpath)
@@ -530,13 +517,6 @@ macro(split_decompinstance instance)
     get_filename_component(basename ${instpath} NAME)
 endmacro(split_decompinstance)
 
-#
-# macro to split a pair into its relevant information
-# - path
-# - optval
-# - setting
-# - basename
-#
 macro(split_pair pair)
     list(GET pair 0 path)
     list(GET pair 1 optval)
