@@ -6739,7 +6739,8 @@ SCIP_RETCODE tryAddOrbitopesDynamic(
 
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "orbitope_full_comp_%d", c);
          SCIP_CALL( SCIPorbitopalReductionAddOrbitope(scip, propdata->orbitopalreddata,
-            orbitopevarmatrix, nrows, ncols, &success) );
+               SCIP_ROWORDERING_BRANCHING, SCIP_COLUMNORDERING_DEFAULT,
+               orbitopevarmatrix, nrows, ncols, &success) );
 
          if ( success )
          {

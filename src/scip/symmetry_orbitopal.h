@@ -47,6 +47,7 @@ extern "C" {
 /** variants for orbitope column ordering */
 enum SCIP_ColumnOrdering
 {
+   SCIP_COLUMNORDERING_DEFAULT     = -1,     /**< use default column order as encoded in SCIP_ORBITOPALREDDATA */
    SCIP_COLUMNORDERING_NONE        = 0,      /**< do not order the columns */
    SCIP_COLUMNORDERING_FIRST       = 1,      /**< choose first possible column */
    SCIP_COLUMNORDERING_LAST        = 2,      /**< choose last possible column */
@@ -54,6 +55,14 @@ enum SCIP_ColumnOrdering
    SCIP_COLUMNORDERING_MEDIAN      = 4       /**< choose median column */
 };
 typedef enum SCIP_ColumnOrdering SCIP_COLUMNORDERING; /**< variants for orbitope column ordering*/
+
+/** variants for orbitope row ordering */
+enum SCIP_RowOrdering
+{
+   SCIP_ROWORDERING_NONE           = 0,      /**< do not order the rows */
+   SCIP_ROWORDERING_BRANCHING      = 1       /**< choose rows based on branching variables */
+};
+typedef enum SCIP_RowOrdering SCIP_ROWORDERING; /**< variants for orbitope row ordering*/
 
 
 /** data for orbitopal reduction */
@@ -95,12 +104,13 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPorbitopalReductionAddOrbitope(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ORBITOPALREDDATA* orbireddata,       /**< orbitopal reduction data structure */
+   SCIP_ROWORDERING      rowordering,        /**< specifies how rows of orbitope are ordered */
+   SCIP_COLUMNORDERING   colordering,        /**< specifies how columnss of orbitope are ordered */
    SCIP_VAR**            vars,               /**< matrix of variables on which the symmetry acts */
    int                   nrows,              /**< number of rows */
    int                   ncols,              /**< number of columns */
    SCIP_Bool*            success             /**< to store whether the component is successfully added */
    );
-
 
 /** resets orbitopal reduction data structure (clears all orbitopes) */
 SCIP_EXPORT
