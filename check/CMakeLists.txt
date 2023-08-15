@@ -462,6 +462,13 @@ set(instances_Or
     )
 
 #
+# Pairs of instances and settings
+#
+set(pairs_Issue
+    "instances/Issue/3589.cip\;-1\;default"
+    )
+
+#
 # available reader file extensions for SCIP readers
 #
 set(scip_reader_extensions
@@ -509,12 +516,33 @@ macro(split_instance instance)
     get_filename_component(basename ${path} NAME)
 endmacro(split_instance)
 
+#
+# macro to split a decomposition instance into its relevant information
+# - instpath
+# - decpath
+# - optval
+# - basename
+#
 macro(split_decompinstance instance)
     list(GET instance 0 instpath)
     list(GET instance 1 decpath)
     list(GET instance 2 optval)
     get_filename_component(basename ${instpath} NAME)
 endmacro(split_decompinstance)
+
+#
+# macro to split a pair into its relevant information
+# - path
+# - optval
+# - setting
+# - basename
+#
+macro(split_pair pair)
+    list(GET pair 0 path)
+    list(GET pair 1 optval)
+    list(GET pair 2 setting)
+    get_filename_component(basename ${path} NAME)
+endmacro(split_pair)
 
 macro(add_instancetests instances settings prefix)
 #
@@ -580,6 +608,28 @@ if((${TEST_BENDERSQP} AND (NOT ${LPS} STREQUAL "msk" )) OR (NOT ${prefix} STREQU
 endif()
 endmacro(add_decompinstancetests)
 
+macro(add_pairtests pairs prefix)
+#
+# loop over pairs
+#
+    foreach(pair ${${pairs}})
+        split_pair(pair)
+        #
+        # add the test
+        #
+        add_test(NAME ${prefix}-${setting}-${basename}
+                COMMAND $<TARGET_FILE:scip> -f ${PROJECT_SOURCE_DIR}/check/${path} -s ${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set -o ${optval} ${optval}
+                )
+        set_tests_properties(${prefix}-${setting}-${basename}
+                            PROPERTIES
+                                PASS_REGULAR_EXPRESSION "Validation         : Success"
+                                FAIL_REGULAR_EXPRESSION ERROR
+                                FAIL_REGULAR_EXPRESSION "WARNING: unknown parameter;user parameter file <${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set> not found"
+                                DEPENDS scip-build
+                            )
+    endforeach(pair)
+endmacro(add_pairtests)
+
 add_instancetests(instances_CP settings_default "CP")
 add_instancetests(instances_Indicator settings_Indicator "Indicator")
 add_instancetests(instances_MIP settings_MIP "MIP")
@@ -604,6 +654,7 @@ add_instancetests(instances_Or settings_Or "Or")
 add_instancetests(instances_BendersLB settings_BendersLB "BendersLB")
 add_decompinstancetests(instances_BendersQP settings_BendersQP "BendersQP")
 add_decompinstancetests(instances_Decomp settings_Decomp "Decomp")
+add_pairtests(pairs_Issue "Issue")
 
 #
 # test writing and reading solutions
