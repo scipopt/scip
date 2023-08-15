@@ -5753,41 +5753,57 @@ SCIP_RETCODE handleOrbitope(
       SCIP_CONS* cons;
       int i;
       int j;
+      int nbinrows = 0;
 
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "orbitope_component_%d", id);
 
       SCIP_CALL( SCIPallocBufferArray(scip, &orbitopematrix, nrows) );
       for (i = 0; i < nrows; ++i)
       {
-         SCIP_CALL( SCIPallocBufferArray(scip, &orbitopematrix[i], ncols) );
+         /* skip rows without binary variables */
+         if ( ! SCIPvarIsBinary(propdata->permvars[varidxmatrix[i][0]]) )
+            continue;
+
+         SCIP_CALL( SCIPallocBufferArray(scip, &orbitopematrix[nbinrows], ncols) );
          for (j = 0; j < ncols; ++j)
-            orbitopematrix[i][j] = propdata->permvars[varidxmatrix[i][j]];
+         {
+            assert( SCIPvarIsBinary(propdata->permvars[varidxmatrix[i][j]]) );
+            orbitopematrix[nbinrows][j] = propdata->permvars[varidxmatrix[i][j]];
+         }
+         ++nbinrows;
       }
 
-      SCIP_CALL( SCIPcreateConsOrbitope(scip, &cons, name, orbitopematrix, SCIP_ORBITOPETYPE_FULL,
-            nrows, ncols, propdata->usedynamicprop /* @todo disable */, FALSE, FALSE, FALSE,
-            propdata->conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+      if ( nbinrows > 0 )
+      {
+         SCIP_CALL( SCIPcreateConsOrbitope(scip, &cons, name, orbitopematrix, SCIP_ORBITOPETYPE_FULL,
+               nbinrows, ncols, propdata->usedynamicprop /* @todo disable */, FALSE, FALSE, FALSE,
+               propdata->conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-      SCIP_CALL( SCIPaddCons(scip, cons) );
+         SCIP_CALL( SCIPaddCons(scip, cons) );
 
-      /* do not release constraint here - will be done later */
-      SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, &propdata->genorbconss,
-            &propdata->genorbconsssize, propdata->ngenorbconss + 1) );
-      propdata->genorbconss[propdata->ngenorbconss++] = cons;
-      ++propdata->norbitopes;
+         /* do not release constraint here - will be done later */
+         SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, &propdata->genorbconss,
+               &propdata->genorbconsssize, propdata->ngenorbconss + 1) );
+         propdata->genorbconss[propdata->ngenorbconss++] = cons;
+         ++propdata->norbitopes;
 
-      *success = TRUE;
+         *success = TRUE;
+      }
 
-      for (i = nrows - 1; i >= 0; --i)
+      for (i = nbinrows - 1; i >= 0; --i)
       {
          SCIPfreeBufferArray(scip, &orbitopematrix[i]);
       }
+      SCIPfreeBufferArray(scip, &orbitopematrix);
    }
 
    return SCIP_OKAY;
 }
 
-/** handles double lex matrix by adding static orbitope constraints */
+/** handles binary double lex matrix by adding static orbitope constraints
+ *
+ * @todo Extend method to general variable types and dynamic variable orders.
+ */
 static
 SCIP_RETCODE handleDoublelLexMatrix(
    SCIP*                 scip,               /**< SCIP instance */
@@ -5811,6 +5827,7 @@ SCIP_RETCODE handleDoublelLexMatrix(
    int p;
    int j;
    int col;
+   int nbinrows;
 
    assert( scip != NULL );
    assert( propdata != NULL );
@@ -5837,37 +5854,61 @@ SCIP_RETCODE handleDoublelLexMatrix(
    /* add orbitopes corresponding to column blocks of doublelexmatrix */
    for (p = 0; p < ncolblocks; ++p)
    {
+      nbinrows = 0;
       for (i = 0; i < nrows; ++i)
       {
+         /* skip rows that do not contain binary variables */
+         if ( ! SCIPvarIsBinary(propdata->permvars[varidxmatrix[i][colsbegin[p]]]) )
+            continue;
+
          for (col = 0, j = colsbegin[p]; j < colsbegin[p + 1]; ++j, ++col)
-            orbitopematrix[i][col] = propdata->permvars[varidxmatrix[i][j]];
+         {
+            assert( SCIPvarIsBinary(propdata->permvars[varidxmatrix[i][j]]) );
+            orbitopematrix[nbinrows][col] = propdata->permvars[varidxmatrix[i][j]];
+         }
+         ++nbinrows;
       }
 
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "doublelex_cols_%d_%d", id, p);
-      SCIP_CALL( SCIPcreateConsOrbitope(scip, &cons, name, orbitopematrix, SCIP_ORBITOPETYPE_FULL,
-            nrows, colsbegin[p + 1] - colsbegin[p], FALSE, FALSE, TRUE, FALSE,
-            propdata->conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-      SCIP_CALL( SCIPaddCons(scip, cons) );
-      propdata->genorbconss[(propdata->ngenorbconss)++] = cons;
-      /* do not release constraint here - will be done later */
+      if ( nbinrows > 0 )
+      {
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "doublelex_cols_%d_%d", id, p);
+         SCIP_CALL( SCIPcreateConsOrbitope(scip, &cons, name, orbitopematrix, SCIP_ORBITOPETYPE_FULL,
+               nrows, colsbegin[p + 1] - colsbegin[p], FALSE, FALSE, TRUE, FALSE,
+               propdata->conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+         SCIP_CALL( SCIPaddCons(scip, cons) );
+         propdata->genorbconss[(propdata->ngenorbconss)++] = cons;
+         /* do not release constraint here - will be done later */
+      }
    }
 
    /* add orbitopes corresponding to row blocks of doublelexmatrix */
    for (p = 0; p < nrowblocks; ++p)
    {
+      nbinrows = 0;
       for (i = 0; i < ncols; ++i)
       {
+         /* skip rows that do not contain binary variables */
+         if ( ! SCIPvarIsBinary(propdata->permvars[varidxmatrix[rowsbegin[p]][i]]) )
+            continue;
+
          for (col = 0, j = rowsbegin[p]; j < rowsbegin[p + 1]; ++j, ++col)
-            orbitopematrix[i][col] = propdata->permvars[varidxmatrix[j][i]];
+         {
+            assert( SCIPvarIsBinary(propdata->permvars[varidxmatrix[j][i]]) );
+            orbitopematrix[nbinrows][col] = propdata->permvars[varidxmatrix[j][i]];
+         }
+         ++nbinrows;
       }
 
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "doublelex_rows_%d_%d", id, p);
-      SCIP_CALL( SCIPcreateConsOrbitope(scip, &cons, name, orbitopematrix, SCIP_ORBITOPETYPE_FULL,
-            ncols, rowsbegin[p + 1] - rowsbegin[p], FALSE, FALSE, TRUE, FALSE,
-            propdata->conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-      SCIP_CALL( SCIPaddCons(scip, cons) );
-      propdata->genorbconss[(propdata->ngenorbconss)++] = cons;
-      /* do not release constraint here - will be done later */
+      if ( nbinrows > 0 )
+      {
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "doublelex_rows_%d_%d", id, p);
+         SCIP_CALL( SCIPcreateConsOrbitope(scip, &cons, name, orbitopematrix, SCIP_ORBITOPETYPE_FULL,
+               ncols, rowsbegin[p + 1] - rowsbegin[p], FALSE, FALSE, TRUE, FALSE,
+               propdata->conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+         SCIP_CALL( SCIPaddCons(scip, cons) );
+         propdata->genorbconss[(propdata->ngenorbconss)++] = cons;
+         /* do not release constraint here - will be done later */
+      }
    }
 
    for (i = maxdim - 1; i >= 0; --i)
