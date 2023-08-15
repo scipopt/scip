@@ -1715,8 +1715,11 @@ void conflictRowClear(
    int i;
    assert(conflictrow != NULL);
 
-   if(conflictrow->vals == NULL)
+   if(conflictrow->vals == NULL || conflictrow->nvars != nvars)
+   {
+      BMSfreeBlockMemoryArrayNull(blkmem, &conflictrow->vals, conflictrow->nvars);
       BMSallocBlockMemoryArray(blkmem, &conflictrow->vals, nvars );
+   }
 
    for(i = 0 ; i < nvars; ++i)
       conflictrow->vals[i] = 0.0;
