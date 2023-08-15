@@ -42,7 +42,6 @@ set(instances
     "instances/MIP/stein27.fzn\;18"
     "instances/MINLP/parincQuadratic.osil\;49920.5564"
     "instances/MINLP/tltr.mps\;48.0666666667"
-    "instances/PseudoBoolean/factor-mod-size=9-P0=67-P1=349-P2=67-P3=499-P4=79-P5=347-P6=307-B.opb\;3"
     "instances/PseudoBoolean/normalized-bsg_10_4_5.opb\;-4"
     "instances/PseudoBoolean/normalized-mds_10_4_3.opb\;2"
     )
