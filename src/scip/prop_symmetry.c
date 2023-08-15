@@ -6060,7 +6060,10 @@ SCIP_RETCODE tryAddSymmetryHandlingMethodsComponent(
       SCIP_CALL( tryHandleSingleOrDoubleLexMatricesComponent(scip, propdata, detectsinglelex, cidx) );
    }
    SCIP_CALL( tryHandleSubgroups(scip, propdata, cidx) );
-   SCIP_CALL( addSSTConss(scip, propdata, useorbitalredorlexred, nchgbds, cidx) );
+   if ( ISSSTACTIVE(propdata->usesymmetry) )
+   {
+      SCIP_CALL( addSSTConss(scip, propdata, useorbitalredorlexred, nchgbds, cidx) );
+   }
    if ( useorbitalredorlexred )
    {
       SCIP_CALL( tryAddOrbitalRedLexRed(scip, propdata, cidx) );
