@@ -721,13 +721,14 @@ void SCIPdotWriteNode(
    FILE* file,               /**< file to write to */
    int nodeId,               /**< node ID */
    const char* label,        /**< node label */
+   const char* nodetype,     /**< type of the node, or NULL */
    const char* interiorColor,/**< interior color */
    const char* borderColor   /**< border color */
 )
 {
    assert(file != NULL);
 
-   fprintf(file, "\t%d [label=\"%s\", style=\"filled\", fillcolor=\"%s\", color=\"%s\"];\n", nodeId, label, interiorColor, borderColor);
+   fprintf(file, "\t%d [shape=\"%s\", label=\"%s\", style=\"filled\", fillcolor=\"%s\", color=\"%s\"];\n", nodeId, nodetype, label, interiorColor, borderColor);
 }
 
 /** adds an arc (edge) between two nodes in the dot graph */
