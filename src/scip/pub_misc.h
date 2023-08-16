@@ -285,8 +285,8 @@ void SCIPdotWriteNode(
 SCIP_EXPORT
 void SCIPdotWriteArc(
    FILE*                 file,               /**< file to write to */
-   unsigned int          source,             /**< source node id of the node */
-   unsigned int          target,             /**< target node id of the edge */
+   int                   source,             /**< source node id of the node */
+   int                   target,             /**< target node id of the edge */
    const char*           color               /**< color of the edge, or NULL */
 );
 
