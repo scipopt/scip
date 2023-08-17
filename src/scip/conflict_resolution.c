@@ -66,10 +66,9 @@
 
 #define EPS                       1e-06
 
-/* #define SCIP_CONFGRAPH */
-/* #define SCIP_CONFGRAPH_DOT */
+// #define SCIP_CONFGRAPH_DOT
 
-#if defined(SCIP_CONFGRAPH) || defined(SCIP_CONFGRAPH_DOT)
+#ifdef SCIP_CONFGRAPH_DOT
 /*
  * Output of Conflict Graph
  */
@@ -86,6 +85,7 @@ static const char* colors[] = {
       "#FFCCCC", /* conflict row */
       "#CCFFFF", /* reason row */
       "#CCFFCC",  /* reduced reason row */
+      "#F9EBEA",  /* resolved row row */
       "#3399FF",  /* current bound change */
       "#FF99FF"  /* next bound change */
 
@@ -94,6 +94,7 @@ typedef enum {
    CONFLICT_ROW,
    REASON_ROW,
    REDUCED_REASON_ROW,
+   RESOLVED_ROW,
    CURRENT_BOUND_CHANGE,
    NEXT_BOUND_CHANGE
 } Color;
@@ -176,11 +177,13 @@ void confgraphAddBdchg(
    int offset;
 
    offset = 0;
-   if (col == 3)
+   if (col == 4)
       offset = SCIPsnprintf(label, SCIP_MAXSTRLEN, "Bound to resolve:\n");
    else
-      assert(col == 4);
+   {
+      assert(col == 5);
       offset = SCIPsnprintf(label, SCIP_MAXSTRLEN, "Next bound in queue:\n");
+   }
 
    (void) SCIPsnprintf(label + offset, SCIP_MAXSTRLEN - offset, "x_%d %s %g\n[%d:%d] %s",
       SCIPvarGetProbindex(SCIPbdchginfoGetVar(bdchginfo)),
@@ -207,11 +210,14 @@ void confgraphAddRow(
    int i = 0;
 
 
-   if(col == 0)
+   if(col == 0 || col == 3)
    {
       SCIP_CONFLICTROW * conflictrow;
       conflictrow = conflict->conflictrow;
-      offset += SCIPsnprintf(label + offset, MAXLEN - offset, "Conflict Row: \n");
+      if (col == 0)
+         offset += SCIPsnprintf(label + offset, MAXLEN - offset, "Conflict Row: \n");
+      else
+         offset += SCIPsnprintf(label + offset, MAXLEN - offset, "Resolved Row: \n");
       for(i = 0; i < conflictrow->nnz; i++)
       {
          int v;
@@ -1921,6 +1927,32 @@ void SCIPreasonRowFree(
    (*reasonrow) = NULL;
 }
 
+static
+void freeConflictResources(
+   SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real*            cutcoefs,           /**< cut coefficients or NULL */
+   int*                  cutinds,            /**< cut indices or NULL */
+   SCIP_Real*            fixbounds,          /**< dense array of fixed bounds */
+   int*                  fixinds             /**< dense array of indices of fixed variables */
+   )
+{
+    if (set->conf_applycmirreason || set->conf_applycmir || set->conf_applysimplemir) {
+        SCIPsetFreeBufferArray(set, &cutinds);
+        SCIPsetFreeBufferArray(set, &cutcoefs);
+    }
+
+    SCIPsetFreeBufferArray(set, &fixinds);
+    SCIPsetFreeBufferArray(set, &fixbounds);
+
+    /* free all conflict rows */
+    for (int i = 0; i < conflict->nconflictrows; i++) {
+        SCIPconflictRowFree(&conflict->conflictrows[i], blkmem);
+    }
+    conflict->nconflictrows = 0;
+}
+
 /** resets the data structure of a conflict row */
 static
 void conflictRowClear(
@@ -3240,7 +3272,6 @@ SCIP_RETCODE StrongerDivisionBasedReduction(
    SCIP_Bool*            successresolution   /**< pointer to store whether the resolution was successful */
    )
 {
-   SCIP_Real resolutionslack;
    SCIP_REASONROW* reasonrow;
    SCIP_BDCHGIDX* currbdchgidx;
 
@@ -3273,31 +3304,29 @@ SCIP_RETCODE StrongerDivisionBasedReduction(
       return SCIP_OKAY;
    }
 
-   resolutionslack = getSlackConflict(set, prob, conflict->resolvedconflictrow, currbdchginfo, fixbounds, fixinds);
+   conflict->resolvedconflictrow->slack = getSlackConflict(set, prob, conflict->resolvedconflictrow, currbdchginfo, fixbounds, fixinds);
 
-   if( SCIPsetIsGE(set, resolutionslack, 0.0) )
+   if( SCIPsetIsGE(set, conflict->resolvedconflictrow->slack, 0.0) )
    {
       if (set->conf_reductiontechnique == 's')
       {
-         SCIPsetDebugMsg(set, "Apply Complemented 0-1 Chvatal-Gomory since slack of resolved row: %f >= 0 \n",resolutionslack);
+         SCIPsetDebugMsg(set, "Apply Complemented 0-1 Chvatal-Gomory since slack of resolved row: %f >= 0 \n", conflict->resolvedconflictrow->slack);
          SCIP_CALL( StrongerChvatalGomoryLhs(set, prob, reasonrow, fixbounds, fixinds, currbdchgidx, idxinreason, coefinreason) );
       }
       else if(set->conf_reductiontechnique == 'r')
       {
-         SCIPsetDebugMsg(set, "Apply Complemented 0-1 MIR since slack of resolved row: %f >= 0 \n",resolutionslack);
+         SCIPsetDebugMsg(set, "Apply Complemented 0-1 MIR since slack of resolved row: %f >= 0 \n", conflict->resolvedconflictrow->slack);
          SCIP_CALL( StrongerMirLhs(set, prob, reasonrow, fixbounds, fixinds, currbdchgidx, idxinreason, coefinreason) );
       }
       assert(SCIPsetIsZero(set, getSlackReason(set, prob, reasonrow, currbdchginfo, fixbounds, fixinds)));
       idxinreason = getVarIdxInReasonRow(reasonrow, residx);
       assert(idxinreason >= 0);
       coefinreason = fabs(reasonrow->vals[idxinreason]);
-#if defined(SCIP_CONFGRAPH) || defined(SCIP_CONFGRAPH_DOT)
+#ifdef SCIP_CONFGRAPH_DOT
       confgraphAddRow(conflict, REDUCED_REASON_ROW);
 #endif
       SCIP_CALL( rescaleAndResolve(set, conflict, prob, reasonrow, currbdchginfo, blkmem,
                            residx, successresolution) );
-
-
    }
 
    return SCIP_OKAY;
@@ -3798,6 +3827,94 @@ SCIP_RETCODE fixBoundChangeWithoutResolving(
       return SCIP_OKAY;
 }
 
+/* add clause conflict */
+static
+SCIP_RETCODE addClauseConflict(
+   SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_PROB*            origprob,           /**< original problem */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
+   SCIP_CONFLICTROW*     conflictrow,        /**< conflict row to add to the tree */
+   SCIP_BDCHGINFO*       currbdchginfo,      /**< bound change to resolve */
+   SCIP_Real*            fixbounds,          /**< dense array of fixed bounds */
+   int*                  fixinds,            /**< dense array of indices of fixed variables */
+   int                   initialnnzs,        /**< number of non-zeros in the initial conflict */
+   int*                  nconss,             /**< pointer to store the number of generated conflict constraints */
+   int*                  nconfvars           /**< pointer to store the number of variables in generated conflict constraints */
+   )
+{
+   SCIP_Bool success;
+   getConflictClause(conflict, blkmem, transprob, set, currbdchginfo, &success, fixbounds, fixinds);
+
+   if (success && conflict->conflictrows[0]->nnz > conflict->conflictrow->nnz) {
+      assert(SCIPsetIsRelEQ(set, getSlackConflict(set, transprob, conflict->conflictrow, currbdchginfo, fixbounds, fixinds), -1.0));
+   }
+
+   SCIP_CALL(SCIPconflictAddConflictCons(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue, cliquetable, conflict->conflictrow, &success));
+
+   if (success)
+   {
+      (*nconss)++;
+      conflict->lengthsumperc += conflict->conflictrow->nnz / (SCIP_Real) initialnnzs;
+      (*nconfvars) += conflict->conflictrow->nnz;
+   }
+   return SCIP_OKAY;
+}
+
+static
+SCIP_RETCODE addConflictRows(
+   SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_PROB*            origprob,           /**< original problem */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
+   int                   nconstoadd,         /**< number of conflict constraints to add */
+   int                   initialnnzs,        /**< number of non-zeros in the initial conflict */
+   int*                  nconss,             /**< pointer to store the number of generated conflict constraints */
+   int*                  nconfvars           /**< pointer to store the number of variables in generated conflict constraints */
+   )
+{
+   int i;
+
+   for( i = 0; i < nconstoadd; i++ )
+   {
+      SCIP_CONFLICTROW* conflictrowtoadd;
+
+      conflictrowtoadd = conflict->conflictrows[i];
+      assert(SCIPsetIsLT(set, conflictrowtoadd->slack, 0.0));
+
+      if ( SCIPsetIsLT(set, conflictrowtoadd->coefquotient, set->conf_generalresminmaxquot) )
+      {
+
+         SCIP_Bool success;
+         SCIP_CALL( SCIPconflictAddConflictCons(conflict, blkmem, set, stat, transprob, origprob, tree, reopt,
+               lp, branchcand, eventqueue, cliquetable, conflictrowtoadd, &success) );
+         if( success )
+         {
+            (*nconss)++;
+            conflict->lengthsumperc += conflictrowtoadd->nnz / (SCIP_Real) initialnnzs;
+            (*nconfvars) += conflictrowtoadd->nnz;
+         }
+      }
+   }
+   return SCIP_OKAY;
+}
+
 SCIP_RETCODE conflictAnalyzeResolution(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    BMS_BLKMEM*           blkmem,             /**< block memory of transformed problem */
@@ -4011,7 +4128,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
     */
    while( TRUE )  /*lint !e716*/
    {
-#if defined(SCIP_CONFGRAPH) || defined(SCIP_CONFGRAPH_DOT)
+#ifdef SCIP_CONFGRAPH_DOT
       {
          startSubgraph(nressteps + 1);
          confgraphAddBdchg(bdchginfo, CURRENT_BOUND_CHANGE);
@@ -4073,7 +4190,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
          SCIPsetDebugMsg(set, "Conflict row: Nonzeros: %d, Slack: %f \n", conflictrow->nnz, conflictrow->slack);
          SCIPsetDebugMsg(set, "Reason row: Nonzeros: %d, Slack: %f \n", reasonrow->nnz, reasonrow->slack);
          SCIPdebug(printReasonRow(reasonrow, set, transprob, 0));
-#if defined(SCIP_CONFGRAPH) || defined(SCIP_CONFGRAPH_DOT)
+#ifdef SCIP_CONFGRAPH_DOT
             confgraphAddRow(conflict, REASON_ROW);
 #endif
          /* call resolution */
@@ -4117,8 +4234,8 @@ SCIP_RETCODE conflictAnalyzeResolution(
          else
             SCIP_CALL( conflictRowReplace(conflictrow, blkmem, resolvedconflictrow) );
 
-#if defined(SCIP_CONFGRAPH) || defined(SCIP_CONFGRAPH_DOT)
-         confgraphAddRow(conflict, CONFLICT_ROW);
+#ifdef SCIP_CONFGRAPH_DOT
+         confgraphAddRow(conflict, RESOLVED_ROW);
 #endif
          if( conflictrow->nnz > maxsize )
          {
@@ -4250,14 +4367,14 @@ SCIP_RETCODE conflictAnalyzeResolution(
                goto TERMINATE_RESOLUTION_LOOP;
          }
       }
-#if defined(SCIP_CONFGRAPH) || defined(SCIP_CONFGRAPH_DOT)
+#ifdef SCIP_CONFGRAPH_DOT
    endSubgraph();
 #endif
    }
 
   TERMINATE_RESOLUTION_LOOP:
 
-#if defined(SCIP_CONFGRAPH) || defined(SCIP_CONFGRAPH_DOT)
+#ifdef SCIP_CONFGRAPH_DOT
    endSubgraph();
    startSubgraph(nressteps + 1);
    if (bdchginfo != NULL)
@@ -4267,80 +4384,38 @@ SCIP_RETCODE conflictAnalyzeResolution(
    confgraphAddRow(conflict, CONFLICT_ROW);
    endSubgraph();
 #endif
+
    /* if resolution fails at some point we can still add the latest valid
-   conflict in the list of conflict row */
-   if ( set->conf_addnonfuip && nressteps >= 1 && nresstepslast != nressteps )
+   conflict in the list of conflict rows */
+   if (set->conf_addnonfuip && nressteps >= 1 && nresstepslast != nressteps)
    {
-      conflict->ncorrectaborts--;
       SCIP_CONFLICTROW* tmpconflictrow;
-      SCIP_CALL( conflictRowCopy(&tmpconflictrow, blkmem, conflictrow) );
-      SCIP_CALL( conflictInsertConflictRow(conflict, set, &tmpconflictrow) );
+
+      SCIP_CALL(conflictRowCopy(&tmpconflictrow, blkmem, conflictrow));
+      SCIP_CALL(conflictInsertConflictRow(conflict, set, &tmpconflictrow));
    }
 
    SCIPsetDebugMsg(set, "Total number of conflict rows found %d\n", conflict->nconflictrows);
    SCIPsetDebugMsg(set, "Total number of FUIPS found %d\n", nfuips);
 
-   if ( conflict->nconflictrows > 0 )
+   if(conflict->nconflictrows > 0)
    {
       int nconstoadd;
-      /** add the conflict constraints to the current node
-       * (all operations are done only on global constraints -> add conflict constraints to the root node)
-       */
+
       nconstoadd = (set->conf_resolutioncons > 0) ? MIN(set->conf_resolutioncons, conflict->nconflictrows) : conflict->nconflictrows;
 
       if (set->conf_addclausealways && !set->conf_addnonfuip && bdchginfo != NULL)
       {
-         SCIP_Bool success;
-         getConflictClause(conflict, blkmem, transprob, set, bdchginfo, &success, fixbounds, fixinds);
-         if ( success &&  conflict->conflictrows[0]->nnz > conflict->conflictrow->nnz )
-         assert(SCIPsetIsRelEQ(set, getSlackConflict(set, transprob, conflict->conflictrow, bdchginfo, fixbounds, fixinds), -1.0));
-         SCIP_CALL( SCIPconflictAddConflictCons(conflict, blkmem, set, stat, transprob, origprob, tree, reopt,
-                                          lp, branchcand, eventqueue, cliquetable, conflict->conflictrow, &success) );
-         if( success )
-         {
-            (*nconss)++;
-            conflict->lengthsumperc += conflict->conflictrow->nnz / (SCIP_Real) initialnnzs;
-            (*nconfvars) = conflict->conflictrow->nnz;
-            if(set->conf_addclauseonly)
+         SCIP_CALL(addClauseConflict(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue, cliquetable, conflict->conflictrow, bdchginfo,
+                           fixbounds, fixinds, initialnnzs, nconss, nconfvars));
+
+         if (set->conf_addclauseonly)
                nconstoadd = 0;
-         }
       }
-      for( i = 0; i < nconstoadd; i++ )
-      {
-         SCIP_CONFLICTROW* conflictrowtoadd;
-         conflictrowtoadd = conflict->conflictrows[i];
-         assert(SCIPsetIsLT(set, conflictrowtoadd->slack, 0.0));
-
-         if ( SCIPsetIsLT(set, conflictrowtoadd->coefquotient, set->conf_generalresminmaxquot) )
-         {
-
-            SCIP_Bool success;
-            SCIP_CALL( SCIPconflictAddConflictCons(conflict, blkmem, set, stat, transprob, origprob, tree, reopt,
-                  lp, branchcand, eventqueue, cliquetable, conflictrowtoadd, &success) );
-            if( success )
-            {
-               (*nconss)++;
-               conflict->lengthsumperc += conflictrowtoadd->nnz / (SCIP_Real) initialnnzs;
-               (*nconfvars) = conflictrowtoadd->nnz;
-            }
-         }
-      }
+      SCIP_CALL(addConflictRows(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue, cliquetable, nconstoadd, initialnnzs, nconss, nconfvars));
    }
 
-   if( set->conf_applycmirreason || set->conf_applycmir || set->conf_applysimplemir)
-   {
-      SCIPsetFreeBufferArray(set, &cutinds);
-      SCIPsetFreeBufferArray(set, &cutcoefs);
-   }
-
-
-   SCIPsetFreeBufferArray(set, &fixinds);
-   SCIPsetFreeBufferArray(set, &fixbounds);
-
-   /* free all conflict rows */
-   for( i = 0; i < conflict->nconflictrows; i++ )
-      SCIPconflictRowFree(&conflict->conflictrows[i], blkmem);
-   conflict->nconflictrows = 0;
+   freeConflictResources(conflict, blkmem, set, cutcoefs, cutinds,fixbounds, fixinds );
 
    return SCIP_OKAY;
 }
@@ -4430,14 +4505,18 @@ SCIP_RETCODE SCIPconflictAnalyzeResolution(
    conflict->bdchgonlyresqueue = TRUE;
 
    /* create the conflict graph */
-#if defined(SCIP_CONFGRAPH) || defined(SCIP_CONFGRAPH_DOT)
-   confgraphFree();
+#ifdef SCIP_CONFGRAPH_DOT
+   assert(confgraphfile == NULL);
    SCIP_CALL( confgraphCreate(set, conflict) );
 #endif
 
    /* analyze the conflict set, and create a conflict constraint on success */
    SCIP_CALL( conflictAnalyzeResolution(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue,
           cliquetable, initialconflictrow, validdepth, infeasibleLP, pseudoobj, &nconss, &nconfvars) );
+
+#ifdef SCIP_CONFGRAPH_DOT
+   confgraphFree();
+#endif
 
    conflict->nressuccess += (nconss > 0 ? 1 : 0);
    conflict->nresconfconss += nconss;
