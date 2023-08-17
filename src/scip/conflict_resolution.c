@@ -80,6 +80,8 @@
 static FILE*             confgraphfile = NULL;              /**< output file for current conflict graph */
 static int               nsubgraphs = 0;                    /**< number of subgraphs in current conflict graph */
 static int               nodeid = 0;                        /**< id of next node to add to the conflict graph */
+static int               elementsoneline = 8;               /**< elements on a single line when writing rows */
+
 static const char* colors[] = {
       "#FFCCCC", /* conflict row */
       "#CCFFFF", /* reason row */
@@ -208,7 +210,6 @@ void confgraphAddRow(
    if(col == 0)
    {
       SCIP_CONFLICTROW * conflictrow;
-      int elementsoneline = 5;
       conflictrow = conflict->conflictrow;
       offset += SCIPsnprintf(label + offset, MAXLEN - offset, "Conflict Row: \n");
       for(i = 0; i < conflictrow->nnz; i++)
@@ -227,7 +228,6 @@ void confgraphAddRow(
    else
    {
       SCIP_REASONROW * reasonrow;
-      int elementsoneline = 5;
       reasonrow = conflict->reasonrow;
       if (col == 1)
          offset += SCIPsnprintf(label + offset, MAXLEN - offset, "Reason Row: \n");

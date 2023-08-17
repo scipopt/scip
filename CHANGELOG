@@ -71,6 +71,7 @@ Interface changes
 - SCIPgetNLPNlRowsStat() to retrieve counts on linear, convex, and nonconvex rows in NLP
 - SCIPnlhdlrSetSollinearize(), SCIPnlhdlrHasSollinearize()
 - SCIPbendersGetNLPParam()
+- SCIPdotWriteOpening(), SCIPdotWriteNode(), SCIPdotWriteArc(), SCIPdotWriteClosing()
 
 ### Command line interface
 

@@ -267,34 +267,35 @@ void SCIPgmlWriteClosing(
 /** writes the opening line to a dot graph file, does not open a file */
 SCIP_EXPORT
 void SCIPdotWriteOpening(
-   FILE* file /**< file to write to */
+   FILE*                 file                /**< file to write to */
 );
 
 /** adds a node to the dot graph */
 SCIP_EXPORT
 void SCIPdotWriteNode(
-   FILE* file,               /**< file to write to */
-   int nodeId,               /**< node ID */
-   const char* label,        /**< node label */
-   const char* nodetype,     /**< type of the node, or NULL */
-   const char* interiorColor,/**< interior color */
-   const char* borderColor   /**< border color */
+   FILE*                 file,               /**< file to write to */
+   int                   node,               /**< node id */
+   const char*           label,              /**< node label */
+   const char*           nodetype,           /**< type of the node, or NULL */
+   const char*           fillcolor,          /**< color of the node's interior, or NULL */
+   const char*           bordercolor         /**< color of the node's border, or NULL */
 );
 
 /** adds an arc (edge) between two nodes in the dot graph */
 SCIP_EXPORT
 void SCIPdotWriteArc(
-   FILE* file,               /**< file to write to */
-   int fromNode,             /**< source node ID */
-   int toNode,               /**< target node ID */
-   const char* edgeColor     /**< edge color */
+   FILE*                 file,               /**< file to write to */
+   unsigned int          source,             /**< source node id of the node */
+   unsigned int          target,             /**< target node id of the edge */
+   const char*           color               /**< color of the edge, or NULL */
 );
 
 /** writes the closing line to a dot graph file, does not close a file */
 SCIP_EXPORT
 void SCIPdotWriteClosing(
-   FILE* file /**< file to write to */
+   FILE*                 file                /**< file to write to */
 );
+
 /**@} */
 
 /*
