@@ -910,8 +910,6 @@ SCIP_RETCODE tightenCoefConflict(
          break;
    }
 
-   /* todo If a reason constraint propagates on a variable x and another
-      variable y is free then tightening the coefficient of y is not possible */
   TERMINATE_TIGHTENING:
    SCIPfreeBufferArrayNull(set->scip, &absvals);
 
@@ -1100,9 +1098,8 @@ SCIP_RETCODE StrongerMirLhs(
 
    assert(SCIPsetIsGT(set, divisor, 0.0));
 
-   /* todo extend Chvatal-Gomory for constraints with general integer variables */
+   /* todo we can use MIR for general constraints */
    assert(isBinaryReasonRow(set, vars, reasonrow));
-
 
    SCIPsetDebugMsg(set, "Stronger MIR on constraint with LHS %f and divisor %f\n" , reasonrow->lhs, divisor);
 
@@ -2095,7 +2092,6 @@ SCIP_RETCODE weakenConflictRow(
 
          ub = SCIPgetVarUbAtIndex(set->scip, vartoweaken, currbdchgidx, TRUE);
 
-         /* refactortodo: Since coefficients of variables may change sign we may be able to weaken also if they are fixed */
          if( SCIPsetIsEQ(set, ub, SCIPvarGetUbGlobal(vartoweaken)) && (fixinds == NULL || fixinds[idx] == 0) )
          {
             weakenVarConflictRow(conflictrow, set, vartoweaken, i);
@@ -3038,7 +3034,6 @@ SCIP_RETCODE getClauseReasonRow(
             assert(reasonrow->vals == NULL);
             assert(reasonrow->inds == NULL);
 
-            /* todo the next line is a temporay fix for the vector size */
             SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &reasonrow->vals, reasonrow->nnz) );
             SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &reasonrow->inds, reasonrow->nnz) );
             reasonrow->size = reasonrow->nnz;
@@ -3105,7 +3100,6 @@ SCIP_RETCODE rescaleAndResolve(
 
    scale = computeScaleReason(set, conflictrow, reasonrow, residx);
 
-   /* refactortodo if the scale becomes too large we can apply a clause resolution step as last resort */
    if ( SCIPsetIsGE(set, scale, set->conf_generalresminmaxquot) )
    {
       if( !conflict->haslargecoef )
@@ -3650,7 +3644,6 @@ SCIP_RETCODE getConflictRow(
          SCIPsetDebugMsg(set, "Number of nonzeros in conflict is larger than maxsize %d > %d\n", conflictrow->nnz, maxsize);
          SCIPsetDebugMsg(set, " Try to shorten the conflict row by applying weakening \n");
 
-         /* refactortodo add parameter for using either this or the clause */
          weakenConflictRow(conflictrow, set, vars, currbdchgidx, NULL, NULL);
 
          if(conflictrow->nnz > maxsize)
@@ -4129,8 +4122,6 @@ SCIP_RETCODE conflictAnalyzeResolution(
 #ifdef SCIP_DEBUG
          printNonResolvableReasonType(set, bdchginfo);
 #endif
-         /* refactor todo add code here! */
-
          SCIP_CALL( fixBoundChangeWithoutResolving(conflict, set, vars, &bdchginfo, &bdchgdepth, nressteps,
                         fixbounds, fixinds, &successfixing) );
          if( !successfixing )
