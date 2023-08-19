@@ -276,7 +276,7 @@ struct SCIP_Conflict
    int                   ntmpbdchginfos;     /**< number of temporary created bound change information data */
    int                   count;              /**< conflict set counter to label binary conflict variables with */
    int                   nconflictrows;      /**< number of available resolution sets */
-   int                   conflictrowssize; /**< size of conflictrows array */
+   int                   conflictrowssize;   /**< size of conflictrows array */
    SCIP_Real             weakeningsumperc;   /**< sum of percentages of variables weakened in resolution sets */
    SCIP_Real             lengthsumperc;      /**< sum of percentages of nonzeros compared to initial conflict */
    SCIP_Bool             bdchgonlyconfqueue; /**< if true we add bound changes only in graph conflict queues */

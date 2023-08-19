@@ -2325,6 +2325,59 @@ SCIP_Bool conflictMarkBoundCheckPresence(
    }
 }
 
+
+/** marks bound to be present in the current conflict and returns whether a bound which is at least as tight was already
+ *  member of the current conflict (i.e., the given bound change does not need to be added)
+ */
+static
+SCIP_Bool betterBoundInResolutionQueue(
+   SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_BDCHGINFO*       bdchginfo           /**< bound change to add to the conflict set */
+   )
+{
+   SCIP_VAR* var;
+   SCIP_Real newbound;
+
+   assert(conflict != NULL);
+
+   var = SCIPbdchginfoGetVar(bdchginfo);
+   newbound = SCIPbdchginfoGetNewbound(bdchginfo);
+   assert(var != NULL);
+
+   switch( SCIPbdchginfoGetBoundtype(bdchginfo) )
+   {
+   case SCIP_BOUNDTYPE_LOWER:
+      /* the variable is already member of the conflict; hence check if the new bound is redundant */
+      if( var->conflictlb < newbound )
+      {
+         var->conflictlb = newbound;
+         return FALSE;
+      }
+      SCIPsetDebugMsg(set, "ignoring redundant bound change <%s> >= %g since a stronger lower bound exist <%s> >= %g\n",
+         SCIPvarGetName(var), newbound, SCIPvarGetName(var), var->conflictlb);
+
+      return TRUE;
+
+   case SCIP_BOUNDTYPE_UPPER:
+      /* the variable is already member of the conflict; hence check if the new bound is redundant */
+      if( var->conflictub > newbound )
+      {
+         var->conflictub = newbound;
+         return FALSE;
+      }
+      SCIPsetDebugMsg(set, "ignoring redundant bound change <%s> <= %g since a stronger upper bound exist <%s> <= %g\n",
+         SCIPvarGetName(var), newbound, SCIPvarGetName(var), var->conflictub);
+
+      return TRUE;
+
+   default:
+      SCIPerrorMessage("invalid bound type %d\n", SCIPbdchginfoGetBoundtype(bdchginfo));
+      SCIPABORT();
+      return FALSE; /*lint !e527*/
+   }
+}
+
 /** puts bound change into the current conflict set */
 static
 SCIP_RETCODE conflictAddConflictBound(
@@ -2412,6 +2465,11 @@ SCIP_RETCODE conflictQueueBound(
       assert(conflict->bdchgonlyresqueue);
       SCIP_CALL( SCIPpqueueInsert(conflict->separatebdchgqueue, (void*)bdchginfo) );
    }
+   else if (set->conf_usegeneralres && !conflict->bdchgonlyconfqueue)
+   {
+      if(!betterBoundInResolutionQueue(conflict, set, bdchginfo))
+         SCIP_CALL( SCIPpqueueInsert(conflict->resbdchgqueue, (void*)bdchginfo) );
+   }
    /* mark the bound to be member of the conflict and check if a bound which is at least as tight is already member of
     * the conflict
     */
@@ -2422,16 +2480,16 @@ SCIP_RETCODE conflictQueueBound(
          && !isBoundchgUseless(set, bdchginfo) )
       {
          if (set->conf_useprop && !conflict->bdchgonlyresqueue)
+         {
             SCIP_CALL( SCIPpqueueInsert(conflict->bdchgqueue, (void*)bdchginfo) );
-         if (set->conf_usegeneralres && !conflict->bdchgonlyconfqueue)
-            SCIP_CALL( SCIPpqueueInsert(conflict->resbdchgqueue, (void*)bdchginfo) );
+         }
       }
       else
       {
          if (set->conf_useprop && !conflict->bdchgonlyresqueue)
+         {
             SCIP_CALL( SCIPpqueueInsert(conflict->forcedbdchgqueue, (void*)bdchginfo) );
-         if (set->conf_usegeneralres && !conflict->bdchgonlyconfqueue)
-            SCIP_CALL( SCIPpqueueInsert(conflict->resbdchgqueue, (void*)bdchginfo) );
+         }
       }
 
 #if defined(SCIP_CONFGRAPH) || defined(SCIP_CONFGRAPH_DOT)
@@ -2491,6 +2549,7 @@ SCIP_RETCODE conflictAddBound(
    /* the relaxed bound should be worse then the old bound of the bound change info */
    assert(boundtype == SCIP_BOUNDTYPE_LOWER ? SCIPsetIsGT(set, relaxedbd, SCIPbdchginfoGetOldbound(bdchginfo)) : SCIPsetIsLT(set, relaxedbd, SCIPbdchginfoGetOldbound(bdchginfo)));
 
+   SCIPsetDebugMsg(set, "Elements in queue: %d \n", SCIPpqueueNElems(conflict->resbdchgqueue));
    /* put bound change information into priority queue */
    SCIP_CALL( conflictQueueBound(conflict, set, bdchginfo, relaxedbd) );
 
