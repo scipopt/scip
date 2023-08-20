@@ -3254,18 +3254,19 @@ SCIP_RETCODE StrongerDivisionBasedReduction(
    if (!(*successresolution))
       return SCIP_OKAY;
 
-   /* todo extend Chvatal-Gomory and MIR for constraints with general integer variables */
-   /* MIR can also be used in the presence of continuous variables */
-   if (!isBinaryReasonRow(set, vars, reasonrow))
-   {
-      SCIPsetDebugMsgPrint(set, "Complemented 0-1 Chvatal-Gomory is implemented for constraint only with binary variables \n");
-      return SCIP_OKAY;
-   }
 
    conflict->resolvedconflictrow->slack = getSlackConflict(set, vars, conflict->resolvedconflictrow, currbdchginfo, fixbounds, fixinds);
 
    if( SCIPsetIsGE(set, conflict->resolvedconflictrow->slack, 0.0) )
    {
+      /* todo extend Chvatal-Gomory and MIR for constraints with general integer variables */
+      /* MIR can also be used in the presence of continuous variables */
+      if (!isBinaryReasonRow(set, vars, reasonrow))
+      {
+         SCIPsetDebugMsgPrint(set, "Complemented 0-1 Chvatal-Gomory And MIR are implemented for constraint only with binary variables \n");
+         return SCIP_OKAY;
+      }
+
       if (set->conf_reductiontechnique == 's')
       {
          SCIPsetDebugMsgPrint(set, "Apply Complemented 0-1 Chvatal-Gomory since slack of resolved row: %f >= 0 \n", conflict->resolvedconflictrow->slack);
