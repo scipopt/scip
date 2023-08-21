@@ -949,40 +949,71 @@ SCIP_RETCODE propagateLexredDynamic(
    assert( scip != NULL );
    assert( masterdata != NULL );
    assert( lexdata != NULL );
-   assert( nodedepthbranchindices != NULL || lexdata->isstatic );
-   assert( nvarstotal >= 0  || lexdata->isstatic );
-   assert( branchvars != NULL  || lexdata->isstatic );
-   assert( nbranchvars >= 0  || lexdata->isstatic );
+   assert( ! lexdata->isstatic );
+   assert( nodedepthbranchindices != NULL );
+   assert( nvarstotal >= 0 );
+   assert( branchvars != NULL );
+   assert( nbranchvars >= 0 );
    assert( infeasible != NULL );
    assert( nreductions != NULL );
 
    nvars = lexdata->nvars;
 
    /* get variable order */
-   if ( lexdata->isstatic )
-   {
-      varorder = masterdata->staticorder;
-      nvarorder = lexdata->nvars;
-   }
-   else
-   {
-      SCIP_CALL( SCIPallocBufferArray(scip, &varorder, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &varorder, nvars) );
 
-      SCIP_CALL( getVarOrder(scip, masterdata, lexdata, nodedepthbranchindices, nvarstotal, branchvars, nbranchvars,
-            varorder, &nvarorder, nvars) );
-      assert( nvarorder >= 0 );
-      assert( nvarorder <= nvars );
-   }
+   SCIP_CALL( getVarOrder(scip, masterdata, lexdata, nodedepthbranchindices, nvarstotal, branchvars, nbranchvars,
+         varorder, &nvarorder, nvars) );
+   assert( nvarorder >= 0 );
+   assert( nvarorder <= nvars );
 
    /* possibly propagate the constraint with this variable order */
    if ( nvarorder > 0 )
    {
       SCIP_CALL( propagateStaticLexred(scip, lexdata, varorder, nvarorder, infeasible, nreductions) );
    }
-   if ( ! lexdata->isstatic )
-   {
-      SCIPfreeBufferArray(scip, &varorder);
-   }
+   SCIPfreeBufferArray(scip, &varorder);
+
+   return SCIP_OKAY;
+}
+
+
+/** propagation method for a dynamic lexicographic reduction */
+static
+SCIP_RETCODE propagateLexredStatic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_LEXREDDATA*      masterdata,         /**< pointer to global data for lexicographic reduction propagator */
+   LEXDATA*              lexdata,            /**< pointer to data for this permutation */
+   NODEDEPTHBRANCHINDEX* nodedepthbranchindices, /**< array with (depth, index)-information per variable in
+                                                  *   rooted path to focus node */
+   int                   nvarstotal,         /**< length of nodedepthbranchindices array */
+   SCIP_VAR**            branchvars,         /**< array populated with variables branched on */
+   int                   nbranchvars,        /**< number of elements in branchvars array */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether the problem is infeasible */
+   int*                  nreductions         /**< pointer to store the number of found domain reductions */
+   )
+{
+   int* varorder;
+   int nvarorder;
+   int nvars;
+
+   assert( scip != NULL );
+   assert( masterdata != NULL );
+   assert( lexdata != NULL );
+   assert( lexdata->isstatic );
+   assert( infeasible != NULL );
+   assert( nreductions != NULL );
+
+   nvars = lexdata->nvars;
+   if ( nvars == 0 )
+      return SCIP_OKAY;
+
+   /* get variable order */
+   varorder = masterdata->staticorder;
+   nvarorder = lexdata->nvars;
+
+   /* propagate the constraint with this variable order */
+   SCIP_CALL( propagateStaticLexred(scip, lexdata, varorder, nvarorder, infeasible, nreductions) );
 
    return SCIP_OKAY;
 }
@@ -1016,8 +1047,16 @@ SCIP_RETCODE propagateLexicographicReductionPerm(
    *nreductions = 0;
    *infeasible = FALSE;
 
-   SCIP_CALL( propagateLexredDynamic(scip, masterdata, lexdata,
-      nodedepthbranchindices, nvarstotal, branchvars, nbranchvars, infeasible, nreductions) );
+   if ( lexdata->isstatic )
+   {
+      SCIP_CALL( propagateLexredStatic(scip, masterdata, lexdata,
+            nodedepthbranchindices, nvarstotal, branchvars, nbranchvars, infeasible, nreductions) );
+   }
+   else
+   {
+      SCIP_CALL( propagateLexredDynamic(scip, masterdata, lexdata,
+            nodedepthbranchindices, nvarstotal, branchvars, nbranchvars, infeasible, nreductions) );
+   }
 
    return SCIP_OKAY;
 }
