@@ -2662,6 +2662,7 @@ SCIP_RETCODE getConflictClause(
    if( SCIPvarIsBinary(SCIPbdchginfoGetVar(currbdchginfo)) && SCIPsetGetStage(set) == SCIP_STAGE_SOLVING )
    {
       SCIP_CONFLICTROW* conflictrow;
+      int* includeinconflict;
       SCIP_Bool isbinary;
       SCIP_Real lhs;
       int nfixinds;
@@ -2673,9 +2674,7 @@ SCIP_RETCODE getConflictClause(
       lhs = 1.0;
       nfixinds = 0;
 
-      /* clear the row before creating a new row out of the clause */
-      conflictRowClear(blkmem, conflictrow, nvars);
-
+      SCIP_CALL( SCIPsetAllocBufferArray(set, &includeinconflict, SCIPpqueueNElems(conflict->resbdchgqueue) ) );
       /** given the set of bound changes that renders infeasibility we can create a no-good cut
        *  as initial conflict. E.g. if x = 1, y = 1, z = 0 leads to infeasibility,
        *  then the initial conflict constraint is (1 - x) + (1 - y) + z >= 1
@@ -2684,14 +2683,19 @@ SCIP_RETCODE getConflictClause(
       {
          SCIP_BDCHGINFO* bdchginfo;
          bdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueElems(conflict->resbdchgqueue)[i]);
-
-         if( !SCIPvarIsBinary(SCIPbdchginfoGetVar(bdchginfo)) && bdchginfoUsedForConflict(conflict, bdchginfo, FALSE) )
+         if(bdchginfoUsedForConflict(conflict, bdchginfo, FALSE))
          {
-            isbinary = FALSE;
-            break;
+            includeinconflict[i] = 1;
+            if( !SCIPvarIsBinary(SCIPbdchginfoGetVar(bdchginfo)))
+            {
+               isbinary = FALSE;
+               break;
+            }
+            if (SCIPbdchginfoGetNewbound(bdchginfo) >= 0.5)
+               lhs--;
          }
-         if (SCIPbdchginfoGetNewbound(bdchginfo) >= 0.5 && bdchginfoUsedForConflict(conflict, bdchginfo, FALSE) )
-            lhs--;
+         else
+            includeinconflict[i] = 0;
       }
 
       if (isbinary && fixinds != NULL)
@@ -2714,6 +2718,9 @@ SCIP_RETCODE getConflictClause(
 
       if( isbinary )
       {
+
+         /* clear the row before creating a new row for the clause */
+         conflictRowClear(blkmem, conflictrow, nvars);
 
          conflictrow->nnz = SCIPpqueueNElems(conflict->resbdchgqueue) + 1 + nfixinds;
          conflictrow->lhs = lhs;
@@ -2761,16 +2768,19 @@ SCIP_RETCODE getConflictClause(
          {
             SCIP_BDCHGINFO* bdchginfo;
             bdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueElems(conflict->resbdchgqueue)[i]);
-            if( bdchginfoUsedForConflict(conflict, bdchginfo, FALSE) )
+            if( includeinconflict[i] == 1 )
             {
                idx = SCIPvarGetProbindex(SCIPbdchginfoGetVar(bdchginfo));
                conflictrow->vals[idx] = SCIPbdchginfoGetNewbound(bdchginfo) > 0.5 ? -1.0 : 1.0;
                conflictrow->inds[pos] = idx;
                pos++;
             }
+            else
+               conflictrow->nnz--;
          }
          *success = TRUE;
       }
+      SCIPsetFreeBufferArray(set, &includeinconflict);
    }
    if( !(*success) )
       SCIPsetDebugMsgPrint(set, " \t -> cannot create clause because of non-binary variable \n");
@@ -3798,8 +3808,8 @@ SCIP_RETCODE addClauseConflict(
 
    if (success)
    {
-      assert(SCIPsetIsRelEQ(set, getSlackConflict(set, transprob->vars, conflict->conflictrow, currbdchginfo, fixbounds, fixinds), -1.0));
       SCIPdebug(printConflictRow(conflict->conflictrow, set, transprob->vars, 5));
+      assert(SCIPsetIsRelEQ(set, getSlackConflict(set, transprob->vars, conflict->conflictrow, currbdchginfo, fixbounds, fixinds), -1.0));
    }
    else
    {
@@ -4229,17 +4239,16 @@ SCIP_RETCODE conflictAnalyzeResolution(
          /* check that we fail for a valid reason */
          if (SCIPsetIsGE(set, conflictrow->slack, 0.0))
          {
-            if ( set->conf_reductiontechnique == 'o' || !isBinaryConflictRow(set, vars, conflictrow) || !isBinaryReasonRow(set, vars, reasonrow) )
+            if ( set->conf_reductiontechnique == 'o' )
+               conflict->nknownaborts++;
+            else
             {
                resolveClauses(set, conflict, vars, bdchginfo, blkmem, residx, nvars, fixbounds, fixinds, &successresolution);
                if (!successresolution)
                {
-                  conflict->nknownaborts++;
                   goto TERMINATE_RESOLUTION_LOOP;
                }
             }
-            else
-               goto TERMINATE_RESOLUTION_LOOP;
          }
 
          nressteps++;
