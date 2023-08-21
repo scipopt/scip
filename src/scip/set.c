@@ -112,7 +112,7 @@
                                                  *   (-1: no limit) */
 #define SCIP_DEFAULT_CONF_USEPROP          TRUE /**< should propagation conflict analysis be used? */
 #define SCIP_DEFAULT_CONF_USEGENRES        TRUE /**< should generalized resolution conflict analysis be used? */
-#define SCIP_DEFAULT_CONF_CLAUSEGENRES    FALSE /**< should the clause version of generalized resolution conflict analysis be used? */
+#define SCIP_DEFAULT_CONF_FAVORRESOLUTION  TRUE /**< should we apply graph conflict analysis only when generalized resolution is unsuccessful? */
 
 #define SCIP_DEFAULT_CONF_USEINFLP          'b' /**< should infeasible LP conflict analysis be used?
                                                  *   ('o'ff, 'c'onflict graph, 'd'ual ray, 'b'oth conflict graph and dual ray, 'g'eneralized resolution and dual ray)
@@ -125,14 +125,18 @@
 #define SCIP_DEFAULT_CONF_USEPSEUDO        TRUE /**< should pseudo solution conflict analysis be used? */
 #define SCIP_DEFAULT_CONF_PREFINFPROOF     TRUE /**< prefer infeasibility proof to boundexceeding proof */
 #define SCIP_DEFAULT_CONF_SEPARATE         TRUE /**< should the conflict constraints be separated? */
-#define SCIP_DEFAULT_CONF_SEPARESOLUTION  FALSE /**< should the resolution conflict constraints be separated? */
+#define SCIP_DEFAULT_CONF_SEPARESOLUTION   TRUE /**< should the generalized resolution conflict constraints be separated? */
 #define SCIP_DEFAULT_CONF_DYNAMIC          TRUE /**< should the conflict constraints be subject to aging? */
 #define SCIP_DEFAULT_CONF_UPGRADECONS     FALSE /**< should we try upgrading the conflict constraints? */
+#define SCIP_DEFAULT_CONF_REPROPAGATE      TRUE /**< should earlier nodes be repropagated in order to replace branching
+                                                 *   decisions by deductions? */
+#define SCIP_DEFAULT_CONF_KEEPREPROP       TRUE /**< should constraints be kept for repropagation even if they are too long? */
+#define SCIP_DEFAULT_CONF_REMOVEABLE       TRUE /**< should the conflict's relaxations be subject to LP aging and cleanup? */
 
 /* Conflict Analysis (conflict graph) */
 
 #define SCIP_DEFAULT_CONF_MAXSTORESIZE    10000 /**< maximal size of the conflict pool */
-#define SCIP_DEFAULT_CONF_MAXRESSTORESIZE  2000 /**< maximal size of the resolution conflict pool */
+
 #define SCIP_DEFAULT_CONF_RECONVLEVELS       -1 /**< number of depth levels up to which UIP reconvergence constraints are
                                                  *   generated (-1: generate reconvergence constraints in all depth levels) */
 #define SCIP_DEFAULT_CONF_CLEANBNDDEPEND   TRUE /**< should conflicts based on an old cutoff bound removed? */
@@ -144,13 +148,8 @@
                                                  *   (-1: use all generated conflict constraints) */
 #define SCIP_DEFAULT_CONF_PREFERBINARY    FALSE /**< should binary conflicts be preferred? */
 #define SCIP_DEFAULT_CONF_ALLOWLOCAL       TRUE /**< should conflict constraints be generated that are only valid locally? */
-#define SCIP_DEFAULT_CONF_RESALLOWLOCAL   FALSE /**< should resolution conflict constraints be generated that are only valid locally? */
 #define SCIP_DEFAULT_CONF_SETTLELOCAL     FALSE /**< should conflict constraints be attached only to the local subtree
                                                  *   where they can be useful? */
-#define SCIP_DEFAULT_CONF_REPROPAGATE      TRUE /**< should earlier nodes be repropagated in order to replace branching
-                                                 *   decisions by deductions? */
-#define SCIP_DEFAULT_CONF_KEEPREPROP       TRUE /**< should constraints be kept for repropagation even if they are too long? */
-#define SCIP_DEFAULT_CONF_REMOVEABLE       TRUE /**< should the conflict's relaxations be subject to LP aging and cleanup? */
 #define SCIP_DEFAULT_CONF_DEPTHSCOREFAC     1.0 /**< score factor for depth level in bound relaxation heuristic of LP analysis */
 #define SCIP_DEFAULT_CONF_PROOFSCOREFAC     1.0 /**< score factor for impact on acticity in bound relaxation heuristic of LP analysis */
 #define SCIP_DEFAULT_CONF_UPLOCKSCOREFAC    0.0 /**< score factor for up locks in bound relaxation heuristic of LP analysis */
@@ -176,6 +175,7 @@
 
 /* Conflict Analysis (generalized resolution) */
 
+#define SCIP_DEFAULT_CONF_CLAUSEGENRES    FALSE /**< should the clause version of generalized resolution conflict analysis be used? */
 #define SCIP_DEFAULT_CONF_MAXVARSFRACRES    1.0 /**< maximal fraction of variables involved in a resolution conflict constraint */
 #define SCIP_DEFAULT_CONF_RESOLUTIONCONS     10 /**< number of resolution constraints to add (-1: add every conflict constraint) */
 #define SCIP_DEFAULT_CONF_MAXNUMRESSTEPS     -1 /**< maximal number of resolution steps in generalized resolution (-1: resolve till (All) FirstUIP) */
@@ -193,15 +193,16 @@
 #define SCIP_DEFAULT_CONF_ADDCLAUSEALWAYS FALSE /**< should we add always also the clause? */
 #define SCIP_DEFAULT_CONF_ADDCLAUSEONLY   FALSE /**< should we add only the clause? */
 
-#define SCIP_DEFAULT_CONF_ABSOLUTEWEAKEN  FALSE /**< should we apply absolute weakening if generalized resolution fails? */
 #define SCIP_DEFAULT_CONF_RESPSEUDOOBJ    FALSE /**< should we apply resolution initiated with the violated pseudo-objective? */
-#define SCIP_DEFAULT_CONF_FAVORRESOLUTION  TRUE /**< should we apply graph conflict analysis only when resolution is unsuccessful? */
 #define SCIP_DEFAULT_CONF_COEFQUOT         1e+6 /**< largest allowed quotient of max, min coefficient in a conflict constraint generated by generalized resolution */
-#define SCIP_DEFAULT_CONF_REDUCTION        'o' /**< which tightening reduction should be used?
+#define SCIP_DEFAULT_CONF_REDUCTION        'o'  /**< which tightening reduction should be used?
                                                  *   ('o'ff, 'm'ir, 'd'ivision, 'c'oefficient tightening, complemented mi'r', complemented divi's'ion)
                                                 */
 #define SCIP_DEFAULT_CONF_MAXNUMWEAKEN  INT_MAX /**< maximal number of weakening steps for the reason constraint */
 #define SCIP_DEFAULT_CONF_BATCHCOEFTIGHT      1 /**< number of weakening steps for the reason before applying coef tightening (-1: apply once after the weakening loop) */
+
+#define SCIP_DEFAULT_CONF_RESALLOWLOCAL   FALSE /**< should resolution conflict constraints be generated that are only valid locally? */
+#define SCIP_DEFAULT_CONF_MAXRESSTORESIZE 10000 /**< maximal size of the resolution conflict pool */
 
 /* Constraints */
 
@@ -1627,12 +1628,7 @@ SCIP_RETCODE SCIPsetCreate(
          "should we add only the clause?",
          &(*set)->conf_addclauseonly, TRUE, SCIP_DEFAULT_CONF_ADDCLAUSEONLY,
          NULL, NULL) );
-   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-         "conflict/absoluteweakening",
-         "should we apply absolute weakening if generalized resolution fails?",
-         &(*set)->conf_absoluteweakening, TRUE, SCIP_DEFAULT_CONF_ABSOLUTEWEAKEN,
-         NULL, NULL) );
-   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+  SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "conflict/graph/depthscorefac",
          "score factor for depth level in bound relaxation heuristic",
          &(*set)->conf_depthscorefac, TRUE, SCIP_DEFAULT_CONF_DEPTHSCOREFAC, SCIP_REAL_MIN, SCIP_REAL_MAX,
