@@ -111,8 +111,6 @@ struct SCIP_LexRedData
    int                   maxnlexdatas;       /**< allocated datas array size */
    int                   nred;               /**< total number of reductions */
    int                   ncutoff;            /**< total number of cutoffs */
-   int*                  staticorder;        /**< array used for static variable order */
-   int                   nstaticorder;       /**< length of static order */
    SCIP_Bool             hasdynamicperm;     /**< whether there exists a permutation that is treated dynamically */
 };
 
@@ -377,6 +375,21 @@ SCIP_DECL_SORTINDCOMP(sortbynodedepthbranchindices)
 }
 
 
+/** return the index of a variable at a specific position of a variable order */
+static
+int varOrderGetIndex(
+   int*                  varorder,           /**< variable order (or NULL) */
+   int                   pos                 /**< position for which index is returned */
+   )
+{
+   assert( pos >= 0 );
+
+   if ( varorder == NULL )
+      return pos;
+   return varorder[pos];
+}
+
+
 /** gets the variable ordering based on the branching decisions at the node */
 static
 SCIP_RETCODE getVarOrder(
@@ -494,7 +507,7 @@ static
 SCIP_RETCODE peekStaticLexredIsFeasible(
    SCIP*                 scip,               /**< SCIP data structure */
    LEXDATA*              lexdata,            /**< pointer to data for this permutation */
-   int*                  varorder,           /**< array populated with variable order */
+   int*                  varorder,           /**< array populated with variable order (or NULL for static propagation) */
    int                   nselvars,           /**< number of variables in the ordering */
    int                   fixi,               /**< variable index of left fixed column */
    int                   fixj,               /**< variable index of right fixed column */
@@ -521,7 +534,6 @@ SCIP_RETCODE peekStaticLexredIsFeasible(
    assert( lexdata->vars != NULL );
    assert( lexdata->nvars >= 0 );
    assert( nselvars <= lexdata->nvars );
-   assert( varorder != NULL );
    assert( nselvars > 0 );
    assert( fixi >= 0 );
    assert( fixi < lexdata->nvars );
@@ -530,11 +542,11 @@ SCIP_RETCODE peekStaticLexredIsFeasible(
    assert( fixrow >= 0 );
    assert( fixrow < nselvars );
    assert( peekfeasible != NULL );
-   assert( varorder[fixrow] == fixi );
-   assert( lexdata->invperm[varorder[fixrow]] == fixj );
+   assert( varOrderGetIndex(varorder, fixrow) == fixi );
+   assert( lexdata->invperm[varOrderGetIndex(varorder, fixrow)] == fixj );
    assert( lexdata->perm[fixj] == fixi );
-   assert( fixi == varorder[fixrow] );
-   assert( fixj == lexdata->invperm[varorder[fixrow]] );
+   assert( fixi == varOrderGetIndex(varorder, fixrow) );
+   assert( fixj == lexdata->invperm[varOrderGetIndex(varorder, fixrow)] );
 
    *peekfeasible = TRUE;
 
@@ -552,7 +564,7 @@ SCIP_RETCODE peekStaticLexredIsFeasible(
    for (row = fixrow + 1; row < nselvars; ++row)
    {
       /* get left and right column indices */
-      i = varorder[row];
+      i = varOrderGetIndex(varorder, row);
       j = lexdata->invperm[i];
       assert( i == lexdata->perm[j] );
 
@@ -643,7 +655,7 @@ SCIP_RETCODE peekStaticLexredIsFeasible(
    for (; row >= fixrow; --row)
    {
       /* left and right column indices */
-      i = varorder[row];
+      i = varOrderGetIndex(varorder, row);
       j = lexdata->invperm[i];
       assert( i == lexdata->perm[j] );
 
@@ -681,7 +693,7 @@ static
 SCIP_RETCODE propagateStaticLexred(
    SCIP*                 scip,               /**< SCIP data structure */
    LEXDATA*              lexdata,            /**< pointer to data for this permutation */
-   int*                  varorder,           /**< array populated with variable order */
+   int*                  varorder,           /**< array populated with variable order (or NULL if static propagation) */
    int                   nselvars,           /**< number of variables in the ordering */
    SCIP_Bool*            infeasible,         /**< pointer to store whether the problem is infeasible */
    int*                  nreductions         /**< pointer to store the number of found domain reductions */
@@ -702,7 +714,6 @@ SCIP_RETCODE propagateStaticLexred(
 
    assert( scip != NULL );
    assert( lexdata != NULL );
-   assert( varorder != NULL );
    assert( nselvars >= 0 );
    assert( infeasible != NULL );
    assert( !*infeasible );
@@ -721,7 +732,7 @@ SCIP_RETCODE propagateStaticLexred(
    for (row = 0; row < nselvars; ++row)
    {
       /* left and right column indices */
-      i = varorder[row];
+      i = varOrderGetIndex(varorder, row);
       j = lexdata->invperm[i];
       assert( i == lexdata->perm[j] );
 
@@ -993,10 +1004,6 @@ SCIP_RETCODE propagateLexredStatic(
    int*                  nreductions         /**< pointer to store the number of found domain reductions */
    )
 {
-   int* varorder;
-   int nvarorder;
-   int nvars;
-
    assert( scip != NULL );
    assert( masterdata != NULL );
    assert( lexdata != NULL );
@@ -1004,16 +1011,12 @@ SCIP_RETCODE propagateLexredStatic(
    assert( infeasible != NULL );
    assert( nreductions != NULL );
 
-   nvars = lexdata->nvars;
-   if ( nvars == 0 )
+   /* skip trivial cases */
+   if ( lexdata->nvars == 0 )
       return SCIP_OKAY;
 
-   /* get variable order */
-   varorder = masterdata->staticorder;
-   nvarorder = lexdata->nvars;
-
    /* propagate the constraint with this variable order */
-   SCIP_CALL( propagateStaticLexred(scip, lexdata, varorder, nvarorder, infeasible, nreductions) );
+   SCIP_CALL( propagateStaticLexred(scip, lexdata, NULL, lexdata->nvars, infeasible, nreductions) );
 
    return SCIP_OKAY;
 }
@@ -1405,49 +1408,6 @@ SCIP_RETCODE SCIPlexicographicReductionPropagate(
 }
 
 
-/** updates the array used to encode static variable ordering */
-static
-SCIP_RETCODE updateStaticOrder(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_LEXREDDATA*      masterdata,         /**< pointer to global data for lexicographic reduction propagator */
-   SCIP_Bool             usestaticorder,     /**< whether a static variable order shall be used */
-   int                   nvars               /**< number of variables needed in static order */
-   )
-{
-   int newsize;
-   int i;
-
-   assert( scip != NULL );
-   assert( masterdata != NULL );
-   assert( nvars > 0 );
-
-   if ( ! usestaticorder )
-      return SCIP_OKAY;
-
-   /* possibly update the static order */
-   if ( nvars > masterdata->nstaticorder )
-   {
-      newsize = SCIPcalcMemGrowSize(scip, nvars);
-      assert( newsize >= 0 );
-
-      if ( masterdata->nstaticorder == 0 )
-      {
-         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &masterdata->staticorder, newsize) );
-      }
-      else
-      {
-         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &masterdata->staticorder, masterdata->nstaticorder, newsize) );
-      }
-
-      for (i = masterdata->nstaticorder; i < newsize; ++i)
-         masterdata->staticorder[i] = i;
-      masterdata->nstaticorder = newsize;
-   }
-
-   return SCIP_OKAY;
-}
-
-
 /** adds permutation for lexicographic reduction propagation */
 SCIP_RETCODE SCIPlexicographicReductionAddPermutation(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1490,9 +1450,6 @@ SCIP_RETCODE SCIPlexicographicReductionAddPermutation(
 
       masterdata->maxnlexdatas = newsize;
    }
-
-   /* possibly update static order */
-   SCIP_CALL( updateStaticOrder(scip, masterdata, usestaticorder, npermvars) );
 
    /* prepare lexdatas */
    SCIP_CALL( lexdataCreate(scip, masterdata, &masterdata->lexdatas[masterdata->nlexdatas],
@@ -1538,9 +1495,6 @@ SCIP_RETCODE SCIPlexicographicReductionReset(
       masterdata->nsymvars = 0;
    }
 
-   SCIPfreeBlockMemoryArrayNull(scip, &masterdata->staticorder, masterdata->nstaticorder);
-   masterdata->staticorder = NULL;
-   masterdata->nstaticorder = 0;
    masterdata->hasdynamicperm = FALSE;
 
    return SCIP_OKAY;
@@ -1594,8 +1548,6 @@ SCIP_RETCODE SCIPincludeLexicographicReduction(
    (*masterdata)->maxnlexdatas = 0;
    (*masterdata)->nred = 0;
    (*masterdata)->ncutoff = 0;
-   (*masterdata)->staticorder = NULL;
-   (*masterdata)->nstaticorder = 0;
    (*masterdata)->hasdynamicperm = FALSE;
 
    return SCIP_OKAY;
