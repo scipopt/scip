@@ -24,7 +24,7 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-// #define SCIP_DEBUG
+#define SCIP_DEBUG
 // #define SCIP_MORE_DEBUG
 
 #include "blockmemshell/memory.h"
@@ -2652,7 +2652,8 @@ SCIP_RETCODE getConflictClause(
    SCIP_Bool*            success,            /**< pointer to store whether we could find an  initial conflict */
    SCIP_Real*            fixbounds,          /**< dense array of fixed bounds */
    int*                  fixinds,            /**< dense array of indices of fixed variables */
-   int                   nvars               /**< number of variables */
+   int                   nvars,              /**< number of variables */
+   SCIP_Bool             initial             /**< whether we are in the initialization conflict analysis */
 )
 {
    SCIPsetDebugMsgPrint(set, "Getting conflict clause: \n");
@@ -2683,7 +2684,7 @@ SCIP_RETCODE getConflictClause(
       {
          SCIP_BDCHGINFO* bdchginfo;
          bdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueElems(conflict->resbdchgqueue)[i]);
-         if(bdchginfoUsedForConflict(conflict, bdchginfo, FALSE))
+         if(initial || bdchginfoUsedForConflict(conflict, bdchginfo, FALSE))
          {
             includeinconflict[i] = 1;
             if( !SCIPvarIsBinary(SCIPbdchginfoGetVar(bdchginfo)))
@@ -3171,7 +3172,7 @@ SCIP_RETCODE resolveClauses(
 
    /* first construct a conflict clause out of fixed bounds, current bound to
     * resolve, and bounds in the queue */
-   SCIP_CALL( getConflictClause(conflict, blkmem, set, vars, currbdchginfo, &successclause, fixbounds, fixinds, nvars) );
+   SCIP_CALL( getConflictClause(conflict, blkmem, set, vars, currbdchginfo, &successclause, fixbounds, fixinds, nvars, FALSE) );
    if( successclause)
    {
       SCIP_CONFLICTROW* conflictrow;
@@ -3665,7 +3666,7 @@ SCIP_RETCODE getConflictRow(
          assert(strcmp(SCIPconshdlrGetName(conshdlr), "knapsack") == 0 || strcmp(SCIPconshdlrGetName(conshdlr), "linear") == 0);
       }
 
-      SCIP_CALL( getConflictClause(conflict, blkmem, set, vars, currbdchginfo, &successclause, NULL, NULL, prob->nvars) );
+      SCIP_CALL( getConflictClause(conflict, blkmem, set, vars, currbdchginfo, &successclause, NULL, NULL, prob->nvars, TRUE) );
       if (!successclause)
       {
          SCIPsetDebugMsgPrint(set, "Initial conflict clause could not be retrieved \n");
@@ -3804,7 +3805,7 @@ SCIP_RETCODE addClauseConflict(
 {
    SCIP_Bool success;
 
-   getConflictClause(conflict, blkmem, set, transprob->vars, currbdchginfo, &success, fixbounds, fixinds, transprob->nvars);
+   getConflictClause(conflict, blkmem, set, transprob->vars, currbdchginfo, &success, fixbounds, fixinds, transprob->nvars, FALSE);
 
    if (success)
    {
