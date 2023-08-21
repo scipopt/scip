@@ -380,7 +380,7 @@ SCIP_RETCODE SCIPconflictCreate(
    (*conflict)->nresconfconss = 0;
    (*conflict)->nresconfvariables = 0;
    (*conflict)->conflictrowssize = 0;
-   (*conflict)->ncorrectaborts = 0;
+   (*conflict)->nknownaborts = 0;
    (*conflict)->weakeningsumperc = 0.0;
    (*conflict)->lengthsumperc = 0.0;
    (*conflict)->bdchgonlyresqueue = FALSE;

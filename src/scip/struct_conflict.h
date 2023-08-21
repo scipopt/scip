@@ -186,7 +186,7 @@ struct SCIP_Conflict
    SCIP_Longint          nressuccess;        /**< number of calls yielding at least one conflict constraint */
    SCIP_Longint          nreslargecoefs;     /**< number of calls terminating because of large coefficients */
    SCIP_Longint          nreslongconfs;      /**< number of calls terminating because of long conflict rows */
-   SCIP_Longint          ncorrectaborts;     /**< count the number of calls that we terminate unsucessfully for a known reason */
+   SCIP_Longint          nknownaborts;       /**< count the number of calls that we terminate unsucessfully for a known reason */
    SCIP_Longint          nresmircalls;       /**< number of calls of c-MIR in resolution conflict analysis */
    SCIP_Longint          nresflowcovercalls; /**< number of calls of flow cover in resolution conflict analysis */
    SCIP_Longint          nresmir;            /**< number of successful calls of c-MIR in resolution conflict analysis */
