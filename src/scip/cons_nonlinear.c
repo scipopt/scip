@@ -9732,12 +9732,17 @@ SCIP_RETCODE tryAddGadgetEvenOperatorSum(
 
    *success = FALSE;
 
-   /* check whether child variable is (multi-) aggregated */
+   /* check whether child variable is (multi-) aggregated and whether all children are variables */
    nlocvars = SCIPexprGetNChildren(child);
    for( i = 0; i < nlocvars; ++i)
    {
-      (*consvars)[i] = SCIPgetVarExprVar(SCIPexprGetChildren(child)[i]);
-      (*consvals)[i] = SCIPgetCoefsExprSum(child)[i];
+      if( SCIPisExprVar(scip, SCIPexprGetChildren(child)[i]) )
+      {
+         (*consvars)[i] = SCIPgetVarExprVar(SCIPexprGetChildren(child)[i]);
+         (*consvals)[i] = SCIPgetCoefsExprSum(child)[i];
+      }
+      else
+         return SCIP_OKAY;
    }
    constant = SCIPgetConstantExprSum(child);
 
