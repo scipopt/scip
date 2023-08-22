@@ -95,7 +95,7 @@ struct LexRedPermData
    int                   nvars;              /**< number of variables */
    int*                  perm;               /**< permutation for lexicographic reduction */
    int*                  invperm;            /**< inverse permutation */
-   SCIP_HASHMAP*         varmap;             /**< map of variables to indices in vars array */
+   SCIP_HASHMAP*         varmap;             /**< map of variables to indices in vars array in isstatic is FALSE */
 };
 typedef struct LexRedPermData LEXDATA;
 
@@ -158,7 +158,10 @@ SCIP_RETCODE lexdataFree(
       assert( (*lexdata)->vars != NULL );
 
       /* free hashmap */
-      SCIPhashmapFree(&((*lexdata)->varmap));
+      if ( ! (*lexdata)->isstatic )
+      {
+         SCIPhashmapFree(&((*lexdata)->varmap));
+      }
 
       /* release variables */
       for (i = 0; i < (*lexdata)->nvars; ++i)
@@ -249,8 +252,11 @@ SCIP_RETCODE lexdataCreate(
       return SCIP_OKAY;
    }
 
-   /* require that the shadowtree is active */
-   SCIP_CALL( SCIPactivateShadowTree(scip, masterdata->shadowtreeeventhdlr) );
+   /* require that the shadowtree is active if dynamic propagation is used */
+   if ( ! usestaticorder )
+   {
+      SCIP_CALL( SCIPactivateShadowTree(scip, masterdata->shadowtreeeventhdlr) );
+   }
 
    /* initialize variable arrays */
    (*lexdata)->nvars = naffectedvariables;
@@ -289,31 +295,36 @@ SCIP_RETCODE lexdataCreate(
 
    /* create hashmap for all variables, both globally and just for this lexdata */
    assert( (masterdata->symvarmap == NULL) == (masterdata->nsymvars == 0) );
-   if ( masterdata->symvarmap == NULL )
+   if ( ! usestaticorder )
    {
-      SCIP_CALL( SCIPhashmapCreate(&masterdata->symvarmap, SCIPblkmem(scip), (*lexdata)->nvars) );
+      if ( masterdata->symvarmap == NULL )
+      {
+         SCIP_CALL( SCIPhashmapCreate(&masterdata->symvarmap, SCIPblkmem(scip), (*lexdata)->nvars) );
+      }
+      assert( masterdata->symvarmap != NULL );
+
+      SCIP_CALL( SCIPhashmapCreate(&(*lexdata)->varmap, SCIPblkmem(scip), (*lexdata)->nvars) );
+      assert( (*lexdata)->varmap != NULL );
+
+      for (i = 0; i < (*lexdata)->nvars; ++i)
+      {
+         var = (*lexdata)->vars[i];
+         assert( var != NULL );
+         assert( SCIPvarIsTransformed(var) );
+
+         /* the hashmap in lexdata maps to the index in the vars array */
+         SCIP_CALL( SCIPhashmapInsertInt((*lexdata)->varmap, (void*) var, i) );
+
+         /* var already added to hashmap */
+         if ( SCIPhashmapExists(masterdata->symvarmap, (void*) var) )
+            continue;
+
+         /* the hashmap in symvarmap maps to a unique index */
+         SCIP_CALL( SCIPhashmapInsertInt(masterdata->symvarmap, (void*) var, masterdata->nsymvars++) );
+      }
    }
-   assert( masterdata->symvarmap != NULL );
-
-   SCIP_CALL( SCIPhashmapCreate(&(*lexdata)->varmap, SCIPblkmem(scip), (*lexdata)->nvars) );
-   assert( (*lexdata)->varmap != NULL );
-
-   for (i = 0; i < (*lexdata)->nvars; ++i)
-   {
-      var = (*lexdata)->vars[i];
-      assert( var != NULL );
-      assert( SCIPvarIsTransformed(var) );
-
-      /* the hashmap in lexdata maps to the index in the vars array */
-      SCIP_CALL( SCIPhashmapInsertInt((*lexdata)->varmap, (void*) var, i) );
-
-      /* var already added to hashmap */
-      if ( SCIPhashmapExists(masterdata->symvarmap, (void*) var) )
-         continue;
-
-      /* the hashmap in symvarmap maps to a unique index */
-      SCIP_CALL( SCIPhashmapInsertInt(masterdata->symvarmap, (void*) var, masterdata->nsymvars++) );
-   }
+   else
+      (*lexdata)->varmap = NULL;
 
    return SCIP_OKAY;
 }
