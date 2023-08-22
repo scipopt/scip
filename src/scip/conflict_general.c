@@ -1950,6 +1950,8 @@ SCIP_RETCODE SCIPconflictAnalyzePseudo(
       int nreconvconss;
       int nreconvliterals;
 
+      conflict->bdchgonlyconfqueue = TRUE;
+
       /* undo bound changes without destroying the infeasibility proof */
       SCIP_CALL( SCIPundoBdchgsProof(set, transprob, SCIPtreeGetCurrentDepth(tree), pseudocoefs, pseudolhs, &pseudoact,
             curvarlbs, curvarubs, lbchginfoposs, ubchginfoposs, NULL, NULL, NULL, lp->lpi) );
@@ -1964,6 +1966,8 @@ SCIP_RETCODE SCIPconflictAnalyzePseudo(
       conflict->npseudoreconvliterals += nreconvliterals;
       if( success != NULL )
          *success = (nconss > 0);
+
+      conflict->bdchgonlyconfqueue = FALSE;
 
       if( set->conf_applyrespseudoobj )
       {
@@ -2358,6 +2362,8 @@ SCIP_RETCODE conflictAnalyzeLP(
          }
       }
 
+      conflict->bdchgonlyconfqueue = TRUE;
+
       SCIP_CALL( SCIPrunBoundHeuristic(conflict, set, stat, origprob, transprob, tree, reopt, lp, lpi, blkmem, farkascoefs,
             &farkaslhs, &farkasactivity, curvarlbs, curvarubs, lbchginfoposs, ubchginfoposs, iterations, marklpunsolved,
             dualproofsuccess, &valid) );
@@ -2366,6 +2372,7 @@ SCIP_RETCODE conflictAnalyzeLP(
 
       if( !valid )
       {
+         conflict->bdchgonlyconfqueue = FALSE;
          if( set->conf_applyresdualproof )
          {
             SCIP_CALL( SCIProwRelease(&initialrow, blkmem, set, lp) );
@@ -2376,6 +2383,8 @@ SCIP_RETCODE conflictAnalyzeLP(
       /* analyze the conflict starting with remaining bound changes */
       SCIP_CALL( SCIPconflictAnalyzeRemainingBdchgs(conflict, blkmem, set, stat, transprob, tree, diving, \
             lbchginfoposs, ubchginfoposs, nconss, nliterals, nreconvconss, nreconvliterals) );
+
+      conflict->bdchgonlyconfqueue = FALSE;
 
       /* flush conflict set storage */
       SCIP_CALL( SCIPconflictFlushConss(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, \

@@ -20,7 +20,6 @@
  * @author Gioni Mexi
  *
  * @todo Description of the algorithm
- * @refactortodo separate data stractures for graph and resolution conflict analysis
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -1674,12 +1673,12 @@ SCIP_BDCHGINFO* conflictFirstCand(
 
          if( SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER )
          {
-            var->conflictlb = SCIP_REAL_MIN;
+            var->conflictreslb = SCIP_REAL_MIN;
          }
          else
          {
             assert(SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_UPPER);
-            var->conflictub = SCIP_REAL_MAX;
+            var->conflictresub = SCIP_REAL_MAX;
          }
          /* call method recursively to get next conflict analysis candidate */
          bdchginfo = conflictFirstCand(set, conflict, initial);
@@ -1709,12 +1708,12 @@ SCIP_BDCHGINFO* conflictFirstCand(
 
          if( SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER )
          {
-            var->conflictlb = SCIP_REAL_MIN;
+            var->conflictreslb = SCIP_REAL_MIN;
          }
          else
          {
             assert(SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_UPPER);
-            var->conflictub = SCIP_REAL_MAX;
+            var->conflictresub = SCIP_REAL_MAX;
          }
 
          /* call method recursively to get next conflict analysis candidate */
@@ -3740,12 +3739,12 @@ SCIP_RETCODE fixBoundChangeWithoutResolving(
          /* we must reset the conflict lower and upper bound to be able to add weaker bounds later */
          if( SCIPbdchginfoGetBoundtype(*currbdchginfo) == SCIP_BOUNDTYPE_LOWER )
          {
-            vars[SCIPvarGetProbindex(SCIPbdchginfoGetVar(*currbdchginfo))]->conflictlb = SCIP_REAL_MIN;
+            vars[SCIPvarGetProbindex(SCIPbdchginfoGetVar(*currbdchginfo))]->conflictreslb = SCIP_REAL_MIN;
          }
          else
          {
             assert(SCIPbdchginfoGetBoundtype(*currbdchginfo) == SCIP_BOUNDTYPE_UPPER);
-            vars[SCIPvarGetProbindex(SCIPbdchginfoGetVar(*currbdchginfo))]->conflictub = SCIP_REAL_MAX;
+            vars[SCIPvarGetProbindex(SCIPbdchginfoGetVar(*currbdchginfo))]->conflictresub = SCIP_REAL_MAX;
          }
 
          SCIPsetDebugMsgPrint(set, "ignoring the latest bound change of variable %s to %f \n", SCIPvarGetName(SCIPbdchginfoGetVar(*currbdchginfo)),
@@ -3907,6 +3906,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
    SCIP_BDCHGIDX* bdchgidx;
 
    int bdchgdepth;
+   int lastuipdepth;
    int focusdepth;
    int currentdepth;
    int maxvaliddepth;
@@ -3943,6 +3943,8 @@ SCIP_RETCODE conflictAnalyzeResolution(
    currentdepth = SCIPtreeGetCurrentDepth(tree);
    assert(currentdepth == tree->pathlen-1);
    assert(focusdepth <= currentdepth);
+
+   lastuipdepth = -1;
 
    *nconss = 0;
    *nconfvars = 0;
@@ -4168,7 +4170,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
          }
          else
          {
-            if ( set->conf_reductiontechnique == 'c' )
+            if ( set->conf_reductiontechnique == 't' )
             {
                /* refactortodo implement again iterative weakening with coefficient tightening for comparison */
                assert(FALSE);
@@ -4198,12 +4200,12 @@ SCIP_RETCODE conflictAnalyzeResolution(
             /* we must reset the conflict lower and upper bound to be able to add weaker bounds later */
             if( SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER )
             {
-               vars[residx]->conflictlb = SCIP_REAL_MIN;
+               vars[residx]->conflictreslb = SCIP_REAL_MIN;
             }
             else
             {
                assert(SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_UPPER);
-               vars[residx]->conflictub = SCIP_REAL_MAX;
+               vars[residx]->conflictresub = SCIP_REAL_MAX;
             }
             SCIP_CALL( conflictRowReplace(conflictrow, blkmem, resolvedconflictrow) );
          }
@@ -4241,12 +4243,16 @@ SCIP_RETCODE conflictAnalyzeResolution(
          if (SCIPsetIsGE(set, conflictrow->slack, 0.0))
          {
             if ( set->conf_reductiontechnique == 'o' )
+            {
                conflict->nknownaborts++;
+               goto TERMINATE_RESOLUTION_LOOP;
+            }
             else
             {
                resolveClauses(set, conflict, vars, bdchginfo, blkmem, residx, nvars, fixbounds, fixinds, &successresolution);
                if (!successresolution)
                {
+                  conflict->nknownaborts++;
                   goto TERMINATE_RESOLUTION_LOOP;
                }
             }
@@ -4324,8 +4330,11 @@ SCIP_RETCODE conflictAnalyzeResolution(
          /* check if the variable we are resolving is active */
          assert(SCIPvarIsActive(vartoresolve));
 
+         assert(nextbdchginfo == NULL || SCIPbdchginfoGetDepth(nextbdchginfo) <= bdchgdepth);
+
          /* when at an UIP add the previous conflict in the list of conflict rows */
-         if( nextbdchginfo == NULL || SCIPbdchginfoGetDepth(nextbdchginfo) != bdchgdepth  )
+         if( (nextbdchginfo == NULL || SCIPbdchginfoGetDepth(nextbdchginfo) != bdchgdepth)
+                                    && SCIPbdchginfoGetDepth(bdchginfo) != lastuipdepth )
          {
             assert( nresstepslast != nressteps );
             SCIPsetDebugMsgPrint(set, " reached UIP in depth %d \n", bdchgdepth);
@@ -4335,6 +4344,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
             SCIP_CONFLICTROW* tmpconflictrow;
             SCIP_CALL( conflictRowCopy(&tmpconflictrow, blkmem, conflictrow) );
             SCIP_CALL( conflictInsertConflictRow(conflict, set, &tmpconflictrow) );
+            lastuipdepth = bdchgdepth;
             nresstepslast = nressteps;
             nfuips ++;
             /* stop after conf_resfuiplevels UIPs */
@@ -4379,7 +4389,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
 
       nconstoadd = (set->conf_resolutioncons > 0) ? MIN(set->conf_resolutioncons, conflict->nconflictrows) : conflict->nconflictrows;
 
-      if (set->conf_addclausealways && !set->conf_addnonfuip && bdchginfo != NULL)
+      if (set->conf_addclauseonly && !set->conf_addnonfuip && bdchginfo != NULL)
       {
          SCIP_CALL(addClauseConflict(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue, cliquetable, conflict->conflictrow, bdchginfo,
                            fixbounds, fixinds, initialnnzs, nconss, nconfvars));
@@ -4425,10 +4435,6 @@ SCIP_RETCODE SCIPconflictAnalyzeResolution(
    int nconfvars;
    int i;
 
-   /* arrays to store variable information related to conflict analysis */
-   SCIP_Real* tmp_conflictlb;
-   SCIP_Real* tmp_conflictub;
-
    /* check if generalized resolution conflict analysis is applicable */
    if( !SCIPconflictResolutionApplicable(set) )
       return SCIP_OKAY;
@@ -4436,8 +4442,6 @@ SCIP_RETCODE SCIPconflictAnalyzeResolution(
    vars = SCIPprobGetVars(transprob);
    nvars = SCIPprobGetNVars(transprob);
 
-   SCIPallocBufferArray(set->scip, &tmp_conflictlb, nvars); /*lint !e522*/
-   SCIPallocBufferArray(set->scip, &tmp_conflictub, nvars); /*lint !e522*/
 
    assert(conflict != NULL);
    assert(set != NULL);
@@ -4449,13 +4453,6 @@ SCIP_RETCODE SCIPconflictAnalyzeResolution(
 
    SCIPsetDebugMsgPrint(set, "Starting resolution based conflict analysis after infeasible propagation in depth %d\n",
                    SCIPtreeGetCurrentDepth(tree));
-
-   for (i = 0; i < nvars; i++)
-   {
-      tmp_conflictlb[i] = vars[i]->conflictlb;
-      tmp_conflictub[i] = vars[i]->conflictub;
-   }
-
 
    /* start timing */
    SCIPclockStart(conflict->resanalyzetime, set);
@@ -4485,23 +4482,13 @@ SCIP_RETCODE SCIPconflictAnalyzeResolution(
    if( success != NULL )
       *success = (nconss > 0);
 
-   /* Set variable information related to conflict analysis to the values before using generalized resolution */
+
+   /* Set variable information related to resolution conflict analysis to default values */
    for (i = 0; i < nvars; i++)
    {
-      vars[i]->conflictlb = tmp_conflictlb[i];
-      vars[i]->conflictub = tmp_conflictub[i];
+      vars[i]->conflictreslb = SCIP_REAL_MIN;
+      vars[i]->conflictresub = SCIP_REAL_MAX;
    }
-
-   /* Set variable information related to conflict analysis to the values before using generalized resolution */
-   for (i = 0; i < nvars; i++)
-   {
-      vars[i]->conflictlb = SCIP_REAL_MIN;
-      vars[i]->conflictub = SCIP_REAL_MAX;
-   }
-
-   /* free data */
-   SCIPfreeBufferArray(set->scip, &tmp_conflictlb);
-   SCIPfreeBufferArray(set->scip, &tmp_conflictub);
 
    /* free all conflictrows */
    for( i = 0; i < conflict->nconflictrows; i++ )
