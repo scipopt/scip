@@ -1006,11 +1006,6 @@ SCIP_RETCODE propagateLexredStatic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_LEXREDDATA*      masterdata,         /**< pointer to global data for lexicographic reduction propagator */
    LEXDATA*              lexdata,            /**< pointer to data for this permutation */
-   NODEDEPTHBRANCHINDEX* nodedepthbranchindices, /**< array with (depth, index)-information per variable in
-                                                  *   rooted path to focus node */
-   int                   nvarstotal,         /**< length of nodedepthbranchindices array */
-   SCIP_VAR**            branchvars,         /**< array populated with variables branched on */
-   int                   nbranchvars,        /**< number of elements in branchvars array */
    SCIP_Bool*            infeasible,         /**< pointer to store whether the problem is infeasible */
    int*                  nreductions         /**< pointer to store the number of found domain reductions */
    )
@@ -1063,8 +1058,7 @@ SCIP_RETCODE propagateLexicographicReductionPerm(
 
    if ( lexdata->isstatic )
    {
-      SCIP_CALL( propagateLexredStatic(scip, masterdata, lexdata,
-            nodedepthbranchindices, nvarstotal, branchvars, nbranchvars, infeasible, nreductions) );
+      SCIP_CALL( propagateLexredStatic(scip, masterdata, lexdata, infeasible, nreductions) );
    }
    else
    {
