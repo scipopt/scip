@@ -107,14 +107,14 @@
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
 #define DEFAULT_USELOCALBOUNDS    FALSE /**< should local bounds be used? */
-#define DEFAULT_ISCUTSONINTS      FALSE /**< should general/implied integer variables be used to generate cuts? */
+#define DEFAULT_ISCUTSONINTS      FALSE /**< should general/implicit integer variables be used to generate cuts? */
 #define DEFAULT_MAXNUNSUCCESSFUL     10 /**< maximal number of consecutive unsuccessful iterations */
 
 /** separator-specific data for the mixing separator */
 struct SCIP_SepaData
 {
    SCIP_Bool             uselocalbounds;     /**< should local bounds be used? */
-   SCIP_Bool             iscutsonints;       /**< should general/implied integer variables be used to generate cuts? */
+   SCIP_Bool             iscutsonints;       /**< should general/implicit integer variables be used to generate cuts? */
    int                   maxrounds;          /**< maximal number of mixing separation rounds per node (-1: unlimited) */
    int                   maxroundsroot;      /**< maximal number of mixing separation rounds in the root node (-1: unlimited) */
    int                   nunsuccessful;      /**< number of consecutive unsuccessful iterations */

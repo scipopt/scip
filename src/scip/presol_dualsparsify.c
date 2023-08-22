@@ -879,7 +879,7 @@ SCIP_RETCODE cancelCol(
                if( SCIPvarIsIntegral(cancelvar) )
                {
                   /* skip if the hashing variable is an integer variable and
-                   * the canceled variable is an implied integer variable
+                   * the canceled variable is an implicit integer variable
                    */
                   if( (SCIPvarGetType(hashingcolvar) != SCIP_VARTYPE_IMPLINT) &&
                      (SCIPvarGetType(cancelvar) == SCIP_VARTYPE_IMPLINT) )
