@@ -9408,9 +9408,6 @@ SCIP_RETCODE tryAddGadgetBilinearProductSignedPerm(
    SCIP_VAR***           consvars,           /**< pointer to allocated array to store temporary variables */
    SCIP_Real**           consvals,           /**< pointer to allocated arrat to store temporary values */
    int*                  maxnconsvars,       /**< pointer to maximum number consvars/consvals can hold */
-   int**                 openidx,            /**< pointer to array of open expressions */
-   int*                  nopenidx,           /**< pointer to number of open expressions in openidx */
-   int*                  maxnopenidx,        /**< pointer to maximum number of entries openidx can hold */
    SCIP_Bool*            success             /**< pointer to store whether gadget could be added successfully */
    )
 {
@@ -9440,11 +9437,6 @@ SCIP_RETCODE tryAddGadgetBilinearProductSignedPerm(
    assert(consvals != NULL);
    assert(maxnconsvars != NULL);
    assert(*maxnconsvars > 0);
-   assert(openidx != NULL);
-   assert(nopenidx != NULL);
-   assert(*nopenidx >= 0);
-   assert(maxnopenidx != NULL);
-   assert(*maxnopenidx > 0);
    assert(success != NULL);
 
    *success = FALSE;
@@ -9530,12 +9522,6 @@ SCIP_RETCODE tryAddGadgetBilinearProductSignedPerm(
          SCIPgetSymgraphNegatedVarnodeidx(scip, graph, var1), FALSE, 0.0) );
    SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, coefidx2,
          SCIPgetSymgraphNegatedVarnodeidx(scip, graph, var2), FALSE, 0.0) );
-
-   SCIP_CALL( ensureOpenArraySize(scip, openidx, *nopenidx + 1, maxnopenidx) );
-
-   /* indicate that variables have been treated already */
-   (*openidx)[*nopenidx] = -1;
-   (*nopenidx)++;
 
    *success = TRUE;
 
@@ -10452,7 +10438,7 @@ SCIP_RETCODE addSymmetryInformation(
             SCIP_Bool succ;
 
             SCIP_CALL( tryAddGadgetBilinearProductSignedPerm(scip, expr, cons, graph, parentidx, hasparentcoef,
-                  parentcoef, &consvars, &consvals, &maxnconsvars, &openidx, &nopenidx, &maxnopenidx, &succ) );
+                  parentcoef, &consvars, &consvals, &maxnconsvars, &succ) );
 
             if( !succ )
                goto DEFAULTOPERATOR;
