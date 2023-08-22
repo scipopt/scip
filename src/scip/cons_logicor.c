@@ -3048,7 +3048,7 @@ SCIP_RETCODE removeRedundantConssAndNonzeros(
     *        representation
     */
 
-   /* get number of all possible(incl. implcit) binary variables and their negation */
+   /* get number of all possible(incl. implicit) binary variables and their negation */
    nbinvars = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
    occurlistsize = 2 * nbinvars;
 

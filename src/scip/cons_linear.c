@@ -14766,7 +14766,7 @@ SCIP_RETCODE fullDualPresolve(
    BMSclearMemoryArray(nlocksdown, nvars);
    BMSclearMemoryArray(nlocksup, nvars);
 
-   /* Initialize isimplint array: variable may be implied integer if rounded to their best bound they are integral.
+   /* Initialize isimplint array: variable may be implicit integer if rounded to their best bound they are integral.
     * We better not use SCIPisFeasIntegral() in these checks.
     */
    for( v = 0; v < ncontvars; v++ )
@@ -14968,13 +14968,13 @@ SCIP_RETCODE fullDualPresolve(
             }
          }
 
-         /* update implied integer status of continuous variables */
+         /* update implicit integer status of continuous variables */
          if( hasimpliedpotential )
          {
             if( nconscontvars > 1 || !integralcoefs )
             {
                /* there is more than one continuous variable or the integer variables have fractional coefficients:
-                * none of the continuous variables is implied integer
+                * none of the continuous variables is implicit integer
                 */
                for( i = 0; i < nconscontvars; i++ )
                {
@@ -15097,7 +15097,7 @@ SCIP_RETCODE fullDualPresolve(
       }
    }
 
-   /* upgrade continuous variables to implied integers */
+   /* upgrade continuous variables to implicit integers */
    for( v = nintvars - nbinvars; v < nvars; ++v )
    {
       SCIP_VAR* var;
@@ -15111,7 +15111,7 @@ SCIP_RETCODE fullDualPresolve(
       assert(SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) >= nlocksup[v]);
       assert(0 <= v - nintvars + nbinvars && v - nintvars + nbinvars < ncontvars);
 
-      /* we can only conclude implied integrality if the variable appears in no other constraint */
+      /* we can only conclude implicit integrality if the variable appears in no other constraint */
       if( isimplint[v - nintvars + nbinvars]
          && SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == nlocksdown[v]
          && SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == nlocksup[v] )
