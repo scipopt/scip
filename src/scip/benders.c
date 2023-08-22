@@ -713,7 +713,7 @@ SCIP_RETCODE addAuxiliaryVariablesToMaster(
       {
          SCIP_VARTYPE vartype;
 
-         /* set the variable type of the auxiliary variables to implied integer if the objective function of the
+         /* set the variable type of the auxiliary variables to implicit integer if the objective function of the
           * subproblem is guaranteed to be integer. This behaviour is controlled through a user parameter.
           * NOTE: It is only possible to determine if the objective function is integral if the subproblem is defined as
           * a SCIP instance, i.e. not NULL.
@@ -1135,7 +1135,7 @@ SCIP_RETCODE doBendersCreate(
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/auxvarsimplint", name);
    SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem, paramname,
-         "if the subproblem objective is integer, then define the auxiliary variables as implied integers?",
+         "if the subproblem objective is integer, then define the auxiliary variables as implicit integers?",
          &(*benders)->auxvarsimplint, FALSE, SCIP_DEFAULT_AUXVARSIMPLINT, NULL, NULL) ); /*lint !e740*/
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/cutcheck", name);
@@ -1618,7 +1618,7 @@ SCIP_RETCODE checkSubproblemConvexity(
    /* getting the number of integer and binary variables to determine the problem type */
    SCIP_CALL( SCIPgetVarsData(subproblem, &vars, &nvars, &nbinvars, &nintvars, &nimplintvars, NULL) );
 
-   /* if there are any binary, integer or implied integer variables, then the subproblems is marked as non-convex */
+   /* if there are any binary, integer or implicit integer variables, then the subproblems is marked as non-convex */
    if( nbinvars != 0 || nintvars != 0 || nimplintvars != 0 )
    {
       discretevar = TRUE;

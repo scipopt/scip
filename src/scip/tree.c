@@ -1284,7 +1284,7 @@ void SCIPnodeMarkPropagated(
    node->reprop = FALSE;
 
    /* if the node was the highest repropagation node in the path, update the repropdepth in the tree data */
-   if( node->active && (long)(node->depth) == tree->repropdepth )
+   if( node->active && node->depth == tree->repropdepth )
    {
       do
       {
@@ -3089,6 +3089,7 @@ SCIP_RETCODE treeSwitchPath(
    SCIP_Bool*            cutoff              /**< pointer to store whether the new focus node can be cut off */
    )
 {
+   int newappliedeffectiverootdepth;
    int focusnodedepth;  /* depth of the new focus node, or -1 if focusnode == NULL */
    int forkdepth;       /* depth of the common subroot/fork/pseudofork/junction node, or -1 if no common fork exists */
    int i;
@@ -3104,8 +3105,6 @@ SCIP_RETCODE treeSwitchPath(
    /* set new focus node */
    oldfocusnode = tree->focusnode;
    tree->focusnode = focusnode;
-
-   *cutoff = FALSE;
 
    SCIPsetDebugMsg(set, "switch path: old pathlen=%d\n", tree->pathlen);
 
@@ -3146,23 +3145,38 @@ SCIP_RETCODE treeSwitchPath(
    {
       assert(tree->appliedeffectiverootdepth <= tree->effectiverootdepth);
       SCIP_CALL( SCIPnodeFree(&oldfocusnode, blkmem, set, stat, eventfilter, eventqueue, tree, lp) );
-      assert(tree->effectiverootdepth <= focusnodedepth || tree->focusnode == NULL || *cutoff);
+      assert(tree->effectiverootdepth <= focusnodedepth || tree->focusnode == NULL);
    }
 
+   /* apply effective root shift up to the new focus node */
+   *cutoff = FALSE;
+   newappliedeffectiverootdepth = MIN(tree->effectiverootdepth, focusnodedepth);
+
    /* promote the constraint set and bound changes up to the new effective root to be global changes */
-   while( tree->appliedeffectiverootdepth < tree->effectiverootdepth && tree->appliedeffectiverootdepth < focusnodedepth
-      && !(*cutoff) )
+   if( tree->appliedeffectiverootdepth < newappliedeffectiverootdepth )
    {
       SCIPsetDebugMsg(set,
-         "effective root is now at depth %d: applying constraint set and bound changes to global problem\n",
-         tree->effectiverootdepth);
-      ++tree->appliedeffectiverootdepth;
-      SCIPsetDebugMsg(set, " -> applying constraint set changes of depth %d\n", tree->appliedeffectiverootdepth);
-      SCIP_CALL( SCIPconssetchgMakeGlobal(&tree->path[tree->appliedeffectiverootdepth]->conssetchg, blkmem, set, stat,
-            transprob, reopt) );
-      SCIPsetDebugMsg(set, " -> applying bound changes of depth %d\n", tree->appliedeffectiverootdepth);
-      SCIP_CALL( SCIPdomchgApplyGlobal(tree->path[tree->appliedeffectiverootdepth]->domchg, blkmem, set, stat, lp,
-            branchcand, eventqueue, cliquetable, cutoff) );
+                      "shift effective root from depth %d to %d: applying constraint set and bound changes to global problem\n",
+                      tree->appliedeffectiverootdepth, newappliedeffectiverootdepth);
+
+      /* at first globalize constraint changes to update constraint handlers before changing bounds */
+      for( i = tree->appliedeffectiverootdepth + 1; i <= newappliedeffectiverootdepth; ++i )
+      {
+         SCIPsetDebugMsg(set, " -> applying constraint set changes of depth %d\n", i);
+
+         SCIP_CALL( SCIPconssetchgMakeGlobal(&tree->path[i]->conssetchg, blkmem, set, stat, transprob, reopt) );
+      }
+
+      /* at last globalize bound changes triggering delayed events processed after the path switch */
+      for( i = tree->appliedeffectiverootdepth + 1; i <= newappliedeffectiverootdepth && !(*cutoff); ++i )
+      {
+         SCIPsetDebugMsg(set, " -> applying bound changes of depth %d\n", i);
+
+         SCIP_CALL( SCIPdomchgApplyGlobal(tree->path[i]->domchg, blkmem, set, stat, lp, branchcand, eventqueue, cliquetable, cutoff) );
+      }
+
+      /* update applied effective root depth */
+      tree->appliedeffectiverootdepth = newappliedeffectiverootdepth;
    }
 
    /* fork might be cut off when applying the pending bound changes */
@@ -8261,7 +8275,7 @@ SCIP_Bool SCIPtreeIsPathComplete(
    assert(tree->pathlen == 0 || tree->focusnode != NULL);
    assert(tree->pathlen >= 2 || !SCIPtreeProbing(tree));
    assert(tree->pathlen == 0 || tree->path[tree->pathlen-1] != NULL);
-   assert(tree->pathlen == 0 || (long)(tree->path[tree->pathlen-1]->depth) == tree->pathlen-1);
+   assert(tree->pathlen == 0 || tree->path[tree->pathlen-1]->depth == tree->pathlen-1);
    assert(tree->focusnode == NULL || (int)tree->focusnode->depth >= tree->pathlen
       || tree->path[tree->focusnode->depth] == tree->focusnode);
 
@@ -8304,7 +8318,7 @@ SCIP_NODE* SCIPtreeGetFocusNode(
    assert(tree->pathlen == 0 || tree->focusnode != NULL);
    assert(tree->pathlen >= 2 || !SCIPtreeProbing(tree));
    assert(tree->pathlen == 0 || tree->path[tree->pathlen-1] != NULL);
-   assert(tree->pathlen == 0 || (long)(tree->path[tree->pathlen-1]->depth) == tree->pathlen-1);
+   assert(tree->pathlen == 0 || tree->path[tree->pathlen-1]->depth == tree->pathlen-1);
    assert(tree->focusnode == NULL || (int)tree->focusnode->depth >= tree->pathlen
       || tree->path[tree->focusnode->depth] == tree->focusnode);
 
@@ -8321,7 +8335,7 @@ int SCIPtreeGetFocusDepth(
    assert(tree->pathlen == 0 || tree->focusnode != NULL);
    assert(tree->pathlen >= 2 || !SCIPtreeProbing(tree));
    assert(tree->pathlen == 0 || tree->path[tree->pathlen-1] != NULL);
-   assert(tree->pathlen == 0 || (long)(tree->path[tree->pathlen-1]->depth) == tree->pathlen-1);
+   assert(tree->pathlen == 0 || tree->path[tree->pathlen-1]->depth == tree->pathlen-1);
    assert(tree->focusnode == NULL || (int)tree->focusnode->depth >= tree->pathlen
       || tree->path[tree->focusnode->depth] == tree->focusnode);
 
@@ -8379,7 +8393,7 @@ SCIP_NODE* SCIPtreeGetCurrentNode(
    assert(tree->pathlen == 0 || tree->focusnode != NULL);
    assert(tree->pathlen >= 2 || !SCIPtreeProbing(tree));
    assert(tree->pathlen == 0 || tree->path[tree->pathlen-1] != NULL);
-   assert(tree->pathlen == 0 || (long)(tree->path[tree->pathlen-1]->depth) == tree->pathlen-1);
+   assert(tree->pathlen == 0 || tree->path[tree->pathlen-1]->depth == tree->pathlen-1);
    assert(tree->focusnode == NULL || (int)tree->focusnode->depth >= tree->pathlen
       || tree->path[tree->focusnode->depth] == tree->focusnode);
 
@@ -8396,7 +8410,7 @@ int SCIPtreeGetCurrentDepth(
    assert(tree->pathlen == 0 || tree->focusnode != NULL);
    assert(tree->pathlen >= 2 || !SCIPtreeProbing(tree));
    assert(tree->pathlen == 0 || tree->path[tree->pathlen-1] != NULL);
-   assert(tree->pathlen == 0 || (long)(tree->path[tree->pathlen-1]->depth) == tree->pathlen-1);
+   assert(tree->pathlen == 0 || tree->path[tree->pathlen-1]->depth == tree->pathlen-1);
    assert(tree->focusnode == NULL || (int)tree->focusnode->depth >= tree->pathlen
       || tree->path[tree->focusnode->depth] == tree->focusnode);
 

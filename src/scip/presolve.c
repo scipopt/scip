@@ -1094,7 +1094,7 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
       issetvar[varidx] = v+1;
    }
 
-   /* check if implied binary variables exist, because for these variables the implications can be stored in the
+   /* check if implicit binary variables exist, because for these variables the implications can be stored in the
     * variable bounds instead of the 'normal' implications
     */
    implbinvarsexist = (SCIPprobGetNImplBinVars(scip->transprob) > 0);
@@ -1109,7 +1109,7 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
    }
 #endif
 
-   /* check for same implied binary variables */
+   /* check for same implicit binary variables */
    for( v = 0; v < nvars; ++v )
    {
       var =  vars[v];
@@ -1278,7 +1278,7 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
 
       assert(start < nprobvars);
 
-      /* check for same implied binary variables */
+      /* check for same implicit binary variables */
       for( v = start; v < nprobvars; ++v )
       {
          probvar = probvars[v];

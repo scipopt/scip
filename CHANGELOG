@@ -20,6 +20,7 @@ Features
 - added new bandit method (EXP.3-IX) that is the new default of the ALNS heuristic
 - added dialog to display recognized permutation symmetries ("display symmetry")
 - added special presolving step for logicor and set covering/packing for constraints with two variables and one independent variable
+- increased the depth field of the tree structure from 16 to 30 bits and the max depth of the search tree from 65534 to 1073741822
 
 Performance improvements
 ------------------------
@@ -32,6 +33,8 @@ Performance improvements
 - Avoided some numerical issues when separating SOC constraints.
 - If differentation of convex expression fails in convex nlhdlr, then a perturbed point is tried.
 - Use sassy/bliss as default symmetry computation package.
+- No longer linearize indicator constraints in undercover heuristic by default.
+- Deactivate pre-root heuristic zeroobj in undercover heuristic.
 
 Examples and applications
 -------------------------
@@ -44,6 +47,8 @@ Interface changes
 - Added solution linearization callback for nonlinear handlers.
   The nonlinear handler may use this callback to add tight cuts that use the given solution as reference point to the cutpool.
   The callback is called if option constraints/nonlinear/linearizeheursol is enabled.
+- The callback for copying problem data SCIP_DECL_PROBCOPY() now has a parameter "original" indicating whether the original
+  or transformed problem should be copied. Similarly, SCIPprobCopy() in prob.h/c has such a parameter.
 
 ### Deleted and changed API methods
 
@@ -53,6 +58,7 @@ Interface changes
 - SCIPcreateConsIndicatorLinCons(), SCIPcreateConsIndicatorGenericLinCons() do not allow binvar to be NULL anymore
 - Replaced SCIPnlrowSetCurvature() by SCIPsetNlRowCurvature().
 - SCIPsnprintf() now returns the required string length in case reallocation is necessary.
+- SCIPcomputeCoverUndercover() receives three more arguments which nonlinearities to cover
 
 ### New API functions
 
@@ -103,8 +109,8 @@ Interface changes
 
 ### New parameters
 
-- separating/maxcutsgen and separating/maxcutsrootgen for limits on the number of cuts generated (which used to be a
-  factor of separating/maxcuts and separating/maxcutsroot)
+- separating/maxcutsgenfactor and separating/maxcutsrootgenfactor as factors (w.r.t. separating/maxcuts and
+  separating/maxcutsroot) for limits on the number of cuts generated (which used to be constants '2')
 - expr/pow/expandmaxexponent to specify limit on exponent when to expand power of sum
 - expr/pow/distribfracexponent to enable expanding power of products with fractional exponents
 - expr/product/expandalways to enable expanding any product with sums as factor (that is, also when more than two factors)
@@ -112,6 +118,7 @@ Interface changes
 - benders/default/nlpiterlimit to adjust iteration limit for NLP solver for Benders' decomposition NLP subproblems
 - limits/objectivestop to interrupt the solve as soon as a primal solution is found
   that is at least as good as the given value
+- heuristics/undercover/{coverand,coverind,covernl} to control which nonlinearities to consider (by default only "and" and nonlinear constraints)
 
 ### Data structures
 
@@ -173,6 +180,13 @@ Fixed bugs
 
 - ensure that delayed cutpool separation does not happen if enough cuts have been found already
 - fixed that a Gurobi or Mosek interface (LPI) could not be freed from a thread different than the one it was created in, which lead to problems when, e.g., using the concurrent optimizer
+- in cons_varbound if both variables are fixed, instead of propagating the constraint check the feasibility of the constraint since propagating can lead to unnecessary numerical troubles
+- fixed memory leak in branching rule "distribution"
+- fixed that undercover did not enforce that sufficiently many variables in an and-constraints were fixed to have it linearized in the generated sub-scip
+- fixed two bugs in cons_varbound: avoid adding variable bounds if vbdcoef is infinite and unlock/lock variables if lhs/rhs/vbdcoef are changed
+- globalize constraint changes before bound changes during the effective root shift in treeSwitchPath() to correctly update variable locks by avoiding global bounds with outstanding bound change events when deleting constraints
+- fixed error when attempting to copy SCIP with activated pricers
+- remove integrality check for implicit integral variables in cons_integral.c
 
 @section RN804 SCIP 8.0.4
 *************************

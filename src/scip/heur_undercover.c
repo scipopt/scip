@@ -124,7 +124,10 @@
 #define DEFAULT_LOCKSROUNDING   TRUE         /**< shall LP values for integer vars be rounded according to locks? */
 #define DEFAULT_ONLYCONVEXIFY   FALSE        /**< should we only fix/dom.red. variables creating nonconvexity? */
 #define DEFAULT_POSTNLP         TRUE         /**< should the NLP heuristic be called to polish a feasible solution? */
+#define DEFAULT_COVERAND        TRUE         /**< should and constraints be covered (or just copied)? */
 #define DEFAULT_COVERBD         FALSE        /**< should bounddisjunction constraints be covered (or just copied)? */
+#define DEFAULT_COVERIND        FALSE        /**< should indicator constraints be covered (or just copied)? */
+#define DEFAULT_COVERNL         TRUE         /**< should nonlinear constraints be covered (or just copied)? */
 #define DEFAULT_REUSECOVER      FALSE        /**< shall the cover be re-used if a conflict was added after an infeasible subproblem? */
 #define DEFAULT_COPYCUTS        TRUE         /**< should all active cuts from the cutpool of the original scip be copied
                                               *   to constraints of the subscip
@@ -182,7 +185,10 @@ struct SCIP_HeurData
    SCIP_Bool             nlpfailed;          /**< has solving the NLP relaxation failed? */
    SCIP_Bool             onlyconvexify;      /**< should we only fix/dom.red. variables creating nonconvexity? */
    SCIP_Bool             postnlp;            /**< should the NLP heuristic be called to polish a feasible solution? */
+   SCIP_Bool             coverand;           /**< should and constraints be covered (or just copied)? */
    SCIP_Bool             coverbd;            /**< should bounddisjunction constraints be covered (or just copied)? */
+   SCIP_Bool             coverind;           /**< should indicator constraints be covered (or just copied)? */
+   SCIP_Bool             covernl;            /**< should nonlinear constraints be covered (or just copied)? */
    SCIP_Bool             reusecover;         /**< shall the cover be re-used if a conflict was added after an infeasible subproblem? */
    SCIP_Bool             copycuts;           /**< should all active cuts from cutpool be copied to constraints in
                                               *   subproblem? */
@@ -482,7 +488,10 @@ SCIP_RETCODE createCoveringProblem(
    SCIP_VAR**            coveringvars,       /**< array to store the covering problem's variables */
    SCIP_Bool             globalbounds,       /**< should global bounds on variables be used instead of local bounds at focus node? */
    SCIP_Bool             onlyconvexify,      /**< should we only fix/dom.red. variables creating nonconvexity? */
+   SCIP_Bool             coverand,           /**< should and constraints be covered (or just copied)? */
    SCIP_Bool             coverbd,            /**< should bounddisjunction constraints be covered (or just copied)? */
+   SCIP_Bool             coverind,           /**< should indicator constraints be covered (or just copied)? */
+   SCIP_Bool             covernl,            /**< should nonlinear constraints be covered (or just copied)? */
    char                  coveringobj,        /**< objective function of the covering problem */
    SCIP_Bool*            success             /**< pointer to store whether the problem was created successfully */
    )
@@ -560,7 +569,7 @@ SCIP_RETCODE createCoveringProblem(
 
    /* go through all AND constraints in the original problem */
    conshdlr = SCIPfindConshdlr(scip, "and");
-   if( conshdlr != NULL )
+   if( conshdlr != NULL && coverand )
    {
       int c;
 
@@ -732,7 +741,7 @@ SCIP_RETCODE createCoveringProblem(
             /* create covering constraint */
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_covering", SCIPconsGetName(andcons));
             SCIP_CALL( SCIPcreateConsLinear(coveringscip, &coveringcons, name, ntofix, coveringconsvars, coveringconsvals,
-                  (SCIP_Real)(ntofix - 2), SCIPinfinity(coveringscip),
+                  (SCIP_Real)(ntofix - 1), SCIPinfinity(coveringscip),
                   TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE ) );
 
             if( coveringcons == NULL )
@@ -895,7 +904,7 @@ SCIP_RETCODE createCoveringProblem(
 
    /* go through all indicator constraints in the original problem; fix the binary variable */
    conshdlr = SCIPfindConshdlr(scip, "indicator");
-   if( conshdlr != NULL )
+   if( conshdlr != NULL && coverind )
    {
       int c;
 
@@ -969,7 +978,7 @@ SCIP_RETCODE createCoveringProblem(
     * this. if more specific information is accessible from expr constrains, then this can be improved
     */
    conshdlr = SCIPfindConshdlr(scip, "nonlinear");
-   if( conshdlr != NULL )
+   if( conshdlr != NULL && covernl )
    {
       int c;
 
@@ -1911,6 +1920,10 @@ SCIP_RETCODE solveSubproblem(
    {
       SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/shiftandpropagate/freq", -1) );
    }
+   if( !SCIPisParamFixed(subscip, "heuristics/zeroobj/freq") )
+   {
+      SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/zeroobj/freq", -1) );
+   }
 
    /* forbid recursive call of undercover heuristic */
    if( SCIPisParamFixed(subscip, "heuristics/" HEUR_NAME "/freq") )
@@ -2485,7 +2498,8 @@ SCIP_RETCODE SCIPapplyUndercover(
    SCIP_CALL( SCIPincludeDefaultPlugins(coveringscip) );
    SCIP_CALL( SCIPallocBufferArray(scip, &coveringvars, nvars) );
    SCIP_CALL( createCoveringProblem(scip, coveringscip, coveringvars, heurdata->globalbounds, heurdata->onlyconvexify,
-         heurdata->coverbd, heurdata->coveringobj, &success) );
+         heurdata->coverand, heurdata->coverbd, heurdata->coverind, heurdata->covernl, heurdata->coveringobj,
+         &success) );
 
    if( !success )
    {
@@ -2901,25 +2915,30 @@ SCIP_DECL_HEURINITSOL(heurInitsolUndercover)
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &heurdata->nlconshdlrs, 4) );/*lint !e506*/
    h = 0;
 
-   heurdata->nlconshdlrs[h] = SCIPfindConshdlr(scip, "and");
-   if( heurdata->nlconshdlrs[h] != NULL )
-      h++;
-
-   heurdata->nlconshdlrs[h] = SCIPfindConshdlr(scip, "nonlinear");
-   if( heurdata->nlconshdlrs[h] != NULL )
-      h++;
-
+   if( heurdata->coverand )
+   {
+      heurdata->nlconshdlrs[h] = SCIPfindConshdlr(scip, "and");
+      if( heurdata->nlconshdlrs[h] != NULL )
+         h++;
+   }
    if( heurdata->coverbd )
    {
       heurdata->nlconshdlrs[h] = SCIPfindConshdlr(scip, "bounddisjunction");
       if( heurdata->nlconshdlrs[h] != NULL )
          h++;
    }
-
-   heurdata->nlconshdlrs[h] = SCIPfindConshdlr(scip, "indicator");
-   if( heurdata->nlconshdlrs[h] != NULL )
-      h++;
-
+   if( heurdata->coverind )
+   {
+      heurdata->nlconshdlrs[h] = SCIPfindConshdlr(scip, "indicator");
+      if( heurdata->nlconshdlrs[h] != NULL )
+         h++;
+   }
+   if( heurdata->covernl )
+   {
+      heurdata->nlconshdlrs[h] = SCIPfindConshdlr(scip, "nonlinear");
+      if( heurdata->nlconshdlrs[h] != NULL )
+         h++;
+   }
    heurdata->nnlconshdlrs = h;
    assert( heurdata->nnlconshdlrs <= 4 );
 
@@ -3042,7 +3061,7 @@ SCIP_DECL_HEUREXEC(heurExecUndercover)
    }
 
    /* go through all nlrows and check for general nonlinearities */
-   if( SCIPisNLPConstructed(scip) )
+   if( !run && SCIPisNLPConstructed(scip) )
    {
       SCIP_NLROW** nlrows;
       int nnlrows;
@@ -3220,9 +3239,21 @@ SCIP_RETCODE SCIPincludeHeurUndercover(
          "should the NLP heuristic be called to polish a feasible solution?",
          &heurdata->postnlp, FALSE, DEFAULT_POSTNLP, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/coverand",
+         "should and constraints be covered (or just copied)?",
+         &heurdata->coverand, TRUE, DEFAULT_COVERAND, NULL, NULL) );
+
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/coverbd",
          "should bounddisjunction constraints be covered (or just copied)?",
          &heurdata->coverbd, TRUE, DEFAULT_COVERBD, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/coverind",
+         "should indicator constraints be covered (or just copied)?",
+         &heurdata->coverind, TRUE, DEFAULT_COVERIND, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/covernl",
+         "should nonlinear constraints be covered (or just copied)?",
+         &heurdata->covernl, TRUE, DEFAULT_COVERNL, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/copycuts",
          "should all active cuts from cutpool be copied to constraints in subproblem?",
@@ -3248,7 +3279,10 @@ SCIP_RETCODE computeCoverUndercover(
    SCIP_Real             objlimit,           /**< objective limit: upper bound on coversize */
    SCIP_Bool             globalbounds,       /**< should global bounds on variables be used instead of local bounds at focus node? */
    SCIP_Bool             onlyconvexify,      /**< should we only fix/dom.red. variables creating nonconvexity? */
+   SCIP_Bool             coverand,           /**< should and constraints be covered (or just copied)? */
    SCIP_Bool             coverbd,            /**< should bounddisjunction constraints be covered (or just copied)? */
+   SCIP_Bool             coverind,           /**< should indicator constraints be covered (or just copied)? */
+   SCIP_Bool             covernl,            /**< should nonlinear constraints be covered (or just copied)? */
    char                  coveringobj,        /**< objective function of the covering problem ('b'ranching status,
                                               *   influenced nonlinear 'c'onstraints/'t'erms, 'd'omain size, 'l'ocks,
                                               *   'm'in of up/down locks, 'u'nit penalties, constraint 'v'iolation) */
@@ -3271,7 +3305,8 @@ SCIP_RETCODE computeCoverUndercover(
    SCIP_CALL( SCIPallocBufferArray(scip, &coveringvars, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &coverinds, nvars) );
 
-   SCIP_CALL( createCoveringProblem(scip, coveringscip, coveringvars, globalbounds, onlyconvexify, coverbd, coveringobj, success) );
+   SCIP_CALL( createCoveringProblem(scip, coveringscip, coveringvars, globalbounds, onlyconvexify,
+         coverand, coverbd, coverind, covernl, coveringobj, success) );
 
    if( *success )
    {
@@ -3324,7 +3359,10 @@ SCIP_RETCODE SCIPcomputeCoverUndercover(
    SCIP_Real             objlimit,           /**< objective limit: upper bound on coversize */
    SCIP_Bool             globalbounds,       /**< should global bounds on variables be used instead of local bounds at focus node? */
    SCIP_Bool             onlyconvexify,      /**< should we only fix/dom.red. variables creating nonconvexity? */
+   SCIP_Bool             coverand,           /**< should and constraints be covered (or just copied)? */
    SCIP_Bool             coverbd,            /**< should bounddisjunction constraints be covered (or just copied)? */
+   SCIP_Bool             coverind,           /**< should indicator constraints be covered (or just copied)? */
+   SCIP_Bool             covernl,            /**< should nonlinear constraints be covered (or just copied)? */
    char                  coveringobj,        /**< objective function of the covering problem ('b'ranching status,
                                               *   influenced nonlinear 'c'onstraints/'t'erms, 'd'omain size, 'l'ocks,
                                               *   'm'in of up/down locks, 'u'nit penalties, constraint 'v'iolation) */
@@ -3344,8 +3382,9 @@ SCIP_RETCODE SCIPcomputeCoverUndercover(
    SCIP_CALL( SCIPcreate(&coveringscip) );
 
    retcode = computeCoverUndercover(scip, coveringscip, coversize, cover,
-         timelimit, memorylimit, objlimit,
-         globalbounds, onlyconvexify, coverbd, coveringobj, success);
+      timelimit, memorylimit, objlimit,
+      globalbounds, onlyconvexify, coverand, coverbd, coverind, covernl,
+      coveringobj, success);
 
    /* free the covering problem scip instance before reacting on potential errors */
    SCIP_CALL( SCIPfree(&coveringscip) );

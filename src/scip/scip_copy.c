@@ -456,7 +456,7 @@ SCIP_RETCODE copyProb(
    targetscip->stat->subscipdepth = sourcescip->stat->subscipdepth + 1;
 
    /* create the problem by copying the source problem */
-   SCIP_CALL( SCIPprobCopy(&targetscip->origprob, targetscip->mem->probmem, targetscip->set, name, sourcescip, sourceprob, localvarmap, localconsmap, global) );
+   SCIP_CALL( SCIPprobCopy(&targetscip->origprob, targetscip->mem->probmem, targetscip->set, name, sourcescip, sourceprob, localvarmap, localconsmap, original, global) );
 
    /* creating the solution candidates storage */
    /**@todo copy solution of source SCIP as candidates for the target SCIP */
