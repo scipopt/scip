@@ -1654,6 +1654,8 @@ SCIP_RETCODE detectOrbitopalSymmetries(
       /* find an element in the first connected component with degree 1 */
       for (v = colorbegins[c]; compidx[v] == compidx[colorbegins[c]]; ++v)
       {
+         assert( v < nposdegree ); /* there should be a node of degree 1 */
+
          if ( degrees[varidx[v]] == 1 )
             break;
       }
@@ -1665,7 +1667,7 @@ SCIP_RETCODE detectOrbitopalSymmetries(
       for (p = 0; p < nselectedperms; ++p)
       {
          perm = perms[selectedperms[p]];
-         for (v = colorbegins[c]; compidx[v] == compidx[colorbegins[c]]; ++v)
+         for (v = colorbegins[c]; compidx[v] == compidx[colorbegins[c]] && v < nposdegree; ++v)
          {
             if ( perm[varidx[v]] != varidx[v] )
             {
