@@ -5613,5 +5613,21 @@ SCIP_RETCODE SCIPconflictAnalyze(
    /* stop timing */
    SCIPclockStop(conflict->propanalyzetime, set);
 
+   /* refactortodo this has to be reset at some other place s*/
+   if ( set->conf_usegeneralres )
+   {
+      SCIP_VAR** vars;
+      int nvars;
+      int i;
+
+      vars = SCIPprobGetVars(prob);
+      nvars = SCIPprobGetNVars(prob);
+      for( i = 0; i < nvars; ++i )
+      {
+         vars[i]->conflictreslb = SCIP_REAL_MIN;
+         vars[i]->conflictresub = SCIP_REAL_MAX;
+      }
+   }
+
    return SCIP_OKAY;
 }
