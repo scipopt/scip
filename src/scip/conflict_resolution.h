@@ -111,7 +111,7 @@ SCIP_Longint SCIPconflictGetNResUnkTerm(
    );
 
 /** create resolution constraints out of resolution sets and add them to the problem */
-SCIP_RETCODE SCIPconflictAddConflictCons(
+SCIP_RETCODE SCIPconflictAddConflictCon(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */

@@ -2447,17 +2447,22 @@ SCIP_RETCODE conflictQueueBound(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_BDCHGINFO*       bdchginfo,          /**< bound change information */
-   SCIP_Real             relaxedbd           /**< relaxed bound */
+   SCIP_Real             relaxedbd,          /**< relaxed bound */
+   SCIP_Bool*            success             /**< was the bound change successfully added to the queue? */
    )
 {
    assert(conflict != NULL);
    assert(set != NULL);
    assert(bdchginfo != NULL);
+
    assert(!SCIPbdchginfoIsRedundant(bdchginfo));
 
    /* check if the relaxed bound is really a relaxed bound */
    assert(SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER || SCIPsetIsGE(set, relaxedbd, SCIPbdchginfoGetNewbound(bdchginfo)));
    assert(SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_UPPER || SCIPsetIsLE(set, relaxedbd, SCIPbdchginfoGetNewbound(bdchginfo)));
+
+   if (success != NULL)
+      *success = FALSE;
 
    if (conflict->reasonclauseres)
    {
@@ -2468,7 +2473,11 @@ SCIP_RETCODE conflictQueueBound(
    else if (set->conf_usegeneralres && !conflict->bdchgonlyconfqueue)
    {
       if(!betterBoundInResolutionQueue(conflict, set, bdchginfo))
+      {
          SCIP_CALL( SCIPpqueueInsert(conflict->resbdchgqueue, (void*)bdchginfo) );
+         if (success != NULL)
+            *success = TRUE;
+      }
    }
    /* mark the bound to be member of the conflict and check if a bound which is at least as tight is already member of
     * the conflict
@@ -2479,11 +2488,15 @@ SCIP_RETCODE conflictQueueBound(
       if( (!set->conf_preferbinary || SCIPvarIsBinary(SCIPbdchginfoGetVar(bdchginfo)))
          && !isBoundchgUseless(set, bdchginfo) )
       {
-            SCIP_CALL( SCIPpqueueInsert(conflict->bdchgqueue, (void*)bdchginfo) );
+         SCIP_CALL( SCIPpqueueInsert(conflict->bdchgqueue, (void*)bdchginfo) );
+         if (success != NULL)
+            *success = TRUE;
       }
       else
       {
-            SCIP_CALL( SCIPpqueueInsert(conflict->forcedbdchgqueue, (void*)bdchginfo) );
+         SCIP_CALL( SCIPpqueueInsert(conflict->forcedbdchgqueue, (void*)bdchginfo) );
+         if (success != NULL)
+            *success = TRUE;
       }
 
 #if defined(SCIP_CONFGRAPH) || defined(SCIP_CONFGRAPH_DOT)
@@ -2511,6 +2524,9 @@ SCIP_RETCODE conflictAddBound(
    SCIP_Real             relaxedbd           /**< relaxed bound */
    )
 {
+
+   SCIP_Bool success;
+
    assert(SCIPvarIsActive(var));
    assert(bdchginfo != NULL);
    assert(!SCIPbdchginfoIsRedundant(bdchginfo));
@@ -2545,13 +2561,14 @@ SCIP_RETCODE conflictAddBound(
 
    SCIPsetDebugMsg(set, "Elements in queue: %d \n", SCIPpqueueNElems(conflict->resbdchgqueue));
    /* put bound change information into priority queue */
-   SCIP_CALL( conflictQueueBound(conflict, set, bdchginfo, relaxedbd) );
+   SCIP_CALL( conflictQueueBound(conflict, set, bdchginfo, relaxedbd, &success) );
 
    /* each variable which is add to the conflict graph gets an increase in the VSIDS
     *
-    * @note That is different to the VSIDS preseted in the literature
+    * @note That is different to the VSIDS presented in the literature
     */
-   SCIP_CALL( incVSIDS(var, blkmem, set, stat, boundtype, relaxedbd, set->conf_conflictgraphweight) );
+   if( success )
+      SCIP_CALL( incVSIDS(var, blkmem, set, stat, boundtype, relaxedbd, set->conf_conflictgraphweight) );
 
    return SCIP_OKAY;
 }
@@ -3591,7 +3608,7 @@ SCIP_RETCODE conflictCreateReconvergenceConss(
       SCIP_CALL( conflictAddConflictBound(conflict, blkmem, set, oppositeuip, oppositeuipbound) );
 
       /* put positive UIP into priority queue */
-      SCIP_CALL( conflictQueueBound(conflict, set, uip, SCIPbdchginfoGetNewbound(uip)) );
+      SCIP_CALL( conflictQueueBound(conflict, set, uip, SCIPbdchginfoGetNewbound(uip), NULL) );
 
       /* resolve the queue until the next UIP is reached */
       bdchginfo = conflictFirstCand(conflict);

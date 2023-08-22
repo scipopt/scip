@@ -52,6 +52,7 @@
 #include "scip/set.h"
 #include "scip/sol.h"
 #include "scip/struct_conflict.h"
+#include "scip/struct_lp.h"
 #include "scip/struct_set.h"
 #include "scip/struct_stat.h"
 #include "scip/tree.h"
@@ -1400,7 +1401,7 @@ SCIP_RETCODE updateStatistics(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_CONFLICTROW*     conflictrow,      /**< conflict row to add to the tree */
+   SCIP_CONFLICTROW*     conflictrow,        /**< conflict row to add to the tree */
    int                   insertdepth         /**< depth level at which the conflict set should be added */
    )
 {
@@ -1437,8 +1438,9 @@ SCIP_RETCODE updateStatistics(
           * infeasibility of the conflict constraint. Alternative: Can we get
           * these values directly these values from the resbdchgqueue and the
           * current bdchg and all previous ones that have been fixed? */
+         assert(!SCIPsetIsZero(set, conflictrow->vals[idx]));
          boundtype = conflictrow->vals[idx] > 0 ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER;
-         bound = conflictrow->vals[idx] > 0 ? 0 : 1;
+         bound = conflictrow->vals[idx] > 0 ? SCIPvarGetLbLocal(var) : SCIPvarGetUbLocal(var);
 
          branchdir = (boundtype == SCIP_BOUNDTYPE_LOWER ? SCIP_BRANCHDIR_UPWARDS : SCIP_BRANCHDIR_DOWNWARDS); /*lint !e641*/
 
@@ -2310,7 +2312,7 @@ SCIP_RETCODE updateBdchgQueue(
 
 /** creates a conflict constraint and tries to add it to the storage */
 static
-SCIP_RETCODE createAndAddConflictCons(
+SCIP_RETCODE createAndAddConflictCon(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -2320,7 +2322,7 @@ SCIP_RETCODE createAndAddConflictCons(
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
-   SCIP_CONFLICTROW*     conflictrow,      /**< conflict row to add to the tree */
+   SCIP_CONFLICTROW*     conflictrow,        /**< conflict row to add to the tree */
    int                   insertdepth,        /**< depth level at which the conflict set should be added */
    SCIP_Bool*            success             /**< pointer to store whether the addition was successful */
    )
@@ -2373,9 +2375,7 @@ SCIP_RETCODE createAndAddConflictCons(
 
 
    /* update statistics */
-   /* todo this does not work for the general case atm */
-   if( isBinaryConflictRow(set, vars, conflictrow) )
-      SCIP_CALL( updateStatistics(conflict, vars, blkmem, set, stat, conflictrow, conflictrow->validdepth) );
+   SCIP_CALL( updateStatistics(conflict, vars, blkmem, set, stat, conflictrow, conflictrow->validdepth) );
 
    /* add conflict to SCIP */
    cons->resconflict = TRUE;
@@ -2390,7 +2390,7 @@ SCIP_RETCODE createAndAddConflictCons(
 }/*lint !e715*/
 
 /** create conflict constraints out of conflict rows and add them to the problem */
-SCIP_RETCODE SCIPconflictAddConflictCons(
+SCIP_RETCODE SCIPconflictAddConflictCon(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -2403,7 +2403,7 @@ SCIP_RETCODE SCIPconflictAddConflictCons(
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
-   SCIP_CONFLICTROW*     conflictrow,      /**< conflict row to add to the tree */
+   SCIP_CONFLICTROW*     conflictrow,        /**< conflict row to add to the tree */
    SCIP_Bool*            success             /**< true if the conflict is added to the problem */
    )
 {
@@ -2430,7 +2430,7 @@ SCIP_RETCODE SCIPconflictAddConflictCons(
    /* calculate the maximal size of each accepted conflict set */
    maxsize = (int) (set->conf_maxvarsfracres * transprob->nvars);
 
-   SCIPsetDebugMsgPrint(set, "flushing %d conflict rows at focus depth %d (vd: %d, cd: %d, rd: %d, maxsize: %d)\n",
+   SCIPsetDebugMsgPrint(set, "flushing %d conflict constraint at focus depth %d (vd: %d, cd: %d, rd: %d, maxsize: %d)\n",
       1, focusdepth, conflictrow->validdepth, conflictrow->conflictdepth, conflictrow->repropdepth, maxsize);
 
    *success = FALSE;
@@ -2462,12 +2462,44 @@ SCIP_RETCODE SCIPconflictAddConflictCons(
     *       change. Bound changes which are related to any other node cannot be handled at point due to the internal
     *       data structure
     */
+   else if( conflictrow->nnz == 1 && conflictrow->insertdepth == 0 && !lp->strongbranching && !lp->diving )
+   {
+      SCIP_VAR* var;
+      SCIP_Real bound;
+      SCIP_BOUNDTYPE boundtype;
+      int idx;
 
+      idx = conflictrow->inds[0];
+      var = vars[idx];
+      assert(!SCIPsetIsZero(set, conflictrow->vals[idx]));
+      assert(var != NULL);
+
+      boundtype = conflictrow->vals[idx] > 0.0 ? SCIP_BOUNDTYPE_LOWER : SCIP_BOUNDTYPE_UPPER;
+
+      /** Since the conflictrow is in the form a*x >= b:
+       *  For integer variables:
+       *    coef > 0: The lower bound change is equal to ceil(lhs / coef)
+       *    coef < 0: The upper bound change is equal to floor(lhs / coef)
+       *  For continuous variables we do not round the bound change
+       */
+      bound = conflictrow->lhs / conflictrow->vals[idx];
+      if( SCIPvarIsIntegral(var) )
+         bound = conflictrow->vals[idx] > 0.0 ? SCIPsetCeil(set, bound) : SCIPsetFloor(set, bound);
+
+      SCIPsetDebugMsg(set, " -> apply global bound change: <%s> %s %g\n",
+         SCIPvarGetName(var), boundtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", bound);
+
+      SCIP_CALL( SCIPnodeAddBoundchg(tree->path[conflictrow->validdepth], blkmem, set, stat, transprob, origprob, tree,
+            reopt, lp, branchcand, eventqueue, cliquetable, var, bound, boundtype, FALSE) );
+
+      *success = TRUE;
+      SCIP_CALL( updateStatistics(conflict, vars, blkmem, set, stat, conflictrow, conflictrow->validdepth) );
+   }
    /* generate the linear constraint */
    else if( !hasRelaxationOnlyVar(set, vars, conflictrow) )
    {
       /* @todo use the right insert depth and not valid depth */
-      SCIP_CALL( createAndAddConflictCons(conflict, blkmem, set, stat, vars, \
+      SCIP_CALL( createAndAddConflictCon(conflict, blkmem, set, stat, vars, \
                      tree, reopt, lp, cliquetable, conflictrow, conflictrow->validdepth, success) );
       conflict->nappliedglbresconss++;
       SCIPsetDebugMsgPrint(set, " \t -> conflict row added (cdpt:%d, fdpt:%d, insert:%d, valid:%d, conf: %d, reprop: %d, len:%d):\n",
@@ -3820,7 +3852,7 @@ SCIP_RETCODE addClauseConflict(
          conflict->nknownaborts++;
       return SCIP_OKAY;
    }
-   SCIP_CALL(SCIPconflictAddConflictCons(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue, cliquetable, conflict->conflictrow, &success));
+   SCIP_CALL(SCIPconflictAddConflictCon(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue, cliquetable, conflict->conflictrow, &success));
 
    if (success)
    {
@@ -3864,7 +3896,7 @@ SCIP_RETCODE addConflictRows(
       {
 
          SCIP_Bool success;
-         SCIP_CALL( SCIPconflictAddConflictCons(conflict, blkmem, set, stat, transprob, origprob, tree, reopt,
+         SCIP_CALL( SCIPconflictAddConflictCon(conflict, blkmem, set, stat, transprob, origprob, tree, reopt,
                lp, branchcand, eventqueue, cliquetable, conflictrowtoadd, &success) );
          if( success )
          {
@@ -4242,7 +4274,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
          /* check that we fail for a valid reason */
          if (SCIPsetIsGE(set, conflictrow->slack, 0.0))
          {
-            if ( set->conf_reductiontechnique == 'o' )
+            if ( set->conf_reductiontechnique == 'o' || !isBinaryConflictRow(set, vars, conflictrow) || !isBinaryReasonRow(set, vars, reasonrow))
             {
                conflict->nknownaborts++;
                goto TERMINATE_RESOLUTION_LOOP;
@@ -4255,6 +4287,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
                   conflict->nknownaborts++;
                   goto TERMINATE_RESOLUTION_LOOP;
                }
+               /* refactortodo we should count the times we reach this point */
             }
          }
 
