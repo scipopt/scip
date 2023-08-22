@@ -7185,6 +7185,15 @@ SCIP_RETCODE tryAddSymmetryHandlingMethods(
 
    propdata = SCIPpropGetData(prop);
    assert( propdata != NULL );
+   assert( propdata->usesymmetry >= 0 );
+
+   /* if no symmetries may be handled, stop here */
+   if ( propdata->usesymmetry == 0 )
+   {
+      if ( earlyterm != NULL )
+         *earlyterm = TRUE;
+      return SCIP_OKAY;
+   }
 
    /* if constraints have already been added */
    if ( propdata->triedaddconss )
@@ -7420,18 +7429,21 @@ SCIP_DECL_PROPINITPRE(propInitpreSymmetry)
       SCIP_CALL( SCIPgetIntParam(scip, "misc/usesymmetry", &propdata->usesymmetry) );
    }
 
-   /* add symmetry handling constraints if required  */
-   if ( propdata->addconsstiming == 0 )
+   if ( propdata->usesymmetry >= 0 )
    {
-      SCIPdebugMsg(scip, "Try to add symmetry handling constraints before presolving.\n");
+      /* add symmetry handling constraints if required  */
+      if ( propdata->addconsstiming == 0 )
+      {
+         SCIPdebugMsg(scip, "Try to add symmetry handling constraints before presolving.\n");
 
-      SCIP_CALL( tryAddSymmetryHandlingMethods(scip, prop, NULL, NULL) );
-   }
-   else if ( propdata->symcomptiming == 0 )
-   {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Symmetry computation before presolving:\n");
+         SCIP_CALL( tryAddSymmetryHandlingMethods(scip, prop, NULL, NULL) );
+      }
+      else if ( propdata->symcomptiming == 0 )
+      {
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Symmetry computation before presolving:\n");
 
-      SCIP_CALL( determineSymmetry(scip, propdata, SYM_SPEC_BINARY | SYM_SPEC_INTEGER | SYM_SPEC_REAL, 0) );
+         SCIP_CALL( determineSymmetry(scip, propdata, SYM_SPEC_BINARY | SYM_SPEC_INTEGER | SYM_SPEC_REAL, 0) );
+      }
    }
 
    return SCIP_OKAY;
@@ -7453,6 +7465,10 @@ SCIP_DECL_PROPEXITPRE(propExitpreSymmetry)
    propdata = SCIPpropGetData(prop);
    assert( propdata != NULL );
    assert( propdata->usesymmetry >= 0 );
+
+   /* terminate early if no symmetries will be handled */
+   if ( propdata->usesymmetry == 0 )
+      return SCIP_OKAY;
 
    /* guarantee that symmetries are computed (and handled) if the solving process has not been interrupted
     * and even if presolving has been disabled */
