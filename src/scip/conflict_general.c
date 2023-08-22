@@ -2384,11 +2384,11 @@ SCIP_RETCODE conflictAnalyzeLP(
       SCIP_CALL( SCIPconflictAnalyzeRemainingBdchgs(conflict, blkmem, set, stat, transprob, tree, diving, \
             lbchginfoposs, ubchginfoposs, nconss, nliterals, nreconvconss, nreconvliterals) );
 
-      conflict->bdchgonlyconfqueue = FALSE;
-
       /* flush conflict set storage */
       SCIP_CALL( SCIPconflictFlushConss(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, \
             eventqueue, cliquetable) );
+
+      conflict->bdchgonlyconfqueue = FALSE;
 
       if( set->conf_applyresdualproof )
       {

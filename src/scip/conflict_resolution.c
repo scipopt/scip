@@ -23,7 +23,7 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-#define SCIP_DEBUG
+// #define SCIP_DEBUG
 // #define SCIP_MORE_DEBUG
 
 #include "blockmemshell/memory.h"
@@ -3981,7 +3981,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
       /* clear the bound change queues */
       SCIPpqueueClear(conflict->resbdchgqueue);
       SCIPpqueueClear(conflict->resforcedbdchgqueue);
-      /* todo this is not necessary if we do not create the queues in conflictAnalyzeRemaining... */
+      /* todo this can be avoided by using the same queues as graph conflict analysis */
       SCIP_CALL( updateBdchgQueue(set, vars, conflictrow, NULL) );
    }
 

@@ -127,7 +127,7 @@
 #define SCIP_DEFAULT_CONF_SEPARATE         TRUE /**< should the conflict constraints be separated? */
 #define SCIP_DEFAULT_CONF_SEPARESOLUTION   TRUE /**< should the generalized resolution conflict constraints be separated? */
 #define SCIP_DEFAULT_CONF_DYNAMIC          TRUE /**< should the conflict constraints be subject to aging? */
-#define SCIP_DEFAULT_CONF_UPGRADECONS     FALSE /**< should we try upgrading the conflict constraints? */
+#define SCIP_DEFAULT_CONF_UPGRADECONS      TRUE /**< should we try upgrading the conflict constraints? */
 #define SCIP_DEFAULT_CONF_REPROPAGATE      TRUE /**< should earlier nodes be repropagated in order to replace branching
                                                  *   decisions by deductions? */
 #define SCIP_DEFAULT_CONF_KEEPREPROP       TRUE /**< should constraints be kept for repropagation even if they are too long? */
