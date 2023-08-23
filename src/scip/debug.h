@@ -92,6 +92,13 @@ SCIP_RETCODE SCIPdebugCheckConss(
    int                   nconss              /**< number of given constraints */
    );
 
+/** checks for validity of the debugging solution in given conflict constraints */
+SCIP_RETCODE SCIPdebugCheckConflictCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           conss,              /**< constraints to check for validity */
+   int                   nconss              /**< number of given constraints */
+   );
+
 /** checks whether given row is valid for the debugging solution */
 SCIP_RETCODE SCIPdebugCheckRow(
    SCIP_SET*             set,                /**< global SCIP settings */

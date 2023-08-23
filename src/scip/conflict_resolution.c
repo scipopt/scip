@@ -2310,6 +2310,74 @@ SCIP_RETCODE updateBdchgQueue(
    return SCIP_OKAY;
 }
 
+/* refactortodo this should only be called if debugsol mode */
+/* check the conflict in debug mode */
+static
+SCIP_RETCODE checkConflictDebug(
+   SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR**            vars,               /**< array of variables */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_CONFLICTROW*     conflictrow         /**< conflict row to add to the tree */
+   )
+{
+
+   SCIP_VAR** consvars;
+   SCIP_CONS* cons;
+   SCIP_CONS* upgdcons;
+
+   char consname[SCIP_MAXSTRLEN];
+
+   SCIP_Real* vals;
+   SCIP_Real lhs;
+   int i;
+
+   assert(vars != NULL);
+
+   SCIP_CALL( SCIPallocBufferArray(set->scip, &consvars, conflictrow->nnz) );
+   SCIP_CALL( SCIPallocBufferArray(set->scip, &vals, conflictrow->nnz) );
+
+   lhs = conflictrow->lhs;
+
+   for( i = 0; i < conflictrow->nnz; ++i )
+   {
+      int idx;
+      idx = conflictrow->inds[i];
+      assert(conflictrow->vals[idx]);
+      consvars[i] = vars[idx];
+      vals[i] = conflictrow->vals[idx];
+   }
+
+   /* create a constraint out of the conflict set */
+   (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "confres_%" SCIP_LONGINT_FORMAT, conflict->nresconfconss);
+   SCIP_CALL( SCIPcreateConsLinear(set->scip, &cons, consname, conflictrow->nnz, consvars, vals,
+              lhs, SCIPsetInfinity(set), FALSE, set->conf_separesolution, FALSE, FALSE, TRUE, (SCIPnodeGetDepth(tree->path[conflictrow->validdepth]) > 0 ),
+              FALSE, set->conf_dynamic, set->conf_removable, FALSE) );
+   /* try to automatically convert a linear constraint into a more specific and more specialized constraint */
+   if (set->conf_upgrade)
+   {
+      SCIP_CALL( SCIPupgradeConsLinear(set->scip, cons, &upgdcons) );
+      if( upgdcons != NULL )
+      {
+         SCIP_CALL( SCIPreleaseCons(set->scip, &cons) );
+         cons = upgdcons;
+      }
+   }
+
+   /* check if the constraint is valid for the debug solution before upgrade */
+   SCIP_CALL( SCIPdebugCheckConflictCons(set->scip, &cons, 1) );
+
+   SCIP_CALL( SCIPreleaseCons(set->scip, &cons) );
+
+   /* free temporary memory */
+   SCIPfreeBufferArray(set->scip, &consvars);
+   SCIPfreeBufferArray(set->scip, &vals);
+
+   return SCIP_OKAY;
+}/*lint !e715*/
+
 /** creates a conflict constraint and tries to add it to the storage */
 static
 SCIP_RETCODE createAndAddConflictCon(
@@ -2360,6 +2428,9 @@ SCIP_RETCODE createAndAddConflictCon(
               lhs, SCIPsetInfinity(set), FALSE, set->conf_separesolution, FALSE, FALSE, TRUE, (SCIPnodeGetDepth(tree->path[conflictrow->validdepth]) > 0 ),
               FALSE, set->conf_dynamic, set->conf_removable, FALSE) );
 
+   /* chck if the constraint is valid for the debug solution */
+   SCIP_CALL( SCIPdebugCheckConflictCons(set->scip, &cons, 1) );
+
    /* try to automatically convert a linear constraint into a more specific and more specialized constraint */
    if (set->conf_upgrade)
    {
@@ -2371,7 +2442,7 @@ SCIP_RETCODE createAndAddConflictCon(
       }
    }
    /* chck if the constraint is valid for the debug solution */
-   SCIP_CALL( SCIPdebugCheckConss(set->scip, &cons, 1) );
+   SCIP_CALL( SCIPdebugCheckConflictCons(set->scip, &cons, 1) );
 
 
    /* update statistics */
@@ -2462,7 +2533,7 @@ SCIP_RETCODE SCIPconflictAddConflictCon(
     *       change. Bound changes which are related to any other node cannot be handled at point due to the internal
     *       data structure
     */
-   else if( conflictrow->nnz == 1 && conflictrow->insertdepth == 0 && !lp->strongbranching && !lp->diving )
+   else if( !hasRelaxationOnlyVar(set, vars, conflictrow) && conflictrow->nnz == 1 && conflictrow->insertdepth == 0 && !lp->strongbranching && !lp->diving )
    {
       SCIP_VAR* var;
       SCIP_Real bound;
@@ -4143,6 +4214,9 @@ SCIP_RETCODE conflictAnalyzeResolution(
          printAllBoundChanges(conflict, set);
       }
 #endif
+      if(SCIPdebugSolIsEnabled(set->scip))
+         checkConflictDebug(conflict, blkmem, set, vars, stat, tree, conflictrow);
+
       if( !bdchginfoIsResolvable(bdchginfo) )
       {
          SCIP_Bool successfixing;
@@ -4402,6 +4476,8 @@ SCIP_RETCODE conflictAnalyzeResolution(
    confgraphAddRow(conflict, CONFLICT_ROW);
    endSubgraph();
 #endif
+      if(SCIPdebugSolIsEnabled(set->scip))
+         checkConflictDebug(conflict, blkmem, set, vars, stat, tree, conflictrow);
 
    /* if resolution fails at some point we can still add the latest valid
    conflict in the list of conflict rows */

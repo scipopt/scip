@@ -836,6 +836,59 @@ SCIP_RETCODE SCIPdebugCheckConss(
    return SCIP_OKAY;
 }
 
+/** checks for validity of the debugging solution in given conflict constraints */
+SCIP_RETCODE SCIPdebugCheckConflictCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           conss,              /**< constraints to check for validity */
+   int                   nconss              /**< number of given constraints */
+   )
+{
+   SCIP_RESULT result;
+   int c;
+
+   SCIP_DEBUGSOLDATA* debugsoldata;
+   assert(scip->set != NULL);
+
+   /* check if we are in the original problem and not in a sub MIP */
+   if( !SCIPdebugSolIsEnabled(scip) )
+      return SCIP_OKAY;
+
+   /* check whether a debug solution is available */
+   if( !debugSolutionAvailable(scip->set) )
+      return SCIP_OKAY;
+
+   debugsoldata = SCIPsetGetDebugSolData(scip->set);
+
+   assert(conss != NULL || nconss == 0);
+   assert(debugsoldata->debugsol != NULL);
+
+   /* check if the incumbent solution is at least as good as the debug solution, so we can stop to check the debug
+    * solution
+    */
+   if( debugSolIsAchieved(scip->set) )
+      return SCIP_OKAY;
+
+   result = SCIP_FEASIBLE;
+
+   /* checking each given constraint against the debugging solution */
+   for( c = nconss - 1; c >= 0; --c )
+   {
+      assert(conss[c] != NULL);
+
+      SCIP_CALL( SCIPcheckCons(scip, conss[c], debugsoldata->debugsol, TRUE, TRUE, TRUE, &result) );
+
+      SCIPdebugMsg(scip, " -> checking of conflict constraint %s returned result <%d>\n", SCIPconsGetName(conss[c]), result);
+
+      if( result != SCIP_FEASIBLE )
+      {
+         SCIPerrorMessage("conflict constraint %s violates the debugging solution\n", SCIPconsGetName(conss[c]));
+         SCIPABORT();
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /** checks whether given row is valid for the debugging solution */
 SCIP_RETCODE SCIPdebugCheckRow(
    SCIP_SET*             set,                /**< global SCIP settings */
