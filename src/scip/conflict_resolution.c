@@ -2367,7 +2367,7 @@ SCIP_RETCODE checkConflictDebug(
    }
 
    /* check if the constraint is valid for the debug solution before upgrade */
-   SCIP_CALL( SCIPdebugCheckConflictCons(set->scip, &cons, 1) );
+   SCIP_CALL( SCIPdebugCheckAnyConss(set->scip, &cons, 1) );
 
    SCIP_CALL( SCIPreleaseCons(set->scip, &cons) );
 
@@ -2429,7 +2429,7 @@ SCIP_RETCODE createAndAddConflictCon(
               FALSE, set->conf_dynamic, set->conf_removable, FALSE) );
 
    /* chck if the constraint is valid for the debug solution */
-   SCIP_CALL( SCIPdebugCheckConflictCons(set->scip, &cons, 1) );
+   SCIP_CALL( SCIPdebugCheckAnyConss(set->scip, &cons, 1) );
 
    /* try to automatically convert a linear constraint into a more specific and more specialized constraint */
    if (set->conf_upgrade)
@@ -2442,7 +2442,7 @@ SCIP_RETCODE createAndAddConflictCon(
       }
    }
    /* chck if the constraint is valid for the debug solution */
-   SCIP_CALL( SCIPdebugCheckConflictCons(set->scip, &cons, 1) );
+   SCIP_CALL( SCIPdebugCheckAnyConss(set->scip, &cons, 1) );
 
 
    /* update statistics */
@@ -4267,7 +4267,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
 #endif
          /* call resolution */
          successresolution = FALSE;
-         if ( !set->conf_weakenreason || set->conf_reductiontechnique == 'o')
+         if (set->conf_reductiontechnique == 'o')
          {
             SCIPsetDebugMsgPrint(set, " Applying resolution to remove variable <%s>\n", SCIPvarGetName(vartoresolve));
 

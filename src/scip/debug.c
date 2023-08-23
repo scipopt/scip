@@ -836,8 +836,10 @@ SCIP_RETCODE SCIPdebugCheckConss(
    return SCIP_OKAY;
 }
 
-/** checks for validity of the debugging solution in given conflict constraints */
-SCIP_RETCODE SCIPdebugCheckConflictCons(
+/** checks for validity of the debugging solution in given constraints.
+ *  The constraints can be any constraints, not only active ones.
+ */
+SCIP_RETCODE SCIPdebugCheckAnyConss(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           conss,              /**< constraints to check for validity */
    int                   nconss              /**< number of given constraints */
@@ -877,11 +879,11 @@ SCIP_RETCODE SCIPdebugCheckConflictCons(
 
       SCIP_CALL( SCIPcheckCons(scip, conss[c], debugsoldata->debugsol, TRUE, TRUE, TRUE, &result) );
 
-      SCIPdebugMsg(scip, " -> checking of conflict constraint %s returned result <%d>\n", SCIPconsGetName(conss[c]), result);
+      SCIPdebugMsg(scip, " -> checking of constraint %s returned result <%d>\n", SCIPconsGetName(conss[c]), result);
 
       if( result != SCIP_FEASIBLE )
       {
-         SCIPerrorMessage("conflict constraint %s violates the debugging solution\n", SCIPconsGetName(conss[c]));
+         SCIPerrorMessage("constraint %s violates the debugging solution\n", SCIPconsGetName(conss[c]));
          SCIPABORT();
       }
    }
