@@ -3279,6 +3279,9 @@ SCIP_RETCODE resolveClauses(
 
    *success = FALSE;
 
+   if( !set->conf_clausegenres && !set->conf_clausefallback )
+      return SCIP_OKAY;
+
    /* first construct a conflict clause out of fixed bounds, current bound to
     * resolve, and bounds in the queue */
    SCIP_CALL( getConflictClause(conflict, blkmem, set, vars, currbdchginfo, &successclause, fixbounds, fixinds, nvars, FALSE) );
@@ -4288,6 +4291,8 @@ SCIP_RETCODE conflictAnalyzeResolution(
          SCIPsetDebugMsgPrint(set, " Applying resolution with resolving variable <%s>\n", SCIPvarGetName(vartoresolve));
          SCIP_CALL( executeResolution(conflict, set, vars, blkmem, bdchginfo, residx, fixbounds, fixinds, &successresolution ) );
 
+         /* if resolution was unsuccessful we can resolve clauses for the binary
+          * case. This is called only if the clause fallback parameter is true */
          if (!successresolution)
          {
             resolveClauses(set, conflict, vars, bdchginfo, blkmem, residx, nvars, fixbounds, fixinds, &successresolution);
@@ -4308,6 +4313,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
             assert(SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_UPPER);
             vars[residx]->conflictresub = SCIP_REAL_MAX;
          }
+
          SCIP_CALL( conflictRowReplace(conflictrow, blkmem, resolvedconflictrow) );
 
 #ifdef SCIP_CONFGRAPH_DOT
