@@ -1326,11 +1326,11 @@ SCIP_RETCODE SCIPlexicographicReductionPropagate(
 {
    int nlocalred;
    int p;
-   NODEDEPTHBRANCHINDEX* nodedepthbranchindices;
-   SCIP_VAR** branchvars;
-   int nbranchvars;
    SCIP_SHADOWTREE* shadowtree;
    SCIP_NODE* focusnode;
+   NODEDEPTHBRANCHINDEX* nodedepthbranchindices = NULL;
+   SCIP_VAR** branchvars = NULL;
+   int nbranchvars = 0;
 
    assert( scip != NULL );
    assert( masterdata != NULL );
