@@ -6739,7 +6739,7 @@ SCIP_RETCODE tryAddOrbitopesDynamic(
             orbitopevarmatrix[i] = propdata->permvars[orbitopematrix[i]];
 
          /* get column ordering */
-         columnordering = SCIPorbitopalredDataGetDefaultColumnordering(propdata->orbitopalreddata);
+         columnordering = SCIPorbitopalReductionGetDefaultColumnOrdering(propdata->orbitopalreddata);
 
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "orbitope_full_comp_%d", c);
          SCIP_CALL( SCIPorbitopalReductionAddOrbitope(scip, propdata->orbitopalreddata,

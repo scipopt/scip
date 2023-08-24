@@ -2389,7 +2389,7 @@ SCIP_RETCODE SCIPincludeOrbitopalReduction(
 
 
 /** returns the default column ordering */
-SCIP_COLUMNORDERING SCIPorbitopalredDataGetDefaultColumnordering(
+SCIP_COLUMNORDERING SCIPorbitopalReductionGetDefaultColumnOrdering(
    SCIP_ORBITOPALREDDATA* orbireddata        /**< pointer to orbitopal reduction structure to populate */
    )
 {
