@@ -154,9 +154,6 @@ struct SCIP_OrbitopalReductionData
    SCIP_Bool             conshdlr_nonlinear_checked; /**< nonlinear constraint handler is already added? */
    int                   nred;               /**< total number of reductions */
    int                   ncutoff;            /**< total number of cutoffs */
-   int*                  staticorder;        /**< array used for static row/column order */
-   int*                  invstaticorder;     /**< array used for inverse static row/column order */
-   int                   nstaticorder;       /**< length of static order */
 };
 
 /*
@@ -300,8 +297,6 @@ static
 SCIP_RETCODE updateColumnOrderWhenBranchingOnColumn(
    SCIP*                 scip,               /**< SCIP data structure */
    ORBITOPEDATA*         orbidata,           /**< orbitope data */
-   int*                  roworder,           /**< array with the row order, of size nselrows */
-   int                   nselrows,           /**< number of rows (required to be positive) */
    int*                  colorder,           /**< array to populate with column order, of size colorder */
    int*                  colorderinv,        /**< inverse array of the column order, of size colorder */
    SCIP_VAR*             var,                /**< variable that we branch on */
@@ -327,8 +322,6 @@ SCIP_RETCODE updateColumnOrderWhenBranchingOnColumn(
 
    assert( scip != NULL );
    assert( orbidata != NULL );
-   assert( roworder != NULL );
-   assert( nselrows > 0 );
    assert( colorder != NULL );
    assert( colorderinv != NULL );
    assert( var != NULL );
@@ -526,16 +519,59 @@ SCIP_RETCODE updateColumnOrderWhenBranchingOnColumn(
 }
 
 
+/** yields entry at index in array, or returns entry if array is NULL */
+static
+int getArrayEntryOrIndex(
+   int**                 arr,                /**< array */
+   int                   idx                 /**< index */
+)
+{
+   assert( arr != NULL );
+   assert( idx >= 0 );
+   if ( arr == NULL )
+      return idx;
+   return arr[idx];
+}
+
+/** frees the row order */
+static
+void freeRowOrder(
+   SCIP*                 scip,               /**< SCIP data structure */
+   ORBITOPEDATA*         orbidata,           /**< orbitope data */
+   int**                 roworder            /**< array to populate with row order */
+)
+{
+   assert( scip != NULL );
+   assert( orbidata != NULL );
+   assert( roworder != NULL );
+
+   if ( orbidata->rowordering == SCIP_ROWORDERING_NONE )
+   {
+      assert( *roworder == NULL );
+      return;
+   }
+
+   assert( *roworder != NULL );
+   assert( orbidata->rowordering == SCIP_ROWORDERING_BRANCHING );
+   SCIPfreeBlockMemoryArray(scip, roworder, orbidata->nrows);
+
+   return;
+}
+
 /** gets the row order at the node
+ *
+ *  this is NULL (i.e., the identity map) in the static (none) setting.
+ *  this is an array of size orbidata->nrows in the dynamic (branching) setting.
  *
  *  The row order is given in the order of the variables that is branched on.
  *  @todo combine with variant of cons_orbitope.c
  */
 static
 SCIP_RETCODE getRowOrder(
+   SCIP*                 scip,               /**< SCIP data structure */
    ORBITOPEDATA*         orbidata,           /**< orbitope data */
    SCIP_NODE*            node,               /**< node for which the row order should be detected */
-   int*                  roworder,           /**< array to populate with row order */
+   int**                 roworder,           /**< array to populate with row order */
    int*                  nselrows            /**< pointer to populate with the number of rows part of the row order */
 )
 {
@@ -551,6 +587,18 @@ SCIP_RETCODE getRowOrder(
    assert( roworder != NULL );
    assert( nselrows != NULL );
 
+   if ( orbidata->rowordering == SCIP_ROWORDERING_NONE )
+   {
+      *roworder = NULL;
+      *nselrows = orbidata->nrows;
+      return SCIP_OKAY;
+   }
+
+   assert( orbidata->rowordering == SCIP_ROWORDERING_BRANCHING );
+
+   /* allocate number of rows */
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, roworder, orbidata->nrows) );
+
    *nselrows = 0;
 
    /* get the present row order up to this node (excluding the node itself) */
@@ -565,13 +613,13 @@ SCIP_RETCODE getRowOrder(
          assert( ancestornodeinfo->nrows >= 0 );
          for (i = ancestornodeinfo->nrows - 1; i >= 0; --i)
          {
-            roworder[(*nselrows)++] = ancestornodeinfo->rows[i];
+            (*roworder)[(*nselrows)++] = ancestornodeinfo->rows[i];
 #ifndef NDEBUG
             {
                /* check if this row is not featured earlier */
                for (j = 0; j < (*nselrows) - 1; ++j)
                {
-                  assert( ancestornodeinfo->rows[i] != roworder[j] );
+                  assert( ancestornodeinfo->rows[i] != (*roworder)[j] );
                }
             }
 #endif
@@ -585,9 +633,9 @@ SCIP_RETCODE getRowOrder(
    for (i = 0; i < (*nselrows) / 2; ++i)
    {
       /* swap entry i with nselrows - 1 - i */
-      j = roworder[i];
-      roworder[i] = roworder[(*nselrows) - 1 - i];
-      roworder[(*nselrows) - 1 - i] = j;
+      j = (*roworder)[i];
+      (*roworder)[i] = (*roworder)[(*nselrows) - 1 - i];
+      (*roworder)[(*nselrows) - 1 - i] = j;
    }
 
    return SCIP_OKAY;
@@ -697,18 +745,9 @@ SCIP_DECL_EVENTEXEC(eventExecNodeBranched)
    int i;
    int j;
    int c;
-   int nrows;
    int rowid;
-   /* data for row ordering */
    BNBNODEINFO* newnodeinfo;
-   int* roworder;
-   int nselrows;
-   /* data for column ordering */
-   int* colorder;
-   int* colorderinv;
    SCIP_NODE** rootedpath;
-   COLSWAP* thiscolswap;
-   COLSWAP tmpcolswap;
 
    assert( eventdata != NULL );
    assert( !SCIPinProbing(scip) );
@@ -730,8 +769,6 @@ SCIP_DECL_EVENTEXEC(eventExecNodeBranched)
    maxnbranchvars = 1;  /* it's a good guess that there's one branching variable, because that's likely the number */
    SCIP_CALL( SCIPallocBufferArray(scip, &branchvars, maxnbranchvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &rootedpath, SCIPnodeGetDepth(eventnode)) );
-
-   nrows = orbidata->nrows;
 
    /* get all variables branched upon (check all branches) */
    nbranchvars = 0;
@@ -799,108 +836,123 @@ SCIP_DECL_EVENTEXEC(eventExecNodeBranched)
    newnodeinfo->nrows = 0;
 
    /* store data about row ordering */
-   assert( nrows > 0 );
-   SCIP_CALL( SCIPallocBufferArray(scip, &roworder, nrows) );
-   nselrows = 0;
-
-   /* get the present row order up to this node */
-   SCIP_CALL( getRowOrder(orbidata, eventnode, roworder, &nselrows) );
-
-   /* extend the row fixings with the steps from this node */
-   for (i = 0; i < nbranchvars; ++i)
+   if ( orbidata->rowordering != SCIP_ROWORDERING_NONE )
    {
-      var = branchvars[i];
+      int* roworder;
+      int nselrows;
 
-      assert( SCIPhashmapExists(orbidata->rowindexmap, (void*) var) ); /* otherwise was not added to branchvars */
-      rowid = SCIPhashmapGetImageInt(orbidata->rowindexmap, (void*) var);
-      assert( rowid >= 0 );
-      assert( rowid < orbidata->nrows );
+      assert( orbidata->nrows > 0 );
+      assert( orbidata->rowordering == SCIP_ROWORDERING_BRANCHING );
 
-      /* avoid adding row to row order twice */
-      if ( nselrows > 0 )
+      /* get the present row order up to this node */
+      SCIP_CALL( getRowOrder(scip, orbidata, eventnode, &roworder, &nselrows) );
+      assert( roworder != NULL );
+
+      /* extend the row fixings with the steps from this node */
+      for (i = 0; i < nbranchvars; ++i)
       {
-         for (j = 0; j < nselrows; ++j)
+         var = branchvars[i];
+
+         assert( SCIPhashmapExists(orbidata->rowindexmap, (void*) var) ); /* otherwise was not added to branchvars */
+         rowid = SCIPhashmapGetImageInt(orbidata->rowindexmap, (void*) var);
+         assert( rowid >= 0 );
+         assert( rowid < orbidata->nrows );
+
+         /* avoid adding row to row order twice */
+         if ( nselrows > 0 )
          {
-            if ( rowid == roworder[j] )
-               break;
+            for (j = 0; j < nselrows; ++j)
+            {
+               if ( rowid == roworder[j] )
+                  break;
+            }
+            if ( j < nselrows )  /* if the loop is interrupted */
+               continue;
          }
-         if ( j < nselrows )  /* if the loop is interrupted */
-            continue;
+
+         /* if we end up here, the row index does not appear for any ancestor or the present row order */
+
+         /* append rowid to present roworder */
+         roworder[nselrows++] = rowid;
+
+         /* mark that this row index is the new one in the node */
+         if ( newnodeinfo->rows == NULL )
+         {
+            assert( newnodeinfo->nrows == 0 );
+            SCIP_CALL( SCIPallocBlockMemoryArray(scip, &newnodeinfo->rows, newnodeinfo->nrows + 1) );
+         }
+         else
+         {
+            /* reallocate with linear increments, because we expect 1 branching variable most of the time */
+            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &newnodeinfo->rows,
+               newnodeinfo->nrows, newnodeinfo->nrows + 1) );
+         }
+         newnodeinfo->rows[newnodeinfo->nrows++] = rowid;
       }
 
-      /* if we end up here, the row index does not appear for any ancestor or the present row order */
-
-      /* append rowid to present roworder */
-      roworder[nselrows++] = rowid;
-
-      /* mark that this row index is the new one in the node */
-      if ( newnodeinfo->rows == NULL )
-      {
-         assert( newnodeinfo->nrows == 0 );
-         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &newnodeinfo->rows, newnodeinfo->nrows + 1) );
-      }
-      else
-      {
-         /* reallocate with linear increments, because we expect 1 branching variable most of the time */
-         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &newnodeinfo->rows, newnodeinfo->nrows, newnodeinfo->nrows + 1) );
-      }
-      newnodeinfo->rows[newnodeinfo->nrows++] = rowid;
+      freeRowOrder(scip, orbidata, &roworder);
    }
 
    /* store data about column ordering */
-   assert( orbidata->ncols > 0 );
-   SCIP_CALL( SCIPallocBufferArray(scip, &colorder, orbidata->ncols) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &colorderinv, orbidata->ncols) );
-
-   /* populate colorder with standard ordering */
-   for (i = 0; i < orbidata->ncols; ++i)
-      colorder[i] = i;
-
-   /* introduce inverse column ordering */
-   for (i = 0; i < orbidata->ncols; ++i)
-      colorderinv[i] = i;
-
-   /* get the rooted path
-    *
-    * We want to iterate through the bound changes in the order of the rooted path to this node.
-    */
-   node = SCIPnodeGetParent(eventnode);
-   if ( node != NULL )
+   if ( orbidata->columnordering != SCIP_COLUMNORDERING_NONE )
    {
-      SCIP_CALL( populateRootedPathColumnOrder(orbidata, node, rootedpath, colorder, colorderinv) );
-   }
+      int* colorder;
+      int* colorderinv;
+      COLSWAP* thiscolswap;
+      COLSWAP tmpcolswap;
 
-   /* get the swap for this node */
-   for (i = 0; i < nbranchvars; ++i)
-   {
-      SCIP_CALL( updateColumnOrderWhenBranchingOnColumn(scip, orbidata, roworder, nselrows, colorder,
-         colorderinv, branchvars[i], &tmpcolswap) );
+      assert( orbidata->ncols > 0 );
+      SCIP_CALL( SCIPallocBufferArray(scip, &colorder, orbidata->ncols) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &colorderinv, orbidata->ncols) );
 
-      /* skip trivial swaps of columns */
-      if ( tmpcolswap.from == tmpcolswap.to )
-         continue;
+      /* populate colorder with standard ordering */
+      for (i = 0; i < orbidata->ncols; ++i)
+         colorder[i] = i;
 
-      /* mark that this row index is the new one in the node */
-      if ( newnodeinfo->rows == NULL )
+      /* introduce inverse column ordering */
+      for (i = 0; i < orbidata->ncols; ++i)
+         colorderinv[i] = i;
+
+      /* get the rooted path
+      *
+      * We want to iterate through the bound changes in the order of the rooted path to this node.
+      */
+      node = SCIPnodeGetParent(eventnode);
+      if ( node != NULL )
       {
-         assert( newnodeinfo->nrows == 0 );
-         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &newnodeinfo->colswaps, newnodeinfo->ncolswaps + 1) );
+         SCIP_CALL( populateRootedPathColumnOrder(orbidata, node, rootedpath, colorder, colorderinv) );
       }
-      else
+
+      /* get the swap for this node */
+      for (i = 0; i < nbranchvars; ++i)
       {
-         /* reallocate with linear increments, because we expect 1 branching variable most of the time */
-         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &newnodeinfo->colswaps, newnodeinfo->ncolswaps,
-            newnodeinfo->ncolswaps + 1) );
+         SCIP_CALL( updateColumnOrderWhenBranchingOnColumn(scip, orbidata, colorder,
+            colorderinv, branchvars[i], &tmpcolswap) );
+
+         /* skip trivial swaps of columns */
+         if ( tmpcolswap.from == tmpcolswap.to )
+            continue;
+
+         /* mark that this row index is the new one in the node */
+         if ( newnodeinfo->rows == NULL )
+         {
+            assert( newnodeinfo->nrows == 0 );
+            SCIP_CALL( SCIPallocBlockMemoryArray(scip, &newnodeinfo->colswaps, newnodeinfo->ncolswaps + 1) );
+         }
+         else
+         {
+            /* reallocate with linear increments, because we expect 1 branching variable most of the time */
+            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &newnodeinfo->colswaps, newnodeinfo->ncolswaps,
+               newnodeinfo->ncolswaps + 1) );
+         }
+         thiscolswap = &(newnodeinfo->colswaps[newnodeinfo->ncolswaps++]);
+         thiscolswap->from = tmpcolswap.from;
+         thiscolswap->to = tmpcolswap.to;
       }
-      thiscolswap = &(newnodeinfo->colswaps[newnodeinfo->ncolswaps++]);
-      thiscolswap->from = tmpcolswap.from;
-      thiscolswap->to = tmpcolswap.to;
+
+      SCIPfreeBufferArray(scip, &colorder);
+      SCIPfreeBufferArray(scip, &colorderinv);
    }
-
-   SCIPfreeBufferArray(scip, &colorderinv);
-   SCIPfreeBufferArray(scip, &colorder);
-
-   SCIPfreeBufferArray(scip, &roworder);
 
    /* store updates of row/column order or free memory if no change applied */
    if ( newnodeinfo->nrows > 0 || newnodeinfo->ncolswaps > 0 )
@@ -1052,60 +1104,6 @@ SCIP_RETCODE freeOrbitope(
 }
 
 
-/** updates the array used to encode static variable ordering */
-static
-SCIP_RETCODE updateStaticOrder(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ORBITOPALREDDATA* orbireddata,       /**< pointer to the dynamic orbitopal reduction data */
-   SCIP_COLUMNORDERING   columnordering,     /**< specifies how columns of orbitope are ordered */
-   SCIP_ROWORDERING      rowordering,        /**< specifies how rows of orbitope are ordered */
-   int                   nrows,              /**< number of rows for orbitopal symmetries */
-   int                   ncols               /**< number of columnss for orbitopal symmetries */
-   )
-{
-   int neededsize = -1;
-   int newsize;
-   int i;
-
-   assert( scip != NULL );
-   assert( orbireddata != NULL );
-   assert( nrows >= 0 );
-   assert( ncols >= 0 );
-
-   /* determine size needed to encode static order */
-   if ( columnordering == SCIP_COLUMNORDERING_NONE )
-      neededsize = ncols;
-   if ( rowordering == SCIP_ROWORDERING_NONE )
-      neededsize = MAX(neededsize, nrows);
-
-   /* possibly update the static order */
-   if ( neededsize > orbireddata->nstaticorder )
-   {
-      newsize = SCIPcalcMemGrowSize(scip, neededsize);
-      assert( newsize >= 0 );
-
-      if ( orbireddata->nstaticorder == 0 )
-      {
-         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &orbireddata->staticorder, newsize) );
-         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &orbireddata->invstaticorder, newsize) );
-      }
-      else
-      {
-         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &orbireddata->staticorder, orbireddata->nstaticorder, newsize) );
-         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &orbireddata->invstaticorder, orbireddata->nstaticorder, newsize) );
-      }
-
-      for (i = orbireddata->nstaticorder; i < newsize; ++i)
-         orbireddata->staticorder[i] = i;
-      for (i = 0; i < newsize; ++i)
-         orbireddata->invstaticorder[i] = newsize - i;
-      orbireddata->nstaticorder = newsize;
-   }
-
-   return SCIP_OKAY;
-}
-
-
 /** adds an orbitope to the orbitopal reduction data */
 static
 SCIP_RETCODE addOrbitope(
@@ -1232,9 +1230,6 @@ SCIP_RETCODE addOrbitope(
             hashGetKeyBnbnodeinfo, hashKeyEqBnbnodeinfo, hashKeyValBnbnodeinfo, NULL) );
    }
 
-   /* possibly update arrays used for static variable order */
-   SCIP_CALL( updateStaticOrder(scip, orbireddata, orbidata->columnordering, orbidata->rowordering, nrows, ncols) );
-
    /* resize orbitope array if needed */
    assert( orbireddata->norbitopes >= 0 );
    assert( (orbireddata->norbitopes == 0) == (orbireddata->orbitopes == NULL) );
@@ -1269,6 +1264,33 @@ SCIP_RETCODE addOrbitope(
    return SCIP_OKAY;
 }
 
+
+/** frees the column order */
+static
+void freeColumnOrder(
+   SCIP*                 scip,               /**< SCIP data structure */
+   ORBITOPEDATA*         orbidata,           /**< orbitope data */
+   int**                 colorder,           /**< array to populate with column order, of size ncols */
+   int**                 colorderinv         /**< array to populate with inverse column order, of size ncols */
+)
+{
+   assert( scip != NULL );
+   assert( orbidata != NULL );
+   assert( colorder != NULL );
+   assert( colorderinv != NULL );
+
+   if ( orbidata->columnordering == SCIP_COLUMNORDERING_NONE )
+   {
+      assert( *colorder == NULL );
+      assert( *colorderinv == NULL );
+      return;
+   }
+
+   SCIPfreeBlockMemoryArray(scip, colorder, orbidata->ncols);
+   SCIPfreeBlockMemoryArray(scip, colorderinv, orbidata->ncols);
+}
+
+
 /** gets the column order at the node
  *
  *  The column order is (deterministically) dynamically decided based on the policy for column ordering.
@@ -1280,8 +1302,8 @@ SCIP_RETCODE getColumnOrder(
    SCIP_NODE*            eventnode,          /**< node where this should be determined at */
    int*                  roworder,           /**< array with the row order, of size nselrows */
    int                   nselrows,           /**< number of rows (required to be positive) */
-   int*                  colorder,           /**< array to populate with column order, of size ncols */
-   int*                  colorderinv         /**< array to populate with inverse column order, of size ncols */
+   int**                 colorder,           /**< array to populate with column order, of size ncols */
+   int**                 colorderinv         /**< array to populate with inverse column order, of size ncols */
 )
 {
    SCIP_NODE* node;
@@ -1298,16 +1320,26 @@ SCIP_RETCODE getColumnOrder(
    assert( colorder != NULL );
    assert( colorderinv != NULL );
 
+   if ( orbidata->columnordering == SCIP_COLUMNORDERING_NONE )
+   {
+      *colorder = NULL;
+      *colorderinv = NULL;
+      return SCIP_OKAY;
+   }
+
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &colorder, ncols) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &colorderinv, ncols) );
+
    ncols = orbidata->ncols;
    assert( ncols > 0 );
 
    /* populate colorder with standard ordering */
    for (i = 0; i < ncols; ++i)
-      colorder[i] = i;
+      (*colorder)[i] = i;
 
    /* introduce inverse column ordering */
    for (i = 0; i < ncols; ++i)
-      colorderinv[i] = i;
+      (*colorderinv)[i] = i;
 
    /* get the rooted path
     *
@@ -1318,7 +1350,7 @@ SCIP_RETCODE getColumnOrder(
    {
       depth = SCIPnodeGetDepth(node);
       SCIP_CALL( SCIPallocBufferArray(scip, &rootedpath, depth + 1) );
-      SCIP_CALL( populateRootedPathColumnOrder(orbidata, node, rootedpath, colorder, colorderinv) );
+      SCIP_CALL( populateRootedPathColumnOrder(orbidata, node, rootedpath, (*colorder), (*colorderinv)) );
       SCIPfreeBufferArray(scip, &rootedpath);
    }
 
@@ -1350,8 +1382,6 @@ void assertIsOrbitopeMatrix(
    SCIP_VAR* var;
 
    assert( scip != NULL );
-   assert( roworder != NULL );
-   assert( colorder != NULL );
    assert( matrix != NULL );
    assert( orbidata != NULL );
    assert( orbidata->vars != NULL );
@@ -1364,10 +1394,10 @@ void assertIsOrbitopeMatrix(
    /* respect variable bounds */
    for (rowid = 0; rowid < nrows; ++rowid)
    {
-      origrowid = roworder[rowid];
+      origrowid = getArrayEntryOrIndex(roworder, rowid);
       for (colid = 0; colid < ncols; ++colid)
       {
-         origcolid = colorder[colid];
+         origcolid = getArrayEntryOrIndex(colorder, colid);
          idx = rowid * ncols + colid;
          origidx = origrowid * ncols + origcolid;
          var = orbidata->vars[origidx];
@@ -1471,9 +1501,9 @@ static
 SCIP_RETCODE propagateStaticOrbitope(
    SCIP*                 scip,               /**< SCIP data structure */
    ORBITOPEDATA*         orbidata,           /**< orbitope data */
-   int*                  roworder,           /**< array with the row order */
+   int*                  roworder,           /**< array with the row order (or NULL if identity function is used) */
    int                   nselrows,           /**< number of selected rows */
-   int*                  colorder,           /**< array with the column order */
+   int*                  colorder,           /**< array with the column order (or NULL if identity function is used) */
    SCIP_Bool*            infeasible,         /**< pointer to store whether the problem is infeasible */
    int*                  nfixedvars          /**< pointer to counter of number of variable domain reductions */
 )
@@ -1502,9 +1532,7 @@ SCIP_RETCODE propagateStaticOrbitope(
    assert( scip != NULL );
    assert( orbidata != NULL );
    assert( orbidata->vars != NULL );
-   assert( roworder != NULL );
    assert( nselrows >= 0 );
-   assert( colorder != NULL );
    assert( infeasible != NULL );
    assert( nfixedvars != NULL );
 
@@ -1559,10 +1587,10 @@ SCIP_RETCODE propagateStaticOrbitope(
 
    /* last column takes the minimally possible values. */
    colid = ncols - 1;
-   origcolid = colorder[colid];
+   origcolid = getArrayEntryOrIndex(colorder, colid);
    for (rowid = 0, i = colid; rowid < nselrows; ++rowid, i += ncols)
    {
-      origrowid = roworder[rowid];
+      origrowid = getArrayEntryOrIndex(roworder, rowid);
       origidx = origrowid * ncols + origcolid;
       var = orbidata->vars[origidx];
 
@@ -1580,10 +1608,10 @@ SCIP_RETCODE propagateStaticOrbitope(
       /* whether column "colid" is the same as column "colid + 1" up (but excluding) to "rowid" */
       iseq = TRUE;
 
-      origcolid = colorder[colid];
+      origcolid = getArrayEntryOrIndex(colorder, colid);
       for (rowid = 0, i = colid; rowid < nselrows; ++rowid, i += ncols)
       {
-         origrowid = roworder[rowid];
+         origrowid = getArrayEntryOrIndex(roworder, rowid);
          origidx = origrowid * ncols + origcolid;
          assert( i == rowid * ncols + colid );
 
@@ -1617,7 +1645,7 @@ SCIP_RETCODE propagateStaticOrbitope(
                   /* repair: return to the last row with "room", and increase the lexmin-value at that row. */
                   assert( EQ(scip, lexminface[lastunfixed * ncols + colid],
                      lexminface[lastunfixed * ncols + colid + 1]) );
-                  othervar = orbidata->vars[roworder[lastunfixed] * ncols + origcolid];
+                  othervar = orbidata->vars[getArrayEntryOrIndex(roworder, lastunfixed) * ncols + origcolid];
                   switch (SCIPvarGetType(othervar))
                   {
                   case SCIP_VARTYPE_BINARY:
@@ -1667,7 +1695,7 @@ SCIP_RETCODE propagateStaticOrbitope(
                else if ( lexminepsrow[colid + 1] == rowid )
                {
                   assert( EQ(scip, lexminface[i], lexminface[i + 1]) );
-                  assert( SCIPvarGetType(orbidata->vars[roworder[rowid] * ncols + origcolid])
+                  assert( SCIPvarGetType(orbidata->vars[getArrayEntryOrIndex(roworder, rowid) * ncols + origcolid])
                      == SCIP_VARTYPE_CONTINUOUS );
                   assert( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS );
                   /* right column (colid+1) has value x + epsilon, left column (colid) has value x, now
@@ -1727,10 +1755,10 @@ SCIP_RETCODE propagateStaticOrbitope(
 
    /* first column, fill all unfixed entries with maximally possible values */
    colid = 0;
-   origcolid = colorder[colid];
+   origcolid = getArrayEntryOrIndex(colorder, colid);
    for (rowid = 0, i = colid; rowid < nselrows; ++rowid, i += ncols)
    {
-      origrowid = roworder[rowid];
+      origrowid = getArrayEntryOrIndex(roworder, rowid);
       origidx = origrowid * ncols + origcolid;
       var = orbidata->vars[origidx];
 
@@ -1748,10 +1776,10 @@ SCIP_RETCODE propagateStaticOrbitope(
       /* whether column "colid" is the same as column "colid - 1" up (but excluding) to "rowid" */
       iseq = TRUE;
 
-      origcolid = colorder[colid];
+      origcolid = getArrayEntryOrIndex(colorder, colid);
       for (rowid = 0, i = colid; rowid < nselrows; ++rowid, i += ncols)
       {
-         origrowid = roworder[rowid];
+         origrowid = getArrayEntryOrIndex(roworder, rowid);
          origidx = origrowid * ncols + origcolid;
          assert( i == rowid * ncols + colid );
 
@@ -1785,7 +1813,7 @@ SCIP_RETCODE propagateStaticOrbitope(
                   /* repair: return to the last row with "room", and decrease the lexmax-value at that row. */
                   assert( EQ(scip, lexmaxface[lastunfixed * ncols + colid],
                      lexmaxface[lastunfixed * ncols + colid - 1]) );
-                  othervar = orbidata->vars[roworder[lastunfixed] * ncols + origcolid];
+                  othervar = orbidata->vars[getArrayEntryOrIndex(roworder, lastunfixed) * ncols + origcolid];
                   switch (SCIPvarGetType(othervar))
                   {
                   case SCIP_VARTYPE_BINARY:
@@ -1837,7 +1865,7 @@ SCIP_RETCODE propagateStaticOrbitope(
                else if ( lexmaxepsrow[colid - 1] == rowid )
                {
                   assert( EQ(scip, lexmaxface[i - 1], lexmaxface[i]) );
-                  assert( SCIPvarGetType(orbidata->vars[roworder[rowid] * ncols + origcolid])
+                  assert( SCIPvarGetType(orbidata->vars[getArrayEntryOrIndex(roworder, rowid) * ncols + origcolid])
                      == SCIP_VARTYPE_CONTINUOUS );
                   assert( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS );
                   /* left column (colid-1) has value x - epsilon, right column (colid) has value x, now
@@ -1903,8 +1931,8 @@ SCIP_RETCODE propagateStaticOrbitope(
          assert( i == rowid * ncols + colid );
 
          /* get var */
-         origrowid = roworder[rowid];
-         origcolid = colorder[colid];
+         origrowid = getArrayEntryOrIndex(roworder, rowid);
+         origcolid = getArrayEntryOrIndex(colorder, colid);
          origidx = origrowid * ncols + origcolid;
          var = orbidata->vars[origidx];
 
@@ -2021,8 +2049,6 @@ SCIP_RETCODE propagateOrbitope(
    int nselrows;
    int* colorder;
    int* colorderinv;
-   int nrows;
-   int ncols;
 
    assert( scip != NULL );
    assert( orbireddata != NULL );
@@ -2033,54 +2059,27 @@ SCIP_RETCODE propagateOrbitope(
    *nfixedvars = 0;
    *infeasible = FALSE;
 
-   ncols = orbidata->ncols;
-   nrows = orbidata->nrows;
-   assert( ncols > 0 );
-   assert( nrows > 0 );
+   assert( orbidata->ncols > 0 );
+   assert( orbidata->nrows > 0 );
 
    focusnode = SCIPgetFocusNode(scip);
    assert( focusnode != NULL );
 
    /* get row order */
-   if ( orbidata->rowordering == SCIP_ROWORDERING_NONE )
-   {
-      assert( nrows <= orbireddata->nstaticorder );
-
-      roworder = orbireddata->staticorder;
-      nselrows = nrows;
-   }
-   else
-   {
-      SCIP_CALL( SCIPallocBufferArray(scip, &roworder, nrows) );
-
-      SCIP_CALL( getRowOrder(orbidata, focusnode, roworder, &nselrows) );
-      assert( nselrows >= 0 );
-      assert( nselrows <= nrows );
-      if ( nselrows == 0 )
-         goto FREE;
-   }
+   SCIP_CALL( getRowOrder(scip, orbidata, focusnode, &roworder, &nselrows) );
+   assert( nselrows >= 0 );
+   assert( nselrows <= orbidata->nrows );
+   if ( nselrows == 0 )
+      goto FREEROWS;
 
    /* get column order */
-   if ( orbidata->columnordering == SCIP_COLUMNORDERING_NONE )
-   {
-      assert( ncols <= orbireddata->nstaticorder );
-
-      colorder = orbireddata->staticorder;
-      colorderinv = orbireddata->invstaticorder;
-   }
-   else
-   {
-      SCIP_CALL( SCIPallocBufferArray(scip, &colorder, ncols) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &colorderinv, ncols) );
-
-      SCIP_CALL( getColumnOrder(scip, orbidata, focusnode, roworder, nselrows, colorder, colorderinv) );
-   }
+   SCIP_CALL( getColumnOrder(scip, orbidata, focusnode, roworder, nselrows, &colorder, &colorderinv) );
 
 #ifndef NDEBUG
    /* DEBUG: if propagation is repeated in the same node, the same column order and row order is needed */
    /* @todo: performance: move roworder and colorder to orbidata, then re-use */
    {
-      int colhash = debugGetArrayHash(colorder, ncols);
+      int colhash = debugGetArrayHash(colorder, orbidata->ncols);
       int rowhash = debugGetArrayHash(roworder, nselrows);
       int hash = colhash ^ rowhash;
 
@@ -2112,16 +2111,9 @@ SCIP_RETCODE propagateOrbitope(
 
    SCIP_CALL( propagateStaticOrbitope(scip, orbidata, roworder, nselrows, colorder, infeasible, nfixedvars) );
 
-   if ( orbidata->columnordering != SCIP_COLUMNORDERING_NONE )
-   {
-      SCIPfreeBufferArray(scip, &colorderinv);
-      SCIPfreeBufferArray(scip, &colorder);
-   }
-FREE:
-   if ( orbidata->rowordering != SCIP_ROWORDERING_NONE )
-   {
-      SCIPfreeBufferArray(scip, &roworder);
-   }
+   freeColumnOrder(scip, orbidata, &colorder, &colorderinv);
+FREEROWS:
+   freeRowOrder(scip, orbidata, &roworder);
 
 #ifdef SCIP_MORE_DEBUG
    SCIPdebugPrintf("\n\n");
@@ -2307,12 +2299,6 @@ SCIP_RETCODE SCIPorbitopalReductionReset(
    orbireddata->orbitopes = NULL;
    orbireddata->maxnorbitopes = 0;
 
-   SCIPfreeBlockMemoryArrayNull(scip, &orbireddata->staticorder, orbireddata->nstaticorder);
-   SCIPfreeBlockMemoryArrayNull(scip, &orbireddata->invstaticorder, orbireddata->nstaticorder);
-   orbireddata->staticorder = NULL;
-   orbireddata->invstaticorder = NULL;
-   orbireddata->nstaticorder = 0;
-
    return SCIP_OKAY;
 }
 
@@ -2378,11 +2364,6 @@ SCIP_RETCODE SCIPincludeOrbitopalReduction(
    /* counter of total number of reductions and cutoffs */
    (*orbireddata)->nred = 0;
    (*orbireddata)->ncutoff = 0;
-
-   /* information about static row/column orders */
-   (*orbireddata)->staticorder = NULL;
-   (*orbireddata)->invstaticorder = NULL;
-   (*orbireddata)->nstaticorder = 0;
 
    return SCIP_OKAY;
 }
