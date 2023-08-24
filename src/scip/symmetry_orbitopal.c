@@ -1154,10 +1154,7 @@ SCIP_RETCODE addOrbitope(
     *
     * For example, think about using the FIRST column ordering for packing-partitioning structures.
     */
-   if ( colordering == SCIP_COLUMNORDERING_DEFAULT )
-      orbidata->columnordering = orbireddata->defaultcolumnordering;
-   else
-      orbidata->columnordering = colordering;
+   orbidata->columnordering = colordering;
 
    orbidata->rowordering = rowordering;
 
@@ -2388,4 +2385,15 @@ SCIP_RETCODE SCIPincludeOrbitopalReduction(
    (*orbireddata)->nstaticorder = 0;
 
    return SCIP_OKAY;
+}
+
+
+/** returns the default column ordering */
+SCIP_COLUMNORDERING SCIPorbitopalredDataGetDefaultColumnordering(
+   SCIP_ORBITOPALREDDATA* orbireddata        /**< pointer to orbitopal reduction structure to populate */
+   )
+{
+   assert( orbireddata != NULL );
+
+   return orbireddata->defaultcolumnordering;
 }

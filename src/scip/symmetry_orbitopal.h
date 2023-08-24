@@ -47,7 +47,6 @@ extern "C" {
 /** variants for orbitope column ordering */
 enum SCIP_ColumnOrdering
 {
-   SCIP_COLUMNORDERING_DEFAULT     = -1,     /**< use default column order as encoded in SCIP_ORBITOPALREDDATA */
    SCIP_COLUMNORDERING_NONE        = 0,      /**< do not order the columns */
    SCIP_COLUMNORDERING_FIRST       = 1,      /**< choose first possible column */
    SCIP_COLUMNORDERING_LAST        = 2,      /**< choose last possible column */
@@ -138,6 +137,12 @@ SCIP_RETCODE SCIPincludeOrbitopalReduction(
    SCIP_ORBITOPALREDDATA** orbireddata       /**< pointer to orbitopal reduction structure to populate */
    );
 
+
+/** returns the default column ordering */
+SCIP_EXPORT
+SCIP_COLUMNORDERING SCIPorbitopalredDataGetDefaultColumnordering(
+   SCIP_ORBITOPALREDDATA* orbireddata        /**< pointer to orbitopal reduction structure to populate */
+   );
 
 #ifdef __cplusplus
 }

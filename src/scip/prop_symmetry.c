@@ -6728,6 +6728,7 @@ SCIP_RETCODE tryAddOrbitopesDynamic(
       else
       {
          /* use orbitopal reduction for component */
+         SCIP_COLUMNORDERING columnordering;
          SCIP_VAR** orbitopevarmatrix;
          int nelem;
 
@@ -6737,9 +6738,12 @@ SCIP_RETCODE tryAddOrbitopesDynamic(
          for (i = 0; i < nelem; ++i)
             orbitopevarmatrix[i] = propdata->permvars[orbitopematrix[i]];
 
+         /* get column ordering */
+         columnordering = SCIPorbitopalredDataGetDefaultColumnordering(propdata->orbitopalreddata);
+
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "orbitope_full_comp_%d", c);
          SCIP_CALL( SCIPorbitopalReductionAddOrbitope(scip, propdata->orbitopalreddata,
-               SCIP_ROWORDERING_BRANCHING, SCIP_COLUMNORDERING_DEFAULT,
+               SCIP_ROWORDERING_BRANCHING, columnordering,
                orbitopevarmatrix, nrows, ncols, &success) );
 
          if ( success )
