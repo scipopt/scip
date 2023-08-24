@@ -2762,6 +2762,9 @@ SCIP_RETCODE getConflictClause(
 
    *success = FALSE;
 
+   if( !set->conf_clausegenres && !set->conf_clausefallback )
+      return SCIP_OKAY;
+
    if( SCIPvarIsBinary(SCIPbdchginfoGetVar(currbdchginfo)) && SCIPsetGetStage(set) == SCIP_STAGE_SOLVING )
    {
       SCIP_CONFLICTROW* conflictrow;
@@ -3063,6 +3066,10 @@ SCIP_RETCODE getReasonClause(
    SCIPsetDebugMsgPrint(set, "Getting reason clause: \n");
 
    *success = FALSE;
+
+   if( !set->conf_clausegenres && !set->conf_clausefallback )
+      return SCIP_OKAY;
+
    /* if the current bound change is on a non-binary variable then we cannot find a linear reason */
    if( !SCIPvarIsBinary(SCIPbdchginfoGetVar(currbdchginfo)) || !reasonIsLinearizable(currbdchginfo))
    {
@@ -3310,8 +3317,9 @@ SCIP_RETCODE resolveClauses(
    return SCIP_OKAY;
 }
 
+/** execute resolution; reduce reason if necessary */
 static
-SCIP_RETCODE StrongerDivisionBasedReduction(
+SCIP_RETCODE executeResolution(
    SCIP_CONFLICT *       conflict,           /**< conflict analysis data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR**            vars,               /**< array of variables */
@@ -3350,7 +3358,7 @@ SCIP_RETCODE StrongerDivisionBasedReduction(
 
    conflict->resolvedconflictrow->slack = getSlackConflict(set, vars, conflict->resolvedconflictrow, currbdchginfo, fixbounds, fixinds);
 
-   if( SCIPsetIsGE(set, conflict->resolvedconflictrow->slack, 0.0) )
+   if( set->conf_reductiontechnique != 'o' && SCIPsetIsGE(set, conflict->resolvedconflictrow->slack, 0.0) )
    {
       /* todo extend Chvatal-Gomory and MIR for constraints with general integer variables */
       /* MIR can also be used in the presence of continuous variables */
@@ -3369,6 +3377,13 @@ SCIP_RETCODE StrongerDivisionBasedReduction(
       {
          SCIPsetDebugMsgPrint(set, "Apply Complemented 0-1 MIR since slack of resolved row: %f >= 0 \n", conflict->resolvedconflictrow->slack);
          SCIP_CALL( StrongerMirLhs(set, vars, reasonrow, fixbounds, fixinds, currbdchgidx, idxinreason, coefinreason) );
+      }
+      else
+      {
+         /* refactortodo: reimplement weakening plus coefficient tightening, Chvatal-Gomory, and MIR  */
+         assert(FALSE);
+         successresolution = FALSE;
+         return SCIP_OKAY;
       }
       SCIPdebug(printReasonRow(reasonrow, set, vars, 1));
 
@@ -4260,38 +4275,19 @@ SCIP_RETCODE conflictAnalyzeResolution(
             conflict->nknownaborts++;
             goto TERMINATE_RESOLUTION_LOOP;
          }
+
          SCIPdebug(printConflictRow(conflict->conflictrow, set, vars, 1));
          SCIPdebug(printReasonRow(reasonrow, set, vars, 0));
+
 #ifdef SCIP_CONFGRAPH_DOT
             confgraphAddRow(conflict, REASON_ROW);
 #endif
-         /* call resolution */
          successresolution = FALSE;
-         if (set->conf_reductiontechnique == 'o')
-         {
-            SCIPsetDebugMsgPrint(set, " Applying resolution to remove variable <%s>\n", SCIPvarGetName(vartoresolve));
 
-            SCIP_CALL( rescaleAndResolve(set, conflict, reasonrow, bdchginfo, blkmem,
-                                 residx, &successresolution) );
-         }
-         else
-         {
-            if ( set->conf_reductiontechnique == 't' )
-            {
-               /* refactortodo implement again iterative weakening with coefficient tightening for comparison */
-               assert(FALSE);
-            }
-            else if ( set->conf_reductiontechnique == 's' || set->conf_reductiontechnique == 'r')
-            {
-               SCIPsetDebugMsgPrint(set, "Applying complementing division based reduction with resolving variable <%s>\n", SCIPvarGetName(vartoresolve));
-               SCIP_CALL( StrongerDivisionBasedReduction(conflict, set, vars, blkmem, bdchginfo, residx, fixbounds, fixinds, &successresolution ) );
-            }
-            else if ( set->conf_reductiontechnique == 'd' || set->conf_reductiontechnique == 'm' )
-            {
-               /* refactortodo implement again iterative weakening with division and MIR for comparison */
-               assert(FALSE);
-           }
-         }
+         /* call resolution */
+         SCIPsetDebugMsgPrint(set, " Applying resolution with resolving variable <%s>\n", SCIPvarGetName(vartoresolve));
+         SCIP_CALL( executeResolution(conflict, set, vars, blkmem, bdchginfo, residx, fixbounds, fixinds, &successresolution ) );
+
          if (!successresolution)
          {
             resolveClauses(set, conflict, vars, bdchginfo, blkmem, residx, nvars, fixbounds, fixinds, &successresolution);
@@ -4301,20 +4297,18 @@ SCIP_RETCODE conflictAnalyzeResolution(
                goto TERMINATE_RESOLUTION_LOOP;
             }
          }
+
+         /* we must reset the conflict lower and upper bound to be able to add weaker bounds later */
+         if( SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER )
+         {
+            vars[residx]->conflictreslb = SCIP_REAL_MIN;
+         }
          else
          {
-            /* we must reset the conflict lower and upper bound to be able to add weaker bounds later */
-            if( SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER )
-            {
-               vars[residx]->conflictreslb = SCIP_REAL_MIN;
-            }
-            else
-            {
-               assert(SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_UPPER);
-               vars[residx]->conflictresub = SCIP_REAL_MAX;
-            }
-            SCIP_CALL( conflictRowReplace(conflictrow, blkmem, resolvedconflictrow) );
+            assert(SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_UPPER);
+            vars[residx]->conflictresub = SCIP_REAL_MAX;
          }
+         SCIP_CALL( conflictRowReplace(conflictrow, blkmem, resolvedconflictrow) );
 
 #ifdef SCIP_CONFGRAPH_DOT
          confgraphAddRow(conflict, RESOLVED_ROW);
@@ -4348,20 +4342,33 @@ SCIP_RETCODE conflictAnalyzeResolution(
          /* check that we fail for a valid reason */
          if (SCIPsetIsGE(set, conflictrow->slack, 0.0))
          {
-            if ( set->conf_reductiontechnique == 'o' || !isBinaryConflictRow(set, vars, conflictrow) || !isBinaryReasonRow(set, vars, reasonrow))
+            if(isBinaryConflictRow(set, vars, conflictrow) && isBinaryReasonRow(set, vars, reasonrow))
             {
-               conflict->nknownaborts++;
-               goto TERMINATE_RESOLUTION_LOOP;
-            }
-            else
-            {
-               resolveClauses(set, conflict, vars, bdchginfo, blkmem, residx, nvars, fixbounds, fixinds, &successresolution);
-               if (!successresolution)
+               /* we can use clausal conflict analysis as a last resort */
+               if( set->conf_clausefallback )
+               {
+                  resolveClauses(set, conflict, vars, bdchginfo, blkmem, residx, nvars, fixbounds, fixinds, &successresolution);
+                  if (!successresolution)
+                  {
+                     conflict->nknownaborts++;
+                     goto TERMINATE_RESOLUTION_LOOP;
+                  }
+               }
+               else if ( set->conf_reductiontechnique != 'o' )
+               {
+                  SCIPsetDebugMsgPrint(set, "Terminate for an unknown reason\n");
+                  goto TERMINATE_RESOLUTION_LOOP;
+               }
+               else
                {
                   conflict->nknownaborts++;
                   goto TERMINATE_RESOLUTION_LOOP;
                }
-               /* refactortodo we should count the times we reach this point */
+            }
+            else
+            {
+               conflict->nknownaborts++;
+               goto TERMINATE_RESOLUTION_LOOP;
             }
          }
 

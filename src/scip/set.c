@@ -180,9 +180,11 @@
 #define SCIP_DEFAULT_CONF_MAXNUMRESSTEPS     -1 /**< maximal number of resolution steps in generalized resolution (-1: unlimited) */
 #define SCIP_DEFAULT_CONF_RESFUIPLEVELS      1  /**< number of depth levels up to which first UIP's are used in resolution conflict
                                                  *   analysis (-1: use All-FirstUIP rule) */
-#define SCIP_DEFAULT_CONF_CLAUSEGENRES    FALSE /**< should the clause version of generalized resolution conflict analysis be used? */
+#define SCIP_DEFAULT_CONF_CLAUSEGENRES    FALSE /**< should only the clause version of generalized resolution conflict analysis be used? */
+#define SCIP_DEFAULT_CONF_CLAUSEFALLBACK  FALSE /**< should the clause version of generalized resolution conflict analysis be used as a fallback? */
+
 #define SCIP_DEFAULT_CONF_WEAKENCONFLICT  FALSE /**< should the conflict constraint be weakened? */
-#define SCIP_DEFAULT_CONF_WEAKENREASON    FALSE  /**< should the reason constraint be weakened? */
+#define SCIP_DEFAULT_CONF_WEAKENREASON    FALSE /**< should the reason constraint be weakened? */
 #define SCIP_DEFAULT_CONF_WEAKENREASONALL FALSE /**< should all variables at bounds in the reason constraint be weakened at once? */
 #define SCIP_DEFAULT_CONF_APPLYSIMPLEMIR  FALSE /**<  should we apply mir with scaling 1.0 to strengthen the conflict constraints? */
 #define SCIP_DEFAULT_CONF_APPLYCMIR       FALSE /**< should we apply cmir to strengthen the conflict constraints? */
@@ -1388,8 +1390,13 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "conflict/clausegenres",
-         "should generalized resolution conflict analysis be used?",
+         "should only the clause version of generalized resolution conflict analysis be used?",
          &(*set)->conf_clausegenres, FALSE, SCIP_DEFAULT_CONF_CLAUSEGENRES,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "conflict/clausefallback",
+         "should the clause version of generalized resolution conflict analysis be used as a fallback?",
+         &(*set)->conf_clausefallback, FALSE, SCIP_DEFAULT_CONF_CLAUSEFALLBACK,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddCharParam(*set, messagehdlr, blkmem,
          "conflict/useinflp",
