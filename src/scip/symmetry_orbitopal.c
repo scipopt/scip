@@ -522,7 +522,7 @@ SCIP_RETCODE updateColumnOrderWhenBranchingOnColumn(
 /** yields entry at index in array, or returns entry if array is NULL */
 static
 int getArrayEntryOrIndex(
-   int**                 arr,                /**< array */
+   int*                  arr,                /**< array */
    int                   idx                 /**< index */
 )
 {
