@@ -95,7 +95,7 @@ struct LexRedPermData
    int                   nvars;              /**< number of variables */
    int*                  perm;               /**< permutation for lexicographic reduction */
    int*                  invperm;            /**< inverse permutation */
-   SCIP_HASHMAP*         varmap;             /**< map of variables to indices in vars array in isstatic is FALSE */
+   SCIP_HASHMAP*         varmap;             /**< map of variables to indices in vars array if isstatic is FALSE */
 };
 typedef struct LexRedPermData LEXDATA;
 
