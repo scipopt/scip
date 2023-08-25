@@ -538,7 +538,8 @@ static
 void freeRowOrder(
    SCIP*                 scip,               /**< SCIP data structure */
    ORBITOPEDATA*         orbidata,           /**< orbitope data */
-   int**                 roworder            /**< array to populate with row order */
+   int**                 roworder            /**< roworder array that is initialized with the roworder in the dynamic
+                                               *  case, and NULL in the static case */
 )
 {
    assert( scip != NULL );
@@ -1270,8 +1271,9 @@ static
 void freeColumnOrder(
    SCIP*                 scip,               /**< SCIP data structure */
    ORBITOPEDATA*         orbidata,           /**< orbitope data */
-   int**                 colorder,           /**< array to populate with column order, of size ncols */
-   int**                 colorderinv         /**< array to populate with inverse column order, of size ncols */
+   int**                 colorder,           /**< colorder array that is initialized with the colorder in the dynamic
+                                               *  case, of size ncols, and NULL in the static case */
+   int**                 colorderinv         /**< array with the inverse column order, of size ncols */
 )
 {
    assert( scip != NULL );
