@@ -1352,7 +1352,7 @@ SCIP_RETCODE getColumnOrder(
    {
       depth = SCIPnodeGetDepth(node);
       SCIP_CALL( SCIPallocBufferArray(scip, &rootedpath, depth + 1) );
-      SCIP_CALL( populateRootedPathColumnOrder(orbidata, node, rootedpath, (*colorder), (*colorderinv)) );
+      SCIP_CALL( populateRootedPathColumnOrder(orbidata, node, rootedpath, *colorder, *colorderinv) );
       SCIPfreeBufferArray(scip, &rootedpath);
    }
 
