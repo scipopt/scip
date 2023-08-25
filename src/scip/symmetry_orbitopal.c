@@ -1148,13 +1148,7 @@ SCIP_RETCODE addOrbitope(
 
    orbidata->nrows = nrows;
    orbidata->ncols = ncols;
-
-   /* @todo currently we always choose the default column ordering
-    *
-    * For example, think about using the FIRST column ordering for packing-partitioning structures.
-    */
    orbidata->columnordering = colordering;
-
    orbidata->rowordering = rowordering;
 
 #ifndef NDEBUG
