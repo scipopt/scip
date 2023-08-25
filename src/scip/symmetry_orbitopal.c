@@ -2040,7 +2040,6 @@ FREE:
 static
 SCIP_RETCODE propagateOrbitope(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ORBITOPALREDDATA* orbireddata,       /**< orbitopal reduction data structure */
    ORBITOPEDATA*         orbidata,           /**< orbitope data */
    SCIP_Bool*            infeasible,         /**< pointer to store whether the problem is infeasible */
    int*                  nfixedvars          /**< pointer to store the number of found domain reductions */
@@ -2053,7 +2052,6 @@ SCIP_RETCODE propagateOrbitope(
    int* colorderinv;
 
    assert( scip != NULL );
-   assert( orbireddata != NULL );
    assert( orbidata != NULL );
    assert( infeasible != NULL );
    assert( nfixedvars != NULL );
