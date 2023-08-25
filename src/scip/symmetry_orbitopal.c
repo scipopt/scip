@@ -1281,6 +1281,8 @@ void freeColumnOrder(
       assert( *colorderinv == NULL );
       return;
    }
+   assert( *colorder != NULL );
+   assert( *colorderinv != NULL );
 
    SCIPfreeBlockMemoryArray(scip, colorder, orbidata->ncols);
    SCIPfreeBlockMemoryArray(scip, colorderinv, orbidata->ncols);
