@@ -187,6 +187,7 @@ Fixed bugs
 - globalize constraint changes before bound changes during the effective root shift in treeSwitchPath() to correctly update variable locks by avoiding global bounds with outstanding bound change events when deleting constraints
 - fixed error when attempting to copy SCIP with activated pricers
 - remove integrality check for implicit integral variables in cons_integral.c
+- avoid invalid strong Chvatal-Gomory cuts by ceiling with tolerance in the calculation of parameter k
 
 @section RN804 SCIP 8.0.4
 *************************
