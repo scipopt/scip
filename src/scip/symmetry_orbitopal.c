@@ -2079,8 +2079,8 @@ SCIP_RETCODE propagateOrbitope(
    /* DEBUG: if propagation is repeated in the same node, the same column order and row order is needed */
    /* @todo: performance: move roworder and colorder to orbidata, then re-use */
    {
-      int colhash = debugGetArrayHash(colorder, orbidata->ncols);
-      int rowhash = debugGetArrayHash(roworder, nselrows);
+      int colhash = (colorder == NULL) ? 1 : debugGetArrayHash(colorder, orbidata->ncols);
+      int rowhash = (roworder == NULL) ? 0 : debugGetArrayHash(roworder, nselrows);
       int hash = colhash ^ rowhash;
 
 #ifdef SCIP_DEBUG
