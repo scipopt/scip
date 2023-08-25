@@ -2215,7 +2215,7 @@ SCIP_RETCODE SCIPorbitopalReductionPropagate(
       orbidata = orbireddata->orbitopes[c];
       assert( orbidata != NULL );
 
-      SCIP_CALL( propagateOrbitope(scip, orbireddata, orbidata, infeasible, &thisfixedvars) );
+      SCIP_CALL( propagateOrbitope(scip, orbidata, infeasible, &thisfixedvars) );
       SCIPdebugMessage("Found %d reductions during orbitopal reduction for orbitope %d\n", thisfixedvars, c);
       *nred += thisfixedvars;
 
