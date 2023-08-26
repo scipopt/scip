@@ -2040,7 +2040,7 @@ SCIP_RETCODE SCIPconflictFlushConss(
                   conflictset->insertdepth, conflictset->validdepth, conflictset->conflictdepth, conflictset->repropdepth,
                   conflictset->nbdchginfos);
                SCIPdebug(conflictsetPrint(conflictset));
-
+               SCIPdebugPrintf("\n");
                if( conflictset->repropagate && conflictset->repropdepth <= repropdepth )
                {
                   repropdepth = conflictset->repropdepth;
@@ -2559,7 +2559,6 @@ SCIP_RETCODE conflictAddBound(
    /* the relaxed bound should be worse then the old bound of the bound change info */
    assert(boundtype == SCIP_BOUNDTYPE_LOWER ? SCIPsetIsGT(set, relaxedbd, SCIPbdchginfoGetOldbound(bdchginfo)) : SCIPsetIsLT(set, relaxedbd, SCIPbdchginfoGetOldbound(bdchginfo)));
 
-   SCIPsetDebugMsg(set, "Elements in queue: %d \n", SCIPpqueueNElems(conflict->resbdchgqueue));
    /* put bound change information into priority queue */
    SCIP_CALL( conflictQueueBound(conflict, set, bdchginfo, relaxedbd, &success) );
 

@@ -709,10 +709,9 @@ void printNonResolvableReasonType(
 
 #endif
 
-/* refactortodo coefficient tightening also for reason row */
-/** perform activity based coefficient tightening on a semi-sparse row defined with a left hand side */
+/** perform activity based coefficient tightening on a semi-sparse or sparse row defined with a left hand side */
 static
-SCIP_RETCODE tightenCoefConflict(
+SCIP_RETCODE tightenCoefs(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR**            vars,               /**< array of variables */
    SCIP_Bool             localbounds,        /**< do we use local bounds? */
@@ -721,6 +720,7 @@ SCIP_RETCODE tightenCoefConflict(
    int*                  rownnz,             /**< number of non-zeros in the row */
    SCIP_Real*            rowlhs,             /**< left hand side of the row */
    int*                  nchgcoefs,          /**< number of changed coefficients */
+   SCIP_Bool             densevals,          /**< is the vector of values dense? */
    SCIP_Bool*            redundant           /**< pointer to store whether the row is redundant */
    )
 {
@@ -751,8 +751,10 @@ SCIP_RETCODE tightenCoefConflict(
    for( i = 0; i < *rownnz; ++i )
    {
       int idx;
-
-      idx = rowinds[i];
+      if(densevals)
+         idx = rowinds[i];
+      else
+         idx = i;
       assert(idx >= 0);
       assert(vars[idx] != NULL);
 
@@ -816,14 +818,22 @@ SCIP_RETCODE tightenCoefConflict(
    if( SCIPsetIsLT(set, minact + maxabsval, *rowlhs) )
       goto TERMINATE_TIGHTENING;
 
-   SCIPsortDownRealInt(absvals, rowinds, *rownnz);
+   if(densevals)
+      SCIPsortDownRealInt(absvals, rowinds, *rownnz);
+   else
+      SCIPsortDownRealRealInt(absvals, rowcoefs, rowinds, *rownnz);
+
    SCIPfreeBufferArray(set->scip, &absvals);
 
    /* loop over the integral variables and try to tighten the coefficients; see cons_linear for more details */
    for( i = 0; i < *rownnz; ++i )
    {
       int idx;
-      idx = rowinds[i];
+
+      if(densevals)
+         idx = rowinds[i];
+      else
+         idx = i;
       assert(idx >= 0);
       assert(vars[idx] != NULL);
 
@@ -867,7 +877,11 @@ SCIP_RETCODE tightenCoefConflict(
             else
             {
                --(*rownnz);
-               rowcoefs[idx] = 0.0;
+               if(densevals)
+                  rowcoefs[idx] = 0.0;
+               else
+                  rowcoefs[idx] = rowcoefs[*rownnz];
+
                rowinds[i] = rowinds[*rownnz];
                continue;
             }
@@ -907,7 +921,11 @@ SCIP_RETCODE tightenCoefConflict(
             else
             {
                --(*rownnz);
-               rowcoefs[idx] = 0.0;
+               if(densevals)
+                  rowcoefs[idx] = 0.0;
+               else
+                  rowcoefs[idx] = rowcoefs[*rownnz];
+
                rowinds[i] = rowinds[*rownnz];
                continue;
             }
@@ -2525,7 +2543,7 @@ SCIP_RETCODE SCIPconflictAddConflictCon(
       SCIP_CALL( SCIPnodeCutoff(tree->path[conflictrow->validdepth], set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
       return SCIP_OKAY;
    }
-   /* todo in case the conflict set contains only one bound change which is globally valid we apply that bound change
+   /* in case the conflict set contains only one bound change which is globally valid we apply that bound change
     * directly (except if we are in strong branching or diving - in this case a bound change would yield an unflushed LP
     * and is not handled when restoring the information)
     *
@@ -3630,8 +3648,8 @@ SCIP_RETCODE getReasonRow(
           }
 
          /* get the conflict row of the reason row */
-         *success = TRUE;
          SCIP_CALL( reasonRowFromLpRow(set, blkmem, reasonlprow, reasonrow, currbdchginfo) );
+         *success = TRUE;
          /* it may happen that some specialized propagation took place and the real reason is not the constraint
             e.g. negated cliques in cons_knapsack or ranged row propagation in cons_linear. */
 
@@ -4152,8 +4170,8 @@ SCIP_RETCODE conflictAnalyzeResolution(
    SCIP_CALL( conflictRowReplace(resolvedconflictrow, blkmem, conflictrow) );
 
    /* Apply coefficient tightening to the conflict constraint should never hurt */
-   SCIP_CALL( tightenCoefConflict(set, vars, FALSE, conflictrow->vals, conflictrow->inds,
-                              &conflictrow->nnz, &conflictrow->lhs, &nchgcoefs, NULL) );
+   SCIP_CALL( tightenCoefs(set, vars, FALSE, conflictrow->vals, conflictrow->inds,
+                              &conflictrow->nnz, &conflictrow->lhs, &nchgcoefs, TRUE, NULL) );
 
    if (nchgcoefs > 0)
    {
@@ -4384,8 +4402,8 @@ SCIP_RETCODE conflictAnalyzeResolution(
             weakenConflictRow(conflictrow, set, vars, bdchgidx, fixbounds, fixinds);
 
          /* apply coefficient tightening to the resolved constraint should never hurt */
-         SCIP_CALL( tightenCoefConflict(set, vars, FALSE, conflictrow->vals, conflictrow->inds,
-                        &conflictrow->nnz, &conflictrow->lhs, &nchgcoefs, NULL) );
+         SCIP_CALL( tightenCoefs(set, vars, FALSE, conflictrow->vals, conflictrow->inds,
+                        &conflictrow->nnz, &conflictrow->lhs, &nchgcoefs, TRUE, NULL) );
          if (nchgcoefs > 0)
          {
             SCIP_Real newslack;
@@ -4401,10 +4419,10 @@ SCIP_RETCODE conflictAnalyzeResolution(
 
          }
 
-         if (SCIPsetIsLT(set, conflictrow->slack, 0.0))
-         {
-            /* TODO Apply cmir after each iteration to strengthen the conflict constraint */
-         }
+         /* if we reached this point the conflict constraint must have negative slack */
+         assert(SCIPsetIsLT(set, conflictrow->slack, 0.0));
+
+         /* TODO Apply cmir after each iteration to strengthen the conflict constraint */
 
          /* terminate after at most nressteps resolution iterations */
          /* By default conf_maxnumressteps is -1 -> we do not stop early */

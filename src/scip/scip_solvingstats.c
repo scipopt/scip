@@ -2975,7 +2975,7 @@ void SCIPprintConflictStatistics(
       / (SCIP_Real)SCIPconflictGetNAppliedLocalConss(scip->conflict) : 0,
       SCIPconflictGetNDualproofsInfLocal(scip->conflict) + SCIPconflictGetNDualproofsBndLocal(scip->conflict));
 
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Further Statistics :       Calls     Success  Useful     Useless  LargeCoef   LongConfs   WeakPer GrowthPer  Length\n");
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Further Conf Stats :       Calls     Success  Useful     Useless  LargeCoef   LongConfs   WeakPer GrowthPer  Length\n");
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  generalized res  : %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "%10.1f" "%10.1f" "%10.1f""\n",
       SCIPconflictGetNResCalls(scip->conflict),
       SCIPconflictGetNResConflictConss(scip->conflict),
