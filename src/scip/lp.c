@@ -2349,7 +2349,6 @@ SCIP_RETCODE rowSideChanged(
  */
 
 /** insert column coefficients in corresponding rows */
-static
 SCIP_RETCODE colLink(
    SCIP_COL*             col,                /**< column data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -2393,7 +2392,6 @@ SCIP_RETCODE colLink(
 }
 
 /** removes column coefficients from corresponding rows */
-static
 SCIP_RETCODE colUnlink(
    SCIP_COL*             col,                /**< column data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -2432,7 +2430,6 @@ SCIP_RETCODE colUnlink(
 }
 
 /** insert row coefficients in corresponding columns */
-static
 SCIP_RETCODE rowLink(
    SCIP_ROW*             row,                /**< row data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -2475,7 +2472,6 @@ SCIP_RETCODE rowLink(
 }
 
 /** removes row coefficients from corresponding columns */
-static
 SCIP_RETCODE rowUnlink(
    SCIP_ROW*             row,                /**< row data */
    SCIP_SET*             set,                /**< global SCIP settings */
