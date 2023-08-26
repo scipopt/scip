@@ -1665,6 +1665,9 @@ SCIP_RETCODE SCIPflushRowExtensions(
    /* force the row sorting, and merge equal column entries */
    SCIProwForceSort(row, scip->set);
 
+   /* link row to columns */
+   SCIP_CALL( rowLink(row, scip->mem->probmem, scip->set, scip->eventqueue, scip->lp) );
+
    return SCIP_OKAY;
 }
 
