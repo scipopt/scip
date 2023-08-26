@@ -465,6 +465,7 @@ set(instances_Or
 # Pairs of instances and settings
 #
 set(pairs_Issue
+    "instances/Issue/3499.lp\;11460\;closeobj"
     "instances/Issue/3589.cip\;-1\;default"
     )
 
