@@ -3380,17 +3380,37 @@ void conflictClear(
 }
 
 
-/** clears the conflict resolution queue and the current conflict set */
+/** clears the resolution conflict analysis queues and bounds leading to conflict */
 static
 void conflictClearResolution(
-   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob                /**< problem data */
    )
 {
    assert(conflict != NULL);
+   assert(set != NULL);
+   assert(prob != NULL);
 
    SCIPpqueueClear(conflict->resbdchgqueue);
    SCIPpqueueClear(conflict->resforcedbdchgqueue);
    SCIPpqueueClear(conflict->separatebdchgqueue);
+
+   /* reset the current lower and upper bounds leading to conflict */
+   if ( set->conf_usegeneralres )
+   {
+      SCIP_VAR** vars;
+      int nvars;
+      int i;
+
+      vars = SCIPprobGetVars(prob);
+      nvars = SCIPprobGetNVars(prob);
+      for( i = 0; i < nvars; ++i )
+      {
+         vars[i]->conflictreslb = SCIP_REAL_MIN;
+         vars[i]->conflictresub = SCIP_REAL_MAX;
+      }
+   }
 }
 
 /** initializes the propagation conflict analysis by clearing the conflict candidate queue */
@@ -3414,7 +3434,7 @@ SCIP_RETCODE SCIPconflictInit(
    conflictClear(conflict);
 
    if ( set->conf_usegeneralres )
-      conflictClearResolution(conflict);
+      conflictClearResolution(conflict, set, prob);
 
    /* set conflict type */
    assert(conftype == SCIP_CONFTYPE_BNDEXCEEDING || conftype == SCIP_CONFTYPE_INFEASLP
@@ -5611,22 +5631,6 @@ SCIP_RETCODE SCIPconflictAnalyze(
 
    /* stop timing */
    SCIPclockStop(conflict->propanalyzetime, set);
-
-   /* refactortodo this has to be reset at some other place s*/
-   if ( set->conf_usegeneralres )
-   {
-      SCIP_VAR** vars;
-      int nvars;
-      int i;
-
-      vars = SCIPprobGetVars(prob);
-      nvars = SCIPprobGetNVars(prob);
-      for( i = 0; i < nvars; ++i )
-      {
-         vars[i]->conflictreslb = SCIP_REAL_MIN;
-         vars[i]->conflictresub = SCIP_REAL_MAX;
-      }
-   }
 
    return SCIP_OKAY;
 }
