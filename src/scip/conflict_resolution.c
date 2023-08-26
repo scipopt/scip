@@ -2575,11 +2575,28 @@ SCIP_RETCODE SCIPconflictAddConflictCon(
       if( SCIPvarIsIntegral(var) )
          bound = conflictrow->vals[idx] > 0.0 ? SCIPsetCeil(set, bound) : SCIPsetFloor(set, bound);
 
-      SCIPsetDebugMsg(set, " -> apply global bound change: <%s> %s %g\n",
-         SCIPvarGetName(var), boundtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", bound);
-
-      SCIP_CALL( SCIPnodeAddBoundchg(tree->path[conflictrow->validdepth], blkmem, set, stat, transprob, origprob, tree,
-            reopt, lp, branchcand, eventqueue, cliquetable, var, bound, boundtype, FALSE) );
+      /* refactortodo: rethink the logic and add asserts. Also find a better way
+       * to inform the statistics that a constraint is added "inderectly", also
+       * update number of global bound changes from conflict analysis */
+      if(boundtype == SCIP_BOUNDTYPE_LOWER && SCIPsetIsFeasGT(set, bound, SCIPvarGetUbGlobal(var)))
+      {
+         SCIPsetDebugMsgPrint(set, " \t -> Bound %s >= %f contradicts with the global upper bound %s <= %f\n",
+            SCIPvarGetName(var), bound, SCIPvarGetName(var), SCIPvarGetUbGlobal(var));
+         SCIP_CALL( SCIPnodeCutoff(tree->path[conflictrow->validdepth], set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
+      }
+      else if(boundtype == SCIP_BOUNDTYPE_UPPER && SCIPsetIsLT(set, bound, SCIPvarGetLbGlobal(var)))
+      {
+         SCIPsetDebugMsgPrint(set, " \t -> Bound %s <= %f contradicts with the global lower bound %s >= %f\n",
+            SCIPvarGetName(var), bound, SCIPvarGetName(var), SCIPvarGetUbGlobal(var));
+         SCIP_CALL( SCIPnodeCutoff(tree->path[conflictrow->validdepth], set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
+      }
+      else
+      {
+         SCIPsetDebugMsg(set, " -> apply global bound change: <%s> %s %g\n",
+            SCIPvarGetName(var), boundtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", bound);
+        SCIP_CALL( SCIPnodeAddBoundchg(tree->path[conflictrow->validdepth], blkmem, set, stat, transprob, origprob, tree,
+               reopt, lp, branchcand, eventqueue, cliquetable, var, bound, boundtype, FALSE) );
+      }
 
       *success = TRUE;
       SCIP_CALL( updateStatistics(conflict, vars, blkmem, set, stat, conflictrow, conflictrow->validdepth) );
