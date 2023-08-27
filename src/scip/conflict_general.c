@@ -2368,17 +2368,20 @@ SCIP_RETCODE conflictAnalyzeLP(
             &farkaslhs, &farkasactivity, curvarlbs, curvarubs, lbchginfoposs, ubchginfoposs, iterations, marklpunsolved,
             dualproofsuccess, &valid) );
 
+      conflict->bdchgonlyconfqueue = FALSE;
+
       SCIPsetFreeBufferArray(set, &farkascoefs);
 
       if( !valid )
       {
-         conflict->bdchgonlyconfqueue = FALSE;
          if( set->conf_usegeneralres && set->conf_applyresdualproof )
          {
             SCIP_CALL( SCIProwRelease(&initialrow, blkmem, set, lp) );
          }
          goto FLUSHPROOFSETS;
       }
+
+      conflict->bdchgonlyconfqueue = TRUE;
 
       /* analyze the conflict starting with remaining bound changes */
       SCIP_CALL( SCIPconflictAnalyzeRemainingBdchgs(conflict, blkmem, set, stat, transprob, tree, diving, \

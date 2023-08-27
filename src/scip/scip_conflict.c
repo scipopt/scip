@@ -686,11 +686,11 @@ SCIP_RETCODE SCIPanalyzeConflict(
    SCIP_Bool conflictlearned;
    conflictlearned = FALSE;
 
-   if(scip->set->conf_usegeneralres && validdepth == 0 && SCIPsetGetStage(scip->set) == SCIP_STAGE_SOLVING)
+   if(scip->set->conf_usegeneralres)
    {
          SCIP_CALL( SCIPconflictAnalyzeResolution(scip->conflict, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
                   scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable, NULL,
-                  0, FALSE, FALSE, &conflictlearned) );
+                  validdepth, FALSE, FALSE, &conflictlearned) );
    }
    if( !(scip->set->conf_favorresolution) || !(conflictlearned) )
    {
@@ -726,6 +726,7 @@ SCIP_RETCODE SCIPanalyzeConflictCons(
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPanalyzeConflictCons", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
+   /* refactortodo write function for calling generalized resolution */
    if( SCIPconsIsGlobal(cons) )
    {
       SCIP_Bool conflictlearned;
@@ -757,10 +758,27 @@ SCIP_RETCODE SCIPanalyzeConflictCons(
    }
    else if( SCIPconsIsActive(cons) )
    {
-      /* @todo generalized resolution for the local case */
+      SCIP_Bool conflictlearned;
 
-      SCIP_CALL( SCIPconflictAnalyze(scip->conflict, scip->mem->probmem, scip->set, scip->stat,
-            scip->transprob, scip->tree, SCIPconsGetValidDepth(cons), success) );
+      conflictlearned = FALSE;
+
+      if(scip->set->conf_usegeneralres)
+      {
+         SCIP_ROW* conflictrow;
+
+         conflictrow = SCIPconsCreateRow(scip, cons);
+
+         SCIP_CALL( SCIPconflictAnalyzeResolution(scip->conflict, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
+                     scip->origprob, scip->tree, scip->reopt, scip->lp,  scip->branchcand, scip->eventqueue, scip->cliquetable,
+                     conflictrow, SCIPconsGetValidDepth(cons), FALSE, FALSE, &conflictlearned) );
+      }
+      /* @todo generalized resolution for the local case */
+      if( !(scip->set->conf_favorresolution) || !(conflictlearned) )
+      {
+         SCIP_CALL( SCIPconflictAnalyze(scip->conflict, scip->mem->probmem, scip->set, scip->stat,
+               scip->transprob, scip->tree, SCIPconsGetValidDepth(cons), success) );
+      }
+
    }
 
    return SCIP_OKAY;

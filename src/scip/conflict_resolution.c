@@ -3916,7 +3916,7 @@ SCIP_RETCODE fixBoundChangeWithoutResolving(
 
          /* if no resolution has been applied yet, and the bound change is a
          branching decision, we can ignore it and continue with the next
-         bound change */
+         bound change. Here we have to update the last bound change depth */
          if( nressteps == 0 && bdchgtype == SCIP_BOUNDCHGTYPE_BRANCHING )
          {
             *currbdchgdepth = SCIPbdchginfoGetDepth(*currbdchginfo);
@@ -4585,20 +4585,13 @@ SCIP_RETCODE SCIPconflictAnalyzeResolution(
    SCIP_Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
    )
 {
-
-   SCIP_VAR** vars;
    int nconss;
-   int nvars;
    int nconfvars;
    int i;
 
    /* check if generalized resolution conflict analysis is applicable */
    if( !SCIPconflictResolutionApplicable(set) )
       return SCIP_OKAY;
-
-   vars = SCIPprobGetVars(transprob);
-   nvars = SCIPprobGetNVars(transprob);
-
 
    assert(conflict != NULL);
    assert(set != NULL);
@@ -4636,16 +4629,9 @@ SCIP_RETCODE SCIPconflictAnalyzeResolution(
    conflict->nressuccess += (nconss > 0 ? 1 : 0);
    conflict->nresconfconss += nconss;
    conflict->nresconfvariables += nconfvars;
+
    if( success != NULL )
       *success = (nconss > 0);
-
-
-   /* Set variable information related to resolution conflict analysis to default values */
-   for (i = 0; i < nvars; i++)
-   {
-      vars[i]->conflictreslb = SCIP_REAL_MIN;
-      vars[i]->conflictresub = SCIP_REAL_MAX;
-   }
 
    /* free all conflictrows */
    for( i = 0; i < conflict->nconflictrows; i++ )
