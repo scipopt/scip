@@ -2519,8 +2519,10 @@ SCIP_RETCODE SCIPconflictAddConflictCon(
    /* calculate the maximal size of each accepted conflict set */
    maxsize = (int) (set->conf_maxvarsfracres * transprob->nvars);
 
-   SCIPsetDebugMsgPrint(set, "flushing %d conflict constraint at focus depth %d (vd: %d, cd: %d, rd: %d, maxsize: %d)\n",
-      1, focusdepth, conflictrow->validdepth, conflictrow->conflictdepth, conflictrow->repropdepth, maxsize);
+   /* refactortodo compute insert depth */
+
+   SCIPsetDebugMsgPrint(set, "flushing %d conflict constraint at focus depth %d (id: %d, vd: %d, cd: %d, rd: %d, maxsize: %d)\n",
+      1, focusdepth, conflictrow->insertdepth, conflictrow->validdepth, conflictrow->conflictdepth, conflictrow->repropdepth, maxsize);
 
    *success = FALSE;
    /* do not add long conflicts */
@@ -2606,11 +2608,11 @@ SCIP_RETCODE SCIPconflictAddConflictCon(
    {
       /* @todo use the right insert depth and not valid depth */
       SCIP_CALL( createAndAddConflictCon(conflict, blkmem, set, stat, vars, \
-                     tree, reopt, lp, cliquetable, conflictrow, conflictrow->validdepth, success) );
+                     tree, reopt, lp, cliquetable, conflictrow, conflictrow->insertdepth, success) );
       conflict->nappliedglbresconss++;
       SCIPsetDebugMsgPrint(set, " \t -> conflict row added (cdpt:%d, fdpt:%d, insert:%d, valid:%d, conf: %d, reprop: %d, len:%d):\n",
                      SCIPtreeGetCurrentDepth(tree), SCIPtreeGetFocusDepth(tree),
-                     conflictrow->validdepth, conflictrow->validdepth, conflictrow->conflictdepth,
+                     conflictrow->insertdepth, conflictrow->validdepth, conflictrow->conflictdepth,
                      conflictrow->repropdepth, conflictrow->nnz);
    }
    else
@@ -4493,8 +4495,10 @@ SCIP_RETCODE conflictAnalyzeResolution(
             and it means that we have already reached a FUIP */
             SCIPsetDebugMsgPrint(set, " reached UIP in depth %d \n", bdchgdepth);
             /* add the previous conflict in the list of conflict rows */
+            conflictrow->validdepth = validdepth;
             conflictrow->conflictdepth = bdchgdepth;
-            conflictrow->repropdepth = (nextbdchginfo == NULL) ? 0 : SCIPbdchginfoGetDepth(nextbdchginfo);
+            conflictrow->insertdepth = validdepth;
+            conflictrow->repropdepth = MAX(0, validdepth);
             SCIP_CONFLICTROW* tmpconflictrow;
             SCIP_CALL( conflictRowCopy(&tmpconflictrow, blkmem, conflictrow) );
             SCIP_CALL( conflictInsertConflictRow(conflict, set, &tmpconflictrow) );
@@ -4525,7 +4529,10 @@ SCIP_RETCODE conflictAnalyzeResolution(
             assert( nresstepslast != nressteps );
             SCIPsetDebugMsgPrint(set, " reached UIP in depth %d \n", bdchgdepth);
             /* add the previous conflict in the list of conflict rows */
+            conflictrow->validdepth = validdepth;
             conflictrow->conflictdepth = bdchgdepth;
+            conflictrow->insertdepth = validdepth;
+            /* refactortodo this may be even deeper if the bound change is not relevant for the propagation */
             conflictrow->repropdepth = (nextbdchginfo == NULL) ? 0 : SCIPbdchginfoGetDepth(nextbdchginfo);
             SCIP_CONFLICTROW* tmpconflictrow;
             SCIP_CALL( conflictRowCopy(&tmpconflictrow, blkmem, conflictrow) );
@@ -4558,16 +4565,6 @@ SCIP_RETCODE conflictAnalyzeResolution(
       if(SCIPdebugSolIsEnabled(set->scip))
          checkConflictDebug(conflict, blkmem, set, vars, stat, tree, conflictrow);
 
-   /* if resolution fails at some point we can still add the latest valid
-   conflict in the list of conflict rows */
-   if (set->conf_addnonfuip && nressteps >= 1 && nresstepslast != nressteps)
-   {
-      SCIP_CONFLICTROW* tmpconflictrow;
-
-      SCIP_CALL(conflictRowCopy(&tmpconflictrow, blkmem, conflictrow));
-      SCIP_CALL(conflictInsertConflictRow(conflict, set, &tmpconflictrow));
-   }
-
    SCIPsetDebugMsgPrint(set, "Total number of conflict rows found %d\n", conflict->nconflictrows);
    SCIPsetDebugMsgPrint(set, "Total number of FUIPS found %d\n", nfuips);
 
@@ -4577,13 +4574,12 @@ SCIP_RETCODE conflictAnalyzeResolution(
 
       nconstoadd = (set->conf_resolutioncons > 0) ? MIN(set->conf_resolutioncons, conflict->nconflictrows) : conflict->nconflictrows;
 
-      if (set->conf_addclauseonly && !set->conf_addnonfuip && bdchginfo != NULL)
+      if (set->conf_addclauseonly)
       {
-         SCIP_CALL(addClauseConflict(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue, cliquetable, conflict->conflictrow, bdchginfo,
-                           fixbounds, fixinds, initialnnzs, nconss, nconfvars));
+         if(bdchginfo != NULL)
+            SCIP_CALL(addClauseConflict(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue, cliquetable, conflict->conflictrow, bdchginfo, fixbounds, fixinds, initialnnzs, nconss, nconfvars));
 
-         if (set->conf_addclauseonly)
-               nconstoadd = 0;
+         nconstoadd = 0;
       }
       SCIP_CALL(addConflictRows(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue, cliquetable, nconstoadd, initialnnzs, nconss, nconfvars));
    }
