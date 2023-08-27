@@ -291,7 +291,7 @@ SCIP_RETCODE SCIPaddConflictUb(
    SCIP_VAR*             var,                /**< variable whose upper bound should be added to conflict candidate queue */
    SCIP_BDCHGIDX*        bdchgidx            /**< bound change index representing time on path to current node, when the
                                               *   conflicting bound was valid, NULL for current local bound */
-);
+   );
 
 /** adds upper bound of variable at the time of the given bound change index to the conflict analysis' candidate storage
  *  with the additional information of a relaxed upper bound; this relaxed upper bound is the one which would be enough

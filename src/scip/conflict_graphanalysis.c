@@ -3854,13 +3854,6 @@ SCIP_RETCODE conflictAnalyze(
    bdchginfo = conflictFirstCand(conflict);
    nfirstuips = 0;
 
-   /*todo there may be an issue since the currentdepth may exceed the resolvedepth. The next lines should fix this issue */
-   if ( bdchginfo != NULL )
-   {
-      lastconsresoldepth = SCIPbdchginfoGetDepth(bdchginfo);
-      resolvedepth = SCIPbdchginfoGetDepth(bdchginfo);
-   }
-
    initialsize = SCIPpqueueNElems(conflict->forcedbdchgqueue) + SCIPpqueueNElems(conflict->bdchgqueue) + conflict->conflictset->nbdchginfos;
 
    /* check if the initial reason on debugging solution */

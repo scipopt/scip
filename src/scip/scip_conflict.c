@@ -686,7 +686,7 @@ SCIP_RETCODE SCIPanalyzeConflict(
    SCIP_Bool conflictlearned;
    conflictlearned = FALSE;
 
-   if(validdepth == 0 && SCIPsetGetStage(scip->set) == SCIP_STAGE_SOLVING)
+   if(scip->set->conf_usegeneralres && validdepth == 0 && SCIPsetGetStage(scip->set) == SCIP_STAGE_SOLVING)
    {
          SCIP_CALL( SCIPconflictAnalyzeResolution(scip->conflict, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
                   scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable, NULL,
@@ -728,16 +728,20 @@ SCIP_RETCODE SCIPanalyzeConflictCons(
 
    if( SCIPconsIsGlobal(cons) )
    {
-      SCIP_ROW* conflictrow;
       SCIP_Bool conflictlearned;
 
-      conflictrow = SCIPconsCreateRow(scip, cons);
       conflictlearned = FALSE;
 
-      SCIP_CALL( SCIPconflictAnalyzeResolution(scip->conflict, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
-                  scip->origprob, scip->tree, scip->reopt, scip->lp,  scip->branchcand, scip->eventqueue, scip->cliquetable,
-                  conflictrow, 0, FALSE, FALSE, &conflictlearned) );
+      if(scip->set->conf_usegeneralres)
+      {
+         SCIP_ROW* conflictrow;
 
+         conflictrow = SCIPconsCreateRow(scip, cons);
+
+         SCIP_CALL( SCIPconflictAnalyzeResolution(scip->conflict, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
+                     scip->origprob, scip->tree, scip->reopt, scip->lp,  scip->branchcand, scip->eventqueue, scip->cliquetable,
+                     conflictrow, 0, FALSE, FALSE, &conflictlearned) );
+      }
       if( !(scip->set->conf_favorresolution) || !(conflictlearned) )
       {
          SCIP_CALL( SCIPconflictAnalyze(scip->conflict, scip->mem->probmem, scip->set, scip->stat,
@@ -747,7 +751,6 @@ SCIP_RETCODE SCIPanalyzeConflictCons(
       {
          SCIPdebugMessage("clear bound changes queues if graph conflict analysis is not called \n");
          SCIP_CALL( SCIPconflictClearQueues(scip->conflict) );
-
       }
       if( success != NULL )
          *success = conflictlearned;
