@@ -2566,7 +2566,7 @@ SCIP_RETCODE conflictAddBound(
     *
     * @note That is different to the VSIDS presented in the literature
     */
-   if( success )
+      /* refactortodo update VSIDS score only in case of successfully adding the bound change to the queue? */
       SCIP_CALL( incVSIDS(var, blkmem, set, stat, boundtype, relaxedbd, set->conf_conflictgraphweight) );
 
    return SCIP_OKAY;

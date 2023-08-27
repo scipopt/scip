@@ -1906,7 +1906,7 @@ SCIP_RETCODE SCIPconflictAnalyzePseudo(
    pseudolhs = -(lp->cutoffbound - (SCIPprobIsObjIntegral(transprob) ? SCIPsetCutoffbounddelta(set) : 0.0));
 
    initialrow = NULL;
-   if( set->conf_applyrespseudoobj )
+   if( set->conf_usegeneralres && set->conf_applyrespseudoobj )
    {
       SCIP_CALL( SCIProwCreate(&initialrow, blkmem, set, stat, "pseudoobj", 0, NULL, NULL, pseudolhs, SCIPsetInfinity(set), \
             SCIP_ROWORIGINTYPE_UNSPEC, NULL, FALSE, FALSE, TRUE) );
@@ -1929,7 +1929,7 @@ SCIP_RETCODE SCIPconflictAnalyzePseudo(
          continue;
       }
 
-      if( set->conf_applyrespseudoobj )
+      if( set->conf_usegeneralres && set->conf_applyrespseudoobj )
       {
          SCIP_CALL( SCIPvarAddToRow(var, blkmem, set, stat, eventqueue, transprob, lp, initialrow, pseudocoefs[v]) );
       }
@@ -1969,7 +1969,7 @@ SCIP_RETCODE SCIPconflictAnalyzePseudo(
 
       conflict->bdchgonlyconfqueue = FALSE;
 
-      if( set->conf_applyrespseudoobj )
+      if( set->conf_usegeneralres && set->conf_applyrespseudoobj )
       {
          SCIP_CALL( SCIPconflictAnalyzeResolution(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp,
                branchcand, eventqueue, cliquetable, initialrow, 0, FALSE, TRUE, success) );
@@ -1983,7 +1983,7 @@ SCIP_RETCODE SCIPconflictAnalyzePseudo(
    SCIPsetFreeBufferArray(set, &curvarubs);
    SCIPsetFreeBufferArray(set, &curvarlbs);
 
-   if( set->conf_applyrespseudoobj )
+   if( set->conf_usegeneralres && set->conf_applyrespseudoobj )
    {
       SCIP_CALL( SCIProwRelease(&initialrow, blkmem, set, lp) );
       assert(!initialrow);
@@ -2348,7 +2348,7 @@ SCIP_RETCODE conflictAnalyzeLP(
       }
 
       initialrow = NULL;
-      if( set->conf_applyresdualproof )
+      if( set->conf_usegeneralres && set->conf_applyresdualproof )
       {
          SCIP_CALL( SCIProwCreate(&initialrow, blkmem, set, stat, "farkasproof", 0, NULL, NULL, farkaslhs, SCIPsetInfinity(set), \
                SCIP_ROWORIGINTYPE_UNSPEC, NULL, (SCIPnodeGetDepth(tree->path[validdepth]) > 0 ), FALSE, TRUE) );
@@ -2373,7 +2373,7 @@ SCIP_RETCODE conflictAnalyzeLP(
       if( !valid )
       {
          conflict->bdchgonlyconfqueue = FALSE;
-         if( set->conf_applyresdualproof )
+         if( set->conf_usegeneralres && set->conf_applyresdualproof )
          {
             SCIP_CALL( SCIProwRelease(&initialrow, blkmem, set, lp) );
          }
@@ -2390,7 +2390,7 @@ SCIP_RETCODE conflictAnalyzeLP(
 
       conflict->bdchgonlyconfqueue = FALSE;
 
-      if( set->conf_applyresdualproof )
+      if( set->conf_usegeneralres && set->conf_applyresdualproof )
       {
          SCIP_CALL( SCIPconflictAnalyzeResolution(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp,
                branchcand, eventqueue, cliquetable, initialrow, validdepth, TRUE, FALSE, &success) );

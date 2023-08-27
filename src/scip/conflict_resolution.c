@@ -1776,7 +1776,7 @@ SCIP_Bool SCIPconflictResolutionApplicable(
    )
 {
    /* check, if generalized resolution conflict analysis is enabled */
-   if( !set->conf_enable || !set->conf_usegeneralres )
+  if( !set->conf_enable || !set->conf_usegeneralres )
       return FALSE;
 
    return TRUE;
