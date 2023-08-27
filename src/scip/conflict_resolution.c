@@ -3536,7 +3536,8 @@ SCIP_RETCODE conflictRowFromLpRow(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_ROW*             row,                /**< row to add */
    SCIP_CONFLICTROW*     conflictrow,        /**< conflict row */
-   SCIP_BDCHGINFO*       bdchginfo           /**< bound change to resolve */
+   SCIP_BDCHGINFO*       bdchginfo,          /**< bound change to resolve */
+   SCIP_Bool             frominfeaslp        /**< whether the row is from the infeasible LP or pseudoobj */
    )
 {
    SCIP_COL** cols;
@@ -3560,8 +3561,11 @@ SCIP_RETCODE conflictRowFromLpRow(
    rowlhs = SCIProwGetLhs(row) - SCIProwGetConstant(row);
    rowrhs = SCIProwGetRhs(row) - SCIProwGetConstant(row);
 
-   var = SCIPbdchginfoGetVar(bdchginfo);
-   varidx = SCIPvarGetProbindex(var);
+   if(!frominfeaslp)
+   {
+      var = SCIPbdchginfoGetVar(bdchginfo);
+      varidx = SCIPvarGetProbindex(var);
+   }
 
    vals = SCIProwGetVals(row);
    cols = SCIProwGetCols(row);
@@ -3574,7 +3578,7 @@ SCIP_RETCODE conflictRowFromLpRow(
    {
       var = SCIPcolGetVar(cols[i]);
       inds[i] = SCIPvarGetProbindex(var);
-      if ( inds[i] == varidx )
+      if ( !frominfeaslp && inds[i] == varidx )
       {
          if ( (SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER && vals[i] > 0) ||
               (SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_UPPER && vals[i] < 0) )
@@ -3594,8 +3598,12 @@ SCIP_RETCODE conflictRowFromLpRow(
          isincon = TRUE;
       }
    }
-   assert(isincon);
-   SCIP_UNUSED(isincon);
+
+   if(!frominfeaslp)
+   {
+      assert(isincon);
+      SCIP_UNUSED(isincon);
+   }
 
    if ( changesign )
       lhs = -rowrhs;
@@ -3777,7 +3785,7 @@ SCIP_RETCODE getConflictRow(
    if (initialconflictrow != NULL && !set->conf_clausegenres)
    {
       SCIPsetDebugMsgPrint(set, "Initial LP Row: %s \n", SCIProwGetName(initialconflictrow));
-      SCIP_CALL( conflictRowFromLpRow(set, blkmem, initialconflictrow, conflictrow, currbdchginfo) );
+      SCIP_CALL( conflictRowFromLpRow(set, blkmem, initialconflictrow, conflictrow, currbdchginfo, FALSE) );
 
       /* if the conflict row is too large, we try to weaken it */
       if( conflictrow->nnz > maxsize )
@@ -4134,9 +4142,17 @@ SCIP_RETCODE conflictAnalyzeResolution(
 
    if( infeasibleLP || pseudoobj )
    {
-      /* clear the bound change queues */
-      SCIPpqueueClear(conflict->resbdchgqueue);
-      SCIPpqueueClear(conflict->resforcedbdchgqueue);
+      assert(SCIPpqueueNElems(conflict->resbdchgqueue) == 0);
+      assert(SCIPpqueueNElems(conflict->resforcedbdchgqueue) == 0);
+
+      if(SCIProwGetNNonz(initialconflictrow) == 0)
+      {
+         SCIPsetDebugMsgPrint(set, "Conflict analysis not applicable since no conflict row could be created \n");
+         conflict->nknownaborts++;
+         return SCIP_OKAY;
+      }
+      SCIP_CALL( conflictRowFromLpRow(set, blkmem, initialconflictrow, conflictrow, NULL, TRUE) );
+
       /* todo this can be avoided by using the same queues as graph conflict analysis */
       SCIP_CALL( updateBdchgQueue(set, vars, conflictrow, NULL) );
    }
@@ -4172,17 +4188,32 @@ SCIP_RETCODE conflictAnalyzeResolution(
    /* calculate the maximal size of each accepted conflict set */
    maxsize = (int) (set->conf_maxvarsfracres * transprob->nvars);
 
-   /* sets the initial conflict row for the bound change directtly in conflict->conflictrow */
-   getConflictRow(conflict, blkmem, set, transprob, initialconflictrow, bdchginfo, residx, maxsize, &successgetconflict);
-
-   /* if we could not get the conflict row, then we abort */
-   if( !successgetconflict )
+   if( !infeasibleLP && !pseudoobj )
    {
-      SCIPsetDebugMsgPrint(set, "Conflict analysis not applicable since no conflict row could be created \n");
-      conflict->nknownaborts++;
-      return SCIP_OKAY;
+      /* sets the initial conflict row for the bound change directly in conflict->conflictrow */
+      getConflictRow(conflict, blkmem, set, transprob, initialconflictrow, bdchginfo, residx, maxsize, &successgetconflict);
+      /* if we could not get the conflict row, then we abort */
+      if( !successgetconflict )
+      {
+         SCIPsetDebugMsgPrint(set, "Conflict analysis not applicable since no conflict row could be created \n");
+         conflict->nknownaborts++;
+         return SCIP_OKAY;
+      }
    }
-
+   else
+   {
+      /* since the dual proof or pseudo objective may be very long we weaken them as much as we can */
+      weakenConflictRow(conflictrow, set, vars, bdchgidx, NULL, NULL);
+      if(conflictrow->nnz > maxsize)
+      {
+         conflict->nreslongconfs++;
+         conflict->nknownaborts++;
+         goto TERMINATE_RESOLUTION_LOOP;
+      }
+      /* set the slack */
+      conflictrow->slack = getSlackConflict(set, vars, conflictrow, bdchginfo, NULL, NULL);
+      assert(SCIPsetIsLT(set, conflictrow->slack, 0.0));
+   }
 
    SCIP_CALL( conflictRowReplace(resolvedconflictrow, blkmem, conflictrow) );
 
