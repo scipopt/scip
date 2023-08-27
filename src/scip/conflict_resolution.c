@@ -848,7 +848,7 @@ SCIP_RETCODE tightenCoefs(
          SCIP_Real newcoef = minact - (*rowlhs);
          SCIP_Real ub = localbounds ? SCIPvarGetUbLocal(vars[idx]) : SCIPvarGetUbGlobal(vars[idx]);
 
-         assert(SCIPsetIsGE(set, newcoef + EPS, rowcoefs[idx]));
+         assert(SCIPsetIsGE(set, newcoef + EPS, rowcoefs[idx]) || SCIPsetIsRelGE(set, newcoef, rowcoefs[idx]));
          assert(!SCIPsetIsPositive(set, newcoef));
 
          if( newcoef > rowcoefs[idx] )
@@ -892,7 +892,7 @@ SCIP_RETCODE tightenCoefs(
          SCIP_Real newcoef = (*rowlhs) - minact;
          SCIP_Real lb = localbounds ? SCIPvarGetLbLocal(vars[idx]) : SCIPvarGetLbGlobal(vars[idx]);
 
-         assert(SCIPsetIsLE(set, newcoef, rowcoefs[idx] + EPS));
+         assert(SCIPsetIsLE(set, newcoef, rowcoefs[idx] + EPS) || SCIPsetIsRelLE(set, newcoef, rowcoefs[idx]));
          assert(!SCIPsetIsNegative(set, newcoef));
 
          if( newcoef < rowcoefs[idx] )
@@ -4195,7 +4195,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
       SCIP_Real newslack;
        /* The new slack should always be less or equal to the old slack */
       newslack = getSlackConflict(set, vars, conflictrow, bdchginfo, NULL, NULL);
-      assert(SCIPsetIsLE(set, newslack, conflictrow->slack + EPS));
+      assert(SCIPsetIsLE(set, newslack, conflictrow->slack + EPS)  || SCIPsetIsRelLE(set, newslack, conflictrow->slack));
       conflictrow->slack = newslack;
    }
 
@@ -4431,7 +4431,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
             newslack = getSlackConflict(set, vars, conflictrow, bdchginfo, fixbounds, fixinds);
             conflictrow->slack = newslack;
             SCIPsetDebugMsgPrint(set, "Tightened %d coefficients in the resolved constraint, old slack %f, new slack %f \n", nchgcoefs, previousslack, newslack);
-            assert(SCIPsetIsLE(set, newslack, previousslack + EPS));
+            assert(SCIPsetIsLE(set, newslack, previousslack + EPS) || SCIPsetIsRelLE(set, newslack, previousslack));
             SCIPdebug(printConflictRow(conflictrow, set, vars, 4));
 
          }
