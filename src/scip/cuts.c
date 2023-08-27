@@ -8722,7 +8722,7 @@ SCIP_RETCODE cutsRoundStrongCG(
          SCIPquadprecProdQD(cutaj, cutaj, k);
          SCIPquadprecProdQQ(cutaj, cutaj, onedivoneminusf0);
          pj = SCIPceil(scip, QUAD_TO_DBL(cutaj));
-         assert(pj >= 0); /* should be >= 1, but due to rounding bias can be 0 if fj almost equal to f0 */
+         assert(pj >= 0); /* should be >= 1, but due to rounding bias can be 0 if fj is almost equal to f0 */
          assert(pj <= k);
          SCIPquadprecDivDD(cutaj, pj, k + 1.0);
          SCIPquadprecSumQQ(cutaj, cutaj, downaj);
@@ -8917,7 +8917,7 @@ SCIP_RETCODE cutsSubstituteStrongCG(
             SCIPquadprecProdQQ(cutar, cutar, onedivoneminusf0);
             SCIPquadprecProdQD(cutar, cutar, k);
             pr = SCIPceil(scip, QUAD_TO_DBL(cutar));
-            assert(pr >= 0); /* should be >= 1, but due to rounding bias can be 0 if fr almost equal to f0 */
+            assert(pr >= 0); /* should be >= 1, but due to rounding bias can be 0 if fr is almost equal to f0 */
             assert(pr <= k);
             SCIPquadprecDivDD(cutar, pr, k + 1.0);
             SCIPquadprecSumQD(cutar, cutar, downar);
@@ -9152,7 +9152,8 @@ SCIP_RETCODE SCIPcalcStrongCG(
    SCIPquadprecSumDD(f0, QUAD_HI(f0), QUAD_LO(f0));
 
    SCIPquadprecDivDQ(tmp, 1.0, f0);
-   k = SCIPround(scip, ceil(QUAD_TO_DBL(tmp)) - 1.0);
+   SCIPquadprecSumQD(tmp, tmp, -1.0);
+   k = SCIPceil(scip, QUAD_TO_DBL(tmp));
 
    QUAD_ASSIGN_Q(rhs, downrhs);
 
