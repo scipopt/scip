@@ -18,6 +18,7 @@ Fixed bugs
 - avoid invalid strong Chvatal-Gomory cuts by ceiling with tolerance in the calculation of parameter k
 - add missing row links to columns in SCIPflushRowExtensions() required to maintain correct row norms
 - restrict separator intobj to solutions for which there can be no better feasible integral objective values to avoid cutting them off
+- correct index for skipping removed clique variables in heuristic vbounds to avoid segmentation faults
 
 @section RN804 SCIP 8.0.4
 *************************
