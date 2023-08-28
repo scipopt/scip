@@ -4441,7 +4441,8 @@ SCIP_RETCODE conflictAnalyzeResolution(
             }
             else
             {
-               conflict->nknownaborts++;
+               /* refactortodo we should count this seperately */
+               /* conflict->nknownaborts++; */
                goto TERMINATE_RESOLUTION_LOOP;
             }
          }

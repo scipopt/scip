@@ -686,7 +686,7 @@ SCIP_RETCODE SCIPanalyzeConflict(
    SCIP_Bool conflictlearned;
    conflictlearned = FALSE;
 
-   if(scip->set->conf_usegeneralres)
+   if(scip->set->conf_usegeneralres && SCIPsetGetStage(scip->set) == SCIP_STAGE_SOLVING)
    {
          SCIP_CALL( SCIPconflictAnalyzeResolution(scip->conflict, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
                   scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable, NULL,
