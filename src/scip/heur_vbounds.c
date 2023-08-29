@@ -338,13 +338,14 @@ SCIP_RETCODE dfs(
             }
             if( !found )
             {
-               assert(SCIPcliqueIsCleanedUp(cliques[j]));
                cliquevars = SCIPcliqueGetVars(cliques[j]);
                cliquevals = SCIPcliqueGetValues(cliques[j]);
                ncliquevars = SCIPcliqueGetNVars(cliques[j]);
 
                for( i = 0; i < ncliquevars; ++i )
                {
+                  assert(SCIPvarIsActive(cliquevars[i]));
+
                   if( cliquevars[i] == startvar )
                      continue;
 
