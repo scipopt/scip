@@ -4079,7 +4079,6 @@ SCIP_RETCODE conflictAnalyzeResolution(
    int maxsize;
    int nchgcoefs;
    int nressteps;
-   int nresstepslast;
    int nfuips;
    SCIP_Real* cutcoefs;
    SCIP_Real* fixbounds;
@@ -4238,7 +4237,6 @@ SCIP_RETCODE conflictAnalyzeResolution(
    conflictrow->coefquotient = getQuotLargestSmallestCoef(set, conflictrow->inds, conflictrow->vals, conflictrow->nnz);
 
    nressteps = 0;
-   nresstepslast = 0;
    nfuips = 0;
 
    /* allocate vectors for mir cuts */
@@ -4527,7 +4525,6 @@ SCIP_RETCODE conflictAnalyzeResolution(
          if( (nextbdchginfo == NULL || SCIPbdchginfoGetDepth(nextbdchginfo) != bdchgdepth)
                                     && SCIPbdchginfoGetDepth(bdchginfo) != lastuipdepth )
          {
-            assert( nresstepslast != nressteps );
             SCIPsetDebugMsgPrint(set, " reached UIP in depth %d \n", bdchgdepth);
             /* add the previous conflict in the list of conflict rows */
             conflictrow->validdepth = validdepth;
