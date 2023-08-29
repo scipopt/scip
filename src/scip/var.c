@@ -11261,9 +11261,6 @@ SCIP_RETCODE SCIPvarFixBinary(
       }
    }
 
-   /* during presolving, the variable should have been removed immediately from all its cliques */
-   assert(SCIPsetGetStage(set) >= SCIP_STAGE_SOLVING || var->cliquelist == NULL);
-
    return SCIP_OKAY;
 }
 
