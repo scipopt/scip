@@ -3254,7 +3254,7 @@ void* SCIPhashmapGetImage(
    return NULL;
 }
 
-/** retrieves image of given origin from the hash map, or LONG_MAX if no image exists */
+/** retrieves image of given origin from the hash map, or INT_MAX if no image exists */
 int SCIPhashmapGetImageInt(
    SCIP_HASHMAP*         hashmap,            /**< hash map */
    void*                 origin              /**< origin to retrieve image for */

@@ -2659,7 +2659,11 @@ void SCIPintervalMax(
    resultant->sup = MAX(operand1.sup, operand2.sup);
 }
 
-SCIP_Real SCIPintervalAbsMax(SCIP_INTERVAL interval) {
+/** returns the maximum of the absolute values of the infimum and supremum of the interval */
+SCIP_Real SCIPintervalAbsMax(
+   SCIP_INTERVAL         interval            /**< interval */
+   )
+{
    return MAX(ABS(interval.sup), ABS(interval.inf));
 }
 

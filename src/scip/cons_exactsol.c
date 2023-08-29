@@ -351,7 +351,7 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
 
       /* get row corresponding to constraint */
       row = SCIPconsGetRow(scip, consprob[c]);
-      if (row == NULL)
+      if( row == NULL )
          continue;
 
       /* get row activity */

@@ -1550,7 +1550,7 @@ void RatPrint(
    SCIP_Rational*        rational            /**< the rational to print */
    )
 {
-   if ( rational == NULL)
+   if( rational == NULL)
       std::cout << "NULL" << std::flush;
    else if( rational->isinf )
       std::cout << rational->val.sign() << "inf" << std::flush;

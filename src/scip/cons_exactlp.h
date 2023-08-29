@@ -393,10 +393,6 @@ SCIP_RETCODE SCIPclassifyConstraintTypesExactLinear(
    SCIP_LINCONSSTATS*    linconsstats        /**< linear constraint type classification */
    );
 
-
-unsigned long certificateGetConsIndex(SCIP* scip, SCIP_CERTIFICATE* certificate, SCIP_CONS* cons, SCIP_Bool rhs);
-
-
 SCIP_RETCODE SCIPconsPrintCertificateExactLinear(
    SCIP*                 scip,
    SCIP_CONSHDLR*        conshdlr,

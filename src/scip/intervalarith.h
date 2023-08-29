@@ -602,7 +602,11 @@ void SCIPintervalMax(
    SCIP_INTERVAL         operand2            /**< second operand of operation */
    );
 
-SCIP_Real SCIPintervalAbsMax(SCIP_INTERVAL interval);
+/** returns the maximum of the absolute values of the infimum and supremum of the interval */
+SCIP_EXPORT
+SCIP_Real SCIPintervalAbsMax(
+   SCIP_INTERVAL         interval            /**< interval */
+   );
 
 /** stores absolute value of operand in resultant */
 SCIP_EXPORT

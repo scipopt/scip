@@ -6267,6 +6267,7 @@ SCIP_RETCODE SCIPinferVarLbCons(
    SCIP_Real ub;
 
    assert(infeasible != NULL);
+
    SCIP_CALL( SCIPcheckStage(scip, "SCIPinferVarLbCons", FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    *infeasible = FALSE;

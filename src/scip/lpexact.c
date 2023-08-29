@@ -6928,7 +6928,6 @@ SCIP_RETCODE SCIPlpExactGetSol(
    int nlpirows;
    int c;
    int r;
-   int j;
 
    assert(lp != NULL);
    //assert(lp->flushed); /* TODO: does that work? The exact LP shouldn't need to be flushed when we're storing for diving */
@@ -7641,7 +7640,7 @@ SCIP_RETCODE SCIPlpExactGetDualfarkas(
       lpicols[c]->validredcostlp = -1L;
       lpicols[c]->validfarkaslp = -1L;
       if( farkascoefs != NULL )
-	 RatSet(lpicols[c]->farkascoef, farkascoefs[c]);
+	      RatSet(lpicols[c]->farkascoef, farkascoefs[c]);
 
       if( overwritefplp )
       {
