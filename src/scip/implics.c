@@ -2690,7 +2690,7 @@ SCIP_RETCODE cliqueCleanup(
             || SCIPvarGetStatus(clique->vars[v]) == SCIP_VARSTATUS_MULTAGGR )
          {
             needsorting = TRUE;
-
+            SCIP_CALL( SCIPvarDelCliqueFromList(clique->vars[v], blkmem, clique->values[v], clique) );
             SCIP_CALL( SCIPvarGetProbvarBinary(&(clique->vars[v]), &(clique->values[v])) );
             if( SCIPvarGetStatus(clique->vars[v]) == SCIP_VARSTATUS_NEGATED )
             {
@@ -2715,6 +2715,9 @@ SCIP_RETCODE cliqueCleanup(
                (!clique->values[v] && SCIPvarGetLbGlobal(clique->vars[v]) > 0.5) ||
                SCIPvarIsMarkedDeleteGlobalStructures(clique->vars[v]) )
          {
+            if( !addvartoclique )
+               SCIP_CALL( SCIPvarDelCliqueFromList(clique->vars[v], blkmem, clique->values[v], clique) );
+
             if( clique->equation && SCIPvarIsMarkedDeleteGlobalStructures(clique->vars[v]) )
                clique->equation = FALSE;
 
