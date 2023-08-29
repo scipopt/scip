@@ -4536,7 +4536,6 @@ SCIP_RETCODE conflictAnalyzeResolution(
             SCIP_CALL( conflictRowCopy(&tmpconflictrow, blkmem, conflictrow) );
             SCIP_CALL( conflictInsertConflictRow(conflict, set, &tmpconflictrow) );
             lastuipdepth = bdchgdepth;
-            nresstepslast = nressteps;
             nfuips ++;
             /* stop after conf_resfuiplevels UIPs */
             if (set->conf_resfuiplevels > 0 && nfuips >= set->conf_resfuiplevels)
