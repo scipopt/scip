@@ -1324,12 +1324,11 @@ SCIP_RETCODE getColumnOrder(
       *colorderinv = NULL;
       return SCIP_OKAY;
    }
-
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &colorder, ncols) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &colorderinv, ncols) );
-
    ncols = orbidata->ncols;
    assert( ncols > 0 );
+
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, colorder, ncols) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, colorderinv, ncols) );
 
    /* populate colorder with standard ordering */
    for (i = 0; i < ncols; ++i)
