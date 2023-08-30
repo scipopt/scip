@@ -296,6 +296,9 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
    if( SCIPgetNContVars(scip) > 0.8 * SCIPgetNVars(scip) )
       return SCIP_OKAY;
 
+   /* do not run for problems that are purely integer */
+   if( SCIPgetNContVars(scip) == 0 )
+       return SCIP_OKAY;
    /* if we are not solving exactly, we have nothing to check */
    if( !SCIPisExactSolve(scip) )
       return SCIP_OKAY;
@@ -351,7 +354,7 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
 
       /* get row corresponding to constraint */
       row = SCIPconsGetRow(scip, consprob[c]);
-      if (row == NULL)
+      if( row == NULL )
          continue;
 
       /* get row activity */

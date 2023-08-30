@@ -84,6 +84,7 @@ struct SCIP_InferenceData
 struct SCIP_BoundChg
 {
    SCIP_Real             newbound;           /**< new value for bound */
+   SCIP_Rational*        newboundexact;      /**< new value for exact bound, or NULL if not needed */
    union
    {
       SCIP_BRANCHINGDATA branchingdata;      /**< data for branching decisions */

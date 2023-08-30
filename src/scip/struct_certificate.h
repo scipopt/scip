@@ -38,12 +38,12 @@ extern "C" {
 /** data structure for hashing bounds of variables in a certificate file */
 struct SCIP_CertificateBound
 {
-   int                   varindex;          /**< index of this bound in the certificate file */
+   int                   varindex;           /**< index of this bound in the certificate file */
    SCIP_Rational*        boundval;           /**< value of the bound */
    SCIP_BOUNDTYPE        boundtype;          /**< is it the upper bound? */
    SCIP_Bool             isbound;            /**< is the last printed index a bound? if it is not, the other information is not useful */
-   SCIP_Bool             isglobal;
-   SCIP_Longint          certificateindex;
+   SCIP_Bool             isglobal;           /**< is the bound global? */
+   SCIP_Longint          certificateindex;   /**< index of the bound in the certificate file */
 };
 
 /** data structure for storing necessary information to print verified aggregation of rows */

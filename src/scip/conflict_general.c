@@ -2054,7 +2054,7 @@ SCIP_RETCODE conflictAnalyzeLP(
    assert(SCIPlpiIsPrimalInfeasible(lpi) || SCIPlpiIsObjlimExc(lpi) || SCIPlpiIsDualFeasible(lpi));
    assert(SCIPlpiIsPrimalInfeasible(lpi) || !SCIPlpDivingObjChanged(lp));
 
-   if( SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_INFEASIBLE )
+   if( !SCIPlpiIsPrimalInfeasible(lpi) )
    {
       SCIP_Real objval;
 
@@ -2112,7 +2112,7 @@ SCIP_RETCODE conflictAnalyzeLP(
       }
    }
 
-   if( SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_INFEASIBLE )
+   if( !SCIPlpiIsPrimalInfeasible(lpi) )
    {
       SCIP_Real objval;
 
@@ -2190,7 +2190,7 @@ SCIP_RETCODE conflictAnalyzeLP(
       goto TERMINATE;
 
    /* the LP is proven to be infeasible */
-   if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE )
+   if( SCIPlpiIsPrimalInfeasible(lpi) )
    {
       SCIP_CALL( SCIPgetFarkasProof(set, transprob, lp, lpi, tree, farkasrow, &farkasactivity, &validdepth,
          curvarlbs, curvarubs, &valid) );
@@ -2354,7 +2354,7 @@ SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
       *upconflict = FALSE;
 
    /* check, if infeasible LP conflict analysis is enabled */
-   if( !set->conf_enable || !set->conf_usesb || set->exact_enabled )
+   if( !set->conf_enable || !set->conf_usesb )
       return SCIP_OKAY;
 
    /* check, if there are any conflict handlers to use a conflict set */

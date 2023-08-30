@@ -165,6 +165,7 @@ struct SCIP_PendingBdchg
    SCIP_NODE*            node;               /**< node to add bound change to */
    SCIP_VAR*             var;                /**< variable to change the bounds for */
    SCIP_Real             newbound;           /**< new value for bound */
+   SCIP_Rational*        newboundexact;      /**< new value for exact bound, or NULL if not needed */
    SCIP_BOUNDTYPE        boundtype;          /**< type of bound: lower or upper bound */
    SCIP_CONS*            infercons;          /**< constraint that deduced the bound change, or NULL */
    SCIP_PROP*            inferprop;          /**< propagator that deduced the bound change, or NULL */

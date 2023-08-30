@@ -73,7 +73,6 @@ doc/inc/simpleinstance/output.log
 
 # editor cache files
 .cproject
-.clangd
 .project
 .vscode/
 .idea/

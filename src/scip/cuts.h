@@ -147,7 +147,6 @@ SCIP_RETCODE SCIPaggrRowAddObjectiveFunctionSafely(
    SCIP_Real             scale               /**< scalar */
    );
 
-
 /** add weighted constraint to the aggregation row */
 SCIP_EXPORT
 SCIP_RETCODE SCIPaggrRowAddCustomCons(

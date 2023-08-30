@@ -2995,7 +2995,6 @@ SCIP_RETCODE SCIPaggrRowAddObjectiveFunction(
    return SCIP_OKAY;
 }
 
-
 /** add weighted constraint to the aggregation row */
 SCIP_RETCODE SCIPaggrRowAddCustomCons(
    SCIP*                 scip,               /**< SCIP data structure */
