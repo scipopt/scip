@@ -1463,6 +1463,7 @@ SCIP_RETCODE tightenDualproof(
    nbinvars = 0;
    nintvars = 0;
    ncontvars = 0;
+   nchgcoefs = 0;
 
    inds = SCIPaggrRowGetInds(proofrow);
    nnz = SCIPaggrRowGetNNz(proofrow);

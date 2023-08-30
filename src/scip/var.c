@@ -618,6 +618,219 @@ SCIP_RETCODE varAddUbchginfo(
 }
 
 /** applies single bound change */
+static
+SCIP_RETCODE boundchgApplyExact(
+   SCIP_BOUNDCHG*        boundchg,           /**< bound change to apply */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   int                   depth,              /**< depth in the tree, where the bound change takes place */
+   int                   pos,                /**< position of the bound change in its bound change array */
+   SCIP_Bool*            cutoff              /**< pointer to store whether an infeasible bound change was detected */
+   )
+{
+   SCIP_VAR* var;
+
+   assert(boundchg != NULL);
+   assert(stat != NULL);
+   assert(depth > 0);
+   assert(pos >= 0);
+   assert(cutoff != NULL);
+   assert(boundchg->newboundexact != NULL);
+
+   *cutoff = FALSE;
+
+   /* ignore redundant bound changes */
+   if( boundchg->redundant )
+      return SCIP_OKAY;
+
+   var = boundchg->var;
+   assert(var != NULL);
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
+   assert(!SCIPvarIsIntegral(var) || RatIsIntegral(boundchg->newboundexact));
+
+   /* apply bound change */
+   switch( boundchg->boundtype )
+   {
+   case SCIP_BOUNDTYPE_LOWER:
+      /* check, if the bound change is still active (could be replaced by inference due to repropagation of higher node) */
+      if( RatIsGT(boundchg->newboundexact, SCIPvarGetLbLocalExact(var)) )
+      {
+         if( RatIsLE(boundchg->newboundexact, SCIPvarGetUbLocalExact(var)) )
+         {
+            /* add the bound change info to the variable's bound change info array */
+            switch( boundchg->boundchgtype )
+            {
+            case SCIP_BOUNDCHGTYPE_BRANCHING:
+               SCIPsetDebugMsg(set, " -> branching: new lower bound of <%s>[%g,%g]: %g\n",
+                  SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, boundchg->newbound);
+               SCIP_CALL( varAddLbchginfo(var, blkmem, set, var->locdom.lb, boundchg->newbound, depth, pos,
+                     NULL, NULL, NULL, 0, SCIP_BOUNDTYPE_LOWER, SCIP_BOUNDCHGTYPE_BRANCHING) );
+               stat->lastbranchvar = var;
+               stat->lastbranchdir = SCIP_BRANCHDIR_UPWARDS;
+               stat->lastbranchvalue = boundchg->newbound;
+               break;
+
+            case SCIP_BOUNDCHGTYPE_CONSINFER:
+               assert(boundchg->data.inferencedata.reason.cons != NULL);
+               SCIPsetDebugMsg(set, " -> constraint <%s> inference: new lower bound of <%s>[%g,%g]: %g\n",
+                  SCIPconsGetName(boundchg->data.inferencedata.reason.cons),
+                  SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, boundchg->newbound);
+               SCIP_CALL( varAddLbchginfo(var, blkmem, set, var->locdom.lb, boundchg->newbound, depth, pos,
+                     boundchg->data.inferencedata.var, boundchg->data.inferencedata.reason.cons, NULL,
+                     boundchg->data.inferencedata.info,
+                     (SCIP_BOUNDTYPE)(boundchg->inferboundtype), SCIP_BOUNDCHGTYPE_CONSINFER) );
+               break;
+
+            case SCIP_BOUNDCHGTYPE_PROPINFER:
+               SCIPsetDebugMsg(set, " -> propagator <%s> inference: new lower bound of <%s>[%g,%g]: %g\n",
+                  boundchg->data.inferencedata.reason.prop != NULL
+                  ? SCIPpropGetName(boundchg->data.inferencedata.reason.prop) : "-",
+                  SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, boundchg->newbound);
+               SCIP_CALL( varAddLbchginfo(var, blkmem, set, var->locdom.lb, boundchg->newbound, depth, pos,
+                     boundchg->data.inferencedata.var, NULL, boundchg->data.inferencedata.reason.prop,
+                     boundchg->data.inferencedata.info,
+                     (SCIP_BOUNDTYPE)(boundchg->inferboundtype), SCIP_BOUNDCHGTYPE_PROPINFER) );
+               break;
+
+            default:
+               SCIPerrorMessage("invalid bound change type %d\n", boundchg->boundchgtype);
+               return SCIP_INVALIDDATA;
+            }
+            if( SCIPcertificateShouldTrackBounds(set->scip) )
+            {
+               assert( var->exactdata->locdom.lbcertificateidx != -1 || SCIPsetIsInfinity(set, -var->locdom.lb) );
+               var->lbchginfos[var->nlbchginfos - 1].oldcertindex = var->exactdata->locdom.lbcertificateidx;
+               SCIPcertificateSetLastBoundIndex(set->scip, SCIPgetCertificate(set->scip), boundchg->certificateindex);
+            }
+            /* change local bound of variable */
+            SCIP_CALL( SCIPvarChgLbLocalExact(var, blkmem, set, stat, lp->lpexact, branchcand, eventqueue, boundchg->newboundexact) );
+         }
+         else
+         {
+            SCIPsetDebugMsg(set, " -> cutoff: new lower bound of <%s>[%g,%g]: %g\n",
+               SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, boundchg->newbound);
+            *cutoff = TRUE;
+            boundchg->redundant = TRUE; /* bound change has not entered the lbchginfos array of the variable! */
+         }
+
+      }
+      else
+      {
+         /* mark bound change to be inactive */
+         SCIPsetDebugMsg(set, " -> inactive %s: new lower bound of <%s>[%g,%g]: %g\n",
+            (SCIP_BOUNDCHGTYPE)boundchg->boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING ? "branching" : "inference",
+            SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, boundchg->newbound);
+         boundchg->redundant = TRUE;
+      }
+      break;
+
+   case SCIP_BOUNDTYPE_UPPER:
+      /* check, if the bound change is still active (could be replaced by inference due to repropagation of higher node) */
+      if( RatIsLT(boundchg->newboundexact, SCIPvarGetUbLocalExact(var)) )
+      {
+         if( RatIsGE(boundchg->newboundexact, SCIPvarGetLbLocalExact(var)) )
+         {
+            /* add the bound change info to the variable's bound change info array */
+            switch( boundchg->boundchgtype )
+            {
+            case SCIP_BOUNDCHGTYPE_BRANCHING:
+               SCIPsetDebugMsg(set, " -> branching: new upper bound of <%s>[%g,%g]: %g\n",
+                  SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, boundchg->newbound);
+               SCIP_CALL( varAddUbchginfo(var, blkmem, set, var->locdom.ub, boundchg->newbound, depth, pos,
+                     NULL, NULL, NULL, 0, SCIP_BOUNDTYPE_UPPER, SCIP_BOUNDCHGTYPE_BRANCHING) );
+               stat->lastbranchvar = var;
+               stat->lastbranchdir = SCIP_BRANCHDIR_DOWNWARDS;
+               stat->lastbranchvalue = boundchg->newbound;
+               break;
+
+            case SCIP_BOUNDCHGTYPE_CONSINFER:
+               assert(boundchg->data.inferencedata.reason.cons != NULL);
+               SCIPsetDebugMsg(set, " -> constraint <%s> inference: new upper bound of <%s>[%g,%g]: %g\n",
+                  SCIPconsGetName(boundchg->data.inferencedata.reason.cons),
+                  SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, boundchg->newbound);
+               SCIP_CALL( varAddUbchginfo(var, blkmem, set, var->locdom.ub, boundchg->newbound, depth, pos,
+                     boundchg->data.inferencedata.var, boundchg->data.inferencedata.reason.cons, NULL,
+                     boundchg->data.inferencedata.info,
+                     (SCIP_BOUNDTYPE)(boundchg->inferboundtype), SCIP_BOUNDCHGTYPE_CONSINFER) );
+               break;
+
+            case SCIP_BOUNDCHGTYPE_PROPINFER:
+               SCIPsetDebugMsg(set, " -> propagator <%s> inference: new upper bound of <%s>[%g,%g]: %g\n",
+                  boundchg->data.inferencedata.reason.prop != NULL
+                  ? SCIPpropGetName(boundchg->data.inferencedata.reason.prop) : "-",
+                  SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, boundchg->newbound);
+               SCIP_CALL( varAddUbchginfo(var, blkmem, set, var->locdom.ub, boundchg->newbound, depth, pos,
+                     boundchg->data.inferencedata.var, NULL, boundchg->data.inferencedata.reason.prop,
+                     boundchg->data.inferencedata.info,
+                     (SCIP_BOUNDTYPE)(boundchg->inferboundtype), SCIP_BOUNDCHGTYPE_PROPINFER) );
+               break;
+
+            default:
+               SCIPerrorMessage("invalid bound change type %d\n", boundchg->boundchgtype);
+               return SCIP_INVALIDDATA;
+            }
+
+            if( SCIPcertificateShouldTrackBounds(set->scip) )
+            {
+               assert( var->exactdata->locdom.ubcertificateidx != -1 || SCIPsetIsInfinity(set, var->locdom.ub) );
+               var->ubchginfos[var->nubchginfos - 1].oldcertindex = var->exactdata->locdom.ubcertificateidx;
+               SCIPcertificateSetLastBoundIndex(set->scip, SCIPgetCertificate(set->scip), boundchg->certificateindex);
+            }
+            /* change local bound of variable */
+            SCIP_CALL( SCIPvarChgUbLocalExact(var, blkmem, set, stat, lp->lpexact, branchcand, eventqueue, boundchg->newboundexact) );
+         }
+         else
+         {
+            SCIPsetDebugMsg(set, " -> cutoff: new upper bound of <%s>[%g,%g]: %g\n",
+               SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, boundchg->newbound);
+            *cutoff = TRUE;
+            boundchg->redundant = TRUE; /* bound change has not entered the ubchginfos array of the variable! */
+         }
+
+      }
+      else
+      {
+         /* mark bound change to be inactive */
+         SCIPsetDebugMsg(set, " -> inactive %s: new upper bound of <%s>[%g,%g]: %g\n",
+            (SCIP_BOUNDCHGTYPE)boundchg->boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING ? "branching" : "inference",
+            SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, boundchg->newbound);
+         boundchg->redundant = TRUE;
+      }
+      break;
+
+   default:
+      SCIPerrorMessage("unknown bound type\n");
+      return SCIP_INVALIDDATA;
+   }
+
+   /* update the branching and inference history */
+   if( !boundchg->applied && !boundchg->redundant )
+   {
+      assert(var == boundchg->var);
+
+      if( (SCIP_BOUNDCHGTYPE)boundchg->boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING )
+      {
+         SCIP_CALL( SCIPvarIncNBranchings(var, blkmem, set, stat,
+               (SCIP_BOUNDTYPE)boundchg->boundtype == SCIP_BOUNDTYPE_LOWER
+               ? SCIP_BRANCHDIR_UPWARDS : SCIP_BRANCHDIR_DOWNWARDS, boundchg->newbound, depth) );
+      }
+      else if( stat->lastbranchvar != NULL )
+      {
+         /**@todo if last branching variable is unknown, retrieve it from the nodes' boundchg arrays */
+         SCIP_CALL( SCIPvarIncInferenceSum(stat->lastbranchvar, blkmem, set, stat, stat->lastbranchdir, stat->lastbranchvalue, 1.0) );
+      }
+      boundchg->applied = TRUE;
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** applies single bound change */
 SCIP_RETCODE SCIPboundchgApply(
    SCIP_BOUNDCHG*        boundchg,           /**< bound change to apply */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -644,6 +857,9 @@ SCIP_RETCODE SCIPboundchgApply(
    /* ignore redundant bound changes */
    if( boundchg->redundant )
       return SCIP_OKAY;
+
+   if( boundchg->newboundexact != NULL)
+      return boundchgApplyExact(boundchg, blkmem, set, stat, lp, branchcand, eventqueue, depth, pos, cutoff);
 
    var = boundchg->var;
    assert(var != NULL);
@@ -1118,6 +1334,8 @@ SCIP_RETCODE SCIPdomchgFree(
       for( i = 0; i < (int)(*domchg)->domchgbound.nboundchgs; ++i )
       {
          SCIP_CALL( boundchgReleaseData(&(*domchg)->domchgbound.boundchgs[i], blkmem, set, eventqueue, lp) );
+         if( (*domchg)->domchgbound.boundchgs[i].newboundexact != NULL )
+            RatFreeBlock(blkmem, &(*domchg)->domchgbound.boundchgs[i].newboundexact);
       }
 
       /* free memory for bound and hole changes */
@@ -1305,6 +1523,8 @@ SCIP_RETCODE domchgEnsureBoundchgsSize(
 
       newsize = SCIPsetCalcMemGrowSize(set, num);
       SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &domchg->domchgdyn.boundchgs, domchg->domchgdyn.boundchgssize, newsize) );
+      for( int i = domchg->domchgdyn.boundchgssize; i < newsize; ++i)
+         domchg->domchgdyn.boundchgs[i].newboundexact = NULL;
       domchg->domchgdyn.boundchgssize = newsize;
    }
    assert(num <= domchg->domchgdyn.boundchgssize);
@@ -1488,6 +1708,7 @@ SCIP_RETCODE SCIPdomchgAddBoundchg(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var,                /**< variable to change the bounds for */
    SCIP_Real             newbound,           /**< new value for bound */
+   SCIP_Rational*        newboundexact,      /**< new value for exact bound, or NULL if not needed */
    SCIP_BOUNDTYPE        boundtype,          /**< type of bound for var: lower or upper bound */
    SCIP_BOUNDCHGTYPE     boundchgtype,       /**< type of bound change: branching decision or inference */
    SCIP_Real             lpsolval,           /**< solval of variable in last LP on path to node, or SCIP_INVALID if unknown */
@@ -1560,6 +1781,13 @@ SCIP_RETCODE SCIPdomchgAddBoundchg(
    boundchg->applied = FALSE;
    boundchg->redundant = FALSE;
    (*domchg)->domchgdyn.nboundchgs++;
+   if( newboundexact != NULL )
+   {
+      if( boundchg->newboundexact == NULL )
+         RatCopy(blkmem, &boundchg->newboundexact, newboundexact);
+      else
+         RatSet(boundchg->newboundexact, newboundexact);
+   }
 
    /* capture branching and inference data associated with the bound changes */
    SCIP_CALL( boundchgCaptureData(boundchg) );

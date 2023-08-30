@@ -3083,9 +3083,9 @@ SCIP_RETCODE analyzeStrongbranch(
    downcutoff = col->sbdownvalid && SCIPsetIsGE(scip->set, col->sbdown, scip->lp->cutoffbound);
    upcutoff = col->sbupvalid && SCIPsetIsGE(scip->set, col->sbup, scip->lp->cutoffbound);
 
-   if( downinf != NULL )
+   if( downinf != NULL && !SCIPisExactSolve(scip) )
       *downinf = downcutoff;
-   if( upinf != NULL )
+   if( upinf != NULL && !SCIPisExactSolve(scip) )
       *upinf = upcutoff;
 
    /* analyze infeasible strong branching sub problems:
@@ -3111,7 +3111,7 @@ SCIP_RETCODE analyzeStrongbranch(
     * @note Ignore the results if the LP solution of the down (up) branch LP is smaller which should not happened by
     *       theory but can arise due to numerical issues.
     */
-   if( SCIPtreeGetCurrentDepth(scip->tree) == 0 && SCIPvarIsBinary(var) && SCIPlpIsDualReliable(scip->lp) )
+   if( SCIPtreeGetCurrentDepth(scip->tree) == 0 && SCIPvarIsBinary(var) && SCIPlpIsDualReliable(scip->lp) && !SCIPisExactSolve(scip) )
    {
       SCIP_Real lpobjval;
 
@@ -3220,7 +3220,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchFrac(
    /* check, if the branchings are infeasible; in exact solving mode, we cannot trust the strong branching enough to
     * declare the sub nodes infeasible
     */
-   if( !(*lperror) && SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp) && !SCIPisExactSolve(scip) )
+   if( !(*lperror) && SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp) )
    {
       if( !idempotent ) /*lint !e774*/
       {
@@ -3960,7 +3960,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchInt(
    /* check, if the branchings are infeasible; in exact solving mode, we cannot trust the strong branching enough to
     * declare the sub nodes infeasible
     */
-   if( !(*lperror) && SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp) && !SCIPisExactSolve(scip) )
+   if( !(*lperror) && SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp) )
    {
       if( !idempotent ) /*lint !e774*/
       {
@@ -4083,7 +4083,7 @@ SCIP_RETCODE SCIPgetVarsStrongbranchesFrac(
       /* check, if the branchings are infeasible; in exact solving mode, we cannot trust the strong branching enough to
        * declare the sub nodes infeasible
        */
-      if( !(*lperror) && SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp) && !SCIPisExactSolve(scip) )
+      if( !(*lperror) && SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp) )
       {
          for( j = 0; j < nvars; ++j )
          {
@@ -4195,7 +4195,7 @@ SCIP_RETCODE SCIPgetVarsStrongbranchesInt(
       /* check, if the branchings are infeasible; in exact solving mode, we cannot trust the strong branching enough to
        * declare the sub nodes infeasible
        */
-      if( !(*lperror) && SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp) && !SCIPisExactSolve(scip) )
+      if( !(*lperror) && SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp) )
       {
          for( j = 0; j < nvars; ++j )
          {
@@ -7201,6 +7201,114 @@ SCIP_RETCODE SCIPinferBinvarProp(
    return SCIP_OKAY;
 }
 
+/** exact submethod of SCIPtightenVarLbGlobal(); it does not check for the stage */
+static
+SCIP_RETCODE tightenVarLbGlobalSafe(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to change the bound for */
+   SCIP_Real             newbound,           /**< new value for bound */
+   SCIP_Bool             force,              /**< force tightening even if below bound strengthening tolerance */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether the new domain is empty */
+   SCIP_Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
+   )
+{
+   SCIP_Real lb;
+   SCIP_Real ub;
+   SCIP_Rational* newboundexact;
+
+   assert(infeasible != NULL);
+
+   *infeasible = FALSE;
+   if( tightened != NULL )
+      *tightened = FALSE;
+
+   SCIPvarAdjustLbExactFloat(var, scip->set, &newbound);
+
+   /* ignore tightenings of lower bounds to +infinity during solving process */
+   if( SCIPisInfinity(scip, newbound) && SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+   {
+#ifndef NDEBUG
+      SCIPwarningMessage(scip, "ignore lower bound tightening for %s from %e to +infinity\n", SCIPvarGetName(var),
+         SCIPvarGetLbLocal(var));
+#endif
+      return SCIP_OKAY;
+   }
+
+   /* get current bounds */
+   lb = SCIPvarGetLbGlobal(var);
+   ub = SCIPvarGetUbGlobal(var);
+   assert(scip->set->stage == SCIP_STAGE_PROBLEM || SCIPsetIsLE(scip->set, lb, ub));
+
+   if( newbound > ub )
+   {
+      *infeasible = TRUE;
+      return SCIP_OKAY;
+   }
+   newbound = MIN(newbound, ub);
+
+   /* bound changes of less than epsilon are ignored by SCIPvarChgLb or raise an assert in SCIPnodeAddBoundinfer,
+    * so don't apply them even if force is set
+    */
+   if( SCIPsetIsEQ(scip->set, lb, newbound) || (!force && !SCIPsetIsLbBetter(scip->set, newbound, lb, ub)) )
+      return SCIP_OKAY;
+
+   RatCreateBuffer(SCIPbuffer(scip), &newboundexact);
+   RatSetReal(newboundexact, newbound);
+
+   switch( scip->set->stage )
+   {
+   case SCIP_STAGE_PROBLEM:
+      assert(!SCIPvarIsTransformed(var));
+      SCIP_CALL( SCIPvarChgLbGlobalExact(var, scip->mem->probmem, scip->set, scip->stat, scip->lpexact,
+            scip->branchcand, scip->eventqueue, scip->cliquetable, newboundexact) );
+      SCIP_CALL( SCIPvarChgLbLocalExact(var, scip->mem->probmem, scip->set, scip->stat, scip->lpexact,
+            scip->branchcand, scip->eventqueue, newboundexact) );
+      SCIP_CALL( SCIPvarChgLbOriginalExact(var, scip->set, newboundexact) );
+      break;
+
+   case SCIP_STAGE_TRANSFORMING:
+      SCIP_CALL( SCIPvarChgLbGlobalExact(var, scip->mem->probmem, scip->set, scip->stat, scip->lpexact,
+            scip->branchcand, scip->eventqueue, scip->cliquetable, newboundexact) );
+      break;
+
+   case SCIP_STAGE_PRESOLVING:
+      if( !SCIPinProbing(scip) )
+      {
+         assert(SCIPtreeGetCurrentDepth(scip->tree) == 0);
+         assert(scip->tree->root == SCIPtreeGetCurrentNode(scip->tree));
+
+         SCIP_CALL( SCIPnodeAddBoundchgExact(scip->tree->root, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
+               scip->origprob, scip->tree, scip->reopt, scip->lpexact, scip->branchcand, scip->eventqueue, scip->cliquetable, var, newboundexact,
+               SCIP_BOUNDTYPE_LOWER, FALSE) );
+
+         if( (SCIP_VARTYPE)var->vartype == SCIP_VARTYPE_INTEGER && SCIPvarIsBinary(var) )
+         {
+            SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_BINARY, infeasible) );
+            assert(!(*infeasible));
+         }
+         break;
+      }
+      /*lint -fallthrough*/
+   case SCIP_STAGE_SOLVING:
+      SCIP_CALL( SCIPnodeAddBoundchgExact(scip->tree->root, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
+            scip->origprob, scip->tree, scip->reopt, scip->lpexact, scip->branchcand, scip->eventqueue, scip->cliquetable, var, newboundexact,
+            SCIP_BOUNDTYPE_LOWER, FALSE) );
+      break;
+
+   default:
+      SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
+      return SCIP_INVALIDCALL;
+   }  /*lint !e788*/
+
+   /* coverity: unreachable code */
+   if( tightened != NULL && lb < SCIPcomputeVarLbGlobal(scip, var) )
+      *tightened = TRUE;
+
+   RatFreeBuffer(SCIPbuffer(scip), &newboundexact);
+
+   return SCIP_OKAY;
+}
+
 /** changes global lower bound of variable in preprocessing or in the current node, if the new bound is tighter
  *  (w.r.t. bound strengthening epsilon) than the current global bound; if possible, adjusts bound to integral value;
  *  also tightens the local bound, if the global bound is better than the local bound
@@ -7234,6 +7342,9 @@ SCIP_RETCODE SCIPtightenVarLbGlobal(
    assert(infeasible != NULL);
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPtightenVarLbGlobal", FALSE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   if( SCIPisExactSolve(scip) )
+      return tightenVarLbGlobalSafe(scip, var, newbound, force, infeasible, tightened);
 
    *infeasible = FALSE;
    if( tightened != NULL )
@@ -7321,6 +7432,114 @@ SCIP_RETCODE SCIPtightenVarLbGlobal(
    return SCIP_OKAY;
 }
 
+/**  */
+static
+SCIP_RETCODE tightenVarUbGlobalSafe(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to change the bound for */
+   SCIP_Real             newbound,           /**< new value for bound */
+   SCIP_Bool             force,              /**< force tightening even if below bound strengthening tolerance */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether the new domain is empty */
+   SCIP_Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
+   )
+{
+   SCIP_Real lb;
+   SCIP_Real ub;
+   SCIP_Rational* newboundexact;
+
+   assert(infeasible != NULL);
+
+   *infeasible = FALSE;
+   if( tightened != NULL )
+      *tightened = FALSE;
+
+   SCIPvarAdjustUbExactFloat(var, scip->set, &newbound);
+
+   /* ignore tightenings of upper bounds to -infinity during solving process */
+   if( SCIPisInfinity(scip, -newbound) && SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+   {
+#ifndef NDEBUG
+      SCIPwarningMessage(scip, "ignore upper bound tightening for %s from %e to -infinity\n", SCIPvarGetName(var),
+         SCIPvarGetUbLocal(var));
+#endif
+      return SCIP_OKAY;
+   }
+
+   /* get current bounds */
+   lb = SCIPvarGetLbGlobal(var);
+   ub = SCIPvarGetUbGlobal(var);
+   assert(scip->set->stage == SCIP_STAGE_PROBLEM || SCIPsetIsLE(scip->set, lb, ub));
+
+   if( newbound < lb )
+   {
+      *infeasible = TRUE;
+      return SCIP_OKAY;
+   }
+   newbound = MAX(newbound, lb);
+
+   /* bound changes of less than epsilon are ignored by SCIPvarChgUb or raise an assert in SCIPnodeAddBoundinfer,
+    * so don't apply them even if force is set
+    */
+   if( SCIPsetIsEQ(scip->set, ub, newbound) || (!force && !SCIPsetIsUbBetter(scip->set, newbound, lb, ub)) )
+      return SCIP_OKAY;
+
+   RatCreateBuffer(SCIPbuffer(scip), &newboundexact);
+   RatSetReal(newboundexact, newbound);
+
+   switch( scip->set->stage )
+   {
+   case SCIP_STAGE_PROBLEM:
+      assert(!SCIPvarIsTransformed(var));
+      SCIP_CALL( SCIPvarChgUbGlobalExact(var, scip->mem->probmem, scip->set, scip->stat, scip->lpexact,
+            scip->branchcand, scip->eventqueue, scip->cliquetable, newboundexact) );
+      SCIP_CALL( SCIPvarChgUbLocalExact(var, scip->mem->probmem, scip->set, scip->stat, scip->lpexact,
+            scip->branchcand, scip->eventqueue, newboundexact) );
+      SCIP_CALL( SCIPvarChgUbOriginalExact(var, scip->set, newboundexact) );
+      break;
+
+   case SCIP_STAGE_TRANSFORMING:
+      SCIP_CALL( SCIPvarChgUbGlobalExact(var, scip->mem->probmem, scip->set, scip->stat, scip->lpexact,
+            scip->branchcand, scip->eventqueue, scip->cliquetable, newboundexact) );
+      break;
+
+   case SCIP_STAGE_PRESOLVING:
+      if( !SCIPinProbing(scip) )
+      {
+         assert(SCIPtreeGetCurrentDepth(scip->tree) == 0);
+         assert(scip->tree->root == SCIPtreeGetCurrentNode(scip->tree));
+
+         SCIP_CALL( SCIPnodeAddBoundchgExact(scip->tree->root, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
+               scip->origprob, scip->tree, scip->reopt, scip->lpexact, scip->branchcand, scip->eventqueue, scip->cliquetable, var, newboundexact,
+               SCIP_BOUNDTYPE_UPPER, FALSE) );
+
+         if( (SCIP_VARTYPE)var->vartype == SCIP_VARTYPE_INTEGER && SCIPvarIsBinary(var) )
+         {
+            SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_BINARY, infeasible) );
+            assert(!(*infeasible));
+         }
+         break;
+      }
+      /*lint -fallthrough*/
+   case SCIP_STAGE_SOLVING:
+      SCIP_CALL( SCIPnodeAddBoundchgExact(scip->tree->root, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
+            scip->origprob, scip->tree, scip->reopt, scip->lpexact, scip->branchcand, scip->eventqueue, scip->cliquetable, var, newboundexact,
+            SCIP_BOUNDTYPE_UPPER, FALSE) );
+      break;
+
+   default:
+      SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
+      return SCIP_INVALIDCALL;
+   }  /*lint !e788*/
+
+   /* coverity: unreachable code */
+   if( tightened != NULL && ub > SCIPcomputeVarUbGlobal(scip, var) )
+      *tightened = TRUE;
+
+   RatFreeBuffer(SCIPbuffer(scip), &newboundexact);
+
+   return SCIP_OKAY;
+}
+
 /** changes global upper bound of variable in preprocessing or in the current node, if the new bound is tighter
  *  (w.r.t. bound strengthening epsilon) than the current global bound; if possible, adjusts bound to integral value;
  *  also tightens the local bound, if the global bound is better than the local bound
@@ -7354,6 +7573,9 @@ SCIP_RETCODE SCIPtightenVarUbGlobal(
    assert(infeasible != NULL);
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPtightenVarUbGlobal", FALSE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   if( SCIPisExactSolve(scip) )
+      return tightenVarUbGlobalSafe(scip, var, newbound, force, infeasible, tightened);
 
    *infeasible = FALSE;
    if( tightened != NULL )

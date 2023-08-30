@@ -2073,11 +2073,19 @@ void RatComputeApproximationLong(
       /* if value is almost integer, we use the next best integer (while still adhering to <=/>= requirements) */
       if( temp  < td / (maxdenom * 1.0) )
       {
-         res->val = a0 * sign;
-         if( forcegreater == 1 && res->val < src->val )
+	 // do not immediately set res to a0 * sign since res and src might be the same pointer
+         if( forcegreater == 1 && a0 * sign < src->val )
+	 {
+	    res->val = a0 * sign;
             res->val += Rational(1,maxdenom);
-         if( forcegreater == -1 && res->val > src->val )
+	 }
+         else if( forcegreater == -1 && a0 * sign > src->val )
+	 {
+	    res->val = a0 * sign;
             res->val -= Rational(1,maxdenom);
+	 }
+	 else
+	    res->val = a0 * sign;
          res->isinf = FALSE;
          res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
 
@@ -2269,11 +2277,18 @@ void RatComputeApproximation(
       /* if value is almost integer, we use the next best integer (while still adhering to <=/>= requirements) */
       if( temp * maxdenom < td )
       {
-         res->val = a0 * sign;
-         if( forcegreater == 1 && res->val < src->val )
+         if( forcegreater == 1 && a0 * sign < src->val )
+	 {
+	    res->val = a0 * sign;
             res->val += Rational(1,maxdenom);
-         if( forcegreater == -1 && res->val > src->val )
+	 }
+         else if( forcegreater == -1 && a0 * sign > src->val )
+	 {
+	    res->val = a0 * sign;
             res->val -= Rational(1,maxdenom);
+	 }
+	 else
+	    res->val = a0 * sign;	    
          res->isinf = FALSE;
          res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
 
