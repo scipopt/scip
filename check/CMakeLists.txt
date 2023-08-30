@@ -467,6 +467,7 @@ set(instances_Or
 set(pairs_Issue
     "instances/Issue/3499.lp\;11460\;closeobj"
     "instances/Issue/3589.cip\;-1\;default"
+    "instances/Issue/3610.cip\;0\;default"
     )
 
 #
