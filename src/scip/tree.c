@@ -1739,6 +1739,7 @@ SCIP_RETCODE treeAddPendingBdchg(
    SCIP_NODE*            node,               /**< node to add bound change to */
    SCIP_VAR*             var,                /**< variable to change the bounds for */
    SCIP_Real             newbound,           /**< new value for bound */
+   SCIP_Rational*        newboundexact,      /**< new exact bound, or NULL if not needed */
    SCIP_BOUNDTYPE        boundtype,          /**< type of bound: lower or upper bound */
    SCIP_CONS*            infercons,          /**< constraint that deduced the bound change, or NULL */
    SCIP_PROP*            inferprop,          /**< propagator that deduced the bound change, or NULL */
@@ -1763,6 +1764,12 @@ SCIP_RETCODE treeAddPendingBdchg(
    tree->pendingbdchgs[tree->npendingbdchgs].inferprop = inferprop;
    tree->pendingbdchgs[tree->npendingbdchgs].inferinfo = inferinfo;
    tree->pendingbdchgs[tree->npendingbdchgs].probingchange = probingchange;
+   if( newboundexact != NULL )
+   {
+      if(  tree->pendingbdchgs[tree->npendingbdchgs].newboundexact == NULL )
+         RatCreate(&tree->pendingbdchgs[tree->npendingbdchgs].newboundexact);
+      RatSet(tree->pendingbdchgs[tree->npendingbdchgs].newboundexact, newboundexact);
+   }
    tree->npendingbdchgs++;
 
    /* check global pending boundchanges against debug solution */
@@ -1990,7 +1997,7 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
             SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), conflictingdepth);
 
          /* remember the pending bound change */
-         SCIP_CALL( treeAddPendingBdchg(tree, set, node, var, newbound, boundtype, infercons, inferprop, inferinfo,
+         SCIP_CALL( treeAddPendingBdchg(tree, set, node, var, newbound, NULL, boundtype, infercons, inferprop, inferinfo,
                probingchange) );
 
          /* mark the node with the conflicting bound change to be cut off */
@@ -2055,7 +2062,7 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
          lpsolval = SCIP_INVALID;
 
       /* remember the bound change as branching decision (infervar/infercons/inferprop are not important: use NULL) */
-      SCIP_CALL( SCIPdomchgAddBoundchg(&node->domchg, blkmem, set, var, newbound, boundtype, SCIP_BOUNDCHGTYPE_BRANCHING,
+      SCIP_CALL( SCIPdomchgAddBoundchg(&node->domchg, blkmem, set, var, newbound, NULL, boundtype, SCIP_BOUNDCHGTYPE_BRANCHING,
             lpsolval, NULL, NULL, NULL, 0, inferboundtype) );
 
       if( SCIPnodeGetType(node) != SCIP_NODETYPE_PROBINGNODE )
@@ -2086,7 +2093,7 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
       SCIP_CALL( SCIPdebugCheckInference(blkmem, set, node, var, newbound, boundtype) ); /*lint !e506 !e774*/
 
       /* remember the bound change as inference (lpsolval is not important: use 0.0) */
-      SCIP_CALL( SCIPdomchgAddBoundchg(&node->domchg, blkmem, set, var, newbound, boundtype,
+      SCIP_CALL( SCIPdomchgAddBoundchg(&node->domchg, blkmem, set, var, newbound, NULL, boundtype,
             infercons != NULL ? SCIP_BOUNDCHGTYPE_CONSINFER : SCIP_BOUNDCHGTYPE_PROPINFER,
             0.0, infervar, infercons, inferprop, inferinfo, inferboundtype) );
 
@@ -2298,7 +2305,7 @@ SCIP_RETCODE SCIPnodeAddBoundinferExact(
             SCIPvarGetLbLocalExact(var), SCIPvarGetUbLocalExact(var), conflictingdepth);
 
          /* remember the pending bound change */
-         SCIP_CALL( treeAddPendingBdchg(tree, set, node, var, newboundreal, boundtype, infercons, inferprop, inferinfo,
+         SCIP_CALL( treeAddPendingBdchg(tree, set, node, var, newboundreal, newbound, boundtype, infercons, inferprop, inferinfo,
                probingchange) );
 
          /* mark the node with the conflicting bound change to be cut off */
@@ -2365,7 +2372,7 @@ SCIP_RETCODE SCIPnodeAddBoundinferExact(
          lpsolval = SCIP_INVALID;
 
       /* remember the bound change as branching decision (infervar/infercons/inferprop are not important: use NULL) */
-      SCIP_CALL( SCIPdomchgAddBoundchg(&node->domchg, blkmem, set, var, newboundreal, boundtype, SCIP_BOUNDCHGTYPE_BRANCHING,
+      SCIP_CALL( SCIPdomchgAddBoundchg(&node->domchg, blkmem, set, var, newboundreal, RatIsIntegral(newbound) ? NULL : newbound, boundtype, SCIP_BOUNDCHGTYPE_BRANCHING,
             lpsolval, NULL, NULL, NULL, 0, inferboundtype) );
 
       if( SCIPnodeGetType(node) != SCIP_NODETYPE_PROBINGNODE )
@@ -2394,7 +2401,7 @@ SCIP_RETCODE SCIPnodeAddBoundinferExact(
       /** @todo exip debug solution */
 
       /* remember the bound change as inference (lpsolval is not important: use 0.0) */
-      SCIP_CALL( SCIPdomchgAddBoundchg(&node->domchg, blkmem, set, var, newboundreal, boundtype,
+      SCIP_CALL( SCIPdomchgAddBoundchg(&node->domchg, blkmem, set, var, newboundreal, RatIsIntegral(newbound) ? NULL : newbound, boundtype,
             infercons != NULL ? SCIP_BOUNDCHGTYPE_CONSINFER : SCIP_BOUNDCHGTYPE_PROPINFER,
             0.0, infervar, infercons, inferprop, inferinfo, inferboundtype) );
 
