@@ -2232,7 +2232,7 @@ void RatComputeApproximation(
    {
 
       if( forcegreater == -1 )
-         RatSetInt(res, 1, maxdenom);
+         RatSetInt(res, -1, maxdenom);
       else
          RatSetReal(res, 0.0);
 

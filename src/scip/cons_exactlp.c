@@ -8218,11 +8218,27 @@ SCIP_RETCODE tightenVarBounds(
                /* tighten upper bound */
                SCIPdebugMsg(scip, "linear constraint <%s>: tighten <%s>, old bds=[%.15g,%.15g], val=%.15g, resactivity=[%.15g,%.15g], sides=[%.15g,%.15g] -> newub=%.15g\n",
                   SCIPconsGetName(cons), SCIPvarGetName(var), lb, ub, valrange.inf, minresactivity, maxresactivity, lhs, rhs, newub);
-               if( SCIPcertificateShouldTrackBounds(scip) )
-                  SCIPcertificatePrintActivityVarBound(scip, SCIPgetCertificate(scip), NULL, SCIP_BOUNDTYPE_UPPER, newub, false, cons, var);
-               SCIPvarAdjustUbExactFloat(var, scip->set, &newub);
-               SCIP_CALL( SCIPinferVarUbCons(scip, var, newub, cons, getInferInt(PROPRULE_1_RHS, pos), force,
-                     &infeasible, &tightened) );
+
+               if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+               {
+                  RatCreateBuffer(SCIPbuffer(scip), &tmpbound);
+                  RatSetReal(tmpbound, newub);
+                  RatComputeApproximation(tmpbound, tmpbound, scip->set->exact_cutmaxdenomsize, 1);
+		         if( SCIPcertificateShouldTrackBounds(scip) )
+		            SCIPcertificatePrintActivityVarBound(scip, SCIPgetCertificate(scip), NULL, SCIP_BOUNDTYPE_UPPER, RatRoundReal(tmpbound, SCIP_R_ROUND_UPWARDS), false, cons, var);
+                  SCIP_CALL( SCIPinferVarUbConsExact(scip, var, tmpbound, cons, getInferInt(PROPRULE_1_RHS, pos), force,
+                        &infeasible, &tightened) );
+                  RatFreeBuffer(SCIPbuffer(scip), &tmpbound);
+               }
+               else
+               {
+		            if( SCIPcertificateShouldTrackBounds(scip) )
+		               SCIPcertificatePrintActivityVarBound(scip, SCIPgetCertificate(scip), NULL, SCIP_BOUNDTYPE_UPPER, newub, false, cons, var);
+		            SCIPvarAdjustUbExactFloat(var, scip->set, &newub);
+                  SCIP_CALL( SCIPinferVarUbCons(scip, var, newub, cons, getInferInt(PROPRULE_1_RHS, pos), force,
+                        &infeasible, &tightened) );
+               }
+
                if( infeasible )
                {
                   SCIPdebugMsg(scip, "linear constraint <%s>: cutoff  <%s>, new bds=[%.15g,%.15g]\n",
@@ -8279,11 +8295,27 @@ SCIP_RETCODE tightenVarBounds(
             /* tighten lower bound */
             SCIPdebugMsg(scip, "linear constraint <%s>: tighten <%s>, old bds=[%.15g,%.15g], val=%.15g, resactivity=[%.15g,%.15g], sides=[%.15g,%.15g] -> newlb=%.15g\n",
                SCIPconsGetName(cons), SCIPvarGetName(var), lb, ub, valrange.inf, minresactivity, maxresactivity, lhs, rhs, newlb);
-            if( SCIPcertificateShouldTrackBounds(scip) )
-               SCIPcertificatePrintActivityVarBound(scip, SCIPgetCertificate(scip), NULL, SCIP_BOUNDTYPE_LOWER, newlb, true, cons, var);
-            SCIPvarAdjustLbExactFloat(var, scip->set, &newlb);
-            SCIP_CALL( SCIPinferVarLbCons(scip, var, newlb, cons, getInferInt(PROPRULE_1_LHS, pos), force,
-                  &infeasible, &tightened) );
+
+            if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+            {
+               RatCreateBuffer(SCIPbuffer(scip), &tmpbound);
+               RatSetReal(tmpbound, newlb);
+               RatComputeApproximation(tmpbound, tmpbound, scip->set->exact_cutmaxdenomsize, -1);
+	            if( SCIPcertificateShouldTrackBounds(scip) )
+		            SCIPcertificatePrintActivityVarBound(scip, SCIPgetCertificate(scip), NULL, SCIP_BOUNDTYPE_LOWER, RatRoundReal(tmpbound, SCIP_R_ROUND_DOWNWARDS), true, cons, var);
+               SCIP_CALL( SCIPinferVarLbConsExact(scip, var, tmpbound, cons, getInferInt(PROPRULE_1_LHS, pos), force,
+                     &infeasible, &tightened) );
+               RatFreeBuffer(SCIPbuffer(scip), &tmpbound);
+            }
+            else
+            {
+	            if( SCIPcertificateShouldTrackBounds(scip) )
+		            SCIPcertificatePrintActivityVarBound(scip, SCIPgetCertificate(scip), NULL, SCIP_BOUNDTYPE_LOWER, newlb, true, cons, var);
+	            SCIPvarAdjustLbExactFloat(var, scip->set, &newlb);
+               SCIP_CALL( SCIPinferVarLbCons(scip, var, newlb, cons, getInferInt(PROPRULE_1_LHS, pos), force,
+                     &infeasible, &tightened) );
+            }
+
             if( infeasible )
             {
                SCIPdebugMsg(scip, "linear constraint <%s>: cutoff  <%s>, new bds=[%.15g,%.15g]\n",
@@ -8347,11 +8379,27 @@ SCIP_RETCODE tightenVarBounds(
                /* tighten lower bound */
                SCIPdebugMsg(scip, "linear constraint <%s>: tighten <%s>, old bds=[%.15g,%.15g], val=%.15g, resactivity=[%.15g,%.15g], sides=[%.15g,%.15g] -> newlb=%.15g\n",
                   SCIPconsGetName(cons), SCIPvarGetName(var), lb, ub, valrange.sup, minresactivity, maxresactivity, lhs, rhs, newlb);
-               if( SCIPcertificateShouldTrackBounds(scip) )
-                  SCIPcertificatePrintActivityVarBound(scip, SCIPgetCertificate(scip), NULL, SCIP_BOUNDTYPE_LOWER, newlb, false, cons, var);
-               SCIPvarAdjustLbExactFloat(var, scip->set, &newlb);
-               SCIP_CALL( SCIPinferVarLbCons(scip, var, newlb, cons, getInferInt(PROPRULE_1_RHS, pos), force,
-                     &infeasible, &tightened) );
+
+               if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+               {
+                  RatCreateBuffer(SCIPbuffer(scip), &tmpbound);
+                  RatSetReal(tmpbound, newlb);
+                  RatComputeApproximation(tmpbound, tmpbound, scip->set->exact_cutmaxdenomsize, -1);
+		            if( SCIPcertificateShouldTrackBounds(scip) )
+		               SCIPcertificatePrintActivityVarBound(scip, SCIPgetCertificate(scip), NULL, SCIP_BOUNDTYPE_LOWER, RatRoundReal(tmpbound, SCIP_R_ROUND_DOWNWARDS), false, cons, var);
+                  SCIP_CALL( SCIPinferVarLbConsExact(scip, var, tmpbound, cons, getInferInt(PROPRULE_1_RHS, pos), force,
+                        &infeasible, &tightened) );
+                  RatFreeBuffer(SCIPbuffer(scip), &tmpbound);
+               }
+               else
+               {
+		            if( SCIPcertificateShouldTrackBounds(scip) )
+		               SCIPcertificatePrintActivityVarBound(scip, SCIPgetCertificate(scip), NULL, SCIP_BOUNDTYPE_LOWER, newlb, false, cons, var);
+		            SCIPvarAdjustLbExactFloat(var, scip->set, &newlb);
+                  SCIP_CALL( SCIPinferVarLbCons(scip, var, newlb, cons, getInferInt(PROPRULE_1_RHS, pos), force,
+                        &infeasible, &tightened) );
+               }
+
                if( infeasible )
                {
                   SCIPdebugMsg(scip, "linear constraint <%s>: cutoff  <%s>, new bds=[%.15g,%.15g]\n",
@@ -8408,11 +8456,27 @@ SCIP_RETCODE tightenVarBounds(
             /* tighten upper bound */
             SCIPdebugMsg(scip, "linear constraint <%s>: tighten <%s>, old bds=[%.15g,%.15g], val=%.15g, resactivity=[%.15g,%.15g], sides=[%.15g,%.15g], newub=%.15g\n",
                SCIPconsGetName(cons), SCIPvarGetName(var), lb, ub, valrange.sup, minresactivity, maxresactivity, lhs, rhs, newub);
-            if( SCIPcertificateShouldTrackBounds(scip) )
-               SCIPcertificatePrintActivityVarBound(scip, SCIPgetCertificate(scip), NULL, SCIP_BOUNDTYPE_UPPER, newub, true, cons, var);
-            SCIPvarAdjustUbExactFloat(var, scip->set, &newub);
-            SCIP_CALL( SCIPinferVarUbCons(scip, var, newub, cons, getInferInt(PROPRULE_1_LHS, pos), force,
-                  &infeasible, &tightened) );
+
+            if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+            {
+               RatCreateBuffer(SCIPbuffer(scip), &tmpbound);
+               RatSetReal(tmpbound, newub);
+               RatComputeApproximation(tmpbound, tmpbound, scip->set->exact_cutmaxdenomsize, 1);
+	            if( SCIPcertificateShouldTrackBounds(scip) )
+		            SCIPcertificatePrintActivityVarBound(scip, SCIPgetCertificate(scip), NULL, SCIP_BOUNDTYPE_UPPER, RatRoundReal(tmpbound, SCIP_R_ROUND_UPWARDS), true, cons, var);
+               SCIP_CALL( SCIPinferVarUbConsExact(scip, var, tmpbound, cons, getInferInt(PROPRULE_1_LHS, pos), force,
+                     &infeasible, &tightened) );
+               RatFreeBuffer(SCIPbuffer(scip), &tmpbound);
+            }
+            else
+            {
+	            if( SCIPcertificateShouldTrackBounds(scip) )
+		            SCIPcertificatePrintActivityVarBound(scip, SCIPgetCertificate(scip), NULL, SCIP_BOUNDTYPE_UPPER, newub, true, cons, var);
+	            SCIPvarAdjustUbExactFloat(var, scip->set, &newub);
+               SCIP_CALL( SCIPinferVarUbCons(scip, var, newub, cons, getInferInt(PROPRULE_1_LHS, pos), force,
+                     &infeasible, &tightened) );
+            }
+
             if( infeasible )
             {
                SCIPdebugMsg(scip, "linear constraint <%s>: cutoff  <%s>, new bds=[%.15g,%.15g]\n",
@@ -8612,11 +8676,6 @@ SCIP_RETCODE tightenBounds(
       oldnchgbdstotal += oldnchgbds;
 #endif
    }
-
-#ifndef NDEBUG
-   if( force && SCIPisEQ(scip, consdata->lhsreal, consdata->rhsreal) )
-      assert(*cutoff || SCIPisFeasEQ(scip, SCIPvarGetLbLocal(GetCertificateVar(consdata, v)), SCIPvarGetUbLocal(GetCertificateVar(consdata, v))));
-#endif
 
    return SCIP_OKAY;
 }

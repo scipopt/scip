@@ -2625,6 +2625,26 @@ SCIP_RETCODE SCIPeventqueueAdd(
                qevent->data.eventbdchg.newbound);
 
             qevent->data.eventbdchg.newbound = (*event)->data.eventbdchg.newbound;
+
+            /* possibly update exact bound */
+            if( (*event)->data.eventbdchg.newboundexact != NULL )
+            {
+               if( qevent->data.eventbdchg.newboundexact == NULL )
+               {
+                  SCIP_CALL( SCIPeventAddExactBdChg(qevent, blkmem, (*event)->data.eventbdchg.oldboundexact, (*event)->data.eventbdchg.newboundexact) );
+               }
+               else
+                  RatSet(qevent->data.eventbdchg.newboundexact, (*event)->data.eventbdchg.newboundexact);
+            }
+            else
+            {
+               if( qevent->data.eventbdchg.newboundexact != NULL )
+               {
+                  RatFreeBlock(blkmem, &(qevent->data.eventbdchg.newboundexact));
+                  RatFreeBlock(blkmem, &(qevent->data.eventbdchg.oldboundexact));
+               }
+            }
+
             /*if( SCIPsetIsLT(set, qevent->data.eventbdchg.newbound, qevent->data.eventbdchg.oldbound) )*/
             if( qevent->data.eventbdchg.newbound < qevent->data.eventbdchg.oldbound )
                qevent->eventtype = SCIP_EVENTTYPE_LBRELAXED;
@@ -2674,6 +2694,26 @@ SCIP_RETCODE SCIPeventqueueAdd(
                qevent->data.eventbdchg.newbound);
 
             qevent->data.eventbdchg.newbound = (*event)->data.eventbdchg.newbound;
+
+            /* possibly update exact bound */
+            if( (*event)->data.eventbdchg.newboundexact != NULL )
+            {
+               if( qevent->data.eventbdchg.newboundexact == NULL )
+               {
+                  SCIP_CALL( SCIPeventAddExactBdChg(qevent, blkmem, (*event)->data.eventbdchg.oldboundexact, (*event)->data.eventbdchg.newboundexact) );
+               }
+               else
+                  RatSet(qevent->data.eventbdchg.newboundexact, (*event)->data.eventbdchg.newboundexact);
+            }
+            else
+            {
+               if( qevent->data.eventbdchg.newboundexact != NULL )
+               {
+                  RatFreeBlock(blkmem, &(qevent->data.eventbdchg.newboundexact));
+                  RatFreeBlock(blkmem, &(qevent->data.eventbdchg.oldboundexact));
+               }
+            }
+
             /*if( SCIPsetIsLT(set, qevent->data.eventbdchg.newbound, qevent->data.eventbdchg.oldbound) )*/
             if( qevent->data.eventbdchg.newbound < qevent->data.eventbdchg.oldbound )
                qevent->eventtype = SCIP_EVENTTYPE_UBTIGHTENED;

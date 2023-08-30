@@ -2407,7 +2407,7 @@ SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
          SCIPclockStop(stat->conflictlptime, set);
 
          /* check return code of LP solving call */
-         if( retcode != SCIP_LPERROR )
+         if( retcode != SCIP_LPERROR && SCIPlpiIsStable(lp->lpi) )
          {
             SCIP_CALL( retcode );
 
@@ -2471,7 +2471,7 @@ SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
          SCIPclockStop(stat->conflictlptime, set);
 
          /* check return code of LP solving call */
-         if( retcode != SCIP_LPERROR )
+         if( retcode != SCIP_LPERROR && SCIPlpiIsStable(lp->lpi) )
          {
             SCIP_CALL( retcode );
 
