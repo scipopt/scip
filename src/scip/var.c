@@ -12087,9 +12087,6 @@ SCIP_RETCODE varProcessChgLbLocalExact(
    RatSet(var->exactdata->locdom.lb, newbound);
    var->locdom.lb = RatRoundReal(newbound, SCIP_R_ROUND_DOWNWARDS);
 
-   if( SCIPisCertificateActive(set->scip) )
-      var->exactdata->locdom.lbcertificateidx = SCIPcertificateGetCurrentIndex(SCIPgetCertificate(set->scip)) - 1;
-
    /* update statistic; during the update steps of the parent variable we pass a NULL pointer to ensure that we only
     * once update the statistic
     */
@@ -12232,9 +12229,6 @@ SCIP_RETCODE varProcessChgUbLocalExact(
    assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM || RatIsGE(newbound, var->exactdata->locdom.lb));
    RatSet(var->exactdata->locdom.ub, newbound);
    var->locdom.ub = RatRoundReal(newbound, SCIP_R_ROUND_UPWARDS);
-
-   if( SCIPisCertificateActive(set->scip) )
-      var->exactdata->locdom.ubcertificateidx = SCIPcertificateGetCurrentIndex(SCIPgetCertificate(set->scip)) - 1;
 
    /* update statistic; during the update steps of the parent variable we pass a NULL pointer to ensure that we only
     * once update the statistic
