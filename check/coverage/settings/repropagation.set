@@ -1,0 +1,6 @@
+separating/rapidlearning/freq = -1
+separating/zerohalf/freq = -1
+separating/gomory/freq = -1
+propagating/probing/maxprerounds = 0
+heuristics/locks/freq = -1
+branching/fullstrong/priority = 536870911

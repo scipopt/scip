@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -56,7 +65,8 @@ SCIP_RETCODE computeCutsAbs(
 
    *nreturned = 0;
 
-   if( ! overestimate )
+   /**! [SnippetExprInitestimatesAbs] */
+   if( !overestimate )
    {
       /* compute left tangent -x <= z */
       coefs[*nreturned][0] = -1.0;
@@ -112,6 +122,7 @@ SCIP_RETCODE computeCutsAbs(
          }
       }
    }
+   /**! [SnippetExprInitestimatesAbs] */
 
    return SCIP_OKAY;
 }
@@ -257,6 +268,7 @@ SCIP_DECL_EXPRESTIMATE(estimateAbs)
    SCIPdebugMsg(scip, "%sestimate |child| over locdom=[%g,%g] glbdom=[%g,%g]\n", overestimate ? "over" : "under",
       localbounds[0].inf, localbounds[0].sup, globalbounds[0].inf, globalbounds[0].sup);
 
+   /**! [SnippetExprEstimateAbs] */
    if( !overestimate )
    {
       *constant = 0.0;
@@ -271,7 +283,7 @@ SCIP_DECL_EXPRESTIMATE(estimateAbs)
    }
    else
    {
-      /* overrestimator */
+      /* overestimator */
       SCIP_Real lb;
       SCIP_Real ub;
 
@@ -324,6 +336,7 @@ SCIP_DECL_EXPRESTIMATE(estimateAbs)
          return SCIP_OKAY;
       }
    }
+   /**! [SnippetExprEstimateAbs] */
 
    SCIPdebugMsg(scip, "-> %g * <child> %+g, local=%u branchcand=%u\n", *coefs, *constant, *islocal, *branchcand);
 
@@ -359,6 +372,7 @@ SCIP_DECL_EXPRREVERSEPROP(reversepropAbs)
    assert(SCIPexprGetNChildren(expr) == 1);
    assert(bounds.inf >= 0.0);  /* bounds should have been intersected with activity, which is >= 0 */
 
+   /**! [SnippetExprReversepropAbs] */
    /* abs(x) in I -> x \in (-I \cup I) \cap bounds(x) */
    right = bounds;  /* I */
    SCIPintervalSetBounds(&left, -right.sup, -right.inf); /* -I */
@@ -373,6 +387,7 @@ SCIP_DECL_EXPRREVERSEPROP(reversepropAbs)
     * this works also if left or right is empty
     */
    SCIPintervalUnify(&childrenbounds[0], left, right);
+   /**! [SnippetExprReversepropAbs] */
 
    return SCIP_OKAY;
 }
@@ -412,6 +427,7 @@ SCIP_DECL_EXPRCURVATURE(curvatureAbs)
    child = SCIPexprGetChildren(expr)[0];
    assert(child != NULL);
 
+   /**! [SnippetExprCurvatureAbs] */
    /* expression is |child|, get domain of child */
    SCIP_CALL( SCIPevalExprActivity(scip, child) );
    childbounds = SCIPexprGetActivity(child);
@@ -427,6 +443,7 @@ SCIP_DECL_EXPRCURVATURE(curvatureAbs)
       childcurv[0] = SCIP_EXPRCURV_LINEAR;
    else /* |f(x)|, f mixed sign, is never concave nor linear */
       *success = FALSE;
+   /**! [SnippetExprCurvatureAbs] */
 
    return SCIP_OKAY;
 }
@@ -446,6 +463,7 @@ SCIP_DECL_EXPRMONOTONICITY(monotonicityAbs)
    child = SCIPexprGetChildren(expr)[0];
    assert(child != NULL);
 
+   /**! [SnippetExprMonotonicityAbs] */
    SCIP_CALL( SCIPevalExprActivity(scip, child) );
    childbounds = SCIPexprGetActivity(child);
 
@@ -455,6 +473,7 @@ SCIP_DECL_EXPRMONOTONICITY(monotonicityAbs)
       *result = SCIP_MONOTONE_INC;
    else
       *result = SCIP_MONOTONE_UNKNOWN;
+   /**! [SnippetExprMonotonicityAbs] */
 
    return SCIP_OKAY;
 }
@@ -521,4 +540,15 @@ SCIP_RETCODE SCIPcreateExprAbs(
    SCIP_CALL( SCIPcreateExpr(scip, expr, SCIPfindExprhdlr(scip, EXPRHDLR_NAME), NULL, 1, &child, ownercreate, ownercreatedata) );
 
    return SCIP_OKAY;
+}
+
+/** indicates whether expression is of abs-type */  /*lint -e{715}*/
+SCIP_Bool SCIPisExprAbs(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{  /*lint --e{715}*/
+   assert(expr != NULL);
+
+   return strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), EXPRHDLR_NAME) == 0;
 }

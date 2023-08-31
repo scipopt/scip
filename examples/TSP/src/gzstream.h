@@ -108,7 +108,7 @@ public:
    /// destructor
    ~gzstreambuf()
    {
-      close();
+      (void) close();
    }
    //@}
 

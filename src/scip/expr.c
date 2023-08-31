@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -35,7 +44,7 @@
 #include "scip/tree.h"
 #include "scip/struct_set.h"
 #include "scip/struct_stat.h"
-#include "scip/nlpi_ipopt.h" /* for LAPACK */
+#include "scip/lapack_calls.h"
 
 /*lint -e440*/
 /*lint -e441*/
@@ -242,6 +251,53 @@ SCIP_RETCODE evalAndDiff(
 /*
  * Public methods
  */
+
+/* Undo the defines from pub_expr.h, which exist if NDEBUG is defined. */
+#ifdef NDEBUG
+#undef SCIPexprhdlrSetCopyFreeHdlr
+#undef SCIPexprhdlrSetCopyFreeData
+#undef SCIPexprhdlrSetPrint
+#undef SCIPexprhdlrSetParse
+#undef SCIPexprhdlrSetCurvature
+#undef SCIPexprhdlrSetMonotonicity
+#undef SCIPexprhdlrSetIntegrality
+#undef SCIPexprhdlrSetHash
+#undef SCIPexprhdlrSetCompare
+#undef SCIPexprhdlrSetDiff
+#undef SCIPexprhdlrSetIntEval
+#undef SCIPexprhdlrSetSimplify
+#undef SCIPexprhdlrSetReverseProp
+#undef SCIPexprhdlrSetEstimate
+#undef SCIPexprhdlrGetName
+#undef SCIPexprhdlrGetDescription
+#undef SCIPexprhdlrGetPrecedence
+#undef SCIPexprhdlrGetData
+#undef SCIPexprhdlrHasPrint
+#undef SCIPexprhdlrHasBwdiff
+#undef SCIPexprhdlrHasFwdiff
+#undef SCIPexprhdlrHasIntEval
+#undef SCIPexprhdlrHasEstimate
+#undef SCIPexprhdlrHasInitEstimates
+#undef SCIPexprhdlrHasSimplify
+#undef SCIPexprhdlrHasCurvature
+#undef SCIPexprhdlrHasMonotonicity
+#undef SCIPexprhdlrHasReverseProp
+#undef SCIPexprhdlrGetNCreated
+#undef SCIPexprhdlrGetNIntevalCalls
+#undef SCIPexprhdlrGetIntevalTime
+#undef SCIPexprhdlrGetNReversepropCalls
+#undef SCIPexprhdlrGetReversepropTime
+#undef SCIPexprhdlrGetNCutoffs
+#undef SCIPexprhdlrGetNDomainReductions
+#undef SCIPexprhdlrIncrementNDomainReductions
+#undef SCIPexprhdlrGetNEstimateCalls
+#undef SCIPexprhdlrGetEstimateTime
+#undef SCIPexprhdlrGetNBranchings
+#undef SCIPexprhdlrIncrementNBranchings
+#undef SCIPexprhdlrGetNSimplifyCalls
+#undef SCIPexprhdlrGetSimplifyTime
+#undef SCIPexprhdlrGetNSimplifications
+#endif
 
 /** create expression handler */
 SCIP_RETCODE SCIPexprhdlrCreate(
@@ -1204,7 +1260,7 @@ SCIP_RETCODE SCIPexprhdlrBwDiffExpr(
    )
 {
    SCIP_Real* origchildrenvals;
-   SCIP_Real origexprval;
+   SCIP_Real origexprval = SCIP_INVALID;
    int c;
 
    assert(exprhdlr != NULL);
@@ -1255,7 +1311,7 @@ SCIP_RETCODE SCIPexprhdlrBwDiffExpr(
          BMSfreeBufferMemoryArray(bufmem, &origchildrenvals);
       }
 
-      expr->evalvalue = origexprval;   /*lint !e644*/
+      expr->evalvalue = origexprval;
    }
 
    return SCIP_OKAY;
@@ -1642,6 +1698,15 @@ SCIP_RETCODE SCIPexprhdlrReversePropExpr(
 /**@{ */
 
 /* from expr.h */
+
+#ifdef NDEBUG
+#undef SCIPexprCapture
+#undef SCIPexprIsVar
+#undef SCIPexprIsValue
+#undef SCIPexprIsSum
+#undef SCIPexprIsProduct
+#undef SCIPexprIsPower
+#endif
 
 /** creates and captures an expression with given expression data and children */
 SCIP_RETCODE SCIPexprCreate(
@@ -2287,7 +2352,8 @@ SCIP_RETCODE SCIPexprPrintDotInit2(
       return SCIP_FILECREATEERROR;
    }
 
-   SCIP_CALL( SCIPexprPrintDotInit(set, stat, blkmem, printdata, f, whattoprint) );
+   SCIP_CALL_FINALLY( SCIPexprPrintDotInit(set, stat, blkmem, printdata, f, whattoprint),
+      fclose(f) );
    (*printdata)->closefile = TRUE;
 
    return SCIP_OKAY;
@@ -3575,7 +3641,7 @@ SCIP_RETCODE SCIPexprComputeQuadraticCurvature(
 
    /* TODO do some simple tests first; like diagonal entries don't change sign, etc */
 
-   if( !SCIPisIpoptAvailableIpopt() )
+   if( ! SCIPlapackIsAvailable() )
       return SCIP_OKAY;
 
    nn = n * n;
@@ -3663,7 +3729,7 @@ SCIP_RETCODE SCIPexprComputeQuadraticCurvature(
    }
 
    /* compute eigenvalues */
-   if( SCIPcallLapackDsyevIpopt(storeeigeninfo, n, matrix, alleigval) != SCIP_OKAY )
+   if( SCIPlapackComputeEigenvalues(bufmem, storeeigeninfo, n, matrix, alleigval) != SCIP_OKAY )
    {
       SCIPmessagePrintWarning(messagehdlr, "Failed to compute eigenvalues of quadratic coefficient "
             "matrix --> don't know curvature\n");
@@ -3703,6 +3769,30 @@ CLEANUP:
 
 
 /* from pub_expr.h */
+
+#ifdef NDEBUG
+#undef SCIPexprGetNUses
+#undef SCIPexprGetNChildren
+#undef SCIPexprGetChildren
+#undef SCIPexprGetHdlr
+#undef SCIPexprGetData
+#undef SCIPexprSetData
+#undef SCIPexprGetOwnerData
+#undef SCIPexprGetEvalValue
+#undef SCIPexprGetEvalTag
+#undef SCIPexprGetDerivative
+#undef SCIPexprGetDot
+#undef SCIPexprGetBardot
+#undef SCIPexprGetDiffTag
+#undef SCIPexprGetActivity
+#undef SCIPexprGetActivityTag
+#undef SCIPexprSetActivity
+#undef SCIPexprGetCurvature
+#undef SCIPexprSetCurvature
+#undef SCIPexprIsIntegral
+#undef SCIPexprSetIntegrality
+#undef SCIPexprAreQuadraticExprsVariables
+#endif
 
 /** gets the number of times the expression is currently captured */
 int SCIPexprGetNUses(
@@ -3787,7 +3877,7 @@ SCIP_EXPR_OWNERDATA* SCIPexprGetOwnerData(
 
 /** gives the value from the last evaluation of an expression (or SCIP_INVALID if there was an eval error)
  *
- * @see SCIPevalExpr
+ * @see SCIPevalExpr to evaluate the expression at a given solution.
  */
 SCIP_Real SCIPexprGetEvalValue(
    SCIP_EXPR*            expr                /**< expression */
@@ -3971,6 +4061,8 @@ void SCIPexprSetIntegrality(
  *
  * This function returns pointers to internal data in linexprs and lincoefs.
  * The user must not change this data.
+ *
+ * @attention SCIPcheckExprQuadratic() needs to be called first to check whether expression is quadratic and initialize the data of the quadratic representation.
  */
 void SCIPexprGetQuadraticData(
    SCIP_EXPR*            expr,               /**< quadratic expression */

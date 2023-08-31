@@ -3,21 +3,37 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   separation_vertexpolyhedral.c
+/**@file   vertexpolyhedral.c
  * @brief  tests estimation of vertexpolyhedral functions
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+/* ICC 2020.4.304 segfaults when compiling this file
+ * __INTEL_COMPILER_BUILD_DATE=20200925
+ * __INTEL_COMPILER=1910
+ * __INTEL_COMPILER_UPDATE=3
+ */
+#if !defined(__INTEL_COMPILER) || (__INTEL_COMPILER != 1910)
 
 #include "scip/nlhdlr.c"
 #include "scip/cons_nonlinear.c"
@@ -48,12 +64,12 @@ SCIP_RETCODE printMatrix(int size)
 
    SCIP_CALL( SCIPcreate(&scip) );
 
-   cr_redirect_stdout();
    SCIP_CALL( buildVertexPolyhedralSeparationLP(scip, size, &lp) );
 
    SCIP_CALL( SCIPlpiGetNRows(lp, &nrows) );
    SCIP_CALL( SCIPlpiGetNCols(lp, &ncols) );
 
+   cr_redirect_stdout();
    for( i = 0; i < nrows; ++i )
    {
       for( j = 0; j < ncols; ++j )
@@ -83,6 +99,12 @@ SCIP_DECL_VERTEXPOLYFUN(prodfunction)
 
    for( i = 0; i < nargs; ++i )
       ret *= args[i];
+
+   /* these products can get fairly large when nargs is high, which is troublesome for new aspiring LP solvers;
+    * let's take a sqrt() if we have more than 10 args
+    */
+   if( nargs > 10 )
+      ret = sqrt(fabs(ret)) * (ret < 0.0 ? -1.0 : 1.0);
 
    return ret;
 }
@@ -439,3 +461,5 @@ Test(separation, vertexpolyhedral,
 
    cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
 }
+
+#endif  /* if !intel */

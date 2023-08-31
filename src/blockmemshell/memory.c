@@ -3,13 +3,22 @@
 /*                  This file is part of the library                         */
 /*          BMS --- Block Memory Shell                                       */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  BMS is distributed under the terms of the ZIB Academic License.          */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with BMS; see the file COPYING. If not email to scip@zib.de.       */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -36,9 +45,7 @@
 /*
  * include build configuration flags
  */
-#ifndef NO_CONFIG_HEADER
 #include "scip/config.h"
-#endif
 
 #ifdef WITH_SCIPDEF
 #include "scip/def.h"
@@ -679,7 +686,7 @@ struct BMS_BlkMem
  * Efficient memory management for multiple objects of the same size
  ********************************************************************/
 
-/* 
+/*
  * block memory methods for faster memory access
  */
 
@@ -718,7 +725,7 @@ struct BMS_ChkMem
 {
    CHUNK*                rootchunk;          /**< array with the chunks of the chunk header */
    FREELIST*             lazyfree;           /**< lazy free list of unused memory elements of all chunks of this chunk block */
-   CHUNK*                firsteager;         /**< first chunk with a non-empty eager free list */ 
+   CHUNK*                firsteager;         /**< first chunk with a non-empty eager free list */
    BMS_CHKMEM*           nextchkmem;         /**< next chunk block in the block memory's hash list */
    int                   elemsize;           /**< size of each memory element in the chunk memory */
    int                   nchunks;            /**< number of chunks in this chunk block (used slots of the chunk array) */
@@ -727,7 +734,7 @@ struct BMS_ChkMem
    int                   lazyfreesize;       /**< number of elements in the lazy free list of the chunk block */
    int                   eagerfreesize;      /**< total number of elements of all eager free lists of the block's chunks */
    int                   initchunksize;      /**< number of elements in the first chunk */
-   int                   garbagefactor;      /**< garbage collector is called, if at least garbagefactor * avg. chunksize 
+   int                   garbagefactor;      /**< garbage collector is called, if at least garbagefactor * avg. chunksize
                                               *   elements are free (-1: disable garbage collection) */
 #ifndef NDEBUG
    char*                 filename;           /**< source file, where this chunk block was created */
@@ -936,7 +943,7 @@ int linkChunk(
    assert(chunk != NULL);
    assert(chunk->store != NULL);
 
-   debugMessage("linking chunk %p to chunk block %p [elemsize:%d, %d chunks]\n", 
+   debugMessage("linking chunk %p to chunk block %p [elemsize:%d, %d chunks]\n",
       (void*)chunk, (void*)chkmem, chkmem->elemsize, chkmem->nchunks);
 
    pos = rbTreeFindChunk(chkmem->rootchunk, chunk->store, &parent);
@@ -967,7 +974,7 @@ void unlinkChunk(
    assert(chkmem != NULL);
    assert(chkmem->elemsize == chunk->elemsize);
 
-   debugMessage("unlinking chunk %p from chunk block %p [elemsize:%d, %d chunks]\n", 
+   debugMessage("unlinking chunk %p from chunk block %p [elemsize:%d, %d chunks]\n",
       (void*)chunk, (void*)chkmem, chkmem->elemsize, chkmem->nchunks);
 
    /* remove the chunk from the chunks of the chunk block */
@@ -1456,7 +1463,7 @@ void freeChkmemElement(
 BMS_CHKMEM* BMScreateChunkMemory_call(
    size_t                size,               /**< element size of the chunk block */
    int                   initchunksize,      /**< number of elements in the first chunk of the chunk block */
-   int                   garbagefactor,      /**< garbage collector is called, if at least garbagefactor * avg. chunksize 
+   int                   garbagefactor,      /**< garbage collector is called, if at least garbagefactor * avg. chunksize
                                               *   elements are free (-1: disable garbage collection) */
    const char*           filename,           /**< source file of the function call */
    int                   line                /**< line number in source file of the function call */
@@ -1727,7 +1734,7 @@ int getHashNumber(
 /** creates a block memory allocation data structure */
 BMS_BLKMEM* BMScreateBlockMemory_call(
    int                   initchunksize,      /**< number of elements in the first chunk of each chunk block */
-   int                   garbagefactor,      /**< garbage collector is called, if at least garbagefactor * avg. chunksize 
+   int                   garbagefactor,      /**< garbage collector is called, if at least garbagefactor * avg. chunksize
                                               *   elements are free (-1: disable garbage collection) */
    const char*           filename,           /**< source file of the function call */
    int                   line                /**< line number in source file of the function call */
@@ -2383,13 +2390,13 @@ void BMSdisplayBlockMemory_call(
    }
 #ifndef NDEBUG
    printInfo("  Total %6d %4d %7d %7d %7d %5d %4d %5.1f%% %6.1f\n",
-      totalnchunks, totalneagerchunks, totalnelems, totalneagerelems, totalnlazyelems, 
+      totalnchunks, totalneagerchunks, totalnelems, totalneagerelems, totalnlazyelems,
       totalngarbagecalls, totalngarbagefrees,
       totalnelems > 0 ? 100.0 * (double) (totalneagerelems + totalnlazyelems) / (double) (totalnelems) : 0.0,
       (double)allocedmem/(1024.0*1024.0));
 #else
    printInfo("  Total %6d %4d %7d %7d %7d %5.1f%% %6.1f\n",
-      totalnchunks, totalneagerchunks, totalnelems, totalneagerelems, totalnlazyelems, 
+      totalnchunks, totalneagerchunks, totalnelems, totalneagerelems, totalnlazyelems,
       totalnelems > 0 ? 100.0 * (double) (totalneagerelems + totalnlazyelems) / (double) (totalnelems) : 0.0,
       (double)allocedmem/(1024.0*1024.0));
 #endif
@@ -2437,6 +2444,7 @@ long long BMScheckEmptyBlockMemory_call(
          })
 
          assert(nchunks == chkmem->nchunks);
+         SCIP_UNUSED(nchunks);
          assert(nelems == chkmem->storesize);
          assert(neagerelems == chkmem->eagerfreesize);
 
@@ -3030,7 +3038,7 @@ void BMSfreeBufferMemory_work(
    if ( bufnum == 0 && buffer->data[bufnum] != *ptr )
    {
       printErrorHeader(filename, line);
-      printError("Tried to free unkown buffer pointer.\n");
+      printError("Tried to free unknown buffer pointer.\n");
       return;
    }
    if ( ! buffer->used[bufnum] )

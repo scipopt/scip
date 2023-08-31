@@ -1,0 +1,9 @@
+set display verblevel 0
+set timing enabled FALSE
+read "${PROJECT_SOURCE_DIR}"/check/"${path}"
+optimize
+write statistics temp/${basename}_r1.stats
+read "${PROJECT_SOURCE_DIR}"/check/"${path}"
+optimize
+write statistics temp/${basename}_r2.stats
+quit

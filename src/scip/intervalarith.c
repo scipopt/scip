@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -41,7 +50,7 @@
  */
 #if defined(__INTEL_COMPILER) || defined(_MSC_VER)
 #pragma fenv_access (on)
-#elif defined __GNUC__
+#elif defined(__GNUC__) && !defined(__clang__)
 #pragma STDC FENV_ACCESS ON
 #endif
 
@@ -52,9 +61,12 @@
  * A more drastic but safer way seems to be to just disable all compiler optimizations for this file.
  * The Intel compiler seems to implement FENV_ACCESS correctly, but also defines __GNUC__.
  */
-#if defined(__GNUC__) && !defined( __INTEL_COMPILER)
-#pragma GCC push_options
+#if defined(__GNUC__) && !defined(__INTEL_COMPILER)
+#if defined(__clang__)
+#pragma clang optimize off
+#else
 #pragma GCC optimize ("O0")
+#endif
 #endif
 
 /*lint -e644*/
@@ -4752,6 +4764,19 @@ int SCIPintervalPropagateWeightedSum(
 
       SCIPdebugMessage("child %d: %.20g*x in [%.20g,%.20g]", c, weights[c], childbounds.inf, childbounds.sup);
 
+      /* if interval arithmetics works correctly, then childbounds cannot be empty, which is also asserted in SCIPintervalDivScalar below
+       * however, if running under valgrind, then interval arithmetics does not work correctly and thus one may run into an assert in SCIPintervalDivScalar
+       * so this check avoids this by declaring the propagation to result in an empty interval (thus only do if asserts are on)
+       */
+#ifndef NDEBUG
+      if( SCIPintervalIsEmpty(infinity, childbounds) )
+      {
+         *infeasible = TRUE;
+         c = noperands;   /*lint !e850*/
+         goto TERMINATE;
+      }
+#endif
+
       /* divide by the child coefficient */
       SCIPintervalDivScalar(infinity, &childbounds, childbounds, weights[c]);
 
@@ -4779,8 +4804,3 @@ TERMINATE:
 
    return nreductions;
 }
-
-/* pop -O0 from beginning, though it probably doesn't matter here at the end of the compilation unit */
-#if defined(__GNUC__) && !defined( __INTEL_COMPILER)
-#pragma GCC pop_options
-#endif

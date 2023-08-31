@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -25,13 +34,22 @@
 #ifndef SCIP_SCIP_EXPR_H_
 #define SCIP_SCIP_EXPR_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include "scip/type_scip.h"
 #include "scip/type_expr.h"
 #include "scip/type_misc.h"
+
+#ifdef NDEBUG
+#include "scip/struct_scip.h"
+#include "scip/struct_set.h"
+#include "scip/struct_mem.h"
+#include "scip/struct_stat.h"
+#include "scip/set.h"
+#include "scip/expr.h"
+#endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**@addtogroup PublicExprHandlerMethods
  * @{
@@ -97,6 +115,20 @@ SCIP_EXPORT
 SCIP_EXPRHDLR* SCIPgetExprhdlrPower(
    SCIP*                      scip           /**< SCIP data structure */
    );
+
+#ifdef NDEBUG
+/* If NDEBUG is defined, the function calls are overwritten by defines to reduce the number of function calls and
+ * speed up the algorithms.
+ */
+#define SCIPgetExprhdlrs(scip)       (scip)->set->exprhdlrs
+#define SCIPgetNExprhdlrs(scip)      (scip)->set->nexprhdlrs
+#define SCIPfindExprhdlr(scip, name) SCIPsetFindExprhdlr((scip)->set, name)
+#define SCIPgetExprhdlrVar(scip)     (scip)->set->exprhdlrvar
+#define SCIPgetExprhdlrValue(scip)   (scip)->set->exprhdlrval
+#define SCIPgetExprhdlrSum(scip)     (scip)->set->exprhdlrsum
+#define SCIPgetExprhdlrProduct(scip) (scip)->set->exprhdlrproduct
+#define SCIPgetExprhdlrPower(scip)   (scip)->set->exprhdlrpow
+#endif
 
 /** @} */
 
@@ -619,6 +651,7 @@ SCIP_RETCODE SCIPhashExpr(
  *     (TODO: we could handle more complicated stuff like \f$xy\log(x) \to - y * \mathrm{entropy}(x)\f$, but I am not sure this should happen at the simplification level;
  *            similar for \f$(xy) \log(xy)\f$, which currently simplifies to \f$xy \log(xy)\f$)
  *   - SP12: if it has two children, then neither of them is a sum (expand sums)
+ *   - SP12b: if it has at least two children and expandalways is set, then no child is a sum (expand sums always)
  *   - SP13: no child is a sum with a single term
  *   - SP14: at most one child is an `exp`
  * - is a power expression such that
@@ -627,12 +660,14 @@ SCIP_RETCODE SCIPhashExpr(
  *   - POW3: its child is not a value
  *   - POW4: its child is simplified
  *   - POW5: if exponent is integer, its child is not a product
+ *   - POW5a: if exponent is fractional and distribfracexponent param is enabled, its child is not a product
  *   - POW6: if exponent is integer, its child is not a sum with a single term (\f$(2x)^2 \to 4x^2\f$)
- *   - POW7: if exponent is 2, its child is not a sum (expand sums)
+ *   - POW7: if exponent is integer and at most expandmaxeponent param, its child is not a sum (expand sums)
  *   - POW8: its child is not a power unless \f$(x^n)^m\f$ with \f$nm\f$ being integer and \f$n\f$ or \f$m\f$ fractional and \f$n\f$ not being even integer
  *   - POW9: its child is not a sum with a single term with a positive coefficient: \f$(25x)^{0.5} \to 5 x^{0.5}\f$
  *   - POW10: its child is not a binary variable: \f$b^e, e > 0 \to b\f$; \f$b^e, e < 0 \to b := 1\f$
  *   - POW11: its child is not an exponential: \f$\exp(\text{expr})^e \to \exp(e\cdot\text{expr})\f$
+ *   - POW12: its child is not an absolute value if the exponent is an even integer: \f$\abs(\text{expr})^e, e \text{ even} \to \text{expr}^e\f$
  * - is a signedpower expression such that
  *   - SPOW1: exponent is not 0
  *   - SPOW2: exponent is not 1
@@ -802,6 +837,13 @@ SCIP_RETCODE SCIPgetExprVarExprs(
  * @{
  */
 
+/** calls the print callback for an expression
+ *
+ * @see SCIP_DECL_EXPRPRINT
+ */
+SCIP_EXPORT
+SCIP_DECL_EXPRPRINT(SCIPcallExprPrint);
+
 /** calls the curvature callback for an expression
  *
  * @see SCIP_DECL_EXPRCURVATURE
@@ -902,6 +944,38 @@ SCIP_DECL_EXPRSIMPLIFY(SCIPcallExprSimplify);
 SCIP_EXPORT
 SCIP_DECL_EXPRREVERSEPROP(SCIPcallExprReverseprop);
 
+#ifdef NDEBUG
+#define SCIPappendExprChild(scip, expr, child)               SCIPexprAppendChild((scip)->set, (scip)->mem->probmem, expr, child)
+#define SCIPreplaceExprChild(scip, expr, childidx, newchild) SCIPexprReplaceChild((scip)->set, (scip)->stat, (scip)->mem->probmem, expr, childidx, newchild)
+#define SCIPremoveExprChildren(scip, expr)                   SCIPexprRemoveChildren((scip)->set, (scip)->stat, (scip)->mem->probmem, expr)
+#define SCIPduplicateExpr(scip, expr, copyexpr, mapexpr, mapexprdata, ownercreate, ownercreatedata) SCIPexprCopy((scip)->set, (scip)->stat, (scip)->mem->probmem, (scip)->set, (scip)->stat, (scip)->mem->probmem, expr, copyexpr, mapexpr, mapexprdata, ownercreate, ownercreatedata)
+#define SCIPduplicateExprShallow(scip, expr, copyexpr, ownercreate, ownercreatedata) SCIPexprDuplicateShallow((scip)->set, (scip)->mem->probmem, expr, copyexpr, ownercreate, ownercreatedata)
+#define SCIPcaptureExpr(expr)                                SCIPexprCapture(expr)
+#define SCIPreleaseExpr(scip, expr)                          SCIPexprRelease((scip)->set, (scip)->stat, (scip)->mem->probmem, expr)
+#define SCIPisExprVar(scip, expr)                            SCIPexprIsVar((scip)->set, expr)
+#define SCIPisExprValue(scip, expr)                          SCIPexprIsValue((scip)->set, expr)
+#define SCIPisExprSum(scip, expr)                            SCIPexprIsSum((scip)->set, expr)
+#define SCIPisExprProduct(scip, expr)                        SCIPexprIsProduct((scip)->set, expr)
+#define SCIPisExprPower(scip, expr)                          SCIPexprIsPower((scip)->set, expr)
+#define SCIPprintExpr(scip, expr, file)                      SCIPexprPrint((scip)->set, (scip)->stat, (scip)->mem->probmem, (scip)->messagehdlr, file, expr)
+#define SCIPevalExpr(scip, expr, sol, soltag)                SCIPexprEval((scip)->set, (scip)->stat, (scip)->mem->probmem, expr, sol, soltag)
+#define SCIPgetExprNewSoltag(scip)                           (++((scip)->stat->exprlastsoltag))
+#define SCIPevalExprGradient(scip, expr, sol, soltag)        SCIPexprEvalGradient((scip)->set, (scip)->stat, (scip)->mem->probmem, expr, sol, soltag)
+#define SCIPevalExprHessianDir(scip, expr, sol, soltag, direction) SCIPexprEvalHessianDir((scip)->set, (scip)->stat, (scip)->mem->probmem, expr, sol, soltag, direction)
+#define SCIPevalExprActivity(scip, expr)                     SCIPexprEvalActivity((scip)->set, (scip)->stat, (scip)->mem->probmem, expr)
+#define SCIPcompareExpr(scip, expr1, expr2)                  SCIPexprCompare((scip)->set, expr1, expr2)
+#define SCIPsimplifyExpr(scip, rootexpr, simplified, changed, infeasible, ownercreate, ownercreatedata) SCIPexprSimplify((scip)->set, (scip)->stat, (scip)->mem->probmem, rootexpr, simplified, changed, infeasible, ownercreate, ownercreatedata)
+#define SCIPcallExprCurvature(scip, expr, exprcurvature, success, childcurv) SCIPexprhdlrCurvatureExpr(SCIPexprGetHdlr(expr), (scip)->set, expr, exprcurvature, success, childcurv)
+#define SCIPcallExprMonotonicity(scip, expr, childidx, result) SCIPexprhdlrMonotonicityExpr(SCIPexprGetHdlr(expr), (scip)->set, expr, childidx, result)
+#define SCIPcallExprEval(scip, expr, childrenvalues, val)    SCIPexprhdlrEvalExpr(SCIPexprGetHdlr(expr), (scip)->set, (scip)->mem->buffer, expr, val, childrenvalues, NULL)
+#define SCIPcallExprEvalFwdiff(scip, expr, childrenvalues, direction, val, dot) SCIPexprhdlrEvalFwDiffExpr(SCIPexprGetHdlr(expr), (scip)->set, (scip)->mem->buffer, expr, val, dot, childrenvalues, NULL, direction, NULL)
+#define SCIPcallExprInteval(scip, expr, interval, intevalvar, intevalvardata) SCIPexprhdlrIntEvalExpr(SCIPexprGetHdlr(expr), (scip)->set, expr, interval, intevalvar, intevalvardata)
+#define SCIPcallExprEstimate(scip, expr, localbounds, globalbounds, refpoint, overestimate, targetvalue, coefs, constant, islocal, success, branchcand) SCIPexprhdlrEstimateExpr(SCIPexprGetHdlr(expr), (scip)->set, expr, localbounds, globalbounds, refpoint, overestimate, targetvalue, coefs, constant, islocal, success, branchcand)
+#define SCIPcallExprInitestimates(scip, expr, bounds, overestimate, coefs, constant, nreturned)  SCIPexprhdlrInitEstimatesExpr(SCIPexprGetHdlr(expr), (scip)->set, expr, bounds, overestimate, coefs, constant, nreturned)
+#define SCIPcallExprSimplify(scip, expr, simplifiedexpr, ownercreate, ownercreatedata)  SCIPexprhdlrSimplifyExpr(SCIPexprGetHdlr(expr), (scip)->set, expr, simplifiedexpr, ownercreate, ownercreatedata)
+#define SCIPcallExprReverseprop(scip, expr, bounds, childrenbounds, infeasible) SCIPexprhdlrReversePropExpr(SCIPexprGetHdlr(expr), (scip)->set, expr, bounds, childrenbounds, infeasible)
+#endif
+
 /** @} */
 
 
@@ -920,6 +994,11 @@ SCIP_EXPORT
 void SCIPfreeExpriter(
    SCIP_EXPRITER**       iterator            /**< pointer to the expression iterator */
    );
+
+#ifdef NDEBUG
+#define SCIPcreateExpriter(scip, iterator)  SCIPexpriterCreate((scip)->stat, (scip)->mem->probmem, iterator)
+#define SCIPfreeExpriter(iterator)          SCIPexpriterFree(iterator)
+#endif
 
 /** @} */
 
@@ -988,6 +1067,12 @@ SCIP_RETCODE SCIPcomputeExprQuadraticCurvature(
    SCIP_HASHMAP*         assumevarfixed,     /**< hashmap containing variables that should be assumed to be fixed, or NULL */
    SCIP_Bool             storeeigeninfo      /**< whether the eigenvalues and eigenvectors should be stored */
    );
+
+#ifdef NDEBUG
+#define SCIPcheckExprQuadratic(scip, expr, isquadratic)  SCIPexprCheckQuadratic((scip)->set, (scip)->mem->probmem, expr, isquadratic)
+#define SCIPfreeExprQuadratic(scip, expr)                SCIPexprFreeQuadratic((scip)->mem->probmem, expr)
+#define SCIPcomputeExprQuadraticCurvature(scip, expr, curv, assumevarfixed, storeeigeninfo)  SCIPexprComputeQuadraticCurvature((scip)->set, (scip)->mem->probmem, (scip)->mem->buffer, (scip)->messagehdlr, expr, curv, assumevarfixed, storeeigeninfo)
+#endif
 
 /** @} */
 

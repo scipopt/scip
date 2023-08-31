@@ -26,12 +26,12 @@ if(STATIC_GMP)
         PATH_SUFFIXES lib)
 else()
     find_library(GMP_LIBRARY
-        NAMES gmp
+        NAMES libgmp.so gmp
         HINTS ${GMP_DIR}
         PATH_SUFFIXES lib)
 
     find_library(GMPXX_LIBRARY
-        NAMES gmpxx
+        NAMES libgmpxx.so gmpxx
         HINTS ${GMP_DIR}
         PATH_SUFFIXES lib)
 endif()
@@ -52,6 +52,25 @@ if(NOT GMP_LIBRARIES)
 
    SET(GMP_LIBRARIES ${GMP_LIBRARY})
 endif()
+
+file(GLOB GMP_HEADERS "${GMP_INCLUDE_DIRS}/gmp.h" "${GMP_INCLUDE_DIRS}/gmp-*.h")
+foreach (gmp_header_filename ${GMP_HEADERS})
+    file(READ "${gmp_header_filename}" _gmp_version_header)
+    string(REGEX MATCH
+            "define[ \t]+__GNU_MP_VERSION[ \t]+([0-9]+)" _gmp_major_version_match
+            "${_gmp_version_header}")
+    if (_gmp_major_version_match)
+        set(GMP_MAJOR_VERSION "${CMAKE_MATCH_1}")
+        string(REGEX MATCH "define[ \t]+__GNU_MP_VERSION_MINOR[ \t]+([0-9]+)"
+                _gmp_minor_version_match "${_gmp_version_header}")
+        set(GMP_MINOR_VERSION "${CMAKE_MATCH_1}")
+        string(REGEX MATCH "define[ \t]+__GNU_MP_VERSION_PATCHLEVEL[ \t]+([0-9]+)"
+                _gmp_patchlevel_version_match "${_gmp_version_header}")
+        set(GMP_PATCHLEVEL_VERSION "${CMAKE_MATCH_1}")
+        set(GMP_VERSION
+                ${GMP_MAJOR_VERSION}.${GMP_MINOR_VERSION}.${GMP_PATCHLEVEL_VERSION})
+    endif ()
+endforeach ()
 
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(GMP DEFAULT_MSG GMP_INCLUDE_DIRS GMP_LIBRARIES)
