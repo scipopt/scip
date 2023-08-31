@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -1881,6 +1890,7 @@ SCIP_RETCODE SCIPchgVarUbNode(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_SOLVING
  *
@@ -1905,6 +1915,7 @@ SCIP_RETCODE SCIPchgVarLbGlobal(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_SOLVING
  *
@@ -1919,8 +1930,13 @@ SCIP_RETCODE SCIPchgVarUbGlobal(
 
 /** changes lazy lower bound of the variable, this is only possible if the variable is not in the LP yet
  *
- *  lazy bounds are bounds, that are enforced by constraints and the objective function; hence, these bounds do not need
- *  to be put into the LP explicitly.
+ *  Lazy bounds are bounds that are already enforced by constraints and the objective function.
+ *  Setting a lazy lower bound has the consequence that for variables which lower bound equals the lazy lower bound,
+ *  the lower bound does not need to be passed on to the LP solver.
+ *  This is especially useful in a column generation (branch-and-price) setting.
+ *
+ *  @attention If the variable has a global lower bound below lazylb, then the global lower bound is tightened to
+ *     lazylb by a call to SCIPchgVarLbGlobal().
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -1931,8 +1947,6 @@ SCIP_RETCODE SCIPchgVarUbGlobal(
  *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_SOLVING
- *
- *  @note lazy bounds are useful for branch-and-price since the corresponding variable bounds are not part of the LP
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPchgVarLbLazy(
@@ -1943,8 +1957,13 @@ SCIP_RETCODE SCIPchgVarLbLazy(
 
 /** changes lazy upper bound of the variable, this is only possible if the variable is not in the LP yet
  *
- *  lazy bounds are bounds, that are enforced by constraints and the objective function; hence, these bounds do not need
- *  to be put into the LP explicitly.
+ *  Lazy bounds are bounds that are already enforced by constraints and the objective function.
+ *  Setting a lazy upper bound has the consequence that for variables which upper bound equals the lazy upper bound,
+ *  the upper bound does not need to be passed on to the LP solver.
+ *  This is especially useful in a column generation (branch-and-price) setting.
+ *
+ *  @attention If the variable has a global upper bound above lazyub, then the global upper bound is tightened to
+ *     lazyub by a call to SCIPchgVarUbGlobal().
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -1955,8 +1974,6 @@ SCIP_RETCODE SCIPchgVarLbLazy(
  *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_SOLVING
- *
- *  @note lazy bounds are useful for branch-and-price since the corresponding variable bounds are not part of the LP
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPchgVarUbLazy(

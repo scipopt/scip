@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -180,7 +189,7 @@ SCIP_Bool computeLeftTangentSin(
 
 /* TODO: fix this, more cases can be considered, see at unit test
  * the underestimating of the tangents depends not only on the ub but also on the lower bound.
- * right now, this function is only checking whether the tangent underestimates independenly of the lower bound!
+ * right now, this function is only checking whether the tangent underestimates independently of the lower bound!
  */
 /** helper function to compute the tangent at upper bound if it is an underestimator
  *
@@ -328,7 +337,12 @@ SCIP_Bool computeLeftSecantSin(
    else
    {
       /* in ascending area, take the midpoint of the possible area in descending part */
-      if( SCIPisLT(scip, sin(lb), 0.0) )
+      /* for lb < 0 but close to zero, we may have sin(lb) = 0 but lbmodpi = pi, which gives a starting point too close to lb
+       * but for sin(lb) around 0 we know that the tangent point needs to be in [lb+pi,lb+pi+pi/2]
+       */
+      if( SCIPisZero(scip, sin(lb)) )
+         startingpoint = lb + 1.25*M_PI;
+      else if( sin(lb) < 0.0 )
          startingpoint = lb + 2.25*M_PI - lbmodpi;
       else
          startingpoint = lb + 1.25*M_PI - lbmodpi;
@@ -410,7 +424,12 @@ SCIP_Bool computeRightSecantSin(
    else
    {
       /* in descending area, take the midpoint of the possible area in ascending part */
-      if( SCIPisLE(scip, sin(ub), 0.0) )
+      /* for ub < 0 but close to zero, we may have sin(ub) = 0 but ubmodpi = pi, which gives a starting point too close to ub
+       * but for sin(ub) around 0 we know that the tangent point needs to be in [ub-(pi+pi/2),ub-pi]
+       */
+      if( SCIPisZero(scip, sin(ub)) )
+         startingpoint = ub - 1.25*M_PI;
+      else if( sin(ub) < 0.0 )
          startingpoint = ub - 1.25*M_PI - ubmodpi;
       else
          startingpoint = ub - M_PI_4 - ubmodpi;
@@ -1058,16 +1077,16 @@ SCIP_DECL_EXPRMONOTONICITY(monotonicitySin)
    sup = SCIPintervalGetSup(interval);
 
    /* expression is not monotone because the interval is too large */
-   if( sup - inf > M_PI )
+   if( SCIPisGT(scip, sup - inf, M_PI) )
       return SCIP_OKAY;
 
    /* compute k s.t. PI * (2k+1) / 2 <= interval.inf <= PI * (2k+3) / 2 */
    k = (int)floor(inf/M_PI - 0.5);
-   assert(M_PI * (2.0*k + 1.0) / 2.0 <= inf);
-   assert(M_PI * (2.0*k + 3.0) / 2.0 >= inf);
+   assert(SCIPisLE(scip, M_PI * (2.0*k + 1.0) / 2.0, inf));
+   assert(SCIPisGE(scip, M_PI * (2.0*k + 3.0) / 2.0, inf));
 
-   /* check whether [inf,sup] are in containing in an interval for which the sine function is monotone */
-   if( M_PI * (2.0*k + 3.0) / 2.0 <= sup )
+   /* check whether [inf,sup] are contained in an interval for which the sine function is monotone */
+   if( SCIPisLE(scip, sup, M_PI * (2.0*k + 3.0) / 2.0) )
       *result = ((k % 2 + 2) % 2) == 1 ? SCIP_MONOTONE_INC : SCIP_MONOTONE_DEC;
 
    return SCIP_OKAY;
@@ -1342,16 +1361,16 @@ SCIP_DECL_EXPRMONOTONICITY(monotonicityCos)
    sup = SCIPintervalGetSup(interval);
 
    /* expression is not monotone because the interval is too large */
-   if( sup - inf > M_PI )
+   if( SCIPisGT(scip, sup - inf, M_PI) )
       return SCIP_OKAY;
 
    /* compute k s.t. PI * k <= interval.inf <= PI * (k+1) */
    k = (int)floor(inf/M_PI);
-   assert(M_PI * k <= inf);
-   assert(M_PI * (k+1) >= inf);
+   assert(SCIPisLE(scip, M_PI * k, inf));
+   assert(SCIPisGE(scip, M_PI * (k+1), inf));
 
    /* check whether [inf,sup] are contained in an interval for which the cosine function is monotone */
-   if( sup <= M_PI * (k+1) )
+   if( SCIPisLE(scip, sup, M_PI * (k+1)) )
       *result = ((k % 2 + 2) % 2) == 0 ? SCIP_MONOTONE_DEC : SCIP_MONOTONE_INC;
 
    return SCIP_OKAY;
@@ -1444,4 +1463,26 @@ SCIP_RETCODE SCIPcreateExprCos(
             ownercreatedata) );
 
    return SCIP_OKAY;
+}
+
+/** indicates whether expression is of sine-type */  /*lint -e{715}*/
+SCIP_Bool SCIPisExprSin(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{  /*lint --e{715}*/
+   assert(expr != NULL);
+
+   return strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), SINEXPRHDLR_NAME) == 0;
+}
+
+/** indicates whether expression is of cosine-type */  /*lint -e{715}*/
+SCIP_Bool SCIPisExprCos(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{  /*lint --e{715}*/
+   assert(expr != NULL);
+
+   return strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), COSEXPRHDLR_NAME) == 0;
 }

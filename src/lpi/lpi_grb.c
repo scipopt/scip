@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -44,8 +53,19 @@
 #error "The Gurobi intreface only works for Gurobi versions at least 7.0.2"
 #endif
 
-/* define infinity value of Gurobi */
-#define GRB_INFBOUND 1e+20
+#ifdef SCIP_THREADSAFE
+   #if defined(_Thread_local)
+      /* Use thread local environment in order to not create a new environment for each new LP. */
+      static _Thread_local GRBenv*    reusegrbenv = NULL; /**< thread local Gurobi environment */
+      static _Thread_local int        numlp = 0;          /**< number of open LP objects */
+      #define SCIP_REUSEENV
+   #endif
+#else
+   /* Global Gurobi environment in order to not create a new environment for each new LP. This is not thread safe. */
+   static GRBenv*           reusegrbenv = NULL; /**< global Gurobi environment */
+   static int               numlp = 0;          /**< number of open LP objects */
+   #define SCIP_REUSEENV
+#endif
 
 /* macro for checking return codes of Gurobi */
 #define CHECK_ZERO(messagehdlr, x) do { int _restat_;                   \
@@ -136,6 +156,10 @@ typedef struct GRBParam GRBPARAM;
 struct SCIP_LPi
 {
    GRBenv*               grbenv;             /**< environment corresponding to model */
+#ifdef SCIP_REUSEENV
+   int*                  numlp;              /**< pointer to count on number of models in environment */
+   GRBenv**              reusegrbenv;        /**< pointer to reused Gurobi environment */
+#endif
    GRBmodel*             grbmodel;           /**< Gurobi model pointer */
    int                   solstat;            /**< solution status of last optimization call */
    GRBPARAM              defparam;           /**< default parameter values */
@@ -189,20 +213,6 @@ struct SCIP_LPiNorms
    double*               rownorm;            /**< dual norms for rows */
 };
 
-
-#ifdef SCIP_THREADSAFE
-   #if defined(_Thread_local)
-      /* Use thread local environment in order to not create a new environment for each new LP. */
-      _Thread_local GRBenv*    reusegrbenv = NULL; /**< thread local Gurobi environment */
-      _Thread_local int        numlp = 0;          /**< number of open LP objects */
-      #define SCIP_REUSEENV
-   #endif
-#else
-   /* Global Gurobi environment in order to not create a new environment for each new LP. This is not thread safe. */
-   static GRBenv*           reusegrbenv = NULL; /**< global Gurobi environment */
-   static int               numlp = 0;          /**< number of open LP objects */
-   #define SCIP_REUSEENV
-#endif
 
 
 /*
@@ -1233,7 +1243,13 @@ SCIP_RETCODE addRangeInfo(
  * Miscellaneous Methods
  */
 
-static char grbname[100];
+static const char grbname[] = {'G', 'u', 'r', 'o', 'b', 'i', ' ',
+#if GRB_VERSION_MAJOR < 10
+   GRB_VERSION_MAJOR + '0',
+#else
+   (GRB_VERSION_MAJOR/10) + '0', (GRB_VERSION_MAJOR%10) + '0',       /*lint !e778*/
+#endif
+   '.', GRB_VERSION_MINOR + '0', '.', GRB_VERSION_TECHNICAL + '0'};  /*lint !e835*/
 
 /**@name Miscellaneous Methods */
 /**@{ */
@@ -1243,12 +1259,6 @@ const char* SCIPlpiGetSolverName(
    void
    )
 {
-   int majorversion;
-   int minorversion;
-   int technical;
-
-   GRBversion(&majorversion, &minorversion, &technical);
-   (void) snprintf(grbname, 100, "Gurobi %d.%d.%d", majorversion, minorversion, technical);
    return grbname;
 }
 
@@ -1355,7 +1365,20 @@ SCIP_RETCODE SCIPlpiCreate(
 
       assert( numlp == 0 );
 
-      /* create evironment */
+      /* create environment */
+#if GRB_VERSION_MAJOR >= 8
+      restat = GRBemptyenv(&reusegrbenv);
+      if ( restat != 0 )
+      {
+         SCIPmessagePrintWarning(messagehdlr, "Gurobi error %d: Something went wrong with creating the environment.\n", restat);
+         return SCIP_LPERROR;
+      }
+
+      /* turn off output for all models */
+      CHECK_ZERO_STAR( messagehdlr, GRBsetintparam(reusegrbenv, GRB_INT_PAR_OUTPUTFLAG, 0) );
+
+      CHECK_ZERO_STAR( messagehdlr, GRBstartenv(reusegrbenv) );
+#else
       restat = GRBloadenv(&reusegrbenv, NULL);
       if ( restat != 0 )
       {
@@ -1365,6 +1388,7 @@ SCIP_RETCODE SCIPlpiCreate(
 
       /* turn off output for all models */
       CHECK_ZERO_STAR( messagehdlr, GRBsetintparam(reusegrbenv, GRB_INT_PAR_OUTPUTFLAG, 0) );
+#endif
 
       /* turn on that basis information for infeasible and unbounded models is available */
       CHECK_ZERO_STAR( messagehdlr, GRBsetintparam(reusegrbenv, GRB_INT_PAR_INFUNBDINFO, 1) );
@@ -1375,16 +1399,29 @@ SCIP_RETCODE SCIPlpiCreate(
 
    /* replace by local copy of environment */
    (*lpi)->grbenv = GRBgetenv((*lpi)->grbmodel);
+
+   /* remember address of numlp and reusegrbenv, in case they are thread-local and SCIPlpiFree is called from different thread */
+   (*lpi)->numlp = &numlp;
+   (*lpi)->reusegrbenv = &reusegrbenv;
    ++numlp;
 
 #else
 
-   /* Create new environment for each new instaniation; note that this involves additional work and
+   /* Create new environment for each new instantiation; note that this involves additional work and
     * uses a new license for each new instantiation. */
+#if GRB_VERSION_MAJOR >= 8
+   CHECK_ZERO_STAR( messagehdlr, GRBemptyenv(&(*lpi)->grbenv) );
+
+   /* turn off output for all models */
+   CHECK_ZERO_STAR( messagehdlr, GRBsetintparam((*lpi)->grbenv, GRB_INT_PAR_OUTPUTFLAG, 0) );
+
+   CHECK_ZERO_STAR( messagehdlr, GRBstartenv((*lpi)->grbenv) );
+#else
    CHECK_ZERO_STAR( messagehdlr, GRBloadenv(&(*lpi)->grbenv, NULL) );
 
    /* turn off output for all models */
    CHECK_ZERO_STAR( messagehdlr, GRBsetintparam((*lpi)->grbenv, GRB_INT_PAR_OUTPUTFLAG, 0) );
+#endif
 
    /* turn on that basis information for infeasible and unbounded models is available */
    CHECK_ZERO_STAR( messagehdlr, GRBsetintparam((*lpi)->grbenv, GRB_INT_PAR_INFUNBDINFO, 1) );
@@ -1468,12 +1505,15 @@ SCIP_RETCODE SCIPlpiFree(
 
    /* free environment */
 #ifdef SCIP_REUSEENV
-   --numlp;
-   if( numlp == 0 )
+   /* decrement the numlp that belongs to the thread where SCIPlpiCreate was called */
+   assert(*(*lpi)->numlp > 0);
+   --(*(*lpi)->numlp);
+   /* if numlp reached zero, then also free the Gurobi environment (that belongs to the thread where SCIPlpiCreate was called) */
+   if( *(*lpi)->numlp == 0 )
    {
       /* free reused environment */
-      GRBfreeenv(reusegrbenv);
-      reusegrbenv = NULL;
+      GRBfreeenv(*(*lpi)->reusegrbenv);
+      *(*lpi)->reusegrbenv = NULL;
    }
 #else
    /* free local environment */
@@ -2370,14 +2410,14 @@ SCIP_RETCODE SCIPlpiScaleRow(
    }
 
    /* scale row sides */
-   if( lhs > -GRB_INFBOUND )
+   if( lhs > -GRB_INFINITY )
       lhs *= scaleval;
    else if( scaleval < 0.0 )
-      lhs = GRB_INFBOUND;
-   if( rhs < GRB_INFBOUND )
+      lhs = GRB_INFINITY;
+   if( rhs < GRB_INFINITY )
       rhs *= scaleval;
    else if( scaleval < 0.0 )
-      rhs = -GRB_INFBOUND;
+      rhs = -GRB_INFINITY;
    if( scaleval > 0.0 )
    {
       SCIP_CALL( SCIPlpiChgSides(lpi, 1, &row, &lhs, &rhs) );

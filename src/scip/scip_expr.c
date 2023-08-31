@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -166,8 +175,7 @@ SCIP_RETCODE parseBase(
    debugParse("parsing base from %s\n", expr);
 
    /* ignore whitespace */
-   while( isspace((unsigned char)*expr) )
-      ++expr;
+   SCIP_CALL( SCIPskipSpace((char**)&expr) );
 
    if( *expr == '\0' )
    {
@@ -181,11 +189,13 @@ SCIP_RETCODE parseBase(
       SCIP_VAR* var;
 
       SCIP_CALL( SCIPparseVarName(scip, expr, &var, (char**)newpos) );
+
       if( var == NULL )
       {
          SCIPerrorMessage("Could not find variable with name '%s'\n", expr);
          return SCIP_READERROR;
       }
+
       expr = *newpos;
 
       /* check if we have already created an expression out of this var */
@@ -243,7 +253,8 @@ SCIP_RETCODE parseBase(
 
       /* get name */
       i = 0;
-      while( *expr != '(' && !isspace((unsigned char)*expr) && *expr != '\0' )
+      while( *expr != '(' && *expr != '\0' && !isspace(*expr)
+             && !( *expr == '\\' && *(expr+1) != '\0' && strchr(SCIP_SPACECONTROL, *(expr+1)) ) )
       {
          operatorname[i] = *expr;
          ++expr;
@@ -327,21 +338,19 @@ SCIP_RETCODE parseFactor(
 
    /* parse Base */
    /* ignore whitespace */
-   while( isspace((unsigned char)*expr) )
-      ++expr;
+   SCIP_CALL( SCIPskipSpace((char**)&expr) );
 
    SCIP_CALL( parseBase(scip, vartoexprvarmap, expr, newpos, &basetree, ownercreate, ownercreatedata) );
    expr = *newpos;
 
    /* check if there is an exponent */
    /* ignore whitespace */
-   while( isspace((unsigned char)*expr) )
-      ++expr;
+   SCIP_CALL( SCIPskipSpace((char**)&expr) );
+
    if( *expr == '^' )
    {
       ++expr;
-      while( isspace((unsigned char)*expr) )
-         ++expr;
+      SCIP_CALL( SCIPskipSpace((char**)&expr) );
 
       if( *expr == '\0' )
       {
@@ -363,8 +372,7 @@ SCIP_RETCODE parseFactor(
          }
 
          /* expect the ')' */
-         while( isspace((unsigned char)*expr) )
-            ++expr;
+         SCIP_CALL( SCIPskipSpace((char**)&expr) );
          if( *expr != ')' )
          {
             SCIPerrorMessage("error in parsing exponent: expected ')', received <%c> from <%s>\n", *expr,  expr);
@@ -443,8 +451,7 @@ SCIP_RETCODE parseTerm(
 
    /* parse Factor */
    /* ignore whitespace */
-   while( isspace((unsigned char)*expr) )
-      ++expr;
+   SCIP_CALL( SCIPskipSpace((char**)&expr) );
 
    SCIP_CALL( parseFactor(scip, FALSE, vartoexprvarmap, expr, newpos, &factortree, ownercreate, ownercreatedata) );
    expr = *newpos;
@@ -452,8 +459,7 @@ SCIP_RETCODE parseTerm(
    debugParse("back to parsing Term, continue parsing from %s\n", expr);
 
    /* check if Terms has another Factor incoming */
-   while( isspace((unsigned char)*expr) )
-      ++expr;
+   SCIP_CALL( SCIPskipSpace((char**)&expr) );
    if( *expr == '*' || *expr == '/' )
    {
       /* initialize termtree as a product expression with a single term, so we can append the extra Factors */
@@ -486,8 +492,7 @@ SCIP_RETCODE parseTerm(
 
          /* find next symbol */
          expr = *newpos;
-         while( isspace((unsigned char)*expr) )
-            ++expr;
+         SCIP_CALL( SCIPskipSpace((char**)&expr) );
       }
       while( *expr == '*' || *expr == '/' );
    }
@@ -525,8 +530,7 @@ SCIP_RETCODE parseExpr(
    debugParse("parsing expression %s\n", expr); /*lint !e506 !e681*/
 
    /* ignore whitespace */
-   while( isspace((unsigned char)*expr) )
-      ++expr;
+   SCIP_CALL( SCIPskipSpace((char**)&expr) );
 
    /* if '+' or '-', store it */
    sign = 1.0;
@@ -543,8 +547,7 @@ SCIP_RETCODE parseExpr(
    debugParse("back to parsing expression (we have the following term), continue parsing from %s\n", expr); /*lint !e506 !e681*/
 
    /* check if Expr has another Term incoming */
-   while( isspace((unsigned char)*expr) )
-      ++expr;
+   SCIP_CALL( SCIPskipSpace((char**)&expr) );
    if( *expr == '+' || *expr == '-' )
    {
       if( SCIPexprIsValue(scip->set, termtree) )
@@ -569,8 +572,7 @@ SCIP_RETCODE parseExpr(
          /* check if we have a "coef * <term>" */
          if( SCIPstrToRealValue(expr, &coef, (char**)newpos) )
          {
-            while( isspace((unsigned char)**newpos) )
-               ++(*newpos);
+            SCIP_CALL( SCIPskipSpace((char**)newpos) );
 
             if( **newpos != '*' )
             {
@@ -583,8 +585,7 @@ SCIP_RETCODE parseExpr(
                /* keep coefficient in coef and continue parsing term after coefficient */
                expr = (*newpos)+1;
 
-               while( isspace((unsigned char)*expr) )
-                  ++expr;
+               SCIP_CALL( SCIPskipSpace((char**)&expr) );
             }
          }
          else
@@ -610,8 +611,7 @@ SCIP_RETCODE parseExpr(
 
          /* find next symbol */
          expr = *newpos;
-         while( isspace((unsigned char)*expr) )
-            ++expr;
+         SCIP_CALL( SCIPskipSpace((char**)&expr) );
       } while( *expr == '+' || *expr == '-' );
    }
    else
@@ -799,8 +799,18 @@ SCIP_RETCODE hashExpr(
  * @{
  */
 
+#ifdef NDEBUG
+#undef SCIPgetExprhdlrs
+#undef SCIPgetNExprhdlrs
+#undef SCIPfindExprhdlr
+#undef SCIPgetExprhdlrVar
+#undef SCIPgetExprhdlrValue
+#undef SCIPgetExprhdlrSum
+#undef SCIPgetExprhdlrProduct
+#undef SCIPgetExprhdlrPower
+#endif
+
 /** creates the handler for an expression handler and includes it into SCIP */
-SCIP_EXPORT
 SCIP_RETCODE SCIPincludeExprhdlr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRHDLR**       exprhdlr,           /**< buffer where to store created expression handler */
@@ -917,6 +927,38 @@ SCIP_EXPRHDLR* SCIPgetExprhdlrPower(
 
 /**@name Expression Methods */
 /**@{ */
+
+#ifdef NDEBUG
+#undef SCIPappendExprChild
+#undef SCIPreplaceExprChild
+#undef SCIPremoveExprChildren
+#undef SCIPduplicateExpr
+#undef SCIPduplicateExprShallow
+#undef SCIPcaptureExpr
+#undef SCIPreleaseExpr
+#undef SCIPisExprVar
+#undef SCIPisExprValue
+#undef SCIPisExprSum
+#undef SCIPisExprProduct
+#undef SCIPisExprPower
+#undef SCIPprintExpr
+#undef SCIPevalExpr
+#undef SCIPgetExprNewSoltag
+#undef SCIPevalExprGradient
+#undef SCIPevalExprHessianDir
+#undef SCIPevalExprActivity
+#undef SCIPcompareExpr
+#undef SCIPsimplifyExpr
+#undef SCIPcallExprCurvature
+#undef SCIPcallExprMonotonicity
+#undef SCIPcallExprEval
+#undef SCIPcallExprEvalFwdiff
+#undef SCIPcallExprInteval
+#undef SCIPcallExprEstimate
+#undef SCIPcallExprInitestimates
+#undef SCIPcallExprSimplify
+#undef SCIPcallExprReverseprop
+#endif
 
 /** creates and captures an expression with given expression data and children */
 SCIP_RETCODE SCIPcreateExpr(
@@ -1526,6 +1568,7 @@ SCIP_RETCODE SCIPshowExpr(
 #else
    SCIP_EXPRPRINTDATA* dotdata;
    FILE* f;
+   SCIP_RETCODE retcode = SCIP_OKAY;
 
    assert(scip != NULL);
    assert(expr != NULL);
@@ -1539,14 +1582,15 @@ SCIP_RETCODE SCIPshowExpr(
    }
 
    /* print all of the expression into the pipe */
-   SCIP_CALL( SCIPprintExprDotInit(scip, &dotdata, f, SCIP_EXPRPRINT_ALL) );
-   SCIP_CALL( SCIPprintExprDot(scip, dotdata, expr) );
-   SCIP_CALL( SCIPprintExprDotFinal(scip, &dotdata) );
+   SCIP_CALL_TERMINATE( retcode, SCIPprintExprDotInit(scip, &dotdata, f, SCIP_EXPRPRINT_ALL), TERMINATE );
+   SCIP_CALL_TERMINATE( retcode, SCIPprintExprDot(scip, dotdata, expr), TERMINATE );
+   SCIP_CALL_TERMINATE( retcode, SCIPprintExprDotFinal(scip, &dotdata), TERMINATE );
 
+ TERMINATE:
    /* close the pipe */
    (void) pclose(f);
 
-   return SCIP_OKAY;
+   return retcode;
 #endif
 }
 
@@ -2063,6 +2107,20 @@ SCIP_RETCODE SCIPgetExprVarExprs(
    return SCIP_OKAY;
 }
 
+/** calls the print callback for an expression
+ *
+ * @see SCIP_DECL_EXPRPRINT
+ */
+SCIP_EXPORT
+SCIP_DECL_EXPRPRINT(SCIPcallExprPrint)
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( SCIPexprhdlrPrintExpr(SCIPexprGetHdlr(expr), scip->set, scip->messagehdlr, expr, stage, currentchild, parentprecedence, file) );
+
+   return SCIP_OKAY;
+}
+
 /** calls the curvature callback for an expression
  *
  * @see SCIP_DECL_EXPRCURVATURE
@@ -2235,6 +2293,11 @@ SCIP_DECL_EXPRREVERSEPROP(SCIPcallExprReverseprop)
 /**@name Expression Iterator Methods */
 /**@{ */
 
+#ifdef NDEBUG
+#undef SCIPcreateExpriter
+#undef SCIPfreeExpriter
+#endif
+
 /** creates an expression iterator */
 SCIP_RETCODE SCIPcreateExpriter(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2262,6 +2325,12 @@ void SCIPfreeExpriter(
 
 /**@name Quadratic expression functions */
 /**@{ */
+
+#ifdef NDEBUG
+#undef SCIPcheckExprQuadratic
+#undef SCIPfreeExprQuadratic
+#undef SCIPcomputeExprQuadraticCurvature
+#endif
 
 /** checks whether an expression is quadratic
  *

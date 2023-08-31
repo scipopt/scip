@@ -1,0 +1,24 @@
+STATISTICS
+  Problem name     : scipbug
+  Variables        : 8 (2 binary, 0 integer, 0 implicit integer, 6 continuous)
+  Constraints      : 0 initial, 7 maximal
+OBJECTIVE
+  Sense            : minimize
+VARIABLES
+  [binary] <x0>: obj=0, original bounds=[0,1]
+  [binary] <x1>: obj=0, original bounds=[0,1]
+  [continuous] <x2>: obj=-1, original bounds=[0,1]
+  [continuous] <x3>: obj=0, original bounds=[0,1]
+  [continuous] <x4>: obj=0, original bounds=[0,1]
+  [continuous] <x5>: obj=0, original bounds=[0,1]
+  [continuous] <x6>: obj=0, original bounds=[0,1]
+  [continuous] <x7>: obj=0, original bounds=[0,1]
+CONSTRAINTS
+  [varbound] <c0>: <x4>[C] -1<x0>[B] <= 0;
+  [linear] <c1>:  -<x2>[C] +2<x3>[C] +2<x5>[C] == 1;
+  [linear] <c2>: <x0>[B] +<x6>[C] <= 1;
+  [linear] <c3>: <x1>[B] +<x3>[C] <= 1;
+  [linear] <c4>: <x4>[C] +<x6>[C] -<x7>[C] >= 0;
+  [linear] <c5>: <x1>[B] -<x5>[C] >= 0;
+  [linear] <c6>: <x4>[C] -1e-06<x7>[C] == 0;
+END

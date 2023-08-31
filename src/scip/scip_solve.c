@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -1345,9 +1354,10 @@ SCIP_RETCODE presolve(
 
    *infeasible = FALSE;
    *unbounded = (*unbounded) || (SCIPgetNSols(scip) > 0 && SCIPisInfinity(scip, -SCIPgetSolOrigObj(scip, SCIPgetBestSol(scip))));
+   *vanished = scip->transprob->nvars == 0 && scip->transprob->nconss == 0 && scip->set->nactivepricers == 0;
 
    finished = (scip->set->presol_maxrounds != -1 && scip->stat->npresolrounds >= scip->set->presol_maxrounds)
-         || (*unbounded) || (scip->set->reopt_enable && scip->stat->nreoptruns >= 1);
+         || (*unbounded) || (*vanished) || (scip->set->reopt_enable && scip->stat->nreoptruns >= 1);
    stopped = SCIPsolveIsStopped(scip->set, scip->stat, TRUE);
 
    /* perform presolving rounds */
@@ -1394,8 +1404,9 @@ SCIP_RETCODE presolve(
 
       SCIPdebugMsg(scip, "presolving round %d returned with unbounded = %u, infeasible = %u, finished = %u\n", scip->stat->npresolrounds, *unbounded, *infeasible, finished);
 
-      /* check whether problem is infeasible or unbounded */
-      finished = finished || *unbounded || *infeasible;
+      /* check whether problem is infeasible or unbounded or vanished */
+      *vanished = scip->transprob->nvars == 0 && scip->transprob->nconss == 0 && scip->set->nactivepricers == 0;
+      finished = finished || *unbounded || *infeasible || *vanished;
 
       /* increase round number */
       scip->stat->npresolrounds++;
@@ -1460,12 +1471,12 @@ SCIP_RETCODE presolve(
 
       if( scip->set->nactivepricers == 0 )
       {
+         assert(*vanished);
+
          if( scip->primal->nlimsolsfound > 0 )
             scip->stat->status = SCIP_STATUS_OPTIMAL;
          else
             scip->stat->status = SCIP_STATUS_INFEASIBLE;
-
-         *vanished = TRUE;
       }
    }
 
@@ -1631,7 +1642,7 @@ SCIP_RETCODE initSolve(
       SCIPstatEnforceLPUpdates(scip->stat);
 
       /* LP is empty anyway; mark empty LP to be solved and update validsollp counter */
-      SCIP_CALL( SCIPlpReset(scip->lp, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->eventfilter) );
+      SCIP_CALL( SCIPlpReset(scip->lp, scip->mem->probmem, scip->set, scip->transprob, scip->stat, scip->eventqueue, scip->eventfilter) );
 
       /* update upper bound and cutoff bound due to objective limit in primal data */
       SCIP_CALL( SCIPprimalUpdateObjlimit(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->eventfilter,
@@ -1807,7 +1818,7 @@ SCIP_RETCODE freeSolve(
    SCIPcertificateClearMirinfo(scip);
 
    /* clear the LP, and flush the changes to clear the LP of the solver */
-   SCIP_CALL( SCIPlpReset(scip->lp, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->eventfilter) );
+   SCIP_CALL( SCIPlpReset(scip->lp, scip->mem->probmem, scip->set, scip->transprob, scip->stat, scip->eventqueue, scip->eventfilter) );
    SCIPlpInvalidateRootObjval(scip->lp);
 
    SCIP_CALL( SCIPlpExactReset(scip->lpexact, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->eventfilter) );
@@ -1921,7 +1932,7 @@ SCIP_RETCODE freeReoptSolve(
    scip->transprob->nlpenabled = FALSE;
 
    /* clear the LP, and flush the changes to clear the LP of the solver */
-   SCIP_CALL( SCIPlpReset(scip->lp, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->eventfilter) );
+   SCIP_CALL( SCIPlpReset(scip->lp, scip->mem->probmem, scip->set, scip->transprob, scip->stat, scip->eventqueue, scip->eventfilter) );
    SCIPlpInvalidateRootObjval(scip->lp);
 
    /* resets the debug environment */
@@ -2670,8 +2681,15 @@ SCIP_RETCODE SCIPsolve(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
+   SCIP_Longint cutpoolncutsfoundbeforerestart = 0;
+   SCIP_Longint cutpoolncutsaddedbeforerestart = 0;
+   SCIP_Longint cutpoolncallsbeforerestart = 0;
+   SCIP_Longint cutpoolnrootcallsbeforerestart = 0;
+   SCIP_Longint cutpoolmaxncutsbeforerestart = 0;
+   SCIP_Real cutpooltimebeforerestart = 0;
    SCIP_Bool statsprinted = FALSE;
    SCIP_Bool restart;
+   SCIP_Bool transferstatistics = FALSE;
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPsolve", FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
@@ -2730,6 +2748,14 @@ SCIP_RETCODE SCIPsolve(
    {
       if( restart )
       {
+         transferstatistics = TRUE;
+         cutpoolncutsfoundbeforerestart = SCIPcutpoolGetNCutsFound(scip->cutpool);
+         cutpoolncutsaddedbeforerestart = SCIPcutpoolGetNCutsAdded(scip->cutpool);
+         cutpooltimebeforerestart = SCIPcutpoolGetTime(scip->cutpool);
+         cutpoolncallsbeforerestart = SCIPcutpoolGetNCalls(scip->cutpool);
+         cutpoolnrootcallsbeforerestart = SCIPcutpoolGetNRootCalls(scip->cutpool);
+         cutpoolmaxncutsbeforerestart = SCIPcutpoolGetMaxNCuts(scip->cutpool);
+
          /* free the solving process data in order to restart */
          assert(scip->set->stage == SCIP_STAGE_SOLVING);
          if( scip->stat->userrestart )
@@ -2797,6 +2823,17 @@ SCIP_RETCODE SCIPsolve(
          /* reset display */
          SCIPstatResetDisplay(scip->stat);
          SCIP_CALL( SCIPcertificateInitTransFile(scip) );
+
+         /* remember cutpool statistics after restart */
+         if( transferstatistics )
+         {
+            SCIPcutpoolAddNCutsFound(scip->cutpool, cutpoolncutsfoundbeforerestart);
+            SCIPcutpoolAddNCutsAdded(scip->cutpool, cutpoolncutsaddedbeforerestart);
+            SCIPcutpoolSetTime(scip->cutpool, cutpooltimebeforerestart);
+            SCIPcutpoolAddNCalls(scip->cutpool, cutpoolncallsbeforerestart);
+            SCIPcutpoolAddNRootCalls(scip->cutpool, cutpoolnrootcallsbeforerestart);
+            SCIPcutpoolAddMaxNCuts(scip->cutpool, cutpoolmaxncutsbeforerestart);
+         }
 
          /* continue solution process */
          SCIP_CALL( SCIPsolveCIP(scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat, scip->mem, scip->origprob, scip->transprob,

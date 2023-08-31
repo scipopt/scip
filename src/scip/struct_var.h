@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -68,14 +77,14 @@ struct SCIP_BranchingData
    SCIP_Real             lpsolval;           /**< sol val of var in last LP prior to bound change, or SCIP_INVALID if unknown */
 };
 
-/** data for infered bound changes */
+/** data for inferred bound changes */
 struct SCIP_InferenceData
 {
    SCIP_VAR*             var;                /**< variable that was changed (parent of var, or var itself) */
    union
    {
-      SCIP_CONS*         cons;               /**< constraint that infered this bound change, or NULL */
-      SCIP_PROP*         prop;               /**< propagator that infered this bound change, or NULL */
+      SCIP_CONS*         cons;               /**< constraint that inferred this bound change, or NULL */
+      SCIP_PROP*         prop;               /**< propagator that inferred this bound change, or NULL */
    } reason;
    int                   info;               /**< user information for inference to help resolving the conflict */
 };
@@ -87,11 +96,11 @@ struct SCIP_BoundChg
    union
    {
       SCIP_BRANCHINGDATA branchingdata;      /**< data for branching decisions */
-      SCIP_INFERENCEDATA inferencedata;      /**< data for infered bound changes */
+      SCIP_INFERENCEDATA inferencedata;      /**< data for inferred bound changes */
    } data;
    SCIP_Longint          certificateindex;   /**< line in certificate for this bound change (-1 if not used) */
    SCIP_VAR*             var;                /**< active variable to change the bounds for */
-   unsigned int          boundchgtype:2;     /**< bound change type: branching decision or infered bound change */
+   unsigned int          boundchgtype:2;     /**< bound change type: branching decision or inferred bound change */
    unsigned int          boundtype:1;        /**< type of bound for var: lower or upper bound */
    unsigned int          inferboundtype:1;   /**< type of bound for inference var (see inference data): lower or upper bound */
    unsigned int          applied:1;          /**< was this bound change applied at least once? */
@@ -112,10 +121,10 @@ struct SCIP_BdChgInfo
    SCIP_Real             newbound;           /**< new value for bound */
    SCIP_Longint          oldcertindex;       /**< certificate line for old bound (-1 if certificate is not used) */
    SCIP_VAR*             var;                /**< active variable that changed the bounds */
-   SCIP_INFERENCEDATA    inferencedata;      /**< data for infered bound changes */
+   SCIP_INFERENCEDATA    inferencedata;      /**< data for inferred bound changes */
    SCIP_BDCHGIDX         bdchgidx;           /**< bound change index in path from root to current node */
    unsigned int          pos:27;             /**< position in the variable domain change array */
-   unsigned int          boundchgtype:2;     /**< bound change type: branching decision or infered bound change */
+   unsigned int          boundchgtype:2;     /**< bound change type: branching decision or inferred bound change */
    unsigned int          boundtype:1;        /**< type of bound for var: lower or upper bound */
    unsigned int          inferboundtype:1;   /**< type of bound for inference var (see inference data): lower or upper bound */
    unsigned int          redundant:1;        /**< does the bound change info belong to a redundant bound change? */
@@ -250,8 +259,8 @@ struct SCIP_Var
    SCIP_Real             primsolavg;         /**< weighted average of all values of variable in primal feasible solutions */
    SCIP_Real             conflictlb;         /**< maximal lower bound of variable in the current conflict */
    SCIP_Real             conflictub;         /**< minimal upper bound of variable in the current conflict */
-   SCIP_Real             conflictrelaxedlb;  /**< minimal relaxed lower bound of variable in the current conflict (conflictrelqxlb <= conflictlb) */
-   SCIP_Real             conflictrelaxedub;  /**< minimal release upper bound of variable in the current conflict (conflictrelqxlb <= conflictlb) */
+   SCIP_Real             conflictrelaxedlb;  /**< maximal relaxed lower bound of variable in the current conflict (conflictrelaxedlb <= conflictlb) */
+   SCIP_Real             conflictrelaxedub;  /**< minimal relaxed upper bound of variable in the current conflict (conflictrelaxedub >= conflictub) */
    SCIP_Real             lazylb;             /**< global lower bound that is ensured by constraints and has not to be added to the LP */
    SCIP_Real             lazyub;             /**< global upper bound that is ensured by constraints and has not to be added to the LP */
    SCIP_DOM              glbdom;             /**< domain of variable in global problem */

@@ -32,13 +32,13 @@ for f in `git ls-files` ; do
     fi
 
     # process files with ZIB copyright string that do not include current year
-    if grep -o 'Copyright (C) [0-9]*-[0-9]* Konrad-Zuse-Zentrum' $f | grep -vq $NEWYEAR ; then
+    if grep -o 'Copyright (c) [0-9]*-[0-9]* Zuse Institute Berlin (ZIB)' $f | grep -vq $NEWYEAR ; then
 	echo "Updating $f"
-	sed -i "s/Copyright (C) \([0-9]*\)-[0-9]* Konrad-Zuse-Zentrum/Copyright (C) \1-$NEWYEAR Konrad-Zuse-Zentrum/g" $f
+	sed -i "s/Copyright (c) \([0-9]*\)-[0-9]* Zuse Institute Berlin (ZIB)/Copyright (c) \1-$NEWYEAR Zuse Institute Berlin (ZIB)/g" $f
     fi
 
     # print matches for lines that have "Copyright" and "Zuse" but are not a valid ZIB copyright
-    grep -iH "Copyright.*Zuse" $f | grep -v "Copyright (C) [0-9]*-$NEWYEAR Konrad-Zuse-Zentrum" || true
+    grep -iH "Copyright.*Zuse" $f | grep -v "Copyright (c) [0-9]*-$NEWYEAR Zuse Institute Berlin (ZIB)" || true
 
 done
 
