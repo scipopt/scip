@@ -401,6 +401,17 @@ SCIP_RETCODE consdataCreate(
       }
    }
 
+#ifndef NDEBUG
+   /* assert that all variables are explicit binary variables
+    * xor-check cannot handle fractional values for implicit binary variables
+    */
+   for( int v = 0; v < (*consdata)->nvars; ++v )
+   {
+      assert(SCIPvarIsBinary((*consdata)->vars[v]));
+      assert(SCIPvarGetType((*consdata)->vars[v]) != SCIP_VARTYPE_IMPLINT);
+   }
+#endif
+
    if( (*consdata)->intvar != NULL )
    {
       /* capture artificial variable */
