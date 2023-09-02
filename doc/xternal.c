@@ -381,6 +381,7 @@
  * - @subpage DECOMP "How to provide a problem decomposition"
  * - @subpage BENDDECF "How to use the Benders' decomposition framework"
  * - @subpage TRAINESTIMATION "How to train custom tree size estimation for SCIP"
+ * - @subpage PROBINGDIVING "How to use probing and diving mode"
  */
 
 /**@page AUTHORS SCIP Authors
@@ -7522,6 +7523,30 @@
  *
  */
 
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+/**@page PROBINGDIVING How to use probing and diving mode
+ *
+ * SCIP contains two methods to perform a temporary dive in the branch-and-bound tree: the diving mode and the probing mode.
+ * Both methods enable the modification of variable bounds, addition of new constraints, or adjustments to the objective function.
+ * Whereas the diving mode works directly on the LP structure, the probing mode creates temporary branch-and-bound nodes, which makes it possible to perform backtracks during a dive.
+ * Probing allows to perform domain propagation at the temporary nodes and provides the ability to solve the LP by column generation if a pricer plugin is implemented; neither is possible in diving mode.
+ *
+ * After entering diving or probing mode by calling SCIPstartDive() and SCIPstartProbing(), respectively, there exist various functions that allow the user to temporarily change the LP.
+ * An overview for diving can be found here[https://www.scipopt.org/doc/html/group__PublicLPDivingMethods.php] and for the probing mode here[https://scipopt.org/doc/html/group__PublicProbingMethods.php].
+ * To reset all changes, the respective mode needs to be ended by calling SCIPendDive() and SCIPendProbing(), respectively.
+ *
+ * Note that, although the state of the LP and the problem is reset after ending probing and diving, both modes can have several effects on the subsequent solving process.
+ * In some situations, when the LP is infeasible for example, conflict analysis will be run in both probing and diving modes, which can lead to globally valid conflict constraints that are then added to the main solving process.
+ * Similarly, the function SCIPpropagateProbing() might find globally valid bound changes, which are added to the main SCIP and considered in the subsequent solving process.
+ * Another way to leverage insights found during probing or diving is to update pseudo costs during both modes, helping make better branching decisions.
+ * This is controlled by setting the parameter "divingpscosts" to TRUE, which is done in the default settings of SCIP.
+ * Moreover, if the LP was not solved to optimality before entering diving mode (or the parameter "resolverestore" is set to TRUE), the LP is resolved to reset the solution.
+ * In some cases, such as when dealing with a numerically difficult instance, this might lead to a different LP state.
+ * Finally, during probing, global variable statistics can be collected by calling SCIPenableVarHistory() after starting probing.
+ * Since these statistics can be used for decision-making in SCIP, enabling their collection can have an effect on the solving process after probing ends.
+ *
+ */
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 /**@page OBJ Creating, capturing, releasing, and adding data objects
