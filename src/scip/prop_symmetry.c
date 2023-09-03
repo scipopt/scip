@@ -7428,22 +7428,24 @@ SCIP_DECL_PROPINITPRE(propInitpreSymmetry)
    {
       SCIP_CALL( SCIPgetIntParam(scip, "misc/usesymmetry", &propdata->usesymmetry) );
    }
+   assert( propdata->usesymmetry >= 0 );
 
-   if ( propdata->usesymmetry >= 0 )
+   /* terminate early if no symmetries will be handled */
+   if ( propdata->usesymmetry == 0 )
+      return SCIP_OKAY;
+
+   /* add symmetry handling constraints if required  */
+   if ( propdata->addconsstiming == 0 )
    {
-      /* add symmetry handling constraints if required  */
-      if ( propdata->addconsstiming == 0 )
-      {
-         SCIPdebugMsg(scip, "Try to add symmetry handling constraints before presolving.\n");
+      SCIPdebugMsg(scip, "Try to add symmetry handling constraints before presolving.\n");
 
-         SCIP_CALL( tryAddSymmetryHandlingMethods(scip, prop, NULL, NULL) );
-      }
-      else if ( propdata->symcomptiming == 0 )
-      {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Symmetry computation before presolving:\n");
+      SCIP_CALL( tryAddSymmetryHandlingMethods(scip, prop, NULL, NULL) );
+   }
+   else if ( propdata->symcomptiming == 0 )
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Symmetry computation before presolving:\n");
 
-         SCIP_CALL( determineSymmetry(scip, propdata, SYM_SPEC_BINARY | SYM_SPEC_INTEGER | SYM_SPEC_REAL, 0) );
-      }
+      SCIP_CALL( determineSymmetry(scip, propdata, SYM_SPEC_BINARY | SYM_SPEC_INTEGER | SYM_SPEC_REAL, 0) );
    }
 
    return SCIP_OKAY;
@@ -7531,6 +7533,10 @@ SCIP_DECL_PROPPRESOL(propPresolSymmetry)
    propdata = SCIPpropGetData(prop);
    assert( propdata != NULL );
    assert( propdata->usesymmetry >= 0 );
+
+   /* terminate early if no symmetries will be handled */
+   if ( propdata->usesymmetry == 0 )
+      return SCIP_OKAY;
 
    /* possibly create symmetry handling constraints */
 
