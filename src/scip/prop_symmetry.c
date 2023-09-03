@@ -6654,7 +6654,7 @@ SCIP_RETCODE tryAddOrbitopesDynamic(
          assert( componentsize == 1 );
 
          SCIP_CALL( SCIPlexicographicReductionAddPermutation(scip, propdata->lexreddata,
-               propdata->permvars, propdata->npermvars, componentperms[0], FALSE, &success) );
+               propdata->permvars, propdata->npermvars, componentperms[0], TRUE, &success) );
          if ( success )
          {
             propdata->componentblocked[c] |= SYM_HANDLETYPE_SYMBREAK;
@@ -7116,7 +7116,7 @@ SCIP_RETCODE tryAddOrbitalRedLexRed(
          {
             assert( componentperms[p] != NULL );
             SCIP_CALL( SCIPlexicographicReductionAddPermutation(scip, propdata->lexreddata,
-                  propdata->permvars, propdata->npermvars, componentperms[p], FALSE, &success) );
+                  propdata->permvars, propdata->npermvars, componentperms[p], TRUE, &success) );
             if ( success )
                propdata->componentblocked[c] |= SYM_HANDLETYPE_SYMBREAK;
          }
