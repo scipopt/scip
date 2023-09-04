@@ -293,6 +293,20 @@ SCIP_RETCODE doScipCreate(
    }
 #endif
 
+#ifdef SCIP_WITH_EXACTSOLVE
+#ifndef SCIP_WITH_BOOST
+   SCIPerrorMessage("SCIP was compiled with exact solve support, but without Boost. Please recompile SCIP with Boost.\n");
+   return SCIP_ERROR;
+#endif
+#ifndef SCIP_WITH_MPFR
+   SCIPerrorMessage("SCIP was compiled with exact solve support, but without MPFR. Please recompile SCIP with MPFR.\n");
+   return SCIP_ERROR;
+#endif
+#ifndef SCIP_WITH_MPFR
+   SCIPerrorMessage("SCIP was compiled with exact solve support, but without GMP. Please recompile SCIP with GMP.\n");
+   return SCIP_ERROR;
+#endif
+#endif
    return SCIP_OKAY;
 }
 

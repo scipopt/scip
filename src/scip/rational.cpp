@@ -1704,6 +1704,7 @@ void RatPrintf(const char *format, ...)
 
 /** @todo exip take care of long overflow */
 #ifdef SCIP_WITH_BOOST
+
 /** returns the numerator of a rational as a long */
 SCIP_Longint RatNumerator(
    SCIP_Rational*        rational            /**< the rational */
@@ -1801,7 +1802,7 @@ SCIP_Real RatRoundReal(
    if( rational->isfprepresentable == SCIP_ISFPREPRESENTABLE_TRUE || roundmode == SCIP_R_ROUND_NEAREST )
       return RatApproxReal(rational);
 
-#if SCIP_WITH_MPFR
+#ifdef SCIP_WITH_MPFR
    {
       mpfr_t valmpfr;
       mpq_t* val;
@@ -1829,10 +1830,12 @@ SCIP_Real RatRoundReal(
       mpfr_clear(valmpfr);
    }
 #else
-
-   current = SCIPintervalGetRoundingMode();
-   if( current != roundmode )
+#ifdef SCIP_DISABLED_CODE
    {
+      SCIP_ROUNDMODE current;
+      Integer numer, denom;
+
+      current = SCIPintervalGetRoundingMode();
       switch(roundmode)
       {
       case SCIP_R_ROUND_DOWNWARDS:
@@ -1847,22 +1850,23 @@ SCIP_Real RatRoundReal(
       default:
          break;
       }
-   }
 
-   nom = RatNumerator(rational);
-   denom = RatDenominator(rational);
+      numer = num(rational);
+      denom = den(rational);
 
-   SCIPdebugMessage("computing %lld/%lld \n", nom, denom);
+      SCIPdebugMessage("computing %s/%s \n", numer.str().c_str(), denom.str().c_str());
 
-   realapprox = ((double) nom) / denom;
-   //realapprox = RgetRealApprox(r);
+      realapprox = ((double) numer) / (double) denom;
 
-   if( current != roundmode )
+      assert(roundmode != SCIP_R_ROUND_DOWNWARDS || Rational(realapprox) <= rational->val);
+      assert(roundmode != SCIP_R_ROUND_UPWARDS || Rational(realapprox) >= rational->val);
+
       SCIPintervalSetRoundingMode(current);
-  #endif
-
-   SCIPdebugMessage("%.*e , Roundmode %d \n",__DBL_DECIMAL_DIG__, realapprox, roundmode );
-
+   }
+#endif
+   SCIPerrorMessage("method RatRoundReal not supported when SCIP is compiled without Boost.\n");
+   SCIPABORT();
+#endif
    return realapprox;
 }
 

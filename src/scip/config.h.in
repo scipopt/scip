@@ -30,5 +30,6 @@
 #cmakedefine SCIP_ROUNDING_FE
 #cmakedefine SCIP_ROUNDING_FP
 #cmakedefine SCIP_ROUNDING_MS
+#cmakedefine SCIP_WITH_EXACTSOLVE
 
 #endif
