@@ -518,7 +518,7 @@ else()
 endif()
 
 # MPFR
-if(MPFR OR AUTOBUILD)
+if((EXACTSOLVE AND MPFR) OR AUTOBUILD)
     message(STATUS "Finding MPFR")
     find_package(MPFR)
     if((NOT MPFR_FOUND) AND (NOT AUTOBUILD))

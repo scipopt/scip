@@ -78,7 +78,7 @@ TestSuite(rationals, .init = setup, .fini = teardown);
 Test(rationals, create_and_free)
 {
    SCIP_Rational** buffer;
-   int nusedbuffers;
+   size_t nusedbuffers;
    nusedbuffers = BMSgetNUsedBufferMemory(buffmem);
 
    RatCreateBufferArray(buffmem, &buffer, 5);
