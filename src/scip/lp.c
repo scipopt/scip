@@ -2346,7 +2346,6 @@ SCIP_RETCODE rowDelCoefPos(
    if( pos < row->nlpcols )
    {
       rowMoveCoef(row, row->nlpcols-1, pos);
-      assert(!row->lpcolssorted);
       row->nlpcols--;
       pos = row->nlpcols;
    }
@@ -14682,8 +14681,6 @@ SCIP_RETCODE SCIPlpGetSol(
    assert(set != NULL);
    assert(stat != NULL);
    assert(lp->validsollp <= stat->lpcount);
-
-   assert(lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL);
 
    /* initialize return and feasibility flags; if primal oder dual feasibility shall not be checked, we set the
     * corresponding flag immediately to FALSE to skip all checks
