@@ -2744,7 +2744,7 @@ SCIP_RETCODE SCIPconflictAnalyzeLP(
       *success = FALSE;
 
    /* check if the conflict analysis is applicable */
-   if( !set->conf_enable || (set->conf_useinflp == 'o' && set->conf_useboundlp == 'o') || set->exact_enabled )
+   if( !set->conf_enable || (set->conf_useinflp == 'o' && set->conf_useboundlp == 'o') )
       return SCIP_OKAY;
 
    /* in rare cases, it might happen that the solution stati of the LP and the LPI are out of sync; in particular this
