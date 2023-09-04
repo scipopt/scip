@@ -407,11 +407,19 @@ add_custom_target(scip_update_githash
 set(WITH_SCIPDEF on)
 
 #Multiprecision
-if(EXACTSOLVE)
+if(EXACTSOLVE OR AUTOBUILD)
     message(STATUS "Building SCIP with support for exact solving mode.")
     # soplex and Boost is required
-    find_package(SOPLEX CONFIG REQUIRED)
-    find_package(Boost 1.65.0 REQUIRED)
+    find_package(SOPLEX CONFIG)
+    find_package(Boost 1.65.0)
+
+    if((NOT Boost_FOUND) AND (NOT AUTOBUILD))
+        message(FATAL_ERROR "Boost Version 1.65 or high is needed to compile with exact solving support.")
+    endif()
+    if((NOT SOPLEX_FOUND) AND (NOT AUTOBUILD))
+        message(FATAL_ERROR "SoPlex is needed as exact LP solver to compile with exact solving support.")
+    endif()
+
     set(SCIP_WITH_EXACTSOLVE ON)
 
     if(Boost_FOUND)
@@ -442,12 +450,12 @@ if(EXACTSOLVE)
          else()
             message(WARNING "SoPlex is needed as exact LP solver to compile with exact solving support.\
                 No SoPlex was found. Continuing without support for exact solving.")
-            set(EXACTSOLVE off)
+            set(SCIP_WITH_EXACTSOLVE off)
          endif()
     else()
         message(WARNING "Boost Version 1.65 or high is needed to compile with exact solving support.\
         No Boost was found. Continuing without support for exact solving.")
-        set(EXACTSOLVE off)
+        set(SCIP_WITH_EXACTSOLVE off)
     endif()
 else()
     message(STATUS "Building SCIP without support for exact solving mode.")
