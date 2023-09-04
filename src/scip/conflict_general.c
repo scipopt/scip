@@ -807,6 +807,7 @@ SCIP_RETCODE addRowToAggrRow(
 {
    SCIP_Bool negated;
    SCIP_Bool success;
+
    assert(set != NULL);
    assert(row != NULL);
    assert(weight != 0.0);
@@ -826,10 +827,10 @@ SCIP_RETCODE addRowToAggrRow(
    {
       SCIP_CALL( SCIPaggrRowAddRow(set->scip, aggrrow, row, weight,  negated ? -1 : 1) );
    }
-   //SCIPsetDebugMsg(set, " -> add %s row <%s>[%g,%g](lp depth: %d): dual=%g -> dualrhs=%g\n",
-   //   row->local ? "local" : "global",
-   //   SCIProwGetName(row), row->lhs - row->constant, row->rhs - row->constant,
-   //   row->lpdepth, weight, SCIPaggrRowGetRhs(aggrrow));
+   SCIPsetDebugMsg(set, " -> add %s row <%s>[%g,%g](lp depth: %d): dual=%g -> dualrhs=%g\n",
+      row->local ? "local" : "global",
+      SCIProwGetName(row), row->lhs - row->constant, row->rhs - row->constant,
+      row->lpdepth, weight, SCIPaggrRowGetRhs(aggrrow));
 
    return SCIP_OKAY;
 }
@@ -1114,11 +1115,11 @@ SCIP_RETCODE addLocalRows(
          if( SCIPsetIsDualfeasZero(set, dualsols[r]) )
             continue;
 
-         if ( set->exact_enabled )
+         if( set->exact_enabled )
          {
-            for (int j = 0; j < row->len; j++)
+            for( int j = 0; j < row->len; j++ )
             {
-               if ( SCIPsetIsInfinity(set, -SCIPvarGetLbGlobal(row->cols[j]->var)) && SCIPsetIsInfinity(set, SCIPvarGetUbGlobal(row->cols[j]->var)) )
+               if( SCIPsetIsInfinity(set, -SCIPvarGetLbGlobal(row->cols[j]->var)) && SCIPsetIsInfinity(set, SCIPvarGetUbGlobal(row->cols[j]->var)) )
                {
                   (*valid) = FALSE;
                   goto TERMINATE; // Adding unbounded variables safely to an aggregation row is not yet supported
@@ -1237,10 +1238,10 @@ SCIP_RETCODE SCIPgetFarkasProof(
 
    /* allocate temporary memory */
    SCIP_CALL( SCIPsetAllocBufferArray(set, &dualfarkas, nrows) );
-   #ifdef SCIP_DEBUG
-   if (set->exact_enabled)
+#ifdef SCIP_DEBUG
+   if( set->exact_enabled )
       SCIP_CALL( SCIPaggrRowCreate(set->scip, &farkasrow_fpdebug) );
-   #endif
+#endif
    BMSclearMemoryArray(dualfarkas, nrows);
 
    /* get dual Farkas values of rows */
@@ -1279,20 +1280,22 @@ SCIP_RETCODE SCIPgetFarkasProof(
          if( SCIPsetIsDualfeasZero(set, dualfarkas[r]) )
             continue;
 
-         if ( set->exact_enabled )
-         {  long certificateIndex;
+         if( set->exact_enabled )
+         {
+            long certificateIndex;
 
-            for (int i = 0; i < row->len; i++)
+            for( int i = 0; i < row->len; i++ )
             {
-               if ( SCIPsetIsInfinity(set, -SCIPvarGetLbGlobal(row->cols[i]->var)) && SCIPsetIsInfinity(set, SCIPvarGetUbGlobal(row->cols[i]->var)) )
+               if( SCIPsetIsInfinity(set, -SCIPvarGetLbGlobal(row->cols[i]->var)) && SCIPsetIsInfinity(set, SCIPvarGetUbGlobal(row->cols[i]->var)) )
                {
                   (*valid) = FALSE;
                   goto TERMINATE; // Adding unbounded variables safely to an aggregation row is not yet supported
                }
             }
-            if (SCIPsetCertificateEnabled(set)) {
+            if( SCIPsetCertificateEnabled(set) )
+            {
                certificateIndex = SCIPhashmapGetImageLong(SCIPgetCertificate(set->scip)->rowdatahash, row->rowexact);
-               if(certificateIndex  == LONG_MAX && SCIProwGetOrigintype(row) == SCIP_ROWORIGINTYPE_SEPA )
+               if( certificateIndex  == LONG_MAX && SCIProwGetOrigintype(row) == SCIP_ROWORIGINTYPE_SEPA )
                {
                   SCIP_CALL( SCIPcertificatePrintMirCut(set, lp, SCIPgetCertificate(set->scip), prob, row, 'L') );
                   certificateIndex = SCIPcertificateGetRowIndex(SCIPgetCertificate(set->scip), row->rowexact, dualfarkas[r]>0);
@@ -1304,6 +1307,7 @@ SCIP_RETCODE SCIPgetFarkasProof(
          if( !row->local )
          {
             SCIP_CALL( addRowToAggrRow(set, row, -dualfarkas[r], farkasrow) );
+
             /* due to numerical reasons we want to stop */
             if( REALABS(SCIPaggrRowGetRhs(farkasrow)) > NUMSTOP )
             {
@@ -1344,8 +1348,8 @@ SCIP_RETCODE SCIPgetFarkasProof(
    /* calculate the current Farkas activity, always using the best bound w.r.t. the Farkas coefficient */
    *farkasact = SCIPaggrRowGetMinActivity(set, prob, farkasrow, curvarlbs, curvarubs, &infdelta);
 
-   //SCIPsetDebugMsg(set, " -> farkasact=%g farkasrhs=%g [infdelta: %u], \n",
-   //   (*farkasact), SCIPaggrRowGetRhs(farkasrow), infdelta);
+   SCIPsetDebugMsg(set, " -> farkasact=%g farkasrhs=%g [infdelta: %u], \n",
+      (*farkasact), SCIPaggrRowGetRhs(farkasrow), infdelta);
 
    /* The constructed proof is not valid, this can happen due to numerical reasons,
     * e.g., we only consider rows r with !SCIPsetIsZero(set, dualfarkas[r]),
@@ -1353,7 +1357,6 @@ SCIP_RETCODE SCIPgetFarkasProof(
     * Due to the latter case, it might happen at least one variable contributes
     * with an infinite value to the activity (see: https://git.zib.de/integer/scip/issues/2743)
     */
-
    if( infdelta || SCIPsetIsFeasLE(set, *farkasact, SCIPaggrRowGetRhs(farkasrow)))
    {
       /* add contribution of local rows */
@@ -1369,33 +1372,35 @@ SCIP_RETCODE SCIPgetFarkasProof(
       }
    }
 
-   for (int i = 0; i < farkasrow->nnz; i++)
+   if( set->exact_enabled )
    {
-      if ( SCIPsetIsInfinity(set, ABS(farkasrow->vals[farkasrow->inds[i]])) )
+      for( int i = 0; i < farkasrow->nnz; i++ )
       {
-         (*valid) = FALSE;
-         goto TERMINATE;
+         if( SCIPsetIsInfinity(set, ABS(farkasrow->vals[farkasrow->inds[i]])) )
+         {
+            (*valid) = FALSE;
+            goto TERMINATE;
+         }
       }
-   }
 
-   if ( set->exact_enabled && SCIPisCertificateActive(set->scip))
-   {
-      //certificatePrintAggrrow(set->scip, SCIPgetCertificate(set->scip), farkasrow, &farkasrow->certificateline);
-      SCIP_ROW** usedrows;
-      SCIP_CALL(SCIPallocBufferArray(set->scip, &usedrows, farkasrow->nrows));
-      for (int i = 0; i < farkasrow->nrows; i++)
+      if( SCIPisCertificateActive(set->scip) )
       {
-         usedrows[i] = SCIPgetLPRows(set->scip)[farkasrow->rowsinds[i]];
+         SCIP_ROW** usedrows;
+         SCIP_CALL(SCIPallocBufferArray(set->scip, &usedrows, farkasrow->nrows));
+         for (int i = 0; i < farkasrow->nrows; i++)
+         {
+            usedrows[i] = SCIPgetLPRows(set->scip)[farkasrow->rowsinds[i]];
+         }
+         SCIPcertificatePrintAggrrow(set, lp, prob, SCIPgetCertificate(set->scip), farkasrow, usedrows, farkasrow->rowweights, farkasrow->nrows, false, &farkasrow->certificateline);
+         SCIPfreeBufferArray(set->scip, &usedrows);
       }
-      SCIPcertificatePrintAggrrow(set, lp, prob, SCIPgetCertificate(set->scip), farkasrow, usedrows, farkasrow->rowweights, farkasrow->nrows, false, &farkasrow->certificateline);
-      SCIPfreeBufferArray(set->scip, &usedrows);
    }
 
   TERMINATE:
-  #ifdef SCIP_DEBUG
-   if (set->exact_enabled)
+#ifdef SCIP_DEBUG
+   if( set->exact_enabled )
       SCIPaggrRowFree(set->scip, &farkasrow_fpdebug);
-   #endif
+#endif
    SCIPfreeBufferArrayNull(set->scip, &localrowdepth);
    SCIPfreeBufferArrayNull(set->scip, &localrowinds);
    SCIPsetFreeBufferArray(set, &dualfarkas);
@@ -1499,7 +1504,7 @@ SCIP_RETCODE SCIPgetDualProof(
    int ncols;
    int r;
 
-   assert(set != NULL);;
+   assert(set != NULL);
    assert(transprob != NULL);
    assert(lp != NULL);
    assert(lp->flushed);
@@ -1560,7 +1565,7 @@ SCIP_RETCODE SCIPgetDualProof(
       goto TERMINATE;
    }
 
-   if ( set->exact_enabled )
+   if( set->exact_enabled )
    {
       SCIP_COL** cols = SCIPgetLPCols(set->scip);
       for (int i = 0; i < SCIPgetNLPCols(set->scip); i++)
@@ -1598,7 +1603,7 @@ SCIP_RETCODE SCIPgetDualProof(
     * possible objective value below the cutoff bound
     */
 
-   if (set->exact_enabled)
+   if( set->exact_enabled )
    {
       double cutoffbound;
       cutoffbound = RatRoundReal(SCIPgetCutoffboundExact(set->scip), SCIP_R_ROUND_UPWARDS);

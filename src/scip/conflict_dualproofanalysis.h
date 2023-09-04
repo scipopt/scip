@@ -25,7 +25,6 @@
 /**@file   conflict_dualproofanalysis.h
  * @ingroup OTHER_CFILES
  * @brief  internal methods for dual proof conflict analysis
- * @author Tobias Achterberg
  * @author Timo Berthold
  * @author Jakob Witzig
  * @autor  Sander Borst

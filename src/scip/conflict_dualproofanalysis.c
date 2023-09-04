@@ -27,6 +27,7 @@
  * @brief  internal methods for dual proof conflict analysis
  * @author Timo Berthold
  * @author Jakob Witzig
+ * @autor  Sander Borst
  *
  * In dual proof analysis, an infeasible LP relaxation is analysed.
  * Using the dual solution, a valid constraint is derived that is violated
@@ -329,7 +330,7 @@ SCIP_RETCODE proofsetAddAggrrow(
 
    SCIPsetFreeBufferArray(set, &vals);
 
-   if ( set->exact_enabled && SCIPisCertificateActive(set->scip))
+   if( set->exact_enabled && SCIPisCertificateActive(set->scip) )
    {
       assert(aggrrow->certificateline != LONG_MAX);
       assert(proofset->certificateline == LONG_MAX); //@todo
@@ -946,6 +947,17 @@ SCIP_RETCODE createAndAddProofcons(
       toolong = (toolong && (nnz > set->conf_maxvarsfac * transprob->nvars));
    }
 
+   /* don't store global dual proofs that are too long / have too many non-zeros */
+      if( toolong && !set->exact_enabled )
+      {
+         if( applyglobal )
+         {
+            SCIP_CALL( propagateLongProof(conflict, set, stat, reopt, tree, blkmem, origprob, transprob, lp, branchcand,
+                  eventqueue, cliquetable, coefs, inds, nnz, rhs, conflicttype, proofset->validdepth) );
+         }
+         return SCIP_OKAY;
+      }
+
    /* check if conflict contains variables that are invalid after a restart to label it appropriately */
    hasrelaxvar = FALSE;
    contonly = TRUE;
@@ -968,7 +980,7 @@ SCIP_RETCODE createAndAddProofcons(
       return SCIP_INVALIDCALL;
 
    SCIPdebugMessage("Create constraint from dual ray analysis\n");
-   if (set->exact_enabled)
+   if( set->exact_enabled )
    {
       SCIP_Rational* lhs_exact;
       SCIP_Rational* rhs_exact;
@@ -1009,29 +1021,19 @@ SCIP_RETCODE createAndAddProofcons(
    }
    else
    {
-      /* don't store global dual proofs that are too long / have too many non-zeros */
-      if( toolong  )
-      {
-         if( applyglobal )
-         {
-            SCIP_CALL( propagateLongProof(conflict, set, stat, reopt, tree, blkmem, origprob, transprob, lp, branchcand,
-                  eventqueue, cliquetable, coefs, inds, nnz, rhs, conflicttype, proofset->validdepth) );
-         }
-         return SCIP_OKAY;
-      }
       SCIP_CALL( SCIPcreateConsLinear(set->scip, &cons, name, 0, NULL, NULL, -SCIPsetInfinity(set), rhs,
             FALSE, FALSE, FALSE, FALSE, TRUE, !applyglobal,
             FALSE, TRUE, TRUE, FALSE) );
+
       for( i = 0; i < nnz; i++ )
       {
          int v = inds[i];
          SCIP_CALL( SCIPaddCoefLinear(set->scip, cons, vars[v], coefs[i]) );
       }
-
    }
 
    /* do not upgrade linear constraints of size 1 */
-   if( nnz > 1 && !set->exact_enabled)
+   if( nnz > 1 && !set->exact_enabled )
    {
       upgdcons = NULL;
       /* try to automatically convert a linear constraint into a more specific and more specialized constraint */
@@ -1240,7 +1242,7 @@ SCIP_RETCODE SCIPconflictFlushProofset(
          assert(proofsetGetConftype(conflict->proofsets[i]) != SCIP_CONFTYPE_UNKNOWN);
 
          /* only one variable has a coefficient different to zero, we add this bound change instead of a constraint */
-         if( SCIPproofsetGetNVars(conflict->proofsets[i]) == 1 && !set->exact_enabled)
+         if( SCIPproofsetGetNVars(conflict->proofsets[i]) == 1 && !set->exact_enabled )
          {
             SCIP_VAR** vars;
             SCIP_Real* coefs;
@@ -1616,7 +1618,7 @@ SCIP_RETCODE tightenDualproof(
    }
 
    /* apply coefficient tightening to initial proof */
-   if (!set->exact_enabled)
+   if( !set->exact_enabled )
       tightenCoefficients(set, proofset, &nchgcoefs, &redundant);
 
    /* it can happen that the constraints is almost globally redundant w.r.t to the maximal activity,
