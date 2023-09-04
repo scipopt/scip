@@ -140,9 +140,21 @@ SCIP_Real SCIPeventGetOldbound(
    SCIP_EVENT*           event               /**< event */
    );
 
+/** gets exact old bound for a bound change event */
+SCIP_EXPORT
+SCIP_Rational* SCIPeventGetOldboundExact(
+   SCIP_EVENT*           event               /**< event */
+   );
+
 /** gets new bound for a bound change event */
 SCIP_EXPORT
 SCIP_Real SCIPeventGetNewbound(
+   SCIP_EVENT*           event               /**< event */
+   );
+
+/** gets exact new bound for a bound change event */
+SCIP_EXPORT
+SCIP_Rational* SCIPeventGetNewboundExact(
    SCIP_EVENT*           event               /**< event */
    );
 
