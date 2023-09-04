@@ -1,0 +1,549 @@
+
+Changes from nauty 2.4 to nauty 2.5
+-----------------------------------
+
+* Add Traces.  The main files are traces.h and traces.c, but
+  many changes were made to dreadnaut.c and nausparse.c also.
+
+* Allow thread-safe storage if requested by configure --enable-tls
+  and available.  This allows parallel running of nauty and Traces
+  in separate threads.
+
+* The makefile now creates static libraries like nauty.a in 
+  addition to object files like nauty.o.
+
+* Remove all uses of types permutation, nvector, np2vector, shortish.
+  These are now int.
+
+* Add schreier.h, schreier.c and the optional use of the random
+  Schreier method in nauty.  These are also used in Traces, but
+  are not optional there.
+
+* Add large-file support to all programs, assuming it is available.
+  Now there is no longer a 4GB limit on files read or written on
+  32-bit systems.
+
+* Use gcc extensions like __builtin_clz() if available and not
+    disabled by configure --disable-clz.
+  Use FIRSTBITNZ instead of FIRSTBIT if the argument is certain
+    to be nonzero.
+
+* New macros defined in nauty.h:
+   COUNTER_FMT
+   PRINT_COUNTER
+   SETWORDSNEEDED
+   ADDONEARC
+   ADDONEEDGE
+   EMPTYGRAPH
+
+* The options structure has a new boolean field schreier.
+
+* New procedures:
+  densenauty()  in naugraph.c  - simplified dense graph interface
+  sparsenauty() in nausparse.c - simplified sparse graph interface
+  writegroupsize() in nautil.c - write two part group size
+  copy_sg() in nausparse.c     - make a copy of a sparse graph
+
+  densenauty() and sparsenauty() are now the recommended ways to
+  call nauty from a program.  See the sample programs in the package.
+
+* Use quicksort in place of shell sort in many places.  This is 
+  implemented in the file sorttemplates.c that can be used in any
+  applications.
+
+* Apply the const attribute more liberally across the code.
+
+* The sparsegraph fields nde and *v changed type from int to size_t.
+  This is to allow more than 2^31 edges on 64-bit hardware.
+
+* sparsegraph.h and sparsegraph.c:
+    Corrected definition of SG_DECL in sparsegraph.h. (The erroneous
+       definition would have worked but generated warnings.)
+    Added DEFAULTOPTIONS_SPARSEDIGRAPH.
+    Added comparelab_tr(), testcanlab_tr(), updatecan_tr() for Traces.
+
+* gtools.h and gtools.c:
+    Now gtools.h is made from gtools-h.in by configure.
+    Updated G6LEN() to work for larger graphs.
+    Use large-file functions fseeko(), ftello() if possible.
+
+* Most tools now use the random number generator in naurng.c rather
+  than that in rng.c.
+
+* gutils.h, gutil1.c and gutil2.c:
+    New procedures maxcliques(), indpathcount1(), indcyclecount1(),
+      indcyclecount().
+
+* Invariants:
+    Corrected getbigcells(), making a small change to invariants
+       celltrips, cellquins and refinvar.
+
+* dreadnaut:
+    Sparse nauty and Traces now incorported.
+    New commands: A, G, F, FF, sr, O, OO, P, PP, S, V
+    w command is now in units of 2*m.
+    Command-line can run commands using -o.
+    M command is extended; now applies to i as well as x.
+    Implement ANSI controls if requested.
+    File names for > and < can be given in "..." to allow spaces.
+ 
+* Updates to utilities:
+     listg:  add -b (Bliss format), -G (GRAPE format) and
+          -y/-Y (dotty format), -H (HCP format)
+     labelg: add -t (Traces) and -i16 (refinvar)
+     countg/pickg: add -m (vertices of min degree),
+         -M (vertices of max degree), -H (induced cycles),
+         -K (number of maximal independent sets)
+     genrang: add -t (tree)
+     genbg: add -A (antichain)
+        The makefile can also make genbgL which makes larger sizes
+     directg: add PROCESS feature
+     shortg: -S (use sparse nauty), -t (use traces), i16 (refinvar)
+
+* New utilities:
+     ranlabg: randomly relabel graphs
+     linegraphg: compute linegraphs
+     subdivideg: compute subdivision graphs
+     watercluster2: orient edges of graphs (by Gunnar Brinkmann)
+
+* Version 25r2 fixed a rare bug in Traces
+* Version 25r3 fixed some problems in the configure script (thanks to Daniel Grayson)
+
+Changes from nauty 2.5 to nauty 2.6
+-----------------------------------
+
+Changes to dreadnaut:
+* dreadnaut now catches control-C when nauty or Traces is running.
+  This uses the global variable nauty_kill_request.
+* new command "vv" to display sorted degree sequence.
+* new command "r&" to relabel according to the partition.
+* new command "->>" to flush the output.
+* new command "B" to turn on output flushing at the end of every
+  command.  Command "-B" turns it off.  Default off.
+* Command with short arguments now have to be all on one line.
+  Most errors cause the rest of the input line to be skipped.
+* The "R" command now preserves the colouring.
+
+Changes to nauty:
+* nauty has an extra hook usercanonproc().
+* The maximum number of vertices is now 2 billion.
+* Many modern processors have instructions POPCNT and CLZ* that can
+  help nauty.  The configuration script now looks for them and
+  attempts to use them if possible.
+
+New file formats (see formats.txt for definitions):
+* sparse6 format is now extended with "incremental sparse6"
+  format. Graphs in incremental sparse6 format specify only the
+  differences from the previous graph.
+  As yet, incremental sparse6 is only supported by copyg (which
+  has new options -i/-I to write this format), listg, pickg and
+  countg. For listg, pickg and countg, the -p switch might not work
+  if the input is incremental.
+* The new format digraph6 is for directed graphs.  There are
+  procedures for reading and writing it in gtools.c.
+  The following programs can handle digraph6 so far:
+    labelg, shortg, ranlabg, directg, gentourng, amtog, complg,
+    copyg, dretog, catg, listg, showg, converse, converseg, delptg,
+    deledgeg, countg/pickg (partially), genrang (partially), genspecialg
+
+New utilities:
+*  converseg : take converse of a digraph
+*  cubhamg : hamiltonian cycles in subcubic graphs
+*  hamheuristic : heuristic for hamiltonian cycles
+*  twohamg : partition quartic graphs into two hamiltonian cycles
+*  genspecialg : generate special graphs like paths and cycles
+*  gentreeg : generateg trees, based on a program of Li and Ruskey.
+*  genquarticg : generate quartic graphs, written with Narjess Afzaly.
+*  dretodot : reads one graph in dreadnaut format and writes a picture
+     of it in dot format. You can use tools in the graphviz library
+     to deal with it.
+*  vcolg : colours the vertices of graphs in all distinct ways.
+     If you choose the number of colours to be 2, this the same as
+     adding loops in all distinct ways.
+*  delptg : delete vertices.
+As always, run the command with argument "-help" to get instructions.
+
+Extra options in existing utilities:
+* amtog now properly handles loops.  (Recall that loops are ok
+    in sparse6 format but not in graph6 format.)
+  amtog has a switch -o that allows selecting one colour class of
+  a coloured graph, and -w to suppress the warning about loops.
+* copyg has -z for writing digraph6 format. An undirected graph
+  can be written as a digraph, but not vice-versa.
+* directg default output format is directg6.
+  directg has a new option -s for splitting into cases.
+* dretog allows "d" command for digraph input.
+* Option -B added to countg and pickg.
+* complg has new option -R.
+* genrang has new option -d that makes random regular graphs of
+  any degree but does not guarantee uniform distribution.
+  Also option -T for random tournaments.
+  Some options now work for bipartite graphs; specify the number
+  of vertices on each side like n1,n2.
+* labelg has extra options -C and -W. These can help to determine
+    what is different between two different programs that generate
+    almost the same output.
+* linegraphg has -t for making the total graph.
+* Most utilities can take a single argument --version, which will
+  print a message stating which nauty&traces package they belong to.
+
+Other changes:
+* Traces has substantial improvements.
+* Extra argument macros SWDOUBLE, SWREALRANGE, SWSEQUENCE in gtools.h.
+* girth() in gutil1.c got the wrong answer for K2.  Thanks to
+  Sean Irvine for reporting it.
+* gtools.c defines checkgline() to check if a graph input 
+  line looks ok.
+* The procedures in gtnauty.c, used by labelg and other utilities,
+  had an old limit of 2^22 (4 million+) vertices.  This limit is
+  now removed.  Also a new procedure setlabptn() was added to set
+  lab/ptn according to an integer weight.
+* planarg -p had a bug causing wrong output for n >= 65536.  Fixed.
+* The structured type bigint has disappeared in favour of integer type
+  nauty_counter, which is "unsigned long long" if that exists and
+  "unsigned long" is only 32 bits, or "unsigned long" otherwise.
+  This means that some plugins for geng/genbg/gentourng may need
+  to be revised.
+
+Changes from nauty 2.6 to nauty 2.7
+-----------------------------------
+
+* -h and -k options for independent set size and clique size were added
+  to countg and pickg.  For some graphs these use the program cliquer,
+  kindly provided by Sampo Nisjkanen and Patric Ostergard.
+
+* Macros SWHIBIT, REMOVEHIBIT and ATMOSTONEBIT added to nauty.h.
+
+* Added option -a to complg.
+
+* Program copyg can now be used to make a simple filter.  See the
+  instructions inside the source file and the example numleaves.c.
+
+* Programs countg and pickg can now display some parameter values
+  as ranges instead of writing a separate line for each value. For
+  example, countg --ne:T will write a separate line for each number
+  of vertices and edges, with that line showing the range of the
+  number of triangles. Everything after the ':' is shown as a range.
+  There is also a switch -1 that causes output to be in a simple
+  numerical table easy to read from a program and a similar switch
+  -2 that omits counts.
+
+* Program vcolg now handles digraphs and graphs with loops.
+
+* genrang can now make random spanning trees of K(n1,n2)
+
+* amtog has an "s" command for reading tournaments
+
+* gentreeg made the same tree twice for n=2; thanks to Kevin Ryde
+  for reporting it.
+
+* The configure script (compiled from configure.ac) was modified to
+  update some tests and remove some old code that is useless. The
+  time-critical parts of nauty are now compiled with
+     -march=native
+  if the compiler allows those switches. Since this may result in
+  a binary which does not run on older machines in the same family,
+  there is a configuration option  --enable-generic  to disable
+  these switches.  To work around a bug with -march-native for
+  gcc version 7 on MacOSX computers (due to the linker not knowing
+  some of the instructions), the extra switch -mno-avx is also added
+  if it appears necessary.
+
+* genspecialg can now make multiple special graphs at once.
+  The -b option has been extended to allow removing a matching from
+  a complete bipartite graph.
+
+* watercluster2 has an option Z to write in digraph6 format.
+
+* Problems for input of graphs with 0 vertices were fixed with help
+  from Kevin Ryde.  However, note that many utilities in the package
+  will not work with such graphs.  It is NOT TRUE that graphs of
+  order 0 are now supported.  However, the primary function nauty()
+  (but not traces()) should work for both dense and sparse versions.
+
+* Stronger measures are taken to ensure that the sort order used by
+  shortg is plain byte order. This corresponds to the C collation
+  order, also known as POSIX, but it may be different from the
+  collation order used by default on your command line. This means
+  that utilities like sort, uniq, comm and join might consider the
+  output of shortg to be out of order. To avoid this, define the
+  environment variable LC_ALL to equal the string "C".
+     bash:   export LC_ALL=C
+     tcsh:   setenv LC_ALL C
+  If LC_ALL is undefined, it will also be sufficient to define
+  LC_COLLATE to equal "C".  The POSIX standard says that LC_ALL
+  takes precedence over LC_COLLATE if both are defined, but this
+  might not be true for older systems.  If you really don't want
+  to change environment variables, you can compile shortg with
+  -DKEEP_SORT_LOCALE but beware that some collation orders are
+  are not even deterministic (i.e. different characters might
+  compare equal).
+
+* The bipartite graph generator genbg now has a -Y switch to
+  specify the minimum number of common neighbours for two
+  vertices on the second side.
+
+* A new version of Traces (including some bug fixes) is included.
+  See traces.c for more.
+
+* New utilities: underlyingg takes the undirected graph underlying
+  a graph or digraph.  assembleg combines a file of graphs (usually
+  connected graphs) as components to make disconnected graphs
+  of a specified size.
+
+* geng has been modified to allow more than 32 vertices.  The
+  makefile knows "geng" for up to 32 vertices, and "gengL" for
+  up to 64 vertices.
+
+* pickg and countg now have -X to reverse the selection.
+  A change was made to allow these utilities to work on Windows
+  computers with sizeof(long) < sizeof(void*).  Also, pickg
+  now writes a header if there is one in the input file.
+
+* listg has -L that can be used in conjunction with -W or -M to
+  write the Laplacian matrix instead of the adjacency matrix.
+
+* Fixed a possible bug in the combination "shortg -kt".
+
+* You can change the archive manager (default "ar") by defining
+  the environment variable AR at configure time.
+
+* Some portability issues in nautycliquer.c were fixed (thanks
+  to Isuru Fernando).
+
+* The -B/--B switch of listg/countg is now isomomorphism-invariant.
+  It equals 0 for non-bipartite graph, and the smallest possible
+  side of a 2-colouring otherwise.  This change reflects rewriting
+  of function bipartiteside() in gutil1.c.  The values can differ
+  from those for nauty version <= 2.7rc1 when there are three or
+  more components.
+
+* Fixed the type of the 4th parameter of options.usercanonproc.
+
+* Check kill requests more often. If the global int variable
+  nauty_kill_request becomes nonzero, nauty and Traces will
+  exit at certain key points. In dreadnaut nauty_kill_request
+  is set if the user types control-C (if the operating system
+  provides this facility).
+
+* nauty.h loads <limits.h> and <stdint.h> if they exist.
+
+* Some features were added to assist installation on non-POSIX
+  systems or where 'configure' can't be easily run, such as
+  Microsoft Visual Studio. These changes are mostly in nauty.h.
+  1. The predefined names _MSC_VER, _WIN32 and _WIN64 are examined.
+  2. HAVE_HWLZCNT and HAVE_HWPOPCNT can be defined at compile time
+     (to 0 or 1) to indicate the presence of hardware lzcnt and
+     popcnt instructions.
+  3. The FIRSTBITNZ, FIRSTBIT and POPCOUNT macros can be defined
+     at compile time (though it is unlikely you will be able to do
+     much better than the default versions). FIRSTBIT is defined
+     in terms of FIRSTBITNZ if it isn't defined separately.
+  4. Loading of unavailable header files can be disabled by
+     predefining macros: AVOID_SYS_TYPES_H, AVOID_UNISTD_H,
+     AVOID_STRINGS_H and AVOID_SYS_WAIT_H.
+  There is more to do here; there are lots of variations in
+  different software versions and documentation is inconsistent.
+  Thanks to Andy Mercier for discussions so far.
+
+* Bug fixed in directg that caused crash when digraphg6 output
+  was selected for more than WORDSIZE vertices.
+
+* The external variables labelorg and nauty_kill_request were
+  moved into the "C" block of nauty.h for C++ compatibility.
+
+* Identical BUGS in naugraph.c and sparsegraph.c.
+  The static sizes of dnwork[] and snwork[] were too small.
+  This bug first crept into version 2.6 beta 10.  To meet this
+  bug, all of the following must be true:
+  (a) called densenauty() or sparsenauty() rather than calling
+      nauty() directly.
+  (b) processed graphs with 20 or more vertices.
+  (c) compiled naugraph.c or sparsegraph.c with an explicit
+      value of MAXN, rather than the default MAXN=0.
+      This includes using the libraries nauty1.a, nautyW1.a
+      or nautyL1.a. However nauty.a, nautyW.a and nautyL.a
+      were safe.  Likewise, the utilities distributed with
+      nauty were also safe.
+  Thanks to James Trimble and Chris Jefferson for uncovering this.
+  Versions 2.6r12 and 2.7rc5 were fixed.
+
+* A bug in nauty.h caused compilation failure on some hardware
+  without popcnt instructions. You didn't encounter this if you
+  didn't get compile-time error messages about POPCOUNT.  Thanks
+  to Anthony Matos for reporting this error.
+
+* Tweak the configure script to more reliably detect standard
+  function declarations and to improve the test for the POPCNT
+  instruction.
+
+* Don't define INFINITY even if it isn't defined in math.h.
+  Note that nauty's infinity is NAUTY_INFINITY and plain
+  INFINITY is a required macro in the C standard.
+
+* A bug prevented a filtering version of copyg (needs special
+  compilation, see copyg.c) from playing nice with incremental
+  sparse6 input. You didn't meet this bug unless you saw an
+  error message like "readg_inc: missing prior".  Another
+  bug in the same facility caused the number of outputs to
+  be reported as the same as the number of inputs even if some
+  of them had been filtered out.  The outputs themselves were
+  correct.
+
+* -march=native is not added to compiles if the user has
+  provided an architecture via CC or CFLAGS.
+
+* traces.h has extern "C" { } for function declarations to
+  assist calling from C++.
+
+* nauty.h defines FLEX_ARRAY_OK to 1 if flexible array
+  members of structures are allowed, and 0 otherwise.
+
+* Compiling with preprocessor variable USE_TLS defined will
+  have the same effect as configuring with --enable-tls.
+  (a) If either --enable-tls or USE_TLS is defined then:
+     USE_TLS is defined, HAVE_TLS is defined as 1, and
+     TLS_ATTR is defined to be the attribute for thread-local
+     memory (either thread_local, _Thread_local, __thread or
+     __declspec(thread)).
+     If the compiler doesn't support thread-local memory at
+     all, an error is issued.
+  (b) If --enable-tls is not used and USE_TLS is not defined,
+     then USE_TLS is not defined, HAVE_TLS is defined as 0,
+     and TLS_ATTR is defined as empty.
+
+(1) The line "AR?=ar" in the makefile violated the Posix standard, see
+  https://pubs.opengroup.org/onlinepubs/9699919799/utilities/make.html
+  It is now gone. This shouldn't be a problem since the variable AR
+  is used instead and its default value is "ar" unless a different
+  value is specified on the make command line.
+(2) There is an install target.  It puts executables into ${bindir},
+  include files into ${includedir}, static libraries into ${libdir},
+  and pkg-config configuration files into ${pkgconfigexecdir}.
+  Configure with --prefix=PATH to specify a parent directory for these.
+  There is still no target for dynamic libraries.
+(3) Several rearrangements that most users won't notice.
+
+* New utility nbrhoodg can extract neighbourhoods of vertices
+
+Changes from nauty 2.7 to nauty 2.8
+-----------------------------------
+
+* New utilities: (as always, use --help to get help)
+  - addptg : add additional vertices in various ways
+  - ancestorg : removes a specified number of final vertices
+  - productg : product of two graphs (such as Cartesian product)
+  - genposetg : generate posets (mostly written by Gunnar Brinkmann)
+  - dimacs2g : read files of graphs in DIMACS format
+
+* Changes to existing utilities:
+  - geng got sigificantly faster for connected graphs with a
+    small number of edges.  However, if you want trees the program
+    gentreeg is still much faster.  There are also new options:
+      -k  generate graphs without K4
+      -T  generate chordal graphs
+      -S  generate split graphs
+      -P  generate perfect graphs
+      -F  generate claw-free graphs
+    All the options can be used in combination unless the program
+    complains.
+    There is a program callgeng2.c that shows how geng can be
+    called in multiple threads. Read the instructions at the
+    start of the source file. It has a target in the makefile but
+    it might not work with all operating systems and compilers.
+  - countg/pickg now have an expanded set of available properties,
+      using double letters. Because --eee and similar are ambiguous,
+      options can be separated by commas: --e,ee or --ee,e.
+      Here are all the options added since version 2.7:
+       -LL  2-cycles (of digraphs)
+       -ee  non-edges (including non-loops for digraphs)
+       -TT  independent sets of size 3
+       -x   sources
+       -xx  sinks
+       -W   4-cycles (undirected only so far)
+       -WW  diamonds (4-cycles with diagonal), only undirected
+  - gentreeg now allows a range of number of vertices.
+      Example: forests on 15 vertices with no isolated vertices:
+                gentreeg 2:15 | assembleg -n15cL
+      Also new option -i for no vertices of degree 2.
+      Fixed output for n=1, diameter > 0.
+  - genrang has an option -M# can be used in conjunction with
+      -d (pseudo-random regular graphs). It runs a Markov chain
+      for #*n steps. The chain has a uniform distribution as 
+      its limit and, although the precise rate of convergence
+      is unknown, running it with a decent number of iterations
+      will produce a more uniform distribution than -d alone.
+  - listg has a new option -S for use with -M or -W to write
+      the signless Laplacian.
+  - subdivideg now works for digraphs.
+  - delptg has several new options:
+       -v  select which vertices to delete
+       -m  lower bound on minimum degree of output graphs
+       -a  delete a clique
+       -b  delete an independent set
+       -i  leave vertices as isolates rather than removing them
+       -r  delete a random set of vertices
+  - multig has a new option -V that lets it read the -T outout of
+       vcolg. Also, the output code has been made faster.
+  - vcolg has new options bounding the number of vertices of each
+    colour and bounding the vertex degrees for each colour. Also
+    the output code has been made faster.
+  - directg has a new option -a for acyclic orientations
+
+* New functions
+  - gutil1.c has new procedures:
+       numcomponents(g,m,n) for counting the components of an
+         undirected graph, and
+       sources_sinks(g,m,n,*sources,*sinks) for counting sources
+         and sinks in digraphs.
+  - gutil2.c has new procedures:
+       digoncount(g,m,n) that counts how many cycles of length 2
+         a digraph has.
+       numind3sets1(g,n) for counting independent sets of size 3,
+         so far only for n <= WORDSIZE.
+       numsquares(g,m,n) counts 4-cycles in undirected graphs.
+  - gtnauty.c has a new procedure
+      breakcellwt() to split a cell according to weights on the
+      vertices
+  - naututil.c has new procedures
+      settolist() for converting a set into a list of integers
+      listtoset() for converting a list of integers into a set
+  Functions nextelement(), permset(), setsize(), setinter(),
+  settolist() and listtoset() now work for multi-word sets
+  even if nauty is compiled with MAXN=WORDSIZE.
+
+* Miscellaneous
+  - The default "make" now creates the 16-bit libraries nautyS.a
+    and nautyS1.a. There are new targets for making thread-enabled
+    libraries nautyT.a, nautyT1.a, nautyTW.a, nautyTW1.a,
+    nautyTL.a and nautyTL1.a; these are not built by "make all".
+  - The compiler switch -march=native is omitted if the build is
+    for Alpine Linux. This is due to a problem with the compiler
+    issuing illegal instructions. Thanks to Gordon Royle for
+    helping with this.
+  - Changes were made to the configure script and nauty.h to
+    support ARM64 (aarch64) architecture. So far this is only
+    tested on the Apple M1 architecture.
+  - Bugs were fixed in multig (if multiple edges were present,
+    also combination of -V and the INPUTGRAPH hook),
+    genspecialg (argument parsing for -T), pickg/countg (help
+    text for -s,-S), and watercluster2 (shifting right by the
+    wordsize is undefined! This only effected clang.), assembleg
+    found by Szabolcs Horvát.
+  - Programs that use randomisation now initialise the random
+    generator from the high-resolution realtime clock if possible.
+    Specifically, it uses the first available of gettimeofday(),
+    clock_gettime() and time(). This makes it much less likely
+    that processes started close together will use the same seed.
+  - The proceedure gtools_getline() in gtools.c, which is used by
+    most utilities for reading graphs, is now faster except for
+    for very small graphs.
+
+* A new version of Traces is included, that fixes a bug reported
+  by Aleksandr Krotov and makes other improvements. A side-effect
+  is that the canonical labelling made by Traces has changed.
+
+* Nauty now uses a more standard version numbering system such as
+  2.8.6. Corrections will be made to the most recent version only.
+
+----- Now 2.8.6

@@ -1,3 +1,44 @@
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                           */
+/*                  This file is part of the program and library             */
+/*         SCIP --- Solving Constraint Integer Programs                      */
+/*                                                                           */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*                                                                           */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
+/*                                                                           */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
+/*                                                                           */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+/**@file   conflict_dualproofanalysis.c
+ * @ingroup OTHER_CFILES
+ * @brief  internal methods for dual proof conflict analysis
+ * @author Timo Berthold
+ * @author Jakob Witzig
+ *
+ * In dual proof analysis, an infeasible LP relaxation is analysed.
+ * Using the dual solution, a valid constraint is derived that is violated
+ * by all values in the domain. This constraint is added to the problem
+ * and can then be used for domain propagation. More details can be found in [1]
+ *
+ * [1] J. Witzig, T. Berthold, en S. Heinz, ‘Computational aspects of infeasibility analysis in mixed integer programming’,
+ * Math. Prog. Comp., mrt. 2021, doi: 10.1007/s12532-021-00202-0.
+ */
+
+/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
 #include "lpi/lpi.h"
 #include "scip/certificate.h"
 #include "scip/clock.h"
@@ -127,7 +168,7 @@ void SCIPproofsetFree(
 }
 
 #ifdef SCIP_DEBUG
-
+/** print a proof set */
 void proofsetPrint(
    SCIP_PROOFSET*        proofset,
    SCIP_SET*             set,
@@ -356,6 +397,7 @@ SCIP_RETCODE SCIPconflictInitProofset(
 
    return SCIP_OKAY;
 }
+
 /** resizes proofsets array to be able to store at least num entries */
 static
 SCIP_RETCODE conflictEnsureProofsetsMem(
@@ -380,7 +422,6 @@ SCIP_RETCODE conflictEnsureProofsetsMem(
    return SCIP_OKAY;
 }
 
-
 /** add a proofset to the list of all proofsets */
 static
 SCIP_RETCODE conflictInsertProofset(
@@ -400,7 +441,6 @@ SCIP_RETCODE conflictInsertProofset(
 
    return SCIP_OKAY;
 }
-
 
 /** tighten the bound of a singleton variable in a constraint
  *
@@ -689,6 +729,7 @@ SCIP_Real getMaxActivity(
    return QUAD_TO_DBL(maxact);
 }
 
+/** propagate a long proof */
 static
 SCIP_RETCODE propagateLongProof(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
@@ -790,7 +831,6 @@ SCIP_RETCODE propagateLongProof(
 
    return SCIP_OKAY;
 }
-
 
 /** creates a proof constraint and tries to add it to the storage */
 static
@@ -1117,7 +1157,7 @@ SCIP_RETCODE createAndAddProofcons(
    return SCIP_OKAY;
 }
 
-/* create proof constraints out of proof sets */
+/** create proof constraints out of proof sets */
 SCIP_RETCODE SCIPconflictFlushProofset(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
@@ -1238,6 +1278,7 @@ SCIP_RETCODE SCIPconflictFlushProofset(
 
 
 #ifdef SCIP_DEBUG
+/** print violation for debugging */
 static
 void debugPrintViolationInfo(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -1314,8 +1355,8 @@ SCIP_RETCODE separateAlternativeProofs(
    SCIP_Real* cutcoefs;
    SCIP_Real cutefficacy;
    SCIP_Real cutrhs;
-   SCIP_Real proofefficiacy;
-   SCIP_Real efficiacynorm;
+   SCIP_Real proofefficacy;
+   SCIP_Real efficacynorm;
    SCIP_Bool islocal;
    SCIP_Bool cutsuccess;
    SCIP_Bool success;
@@ -1333,15 +1374,15 @@ SCIP_RETCODE separateAlternativeProofs(
    inds = SCIPaggrRowGetInds(proofrow);
    nnz = SCIPaggrRowGetNNz(proofrow);
 
-   proofefficiacy = SCIPaggrRowGetMinActivity(set, transprob, proofrow, curvarlbs, curvarubs, &infdelta);
+   proofefficacy = SCIPaggrRowGetMinActivity(set, transprob, proofrow, curvarlbs, curvarubs, &infdelta);
 
    if( infdelta )
       return SCIP_OKAY;
 
-   proofefficiacy -= SCIPaggrRowGetRhs(proofrow);
+   proofefficacy -= SCIPaggrRowGetRhs(proofrow);
 
-   efficiacynorm = SCIPaggrRowCalcEfficacyNorm(set->scip, proofrow);
-   proofefficiacy /= MAX(1e-6, efficiacynorm);
+   efficacynorm = SCIPaggrRowCalcEfficacyNorm(set->scip, proofrow);
+   proofefficacy /= MAX(1e-6, efficacynorm);
 
    /* create reference solution */
    SCIP_CALL( SCIPcreateSol(set->scip, &refsol, NULL) );
@@ -1385,7 +1426,7 @@ SCIP_RETCODE separateAlternativeProofs(
    success = (success || cutsuccess);
 
    /* replace the current proof */
-   if( success && !islocal && SCIPsetIsPositive(set, cutefficacy) && cutefficacy * nnz > proofefficiacy * cutnnz )
+   if( success && !islocal && SCIPsetIsPositive(set, cutefficacy) && cutefficacy * nnz > proofefficacy * cutnnz )
    {
       SCIP_PROOFSET* alternativeproofset;
       SCIP_Bool redundant;
@@ -1416,7 +1457,6 @@ SCIP_RETCODE separateAlternativeProofs(
 
    return SCIP_OKAY;
 }
-
 
 /** tighten a given infeasibility proof a^Tx <= b with minact > b w.r.t. local bounds
  *

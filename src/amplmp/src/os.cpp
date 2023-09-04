@@ -34,11 +34,13 @@
 # include <sys/types.h>
 # include <sys/stat.h>
 # include <fcntl.h>
+# include <sys/param.h> // __FreeBSD__
 #endif
 
 #if defined(__APPLE__)
 # include <mach-o/dyld.h>
 #elif defined(_WIN32)
+struct IUnknown; // Workaround for "combaseapi.h(229): error C2187: syntax error: 'identifier' was unexpected here" when using /permissive-
 # include <windows.h>
 # include <io.h>
 # undef min
@@ -104,8 +106,17 @@ path mp::GetExecutablePath() {
   return path(getexecname());
 }
 
+# elif defined(__FreeBSD__)
+
+path mp::GetExecutablePath() {
+  using namespace std;
+  return path(getprogname());
+}
 # else
-#  error GetExecutablePath is not implemented for this system
+path mp::GetExecutablePath() {
+  throw "GetExecutablePath() is not implemented for this system";
+  return path("");
+}
 # endif
 
 // POSIX implementation.

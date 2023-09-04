@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -88,7 +97,7 @@ typedef unsigned int SCIP_NLHDLR_METHOD; /**< nlhdlr methods bitflags */
    SCIP_EXPR*            expr,   \
    SCIP_NLHDLREXPRDATA** nlhdlrexprdata)
 
-/** callback to be called in initialization
+/** callback to be called in initialization (called after problem was transformed)
  *
  * \param[in] scip   SCIP data structure
  * \param[in] nlhdlr nonlinear handler
@@ -97,7 +106,7 @@ typedef unsigned int SCIP_NLHDLR_METHOD; /**< nlhdlr methods bitflags */
    SCIP*        scip, \
    SCIP_NLHDLR* nlhdlr)
 
-/** callback to be called in deinitialization
+/** callback to be called in deinitialization (called before transformed problem is freed)
  *
  * \param[in] scip   SCIP data structure
  * \param[in] nlhdlr nonlinear handler
@@ -115,8 +124,8 @@ typedef unsigned int SCIP_NLHDLR_METHOD; /**< nlhdlr methods bitflags */
  * be associated with `expr` and auxiliary variables may be requested in descendant expressions.
  *
  * We distinguish the following enforcement methods:
- * - \ref SCIP_NLHDLR_METHOD_SEPABELOW : linear underestimation or cut generation for the relation `expr` &le; `auxvar` (denoted as "below")
- * - \ref SCIP_NLHDLR_METHOD_SEPAABOVE : linear overestimation or cut generation for the relation `expr` &ge; `auxvar` (denoted as "above")
+ * - \ref SCIP_NLHDLR_METHOD_SEPABELOW : linear underestimation of `expr` or cut generation for the relation `expr` &le; `auxvar` (denoted as "below")
+ * - \ref SCIP_NLHDLR_METHOD_SEPAABOVE : linear overestimation of `expr` or cut generation for the relation `expr` &ge; `auxvar` (denoted as "above")
  * - \ref SCIP_NLHDLR_METHOD_ACTIVITY  : domain propagation (i.e., constant under/overestimation) for the relation `expr` = `auxvar`.
  *
  * On input, parameter `enforcing` indicates for any of these methods, whether
@@ -137,14 +146,14 @@ typedef unsigned int SCIP_NLHDLR_METHOD; /**< nlhdlr methods bitflags */
  * A nonlinear handler will be called only for those callbacks that it mentioned in `participating`, which is
  * - \ref SCIP_DECL_NLHDLRENFO "ENFO" and/or \ref SCIP_DECL_NLHDLRESTIMATE "ESTIMATE" will be called with `overestimate==FALSE` if \ref SCIP_NLHDLR_METHOD_SEPABELOW has been set
  * - \ref SCIP_DECL_NLHDLRENFO "ENFO" and/or \ref SCIP_DECL_NLHDLRESTIMATE "ESTIMATE" will be called with `overestimate==TRUE`  if \ref SCIP_NLHDLR_METHOD_SEPAABOVE has been set
- * - \ref SCIP_DECL_NLHDLRINTEVAL "INTEVAL" and/or \ref SCIP_DECL_NLHDLRREVERSEPROP "REVERSEPROP" will be called if `SCIP_NLHDLR_METHOD_ACTIVITY` has been set
+ * - \ref SCIP_DECL_NLHDLRINTEVAL "INTEVAL" and/or \ref SCIP_DECL_NLHDLRREVERSEPROP "REVERSEPROP" will be called if \ref SCIP_NLHDLR_METHOD_ACTIVITY has been set
  *
  * If \ref SCIP_NLHDLR_METHOD_SEPABELOW or \ref SCIP_NLHDLR_METHOD_SEPAABOVE has been set, then at least one of the
  * callbacks \ref SCIP_DECL_NLHDLRENFO "ENFO" and \ref SCIP_DECL_NLHDLRESTIMATE "ESTIMATE" needs to be implemented.
  * Also \ref SCIP_DECL_NLHDLREVALAUX "EVALAUX" will be called in this case.
  * If \ref SCIP_NLHDLR_METHOD_ACTIVITY has been set, then at least one of \ref SCIP_DECL_NLHDLRINTEVAL "INTEVAL" and
  * \ref SCIP_DECL_NLHDLRREVERSEPROP "REVERSEPROP" needs to be implemented.
- * If the nonlinear handler chooses not to participate, then it must not set `nlhdlrexprdata` and can leave participating at its
+ * If the nonlinear handler chooses not to participate, then it must not set `nlhdlrexprdata` and can leave `participating` at its
  * initial value (\ref SCIP_NLHDLR_METHOD_NONE).
  *
  * Additionally, a nonlinear handler that decides to participate in any of the enforcement methods must call
@@ -153,7 +162,7 @@ typedef unsigned int SCIP_NLHDLR_METHOD; /**< nlhdlr methods bitflags */
  * - it will use activity for some subexpressions when computing estimators or cuts, and
  * - it will use activity for some subexpressions when in \ref SCIP_DECL_NLHDLRINTEVAL "INTEVAL" or \ref SCIP_DECL_NLHDLRREVERSEPROP "REVERSEPROP".
  *
- * @note Auxiliary variables do not exist in subexpressions during detect and are not created by a call to @ref SCIPregisterExprUsageNonlinear().
+ * @note Auxiliary variables do not exist in subexpressions during DETECT and are not created by a call to @ref SCIPregisterExprUsageNonlinear().
  *   They will be available when the \ref SCIP_DECL_NLHDLRINITSEPA "INITSEPA" callback is called.
  *
  * \param[in] scip              SCIP data structure
@@ -358,16 +367,17 @@ typedef unsigned int SCIP_NLHDLR_METHOD; /**< nlhdlr methods bitflags */
 
 /** nonlinear handler under/overestimation callback
  *
- * The method tries to compute a linear under- or overestimator that is as tight as possible at a given point.
+ * The method tries to compute linear under- or overestimators of `expr` that are as tight as possible at a given point.
  * If the value of the estimator in the solution is smaller (larger) than `targetvalue`
  * when underestimating (overestimating), then no estimator needs to be computed.
- * Note, that targetvalue can be infinite if any estimator will be accepted.
+ * Note, that `targetvalue` can be infinite if any estimator will be accepted.
  * If successful, it shall store the estimators in the given `rowpreps` data structure and set the
  * `rowprep->local` flag accordingly (SCIProwprepSetLocal()).
  * The sidetype of a rowprep must be set to \ref SCIP_SIDETYPE_LEFT if overestimating and
  * \ref SCIP_SIDETYPE_RIGHT if underestimating.
  *
- *  is not changed by the callback.
+ * If the callback is required to indicate for which expression a reduction in the local bounds (usually by branching)
+ * would improve the estimator, it shall do so via calls to SCIPaddExprsViolScoreNonlinear().
  *
  * \param[in] scip               SCIP main data structure
  * \param[in] conshdlr           constraint handler
@@ -397,6 +407,34 @@ typedef unsigned int SCIP_NLHDLR_METHOD; /**< nlhdlr methods bitflags */
    SCIP_PTRARRAY*       rowpreps,        \
    SCIP_Bool*           success,         \
    SCIP_Bool*           addedbranchscores)
+
+/** nonlinear handler solution linearization callback
+ *
+ * The callback is called when a new feasible solution has been found.
+ * The nonlinear handler may add tight estimates on its nonlinear function to the cut pool of SCIP.
+ *
+ * \param[in] scip               SCIP main data structure
+ * \param[in] conshdlr           constraint handler
+ * \param[in] cons               a nonlinear constraint which includes expression
+ * \param[in] nlhdlr             nonlinear handler
+ * \param[in] expr               expression
+ * \param[in] nlhdlrexprdata     expression data of nonlinear handler
+ * \param[in] sol                solution that has been found
+ * \param[in] solisbest          whether solution is new best solution (incumbent)
+ * \param[in] overestimate       whether the expression needs is overestimated by the nlhdlr
+ * \param[in] underestimate      whether the expression needs is underestimated by the nlhdlr
+ */
+#define SCIP_DECL_NLHDLRSOLLINEARIZE(x) SCIP_RETCODE x (\
+   SCIP*                scip,            \
+   SCIP_CONSHDLR*       conshdlr,        \
+   SCIP_CONS*           cons,            \
+   SCIP_NLHDLR*         nlhdlr,          \
+   SCIP_EXPR*           expr,            \
+   SCIP_NLHDLREXPRDATA* nlhdlrexprdata,  \
+   SCIP_SOL*            sol,             \
+   SCIP_Bool            solisbest,       \
+   SCIP_Bool            overestimate,    \
+   SCIP_Bool            underestimate)
 
 typedef struct SCIP_Nlhdlr         SCIP_NLHDLR;          /**< nonlinear handler */
 typedef struct SCIP_NlhdlrData     SCIP_NLHDLRDATA;      /**< nonlinear handler data */

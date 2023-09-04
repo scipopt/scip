@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -23,10 +32,10 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+#include "include/scip_test.h"
 #include "scip/scipdefplugins.h"
 #include "scip/nlhdlr.c"
 #include "scip/cons_nonlinear.c"
-#include "include/scip_test.h"
 
 #define CHECK_EXPRINTERVAL(scip,expr,a,b) (SCIPisFeasEQ(scip, SCIPexprGetActivity(expr).inf, (a)) && SCIPisFeasEQ(scip, SCIPexprGetActivity(expr).sup, (b)))
 #define EXPECTING_EXPRINTERVAL(expr,a,b) (a), (b), SCIPexprGetActivity(expr).inf, SCIPexprGetActivity(expr).sup
@@ -694,8 +703,8 @@ Test(propagate, forwardprop_uses_expressions_bounds)
     * NOTE: this should not be done by a user as it interferes with the way how we recognize whether activities are uptodate
     */
    SCIPincrementCurBoundsTagNonlinear(conshdlr, FALSE);
-   SCIPexprSetActivity(SCIPexprGetChildren(expr)[0], (SCIP_INTERVAL){.inf = -1.0, .sup = 0.2}, conshdlrdata->curboundstag);
-   SCIPexprSetActivity(SCIPexprGetChildren(expr)[1], (SCIP_INTERVAL){.inf = -1.0, .sup = 0.2}, conshdlrdata->curboundstag);
+   SCIPexprSetActivity(SCIPexprGetChildren(expr)[0], ((SCIP_INTERVAL){.inf = -1.0, .sup = 0.2}), conshdlrdata->curboundstag);
+   SCIPexprSetActivity(SCIPexprGetChildren(expr)[1], ((SCIP_INTERVAL){.inf = -1.0, .sup = 0.2}), conshdlrdata->curboundstag);
 
    /* new interval should be [0,2] intersected with [-2, 0.4]; note that it is important to have the activitytag
     * set to curboundstag; otherwise the explicitly set intervals are going to be overwritten

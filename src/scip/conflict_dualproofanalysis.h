@@ -3,20 +3,31 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   conflict.h
- * @ingroup INTERNALAPI
+/**@file   conflict_dualproofanalysis.h
+ * @ingroup OTHER_CFILES
  * @brief  internal methods for dual proof conflict analysis
  * @author Tobias Achterberg
+ * @author Timo Berthold
+ * @author Jakob Witzig
  * @autor  Sander Borst
  *
  * In dual proof analysis, an infeasible LP relaxation is analysed.
@@ -93,19 +104,6 @@ SCIP_RETCODE SCIPconflictFlushProofset(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_CLIQUETABLE*     cliquetable         /**< clique table data structure */
    );
-
-#ifdef SCIP_DEBUG
-static
-void debugPrintViolationInfo(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Real             minact,             /**< min activity */
-   SCIP_Real             rhs,                /**< right hand side */
-   const char*           infostr             /**< additional info for this debug message, or NULL */
-   );
-#else
-#define debugPrintViolationInfo(...) /**/
-#endif
-
 
 /** perform conflict analysis based on a dual unbounded ray
  *

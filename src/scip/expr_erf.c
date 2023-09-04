@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -99,19 +108,6 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyErf)
    return SCIP_OKAY;
 }
 
-/** expression compare callback */
-static
-SCIP_DECL_EXPRCOMPARE(compareErf)
-{  /*lint --e{715}*/
-   assert(expr1 != NULL);
-   assert(expr2 != NULL);
-
-   SCIPerrorMessage("method of erf expression handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return 0;
-}
-
 /** expression parse callback */
 static
 SCIP_DECL_EXPRPARSE(parseErf)
@@ -189,30 +185,6 @@ SCIP_DECL_EXPRINTEVAL(intevalErf)
    return SCIP_OKAY;
 }
 
-/** expression under/overestimation callback */
-static
-SCIP_DECL_EXPRESTIMATE(estimateErf)
-{  /*lint --e{715}*/
-   assert(expr != NULL);
-
-   SCIPerrorMessage("method of erf expression handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-
-/** expression reverse propagation callback */
-static
-SCIP_DECL_EXPRREVERSEPROP(reversepropErf)
-{  /*lint --e{715}*/
-   assert(expr != NULL);
-
-   SCIPerrorMessage("method of erf expression handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-
 /** erf hash callback */
 static
 SCIP_DECL_EXPRHASH(hashErf)
@@ -277,34 +249,11 @@ SCIP_DECL_EXPRINTEGRALITY(integralityErf)
    return SCIP_OKAY;
 }
 
-/** creates the handler for erf expressions and includes it SCIP */
-SCIP_RETCODE SCIPincludeExprhdlrErf(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   SCIP_EXPRHDLR* exprhdlr;
-
-   /* include expression handler */
-   SCIP_CALL( SCIPincludeExprhdlr(scip, &exprhdlr, EXPRHDLR_NAME, EXPRHDLR_DESC, EXPRHDLR_PRECEDENCE, evalErf, NULL) );
-   assert(exprhdlr != NULL);
-
-   SCIPexprhdlrSetCopyFreeHdlr(exprhdlr, copyhdlrErf, NULL);
-   SCIPexprhdlrSetSimplify(exprhdlr, simplifyErf);
-   SCIPexprhdlrSetCompare(exprhdlr, compareErf);
-   SCIPexprhdlrSetParse(exprhdlr, parseErf);
-   SCIPexprhdlrSetIntEval(exprhdlr, intevalErf);
-   SCIPexprhdlrSetEstimate(exprhdlr, NULL, estimateErf);
-   SCIPexprhdlrSetReverseProp(exprhdlr, reversepropErf);
-   SCIPexprhdlrSetHash(exprhdlr, hashErf);
-   SCIPexprhdlrSetDiff(exprhdlr, bwdiffErf, NULL, NULL);
-   SCIPexprhdlrSetCurvature(exprhdlr, curvatureErf);
-   SCIPexprhdlrSetMonotonicity(exprhdlr, monotonicityErf);
-   SCIPexprhdlrSetIntegrality(exprhdlr, integralityErf);
-
-   return SCIP_OKAY;
-}
-
-/** creates an erf expression */
+/** creates an erf expression
+ *
+ * @attention The implementation of `erf` expressions is incomplete.
+ * They are not usable for most use cases so far.
+ */
 SCIP_RETCODE SCIPcreateExprErf(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPR**           expr,               /**< pointer where to store expression */
@@ -328,6 +277,45 @@ SCIP_RETCODE SCIPcreateExprErf(
 
    /* create expression */
    SCIP_CALL( SCIPcreateExpr(scip, expr, exprhdlr, NULL, 1, &child, ownercreate, ownercreatedata) );
+
+   return SCIP_OKAY;
+}
+
+/** indicates whether expression is of erf-type */  /*lint -e{715}*/
+SCIP_Bool SCIPisExprErf(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{  /*lint --e{715}*/
+   assert(expr != NULL);
+
+   return strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), EXPRHDLR_NAME) == 0;
+}
+
+/** creates the handler for erf expressions and includes it into SCIP
+ *
+ * @attention The implementation of this expression handler is incomplete.
+ * It is not usable for most use cases so far.
+ */
+SCIP_RETCODE SCIPincludeExprhdlrErf(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_EXPRHDLR* exprhdlr;
+
+   /* include expression handler */
+   SCIP_CALL( SCIPincludeExprhdlr(scip, &exprhdlr, EXPRHDLR_NAME, EXPRHDLR_DESC, EXPRHDLR_PRECEDENCE, evalErf, NULL) );
+   assert(exprhdlr != NULL);
+
+   SCIPexprhdlrSetCopyFreeHdlr(exprhdlr, copyhdlrErf, NULL);
+   SCIPexprhdlrSetSimplify(exprhdlr, simplifyErf);
+   SCIPexprhdlrSetParse(exprhdlr, parseErf);
+   SCIPexprhdlrSetIntEval(exprhdlr, intevalErf);
+   SCIPexprhdlrSetHash(exprhdlr, hashErf);
+   SCIPexprhdlrSetDiff(exprhdlr, bwdiffErf, NULL, NULL);
+   SCIPexprhdlrSetCurvature(exprhdlr, curvatureErf);
+   SCIPexprhdlrSetMonotonicity(exprhdlr, monotonicityErf);
+   SCIPexprhdlrSetIntegrality(exprhdlr, integralityErf);
 
    return SCIP_OKAY;
 }

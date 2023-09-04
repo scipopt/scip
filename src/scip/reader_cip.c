@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -25,7 +34,6 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "blockmemshell/memory.h"
-#include <ctype.h>
 #include "scip/cons_linear.h"
 #include "scip/pub_fileio.h"
 #include "scip/pub_message.h"
@@ -41,11 +49,10 @@
 #include "scip/scip_prob.h"
 #include "scip/scip_reader.h"
 #include "scip/scip_var.h"
-#include <string.h>
-
 #if !defined(_WIN32) && !defined(_WIN64)
 #include <strings.h> /*lint --e{766}*/ /* needed for strncasecmp() */
 #endif
+
 
 #define READER_NAME             "cipreader"
 #define READER_DESC             "file reader for CIP (Constraint Integer Program) format"
@@ -123,8 +130,8 @@ SCIP_RETCODE getInputString(
 
    cipinput->linenumber++;
    endline = strchr(cipinput->strbuf, '\n');
-
    endcharacter = strchr(cipinput->strbuf, ';');
+
    while( endline == NULL || (endcharacter == NULL && cipinput->section == CIP_CONSTRAINTS && strncmp(cipinput->strbuf, "END", 3) != 0 ) )
    {
       int pos;
@@ -157,8 +164,8 @@ SCIP_RETCODE getInputString(
       }
 
       cipinput->linenumber++;
-      endline = strrchr(cipinput->strbuf, '\n');
-      endcharacter = strchr(cipinput->strbuf, ';');
+      endline = strrchr(&cipinput->strbuf[pos], '\n');
+      endcharacter = strchr(&cipinput->strbuf[pos], ';');
    }
    assert(endline != NULL);
 
@@ -251,8 +258,7 @@ SCIP_RETCODE getStatistics(
          *s = '\0';
 
       /* remove white space (tabs, ' ') in front of the name */
-      while( isspace((unsigned char)* name) )
-         ++name;
+      SCIP_CALL( SCIPskipSpace(&name) );
 
       /* set problem name */
       SCIP_CALL( SCIPsetProbName(scip, name) );
@@ -295,8 +301,7 @@ SCIP_RETCODE getObjective(
    SCIPdebugMsg(scip, "parse objective information\n");
 
    /* remove white space */
-   while ( isspace((unsigned char)* buf) )
-      ++buf;
+   SCIP_CALL( SCIPskipSpace(&buf) );
 
    if( strncasecmp(buf, "Sense", 5) == 0 )
    {
@@ -314,8 +319,7 @@ SCIP_RETCODE getObjective(
       ++name;
 
       /* remove white space in front of the name */
-      while( isspace((unsigned char)* name) )
-         ++name;
+      SCIP_CALL( SCIPskipSpace(&name) );
 
       if( strncasecmp(name, "minimize", 3) == 0 )
          objsense = SCIP_OBJSENSE_MINIMIZE;
@@ -348,8 +352,7 @@ SCIP_RETCODE getObjective(
       ++name;
 
       /* remove white space in front of the name */
-      while(isspace((unsigned char)*name))
-         ++name;
+      SCIP_CALL( SCIPskipSpace(&name) );
 
       if ( SCIPstrToRealValue(name, &off, &endptr) )
       {
@@ -379,8 +382,7 @@ SCIP_RETCODE getObjective(
       ++name;
 
       /* remove white space in front of the name */
-      while(isspace((unsigned char)*name))
-         ++name;
+      SCIP_CALL( SCIPskipSpace(&name) );
 
       if ( SCIPstrToRealValue(name, &scale, &endptr) )
       {
@@ -515,6 +517,7 @@ SCIP_RETCODE getFixedVariable(
          cipinput->haserror = TRUE;
          return SCIP_OKAY;
       }
+
       assert(SCIPvarIsBinary(var));
       assert(SCIPvarIsBinary(negvar));
 
@@ -561,8 +564,7 @@ SCIP_RETCODE getFixedVariable(
 
       /* check whether constant is 0.0 */
       str = endptr;
-      while ( *str != '\0' && isspace(*str) )
-         ++str;
+      SCIP_CALL( SCIPskipSpace((char**)&str) );
       /* if next char is '<' we found a variable -> constant is 0 */
       if ( *str != '<' )
       {

@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -2078,7 +2087,7 @@ bool ScipNLP::get_var_con_metadata(
          else
          {
             char buffer[20];
-            (void) sprintf(buffer, "nlpivar%8d", i);
+            (void) SCIPsnprintf(buffer, 20, "nlpivar%8d", i);
             varnamesvec.push_back(buffer);
          }
       }
@@ -2095,7 +2104,7 @@ bool ScipNLP::get_var_con_metadata(
       else
       {
          char buffer[20];
-         (void) sprintf(buffer, "nlpicons%8d", i);
+         (void) SCIPsnprintf(buffer, 20, "nlpicons%8d", i);
          consnamesvec.push_back(buffer);  /*lint !e3701*/
       }
    }
@@ -2466,6 +2475,9 @@ void ScipNLP::finalize_solution(
       break;
 
    case CPUTIME_EXCEEDED:
+#if IPOPT_VERSION_MAJOR > 3 || IPOPT_VERSION_MINOR >= 14
+   case WALLTIME_EXCEEDED:
+#endif
       check_feasibility = true;
       nlpiproblem->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
       nlpiproblem->termstat = SCIP_NLPTERMSTAT_TIMELIMIT;
@@ -2595,6 +2607,16 @@ void ScipNLP::finalize_solution(
       nlpiproblem->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
       nlpiproblem->solconsviol = SCIP_INVALID;
    }
+   catch(...)
+   {
+      /* with clang++, an IpoptNLP::Eval_Error wasn't catched by the catch-block above
+       * I don't know why, but this should work around it
+       */
+      SCIPdebugMsg(scip, "Unknown exception when checking constraint viol\n");
+      assert(status == INVALID_NUMBER_DETECTED);
+      nlpiproblem->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
+      nlpiproblem->solconsviol = SCIP_INVALID;
+   }
 
    if( nlpiproblem->solstat == SCIP_NLPSOLSTAT_LOCINFEASIBLE )
    {
@@ -2658,7 +2680,7 @@ void ScipNLP::finalize_solution(
 
 /** Calls Lapacks Dsyev routine to compute eigenvalues and eigenvectors of a dense matrix.
  *
- * It's here, because we use Ipopt's C interface to Lapack.
+ * This uses Ipopt's interface to Lapack.
  */
 SCIP_RETCODE SCIPcallLapackDsyevIpopt(
    SCIP_Bool             computeeigenvectors,/**< should also eigenvectors should be computed ? */
@@ -2742,7 +2764,7 @@ SCIP_RETCODE solveLinearProb3(
  *  Calls Lapacks DGETRF routine to calculate a LU factorization and uses this factorization to solve
  *  the linear problem Ax = b.
  *
- * It's here, because we use Ipopt's C interface to Lapack.
+ * This uses Ipopt's interface to Lapack.
  */
 SCIP_RETCODE SCIPsolveLinearEquationsIpopt(
    int                   N,                  /**< dimension */

@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -43,6 +52,7 @@
 #include "scip/syncstore.h"
 #include "scip/set.h"
 #include "tpi/tpi.h"
+#include "tpi/def_openmp.h"
 
 /** create concurrent data */
 SCIP_RETCODE SCIPcreateConcurrent(
@@ -150,7 +160,7 @@ SCIP_RETCODE SCIPfreeConcurrent(
 
    assert(scip->concurrent->varperm != NULL);
 
-   /* check if we are the SCIP that is responsible for freeing this concurent struct
+   /* check if we are the SCIP that is responsible for freeing this concurrent struct
     * or just a subscip */
    if( scip->concurrent->mainscip != scip )
    {
@@ -506,7 +516,7 @@ SCIP_RETCODE SCIPconcurrentSolve(
             SCIP_SUBMITSTATUS status;
 
             SCIP_CALL_ABORT( SCIPtpiCreateJob(&job, jobid, execConcsolver, scip) );
-            SCIP_CALL_ABORT( SCIPtpiSumbitJob(job, &status) );
+            SCIP_CALL_ABORT( SCIPtpiSubmitJob(job, &status) );
 
             assert(status == SCIP_SUBMIT_SUCCESS);
          }
@@ -516,6 +526,10 @@ SCIP_RETCODE SCIPconcurrentSolve(
    retcode = SCIPtpiCollectJobs(jobid);
    idx = SCIPsyncstoreGetWinner(syncstore);
    assert(idx >= 0 && idx < nconcsolvers);
+
+   /* a paranoid safeguard for running in optimized mode */
+   if( idx < 0 || idx >= nconcsolvers )
+      idx = 0;
 
    SCIP_CALL( SCIPconcsolverGetSolvingData(concsolvers[idx], scip) );
 
@@ -651,9 +665,13 @@ SCIP_RETCODE SCIPcopyConcurrentSolvingStats(
       {
          sepas[i]->lastsepanode = sepa->lastsepanode;
          sepas[i]->ncalls += sepa->ncalls;
+         sepas[i]->nrootcalls += sepa->nrootcalls;
          sepas[i]->ncutoffs += sepa->ncutoffs;
          sepas[i]->ncutsfound += sepa->ncutsfound;
-         sepas[i]->ncutsapplied += sepa->ncutsapplied;
+         sepas[i]->ncutsaddedviapool += sepa->ncutsaddedviapool;
+         sepas[i]->ncutsaddeddirect += sepa->ncutsaddeddirect;
+         sepas[i]->ncutsappliedviapool += sepa->ncutsappliedviapool;
+         sepas[i]->ncutsapplieddirect += sepa->ncutsapplieddirect;
          sepas[i]->nconssfound += sepa->nconssfound;
          sepas[i]->ndomredsfound += sepa->ndomredsfound;
          sepas[i]->maxbounddist = MAX(sepas[i]->maxbounddist, sepa->maxbounddist);

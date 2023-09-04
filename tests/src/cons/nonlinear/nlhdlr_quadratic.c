@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -22,6 +31,7 @@
 
 #include <string.h>
 
+#include "include/scip_test.h"
 /* XXX: need the consdata struct because we don't have getNlhdlrs or findNlhdlrs; I don't add those function because I'm unsure
  * we actually need them
  */
@@ -44,8 +54,6 @@
 /*
  * TEST
  */
-
-#include "include/scip_test.h"
 
 static SCIP* scip;
 static SCIP_VAR* x;
@@ -1184,7 +1192,7 @@ void testCut(
    SCIP_Real enorm;
    SCIP_Real cutnorm;
    SCIP_Real side;
-   SCIP_Real nnonz;
+   int nnonz;
    SCIP_Bool success;
 
    /* compute expected cut's norm: this norm does not have to be equal to cutnorm! */
@@ -1210,8 +1218,14 @@ void testCut(
    cols = SCIProwGetCols(cut);
    coefs = SCIProwGetVals(cut);
 
-   /* check same number of coefficients and norm not zero */
-   cr_expect_eq(nnonz, expectedncoefs);
+   SCIPprintRow(scip, cut, NULL);
+
+   /* ~~check same number of coefficients~~
+    * currently not, as with HiGHS a coef of 2e-9 is obtained, which messes up nonzero count but still passes the coef checks below
+    */
+   /* cr_expect_eq(nnonz, expectedncoefs, "expected %d coefs, but got %d\n", expectedncoefs, nnonz); */
+
+   /* check norm not zero */
    cr_assert(cutnorm > 0);
 
    /* check side */
@@ -1220,14 +1234,26 @@ void testCut(
    cr_expect_float_eq(side / cutnorm, expectedlhs / enorm, 1e-6, "expecting lhs %g, got %g\n", expectedlhs / enorm, side
          / cutnorm);
 
-   /* check coefficients */
-   for( int j = 0; j < expectedncoefs; j++ )
-      for( int i = 0; i < expectedncoefs; i++ )
+    /* check coefficients */
+   for( int j = 0; j < nnonz; j++ )
+   {
+      SCIP_Real expcoeffound = 0.0;
+       for( int i = 0; i < expectedncoefs; i++ )
+          if( SCIPcolGetVar(cols[j]) == expectedvars[i] )
+            expcoeffound = expectedcoefs[i];
+      cr_expect_float_eq(coefs[j] / cutnorm, expcoeffound / enorm, 1e-6, "expecting cut coef %g, got %g\n",
+         expcoeffound / enorm, coefs[j] / cutnorm);
+   }
+   /* and another round to check that there isn't an expected coef missing */
+   for( int i = 0; i < expectedncoefs; i++ )
+   {
+      SCIP_Real coeffound = 0.0;
+      for( int j = 0; j < nnonz; j++ )
          if( SCIPcolGetVar(cols[j]) == expectedvars[i] )
-         {
-            cr_expect_float_eq(coefs[j] / cutnorm, expectedcoefs[i] / enorm, 1e-6, "expecting cut coef %g, got %g\n",
-                  expectedcoefs[i] / enorm, coefs[j] / cutnorm);
-         }
+            coeffound = coefs[j];
+      cr_expect_float_eq(coeffound / cutnorm, expectedcoefs[i] / enorm, 1e-6, "expecting cut coef %g, got %g\n",
+         expectedcoefs[i] / enorm, coeffound / cutnorm);
+   }
 
    /* free cut */
    SCIPreleaseRow(scip, &cut);
@@ -1450,9 +1476,10 @@ Test(interCuts, testRays4)
  *
  * Note SCIP will add slack variables nonetheless, so this will contribute ray entries
  * the slack variables coefficients are +1 in the tableau.
- * I don't know if one can really tell at which bound they are going to be fixed.
- * I will assume that the row is going to be active at its lhs, which means that the base status is goingto be at lower
- * (see lpi.h). However, this means that the slack variable is active at its upper bound!
+ * I don't know if one can really tell at which bound they are going to be fixed; this depends
+ * on the LP solver we use. Apparently, for CPLEX, the row is going to be active at its lhs,
+ * which means that the base status is going to be at lower (see lpi.h). However, this means that
+ * the slack variable is active at its upper bound! This is different for XPRESS for example.
  *
  */
 Test(interCuts, testRays5)
@@ -1508,10 +1535,10 @@ Test(interCuts, testRays5)
       SCIP_CALL( SCIPchgVarObjProbing(scip, t, -1.0) );
 
 
-      /* give bounds to x and y to prevent basestat zero (needed for soplex apparently) */
+      /* give bounds to x and y to prevent basestat zero (needed for soplex/xpress apparently) */
       SCIP_CALL( SCIPchgVarLbProbing(scip, x, -1.0e10) ); SCIP_CALL( SCIPchgVarUbProbing(scip, x, 1.0e10) );
       //SCIP_CALL( SCIPchgVarObjProbing(scip, x, -1.0e-5) );
-      //SCIP_CALL( SCIPchgVarLbProbing(scip, y, -1.0e10) ); SCIP_CALL( SCIPchgVarUbProbing(scip, y, 1.0e10) );
+      SCIP_CALL( SCIPchgVarLbProbing(scip, y, -1.0e10) ); SCIP_CALL( SCIPchgVarUbProbing(scip, y, 1.0e10) );
       //SCIP_CALL( SCIPchgVarObjProbing(scip, y,  1.0e-5) );
 
       SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror, &cutoff) );
@@ -1539,15 +1566,26 @@ Test(interCuts, testRays5)
     * the quadraitc: x*y + x*w - z + w*s + t + 2
     */
    {
+      SCIP_ROW** rows;
+      int nrows;
       int expectednnonz = 11;
+      SCIP_Real factor1;
+      SCIP_Real factor2;
+
+      /* get basis status of slack variables to know what rays to expect */
+      SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
+
+      factor1 = SCIProwGetBasisStatus(rows[0]) == SCIP_BASESTAT_LOWER ? 1.0 : -1.0;
+      factor2 = SCIProwGetBasisStatus(rows[1]) == SCIP_BASESTAT_LOWER ? 1.0 : -1.0;
+
       SCIP_Real expectedrayscoefs[11] = {
          3.0/2, -1.0, 1.0,
          -1.0,
          47.0/12, 1.0,
          -1.0, 2.0, -1.0,
-         /* slacks entries: assuming slacks are at their upper bound */
-         1.0,
-         1.0
+         /* slacks entries */
+         factor1 * 1.0,
+         factor2 * 1.0
       };
       int expectedraysidx[11] = {
          0, 1, 2,
@@ -1907,6 +1945,9 @@ Test(interCuts, testRaysAuxvar1)
    registerAndFree(cons, nlhdlrexprdata);
 }
 
+#if SCIP_DISABLED_CODE
+/* Gurobi finds a different basis here since the optimal solution of this problem is degenerate.
+ * We disable it for now since it fails for Gurobi. TODO: fix that or run only for specific lp solvers */
 /* test when aux var is present and auxvar basic */
 Test(interCuts, testRaysAuxvar2)
 {
@@ -1987,7 +2028,7 @@ Test(interCuts, testRaysAuxvar2)
    SCIP_CALL( SCIPchgVarObjProbing(scip, auxvar,  1.0/4) );
 
 
-   SCIP_CALL( SCIPwriteLP(scip, "probing.lp") );
+   /* SCIP_CALL( SCIPwriteLP(scip, "probing.lp") ); */
 
    SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror, &cutoff) );
 
@@ -2035,6 +2076,7 @@ Test(interCuts, testRaysAuxvar2)
    /* register enforcer info in expr and free */
    registerAndFree(cons, nlhdlrexprdata);
 }
+#endif
 
 Test(interCuts, cut1, .description = "test cut for Case 2")
 {
@@ -2533,7 +2575,7 @@ Test(interCuts, strength4ab, .description = "more complicated test strengthening
       SCIP_CALL( SCIPchgVarObjProbing(scip, z, 1.0) );
 
 
-      SCIP_CALL( SCIPwriteLP(scip, "probing.lp") );
+      /* SCIP_CALL( SCIPwriteLP(scip, "probing.lp") ); */
 
       SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror, &cutoff) );
       cr_assert_not(lperror);
@@ -2682,7 +2724,11 @@ Test(interCuts, testBoundRays1)
       /* cr_expect_arr_eq(myrays->raysidx, expectedraysidx, expectednnonz * sizeof(int));
       cr_expect_arr_eq(myrays->lpposray, expectedlppos, expectednrays * sizeof(int));
       cr_expect_arr_eq(myrays->raysbegin, expectedbegin, (expectednrays + 1) * sizeof(int)); */
+
+      SCIP_CALL( SCIPfreeSol(scip, &vertex) );
    }
+
+   SCIP_CALL( SCIPfreeSol(scip, &sol) );
 
    /* end probing mode */
    SCIP_CALL( SCIPendProbing(scip) );

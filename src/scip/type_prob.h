@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -128,7 +137,8 @@ typedef struct SCIP_ProbData SCIP_PROBDATA;       /**< user problem data set by 
  *  - varmap,         : a hashmap which stores the mapping of source variables to corresponding target variables
  *  - consmap,        : a hashmap which stores the mapping of source constraints to corresponding target constraints
  *  - targetdata      : pointer to the target user problem data to create
- *  - global          : create a global or a local copy? 
+ *  - original        : copy original or transformed problem?
+ *  - global          : create a global or a local copy?
  *
  *  output:
  *  - result          : pointer to store the result of the call
@@ -138,7 +148,8 @@ typedef struct SCIP_ProbData SCIP_PROBDATA;       /**< user problem data set by 
  *  - SCIP_SUCCESS    : the copying process was successfully performed
  */
 #define SCIP_DECL_PROBCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP* sourcescip, SCIP_PROBDATA* sourcedata, \
-      SCIP_HASHMAP* varmap, SCIP_HASHMAP* consmap, SCIP_PROBDATA** targetdata, SCIP_Bool global, SCIP_RESULT* result)
+      SCIP_HASHMAP* varmap, SCIP_HASHMAP* consmap, SCIP_PROBDATA** targetdata, SCIP_Bool original, \
+      SCIP_Bool global, SCIP_RESULT* result)
 
 #ifdef __cplusplus
 }

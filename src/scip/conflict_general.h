@@ -3,20 +3,44 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   conflict.h
- * @ingroup INTERNALAPI
- * @brief  internal methods for conflict analysis
+/**@file   conflict_general.h
+ * @ingroup OTHER_CFILES
+ * @brief  methods and datastructures for conflict analysis
  * @author Tobias Achterberg
+ * @author Timo Berthold
+ * @author Stefan Heinz
+ * @author Marc Pfetsch
+ * @author Michael Winkler
+ * @author Jakob Witzig
+ *
+ * SCIP contains two kinds of conflict analysis:
+ *    - In graph based conflict analysis, the graph consisting of derived
+ *      is analysed. Code and documentation is available in conflict_graphanalysis.h
+ *    - In dual proof analysis, an infeasible LP relaxation is analysed.
+ *      Using the dual solution, a valid constraint is derived that is violated
+ *      by all values in the domain. This constraint is added to the problem
+ *      and can then be used for domain propagation.
+ *      Code is available in conflict_dualproofanalysis.h
+ * This file contains the methods that are shared by both kinds of conflict analysis.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -473,7 +497,6 @@ void SCIPconflictEnableOrDisableClocks(
  *  SCIPconflictAddRelaxedBound(), and on success, calls the conflict handlers to create a conflict constraint out of
  *  the resulting conflict set; afterwards the conflict queue and the conflict set is cleared
  */
-
 SCIP_RETCODE conflictAnalyze(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    BMS_BLKMEM*           blkmem,             /**< block memory of transformed problem */
@@ -505,7 +528,7 @@ SCIP_RETCODE SCIPgetFarkasProof(
    SCIP_Bool*            valid               /**< pointer store whether the proof constraint is valid */
    );
 
-/** calculates a Farkas proof from the current dual LP solution */
+/** calculates a dual proof from the current dual LP solution */
 SCIP_RETCODE SCIPgetDualProof(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            transprob,          /**< transformed problem */
@@ -520,6 +543,7 @@ SCIP_RETCODE SCIPgetDualProof(
    SCIP_Bool*            valid               /**< pointer store whether the proof constraint is valid */
    );
 
+/** calculates the minimal activity of a given aggregation row */
 SCIP_Real SCIPaggrRowGetMinActivity(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            transprob,          /**< transformed problem data */

@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -195,6 +204,7 @@
 #define SCIP_DEFAULT_LIMIT_GAP              0.0 /**< solving stops, if the gap is below the given value */
 #define SCIP_DEFAULT_LIMIT_ABSGAP           0.0 /**< solving stops, if the absolute difference between primal and dual
                                                  *   bound reaches this value */
+#define SCIP_DEFAULT_LIMIT_OBJSTOP SCIP_INVALID /**< solving stops, if solution is found that is at least as good as given value */
 #define SCIP_DEFAULT_LIMIT_NODES           -1LL /**< maximal number of nodes to process (-1: no limit) */
 #define SCIP_DEFAULT_LIMIT_STALLNODES      -1LL /**< solving stops, if the given number of nodes was processed since the
                                                  *   last improvement of the primal solution value (-1: no limit) */
@@ -300,6 +310,7 @@
                                                  *   orbitopes); 6: Schreier Sims cuts and orbital fixing; 7: Schreier Sims cuts, orbitopes, and orbital
                                                  *   fixing, see type_symmetry.h */
 #define SCIP_DEFAULT_MISC_SCALEOBJ         TRUE /**< should the objective function be scaled? */
+#define SCIP_DEFAULT_MISC_SHOWDIVINGSTATS FALSE /**< should detailed statistics for diving heuristics be shown? */
 
 #ifdef WITH_DEBUG_SOLUTION
 #define SCIP_DEFAULT_MISC_DEBUGSOLUTION     "-" /**< path to a debug solution */
@@ -429,7 +440,7 @@
                                                  *   's'um, 'd'iscrete) */
 #define SCIP_DEFAULT_SEPA_CUTSELRESTART     'a' /**< cut selection during restart ('a'ge, activity 'q'uotient) */
 #define SCIP_DEFAULT_SEPA_CUTSELSUBSCIP     'a' /**< cut selection for sub SCIPs  ('a'ge, activity 'q'uotient) */
-#define SCIP_DEFAULT_SEPA_FILTERCUTPOOLREL TRUE /**< should cutpool separate only cuts with high relative efficacy? */
+#define SCIP_DEFAULT_SEPA_FILTERCUTPOOLREL FALSE /**< should cutpool separate only cuts with high relative efficacy? */
 #define SCIP_DEFAULT_SEPA_MAXRUNS            -1 /**< maximal number of runs for which separation is enabled (-1: unlimited) */
 #define SCIP_DEFAULT_SEPA_MAXROUNDS          -1 /**< maximal number of separation rounds per node (-1: unlimited) */
 #define SCIP_DEFAULT_SEPA_MAXROUNDSROOT      -1 /**< maximal number of separation rounds in the root node (-1: unlimited) */
@@ -440,8 +451,10 @@
                                                  *   or integrality improvement in the root node (-1: no additional restriction) */
 #define SCIP_DEFAULT_SEPA_MAXSTALLROUNDS      1 /**< maximal number of consecutive separation rounds without objective
                                                  *   or integrality improvement in local nodes (-1: no additional restriction) */
+#define SCIP_DEFAULT_SEPA_MAXCUTSGENFACTOR  2.0 /**< factor w.r.t. maxcuts for maximal number of cuts generated per separation round */
+#define SCIP_DEFAULT_SEPA_MAXCUTSROOTGENFACTOR 2.0 /**< factor w.r.t. maxcutsroot for maximal generated cuts at the root node */
 #define SCIP_DEFAULT_SEPA_MAXCUTS           100 /**< maximal number of cuts separated per separation round */
-#define SCIP_DEFAULT_SEPA_MAXCUTSROOT      2000 /**< maximal separated cuts at the root node */
+#define SCIP_DEFAULT_SEPA_MAXCUTSROOT      2000 /**< maximal separated cuts per separation round at the root node */
 #define SCIP_DEFAULT_SEPA_CUTAGELIMIT        80 /**< maximum age a cut can reach before it is deleted from global cut pool
                                                  *   (-1: cuts are never deleted from the global cut pool) */
 #define SCIP_DEFAULT_SEPA_POOLFREQ           10 /**< separation frequency for the global cut pool */
@@ -942,7 +955,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
          *allvalid = *allvalid && valid;
          if( SCIPpricerIsActive(sourceset->pricers[p]) )
          {
-            SCIP_CALL( SCIPactivatePricer(targetset->scip, targetset->pricers[p]) );
+            SCIP_CALL( SCIPpricerActivate(targetset->pricers[p], targetset) );
          }
       }
    }
@@ -1676,9 +1689,14 @@ SCIP_RETCODE SCIPsetCreate(
          "solving stops, if the absolute gap = |primalbound - dualbound| is below the given value",
          &(*set)->limit_absgap, FALSE, SCIP_DEFAULT_LIMIT_ABSGAP, 0.0, SCIP_REAL_MAX,
          SCIPparamChgdLimit, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "limits/objectivestop",
+         "solving stops, if solution is found that is at least as good as given value",
+         &(*set)->limit_objstop, FALSE, SCIP_DEFAULT_LIMIT_OBJSTOP, SCIP_REAL_MIN, SCIP_REAL_MAX,
+         SCIPparamChgdLimit, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "limits/solutions",
-         "solving stops, if the given number of solutions were found (-1: no limit)",
+         "solving stops, if the given number of solutions were found; this limit is first checked in presolving (-1: no limit)",
          &(*set)->limit_solutions, FALSE, SCIP_DEFAULT_LIMIT_SOLUTIONS, -1, INT_MAX,
          SCIPparamChgdLimit, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
@@ -2037,6 +2055,11 @@ SCIP_RETCODE SCIPsetCreate(
             "should the objective function be scaled so that it is always integer?",
             &(*set)->misc_scaleobj, FALSE, SCIP_DEFAULT_MISC_SCALEOBJ,
             NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+            "misc/showdivingstats",
+            "should detailed statistics for diving heuristics be shown?",
+            &(*set)->misc_showdivingstats, FALSE, SCIP_DEFAULT_MISC_SHOWDIVINGSTATS,
+            NULL, NULL) );
 
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "misc/referencevalue",
@@ -2054,10 +2077,16 @@ SCIP_RETCODE SCIPsetCreate(
 
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "misc/usesymmetry",
-         "bitset describing used symmetry handling technique (0: off; 1: polyhedral (orbitopes and/or symresacks);" \
-         " 2: orbital fixing; 3: orbitopes and orbital fixing; 4: Schreier Sims cuts; 5: Schreier Sims cuts and " \
-         "orbitopes); 6: Schreier Sims cuts and orbital fixing; 7: Schreier Sims cuts, orbitopes, and orbital " \
-         "fixing, see type_symmetry.h.",
+         "bitset describing used symmetry handling technique: " \
+         "(0: off; " \
+         "1: constraint-based (orbitopes and/or symresacks); " \
+         "2: orbital fixing; " \
+         "3: orbitopes and orbital fixing; " \
+         "4: Schreier Sims cuts; " \
+         "5: Schreier Sims cuts and orbitopes; " \
+         "6: Schreier Sims cuts and orbital fixing; " \
+         "7: Schreier Sims cuts, orbitopes, and orbital fixing) " \
+         "See type_symmetry.h.",
          &(*set)->misc_usesymmetry, FALSE, SCIP_DEFAULT_MISC_USESYMMETRY, 0, 7,
          paramChgdUsesymmetry, NULL) );
 
@@ -2452,6 +2481,17 @@ SCIP_RETCODE SCIPsetCreate(
            "minimum cut activity quotient to convert cuts into constraints during a restart (0.0: all cuts are converted)",
            &(*set)->sepa_minactivityquot, FALSE, SCIP_DEFAULT_SEPA_MINACTIVITYQUOT, 0.0, 1.0,
            NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+            "separating/maxcutsgenfactor",
+            "factor w.r.t. maxcuts for maximal number of cuts generated per separation round (-1.0: no limit, >= 0.0: valid finite limit)",
+            &(*set)->sepa_maxcutsgenfactor, FALSE, SCIP_DEFAULT_SEPA_MAXCUTSGENFACTOR, -1.0, SCIP_REAL_MAX,
+            NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "separating/maxcutsrootgenfactor",
+         "factor w.r.t. maxcutsroot for maximal number of generated cuts per separation round at the root node "
+         "(-1.0: no limit, >= 0.0: valid finite limit)",
+         &(*set)->sepa_maxcutsrootgenfactor, FALSE, SCIP_DEFAULT_SEPA_MAXCUTSROOTGENFACTOR, -1.0, SCIP_REAL_MAX,
+         NULL, NULL) );
    SCIP_CALL( SCIPsetAddCharParam(*set, messagehdlr, blkmem,
          "separating/orthofunc",
          "function used for calc. scalar prod. in orthogonality test ('e'uclidean, 'd'iscrete)",
@@ -2519,7 +2559,7 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "separating/maxcutsroot",
-         "maximal number of separated cuts at the root node (0: disable root node separation)",
+         "maximal number of separated cuts per separation round at the root node (0: disable root node separation)",
          &(*set)->sepa_maxcutsroot, FALSE, SCIP_DEFAULT_SEPA_MAXCUTSROOT, 0, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
@@ -3502,6 +3542,21 @@ SCIP_RETCODE SCIPsetSetStringParam(
    assert(set != NULL);
 
    SCIP_CALL( SCIPparamsetSetString(set->paramset, set, messagehdlr, name, value) );
+
+   return SCIP_OKAY;
+}
+
+/** changes the value of an existing parameter */
+SCIP_RETCODE SCIPsetSetParam(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   const char*           name,               /**< name of the parameter */
+   const char*           value               /**< new value of the parameter as string */
+   )
+{
+   assert(set != NULL);
+
+   SCIP_CALL( SCIPparamsetSet(set->paramset, set, messagehdlr, name, value, FALSE) );
 
    return SCIP_OKAY;
 }
@@ -4639,7 +4694,7 @@ SCIP_HEUR* SCIPsetFindHeur(
    return NULL;
 }
 
-/** sorts heuristics by priorities */
+/** sorts heuristics by their delay positions and priorities */
 void SCIPsetSortHeurs(
    SCIP_SET*             set                 /**< global SCIP settings */
    )
@@ -5915,6 +5970,20 @@ int SCIPsetGetPriceMaxvars(
       return set->price_maxvarsroot;
    else
       return set->price_maxvars;
+}
+
+/** returns factor for the maximal number of cuts that can be generated per round */
+SCIP_Real SCIPsetGetSepaMaxcutsGenFactor(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             root                /**< are we at the root node? */
+   )
+{
+   assert(set != NULL);
+
+   if( root )
+      return set->sepa_maxcutsrootgenfactor;
+   else
+      return set->sepa_maxcutsgenfactor;
 }
 
 /** returns the maximal number of cuts separated per round */
