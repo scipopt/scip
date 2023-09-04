@@ -55,8 +55,8 @@
 
 
 /* fundamental nonlinear handler properties */
-#define NLHDLR_NAME               "signomial"
-#define NLHDLR_DESC               "signomial handler for expressions"
+#define NLHDLR_NAME                    "signomial"
+#define NLHDLR_DESC                    "signomial handler for expressions"
 #define NLHDLR_DETECTPRIORITY          30     
 #define NLHDLR_ENFOPRIORITY            30
 
@@ -69,13 +69,13 @@
  * nonlinear handler expression data
  * 
  * A signomial expression admits the form \f$ cx^e = y \f$, where \f$ y \f$ is an auxiliary variable representing this
- * expression. The original fomrulation of the expression is defined as \f$ x^e = t = y/c \f$, where \f$ t \f$ is a
+ * expression. The natural fomrulation of the expression is defined as \f$ x^e = t = y/c \f$, where \f$ t \f$ is a
  * non-existant slack variable denoting \f$ y/c \f$. The variables in $x$ with positive exponents form positive
  * variables \f$ u \f$, and the associated exponents form positive exponents \f$ f\ f$. The variables in \f$ x \f$ with
  * negative exponents and \f$ t \f$  form negative variables \f$ v \f$, and the associated exponents form negative
- * exponents \f$ g \f$. Let \$ s =  \max(|f|,|\abs(g)|) \$ be a normalization constant. Let \f$ f = f / s f$, and let
- * \f$ g =  \abs(g) / s \f$. Then \f$ x^e = t \f$ has a reformulation \f$ u^f = v^g \f$, where \f$ u^f, v^g \$ are two
- * concave power functions.
+ * exponents \f$ g \f$. Let \$ s =  \max(|f|,|g|) \$ be a normalization constant, where \$ || \$ denotes the L1 norm. Apply a scaling step:
+ * Dividing the entries of \f$ f \f$  by \f$ s \f$, and dividing the entries of \f$ g \f$  by \f$ s \f$ as well. Then \f$ x^e = t \f$ has a reformulation 
+ * \f$ u^f = v^g \f$, where \f$ u^f, v^g \$ are two concave power functions.
  */
 struct SCIP_NlhdlrExprData
 {
@@ -94,9 +94,9 @@ struct SCIP_NlhdlrExprData
    /* working parameters will be modified after getting all variables */
    SCIP_VAR**            vars;               /**< variables \f$(x,y)\f$ */
    SCIP_INTERVAL*        intervals;          /**< intervals storing lower and upper bounds of variables \f$(x,y)\f$ */
-   SCIP_Real*            box;
-   SCIP_Real*            xstar;
-   SCIP_Real*            facetcoefs;
+   SCIP_Real*            box;                /**< the upper/lower bounds of variables, used in SCIPcomputeFacetVertexPolyhedralNonlinear() */
+   SCIP_Real*            xstar;              /**< the values of variables, used in SCIPcomputeFacetVertexPolyhedralNonlinear() */
+   SCIP_Real*            facetcoefs;         /**< the coefficients of variables, returned by SCIPcomputeFacetVertexPolyhedralNonlinear() */
 };
 
 /** nonlinear handler data */
@@ -105,17 +105,17 @@ struct SCIP_NlhdlrData
    int                   nexprs;
 
    /* parameters */
-   int                   maxnundervars;      /**< maximum numbver of variables in underestimating a concave  power function */
+   int                   maxnundervars;      /**< maximum numbver of variables in underestimating a concave power function */
    SCIP_Real             mincutscale;        /**< minimum scale factor when scaling a cut */
 };
 
 /** data struct to be passed on to vertexpoly-evalfunction (see SCIPcomputeFacetVertexPolyhedralNonlinear) */
 typedef struct
 {
-   SCIP_NLHDLREXPRDATA*  nlhdlrexprdata;
-   SCIP_Bool             sign;
-   int                   nsignvars;
-   SCIP*                 scip;
+   SCIP_NLHDLREXPRDATA*  nlhdlrexprdata;     /**< expression data */
+   SCIP_Bool             sign;               /**< the sign of variables in the reformulated constraint for vertexpoly-evalfunction */
+   int                   nsignvars;          /**< the number of variables in the reformulated constraint for vertexpoly-evalfunction */
+   SCIP*                 scip;               /**< SCIP data structure */
 } VERTEXPOLYFUN_EVALDATA;
 
 
@@ -306,8 +306,8 @@ SCIP_RETCODE printSignomial(
       return SCIP_OKAY;
    }
 
-   /* print the original formulation of the expression */   
-   SCIPinfoMessage(scip, NULL, ". Original formulation c x^a = y: %.2f", nlhdlrexprdata->coef);
+   /* print the natural formulation of the expression */   
+   SCIPinfoMessage(scip, NULL, ". natural formulation c x^a = y: %.2f", nlhdlrexprdata->coef);
    for( int i = 0; i < nlhdlrexprdata->nvars - 1; i++ )
       SCIPinfoMessage(scip, NULL, "%s^%.2f", SCIPvarGetName(nlhdlrexprdata->vars[i]), nlhdlrexprdata->exponents[i]);
    SCIPinfoMessage(scip, NULL, " = %s", SCIPvarGetName(nlhdlrexprdata->vars[nlhdlrexprdata->nvars - 1]));
@@ -354,9 +354,9 @@ SCIP_RETCODE printSignomial(
 /** free the memory of expression data */
 static 
 void freeExprDataMem(
-   SCIP*                 scip,
-   SCIP_NLHDLREXPRDATA** nlhdlrexprdata,
-   SCIP_Bool             ispartial
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLHDLREXPRDATA** nlhdlrexprdata,     /**< expression data */
+   SCIP_Bool             ispartial           /**< free the partially allocated memory or the fully allocated memory? */
    )
 {
    SCIPfreeBlockMemoryArrayNull(scip, &(*nlhdlrexprdata)->factors, (*nlhdlrexprdata)->nfactors);
@@ -428,8 +428,8 @@ SCIP_Real reformRowprep(
 /** get variables associated with the expression and its subexpressions */
 static
 SCIP_RETCODE getVars(
-   SCIP*                 scip,
-   SCIP_NLHDLREXPRDATA*  nlhdlrexprdata
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLHDLREXPRDATA*  nlhdlrexprdata      /**< expression data */
    )
 {
    int c;
@@ -458,8 +458,8 @@ SCIP_RETCODE getVars(
 /** get bounds of variables $x,t$ and check whether they are box constrained signomial variables */
 static
 void getCheckBds(
-   SCIP*                 scip,
-   SCIP_NLHDLREXPRDATA*  nlhdlrexprdata,
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLHDLREXPRDATA*  nlhdlrexprdata,     /**< expression data */
    SCIP_Bool*            isboxsignomial      /**< buffer to store whether variables are box constrained signomial variables */
    )
 {
