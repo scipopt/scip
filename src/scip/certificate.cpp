@@ -785,7 +785,7 @@ SCIP_Longint SCIPcertificateGetCurrentIndex(
 
 #ifndef NDEBUG
 /** checks if information is consistent with printed certificate line */
-SCIP_Bool SCIPcertificateEnsureLastBoundInfoConsistent(
+void SCIPcertificateEnsureLastBoundInfoConsistent(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
    SCIP_VAR*             var,                /**< variable that gets changed */
    SCIP_BOUNDTYPE        boundtype,          /**< lb or ub changed? */
@@ -1022,12 +1022,12 @@ void SCIPcertificatePrintProofMessage(
    )
 {
    va_list ap;
-   char buffer[SCIP_MAXSTRLEN];
+   char buffer[3 * SCIP_MAXSTRLEN];
    /* check if certificate output should be created */
    if( certificate->derivationfile == NULL )
       return;
    va_start(ap, formatstr);
-   vsprintf(buffer, formatstr, ap);
+   vsnprintf(buffer, 3 * SCIP_MAXSTRLEN, formatstr, ap);
 
    SCIPfprintf(certificate->derivationfile, "%s", buffer); // todo: is this correct?
    va_end(ap);
@@ -1094,7 +1094,7 @@ void SCIPcertificatePrintProblemComment(
    )
 {
    va_list ap;
-   char buffer[SCIP_MAXSTRLEN];
+   char buffer[3 * SCIP_MAXSTRLEN];
    /* check if certificate output should be created */
    if( certificate->transfile == NULL )
       return;
@@ -1102,7 +1102,7 @@ void SCIPcertificatePrintProblemComment(
    SCIPfprintf(certificate->origfile, "# ");
 
    va_start(ap, formatstr);
-   vsprintf(buffer, formatstr, ap);
+   vsnprintf(buffer, 3 * SCIP_MAXSTRLEN, formatstr, ap);
 
    if( isorigfile )
       SCIPfprintf(certificate->origfile, "%s", formatstr); // todo: is this correct?
@@ -1121,7 +1121,7 @@ void SCIPcertificatePrintProofComment(
    )
 {
    va_list ap;
-   char buffer[SCIP_MAXSTRLEN];
+   char buffer[3 * SCIP_MAXSTRLEN];
    /* check if certificate output should be created */
    if( certificate->derivationfile == NULL )
       return;
@@ -1129,7 +1129,7 @@ void SCIPcertificatePrintProofComment(
    SCIPfprintf(certificate->derivationfile, "# ");
 
    va_start(ap, formatstr);
-   vsprintf(buffer, formatstr, ap);
+   vsnprintf(buffer, 3 * SCIP_MAXSTRLEN, formatstr, ap);
 
    SCIPfprintf(certificate->derivationfile, "%s", formatstr); // todo: is this correct?
    va_end(ap);

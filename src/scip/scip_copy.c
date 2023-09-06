@@ -1043,7 +1043,7 @@ SCIP_RETCODE copyVars(
       /* copy exact data, if solving exactly */
       if( SCIPisExactSolve(targetscip) && SCIPisExactSolve(sourcescip) )
       {
-         SCIP_CALL( SCIPvarCopyExactData(targetscip->set, targetscip->mem->probmem, targetvar, sourcevars[i], FALSE) );
+         SCIP_CALL( SCIPvarCopyExactData(targetscip->mem->probmem, targetvar, sourcevars[i], FALSE) );
       }
       assert(success);
       assert(targetvar != NULL);

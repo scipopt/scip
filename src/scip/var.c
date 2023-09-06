@@ -1700,7 +1700,7 @@ void overwriteMultAggrWithExactData(
 {
    int i;
 
-   if( !set->exact_enabled || var->varstatus != SCIP_VARSTATUS_MULTAGGR )
+   if( !set->exact_enabled || SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR )
       return;
 
    var->data.multaggr.constant = RatApproxReal(var->exactdata->multaggr.constant);
@@ -2322,7 +2322,7 @@ SCIP_RETCODE SCIPvarAddExactData(
    }
 
    var->exactdata->colexact = NULL;
-   var->exactdata->varstatusexact = var->varstatus;
+   var->exactdata->varstatusexact = SCIPvarGetStatus(var);
    var->exactdata->certificateindex = -1;
    var->exactdata->multaggr.scalars = NULL;
    var->exactdata->multaggr.constant = NULL;
@@ -2336,7 +2336,6 @@ SCIP_RETCODE SCIPvarAddExactData(
  * can't be integrated into varCopy because it is needed, e.g., when transforming vars
  */
 SCIP_RETCODE SCIPvarCopyExactData(
-   SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_VAR*             targetvar,          /**< variable that gets the exact data */
    SCIP_VAR*             sourcevar,          /**< variable the data gets copied from */
@@ -6407,7 +6406,7 @@ SCIP_RETCODE SCIPvarAggregateExact(
 
    /* set the aggregated variable's objective value to 0.0 */
    RatSet(obj, var->exactdata->obj);
-   RatSetReal(tmpval, 0);
+   RatSetReal(tmpval, 0.0);
    SCIP_CALL( SCIPvarChgObjExact(var, blkmem, set, transprob, primal, lp->lpexact, eventqueue, tmpval) );
 
    RatFreeBuffer(set->buffer, &tmpval);
@@ -6823,10 +6822,10 @@ SCIP_RETCODE tryAggregateIntVarsExact(
    SCIP_Rational* tmprat2;
    SCIP_Rational* tmprat3;
    char aggvarname[SCIP_MAXSTRLEN];
-   SCIP_Longint scalarxn = 0;
-   SCIP_Longint scalarxd = 0;
-   SCIP_Longint scalaryn = 0;
-   SCIP_Longint scalaryd = 0;
+   SCIP_Longint scalarxn;
+   SCIP_Longint scalarxd;
+   SCIP_Longint scalaryn;
+   SCIP_Longint scalaryd;
    SCIP_Longint a;
    SCIP_Longint b;
    SCIP_Longint c;
@@ -6837,8 +6836,6 @@ SCIP_RETCODE tryAggregateIntVarsExact(
    SCIP_Longint xsol;
    SCIP_Longint ysol;
    SCIP_VARTYPE vartype;
-
-#define MAXDNOM 1000000LL
 
    assert(set != NULL);
    assert(blkmem != NULL);
@@ -7011,14 +7008,14 @@ SCIP_RETCODE tryAggregateIntVarsExact(
 
    RatSetString(tmprat1, "-inf");
    RatSetString(tmprat2, "inf");
-   RatSetInt(tmprat3, 0, 0);
+   RatSetInt(tmprat3, 0L, 0L);
 
    SCIP_CALL( SCIPvarAddExactData(aggvar, blkmem, tmprat1, tmprat2, tmprat3) );
 
    SCIP_CALL( SCIPprobAddVar(transprob, blkmem, set, lp, branchcand, eventfilter, eventqueue, aggvar) );
 
-   RatSetInt(tmprat1, -b, 1);
-   RatSetInt(tmprat2, xsol, 1);
+   RatSetInt(tmprat1, -b, 1L);
+   RatSetInt(tmprat2, xsol, 1L);
 
    SCIP_CALL( SCIPvarAggregateExact(varx, blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, cliquetable,
          branchcand, eventfilter, eventqueue, aggvar, tmprat1, tmprat2, infeasible, aggregated) );
@@ -8285,7 +8282,7 @@ SCIP_RETCODE varNegateExactData(
 
    constant = negvar->data.negate.constant;
 
-   SCIPvarCopyExactData(set, blkmem, negvar, origvar, FALSE);
+   SCIPvarCopyExactData(blkmem, negvar, origvar, FALSE);
 
    RatDiffReal(negvar->exactdata->glbdom.ub, origvar->exactdata->glbdom.lb, constant);
    RatNegate(negvar->exactdata->glbdom.ub, negvar->exactdata->glbdom.ub);
