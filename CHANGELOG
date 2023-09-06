@@ -20,6 +20,7 @@ Fixed bugs
 - add missing row links to columns in SCIPflushRowExtensions() required to maintain correct row norms
 - restrict separator intobj to solutions for which there can be no better feasible integral objective values to avoid cutting them off
 - delay removal of clique lists from SCIPvarRemoveCliquesImplicsVbs() into cliqueCleanup() to avoid segmentation faults by incomplete cleanups after variable conversions
+- reject sub-solutions with invalid objectives in SCIPtranslateSubSols() due to contradicting infinite contributions
 
 @section RN804 SCIP 8.0.4
 *************************
