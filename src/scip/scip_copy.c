@@ -1485,20 +1485,25 @@ SCIP_RETCODE SCIPtranslateSubSols(
    subsols = SCIPgetSols(subscip);
    for( i = 0; i < nsubsols; ++i )
    {
-      /* better do not copy unbounded solutions as this will mess up the SCIP solution status */
-      if( SCIPisInfinity(scip, -SCIPgetSolOrigObj(subscip, subsols[i])) )
-         continue;
-
+      /* create or clear main solution */
       if( newsol == NULL )
       {
          SCIP_CALL( SCIPcreateSol(scip, &newsol, heur) );
          if( solindex != NULL )
             *solindex = SCIPsolGetIndex(newsol);
       }
+      else
+         SCIP_CALL( SCIPclearSol(scip, newsol) );
 
-      /* put values from subsol into newsol */
+      /* get values from subsol */
       SCIP_CALL( translateSubSol(scip, subscip, subsols[i], subvars, solvals) );
+
+      /* put values into newsol */
       SCIP_CALL( SCIPsetSolVals(scip, newsol, nvars, vars, solvals) );
+
+      /* reject solution with invalid objective value */
+      if( SCIPgetSolTransObj(scip, newsol) == SCIP_INVALID ) /*lint !e777*/
+         continue;
 
       /* check whether feasible */
       SCIP_CALL( SCIPcheckSol(scip, newsol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
