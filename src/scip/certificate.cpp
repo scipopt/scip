@@ -3033,7 +3033,7 @@ SCIP_RETCODE SCIPfreeCertificateActiveAggregationInfo(
 }
 
 /** prints unsplitting information to proof section */
-int SCIPcertificatePrintUnsplitting(
+void SCIPcertificatePrintUnsplitting(
    SCIP_SET*             set,                /**< general SCIP settings */
    SCIP_CERTIFICATE*     certificate,        /**< certificate data structure */
    SCIP_NODE*            node                /**< node data */
@@ -3047,12 +3047,12 @@ int SCIPcertificatePrintUnsplitting(
 
    /* check whether certificate output should be created */
    if( certificate->transfile == NULL || SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE )
-      return SCIP_OKAY;
+      return;
 
    /* get the current node data */
    assert(SCIPhashmapExists(certificate->nodedatahash, node));
    nodedata = (SCIP_CERTNODEDATA*) SCIPhashmapGetImage(certificate->nodedatahash, node);
-   SCIP_CALL( RatCreateBuffer(set->buffer, &lowerbound) );
+   RatCreateBuffer(set->buffer, &lowerbound);
    infeas = FALSE;
 
    assert(nodedata != NULL);
@@ -3096,7 +3096,7 @@ int SCIPcertificatePrintUnsplitting(
 
       SCIPcertificatePrintProofMessage(certificate, " { uns %d %d  %d %d  } -1\n", nodedata->derindex_left, nodedata->assumptionindex_left,
          nodedata->derindex_right, nodedata->assumptionindex_right);
-      SCIP_CALL( SCIPcertificateUpdateParentData(certificate, node, certificate->indexcounter - 1, lowerbound) );
+      SCIPcertificateUpdateParentData(certificate, node, certificate->indexcounter - 1, lowerbound);
    }
    else
    {
@@ -3125,7 +3125,6 @@ int SCIPcertificatePrintUnsplitting(
    certificateFreeNodeData(certificate, node);
 
    RatFreeBuffer(set->buffer, &lowerbound);
-   return (certificate->indexcounter - 1);
 }
 
 /** prints RTP section with lowerbound and upperbound range */

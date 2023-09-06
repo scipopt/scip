@@ -5096,9 +5096,10 @@ SCIP_RETCODE SCIPvarGetActiveRepresentativesExact(
          /* x = a*y + c */
          if( nactivevars >= activevarssize )
          {
-            SCIP_CALL( SCIPsetReallocBufferArray(set, &activevars, 2 * activevarssize) );
-            SCIP_CALL( RatReallocBufferArray(set->buffer, &activescalars, activevarssize, 2 * activevarssize) );
-            activevarssize *= 2;
+            int newactivevarssize = activevarssize * 2;
+            SCIP_CALL( SCIPsetReallocBufferArray(set, &activevars, newactivevarssize) );
+            SCIP_CALL( RatReallocBufferArray(set->buffer, &activescalars, activevarssize, newactivevarssize) );
+            activevarssize = newactivevarssize;
             assert(nactivevars < activevarssize);
          }
          activevars[nactivevars] = var;
@@ -5471,21 +5472,21 @@ SCIP_RETCODE SCIPvarFlattenAggregationGraph(
          assert( multrequiredsize <= multvarssize );
       }
 
-        /**@note After the flattening the multi aggregation might resolve to be in fact an aggregation (or even a fixing?).
-          * This issue is not resolved right now, since var->data.multaggr.nvars < 2 should not cause troubles. However, one
-          * may loose performance hereby, since aggregated variables are easier to handle.
-          *
-          * Note, that there are two cases where SCIPvarFlattenAggregationGraph() is called: The easier one is that it is
-          * called while installing the multi-aggregation. in principle, the described issue could be handled straightforward
-          * in this case by aggregating or fixing the variable instead.  The more complicated case is the one, when the
-          * multi-aggregation is used, e.g., in linear presolving (and the variable is already declared to be multi-aggregated).
-          *
-          * By now, it is not allowed to fix or aggregate multi-aggregated variables which would be necessary in this case.
-          *
-          * The same issue appears in the SCIPvarGetProbvar...() methods.
-          */
+      /**@note After the flattening the multi aggregation might resolve to be in fact an aggregation (or even a fixing?).
+       * This issue is not resolved right now, since var->data.multaggr.nvars < 2 should not cause troubles. However, one
+       * may loose performance hereby, since aggregated variables are easier to handle.
+       *
+       * Note, that there are two cases where SCIPvarFlattenAggregationGraph() is called: The easier one is that it is
+       * called while installing the multi-aggregation. in principle, the described issue could be handled straightforward
+       * in this case by aggregating or fixing the variable instead.  The more complicated case is the one, when the
+       * multi-aggregation is used, e.g., in linear presolving (and the variable is already declared to be multi-aggregated).
+       *
+       * By now, it is not allowed to fix or aggregate multi-aggregated variables which would be necessary in this case.
+       *
+       * The same issue appears in the SCIPvarGetProbvar...() methods.
+       */
 
-         var->data.multaggr.constant = multconstant;
+      var->data.multaggr.constant = multconstant;
    }
    else
    {

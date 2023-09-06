@@ -50,9 +50,6 @@
 
 extern "C" {
 
-static const char posinf[4] = "inf";
-static const char neginf[5] = "-inf";
-static SCIP_Rational buffer;
 static SCIP_Real infinity = SCIP_DEFAULT_INFINITY; /* values above this are considered to be infinite */
 
 /*

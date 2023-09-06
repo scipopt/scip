@@ -643,10 +643,13 @@ SCIP_EXPORT
 void RatPrintf(const char *format, ...);
 
 /** rational extension for the SCIPdebugMsg */
+/*lint -emacro(681,RatDebugMessage) */
+/*lint -emacro(506,RatDebugMessage) */
+/*lint -emacro(774,RatDebugMessage) */
 #ifdef SCIP_DEBUG
-#define RatDebugMessage           printf("[%s:%d] debug: ", __FILE__, __LINE__), RatPrintf
+#define RatDebugMessage                 printf("[%s:%d] debug: ", __FILE__, __LINE__), RatPrintf
 #else
-#define RatDebugMessage           while( FALSE ) /*lint -e{530}*/ RatPrintf
+#define RatDebugMessage                 while( FALSE ) /*lint -e{530}*/ RatPrintf
 #endif
 
 /** prints rational to file using message handler */
