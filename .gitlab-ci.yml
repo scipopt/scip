@@ -15,13 +15,13 @@ build:
     - mkdir build
     - cd build
     - cmake ..
-    - make -j4
+    - make -j
     - cd ../..
 
     - mkdir build
     - cd build
-    - cmake .. -DAUTOBUILD=ON -DSOPLEX_DIR=../soplex/build
-    - make -j4
+    - cmake .. -DAUTOBUILD=ON -DSOPLEX_DIR=soplex/build
+    - make -j
 
 test:
   stage: test
