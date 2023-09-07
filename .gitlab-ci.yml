@@ -7,7 +7,7 @@ build:
     name: rust:latest
   script:
     - apt-get update
-    - apt-get install -y cmake g++ git
+    - apt-get install -y cmake g++ git clang
     - git clone https://github.com/scipopt/soplex.git
     - cd soplex
     - git checkout bugfix-60
