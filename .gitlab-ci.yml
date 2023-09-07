@@ -1,0 +1,29 @@
+stages:
+  - build
+  - test
+
+build:
+  stage: build
+  script:
+    - git clone https://github.com/scipopt/soplex.git
+    - cd soplex
+    - git checkout bugfix-60
+    - mkdir build
+    - cd build
+    - cmake ..
+    - make -j4
+    - cd ../..
+
+    - mkdir build
+    - cd build
+    - cmake .. -DAUTOBUILD=ON -DSOPLEX_DIR=../soplex/build
+    - make -j4
+
+test:
+  stage: test
+  image:
+    name: rust:latest  # Use the official Rust image as the base image for the test stage
+  script:
+    - cd build  # Assuming your build artifacts are in the 'build' directory
+    - echo LETS TEST SOME RUST
+    - cargo
