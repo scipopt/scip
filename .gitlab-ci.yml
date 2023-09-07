@@ -5,8 +5,10 @@ stages:
 build:
   stage: build
   image:
-    name: ubuntu:20.04
+    name: debian:12
   script:
+    - apt-get update
+    - apt-get install -y cmake g++ git
     - git clone https://github.com/scipopt/soplex.git
     - cd soplex
     - git checkout bugfix-60
