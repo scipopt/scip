@@ -4,6 +4,8 @@ stages:
 
 build:
   stage: build
+  image:
+    name: ubuntu:20.04
   script:
     - git clone https://github.com/scipopt/soplex.git
     - cd soplex
