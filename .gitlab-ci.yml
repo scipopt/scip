@@ -26,4 +26,4 @@ build:
 
     - git clone https://github.com/scipopt/russcip.git
     - cd russcip
-    - LD_LIBRARY_PATH=../install/lib SCIPOPTDIR=../install cargo test --release
+    - LD_LIBRARY_PATH=$CI_PROJECT_DIR/install/lib SCIPOPTDIR=$CI_PROJECT_DIR/install cargo test --release
