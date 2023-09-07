@@ -19,10 +19,11 @@ build:
 
     - mkdir build
     - cd build
-    - cmake .. -DAUTOBUILD=ON -DSOPLEX_DIR=soplex/build
+    - cmake .. -DAUTOBUILD=ON -DSOPLEX_DIR=soplex/build -DCMAKE_INSTALL_PREFIX=../install
     - make -j
+    - make install
     - cd ..
 
     - git clone https://github.com/scipopt/russcip.git
     - cd russcip
-    - SCIPOPTDIR=../build cargo test --release
+    - LD_LIBRARY_PATH=../install/lib SCIPOPTDIR=../install cargo test --release
