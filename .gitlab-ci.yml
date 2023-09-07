@@ -1,11 +1,10 @@
 stages:
   - build
-  - test
 
 build:
   stage: build
   image:
-    name: debian:12
+    name: rust:latest
   script:
     - apt-get update
     - apt-get install -y cmake g++ git
@@ -22,12 +21,8 @@ build:
     - cd build
     - cmake .. -DAUTOBUILD=ON -DSOPLEX_DIR=soplex/build
     - make -j
+    - cd ..
 
-test:
-  stage: test
-  image:
-    name: rust:latest  # Use the official Rust image as the base image for the test stage
-  script:
-    - cd build  # Assuming your build artifacts are in the 'build' directory
-    - echo LETS TEST SOME RUST
-    - cargo
+    - git clone https://github.com/scipopt/russcip.git
+    - cd russcip
+    - SCIPOPTDIR=../build cargo test --release
