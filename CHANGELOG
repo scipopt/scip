@@ -6,6 +6,10 @@
 Fixed bugs
 ----------
 
+- fixed that scaling of rows in Gurobi interface (SCIPlpiScaleRow()) changed infinite sides to large finite ones (1e20) when scale factor is negative
+- check whether objective limit is truly reached in SCIPlpiIsStable()
+- if an objective limit is set and Mosek claims that it is exceeded, check that this is indeed the case in SCIPlpiIsStable()
+- the .mps file reader was extended to additionally accept .mps files with the objective sense section on one line
 - ensure that delayed cutpool separation does not happen if enough cuts have been found already
 - fixed that a Gurobi or Mosek interface (LPI) could not be freed from a thread different than the one it was created in, which lead to problems when, e.g., using the concurrent optimizer
 - in cons_varbound if both variables are fixed, instead of propagating the constraint check the feasibility of the constraint since propagating can lead to unnecessary numerical troubles
@@ -87,10 +91,6 @@ Fixed bugs
 - only consider positive slack variables as active in benders.c
 - in the feasibility check of and/or constraints, allow for fractional values in operands
 - fixed linear outer-approximation for some composite absolute-value expressions
-- fixed that scaling of rows in Gurobi interface (SCIPlpiScaleRow()) changed infinite sides to large finite ones (1e20) when scale factor is negative
-- check whether objective limit is truly reached in SCIPlpiIsStable()
-- if an objective limit is set and Mosek claims that it is exceeded, check that this is indeed the case in SCIPlpiIsStable()
-- The .mps file reader was extended to additionally accept .mps files with the objective sense section on one line.
 
 Miscellaneous
 -------------
