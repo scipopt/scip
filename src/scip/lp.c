@@ -10445,7 +10445,7 @@ SCIP_RETCODE SCIPlpSetCutoffbound(
    }
 
    if( !lp->diving )
-      SCIPlpExactSetCutoffbound(lp->lpexact, set, prob, cutoffbound);
+      SCIPlpExactSetCutoffbound(lp->lpexact, set, cutoffbound);
 
    lp->cutoffbound = cutoffbound;
 

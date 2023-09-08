@@ -1370,7 +1370,7 @@ SCIP_RETCODE readCoefficientsRational(
    *newsection = FALSE;
    inquadpart = FALSE;
 
-   RatCreateBuffer(SCIPbuffer(scip), &coef);
+   SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &coef) );
 
    if( isobjective )
    {
@@ -1445,7 +1445,7 @@ SCIP_RETCODE readCoefficientsRational(
             }
             SCIPdebugMsg(scip, "(line %d) read objective offset %g\n", lpinput->linenumber, coefsign * RatApproxReal(coef));
             haveobjoffset = TRUE;
-            RatMultReal(objoffset, coef, coefsign);
+            RatMultReal(objoffset, coef, (double) coefsign);
          }
       }
 
@@ -1503,7 +1503,7 @@ SCIP_RETCODE readCoefficientsRational(
                goto TERMINATE;
             }
             SCIPdebugMsg(scip, "(line %d) read objective offset %g\n", lpinput->linenumber, coefsign * RatApproxReal(coef));
-            RatMultReal(objoffset, coef, coefsign);
+            RatMultReal(objoffset, coef, (double) coefsign);
          }
 
          *newsection = TRUE;
@@ -1568,13 +1568,13 @@ SCIP_RETCODE readCoefficientsRational(
                *coefssize *= 2;
                *coefssize = MAX(*coefssize, (*ncoefs)+1);
                SCIP_CALL( SCIPreallocBlockMemoryArray(scip, vars, oldcoefssize, *coefssize) );
-               RatReallocBlockArray(SCIPblkmem(scip), coefs, oldcoefssize, *coefssize);
+               SCIP_CALL( RatReallocBlockArray(SCIPblkmem(scip), coefs, oldcoefssize, *coefssize) );
             }
             assert(*ncoefs < *coefssize);
 
             /* add coefficient */
             (*vars)[*ncoefs] = var;
-            RatMultReal((*coefs)[*ncoefs], coef, coefsign);
+            RatMultReal((*coefs)[*ncoefs], coef, (double) coefsign);
             (*ncoefs)++;
          }
       }
@@ -1611,8 +1611,8 @@ SCIP_RETCODE readObjectiveRational(
 
    assert(lpinput != NULL);
 
-   RatCreateBuffer(SCIPbuffer(scip), &objoffset);
-   RatCreateBuffer(SCIPbuffer(scip), &tmpval);
+   SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &objoffset) );
+   SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &tmpval) );
 
    /* read the objective coefficients */
    SCIP_CALL( readCoefficientsRational(scip, lpinput, TRUE, name, &coefssize, &vars, &coefs, &ncoefs,
@@ -2006,9 +2006,9 @@ SCIP_RETCODE readConstraintsRational(
    retcode = SCIP_OKAY;
    nquadcoefs = 0;
 
-   RatCreateBuffer(SCIPbuffer(scip), &lhs);
-   RatCreateBuffer(SCIPbuffer(scip), &rhs);
-   RatCreateBuffer(SCIPbuffer(scip), &sidevalue);
+   SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &lhs) );
+   SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &rhs) );
+   SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &sidevalue) );
 
    /* read coefficients */
    SCIP_CALL( readCoefficientsRational(scip, lpinput, FALSE, name, &coefssize, &vars, &coefs, &ncoefs,
@@ -2018,7 +2018,7 @@ SCIP_RETCODE readConstraintsRational(
       goto TERMINATE;
    if( newsection )
    {
-      if( ncoefs > 0 || nquadcoefs > 0 )
+      if( ncoefs > 0 )
          syntaxError(scip, lpinput, "expected constraint sense '<=', '=', or '>='.");
       goto TERMINATE;
    }
@@ -2056,7 +2056,7 @@ SCIP_RETCODE readConstraintsRational(
       syntaxError(scip, lpinput, "expected value as right hand side.");
       goto TERMINATE;
    }
-   RatMultReal(sidevalue, sidevalue, sidesign);
+   RatMultReal(sidevalue, sidevalue, (double) sidesign);
 
    /* assign the left and right hand side, depending on the constraint sense */
    switch( sense ) /*lint !e530*/
@@ -2171,7 +2171,7 @@ SCIP_RETCODE readConstraintsRational(
    else
    {
       /* now we should have an indicator constraint */
-      if( ncoefs != 1 || nquadcoefs > 0 )
+      if( ncoefs != 1 )
       {
          syntaxError(scip, lpinput, "Indicator part can only consist of one binary variable.");
          goto TERMINATE;
@@ -2257,7 +2257,7 @@ SCIP_RETCODE readConstraints(
 
    if( SCIPisExactSolve(scip) )
    {
-      readConstraintsRational(scip, lpinput);
+      SCIP_CALL( readConstraintsRational(scip, lpinput) );
       return SCIP_OKAY;
    }
 
@@ -2474,9 +2474,9 @@ SCIP_RETCODE readBoundsRational(
 
    assert(lpinput != NULL);
 
-   RatCreateBuffer(SCIPbuffer(scip), &value);
-   RatCreateBuffer(SCIPbuffer(scip), &lb);
-   RatCreateBuffer(SCIPbuffer(scip), &ub);
+   SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &value) );
+   SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &lb) );
+   SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &ub) );
 
    while( getNextToken(scip, lpinput) )
    {
@@ -2518,14 +2518,14 @@ SCIP_RETCODE readBoundsRational(
          switch( leftsense )
          {
          case LP_SENSE_GE:
-            RatMultReal(ub, value, sign);
+            RatMultReal(ub, value, (double) sign);
             break;
          case LP_SENSE_LE:
-            RatMultReal(lb, value, sign);
+            RatMultReal(lb, value, (double) sign);
             break;
          case LP_SENSE_EQ:
-            RatMultReal(lb, value, sign);
-            RatMultReal(ub, value, sign);
+            RatMultReal(lb, value, (double) sign);
+            RatMultReal(ub, value, (double) sign);
             break;
          case LP_SENSE_NOTHING:
          default:
@@ -2587,14 +2587,14 @@ SCIP_RETCODE readBoundsRational(
                switch( rightsense )
                {
                case LP_SENSE_GE:
-                  RatMultReal(lb, value, sign);
+                  RatMultReal(lb, value, (double) sign);
                   break;
                case LP_SENSE_LE:
-                  RatMultReal(ub, value, sign);
+                  RatMultReal(ub, value, (double) sign);
                   break;
                case LP_SENSE_EQ:
-                  RatMultReal(lb, value, sign);
-                  RatMultReal(ub, value, sign);
+                  RatMultReal(lb, value, (double) sign);
+                  RatMultReal(ub, value, (double) sign);
                   break;
                case LP_SENSE_NOTHING:
                default:

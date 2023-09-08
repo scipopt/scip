@@ -290,7 +290,7 @@ SCIP_RETCODE checkSolOrigExact(
    if( !printreason )
       completely = FALSE;
 
-   RatCreateBuffer(SCIPbuffer(scip), &solval);
+   SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &solval) );
 
    /* check bounds */
    if( checkbounds )
@@ -1829,9 +1829,9 @@ void SCIPgetSolTransObjExact(
       SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetSolTransObjExact(sol==NULL)", \
             FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
       if( SCIPtreeHasCurrentNodeLP(scip->tree) )
-         SCIPlpExactGetObjval(scip->lpexact, scip->set, scip->transprob, res);
+         SCIPlpExactGetObjval(scip->lpexact, scip->set, res);
       else
-         SCIPlpExactGetPseudoObjval(scip->lpexact, scip->set, scip->transprob, res);
+         SCIPlpExactGetPseudoObjval(scip->lpexact, scip->set, res);
    }
 }
 
@@ -4118,7 +4118,7 @@ SCIP_Bool SCIPisExactSol(
 {
    assert(SCIPisTransformed(scip) || sol != NULL);
 
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPisExactSol", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPisExactSol", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
    return SCIPsolIsExact(sol);
 }

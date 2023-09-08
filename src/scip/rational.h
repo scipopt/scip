@@ -689,6 +689,13 @@ void RatRound(
    SCIP_ROUNDMODE_RAT    roundmode           /**< the rounding direction */
    );
 
+/** computes fractional part of a rational number */
+SCIP_EXPORT
+void RatGetFrac(
+   SCIP_Rational*        res,                /**< rational to save the frac */
+   SCIP_Rational*        src                 /**< src rational */
+   );
+
 /** rounds rational to next integer in direction of roundmode */
 SCIP_EXPORT
 SCIP_Bool RatRoundInteger(

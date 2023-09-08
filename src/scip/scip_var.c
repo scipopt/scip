@@ -484,8 +484,14 @@ SCIP_RETCODE SCIPwriteVarsLinearsumExact(
             SCIPinfoMessage(scip, file, " -");
          else
          {
-            char buf[SCIP_MAXSTRLEN];
-            RatToString(vals[v], buf, SCIP_MAXSTRLEN);
+            char buf[3 * SCIP_MAXSTRLEN];
+            int len;
+
+            len = RatToString(vals[v], buf, 3 * SCIP_MAXSTRLEN);
+            if( len == SCIP_MAXSTRLEN )
+            {
+               SCIPerrorMessage("rational was truncated while printing\n");
+            }
             SCIPinfoMessage(scip, file, " %s", buf);
          }
       }

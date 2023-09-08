@@ -485,8 +485,6 @@ SCIP_Bool SCIPparseRational(
       *endptr = (char*)(localstr + RatStrlen(value));
       return TRUE;
    }
-
-   return TRUE;
 }
 
 /** checks, if values are in range of epsilon */
@@ -659,7 +657,7 @@ SCIP_Bool SCIPisExactlyIntegral(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   return floor(val) == val;
+   return floor(val) == val; /*lint !e777*/
 }
 
 /** checks whether the product val * scalar is integral in epsilon scaled by scalar */

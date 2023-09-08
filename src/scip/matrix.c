@@ -493,9 +493,9 @@ SCIP_RETCODE addConstraintExact(
    activevars = NULL;
    activevals = NULL;
    nactivevars = nvars;
-   RatCreateBuffer(SCIPbuffer(scip), &activeconstant);
-   RatCopyBuffer(SCIPbuffer(scip), &tmplhs, lhs);
-   RatCopyBuffer(SCIPbuffer(scip), &tmprhs, rhs);
+   SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &activeconstant) );
+   SCIP_CALL( RatCopyBuffer(SCIPbuffer(scip), &tmplhs, lhs) );
+   SCIP_CALL( RatCopyBuffer(SCIPbuffer(scip), &tmprhs, rhs) );
 
    /* duplicate variable and value array */
    SCIP_CALL( SCIPduplicateBufferArray(scip, &activevars, vars, nactivevars ) );
@@ -508,7 +508,7 @@ SCIP_RETCODE addConstraintExact(
       SCIP_CALL( RatCreateBufferArray(SCIPbuffer(scip), &activevals, nactivevars) );
 
       for( v = 0; v < nactivevars; v++ )
-         RatSetInt(activevals[v], 1, 1);
+         RatSetInt(activevals[v], 1L, 1L);
    }
 
    /* retransform given variables to active variables */
@@ -598,7 +598,7 @@ SCIP_RETCODE setColumnMajorFormat(
          colidx = *rowpnt;
          matrix->colmatval[matrix->colmatbeg[colidx] + fillidx[colidx]] = *valpnt;
          if( SCIPisExactSolve(scip) )
-            RatSet(matrix->matrixvalsexact->colmatvalexact[matrix->colmatbeg[colidx] + fillidx[colidx]], valpntrational);
+            RatSet(matrix->matrixvalsexact->colmatvalexact[matrix->colmatbeg[colidx] + fillidx[colidx]], valpntrational); /*lint !e644*/
          matrix->colmatind[matrix->colmatbeg[colidx] + fillidx[colidx]] = i;
          fillidx[colidx]++;
       }

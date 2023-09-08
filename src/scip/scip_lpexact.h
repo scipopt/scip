@@ -96,7 +96,6 @@ SCIP_RETCODE SCIPcreateEmptyRowExactSepa(
    SCIP_ROWEXACT**       rowexact,           /**< pointer to exact row */
    SCIP_ROW*             fprow,              /**< corresponding fp approximation/relaxation */
    SCIP_SEPA*            sepa,               /**< separator that creates the row */
-   const char*           name,               /**< name of row */
    SCIP_Rational*        lhs,                /**< left hand side of row */
    SCIP_Rational*        rhs,                /**< right hand side of row */
    SCIP_Bool             hasfprelaxation     /**< the the fprow a relaxation or only an approximation of the exact row? */
@@ -128,7 +127,7 @@ SCIP_RETCODE SCIPcreateRowExactFromRow(
  *       - \ref SCIP_STAGE_SOLVING
  */
 SCIP_EXPORT
-SCIP_Bool SCIPgenerateFpRowsFromRowExact(
+SCIP_RETCODE SCIPgenerateFpRowsFromRowExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWEXACT*        row,                /**< SCIP exact row */
    SCIP_ROW*             rowlhs,             /**< fp row-relaxation wrt lhs */
@@ -146,6 +145,7 @@ SCIP_Bool SCIPgenerateFpRowsFromRowExact(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
+SCIP_EXPORT
 SCIP_RETCODE SCIPcaptureRowExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWEXACT*        row                 /**< row to capture */

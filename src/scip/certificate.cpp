@@ -785,7 +785,7 @@ SCIP_Longint SCIPcertificateGetCurrentIndex(
 
 #ifndef NDEBUG
 /** checks if information is consistent with printed certificate line */
-void SCIPcertificateEnsureLastBoundInfoConsistent(
+SCIP_Bool SCIPcertificateEnsureLastBoundInfoConsistent(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
    SCIP_VAR*             var,                /**< variable that gets changed */
    SCIP_BOUNDTYPE        boundtype,          /**< lb or ub changed? */
@@ -2001,7 +2001,7 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
       return SCIP_OKAY;
 
    SCIP_CALL( RatCreateBuffer(set->buffer, &tmp) );
-   SCIPlpExactGetObjval(lpexact, set, prob, tmp);
+   SCIPlpExactGetObjval(lpexact, set, tmp);
 
    /* only print line if bound improved */
    if( !usefarkas && RatIsLT(tmp, SCIPnodeGetLowerboundExact(node)) )
@@ -2188,7 +2188,7 @@ SCIP_RETCODE  SCIPcertificatePrintDualboundPseudo(
 
    /* infinity means we use the exact lp value */
    if( SCIPsetIsInfinity(set, psval) )
-      SCIPlpExactGetPseudoObjval(lpexact, set, prob, pseudoobjval);
+      SCIPlpExactGetPseudoObjval(lpexact, set, pseudoobjval);
    else
       RatSetReal(pseudoobjval, psval);
    duallen = SCIPprobGetNObjVars(prob, set);
@@ -2269,8 +2269,8 @@ SCIP_RETCODE SCIPcertificatePrintInheritedBound(
 
       ind[0] = nodedata->derindex_inherit;
 
-      RatCreateBuffer(set->buffer, &lowerbound);
-      RatCreateBuffer(set->buffer, &val);
+      SCIP_CALL( RatCreateBuffer(set->buffer, &lowerbound) );
+      SCIP_CALL( RatCreateBuffer(set->buffer, &val) );
 
       RatSet(lowerbound, nodedata->derbound_inherit);
       RatSetInt(val, 1, 1);
@@ -3052,7 +3052,7 @@ void SCIPcertificatePrintUnsplitting(
    /* get the current node data */
    assert(SCIPhashmapExists(certificate->nodedatahash, node));
    nodedata = (SCIP_CERTNODEDATA*) SCIPhashmapGetImage(certificate->nodedatahash, node);
-   RatCreateBuffer(set->buffer, &lowerbound);
+   (void) RatCreateBuffer(set->buffer, &lowerbound);
    infeas = FALSE;
 
    assert(nodedata != NULL);
@@ -3110,7 +3110,7 @@ void SCIPcertificatePrintUnsplitting(
 
          ind[0] = nodedata->derindex_inherit;
 
-         RatCreateBuffer(set->buffer, &val);
+         (void) RatCreateBuffer(set->buffer, &val);
 
          RatSet(lowerbound, nodedata->derbound_inherit);
          RatSetInt(val, 1, 1);

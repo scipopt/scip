@@ -258,7 +258,9 @@ SCIP_RETCODE RatReallocBlockArray(
    BMSreallocBlockMemoryArray(mem, result, oldlen, newlen);
 
    for( i = oldlen; i < newlen; ++i )
-      RatCreateBlock(mem, &((*result)[i]));
+   {
+      SCIP_CALL( RatCreateBlock(mem, &((*result)[i])) );
+   }
 
    return SCIP_OKAY;
 }
@@ -1907,6 +1909,34 @@ void RatRound(
          }
       }
       res->val = roundint;
+   }
+#endif
+}
+
+/** computes fractional part of a rational */
+void RatGetFrac(
+   SCIP_Rational*        res,                /**< rational to save the frac */
+   SCIP_Rational*        src                 /**< src rational */
+   )
+{
+#ifdef SCIP_WITH_BOOST
+   Integer roundint, rest;
+
+   assert(src != NULL);
+   assert(res != NULL);
+
+   if( src->isinf )
+      RatSetReal(res, 0.0);
+   else
+   {
+      roundint = 0;
+      rest = 0;
+      divide_qr(numerator(src->val), denominator(src->val), roundint, rest);
+      if( rest != 0 )
+      {
+         roundint = src->val.sign() > 0 ? roundint : roundint - 1;
+      }
+      res->val = src->val - roundint;
    }
 #endif
 }

@@ -186,7 +186,7 @@ SCIP_RETCODE SCIPchgRowExactLhs(
 
    assert(!SCIPlpExactDiving(scip->lpexact) || (row->lppos == -1));
 
-   SCIP_CALL( SCIProwExactChgLhs(row, scip->mem->probmem, scip->set, scip->eventqueue, scip->lpexact, lhs) );
+   SCIP_CALL( SCIProwExactChgLhs(row, scip->set, scip->lpexact, lhs) );
 
    return SCIP_OKAY;
 }
@@ -210,7 +210,7 @@ SCIP_RETCODE SCIPchgRowExactRhs(
 
    assert(!SCIPlpExactDiving(scip->lpexact) || (row->lppos == -1));
 
-   SCIP_CALL( SCIProwExactChgRhs(row, scip->mem->probmem, scip->set, scip->eventqueue, scip->lpexact, rhs) );
+   SCIP_CALL( SCIProwExactChgRhs(row, scip->set, scip->lpexact, rhs) );
 
    return SCIP_OKAY;
 }
@@ -306,7 +306,6 @@ SCIP_RETCODE SCIPcreateEmptyRowExactSepa(
    SCIP_ROWEXACT**       rowexact,           /**< pointer to exact row */
    SCIP_ROW*             fprow,              /**< corresponding fp approximation/relaxation */
    SCIP_SEPA*            sepa,               /**< separator that creates the row */
-   const char*           name,               /**< name of row */
    SCIP_Rational*        lhs,                /**< left hand side of row */
    SCIP_Rational*        rhs,                /**< right hand side of row */
    SCIP_Bool             hasfprelaxation     /**< the the fprow a relaxation or only an approximation of the exact row? */
@@ -353,7 +352,7 @@ SCIP_RETCODE SCIPcreateRowExactFromRow(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-SCIP_Bool SCIPgenerateFpRowsFromRowExact(
+SCIP_RETCODE SCIPgenerateFpRowsFromRowExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWEXACT*        row,                /**< SCIP exact row */
    SCIP_ROW*             rowlhs,             /**< fp row-relaxation wrt lhs */
@@ -416,9 +415,9 @@ void SCIPgetRowSolActivityExact(
    if( sol != NULL )
       SCIProwExactGetSolActivity(row, scip->set, scip->stat, sol, useexact, result);
    else if( SCIPtreeHasCurrentNodeLP(scip->tree) )
-      RatSet(result, SCIProwExactGetLPActivity(row, scip->set, scip->stat, scip->lpexact));
+      RatSet(result, SCIProwExactGetLPActivity(row, scip->stat, scip->lpexact));
    else
-      RatSet(result, SCIProwExactGetPseudoActivity(row, scip->set, scip->stat));
+      RatSet(result, SCIProwExactGetPseudoActivity(row, scip->stat));
 }
 
 
@@ -467,7 +466,7 @@ void SCIPgetLPExactObjval(
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetLPExactObjval", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIPlpExactGetObjval(scip->lpexact, scip->set, scip->transprob, result);
+   SCIPlpExactGetObjval(scip->lpexact, scip->set, result);
 }
 
 /** returns whether the exact lp was solved */
@@ -583,8 +582,8 @@ SCIP_RETCODE SCIPendExactDive(
    SCIP_CALL( SCIPendDive(scip) );
 
    /* unmark the diving flag in the exact LP and reset all variables' objective and bound values */
-   SCIP_CALL( SCIPlpExactEndDive(scip->lpexact, scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat, scip->eventqueue, scip->eventfilter,
-         scip->transprob, scip->transprob->vars, scip->transprob->nvars) );
+   SCIP_CALL( SCIPlpExactEndDive(scip->lpexact, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,
+         scip->transprob->vars, scip->transprob->nvars) );
 
    /* reset the probably changed LP's cutoff bound */
    SCIP_CALL( SCIPlpSetCutoffbound(scip->lp, scip->set, scip->transprob, scip->primal->cutoffbound) );
@@ -634,7 +633,7 @@ SCIP_RETCODE SCIPsolveExactDiveLP(
 
    /* solve diving LP */
    SCIP_CALL( SCIPlpExactSolveAndEval(scip->lpexact, scip->lp, scip->set, scip->messagehdlr, scip->mem->probmem, scip->stat,
-         scip->eventqueue, scip->eventfilter, scip->transprob, (SCIP_Longint)itlim, lperror, FALSE) );
+         scip->eventqueue, scip->transprob, (SCIP_Longint)itlim, lperror, FALSE) );
 
    if( !(*lperror) )
    {
@@ -747,7 +746,7 @@ SCIP_RETCODE SCIPwriteLPexact(
    }
 
    /* we need a flushed lp to write the current lp */
-   SCIP_CALL( SCIPsepastoreExactSyncLPs(scip->sepastoreexact, scip->mem->probmem, scip->set, scip->stat, scip->lpexact, scip->transprob, scip->eventqueue) );
+   SCIP_CALL( SCIPsepastoreExactSyncLPs(scip->sepastoreexact, scip->mem->probmem, scip->set, scip->lpexact, scip->eventqueue) );
    SCIP_CALL( SCIPlpExactFlush(scip->lpexact, scip->mem->probmem, scip->set, scip->eventqueue) );
 
    SCIP_CALL( SCIPlpExactWrite(scip->lpexact, filename) );

@@ -2290,7 +2290,7 @@ void SCIPprobExternObjvalExact(
    assert(transprob->objscale > 0.0);
    assert(set->exact_enabled);
 
-   RatCreateBuffer(set->buffer, &tmpval);
+   (void) RatCreateBuffer(set->buffer, &tmpval);
 
    if( RatIsAbsInfinity(objval) )
    {
@@ -2348,7 +2348,7 @@ void SCIPprobInternObjvalExact(
    assert(transprob->objscale > 0.0);
    assert(set->exact_enabled);
 
-   RatCreateBuffer(set->buffer, &tmpval);
+   (void) RatCreateBuffer(set->buffer, &tmpval);
 
    if( RatIsAbsInfinity(objval) )
    {
@@ -2696,7 +2696,7 @@ SCIP_RETCODE SCIPprobCheckObjIntegralExact(
       return SCIP_OKAY;
 
    /* if the objective value offset is fractional, the value itself is possibly fractional */
-   if( !EPSISINT(transprob->objoffset, 0.0) )
+   if( !EPSISINT(transprob->objoffset, 0.0) ) /*lint !e835*/
       return SCIP_OKAY;
 
    /* scan through the variables */

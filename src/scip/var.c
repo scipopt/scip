@@ -1468,7 +1468,7 @@ void SCIPdomchgAddCurrentCertificateIndex(
    change = &(domchg->domchgdyn.boundchgs[domchg->domchgdyn.nboundchgs - 1]);
 
 #ifndef NDEBUG
-   SCIPcertificateEnsureLastBoundInfoConsistent(certificate, change->var, change->boundtype, change->newbound);
+   assert(SCIPcertificateEnsureLastBoundInfoConsistent(certificate, change->var, change->boundtype, change->newbound));
 #endif
 
    change->certificateindex = SCIPcertificateGetCurrentIndex(certificate) - 1;
@@ -3004,7 +3004,7 @@ SCIP_RETCODE varFreeExactData(
    {
       if( SCIPvarGetStatusExact(var) ==  SCIP_VARSTATUS_COLUMN )
       {
-         SCIP_CALL( SCIPcolExactFree(&(var->exactdata->colexact), blkmem, set, eventqueue, lp) );
+         SCIP_CALL( SCIPcolExactFree(&(var->exactdata->colexact), blkmem) );
       }
 
       if( var->exactdata->aggregate.scalar != NULL )
@@ -12862,8 +12862,8 @@ void SCIPvarGetMultaggrLbLocalExact(
    assert(var->scip == set->scip);
    assert((SCIP_VARSTATUS) var->varstatus == SCIP_VARSTATUS_MULTAGGR);
 
-   RatCreateBuffer(set->buffer, &lb);
-   RatCreateBuffer(set->buffer, &bnd);
+   (void) RatCreateBuffer(set->buffer, &lb);
+   (void) RatCreateBuffer(set->buffer, &bnd);
 
    posinf = FALSE;
    neginf = FALSE;
@@ -13008,8 +13008,8 @@ void SCIPvarGetMultaggrUbLocalExact(
    assert(var->scip == set->scip);
    assert((SCIP_VARSTATUS) var->varstatus == SCIP_VARSTATUS_MULTAGGR);
 
-   RatCreateBuffer(set->buffer, &ub);
-   RatCreateBuffer(set->buffer, &bnd);
+   (void) RatCreateBuffer(set->buffer, &ub);
+   (void) RatCreateBuffer(set->buffer, &bnd);
 
    posinf = FALSE;
    neginf = FALSE;
@@ -17999,7 +17999,7 @@ void SCIPvarGetLPSolExact_rec(
       assert(var->data.multaggr.vars != NULL);
       assert(var->data.multaggr.scalars != NULL);
 
-      RatCreate(&tmp);
+      (void) RatCreate(&tmp);
       /* Due to method SCIPvarFlattenAggregationGraph(), this assert is no longer correct
        * assert(var->data.multaggr.nvars >= 2);
        */
@@ -19344,7 +19344,7 @@ SCIP_RETCODE SCIPvarAddToRowExact(
       {
          SCIP_CALL( RatCreateBuffer(set->buffer, &tmp) );
          RatMult(tmp, val, var->exactdata->glbdom.lb);
-         SCIP_CALL( SCIProwExactAddConstant(rowexact, blkmem, set, stat, eventqueue, lpexact, tmp) );
+         SCIP_CALL( SCIProwExactAddConstant(rowexact, set, stat, lpexact, tmp) );
          RatFreeBuffer(set->buffer, &tmp);
          break;;
       }
@@ -19368,7 +19368,7 @@ SCIP_RETCODE SCIPvarAddToRowExact(
       SCIP_CALL( RatCreateBuffer(set->buffer, &tmp) );
 
       RatMult(tmp, val, var->exactdata->locdom.lb);
-      SCIP_CALL( SCIProwExactAddConstant(rowexact, blkmem, set, stat, eventqueue, lpexact, tmp) );
+      SCIP_CALL( SCIProwExactAddConstant(rowexact, set, stat, lpexact, tmp) );
 
       RatFreeBuffer(set->buffer, &tmp);
 
@@ -19382,7 +19382,7 @@ SCIP_RETCODE SCIPvarAddToRowExact(
       SCIP_CALL( SCIPvarAddToRowExact(var->data.aggregate.var, blkmem, set, stat, eventqueue, prob, lpexact,
             rowexact, tmp) );
       RatMult(tmp, var->exactdata->aggregate.constant, val);
-      SCIP_CALL( SCIProwExactAddConstant(rowexact, blkmem, set, stat, eventqueue, lpexact, tmp) );
+      SCIP_CALL( SCIProwExactAddConstant(rowexact, set, stat, lpexact, tmp) );
       RatFreeBuffer(set->buffer, &tmp);
       return SCIP_OKAY;
 
@@ -19402,7 +19402,7 @@ SCIP_RETCODE SCIPvarAddToRowExact(
                rowexact, tmp) );
       }
       RatMult(tmp, var->exactdata->multaggr.constant, val);
-      SCIP_CALL( SCIProwExactAddConstant(rowexact, blkmem, set, stat, eventqueue, lpexact, tmp) );
+      SCIP_CALL( SCIProwExactAddConstant(rowexact, set, stat, lpexact, tmp) );
 
       RatFreeBuffer(set->buffer, &tmp);
       return SCIP_OKAY;
@@ -19418,7 +19418,7 @@ SCIP_RETCODE SCIPvarAddToRowExact(
       SCIP_CALL( SCIPvarAddToRowExact(var->negatedvar, blkmem, set, stat, eventqueue, prob, lpexact, rowexact, tmp) );
 
       RatMultReal(tmp, val, var->data.negate.constant);
-      SCIP_CALL( SCIProwExactAddConstant(rowexact, blkmem, set, stat, eventqueue, lpexact, tmp) );
+      SCIP_CALL( SCIProwExactAddConstant(rowexact, set, stat, lpexact, tmp) );
 
       RatFreeBuffer(set->buffer, &tmp);
 

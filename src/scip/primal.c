@@ -308,7 +308,7 @@ SCIP_RETCODE primalSetCutoffbound(
    {
       SCIP_Rational* tmp;
 
-      RatCreateBuffer(set->buffer, &tmp);
+      SCIP_CALL( RatCreateBuffer(set->buffer, &tmp) );
       RatSetReal(tmp, primal->cutoffbound);
       if( RatIsGT(primal->cutoffboundexact, tmp) )
          RatSet(primal->cutoffboundexact, tmp);
@@ -1427,7 +1427,7 @@ SCIP_Bool solOfInterest(
    {
       SCIP_Rational* tmpobj;
 
-      SCIP_CALL( RatCreateBuffer(set->buffer, &tmpobj) );
+      SCIP_CALL_ABORT( RatCreateBuffer(set->buffer, &tmpobj) );
       SCIPsolGetObjExact(sol, set, transprob, origprob, tmpobj);
       solisbetterexact = RatIsLT(tmpobj, primal->cutoffboundexact);
 

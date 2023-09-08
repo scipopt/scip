@@ -633,8 +633,6 @@ SCIP_RETCODE SCIPsolOverwriteFPSolWithExact(
 SCIP_RETCODE SCIPvalsExactCopy(
    SCIP_VALSEXACT**      valsexact,          /**< pointer to store the copy of the primal CIP solution */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_VALSEXACT*       sourcevals          /**< primal CIP solution to copy */
    );
 

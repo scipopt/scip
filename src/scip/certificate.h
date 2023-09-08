@@ -100,7 +100,7 @@ SCIP_Longint SCIPcertificateGetCurrentIndex(
 
 #ifndef NDEBUG
 /** checks if information is consistent with printed certificate line */
-void SCIPcertificateEnsureLastBoundInfoConsistent(
+SCIP_Bool SCIPcertificateEnsureLastBoundInfoConsistent(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
    SCIP_VAR*             var,                /**< variable that gets changed */
    SCIP_BOUNDTYPE        boundtype,          /**< lb or ub changed? */

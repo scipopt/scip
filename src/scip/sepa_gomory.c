@@ -208,10 +208,7 @@ SCIP_RETCODE addCut(
    int                   cutrank,            /**< rank of cut */
    SCIP_Bool             strongcg,           /**< whether the cut arises from the strong-CG procedure */
    SCIP_Bool*            cutoff,             /**< pointer to store whether a cutoff appeared */
-   int*                  naddedcuts,         /**< pointer to store number of added cuts */
-   int                   ninds,              /**< number of inds in aggregation row (only used for certificate) */
-   int*                  inds,               /**< indices of aggregation rows (only used for certificate) */
-   SCIP_Real*            weights             /**< weights used for aggregation (only used for certificate) */
+   int*                  naddedcuts          /**< pointer to store number of added cuts */
    )
 {
    int j;
@@ -679,7 +676,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
          {
             assert(allowlocal || !cutislocal); /*lint !e644*/
             SCIP_CALL( addCut(scip, sepadata, vars, c, maxdnom, maxscale, cutnnz, cutinds, cutcoefs, cutefficacy, cutrhs,
-                  cutislocal, cutrank, TRUE, &cutoff, &naddedcuts, ninds, inds, binvrow) );
+                  cutislocal, cutrank, TRUE, &cutoff, &naddedcuts) );
             cutefficacy = 0.0;
             strongcgsuccess = FALSE;
             if( cutoff )
@@ -700,7 +697,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
                strongcgsuccess = FALSE;   /* Set strongcgsuccess to FALSE, since the MIR cut has overriden the strongcg cut. */
 
             SCIP_CALL( addCut(scip, sepadata, vars, c, maxdnom, maxscale, cutnnz, cutinds, cutcoefs, cutefficacy, cutrhs,
-                  cutislocal, cutrank, strongcgsuccess, &cutoff, &naddedcuts, ninds, inds, binvrow) );
+                  cutislocal, cutrank, strongcgsuccess, &cutoff, &naddedcuts) );
          }
       }
       if( SCIPisCertificateActive(scip) )

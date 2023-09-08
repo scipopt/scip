@@ -2855,7 +2855,7 @@ SCIP_RETCODE SCIPnodeUpdateExactLowerboundLP(
 
    SCIP_CALL( RatCreateBuffer(set->buffer, &lpobjval) );
 
-   SCIPlpExactGetObjval(lp->lpexact, set, transprob, lpobjval);
+   SCIPlpExactGetObjval(lp->lpexact, set, lpobjval);
    SCIPnodeUpdateExactLowerbound(node, stat, set, tree, transprob, origprob, lpobjval);
 
    RatFreeBuffer(set->buffer, &lpobjval);

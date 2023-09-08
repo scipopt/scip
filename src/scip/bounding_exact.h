@@ -59,7 +59,7 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_PROB*            prob,               /**< problem data */
-   SCIP_Longint          itlim,              /**< maximal number of LP iterations to perform, or -1 for no limit */
+   int                   itlim,              /**< maximal number of LP iterations to perform, or -1 for no limit */
    SCIP_Bool*            lperror,            /**< pointer to store whether an unresolved LP error occurred */
    SCIP_Bool             usefarkas,          /**< should infeasiblity be proven? */
    SCIP_Real*            safebound,          /**< pointer to store the calculated safe bound */

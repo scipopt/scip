@@ -1855,7 +1855,7 @@ SCIP_RETCODE SCIPeventProcess(
          {
             SCIP_CALL( SCIPcolExactChgObj(SCIPvarGetColExact(var), set, lp->lpexact, newobj) );
          }
-         SCIP_CALL( SCIPlpExactUpdateVarObj(lp->lpexact, set, var, oldobj, newobj) );
+         SCIP_CALL( SCIPlpExactUpdateVarObj(set, lp->lpexact, var, oldobj, newobj) );
 
          if( event->data.eventobjchg.newobjexact == NULL )
          {

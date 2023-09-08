@@ -3941,7 +3941,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecValidateSolve)
 
       if( SCIPisExactSolve(scip) )
       {
-         RatCreateArray(&refvalsrat, 2);
+         SCIP_CALL( RatCreateArray(&refvalsrat, 2) );
       }
 
       /* read in primal and dual reference values */
@@ -3962,7 +3962,11 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecValidateSolve)
             break;
          else if( SCIPisExactSolve(scip) )
          {
-            SCIPparseRational(scip, refstrs[i], refvalsrat[i], &endptr);
+            if( !SCIPparseRational(scip, refstrs[i], refvalsrat[i], &endptr) ) /*lint !e644*/
+            {
+               SCIPdialogMessage(scip, NULL, "Could not parse value '%s', please try again or type 'q' to quit\n", refstrs[i]);
+               --i; /*lint !e850*/
+            }
          }
          else if( ! SCIPparseReal(scip, refstrs[i], &refvals[i], &endptr) )
          {

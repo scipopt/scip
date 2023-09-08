@@ -329,8 +329,7 @@ SCIP_RETCODE SCIPcheckIntegralityExact(
    assert(scip != NULL);
    assert(scip->lp != NULL && scip->lpexact != NULL);
 
-   SCIP_CALL( SCIPlpExactcheckIntegralityExact(scip->lp, scip->lpexact,
-         scip->set, scip->stat, result) );
+   SCIP_CALL( SCIPlpExactcheckIntegralityExact(scip->lp, scip->lpexact, scip->set, result) );
 
    return SCIP_OKAY;
 }
@@ -354,7 +353,7 @@ SCIP_RETCODE SCIPbranchLPexact(
    SCIP_CALL( SCIPcheckStage(scip, "SCIPbranchLPexact", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPbranchExecLPexact(scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-         scip->tree, scip->reopt, scip->lp, scip->sepastore, scip->branchcand, scip->eventqueue, scip->primal->cutoffbound,
+         scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->primal->cutoffbound,
          TRUE, result) );
 
    return SCIP_OKAY;
@@ -375,8 +374,7 @@ SCIP_RETCODE SCIPaddRowExact(
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPaddRowExact", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPsepastoreExactAddCut(scip->sepastoreexact, SCIPblkmem(scip), scip->set, scip->stat, scip->eventqueue,
-            scip->lpexact, rowexact) );
+   SCIP_CALL( SCIPsepastoreExactAddCut(scip->sepastoreexact, scip->set, scip->eventqueue, rowexact) );
 
    return SCIP_OKAY;
 }
