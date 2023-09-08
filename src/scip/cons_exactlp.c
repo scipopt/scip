@@ -17505,12 +17505,6 @@ SCIP_RETCODE SCIPcreateConsExactLinear(
     */
    if( SCIPgetStage(scip) >= SCIP_STAGE_EXITPRESOLVE && nvars > 0 )
    {
-      SCIP_VAR** consvars;
-      SCIP_Rational** consvals;
-      SCIP_Rational* constant;
-      int nconsvars;
-      int requiredsize;
-
       SCIPerrorMessage("creating constrains after presolving not supported in exact solving mode yet \n");
       SCIPABORT();
 
