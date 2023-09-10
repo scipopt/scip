@@ -102,7 +102,7 @@ struct SCIP_NlhdlrExprData
 /** nonlinear handler data */
 struct SCIP_NlhdlrData
 {
-   int                   nexprs;
+   int                   nexprs;             /**< the number of registered signomial expressions */
 
    /* parameters */
    int                   maxnundervars;      /**< maximum numbver of variables in underestimating a concave power function */
@@ -125,165 +125,6 @@ typedef struct
 
 #ifdef SCIP_SIGCUT_DEBUG
 
-/** validate an estimator probabilistically by sampling */
-static 
-void validEstimateProb(
-   SCIP*                 scip,
-   SCIP_NLHDLREXPRDATA*  nlhdlrexprdata,
-   SCIP_Bool             sign,                               /**< the sign of variables of the power function */     
-   SCIP_Real             multiplier,                         /**< the mulitplier of the estimator */ 
-   SCIP_Bool             overestimate,                       /**< whether overestimate or underestimator the power function */ 
-   SCIP_Real             prevside,
-   SCIP_ROWPREP*         rowprep,
-   int                   nsample,                            /**< number of samples */ 
-   SCIP_Bool*            isvalid
-   )
-{
-   unsigned int seedp  = 2132;
-   SCIP_RANDNUMGEN* randnumgen;
-   SCIPcreateRandom(scip, &randnumgen, seedp, TRUE);
-   assert(randnumgen);
-
-   *isvalid = TRUE;
-   SCIP_Real* coefs =  SCIProwprepGetCoefs(rowprep);
-   SCIP_Real side = SCIProwprepGetSide(rowprep);
-   SCIP_VAR** vars = SCIProwprepGetVars(rowprep);
-   int nvars = SCIProwprepGetNVars(rowprep);
-   SCIP_Real tmp[100];
-
-   for( int s = 0; s < nsample; s++ )
-   {
-      SCIP_Real funcval = 1;
-      SCIP_Real constant = - multiplier * (side - prevside);
-      SCIP_Real estimatefuncval =  constant;
-      for( int i = 0; i < nlhdlrexprdata->nvars; i++ )
-      {
-         if( nlhdlrexprdata->signs[i] != sign )
-            continue;
-         SCIP_Real scale = i == (nlhdlrexprdata->nvars - 1) ? nlhdlrexprdata->coef : 1;
-         SCIP_Real xval = SCIPrandomGetReal(randnumgen, nlhdlrexprdata->intervals[i].inf, nlhdlrexprdata->intervals[i].sup) / scale;
-         tmp[i] = xval;
-         SCIP_VAR* xvar = nlhdlrexprdata->vars[i];
-         SCIP_Real refexponent = nlhdlrexprdata->refexponents[i];
-         funcval *= pow(xval, refexponent);
-         SCIP_Real coef = 0;
-         for( int j = 0; j < nvars; j++ )
-         {
-            if( vars[j] == xvar ){
-               coef = coefs[j];
-               break;
-            }
-         }
-         estimatefuncval += multiplier * coef * xval;
-      } 
-      if( overestimate)
-      {
-         if( SCIPisLT(scip, estimatefuncval, funcval) ){
-            SCIPdebugMsg(scip, "(overstimate) %f >= %f with constant %f \n",  estimatefuncval, funcval, constant);
-            for( int i = 0; i < nlhdlrexprdata->nvars; i++ )
-            {
-               if( nlhdlrexprdata->signs[i] != sign )
-                  continue;
-               SCIPinfoMessage(scip, NULL, "%s,%f ", SCIPvarGetName(nlhdlrexprdata->vars[i]), tmp[i]);
-            }
-            *isvalid = FALSE;
-            break;
-         }
-      }
-      else
-      {
-         if( SCIPisGT(scip, estimatefuncval, funcval) ){
-            SCIPdebugMsg(scip, "(underestimate) %f <= %f  with constant %f \n",  estimatefuncval, funcval, constant);
-            for( int i = 0; i < nlhdlrexprdata->nvars; i++ )
-            {
-               if( nlhdlrexprdata->signs[i] != sign )
-                  continue;
-               SCIPinfoMessage(scip, NULL, "%s,%f ", SCIPvarGetName(nlhdlrexprdata->vars[i]), tmp[i]);
-            }
-            *isvalid = FALSE;
-            break;
-         }
-      }
-   }
-   
-   SCIPfreeRandom(scip, &randnumgen);
-
-}
-
-
-/** validate a rowprep probabilistically by sampling */
-static 
-void validCutProb(
-   SCIP*                 scip,
-   SCIP_NLHDLREXPRDATA*  nlhdlrexprdata,      
-   SCIP_ROWPREP*         rowprep,
-   SCIP_SOL*             sol,
-   int                   nsample,            /**< number of samples */ 
-   SCIP_Bool*            isvalid             /**< whether the rowprep is valid */ 
-   )
-{
-   unsigned int seedp  = 2132;
-   SCIP_RANDNUMGEN* randnumgen;
-   SCIPcreateRandom(scip, &randnumgen, seedp, TRUE);
-   assert(randnumgen);
-
-   *isvalid = TRUE;
-   SCIP_Real* coefs =  SCIProwprepGetCoefs(rowprep);
-   SCIP_Real side = SCIProwprepGetSide(rowprep);
-   SCIP_VAR** vars = SCIProwprepGetVars(rowprep);
-   int nvars = SCIProwprepGetNVars(rowprep);
-
-
-   for( int s = 0; s < nsample; s++ )
-   {
-      SCIP_Real cutval = 0;
-      SCIP_Real yval = nlhdlrexprdata->coef;
-      for( int i = 0; i < nlhdlrexprdata->nfactors; i++ )
-      {
-         SCIP_VAR* xvar = nlhdlrexprdata->vars[i];
-         SCIP_Real coef = 0;
-         for( int j = 0; j < nvars; j++ )
-         {
-            if( vars[j] == xvar ){
-               coef = coefs[j];
-               break;
-            }
-         }
-         SCIP_Real xval = SCIPrandomGetReal(randnumgen, nlhdlrexprdata->intervals[i].inf, nlhdlrexprdata->intervals[i].sup);
-         cutval += xval * coef;
-         SCIP_Real exponent = nlhdlrexprdata->exponents[i];
-         yval *= pow(xval, exponent);
-      }
-      SCIP_Real ycoef = 0;
-      for( int j = 0; j < nvars; j++ )
-      {
-         if( vars[j] == nlhdlrexprdata->vars[nlhdlrexprdata->nfactors] ){
-            ycoef = coefs[j];
-            break;
-         }
-      }     
-      cutval += yval * ycoef;
-      if( SCIProwprepGetSidetype(rowprep) == SCIP_SIDETYPE_LEFT)
-      {
-         if( cutval < side ){
-            SCIPdebugMsg(scip, "%d/%d, (lhs) %f <= %f \n", s, nsample, side, cutval);
-            *isvalid = FALSE;
-            break;
-         }
-      }
-      else
-      {
-         if( cutval > side ){
-            SCIPdebugMsg(scip, "%d/%d, %f <= %f (rhs) \n", s, nsample, cutval, side);
-            *isvalid = FALSE;
-            break;
-         }
-      }
-   }
-
-   SCIPfreeRandom(scip, &randnumgen);
-
-}
 
 /** print the information on a signomial term */
 static 
@@ -940,17 +781,6 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateSignomial)
       SCIP_CALL( estimateSpecialPower(scip, nlhdlrexprdata, undersign, undermultiplier, FALSE, sol, rowprep, &isspecial, success));
       if( !isspecial )
          SCIP_CALL( underEstimatePower(scip, conshdlr, nlhdlr, nlhdlrexprdata, undersign, undermultiplier, sol, targetunder, rowprep, success));
-      #ifdef SCIP_SIGCUT_DEBUG
-         if( *success )
-         {
-            SCIPdebugMsg(scip, "underestimate:");
-            SCIP_Bool isvalid = TRUE;
-            int nsample = 10000;
-            validEstimateProb(scip, nlhdlrexprdata, undersign, undermultiplier, FALSE, 0, rowprep, nsample, &isvalid);
-            SCIPinfoMessage(scip, NULL, "\n");
-            assert(isvalid);
-         }
-      #endif
    }
 
 
@@ -965,33 +795,9 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateSignomial)
       SCIP_CALL( estimateSpecialPower(scip, nlhdlrexprdata, oversign, overmultiplier, TRUE, sol, rowprep, &isspecial, success));
       if( !isspecial )
          SCIP_CALL( overEstimatePower(scip, nlhdlrexprdata, oversign, overmultiplier, sol, rowprep, success));
-      #ifdef SCIP_SIGCUT_DEBUG
-         if( *success )
-         {
-            SCIPdebugMsg(scip, "overestimate: ");
-            SCIP_Bool isvalid = TRUE;
-            int nsample = 10000;
-            validEstimateProb(scip, nlhdlrexprdata, oversign, overmultiplier, TRUE, prevconstant, rowprep, nsample, &isvalid);
-            SCIPinfoMessage(scip, NULL, "\n");
-            assert(isvalid);
-         }
-      #endif
+
    }
 
-
-   #ifdef SCIP_SIGCUT_DEBUG
-   if( *success )
-   {
-      SCIP_Bool reliable;
-      SCIP_Real violation = SCIPgetRowprepViolation(scip, rowprep, sol, &reliable);
-      SCIP_Bool isvalid = TRUE;
-      int nsample = 10000;
-      validCutProb(scip, nlhdlrexprdata, rowprep, sol, nsample, &isvalid);
-      SCIPprintRowprep(scip, rowprep, NULL);
-      assert(isvalid);
-      SCIPdebugMsg(scip, "node depth:%d, viol: %f, computed estimator", SCIPgetDepth(scip), violation);
-   }
-   #endif
 
    if( *success )
    {
