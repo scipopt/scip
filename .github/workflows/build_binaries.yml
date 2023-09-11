@@ -19,7 +19,7 @@ jobs:
     strategy:
       fail-fast: false # do not stop all builds if one fails
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-latest]
 
 
     steps:
@@ -27,25 +27,25 @@ jobs:
     - uses: conda-incubator/setup-miniconda@v2.2.0
     - name: Install dependencies
       run: conda create --name myenv --no-default-packages -c conda-forge scip
-    - name: Set OS-specific Path
-      run: |
-        if [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
-          echo "OS_SPECIFIC_PATH=/usr/share/miniconda/envs/scip/" >> $GITHUB_ENV
-        elif [[ "${{ matrix.os }}" == "macos-latest" ]]; then
-          echo "OS_SPECIFIC_PATH=/usr/local/miniconda/" >> $GITHUB_ENV
-        elif [[ "${{ matrix.os }}" == "windows-latest" ]]; then
-          echo "OS_SPECIFIC_PATH=C:\Miniconda\envs\scip\" >> $GITHUB_ENV
-        fi
+    # - name: Set OS-specific Path
+    #   run: |
+    #     if [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
+    #       echo "OS_SPECIFIC_PATH=/usr/share/miniconda/envs/scip/" >> $GITHUB_ENV
+    #     elif [[ "${{ matrix.os }}" == "macos-latest" ]]; then
+    #       echo "OS_SPECIFIC_PATH=/usr/local/miniconda/" >> $GITHUB_ENV
+    #     elif [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+    #       echo "OS_SPECIFIC_PATH=C:\Miniconda\envs\scip\" >> $GITHUB_ENV
+    #     fi
     - name: Upload header files
       uses: actions/upload-artifact@v3
       with:
         name: headers
-        path: ${{ env.OS_SPECIFIC_PATH }}include
+        path: /usr/share/miniconda/envs/scip/include
     - name: Upload lib files
       uses: actions/upload-artifact@v3
       with:
         name: libscip
-        path: ${{ env.OS_SPECIFIC_PATH }}lib
+        path: /usr/share/miniconda/envs/scip/lib
         
 
       
