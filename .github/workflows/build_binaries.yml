@@ -37,7 +37,9 @@ jobs:
 
     - name: Run command on Windows
       if: matrix.os == 'windows-latest'
-      run: winget install julia -s msstore
+      run: |
+        choco install julia -y
+        julia -e 'using InteractiveUtils; versioninfo()'
       shell: pwsh
 
     - name: Install SCIP julia package
