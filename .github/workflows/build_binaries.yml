@@ -36,16 +36,19 @@ jobs:
     #     elif [[ "${{ matrix.os }}" == "windows-latest" ]]; then
     #       echo "OS_SPECIFIC_PATH=C:\Miniconda\envs\scip\" >> $GITHUB_ENV
     #     fi
-    - name: Upload header files
-      uses: actions/upload-artifact@v3
-      with:
-        name: headers
-        path: /usr/share/miniconda/envs/scip/include
-    - name: Upload lib files
-      uses: actions/upload-artifact@v3
-      with:
-        name: libscip
-        path: /usr/share/miniconda/envs/scip/lib
+    - name: Set OS-specific Path
+      run: |
+        ls /usr/share/miniconda/envs
+    # - name: Upload header files
+    #   uses: actions/upload-artifact@v3
+    #   with:
+    #     name: headers
+    #     path: /usr/share/miniconda/envs/scip/include
+    # - name: Upload lib files
+    #   uses: actions/upload-artifact@v3
+    #   with:
+    #     name: libscip
+    #     path: /usr/share/miniconda/envs/scip/lib
         
 
       
