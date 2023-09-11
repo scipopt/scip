@@ -25,8 +25,7 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - uses: conda-incubator/setup-miniconda@v2.2.0
-    - run: which conda
-
+    - run: where.exe conda
     # - name: Install dependencies
     #   run: |
     #     conda install -c conda-forge scip
@@ -34,7 +33,7 @@ jobs:
     #   uses: actions/upload-artifact@v3
     #   with:
     #     name: libscip
-    #     path: ${{ env.CONDA_PREFIX }}/lib
+    #     path: /usr//lib
 
     
     
