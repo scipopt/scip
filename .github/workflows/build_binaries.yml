@@ -26,9 +26,9 @@ jobs:
     - name: Install julia using juliaup
       run: |
         if [ ${{ matrix.os }} == "ubuntu-latest" ]; then
-          curl -fsSL https://install.julialang.org | sh -y
+          curl -fsSL https://install.julialang.org | sh -s -- -y
         elif [ ${{ matrix.os }} == "macos-latest" ]; then
-          curl -fsSL https://install.julialang.org | sh -y 
+          curl -fsSL https://install.julialang.org | sh -s -- -y 
         elif [ ${{ matrix.os }} == "windows-latest" ]; then
           winget install julia -s msstore
         fi
