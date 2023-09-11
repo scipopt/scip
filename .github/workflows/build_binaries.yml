@@ -1,0 +1,45 @@
+name: Build Binaries
+
+
+# on:
+#   push:
+#     tags:
+#       - v** # TODO: add regex for version numbers
+
+on:
+  push:
+    branches:
+      - **
+
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Install julia using juliaup
+      run: |
+        if [ ${{ matrix.os }} == "ubuntu-latest" ]; then
+          curl -fsSL https://install.julialang.org | sh
+        elif [ ${{ matrix.os }} == "macos-latest" ]; then
+          curl -fsSL https://install.julialang.org | sh
+        elif [ ${{ matrix.os }} == "windows-latest" ]; then
+          winget install julia -s msstore
+        fi
+
+    - name: Install SCIP julia package
+      run: |
+        julia -e 'using Pkg; Pkg.add("SCIP")'
+        ls ~/.julia/artifacts
+
+      
+
+        
+
+
