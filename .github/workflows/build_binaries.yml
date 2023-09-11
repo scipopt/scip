@@ -25,19 +25,20 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - uses: conda-incubator/setup-miniconda@v2.2.0
-    - run: where.exe conda
-    # - name: Install dependencies
-    #   run: |
-    #     conda install -c conda-forge scip
-    # - name: Upload artifacts
-    #   uses: actions/upload-artifact@v3
-    #   with:
-    #     name: libscip
-    #     path: /usr//lib
+    - name: Install dependencies
+      run: |
+        conda install -c conda-forge scip
+    - name: Upload artifacts
+      if: matrix.os == 'ubuntu-latest'
+      uses: actions/upload-artifact@v3
+      with:
+        name: libscip
+        path: /usr/share/miniconda/lib
+      
 
+        # /usr/share/miniconda
     
-    
-        
+        # /usr/local/miniconda
         
 
       
