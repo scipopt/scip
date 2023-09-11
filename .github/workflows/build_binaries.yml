@@ -27,6 +27,8 @@ jobs:
     - uses: conda-incubator/setup-miniconda@v2.2.0
     - name: Install dependencies
       run: |
+        conda create -n scip 
+        conda activate scip
         conda install -c conda-forge scip
     - name: Upload header files
       if: matrix.os == 'ubuntu-latest'
@@ -34,17 +36,21 @@ jobs:
       with:
         name: headers
         path: /usr/share/miniconda/include
+    - name: Set OS-specific Path
+      run: |
+        if [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
+          echo "OS_SPECIFIC_PATH=/usr/share/miniconda/envs/scip" >> $GITHUB_ENV
+        elif [[ "${{ matrix.os }}" == "macos-latest" ]]; then
+          echo "OS_SPECIFIC_PATH=/usr/local/miniconda" >> $GITHUB_ENV
+        elif [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+          echo "OS_SPECIFIC_PATH=C:\Miniconda\envs\scip" >> $GITHUB_ENV
+        fi
     - name: Upload lib files
       if: matrix.os == 'ubuntu-latest'
       uses: actions/upload-artifact@v3
       with:
         name: libscip
-        path: /usr/share/miniconda/lib
-
-    
-        # /usr/share/miniconda
-    
-        # /usr/local/miniconda
+        path: ${{ env.OS_SPECIFIC_PATH }}/lib
         
 
       
