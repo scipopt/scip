@@ -34,17 +34,14 @@ jobs:
       with:
         name: headers
         path: /usr/share/miniconda/include
-    # - name: Upload artifacts
-    #   if: matrix.os == 'ubuntu-latest'
-    #   uses: actions/upload-artifact@v3
-    #   with:
-    #     name: libscip
-    #     path: /usr/share/miniconda/lib
+    - name: Upload lib files
+      if: matrix.os == 'ubuntu-latest'
+      uses: actions/upload-artifact@v3
+      with:
+        name: libscip
+        path: /usr/share/miniconda/lib
+
     
-
-
-      
-
         # /usr/share/miniconda
     
         # /usr/local/miniconda
