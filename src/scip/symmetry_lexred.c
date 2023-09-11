@@ -1327,8 +1327,8 @@ SCIP_RETCODE SCIPlexicographicReductionPropagate(
 {
    int nlocalred;
    int p;
-   SCIP_SHADOWTREE* shadowtree;
-   SCIP_NODE* focusnode;
+   SCIP_SHADOWTREE* shadowtree = NULL;
+   SCIP_NODE* focusnode = NULL;
    NODEDEPTHBRANCHINDEX* nodedepthbranchindices = NULL;
    SCIP_VAR** branchvars = NULL;
    int nbranchvars = 0;
@@ -1403,6 +1403,8 @@ SCIP_RETCODE SCIPlexicographicReductionPropagate(
    /* possibly clean the node-depth-branch-indices structure */
    if ( masterdata->hasdynamicperm )
    {
+      assert( shadowtree != NULL );
+      assert( focusnode != NULL );
       SCIP_CALL( shadowtreeUndoNodeDepthBranchIndices(scip, masterdata, nodedepthbranchindices,
             branchvars, &nbranchvars, shadowtree, focusnode) );
       assert( nbranchvars == 0 );

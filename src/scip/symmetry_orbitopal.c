@@ -526,7 +526,6 @@ int getArrayEntryOrIndex(
    int                   idx                 /**< index */
 )
 {
-   assert( arr != NULL );
    assert( idx >= 0 );
    if ( arr == NULL )
       return idx;
