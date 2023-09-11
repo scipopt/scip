@@ -29,8 +29,7 @@ jobs:
         version: 1.6
     - name: Install SCIP julia package
       run: |
-        julia -e 'using Pkg; Pkg.add("SCIP")'
-        ls ~/.julia/artifacts
+        julia -e 'using Pkg; Pkg.add(\"SCIP\")'
 
       
 
