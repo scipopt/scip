@@ -24,7 +24,9 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-    - uses: actions/setup-julia@v1
+    - uses: julia-actions/setup-julia@v1
+      with:
+        version: 1.6
     - name: Install SCIP julia package
       run: |
         julia -e 'using Pkg; Pkg.add("SCIP")'
