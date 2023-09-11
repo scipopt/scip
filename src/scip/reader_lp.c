@@ -2004,7 +2004,6 @@ SCIP_RETCODE readConstraintsRational(
    assert(lpinput != NULL);
 
    retcode = SCIP_OKAY;
-   nquadcoefs = 0;
 
    SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &lhs) );
    SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &rhs) );
@@ -2154,8 +2153,6 @@ SCIP_RETCODE readConstraintsRational(
       dynamic = lpinput->dynamicconss;
       removable = lpinput->dynamicrows || lpinput->inusercuts;
 
-      assert(nquadcoefs == 0);
-
       retcode = SCIPcreateConsExactLinear(scip, &cons, name, ncoefs, vars, coefs, lhs, rhs,
          initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE);
 
@@ -2246,7 +2243,6 @@ SCIP_RETCODE readConstraints(
    SCIP_Bool removable;
    SCIP_Bool isIndicatorCons;
    int ncoefs;
-   int nquadcoefs;
    int sidesign;
    int quadcoefssize;
    int coefssize;
