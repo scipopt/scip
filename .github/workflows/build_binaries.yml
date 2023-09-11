@@ -25,11 +25,11 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - uses: conda-incubator/setup-miniconda@v2.2.0
+      with:
+        activate-environment: scip
+        
     - name: Install dependencies
-      run: |
-        conda create -n scip 
-        conda activate scip
-        conda install -c conda-forge scip
+      run: conda install -c conda-forge scip
     - name: Upload header files
       if: matrix.os == 'ubuntu-latest'
       uses: actions/upload-artifact@v3
