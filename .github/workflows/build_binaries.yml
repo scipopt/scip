@@ -17,6 +17,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     
     strategy:
+      fail-fast: false # do not stop all builds if one fails
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
 
@@ -24,15 +25,20 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
-    - name: Install julia using juliaup
-      run: |
-        if [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
-          curl -fsSL https://install.julialang.org | sh -s -- -y
-        elif [ "${{ matrix.os }}" == "macos-latest" ]; then
-          curl -fsSL https://install.julialang.org | sh -s -- -y 
-        elif [ "${{ matrix.os }}" == "windows-latest" ]; then
-          winget install julia -s msstore
-        fi
+    - name: Run command on Ubuntu
+      if: matrix.os == 'ubuntu-latest'
+      run: curl -fsSL https://install.julialang.org | sh -s -- -y
+      shell: bash
+
+    - name: Run command on macOS
+      if: matrix.os == 'macos-latest'
+      run: curl -fsSL https://install.julialang.org | sh -s -- -y
+      shell: bash
+
+    - name: Run command on Windows
+      if: matrix.os == 'windows-latest'
+      run: winget install julia -s msstore
+      shell: pwsh
 
     - name: Install SCIP julia package
       run: |
