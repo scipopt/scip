@@ -1997,7 +1997,6 @@ SCIP_RETCODE readConstraintsRational(
    SCIP_Bool removable;
    SCIP_Bool isIndicatorCons;
    int ncoefs;
-   int nquadcoefs;
    int sidesign;
    int coefssize;
 
@@ -2244,6 +2243,7 @@ SCIP_RETCODE readConstraints(
    SCIP_Bool isIndicatorCons;
    int ncoefs;
    int sidesign;
+   int nquadcoefs;
    int quadcoefssize;
    int coefssize;
 
