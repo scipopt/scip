@@ -43,6 +43,14 @@ jobs:
       run: julia -e 'using Pkg; Pkg.add(\"SCIP\")'
       shell: pwsh
 
+    - name: Upload Binaries as artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: Binaries
+        path: |
+          ${{ runner.temp }}/julia
+          ${{ runner.temp }}/julia_packages
+
       
 
         
