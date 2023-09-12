@@ -1386,6 +1386,7 @@ SCIP_RETCODE rowExactDelCoefPos(
    if( pos < row->nlpcols )
    {
       rowExactMoveCoef(row, row->nlpcols-1, pos);
+      assert(!row->lpcolssorted);
       row->nlpcols--;
       pos = row->nlpcols;
    }

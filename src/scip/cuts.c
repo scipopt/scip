@@ -7132,7 +7132,7 @@ SCIP_RETCODE calcMIRSafely(
    SCIPintervalSet(&f0interval, rhs);
    SCIPintervalSubScalar(SCIPinfinity(scip), &f0interval, f0interval, downrhs);
 
-   if( f0 < minfrac || f0 > maxfrac )
+   if( f0interval.inf < minfrac || f0interval.sup > maxfrac )
       goto TERMINATE;
 
    /* We multiply the coefficients of the base inequality roughly by scale/(1-f0).
