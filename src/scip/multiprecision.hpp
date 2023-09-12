@@ -77,7 +77,7 @@
    Rational& max(Rational& r1, Rational& r2){return r1;}
    Rational& min(Rational& r1, Rational& r2){return r1;}
    SCIP_Longint denominator(Rational& r){return 0L;}
-   SCIP_Longin numerator(Rational& r){return 0L;}
+   SCIP_Longint numerator(Rational& r){return 0L;}
 #endif
 
 #endif
