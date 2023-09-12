@@ -117,6 +117,61 @@ void printCutQuad(
    }
    SCIPdebugMsgPrint(scip, " <= %.6f (activity: %g)\n", QUAD_TO_DBL(cutrhs), QUAD_TO_DBL(activity));
 }
+
+static
+void printCut(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
+   SCIP_Real*            cutcoefs,           /**< non-zero coefficients of cut */
+   SCIP_Real             cutrhs,             /**< right hand side of the MIR row */
+   int*                  cutinds,            /**< indices of problem variables for non-zero coefficients */
+   int                   cutnnz,             /**< number of non-zeros in cut */
+   SCIP_Bool             ignoresol,
+   SCIP_Bool             islocal
+   )
+{
+   SCIP_Real activity;
+   SCIP_VAR** vars;
+   int i;
+
+   assert(scip != NULL);
+   vars = SCIPgetVars(scip);
+
+   SCIPdebugMsg(scip, "CUT:");
+   activity = 0.0;
+   for( i = 0; i < cutnnz; ++i )
+   {
+      SCIP_Real coef;
+
+      coef = cutcoefs[cutinds[i]];
+
+      if( SCIPvarGetType(vars[cutinds[i]]) == SCIP_VARTYPE_BINARY )
+         SCIPdebugMsgPrint(scip, " %+g<%s>[B]", coef, SCIPvarGetName(vars[cutinds[i]]));
+      else if( SCIPvarGetType(vars[cutinds[i]]) == SCIP_VARTYPE_INTEGER )
+         SCIPdebugMsgPrint(scip, " %+g<%s>[I]", coef, SCIPvarGetName(vars[cutinds[i]]));
+      else
+         SCIPdebugMsgPrint(scip, " %+g<%s>[C]", coef, SCIPvarGetName(vars[cutinds[i]]));
+
+      if( ! ignoresol )
+      {
+         coef = coef * (sol == NULL ? SCIPvarGetLPSol(vars[cutinds[i]]) : SCIPgetSolVal(scip, sol, vars[cutinds[i]]));
+      }
+      else
+      {
+         if( cutcoefs[i] > 0.0 )
+         {
+            coef = coef * (islocal ? SCIPvarGetLbLocal(vars[cutinds[i]]) : SCIPvarGetLbGlobal(vars[cutinds[i]]));
+         }
+         else
+         {
+            coef = coef * (islocal ? SCIPvarGetUbLocal(vars[cutinds[i]]) : SCIPvarGetUbGlobal(vars[cutinds[i]]));
+         }
+      }
+
+      activity += coef;
+   }
+   SCIPdebugMsgPrint(scip, " <= %.6f (activity: %g)\n", cutrhs, activity);
+}
 #endif
 
 /** macro to make sure a value is not equal to zero, i.e. NONZERO(x) != 0.0
