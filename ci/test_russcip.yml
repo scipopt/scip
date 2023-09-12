@@ -1,0 +1,12 @@
+test_russcip:
+  image:
+    name: rust:latest
+  script:
+    - sh ci/build_scip.sh
+    - git clone https://github.com/scipopt/russcip.git
+    - cd russcip
+    - export LD_LIBRARY_PATH=$CI_PROJECT_DIR/install/lib SCIPOPTDIR=$CI_PROJECT_DIR/install
+    - cargo test --release
+
+  only:
+    - merge_requests

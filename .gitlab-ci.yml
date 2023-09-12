@@ -1,0 +1,1 @@
+include: 'ci/test_russcip.yml'
