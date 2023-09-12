@@ -649,6 +649,7 @@ set(scipheaders
     scip/nlhdlr_perspective.h
     scip/nlhdlr_quadratic.h
     scip/nlhdlr_quotient.h
+    scip/nlhdlr_signomial.h
     scip/nlhdlr_soc.h
     scip/nlhdlr.h
     scip/nlp.h
