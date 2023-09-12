@@ -7185,6 +7185,15 @@ SCIP_RETCODE tryAddSymmetryHandlingMethods(
 
    propdata = SCIPpropGetData(prop);
    assert( propdata != NULL );
+   assert( propdata->usesymmetry >= 0 );
+
+   /* if no symmetries may be handled, stop here */
+   if ( propdata->usesymmetry == 0 )
+   {
+      if ( earlyterm != NULL )
+         *earlyterm = TRUE;
+      return SCIP_OKAY;
+   }
 
    /* if constraints have already been added */
    if ( propdata->triedaddconss )
@@ -7419,6 +7428,11 @@ SCIP_DECL_PROPINITPRE(propInitpreSymmetry)
    {
       SCIP_CALL( SCIPgetIntParam(scip, "misc/usesymmetry", &propdata->usesymmetry) );
    }
+   assert( propdata->usesymmetry >= 0 );
+
+   /* terminate early if no symmetries will be handled */
+   if ( propdata->usesymmetry == 0 )
+      return SCIP_OKAY;
 
    /* add symmetry handling constraints if required  */
    if ( propdata->addconsstiming == 0 )
@@ -7453,6 +7467,10 @@ SCIP_DECL_PROPEXITPRE(propExitpreSymmetry)
    propdata = SCIPpropGetData(prop);
    assert( propdata != NULL );
    assert( propdata->usesymmetry >= 0 );
+
+   /* terminate early if no symmetries will be handled */
+   if ( propdata->usesymmetry == 0 )
+      return SCIP_OKAY;
 
    /* guarantee that symmetries are computed (and handled) if the solving process has not been interrupted
     * and even if presolving has been disabled */
@@ -7515,6 +7533,10 @@ SCIP_DECL_PROPPRESOL(propPresolSymmetry)
    propdata = SCIPpropGetData(prop);
    assert( propdata != NULL );
    assert( propdata->usesymmetry >= 0 );
+
+   /* terminate early if no symmetries will be handled */
+   if ( propdata->usesymmetry == 0 )
+      return SCIP_OKAY;
 
    /* possibly create symmetry handling constraints */
 
