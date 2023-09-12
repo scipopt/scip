@@ -3748,8 +3748,8 @@ SCIP_RETCODE SCIPsolOverwriteFPSolWithExact(
    assert(sol != NULL);
    assert(SCIPsolIsExact(sol));
 
-   vars = SCIPprobGetVars(transprob);
-   nvars = SCIPprobGetNVars(transprob);
+   vars = SCIPsolIsOriginal(sol) ? SCIPprobGetVars(origprob) : SCIPprobGetVars(transprob);
+   nvars = SCIPsolIsOriginal(sol) ? SCIPprobGetNVars(origprob) : SCIPprobGetNVars(transprob);
 
    SCIP_CALL( RatCreateBuffer(set->buffer, &solval) );
 
