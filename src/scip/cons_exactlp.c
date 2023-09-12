@@ -17235,7 +17235,6 @@ SCIP_RETCODE SCIPincludeConshdlrExactLinear(
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSHDLR* conshdlr;
    SCIP_EVENTHDLR* eventhdlr;
-   char version[20];
 
    assert(scip != NULL);
 
@@ -17387,10 +17386,13 @@ SCIP_RETCODE SCIPincludeConshdlrExactLinear(
          "should multi-aggregations only be performed if the constraint can be removed afterwards?",
          &conshdlrdata->multaggrremove, TRUE, DEFAULT_MULTAGGRREMOVE, NULL, NULL) );
 #ifdef SCIP_WITH_MPFR
-   /* add info about using MPFR to external codes information */
-   (void) SCIPsnprintf(version, sizeof(version), "MPFR %s", MPFR_VERSION_STRING);
-   SCIP_CALL( SCIPincludeExternalCodeInformation(scip, version,
-         "GNU Multiple Precision Floating-Point Reliable Library (mpfr.org)") );
+   {
+      char version[20];
+      /* add info about using MPFR to external codes information */
+      (void) SCIPsnprintf(version, sizeof(version), "MPFR %s", MPFR_VERSION_STRING);
+      SCIP_CALL( SCIPincludeExternalCodeInformation(scip, version,
+            "GNU Multiple Precision Floating-Point Reliable Library (mpfr.org)") );
+   }
 #endif /*lint --e{529}*/
 
    return SCIP_OKAY;
