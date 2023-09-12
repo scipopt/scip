@@ -235,18 +235,6 @@ SCIP_RETCODE SCIPlpiExactAddCols(
    assert(nnonz >= 0);
    assert(ncols >= 0);
 
-#ifndef NDEBUG
-   {
-      int j;
-      for( j = 0; j < nnonz; j++ )
-      {
-         assert( val[j] != 0.0 );
-         /* perform check that no new rows are added - this is forbidden */
-         assert( 0 <= ind[j] && ind[j] < lpi->nrows );
-      }
-   }
-#endif
-
    lpi->ncols += ncols;
 
    return SCIP_OKAY;
@@ -289,18 +277,6 @@ SCIP_RETCODE SCIPlpiExactAddRows(
    assert(nnonz == 0 || beg != NULL);
    assert(nnonz == 0 || ind != NULL);
    assert(nnonz == 0 || val != NULL);
-
-#ifndef NDEBUG
-   /* perform check that no new columns are added - this is forbidden */
-   {
-      int j;
-      for (j = 0; j < nnonz; ++j)
-      {
-         assert( val[j] != 0.0 );
-         assert( 0 <= ind[j] && ind[j] < lpi->ncols );
-      }
-   }
-#endif
 
    lpi->nrows += nrows;
 
