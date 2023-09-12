@@ -4322,7 +4322,6 @@ void performBoundSubstitutionSafely(
    )
 {
    SCIP_Real coef;
-   SCIP_Real tmp;
    SCIP_ROUNDMODE previousroundmode;
 
    assert(!SCIPisInfinity(scip, -varsign * boundval));
@@ -4336,8 +4335,7 @@ void performBoundSubstitutionSafely(
    /* standard (bestlbtype < 0) or variable (bestlbtype >= 0) lower bound? */
    if( boundtype < 0 )
    {
-      tmp = coef - boundval;
-      *cutrhs += tmp;
+      *cutrhs += coef * (-boundval);
       *localbdsused = *localbdsused || (boundtype == -2);
    }
    else
@@ -4367,7 +4365,6 @@ void performBoundSubstitutionSimpleSafely(
    )
 {
    SCIP_Real coef;
-   SCIP_Real tmp;
    SCIP_ROUNDMODE previousroundmode;
 
    assert(!SCIPisInfinity(scip, ABS(boundval)));
@@ -4381,8 +4378,7 @@ void performBoundSubstitutionSimpleSafely(
    /* must be a standard bound */
    assert( boundtype < 0 );
 
-   tmp = coef - boundval;
-   *cutrhs += tmp;
+   *cutrhs = coef * (-boundval);
 
    *localbdsused = *localbdsused || (boundtype == -2);
 
@@ -4409,15 +4405,8 @@ void performBoundSubstitution(
 {
    SCIP_Real QUAD(coef);
    SCIP_Real QUAD(tmp);
-   SCIP_ROUNDMODE previousroundmode;
 
    assert(!SCIPisInfinity(scip, -varsign * boundval));
-
-   if( SCIPisExactSolve(scip) )
-   {
-      previousroundmode = SCIPintervalGetRoundingMode();
-      SCIPintervalSetRoundingModeUpwards();
-   }
 
    QUAD_ARRAY_LOAD(coef, cutcoefs, probindex);
 
@@ -4436,9 +4425,6 @@ void performBoundSubstitution(
       SCIP_Real QUAD(zcoef);
       int zidx;
       SCIP_VAR* var = SCIPgetVars(scip)[probindex];
-
-      /* we don't support vlbs in exact mode yet */
-      assert(!SCIPisExactSolve(scip));
 
       if( varsign == +1 )
       {
@@ -4479,9 +4465,6 @@ void performBoundSubstitution(
 
       QUAD_ARRAY_STORE(cutcoefs, zidx, zcoef);
    }
-
-   if( SCIPisExactSolve(scip) )
-      SCIPintervalSetRoundingMode(previousroundmode); /*lint !e644*/
 }
 
 /** performs the bound substitution step with the simple bound for the variable with the given problem index
@@ -4501,15 +4484,8 @@ void performBoundSubstitutionSimple(
 {
    SCIP_Real QUAD(coef);
    SCIP_Real QUAD(tmp);
-   SCIP_ROUNDMODE previousroundmode;
 
    assert(!SCIPisInfinity(scip, ABS(boundval)));
-
-   if( SCIPisExactSolve(scip) )
-   {
-      previousroundmode = SCIPintervalGetRoundingMode();
-      SCIPintervalSetRoundingModeUpwards();
-   }
 
    QUAD_ARRAY_LOAD(coef, cutcoefs, probindex);
 
@@ -4519,9 +4495,6 @@ void performBoundSubstitutionSimple(
    SCIPquadprecProdQD(tmp, coef, -boundval);
    SCIPquadprecSumQQ(*cutrhs, *cutrhs, tmp);
    *localbdsused = *localbdsused || (boundtype == -2);
-
-   if( SCIPisExactSolve(scip) )
-      SCIPintervalSetRoundingMode(previousroundmode); /*lint !e644*/
 }
 
 /** Transform equation \f$ a \cdot x = b; lb \leq x \leq ub \f$ into standard form
@@ -4817,22 +4790,11 @@ SCIP_RETCODE cutsTransformMIR(
    int nvars;
    int firstcontvar;
    SCIP_VAR** vars;
-   SCIP_MIRINFO* mirinfo;
-
-   SCIP_ROUNDMODE previousroundmode;
 
    assert(varsign != NULL);
    assert(boundtype != NULL);
    assert(freevariable != NULL);
    assert(localbdsused != NULL);
-
-   if( SCIPisExactSolve(scip) )
-   {
-      if( SCIPisCertificateActive(scip)   )
-         mirinfo = SCIPgetCertificate(scip)->mirinfo[SCIPgetCertificate(scip)->nmirinfos - 1];
-      previousroundmode = SCIPintervalGetRoundingMode();
-      SCIPintervalSetRoundingModeUpwards();
-   }
 
    *freevariable = FALSE;
    *localbdsused = FALSE;
@@ -4892,16 +4854,6 @@ SCIP_RETCODE cutsTransformMIR(
          varsign[i] = -1;
 
          performBoundSubstitution(scip, cutinds, cutcoefs, QUAD(cutrhs), nnz, varsign[i], boundtype[i], bestubs[i], v, localbdsused);
-      }
-
-      if( SCIPisCertificateActive(scip) )
-      {
-         if( boundtype[i] == -2 )
-         {
-            mirinfo->localbdused[v] = TRUE; /*lint !e644*/
-            mirinfo->nlocalvars++;
-         }
-         mirinfo->upperused[v] = (varsign[i] == -1);
       }
    }
 
@@ -4967,19 +4919,9 @@ SCIP_RETCODE cutsTransformMIR(
 
          performBoundSubstitutionSimple(scip, cutcoefs, QUAD(cutrhs), boundtype[i], bestubs[i], v, localbdsused);
       }
-
-      if( SCIPisCertificateActive(scip) )
-      {
-         if( boundtype[i] == -2 )
-         {
-            mirinfo->localbdused[v] = TRUE;
-            mirinfo->nlocalvars++;
-         }
-         mirinfo->upperused[v] = (varsign[i] == -1);
-      }
    }
 
-   if( fixintegralrhs && !SCIPisExactSolve(scip) )
+   if( fixintegralrhs )
    {
       SCIP_Real f0;
 
@@ -5105,9 +5047,6 @@ SCIP_RETCODE cutsTransformMIR(
    }
 
   TERMINATE:
-
-   if( SCIPisExactSolve(scip) )
-      SCIPintervalSetRoundingMode(previousroundmode); /*lint !e644*/
 
    /*free temporary memory */
    SCIPfreeBufferArray(scip, &selectedbounds);
