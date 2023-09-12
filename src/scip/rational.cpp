@@ -2544,7 +2544,7 @@ SCIP_RETCODE SCIPrationalarraySetVal(
    if( idx < rationalarray->firstidx )
    {
       int ninserts = rationalarray->firstidx - idx;
-      SCIP_Rational r;
+      SCIP_Rational r = {};
       rationalarray->vals.insert(rationalarray->vals.begin(), ninserts, r);
       rationalarray->firstidx = idx;
       rationalarray->vals[0] = *val;
@@ -2552,7 +2552,7 @@ SCIP_RETCODE SCIPrationalarraySetVal(
    else if( (size_t) idx >= rationalarray->vals.size() + rationalarray->firstidx )
    {
       int ninserts = idx - rationalarray->vals.size() - rationalarray->firstidx + 1;
-      SCIP_Rational r;
+      SCIP_Rational r = {};
       rationalarray->vals.insert(rationalarray->vals.end(), ninserts, r);
       rationalarray->vals[rationalarray->vals.size() - 1] = *val;
    }
