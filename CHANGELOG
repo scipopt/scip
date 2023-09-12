@@ -160,6 +160,7 @@ Fixed bugs
 - Number of runs in which separation is enabled will now be correct as per "separating/maxruns" parameter. Earlier,
   separation was enabled for "maxruns + 1" number of runs, i.e., separation was enabled even when "maxruns = 0" was set.
 - add safeguard for number of selected cuts
+- use double double precision for delta in activity updates of cons_linear.c
 
 Miscellaneous
 -------------
@@ -263,7 +264,6 @@ Fixed bugs
 - check whether objective limit is truly reached in SCIPlpiIsStable()
 - if an objective limit is set and Mosek claims that it is exceeded, check that this is indeed the case in SCIPlpiIsStable()
 - The .mps file reader was extended to additionally accept .mps files with the objective sense section on one line.
-- use double double precision for delta in activity updates of cons_linear.c.
 
 Miscellaneous
 -------------
