@@ -43,12 +43,9 @@
 #include "scip/struct_scip.h"
 #include "rectlu/rectlu.h"
 
-#define PSBIGM                      100
-#define PSWARMSTARTAUXPROB         TRUE
-#define PSPOSTPROCESSDUALSOL       TRUE
-
-
 #ifdef SCIP_WITH_BOOST
+
+#define PSBIGM                      100
 
 /** checks if number is a power of two (negative numbers are reported as false);
  *
@@ -2364,14 +2361,13 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_PROB*            prob,               /**< problem data */
-   int                   itlim,              /**< maximal number of LP iterations to perform, or -1 for no limit */
    SCIP_Bool*            lperror,            /**< pointer to store whether an unresolved LP error occurred */
    SCIP_Bool             usefarkas,          /**< should infeasiblity be proven? */
    SCIP_Real*            safebound,          /**< pointer to store the calculated safe bound */
    SCIP_Bool*            primalfeasible,     /**< pointer to store whether the solution is primal feasible, or NULL */
    SCIP_Bool*            dualfeasible        /**< pointer to store whether the solution is dual feasible, or NULL */
    )
-{
+{  /*lint --e{715}*/
 #ifdef SCIP_WITH_BOOST
    char dualboundmethod;
    char lastboundmethod;

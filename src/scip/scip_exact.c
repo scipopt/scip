@@ -298,7 +298,7 @@ SCIP_RETCODE SCIPcomputeSafeBound(
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPcomputeSafeBound", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    SCIP_CALL( SCIPlpExactComputeSafeBound(scip->lp, scip->lpexact, scip->set, scip->messagehdlr, SCIPblkmem(scip),
-         scip->stat, scip->eventqueue, scip->eventfilter, scip->transprob, scip->lpexact->lpiitlim,
+         scip->stat, scip->eventqueue, scip->eventfilter, scip->transprob,
          &lperror, proveinfeas, safebound, NULL, NULL) );
 
    if( lperror )
