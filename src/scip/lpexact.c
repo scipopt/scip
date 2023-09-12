@@ -3897,7 +3897,7 @@ SCIP_RETCODE SCIPlpExactProjectShiftFree(
    BMSfreeBlockMemoryArrayNull(blkmem, &projshiftdata->includedrows, projshiftdata->nextendedrows);
    BMSfreeBlockMemoryArrayNull(blkmem, &projshiftdata->projshiftbasis, projshiftdata->nextendedrows);
 
-#ifdef SCIP_WITH_GMP
+#if defined(SCIP_WITH_GMP) && defined(SCIP_WITH_EXACTSOLVE)
    if( projshiftdata->rectfactor != NULL )
       RECTLUfreeFactorization(projshiftdata->rectfactor);
 #endif

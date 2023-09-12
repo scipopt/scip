@@ -2372,6 +2372,7 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
    SCIP_Bool*            dualfeasible        /**< pointer to store whether the solution is dual feasible, or NULL */
    )
 {
+#ifdef SCIP_WITH_BOOST
    char dualboundmethod;
    char lastboundmethod;
    SCIP_Bool shouldabort;
@@ -2385,7 +2386,6 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
    shouldabort = FALSE;
    nattempts = 0;
 
-#ifdef SCIP_WITH_BOOST
    assert(set->exact_enabled);
    assert(!lp->hasprovedbound);
 

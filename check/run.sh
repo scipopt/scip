@@ -221,7 +221,10 @@ mv $VIPRRAWFILE.gz $SOLVERPATH/$OUTPUTDIR/$BASENAME.viprraw.gz
 mv $VIPRORIFILE.gz $SOLVERPATH/$OUTPUTDIR/$BASENAME.vipr_ori.gz
 fi
 #ensure no garbage is left over
-rm $CLIENTTMPDIR/${USER}-tmpdir/$BASENAME*vipr*
+if test -e $VIPRFILE
+then
+    rm $CLIENTTMPDIR/${USER}-tmpdir/$BASENAME*vipr*
+fi
 
 if test -e "${SOLFILE}"
 then

@@ -180,7 +180,7 @@ using namespace soplex;
 static void RsetSpxR(
    SCIP_LPIEXACT*        lpi,                /**< exact lpi*/
    SCIP_Rational*        r,                  /**< scip rational */
-   const Rational&       spxr                /**< soplex rational */
+   const soplex::Rational&       spxr                /**< soplex rational */
    )
 {
    if( SCIPlpiExactIsInfinity(lpi, double(spxr)) )
@@ -193,7 +193,11 @@ static void RsetSpxR(
    }
    else
    {
+#ifdef SCIP_WITH_BOOST
       r->val = spxr;
+#else
+      r->val = (double) spxr;
+#endif
       r->isinf = false;
       r->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
    }
@@ -218,23 +222,23 @@ static void RsetSpxVector(
  * @todo exip: there seems to be something wrong with the = of spx rational */
 static void SpxRSetRat(
    SCIP_LPIEXACT*        lpi,                /**< exact LPI */
-   Rational&             spxr,               /**< SoPlex Rational*/
+   soplex::Rational&     spxr,               /**< SoPlex Rational*/
    SCIP_Rational*        src                 /**< SCIP_Rational */
 )
 {
    if( RatIsAbsInfinity(src) )
    {
       if( RatIsPositive(src) )
-         spxr = Rational(SCIPlpiExactInfinity(lpi));
+         spxr = soplex::Rational(SCIPlpiExactInfinity(lpi));
       else
-         spxr = Rational(-SCIPlpiExactInfinity(lpi));
+         spxr = soplex::Rational(-SCIPlpiExactInfinity(lpi));
    }
    else
    {
 #if defined(SOPLEX_WITH_GMP) && defined(SCIP_WITH_BOOST)
-      spxr = Rational(*RatGetGMP(src));
+      spxr = soplex::Rational(*RatGetGMP(src));
 #else
-      spxr = Rational(RatApproxReal(src));
+      spxr = soplex::Rational(RatApproxReal(src));
 #endif
    }
 }
@@ -971,8 +975,8 @@ SCIP_RETCODE SCIPlpiExactLoadColLP(
       /* create empty rows with given sides */
       for( i = 0; i < nrows; ++i )
       {
-         Rational spxlhs;
-         Rational spxrhs;
+         soplex::Rational spxlhs;
+         soplex::Rational spxrhs;
          SpxRSetRat(lpi, spxlhs, lhs[i]);
          SpxRSetRat(lpi, spxlhs, rhs[i]);
          rows.add(spxlhs, emptyVector, spxrhs);
@@ -1056,10 +1060,10 @@ SCIP_RETCODE SCIPlpiExactAddCols(
       for( i = 0; i < ncols; ++i )
       {
          int j;
-         Rational spxlb;
-         Rational spxub;
-         Rational spxobj;
-         std::vector<Rational> spxval;
+         soplex::Rational spxlb;
+         soplex::Rational spxub;
+         soplex::Rational spxobj;
+         std::vector<soplex::Rational> spxval;
 
          SpxRSetRat(lpi, spxlb, lb[i]);
          SpxRSetRat(lpi, spxub, ub[i]);
@@ -1068,7 +1072,7 @@ SCIP_RETCODE SCIPlpiExactAddCols(
          colVector.clear();
          if( nnonz > 0 )
          {
-            Rational tmp;
+            soplex::Rational tmp;
 
             start = beg[i];
             last = (i == ncols-1 ? nnonz : beg[i+1]);
@@ -1205,9 +1209,9 @@ SCIP_RETCODE SCIPlpiExactAddRows(
       /* create row vectors with given sides */
       for( i = 0; i < nrows; ++i )
       {
-          Rational spxlhs;
-          Rational spxrhs;
-          std::vector<Rational> spxval;
+          soplex::Rational spxlhs;
+          soplex::Rational spxrhs;
+          std::vector<soplex::Rational> spxval;
 
           SpxRSetRat(lpi, spxlhs, lhs[i]);
           SpxRSetRat(lpi, spxrhs, rhs[i]);
@@ -1221,7 +1225,7 @@ SCIP_RETCODE SCIPlpiExactAddRows(
 
             for( int j = start; j < last; ++j )
             {
-               Rational tmp;
+               soplex::Rational tmp;
                spxval.push_back(tmp);
                SpxRSetRat(lpi, spxval[j - start], val[j]);
             }
@@ -1342,8 +1346,8 @@ SCIP_RETCODE SCIPlpiExactChgBounds(
 
    try
    {
-      Rational spxlb;
-      Rational spxub;
+      soplex::Rational spxlb;
+      soplex::Rational spxub;
 
       for( i = 0; i < ncols; ++i )
       {
@@ -1410,8 +1414,8 @@ SCIP_RETCODE SCIPlpiExactChgSides(
 
    try
    {
-      Rational spxlhs;
-      Rational spxrhs;
+      soplex::Rational spxlhs;
+      soplex::Rational spxrhs;
 
       for( i = 0; i < nrows; ++i )
       {
@@ -1447,7 +1451,7 @@ SCIP_RETCODE SCIPlpiExactChgCoef(
    SCIP_Rational*        newval              /**< new value of coefficient */
    )
 {
-   Rational spxval;
+   soplex::Rational spxval;
 
    SCIPdebugMessage("calling SCIPlpiChgCoef()\n");
 
@@ -1509,7 +1513,7 @@ SCIP_RETCODE SCIPlpiExactChgObj(
 
    try
    {
-      Rational spxobj;
+      soplex::Rational spxobj;
 
       for( i = 0; i < ncols; ++i )
       {
@@ -2792,7 +2796,7 @@ SCIP_RETCODE SCIPlpiExactGetBInvRow(
    )
 {
    int i;
-   SSVectorBase<Rational> tmpvec(0);
+   SSVectorBase<soplex::Rational> tmpvec(0);
    SCIPdebugMessage("calling SCIPlpiExactGetBInvRow()\n");
 
    assert(lpi != NULL);

@@ -37,6 +37,7 @@
 #include <numeric>
 #include <string.h>
 #include <ostream>
+#include <algorithm>
 
 #ifdef SCIP_WITH_BOOST
 #include <boost/format.hpp>
@@ -65,7 +66,7 @@ SCIP_RETCODE RatCreate(
 
    (*rational)->isinf = FALSE;
    (*rational)->isfprepresentable = SCIP_ISFPREPRESENTABLE_TRUE;
-   new (&(*rational)->val) Rational(0);
+   new (&(*rational)->val) Rational(0.0);
 
    return SCIP_OKAY;
 }
@@ -80,7 +81,7 @@ SCIP_RETCODE RatCreateBlock(
 
    (*rational)->isinf = FALSE;
    (*rational)->isfprepresentable = SCIP_ISFPREPRESENTABLE_TRUE;
-   new (&(*rational)->val) Rational(0);
+   new (&(*rational)->val) Rational(0.0);
 
    return SCIP_OKAY;
 }
@@ -95,7 +96,7 @@ SCIP_RETCODE RatCreateBuffer(
 
    (*rational)->isinf = FALSE;
    (*rational)->isfprepresentable = SCIP_ISFPREPRESENTABLE_TRUE;
-   new (&(*rational)->val) Rational(0);
+   new (&(*rational)->val) Rational(0.0);
 
    return SCIP_OKAY;
 }
@@ -1759,7 +1760,7 @@ SCIP_Bool RatDenominatorIsLE(
 
 #else
 /** returns the numerator of a rational as a long */
-SCIP_Longint Rnumerator(
+SCIP_Longint RatNumerator(
    SCIP_Rational*        rational            /**< the rational */
    )
 {
@@ -1767,11 +1768,20 @@ SCIP_Longint Rnumerator(
 }
 
 /** returns the denominator of a rational as a long */
-SCIP_Longint Rdenominator(
+SCIP_Longint RatDenominator(
    SCIP_Rational*        rational            /**< the rational */
    )
 {
    return 1.0;
+}
+
+/** returns the denominator of a rational as a long */
+SCIP_Bool RatDenominatorIsLE(
+   SCIP_Rational*        rational,           /**< the rational */
+   SCIP_Longint          val                 /**< long value to compare to */
+   )
+{
+   return TRUE;
 }
 #endif
 
@@ -1801,7 +1811,7 @@ SCIP_Real RatRoundReal(
    if( rational->isfprepresentable == SCIP_ISFPREPRESENTABLE_TRUE || roundmode == SCIP_R_ROUND_NEAREST )
       return RatApproxReal(rational);
 
-#ifdef SCIP_WITH_MPFR
+#if defined(SCIP_WITH_MPFR) && defined(SCIP_WITH_BOOST)
    {
       mpfr_t valmpfr;
       mpq_t* val;
@@ -1992,7 +2002,7 @@ SCIP_Real RatApproxReal(
    SCIP_Rational*        rational            /**< the rational */
    )
 {
-   SCIP_Real retval;
+   SCIP_Real retval = 0.0;
 #ifdef SCIP_WITH_BOOST
    assert(rational != NULL);
 
@@ -2008,6 +2018,7 @@ SCIP_Real RatApproxReal(
    return retval;
 }
 
+#ifdef SCIP_WITH_BOOST
 /* choose the best semiconvergent with demnominator <= maxdenom between p1/q1 and p2/q2 */
 static
 void chooseSemiconv(
@@ -2034,6 +2045,7 @@ void chooseSemiconv(
       resden = q[1];
    }
 }
+#endif
 
 /* choose the best semiconvergent with demnominator <= maxdenom between p1/q1 and p2/q2 */
 static
@@ -2222,6 +2234,7 @@ void RatComputeApproximation(
    int                   forcegreater        /**< 1 if res >= src should be enforced, -1 if res <= src should be enforced, 0 else */
    )
 {
+#ifdef SCIP_WITH_BOOST
    int done = 0;
 
    Integer temp;
@@ -2402,6 +2415,7 @@ void RatComputeApproximation(
 
    assert(forcegreater != 1 || res->val >= src->val);
    assert(forcegreater != -1 || res->val <= src->val);
+#endif
 
    res->isinf = FALSE;
    res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
