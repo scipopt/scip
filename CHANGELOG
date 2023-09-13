@@ -8,6 +8,7 @@ Features
 
 - added constraint handler that checks and enforces bounds on original variables which have been fixed or aggregated in the transformed problem
 - allow for implicit integer variables in xor constraints
+- added option to consider enforcement of nonlinear constraints (including spatial branching) before integrality has been enforced
 
 Performance improvements
 ------------------------
@@ -22,6 +23,9 @@ Interface changes
 -----------------
 
 ### New callbacks
+
+- SCIP_DECL_NLHDLRENFO takes additional parameter branchcandonly to indicate whether only branching candidates should be registered,
+  without looking for cuts or boundchanges
 
 ### New API functions
 
@@ -38,6 +42,9 @@ Interface changes
 - limits/dual to terminate the solve as soon as the dual bound is at least as good as this value
 - presolving/milp/internalmaxrounds to control the maximal rounds for each call of the milp presolver (PaPILO)
 - constraints/fixedvar/* to control the new constraint handler that checks bounds on fixed original variables
+- constraints/nonlinear/branching/mixfractional to specify minimal average pseudo cost count for discrete variables
+  at which to start considering spatial branching before branching on fractional integer variables
+  (default infinity means that integrality is always enforced before nonlinear constraints)
 
 ### New data structures
 
