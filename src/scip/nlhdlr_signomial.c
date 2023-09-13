@@ -29,8 +29,8 @@
  */
 
 
-#define SCIP_SIGCUT_DEBUG_
-#define SCIP_SIG_DEBUG
+// #define SCIP_SIGCUT_DEBUG
+// define SCIP_SIG_DEBUG
 
 #ifdef SCIP_SIGCUT_DEBUG
 #ifndef SCIP_SIG_DEBUG_
@@ -204,13 +204,15 @@ void freeExprDataMem(
    SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->exponents, (*nlhdlrexprdata)->nfactors);
    if( !ispartial )
    {
-      SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->signs, (*nlhdlrexprdata)->nvars);
-      SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->refexponents, (*nlhdlrexprdata)->nvars);
-      SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->vars, (*nlhdlrexprdata)->nvars);
-      SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->intervals, (*nlhdlrexprdata)->nvars);
-      SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->box, 2 * (*nlhdlrexprdata)->nvars);
-      SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->xstar, (*nlhdlrexprdata)->nvars);
-      SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->facetcoefs, (*nlhdlrexprdata)->nvars);
+      int nvars = (*nlhdlrexprdata)->nvars;
+      int n2vars = nvars + nvars;
+      SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->signs, nvars);
+      SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->refexponents, nvars);
+      SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->vars, nvars);
+      SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->intervals, nvars);
+      SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->box, n2vars);
+      SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->xstar, nvars);
+      SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->facetcoefs, nvars);
    }
    SCIPfreeBlockMemory(scip, nlhdlrexprdata);
    *nlhdlrexprdata = NULL;
@@ -841,14 +843,12 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectSignomial)
       (*nlhdlrexprdata)->nfactors = nf;
       (*nlhdlrexprdata)->nvars = nvars;
 
-      SCIP_EXPR *** ptrfactors = &(*nlhdlrexprdata)->factors;
-      SCIP_Real ** ptrexponents = &(*nlhdlrexprdata)->exponents;
       /* allocat memory for expression data */
-      SCIP_CALL(SCIPallocBlockMemoryArray(scip, ptrfactors, nf));
-      SCIP_CALL(SCIPallocBlockMemoryArray(scip, ptrexponents, nf));
+      SCIP_CALL(SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->factors, nf));
+      SCIP_CALL(SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->exponents, nf));
 
       /* get monomial information */
-      SCIP_CALL( SCIPgetExprMonomialData(scip, expr, &((*nlhdlrexprdata)->coef), *ptrexponents, *ptrfactors) );
+      SCIP_CALL( SCIPgetExprMonomialData(scip, expr, &((*nlhdlrexprdata)->coef), (*nlhdlrexprdata)->factors, (*nlhdlrexprdata)->exponents) );
 
       /* skip multilinear terms */
       SCIP_Bool ismultilinear = FALSE;
@@ -874,20 +874,13 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectSignomial)
       else
       {
          /* allocate more memory for expression data */
-         //SCIP_Bool ** ptrsigns =  &(*nlhdlrexprdata)->signs;
-         SCIP_Real ** ptrrefexponents  = &(*nlhdlrexprdata)->refexponents;
-         SCIP_VAR *** ptrvars = &(*nlhdlrexprdata)->vars;
-         SCIP_INTERVAL ** ptrintervals = &(*nlhdlrexprdata)->intervals;
-         SCIP_Real ** ptrxstar =  &(*nlhdlrexprdata)->xstar;
-         SCIP_Real ** ptrfacetcoefs = &(*nlhdlrexprdata)->facetcoefs;
-         SCIP_Real ** ptrbox = &(*nlhdlrexprdata)->box;
          SCIP_CALL(SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->signs, nvars));
-         SCIP_CALL(SCIPallocBlockMemoryArray(scip, ptrrefexponents, nvars));
-         SCIP_CALL(SCIPallocBlockMemoryArray(scip, ptrvars, nvars));
-         SCIP_CALL(SCIPallocBlockMemoryArray(scip, ptrintervals, nvars));
-         SCIP_CALL(SCIPallocBlockMemoryArray(scip, ptrxstar, nvars));
-         SCIP_CALL(SCIPallocBlockMemoryArray(scip, ptrfacetcoefs, nvars));
-         SCIP_CALL(SCIPallocBlockMemoryArray(scip, ptrbox, 2 * nvars));
+         SCIP_CALL(SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->refexponents, nvars));
+         SCIP_CALL(SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->vars, nvars));
+         SCIP_CALL(SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->intervals, nvars));
+         SCIP_CALL(SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->xstar, nvars));
+         SCIP_CALL(SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->facetcoefs, nvars));
+         SCIP_CALL(SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->box, 2 * nvars));
 
          (*nlhdlrexprdata)->isgetvars = FALSE;
          (*nlhdlrexprdata)->expr = expr;
