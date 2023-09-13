@@ -422,6 +422,11 @@ if(EXACTSOLVE OR AUTOBUILD)
 
     set(SCIP_WITH_EXACTSOLVE ON)
 
+    find_program(VIPR "viprcomp")
+    if(${VIPR} STREQUAL VIPR-NOTFOUND)
+      message(WARNING "VIPR checker was not found, so verification is not enabled for exact ctest. Make sure to install vipr (https://github.com/ambros-gleixner/VIPR) to enable certificate checking.")
+    endif()
+
     if(Boost_FOUND)
         include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
         add_definitions(-DSCIP_WITH_BOOST)

@@ -1118,32 +1118,34 @@ if(TEST_MIPEX)
                                     DEPENDS scip-build
                                 )
 
-            add_test(NAME MIPEX-${setting}-${basename}-viprcomp
-                    COMMAND viprcomp ${basename}.${setting}.vipr)
-            set_tests_properties(MIPEX-${setting}-${basename}-viprcomp
-                                PROPERTIES
-                                DEPENDS MIPEX-${setting}-${basename}
-                                PASS_REGULAR_EXPRESSION "Completion of File successful!"
-                                FAIL_REGULAR_EXPRESSION "Error"
-                                FAIL_REGULAR_EXPRESSION "Failed")
+            if(NOT ${VIPR} STREQUAL VIPR-NOTFOUND)
+               add_test(NAME MIPEX-${setting}-${basename}-viprcomp
+                     COMMAND viprcomp ${basename}.${setting}.vipr)
+               set_tests_properties(MIPEX-${setting}-${basename}-viprcomp
+                                 PROPERTIES
+                                 DEPENDS MIPEX-${setting}-${basename}
+                                 PASS_REGULAR_EXPRESSION "Completion of File successful!"
+                                 FAIL_REGULAR_EXPRESSION "Error"
+                                 FAIL_REGULAR_EXPRESSION "Failed")
 
-            add_test(NAME MIPEX-${setting}-${basename}-vipr
-                    COMMAND viprchk ${basename}.${setting}_complete.vipr)
-            set_tests_properties(MIPEX-${setting}-${basename}-vipr
-                                PROPERTIES
-                                DEPENDS MIPEX-${setting}-${basename}-viprcomp
-                                PASS_REGULAR_EXPRESSION "Successfully verified"
-                                FAIL_REGULAR_EXPRESSION "Error"
-                                FAIL_REGULAR_EXPRESSION "Failed")
+               add_test(NAME MIPEX-${setting}-${basename}-vipr
+                     COMMAND viprchk ${basename}.${setting}_complete.vipr)
+               set_tests_properties(MIPEX-${setting}-${basename}-vipr
+                                 PROPERTIES
+                                 DEPENDS MIPEX-${setting}-${basename}-viprcomp
+                                 PASS_REGULAR_EXPRESSION "Successfully verified"
+                                 FAIL_REGULAR_EXPRESSION "Error"
+                                 FAIL_REGULAR_EXPRESSION "Failed")
 
-            add_test(NAME MIPEX-${setting}-${basename}-vipr_ori
-                    COMMAND viprchk ${basename}.${setting}.vipr_ori)
-            set_tests_properties(MIPEX-${setting}-${basename}-vipr_ori
-                                PROPERTIES
-                                DEPENDS MIPEX-${setting}-${basename}
-                                PASS_REGULAR_EXPRESSION "Successfully checked solution for feasibility"
-                                FAIL_REGULAR_EXPRESSION "Error"
-                                FAIL_REGULAR_EXPRESSION "Failed")
+               add_test(NAME MIPEX-${setting}-${basename}-vipr_ori
+                     COMMAND viprchk ${basename}.${setting}.vipr_ori)
+               set_tests_properties(MIPEX-${setting}-${basename}-vipr_ori
+                                 PROPERTIES
+                                 DEPENDS MIPEX-${setting}-${basename}
+                                 PASS_REGULAR_EXPRESSION "Successfully checked solution for feasibility"
+                                 FAIL_REGULAR_EXPRESSION "Error"
+                                 FAIL_REGULAR_EXPRESSION "Failed")
+            endif()
 
         endforeach(setting)
     endforeach(instance ${instances_MIPEX})
