@@ -844,8 +844,8 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectSignomial)
       SCIP_EXPR *** ptrfactors = &(*nlhdlrexprdata)->factors;
       SCIP_Real ** ptrexponents = &(*nlhdlrexprdata)->exponents;
       /* allocat memory for expression data */
-      SCIPallocBlockMemoryArray(scip, ptrfactors, nf);
-      SCIPallocBlockMemoryArray(scip, ptrexponents, nf);
+      SCIP_CALL(SCIPallocBlockMemoryArray(scip, ptrfactors, nf));
+      SCIP_CALL(SCIPallocBlockMemoryArray(scip, ptrexponents, nf));
 
       /* get monomial information */
       SCIP_CALL( SCIPgetExprMonomialData(scip, expr, &((*nlhdlrexprdata)->coef), *ptrexponents, *ptrfactors) );
@@ -881,13 +881,13 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectSignomial)
          SCIP_Real ** ptrxstar =  &(*nlhdlrexprdata)->xstar;
          SCIP_Real ** ptrfacetcoefs = &(*nlhdlrexprdata)->facetcoefs;
          SCIP_Real ** ptrbox = &(*nlhdlrexprdata)->box;
-         SCIPallocBlockMemoryArray(scip, ptrsigns, nvars);
-         SCIPallocBlockMemoryArray(scip, ptrrefexponents, nvars);
-         SCIPallocBlockMemoryArray(scip, ptrvars, nvars);
-         SCIPallocBlockMemoryArray(scip, ptrintervals, nvars);
-         SCIPallocBlockMemoryArray(scip, ptrxstar, nvars);
-         SCIPallocBlockMemoryArray(scip, ptrfacetcoefs, nvars);
-         SCIPallocBlockMemoryArray(scip, ptrbox, 2 * nvars);
+         SCIP_CALL(SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->signs, nvars));
+         SCIP_CALL(SCIPallocBlockMemoryArray(scip, ptrrefexponents, nvars));
+         SCIP_CALL(SCIPallocBlockMemoryArray(scip, ptrvars, nvars));
+         SCIP_CALL(SCIPallocBlockMemoryArray(scip, ptrintervals, nvars));
+         SCIP_CALL(SCIPallocBlockMemoryArray(scip, ptrxstar, nvars));
+         SCIP_CALL(SCIPallocBlockMemoryArray(scip, ptrfacetcoefs, nvars));
+         SCIP_CALL(SCIPallocBlockMemoryArray(scip, ptrbox, 2 * nvars));
 
          (*nlhdlrexprdata)->isgetvars = FALSE;
          (*nlhdlrexprdata)->expr = expr;
