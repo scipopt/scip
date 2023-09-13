@@ -1087,7 +1087,7 @@ void computePosRingCircle(
 
          if( a*a >= alpha*alpha )
          {
-            h = SQRT(a*a - alpha*alpha);
+            h = SQRT(MAX(a*a - alpha*alpha, 0.0));
             u = (c - alpha) * xs[i] / c;
             v = (c - alpha) * ys[i] / c;
 
@@ -1272,7 +1272,8 @@ void computePosCircleCircle(
          b = Rj + rext;
          assert(dist != 0.0);
          alpha = (dist*dist - b*b + a*a) / (2.0*dist);
-         h = SQRT(a*a - alpha*alpha);
+         assert(a*a >= alpha*alpha);
+         h = SQRT(MAX(a*a - alpha*alpha, 0.0));
          u = xs[i] + (alpha / dist) * (xs[j] - xs[i]);
          v = ys[i] + (alpha / dist) * (ys[j] - ys[i]);
          n1 = h * ((ys[j] - ys[i]) / dist);
