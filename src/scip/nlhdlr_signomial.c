@@ -874,7 +874,7 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectSignomial)
       else
       {
          /* allocate more memory for expression data */
-         SCIP_Bool ** ptrsigns =  &(*nlhdlrexprdata)->signs;
+         //SCIP_Bool ** ptrsigns =  &(*nlhdlrexprdata)->signs;
          SCIP_Real ** ptrrefexponents  = &(*nlhdlrexprdata)->refexponents;
          SCIP_VAR *** ptrvars = &(*nlhdlrexprdata)->vars;
          SCIP_INTERVAL ** ptrintervals = &(*nlhdlrexprdata)->intervals;
