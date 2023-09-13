@@ -4397,7 +4397,7 @@ void performBoundSubstitutionSimpleSafely(
    /* must be a standard bound */
    assert( boundtype < 0 );
 
-   *cutrhs = coef * (-boundval);
+   *cutrhs += coef * (-boundval);
 
    *localbdsused = *localbdsused || (boundtype == -2);
 
@@ -7075,6 +7075,9 @@ SCIP_RETCODE calcMIRSafely(
 
          assert(coef != 0.0);
       }
+
+      SCIPdebugMsg(scip, "Initial row:\n");
+      SCIPdebug(printCut(scip, sol, tmpcoefs, rhs, tmpinds, tmpnnz, FALSE, FALSE));
 
       /* Transform equation  a*x == b, lb <= x <= ub  into standard form
        *   a'*x' == b, 0 <= x' <= ub'.
