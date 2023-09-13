@@ -248,7 +248,7 @@ SCIP_Real reformRowprep(
    if( SCIPisZero(scip, coefauxvar) )
    {
       *success = FALSE;
-      return SCIP_OKAY;
+      return 0.0;
    }
 
    /* the reformation scales the cut, such that coefficients and constant are dividing by the absolute value of coefauxvar */
@@ -448,7 +448,7 @@ SCIP_RETCODE estimateSpecialPower(
             SCIP_Real scale = i == (nlhdlrexprdata->nvars - 1) ? nlhdlrexprdata->coef : 1;
             SCIP_VAR* var = nlhdlrexprdata->vars[i];
             SCIP_Real refexponent = nlhdlrexprdata->refexponents[i];
-            if( SCIPisEQ(scip, refexponent, 1) )
+            if( SCIPisEQ(scip, refexponent, 1.0) )
             {
                /* \f$ h = 1 \f$, a univariate linear function. Only rescale, no need for linearization */
                SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, var, multiplier / scale));
@@ -484,11 +484,11 @@ SCIP_RETCODE estimateSpecialPower(
    }
    else if( nsignvars == 2 && !overestimate ){
       /* bivariate case, \f$ f(w) = w^h = f_0(w_0) f_1(w_1)  \f$ */
-      SCIP_VAR* vars[2]; 
-      SCIP_Real refexponents[2];
-      SCIP_Real xstar[2];
-      SCIP_Real scale[2]; 
-      SCIP_Real box[4];
+      SCIP_VAR* vars[2] = {NULL, NULL}; 
+      SCIP_Real refexponents[2] = {0.0, 0.0};
+      SCIP_Real xstar[2] = {0.0, 0.0};;
+      SCIP_Real scale[2] = {0.0, 0.0};; 
+      SCIP_Real box[4] = {0.0, 0.0, 0.0, 0.0};
       int j = 0;
       /* get refexponents, xtar, scale, and box */
       for( int i = 0; i < nlhdlrexprdata->nvars; ++i )
@@ -594,7 +594,6 @@ SCIP_RETCODE underEstimatePower(
       box[2 * j + 1] = nlhdlrexprdata->intervals[i].sup;
       SCIP_Real scale = i == (nlhdlrexprdata->nvars - 1) ? nlhdlrexprdata->coef : 1;
       xstar[j] = SCIPgetSolVal(scip, sol, nlhdlrexprdata->vars[i]) / scale;
-      assert(xstar[j] != SCIP_INVALID);
       j++;
    }
 
@@ -607,7 +606,7 @@ SCIP_RETCODE underEstimatePower(
    if( !*success )
    {
       SCIPdebugMsg(scip, "failed to compute facet of convex hull\n");
-      return SCIP_OKAY;;
+      return SCIP_OKAY;
    }
 
    /* set coefficients in the rowprep */
@@ -801,8 +800,8 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateSignomial)
 
    if( *success )
    {
-      int scale = reformRowprep(scip, nlhdlrexprdata, rowprep, success);
-      *success = SCIPisGT(scip, scale, nlhdlrdata->mincutscale) && *success;
+      SCIP_Real scale = reformRowprep(scip, nlhdlrexprdata, rowprep, success);
+      *success = *success && SCIPisGT(scip, scale, nlhdlrdata->mincutscale);
       if( *success )
          SCIP_CALL( SCIPsetPtrarrayVal(scip, rowpreps, 0, rowprep));
    }
@@ -842,12 +841,14 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectSignomial)
       (*nlhdlrexprdata)->nfactors = nf;
       (*nlhdlrexprdata)->nvars = nvars;
 
+      SCIP_EXPR *** ptrfactors = &(*nlhdlrexprdata)->factors;
+      SCIP_Real ** ptrexponents = &(*nlhdlrexprdata)->exponents;
       /* allocat memory for expression data */
-      SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->factors, nf);
-      SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->exponents, nf);
+      SCIPallocBlockMemoryArray(scip, ptrfactors, nf);
+      SCIPallocBlockMemoryArray(scip, ptrexponents, nf);
 
       /* get monomial information */
-      SCIP_CALL( SCIPgetExprMonomialData(scip, expr, &((*nlhdlrexprdata)->coef), (*nlhdlrexprdata)->exponents, (*nlhdlrexprdata)->factors) );
+      SCIP_CALL( SCIPgetExprMonomialData(scip, expr, &((*nlhdlrexprdata)->coef), exponents, factors) );
 
       /* skip multilinear terms */
       SCIP_Bool ismultilinear = FALSE;
@@ -856,7 +857,7 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectSignomial)
          ismultilinear = TRUE;
          for ( int c = 0; c < nf; c++ )
          {
-            if( !SCIPisEQ(scip, (*nlhdlrexprdata)->exponents[c], 1) )
+            if( !SCIPisEQ(scip, exponents[c], 1.0) )
             {
                ismultilinear = FALSE;
                break;
@@ -873,13 +874,20 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectSignomial)
       else
       {
          /* allocate more memory for expression data */
-         SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->signs, nvars);
-         SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->refexponents, nvars);
-         SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->vars, nvars);
-         SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->intervals, nvars);
-         SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->xstar, nvars);
-         SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->facetcoefs, nvars);
-         SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->box, 2 * nvars);
+         SCIP_Bool ** ptrsigns =  &(*nlhdlrexprdata)->signs;
+         SCIP_Real ** ptrrefexponents  = &(*nlhdlrexprdata)->refexponents;
+         SCIP_VAR *** ptrvars = &(*nlhdlrexprdata)->vars;
+         SCIP_INTERVAL ** ptrintervals = &(*nlhdlrexprdata)->intervals;
+         SCIP_Real ** ptrxstar =  &(*nlhdlrexprdata)->xstar;
+         SCIP_Real ** ptrfacetcoefs = &(*nlhdlrexprdata)->facetcoefs;
+         SCIP_Real ** ptrbox = &(*nlhdlrexprdata)->box;
+         SCIPallocBlockMemoryArray(scip, ptrsigns, nvars);
+         SCIPallocBlockMemoryArray(scip, ptrrefexponents, nvars);
+         SCIPallocBlockMemoryArray(scip, ptrvars, nvars);
+         SCIPallocBlockMemoryArray(scip, ptrintervals, nvars);
+         SCIPallocBlockMemoryArray(scip, ptrxstar, nvars);
+         SCIPallocBlockMemoryArray(scip, ptrfacetcoefs, nvars);
+         SCIPallocBlockMemoryArray(scip, ptrbox, 2 * nvars);
 
          (*nlhdlrexprdata)->isgetvars = FALSE;
          (*nlhdlrexprdata)->expr = expr;
@@ -1004,15 +1012,15 @@ SCIP_DECL_NLHDLRFREEEXPRDATA(nlhdlrFreeExprDataSignomial)
    assert(expr != NULL);
 
    /* release expressions */
-   SCIPreleaseExpr(scip, &(*nlhdlrexprdata)->expr);
+   SCIP_CALL(SCIPreleaseExpr(scip, &(*nlhdlrexprdata)->expr));
    for( int c = 0; c < (*nlhdlrexprdata)->nfactors; c++ )
-      SCIPreleaseExpr(scip, &(*nlhdlrexprdata)->factors[c]);
+      SCIP_CALL(SCIPreleaseExpr(scip, &(*nlhdlrexprdata)->factors[c]));
 
    /* release variables */
    if( (*nlhdlrexprdata)->isgetvars )
    {
       for( int c = 0; c < (*nlhdlrexprdata)->nvars; c++ ) 
-         SCIPreleaseVar(scip, &(*nlhdlrexprdata)->vars[c]);
+         SCIP_CALL(SCIPreleaseVar(scip, &(*nlhdlrexprdata)->vars[c]));
    }
 
    /* free memory */
