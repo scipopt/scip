@@ -719,7 +719,6 @@ set(scipheaders
     scip/pricer.h
     scip/pricestore.h
     scip/primal.h
-    scip/primalex.h
     scip/prob.h
     scip/prop_dualfix.h
     scip/prop_genvbounds.h

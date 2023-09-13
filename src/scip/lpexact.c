@@ -3334,7 +3334,10 @@ SCIP_RETCODE rowExactCreateFromRowLimitEncodingLength(
       else
          RatAddProd(rowexact->rhs, difference, SCIPvarGetLbGlobalExact(var));
 
-      SCIP_CALL( SCIProwExactAddCoef(rowexact, blkmem, set, eventqueue, lpexact, SCIPcolGetColExact(row->cols[i]), newval) );
+      if( !RatIsZero(newval) )
+      {
+         SCIP_CALL( SCIProwExactAddCoef(rowexact, blkmem, set, eventqueue, lpexact, SCIPcolGetColExact(row->cols[i]), newval) );
+      }
 
       if( RatIsNegative(SCIPvarGetLbGlobalExact(var)) && !RatIsZero(newval) )
       {
