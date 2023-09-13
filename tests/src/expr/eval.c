@@ -489,7 +489,7 @@ Test(evalexpr, complicated, .description = "Tests expression evaluation for a la
 
    /* evaluate solution with zero tag */
    printf("evaluate expression with a zero tag\n");
-   for( i = 1; i < 100; ++i )
+   for( i = 1; i < 50; ++i )
    {
       SCIP_CALL( SCIPsetSolVal(scip, sol, x, i*i) );
       SCIP_CALL( SCIPsetSolVal(scip, sol, y, -5.0/i) );

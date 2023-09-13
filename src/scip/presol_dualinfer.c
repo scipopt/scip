@@ -719,7 +719,7 @@ static
 void getMinMaxActivityResiduals(
    SCIP*                 scip,               /**< SCIP main data structure */
    SCIP_MATRIX*          matrix,             /**< matrix containing the constraints */
-   int                   col,                /**< column index */
+   int                   withoutcol,         /**< exclude this column index */
    int                   row,                /**< row index */
    SCIP_Real*            lbs,                /**< lower bounds */
    SCIP_Real*            ubs,                /**< upper bounds */
@@ -739,6 +739,7 @@ void getMinMaxActivityResiduals(
    int nminactposinf;
    SCIP_Real maxresact;
    SCIP_Real minresact;
+   int col;
 
    assert(scip != NULL);
    assert(matrix != NULL);
@@ -763,7 +764,9 @@ void getMinMaxActivityResiduals(
 
    for( ; rowpnt < rowend; rowpnt++, valpnt++ )
    {
-      if(*rowpnt == col)
+      col = *rowpnt;
+
+      if( col == withoutcol )
          continue;
 
       coef = *valpnt;

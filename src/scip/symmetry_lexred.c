@@ -1189,7 +1189,9 @@ SCIP_RETCODE shadowtreeUndoNodeDepthBranchIndices(
    /* undo the operations from shadowtreeFillNodeDepthBranchIndices, which makes nodedepthbranchindices clean */
    SCIP_SHADOWNODE* shadownode;
    SCIP_SHADOWNODE* shadowchild;
+#ifndef NDEBUG
    int shadowdepth;
+#endif
    SCIP_VAR* var;
    int varindex;
    int c;
@@ -1208,7 +1210,9 @@ SCIP_RETCODE shadowtreeUndoNodeDepthBranchIndices(
    assert( focusnode != NULL );
 
    shadownode = SCIPshadowTreeGetShadowNode(shadowtree, focusnode);
+#ifndef NDEBUG
    shadowdepth = SCIPnodeGetDepth(focusnode);
+#endif
 
    /* clean nbranchvars array */
    while ( *nbranchvars > 0 )
@@ -1225,7 +1229,9 @@ SCIP_RETCODE shadowtreeUndoNodeDepthBranchIndices(
     */
    while (shadownode != NULL)
    {
+#ifndef NDEBUG
       assert( shadowdepth > 0 );
+#endif
       for (c = 0; c < shadownode->nchildren; ++c)
       {
          shadowchild = shadownode->children[c];
@@ -1250,7 +1256,9 @@ SCIP_RETCODE shadowtreeUndoNodeDepthBranchIndices(
 
       /* prepare for the next iteration */
       shadownode = shadownode->parent;
+#ifndef NDEBUG
       --shadowdepth;
+#endif
    }
    /* In the last iteration, we handled the branching decisions at the root node, so shadowdepth must have value 0. */
    assert( shadowdepth == 0 );

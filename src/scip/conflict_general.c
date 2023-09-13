@@ -327,7 +327,7 @@ SCIP_RETCODE SCIPconflictFree(
    assert((*conflict)->nconflictsets == 0);
    assert((*conflict)->ntmpbdchginfos == 0);
 
-#ifdef SCIP_CONFGRAPH
+#if defined(SCIP_CONFGRAPH) || defined(SCIP_CONFGRAPH_DOT)
    confgraphFree();
 #endif
 
