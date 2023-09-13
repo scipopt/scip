@@ -848,8 +848,7 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectSignomial)
       SCIP_CALL(SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->exponents, nf));
 
       /* get monomial information */
-      SCIP_CALL( SCIPgetExprMonomialData(scip, expr, &((*nlhdlrexprdata)->coef), (*nlhdlrexprdata)->factors, (*nlhdlrexprdata)->exponents) );
-
+      SCIP_CALL( SCIPgetExprMonomialData(scip, expr, &((*nlhdlrexprdata)->coef), (*nlhdlrexprdata)->exponents, (*nlhdlrexprdata)->factors) );
       /* skip multilinear terms */
       SCIP_Bool ismultilinear = FALSE;
       if( nf >= 2)
