@@ -746,11 +746,10 @@ SCIP_Bool removeZerosSafely(
    SCIP_VAR** vars;
    SCIP_ROUNDMODE previousroundmode;
 
-   if( SCIPisExactSolve(scip) )
-   {
-      previousroundmode = SCIPintervalGetRoundingMode();
-      SCIPintervalSetRoundingModeUpwards();
-   }
+   assert(SCIPisExactSolve(scip));
+
+   previousroundmode = SCIPintervalGetRoundingMode();
+   SCIPintervalSetRoundingModeUpwards();
 
    vars = SCIPgetVars(scip);
 
@@ -784,7 +783,7 @@ SCIP_Bool removeZerosSafely(
          {
             if( SCIPisInfinity(scip, ub) )
             {
-               SCIPintervalSetRoundingMode(previousroundmode); /*lint !e644*/
+               SCIPintervalSetRoundingMode(previousroundmode);
                return TRUE;
             }
             else
@@ -794,8 +793,7 @@ SCIP_Bool removeZerosSafely(
          {
             if( SCIPisInfinity(scip, -lb) )
             {
-               if( SCIPisExactSolve(scip) )
-                  SCIPintervalSetRoundingMode(previousroundmode); /*lint !e644*/
+               SCIPintervalSetRoundingMode(previousroundmode);
                return TRUE;
             }
             else
@@ -817,8 +815,7 @@ SCIP_Bool removeZerosSafely(
    if( *cutrhs < 0.0 && *cutrhs >= -SCIPepsilon(scip) )
       *cutrhs = 0.0;
 
-   if( SCIPisExactSolve(scip) )
-      SCIPintervalSetRoundingMode(previousroundmode); /*lint !e644*/
+   SCIPintervalSetRoundingMode(previousroundmode);
 
    return FALSE;
 }
@@ -7002,7 +6999,6 @@ SCIP_RETCODE calcMIRSafely(
 
    SCIP_Real rhs;
    SCIP_Real downrhs;
-   SCIP_Real f0;
    SCIP_Bool freevariable;
    SCIP_Bool localbdsused;
    SCIP_Bool tmpislocal;
@@ -7132,7 +7128,7 @@ SCIP_RETCODE calcMIRSafely(
    /* We multiply the coefficients of the base inequality roughly by scale/(1-f0).
     * If this gives a scalar that is very big, we better do not generate this cut.
     */
-   if( REALABS(scale)/(1.0 - f0) > MAXCMIRSCALE )
+   if( REALABS(scale)/(1.0 - f0interval.inf) > MAXCMIRSCALE )
       goto TERMINATE;
 
    /* renormalize f0 value */
