@@ -178,6 +178,12 @@ void SCIPaggrRowClear(
    SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
    );
 
+/** version for use in exact solvig mode of SCIPaggrRowClear */
+SCIP_EXPORT
+void SCIPaggrRowClearSafe(
+   SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
+   );
+
 /** aggregate rows using the given weights; the current content of the aggregation
  *  row, \p aggrrow, gets overwritten
  */

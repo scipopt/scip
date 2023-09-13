@@ -338,6 +338,8 @@ SCIP_RETCODE addCut(
                SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
                SCIPgetRowMaxCoef(scip, cut)/SCIPgetRowMinCoef(scip, cut));
 
+            SCIPdebug(SCIPprintRow(scip, cut, NULL));
+
             if( SCIPisCutNew(scip, cut) )
             {
                /* add global cuts which are not implicit bound changes to the cut pool */

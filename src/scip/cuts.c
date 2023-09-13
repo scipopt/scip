@@ -3169,6 +3169,25 @@ SCIP_RETCODE SCIPaggrRowAddCustomCons(
    return SCIP_OKAY;
 }
 
+/** version for use in exact solvig mode of SCIPaggrRowClear */
+void SCIPaggrRowClearSafe(
+   SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
+   )
+{
+   int i;
+
+   for( i = 0; i < aggrrow->nnz; ++i )
+   {
+      aggrrow->vals[aggrrow->inds[i]] = 0.0;
+   }
+
+   aggrrow->nnz = 0;
+   aggrrow->nrows = 0;
+   aggrrow->rank = 0;
+   QUAD_ASSIGN(aggrrow->rhs, 0.0);
+   aggrrow->local = FALSE;
+}
+
 /** clear all entries int the aggregation row but don't free memory */
 void SCIPaggrRowClear(
    SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
@@ -3499,7 +3518,10 @@ SCIP_RETCODE SCIPaggrRowSumRows(
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
    SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
 
-   SCIPaggrRowClear(aggrrow);
+   if( SCIPisExactSolve(scip) )
+      SCIPaggrRowClearSafe(aggrrow);
+   else
+      SCIPaggrRowClear(aggrrow);
    *valid = FALSE;
    lhsused = FALSE;
    nusedrows = 0;
@@ -3544,7 +3566,7 @@ SCIP_RETCODE SCIPaggrRowSumRows(
                }
                else
                {
-                  SCIP_CALL( addOneRowSafely(scip, certificaterow, rows[rowinds[k]], weights[rowinds[k]], sidetypebasis, 
+                  SCIP_CALL( addOneRowSafely(scip, certificaterow, rows[rowinds[k]], weights[rowinds[k]], sidetypebasis,
                         allowlocal, 0, maxaggrlen, &rowtoolongcert, &rowusedcert, valid, &lhsused) );
                }
                if( rowusedcert )
