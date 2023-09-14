@@ -19,7 +19,7 @@ jobs:
     strategy:
       fail-fast: false # do not stop all builds if one fails
       matrix:
-        os: [ubuntu-latest]
+        os: [windows-latest]
 
 
     steps:
@@ -36,16 +36,26 @@ jobs:
     #     elif [[ "${{ matrix.os }}" == "windows-latest" ]]; then
     #       echo "OS_SPECIFIC_PATH=C:\Miniconda\envs\scip\" >> $GITHUB_ENV
     #     fi
+    # - name: Upload header files
+    #   uses: actions/upload-artifact@v3
+    #   with:
+    #     name: headers
+    #     path: /usr/share/miniconda/envs/scip/include
+    # - name: Upload lib files
+    #   uses: actions/upload-artifact@v3
+    #   with:
+    #     name: libscip
+    #     path: /usr/share/miniconda/envs/scip/lib
     - name: Upload header files
       uses: actions/upload-artifact@v3
       with:
         name: headers
-        path: /usr/share/miniconda/envs/scip/include
+        path: C:\Miniconda\envs\scip\include
     - name: Upload lib files
       uses: actions/upload-artifact@v3
       with:
         name: libscip
-        path: /usr/share/miniconda/envs/scip/lib
+        path: C:\Miniconda\envs\scip\lib
         
 
       
