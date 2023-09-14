@@ -77,6 +77,19 @@ Interface changes
 - SCIPgetNLPNlRowsStat() to retrieve counts on linear, convex, and nonconvex rows in NLP
 - SCIPnlhdlrSetSollinearize(), SCIPnlhdlrHasSollinearize()
 - SCIPbendersGetNLPParam()
+- new API functions SCIPlexicographicReductionGetStatistics(), SCIPlexicographicReductionPrintStatistics(),
+  SCIPlexicographicReductionPropagate(), SCIPlexicographicReductionAddPermutation(), SCIPlexicographicReductionReset(),
+  SCIPlexicographicReductionFree(), SCIPincludeLexicographicReduction(), for lexicographic reduction.
+- new API functions SCIPorbitopalReductionGetStatistics(), SCIPorbitopalReductionPrintStatistics(),
+  SCIPorbitopalReductionPropagate(), SCIPorbitopalReductionAddOrbitope(), SCIPorbitopalReductionReset(),
+  SCIPorbitopalReductionFree(), SCIPincludeOrbitopalReduction(), SCIPorbitopalReductionGetDefaultColumnOrdering(),
+  for orbitopal fixing.
+- new API functions SCIPorbitalReductionGetStatistics(), SCIPorbitalReductionPrintStatistics(),
+  SCIPorbitalReductionPropagate(), SCIPorbitalReductionAddComponent(), SCIPorbitalReductionReset(),
+  SCIPorbitalReductionFree(), SCIPincludeOrbitalReduction(), for orbital fixing.
+- new API functions SCIPgetShadowTreeEventHandlerExecutionTime(), SCIPshadowTreeGetShadowNodeFromNodeNumber(),
+  SCIPshadowTreeGetShadowNode(), SCIPgetShadowTree(), SCIPactivateShadowTree(), SCIPincludeEventHdlrShadowTree(),
+  for managing a copy of the branch-and-bound tree for symmetry handling purposes.
 - SCIPdotWriteOpening(), SCIPdotWriteNode(), SCIPdotWriteArc(), SCIPdotWriteClosing()
 
 ### Command line interface
