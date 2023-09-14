@@ -29,7 +29,7 @@ jobs:
       run: |
         conda create --name scip 
         conda info --envs
-        ls C:\Miniconda\envs\scip\
+        ls C:\Miniconda\envs\scip\conda-meta\
     # - name: Set OS-specific Path
     #   run: |
     #     if [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
