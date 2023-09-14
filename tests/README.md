@@ -27,7 +27,7 @@ Here are some test examples that can help you get started writing unit tests.
 
 | Example Type| Location |
 | ------ | ------ |
-| catch a signal | `src/bugs/depthlevel.c` |
+| catch a signal | `src/bugs/lowerbound.c` |
 | parameterized test | unittest_framework_tmp branch, `src/cons/expr/simplify.c` |
 | check stdout | unittest_framework_tmp branch, `src/cons/expr/walk.c` |
 

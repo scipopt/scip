@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -43,9 +52,7 @@
 /*lint -e777*/
 /*lint -e866*/
 
-#include <assert.h>
 #include <ctype.h>
-
 #include "scip/cons_nonlinear.h"
 #include "scip/nlhdlr.h"
 #include "scip/expr_var.h"
@@ -59,9 +66,10 @@
 #include "scip/cons_bounddisjunction.h"
 #include "scip/heur_subnlp.h"
 #include "scip/heur_trysol.h"
-#include "scip/nlpi_ipopt.h"  /* for SCIPsolveLinearEquationsIpopt */
+#include "scip/lapack_calls.h"
 #include "scip/debug.h"
 #include "scip/dialog_default.h"
+
 
 /* fundamental constraint handler properties */
 #define CONSHDLR_NAME          "nonlinear"
@@ -301,6 +309,7 @@ struct SCIP_ConshdlrData
    char                  branchviolsplit;    /**< method used to split violation in expression onto variables ('u'niform, 'm'idness of solution, 'd'omain width, 'l'ogarithmic domain width) */
    SCIP_Real             branchpscostreliable; /**< minimum pseudo-cost update count required to consider pseudo-costs reliable */
    char                  linearizeheursol;   /**< whether tight linearizations of nonlinear constraints should be added to cutpool when some heuristics finds a new solution ('o'ff, on new 'i'ncumbents, on 'e'very solution) */
+   SCIP_Bool             assumeconvex;       /**< whether to assume that any constraint is convex */
 
    /* statistics */
    SCIP_Longint          nweaksepa;          /**< number of times we used "weak" cuts for enforcement */
@@ -720,6 +729,7 @@ SCIP_RETCODE storeVarExprs(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
+   int varexprssize;
    int i;
 
    assert(consdata != NULL);
@@ -731,16 +741,29 @@ SCIP_RETCODE storeVarExprs(
    assert(consdata->varexprs == NULL);
    assert(consdata->nvarexprs == 0);
 
-   /* create array to store all variable expressions; the number of variable expressions is bounded by SCIPgetNTotalVars() */
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->varexprs, SCIPgetNTotalVars(scip)) );
+   /* get an upper bound on number of variable expressions */
+   if( consdata->issimplified )
+   {
+      /* if simplified, then we should have removed inactive variables and replaced common subexpressions,
+       * so we cannot have more variable expression than the number of active variables
+       */
+      varexprssize = SCIPgetNVars(scip);
+   }
+   else
+   {
+      SCIP_CALL( SCIPgetExprNVars(scip, consdata->expr, &varexprssize) );
+   }
+
+   /* create array to store all variable expressions */
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->varexprs, varexprssize) );
 
    SCIP_CALL( SCIPgetExprVarExprs(scip, consdata->expr, consdata->varexprs, &(consdata->nvarexprs)) );
-   assert(SCIPgetNTotalVars(scip) >= consdata->nvarexprs);
+   assert(varexprssize >= consdata->nvarexprs);
 
    /* shrink array if there are less variables in the expression than in the problem */
-   if( SCIPgetNTotalVars(scip) > consdata->nvarexprs )
+   if( varexprssize > consdata->nvarexprs )
    {
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &consdata->varexprs, SCIPgetNTotalVars(scip), consdata->nvarexprs) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &consdata->varexprs, varexprssize, consdata->nvarexprs) );
    }
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -748,7 +771,7 @@ SCIP_RETCODE storeVarExprs(
    assert(conshdlrdata->var2expr != NULL);
 
    /* ensure that for every variable an entry exists in the var2expr hashmap
-    * when removing duplicate subexpressions it can happen than a var->varexpr map was removed from the hashmap
+    * when removing duplicate subexpressions it can happen that a var->varexpr map was removed from the hashmap
     */
    for( i = 0; i < consdata->nvarexprs; ++i )
    {
@@ -1117,7 +1140,9 @@ SCIP_RETCODE catchVarEvents(
 
    conshdlrdata = SCIPconshdlrGetData(SCIPconsGetHdlr(cons));
    assert(conshdlrdata != NULL);
+#ifndef CR_API  /* this assert may not work in unittests due to having this code compiled twice, #3543 */
    assert(conshdlrdata->intevalvar == intEvalVarBoundTightening);
+#endif
 
    SCIPdebugMsg(scip, "catchVarEvents for %s\n", SCIPconsGetName(cons));
 
@@ -1884,150 +1909,45 @@ SCIP_RETCODE proposeFeasibleSolution(
    return SCIP_OKAY;
 }
 
-/** adds globally valid tight estimators in a given solution as cut to cutpool
+/** notify nonlinear handlers to add linearization in new solution that has been found
  *
- * Called by addTightEstimatorCuts() for a specific expression, nlhdlr, and estimate-direction (over or under).
- */
-static
-SCIP_RETCODE addTightEstimatorCut(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP_CONS*            cons,               /**< constraint */
-   SCIP_EXPR*            expr,               /**< expression */
-   EXPRENFO*             exprenfo,           /**< expression enfo data, e.g., nlhdlr to use */
-   SCIP_SOL*             sol,                /**< reference point where to estimate */
-   SCIP_Bool             overestimate,       /**< whether to overestimate */
-   SCIP_PTRARRAY*        rowpreps            /**< array for rowpreps */
-   )
-{
-   SCIP_Bool estimatesuccess = FALSE;
-   SCIP_Bool branchscoresuccess = FALSE;
-   int minidx;
-   int maxidx;
-   int r;
-
-   assert(scip != NULL);
-   assert(expr != NULL);
-   assert(exprenfo != NULL);
-   assert(rowpreps != NULL);
-
-   ENFOLOG( SCIPinfoMessage(scip, enfologfile, "   %sestimate using nlhdlr <%s> for expr %p (%s)\n",
-      overestimate ? "over" : "under", SCIPnlhdlrGetName(exprenfo->nlhdlr), (void*)expr, SCIPexprhdlrGetName(SCIPexprGetHdlr(expr))); )
-
-   SCIP_CALL( SCIPnlhdlrEstimate(scip, conshdlr, exprenfo->nlhdlr, expr, exprenfo->nlhdlrexprdata, sol,
-      exprenfo->auxvalue, overestimate, SCIPinfinity(scip), FALSE, rowpreps, &estimatesuccess, &branchscoresuccess) );
-
-   minidx = SCIPgetPtrarrayMinIdx(scip, rowpreps);
-   maxidx = SCIPgetPtrarrayMaxIdx(scip, rowpreps);
-   assert(estimatesuccess == (minidx <= maxidx));
-
-   if( !estimatesuccess )
-   {
-      ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    estimate of nlhdlr %s failed\n", SCIPnlhdlrGetName(exprenfo->nlhdlr)); )
-      return SCIP_OKAY;
-   }
-
-   for( r = minidx; r <= maxidx; ++r )
-   {
-      SCIP_ROWPREP* rowprep;
-      SCIP_ROW* row;
-      SCIP_Real estimateval;
-      int i;
-
-      rowprep = (SCIP_ROWPREP*) SCIPgetPtrarrayVal(scip, rowpreps, r);
-      assert(rowprep != NULL);
-      assert(SCIProwprepGetSidetype(rowprep) == (overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT));
-
-      /* if estimators is only local valid, then skip */
-      if( SCIProwprepIsLocal(rowprep) )
-      {
-         ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    skip local estimator\n"); )
-         SCIPfreeRowprep(scip, &rowprep);
-         continue;
-      }
-
-      /* compute value of estimator */
-      estimateval = -SCIProwprepGetSide(rowprep);
-      for( i = 0; i < SCIProwprepGetNVars(rowprep); ++i )
-         estimateval += SCIProwprepGetCoefs(rowprep)[i] * SCIPgetSolVal(scip, sol, SCIProwprepGetVars(rowprep)[i]);
-
-      /* if estimator value is not tight (or even "more than tight", e.g., when estimating in integer vars), then skip */
-      if( (overestimate && !SCIPisFeasLE(scip, estimateval, SCIPexprGetEvalValue(expr))) ||
-         (!overestimate && !SCIPisFeasGE(scip, estimateval, SCIPexprGetEvalValue(expr))) )
-      {
-         ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    skip non-tight estimator with value %g, expr value %g\n", estimateval, SCIPexprGetEvalValue(expr)); )
-         SCIPfreeRowprep(scip, &rowprep);
-         continue;
-      }
-
-      /* complete estimator to cut and clean it up */
-      SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, SCIPgetExprAuxVarNonlinear(expr), -1.0) );
-      SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, sol, SCIPinfinity(scip), &estimatesuccess) );
-
-      /* if cleanup failed or rowprep is local now, then skip */
-      if( !estimatesuccess || SCIProwprepIsLocal(rowprep) )
-      {
-         ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    skip after cleanup failed or made estimator locally valid\n"); )
-         SCIPfreeRowprep(scip, &rowprep);
-         continue;
-      }
-
-      /* generate row and add to cutpool */
-      SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, cons) );
-
-      ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    adding cut ");
-      SCIP_CALL( SCIPprintRow(scip, row, enfologfile) ); )
-
-      SCIP_CALL( SCIPaddPoolCut(scip, row) );
-      /* SCIPnlhdlrIncrementNSeparated(nlhdlr); */
-
-      SCIP_CALL( SCIPreleaseRow(scip, &row) );
-      SCIPfreeRowprep(scip, &rowprep);
-   }
-
-   SCIP_CALL( SCIPclearPtrarray(scip, rowpreps) );
-
-   return SCIP_OKAY;
-}
-
-/** adds globally valid tight estimators in a given solution as cuts to cutpool
+ * The idea is that nonlinear handlers add globally valid tight estimators in a given solution as cuts to the cutpool.
  *
  * Essentially we want to ensure that the LP relaxation is tight in the new solution, if possible.
- * For convex constraints, we would achieve this by linearizing.
- * To avoid checking explicitly for convexity, we compute estimators via any nlhdlr that didn't say it would
- * use bound information and check whether the estimator is tight.
+ * As the nonlinear handlers define the extended formulation, they should know whether it is possible to generate a
+ * cut that is valid and supporting in the given solution.
+ * For example, for convex constraints, we achieve this by linearizing.
+ * For SOC, we also linearize, but on a a convex reformulation.
  *
  * Since linearization may happen in auxiliary variables, we ensure that auxiliary variables are set
  * to the eval-value of its expression, i.e., we change sol so it is also feasible in the extended formulation.
  */
 static
-SCIP_RETCODE addTightEstimatorCuts(
+SCIP_RETCODE notifyNlhdlrNewsol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONS**           conss,              /**< constraints */
    int                   nconss,             /**< number of constraints */
-   SCIP_SOL*             sol                 /**< reference point where to estimate */
+   SCIP_SOL*             sol,                /**< reference point where to estimate */
+   SCIP_Bool             solisbest           /**< whether solution is best */
    )
 {
    SCIP_CONSDATA* consdata;
    SCIP_Longint soltag;
    SCIP_EXPRITER* it;
    SCIP_EXPR* expr;
-   SCIP_PTRARRAY* rowpreps;
    int c, e;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(conss != NULL || nconss == 0);
 
-   ENFOLOG( SCIPinfoMessage(scip, enfologfile, "add tight estimators in new solution from <%s> to cutpool\n", SCIPheurGetName(SCIPsolGetHeur(sol))); )
+   ENFOLOG( SCIPinfoMessage(scip, enfologfile, "call nlhdlr sollinearize in new solution from <%s>\n", SCIPheurGetName(SCIPsolGetHeur(sol))); )
 
    /* TODO probably we just evaluated all expressions when checking the sol before it was added
     * would be nice to recognize this and skip reevaluating
     */
    soltag = SCIPgetExprNewSoltag(scip);
-
-   SCIP_CALL( SCIPcreatePtrarray(scip, &rowpreps) );
 
    SCIP_CALL( SCIPcreateExpriter(scip, &it) );
    SCIP_CALL( SCIPexpriterInit(it, NULL, SCIP_EXPRITER_DFS, FALSE) );
@@ -2042,10 +1962,6 @@ SCIP_RETCODE addTightEstimatorCuts(
 
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
-
-      /* TODO we could remember for which constraints there is a chance that we would add anything,
-       * i.e., there is some convex-like expression, and skip other constraints
-       */
 
       ENFOLOG(
       {
@@ -2072,66 +1988,27 @@ SCIP_RETCODE addTightEstimatorCuts(
          ownerdata = SCIPexprGetOwnerData(expr);
          assert(ownerdata != NULL);
 
-         /* we can only generate a cut from an estimator if there is an auxvar */
-         if( ownerdata->auxvar == NULL )
-            continue;
-
          /* set value for auxvar in sol to value of expr, in case it is used to compute estimators higher up of this expression */
          assert(SCIPexprGetEvalTag(expr) == soltag);
          assert(SCIPexprGetEvalValue(expr) != SCIP_INVALID);
-         SCIP_CALL( SCIPsetSolVal(scip, sol, ownerdata->auxvar, SCIPexprGetEvalValue(expr)) );
+         if( ownerdata->auxvar != NULL )
+         {
+            SCIP_CALL( SCIPsetSolVal(scip, sol, ownerdata->auxvar, SCIPexprGetEvalValue(expr)) );
+         }
 
-         /* generate cuts from estimators of each nonlinear handler that provides estimates */
+         /* let nonlinear handler generate cuts by calling the sollinearize callback */
          for( e = 0; e < ownerdata->nenfos; ++e )
          {
-            SCIP_NLHDLR* nlhdlr;
-
-            nlhdlr = ownerdata->enfos[e]->nlhdlr;
-            assert(nlhdlr != NULL);
-
-            /* skip nlhdlr that does not implement estimate (so it does enfo) */
-            if( !SCIPnlhdlrHasEstimate(nlhdlr) )
-               continue;
-
-            /* skip nlhdlr that does not participate in separation or looks like it would give only locally-valid estimators
-             * (because it uses activities on vars/auxvars)
-             */
-            if( ((ownerdata->enfos[e]->nlhdlrparticipation & SCIP_NLHDLR_METHOD_SEPAABOVE) == 0 || ownerdata->enfos[e]->sepaaboveusesactivity) &&
-                ((ownerdata->enfos[e]->nlhdlrparticipation & SCIP_NLHDLR_METHOD_SEPABELOW) == 0 || ownerdata->enfos[e]->sepabelowusesactivity) )
-               continue;
-
-            /* skip nlhdlr_default on sum, as the estimator doesn't depend on the reference point (expr is linear in auxvars) */
-            if( SCIPisExprSum(scip, expr) && strcmp(SCIPnlhdlrGetName(nlhdlr), "default") == 0 )
-               continue;
-
-            /* evaluate the expression w.r.t. the nlhdlrs auxiliary variables, since some nlhdlr expect this before their estimate is called */
-            SCIP_CALL( SCIPnlhdlrEvalaux(scip, nlhdlr, expr, ownerdata->enfos[e]->nlhdlrexprdata, &ownerdata->enfos[e]->auxvalue, sol) );
-            ENFOLOG(
-               SCIPinfoMessage(scip, enfologfile, "  expr ");
-               SCIPprintExpr(scip, expr, enfologfile);
-               SCIPinfoMessage(scip, enfologfile, " (%p): evalvalue %.15g auxvarvalue %.15g, nlhdlr <%s> auxvalue: %.15g\n",
-                  (void*)expr, SCIPexprGetEvalValue(expr), SCIPgetSolVal(scip, sol, ownerdata->auxvar), SCIPnlhdlrGetName(nlhdlr), ownerdata->enfos[e]->auxvalue);
-            )
-            /* due to setting values of auxvars to expr values in sol, the auxvalue should equal to expr evalvalue */
-            assert(SCIPisEQ(scip, ownerdata->enfos[e]->auxvalue, SCIPexprGetEvalValue(expr)));
-
-            /* if nlhdlr wants to be called for overestimate and does not use local bounds, then call estimate of nlhdlr */
-            if( (ownerdata->enfos[e]->nlhdlrparticipation & SCIP_NLHDLR_METHOD_SEPAABOVE) && !ownerdata->enfos[e]->sepaaboveusesactivity )
-            {
-               SCIP_CALL( addTightEstimatorCut(scip, conshdlr, conss[c], expr, ownerdata->enfos[e], sol, TRUE, rowpreps) );
-            }
-
-            /* if nlhdlr wants to be called for underestimate and does not use local bounds, then call estimate of nlhdlr */
-            if( (ownerdata->enfos[e]->nlhdlrparticipation & SCIP_NLHDLR_METHOD_SEPABELOW) && !ownerdata->enfos[e]->sepabelowusesactivity )
-            {
-               SCIP_CALL( addTightEstimatorCut(scip, conshdlr, conss[c], expr, ownerdata->enfos[e], sol, FALSE, rowpreps) );
-            }
+            /* call sollinearize callback, if implemented by nlhdlr */
+            SCIP_CALL( SCIPnlhdlrSollinearize(scip, conshdlr, conss[c],
+               ownerdata->enfos[e]->nlhdlr, expr, ownerdata->enfos[e]->nlhdlrexprdata, sol, solisbest,
+               ownerdata->enfos[e]->nlhdlrparticipation & SCIP_NLHDLR_METHOD_SEPAABOVE,
+               ownerdata->enfos[e]->nlhdlrparticipation & SCIP_NLHDLR_METHOD_SEPABELOW) );
          }
       }
    }
 
    SCIPfreeExpriter(&it);
-   SCIP_CALL( SCIPfreePtrarray(scip, &rowpreps) );
 
    return SCIP_OKAY;
 }
@@ -2170,7 +2047,7 @@ SCIP_DECL_EVENTEXEC(processNewSolutionEvent)
 
    SCIPdebugMsg(scip, "caught new sol event %" SCIP_EVENTTYPE_FORMAT " from heur <%s>\n", SCIPeventGetType(event), SCIPheurGetName(SCIPsolGetHeur(sol)));
 
-   SCIP_CALL( addTightEstimatorCuts(scip, conshdlr, SCIPconshdlrGetConss(conshdlr), SCIPconshdlrGetNConss(conshdlr), sol) );
+   SCIP_CALL( notifyNlhdlrNewsol(scip, conshdlr, SCIPconshdlrGetConss(conshdlr), SCIPconshdlrGetNConss(conshdlr), sol, (SCIPeventGetType(event) & SCIP_EVENTTYPE_BESTSOLFOUND) != 0) );
 
    return SCIP_OKAY;
 }
@@ -2804,7 +2681,9 @@ SCIP_RETCODE propConss(
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
+#ifndef CR_API  /* this assert may not work in unittests due to having this code compiled twice, #3543 */
    assert(conshdlrdata->intevalvar == intEvalVarBoundTightening);
+#endif
    assert(!conshdlrdata->globalbounds);
 
    *result = SCIP_DIDNOTFIND;
@@ -2995,7 +2874,9 @@ SCIP_RETCODE propExprDomains(
    assert(nchgbds != NULL);
    assert(*nchgbds >= 0);
 
+#ifndef CR_API  /* this assert may not work in unittests due to having this code compiled twice, #3543 */
    assert(SCIPconshdlrGetData(conshdlr)->intevalvar == intEvalVarBoundTightening);
+#endif
    assert(!SCIPconshdlrGetData(conshdlr)->globalbounds);
    assert(SCIPqueueIsEmpty(SCIPconshdlrGetData(conshdlr)->reversepropqueue));
 
@@ -3464,6 +3345,7 @@ SCIP_RETCODE detectNlhdlr(
       nlhdlrparticipating = SCIP_NLHDLR_METHOD_NONE;
       conshdlrdata->registerusesactivitysepabelow = FALSE;  /* SCIPregisterExprUsageNonlinear() as called by detect may set this to TRUE */
       conshdlrdata->registerusesactivitysepaabove = FALSE;  /* SCIPregisterExprUsageNonlinear() as called by detect may set this to TRUE */
+      /* coverity[forward_null] */
       SCIP_CALL( SCIPnlhdlrDetect(scip, ownerdata->conshdlr, nlhdlr, expr, cons, &enforcemethodsnew, &nlhdlrparticipating, &nlhdlrexprdata) );
 
       /* nlhdlr might have claimed more than needed: clean up sepa flags */
@@ -3717,22 +3599,37 @@ SCIP_RETCODE initSolve(
          assert(consdata != NULL);
          assert(consdata->expr != NULL);
 
-         /* call the curvature detection algorithm of the convex nonlinear handler
-          * Check only for those curvature that may result in a convex inequality, i.e.,
-          * whether f(x) is concave when f(x) >= lhs and/or f(x) is convex when f(x) <= rhs.
-          * Also we can assume that we are nonlinear, so do not check for convex if already concave.
-          */
-         if( !SCIPisInfinity(scip, -consdata->lhs) )
+         if( !SCIPconshdlrGetData(conshdlr)->assumeconvex )
          {
-            SCIP_CALL( SCIPhasExprCurvature(scip, consdata->expr, SCIP_EXPRCURV_CONCAVE, &success, NULL) );
-            if( success )
-               consdata->curv = SCIP_EXPRCURV_CONCAVE;
+            /* call the curvature detection algorithm of the convex nonlinear handler
+             * Check only for those curvature that may result in a convex inequality, i.e.,
+             * whether f(x) is concave when f(x) >= lhs and/or f(x) is convex when f(x) <= rhs.
+             * Also we can assume that we are nonlinear, so do not check for convex if already concave.
+             */
+            if( !SCIPisInfinity(scip, -consdata->lhs) )
+            {
+               SCIP_CALL( SCIPhasExprCurvature(scip, consdata->expr, SCIP_EXPRCURV_CONCAVE, &success, NULL) );
+               if( success )
+                  consdata->curv = SCIP_EXPRCURV_CONCAVE;
+            }
+            if( !success && !SCIPisInfinity(scip, consdata->rhs) )
+            {
+               SCIP_CALL( SCIPhasExprCurvature(scip, consdata->expr, SCIP_EXPRCURV_CONVEX, &success, NULL) );
+               if( success )
+                  consdata->curv = SCIP_EXPRCURV_CONVEX;
+            }
          }
-         if( !success && !SCIPisInfinity(scip, consdata->rhs) )
+         else
          {
-            SCIP_CALL( SCIPhasExprCurvature(scip, consdata->expr, SCIP_EXPRCURV_CONVEX, &success, NULL) );
-            if( success )
-               consdata->curv = SCIP_EXPRCURV_CONVEX;
+            if( !SCIPisInfinity(scip, -consdata->lhs) && !SCIPisInfinity(scip, consdata->rhs) )
+            {
+               SCIPwarningMessage(scip, "Nonlinear constraint <%s> has finite left- and right-hand side, but constraints/nonlinear/assumeconvex is enabled.\n", SCIPconsGetName(conss[c]));
+               consdata->curv = SCIP_EXPRCURV_LINEAR;
+            }
+            else
+            {
+               consdata->curv = !SCIPisInfinity(scip, consdata->rhs) ? SCIP_EXPRCURV_CONVEX : SCIP_EXPRCURV_CONCAVE;
+            }
          }
          SCIPdebugMsg(scip, "root curvature of constraint %s = %d\n", SCIPconsGetName(conss[c]), consdata->curv);
 
@@ -3744,7 +3641,7 @@ SCIP_RETCODE initSolve(
                SCIP_CALL( createNlRow(scip, conss[c]) );
                assert(consdata->nlrow != NULL);
             }
-            SCIPnlrowSetCurvature(consdata->nlrow, consdata->curv);
+            SCIPsetNlRowCurvature(scip, consdata->nlrow, consdata->curv);
             SCIP_CALL( SCIPaddNlRow(scip, consdata->nlrow) );
          }
       }
@@ -4256,7 +4153,7 @@ SCIP_RETCODE getBinaryProductExprDo(
    SCIP_CONS* cons;
    SCIP_Real* coefs;
    SCIP_VAR* w;
-   char name[SCIP_MAXSTRLEN];
+   char* name;
    int nchildren;
    int i;
 
@@ -4268,12 +4165,13 @@ SCIP_RETCODE getBinaryProductExprDo(
    nchildren = SCIPexprGetNChildren(prodexpr);
    assert(nchildren >= 2);
 
-   /* memory to store the variables of the variable expressions (+1 for w) */
+   /* memory to store the variables of the variable expressions (+1 for w) and their name */
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, nchildren + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &coefs, nchildren + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &name, nchildren * (SCIP_MAXSTRLEN + 1) + 20) );
 
    /* prepare the names of the variable and the constraints */
-   (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "binreform");
+   strcpy(name, "binreform");
    for( i = 0; i < nchildren; ++i )
    {
       vars[i] = SCIPgetVarExprVar(SCIPexprGetChildren(prodexpr)[i]);
@@ -4342,6 +4240,7 @@ SCIP_RETCODE getBinaryProductExprDo(
    SCIP_CALL( SCIPreleaseVar(scip, &w) );
 
    /* free memory */
+   SCIPfreeBufferArray(scip, &name);
    SCIPfreeBufferArray(scip, &coefs);
    SCIPfreeBufferArray(scip, &vars);
 
@@ -6335,9 +6234,8 @@ void addExprsViolScore(
    if( nexprs == 1 )
    {
       SCIPaddExprViolScoreNonlinear(scip, exprs[0], violscore);
-      SCIPdebug( var = SCIPgetExprAuxVarNonlinear(exprs[0]); )
       SCIPdebugMsg(scip, "add score %g to <%s>[%g,%g]\n", violscore,
-         SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
+         SCIPvarGetName(SCIPgetExprAuxVarNonlinear(exprs[0])), SCIPvarGetLbLocal(SCIPgetExprAuxVarNonlinear(exprs[0])), SCIPvarGetUbLocal(SCIPgetExprAuxVarNonlinear(exprs[0])));
       *success = TRUE;
       return;
    }
@@ -7376,13 +7274,13 @@ SCIP_RETCODE enforceExprNlhdlr(
    /* if it was not running (e.g., because it was not available) or did not find anything, then try with estimator callback */
    if( *result != SCIP_DIDNOTRUN && *result != SCIP_DIDNOTFIND )
    {
-      ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    sepa of nlhdlr %s succeeded with result %d\n",
+      ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    enfo of nlhdlr <%s> succeeded with result %d\n",
                SCIPnlhdlrGetName(nlhdlr), *result); )
       return SCIP_OKAY;
    }
    else
    {
-      ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    sepa of nlhdlr <%s> did not succeed with result %d\n", SCIPnlhdlrGetName(nlhdlr), *result); )
+      ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    enfo of nlhdlr <%s> did not succeed with result %d\n", SCIPnlhdlrGetName(nlhdlr), *result); )
    }
 
    *result = SCIP_DIDNOTFIND;
@@ -9250,7 +9148,7 @@ SCIP_RETCODE computeHyperplaneThreePoints(
       SCIPdebugMsg(scip, "numerical troubles - try to solve the linear system via an LU factorization\n");
 
       /* solve the linear problem */
-      SCIP_CALL( SCIPsolveLinearEquationsIpopt(3, m, rhs, x, &success) );
+      SCIP_CALL( SCIPlapackSolveLinearEquations(SCIPbuffer(scip), 3, m, rhs, x, &success) );
 
       *delta  = rhs[0];
       *alpha  = x[0];
@@ -9510,7 +9408,7 @@ SCIP_DECL_CONSFREE(consFreeNonlinear)
    assert(SCIPhashmapGetNElements(conshdlrdata->var2expr) == 0);
    SCIPhashmapFree(&conshdlrdata->var2expr);
 
-   SCIPfreeMemory(scip, &conshdlrdata);
+   SCIPfreeBlockMemory(scip, &conshdlrdata);
    SCIPconshdlrSetData(conshdlr, NULL);
 
    return SCIP_OKAY;
@@ -9531,6 +9429,8 @@ SCIP_DECL_CONSINIT(consInitNonlinear)
    conshdlrdata->lastboundrelax = ++conshdlrdata->curboundstag;
    /* set to 1 so it is larger than initial value of lastenforound in exprs */
    conshdlrdata->enforound = 1;
+   /* reset numbering for auxiliary variables */
+   conshdlrdata->auxvarid = 0;
 
    for( i = 0; i < nconss; ++i )
    {
@@ -9546,7 +9446,7 @@ SCIP_DECL_CONSINIT(consInitNonlinear)
    conshdlrdata->subnlpheur = SCIPfindHeur(scip, "subnlp");
    conshdlrdata->trysolheur = SCIPfindHeur(scip, "trysol");
 
-   /* reset statistics in nonlinear handlers (TODO only if misc/resetstat == TRUE) */
+   /* reset statistics in nonlinear handlers (TODO only if misc/resetstat == TRUE) and call nlhdlrInit */
    for( i = 0; i < conshdlrdata->nnlhdlrs; ++i )
    {
       SCIP_CALL( SCIPnlhdlrInit(scip, conshdlrdata->nlhdlrs[i]) );
@@ -9665,8 +9565,9 @@ SCIP_DECL_CONSEXITPRE(consExitpreNonlinear)
    /* currently SCIP does not offer to communicate this,
     * but at the moment this can only become true if canonicalizeConstraints called detectNlhdlrs (which it doesn't do in EXITPRESOLVE stage)
     * or if a constraint expression became constant
+    * the latter happened on tls4 within fiberscip, so I'm disabling this assert for now
     */
-   assert(!infeasible);
+   /* assert(!infeasible); */
 
    /* tell SCIP that we have something nonlinear */
    SCIPenableNLP(scip);
@@ -9704,18 +9605,6 @@ SCIP_DECL_CONSINITSOL(consInitsolNonlinear)
       SCIPnlhdlrResetNDetectionslast(conshdlrdata->nlhdlrs[i]);
 
    SCIP_CALL( initSolve(scip, conshdlr, conss, nconss) );
-
-   /* catch new solution event */
-   if( nconss != 0 && conshdlrdata->linearizeheursol != 'o' )
-   {
-      SCIP_EVENTHDLR* eventhdlr;
-
-      eventhdlr = SCIPfindEventhdlr(scip, CONSHDLR_NAME "_newsolution");
-      assert(eventhdlr != NULL);
-
-      SCIP_CALL( SCIPcatchEvent(scip, conshdlrdata->linearizeheursol == 'i' ? SCIP_EVENTTYPE_BESTSOLFOUND : SCIP_EVENTTYPE_SOLFOUND,
-         eventhdlr, (SCIP_EVENTDATA*)conshdlr, &conshdlrdata->newsoleventfilterpos) );
-   }
 
    /* check that branching/lpgainnormalize is set to a known value if pseudo-costs are used in branching */
    if( conshdlrdata->branchpscostweight > 0.0 )
@@ -9828,12 +9717,29 @@ SCIP_DECL_CONSTRANS(consTransNonlinear)
 static
 SCIP_DECL_CONSINITLP(consInitlpNonlinear)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
    /* create auxiliary variables and call separation initialization callbacks of the expression handlers
     * TODO if we ever want to allow constraints that are separated but not initial, then we need to call initSepa also
     *   during SEPALP, ENFOLP, etc, whenever a constraint may be separated the first time
     *   for now, there is an assert in detectNlhdlrs to require initial if separated
     */
    SCIP_CALL( initSepa(scip, conshdlr, conss, nconss, infeasible) );
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* catch new solution event */
+   if( conshdlrdata->linearizeheursol != 'o' && conshdlrdata->newsoleventfilterpos == -1 )
+   {
+      SCIP_EVENTHDLR* eventhdlr;
+
+      eventhdlr = SCIPfindEventhdlr(scip, CONSHDLR_NAME "_newsolution");
+      assert(eventhdlr != NULL);
+
+      SCIP_CALL( SCIPcatchEvent(scip, conshdlrdata->linearizeheursol == 'i' ? SCIP_EVENTTYPE_BESTSOLFOUND : SCIP_EVENTTYPE_SOLFOUND,
+         eventhdlr, (SCIP_EVENTDATA*)conshdlr, &conshdlrdata->newsoleventfilterpos) );
+   }
 
    /* collect all bilinear terms for which an auxvar is present
     * TODO this will only do something for the first call of initlp after initsol, because it cannot handle
@@ -9963,6 +9869,9 @@ SCIP_DECL_CONSCHECK(consCheckNonlinear)
    maxviol = 0.0;
    maypropfeasible = conshdlrdata->trysolheur != NULL && SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED
       && SCIPgetStage(scip) <= SCIP_STAGE_SOLVING;
+
+   if( maypropfeasible && (sol == NULL || SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_LPSOL) && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
+      maypropfeasible = FALSE;
 
    /* check nonlinear constraints for feasibility */
    for( c = 0; c < nconss; ++c )
@@ -10265,6 +10174,8 @@ SCIP_DECL_CONSACTIVE(consActiveNonlinear)
    /* simplify root expression if the constraint has been added after presolving */
    if( SCIPgetStage(scip) > SCIP_STAGE_EXITPRESOLVE )
    {
+      SCIP_Bool replacedroot;
+
       if( !consdata->issimplified )
       {
          SCIP_EXPR* simplified;
@@ -10277,6 +10188,10 @@ SCIP_DECL_CONSACTIVE(consActiveNonlinear)
          consdata->expr = simplified;
          consdata->issimplified = TRUE;
       }
+
+      /* ensure each variable is represented by one variable expression only (need this for storeVarExprs() with simplified=TRUE below) */
+      SCIP_CALL( SCIPreplaceCommonSubexpressions(scip, &consdata->expr, 1, &replacedroot) );
+      assert(!replacedroot);  /* root expression cannot have been equal to one of its subexpressions */
 
       /* ensure that varexprs in consdata->expr are the one from var2expr hashmap */
       {
@@ -10500,7 +10415,7 @@ SCIP_DECL_CONSPARSE(consParseNonlinear)
 {  /*lint --e{715}*/
    SCIP_Real  lhs;
    SCIP_Real  rhs;
-   const char* endptr;
+   char*      endptr;
    SCIP_EXPR* consexprtree;
 
    SCIPdebugMsg(scip, "cons_nonlinear::consparse parsing %s\n", str);
@@ -10517,7 +10432,7 @@ SCIP_DECL_CONSPARSE(consParseNonlinear)
    if( !*str )
       return SCIP_OKAY;
 
-   endptr = str;
+   endptr = (char*)str;
 
    /* set left and right hand side to their default values */
    lhs = -SCIPinfinity(scip);
@@ -10529,15 +10444,14 @@ SCIP_DECL_CONSPARSE(consParseNonlinear)
    if( isdigit((unsigned char)str[0]) || ((str[0] == '-' || str[0] == '+') && isdigit((unsigned char)str[1])) )
    {
       /* there is a number coming, maybe it is a left-hand-side */
-      if( !SCIPstrToRealValue(str, &lhs, (char**)&endptr) )
+      if( !SCIPparseReal(scip, str, &lhs, &endptr) )
       {
          SCIPerrorMessage("error parsing number from <%s>\n", str);
          return SCIP_READERROR;
       }
 
       /* ignore whitespace */
-      while( isspace((unsigned char)*endptr) )
-         ++endptr;
+      SCIP_CALL( SCIPskipSpace(&endptr) );
 
       if( endptr[0] != '<' || endptr[1] != '=' )
       {
@@ -10550,8 +10464,7 @@ SCIP_DECL_CONSPARSE(consParseNonlinear)
          str = endptr + 2;
 
          /* ignore whitespace */
-         while( isspace((unsigned char)*str) )
-            ++str;
+         SCIP_CALL( SCIPskipSpace((char**)&str) );
       }
    }
 
@@ -10561,8 +10474,7 @@ SCIP_DECL_CONSPARSE(consParseNonlinear)
    SCIP_CALL( SCIPparseExpr(scip, &consexprtree, str, &str, exprownerCreate, (void*)conshdlr) );
 
    /* check for left or right hand side */
-   while( isspace((unsigned char)*str) )
-      ++str;
+   SCIP_CALL( SCIPskipSpace((char**)&str) );
 
    /* check for free constraint */
    if( strncmp(str, "[free]", 6) == 0 )
@@ -10580,7 +10492,7 @@ SCIP_DECL_CONSPARSE(consParseNonlinear)
       switch( *str )
       {
          case '<':
-            *success = SCIPstrToRealValue(str+2, &rhs, (char**)&endptr);
+            *success = *(str+1) == '=' ? SCIPparseReal(scip, str+2, &rhs, &endptr) : FALSE;
             break;
          case '=':
             if( !SCIPisInfinity(scip, -lhs) )
@@ -10591,7 +10503,7 @@ SCIP_DECL_CONSPARSE(consParseNonlinear)
             }
             else
             {
-               *success = SCIPstrToRealValue(str+2, &rhs, (char**)&endptr);
+               *success = *(str+1) == '=' ? SCIPparseReal(scip, str+2, &rhs, &endptr) : FALSE;
                lhs = rhs;
             }
             break;
@@ -10604,7 +10516,7 @@ SCIP_DECL_CONSPARSE(consParseNonlinear)
             }
             else
             {
-               *success = SCIPstrToRealValue(str+2, &lhs, (char**)&endptr);
+               *success = *(str+1) == '=' ? SCIPparseReal(scip, str+2, &lhs, &endptr) : FALSE;
                break;
             }
          case '\0':
@@ -10801,7 +10713,7 @@ SCIP_RETCODE SCIPincludeConshdlrNonlinear(
    SCIP_DIALOG* parentdialog;
 
    /* create nonlinear constraint handler data */
-   SCIP_CALL( SCIPallocClearMemory(scip, &conshdlrdata) );
+   SCIP_CALL( SCIPallocClearBlockMemory(scip, &conshdlrdata) );
    conshdlrdata->intevalvar = intEvalVarBoundTightening;
    conshdlrdata->curboundstag = 1;
    conshdlrdata->lastboundrelax = 1;
@@ -10977,6 +10889,10 @@ SCIP_RETCODE SCIPincludeConshdlrNonlinear(
    SCIP_CALL( SCIPaddCharParam(scip, "constraints/" CONSHDLR_NAME "/linearizeheursol",
          "whether tight linearizations of nonlinear constraints should be added to cutpool when some heuristics finds a new solution ('o'ff, on new 'i'ncumbents, on 'e'very solution)",
          &conshdlrdata->linearizeheursol, FALSE, 'o', "oie", NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/assumeconvex",
+         "whether to assume that any constraint is convex",
+         &conshdlrdata->assumeconvex, FALSE, FALSE, NULL, NULL) );
 
    /* include handler for bound change events */
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &conshdlrdata->eventhdlr, CONSHDLR_NAME "_boundchange",
@@ -11249,6 +11165,77 @@ SCIP_RETCODE SCIPcreateConsBasicQuadraticNonlinear(
 {
    SCIP_CALL( SCIPcreateConsQuadraticNonlinear(scip, cons, name, nlinvars, linvars, lincoefs, nquadterms, quadvars1, quadvars2, quadcoefs, lhs, rhs,
       TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   return SCIP_OKAY;
+}
+
+/** creates and captures a nonlinear constraint that is a second-order cone constraint with all its constraint flags set to their default values
+ *
+ * \f$\sqrt{\gamma + \sum_{i=1}^{n} (\alpha_i\, (x_i + \beta_i))^2} \leq \alpha_{n+1}\, (x_{n+1}+\beta_{n+1})\f$
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+SCIP_RETCODE SCIPcreateConsBasicSOCNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   int                   nvars,              /**< number of variables on left hand side of constraint (n) */
+   SCIP_VAR**            vars,               /**< array with variables on left hand side (x_i) */
+   SCIP_Real*            coefs,              /**< array with coefficients of left hand side variables (alpha_i), or NULL if all 1.0 */
+   SCIP_Real*            offsets,            /**< array with offsets of variables (beta_i), or NULL if all 0.0 */
+   SCIP_Real             constant,           /**< constant on left hand side (gamma) */
+   SCIP_VAR*             rhsvar,             /**< variable on right hand side of constraint (x_{n+1}) */
+   SCIP_Real             rhscoeff,           /**< coefficient of variable on right hand side (alpha_{n+1}) */
+   SCIP_Real             rhsoffset           /**< offset of variable on right hand side (beta_{n+1}) */
+   )
+{
+   SCIP_EXPR* expr;
+   SCIP_EXPR* lhssum;
+   SCIP_EXPR* terms[2];
+   SCIP_Real termcoefs[2];
+   int i;
+
+   assert(vars != NULL || nvars == 0);
+
+   SCIP_CALL( SCIPcreateExprSum(scip, &lhssum, 0, NULL, NULL, constant, NULL, NULL) );  /* gamma */
+   for( i = 0; i < nvars; ++i )
+   {
+      SCIP_EXPR* varexpr;
+      SCIP_EXPR* powexpr;
+
+      SCIP_CALL( SCIPcreateExprVar(scip, &varexpr, vars[i], NULL, NULL) );   /* x_i */
+      if( offsets != NULL && offsets[i] != 0.0 )
+      {
+         SCIP_EXPR* sum;
+         SCIP_CALL( SCIPcreateExprSum(scip, &sum, 1, &varexpr, NULL, offsets[i], NULL, NULL) );  /* x_i + beta_i */
+         SCIP_CALL( SCIPcreateExprPow(scip, &powexpr, sum, 2.0, NULL, NULL) );   /* (x_i + beta_i)^2 */
+         SCIP_CALL( SCIPreleaseExpr(scip, &sum) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPcreateExprPow(scip, &powexpr, varexpr, 2.0, NULL, NULL) );  /* x_i^2 */
+      }
+
+      SCIP_CALL( SCIPappendExprSumExpr(scip, lhssum, powexpr, coefs != NULL ? coefs[i]*coefs[i] : 1.0) );  /* + alpha_i^2 (x_i + beta_i)^2 */
+      SCIP_CALL( SCIPreleaseExpr(scip, &varexpr) );
+      SCIP_CALL( SCIPreleaseExpr(scip, &powexpr) );
+   }
+
+   SCIP_CALL( SCIPcreateExprPow(scip, &terms[0], lhssum, 0.5, NULL, NULL) );  /* sqrt(...) */
+   SCIP_CALL( SCIPreleaseExpr(scip, &lhssum) );
+   termcoefs[0] = 1.0;
+
+   SCIP_CALL( SCIPcreateExprVar(scip, &terms[1], rhsvar, NULL, NULL) );  /* x_{n+1} */
+   termcoefs[1] = -rhscoeff;
+
+   SCIP_CALL( SCIPcreateExprSum(scip, &expr, 2, terms, termcoefs, 0.0, NULL, NULL) );  /* sqrt(...) - alpha_{n+1}x_{n_1} */
+
+   SCIP_CALL( SCIPreleaseExpr(scip, &terms[1]) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &terms[0]) );
+
+   SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, cons, name, expr, -SCIPinfinity(scip), rhscoeff * rhsoffset) );
+
+   SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 
    return SCIP_OKAY;
 }
@@ -11584,6 +11571,10 @@ SCIP_RETCODE SCIPprocessRowprepNonlinear(
          ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    cut efficacy %g is too low (minefficacy=%g)\n",
                                   SCIPgetCutEfficacy(scip, sol, row), SCIPgetSepaMinEfficacy(scip)); )
       }
+      else if( !SCIPisCutApplicable(scip, row) )
+      {
+         ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    cut not applicable (e.g., cut is boundchange below eps)\n"); )
+      }
       else
       {
          SCIP_Bool infeasible;
@@ -11632,6 +11623,21 @@ SCIP_RETCODE SCIPprocessRowprepNonlinear(
    }
 
    return SCIP_OKAY;
+}
+
+/** returns whether all nonlinear constraints are assumed to be convex */
+SCIP_Bool SCIPassumeConvexNonlinear(
+   SCIP_CONSHDLR*        conshdlr
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert(conshdlr != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   return conshdlrdata->assumeconvex;
 }
 
 /** collects all bilinear terms for a given set of constraints
@@ -12030,7 +12036,7 @@ SCIP_RETCODE SCIPcomputeFacetVertexPolyhedralNonlinear(
          *success = FALSE;
       }
    }
-   else if( nvars == 2 )
+   else if( nvars == 2 && SCIPlapackIsAvailable() )
    {
       int idx1 = nonfixedpos[0];
       int idx2 = nonfixedpos[1];
@@ -13597,6 +13603,36 @@ SCIP_RETCODE SCIPincludeNlhdlrNonlinear(
       SCIPsortDownPtr((void**)conshdlrdata->nlhdlrs, SCIPnlhdlrComp, conshdlrdata->nnlhdlrs);
 
    return SCIP_OKAY;
+}
+
+/** get number of nonlinear handler */
+int SCIPgetNNlhdlrsNonlinear(
+   SCIP_CONSHDLR*        conshdlr            /**< nonlinear constraint handler */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert(conshdlr != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   return conshdlrdata->nnlhdlrs;
+}
+
+/** get nonlinear handlers */
+SCIP_NLHDLR** SCIPgetNlhdlrsNonlinear(
+   SCIP_CONSHDLR*        conshdlr            /**< nonlinear constraint handler */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert(conshdlr != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   return conshdlrdata->nlhdlrs;
 }
 
 /** returns a nonlinear handler of a given name (or NULL if not found) */

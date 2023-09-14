@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -43,22 +52,40 @@
  *
  * See the web site of <a href="http://scipopt.org">\SCIP</a> for more information about licensing and to download \SCIP.
  *
+ *  <b style="color: blue">If you are new to SCIP and don't know where to start you should have a look at the
+ *  @ref GETTINGSTARTED "first steps walkthrough"
+ *  .</b>
  *
  * @section TABLEOFCONTENTS Structure of this manual
  *
  * This manual gives an accessible introduction to the functionality of the SCIP code in the following chapters
  *
- *  - @subpage GETTINGSTARTED      Installation and license information and an interactive shell tutorial
- *  - @subpage EXAMPLES            Coding examples in C and C++ in the source code distribution
- *  - @subpage APPLICATIONS        Extensions of SCIP for specific applications
- *  - @subpage PARAMETERS          List of all SCIP parameters
- *  - @subpage PROGRAMMING         Important programming concepts for working with(in) SCIP.
- *  - @subpage HOWTOADD            Detailed guides for adding user plugins
- *  - @subpage HOWTOUSESECTION     Detailed guides for advanced SCIP topics
- *  - @subpage FAQ                 Frequently asked questions (FAQ)
- *  - @subpage CHG                 Release notes and changelog
- *  - @subpage AUTHORS             SCIP Authors
- *  - @subpage EXTERNALDOC         Links to external documentation
+ * Setup and news
+ *  - @subpage INSTALL
+ *  - @subpage FAQ
+ *  - @subpage CHG
+ *
+ * Tutorials and guides
+ *  - @subpage GETTINGSTARTED
+ *  - @subpage SHELL
+ *  - @subpage PROGRAMMING "Important programming concepts for working with(in) SCIP"
+ *  - @subpage START
+ *  - @subpage DOC
+ *  - @subpage HOWTOADD "Detailed guides for adding user plugins"
+ *  - @subpage HOWTOUSESECTION "Detailed guides for advanced SCIP topics"
+ *
+ * Examples and applications
+ *  - @subpage EXAMPLES "Coding examples in C and C++ in the source code distribution"
+ *  - @subpage APPLICATIONS "Extensions of SCIP for specific applications"
+ *
+ * References
+ *  - @subpage WHATPROBLEMS "Supported types of optimization problems"
+ *  - @subpage FILEREADERS "Readable file formats"
+ *  - @subpage INTERFACES
+ *  - @subpage PARAMETERS
+ *  - @subpage AUTHORS "SCIP Authors"
+ *  - @subpage LICENSE
+ *  - @subpage EXTERNALDOC "Links to external documentation"
  *
  *
  * @section QUICKSTART Quickstart
@@ -68,16 +95,16 @@
  *
  *  \verbinclude simple.lp
  *
- *  Saving this file as "simple.lp" allows to read it into SCIP and solve it.
+ *  Saving this file as "simple.lp" allows to read it into SCIP and solve it by calling the scip binary with the `-f` flag to solve the problem from the provided file and exit.
  *
  * ```
- * scip -c "read simple.lp optimize quit"
+ * scip -f simple.lp
  * ```
  * reads and optimizes this model in no time:
  *
  * \verbinclude output.log
  *
- * @version  8.0.0.1
+ * @version  8.0.3.5
  *
  * \image html scippy.png
  */
@@ -114,8 +141,8 @@
 
 /** @page NLPISOLVERS Available implementations of the NLP solver interface
  *
- * SCIP implements the NLP solver interface for the solvers <a href="https://projects.coin-or.org/Ipopt">IPOPT</a>, <a
- * href="https://worhp.de/">WORHP</a>, and <a href=" http://www.mcs.anl.gov/~leyffer/solvers.html">FilterSQP</a>. In
+ * SCIP implements the NLP solver interface for the solvers <a href="https://github.com/coin-or/Ipopt">IPOPT</a>, <a
+ * href="https://worhp.de/">WORHP</a>, and <a href="http://www.mcs.anl.gov/~leyffer/solvers.html">FilterSQP</a>. In
  * contrast to the implementations of the LP solver interface, SCIP can be compiled with multiple NLP solvers and selects
  * the solver with the highest priority at the beginning of the solving process.
  * Currently, the priorities are, in descending order: Ipopt, WORHP/IP, FilterSQP, WORHP/SQP.
@@ -140,7 +167,7 @@
  * @section NLPISOLVERS_WORHP WORHP
  *
  * <b>WORHP</b> implements a sequential quadratic programming method and a penalty-interior point algorithm.  It is
- * developed at the <a href="http://www.uni-bremen.de/en.html">University of Bremen</a> and is free for academic
+ * developed at the <a href="https://www.uni-bremen.de/en/">University of Bremen</a> and is free for academic
  * purposes.
  *
  * @section NLPISOLVERS_FILTERSQP FilterSQP
@@ -151,39 +178,157 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-/**@page GETTINGSTARTED Getting started
+/**@page GETTINGSTARTED First Steps Walkthrough
  *
- * - @subpage WHATPROBLEMS "What types of optimization problems does SCIP solve?"
+ * @section GETTINGSTARTED_BLACKBOX Use SCIP to solve a problem
  *
- * - @subpage LICENSE     "License"
- * - @subpage INSTALL     "Installation"
- * - @subpage SHELL       "Tutorial: the interactive shell"
- * - @subpage FILEREADERS "Readable file formats"
- * - @subpage INTERFACES  "Interfaces"
- * - @subpage START       "How to start a new project"
- * - @subpage DOC         "How to search the documentation for interface methods"
+ * @subsection GETTINGSTARTED_BLACKBOX_WHY Why SCIP?
+ *
+ * Charlotte lectures at a university and she wants her students to get in touch with solving constraint integer programs (CIPs).
+ * She would like to use SCIP for this purpose because it allows the students to look at the full source code
+ * and SCIP comes with a permissive open source \ref LICENSE "license".
+ * Also, her advisor told her that there are various \ref INTERFACES "interfaces" to SCIP.
+ *
+ * @subsection GETTINGSTARTED_BLACKBOX_PROBLEMS What Kinds Of Problems?
+ *
+ * As a first step she checks \ref WHATPROBLEMS "what types of problems" \SCIP can solve and
+ * \ref FILEREADERS "what are readable formats", and is happy to find MIPs to be among them.
+ *
+ * @subsection GETTINGSTARTED_BLACKBOX_INSTALL Setup
+ *
+ * Charlotte now needs to \ref INSTALL "install SCIP".
+ * She works on a recent computer with a windows system and already has the <a href="https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads">Visual C++ Redistributable Packages</a> and <a href="https://github.com/oneapi-src/oneTBB">TBB</a> installed.
+ *
+ * Having these prerequisites in place, Charlotte downloads the 64-bit windows exectuable from the <a href="https://scipopt.org/index.php#download">download page</a> and installs it without a problem.
+ * They also read about the <a href="http://www.pokutta.com/blog/pages/scip/scip-teaching.html"> dockerized SCIP container</a> which she wants
+ * to recommend to her students, in case they are unable to install SCIP on their own machines.
+ *
+ * @subsection GETTINGSTARTED_BLACKBOX_SOLVE Solve A First Problem
+ *
+ * To test her installation and get a first feeling for SCIP, Charlotte follows the steps described in the \ref QUICKSTART "quickstart" section to solve a first simple lp problem.
+ *
+ * She has just solved a problem, using SCIP in the command-based mode, by passing a command to the scip call via the `-c` flag.
+ * These commands can also be typed into the interactive shell, that one uses by just calling the binary `scip`.
+ *
+ * After the first solution process worked like a charm, Charlotte downloads a more complicated problem file from the <a href="https://miplib.zib.de/instance_details_enlight_hard.html">MIPLIB 2017</a> page
+ * and follows the \ref SHELL_AFTERINSTALL "interactive shell tutorial".
+ * There, she already learns quite a lot about the solving process and how to work with the interactive shell.
+ *
+ * @subsection GETTINGSTARTED_BLACKBOX_HELP Getting Help
+ *
+ * Feeling happy about having already solved some instances and having worked in interactive mode, Charlotte is curious on what more options SCIP has.
+ * She types `scip -h` to find out.
+ *
+ * She feels confident to being able to understand and use some of the other options, like `-l` to write the output to a logfile, or `-b` to pass a file containing the commands to be executed by scip.
+ * There are some commands that do not yet make a lot of sense to her, but she doesn't worry about it for now.
+ * She will familiarize herself with it over time and with experience.
+ *
+ * @section GETTINGSTARTED_DEVELOP Develop A Custom Plugin
+ *
+ * Alex is a researcher in Charlotte's group and is working on problems that have a very special structure that he hopes to be able to exploit in the solving process.
+ *
+ * Alex heard Charlotte talk about SCIP.
+ * She explained that SCIP is plugin-based, that is, different components (plugins) are implemented using a generic interface and that it is very easy to write your own plugins, like constraint handlers, heuristics etc.
+ * So Alex decides to give it a go and dive into SCIP.
+ *
+ * @subsection GETTINGSTARTED_DEVELOP_PREREQUISITES Prerequisites And Setup
+ *
+ * After some time of using SCIP, he feels confident enough to dig into the source code and decides to write his own plugin.
+ * Alex likes to use his linux machine for developing code, because in his experience compilation is easiest there.
+ *
+ * He starts by downloading the latest <a href="http://scipopt.org/#download">source code tarball</a>,
+ * unpacking it and compiling via \ref CMAKE "cmake", typing `mkdir build; cd build; cmake ..; make`.
+ *
+ * @subsection GETTINGSTARTED_DEVELOP_HELP Getting help
+ *
+ * Before writing any code, he quickly scans over the contents of the \ref PROGRAMMING "Programming with SCIP" page,
+ * so that he knows about some of the pitfalls, best practices and mechanisms.
+ * If a problem comes up later or he gets stuck, he knows what to look out for and where to find help.
+ *
+ * Whenever Alex gets stuck inside the code, he makes use of the extensive documentation to \ref DOC "search for interface methods".
+ *
+ * @subsection GETTINGSTARTED_DEVELOP_EXAMPLE Writing An Example
+ *
+ * Alex is now ready to write his very first example, he creates a new folder `MinEx` under `examples` and puts two files in there:
+ * `CMakeLists.txt`:
+ * ```
+ * cmake_minimum_required(VERSION 3.3)
+ *
+ * project(minex)
+ * find_package(SCIP REQUIRED)
+ * include_directories(${SCIP_INCLUDE_DIRS})
+ *
+ * add_executable(minex
+ *   src/cmain.c)
+ *
+ * target_link_libraries(minex ${SCIP_LIBRARIES})
+ *
+ * if( TARGET examples )
+ *     add_dependencies( examples minex )
+ * endif()
+ * ```
+ *
+ * and `cmain.c` in a subfolder `src`:
+ * ```
+ * #include <string.h>
+ * #include <scip/scip.h>
+ *
+ * int main( int argc, char** argv )
+ * {
+ *    SCIP* scip = NULL;
+ *    SCIP_CALL( SCIPcreate(&scip) ); // initialize SCIP
+ *    SCIPinfoMessage(scip, NULL, "Hello world.\n"); // output greeting
+ *    SCIP_CALL( SCIPfree(&scip) ); // free SCIP
+ *    BMScheckEmptyMemory();
+ *    return 0;
+ * }
+ * ```
+ *
+ * This is a minimal example that just prints "Hello world." and exits.
+ * Alex compiles and runs it via cmake with the following command:
+ * ```
+ * mkdir build; cd build; cmake .. -DSCIP_DIR=../../build/; make; ./minex
+ * ```
+ *
+ * After having successfully written this minimal example, Alex follows the instructions to \ref START "start a new project" to start his actual project and extend this most basic code.
+ *
+ * @subsection GETTINGSTARTED_DEVELOP_CONSTRAINTHANDLER Writing A Plugin
+ *
+ * Alex now needs a custom constraint handler in his project, for that he will write a custom plugin.
+ * He looks up the instructions in the \ref HOWTOADD "How to add..." page and is
+ * very happy to find \ref CONS "a page with a detailed description" what he has to do.
+ *
+ * Furthermore he found exercises for implementing plugins for the example of the
+ * linear ordering problem. The corresponding code framework
+ * (<a href="https://scipopt.org/workshop2018/pyscipopt-exercises.tgz">Python</a> or
+ * <a href="https://scipopt.org/workshop2018/exercise.pdf">C/C++</a>)
+ * could form a good starting point for a new project as well.
+ *
+ * @subsection GETTINGSTARTED_DEVELOP_REOPTMIZATION Using Functionality In A Plugin
+ *
+ * After implementing his own constraint handler Alex realizes that he needs to use repotimization in his project.
+ * He looks up the \ref HOWTOUSESECTION "How to use..." section and finds some more information about \ref REOPT "how to use reoptimization".
+ *
  */
 
 /**@page INSTALL Installing SCIP
  *
- * This chapter is a detailed guide to the installation procedure of SCIP.
+ * There are two options to get a running SCIP on your system.
+ * You can either use one of the installers or you can compile it yourself.
  *
- * SCIP lets you freely choose between its own, manually maintained Makefile system
- * or the CMake cross platform build system generator.
- *
- * <b>For new users and on for installation of the scipoptsuite on windows, we strongly recommend to use CMake, if available on their targeted platform.</b>
- *
- * Which one you choose depends on you use case and your level of expertise.
+ * Which one you choose depends on your use case and your level of expertise.
  * If you just want to use SCIP as a black box solver you should use an installer with a precompiled binary from the <a href="http://scipopt.org/#download">download section</a>.
- * <b>This is highly recommended for new users.</b>
- * If you are just curious about SCIP and want to try it out you can use the <a href="http://www.pokutta.com/blog/pages/scip/scip-teaching.html"> dockerized SCIP container</a>.
+ * This is highly recommended for new users.
+ * If you are just curious and want to try it out you can use the <a href="http://www.pokutta.com/blog/pages/scip/scip-teaching.html"> dockerized SCIP container</a>.
  *
- * However if you want to develop your own plugin for scip you have to compile the SCIPOptSuite from the source code, which is available as a tarball from the <a href="http://scipopt.org/#download">website</a>.
+ * However, if you want to develop your own plugin for SCIP, you have to compile SCIP or the SCIPOptSuite from source code, which are available as a tarball from the <a href="http://scipopt.org/#download">download page</a>.
  * Note that you might need some level of experience to be able to do this, this is described in the following.
  *
- * Please note that there are differences between both systems, most notably, the generated
- * library libscip will not be compatible between the versions. For more information, we
- * refer to the INSTALL.md file of the SCIP source code distribution.
+ * SCIP lets you choose freely between its own, manually maintained Makefile system
+ * or the CMake cross platform build system generator. For new users, we strongly
+ * recommend to use CMake, if available on their targeted platform.
+ *
+ * Be aware that generated libraries and binaries of both systems might be different and incompatible.
  *
  * - @subpage md_INSTALL  "Installation instructions"
  * - @subpage LPI         "Available implementations of the LP solver interface"
@@ -197,6 +342,7 @@
  * - @subpage OBJ     "Creating, capturing, releasing, and adding data objects"
  * - @subpage MEMORY  "Using the memory functions of SCIP"
  * - @subpage DEBUG   "Debugging"
+ * - @subpage STAGES  "SCIP stages"
  */
 /**@page HOWTOADD How to add ...
  *
@@ -217,7 +363,9 @@
  * - @subpage DIALOG  "Dialogs"
  * - @subpage DISP    "Display columns"
  * - @subpage EVENT   "Event handler"
- * - @subpage NLPI    "Interface to NLP solvers"
+ * - @subpage EXPRHDLR "Expression handlers"
+ * - @subpage NLHDLR  "Nonlinear handlers"
+ * - @subpage NLPI    "Interfaces to NLP solvers"
  * - @subpage EXPRINT "Interfaces to expression interpreters"
  * - @subpage PARAM   "additional user parameters"
  * - @subpage TABLE   "Statistics tables"
@@ -234,6 +382,7 @@
  * - @subpage DECOMP "How to provide a problem decomposition"
  * - @subpage BENDDECF "How to use the Benders' decomposition framework"
  * - @subpage TRAINESTIMATION "How to train custom tree size estimation for SCIP"
+ * - @subpage SYMMETRY "How to use symmetry handling in SCIP"
  */
 
 /**@page AUTHORS SCIP Authors
@@ -255,6 +404,7 @@
  * New features, peformance improvements, and interface changes between different versions of SCIP are documented in the
  * release notes:
  *
+ * - \subpage RN80         "SCIP 8.0"
  * - \subpage RN70         "SCIP 7.0"
  * - \subpage RN60         "SCIP 6.0"
  * - \subpage RN50         "SCIP 5.0"
@@ -478,7 +628,7 @@
  *          \f}
  *          where \f$\mathbb{K}\f$ is either \f$\mathbb{Z}\f$ or \f$\mathbb{R}\f$.
  *    </td>
- *    <td colspan="3"> see the <a href="http://polyscipopt.org/">PolySCIP web page</a></td>
+ *    <td colspan="3"> see the <a href="http://polyscip.zib.de/">PolySCIP web page</a></td>
  * </tr>
  * <tr>
  *    <td>Mixed-integer semidefinite program (MISDP)</td>
@@ -853,14 +1003,6 @@
  *  A solver for scheduling problems.
  *  </td>
  *  </tr>
- *  <tr>
- *  <td>
- *  @subpage STP_MAIN
- *  </td>
- *  <td>
- *  A solver for Steiner Tree Problems in graphs, based on a branch-and-cut approach.
- *  </td>
- *  </tr>
  *  </table>
  *
  */
@@ -872,22 +1014,29 @@
  *
  * @section TUTORIAL_OPTIMIZE Read and optimize a problem instance
  *
- * First of all, we need a \SCIP binary and an example problem file to work with. Therefore, you can either download the
- * \SCIP standard distribution (which includes problem files) and compile it on your own or you can download a
+ * @subsection SHELL_PREREQUISITES "Prerequisites"
+ *
+ * First of all, we need a \SCIP binary and an example problem file to work with.
+ * For installation we refer you to the \ref INSTALL section.
+ *
+ * Therefore, you can either download the \SCIP standard distribution (which includes problem files) and compile it on your own or you can download a
  * precompiled binary and an example problem separately. \SCIP can read files in LP, MPS, ZPL, WBO, FZN, PIP, OSiL, and
  * other formats (see \ref FILEREADERS).
  *
  * If you want to download the source code of the \SCIP standard distribution, we recommend to go to the <a
- * href="http://scipopt.org/#download">SCIP download section</a>, download the latest release (version 4.0.0 as
- * of this writing), inflate the tarball (e.g., with "tar xzf scipoptsuite-[version].tgz"), and follow the instructions
- * in the INSTALL.md file. The instance stein27, which will serve as an example in this tutorial, can be found under
+ * href="https://scipopt.org/#download">SCIP download section</a>, download the latest release,
+ * inflate the tarball (e.g., with "tar xzf scipoptsuite-[version].tgz"), and follow the instructions
+ * in the INSTALL file. The instance stein27, which will serve as an example in this tutorial, can be found under
  * scipoptsuite-[version]/scip-[version]/check/instances/MIP/stein27.fzn.
+ * Alternatively you can download an instance file from the <a href="https://miplib.zib.de/tag_benchmark.html">MIPLIB 2017 page</a>.
  *
  * If you want to download a precompiled binary, go to the <a href="http://scipopt.org/#download">SCIP download
  * section</a> and download an appropriate binary for your operating system. The \SCIP source code distribution already comes with
  * the example instance used throughout this tutorial. To follow this tutorial with a precompiled binary, we recommend downloading the instance
  * <a href="http://miplib2010.zib.de/miplib3/miplib3/stein27.mps.gz">stein27</a> from
  * the <a href="http://miplib2010.zib.de/miplib3/miplib.html">MIPLIB 3.0</a> homepage.
+ *
+ * @subsection SHELL_AFTERINSTALL "After installation"
  *
  * Now start your binary, without any arguments. This opens the interactive shell, which should look somehow like this:
  *
@@ -897,7 +1046,7 @@
  *
  * @snippet shelltutorial/shelltutorialannotated.tmp SnippetHelp
  *
- * Okay, let's solve the example instance... use "read check/instances/MIP/stein27.fzn" to parse the instance file, "optimize" to solve it and "display
+ * Okay, let's solve the example instance... use "read check/instances/MIP/stein27.fzn" (or the problem file of your choice) to parse the instance file, "optimize" to solve it and "display
  * solution" to show the nonzero variables of the best found solution.
  *
  * @snippet shelltutorial/shelltutorialannotated.tmp SnippetOpt1
@@ -1014,7 +1163,7 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-/**@page DOC How to search the documentation for interface methods
+/**@page DOC How to search the documentation and source files structure for public interface methods
  *
  * If you are looking for a method in order to perform a specific task, the public \ref PUBLICAPI "SCIP C-API" is the place to look.
  * - It contains interface methods for all SCIP structs, both in the solver core or in one of the plugins.
@@ -1082,9 +1231,11 @@
  * -# Copy the template files src/scip/cons_xyz.c and src/scip/cons_xyz.h into files "cons_subtour.c"
  *    and "cons_subtour.h".
  *     \n
- *    Make sure to <b>adjust your Makefile</b> such that these files are compiled and linked to your project.
- * -# Use SCIPincludeConsSubtour() in order to include the constraint handler into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/cppmain.cpp in the TSP example).
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
+ * -# Use `SCIPincludeConshdlrSubtour()` in order to include the constraint handler into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/cppmain.cpp in the TSP example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "subtour".
  * -# Adjust the \ref CONS_PROPERTIES "properties of the constraint handler".
  * -# Define the \ref CONS_DATA "constraint data and the constraint handler data". This is optional.
@@ -1644,6 +1795,8 @@
  *
  * Usually, a separation callback searches and produces cuts, that are added with a call to SCIPaddCut().
  * If the cut should be remembered in the global cut pool, it may also call SCIPaddPoolCut().
+ * If the cut is constructed via multiple calls to SCIPaddVarToRow(), then performance can be improved by calling
+ * SCIPcacheRowExtensions() before these additions and SCIPflushRowExtensions() after.
  * However, the callback may also produce domain reductions or add other constraints.
  *
  * The CONSSEPALP callback has the following options:
@@ -1670,6 +1823,8 @@
  *
  * Usually, a separation callback searches and produces cuts, that are added with a call to SCIPaddCut().
  * If the cut should be remembered in the global cut pool, it may also call SCIPaddPoolCut().
+ * If the cut is constructed via multiple calls to SCIPaddVarToRow(), then performance can be improved by calling
+ * SCIPcacheRowExtensions() before these additions and SCIPflushRowExtensions() after.
  * However, the callback may also produce domain reductions or add other constraints.
  *
  * The CONSSEPASOL callback has the following options:
@@ -1916,9 +2071,11 @@
  * -# Copy the template files src/scip/pricer_xyz.c and src/scip/pricer_xyz.h into files "pricer_mypricer.c"
  *    and "pricer_mypricer.h".
  *    \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Use SCIPincludePricerMypricer() in order to include the pricer into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
+ * -# Use `SCIPincludePricerMypricer()` in order to include the pricer into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mypricer".
  * -# Adjust the properties of the pricer (see \ref PRICER_PROPERTIES).
  * -# Define the pricer data (see \ref PRICER_DATA). This is optional.
@@ -2095,9 +2252,8 @@
  * @subsection PRICERFREE
  *
  * If you are using pricer data, you have to implement this method in order to free the pricer data.
- * This can be done by the following procedure:
- *
- * @refsnippet{applications/STP/src/pricer_stp.c,SnippetPricerFreeSTP}
+ * This can be done by the procedure described in stp/src/pricer_stp.c,
+ * see https://scipjack.zib.de/.
  *
  * If you have allocated memory for fields in your pricer data, remember to free this memory
  * before freeing the pricer data itself.
@@ -2155,7 +2311,7 @@
  * Therefore, these bounds do not need to be added to the LP explicitly, which has the advantage that the pricing routine does not need to
  * care about the corresponding dual values.
  * We call these bounds lazy bounds, they may be set by SCIPchgVarLbLazy() and SCIPchgVarUbLazy() for upper or lower bounds, respectively.
- * If the lazy bound is tighter than the local bound, the corresponding bound is not put into the LP.
+ * If the lazy bound equals the local bound, the corresponding bound is not put into the LP.
  * In diving mode, lazy bounds are explicitly put into the LP, because changing the objective (which is only possible in diving)
  * might reverse the implicitly given bounds. When diving is finished, the bounds are again removed from the LP.
  */
@@ -2185,9 +2341,11 @@
  * -# Copy the template files src/scip/presol_xyz.c and src/scip/presol_xyz.h into files named "presol_mypresolver.c"
  *    and "presol_mypresolver.h".
  *    \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Use SCIPincludePresolMypresolver() in order to include the presolver into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
+ * -# Use `SCIPincludePresolMypresolver()` in order to include the presolver into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mypresolver".
  * -# Adjust the properties of the presolver (see \ref PRESOL_PROPERTIES).
  * -# Define the presolver data (see \ref PRESOL_DATA). This is optional.
@@ -2386,9 +2544,11 @@
  * -# Copy the template files src/scip/sepa_xyz.c and src/scip/sepa_xyz.h into files "sepa_myseparator.c"
  *    and "sepa_myseparator.h".
       \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Use SCIPincludeSepaMyseparator() in order to include the separator into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
+ * -# Use `SCIPincludeSepaMyseparator()` in order to include the separator into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "myseparator".
  * -# Adjust the properties of the separator (see \ref SEPA_PROPERTIES).
  * -# Define the separator data (see \ref SEPA_DATA). This is optional.
@@ -2526,6 +2686,8 @@
  *
  * Usually, the callback searches and produces cuts, that are added with a call to SCIPaddCut().
  * If the cut should be added to the global cut pool, it calls SCIPaddPoolCut().
+ * If the cut is constructed via multiple calls to SCIPaddVarToRow(), then performance can be improved by calling
+ * SCIPcacheRowExtensions() before these additions and SCIPflushRowExtensions() after.
  * In addition to LP rows, the callback may also produce domain reductions or add additional constraints.
  *
  * Overall, the SEPAEXECLP callback has the following options, which is indicated by the possible return values of
@@ -2553,6 +2715,8 @@
  *
  * Usually, the callback searches and produces cuts, that are added with a call to SCIPaddCut().
  * If the cut should be added to the global cut pool, it calls SCIPaddPoolCut().
+ * If the cut is constructed via multiple calls to SCIPaddVarToRow(), then performance can be improved by calling
+ * SCIPcacheRowExtensions() before these additions and SCIPflushRowExtensions() after.
  * In addition to LP rows, the callback may also produce domain reductions or add other constraints.
  *
  * Overall, the SEPAEXECSOL callback has the following options, which is indicated by the possible return values of
@@ -2642,9 +2806,11 @@
  * -# Copy the template files src/scip/prop_xyz.c and src/scip/prop_xyz.h into files named "prop_mypropagator.c"
  *    and "prop_mypropagator.h".
  *    \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Use SCIPincludePropMypropagator() in order to include the propagator into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
+ * -# Use `SCIPincludePropMypropagator()` in order to include the propagator into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mypropagator".
  * -# Adjust the properties of the propagator (see \ref PROP_PROPERTIES).
  * -# Define the propagator data (see \ref PROP_DATA). This is optional.
@@ -2941,9 +3107,11 @@
  * -# Copy the template files src/scip/branch_xyz.c and src/scip/branch_xyz.h into files named
  *    "branch_mybranchingrule.c" and "branch_mybranchingrule.h".
  *    \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Use SCIPincludeBranchruleMybranchingrule() in order to include the branching rule into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
+ * -# Use `SCIPincludeBranchruleMybranchingrule()` in order to include the branching rule into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mybranchingrule".
  * -# Adjust the properties of the branching rule (see \ref BRANCHRULE_PROPERTIES).
  * -# Define the branching rule data (see \ref BRANCHRULE_DATA). This is optional.
@@ -3231,9 +3399,11 @@
  * -# Copy the template files src/scip/cutsel_xyz.c and src/scip/cutsel_xyz.h into files named "cutsel_mycutselector.c"
  *    and "cutsel_mycutselector.h".
  *    \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Use SCIPincludeCutselMycutselector() in oder to include the cut selector into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
+ * -# Use SCIPincludeCutselMycutselector() in order to include the cut selector into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mycutselector".
  * -# Adjust the properties of the cut selector (see \ref CUTSEL_PROPERTIES).
  * -# Define the cut selector data (see \ref CUTSEL_DATA). This is optional.
@@ -3397,9 +3567,11 @@
  * -# Copy the template files src/scip/nodesel_xyz.c and src/scip/nodesel_xyz.h into files named "nodesel_mynodeselector.c"
  *    and "nodesel_mynodeselector.h".
  *    \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Use SCIPincludeNodeselMynodeselector() in oder to include the node selector into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
+ * -# Use SCIPincludeNodeselMynodeselector() in order to include the node selector into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mynodeselector".
  * -# Adjust the properties of the node selector (see \ref NODESEL_PROPERTIES).
  * -# Define the node selector data (see \ref NODESEL_DATA). This is optional.
@@ -3632,9 +3804,11 @@
  * -# Copy the template files src/scip/heur_xyz.c and src/scip/heur_xyz.h into files named "heur_myheuristic.c"
  *    and "heur_myheuristic.h".
  *    \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Use SCIPincludeHeurMyheuristic() in order to include the heuristic into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
+ * -# Use `SCIPincludeHeurMyheuristic()` in order to include the heuristic into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "myheuristic".
  * -# Adjust the properties of the primal heuristic (see \ref HEUR_PROPERTIES).
  * -# Define the primal heuristic data (see \ref HEUR_DATA). This is optional.
@@ -3883,6 +4057,740 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+/**@page EXPRHDLR How to add expression handlers
+ *
+ * Expression handlers define basic expression types and provide additional functionality to work with expressions,
+ * e.g., differentiation, simplification, estimation, hashing, copying, printing, parsing.
+ * A complete list of all expression handlers contained in this release can be found \ref EXPRHDLRS "here".
+ * In addition to expression handlers, higher level nonlinear structures are handled by nonlinear handlers, see \ref NLHDLR.
+ *
+ * Here is what you have to do to implement an own expression handler:
+ * -# Copy the template files `src/scip/expr_xyz.c` and `src/scip/expr_xyz.h` into files `expr_myfunc.c` and `expr_myfunc.h`, respectively. \n
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
+ * -# Use `SCIPincludeExprhdlrMyfunc()` in order to include the expression handler into your SCIP instance,
+ *    e.g., in the main file of your project. \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
+ * -# Open the new files with a text editor and replace all occurrences of "xyz" by "myfunc".
+ * -# Adjust the properties of the expression handler (see \ref EXPRHDLR_PROPERTIES).
+ * -# Define the expression handler data and expression data (see \ref EXPRHDLR_DATA). This is optional.
+ * -# Implement the interface methods (see \ref EXPRHDLR_INTERFACE).
+ * -# Implement the fundamental callback methods (see \ref EXPRHDLR_FUNDAMENTALCALLBACKS).
+ * -# Implement the additional callback methods (see \ref EXPRHDLR_ADDITIONALCALLBACKS), where necessary.
+ *
+ * Additional documentation for the callback methods of an expression handler, in particular for the input parameters,
+ * can be found in the file \ref type_expr.h.
+ *
+ * For a complete implementation of an expression handler, take the one for exponential expressions (src/scip/expr_exp.c) as an example.
+ *
+ * @section EXPRHDLR_PROPERTIES Properties of an Expression Handler
+ *
+ * At the top of the new file `expr_myfunc.c`, you can find the expression handler properties.
+ * These are given as compiler defines.
+ * The properties you have to set have the following meaning:
+ *
+ * \par EXPRHDLR_NAME: the name of the expression handler.
+ * This name is used in the interactive shell to address the expression handler.
+ * Additionally, if you or a parsing routine is searching for an expression handler with SCIPfindExprhdlr(), this name is looked up.
+ * Names have to be unique: no two expression handlers may have the same name.
+ *
+ * \par EXPRHDLR_DESC: the description of the expression handler.
+ * This string is printed as a description of the expression handler in the interactive shell.
+ *
+ * \par EXPRHDLR_PRECEDENCE: the precedence of the expression handler.
+ * Precedence of the expression operation relative to other expressions when printing the expression.
+ *
+ * @section EXPRHDLR_DATA Expression Handler Data and Expression Data
+ *
+ * Below the header "Data structures" you can find structs called `struct SCIP_ExprhdlrData` and `struct SCIP_ExprData`.
+ * In this first data structure, you can store the data of your expression handler.
+ * For example, you should store the adjustable parameters of the expression handler in this data structure.
+ * In the second data structure, you can store data that is unique to an expression.
+ * For example, the pow expression handler stores the exponent in this data structure.
+ * \n
+ * Defining expression handler data and expression data is optional. You can leave these structs empty.
+ *
+ * @section EXPRHDLR_INTERFACE Interface Methods
+ *
+ * @subsection EXPRHDLR_INCLUDE SCIPincludeExprhdlrMyfunc()
+ *
+ * At the bottom of `expr_myfunc.c`, you can find the interface method `SCIPincludeExprhdlrMyfunc()`,
+ * which also appears in `expr_myfunc.h`.
+ * `SCIPincludeExprhdlrMyfunc()` is called by the user, if (s)he wants to include the expression handler,
+ * i.e., if (s)he wants to use the expression handler in his/her application.
+ *
+ * This method is responsible for notifying SCIP of the presence of the expression handler.
+ * For this, you must call SCIPincludeExprhdlr() from SCIPincludeExprhdlrMyfunc().
+ * The function only expects the properties and fundamental callbacks of the expression handler as arguments.
+ * \ref EXPRHDLR_ADDITIONALCALLBACKS "Additional callbacks" must be added via setter functions as, e.g., SCIPexprhdlrSetCopyFreeHdlr().
+ *
+ * If you are using expression handler data, you have to allocate the memory for the data at this point.
+ * You can do this by calling:
+ * \code
+ * SCIP_CALL( SCIPallocBlockMemory(scip, &exprhdlrdata) );
+ * \endcode
+ * You also have to initialize the fields in `struct SCIP_ExprhdlrData` afterwards.
+ * For freeing the expression handler data, see \ref EXPRFREEHDLR.
+ *
+ * You may also add user parameters for your expression handler, see \ref PARAM for how to add user parameters.
+ *
+ * For the logarithm expression handler, the include method is as follows:
+ * @refsnippet{src/scip/expr_log.c,SnippetIncludeExprhdlrLog}
+ *
+ * @subsection EXPRHDLR_CREATEEXPR SCIPcreateExprMyfunc()
+ *
+ * Another interface method that can be found in `expr_myfunc.c` is `SCIPcreateExprMyfunc()`.
+ * This method is called by the user, if (s)he wants to create an expression that is handled by this expression handler.
+ * Typically, the creation function takes the operands of the expression (the children) as arguments.
+ * `SCIPcreateExprMyfunc()` may further be extended to take parameters of an expression into account.
+ * For example, SCIPcreateExprPow() receives the exponent as argument.
+ *
+ * In the implementation of `SCIPcreateExprMyfunc()`, the expression data shall be allocated and initialized, if the expression has data
+ * (like the exponent of pow expressions).
+ * Then the expression shall be created by a call to SCIPcreateExpr().
+ * This function takes the expression handler, expression data, children, and ownercreate callback as arguments.
+ * For freeing the expression data, see \ref EXPRFREEDATA.
+ *
+ * The `ownercreate` and `ownercreatedata` that are passed to `SCIPcreateExprMyfunc()` need to be passed on to SCIP.
+ * The owner of the expression that is created uses these arguments to store additional data in an expression.
+ * For most usecases, these arguments will be set to `NULL`.
+ * However, if the \ref EXPRPARSE callback is implemented, then `SCIPcreateExprMyfunc()` may need to be called with a non-NULL value
+ * for `ownercreate` and `ownercreatedata`.
+ * This will be the case if, for example, the constraint handler for nonlinear constraint parses an expression.
+ * The constraint handler will then own the expression and needs to store some data in the expression.
+ *
+ * For the product expression handler, the expression create function is as follows:
+ * @refsnippet{src/scip/expr_product.c,SnippetCreateExprProduct}
+ *
+ *
+ * @section EXPRHDLR_FUNDAMENTALCALLBACKS Fundamental Callback Methods of an Expression Handler
+ *
+ * The fundamental callback methods of the plugins are the ones that have to be implemented in order to obtain
+ * an operational algorithm.
+ * They are passed to SCIP when the expression handler is created and included in SCIP via SCIPincludeExprhdlr(),
+ * see @ref EXPRHDLR_INTERFACE.
+ *
+ * Expression handlers have one fundamental callback, @ref EXPREVAL, that needs to be implemented.
+ * However, expression handlers with stateful expressions (expressions that have data) need to implement also the
+ * @ref EXPRCOPYDATA, @ref EXPRFREEDATA, and @ref EXPRCOMPARE callbacks.
+ *
+ * Additional documentation for the callback methods, in particular relating to their input parameters,
+ * can be found in \ref type_expr.h.
+ *
+ * @subsection EXPREVAL
+ *
+ * The expression evaluation callback defines the mathematical operation that the expression handler represents.
+ * Its purpose is to evaluate an expression by taking the values of its children (operands) into account.
+ *
+ * The children of the expression can be retrieved via SCIPexprGetChildren() and SCIPexprGetNChildren().
+ * The value (a `SCIP_Real`) for each child can be retrieved via function SCIPexprGetEvalValue().
+ * The value of the expression should be stored in the argument `val` that is passed to the callback.
+ * For example, the evaluation in the expression handler for sum is doing the following:
+ * @refsnippet{src/scip/expr_sum.c,SnippetExprEvalSum}
+ *
+ * When an expression cannot be evaluated w.r.t. the values of its children, such a domain error must be signaled
+ * to SCIP by setting `*val` to `SCIP_INVALID`.
+ * SCIP then aborts evaluation. It is thus not necessary to check in the evaluation callback whether any child
+ * has value `SCIP_INVALID`.
+ * For example, the evaluation in the expression handler for logarithm expressions is doing the following:
+ * @refsnippet{src/scip/expr_log.c,SnippetExprEvalLog}
+ *
+ * The solution (`sol`) that is passed to EXPREVAL can usually be ignored.
+ * It is used by the expression handler for variables to retrieve the value of a variable expression.
+ *
+ *
+ * @section EXPRHDLR_ADDITIONALCALLBACKS Additional Callback Methods of an Expression Handler
+ *
+ * The additional callback methods do not need to be implemented in every case. However, some of them have to be
+ * implemented for most applications; they can be used, for example, to initialize and free private data.
+ * Additional callbacks can be passed via specific
+ * <b>setter functions</b> after a call of SCIPincludeExprhdlr(), see also @ref EXPRHDLR_INCLUDE.
+ *
+ * @subsection EXPRCOPYHDLR
+ *
+ * This method should include the expression handler into a given SCIP instance.
+ * It is usually called when a copy of SCIP is generated.
+ *
+ * By not implementing this callback, the expression handler will not be available in copied SCIP instances.
+ * If a nonlinear constraint uses expressions of this type, it will not be possible to copy them.
+ * This may deteriorate the performance of primal heuristics using sub-SCIPs.
+ *
+ * @subsection EXPRFREEHDLR
+ *
+ * If you are using expression handler data (see \ref EXPRHDLR_DATA and \ref EXPRHDLR_INCLUDE), you have to implement this method
+ * in order to free the expression handler data.
+ *
+ * @subsection EXPRCOPYDATA
+ *
+ * This method is called when creating copies of an expression within
+ * the same or between different SCIP instances. It is given the
+ * source expression, whose data shall be copied, and expects that
+ * the data for the target expression is returned. This data will then be used
+ * to create a new expression.
+ *
+ * If expressions that are handled by this expression handler have no data,
+ * then this callback can be omitted.
+ *
+ * @subsection EXPRFREEDATA
+ *
+ * This method is called when freeing an expression that has data.
+ * It is given an expression and shall free its expression data.
+ * It shall then call `SCIPexprSetData(expr, NULL)`.
+ *
+ * This callback must be implemented for expressions that have data.
+ *
+ * @subsection EXPRPRINT
+ *
+ * This callback is called when an expression is printed.
+ * It is called while DFS-iterating over the expression at different stages, that is,
+ * when the expression is visited the first time, before each child of the expression is visited,
+ * after each child of the expression has been visited, and when the iterator leaves the expression
+ * for its parent.
+ * At the various stages, the expression may print a string.
+ * The given precedence of the parent expression can be used to decide whether parenthesis need to be printed.
+ *
+ * For example, the pow expression prints `(f(x))^p` where `f(x)` is a print of the child of the pow expression and `p` is the exponent:
+ * @refsnippet{src/scip/expr_pow.c,SnippetExprPrintPow}
+ *
+ * The pow expression handler does not yet take expression precedence into account to decide whether the parenthesis around `f(x)` can be omitted.
+ * For the sum expression handler, this has been implemented:
+ * @refsnippet{src/scip/expr_sum.c,SnippetExprPrintSum}
+ *
+ * If this callback is not implemented, the expression is printed as `<hdlrname>(<child1>, <child2>, ...)`.
+ *
+ * @subsection EXPRPARSE
+ *
+ * This callback is called when an expression is parsed from a string and an operator with the name of the expression handler is found.
+ * The given string points to the beginning of the arguments of the expression, that is, the beginning of "..." in the string `myfunc(...)`.
+ * The callback shall interpret "..." and create an expression, probably via `SCIPcreateExprMyfunc()`, and return this created expression
+ * and the position of the last character in "..." to SCIP.
+ * When creating an expression, the given `ownercreate` and `ownercreatedata` shall be passed on.
+ *
+ * The string "..." likely contains one or several other expressions that will be the children of the `myfunc` expression.
+ * `SCIPparseExpr()` shall be used to parse these expressions.
+ *
+ * For an expression that takes only one argument and has no parameters, the parsing routine is straightforward.
+ * For example:
+ * @refsnippet{src/scip/expr_exp.c,SnippetExprParseExp}
+ *
+ * For an expression that has additional data, the parsing routine is slightly more complex.
+ * For the signpower expression, this parses `signpower(<child>,<exponent>)`:
+ * @refsnippet{src/scip/expr_pow.c,SnippetExprParseSignpower}
+ *
+ * If this callback is not implemented, the expression cannot be parsed.
+ * For instance, `.cip` files with nonlinear constraints that use this expression cannot be read.
+ *
+ * @subsection EXPRCURVATURE
+ *
+ * This callback is called when an expression is checked for convexity or concavity.
+ * It is important to note that the callback is given a desired curvature (convex, concave, or both (=linear))
+ * and the callback is required to return whether the given expression has the desired curvature.
+ * In addition, it can state conditions on the curvature of the children under which the desired curvature
+ * can be achieved and it can take bounds on the children into account.
+ * SCIPevalExprActivity() and SCIPexprGetActivity() shall be used to evaluate and get bounds on a child expression.
+ *
+ * The implementation in the absolute-value expression handler serves as an example:
+ * @refsnippet{src/scip/expr_abs.c,SnippetExprCurvatureAbs}
+ *
+ * If this callback is not implemented, the expression is assumed to be indefinite.
+ *
+ * @subsection EXPRMONOTONICITY
+ *
+ * This callback is called when an expression is checked for its monotonicity with respect to a given child.
+ * It is given the index of the child and shall return whether the expression is monotonically increasing or decreasing with respect to this child,
+ * that is, when assuming that all other children are fixed.
+ * Bounds on the children can be taken into account.
+ * These can be evaluated and obtained via SCIPevalExprActivity() and SCIPexprGetActivity().
+ *
+ * The implementation in the absolute value expression handler serves as an example:
+ * @refsnippet{src/scip/expr_abs.c,SnippetExprMonotonicityAbs}
+ *
+ * If this callback is not implemented, the expression is assumed to be not monotone in any child.
+ *
+ * @subsection EXPRINTEGRALITY
+ *
+ * This callback is called when an expression is checked for integrality, that is,
+ * whether the expression evaluates always to an integral value in a feasible solution.
+ * An implementation usually uses SCIPexprIsIntegral() to check whether children evaluate to an integral value.
+ *
+ * For example, a sum expression is returned to be integral if all coefficients and all children are integral:
+ * @refsnippet{src/scip/expr_sum.c,SnippetExprIntegralitySum}
+ *
+ * If this callback is not implemented, the expression is assumed to be not integral.
+ *
+ * @subsection EXPRHASH
+ *
+ * This callback is called when a hash value is computed for an expression.
+ * The hash is used to quickly identify expressions that may be equal (or better: to identify expressions that cannot be pairwise equal).
+ *
+ * The hash shall be unique to the expression as likely as positive.
+ * To achieve this, the hashing algorithm shall use the expression type, expression data, and hash of children as input.
+ * It must also be deterministic in this input.
+ *
+ * For example, for the sum expression, the coefficients and the hashes of all children are taken into account:
+ * @refsnippet{src/scip/expr_sum.c,SnippetExprHashSum}
+ *
+ * `EXPRHDLR_HASHKEY` is a constant that is unique to the sum expression handler.
+ *
+ * If this callback is not implemented, a hash is computed from the expression handler name and the hashes of all children.
+ *
+ * @subsection EXPRCOMPARE
+ *
+ * This callback is called when two expressions (expr1 and expr2) that are handled by the expression handlers need to be compared.
+ * The method shall impose an order on expressions and thus must return
+ * - -1 if expr1 < expr2, or
+ * -  0 if expr1 = expr2, or
+ * -  1 if expr1 > expr2.
+ *
+ * The callback may use SCIPcompareExpr() to compare children of expr1 and expr2.
+ *
+ * For example, for pow expressions, the order is given by the order of the children.
+ * If the children are equal, then the order of the exponents is used:
+ * @refsnippet{src/scip/expr_pow.c,SnippetExprComparePow}
+ *
+ * If this callback is not implemented, a comparison is done based on the children of expr1 and expr2 only.
+ * If the expression is stateful, it must implement this callback.
+ *
+ * @subsection EXPRBWDIFF
+ *
+ * This callback is called when the gradient or Hessian of a function that is represented by an expression is computed.
+ *
+ * The method shall compute the partial derivative of the expression w.r.t. a child with specified childidx.
+ * That is, it should return
+ * \f[
+ *   \frac{\partial \text{expr}}{\partial \text{child}_{\text{childidx}}}
+ * \f]
+ *
+ * See also \ref SCIP_EXPR_DIFF "Differentiation methods in scip_expr.h" for more details on automatic differentiation of expressions.
+ *
+ * For the product expression, backward differentiation is implemented as follows:
+ * @refsnippet{src/scip/expr_product.c,SnippetExprBwdiffProduct}
+ *
+ * If this callback is not implemented, gradients and Hessian of functions that involve this expression cannot be computed.
+ * This can be hurtful for performance because linear relaxation routines that rely on gradient evaluation (e.g., nlhdlr_convex) cannot be used.
+ *
+ * @subsection EXPRFWDIFF
+ *
+ * This callback is called when the Hessian of a function that is represented by an expression is computed.
+ * It may also be used to compute first derivatives.
+ *
+ * The method shall evaluate the directional derivative of the expression when interpreted as an operator
+ *   \f$ f(c_1, \ldots, c_n) \f$, where \f$ c_1, \ldots, c_n \f$ are the children.
+ * The directional derivative is
+ * \f[
+ *    \sum_{i = 1}^n \frac{\partial f}{\partial c_i} D_u c_i,
+ * \f]
+ * where \f$ u \f$ is the direction (given to the callback) and \f$ D_u c_i \f$ is the directional derivative of the i-th child,
+ * which can be accessed via SCIPexprGetDot().
+ * The point at which to compute the derivative is given by SCIPexprGetEvalValue().
+ *
+ * See also \ref SCIP_EXPR_DIFF "Differentiation methods in scip_expr.h" for more details on automatic differentiation of expressions.
+ *
+ * For a product, \f$f(x) = c\prod_i x_i\f$, the directional derivative is \f$c\sum_j \prod_{i\neq j} x_i x^{\text{dot}}_j\f$:
+ * @refsnippet{src/scip/expr_product.c,SnippetExprFwdiffProduct}
+ *
+ * If this callback is not implemented, routines (in particular primal heuristics) that rely on solving NLPs cannot be used, as they currently rely on using forward differentiation for gradient computations.
+ *
+ * @subsection EXPRBWFWDIFF
+ *
+ * This callback is called when the Hessian of a function that is represented by an expression is computed.
+ *
+ * The method computes the total derivative, w.r.t. its children, of the partial derivative of expr w.r.t. childidx.
+ * Equivalently, it computes the partial derivative w.r.t. childidx of the total derivative.
+ *
+ * The expression should be interpreted as an operator \f$ f(c_1, \ldots, c_n) \f$, where \f$ c_1, \ldots, c_n \f$ are the children,
+ * and the method should return
+ * \f[
+ *    \sum_{i = 1}^n \frac{\partial^2 f}{\partial c_i} \partial c_{\text{childidx}} D_u c_i,
+ * \f]
+ * where \f$ u \f$ is the direction (given to the callback) and \f$ D_u c_i \f$ is the directional derivative of the i-th child,
+ * which can be accessed via SCIPexprGetDot().
+ *
+ * Thus, if \f$ n = 1 \f$ (i.e., the expression represents a univariate operator), the method should return
+ * \f[
+ *    f^{\prime \prime}(\text{SCIPexprGetEvalValue}(c)) D_u c.
+ * \f]
+ *
+ * See also \ref SCIP_EXPR_DIFF "Differentiation methods in scip_expr.h" for more details on automatic differentiation of expressions.
+ *
+ * For a product, \f$f(x) = c\prod_i x_i\f$, the directional derivative is
+ * \f$c\partial_k \sum_j \prod_{i \neq j} x_i x^{\text{dot}}_j = c\sum_{j \neq k} \prod_{i \neq j, k} x_i x^{\text{dot}}_j\f$:
+ * @refsnippet{src/scip/expr_product.c,SnippetExprBwfwdiffProduct}
+ *
+ * If this callback is not implemented, there is currently no particular performance impact.
+ * In a future version, not implementing this callback would mean that Hessians are not available for NLP solvers, in which case they may have to work with approximations.
+ *
+ * @subsection EXPRINTEVAL
+ *
+ * This callback is called when bounds on an expression need to be computed.
+ * It shall compute an (as tight as possible) overestimate on the range that the expression values take w.r.t. bounds (given as \ref SCIP_INTERVAL) for the children.
+ * The latter can be accessed via SCIPexprGetActivity().
+ *
+ * Often, interval evaluation is implemented analogous to evaluation with numbers.
+ * For example, for products:
+ * @refsnippet{src/scip/expr_product.c,SnippetExprIntevalProduct}
+ *
+ * If this callback is not implemented, the performance of domain propagation for nonlinear constraints and other routines that rely on bounds of expressions will be impacted severely.
+ *
+ * @subsection EXPRESTIMATE
+ *
+ * While \ref EXPRINTEVAL computes constant under- and overestimators,
+ * this callback is called when linear under- or overestimators need to be computed.
+ * The estimator shall be as tight as possible at a given point and must be valid w.r.t. given (local) bounds.
+ * If the value of the estimator in the reference point is smaller (larger) than a given targetvalue
+ * when underestimating (overestimating), then no estimator needs to be computed.
+ * Note, that targetvalue can be infinite if any estimator will be accepted.
+ *
+ * The callback shall also indicate whether the estimator is also valid w.r.t. given global bounds and for which
+ * child a reduction in the local bounds (usually by branching) would improve the estimator.
+ *
+ * For the absolute-value expression, the under- and overestimators are computed as follows:
+ * @refsnippet{src/scip/expr_abs.c,SnippetExprEstimateAbs}
+ *
+ * If this callback is not implemented, updating the linear relaxation for nonlinear constraints that use this expression will not be possible, which has a severe impact on performance.
+ *
+ * @subsection EXPRINITESTIMATES
+ *
+ * This callback is similar to \ref EXPRESTIMATE, but is not given a reference point.
+ * It can also return several (up to \ref SCIP_EXPR_MAXINITESTIMATES many) estimators.
+ * A usecase for this callback is the construction of an initial linear relaxation of nonlinear constraints.
+ *
+ * For the absolute-value expression, the following initial under- and overestimators are computed:
+ * @refsnippet{src/scip/expr_abs.c,SnippetExprInitestimatesAbs}
+ *
+ * If this callback is not implemented, the initial linear relaxation for nonlinear constraints may be less tight.
+ * This can have a minor effect on performance, as long as \ref EXPRESTIMATE has been implemented and the linear relaxation
+ * is still bounded (e.g., when all nonlinear variables have finite bounds).
+ *
+ * @subsection EXPRSIMPLIFY
+ *
+ * This callback shall try to simplify an expression by applying algebraic transformations.
+ * It shall return the simplified (and equivalent) expression.
+ * It can assume that children have been simplified.
+ * If no simplification is possible, then it can return the original expression, but needs to capture it.
+ * When creating a new expression, it shall pass on the given ownerdata creation callback and its data.
+ *
+ * A simplification that should be implemented by every expression handler at the moment is constant-folding, i.e.,
+ * returning a value-expression if every child is a value expression.
+ * For an example, the simplification for the exponentiation expression is implemented as
+ * @refsnippet{src/scip/expr_exp.c,SnippetExprSimplifyExp}
+ *
+ * See also SCIPsimplifyExpr() for more information on implemented simplification rules.
+ *
+ * If this callback is not implemented, reducing the problem size when variables are fixed may not be possible, which can have an impact on performance.
+ * (Also bugs may show up as this situation is untested.)
+ *
+ * @subsection EXPRREVERSEPROP
+ *
+ * This callback is called when given bounds on an expression shall be propagated over the children of an expression.
+ * Already existing bounds on the children (see \ref EXPRINTEVAL) shall be used.
+ * That is, the method shall compute an interval overestimate on
+ * \f[
+ *   \{ x_i : f(c_1,\ldots,c_{i-1},x_i,c_{i+1},\ldots,c_n) \in \text{bounds} \}
+ * \f]
+ * for each child \f$i\f$, given bounds on f and initial intervals \f$c_i, i=1,\ldots,n,\f$, for the children.
+ *
+ * For univariate expressions, the implementation can be rather straightforward, e.g., for absolute value:
+ * @refsnippet{src/scip/expr_abs.c,SnippetExprReversepropAbs}
+ *
+ * For multivariate expressions, it can be more complicated, e.g., for products:
+ * @refsnippet{src/scip/expr_product.c,SnippetExprReversepropProduct}
+ *
+ * If this callback is not implemented, the performance of domain propagation for nonlinear constraints will be impacted severely.
+ */
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+/**@page NLHDLR How to add nonlinear handlers
+ *
+ * Nonlinear handlers define the extended formulations of nonlinear constraints and provide domain propagation and separation routines on this extended formulation.
+ * In difference to \ref EXPRHDLR "expression handlers", they do not define a function, but instead identify a
+ * structure in an existing expression and provide bound tightening and separation on this structure similar to \ref EXPRINTEVAL, \ref EXPRREVERSEPROP, \ref EXPRINITESTIMATES, and \ref EXPRESTIMATE.
+ * The structure typically consists of a composition of expressions.
+ *
+ * Nonlinear handlers are a new plugin type in SCIP and may still have some rough edges.
+ * They resemble constraint handlers in some sense, but are specific to the handling of nonlinear constraints.
+ * We suggest to read section "New Handler for Nonlinear Constraints" in the SCIP 8.0 release report (2021)
+ * to understand the role and use of nonlinear handlers before attempting to implement one.
+ *
+ * A complete list of all nonlinear handlers contained in this release can be found \ref NLHDLRS "here".
+ * In difference to many other plugins in SCIP, nonlinear handlers are not handled by the SCIP core but by the constraint handler for nonlinear constraints.
+ *
+ * Here is what you have to do to implement a nonlinear handler:
+ * -# Copy the template files `src/scip/nlhdlr_xyz.c` and `src/scip/nlhdlr_xyz.h` into files `nlhdlr_mystruct.c` and `nlhdlr_mystruct.h`, respectively. \n
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
+ * -# Use `SCIPincludeNlhdlrMystruct()` in order to include the nonlinear handler into your SCIP instance, e.g., in the main file of your project. \n
+      If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
+ * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mystruct".
+ * -# Adjust the properties of the nonlinear handler (see \ref NLHDLR_PROPERTIES).
+ * -# Define the nonlinear handler data and nonlinear handler expression data (see \ref NLHDLR_DATA). This is optional.
+ * -# Implement the interface methods (see \ref NLHDLR_INTERFACE).
+ * -# Implement the fundamental callback methods (see \ref NLHDLR_FUNDAMENTALCALLBACKS).
+ * -# Implement the additional callback methods (see \ref NLHDLR_ADDITIONALCALLBACKS), where necessary.
+ *
+ * Additional documentation for the callback methods of a nonlinear handler, in particular for the input parameters,
+ * can be found in the file \ref type_nlhdlr.h.
+ *
+ * @section NLHDLR_PROPERTIES Properties of a Nonlinear Handler
+ *
+ * At the top of the new file `nlhdlr_mystruct.c`, you can find the nonlinear handler properties.
+ * These are given as compiler defines.
+ * The properties you have to set have the following meaning:
+ *
+ * \par NLHDLR_NAME: the name of the nonlinear handler.
+ * This name is used in the interactive shell to address the nonlinear handler.
+ * Additionally, if you are searching for a nonlinear handler with SCIPfindNlhdlrNonlinear(), this name is looked up.
+ * Names have to be unique: no two nonlinear handlers may have the same name.
+ *
+ * \par NLHDLR_DESC: the description of the nonlinear handler.
+ * This string is printed as a description of the nonlinear handler in the interactive shell.
+ *
+ * \par NLHDLR_DETECTPRIORITY: the priority of the nonlinear handler when detecting structure.
+ * This priority decides when the \ref NLHDLRDETECT callback of the nonlinear handler is called, relative to other nonlinear handlers, on an expression.
+ * Typically, the priority should be strictly positive.
+ * This is because the nonlinear handler "default" (having detection priority 0) will not become active on expressions that are already handled by other nonlinear handlers.
+ *
+ * \par NLHDLR_ENFOPRIORITY: the priority of the nonlinear handler when enforcing constraints in the extended formulations.
+ * This priority decides when the callbacks that help on domain propagation and separation are called for an expression for which the nonlinear handler detected a structure.
+ * A high priority means that the nonlinear handler will be called before others.
+ * The nonlinear handler "default" has enforcement priority 0.
+ *
+ * @section NLHDLR_DATA Nonlinear Handler Data and Nonlinear Handler Expression Data
+ *
+ * Below the header "Data structures" you can find structs called `struct SCIP_NlhdlrData` and `struct SCIP_NlhdlrExprData`.
+ * In this first data structure, you can store the data of your nonlinear handler.
+ * For example, you should store the adjustable parameters of the nonlinear handler in this data structure.
+ * In the second data structure, you can store data that is unique to an expression for which the nonlinear handler detected a structure.
+ * For example, the nonlinear handler for quotients stores a representation of a detected quotient in this data structure.
+ * \n
+ * Defining nonlinear handler data and nonlinear handler expression data is optional. You can leave these structs empty.
+ *
+ * @section NLHDLR_INTERFACE Interface Methods
+ *
+ * At the bottom of `nlhdlr_mystruct.c`, you can find the interface method `SCIPincludeNlhdlrXyz()`,
+ * which also appears in `nlhdlr_mystruct.h`.
+ * `SCIPincludeNlhdlrXyz()` is called by the user, if (s)he wants to include the nonlinear handler,
+ * i.e., if (s)he wants to use the nonlinear handler in his/her application.
+ *
+ * This method is responsible for notifying SCIP of the presence of the nonlinear handler.
+ * For this, you must call SCIPincludeNlhdlrNonlinear() from SCIPincludeNlhdlrMystruct().
+ * The function only expects the properties and fundamental callbacks of the nonlinear handler as arguments.
+ * \ref NLHDLR_ADDITIONALCALLBACKS "Additional callbacks" must be added via setter functions as, e.g., SCIPnlhdlrSetCopyHdlr().
+ *
+ * If you are using nonlinear handler data, you have to allocate the memory for the data at this point and initialize it.
+ * For freeing the nonlinear handler data, see \ref NLHDLRFREEHDLRDATA.
+ * You may also add user parameters or statistic tables for your nonlinear handler, see \ref PARAM for how to add user parameters.
+ *
+ * For the bilinear nonlinear handler, the include method is as follows:
+ * @refsnippet{src/scip/nlhdlr_bilinear.c,SnippetIncludeNlhdlrBilinear}
+ *
+ *
+ * @section NLHDLR_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a Nonlinear Handler
+ *
+ * The fundamental callback methods of the plugins are the ones that have to be implemented in order to obtain
+ * an operational algorithm.
+ * They are passed to SCIP when the nonlinear handler is created and included in SCIP via SCIPincludeNlhdlrNonlinear(),
+ * see @ref NLHDLR_INTERFACE.
+ *
+ * Nonlinear handlers have two fundamental callbacks that need to be implemented.
+ * Additional documentation for the callback methods, in particular to their input parameters,
+ * can be found in \ref type_nlhdlr.h.
+ *
+ * @subsection NLHDLRDETECT
+ *
+ * This callback is called by the handler for nonlinear constraints when extended formulations are constructed.
+ * The result of this callback determines the extended formulation.
+ *
+ * The nonlinear handler shall analyze the given expression (`expr`) and decide whether it wants to contribute
+ * in enforcing the relation between bounds or an auxiliary variable (`auxvar`) associated with this expression and
+ * its descendants (e.g., children) via linear under- or overestimation, cut generation, and/or activity computation and propagation.
+ * For linear under- or overestimation and cut generation, an auxiliary variable can be assumed to
+ * be associated with the expression and auxiliary variables may be requested for descendant expressions.
+ *
+ * We distinguish the following enforcement methods:
+ * - \ref SCIP_NLHDLR_METHOD_SEPABELOW : linear underestimation of `expr` or cut generation for the relation `expr` &le; `auxvar` (denoted as "below")
+ * - \ref SCIP_NLHDLR_METHOD_SEPAABOVE : linear overestimation of `expr` or cut generation for the relation `expr` &ge; `auxvar` (denoted as "above")
+ * - \ref SCIP_NLHDLR_METHOD_ACTIVITY  : domain propagation (i.e., constant under/overestimation) for `expr`.
+ *
+ * On input, parameter `enforcing` indicates for any of these methods, whether
+ * - it is not necessary to have such a method, e.g., because no `auxvar` will exist for `expr`, or no one uses or sets activities of this expression,
+ *   or because analysis of the expression has shown that a relation like `expr` &ge; `auxvar` is not necessary to be satisfied,
+ * - or there already exists a nonlinear handler that will provide this method in an "enforcement" sense, that is,
+ *   it believes that no one else could provide this method in a stronger sense. (This is mainly used by the nonlinear handler "default" to check whether
+ *   it should still reach out to the expression handler or whether it would be dominated by some nonlinear handler.)
+ *
+ * The DETECT callback shall augment the `enforcing` bitmask by setting the enforcement methods it wants to provide in an "enforcement" sense.
+ *
+ * Additionally, the `participating` bitmask shall be set if the nonlinear handler wants to be called on this expression at all.
+ * Here, it shall set all methods that it wants to provide, which are those set in `enforcing`, but additionally those where it wants
+ * to participate but leave enforcement to another nonlinear handler.
+ * This can be useful for nonlinear handlers that do not implement a complete enforcement, e.g., a handler that only contributes
+ * cutting planes in some situations only.
+ *
+ * A nonlinear handler will be called only for those callbacks that it mentioned in `participating`, which is
+ * - \ref NLHDLRENFO and/or \ref NLHDLRESTIMATE will be called with `overestimate==FALSE` if \ref SCIP_NLHDLR_METHOD_SEPABELOW has been set
+ * - \ref NLHDLRENFO and/or \ref NLHDLRESTIMATE will be called with `overestimate==TRUE`  if \ref SCIP_NLHDLR_METHOD_SEPAABOVE has been set
+ * - \ref NLHDLRINTEVAL and/or \ref NLHDLRREVERSEPROP will be called if \ref SCIP_NLHDLR_METHOD_ACTIVITY has been set
+ *
+ * If \ref SCIP_NLHDLR_METHOD_SEPABELOW or \ref SCIP_NLHDLR_METHOD_SEPAABOVE has been set, then at least one of the
+ * callbacks \ref NLHDLRENFO and \ref NLHDLRESTIMATE needs to be implemented.
+ * Also \ref NLHDLREVALAUX will be called in this case.
+ * If \ref SCIP_NLHDLR_METHOD_ACTIVITY has been set, then at least one of \ref NLHDLRINTEVAL and \ref NLHDLRREVERSEPROP needs to be implemented.
+ * If the nonlinear handler chooses not to participate, then it must not set `nlhdlrexprdata` and can leave `participating` at its
+ * initial value (\ref SCIP_NLHDLR_METHOD_NONE).
+ *
+ * Additionally, a nonlinear handler that decides to participate in any of the enforcement methods must call
+ * @ref SCIPregisterExprUsageNonlinear() for every subexpression that it will use and indicate whether
+ * - it will use an auxiliary variable in \ref NLHDLRENFO or \ref NLHDLRESTIMATE,
+ * - it will use activity for some subexpressions when computing estimators or cuts, and
+ * - it will use activity for some subexpressions when in \ref NLHDLRINTEVAL or \ref NLHDLRREVERSEPROP.
+ *
+ * Note that auxiliary variables do not exist in subexpressions during DETECT and are not created by a call to @ref SCIPregisterExprUsageNonlinear().
+ * They will be available when the \ref NLHDLRINITSEPA callback is called.
+ *
+ * For an example, see the implementation of the DETECT callback for the nonlinear handler for quotients (src/scip/nlhdlr_quotient.c).
+ *
+ * @subsection NLHDLREVALAUX
+ *
+ * This callback is called by the constraint handler for nonlinear constraints when the violation of constraints in the extended formulation
+ * (`expr` &le;/&ge; `auxvar`) needs to be evaluated.
+ * During constraint enforcement, this violation value is used to decide whether estimation and separation callbacks should be called.
+ *
+ * The method shall evaluate the expression w.r.t. the auxiliary variables that were introduced by the nonlinear handler (if any).
+ * It can be assumed that the expression itself has been evaluated in the given sol.
+ *
+ * For an example, see the evaluation for the quotient nonlinear handler:
+ * @refsnippet{src/scip/nlhdlr_quotient.c,SnippetNlhdlrEvalauxQuotient}
+*
+ * @section NLHDLR_ADDITIONALCALLBACKS Additional Callback Methods of a Nonlinear Handler
+ *
+ * The additional callback methods do not need to be implemented in every case. However, some of them have to be
+ * implemented for most applications, they can be used, for example, to initialize and free private data.
+ * Additional callbacks can be passed via specific
+ * <b>setter functions</b> after a call of SCIPincludeNlhdlrNonlinear(), see also @ref NLHDLR_INTERFACE.
+ *
+ * @subsection NLHDLRCOPYHDLR
+ *
+ * This callback is called when doing a copy of the constraint handler for nonlinear constraints.
+ * It shall include the nonlinear handler into the copy of the constraint handler.
+ *
+ * @subsection NLHDLRFREEHDLRDATA
+ *
+ * If you are using nonlinear handler data (see \ref NLHDLR_DATA and \ref NLHDLR_INTERFACE), you have to implement this method
+ * in order to free the nonlinear handler data.
+ *
+ * @subsection NLHDLRFREEEXPRDATA
+ *
+ * If you are using nonlinear handler expression data (see \ref NLHDLR_DATA and \ref NLHDLRDETECT), you have to implement this method
+ * in order to free the nonlinear handler expression data.
+ * This method is called when an extended formulation is freed.
+ *
+ * @subsection NLHDLRINIT
+ *
+ * This callback is called when the constraint handler for nonlinear constraints is initialized, that is, after the problem was transformed.
+ * The nonlinear handler can use this callback to initialize or reset some data for the upcoming solve.
+ *
+ * @subsection NLHDLREXIT
+ *
+ * This callback is called when the constraint handler for nonlinear constraints is deinitialized, that is, before the transformed problem is freed.
+ * The nonlinear handler can use this callback to free some data that was used for the previous solve only.
+ *
+ * @subsection NLHDLRINTEVAL
+ *
+ * This callback is called when bounds on a given expression shall be computed.
+ * It is called for expressions for which the nonlinear handler registered to participate in \ref SCIP_NLHDLR_METHOD_ACTIVITY in \ref NLHDLRDETECT.
+ * The method is given the currently available bounds to the expression and can return possibly tighter bounds.
+ *
+ * For a univariate quotient ((ax+b)/(cx+d)), the interval evaluation is implemented as follows:
+ * @refsnippet{src/scip/nlhdlr_quotient.c,SnippetNlhdlrIntevalQuotient}
+ *
+ * @subsection NLHDLRREVERSEPROP
+ *
+ * This callback is called when bounds on a given expression shall be propagated to its successors.
+ * It is called for expressions for which the nonlinear handler registered to participate in \ref SCIP_NLHDLR_METHOD_ACTIVITY in \ref NLHDLRDETECT.
+ * The tighter intervals should be passed to the corresponding expression via SCIPtightenExprIntervalNonlinear().
+ *
+ * For a univariate quotient ((ax+b)/(cx+d)), reverse propagation is implemented as follows:
+ * @refsnippet{src/scip/nlhdlr_quotient.c,SnippetNlhdlrReversepropQuotient}
+ *
+ * @subsection NLHDLRINITSEPA
+ *
+ * This callback is called when the constraint handler for nonlinear constraints initializes the LP relaxation (@ref CONSINITLP).
+ * It is called for expressions for which the nonlinear handler registered to participate in \ref SCIP_NLHDLR_METHOD_SEPABELOW or \ref SCIP_NLHDLR_METHOD_SEPAABOVE in \ref NLHDLRDETECT.
+ * The method shall initialize the separation data of the nonlinear handler, if any, and add initial cuts to the LP relaxation.
+ * It can assume that auxiliary variables are available for expressions for which auxiliary variables were requested via SCIPregisterExprUsageNonlinear() in \ref NLHDLRDETECT.
+ *
+ * @subsection NLHDLREXITSEPA
+ *
+ * This callback is called when the solving process is finished and the branch and bound process data is freed (@ref CONSEXITSOL).
+ * It is called for expressions for which the nonlinear handler registered to participate in \ref SCIP_NLHDLR_METHOD_SEPABELOW or \ref SCIP_NLHDLR_METHOD_SEPAABOVE in \ref NLHDLRDETECT and \ref NLHDLRINITSEPA was called.
+ * The method shall deinitialize the separation data of the nonlinear handler, if any.
+ *
+ * @subsection NLHDLRENFO
+ *
+ * This callback is called when the constraint handler requires that the relation between the given expression and its auxiliary variable
+ * (`expr` &le; `auxvar`  or  `expr` &ge; `auxvar`) is violated by a given solution and this solution needs to be separated.
+ * It is called for expressions for which the nonlinear handler registered to participate in \ref SCIP_NLHDLR_METHOD_SEPABELOW or \ref SCIP_NLHDLR_METHOD_SEPAABOVE in \ref NLHDLRDETECT.
+ *
+ * The nonlinear handler can enforce `expr` &le;/&ge; `auxvar` by
+ * - separation, i.e., finding an affine hyperplane (a cut) that separates the given point, or
+ * - bound tightening, i.e., changing bounds on a variable so that the given point is outside the updated domain, or
+ * - adding branching scores to potentially split the current problem into two subproblems.
+ *
+ * If parameter `inenforcement` is FALSE, then only the first option (separation) is allowed.
+ *
+ * If the nonlinear handler always separates by computing a linear under- or overestimator of `expr`,
+ * then it is usually easier to implement the \ref NLHDLRESTIMATE callback instead.
+ *
+ * Note, that the nonlinear handler may also choose to separate for a relaxation of the mentioned sets,
+ * e.g., `expr` &le; upperbound(`auxvar`)  or  `expr` &ge; lowerbound(`auxvar`).
+ * This is especially useful in situations where `expr` is the root expression of a constraint
+ * and it is sufficient to satisfy `lhs` &le; `expr` &le; `rhs`.
+ * The constraint handler ensures that `lhs` &le; lowerbound(`auxvar`) and upperbound(`auxvar`) &le; `rhs`.
+ *
+ * The constraint handler may call this callback first with `allowweakcuts` = FALSE and repeat later with
+ * `allowweakcuts` = TRUE, if it didn't succeed to enforce a solution without using weak cuts.
+ * If in enforcement and the nonlinear handler cannot enforce by separation or bound tightening, it should register
+ * branching scores for those expressions where branching may help to compute tighter cuts in children.
+ *
+ * The nonlinear handler must set `result` to \ref SCIP_SEPARATED if it added a cut,
+ * to \ref SCIP_REDUCEDDOM if it added a bound change, and
+ * to \ref SCIP_BRANCHED if it added branching scores.
+ * Otherwise, it may set result to \ref SCIP_DIDNOTRUN or \ref SCIP_DIDNOTFIND.
+ *
+ * @subsection NLHDLRESTIMATE
+ *
+ * This callback is called when the constraint handler requires that the relaxation between the given expression and its auxiliary variable
+ * (`expr` &le; `auxvar`  or  `expr` &ge; `auxvar`) is violated by a given solution and this solution needs to be separated.
+ * It is called for expressions for which the nonlinear handler registered to participate in \ref SCIP_NLHDLR_METHOD_SEPABELOW or \ref SCIP_NLHDLR_METHOD_SEPAABOVE in \ref NLHDLRDETECT.
+ * This method is a simpler alternative to \ref NLHDLRENFO and is called if \ref NLHDLRENFO is not implemented or does not succeed.
+ *
+ * The method shall compute one or several linear under- or overestimator of `expr` that are as tight as possible at a given point.
+ * If the value of the estimator in the solution is smaller (larger) than a given targetvalue
+ * when underestimating (overestimating), then no estimator needs to be computed.
+ * Note, that targetvalue can be infinite if any estimator will be accepted.
+ * If successful, it shall store the estimators in the given `rowpreps` data structure and set the
+ * `rowprep->local` flag accordingly (SCIProwprepSetLocal()).
+ * The sidetype of a rowprep must be set to \ref SCIP_SIDETYPE_LEFT if overestimating and
+ * \ref SCIP_SIDETYPE_RIGHT if underestimating.
+ *
+ * The callback may also be required to indicate for which expression a reduction in the local bounds (usually by branching) would improve the estimator.
+ * This is done by a call to SCIPaddExprsViolScoreNonlinear().
+ *
+ * For the quotient nonlinear handler, the estimators are computed as follows:
+ * @refsnippet{src/scip/nlhdlr_quotient.c,SnippetNlhdlrEstimateQuotient}
+ *
+ * @subsection NLHDLRSOLLINEARIZE
+ *
+ * This callback is called by the constraint handler when it has caught a solution event from SCIP and option constraints/nonlinear/linearizeheursol has been enabled.
+ * The constraint handler then calls the nonlinear handlers for all expressions they currently handle.
+ * The nonlinear handler may use this opportunity to add a cut that supports its nonlinear function in the given solution to the cutpool.
+ * For convex functions, this may help to accellerate proving optimality for a solution found by a NLP solver.
+ */
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
 /**@page DIVINGHEUR How to implement a diving heuristic
  *
  * Diving heuristics are an important addon to the branch-and-cut search. A diving heuristic explores a single probing
@@ -4022,9 +4930,11 @@
  * -# Copy the template files src/scip/relax_xyz.c and src/scip/relax_xyz.h into files named "relax_myrelaxator.c"
  *    and "relax_myrelaxator.h".
  *    \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Use SCIPincludeRelaxMyrelaxator() in order to include the relaxation handler into your SCIP instance,
- *    e.g, in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
+ * -# Use `SCIPincludeRelaxMyrelaxator()` in order to include the relaxation handler into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "myrelaxator".
  * -# Adjust the properties of the relaxation handler (see \ref RELAX_PROPERTIES).
  * -# Define the relaxation handler data (see \ref RELAX_DATA). This is optional.
@@ -4261,9 +5171,11 @@
  * -# Copy the template files src/scip/reader_xyz.c and src/scip/reader_xyz.h into files named
  *    "reader_myreader.c" and "reader_myreader.h".
  *    \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Use SCIPincludeReaderMyreader() in order to include the file reader into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
+ * -# Use `SCIPincludeReaderMyreader()` in order to include the reader into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "myreader".
  * -# Adjust the \ref READER_PROPERTIES "properties of the file reader".
  * -# Define the \ref READER_DATA "file reader data". This is optional.
@@ -4455,9 +5367,11 @@
  * -# Copy the template files src/scip/dialog_xyz.c and src/scip/dialog_xyz.h into files named "dialog_mydialog.c"
  *    and "dialog_mydialog.h".
  *    \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Use SCIPincludeDialogMydialog() in order to include the dialog handler into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
+ * -# Use `SCIPincludeDialogMydialog()` in order to include the dialog handler into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mydialog".
  * -# Adjust the \ref DIALOG_PROPERTIES "properties of the dialog".
  * -# Define the \ref DIALOG_DATA "dialog data". This is optional.
@@ -4624,9 +5538,11 @@
  * -# Copy the template files src/scip/disp_xyz.c and src/scip/disp_xyz.h into files named "disp_mydisplaycolumn.c"
  *    and "disp_mydisplaycolumn.h".
       \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Use SCIPincludeDispMydisplaycolumn() in order to include the display column into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
+ * -# Use `SCIPincludeDispMydisplaycolumn()` in order to include the display column into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mydisplaycolumn".
  * -# Adjust the \ref DISP_PROPERTIES "properties of the display column".
  * -# Define the  \ref DISP_DATA "display column data". This is optional.
@@ -4800,9 +5716,11 @@
  * -# Copy the template files src/scip/event_xyz.c and src/scip/event_xyz.h into files named "event_bestsol.c"
  *    and "event_bestsol.h".
       \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Use SCIPincludeEventBestsol() in order to include the event handler into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Eventhdlr example).
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
+ * -# Use `SCIPincludeEventBestsol()` in order to include the event handler into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "bestsol".
  * -# Adjust the \ref EVENTHDLR_PROPERTIES "properties of the event handler".
  * -# Implement the \ref EVENT_INTERFACE "interface methods".
@@ -5019,9 +5937,11 @@
  *
  * Here is what you have to do to implement an NLPI:
  * -# Copy the template files src/scip/nlpi_xyz.c and src/scip/nlpi_xyz.h into files named "nlpi_mysolver.c" and "nlpi_mysolver.h".
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
  * -# Use `SCIPincludeNlpSolverMysolver()` in order to include the NLPI into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mysolver".
  * -# Adjust the properties of the nlpi (see \ref NLPI_PROPERTIES).
  * -# Define the NLPI and NLPIPROBLEM data (see \ref NLPI_DATA).
@@ -5228,7 +6148,8 @@
  *
  * Here is what you have to do to implement an expression interpreter:
  * -# Copy the file \ref exprinterpret_none.c into a file named "exprinterpret_myad.c".
- *    Make sure to adjust your Makefile such that this file is compiled and linked to your project instead of exprinterpret implementations.
+ *    Make sure to adjust your build system such that this file is compiled and linked to your project instead of exprinterpret implementations. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
  * -# Open the new file with a text editor.
  * -# Define the expression interpreter data (see \ref EXPRINT_DATA).
  * -# Implement the interface methods (see \ref EXPRINT_INTERFACE).
@@ -5330,9 +6251,11 @@
  * -# Copy the template files src/scip/table_xyz.c and src/scip/table_xyz.h into files named "table_mystatisticstable.c"
  *    and "table_mystatisticstable.h".
  *    \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
  * -# Use SCIPincludeTableMystatisticstable() in order to include the statistics table into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mystatisticstable".
  * -# Adjust the \ref TABLE_PROPERTIES "properties of the statistics table".
  * -# Define the  \ref TABLE_DATA "statistics table data". This is optional.
@@ -5564,9 +6487,11 @@
  * -# Copy the template files src/scip/benders_xyz.c and src/scip/benders_xyz.h into files "benders_mybenders.c" and
  *  "benders_mybenders.h".
       \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
  * -# Use SCIPincludeBendersMybenders() in order to include the Benders' decomposition into your SCIP instance, e.g., in
- *  the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ *    the main file of your project (see, e.g., src/cmain.c in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mybenders".
  * -# Adjust the properties of the Benders' decomposition (see \ref BENDERS_PROPERTIES).
  * -# Define the Benders' decomposition data (see \ref BENDERS_DATA). This is optional.
@@ -5885,9 +6810,11 @@
  * -# Copy the template files src/scip/benderscut_xyz.c and src/scip/benderscut_xyz.h into files "benderscut_mybenderscut.c" and
  *  "benderscut_mybenderscut.h".
       \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
  * -# Use SCIPincludeBenderscutMybenderscut() in order to include the Benders' decomposition cut method into your SCIP
- *  instance, e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ *    instance, e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mybenderscut".
  * -# Adjust the properties of the Benders' decomposition (see \ref BENDERSCUT_PROPERTIES).
  * -# Define the Benders' decomposition data (see \ref BENDERSCUT_DATA). This is optional.
@@ -6869,6 +7796,32 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+/**@page STAGES SCIP stages
+ *
+ * The SCIP object goes through different stages during the solving process, the transitions from one to the next are presented in the following diagram.
+ * \image html stages.png
+ * More exhaustively, the stages are:
+ * \code
+ * SCIP_STAGE_INIT         =  0,        /**< SCIP data structures are initialized, no problem exists
+ * SCIP_STAGE_PROBLEM      =  1,        /**< the problem is being created and modified
+ * SCIP_STAGE_TRANSFORMING =  2,        /**< the problem is being transformed into solving data space
+ * SCIP_STAGE_TRANSFORMED  =  3,        /**< the problem was transformed into solving data space
+ * SCIP_STAGE_INITPRESOLVE =  4,        /**< presolving is initialized
+ * SCIP_STAGE_PRESOLVING   =  5,        /**< the problem is being presolved
+ * SCIP_STAGE_EXITPRESOLVE =  6,        /**< presolving is exited
+ * SCIP_STAGE_PRESOLVED    =  7,        /**< the problem was presolved
+ * SCIP_STAGE_INITSOLVE    =  8,        /**< the solving process data is being initialized
+ * SCIP_STAGE_SOLVING      =  9,        /**< the problem is being solved
+ * SCIP_STAGE_SOLVED       = 10,        /**< the problem was solved
+ * SCIP_STAGE_EXITSOLVE    = 11,        /**< the solving process data is being freed
+ * SCIP_STAGE_FREETRANS    = 12,        /**< the transformed problem is being freed
+ * SCIP_STAGE_FREE         = 13         /**< SCIP data structures are being freed
+ * \endcode
+ * Most functions can be called in a subset of the stages, this is then documented, a runtime check is often added and will throw a \ref SCIP_INVALIDCALL if the stage is not allowed.
+ */
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
 /**@page TEST How to run automated tests with SCIP
  *
  *  SCIP comes along with a set of useful tools that allow to perform automated tests. The
@@ -7375,9 +8328,219 @@
  *
  */
 
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+/** @page SYMMETRY How to use symmetry handling in SCIP
+ *
+ * Symmetry handling is an important feature of SCIP that allows to discard symmetric subproblems from the
+ * branch-and-bound tree, and thus, can substantially reduce the running time. To handle symmetries, SCIP
+ * automatically detects symmetries and then applies (combinations of) symmetry handling methods.
+ *
+ * @section SYMDETECT Symmetry detection
+ *
+ * In a purely integer linear setting
+ * \f[
+ *  \max \{ c^{\top} x : Ax \leq b,\; x \in \mathbb{Z}^n \},
+ * \f]
+ * a symmetry is a permutation \f$\gamma\f$ of \f$\{1,\dots,n\}\f$ that acts on vector \f$x\f$ by
+ * permuting its coordinates via \f$\gamma(x) = (x_{\gamma^{-1}(1)}, \dots, x_{\gamma^{-1}(n)})\f$
+ * such that
+ *
+ * -# \f$\gamma\f$ leaves the objective invariant, i.e., \f$c^{\top}x = c^{\top}\gamma(x)\f$, and
+ * -# \f$\gamma\f$ maps feasible solutions onto feasible solutions, i.e., \f$Ax \leq b\f$ if and only
+ *    if \f$A\gamma(x) \leq b\f$.
+ *
+ * Since this definition depends on the feasible region of the integer program, which is unknown
+ * in general, SCIP only computes symmetries that leave the formulation of the optimization problem
+ * invariant. To detect such formulation symmetries, SCIP builds an auxiliary colored graph whose
+ * color-preserving automorphisms correspond to symmetries of the integer program. The symmetries of
+ * the graph, and thus of the integer program, are then computed by an external graph automorphism
+ * library that needs to be linked to SCIP. Currently, SCIP ships with two such libraries: The graph
+ * automorphism library bliss is the basic workhorse to detect symmetries. Moreover, one can use
+ * sassy, a graph symmetry preprocessor which passes the preprocessed graphs to bliss and is the
+ * current default.
+ *
+ * @note To detect symmetries, SCIP needs to be built with sassy/bliss, which can be achieved
+ * by using the options <code>SYM=sassy</code> and <code>-DSYM=sassy</code> in the Makefile and CMake
+ * system, respectively.
+ *
+ * Besides purely integer linear problems, SCIP also supports symmetry detection for general
+ * constraint mixed-integer programs containing most of the constraint types that can be handled
+ * by SCIP. In particular, symmetries of mixed-integer nonlinear problems can be detected.
+ *
+ * @subsection SYMPROCESS Processing symmetry information
+ *
+ * After symmetries have been computed, SCIP has access to a list \f$\gamma_1,\dots,\gamma_m\f$ of
+ * permutations that generate a group \f$\Gamma\f$ of symmetries of the optimization problem. That
+ * is, SCIP has not access to all permutations in \f$\Gamma\f$, but only a set of generators. Based
+ * on these generators, SCIP analyzes the group \f$\Gamma\f$ and checks whether it can be split into
+ * independent factors. That is, whether there exist subgroups \f$\Gamma_1,\dots,\Gamma_k\f$ of
+ * \f$\Gamma\f$ that act on pairwise independent sets of variables such that \f$\bigcup_{i=1}^k \Gamma_i = \Gamma\f$.
+ * In this case, SCIP can handle the symmetries of the different subgroups independently. In particular,
+ * different subgroups can be treated by different symmetry handling methods.
+ *
+ * @section SYMMETHODS Symmetry handling methods
+ *
+ * To handle symmetries, SCIP uses three different classes of methods, which we detail below.
+ *
+ * @subsection SYMCONSS Static symmetry handling constraints for binary variable domains
+ *
+ * SCIP contains three constraint handlers for handling symmetries of binary variables: the symresack,
+ * orbisack, and orbitope constraint handler. Given a symmetry \f$\gamma\f$,
+ * the symresack constraint handler enforces that a solution vector \f$x\f$ is not lexicographically
+ * smaller than its image \f$\gamma(x)\f$. This constraint is enforced by a propagation algorithm
+ * and separating inequalities. Moreover, given the disjoint cycle decomposition of \f$\gamma\f$,
+ * SCIP checks, for each cycle of \f$\gamma\f$, whether all variables in the cycle are contained
+ * in set packing or partitioning constraints. If this is the case, specialized inequalities can
+ * be separated.
+ *
+ * In case the permutation \f$\gamma\f$ is an involution, i.e., \f$\gamma(\gamma(x)) = x\f$,
+ * specialized separation and propagation algorithms can be used, which are implemented in the
+ * orbisack constraint handler. For orbisack constraints, also facet-defining inequalities of the
+ * convex hull of all binary points \f$x\f$ being not lexicographically smaller than \f$\gamma(x)\f$
+ * can be separated. Since the coefficients in these inequalities grow exponentially large which might
+ * cause numerical instabilities, the separation of these inequalities is disabled by default, but can be
+ * enabled via the parameter <code>constraints/orbisack/orbiSeparation</code>. Furthermore, to avoid
+ * numerical instabilities, the parameter <code>constraints/orbisack/coeffbound</code> controls the
+ * maximum absolute value of a coefficient in separated facet-defining inequalities.
+ *
+ * Finally, the orbitope constraint handler is able to handle symmetries of special symmetric groups \f$\Gamma\f$.
+ * For orbitopes to be applicable, the affected variables need to be arranged in a matrix \f$X\f$ such that
+ * the symmetries in \f$\Gamma\f$ permute the columns of \f$X\f$. Symmetries are then handled by orbitope
+ * constraints by enforcing to only compute solution matrices \f$X\f$ whose columns are sorted lexicographically
+ * non-increasingly. To this end, a propagation algorithm is used and inequalities are separated. In case
+ * the variables of each row of the matrix \f$X\f$ are contained in a set packing or partitioning constraint,
+ * specialized propagation and separation routines are used.
+ *
+ * @subsection SYMPROP Dynamic symmetry handling by propagation
+ *
+ * Static symmetry handling enforces a lexicographic ordering on the variable solution vectors.
+ * The pro of that approach, is that throughout the solving process, the same lexicographic ordering constraint
+ * is used. This means that already during presolving certain symmetry reductions can be made.
+ * The con of this approach is that an ordering of the variables for lexicographic comparisons have to be made
+ * before solving. Consequently, if reductions of certain variable domains are found, but these variables are compared
+ * late by the lexicographic comparison order, the effect for symmetry handling is very slim.
+ *
+ * Dynamic symmetry handling addresses this issue by propagating symmetry handling constraints, where the variable
+ * comparison ordering are determined while solving, attempting to make strong symmetry handling reductions early on.
+ * Dynamic symmetry handling removes feasible solutions of the problem, while it is guaranteed that at least one
+ * symmetric solution remains feasible.
+ *
+ * Whether dynamic or static symmetry handling methods are used, is determined by the boolean parameter
+ * <code>propagating/symmetry/usedynamicprop</code>.
+ * SCIP features three dynamic symmetry handling methods.
+ * SCIP only provides propagation methods for handling these symmetries,
+ * and the methods work on variables with arbitrary (so also non-binary) variable domains.
+ *
+ * -# Orbitopal reduction is the dynamic counterpart of orbitopal fixing. This method can be used if the variables
+ *    can be arranged without duplicates in a matrix, and symmetries permute the columns of this matrix. This method
+ *    propagates the variable domains such that solutions in matrix-form have lexicographically decreasing columns,
+ *    with respect to the dynamically chosen row and column order.
+ *    Orbitopal reduction respects the parameter <code>propagating/symmetry/detectorbitopes</code>.
+ * -# Lexicographic reduction is the dynamic counterpart of symresack and orbisack propagation.
+ *    Lexicographic reduction respects the parameter <code>propagating/symmetry/addsymresacks</code>.
+ * -# Orbital reduction is a generalization of orbital fixing that also works for non-binary variable domains.
+ *    Orbital reduction respects the 2-bit of the bitset <code>misc/usesymmetry</code>.
+ *    See \ref SYMMETHODSELECT <method selection>. Since there is no static counterpart, this method ignores
+ *    <code>propagating/symmetry/usedynamicprop</code>.
+ *
+ * In all cases, the dynamic variable ordering is derived from the branching decisions.
+ * In particular, at different branch-and-bound tree nodes, a different variable ordering can be active.
+ * Since the symmetries are handled for independent factors of the symmetry group, a different variable ordering method
+ * can be used for handling symmetries in different factors. In SCIP, the same method is used for orbital reduction and
+ * for lexicographic reduction, which means that these two methods are compatible and can be used simultanuously in the
+ * same factor. Orbitopal reduction uses a different method.
+ *
+ * As SCIP might restart the branch-and-bound process, which removes information regarding the branching decisions,
+ * we need to make sure that correct reductions are found after a restart.
+ * If a restart occurs, static symmetry handling methods are preserved. Since dynamic symmetry handling methods
+ * depend on the branch-and-bound tree structure, and because the prior branch-and-bound tree is removed,
+ * the dynamic symmetry handling methods are disabled after a restart.
+ *
+ * @subsection SYMSST SST cuts
+ *
+ * The Schreier-Sims table (SST) is a table that contains certain information about symmetry groups
+ * and can be used, among others, to derive symmetry handling inequalities. The corresponding SST cuts
+ * are symmetry handling inequalities that are defined iteratively in rounds \f$r = 1,\dots,R\f$.
+ * In each round \f$r\f$, a leader variable \f$\ell_r\f$ is selected and the group
+ * \f$\Gamma_r = \{ \gamma \in \Gamma : \gamma(\ell_i) = \ell_i \text{ for all } i = 1,\dots,r-1\}\f$
+ * is considered. Then, the symmetry handling inequalities of round \f$r\f$ are defined as
+ * \f$x_{\ell_r} \geq x_j\f$ for all \f$j \in \{\gamma(i) : i \in \{1,\dots,n\}\}\f$.
+ * The latter set is called the orbit of leader \f$\ell_r\f$.
+ *
+ * SST cuts admit many degrees of freedom. In particular, they are not limited to binary variables
+ * but can be used for arbitrary variable types. A user can gain control over the selection process of
+ * SST cuts via several parameters. For instance,
+ *
+ * - <code>sstleadervartype</code> is a bitset encoding the variable types of leaders: the 1-bit models binary,
+ *   the 2-bit integer, the 4-bit implicit integer, and the 8-bit continuous variables. That is, a value
+ *   of 9 models that the leader can be a binary or continuous variable.
+ * - <code>sstleaderrule</code> ranges from 0 to 2 and models whether a leader is the first variable in
+ *   its orbit, the last variable in its orbit, or a variable with most conflicts with other variables in
+ *   the orbit, respectively.
+ * - <code>ssttiebreakrule</code> ranges from 0 to 2 and models whether an orbit of minimum size, maximum
+ *   size or with most variables being in conflict to the leader is selected, respectively.
+ * - <code>sstmixedcomponents</code> whether SST cuts are also applied if a symmetries do not only affect
+ *   variables of a single type.
+ * - <code>sstaddcuts</code> whether SST cuts are added to the problem. If no cuts are added, only
+ *   binary variables might be fixed to 0 if they are in conflict with the leader.
+ *
+ * @subsection SYMMETHODSELECT Selecting symmetry handling methods
+ *
+ * The symmetry handling methods explained above can be enabled and disabled via the parameter
+ * <code>misc/usesymmetry</code>, which encodes the enabled methods via a bitset that ranges between 0
+ * and 7: the 1-bit encodes symmetry handling constraints, the 2-bit encodes orbital reduction, and the
+ * 4-bit encodes SST cuts. For example, <code>misc/usesymmetry = 3</code> enables symmetry handling
+ * constraints and orbital reduction, whereas <code>misc/usesymmetry = 0</code> disables symmetry handling.
+ * In the following, we explain how the combination of different symmetry handling methods works.
+ *
+ * The default strategy of SCIP is to handle symmetries via the bitset value 7, i.e., symmetry handling
+ * constraints, orbital reduction, and SST cuts are enabled. To make sure that the different methods are
+ * compatible, the following steps are carried out:
+ *
+ * -# SCIP determines independent subgroups \f$\Gamma_1,\dots,\Gamma_k\f$ as described in \ref SYMPROCESS.
+ *    Then, for each subgroup \f$\Gamma_i\f$, different symmetry handling methods can be applied.
+ * -# For each subgroup \f$\Gamma_i\f$, a heuristic is called that checks whether orbitopes are applicable
+ *    to handle the entire subgroup. If yes, this subgroup is handled by orbitopes and no other
+ *    symmetry handling methods.
+ * -# Otherwise, if parameter <code>propagating/symmetry/detectsubgroups</code> is <code>TRUE</code>
+ *    and <code>propagating/symmetry/usedynamicprop</code> is <code>FALSE</code>, a
+ *    heuristic is called to detect whether "hidden" orbitopes are present. That is, whether some but not
+ *    all symmetries of \f$\Gamma_i\f$ can be handled by orbitopes. If sufficiently many symmetries can
+ *    be handled by orbitopes, orbitopes are applied and, if parameter <code>propagating/symmetry/addweaksbcs</code>
+ *    is TRUE, some compatible SST cuts are added, too. Besides this, no further symmetry handling methods
+ *    are applied for \f$\Gamma_i\f$.
+ * -# Otherwise, orbital reduction is used. If <code>propagating/symmetry/usedynamicprop</code> and
+ *    <code>propagating/symmetry/addsymresacks> are <code>TRUE</code>, then also the dynamic lexicographic reduction
+ *    method is used.
+ * -# Otherwise, if the majority of variables affected by \f$\Gamma_i\f$ are non-binary, SST cuts are applied
+ *    to handle \f$\Gamma_i\f$. No further symmetry handling methods are applied for \f$\Gamma_i\f$.
+ *
+ * @note If orbital reduction is enabled, a factor \f$\Gamma_i\f$ can always be handled by this method.
+ *       As such, by default, no SST cuts will be added.
+ *
+ * @note Depending on the setting of <code>misc/usesymmetry</code>, it might be possible that a symmetry component is
+ *       not handled. For instance, if only orbitopal reduction is used
+ *       (i.e., <code>propagating/symmetry/detectorbitopes</code> is set to 1),
+ *       and if a symmetry component is no orbitope, no symmetry is handled for that component at all.
+ *
+ *
+ * @subsection SYMTIMING Controlling the timing of symmetry computation
+ *
+ * Since presolving might both remove and introduce formulation symmetries, the timing of computing symmetries
+ * can be changed via the parameters <code>propagating/symmetry/addconsstiming</code> and
+ * <code>propagating/symmetry/ofsymcomptiming</code>.
+ * The first specifies the moment at which symmetries handling methods must be determined.
+ * The second specifies the moment at which the symmetries must be computed.
+ * If the second is triggered at a later moment than the first, the symmetries are computed just before determining
+ * the symmetry handling methods, so the first parameter is the dominant parameter.
+ * Both parameters take values 0, 1, or 2, corresponding to computing symmetries before presolving,
+ * during presolving, or when the symmetry handling methods are applied first, respectively.
+ */
+
 /**@page LICENSE License
  *
- * \verbinclude COPYING
+ * \verbinclude LICENSE
  */
 
 /**@page FAQ Frequently Asked Questions (FAQ)
@@ -7407,51 +8570,74 @@
   *
   * @section FILEFORMATS File formats
   *
-  *  The easiest way to load a problem into SCIP is via an input file, given in a format that SCIP can parse directly,
-  *  see \ref SHELL "the tutorial on how to use the interactive shell".
-  *  \SCIP is capable of reading more than ten different file formats, including formats for nonlinear
-  *  problems and constraint programs. This gives researchers from different communities an easy, first access to the
-  *  \SCIP Optimization Suite. See also the \ref AVAILABLEFORMATS "list of readable file formats".
+  * The easiest way to load a problem into SCIP is via an input file, given in a format that SCIP can parse directly,
+  * see \ref SHELL "the tutorial on how to use the interactive shell".
+  * \SCIP is capable of reading more than ten different file formats, including formats for nonlinear
+  * problems and constraint programs. This gives researchers from different communities an easy access to the
+  * \SCIP Optimization Suite. See also the \ref AVAILABLEFORMATS "list of readable file formats".
   *
-  * @section MODELLING Modeling languages and Matlab interface
+  * @section C_API C API
   *
-  * A natural way of formulating an optimization problem is to use a modeling language. Besides ZIMPL there are several
-  * other modeling tools with a direct interface to \SCIP. These include <a href="http://dynadec.com/">Comet</a>, a
-  * modeling language for constraint programming, <a href="http://www.ampl.com/">AMPL</a> and <a
-  * href="http://www.gams.com/">GAMS</a>, which are well-suited for modeling mixed-integer linear and nonlinear
-  * optimization problems, and <a href="https://projects.coin-or.org/Cmpl">CMPL</a> for mixed-integer linear problems.
-  * The AMPL and ZIMPL interfaces are included in the \SCIP distribution, the GAMS interface is available <a
-  * href="https://github.com/coin-or/GAMSlinks">here</a>.
-  *
-  * The <a href="http://www.i2c2.aut.ac.nz/Wiki/OPTI/index.php">OPTI project</a> by Jonathan Currie provides an external
-  * MATLAB interface for the \SCIP Optimization Suite. Furthermore,
-  * <a href="http://users.isy.liu.se/johanl/yalmip/pmwiki.php?n=Main.HomePage">YALMIP</a> by Johan L&ouml;fberg provides a
-  * free modeling language.
-  *
+  * The main access point for \SCIP is its API to C. Please refer to the \ref PUBLICAPI documentation
+  * for further details.
   *
   * @section CPLUSPLUS C++ wrapper classes
   *
   * Since \SCIP is written in C, its callable library can be directly accessed from C++. If a user wants to program own
   * plugins in C++, there are wrapper classes for all different types of plugins available in the <code>src/objscip</code>
   * directory of the \SCIP standard distribution. SCIP provides several examples that were written in C++, see
-  * \ref EXAMPLES "Examples" and select an example written in C++.
+  * \ref EXAMPLES "Examples".
   *
-  *
-  * @section OTHER Interfaces for other programming languages
+  * @section SCIPINTERFACES Interfaces for other programming languages
   *
   * Interfaces for other programming languages are developed and maintained independently from the SCIP Optimization Suite
   * on <a href="https://github.com/scipopt">GitHub</a> in order to provide extensions and patches faster
-  * and to collaborate on them more easily. Besides the popular interfaces for Python and Java, there is also an interface
-  * for Julia available. Contributions to these projects are very welcome.
+  * and to collaborate on them more easily.
   *
-  * There are also several third-party python interfaces to the \SCIP Optimization Suite, e.g., <a
-  * href="http://numberjack.ucc.ie/">NUMBERJACK</a> and <a
-  * href="http://code.google.com/p/python-zibopt/">python-zibopt</a>. <a href="http://numberjack.ucc.ie/">NUMBERJACK</a>
-  * is a constraint programming platform implemented in python. It supports a variety of different solvers, one of them
-  * being the \SCIP Optimization Suite. <a href="http://code.google.com/p/python-zibopt/">python-zibopt</a> was developed
-  * by Ryan J. O'Neil and is a python extension of the \SCIP Optimization Suite. <a
-  * href="http://picos.zib.de/">PICOS</a> is a python interface for conic optimization, provided by Guillaume Sagnol.
+  * - <a href="https://github.com/scipopt/PySCIPOpt">PySCIPOpt</a> provides an extensive open-source interface for Python.
+  *   PySCIPOpt can be installed via <a href="https://anaconda.org/conda-forge/pyscipopt">conda-forge</a>,
+  *   which automatically includes \SCIP.
+  *   PySCIPOpt uses wrappers to allow users to build
+  *   their own plugins without accessing the C code of \SCIP itself.
+  *   Since Python is one of the most commonly used programming languages, especially in the field of
+  *   machine learning, the API gives easy access to the solvers functionality to incorporate \SCIP
+  *   into any python project pipeline, extract data for further analysis and computation as well as allow
+  *   customizing the solving process.
+  * - <a href="https://github.com/scipopt/SCIP.jl">SCIP.jl</a> is a
+  *   Julia interface that exposes an API identical to the SCIP-C_API and implements the
+  *   MathOptInterface used by most constrained solvers in Julia.
+  *   It can be accessed through the Julia package manager and will install a pre-built version of
+  *   \SCIP if none is provided by the user.
+  * - There is a <a href="https://github.com/scipopt/MatlabSCIPInterface">Matlab interface</a>
+  *   to use SCIP and SCIP-SDP from Matlab and Octave.
+  * - <a href="https://github.com/scipopt/JSCIPOpt">JSCIPOpt</a> is an interface for Java.
   *
+  * Contributions to these projects are very welcome.
+  *
+  * There are also several third-party python interfaces to the \SCIP Optimization Suite:
+  * - <a href="https://github.com/eomahony/Numberjack">NUMBERJACK</a> is a constraint programming platform implemented in python.
+  *   It supports a variety of different solvers, one of them being the \SCIP Optimization Suite .
+  * - <a href="http://code.google.com/p/python-zibopt/">python-zibopt</a> was developed
+  *   by Ryan J. O'Neil and is a python extension of the \SCIP Optimization Suite (not maintained anymore).
+  * - <a href="http://picos.zib.de/">PICOS</a> is a python interface for conic optimization,
+  *   provided by Guillaume Sagnol.
+  *
+  * @section MODELLING Modeling languages
+  *
+  * A natural way of formulating an optimization problem is to use a modeling language.
+  * Besides ZIMPL, which is part of the \SCIP Optimization Suite,
+  * there are several other modeling tools with a direct interface to \SCIP:
+  *
+  * - <a href="https://zimpl.zib.de">ZIMPL</a>, a modeling language for constraint programming,
+  * - both <a href="http://www.ampl.com/">AMPL</a> and <a href="http://www.gams.com">GAMS</a>,
+  *   are well-suited for modeling mixed-integer linear and nonlinear optimization problems,
+  * - and <a href="https://projects.coin-or.org/Cmpl">CMPL</a> for mixed-integer linear problems.
+  * - <a href="https://jump.dev/JuMP.jl/stable/">JuMP</a> accesses SCIP through the Julia interface.
+  * - <a href="http://users.isy.liu.se/johanl/yalmip/pmwiki.php?n=Main.HomePage">YALMIP</a> by Johan L&ouml;fberg provides a
+  *   free modeling language.
+  *
+  * The AMPL and ZIMPL interfaces are included in the \SCIP distribution,
+  * the GAMS interface is available <a href="https://github.com/coin-or/GAMSlinks">here</a>.
   *
   */
 

@@ -179,7 +179,7 @@ SCIP_Bool colExactInSync(
    assert(colexact->var == fpcol->var);
    assert(colexact->lpipos == fpcol->lpipos);
    assert(colexact->index == fpcol->index);
-   assert(colexact->len >= fpcol->len);
+   assert(colexact->len >= fpcol->nlprows);
 
    assert(RatIsApproxEqualReal(set, colexact->obj, fpcol->obj, SCIP_R_ROUND_NEAREST));
    assert(RatIsApproxEqualReal(set, colexact->flushedobj, fpcol->flushedobj, SCIP_R_ROUND_NEAREST));
@@ -1388,7 +1388,6 @@ SCIP_RETCODE rowExactDelCoefPos(
    if( pos < row->nlpcols )
    {
       rowExactMoveCoef(row, row->nlpcols-1, pos);
-      assert(!row->lpcolssorted);
       row->nlpcols--;
       pos = row->nlpcols;
    }
@@ -7028,21 +7027,19 @@ SCIP_RETCODE SCIPlpExactGetSol(
          * must be non-positive or non-negative, respectively; in particular, if a variable is strictly within its
          * bounds, its reduced cost must be zero
          */
-      if( stilldualfeasible
-         && (RatIsNegInfinity(lpicols[c]->lb) || RatIsGT(lpicols[c]->primsol, lpicols[c]->lb)) )
+      if( stilldualfeasible && (RatIsNegInfinity(lpicols[c]->lb) || RatIsGT(lpicols[c]->primsol, lpicols[c]->lb)) )
          stilldualfeasible = !RatIsPositive(lpicols[c]->redcost);
-      if( stilldualfeasible
-         && (RatIsInfinity(lpicols[c]->ub) || RatIsLT(lpicols[c]->primsol, lpicols[c]->ub)) )
+      if( stilldualfeasible && (RatIsInfinity(lpicols[c]->ub) || RatIsLT(lpicols[c]->primsol, lpicols[c]->ub)) )
          stilldualfeasible = !RatIsNegative(lpicols[c]->redcost);
 
       RatDebugMessage("col <%s> [%q,%q]: primsol=%q, redcost=%q, pfeas=%u/%u(%u), dfeas=%d/%d(%u)\n",
-      SCIPvarGetName(lpicols[c]->var), lpicols[c]->lb, lpicols[c]->ub, lpicols[c]->primsol, lpicols[c]->redcost,
-      RatIsGE(lpicols[c]->primsol, lpicols[c]->lb),
-      RatIsLE(lpicols[c]->primsol, lpicols[c]->ub),
-      primalfeasible != NULL ? stillprimalfeasible : TRUE,
-      !RatIsGT(lpicols[c]->primsol, lpicols[c]->lb) || !RatIsPositive(lpicols[c]->redcost),
-      !RatIsGT(lpicols[c]->primsol, lpicols[c]->ub) || !RatIsNegative(lpicols[c]->redcost),
-      dualfeasible != NULL ? stilldualfeasible : TRUE);
+         SCIPvarGetName(lpicols[c]->var), lpicols[c]->lb, lpicols[c]->ub, lpicols[c]->primsol, lpicols[c]->redcost,
+         RatIsGE(lpicols[c]->primsol, lpicols[c]->lb),
+         RatIsLE(lpicols[c]->primsol, lpicols[c]->ub),
+         primalfeasible != NULL ? stillprimalfeasible : TRUE,
+         !RatIsGT(lpicols[c]->primsol, lpicols[c]->lb) || !RatIsPositive(lpicols[c]->redcost),
+         !RatIsGT(lpicols[c]->primsol, lpicols[c]->ub) || !RatIsNegative(lpicols[c]->redcost),
+         dualfeasible != NULL ? stilldualfeasible : TRUE);
 
       /* we intentionally use an exact positive/negative check because ignoring small reduced cost values may lead to a
        * wrong bound value; if the corresponding bound is +/-infinity, we use zero reduced cost (if stilldualfeasible is

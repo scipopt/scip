@@ -3,15 +3,25 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
 /**@file   conflict_graphanalysis.c
  * @ingroup OTHER_CFILES
  * @brief  methods and datastructures for conflict analysis
@@ -100,7 +110,7 @@
  *    SCIPaddConflictBound() on the conflict queue (algorithm step 3.(a)).
  *  - If the current bounds lead to a deduction of a bound change (e.g. in domain
  *    propagation), a constraint handler should call SCIPinferVarLbCons() or
- *    SCIPinferVarUbCons(), thus providing the constraint that infered the bound change.
+ *    SCIPinferVarUbCons(), thus providing the constraint that inferred the bound change.
  *    A propagator should call SCIPinferVarLbProp() or SCIPinferVarUbProp() instead,
  *    thus providing a pointer to itself.
  *  - If (in the current bounds) an infeasibility is detected, the constraint handler or
@@ -159,15 +169,17 @@
 #include <strings.h> /*lint --e{766}*/
 #endif
 
-/*#define SCIP_CONFGRAPH*/
+/* #define SCIP_CONFGRAPH */
+/* #define SCIP_CONFGRAPH_DOT */
 
 
-#ifdef SCIP_CONFGRAPH
+#if defined(SCIP_CONFGRAPH) || defined(SCIP_CONFGRAPH_DOT)
 /*
  * Output of Conflict Graph
  */
 
 #include <stdio.h>
+#include "scip/scip_message.h"
 
 static FILE*             confgraphfile = NULL;              /**< output file for current conflict graph */
 static SCIP_BDCHGINFO*   confgraphcurrentbdchginfo = NULL;  /**< currently resolved bound change */
@@ -185,7 +197,13 @@ void confgraphWriteNode(
 {
    assert(confgraphfile != NULL);
 
-   SCIPgmlWriteNode(confgraphfile, (unsigned int)(size_t)idptr, label, nodetype, fillcolor, bordercolor);
+#ifdef SCIP_CONFGRAPH_DOT
+   SCIPdotWriteNode(confgraphfile, (int)(size_t) idptr, label, nodetype, fillcolor, bordercolor); /*lint !e571*/
+
+#else
+   SCIPgmlWriteNode(confgraphfile, (unsigned int)(size_t)idptr, label, nodetype, fillcolor, bordercolor); /*lint !e571*/
+
+#endif
 }
 
 /** writes an edge section to the conflict graph file */
@@ -198,10 +216,16 @@ void confgraphWriteEdge(
 {
    assert(confgraphfile != NULL);
 
-#ifndef SCIP_CONFGRAPH_EDGE
-   SCIPgmlWriteArc(confgraphfile, (unsigned int)(size_t)source, (unsigned int)(size_t)target, NULL, color);
+#ifdef SCIP_CONFGRAPH_DOT
+   SCIPdotWriteArc(confgraphfile, (int)(size_t)source, (int)(size_t)target, color); /*lint !e571*/
+
 #else
-   SCIPgmlWriteEdge(confgraphfile, (unsigned int)(size_t)source, (unsigned int)(size_t)target, NULL, color);
+#ifndef SCIP_CONFGRAPH_EDGE
+   SCIPgmlWriteArc(confgraphfile, (unsigned int)(size_t)source, (unsigned int)(size_t)target, NULL, color); /*lint !e571*/
+
+#else
+   SCIPgmlWriteEdge(confgraphfile, (unsigned int)(size_t)source, (unsigned int)(size_t)target, NULL, color); /*lint !e571*/
+#endif
 #endif
 }
 
@@ -217,7 +241,11 @@ SCIP_RETCODE confgraphCreate(
    assert(conflict != NULL);
    assert(confgraphfile == NULL);
 
+#ifdef SCIP_CONFGRAPH_DOT
+   (void) SCIPsnprintf(fname, SCIP_MAXSTRLEN, "conf%p%d.dot", conflict, conflict->count);
+#else
    (void) SCIPsnprintf(fname, SCIP_MAXSTRLEN, "conf%p%d.gml", conflict, conflict->count);
+#endif
    SCIPinfoMessage(set->scip, NULL, "storing conflict graph in file <%s>\n", fname);
 
    confgraphfile = fopen(fname, "w");
@@ -229,8 +257,11 @@ SCIP_RETCODE confgraphCreate(
       return SCIP_WRITEERROR;
    }
 
+#ifdef SCIP_CONFGRAPH_DOT
+   SCIPdotWriteOpening(confgraphfile);
+#else
    SCIPgmlWriteOpening(confgraphfile, TRUE);
-
+#endif
    confgraphWriteNode(NULL, "conflict", "ellipse", "#ff0000", "#000000");
 
    confgraphcurrentbdchginfo = NULL;
@@ -246,8 +277,11 @@ void confgraphFree(
 {
    if( confgraphfile != NULL )
    {
+#ifdef SCIP_CONFGRAPH_DOT
+      SCIPdotWriteClosing(confgraphfile);
+#else
       SCIPgmlWriteClosing(confgraphfile);
-
+#endif
       fclose(confgraphfile);
 
       confgraphfile = NULL;
@@ -330,9 +364,9 @@ void confgraphMarkConflictset(
 
    confgraphnconflictsets++;
    (void) SCIPsnprintf(label, SCIP_MAXSTRLEN, "conf %d (%d)", confgraphnconflictsets, conflictset->validdepth);
-   confgraphWriteNode((void*)(size_t)confgraphnconflictsets, label, "rectangle", "#ff00ff", "#000000");
+   confgraphWriteNode((void*)(size_t)confgraphnconflictsets, label, "rectangle", "#ff00ff", "#000000"); /*lint !e571*/
    for( i = 0; i < conflictset->nbdchginfos; ++i )
-      confgraphWriteEdge((void*)(size_t)confgraphnconflictsets, conflictset->bdchginfos[i], "#ff00ff");
+      confgraphWriteEdge((void*)(size_t)confgraphnconflictsets, conflictset->bdchginfos[i], "#ff00ff"); /*lint !e571*/
 }
 
 #endif
@@ -573,7 +607,6 @@ SCIP_Bool conflictsetIsRedundant(
 
 #ifdef SCIP_DEBUG
 /** prints a conflict set to the screen */
-
 void conflictsetPrint(
    SCIP_CONFLICTSET*     conflictset         /**< conflict set */
    )
@@ -925,7 +958,6 @@ SCIP_RETCODE detectImpliedBounds(
    return SCIP_OKAY;
 }
 
-
 /** clears the given conflict set */
 static
 void conflictsetClear(
@@ -946,7 +978,6 @@ void conflictsetClear(
 }
 
 /** creates an empty conflict set */
-
 SCIP_RETCODE SCIPconflictsetCreate(
    SCIP_CONFLICTSET**    conflictset,        /**< pointer to store the conflict set */
    BMS_BLKMEM*           blkmem              /**< block memory of transformed problem */
@@ -1003,7 +1034,6 @@ SCIP_RETCODE conflictsetCopy(
 }
 
 /** frees a conflict set */
-
 void SCIPconflictsetFree(
    SCIP_CONFLICTSET**    conflictset,        /**< pointer to the conflict set */
    BMS_BLKMEM*           blkmem              /**< block memory of transformed problem */
@@ -1017,8 +1047,6 @@ void SCIPconflictsetFree(
    BMSfreeBlockMemoryArrayNull(blkmem, &(*conflictset)->sortvals, (*conflictset)->bdchginfossize);
    BMSfreeBlockMemory(blkmem, conflictset);
 }
-
-
 
 /** calculates the score of the conflict set
  *
@@ -1037,19 +1065,18 @@ SCIP_Real conflictsetCalcScore(
          + set->conf_weightvaliddepth * conflictset->validdepth);
 }
 
+
 /*
  * Conflict Handler
  */
 
 /** compares two conflict handlers w. r. to their priority */
-
 SCIP_DECL_SORTPTRCOMP(SCIPconflicthdlrComp)
 {  /*lint --e{715}*/
    return ((SCIP_CONFLICTHDLR*)elem2)->priority - ((SCIP_CONFLICTHDLR*)elem1)->priority;
 }
 
 /** comparison method for sorting conflict handler w.r.t. to their name */
-
 SCIP_DECL_SORTPTRCOMP(SCIPconflicthdlrCompName)
 {
    return strcmp(SCIPconflicthdlrGetName((SCIP_CONFLICTHDLR*)elem1), SCIPconflicthdlrGetName((SCIP_CONFLICTHDLR*)elem2));
@@ -1071,7 +1098,6 @@ SCIP_DECL_PARAMCHGD(paramChgdConflicthdlrPriority)
 }
 
 /** copies the given conflict handler to a new scip */
-
 SCIP_RETCODE SCIPconflicthdlrCopyInclude(
    SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
    SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
@@ -1434,7 +1460,6 @@ void SCIPconflicthdlrSetExit(
 }
 
 /** set solving process initialization method of conflict handler */
-
 void SCIPconflicthdlrSetInitsol(
    SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
    SCIP_DECL_CONFLICTINITSOL((*conflictinitsol))/**< solving process initialization method of conflict handler */
@@ -1501,7 +1526,6 @@ void SCIPconflicthdlrSetPriority(
 }
 
 /** is conflict handler initialized? */
-
 SCIP_Bool SCIPconflicthdlrIsInitialized(
    SCIP_CONFLICTHDLR*    conflicthdlr        /**< conflict handler */
    )
@@ -1512,7 +1536,6 @@ SCIP_Bool SCIPconflicthdlrIsInitialized(
 }
 
 /** enables or disables all clocks of \p conflicthdlr, depending on the value of the flag */
-
 void SCIPconflicthdlrEnableOrDisableClocks(
    SCIP_CONFLICTHDLR*    conflicthdlr,       /**< the conflict handler for which all clocks should be enabled or disabled */
    SCIP_Bool             enable              /**< should the clocks of the conflict handler be enabled? */
@@ -1625,8 +1648,6 @@ void conflictFreeTmpBdchginfos(
    conflict->ntmpbdchginfos = 0;
 }
 
-
-
 /** increases the conflict score of the variable in the given direction */
 static
 SCIP_RETCODE incVSIDS(
@@ -1657,6 +1678,7 @@ SCIP_RETCODE incVSIDS(
 
    return SCIP_OKAY;
 }
+
 /** update conflict statistics */
 static
 SCIP_RETCODE updateStatistics(
@@ -2116,7 +2138,6 @@ SCIP_RETCODE conflictEnsureConflictsetsMem(
    return SCIP_OKAY;
 }
 
-
 /** inserts conflict set into sorted conflictsets array and deletes the conflict set pointer */
 static
 SCIP_RETCODE conflictInsertConflictset(
@@ -2202,7 +2223,7 @@ SCIP_RETCODE conflictInsertConflictset(
    assert(j <= conflict->nconflictsets);
    conflict->nconflictsets = j;
 
-#ifdef SCIP_CONFGRAPH
+#if defined(SCIP_CONFGRAPH) || defined(SCIP_CONFGRAPH_DOT)
    confgraphMarkConflictset(*conflictset);
 #endif
 
@@ -2210,8 +2231,6 @@ SCIP_RETCODE conflictInsertConflictset(
 
    return SCIP_OKAY;
 }
-
-
 
 /** marks bound to be present in the current conflict and returns whether a bound which is at least as tight was already
  *  member of the current conflict (i.e., the given bound change does not need to be added)
@@ -2304,7 +2323,6 @@ SCIP_Bool conflictMarkBoundCheckPresence(
    }
 }
 
-
 /** puts bound change into the current conflict set */
 static
 SCIP_RETCODE conflictAddConflictBound(
@@ -2335,18 +2353,19 @@ SCIP_RETCODE conflictAddConflictBound(
       /* add the bound change to the current conflict set */
       SCIP_CALL( conflictsetAddBound(conflict->conflictset, blkmem, set, bdchginfo, relaxedbd) );
 
-#ifdef SCIP_CONFGRAPH
+#if defined(SCIP_CONFGRAPH) || defined(SCIP_CONFGRAPH_DOT)
       if( bdchginfo != confgraphcurrentbdchginfo )
          confgraphAddBdchg(bdchginfo);
 #endif
    }
-#ifdef SCIP_CONFGRAPH
+#if defined(SCIP_CONFGRAPH) || defined(SCIP_CONFGRAPH_DOT)
    else
       confgraphLinkBdchg(bdchginfo);
 #endif
 
    return SCIP_OKAY;
 }
+
 /** returns whether the negation of the given bound change would lead to a globally valid literal */
 static
 SCIP_Bool isBoundchgUseless(
@@ -2401,17 +2420,18 @@ SCIP_RETCODE conflictQueueBound(
          SCIP_CALL( SCIPpqueueInsert(conflict->forcedbdchgqueue, (void*)bdchginfo) );
       }
 
-#ifdef SCIP_CONFGRAPH
+#if defined(SCIP_CONFGRAPH) || defined(SCIP_CONFGRAPH_DOT)
       confgraphAddBdchg(bdchginfo);
 #endif
    }
-#ifdef SCIP_CONFGRAPH
+#if defined(SCIP_CONFGRAPH) || defined(SCIP_CONFGRAPH_DOT)
    else
       confgraphLinkBdchg(bdchginfo);
 #endif
 
    return SCIP_OKAY;
 }
+
 /** adds variable's bound to conflict candidate queue */
 static
 SCIP_RETCODE conflictAddBound(
@@ -2609,9 +2629,6 @@ SCIP_RETCODE SCIPconflictAnalyzeRemainingBdchgs(
    return SCIP_OKAY;
 }
 
-
-
-
 /** check if the bound change info (which is the potential next candidate which is queued) is valid for the current
  *  conflict analysis; a bound change info can get invalid if after this one was added to the queue, a weaker bound
  *  change was added to the queue (due the bound widening idea) which immediately makes this bound change redundant; due
@@ -2645,7 +2662,7 @@ SCIP_RETCODE SCIPconflictAnalyzeRemainingBdchgs(
  *       conflict->count); however the (x >= 3) only has be explained if conflictlb matches that one; that is
  *       (var->conflictlb == bdchginfo->newbound); otherwise it redundant/invalid.
  */
- static
+static
 SCIP_Bool bdchginfoIsInvalid(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    SCIP_BDCHGINFO*       bdchginfo           /**< bound change information */
@@ -2686,7 +2703,6 @@ SCIP_Bool bdchginfoIsInvalid(
 
    return FALSE;
 }
-
 
 /** adds given bound changes to a conflict set */
 static
@@ -2894,7 +2910,7 @@ SCIP_BDCHGINFO* conflictRemoveCand(
       var->conflictrelaxedub = SCIP_REAL_MAX;
    }
 
-#ifdef SCIP_CONFGRAPH
+#if defined(SCIP_CONFGRAPH) || defined(SCIP_CONFGRAPH_DOT)
    confgraphSetCurrentBdchg(bdchginfo);
 #endif
 
@@ -3157,7 +3173,7 @@ SCIP_RETCODE conflictResolveBound(
          SCIP_BOUNDTYPE inferboundtype;
          SCIP_BDCHGIDX* bdchgidx;
 
-         /* resolve bound change by asking the constraint that infered the bound to put all bounds that were
+         /* resolve bound change by asking the constraint that inferred the bound to put all bounds that were
           * the reasons for the conflicting bound change on the priority queue
           */
          infervar = SCIPbdchginfoGetInferVar(bdchginfo);
@@ -3217,7 +3233,7 @@ SCIP_RETCODE conflictResolveBound(
          SCIP_BOUNDTYPE inferboundtype;
          SCIP_BDCHGIDX* bdchgidx;
 
-         /* resolve bound change by asking the propagator that infered the bound to put all bounds that were
+         /* resolve bound change by asking the propagator that inferred the bound to put all bounds that were
           * the reasons for the conflicting bound change on the priority queue
           */
          infervar = SCIPbdchginfoGetInferVar(bdchginfo);
@@ -3263,8 +3279,6 @@ SCIP_RETCODE conflictResolveBound(
 
    return SCIP_OKAY;
 }
-
-
 
 /** clears the conflict queue and the current conflict set */
 static
@@ -3337,19 +3351,13 @@ SCIP_RETCODE SCIPconflictInit(
       stat->lastconflictnode = stat->nnodes;
    }
 
-#ifdef SCIP_CONFGRAPH
+#if defined(SCIP_CONFGRAPH) || defined(SCIP_CONFGRAPH_DOT)
    confgraphFree();
    SCIP_CALL( confgraphCreate(set, conflict) );
 #endif
 
    return SCIP_OKAY;
 }
-
-
-
-
-
-
 
 /** convert variable and bound change to active variable */
 static
@@ -3642,7 +3650,6 @@ SCIP_RETCODE conflictCreateReconvergenceConss(
  *  SCIPconflictAddRelaxedBound(), and on success, calls the conflict handlers to create a conflict constraint out of
  *  the resulting conflict set; afterwards the conflict queue and the conflict set is cleared
  */
-
 SCIP_RETCODE conflictAnalyze(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    BMS_BLKMEM*           blkmem,             /**< block memory of transformed problem */
@@ -3926,7 +3933,6 @@ SCIP_RETCODE conflictAnalyze(
    return SCIP_OKAY;
 }
 
-
 /** calculates the score of a bound change within a conflict */
 static
 SCIP_Real calcBdchgScore(
@@ -4002,8 +4008,6 @@ SCIP_RETCODE ensureCandsSize(
 
    return SCIP_OKAY;
 }
-
-
 
 /** after changing the global bound of a variable, the bdchginfos that are now redundant are replaced with
  *  oldbound = newbound = global bound; if the current bdchginfo is of such kind, the bound is equal to the
@@ -4404,7 +4408,6 @@ SCIP_RETCODE addBdchg(
    return SCIP_OKAY;
 }
 
-
 /** adds variable to candidate list, if the current best bound corresponding to the proof coefficient is local;
  *  returns the array position in the candidate list, where the new candidate was inserted, or -1 if the
  *  variable can relaxed to global bounds immediately without increasing the proof's activity;
@@ -4755,8 +4758,6 @@ SCIP_RETCODE SCIPundoBdchgsProof(
    return SCIP_OKAY;
 }
 
-
-
 /** analyzes an infeasible LP and undoes additional bound changes while staying infeasible */
 static
 SCIP_RETCODE undoBdchgsDualfarkas(
@@ -4813,10 +4814,10 @@ SCIP_RETCODE undoBdchgsDualfarkas(
    return SCIP_OKAY;
 }
 
+
 /*
  * Conflict LP Bound Changes
  */
-
 
 /** create conflict LP bound change data structure */
 static
@@ -4839,6 +4840,7 @@ SCIP_RETCODE lpbdchgsCreate(
 
    return SCIP_OKAY;
 }
+
 
 /*
  * Propagation Conflict Analysis
@@ -5056,7 +5058,6 @@ SCIP_RETCODE undoBdchgsDualsol(
  *  4. analyze conflict
  *     -> put remaining changed bounds (see lb/ubchginfoposs arrays) into starting conflict set
  */
-
 SCIP_RETCODE SCIPrunBoundHeuristic(
    SCIP_CONFLICT*        conflict,           /**< conflict data */
    SCIP_SET*             set,                /**< global SCIP settings */

@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -1502,7 +1511,7 @@ SCIP_DECL_EVENTEXEC(eventExecDps)
    assert(event != NULL);
    assert(SCIPeventGetType(event) & SCIP_EVENTTYPE_LPSOLVED);
 
-   SCIPdebugMsg(scip, "dual bound: %0.2f\n", SCIPgetDualbound(scip));
+   SCIPdebugMsg(scip, "dual bound: %.2f\n", SCIPgetDualbound(scip));
 
    if( SCIPisFeasGT(scip, SCIPgetDualbound(scip), 0.0) && SCIPgetNSols(scip) >= 1 )
    {
@@ -1908,7 +1917,7 @@ SCIP_DECL_HEUREXEC(heurExecDps)
          /* if reoptimization is turned off or reoptimization found no solution, try initial solution */
          if( *result != SCIP_FOUNDSOL )
          {
-            SCIPdebugMsg(scip, "Solution has value: %0.2f\n", SCIPgetSolOrigObj(scip, newsol));
+            SCIPdebugMsg(scip, "Solution has value: %.2f\n", SCIPgetSolOrigObj(scip, newsol));
             SCIP_CALL( SCIPtrySolFree(scip, &newsol, TRUE, FALSE, TRUE, TRUE, TRUE, &success) );
             if( success )
             {

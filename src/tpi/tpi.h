@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -18,6 +27,7 @@
  * @brief  the type definitions for the SCIP parallel interface
  * @author Leona Gottwald
  * @author Stephen J. Maher
+ * @author Marc Pfetsch
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -26,20 +36,19 @@
 #define __TPI_H__
 
 #include "scip/def.h"
-#include "scip/pub_message.h"
-#include "tpi/def_openmp.h"
+#include "scip/type_retcode.h"
 #include "tpi/type_tpi.h"
 
-/** initializes the given lock */
+/** creates and initializes the given lock */
 SCIP_EXPORT
 SCIP_RETCODE SCIPtpiInitLock(
-   SCIP_LOCK*            lock                /**< the lock */
+   SCIP_LOCK**           lock                /**< the lock */
    );
 
-/** destroys the given lock */
+/** destroys and frees the given lock */
 SCIP_EXPORT
 void SCIPtpiDestroyLock(
-   SCIP_LOCK*            lock                /**< the lock */
+   SCIP_LOCK**           lock                /**< the lock */
    );
 
 /** acquires the given lock */
@@ -57,13 +66,13 @@ SCIP_RETCODE SCIPtpiReleaseLock(
 /** initializes the given condition variable */
 SCIP_EXPORT
 SCIP_RETCODE SCIPtpiInitCondition(
-   SCIP_LOCK*            lock                /**< the lock */
+   SCIP_CONDITION**      condition           /**< condition to be created and initialized */
    );
 
 /** destroys the given condition variable */
 SCIP_EXPORT
 void SCIPtpiDestroyCondition(
-   SCIP_LOCK*            lock                /**< the lock */
+   SCIP_CONDITION**      condition           /**< condition to be destroyed and freed */
    );
 
 /** signals one waiting thread */
@@ -116,7 +125,7 @@ int SCIPtpiGetNewJobID(
 
 /** submit a job for parallel processing; the return value is a globally defined status */
 SCIP_EXPORT
-SCIP_RETCODE SCIPtpiSumbitJob(
+SCIP_RETCODE SCIPtpiSubmitJob(
    SCIP_JOB*             job,                /**< pointer to the job to be submitted */
    SCIP_SUBMITSTATUS*    status              /**< pointer to store the job's submit status */
    );
@@ -145,7 +154,3 @@ SCIP_RETCODE SCIPtpiExit(
    );
 
 #endif
-
-#include "tpi/tpi_openmp.h"
-#include "tpi/tpi_tnycthrd.h"
-#include "tpi/tpi_none.h"

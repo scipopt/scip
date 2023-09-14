@@ -3,15 +3,25 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
 /**@file   conflict_general.c
  * @ingroup OTHER_CFILES
  * @brief  methods and datastructures for conflict analysis
@@ -91,6 +101,9 @@
 #include <strings.h> /*lint --e{766}*/
 #endif
 
+/* because calculations might cancel out some values, we stop the infeasibility analysis if a value is bigger than
+ * 2^53 = 9007199254740992
+ */
 #define NUMSTOP 9007199254740992.0
 
 /** returns the current number of conflict sets in the conflict set storage */
@@ -183,12 +196,8 @@ SCIP_Longint SCIPconflictGetNAppliedLocalLiterals(
    return conflict->nappliedlocliterals;
 }
 
-
-
-
-
-/** compares two conflict set entries, such that bound changes infered later are
- *  ordered prior to ones that were infered earlier
+/** compares two conflict set entries, such that bound changes inferred later are
+ *  ordered prior to ones that were inferred earlier
  */
 static
 SCIP_DECL_SORTPTRCOMP(conflictBdchginfoComp)
@@ -329,7 +338,7 @@ SCIP_RETCODE SCIPconflictFree(
    assert((*conflict)->nconflictsets == 0);
    assert((*conflict)->ntmpbdchginfos == 0);
 
-#ifdef SCIP_CONFGRAPH
+#if defined(SCIP_CONFGRAPH) || defined(SCIP_CONFGRAPH_DOT)
    confgraphFree();
 #endif
 
@@ -787,7 +796,6 @@ SCIP_Longint SCIPconflictGetNStrongbranchIterations(
    return conflict->nsbiterations;
 }
 
-
 /** adds a weighted LP row to an aggregation row */
 static
 SCIP_RETCODE addRowToAggrRow(
@@ -799,6 +807,7 @@ SCIP_RETCODE addRowToAggrRow(
 {
    SCIP_Bool negated;
    SCIP_Bool success;
+
    assert(set != NULL);
    assert(row != NULL);
    assert(weight != 0.0);
@@ -818,10 +827,10 @@ SCIP_RETCODE addRowToAggrRow(
    {
       SCIP_CALL( SCIPaggrRowAddRow(set->scip, aggrrow, row, weight,  negated ? -1 : 1) );
    }
-   //SCIPsetDebugMsg(set, " -> add %s row <%s>[%g,%g](lp depth: %d): dual=%g -> dualrhs=%g\n",
-   //   row->local ? "local" : "global",
-   //   SCIProwGetName(row), row->lhs - row->constant, row->rhs - row->constant,
-   //   row->lpdepth, weight, SCIPaggrRowGetRhs(aggrrow));
+   SCIPsetDebugMsg(set, " -> add %s row <%s>[%g,%g](lp depth: %d): dual=%g -> dualrhs=%g\n",
+      row->local ? "local" : "global",
+      SCIProwGetName(row), row->lhs - row->constant, row->rhs - row->constant,
+      row->lpdepth, weight, SCIPaggrRowGetRhs(aggrrow));
 
    return SCIP_OKAY;
 }
@@ -914,11 +923,21 @@ SCIP_Real SCIPaggrRowGetMinActivity(
       if( val > 0.0 )
       {
          SCIP_Real bnd = (curvarlbs == NULL ? SCIPvarGetLbGlobal(vars[v]) : curvarlbs[v]);
+         if( infdelta != NULL && SCIPsetIsInfinity(set, -bnd) )
+         {
+            *infdelta = TRUE;
+            goto TERMINATE;
+         }
          SCIPquadprecProdDD(delta, val, bnd);
       }
       else
       {
          SCIP_Real bnd = (curvarubs == NULL ? SCIPvarGetUbGlobal(vars[v]) : curvarubs[v]);
+         if( infdelta != NULL && SCIPsetIsInfinity(set, bnd) )
+         {
+            *infdelta = TRUE;
+            goto TERMINATE;
+         }
          SCIPquadprecProdDD(delta, val, bnd);
       }
 
@@ -1096,11 +1115,11 @@ SCIP_RETCODE addLocalRows(
          if( SCIPsetIsDualfeasZero(set, dualsols[r]) )
             continue;
 
-         if ( set->exact_enabled )
+         if( set->exact_enabled )
          {
-            for (int j = 0; j < row->len; j++)
+            for( int j = 0; j < row->len; j++ )
             {
-               if ( SCIPsetIsInfinity(set, -SCIPvarGetLbGlobal(row->cols[j]->var)) && SCIPsetIsInfinity(set, SCIPvarGetUbGlobal(row->cols[j]->var)) )
+               if( SCIPsetIsInfinity(set, -SCIPvarGetLbGlobal(row->cols[j]->var)) && SCIPsetIsInfinity(set, SCIPvarGetUbGlobal(row->cols[j]->var)) )
                {
                   (*valid) = FALSE;
                   goto TERMINATE; // Adding unbounded variables safely to an aggregation row is not yet supported
@@ -1163,7 +1182,6 @@ SCIP_RETCODE addLocalRows(
    return SCIP_OKAY;
 }
 
-
 /** calculates a Farkas proof from the current dual LP solution */
 SCIP_RETCODE SCIPgetFarkasProof(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -1220,10 +1238,10 @@ SCIP_RETCODE SCIPgetFarkasProof(
 
    /* allocate temporary memory */
    SCIP_CALL( SCIPsetAllocBufferArray(set, &dualfarkas, nrows) );
-   #ifdef SCIP_DEBUG
-   if (set->exact_enabled)
+#ifdef SCIP_DEBUG
+   if( set->exact_enabled )
       SCIP_CALL( SCIPaggrRowCreate(set->scip, &farkasrow_fpdebug) );
-   #endif
+#endif
    BMSclearMemoryArray(dualfarkas, nrows);
 
    /* get dual Farkas values of rows */
@@ -1262,20 +1280,22 @@ SCIP_RETCODE SCIPgetFarkasProof(
          if( SCIPsetIsDualfeasZero(set, dualfarkas[r]) )
             continue;
 
-         if ( set->exact_enabled )
-         {  long certificateIndex;
+         if( set->exact_enabled )
+         {
+            long certificateIndex;
 
-            for (int i = 0; i < row->len; i++)
+            for( int i = 0; i < row->len; i++ )
             {
-               if ( SCIPsetIsInfinity(set, -SCIPvarGetLbGlobal(row->cols[i]->var)) && SCIPsetIsInfinity(set, SCIPvarGetUbGlobal(row->cols[i]->var)) )
+               if( SCIPsetIsInfinity(set, -SCIPvarGetLbGlobal(row->cols[i]->var)) && SCIPsetIsInfinity(set, SCIPvarGetUbGlobal(row->cols[i]->var)) )
                {
                   (*valid) = FALSE;
                   goto TERMINATE; // Adding unbounded variables safely to an aggregation row is not yet supported
                }
             }
-            if (SCIPsetCertificateEnabled(set)) {
+            if( SCIPsetCertificateEnabled(set) )
+            {
                certificateIndex = SCIPhashmapGetImageLong(SCIPgetCertificate(set->scip)->rowdatahash, row->rowexact);
-               if(certificateIndex  == LONG_MAX && SCIProwGetOrigintype(row) == SCIP_ROWORIGINTYPE_SEPA )
+               if( certificateIndex  == LONG_MAX && SCIProwGetOrigintype(row) == SCIP_ROWORIGINTYPE_SEPA )
                {
                   SCIP_CALL( SCIPcertificatePrintMirCut(set, lp, SCIPgetCertificate(set->scip), prob, row, 'L') );
                   certificateIndex = SCIPcertificateGetRowIndex(SCIPgetCertificate(set->scip), row->rowexact, dualfarkas[r]>0);
@@ -1287,6 +1307,7 @@ SCIP_RETCODE SCIPgetFarkasProof(
          if( !row->local )
          {
             SCIP_CALL( addRowToAggrRow(set, row, -dualfarkas[r], farkasrow) );
+
             /* due to numerical reasons we want to stop */
             if( REALABS(SCIPaggrRowGetRhs(farkasrow)) > NUMSTOP )
             {
@@ -1327,8 +1348,8 @@ SCIP_RETCODE SCIPgetFarkasProof(
    /* calculate the current Farkas activity, always using the best bound w.r.t. the Farkas coefficient */
    *farkasact = SCIPaggrRowGetMinActivity(set, prob, farkasrow, curvarlbs, curvarubs, &infdelta);
 
-   //SCIPsetDebugMsg(set, " -> farkasact=%g farkasrhs=%g [infdelta: %u], \n",
-   //   (*farkasact), SCIPaggrRowGetRhs(farkasrow), infdelta);
+   SCIPsetDebugMsg(set, " -> farkasact=%g farkasrhs=%g [infdelta: %u], \n",
+      (*farkasact), SCIPaggrRowGetRhs(farkasrow), infdelta);
 
    /* The constructed proof is not valid, this can happen due to numerical reasons,
     * e.g., we only consider rows r with !SCIPsetIsZero(set, dualfarkas[r]),
@@ -1336,7 +1357,6 @@ SCIP_RETCODE SCIPgetFarkasProof(
     * Due to the latter case, it might happen at least one variable contributes
     * with an infinite value to the activity (see: https://git.zib.de/integer/scip/issues/2743)
     */
-
    if( infdelta || SCIPsetIsFeasLE(set, *farkasact, SCIPaggrRowGetRhs(farkasrow)))
    {
       /* add contribution of local rows */
@@ -1352,33 +1372,35 @@ SCIP_RETCODE SCIPgetFarkasProof(
       }
    }
 
-   for (int i = 0; i < farkasrow->nnz; i++)
+   if( set->exact_enabled )
    {
-      if ( SCIPsetIsInfinity(set, ABS(farkasrow->vals[farkasrow->inds[i]])) )
+      for( int i = 0; i < farkasrow->nnz; i++ )
       {
-         (*valid) = FALSE;
-         goto TERMINATE;
+         if( SCIPsetIsInfinity(set, ABS(farkasrow->vals[farkasrow->inds[i]])) )
+         {
+            (*valid) = FALSE;
+            goto TERMINATE;
+         }
       }
-   }
 
-   if ( set->exact_enabled && SCIPisCertificateActive(set->scip))
-   {
-      //certificatePrintAggrrow(set->scip, SCIPgetCertificate(set->scip), farkasrow, &farkasrow->certificateline);
-      SCIP_ROW** usedrows;
-      SCIP_CALL(SCIPallocBufferArray(set->scip, &usedrows, farkasrow->nrows));
-      for (int i = 0; i < farkasrow->nrows; i++)
+      if( SCIPisCertificateActive(set->scip) )
       {
-         usedrows[i] = SCIPgetLPRows(set->scip)[farkasrow->rowsinds[i]];
+         SCIP_ROW** usedrows;
+         SCIP_CALL(SCIPallocBufferArray(set->scip, &usedrows, farkasrow->nrows));
+         for (int i = 0; i < farkasrow->nrows; i++)
+         {
+            usedrows[i] = SCIPgetLPRows(set->scip)[farkasrow->rowsinds[i]];
+         }
+         SCIPcertificatePrintAggrrow(set, lp, prob, SCIPgetCertificate(set->scip), farkasrow, usedrows, farkasrow->rowweights, farkasrow->nrows, false, &farkasrow->certificateline);
+         SCIPfreeBufferArray(set->scip, &usedrows);
       }
-      SCIPcertificatePrintAggrrow(set, lp, prob, SCIPgetCertificate(set->scip), farkasrow, usedrows, farkasrow->rowweights, farkasrow->nrows, false, &farkasrow->certificateline);
-      SCIPfreeBufferArray(set->scip, &usedrows);
    }
 
   TERMINATE:
-  #ifdef SCIP_DEBUG
-   if (set->exact_enabled)
+#ifdef SCIP_DEBUG
+   if( set->exact_enabled )
       SCIPaggrRowFree(set->scip, &farkasrow_fpdebug);
-   #endif
+#endif
    SCIPfreeBufferArrayNull(set->scip, &localrowdepth);
    SCIPfreeBufferArrayNull(set->scip, &localrowinds);
    SCIPsetFreeBufferArray(set, &dualfarkas);
@@ -1452,7 +1474,6 @@ static SCIP_RETCODE getObjectiveRow(
 }
 
 /** calculates a Farkas proof from the current dual LP solution */
-
 SCIP_RETCODE SCIPgetDualProof(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            transprob,          /**< transformed problem */
@@ -1483,7 +1504,7 @@ SCIP_RETCODE SCIPgetDualProof(
    int ncols;
    int r;
 
-   assert(set != NULL);;
+   assert(set != NULL);
    assert(transprob != NULL);
    assert(lp != NULL);
    assert(lp->flushed);
@@ -1544,7 +1565,7 @@ SCIP_RETCODE SCIPgetDualProof(
       goto TERMINATE;
    }
 
-   if ( set->exact_enabled )
+   if( set->exact_enabled )
    {
       SCIP_COL** cols = SCIPgetLPCols(set->scip);
       for (int i = 0; i < SCIPgetNLPCols(set->scip); i++)
@@ -1576,13 +1597,13 @@ SCIP_RETCODE SCIPgetDualProof(
     * where lhs, rhs, lb, and ub are selected in order to maximize the feasibility of the row.
     */
 
-   /* add the objective function to the aggregation row with current cutoff bound as right-hand side
+   /* add the objective function to the aggregation row with respect to the current cutoff bound
     *
-    * use a slightly tighter cutoff bound, because solutions with equal objective value should also be declared
-    * infeasible
+    * for an integral objective the right-hand side is reduced by the cutoff bound delta to cut off up to the next
+    * possible objective value below the cutoff bound
     */
 
-   if (set->exact_enabled)
+   if( set->exact_enabled )
    {
       double cutoffbound;
       cutoffbound = RatRoundReal(SCIPgetCutoffboundExact(set->scip), SCIP_R_ROUND_UPWARDS);
@@ -1590,7 +1611,9 @@ SCIP_RETCODE SCIPgetDualProof(
       SCIP_CALL( addRowToAggrRow(set, objectiverow, 1.0, farkasrow) );
    }
    else
-      SCIP_CALL( SCIPaggrRowAddObjectiveFunction(set->scip, farkasrow, lp->cutoffbound - SCIPsetSumepsilon(set), 1.0) );
+   {
+      SCIP_CALL( SCIPaggrRowAddObjectiveFunction(set->scip, farkasrow, lp->cutoffbound - (SCIPprobIsObjIntegral(transprob) ? SCIPsetCutoffbounddelta(set) : 0.0), 1.0) );
+   }
 
    /* dual row: z^T{lhs,rhs} - c* <= (-r^T - (y-z)^TA){lb,ub}
     * process rows: add z^T{lhs,rhs} to the dual row's left hand side, and -(y-z)^TA to the dual row's coefficients
@@ -1674,7 +1697,7 @@ SCIP_RETCODE SCIPgetDualProof(
     * Due to the latter case, it might happen at least one variable contributes
     * with an infinite value to the activity (see: https://git.zib.de/integer/scip/issues/2743)
     */
-   if( infdelta || SCIPsetIsFeasLE(set, *farkasact, SCIPaggrRowGetRhs(farkasrow)) || farkasrow->nrows == 1 )
+   if( infdelta || SCIPsetIsFeasLE(set, *farkasact, SCIPaggrRowGetRhs(farkasrow)))
    {
       /* add contribution of local rows */
       if( nlocalrows > 0 && set->conf_uselocalrows > 0 )
@@ -1686,18 +1709,6 @@ SCIP_RETCODE SCIPgetDualProof(
       {
          (*valid) = FALSE;
          SCIPsetDebugMsg(set, " -> proof is not valid to due infinite activity delta\n");
-      }
-   }
-
-   if ( farkasrow->nrows == 1 )
-      goto TERMINATE;
-
-   for (int i = 0; i < farkasrow->nnz; i++)
-   {
-      if ( SCIPsetIsInfinity(set, ABS(farkasrow->vals[farkasrow->inds[i]])) )
-      {
-         (*valid) = FALSE;
-         goto TERMINATE;
       }
    }
 
@@ -1747,6 +1758,7 @@ SCIP_RETCODE SCIPgetDualProof(
 
    return SCIP_OKAY;
 }
+
 
 /*
  * pseudo solution conflict analysis
@@ -1842,10 +1854,10 @@ SCIP_RETCODE SCIPconflictAnalyzePseudo(
    /* get temporary memory for infeasibility proof coefficients */
    SCIP_CALL( SCIPsetAllocBufferArray(set, &pseudocoefs, nvars) );
 
-   /* use a slightly tighter cutoff bound, because solutions with equal objective value should also be declared
-    * infeasible
+   /* for an integral objective use the cutoff bound reduced by the cutoff bound delta to cut off up to the next better
+    * objective value
     */
-   pseudolhs = -(lp->cutoffbound - SCIPsetSumepsilon(set));
+   pseudolhs = -(lp->cutoffbound - (SCIPprobIsObjIntegral(transprob) ? SCIPsetCutoffbounddelta(set) : 0.0));
 
    /* store the objective values as infeasibility proof coefficients, and recalculate the pseudo activity */
    pseudoact = 0.0;
@@ -2067,7 +2079,7 @@ SCIP_RETCODE conflictAnalyzeLP(
        * additional simplex iteration yields better results.
        */
       SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
-      if( objval < SCIPgetCutoffbound(set->scip) )
+      if( objval < lp->lpiobjlim )
       {
          SCIP_RETCODE retcode;
 
@@ -2111,6 +2123,7 @@ SCIP_RETCODE conflictAnalyzeLP(
             return SCIP_OKAY;
       }
    }
+   assert(SCIPlpiIsPrimalInfeasible(lpi) || SCIPlpiIsObjlimExc(lpi) || SCIPlpiIsDualFeasible(lpi));
 
    if( !SCIPlpiIsPrimalInfeasible(lpi) )
    {
@@ -2119,14 +2132,14 @@ SCIP_RETCODE conflictAnalyzeLP(
       assert(!SCIPlpDivingObjChanged(lp));
 
       SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
-      if( objval < SCIPgetCutoffbound(set->scip) )
+      if( objval < lp->lpiobjlim )
       {
-         SCIPsetDebugMsg(set, " -> LP does not exceed the cutoff bound: obj=%g, cutoff=%g\n", objval, SCIPgetCutoffbound(set->scip));
+         SCIPsetDebugMsg(set, " -> LP does not exceed the cutoff bound: obj=%g, cutoff=%g\n", objval, lp->lpiobjlim);
          return SCIP_OKAY;
       }
       else
       {
-         SCIPsetDebugMsg(set, " -> LP exceeds the cutoff bound: obj=%g, cutoff=%g\n", objval, SCIPgetCutoffbound(set->scip));
+         SCIPsetDebugMsg(set, " -> LP exceeds the cutoff bound: obj=%g, cutoff=%g\n", objval, lp->lpiobjlim);
       }
    }
 
@@ -2184,7 +2197,7 @@ SCIP_RETCODE conflictAnalyzeLP(
             valid = FALSE;
          }
       }
-   }\
+   }
 
    if( !valid )
       goto TERMINATE;
@@ -2294,6 +2307,7 @@ SCIP_RETCODE conflictAnalyzeLP(
 
    return SCIP_OKAY;
 }
+
 
 /*
  * infeasible strong branching conflict analysis
@@ -2535,6 +2549,7 @@ SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
 
    return SCIP_OKAY;
 }
+
 /** analyzes an infeasible LP to find out the bound changes on variables that were responsible for the infeasibility;
  *  on success, calls standard conflict analysis with the responsible variables as starting conflict set, thus creating
  *  a conflict constraint out of the resulting conflict set;
@@ -2737,8 +2752,8 @@ SCIP_RETCODE SCIPconflictAnalyzeLP(
 
    /* LP conflict analysis is only valid, if all variables are known */
    assert( SCIPprobAllColsInLP(transprob, set, lp) );
-   //assert( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT
-   //   || (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL && SCIPisGE(scip, SCIPgetLPObjval(set->scip), SCIPgetCutoffbound(set->scip))) );
+   assert( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT
+      || (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL && set->lp_disablecutoff == 1) );
 
    /* save status */
    storedsolvals.lpsolstat = lp->lpsolstat;
@@ -2775,8 +2790,8 @@ SCIP_RETCODE SCIPconflictAnalyzeLP(
          storedrowsolvals[r].dualsol = row->dualfarkas;
       else
       {
-         //assert( lp->lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT ||
-         //   (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL && set->lp_disablecutoff == 1) );
+         assert( lp->lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT ||
+            (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL && set->lp_disablecutoff == 1) );
          storedrowsolvals[r].dualsol = row->dualsol;
       }
       storedrowsolvals[r].activity = row->activity;
@@ -2829,9 +2844,7 @@ SCIP_RETCODE SCIPconflictAnalyzeLP(
             row->dualfarkas = storedrowsolvals[r].dualsol;
          else
          {
-            SCIP_Real objval = SCIPgetLPObjval(set->scip);
-            SCIP_Real cutoff = SCIPgetCutoffbound(set->scip);
-            assert( lp->lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT || SCIPsetIsGE(set, objval, cutoff) );
+            assert( lp->lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT );
             row->dualsol = storedrowsolvals[r].dualsol;
          }
          row->activity = storedrowsolvals[r].activity;

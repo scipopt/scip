@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -28,6 +37,10 @@
 #include "scip/def.h"
 #include "scip/type_nlpi.h"
 #include "scip/type_misc.h"
+
+#ifdef NDEBUG
+#include "scip/struct_nlpi.h"
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -128,6 +141,24 @@ void SCIPnlpiMergeStatistics(
    SCIP_NLPI*            sourcenlpi,         /**< NLP interface from which to add statistics */
    SCIP_Bool             reset               /**< whether to reset statistics in sourcescip */
    );
+
+#ifdef NDEBUG
+/* If NDEBUG is defined, the function calls are overwritten by defines to reduce the number of function calls and
+ * speed up the algorithms.
+ */
+#define SCIPnlpiGetData(nlpi)                  (nlpi)->nlpidata
+#define SCIPnlpiGetName(nlpi)                  (nlpi)->name
+#define SCIPnlpiGetDesc(nlpi)                  (nlpi)->description
+#define SCIPnlpiGetPriority(nlpi)              (nlpi)->priority
+#define SCIPnlpiGetNProblems(nlpi)             (nlpi)->nproblems
+#define SCIPnlpiGetProblemTime(nlpi)           SCIPclockGetTime((nlpi)->problemtime)
+#define SCIPnlpiGetNSolves(nlpi)               (nlpi)->nsolves
+#define SCIPnlpiGetSolveTime(nlpi)             (nlpi)->solvetime
+#define SCIPnlpiGetEvalTime(nlpi)              (nlpi)->evaltime
+#define SCIPnlpiGetNIterations(nlpi)           (nlpi)->niter
+#define SCIPnlpiGetNTermStat(nlpi, termstatus) (nlpi)->ntermstat[termstatus]
+#define SCIPnlpiGetNSolStat(nlpi, solstatus)   (nlpi)->nsolstat[solstatus]
+#endif
 
 /**@} */ /* Statistics */
 

@@ -3,7 +3,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*  Copyright 2002-2022 Zuse Institute Berlin                                *
+#*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      *
 #*                                                                           *
 #*  Licensed under the Apache License, Version 2.0 (the "License");          *
 #*  you may not use this file except in compliance with the License.         *
@@ -97,7 +97,7 @@ SCIP_VERSION_MAJOR = 8
 SCIP_VERSION_MINOR = 0
 SCIP_VERSION_PATCH = 3
 SCIP_VERSION_SUB = 5
-SCIP_VERSION_API = 108
+SCIP_VERSION_API = 110
 SCIP_VERSION = $(SCIP_VERSION_MAJOR).$(SCIP_VERSION_MINOR).$(SCIP_VERSION_PATCH).$(SCIP_VERSION_SUB)
 
 # compiling and linking parameters
@@ -106,7 +106,7 @@ OPT		=	opt
 COMP		=	gnu
 LPS		=	spx2
 TPI		=	none
-SYM		=	bliss
+SYM		=	sbliss
 PAPILO		=	false
 LAPACK		=	false
 STATICLIBEXT	=	a
@@ -118,6 +118,7 @@ NOBLKMEM	=	false
 NOBUFMEM	=	false
 NOBLKBUFMEM	=	false
 BLISSEXTERNAL	=	false
+NAUTYEXTERNAL	=	false
 
 # if SHARED = true, nevertheless link to static version of external libraries (usefull for mingw)
 LIBEXTFORCESTATIC =	false
@@ -221,8 +222,9 @@ FLAGS		=	-I$(SRCDIR) -I$(SCIPDIR)/src
 OFLAGS		=
 CFLAGS		=
 CXXFLAGS	=
-CXX14FLAG	=	-std=c++14
 CXX11FLAG	=	-std=c++0x
+CXX14FLAG	=	-std=c++14
+CXX17FLAG	=	-std=c++17
 
 ifeq ($(COMP),msvc)
 LDFLAGS		=
@@ -537,6 +539,29 @@ LIBOBJSUBDIRS	+=      $(LIBOBJDIR)/bliss
 endif
 endif
 
+ifeq ($(SYM),sbliss)
+ifeq ($(BLISSEXTERNAL),true)
+LDFLAGS		+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCC_l)bliss.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
+else
+LIBOBJSUBDIRS	+=      $(LIBOBJDIR)/bliss/src
+LIBOBJSUBDIRS	+=      $(LIBOBJDIR)/bliss
+endif
+CXXFLAGS	+=	$(CXX17FLAG)
+endif
+
+ifeq ($(SYM),nauty)
+ifeq ($(NAUTYEXTERNAL),true)
+LDFLAGS		+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCC_l)nauty.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
+else
+LIBOBJSUBDIRS	+=      $(LIBOBJDIR)/nauty
+endif
+endif
+
+ifeq ($(SYM),snauty)
+LDFLAGS		+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCC_l)nauty.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
+CXXFLAGS	+=	$(CXX17FLAG)
+endif
+
 #-----------------------------------------------------------------------------
 # PaPILO Library
 #-----------------------------------------------------------------------------
@@ -666,25 +691,17 @@ endif
 
 # (re)define some variables
 ifeq ($(SHARED),true)
-ifneq ($(COMP),msvc)
-FLAGS		+=	-fPIC
-endif
 LIBEXT		=	$(SHAREDLIBEXT)
 ifeq ($(LINKER),CPP)
 LIBBUILD	=	$(LINKCXX)
 LIBBUILD_L	=	$(LINKCXX_L)
+LIBBUILD_o	=	$(LINKCXX_o)
 else
 LIBBUILD	=	$(LINKCC)
 LIBBUILD_L	=	$(LINKCC_L)
+LIBBUILD_o	=	$(LINKCC_o)
 endif
-
-ifeq ($(COMP),msvc)
-LIBBUILDFLAGS	+=      -dll
-LIBBUILD_o	= 	-out:
-else
-LIBBUILDFLAGS	+=      -shared
-LIBBUILD_o	= 	-o # the trailing space is important
-endif
+LIBBUILDFLAGS	+=	$(LINK_shared)
 ARFLAGS		=
 RANLIB		=
 endif

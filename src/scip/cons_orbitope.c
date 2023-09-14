@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -114,8 +123,6 @@
 #include "scip/scip_sol.h"
 #include "scip/scip_var.h"
 #include "scip/symmetry.h"
-#include <ctype.h>
-#include <string.h>
 #include <symmetry/type_symmetry.h>
 
 /* constraint handler properties */
@@ -190,6 +197,7 @@ SCIP_RETCODE consdataFree(
    )
 {
    int i;
+   int j;
    int p;
    int q;
 
@@ -205,6 +213,13 @@ SCIP_RETCODE consdataFree(
    q = (*consdata)->nblocks;
    for (i = 0; i < p; ++i)
    {
+      /* release variables in vars array */
+      for (j = 0; j < q; ++j)
+      {
+         assert( (*consdata)->vars[i] != NULL );
+         SCIP_CALL( SCIPreleaseVar(scip, &(*consdata)->vars[i][j]) );
+      }
+
       SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->cases[i]), q);    /*lint !e866*/
       SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->vars[i]), q);     /*lint !e866*/
       SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->weights[i]), q);  /*lint !e866*/
@@ -318,6 +333,16 @@ SCIP_RETCODE consdataCreate(
                SCIP_CALL( SCIPhashmapInsert((*consdata)->rowindexmap, (*consdata)->vars[i][j], (void*) (size_t) i) );
             }
          }
+      }
+   }
+
+   /* capture vars contained in vars array */
+   for (i = 0; i < nspcons; ++i)
+   {
+      for (j = 0; j < nblocks; ++j)
+      {
+         assert( (*consdata)->vars[i][j] != NULL );
+         SCIP_CALL( SCIPcaptureVar(scip, (*consdata)->vars[i][j]) );
       }
    }
 
@@ -902,6 +927,7 @@ SCIP_RETCODE separateSCIs(
 #endif
 
             assert( SCIPisSumEQ(scip, weights[i-1][j-1], weight) );
+            SCIP_UNUSED(weight);
          }
       }
    }
@@ -3434,18 +3460,17 @@ SCIP_DECL_CONSPARSE(consParseOrbitope)
    s = str;
 
    /* skip white space */
-   while ( *s != '\0' && isspace((unsigned char)*s) )
-      ++s;
+   SCIP_CALL( SCIPskipSpace((char**)&s) );
 
-   if ( strncmp(s, "partOrbitope(", 13) == 0 )
+   if( strncmp(s, "partOrbitope(", 13) == 0 )
       orbitopetype = SCIP_ORBITOPETYPE_PARTITIONING;
-   else if ( strncmp(s, "packOrbitope(", 13) == 0 )
+   else if( strncmp(s, "packOrbitope(", 13) == 0 )
       orbitopetype = SCIP_ORBITOPETYPE_PACKING;
    else
    {
-      if ( strncmp(s, "fullOrbitope(", 13) != 0 )
+      if( strncmp(s, "fullOrbitope(", 13) != 0 )
       {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error - expected \"fullOrbitope(\", \"partOrbitope\" or \"packOrbitope\": %s\n", s);
+         SCIPerrorMessage("Syntax error - expected \"fullOrbitope(\", \"partOrbitope\" or \"packOrbitope\": %s\n", s);
          *success = FALSE;
          return SCIP_OKAY;
       }
@@ -3460,81 +3485,89 @@ SCIP_DECL_CONSPARSE(consParseOrbitope)
    maxnblocks = 10;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, maxnspcons) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(vars[0]), maxnblocks) );
 
    j = 0;
    do
    {
-      /* skip whitespace */
-      while ( isspace((int)*s) )
-         ++s;
-
       /* parse variable name */
       SCIP_CALL( SCIPparseVarName(scip, s, &var, &endptr) );
-      if ( var == NULL )
-      {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "unknown variable name at '%s'\n", str);
-         *success = FALSE;
-         return SCIP_OKAY;
-      }
-      vars[nspcons][j++] = var;
-      s = endptr;
 
-      if ( j > nblocks )
+      if( var == NULL )
       {
-         if ( nspcons > 0 )
+         endptr = strchr(endptr, ')');
+
+         if( endptr == NULL || j > 0 )
          {
-            SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "variables per row do not match.\n");
+            SCIPerrorMessage("not enough variables.\n");
             *success = FALSE;
-            return SCIP_OKAY;
          }
-         nblocks = j;
 
-         if ( nblocks > maxnblocks )
-         {
-            int newsize;
-
-            newsize = SCIPcalcMemGrowSize(scip, nblocks);
-            SCIP_CALL( SCIPreallocBufferArray(scip, &(vars[nspcons]), newsize) );    /*lint !e866*/
-            maxnblocks = newsize;
-         }
+         break;
       }
-      assert( nblocks <= maxnblocks );
 
-      /* skip white space and ',' */
-      while ( *s != '\0' && ( isspace((unsigned char)*s) ||  *s == ',' ) )
-         ++s;
+      s = endptr;
+      assert( s != NULL );
+
+      /* skip white space */
+      SCIP_CALL( SCIPskipSpace((char**)&s) );
 
       /* begin new row if required */
-      if ( *s == '.' )
+      if( j == 0 )
       {
          ++nspcons;
-         ++s;
 
-         if ( nspcons >= maxnspcons )
+         if( nspcons > maxnspcons )
          {
-            int newsize;
-
-            newsize = SCIPcalcMemGrowSize(scip, nspcons+1);
-            SCIP_CALL( SCIPreallocBufferArray(scip, &vars, newsize) );
-            maxnspcons = newsize;
+            maxnspcons = SCIPcalcMemGrowSize(scip, nspcons);
+            SCIP_CALL( SCIPreallocBufferArray(scip, &vars, maxnspcons) );
+            assert( nspcons <= maxnspcons );
          }
-         assert(nspcons < maxnspcons);
 
-         SCIP_CALL( SCIPallocBufferArray(scip, &(vars[nspcons]), nblocks) );  /*lint !e866*/
-         j = 0;
+         SCIP_CALL( SCIPallocBufferArray(scip, &(vars[nspcons-1]), nspcons == 1 ? maxnblocks : nblocks) ); /*lint !e866*/
       }
+
+      /* determine number of columns */
+      if( nspcons == 1 )
+      {
+         nblocks = j+1;
+
+         if( *s == '.' || *s == ')' )
+            SCIP_CALL( SCIPreallocBufferArray(scip, &(vars[nspcons-1]), nblocks) ); /*lint !e866*/
+         else if( nblocks > maxnblocks )
+         {
+            maxnblocks = SCIPcalcMemGrowSize(scip, nblocks);
+            SCIP_CALL( SCIPreallocBufferArray(scip, &(vars[nspcons-1]), maxnblocks) ); /*lint !e866*/
+            assert( nblocks <= maxnblocks );
+         }
+      }
+      else if( ( j < nblocks-1 ) == ( *s == '.' || *s == ')' ) )
+      {
+         SCIPerrorMessage("variables per row do not match.\n");
+         *success = FALSE;
+         break;
+      }
+
+      vars[nspcons-1][j] = var;
+
+      if( *s == '.' )
+         j = 0;
+      else
+         ++j;
+
+      /* skip ',' or '.' */
+      if( *s == ',' || *s == '.' )
+         ++s;
    }
-   while ( *s != ')' );
-   ++nspcons;
+   while( *s != ')' );
 
    /* to ensure consistency, we disable dynamic propagation and tell SCIP that the orbitope could potentially
     * interact with other symmetry handling constraints
     */
-   SCIP_CALL( SCIPcreateConsOrbitope(scip, cons, name, vars, orbitopetype, nspcons, nblocks, FALSE, TRUE, TRUE, TRUE,
-         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+   if( *success )
+      SCIP_CALL( SCIPcreateConsOrbitope(scip, cons, name, vars, orbitopetype, nspcons, nblocks, FALSE, TRUE, TRUE, TRUE,
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
 
-   for (k = nspcons - 1; k >= 0; --k)
+   for( k = nspcons - 1; k >= 0; --k )
       SCIPfreeBufferArray(scip, &vars[k]);
    SCIPfreeBufferArray(scip, &vars);
 

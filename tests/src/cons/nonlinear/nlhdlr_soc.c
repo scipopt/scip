@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -25,6 +34,7 @@
 
 #include <string.h>
 
+#include "include/scip_test.h"
 #include "scip/nlhdlr_default.h"
 #include "scip/expr_exp.h"
 #include "scip/expr_pow.h"
@@ -39,8 +49,6 @@
 /*
  * TEST
  */
-
-#include "include/scip_test.h"
 
 static SCIP* scip;
 static SCIP_VAR* x;
@@ -228,7 +236,7 @@ void checkData(
 
 static
 void checkCut(
-   SCIP_ROW*             cut,
+   SCIP_ROWPREP*         cut,
    SCIP_VAR**            vars,
    SCIP_Real*            vals,
    SCIP_Real             rhs,
@@ -241,9 +249,12 @@ void checkCut(
    cr_assert_not_null(vars);
    cr_assert_not_null(vals);
 
-   cr_expect_eq(SCIProwGetNNonz(cut), nvars, "expected %d vars in cut, but got %d\n",
-      nvars, SCIProwGetNNonz(cut));
-   cr_expect(SCIPisEQ(scip, SCIProwGetRhs(cut), rhs), "expected rhs = %f, but got %f\n", rhs, SCIProwGetRhs(cut));
+   SCIPmergeRowprepTerms(scip, cut);
+
+   cr_expect_eq(SCIProwprepGetNVars(cut), nvars, "expected %d vars in cut, but got %d\n",
+      nvars, SCIProwprepGetNVars(cut));
+   cr_expect_eq(SCIProwprepGetSidetype(cut), SCIP_SIDETYPE_RIGHT);
+   cr_expect(SCIPisEQ(scip, SCIProwprepGetSide(cut), rhs), "expected rhs = %f, but got %f\n", rhs, SCIProwprepGetSide(cut));
 
    /* FIXME the remaining tests assume a certain order of terms and thus are not invariant to
     * valid permutations
@@ -252,10 +263,10 @@ void checkCut(
 
    for( i = 0; i < nvars; ++i )
    {
-      cr_expect_eq(SCIPcolGetVar(SCIProwGetCols(cut)[i]), vars[i], "expected var%d = %s, but got %s\n",
-         i + 1, SCIPvarGetName(vars[i]), SCIPvarGetName(SCIPcolGetVar(SCIProwGetCols(cut)[i])));
-      cr_expect_eq(SCIProwGetVals(cut)[i], vals[i], "expected val%d = %f, but got %f\n", i + 1, vals[i],
-         SCIProwGetVals(cut)[i]);
+      cr_expect_eq(SCIProwprepGetVars(cut)[i], vars[i], "expected var%d = %s, but got %s\n",
+         i + 1, SCIPvarGetName(vars[i]), SCIPvarGetName(SCIProwprepGetVars(cut)[i]));
+      cr_expect_eq(SCIProwprepGetCoefs(cut)[i], vals[i], "expected val%d = %f, but got %f\n", i + 1, vals[i],
+         SCIProwprepGetCoefs(cut)[i]);
    }
 }
 
@@ -746,7 +757,7 @@ Test(nlhdlrsoc, detectandfree11, .description = "detects complex quadratic const
    SCIP_Bool infeasible;
    SCIP_Bool success;
 
-   if( !SCIPisIpoptAvailableIpopt() )
+   if( !SCIPlapackIsAvailable() )
       return;
 
    /* create nonlinear constraint */
@@ -802,7 +813,7 @@ Test(nlhdlrsoc, detectandfree12, .description = "detects complex quadratic const
    SCIP_Bool infeasible;
    SCIP_Bool success;
 
-   if( !SCIPisIpoptAvailableIpopt() )
+   if( !SCIPlapackIsAvailable() )
       return;
 
    /* create nonlinear constraint */
@@ -998,7 +1009,7 @@ Test(nlhdlrsoc, disaggregation, .description = "disaggregate soc and check the r
 
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
-   /* clear sepastorage to get rid of disaggregation row */
+   /* clear sepastorage to get rid of initial relaxation */
    SCIP_CALL( SCIPclearCuts(scip) );
 }
 
@@ -1010,7 +1021,7 @@ Test(nlhdlrsoc, separation1, .description = "test separation for simple norm exp
    SCIP_EXPR* rootexpr;
    SCIP_EXPR* expr;
    SCIP_SOL* sol;
-   SCIP_ROW* cut;
+   SCIP_ROWPREP* cut;
    SCIP_VAR* cutvars[3];
    SCIP_VAR* auxvar;
    SCIP_Real cutvals[3];
@@ -1036,9 +1047,10 @@ Test(nlhdlrsoc, separation1, .description = "test separation for simple norm exp
    SCIPsetSolVal(scip, sol, nlhdlrexprdata->disvars[1], 1.0);
    SCIPsetSolVal(scip, sol, nlhdlrexprdata->disvars[2], 1.0);
    SCIPsetSolVal(scip, sol, auxvar, 2.0);
+   updateVarVals(scip, nlhdlrexprdata, sol, FALSE);
 
    /* check cut w.r.t. x */
-   SCIP_CALL( generateCutSolDisagg(scip, expr, cons, sol, nlhdlrexprdata, 0, 0.0, 2.0, &cut) );
+   SCIP_CALL( generateCutSolDisagg(scip, &cut, expr, cons, nlhdlrexprdata, 0, 0.0, 2.0) );
 
    cutvars[0] = nlhdlrexprdata->disvars[0];
    cutvars[1] = x;
@@ -1049,10 +1061,10 @@ Test(nlhdlrsoc, separation1, .description = "test separation for simple norm exp
    rhs = cutvals[1] + cutvals[2] * 2.0 - SQRT(8.0) + 2.0;
 
    checkCut(cut, cutvars, cutvals, rhs, 3);
-   SCIPreleaseRow(scip, &cut);
+   SCIPfreeRowprep(scip, &cut);
 
    /* check cut w.r.t. y */
-   SCIP_CALL( generateCutSolDisagg(scip, expr, cons, sol, nlhdlrexprdata, 1, 0.0, 2.0, &cut) );
+   SCIP_CALL( generateCutSolDisagg(scip, &cut, expr, cons, nlhdlrexprdata, 1, 0.0, 2.0) );
 
    cutvars[0] = auxvar;
    cutvars[1] = y;
@@ -1063,10 +1075,10 @@ Test(nlhdlrsoc, separation1, .description = "test separation for simple norm exp
    rhs =  cutvals[0] * 2.0 + cutvals[1] * 2.0 + cutvals[2] * 1.0 - SQRT(17.0) + 3.0;
 
    checkCut(cut, cutvars, cutvals, rhs, 3);
-   SCIPreleaseRow(scip, &cut);
+   SCIPfreeRowprep(scip, &cut);
 
    /* check cut w.r.t. z */
-   SCIP_CALL( generateCutSolDisagg(scip, expr, cons, sol, nlhdlrexprdata, 2, 0.0, 2.0, &cut) );
+   SCIP_CALL( generateCutSolDisagg(scip, &cut, expr, cons, nlhdlrexprdata, 2, 0.0, 2.0) );
 
    cutvars[0] = auxvar;
    cutvars[1] = z;
@@ -1077,7 +1089,7 @@ Test(nlhdlrsoc, separation1, .description = "test separation for simple norm exp
    rhs =  cutvals[0] * 2.0 - cutvals[1] * 2.0 + cutvals[2] * 1.0 - SQRT(17.0) + 3.0;
 
    checkCut(cut, cutvars, cutvals, rhs, 3);
-   SCIPreleaseRow(scip, &cut);
+   SCIPfreeRowprep(scip, &cut);
 
    /* free expr and cons */
    SCIPfreeSol(scip, &sol);
@@ -1093,7 +1105,7 @@ Test(nlhdlrsoc, separation2, .description = "test separation for simple norm exp
    SCIP_EXPR* rootexpr;
    SCIP_EXPR* expr;
    SCIP_SOL* sol;
-   SCIP_ROW* cut;
+   SCIP_ROWPREP* cut;
    SCIP_VAR* cutvars[3];
    SCIP_VAR* auxvar;
    SCIP_Real cutvals[3];
@@ -1134,9 +1146,10 @@ Test(nlhdlrsoc, separation2, .description = "test separation for simple norm exp
    SCIPsetSolVal(scip, sol, x, 1.0);
    SCIPsetSolVal(scip, sol, y, 2.0);
    SCIPsetSolVal(scip, sol, auxvar, 1.0);
+   updateVarVals(scip, nlhdlrexprdata, sol, FALSE);
 
    /* check cut */
-   SCIP_CALL( generateCutSolSOC(scip, expr, cons, sol, nlhdlrexprdata, 0.0, 1.0, &cut) );
+   SCIP_CALL( generateCutSolSOC(scip, &cut, expr, cons, nlhdlrexprdata, 0.0, 1.0) );
 
    cutvars[0] = auxvar;
    cutvars[1] = y;
@@ -1147,7 +1160,7 @@ Test(nlhdlrsoc, separation2, .description = "test separation for simple norm exp
    rhs = -3.0 / 10;
 
    checkCut(cut, cutvars, cutvals, rhs, 3);
-   SCIPreleaseRow(scip, &cut);
+   SCIPfreeRowprep(scip, &cut);
 
    /* free expr and cons */
    SCIPfreeSol(scip, &sol);
@@ -1168,7 +1181,7 @@ Test(nlhdlrsoc, separation3, .description = "test separation for simple expressi
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_EXPR* expr;
    SCIP_SOL* sol;
-   SCIP_ROW* cut;
+   SCIP_ROWPREP* cut;
    SCIP_VAR* cutvars[3];
    SCIP_Real cutvals[3];
    SCIP_Real rhs;
@@ -1193,14 +1206,18 @@ Test(nlhdlrsoc, separation3, .description = "test separation for simple expressi
    getSocNlhdlrData(expr, &nlhdlrexprdata);
    cr_assert_not_null(nlhdlrexprdata);
 
+   /* since nlhdlrInitSepaSoc is not called (on purpose), alloc the varvals array manually */
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &nlhdlrexprdata->varvals, nlhdlrexprdata->nvars) );
+
    /* create solution */
    SCIPcreateSol(scip, &sol, NULL);
    SCIPsetSolVal(scip, sol, x, 1.0);
    SCIPsetSolVal(scip, sol, y, 1.0);
    SCIPsetSolVal(scip, sol, z, 0.0);
+   updateVarVals(scip, nlhdlrexprdata, sol, FALSE);
 
    /* check cut */
-   SCIP_CALL( generateCutSolSOC(scip, expr, cons, sol, nlhdlrexprdata, 0.0, 1.0, &cut) );
+   SCIP_CALL( generateCutSolSOC(scip, &cut, expr, cons, nlhdlrexprdata, 0.0, 1.0) );
 
    cutvars[0] = x;
    cutvars[1] = y;
@@ -1211,7 +1228,7 @@ Test(nlhdlrsoc, separation3, .description = "test separation for simple expressi
    rhs = 0.0;
 
    checkCut(cut, cutvars, cutvals, rhs, 3);
-   SCIPreleaseRow(scip, &cut);
+   SCIPfreeRowprep(scip, &cut);
 
    /* free expr and cons */
    SCIPfreeSol(scip, &sol);
@@ -1225,7 +1242,7 @@ Test(nlhdlrsoc, separation3, .description = "test separation for simple expressi
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
 
-/* detects 2x^2 - 9y^2 + sin(z)^2 < = 0 as soc constraint using a public function */
+/* detects 2x^2 - 9y^2 + z^2 < = 0 as soc constraint using a public function */
 Test(nlhdlrsoc, access, .description = "public detect for simple quadratic constraint")
 {
    SCIP_CONS* cons;
