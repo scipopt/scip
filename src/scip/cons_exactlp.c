@@ -840,6 +840,8 @@ SCIP_RETCODE consCatchEvent(
          | SCIP_EVENTTYPE_GBDCHANGED | SCIP_EVENTTYPE_VARDELETED,
          eventhdlr, consdata->eventdata[pos], &consdata->eventdata[pos]->filterpos) );
 
+   consdata->removedfixings = consdata->removedfixings && SCIPvarIsActive(consdata->vars[pos]);
+
    return SCIP_OKAY;
 }
 
@@ -4376,7 +4378,6 @@ SCIP_RETCODE chgLhs(
    if( RatIsEqual(lhs, consdata->rhs) )
    {
       RatSet(consdata->rhs, lhs);
-      consdata->lhsreal = RatApproxReal(lhs);
       assert(consdata->rowlhs == NULL);
    }
 
@@ -4456,6 +4457,7 @@ SCIP_RETCODE chgLhs(
 
    /* set new left hand side and update constraint data */
    RatSet(consdata->lhs, lhs);
+   consdata->lhsreal = RatRoundReal(lhs, SCIP_R_ROUND_DOWNWARDS);
    consdata->changed = TRUE;
    consdata->normalized = FALSE;
    consdata->upgradetried = FALSE;
@@ -4499,7 +4501,6 @@ SCIP_RETCODE chgRhs(
    if( RatIsEqual(rhs, consdata->lhs) )
    {
       RatSet(consdata->rhs, rhs);
-      consdata->rhsreal = RatApproxReal(rhs);
       assert(consdata->rowlhs == NULL);
    }
 
@@ -4581,6 +4582,7 @@ SCIP_RETCODE chgRhs(
 
    /* set new right hand side and update constraint data */
    RatSet(consdata->rhs, rhs);
+   consdata->rhsreal = RatRoundReal(rhs, SCIP_R_ROUND_UPWARDS);
    consdata->changed = TRUE;
    consdata->normalized = FALSE;
    consdata->upgradetried = FALSE;
@@ -4795,7 +4797,6 @@ SCIP_RETCODE delCoefPos(
       consdata->indexsorted = consdata->indexsorted && (pos + 2 >= consdata->nvars);
       consdata->coefsorted = consdata->coefsorted && (pos + 2 >= consdata->nvars);
    }
-   RatFreeBlock(SCIPblkmem(scip), &(consdata->vals[consdata->nvars - 1]));
    consdata->nvars--;
 
 #ifdef SCIP_DISABLED_CODE
@@ -5445,7 +5446,6 @@ SCIP_RETCODE normalizeCons(
 }
 #endif
 
-#ifdef SCIP_DISABLED_CODE
 /** replaces multiple occurrences of a variable by a single coefficient */
 static
 SCIP_RETCODE mergeMultiples(
@@ -5502,7 +5502,7 @@ SCIP_RETCODE mergeMultiples(
              */
             if( consdata->maxactdeltavar == var )
             {
-               RatSetString(consdata->maxactdelta, "inf");
+               consdata->maxactdelta = SCIP_INVALID;
                consdata->maxactdeltavar = NULL;
             }
          }
@@ -5519,9 +5519,7 @@ SCIP_RETCODE mergeMultiples(
 
    return SCIP_OKAY;
 }
-#endif
 
-#ifdef SCIP_DISABLED_CODE
 /** replaces all fixed and aggregated variables by their non-fixed counterparts */
 static
 SCIP_RETCODE applyFixings(
@@ -5536,9 +5534,10 @@ SCIP_RETCODE applyFixings(
    SCIP_VAR* var;
    SCIP_VAR** aggrvars;
    SCIP_Rational* val;
-   SCIP_Real* aggrscalars;
-   SCIP_Real fixedval;
-   SCIP_Real aggrconst;
+   SCIP_Rational** aggrscalars;
+   SCIP_Rational* fixedval;
+   SCIP_Rational* aggrconst;
+   SCIP_Real negconst;
    int v;
    int naggrvars;
    int i;
@@ -5552,13 +5551,31 @@ SCIP_RETCODE applyFixings(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
+   if( consdata->eventdata == NULL )
+   {
+      SCIP_CONSHDLR* conshdlr;
+      SCIP_CONSHDLRDATA* conshdlrdata;
+
+      conshdlr = SCIPconsGetHdlr(cons);
+      assert(conshdlr != NULL);
+
+      conshdlrdata = SCIPconshdlrGetData(conshdlr);
+      assert(conshdlrdata != NULL);
+
+      /* catch bound change events of variables */
+      SCIP_CALL( consCatchAllEvents(scip, cons, conshdlrdata->eventhdlr) );
+      assert(consdata->eventdata != NULL);
+   }
+
    if( !consdata->removedfixings )
    {
-      SCIP_Real lhssubtrahend;
-      SCIP_Real rhssubtrahend;
+      SCIP_Rational* lhssubtrahend;
+      SCIP_Rational* rhssubtrahend;
+      SCIP_Rational* tmpval;
 
-      lhssubtrahend = 0.0;
-      rhssubtrahend = 0.0;
+      RatCreateBuffer(SCIPbuffer(scip), &lhssubtrahend);
+      RatCreateBuffer(SCIPbuffer(scip), &rhssubtrahend);
+      RatCreateBuffer(SCIPbuffer(scip), &tmpval);
 
       SCIPdebugMsg(scip, "applying fixings:\n");
       SCIPdebugPrintCons(scip, cons, NULL);
@@ -5583,14 +5600,15 @@ SCIP_RETCODE applyFixings(
 
          case SCIP_VARSTATUS_FIXED:
             assert(SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var)));
-            fixedval = SCIPvarGetLbGlobal(var);
-            if( !RisInfinity(-consdata->lhs) )
+            fixedval = SCIPvarGetLbGlobalExact(var);
+            if( !RatIsNegInfinity(consdata->lhs) )
             {
-               if( RisInfinity(ABS(fixedval)) )
+               if( RatIsAbsInfinity(fixedval) )
                {
-                  if( val * fixedval > 0.0 )
+                  if( RatGetSign(val) == RatGetSign(fixedval) )
                   {
-                     SCIP_CALL( chgLhs(scip, cons, -SCIPinfinity(scip)) );
+                     RatSetString(tmpval, "-inf");
+                     SCIP_CALL( chgLhs(scip, cons, tmpval) );
                   }
                   else
                   {
@@ -5602,18 +5620,19 @@ SCIP_RETCODE applyFixings(
                      }
                      else
                      {
-                        SCIP_CALL( chgLhs(scip, cons, SCIPinfinity(scip)) );
+                        RatSetString(tmpval, "inf");
+                        SCIP_CALL( chgLhs(scip, cons, tmpval) );
                      }
                   }
                }
                else
-                  lhssubtrahend += val * fixedval;
+                  RatAddProd(lhssubtrahend, val, fixedval);
             }
-            if( !RisInfinity(consdata->rhs) )
+            if( !RatIsInfinity(consdata->rhs) )
             {
-               if( RisInfinity(ABS(fixedval)) )
+               if( RatIsAbsInfinity(fixedval) )
                {
-                  if( val * fixedval > 0.0 )
+                  if( RatGetSign(val) == RatGetSign(fixedval) )
                   {
                      if( infeasible != NULL )
                      {
@@ -5623,16 +5642,18 @@ SCIP_RETCODE applyFixings(
                      }
                      else
                      {
-                        SCIP_CALL( chgRhs(scip, cons, -SCIPinfinity(scip)) );
+                        RatSetString(tmpval, "-inf");
+                        SCIP_CALL( chgRhs(scip, cons, tmpval) );
                      }
                   }
                   else
                   {
-                     SCIP_CALL( chgRhs(scip, cons, SCIPinfinity(scip)) );
+                     RatSetString(tmpval, "inf");
+                     SCIP_CALL( chgRhs(scip, cons, tmpval) );
                   }
                }
                else
-                  rhssubtrahend += val * fixedval;
+                  RatAddProd(rhssubtrahend, val, fixedval);
             }
             SCIP_CALL( delCoefPos(scip, cons, v) );
             break;
@@ -5640,57 +5661,79 @@ SCIP_RETCODE applyFixings(
          case SCIP_VARSTATUS_AGGREGATED:
          {
             SCIP_VAR* activevar = SCIPvarGetAggrVar(var);
-            SCIP_Real activescalar = val * SCIPvarGetAggrScalar(var);
-            SCIP_Real activeconstant = val * SCIPvarGetAggrConstant(var);
+            SCIP_Rational* activescalar;
+            SCIP_Rational* activeconstant;
+
+            RatCreateBuffer(SCIPbuffer(scip), &activescalar);
+            RatCreateBuffer(SCIPbuffer(scip), &activeconstant);
+
+            RatMult(activescalar, val, SCIPvarGetAggrScalarExact(var));
+            RatMult(activeconstant, val, SCIPvarGetAggrConstantExact(var));
 
             assert(activevar != NULL);
-            SCIP_CALL( SCIPgetProbvarSum(scip, &activevar, &activescalar, &activeconstant) );
+            SCIP_CALL( SCIPgetProbvarSumExact(scip, &activevar, activescalar, activeconstant) );
             assert(activevar != NULL);
 
-            if( !SCIPisZero(scip, activescalar) )
+            if( !RatIsZero(activescalar) )
             {
                SCIP_CALL( addCoef(scip, cons, activevar, activescalar) );
             }
 
-            if( !SCIPisZero(scip, activeconstant) )
+            if( !RatIsZero(activeconstant) )
             {
-               if( !RisInfinity(-consdata->lhs) )
-            lhssubtrahend += activeconstant;
-               if( !RisInfinity(consdata->rhs) )
-            rhssubtrahend += activeconstant;
+               if( !RatIsNegInfinity(consdata->lhs) )
+                  RatAdd(lhssubtrahend, lhssubtrahend, activeconstant);
+               if( !RatIsInfinity(consdata->rhs) )
+                  RatAdd(rhssubtrahend, rhssubtrahend, activeconstant);
             }
 
             SCIP_CALL( delCoefPos(scip, cons, v) );
-            break;
 
+            RatFreeBuffer(SCIPbuffer(scip), &activescalar);
+            RatFreeBuffer(SCIPbuffer(scip), &activeconstant);
+            break;
          }
          case SCIP_VARSTATUS_MULTAGGR:
             SCIP_CALL( SCIPflattenVarAggregationGraph(scip, var) );
             naggrvars = SCIPvarGetMultaggrNVars(var);
             aggrvars = SCIPvarGetMultaggrVars(var);
-            aggrscalars = SCIPvarGetMultaggrScalars(var);
+            aggrscalars = SCIPvarGetMultaggrScalarsExact(var);
             for( i = 0; i < naggrvars; ++i )
             {
-               SCIP_CALL( addCoef(scip, cons, aggrvars[i], val * aggrscalars[i]) );
+               RatMult(tmpval, val, aggrscalars[i]);
+               SCIP_CALL( addCoef(scip, cons, aggrvars[i], tmpval) );
             }
-            aggrconst = SCIPvarGetMultaggrConstant(var);
+            aggrconst = SCIPvarGetMultaggrConstantExact(var);
 
-            if( !RisInfinity(-consdata->lhs) )
-               lhssubtrahend += val * aggrconst;
-            if( !RisInfinity(consdata->rhs) )
-               rhssubtrahend += val * aggrconst;
+            if( !RatIsNegInfinity(consdata->lhs) )
+            {
+               RatMult(tmpval, val, aggrconst);
+               RatAdd(lhssubtrahend, lhssubtrahend, tmpval);
+            }
+            if( !RatIsInfinity(consdata->rhs) )
+            {
+               RatMult(tmpval, val, aggrconst);
+               RatAdd(rhssubtrahend, rhssubtrahend, tmpval);
+            }
 
             SCIP_CALL( delCoefPos(scip, cons, v) );
             break;
 
          case SCIP_VARSTATUS_NEGATED:
-            SCIP_CALL( addCoef(scip, cons, SCIPvarGetNegationVar(var), -val) );
-            aggrconst = SCIPvarGetNegationConstant(var);
+            RatNegate(tmpval, val);
+            SCIP_CALL( addCoef(scip, cons, SCIPvarGetNegationVar(var), tmpval) );
+            negconst = SCIPvarGetNegationConstant(var);
 
-            if( !RisInfinity(-consdata->lhs) )
-               lhssubtrahend += val * aggrconst;
-            if( !RisInfinity(consdata->rhs) )
-               rhssubtrahend += val * aggrconst;
+            if( !RatIsNegInfinity(consdata->lhs) )
+            {
+               RatMultReal(tmpval, val, negconst);
+               RatAdd(lhssubtrahend, lhssubtrahend, tmpval);
+            }
+            if( !RatIsInfinity(consdata->rhs) )
+            {
+               RatMultReal(tmpval, val, negconst);
+               RatAdd(rhssubtrahend, rhssubtrahend, tmpval);
+            }
 
             SCIP_CALL( delCoefPos(scip, cons, v) );
             break;
@@ -5702,37 +5745,15 @@ SCIP_RETCODE applyFixings(
          }
       }
 
-      if( !RisInfinity(-consdata->lhs) && !RisInfinity(consdata->lhs) )
+      if( !RatIsAbsInfinity(consdata->lhs) )
       {
-         /* for large numbers that are relatively equal, substraction can lead to cancellation,
-          * causing wrong fixings of other variables --> better use a real zero here;
-          * for small numbers, polishing the difference might lead to wrong results -->
-          * better use the exact difference in this case
-          */
-         if( SCIPisEQ(scip, lhssubtrahend, consdata->lhs) && SCIPisFeasGE(scip, REALABS(lhssubtrahend), 1.0) )
-         {
-            SCIP_CALL( chgLhs(scip, cons, 0.0) );
-         }
-         else
-         {
-            SCIP_CALL( chgLhs(scip, cons, consdata->lhs - lhssubtrahend) );
-         }
+         RatDiff(tmpval, consdata->lhs, lhssubtrahend);
+         SCIP_CALL( chgLhs(scip, cons, tmpval) );
       }
-      if( !RisInfinity(consdata->rhs) && !RisInfinity(-consdata->rhs))
+      if( !RatIsAbsInfinity(consdata->rhs) )
       {
-         /* for large numbers that are relatively equal, substraction can lead to cancellation,
-          * causing wrong fixings of other variables --> better use a real zero here;
-          * for small numbers, polishing the difference might lead to wrong results -->
-          * better use the exact difference in this case
-          */
-         if( SCIPisEQ(scip, rhssubtrahend, consdata->rhs ) && SCIPisFeasGE(scip, REALABS(rhssubtrahend), 1.0) )
-         {
-            SCIP_CALL( chgRhs(scip, cons, 0.0) );
-         }
-         else
-         {
-            SCIP_CALL( chgRhs(scip, cons, consdata->rhs - rhssubtrahend) );
-         }
+         RatDiff(tmpval, consdata->rhs, rhssubtrahend);
+         SCIP_CALL( chgRhs(scip, cons, tmpval) );
       }
 
       consdata->removedfixings = TRUE;
@@ -5747,6 +5768,10 @@ SCIP_RETCODE applyFixings(
 
       SCIPdebugMsg(scip, "after merging:\n");
       SCIPdebugPrintCons(scip, cons, NULL);
+
+      RatFreeBuffer(SCIPbuffer(scip), &tmpval);
+      RatFreeBuffer(SCIPbuffer(scip), &rhssubtrahend);
+      RatFreeBuffer(SCIPbuffer(scip), &lhssubtrahend);
    }
    assert(consdata->removedfixings);
 
@@ -5758,7 +5783,6 @@ SCIP_RETCODE applyFixings(
 
    return SCIP_OKAY;
 }
-#endif
 
 #ifdef SCIP_DISABLED_CODE
 /** for each variable in the linear constraint, except the inferred variable, adds one bound to the conflict analysis'
@@ -16515,22 +16539,20 @@ SCIP_RETCODE SCIPclassifyConstraintTypesLinear(
 static
 SCIP_DECL_CONSEXITPRE(consExitpreExactLinear)
 {  /*lint --e{715}*/
+   int c;
+
+#ifdef SCIP_DISABLED_CODE
 #ifdef SCIP_STATISTIC
    SCIP_CONSHDLRDATA* conshdlrdata;
    int ngoodconss;
    int nallconss;
+#endif
 #endif
 
    /* delete all linear constraints that were upgraded to a more specific constraint type;
     * make sure, only active variables remain in the remaining constraints
     */
    assert(scip != NULL);
-
-   if( nconss > 0 )
-   {
-      assert(SCIPisExactSolve(scip));
-      SCIPwarningMessage(scip, "Exact presolving not implemented yet \n");
-   }
 
 #ifdef SCIP_DISABLED_CODE
 #ifdef SCIP_STATISTIC
@@ -16566,6 +16588,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreExactLinear)
       SCIPstatisticMessage("below threshold: %d / %d ratio= %g\n", ngoodconss, nallconss, (100.0 * ngoodconss / nallconss));
    }
 #endif
+#endif
 
    for( c = 0; c < nconss; ++c )
    {
@@ -16579,10 +16602,12 @@ SCIP_DECL_CONSEXITPRE(consExitpreExactLinear)
 
       if( consdata->upgraded )
       {
+         SCIPerrorMessage("exact linear constraint updrade not implemented yet\n");
          /* this is no problem reduction, because the upgraded constraint was added to the problem before, and the
           * (redundant) linear constraint was only kept in order to support presolving the the linear constraint handler
           */
-         SCIP_CALL( SCIPdelCons(scip, conss[c]) );
+         // SCIP_CALL( SCIPdelCons(scip, conss[c]) );
+         return SCIP_ERROR;
       }
       else
       {
@@ -16590,7 +16615,6 @@ SCIP_DECL_CONSEXITPRE(consExitpreExactLinear)
          SCIP_CALL( applyFixings(scip, conss[c], NULL) );
       }
    }
-   #endif
 
    return SCIP_OKAY;
 }
