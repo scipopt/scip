@@ -218,17 +218,20 @@ void freeExprDataMem(
    *nlhdlrexprdata = NULL;
 }
 
-/** reform rowprep to a standard form for nonlinear handlers.
+/** reforms a rowprep to a standard form for nonlinear handlers
+ *
  * A rowprep in standard form only contains an estimator of the expression and no auxvar.
  */
 static
 SCIP_Real reformRowprep(
-   SCIP*                 scip,
-   SCIP_NLHDLREXPRDATA*  nlhdlrexprdata,
-   SCIP_ROWPREP*         rowprep,
-   SCIP_Bool*            success
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLHDLREXPRDATA*  nlhdlrexprdata,     /**< expression data */
+   SCIP_ROWPREP*         rowprep,            /**< cut to be reformulated */
+   SCIP_Bool*            success             /**< pointer to store whether the reformulating was successful */
 )
 {
+   SCIP_Real scale;
+
    assert(rowprep != NULL);
    assert(nlhdlrexprdata != NULL);
 
@@ -241,10 +244,12 @@ SCIP_Real reformRowprep(
    SCIP_Real coefauxvar = 0;
    for( int i = 0; i < nvars; i++ )
    {  
-      if( vars[i] != auxvar )
-         continue;
-      coefauxvar = coefs[i];
-      coefs[i] = 0;
+      if( vars[i] == auxvar )
+      {
+         coefauxvar = coefs[i];
+         coefs[i] = 0;
+         break;
+      }
    }
 
    if( SCIPisZero(scip, coefauxvar) )
@@ -253,19 +258,18 @@ SCIP_Real reformRowprep(
       return 0.0;
    }
 
-   /* the reformation scales the cut, such that coefficients and constant are dividing by the absolute value of coefauxvar */
-   coefauxvar = 1 / fabs(coefauxvar);
-   
+   /* the reformation scales the cut so that coefficients and constant are divided by the absolute value of coefauxvar */
+   scale = 1 / fabs(coefauxvar);
+
    for( int i = 0; i < nvars; i++ )
    {  
       if( vars[i] == auxvar )
          continue;
-      coefs[i] *= coefauxvar;
+      coefs[i] *= scale;
    }
+   rowprep->side *= scale;
 
-   rowprep->side *= coefauxvar;
-
-   return coefauxvar;
+   return scale;
 }
 
 /** get variables associated with the expression and its subexpressions */
