@@ -268,7 +268,7 @@ SCIP_DECL_NLHDLRREVERSEPROP(nlhdlrReversepropXyz)
  * nonlinear handler specific interface methods
  */
 
-/** includes Xyz nonlinear handler to consexpr */
+/** includes Xyz nonlinear handler in nonlinear constraint handler */
 SCIP_RETCODE SCIPincludeNlhdlrXyz(
    SCIP*                 scip                /**< SCIP data structure */
    )
