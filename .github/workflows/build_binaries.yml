@@ -53,13 +53,8 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: headers
-        path: C:\Miniconda\envs\scip\include
-    - name: Upload lib files
-      uses: actions/upload-artifact@v3
-      with:
-        name: libscip
-        path: C:\Miniconda\envs\scip\lib
-        
+        path: C:\Miniconda\envs\scip\
+
 
       
 
