@@ -7874,9 +7874,15 @@ SCIP_RETCODE tightenVarBounds(
 
                if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
                {
+                  SCIP_Real maxdenom;
                   RatCreateBuffer(SCIPbuffer(scip), &tmpbound);
                   RatSetReal(tmpbound, newub);
-                  RatComputeApproximation(tmpbound, tmpbound, scip->set->exact_cutmaxdenomsize, 1);
+                  // be more strict for 0 bounds
+                  if( SCIPvarGetUbLocal(var) == 0.0 )
+                     maxdenom = 2;
+                  else
+                     maxdenom = MAX(256, RatDenominator(SCIPvarGetUbLocalExact(var)));
+                  RatComputeApproximation(tmpbound, tmpbound, maxdenom, 1);
                   if( SCIPcertificateShouldTrackBounds(scip) )
                      SCIPcertificatePrintActivityVarBoundEx(scip, SCIPgetCertificate(scip), NULL, SCIP_BOUNDTYPE_UPPER, tmpbound, false, cons, var);
                   SCIP_CALL( SCIPinferVarUbConsExact(scip, var, tmpbound, cons, getInferInt(PROPRULE_1_RHS, pos), force,
@@ -7952,9 +7958,15 @@ SCIP_RETCODE tightenVarBounds(
 
             if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
             {
+               SCIP_Real maxdenom;
+
                RatCreateBuffer(SCIPbuffer(scip), &tmpbound);
                RatSetReal(tmpbound, newlb);
-               RatComputeApproximation(tmpbound, tmpbound, scip->set->exact_cutmaxdenomsize, -1);
+               if( SCIPvarGetLbLocal(var) == 0.0 )
+                  maxdenom = 2;
+               else
+                  maxdenom = MAX(256, RatDenominator(SCIPvarGetLbLocalExact(var)));
+               RatComputeApproximation(tmpbound, tmpbound, maxdenom, -1);
                if( SCIPcertificateShouldTrackBounds(scip) )
                   SCIPcertificatePrintActivityVarBoundEx(scip, SCIPgetCertificate(scip), NULL, SCIP_BOUNDTYPE_LOWER, tmpbound, true, cons, var);
                SCIP_CALL( SCIPinferVarLbConsExact(scip, var, tmpbound, cons, getInferInt(PROPRULE_1_LHS, pos), force,
@@ -8036,9 +8048,14 @@ SCIP_RETCODE tightenVarBounds(
 
                if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
                {
+                  SCIP_Real maxdenom;
                   RatCreateBuffer(SCIPbuffer(scip), &tmpbound);
                   RatSetReal(tmpbound, newlb);
-                  RatComputeApproximation(tmpbound, tmpbound, scip->set->exact_cutmaxdenomsize, -1);
+                  if( SCIPvarGetLbLocal(var) == 0.0 )
+                     maxdenom = 2;
+                  else
+                     maxdenom = MAX(256, RatDenominator(SCIPvarGetLbLocalExact(var)));
+                  RatComputeApproximation(tmpbound, tmpbound, maxdenom, -1);
                   if( SCIPcertificateShouldTrackBounds(scip) )
                      SCIPcertificatePrintActivityVarBoundEx(scip, SCIPgetCertificate(scip), NULL, SCIP_BOUNDTYPE_LOWER, tmpbound, false, cons, var);
                   SCIP_CALL( SCIPinferVarLbConsExact(scip, var, tmpbound, cons, getInferInt(PROPRULE_1_RHS, pos), force,
@@ -8114,9 +8131,14 @@ SCIP_RETCODE tightenVarBounds(
 
             if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
             {
+               SCIP_Real maxdenom;
                RatCreateBuffer(SCIPbuffer(scip), &tmpbound);
                RatSetReal(tmpbound, newub);
-               RatComputeApproximation(tmpbound, tmpbound, scip->set->exact_cutmaxdenomsize, 1);
+               if( SCIPvarGetUbLocal(var) == 0.0 )
+                  maxdenom = 2;
+               else
+                  maxdenom = MAX(256, RatDenominator(SCIPvarGetUbLocalExact(var)));
+               RatComputeApproximation(tmpbound, tmpbound, maxdenom, 1);
                if( SCIPcertificateShouldTrackBounds(scip) )
                   SCIPcertificatePrintActivityVarBoundEx(scip, SCIPgetCertificate(scip), NULL, SCIP_BOUNDTYPE_UPPER, tmpbound, true, cons, var);
                SCIP_CALL( SCIPinferVarUbConsExact(scip, var, tmpbound, cons, getInferInt(PROPRULE_1_LHS, pos), force,
