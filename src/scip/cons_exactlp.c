@@ -4786,6 +4786,7 @@ SCIP_RETCODE delCoefPos(
    {
       consdata->vars[pos] = consdata->vars[consdata->nvars-1];
       RatSet(consdata->vals[pos], consdata->vals[consdata->nvars - 1]);
+      consdata->valsreal[pos] = consdata->valsreal[consdata->nvars -1];
 
       if( consdata->eventdata != NULL )
       {
