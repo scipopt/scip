@@ -29,7 +29,7 @@
  */
 
 #ifdef SCIP_SIGCUT_DEBUG
-#ifndef SCIP_SIG_DEBUG_
+#ifndef SCIP_SIG_DEBUG
 #define SCIP_SIG_DEBUG
 #endif
 #endif
@@ -194,6 +194,7 @@ void freeExprDataMem(
    SCIP_Bool             ispartial           /**< free the partially allocated memory or the fully allocated memory? */
    )
 {
+   
    SCIPfreeBlockMemoryArrayNull(scip, &(*nlhdlrexprdata)->factors, (*nlhdlrexprdata)->nfactors);
    SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->exponents, (*nlhdlrexprdata)->nfactors);
    if( !ispartial )
@@ -311,6 +312,8 @@ void getCheckBds(
    )
 {
    int c;
+   SCIP_Real powinf;
+   SCIP_Real powsup;
    SCIP_Real productinf = 1;
    SCIP_Real productsup = 1;
 
@@ -329,8 +332,8 @@ void getCheckBds(
          return;
       nlhdlrexprdata->intervals[c].inf = inf;
       nlhdlrexprdata->intervals[c].sup = sup;
-      SCIP_Real powinf = pow(inf, nlhdlrexprdata->exponents[c]);
-      SCIP_Real powsup = pow(sup, nlhdlrexprdata->exponents[c]);
+      powinf = pow(inf, nlhdlrexprdata->exponents[c]);
+      powsup = pow(sup, nlhdlrexprdata->exponents[c]);
       productinf *= fmin(powinf, powsup);
       productsup *= fmax(powinf, powsup);
    }
@@ -339,7 +342,7 @@ void getCheckBds(
    nlhdlrexprdata->intervals[c].inf = productinf;
    nlhdlrexprdata->intervals[c].sup = productsup;
 
-   #ifdef SCIP_SIG_DEBUG_
+   #ifdef SCIP_SIG_DEBUG
       if( !SCIPisEQ(scip, productinf, SCIPvarGetLbLocal(nlhdlrexprdata->vars[c])) ){
          SCIPdebugMsg(scip, "%f %f \n", productinf, SCIPvarGetLbLocal(nlhdlrexprdata->vars[c]));
       }
@@ -499,6 +502,12 @@ SCIP_RETCODE estimateSpecialPower(
    }
    else if( nsignvars == 2 && !overestimate ){
       /* bivariate case, \f$ f(w) = w^h = f_0(w_0) f_1(w_1)  \f$ */
+      SCIP_Bool isupperright;
+      SCIP_Real dw0, dw1;
+      SCIP_Real f0w0l, f0w0u, f1w1l, f1w1u;
+      SCIP_Real fw0lw1u, fw0uw1l;
+      SCIP_Real facetconstant;
+      SCIP_Real facetcoefs[2] = {0.0, 0.0};
       SCIP_VAR* vars[2] = {NULL, NULL}; 
       SCIP_Real refexponents[2] = {0.0, 0.0};
       SCIP_Real xstar[2] = {0.0, 0.0};;
@@ -519,20 +528,18 @@ SCIP_RETCODE estimateSpecialPower(
          j++;
       }
       /* compute the box length*/
-      SCIP_Real dw0 = box[1] - box[0];
-      SCIP_Real dw1 = box[3] - box[2];
+      dw0 = box[1] - box[0];
+      dw1 = box[3] - box[2];
       /* determine the location (upper right or lower left half sapce) of the xtar. 
        * \f$ (dw1, dw0) \f$ is the direction vector to the upper right half space. */
-      SCIP_Bool isupperright = ( (xstar[0] - box[0]) * dw1 + (xstar[1] - box[3]) * dw0 ) > 0;
+      isupperright = ( (xstar[0] - box[0]) * dw1 + (xstar[1] - box[3]) * dw0 ) > 0;
       /* compute function values of \f$ f_0, f_1 \f$ at vetices */
-      SCIP_Real f0w0l = pow(box[0], refexponents[0]);
-      SCIP_Real f0w0u = pow(box[1], refexponents[0]);
-      SCIP_Real f1w1l = pow(box[2], refexponents[1]);
-      SCIP_Real f1w1u = pow(box[3], refexponents[1]);
-      SCIP_Real fw0lw1u = f0w0l * f1w1u;
-      SCIP_Real fw0uw1l = f0w0u * f1w1l;
-      SCIP_Real facetcoefs[2];
-      SCIP_Real facetconstant;
+      f0w0l = pow(box[0], refexponents[0]);
+      f0w0u = pow(box[1], refexponents[0]);
+      f1w1l = pow(box[2], refexponents[1]);
+      f1w1u = pow(box[3], refexponents[1]);
+      fw0lw1u = f0w0l * f1w1u;
+      fw0uw1l = f0w0u * f1w1l;
       if( isupperright )
       {
          /* underestimator: \f$ fw0uw1u + (fw0uw1u - fw0lw1u) / (dw0) * (x0 - w0u) + (fw0uw1u - fw0uw1l) / (dw1) * (x1 - w1u) \f$ */
@@ -730,6 +737,7 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateSignomial)
    SCIP_Real scale;
    SCIP_Real targetunder;
    SCIP_NLHDLRDATA *nlhdlrdata;
+   SCIP_ROWPREP *rowprep;
 
    assert(conshdlr != NULL);
    assert(nlhdlr != NULL);
@@ -804,7 +812,6 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateSignomial)
 #endif
 
    /* create a rowprep and allocate memory for it */
-   SCIP_ROWPREP *rowprep;
    SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, TRUE));
    SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, nlhdlrexprdata->nvars + 1));
 
@@ -869,6 +876,7 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectSignomial)
    /* check for product expressions with more than one child */
    if( SCIPisExprProduct(scip, expr) && SCIPexprGetNChildren(expr) >= 2 )
    {
+      int c;
       int nf = SCIPexprGetNChildren(expr);
       int nvars = nf + 1;
       SCIP_Bool ismultilinear = FALSE;
@@ -887,7 +895,7 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectSignomial)
 
       /* skip multilinear terms, since we wouldn't do better than expr_product */
       ismultilinear = TRUE;
-      for( int c = 0; c < nf; c++ )
+      for( c = 0; c < nf; c++ )
       {
          if( !SCIPisEQ(scip, (*nlhdlrexprdata)->exponents[c], 1.0) )
          {
@@ -904,6 +912,11 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectSignomial)
       }
       else
       {
+         SCIP_Real normalize;
+         SCIP_Real sumlexponents = 0;
+         SCIP_Real sumrexponents = 1;
+         int nposvars = 0;
+
          /* allocate more memory for expression data */
          SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->signs, nvars) );
          SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->refexponents, nvars) );
@@ -920,14 +933,11 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectSignomial)
          /* detect more information for the reformulation: we first compute the sum
           * of positive and negative exponents and determine the sign indicators
           */
-         SCIP_Real sumlexponents = 0;
-         SCIP_Real sumrexponents = 1;
-         int nposvars = 0;
-         for( int c = 0; c < nf; c++ )
+         for( c = 0; c < nf; c++ )
          {
             /* capture sub expressions */
-            SCIPcaptureExpr((*nlhdlrexprdata)->factors[c]);
-            if( SCIPisPositive(scip, (*nlhdlrexprdata)->exponents[c]) )
+            SCIPcaptureExpr((*nlhdlrexprdata)->factors[c]);            
+            if( (*nlhdlrexprdata)->exponents[c] > 0 )
             {
                /* add a positive exponent */
                sumlexponents += (*nlhdlrexprdata)->exponents[c];
@@ -946,9 +956,9 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectSignomial)
          (*nlhdlrexprdata)->nnegvars = nf - nposvars + 1;
 
          /* compute the normalization constant */
-         SCIP_Real normalize = fmax(sumlexponents, sumrexponents);
+         normalize = fmax(sumlexponents, sumrexponents);
          /* normalize positive and negative exponents */
-         for( int c = 0; c < nf; c++ )
+         for( c = 0; c < nf; c++ )
          {
             if( (*nlhdlrexprdata)->signs[c] )
                (*nlhdlrexprdata)->refexponents[c] = (*nlhdlrexprdata)->exponents[c] / normalize;
@@ -958,7 +968,7 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectSignomial)
          (*nlhdlrexprdata)->refexponents[nf] = 1 / normalize;
 
          /* tell children that we will use their auxvar and use its activity for both estimate and domain propagation */
-         for( int c = 0; c < nf; c++ )
+         for( c = 0; c < nf; c++ )
          {
             SCIP_CALL( SCIPregisterExprUsageNonlinear(scip, (*nlhdlrexprdata)->factors[c], TRUE, FALSE, TRUE, TRUE) );
          }
@@ -989,13 +999,16 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectSignomial)
 /** auxiliary evaluation callback of nonlinear handler */
 static SCIP_DECL_NLHDLREVALAUX(nlhdlrEvalauxSignomial)
 { /*lint --e{715}*/
+   int c;
+   SCIP_Real val;
+   SCIP_VAR* var;
    *auxvalue = nlhdlrexprdata->coef;
-   for( int c = 0; c < nlhdlrexprdata->nfactors; ++c )
+   for( c = 0; c < nlhdlrexprdata->nfactors; ++c )
    {
       assert(nlhdlrexprdata->factors[c] != NULL);
-      SCIP_VAR* var = SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->factors[c]);
+      var = SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->factors[c]);
       assert(var != NULL);
-      SCIP_Real val = SCIPgetSolVal(scip, sol, var);
+      val = SCIPgetSolVal(scip, sol, var);
       *auxvalue *= pow(val, nlhdlrexprdata->exponents[c]);
    }
 
@@ -1030,14 +1043,14 @@ SCIP_DECL_NLHDLRFREEHDLRDATA(nlhdlrFreehdlrDataSignomial)
 static
 SCIP_DECL_NLHDLRFREEEXPRDATA(nlhdlrFreeExprDataSignomial)
 { /*lint --e{715}*/
-   SCIP_NLHDLRDATA *nlhdlrdata;
-   nlhdlrdata = SCIPnlhdlrGetData(nlhdlr);
+   int c;
+   SCIP_NLHDLRDATA *nlhdlrdata = SCIPnlhdlrGetData(nlhdlr);
 
    assert(expr != NULL);
 
    /* release expressions */
    SCIP_CALL( SCIPreleaseExpr(scip, &(*nlhdlrexprdata)->expr) );
-   for( int c = 0; c < (*nlhdlrexprdata)->nfactors; c++ )
+   for( c = 0; c < (*nlhdlrexprdata)->nfactors; c++ )
    {
       SCIP_CALL( SCIPreleaseExpr(scip, &(*nlhdlrexprdata)->factors[c]) );
    }
@@ -1045,7 +1058,7 @@ SCIP_DECL_NLHDLRFREEEXPRDATA(nlhdlrFreeExprDataSignomial)
    /* release variables */
    if( (*nlhdlrexprdata)->isstorecapture )
    {
-      for( int c = 0; c < (*nlhdlrexprdata)->nvars; c++ )
+      for( c = 0; c < (*nlhdlrexprdata)->nvars; c++ )
       {
          SCIP_CALL( SCIPreleaseVar(scip, &(*nlhdlrexprdata)->vars[c]) );
       }
