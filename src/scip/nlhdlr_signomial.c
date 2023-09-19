@@ -295,7 +295,7 @@ SCIP_RETCODE storeCaptureVars(
 
    /* get and capture variable \f$y\f$ */
    nlhdlrexprdata->vars[c] = NULL;
-   nlhdlrexprdata->vars[c] = expr;
+   nlhdlrexprdata->vars[c] = SCIPgetExprAuxVarNonlinear(expr);
    assert(nlhdlrexprdata->vars[c] != NULL);
    SCIP_CALL( SCIPcaptureVar(scip, nlhdlrexprdata->vars[c]) );
 
