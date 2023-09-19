@@ -879,7 +879,7 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectSignomial)
       int c;
       int nf = SCIPexprGetNChildren(expr);
       int nvars = nf + 1;
-      SCIP_Bool ismultilinear = FALSE;
+      SCIP_Bool ismultilinear = TRUE;
 
       /* create expression data for the nonlinear handler */
       SCIP_CALL( SCIPallocClearBlockMemory(scip, nlhdlrexprdata) );
@@ -894,7 +894,6 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectSignomial)
       SCIP_CALL( SCIPgetExprMonomialData(scip, expr, &((*nlhdlrexprdata)->coef), (*nlhdlrexprdata)->exponents, (*nlhdlrexprdata)->factors) );
 
       /* skip multilinear terms, since we wouldn't do better than expr_product */
-      ismultilinear = TRUE;
       for( c = 0; c < nf; c++ )
       {
          if( !SCIPisEQ(scip, (*nlhdlrexprdata)->exponents[c], 1.0) )
