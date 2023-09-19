@@ -212,6 +212,7 @@ Fixed bugs
 - delay removal of clique lists from SCIPvarRemoveCliquesImplicsVbs() into cliqueCleanup() to avoid segmentation faults by incomplete cleanups after variable conversions
 - reject sub-solutions with invalid objectives in SCIPtranslateSubSols() due to contradicting infinite contributions
 - correct column index in getMinMaxActivityResiduals() to make presolver dualinfer work
+- copy quiet flag from main scip's message handler to the one of solverscip in concurrent optimization
 
 @section RN804 SCIP 8.0.4
 *************************
