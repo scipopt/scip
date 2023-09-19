@@ -73,7 +73,6 @@
  */
 struct SCIP_NlhdlrExprData
 {
-   SCIP_EXPR*            expr;               /**< expression */
    SCIP_Real             coef;               /**< coeffcient \f$c\f$ */
    SCIP_EXPR**           factors;            /**< expression factors representing \f$x\f$ */
    int                   nfactors;           /**< number of factors */
@@ -123,16 +122,17 @@ typedef struct
 /** print the information on a signomial term */
 static 
 SCIP_RETCODE printSignomial(
-   SCIP *scip,
-   SCIP_NLHDLREXPRDATA *nlhdlrexprdata
+   SCIP                 *scip,               /**< SCIP data structure */
+   SCIP_EXPR*           *expr,               /**< expression */
+   SCIP_NLHDLREXPRDATA  *nlhdlrexprdata      /**< expression data */
    )
 {
-   assert(nlhdlrexprdata->expr != NULL);
+   assert(expr != NULL);
 
    /* print overall statistics and the expression */
    SCIPdebugMsg(scip, " #all variables: %d, #positive exponent variables: %d, #negative exponent variables: %d, auxvar: %s \n expr: ",
-      nlhdlrexprdata->nvars, nlhdlrexprdata->nposvars, nlhdlrexprdata->nnegvars, SCIPvarGetName(SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->expr)) );
-   SCIPprintExpr(scip, nlhdlrexprdata->expr, NULL);
+      nlhdlrexprdata->nvars, nlhdlrexprdata->nposvars, nlhdlrexprdata->nnegvars, SCIPvarGetName(SCIPgetExprAuxVarNonlinear(expr)) );
+   SCIPprintExpr(scip, expr, NULL);
 
    /* if variables are detected, we can print more information */
    if( !nlhdlrexprdata->isstorecapture )
@@ -276,6 +276,7 @@ void reformRowprep(
 static
 SCIP_RETCODE storeCaptureVars(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr,               /**< expression */
    SCIP_NLHDLREXPRDATA*  nlhdlrexprdata      /**< expression data */
    )
 {
@@ -294,7 +295,7 @@ SCIP_RETCODE storeCaptureVars(
 
    /* get and capture variable \f$y\f$ */
    nlhdlrexprdata->vars[c] = NULL;
-   nlhdlrexprdata->vars[c] = SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->expr);
+   nlhdlrexprdata->vars[c] = expr;
    assert(nlhdlrexprdata->vars[c] != NULL);
    SCIP_CALL( SCIPcaptureVar(scip, nlhdlrexprdata->vars[c]) );
 
@@ -744,14 +745,12 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateSignomial)
    assert(expr != NULL);
    assert(nlhdlrexprdata != NULL);
    assert(rowpreps != NULL);
-   assert(expr == nlhdlrexprdata->expr);
-
    *success = FALSE;
    *addedbranchscores = FALSE;
 	
    /* store and capture the vars of an expression, if the vars are not stored and captured yet */
    if( !nlhdlrexprdata->isstorecapture )
-      SCIP_CALL( storeCaptureVars(scip, nlhdlrexprdata) );
+      SCIP_CALL( storeCaptureVars(scip, expr, nlhdlrexprdata) );
 
    /* check whether the expression is a signomial term */
    isboxsignomial = FALSE;
@@ -795,7 +794,7 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateSignomial)
    }
 #ifdef SCIP_SIGCUT_DEBUG
    /* print information on estimators */
-   SCIP_CALL( printSignomial(scip, nlhdlrexprdata));
+   SCIP_CALL( printSignomial(scip, expr, nlhdlrexprdata));
    SCIPinfoMessage(scip, NULL, " Auxvalue: %f, targetvalue: %f, %sestimate.", auxvalue, targetvalue, overestimate ? "over" : "under");
    SCIP_Real targetover = 1;
    for ( int i = 0; i < nlhdlrexprdata->nvars; i++ )
@@ -926,7 +925,6 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectSignomial)
          SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->box, 2 * nvars) );
 
          (*nlhdlrexprdata)->isstorecapture = FALSE;
-         (*nlhdlrexprdata)->expr = expr;
          SCIPcaptureExpr(expr);
 
          /* detect more information for the reformulation: we first compute the sum
@@ -1048,7 +1046,7 @@ SCIP_DECL_NLHDLRFREEEXPRDATA(nlhdlrFreeExprDataSignomial)
    assert(expr != NULL);
 
    /* release expressions */
-   SCIP_CALL( SCIPreleaseExpr(scip, &(*nlhdlrexprdata)->expr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
    for( c = 0; c < (*nlhdlrexprdata)->nfactors; c++ )
    {
       SCIP_CALL( SCIPreleaseExpr(scip, &(*nlhdlrexprdata)->factors[c]) );
