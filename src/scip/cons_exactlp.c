@@ -319,6 +319,7 @@ struct SCIP_ConshdlrData
                                                *   infeasibility, and extract sub-constraints from ranged rows and
                                                *   equations */
    SCIP_Bool             rangedrowartcons;   /**< should presolving and propagation extract sub-constraints from ranged rows and equations?*/
+   SCIP_Bool             propcont;           /**< should bounds on continuous variables be tightened by propagation?*/
    int                   rangedrowmaxdepth;  /**< maximum depth to apply ranged row propagation */
    int                   rangedrowfreq;      /**< frequency for applying ranged row propagation */
    SCIP_Bool             multaggrremove;     /**< should multi-aggregations only be performed if the constraint can be
@@ -7787,6 +7788,14 @@ SCIP_RETCODE tightenVarBounds(
    SCIP_ROUNDMODE prevmode;
    CERTIFICATE_CONS ccons;
    SCIP_Rational* tmpbound;
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   conshdlr = SCIPconsGetHdlr(cons);
+   assert(conshdlr != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
 
    prevmode = SCIPintervalGetRoundingMode();
 
@@ -7823,6 +7832,9 @@ SCIP_RETCODE tightenVarBounds(
          goto RETURN_SCIP_OKAY;
       }
    }
+
+   if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS && !conshdlrdata->propcont )
+      return SCIP_OKAY;
 
    valrange = ccons.valsreal[pos];
    lhs = ccons.lhsreal;
@@ -18559,6 +18571,10 @@ SCIP_RETCODE SCIPincludeConshdlrExactLinear(
          "constraints/" CONSHDLR_NAME "/multaggrremove",
          "should multi-aggregations only be performed if the constraint can be removed afterwards?",
          &conshdlrdata->multaggrremove, TRUE, DEFAULT_MULTAGGRREMOVE, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/" CONSHDLR_NAME "/propcont",
+         "should bounds on continuous variables be tightened by propagation?",
+         &conshdlrdata->propcont, TRUE, DEFAULT_MULTAGGRREMOVE, NULL, NULL) );
 #ifdef SCIP_WITH_MPFR
    /* add info about using MPFR to external codes information */
    (void) SCIPsnprintf(version, sizeof(version), "MPFR %s", MPFR_VERSION_STRING);
