@@ -99,6 +99,8 @@
 #define DEFAULT_SKIPBADINITCANDS TRUE        /**< should branching rule skip candidates that have a low probability to be
                                               *  better than the best strong-branching or pseudo-candidate? */
 #define DEFAULT_STARTRANDSEED    5           /**< start random seed for random number generation */
+#define DEFAULT_MINSAMPLESIZE    10          /**< minimum sample size to estimate the tree size for dynamic lookahead */
+
 #define DEFAULT_RANDINITORDER    FALSE       /**< should slight perturbation of scores be used to break ties in the prior scores? */
 #define DEFAULT_USESMALLWEIGHTSITLIM FALSE   /**< should smaller weights be used for pseudo cost updates after hitting the LP iteration limit? */
 #define DEFAULT_DYNAMICWEIGHTS   TRUE        /**< should the weights of the branching rule be adjusted dynamically during solving based
@@ -108,7 +110,7 @@
 /* symmetry handling */
 #define DEFAULT_FILTERCANDSSYM   FALSE       /**< Use symmetry to filter branching candidates? */
 #define DEFAULT_TRANSSYMPSCOST   FALSE       /**< Transfer pscost information to symmetric variables if filtering is performed? */
-#define DEFAULT_DYNAMICLOOKAHEAD FALSE       /**< should we use a dynamic lookahead based on a tree size estimation of further strong branchings? */
+#define DEFAULT_DYNAMICLOOKAHEAD TRUE        /**< should we use a dynamic lookahead based on a tree size estimation of further strong branchings? */
 
 
 /** branching rule data */
@@ -149,6 +151,7 @@ struct SCIP_BranchruleData
    SCIP_Bool             dynamicweights;     /**< should the weights of the branching rule be adjusted dynamically during
                                               *   solving based on objective and infeasible leaf counters? */
    SCIP_Bool             dynamiclookahead;   /**< should we use a dynamic lookahead based on a tree size estimation of further strong branchings? */
+   int                   minsamplesize;      /**< minimum sample size to estimate the tree size for dynamic lookahead */
    int                   degeneracyaware;    /**< should degeneracy be taken into account to update weights and skip strong branching? (0: off, 1: after root, 2: always) */
    int                   confidencelevel;    /**< The confidence level for statistical methods, between 0 (Min) and 4 (Max). */
    int*                  nlcount;            /**< array to store nonlinear count values */
@@ -905,7 +908,7 @@ SCIP_Bool continueStrongBranching(
    long long sbcount;
    int currentdepth;
    long long currenttreesize;
-   SCIP_Real dualgap;
+   SCIP_Real absdualgap;
    SCIP_Real gaptoclose;
 
    branchruledata = SCIPbranchruleGetData(branchrule);
@@ -914,28 +917,31 @@ SCIP_Bool continueStrongBranching(
       return TRUE;
 
    /* if we do not have a large enough sample to estimate the rate of the exponential distribution we continue with strong branching */
-   /* TodoSB add a parameter for the minimum size for the sample */
-   if (branchruledata->ndualgains < 10)
+   if (branchruledata->ndualgains < branchruledata->minsamplesize)
       return TRUE;
 
    mingain = branchruledata->mingain;
    maxgain = branchruledata->maxgain;
 
-   /* Compute the dual gap at the current node */
+   /* Compute the absolute dual gap at the current node */
    if( !SCIPisInfinity(scip, SCIPgetUpperbound(scip)) )
-      dualgap = SCIPgetUpperbound(scip) - SCIPgetNodeLowerbound(scip, SCIPgetCurrentNode(scip));
+      absdualgap = SCIPgetUpperbound(scip) - SCIPgetNodeLowerbound(scip, SCIPgetCurrentNode(scip));
+   else
+      absdualgap = SCIPinfinity(scip);
+
+   /* Compute an estimate of the height of the current node TodoSB using the maxgain? */
+   if( !SCIPisInfinity(scip, absdualgap) && !SCIPisInfinity(scip, mingain) )
+      gaptoclose = absdualgap;
    else
       return TRUE;
 
-
-   gaptoclose = dualgap / (mingain + 1.0);
    /* update the rate for the exponential distribution */
    lambda = 1 / branchruledata->meandualgain;
 
    sbcount = SCIPgetNStrongbranchs(scip);
 
-   /* Compute the tree size if we branch on the best variable so far, including the strong branching already done. */
    currentdepth = strongBranchingDepth(gaptoclose, maxgain);
+   /* Compute the tree size if we branch on the best variable so far, including the strong branching already done. */
    currenttreesize = strongBranchingTreeSize(currentdepth) + 2 * sbcount;
 
    /* Compute the expected size of the tree with one more strong branching */
@@ -991,7 +997,8 @@ SCIP_RETCODE execRelpscost(
    /* get branching rule data */
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
-
+   branchruledata->mingain = SCIPinfinity(scip);
+   branchruledata->maxgain = -SCIPinfinity(scip);
    /* get current LP objective bound of the local sub problem and global cutoff bound */
    lpobjval = SCIPgetLPObjval(scip);
 
@@ -2411,7 +2418,9 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
          NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip, "branching/relpscost/startrandseed", "start seed for random number generation",
          &branchruledata->startrandseed, TRUE, DEFAULT_STARTRANDSEED, 0, INT_MAX, NULL, NULL) );
-
+   SCIP_CALL( SCIPaddIntParam(scip, "branching/relpscost/minsamplesize",
+         "minimum sample size to estimate the tree size for dynamic lookahead",
+         &branchruledata->minsamplesize, TRUE, DEFAULT_MINSAMPLESIZE, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "branching/relpscost/filtercandssym",
          "Use symmetry to filter branching candidates?",
          &branchruledata->filtercandssym, TRUE, DEFAULT_FILTERCANDSSYM, NULL, NULL) );
