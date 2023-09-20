@@ -738,6 +738,12 @@ SCIP_Rational* SCIPvarGetObjExact(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
+/** gets exact objective function value of variable */
+SCIP_EXPORT
+SCIP_INTERVAL SCIPvarGetObjInterval(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
 /** gets the unchanged objective function value of variable (ignoring temproray changes performed in probing mode) */
 SCIP_EXPORT
 SCIP_Real SCIPvarGetUnchangedObj(

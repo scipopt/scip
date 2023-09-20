@@ -44,6 +44,7 @@
 #include "scip/type_lp.h"
 #include "scip/rational.h"
 #include "scip/type_lpexact.h"
+#include "scip/intervalarith.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -235,6 +236,7 @@ struct SCIP_Negate
 struct SCIP_VarDataExact
 {
    SCIP_Rational*        obj;                /**< exact rational objective */
+   SCIP_INTERVAL         objinterval;        /**< interval approximation of obj (for faster performance) */
    SCIP_DOMEXACT         locdom;             /**< exact local bounds */
    SCIP_DOMEXACT         glbdom;             /**< exact global bound */
    SCIP_DOMEXACT         origdom;            /**< original domain */

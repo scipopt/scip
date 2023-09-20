@@ -2213,12 +2213,7 @@ SCIP_RETCODE boundShift(
          SCIPintervalSet(&obj[j], 0);
       else
       {
-         if( RatIsFpRepresentable(SCIPvarGetObjExact(SCIPcolGetVar(col))) )
-            SCIPintervalSet(&obj[j], col->obj);
-         else
-         {
-            SCIPintervalSetRational(&obj[j], SCIPvarGetObjExact(SCIPcolGetVar(col)));
-         }
+         obj[j] = SCIPvarGetObjInterval(SCIPcolGetVar(col));
       }
 
       assert(SCIPcolGetLb(col) <= RatRoundReal(SCIPvarGetLbLocalExact(col->var), SCIP_R_ROUND_DOWNWARDS));

@@ -59,6 +59,7 @@
 #include "scip/type_stat.h"
 #include "scip/type_tree.h"
 #include "scip/type_var.h"
+#include "scip/intervalarith.h"
 
 #ifndef NDEBUG
 #include "scip/struct_var.h"

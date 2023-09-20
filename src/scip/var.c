@@ -2586,11 +2586,13 @@ SCIP_RETCODE SCIPvarAddExactData(
    if( obj != NULL )
    {
       SCIP_CALL( RatCopy(blkmem, &var->exactdata->obj, obj) );
+      SCIPintervalSetRational(&var->exactdata->objinterval, obj);
    }
    else
    {
       SCIP_CALL( RatCreateBlock(blkmem, &var->exactdata->obj) );
       RatSetReal(var->exactdata->obj, var->obj);
+      SCIPintervalSet(&var->exactdata->objinterval, 0.0);
    }
 
    var->exactdata->locdom.lbcertificateidx = -1;
@@ -2663,7 +2665,10 @@ SCIP_RETCODE SCIPvarCopyExactData(
 
    SCIP_CALL( RatCopy(blkmem, &targetvar->exactdata->obj, sourcevar->exactdata->obj) );
    if( negateobj )
+   {
       RatNegate(targetvar->exactdata->obj, targetvar->exactdata->obj);
+   }
+   SCIPintervalSetRational(&(targetvar->exactdata->objinterval), targetvar->exactdata->obj);
    targetvar->exactdata->colexact = NULL;
    targetvar->exactdata->varstatusexact = SCIP_VARSTATUS_LOOSE;
    targetvar->exactdata->certificateindex = sourcevar->exactdata->certificateindex;
@@ -9098,6 +9103,7 @@ SCIP_RETCODE SCIPvarChgObjExact(
             assert(set->stage == SCIP_STAGE_PROBLEM);
 
          RatSet(var->exactdata->obj, newobj);
+         SCIPintervalSetRational(&(var->exactdata->objinterval), newobj);
          var->obj = newobjreal;
          var->unchangedobj = newobjreal;
 
@@ -9107,6 +9113,7 @@ SCIP_RETCODE SCIPvarChgObjExact(
       case SCIP_VARSTATUS_COLUMN:
          RatSet(oldobj, var->exactdata->obj);
          RatSet(var->exactdata->obj, newobj);
+         SCIPintervalSetRational(&(var->exactdata->objinterval), newobj);
          var->obj = newobjreal;
 
          /* update unchanged objective value of variable */
@@ -9309,6 +9316,7 @@ SCIP_RETCODE SCIPvarAddObjExact(
             assert(set->stage == SCIP_STAGE_PROBLEM);
 
          RatAdd(var->exactdata->obj, var->exactdata->obj, addobj);
+         SCIPintervalSetRational(&(var->exactdata->objinterval), var->exactdata->obj);
          var->obj = RatApproxReal(var->exactdata->obj);
          var->unchangedobj = var->obj;
 
@@ -9319,6 +9327,7 @@ SCIP_RETCODE SCIPvarAddObjExact(
          RatSet(oldobj, var->exactdata->obj);
          oldobjreal = var->obj;
          RatAdd(var->exactdata->obj, var->exactdata->obj, addobj);
+         SCIPintervalSetRational(&(var->exactdata->objinterval), var->exactdata->obj);
          var->obj = RatApproxReal(var->exactdata->obj);
 
          /* update unchanged objective value of variable */
@@ -11706,7 +11715,7 @@ SCIP_RETCODE varProcessChgLbLocal(
    assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM || SCIPsetIsFeasLE(set, newbound, var->locdom.ub));
    var->locdom.lb = newbound;
    /* adjust the exact bound as well */
-   if( set->exact_enabled && RatRoundReal(var->exactdata->locdom.lb, SCIP_R_ROUND_DOWNWARDS) != var->locdom.lb )
+   if( set->exact_enabled )
       RatSetReal(var->exactdata->locdom.lb, var->locdom.lb);
 
    /* update statistic; during the update steps of the parent variable we pass a NULL pointer to ensure that we only
@@ -11892,7 +11901,7 @@ SCIP_RETCODE varProcessChgUbLocal(
    assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM || SCIPsetIsFeasGE(set, newbound, var->locdom.lb));
    var->locdom.ub = newbound;
    /* adjust the exact bound as well */
-   if( set->exact_enabled && RatRoundReal(var->exactdata->locdom.ub, SCIP_R_ROUND_UPWARDS) != var->locdom.ub )
+   if( set->exact_enabled )
       RatSetReal(var->exactdata->locdom.ub, var->locdom.ub);
 
    /* update statistic; during the update steps of the parent variable we pass a NULL pointer to ensure that we only
@@ -23346,6 +23355,17 @@ SCIP_Rational* SCIPvarGetObjExact(
    assert(var->exactdata != NULL);
 
    return var->exactdata->obj;
+}
+
+/** gets exact objective function value of variable */
+SCIP_INTERVAL SCIPvarGetObjInterval(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+   assert(var->exactdata != NULL);
+
+   return var->exactdata->objinterval;
 }
 
 /** gets the unchanged objective function value of a variable (ignoring temproray changes performed in probing mode) */
