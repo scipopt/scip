@@ -1465,15 +1465,20 @@ SCIP_DECL_EVENTEXEC(eventExecGlobalBoundChange)
    assert( strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_SYMMETRY_NAME) == 0 );
    assert( event != NULL );
 
-   /* only update the global bounds if branching has not started */
-   if ( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPgetNNodes(scip) > 1 )
-      return SCIP_OKAY;
-
    orcdata = (ORCDATA*) eventdata;
+   assert( orcdata != NULL );
+
+   /* only update the global bounds if the propagator has not been called yet */
+   if ( orcdata->symmetrybrokencomputed )
+   {
+      /* identifyOrbitalSymmetriesBroken is only called when we're propagating, which is only done for during solving */
+      assert( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPgetNNodes(scip) > 1 );
+      return SCIP_OKAY;
+   }
+
    var = SCIPeventGetVar(event);
    assert( var != NULL );
    assert( SCIPvarIsTransformed(var) );
-   assert( !orcdata->symmetrybrokencomputed );
 
    assert( orcdata->permvarmap != NULL );
    varidx = SCIPhashmapGetImageInt(orcdata->permvarmap, (void*) var);
