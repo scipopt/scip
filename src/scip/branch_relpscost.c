@@ -768,10 +768,10 @@ SCIP_RETCODE applyBdchgs(
    return SCIP_OKAY;
 }
 
-/* Update the mean of all gains computed so far. This mean is used in the
+/* Update the min/max gain, and the mean of all gains computed so far. This mean is used in the
  * definition of the exponential distribution */
 static
-SCIP_RETCODE updateMeanGain(
+SCIP_RETCODE updateMinMaxMeanGain(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
    SCIP_Real             downgain,           /**< gain for branching downwards */
@@ -790,8 +790,11 @@ SCIP_RETCODE updateMeanGain(
    avggain = (downgain + upgain) / 2.0;
 
    branchruledata->meandualgain = ((SCIP_Real) branchruledata->ndualgains /  (branchruledata->ndualgains + 1) ) * branchruledata->meandualgain + avggain / ( branchruledata->ndualgains + 1 ) ;
+   /* update the min and max gain */
+   branchruledata->mingain = MIN(branchruledata->mingain, MIN(downgain, upgain));
+   branchruledata->maxgain = MAX(branchruledata->maxgain, MAX(downgain, upgain));
    ++branchruledata->ndualgains;
-   SCIPdebugMsg(scip, " -> mean of %d dual gains: %g\n", branchruledata->ndualgains, branchruledata->meandualgain);
+   SCIPdebugMsg(scip, " -> min gain: %g, max gain: %g, mean of %d dual gains: %g\n", branchruledata->mingain, branchruledata->maxgain, branchruledata->ndualgains, branchruledata->meandualgain);
 
    return SCIP_OKAY;
 }
@@ -803,17 +806,18 @@ long int strongBranchingDepth(
    SCIP_Real             maxgain
    )
 {
-   assert(maxgain > 0.0);
-   return (long int) ceil(gap / maxgain);
+   assert(maxgain >= 0.0);
+   /* TodoSB case where maxgain is 0.0? */
+   return (long int) ceil(gap / (maxgain + 1.0));
 }
 
 /* Compute the size of the tree with the assumption that left and right dual gains are equal */
 static
-long long strongBranchingTreeSize(
+long int strongBranchingTreeSize(
    int                   depth_tree
    )
 {
-   return (long long) (pow(2.0, (double) depth_tree + 1) - 1);
+   return (long int) (pow(2.0, (long int) depth_tree + 1) - 1);
 }
 
 /* Calculate the cumulative distribution function (CDF) value for an exponential distribution. */
@@ -824,6 +828,7 @@ SCIP_Real cbfProbability(
    )
 {
    assert(rate >= 0.0);
+
    return 1.0 - exp(-rate * proposedgain);
 }
 
@@ -831,6 +836,7 @@ SCIP_Real cbfProbability(
 /* TodoSB check the code since it is just copied from the python script */
 static
 SCIP_Real expectedTreeSize(
+   SCIP*                 scip,
    SCIP_Real             gap,
    SCIP_Real             maxgain,
    SCIP_Real             lambda,
@@ -843,17 +849,17 @@ SCIP_Real expectedTreeSize(
 
    int current_depth = strongBranchingDepth(gap, maxgain);
    int depth = current_depth;
-   int current_treesize = strongBranchingTreeSize(current_depth);
-   SCIP_Real next_treesize;
-   SCIP_Real improved_tree;
+   long int current_treesize = strongBranchingTreeSize(current_depth);
+   long int next_treesize;
+   long int improved_tree;
    if (depth == 1)
    {
-      next_treesize = (SCIP_Real) current_treesize;
+      next_treesize = (long int) current_treesize;
    }
    else if (depth == 2)
    {
       SCIP_Real p = 1.0 - cbfProbability(lambda, gap);
-      improved_tree = (SCIP_Real) strongBranchingTreeSize(depth - 1);
+      improved_tree = (long int) strongBranchingTreeSize(depth - 1);
       next_treesize = improved_tree * p + strongBranchingTreeSize(depth) * (1.0 - p) + 2.0 * (sb_count + 1);
    }
    else
@@ -871,7 +877,7 @@ SCIP_Real expectedTreeSize(
             pp = 1.0 - cbfProbability(lambda, gap / (depth - 2));
          }
 
-         if (depth == 2)
+         else if (depth == 2)
          {
                p = 1.0 - cbfProbability(lambda, gap);
                total_p += p;
@@ -904,7 +910,7 @@ SCIP_Bool continueStrongBranching(
    SCIP_Real lambda;
    SCIP_Real mingain;
    SCIP_Real maxgain;
-   int nexttreesize;
+   long int nexttreesize;
    long long sbcount;
    int currentdepth;
    long long currenttreesize;
@@ -923,7 +929,7 @@ SCIP_Bool continueStrongBranching(
    mingain = branchruledata->mingain;
    maxgain = branchruledata->maxgain;
 
-   /* Compute the absolute dual gap at the current node */
+   /* Compute the absolute gap at the current node */
    if( !SCIPisInfinity(scip, SCIPgetUpperbound(scip)) )
       absdualgap = SCIPgetUpperbound(scip) - SCIPgetNodeLowerbound(scip, SCIPgetCurrentNode(scip));
    else
@@ -935,17 +941,19 @@ SCIP_Bool continueStrongBranching(
    else
       return TRUE;
 
+   assert(!SCIPisInfinity(scip, -maxgain));
    /* update the rate for the exponential distribution */
    lambda = 1 / branchruledata->meandualgain;
 
    sbcount = SCIPgetNStrongbranchs(scip);
 
-   currentdepth = strongBranchingDepth(gaptoclose, maxgain);
+   /* TodoSB too large depth can cause overflow */
+   currentdepth = MIN(50, strongBranchingDepth(gaptoclose, maxgain));
    /* Compute the tree size if we branch on the best variable so far, including the strong branching already done. */
    currenttreesize = strongBranchingTreeSize(currentdepth) + 2 * sbcount;
 
    /* Compute the expected size of the tree with one more strong branching */
-   nexttreesize = expectedTreeSize(gaptoclose, maxgain, lambda, sbcount);
+   nexttreesize = expectedTreeSize(scip, gaptoclose, maxgain, lambda, sbcount);
 
    if(nexttreesize < currenttreesize)
       return TRUE;
@@ -1338,15 +1346,12 @@ SCIP_RETCODE execRelpscost(
             downgain = MAX(down - lastlpobjval, 0.0);
             upgain = MAX(up - lastlpobjval, 0.0);
             /* update the average gain */
-            updateMeanGain(scip, branchrule, downgain, upgain);
+            updateMinMaxMeanGain(scip, branchrule, downgain, upgain);
 
             pscostscore = SCIPgetBranchScore(scip, branchcands[c], downgain, upgain);
 
             mingains[c] = MIN(downgain, upgain);
             maxgains[c] = MAX(downgain, upgain);
-            /* keep the min and max gain */
-            branchruledata->mingain = MIN(branchruledata->mingain, mingains[c]);
-            branchruledata->maxgain = MAX(branchruledata->maxgain, maxgains[c]);
 
             SCIPdebugMsg(scip, " -> strong branching on variable <%s> already performed (down=%g (%+g), up=%g (%+g), pscostscore=%g)\n",
                SCIPvarGetName(branchcands[c]), down, downgain, up, upgain, pscostscore);
@@ -1697,7 +1702,7 @@ SCIP_RETCODE execRelpscost(
          assert(downinf || !downconflict);
          assert(upinf || !upconflict);
 
-         updateMeanGain(scip, branchrule, downgain, upgain);
+         updateMinMaxMeanGain(scip, branchrule, downgain, upgain);
 
          /* @todo: store pseudo cost only for valid bounds?
           * depending on the user parameter choice of storesemiinitcosts, pseudo costs are also updated in single directions,
@@ -1815,10 +1820,6 @@ SCIP_RETCODE execRelpscost(
 
             mingains[c] = MIN(downgain, upgain);
             maxgains[c] = MAX(downgain, upgain);
-            /* keep the min and max gain */
-            branchruledata->mingain = MIN(branchruledata->mingain, mingains[c]);
-            branchruledata->maxgain = MAX(branchruledata->maxgain, maxgains[c]);
-
             sbdown[c] = down;
             sbup[c] = up;
             sbdownvalid[c] = downvalid;
