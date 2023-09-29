@@ -15041,14 +15041,16 @@ SCIP_RETCODE fullDualPresolve(
 
       var = vars[v];
       obj = SCIPvarGetObj(var);
-      if( obj >= 0.0 )
+      if( !SCIPisPositive(scip, -obj) )
       {
          /* making the variable as small as possible does not increase the objective:
           * check if all down locks of the variables are due to linear constraints;
-          * if largest bound to make constraints redundant is -infinity, we better do nothing for numerical reasons
+          * if variable is cost neutral and only upper bounded non-positively or negative largest bound to make
+          * constraints redundant is huge, we better do nothing for numerical reasons
           */
-         if( SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == nlocksdown[v]
-            && !SCIPisInfinity(scip, -redlb[v])
+         if( ( SCIPisPositive(scip, obj) || SCIPisPositive(scip, SCIPvarGetUbGlobal(var)) || !SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var)) )
+            && SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == nlocksdown[v]
+            && !SCIPisHugeValue(scip, -redlb[v])
             && redlb[v] < SCIPvarGetUbGlobal(var) )
          {
             SCIP_Real ub;
@@ -15068,14 +15070,16 @@ SCIP_RETCODE fullDualPresolve(
                (*nchgbds)++;
          }
       }
-      if( obj <= 0.0 )
+      if( !SCIPisPositive(scip, obj) )
       {
          /* making the variable as large as possible does not increase the objective:
           * check if all up locks of the variables are due to linear constraints;
-          * if smallest bound to make constraints redundant is +infinity, we better do nothing for numerical reasons
+          * if variable is cost neutral and only lower bounded non-negatively or positive smallest bound to make
+          * constraints redundant is huge, we better do nothing for numerical reasons
           */
-         if( SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == nlocksup[v]
-            && !SCIPisInfinity(scip, redub[v])
+         if( ( SCIPisPositive(scip, -obj) || SCIPisPositive(scip, -SCIPvarGetLbGlobal(var)) || !SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) )
+            && SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == nlocksup[v]
+            && !SCIPisHugeValue(scip, redub[v])
             && redub[v] > SCIPvarGetLbGlobal(var) )
          {
             SCIP_Real lb;
