@@ -263,7 +263,7 @@ SCIP_RETCODE lockVariableSOS2(
 }
 
 
-/* remove lock on variable */
+/** remove lock on variable */
 static
 SCIP_RETCODE unlockVariableSOS2(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2292,15 +2292,12 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphSOS2)
          if( nlocvars == 1 && SCIPisZero(scip, constant) && SCIPisEQ(scip, locvals[0], 1.0) )
          {
             nodeidx = SCIPgetSymgraphVarnodeidx(scip, graph, locvars[0]);
-
             SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, opnodeidx, nodeidx, FALSE, 0.0) );
          }
          else
          {
             SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, (int) SYM_CONSOPTYPE_SUM, &nodeidx) ); /*lint !e641*/
-
             SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, opnodeidx, nodeidx, FALSE, 0.0) );
-
             SCIP_CALL( SCIPaddSymgraphVarAggegration(scip, graph, nodeidx, locvars, locvals, nlocvars, constant) );
          }
       }
@@ -2403,7 +2400,6 @@ SCIP_DECL_CONSGETSIGNEDPERMSYMGRAPH(consGetSignedPermsymGraphSOS2)
             if( ! SCIPisZero(scip, constant) )
             {
                SCIP_CALL( SCIPaddSymgraphValnode(scip, graph, constant, &nodeidx) );
-
                SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, sumnodeidx, nodeidx, FALSE, 0.0) );
             }
          }
@@ -2419,7 +2415,7 @@ SCIP_DECL_CONSGETSIGNEDPERMSYMGRAPH(consGetSignedPermsymGraphSOS2)
 
 /* ---------------- Callback methods of event handler ---------------- */
 
-/* exec the event handler
+/** exec the event handler
  *
  * We update the number of variables fixed to be nonzero
  */

@@ -9039,7 +9039,7 @@ CLEANUP:
    return SCIP_OKAY;
 }
 
-/** computes a facet of the convex or concave envelope of a univariat vertex polyhedral function
+/** computes a facet of the convex or concave envelope of a univariate vertex polyhedral function
  *
  * In other words, compute the line that passes through two given points.
  */
@@ -9330,7 +9330,7 @@ SCIP_RETCODE computeVertexPolyhedralFacetBivariate(
    return SCIP_OKAY;
 }
 
-/** ensures that we can store information about open expressions (i.e, not fully encoded in the symmetry detection
+/** ensures that we can store information about open expressions (i.e., not fully encoded in the symmetry detection
  *  graph yet) in an array
  */
 static
@@ -9646,7 +9646,7 @@ SCIP_RETCODE tryAddGadgetEvenOperatorVariable(
 
    *success = FALSE;
 
-   /* check whether child variable is (multi-) aggregated */
+   /* check whether child variable is (multi-)aggregated */
    var = SCIPgetVarExprVar(child);
    (*consvars)[0] = var;
    (*consvals)[0] = 1.0;
@@ -9732,7 +9732,7 @@ SCIP_RETCODE tryAddGadgetEvenOperatorSum(
 
    *success = FALSE;
 
-   /* check whether child variable is (multi-) aggregated and whether all children are variables */
+   /* check whether child variable is (multi-)aggregated and whether all children are variables */
    nlocvars = SCIPexprGetNChildren(child);
    for( i = 0; i < nlocvars; ++i)
    {
@@ -9758,6 +9758,7 @@ SCIP_RETCODE tryAddGadgetEvenOperatorSum(
    var = (*consvars)[0];
    if( (SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) != SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var))) )
       return SCIP_OKAY;
+
    if( nlocvars == 2 )
    {
       var = (*consvars)[1];
@@ -9778,7 +9779,6 @@ SCIP_RETCODE tryAddGadgetEvenOperatorSum(
       SCIP_CALL( SCIPaddSymgraphValnode(scip, graph, symval, &nodeidx) );
       SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, thisopidx, nodeidx, FALSE, 0.0) );
    }
-
 
    if( nlocvars == 1 )
    {
@@ -10006,7 +10006,7 @@ SCIP_RETCODE tryAddGadgetSquaredDifference(
    SCIP_CALL( SCIPallocBufferArray(scip, &powvars, nchildren) );
    SCIP_CALL( SCIPallocBufferArray(scip, &prodvars, 2 * nchildren) );
 
-   /* we scan for norm constraints, i.e., the number of powexpres needs to be twice the prodexpr
+   /* we scan for norm constraints, i.e., the number of powexpr needs to be twice the prodexpr
     *
     * @todo make this work in a more general case
     */
@@ -10031,7 +10031,7 @@ SCIP_RETCODE tryAddGadgetSquaredDifference(
          if( !SCIPisExprVar(scip, child) )
             continue;
 
-         /* the power is requires to be a 2 */
+         /* the power is required to be a 2 */
          SCIP_CALL( SCIPgetSymDataExpr(scip, children[i], &symdata) );
          assert(symdata != NULL);
          assert(SCIPgetSymExprdataNConstants(symdata) == 1);

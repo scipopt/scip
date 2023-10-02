@@ -2021,7 +2021,7 @@ SCIP_RETCODE addSymmetryInformation(
       SCIP_CALL( SCIPaddSymgraphValnode(scip, graph, bound, &nodeidx) );
       SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, opnodeidx, nodeidx, FALSE, 0.0) );
 
-      /* check whether variable is (multi-) aggregated */
+      /* check whether variable is (multi-)aggregated */
       nodeidx = opnodeidx;
       if( nlocvars > 1 )
       {

@@ -337,7 +337,6 @@ SCIP_RETCODE SCIPaddSymgraphVarAggegration(
    if( ! SCIPisZero(scip, constant) )
    {
       SCIP_CALL( SCIPaddSymgraphValnode(scip, graph, constant, &nodeidx) );
-
       SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, rootidx, nodeidx, FALSE, 0.0) );
    }
 

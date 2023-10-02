@@ -3180,7 +3180,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphCardinality)
       SCIP_CALL( SCIPgetActiveVariables(scip, SYM_SYMTYPE_PERM, &vars, &vals,
             &nlocvars, &constant, SCIPisTransformed(scip)) );
 
-      /* check whether variable is (multi-) aggregated or negated */
+      /* check whether variable is (multi-)aggregated or negated */
       if( nlocvars > 1 || !SCIPisEQ(scip, vals[0], 1.0) || !SCIPisZero(scip, constant) )
       {
          /* encode aggregation by a sum-expression */

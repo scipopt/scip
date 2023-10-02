@@ -1412,7 +1412,7 @@ SCIP_RETCODE isPermInvolution(
    return SCIP_OKAY;
 }
 
-/* checks whether selected permutations define orbitopal symmetrie */
+/** checks whether selected permutations define orbitopal symmetries */
 static
 SCIP_RETCODE detectOrbitopalSymmetries(
    SCIP*                 scip,               /**< SCIP pointer */
@@ -1715,7 +1715,7 @@ SCIP_RETCODE detectOrbitopalSymmetries(
          }
       }
 
-      /* if the selected permutation do not form orbitopal symmetries*/
+      /* if the selected permutation do not form orbitopal symmetries */
       if ( cnt < nrows )
       {
          *success = FALSE;
