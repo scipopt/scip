@@ -167,7 +167,7 @@ SCIP_DECL_PRESOLEXEC(presolExecImplics)
             }
             index1 = SCIPvarGetIndex(implvars[1][i1]); /*lint !e838*/
          }
-         /**@todo for all implied binary variables y, check the cliques of x == !varfixing if y is contained */
+         /**@todo for all implicit binary variables y, check the cliques of x == !varfixing if y is contained */
 
          if( index0 == index1 )
          {

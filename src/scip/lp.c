@@ -12126,7 +12126,8 @@ SCIP_RETCODE lpSolve(
       assert(!lpCutoffDisabled(set, prob));
 
 #ifndef NDEBUG
-      /* the LP solution objective should exceed the limit in this case */
+      /* the LP solution objective should exceed the limit in this case; if this assert is triggered, it typically means
+       * that the LP interface method SCIPlpiIsStable() lacks a check for this event and incorrectly returned TRUE */
       SCIP_CALL( SCIPlpiGetObjval(lp->lpi, &lp->lpobjval) );
       assert(!set->lp_checkstability || SCIPsetIsRelGE(set, lp->lpobjval, lp->lpiobjlim));
 #endif
@@ -18702,7 +18703,9 @@ SCIP_RETCODE SCIPlpGetDualDegeneracy(
          int nfixedcols = 0;
          int nalreadyfixedcols = 0;
          int nfixedrows = 0;
+#ifndef NDEBUG
          int nimplicitfixedrows = 0;
+#endif
          int nineq = 0;
          int c;
          int r;
@@ -18761,11 +18764,13 @@ SCIP_RETCODE SCIPlpGetDualDegeneracy(
                         ++nfixedrows;
                      }
                   }
+#ifndef NDEBUG
                   else if( SCIPsetIsEQ(set, SCIProwGetLhs(row), SCIProwGetMaxActivity(row, set, stat))
                      || SCIPsetIsEQ(set, SCIProwGetRhs(row), SCIProwGetMinActivity(row, set, stat)) )
                   {
                      ++nimplicitfixedrows;
                   }
+#endif
                }
             }
             else if( SCIProwGetBasisStatus(row) == SCIP_BASESTAT_BASIC )

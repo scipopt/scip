@@ -2044,7 +2044,7 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
    }
    else
    {
-      /* check the infered bound change on the debugging solution */
+      /* check the inferred bound change on the debugging solution */
       SCIP_CALL( SCIPdebugCheckInference(blkmem, set, node, var, newbound, boundtype) ); /*lint !e506 !e774*/
 
       /* remember the bound change as inference (lpsolval is not important: use 0.0) */
@@ -3089,6 +3089,7 @@ SCIP_RETCODE treeSwitchPath(
    SCIP_Bool*            cutoff              /**< pointer to store whether the new focus node can be cut off */
    )
 {
+   int newappliedeffectiverootdepth;
    int focusnodedepth;  /* depth of the new focus node, or -1 if focusnode == NULL */
    int forkdepth;       /* depth of the common subroot/fork/pseudofork/junction node, or -1 if no common fork exists */
    int i;
@@ -3105,8 +3106,6 @@ SCIP_RETCODE treeSwitchPath(
    oldfocusnode = tree->focusnode;
    tree->focusnode = focusnode;
 
-   *cutoff = FALSE;
-
    SCIPsetDebugMsg(set, "switch path: old pathlen=%d\n", tree->pathlen);
 
    /* get the nodes' depths */
@@ -3115,7 +3114,7 @@ SCIP_RETCODE treeSwitchPath(
    assert(forkdepth <= focusnodedepth);
    assert(forkdepth < tree->pathlen);
 
-   /* delay events in node deactivations */
+   /* delay events in node deactivations to fork and node activations to parent of new focus node */
    SCIP_CALL( SCIPeventqueueDelay(eventqueue) );
 
    /* undo the domain and constraint set changes of the old active path by deactivating the path's nodes */
@@ -3127,9 +3126,6 @@ SCIP_RETCODE treeSwitchPath(
 
    /* apply the pending bound changes */
    SCIP_CALL( treeApplyPendingBdchgs(tree, reopt, blkmem, set, stat, transprob, origprob, lp, branchcand, eventqueue, cliquetable) );
-
-   /* process the delayed events */
-   SCIP_CALL( SCIPeventqueueProcess(eventqueue, blkmem, set, primal, lp, branchcand, eventfilter) );
 
    /* create the new active path */
    SCIP_CALL( treeEnsurePathMem(tree, set, focusnodedepth+1) );
@@ -3149,27 +3145,39 @@ SCIP_RETCODE treeSwitchPath(
    {
       assert(tree->appliedeffectiverootdepth <= tree->effectiverootdepth);
       SCIP_CALL( SCIPnodeFree(&oldfocusnode, blkmem, set, stat, eventfilter, eventqueue, tree, lp) );
-      assert(tree->effectiverootdepth <= focusnodedepth || tree->focusnode == NULL || *cutoff);
+      assert(tree->effectiverootdepth <= focusnodedepth || tree->focusnode == NULL);
    }
+
+   /* apply effective root shift up to the new focus node */
+   *cutoff = FALSE;
+   newappliedeffectiverootdepth = MIN(tree->effectiverootdepth, focusnodedepth);
 
    /* promote the constraint set and bound changes up to the new effective root to be global changes */
-   while( tree->appliedeffectiverootdepth < tree->effectiverootdepth && tree->appliedeffectiverootdepth < focusnodedepth
-      && !(*cutoff) )
+   if( tree->appliedeffectiverootdepth < newappliedeffectiverootdepth )
    {
       SCIPsetDebugMsg(set,
-         "effective root is now at depth %d: applying constraint set and bound changes to global problem\n",
-         tree->effectiverootdepth);
-      ++tree->appliedeffectiverootdepth;
-      SCIPsetDebugMsg(set, " -> applying constraint set changes of depth %d\n", tree->appliedeffectiverootdepth);
-      SCIP_CALL( SCIPconssetchgMakeGlobal(&tree->path[tree->appliedeffectiverootdepth]->conssetchg, blkmem, set, stat,
-            transprob, reopt) );
-      SCIPsetDebugMsg(set, " -> applying bound changes of depth %d\n", tree->appliedeffectiverootdepth);
-      SCIP_CALL( SCIPdomchgApplyGlobal(tree->path[tree->appliedeffectiverootdepth]->domchg, blkmem, set, stat, lp,
-            branchcand, eventqueue, cliquetable, cutoff) );
-   }
+                      "shift effective root from depth %d to %d: applying constraint set and bound changes to global problem\n",
+                      tree->appliedeffectiverootdepth, newappliedeffectiverootdepth);
 
-   /* delay events in node activations */
-   SCIP_CALL( SCIPeventqueueDelay(eventqueue) );
+      /* at first globalize constraint changes to update constraint handlers before changing bounds */
+      for( i = tree->appliedeffectiverootdepth + 1; i <= newappliedeffectiverootdepth; ++i )
+      {
+         SCIPsetDebugMsg(set, " -> applying constraint set changes of depth %d\n", i);
+
+         SCIP_CALL( SCIPconssetchgMakeGlobal(&tree->path[i]->conssetchg, blkmem, set, stat, transprob, reopt) );
+      }
+
+      /* at last globalize bound changes triggering delayed events processed after the path switch */
+      for( i = tree->appliedeffectiverootdepth + 1; i <= newappliedeffectiverootdepth && !(*cutoff); ++i )
+      {
+         SCIPsetDebugMsg(set, " -> applying bound changes of depth %d\n", i);
+
+         SCIP_CALL( SCIPdomchgApplyGlobal(tree->path[i]->domchg, blkmem, set, stat, lp, branchcand, eventqueue, cliquetable, cutoff) );
+      }
+
+      /* update applied effective root depth */
+      tree->appliedeffectiverootdepth = newappliedeffectiverootdepth;
+   }
 
    /* fork might be cut off when applying the pending bound changes */
    if( fork != NULL && fork->cutoff )

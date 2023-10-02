@@ -89,12 +89,6 @@
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
 #include "scip/dbldblarith.h"
-#include <ctype.h>
-#include <string.h>
-#if defined(_WIN32) || defined(_WIN64)
-#else
-#include <strings.h> /*lint --e{766}*/
-#endif
 
 
 #define CONSHDLR_NAME          "linear"
@@ -5040,7 +5034,7 @@ SCIP_RETCODE addConflictBounds(
             {
                assert( vars != NULL && vals != NULL ); /* for lint */
 
-               /* zero coefficients and the infered variable can be ignored */
+               /* zero coefficients and the inferred variable can be ignored */
                if( vars[i] == infervar || SCIPisZero(scip, vals[i]) )
                   continue;
 
@@ -5074,7 +5068,7 @@ SCIP_RETCODE addConflictBounds(
       assert(vars != NULL); /* for flexelint */
       assert(vals != NULL); /* for flexelint */
 
-      /* zero coefficients and the infered variable can be ignored */
+      /* zero coefficients and the inferred variable can be ignored */
       if( vars[i] == infervar || SCIPisZero(scip, vals[i]) )
          continue;
 
@@ -10389,6 +10383,10 @@ SCIP_RETCODE checkPartialObjective(
       SCIPdebugMsg(scip, "linear equality constraint <%s> == %g (offset %g) is a subset of the objective function\n",
          SCIPconsGetName(cons), consdata->rhs, offset);
 
+      /* make equality a model constraint to ensure optimality in this direction */
+      SCIP_CALL( SCIPsetConsChecked(scip, cons, TRUE) );
+      SCIP_CALL( SCIPsetConsEnforced(scip, cons, TRUE) );
+
       /* set all objective coefficient to zero */
       for( v = 0; v < nvars; ++v )
       {
@@ -14768,7 +14766,7 @@ SCIP_RETCODE fullDualPresolve(
    BMSclearMemoryArray(nlocksdown, nvars);
    BMSclearMemoryArray(nlocksup, nvars);
 
-   /* Initialize isimplint array: variable may be implied integer if rounded to their best bound they are integral.
+   /* Initialize isimplint array: variable may be implicit integer if rounded to their best bound they are integral.
     * We better not use SCIPisFeasIntegral() in these checks.
     */
    for( v = 0; v < ncontvars; v++ )
@@ -14970,13 +14968,13 @@ SCIP_RETCODE fullDualPresolve(
             }
          }
 
-         /* update implied integer status of continuous variables */
+         /* update implicit integer status of continuous variables */
          if( hasimpliedpotential )
          {
             if( nconscontvars > 1 || !integralcoefs )
             {
                /* there is more than one continuous variable or the integer variables have fractional coefficients:
-                * none of the continuous variables is implied integer
+                * none of the continuous variables is implicit integer
                 */
                for( i = 0; i < nconscontvars; i++ )
                {
@@ -15099,7 +15097,7 @@ SCIP_RETCODE fullDualPresolve(
       }
    }
 
-   /* upgrade continuous variables to implied integers */
+   /* upgrade continuous variables to implicit integers */
    for( v = nintvars - nbinvars; v < nvars; ++v )
    {
       SCIP_VAR* var;
@@ -15113,7 +15111,7 @@ SCIP_RETCODE fullDualPresolve(
       assert(SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) >= nlocksup[v]);
       assert(0 <= v - nintvars + nbinvars && v - nintvars + nbinvars < ncontvars);
 
-      /* we can only conclude implied integrality if the variable appears in no other constraint */
+      /* we can only conclude implicit integrality if the variable appears in no other constraint */
       if( isimplint[v - nintvars + nbinvars]
          && SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == nlocksdown[v]
          && SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == nlocksup[v] )
@@ -17089,8 +17087,7 @@ SCIP_DECL_CONSPARSE(consParseLinear)
       return SCIP_OKAY;
 
    /* ignore whitespace */
-   while( isspace((unsigned char)*str) )
-      ++str;
+   SCIP_CALL( SCIPskipSpace((char**)&str) );
 
    /* find operators in the line first, all other remaining parsing depends on occurence of the operators '<=', '>=', '==',
     * and the special word [free]

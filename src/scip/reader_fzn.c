@@ -3859,57 +3859,65 @@ SCIP_RETCODE readFZNFile(
  * Local methods (for writing)
  */
 
-
 /** transforms given variables, scalars, and constant to the corresponding active variables, scalars, and constant */
 static
 SCIP_RETCODE getActiveVariables(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR**            vars,               /**< vars array to get active variables for */
-   SCIP_Real*            scalars,            /**< scalars a_1, ..., a_n in linear sum a_1*x_1 + ... + a_n*x_n + c */
+   SCIP_VAR***           vars,               /**< pointer to vars array to get active variables for */
+   SCIP_Real**           scalars,            /**< pointer to scalars a_1, ..., a_n in linear sum a_1*x_1 + ... + a_n*x_n + c */
    int*                  nvars,              /**< pointer to number of variables and values in vars and vals array */
    SCIP_Real*            constant,           /**< pointer to constant c in linear sum a_1*x_1 + ... + a_n*x_n + c  */
    SCIP_Bool             transformed         /**< transformed constraint? */
    )
 {
-   int requiredsize;                         /* number of active variables */
+   int requiredsize;
    int v;
 
-   assert( scip != NULL );
-   assert( scalars != NULL );
-   assert( nvars != NULL );
-   assert( vars != NULL || *nvars == 0 );
-   assert( constant != NULL );
+   assert(scip != NULL);
+   assert(vars != NULL);
+   assert(scalars != NULL);
+   assert(nvars != NULL);
+   assert(*vars != NULL || *nvars == 0);
+   assert(*scalars != NULL || *nvars == 0);
+   assert(constant != NULL);
 
    if( transformed )
    {
-      SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, scalars, nvars, *nvars, constant, &requiredsize, TRUE) );
+      SCIP_CALL( SCIPgetProbvarLinearSum(scip, *vars, *scalars, nvars, *nvars, constant, &requiredsize, TRUE) );
 
-      /* avoid overflow by reallocation */
       if( requiredsize > *nvars )
       {
-         SCIP_CALL( SCIPreallocBufferArray(scip, &vars, requiredsize) );
-         SCIP_CALL( SCIPreallocBufferArray(scip, &scalars, requiredsize) );
+         SCIP_CALL( SCIPreallocBufferArray(scip, vars, requiredsize) );
+         SCIP_CALL( SCIPreallocBufferArray(scip, scalars, requiredsize) );
 
-         SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, scalars, nvars, requiredsize, constant, &requiredsize, TRUE) );
+         SCIP_CALL( SCIPgetProbvarLinearSum(scip, *vars, *scalars, nvars, requiredsize, constant, &requiredsize, TRUE) );
          assert( requiredsize <= *nvars );
       }
    }
    else
    {
-      if( *nvars > 0 && (vars == NULL || scalars == NULL) ) /*lint !e774 !e845*/
+      if( *nvars > 0 && ( *vars == NULL || *scalars == NULL ) ) /*lint !e774 !e845*/
       {
-         SCIPerrorMessage("Null pointer"); /* should not happen */
+         SCIPerrorMessage("Null pointer in FZN reader\n"); /* should not happen */
          SCIPABORT();
          return SCIP_INVALIDDATA;  /*lint !e527*/
       }
 
       for( v = 0; v < *nvars; ++v )
       {
-         assert(vars != NULL);
-         SCIP_CALL( SCIPvarGetOrigvarSum(&vars[v], &scalars[v], constant) );
+         SCIP_CALL( SCIPvarGetOrigvarSum(&(*vars)[v], &(*scalars)[v], constant) );
+
+         /* negated variables with an original counterpart may also be returned by SCIPvarGetOrigvarSum();
+          * make sure we get the original variable in that case
+          */
+         if( SCIPvarGetStatus((*vars)[v]) == SCIP_VARSTATUS_NEGATED )
+         {
+            (*vars)[v] = SCIPvarGetNegatedVar((*vars)[v]);
+            *constant += (*scalars)[v];
+            (*scalars)[v] *= -1.0;
+         }
       }
    }
-
    return SCIP_OKAY;
 }
 
@@ -4144,7 +4152,7 @@ SCIP_RETCODE printLinearCons(
    {
       assert( activevars != NULL );
       assert( activevals != NULL );
-      SCIP_CALL( getActiveVariables(scip, activevars, activevals, &nactivevars, &activeconstant, transformed) );
+      SCIP_CALL( getActiveVariables(scip, &activevars, &activevals, &nactivevars, &activeconstant, transformed) );
    }
 
    /* If there may be continuous variables or coefficients in the constraint, scan for them */
@@ -4651,7 +4659,7 @@ SCIP_RETCODE writeFzn(
    SCIPinfoMessage(scip, file, "\n%%%%%%%%%%%% Objective function %%%%%%%%%%%%\n");
 
    /* If there is at least one variable in the objective function write down the optimization problem, else declare it to be a satisfiability problem */
-   if( nintobjvars > 0 || nfloatobjvars > 0 )
+   if( nintobjvars > 0 || nfloatobjvars > 0 || !SCIPisZero(scip, objoffset) )
    {
       SCIPinfoMessage(scip, file, "solve %s int_float_lin([", objsense == SCIP_OBJSENSE_MINIMIZE ? "minimize" : "maximize" );
 

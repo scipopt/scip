@@ -42,6 +42,7 @@ set(instances_CP
 set(settings_default
     "default"
 )
+
 #
 # settings to run a whole test. In order to run a sub-suite, use -R
 #
@@ -92,12 +93,14 @@ set(settings_MIP
     "conflictdiving"
     "tolerance"
 )
+
 #
 # settings for the componentshandler test
 #
 set(settings_compHandlerTest
     "components_during_solve"
     )
+
 #
 # settings to run a reduced MIP test
 #
@@ -108,6 +111,7 @@ set(settings_fastMIP
     "bakvisualization"
     "fullstrongbfs"
     "cgmip"
+    "cgmipdirect"
     "cgmipstrong"
     "cgmipviol"
     "lookahead-abbrev-bincons"
@@ -119,6 +123,7 @@ set(settings_fastMIP
     "enable_treeprofile_regression_forest"
     "../../../scripts/trainEstimation/periodic_report"
   )
+
 set(settings_MINLP
     "default"
     "undercover1"
@@ -200,7 +205,6 @@ set(settings_reopt
     "reopt-test-settings-varorderinterdiction-r"
     )
 
-
 #
 # Indicator instances
 #
@@ -244,14 +248,15 @@ set(instances_consecSolve
 # read/write instances
 #
 set(instances_MIP_write
-  #"instances/MIP/bell5.mps\;8966406.49"
-  #"instances/MIP/egout.mps\;568.1007"
-  #"instances/MIP/flugpl.mps\;1201500"
-  #"instances/MIP/MANN_a9.clq.lp\;16"
+#    "instances/MIP/bell5.mps\;8966406.49"
+#    "instances/MIP/egout.mps\;568.1007"
+#    "instances/MIP/flugpl.mps\;1201500"
+#    "instances/MIP/MANN_a9.clq.lp\;16"
     "instances/MIP/p0033.osil\;3089"
     "instances/MIP/stein27.fzn\;18"
     "instances/MIP/stein27_inf.lp\;+infinity"
     )
+
 #
 # MIP instances
 #
@@ -266,6 +271,7 @@ set(instances_MIP
     "instances/MIP/lseu.mps\;1120"
     "instances/MIP/MANN_a9.clq.lp\;16"
     "instances/MIP/misc03.mps\;3360"
+    "instances/MIP/Negated.cip\;1"
     "instances/MIP/p0033.osil\;3089"
     "instances/MIP/p0548.mps\;8691"
     "instances/MIP/rgn.mps\;82.19999924"
@@ -273,6 +279,7 @@ set(instances_MIP
     "instances/MIP/stein27_inf.lp\;+infinity"
     "instances/MIP/vpm2.fzn\;13.75"
     )
+
 #
 # Instances for component handler test
 #
@@ -280,6 +287,7 @@ set(instances_compHandlerTest
     "instances/MIP/lseu_dcmulti.cip\;189302"
     "instances/MIP/4sHB.cip\;67"
     )
+
 #
 # Reduced set of MIP instances for more expensive settings
 #
@@ -289,28 +297,20 @@ set(instances_fastMIP
     "instances/MIP/gt2.mps\;21166"
     "instances/MIP/MANN_a9.clq.lp\;16"
     "instances/MIP/p0033.osil\;3089"
+    "instances/MIP/Side.lp\;2"
     )
 
 #
 # add additional ZIMPL instances if the configuration uses ZIMPL
 #
 if(ZIMPL AND ZIMPL_FOUND)
-
 list(APPEND
     instances_Indicator
-    "/instances/Indicator/indicatortest.zpl\;-2"
+    "instances/Indicator/indicatortest.zpl\;-2"
     "instances/Indicator/mcf64-4-1.zpl\;10"
     )
-#
-# this instance was part of the original coverage tests. However, it causes
-# a significant overhead without providing relevant benefit.
-#
-#list(APPEND
-#    instances_MIP
-#    "instances/MIP/rocII_2_11.zpl\;+4.61527698552400e+00"
-#    )
-
 endif()
+
 #
 # MINLP instances
 #
@@ -322,6 +322,7 @@ set(instances_MINLP
     "instances/MINLP/parincQuadratic.osil\;49920.5564"
     "instances/MINLP/tltr.mps\;48.0666666667"
     )
+
 set(instances_branch
     "instances/MIP/egout.mps\;568.1007"
     "instances/MIP/MANN_a9.clq.lp\;16"
@@ -329,6 +330,7 @@ set(instances_branch
     "instances/MINLP/circle.lp\;4.57424778"
     "instances/MINLP/ex1266.mps\;16.3"
     )
+
 set(instances_Bilinrelax
     "instances/MINLP/pointpack04.osil\;1.00000024988836"
     "instances/MINLP/pointpack06.osil\;0.361111675167215"
@@ -362,6 +364,7 @@ set(instances_Semicontinuous
     "instances/MINLP/meanvarxsc.lp\;14.3692321148754"
     "instances/MIP/semicon1.mps\;1.1"
     )
+
 #
 # SAT instance(s)
 #
@@ -430,7 +433,7 @@ set(instances_Stochastic
    "instances/Stochastic/pltexpA2_6.smps\;-9.479354404641"
    "instances/Stochastic/pltexpA2_16.smps\;-9.663308373027"
    "instances/Stochastic/pltexpA4_6.smps\;-19.5994173819041"
-    "instances/Stochastic/sslp_5_25_5.smps\;-100.6"
+   "instances/Stochastic/sslp_5_25_5.smps\;-100.6"
    )
 
 set(instances_Benders
@@ -444,8 +447,8 @@ set(instances_BendersLB
 
 set(instances_BendersQP
     "instances/Benders/classical_20_0.mps\;instances/Benders/classical_20.dec\;-8.22960761981176e-02"
-    #"instances/Benders/classical_30_0.mps\;instances/Benders/classical_30.dec\;-7.98150796362468e-02"
-    "instances/Benders/classical_30_15.mps\;instances/Benders/classical_30.dec\;-7.34740783553289e-02"
+#    "instances/Benders/classical_30_0.mps\;instances/Benders/classical_30.dec\;-7.98150796362468e-02"
+#    "instances/Benders/classical_30_15.mps\;instances/Benders/classical_30.dec\;-7.34740783553289e-02"
    )
 
 set(instances_Decomp
@@ -456,6 +459,13 @@ set(instances_Or
     "instances/Or/or_constraint.cip\;18"
     "instances/Or/Demo8.cip\;3"
     "instances/Or/problem.cip\;0"
+    )
+
+#
+# Pairs of instances and settings
+#
+set(pairs_Issue
+    "instances/Issue/3589.cip\;-1\;default"
     )
 
 #
@@ -494,13 +504,6 @@ set_tests_properties(scip-build
                         RESOURCE_LOCK libscip
                     )
 
-
-#
-# macro to split an instance into its relevant information
-# - path
-# - optval
-# - basename
-#
 macro(split_instance instance)
     list(GET instance 0 path)
     list(GET instance 1 optval)
@@ -513,6 +516,13 @@ macro(split_decompinstance instance)
     list(GET instance 2 optval)
     get_filename_component(basename ${instpath} NAME)
 endmacro(split_decompinstance)
+
+macro(split_pair pair)
+    list(GET pair 0 path)
+    list(GET pair 1 optval)
+    list(GET pair 2 setting)
+    get_filename_component(basename ${path} NAME)
+endmacro(split_pair)
 
 macro(add_instancetests instances settings prefix)
 #
@@ -527,6 +537,7 @@ macro(add_instancetests instances settings prefix)
             #
             # treat the instance as a tuple (list) of two values
             #
+            if(NOT ((${setting} STREQUAL "lns_epsgreedy_vanilla") AND (${basename} STREQUAL "blend2.mps") AND (${LPS} STREQUAL "grb")))
             add_test(NAME ${prefix}-${setting}-${basename}
                     COMMAND $<TARGET_FILE:scip> -f ${PROJECT_SOURCE_DIR}/check/${path} -s ${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set -o ${optval} ${optval}
                     )
@@ -537,6 +548,7 @@ macro(add_instancetests instances settings prefix)
                                     FAIL_REGULAR_EXPRESSION "WARNING: unknown parameter;user parameter file <${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set> not found"
                                     DEPENDS scip-build
                                 )
+            endif()  # Gurobi gets stuck in LP solve, #2833
         endforeach(setting)
     endforeach(instance)
 endmacro(add_instancetests)
@@ -576,6 +588,28 @@ if((${TEST_BENDERSQP} AND (NOT ${LPS} STREQUAL "msk" )) OR (NOT ${prefix} STREQU
 endif()
 endmacro(add_decompinstancetests)
 
+macro(add_pairtests pairs prefix)
+#
+# loop over pairs
+#
+    foreach(pair ${${pairs}})
+        split_pair(pair)
+        #
+        # add the test
+        #
+        add_test(NAME ${prefix}-${setting}-${basename}
+                COMMAND $<TARGET_FILE:scip> -f ${PROJECT_SOURCE_DIR}/check/${path} -s ${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set -o ${optval} ${optval}
+                )
+        set_tests_properties(${prefix}-${setting}-${basename}
+                            PROPERTIES
+                                PASS_REGULAR_EXPRESSION "Validation         : Success"
+                                FAIL_REGULAR_EXPRESSION ERROR
+                                FAIL_REGULAR_EXPRESSION "WARNING: unknown parameter;user parameter file <${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set> not found"
+                                DEPENDS scip-build
+                            )
+    endforeach(pair)
+endmacro(add_pairtests)
+
 add_instancetests(instances_CP settings_default "CP")
 add_instancetests(instances_Indicator settings_Indicator "Indicator")
 add_instancetests(instances_MIP settings_MIP "MIP")
@@ -600,6 +634,7 @@ add_instancetests(instances_Or settings_Or "Or")
 add_instancetests(instances_BendersLB settings_BendersLB "BendersLB")
 add_decompinstancetests(instances_BendersQP settings_BendersQP "BendersQP")
 add_decompinstancetests(instances_Decomp settings_Decomp "Decomp")
+add_pairtests(pairs_Issue "Issue")
 
 #
 # test writing and reading solutions
@@ -641,7 +676,6 @@ foreach(instance ${instances_Indicator})
         )
 endforeach(instance)
 
-
 #
 # the following instances are not pure binary and hence cannot be written out in opb format
 #
@@ -657,6 +691,7 @@ set(basenames_opb_wrongformat
     vpm2.fzn
     lseu_dcmulti.cip
     lseu_dcmulti_sHB.cip
+    dcmulti.mps
     )
 set(message_format_opb "WARNING: only binary problems can be written in OPB format.")
 
@@ -669,6 +704,14 @@ set(basenames_pip_wrongformat
 set(message_format_pip "PIP might be corrupted")
 
 #
+# the following instances use variable or equations names that are not supported in lp format
+#
+set(basenames_lp_wrongformat
+    rgn.mps
+    )
+set(message_format_lp "WARNING: violation of LP format - a constraint name starts with a digit; it is not possible to read the generated LP file with SCIP; use write/genproblem or write/gentransproblem for generic variable names")
+
+#
 # test writing and reading from and to different file extensions for MIP
 #
 foreach(instance ${instances_MIP_write})
@@ -676,7 +719,6 @@ foreach(instance ${instances_MIP_write})
     split_instance(instance)
     configure_file(interactiveshell/writeronlytest.bat.in interactiveshell/writeronlytest-${extension}-${basename}.bat)
     set(regex "written original problem to file")
-
     add_test(NAME MIP-writeronlytest-${extension}-${basename}
       COMMAND $<TARGET_FILE:scip> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/writeronlytest-${extension}-${basename}.bat
       )
@@ -694,18 +736,12 @@ endforeach(instance)
 #
 foreach(instance ${instances_MIP})
     split_instance(instance)
-    if(${basename} STREQUAL "rgn.mps")
-      continue()
-    endif()
-
     foreach(extension ${scip_reader_extensions})
         #
         # configure the batch file for this test by substituting placeholders in the in.file
         #
-
         # does this instance match the requirements of this format?
         list(FIND basenames_${extension}_wrongformat ${basename} wrongformat)
-
         #
         # use different template batch files depending on the format requirements
         #
@@ -716,7 +752,6 @@ foreach(instance ${instances_MIP})
             configure_file(interactiveshell/readertest-wrongformat.bat.in interactiveshell/readertest-${extension}-${basename}.bat)
             set(regex "${message_format_${extension}}")
         endif()
-
         add_test(NAME MIP-readertest-${extension}-${basename}
                 COMMAND $<TARGET_FILE:scip> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/readertest-${extension}-${basename}.bat
                 )
@@ -764,7 +799,6 @@ foreach(instance ${instances_MIP})
         # configure the template batch file and store it under the binary (build) directory
         #
         configure_file(interactiveshell/mipstarts.bat.in interactiveshell/MIP-mipstart-${basename}.bat)
-
         #
         # add test that executes the configured batch file and greps the validation expression
         #
@@ -789,9 +823,7 @@ endforeach(instance)
 #
 set(shell_tmp_dir ${PROJECT_BINARY_DIR}/check/temp)
 file(MAKE_DIRECTORY ${shell_tmp_dir})
-
 configure_file(interactiveshell/interactiveshell.bat.in interactiveshell/interactiveshell.bat)
-
 add_test(NAME interactiveshell
         COMMAND $<TARGET_FILE:scip> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/interactiveshell.bat
         )
@@ -801,7 +833,6 @@ set_tests_properties(interactiveshell
                         FAIL_REGULAR_EXPRESSION ERROR
                         DEPENDS scip-build
                     )
-
 add_test(NAME write_and_read_settings
         COMMAND $<TARGET_FILE:scip> -b ${CMAKE_CURRENT_SOURCE_DIR}/interactiveshell/write_and_read_settings.bat
         )
@@ -816,10 +847,8 @@ set_tests_properties(write_and_read_settings
 # We substitute first path placeholders in the .in file, which creates a new file under the binary directory
 # Then run SCIP to execute the list of commands defined there.
 #
-
 set(shell_tmp_dir ${PROJECT_BINARY_DIR}/check/temp)
 file(MAKE_DIRECTORY ${shell_tmp_dir})
-
 foreach(testname reopt-chg-obj-stein27 reopt-chg-obj-flugpl reopt-chg-obj-1-FullIns_3)
     foreach(setting ${settings_reopt})
         configure_file(interactiveshell/${testname}.bat.in interactiveshell/${testname}-${setting}.bat)
@@ -828,17 +857,14 @@ foreach(testname reopt-chg-obj-stein27 reopt-chg-obj-flugpl reopt-chg-obj-1-Full
                 )
         set_tests_properties(${testname}-${setting} PROPERTIES
                                             PASS_REGULAR_EXPRESSION "Validation         : Success"
-#                                            FAIL_REGULAR_EXPRESSION ERROR
+                                            FAIL_REGULAR_EXPRESSION ERROR
                                             DEPENDS scip-build)
         endforeach()
-
 endforeach()
-
 
 #
 # define sets of linear classification results
 #
-
 set(linclass_bell5
   "total             :         91"
   "singleton         :          2"
@@ -857,6 +883,7 @@ set(linclass_blend2
     "mixedbinary       :         68"
     "general           :         21"
     )
+
 set(linclass_dcmulti
     "setpacking        :          5"
     "cardinality       :          3"
@@ -880,6 +907,7 @@ set(linclass_enigma
     "setpacking        :          0"
     "eqknapsack        :          1"
     )
+
 set(linclass_flugpl
     "total             :         18"
     "empty             :          0"
@@ -889,12 +917,15 @@ set(linclass_flugpl
     "mixedbinary       :          0"
     "general           :         11"
     )
+
 set(linclass_gt2
     "intknapsack       :         15"
     )
+
 set(linclass_lseu
     "knapsack          :         11"
     )
+
 set(linclass_misc03
     "setpartition      :          5"
     "setpacking        :          3"
@@ -904,6 +935,7 @@ set(linclass_misc03
     "eqknapsack        :          0"
     "binpacking        :          2"
     )
+
 set(linclass_p0548
     "empty             :          0"
     "free              :          0"
@@ -957,7 +989,6 @@ foreach(instance ${instances_MIP})
                                 FAIL_REGULAR_EXPRESSION ERROR
                             )
     endif()
-
 endforeach()
 
 #
@@ -965,7 +996,6 @@ endforeach()
 #
 set(shell_tmp_dir ${PROJECT_BINARY_DIR}/check/temp)
 file(MAKE_DIRECTORY ${shell_tmp_dir})
-
 # copy cmake file for comparision
 configure_file(interactiveshell/comparestatusfiles.cmake interactiveshell/comparestatusfiles.cmake COPYONLY)
 foreach(instance ${instances_consecSolve})
@@ -975,7 +1005,6 @@ foreach(instance ${instances_consecSolve})
     #
     configure_file(interactiveshell/consecutivesolve.bat.in
       interactiveshell/consecutivesolve-${basename}.bat)
-
     #
     # add a test for creating two log files from consecutive solves;
     # this test acts as a setup for the next test
@@ -989,7 +1018,6 @@ foreach(instance ${instances_consecSolve})
                             DEPENDS scip-build
                             FIXTURES_SETUP consecutivesolve-${basename}
                         )
-
     #
     # add a test for comparing two log files from consecutive solves
     # use cmake file comparestatusfiles.cmake
@@ -1027,7 +1055,6 @@ if (UNIX)
                             PASS_REGULAR_EXPRESSION "termination signal received"
                             FAIL_REGULAR_EXPRESSION ERROR
                             )
-
 endif (UNIX)
 endif()
 

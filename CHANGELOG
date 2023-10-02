@@ -1,5 +1,21 @@
 @page RN80 Release notes for SCIP 8.0
 
+@section RN805 SCIP 8.0.5
+*************************
+
+Fixed bugs
+----------
+
+- ensure that delayed cutpool separation does not happen if enough cuts have been found already
+- fixed that a Gurobi or Mosek interface (LPI) could not be freed from a thread different than the one it was created in, which lead to problems when, e.g., using the concurrent optimizer
+- in cons_varbound if both variables are fixed, instead of propagating the constraint check the feasibility of the constraint since propagating can lead to unnecessary numerical troubles
+- fixed memory leak in branching rule "distribution"
+- fixed that undercover did not enforce that sufficiently many variables in an and-constraints were fixed to have it linearized in the generated sub-scip
+- fixed two bugs in cons_varbound: avoid adding variable bounds if vbdcoef is infinite and unlock/lock variables if lhs/rhs/vbdcoef are changed
+- globalize constraint changes before bound changes during the effective root shift in treeSwitchPath() to correctly update variable locks by avoiding global bounds with outstanding bound change events when deleting constraints
+- fixed error when attempting to copy SCIP with activated pricers
+- remove integrality check for implicit integral variables in cons_integral.c
+
 @section RN804 SCIP 8.0.4
 *************************
 
@@ -9,22 +25,15 @@ Features
 - use quad precision in cutsSubstituteMIR() for substituting slack variables into CMIR cuts
 - use quad precision for activity computations in cons_linear.c
 
-Performance improvements
-------------------------
-
-Examples and applications
--------------------------
-
-Interface changes
------------------
-
-### New and changed callbacks
-
 ### Deleted and changed API methods
+
+- SCIPshrinkDisjunctiveVarSet() no longer attempts to cutoff the current node if it finds the
+  given disjunction to be infeasible; it is now in the responsibility of the caller to act accordingly
 
 ### New API functions
 
-### Command line interface
+- added SCIPskipSpace
+- added XML parser routines from src/xml/xml.h
 
 ### Interfaces to external software
 
@@ -34,27 +43,10 @@ Interface changes
 
 - changed integer parameter "propagating/symmetry/recomputrestart" from range {0, 1, 2} to being fixed at value 0
 
-### New parameters
-
-### Data structures
-
-Deleted files
--------------
-
 Unit tests
 ----------
 
 - added new checks for objective, bounds and sides inside the scaling tests in lpi/change.c
-
-Testing
--------
-
-Build system
-------------
-
-### Cmake
-
-### Makefile
 
 Fixed bugs
 ----------
@@ -79,6 +71,20 @@ Fixed bugs
 - disable recomputing symmetries after a restart (constraint removal is not permitted)
 - avoid cutting off optimal solutions for small feasibility tolerances in conflict analysis
 - initialize variable in presol_dualsparsify.c
+- fix in presolving of variable bound constraints to use absolute instead of relative difference
+- free variable histories in reoptimization mode
+- handle whitespaces in interactive shell history consistently
+- check and enforce equalities on which the objective is projected in cons_linear.c
+- ensure row feasibilities of solution shiftings in heur_oneopt.c and heur_twoopt.c
+- remove rounded row check blocking tolerable primal solutions in cons_varbound.c
+- fixed that presolve of logicor-constraints may have attempted to cutoff a root of the not yet existing branch-and-bound tree
+- only consider positive slack variables as active in benders.c
+- in the feasibility check of and/or constraints, allow for fractional values in operands
+- fixed linear outer-approximation for some composite absolute-value expressions
+- fixed that scaling of rows in Gurobi interface (SCIPlpiScaleRow()) changed infinite sides to large finite ones (1e20) when scale factor is negative
+- check whether objective limit is truly reached in SCIPlpiIsStable()
+- if an objective limit is set and Mosek claims that it is exceeded, check that this is indeed the case in SCIPlpiIsStable()
+- The .mps file reader was extended to additionally accept .mps files with the objective sense section on one line.
 
 Miscellaneous
 -------------
@@ -86,9 +92,6 @@ Miscellaneous
 - Extended documentation of the parameter limits/solutions to point out that the limit is first checked in presolving
 - Added more information about using SCIPcache- and SCIPflushRowExtensions() to documentation and comments
 - Extended the `how to add' sections of the documentation by adding information on how to include default plugins into SCIP
-
-Known bugs
-----------
 
 @section RN803 SCIP 8.0.3
 *************************

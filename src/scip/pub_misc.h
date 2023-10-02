@@ -2250,6 +2250,12 @@ void SCIPescapeString(
    const char*           s                   /**< string to transform into escaped string */
    );
 
+/** increases string pointer as long as it refers to a space character or an explicit space control sequence */
+SCIP_EXPORT
+SCIP_RETCODE SCIPskipSpace(
+   char**                s                   /**< pointer to string pointer */
+   );
+
 /** safe version of snprintf */
 SCIP_EXPORT
 int SCIPsnprintf(

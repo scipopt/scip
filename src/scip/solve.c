@@ -2608,7 +2608,8 @@ SCIP_RETCODE priceAndCutLoop(
          }
 
          /* delayed global cut pool separation */
-         if( !(*cutoff) && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL && SCIPsepastoreGetNCuts(sepastore) == 0 )
+         if( !(*cutoff) && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL && SCIPsepastoreGetNCuts(sepastore) == 0 &&
+               !enoughcuts )
          {
             assert( !(*lperror) );
 
