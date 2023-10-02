@@ -2350,7 +2350,8 @@ SCIP_RETCODE SCIPconshdlrCreate(
       consdelete, constrans, consinitlp, conssepalp, conssepasol, consenfolp, consenforelax, consenfops, conscheck,
       consprop, conspresol, consresprop, conslock, consactive, consdeactive, consenable, consdisable, consdelvars,
       consprint, conscopy, consparse, consgetvars, consgetnvars, consgetdivebdchgs, consgetpermsymgraph,
-      consgetsignedpermsymgraph, conshdlrdata), (void) SCIPconshdlrFree(conshdlr, set) );
+      consgetsignedpermsymgraph, conshdlrdata),
+      (void) SCIPconshdlrFree(conshdlr, set) );
 
    return SCIP_OKAY;
 } /*lint !e715*/
