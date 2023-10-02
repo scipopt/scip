@@ -344,10 +344,9 @@ SCIP_RETCODE dfs(
 
                for( i = 0; i < ncliquevars; ++i )
                {
-                  if( cliquevars[i] == startvar )
-                     continue;
+                  assert(SCIPvarIsActive(cliquevars[i]));
 
-                  if( SCIPvarGetIndex(cliquevars[i]) < 0 )
+                  if( cliquevars[i] == startvar )
                      continue;
 
                   if( cliquevals[i] )

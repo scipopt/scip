@@ -1964,7 +1964,7 @@ SCIP_RETCODE consdataCreate(
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->downlocks, nvars) );
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->uplocks, nvars) );
 
-      /* initialize variable lock data structure; the locks are only used if the contraint is a check constraint */
+      /* initialize variable lock data structure; the locks are only used if the constraint is a check constraint */
       initializeLocks(*consdata, check);
 
       if( linkingconss != NULL )
@@ -1997,6 +1997,14 @@ SCIP_RETCODE consdataCreate(
                assert(SCIPgetConsLinking(scip, (*consdata)->vars[v]) == (*consdata)->linkingconss[v]);
          }
       }
+
+#ifndef NDEBUG
+      /* only binary and integer variables can be used in cumulative constraints
+       * for fractional variable values, the constraint cannot be checked
+       */
+      for( v = 0; v < (*consdata)->nvars; ++v )
+         assert(SCIPvarGetType((*consdata)->vars[v]) <= SCIP_VARTYPE_INTEGER);
+#endif
    }
    else
    {

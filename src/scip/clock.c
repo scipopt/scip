@@ -514,6 +514,13 @@ SCIP_Real SCIPclockGetTime(
       }
    }
 
+   /* time typically moves forward
+    * but when compiler optimizations meet fast CPUs, then rounding errors create small timetravel
+    */
+   assert(!EPSN(result, 1e-12));
+   if( result < 0.0 )
+      result = 0.0;
+
    clck->lasttime = result;
    return result;
 }

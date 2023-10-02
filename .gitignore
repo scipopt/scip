@@ -142,3 +142,6 @@ examples/*/doc/miniscippy.png
 examples/*/doc/userguide.*
 examples/*/!doc/userguide.tex
 examples/*/lint
+
+# avoid ignoring files in ci folder
+!ci/* 
