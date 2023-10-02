@@ -449,8 +449,9 @@ public:
     */
    virtual SCIP_DECL_CONSGETVARS(scip_getvars)
    {  /*lint --e{715}*/
+      assert(success != NULL);
 
-      (*success) = FALSE;
+      *success = FALSE;
 
       return SCIP_OKAY;
    }
@@ -461,9 +462,11 @@ public:
     */
    virtual SCIP_DECL_CONSGETNVARS(scip_getnvars)
    {  /*lint --e{715}*/
+      assert(nvars != NULL);
+      assert(success != NULL);
 
-      (*nvars) = 0;
-      (*success) = FALSE;
+      *nvars = 0;
+      *success = FALSE;
 
       return SCIP_OKAY;
    }
@@ -474,8 +477,9 @@ public:
     */
    virtual SCIP_DECL_CONSGETDIVEBDCHGS(scip_getdivebdchgs)
    {  /*lint --e{715}*/
+      assert(success != NULL);
 
-      (*success) = FALSE;
+      *success = FALSE;
 
       return SCIP_OKAY;
    }
@@ -486,8 +490,9 @@ public:
     */
    virtual SCIP_DECL_CONSGETPERMSYMGRAPH(scip_getpermsymgraph)
    {  /*lint --e{715}*/
+      assert(success != NULL);
 
-      (*success) = FALSE;
+      *success = FALSE;
 
       return SCIP_OKAY;
    }
@@ -498,8 +503,9 @@ public:
     */
    virtual SCIP_DECL_CONSGETSIGNEDPERMSYMGRAPH(scip_getsignedpermsymgraph)
    {  /*lint --e{715}*/
+      assert(success != NULL);
 
-      (*success) = FALSE;
+      *success = FALSE;
 
       return SCIP_OKAY;
    }
