@@ -127,9 +127,11 @@ struct SCIP_BranchruleData
    SCIP_Real             maxreliable;        /**< maximal value for minimum pseudo cost size to regard pseudo cost value as reliable */
    SCIP_Real             sbiterquot;         /**< maximal fraction of strong branching LP iterations compared to normal iterations */
    SCIP_Real             meandualgain;       /**< mean dual gain of all strong branchings */
+   SCIP_Real             currmeandualgain;   /**< current mean dual gain in current node */
    SCIP_Real             mingain;            /**< minimal dual gain of all strong branchings */
    SCIP_Real             maxgain;            /**< maximal dual gain of all strong branchings */
    int                   ndualgains;         /**< number of dual gains used in the computation of the mean */
+   int                   currndualgains;     /**< number of dual gains used in the computation of the mean from current node */
    int                   sbiterofs;          /**< additional number of allowed strong branching LP iterations */
    int                   maxlookahead;       /**< maximal number of further variables evaluated without better score */
    int                   initcand;           /**< maximal number of candidates initialized with strong branching per node */
@@ -785,18 +787,19 @@ SCIP_RETCODE updateMinMaxMeanGain(
 
    branchruledata = SCIPbranchruleGetData(branchrule);
 
-   /* TodoSB think about infinity gains */
-   if (SCIPisRelGE(scip, downgain, SCIPinfinity(scip)) || SCIPisRelGE(scip, upgain, SCIPinfinity(scip)))
+   /* TodoSB think about large/infinite gains */
+   if (SCIPisRelGE(scip, downgain, 1.0e15) || SCIPisRelGE(scip, upgain, 1.0e15))
       return SCIP_OKAY;
 
    avggain = (downgain + upgain) / 2.0;
 
-   branchruledata->meandualgain = ((SCIP_Real) branchruledata->ndualgains /  (branchruledata->ndualgains + 1) ) * branchruledata->meandualgain + avggain / ( branchruledata->ndualgains + 1 ) ;
+   branchruledata->currmeandualgain = ((SCIP_Real) branchruledata->currndualgains /  (branchruledata->currndualgains + 1) ) * branchruledata->currmeandualgain + avggain / ( branchruledata->currndualgains + 1 ) ;
+
    /* update the min and max gain */
    branchruledata->mingain = MIN(branchruledata->mingain, MIN(downgain, upgain));
    branchruledata->maxgain = MAX(branchruledata->maxgain, MAX(downgain, upgain));
-   ++branchruledata->ndualgains;
-   SCIPdebugMsg(scip, " -> min gain: %g, max gain: %g, mean of %d dual gains: %g\n", branchruledata->mingain, branchruledata->maxgain, branchruledata->ndualgains, branchruledata->meandualgain);
+   ++branchruledata->currndualgains;
+   SCIPdebugMsg(scip, " -> min gain: %g, max gain: %g, mean of %d dual gains: %g\n", branchruledata->mingain, branchruledata->maxgain, branchruledata->currndualgains, branchruledata->currmeandualgain);
 
    return SCIP_OKAY;
 }
@@ -835,70 +838,76 @@ SCIP_Real cbfProbability(
 }
 
 /* Calculate the expected size of a tree with one more iteration of strong branching */
-/* TodoSB check the code since it is just copied from the python script */
+/* TodoSB check the code since it is just translated from the python script */
 static
 SCIP_Real expectedTreeSize(
    SCIP*                 scip,
    SCIP_Real             gap,
+   SCIP_Real             currentdepth,
    SCIP_Real             maxgain,
    SCIP_Real             lambda,
-   int                   sb_count
+   int                   sbcount
    )
 {
 
-   SCIP_Real total_p = 0.0;
-   SCIP_Real total_improved_tree = 0.0;
+   SCIP_Real ptotal = 0.0;
+   SCIP_Real totalimprovedtree = 0.0;
 
-   int current_depth = MIN(50, strongBranchingDepth(gap, maxgain));
-   int depth = current_depth;
-   long int current_treesize = strongBranchingTreeSize(current_depth);
-   long int next_treesize;
-   long int improved_tree;
+   int depth = currentdepth;
+   long int currenttreesize = strongBranchingTreeSize(currentdepth);
+   long int nexttreesize;
+   long int improvedtree;
    if (depth == 1)
    {
-      next_treesize = (long int) current_treesize;
+      nexttreesize = (long int) currenttreesize;
    }
+   /* compute the expected size with one more strong branching iteration */
    else if (depth == 2)
    {
       SCIP_Real p = 1.0 - cbfProbability(lambda, gap);
-      improved_tree = (long int) strongBranchingTreeSize(depth - 1);
-      next_treesize = improved_tree * p + strongBranchingTreeSize(depth) * (1.0 - p) + 2.0 * (sb_count + 1);
+      improvedtree = (long int) strongBranchingTreeSize(depth - 1);
+      nexttreesize = improvedtree * p + strongBranchingTreeSize(depth) * (1.0 - p) + 2.0 * (sbcount + 1);
    }
    else
    {
-      SCIP_Real p1 = cbfProbability(lambda, (gap / (depth - 1)));
-      SCIP_Real pp = 1.0 - cbfProbability(lambda, gap / (depth - 1));
+      /* Probability of not finding a better variable that would reduce the depth of the tree (size of the tree). */
+      SCIP_Real pnotbetter = cbfProbability(lambda, (gap / (depth - 1)));
+      /* Probability of finding a better better variable that would reduce the depth (smaller tree size). */
+      SCIP_Real pbetter = 1.0 - cbfProbability(lambda, gap / (depth - 1));
 
-      while (pp >= 0.00001 && total_p + p1 < 1.0)
+      while (pbetter >= 0.00001 && ptotal + pnotbetter < 1.0)
       {
          SCIP_Real p;
          if (depth > 2)
          {
             p = cbfProbability(lambda, gap / (depth - 2)) - cbfProbability(lambda, gap / (depth - 1));
-            total_p += p;
-            pp = 1.0 - cbfProbability(lambda, gap / (depth - 2));
+            ptotal += p;
+            pbetter = 1.0 - cbfProbability(lambda, gap / (depth - 2));
          }
 
          else if (depth == 2)
          {
                p = 1.0 - cbfProbability(lambda, gap);
-               total_p += p;
-               pp = 0.0;
+               ptotal += p;
+               pbetter = 0.0;
          }
-
-         if (total_p + p1 <= 1.0)
-            improved_tree = strongBranchingTreeSize(depth - 1) * p;
+         if (ptotal + pnotbetter <= 1.0)
+         {
+            /* Compute expected size of the improved tree based on improved depth, considering the probability of this improvement. */
+            improvedtree = strongBranchingTreeSize(depth - 1) * p;
+         }
          else
          {
-            improved_tree = 0.0;
+            improvedtree = 0.0;
             break;
          }
          depth--;
-         total_improved_tree += improved_tree;
+         totalimprovedtree += improvedtree;
       }
-      next_treesize = total_improved_tree + p1 * strongBranchingTreeSize(current_depth) + 2.0 * (sb_count + 1);
+      /* Compute the expectation of the next tree size with one more iteration of strong branching */
+      nexttreesize = totalimprovedtree + pnotbetter * strongBranchingTreeSize(currentdepth) + 2.0 * (sbcount + 1);
    }
-   return next_treesize;
+   return nexttreesize;
 }
 
 /* Decide if we continue strong branching based on the estimation of the tree size */
@@ -927,7 +936,7 @@ SCIP_Bool continueStrongBranching(
       return TRUE;
 
    /* if we do not have a large enough sample to estimate the rate of the exponential distribution we continue with strong branching */
-   if (branchruledata->ndualgains < branchruledata->minsamplesize)
+   if ((branchruledata->ndualgains + branchruledata->currndualgains) < branchruledata->minsamplesize)
       return TRUE;
 
    mingain = branchruledata->mingain;
@@ -939,15 +948,20 @@ SCIP_Bool continueStrongBranching(
    else
       absdualgap = SCIPinfinity(scip);
 
-   /* Compute an estimate of the height of the current node TodoSB using the maxgain? */
-   if( !SCIPisInfinity(scip, absdualgap) && !SCIPisInfinity(scip, mingain) )
+   /*  TodoSB use absolute gap? */
+   if( !SCIPisInfinity(scip, absdualgap) && !SCIPisInfinity(scip, mingain) && !SCIPisInfinity(scip, maxgain) )
       gaptoclose = absdualgap;
    else
       return TRUE;
 
    assert(!SCIPisInfinity(scip, -maxgain));
+
    /* update the rate for the exponential distribution */
-   lambda = 1 / branchruledata->meandualgain;
+   /* TodoSB rethink this */
+   if (branchruledata->ndualgains == 0)
+      lambda = 1 / (branchruledata->currmeandualgain);
+   else
+      lambda = 1 / (0.3 * branchruledata->meandualgain + 0.7 * branchruledata->currmeandualgain);
 
    sbcount = SCIPgetNStrongbranchs(scip);
 
@@ -957,7 +971,7 @@ SCIP_Bool continueStrongBranching(
    currenttreesize = strongBranchingTreeSize(currentdepth) + 2 * sbcount;
 
    /* Compute the expected size of the tree with one more strong branching */
-   nexttreesize = expectedTreeSize(scip, gaptoclose, maxgain, lambda, sbcount);
+   nexttreesize = expectedTreeSize(scip, gaptoclose, currentdepth, maxgain, lambda, sbcount);
 
    if(nexttreesize < currenttreesize)
    {
@@ -1486,10 +1500,6 @@ SCIP_RETCODE execRelpscost(
       /* initialize unreliable candidates with strong branching until maxlookahead is reached,
        * search best strong branching candidate
        */
-      /* TodoSB we can increase the maxlookahead for our approach since we may need more strong branchings than maxlookahead */
-      // if(branchruledata->dynamiclookahead)
-      //    maxlookahead = (SCIP_Real)branchruledata->maxlookahead * (1.0 + (SCIP_Real)nuninitcands/(SCIP_Real)nbranchcands) * 5;
-      // else
       maxlookahead = (SCIP_Real)branchruledata->maxlookahead * (1.0 + (SCIP_Real)nuninitcands/(SCIP_Real)nbranchcands);
       maxlookaheaddefault = 9.0 * (1.0 + (SCIP_Real)nuninitcands/(SCIP_Real)nbranchcands);
 
@@ -1533,8 +1543,9 @@ SCIP_RETCODE execRelpscost(
       bestuninitsbscore = -SCIPinfinity(scip);
       bestuninitsbcand = -1;
       lookahead = 0.0;
-      for( i = 0; i < ninitcands && lookahead < maxlookahead && nbdchgs + nbdconflicts < maxbdchgs && continueStrongBranching(scip, branchrule, lookahead, maxlookaheaddefault)
-       && (i < (int) maxlookahead || SCIPgetNStrongbranchLPIterations(scip) < maxnsblpiterations); ++i )
+      for( i = 0; i < ninitcands && lookahead < maxlookahead && nbdchgs + nbdconflicts < maxbdchgs
+                  && (i < (int) maxlookahead || SCIPgetNStrongbranchLPIterations(scip) < maxnsblpiterations)
+                  && continueStrongBranching(scip, branchrule, lookahead, maxlookaheaddefault); ++i )
       {
          SCIP_Real down;
          SCIP_Real up;
@@ -2230,6 +2241,18 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
    branchruledata->mingain = SCIPinfinity(scip);
    branchruledata->maxgain = -SCIPinfinity(scip);
 
+   if( branchruledata->ndualgains + branchruledata->currndualgains > 0 )
+   {
+      /* update mean dual gain */
+      int total = branchruledata->ndualgains + branchruledata->currndualgains;
+      branchruledata->meandualgain = ((SCIP_Real) branchruledata->ndualgains / total ) * branchruledata->meandualgain
+                                    + ((SCIP_Real) branchruledata->currndualgains / total ) * branchruledata->currmeandualgain;
+      branchruledata->ndualgains += branchruledata->currndualgains;
+
+   }
+   branchruledata->currmeandualgain = 0.0;
+   branchruledata->currndualgains = 0;
+
    /* determine whether we should run filtering */
    runfiltering = ! branchruledata->nosymmetry && branchruledata->filtercandssym && SCIPgetSubscipDepth(scip) == 0 && ! SCIPinDive(scip) && ! SCIPinProbing(scip);
 
@@ -2298,6 +2321,8 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
    branchruledata->permvarmap = NULL;
    branchruledata->meandualgain = 0.0;
    branchruledata->ndualgains = 0;
+   branchruledata->currmeandualgain = 0.0;
+   branchruledata->currndualgains = 0;
    branchruledata->mingain = SCIPinfinity(scip);
    branchruledata->maxgain = -SCIPinfinity(scip);
 
