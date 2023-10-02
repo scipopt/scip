@@ -62,6 +62,7 @@
 #include "scip/scip_var.h"
 #include "scip/prop_symmetry.h"
 #include "scip/symmetry.h"
+#include "scip/struct_branch.h"
 #include <string.h>
 
 #define BRANCHRULE_NAME          "relpscost"
@@ -151,6 +152,7 @@ struct SCIP_BranchruleData
    SCIP_Bool             dynamicweights;     /**< should the weights of the branching rule be adjusted dynamically during
                                               *   solving based on objective and infeasible leaf counters? */
    SCIP_Bool             dynamiclookahead;   /**< should we use a dynamic lookahead based on a tree size estimation of further strong branchings? */
+   SCIP_Bool             exceeddefaultlookahead; /**< is the default maxlookahead=9 exceeded? */
    int                   minsamplesize;      /**< minimum sample size to estimate the tree size for dynamic lookahead */
    int                   degeneracyaware;    /**< should degeneracy be taken into account to update weights and skip strong branching? (0: off, 1: after root, 2: always) */
    int                   confidencelevel;    /**< The confidence level for statistical methods, between 0 (Min) and 4 (Max). */
@@ -784,7 +786,7 @@ SCIP_RETCODE updateMinMaxMeanGain(
    branchruledata = SCIPbranchruleGetData(branchrule);
 
    /* TodoSB think about infinity gains */
-   if (SCIPisInfinity(scip, downgain) || SCIPisInfinity(scip, upgain))
+   if (SCIPisRelGE(scip, downgain, SCIPinfinity(scip)) || SCIPisRelGE(scip, upgain, SCIPinfinity(scip)))
       return SCIP_OKAY;
 
    avggain = (downgain + upgain) / 2.0;
@@ -847,7 +849,7 @@ SCIP_Real expectedTreeSize(
    SCIP_Real total_p = 0.0;
    SCIP_Real total_improved_tree = 0.0;
 
-   int current_depth = strongBranchingDepth(gap, maxgain);
+   int current_depth = MIN(50, strongBranchingDepth(gap, maxgain));
    int depth = current_depth;
    long int current_treesize = strongBranchingTreeSize(current_depth);
    long int next_treesize;
@@ -903,7 +905,9 @@ SCIP_Real expectedTreeSize(
 static
 SCIP_Bool continueStrongBranching(
    SCIP*                 scip,
-   SCIP_BRANCHRULE*      branchrule          /**< branching rule */
+   SCIP_BRANCHRULE*      branchrule,          /**< branching rule */
+   SCIP_Real             lookahead,
+   SCIP_Real             maxlookaheaddefault
    )
 {
    SCIP_BRANCHRULEDATA* branchruledata;
@@ -956,8 +960,19 @@ SCIP_Bool continueStrongBranching(
    nexttreesize = expectedTreeSize(scip, gaptoclose, maxgain, lambda, sbcount);
 
    if(nexttreesize < currenttreesize)
+   {
+      if (!branchruledata->exceeddefaultlookahead && SCIPisGE(scip, lookahead, maxlookaheaddefault))
+      {
+         branchruledata->exceeddefaultlookahead = TRUE;
+         branchrule->nreachedlookahead++;
+      }
       return TRUE;
+   }
 
+   if (lookahead < maxlookaheaddefault)
+   {
+      branchrule->nbeforelookahead++;
+   }
    return FALSE;
 }
 
@@ -1005,8 +1020,9 @@ SCIP_RETCODE execRelpscost(
    /* get branching rule data */
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
-   branchruledata->mingain = SCIPinfinity(scip);
-   branchruledata->maxgain = -SCIPinfinity(scip);
+
+   branchruledata->exceeddefaultlookahead = FALSE;
+
    /* get current LP objective bound of the local sub problem and global cutoff bound */
    lpobjval = SCIPgetLPObjval(scip);
 
@@ -1079,6 +1095,7 @@ SCIP_RETCODE execRelpscost(
       SCIP_Real prio;
       SCIP_Real reliable;
       SCIP_Real maxlookahead;
+      SCIP_Real maxlookaheaddefault;
       SCIP_Real lookahead;
       SCIP_Real relerrorthreshold;
       SCIP_Bool initstrongbranching;
@@ -1371,6 +1388,8 @@ SCIP_RETCODE execRelpscost(
             /* check fixed number threshold (aka original) reliability first */
             assert(!branchruledata->usehyptestforreliability || bestpscand >= 0);
             usesb = FALSE;
+            if( size >= reliable)
+               updateMinMaxMeanGain(scip, branchrule, downgain, upgain);
             if( size < reliable )
                usesb = TRUE;
             else if( branchruledata->userelerrorforreliability && branchruledata->usehyptestforreliability )
@@ -1472,6 +1491,7 @@ SCIP_RETCODE execRelpscost(
       //    maxlookahead = (SCIP_Real)branchruledata->maxlookahead * (1.0 + (SCIP_Real)nuninitcands/(SCIP_Real)nbranchcands) * 5;
       // else
       maxlookahead = (SCIP_Real)branchruledata->maxlookahead * (1.0 + (SCIP_Real)nuninitcands/(SCIP_Real)nbranchcands);
+      maxlookaheaddefault = 9.0 * (1.0 + (SCIP_Real)nuninitcands/(SCIP_Real)nbranchcands);
 
       inititer = branchruledata->inititer;
       if( inititer == 0 )
@@ -1513,8 +1533,8 @@ SCIP_RETCODE execRelpscost(
       bestuninitsbscore = -SCIPinfinity(scip);
       bestuninitsbcand = -1;
       lookahead = 0.0;
-      for( i = 0; i < ninitcands && lookahead < maxlookahead && nbdchgs + nbdconflicts < maxbdchgs && continueStrongBranching(scip, branchrule)
-              && (i < (int) maxlookahead || SCIPgetNStrongbranchLPIterations(scip) < maxnsblpiterations); ++i )
+      for( i = 0; i < ninitcands && lookahead < maxlookahead && nbdchgs + nbdconflicts < maxbdchgs && continueStrongBranching(scip, branchrule, lookahead, maxlookaheaddefault)
+       && (i < (int) maxlookahead || SCIPgetNStrongbranchLPIterations(scip) < maxnsblpiterations); ++i )
       {
          SCIP_Real down;
          SCIP_Real up;
@@ -2184,6 +2204,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
    int nfilteredlpcands;
    int nlpcands;
 
+
    assert(branchrule != NULL);
    assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
    assert(scip != NULL);
@@ -2205,6 +2226,9 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
 
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
+
+   branchruledata->mingain = SCIPinfinity(scip);
+   branchruledata->maxgain = -SCIPinfinity(scip);
 
    /* determine whether we should run filtering */
    runfiltering = ! branchruledata->nosymmetry && branchruledata->filtercandssym && SCIPgetSubscipDepth(scip) == 0 && ! SCIPinDive(scip) && ! SCIPinProbing(scip);
