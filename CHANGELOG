@@ -28,6 +28,7 @@ Fixed bugs
 - correct column index in getMinMaxActivityResiduals() to make presolver dualinfer work
 - copy quiet flag from main scip's message handler to the one of solverscip in concurrent optimization
 - avoid bound tightening cycles towards huge redundancy bounds in fullDualPresolve() to avert fatal numerical trouble in representing vertices of linear relaxations with unbounded domains
+- fix problem where debug solution did not work if branching constraints are present
 
 @section RN804 SCIP 8.0.4
 *************************
