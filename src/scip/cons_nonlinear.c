@@ -9334,7 +9334,7 @@ SCIP_RETCODE computeVertexPolyhedralFacetBivariate(
  *  graph yet) in an array
  */
 static
-SCIP_RETCODE ensureOpenArraySize(
+SCIP_RETCODE ensureOpenArraySizeSymdetect(
    SCIP*                 scip,               /**< SCIP pointer */
    int**                 openidx,            /**< address of openidx array */
    int                   nelems,             /**< number of elements that need to be stored */
@@ -10331,7 +10331,7 @@ SCIP_RETCODE addSymmetryInformation(
       if( SCIPisExprVar(scip, expr) )
       {
          /* needed to correctly reset value when leaving expression */
-         SCIP_CALL( ensureOpenArraySize(scip, &openidx, nopenidx + 1, &maxnopenidx) );
+         SCIP_CALL( ensureOpenArraySizeSymdetect(scip, &openidx, nopenidx + 1, &maxnopenidx) );
 
          openidx[nopenidx++] = -1;
 
@@ -10378,7 +10378,7 @@ SCIP_RETCODE addSymmetryInformation(
          SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, parentidx, nodeidx, hasparentcoef, parentcoef) );
 
          /* needed to correctly reset value when leaving expression */
-         SCIP_CALL( ensureOpenArraySize(scip, &openidx, nopenidx + 1, &maxnopenidx) );
+         SCIP_CALL( ensureOpenArraySizeSymdetect(scip, &openidx, nopenidx + 1, &maxnopenidx) );
 
          openidx[nopenidx++] = -1;
       }
@@ -10426,7 +10426,7 @@ SCIP_RETCODE addSymmetryInformation(
             /* add the linear part of the sum */
             SCIP_CALL( SCIPaddSymgraphVarAggegration(scip, graph, sumidx, consvars, consvals, nlocvars, constant) );
 
-            SCIP_CALL( ensureOpenArraySize(scip, &openidx, nopenidx + 1, &maxnopenidx) );
+            SCIP_CALL( ensureOpenArraySizeSymdetect(scip, &openidx, nopenidx + 1, &maxnopenidx) );
 
             /* check whether the sum encodes expressions of type \f$(x - y)^2\f$ */
             if( symtype == SYM_SYMTYPE_SIGNPERM )
@@ -10496,7 +10496,7 @@ SCIP_RETCODE addSymmetryInformation(
                SCIP_CALL( SCIPfreeSymDataExpr(scip, &symdata) );
             }
 
-            SCIP_CALL( ensureOpenArraySize(scip, &openidx, nopenidx + 1, &maxnopenidx) );
+            SCIP_CALL( ensureOpenArraySizeSymdetect(scip, &openidx, nopenidx + 1, &maxnopenidx) );
 
             openidx[nopenidx++] = opidx;
          }
