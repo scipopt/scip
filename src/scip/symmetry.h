@@ -301,41 +301,41 @@ SCIP_RETCODE tryHandleDoubleLexMatrices(
 
 /** helper function to test if val1 = val2 while permitting infinity-values */
 SCIP_Bool EQ(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_Real          val1,               /**< left-hand side value */
-   SCIP_Real          val2                /**< right-hand side value */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             val1,               /**< left-hand side value */
+   SCIP_Real             val2                /**< right-hand side value */
    );
 
 
 /** helper function to test if val1 <= val2 while permitting infinity-values */
 SCIP_Bool LE(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_Real          val1,               /**< left-hand side value */
-   SCIP_Real          val2                /**< right-hand side value */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             val1,               /**< left-hand side value */
+   SCIP_Real             val2                /**< right-hand side value */
    );
 
 
 /** helper function to test if val1 >= val2 while permitting infinity-values */
 SCIP_Bool GE(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_Real          val1,               /**< left-hand side value */
-   SCIP_Real          val2                /**< right-hand side value */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             val1,               /**< left-hand side value */
+   SCIP_Real             val2                /**< right-hand side value */
    );
 
 
 /** helper function to test if val1 < val2 while permitting infinity-values */
 SCIP_Bool LT(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_Real          val1,               /**< left-hand side value */
-   SCIP_Real          val2                /**< right-hand side value */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             val1,               /**< left-hand side value */
+   SCIP_Real             val2                /**< right-hand side value */
    );
 
 
 /** helper function to test if val1 > val2 while permitting infinity-values */
 SCIP_Bool GT(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_Real          val1,               /**< left-hand side value */
-   SCIP_Real          val2                /**< right-hand side value */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             val1,               /**< left-hand side value */
+   SCIP_Real             val2                /**< right-hand side value */
    );
 
 /** @} */

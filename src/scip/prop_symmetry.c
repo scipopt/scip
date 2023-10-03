@@ -355,7 +355,7 @@ SCIP_Bool checkSortedArraysHaveOverlappingEntry(
    void**                arr2,               /**< second array */
    int                   narr2,              /**< number of elements in second array */
    SCIP_DECL_SORTPTRCOMP((*compfunc))        /**< comparator function that was used to sort arri and arrj; must define a total ordering */
-)
+   )
 {
    /* @todo move to misc.c? */
    int it1;
@@ -872,7 +872,7 @@ static
 SCIP_RETCODE resetDynamicSymmetryHandling(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_PROPDATA*        propdata            /**< propagator data */
-)
+   )
 {
    assert( scip != NULL );
    assert( propdata != NULL );
@@ -1074,7 +1074,7 @@ SCIP_RETCODE ensureDynamicConsArrayAllocatedAndSufficientlyLarge(
    SCIP_CONS***          consarrptr,         /**< constraint array pointer */
    int*                  consarrsizeptr,     /**< constraint array size pointer */
    int                   consarrsizereq      /**< constraint array size required */
-)
+   )
 {
    int newsize;
 
@@ -1323,7 +1323,6 @@ SCIP_Bool conshdlrsCanProvideSymInformation(
          default:
             assert( symtype == SYM_SYMTYPE_SIGNPERM );
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "CONSGETSIGNEDPERMSYMGRAPH");
-
          }
          SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
             "   Symmetry detection interrupted: constraints of type %s do not provide symmetry information.\n"
@@ -1885,7 +1884,7 @@ static
 SCIP_RETCODE ensureSymmetryPermvarmapComputed(
    SCIP*                 scip,               /**< SCIP instance */
    SCIP_PROPDATA*        propdata            /**< propagator data */
-)
+   )
 {
    int v;
 
@@ -1917,7 +1916,7 @@ static
 SCIP_RETCODE ensureSymmetryPermstransComputed(
    SCIP*                 scip,               /**< SCIP instance */
    SCIP_PROPDATA*        propdata            /**< propagator data */
-)
+   )
 {
    int v;
    int p;
@@ -1951,7 +1950,7 @@ static
 SCIP_RETCODE ensureSymmetryMovedpermvarscountsComputed(
    SCIP*                 scip,               /**< SCIP instance */
    SCIP_PROPDATA*        propdata            /**< propagator data */
-)
+   )
 {
    int v;
    int p;
@@ -2012,7 +2011,7 @@ static
 SCIP_Bool testSymmetryComputationRequired(
    SCIP*                 scip,               /**< SCIP instance */
    SCIP_PROPDATA*        propdata            /**< propagator data */
-)
+   )
 {
    /* must always compute symmetry if it is enforced */
    if ( propdata->enforcecomputesymmetry )
@@ -4300,7 +4299,7 @@ SCIP_RETCODE freeConflictGraphSST(
    SCIP*                 scip,               /**< SCIP instance */
    SCIP_CONFLICTDATA**   varconflicts,       /**< conflict graph */
    int                   nvars               /**< number of nodes in conflict graph */
-)
+   )
 {
    int i;
    int n;
@@ -5326,7 +5325,7 @@ SCIP_RETCODE componentPackingPartitioningOrbisackUpgrade(
    int                   componentsize,      /**< number of permutations in the component */
    SCIP_Bool             hassignedperm,      /**< whether the component has a signed permutation */
    SCIP_Bool*            success             /**< whether the packing partitioning upgrade succeeded */
-)
+   )
 {
    int c;
    int i;
@@ -5917,7 +5916,6 @@ SCIP_RETCODE handleDoublelLexMatrix(
    }
    SCIPfreeBufferArray(scip, &orbitopematrix);
 
-
    return SCIP_OKAY;
 }
 
@@ -6207,7 +6205,7 @@ SCIP_RETCODE propagateSymmetry(
    SCIP_Bool*            infeasible,         /**< pointer for storing feasibility state */
    int*                  nred,               /**< pointer for number of reductions */
    SCIP_Bool*            didrun              /**< pointer for storing whether a propagator actually ran */
-)
+   )
 {
    int nredlocal;
 

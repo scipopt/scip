@@ -184,7 +184,6 @@ SCIP_RETCODE lexdataFree(
       {
          assert( (*lexdata)->vardomaincenter == NULL );
       }
-
    }
 #ifndef NDEBUG
    else
@@ -1596,7 +1595,7 @@ SCIP_RETCODE shadowtreeFillNodeDepthBranchIndices(
    int*                  nbranchvars,        /**< number of elements in branchvars array */
    SCIP_SHADOWTREE*      shadowtree,         /**< pointer to shadow tree structure */
    SCIP_NODE*            focusnode           /**< focusnode to which the rooted path is evaluated */
-)
+   )
 {
    SCIP_SHADOWNODE* shadownode;
    SCIP_SHADOWNODE* shadowchild;
@@ -1697,7 +1696,7 @@ SCIP_RETCODE shadowtreeUndoNodeDepthBranchIndices(
    int*                  nbranchvars,        /**< number of elements in branchvars array */
    SCIP_SHADOWTREE*      shadowtree,         /**< pointer to shadow tree structure */
    SCIP_NODE*            focusnode           /**< focusnode to which the rooted path is evaluated */
-)
+   )
 {
    /* undo the operations from shadowtreeFillNodeDepthBranchIndices, which makes nodedepthbranchindices clean */
    SCIP_SHADOWNODE* shadownode;

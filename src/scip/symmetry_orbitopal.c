@@ -248,7 +248,7 @@ SCIP_Bool testColumnsAreSymmetricallyEquivalent(
    ORBITOPEDATA*         orbidata,           /**< orbitope information */
    int                   col1,               /**< first column to compare */
    int                   col2                /**< second column to compare */
-)
+   )
 {
    int i;
    SCIP_VAR* var1;
@@ -302,7 +302,7 @@ SCIP_RETCODE updateColumnOrderWhenBranchingOnColumn(
    int*                  colorderinv,        /**< inverse array of the column order, of size colorder */
    SCIP_VAR*             var,                /**< variable that we branch on */
    COLSWAP*              thiscolswap         /**< the colswap to populate */
-)
+   )
 {
    int origcolid;
    int swaporigcolid;
@@ -533,7 +533,7 @@ SCIP_RETCODE getRowOrder(
    SCIP_NODE*            node,               /**< node for which the row order should be detected */
    int*                  roworder,           /**< array to populate with row order */
    int*                  nselrows            /**< pointer to populate with the number of rows part of the row order */
-)
+   )
 {
    int i;
    int j;
@@ -598,7 +598,7 @@ SCIP_RETCODE populateRootedPathColumnOrder(
    SCIP_NODE**           rootedpath,         /**< array to populate with the rooted path, must be sufficiently long */
    int*                  colorder,           /**< array to populate with the column order, must be nvars long */
    int*                  colorderinv         /**< array to populate with the inverse column order, must be nvars long */
-)
+   )
 {
    int i;
    int j;
@@ -938,7 +938,7 @@ SCIP_Bool rowIsBranchRow(
    SCIP_ORBITOPALREDDATA* orbireddata,       /**< pointer to the dynamic orbitopal reduction data */
    ORBITOPEDATA*         orbidata,           /**< symmetry handling data for orbitopal structure */
    int                   rowid               /**< row id for which to check */
-)
+   )
 {
    SCIP_VAR* var;
 #ifndef NDEBUG
@@ -1209,7 +1209,7 @@ SCIP_RETCODE getColumnOrder(
    int                   nselrows,           /**< number of rows (required to be positive) */
    int*                  colorder,           /**< array to populate with column order, of size ncols */
    int*                  colorderinv         /**< array to populate with inverse column order, of size ncols */
-)
+   )
 {
    SCIP_NODE* node;
    SCIP_NODE** rootedpath;
@@ -1266,7 +1266,7 @@ void assertIsOrbitopeMatrix(
    int                   ncols,              /**< number of cols of matrix */
    int*                  infinitesimal,      /**< array specifying where the infinitesimals are at */
    SCIP_Bool             addinfinitesimals   /**< whether infinitesimals are added (TRUE) or subtracted (FALSE) */
-)
+   )
 {
    int rowid;
    int colid;
@@ -1346,7 +1346,7 @@ static
 int debugGetArrayHash(
    int*                  array,              /** array */
    int                   len                 /** array length */
-)
+   )
 {
    int i;
    unsigned int hash = 0;
@@ -1371,7 +1371,7 @@ void debugPrintMatrix(
    SCIP_Real*            matrix,             /** matrix, encoded as array enumerating the elements row-wise */
    int                   nrows,              /** number of rows */
    int                   ncols               /** number of rows */
-)
+   )
 {
    int row;
    int col;
@@ -1403,7 +1403,7 @@ SCIP_RETCODE propagateStaticOrbitope(
    int*                  colorder,           /**< array with the column order */
    SCIP_Bool*            infeasible,         /**< pointer to store whether the problem is infeasible */
    int*                  nfixedvars          /**< pointer to counter of number of variable domain reductions */
-)
+   )
 {
    /* @todo also make "nselcols" to allow for colorders smaller than orbidata->ncols */
    SCIP_Real* lexminface = NULL;
@@ -2038,7 +2038,7 @@ SCIP_RETCODE SCIPorbitopalReductionGetStatistics(
    SCIP_ORBITOPALREDDATA* orbireddata,       /**< orbitopal reduction data structure */
    int*                  nred,               /**< total number of reductions applied */
    int*                  ncutoff             /**< total number of cutoffs applied */
-)
+   )
 {
    assert( scip != NULL );
    assert( orbireddata != NULL );
@@ -2055,7 +2055,7 @@ SCIP_RETCODE SCIPorbitopalReductionGetStatistics(
 SCIP_RETCODE SCIPorbitopalReductionPrintStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ORBITOPALREDDATA* orbireddata        /**< orbitopal reduction data structure */
-)
+   )
 {
    int i;
 

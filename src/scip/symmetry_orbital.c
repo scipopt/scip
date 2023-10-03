@@ -343,7 +343,7 @@ SCIP_RETCODE orbitalReductionGetSymmetryStabilizerSubgroup(
    SCIP_Bool*            inbranchedvarindices, /**< array stating whether variable with index in orcdata->permvars is
                                                 *   contained in the branching decisions. */
    int                   nbranchedvarindices /**< number of branching decisions */
-)
+   )
 {
    int i;
    int p;
@@ -440,12 +440,12 @@ SCIP_RETCODE orbitalReductionGetSymmetryStabilizerSubgroup(
  */
 static
 int bisectSortedArrayFindFirstGEQ(
-   int*               ids,                /**< int array with entries */
-   int*               idssort,            /**< array of indices of ids that sort ids */
-   int                frameleft,          /**< search in idssort for index range [frameleft, frameright) */
-   int                frameright,         /**< search in idssort for index range [frameleft, frameright) */
-   int                findid              /**< entry value to find */
-)
+   int*                  ids,                /**< int array with entries */
+   int*                  idssort,            /**< array of indices of ids that sort ids */
+   int                   frameleft,          /**< search in idssort for index range [frameleft, frameright) */
+   int                   frameright,         /**< search in idssort for index range [frameleft, frameright) */
+   int                   findid              /**< entry value to find */
+   )
 {
    int center;
    int id;
@@ -515,7 +515,7 @@ SCIP_RETCODE applyOrbitalReductionPart(
                                               *   or NULL, if local bounds are used */
    SCIP_Real*            varubs              /**< array of upper bounds for variable array orcdata->vars to compute with
                                               *   or NULL, if local bounds are used. */
-)
+   )
 {
    int i;
    int varid;
@@ -638,7 +638,7 @@ SCIP_RETCODE applyOrbitalBranchingPropagations(
    SCIP_SHADOWTREE*      shadowtree,         /**< pointer to shadow tree */
    SCIP_Bool*            infeasible,         /**< pointer to store whether infeasibility is detected */
    int*                  nred                /**< pointer to store the number of determined domain reductions */
-)
+   )
 {
    SCIP_NODE* focusnode;
    SCIP_NODE* parentnode;
@@ -1005,7 +1005,7 @@ SCIP_RETCODE applyOrbitalReductionPropagations(
    SCIP_SHADOWTREE*      shadowtree,         /**< pointer to shadow tree */
    SCIP_Bool*            infeasible,         /**< pointer to store whether infeasibility is detected */
    int*                  nred                /**< pointer to store the number of determined domain reductions */
-)
+   )
 {
    SCIP_NODE* focusnode;
    SCIP_SHADOWNODE* shadowfocusnode;
