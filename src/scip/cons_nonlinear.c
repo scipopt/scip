@@ -10437,10 +10437,8 @@ SCIP_RETCODE addSymmetryInformation(
 
             if( !succ )
                goto DEFAULTOPERATOR;
-            else
-            {
-               SCIP_CALL( SCIPhashsetInsert(handledexprs, SCIPblkmem(scip), (void*) expr) );
-            }
+
+            SCIP_CALL( SCIPhashsetInsert(handledexprs, SCIPblkmem(scip), (void*) expr) );
          }
          else if( symtype == SYM_SYMTYPE_SIGNPERM )
          {
@@ -10452,10 +10450,8 @@ SCIP_RETCODE addSymmetryInformation(
 
             if( !succ )
                goto DEFAULTOPERATOR;
-            else
-            {
-               SCIP_CALL( SCIPhashsetInsert(handledexprs, SCIPblkmem(scip), (void*) expr) );
-            }
+
+            SCIP_CALL( SCIPhashsetInsert(handledexprs, SCIPblkmem(scip), (void*) expr) );
          }
          else
          {
