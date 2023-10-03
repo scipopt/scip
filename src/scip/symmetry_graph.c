@@ -722,8 +722,6 @@ int compareVarsFixed(
    SCIP_Bool             isfixed2            /**< whether var2 needs to be fixed */
    )
 {
-   int result;
-
    assert(var1 != NULL);
    assert(var2 != NULL);
 
@@ -877,8 +875,6 @@ int compareVarsFixedSignedPerm(
    SCIP_Real             infinity            /**< values as least as large as this are regarded as infinite */
    )
 {
-   int result;
-
    assert(var1 != NULL);
    assert(var2 != NULL);
 
