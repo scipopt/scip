@@ -646,7 +646,7 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputNLPAvgIters)
    if( SCIPgetNNodes(scip) < 2 )
       SCIPinfoMessage(scip, file, "     - ");
    else
-      SCIPinfoMessage(scip, file, "%6.1f ", 
+      SCIPinfoMessage(scip, file, "%6.1f ",
          (SCIPgetNLPIterations(scip) - SCIPgetNRootLPIterations(scip)) / (SCIP_Real)(SCIPgetNTotalNodes(scip) - 1) );
 
    return SCIP_OKAY;

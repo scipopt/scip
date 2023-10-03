@@ -137,7 +137,8 @@ typedef struct SCIP_ProbData SCIP_PROBDATA;       /**< user problem data set by 
  *  - varmap,         : a hashmap which stores the mapping of source variables to corresponding target variables
  *  - consmap,        : a hashmap which stores the mapping of source constraints to corresponding target constraints
  *  - targetdata      : pointer to the target user problem data to create
- *  - global          : create a global or a local copy? 
+ *  - original        : copy original or transformed problem?
+ *  - global          : create a global or a local copy?
  *
  *  output:
  *  - result          : pointer to store the result of the call
@@ -147,7 +148,8 @@ typedef struct SCIP_ProbData SCIP_PROBDATA;       /**< user problem data set by 
  *  - SCIP_SUCCESS    : the copying process was successfully performed
  */
 #define SCIP_DECL_PROBCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP* sourcescip, SCIP_PROBDATA* sourcedata, \
-      SCIP_HASHMAP* varmap, SCIP_HASHMAP* consmap, SCIP_PROBDATA** targetdata, SCIP_Bool global, SCIP_RESULT* result)
+      SCIP_HASHMAP* varmap, SCIP_HASHMAP* consmap, SCIP_PROBDATA** targetdata, SCIP_Bool original, \
+      SCIP_Bool global, SCIP_RESULT* result)
 
 #ifdef __cplusplus
 }

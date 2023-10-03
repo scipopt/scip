@@ -1,0 +1,11 @@
+STATISTICS
+  Problem name     : model
+  Variables        : 1 (1 binary, 0 integer, 0 implicit integer, 0 continuous)
+  Constraints      : 1 initial, 1 maximal
+OBJECTIVE
+  Sense            : minimize
+VARIABLES
+  [binary] <x0>: obj=1, original bounds=[0,1]
+CONSTRAINTS
+  [linear] <c0>:  +2<~x0>[B] <= 1;
+END

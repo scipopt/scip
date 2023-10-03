@@ -1009,7 +1009,7 @@ SCIP_RETCODE conshdlrAddEnfocons(
    {
       /* we have to make sure that even this obsolete constraint is enforced in the next enforcement call;
        * if the same LP or pseudo solution is enforced again, only the newly added useful constraints are
-       * enforced; thus, we have to reset the enforcement counters and force all constraints to be 
+       * enforced; thus, we have to reset the enforcement counters and force all constraints to be
        * enforced again; this is not needed for separation and propagation, because they are not vital for correctness
        */
       conshdlr->lastenfolplpcount = -1;
@@ -1720,10 +1720,10 @@ SCIP_RETCODE conshdlrProcessUpdates(
          || cons->updatemarkpropagate || cons->updateunmarkpropagate);
 
       SCIPsetDebugMsg(set, " -> constraint <%s>: insert=%u, activate=%u, deactivate=%u, enable=%u, disable=%u, sepaenable=%u, sepadisable=%u, propenable=%u, propdisable=%u, obsolete=%u, free=%u (consdata=%p)\n",
-         cons->name, cons->updateinsert, cons->updateactivate, cons->updatedeactivate, 
+         cons->name, cons->updateinsert, cons->updateactivate, cons->updatedeactivate,
          cons->updateenable, cons->updatedisable,
-         cons->updatesepaenable, cons->updatesepadisable, 
-         cons->updatepropenable, cons->updatepropdisable, 
+         cons->updatesepaenable, cons->updatesepadisable,
+         cons->updatepropenable, cons->updatepropdisable,
          cons->updateobsolete, cons->updatefree, (void*)cons->consdata);
 
       if( cons->updateinsert )
@@ -1789,7 +1789,7 @@ SCIP_RETCODE conshdlrProcessUpdates(
       else if( cons->updatesepadisable )
       {
          if( cons->sepaenabled )
-         {         
+         {
             SCIP_CALL( conshdlrDisableConsSeparation(conshdlr, cons) );
             assert(!cons->sepaenabled);
          }
@@ -1809,7 +1809,7 @@ SCIP_RETCODE conshdlrProcessUpdates(
       else if( cons->updatepropdisable )
       {
          if( cons->propenabled )
-         {         
+         {
             SCIP_CALL( conshdlrDisableConsPropagation(conshdlr, cons) );
             assert(!cons->propenabled);
          }
@@ -3005,7 +3005,7 @@ SCIP_RETCODE SCIPconshdlrSeparateLP(
                && *result != SCIP_DIDNOTRUN
                && *result != SCIP_DELAYED )
             {
-               SCIPerrorMessage("LP separation method of constraint handler <%s> returned invalid result <%d>\n", 
+               SCIPerrorMessage("LP separation method of constraint handler <%s> returned invalid result <%d>\n",
                   conshdlr->name, *result);
                return SCIP_INVALIDRESULT;
             }
@@ -3132,7 +3132,7 @@ SCIP_RETCODE SCIPconshdlrSeparateSol(
                && *result != SCIP_DIDNOTRUN
                && *result != SCIP_DELAYED )
             {
-               SCIPerrorMessage("SOL separation method of constraint handler <%s> returned invalid result <%d>\n", 
+               SCIPerrorMessage("SOL separation method of constraint handler <%s> returned invalid result <%d>\n",
                   conshdlr->name, *result);
                return SCIP_INVALIDRESULT;
             }
@@ -3502,7 +3502,7 @@ SCIP_RETCODE SCIPconshdlrEnforceLPSol(
             && *result != SCIP_INFEASIBLE
             && *result != SCIP_FEASIBLE )
          {
-            SCIPerrorMessage("enforcing method of constraint handler <%s> for LP solutions returned invalid result <%d>\n", 
+            SCIPerrorMessage("enforcing method of constraint handler <%s> for LP solutions returned invalid result <%d>\n",
                conshdlr->name, *result);
             return SCIP_INVALIDRESULT;
          }
@@ -3574,8 +3574,8 @@ SCIP_RETCODE SCIPconshdlrEnforcePseudoSol(
    assert(tree->nchildren == 0);
    assert(result != NULL);
 
-   /* no enforcing of pseudo solution */ 
-   if( set->cons_disableenfops && SCIPbranchcandGetNPseudoCands(branchcand) > 0 ) 
+   /* no enforcing of pseudo solution */
+   if( set->cons_disableenfops && SCIPbranchcandGetNPseudoCands(branchcand) > 0 )
    {
       *result = SCIP_INFEASIBLE;
       return SCIP_OKAY;
@@ -3636,7 +3636,7 @@ SCIP_RETCODE SCIPconshdlrEnforcePseudoSol(
       assert(nusefulconss <= nconss);
 
       /* constraint handlers without constraints should only be called once */
-      if( nconss > 0 || (!conshdlr->needscons && pschanged) ) 
+      if( nconss > 0 || (!conshdlr->needscons && pschanged) )
       {
          SCIP_CONS** conss;
          SCIP_Longint oldndomchgs;
@@ -3685,7 +3685,7 @@ SCIP_RETCODE SCIPconshdlrEnforcePseudoSol(
             conshdlr->nenfopscalls++;
          else if( !objinfeasible )
          {
-            SCIPerrorMessage("enforcing method of constraint handler <%s> for pseudo solutions was skipped, even though the solution was not objective-infeasible\n", 
+            SCIPerrorMessage("enforcing method of constraint handler <%s> for pseudo solutions was skipped, even though the solution was not objective-infeasible\n",
                conshdlr->name);
             conshdlr->lastenfopsresult = *result;
 
@@ -3725,7 +3725,7 @@ SCIP_RETCODE SCIPconshdlrEnforcePseudoSol(
             && *result != SCIP_FEASIBLE
             && *result != SCIP_DIDNOTRUN )
          {
-            SCIPerrorMessage("enforcing method of constraint handler <%s> for pseudo solutions returned invalid result <%d>\n", 
+            SCIPerrorMessage("enforcing method of constraint handler <%s> for pseudo solutions returned invalid result <%d>\n",
                conshdlr->name, *result);
             return SCIP_INVALIDRESULT;
          }
@@ -4110,7 +4110,7 @@ SCIP_RETCODE SCIPconshdlrPresolve(
             && *result != SCIP_DIDNOTRUN
             && *result != SCIP_DELAYED )
          {
-            SCIPerrorMessage("presolving method of constraint handler <%s> returned invalid result <%d>\n", 
+            SCIPerrorMessage("presolving method of constraint handler <%s> returned invalid result <%d>\n",
                conshdlr->name, *result);
             return SCIP_INVALIDRESULT;
          }
@@ -6562,7 +6562,7 @@ SCIP_RETCODE SCIPconsTransform(
       {
          /* create new constraint with a pointer copy of the constraint data */
          SCIP_CALL( SCIPconsCreate(transcons, blkmem, set, origcons->name, origcons->conshdlr, origcons->consdata, origcons->initial,
-               origcons->separate, origcons->enforce, origcons->check, origcons->propagate, 
+               origcons->separate, origcons->enforce, origcons->check, origcons->propagate,
                origcons->local, origcons->modifiable, origcons->dynamic, origcons->removable, origcons->stickingatnode,
                FALSE, FALSE) );
       }
@@ -7353,14 +7353,14 @@ SCIP_RETCODE SCIPconsResolvePropagation(
       /* check result code */
       if( *result != SCIP_SUCCESS && *result != SCIP_DIDNOTFIND )
       {
-         SCIPerrorMessage("propagation conflict resolving method of constraint handler <%s> returned invalid result <%d>\n", 
+         SCIPerrorMessage("propagation conflict resolving method of constraint handler <%s> returned invalid result <%d>\n",
             conshdlr->name, *result);
          return SCIP_INVALIDRESULT;
       }
    }
    else
    {
-      SCIPerrorMessage("propagation conflict resolving method of constraint handler <%s> is not implemented\n", 
+      SCIPerrorMessage("propagation conflict resolving method of constraint handler <%s> is not implemented\n",
          conshdlr->name);
       return SCIP_PLUGINNOTFOUND;
    }
@@ -8201,7 +8201,7 @@ void SCIPprintLinConsStats(
 #undef SCIPconsIsAdded
 #undef SCIPconsGetNUpgradeLocks
 
-/** returns the name of the constraint 
+/** returns the name of the constraint
  *
  *  @note to change the name of a constraint, use SCIPchgConsName() from scip.h
  */

@@ -1622,6 +1622,7 @@ void consdataUpdateActivities(
    )
 {
    QUAD_MEMBER(SCIP_Real* activity);
+   QUAD_MEMBER(SCIP_Real delta);
    SCIP_Real* lastactivity;
    int* activityposinf;
    int* activityneginf;
@@ -1629,7 +1630,6 @@ void consdataUpdateActivities(
    int* activityneghuge;
    SCIP_Real oldcontribution;
    SCIP_Real newcontribution;
-   SCIP_Real delta;
    SCIP_Bool validact;
    SCIP_Bool finitenewbound;
    SCIP_Bool hugevalnewcont;
@@ -1663,7 +1663,7 @@ void consdataUpdateActivities(
    assert(consdata->glbmaxactivityneghuge >= 0);
    assert(consdata->glbmaxactivityposhuge >= 0);
 
-   delta = 0.0;
+   QUAD_ASSIGN(delta, 0.0);
 
    /* we are updating global activities */
    if( global )
@@ -1809,7 +1809,7 @@ void consdataUpdateActivities(
             }
             /* "normal case": just add the contribution to the activity */
             else
-               delta = newcontribution;
+               QUAD_ASSIGN(delta, newcontribution);
          }
       }
       /* old bound was -infinity */
@@ -1837,7 +1837,7 @@ void consdataUpdateActivities(
             }
             /* "normal case": just add the contribution to the activity */
             else
-               delta = newcontribution;
+               QUAD_ASSIGN(delta, newcontribution);
          }
       }
    }
@@ -1873,7 +1873,7 @@ void consdataUpdateActivities(
          }
          /* "normal case": just add the contribution to the activity */
          else
-            delta = newcontribution;
+            QUAD_ASSIGN(delta, newcontribution);
       }
       /* old contribution was too large and negative */
       else
@@ -1906,7 +1906,7 @@ void consdataUpdateActivities(
          }
          /* "normal case": just add the contribution to the activity */
          else
-            delta = newcontribution;
+            QUAD_ASSIGN(delta, newcontribution);
       }
    }
    /* old bound was finite and not too large */
@@ -1920,7 +1920,7 @@ void consdataUpdateActivities(
          if( newbound > 0.0 )
          {
             (*activityposinf)++;
-            delta = -oldcontribution;
+            QUAD_ASSIGN(delta, -oldcontribution);
          }
          /* if the new bound is -infinity, the old contribution has to be subtracted
           * and the counter for negative infinite contributions has to be increased
@@ -1930,7 +1930,7 @@ void consdataUpdateActivities(
             assert(newbound < 0.0 );
 
             (*activityneginf)++;
-            delta = -oldcontribution;
+            QUAD_ASSIGN(delta, -oldcontribution);
          }
       }
       /* if the contribution of this variable is too large, increase the counter for huge values */
@@ -1939,28 +1939,31 @@ void consdataUpdateActivities(
          if( newcontribution > 0.0 )
          {
             (*activityposhuge)++;
-            delta = -oldcontribution;
+            QUAD_ASSIGN(delta, -oldcontribution);
          }
          else
          {
             (*activityneghuge)++;
-            delta = -oldcontribution;
+            QUAD_ASSIGN(delta, -oldcontribution);
          }
       }
       /* "normal case": just update the activity */
       else
-         delta = newcontribution - oldcontribution;
+      {
+         QUAD_ASSIGN(delta, newcontribution);
+         SCIPquadprecSumQD(delta, delta, -oldcontribution);
+      }
    }
 
    /* update the activity, if the current value is valid and there was a change in the finite part */
-   if( validact && (delta != 0.0) )
+   if( validact && (QUAD_TO_DBL(delta) != 0.0) )
    {
       SCIP_Real curractivity;
 
       /* if the absolute value of the activity is increased, this is regarded as reliable,
        * otherwise, we check whether we can still trust the updated value
        */
-      SCIPquadprecSumQD(*activity, *activity, delta);
+      SCIPquadprecSumQD(*activity, *activity, QUAD_TO_DBL(delta));
 
       curractivity = QUAD_TO_DBL(*activity);
       assert(!SCIPisInfinity(scip, -curractivity) && !SCIPisInfinity(scip, curractivity));
@@ -14769,7 +14772,7 @@ SCIP_RETCODE fullDualPresolve(
    BMSclearMemoryArray(nlocksdown, nvars);
    BMSclearMemoryArray(nlocksup, nvars);
 
-   /* Initialize isimplint array: variable may be implied integer if rounded to their best bound they are integral.
+   /* Initialize isimplint array: variable may be implicit integer if rounded to their best bound they are integral.
     * We better not use SCIPisFeasIntegral() in these checks.
     */
    for( v = 0; v < ncontvars; v++ )
@@ -14971,13 +14974,13 @@ SCIP_RETCODE fullDualPresolve(
             }
          }
 
-         /* update implied integer status of continuous variables */
+         /* update implicit integer status of continuous variables */
          if( hasimpliedpotential )
          {
             if( nconscontvars > 1 || !integralcoefs )
             {
                /* there is more than one continuous variable or the integer variables have fractional coefficients:
-                * none of the continuous variables is implied integer
+                * none of the continuous variables is implicit integer
                 */
                for( i = 0; i < nconscontvars; i++ )
                {
@@ -15044,14 +15047,16 @@ SCIP_RETCODE fullDualPresolve(
 
       var = vars[v];
       obj = SCIPvarGetObj(var);
-      if( obj >= 0.0 )
+      if( !SCIPisPositive(scip, -obj) )
       {
          /* making the variable as small as possible does not increase the objective:
           * check if all down locks of the variables are due to linear constraints;
-          * if largest bound to make constraints redundant is -infinity, we better do nothing for numerical reasons
+          * if variable is cost neutral and only upper bounded non-positively or negative largest bound to make
+          * constraints redundant is huge, we better do nothing for numerical reasons
           */
-         if( SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == nlocksdown[v]
-            && !SCIPisInfinity(scip, -redlb[v])
+         if( ( SCIPisPositive(scip, obj) || SCIPisPositive(scip, SCIPvarGetUbGlobal(var)) || !SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var)) )
+            && SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == nlocksdown[v]
+            && !SCIPisHugeValue(scip, -redlb[v])
             && redlb[v] < SCIPvarGetUbGlobal(var) )
          {
             SCIP_Real ub;
@@ -15071,14 +15076,16 @@ SCIP_RETCODE fullDualPresolve(
                (*nchgbds)++;
          }
       }
-      if( obj <= 0.0 )
+      if( !SCIPisPositive(scip, obj) )
       {
          /* making the variable as large as possible does not increase the objective:
           * check if all up locks of the variables are due to linear constraints;
-          * if smallest bound to make constraints redundant is +infinity, we better do nothing for numerical reasons
+          * if variable is cost neutral and only lower bounded non-negatively or positive smallest bound to make
+          * constraints redundant is huge, we better do nothing for numerical reasons
           */
-         if( SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == nlocksup[v]
-            && !SCIPisInfinity(scip, redub[v])
+         if( ( SCIPisPositive(scip, -obj) || SCIPisPositive(scip, -SCIPvarGetLbGlobal(var)) || !SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) )
+            && SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == nlocksup[v]
+            && !SCIPisHugeValue(scip, redub[v])
             && redub[v] > SCIPvarGetLbGlobal(var) )
          {
             SCIP_Real lb;
@@ -15100,7 +15107,7 @@ SCIP_RETCODE fullDualPresolve(
       }
    }
 
-   /* upgrade continuous variables to implied integers */
+   /* upgrade continuous variables to implicit integers */
    for( v = nintvars - nbinvars; v < nvars; ++v )
    {
       SCIP_VAR* var;
@@ -15114,7 +15121,7 @@ SCIP_RETCODE fullDualPresolve(
       assert(SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) >= nlocksup[v]);
       assert(0 <= v - nintvars + nbinvars && v - nintvars + nbinvars < ncontvars);
 
-      /* we can only conclude implied integrality if the variable appears in no other constraint */
+      /* we can only conclude implicit integrality if the variable appears in no other constraint */
       if( isimplint[v - nintvars + nbinvars]
          && SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == nlocksdown[v]
          && SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == nlocksup[v] )

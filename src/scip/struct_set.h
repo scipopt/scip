@@ -342,7 +342,7 @@ struct SCIP_Set
                                               *   freed at end of diving? */
    int                   lp_colagelimit;     /**< maximum age a column can reach before it is deleted from the SCIP_LP
                                               *   (-1: don't delete columns due to aging) */
-   int                   lp_rowagelimit;     /**< maximum age a row can reach before it is deleted from the LP 
+   int                   lp_rowagelimit;     /**< maximum age a row can reach before it is deleted from the LP
                                               *   (-1: don't delete rows due to aging) */
    SCIP_Bool             lp_cleanupcols;     /**< should new non-basic columns be removed after LP solving? */
    SCIP_Bool             lp_cleanupcolsroot; /**< should new non-basic columns be removed after root LP solving? */
@@ -562,6 +562,10 @@ struct SCIP_Set
                                               *   or integrality improvement (-1: no additional restriction) */
    int                   sepa_maxstallroundsroot;/**< maximal number of consecutive separation rounds without objective
                                               *   or integrality improvement (-1: no additional restriction) */
+   SCIP_Real             sepa_maxcutsgenfactor; /**< factor w.r.t. maxcuts for maximal number of cuts generated per
+                                                 * separation round (-1.0: no limit, >= 0.0: valid finite limit) */
+   SCIP_Real             sepa_maxcutsrootgenfactor; /**< factor w.r.t. maxcutsroot for maximal number of generated cuts
+                                                     * at the root node (-1.0: no limit, >= 0.0: valid finite limit) */
    int                   sepa_maxcuts;       /**< maximal number of cuts separated per separation round */
    int                   sepa_maxcutsroot;   /**< maximal number of separated cuts at the root node */
    int                   sepa_cutagelimit;   /**< maximum age a cut can reach before it is deleted from the global cut pool */

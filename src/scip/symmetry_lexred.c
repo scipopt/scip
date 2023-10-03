@@ -90,6 +90,7 @@
 /** data per permutation for lexicographic reduction propagator */
 struct LexRedPermData
 {
+   SCIP_Bool             isdynamic;          /**< whether permutation shall be propagated with dynamic variable order */
    SCIP_VAR**            vars;               /**< variables affected by permutation */
    int                   nvars;              /**< number of variables */
    int*                  perm;               /**< permutation for lexicographic reduction */
@@ -112,6 +113,7 @@ struct SCIP_LexRedData
    int                   maxnlexdatas;       /**< allocated datas array size */
    int                   nred;               /**< total number of reductions */
    int                   ncutoff;            /**< total number of cutoffs */
+   SCIP_Bool             hasdynamicperm;     /**< whether there exists a permutation that is treated dynamically */
 };
 
 
@@ -164,7 +166,11 @@ SCIP_RETCODE lexdataFree(
       assert( (*lexdata)->vars != NULL );
 
       /* free hashmap */
-      SCIPhashmapFree(&((*lexdata)->varmap));
+      if ( (*lexdata)->isdynamic )
+      {
+         assert( (*lexdata)->varmap != NULL );
+         SCIPhashmapFree(&((*lexdata)->varmap));
+      }
 
       /* release variables */
       for (i = 0; i < (*lexdata)->nvars; ++i)
@@ -217,6 +223,7 @@ SCIP_RETCODE lexdataCreate(
    int*                  perm,               /**< input permutation of the lexicographic reduction propagator */
    SYM_SYMTYPE           symtype,            /**< type of symmetries in perm */
    SCIP_Real*            permvardomaincenter, /**< array containing center point for each variable domain */
+   SCIP_Bool             usedynamicorder,    /**< whether a dynamic variable order shall be used */
    SCIP_Bool*            success             /**< to store whether the component is successfully added */
    )
 {
@@ -246,6 +253,8 @@ SCIP_RETCODE lexdataCreate(
    SCIP_CALL( SCIPallocBlockMemory(scip, lexdata) );
    (*lexdata)->symtype = symtype;
 
+   (*lexdata)->isdynamic = usedynamicorder;
+
    /* remove fixed points */
    naffectedvariables = 0;
    SCIP_CALL( SCIPallocBufferArray(scip, &indexcorrection, nvars) );
@@ -268,8 +277,13 @@ SCIP_RETCODE lexdataCreate(
       return SCIP_OKAY;
    }
 
-   /* require that the shadowtree is active */
-   SCIP_CALL( SCIPactivateShadowTree(scip, masterdata->shadowtreeeventhdlr) );
+   /* require that the shadowtree is active if dynamic propagation is used */
+   if ( usedynamicorder )
+   {
+      masterdata->hasdynamicperm = TRUE;
+
+      SCIP_CALL( SCIPactivateShadowTree(scip, masterdata->shadowtreeeventhdlr) );
+   }
 
    /* initialize variable arrays */
    (*lexdata)->nvars = naffectedvariables;
@@ -351,31 +365,36 @@ SCIP_RETCODE lexdataCreate(
 
    /* create hashmap for all variables, both globally and just for this lexdata */
    assert( (masterdata->symvarmap == NULL) == (masterdata->nsymvars == 0) );
-   if ( masterdata->symvarmap == NULL )
+   if ( usedynamicorder )
    {
-      SCIP_CALL( SCIPhashmapCreate(&masterdata->symvarmap, SCIPblkmem(scip), (*lexdata)->nvars) );
+      if ( masterdata->symvarmap == NULL )
+      {
+         SCIP_CALL( SCIPhashmapCreate(&masterdata->symvarmap, SCIPblkmem(scip), (*lexdata)->nvars) );
+      }
+      assert( masterdata->symvarmap != NULL );
+
+      SCIP_CALL( SCIPhashmapCreate(&(*lexdata)->varmap, SCIPblkmem(scip), (*lexdata)->nvars) );
+      assert( (*lexdata)->varmap != NULL );
+
+      for (i = 0; i < (*lexdata)->nvars; ++i)
+      {
+         var = (*lexdata)->vars[i];
+         assert( var != NULL );
+         assert( SCIPvarIsTransformed(var) );
+
+         /* the hashmap in lexdata maps to the index in the vars array */
+         SCIP_CALL( SCIPhashmapInsertInt((*lexdata)->varmap, (void*) var, i) );
+
+         /* var already added to hashmap */
+         if ( SCIPhashmapExists(masterdata->symvarmap, (void*) var) )
+            continue;
+
+         /* the hashmap in symvarmap maps to a unique index */
+         SCIP_CALL( SCIPhashmapInsertInt(masterdata->symvarmap, (void*) var, masterdata->nsymvars++) );
+      }
    }
-   assert( masterdata->symvarmap != NULL );
-
-   SCIP_CALL( SCIPhashmapCreate(&(*lexdata)->varmap, SCIPblkmem(scip), (*lexdata)->nvars) );
-   assert( (*lexdata)->varmap != NULL );
-
-   for (i = 0; i < (*lexdata)->nvars; ++i)
-   {
-      var = (*lexdata)->vars[i];
-      assert( var != NULL );
-      assert( SCIPvarIsTransformed(var) );
-
-      /* the hashmap in lexdata maps to the index in the vars array */
-      SCIP_CALL( SCIPhashmapInsertInt((*lexdata)->varmap, (void*) var, i) );
-
-      /* var already added to hashmap */
-      if ( SCIPhashmapExists(masterdata->symvarmap, (void*) var) )
-         continue;
-
-      /* the hashmap in symvarmap maps to a unique index */
-      SCIP_CALL( SCIPhashmapInsertInt(masterdata->symvarmap, (void*) var, masterdata->nsymvars++) );
-   }
+   else
+      (*lexdata)->varmap = NULL;
 
    return SCIP_OKAY;
 }
@@ -434,6 +453,21 @@ SCIP_DECL_SORTINDCOMP(sortbynodedepthbranchindices)
    assert( index1->index == index2->index );
 
    return 0;
+}
+
+
+/** return the index of a variable at a specific position of a variable order */
+static
+int varOrderGetIndex(
+   int*                  varorder,           /**< variable order (or NULL) */
+   int                   pos                 /**< position for which index is returned */
+   )
+{
+   assert( pos >= 0 );
+
+   if ( varorder == NULL )
+      return pos;
+   return varorder[pos];
 }
 
 
@@ -972,8 +1006,8 @@ SCIP_RETCODE propagateVariablePair(
    SCIP_Bool*            infeasible,         /**< pointer to store whether infeasibility is found */
    int*                  nreductions,        /**< pointer to store number of reductions */
    SCIP_Bool             peekmode,           /**< whether function is called in peek mode */
-   int                   varidx1,            /**< index of var1 */
-   int                   varidx2,            /**< index of var2 */
+   int                   varidx1,            /**< index of var1 (or NULL) */
+   int                   varidx2,            /**< index of var2 (or NULL) */
    SCIP_Real*            peeklbs,            /**< lower bounds of variables in peek mode (or NULL) */
    SCIP_Real*            peekubs,            /**< upper bounds of variables in peek mode (or NULL) */
    SCIP_Bool*            peekbdset           /**< whether peek bounds have been set (or NULL) */
@@ -1035,13 +1069,13 @@ static
 SCIP_RETCODE peekStaticLexredIsFeasible(
    SCIP*                 scip,               /**< SCIP data structure */
    LEXDATA*              lexdata,            /**< pointer to data for this permutation */
-   int*                  varorder,           /**< array populated with variable order */
+   int*                  varorder,           /**< array populated with variable order (or NULL for static propagation) */
    int                   nselvars,           /**< number of variables in the ordering */
    int                   fixi,               /**< variable index of left fixed column */
    int                   fixj,               /**< variable index of right fixed column */
    int                   fixrow,             /**< row index in var ordering, from which to start peeking */
-   SCIP_Real             fixvaluei,          /**< value on which variables i and j are fixed */
-   SCIP_Real             fixvaluej,          /**< value on which variables i and j are fixed */
+   SCIP_Real             fixvaluei,          /**< value on which variables i is fixed */
+   SCIP_Real             fixvaluej,          /**< value on which variables j is fixed */
    SCIP_Bool*            peekfeasible,       /**< pointer to store whether this is feasible or not */
    SCIP_Real*            peeklbs,            /**< lower bounds of variables in peek mode (or NULL) */
    SCIP_Real*            peekubs,            /**< upper bounds of variables in peek mode (or NULL) */
@@ -1065,7 +1099,6 @@ SCIP_RETCODE peekStaticLexredIsFeasible(
    assert( lexdata->vars != NULL );
    assert( lexdata->nvars >= 0 );
    assert( nselvars <= lexdata->nvars );
-   assert( varorder != NULL );
    assert( nselvars > 0 );
    assert( fixi >= 0 );
    assert( fixi < lexdata->nvars );
@@ -1075,14 +1108,11 @@ SCIP_RETCODE peekStaticLexredIsFeasible(
    assert( fixrow >= 0 );
    assert( fixrow < nselvars );
    assert( peekfeasible != NULL );
-   assert( varorder[fixrow] == fixi );
-   assert( lexdata->invperm[varorder[fixrow]] % lexdata->nvars == fixj );
-   assert( lexdata->perm[fixj] % lexdata->nvars == fixi );
-   assert( fixi == varorder[fixrow] );
-   assert( fixj == lexdata->invperm[varorder[fixrow]] % lexdata->nvars );
-   assert( peeklbs != NULL );
-   assert( peekubs != NULL );
-   assert( peekbdset != NULL );
+   assert( varOrderGetIndex(varorder, fixrow) == fixi );
+   assert( lexdata->invperm[varOrderGetIndex(varorder, fixrow)] == fixj );
+   assert( lexdata->perm[fixj] == fixi );
+   assert( fixi == varOrderGetIndex(varorder, fixrow) );
+   assert( fixj == lexdata->invperm[varOrderGetIndex(varorder, fixrow)] );
 
    *peekfeasible = TRUE;
    issigned = lexdata->symtype == SYM_SYMTYPE_SIGNPERM ? TRUE : FALSE;
@@ -1101,8 +1131,8 @@ SCIP_RETCODE peekStaticLexredIsFeasible(
 
    for (row = fixrow + 1; row < nselvars; ++row)
    {
-      /* left and right column indices */
-      i = varorder[row];
+      /* get left and right column indices */
+      i = varOrderGetIndex(varorder, row);
       j = lexdata->invperm[i];
       assert( i == lexdata->perm[j] );
 
@@ -1161,9 +1191,6 @@ SCIP_RETCODE peekStaticLexredIsFeasible(
          break;
    }
 
-   if ( row >= nselvars )
-      row = nselvars - 1;
-
    return SCIP_OKAY;
 }
 
@@ -1172,7 +1199,7 @@ static
 SCIP_RETCODE propagateStaticLexred(
    SCIP*                 scip,               /**< SCIP data structure */
    LEXDATA*              lexdata,            /**< pointer to data for this permutation */
-   int*                  varorder,           /**< array populated with variable order */
+   int*                  varorder,           /**< array populated with variable order (or NULL if static propagation) */
    int                   nselvars,           /**< number of variables in the ordering */
    SCIP_Bool*            infeasible,         /**< pointer to store whether the problem is infeasible */
    int*                  nreductions         /**< pointer to store the number of found domain reductions */
@@ -1191,7 +1218,6 @@ SCIP_RETCODE propagateStaticLexred(
 
    assert( scip != NULL );
    assert( lexdata != NULL );
-   assert( varorder != NULL );
    assert( nselvars >= 0 );
    assert( infeasible != NULL );
    assert( !*infeasible );
@@ -1213,7 +1239,7 @@ SCIP_RETCODE propagateStaticLexred(
    for (row = 0; row < nselvars; ++row)
    {
       /* left and right column indices */
-      i = varorder[row];
+      i = varOrderGetIndex(varorder, row);
       j = lexdata->invperm[i];
       assert( i == lexdata->perm[j] );
 
@@ -1522,6 +1548,7 @@ SCIP_RETCODE propagateLexredDynamic(
    assert( scip != NULL );
    assert( masterdata != NULL );
    assert( lexdata != NULL );
+   assert( lexdata->isdynamic );
    assert( nodedepthbranchindices != NULL );
    assert( nvarstotal >= 0 );
    assert( branchvars != NULL );
@@ -1531,10 +1558,11 @@ SCIP_RETCODE propagateLexredDynamic(
 
    nvars = lexdata->nvars;
 
+   /* get variable order */
    SCIP_CALL( SCIPallocBufferArray(scip, &varorder, nvars) );
 
    SCIP_CALL( getVarOrder(scip, masterdata, lexdata, nodedepthbranchindices, nvarstotal, branchvars, nbranchvars,
-      varorder, &nvarorder, nvars) );
+         varorder, &nvarorder, nvars) );
    assert( nvarorder >= 0 );
    assert( nvarorder <= nvars );
 
@@ -1544,6 +1572,34 @@ SCIP_RETCODE propagateLexredDynamic(
       SCIP_CALL( propagateStaticLexred(scip, lexdata, varorder, nvarorder, infeasible, nreductions) );
    }
    SCIPfreeBufferArray(scip, &varorder);
+
+   return SCIP_OKAY;
+}
+
+
+/** propagation method for a dynamic lexicographic reduction */
+static
+SCIP_RETCODE propagateLexredStatic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_LEXREDDATA*      masterdata,         /**< pointer to global data for lexicographic reduction propagator */
+   LEXDATA*              lexdata,            /**< pointer to data for this permutation */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether the problem is infeasible */
+   int*                  nreductions         /**< pointer to store the number of found domain reductions */
+   )
+{
+   assert( scip != NULL );
+   assert( masterdata != NULL );
+   assert( lexdata != NULL );
+   assert( ! lexdata->isdynamic );
+   assert( infeasible != NULL );
+   assert( nreductions != NULL );
+
+   /* skip trivial cases */
+   if ( lexdata->nvars == 0 )
+      return SCIP_OKAY;
+
+   /* propagate the constraint with this variable order */
+   SCIP_CALL( propagateStaticLexred(scip, lexdata, NULL, lexdata->nvars, infeasible, nreductions) );
 
    return SCIP_OKAY;
 }
@@ -1567,18 +1623,25 @@ SCIP_RETCODE propagateLexicographicReductionPerm(
    assert( scip != NULL );
    assert( masterdata != NULL );
    assert( lexdata != NULL );
-   assert( nodedepthbranchindices != NULL );
-   assert( nvarstotal >= 0 );
-   assert( branchvars != NULL );
-   assert( nbranchvars >= 0 );
+   assert( nodedepthbranchindices != NULL || ! lexdata->isdynamic );
+   assert( nvarstotal >= 0 || ! lexdata->isdynamic );
+   assert( branchvars != NULL || ! lexdata->isdynamic );
+   assert( nbranchvars >= 0 || ! lexdata->isdynamic );
    assert( infeasible != NULL );
    assert( nreductions != NULL );
 
    *nreductions = 0;
    *infeasible = FALSE;
 
-   SCIP_CALL( propagateLexredDynamic(scip, masterdata, lexdata,
-      nodedepthbranchindices, nvarstotal, branchvars, nbranchvars, infeasible, nreductions) );
+   if ( lexdata->isdynamic )
+   {
+      SCIP_CALL( propagateLexredDynamic(scip, masterdata, lexdata,
+            nodedepthbranchindices, nvarstotal, branchvars, nbranchvars, infeasible, nreductions) );
+   }
+   else
+   {
+      SCIP_CALL( propagateLexredStatic(scip, masterdata, lexdata, infeasible, nreductions) );
+   }
 
    return SCIP_OKAY;
 }
@@ -1702,7 +1765,9 @@ SCIP_RETCODE shadowtreeUndoNodeDepthBranchIndices(
    /* undo the operations from shadowtreeFillNodeDepthBranchIndices, which makes nodedepthbranchindices clean */
    SCIP_SHADOWNODE* shadownode;
    SCIP_SHADOWNODE* shadowchild;
+#ifndef NDEBUG
    int shadowdepth;
+#endif
    SCIP_VAR* var;
    int varindex;
    int c;
@@ -1721,7 +1786,9 @@ SCIP_RETCODE shadowtreeUndoNodeDepthBranchIndices(
    assert( focusnode != NULL );
 
    shadownode = SCIPshadowTreeGetShadowNode(shadowtree, focusnode);
+#ifndef NDEBUG
    shadowdepth = SCIPnodeGetDepth(focusnode);
+#endif
 
    /* clean nbranchvars array */
    while ( *nbranchvars > 0 )
@@ -1738,7 +1805,9 @@ SCIP_RETCODE shadowtreeUndoNodeDepthBranchIndices(
     */
    while (shadownode != NULL)
    {
+#ifndef NDEBUG
       assert( shadowdepth > 0 );
+#endif
       for (c = 0; c < shadownode->nchildren; ++c)
       {
          shadowchild = shadownode->children[c];
@@ -1763,7 +1832,9 @@ SCIP_RETCODE shadowtreeUndoNodeDepthBranchIndices(
 
       /* prepare for the next iteration */
       shadownode = shadownode->parent;
+#ifndef NDEBUG
       --shadowdepth;
+#endif
    }
    /* In the last iteration, we handled the branching decisions at the root node, so shadowdepth must have value 0. */
    assert( shadowdepth == 0 );
@@ -1840,11 +1911,11 @@ SCIP_RETCODE SCIPlexicographicReductionPropagate(
 {
    int nlocalred;
    int p;
-   NODEDEPTHBRANCHINDEX* nodedepthbranchindices;
-   SCIP_VAR** branchvars;
-   int nbranchvars;
-   SCIP_SHADOWTREE* shadowtree;
-   SCIP_NODE* focusnode;
+   SCIP_SHADOWTREE* shadowtree = NULL;
+   SCIP_NODE* focusnode = NULL;
+   NODEDEPTHBRANCHINDEX* nodedepthbranchindices = NULL;
+   SCIP_VAR** branchvars = NULL;
+   int nbranchvars = 0;
 
    assert( scip != NULL );
    assert( masterdata != NULL );
@@ -1862,26 +1933,31 @@ SCIP_RETCODE SCIPlexicographicReductionPropagate(
    if ( masterdata->nlexdatas == 0 )
       return SCIP_OKAY;
 
-   /* compute the variable ordering based on the branching decisions of the shadowtree */
-   assert( masterdata->shadowtreeeventhdlr != NULL );
-   shadowtree = SCIPgetShadowTree(masterdata->shadowtreeeventhdlr);
-   focusnode = SCIPgetFocusNode(scip);
-
-   /* fill the node-depth-branch-indices structure
-    *
-    * this is an array that maps every variable index to (depth, index) = (0, 0) if the variable is not branched on,
-    * or (depth, index) is the depth (branching at root node: depth 1) and variable index when it was branched thereon.
-    * For individual dynamic lexicographic reductions, we use this ordering the following way:
-    *  1. Choose those variables that have (depth, index) with depth > 0 (these)
-    *  2. Sort by depth, then by index, in increasing order.
+   /* compute the variable ordering based on the branching decisions
+    * of the shadowtree if there exist dynamic permutations
     */
-   SCIP_CALL( SCIPallocCleanBufferArray(scip, &nodedepthbranchindices, masterdata->nsymvars) );
-   SCIP_CALL( SCIPallocCleanBufferArray(scip, &branchvars, masterdata->nsymvars) );
-   SCIP_CALL( shadowtreeFillNodeDepthBranchIndices(scip, masterdata, nodedepthbranchindices,
-      branchvars, &nbranchvars, shadowtree, focusnode) );
-   /* ... Do everything using this nodedepthbranchindices structure */
+   if ( masterdata->hasdynamicperm )
+   {
+      assert( masterdata->shadowtreeeventhdlr != NULL );
+      shadowtree = SCIPgetShadowTree(masterdata->shadowtreeeventhdlr);
+      focusnode = SCIPgetFocusNode(scip);
 
-   if ( nbranchvars > 0 )
+      /* fill the node-depth-branch-indices structure
+       *
+       * this is an array that maps every variable index to (depth, index) = (0, 0) if the variable is not branched on,
+       * or (depth, index) is the depth (branching at root node: depth 1) and variable index when it was branched thereon.
+       * For individual dynamic lexicographic reductions, we use this ordering the following way:
+       *  1. Choose those variables that have (depth, index) with depth > 0 (these)
+       *  2. Sort by depth, then by index, in increasing order.
+       */
+      SCIP_CALL( SCIPallocCleanBufferArray(scip, &nodedepthbranchindices, masterdata->nsymvars) );
+      SCIP_CALL( SCIPallocCleanBufferArray(scip, &branchvars, masterdata->nsymvars) );
+      SCIP_CALL( shadowtreeFillNodeDepthBranchIndices(scip, masterdata, nodedepthbranchindices,
+            branchvars, &nbranchvars, shadowtree, focusnode) );
+      /* ... Do everything using this nodedepthbranchindices structure */
+   }
+
+   if ( nbranchvars > 0 || ! masterdata->hasdynamicperm )
    {
       /* apply lexicographic reduction propagator to all lexdata objects */
       for (p = 0; p < masterdata->nlexdatas; ++p)
@@ -1908,12 +1984,17 @@ SCIP_RETCODE SCIPlexicographicReductionPropagate(
          ++masterdata->ncutoff;
    }
 
-   /* clean the node-depth-branch-indices structure */
-   SCIP_CALL( shadowtreeUndoNodeDepthBranchIndices(scip, masterdata, nodedepthbranchindices,
-      branchvars, &nbranchvars, shadowtree, focusnode) );
-   assert( nbranchvars == 0 );
-   SCIPfreeCleanBufferArray(scip, &branchvars);
-   SCIPfreeCleanBufferArray(scip, &nodedepthbranchindices);
+   /* possibly clean the node-depth-branch-indices structure */
+   if ( masterdata->hasdynamicperm )
+   {
+      assert( shadowtree != NULL );
+      assert( focusnode != NULL );
+      SCIP_CALL( shadowtreeUndoNodeDepthBranchIndices(scip, masterdata, nodedepthbranchindices,
+            branchvars, &nbranchvars, shadowtree, focusnode) );
+      assert( nbranchvars == 0 );
+      SCIPfreeCleanBufferArray(scip, &branchvars);
+      SCIPfreeCleanBufferArray(scip, &nodedepthbranchindices);
+   }
 
    return SCIP_OKAY;
 }
@@ -1928,6 +2009,7 @@ SCIP_RETCODE SCIPlexicographicReductionAddPermutation(
    int*                  perm,               /**< permutation */
    SYM_SYMTYPE           symtype,            /**< type of symmetries in perm */
    SCIP_Real*            permvardomaincenter, /**< array containing center point for each variable domain */
+   SCIP_Bool             usedynamicorder,    /**< whether a dynamic variable order shall be used */
    SCIP_Bool*            success             /**< to store whether the component is successfully added */
    )
 {
@@ -1972,7 +2054,7 @@ SCIP_RETCODE SCIPlexicographicReductionAddPermutation(
 
    /* prepare lexdatas */
    SCIP_CALL( lexdataCreate(scip, masterdata, &masterdata->lexdatas[masterdata->nlexdatas],
-         permvars, npermvars, perm, symtype, permvardomaincenter, success) );
+         permvars, npermvars, perm, symtype, permvardomaincenter, usedynamicorder, success) );
 
    /* if not successfully added, undo increasing the counter */
    if ( *success )
@@ -2013,6 +2095,8 @@ SCIP_RETCODE SCIPlexicographicReductionReset(
       masterdata->symvarmap = NULL;
       masterdata->nsymvars = 0;
    }
+
+   masterdata->hasdynamicperm = FALSE;
 
    return SCIP_OKAY;
 }
@@ -2065,6 +2149,7 @@ SCIP_RETCODE SCIPincludeLexicographicReduction(
    (*masterdata)->maxnlexdatas = 0;
    (*masterdata)->nred = 0;
    (*masterdata)->ncutoff = 0;
+   (*masterdata)->hasdynamicperm = FALSE;
 
    return SCIP_OKAY;
 }

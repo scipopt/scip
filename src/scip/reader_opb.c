@@ -1128,6 +1128,7 @@ SCIP_RETCODE setObjective(
    SCIP*const            scip,               /**< SCIP data structure */
    OPBINPUT*const        opbinput,           /**< OPB reading data */
    const char*           sense,              /**< objective sense */
+   SCIP_Real const       scale,              /**< objective scale */
    SCIP_VAR**const       linvars,            /**< array of linear variables */
    SCIP_Real*const       coefs,              /**< array of objective values for linear variables */
    int const             ncoefs,             /**< number of coefficients for linear part */
@@ -1318,11 +1319,11 @@ SCIP_RETCODE setObjective(
 	    SCIP_VAR* negvar = SCIPvarGetNegationVar(linvars[v]);
 
 	    SCIP_CALL( SCIPaddOrigObjoffset(scip, coefs[v]) );
-	    SCIP_CALL( SCIPchgVarObj(scip, negvar, SCIPvarGetObj(negvar) - coefs[v]) );
+	    SCIP_CALL( SCIPaddVarObj(scip, negvar, -scale * coefs[v]) );
 	 }
 	 else
 	 {
-	    SCIP_CALL( SCIPchgVarObj(scip, linvars[v], SCIPvarGetObj(linvars[v]) + coefs[v]) );
+	    SCIP_CALL( SCIPaddVarObj(scip, linvars[v], scale * coefs[v]) );
 	 }
       }
    }
@@ -1335,6 +1336,7 @@ static
 SCIP_RETCODE readConstraints(
    SCIP*                 scip,               /**< SCIP data structure */
    OPBINPUT*             opbinput,           /**< OPB reading data */
+   SCIP_Real             objscale,           /**< objective scale */
    int*                  nNonlinearConss     /**< pointer to store number of nonlinear constraints */
    )
 {
@@ -1396,7 +1398,7 @@ SCIP_RETCODE readConstraints(
          }
 
          /* set objective function  */
-         SCIP_CALL( setObjective(scip, opbinput, name, linvars, lincoefs, nlincoefs, terms, termcoefs, ntermvars, ntermcoefs) );
+         SCIP_CALL( setObjective(scip, opbinput, name, objscale, linvars, lincoefs, nlincoefs, terms, termcoefs, ntermvars, ntermcoefs) );
       }
       else if( strcmp(name, "soft") == 0 )
       {
@@ -1502,7 +1504,7 @@ SCIP_RETCODE readConstraints(
       SCIP_CALL( createVariable(scip, &indvar, indname) );
 
       assert(!SCIPisInfinity(scip, -weight));
-      SCIP_CALL( SCIPchgVarObj(scip, indvar, weight) );
+      SCIP_CALL( SCIPchgVarObj(scip, indvar, objscale * weight) );
    }
    else
       indvar = NULL;
@@ -1568,6 +1570,7 @@ static
 SCIP_RETCODE getMaxAndConsDim(
    SCIP*                 scip,               /**< SCIP data structure */
    OPBINPUT*             opbinput,           /**< OPB reading data */
+   SCIP_Real*            objscale,           /**< pointer to store objective scale */
    SCIP_Real*            objoffset           /**< pointer to store objective offset */
    )
 {
@@ -1584,7 +1587,7 @@ SCIP_RETCODE getMaxAndConsDim(
    stop = FALSE;
    commentstart = NULL;
    nproducts = NULL;
-
+   *objscale = 1.0;
    *objoffset = 0.0;
    opbinput->linebuf[opbinput->linebufsize - 2] = '\0';
 
@@ -1650,6 +1653,15 @@ SCIP_RETCODE getMaxAndConsDim(
                stop = TRUE;
             }
 
+            /* search for "Obj. scale       : <number>" in comment line */
+            str = strstr(opbinput->linebuf, "Obj. scale       : ");
+            if( str != NULL )
+            {
+               str += strlen("Obj. scale       : ");
+               *objscale = atof(str);
+               break;
+            }
+
             /* search for "Obj. offset      : <number>" in comment line */
             str = strstr(opbinput->linebuf, "Obj. offset      : ");
             if( str != NULL )
@@ -1679,6 +1691,7 @@ SCIP_RETCODE readOPBFile(
    const char*           filename            /**< name of the input file */
    )
 {
+   SCIP_Real objscale;
    SCIP_Real objoffset;
    int nNonlinearConss;
    int i;
@@ -1700,21 +1713,25 @@ SCIP_RETCODE readOPBFile(
     */
 
    /* tries to read the first comment line which usually contains information about the max size of "and" products */
-   SCIP_CALL( getMaxAndConsDim(scip, opbinput, &objoffset) );
+   SCIP_CALL( getMaxAndConsDim(scip, opbinput, &objscale, &objoffset) );
 
    /* create problem */
    SCIP_CALL( SCIPcreateProb(scip, filename, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
 
+   /* opb format supports only minimization; therefore, flip objective sense for negative objective scale */
+   if( objscale < 0.0 )
+      opbinput->objsense = (SCIP_OBJSENSE)(-1 * (int)(opbinput->objsense));
+
    if( ! SCIPisZero(scip, objoffset) )
    {
-      SCIP_CALL( SCIPaddOrigObjoffset(scip, objoffset) );
+      SCIP_CALL( SCIPaddOrigObjoffset(scip, objscale * objoffset) );
    }
 
    nNonlinearConss = 0;
 
    while( !SCIPfeof( opbinput->file ) && !hasError(opbinput) )
    {
-      SCIP_CALL( readConstraints(scip, opbinput, &nNonlinearConss) );
+      SCIP_CALL( readConstraints(scip, opbinput, objscale, &nNonlinearConss) );
    }
 
    /* if we read a wbo file we need to make sure that the top cost won't be exceeded */
@@ -2181,7 +2198,7 @@ SCIP_RETCODE writeOpbObjective(
    assert(multisymbol != NULL);
 
    mult = 1;
-   objective = FALSE;
+   objective = !SCIPisZero(scip, objoffset);
 
    clearBuffer(linebuffer, &linecnt);
 
@@ -2431,15 +2448,15 @@ SCIP_RETCODE writeOpbObjective(
 
    if( objective )
    {
+      /* opb format supports only minimization; therefore, a maximization problem has to be converted */
+      if( ( objsense == SCIP_OBJSENSE_MAXIMIZE ) != ( objscale < 0.0 ) )
+         mult *= -1;
+
       /* there exist a objective function*/
-      SCIPinfoMessage(scip, file, "*   Obj. scale       : %.15g\n", objscale * mult);
-      SCIPinfoMessage(scip, file, "*   Obj. offset      : %.15g\n", objoffset);
+      SCIPinfoMessage(scip, file, "*   Obj. scale       : %.15g\n", objscale / mult);
+      SCIPinfoMessage(scip, file, "*   Obj. offset      : %.15g\n", objoffset * mult);
 
       clearBuffer(linebuffer, &linecnt);
-
-      /* opb format supports only minimization; therefore, a maximization problem has to be converted */
-      if( objsense == SCIP_OBJSENSE_MAXIMIZE )
-         mult *= -1;
 
       SCIPdebugMsg(scip, "print objective function multiplied with %" SCIP_LONGINT_FORMAT "\n", mult);
 
@@ -2674,13 +2691,11 @@ SCIP_RETCODE printNonLinearCons(
    SCIP_Real activeconstant;
    SCIP_Longint mult;
    SCIP_RETCODE retcode;
-   int v;
    int nactivevars;
+   int v;
 
    assert(scip != NULL);
-   assert(vars != NULL);
-   assert(nvars > 0);
-   assert(lhs <= rhs);
+   assert(vars != NULL || nvars == 0);
    assert(resvars != NULL);
    assert(nresvars > 0);
    assert(andvars != NULL && nandvars != NULL);
@@ -2688,25 +2703,30 @@ SCIP_RETCODE printNonLinearCons(
    if( SCIPisInfinity(scip, -lhs) && SCIPisInfinity(scip, rhs) )
       return SCIP_OKAY;
 
-   activeconstant = 0.0;
    nactivevars = nvars;
+   activevars = NULL;
+   activevals = NULL;
+   activeconstant = 0.0;
 
    /* duplicate variable and value array */
-   SCIP_CALL( SCIPduplicateBufferArray(scip, &activevars, vars, nactivevars ) );
-   if( vals != NULL )
+   if( vars != NULL )
    {
-      SCIP_CALL( SCIPduplicateBufferArray(scip, &activevals, vals, nactivevars ) );
-   }
-   else
-   {
-      SCIP_CALL( SCIPallocBufferArray(scip, &activevals, nactivevars) );
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &activevars, vars, nactivevars ) );
+      if( vals != NULL )
+      {
+         SCIP_CALL( SCIPduplicateBufferArray(scip, &activevals, vals, nactivevars ) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPallocBufferArray(scip, &activevals, nactivevars) );
 
-      for( v = 0; v < nactivevars; ++v )
-         activevals[v] = 1.0;
-   }
+         for( v = 0; v < nactivevars; ++v )
+            activevals[v] = 1.0;
+      }
 
-   /* retransform given variables to active variables */
-   SCIP_CALL( getActiveVariables(scip, activevars, activevals, &nactivevars, &activeconstant, transformed) );
+      /* retransform given variables to active variables */
+      SCIP_CALL( getActiveVariables(scip, activevars, activevals, &nactivevars, &activeconstant, transformed) );
+   }
 
    mult = 1;
    retcode = SCIP_OKAY;
@@ -2740,8 +2760,11 @@ SCIP_RETCODE printNonLinearCons(
    }
 
    /* free buffer arrays */
-   SCIPfreeBufferArray(scip, &activevars);
-   SCIPfreeBufferArray(scip, &activevals);
+   if( vars != NULL )
+   {
+      SCIPfreeBufferArray(scip, &activevars);
+      SCIPfreeBufferArray(scip, &activevals);
+   }
 
    return retcode;
 }
@@ -2859,39 +2882,42 @@ SCIP_RETCODE printLinearCons(
 {
    SCIP_VAR** activevars;
    SCIP_Real* activevals;
-   int nactivevars;
    SCIP_Real activeconstant;
    SCIP_Longint mult;
    SCIP_RETCODE retcode;
+   int nactivevars;
    int v;
 
    assert( scip != NULL );
-   assert( vars != NULL );
-   assert( nvars > 0 );
-   assert( lhs <= rhs );
+   assert( vars != NULL || nvars == 0 );
 
    if( SCIPisInfinity(scip, -lhs) && SCIPisInfinity(scip, rhs) )
       return SCIP_OKAY;
 
+   nactivevars = nvars;
+   activevars = NULL;
+   activevals = NULL;
    activeconstant = 0.0;
 
    /* duplicate variable and value array */
-   nactivevars = nvars;
-   SCIP_CALL( SCIPduplicateBufferArray(scip, &activevars, vars, nactivevars ) );
-   if( vals != NULL )
+   if( vars != NULL )
    {
-      SCIP_CALL( SCIPduplicateBufferArray(scip, &activevals, vals, nactivevars ) );
-   }
-   else
-   {
-      SCIP_CALL( SCIPallocBufferArray(scip, &activevals, nactivevars) );
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &activevars, vars, nactivevars ) );
+      if( vals != NULL )
+      {
+         SCIP_CALL( SCIPduplicateBufferArray(scip, &activevals, vals, nactivevars ) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPallocBufferArray(scip, &activevals, nactivevars) );
 
-      for( v = 0; v < nactivevars; ++v )
-         activevals[v] = 1.0;
-   }
+         for( v = 0; v < nactivevars; ++v )
+            activevals[v] = 1.0;
+      }
 
-   /* retransform given variables to active variables */
-   SCIP_CALL( getActiveVariables(scip, activevars, activevals, &nactivevars, &activeconstant, transformed) );
+      /* retransform given variables to active variables */
+      SCIP_CALL( getActiveVariables(scip, activevars, activevals, &nactivevars, &activeconstant, transformed) );
+   }
 
    mult = 1;
    retcode = SCIP_OKAY;
@@ -2925,8 +2951,11 @@ SCIP_RETCODE printLinearCons(
    }
 
    /* free buffer arrays */
-   SCIPfreeBufferArray(scip, &activevars);
-   SCIPfreeBufferArray(scip, &activevals);
+   if( vars != NULL )
+   {
+      SCIPfreeBufferArray(scip, &activevars);
+      SCIPfreeBufferArray(scip, &activevals);
+   }
 
    return retcode;
 }
@@ -3461,16 +3490,6 @@ SCIP_RETCODE writeOpbConstraints(
       {
 	 if( strcmp(conshdlrname, "linear") == 0 )
 	 {
-	    if( SCIPgetNVarsLinear(scip, cons) == 0 )
-	    {
-	       if( SCIPisGT(scip, SCIPgetLhsLinear(scip, cons), SCIPgetRhsLinear(scip, cons)) )
-	       {
-		  SCIPerrorMessage("Cannot print empty violated constraint %s, %g <= %g is not fulfilled\n",
-		     SCIPconsGetName(cons), SCIPgetLhsLinear(scip, cons), SCIPgetRhsLinear(scip, cons));
-	       }
-	       continue;
-	    }
-
 	    if( existands )
 	    {
 	       retcode = printNonLinearCons(scip, file,
@@ -3489,9 +3508,6 @@ SCIP_RETCODE writeOpbConstraints(
 	 {
 	    consvars = SCIPgetVarsSetppc(scip, cons);
 	    nconsvars = SCIPgetNVarsSetppc(scip, cons);
-
-	    if( nconsvars == 0 )
-	       continue;
 
 	    switch( SCIPgetTypeSetppc(scip, cons) )
 	    {
@@ -3537,9 +3553,6 @@ SCIP_RETCODE writeOpbConstraints(
 	 }
 	 else if( strcmp(conshdlrname, "logicor") == 0 )
 	 {
-	    if( SCIPgetNVarsLogicor(scip, cons) == 0 )
-	       continue;
-
 	    if( existands )
 	    {
 	       retcode = printNonLinearCons(scip, file,
@@ -3559,9 +3572,6 @@ SCIP_RETCODE writeOpbConstraints(
 
 	    consvars = SCIPgetVarsKnapsack(scip, cons);
 	    nconsvars = SCIPgetNVarsKnapsack(scip, cons);
-
-	    if( nconsvars == 0 )
-	       continue;
 
 	    /* copy Longint array to SCIP_Real array */
 	    weights = SCIPgetWeightsKnapsack(scip, cons);

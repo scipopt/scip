@@ -125,7 +125,7 @@ void SCIPconshdlrSetEnforelax(
  *
  *  @note A constraint is active if it is global and was not removed or it was added locally (in that case the local
  *        flag is TRUE) and the current node belongs to the corresponding sub tree.
- */ 
+ */
 SCIP_EXPORT
 SCIP_CONS** SCIPconshdlrGetConss(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
@@ -174,7 +174,7 @@ int SCIPconshdlrGetNCheckConss(
  *
  *  @note A constraint is active if it is global and was not removed or it was added locally (in that case the local
  *        flag is TRUE) and the current node belongs to the corresponding sub tree.
- */ 
+ */
 SCIP_EXPORT
 int SCIPconshdlrGetNActiveConss(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
@@ -560,7 +560,7 @@ SCIP_Bool SCIPconshdlrSupportsSignedPermsymDetection(
  */
 
 
-/** returns the name of the constraint 
+/** returns the name of the constraint
  *
  *  @note to change the name of a constraint, use SCIPchgConsName() from scip.h
  */
