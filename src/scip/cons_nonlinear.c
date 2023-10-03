@@ -9413,8 +9413,8 @@ SCIP_RETCODE tryAddGadgetBilinearProductSignedPerm(
 {
    SYM_EXPRDATA* symdata;
    SCIP_EXPR** children;
-   SCIP_VAR* var1;
-   SCIP_VAR* var2;
+   SCIP_VAR* var1 = NULL;
+   SCIP_VAR* var2 = NULL;
    SCIP_Real val1;
    SCIP_Real val2;
    SCIP_Real coef;
@@ -9482,6 +9482,8 @@ SCIP_RETCODE tryAddGadgetBilinearProductSignedPerm(
          val2 = (*consvals)[0];
       }
    }
+   assert(var1 != NULL);
+   assert(var2 != NULL);
 
    SCIP_CALL( SCIPgetSymDataExpr(scip, expr, &symdata) );
    assert(symdata != NULL);
