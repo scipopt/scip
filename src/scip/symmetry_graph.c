@@ -1579,8 +1579,6 @@ SCIP_Bool SCIPhasGraphUniqueEdgetype(
    return graph->uniqueedgetype;
 }
 
-/** returns the color of a symmetry */
-
 /** Transforms given variables, scalars, and constant to the corresponding active variables, scalars, and constant.
  *
  *  For permutation symmetries, active variables as encoded in SCIP are used. For signed permutation symmetries,
