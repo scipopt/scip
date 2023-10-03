@@ -9338,7 +9338,7 @@ SCIP_RETCODE ensureOpenArraySizeSymdetect(
    SCIP*                 scip,               /**< SCIP pointer */
    int**                 openidx,            /**< address of openidx array */
    int                   nelems,             /**< number of elements that need to be stored */
-   int*                  maxnelems           /**< address of maximum number that can be stored */
+   int*                  maxnelems           /**< pointer to store maximum number that can be stored */
    )
 {
    assert(scip != NULL);
@@ -9367,7 +9367,7 @@ SCIP_RETCODE ensureLocVarsArraySize(
    SCIP_VAR***           vars,               /**< address of variable array */
    SCIP_Real**           vals,               /**< address of value array */
    int                   nelems,             /**< number of elements that need to be stored */
-   int*                  maxnelems           /**< address of maximum number that can be stored */
+   int*                  maxnelems           /**< pointer to store maximum number that can be stored */
    )
 {
    assert(scip != NULL);
