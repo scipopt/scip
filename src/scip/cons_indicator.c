@@ -508,7 +508,30 @@ SCIP_RETCODE addSymmetryInformation(
    lhs = SCIPgetLhsLinear(scip, lincons);
    rhs = SCIPgetRhsLinear(scip, lincons);
 
+   /* get information about linear constraint */
+   linvars = SCIPgetVarsLinear(scip, lincons);
+   linvals = SCIPgetValsLinear(scip, lincons);
+   for( i = 0; i < nvarslincons; ++i )
+   {
+      vars[i] = linvars[i];
+      vals[i] = linvals[i];
+   }
+   nlocvars = nvarslincons;
+
+   constant = 0.0;
+   SCIP_CALL( SCIPgetActiveVariables(scip, symtype, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
+
+   /* update lhs/rhs due to possible variable aggregation */
+   lhs -= constant;
+   rhs -= constant;
+
+   /* create nodes and edges */
    SCIP_CALL( SCIPaddSymgraphConsnode(scip, graph, cons, lhs, rhs, &consnodeidx) );
+   SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, (int) SYM_CONSOPTYPE_SUM, &opnodeidx) ); /*lint !e641*/
+   SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, consnodeidx, opnodeidx, FALSE, 0.0) );
+
+   /* add nodes/edes for variables in linear constraint */
+   SCIP_CALL( SCIPaddSymgraphVarAggegration(scip, graph, opnodeidx, vars, vals, nlocvars, 0.0) );
 
    /* create nodes and edges for activation of constraint */
    SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, (int) SYM_CONSOPTYPE_EQ, &eqnodeidx) ); /*lint !e641*/
@@ -579,31 +602,6 @@ SCIP_RETCODE addSymmetryInformation(
    {
       nodeidx = SCIPgetSymgraphVarnodeidx(scip, graph, vars[0]);
       SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, slacknodeidx, nodeidx, FALSE, 0.0) );
-   }
-
-   /* create nodes and edges for linear constraint */
-   linvars = SCIPgetVarsLinear(scip, lincons);
-   linvals = SCIPgetValsLinear(scip, lincons);
-   for( i = 0; i < nvarslincons; ++i )
-   {
-      vars[i] = linvars[i];
-      vals[i] = linvals[i];
-   }
-   nlocvars = nvarslincons;
-
-   SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, (int) SYM_CONSOPTYPE_SUM, &opnodeidx) ); /*lint !e641*/
-   SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, consnodeidx, opnodeidx, FALSE, 0.0) );
-
-   SCIP_CALL( SCIPgetActiveVariables(scip, symtype, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
-
-   /* handle constant separately */
-   SCIP_CALL( SCIPaddSymgraphVarAggegration(scip, graph, opnodeidx, vars, vals, nlocvars, 0.0) );
-
-   /* possibly adapt lhs/rhs of root node */
-   if( !SCIPisZero(scip, constant) )
-   {
-      SCIP_CALL( SCIPupdateSymgraphLhs(graph, consnodeidx, lhs - constant) );
-      SCIP_CALL( SCIPupdateSymgraphRhs(graph, consnodeidx, rhs - constant) );
    }
 
    SCIPfreeBufferArray(scip, &vals);
