@@ -9736,6 +9736,9 @@ SCIP_RETCODE tryAddGadgetEvenOperatorSum(
 
    /* check whether child variable is (multi-)aggregated and whether all children are variables */
    nlocvars = SCIPexprGetNChildren(child);
+
+   SCIP_CALL( ensureLocVarsArraySize(scip, consvars, consvals, nlocvars, maxnconsvars) );
+
    for( i = 0; i < nlocvars; ++i)
    {
       if( SCIPisExprVar(scip, SCIPexprGetChildren(child)[i]) )
@@ -9748,7 +9751,6 @@ SCIP_RETCODE tryAddGadgetEvenOperatorSum(
    }
    constant = SCIPgetConstantExprSum(child);
 
-   SCIP_CALL( ensureLocVarsArraySize(scip, consvars, consvals, nlocvars, maxnconsvars) );
    SCIP_CALL( SCIPgetActiveVariables(scip, SYM_SYMTYPE_SIGNPERM, consvars, consvals, &nlocvars, &constant,
          SCIPconsIsTransformed(cons)) );
 
