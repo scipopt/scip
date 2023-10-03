@@ -10151,7 +10151,7 @@ SCIP_RETCODE tryAddGadgetSquaredDifference(
       /* add gadget */
       SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, (int) SYM_CONSOPTYPE_SQDIFF, &nodeidx) );
       SCIP_CALL( SCIPaddSymgraphValnode(scip, graph, val, &coefnodeidx1) );
-      SCIP_CALL( SCIPaddSymgraphValnode(scip, graph, val, &coefnodeidx2) );
+      SCIP_CALL( SCIPaddSymgraphValnode(scip, graph, val2, &coefnodeidx2) );
 
       SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, sumnodeidx, nodeidx, TRUE, (SCIP_Real) powcoef) );
       SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, nodeidx, coefnodeidx1, TRUE, (SCIP_Real) powcoef) );
