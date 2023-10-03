@@ -4134,7 +4134,6 @@ SCIP_DECL_CONSEXITPRE(consExitpreLogicor)
 static
 SCIP_DECL_CONSINITSOL(consInitsolLogicor)
 {  /*lint --e{715}*/
-
    /* add nlrow representation to NLP, if NLP had been constructed */
    if( SCIPisNLPConstructed(scip) )
    {
