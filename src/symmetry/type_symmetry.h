@@ -72,7 +72,7 @@ typedef enum SYM_Nodetype SYM_NODETYPE;
 /** define type of simple constraints/operators in symmetry detection */
 enum SYM_Consoptype
 {
-   SYM_CONSOPTYPE_UNKNOWN     = 0,           /**< unkown constraint type */
+   SYM_CONSOPTYPE_UNKNOWN     = 0,           /**< unknown constraint type */
    SYM_CONSOPTYPE_BDDISJ      = 1,           /**< constraint of type bounddisjunction */
    SYM_CONSOPTYPE_EQ          = 2,           /**< encodes == in indicator constraints */
    SYM_CONSOPTYPE_TUPLE       = 3,           /**< encodes pairs in SOS2 constraints */

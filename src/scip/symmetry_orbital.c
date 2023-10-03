@@ -56,7 +56,7 @@
  *
  * We have observed, and assume, that such dual reductions only take place at presolving or in the root node.
  * So, to avoid this situation, if we detect that a symmetry-breaking reduction is applied at the root node,
- * we disable orbital fixing for certain generating permutations based on the bounds of the affected globla variables,
+ * we disable orbital fixing for certain generating permutations based on the bounds of the affected global variables,
  * see identifyOrbitalSymmetriesBroken.
  *
  * With the assumption that the symmetries are actual symmetries at the root node, symmetries are broken by the

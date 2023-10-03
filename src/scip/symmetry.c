@@ -43,7 +43,7 @@
 
 /** compute non-trivial orbits of symmetry group
  *
- *  The non-tivial orbits of the group action are stored in the array orbits of length npermvars. This array contains
+ *  The non-trivial orbits of the group action are stored in the array orbits of length npermvars. This array contains
  *  the indices of variables from the permvars array such that variables that are contained in the same orbit appear
  *  consecutively in the orbits array. The variables of the i-th orbit have indices
  *  orbits[orbitbegins[i]], ... , orbits[orbitbegins[i + 1] - 1].
@@ -403,7 +403,7 @@ SCIP_RETCODE SCIPcomputeOrbitVar(
 
 /** compute non-trivial orbits of symmetry group
  *
- *  The non-tivial orbits of the group action are stored in the array orbits of length npermvars. This array contains
+ *  The non-trivial orbits of the group action are stored in the array orbits of length npermvars. This array contains
  *  the indices of variables from the permvars array such that variables that are contained in the same orbit appear
  *  consecutively in the orbits array. The variables of the i-th orbit have indices
  *  orbits[orbitbegins[i]], ... , orbits[orbitbegins[i + 1] - 1].
@@ -1512,7 +1512,7 @@ SCIP_RETCODE detectOrbitopalSymmetries(
          curcomp1 = SCIPdisjointsetFind(conncomps, v);
          curcomp2 = SCIPdisjointsetFind(conncomps, w);
 
-         /* an edge is not allowed to connect nodes from the same conncected component */
+         /* an edge is not allowed to connect nodes from the same connected component */
          if ( curcomp1 == curcomp2 )
             break;
 
@@ -2079,7 +2079,7 @@ SCIP_RETCODE SCIPdetectSingleOrDoubleLexMatrices(
          goto FREEMEMORY;
       }
 
-      /* store number of cycles or termintate if too many different types of involutions */
+      /* store number of cycles or terminate if too many different types of involutions */
       if ( ncycs1 == -1 || ncycs1 == tmpncycs )
       {
          ncycs1 = tmpncycs;

@@ -88,7 +88,7 @@
  * @todo Possibly turn off propagator in subtrees.
  * @todo Check application of conflict resolution.
  * @todo Check whether one should switch the role of 0 and 1
- * @todo Implement stablizer computation?
+ * @todo Implement stabilizer computation?
  * @todo Implement isomorphism pruning?
  * @todo Implement particular preprocessing rules
  * @todo Separate permuted cuts (first experiments not successful)
@@ -217,7 +217,7 @@ struct SCIP_PropData
 {
    /* symmetry group information */
    int                   npermvars;          /**< number of variables for permutations */
-   int                   nbinpermvars;       /**< number of binary variables for permuations */
+   int                   nbinpermvars;       /**< number of binary variables for permutations */
    SCIP_VAR**            permvars;           /**< variables on which permutations act */
    int                   nperms;             /**< number of permutations */
    int                   nmaxperms;          /**< maximal number of permutations (needed for freeing storage) */
@@ -234,7 +234,7 @@ struct SCIP_PropData
    SCIP_HASHMAP*         customsymopnodetypes; /**< types of operator nodes introduced
                                                 *   by a user for symmetry detection */
    int                   nopnodetypes;       /**< current number of operator node types used for symmetry detection */
-   SCIP_Real*            permvardomaincenter; /**< center of variable domains (needed for signed permuations) */
+   SCIP_Real*            permvardomaincenter; /**< center of variable domains (needed for signed permutations) */
    int                   symtype;             /**< type of symmetries to be computed */
 
    /* components of symmetry group */
@@ -292,7 +292,7 @@ struct SCIP_PropData
    SCIP_Bool             preferlessrows;     /**< Shall orbitopes with less rows be preferred in detection? */
 
    /* data necessary for symmetry computation order */
-   int                   recomputerestart;   /**< Recompute symmetries after a restart has occured? (0 = never, 1 = always, 2 = if symmetry reduction found) */
+   int                   recomputerestart;   /**< Recompute symmetries after a restart has occurred? (0 = never, 1 = always, 2 = if symmetry reduction found) */
    int                   symcomptiming;      /**< timing for computation symmetries (0 = before presolving, 1 = during presolving, 2 = at first call) */
    int                   lastrestart;        /**< last restart for which symmetries have been computed */
    SCIP_Bool             symfoundreduction;  /**< whether symmetry handling propagation has found a reduction since the last time computing symmetries */
@@ -354,7 +354,7 @@ SCIP_Bool checkSortedArraysHaveOverlappingEntry(
    int                   narr1,              /**< number of elements in first array */
    void**                arr2,               /**< second array */
    int                   narr2,              /**< number of elements in second array */
-   SCIP_DECL_SORTPTRCOMP((*compfunc))        /**< comparator function that was used to sort arri and arrj; must define a total ordering */
+   SCIP_DECL_SORTPTRCOMP((*compfunc))        /**< comparator function that was used to sort arr1 and arr2; must define a total ordering */
    )
 {
    /* @todo move to misc.c? */
@@ -647,7 +647,7 @@ SCIP_DECL_TABLEOUTPUT(tableOutputSymmetry)
       if ( tabledata->propdata->orbitopalreddata )
       {
          SCIP_CALL( SCIPorbitopalReductionGetStatistics(scip, tabledata->propdata->orbitopalreddata, &nred, &ncutoff) );
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, file, "  orbitopal reducti: %10d reductions applied,"
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, file, "  orbitopal reduction: %10d reductions applied,"
             " %10d cutoffs\n", nred, ncutoff);
       }
       if ( tabledata->propdata->orbitalreddata )
@@ -2238,7 +2238,7 @@ SCIP_RETCODE determineSymmetry(
  *  If @p activevars == NULL, then the function assumes all permutations of the component are active and therefore all
  *  moved vars are considered.
  *
- *  We need to keep track of the number of generatored columns, because we might not be able to detect all orbitopes.
+ *  We need to keep track of the number of generated columns, because we might not be able to detect all orbitopes.
  *  For example (1,2), (2,3), (3,4), (3,5) defines the symmetric group on {1,2,3,4,5}, but the generators we expect
  *  in our construction need shape (1,2), (2,3), (3,4), (4,5).
  *
@@ -2251,14 +2251,14 @@ SCIP_RETCODE checkTwoCyclePermsAreOrbitope(
    SCIP*                 scip,               /**< SCIP instance */
    SCIP_VAR**            permvars,           /**< array of all permutation variables */
    int                   npermvars,          /**< number of permutation variables */
-   int**                 perms,              /**< array of all permutations of the symmety group */
+   int**                 perms,              /**< array of all permutations of the symmetry group */
    int*                  activeperms,        /**< indices of the relevant permutations in perms */
    int                   ntwocycles,         /**< number of 2-cycles in the permutations */
    int                   nactiveperms,       /**< number of active permutations */
    int**                 orbitopevaridx,     /**< pointer to store variable index matrix */
    int*                  columnorder,        /**< pointer to store column order */
    int*                  nusedelems,         /**< pointer to store how often each element was used */
-   int*                  nusedcols,          /**< pointer to store numer of columns used in orbitope (or NULL) */
+   int*                  nusedcols,          /**< pointer to store number of columns used in orbitope (or NULL) */
    SCIP_Shortbool*       rowisbinary,        /**< pointer to store which rows are binary (or NULL) */
    SCIP_Bool*            isorbitope,         /**< buffer to store result */
    SCIP_Shortbool*       activevars          /**< bitset to store whether a variable is active (or NULL) */
@@ -2794,7 +2794,7 @@ SCIP_RETCODE addOrbitopeSubgroup(
    int*                  nvarslexorder,      /**< number of variables in lexicographic order */
    int*                  maxnvarslexorder,   /**< maximum number of variables in lexicographic order */
    SCIP_Bool             mayinteract,        /**< whether orbitope's symmetries might interact with other symmetries */
-   SCIP_Bool*            success             /**< whether the orbitpe could be added */
+   SCIP_Bool*            success             /**< whether the orbitope could be added */
    )
 {  /*lint --e{571}*/
    char name[SCIP_MAXSTRLEN];
@@ -4854,7 +4854,7 @@ SCIP_RETCODE selectOrbitLeaderSSTConss(
 static
 SCIP_RETCODE addSSTConss(
    SCIP*                 scip,               /**< SCIP instance */
-   SCIP_PROPDATA*        propdata,           /**< datas of symmetry propagator */
+   SCIP_PROPDATA*        propdata,           /**< data of symmetry propagator */
    SCIP_Bool             onlywithcontvars,   /**< only handle components that contain continuous variables with SST */
    int*                  nchgbds,            /**< pointer to store number of bound changes (or NULL) */
    int                   cidx                /**< index of component which shall be handled */
@@ -5580,7 +5580,7 @@ static
 SCIP_RETCODE tryAddOrbitalRedLexRed(
    SCIP*                 scip,               /**< SCIP instance */
    SCIP_PROPDATA*        propdata,           /**< propdata */
-   int                   cidx                /**< index of componet */
+   int                   cidx                /**< index of component */
    )
 {
    int componentsize;
@@ -5932,7 +5932,7 @@ SCIP_RETCODE tryHandleSingleOrDoubleLexMatricesComponent(
    SCIP*                 scip,               /**< SCIP instance */
    SCIP_PROPDATA*        propdata,           /**< data of symmetry propagator */
    SCIP_Bool             detectsinglelex,    /**< whether single lex matrices shall be detected */
-   int                   cidx                /**< index of componet */
+   int                   cidx                /**< index of component */
    )
 {
    int** lexmatrix = NULL;
@@ -6024,7 +6024,7 @@ static
 SCIP_RETCODE tryHandleSubgroups(
    SCIP*                 scip,               /**< SCIP instance */
    SCIP_PROPDATA*        propdata,           /**< data of symmetry propagator */
-   int                   cidx                /**< index of componet */
+   int                   cidx                /**< index of component */
    )
 {
    assert( scip != NULL );
@@ -6077,7 +6077,7 @@ static
 SCIP_RETCODE tryAddSymmetryHandlingMethodsComponent(
    SCIP*                 scip,               /**< SCIP instance */
    SCIP_PROPDATA*        propdata,           /**< data of symmetry propagator */
-   int                   cidx,               /**< index of componet */
+   int                   cidx,               /**< index of component */
    int*                  nchgbds             /**< pointer to store number of bound changes (or NULL)*/
    )
 {
@@ -6789,7 +6789,7 @@ SCIP_RETCODE SCIPincludePropSymmetry(
 
    SCIP_CALL( SCIPaddIntParam(scip,
          "propagating/" PROP_NAME "/recomputerestart",
-         "recompute symmetries after a restart has occured? (0 = never)",
+         "recompute symmetries after a restart has occurred? (0 = never)",
          &propdata->recomputerestart, TRUE, DEFAULT_RECOMPUTERESTART, 0, 0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,

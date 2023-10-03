@@ -47,7 +47,7 @@ struct SYM_Graph
    /* general information about graph */
    SYM_SYMTYPE           symtype;            /**< type of symmetries encoded in graph */
    SCIP_Bool             islocked;           /**< whether graph is locked, i.e., cannot be modified anymore
-                                              *   (computing colors will lock the graph to avoid incosistencies) */
+                                              *   (computing colors will lock the graph to avoid inconsistencies) */
    SCIP_Real             infinity;           /**< values as least as large as this are regarded as infinite */
 
    /* information about nodes and node arrays */
@@ -77,7 +77,7 @@ struct SYM_Graph
    int                   nedges;             /**< number of edges in graph */
    int                   maxnedges;          /**< maximum number of entries in edge-based arrays */
 
-   /* edge-based arrays; negative entries in edgefirst and edgesecond correspond to variables */
+   /* edge-based arrays; negative entries in edge-first and edge-second correspond to variables */
    int*                  edgefirst;          /**< array of first nodes of edges */
    int*                  edgesecond;         /**< array of second nodes of edges */
    SCIP_Real*            edgevals;           /**< array assigning each edge a value (SCIPinfinity if unassigned) */

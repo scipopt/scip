@@ -114,7 +114,7 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPaddSymgraphVarAggegration(
    SCIP*                 scip,               /**< SCIP data structure */
    SYM_GRAPH*            graph,              /**< symmetry detection graph */
-   int                   rootidx,            /**< index of root node of the aggegration */
+   int                   rootidx,            /**< index of root node of the aggregation */
    SCIP_VAR**            vars,               /**< array of variables in aggregation */
    SCIP_Real*            vals,               /**< coefficients of variables */
    int                   nvars,              /**< number of variables in aggregation */
