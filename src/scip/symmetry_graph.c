@@ -706,8 +706,8 @@ int compareVars(
 
 /** compares two variables for permutation symmetry detection
  *
- *  Variables are sorted first by their type, then by their objective coefficient,
- *  then by their lower bound, then by their upper bound, and then whether they are fixed.
+ *  Variables are sorted first by whether they are fixed, then by their type, then by
+ *  their objective coefficient, then by their lower bound, and then by their upper bound.
  *
  *  result:
  *    < 0: ind1 comes before (is better than) ind2
@@ -727,23 +727,18 @@ int compareVarsFixed(
    assert(var1 != NULL);
    assert(var2 != NULL);
 
-   result = compareVars(var1, var2);
-
-   if( result != 0 )
-      return result;
-
    if( (! isfixed1) && isfixed2 )
       return -1;
    if( isfixed1 && (! isfixed2) )
       return 1;
 
-   return 0;
+   return compareVars(var1, var2);
 }
 
 /** sorts nodes of a permutation symmetry detection graph
  *
- *  Variables are sorted first by their type, then by their objective coefficient,
- *  then by their lower bound, then by their upper bound, and then whether they are fixed.
+ *  Variables are sorted first by whether they are fixed, then by their type, then by
+ *  their objective coefficient, then by their lower bound, and then by their upper bound.
  *
  *  result:
  *    < 0: ind1 comes before (is better than) ind2
@@ -861,8 +856,8 @@ int compareVarsSignedPerm(
 
 /** compares two variables for signed permutation symmetry detection
  *
- *  Variables are sorted first by their type, then by their objective coefficient,
- *  then by their lower bound, then by their upper bound, and then whether they are fixed.
+ *  Variables are sorted first by whether they are fixed, then by their type, then
+ *  by their objective coefficient, then by their lower bound and then by their upper bound.
  *  To take signed permutations into account, variable domains are centered at origin
  *  if the domain is finite.
  *
@@ -887,23 +882,18 @@ int compareVarsFixedSignedPerm(
    assert(var1 != NULL);
    assert(var2 != NULL);
 
-   result = compareVarsSignedPerm(var1, var2, isneg1, isneg2, infinity);
-
-   if( result != 0 )
-      return result;
-
    if( (! isfixed1) && isfixed2 )
       return -1;
    if( isfixed1 && (! isfixed2) )
       return 1;
 
-   return 0;
+   return compareVarsSignedPerm(var1, var2, isneg1, isneg2, infinity);
 }
 
 /** sorts nodes of a signed permutation symmetry detection graph
  *
- *  Variables are sorted first by their type, then by their objective coefficient,
- *  then by their lower bound, then by their upper bound, and then whether they are fixed.
+ *  Variables are sorted first by whether they are fixed, then by their type, then
+ *  by their objective coefficient, then by their lower bound and then by their upper bound.
  *  To take signed permutations into account, variable domains are centered at origin
  *  if the domain is finite.
  *
