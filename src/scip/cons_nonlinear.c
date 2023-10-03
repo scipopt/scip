@@ -10173,6 +10173,7 @@ SCIP_RETCODE tryAddGadgetSquaredDifference(
       {
          if( powexprused[j] )
             continue;
+         assert(cnt >= 2);
 
          if( !var1found && powvars[j] == prodvars[cnt - 2] )
          {
