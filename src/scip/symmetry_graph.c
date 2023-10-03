@@ -262,16 +262,18 @@ SCIP_RETCODE SCIPextendPermsymDetectionGraphLinear(
    /* create edges */
    for( i = 0; i < nvars; ++i )
    {
-      switch( SCIPgetSymgraphSymtype(graph) )
+      if( SCIPgetSymgraphSymtype(graph) == SYM_SYMTYPE_SIGNPERM )
       {
-      case SYM_SYMTYPE_SIGNPERM:
          varnodeidx = SCIPgetSymgraphNegatedVarnodeidx(scip, graph, vars[i]);
          SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, rhsnodeidx, varnodeidx, TRUE, -vals[i]) );
-         /* do not break to also add edge to non-negated variable */
-         /*lint -fallthrough*/
-      default:
-         assert(SCIPgetSymgraphSymtype(graph) == SYM_SYMTYPE_SIGNPERM
-            || SCIPgetSymgraphSymtype(graph) == SYM_SYMTYPE_PERM);
+
+         varnodeidx = SCIPgetSymgraphVarnodeidx(scip, graph, vars[i]);
+         SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, rhsnodeidx, varnodeidx, TRUE, vals[i]) );
+      }
+      else
+      {
+         assert(SCIPgetSymgraphSymtype(graph) == SYM_SYMTYPE_PERM);
+
          varnodeidx = SCIPgetSymgraphVarnodeidx(scip, graph, vars[i]);
          SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, rhsnodeidx, varnodeidx, TRUE, vals[i]) );
       }
@@ -318,16 +320,18 @@ SCIP_RETCODE SCIPaddSymgraphVarAggegration(
    /* add edges incident to variables in aggregation */
    for( j = 0; j < nvars; ++j )
    {
-      switch( SCIPgetSymgraphSymtype(graph) )
+      if( SCIPgetSymgraphSymtype(graph) == SYM_SYMTYPE_SIGNPERM )
       {
-      case SYM_SYMTYPE_SIGNPERM:
          nodeidx = SCIPgetSymgraphNegatedVarnodeidx(scip, graph, vars[j]);
          SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, rootidx, nodeidx, TRUE, -vals[j]) );
-         /* do not break to also add edge to non-negated variable */
-         /*lint -fallthrough*/
-      default:
-         assert(SCIPgetSymgraphSymtype(graph) == SYM_SYMTYPE_SIGNPERM
-            || SCIPgetSymgraphSymtype(graph) == SYM_SYMTYPE_PERM);
+
+         nodeidx = SCIPgetSymgraphVarnodeidx(scip, graph, vars[j]);
+         SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, rootidx, nodeidx, TRUE, vals[j]) );
+      }
+      else
+      {
+         assert(SCIPgetSymgraphSymtype(graph) == SYM_SYMTYPE_PERM);
+
          nodeidx = SCIPgetSymgraphVarnodeidx(scip, graph, vars[j]);
          SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, rootidx, nodeidx, TRUE, vals[j]) );
       }
@@ -1618,9 +1622,8 @@ SCIP_RETCODE SCIPgetActiveVariables(
    }
 
    /* possibly post-process active variables */
-   switch ( symtype )
+   if( symtype == SYM_SYMTYPE_SIGNPERM )
    {
-   case SYM_SYMTYPE_SIGNPERM:
       /* center variables at origin if their domain is finite */
       for (v = 0; v < *nvars; ++v)
       {
@@ -1632,10 +1635,6 @@ SCIP_RETCODE SCIPgetActiveVariables(
 
          *constant += (*scalars)[v] * (ub + lb) / 2;
       }
-
-      break;
-   default:
-      assert( symtype == SYM_SYMTYPE_PERM );
    }
 
    return SCIP_OKAY;
