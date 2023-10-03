@@ -1446,6 +1446,9 @@ SCIP_RETCODE addSymmetryInformation(
 
    SCIP_CALL( SCIPgetActiveVariables(scip, symtype, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
 
+   /* represent the OR constraint via the gadget for linear constraints and use the constant as lhs/rhs to
+    * distinguish different OR constraints (OR constraints do not have an intrinsic right-hand side)
+    */
    SCIP_CALL( SCIPextendPermsymDetectionGraphLinear(scip, graph, vars, vals, nlocvars,
          cons, -constant, -constant, success) );
 
