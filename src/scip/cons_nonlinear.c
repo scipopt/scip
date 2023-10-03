@@ -10253,7 +10253,7 @@ SCIP_RETCODE addSymmetryInformation(
 
    /* find potential number of nodes in graph */
    maxnopenidx = 0;
-   for( (void) SCIPexpriterGetCurrent(it); !SCIPexpriterIsEnd(it); (void) SCIPexpriterGetNext(it) )
+   for( ; !SCIPexpriterIsEnd(it); (void) SCIPexpriterGetNext(it) )
    {
       if( SCIPexpriterGetStageDFS(it) == SCIP_EXPRITER_LEAVEEXPR )
          continue;
