@@ -4783,7 +4783,7 @@ SCIP_RETCODE addSymmetryInformation(
    SCIP_CALL( SCIPallocBufferArray(scip, &vals, nvars) );
 
    xorvars = SCIPgetVarsXor(scip, cons);
-   for( i = 0; i < consdata->nvars; ++i )
+   for( i = 0; i < nlocvars; ++i )
    {
       vars[i] = xorvars[i];
       vals[i] = 1.0;
