@@ -9974,8 +9974,6 @@ SCIP_RETCODE tryAddGadgetSquaredDifference(
    SCIP_Bool* powexprused = NULL;
    int* powperm = NULL;
    int* prodperm = NULL;
-   int* pospowexprs;
-   int* posprodexprs;
    int nchildren;
    int nlocvars;
    int nodeidx;
@@ -10005,8 +10003,6 @@ SCIP_RETCODE tryAddGadgetSquaredDifference(
    nchildren = SCIPexprGetNChildren(sumexpr);
    SCIP_CALL( SCIPallocBufferArray(scip, &powexprs, nchildren) );
    SCIP_CALL( SCIPallocBufferArray(scip, &prodexprs, 2 * nchildren) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &pospowexprs, nchildren) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &posprodexprs,2 *  nchildren) );
    SCIP_CALL( SCIPallocBufferArray(scip, &powvars, nchildren) );
    SCIP_CALL( SCIPallocBufferArray(scip, &prodvars, 2 * nchildren) );
 
@@ -10051,8 +10047,7 @@ SCIP_RETCODE tryAddGadgetSquaredDifference(
          if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR )
          {
             powexprs[npowexprs] = children[i];
-            powvars[npowexprs] = var;
-            pospowexprs[npowexprs++] = i;
+            powvars[npowexprs++] = var;
          }
       }
       else if( SCIPisExprProduct(scip, children[i]) )
@@ -10081,11 +10076,9 @@ SCIP_RETCODE tryAddGadgetSquaredDifference(
             && SCIPvarGetStatus(var2) != SCIP_VARSTATUS_MULTAGGR )
          {
             prodexprs[nprodexprs] = children[i];
-            prodvars[nprodexprs] = var;
-            posprodexprs[nprodexprs++] = i;
+            prodvars[nprodexprs++] = var;
             prodexprs[nprodexprs] = children[i];
-            prodvars[nprodexprs] = var2;
-            posprodexprs[nprodexprs++] = i;
+            prodvars[nprodexprs++] = var2;
          }
       }
    }
@@ -10099,11 +10092,6 @@ SCIP_RETCODE tryAddGadgetSquaredDifference(
 
    SCIPsort(powperm, SCIPsortVarPtr, (void*) powvars, npowexprs);
    SCIPsort(prodperm, SCIPsortVarPtr, (void*) prodvars, npowexprs);
-   /* SCIPsortPtr((void**) copyprodvars, SCIPsortVarPtr, npowexprs); */
-   /* SCIPsortPtr((void**) copypowvars, SCIPsortVarPtr, npowexprs); */
-
-   /* SCIPsortPtrPtrInt((void**) prodvars, (void**) prodexprs, posprodexprs, SCIPsortVarPtr, npowexprs); */
-   /* SCIPsortPtrPtrInt((void**) powvars, (void**) powexprs, pospowexprs, SCIPsortVarPtr, npowexprs); */
 
    for( i = 0; i < npowexprs; ++i )
    {
@@ -10207,8 +10195,6 @@ SCIP_RETCODE tryAddGadgetSquaredDifference(
    SCIPfreeBufferArrayNull(scip, &powperm);
    SCIPfreeBufferArray(scip, &prodvars);
    SCIPfreeBufferArray(scip, &powvars);
-   SCIPfreeBufferArray(scip, &posprodexprs);
-   SCIPfreeBufferArray(scip, &pospowexprs);
    SCIPfreeBufferArray(scip, &prodexprs);
    SCIPfreeBufferArray(scip, &powexprs);
 
