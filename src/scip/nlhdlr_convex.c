@@ -2410,7 +2410,6 @@ SCIP_DECL_NLHDLRCOPYHDLR(nlhdlrCopyhdlrConcave)
 }
 
 /** includes concave nonlinear handler in nonlinear constraint handler */
-SCIP_EXPORT
 SCIP_RETCODE SCIPincludeNlhdlrConcave(
    SCIP*                 scip                /**< SCIP data structure */
    )
