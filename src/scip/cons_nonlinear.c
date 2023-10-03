@@ -10006,10 +10006,8 @@ SCIP_RETCODE tryAddGadgetSquaredDifference(
    SCIP_CALL( SCIPallocBufferArray(scip, &powvars, nchildren) );
    SCIP_CALL( SCIPallocBufferArray(scip, &prodvars, 2 * nchildren) );
 
-   /* we scan for norm constraints, i.e., the number of powexpr needs to be twice the prodexpr
-    *
-    * @todo make this work in a more general case
-    */
+   /* we scan for norm constraints, i.e., the number of powexpr needs to be twice the prodexpr */
+   /** @todo make this work in a more general case */
    for( i = 0; i < nchildren; ++i )
    {
       if( SCIPisExprPower(scip, children[i]) )
