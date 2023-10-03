@@ -10373,6 +10373,8 @@ SCIP_RETCODE addSymmetryInformation(
       }
       else
       {
+         SCIP_Bool usedefaultgadget = TRUE;
+
          assert(expr == rootexpr || parentidx > 0);
          assert(SCIPhashsetIsEmpty(handledexprs) || !SCIPhashsetExists(handledexprs, expr));
 
@@ -10383,6 +10385,9 @@ SCIP_RETCODE addSymmetryInformation(
             int sumidx;
             int optype;
             int childidx = 0;
+
+            /* sums are handled by a special gadget */
+            usedefaultgadget = FALSE;
 
             /* extract all children being variables and compute the sum of active variables expression */
             nlocvars = 0;
@@ -10434,10 +10439,11 @@ SCIP_RETCODE addSymmetryInformation(
             SCIP_CALL( tryAddGadgetBilinearProductSignedPerm(scip, expr, cons, graph, parentidx, hasparentcoef,
                   parentcoef, &consvars, &consvals, &maxnconsvars, &succ) );
 
-            if( !succ )
-               goto DEFAULTOPERATOR;
-
-            SCIP_CALL( SCIPhashsetInsert(handledexprs, SCIPblkmem(scip), (void*) expr) );
+            if( succ )
+            {
+               usedefaultgadget = FALSE;
+               SCIP_CALL( SCIPhashsetInsert(handledexprs, SCIPblkmem(scip), (void*) expr) );
+            }
          }
          else if( symtype == SYM_SYMTYPE_SIGNPERM )
          {
@@ -10447,17 +10453,18 @@ SCIP_RETCODE addSymmetryInformation(
             SCIP_CALL( tryAddGadgetEvenOperator(scip, expr, cons, graph, parentidx, hasparentcoef, parentcoef,
                   &consvars, &consvals, &maxnconsvars, handledexprs, &succ) );
 
-            if( !succ )
-               goto DEFAULTOPERATOR;
-
-            SCIP_CALL( SCIPhashsetInsert(handledexprs, SCIPblkmem(scip), (void*) expr) );
+            if( succ )
+            {
+               usedefaultgadget = FALSE;
+               SCIP_CALL( SCIPhashsetInsert(handledexprs, SCIPblkmem(scip), (void*) expr) );
+            }
          }
-         else
+
+         if( usedefaultgadget )
          {
             int opidx;
             int optype;
 
-         DEFAULTOPERATOR:
             SCIP_CALL( SCIPgetSymOpNodeType(scip, SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), &optype) );
             SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, optype, &opidx) );
             SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, parentidx, opidx, hasparentcoef, parentcoef) );
