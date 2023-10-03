@@ -2141,7 +2141,7 @@ SCIP_RETCODE SCIPdetectSingleOrDoubleLexMatrices(
       *isorbitope = TRUE;
    }
 #ifndef NDEBUG
-   else
+   else if ( !(*success) )
    {
       assert( *lexmatrix == NULL );
       assert( *lexrowsbegin == NULL );
