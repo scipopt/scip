@@ -550,7 +550,6 @@ SCIP_RETCODE addSymmetryInformation(
          /* do not break to also add edge to non-negated variable */
          /*lint -fallthrough*/
       default:
-         assert(symtype == SYM_SYMTYPE_PERM);
          nodeidx = SCIPgetSymgraphVarnodeidx(scip, graph, vars[0]);
          SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, eqnodeidx, nodeidx, TRUE, actweight) );
       }
