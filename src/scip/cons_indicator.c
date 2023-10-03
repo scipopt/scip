@@ -532,7 +532,7 @@ SCIP_RETCODE addSymmetryInformation(
 
    if( nlocvars > 1 || !SCIPisEQ(scip, vals[0], 1.0) || !SCIPisZero(scip, constant) )
    {
-      /* encode aggregation by a sum-expression and connect it to bdexpr node */
+      /* encode aggregation by a sum-expression and connect it to indicator node */
       SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, (int) SYM_CONSOPTYPE_SUM, &opnodeidx) ); /*lint !e641*/
       SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, eqnodeidx, opnodeidx, TRUE, actweight) );
 

@@ -15265,7 +15265,9 @@ SCIP_RETCODE addSymmetryInformation(
    lhs = consdata->lhs - constant;
    rhs = consdata->rhs - constant;
 
-   /* if either rhs or lhs is trivial, normalize rhs to be finite */
+   /* if rhs is infinite, normalize rhs to be finite to make sure that different encodings
+    * of the same constraint are rated as equal
+    */
    if ( SCIPisInfinity(scip, rhs) )
    {
       SCIP_Real tmp;
