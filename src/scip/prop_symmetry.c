@@ -587,16 +587,12 @@ SCIP_DECL_DIALOGEXEC(dialogExecDisplaySymmetry)
    if ( propdata->nperms == -1 )
    {
       SCIPinfoMessage(scip, NULL, "Cannot display symmetries. Symmetries have not been computed yet.\n");
-      goto EXITDIALOG;
    }
-
-   if ( propdata->nperms == 0 )
+   else if ( propdata->nperms == 0 )
    {
       SCIPinfoMessage(scip, NULL, "Cannot display symmetries. No symmetries detected.\n");
-      goto EXITDIALOG;
    }
-
-   if ( propdata->ncomponents < 0 )
+   else if ( propdata->ncomponents < 0 )
    {
       SCIP_CALL( displaySymmetriesWithoutComponents(scip, propdata) );
    }
@@ -605,7 +601,6 @@ SCIP_DECL_DIALOGEXEC(dialogExecDisplaySymmetry)
       SCIP_CALL( displaySymmetriesWithComponents(scip, propdata) );
    }
 
- EXITDIALOG:
    /* next dialog will be root dialog again */
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
@@ -1315,15 +1310,11 @@ SCIP_Bool conshdlrsCanProvideSymInformation(
       {
          char name[SCIP_MAXSTRLEN];
 
-         switch ( symtype )
-         {
-         case SYM_SYMTYPE_PERM:
+         if ( symtype == SYM_SYMTYPE_PERM )
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "CONSGETPERMSYMGRAPH");
-            break;
-         default:
-            assert( symtype == SYM_SYMTYPE_SIGNPERM );
+         else
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "CONSGETSIGNEDPERMSYMGRAPH");
-         }
+
          SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
             "   Symmetry detection interrupted: constraints of type %s do not provide symmetry information.\n"
             "   If symmetries shall be detected, implement the %s callback.\n",
