@@ -668,9 +668,9 @@ SCIP_Bool SYMcheckGraphsAreIdentical(
       assert( symtype == SYM_SYMTYPE_SIGNPERM );
       nvars = 2 * G1->nsymvars;
    }
-   SCIP_CALL( SCIPallocClearBufferArray(scip, &nvarused1, nvars) );
-   SCIP_CALL( SCIPallocClearBufferArray(scip, &nvarused2, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &varlabel, nvars) );
+   SCIP_CALL_ABORT( SCIPallocClearBufferArray(scip, &nvarused1, nvars) );
+   SCIP_CALL_ABORT( SCIPallocClearBufferArray(scip, &nvarused2, nvars) );
+   SCIP_CALL_ABORT( SCIPallocBufferArray(scip, &varlabel, nvars) );
 
    for (i = 0; i < G1->nedges; ++i)
    {
@@ -811,7 +811,7 @@ SCIP_Bool SYMcheckGraphsAreIdentical(
    int nnodesfromG1 = nusedvars + G1->nnodes;
    SCIP_Real symcodetime = 0.0;
 
-   SCIP_CALL( computeAutomorphisms(scip, symtype, &G, n, 0,
+   SCIP_CALL_ABORT( computeAutomorphisms(scip, symtype, &G, n, 0,
          &perms, &nperms, &nmaxperms, &log10groupsize, FALSE, &symcodetime) );
 
    /* since G1 and G2 are connected and disjoint, they are isomorphic iff there is a permutation

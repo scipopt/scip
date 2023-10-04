@@ -934,7 +934,6 @@ SCIP_RETCODE createOrDetermineSizeGraphCheck(
       }
 
       /* for signed permutation, also add edges connecting a variable and its negation */
-      switch ( SCIPgetSymgraphSymtype(graph1) )
       if ( SCIPgetSymgraphSymtype(graph1) == SYM_SYMTYPE_SIGNPERM )
       {
          if ( determinesize )
@@ -1260,7 +1259,7 @@ SCIP_Bool SYMcheckGraphsAreIdentical(
       return FALSE;
 
    /* determine number of nodes and edges */
-   SCIP_CALL( createOrDetermineSizeGraphCheck(scip, G1, G2, TRUE, NULL,
+   SCIP_CALL_ABORT( createOrDetermineSizeGraphCheck(scip, G1, G2, TRUE, NULL,
          &nnodes, &nedges, &degrees, &maxdegrees, &success) );
 
    if ( ! success )
@@ -1285,14 +1284,14 @@ SCIP_Bool SYMcheckGraphsAreIdentical(
    sassygraph.initialize_graph((unsigned) nnodes, (unsigned) nedges);
 
    /* add the nodes for linear and nonlinear constraints to the graph */
-   SCIP_CALL( createOrDetermineSizeGraphCheck(scip, G1, G2, FALSE, &sassygraph,
+   SCIP_CALL_ABORT( createOrDetermineSizeGraphCheck(scip, G1, G2, FALSE, &sassygraph,
          &nnodes, &nedges, &degrees, &maxdegrees, &success) );
    assert( success );
 
    SCIPfreeBlockMemoryArray(scip, &degrees, maxdegrees);
 
    /* compute symmetries */
-   SCIP_CALL( computeAutomorphisms(scip, SCIPgetSymgraphSymtype(G1), &sassygraph, nnodes, 0,
+   SCIP_CALL_ABORT( computeAutomorphisms(scip, SCIPgetSymgraphSymtype(G1), &sassygraph, nnodes, 0,
          &perms, &nperms, &nmaxperms, &log10groupsize, FALSE, &symcodetime) );
 
    /* since G1 and G2 are connected and disjoint, they are isomorphic iff there is a permutation
