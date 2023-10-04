@@ -1802,12 +1802,12 @@ SCIP_RETCODE isDoublelLexSym(
    SCIP_Bool*            success             /**< pointer to store whether combined matrix could be generated */
    )
 {
-   SCIP_HASHMAP* idxtomatrix1;
-   SCIP_HASHMAP* idxtomatrix2;
-   SCIP_HASHMAP* idxtorow1;
-   SCIP_HASHMAP* idxtorow2;
-   SCIP_HASHMAP* idxtocol1;
-   SCIP_HASHMAP* idxtocol2;
+   int* idxtomatrix1;
+   int* idxtomatrix2;
+   int* idxtorow1;
+   int* idxtorow2;
+   int* idxtocol1;
+   int* idxtocol2;
    int* sortvals;
    int elem;
    int mat;
@@ -1861,12 +1861,12 @@ SCIP_RETCODE isDoublelLexSym(
 
    /* collect information about entries in matrices */
    nidx = nrows1 * nrows2;
-   SCIP_CALL( SCIPhashmapCreate(&idxtomatrix1, SCIPblkmem(scip), nidx) );
-   SCIP_CALL( SCIPhashmapCreate(&idxtomatrix2, SCIPblkmem(scip), nidx) );
-   SCIP_CALL( SCIPhashmapCreate(&idxtorow1, SCIPblkmem(scip), nidx) );
-   SCIP_CALL( SCIPhashmapCreate(&idxtorow2, SCIPblkmem(scip), nidx) );
-   SCIP_CALL( SCIPhashmapCreate(&idxtocol1, SCIPblkmem(scip), nidx) );
-   SCIP_CALL( SCIPhashmapCreate(&idxtocol2, SCIPblkmem(scip), nidx) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &idxtomatrix1, nidx) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &idxtomatrix2, nidx) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &idxtorow1, nidx) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &idxtorow2, nidx) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &idxtocol1, nidx) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &idxtocol2, nidx) );
 
    for (c = 0; c < nmatrices1; ++c)
    {
@@ -1874,9 +1874,9 @@ SCIP_RETCODE isDoublelLexSym(
       {
          for (j = 0; j < ncols1[c]; ++j)
          {
-            SCIP_CALL( SCIPhashmapInsertInt(idxtomatrix1, (void*) (size_t) matrices1[c][i][j], c) );
-            SCIP_CALL( SCIPhashmapInsertInt(idxtorow1, (void*) (size_t) matrices1[c][i][j], i) );
-            SCIP_CALL( SCIPhashmapInsertInt(idxtocol1, (void*) (size_t) matrices1[c][i][j], j) );
+            idxtomatrix1[matrices1[c][i][j]] = c;
+            idxtorow1[matrices1[c][i][j]] = i;
+            idxtocol1[matrices1[c][i][j]] = j;
          }
       }
    }
@@ -1886,9 +1886,9 @@ SCIP_RETCODE isDoublelLexSym(
       {
          for (j = 0; j < ncols2[c]; ++j)
          {
-            SCIP_CALL( SCIPhashmapInsertInt(idxtomatrix2, (void*) (size_t) matrices2[c][i][j], c) );
-            SCIP_CALL( SCIPhashmapInsertInt(idxtorow2, (void*) (size_t) matrices2[c][i][j], i) );
-            SCIP_CALL( SCIPhashmapInsertInt(idxtocol2, (void*) (size_t) matrices2[c][i][j], j) );
+            idxtomatrix2[matrices2[c][i][j]] = c;
+            idxtorow2[matrices2[c][i][j]] = i;
+            idxtocol2[matrices2[c][i][j]] = j;
          }
       }
    }
@@ -1911,13 +1911,13 @@ SCIP_RETCODE isDoublelLexSym(
    {
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*doublelexmatrix)[i], *ncols) );
       (*doublelexmatrix)[i][0] = matrices1[0][i][0];
-      sortvals[i] = SCIPhashmapGetImageInt(idxtomatrix2, (void*) (size_t) matrices1[0][i][0]);
+      sortvals[i] = idxtomatrix2[matrices1[0][i][0]];
    }
    SCIPsortIntPtr(sortvals, (void*) (*doublelexmatrix), *nrows);
 
    /* fill first row of big matrix */
-   mat = SCIPhashmapGetImageInt(idxtomatrix2, (void*) (size_t) (*doublelexmatrix)[0][0]);
-   col = SCIPhashmapGetImageInt(idxtocol2, (void*) (size_t) (*doublelexmatrix)[0][0]);
+   mat = idxtomatrix2[(*doublelexmatrix)[0][0]];
+   col = idxtocol2[(*doublelexmatrix)[0][0]];
    cnt = 0;
    for (j = 0; j < *ncols; ++j)
    {
@@ -1925,7 +1925,7 @@ SCIP_RETCODE isDoublelLexSym(
       if ( matrices2[mat][j][col] == (*doublelexmatrix)[0][0] )
          continue;
 
-      sortvals[cnt++] = SCIPhashmapGetImageInt(idxtomatrix1, (void*) (size_t) matrices2[mat][j][col]);
+      sortvals[cnt++] = idxtomatrix1[matrices2[mat][j][col]];
       (*doublelexmatrix)[0][cnt] = matrices2[mat][j][col];
    }
    assert( cnt == nrows2 - 1);
@@ -1937,10 +1937,10 @@ SCIP_RETCODE isDoublelLexSym(
       for (j = 1; j < *ncols; ++j)
       {
          /* get the matrices and column/row of the entry */
-         mat = SCIPhashmapGetImageInt(idxtomatrix1, (void*) (size_t) (*doublelexmatrix)[0][j]);
-         mat2 = SCIPhashmapGetImageInt(idxtomatrix2, (void*) (size_t) (*doublelexmatrix)[i][0]);
-         col = SCIPhashmapGetImageInt(idxtocol1, (void*) (size_t) (*doublelexmatrix)[0][j]);
-         col2 = SCIPhashmapGetImageInt(idxtocol2, (void*) (size_t) (*doublelexmatrix)[i][0]);
+         mat = idxtomatrix1[(*doublelexmatrix)[0][j]];
+         mat2 = idxtomatrix2[(*doublelexmatrix)[i][0]];
+         col = idxtocol1[(*doublelexmatrix)[0][j]];
+         col2 = idxtocol2[(*doublelexmatrix)[i][0]];
 
          /* find the unique element in the col column of matrix mat and the row column of matrix mat2 */
          /* @todo improve this by first sorting the columns */
@@ -1981,12 +1981,13 @@ SCIP_RETCODE isDoublelLexSym(
 
  FREEMEMORY:
    SCIPfreeBufferArray(scip, &sortvals);
-   SCIPhashmapFree(&idxtocol2);
-   SCIPhashmapFree(&idxtocol1);
-   SCIPhashmapFree(&idxtorow2);
-   SCIPhashmapFree(&idxtorow1);
-   SCIPhashmapFree(&idxtomatrix2);
-   SCIPhashmapFree(&idxtomatrix1);
+
+   SCIPfreeBufferArray(scip, &idxtocol2);
+   SCIPfreeBufferArray(scip, &idxtocol1);
+   SCIPfreeBufferArray(scip, &idxtorow2);
+   SCIPfreeBufferArray(scip, &idxtorow1);
+   SCIPfreeBufferArray(scip, &idxtomatrix2);
+   SCIPfreeBufferArray(scip, &idxtomatrix1);
 
    if ( !(*success) )
    {
