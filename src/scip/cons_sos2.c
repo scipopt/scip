@@ -2275,7 +2275,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphSOS2)
    /* for all pairs of variables, add a node indicating a tuple and add nodes for (aggregated) variables */
    for( i = 0; i < nconsvars - 1; ++i )
    {
-      SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, (int) SYM_CONSOPTYPE_TUPLE, &opnodeidx) ); /*lint !e641*/
+      SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, (int) SYM_CONSOPTYPE_SOS2_TUPLE, &opnodeidx) ); /*lint !e641*/
       SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, consnodeidx, opnodeidx, FALSE, 0.0) );
 
       for( j = i; j < i + 2; ++j )
@@ -2346,7 +2346,7 @@ SCIP_DECL_CONSGETSIGNEDPERMSYMGRAPH(consGetSignedPermsymGraphSOS2)
    /* for all pairs of variables, add a node indicating a tuple and add nodes for (aggregated) variables */
    for( i = 0; i < nconsvars - 1; ++i )
    {
-      SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, (int) SYM_CONSOPTYPE_TUPLE, &opnodeidx) ); /*lint !e641*/
+      SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, (int) SYM_CONSOPTYPE_SOS2_TUPLE, &opnodeidx) ); /*lint !e641*/
       SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, consnodeidx, opnodeidx, FALSE, 0.0) );
 
       for( j = i; j < i + 2; ++j )
