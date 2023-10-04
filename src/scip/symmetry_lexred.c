@@ -155,9 +155,16 @@ SCIP_RETCODE lexdataFree(
    assert( lexdata != NULL );
    assert( (*lexdata) != NULL );
 
-   issigned = (*lexdata)->symtype == SYM_SYMTYPE_SIGNPERM ? TRUE : FALSE;
-
-   permlen =  issigned ? 2 * (*lexdata)->nvars : (*lexdata)->nvars;
+   if ( (*lexdata)->symtype == SYM_SYMTYPE_SIGNPERM )
+   {
+      issigned = TRUE;
+      permlen = 2 * (*lexdata)->nvars;
+   }
+   else
+   {
+      issigned = FALSE;
+      permlen = (*lexdata)->nvars;
+   }
 
    if ( (*lexdata)->nvars > 0 )
    {

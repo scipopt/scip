@@ -933,8 +933,8 @@ SCIP_RETCODE createOrDetermineSizeGraphCheck(
 
       /* for signed permutation, also add edges connecting a variable and its negation */
       switch ( SCIPgetSymgraphSymtype(graph1) )
+      if ( SCIPgetSymgraphSymtype(graph1) == SYM_SYMTYPE_SIGNPERM )
       {
-      case SYM_SYMTYPE_SIGNPERM:
          if ( determinesize )
          {
             for (j = 0; j < nusedvars; ++j)
@@ -946,11 +946,7 @@ SCIP_RETCODE createOrDetermineSizeGraphCheck(
             for (j = 0; j < nusedvars; ++j)
                G->add_edge((unsigned) nodeshift + j, (unsigned) nodeshift + j + nusedvars);
          }
-         break;
-      default:
-         assert( SCIPgetSymgraphSymtype(graph) == SYM_SYMTYPE_PERM );
       }
-
       nodeshift = curnnodes;
    }
 

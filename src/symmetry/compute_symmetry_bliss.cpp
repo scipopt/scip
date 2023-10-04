@@ -92,15 +92,10 @@ void blisshook(
    int permlen;
    if ( data->restricttovars )
    {
-      switch ( data->symtype )
-      {
-      case SYM_SYMTYPE_PERM:
+      if ( data->symtype == SYM_SYMTYPE_PERM )
          permlen = data->npermvars;
-         break;
-      default:
-         assert( data->symtype == SYM_SYMTYPE_SIGNPERM );
+      else
          permlen = 2 * data->npermvars;
-      }
    }
    else
       permlen = n;
