@@ -526,6 +526,8 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
          second = -second - 1;
       else
          second += nvarnodestoadd;
+      assert(first >= 0);
+      assert(second >= 0);
 
       /* check whether edge is used for grouping */
       if ( ! SCIPhasGraphUniqueEdgetype(graph) && isEdgeGroupable(graph, e, groupByConstraints) )
