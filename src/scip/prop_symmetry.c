@@ -1358,9 +1358,9 @@ SCIP_Bool conshdlrsCanProvideSymInformation(
          /* there exists an unknown expression handler that does not provide symmetry information */
          if ( ! found )
          {
-            SCIPwarningMessage(scip, "   Expression handler %s does not implement the EXPRGETSYMDATA callback.\n"
-               "   Computed symmetries might be incorrect if the expression uses different constants or assigns\n"
-               "   different coefficients to its children.\n", SCIPexprhdlrGetName(SCIPgetExprhdlrs(scip)[c]));
+            SCIPwarningMessage(scip, "Expression handler %s does not implement the EXPRGETSYMDATA callback.\n"
+               "Computed symmetries might be incorrect if the expression uses different constants or assigns\n"
+               "different coefficients to its children.\n", SCIPexprhdlrGetName(SCIPgetExprhdlrs(scip)[c]));
          }
       }
    }
