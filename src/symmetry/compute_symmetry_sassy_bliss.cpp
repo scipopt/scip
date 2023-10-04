@@ -589,7 +589,7 @@ SCIP_RETCODE createOrDetermineSizeGraph(
       {
          for (j = 0; j < nvarnodestoadd; ++j)
             ++(*degrees)[j];
-         (*nedges) += nsymvars;
+         *nedges += nsymvars;
       }
       else
       {

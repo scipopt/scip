@@ -39,7 +39,7 @@
 
 /** creates and initializes a symmetry detection graph with memory for the given number of nodes and edges
  *
- *  @note at some point, the graph needs to be freed!
+ *  @note At some point, the graph needs to be freed!
  */
 SCIP_RETCODE SCIPcreateSymgraph(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -206,7 +206,7 @@ SCIP_RETCODE SCIPcopySymgraph(
          second = -perm[-second - 1] - 1;
 
       SCIP_CALL( SCIPaddSymgraphEdge(scip, *graph, first, second,
-            ! SCIPisEQ(scip, SCIPinfinity(scip), origgraph->edgevals[i]), origgraph->edgevals[i]) );
+            ! SCIPisInfinity(scip, origgraph->edgevals[i]), origgraph->edgevals[i]) );
    }
 
    SCIP_CALL( SCIPcomputeSymgraphColors(scip, *graph, fixedtype) );

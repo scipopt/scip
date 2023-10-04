@@ -1776,7 +1776,7 @@ SCIP_RETCODE detectOrbitopalSymmetries(
    return SCIP_OKAY;
 }
 
-/** checks whether two families of orbitopal symmetries define double lex matrix, in case of success, generate matrix
+/** checks whether two families of orbitopal symmetries define a double lex matrix, and in case of success, generates matrix
  *
  *  The columns of matrix1 will serve as the columns of the matrix to be generated, the columns of matrix2 will
  *  serve as rows.

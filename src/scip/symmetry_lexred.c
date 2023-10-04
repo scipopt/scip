@@ -1048,7 +1048,7 @@ SCIP_RETCODE propagateVariablePair(
       return SCIP_OKAY;
    }
 
-   /* for signed permutations, a variable might be map to itself */
+   /* for signed permutations, a variable might be mapped to itself */
    if ( var1 == var2 )
    {
       SCIP_CALL( propagateSelfReflectionVar(scip, var1, center1, infeasible, nreductions, peekmode, varidx1,
@@ -1352,7 +1352,7 @@ SCIP_RETCODE propagateStaticLexred(
                break;
             case SCIP_VARTYPE_CONTINUOUS:
                /* continuous variable type: act as if we increase the variable by a very little bit.
-                * That is only possible if we're able to increase the variable bound by a bit.
+                * This is only possible if we're able to increase the variable bound by a bit.
                 */
                if ( SCIPEQ(scip, lb1, ub1) )
                {
@@ -1372,7 +1372,7 @@ SCIP_RETCODE propagateStaticLexred(
           *
           * Now check if vari == varj is permitted, and if not, tighten the domain further.
           *
-          * @todo we peek twice if vari and varj are unfixed
+          * @todo We peek twice if vari and varj are unfixed
           * But, if the subcycle only contains var1 and var2, a single peek suffices.
           * This is similar to orbisack and symresack propagation.
           *
